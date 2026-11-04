@@ -236,14 +236,16 @@ describe("(8) Vila Franca de Xira e Mafra saem das zonas vizinhas", () => {
 
 /*
  * O mínimo de 80 € por pedido acabou a 03-11-2026 (d6 v2): os móveis contam-se peça a
- * peça. O sofá é uma peça grande — a frase e onde ela vai.
+ * peça. O sofá é uma peça grande — a frase e onde ela vai. Desde a d7 (04-11-2026) há a
+ * recolha mínima de 40 € + IVA, dita na frase por peça: o «sem mínimo por pedido» saiu.
  */
-describe("(9) o sofá: uma peça grande, com o IVA, sem mínimo por pedido", () => {
+describe("(9) o sofá: uma peça grande, com o IVA, e a recolha mínima (d7)", () => {
   it("a frase e onde ela vai", () => {
     expect(PECA_GRANDE).toBe("50 € + IVA (61,50 € com IVA)");
-    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: {PECA_GRANDE}, sem mínimo por pedido.");
-    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: ${PECA_GRANDE}, sem mínimo por pedido.");
-    expect(ler("src/lib/blog-data.ts")).toContain("sem mínimo por pedido, e o sofá é uma peça grande");
+    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: {PECA_GRANDE}. A recolha conta-se {MOVEIS_POR_PECA_COM_OS_ANDARES}.");
+    expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: ${PECA_GRANDE}. A recolha conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}.");
+    expect(ler("src/lib/blog-data.ts")).toContain(": o sofá é uma peça grande. Uma recolha de móveis conta-se");
+    for (const f of ["src/app/recolha-de-sofas/page.tsx", "src/lib/blog-data.ts"]) expect(ler(f), f).not.toContain("sem mínimo por pedido");
     expect(ler("src/app/recolha-de-sofas/page.tsx")).not.toContain("MINIMO_POR_PEDIDO_DOS_ITENS");
   });
 });

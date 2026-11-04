@@ -108,7 +108,7 @@ const pricingFactors = [
 const faqs = [
   {
     q: "Quanto custa a recolha de um eletrodoméstico?",
-    a: `A recolha conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}, sem mínimo por pedido. O valor certo vem na proposta, consoante o tipo, o peso, os acessos e a localização. A forma mais rápida de o fechar é enviar fotos do equipamento e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
+    a: `A recolha conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}. O valor certo vem na proposta, consoante o tipo, o peso, os acessos e a localização. A forma mais rápida de o fechar é enviar fotos do equipamento e a morada para receber propostas ${PROPOSTAS_EM_ATE}.`,
   },
   {
     q: "Recolhem frigoríficos e máquinas de lavar?",
@@ -325,7 +325,7 @@ export default function RecolhaDeEletrodomesticosPage() {
             Quanto custa a recolha de eletrodomésticos?
           </h2>
           <p className="mt-4 max-w-3xl text-base text-slate-600">
-            A recolha conta-se {MOVEIS_POR_PECA_COM_OS_ANDARES}, sem mínimo por pedido. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
+            A recolha conta-se {MOVEIS_POR_PECA_COM_OS_ANDARES}. O valor depende de vários fatores, e a melhor forma de o saber ao certo é pedir um orçamento com fotos e morada.
           </p>
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
             <p className="font-semibold text-slate-900">Fatores que influenciam o preço:</p>

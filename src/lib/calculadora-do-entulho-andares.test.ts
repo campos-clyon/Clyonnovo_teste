@@ -28,10 +28,12 @@ describe("a calculadora do entulho com os andares, por trabalho (d4)", () => {
   it("1 big bag no 1.º andar com elevador → 157 – 187,40 €", () => {
     expect(semIvaEscrito(conta(1, "bigbags", 1, "yes"))).toBe("157 – 187,40 €");
   });
-  it("a granel (m³) continua pela grelha: 1 m³ num 3.º sem elevador → desde 165 € + IVA (202,95 € com IVA)", () => {
+  // A granel ao preço dos sacos desde a d7 (04-11-2026): era «desde 165 €» (120 + 45).
+  it("a granel (m³) pelos sacos: 1 m³ num 3.º sem elevador → 205 – 237 € + IVA (252,15 – 291,51 € com IVA)", () => {
     const v = conta(1, "m3", 3, "no");
-    expect(semIvaEscrito(v)).toBe("desde 165 €");
-    expect(comIvaEscrito(v)).toBe("desde 202,95 €");
+    expect(semIvaEscrito(v)).toBe("205 – 237 €");
+    expect(comIvaEscrito(v)).toBe("252,15 – 291,51 €");
+    expect(v).toEqual(conta(40, "sacos", 3, "no"));
   });
   it("o estacionamento longe conta como mais um andar sem elevador", () => {
     expect(conta(1, "m3", 2, "no", true)).toEqual(conta(1, "m3", 3, "no"));

@@ -9,7 +9,7 @@ import {
   PECAS_DE_REFERENCIA,
   PRECOS,
 } from "./precos-publicos";
-import { PROPOSTA_COM_FOTOGRAFIAS, faixaSemEComIva, valorSemEComIva } from "./preco-de-referencia";
+import { PROPOSTA_COM_FOTOGRAFIAS, faixaSemEComIva, precoDaPecaComOIva, valorSemEComIva } from "./preco-de-referencia";
 import { comIva, euros } from "./quanto-custa";
 import { referenciasDaCidade } from "./referencias-da-cidade";
 import { SERVICES, getAllCityServiceSlugs } from "./seo-data";
@@ -83,10 +83,13 @@ describe("os preços de referência das páginas de cidade", () => {
 describe("os números são os das fontes únicas", () => {
   const precos = (servico: string, cidade = "Barreiro") => referenciasDaCidade(servico, cidade).map((r) => r.preco);
 
-  it("móveis: as peças de referência e a faixa da recolha de móveis", () => {
+  // d7 (04-11-2026): as peças pela tabela das peças, e a recolha de móveis desde a recolha mínima.
+  it("móveis: as peças de referência pela tabela e a recolha mínima", () => {
     const p = precos("recolha-moveis");
-    for (const peca of PECAS_DE_REFERENCIA) expect(p).toContain(faixaSemEComIva(peca.minimo, peca.maximo));
-    expect(p).toContain(faixaSemEComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!));
+    for (const peca of PECAS_DE_REFERENCIA) expect(p).toContain(precoDaPecaComOIva(peca));
+    expect(p).toContain("peça grande, 50 € + IVA (61,50 € com IVA)");
+    expect(p).toContain(`desde ${valorSemEComIva(PRECOS.recolha_moveis.minimo!)}`);
+    expect(p).toContain("desde 40 € + IVA (49,20 € com IVA)");
     expect(referenciasDaCidade("recolha-moveis", "Barreiro").map((r) => r.oQue)).toEqual([
       ...PECAS_DE_REFERENCIA.map((x) => x.peca),
       // Por peça desde 03-11-2026 (d6 v2): da pequena à grande, e por baixo a frase inteira com os andares.
@@ -97,14 +100,16 @@ describe("os números são os das fontes únicas", () => {
   it("monos: a faixa dos monos, e a dos móveis", () => {
     const p = precos("recolha-monos");
     expect(p[0]).toBe(faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!));
-    expect(p).toContain(faixaSemEComIva(PRECOS.recolha_moveis.minimo!, PRECOS.recolha_moveis.maximo!));
+    expect(p).toContain(`desde ${valorSemEComIva(PRECOS.recolha_moveis.minimo!)}`);
     expect(referenciasDaCidade("recolha-monos", "Seixal")[0].oQue).toBe("Recolha de monos no Seixal");
   });
 
   it("entulho: os 10 sacos, os volumes da grelha e a proposta com fotografias acima deles", () => {
     const p = precos("recolha-entulho", "Lisboa");
     expect(p[0]).toBe(faixaSemEComIva(ENTULHO_ATE_10_SACOS.minimo, ENTULHO_ATE_10_SACOS.maximo));
-    for (const v of ENTULHO_POR_VOLUME) expect(p).toContain(`desde ${valorSemEComIva(v.desde)}`);
+    // O m³ pelos sacos, ensacado ou a granel (d7, 04-11-2026): eram «desde 120 / 432 / 720 €».
+    for (const v of ENTULHO_POR_VOLUME) expect(p).toContain(faixaSemEComIva(v.de, v.ate));
+    expect(p).toContain("160 – 192 € + IVA (196,80 – 236,16 € com IVA)");
     expect(p[p.length - 1]).toBe(PROPOSTA_COM_FOTOGRAFIAS);
   });
 
@@ -119,9 +124,8 @@ describe("os números são os das fontes únicas", () => {
   });
 
   it("o com IVA é o sem IVA com o IVA, e não outro número", () => {
-    const sofa = PECAS_DE_REFERENCIA[0];
     const linha = referenciasDaCidade("recolha-moveis", "Lisboa")[0].preco;
-    expect(linha).toContain(`(${euros(comIva(sofa.minimo)).replace(" €", "")} – ${euros(comIva(sofa.maximo))} com IVA)`);
+    expect(linha).toContain(`(${euros(comIva(50))} com IVA)`);
   });
 });
 

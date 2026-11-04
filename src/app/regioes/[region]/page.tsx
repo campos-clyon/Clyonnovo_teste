@@ -21,7 +21,7 @@ import {
 } from "@/lib/seo-data";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PRECOS, comMaiuscula, maisIva } from "@/lib/precos-publicos";
-import { MOVEIS_POR_PECA, MOVEIS_POR_PECA_COM_OS_ANDARES } from "@/lib/preco-de-referencia";
+import { MOVEIS_POR_PECA, MOVEIS_POR_PECA_COM_OS_ANDARES, RECOLHA_MINIMA_COM_IVA } from "@/lib/preco-de-referencia";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { PRECO_FECHADO, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { CONSULTADAS_EM, camarasDasZonas, primeiraFrase } from "@/lib/recolha-da-camara";
@@ -241,7 +241,7 @@ export default async function RegionPage({ params }: Props) {
                     Recolha de móveis
                   </dt>
                   <dd className="mt-1 text-sm leading-7 text-slate-600">
-                    {comMaiuscula(MOVEIS_POR_PECA)}, e os andares
+                    {comMaiuscula(MOVEIS_POR_PECA)}; os andares somam-se depois do mínimo
                   </dd>
                 </div>
                 <div className="rounded-[22px] border border-cyan-100 bg-white p-4">
@@ -328,7 +328,8 @@ export default async function RegionPage({ params }: Props) {
               Serviços {emTerra(regionData.name)}
             </h2>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              De uma peça só a uma casa inteira. Não há mínimo de volume.
+              {/* 04-11-2026 (d7): a recolha mínima dos móveis — dizia «Não há mínimo de volume». */}
+              De uma peça só a uma casa inteira; nos móveis, a recolha mínima é de {RECOLHA_MINIMA_COM_IVA}.
             </p>
             {/*
               O link de cada serviço sai de `caminhoDoServicoNaCidade`, e não

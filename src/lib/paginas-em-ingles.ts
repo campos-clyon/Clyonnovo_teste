@@ -1,5 +1,5 @@
 import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
-import { PRECOS, PRECO_POR_ITEM, type PrecoPublico } from "./precos-publicos";
+import { PRECOS, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, type PrecoPublico } from "./precos-publicos";
 
 /*
  * AS PÁGINAS EM INGLÊS — 14-10-2026 (auditoria de SEO, 90 dias).
@@ -104,15 +104,17 @@ export function enderecoEmIngles(slugPt: string): string | null {
 /** «€40–120 + VAT», «from €120/m³ + VAT» — a tabela portuguesa, dita em inglês. */
 export function precoEmIngles(p: PrecoPublico): string {
   const unidade = p.unidade ? `/${p.unidade}` : "";
-  if (p.minimo != null && p.maximo != null) return `€${p.minimo}–${p.maximo} + VAT`;
+  // With the unit (04-11-2026, d7): rubble is now a range per m³, «€160–192/m³ + VAT».
+  if (p.minimo != null && p.maximo != null) return `€${p.minimo}–${p.maximo}${unidade} + VAT`;
   if (p.minimo != null) return `from €${p.minimo}${unidade} + VAT`;
   return "quote on request";
 }
 
 export const PRECOS_EM_INGLES = [
   // Per item since 03-11-2026 (d6): small, medium, large.
-  { servico: "Furniture removal (sofa, bed, wardrobe…)", preco: `per item: small €${PRECO_POR_ITEM.pequeno}, medium €${PRECO_POR_ITEM.medio}, large €${PRECO_POR_ITEM.grande} + VAT` },
+  // And the minimum collection since 04-11-2026 (d7).
+  { servico: "Furniture removal (sofa, bed, wardrobe…)", preco: `per item: small €${PRECO_POR_ITEM.pequeno}, medium €${PRECO_POR_ITEM.medio}, large €${PRECO_POR_ITEM.grande} + VAT; minimum collection €${RECOLHA_MINIMA_DOS_MOVEIS} + VAT` },
   { servico: "Bulky waste and junk", preco: precoEmIngles(PRECOS.recolha_monos) },
-  { servico: "Construction rubble, in bags", preco: precoEmIngles(PRECOS.recolha_entulho) },
+  { servico: "Construction rubble, in bags or loose", preco: precoEmIngles(PRECOS.recolha_entulho) },
   { servico: "House clearance", preco: precoEmIngles(PRECOS.esvaziamento_casa) },
 ];

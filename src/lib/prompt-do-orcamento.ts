@@ -1,12 +1,17 @@
 import { MINIMO_DO_ENTULHO, GRELHA_DA_MANUTENCAO_PARA_O_MODELO, GRELHA_DO_ENTULHO_PARA_O_MODELO } from "@/lib/pricing-helper";
 import {
   ENTULHO_ATE_10_SACOS,
+  ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
+  NOME_DO_TAMANHO,
   PECAS_DE_REFERENCIA,
+  PECAS_EM_TEXTO,
   PRECOS,
   PRECO_POR_SACO,
+  RECOLHA_MINIMA_DOS_MOVEIS,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
-  desdeDoVolume,
+  precoDaPeca,
+  type PecaDeReferencia,
 } from "@/lib/precos-publicos";
 import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import {
@@ -62,13 +67,23 @@ function tipologia(chave: string) {
   return t;
 }
 
-/** «Mesa com cadeiras: 40 – 65 € s/IVA (…)» — a peça de referência do site. */
+/** «peça média, 30 € s/IVA (36,90 € c/IVA)» — uma peça de referência pela tabela das peças (d7, 04-11-2026). */
+const pecaPelaTabela = (p: PecaDeReferencia) => `${NOME_DO_TAMANHO[p.tamanho]}, ${comOIva({ tipo: "exacto", valor: precoDaPeca(p) })}`;
+
+/** «Mesa com cadeiras: peça média, 30 € s/IVA (…)» — a peça de referência do site. */
 const MESA = peca(/mesa/i);
-const MESA_COM_CADEIRAS = `${MESA.peca}: ${comOIva(faixa(MESA))}`;
+const MESA_COM_CADEIRAS = `${MESA.peca}: ${pecaPelaTabela(MESA)}`;
 const SOFA = peca(/sof[áa]/i);
 
-/** O mínimo de uma peça solta: o início das peças de referência do site. */
-const MINIMO_POR_PECA = Math.min(...PECAS_DE_REFERENCIA.map((p) => p.minimo));
+/** A recolha mínima dos móveis por peça (d7): a soma das peças nunca fica abaixo dela. */
+const RECOLHA_MINIMA = comOIva({ tipo: "exacto", valor: RECOLHA_MINIMA_DOS_MOVEIS });
+
+/** 3 m³ de entulho, a granel ou em sacos: os sacos que faz e a faixa deles (d7). */
+const TRES_METROS = (() => {
+  const v = ENTULHO_POR_VOLUME.find((x) => x.m3 === 3);
+  if (!v) throw new Error("A grelha do entulho não tem a linha dos 3 m³");
+  return v;
+})();
 
 /** Uma divisão cheia, garagem ou arrecadação — a carga completa sem a casa toda. */
 const CARGA_SEM_A_CASA = exigir(PRECOS.esvaziamento_casa.minimo, "esvaziamento_casa");
@@ -164,9 +179,9 @@ REGRAS ABSOLUTAS
    Para MUDANÇA usa EXCLUSIVAMENTE a tabela à hora da regra 2.d (${PRECO_POR_HORA} € s/IVA por hora, mínimo ${MINIMO_DE_HORAS} horas).
 2. MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
    a) ITENS SOLTOS (1–7 itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
-      Usar preço real calculado pela fórmula. Mínimo por item: ${comOIva({ tipo: "exacto", valor: MINIMO_POR_PECA })} — o início das peças de referência do site.
-      EXEMPLO CORRETO: ${MESA_COM_CADEIRAS} — é uma peça da tabela, NÃO um valor de carga completa nem de esvaziamento (esses começam nos ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}).
-      EXEMPLO CORRETO: 1 ${SOFA.peca.toLowerCase()}, rés-do-chão, estacionamento à porta → perto do início da faixa ${comOIva(faixa(SOFA))}
+      Móveis por peça, a tabela do site (s/IVA): ${PECAS_EM_TEXTO}; a soma das peças nunca fica abaixo da recolha mínima de ${RECOLHA_MINIMA}, e os andares somam-se depois do mínimo.
+      EXEMPLO CORRETO: ${MESA_COM_CADEIRAS} — é uma peça da tabela, NÃO um valor de carga completa nem de esvaziamento (esses começam nos ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}); sozinha, conta a recolha mínima de ${RECOLHA_MINIMA}.
+      EXEMPLO CORRETO: 1 ${SOFA.peca.toLowerCase()}, rés-do-chão, estacionamento à porta → ${pecaPelaTabela(SOFA)}
       Para múltiplos itens soltos: aplica desconto de eficiência (~60% do custo por item adicional).
    b) CARGA COMPLETA (≥8 itens) e ESVAZIAMENTO: o preço sai das faixas publicadas no site (sem IVA, com o IVA ao lado):
 ${FAIXAS_DO_ESVAZIAMENTO}
@@ -176,12 +191,12 @@ ${FAIXAS_DO_ESVAZIAMENTO}
       EXEMPLO: Esvaziamento de um T2 em Lisboa, com elevador e estacionamento à porta → ${comOIva({ tipo: "exacto", valor: T2.minimo })}, o início da faixa.
       EXEMPLO: Carga completa no Seixal (uma garagem cheia), o cálculo dá menos do que a faixa → ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}.
       EXEMPLO: Esvaziamento de um T3 num 4.º andar sem elevador → ${comOIva({ tipo: "exacto", valor: exigir(T3_T4.maximo, "T3/T4") })}, o fim da faixa.
-   c) ENTULHO — a grelha publicada no site (afecta diretamente o preço final; os sacos contam-se um a um, o entulho solto pela grelha por m³):
+   c) ENTULHO — a grelha publicada no site (afecta diretamente o preço final; os sacos contam-se um a um, e o entulho solto pelos sacos que faz, ao mesmo preço):
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
       Mínimo fixo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona).
       EXEMPLO: 10 sacos ensacados, acesso normal → ${ENTULHO_ATE_10_SACOS.minimo} a ${ENTULHO_ATE_10_SACOS.maximo} € s/IVA.
       EXEMPLO: 50 sacos num 2.º andar com elevador → ${50 * PRECO_POR_SACO.minimo + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR} a ${50 * PRECO_POR_SACO.maximo + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR} € s/IVA.
-      EXEMPLO: 3 m³ de obra de um T1/T2, a granel → desde ${desdeDoVolume(3)} € s/IVA.
+      EXEMPLO: 3 m³ de obra de um T1/T2, a granel (≈ ${TRES_METROS.sacos} sacos) → ${TRES_METROS.de} a ${TRES_METROS.ate} € s/IVA, o mesmo que ${TRES_METROS.sacos} sacos ensacados.
    d) MUDANÇA — a tabela CLYON à hora (NÃO usar a fórmula geral custo×margem):
 ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
       Mudanças NÃO têm limite de distância.

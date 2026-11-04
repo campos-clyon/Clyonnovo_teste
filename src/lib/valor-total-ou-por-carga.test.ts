@@ -25,11 +25,12 @@ const proposta = (base?: string) =>
   );
 
 describe("a nota ao lado do preço, para o cliente", () => {
-  it("pelo trabalho todo: os 32 € por item a mais", () => {
+  it("pelo trabalho todo: os itens a mais pela tabela das peças (d7; eram 32 €)", () => {
     const n = notaDoPrecoParaOCliente("total");
     expect(n).toContain("fotografias");
     // «32 € mais IVA» — o dono, 22-10-2026: o sem IVA nunca sozinho.
-    expect(n).toContain("cada item a mais acresce 32 € + IVA = 39,36 €");
+    expect(n).toContain("cada item a mais conta pela tabela das peças: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)");
+    expect(n).not.toContain("32 €");
   });
 
   it("por carga: que o total depende das cargas — e num Trabalho CLYON, confirma-se connosco", () => {
@@ -47,10 +48,10 @@ describe("a proposta de um Trabalho CLYON ao cliente (o #466)", () => {
     expect(m).not.toContain("32 €");
   });
 
-  it("pelo trabalho todo, os 32 € por item que não estava nas fotografias", () => {
+  it("pelo trabalho todo, os itens que não estavam nas fotografias pela tabela das peças (d7; eram 32 €)", () => {
     for (const m of [proposta("total"), proposta(undefined)]) {
       expect(m).toContain("é o valor final a pagar, já com IVA.");
-      expect(m).toContain("cada item a mais acresce 32 €");
+      expect(m).toContain("cada item a mais conta pela tabela das peças");
     }
   });
 });

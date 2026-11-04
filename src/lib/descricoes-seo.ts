@@ -77,10 +77,12 @@ const faixaComIva = (de: number, ate: number) => `${euros(comIva(de)).replace(" 
 /** «30 – 100 € + IVA (36,90 – 123 € com IVA)», para as descriptions — vive numa lib pura desde 29-10-2026 (S13). */
 export { faixaSemEComIva };
 const PRECO: Record<string, string> = {
-  // Por peça desde 03-11-2026 (d6): «Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA).»
+  // Por peça desde 03-11-2026 (d6), com a recolha mínima desde a d7 (04-11-2026):
+  // «Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 40 € + IVA.»
   "recolha-moveis": `${comMaiuscula(MOVEIS_POR_PECA_CURTO)}.`,
   "recolha-monos": `${faixa(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} + IVA (${faixaComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} com IVA).`,
-  "recolha-entulho": `Desde ${euros(PRECOS.recolha_entulho.minimo!)}/m³ + IVA (${euros(comIva(PRECOS.recolha_entulho.minimo!))}/m³ com IVA).`,
+  // O m³ ao preço dos sacos, ensacado ou a granel (d7): era «Desde 120 €/m³».
+  "recolha-entulho": `${faixa(PRECOS.recolha_entulho.minimo!, PRECOS.recolha_entulho.maximo!)}/m³ + IVA (${faixaComIva(PRECOS.recolha_entulho.minimo!, PRECOS.recolha_entulho.maximo!)}/m³ com IVA).`,
 };
 
 /** «10 sacos 40 – 50 € + IVA (49,20 – 61,50 € com IVA)» — o preço de entrada do entulho. */

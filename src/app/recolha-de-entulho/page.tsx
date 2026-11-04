@@ -37,7 +37,8 @@ import {
   SITE_URL,
   getCityServiceSlug,
 } from "@/lib/seo-data";
-import { ENTULHO_ATE_10_SACOS, PRECOS, comMaiuscula, desdeDoVolume, maisIva } from "@/lib/precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECOS, comMaiuscula, faixaDoVolume, maisIva } from "@/lib/precos-publicos";
+import { ENTULHO_NA_FAQ } from "@/lib/preco-de-referencia";
 import { comIvaEscrito, linhasDoEntulho, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import { ENTULHO_10_SACOS_NA_FRASE, descricaoQueCabe } from "@/lib/descricoes-seo";
@@ -134,27 +135,29 @@ const keyCities = ["lisboa", "almada", "seixal", "setubal", "sintra", "cascais",
   .filter((city): city is (typeof CITIES)[number] => Boolean(city));
 
 /*
- * DESDE 17-10-2026 a grelha é a do dono, em `ENTULHO_POR_VOLUME`: 120 € até
- * 1 m³, 432 € até 3 m³, 720 € até 5 m³ — já não é o preço por m³ vezes o
- * volume. A composição da faixa (travessão e o símbolo uma só vez) é do
+ * A grelha do dono, em `ENTULHO_POR_VOLUME`. Era «desde» 120 € até 1 m³, 432 €
+ * até 3 m³ e 720 € até 5 m³ (17-10-2026); desde 04-11-2026 (d7) cada volume
+ * conta os sacos que faz, ensacado ou a granel: 1 m³ = 40 sacos × 4,00–4,80 € =
+ * 160–192 €. A composição da faixa (travessão e o símbolo uma só vez) é do
  * PricingTable: aqui passam-se os números.
  */
-function desdeOsMetros(m3: number): string {
-  return `${desdeDoVolume(m3)} €`;
+function linhaDosMetros(m3: number): { priceFrom: string; priceTo: string } {
+  const f = faixaDoVolume(m3);
+  return { priceFrom: `${f.de} €`, priceTo: `${f.ate} €` };
 }
 
 const pricingRows = [
   { service: "Sacos de entulho (até 10 sacos)", priceFrom: `${ENTULHO_ATE_10_SACOS.minimo} €`, priceTo: `${ENTULHO_ATE_10_SACOS.maximo} €`, description: ENTULHO_ATE_10_SACOS.descricao },
-  { service: "Recolha pequena (até 1 m³)", priceFrom: desdeOsMetros(1), description: "Remodelações de WC ou cozinha" },
-  { service: "Recolha média (até 3 m³)", priceFrom: desdeOsMetros(3), description: "Obras de apartamento T1/T2" },
-  { service: "Recolha grande (até 5 m³)", priceFrom: desdeOsMetros(5), description: "Demolições e renovações completas" },
+  { service: `Recolha pequena (1 m³, ≈ ${SACOS_POR_METRO_CUBICO} sacos ou a granel)`, ...linhaDosMetros(1), description: "Remodelações de WC ou cozinha" },
+  { service: `Recolha média (3 m³, ≈ ${3 * SACOS_POR_METRO_CUBICO} sacos ou a granel)`, ...linhaDosMetros(3), description: "Obras de apartamento T1/T2" },
+  { service: `Recolha grande (5 m³, ≈ ${5 * SACOS_POR_METRO_CUBICO} sacos ou a granel)`, ...linhaDosMetros(5), description: "Demolições e renovações completas" },
   { service: "Recolha extra (acima de 5 m³)", priceFrom: "Orçamento personalizado", description: "Volumes maiores — envie fotografias" },
 ];
 
-/** «desde 120 € + IVA», «40 – 50 € + IVA» — o número nunca vai sozinho. */
+/** «160 – 192 € + IVA», «40 – 48 € + IVA» — o número nunca vai sozinho. */
 const semIvaComAviso = (v: Valor) => `${semIvaEscrito(v)} + IVA`;
 
-const [ATE_10_SACOS, ATE_1_M3, ATE_3_M3, ATE_5_M3] = LINHAS;
+const [, ATE_1_M3, ATE_3_M3, ATE_5_M3] = LINHAS;
 
 const MEDIDAS = [
   { quanto: `${SACOS_POR_METRO_CUBICO} sacos`, oQue: "fazem cerca de 1 m³ de entulho" },
@@ -228,14 +231,16 @@ const TESTEMUNHOS = ["Ricardo C.", "Fátima C.", "Stefanie R."]
 const faqs = [
   {
     question: "Quanto custa a recolha de entulho?",
+    // Ensacado ou a granel, ao mesmo preço (d7, 04-11-2026, o texto do Apoio): era «até 1 m³, desde 120 €».
     answer:
-      `Até 10 sacos, ${semIvaComAviso(ATE_10_SACOS.valor)}; até 1 m³, ${semIvaComAviso(ATE_1_M3.valor)}; ` +
-      `até 3 m³, ${semIvaComAviso(ATE_3_M3.valor)}; até 5 m³, ${semIvaComAviso(ATE_5_M3.valor)}. ` +
-      `Acima disso, a proposta faz-se a partir de fotografias. ${PRECO_FECHADO}`,
+      `${ENTULHO_NA_FAQ} 1 m³ são uns ${SACOS_POR_METRO_CUBICO} sacos: ${semIvaComAviso(ATE_1_M3.valor)}; 3 m³, ${semIvaComAviso(ATE_3_M3.valor)}; ` +
+      `5 m³, ${semIvaComAviso(ATE_5_M3.valor)}. Acima disso, a proposta faz-se a partir de fotografias. ${PRECO_FECHADO}`,
   },
   {
     question: "Recolhem entulho a granel?",
-    answer: `Sim. ${A_GRANEL} Diga no pedido como está o entulho — ensacado, solto, ou as duas coisas.`,
+    answer:
+      `Sim. ${A_GRANEL} Conta-se ao mesmo preço dos sacos: 1 m³ são uns ${SACOS_POR_METRO_CUBICO} sacos, ${semIvaComAviso(ATE_1_M3.valor)} ` +
+      `(${comIvaEscrito(ATE_1_M3.valor)} com IVA). Diga no pedido como está o entulho — ensacado, solto, ou as duas coisas.`,
   },
   {
     question: "Quanto pesa cada saco, e quantos sacos são 1 m³?",

@@ -17,22 +17,24 @@
  *
  * ESTE FICHEIRO É PURO.
  */
-import { ACRESCIMO_POR_ITEM_EXTRA } from "./itens-a-mais";
+import { ITENS_A_MAIS_PARA_O_CLIENTE } from "./itens-a-mais";
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { O_IVA_NA_PROPOSTA, O_QUE_E_A_CARGA, PODE_MANDAR_IMAGENS } from "./perguntas-frequentes-da-vitoria";
 import {
   ENTULHO_ATE_10_SACOS,
-  ENTULHO_POR_M3_ACIMA_DE_1,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   MANUTENCAO_POR_TIPO,
+  NOME_DO_TAMANHO,
   PECAS_DE_REFERENCIA,
   PRECOS,
   PRECO_POR_ITEM,
   PRECO_POR_SACO,
+  RECOLHA_MINIMA_DOS_MOVEIS,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
   RECOLHA_POR_ANDAR_SEM_ELEVADOR,
   SEM_IVA_NA_FRASE,
+  precoDaPeca,
 } from "./precos-publicos";
 import {
   ACRESCIMO_POR_URGENCIA,
@@ -106,22 +108,30 @@ function linhasDosPrecos(): string[] {
     const nome = nota ? `${nomeDoServico(id)} (${nota})` : nomeDoServico(id);
     const p = PRECOS[id];
     if (!p || p.minimo == null) continue;
-    // Os móveis por peça (d6 v2, 03-11-2026): a frase do dono, peça a peça, com o com IVA de cada uma.
+    // Os móveis por peça (d6 v2, 03-11-2026): a frase do dono, peça a peça, com o com IVA de cada uma;
+    // e a recolha mínima (d7, 04-11-2026), com os andares depois do mínimo.
     if (id === "recolha_moveis") {
       const pecas = (["pequeno", "medio", "grande"] as const).map((t) => PRECO_POR_ITEM[t]);
-      linhas.push(`  · ${nome}, por peça: pequena ${pecas[0]} €, média ${pecas[1]} €, grande ${pecas[2]} € sem IVA (${pecas.map((v) => centimos(comIva(v))).join(" / ")} € com IVA).`);
+      linhas.push(
+        `  · ${nome}, por peça: pequena ${pecas[0]} €, média ${pecas[1]} €, grande ${pecas[2]} € sem IVA (${pecas.map((v) => centimos(comIva(v))).join(" / ")} € com IVA); ` +
+          `recolha mínima ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} sem IVA (${euros(comIva(RECOLHA_MINIMA_DOS_MOVEIS))} com IVA), que já inclui o parceiro ir a casa, carregar e levar ao destino certo; os andares somam-se depois do mínimo.`,
+      );
       continue;
     }
     linhas.push(`  · ${nome}: ${faixa(p.minimo, p.maximo)}.`);
   }
   for (const t of ESVAZIAMENTO_POR_TIPOLOGIA) linhas.push(`  · ${t.tipo}: ${faixa(t.minimo, t.maximo)}.`);
-  for (const p of PECAS_DE_REFERENCIA) linhas.push(`  · ${p.peca}: ${faixa(p.minimo, p.maximo)}.`);
+  // Os exemplos pela tabela das peças (d7): o sofá é uma peça grande, a mesa com cadeiras uma média.
+  for (const p of PECAS_DE_REFERENCIA) {
+    linhas.push(`  · ${p.peca}: ${NOME_DO_TAMANHO[p.tamanho]}, ${euros(precoDaPeca(p))} sem IVA (${euros(comIva(precoDaPeca(p)))} com IVA).`);
+  }
   linhas.push(
     `  · Entulho até 10 sacos (sacos de ${PESO_DO_SACO}): ${faixa(ENTULHO_ATE_10_SACOS.minimo, ENTULHO_ATE_10_SACOS.maximo)}.`,
     // Os sacos um a um (d4, 03-11-2026): cada saco a mais conta o mesmo.
     `  · Entulho em sacos de ${PESO_DO_SACO}, cada saco: ${centimos(PRECO_POR_SACO.minimo)} – ${centimos(PRECO_POR_SACO.maximo)} € sem IVA (${centimos(comIva(PRECO_POR_SACO.minimo))} – ${centimos(comIva(PRECO_POR_SACO.maximo))} € com IVA); até 10 sacos conta o mínimo de 10.`,
   );
-  for (const v of ENTULHO_POR_VOLUME) linhas.push(`  · Entulho até ${v.m3} m³: ${faixa(v.desde)}.`);
+  // O granel ao preço dos sacos (d7, 04-11-2026): 1 m³ = 40 sacos.
+  for (const v of ENTULHO_POR_VOLUME) linhas.push(`  · Entulho, ${v.m3} m³ (≈ ${v.sacos} sacos, ensacado ou a granel): ${faixa(v.de, v.ate)}.`);
   linhas.push(`  · Mudança: ${PRECO_DA_MUDANCA_POR_EXTENSO}`);
   return linhas;
 }
@@ -156,7 +166,7 @@ PREÇO, IVA E FATURA
 - ${FACTURA_EM_PALAVRAS}
 - ${O_IVA_NA_PROPOSTA}
 - Por carga: ${O_QUE_E_A_CARGA}
-- Itens a mais no dia (orçamento de valor total): cada um acresce ${ACRESCIMO_POR_ITEM_EXTRA} € + IVA (${euros(comIva(ACRESCIMO_POR_ITEM_EXTRA))}), combinado com o cliente antes de avançar.
+- Itens a mais no dia (orçamento de valor total): ${ITENS_A_MAIS_PARA_O_CLIENTE}, combinado com o cliente antes de avançar.
 - Preços de referência do site, ${SEM_IVA_NA_FRASE} — o preço final é sempre o da proposta do parceiro:
 ${linhasDosPrecos().join("\n")}
 - Mudança à hora: cada andar sem elevador ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € + IVA por pessoa (${POR_ANDAR_SEM_ELEVADOR} € + IVA a equipa); elevador exterior ${ELEVADOR_EXTERIOR} € + IVA; mínimo ${MINIMO_DE_HORAS} horas (${MINIMO_DA_MUDANCA} € + IVA). Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
@@ -169,7 +179,7 @@ COMO SE PAGA
 ENTULHO
 - ${RESPOSTA_SOBRE_CONTENTORES}
 - ${A_GRANEL}
-- Acima de 1 m³, a granel, a referência é ${euros(ENTULHO_POR_M3_ACIMA_DE_1)} + IVA por m³.
+- A granel conta-se ao mesmo preço dos sacos: 1 m³ são cerca de ${ENTULHO_POR_VOLUME[0].sacos} sacos, ${faixa(ENTULHO_POR_VOLUME[0].de, ENTULHO_POR_VOLUME[0].ate)}.
 - Andares, no entulho e nos móveis por peça (por trabalho): +${euros(RECOLHA_POR_ANDAR_COM_ELEVADOR)} + IVA por andar com elevador, +${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA por andar sem elevador; o estacionamento a mais de 30 metros conta como mais um andar sem elevador.
 
 O QUE NUNCA SE DIZ
@@ -199,14 +209,14 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
     juntar(t.minimo);
     juntar(t.maximo);
   }
-  for (const p of PECAS_DE_REFERENCIA) {
-    juntar(p.minimo);
-    juntar(p.maximo);
-  }
+  for (const p of PECAS_DE_REFERENCIA) juntar(precoDaPeca(p));
+  juntar(RECOLHA_MINIMA_DOS_MOVEIS);
   juntar(ENTULHO_ATE_10_SACOS.minimo);
   juntar(ENTULHO_ATE_10_SACOS.maximo);
-  for (const v of ENTULHO_POR_VOLUME) juntar(v.desde);
-  juntar(ENTULHO_POR_M3_ACIMA_DE_1);
+  for (const v of ENTULHO_POR_VOLUME) {
+    juntar(v.de);
+    juntar(v.ate);
+  }
   // d4 e d6 (03-11-2026): os sacos um a um, os andares do entulho e dos móveis, as peças; e a grelha da manutenção por tipo (d1 v2).
   juntar(PRECO_POR_SACO.minimo);
   juntar(PRECO_POR_SACO.maximo);
@@ -228,7 +238,6 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
     POR_ANDAR_SEM_ELEVADOR,
     POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
     MINIMO_DA_MUDANCA,
-    ACRESCIMO_POR_ITEM_EXTRA,
   ])
     juntar(n);
   for (const m of MATERIAIS) juntar(m.preco);

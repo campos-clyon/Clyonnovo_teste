@@ -23,9 +23,9 @@
  * a frase dos contentores vêm das fontes únicas, nunca escritos à mão.
  */
 import { PROMESSA_DO_PRAZO } from "./promessas-publicas";
-import { ESVAZIAMENTO_POR_TIPOLOGIA, PECAS_DE_REFERENCIA, PRECOS, desdeDoVolume } from "./precos-publicos";
+import { ESVAZIAMENTO_POR_TIPOLOGIA, PECAS_DE_REFERENCIA, PRECOS, faixaDoVolume } from "./precos-publicos";
 import { ENTULHO_10_SACOS_NA_FRASE, faixaSemEComIva } from "./descricoes-seo";
-import { MOVEIS_POR_PECA_CURTO } from "./preco-de-referencia";
+import { MOVEIS_POR_PECA_CURTO, precoDaPecaComOIva } from "./preco-de-referencia";
 import { comIva, euros } from "./quanto-custa";
 import { NAO_HA_CONTENTORES, PESO_DO_SACO } from "./sacos-de-entulho";
 import { MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_POR_HORA, PRECO_POR_HORA_COM_IVA } from "./tabela-das-mudancas";
@@ -48,12 +48,15 @@ const desdeComIva = (v: number) => `desde ${euros(v)} + IVA (${euros(comIva(v))}
 const tipologia = (chave: string) => ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === chave)!;
 const SOFA = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
 
-const PRECO_SOFA = faixaSemEComIva(SOFA.minimo, SOFA.maximo);
-// Por peça desde 03-11-2026 (d6).
+// O sofá pela tabela das peças (d7, 04-11-2026): «peça grande, 50 € + IVA (61,50 € com IVA)»; era 40 – 70 €.
+const PRECO_SOFA = precoDaPecaComOIva(SOFA);
+// Por peça desde 03-11-2026 (d6), com a recolha mínima desde a d7.
 const PRECO_MOVEIS = MOVEIS_POR_PECA_CURTO;
 const PRECO_MONOS = faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!);
-const UM_METRO = desdeComIva(desdeDoVolume(1));
-const TRES_METROS = desdeComIva(desdeDoVolume(3));
+// O m³ ao preço dos sacos, ensacado ou a granel (d7): era «desde 120 €» e «desde 432 €».
+const faixaDosMetros = (m3: number) => faixaSemEComIva(faixaDoVolume(m3).de, faixaDoVolume(m3).ate);
+const UM_METRO = faixaDosMetros(1);
+const TRES_METROS = faixaDosMetros(3);
 const ESV_T0_T1 = faixaSemEComIva(tipologia("T0/T1").minimo, tipologia("T0/T1").maximo!);
 const ESV_T2 = faixaSemEComIva(tipologia("T2").minimo, tipologia("T2").maximo!);
 const ESV_APARTAMENTO = faixaSemEComIva(
@@ -73,7 +76,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-moveis-amora",
       titulo: "Recolha de móveis na Amora",
       texto:
-        `Com perto de 50 mil habitantes (Censos de 2021), a Amora junta a cidade — Amora e Cruz de Pau —, os Foros de Amora, o Fogueteiro, as Paivas, a Quinta da Princesa e parte de Belverde. Há prédios de vários andares e moradias com garagem, e é isso que o pedido deve dizer: o andar, se há elevador e se o sofá ou o roupeiro passa na porta. Um parceiro da zona retira sofás, camas, armários e eletrodomésticos de dentro de casa, e desmonta-os se o pedir. Um sofá de 2 a 3 lugares fica em ${PRECO_SOFA}; vários móveis contam-se ${PRECO_MOVEIS}. ${PROMESSA_DO_PRAZO}`,
+        `Com perto de 50 mil habitantes (Censos de 2021), a Amora junta a cidade — Amora e Cruz de Pau —, os Foros de Amora, o Fogueteiro, as Paivas, a Quinta da Princesa e parte de Belverde. Há prédios de vários andares e moradias com garagem, e é isso que o pedido deve dizer: o andar, se há elevador e se o sofá ou o roupeiro passa na porta. Um parceiro da zona retira sofás, camas, armários e eletrodomésticos de dentro de casa, e desmonta-os se o pedir. Um sofá de 2 a 3 lugares conta como uma ${PRECO_SOFA}; vários móveis contam-se ${PRECO_MOVEIS}. ${PROMESSA_DO_PRAZO}`,
     },
     {
       nome: "Corroios",
@@ -105,14 +108,14 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-entulho-amora",
       titulo: "Recolha de entulho na Amora",
       texto:
-        `Uma casa de banho ou uma cozinha remodelada num prédio da Amora dá entulho que tem de descer escadas ou caber no elevador. Por isso recolhe-se em sacos de obra de ${PESO_DO_SACO}, carregados à mão pelo parceiro, ou a granel, se estiver solto. ${NAO_HA_CONTENTORES} Quem tem pouco entulho e carrinha própria pode levá-lo ao Ecoparque do Seixal, da Amarsul, que fica na Amora, no Pinhal Alto dos Carrascos, dentro dos limites que a Câmara publica. Para o resto, um parceiro leva-o a operador licenciado: ${ENTULHO_10_SACOS_NA_FRASE}; 1 m³, o volume de uma casa de banho ou de uma cozinha, ${UM_METRO}. ${PROMESSA_DO_PRAZO}`,
+        `Uma casa de banho ou uma cozinha remodelada num prédio da Amora dá entulho que tem de descer escadas ou caber no elevador. Por isso recolhe-se em sacos de obra de ${PESO_DO_SACO}, carregados à mão pelo parceiro, ou a granel, se estiver solto. ${NAO_HA_CONTENTORES} Quem tem pouco entulho e carrinha própria pode levá-lo ao Ecoparque do Seixal, da Amarsul, que fica na Amora, no Pinhal Alto dos Carrascos, dentro dos limites que a Câmara publica. Para o resto, um parceiro leva-o a operador licenciado: ${ENTULHO_10_SACOS_NA_FRASE}; 1 m³ (uma casa de banho ou uma cozinha), ensacado ou a granel, ${UM_METRO}. ${PROMESSA_DO_PRAZO}`,
     },
     {
       nome: "Corroios",
       enderecoAntigo: "/recolha-entulho-corroios",
       titulo: "Recolha de entulho em Corroios",
       texto:
-        `Em Corroios, o tipo de casa muda o trabalho. Nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha costuma encostar ao portão e o entulho sai depressa; nas torres do Miratejo, desce de elevador, saco a saco, e convém avisar o condomínio. Em qualquer dos casos, recolhe-se em sacos de obra de ${PESO_DO_SACO} ou a granel, e não fica nada na rua à espera. ${NAO_HA_CONTENTORES} Uma remodelação de casa de banho cabe, em geral, em 1 m³, ${UM_METRO}; a obra de um T1 ou de um T2 vai até 3 m³, ${TRES_METROS}. O parceiro que escolher leva o entulho a operador licenciado. ${PROMESSA_DO_PRAZO}`,
+        `Em Corroios, o tipo de casa muda o trabalho. Nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha costuma encostar ao portão e o entulho sai depressa; nas torres do Miratejo, desce de elevador, saco a saco, e convém avisar o condomínio. Em qualquer caso, recolhe-se em sacos de obra de ${PESO_DO_SACO} ou a granel, e nada fica na rua à espera. ${NAO_HA_CONTENTORES} Uma casa de banho remodelada cabe, em geral, em 1 m³, ${UM_METRO}; a obra de um T1 ou T2, até 3 m³, ${TRES_METROS}. O parceiro que escolher leva o entulho a operador licenciado. ${PROMESSA_DO_PRAZO}`,
     },
   ],
   "esvaziamento-casas-seixal": [
@@ -175,7 +178,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-entulho-costa-da-caparica",
       titulo: "Recolha de entulho na Costa da Caparica",
       texto:
-        `Para pequenas obras feitas pelo próprio morador, a Câmara de Almada tem um serviço de recolha de entulho, pago à taxa municipal, que também se pede no Espaço Cidadão da Costa da Caparica. Quando a obra é maior, tem empreiteiro ou não quer tratar disso, um parceiro recolhe o entulho em sacos de obra de ${PESO_DO_SACO} ou a granel e leva-o a operador licenciado. ${NAO_HA_CONTENTORES} Se a obra for numa casa de férias, fazê-la fora da época facilita: entre junho e setembro, estacionar junto à praia é difícil. Pequenas quantidades: ${ENTULHO_10_SACOS_NA_FRASE}; 1 m³, ${UM_METRO}. ${PROMESSA_DO_PRAZO}`,
+        `Para pequenas obras feitas pelo próprio morador, a Câmara de Almada tem um serviço de recolha de entulho, pago à taxa municipal, que também se pede no Espaço Cidadão da Costa da Caparica. Quando a obra é maior, tem empreiteiro ou não quer tratar disso, um parceiro recolhe o entulho em sacos de obra de ${PESO_DO_SACO} ou a granel e leva-o a operador licenciado. ${NAO_HA_CONTENTORES} Se a obra for numa casa de férias, fazê-la fora da época facilita: entre junho e setembro, estacionar junto à praia é difícil. Pequenas quantidades: ${ENTULHO_10_SACOS_NA_FRASE}; 1 m³, ensacado ou a granel, ${UM_METRO}. ${PROMESSA_DO_PRAZO}`,
     },
   ],
   "esvaziamento-casas-almada": [

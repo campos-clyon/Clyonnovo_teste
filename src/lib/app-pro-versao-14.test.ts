@@ -153,7 +153,7 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     }
   });
 
-  it("e o texto que levam é o de hoje: a taxa em vigor, o IVA à parte e «32 € + IVA»", () => {
+  it("e o texto que levam é o de hoje: a taxa em vigor, o IVA à parte e os itens a mais pela tabela das peças (d7)", () => {
     // Desde 28-10-2026 (d8) a lista que a app importa diz o nome da taxa, sem
     // número; com as taxas das Configs, a mesma resposta diz a percentagem.
     const ajuda = PERGUNTAS_DO_PROFISSIONAL.map((p) => `${p.pergunta} ${p.resposta}`).join(" ");
@@ -169,6 +169,8 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     expect(como).toContain("o cliente vê-o com IVA incluído");
     expect(como).not.toContain("com a taxa da plataforma e com IVA");
 
-    expect(avisoDosItens("total", "profissional")).toContain("vale 32 € + IVA");
+    // Os itens a mais pela tabela das peças desde a d7 (04-11-2026): eram 32 € + IVA.
+    expect(avisoDosItens("total", "profissional")).toContain("conta pela tabela das peças (pequena 15 €, média 30 €, grande 50 € + IVA)");
+    expect(avisoDosItens("total", "profissional")).not.toContain("32 €");
   });
 });

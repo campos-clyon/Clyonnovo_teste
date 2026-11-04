@@ -18,23 +18,26 @@ describe("calculadora de referência do entulho", () => {
     expect(semIvaEscrito(r.valor)).toBe("40 – 48 €");
   });
 
-  it("os volumes da grelha dão o mesmo «desde» da grelha", () => {
+  it("os volumes da grelha dão a mesma faixa da grelha", () => {
     const grelha = linhasDoEntulho();
     expect(referenciaDoEntulho(1, "m3")!.valor).toEqual(grelha[1].valor);
     expect(referenciaDoEntulho(3, "m3")!.valor).toEqual(grelha[2].valor);
     expect(referenciaDoEntulho(5, "m3")!.valor).toEqual(grelha[3].valor);
   });
 
-  // d4 (03-11-2026): os sacos contam-se um a um, a 4,00–4,80 € + IVA; o «desde 120 €» é do entulho a granel (m³).
-  it("os sacos contam-se um a um; a granel, nunca abaixo do primeiro m³", () => {
+  // d4 (03-11-2026): os sacos contam-se um a um, a 4,00–4,80 € + IVA; e desde a d7 (04-11-2026)
+  // o entulho a granel (m³) também, pelos sacos que faz — era «desde 120 €» o m³.
+  it("os sacos contam-se um a um; a granel, pelos sacos que faz", () => {
     expect(referenciaDoEntulho(20, "sacos")!.valor).toEqual({ tipo: "faixa", de: 80, ate: 96 });
     expect(referenciaDoEntulho(11, "sacos")!.valor).toEqual({ tipo: "faixa", de: 44, ate: 52.8 });
-    expect(referenciaDoEntulho(0.5, "m3")!.valor).toEqual({ tipo: "desde", de: 120 });
+    expect(referenciaDoEntulho(0.5, "m3")!.valor).toEqual({ tipo: "faixa", de: 80, ate: 96 });
   });
 
-  it("acima de 1 m³ conta a 144 €/m³, como as linhas de 3 e 5 m³ (17-10-2026)", () => {
-    expect(referenciaDoEntulho(2, "m3")!.valor).toEqual({ tipo: "desde", de: 288 });
-    expect(referenciaDoEntulho(4, "m3")!.valor).toEqual({ tipo: "desde", de: 576 });
+  it("o m³ a granel conta 40 sacos: 1 m³ = 40 sacos ensacados (d7)", () => {
+    expect(referenciaDoEntulho(1, "m3")!.valor).toEqual({ tipo: "faixa", de: 160, ate: 192 });
+    expect(referenciaDoEntulho(1, "m3")!.valor).toEqual(referenciaDoEntulho(40, "sacos")!.valor);
+    expect(referenciaDoEntulho(2, "m3")!.valor).toEqual({ tipo: "faixa", de: 320, ate: 384 });
+    expect(referenciaDoEntulho(4, "m3")!.valor).toEqual({ tipo: "faixa", de: 640, ate: 768 });
     // 2 big bags = 76 sacos, um a um (d4): 304 – 364,80 €.
     expect(referenciaDoEntulho(2, "bigbags")!.valor).toEqual({ tipo: "faixa", de: 304, ate: 364.8 });
   });
@@ -50,7 +53,7 @@ describe("calculadora de referência do entulho", () => {
   });
 
   it("o com IVA vai sempre ao lado", () => {
-    expect(comIvaEscrito(referenciaDoEntulho(3, "m3")!.valor)).toBe("desde 531,36 €");
+    expect(comIvaEscrito(referenciaDoEntulho(3, "m3")!.valor)).toBe("590,40 – 708,48 €");
   });
 
   it("zero, negativo ou lixo não dão referência", () => {

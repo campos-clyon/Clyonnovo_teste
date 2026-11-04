@@ -13,6 +13,9 @@ import { PRECOS } from "./precos-publicos";
  *
  * 17-10-2026: 120 €/m³, e os volumes passam a ser os do dono (120, 432 e
  * 720 €, em `ENTULHO_POR_VOLUME`) — já não é o preço vezes o volume.
+ *
+ * 04-11-2026 (d7): o m³ é o dos sacos — 40 sacos × 4,00–4,80 € = 160–192 € —,
+ * ensacado ou a granel, e cada volume da grelha é a conta dos sacos que faz.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
@@ -22,21 +25,22 @@ const semNotas = (t: string) =>
 const PAGINA = semNotas(ler("src/app/recolha-de-entulho/page.tsx"));
 
 describe("recolha de entulho por volume", () => {
-  it("o preço por m³ é 120 € desde 17-10-2026", () => {
-    expect(PRECOS.recolha_entulho.minimo).toBe(120);
-    expect(PRECOS.recolha_entulho.etiqueta).toBe("desde 120 €/m³");
+  it("o preço por m³ é o dos sacos desde 04-11-2026 (d7): 160 – 192 €", () => {
+    expect(PRECOS.recolha_entulho.minimo).toBe(160);
+    expect(PRECOS.recolha_entulho.maximo).toBe(192);
+    expect(PRECOS.recolha_entulho.etiqueta).toBe("160 – 192 €/m³");
     expect(PRECOS.recolha_entulho.unidade).toBe("m³");
   });
 
   it("as linhas de 1, 3 e 5 m³ são calculadas, e a de cima de 5 é orçamento", () => {
-    expect(PAGINA).toMatch(/até 1 m³\)", priceFrom: desdeOsMetros\(1\)/);
-    expect(PAGINA).toMatch(/até 3 m³\)", priceFrom: desdeOsMetros\(3\)/);
-    expect(PAGINA).toMatch(/até 5 m³\)", priceFrom: desdeOsMetros\(5\)/);
+    expect(PAGINA).toMatch(/\.\.\.linhaDosMetros\(1\)/);
+    expect(PAGINA).toMatch(/\.\.\.linhaDosMetros\(3\)/);
+    expect(PAGINA).toMatch(/\.\.\.linhaDosMetros\(5\)/);
     expect(PAGINA).toMatch(/acima de 5 m³\)", priceFrom: "Orçamento personalizado"/);
   });
 
   it("e as faixas antigas não voltam", () => {
-    for (const velho of ['"180 €"', '"280 €"', '"400 €"', '"110 €"', "110 €/m³"]) {
+    for (const velho of ['"180 €"', '"280 €"', '"400 €"', '"110 €"', "110 €/m³", "120 €/m³", "desdeDoVolume"]) {
       expect(PAGINA, velho).not.toContain(velho);
     }
   });

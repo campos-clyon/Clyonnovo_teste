@@ -123,7 +123,8 @@ describe("4. o hub /servicos", () => {
 
   it("o exemplo do entulho diz o valor com IVA ao lado do sem IVA, os dois da grelha", async () => {
     const r = referenciaDoEntulho(2, "m3");
-    expect(r?.valor.tipo).toBe("desde");
+    // Pelos sacos desde a d7 (04-11-2026): 2 m³ = 80 sacos, uma faixa (era o «desde» de 288 €).
+    expect(r?.valor).toEqual({ tipo: "faixa", de: 320, ate: 384 });
     const mod = await import("@/app/servicos/page");
     const texto = textoDe(cartaoDoEntulho(renderToStaticMarkup(React.createElement(mod.default))));
     expect(texto).toContain(`Com 2 m³, a referência é ${semIvaEscrito(r!.valor)} + IVA (${comIvaEscrito(r!.valor)} com IVA).`);

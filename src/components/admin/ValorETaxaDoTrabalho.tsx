@@ -15,7 +15,7 @@ import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import { avisoDaBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
-import { ACRESCIMO_POR_ITEM_EXTRA } from "@/lib/itens-a-mais";
+import { TABELA_DOS_ITENS_A_MAIS } from "@/lib/itens-a-mais";
 import BotoesDaBase from "@/components/admin/BotoesDaBase";
 import { rotuloDoValorPorBase, sufixoDaBase } from "@/lib/valor-por-base";
 
@@ -133,7 +133,7 @@ export default function ValorETaxaDoTrabalho({
           <BotoesDaBase base={base} valor={valor} horasPrevistas={horasPrevistas} onBase={onBase} onValor={mudarValor} />
           <span className="mt-1 block text-xs text-slate-400">
             {avisoDaBase(base) ??
-              `Pelo trabalho todo. Na mensagem ao cliente vai que cada item fora das fotografias acresce ${ACRESCIMO_POR_ITEM_EXTRA} € + IVA.`}
+              `Pelo trabalho todo. Na mensagem ao cliente vai que cada item fora das fotografias conta pela tabela das peças: ${TABELA_DOS_ITENS_A_MAIS}.`}
           </span>
         </fieldset>
       )}

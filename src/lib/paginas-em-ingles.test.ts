@@ -29,8 +29,10 @@ describe("as páginas em inglês", () => {
   });
 
   it("os preços são os da tabela portuguesa, ditos em inglês, com o IVA", () => {
-    expect(precoEmIngles(PRECOS.recolha_moveis)).toBe(`€${PRECOS.recolha_moveis.minimo}–${PRECOS.recolha_moveis.maximo} + VAT`);
-    expect(precoEmIngles(PRECOS.recolha_entulho)).toBe(`from €${PRECOS.recolha_entulho.minimo}/m³ + VAT`);
+    // d7 (04-11-2026): the furniture «from» is the minimum collection, and rubble a range per m³ (bags or loose).
+    expect(precoEmIngles(PRECOS.recolha_moveis)).toBe(`from €${PRECOS.recolha_moveis.minimo} + VAT`);
+    expect(precoEmIngles(PRECOS.recolha_entulho)).toBe("€160–192/m³ + VAT");
+    expect(PRECOS_EM_INGLES[0].preco).toContain("minimum collection €40 + VAT");
     for (const l of PRECOS_EM_INGLES) expect(l.preco).toContain("VAT");
   });
 

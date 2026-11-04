@@ -8,7 +8,7 @@ import {
   PRAZO_DE_RESPOSTA,
 } from "./seo-data";
 import { PRECOS, etiquetaDoEsvaziamento } from "./precos-publicos";
-import { MOVEIS_POR_PECA_COM_OS_ANDARES } from "./preco-de-referencia";
+import { A_DESLOCACAO_NO_PRECO, DESDE_UMA_PECA, MOVEIS_POR_PECA_COM_OS_ANDARES } from "./preco-de-referencia";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import { NO_MESMO_DIA, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 
@@ -51,7 +51,8 @@ export const PERGUNTAS_FREQUENTES = [
       },
       {
         q: "Recolhem apenas uma peça ou precisam de vários móveis?",
-        a: "Os parceiros recolhem desde uma única peça (um sofá, uma cama, um armário) até uma casa inteira. Não há mínimo de volume.",
+        // 04-11-2026 (d7): a recolha mínima — dizia «Não há mínimo de volume».
+        a: DESDE_UMA_PECA,
       },
       {
         q: "Para onde vão os móveis recolhidos?",
@@ -162,7 +163,8 @@ export const PERGUNTAS_FREQUENTES = [
       },
       {
         q: "Há custo de deslocação para Lisboa e Margem Sul?",
-        a: "O custo da deslocação entra na proposta de cada parceiro. Vê-o antes de aceitar.",
+        // 04-11-2026 (d7): nos móveis por peça e no entulho em sacos, já está no preço.
+        a: A_DESLOCACAO_NO_PRECO,
       },
       {
         q: "O entulho vai para onde? Estão licenciados?",

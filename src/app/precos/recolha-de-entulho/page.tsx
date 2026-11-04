@@ -4,12 +4,12 @@ import PaginaDePreco from "@/components/precos/PaginaDePreco";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { ACRESCIMO_POR_URGENCIA, PRECO_FECHADO } from "@/lib/promessas-publicas";
+import { comMaiuscula } from "@/lib/precos-publicos";
 import {
   ANDARES_DO_ENTULHO_EM_FRASE,
   ENTULHO_POR_M3,
   MEDIDAS_DO_ENTULHO,
-  comIva,
-  euros,
+  PRECO_DO_SACO_EM_TEXTO,
   linhasDoEntulho,
   paginaDePreco,
   semIvaEscrito,
@@ -32,8 +32,15 @@ const [ate10Sacos, umMetro, tresMetros] = linhas;
 const { sacosPorMetroCubico, sacosPorBigBag, pesoDoSaco } = MEDIDAS_DO_ENTULHO;
 const IVA = `${Math.round(TAXA_IVA * 100)} %`;
 
+/*
+ * O m³ AO PREÇO DOS SACOS — 04-11-2026 (decisão d7): era «desde 120 € + IVA
+ * por m³». 1 m³ são 40 sacos, ensacados ou a granel: 160 – 192 € + IVA.
+ */
+const POR_SACO = `${PRECO_DO_SACO_EM_TEXTO.replace(" €", "")} € + IVA por saco`;
+const UM_METRO = `${semIvaEscrito(umMetro.valor)} + IVA (${comIvaEscrito(umMetro.valor)} com IVA)`;
+
 const descricao = descricaoQueCabe([
-  `Recolha de entulho desde ${euros(ENTULHO_POR_M3)} + IVA por m³ (${euros(comIva(ENTULHO_POR_M3))} com IVA).`,
+  `Recolha de entulho a ${POR_SACO}: 1 m³ (≈ ${sacosPorMetroCubico} sacos, ou a granel) ${semIvaEscrito(umMetro.valor)} + IVA.`,
   `Até 10 sacos: ${semIvaEscrito(ate10Sacos.valor)} + IVA.`,
   "Tabela, exemplos e o que a câmara recolhe de graça.",
 ]);
@@ -55,15 +62,15 @@ export default function PrecoDoEntulhoPage() {
         tom: "recolha",
         h1: "Quanto custa recolher entulho?",
         resposta:
-          `A recolha de entulho custa desde ${euros(ENTULHO_POR_M3)} + IVA por metro cúbico ` +
-          `(${euros(comIva(ENTULHO_POR_M3))} com IVA). Até 10 sacos, ${semIvaEscrito(ate10Sacos.valor)} + IVA; ` +
-          `até 3 m³, ${semIvaEscrito(tresMetros.valor)} + IVA. ${COMO_SE_RECOLHE_ENTULHO} ` +
+          `A recolha de entulho conta-se a ${POR_SACO}, ensacado ou a granel: 1 m³ são uns ${sacosPorMetroCubico} sacos, ` +
+          `${UM_METRO}. Até 10 sacos, ${semIvaEscrito(ate10Sacos.valor)} + IVA; ` +
+          `3 m³, ${semIvaEscrito(tresMetros.valor)} + IVA. ${COMO_SE_RECOLHE_ENTULHO} ` +
           "O valor final é a proposta do parceiro, fechada antes de começar e já com o IVA.",
         tabela: { titulo: "Tabela de preços da recolha de entulho", linhas },
         caixa: {
           titulo: "Quanto é 1 m³ de entulho",
           itens: [
-            `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco}.`,
+            `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco}, e a granel conta-se ao mesmo preço.`,
             `Um big bag são cerca de ${sacosPorBigBag} sacos, quase 1 m³. Serve de medida: a recolha é feita em sacos ou a granel, carregada à mão.`,
             NAO_HA_CONTENTORES,
             A_GRANEL,
@@ -83,8 +90,8 @@ export default function PrecoDoEntulhoPage() {
           {
             question: "Quanto custa recolher 1 m³ de entulho?",
             answer:
-              `Desde ${euros(ENTULHO_POR_M3)} + IVA (${euros(comIva(ENTULHO_POR_M3))} com IVA). ` +
-              `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco}.`,
+              `${comMaiuscula(UM_METRO)}, ensacado ou a granel. ` +
+              `1 m³ são cerca de ${sacosPorMetroCubico} sacos de obra de ${pesoDoSaco}, a ${POR_SACO}.`,
           },
           {
             question: "Quanto custa recolher só alguns sacos de entulho?",
@@ -95,7 +102,7 @@ export default function PrecoDoEntulhoPage() {
           {
             question: "Quanto custa tirar o entulho de uma obra num T1 ou T2?",
             answer:
-              `Uma obra num T1 ou T2 costuma dar até 3 m³: ${semIvaEscrito(tresMetros.valor)} + IVA ` +
+              `Uma obra num T1 ou T2 costuma dar até 3 m³, uns ${3 * sacosPorMetroCubico} sacos: ${semIvaEscrito(tresMetros.valor)} + IVA ` +
               `(${comIvaEscrito(tresMetros.valor)} com IVA). Uma casa de banho ou uma cozinha cabem normalmente em 1 m³: ` +
               `${semIvaEscrito(umMetro.valor)} + IVA.`,
           },
@@ -125,8 +132,9 @@ export default function PrecoDoEntulhoPage() {
           priceCurrency: "EUR",
           priceSpecification: {
             "@type": "UnitPriceSpecification",
-            price: ENTULHO_POR_M3,
-            minPrice: ENTULHO_POR_M3,
+            price: ENTULHO_POR_M3.de,
+            minPrice: ENTULHO_POR_M3.de,
+            maxPrice: ENTULHO_POR_M3.ate,
             priceCurrency: "EUR",
             unitCode: "MTQ",
             unitText: "m³",

@@ -1,16 +1,18 @@
 import {
   ENTULHO_ATE_10_SACOS,
-  ENTULHO_POR_M3_ACIMA_DE_1,
   ESVAZIAMENTO_POR_ESPACO,
   ESVAZIAMENTO_POR_TIPOLOGIA,
+  NOME_DO_TAMANHO,
   PECAS_DE_REFERENCIA,
   MINIMO_DE_SACOS,
   PRECOS,
   PRECO_POR_ITEM,
   PRECO_POR_SACO,
+  RECOLHA_MINIMA_DOS_MOVEIS,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
   RECOLHA_POR_ANDAR_SEM_ELEVADOR,
-  desdeDoVolume,
+  faixaDoVolume,
+  precoDaPeca,
   precoDosSacos,
 } from "./precos-publicos";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
@@ -135,10 +137,14 @@ function exigir(n: number | null | undefined, onde: string): number {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * ENTULHO — por volume, a partir do preço por m³
+ * ENTULHO — pelos sacos, ensacado ou a granel (d7, 04-11-2026)
  * ────────────────────────────────────────────────────────────────────────── */
 
-export const ENTULHO_POR_M3 = exigir(PRECOS.recolha_entulho.minimo, "recolha_entulho");
+/** O m³ de entulho, sem IVA: 40 sacos × 4,00–4,80 € = 160–192 € (d7; era «desde 120 €»). */
+export const ENTULHO_POR_M3: { readonly de: number; readonly ate: number } = {
+  de: exigir(PRECOS.recolha_entulho.minimo, "recolha_entulho"),
+  ate: exigir(PRECOS.recolha_entulho.maximo, "recolha_entulho"),
+};
 
 /** Os volumes da grelha, em m³ — os da página /recolha-de-entulho. */
 const VOLUMES: Array<{ m3: number; exemplo: string }> = [
@@ -147,6 +153,13 @@ const VOLUMES: Array<{ m3: number; exemplo: string }> = [
   { m3: 5, exemplo: "Demolições e renovações completas" },
 ];
 
+/*
+ * A GRELHA POR m³ SEGUE OS SACOS — 04-11-2026 (decisão d7, o dono): *«1 m³ a
+ * granel ao mesmo preço que os sacos»*. Cada volume é a conta dos sacos que faz
+ * (40 por m³), ensacados ou a granel: 1 m³ 160–192 €, 3 m³ 480–576 €, 5 m³
+ * 800–960 € sem IVA. Era «Até 1 m³ (≈ 40 sacos) desde 120 €». O mínimo de 10
+ * sacos (40–48 €) fica, e acima de 5 m³ continua a proposta com fotografias.
+ */
 export function linhasDoEntulho(): LinhaDaTabela[] {
   return [
     {
@@ -155,9 +168,9 @@ export function linhasDoEntulho(): LinhaDaTabela[] {
       valor: { tipo: "faixa", de: ENTULHO_ATE_10_SACOS.minimo, ate: ENTULHO_ATE_10_SACOS.maximo },
     },
     ...VOLUMES.map(({ m3, exemplo }) => ({
-      oQue: `Até ${m3} m³ (≈ ${m3 * SACOS_POR_METRO_CUBICO} sacos)`,
+      oQue: `${m3} m³ (≈ ${m3 * SACOS_POR_METRO_CUBICO} sacos, ou a granel)`,
       exemplo,
-      valor: { tipo: "desde", de: desdeDoVolume(m3) } as Valor,
+      valor: { tipo: "faixa", ...faixaDoVolume(m3) } as Valor,
     })),
     {
       oQue: `Mais de ${VOLUMES[VOLUMES.length - 1].m3} m³`,
@@ -178,9 +191,10 @@ export function linhasDoEntulho(): LinhaDaTabela[] {
  * do volume. As conversões são as da casa (40 sacos o m³, 38 o big bag).
  *
  * OS SACOS UM A UM — 03-11-2026 (decisão d4): os sacos e os big bags contam-se
- * a `PRECO_POR_SACO` cada (4,00–4,80 €; até 10, o mínimo de 10), numa faixa;
- * só o volume em m³ (o entulho a granel) continua pela grelha por m³, no
- * «desde». Acima de 5 m³ (200 sacos), proposta com fotografias, como antes.
+ * a `PRECO_POR_SACO` cada (4,00–4,80 €; até 10, o mínimo de 10), numa faixa.
+ * E O GRANEL TAMBÉM — 04-11-2026 (decisão d7): o volume em m³ conta-se pelos
+ * sacos que faz (40 por m³), ao mesmo preço; «1 m³ a granel» = «40 sacos
+ * ensacados». Acima de 5 m³ (200 sacos), proposta com fotografias, como antes.
  */
 export type UnidadeDoEntulho = "sacos" | "m3" | "bigbags";
 
@@ -188,7 +202,7 @@ export type ReferenciaDoEntulho = {
   sacos: number;
   m3: number;
   valor: Valor;
-  /** Contado saco a saco (a faixa de `precoDosSacos`); `false` a granel e acima da grelha. */
+  /** Contado saco a saco (a faixa de `precoDosSacos`) — também a granel desde a d7; `false` só acima da grelha. */
   porSaco: boolean;
 };
 
@@ -213,11 +227,9 @@ export function referenciaDoEntulho(
   if (sacos <= MINIMO_DE_SACOS) return dosSacos();
   const maior = VOLUMES[VOLUMES.length - 1].m3;
   if (m3 > maior) return { sacos, m3, valor: { tipo: "orcamento" }, porSaco: false };
-  if (unidade !== "m3") return dosSacos();
-  // A granel: até 1 m³, o piso da grelha (120 €); daí para cima, 144 €/m³ — a
-  // conta que dá os 432 € dos 3 m³ e os 720 € dos 5 m³ (17-10-2026).
-  const de = m3 <= 1 ? ENTULHO_POR_M3 : Math.max(ENTULHO_POR_M3, Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * m3));
-  return { sacos, m3, valor: { tipo: "desde", de }, porSaco: false };
+  // Em sacos, em big bags ou a granel, a mesma conta (d7, 04-11-2026): era a
+  // grelha por m³, «desde 120 €» até 1 m³ e 144 €/m³ daí para cima.
+  return dosSacos();
 }
 
 /** «4,00–4,80 €» — o preço de um saco, sempre com os cêntimos. */
@@ -373,10 +385,20 @@ export function linhasDosMonosEMoveis(): LinhaDaTabela[] {
       valor: { tipo: "exacto", valor: PRECO_POR_ITEM[p.id] },
       unidade: "peça",
     })),
-    ...PECAS_DE_REFERENCIA.map((p) => ({
-      oQue: p.peca,
-      valor: { tipo: "faixa", de: p.minimo, ate: p.maximo } as Valor,
-    })),
+    // A recolha mínima (d7, 04-11-2026): a soma das peças nunca fica abaixo dela.
+    {
+      oQue: "Móveis: recolha mínima",
+      exemplo: "Uma peça pequena ou média sozinha conta a recolha mínima; os andares somam-se depois",
+      valor: { tipo: "exacto", valor: RECOLHA_MINIMA_DOS_MOVEIS },
+    },
+    // Os exemplos pela tabela das peças (d7): eram faixas próprias, que chocavam com ela.
+    ...PECAS_DE_REFERENCIA.map(
+      (p): LinhaDaTabela => ({
+        oQue: p.peca,
+        exemplo: NOME_DO_TAMANHO[p.tamanho].charAt(0).toUpperCase() + NOME_DO_TAMANHO[p.tamanho].slice(1),
+        valor: { tipo: "exacto", valor: precoDaPeca(p) },
+      }),
+    ),
   ];
 }
 
@@ -414,12 +436,10 @@ export function linhasDoEsvaziamento(): LinhaDaTabela[] {
     })),
     {
       oQue: "Só algumas peças",
-      exemplo: "Quando não é a casa inteira, conta como recolha de móveis, peça a peça",
-      valor: {
-        tipo: "faixa",
-        de: exigir(PRECOS.recolha_moveis.minimo, "recolha_moveis"),
-        ate: exigir(PRECOS.recolha_moveis.maximo, "recolha_moveis"),
-      },
+      exemplo:
+        "Quando não é a casa inteira, conta como recolha de móveis, peça a peça, com a recolha mínima de " +
+        `${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA (${euros(comIva(RECOLHA_MINIMA_DOS_MOVEIS))} com IVA)`,
+      valor: { tipo: "faixa", de: PRECO_POR_ITEM.pequeno, ate: PRECO_POR_ITEM.grande },
       unidade: "peça",
     },
     {

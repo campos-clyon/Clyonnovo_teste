@@ -1,5 +1,6 @@
 import { AVALIACOES, PRAZO_DE_RESPOSTA, NOTAS_EM_FRASE } from "./seo-data";
 import { PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
+import { ENTULHO_EM_FRASE } from "./preco-de-referencia";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import {
   AO_FIM_DE_SEMANA,
@@ -141,7 +142,8 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho de uma obra em Lisboa?",
-        a: `Depende da quantidade. A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE} — uma remodelação de casa de banho ou de cozinha cabe normalmente em 1 m³, uns ${SACOS_POR_METRO_CUBICO} sacos. Diga quantos sacos tem, ou mande uma fotografia: é daí que os parceiros fazem a proposta.`,
+        // O m³ ao preço dos sacos, ensacado ou a granel (d7, 04-11-2026): dizia «desde 120 €/m³».
+        a: `Depende da quantidade. A recolha de entulho conta-se ${ENTULHO_EM_FRASE}. Uma remodelação de casa de banho ou de cozinha cabe normalmente em 1 m³, uns ${SACOS_POR_METRO_CUBICO} sacos. Diga quantos sacos tem, ou mande uma fotografia: é daí que os parceiros fazem a proposta.`,
       },
       {
         q: "A CLYON fornece contentor para entulho em Lisboa?",
@@ -390,7 +392,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa um contentor de entulho em Almada?",
-        a: `${NAO_HA_CONTENTORES} A recolha, essa, é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE}, com transporte e destino licenciado incluídos — e o preço acompanha o número de sacos.`,
+        a: `${NAO_HA_CONTENTORES} A recolha, essa, conta-se ${ENTULHO_EM_FRASE}, com transporte e destino licenciado incluídos.`,
       },
       {
         q: "A CLYON deixa contentor de entulho na Costa da Caparica?",
@@ -554,7 +556,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho em Setúbal?",
-        a: `A recolha de entulho é ${PRECOS.recolha_entulho.etiqueta}, ${SEM_IVA_NA_FRASE}, e o preço acompanha o número de sacos — cerca de 40 sacos de ${PESO_DO_SACO} fazem um metro cúbico. Diga a quantidade e o local e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `A recolha de entulho conta-se ${ENTULHO_EM_FRASE}, em sacos de ${PESO_DO_SACO}. Diga a quantidade e o local e recebe propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "A CLYON fornece contentores para entulho em Setúbal?",

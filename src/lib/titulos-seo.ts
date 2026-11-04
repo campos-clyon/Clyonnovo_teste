@@ -1,5 +1,5 @@
 import { emTerra } from "./preposicao-da-terra";
-import { ENTULHO_ATE_10_SACOS, PRECOS, PRECO_POR_ITEM, maisIva } from "./precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECOS, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, maisIva } from "./precos-publicos";
 import { comIva, euros } from "./quanto-custa";
 import { PRECO_DA_MUDANCA_NO_TITULO } from "./tabela-das-mudancas";
 
@@ -64,7 +64,8 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
 // cabe nos 60 caracteres; vai o piso e o tecto de uma peça, com a unidade e «+ IVA» — e, onde
 // nem isso cabe, o piso («Desde 15 € + IVA»), como era «40 – 120 € + IVA».
 const PRECO_MOVEIS = `${PRECO_POR_ITEM.pequeno}–${PRECO_POR_ITEM.grande} €/Peça + IVA`; // "15–50 €/Peça + IVA"
-const MOVEIS_DESDE = `Desde ${PRECO_POR_ITEM.pequeno} € + IVA`;
+// O «desde» é a recolha mínima desde 04-11-2026 (d7): «Desde 40 € + IVA» (era a peça pequena, 15 €).
+const MOVEIS_DESDE = `Desde ${RECOLHA_MINIMA_DOS_MOVEIS} € + IVA`;
 const SEM_PRECO = "Propostas Grátis";
 
 /*

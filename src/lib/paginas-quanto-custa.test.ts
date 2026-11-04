@@ -4,12 +4,13 @@ import { join } from "node:path";
 import { BLOG_POSTS } from "./blog-data";
 import {
   ENTULHO_ATE_10_SACOS,
-  ENTULHO_POR_M3_ACIMA_DE_1,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
   PECAS_DE_REFERENCIA,
   PRECOS,
+  RECOLHA_MINIMA_DOS_MOVEIS,
   etiquetaDoEsvaziamento,
+  precoDaPeca,
 } from "./precos-publicos";
 import {
   PAGINAS_DE_PRECO,
@@ -53,23 +54,26 @@ describe("os números são os das tabelas do motor", () => {
    * A grelha do dono, 17-10-2026: 10 sacos a 40–50 €, e 1, 3 e 5 m³ desde
    * 120, 432 e 720 €. Sem IVA.
    */
-  // 03-11-2026 (d4): os 10 sacos a 4,00–4,80 € cada, 40–48 €.
-  it("entulho: até 10 sacos a 40–48 €, e 1, 3 e 5 m³ desde 120, 432 e 720 €", () => {
+  // 03-11-2026 (d4): os 10 sacos a 4,00–4,80 € cada, 40–48 €. 04-11-2026 (d7): os m³ pelos sacos que fazem.
+  it("entulho: até 10 sacos a 40–48 €, e 1, 3 e 5 m³ a 160–192, 480–576 e 800–960 €", () => {
     const [sacos, um, tres, cinco, mais] = linhasDoEntulho();
     expect(sacos.valor).toEqual({ tipo: "faixa", de: 40, ate: 48 });
     expect(sacos.exemplo).toBe("Pequenas quantidades, em sacos de 25 a 30 kg");
-    expect(um.valor).toEqual({ tipo: "desde", de: 120 });
-    expect(tres.valor).toEqual({ tipo: "desde", de: 432 });
-    expect(cinco.valor).toEqual({ tipo: "desde", de: 720 });
+    expect(um.valor).toEqual({ tipo: "faixa", de: 160, ate: 192 });
+    expect(tres.valor).toEqual({ tipo: "faixa", de: 480, ate: 576 });
+    expect(cinco.valor).toEqual({ tipo: "faixa", de: 800, ate: 960 });
     expect(mais.valor).toEqual({ tipo: "orcamento" });
+    expect(um.oQue).toBe("1 m³ (≈ 40 sacos, ou a granel)");
     // O preço por m³ que se anuncia é o da linha de 1 m³.
-    expect(PRECOS.recolha_entulho.minimo).toBe(ENTULHO_POR_VOLUME[0].desde);
+    expect([PRECOS.recolha_entulho.minimo, PRECOS.recolha_entulho.maximo]).toEqual([ENTULHO_POR_VOLUME[0].de, ENTULHO_POR_VOLUME[0].ate]);
   });
 
-  it("acima de 1 m³ é o mesmo preço por m³ nas duas linhas (432 ÷ 3 = 720 ÷ 5)", () => {
-    const [, tres, cinco] = ENTULHO_POR_VOLUME;
-    expect(tres.desde / tres.m3).toBe(cinco.desde / cinco.m3);
-    expect(ENTULHO_POR_M3_ACIMA_DE_1).toBe(144);
+  it("o m³ é linear, pelos sacos: 40 sacos por m³ em todas as linhas (d7; era 120 e depois 144 €/m³)", () => {
+    for (const v of ENTULHO_POR_VOLUME) {
+      expect(v.sacos, String(v.m3)).toBe(v.m3 * 40);
+      expect(v.de / v.m3, String(v.m3)).toBe(160);
+      expect(v.ate / v.m3, String(v.m3)).toBe(192);
+    }
   });
 
   it("a grelha de /recolha-de-entulho lê os mesmos sacos e volumes", () => {
@@ -77,23 +81,31 @@ describe("os números são os das tabelas do motor", () => {
     expect(pagina).toContain("priceFrom: `${ENTULHO_ATE_10_SACOS.minimo} €`");
     expect(pagina).toContain("priceTo: `${ENTULHO_ATE_10_SACOS.maximo} €`");
     expect(pagina).toContain("description: ENTULHO_ATE_10_SACOS.descricao");
-    expect(pagina).toContain("return `${desdeDoVolume(m3)} €`;");
+    expect(pagina).toContain("const f = faixaDoVolume(m3);");
+    expect(pagina).toContain("...linhaDosMetros(1)");
     expect(pagina).not.toContain('priceTo: "120 €"');
     expect(ENTULHO_ATE_10_SACOS.maximo).toBe(48);
   });
 
-  // Os móveis por peça desde 03-11-2026 (d6 v2): uma linha por tamanho, «/ peça».
-  it("monos e móveis: a faixa dos monos, as três peças dos móveis e as peças de referência", () => {
-    const [monos, pequena, media, grande, ...pecas] = linhasDosMonosEMoveis();
+  // Os móveis por peça desde 03-11-2026 (d6 v2): uma linha por tamanho, «/ peça»; a recolha mínima e
+  // as peças de referência pela tabela desde a d7 (04-11-2026).
+  it("monos e móveis: a faixa dos monos, as três peças dos móveis, a recolha mínima e as peças de referência", () => {
+    const [monos, pequena, media, grande, minima, ...pecas] = linhasDosMonosEMoveis();
     expect(monos.valor).toEqual({ tipo: "faixa", de: PRECOS.recolha_monos.minimo, ate: PRECOS.recolha_monos.maximo });
     expect([pequena, media, grande].map((l) => [l.valor, l.unidade])).toEqual([
       [{ tipo: "exacto", valor: 15 }, "peça"],
       [{ tipo: "exacto", valor: 30 }, "peça"],
       [{ tipo: "exacto", valor: 50 }, "peça"],
     ]);
-    expect(pecas.map((p) => p.valor)).toEqual(
-      PECAS_DE_REFERENCIA.map((p) => ({ tipo: "faixa", de: p.minimo, ate: p.maximo })),
-    );
+    expect(minima.valor).toEqual({ tipo: "exacto", valor: RECOLHA_MINIMA_DOS_MOVEIS });
+    expect(minima.oQue).toBe("Móveis: recolha mínima");
+    expect(pecas.map((p) => p.valor)).toEqual(PECAS_DE_REFERENCIA.map((p) => ({ tipo: "exacto", valor: precoDaPeca(p) })));
+    expect(pecas.map((p) => [p.oQue, p.exemplo])).toEqual([
+      ["Sofá de 2 a 3 lugares", "Peça grande"],
+      ["Cama de casal com estrado", "Peça grande"],
+      ["Armário grande", "Peça grande"],
+      ["Mesa com cadeiras", "Peça média"],
+    ]);
   });
 
   it("esvaziamento: as tipologias de /esvaziamento-de-casas, com o mínimo e a moradia", () => {

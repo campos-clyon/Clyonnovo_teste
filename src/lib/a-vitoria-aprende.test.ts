@@ -23,7 +23,7 @@ import { respostaLivre } from "./whatsapp-compreensao";
 import { PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-das-mudancas";
 import { QUEM_FAZ_O_TRABALHO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
-import { ACRESCIMO_POR_ITEM_EXTRA } from "./itens-a-mais";
+import { ITENS_A_MAIS_PARA_O_CLIENTE } from "./itens-a-mais";
 import { PRECOS } from "./precos-publicos";
 
 /**
@@ -48,7 +48,7 @@ describe("o que o site sabe — lido das fontes", () => {
     expect(texto).toContain(PROMESSA_DO_PRAZO);
     expect(texto).toContain(RESPOSTA_SOBRE_CONTENTORES);
     expect(texto).toContain(PRECO_DA_MUDANCA_POR_EXTENSO);
-    expect(texto).toContain(`${ACRESCIMO_POR_ITEM_EXTRA} € + IVA`);
+    expect(texto).toContain(ITENS_A_MAIS_PARA_O_CLIENTE);
   });
 
   it("cada preço sem IVA vai com o valor com IVA ao lado", () => {
@@ -60,8 +60,15 @@ describe("o que o site sabe — lido das fontes", () => {
   it("os euros das fontes têm os preços do site e o seu valor com IVA", () => {
     expect(EUROS_DAS_FONTES).toContain(PRECOS.recolha_moveis.minimo);
     expect(EUROS_DAS_FONTES).toContain(49.2);
-    expect(EUROS_DAS_FONTES).toContain(ACRESCIMO_POR_ITEM_EXTRA);
-    expect(EUROS_DAS_FONTES).toContain(39.36);
+    // Os itens a mais pela tabela das peças (d7, 04-11-2026): os 32 € (39,36 € com IVA) saíram.
+    expect(EUROS_DAS_FONTES).toContain(30);
+    expect(EUROS_DAS_FONTES).toContain(36.9);
+    expect(EUROS_DAS_FONTES).not.toContain(32);
+    expect(EUROS_DAS_FONTES).not.toContain(39.36);
+    // O m³ ao preço dos sacos (d7): 160–192 €, e não o 144 €/m³ de antes.
+    expect(EUROS_DAS_FONTES).toContain(160);
+    expect(EUROS_DAS_FONTES).toContain(192);
+    expect(EUROS_DAS_FONTES).not.toContain(144);
   });
 
   it("lê os euros de um texto, faixas incluídas", () => {
@@ -83,7 +90,9 @@ describe("a guarda: uma lição nunca muda um preço, uma taxa ou uma promessa",
 
   it("os preços do site, com o IVA ao lado, passam", () => {
     expect(motivoParaBloquear("A recolha de móveis fica entre 40 – 120 € sem IVA (49,20 – 147,60 € com IVA).")).toBeNull();
-    expect(motivoParaBloquear("Cada item a mais acresce 32 € + IVA = 39,36 €.")).toBeNull();
+    expect(motivoParaBloquear("Cada item a mais conta pela tabela das peças: média 30 € + IVA (36,90 € com IVA).")).toBeNull();
+    // Os 32 € por item de antes da d7 (04-11-2026) já não batem.
+    expect(motivoParaBloquear("Cada item a mais acresce 32 € + IVA = 39,36 €.")).toMatch(/32 €.*não bate com os preços do site/);
   });
 
   it("«próprio dia», contentores e big bags ficam bloqueados — negados, não", () => {

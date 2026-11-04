@@ -31,7 +31,8 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Quem retira móveis velhos em Lisboa? Sofás, camas e armários, ${MOVEIS_POR_PECA_CURTO}. Propostas em menos de 6 horas.`,
+    // Com a recolha mínima (d7, 04-11-2026) a frase do preço cresceu: «e armários» saiu para caber.
+    `Quem retira móveis velhos em Lisboa? Sofás e camas, ${MOVEIS_POR_PECA_CURTO}. Propostas em menos de 6 horas.`,
   keywords: [
     "empresas que retiram móveis velhos",
     "empresas que retiram móveis velhos Lisboa",
@@ -54,7 +55,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Empresas que Retiram Móveis Velhos em Lisboa",
     description:
-      `Parceiros retiram sofás, camas, armários, colchões e eletrodomésticos, com desmontagem a pedido. ${comMaiuscula(MOVEIS_POR_PECA_CURTO)}.`,
+      `Parceiros retiram sofás, camas, armários, colchões e eletrodomésticos. ${comMaiuscula(MOVEIS_POR_PECA_CURTO)}.`,
     url: "https://clyon.pt/retirar-moveis-velhos",
   }),
 };

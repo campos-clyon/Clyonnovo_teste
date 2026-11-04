@@ -1,5 +1,11 @@
 import { ESVAZIAMENTO_POR_ESPACO, ESVAZIAMENTO_POR_TIPOLOGIA, PECAS_DE_REFERENCIA, PRECOS, comMaiuscula } from "./precos-publicos";
-import { ANDARES_DOS_MOVEIS, MOVEIS_POR_PECA, PROPOSTA_COM_FOTOGRAFIAS, faixaSemEComIva, valorSemEComIva } from "./preco-de-referencia";
+import {
+  MOVEIS_POR_PECA_COM_OS_ANDARES,
+  PROPOSTA_COM_FOTOGRAFIAS,
+  faixaSemEComIva,
+  precoDaPecaComOIva,
+  valorSemEComIva,
+} from "./preco-de-referencia";
 import { emTerra } from "./preposicao-da-terra";
 import { linhasDoEntulho, linhasDosMonosEMoveis, type Valor } from "./quanto-custa";
 
@@ -54,18 +60,15 @@ function exigir(n: number | null | undefined, onde: string): number {
   return n;
 }
 
-const faixaDe = (servico: "recolha_moveis" | "recolha_monos"): Valor => ({
-  tipo: "faixa",
-  de: exigir(PRECOS[servico].minimo, servico),
-  ate: exigir(PRECOS[servico].maximo, servico),
-});
-
-/** «Recolha de móveis no Barreiro» — peça a peça desde 03-11-2026 (d6 v2), com os andares. */
+/**
+ * «Recolha de móveis no Barreiro» — peça a peça desde 03-11-2026 (d6 v2), com os
+ * andares; desde a d7 (04-11-2026) o preço é o «desde» da recolha mínima.
+ */
 function variosMoveis(cidade: string): ReferenciaDaCidade {
   return {
     oQue: `Recolha de móveis ${emTerra(cidade)}, por peça`,
-    exemplo: `${comMaiuscula(MOVEIS_POR_PECA)}, ${ANDARES_DOS_MOVEIS}.`,
-    preco: precoComOIvaAoLado(faixaDe("recolha_moveis")),
+    exemplo: `${comMaiuscula(MOVEIS_POR_PECA_COM_OS_ANDARES)}.`,
+    preco: precoComOIvaAoLado({ tipo: "desde", de: exigir(PRECOS.recolha_moveis.minimo, "recolha_moveis") }),
   };
 }
 
@@ -77,12 +80,12 @@ function variosMoveis(cidade: string): ReferenciaDaCidade {
 export function referenciasDaCidade(servicoDaCidade: string, cidade: string): ReferenciaDaCidade[] {
   switch (servicoDaCidade) {
     case "recolha-moveis":
-      // As peças soltas ficam dentro da faixa da recolha de móveis (um teste
-      // confere); o artigo do sofá diz as mesmas.
+      // As peças soltas pela tabela das peças (d7, 04-11-2026: eram faixas
+      // próprias); o artigo do sofá diz as mesmas.
       return [
         ...PECAS_DE_REFERENCIA.map((p) => ({
           oQue: p.peca,
-          preco: precoComOIvaAoLado({ tipo: "faixa", de: p.minimo, ate: p.maximo }),
+          preco: precoDaPecaComOIva(p),
         })),
         variosMoveis(cidade),
       ];

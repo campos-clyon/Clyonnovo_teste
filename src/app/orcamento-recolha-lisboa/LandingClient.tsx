@@ -33,7 +33,7 @@ import {
 } from "@/lib/analytics";
 import { NOTAS_EM_LINHA } from "@/lib/seo-data";
 import { reviews as AVALIACOES_REAIS } from "@/lib/reviews-data";
-import { PRECOS } from "@/lib/precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PECAS_EM_TEXTO, PRECOS } from "@/lib/precos-publicos";
 import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import {
   ACRESCIMO_POR_URGENCIA,
@@ -295,12 +295,12 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
    * 40 € + IVA», e no telemóvel o número só aparecia três ecrãs abaixo. Fica
    * aqui, da fonte única, com o IVA ao lado.
    */
-  // Por peça desde 03-11-2026 (d6): o «desde» é a peça pequena, e a unidade vai escrita.
-  const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 15 };
+  // Por peça desde 03-11-2026 (d6); desde a d7 (04-11-2026) o «desde» é a recolha mínima, 40 € + IVA.
+  const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 };
   const bullets = [
     {
       icon: Sofa,
-      label: `Móveis ${semIvaEscrito(desdeMoveis, "peça")} + IVA (${comIvaEscrito(desdeMoveis, "peça")} com IVA)`,
+      label: `Móveis ${semIvaEscrito(desdeMoveis)} + IVA (${comIvaEscrito(desdeMoveis)} com IVA)`,
     },
     { icon: Truck, label: "Carregamento feito pelo parceiro" },
     { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
@@ -811,11 +811,11 @@ function PricingGuide() {
    */
   const cards: { title: string; text: string; icon: typeof Sofa; preco: Valor; unidade?: string }[] = [
     {
+      // A recolha mínima e as peças (d7, 04-11-2026): era «15 – 50 € / peça».
       title: "Móveis",
-      text: "Sofás, camas, armários e colchões, de qualquer divisão.",
+      text: `Sofás, camas, armários e colchões, de qualquer divisão. Por peça: ${PECAS_EM_TEXTO} + IVA.`,
       icon: Sofa,
-      preco: { tipo: "faixa", de: PRECOS.recolha_moveis.minimo ?? 15, ate: PRECOS.recolha_moveis.maximo ?? 50 },
-      unidade: "peça",
+      preco: { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 },
     },
     {
       title: "Monos",
@@ -824,10 +824,11 @@ function PricingGuide() {
       preco: { tipo: "faixa", de: PRECOS.recolha_monos.minimo ?? 30, ate: PRECOS.recolha_monos.maximo ?? 100 },
     },
     {
+      // O m³ ao preço dos sacos, ensacado ou a granel (d7, 04-11-2026): era «desde 120 € / m³».
       title: "Entulho",
-      text: "Em sacos ou a granel. Avaliado por volume, peso e acesso.",
+      text: `Em sacos ou a granel, ao mesmo preço; até 10 sacos, ${ENTULHO_ATE_10_SACOS.minimo} – ${ENTULHO_ATE_10_SACOS.maximo} € + IVA.`,
       icon: Trash2,
-      preco: { tipo: "desde", de: PRECOS.recolha_entulho.minimo ?? 120 },
+      preco: { tipo: "faixa", de: PRECOS.recolha_entulho.minimo ?? 160, ate: PRECOS.recolha_entulho.maximo ?? 192 },
       unidade: "m³",
     },
     {

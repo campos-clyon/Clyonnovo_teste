@@ -45,6 +45,9 @@ import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
  * E desde 31-10-2026: p) um valor dito «sem IVA» leva o com IVA na mesma
  * frase (ou a nota do dono, `SEM_IVA_NA_FRASE`).
  *
+ * E desde 04-11-2026 (d7): r) em src/, nenhum preço de peça à mão (vem de
+ * `PRECO_POR_ITEM`), nenhum «sem mínimo» e nenhum «desde 120 €/m³».
+ *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
  * passar de TAMANHO_MAXIMO. Desce o número quando a lista desce.
@@ -68,7 +71,8 @@ type Regra =
   | "m-mal-escrito"
   | "n-parceiro"
   | "p-sem-iva-sozinho"
-  | "q-verificado";
+  | "q-verificado"
+  | "r-pecas-e-entulho";
 
 interface Excepcao {
   ficheiro: string;
@@ -355,6 +359,24 @@ const MAL_ESCRITAS: RegExp[] = [
   // painel e na app CLYON Pro (relatório da Engenharia — Site, 28-10-2026).
   /\bValores fala\b/i,
 ];
+
+/*
+ * r) AS PEÇAS E O ENTULHO SÓ PELAS FONTES — d7, 04-11-2026 (ordem do CEO).
+ *
+ * Os exemplos por peça (sofá 40–70 €, cama 40–65 €, armário 55–95 €) viviam
+ * ao lado da tabela por peça (15 / 30 / 50 €) e chocavam com ela; o «sem mínimo
+ * por pedido» e o «não há mínimo de volume» ficaram depois da recolha mínima;
+ * e o «desde 120 €/m³» depois de o granel passar a contar pelos sacos. Em src/
+ * (fora das fontes dos preços), nenhum texto diz um preço de peça escrito à mão
+ * — vem de `PRECO_POR_ITEM`, e chega aqui como «‹›» —, nem «sem mínimo» (o
+ * «sem mínimo de zona» do motor é outra coisa, e fica), nem 120 € por m³.
+ */
+const PECA_COM_PRECO_A_MAO =
+  /(?<!\p{L})(sof[áa]s?|camas?|arm[áa]rios?|roupeiros?|mesas?|colch(?:ão|ões)|peças?(?: pequenas?| médias?| grandes?)?)(?!\p{L})[^.;!?]{0,30}?(?<![\p{L}\d_.,‹])\d+(?:[.,]\d{1,2})?\s?(?:(?:–|-|a)\s?\d+(?:[.,]\d{1,2})?\s?)?(?:€|euros?(?!\p{L}))/iu;
+const SEM_MINIMO = /(?<!\p{L})(sem m[íi]nimo(?! de zona)|n[ãa]o h[áa] m[íi]nimo)/iu;
+const ENTULHO_A_120 = /(?<![\d.,])120\s?€\s?(\/|por)\s?(m³|m3|metro)|m³[^.;]{0,25}desde\s+120\s?€/iu;
+const PRECOS_DA_D7: RegExp[] = [PECA_COM_PRECO_A_MAO, SEM_MINIMO, ENTULHO_A_120];
+const A_REGRA_R_SE_APLICA = (f: string) => f.startsWith("src/") && !FONTES_DE_PRECOS.has(f);
 
 /*
  * n) «PARCEIRO», NÃO «PROFISSIONAL», NO QUE O CLIENTE LÊ — 29-10-2026 (dono).
@@ -716,6 +738,8 @@ function achadosDe(f: string): Achado[] {
       for (const m of texto.matchAll(EUROS_A_MAO)) out.push({ ficheiro: f, linha, regra: "l-euros-a-mao", texto: m[0] });
     }
     if (!NAO_FALAM.has(f)) for (const re of MAL_ESCRITAS) marcar("m-mal-escrito", re.exec(texto));
+    // r) O SQL fica de fora.
+    if (A_REGRA_R_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of PRECOS_DA_D7) marcar("r-pecas-e-entulho", re.exec(texto));
     // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.
     if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const p = profissionalAoCliente(texto);
@@ -962,6 +986,30 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     for (const f of ["src/app/conta/components/OrderDetailModal.tsx", "src/lib/email-proposta.ts", "src/lib/pricing-helper.ts"]) {
       expect(SEM_IVA_SE_APLICA(f), f).toBe(false);
     }
+  });
+
+  it("a regra r apanha o preço de peça à mão, o «sem mínimo» e o «desde 120 €/m³» (d7, 04-11-2026)", () => {
+    const tem = (s: string) => PRECOS_DA_D7.some((re) => re.test(s));
+    // O que estava no site antes da d7.
+    expect(tem("Sofá de 2 a 3 lugares: 40 – 70 €")).toBe(true);
+    expect(tem("o sofá 40–70 € ao lado de grande 50 €")).toBe(true);
+    expect(tem("Armário grande: 55 – 95 € + IVA")).toBe(true);
+    expect(tem("Itens Grandes (sofá, armário…): 2 × 50 € = 100 €")).toBe(true);
+    expect(tem("A recolha conta-se por peça, sem mínimo por pedido.")).toBe(true);
+    expect(tem("De uma peça só a uma casa inteira. Não há mínimo de volume.")).toBe(true);
+    expect(tem("A recolha de entulho é desde 120 €/m³, sem IVA")).toBe(true);
+    expect(tem("Até 1 m³ (≈ 40 sacos) desde 120 €")).toBe(true);
+    // O que se escreve agora: das fontes, interpolado.
+    expect(tem("Sofá de 2 a 3 lugares: ‹›")).toBe(false);
+    expect(tem("Um sofá conta como uma ‹›. A recolha conta-se ‹›.")).toBe(false);
+    expect(tem("Itens Grandes (sofá, armário, frigorífico…): ‹› × ‹› € = ‹› €")).toBe(false);
+    expect(tem("ENTULHO: mínimo fixo ‹› € s/IVA — sem mínimo de zona")).toBe(false);
+    expect(tem("Garagem: desde 120 €")).toBe(false);
+    expect(tem("1 m³ (≈ ‹› sacos, ou a granel): ‹›")).toBe(false);
+    // As fontes dos preços são o sítio certo; as apps ficam com as Apps.
+    expect(A_REGRA_R_SE_APLICA("src/lib/precos-publicos.ts")).toBe(false);
+    expect(A_REGRA_R_SE_APLICA("src/lib/preco-de-referencia.ts")).toBe(true);
+    expect(A_REGRA_R_SE_APLICA("app-cliente/src/componentes/Preco.tsx")).toBe(false);
   });
 
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {

@@ -2,6 +2,7 @@
 
 import { Minus, Plus } from "lucide-react";
 import {
+  RECOLHA_MINIMA_COM_IVA,
   ROTULO_DO_TOTAL_DOS_ITENS,
   contaDosItens,
   precoDoItem,
@@ -159,6 +160,11 @@ export default function MovelItemSelector({
               />
             </div>
           ))}
+
+          {/* A recolha mínima (d7, 04-11-2026): a soma das peças nunca fica abaixo dela. */}
+          <p className="text-[11px] text-slate-500">
+            Recolha mínima {RECOLHA_MINIMA_COM_IVA}; os andares somam-se depois.
+          </p>
 
           {totalItems > 0 && (
             <div className="border-t border-slate-200 pt-3 flex items-center justify-between gap-3">

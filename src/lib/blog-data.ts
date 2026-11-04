@@ -1,12 +1,13 @@
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, O_DIA_DO_TRABALHO, PROMESSA_DO_PRAZO, PROPOSTAS_EM_ATE } from "./promessas-publicas";
-import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva } from "./precos-publicos";
+import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva, precoDaPeca } from "./precos-publicos";
 import {
-  faixaSemEComIva,
+  DESDE_UMA_PECA,
+  ENTULHO_EM_FRASE,
   pecaComOIvaAoLado,
   precoDeReferencia,
   valorSemEComIva,
 } from "./preco-de-referencia";
-import { comIva, euros } from "./quanto-custa";
+import { PRECO_DO_SACO_EM_TEXTO, comIva, euros } from "./quanto-custa";
 import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
 import {
   COMO_SE_RECOLHE_ENTULHO,
@@ -233,7 +234,8 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "8 min",
     publishDate: "2026-03-16",
-    updatedDate: "2026-10-28",
+    // 04-11-2026 (d7): «recolhe apenas uma peça?» com a recolha mínima.
+    updatedDate: "2026-11-04",
     heroLabel: "Guia prático",
     intro:
       "A recolha de móveis é dos pedidos mais frequentes na CLYON. Seja por mudança, renovação, venda de casa, fim de arrendamento, herança ou despejo de recheios, o objetivo costuma ser sempre o mesmo: libertar espaço depressa, com segurança e sem complicar acessos, desmontagens ou transporte. Precisa de recolha de móveis em Lisboa ou na Margem Sul? Veja a [recolha de móveis](/recolha-de-moveis) ou [simule um orçamento](/simulador). Para esvaziar uma casa ou apartamento completo, veja o [esvaziamento de casas](/esvaziamento-de-casas).",
@@ -289,8 +291,8 @@ export const BLOG_POSTS: BlogPost[] = [
     faq: [
       {
         question: "A CLYON recolhe apenas uma peça, como um sofá?",
-        answer:
-          "Sim. A recolha pode ser para uma única peça ou para vários móveis, dependendo da disponibilidade, da localização e das condições de acesso.",
+        // 04-11-2026 (d7): com a recolha mínima, das fontes.
+        answer: `Sim. ${DESDE_UMA_PECA}`,
       },
       {
         question: "É possível recolher móveis no mesmo dia?",
@@ -889,7 +891,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Quanto custa retirar um sofá em Lisboa? Preços, Câmara e alternativas",
     metaTitle: "Quanto Custa Retirar um Sofá em Lisboa?",
     description:
-      `Retirar um sofá em Lisboa custa, como referência, ${SOFA.minimo} a ${SOFA.maximo} € + IVA. O que faz variar o preço, a recolha gratuita da Câmara e quando doar.`,
+      `Retirar um sofá em Lisboa custa, como referência, ${precoDaPeca(SOFA)} € + IVA: é uma peça grande. O que faz variar o preço, a recolha gratuita da Câmara e quando doar.`,
     category: "Recolha de móveis",
     keywords: [
       "quanto custa retirar sofá lisboa",
@@ -900,8 +902,8 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-14",
-    // 03-11-2026 (d6 v2): a recolha de móveis por peça, sem mínimo por pedido.
-    updatedDate: "2026-11-03",
+    // 03-11-2026 (d6 v2): a recolha de móveis por peça; 04-11-2026 (d7): a recolha mínima, e o sofá pela tabela das peças.
+    updatedDate: "2026-11-04",
     heroLabel: "Recolha de móveis",
     intro:
       "O sofá é a peça que mais gente quer tirar de casa, e a que mais dúvidas levanta: cabe no elevador? Tem de ser desmontado? A Câmara leva-o de graça? Este guia junta os valores de referência da CLYON para Lisboa, o que os faz variar e as alternativas sem custo.",
@@ -910,7 +912,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quanto custa, em números",
         paragraphs: [
           // Cada valor com o com IVA ao lado (31-10-2026): as peças iam só sem IVA.
-          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${faixaSemEComIva(SOFA.minimo, SOFA.maximo)}. Uma recolha de móveis conta-se ${precoDeReferencia("recolha_moveis")}, sem mínimo por pedido, e o sofá é uma peça grande. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
+          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${valorSemEComIva(precoDaPeca(SOFA))}: o sofá é uma peça grande. Uma recolha de móveis conta-se ${precoDeReferencia("recolha_moveis")}, e os andares somam-se depois do mínimo. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
           "Para comparar, o sofá e as outras peças que costumam sair com ele:",
         ],
         bullets: PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado),
@@ -1125,7 +1127,8 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "entulho-sacos-big-bag-ou-contentor",
     title: "Entulho de obras: sacos, big bag da câmara ou contentor? Como escolher",
     metaTitle: "Entulho de Obras: Sacos, Big Bag ou Contentor?",
-    description: `Três formas de tirar o entulho de uma obra: o big bag da câmara, um contentor alugado ou a recolha em sacos (${maisIva(PRECOS.recolha_entulho.etiqueta)}).`,
+    // O saco e o m³ ao mesmo preço (d7, 04-11-2026): dizia «desde 120 €/m³ + IVA».
+    description: `Três formas de tirar o entulho de uma obra: o big bag da câmara, um contentor alugado ou a recolha em sacos (${PRECO_DO_SACO_EM_TEXTO} + IVA por saco).`,
     category: "Recolha de entulho",
     keywords: [
       "big bag entulho câmara",
@@ -1136,6 +1139,8 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "6 min",
     publishDate: "2026-10-15",
+    // 04-11-2026 (d7): o entulho por saco, e a granel ao mesmo preço.
+    updatedDate: "2026-11-04",
     heroLabel: "Recolha de entulho",
     intro:
       "Uma obra pequena — uma casa de banho, uma cozinha, um quarto — deixa entulho que não pode ir para o contentor do lixo. Há três caminhos: o big bag que muitas câmaras recolhem, um contentor alugado à porta, ou a recolha em sacos por um parceiro. Este guia compara os três, com as regras que as câmaras publicam.",
@@ -1165,7 +1170,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "A recolha em sacos",
         paragraphs: [
           `${COMO_SE_RECOLHE_ENTULHO} Se o entulho estiver solto no chão, o parceiro ensaca-o no local. Os sacos descem por qualquer escada, e a rua não fica ocupada com um contentor.`,
-          `Como referência, a recolha fica ${maisIva(PRECOS.recolha_entulho.etiqueta)} — e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO} sacos de ${PESO_DO_SACO}. Na proposta, o preço já vem com IVA incluído.`,
+          `Como referência, a recolha conta-se ${ENTULHO_EM_FRASE}. Cada saco é de ${PESO_DO_SACO}, e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO}. Na proposta, o preço já vem com IVA incluído.`,
         ],
       },
       {

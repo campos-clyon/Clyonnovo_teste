@@ -68,12 +68,17 @@ export default function CalculadoraDeEntulho() {
   const conta = valorDoEntulho(Number.isFinite(quantidade) && quantidade > 0 ? { quantidade, unidade } : null, acesso);
   const ref = conta?.ref ?? null;
   const valor = conta?.valor ?? null;
-  // A conta à vista (d4): os sacos um a um e os andares, como no simulador.
+  // A conta à vista (d4): os sacos um a um e os andares, como no simulador. Os m³ (a granel
+  // ou ensacados) contam-se pelos sacos que fazem, ao mesmo preço (d7, 04-11-2026).
+  const antesDosSacos =
+    unidade === "bigbags"
+      ? `${numero(quantidade)} ${quantidade === 1 ? "big bag" : "big bags"}`
+      : unidade === "m3"
+        ? `${numero(quantidade)} m³`
+        : undefined;
   const linhasDaConta = conta
     ? [
-        ...(conta.ref.porSaco
-          ? [contaDosSacosEmTexto(conta.ref.sacos, unidade === "bigbags" ? `${numero(quantidade)} ${quantidade === 1 ? "big bag" : "big bags"}` : undefined)]
-          : []),
+        ...(conta.ref.porSaco ? [contaDosSacosEmTexto(conta.ref.sacos, antesDosSacos, unidade === "m3" ? "≈" : "=")] : []),
         ...(conta.valor.tipo === "orcamento" ? [] : linhasDosAndares(conta.sup, acesso)),
       ]
     : [];

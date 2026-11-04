@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ESVAZIAMENTO_POR_ESPACO, PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva } from "./precos-publicos";
+import { ESVAZIAMENTO_POR_ESPACO, PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva, precoDaPeca } from "./precos-publicos";
 import { CITIES, NA_PROPOSTA_COM_IVA, SERVICES } from "./seo-data";
 import { tituloDaCidade } from "./titulos-seo";
 import {
@@ -201,7 +201,8 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
     const lista = sofa.sections.flatMap((s) => s.bullets ?? []);
     expect(lista).toEqual(PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado));
     for (const p of PECAS_DE_REFERENCIA) {
-      expect(lista.join("\n")).toContain(`${euros(comIva(p.minimo)).replace(" €", "")} – ${euros(comIva(p.maximo))} com IVA`);
+      // Pela tabela das peças desde a d7 (04-11-2026): um valor por peça, com o com IVA ao lado.
+      expect(lista.join("\n")).toContain(`${euros(precoDaPeca(p))} + IVA (${euros(comIva(precoDaPeca(p)))} com IVA)`);
     }
     expect(JSON.stringify(sofa)).not.toMatch(/valores sem IVA\)|também sem IVA/);
   });
@@ -241,10 +242,11 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
 
   it("os cartões e as grelhas que mostravam o número nu", () => {
     // Só o com IVA, para a linha pequena por baixo de `maisIva(etiqueta)`.
-    expect(comIvaDaEtiqueta("recolha_moveis")).toBe("por peça: pequena 18,45 €, média 36,90 €, grande 61,50 € com IVA");
+    expect(comIvaDaEtiqueta("recolha_moveis")).toBe("por peça: pequena 18,45 €, média 36,90 €, grande 61,50 € com IVA; recolha mínima 49,20 € com IVA");
     expect(comIvaDaEtiqueta("esvaziamento_casa")).toBe("desde 307,50 € com IVA");
     expect(comIvaDaEtiqueta("esvaziamento_garagem")).toBe("desde 147,60 € com IVA");
-    expect(comIvaDaEtiqueta("recolha_entulho")).toBe("desde 147,60 €/m³ com IVA");
+    // O m³ ao preço dos sacos desde a d7 (04-11-2026): era «desde 147,60 €/m³».
+    expect(comIvaDaEtiqueta("recolha_entulho")).toBe("196,80 – 236,16 €/m³ com IVA");
     expect(comIvaDaEtiqueta("mudanca")).toBe(`${euros(PRECO_POR_HORA_COM_IVA)}/hora com IVA`);
     expect(comIvaDaEtiqueta("outro")).toBeNull();
 

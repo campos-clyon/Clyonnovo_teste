@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { PRECOS } from "./precos-publicos";
+import { PRECOS, PRECO_POR_ITEM } from "./precos-publicos";
 import { comIva, euros } from "./quanto-custa";
 import {
   ANCORA_DA_RECOLHA_GRATUITA,
@@ -41,9 +41,10 @@ describe("recolha gratuita de móveis usados — Lisboa e Setúbal", () => {
   });
 
   it("o preço sai da fonte única, com o IVA ao lado", () => {
-    const { minimo, maximo } = PRECOS.recolha_moveis;
-    expect(PRECO_DOS_MOVEIS).toContain(`${minimo}`);
-    expect(PRECO_DOS_MOVEIS).toContain(euros(comIva(maximo!)));
+    // A recolha mínima é o «desde» dos móveis desde a d7 (04-11-2026); as peças, a tabela.
+    const { minimo } = PRECOS.recolha_moveis;
+    expect(PRECO_DOS_MOVEIS).toContain(`recolha mínima ${minimo} € + IVA (${euros(comIva(minimo!))} com IVA)`);
+    expect(PRECO_DOS_MOVEIS).toContain(euros(comIva(PRECO_POR_ITEM.grande)));
     expect(PRECO_DOS_MOVEIS).toMatch(/\+ IVA \(.+ com IVA\)/);
   });
 

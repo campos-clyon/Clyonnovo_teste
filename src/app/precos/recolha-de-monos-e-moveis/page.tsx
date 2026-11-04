@@ -3,15 +3,15 @@ import type { Metadata } from "next";
 import PaginaDePreco from "@/components/precos/PaginaDePreco";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
-import { PECAS_DE_REFERENCIA, PRECOS } from "@/lib/precos-publicos";
+import { PECAS_DE_REFERENCIA, PRECOS, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA_COM_OS_ANDARES, O_QUE_INCLUI_A_RECOLHA_MINIMA, precoDaPecaComOIva } from "@/lib/preco-de-referencia";
 import { ACRESCIMO_POR_URGENCIA, DESMONTAGEM_A_PEDIDO, PRECO_FECHADO } from "@/lib/promessas-publicas";
 import {
-  comIvaEscrito,
+  euros,
   linhaDoEsvaziamento,
   linhasDosMonosEMoveis,
   paginaDePreco,
   semIvaEscrito,
-  type Valor,
 } from "@/lib/quanto-custa";
 import { SITE_URL } from "@/lib/seo-data";
 import { TAXA_IVA } from "@/lib/taxas-plataforma";
@@ -23,26 +23,29 @@ import { TAXA_IVA } from "@/lib/taxas-plataforma";
  * peças para a câmara. Aqui estão as duas faixas, as peças de referência e,
  * concelho a concelho, o que a câmara recolhe de graça — para a pessoa
  * escolher com tudo à frente.
+ *
+ * 04-11-2026 (decisão d7): os móveis por peça com a recolha mínima de 40 € +
+ * IVA, e o sofá, a cama e o armário grande como peças grandes, pela tabela.
  */
 const pagina = paginaDePreco("/precos/recolha-de-monos-e-moveis");
 const linhas = linhasDosMonosEMoveis();
-const [monos, moveis] = linhas;
+const [monos] = linhas;
 const IVA = `${Math.round(TAXA_IVA * 100)} %`;
 
-/** A faixa de uma peça de referência, pelo nome. */
-function faixaDa(peca: string): Valor {
+/** «peça grande, 50 € + IVA (61,50 € com IVA)» — uma peça de referência pelo nome, pela tabela das peças. */
+function precoDa(peca: string): string {
   const p = PECAS_DE_REFERENCIA.find((x) => x.peca === peca);
   if (!p) throw new Error(`Peça de referência desconhecida: ${peca}`);
-  return { tipo: "faixa", de: p.minimo, ate: p.maximo };
+  return precoDaPecaComOIva(p);
 }
-const sofa = faixaDa("Sofá de 2 a 3 lugares");
-const cama = faixaDa("Cama de casal com estrado");
-const armario = faixaDa("Armário grande");
+const sofa = precoDa("Sofá de 2 a 3 lugares");
+const cama = precoDa("Cama de casal com estrado");
+const armario = precoDa("Armário grande");
 const t01 = linhaDoEsvaziamento("T0/T1").valor;
 const moradia = linhaDoEsvaziamento("moradia").valor;
 
 const descricao = descricaoQueCabe([
-  `Recolha de monos ${semIvaEscrito(monos.valor)} + IVA, de móveis ${semIvaEscrito(moveis.valor)} + IVA, sofá ${semIvaEscrito(sofa)} + IVA.`,
+  `Recolha de monos ${semIvaEscrito(monos.valor)} + IVA; móveis por peça, ${PRECO_POR_ITEM.pequeno} a ${euros(PRECO_POR_ITEM.grande)} + IVA, recolha mínima ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA.`,
   "Com IVA ao lado, e o que a câmara recolhe de graça.",
 ]);
 
@@ -63,9 +66,8 @@ export default function PrecoDosMonosEMoveisPage() {
         tom: "recolha",
         h1: "Quanto custa recolher monos e móveis?",
         resposta:
-          `A recolha de monos custa ${semIvaEscrito(monos.valor)} + IVA, e a de móveis ${semIvaEscrito(moveis.valor)} + IVA, ` +
-          `conforme a peça, o andar e o elevador. Um sofá de 2 a 3 lugares fica em ${semIvaEscrito(sofa)} + IVA ` +
-          `(${comIvaEscrito(sofa)} com IVA). As câmaras da zona também recolhem monos, por marcação e, em regra, de graça: ` +
+          `A recolha de monos custa ${semIvaEscrito(monos.valor)} + IVA. A de móveis conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}. ` +
+          `Um sofá de 2 a 3 lugares é uma ${sofa}. As câmaras da zona também recolhem monos, por marcação e, em regra, de graça: ` +
           "as regras de cada uma estão mais abaixo.",
         tabela: { titulo: "Tabela de preços da recolha de monos e móveis", linhas },
         caixa: {
@@ -89,15 +91,19 @@ export default function PrecoDosMonosEMoveisPage() {
         faqs: [
           {
             question: "Quanto custa retirar um sofá?",
-            answer: `Um sofá de 2 a 3 lugares fica em ${semIvaEscrito(sofa)} + IVA (${comIvaEscrito(sofa)} com IVA). O andar, o elevador e se é preciso desmontar fazem a diferença dentro da faixa.`,
+            answer: `Um sofá de 2 a 3 lugares conta como uma ${sofa}. O andar e o elevador somam-se à parte, e o que é preciso desmontar diz-se no pedido.`,
           },
           {
             question: "Quanto custa recolher uma cama?",
-            answer: `Uma cama de casal com estrado fica em ${semIvaEscrito(cama)} + IVA (${comIvaEscrito(cama)} com IVA).`,
+            answer: `Uma cama de casal com estrado conta como uma ${cama}.`,
           },
           {
             question: "Quanto custa retirar um armário grande?",
-            answer: `Um armário grande fica em ${semIvaEscrito(armario)} + IVA (${comIvaEscrito(armario)} com IVA). ${DESMONTAGEM_A_PEDIDO}`,
+            answer: `Um armário grande conta como uma ${armario}. ${DESMONTAGEM_A_PEDIDO}`,
+          },
+          {
+            question: "Há um valor mínimo para a recolha de móveis?",
+            answer: `Sim: a soma das peças nunca fica abaixo da recolha mínima. ${O_QUE_INCLUI_A_RECOLHA_MINIMA} Os andares e o estacionamento somam-se depois do mínimo.`,
           },
           {
             question: "A câmara recolhe monos de graça?",

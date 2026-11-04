@@ -30,11 +30,12 @@ import { comIvaEscrito, referenciaDoEntulho, semIvaEscrito } from "@/lib/quanto-
 /**
  * O «desde» de 2 m³ de entulho, pela grelha publicada, com o valor com IVA ao
  * lado (25-10-2026): dizia «desde 288 €, sem IVA», e o sem IVA nunca vai
- * sozinho. Os dois números saem da grelha; nenhum se escreve à mão.
+ * sozinho. Os dois números saem da grelha; nenhum se escreve à mão. Desde a d7
+ * (04-11-2026) é a faixa dos 80 sacos que faz, a granel ao preço dos sacos.
  */
 const REFERENCIA_DE_2_M3 = (() => {
   const r = referenciaDoEntulho(2, "m3");
-  return r && r.valor.tipo === "desde"
+  return r && (r.valor.tipo === "desde" || r.valor.tipo === "faixa")
     ? `${semIvaEscrito(r.valor)} + IVA (${comIvaEscrito(r.valor)} com IVA)`
     : "a da grelha publicada";
 })();

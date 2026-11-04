@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { calculateFastEstimate, entulhoPelaGrelha } from "./pricing-helper";
-import { ENTULHO_ATE_10_SACOS, ENTULHO_POR_M3_ACIMA_DE_1, PRECO_POR_SACO, desdeDoVolume } from "./precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECO_POR_SACO, faixaDoVolume, precoDosSacos } from "./precos-publicos";
 import { referenciaDoEntulho } from "./quanto-custa";
 
 /**
@@ -28,8 +28,9 @@ describe("o entulho do motor é a linha da grelha", () => {
     expect(g.proposta).toBe(false);
   });
 
-  // d4 (03-11-2026): os sacos contam-se um a um, numa faixa; o volume em m³ (a granel) é o «desde».
-  it("os sacos são a faixa da calculadora (4,00–4,80 € cada); o m³ a granel, o «desde»", () => {
+  // d4 (03-11-2026): os sacos contam-se um a um, numa faixa; e desde a d7 (04-11-2026) o volume em m³
+  // (a granel) também, pelos sacos que faz — era o «desde» da grelha por m³.
+  it("os sacos são a faixa da calculadora (4,00–4,80 € cada); o m³ a granel, a mesma conta", () => {
     for (const sacos of [11, 20, 40, 80, 120, 200]) {
       const g = entulhoPelaGrelha(String(sacos))!;
       const ref = referenciaDoEntulho(sacos, "sacos")!;
@@ -39,19 +40,25 @@ describe("o entulho do motor é a linha da grelha", () => {
         expect(ref.valor.de).toBe(Math.round(sacos * PRECO_POR_SACO.minimo * 100) / 100);
       }
     }
-    expect(entulhoPelaGrelha("3 m3")!.semIva).toBe(desdeDoVolume(3));
-    expect(entulhoPelaGrelha("5 m3")!.semIva).toBe(desdeDoVolume(5));
+    expect(entulhoPelaGrelha("3 m3")!.semIva).toBe(faixaDoVolume(3).ate);
+    expect(entulhoPelaGrelha("3 m3")!.minimo).toBe(faixaDoVolume(3).de);
+    expect(entulhoPelaGrelha("5 m3")!.semIva).toBe(faixaDoVolume(5).ate);
+    // 1 m³ a granel = 40 sacos ensacados (d7).
+    const umMetro = entulhoPelaGrelha("1 m3")!;
+    const quarentaSacos = entulhoPelaGrelha("40")!;
+    expect([umMetro.minimo, umMetro.maximo]).toEqual([quarentaSacos.minimo, quarentaSacos.maximo]);
+    expect([umMetro.minimo, umMetro.maximo]).toEqual([160, 192]);
   });
 
   it("lê os metros cúbicos e os big bags como a casa os conta («4m3» não são 43 sacos)", () => {
     expect(entulhoPelaGrelha("4m3")!.sacos).toBe(160);
-    expect(entulhoPelaGrelha("4m3")!.semIva).toBe(Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * 4));
+    expect(entulhoPelaGrelha("4m3")!.semIva).toBe(precoDosSacos(160).ate);
   });
 
-  it("acima de 5 m³ é proposta, com uma referência ao preço por m³ da grelha", () => {
+  it("acima de 5 m³ é proposta, com uma referência pelos sacos (d7; era 144 €/m³)", () => {
     const g = entulhoPelaGrelha("6 m3")!;
     expect(g.proposta).toBe(true);
-    expect(g.semIva).toBe(Math.ceil(ENTULHO_POR_M3_ACIMA_DE_1 * 6));
+    expect([g.minimo, g.maximo]).toEqual([precoDosSacos(240).de, precoDosSacos(240).ate]);
   });
 
   it("sem quantidade não inventa uma linha", () => {
@@ -75,7 +82,7 @@ describe("a estimativa do entulho no simulador", () => {
     expect(e.assumptions.join(" ")).not.toMatch(/€\/saco/);
   }, 60_000);
 
-  it("120 sacos são 480–576 €; 3 m³ no chão, a granel («Enche a caixa de um camião»), o «desde» dos 3 m³", async () => {
+  it("120 sacos são 480–576 €; 3 m³ no chão, a granel («Enche a caixa de um camião»), também (d7)", async () => {
     const sacos = await calculateFastEstimate({
       serviceType: "recolha_entulho",
       entulhoState: "ensacado",
@@ -90,8 +97,8 @@ describe("a estimativa do entulho no simulador", () => {
       entulhoVolume: "camiao_caixa",
       distanceFromBase: { distanceKm: 15 },
     });
-    expect(granel.estimatedPriceWithoutVat).toBe(desdeDoVolume(3));
-    expect(granel.estimateMinWithoutVat).toBe(desdeDoVolume(3));
+    expect([granel.estimateMinWithoutVat, granel.estimateMaxWithoutVat]).toEqual([480, 576]);
+    expect(granel.estimatedPriceWithoutVat).toBe(faixaDoVolume(3).ate);
   }, 60_000);
 
   it("acima de 5 m³ a confiança fica em baixo", async () => {

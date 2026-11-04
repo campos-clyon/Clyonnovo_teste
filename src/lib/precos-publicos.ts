@@ -29,7 +29,7 @@
  * A nota que acompanha os preços diz exatamente isso.
  */
 
-import { PESO_DO_SACO } from "./sacos-de-entulho";
+import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import { PRECO_POR_HORA, MINIMO_DE_HORAS } from "./tabela-das-mudancas";
 
 export type PrecoPublico = {
@@ -63,19 +63,69 @@ export const PRECO_POR_ITEM: Readonly<Record<"pequeno" | "medio" | "grande", num
   grande: 50,
 };
 
-/** «por peça: pequena 15 €, média 30 €, grande 55 €» — a etiqueta da recolha de móveis (d6). */
-export const ETIQUETA_DOS_MOVEIS = `por peça: pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} €`;
+/*
+ * A RECOLHA MÍNIMA DOS MÓVEIS — 04-11-2026 (decisão d7, o dono): *«recolha
+ * mínima de 40 € + IVA»*. A soma das peças nunca fica abaixo dela; os andares e
+ * o estacionamento somam-se DEPOIS do mínimo. Diz-se «recolha mínima» (já inclui
+ * o parceiro ir a casa, carregar e levar ao destino certo), nunca «deslocação».
+ * Exemplos do dono: 1 peça pequena no rés-do-chão = 40 € + IVA; 1 média num 3.º
+ * andar sem elevador = 40 + 45 = 85 € + IVA; 2 grandes + 1 média num 2.º com
+ * elevador = 140 € + IVA (não muda). Os monos não têm este mínimo. Sem IVA.
+ */
+export const RECOLHA_MINIMA_DOS_MOVEIS = 40;
+
+/** «pequena 15 €, média 30 €, grande 50 €» — as peças pela ordem, sem IVA. */
+export const PECAS_EM_TEXTO = `pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} €`;
+
+/**
+ * «por peça: pequena 15 €, média 30 €, grande 50 € + IVA; recolha mínima 40 € +
+ * IVA» — a etiqueta da recolha de móveis (d6; o mínimo desde a d7). Já leva o
+ * «+ IVA» dos dois números (`maisIva` não lhe acrescenta outro).
+ */
+export const ETIQUETA_DOS_MOVEIS = `por peça: ${PECAS_EM_TEXTO} + IVA; recolha mínima ${RECOLHA_MINIMA_DOS_MOVEIS} € + IVA`;
 
 /** O mínimo da manutenção da casa, sem IVA — o «desde» publicado e o piso da grelha por tipo (03-11-2026). */
 export const MINIMO_DA_MANUTENCAO = 57;
 
+/*
+ * O SACO PEQUENO A 4,00–4,80 € — 03-11-2026 (decisão d4, aprovada pelo dono).
+ *
+ * O saco de obra de 25 a 30 kg («como os do Leroy Merlin») conta-se um a um:
+ * 4,00 a 4,80 € sem IVA cada. 10 sacos passam de 40–50 € a 40–48 €; 50 sacos
+ * são 200–240 €; um big bag conta como 38 sacos (`SACOS_POR_BIG_BAG`), ou seja
+ * 152–182,40 €. Até 10 sacos conta o mínimo de 10 — o mínimo de uma recolha (a
+ * deslocação é a mesma para dois ou para dez). Sem IVA.
+ *
+ * E O GRANEL AO MESMO PREÇO — 04-11-2026 (decisão d7, o dono): o entulho solto
+ * conta-se pelos sacos que faria, 40 por m³ (`SACOS_POR_METRO_CUBICO`). 1 m³ a
+ * granel = 40 sacos × 4,00–4,80 € = 160–192 € + IVA, o mesmo que 40 sacos
+ * ensacados. A grelha por m³ (`ENTULHO_POR_VOLUME`) sai daqui. Era «até 1 m³
+ * desde 120 €, 3 m³ desde 432 €, 5 m³ desde 720 €».
+ */
+export const PRECO_POR_SACO = { minimo: 4, maximo: 4.8 } as const;
+
+/** Até aqui conta-se o mínimo de uma recolha: 10 sacos. */
+export const MINIMO_DE_SACOS = 10;
+
+const emCentimos = (v: number) => Math.round(v * 100) / 100;
+
+/** Estes sacos, um a um, sem IVA — até 10, o mínimo de 10. */
+export function precoDosSacos(sacos: number): { de: number; ate: number } {
+  const n = Math.max(MINIMO_DE_SACOS, Math.round(sacos));
+  return { de: emCentimos(n * PRECO_POR_SACO.minimo), ate: emCentimos(n * PRECO_POR_SACO.maximo) };
+}
+
+/** 1 m³ de entulho, ensacado ou a granel: 40 sacos (160–192 € sem IVA). */
+const UM_METRO_CUBICO = precoDosSacos(SACOS_POR_METRO_CUBICO);
+
 export const PRECOS: Record<string, PrecoPublico> = {
   /*
-   * POR PEÇA DESDE 03-11-2026 (d6): era «40 – 120 €» pelo trabalho. O piso é a
-   * peça pequena e o tecto a grande, POR PEÇA (a unidade vai escrita): a conta
-   * de um pedido é peça a peça, `PRECO_POR_ITEM`, mais os andares.
+   * POR PEÇA DESDE 03-11-2026 (d6): era «40 – 120 €» pelo trabalho; a conta de
+   * um pedido é peça a peça, `PRECO_POR_ITEM`, mais os andares. Desde a d7
+   * (04-11-2026) o piso é a recolha mínima — o «desde 40 €» —, e a etiqueta diz
+   * as peças e o mínimo. Sem tecto: cada peça tem o seu valor.
    */
-  recolha_moveis: { etiqueta: ETIQUETA_DOS_MOVEIS, minimo: PRECO_POR_ITEM.pequeno, maximo: PRECO_POR_ITEM.grande, unidade: "peça" },
+  recolha_moveis: { etiqueta: ETIQUETA_DOS_MOVEIS, minimo: RECOLHA_MINIMA_DOS_MOVEIS },
   recolha_monos: { etiqueta: "30 – 100 €", minimo: 30, maximo: 100 },
 
   /*
@@ -88,11 +138,17 @@ export const PRECOS: Record<string, PrecoPublico> = {
    */
   /*
    * 120 €/m³ DESDE 17-10-2026 — *«vamos mudar o valor do metro cúbico para 120,
-   * não só aqui mas em todo o site»* (o dono). Era 110 desde 01-10-2026. A
-   * grelha por volume está em `ENTULHO_POR_VOLUME`, e os sacos soltos em
-   * `ENTULHO_ATE_10_SACOS`.
+   * não só aqui mas em todo o site»* (o dono). Era 110 desde 01-10-2026.
+   * DESDE 04-11-2026 (d7) o m³ é o dos sacos: 40 sacos × 4,00–4,80 € = 160 –
+   * 192 €/m³, ensacado ou a granel. A grelha por volume está em
+   * `ENTULHO_POR_VOLUME`, e os sacos soltos em `ENTULHO_ATE_10_SACOS`.
    */
-  recolha_entulho: { etiqueta: "desde 120 €/m³", minimo: 120, unidade: "m³" },
+  recolha_entulho: {
+    etiqueta: `${UM_METRO_CUBICO.de} – ${UM_METRO_CUBICO.ate} €/m³`,
+    minimo: UM_METRO_CUBICO.de,
+    maximo: UM_METRO_CUBICO.ate,
+    unidade: "m³",
+  },
 
   esvaziamento_casa: { etiqueta: "desde 250 €", minimo: 250 },
   esvaziamento_apartamento: { etiqueta: "260 – 450 €", minimo: 260, maximo: 450 },
@@ -325,42 +381,16 @@ export function etiquetaDoEsvaziamento(chave: string): string {
 }
 
 /*
- * A GRELHA DO ENTULHO — 17-10-2026, os números do dono:
+ * A GRELHA DO ENTULHO — 17-10-2026, os números do dono, e o que mudou depois:
  *
  *   · até 10 sacos, em sacos de 25 a 30 kg: 40 a 50 € sem IVA (40 a 48 € desde
- *     03-11-2026, pelo preço de cada saco — abaixo);
- *   · até 1 m³ (WC ou cozinha): desde 120 €;
- *   · até 3 m³ (obra de um T1/T2): desde 432 €;
- *   · até 5 m³ (demolições e renovações): desde 720 €;
- *   · acima disso, proposta com fotografias.
- *
- * Já não é linear: até 1 m³ são 120 €/m³, e daí para cima 144 €/m³ (432 ÷ 3
- * e 720 ÷ 5 — um teste confere que as duas dão o mesmo). Antes, cada linha
- * era 110 € vezes o volume, e os 10 sacos iam de 110 a 120 €. Sem IVA.
+ *     03-11-2026, pelo preço de cada saco — `PRECO_POR_SACO`, acima);
+ *   · 1 m³ (WC ou cozinha), 3 m³ (obra de um T1/T2) e 5 m³ (demolições e
+ *     renovações): eram «desde 120 / 432 / 720 €»; desde 04-11-2026 (d7) são
+ *     os sacos que fazem, 40 por m³ — 160–192, 480–576 e 800–960 €;
+ *   · acima de 5 m³, proposta com fotografias.
+ * Sem IVA.
  */
-
-/*
- * O SACO PEQUENO A 4,00–4,80 € — 03-11-2026 (decisão d4, aprovada pelo dono).
- *
- * O saco de obra de 25 a 30 kg («como os do Leroy Merlin») conta-se um a um:
- * 4,00 a 4,80 € sem IVA cada. 10 sacos passam de 40–50 € a 40–48 €; 50 sacos
- * são 200–240 €; um big bag conta como 38 sacos (`SACOS_POR_BIG_BAG`), ou seja
- * 152–182,40 €. Até 10 sacos conta o mínimo de 10 — o mínimo de uma recolha (a
- * deslocação é a mesma para dois ou para dez). O entulho solto, a granel,
- * continua pela grelha por m³ (`ENTULHO_POR_VOLUME`). Sem IVA.
- */
-export const PRECO_POR_SACO = { minimo: 4, maximo: 4.8 } as const;
-
-/** Até aqui conta-se o mínimo de uma recolha: 10 sacos. */
-export const MINIMO_DE_SACOS = 10;
-
-const emCentimos = (v: number) => Math.round(v * 100) / 100;
-
-/** Estes sacos, um a um, sem IVA — até 10, o mínimo de 10. */
-export function precoDosSacos(sacos: number): { de: number; ate: number } {
-  const n = Math.max(MINIMO_DE_SACOS, Math.round(sacos));
-  return { de: emCentimos(n * PRECO_POR_SACO.minimo), ate: emCentimos(n * PRECO_POR_SACO.maximo) };
-}
 
 const DEZ_SACOS = precoDosSacos(MINIMO_DE_SACOS);
 
@@ -370,21 +400,18 @@ export const ENTULHO_ATE_10_SACOS: { readonly minimo: number; readonly maximo: n
   descricao: `Pequenas quantidades, em sacos de ${PESO_DO_SACO}`,
 };
 
-export const ENTULHO_POR_VOLUME: ReadonlyArray<{ m3: number; desde: number }> = [
-  { m3: 1, desde: 120 },
-  { m3: 3, desde: 432 },
-  { m3: 5, desde: 720 },
-];
+/** As linhas da grelha por volume: os m³, os sacos que fazem e a faixa deles (d7). */
+export const ENTULHO_POR_VOLUME: ReadonlyArray<{ m3: number; sacos: number; de: number; ate: number }> = [1, 3, 5].map((m3) => {
+  const sacos = m3 * SACOS_POR_METRO_CUBICO;
+  return { m3, sacos, ...precoDosSacos(sacos) };
+});
 
-/** O «desde» de um volume da grelha — `ENTULHO_POR_VOLUME`, e mais nenhum. */
-export function desdeDoVolume(m3: number): number {
+/** A faixa de um volume da grelha — `ENTULHO_POR_VOLUME`, e mais nenhuma. */
+export function faixaDoVolume(m3: number): { de: number; ate: number } {
   const linha = ENTULHO_POR_VOLUME.find((v) => v.m3 === m3);
   if (!linha) throw new Error(`Volume de entulho fora da grelha: ${m3} m³`);
-  return linha.desde;
+  return { de: linha.de, ate: linha.ate };
 }
-
-/** O preço por m³ acima de 1 m³ — o da linha dos 3 m³ (144 €/m³). */
-export const ENTULHO_POR_M3_ACIMA_DE_1 = desdeDoVolume(3) / 3;
 
 /** Logo a seguir ao número, onde há pouco espaço: «40 – 120 € + IVA». */
 export function maisIva(etiqueta: string): string {
@@ -408,19 +435,36 @@ export const SEM_IVA_NA_FRASE = "sem IVA (na proposta, o preço já vem com IVA 
  *
  * Estavam escritas à mão no modelo das páginas de cidade. Passam a viver aqui
  * para o artigo «Quanto custa retirar um sofá em Lisboa» dizer os mesmos
- * números. Nenhuma abre abaixo do mínimo nem fecha acima do máximo da
- * recolha de móveis (um teste confere). Sem IVA.
+ * números.
+ *
+ * PELA TABELA DAS PEÇAS DESDE 04-11-2026 (d7, o dono): eram faixas próprias
+ * (sofá 40–70, cama 40–65, armário 55–95, mesa 40–65 €) ao lado da tabela por
+ * peça, e chocavam com ela. Agora cada exemplo é um tamanho, e o preço é o de
+ * `PRECO_POR_ITEM`: o sofá, a cama e o armário grande são peças grandes
+ * (50 €), a mesa com cadeiras uma peça média (30 €). Sem IVA.
  */
-export const PECAS_DE_REFERENCIA: ReadonlyArray<{ peca: string; minimo: number; maximo: number }> = [
-  { peca: "Sofá de 2 a 3 lugares", minimo: 40, maximo: 70 },
-  { peca: "Cama de casal com estrado", minimo: 40, maximo: 65 },
-  { peca: "Armário grande", minimo: 55, maximo: 95 },
-  { peca: "Mesa com cadeiras", minimo: 40, maximo: 65 },
+export type PecaDeReferencia = { peca: string; tamanho: keyof typeof PRECO_POR_ITEM };
+
+export const PECAS_DE_REFERENCIA: ReadonlyArray<PecaDeReferencia> = [
+  { peca: "Sofá de 2 a 3 lugares", tamanho: "grande" },
+  { peca: "Cama de casal com estrado", tamanho: "grande" },
+  { peca: "Armário grande", tamanho: "grande" },
+  { peca: "Mesa com cadeiras", tamanho: "medio" },
 ];
 
-/** «Sofá de 2 a 3 lugares: 40 – 70 €» */
-export function pecaEmLinha(p: { peca: string; minimo: number; maximo: number }): string {
-  return `${p.peca}: ${p.minimo} – ${p.maximo} €`;
+/** «peça grande», «peça média», «peça pequena». */
+export const NOME_DO_TAMANHO: Readonly<Record<keyof typeof PRECO_POR_ITEM, string>> = {
+  pequeno: "peça pequena",
+  medio: "peça média",
+  grande: "peça grande",
+};
+
+/** O preço de uma peça de referência, sem IVA — o do seu tamanho. */
+export const precoDaPeca = (p: PecaDeReferencia): number => PRECO_POR_ITEM[p.tamanho];
+
+/** «Sofá de 2 a 3 lugares: peça grande, 50 €» (sem IVA — para o texto ao modelo, com «s/IVA» a seguir). */
+export function pecaEmLinha(p: PecaDeReferencia): string {
+  return `${p.peca}: ${NOME_DO_TAMANHO[p.tamanho]}, ${precoDaPeca(p)} €`;
 }
 
 /** A etiqueta de um serviço, ou nada se ele não publicar preço. */

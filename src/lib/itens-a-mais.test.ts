@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PRECO_POR_ITEM } from "./precos-publicos";
 import {
-  ACRESCIMO_POR_ITEM_EXTRA,
+  ACRESCIMO_POR_ITEM_SEM_TAMANHO,
+  ITENS_A_MAIS_PARA_O_CLIENTE,
+  TABELA_DOS_ITENS_A_MAIS,
   acrescimoPorItens,
   acrescimoPorExtenso,
   avisoDosItens,
@@ -16,15 +19,21 @@ import {
  *
  * "Caso o cliente tenha mais coisas deve ter um acréscimo de 32 euros por item
  * adicionado a mais."
+ *
+ * 04-11-2026 (decisão d7, o dono): os itens a mais passam a contar pela tabela
+ * das peças — pequena 15 €, média 30 €, grande 50 € + IVA. Sem tamanho dito,
+ * conta a peça média.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
 describe("quanto vale o que aparece a mais", () => {
-  it("trinta e dois euros por item", () => {
-    expect(ACRESCIMO_POR_ITEM_EXTRA).toBe(32);
-    expect(acrescimoPorItens(1)).toBe(32);
-    expect(acrescimoPorItens(4)).toBe(128);
+  it("pela tabela das peças; sem tamanho, a peça média (d7)", () => {
+    expect(ACRESCIMO_POR_ITEM_SEM_TAMANHO).toBe(PRECO_POR_ITEM.medio);
+    expect(acrescimoPorItens(1)).toBe(30);
+    expect(acrescimoPorItens(4)).toBe(120);
+    expect(acrescimoPorItens(1, "pequeno")).toBe(15);
+    expect(acrescimoPorItens(2, "grande")).toBe(100);
   });
 
   it("nada a mais é nada a pagar", () => {
@@ -41,7 +50,7 @@ describe("quanto vale o que aparece a mais", () => {
   });
 
   it("meios itens não existem", () => {
-    expect(acrescimoPorItens(2.7)).toBe(64);
+    expect(acrescimoPorItens(2.7)).toBe(60);
   });
 
   it("um número que não é número não inventa uma conta", () => {
@@ -50,8 +59,9 @@ describe("quanto vale o que aparece a mais", () => {
   });
 
   it("escreve-se como se fala, com vírgula decimal", () => {
-    expect(acrescimoPorExtenso(1)).toBe("1 item a mais — 32,00 €");
-    expect(acrescimoPorExtenso(4)).toBe("4 itens a mais — 128,00 €");
+    expect(acrescimoPorExtenso(1)).toBe("1 item a mais — 30,00 €");
+    expect(acrescimoPorExtenso(4)).toBe("4 itens a mais — 120,00 €");
+    expect(acrescimoPorExtenso(1, "grande")).toBe("1 item a mais — 50,00 €");
     expect(acrescimoPorExtenso(0)).toBe("0 itens a mais — 0,00 €");
   });
 });
@@ -78,7 +88,9 @@ describe("o aviso é escrito para quem o lê", () => {
   it("ao cliente diz o que cobre e quanto acresce", () => {
     const t = avisoDosItens("total", "cliente")!;
     expect(t).toContain("fotografias e na descrição");
-    expect(t).toContain("32 €");
+    expect(t).toContain(ITENS_A_MAIS_PARA_O_CLIENTE);
+    expect(t).toContain("pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)");
+    expect(t).not.toContain("32 €");
     // O acréscimo não é uma autorização para cobrar sozinho.
     expect(t).toContain("combinado consigo antes de o trabalho avançar");
   });
@@ -86,7 +98,8 @@ describe("o aviso é escrito para quem o lê", () => {
   it("ao profissional diz o mesmo do lado dele", () => {
     const t = avisoDosItens("total", "profissional")!;
     expect(t).toContain("A sua proposta cobre");
-    expect(t).toContain("32 €");
+    expect(t).toContain(TABELA_DOS_ITENS_A_MAIS);
+    expect(t).not.toContain("32 €");
     expect(t).toContain("combine-o com o cliente antes de carregar");
   });
 
@@ -113,7 +126,8 @@ describe("a regra não se confunde com o que a casa leva", () => {
     // A CLYON não cobra isto nem o recebe: é o preço do trabalho a mais, e vai
     // inteiro para quem o faz.
     const TAXAS = ler("src/lib/taxas-plataforma.ts");
-    expect(TAXAS).not.toContain("ACRESCIMO_POR_ITEM_EXTRA");
+    expect(TAXAS).not.toContain("ACRESCIMO_POR_ITEM");
+    expect(TAXAS).not.toContain("itens-a-mais");
   });
 });
 

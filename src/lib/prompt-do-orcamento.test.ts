@@ -15,7 +15,8 @@ import {
   PECAS_DE_REFERENCIA,
   PRECOS,
   pecaEmLinha,
-  desdeDoVolume,
+  precoDaPeca,
+  RECOLHA_MINIMA_DOS_MOVEIS,
   PRECO_POR_SACO,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
 } from "./precos-publicos";
@@ -61,7 +62,9 @@ describe("o prompt do orçamento", () => {
     const p = await oPrompt();
     expect(p).toContain(GRELHA_DO_ENTULHO_PARA_O_MODELO);
     expect(p).toContain(`${ENTULHO_ATE_10_SACOS.minimo} a ${ENTULHO_ATE_10_SACOS.maximo} € s/IVA`);
-    for (const v of ENTULHO_POR_VOLUME) expect(p).toContain(`Até ${v.m3} m³: desde ${v.desde} € s/IVA`);
+    // O granel ao preço dos sacos (d7, 04-11-2026): era «Até 1 m³: desde 120 € s/IVA».
+    for (const v of ENTULHO_POR_VOLUME) expect(p).toContain(`${v.m3} m³ (≈ ${v.sacos} sacos): ${v.de}–${v.ate} € s/IVA`);
+    expect(p).not.toMatch(/desde 120 €|144 €\/m³/);
   });
 
   it("os exemplos das peças são os do site", async () => {
@@ -182,10 +185,14 @@ describe("as faixas do orçamentista são as das fontes", () => {
   const faixa = (x: { minimo: number; maximo?: number }): Valor =>
     x.maximo != null ? { tipo: "faixa", de: x.minimo, ate: x.maximo } : { tipo: "desde", de: x.minimo };
 
-  it("o mínimo por item é o início das peças de referência, com o IVA ao lado", () => {
-    const min = Math.min(...PECAS_DE_REFERENCIA.map((x) => x.minimo));
-    expect(p).toContain(`Mínimo por item: ${euros(min)} s/IVA (${euros(comIva(min))} c/IVA)`);
+  // d7 (04-11-2026): os móveis pela tabela das peças, com a recolha mínima de 40 € s/IVA.
+  it("os móveis são a tabela das peças, nunca abaixo da recolha mínima, com o IVA ao lado", () => {
+    const m = RECOLHA_MINIMA_DOS_MOVEIS;
+    expect(p).toContain("pequena 15 €, média 30 €, grande 50 €");
+    expect(p).toContain(`nunca fica abaixo da recolha mínima de ${euros(m)} s/IVA (${euros(comIva(m))} c/IVA)`);
+    expect(p).toContain("os andares somam-se depois do mínimo");
     expect(p).not.toContain("48,78");
+    expect(p).not.toContain("Mínimo por item");
   });
 
   it("a carga completa e o esvaziamento são as faixas publicadas, sem a tabela por zona", () => {
@@ -203,7 +210,10 @@ describe("as faixas do orçamentista são as das fontes", () => {
     expect(p).toContain(`T2 em Lisboa, com elevador e estacionamento à porta → ${comOIva({ tipo: "exacto", valor: t2.minimo })}`);
     expect(p).toContain(`T3 num 4.º andar sem elevador → ${comOIva({ tipo: "exacto", valor: t3.maximo! })}, o fim da faixa`);
     const sofa = PECAS_DE_REFERENCIA.find((x) => /sof[áa]/i.test(x.peca))!;
-    expect(p).toContain(`perto do início da faixa ${comOIva(faixa(sofa))}`);
+    // Pela tabela das peças (d7): o sofá é uma peça grande, a mesa com cadeiras uma média.
+    expect(p).toContain(`estacionamento à porta → peça grande, ${comOIva({ tipo: "exacto", valor: precoDaPeca(sofa) })}`);
+    const mesa = PECAS_DE_REFERENCIA.find((x) => /mesa/i.test(x.peca))!;
+    expect(p).toContain(`Mesa com cadeiras: peça média, ${comOIva({ tipo: "exacto", valor: precoDaPeca(mesa) })}`);
   });
 
   it("a deslocação dos itens soltos lê-se nos dados do pedido, e não num «× 2 €» escrito", () => {
@@ -221,7 +231,6 @@ describe("as faixas do orçamentista são as das fontes", () => {
     // (50 sacos num 2.º andar com elevador = 210–250 €).
     for (const v of [SACOS_POR_BIG_BAG * PRECO_POR_SACO.minimo, SACOS_POR_BIG_BAG * PRECO_POR_SACO.maximo]) daMudanca.add(Math.round(v * 100) / 100);
     for (const v of [50 * PRECO_POR_SACO.minimo, 50 * PRECO_POR_SACO.maximo]) daMudanca.add(v + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR);
-    void desdeDoVolume;
     const fora = eurosNoTexto(p).filter((n) => !euroDasFontes(n) && !daMudanca.has(n));
     expect(fora).toEqual([]);
   });

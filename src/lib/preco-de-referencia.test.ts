@@ -45,17 +45,21 @@ describe("S13 — o preço de referência", () => {
       expect(l, s.id).toContain("+ IVA");
       expect(l, s.id).toContain("com IVA");
     }
-    // Por peça desde 03-11-2026 (d6 v2).
-    expect(linhaDeReferencia("recolha_moveis")).toBe("Preço de referência: por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)");
+    // Por peça desde 03-11-2026 (d6 v2), com a recolha mínima desde a d7 (04-11-2026).
+    expect(linhaDeReferencia("recolha_moveis")).toBe(
+      "Preço de referência: por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA); recolha mínima 40 € + IVA (49,20 € com IVA)",
+    );
     for (const t of ["pequeno", "medio", "grande"] as const) expect(precoDoItem(t)).toMatch(/€\/un \+ IVA \(.+ € com IVA\)$/);
     expect(precoDoItem("pequeno")).toBe("15 €/un + IVA (18,45 € com IVA)");
   });
 
-  // d6 v2 (03-11-2026): sem mínimo por pedido.
-  it("os móveis por item: o total com IVA ao lado, sem mínimo", () => {
+  // d7 (04-11-2026): a soma das peças nunca fica abaixo da recolha mínima de 40 € + IVA (na d6 não havia mínimo).
+  it("os móveis por item: o total com IVA ao lado, com a recolha mínima", () => {
     expect(totalDosItens({})).toBeNull();
     expect(totalDosItens({ grande: 2 })).toBe("100 € + IVA (123 € com IVA).");
-    expect(totalDosItens({ pequeno: 1 })).toBe("15 € + IVA (18,45 € com IVA).");
+    expect(totalDosItens({ pequeno: 1 })).toBe("40 € + IVA (49,20 € com IVA).");
+    expect(totalDosItens({ medio: 1 })).toBe("40 € + IVA (49,20 € com IVA).");
+    expect(totalDosItens({ pequeno: 1, medio: 1 })).toBe("45 € + IVA (55,35 € com IVA).");
   });
 
   it("os números dos itens só existem em precos-publicos.ts (o seletor e o motor leem de lá)", () => {
