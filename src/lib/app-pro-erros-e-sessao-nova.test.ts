@@ -199,7 +199,13 @@ describe("d14 — a sessão nova fica no lugar da antiga", () => {
     // As duas portas para o site passam o token que levaram.
     expect(API.split("lerResposta<T>(r, ").length - 1).toBe(2);
     expect(API).toContain("return lerResposta<T>(r, !!opcoes.semSessao, tokenUsado);");
-    expect(API).toContain("return lerResposta<T>(r, false, tokenUsado);");
+    /*
+     * A dos ficheiros também, desde 04-11-2026 (d17): com a sessão, leva o
+     * token e um 401 pode fazer sair; sem ela (as fotografias da
+     * candidatura), não leva token nenhum e um 401 não faz sair ninguém.
+     */
+    expect(API).toContain("const tokenUsado = semSessao ? null : await lerToken();");
+    expect(API).toContain("return lerResposta<T>(r, semSessao, tokenUsado);");
     expect(API).toContain("if (r.status === 401 && !semSessao) await perdeuASessao(tokenUsado);");
     expect(API).not.toContain("if (r.status === 401 && !semSessao) aoPerderASessao?.();");
   });
