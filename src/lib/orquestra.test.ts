@@ -480,6 +480,9 @@ const ENTRE_A_EQUIPA = new Set([
   "src/lib/rotinas.ts",
   "src/lib/texto-da-mesa.ts",
   "src/lib/trabalhos-para-gerir.ts",
+  // As frases dos Pagamentos e da correcção de um pagamento registado (04-11-2026, d9): só a equipa as lê.
+  "src/lib/a-quem-foi-o-dinheiro.ts",
+  "src/lib/corrigir-pagamento-registado.ts",
   // Os testemunhos são as palavras dos clientes, e ficam como estão (como na regra c).
   "src/lib/reviews-data.ts",
   "src/app/plataforma/PainelDeTestes.tsx",

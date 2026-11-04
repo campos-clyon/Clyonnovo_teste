@@ -1,5 +1,7 @@
 import { getPool, toMySQLDateTime } from "./db";
 import { IDENTIFICADOR_DE_TESTE, type Ambiente, type MetodoDePagamento } from "./eupago";
+import { tridDoAbatimentoAParte } from "./pago-em-mao";
+import { lerParte, type ParteDoPagamento } from "./parte-do-pagamento";
 
 /**
  * O AVISO DA «PROVAR A LIGAÇÃO» NÃO É DINHEIRO POR APLICAR — 03-11-2026. A
@@ -140,8 +142,12 @@ export type Pagamento = {
   actualizadoEm: Date;
 };
 
-export type ParteDoPagamento = "trabalho" | "diferenca";
-export const lerParte = (v: unknown): ParteDoPagamento => (v === "diferenca" ? "diferenca" : "trabalho");
+/*
+ * A `parte` de cada linha — «trabalho», «diferenca» e, desde 04-11-2026 (d9),
+ * «divida» (a referência do que o profissional deve num pago em mão). Vive em
+ * `parte-do-pagamento.ts`, sem base; aqui reexporta-se.
+ */
+export { lerParte, eDoCliente, daMesmaConta, type ParteDoPagamento } from "./parte-do-pagamento";
 
 let prontas = false;
 async function garantirTabelas() {
@@ -479,7 +485,7 @@ export async function substituirAsAnteriores(novoId: number): Promise<void> {
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [linhas] = (await pool.execute(
-    "SELECT negociacaoId, metodo, valor, comFactura FROM pagamentos WHERE id = ? LIMIT 1",
+    "SELECT negociacaoId, metodo, valor, comFactura, parte FROM pagamentos WHERE id = ? LIMIT 1",
     [novoId],
   )) as any[];
   const nova = (linhas as Array<Record<string, unknown>>)[0];
@@ -490,12 +496,23 @@ export async function substituirAsAnteriores(novoId: number): Promise<void> {
    * adjudicação podem ir ao cliente, de uma vez, uma Multibanco e um MB WAY
    * do mesmo valor: são duas formas de pagar o mesmo, e a primeira não anula
    * a segunda. O que se anula é a referência que a nova veio substituir.
+   *
+   * A dívida do profissional e as referências do cliente não se substituem
+   * umas às outras (04-11-2026, d9): são contas diferentes.
    */
   await pool.execute(
     `UPDATE pagamentos SET estado = 'substituido'
       WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente'
+        AND (parte = 'divida') = ?
         AND (metodo = ? OR ABS(valor - ?) > 0.011 OR comFactura <> ?)`,
-    [negociacaoId, novoId, String(nova?.metodo ?? ""), Number(nova?.valor ?? 0), Number(nova?.comFactura ?? 0)],
+    [
+      negociacaoId,
+      novoId,
+      lerParte(nova?.parte) === "divida" ? 1 : 0,
+      String(nova?.metodo ?? ""),
+      Number(nova?.valor ?? 0),
+      Number(nova?.comFactura ?? 0),
+    ],
   );
 }
 
@@ -674,17 +691,26 @@ export async function darPorPago(
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    /*
+     * A DÍVIDA DE UM PAGO EM MÃO — 04-11-2026 (d9). A negociação já está
+     * fechada pelo registo `ao_profissional`: esta linha não lhe toca, e o
+     * seu `trid` passa a ser o da linha à parte (`tridDoAbatimentoAParte`),
+     * cujo índice único impede a mesma dívida de se pagar duas vezes — por
+     * outra referência, abatida no saldo ou registada à mão. O `trid` do
+     * euPago fica no aviso (`avisosDoEupago`, com o número do pagamento).
+     */
     const [r] = (await conn.execute(
       `UPDATE pagamentos
           SET estado = 'pago',
-              negociacaoPaga = IF(parte = 'diferenca', NULL, ?),
+              negociacaoPaga = IF(parte IN ('diferenca', 'divida'), NULL, ?),
               diferencaPaga = IF(parte = 'diferenca', ?, NULL),
-              trid = ?,
+              trid = IF(parte = 'divida', ?, ?),
               valorPago = ?, comissaoEupago = ?, pagoEm = ?, erro = NULL
         WHERE id = ? AND estado IN (${podeAinda})`,
       [
         negociacaoId,
         negociacaoId,
+        tridDoAbatimentoAParte(negociacaoId),
         d.trid.slice(0, 60),
         d.valorPago,
         d.comissao,
@@ -1026,16 +1052,12 @@ export type PagamentoQueFecha = {
   } | null;
 };
 
-/**
+/*
  * O começo desse `trid` — para os Pagamentos perguntarem à base, trabalho a
  * trabalho, se a parte da CLYON de um pago em mão já está cobrada (03-11-2026).
+ * Vive em `pago-em-mao.ts` desde 04-11-2026 (d9), sem base, para as Finanças.
  */
-export const PREFIXO_DO_ABATIMENTO_A_PARTE = "abatimento-mao-";
-
-/** O `trid` que impede a mesma taxa de ser abatida duas vezes (`uq_trid`). */
-export function tridDoAbatimentoAParte(negociacaoId: number): string {
-  return `${PREFIXO_DO_ABATIMENTO_A_PARTE}${negociacaoId}`;
-}
+export { PREFIXO_DO_ABATIMENTO_A_PARTE, tridDoAbatimentoAParte } from "./pago-em-mao";
 
 export async function negociacoesPagasComDetalhe(
   negociacaoIds: number[],
@@ -1216,7 +1238,19 @@ export async function registarRecebimentoAMao(d: {
     )) as any[];
 
     const pagamentoId = Number((r as { insertId?: number })?.insertId ?? 0);
-    if (d.aParte) return { feito: true, pagamentoId };
+    if (d.aParte) {
+      /*
+       * A dívida fechou-se por aqui (abatida, paga à mão): as referências dela
+       * que ficaram vivas deixam de se oferecer ao profissional (04-11-2026, d9).
+       * Só as da dívida — as do cliente não são desta conta.
+       */
+      await pool.execute(
+        `UPDATE pagamentos SET estado = 'substituido'
+          WHERE negociacaoId = ? AND id <> ? AND estado = 'pendente' AND parte = 'divida'`,
+        [d.negociacaoId, pagamentoId],
+      );
+      return { feito: true, pagamentoId };
+    }
 
     /*
      * As referências que ficaram por pagar deixam de fazer sentido: se o

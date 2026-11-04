@@ -245,7 +245,10 @@ export type DividaDaCarteira = {
   recebidoDoCliente: number;
   /** Até quando tem para a pagar antes de ficar bloqueado no dinheiro (01-10-2026). */
   venceEm?: string | null;
-  /** Pago em mão num trabalho da plataforma: desconta-se do saldo, sem referência (01-11-2026). */
+  /**
+   * Só se desconta do saldo, sem referência (01-11-2026). Desde 04-11-2026 (d9)
+   * nenhuma: a dos pagos em mão também se paga por referência.
+   */
   descontaNoSaldo?: boolean;
   referencia: {
     metodo: "mbway" | "multibanco";

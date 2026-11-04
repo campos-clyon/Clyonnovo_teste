@@ -134,7 +134,7 @@ export async function quitarAsDividasAte01Nov(agora: Date = new Date()): Promise
     for (const p of plano) {
       const deste: (typeof feitas)[number] = { providerId: p.providerId, dividas: [] };
       for (const d of p.dividas) {
-        const aParte = d.descontaNoSaldo === true;
+        const aParte = d.aParte === true;
         const [r] = (await conn.execute(
           `INSERT IGNORE INTO pagamentos
              (negociacaoId, pedidoId, providerId, metodo, ambiente, valor, comFactura,

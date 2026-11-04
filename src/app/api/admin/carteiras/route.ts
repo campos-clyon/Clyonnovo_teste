@@ -18,6 +18,7 @@ import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 import { eSemFactura, modeloDaLinha } from "@/lib/sem-factura";
 import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { resumoDaQuitacao } from "@/lib/quitacao-na-base";
+import { monteNasCarteiras } from "@/lib/a-quem-foi-o-dinheiro";
 
 export const runtime = "nodejs";
 
@@ -268,14 +269,11 @@ export async function GET(req: NextRequest) {
      */
     // Com o método (01-11-2026): «pago ao profissional, em mão» registado nos
     // Pagamentos não é dinheiro que a CLYON tenha para lhe pagar.
+    // Também nos Trabalhos CLYON (04-11-2026, d9): o #479 e o #496 foram pagos
+    // em mão ao parceiro e ficavam «por pagar», porque aqui nem se perguntava.
     const recebidos = await negociacoesPagasComDetalhe(
       linhas
-        .filter(
-          (l) =>
-            l.negociacaoId != null &&
-            lerForma(l.formaDePagamento) !== "dinheiro" &&
-            !(typeof l.ofertaClyon === "string" && l.ofertaClyon !== ""),
-        )
+        .filter((l) => l.negociacaoId != null && lerForma(l.formaDePagamento) !== "dinheiro")
         .map((l) => Number(l.negociacaoId)),
     );
 
@@ -390,8 +388,18 @@ export async function GET(req: NextRequest) {
        * conta da CLYON dinheiro que nunca lá entrou. Conta-se à parte, e a
        * comissão da CLYON neste trabalho vem da referência ao cliente — não
        * do profissional.
+       *
+       * O MONTE DECIDE-SE PELA MESMA PERGUNTA DOS PAGAMENTOS — 04-11-2026 (d9,
+       * dono): *«Um trabalho pago em mão ao profissional nunca entra no "A
+       * pagar".»* Trabalho CLYON ou não (`monteNasCarteiras`).
        */
-      if (lerForma(l.formaDePagamento) === "dinheiro" || emMaoRegistado) {
+      const monte = monteNasCarteiras({
+        formaDePagamento: (l.formaDePagamento as string | null) ?? null,
+        comoEntrou: fecho?.metodo ?? null,
+        confirmadoEm: l.confirmadoEm,
+        pagoEm: l.pagoEm,
+      });
+      if (monte === "em_mao") {
         if (l.confirmadoEm != null) {
           ficha.recebidoEmMao = Math.round((ficha.recebidoEmMao + recebe) * 100) / 100;
           if (divida != null && !dividaPaga) {
@@ -407,13 +415,13 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      if (l.pagoEm != null) {
+      if (monte === "pago") {
         ficha.jaPago = Math.round((ficha.jaPago + recebe) * 100) / 100;
         clyon.fechada = Math.round((clyon.fechada + comissao) * 100) / 100;
         if (!trabalhoClyon) clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         continue;
       }
-      if (l.confirmadoEm == null) {
+      if (monte === "por_finalizar") {
         clyon.porFinalizar = Math.round((clyon.porFinalizar + comissao) * 100) / 100;
         ficha.porFinalizar.push(trabalho);
         ficha.totalPorFinalizar = Math.round((ficha.totalPorFinalizar + recebe) * 100) / 100;
@@ -534,8 +542,12 @@ export async function POST(req: NextRequest) {
     const [antes] = (await pool.execute(
       `SELECT n.pedidoId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
               n.formaDePagamento,
-              p.name AS profissionalNome, p.email AS emailDoProfissional
+              p.name AS profissionalNome, p.email AS emailDoProfissional,
+              -- Como o cliente pagou (04-11-2026, d9): registado «pago ao profissional»
+              -- também é em mão, e a CLYON não transfere nada.
+              pg.metodo AS comoEntrou
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
+         LEFT JOIN pagamentos pg ON pg.negociacaoPaga = n.id
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
     )) as [Array<{
@@ -546,12 +558,15 @@ export async function POST(req: NextRequest) {
         formaDePagamento: string | null;
         profissionalNome: string;
         emailDoProfissional: string | null;
+        comoEntrou: string | null;
       }>, unknown];
     const linha = antes[0];
     if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
 
-    // Em dinheiro o profissional recebeu do cliente, no local: não há nada a transferir.
-    if (lerForma(linha.formaDePagamento) === "dinheiro") {
+    // Em mão — combinado em dinheiro, ou registado «pago ao profissional» (04-11-2026,
+    // d9, a mesma pergunta dos Pagamentos): o profissional recebeu do cliente, e não
+    // há nada a transferir. Assim o #479 e o #496 não se pagam duas vezes.
+    if (monteNasCarteiras({ formaDePagamento: linha.formaDePagamento, comoEntrou: linha.comoEntrou }) === "em_mao") {
       return NextResponse.json(
         { error: "Este trabalho é pago em mão ao profissional — a CLYON não lhe transfere nada." },
         { status: 409 },

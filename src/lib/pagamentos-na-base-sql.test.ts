@@ -115,15 +115,17 @@ describe("R3 — a rotina pergunta pelas mais recentes, numa janela de dias", ()
 describe("R4 — uma referência nova anula as anteriores na base", () => {
   it("marcarPedido passa a substituido as pendentes do mesmo método, ou de outro valor ou fatura (d14)", async () => {
     base.respostas.push((s) =>
-      /SELECT negociacaoId, metodo, valor, comFactura FROM pagamentos/.test(s)
-        ? [{ negociacaoId: 70, metodo: "multibanco", valor: "452.03", comFactura: 1 }]
+      /SELECT negociacaoId, metodo, valor, comFactura, parte FROM pagamentos/.test(s)
+        ? [{ negociacaoId: 70, metodo: "multibanco", valor: "452.03", comFactura: 1, parte: "trabalho" }]
         : undefined,
     );
     await lib.marcarPedido(9, { referencia: "104295830", entidade: "21921", transacaoId: null });
     const [c] = sqlCom(/SET estado = 'substituido'/);
     expect(c.sql).toMatch(/WHERE negociacaoId = \? AND id <> \? AND estado = 'pendente'/);
     expect(c.sql).toMatch(/AND \(metodo = \? OR ABS\(valor - \?\) > 0\.011 OR comFactura <> \?\)/);
-    expect(c.args).toEqual([70, 9, "multibanco", 452.03, 1]);
+    // A dívida do profissional e as do cliente não se substituem (04-11-2026, d9): 0 = não é da dívida.
+    expect(c.sql).toContain("AND (parte = 'divida') = ?");
+    expect(c.args).toEqual([70, 9, 0, "multibanco", 452.03, 1]);
   });
 });
 

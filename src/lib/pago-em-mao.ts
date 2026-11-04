@@ -41,6 +41,29 @@ export function pagoAoProfissionalRegistado(forma: unknown, comoEntrou: unknown)
   );
 }
 
+/**
+ * A LINHA À PARTE DA DÍVIDA DE UM PAGO EM MÃO — o começo do seu `trid`.
+ *
+ * A negociação já está fechada pelo registo `ao_profissional` (o índice único
+ * `negociacaoPaga`), por isso o que o profissional deve vive noutra linha de
+ * `pagamentos`, com `negociacaoPaga` nula e este `trid`, cujo índice único
+ * impede a mesma dívida de se fechar duas vezes — abatida no saldo, paga por
+ * ele à mão, quitada no acerto de 01-11-2026 ou, desde 04-11-2026 (d9), paga
+ * pela referência do euPago. Vive aqui, num ficheiro sem base, para as
+ * Finanças o poderem ler; `pagamentos-na-base.ts` reexporta-o.
+ */
+export const PREFIXO_DO_ABATIMENTO_A_PARTE = "abatimento-mao-";
+
+/** O `trid` que impede a mesma taxa de ser abatida duas vezes (`uq_trid`). */
+export function tridDoAbatimentoAParte(negociacaoId: number): string {
+  return `${PREFIXO_DO_ABATIMENTO_A_PARTE}${negociacaoId}`;
+}
+
+/** Esta linha de `pagamentos` é a que fecha a dívida de um pago em mão? */
+export function eLinhaDaDividaEmMao(trid: unknown): boolean {
+  return typeof trid === "string" && trid.startsWith(PREFIXO_DO_ABATIMENTO_A_PARTE);
+}
+
 const aosCentimos = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export type DividaDoRegistoEmMao = {
@@ -86,5 +109,78 @@ export function dividaDoRegistoEmMao(
     iva: Math.max(0, aosCentimos(total - comissao)),
     comissao,
     total,
+  };
+}
+
+/** Uma linha de `pagamentos`, como a cobrança da dívida a lê. */
+export type LinhaParaADivida = {
+  estado: string;
+  metodo: string;
+  parte?: unknown;
+  trid?: string | null;
+  valor: number;
+  valorPago?: number | null;
+};
+
+/**
+ * A DÍVIDA QUE SE COBRA POR REFERÊNCIA — 04-11-2026 (d9, dono).
+ *
+ * *«A dívida (o IVA mais a taxa) passa a aparecer na Carteira do parceiro, em
+ * "Pagamentos em dinheiro", com "Pagar por MB WAY" / "Gerar referência
+ * Multibanco", tal como nos trabalhos combinados em dinheiro.»*
+ *
+ * Dois casos, e a mesma porta (`gerarReferenciaDaDivida`):
+ *
+ *   · COMBINADO EM DINHEIRO (IVA incluído) — a dívida de sempre
+ *     (`dividaDoProfissional`). As referências dela são as da negociação
+ *     (parte «trabalho»), e paga é qualquer linha paga;
+ *   · NA PLATAFORMA, REGISTADO «PAGO AO PROFISSIONAL» — a conta do registo
+ *     (`dividaDoRegistoEmMao`), com o valor que ficou registado. A negociação
+ *     já está paga pelo registo: as referências desta dívida são a parte
+ *     «divida», e paga é a linha à parte (`tridDoAbatimentoAParte`), seja qual
+ *     for o caminho por que se fechou.
+ *
+ * Nula quando o trabalho não tem nada a pagar pelo profissional.
+ */
+export type DividaACobrar = {
+  caso: "dinheiro" | "em_mao";
+  divida: DividaDoRegistoEmMao;
+  /** A `parte` das linhas de `pagamentos` desta dívida. */
+  parte: "trabalho" | "divida";
+  jaPaga: boolean;
+};
+
+export function dividaACobrar(
+  t: {
+    negociacaoId: number;
+    formaDePagamento: unknown;
+    /** A do dinheiro com IVA incluído, já perguntada (`temDividaDoProfissional`). */
+    dividaEmDinheiro: DividaDoRegistoEmMao | null;
+    acordado: number;
+    taxas: Taxas;
+  },
+  linhas: ReadonlyArray<LinhaParaADivida>,
+): DividaACobrar | null {
+  const registo = linhas.find(
+    (l) => l.estado === "pago" && pagoAoProfissionalRegistado(t.formaDePagamento, l.metodo),
+  );
+  if (registo) {
+    const valor = registo.valorPago != null && registo.valorPago > 0 ? registo.valorPago : registo.valor;
+    const divida = dividaDoRegistoEmMao(t.acordado, t.taxas, valor);
+    if (!(divida.total > 0)) return null;
+    const trid = tridDoAbatimentoAParte(t.negociacaoId);
+    return {
+      caso: "em_mao",
+      divida,
+      parte: "divida",
+      jaPaga: linhas.some((l) => l.estado === "pago" && l.trid === trid),
+    };
+  }
+  if (!t.dividaEmDinheiro) return null;
+  return {
+    caso: "dinheiro",
+    divida: t.dividaEmDinheiro,
+    parte: "trabalho",
+    jaPaga: linhas.some((l) => l.estado === "pago"),
   };
 }

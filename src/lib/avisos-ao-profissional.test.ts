@@ -76,7 +76,8 @@ describe("as três rotas chamam o aviso com \"pro\"", () => {
   it("«Já paguei» nas Carteiras: recusa o dinheiro antes do UPDATE e avisa depois, com o líquido", () => {
     const s = ler("src/app/api/admin/carteiras/route.ts");
     const post = s.slice(s.indexOf("export async function POST"));
-    const recusa = post.indexOf('lerForma(linha.formaDePagamento) === "dinheiro"');
+    // Em mão — dinheiro, ou registado «pago ao profissional» (04-11-2026, d9).
+    const recusa = post.indexOf("monteNasCarteiras({ formaDePagamento: linha.formaDePagamento, comoEntrou: linha.comoEntrou })");
     const update = post.indexOf("UPDATE negociacoes SET pagoEm");
     const aviso = post.indexOf("await avisarProfissionalPagoPorPush(");
     expect(recusa).toBeGreaterThan(-1);

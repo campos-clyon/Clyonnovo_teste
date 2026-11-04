@@ -25,6 +25,7 @@ import {
   pagamentosDaNegociacao,
   type Pagamento,
 } from "@/lib/pagamentos-na-base";
+import { daMesmaConta } from "@/lib/parte-do-pagamento";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -233,7 +234,8 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
      * (d16). O valor bate com o DELA, mas já não é o que se pede: entretanto
      * gerou-se outra. Fica por aplicar, à vista, para devolver ao cliente.
      */
-    const foraDeVigor = pagamentoForaDeVigor(p, await pagamentosDaNegociacao(p.negociacaoId));
+    // A dívida do profissional e o pagamento do cliente não contam um contra o outro (04-11-2026, d9).
+    const foraDeVigor = pagamentoForaDeVigor(p, daMesmaConta(p, await pagamentosDaNegociacao(p.negociacaoId)));
     if (foraDeVigor) {
       await anotarAviso(aviso.trid, aviso.estado, { aplicado: false, nota: foraDeVigor });
       await registarSemFalhar({
@@ -261,9 +263,10 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
 
     if (r.feito) {
       // O cliente fica a saber (S10) — só se o pagamento for dele, não a dívida do profissional.
-      await avisarOClienteDoPedido(p.pedidoId, "pago", { negociacaoId: p.negociacaoId });
+      // A dívida do profissional num pago em mão (04-11-2026, d9) também não é do cliente.
+      if (p.parte !== "divida") await avisarOClienteDoPedido(p.pedidoId, "pago", { negociacaoId: p.negociacaoId });
       // E o parceiro, no mesmo momento (02-11-2026) — só quando o pagamento é do cliente.
-      if (p.parte !== "diferenca" && !(await eDividaDoProfissional(p.negociacaoId))) {
+      if (p.parte === "trabalho" && !(await eDividaDoProfissional(p.negociacaoId))) {
         await avisarProfissionalClientePagouPorPush({
           providerId: p.providerId,
           pedidoId: p.pedidoId,

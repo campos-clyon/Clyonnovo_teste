@@ -2,6 +2,7 @@ import { configuracaoDoEupago, podeCobrar, quantoOClientePaga } from "@/lib/eupa
 import { O_CLIENTE_PAGA_SOZINHO } from "@/lib/pagamento-na-plataforma";
 import { temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { pagamentosDaNegociacao, type Pagamento } from "@/lib/pagamentos-na-base";
+import { eDoCliente } from "@/lib/parte-do-pagamento";
 import type { TrabalhoAPagar } from "@/lib/acesso-ao-pagamento";
 import { acertoDoFim } from "@/lib/horas-do-trabalho";
 import { contaDoCliente } from "@/lib/taxas-plataforma";
@@ -126,6 +127,8 @@ export function acertoDasHoras(
   linhas: Pagamento[],
 ): { aPagar: number; aDevolver: number; pagoAteAgora: number; final: number; comFactura: boolean } | null {
   if (!trabalho.porHora?.horasConfirmadas) return null;
+  // A dívida do profissional num pago em mão não é do cliente (04-11-2026, d9).
+  linhas = linhas.filter(eDoCliente);
   const doTrabalho = linhas.find((l) => l.parte !== "diferenca" && l.estado === "pago");
   if (!doTrabalho) return null;
   const pagos = linhas.filter((l) => l.estado === "pago");
@@ -137,7 +140,8 @@ export function acertoDasHoras(
 export async function estadoDoPagamentoParaOCliente(
   trabalho: TrabalhoAPagar,
 ): Promise<EstadoDoPagamentoParaOCliente> {
-  const linhas = await pagamentosDaNegociacao(trabalho.negociacaoId);
+  // Só as do cliente: a dívida do profissional num pago em mão nunca sai para ele (04-11-2026, d9).
+  const linhas = (await pagamentosDaNegociacao(trabalho.negociacaoId)).filter(eDoCliente);
   /*
    * `disponivel` EXISTE PARA O ECRÃ NÃO APARECER QUANDO NÃO SERVE.
    *

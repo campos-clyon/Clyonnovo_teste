@@ -13832,6 +13832,8 @@ export type Acontecimento =
    */
   | "divida_paga_pelo_profissional"
   | "divida_quitada"
+  // Um pagamento registado à mão corrigido pelo administrador: fatura e valor (04-11-2026, d9).
+  | "pagamento_corrigido"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —
    * com ou sem factura, e por onde. Não é dinheiro que entrou: é o que fica

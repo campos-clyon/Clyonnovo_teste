@@ -9,7 +9,9 @@ import { lerForma } from "@/lib/forma-de-pagamento";
 import { contaDaLinha, eTrabalhoClyon, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
 import { precoClyonDesalinhado, precoDoTrabalhoClyonDaLinha } from "@/lib/corrigir-trabalho-clyon";
 import { taxaDoPagoEmMao, type TaxaDoPagoEmMao } from "@/lib/a-quem-foi-o-dinheiro";
-import { PREFIXO_DO_ABATIMENTO_A_PARTE } from "@/lib/pagamentos-na-base";
+import { PREFIXO_DO_ABATIMENTO_A_PARTE } from "@/lib/pago-em-mao";
+import { CORRIGEM_SE, valoresDeReferencia } from "@/lib/corrigir-pagamento-registado";
+import type { ComoEntrou } from "@/lib/dinheiro-do-trabalho";
 
 /*
  * OS TRABALHOS DOS PAGAMENTOS — cada negociação fechada, com as duas pontas
@@ -106,6 +108,17 @@ export type TrabalhoParaGerir = {
    * Nula nos que o cliente paga à CLYON. Ver `taxaDoPagoEmMao`.
    */
   taxaEmMao: TaxaDoPagoEmMao | null;
+  /**
+   * CORRIGIR O PAGAMENTO REGISTADO À MÃO — 04-11-2026 (d9). O valor que ficou
+   * registado, o que a declaração diz, e o que a conta dá com e sem fatura.
+   * Nulo onde não se corrige (euPago, dinheiro, por registar).
+   */
+  correccao: {
+    valorRegistado: number | null;
+    declarado: ParaQue | null;
+    comFactura: number | null;
+    semFactura: number | null;
+  } | null;
 };
 
 /**
@@ -137,13 +150,17 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
             pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm, pg.valorPago AS valorQueEntrou,
             -- Pago em mão num trabalho da plataforma: a parte da CLYON fecha-se
-            -- numa linha à parte, pelo trid (03-11-2026, d3).
-            (SELECT MAX(ap.pagoEm) FROM pagamentos ap
-              WHERE ap.trid = CONCAT(?, n.id) AND ap.estado = 'pago' AND ap.negociacaoPaga IS NULL) AS taxaAParteEm
+            -- numa linha à parte, pelo trid (03-11-2026, d3) — com o método e o
+            -- valor, para dizer como se fechou (04-11-2026, d9). O trid é único:
+            -- a junção nunca duplica a linha.
+            ap.pagoEm AS taxaAParteEm, ap.metodo AS taxaAParteComo,
+            COALESCE(ap.valorPago, ap.valor) AS taxaAParteValor
        FROM negociacoes n
        JOIN providers pr ON pr.id = n.providerId
        LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
        LEFT JOIN pagamentos pg ON pg.negociacaoPaga = n.id
+       LEFT JOIN pagamentos ap
+              ON ap.trid = CONCAT(?, n.id) AND ap.estado = 'pago' AND ap.negociacaoPaga IS NULL
       WHERE n.estado = 'acordada' AND n.valorAcordado IS NOT NULL
         ${soA ? "AND n.id = ?" : ""}
       ORDER BY n.updatedAt DESC
@@ -267,7 +284,24 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
         taxas,
         valorQueEntrou: l.valorQueEntrou == null ? null : Number(l.valorQueEntrou),
         taxaAParteEm: l.taxaAParteEm ?? null,
+        taxaAParteComo: (l.taxaAParteComo as string) ?? null,
+        taxaAParteValor: l.taxaAParteValor == null ? null : Number(l.taxaAParteValor),
       }),
+      /*
+       * CORRIGIR O PAGAMENTO REGISTADO — 04-11-2026 (d9). Só nos registados à
+       * mão (transferência, numerário, pago ao profissional), fora do dinheiro
+       * combinado: o valor registado e o que a conta dá com e sem fatura.
+       */
+      correccao:
+        l.clientePagouEm != null &&
+        lerForma(l.formaDePagamento) !== "dinheiro" &&
+        CORRIGEM_SE.includes(String(l.comoEntrou ?? "") as ComoEntrou)
+          ? {
+              valorRegistado: l.valorQueEntrou == null ? null : Number(l.valorQueEntrou),
+              declarado: lerParaQue(l.pagamentoParaQue),
+              ...valoresDeReferencia(l),
+            }
+          : null,
     };
   });
 }

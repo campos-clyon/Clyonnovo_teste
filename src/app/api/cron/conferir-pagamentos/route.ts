@@ -11,6 +11,7 @@ import {
   pedidosFechadosComPagamentosAbertos,
   type Pagamento,
 } from "@/lib/pagamentos-na-base";
+import { daMesmaConta } from "@/lib/parte-do-pagamento";
 import {
   consultaDaPago,
   fechaPorCaducar,
@@ -106,7 +107,7 @@ async function conferirUm(
     return;
   }
 
-  const foraDeVigor = pagamentoForaDeVigor(p, await pagamentosDaNegociacao(p.negociacaoId));
+  const foraDeVigor = pagamentoForaDeVigor(p, daMesmaConta(p, await pagamentosDaNegociacao(p.negociacaoId)));
   if (foraDeVigor) {
     s.porConfirmar.push(`#${p.id}: ${foraDeVigor}`);
     return;

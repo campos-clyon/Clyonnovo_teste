@@ -391,8 +391,9 @@ function diaDe(iso: string | null): string | null {
  * deixa pedir outra — Multibanco ou MB WAY — quando não há.
  */
 /**
- * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 01-11-2026. Não há referência: a
- * taxa desconta-se do próximo valor que a CLYON lhe transferir. Sem botões.
+ * UMA DÍVIDA SÓ DO SALDO, SEM REFERÊNCIA — 01-11-2026. Desde 04-11-2026 (d9)
+ * a dos pagos em mão também tem referência e usa `Divida`, com os botões;
+ * nenhuma nasce hoje com `descontaNoSaldo`. Fica para uma que volte a nascer.
  */
 function DividaNoSaldo({ d }: { d: DividaDaCarteira }) {
   return (
@@ -457,9 +458,11 @@ function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
             {d.pedidoId != null ? `#${d.pedidoId} · ` : ""}
             {d.titulo}
           </p>
+          {/* Sem fatura não há IVA (um pago em mão, 04-11-2026, d9): só a taxa é da CLYON. */}
           <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-            O cliente pagou-lhe {euros(d.recebidoDoCliente)} em dinheiro, com IVA. São da CLYON{" "}
-            {euros(d.iva)} de IVA e {euros(d.comissao)} de taxa da plataforma.
+            {d.iva > 0
+              ? `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, com IVA. São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma.`
+              : `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, sem IVA. A taxa da plataforma (${euros(d.comissao)}) é da CLYON.`}
           </p>
           {/*
             O PRAZO — 01-10-2026. Passados 7 dias deixa de poder propor e

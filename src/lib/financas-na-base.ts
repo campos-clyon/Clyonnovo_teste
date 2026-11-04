@@ -245,7 +245,7 @@ async function dinheiroDaPlataforma(): Promise<{
   const [recebidos, pagos, levantados] = await Promise.all([
     lerSeHouver(
       `SELECT pg.id, pg.pedidoId, pg.metodo, pg.valor, pg.valorPago, pg.comissaoEupago, pg.pagoEm,
-              pg.ambiente, pg.deTeste, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
+              pg.ambiente, pg.deTeste, pg.trid, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
               n.formaDePagamento, o.contactName AS cliente, pr.name AS profissional
          FROM pagamentos pg
          LEFT JOIN negociacoes n ON n.id = pg.negociacaoId
@@ -255,9 +255,12 @@ async function dinheiroDaPlataforma(): Promise<{
     ),
     lerSeHouver(
       `SELECT n.id, n.pedidoId, n.pagoEm, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-              n.formaDePagamento, pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste
+              n.formaDePagamento, pr.name AS profissional, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
+              -- Como o cliente pagou (04-11-2026, d9): pago em mão não é despesa da CLYON.
+              pg.metodo AS comoEntrou
          FROM negociacoes n
          JOIN providers pr ON pr.id = n.providerId
+         LEFT JOIN pagamentos pg ON pg.negociacaoPaga = n.id
         WHERE n.pagoEm IS NOT NULL AND n.valorAcordado IS NOT NULL`,
     ),
     lerSeHouver(
@@ -281,6 +284,7 @@ async function dinheiroDaPlataforma(): Promise<{
       deTeste: Number(l.deTeste) === 1,
       contaDeTeste: Number(l.contaDeTeste) === 1,
       formaDoTrabalho: (l.formaDePagamento as string) ?? null,
+      trid: (l.trid as string) ?? null,
       cliente: (l.cliente as string) ?? null,
       profissional: (l.profissional as string) ?? null,
     })),
@@ -292,6 +296,7 @@ async function dinheiroDaPlataforma(): Promise<{
       profissional: String(l.profissional ?? "Profissional"),
       contaDeTeste: Number(l.contaDeTeste) === 1,
       formaDoTrabalho: (l.formaDePagamento as string) ?? null,
+      comoEntrou: (l.comoEntrou as string) ?? null,
     })),
     levantamentos: levantados.map((l) => ({
       id: Number(l.id),

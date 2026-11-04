@@ -2,7 +2,8 @@ import { negociacoesDoPedido, perfilDoProfissional } from "@/lib/db";
 import { avisarTrabalhoConfirmado } from "@/lib/email-proposta";
 import { avisarProfissionalConfirmadoPorPush } from "@/lib/avisar-por-push";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
-import { destinoDoValorConcluido, type DestinoDoValor } from "@/lib/carteira";
+import { destinoDoValorConcluido, type DestinoDoValor, type TrabalhoNaCarteira } from "@/lib/carteira";
+import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 import { casoDoDestino } from "@/lib/fim-do-trabalho";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
@@ -46,8 +47,44 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
      * dele. Se falhar (euPago em baixo, sem chave), fica registado e ele pode
      * pedi-la na carteira; o backoffice também.
      */
+    /*
+     * ONDE FICOU O VALOR — perguntado como a carteira pergunta. 29-09-2026.
+     *
+     * O email dizia sempre «ficaram disponíveis, pode pedir a transferência».
+     * O trabalho passa pela MESMA conversão que a carteira usa
+     * (`trabalhosDaCarteira`, que só pergunta à base pelos pagamentos quando a
+     * carteira também pergunta) e pela mesma regra (`destinoDoValorConcluido`):
+     * o email não pode dizer «disponível» de um valor que o painel mostra por
+     * cobrar, nem mandar à carteira quem recebeu em notas.
+     *
+     * Lê-se antes da dívida (04-11-2026, d9): é daqui que se sabe se o cliente
+     * lhe pagou em mão num trabalho da plataforma.
+     */
+    let destino: DestinoDoValor | null = null;
+    let lido: TrabalhoNaCarteira | null = null;
+    try {
+      const [trabalho] = await trabalhosDaCarteira([n]);
+      lido = trabalho ?? null;
+      destino = destinoDoValorConcluido(trabalho);
+    } catch (err) {
+      console.error("[avisar-confirmacao] não li a carteira:", err);
+    }
+
+    const taxas = taxasDaNegociacao(n);
     const modelo = modeloDaNegociacao(n.createdAt);
-    const temDivida = temDividaDoProfissional(n.formaDePagamento, modelo);
+    /*
+     * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 04-11-2026 (d9, dono). *«Hoje
+     * a confirmação não gera referência quando o trabalho foi combinado "na
+     * plataforma" e o cliente pagou em mão.»* Passa a gerar, como no
+     * dinheiro: o IVA (se o cliente lho pagou) e a taxa, pela conta do registo.
+     */
+    const emMao = lido != null && pagoAoProfissionalRegistado(n.formaDePagamento, lido.comoEntrou);
+    const contaDaDivida = temDividaDoProfissional(n.formaDePagamento, modelo)
+      ? dividaDoProfissional(valor, taxas)
+      : emMao
+        ? dividaDoRegistoEmMao(valor, taxas, lido?.valorQueEntrou)
+        : null;
+    const temDivida = contaDaDivida != null;
     const referencia = temDivida
       ? await gerarReferenciaDaDivida(dados.negociacaoId, {
           metodo: "multibanco",
@@ -60,37 +97,18 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
     if (!email) return;
 
     /*
-     * ONDE FICOU O VALOR — perguntado como a carteira pergunta. 29-09-2026.
-     *
-     * O email dizia sempre «ficaram disponíveis, pode pedir a transferência».
-     * O trabalho passa pela MESMA conversão que a carteira usa
-     * (`trabalhosDaCarteira`, que só pergunta à base pelos pagamentos quando a
-     * carteira também pergunta) e pela mesma regra (`destinoDoValorConcluido`):
-     * o email não pode dizer «disponível» de um valor que o painel mostra por
-     * cobrar, nem mandar à carteira quem recebeu em notas.
-     */
-    let destino: DestinoDoValor | null = null;
-    try {
-      const [trabalho] = await trabalhosDaCarteira([n]);
-      destino = destinoDoValorConcluido(trabalho);
-    } catch (err) {
-      console.error("[avisar-confirmacao] não li a carteira:", err);
-    }
-
-    /*
      * O aviso no telemóvel (27-10-2026), além do email. Nunca lança. Desde
      * 28-10-2026 (d4) diz o caso — na carteira, por cobrar, em dinheiro e o
      * que entrega à CLYON —, com a mesma regra do email. Sem o caso (a
      * carteira não se leu), sai o aviso de sempre.
      */
-    const taxas = taxasDaNegociacao(n);
     await avisarProfissionalConfirmadoPorPush({
       email,
       pedidoId: dados.pedidoId,
       negociacaoId: dados.negociacaoId,
       caso: destino ? casoDoDestino(destino, temDivida) : null,
       liquido: quantoOProfissionalRecebe(valor, taxas),
-      aPagarAClyon: temDivida ? dividaDoProfissional(valor, taxas).total : null,
+      aPagarAClyon: contaDaDivida ? contaDaDivida.total : null,
     });
     if (!destino) return;
 
@@ -101,9 +119,9 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
       valorAcordado: valor,
       taxas: taxasDaNegociacao(n),
       destino,
-      divida: temDivida
+      divida: contaDaDivida
         ? {
-            ...dividaDoProfissional(valor, taxasDaNegociacao(n)),
+            ...contaDaDivida,
             referencia:
               referencia?.ok && referencia.pagamento.metodo === "multibanco"
                 ? {

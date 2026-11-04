@@ -537,11 +537,18 @@ export type DividaNaCarteira = {
    */
   nasceuEm: Date | null;
   /**
-   * TRABALHO DA PLATAFORMA PAGO EM MÃO — 01-11-2026. Não há referência para
-   * esta dívida (o trabalho já está dado por pago): desconta-se do que a
-   * CLYON lhe tiver a transferir (`levantavelDe` e `abater-dividas-no-saldo.ts`).
+   * SÓ SE DESCONTA NO SALDO, SEM REFERÊNCIA — 01-11-2026. Desde 04-11-2026
+   * (d9) nenhuma dívida nasce assim: a dos pagos em mão também se paga por
+   * referência e conta para os 7 dias. Fica no tipo porque a app Pro o lê.
    */
   descontaNoSaldo?: boolean;
+  /**
+   * TRABALHO DA PLATAFORMA PAGO EM MÃO — 01-11-2026. A negociação já está
+   * fechada pelo registo `ao_profissional`: o que fecha esta dívida (abatida,
+   * paga por ele, quitada ou paga pela referência) vive numa linha à parte de
+   * `pagamentos` (`tridDoAbatimentoAParte`), sem tocar em `negociacaoPaga`.
+   */
+  aParte?: boolean;
 };
 
 export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
@@ -550,7 +557,11 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
     /*
      * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 01-11-2026. A taxa (e o IVA,
      * se o cliente lho pagou) está com ele e é da CLYON. Nasce como a do
-     * dinheiro, com o trabalho feito; paga-se com o saldo dele.
+     * dinheiro, com o trabalho feito.
+     *
+     * PAGA-SE COMO A DO DINHEIRO — 04-11-2026 (d9, dono): por referência
+     * Multibanco ou MB WAY na carteira, ou abatida no saldo; e passados 7
+     * dias por pagar, bloqueia os trabalhos em dinheiro (`bloqueio-por-divida.ts`).
      */
     if (pagoAoProfissionalRegistado(t.formaDePagamento, t.comoEntrou)) {
       if (faseDoTrabalho(t) === "a_negociar") continue;
@@ -572,7 +583,7 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
         abatida: t.dividaAbatida != null,
         abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
         nasceuEm: quandoLiberta(t),
-        descontaNoSaldo: true,
+        aParte: true,
       });
       continue;
     }

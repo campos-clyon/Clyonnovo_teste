@@ -33,6 +33,7 @@ export const ACONTECIMENTOS_DO_DINHEIRO = [
   "divida_paga_pelo_profissional",
   "divida_quitada",
   "valor_corrigido",
+  "pagamento_corrigido",
   "levantamento_pago",
 ] as const;
 
@@ -49,6 +50,7 @@ const NOME_DO_ACONTECIMENTO: Record<string, string> = {
   divida_paga_pelo_profissional: "O profissional pagou à CLYON",
   divida_quitada: "Dívida quitada no acerto de 01/11/2026",
   valor_corrigido: "Valor corrigido",
+  pagamento_corrigido: "Pagamento registado corrigido",
   levantamento_pago: "Pago ao profissional",
 };
 

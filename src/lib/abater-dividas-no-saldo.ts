@@ -187,7 +187,7 @@ async function abaterUma(
     levantamentoId: c.levantamentoId,
     // Pago em mão num trabalho da plataforma (01-11-2026): a negociação já
     // está fechada pelo registo; a taxa abate-se numa linha à parte.
-    aParte: d.descontaNoSaldo === true,
+    aParte: d.aParte === true,
   });
   // Já paga entretanto (por referência, ou outro abatimento): a base disse
   // que não, e é ela que manda. Fica como estava.

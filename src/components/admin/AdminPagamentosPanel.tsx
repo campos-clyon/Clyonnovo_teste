@@ -53,6 +53,7 @@ import {
   porCobrarNosPagosEmMao,
   somaDoSeparador,
   ultimosDe,
+  fraseDaParteDaClyon,
   type Destino,
   type ResumoDosRegistos,
   type TaxaDoPagoEmMao,
@@ -84,6 +85,10 @@ import {
   type ParaQue,
 } from "@/lib/pagamento-declarado";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import CorrigirOPagamento, { type CorreccaoDoPagamento } from "@/components/admin/CorrigirOPagamento";
+
+/** Corrigir um pagamento registado à mão: a fatura e o valor, com motivo (04-11-2026, d9). */
+const ROTA_DA_CORRECCAO = "/api/admin/pagamentos/corrigir-pagamento";
 
 /**
  * O QUE ENTROU PELO euPAGO.
@@ -317,6 +322,13 @@ type Trabalho = {
   motivoSemFactura?: string | null;
   /** Pago em mão: a parte da CLYON e se já está cobrada (03-11-2026, d3). */
   taxaEmMao?: TaxaDoPagoEmMao | null;
+  /** Corrigir o pagamento registado à mão — 04-11-2026 (d9). Nulo onde não se corrige. */
+  correccao?: {
+    valorRegistado: number | null;
+    declarado: ParaQue | null;
+    comFactura: number | null;
+    semFactura: number | null;
+  } | null;
 };
 
 /**
@@ -1362,6 +1374,7 @@ function GestorDoDinheiro({
                     "grupo",
                   )
                 }
+                onCorrigirPagamento={(c) => void agir(t, ROTA_DA_CORRECCAO, c, "grupo")}
                 marcado={marcados.has(t.negociacaoId)}
                 onMarcar={(v) => marcar([t.negociacaoId], v)}
                 mexeNoDinheiro={mexeNoDinheiro}
@@ -1745,6 +1758,7 @@ function GestorDoDinheiro({
                         onFactura={(semFactura, motivo) =>
                           void agir(t, "/api/admin/pagamentos/factura", { semFactura, ...(semFactura ? { motivo } : {}) })
                         }
+                        onCorrigirPagamento={(c) => void agir(t, ROTA_DA_CORRECCAO, c)}
                         marcado={marcados.has(t.negociacaoId)}
                         onMarcar={(v) => marcar([t.negociacaoId], v)}
                         mexeNoDinheiro={mexeNoDinheiro}
@@ -1865,6 +1879,7 @@ function GestorDoDinheiro({
                     "gaveta",
                   )
                 }
+                onCorrigirPagamento={(c) => void agir(trabalhoDaGaveta, ROTA_DA_CORRECCAO, c, "gaveta")}
                 marcado={false}
                 onMarcar={() => {}}
                 mexeNoDinheiro={mexeNoDinheiro}
@@ -2183,6 +2198,7 @@ function Linha({
   onCorrigir,
   onExcluir,
   onFactura,
+  onCorrigirPagamento,
   marcado,
   onMarcar,
   mexeNoDinheiro,
@@ -2206,6 +2222,8 @@ function Linha({
   onExcluir: (motivo: string) => void;
   /** Com ou sem factura — 21-10-2026; sem factura, com o motivo escrito (25-10-2026, d19). */
   onFactura: (semFactura: boolean, motivo?: string) => void;
+  /** Corrigir o pagamento registado: a fatura e o valor, com motivo — 04-11-2026 (d9). */
+  onCorrigirPagamento: (c: CorreccaoDoPagamento) => void;
   marcado: boolean;
   onMarcar: (valor: boolean) => void;
   mexeNoDinheiro: boolean;
@@ -2351,12 +2369,14 @@ function Linha({
               </span>
             )}
             {t.dividaDoProfissional == null && t.taxaEmMao && (
-              /* Registado «pago ao profissional»: a parte da CLYON desconta-se no saldo dele (03-11-2026, d3). */
+              /*
+                Registado «pago ao profissional»: a parte da CLYON (03-11-2026, d3).
+                Cada caminho com o seu nome — «quitada no acerto», e não «cobrada»,
+                quando não entrou dinheiro (04-11-2026, d9).
+              */
               <span className={t.taxaEmMao.cobrada ? "text-emerald-300" : "text-amber-300"}>
                 {" · "}
-                {t.taxaEmMao.cobrada
-                  ? `a parte da CLYON, ${euros(t.taxaEmMao.valor)}, já está cobrada`
-                  : `a parte da CLYON, ${euros(t.taxaEmMao.valor)}, desconta-se no saldo do profissional`}
+                {fraseDaParteDaClyon(t.taxaEmMao, euros)}
               </span>
             )}
           </span>
@@ -2438,6 +2458,21 @@ function Linha({
           Sem fatura:{" "}
           {t.motivoSemFactura ? <span className="text-amber-100">«{t.motivoSemFactura}»</span> : "sem motivo registado."}
         </p>
+      )}
+
+      {/*
+        CORRIGIR O PAGAMENTO REGISTADO — 04-11-2026 (d9, dono). A fatura e o
+        valor de um pagamento registado à mão, com motivo, só o administrador;
+        também num trabalho fechado, que é onde o erro se descobre.
+      */}
+      {aberto && mexeNoDinheiro && t.correccao && (
+        <CorrigirOPagamento
+          correccao={t.correccao}
+          semFactura={Boolean(t.semFactura)}
+          emMao={emMao}
+          ocupado={ocupado}
+          onGuardar={onCorrigirPagamento}
+        />
       )}
 
       {/*

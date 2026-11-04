@@ -54,11 +54,11 @@ export function dividasEmAtraso(trabalhos: TrabalhoNaCarteira[], agora: Date): D
   for (const d of dividasDe(trabalhos, agora)) {
     if (d.paga) continue;
     /*
-     * A TAXA DE UM TRABALHO DA PLATAFORMA PAGO EM MÃO NÃO BLOQUEIA — 01-11-2026.
-     * Não tem referência por onde a pagar: desconta-se do saldo dele, na
-     * próxima transferência. Bloquear por uma dívida que ele não tem como pagar
-     * era castigá-lo por um caminho que só a CLYON tem. Fica reservada no que
-     * pode pedir (`levantavelDe`).
+     * Uma dívida sem referência por onde a pagar não bloqueia: bloquear por
+     * uma dívida que ele não tem como pagar era castigá-lo por um caminho que
+     * só a CLYON tem (01-11-2026). Desde 04-11-2026 (d9) a dos pagos em mão
+     * também tem referência na carteira, e conta para os 7 dias como a do
+     * dinheiro; nenhuma dívida nasce hoje com esta marca.
      */
     if (d.descontaNoSaldo) continue;
     const fim = venceEm(d);

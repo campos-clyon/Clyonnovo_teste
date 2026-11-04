@@ -345,7 +345,7 @@ describe("o dinheiro no fim: a diferença paga-se, o que sobra devolve-se à mã
     expect(rota).toContain("valor = acerto.aPagar;");
     const base = ler("src/lib/pagamentos-na-base.ts");
     expect(base).toContain("ADD UNIQUE KEY uq_uma_diferenca (diferencaPaga)");
-    expect(base).toContain("negociacaoPaga = IF(parte = 'diferenca', NULL, ?)");
+    expect(base).toContain("negociacaoPaga = IF(parte IN ('diferenca', 'divida'), NULL, ?)");
     // Nunca se devolve sozinho: não há chamada de reembolso nesta conta.
     expect(ler("src/lib/pagamento-para-o-cliente.ts")).not.toMatch(/reembols/i);
   });

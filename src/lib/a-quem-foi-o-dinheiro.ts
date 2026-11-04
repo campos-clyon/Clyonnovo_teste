@@ -159,9 +159,10 @@ export function somaDoSeparador(
  *
  *   · combinado em dinheiro: a dívida de sempre (`dividaDoProfissional`),
  *     cobrada quando o pagamento dela entrou (`clientePagouEm`);
- *   · registado «pago ao profissional»: a conta de `dividaDoRegistoEmMao`,
- *     que se desconta no saldo dele (24d1cc1d) — cobrada quando a linha à
- *     parte existe (`taxaAParteEm`).
+ *   · registado «pago ao profissional»: a conta de `dividaDoRegistoEmMao`
+ *     (24d1cc1d) — cobrada quando a linha à parte existe (`taxaAParteEm`).
+ *     Desde 04-11-2026 (d9) paga-se como a do dinheiro: por referência na
+ *     carteira dele, ou abatida no saldo.
  *
  * Nula fora dos pagos em mão, ou quando não há o dado (dinheiro do regime
  * antigo, sem dívida registada).
@@ -169,8 +170,22 @@ export function somaDoSeparador(
 export type TaxaDoPagoEmMao = {
   valor: number;
   cobrada: boolean;
-  /** Desconta-se no saldo do profissional (não há referência para ela). */
+  /**
+   * Só se desconta no saldo, sem referência (01-11-2026). Desde 04-11-2026
+   * (d9) nenhuma é assim: falso.
+   */
   descontaNoSaldo: boolean;
+  /**
+   * COMO SE FECHOU — o método da linha à parte: `quitacao` (o acerto de
+   * 01-11-2026, sem dinheiro), `abatimento` (no saldo dele), `pro_*` (ele
+   * pagou à mão), `multibanco`/`mbway` (pela referência). Nulo por cobrar.
+   */
+  como?: string | null;
+  /**
+   * COM QUANTO SE FECHOU — o valor dessa linha. Depois de uma correcção do
+   * pagamento (d9) a conta (`valor`) pode já não bater com ele: diz-se.
+   */
+  fechadaCom?: number | null;
 };
 
 export function taxaDoPagoEmMao(t: {
@@ -182,6 +197,9 @@ export function taxaDoPagoEmMao(t: {
   taxas: Taxas;
   valorQueEntrou?: number | null;
   taxaAParteEm?: unknown;
+  /** O método e o valor da linha à parte, quando existe (04-11-2026, d9). */
+  taxaAParteComo?: string | null;
+  taxaAParteValor?: number | null;
 }): TaxaDoPagoEmMao | null {
   if (lerForma(t.formaDePagamento ?? null) === "dinheiro") {
     if (t.dividaDoProfissional == null || !Number.isFinite(t.dividaDoProfissional)) return null;
@@ -191,7 +209,76 @@ export function taxaDoPagoEmMao(t: {
   if (!Number.isFinite(t.valorAcordado)) return null;
   const d = dividaDoRegistoEmMao(t.valorAcordado, t.taxas, t.valorQueEntrou);
   if (d.total <= 0) return null;
-  return { valor: d.total, cobrada: t.taxaAParteEm != null, descontaNoSaldo: true };
+  const cobrada = t.taxaAParteEm != null;
+  return {
+    valor: d.total,
+    cobrada,
+    descontaNoSaldo: false,
+    como: cobrada ? (String(t.taxaAParteComo ?? "").trim() || null) : null,
+    fechadaCom:
+      cobrada && t.taxaAParteValor != null && Number.isFinite(Number(t.taxaAParteValor))
+        ? aosCentimos(Number(t.taxaAParteValor))
+        : null,
+  };
+}
+
+/**
+ * COMO SE DIZ A PARTE DA CLYON DE UM PAGO EM MÃO — 04-11-2026 (d9, dono).
+ *
+ * *«Nas 34 linhas do acerto de 01/11, os Pagamentos dizem "já está cobrada"
+ * quando a dívida foi quitada sem entrar dinheiro: passa a "quitada no
+ * acerto".»* Cada caminho com o seu nome; e, se uma correcção mudou a conta
+ * depois de fechada, a diferença à vista (não se cobra sozinha).
+ */
+export function fraseDaParteDaClyon(x: TaxaDoPagoEmMao, euros: (v: number) => string): string {
+  const parte = `a parte da CLYON, ${euros(x.valor)}`;
+  if (!x.cobrada) {
+    return `${parte}, está por pagar pelo profissional — pela referência na carteira dele, ou descontada no saldo`;
+  }
+  const como = String(x.como ?? "").trim();
+  const quitada = como === "quitacao";
+  const fechada = quitada
+    ? "foi quitada no acerto de 01/11/2026"
+    : como === "abatimento"
+      ? "foi abatida no saldo do profissional"
+      : como.startsWith("pro_") || como === "multibanco" || como === "mbway"
+        ? "foi paga pelo profissional"
+        : "está fechada";
+  const diferenca = x.fechadaCom != null ? aosCentimos(x.valor - x.fechadaCom) : 0;
+  if (Math.abs(diferenca) > 0.005) {
+    return (
+      `a parte da CLYON é ${euros(x.valor)} pela conta de hoje; ${fechada} com ${euros(x.fechadaCom as number)}` +
+      `${quitada ? " (sem entrar dinheiro)" : ""} — ${diferenca > 0 ? "faltam" : "sobram"} ` +
+      `${euros(Math.abs(diferenca))}, que não se acertam sozinhos`
+    );
+  }
+  return `${parte}, ${fechada}${quitada ? ", sem entrar dinheiro" : ""}`;
+}
+
+/**
+ * EM QUE MONTE DAS CARTEIRAS FICA UM TRABALHO — 04-11-2026 (d9, dono).
+ *
+ * *«Um trabalho pago em mão ao profissional nunca entra no "A pagar".»* As
+ * Carteiras do backoffice (Finanças › «A pagar aos profissionais») liam o
+ * pago em mão só pela forma combinada e, nos Trabalhos CLYON, nem
+ * perguntavam como o cliente pagou: o #479 e o #496, pagos em mão ao
+ * parceiro, ficavam «por pagar» — o caminho para a CLYON pagar duas vezes.
+ *
+ * A mesma pergunta dos Pagamentos (`destinoDoTrabalho`, `foiPagoEmMaoPor`):
+ * pago em mão é «em mão», feito ou por fazer, seja Trabalho CLYON ou não.
+ */
+export type MonteDaCarteira = "em_mao" | "pago" | "por_finalizar" | "por_pagar";
+
+export function monteNasCarteiras(t: {
+  formaDePagamento?: string | null;
+  comoEntrou?: string | null;
+  confirmadoEm?: unknown;
+  pagoEm?: unknown;
+}): MonteDaCarteira {
+  if (destinoDoTrabalho(t) === "profissional") return "em_mao";
+  if (t.pagoEm != null) return "pago";
+  if (t.confirmadoEm == null) return "por_finalizar";
+  return "por_pagar";
 }
 
 /** O que falta cobrar aos profissionais nos trabalhos pagos em mão. */

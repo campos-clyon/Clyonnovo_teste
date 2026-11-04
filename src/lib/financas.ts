@@ -1,4 +1,5 @@
 import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
+import { eLinhaDaDividaEmMao, foiPagoEmMaoPor } from "./pago-em-mao";
 
 /**
  * A GESTORA DE CONTAS DA CLYON — 14-10-2026.
@@ -605,6 +606,11 @@ export type RecebimentoDaPlataforma = {
   contaDeTeste: boolean;
   /** A forma de pagamento do trabalho: `dinheiro` quer dizer que isto é a dívida do pro. */
   formaDoTrabalho: string | null;
+  /**
+   * O `trid` da linha. A da dívida de um pago em mão (`abatimento-mao-N`) é o
+   * profissional a pagar à CLYON, mesmo pela referência do euPago (04-11-2026, d9).
+   */
+  trid?: string | null;
   cliente: string | null;
   profissional: string | null;
 };
@@ -619,6 +625,12 @@ export type PagamentoAoProfissional = {
   profissional: string;
   contaDeTeste: boolean;
   formaDoTrabalho: string | null;
+  /**
+   * Como o cliente pagou o trabalho — o método do pagamento que fecha a
+   * negociação. `ao_profissional` = pago em mão: o `pagoEm` não é dinheiro que
+   * saiu da CLYON (04-11-2026, d9).
+   */
+  comoEntrou?: string | null;
 };
 
 /** Um levantamento dado por pago. */
@@ -695,7 +707,7 @@ export function movimentosDaPlataforma(
     if (NAO_ENTROU_NA_CLYON.includes(r.metodo)) continue;
     if (r.contaDeTeste && ANOTADOS_A_MAO.includes(r.metodo)) continue;
 
-    const daDivida = r.formaDoTrabalho === "dinheiro" || r.metodo.startsWith("pro_");
+    const daDivida = r.formaDoTrabalho === "dinheiro" || r.metodo.startsWith("pro_") || eLinhaDaDividaEmMao(r.trid);
     const como = NOME_DO_METODO[r.metodo];
     const teste = r.deTeste ? " · pagamento de teste" : "";
     fora.push({
@@ -735,8 +747,14 @@ export function movimentosDaPlataforma(
     const dia = diaDe(p.pagoEm);
     const valor = aosCentimos(p.recebe);
     if (!dia || !(valor > 0) || p.contaDeTeste) continue;
-    // Num trabalho em dinheiro a CLYON não transfere nada: o cliente pagou-lhe no local.
-    if (p.formaDoTrabalho === "dinheiro") continue;
+    /*
+     * PAGO EM MÃO NÃO É DESPESA — 04-11-2026 (d9, dono). Num trabalho em
+     * dinheiro, ou registado «pago ao profissional», a CLYON não transfere
+     * nada: o cliente pagou-lhe no local. O `pagoEm` desses trabalhos (marcado
+     * antes de haver o travão) contava-se como despesa que nunca existiu. A
+     * mesma pergunta dos Pagamentos e das Carteiras (`foiPagoEmMaoPor`).
+     */
+    if (foiPagoEmMaoPor(p.formaDoTrabalho, p.comoEntrou)) continue;
     fora.push({
       ...base,
       id: `auto:pago:${p.negociacaoId}`,

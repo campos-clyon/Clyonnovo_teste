@@ -166,9 +166,15 @@ describe("4. a parte da CLYON de um pago em mão", () => {
     expect(taxaDoPagoEmMao({ ...base, dividaDoProfissional: null })).toBeNull();
   });
 
-  it("registado «pago ao profissional»: a conta do registo em mão, que se desconta no saldo", () => {
+  it("registado «pago ao profissional»: a conta do registo em mão (desde 04-11-2026 também por referência)", () => {
     const base = { formaDePagamento: "na_plataforma", comoEntrou: "ao_profissional", valorAcordado: 100, taxas: TAXAS };
-    expect(taxaDoPagoEmMao({ ...base, valorQueEntrou: 100 })).toEqual({ valor: 20, cobrada: false, descontaNoSaldo: true });
+    expect(taxaDoPagoEmMao({ ...base, valorQueEntrou: 100 })).toEqual({
+      valor: 20,
+      cobrada: false,
+      descontaNoSaldo: false,
+      como: null,
+      fechadaCom: null,
+    });
     // Com o IVA pago em mão, o IVA também é da CLYON.
     expect(taxaDoPagoEmMao({ ...base, valorQueEntrou: 123 })?.valor).toBe(43);
     // Sem o valor registado, só a taxa.
@@ -310,9 +316,12 @@ describe("7. o ecrã e a base usam esta regra — e não outra parecida", () => 
   });
 
   it("a parte cobrada de um pago em mão lê a linha à parte pelo mesmo `trid` da carteira", () => {
-    expect(BASE).toContain('export const PREFIXO_DO_ABATIMENTO_A_PARTE = "abatimento-mao-";');
-    expect(BASE).toContain("return `${PREFIXO_DO_ABATIMENTO_A_PARTE}${negociacaoId}`;");
-    expect(GERIR).toContain("WHERE ap.trid = CONCAT(?, n.id) AND ap.estado = 'pago' AND ap.negociacaoPaga IS NULL");
+    // Desde 04-11-2026 (d9) vive em `pago-em-mao.ts` (sem base, para as Finanças); a base reexporta-o.
+    const MAO = ler("src/lib/pago-em-mao.ts");
+    expect(MAO).toContain('export const PREFIXO_DO_ABATIMENTO_A_PARTE = "abatimento-mao-";');
+    expect(MAO).toContain("return `${PREFIXO_DO_ABATIMENTO_A_PARTE}${negociacaoId}`;");
+    expect(BASE).toContain('export { PREFIXO_DO_ABATIMENTO_A_PARTE, tridDoAbatimentoAParte } from "./pago-em-mao";');
+    expect(GERIR).toContain("ON ap.trid = CONCAT(?, n.id) AND ap.estado = 'pago' AND ap.negociacaoPaga IS NULL");
     expect(GERIR).toContain("soA ? [PREFIXO_DO_ABATIMENTO_A_PARTE, soA] : [PREFIXO_DO_ABATIMENTO_A_PARTE]");
     expect(GERIR).toContain("taxaEmMao: taxaDoPagoEmMao({");
   });

@@ -102,9 +102,10 @@ describe("os dois casos do dono: recebidos em mão, nunca «Por receber»", () =
 
   it("a taxa fica a dever-se à CLYON: 15,00 € e 8,80 €", () => {
     const d = dividasDe(trabalhos, agora);
-    expect(d.map((x) => [x.negociacaoId, x.total, x.comissao, x.iva, x.descontaNoSaldo])).toEqual([
-      [1, 15, 15, 0, true],
-      [2, 8.8, 8.8, 0, true],
+    // À parte (a negociação já está paga pelo registo), e desde 04-11-2026 (d9) com referência.
+    expect(d.map((x) => [x.negociacaoId, x.total, x.comissao, x.iva, x.aParte, x.descontaNoSaldo ?? false])).toEqual([
+      [1, 15, 15, 0, true, false],
+      [2, 8.8, 8.8, 0, true, false],
     ]);
     expect(aPagarAClyonDe(trabalhos, agora)).toBe(23.8);
   });
@@ -114,9 +115,12 @@ describe("os dois casos do dono: recebidos em mão, nunca «Por receber»", () =
     expect(recusaDoLevantamento(10, k, true, false, aPagarAClyonDe(trabalhos, agora))).toBe("pago_em_mao");
   });
 
-  it("não bloqueia os trabalhos em dinheiro (não há referência por onde pagar)", () => {
+  it("desde 04-11-2026 (d9) pagam-se por referência e contam para os 7 dias, como as do dinheiro", () => {
+    // Feitos a 25/10: dentro do prazo a 01/11, em atraso a 01/12.
+    expect(bloqueioEmDinheiro(trabalhos, agora).bloqueado).toBe(false);
     const longe = new Date("2026-12-01T12:00:00Z");
-    expect(bloqueioEmDinheiro(trabalhos, longe).bloqueado).toBe(false);
+    expect(bloqueioEmDinheiro(trabalhos, longe).bloqueado).toBe(true);
+    expect(bloqueioEmDinheiro(trabalhos, longe).total).toBe(23.8);
   });
 });
 
@@ -237,11 +241,10 @@ describe("os caminhos que pagam ao profissional lêem a mesma regra", () => {
     expect(r).toContain("aPagarAClyonDe(trabalhos, agora)");
   });
   it("as Carteiras do backoffice não põem um pago em mão em «por pagar»", () => {
-    expect(ler("src/app/api/admin/carteiras/route.ts")).toContain(
-      'lerForma(l.formaDePagamento) === "dinheiro" || emMaoRegistado',
-    );
+    // A mesma pergunta dos Pagamentos, também nos Trabalhos CLYON (04-11-2026, d9).
+    expect(ler("src/app/api/admin/carteiras/route.ts")).toContain("const monte = monteNasCarteiras({");
   });
   it("o abatimento de um pago em mão não fecha a negociação outra vez", () => {
-    expect(ler("src/lib/abater-dividas-no-saldo.ts")).toContain("aParte: d.descontaNoSaldo === true");
+    expect(ler("src/lib/abater-dividas-no-saldo.ts")).toContain("aParte: d.aParte === true");
   });
 });

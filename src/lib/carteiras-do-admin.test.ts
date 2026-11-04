@@ -166,10 +166,11 @@ describe("os três montes", () => {
     // O dinheiro sai primeiro de todos — não é a CLYON quem o paga. Depois:
     // pago, por finalizar, e o resto é por pagar. Cada ramo termina em
     // `continue`, para nenhum trabalho contar duas vezes.
-    expect(bloco.indexOf('lerForma(l.formaDePagamento) === "dinheiro"')).toBeLessThan(
-      bloco.indexOf("l.pagoEm != null"),
-    );
-    expect(bloco.indexOf("l.pagoEm != null")).toBeLessThan(bloco.indexOf("l.confirmadoEm == null"));
+    // Desde 04-11-2026 (d9) o monte decide-se pela regra dos Pagamentos
+    // (`monteNasCarteiras`): em mão primeiro, depois pago e por finalizar.
+    expect(bloco).toContain("const monte = monteNasCarteiras({");
+    expect(bloco.indexOf('if (monte === "em_mao")')).toBeLessThan(bloco.indexOf('if (monte === "pago")'));
+    expect(bloco.indexOf('if (monte === "pago")')).toBeLessThan(bloco.indexOf('if (monte === "por_finalizar")'));
     // Três e não dois: o dinheiro no local também sai por `continue`, antes
     // do pago — para um trabalho pago em mão nunca cair em «por pagar».
     expect((bloco.match(/continue;/g) ?? []).length).toBe(3);
@@ -340,7 +341,7 @@ describe("a taxa da plataforma da casa", () => {
 
   it("só conta como faturado o que o cliente já pagou", () => {
     // O trabalho por fazer não entra: o dinheiro está cativo, não facturado.
-    const i = ROTA.indexOf("if (l.confirmadoEm == null) {");
+    const i = ROTA.indexOf('if (monte === "por_finalizar") {');
     const bloco = ROTA.slice(i, ROTA.indexOf("continue;", i));
     expect(bloco).toContain("clyon.porFinalizar");
     expect(bloco).not.toContain("clyon.faturado");

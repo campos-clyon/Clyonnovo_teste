@@ -5,6 +5,7 @@ import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
 import { configuracaoDoEupago, NOME_DO_METODO } from "@/lib/eupago";
 import { estadoDaReferencia } from "@/lib/pedir-ao-eupago";
 import { darPorPago, pagamentoPorId, pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
+import { daMesmaConta } from "@/lib/parte-do-pagamento";
 import { consultaDaPago, pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
 
 export const runtime = "nodejs";
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Uma referência antiga de outro valor não fecha o pedido (27-10-2026, d16).
-    const foraDeVigor = pagamentoForaDeVigor(p, await pagamentosDaNegociacao(p.negociacaoId));
+    const foraDeVigor = pagamentoForaDeVigor(p, daMesmaConta(p, await pagamentosDaNegociacao(p.negociacaoId)));
     if (foraDeVigor) {
       return NextResponse.json({ ok: true, pago: true, aplicado: false, porConfirmar: true, porque: foraDeVigor, bruto });
     }

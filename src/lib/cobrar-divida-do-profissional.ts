@@ -19,6 +19,8 @@ import {
   type Pagamento,
 } from "./pagamentos-na-base";
 import { dividaDoProfissional, temDividaDoProfissional, type DividaDoProfissional } from "./divida-do-profissional";
+import { dividaACobrar } from "./pago-em-mao";
+import { lerParte } from "./parte-do-pagamento";
 
 /**
  * A REFERÊNCIA COM QUE O PROFISSIONAL PAGA À CLYON O IVA E A COMISSÃO DE UM
@@ -90,10 +92,31 @@ export async function gerarReferenciaDaDivida(
     if (!acesso.ok) return { ok: false, porque: acesso.erro };
     const t = acesso.trabalho;
 
-    if (!temDividaDoProfissional(t.formaDePagamento, t.modelo)) {
+    /*
+     * EM DINHEIRO, OU PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 04-11-2026
+     * (d9). O segundo caso lê-se das linhas de `pagamentos` (o registo
+     * «pago ao profissional»), e as referências dele vivem à parte (`parte =
+     * 'divida'`): a negociação já está paga pelo registo. Ver `dividaACobrar`.
+     */
+    const jaHa = await pagamentosDaNegociacao(negociacaoId);
+    const aCobrar = dividaACobrar(
+      {
+        negociacaoId,
+        formaDePagamento: t.formaDePagamento,
+        dividaEmDinheiro: temDividaDoProfissional(t.formaDePagamento, t.modelo)
+          ? dividaDoProfissional(t.acordado, t.taxas)
+          : null,
+        acordado: t.acordado,
+        taxas: t.taxas,
+      },
+      jaHa,
+    );
+    if (!aCobrar) {
       return { ok: false, porque: "Este trabalho não tem nada a pagar pelo profissional." };
     }
-    const divida = dividaDoProfissional(t.acordado, t.taxas);
+    const divida = aCobrar.divida;
+    // As referências DESTA dívida — num pago em mão, só as da parte «divida».
+    const desta = jaHa.filter((l) => lerParte(l.parte) === aCobrar.parte);
     /*
      * SÓ DEPOIS DE FEITO. Antes da confirmação o cliente ainda não pagou nada
      * ao profissional — pedir-lhe o IVA de um dinheiro que não recebeu era
@@ -112,8 +135,7 @@ export async function gerarReferenciaDaDivida(
     const porta = podeCobrarPeloBackoffice(conf.config);
     if (!porta.pode) return { ok: false, porque: porta.porque, divida };
 
-    const jaHa = await pagamentosDaNegociacao(negociacaoId);
-    if (jaHa.some((l) => l.estado === "pago")) {
+    if (aCobrar.jaPaga) {
       return { ok: false, porque: "Já está paga.", divida, jaPaga: true };
     }
 
@@ -123,7 +145,7 @@ export async function gerarReferenciaDaDivida(
      * vezes. O MB WAY é o contrário: pede-se outro e fecha-se o anterior.
      */
     if (metodo === "multibanco") {
-      const viva = jaHa.find(
+      const viva = desta.find(
         (l) =>
           l.estado === "pendente" &&
           l.metodo === "multibanco" &&
@@ -133,7 +155,7 @@ export async function gerarReferenciaDaDivida(
       );
       if (viva) return { ok: true, pagamento: viva, divida, reaproveitada: true };
     } else {
-      for (const l of jaHa) {
+      for (const l of desta) {
         if (l.estado === "pendente" && l.metodo === "mbway") {
           await fecharSemPagar(l.id, "cancelado", { motivo: "Pedido outro MB WAY para a dívida." });
         }
@@ -160,6 +182,8 @@ export async function gerarReferenciaDaDivida(
       comFactura: false,
       telemovel,
       expiraEm,
+      // Num pago em mão, à parte: paga, não toca na negociação (04-11-2026, d9).
+      parte: aCobrar.parte,
     });
 
     const r = await pedirPagamento(conf.config, metodo, {
@@ -199,7 +223,9 @@ export async function gerarReferenciaDaDivida(
       autorNome: opcoes.autor.nome,
       resumo:
         `${NOME_DO_METODO[metodo]}: gerados ${divida.total.toFixed(2).replace(".", ",")} € de IVA e ` +
-        `taxa da plataforma, a pagar pelo profissional (trabalho pago em dinheiro). Ainda não está pago.`,
+        `taxa da plataforma, a pagar pelo profissional (` +
+        (aCobrar.caso === "em_mao" ? "o cliente pagou-lhe em mão" : "trabalho pago em dinheiro") +
+        "). Ainda não está pago.",
       detalhe: {
         pagamentoId,
         metodo,

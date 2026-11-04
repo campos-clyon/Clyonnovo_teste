@@ -135,6 +135,8 @@ export async function GET(req: NextRequest) {
           const viva = (await pagamentosDaNegociacao(d.negociacaoId)).find(
             (p) =>
               p.estado === "pendente" &&
+              // Num pago em mão, só a referência da dívida dele (04-11-2026, d9).
+              (!d.aParte || p.parte === "divida") &&
               p.valor === d.total &&
               p.referencia != null &&
               (!p.expiraEm || new Date(p.expiraEm).getTime() > agora.getTime()),

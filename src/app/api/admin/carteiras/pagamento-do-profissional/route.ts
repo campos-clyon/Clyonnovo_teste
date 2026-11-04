@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         ambiente,
         // Num trabalho da plataforma pago em mão a negociação já está fechada
         // pelo registo: a dívida vive numa linha à parte (`tridDoAbatimentoAParte`).
-        aParte: d.descontaNoSaldo === true,
+        aParte: d.aParte === true,
       });
       // Já paga entretanto (o índice disse que não): fica como está.
       if (!r.feito) {

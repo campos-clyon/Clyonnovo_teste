@@ -16,6 +16,7 @@ import { registarRecebimentoAMao } from "@/lib/pagamentos-na-base";
 import { valorDoPagamento } from "@/lib/pagamento-declarado";
 import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 import { fraseDoPagoEmDinheiro } from "@/lib/pagamento-da-divida";
+import { gerarReferenciaDaDivida } from "@/lib/cobrar-divida-do-profissional";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -189,6 +190,15 @@ export async function POST(req: NextRequest) {
         ...(emMao ? { deveAClyon: emMao.total, iva: emMao.iva, taxa: emMao.comissao } : {}),
       },
     });
+
+    /*
+     * A REFERÊNCIA DA DÍVIDA DE UM PAGO EM MÃO — 04-11-2026 (d9). Se o trabalho
+     * já está feito, gera-se já, como na confirmação; se ainda não, gera-se ao
+     * confirmar (`avisar-confirmacao.ts`). Nunca lança, e não desfaz o registo.
+     */
+    if (emMao) {
+      await gerarReferenciaDaDivida(negociacaoId, { metodo: "multibanco", autor: { tipo: "clyon", nome: porQuem } });
+    }
 
     // S19 (BO26, 29-10-2026): o «pago» também quando se regista à mão — a
     // mesma regra do webhook (a dívida do profissional não é aviso do cliente).
