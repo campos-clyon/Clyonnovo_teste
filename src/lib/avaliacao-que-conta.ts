@@ -51,7 +51,8 @@ const emailLimpo = (expr: string) => comColacao(`LOWER(TRIM(COALESCE(${expr}, ''
 
 /** O trabalho da negociação `n` foi pago pela plataforma? */
 export const SQL_PAGO_PELA_PLATAFORMA = (n = "n") =>
-  `EXISTS (SELECT 1 FROM pagamentos pgv WHERE pgv.negociacaoId = ${n}.id AND pgv.pagoEm IS NOT NULL ` +
+  // Só `pago`: um reembolsado guarda a data do pagamento, mas o dinheiro voltou ao cliente.
+  `EXISTS (SELECT 1 FROM pagamentos pgv WHERE pgv.negociacaoId = ${n}.id AND pgv.estado = 'pago' AND pgv.pagoEm IS NOT NULL ` +
   `AND COALESCE(pgv.deTeste, 0) = 0 AND pgv.metodo IN (${METODOS_PAGOS_PELA_PLATAFORMA.map((m) => `'${m}'`).join(", ")}))`;
 
 /**

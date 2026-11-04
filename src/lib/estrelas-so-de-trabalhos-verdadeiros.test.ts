@@ -35,6 +35,8 @@ describe("o que conta como trabalho verdadeiro", () => {
     expect(pago).toContain("FROM pagamentos");
     expect(pago).toContain("negociacaoId = n.id");
     expect(pago).toContain("pagoEm IS NOT NULL");
+    // Um reembolsado guarda a data, mas o dinheiro voltou: só o estado «pago» conta.
+    expect(pago).toContain("estado = 'pago'");
     expect(pago).toContain("deTeste");
     expect(pago).not.toMatch(/ao_profissional|numerario|abatimento|quitacao/);
   });
