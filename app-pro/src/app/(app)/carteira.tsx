@@ -444,9 +444,14 @@ function Divida({ d, aoMudar }: { d: DividaDaCarteira; aoMudar: () => Promise<vo
         </Text>
         <Text style={{ color: c.aviso, fontWeight: "800", fontSize: LETRA.media }}>{euros(d.total)}</Text>
       </View>
+      {/*
+        Sem fatura não há IVA (um pago em mão, 04-11-2026, d9): só a taxa é da
+        CLYON. As duas frases são as do painel (`Carteira.tsx`), à letra.
+      */}
       <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-        O cliente pagou-lhe {euros(d.recebidoDoCliente)} em dinheiro, com IVA. São da CLYON {euros(d.iva)} de IVA e {euros(d.comissao)} de
-        taxa da plataforma.
+        {d.iva > 0
+          ? `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, com IVA. São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma.`
+          : `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, sem IVA. A taxa da plataforma (${euros(d.comissao)}) é da CLYON.`}
       </Text>
       {prazo ? (
         <Text style={{ color: c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600", lineHeight: 20 }}>

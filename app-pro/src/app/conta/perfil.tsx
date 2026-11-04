@@ -10,6 +10,7 @@ import { VerFotografias } from "../../componentes/VerFotografias";
 import { useConta } from "../../estado/Conta";
 import { enviarFicheiro, ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
 import { faltasEm, type Perfil } from "../../lib/conta";
+import { AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA, MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA } from "../../lib/fotografias-da-carrinha";
 import { horaCurta } from "../../lib/trabalhos";
 import { TIPOS_DE_VEICULO } from "../../../../src/lib/convite-profissional";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
@@ -22,7 +23,12 @@ import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
  * mexe nos campos que recebe.
  */
 
-const MAXIMO_DE_FOTOS_DA_VIATURA = 6;
+/*
+ * QUATRO, E NÃO SEIS — 04-11-2026 (decisão d17): o mesmo máximo da candidatura
+ * e do painel. Quem já tem cinco ou seis não perde nenhuma (o site guarda-as);
+ * só não junta mais até ficar abaixo de quatro.
+ */
+const MAXIMO_DE_FOTOS_DA_VIATURA = MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA;
 
 type Sugestao = { placeId: string; mainText: string; secondaryText: string; description: string };
 
@@ -257,11 +263,12 @@ function FotosDaViatura({ perfil, aoMudar }: { perfil: Perfil; aoMudar: () => Pr
 
   return (
     <Caixa>
-      <TituloDaCaixa>As suas viaturas</TituloDaCaixa>
-      {/* As palavras da ajuda do painel, à letra: o cliente não vê estas fotografias (19-10-2026). */}
-      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
-        Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe. O cliente não as vê. Cada fotografia grava-se logo, sem carregar em «Guardar».
-      </Text>
+      {/*
+        «A MINHA CARRINHA» — 04-11-2026 (d17): o título e a ajuda do painel e da
+        candidatura, a mesma constante. O cliente não vê estas fotografias.
+      */}
+      <TituloDaCaixa>A minha carrinha</TituloDaCaixa>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}</Text>
       {fotos.length > 0 ? (
         <View style={estilos.grelha}>
           {fotos.map((u, i) => (
@@ -293,8 +300,16 @@ function FotosDaViatura({ perfil, aoMudar }: { perfil: Perfil; aoMudar: () => Pr
             <Botao titulo="Da galeria" tipo="secundario" ocupado={aEnviar} aoCarregar={() => void juntar("galeria")} />
           </View>
         </View>
+      ) : null}
+      {/* As frases do painel (`Perfil.tsx`): com 5 ou 6 de antes, diz quantas tem, e não o máximo. */}
+      {restam > 0 ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
+          {fotos.length} de {MAXIMO_DE_FOTOS_DA_VIATURA} fotografias · cada uma grava-se logo, sem carregar em «Guardar».
+        </Text>
       ) : (
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>Já tem {MAXIMO_DE_FOTOS_DA_VIATURA} fotografias. Apague uma antes de acrescentar outra.</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
+          Já tem {fotos.length} fotografias. Apague uma para acrescentar outra.
+        </Text>
       )}
     </Caixa>
   );

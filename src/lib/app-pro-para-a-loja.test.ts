@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA } from "./fotografias-da-carrinha";
+import * as COPIA_DA_APP from "../../app-pro/src/lib/fotografias-da-carrinha";
 
 /**
  * A CLYON PRO, PARA A VERSÃO SEGUINTE DA LOJA — 19-10-2026.
@@ -51,13 +52,11 @@ describe("as fotografias da viatura dizem a verdade", () => {
   /*
    * 04-11-2026 (decisão d17, v2): o título no painel passou a «A minha
    * carrinha», e a ajuda passou a ser a da candidatura — a mesma constante,
-   * `AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA`, nos dois sítios. A app ainda diz o
-   * título e a frase de antes (que também promete «O cliente não as vê.») até
-   * a Engenharia — Apps lhe mexer; até lá aceita-se uma das duas, e nenhuma
-   * terceira.
+   * `AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA`, nos dois sítios. A app passou a ela
+   * no mesmo dia (parte das apps da d17): o título «A minha carrinha» e, por
+   * baixo, a constante — a cópia da app (`app-pro/src/lib/fotografias-da-carrinha.ts`),
+   * que tem de ser igual à do site. A frase antiga da app já não passa.
    */
-  const AJUDA_ANTIGA_DA_APP =
-    "Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe. O cliente não as vê. Cada fotografia grava-se logo, sem carregar em «Guardar».";
   const ajudaDoPainel = () => {
     const painel = ler("src/app/profissionais/painel/Perfil.tsx");
     expect(painel, "a ajuda «A minha carrinha» no painel").toMatch(
@@ -67,22 +66,25 @@ describe("as fotografias da viatura dizem a verdade", () => {
   };
   const textoDaApp = () => {
     const app = ler("app-pro/src/app/conta/perfil.tsx");
-    const i = Math.max(
-      app.indexOf("<TituloDaCaixa>As suas viaturas</TituloDaCaixa>"),
-      app.indexOf("<TituloDaCaixa>A minha carrinha</TituloDaCaixa>"),
+    const i = app.indexOf("<TituloDaCaixa>A minha carrinha</TituloDaCaixa>");
+    expect(i, "o título «A minha carrinha» na app").toBeGreaterThan(-1);
+    expect(app.indexOf("As suas viaturas"), "o título antigo saiu").toBe(-1);
+    // Logo a seguir ao título, o texto é a constante — e não uma frase escrita à mão.
+    const m = app.slice(i).match(/<\/TituloDaCaixa>\s*<Text[^>]*>\{(\w+)\}<\/Text>/);
+    expect(m, "a ajuda por baixo do título, pela constante").not.toBeNull();
+    expect(m![1]).toBe("AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA");
+    expect(app).toMatch(
+      /import \{[^}]*\bAJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA\b[^}]*\} from "\.\.\/\.\.\/lib\/fotografias-da-carrinha"/,
     );
-    expect(i, "o título das fotografias na app").toBeGreaterThan(-1);
-    const m = app.slice(i).match(/<Text[^>]*>([^<{]+)<\/Text>/);
-    expect(m, "o texto por baixo do título").not.toBeNull();
-    return m![1].replace(/\s+/g, " ").trim();
+    return COPIA_DA_APP.AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA;
   };
 
-  it("o painel e a candidatura dizem o mesmo, e a app uma das duas frases (até à versão seguinte)", () => {
+  it("o painel, a candidatura e a app dizem o mesmo", () => {
     expect(ajudaDoPainel()).toBe(AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA);
     expect(ler("src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx")).toContain(
       "{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}",
     );
-    expect([AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA, AJUDA_ANTIGA_DA_APP]).toContain(textoDaApp());
+    expect(textoDaApp()).toBe(AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA);
   });
 
   it("nenhum dos dois promete que o cliente as vê", () => {

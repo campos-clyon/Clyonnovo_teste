@@ -9,6 +9,7 @@ import { Text } from "./Texto";
 import { Botao, Mensagem } from "./ui";
 import { VerFotografias } from "./VerFotografias";
 import { enviarFotografia, ErroDaApi } from "../lib/api";
+import { LADO_DAS_FOTOGRAFIAS_DA_CANDIDATURA } from "../lib/fotografias-da-carrinha";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /**
@@ -25,12 +26,15 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 const LADO_MAXIMO = 1600;
 
-async function reduzir(a: ImagePicker.ImagePickerAsset): Promise<{ uri: string; nome: string; tipo: string }> {
+async function reduzir(
+  a: ImagePicker.ImagePickerAsset,
+  ladoMaximo: number = LADO_MAXIMO,
+): Promise<{ uri: string; nome: string; tipo: string }> {
   const contexto = ImageManipulator.manipulate(a.uri);
   try {
     const lado = Math.max(a.width || 0, a.height || 0);
-    if (lado > LADO_MAXIMO) {
-      contexto.resize(a.width >= a.height ? { width: LADO_MAXIMO } : { height: LADO_MAXIMO });
+    if (lado > ladoMaximo) {
+      contexto.resize(a.width >= a.height ? { width: ladoMaximo } : { height: ladoMaximo });
     }
     const imagem = await contexto.renderAsync();
     try {
@@ -76,6 +80,13 @@ export async function escolherFotografias(
 
 /** Reduz uma fotografia escolhida (1600 px, JPEG) — pronta a enviar. */
 export const reduzirFotografia = (a: ImagePicker.ImagePickerAsset) => reduzir(a);
+
+/**
+ * A da candidatura (d17, 04-11-2026): 1920 px, como no formulário do site
+ * (`reduzir-imagem.ts`), porque é por ela que a equipa decide se aprova.
+ */
+export const reduzirFotografiaDaCandidatura = (a: ImagePicker.ImagePickerAsset) =>
+  reduzir(a, LADO_DAS_FOTOGRAFIAS_DA_CANDIDATURA);
 
 export function Fotografias({
   negociacaoId,

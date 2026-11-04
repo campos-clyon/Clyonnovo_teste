@@ -1,13 +1,21 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { useState, type Dispatch, type SetStateAction } from "react";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../componentes/ui";
-import { ErroDaApi, errosPorCampo, pedir } from "../lib/api";
+import { escolherFotografias, reduzirFotografiaDaCandidatura } from "../componentes/Fotografias";
+import { VerFotografias } from "../componentes/VerFotografias";
+import { enviarFicheiro, ErroDaApi, errosPorCampo, pedir } from "../lib/api";
 import { SERVICOS_DA_INSCRICAO } from "../lib/conta";
+import {
+  AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA,
+  MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA,
+  MENSAGEM_SEM_FOTOGRAFIA,
+  ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA,
+} from "../lib/fotografias-da-carrinha";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /**
@@ -19,6 +27,10 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  * O resto não muda, por escolha dele: alguém da CLYON lê a candidatura no
  * backoffice e aprova; a aprovação manda o link da palavra-passe por email, e
  * esse link abre a app (`definir-senha/[token]`), onde ele fica logo dentro.
+ *
+ * Desde 04-11-2026 (d17) a candidatura leva de 1 a 4 fotografias da carrinha
+ * (`FotografiasDaCarrinha`, em baixo). Sem elas o servidor recusava a da app e
+ * mandava a pessoa para o site.
  */
 
 /** As mesmas cinco do site (os ids são os de `TIPOS_DE_VEICULO`). */
@@ -40,6 +52,9 @@ export default function Registo() {
   const [tipoVeiculo, setTipoVeiculo] = useState<string | null>(null);
   const [servicos, setServicos] = useState<string[]>([]);
   const [mensagem, setMensagem] = useState("");
+  // As fotografias da carrinha (d17, 04-11-2026): os endereços que o envio devolveu.
+  const [fotografias, setFotografias] = useState<string[]>([]);
+  const [aJuntar, setAJuntar] = useState(0);
   const [aEnviar, setAEnviar] = useState(false);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [erroGeral, setErroGeral] = useState<string | null>(null);
@@ -51,9 +66,14 @@ export default function Registo() {
   }
 
   async function enviar() {
-    setAEnviar(true);
     setErros({});
     setErroGeral(null);
+    // Sem fotografia, a candidatura não segue — como no site, e o servidor recusa-a na mesma.
+    if (fotografias.length === 0) {
+      setErros({ fotografias: MENSAGEM_SEM_FOTOGRAFIA });
+      return;
+    }
+    setAEnviar(true);
     try {
       await pedir("/api/parceiros/candidatura", {
         metodo: "POST",
@@ -65,6 +85,7 @@ export default function Registo() {
           tipoVeiculo,
           servicos,
           mensagem: mensagem.trim() || null,
+          fotografiasDoVeiculo: fotografias,
         },
         semSessao: true,
       });
@@ -178,6 +199,15 @@ export default function Registo() {
           })}
         </Caixa>
 
+        <FotografiasDaCarrinha
+          fotografias={fotografias}
+          aoMudar={setFotografias}
+          aJuntar={aJuntar}
+          aoMudarAJuntar={setAJuntar}
+          erro={erros.fotografias}
+          aoMudarErro={(e) => setErros(({ fotografias: _, ...resto }) => (e ? { ...resto, fotografias: e } : resto))}
+        />
+
         <Caixa>
           <TituloDaCaixa>O que faz *</TituloDaCaixa>
           <Text style={[estilos.dica, { color: c.suave }]}>Só lhe chegam pedidos destas categorias. Pode mudar depois.</Text>
@@ -211,7 +241,8 @@ export default function Registo() {
         </Caixa>
 
         {/* Os erros por baixo do botão, como no site: é onde ele está a olhar. */}
-        <Botao titulo={aEnviar ? "A enviar…" : "Enviar candidatura"} aoCarregar={enviar} ocupado={aEnviar} />
+        {/* Enquanto uma fotografia sobe, espera-se por ela: a candidatura leva os endereços. */}
+        <Botao titulo={aEnviar ? "A enviar…" : "Enviar candidatura"} aoCarregar={enviar} ocupado={aEnviar || aJuntar > 0} />
         {erroGeral ? <Mensagem texto={erroGeral} /> : null}
         {nErros > 0 && !erroGeral ? <Mensagem texto="Falta preencher o que está assinalado acima." /> : null}
         <Text style={[estilos.dica, { color: c.suave, textAlign: "center" }]}>
@@ -221,8 +252,119 @@ export default function Registo() {
   );
 }
 
+/**
+ * AS FOTOGRAFIAS DA CARRINHA — 04-11-2026 (decisão d17), como no formulário do
+ * site (`FormularioDeCandidatura.tsx`): de 1 a 4, e sem nenhuma a candidatura
+ * não segue. Sobem uma a uma, logo depois de escolhidas, sem sessão
+ * (`POST /api/parceiros/candidatura/fotografias`, campo `file`), reduzidas a
+ * 1920 px; a candidatura leva só os endereços (`fotografiasDoVeiculo`). Uma
+ * que falhe diz porquê por baixo do campo e não leva as outras com ela.
+ * Só a equipa as vê.
+ */
+function FotografiasDaCarrinha({
+  fotografias,
+  aoMudar,
+  aJuntar,
+  aoMudarAJuntar,
+  erro,
+  aoMudarErro,
+}: {
+  fotografias: string[];
+  aoMudar: Dispatch<SetStateAction<string[]>>;
+  /** Quantas estão a subir agora — o «Enviar candidatura» espera por elas. */
+  aJuntar: number;
+  aoMudarAJuntar: Dispatch<SetStateAction<number>>;
+  erro: string | undefined;
+  aoMudarErro: (erro: string | null) => void;
+}) {
+  const c = useCores();
+  const [aberta, setAberta] = useState<number | null>(null);
+  const restam = MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA - fotografias.length - aJuntar;
+
+  async function juntar(origem: "camara" | "galeria") {
+    aoMudarErro(null);
+    const r = await escolherFotografias(origem, restam);
+    if ("erro" in r) {
+      aoMudarErro(r.erro);
+      return;
+    }
+    for (const a of r.fotografias) {
+      aoMudarAJuntar((n) => n + 1);
+      try {
+        const f = await reduzirFotografiaDaCandidatura(a);
+        const { url } = await enviarFicheiro<{ url?: unknown }>("/api/parceiros/candidatura/fotografias", {}, f, {
+          semSessao: true,
+        });
+        if (typeof url !== "string" || !url) throw new Error("sem endereço");
+        aoMudar((antes) => (antes.includes(url) || antes.length >= MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA ? antes : [...antes, url]));
+      } catch (e) {
+        aoMudarErro(e instanceof ErroDaApi ? e.message : "A fotografia não seguiu. Tente outra vez.");
+        break;
+      } finally {
+        aoMudarAJuntar((n) => n - 1);
+      }
+    }
+  }
+
+  return (
+    <Caixa>
+      <TituloDaCaixa>{ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA} *</TituloDaCaixa>
+      <Text style={[estilos.dica, { color: c.suave }]}>{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}</Text>
+      {fotografias.length > 0 || aJuntar > 0 ? (
+        <View style={estilos.grelha}>
+          {fotografias.map((u, i) => (
+            <View key={u}>
+              <Pressable
+                onPress={() => setAberta(i)}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={`Ver a fotografia ${i + 1} da carrinha`}
+              >
+                <Image source={{ uri: u }} style={[estilos.foto, { backgroundColor: c.fundo }]} />
+              </Pressable>
+              <Pressable
+                onPress={() => aoMudar((antes) => antes.filter((x) => x !== u))}
+                accessibilityRole="button"
+                accessibilityLabel={`Tirar a fotografia ${i + 1}`}
+                hitSlop={8}
+                style={[estilos.tirar, { backgroundColor: c.tinta }]}
+              >
+                <Text style={{ color: c.superficie, fontWeight: "800", fontSize: 14, lineHeight: 16 }}>×</Text>
+              </Pressable>
+            </View>
+          ))}
+          {Array.from({ length: aJuntar }, (_, i) => (
+            <View key={`a-enviar-${i}`} style={[estilos.foto, estilos.aEnviar, { backgroundColor: c.fundo, borderColor: c.linha }]}>
+              <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>A enviar…</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <VerFotografias key={aberta ?? -1} fotos={fotografias} inicio={aberta} aoFechar={() => setAberta(null)} />
+      {restam > 0 ? (
+        <View style={estilos.lado}>
+          <View style={{ flex: 1 }}>
+            <Botao titulo="Fotografar" tipo="secundario" aoCarregar={() => void juntar("camara")} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Botao titulo="Da galeria" tipo="secundario" aoCarregar={() => void juntar("galeria")} />
+          </View>
+        </View>
+      ) : null}
+      <Text style={[estilos.dica, { color: c.suave }]}>
+        {fotografias.length} de {MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA} fotografias
+      </Text>
+      {erro ? <Text style={{ color: c.mau }}>{erro}</Text> : null}
+    </Caixa>
+  );
+}
+
 const estilos = StyleSheet.create({
   pagina: { padding: ESPACO.l, gap: ESPACO.m, maxWidth: 560, width: "100%", alignSelf: "center" },
+  grelha: { flexDirection: "row", flexWrap: "wrap", gap: ESPACO.s },
+  foto: { width: 96, height: 96, borderRadius: RAIO.m },
+  aEnviar: { borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center" },
+  tirar: { position: "absolute", top: -6, right: -6, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  lado: { flexDirection: "row", gap: ESPACO.s },
   texto: { fontSize: LETRA.normal, lineHeight: 23 },
   dica: { fontSize: LETRA.pequena + 1, lineHeight: 19 },
   tituloFeito: { fontSize: LETRA.media + 2, fontWeight: "800", textAlign: "center" },

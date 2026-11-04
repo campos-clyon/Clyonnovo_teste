@@ -453,6 +453,8 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
     return { ok: true, nome: "Profissional de exemplo", token: "demo" } as T;
   }
   if (caminho === "/api/parceiros/candidatura") return { ok: true, repetida: false } as T;
+  // As fotografias da carrinha da candidatura (d17, 04-11-2026): o endereço é o do próprio ficheiro.
+  if (caminho === "/api/parceiros/candidatura/fotografias") return { ok: true, url: c.url } as T;
   // Mudar a palavra-passe e «Sair de todos os aparelhos» devolvem a sessão nova (25-10-2026).
   if (caminho === "/api/profissionais/palavra-passe" || caminho === "/api/profissionais/sair-de-todos") {
     return { ok: true, token: "demo" } as T;

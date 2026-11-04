@@ -168,11 +168,18 @@ export async function enviarFotografia(
   return enviarFicheiro<{ url: string }>("/api/profissionais/trabalho/fotos", { negociacaoId: String(negociacaoId) }, ficheiro);
 }
 
-/** Um ficheiro (campo `file`) e campos de texto, num POST multipart com a sessão. */
+/**
+ * Um ficheiro (campo `file`) e campos de texto, num POST multipart com a sessão.
+ *
+ * `semSessao` (d17, 04-11-2026): as fotografias da candidatura sobem antes de
+ * haver conta (`/api/parceiros/candidatura/fotografias`) — sem o token, e um
+ * 401 aí não faz sair ninguém.
+ */
 export async function enviarFicheiro<T>(
   caminho: string,
   campos: Record<string, string>,
   ficheiro: { uri: string; nome: string; tipo: string },
+  opcoes: { semSessao?: boolean } = {},
 ): Promise<T> {
   if (EM_DEMO) return pedirEmDemo<T>(caminho, "POST", { ...campos, url: ficheiro.uri });
   const corpo = new FormData();
@@ -180,7 +187,8 @@ export async function enviarFicheiro<T>(
   // O React Native lê o ficheiro do disco a partir de {uri, name, type}.
   corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);
   const cabecalhos: Record<string, string> = { Accept: "application/json", [CABECALHO_DA_VERSAO]: versaoDestaApp() };
-  const tokenUsado = await lerToken();
+  const semSessao = !!opcoes.semSessao;
+  const tokenUsado = semSessao ? null : await lerToken();
   if (tokenUsado) cabecalhos.Authorization = `Bearer ${tokenUsado}`;
   const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);
   let r: Response;
@@ -191,7 +199,7 @@ export async function enviarFicheiro<T>(
     if (sinal?.aborted) throw new ErroDaApi(MENSAGEM_DE_FICHEIRO_LENTO, 0);
     throw new ErroDaApi("A fotografia não seguiu: sem ligação à internet. Tente outra vez.", 0);
   }
-  return lerResposta<T>(r, false, tokenUsado);
+  return lerResposta<T>(r, semSessao, tokenUsado);
 }
 
 /** Os erros por campo que as rotas de gravar devolvem (`erros: [{campo, mensagem}]`). */
