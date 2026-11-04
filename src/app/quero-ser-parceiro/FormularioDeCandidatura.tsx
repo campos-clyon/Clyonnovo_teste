@@ -2,16 +2,30 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, X } from "lucide-react";
 import { CATEGORIAS_DOS_PROFISSIONAIS } from "@/lib/service-categories";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { origemParaACandidatura } from "@/lib/origem-da-candidatura";
 import { paginaAnterior } from "@/lib/pagina-anterior";
+import { reduzirImagem } from "@/lib/reduzir-imagem";
+import {
+  AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA,
+  MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA,
+  MENSAGEM_SEM_FOTOGRAFIA,
+  ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA,
+} from "@/lib/fotografias-da-carrinha";
+
+/**
+ * O tecto do Vercel é 4,5 MB de corpo; abaixo disto, com folga. A fotografia
+ * passa antes pela redução (1920 px), e quase todas ficam muito abaixo.
+ */
+const LIMITE_DO_ENVIO = 4 * 1024 * 1024;
 
 /**
  * O formulário de quem se quer tornar parceiro.
  *
- * Seis campos, e nenhum deles é papelada. O NIF, a morada fiscal, o IBAN e o
+ * Sete campos (as fotografias da carrinha desde 04-11-2026, d17), e nenhum
+ * deles é papelada. O NIF, a morada fiscal, o IBAN e o
  * raio ficam para depois do convite — pedir tudo à cabeça a alguém que ainda
  * não decidiu se quer é a forma mais rápida de o perder no terceiro campo.
  *
@@ -39,6 +53,9 @@ export default function FormularioDeCandidatura() {
   const [tipoVeiculo, setTipoVeiculo] = useState("");
   const [servicos, setServicos] = useState<string[]>([]);
   const [mensagem, setMensagem] = useState("");
+  /* As fotografias da carrinha (04-11-2026, d17): os endereços que o envio devolveu. */
+  const [fotografias, setFotografias] = useState<string[]>([]);
+  const [aJuntar, setAJuntar] = useState(false);
 
   const [aEnviar, setAEnviar] = useState(false);
   const [erros, setErros] = useState<Array<{ campo: string; mensagem: string }>>([]);
@@ -51,9 +68,61 @@ export default function FormularioDeCandidatura() {
     setErros((e) => e.filter((x) => x.campo !== "servicos"));
   }
 
+  /*
+   * JUNTAR AS FOTOGRAFIAS — uma a uma, cada uma vale por si.
+   *
+   * Sobem logo, para o envio da candidatura levar só os endereços. Uma que
+   * falhe diz porquê por baixo do campo e não leva as outras com ela.
+   */
+  async function juntarFotografias(lista: FileList | null) {
+    if (!lista || lista.length === 0) return;
+    const cabem = MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA - fotografias.length;
+    const escolhidas = Array.from(lista).slice(0, Math.max(0, cabem));
+    setErros((e) => e.filter((x) => x.campo !== "fotografias"));
+    setAJuntar(true);
+    try {
+      for (const original of escolhidas) {
+        let f = original;
+        try {
+          f = (await reduzirImagem(original)).ficheiro;
+        } catch {
+          /* segue o original */
+        }
+        if (f.size > LIMITE_DO_ENVIO) {
+          setErros((e) => [
+            ...e,
+            { campo: "fotografias", mensagem: "Uma fotografia é grande de mais. Tire-a com menos qualidade ou escolha outra." },
+          ]);
+          break;
+        }
+        const fd = new FormData();
+        fd.append("file", f, f.name);
+        const res = await fetch("/api/parceiros/candidatura/fotografias", { method: "POST", body: fd });
+        const dados = await res.json().catch(() => ({}));
+        if (!res.ok || typeof dados.url !== "string") {
+          setErros((e) => [
+            ...e,
+            { campo: "fotografias", mensagem: dados.error ?? "A fotografia não seguiu. Tente outra vez." },
+          ]);
+          break;
+        }
+        setFotografias((l) => (l.length < MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA ? [...l, dados.url] : l));
+      }
+    } catch {
+      setErros((e) => [...e, { campo: "fotografias", mensagem: "Sem ligação. Tente juntar a fotografia outra vez." }]);
+    } finally {
+      setAJuntar(false);
+    }
+  }
+
   async function enviar() {
-    setAEnviar(true);
     setErros([]);
+    // Sem fotografia, a candidatura não segue — e o servidor recusa-a na mesma.
+    if (fotografias.length === 0) {
+      setErros([{ campo: "fotografias", mensagem: MENSAGEM_SEM_FOTOGRAFIA }]);
+      return;
+    }
+    setAEnviar(true);
     try {
       const res = await fetch("/api/parceiros/candidatura", {
         method: "POST",
@@ -66,6 +135,7 @@ export default function FormularioDeCandidatura() {
           tipoVeiculo: tipoVeiculo || null,
           servicos,
           mensagem: mensagem || null,
+          fotografiasDoVeiculo: fotografias,
           // De onde veio (31-10-2026): a campanha, o site que mandou e a página anterior.
           // E a zona do anúncio, `?zona=sintra` (04-11-2026, d16).
           origem: origemParaACandidatura(
@@ -227,6 +297,69 @@ export default function FormularioDeCandidatura() {
           </label>
         </div>
 
+        {/*
+          AS FOTOGRAFIAS DA CARRINHA — 04-11-2026 (decisão d17).
+
+          «Quero que os candidatos a pro enviem imagens dos veículos.» De 1 a
+          4; sem nenhuma, a candidatura não segue. Só a equipa as vê: não vão
+          para o perfil público nem para os clientes.
+        */}
+        <div>
+          <span className="text-sm font-medium text-slate-700">{ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA} *</span>
+          <span className="mt-0.5 block text-xs text-slate-500">{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}</span>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {fotografias.map((url, i) => (
+              <div key={url} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Fotografia ${i + 1} da carrinha`}
+                  className="h-20 w-28 rounded-xl border border-slate-200 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFotografias((l) => l.filter((u) => u !== url))}
+                  aria-label={`Tirar a fotografia ${i + 1}`}
+                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:text-red-600"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+            {fotografias.length < MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA && (
+              <label
+                className={`flex h-20 w-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-cyan-600/50 bg-cyan-50 text-xs font-medium text-cyan-800 transition hover:bg-cyan-100 ${
+                  aJuntar ? "pointer-events-none opacity-60" : ""
+                }`}
+              >
+                {aJuntar ? (
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Camera className="h-5 w-5" aria-hidden="true" />
+                )}
+                {aJuntar ? "A enviar…" : fotografias.length === 0 ? "Juntar fotografia" : "Juntar outra"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                  multiple
+                  className="sr-only"
+                  disabled={aJuntar}
+                  onChange={(e) => {
+                    void juntarFotografias(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+          </div>
+          <span className="mt-1 block text-xs text-slate-500">
+            {fotografias.length} de {MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA} fotografias
+          </span>
+          {erroDe("fotografias") && (
+            <span className="mt-1 block text-xs text-red-600">{erroDe("fotografias")}</span>
+          )}
+        </div>
+
         <div>
           <span className="text-sm font-medium text-slate-700">O que faz *</span>
           <span className="mt-0.5 block text-xs text-slate-500">
@@ -274,7 +407,7 @@ export default function FormularioDeCandidatura() {
 
       <button
         onClick={() => void enviar()}
-        disabled={aEnviar}
+        disabled={aEnviar || aJuntar}
         className="mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-acao text-base font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
       >
         {aEnviar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}

@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { Check, Copy, Inbox, Loader2, Pencil, Save, Send, X } from "lucide-react";
+import { Check, Copy, Inbox, Loader2, Pencil, Save, Send, Truck, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { CATEGORIAS_DOS_PROFISSIONAIS, nomeDaCategoria } from "@/lib/service-categories";
 import { etiquetaDoVeiculo, TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { lerOrigemDaCandidatura, type OrigemDaCandidatura } from "@/lib/origem-da-candidatura";
+import VisorDeFotos from "@/components/VisorDeFotos";
+import { Miniatura } from "@/components/Anexo";
 
 /**
  * QUEM SE CANDIDATOU PELO SITE.
@@ -42,6 +44,8 @@ type Candidatura = {
   estado: "nova" | "aprovada" | "convidada" | "recusada";
   /** De onde veio quem a enviou (31-10-2026). Null nas de antes. */
   origem?: OrigemDaCandidatura | null;
+  /** As fotografias da carrinha (04-11-2026, d17). Vazia nas de antes. */
+  fotografiasDoVeiculo?: string[];
   criadoEm: string;
   tratadoEm: string | null;
   tratadoPor: string | null;
@@ -95,6 +99,8 @@ export default function AdminCandidaturasPanel({
   const [aEditar, setAEditar] = useState<number | null>(null);
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
   const [aGuardar, setAGuardar] = useState(false);
+  /* As fotografias da carrinha abertas em grande, e a que se tocou. */
+  const [aVer, setAVer] = useState<{ lista: string[]; i: number } | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -500,6 +506,39 @@ export default function AdminCandidaturasPanel({
                     </p>
                   )}
                   {/*
+                    A CARRINHA DELE — 04-11-2026 (d17). Em miniatura, e em
+                    grande ao carregar. Só para a equipa: o cliente e o perfil
+                    público não as vêem.
+                  */}
+                  {(c.fotografiasDoVeiculo ?? []).length > 0 ? (
+                    <div className="mt-2">
+                      <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                        <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+                        Fotografias da carrinha
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {(c.fotografiasDoVeiculo ?? []).map((url, i) => (
+                          <button
+                            key={url}
+                            type="button"
+                            onClick={() => setAVer({ lista: c.fotografiasDoVeiculo ?? [], i })}
+                            aria-label={`Ver a fotografia ${i + 1} da carrinha`}
+                          >
+                            <Miniatura
+                              url={url}
+                              className="h-16 w-24 ring-1 ring-slate-700 transition hover:ring-cyan-500"
+                              tamanho="96px"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Sem fotografias da carrinha (candidatura de antes de 04/11).
+                    </p>
+                  )}
+                  {/*
                     DE ONDE VEIO — 31-10-2026 (d6 de 28-10). O canal, a campanha
                     e a página de onde veio, com o código como o do WhatsApp.
                     As candidaturas de antes não a têm.
@@ -591,6 +630,9 @@ export default function AdminCandidaturasPanel({
             </li>
           ))}
         </ul>
+      )}
+      {aVer && (
+        <VisorDeFotos fotos={aVer.lista} indiceInicial={aVer.i} onFechar={() => setAVer(null)} />
       )}
     </section>
   );

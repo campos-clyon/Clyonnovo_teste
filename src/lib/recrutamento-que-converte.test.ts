@@ -182,7 +182,8 @@ describe("a candidatura guarda de onde veio a pessoa", () => {
     // A coluna no CREATE (bases novas) e no ALTER (a que já existe).
     expect(LIB).toContain("origemJson  VARCHAR(1500) NULL DEFAULT NULL,");
     expect(LIB).toContain("ALTER TABLE candidaturasProfissionais ADD COLUMN origemJson VARCHAR(1500) NULL DEFAULT NULL");
-    expect(LIB).toContain("(nome, email, telefone, cidade, tipoVeiculo, servicosJson, mensagem, origemJson)");
+    // A origem no INSERT; a seguir a ela, as fotografias da carrinha desde 04-11-2026 (d17).
+    expect(LIB).toMatch(/\(nome, email, telefone, cidade, tipoVeiculo, servicosJson, mensagem, origemJson[,)]/);
     // Repetida, a origem da primeira vez fica.
     expect(LIB).toContain("origemJson = COALESCE(origemJson, ?)");
     expect(LIB).toContain("origem: origemGuardada(l.origemJson),");

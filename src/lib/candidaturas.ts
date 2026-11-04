@@ -1,5 +1,6 @@
 import { getPool } from "./db";
 import { origemGuardada, type OrigemDaCandidatura } from "./origem-da-candidatura";
+import { fotografiasGuardadas, MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA } from "./fotografias-da-carrinha";
 
 /**
  * QUEM SE OFERECE PARA TRABALHAR CONNOSCO.
@@ -46,6 +47,11 @@ export type Candidatura = {
   providerId: number | null;
   /** De onde veio quem a enviou (31-10-2026) — ver origem-da-candidatura.ts. Null nas de antes. */
   origem: OrigemDaCandidatura | null;
+  /**
+   * As fotografias da carrinha (04-11-2026, d17), de 1 a 4. Vazia nas de antes.
+   * Só para a equipa: sai na rota do backoffice e em mais lado nenhum.
+   */
+  fotografiasDoVeiculo: string[];
   criadoEm: string;
   tratadoEm: string | null;
   tratadoPor: string | null;
@@ -72,6 +78,7 @@ export async function ensureCandidaturasTable(): Promise<void> {
       conviteId   INT UNSIGNED NULL DEFAULT NULL,
       providerId  INT UNSIGNED NULL DEFAULT NULL,
       origemJson  VARCHAR(1500) NULL DEFAULT NULL,
+      fotografiasDoVeiculoJson TEXT NULL DEFAULT NULL,
       criadoEm    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       tratadoEm   DATETIME NULL DEFAULT NULL,
       tratadoPor  VARCHAR(120) NULL,
@@ -103,6 +110,18 @@ export async function ensureCandidaturasTable(): Promise<void> {
   } catch {
     /* já existe */
   }
+  /*
+   * AS FOTOGRAFIAS DA CARRINHA — 04-11-2026 (d17). O mesmo cuidado: no CREATE
+   * para as bases novas, e aqui para a que já existe. As candidaturas de antes
+   * ficam com a coluna vazia — não se lhes toca.
+   */
+  try {
+    await pool.execute(
+      "ALTER TABLE candidaturasProfissionais ADD COLUMN fotografiasDoVeiculoJson TEXT NULL DEFAULT NULL",
+    );
+  } catch {
+    /* já existe */
+  }
 
   pronta = true;
 }
@@ -129,6 +148,7 @@ function daLinha(l: Record<string, unknown>): Candidatura {
     conviteId: l.conviteId != null ? Number(l.conviteId) : null,
     providerId: l.providerId != null ? Number(l.providerId) : null,
     origem: origemGuardada(l.origemJson),
+    fotografiasDoVeiculo: fotografiasGuardadas(l.fotografiasDoVeiculoJson),
     criadoEm: String(l.criadoEm ?? ""),
     tratadoEm: l.tratadoEm ? String(l.tratadoEm) : null,
     tratadoPor: l.tratadoPor ? String(l.tratadoPor) : null,
@@ -152,26 +172,37 @@ export async function guardarCandidatura(dados: {
   mensagem: string | null;
   /** De onde veio (31-10-2026). Já limpa — ver `limparOrigemDaCandidatura`. */
   origem?: OrigemDaCandidatura | null;
-}): Promise<{ id: number; repetida: boolean }> {
+  /** As fotografias da carrinha (04-11-2026, d17), já conferidas por `lerFotografiasDaCandidatura`. */
+  fotografiasDoVeiculo: string[];
+}): Promise<{ id: number; repetida: boolean; orfas: string[] }> {
   await ensureCandidaturasTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
   const [existentes] = (await pool.execute(
-    "SELECT id FROM candidaturasProfissionais WHERE email = ? AND estado = 'nova' LIMIT 1",
+    "SELECT id, fotografiasDoVeiculoJson FROM candidaturasProfissionais WHERE email = ? AND estado = 'nova' LIMIT 1",
     [dados.email],
-  )) as [Array<{ id: number }>, unknown];
+  )) as [Array<{ id: number; fotografiasDoVeiculoJson: string | null }>, unknown];
 
   const servicosJson = JSON.stringify(dados.servicos.slice(0, 12));
   const origemJson = dados.origem ? JSON.stringify(dados.origem).slice(0, 1500) : null;
+  const fotografias = dados.fotografiasDoVeiculo.slice(0, MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA);
+  const fotografiasJson = JSON.stringify(fotografias);
 
   if (existentes[0]) {
     const id = Number(existentes[0].id);
+    /*
+     * AS FOTOGRAFIAS DA VEZ ANTERIOR que já não vêm nesta saem do Blob depois
+     * (quem chama apaga as `orfas`): a matrícula está à vista, e um ficheiro
+     * sem ponteiro na base é público sem ninguém saber que existe.
+     */
+    const antes = fotografiasGuardadas(existentes[0].fotografiasDoVeiculoJson);
     // A origem da primeira vez fica: é por ela que se mede o canal.
     await pool.execute(
       `UPDATE candidaturasProfissionais
           SET nome = ?, telefone = ?, cidade = ?, tipoVeiculo = ?,
               servicosJson = ?, mensagem = ?, origemJson = COALESCE(origemJson, ?),
+              fotografiasDoVeiculoJson = ?,
               criadoEm = CURRENT_TIMESTAMP
         WHERE id = ?`,
       [
@@ -182,16 +213,17 @@ export async function guardarCandidatura(dados: {
         servicosJson,
         dados.mensagem,
         origemJson,
+        fotografiasJson,
         id,
       ],
     );
-    return { id, repetida: true };
+    return { id, repetida: true, orfas: antes.filter((u) => !fotografias.includes(u)) };
   }
 
   const [res] = (await pool.execute(
     `INSERT INTO candidaturasProfissionais
-       (nome, email, telefone, cidade, tipoVeiculo, servicosJson, mensagem, origemJson)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (nome, email, telefone, cidade, tipoVeiculo, servicosJson, mensagem, origemJson, fotografiasDoVeiculoJson)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       dados.nome,
       dados.email,
@@ -201,10 +233,11 @@ export async function guardarCandidatura(dados: {
       servicosJson,
       dados.mensagem,
       origemJson,
+      fotografiasJson,
     ],
   )) as [{ insertId: number }, unknown];
 
-  return { id: Number(res.insertId), repetida: false };
+  return { id: Number(res.insertId), repetida: false, orfas: [] };
 }
 
 /**

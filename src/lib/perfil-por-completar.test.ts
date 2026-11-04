@@ -52,9 +52,34 @@ const CHEIO: PerfilParaCompletar = {
   temIban: true,
   ibanTitular: "Uma empresa",
   mbway: "",
+  // A carrinha (04-11-2026, d17): um perfil inteiro tem pelo menos uma fotografia.
+  fotosViatura: ["https://abc.public.blob.vercel-storage.com/viaturas/7-1.jpg"],
+  fotoViaturaUrl: "https://abc.public.blob.vercel-storage.com/viaturas/7-1.jpg",
 };
 
 const chaves = (p: PerfilParaCompletar) => oQueFaltaNoPerfil(p).map((f) => f.chave);
+
+describe("a minha carrinha — 04-11-2026 (d17)", () => {
+  it("sem fotografia nenhuma é um passo por fazer, e não um travão", () => {
+    const f = faltaPelaChave(oQueFaltaNoPerfil({ ...CHEIO, fotosViatura: [], fotoViaturaUrl: null }), "fotografias-da-carrinha");
+    expect(f?.peso).toBe("melhora");
+    expect(f?.seccao).toBe("dados");
+    expect(f?.rotulo).toBe("A minha carrinha");
+    expect(f?.porque).toContain("de 1 a 4 fotografias");
+  });
+
+  it("uma chega, e a coluna antiga sozinha também conta", () => {
+    expect(chaves(CHEIO)).not.toContain("fotografias-da-carrinha");
+    expect(chaves({ ...CHEIO, fotosViatura: [] })).not.toContain("fotografias-da-carrinha");
+    expect(chaves({ ...CHEIO, fotosViatura: null, fotoViaturaUrl: null })).toContain("fotografias-da-carrinha");
+  });
+
+  it("é a primeira das melhorias, para aparecer no cartão quando não há travões", () => {
+    const so = resumoDoPerfil({ ...CHEIO, fotosViatura: [], fotoViaturaUrl: null, custoKm: null, margemPercent: null });
+    expect(so.essenciais).toEqual([]);
+    expect(so.melhorias[0]?.chave).toBe("fotografias-da-carrinha");
+  });
+});
 
 describe("um perfil inteiro não tem nada a dizer", () => {
   it("sem faltas, e a cem por cento", () => {

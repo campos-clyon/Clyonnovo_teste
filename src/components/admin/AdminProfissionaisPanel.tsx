@@ -685,10 +685,12 @@ function Cartao({
       {/*
         A VIATURA, PARA SE VER O QUE CABE — 19-10-2026.
 
-        O profissional põe até seis fotografias da carrinha ou do camião, por
-        fora e por dentro, e a ajuda do perfil diz-lhe «É assim que sabemos o
-        que cabe». Até aqui só ele as via. Aqui são só para ver: tirar e pôr é
-        com ele, no perfil.
+        O profissional põe até quatro fotografias da carrinha ou do camião (eram
+        seis até 04-11-2026), por fora e por dentro, e a ajuda do perfil diz-lhe
+        «É assim que sabemos o que cabe». Até aqui só ele as via. Aqui são só
+        para ver: tirar e pôr é com ele, no perfil, em «A minha carrinha».
+        Desde 04-11-2026 (d17) chegam também da candidatura: aprovar passa-as
+        para a conta.
       */}
       {fotosDaViatura.length > 0 && (
         <div className="mt-3">

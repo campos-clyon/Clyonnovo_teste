@@ -100,8 +100,14 @@ export default async function QueroSerParceiroPage() {
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#0B1929] sm:text-4xl">
             Tem carrinha e equipa? Receba os nossos pedidos.
           </h1>
+          {/*
+            SEM ENTULHO NO RECRUTAMENTO — 04-11-2026 (decisão d18). «Não divulgue
+            ou coloque anúncios para entulhos, apenas móveis, monos e
+            esvaziamento.» O site continua a aceitar pedidos de entulho, e a lista
+            dos serviços do formulário não muda; o que sai é o chamariz.
+          */}
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-            Recolhas de móveis e entulho, esvaziamentos, mudanças e reparações. O cliente
+            Recolhas de móveis e monos, esvaziamentos, mudanças e reparações. O cliente
             descreve o trabalho com fotografias; é só responder com o seu valor.
           </p>
           {pedidosDaSemana != null && (

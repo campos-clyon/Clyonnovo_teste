@@ -14,6 +14,7 @@ import {
   slugLivreParaProfissional,
   guardarTokenDePalavraPasse,
   consumirConvitesDoEmail,
+  guardarFotosDaViatura,
 } from "@/lib/db";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
@@ -245,6 +246,20 @@ export async function POST(req: NextRequest) {
       baseLat: geo?.lat ?? null,
       baseLng: geo?.lng ?? null,
     });
+
+    /*
+     * AS FOTOGRAFIAS DA CARRINHA PASSAM PARA A CONTA — 04-11-2026 (d17).
+     *
+     * São as mesmas que a ficha do parceiro mostra no backoffice e que ele
+     * junta ou troca no perfil, em «A minha carrinha». Depois de aprovada é a
+     * conta que manda; a candidatura fica como registo do que ele enviou.
+     * Falhar aqui não impede nada: a conta está criada, e ele pode juntá-las.
+     */
+    if (candidatura.fotografiasDoVeiculo.length > 0) {
+      await guardarFotosDaViatura(providerId, candidatura.fotografiasDoVeiculo).catch((e) =>
+        console.error("[admin/candidaturas] fotografias da carrinha por passar:", e instanceof Error ? e.message : e),
+      );
+    }
 
     /*
      * O CONVITE FECHA-SE COM A CONTA.

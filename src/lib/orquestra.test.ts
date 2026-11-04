@@ -1172,3 +1172,40 @@ describe("o) «no mesmo dia?» responde-se com uma frase só (d1, 31-10-2026)", 
     expect(respostaFrequente("Dá para ser hoje?")).toBe(NO_MESMO_DIA);
   });
 });
+
+/*
+ * s) O RECRUTAMENTO NÃO CHAMA PARCEIROS PARA O ENTULHO — 04-11-2026 (decisão d18).
+ *
+ * «Não divulgue ou coloque anúncios para entulhos, apenas móveis, monos e
+ * esvaziamento.» A /quero-ser-parceiro (a página, o formulário, o título e a
+ * descrição do Google) não fala de entulho. O site continua a aceitar pedidos
+ * de entulho, e a lista dos serviços que o parceiro escolhe (que vem de
+ * `service-categories.ts`) não muda — esta regra lê só o texto escrito
+ * nestes ficheiros.
+ */
+describe("s) a /quero-ser-parceiro não fala de entulho (d18)", () => {
+  const FICHEIROS = [
+    "src/app/quero-ser-parceiro/page.tsx",
+    "src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx",
+    "src/app/quero-ser-parceiro/ProcuraNaZona.tsx",
+  ];
+
+  it("nenhum texto da página nem do formulário diz entulho", () => {
+    const achados = FICHEIROS.flatMap((f) =>
+      lerFicheiro(f)
+        .textos.filter((t) => /entulho/i.test(t.texto))
+        .map((t) => `${f}:${t.linha} «${t.texto.slice(0, 80)}»`),
+    );
+    expect(achados).toEqual([]);
+  });
+
+  it("nem o título e a descrição que o Google mostra", async () => {
+    const { TITULO_DO_RECRUTAMENTO, DESCRICAO_DO_RECRUTAMENTO } = await import("./pagina-de-recrutamento");
+    expect(`${TITULO_DO_RECRUTAMENTO} ${DESCRICAO_DO_RECRUTAMENTO}`).not.toMatch(/entulho/i);
+  });
+
+  it("e a frase de abertura diz o que fica: móveis e monos, esvaziamentos, mudanças e reparações", () => {
+    const textos = lerFicheiro("src/app/quero-ser-parceiro/page.tsx").textos.map((t) => t.texto);
+    expect(textos.some((t) => t.includes("Recolhas de móveis e monos, esvaziamentos, mudanças e reparações."))).toBe(true);
+  });
+});

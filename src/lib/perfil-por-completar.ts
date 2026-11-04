@@ -72,9 +72,16 @@ export type PerfilParaCompletar = {
   temIban?: boolean | null;
   ibanTitular?: string | null;
   mbway?: string | null;
+  /** As fotografias da carrinha (04-11-2026, d17): a lista, ou a antiga sozinha. */
+  fotosViatura?: string[] | null;
+  fotoViaturaUrl?: string | null;
 };
 
 const vazio = (v: string | null | undefined): boolean => !v || v.trim() === "";
+
+/** Tem pelo menos uma fotografia da carrinha — na lista, ou na coluna antiga. */
+const temFotografiaDaCarrinha = (p: PerfilParaCompletar): boolean =>
+  (p.fotosViatura ?? []).some((u) => typeof u === "string" && u.trim() !== "") || !vazio(p.fotoViaturaUrl);
 
 /** Um número que o profissional escreveu mesmo — zero não conta como resposta. */
 const semNumero = (v: number | null | undefined): boolean =>
@@ -207,6 +214,26 @@ export function oQueFaltaNoPerfil(p: PerfilParaCompletar): Falta[] {
     });
   }
 
+  // ── O que não trava, mas está por fazer ──────────────────────────────────
+
+  /*
+   * A MINHA CARRINHA — 04-11-2026 (decisão d17).
+   *
+   * As candidaturas passaram a trazer de 1 a 4 fotografias da carrinha. Quem
+   * já era parceiro, ou se candidatou antes, junta-as no perfil. Não trava
+   * trabalho nem dinheiro — por isso é uma melhoria e não um travão — mas é a
+   * primeira das melhorias, para se ver no cartão quando não há travões.
+   */
+  if (!temFotografiaDaCarrinha(p)) {
+    faltas.push({
+      chave: "fotografias-da-carrinha",
+      seccao: "dados",
+      rotulo: "A minha carrinha",
+      porque: "Junte de 1 a 4 fotografias, por fora e da caixa de carga. É assim que sabemos o que a sua carrinha leva.",
+      peso: "melhora",
+    });
+  }
+
   // ── O que melhora a sugestão de valor ────────────────────────────────────
 
   if (semNumero(p.custoKm)) {
@@ -309,14 +336,15 @@ export type ResumoDoPerfil = {
 /**
  * Quantos campos existem para avaliar — o denominador da percentagem.
  *
- * Catorze são sempre perguntados. Os outros três só existem depois de uma
+ * Quinze são sempre perguntados (as fotografias da carrinha desde 04-11-2026,
+ * d17). Os outros três só existem depois de uma
  * resposta anterior: o titular só faz sentido com IBAN, o número de
  * transportador só a quem disse que emite guia, e o divisor dos custos fixos
  * só depois de haver custos fixos. O denominador tem de crescer com eles —
  * senão a percentagem subia por se ter respondido «sim» a uma pergunta.
  */
 function quantosCamposConta(p: PerfilParaCompletar): number {
-  const SEMPRE = 14;
+  const SEMPRE = 15;
   return (
     SEMPRE +
     (p.temIban ? 1 : 0) +

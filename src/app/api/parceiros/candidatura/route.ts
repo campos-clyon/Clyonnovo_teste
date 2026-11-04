@@ -10,6 +10,11 @@ import {
 } from "@/lib/inscricao-profissional";
 import { guardarCandidatura } from "@/lib/candidaturas";
 import { limparOrigemDaCandidatura } from "@/lib/origem-da-candidatura";
+import {
+  lerFotografiasDaCandidatura,
+  MENSAGEM_SEM_FOTOGRAFIA_NA_APP,
+} from "@/lib/fotografias-da-carrinha";
+import { apagarFotosDoBlob } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -94,12 +99,37 @@ export async function POST(req: NextRequest) {
   const veiculoBruto = texto(corpo.tipoVeiculo, 60);
   const tipoVeiculo = veiculoBruto && VEICULOS.includes(veiculoBruto) ? veiculoBruto : null;
 
-  if (erros.length > 0) {
+  /*
+   * AS FOTOGRAFIAS DA CARRINHA — 04-11-2026 (decisão d17).
+   *
+   * «Quero que os candidatos a pro enviem imagens dos veículos.» De 1 a 4, e
+   * sem nenhuma a candidatura não segue — aqui, no servidor, e não só no
+   * formulário: a rota é pública e qualquer um a chama sem passar por ele.
+   * Os endereços têm de ser os que o nosso envio devolveu
+   * (`/api/parceiros/candidatura/fotografias`), e nenhum outro.
+   */
+  const fotografias = lerFotografiasDaCandidatura(corpo.fotografiasDoVeiculo);
+  if (!fotografias.ok) {
+    /*
+     * A APP CLYON PRO AINDA NÃO TEM O CAMPO (a app fica para a Engenharia —
+     * Apps). Ela mostra os erros por campo que conhece, e um erro de
+     * «fotografias» ficava sem sítio: o candidato lia «falta preencher o que
+     * está assinalado» com nada assinalado. Quando é a única coisa que falta,
+     * vai como mensagem geral, que a app mostra, a dizer-lhe por onde seguir.
+     */
+    const daApp = Boolean(req.headers.get("x-app-versao"));
+    if (daApp && fotografias.semNenhuma && erros.length === 0) {
+      return NextResponse.json({ error: MENSAGEM_SEM_FOTOGRAFIA_NA_APP }, { status: 400 });
+    }
+    erros.push({ campo: "fotografias", mensagem: fotografias.mensagem });
+  }
+
+  if (erros.length > 0 || !fotografias.ok) {
     return NextResponse.json({ erros }, { status: 400 });
   }
 
   try {
-    const { repetida } = await guardarCandidatura({
+    const { repetida, orfas } = await guardarCandidatura({
       nome: nome!,
       email: email!,
       telefone,
@@ -112,7 +142,18 @@ export async function POST(req: NextRequest) {
        * o que não se reconhece fica de fora, e a candidatura entra na mesma.
        */
       origem: limparOrigemDaCandidatura(corpo.origem),
+      fotografiasDoVeiculo: fotografias.fotos,
     });
+
+    /*
+     * Quem se candidata outra vez com o mesmo email troca as fotografias: as
+     * da vez anterior que já não vêm saem do Blob, depois de a base já ter as
+     * novas. Se o Blob falhar, fica uma a mais — fica dito nos registos.
+     */
+    if (orfas.length > 0) {
+      const saiu = await apagarFotosDoBlob(orfas).catch(() => 0);
+      if (saiu < orfas.length) console.error("[parceiros/candidatura] ficaram no Blob:", orfas.length);
+    }
 
     /*
      * A resposta é a mesma nos dois casos, de propósito.

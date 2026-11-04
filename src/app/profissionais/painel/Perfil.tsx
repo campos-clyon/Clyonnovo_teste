@@ -24,6 +24,7 @@ import type { Perfil as PerfilTipo } from "./tipos";
 import MoradaDaBase from "./MoradaDaBase";
 import Avaliacoes from "./Avaliacoes";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
+import { MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA } from "@/lib/fotografias-da-carrinha";
 
 /**
  * O perfil, em secções pequenas.
@@ -511,6 +512,7 @@ export default function Perfil({
             </Campo>
 
             <FotoDaViatura
+              falta={porque("fotografias-da-carrinha")}
               fotos={dados.fotosViatura ?? (dados.fotoViaturaUrl ? [dados.fotoViaturaUrl] : [])}
               onMudou={(urls) =>
                 setDados((d) => ({ ...d, fotosViatura: urls, fotoViaturaUrl: urls[0] ?? null }))
@@ -1287,15 +1289,21 @@ export default function Perfil({
  * espera de um botao e uma fotografia que se perde quando ele fecha o ecra.
  * A rota grava o endereco no perfil dele assim que o ficheiro chega.
  */
-/** Quantas cabem. O mesmo número que a rota impõe — ver `MAX_FOTOS_DA_VIATURA`. */
-const MAXIMO_DE_VIATURAS = 6;
+/**
+ * Quantas cabem: quatro desde 04-11-2026 (d17), as mesmas da candidatura. É o
+ * número que a rota impõe (`MAX_FOTOS_DA_VIATURA` lê o mesmo ficheiro).
+ */
+const MAXIMO_DE_VIATURAS = MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA;
 
 function FotoDaViatura({
   fotos,
   onMudou,
+  falta,
 }: {
   fotos: string[];
   onMudou: (urls: string[]) => void;
+  /** Sem nenhuma, o triângulo do «passo por fazer» (não trava nada). */
+  falta?: string;
 }) {
   const [aEnviar, setAEnviar] = useState(false);
   const [aApagar, setAApagar] = useState<string | null>(null);
@@ -1346,9 +1354,22 @@ function FotoDaViatura({
 
   return (
     <Campo
-      etiqueta="As suas viaturas"
+      etiqueta="A minha carrinha"
       ajuda="Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe. O cliente não as vê. Cada fotografia grava-se logo, sem carregar em «Guardar»."
+      falta={falta}
     >
+      {/*
+        «A MINHA CARRINHA» — 04-11-2026 (decisão d17).
+
+        As candidaturas passaram a trazer as fotografias da carrinha. Quem já
+        era parceiro, ou se candidatou antes, junta-as aqui: de 1 a 4. Não é
+        obrigatório, mas sem nenhuma aparece como passo por fazer no cartão do
+        perfil por completar (`perfil-por-completar.ts`).
+
+        A ajuda continua palavra por palavra a da app (`app-pro-para-a-loja`
+        compara as duas); o título da app («As suas viaturas») muda quando a
+        Engenharia — Apps lhe mexer.
+      */}
       {/*
         VARIAS, E NAO UMA — 19-09-2026.
 
@@ -1411,9 +1432,13 @@ function FotoDaViatura({
         )}
       </div>
 
-      {cheio && (
+      {cheio ? (
         <p className="mt-1.5 text-xs text-slate-500">
-          Já tem {MAXIMO_DE_VIATURAS} fotografias. Apague uma para acrescentar outra.
+          Já tem {fotos.length} fotografias. Apague uma para acrescentar outra.
+        </p>
+      ) : (
+        <p className="mt-1.5 text-xs text-slate-500">
+          {fotos.length} de {MAXIMO_DE_VIATURAS} fotografias
         </p>
       )}
       {erro && <p className="mt-1.5 text-xs text-red-600">{erro}</p>}

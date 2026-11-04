@@ -1,4 +1,5 @@
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
+import { MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA } from "@/lib/fotografias-da-carrinha";
 import { drizzle } from "drizzle-orm/mysql2";
 import { ORIGEM_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
 import { guiaMudouDeFacto } from "@/lib/guia-mudou";
@@ -7497,11 +7498,12 @@ export async function urlDaFotoDaViatura(providerId: number): Promise<string | n
 /**
  * QUANTAS FOTOGRAFIAS DE VIATURA CABEM NUM PERFIL.
  *
- * Seis: uma carrinha por fora, uma por dentro, e sobra para quem tem duas.
+ * Quatro desde 04-11-2026 (decisão d17), as mesmas da candidatura — eram seis.
  * Sem limite, um perfil com trinta fotografias é um perfil que ninguém abre —
  * e trinta ficheiros no Blob por cada profissional que descobre o botão.
+ * Quem já tinha cinco ou seis não perde nenhuma: ver `guardarFotosDaViatura`.
  */
-export const MAX_FOTOS_DA_VIATURA = 6;
+export const MAX_FOTOS_DA_VIATURA = MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA;
 
 /**
  * A lista, lida com cuidado: um JSON estragado não pode calar o perfil.
@@ -7573,10 +7575,17 @@ export async function guardarFotosDaViatura(
     const l = (linhas as Array<{ fotosViaturaJson: string | null; fotoViaturaUrl: string | null }>)[0];
     const antes = l ? lerFotos(l.fotosViaturaJson, l.fotoViaturaUrl) : [];
 
-    const fotos = [...new Set(urls.map((u) => String(u).trim()).filter(Boolean))].slice(
-      0,
-      MAX_FOTOS_DA_VIATURA,
-    );
+    /*
+     * O TECTO NUNCA APAGA AS QUE JÁ LÁ ESTAVAM — 04-11-2026 (d17).
+     *
+     * O limite desceu de seis para quatro. Cortar a lista em quatro deitava
+     * fora, sem ninguém pedir, a quinta e a sexta de quem as pôs quando cabiam
+     * seis — eram devolvidas como órfãs e saíam do Blob. O tecto é o maior dos
+     * dois: quatro, ou as que ele já tinha. Acrescentar acima de quatro é a
+     * rota do envio que recusa.
+     */
+    const tecto = Math.max(MAX_FOTOS_DA_VIATURA, antes.length);
+    const fotos = [...new Set(urls.map((u) => String(u).trim()).filter(Boolean))].slice(0, tecto);
 
     await conn.execute(
       "UPDATE providers SET fotosViaturaJson = ?, fotoViaturaUrl = ? WHERE id = ?",

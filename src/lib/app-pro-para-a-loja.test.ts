@@ -47,9 +47,15 @@ describe("as fotografias da viatura dizem a verdade", () => {
    * vê». Nenhum ecrã do cliente as mostra. Os textos da app são os do painel,
    * por isso os dois mudaram juntos e ficam iguais.
    */
+  /*
+   * O TÍTULO NO PAINEL PASSOU A «A minha carrinha» a 04-11-2026 (decisão d17);
+   * a app continua «As suas viaturas» até a Engenharia — Apps lhe mexer. O
+   * que este teste guarda é a AJUDA — a promessa de que o cliente não as vê —
+   * e essa continua igual palavra por palavra.
+   */
   const ajudaDoPainel = () => {
-    const m = ler("src/app/profissionais/painel/Perfil.tsx").match(/etiqueta="As suas viaturas"\s+ajuda="([^"]+)"/);
-    expect(m, "a ajuda «As suas viaturas» no painel").not.toBeNull();
+    const m = ler("src/app/profissionais/painel/Perfil.tsx").match(/etiqueta="A minha carrinha"\s+ajuda="([^"]+)"/);
+    expect(m, "a ajuda «A minha carrinha» no painel").not.toBeNull();
     return m![1];
   };
   const textoDaApp = () => {

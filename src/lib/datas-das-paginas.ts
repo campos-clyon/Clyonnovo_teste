@@ -73,7 +73,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/pequenas-mudancas": "2026-11-01",
   "/mudancas-de-escritorio": "2026-11-01",
   // 31-10-2026 (d6 de 28-10): o primeiro ecrã, o número da semana, a app CLYON Pro.
-  "/quero-ser-parceiro": "2026-11-01",
+  // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
+  "/quero-ser-parceiro": "2026-11-04",
 };
 
 /**
