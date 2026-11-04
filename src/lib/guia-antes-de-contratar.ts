@@ -67,10 +67,76 @@ export function guiaVerificada(profissional: {
   return !Number.isNaN(d.getTime());
 }
 
+/*
+ * ── A TRANSIÇÃO DE 7 DIAS — 04-11-2026 (d10 v2, escolha do dono: «7 dias de
+ * transição») ───────────────────────────────────────────────────────────────
+ *
+ * Com 0 de 13 guias verificadas, a regra parou toda a contratação de entulho
+ * (em 60 dias o #11, o #6 e o #9 fizeram 16 trabalhos de entulho). Até
+ * `TRANSICAO_DA_GUIA_ATE`, um parceiro APROVADO ANTES de 04-11-2026 com a guia
+ * por verificar pode ser contratado e escolhido, em todas as portas; a Mesa e
+ * os Trabalhos CLYON mostram-lhe o aviso âmbar (`AVISO_DA_TRANSICAO`) e o
+ * cliente não vê aviso nenhum. Quem for aprovado a 04-11 ou depois precisa da
+ * guia verificada desde já.
+ *
+ * O INTERRUPTOR É SÓ ESTA DATA. Passada ela, a regra volta a valer para todos
+ * sem deploy nenhum: a hora compara-se a cada pedido. Em Novembro Lisboa está
+ * em UTC, por isso «23:59:59Z» é o fim do dia 11 em Lisboa.
+ *
+ * «Aprovado antes» lê `providers.aprovadoEm`, que nasceu a 04-11-2026 (d10.2):
+ * vazio é um aprovado de antes; uma data é de quando foi aprovado. Uma linha
+ * que nem traz a coluna não ganha a transição — na dúvida, a regra.
+ */
+export const TRANSICAO_DA_GUIA_ATE = "2026-11-11T23:59:59Z";
+/** Os aprovados antes deste instante (00:00 de 04-11-2026 em Lisboa, = UTC) têm a transição. */
+export const APROVADOS_ANTES_DE = "2026-11-04T00:00:00Z";
+
+/** «11/11» — o último dia da transição, em Lisboa. */
+export const ULTIMO_DIA_DA_TRANSICAO = new Date(TRANSICAO_DA_GUIA_ATE).toLocaleDateString("pt-PT", {
+  timeZone: "Europe/Lisbon",
+  day: "2-digit",
+  month: "2-digit",
+});
+
+/** O aviso âmbar da Mesa e dos Trabalhos CLYON durante a transição. */
+export const AVISO_DA_TRANSICAO = `guia por verificar — pode ser contratado até ${ULTIMO_DIA_DA_TRANSICAO}`;
+
+/** Este parceiro está na transição (aprovado antes de 04-11, e ainda não passou o prazo)? */
+export function emTransicao(
+  profissional: { estado?: unknown; aprovadoEm?: unknown },
+  agora: Date = new Date(),
+): boolean {
+  if (agora.getTime() > new Date(TRANSICAO_DA_GUIA_ATE).getTime()) return false;
+  // A linha tem de dizer o estado e trazer a coluna: sem isso, a regra.
+  if (profissional.estado !== "aprovado") return false;
+  if (profissional.aprovadoEm === undefined) return false;
+  if (profissional.aprovadoEm === null || profissional.aprovadoEm === "") return true;
+  const d = profissional.aprovadoEm instanceof Date ? profissional.aprovadoEm : new Date(String(profissional.aprovadoEm));
+  return !Number.isNaN(d.getTime()) && d.getTime() < new Date(APROVADOS_ANTES_DE).getTime();
+}
+
+type ProfissionalDaGuia = {
+  emiteGuiaTransporte?: unknown;
+  guiaVerificadaEm?: unknown;
+  /** O estado da conta e quando foi aprovado — para a transição (d10 v2). */
+  estado?: unknown;
+  aprovadoEm?: unknown;
+};
+
 /** O cliente, a Mesa ou a escolha de um Trabalho CLYON têm de parar aqui? */
 export function guiaImpedeContratar(
   pedido: { serviceType?: unknown; precisaGuiaTransporte?: unknown },
-  profissional: { emiteGuiaTransporte?: unknown; guiaVerificadaEm?: unknown },
+  profissional: ProfissionalDaGuia,
+  agora: Date = new Date(),
 ): boolean {
-  return trabalhoExigeGuia(pedido) && !guiaVerificada(profissional);
+  return trabalhoExigeGuia(pedido) && !guiaVerificada(profissional) && !emTransicao(profissional, agora);
+}
+
+/** Passa só por causa da transição: a Mesa e os Trabalhos CLYON mostram o aviso âmbar. */
+export function guiaPassaPelaTransicao(
+  pedido: { serviceType?: unknown; precisaGuiaTransporte?: unknown },
+  profissional: ProfissionalDaGuia,
+  agora: Date = new Date(),
+): boolean {
+  return trabalhoExigeGuia(pedido) && !guiaVerificada(profissional) && emTransicao(profissional, agora);
 }

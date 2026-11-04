@@ -2226,6 +2226,8 @@ export async function negociacoesDoPedido(pedidoId: number): Promise<
     // quem decide isso é quem monta a resposta, não esta função.
     `SELECT n.*, p.name AS profissionalNome, p.phone AS profissionalTelefone,
             p.emiteFatura, p.regimeIva, p.guiaVerificadaEm,
+            -- A transição de 7 dias da guia (d10 v2, 04-11-2026): o estado e quando foi aprovado.
+            p.estado AS profissionalEstado, p.aprovadoEm,
             ${SQL_DO_VERIFICADO} AS parceiroVerificado
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId

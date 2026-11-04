@@ -58,7 +58,7 @@ import { validarValorDesejado } from "@/lib/pedido-valores";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
-import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 
 /**
@@ -109,6 +109,8 @@ type NegociacaoDoTrabalho = {
   choques?: Choque[];
   /** Trabalho de resíduos e a guia dele por verificar: não se escolhe (04-11-2026, d10.1). */
   guiaPorVerificar?: boolean;
+  /** Guia por verificar, mas aprovado antes de 04-11: escolhe-se até ao fim da transição (d10 v2). */
+  guiaEmTransicao?: boolean;
   /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
   coincidencias?: Coincidencia[];
 };
@@ -1450,6 +1452,7 @@ function CartaoDoTrabalho({
                 )}
                 {/* A guia antes de escolher (04-11-2026, d10.1) e os contactos iguais (d10.3). */}
                 {n.guiaPorVerificar && <span className="text-xs font-semibold text-amber-300">{GUIA_POR_VERIFICAR_FRASE}</span>}
+                {n.guiaEmTransicao && <span className="text-xs font-semibold text-amber-300">{AVISO_DA_TRANSICAO}</span>}
                 {n.coincidencias?.length ? (
                   <span className="w-full text-xs font-semibold text-red-300">{avisoDasCoincidencias(n.coincidencias)}</span>
                 ) : null}

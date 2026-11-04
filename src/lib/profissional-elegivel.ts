@@ -58,7 +58,7 @@ export type MotivoDeExclusao =
 import type { FormaDePagamento } from "./forma-de-pagamento";
 import { grupoDoServico, gruposDe } from "./service-categories";
 import { GRUPO_QUE_RECEBE_O_OUTRO, OUTRO_SERVICO } from "./outro-servico";
-import { guiaImpedeContratar } from "./guia-antes-de-contratar";
+import { guiaVerificada, trabalhoExigeGuia } from "./guia-antes-de-contratar";
 
 export type AvisoAntesDeCotar =
   | "trabalho_exige_guia"
@@ -278,7 +278,8 @@ export function avisosDoTrabalho(
    * verificar. A regra vive em `guia-antes-de-contratar.ts`, a mesma das
    * portas que contratam.
    */
-  if (guiaImpedeContratar(pedido, profissional)) {
+  // O aviso não olha à transição de 7 dias (d10 v2): a guia é lei, e ele tem de o saber antes de propor.
+  if (trabalhoExigeGuia(pedido) && !guiaVerificada(profissional)) {
     avisos.push("trabalho_exige_guia");
   }
 

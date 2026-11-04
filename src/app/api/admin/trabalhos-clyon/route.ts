@@ -156,6 +156,8 @@ export async function GET(req: NextRequest) {
       trabalhos: ofertas.map((o) => {
         const negociacoes = o.negociacoes.map((n) => ({
           guiaPorVerificar: confianca.get(Number(n.negociacaoId))?.guiaPorVerificar ?? false,
+          // A transição de 7 dias (d10 v2): escolhe-se, com o aviso âmbar.
+          guiaEmTransicao: confianca.get(Number(n.negociacaoId))?.guiaEmTransicao ?? false,
           coincidencias: confianca.get(Number(n.negociacaoId))?.coincidencias ?? [],
           negociacaoId: n.negociacaoId,
           providerId: n.providerId,

@@ -49,7 +49,7 @@ import { clientePodeConfirmarChegada, viagemComConfirmacao } from "@/lib/viagem-
 import { sufixoDaBase, totalEstimadoNoBackoffice } from "@/lib/valor-por-base";
 import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO } from "@/lib/horas-do-trabalho";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
-import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 /*
  * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
@@ -224,6 +224,8 @@ type Negociacao = {
   chegadaConfirmadaEm?: string | null;
   /** Trabalho de resíduos e a guia dele por verificar: não se fecha (04-11-2026, d10.1). */
   guiaPorVerificar?: boolean;
+  /** Guia por verificar, mas aprovado antes de 04-11: fecha-se até ao fim da transição (d10 v2). */
+  guiaEmTransicao?: boolean;
   /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
   coincidencias?: Coincidencia[];
 };
@@ -3593,6 +3595,12 @@ export default function AdminNegociacoesPanel({
                         guia por verificar
                       </span>
                     )}
+                    {/* A transição de 7 dias (d10 v2): fecha-se, com o aviso âmbar. */}
+                    {n.guiaEmTransicao && (
+                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200">
+                        {AVISO_DA_TRANSICAO}
+                      </span>
+                    )}
                     {n.coincidencias?.length ? (
                       <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title={avisoDasCoincidencias(n.coincidencias) ?? undefined}>
                         ⚠ cliente = parceiro? ({n.coincidencias.join(", ")})
@@ -5511,6 +5519,8 @@ function AceitarNaLista({
       {negociacao.choques?.length ? (
         <span className="text-[11px] text-red-300">{textoDosChoques(negociacao.choques)}</span>
       ) : null}
+      {/* A transição de 7 dias (d10 v2): fecha-se, com o aviso âmbar. */}
+      {negociacao.guiaEmTransicao && <span className="text-[11px] text-amber-300">{AVISO_DA_TRANSICAO}</span>}
       {erro && <span className="text-[11px] text-red-300">{erro}</span>}
     </span>
   );
@@ -5611,6 +5621,12 @@ function RespostaDaClyon({
       {negociacao.guiaPorVerificar && (
         <p className="mt-2 rounded-md border border-amber-800 bg-amber-950/40 px-2 py-1.5 text-xs font-semibold text-amber-200">
           {GUIA_POR_VERIFICAR_FRASE} Pode contrapropor, mas só se fecha depois de a guia ser verificada em Profissionais.
+        </p>
+      )}
+      {/* A transição de 7 dias (d10 v2). */}
+      {negociacao.guiaEmTransicao && (
+        <p className="mt-2 rounded-md border border-amber-800 bg-amber-950/40 px-2 py-1.5 text-xs font-semibold text-amber-200">
+          {AVISO_DA_TRANSICAO}.
         </p>
       )}
 

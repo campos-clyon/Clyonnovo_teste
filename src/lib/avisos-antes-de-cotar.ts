@@ -56,8 +56,9 @@ export const FICHA_DO_AVISO: Record<AvisoAntesDeCotar, FichaDoAviso> = {
       "Transportar resíduos exige estar registado como transportador e emitir a " +
       "guia de acompanhamento. No seu perfil isso não está declarado, ou ainda " +
       "não foi verificado pela CLYON. " +
+      // d10 v2: os aprovados antes de 04-11 têm 7 dias de transição (até 11-11).
       "Pode enviar a proposta, mas só pode ser contratado depois de a CLYON " +
-      "verificar a guia: até lá, o cliente vê que ela está por verificar. " +
+      "verificar a guia (quem foi aprovado antes de 04/11 tem até 11/11). " +
       "A responsabilidade do transporte é de quem o faz: sem registo válido, a " +
       "coima é sua e o cliente fica igualmente exposto. Se continuar, fica " +
       "registado no pedido que foi avisado.",

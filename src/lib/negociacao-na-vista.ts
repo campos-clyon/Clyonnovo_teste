@@ -1,5 +1,5 @@
 import { estaVerificado } from "./parceiro-verificado";
-import { guiaVerificada } from "./guia-antes-de-contratar";
+import { guiaImpedeContratar } from "./guia-antes-de-contratar";
 import type { Proposta } from "./negociacao";
 import { faseParaOCliente, diasAteLibertar } from "./trabalho";
 import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local";
@@ -139,6 +139,9 @@ export type LinhaParaAVista = HorasNaBase & {
   profissionalTelefone?: string | null;
   regimeIva?: unknown;
   guiaVerificadaEm?: unknown;
+  /** O estado da conta dele e quando foi aprovado — a transição da guia (d10 v2). Não saem para o ecrã. */
+  profissionalEstado?: unknown;
+  aprovadoEm?: unknown;
   parceiroVerificado?: unknown;
   provaJson?: string | null;
   ajustesJson?: string | null;
@@ -217,8 +220,16 @@ export function negociacaoParaAVista(
     profissionalTelefone: contratado ? (n.profissionalTelefone ?? null) : null,
     regimeIva: String(n.regimeIva ?? "isento"),
     guiaVerificada: n.guiaVerificadaEm != null,
-    // Só antes de contratado: depois, a pergunta já não se põe.
-    guiaPorVerificar: o.exigeGuia === true && !contratado && !guiaVerificada({ guiaVerificadaEm: n.guiaVerificadaEm }),
+    // Só antes de contratado: depois, a pergunta já não se põe. Na transição de
+    // 7 dias (d10 v2) o aprovado antes de 04-11 contrata-se, e o cliente não vê aviso.
+    guiaPorVerificar:
+      o.exigeGuia === true &&
+      !contratado &&
+      guiaImpedeContratar(
+        { precisaGuiaTransporte: 1 },
+        { guiaVerificadaEm: n.guiaVerificadaEm, estado: n.profissionalEstado, aprovadoEm: n.aprovadoEm },
+        o.agora,
+      ),
     verificado: estaVerificado({ parceiroVerificado: n.parceiroVerificado ?? 0 }),
     fase,
     // O ajuste no local por responder (18-10-2026) — ver `ajuste-no-local.ts`.

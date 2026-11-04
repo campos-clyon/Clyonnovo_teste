@@ -39,6 +39,8 @@ export function sqlDasNegociacoesDaConta(quantos: number): string {
                  n.ofertaClyon,
                  p.name AS profissionalNome, p.phone AS profissionalTelefone,
                  p.regimeIva, p.guiaVerificadaEm,
+                 -- A transição de 7 dias da guia (d10 v2, 04-11-2026).
+                 p.estado AS profissionalEstado, p.aprovadoEm,
                  -- «verificado» só com as três confirmações (01-11-2026).
                  ${SQL_DO_VERIFICADO} AS parceiroVerificado
             FROM negociacoes n
