@@ -292,11 +292,16 @@ describe("o envio das fotografias da candidatura", () => {
 describe("o formulário, o backoffice e o perfil", () => {
   const FORM = semNotas(ler("src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx"));
 
-  it("o campo tem o nome e a ajuda da ordem", () => {
+  it("o campo tem o nome e a ajuda da ordem (d17 v2), a mesma no formulário e no perfil", () => {
     expect(ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA).toBe("Fotografias da carrinha");
-    expect(AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA).toBe("Por fora e a caixa de carga, para os clientes saberem o que leva.");
+    expect(AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA).toBe(
+      "Por fora e a caixa de carga, para sabermos o que a sua carrinha leva. O cliente não as vê.",
+    );
+    // A v1 prometia aos clientes o que eles nunca vêem: não volta.
+    expect(AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA).not.toMatch(/clientes saberem|cliente vê/);
     expect(FORM).toContain("{ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA} *");
     expect(FORM).toContain("{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}");
+    expect(ler("src/app/profissionais/painel/Perfil.tsx")).toContain("ajuda={AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}");
   });
 
   it("manda as fotografias, e não envia sem nenhuma", () => {

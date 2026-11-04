@@ -35,9 +35,15 @@ export const MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA = 4;
 /** O nome do campo no formulário da candidatura. */
 export const ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA = "Fotografias da carrinha";
 
-/** O texto por baixo do campo, à letra da ordem d17. */
+/**
+ * O texto por baixo do campo — na candidatura e no perfil («A minha carrinha»).
+ *
+ * À letra da d17 v2 (04-11-2026). A v1 dizia «para os clientes saberem o que
+ * leva», e as fotografias são só para a equipa: o texto prometia o contrário
+ * do que é verdade.
+ */
 export const AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA =
-  "Por fora e a caixa de carga, para os clientes saberem o que leva.";
+  "Por fora e a caixa de carga, para sabermos o que a sua carrinha leva. O cliente não as vê.";
 
 /** O sítio do Blob onde ficam as da candidatura — separado das dos pedidos. */
 export const PREFIXO_DAS_FOTOGRAFIAS_DA_CANDIDATURA = "candidaturas/";

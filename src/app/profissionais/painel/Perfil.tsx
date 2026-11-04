@@ -24,7 +24,10 @@ import type { Perfil as PerfilTipo } from "./tipos";
 import MoradaDaBase from "./MoradaDaBase";
 import Avaliacoes from "./Avaliacoes";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
-import { MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA } from "@/lib/fotografias-da-carrinha";
+import {
+  AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA,
+  MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA,
+} from "@/lib/fotografias-da-carrinha";
 
 /**
  * O perfil, em secções pequenas.
@@ -1355,7 +1358,7 @@ function FotoDaViatura({
   return (
     <Campo
       etiqueta="A minha carrinha"
-      ajuda="Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe. O cliente não as vê. Cada fotografia grava-se logo, sem carregar em «Guardar»."
+      ajuda={AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}
       falta={falta}
     >
       {/*
@@ -1366,9 +1369,11 @@ function FotoDaViatura({
         obrigatório, mas sem nenhuma aparece como passo por fazer no cartão do
         perfil por completar (`perfil-por-completar.ts`).
 
-        A ajuda continua palavra por palavra a da app (`app-pro-para-a-loja`
-        compara as duas); o título da app («As suas viaturas») muda quando a
-        Engenharia — Apps lhe mexer.
+        A AJUDA É A DA CANDIDATURA, à letra (d17 v2): a mesma constante nos
+        dois sítios. A app ainda diz a frase antiga, que também promete «O
+        cliente não as vê.»; passa à nova, com o título «A minha carrinha»,
+        quando a Engenharia — Apps lhe mexer (`app-pro-para-a-loja` vigia a
+        promessa nos dois).
       */}
       {/*
         VARIAS, E NAO UMA — 19-09-2026.
@@ -1438,7 +1443,7 @@ function FotoDaViatura({
         </p>
       ) : (
         <p className="mt-1.5 text-xs text-slate-500">
-          {fotos.length} de {MAXIMO_DE_VIATURAS} fotografias
+          {fotos.length} de {MAXIMO_DE_VIATURAS} fotografias · cada uma grava-se logo, sem carregar em «Guardar».
         </p>
       )}
       {erro && <p className="mt-1.5 text-xs text-red-600">{erro}</p>}

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA } from "./fotografias-da-carrinha";
 
 /**
  * A CLYON PRO, PARA A VERSÃO SEGUINTE DA LOJA — 19-10-2026.
@@ -48,27 +49,40 @@ describe("as fotografias da viatura dizem a verdade", () => {
    * por isso os dois mudaram juntos e ficam iguais.
    */
   /*
-   * O TÍTULO NO PAINEL PASSOU A «A minha carrinha» a 04-11-2026 (decisão d17);
-   * a app continua «As suas viaturas» até a Engenharia — Apps lhe mexer. O
-   * que este teste guarda é a AJUDA — a promessa de que o cliente não as vê —
-   * e essa continua igual palavra por palavra.
+   * 04-11-2026 (decisão d17, v2): o título no painel passou a «A minha
+   * carrinha», e a ajuda passou a ser a da candidatura — a mesma constante,
+   * `AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA`, nos dois sítios. A app ainda diz o
+   * título e a frase de antes (que também promete «O cliente não as vê.») até
+   * a Engenharia — Apps lhe mexer; até lá aceita-se uma das duas, e nenhuma
+   * terceira.
    */
+  const AJUDA_ANTIGA_DA_APP =
+    "Fotografias das carrinhas ou camiões — por fora e por dentro. É assim que sabemos o que cabe. O cliente não as vê. Cada fotografia grava-se logo, sem carregar em «Guardar».";
   const ajudaDoPainel = () => {
-    const m = ler("src/app/profissionais/painel/Perfil.tsx").match(/etiqueta="A minha carrinha"\s+ajuda="([^"]+)"/);
-    expect(m, "a ajuda «A minha carrinha» no painel").not.toBeNull();
-    return m![1];
+    const painel = ler("src/app/profissionais/painel/Perfil.tsx");
+    expect(painel, "a ajuda «A minha carrinha» no painel").toMatch(
+      /etiqueta="A minha carrinha"\s+ajuda=\{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA\}/,
+    );
+    return AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA;
   };
   const textoDaApp = () => {
     const app = ler("app-pro/src/app/conta/perfil.tsx");
-    const i = app.indexOf("<TituloDaCaixa>As suas viaturas</TituloDaCaixa>");
-    expect(i, "o título «As suas viaturas» na app").toBeGreaterThan(-1);
+    const i = Math.max(
+      app.indexOf("<TituloDaCaixa>As suas viaturas</TituloDaCaixa>"),
+      app.indexOf("<TituloDaCaixa>A minha carrinha</TituloDaCaixa>"),
+    );
+    expect(i, "o título das fotografias na app").toBeGreaterThan(-1);
     const m = app.slice(i).match(/<Text[^>]*>([^<{]+)<\/Text>/);
     expect(m, "o texto por baixo do título").not.toBeNull();
     return m![1].replace(/\s+/g, " ").trim();
   };
 
-  it("o painel e a app dizem o mesmo, palavra por palavra", () => {
-    expect(textoDaApp()).toBe(ajudaDoPainel());
+  it("o painel e a candidatura dizem o mesmo, e a app uma das duas frases (até à versão seguinte)", () => {
+    expect(ajudaDoPainel()).toBe(AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA);
+    expect(ler("src/app/quero-ser-parceiro/FormularioDeCandidatura.tsx")).toContain(
+      "{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}",
+    );
+    expect([AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA, AJUDA_ANTIGA_DA_APP]).toContain(textoDaApp());
   });
 
   it("nenhum dos dois promete que o cliente as vê", () => {
