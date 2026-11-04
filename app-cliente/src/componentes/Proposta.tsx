@@ -2,8 +2,8 @@ import { useState } from "react";
 import { View } from "react-native";
 import { Preco } from "./Preco";
 import { Text } from "./Texto";
-import { Botao, Cartao, Ligacao } from "./ui";
-import { accaoDeContratar, podeRecusar, type NegociacaoV3, type TextosDoPedido } from "../lib/pedidos";
+import { Aviso, Botao, Cartao, Ligacao } from "./ui";
+import { accaoDeContratar, podeRecusar, porqueNaoSeContrata, type NegociacaoV3, type TextosDoPedido } from "../lib/pedidos";
 import { CORES } from "../tema";
 
 /**
@@ -34,6 +34,8 @@ export function Proposta({
   const [historico, setHistorico] = useState(false);
   const p = n.profissional;
   const contratar = accaoDeContratar(n);
+  // d10.1: a guia de resíduos por verificar — a frase do site e o «Contratar» parado.
+  const parado = porqueNaoSeContrata(n);
   const trabalhos = `${p.trabalhosConcluidos} ${p.trabalhosConcluidos === 1 ? "trabalho" : "trabalhos"} na CLYON`;
   return (
     <Cartao destaque={!!contratar}>
@@ -66,7 +68,8 @@ export function Proposta({
       {n.preco ? <Preco preco={n.preco} /> : null}
       {n.materiaisTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.materiaisTexto}</Text> : null}
       {n.formaTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text> : null}
-      {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} /> : null}
+      {parado ? <Aviso tom="aviso" texto={parado} /> : null}
+      {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} desligado={!!parado} /> : null}
       {aoPropor && n.accoes.includes("propor") ? <Ligacao titulo="Ou proponha outro valor" centrada aoCarregar={aoPropor} /> : null}
       {podeRecusar(n, textos) ? <Ligacao titulo="Recusar" tom="mau" centrada aoCarregar={aoRecusar} /> : null}
       {n.historico && n.historico.length > 0 ? (

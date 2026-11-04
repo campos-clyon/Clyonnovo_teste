@@ -580,7 +580,29 @@ export type ExtrasDaNegociacaoV3 = {
   emDuasEntregas?: string[] | null;
   /** d8: a legenda de «Proponha um valor» desta negociação, a mesma do site (`frase-da-contraproposta.ts`). */
   proporAjuda?: string | null;
+  /**
+   * d10.1 (04-11-2026): porque não se contrata este parceiro agora — num
+   * trabalho de resíduos, com a guia dele por verificar («Este parceiro ainda
+   * não tem a guia de resíduos verificada.»). Já escrito pelo site; `null`
+   * quando nada impede. Um site antigo não o manda.
+   */
+  naoSeContrata?: string | null;
 };
+
+/** O que o site diz a seguir ao `naoSeContrata` (`PropostasRecebidas.tsx`), à letra. */
+export const DEPOIS_DE_NAO_SE_CONTRATAR = "Pode escolher outra proposta, ou esperar que a CLYON a verifique.";
+
+/**
+ * A GUIA ANTES DE CONTRATAR — 04-11-2026 (d10.1), como no site: a frase por
+ * cima do «Contratar», que fica parado. Sem isto o cliente só via a recusa
+ * (409) depois de tocar. `null` quando nada impede, ou quando não há o que
+ * contratar nesta proposta.
+ */
+export function porqueNaoSeContrata(n: Pick<Negociacao, "accoes"> & Pick<ExtrasDaNegociacaoV3, "naoSeContrata">): string | null {
+  const porque = typeof n.naoSeContrata === "string" ? n.naoSeContrata.trim() : "";
+  if (!porque || !accaoDeContratar(n)) return null;
+  return `${porque} ${DEPOIS_DE_NAO_SE_CONTRATAR}`;
+}
 
 /** `proporAjuda`: a frase do site por baixo de «Proponha um valor» (vem da API, com o imposto escrito). */
 export type ExtrasDosTextosV3 = { rodape?: string; responderam?: string; proporAjuda?: string };
