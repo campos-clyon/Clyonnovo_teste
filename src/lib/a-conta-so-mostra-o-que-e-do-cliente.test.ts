@@ -72,6 +72,9 @@ vi.mock("@/lib/db", () => ({
   ensureSimulatorOrdersTable: vi.fn(async () => {}),
   ensureUsersSchema: vi.fn(async () => {}),
   withConnection: vi.fn(),
+  // O fim do Trabalho CLYON (d20) lê o pedido inteiro e as negociações: aqui não há.
+  getSimulatorOrderById: vi.fn(async () => undefined),
+  negociacoesDoPedido: vi.fn(async () => []),
 }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/auth", () => ({ authOptions: {} }));

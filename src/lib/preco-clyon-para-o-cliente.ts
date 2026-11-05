@@ -25,6 +25,8 @@ export function precoClyonParaOCliente(pedido: {
   propostaEnviadaEm?: Date | string | null;
   precoAceiteEm?: Date | string | null;
   baseDoPreco?: unknown;
+  /** O serviço: a tabela das peças só na recolha de móveis (d20). */
+  serviceType?: string | null;
 }): PrecoClyonNoEcra | null {
   if (pedido.valorFixoClyon == null) return null;
   const versao = isoOuNulo(pedido.propostaEnviadaEm ?? null);
@@ -36,7 +38,7 @@ export function precoClyonParaOCliente(pedido: {
   });
   if (!conta) return null;
   return {
-    ...textosDaConta(conta, notaDoPrecoParaOCliente(lerBase(pedido.baseDoPreco as string | null), "clyon")),
+    ...textosDaConta(conta, notaDoPrecoParaOCliente(lerBase(pedido.baseDoPreco as string | null), "clyon", pedido.serviceType ?? null)),
     versao,
     aceiteEm: isoOuNulo(pedido.precoAceiteEm ?? null),
     aceiteEmTexto: quandoEmLisboa(pedido.precoAceiteEm ?? null),

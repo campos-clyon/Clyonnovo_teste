@@ -46,7 +46,7 @@ import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } fro
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
 import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
-import { comOLink, mensagemDosValoresParaPagamento, oQueNaoPodeIr } from "@/lib/valores-para-pagamento";
+import { comOLink, linkParaPagar, mensagemDosValoresParaPagamento, oQueNaoPodeIr } from "@/lib/valores-para-pagamento";
 import { contaDoTrabalhoClyon, emEuros } from "@/lib/conta-do-pagamento";
 import { linkParaQuemFechou } from "@/lib/link-de-quem-fecha-pelo-whatsapp";
 import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
@@ -602,7 +602,7 @@ export async function PATCH(req: NextRequest) {
         site: urlDeAccaoDoPedido(req.headers),
       });
       if (!link) return NextResponse.json({ error: "Não foi possível gerar o link do pedido." }, { status: 500 });
-      const final = comOLink(texto, link);
+      const final = comOLink(texto, linkParaPagar(link));
       const saiu = await enviarTextoManualWhatsApp(telefone, final);
       if (!saiu) {
         return NextResponse.json(

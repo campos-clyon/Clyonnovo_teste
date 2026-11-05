@@ -100,6 +100,16 @@ export function mensagemDosValoresParaPagamento(v: ValoresParaPagamento, agora: 
     .join("\n\n");
 }
 
+/**
+ * O LINK ABRE NO PAGAMENTO — 05-11-2026 (d20). O link do pedido leva `?pagar=1`:
+ * a página abre com o ecrã no bloco de pagar. Só no link do pedido; a `/conta`
+ * (quem tem conta) fica como está.
+ */
+export function linkParaPagar(link: string): string {
+  if (!link.includes("/pedido/") || /[?&]pagar=1(?:&|$)/.test(link)) return link;
+  return `${link}${link.includes("?") ? "&" : "?"}pagar=1`;
+}
+
 /** Põe o link no lugar do marcador; se a equipa o apagou ao editar, junta-o no fim. */
 export function comOLink(texto: string, link: string): string {
   if (texto.includes(LINK_POR_GERAR)) return texto.split(LINK_POR_GERAR).join(link);

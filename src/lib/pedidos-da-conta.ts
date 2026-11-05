@@ -8,6 +8,7 @@ import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { trabalhoExigeGuia } from "@/lib/guia-antes-de-contratar";
 import { resumoDoPedidoParaOCliente, type PedidoParaOResumo } from "@/lib/pedidos-do-cliente";
 import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
+import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib/fim-do-trabalho-clyon";
 
 /**
  * OS PEDIDOS DA CONTA DO CLIENTE, PRONTOS PARA O ECRÃ — 28-10-2026 (d10).
@@ -124,12 +125,26 @@ export async function pedidoDaContaParaOEcra<T extends Record<string, unknown>>(
      * enviado, já em texto. O valor fixo (o que o profissional recebe) e a taxa
      * lêem-se aqui, no servidor, e não saem.
      */
-    precoClyon: await (async () => {
+    ...(await (async () => {
       const t = pedido.trabalhoClyon;
-      if (!(t === true || Number(t) === 1) || !pedido.propostaEnviadaEm) return null;
-      const { getSimulatorOrderById } = await import("@/lib/db");
+      if (!(t === true || Number(t) === 1)) return { precoClyon: null, fimClyon: null };
+      const { getSimulatorOrderById, negociacoesDoPedido } = await import("@/lib/db");
       const completo = await getSimulatorOrderById(Number(pedido.id));
-      return completo ? precoClyonParaOCliente(completo as unknown as Parameters<typeof precoClyonParaOCliente>[0]) : null;
-    })(),
+      if (!completo) return { precoClyon: null, fimClyon: null };
+      const precoClyon = pedido.propostaEnviadaEm
+        ? precoClyonParaOCliente(completo as unknown as Parameters<typeof precoClyonParaOCliente>[0])
+        : null;
+      /*
+       * O FIM DO TRABALHO CLYON TAMBÉM NA CONTA — 05-11-2026 (d20): com o
+       * parceiro escolhido, o preço já foi acordado; a conta mostra o dia, as
+       * formas de pagar e, depois de feito, a avaliação — a mesma lista fechada
+       * de campos do link e da app (`fim-do-trabalho-clyon.ts`).
+       */
+      const fimClyon = fimDoTrabalhoClyonParaOCliente(
+        completo as unknown as Parameters<typeof fimDoTrabalhoClyonParaOCliente>[0],
+        (await negociacoesDoPedido(Number(pedido.id))) as unknown as LinhaDoTrabalhoClyon[],
+      );
+      return { precoClyon, fimClyon };
+    })()),
   };
 }

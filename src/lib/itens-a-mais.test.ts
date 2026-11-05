@@ -134,7 +134,7 @@ describe("a regra não se confunde com o que a casa leva", () => {
 describe("chega aos dois ecrãs onde se fecha um valor", () => {
   it("ao cliente, ao lado do aviso da carga", () => {
     const VISTA = ler("src/app/pedido/[token]/VistaDoPedido.tsx");
-    expect(VISTA).toContain('avisoDosItens(base, "cliente")');
+    expect(VISTA).toContain('avisoDosItens(base, "cliente", pedido.serviceType ?? null)');
   });
 
   it("ao profissional, no mesmo sítio", () => {

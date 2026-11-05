@@ -99,7 +99,7 @@ export function mensagemDaPropostaClyon(
     base === "total"
       ? `${semEComIva(t.preco)} — é o valor final a pagar, já com IVA.`
       : `${semEComIva(t.preco)}${unidadeDaBase(base)} — já com IVA.`,
-    notaDoPrecoParaOCliente(base, "clyon"),
+    notaDoPrecoParaOCliente(base, "clyon", t.servico ?? null),
     "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.",
     profissional
       ? "Se estiver de acordo, é só responder a esta mensagem e confirmamos o dia consigo."

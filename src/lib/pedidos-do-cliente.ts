@@ -618,7 +618,7 @@ export async function pedidoDoClienteParaAApp(
       }),
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
-      avisos: [avisoDaBaseParaOCliente(base), avisoDosItens(base, "cliente")].filter(
+      avisos: [avisoDaBaseParaOCliente(base), avisoDosItens(base, "cliente", pedido.serviceType ?? null)].filter(
         (a): a is string => typeof a === "string" && a.length > 0,
       ),
       criadoEm: isoOuNulo(pedido.createdAt),
@@ -626,7 +626,7 @@ export async function pedidoDoClienteParaAApp(
       trabalhoClyon,
       valorClyon:
         precoClyon && enviadoEm
-          ? { ...textosDaConta(precoClyon, notaDoPrecoParaOCliente(base, "clyon")), versao: enviadoEm }
+          ? { ...textosDaConta(precoClyon, notaDoPrecoParaOCliente(base, "clyon", pedido.serviceType ?? null)), versao: enviadoEm }
           : null,
       // «Aceito este preço» (S7): quando o cliente o aceitou.
       precoAceiteEm: trabalhoClyon ? isoOuNulo(o.precoAceiteEm ?? null) : null,

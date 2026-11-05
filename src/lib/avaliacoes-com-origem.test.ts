@@ -136,7 +136,7 @@ describe("d6 — o fim do Trabalho CLYON, só a parte do cliente", () => {
     }
     expect(f.textos).toEqual({
       quemFaz: "O trabalho é feito por Empresa Inventada, parceiro da CLYON.",
-      dia: "Dia combinado: terça-feira, 3 de novembro, às 09:00",
+      dia: "Dia marcado: terça-feira, 3 de novembro, às 09:00",
       aClyonConfirma: A_CLYON_CONFIRMA,
       pergunta: "Como correu com Empresa Inventada?",
     });

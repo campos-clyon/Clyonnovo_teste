@@ -35,10 +35,15 @@ export const dynamic = "force-dynamic";
 
 export default async function PaginaDoPedido({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { token } = await params;
+  // «Enviar valores para pagamento» (d19) põe `?pagar=1` no link: o ecrã abre no pagamento (d20).
+  const pagar = (await searchParams)?.pagar;
+  const focarNoPagamento = (Array.isArray(pagar) ? pagar[0] : pagar) === "1";
 
   const pedido = await getSimulatorOrderByAcessoTokenHash(hashDeToken(token));
   const resultado = verificarTokenDeAcesso(
@@ -152,5 +157,5 @@ export default async function PaginaDoPedido({
    * O que FICA aqui é o que só o link sabe fazer: provar o token, e dizer as
    * coisas certas quando ele já não abre nada.
    */
-  return <VistaDoPedido pedido={pedido} token={token} />;
+  return <VistaDoPedido pedido={pedido} token={token} focarNoPagamento={focarNoPagamento} />;
 }

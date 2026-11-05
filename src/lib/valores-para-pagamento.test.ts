@@ -99,7 +99,7 @@ describe("só o link da CLYON: nada de dados de pessoas", () => {
     expect(oQueNaoPodeIr("IBAN PT50 0000 0000 0000")).not.toBeNull();
     expect(oQueNaoPodeIr("Pode pagar pelo Revolut")).not.toBeNull();
     expect(oQueNaoPodeIr("MB WAY para o 912 345 678")).not.toBeNull();
-    expect(oQueNaoPodeIr("MB WAY para o +351 963456789")).not.toBeNull();
+    expect(oQueNaoPodeIr("MB WAY para o +351 960000123")).not.toBeNull();
     // O da CLYON pode ir.
     expect(oQueNaoPodeIr(`Dúvidas: ${TELEFONE_DA_CLYON_NACIONAL}`)).toBeNull();
   });

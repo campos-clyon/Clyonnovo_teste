@@ -504,7 +504,7 @@ async function aceitarOPrecoDaClyon(pedidoId: number, versao: unknown): Promise<
       precoAoCliente: pedido.precoClienteClyon == null ? null : Number(pedido.precoClienteClyon),
     });
     const texto = preco
-      ? textosDaConta(preco, notaDoPrecoParaOCliente(lerBase(pedido.baseDoPreco), "clyon")).principal
+      ? textosDaConta(preco, notaDoPrecoParaOCliente(lerBase(pedido.baseDoPreco), "clyon", (pedido.serviceType as string | null) ?? null)).principal
       : null;
     await appendOrderHistory(pedidoId, {
       type: "created",

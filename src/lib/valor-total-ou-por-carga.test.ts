@@ -48,10 +48,20 @@ describe("a proposta de um Trabalho CLYON ao cliente (o #466)", () => {
     expect(m).not.toContain("32 €");
   });
 
-  it("pelo trabalho todo, os itens que não estavam nas fotografias pela tabela das peças (d7; eram 32 €)", () => {
+  it("pelo trabalho todo, na recolha de móveis, os itens a mais pela tabela das peças (d7; eram 32 €)", () => {
+    const m = mensagemDaPropostaClyon(
+      { cliente: "Vasco Ramalhete", servico: "recolha_moveis", localidade: "Sobreda", quando: null, preco, base: "total" },
+      agora,
+    );
+    expect(m).toContain("é o valor final a pagar, já com IVA.");
+    expect(m).toContain("cada item a mais conta pela tabela das peças");
+  });
+
+  it("pelo trabalho todo, nos outros serviços, a nota do serviço — sem a tabela das peças (d20)", () => {
     for (const m of [proposta("total"), proposta(undefined)]) {
       expect(m).toContain("é o valor final a pagar, já com IVA.");
-      expect(m).toContain("cada item a mais conta pela tabela das peças");
+      expect(m).toContain("Este valor cobre o que está nas fotografias e na descrição.");
+      expect(m).not.toContain("tabela das peças");
     }
   });
 });

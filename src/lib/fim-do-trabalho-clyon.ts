@@ -27,6 +27,8 @@ export const A_CLYON_CONFIRMA = "A CLYON confirma consigo quando o trabalho esti
 export const quemFazOTrabalhoClyon = (nome: string, verificado = false) => `O trabalho é feito por ${parceiroNaFrase(nome, verificado)}.`;
 export const perguntaDaAvaliacao = (nome: string) => `Como correu com ${nome}?`;
 export const O_PARCEIRO_COMBINA_O_DIA = "A CLYON combina o dia consigo e diz-lho aqui.";
+/** «Dia marcado: quinta-feira, 5 de novembro, às 10:00» — em Lisboa (d20, 05-11-2026). */
+export const diaMarcado = (quando: string) => `Dia marcado: ${quando}`;
 
 /** O que se lê de uma linha crua de `negociacoes` (a de quem ficou com o trabalho). */
 export type LinhaDoTrabalhoClyon = {
@@ -70,7 +72,16 @@ function daEquipa(l: LinhaDoTrabalhoClyon): boolean {
 }
 
 export function fimDoTrabalhoClyonParaOCliente(
-  pedido: { valorFixoClyon?: unknown; taxaClyon?: unknown },
+  pedido: {
+    valorFixoClyon?: unknown;
+    taxaClyon?: unknown;
+    /**
+     * O dia do pedido. Sem dia combinado na negociação, é o dia que a equipa
+     * usa no cartão e nas mensagens ao cliente (proposta e «Enviar valores para
+     * pagamento»): o cliente lê aqui o mesmo dia (d20, 05-11-2026).
+     */
+    dataAgendada?: Date | string | null;
+  },
   cruas: readonly LinhaDoTrabalhoClyon[],
 ): FimDoTrabalhoClyon | null {
   if (pedido.valorFixoClyon == null) return null;
@@ -80,12 +91,13 @@ export function fimDoTrabalhoClyonParaOCliente(
   const fase = faseParaOCliente({ estado: a.estado, execucaoEnviadaEm: a.execucaoEnviadaEm, confirmadoEm: a.confirmadoEm, pagoEm: a.pagoEm });
   const confirmado = fase === "confirmado" || fase === "pago";
   const avaliadoPeloCliente = a.avaliadoEm != null && !daEquipa(a);
-  const dataCombinadaTexto = quandoEmLisboa(a.dataCombinada ?? null);
+  const dia = a.dataCombinada ?? pedido.dataAgendada ?? null;
+  const dataCombinadaTexto = quandoEmLisboa(dia);
   return {
     negociacaoId: Number(a.id),
     profissional: nome,
     fase,
-    dataCombinada: isoOuNulo(a.dataCombinada ?? null),
+    dataCombinada: isoOuNulo(dia),
     dataCombinadaTexto,
     confirmadoEm: isoOuNulo(a.confirmadoEm ?? null),
     confirmadoEmTexto: quandoEmLisboa(a.confirmadoEm ?? null),
@@ -94,7 +106,7 @@ export function fimDoTrabalhoClyonParaOCliente(
     podeAvaliar: confirmado && !avaliadoPeloCliente,
     textos: {
       quemFaz: quemFazOTrabalhoClyon(nome, estaVerificado({ parceiroVerificado: a.parceiroVerificado ?? 0 })),
-      dia: dataCombinadaTexto ? `Dia combinado: ${dataCombinadaTexto}` : O_PARCEIRO_COMBINA_O_DIA,
+      dia: dataCombinadaTexto ? diaMarcado(dataCombinadaTexto) : O_PARCEIRO_COMBINA_O_DIA,
       aClyonConfirma: confirmado ? null : A_CLYON_CONFIRMA,
       pergunta: perguntaDaAvaliacao(nome),
     },

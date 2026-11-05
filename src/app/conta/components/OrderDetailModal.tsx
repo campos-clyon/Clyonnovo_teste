@@ -17,6 +17,7 @@ import { formatarEuros } from "@/lib/formatar-euros";
 import { tElevator, tUrgency, tFloor } from "@/lib/translations";
 import { entradasParaOCliente, eDaConversaComOCliente, textoParaOCliente } from "@/lib/historico-para-o-cliente";
 import PrecoDaClyon from "@/components/PrecoDaClyon";
+import FimDoTrabalhoClyon from "@/components/FimDoTrabalhoClyon";
 import AjudaDoPedido from "@/components/AjudaDoPedido";
 import AlterarPedido from "@/components/AlterarPedido";
 
@@ -466,8 +467,22 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
             </div>
           )}
 
-          {/* O preço de um Trabalho CLYON, com «Aceito este preço» (S20, P8 (a), 29-10-2026). */}
-          {order.precoClyon && (
+          {/*
+            Com o parceiro escolhido, o preço já foi acordado (d20 v2, 05-11-2026):
+            sem «Aceito», o valor e logo as formas de pagar.
+          */}
+          {order.fimClyon && (
+            <FimDoTrabalhoClyon
+              fim={order.fimClyon}
+              pedidoId={order.id}
+              precisaFatura={Boolean(order.precisaFatura)}
+              telefoneDoCliente={order.contactPhone ?? null}
+              preco={order.precoClyon ?? null}
+            />
+          )}
+
+          {/* O preço de um Trabalho CLYON, com «Aceito este preço» (S20, P8 (a), 29-10-2026) — só sem parceiro. */}
+          {order.precoClyon && !order.fimClyon && (
             <PrecoDaClyon
               preco={order.precoClyon}
               enviarPara="/api/users/me/negociacao"
@@ -567,7 +582,7 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
             </div>
           )}
 
-          {order.status === "concluido" && (
+          {order.status === "concluido" && !order.fimClyon && (
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <p className="text-xs font-medium text-slate-500">
                 {rating ? "A sua avaliação" : "Como correu o serviço?"}

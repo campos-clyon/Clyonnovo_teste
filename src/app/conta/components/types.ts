@@ -78,6 +78,8 @@ export interface Order {
   estadoTexto?: string;
   /** O preço de um Trabalho CLYON, já em texto (S20, 29-10-2026). */
   precoClyon?: import("@/lib/preco-clyon-para-o-cliente").PrecoClyonNoEcra | null;
+  /** Com o parceiro escolhido num Trabalho CLYON: o dia, o pagamento e a avaliação (d20, 05-11-2026). */
+  fimClyon?: import("@/lib/fim-do-trabalho-clyon").FimDoTrabalhoClyon | null;
   novidade?: string | null;
 }
 

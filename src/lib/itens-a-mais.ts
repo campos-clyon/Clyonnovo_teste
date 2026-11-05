@@ -112,8 +112,16 @@ export function acrescimoPorExtenso(itens: number, tamanho: TamanhoDoItemAMais =
  * Devolve `null` no preço por carga — ver a nota do módulo. Dizer o que não se
  * aplica é ruído, e ruído em todos os cartões deixa de se ler.
  */
-export function avisoDosItens(base: BaseDoPreco, quem: "cliente" | "profissional"): string | null {
+export function avisoDosItens(
+  base: BaseDoPreco,
+  quem: "cliente" | "profissional",
+  servico?: string | null,
+): string | null {
   if (!haAcrescimoPorItem(base)) return null;
+  // A tabela das peças só na recolha de móveis por peça (d20, 05-11-2026).
+  if (quem === "cliente" && servico !== undefined && !contaPelaTabelaDasPecas(servico)) {
+    return notaDoServicoParaOCliente(servico);
+  }
   return quem === "cliente"
     ? `Este valor cobre o que está nas fotografias e na descrição. Se no dia aparecerem mais coisas, ` +
         `${ITENS_A_MAIS_PARA_O_CLIENTE} — combinado consigo antes de o trabalho avançar.`
@@ -142,9 +150,34 @@ export function avisoDosItens(base: BaseDoPreco, quem: "cliente" | "profissional
 export function notaDoPrecoParaOCliente(
   base: BaseDoPreco,
   comQuem: "profissional" | "clyon" = "profissional",
+  /** O serviço do pedido (o id). Dito, a tabela das peças só sai na recolha de móveis (d20). */
+  servico?: string | null,
 ): string {
   if (base === "carga" && comQuem === "clyon") {
     return `É um preço POR CARGA (${O_QUE_E_UMA_CARGA}): o total depende de quantas cargas forem — confirmamos o número consigo antes de começar.`;
   }
-  return notaDaCargaParaOCliente(base) ?? (avisoDosItens(base, "cliente") as string);
+  return notaDaCargaParaOCliente(base) ?? (avisoDosItens(base, "cliente", servico) as string);
+}
+
+/*
+ * A TABELA DAS PEÇAS É DA RECOLHA DE MÓVEIS — 05-11-2026 (decisão d20).
+ *
+ * No #524, uma mudança de valor fixo, a cliente lia «cada item a mais conta
+ * pela tabela das peças (15/30/50 €)» — uma regra da recolha de móveis por
+ * peça, que numa mudança não diz nada. Com o serviço dito, a tabela só sai na
+ * recolha de móveis; nos outros serviços fica a nota do serviço. Sem serviço
+ * dito (`undefined`), fica como estava: as mensagens antigas não mudam aqui.
+ */
+export const SERVICOS_PELA_TABELA_DAS_PECAS: readonly string[] = ["recolha_moveis"];
+
+export function contaPelaTabelaDasPecas(servico: string | null | undefined): boolean {
+  return typeof servico === "string" && SERVICOS_PELA_TABELA_DAS_PECAS.includes(servico);
+}
+
+/** A nota de um preço pelo trabalho todo, num serviço que não se conta por peça. */
+export function notaDoServicoParaOCliente(servico: string | null | undefined): string {
+  if (servico === "mudanca") {
+    return "Este valor cobre a mudança que está na descrição e nas fotografias. Se no dia houver mais a levar, o acréscimo combina-se consigo antes de o trabalho avançar.";
+  }
+  return "Este valor cobre o que está nas fotografias e na descrição. Se no dia houver mais a fazer, o acréscimo combina-se consigo antes de o trabalho avançar.";
 }

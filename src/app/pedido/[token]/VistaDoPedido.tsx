@@ -65,6 +65,7 @@ export default async function VistaDoPedido({
   pedido,
   token,
   soParaVer = false,
+  focarNoPagamento = false,
 }: {
   pedido: Awaited<ReturnType<typeof import("@/lib/db").getSimulatorOrderById>>;
   /** O token do link, quando se chega por ele. O backoffice não traz nenhum. */
@@ -77,6 +78,8 @@ export default async function VistaDoPedido({
    * de euros em nome de outra pessoa. A vista é a mesma; os gestos não.
    */
   soParaVer?: boolean;
+  /** O link veio do «Enviar valores para pagamento» (`?pagar=1`, d20). */
+  focarNoPagamento?: boolean;
 }) {
   if (!pedido) return null;
 
@@ -133,7 +136,12 @@ export default async function VistaDoPedido({
         O PREÇO DE UM TRABALHO CLYON, TAMBÉM NO SITE — 29-10-2026 (S20, P8 (a)):
         o mesmo da app, com «Aceito este preço» pela mesma acção.
       */}
-      {(() => {
+      {/*
+        COM O PARCEIRO ESCOLHIDO, O PREÇO JÁ FOI ACORDADO — 05-11-2026 (d20 v2):
+        sem «Aceito este preço»; o valor e as formas de pagar vêm no fim do
+        Trabalho CLYON, logo abaixo. O «Aceito» fica só enquanto não há parceiro.
+      */}
+      {!fimClyon && (() => {
         const preco = precoClyonParaOCliente(pedido as unknown as Parameters<typeof precoClyonParaOCliente>[0]);
         if (!preco) return null;
         const cancelado = ["cancelado", "rejeitado", "arquivado"].includes(String(pedido.status ?? ""));
@@ -154,9 +162,17 @@ export default async function VistaDoPedido({
           precisaFatura={Boolean(pedido.precisaFatura)}
           telefoneDoCliente={pedido.contactPhone ?? null}
           soParaVer={soParaVer}
+          preco={precoClyonParaOCliente(pedido as unknown as Parameters<typeof precoClyonParaOCliente>[0])}
+          focarNoPagamento={focarNoPagamento}
         />
       )}
 
+      {/*
+        AS PROPOSTAS NÃO SÃO DE UM TRABALHO CLYON — 05-11-2026 (d20). Quem fala
+        com os parceiros é a CLYON: o bloco dizia «Ainda sem propostas. O pedido
+        foi enviado aos parceiros da zona…» com o parceiro já escolhido.
+      */}
+      {pedido.valorFixoClyon == null && (
       <PropostasRecebidas
         token={token}
         pedidoId={pedido.id}
@@ -166,6 +182,7 @@ export default async function VistaDoPedido({
         telefoneDoCliente={pedido.contactPhone ?? null}
         soParaVer={soParaVer}
       />
+      )}
 
       {/* «Há um problema» e «Pedir outra vez», como na app (S21, 29-10-2026). */}
       {!soParaVer && <AjudaDoPedido pedidoId={pedido.id} servico={pedido.serviceType ?? null} />}
@@ -302,7 +319,7 @@ export default async function VistaDoPedido({
         que o orçamento cobre. Continuam a fazer falta, e agora estão sozinhos
         — por isso a secção mudou de nome e só aparece quando há algum.
       */}
-      {(avisoDaBaseParaOCliente(base) || avisoDosItens(base, "cliente")) && (
+      {(avisoDaBaseParaOCliente(base) || avisoDosItens(base, "cliente", pedido.serviceType ?? null)) && (
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">
           Antes de fechar
@@ -326,9 +343,9 @@ export default async function VistaDoPedido({
             fotografias. Dizê-lo aqui, antes de ele decidir, é o que impede que
             no dia seja uma surpresa — para ele e para quem vai buscar.
           */}
-          {avisoDosItens(base, "cliente") && (
+          {avisoDosItens(base, "cliente", pedido.serviceType ?? null) && (
             <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-700">
-              {avisoDosItens(base, "cliente")}
+              {avisoDosItens(base, "cliente", pedido.serviceType ?? null)}
             </p>
           )}
 
