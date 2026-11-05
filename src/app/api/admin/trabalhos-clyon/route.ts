@@ -46,6 +46,9 @@ import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } fro
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
 import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
+import { comOLink, mensagemDosValoresParaPagamento, oQueNaoPodeIr } from "@/lib/valores-para-pagamento";
+import { contaDoTrabalhoClyon, emEuros } from "@/lib/conta-do-pagamento";
+import { linkParaQuemFechou } from "@/lib/link-de-quem-fecha-pelo-whatsapp";
 import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
@@ -171,6 +174,8 @@ export async function GET(req: NextRequest) {
           execucaoEnviadaEm: iso(n.execucaoEnviadaEm),
           confirmadoEm: iso(n.confirmadoEm),
           pagoEm: iso(n.pagoEm),
+          // O cliente já pagou? O «Enviar valores para pagamento» só aparece enquanto não (05-11-2026, d19).
+          clientePagouEm: iso(n.clientePagouEm),
           // Como na Mesa (19-10-2026): a prova do trabalho feito e a nota dada.
           prova: provaDe(n.provaJson),
           estrelas: n.estrelas,
@@ -431,6 +436,8 @@ export async function PATCH(req: NextRequest) {
     motivo?: unknown;
     /** d6: como é que o cliente deu a nota que a equipa regista. */
     comoDisse?: unknown;
+    /** O «Enviar valores para pagamento» (05-11-2026, d19): a mensagem, como a equipa a deixou. */
+    texto?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -509,6 +516,110 @@ export async function PATCH(req: NextRequest) {
       // Na app de cliente aparece o preço com «Aceito este preço» (S7, S10).
       await avisarOClienteDoPedido(pedidoId, "preco_clyon");
       const resumo = `Proposta de ${euros(preco.total)} enviada ao cliente pelo WhatsApp da CLYON, por ${quem}.`;
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      return NextResponse.json({ ok: true, feito: resumo });
+    }
+
+    /*
+     * ── «Enviar valores para pagamento» — 05-11-2026 (d19) ──
+     *
+     * No lugar do «Enviar pela CLYON» do cartão, pelo mesmo caminho (o WhatsApp
+     * da CLYON). Os valores saem da conta em degraus, do servidor; a equipa pode
+     * ter editado a mensagem, mas o total a pagar tem de lá estar, e os dados
+     * de pagamento de pessoas (IBAN, Revolut, um telemóvel) não saem por aqui —
+     * só o link do pedido, gerado agora. Ver `valores-para-pagamento.ts`.
+     */
+    if (accao === "valores_para_pagamento") {
+      const pedido = (await getSimulatorOrderById(pedidoId)) as unknown as Record<string, unknown> | undefined;
+      if (!pedido || pedido.valorFixoClyon == null) {
+        return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+      }
+      const telefone = String(pedido.contactPhone ?? "");
+      if (telefone.replace(/\D/g, "").length < 9) {
+        return NextResponse.json({ error: "O pedido não tem telemóvel." }, { status: 400 });
+      }
+      const {
+        aNegociacaoDoTrabalhoClyon,
+        numeroBloqueadoWhatsApp,
+        retomarNumeroWhatsApp,
+        existeContaComEmail,
+        substituirTokenDoPedido,
+      } = await import("@/lib/db");
+      const neg = await aNegociacaoDoTrabalhoClyon(pedidoId);
+      if (!neg) {
+        return NextResponse.json({ error: "Ainda ninguém ficou com este trabalho: não há valores finais." }, { status: 409 });
+      }
+      if (neg.clientePagouEm || neg.pagoAoProfissionalEm) {
+        return NextResponse.json({ error: "O cliente já pagou este trabalho." }, { status: 409 });
+      }
+      const numero = (v: unknown) => (v == null || v === "" ? null : Number(v));
+      const conta = contaDoTrabalhoClyon(
+        {
+          valorFixo: Number(pedido.valorFixoClyon),
+          taxa: numero(pedido.taxaClyon),
+          precoAoCliente: numero(pedido.precoClienteClyon),
+        },
+        false,
+        neg.semFactura,
+      );
+      if (!conta) return NextResponse.json({ error: "Falta o preço ao cliente." }, { status: 400 });
+      if (await numeroBloqueadoWhatsApp(telefone)) {
+        return NextResponse.json(
+          { error: "Este número está bloqueado. Desbloqueie-o primeiro, no ecrã do WhatsApp." },
+          { status: 409 },
+        );
+      }
+      const escrito = typeof corpo.texto === "string" ? corpo.texto.trim().slice(0, 4000) : "";
+      const texto =
+        escrito ||
+        mensagemDosValoresParaPagamento(
+          {
+            pedidoId,
+            cliente: (pedido.contactName as string) ?? null,
+            servico: (pedido.serviceType as string) ?? null,
+            localidade: (pedido.city as string) ?? null,
+            quando: neg.dataCombinada ?? ((pedido.dataAgendada as string | Date | null) ?? null),
+            base: (pedido.baseDoPreco as string) ?? null,
+            conta,
+          },
+          new Date(),
+        );
+      if (!texto.includes(emEuros(conta.total))) {
+        return NextResponse.json(
+          { error: `A mensagem tem de levar o total a pagar (${emEuros(conta.total)}), como sai da conta do trabalho.` },
+          { status: 409 },
+        );
+      }
+      const proibido = oQueNaoPodeIr(texto);
+      if (proibido) return NextResponse.json({ error: proibido }, { status: 400 });
+      const link = await linkParaQuemFechou(pedidoId, {
+        emailDoPedido: async () => {
+          const e = typeof pedido.contactEmail === "string" ? pedido.contactEmail.trim() : "";
+          return e || null;
+        },
+        existeContaComEmail,
+        substituirTokenDoPedido,
+        site: urlDeAccaoDoPedido(req.headers),
+      });
+      if (!link) return NextResponse.json({ error: "Não foi possível gerar o link do pedido." }, { status: 500 });
+      const final = comOLink(texto, link);
+      const saiu = await enviarTextoManualWhatsApp(telefone, final);
+      if (!saiu) {
+        return NextResponse.json(
+          {
+            error:
+              "Não saiu. Ou não há canal configurado, ou a janela de 24 horas desde a última mensagem dele já fechou — copie a mensagem e envie-a do seu WhatsApp.",
+            texto: final,
+          },
+          { status: 400 },
+        );
+      }
+      await retomarNumeroWhatsApp(telefone);
+      const valores =
+        conta.iva === 0
+          ? `${emEuros(conta.total)}, sem fatura`
+          : `${emEuros(conta.total)} com IVA (${emEuros(conta.semIva)} + IVA ${emEuros(conta.iva)})`;
+      const resumo = `Valores para pagamento enviados ao cliente pelo WhatsApp da CLYON: ${valores}, com o link do pedido — por ${quem}.`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: resumo });
     }

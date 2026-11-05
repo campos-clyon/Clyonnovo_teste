@@ -3639,6 +3639,8 @@ export type OfertaClyonNaBase = {
     avaliadoEm: Date | null;
     /** Sem factura (21-10-2026) — sem IVA ao cliente. */
     semFactura: boolean;
+    /** Quando entrou o pagamento do cliente (05-11-2026, d19); nulo enquanto não. */
+    clientePagouEm: Date | null;
   }>;
 };
 
@@ -3900,11 +3902,35 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
   )) as [Array<Record<string, unknown>>, unknown];
 
   const data = (v: unknown) => (v ? new Date(v as string) : null);
+  /*
+   * O CLIENTE JÁ PAGOU? — 05-11-2026 (d19): o «Enviar valores para pagamento»
+   * só aparece enquanto não. À parte, e sem deitar a lista abaixo se a tabela
+   * dos pagamentos não existir.
+   */
+  const pagouEm = new Map<number, Date>();
+  if (negs.length > 0) {
+    try {
+      const negIds = negs.map((n) => Number(n.id));
+      const [pagos] = (await pool.execute(
+        `SELECT negociacaoPaga, MAX(pagoEm) AS pagoEm FROM pagamentos
+          WHERE negociacaoPaga IN (${negIds.map(() => "?").join(",")}) AND pagoEm IS NOT NULL
+          GROUP BY negociacaoPaga`,
+        negIds,
+      )) as [Array<Record<string, unknown>>, unknown];
+      for (const p of pagos) {
+        const d = data(p.pagoEm);
+        if (d) pagouEm.set(Number(p.negociacaoPaga), d);
+      }
+    } catch (e) {
+      console.error("[ofertasClyon] pagamentos do cliente", e);
+    }
+  }
   const porPedido = new Map<number, OfertaClyonNaBase["negociacoes"]>();
   for (const n of negs) {
     const k = Number(n.pedidoId);
     if (!porPedido.has(k)) porPedido.set(k, []);
     porPedido.get(k)!.push({
+      clientePagouEm: pagouEm.get(Number(n.id)) ?? null,
       negociacaoId: Number(n.id),
       providerId: Number(n.providerId),
       profissional: String(n.profissional ?? ""),
@@ -3947,6 +3973,50 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     base: (p.baseDoPreco as string) ?? null,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
+}
+
+/**
+ * A NEGOCIAÇÃO QUE O CLIENTE PAGA, NUM TRABALHO CLYON — 05-11-2026 (d19, o
+ * «Enviar valores para pagamento»). A acordada (quem ficou com o trabalho),
+ * sem factura ou não, se já se pagou ao profissional e se o cliente já pagou.
+ * Nula quando ninguém ficou com ele.
+ */
+export async function aNegociacaoDoTrabalhoClyon(pedidoId: number): Promise<{
+  negociacaoId: number;
+  dataCombinada: Date | null;
+  semFactura: boolean;
+  pagoAoProfissionalEm: Date | null;
+  clientePagouEm: Date | null;
+} | null> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT id, dataCombinada, semFactura, pagoEm FROM negociacoes
+      WHERE pedidoId = ? AND estado = 'acordada' AND ofertaClyon IS NOT NULL
+      ORDER BY id DESC LIMIT 1`,
+    [pedidoId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const n = linhas[0];
+  if (!n) return null;
+  const data = (v: unknown) => (v ? new Date(v as string) : null);
+  let clientePagouEm: Date | null = null;
+  try {
+    const [pagos] = (await pool.execute(
+      "SELECT MAX(pagoEm) AS pagoEm FROM pagamentos WHERE negociacaoPaga = ? AND pagoEm IS NOT NULL",
+      [Number(n.id)],
+    )) as [Array<Record<string, unknown>>, unknown];
+    clientePagouEm = data(pagos[0]?.pagoEm);
+  } catch {
+    /* sem tabela, sem pagamento */
+  }
+  return {
+    negociacaoId: Number(n.id),
+    dataCombinada: data(n.dataCombinada),
+    semFactura: Number(n.semFactura) === 1,
+    pagoAoProfissionalEm: data(n.pagoEm),
+    clientePagouEm,
+  };
 }
 
 /**

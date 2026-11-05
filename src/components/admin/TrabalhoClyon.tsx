@@ -12,7 +12,6 @@ import {
   MessageCircle,
   Pencil,
   RotateCcw,
-  Send,
   StickyNote,
   UserCheck,
   Users,
@@ -36,6 +35,7 @@ import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
+import EnviarValoresParaPagamento from "@/components/admin/EnviarValoresParaPagamento";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
@@ -98,6 +98,8 @@ type NegociacaoDoTrabalho = {
   execucaoEnviadaEm: string | null;
   confirmadoEm: string | null;
   pagoEm: string | null;
+  /** Quando entrou o pagamento do cliente (05-11-2026, d19); nulo enquanto não. */
+  clientePagouEm?: string | null;
   /** A prova do trabalho feito e a nota dada — como na Mesa (19-10-2026). */
   prova: { fotos: string[]; nota: string } | null;
   estrelas: number | null;
@@ -666,11 +668,6 @@ export function TrabalhoClyonComAccoes({
     void mexer({ accao: "ja_enviei" }, (d) => String(d.feito ?? "Marcado como enviado."));
   };
 
-  const enviarProposta = () => {
-    if (!window.confirm(`Enviar a proposta do #${t.pedidoId} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
-    void mexer({ accao: "proposta" }, (d) => String(d.feito ?? "Proposta enviada."));
-  };
-
   // Cancelar abre a janela com os motivos da Mesa (19-10-2026).
   const [aCancelar, setACancelar] = useState<TrabalhoClyon | null>(null);
   async function cancelarComMotivo(t: TrabalhoClyon, motivo: string): Promise<string | null> {
@@ -770,7 +767,6 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       onVisto={marcarVisto}
       onReoferecer={reoferecer}
       onAvaliar={avaliar}
-      onEnviarProposta={enviarProposta}
       onPropostaAberta={propostaAberta}
       onJaEnviei={jaEnviei}
       onClienteAceitou={clienteAceitou}
@@ -875,7 +871,6 @@ function CartaoDoTrabalho({
   onVisto,
   onReoferecer,
   onAvaliar,
-  onEnviarProposta,
   onPropostaAberta,
   onJaEnviei,
   onClienteAceitou,
@@ -911,7 +906,6 @@ function CartaoDoTrabalho({
   /** Voltar a oferecer a quem recusou — a um, ou a todos (`null`). */
   onReoferecer: (negociacaoId: number | null) => void;
   onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;
-  onEnviarProposta: () => void;
   onPropostaAberta: () => void;
   onJaEnviei: () => void;
   onClienteAceitou: () => void;
@@ -1021,6 +1015,23 @@ function CartaoDoTrabalho({
    */
   const conta =
     r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga", Boolean(a?.semFactura));
+  /*
+   * «ENVIAR VALORES PARA PAGAMENTO» — 05-11-2026 (d19). Há quem faça o
+   * trabalho, há valor final (a conta), há telemóvel, e o cliente ainda não
+   * pagou: nem pagamento entrado, nem o profissional já pago.
+   */
+  const valoresParaPagamento =
+    a && conta && t.telefone && !a.clientePagouEm && !a.pagoEm
+      ? {
+          pedidoId: t.pedidoId,
+          cliente: t.cliente,
+          servico: t.servico,
+          localidade: t.localidade,
+          quando: a.dataCombinada ?? t.dataAgendada,
+          base: t.base ?? null,
+          conta: { semIva: conta.semIva, iva: conta.iva, total: conta.total },
+        }
+      : null;
 
   return (
     <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border px-3 py-2 ${cor ? `border-l-4 ${cor.grupo}` : corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}${porVer ? " ring-2 ring-emerald-400/60" : ""}`}>
@@ -1583,17 +1594,12 @@ function CartaoDoTrabalho({
             Enviar proposta ao cliente · {euros(proposta.total)}
           </a>
         )}
-        {/* Pelo WhatsApp da CLYON — a conversa fica com a plataforma (19-10-2026). */}
-        {proposta && (
-          <button
-            onClick={onEnviarProposta}
-            disabled={ocupado === t.pedidoId}
-            className="flex items-center gap-1.5 rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40"
-          >
-            <Send className="h-3.5 w-3.5" aria-hidden="true" />
-            Enviar pela CLYON
-          </button>
-        )}
+        {/*
+          OS VALORES PARA PAGAMENTO — 05-11-2026 (d19), no lugar do «Enviar pela
+          CLYON». Só com quem ficou com o trabalho, o valor final e o cliente
+          ainda por pagar. Ver `EnviarValoresParaPagamento`.
+        */}
+        {valoresParaPagamento && <EnviarValoresParaPagamento valores={valoresParaPagamento} onMudou={onMudou} />}
         {/* A proposta já seguiu por outro lado — passa para «A aguardar cliente» (21-10-2026). */}
         {proposta && !t.propostaEnviadaEm && (
           <button

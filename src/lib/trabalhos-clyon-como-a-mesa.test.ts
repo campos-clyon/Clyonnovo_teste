@@ -139,8 +139,9 @@ describe("as acções da Mesa (fase 3)", () => {
     expect(CARTAO).toContain("<VisorDeFotos fotos={a.prova.fotos}");
   });
 
-  it("enviar a proposta pelo WhatsApp da CLYON, e não com o número bloqueado", () => {
-    expect(CARTAO).toContain("Enviar pela CLYON");
+  it("enviar pelo WhatsApp da CLYON, e não com o número bloqueado", () => {
+    // Desde 05-11-2026 (d19) o «Enviar pela CLYON» deu lugar ao «Enviar valores para pagamento».
+    expect(CARTAO).toContain("<EnviarValoresParaPagamento");
     expect(ROTA).toContain("if (await numeroBloqueadoWhatsApp(telefone)) {");
     expect(ROTA).toContain("const saiu = await enviarTextoManualWhatsApp(telefone, texto);");
   });
