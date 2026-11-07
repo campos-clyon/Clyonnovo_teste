@@ -35,6 +35,15 @@ describe("os motivos são uma lista fechada", () => {
     expect(todos).toContain("Já foi feito por outra pessoa");
   });
 
+  it("o preço, a data e outra empresa contam-se à parte (d14)", () => {
+    // Clientes que achavam caro ficavam em «desistiu», e não se somavam.
+    const lista = MOTIVOS_DE_CANCELAMENTO as readonly string[];
+    expect(lista).toContain("O cliente achou o preço alto");
+    expect(lista).toContain("A data não serviu ao cliente");
+    expect(lista).toContain("O cliente escolheu outra empresa");
+    expect(new Set(lista).size).toBe(lista.length);
+  });
+
   it("«outro motivo» existe, e é o único que pede texto", () => {
     /*
      * Uma lista fechada a que falte a razão verdadeira obriga quem cancela a

@@ -95,6 +95,8 @@ type NegociacaoDoTrabalho = {
   modo: ModoDaOferta | null;
   dataCombinada: string | null;
   atribuidaEm: string | null;
+  /** A última mudança da negociação — num «aceitou», quando aceitou (d14). */
+  actualizadaEm?: string | null;
   execucaoEnviadaEm: string | null;
   confirmadoEm: string | null;
   pagoEm: string | null;

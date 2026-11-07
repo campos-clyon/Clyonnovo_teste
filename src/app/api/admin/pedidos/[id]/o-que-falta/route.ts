@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { appendOrderHistory, getSimulatorOrderById } from "@/lib/db";
 import { oQueFaltaNoPedido, type PedidoParaOQueFalta } from "@/lib/o-que-falta-no-pedido";
-import { linhaDaFalta, registoDoQueFalta, type CanalDoPedido } from "@/lib/mensagem-do-que-falta";
+import { ABERTURA_DO_QUE_FALTA, linhaDaFalta, registoDoQueFalta, type CanalDoPedido } from "@/lib/mensagem-do-que-falta";
 import { pedirMaisDetalhes } from "@/lib/conversa-com-a-clyon";
 
 export const runtime = "nodejs";
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const servico = (pedido as { serviceType?: string | null }).serviceType;
       await pedirMaisDetalhes(
         pedidoId,
-        ["Para enviar o pedido aos profissionais, falta:", ...faltas.map((f) => `- ${linhaDaFalta(f, servico)}`)].join("\n"),
+        [ABERTURA_DO_QUE_FALTA, ...faltas.map((f) => `- ${linhaDaFalta(f, servico)}`)].join("\n"),
         colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
         { semAvisoPorFora: true },
       );

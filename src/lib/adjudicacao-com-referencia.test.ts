@@ -206,6 +206,8 @@ describe("um assistente com Trabalhos CLYON gera, e a mensagem leva a referênci
         metodosDePagamento: "Transferência: dados de exemplo",
         formas: {
           comDadosDoDono: true,
+          // Desde 03-11-2026 (d15), só com um motivo escrito.
+          motivoDosDadosDoDono: "O cliente pediu transferência",
           referencias: [{ metodo: "multibanco", valor: 10, entidade: "21921", referencia: "104295830" }],
         },
       },

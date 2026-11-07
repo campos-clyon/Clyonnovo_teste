@@ -171,6 +171,8 @@ export async function GET(req: NextRequest) {
           modo: modoDaOferta(n.modo),
           dataCombinada: iso(n.dataCombinada),
           atribuidaEm: iso(n.atribuidaEm),
+          // Num «aceitou», quando aceitou — o «Do nosso lado» da Mesa conta daí (d14).
+          actualizadaEm: iso(n.actualizadaEm),
           execucaoEnviadaEm: iso(n.execucaoEnviadaEm),
           confirmadoEm: iso(n.confirmadoEm),
           pagoEm: iso(n.pagoEm),

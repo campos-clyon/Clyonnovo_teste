@@ -88,7 +88,7 @@ describe("S18 — pedir mais detalhes", () => {
   });
 
   it("«Pedir o que falta» só avisa na app (a equipa já manda a mensagem pela mão dela)", async () => {
-    await pedirMaisDetalhes(702, "Para enviar o pedido aos profissionais, falta:", null, { semAvisoPorFora: true });
+    await pedirMaisDetalhes(702, "Para enviar o seu pedido aos parceiros da sua zona, falta:", null, { semAvisoPorFora: true });
     expect(avisarContactoDoPedido).not.toHaveBeenCalled();
   });
 

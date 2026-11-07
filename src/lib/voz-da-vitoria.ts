@@ -75,6 +75,15 @@ export const PERGUNTA_ANOTADA =
   "Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.";
 
 /**
+ * A PASSAGEM A UMA PESSOA, SEM PROMETER «JÁ DE SEGUIDA» — 03-11-2026 (d15,
+ * proposta 7 do Apoio). Dizia «um colega (…) fala-lhe já de seguida», quando a
+ * primeira resposta de uma pessoa leva horas: promete-se o que se cumpre — uma
+ * pessoa da CLYON, por aqui, no horário de atendimento. Tem tradução fixa.
+ */
+export const MENSAGEM_DE_PASSAR_A_UMA_PESSOA =
+  "Percebi o que me disse. Vou passar isto a uma pessoa da CLYON, que lhe responde por aqui (de segunda a sábado, das 8h às 20h).";
+
+/**
  * «DO YOU SPEAK ENGLISH?» — «Yes, of course!» — 28-10-2026 (decisão d35).
  *
  * Levou `PERGUNTA_ANOTADA`, e a conversa continuou em português. Um pedido de

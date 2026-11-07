@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AlteracoesDoCliente from "./AlteracoesDoCliente";
+import DoNossoLado from "./DoNossoLado";
 import type { ComponentType } from "react";
 import {
   Briefcase,
@@ -4310,6 +4311,31 @@ export default function AdminNegociacoesPanel({
           {quandoFoiLido}
         </span>
       </header>
+
+      {/*
+        «DO NOSSO LADO» — 03-11-2026 (d14). O que espera pela CLYON, de todas as
+        fontes, antes da procura e dos blocos: as conversas por responder há mais
+        de 2 h, os Trabalhos CLYON aceites com o preço por enviar, as propostas
+        por enviar e os trabalhos com a data passada sem «Está feito». Só
+        leitura; cada linha procura o pedido na Mesa. Lê a mesa inteira que está
+        carregada, e não o que a procura ou os filtros deixam passar.
+      */}
+      {(mostrar === "tudo" || mostrar === "clyon") && (
+        <DoNossoLado
+          token={token}
+          pedidos={pedidos}
+          trabalhosClyon={trabalhosClyon}
+          onAbrirPedido={(id) => {
+            setBusca(`#${id}`);
+            if (idsClyon.has(id)) irAoTrabalhoClyon(id);
+            else
+              window.setTimeout(
+                () => document.getElementById(`pedido-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                120,
+              );
+          }}
+        />
+      )}
 
       {/*
         A BUSCA, ANTES DOS CARTÕES.

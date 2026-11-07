@@ -38,10 +38,18 @@
  *
  * «Outro motivo» fica, e é o único que pede texto: uma lista fechada a que
  * falte a razão verdadeira obriga a escolher a mentira mais parecida.
+ *
+ * O PREÇO, A DATA E A CONCORRÊNCIA — d14, 03/11/2026. Havia clientes a
+ * escrever que achavam caro ou que tinham arranjado mais barato, e o registo
+ * não tinha onde o pôr: ficava em «desistiu». Sem estes três, os preços e os
+ * anúncios avaliam-se às cegas.
  */
 export const MOTIVOS_DE_CANCELAMENTO = [
   "O cliente desistiu",
   "O cliente já não precisa",
+  "O cliente achou o preço alto",
+  "A data não serviu ao cliente",
+  "O cliente escolheu outra empresa",
   "Já foi feito por outra pessoa",
   "Não conseguimos falar com o cliente",
   "O profissional não pode fazer",

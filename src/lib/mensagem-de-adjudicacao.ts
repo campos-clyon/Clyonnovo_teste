@@ -1,12 +1,7 @@
 import { primeiroNome } from "./mensagem-whatsapp";
 import { quandoPorExtenso } from "./aviso-de-data-ao-cliente";
 import { linkDeWhatsApp } from "./link-de-whatsapp";
-import {
-  ABERTURA_DOS_METODOS,
-  SEM_METODOS_DE_PAGAMENTO,
-  blocoDosMetodosDePagamento,
-  limparMetodosDePagamento,
-} from "./metodos-de-pagamento";
+import { ABERTURA_DOS_METODOS, SEM_METODOS_DE_PAGAMENTO, limparMetodosDePagamento } from "./metodos-de-pagamento";
 import { servicoComArtigo } from "./mensagem-das-propostas";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { telefoneLegivel } from "./telefone-legivel";
@@ -30,7 +25,33 @@ import { telefoneLegivel } from "./telefone-legivel";
  * backoffice (Configs → «Métodos de pagamento para a adjudicação») e chegam
  * aqui em `metodosDePagamento`. Sem eles, a mensagem diz que os dados seguem
  * a seguir. Ver `metodos-de-pagamento.ts`.
+ *
+ * O PAGAMENTO SÓ PELA PLATAFORMA — 03-11-2026 (d15, aprovada pelo dono a
+ * 04-11). O bloco das Configs saía por omissão neste botão, com dados de
+ * pagamento de uma pessoa, e o cliente pagava fora da plataforma. Desde hoje:
+ *
+ *   · o link do pedido (onde o cliente paga por MB WAY, Multibanco ou
+ *     transferência, como no «Enviar valores para pagamento» da d19) vem
+ *     marcado no «Enviar adjudicação»;
+ *   · os «Dados do dono» vêm desmarcados, e só entram com um motivo escrito
+ *     (`lerMotivoDosDadosDoDono`) — o motivo fica no histórico do pedido;
+ *   · sem formas escolhidas, a mensagem NUNCA leva o bloco das Configs: diz
+ *     que os dados seguem a seguir. Os dados de uma pessoa (IBAN, Revolut, um
+ *     telemóvel) não saem por omissão.
  */
+
+/** O motivo para usar os dados do dono: o mesmo tamanho do «sem factura». */
+export const MOTIVO_DOS_DADOS_DO_DONO_MINIMO = 5;
+export const MOTIVO_DOS_DADOS_DO_DONO_MAXIMO = 300;
+export const PEDE_O_MOTIVO_DOS_DADOS_DO_DONO =
+  "Escreva porque vai com os dados do dono e não pela plataforma — sem o motivo, não entram.";
+
+export function lerMotivoDosDadosDoDono(v: unknown): { ok: true; motivo: string } | { ok: false; erro: string } {
+  const motivo = typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, MOTIVO_DOS_DADOS_DO_DONO_MAXIMO) : "";
+  return motivo.length >= MOTIVO_DOS_DADOS_DO_DONO_MINIMO
+    ? { ok: true, motivo }
+    : { ok: false, erro: PEDE_O_MOTIVO_DOS_DADOS_DO_DONO };
+}
 
 export type TrabalhoAdjudicado = {
   cliente: string | null;
@@ -52,7 +73,11 @@ export type TrabalhoAdjudicado = {
    */
   formas?: {
     comDadosDoDono: boolean;
+    /** Porque vão os dados do dono (d15): sem um motivo válido, não entram. */
+    motivoDosDadosDoDono?: string | null;
     referencias: ReferenciaNaAdjudicacao[];
+    /** O link do pedido, gerado no servidor ao preparar a mensagem (d15). */
+    link?: string | null;
   };
 };
 
@@ -107,19 +132,37 @@ export function blocoDasFormasDePagamento(
   formas: NonNullable<TrabalhoAdjudicado["formas"]>,
   metodosDePagamento: string | null | undefined,
 ): string {
-  const doDono = formas.comDadosDoDono ? limparMetodosDePagamento(metodosDePagamento ?? null) : null;
+  const doDono =
+    formas.comDadosDoDono && lerMotivoDosDadosDoDono(formas.motivoDosDadosDoDono).ok
+      ? limparMetodosDePagamento(metodosDePagamento ?? null)
+      : null;
+  const link = formas.link?.trim() || null;
   const partes = [
+    // Primeiro o pedido, onde se paga pela plataforma (d15).
+    ...(link ? [`No seu pedido, por MB WAY, por Multibanco ou por transferência:\n${link}`] : []),
     ...formas.referencias.map(blocoDaReferencia),
     // A abertura que o dono tenha escrito nas Configs não se repete.
     ...(doDono ? [doDono.replace(/^para o pagamento[^\n]*\n+/i, "")] : []),
   ];
   if (partes.length === 0) return SEM_METODOS_DE_PAGAMENTO;
+  // Só o link: a frase da d19, sem abertura.
+  if (link && partes.length === 1) {
+    return [
+      `Pode pagar por MB WAY, por Multibanco ou por transferência, no seu pedido:\n${link}`,
+      "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.",
+    ].join("\n\n");
+  }
   const abertura = partes.length > 1 ? ABERTURA_DOS_METODOS : "Para o pagamento:";
   const euPago =
     formas.referencias.length > 0
       ? "Os pagamentos por Multibanco e MB WAY são processados pelo euPago."
       : null;
-  return [abertura, ...partes, euPago].filter(Boolean).join("\n\n");
+  // Como no «Enviar valores para pagamento» (d19): a quem se paga, e quando o parceiro recebe.
+  const aQuem =
+    link || formas.referencias.length > 0
+      ? "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito."
+      : null;
+  return [abertura, ...partes, euPago, aQuem].filter(Boolean).join("\n\n");
 }
 
 const maiuscula = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
@@ -159,9 +202,8 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
     `Olá${nome ? `, ${nome}` : ""}! Obrigado pela confirmação.`,
     fica,
     quemFaz,
-    t.formas
-      ? blocoDasFormasDePagamento(t.formas, t.metodosDePagamento)
-      : blocoDosMetodosDePagamento(t.metodosDePagamento),
+    // Sem formas escolhidas, nunca os dados do dono (d15): os dados seguem a seguir.
+    blocoDasFormasDePagamento(t.formas ?? { comDadosDoDono: false, referencias: [] }, t.metodosDePagamento),
     "Depois de pagar, envie-nos o comprovativo por aqui, por favor.",
     "Obrigado pela preferência,\nEquipa CLYON",
   ].join("\n\n");

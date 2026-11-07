@@ -330,6 +330,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // O «porquê?» do alcance e o «Trocar profissional» também nos Trabalhos CLYON (19-10-2026).
   { prefixo: "/api/admin/negociacoes/trocar-profissional", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes/alcance", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
+  // O link do pedido e o motivo dos dados do dono no «Enviar adjudicação» (03-11-2026, d15): na Mesa e nos Trabalhos CLYON.
+  { prefixo: "/api/admin/negociacoes/adjudicacao", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },
   { prefixo: "/api/admin/alteracoes-do-cliente", seccoes: ["negociacoes_clyon", "trabalhos_clyon", "pedidos"] },
 

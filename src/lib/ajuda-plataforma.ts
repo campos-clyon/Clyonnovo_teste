@@ -17,7 +17,7 @@ import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { quotaEmPontos } from "./quota-da-clyon";
-import { TAXA_MAXIMA, type Taxas } from "./taxas-plataforma";
+import { TAXA_IVA, TAXA_MAXIMA, type Taxas } from "./taxas-plataforma";
 
 export type PerguntaFrequente = {
   pergunta: string;
@@ -46,6 +46,28 @@ export function taxasDaAjuda(v: unknown): Taxas | null {
   const boa = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= TAXA_MAXIMA;
   return t && boa(t.cliente) && boa(t.profissional) ? { cliente: t.cliente, profissional: t.profissional } : null;
 }
+
+/*
+ * O EXEMPLO DO «RECEBI EM DINHEIRO» — 03-11-2026 (d15). Uma proposta de 100 €
+ * + IVA num pedido com a taxa de 11 % (a regra geral de 22-10-2026). As contas
+ * fazem-se aqui, para os números do exemplo baterem sempre uns com os outros.
+ */
+const EXEMPLO_EM_DINHEIRO = (() => {
+  const semIva = 100;
+  const taxa = 0.11;
+  const iva = Math.round(semIva * TAXA_IVA * 100) / 100;
+  const daTaxa = Math.round(semIva * taxa * 100) / 100;
+  const n = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
+  return {
+    taxa: `${Math.round(taxa * 100)} %`,
+    semIva: n(semIva),
+    comIva: n(semIva + iva),
+    ganhos: n(semIva - daTaxa),
+    entrega: n(iva + daTaxa),
+    iva: n(iva),
+    daTaxa: n(daTaxa),
+  };
+})();
 
 export function perguntasDoProfissional(taxas: Taxas | null): PerguntaFrequente[] {
   return [
@@ -141,6 +163,35 @@ export function perguntasDoProfissional(taxas: Taxas | null): PerguntaFrequente[
         "CLYON, com a taxa da plataforma, por referência. O seu regime continua a " +
         "contar entre si e nós — declare-o em Faturação e IVA — e é com ele que nos fatura " +
         "a si o que recebe.",
+    },
+    /*
+     * «RECEBI EM DINHEIRO: E AGORA?» — 03-11-2026 (d15, aprovada pelo dono a
+     * 04-11). Os parceiros activos perguntavam-no todas as semanas pelo
+     * WhatsApp, e a equipa explicava a taxa de três maneiras. O texto é o do
+     * Apoio, revisto pela Rede: cinco pontos e um exemplo, os botões com os
+     * nomes da Carteira (painel e app). O recibo verde não é parecer: remete
+     * para a CLYON ou para o contabilista.
+     */
+    {
+      pergunta: "Recebi em dinheiro: e agora?",
+      resposta: [
+        "1. Veja no trabalho como o cliente paga. Se diz «Dinheiro no local», recebe dele o preço da proposta, " +
+          "com IVA, e mais nada. Se diz que paga pela plataforma e o cliente lhe quer dar dinheiro, avise a CLYON " +
+          "antes de receber.",
+        "2. Fica consigo o valor dos seus ganhos, o mesmo que vê no trabalho. O resto, o IVA e a taxa da " +
+          "plataforma, entrega-o à CLYON.",
+        "3. Depois de o trabalho ser confirmado, a conta aparece em Carteira › Pagamentos em dinheiro: carregue " +
+          "em «Pagar por MB WAY» ou «Gerar referência Multibanco». Se tiver saldo na Carteira, o valor fica " +
+          "reservado e é descontado na transferência seguinte.",
+        `4. Tem ${DIAS_PARA_PAGAR_A_DIVIDA} dias a partir daí. Se passarem, deixa de poder propor ou aceitar ` +
+          "trabalhos pagos em dinheiro até a conta estar paga.",
+        `5. A fatura ao cliente é passada pela ${EMPRESA_PARCEIRA_AO_PUBLICO}, já com o IVA. Sobre recibos verdes ` +
+          "ou outros documentos seus, fale com a CLYON ou com o seu contabilista.",
+        `Exemplo, num pedido com a taxa de ${EXEMPLO_EM_DINHEIRO.taxa}: proposta de ${EXEMPLO_EM_DINHEIRO.semIva} € + IVA. ` +
+          `O cliente paga-lhe ${EXEMPLO_EM_DINHEIRO.comIva} €; fica com ${EXEMPLO_EM_DINHEIRO.ganhos} € e entrega ` +
+          `${EXEMPLO_EM_DINHEIRO.entrega} € à CLYON (${EXEMPLO_EM_DINHEIRO.iva} € de IVA e ${EXEMPLO_EM_DINHEIRO.daTaxa} € de taxa). ` +
+          "Num Trabalho CLYON, a conta faz-se da mesma maneira, com os ganhos que viu antes de aceitar.",
+      ].join("\n"),
     },
   ];
 }

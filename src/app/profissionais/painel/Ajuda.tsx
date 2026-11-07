@@ -114,7 +114,8 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
         <div className="space-y-2">
           {perguntas.map((p) => (
             <Nota key={p.pergunta} titulo={p.pergunta}>
-              {p.resposta}
+              {/* Uma resposta em pontos (o «Recebi em dinheiro», d15) traz as linhas partidas. */}
+              <span className="whitespace-pre-line">{p.resposta}</span>
             </Nota>
           ))}
         </div>

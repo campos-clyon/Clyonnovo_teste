@@ -143,6 +143,13 @@ export function rotuloDaFalta(chave: ChaveDaFalta, servico?: string | null): str
  * porquê, curto: «Fotografias do que é para levar, para os profissionais
  * avaliarem o volume.»
  */
+/**
+ * A ABERTURA DA LISTA DO QUE FALTA, NA CONVERSA DO PEDIDO — 03-11-2026 (d15,
+ * proposta 7 do Apoio). Dizia «aos profissionais»: ao cliente diz-se
+ * «parceiros», e da sua zona, que é a quem o pedido vai (29-10-2026).
+ */
+export const ABERTURA_DO_QUE_FALTA = "Para enviar o seu pedido aos parceiros da sua zona, falta:";
+
 export function linhaDaFalta(chave: ChaveDaFalta, servico?: string | null): string {
   const s = limpo(servico);
   const mudanca = s === "mudanca";

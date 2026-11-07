@@ -414,6 +414,15 @@ export default function AdminWhatsAppPanel() {
    * fora do painel, porque é a única coisa deste ecrã que se pode provar.
    */
   const [procura, setProcura] = useState("");
+  /*
+   * DE OUTRO ECRÃ, JÁ COM A PROCURA — 03-11-2026 (d14). O «Do nosso lado» da
+   * Mesa abre aqui uma conversa sem pedido pelo telefone (`?procurar=`), como
+   * a Mesa e os Trabalhos CLYON já faziam.
+   */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("procurar");
+    if (q) setProcura(q);
+  }, []);
   const [aAdicionar, setAAdicionar] = useState(false);
   const [numeroNovo, setNumeroNovo] = useState("");
   const [notaNova, setNotaNova] = useState("");

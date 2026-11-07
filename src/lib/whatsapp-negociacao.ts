@@ -48,6 +48,7 @@ import { jaFoiDito } from "@/lib/nao-repetir";
 import { lerARespostaDirecta, jaSeLeSemModelo } from "@/lib/ler-a-resposta";
 import { lerAData, diaPorPalavras, quandoSera } from "@/lib/ler-a-data";
 import { notaDoPrecoParaOCliente } from "./itens-a-mais";
+import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA } from "./voz-da-vitoria";
 
 /**
  * O WhatsApp como ecrã da negociação — o cérebro.
@@ -621,7 +622,7 @@ async function passarAUmaPessoa(
   telefone: string,
   porque: string,
   /** O que se lhe diz. Por omissão, a frase de sempre. */
-  mensagem = "Percebi o que me disse. Vou passar isto a um colega para confirmar tudo consigo, e ele fala-lhe já de seguida.",
+  mensagem = MENSAGEM_DE_PASSAR_A_UMA_PESSOA,
 ): Promise<void> {
   const { interromperNumeroWhatsApp } = await import("@/lib/db");
   await enviarTextoWhatsApp(telefone, mensagem);

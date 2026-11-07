@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Loader2, MessageCircle } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
+  MOTIVO_DOS_DADOS_DO_DONO_MAXIMO,
+  PEDE_O_MOTIVO_DOS_DADOS_DO_DONO,
+  lerMotivoDosDadosDoDono,
   linkDaAdjudicacao,
   type ReferenciaNaAdjudicacao,
   type TrabalhoAdjudicado,
@@ -14,14 +17,19 @@ import {
  *
  * Na Mesa e nos Trabalhos CLYON. Escolhe-se uma ou várias formas:
  *
- *   · os dados do dono (Configs → «Métodos de pagamento para a adjudicação»);
+ *   · o link do pedido, onde o cliente paga pela plataforma por MB WAY,
+ *     Multibanco ou transferência — MARCADO POR OMISSÃO desde 03-11-2026 (d15),
+ *     como no «Enviar valores para pagamento» (d19);
  *   · uma referência Multibanco do euPago para este pedido;
- *   · um MB WAY do euPago para este pedido, para o telemóvel do cliente.
+ *   · um MB WAY do euPago para este pedido, para o telemóvel do cliente;
+ *   · os dados do dono (Configs → «Métodos de pagamento para a adjudicação») —
+ *     DESMARCADOS por omissão desde a d15, e só com um motivo escrito, como no
+ *     «sem factura». O motivo fica no histórico do pedido.
  *
- * As referências geram-se na hora pela rota de sempre
- * (/api/admin/pagamentos/criar): o VALOR É SEMPRE O DO SERVIDOR — este ecrã
- * não manda valor nenhum —, a Multibanco viva do mesmo valor reaproveita-se, e
- * uma nova anula a antiga. Ficam ligadas ao pedido nos Pagamentos.
+ * As referências vão pela rota de sempre (/api/admin/pagamentos/criar): o
+ * VALOR É SEMPRE O DO SERVIDOR — este ecrã não manda valor nenhum —, a
+ * Multibanco viva do mesmo valor reaproveita-se, e uma nova anula a antiga. O
+ * link e o motivo vão pela rota da adjudicação (/api/admin/negociacoes/adjudicacao).
  *
  * NÃO MANDA A MENSAGEM: abre o WhatsApp do cliente com ela escrita.
  */
@@ -47,6 +55,8 @@ type Resposta = {
   };
 };
 
+type Preparada = { link: string | null; referencias: ReferenciaNaAdjudicacao[] };
+
 export default function EnviarAdjudicacao({
   negociacaoId,
   adjudicacao,
@@ -57,29 +67,42 @@ export default function EnviarAdjudicacao({
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(false);
   const temDadosDoDono = Boolean(metodosDePagamento && metodosDePagamento.trim());
-  const [doDono, setDoDono] = useState(temDadosDoDono);
+  // O pagamento pela plataforma, por omissão; os dados do dono, desmarcados (d15).
+  const [comLink, setComLink] = useState(true);
+  const [doDono, setDoDono] = useState(false);
+  const [motivoDoDono, setMotivoDoDono] = useState("");
   const [multibanco, setMultibanco] = useState(false);
   const [mbway, setMbway] = useState(false);
   const [telemovel, setTelemovel] = useState(adjudicacao.telefone ?? "");
-  const [aGerar, setAGerar] = useState(false);
+  const [aPreparar, setAPreparar] = useState(false);
   const [erro, setErro] = useState("");
-  const [geradas, setGeradas] = useState<ReferenciaNaAdjudicacao[] | null>(null);
+  const [preparada, setPreparada] = useState<Preparada | null>(null);
 
-  const comEupago = multibanco || mbway;
-  const link = (referencias: ReferenciaNaAdjudicacao[]) =>
+  const comDono = doDono && temDadosDoDono;
+  const motivoValido = lerMotivoDosDadosDoDono(motivoDoDono).ok;
+  const precisaDoServidor = comLink || multibanco || mbway || comDono;
+  const fixo = preparada != null;
+
+  const link = (p: Preparada) =>
     linkDaAdjudicacao(
       {
         ...adjudicacao,
         metodosDePagamento,
-        formas: { comDadosDoDono: doDono && temDadosDoDono, referencias },
+        formas: {
+          comDadosDoDono: comDono,
+          motivoDosDadosDoDono: comDono ? motivoDoDono : null,
+          referencias: p.referencias,
+          link: p.link,
+        },
       },
       new Date(),
     );
 
-  async function gerar() {
-    setAGerar(true);
+  async function preparar() {
+    setAPreparar(true);
     setErro("");
     const feitas: ReferenciaNaAdjudicacao[] = [];
+    let linkDoPedido: string | null = null;
     try {
       for (const metodo of [multibanco ? "multibanco" : null, mbway ? "mbway" : null]) {
         if (!metodo) continue;
@@ -96,7 +119,9 @@ export default function EnviarAdjudicacao({
         const d = (await r.json().catch(() => ({}))) as Resposta;
         if (!r.ok || !d.pagamento) {
           setErro(`${metodo === "mbway" ? "MB WAY" : "Multibanco"}: ${d.error ?? "não foi possível gerar."}`);
-          break;
+          // As que já se geraram ficam na mensagem, como antes: não se pede outra vez um MB WAY.
+          if (feitas.length > 0) setPreparada({ link: null, referencias: feitas });
+          return;
         }
         feitas.push({
           metodo: d.pagamento.metodo,
@@ -107,15 +132,35 @@ export default function EnviarAdjudicacao({
           expiraEm: d.pagamento.expiraEm,
         });
       }
+      // O link do pedido e o motivo dos dados do dono (d15).
+      if (comLink || comDono) {
+        const r = await fetch("/api/admin/negociacoes/adjudicacao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            negociacaoId,
+            comLink,
+            dadosDoDono: comDono,
+            motivoDosDadosDoDono: comDono ? motivoDoDono : null,
+          }),
+        });
+        const d = (await r.json().catch(() => ({}))) as { link?: string | null; error?: string };
+        if (!r.ok) {
+          setErro(d.error ?? "Não foi possível preparar a mensagem.");
+          if (feitas.length > 0) setPreparada({ link: null, referencias: feitas });
+          return;
+        }
+        linkDoPedido = d.link ?? null;
+      }
+      setPreparada({ link: linkDoPedido, referencias: feitas });
     } catch {
       setErro("Erro de rede.");
     } finally {
-      setGeradas(feitas);
-      setAGerar(false);
+      setAPreparar(false);
     }
   }
 
-  const pronto = comEupago ? (geradas && geradas.length > 0 ? link(geradas) : null) : link([]);
+  const pronto = preparada ? link(preparada) : precisaDoServidor ? null : link({ link: null, referencias: [] });
 
   return (
     <div className={aberto ? "flex w-full flex-col gap-2" : "contents"}>
@@ -132,25 +177,18 @@ export default function EnviarAdjudicacao({
       {aberto && (
         <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-200">
           <p className="font-semibold text-slate-100">Formas de pagamento na mensagem</p>
-          <label className={`mt-2 flex items-center gap-2 ${temDadosDoDono ? "" : "opacity-50"}`}>
-            <input
-              type="checkbox"
-              checked={doDono && temDadosDoDono}
-              disabled={!temDadosDoDono || geradas != null}
-              onChange={(e) => setDoDono(e.target.checked)}
-            />
-            Dados do dono (Métodos de pagamento das Configs)
+          <label className="mt-2 flex items-center gap-2">
+            <input type="checkbox" checked={comLink} disabled={fixo} onChange={(e) => setComLink(e.target.checked)} />
+            Link do pedido: o cliente paga pela plataforma (MB WAY, Multibanco ou transferência)
           </label>
-          {metodosLidos && !temDadosDoDono && (
-            <p className="ml-6 text-amber-300">
-              Sem métodos de pagamento nas Configs: a mensagem diz que os dados seguem a seguir.
-            </p>
+          {comLink && !fixo && (
+            <p className="ml-6 text-slate-400">Gera-se um link novo ao preparar; o anterior deixa de funcionar.</p>
           )}
           <label className="mt-1.5 flex items-center gap-2">
             <input
               type="checkbox"
               checked={multibanco}
-              disabled={geradas != null}
+              disabled={fixo}
               onChange={(e) => setMultibanco(e.target.checked)}
             />
             Referência Multibanco euPago para este pedido
@@ -159,7 +197,7 @@ export default function EnviarAdjudicacao({
             <input
               type="checkbox"
               checked={mbway}
-              disabled={geradas != null}
+              disabled={fixo}
               onChange={(e) => setMbway(e.target.checked)}
             />
             MB WAY euPago para este pedido
@@ -169,7 +207,7 @@ export default function EnviarAdjudicacao({
               <input
                 type="tel"
                 value={telemovel}
-                disabled={geradas != null}
+                disabled={fixo}
                 onChange={(e) => setTelemovel(e.target.value)}
                 aria-label="Telemóvel do cliente para o MB WAY"
                 className="w-44 rounded-lg border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-slate-100"
@@ -179,21 +217,52 @@ export default function EnviarAdjudicacao({
               </p>
             </div>
           )}
+          <label className={`mt-1.5 flex items-center gap-2 ${temDadosDoDono ? "" : "opacity-50"}`}>
+            <input
+              type="checkbox"
+              checked={comDono}
+              disabled={!temDadosDoDono || fixo}
+              onChange={(e) => setDoDono(e.target.checked)}
+            />
+            Dados do dono (Métodos de pagamento das Configs), fora da plataforma
+          </label>
+          {comDono && (
+            <label className="ml-6 mt-1 block">
+              <span className="font-semibold text-amber-200">Motivo de não ir pela plataforma (obrigatório)</span>
+              <textarea
+                value={motivoDoDono}
+                disabled={fixo}
+                onChange={(e) => setMotivoDoDono(e.target.value)}
+                maxLength={MOTIVO_DOS_DADOS_DO_DONO_MAXIMO}
+                rows={2}
+                placeholder="Ex.: o cliente não consegue pagar por MB WAY nem Multibanco"
+                className="mt-1 w-full rounded-lg border border-amber-500/40 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none placeholder:text-slate-500 focus:border-amber-400"
+              />
+              {!motivoValido && (
+                <span className="mt-0.5 block text-[11px] text-red-300">{PEDE_O_MOTIVO_DOS_DADOS_DO_DONO}</span>
+              )}
+            </label>
+          )}
+          {metodosLidos && !temDadosDoDono && <p className="ml-6 text-slate-400">Sem métodos de pagamento nas Configs.</p>}
+          {!precisaDoServidor && (
+            <p className="mt-2 text-amber-300">Sem nenhuma forma escolhida, a mensagem diz que os dados seguem a seguir.</p>
+          )}
 
-          {comEupago && geradas == null && (
+          {precisaDoServidor && !fixo && (
             <button
               type="button"
-              onClick={() => void gerar()}
-              disabled={aGerar || (mbway && !telemovel.trim())}
+              onClick={() => void preparar()}
+              disabled={aPreparar || (mbway && !telemovel.trim()) || (comDono && !motivoValido)}
               className="mt-3 flex items-center gap-1.5 rounded-lg border border-cyan-600/60 px-2.5 py-1.5 font-semibold text-cyan-200 disabled:opacity-40"
             >
-              {aGerar && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
-              {aGerar ? "A gerar…" : "Gerar e preparar a mensagem"}
+              {aPreparar && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+              {aPreparar ? "A preparar…" : "Preparar a mensagem"}
             </button>
           )}
-          {geradas != null && geradas.length > 0 && (
+          {preparada != null && preparada.referencias.length > 0 && (
             <p className="mt-2 text-emerald-300">
-              {geradas.length === 1 ? "Referência gerada" : "Referências geradas"} — ficam nos Pagamentos deste pedido.
+              {preparada.referencias.length === 1 ? "Referência gerada" : "Referências geradas"} — ficam nos Pagamentos
+              deste pedido.
             </p>
           )}
           {erro && <p className="mt-2 text-red-300">{erro}</p>}

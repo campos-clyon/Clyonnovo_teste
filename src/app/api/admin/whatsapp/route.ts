@@ -95,8 +95,32 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ mensagens, recolha });
   }
 
-  const { saudeDaCompreensao, quandoAPonteVeio } = await import("@/lib/db");
   const { mesaComOTelemovelWhatsApp } = await import("@/lib/mesa-das-conversas-na-base");
+  /*
+   * SÓ A MESA DAS CONVERSAS — 03-11-2026 (d14, «Do nosso lado»). O cartão do
+   * topo da Mesa só precisa de saber em que pé está cada conversa; o resto
+   * (a fila, o arquivo, a saúde da IA) é do ecrã do WhatsApp. A mesma leitura
+   * e a mesma regra (`mesa-das-conversas.ts`), com o pedido e a espera de cada
+   * uma — sem o texto das mensagens.
+   */
+  if (req.nextUrl.searchParams.get("so") === "mesa") {
+    try {
+      const aMesa = await mesaComOTelemovelWhatsApp();
+      return NextResponse.json({
+        mesa: aMesa.linhas.map((l) => ({
+          telefone: l.telefone,
+          estado: l.estado,
+          haSegundos: l.haSegundos,
+          pedido: l.pedido ? { id: l.pedido.id, fechado: l.pedido.fechado } : null,
+        })),
+      });
+    } catch (e) {
+      console.error("[admin/whatsapp] a mesa das conversas falhou (só a mesa):", e);
+      return NextResponse.json({ error: "A mesa das conversas não se leu." }, { status: 500 });
+    }
+  }
+
+  const { saudeDaCompreensao, quandoAPonteVeio } = await import("@/lib/db");
   /*
    * A MESA QUE FALHA DIZ QUE FALHOU — 23-10-2026. Devolvia uma lista vazia, e
    * o painel mostrava «Ninguém à espera de resposta. 👍» — o contrário da

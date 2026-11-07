@@ -30,6 +30,7 @@ import {
   CLARO_QUE_SIM,
   desculpasPeloAtendimento,
   EM_QUE_POSSO_AJUDAR,
+  MENSAGEM_DE_PASSAR_A_UMA_PESSOA,
   PERGUNTA_ANOTADA,
   respostaADisponibilidade,
   respostaAHora,
@@ -87,7 +88,8 @@ function todasAsMensagens(): string[] {
     PASSO_A_ALGUEM_DA_EQUIPA,
     FICA_SEM_EFEITO,
     "De nada. Qualquer coisa, é só dizer.",
-    "Percebi o que me disse. Vou passar isto a um colega para confirmar tudo consigo, e ele fala-lhe já de seguida.",
+    // A passagem a uma pessoa sem prometer «já de seguida» (d15, 03-11-2026).
+    MENSAGEM_DE_PASSAR_A_UMA_PESSOA,
     entregarQuemDesiste({ passo: "andar", dados: RECOLHA }).resposta,
     desculpasPeloAtendimento(null),
     desculpasPeloAtendimento("Oliver"),

@@ -63,9 +63,12 @@ describe("a mensagem", () => {
   // Valores inventados: nenhum destes dados existe.
   const INVENTADOS = "Transferência bancária\nConta: 0000 FALSA 0000\nTitular: Fulano de Tal";
 
-  it("com métodos nas Configs, leva-os depois da abertura, tal e qual", () => {
-    const com = mensagemDeAdjudicacao({ ...EXEMPLO, metodosDePagamento: INVENTADOS }, AGORA);
-    expect(com).toContain(`${ABERTURA_DOS_METODOS}\n\n${INVENTADOS}\n\nDepois de pagar`);
+  // Desde 03-11-2026 (d15) só com os «Dados do dono» marcados e um motivo escrito.
+  const COM_O_DONO = { formas: { comDadosDoDono: true, motivoDosDadosDoDono: "O cliente pediu transferência", referencias: [] } };
+
+  it("com métodos nas Configs e os dados do dono escolhidos, leva-os tal e qual", () => {
+    const com = mensagemDeAdjudicacao({ ...EXEMPLO, metodosDePagamento: INVENTADOS, ...COM_O_DONO }, AGORA);
+    expect(com).toContain(`Para o pagamento:\n\n${INVENTADOS}\n\nDepois de pagar`);
     expect(com).not.toContain(SEM_METODOS_DE_PAGAMENTO);
   });
 
@@ -76,7 +79,8 @@ describe("a mensagem", () => {
     expect(blocoDosMetodosDePagamento(`${ABERTURA_DOS_METODOS}\n\nConta: 0000`)).toBe(
       `${ABERTURA_DOS_METODOS}\n\nConta: 0000`,
     );
-    const com = mensagemDeAdjudicacao({ ...EXEMPLO, metodosDePagamento: "💳 " + INVENTADOS }, AGORA);
+    const com = mensagemDeAdjudicacao({ ...EXEMPLO, metodosDePagamento: "💳 " + INVENTADOS, ...COM_O_DONO }, AGORA);
+    expect(com).toContain("Transferência bancária");
     expect(com).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 

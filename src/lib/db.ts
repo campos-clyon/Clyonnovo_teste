@@ -3629,6 +3629,8 @@ export type OfertaClyonNaBase = {
     modo: string | null;
     dataCombinada: Date | null;
     atribuidaEm: Date | null;
+    /** A última mudança da negociação — num «aceitou», é quando aceitou (d14, «Do nosso lado»). */
+    actualizadaEm: Date | null;
     execucaoEnviadaEm: Date | null;
     confirmadoEm: Date | null;
     pagoEm: Date | null;
@@ -3893,7 +3895,8 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     `SELECT n.id, n.pedidoId, n.providerId, p.name AS profissional, p.phone AS telefoneDoProfissional,
             p.responsavel, n.estado, n.ofertaClyon,
             n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
-            n.provaJson, n.estrelas, n.comentario, n.avaliadoEm, n.semFactura
+            n.provaJson, n.estrelas, n.comentario, n.avaliadoEm, n.semFactura,
+            n.updatedAt AS actualizadaEm
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
@@ -3940,6 +3943,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
       modo: (n.ofertaClyon as string) ?? null,
       dataCombinada: data(n.dataCombinada),
       atribuidaEm: data(n.atribuidaEm),
+      actualizadaEm: data(n.actualizadaEm),
       execucaoEnviadaEm: data(n.execucaoEnviadaEm),
       confirmadoEm: data(n.confirmadoEm),
       pagoEm: data(n.pagoEm),
