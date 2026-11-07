@@ -9,11 +9,25 @@
 # é preciso uma build nova, o que se diz numa anotação). Se só o `preview`
 # falhar, fica um aviso e a publicada marca-se na mesma.
 #
-# Precisa do segredo `EXPO_TOKEN` no repositório (expo.dev → Access tokens).
-# Sem ele, o passo pára com uma anotação e nada se publica.
+# Precisa do segredo `EXPO_TOKEN` (expo.dev → Access tokens). Vem do ambiente
+# `app-cliente`, que só a main usa; enquanto lá não estiver, o GitHub dá o do
+# repositório. Sem nenhum dos dois, o passo pára com uma anotação e nada se
+# publica.
 #
 # A última publicada fica marcada na etiqueta `app-cliente-publicada`.
-# Também se pode correr à mão (Actions → «Actualizar a app de cliente» → Run).
+# Também se pode correr à mão, só na main (Actions → «Actualizar a app de
+# cliente» → Run).
+#
+# AS PORTAS FECHADAS — d11, 07-11-2026. Quem tiver o EXPO_TOKEN muda a app em
+# todos os telemóveis sem passar pela revisão da Play. Por isso:
+#   - o workflow só lê o repositório; a escrita é só do trabalho «marcar», que
+#     move a etiqueta pela API e não instala nem corre nada do repositório;
+#   - os checkouts não guardam as credenciais;
+#   - o eas-cli e as acções estão em versões fixas (as acções por SHA): uma
+#     versão nova não entra sem um commit que a escolha;
+#   - o «Run» à mão só corre na main;
+#   - o segredo só entra no trabalho «publicar», e só nos passos que o usam.
+# Guardado por src/lib/app-cliente-workflow-seguro.test.ts.
 name: Actualizar a app de cliente
 
 on:
@@ -24,7 +38,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: atualizar-app-cliente
@@ -34,24 +48,50 @@ env:
   # A fingerprint da build da Play (67b2ea5b, versionCode 7) — ver app-cliente/LEIA-ME.md.
   FINGERPRINT_DA_BUILD: f387938d97375699783545363962a7181dcb263e
   ETIQUETA: app-cliente-publicada
+  # A versão que publicou a 04-11-2026. Muda-se aqui, de propósito, nunca sozinha.
+  EAS_CLI: eas-cli@27.4.1
 
 jobs:
-  publicar:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
+  # Sem segredo e sem escrita: só decide se há o que publicar.
+  mudou:
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-latest
+    outputs:
+      sim: ${{ steps.mudou.outputs.sim }}
+      sha: ${{ steps.mudou.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
 
+      # A app não é só app-cliente/: o bundle leva também ficheiros de src/lib
+      # (as frases, a hora de Lisboa, o preço em três linhas…). Uma mudança num
+      # deles muda a app. A lista guarda-a o teste: um import novo de src/lib
+      # na app chumba a «Verificar» até entrar aqui.
       - name: A app de cliente mudou?
         id: mudou
+        env:
+          DO_SITE_NA_APP: >-
+            src/lib/erros-da-app.ts
+            src/lib/frases-do-pedido.ts
+            src/lib/hora-de-lisboa.ts
+            src/lib/link-de-whatsapp.ts
+            src/lib/palavra-passe-minima.ts
+            src/lib/palavras-do-pagamento.ts
+            src/lib/preco-em-tres-linhas.ts
+            src/lib/telefone-da-clyon.ts
+            src/lib/trabalho.ts
+            src/lib/viagem-ate-ao-cliente.ts
         run: |
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "sim=1" >> "$GITHUB_OUTPUT"; exit 0; fi
-          git fetch --tags --force
           if git rev-parse -q --verify "refs/tags/$ETIQUETA" >/dev/null; then
-            mudancas=$(git diff --name-only "$ETIQUETA" HEAD -- app-cliente/ | head -n 50)
+            # A lista separa-se pelos espaços, de propósito (sem aspas).
+            mudancas=$(git diff --name-only "$ETIQUETA" HEAD -- app-cliente/ $DO_SITE_NA_APP | head -n 50)
           else
             mudancas="(primeira vez)"
           fi
@@ -63,34 +103,41 @@ jobs:
             echo "sim=1" >> "$GITHUB_OUTPUT"
           fi
 
+  # O único trabalho com o segredo. Lê o repositório e não escreve nada.
+  publicar:
+    needs: mudou
+    if: ${{ needs.mudou.outputs.sim == '1' }}
+    runs-on: ubuntu-latest
+    environment: app-cliente
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.mudou.outputs.sha }}
+          persist-credentials: false
+
       - name: Há a chave do Expo?
-        if: steps.mudou.outputs.sim == '1'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
-            echo "::error title=app de cliente::Falta o segredo EXPO_TOKEN no repositório (Settings → Secrets and variables → Actions). Nada se publicou."
+            echo "::error title=app de cliente::Falta o segredo EXPO_TOKEN (no ambiente app-cliente ou no repositório: Settings → Environments / Secrets and variables → Actions). Nada se publicou."
             exit 1
           fi
 
-      - uses: pnpm/action-setup@v4
-        if: steps.mudou.outputs.sim == '1'
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
-      - uses: actions/setup-node@v4
-        if: steps.mudou.outputs.sim == '1'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: pnpm
 
       # A app importa ficheiros de src/lib: os pacotes do site também.
       - name: Instalar
-        if: steps.mudou.outputs.sim == '1'
         run: |
           pnpm install --frozen-lockfile
           cd app-cliente && npm ci --no-audit --no-fund
 
       - name: A fingerprint é a da build?
-        if: steps.mudou.outputs.sim == '1'
         working-directory: app-cliente
         run: |
           agora=$(npx expo-updates fingerprint:generate --platform android | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).hash))')
@@ -101,31 +148,48 @@ jobs:
           fi
 
       - name: Publicar (EAS Update, canal production)
-        if: steps.mudou.outputs.sim == '1'
         working-directory: app-cliente
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           mensagem=$(git log -1 --format=%s | cut -c1-200)
-          npx eas-cli@latest update --channel production --environment production --platform android --non-interactive --message "$mensagem"
+          npx --yes "$EAS_CLI" update --channel production --environment production --platform android --non-interactive --message "$mensagem"
 
       # As builds de teste recebem o mesmo update. Uma falha aqui não impede
       # «Marcar a publicada»: o production já saiu.
       - name: Publicar (EAS Update, canal preview)
-        if: steps.mudou.outputs.sim == '1'
         continue-on-error: true
         working-directory: app-cliente
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           mensagem=$(git log -1 --format=%s | cut -c1-200)
-          if ! npx eas-cli@latest update --channel preview --environment preview --platform android --non-interactive --message "$mensagem"; then
+          if ! npx --yes "$EAS_CLI" update --channel preview --environment preview --platform android --non-interactive --message "$mensagem"; then
             echo "::warning title=app de cliente::O EAS Update do canal preview falhou (as builds de teste não o recebem); o do canal production saiu."
             exit 1
           fi
 
+  # A única escrita: mover a etiqueta pela API. Sem checkout, sem instalar
+  # nada, sem o segredo do Expo.
+  marcar:
+    needs: [mudou, publicar]
+    if: ${{ needs.publicar.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
       - name: Marcar a publicada
-        if: steps.mudou.outputs.sim == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.mudou.outputs.sha }}
         run: |
-          git tag -f "$ETIQUETA" HEAD
-          git push -f origin "refs/tags/$ETIQUETA"
+          if ! printf '%s' "$SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error title=app de cliente::SHA inválido: «$SHA». A etiqueta não se mexeu."
+            exit 1
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$ETIQUETA" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$ETIQUETA" -f sha="$SHA" -F force=true >/dev/null
+          else
+            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$ETIQUETA" -f sha="$SHA" >/dev/null
+          fi
+          echo "A etiqueta $ETIQUETA está agora em $SHA."
