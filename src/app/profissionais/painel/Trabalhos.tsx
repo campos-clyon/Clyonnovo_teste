@@ -76,6 +76,7 @@ import { legendaDosConfirmados, ondeEstaODinheiro, tituloDoConfirmado } from "@/
 import { AvaliarOCliente } from "./AvaliarOCliente";
 import { AJUSTE_FORA_DA_APP, VALOR_QUE_MUDA_NO_LOCAL } from "@/lib/ajuste-no-local";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA } from "@/lib/palavras-do-pagamento";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
 import { MARQUE_AS_HORAS_PRIMEIRO, totalEstimadoCurto } from "@/lib/horas-do-trabalho";
@@ -1978,8 +1979,8 @@ function DetalheDoTrabalho({
           */}
           {pedido.clientePagou === false && pedido.pagamentoACaminho === "transferencia" && (
             <p className="mt-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-900">
-              <strong className="font-semibold">O pagamento vem a caminho, por transferência bancária.</strong>{" "}
-              Não comece o trabalho antes de a CLYON confirmar que recebeu — avisamos assim que entrar.
+              <strong className="font-semibold">{O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA.titulo}</strong>{" "}
+              {O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA.texto}
             </p>
           )}
           {pedido.clientePagou === false && pedido.pagamentoACaminho !== "transferencia" && (

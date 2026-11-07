@@ -130,3 +130,24 @@ export function transferenciaParaOCliente(d: {
     limite: LIMITE_DA_TRANSFERENCIA,
   };
 }
+
+/**
+ * O QUE ESTÁ À ESPERA NO BLOCO DE PAGAR — 07-11-2026 (d13). Do estado do
+ * `GET /api/pagamentos` (o mesmo que a app de cliente recebe na R5): a
+ * transferência escolhida e ainda por receber, ou a referência / o MB WAY em
+ * curso. A primeira pendente é a mais recente (a base lê por id, do maior).
+ *
+ * Quem diz se a transferência ainda está à espera é o servidor
+ * (`aEsperaDaTransferencia`): passado o prazo, a linha fica «pendente» na base
+ * mas já não está à espera, e voltam as formas de pagar. Uma transferência
+ * nunca se mostra como uma referência.
+ */
+export function oQueEstaAEspera<P extends { metodo: string; estado: string }>(estado: {
+  pagamentos: P[];
+  aEsperaDaTransferencia?: boolean;
+}): { transferencia: P | null; referencia: P | null } {
+  const pendente = estado.pagamentos.find((p) => p.estado === "pendente") ?? null;
+  if (!pendente) return { transferencia: null, referencia: null };
+  if (pendente.metodo !== METODO_TRANSFERENCIA) return { transferencia: null, referencia: pendente };
+  return { transferencia: estado.aEsperaDaTransferencia === false ? null : pendente, referencia: null };
+}

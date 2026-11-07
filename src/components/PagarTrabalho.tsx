@@ -6,6 +6,7 @@ import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { comoORecebemos, pagamentoDoClienteParaMostrar } from "@/lib/pagamento-visto-pelo-cliente";
 import { diferencaEmPalavras } from "@/lib/horas-do-trabalho";
 import { lerForma } from "@/lib/forma-de-pagamento";
+import { oQueEstaAEspera } from "@/lib/transferencia-bancaria";
 import {
   COMO_PAGA,
   IVA_DO_PAGAMENTO,
@@ -192,14 +193,15 @@ export default function PagarTrabalho({
     void ler();
   }, [ler]);
 
-  const pendente = estado?.pagamentos.find((p) => p.estado === "pendente") ?? null;
   /*
    * UMA TRANSFERÊNCIA À ESPERA NÃO É UMA REFERÊNCIA — 02-11-2026. Tem o seu
    * bloco (os dados para transferir) e não se sonda de 4 em 4 segundos: leva
-   * dias, e quem a dá por recebida é a equipa.
+   * dias, e quem a dá por recebida é a equipa. Se ainda está à espera di-lo o
+   * servidor (`aEsperaDaTransferencia`, o mesmo que a app lê — d13, 07-11-2026).
    */
-  const transferenciaPendente = pendente?.metodo === "transferencia" ? pendente : null;
-  const aberto = transferenciaPendente ? null : pendente;
+  const { transferencia: transferenciaPendente, referencia: aberto } = estado
+    ? oQueEstaAEspera(estado)
+    : { transferencia: null, referencia: null };
 
   /* O bloco de pagar está à vista? A página tira o cartão do preço de cima quando está. */
   const mostraOBloco = Boolean(

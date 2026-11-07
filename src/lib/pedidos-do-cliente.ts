@@ -57,6 +57,8 @@ import {
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
 import { precoEmTresLinhas } from "@/lib/preco-em-tres-linhas";
 import { TAXA_IVA } from "@/lib/taxas-plataforma";
+import { METODO_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
+import { TRANSFERENCIA_BANCARIA } from "@/lib/palavras-do-pagamento";
 
 /**
  * OS PEDIDOS DO CLIENTE, PARA A APP — a lista (R4) e o pedido (R5). d8,
@@ -382,8 +384,8 @@ export async function listaDosPedidosDoCliente(
 
 // ── R5 — o pedido ───────────────────────────────────────────────────────────
 
-/** O pagamento de um trabalho fechado, em texto — o mesmo estado do `GET /api/pagamentos`. */
-async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email: string) {
+/** O pagamento de um trabalho fechado, em texto — o mesmo estado do `GET /api/pagamentos`. Exportado para o teste que compara os dois (d13). */
+export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email: string) {
   if (n.estado !== "acordada" || n.fase === "a_negociar") return null;
   const acesso = await trabalhoQueSePodePagar(pedidoId, n.id, { email });
   if (!acesso.ok) return null;
@@ -411,7 +413,7 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
           .filter((p) => p.estado === "pendente")
           .map((p) => ({
             metodo: p.metodo,
-            metodoTexto: NOME_DO_METODO[p.metodo] ?? p.metodo,
+            metodoTexto: String(p.metodo) === METODO_TRANSFERENCIA ? TRANSFERENCIA_BANCARIA : NOME_DO_METODO[p.metodo] ?? p.metodo,
             entidade: p.entidade,
             referencia: p.referencia,
             // O valor da referência é o que o banco pede; o sem IVA vai ao lado quando é este trabalho com IVA.
@@ -420,6 +422,16 @@ async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email
             expiraEmTexto: quandoEmLisboa(p.expiraEm),
           }))
       : [],
+    /*
+     * A TRANSFERÊNCIA, COMO NO SITE — 07-11-2026 (d13). Os dois campos do
+     * `GET /api/pagamentos`, tal e qual: os dados para transferir (ou `null`
+     * quando não se oferece) e se o cliente já a escolheu e ela está por
+     * receber. Com `aEsperaDaTransferencia`, a app mostra «À espera da
+     * transferência» em vez de oferecer o MB WAY e o Multibanco como se nada
+     * estivesse feito — o cliente não paga duas vezes.
+     */
+    transferencia: e.transferencia,
+    aEsperaDaTransferencia: e.aEsperaDaTransferencia,
     ivaIncluido: e.ivaIncluido,
     valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
     // «Serviço / IVA / Total a pagar» (02-11-2026): o mesmo desdobramento do bloco de pagar do site; o IVA é a diferença.

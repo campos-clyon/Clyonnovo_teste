@@ -49,3 +49,17 @@ export const OUTRO_METODO = "Pagar por MB WAY ou Multibanco";
 /** «861,00 € com IVA (700,00 € sem IVA)» — o com IVA, com o sem IVA ao lado. */
 export const valorDaTransferencia = (comIva: number, semIva: number) =>
   `${emEurosNoPagamento(comIva)} com IVA (${emEurosNoPagamento(semIva)} sem IVA)`;
+
+/*
+ * O PAGAMENTO VEM A CAMINHO, POR TRANSFERÊNCIA — 07-11-2026 (d13). O que o
+ * profissional lê, no painel e na app CLYON Pro, quando o cliente escolheu a
+ * transferência e ela ainda não foi dada por recebida (`pagamentoACaminho:
+ * "transferencia"` no meus-pedidos). Uma só frase para os dois ecrãs: o painel
+ * põe o `titulo` a negrito; a app mostra a `inteira`.
+ */
+export const O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA = {
+  titulo: "O pagamento vem a caminho, por transferência bancária.",
+  texto: "Não comece o trabalho antes de a CLYON confirmar que recebeu — avisamos assim que entrar.",
+  inteira:
+    "O pagamento vem a caminho, por transferência bancária. Não comece o trabalho antes de a CLYON confirmar que recebeu — avisamos assim que entrar.",
+} as const;
