@@ -35,7 +35,22 @@ import {
   type RespostaDoPedido,
 } from "../lib/pedidos";
 import { pagoNaData } from "../../../src/lib/frases-do-pedido";
-import { COMO_PAGA, MB_WAY, PRECO, REFERENCIA_MULTIBANCO, servicoEParceiro } from "../../../src/lib/palavras-do-pagamento";
+import {
+  A_ESPERA_DA_TRANSFERENCIA,
+  COMO_PAGA,
+  DEPOIS_DA_TRANSFERENCIA,
+  DESCRITIVO,
+  IBAN,
+  MB_WAY,
+  OUTRO_METODO,
+  PRECO,
+  REFERENCIA_MULTIBANCO,
+  servicoEParceiro,
+  TITULAR,
+  TOTAL_A_PAGAR,
+  valorDaTransferencia,
+} from "../../../src/lib/palavras-do-pagamento";
+import type { TransferenciaParaOCliente } from "../../../src/lib/transferencia-bancaria";
 import { CORES } from "../tema";
 
 /**
@@ -75,7 +90,7 @@ function useAgora(ms: number): number {
  * Uma linha da referência: o rótulo pequeno em cima, o valor por baixo (parte
  * de linha em vez de cortar — 360 px e letra grande, 02-11-2026) e «Copiar».
  */
-function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
+function Copiavel({ rotulo, valor, copia }: { rotulo: string; valor: string; copia?: string | null }) {
   const [copiado, setCopiado] = useState(false);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44 }}>
@@ -89,9 +104,32 @@ function Copiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
         titulo={copiado ? "Copiado" : "Copiar"}
         aoCarregar={() => {
           // Só o número que o banco pede: sem o «(… sem IVA)», sem espaços e sem o «€» (d8, 31-10-2026).
-          void Clipboard.setStringAsync(paraCopiar(valor)).then(() => setCopiado(true));
+          // Os dados da transferência (d13) dizem o que se copia (o descritivo leva o espaço).
+          const copiar = copia != null ? Clipboard.setStringAsync(copia) : Clipboard.setStringAsync(paraCopiar(valor));
+          void copiar.then(() => setCopiado(true));
         }}
       />
+    </View>
+  );
+}
+
+/**
+ * Os dados para transferir (d13), como no site (`DadosDaTransferencia` em
+ * PagarTrabalho.tsx): IBAN, titular, o total com IVA com o sem IVA ao lado, e o
+ * descritivo. Copia-se o IBAN sem espaços, o valor e o descritivo tal como está.
+ */
+function DadosDaTransferencia({ t }: { t: TransferenciaParaOCliente }) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Copiavel rotulo={IBAN} valor={t.iban} copia={t.iban.replace(/\s+/g, "")} />
+      <View style={{ minHeight: 44, justifyContent: "center", gap: 1 }}>
+        <Text style={{ color: CORES.suave, fontSize: 13 }}>{TITULAR}</Text>
+        <Text style={{ color: CORES.tinta, fontSize: 17, fontWeight: "700" }} selectable>
+          {t.titular}
+        </Text>
+      </View>
+      <Copiavel rotulo={TOTAL_A_PAGAR} valor={valorDaTransferencia(t.valor, t.valorSemIva)} copia={t.valor.toFixed(2).replace(".", ",")} />
+      <Copiavel rotulo={DESCRITIVO} valor={t.descritivo} copia={t.descritivo} />
     </View>
   );
 }
@@ -163,6 +201,8 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
   const [esperavaMbway, setEsperavaMbway] = useState(false);
   const [mbwayVistoEm, setMbwayVistoEm] = useState<number | null>(null);
   const [querMbway, setQuerMbway] = useState(false);
+  // «Pagar por MB WAY ou Multibanco» com uma transferência à espera (d13): abre o bloco de pagar.
+  const [outraForma, setOutraForma] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!Number.isInteger(pedidoId)) {
@@ -187,7 +227,7 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
 
   const n = r ? aPagarDe(r) : null;
   const pg = n?.pagamento ?? null;
-  const estado: EstadoDoPagar | null = pg ? estadoDoPagar(pg, agora, { esperavaMbway, mbwayVistoEm }) : null;
+  const estado: EstadoDoPagar | null = pg ? estadoDoPagar(pg, agora, { esperavaMbway, mbwayVistoEm, outraForma }) : null;
 
   // À espera do MB WAY: o pedido lê-se de 5 em 5 s. Quando a espera acaba (prazo ou resposta), lê-se mais uma vez.
   const tipo = estado?.tipo ?? null;
@@ -290,6 +330,24 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
             <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 18 }}>Esta página atualiza-se sozinha.</Text>
             <Ligacao titulo="Pagar por Multibanco" aoCarregar={() => void pagar("multibanco")} />
           </Cartao>
+        ) : estado.tipo === "a-espera-da-transferencia" ? (
+          <View style={{ gap: 10 }}>
+            <Cartao destaque>
+              <Subtitulo>{A_ESPERA_DA_TRANSFERENCIA}</Subtitulo>
+              {estado.transferencia ? <DadosDaTransferencia t={estado.transferencia} /> : null}
+              <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 18 }}>{DEPOIS_DA_TRANSFERENCIA}</Text>
+            </Cartao>
+            {estado.podePagarDeOutraForma ? (
+              <Ligacao
+                titulo={OUTRO_METODO}
+                centrada
+                aoCarregar={() => {
+                  setMetodo(MBWAY);
+                  setOutraForma(true);
+                }}
+              />
+            ) : null}
+          </View>
         ) : referencia && estado.multibanco ? (
           <View style={{ gap: 10 }}>
             <Cartao destaque>
@@ -394,6 +452,11 @@ export function ResumoDoPagamento({
         pg.pendentes.length > 0 ? (
           <Ligacao titulo="Para pagar, fale com a CLYON por WhatsApp" aoCarregar={() => whatsappDaClyon(`Pedido #${pedidoId}: quero pagar.`)} />
         ) : null
+      ) : estado.tipo === "a-espera-da-transferencia" ? (
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "700" }}>{A_ESPERA_DA_TRANSFERENCIA}</Text>
+          <Botao titulo="Ver o pagamento" tipo="secundario" aoCarregar={irPagar} />
+        </View>
       ) : estado.tipo === "a-confirmar-mbway" ? (
         <View style={{ gap: 8 }}>
           <Text style={{ color: CORES.tinta, fontSize: 15 }}>{`À espera da confirmação no MB WAY (${contagem(estado.fimEm - agora)}).`}</Text>

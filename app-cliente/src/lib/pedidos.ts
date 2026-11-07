@@ -13,6 +13,7 @@
  */
 import { mensagemDaTrocaDeParceiro, mensagemDoProblema } from "../../../src/lib/frases-do-pedido";
 import type { PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
+import type { TransferenciaParaOCliente } from "../../../src/lib/transferencia-bancaria";
 
 export const ROTA_DOS_PEDIDOS = "/api/cliente/pedidos";
 export const ROTA_DO_PEDIDO = (id: number) => `/api/cliente/pedidos/${id}`;
@@ -192,6 +193,14 @@ export type Pagamento = {
   pagoEm?: string | null;
   emDinheiroAoProfissional: boolean;
   pendentes: PendenteDoPagamento[];
+  /**
+   * A TRANSFERÊNCIA, COMO NO SITE — d13, 07-11-2026. Os dois campos do
+   * `GET /api/pagamentos`, que a R5 passa tal e qual: os dados para
+   * transferir (ou `null` quando não se oferece) e se o cliente já a escolheu
+   * e ela está por receber. Opcionais: um site antigo não os manda.
+   */
+  transferencia?: TransferenciaParaOCliente | null;
+  aEsperaDaTransferencia?: boolean;
   ivaIncluido: boolean;
   valoresTexto: { comFactura: string; semFactura: string };
   /** «Serviço / IVA / Total a pagar», já escrito pela API (02-11-2026). Só com IVA incluído; um site antigo não o manda. */

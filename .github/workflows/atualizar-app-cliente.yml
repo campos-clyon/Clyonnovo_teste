@@ -84,6 +84,7 @@ jobs:
             src/lib/preco-em-tres-linhas.ts
             src/lib/telefone-da-clyon.ts
             src/lib/trabalho.ts
+            src/lib/transferencia-bancaria.ts
             src/lib/viagem-ate-ao-cliente.ts
         run: |
           sha=$(git rev-parse HEAD)

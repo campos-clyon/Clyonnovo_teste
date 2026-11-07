@@ -1,5 +1,6 @@
 import { ErroDaApi, type Pedir } from "./erros";
 import { O_VALOR_FICA_COM_A_CLYON } from "../../../src/lib/palavras-do-pagamento";
+import { METODO_TRANSFERENCIA, oQueEstaAEspera, type TransferenciaParaOCliente } from "../../../src/lib/transferencia-bancaria";
 import type { Pagamento, PendenteDoPagamento } from "./pedidos";
 
 /**
@@ -38,7 +39,8 @@ export function mbwayVivo(p: Pick<PendenteDoPagamento, "metodo" | "expiraEm">, a
 
 /** Uma referência Multibanco que ainda se pode pagar. */
 export function multibancoVivo(p: Pick<PendenteDoPagamento, "metodo" | "expiraEm" | "referencia">, agora: number): boolean {
-  if (p.metodo === MBWAY || !p.referencia) return false;
+  // Uma transferência nunca se mostra como uma referência (d13).
+  if (p.metodo === MBWAY || p.metodo === METODO_TRANSFERENCIA || !p.referencia) return false;
   const fim = p.expiraEm ? Date.parse(p.expiraEm) : NaN;
   return !Number.isFinite(fim) || fim > agora;
 }
@@ -49,6 +51,12 @@ export type EstadoDoPagar =
   /** O servidor não abre pagamentos para este trabalho agora (`disponivel: false`). */
   | { tipo: "indisponivel" }
   | { tipo: "a-confirmar-mbway"; fimEm: number; valorTexto: string }
+  /**
+   * O cliente escolheu a transferência e ela está por receber (d13): «À espera
+   * da transferência», os dados para transferir (se a R5 os mandar) e, se o
+   * servidor abrir pagamentos, «Pagar por MB WAY ou Multibanco» — como o site.
+   */
+  | { tipo: "a-espera-da-transferencia"; transferencia: TransferenciaParaOCliente | null; podePagarDeOutraForma: boolean }
   /** Por pagar: o bloco inteiro. Com a referência que já exista, e se houve um MB WAY que não chegou ao fim. */
   | { tipo: "por-pagar"; multibanco: PendenteDoPagamento | null; mbwayNaoConfirmado: boolean };
 
@@ -60,10 +68,24 @@ export type EstadoDoPagar =
 export function estadoDoPagar(
   pg: Pagamento,
   agora: number,
-  o: { esperavaMbway?: boolean; mbwayVistoEm?: number | null } = {},
+  o: { esperavaMbway?: boolean; mbwayVistoEm?: number | null; outraForma?: boolean } = {},
 ): EstadoDoPagar {
   if (pg.pago) return { tipo: "pago", quando: pg.pagoEmTexto };
   if (pg.emDinheiroAoProfissional) return { tipo: "no-local" };
+  /*
+   * UMA TRANSFERÊNCIA À ESPERA NÃO É «POR PAGAR» — d13, 07-11-2026. A mesma
+   * regra do bloco de pagar do site (`oQueEstaAEspera`): a pendente mais
+   * recente é uma transferência e o servidor diz que ainda está à espera. Não
+   * se oferece o MB WAY nem o Multibanco como se nada estivesse feito — o
+   * cliente não paga duas vezes. Só se ele pedir outra forma (`outraForma`).
+   */
+  const espera = oQueEstaAEspera({
+    pagamentos: pg.pendentes.map((p) => ({ ...p, estado: "pendente" })),
+    aEsperaDaTransferencia: pg.aEsperaDaTransferencia,
+  });
+  if (espera.transferencia && !o.outraForma) {
+    return { tipo: "a-espera-da-transferencia", transferencia: pg.transferencia ?? null, podePagarDeOutraForma: pg.disponivel };
+  }
   const mbways = pg.pendentes.filter((p) => p.metodo === MBWAY);
   const vivo = mbways.find((p) => mbwayVivo(p, agora, o.mbwayVistoEm ?? null));
   if (vivo) {

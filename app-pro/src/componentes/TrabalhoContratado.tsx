@@ -25,6 +25,7 @@ import {
   type EtapaDaViagem,
 } from "../../../src/lib/viagem-ate-ao-cliente";
 import { TELEFONE_DA_CLYON } from "../../../src/lib/telefone-da-clyon";
+import { O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA } from "../../../src/lib/palavras-do-pagamento";
 import { AvisosDoValor } from "./AvisosDoValor";
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { MARQUE_AS_HORAS_PRIMEIRO } from "../../../src/lib/horas-do-trabalho";
@@ -215,7 +216,15 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
       {t.fase === "a_executar" && t.clientePagou === true ? (
         <Mensagem tom="bom" texto="O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o trabalho está feito." />
       ) : null}
-      {t.fase === "a_executar" && t.clientePagou === false ? (
+      {/*
+       * A transferência a caminho (d13, 07-11-2026): a mesma frase do painel
+       * (`O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA`) — não começa antes de a
+       * CLYON a dar por recebida.
+       */}
+      {t.fase === "a_executar" && t.clientePagou === false && t.pagamentoACaminho === "transferencia" ? (
+        <Mensagem tom="aviso" texto={O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA.inteira} />
+      ) : null}
+      {t.fase === "a_executar" && t.clientePagou === false && t.pagamentoACaminho !== "transferencia" ? (
         <Mensagem tom="aviso" texto="O cliente ainda não pagou à CLYON. Pode ir fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir esperar, diga-nos e falamos com ele." />
       ) : null}
     </Caixa>

@@ -135,6 +135,12 @@ export type Trabalho = {
    * CLYON, pago em mão, ou de antes de a plataforma cobrar) — não se mostra nada.
    */
   clientePagou: boolean | null;
+  /**
+   * O cliente escolheu a transferência e ela ainda não foi dada por recebida
+   * (d13, 07-11-2026). Só com `clientePagou` falso. Opcional: um site antigo
+   * não o manda.
+   */
+  pagamentoACaminho?: "transferencia" | null;
   /** O que uma carga vale na carrinha dele, num pedido por carga (`carga-da-carrinha.ts`). */
   cargaNaSuaCarrinha: { titulo: string; texto: string; curto: string } | null;
   /** Para o histórico da negociação: quando o cliente avaliou, e com quantas estrelas. */
