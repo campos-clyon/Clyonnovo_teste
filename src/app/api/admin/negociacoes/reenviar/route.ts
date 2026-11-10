@@ -7,7 +7,12 @@ import {
   substituirTokenDaNegociacao,
   appendOrderHistory,
   getPool,
+  assistentePode,
+  reporAvisoAoProfissional,
 } from "@/lib/db";
+import { telemovelParaWhatsApp } from "@/lib/whatsapp-cloud";
+import { avisoDePedidoAoProfissional } from "@/lib/aviso-de-pedido-ao-profissional";
+import { lerBase } from "@/lib/base-do-preco";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { avisarProfissional } from "@/lib/email-profissional";
@@ -156,11 +161,13 @@ export async function POST(req: NextRequest) {
 
     const pool = await getPool();
     const [linhas] = pool
-      ? ((await pool.execute("SELECT name, email FROM providers WHERE id = ? LIMIT 1", [
+      ? ((await pool.execute("SELECT name, email, phone, whatsappAvisos FROM providers WHERE id = ? LIMIT 1", [
           alvo.providerId,
         ])) as any[])
       : [[]];
-    const profissional = (linhas as Array<{ name: string; email: string | null }>)[0];
+    const profissional = (
+      linhas as Array<{ name: string; email: string | null; phone: string | null; whatsappAvisos: number | null }>
+    )[0];
 
     const minimo =
       pedido.valorDesejadoCliente != null ? Number(pedido.valorDesejadoCliente) : null;
@@ -185,15 +192,55 @@ export async function POST(req: NextRequest) {
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
     });
 
+    /*
+     * E NO WHATSAPP — 10-11-2026. *«Os profissionais pedem trabalho»* e os
+     * pedidos tinham 0 propostas: o aviso «Pedido novo» só nasce na
+     * distribuição, e com o interruptor desligado nesse momento nunca nasceu
+     * (e um aviso caduca em 24 h). Reenviar ao profissional repõe também o
+     * aviso no WhatsApp, com o link novo — com as mesmas fechaduras da
+     * distribuição: o interruptor «Avisar o profissional», a vontade dele e um
+     * telemóvel. Só numa negociação ainda aberta.
+     */
+    let porWhatsApp = false;
+    const telemovel =
+      Number(profissional?.whatsappAvisos) === 1 ? telemovelParaWhatsApp(profissional?.phone ?? null) : null;
+    if (
+      alvo.estado === "aberta" &&
+      telemovel &&
+      (await assistentePode("avisar_profissional").catch(() => false))
+    ) {
+      porWhatsApp = await reporAvisoAoProfissional({
+        pedidoId,
+        providerId: alvo.providerId,
+        telefone: telemovel,
+        texto: avisoDePedidoAoProfissional(
+          profissional?.name ?? null,
+          {
+            pedidoId,
+            localidade: pedido.city ?? null,
+            servico: pedido.serviceType ?? null,
+            descricao: pedido.description ?? null,
+            urgencia: pedido.urgency ?? null,
+            valorDesejadoCliente: minimo,
+            baseDoPreco: lerBase(pedido.baseDoPreco),
+            taxas: taxasDaNegociacao(alvo),
+            distanciaKm: null,
+            link: `${baseUrl}/profissionais/pedidos/${acesso.token}`,
+          },
+          new Date(),
+        ),
+      });
+    }
+
     await appendOrderHistory(pedidoId, {
       type: "created",
       by: null,
       message: enviado
-        ? `Link reenviado ao profissional #${alvo.providerId}. O anterior deixou de funcionar.`
+        ? `Link reenviado ao profissional #${alvo.providerId}${porWhatsApp ? " (email e WhatsApp)" : ""}. O anterior deixou de funcionar.`
         : `Link do profissional #${alvo.providerId} regenerado, mas o email NÃO saiu.`,
     });
 
-    return NextResponse.json({ ok: true, enviado, token: enviado ? undefined : acesso.token });
+    return NextResponse.json({ ok: true, enviado, porWhatsApp, token: enviado ? undefined : acesso.token });
   } catch (error) {
     console.error("[api/admin/negociacoes/reenviar]", error);
     return NextResponse.json({ error: "Não foi possível reenviar" }, { status: 500 });

@@ -33,6 +33,9 @@ const ROTULO_DO_MOTIVO: Record<string, string> = {
   categoria_diferente: "não faz este tipo de serviço",
   fora_de_alcance: "fora do raio dele",
   sem_morada: "não foi possível localizar a morada do pedido",
+  // 10-11-2026: a distância falta porque a conta não tem a base marcada —
+  // a frase de cima mandava procurar o problema no pedido.
+  sem_base: "a conta não tem a base marcada (Serviços e raio)",
   nao_emite_fatura: "não emite fatura (o cliente pediu)",
   nao_emite_guia: "sem guia de transporte verificada",
   // 01-10-2026: pedido em dinheiro e dívida à CLYON por pagar há mais de 7 dias.
@@ -154,7 +157,11 @@ export async function distribuicaoDoPedido(pedidoId: number): Promise<{
         ? // Elegível e sem negociação: não estava cá (ou não estava elegível)
           // quando o pedido foi enviado. Não é um erro — é história.
           ["elegível agora — inscreveu-se ou ficou elegível depois do envio"]
-        : r.motivos.map((m) => ROTULO_DO_MOTIVO[m] ?? m),
+        : r.motivos.map((m) =>
+            m === "sem_morada" && (p.baseLat == null || p.baseLng == null)
+              ? ROTULO_DO_MOTIVO.sem_base
+              : ROTULO_DO_MOTIVO[m] ?? m,
+          ),
       distanciaKm,
     });
   }
