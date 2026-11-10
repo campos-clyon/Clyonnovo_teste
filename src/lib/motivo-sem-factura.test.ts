@@ -146,7 +146,7 @@ describe("onde se marca ou se declara «sem fatura», o motivo é obrigatório",
   it("Negociações: confirmar «sem fatura» sem o motivo é recusado, e o motivo vai no mesmo update", () => {
     const AGIR = ler("src/app/api/admin/negociacoes/agir/route.ts");
     const le = AGIR.indexOf("lerMotivoSemFactura(corpo.motivoSemFactura)");
-    const grava = AGIR.indexOf("await confirmarExecucao(negociacaoId, pedidoId, {");
+    const grava = AGIR.indexOf("confirmarExecucao(negociacaoId, pedidoId, {");
     expect(le).toBeGreaterThan(-1);
     expect(grava).toBeGreaterThan(le);
     expect(AGIR).toMatch(/if \(paraQue === "sem_factura"\) \{\s*const lido = lerMotivoSemFactura/);

@@ -11,6 +11,9 @@ import {
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
+import { pedidoArrumado, PEDIDO_ARRUMADO_NAO_SE_ENVIA } from "@/lib/pedido-arrumado";
+import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
+import { pagamentosQuePrendem } from "@/lib/pagamentos-na-base";
 
 export const runtime = "nodejs";
 
@@ -48,6 +51,19 @@ export async function POST(req: NextRequest) {
 
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
+
+  /*
+   * UM PEDIDO CANCELADO FICA CANCELADO — 10-11-2026 (d27).
+   *
+   * Esta rota nunca leu o estado do pedido: o botão está à vista em qualquer
+   * estado, e redistribuir um pedido cancelado (ou arquivado, ou rejeitado)
+   * reabria as negociações que o cancelamento encerrou e avisava os parceiros
+   * de um trabalho que já não existe. Recusa-se aqui, antes de qualquer
+   * escrita e de qualquer aviso — incluindo o «reabrir» e o «voltar a mandar».
+   */
+  if (pedidoArrumado(pedido.status)) {
+    return NextResponse.json({ error: PEDIDO_ARRUMADO_NAO_SE_ENVIA }, { status: 409 });
+  }
 
   /*
    * UM TRABALHO FECHADO NÃO ESTÁ À VENDA — 21-09-2026.
@@ -105,8 +121,17 @@ export async function POST(req: NextRequest) {
      * carteira, ou o do cliente numa referência. Desfazer isso é outra
      * conversa (uma correcção de valor, um reembolso), nunca um clique.
      */
+    /*
+     * «PAGO» É TAMBÉM O CLIENTE TER PAGO — 10-11-2026 (d27). `pagoEm` na
+     * negociação é o que a CLYON pagou ao parceiro; o que o cliente pagou
+     * (referência, MB WAY, transferência) vive na tabela dos pagamentos, e
+     * desde que contratar abre o pagamento chega ANTES de o trabalho ser
+     * feito. Sem o ler, reabria-se um fecho com o dinheiro do cliente cá
+     * dentro. Só o que está pago trava: uma referência por pagar não.
+     */
+    const clienteJaPagou = (await pagamentosQuePrendem([Number(fechada.id)])).some((p) => p.estado === "pago");
     const jaAconteceu =
-      fechada.execucaoEnviadaEm != null || fechada.confirmadoEm != null || fechada.pagoEm != null;
+      fechada.execucaoEnviadaEm != null || fechada.confirmadoEm != null || fechada.pagoEm != null || clienteJaPagou;
     if (corpo.reabrir !== true || jaAconteceu) {
       return NextResponse.json(
         {
@@ -122,11 +147,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await gravarNegociacao(Number(fechada.id), {
-      estado: "morta",
-      valorAcordado: null,
-      propostasJson: fechada.propostasJson ?? "[]",
-    });
+    /*
+     * COM O ESTADO QUE SE LEU — 10-11-2026 (d27), o padrão da d26. Se entre a
+     * leitura e esta escrita a negociação deixou de estar «acordada» (outra
+     * pessoa já a reabriu, ou o pedido foi cancelado), não se grava por cima
+     * nem se distribui: 409 «já foi decidido».
+     */
+    const desfeita = await gravarNegociacao(
+      Number(fechada.id),
+      {
+        estado: "morta",
+        valorAcordado: null,
+        propostasJson: fechada.propostasJson ?? "[]",
+      },
+      { estado: "acordada", pedidoId },
+    );
+    if (!desfeita.ok) return NextResponse.json({ error: JA_FOI_DECIDIDO }, { status: 409 });
     await appendOrderHistory(pedidoId, {
       type: "created",
       by: null,
@@ -170,11 +206,22 @@ export async function POST(req: NextRequest) {
         { status: 409 },
       );
     }
-    await gravarNegociacao(Number(alvo.id), {
-      estado: "morta",
-      valorAcordado: null,
-      propostasJson: alvo.propostasJson ?? "[]",
-    });
+    // Com o estado que se leu (10-11-2026, d27): se já não é esse, alguém mexeu primeiro.
+    const reposta = await gravarNegociacao(
+      Number(alvo.id),
+      {
+        estado: "morta",
+        valorAcordado: null,
+        propostasJson: alvo.propostasJson ?? "[]",
+      },
+      { estado: alvo.estado, pedidoId },
+    );
+    if (!reposta.ok) {
+      // O MySQL conta linhas MUDADAS: uma «morta» já sem valor não muda nada e
+      // não é uma recusa. Só é «já decidido» se a linha deixou de estar morta.
+      const agora = (await negociacoesDoPedido(pedidoId)).find((n) => n.id === voltarAMandar);
+      if (agora?.estado !== "morta") return NextResponse.json({ error: JA_FOI_DECIDIDO }, { status: 409 });
+    }
     await appendOrderHistory(pedidoId, {
       type: "created",
       by: null,

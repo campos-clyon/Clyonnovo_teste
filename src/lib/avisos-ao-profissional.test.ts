@@ -51,7 +51,9 @@ describe("as três rotas chamam o aviso com \"pro\"", () => {
 
   it("os Trabalhos CLYON, ao confirmar, mandam o email e o push — depois de gravar", () => {
     const s = ler("src/app/api/admin/trabalhos-clyon/confirmar/route.ts");
-    const gravou = s.indexOf("await confirmarExecucao(");
+    // Desde a d27 a confirmação corre dentro de `confirmarDandoPorEntregue` (sem prova: ou tudo, ou nada).
+    const gravou = s.indexOf("const gravou = await confirmarDandoPorEntregue(");
+    expect(s).toContain('confirmarExecucao(negociacaoId, pedidoId, undefined, "clyon")');
     const aviso = s.indexOf("await avisarProfissionalTrabalhoConfirmado(");
     expect(gravou).toBeGreaterThan(-1);
     expect(aviso).toBeGreaterThan(gravou);

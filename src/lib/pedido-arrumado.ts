@@ -54,6 +54,31 @@ export function estadoParaOProfissional(n: Marcos, statusDoPedido: string | null
 export const ESTADOS_QUE_TIRAM_DOS_PROS_SQL = `(${ESTADOS_QUE_TIRAM_DOS_PROS.map((s) => `'${s}'`).join(", ")})`;
 
 /**
+ * UM PEDIDO FECHADO NÃO VOLTA A ABRIR POR UMA PORTA LATERAL — 10-11-2026 (d27).
+ *
+ * Arrumado (cancelado, arquivado, rejeitado) ou concluído: aprovar o
+ * orçamento, ou o cliente a confirmá-lo pelo link antigo do email, escreviam
+ * «aprovado» / «confirmado» por cima sem olhar. Quem quer mesmo reabrir um
+ * pedido fá-lo pelo gesto próprio (restaurar), com registo.
+ */
+export const ESTADOS_DE_PEDIDO_FECHADO = [...ESTADOS_QUE_TIRAM_DOS_PROS, "concluido"] as const;
+
+export function pedidoFechado(status: string | null | undefined): boolean {
+  return (ESTADOS_DE_PEDIDO_FECHADO as readonly string[]).includes(String(status ?? ""));
+}
+
+/** A lista dos estados fechados, para um `IN (…)` de SQL. */
+export const ESTADOS_DE_PEDIDO_FECHADO_SQL = `(${ESTADOS_DE_PEDIDO_FECHADO.map((s) => `'${s}'`).join(", ")})`;
+
+/**
+ * O que a equipa lê quando tenta mandar a alguém um pedido arrumado
+ * (redistribuir, enviar aos parceiros da Mesa, oferecer a valor fixo). Recusa
+ * antes de qualquer escrita e de qualquer aviso.
+ */
+export const PEDIDO_ARRUMADO_NAO_SE_ENVIA =
+  "Este pedido está cancelado ou arquivado — não se envia a ninguém. Restaure-o primeiro.";
+
+/**
  * `aindaPorFazer`, em SQL. `n` é o prefixo das colunas das negociações — `"n."`
  * numa consulta com alias, `""` num UPDATE sem ele.
  */

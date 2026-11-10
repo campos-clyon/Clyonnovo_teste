@@ -106,6 +106,16 @@ export async function POST(req: NextRequest) {
       titular: typeof perfil?.ibanTitular === "string" ? perfil.ibanTitular : null,
     });
 
+    /*
+     * DOIS TOQUES, UM SÓ PEDIDO — 10-11-2026 (d27). A leitura lá de cima («não
+     * tem nenhum em espera») não chega: entre ela e esta escrita cabe o
+     * segundo toque. `criarLevantamento` volta a perguntar com a linha do
+     * parceiro presa, e devolve `null` a quem chega em segundo.
+     */
+    if (id == null) {
+      return NextResponse.json({ error: EXPLICACAO_DA_RECUSA.ja_tem_pedido }, { status: 400 });
+    }
+
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error("[profissionais/levantamento]", error);

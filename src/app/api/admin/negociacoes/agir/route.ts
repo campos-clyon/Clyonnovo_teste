@@ -8,7 +8,6 @@ import {
   gravarNegociacao,
   appendOrderHistory,
   confirmarExecucao,
-  darPorEntreguePelaClyon,
   getSimulatorOrderById,
   registarSemFalhar,
 } from "@/lib/db";
@@ -22,6 +21,7 @@ import { avisarQueFoiContratadoSemFalhar } from "@/lib/agir-como-cliente";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
+import { confirmarDandoPorEntregue } from "@/lib/confirmar-sem-prova";
 import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -374,15 +374,17 @@ export async function POST(req: NextRequest) {
        * `darPorEntreguePelaClyon`.
        */
       const semProva = corpo.semProva === true;
-      if (semProva) await darPorEntreguePelaClyon(negociacaoId, pedidoId);
 
       // Quem confirmou é a CLYON, em nome do cliente — o último argumento (28-10-2026, d4).
-      const gravou = await confirmarExecucao(negociacaoId, pedidoId, {
-        paraQue,
-        como,
-        por: porQuem,
-        motivoSemFactura,
-      }, "clyon");
+      // Sem prova: ou fica confirmado, ou não fica entregue (10-11-2026, d27) — `confirmar-sem-prova.ts`.
+      const gravou = await confirmarDandoPorEntregue(negociacaoId, pedidoId, semProva, () =>
+        confirmarExecucao(negociacaoId, pedidoId, {
+          paraQue,
+          como,
+          por: porQuem,
+          motivoSemFactura,
+        }, "clyon"),
+      );
       if (!gravou) {
         return NextResponse.json(
           {

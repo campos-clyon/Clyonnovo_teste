@@ -271,7 +271,7 @@ describe("a base guarda quem confirmou", () => {
     expect(ler("src/app/api/admin/trabalhos-clyon/confirmar/route.ts")).toContain(
       'confirmarExecucao(negociacaoId, pedidoId, undefined, "clyon")',
     );
-    expect(ler("src/app/api/admin/negociacoes/agir/route.ts")).toMatch(/motivoSemFactura,\s*\}, "clyon"\);/);
+    expect(ler("src/app/api/admin/negociacoes/agir/route.ts")).toMatch(/motivoSemFactura,\s*\}, "clyon"\)[,;]/);
   });
 
   it("e o painel recebe-o", () => {

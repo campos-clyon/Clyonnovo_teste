@@ -30,6 +30,7 @@ import { oQueReabrir } from "@/lib/cancelamento";
 import {
   aindaPorFazerSql,
   estadoParaOProfissionalSql,
+  ESTADOS_DE_PEDIDO_FECHADO_SQL,
   ESTADOS_QUE_TIRAM_DOS_PROS_SQL,
   pedidoArrumado,
 } from "@/lib/pedido-arrumado";
@@ -4305,6 +4306,29 @@ export async function darPorEntreguePelaClyon(
   return Number(r?.affectedRows ?? 0) > 0;
 }
 
+/**
+ * DESFAZ O «DADO POR ENTREGUE» DA CLYON — 10-11-2026 (d27).
+ *
+ * Só para quando a confirmação que vinha a seguir não ficou gravada (ver
+ * `confirmar-sem-prova.ts`). Não toca num trabalho confirmado, nem num que
+ * tenha a prova do parceiro: esses não foram dados por entregues por nós.
+ */
+export async function retirarEntregaDadaPelaClyon(
+  negociacaoId: number,
+  pedidoId: number,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE negociacoes SET execucaoEnviadaEm = NULL
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+        AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL AND provaJson IS NULL`,
+    [negociacaoId, pedidoId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0) > 0;
+}
+
 /** Marca a guia de transporte como verificada por alguém. */
 export async function verificarGuiaDeTransporte(
   providerId: number,
@@ -7310,20 +7334,49 @@ export async function levantamentosDoProfissional(
   return rows as LevantamentoNaBase[];
 }
 
+/**
+ * UM PEDIDO DE TRANSFERÊNCIA DE CADA VEZ — e, desde 10-11-2026 (d27), mesmo
+ * com dois toques no botão.
+ *
+ * A rota lia «não tem nenhum pedido em espera» e só depois gravava: dois
+ * toques seguidos liam os dois «nenhum» e ficavam dois pedidos do mesmo
+ * saldo. A leitura e a escrita passam a ser uma só transacção, com a linha do
+ * parceiro presa (`FOR UPDATE`): quem chega em segundo espera, encontra o
+ * primeiro pedido e recebe `null` — a rota responde «já tem um pedido».
+ */
 export async function criarLevantamento(dados: {
   providerId: number;
   valor: number;
   iban: string;
   titular: string | null;
-}): Promise<number> {
+}): Promise<number | null> {
   await ensureLevantamentosTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
-  const [res] = await pool.execute(
-    `INSERT INTO levantamentos (providerId, valor, iban, titular) VALUES (?, ?, ?, ?)`,
-    [dados.providerId, dados.valor, dados.iban, dados.titular],
-  ) as any[];
-  return Number(res.insertId);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute("SELECT id FROM providers WHERE id = ? FOR UPDATE", [dados.providerId]);
+    const [emEspera] = (await conn.execute(
+      "SELECT id FROM levantamentos WHERE providerId = ? AND estado = 'pedido' LIMIT 1",
+      [dados.providerId],
+    )) as [unknown[], unknown];
+    if (emEspera.length > 0) {
+      await conn.rollback();
+      return null;
+    }
+    const [res] = (await conn.execute(
+      `INSERT INTO levantamentos (providerId, valor, iban, titular) VALUES (?, ?, ?, ?)`,
+      [dados.providerId, dados.valor, dados.iban, dados.titular],
+    )) as any[];
+    await conn.commit();
+    return Number(res.insertId);
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    throw e;
+  } finally {
+    conn.release();
+  }
 }
 
 /** Os pedidos de transferência, para o backoffice. */
@@ -13468,20 +13521,29 @@ export async function assignSimulatorOrder(
 export async function approveSimulatorOrder(
   orderId: number,
   data: { precoFinal: number; precoFinalIva: number; mensagemCliente: string; notasInternas?: string; reviewedBy: { id: number; nome: string; role: string } }
-): Promise<void> {
+): Promise<boolean> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
-  if (!pool) return;
+  if (!pool) return false;
   const reviewJson = JSON.stringify({ ...data, reviewedAt: toMySQLDateTime() });
-  await pool.execute(
-    `UPDATE simulatorOrders SET status='aprovado', precoFinal=?, precoFinalIva=?, mensagemCliente=?, notasInternas=COALESCE(?,notasInternas), reviewJson=?, updatedAt=NOW() WHERE id=?`,
+  /*
+   * SÓ NUM PEDIDO QUE AINDA SE PODE APROVAR — 10-11-2026 (d27). A condição
+   * vai no UPDATE: um pedido cancelado, arquivado, rejeitado ou concluído
+   * entre a leitura da rota e esta escrita não volta a «aprovado». Devolve se
+   * gravou; sem gravar, não há linha no histórico nem email.
+   */
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET status='aprovado', precoFinal=?, precoFinalIva=?, mensagemCliente=?, notasInternas=COALESCE(?,notasInternas), reviewJson=?, updatedAt=NOW()
+      WHERE id=? AND (status IS NULL OR status NOT IN ${ESTADOS_DE_PEDIDO_FECHADO_SQL})`,
     [data.precoFinal, data.precoFinalIva, data.mensagemCliente, data.notasInternas ?? null, reviewJson, orderId]
-  );
+  )) as any[];
+  if (Number(r?.affectedRows ?? 0) === 0) return false;
   await appendOrderHistory(orderId, {
     type: "approved",
     by: data.reviewedBy,
     message: `Pedido aprovado por ${data.reviewedBy.nome}. Valor: ${data.precoFinal}€ + IVA.`,
   });
+  return true;
 }
 
 export async function getSimulatorOrdersByAssistant(assignedToId: number): Promise<SimulatorOrder[]> {
@@ -13613,11 +13675,24 @@ export async function confirmarOrcamento(token: string): Promise<{ ok: boolean; 
   const order = await getOrderByToken(token);
   if (!order) return { ok: false, error: "Pedido não encontrado." };
   if ((order as any).canceladoPeloCliente) return { ok: false, error: "Este pedido já foi cancelado." };
+  /*
+   * O LINK ANTIGO NÃO REABRE UM PEDIDO FECHADO — 10-11-2026 (d27).
+   *
+   * Só se olhava para o cancelamento feito pelo próprio cliente nesta página.
+   * Um pedido cancelado, arquivado ou rejeitado pela equipa (ou já concluído)
+   * voltava a «confirmado» com um toque no link do email, que não caduca. A
+   * condição vai também no UPDATE, para o que mudar entre ler e gravar.
+   */
+  if (pedidoArrumado(order.status)) return { ok: false, error: "Este pedido já foi cancelado." };
+  if (order.status === "concluido") return { ok: false, error: "Este pedido já foi concluído." };
   if ((order as any).confirmadoPeloCliente) return { ok: true }; // idempotente
-  await pool.execute(
-    "UPDATE simulatorOrders SET confirmadoPeloCliente = 1, confirmadoEm = NOW(), status = 'confirmado', updatedAt = NOW() WHERE orcamentoToken = ?",
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET confirmadoPeloCliente = 1, confirmadoEm = NOW(), status = 'confirmado', updatedAt = NOW()
+      WHERE orcamentoToken = ? AND COALESCE(canceladoPeloCliente, 0) = 0
+        AND (status IS NULL OR status NOT IN ${ESTADOS_DE_PEDIDO_FECHADO_SQL})`,
     [token]
-  );
+  )) as any[];
+  if (Number(r?.affectedRows ?? 0) === 0) return { ok: false, error: "Este pedido já foi cancelado." };
   await appendOrderHistory(order.id, {
     type: "client_confirmed",
     by: null,

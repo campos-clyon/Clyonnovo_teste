@@ -17,6 +17,7 @@ import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { validarValorDesejado } from "@/lib/pedido-valores";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
+import { pedidoArrumado, PEDIDO_ARRUMADO_NAO_SE_ENVIA } from "@/lib/pedido-arrumado";
 import { oQueFaltaNoPedido } from "@/lib/o-que-falta-no-pedido";
 import { getActivePricingMap } from "@/lib/pricing-helper";
 import {
@@ -122,10 +123,19 @@ export async function POST(req: NextRequest) {
     }
     soPara = ids;
   }
-  await assumirPedidoSeLivre(pedidoId, colab);
-
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+  /*
+   * UM PEDIDO CANCELADO FICA CANCELADO — 10-11-2026 (d27). A lista do «Por
+   * enviar» já não os mostra, mas a rota não lia o estado: um ecrã aberto
+   * antes do cancelamento (ou um segundo separador) ainda o enviava aos
+   * parceiros, com email ao cliente. Recusa-se antes de qualquer escrita —
+   * por isso o «assumir» passou para depois desta leitura.
+   */
+  if (pedidoArrumado(pedido.status)) {
+    return NextResponse.json({ error: PEDIDO_ARRUMADO_NAO_SE_ENVIA }, { status: 409 });
+  }
+  await assumirPedidoSeLivre(pedidoId, colab);
   /*
    * Está na plataforma quem CHEGOU a alguém, não quem tem um número.
    *

@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import { sendOrcamentoEmail } from "@/lib/email-orcamento";
 import { contaDoCliente } from "@/lib/taxas-plataforma";
+import { lerPrecoDoOrcamento, porqueNaoSeAprova } from "@/lib/aprovar-orcamento";
 
 export const runtime = "nodejs";
 
@@ -12,17 +13,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
   const { id } = await params;
-  // Um assistente que aprova um pedido sem responsável passa a ser o responsável.
-  await assumirPedidoSeLivre(Number(id), colab);
 
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch {}
 
-  const { precoFinal, mensagemCliente, notasInternas } = body as Record<string, string | undefined>;
+  const { precoFinal: precoEscrito, mensagemCliente, notasInternas } = body as Record<string, string | undefined>;
+
+  /*
+   * O PREÇO E O ESTADO, ANTES DE QUALQUER ESCRITA — 10-11-2026 (d27). Ver
+   * `aprovar-orcamento.ts`: um preço que não é número (ou negativo) não
+   * segue para o email, e um pedido cancelado, arquivado ou concluído não
+   * volta a «aprovado».
+   */
+  const idDoPedido = Number(id);
+  if (!Number.isInteger(idDoPedido) || idDoPedido <= 0) {
+    return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+  const temPreco = precoEscrito != null && String(precoEscrito).trim() !== "";
+  const preco = temPreco ? lerPrecoDoOrcamento(precoEscrito) : null;
+  if (preco && !preco.ok) return NextResponse.json({ error: preco.erro }, { status: 400 });
+  const precoFinal = preco?.ok ? preco.preco : null;
+  const antes = await getSimulatorOrderById(idDoPedido);
+  if (!antes) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+  const recusa = porqueNaoSeAprova(antes.status);
+  if (recusa) return NextResponse.json({ error: recusa }, { status: 409 });
+
+  // Um assistente que aprova um pedido sem responsável passa a ser o responsável.
+  await assumirPedidoSeLivre(idDoPedido, colab);
 
   // Se precoFinal fornecido usa approveSimulatorOrder, senão apenas muda status
-  if (precoFinal) {
-    await approveSimulatorOrder(Number(id), {
+  if (precoFinal != null) {
+    const gravou = await approveSimulatorOrder(Number(id), {
       precoFinal: Number(precoFinal),
       /*
        * O PREÇO COM FACTURA, FEITO PELA CONTA DE TODOS — 29-09-2026.
@@ -39,6 +60,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       notasInternas: notasInternas ?? undefined,
       reviewedBy: { id: colab!.id, nome: colab!.nome, role: colab!.papel },
     });
+    // Mudou de estado entre a leitura e a escrita: não se aprova, não há email.
+    // (Sem gravar e ainda aprovável é a mesma aprovação repetida no mesmo segundo: segue.)
+    if (!gravou) {
+      const fechouEntretanto = porqueNaoSeAprova((await getSimulatorOrderById(idDoPedido))?.status ?? "cancelado");
+      if (fechouEntretanto) return NextResponse.json({ error: fechouEntretanto }, { status: 409 });
+    }
   } else {
     await updateSimulatorOrder(Number(id), { status: "aprovado" } as Parameters<typeof updateSimulatorOrder>[1]);
   }

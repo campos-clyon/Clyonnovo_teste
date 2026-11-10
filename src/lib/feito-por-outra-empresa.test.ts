@@ -59,10 +59,13 @@ describe("dar por feito sem a prova do profissional", () => {
 
   it("a confirmação de sempre faz o resto — com as duas perguntas do pagamento", () => {
     const AGIR = semComentarios(ler("src/app/api/admin/negociacoes/agir/route.ts"));
-    expect(AGIR).toContain("if (semProva) await darPorEntreguePelaClyon(negociacaoId, pedidoId);");
-    expect(AGIR.indexOf("darPorEntreguePelaClyon(negociacaoId")).toBeLessThan(
-      AGIR.indexOf("await confirmarExecucao(negociacaoId"),
-    );
+    // Desde a d27 as duas escritas andam juntas: dá por entregue, confirma, e
+    // retira a entrega se a confirmação não gravou (`confirmar-sem-prova.ts`).
+    expect(AGIR).toContain("await confirmarDandoPorEntregue(negociacaoId, pedidoId, semProva, () =>");
+    const JUNTAS = semComentarios(ler("src/lib/confirmar-sem-prova.ts"));
+    const entrega = JUNTAS.indexOf("await darPorEntreguePelaClyon(negociacaoId, pedidoId)");
+    expect(entrega).toBeGreaterThan(-1);
+    expect(entrega).toBeLessThan(JUNTAS.indexOf("await confirmar()"));
     expect(AGIR).toContain("sem a prova do profissional");
   });
 

@@ -43,7 +43,7 @@ import {
   type ModoDaOferta,
 } from "@/lib/oferta-clyon";
 import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } from "@/lib/avisar-trabalho-clyon";
-import { pedidoArrumado } from "@/lib/pedido-arrumado";
+import { pedidoArrumado, PEDIDO_ARRUMADO_NAO_SE_ENVIA } from "@/lib/pedido-arrumado";
 import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
 import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { comOLink, linkParaPagar, mensagemDosValoresParaPagamento, oQueNaoPodeIr } from "@/lib/valores-para-pagamento";
@@ -291,9 +291,19 @@ export async function POST(req: NextRequest) {
   }
   const modo: ModoDaOferta = soPara?.length === 1 ? "directa" : "distribuida";
 
-  await assumirPedidoSeLivre(pedidoId, colab);
   const pedido = await getSimulatorOrderById(pedidoId);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+  /*
+   * UM PEDIDO CANCELADO FICA CANCELADO — 10-11-2026 (d27). Oferecer a valor
+   * fixo não lia o estado do pedido (só a passagem «de negociação» o fazia):
+   * um cancelado ou arquivado era marcado como Trabalho CLYON e distribuído,
+   * com aviso aos parceiros. Recusa-se antes de qualquer escrita — por isso o
+   * «assumir» passou para depois desta leitura.
+   */
+  if (pedidoArrumado(pedido.status)) {
+    return NextResponse.json({ error: PEDIDO_ARRUMADO_NAO_SE_ENVIA }, { status: 409 });
+  }
+  await assumirPedidoSeLivre(pedidoId, colab);
   /*
    * DE NEGOCIAÇÃO A VALOR FIXO — 20-10-2026 (fase 4), enquanto ninguém foi
    * contratado. As negociações abertas e as recusas acabam, e a oferta a

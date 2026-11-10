@@ -4,13 +4,13 @@ import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import {
   appendOrderHistory,
   confirmarExecucao,
-  darPorEntreguePelaClyon,
   ensureNegociacoesTable,
   getPool,
   registarSemFalhar,
 } from "@/lib/db";
 
 import { CONFIRME_AS_HORAS_PRIMEIRO, horasNaoTravamOFim } from "@/lib/horas-do-trabalho";
+import { confirmarDandoPorEntregue } from "@/lib/confirmar-sem-prova";
 
 export const runtime = "nodejs";
 
@@ -90,8 +90,10 @@ export async function POST(req: NextRequest) {
     if (!horasNaoTravamOFim(linha)) {
       return NextResponse.json({ error: CONFIRME_AS_HORAS_PRIMEIRO, faltamAsHoras: true }, { status: 409 });
     }
-    if (corpo.semProva === true) await darPorEntreguePelaClyon(negociacaoId, pedidoId);
-    const gravou = await confirmarExecucao(negociacaoId, pedidoId, undefined, "clyon");
+    // Sem prova: ou fica confirmado, ou não fica entregue (10-11-2026, d27) — `confirmar-sem-prova.ts`.
+    const gravou = await confirmarDandoPorEntregue(negociacaoId, pedidoId, corpo.semProva === true, () =>
+      confirmarExecucao(negociacaoId, pedidoId, undefined, "clyon"),
+    );
     if (!gravou) {
       return NextResponse.json(
         {
