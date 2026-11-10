@@ -25,6 +25,24 @@ export const TRES_PASSOS_DEPOIS_DE_ENVIAR: ReadonlyArray<{ titulo: string; texto
   },
 ];
 
+/**
+ * Os três passos do «Pedido enviado» numa MUDANÇA COM A LISTA DE PARCEIROS
+ * (10-11-2026): o pedido não espera pela CLYON, já foi aos escolhidos.
+ */
+export const PASSOS_DA_MUDANCA_COM_ESCOLHA: ReadonlyArray<{ titulo: string; texto: string }> = [
+  {
+    titulo: "O pedido já seguiu para os parceiros que escolheu",
+    texto: "Cada um recebe-o com os preços que viu na lista, que ficam guardados para este pedido.",
+  },
+  {
+    titulo: "Cada parceiro responde com a data e o orçamento",
+    texto:
+      "A estimativa conta as horas habituais numa casa como a sua; o valor final conta as horas feitas, " +
+      "os quilómetros e o material, com IVA incluído.",
+  },
+  TRES_PASSOS_DEPOIS_DE_ENVIAR[2],
+];
+
 /** «Podem mostrar as minhas fotos…» — a caixa do simulador, numa só frase. */
 export const AUTORIZA_FOTOS =
   "Podem mostrar as minhas fotos no site e nas redes da CLYON (opcional), sem nada que me identifique — nem pessoas, nem morada.";

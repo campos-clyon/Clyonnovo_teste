@@ -404,6 +404,8 @@ export async function distribuirPedido(
     reabrir = false,
     soPara,
     oferta,
+    exigirElegibilidade = false,
+    mudancaPorParceiro,
   }: {
     reabrir?: boolean;
     /**
@@ -427,6 +429,29 @@ export async function distribuirPedido(
      * `profissionaisActivos`, e um suspenso não recebe nada de ninguém.
      */
     soPara?: number[];
+    /**
+     * COM A LISTA, MAS A REGRA TAMBÉM — 10-11-2026. Os escolhidos pelo CLIENTE
+     * numa mudança passam pela regra inteira: `soPara` ∩ elegíveis. Quem
+     * escolhe à mão na Mesa continua sem ela (ver a nota de cima).
+     */
+    exigirElegibilidade?: boolean;
+    /**
+     * A MUDANÇA COM O PARCEIRO ESCOLHIDO PELO CLIENTE — 10-11-2026. Por
+     * parceiro: a tarifa congelada, a equipa, o prazo e as taxas da mudança. O
+     * aviso diz-lhe o preço da hora DELE e o que lhe fica, e não o valor de
+     * partida do pedido.
+     */
+    mudancaPorParceiro?: Map<
+      number,
+      {
+        tarifaCongeladaJson: string;
+        pessoas: 2 | 3;
+        prazoRespostaEm: Date;
+        taxas: Taxas;
+        /** O preço da hora dele para esta equipa, sem IVA (euros). */
+        precoHora: number;
+      }
+    >;
   } = {},
 ): Promise<ResultadoDaDistribuicao> {
   const forma = lerForma(pedido.formaDePagamento);
@@ -489,6 +514,8 @@ export async function distribuirPedido(
      * deixa responder; o histórico diz porquê.
      */
     const bloqueado = r.motivos.includes("divida_em_atraso");
+    // Os escolhidos pelo cliente passam também pela regra (10-11-2026): soPara ∩ elegíveis.
+    if (exigirElegibilidade && !r.elegivel) continue;
     if (soPara ? soPara.includes(c.profissional.id) && !bloqueado : r.elegivel) elegiveis.push(c);
   }
 
@@ -573,6 +600,10 @@ export async function distribuirPedido(
     linhasExistentes.filter((n) => n.estado === "morta").map((n) => Number(n.providerId)),
   );
 
+  // As do pedido, para a mudança escolhida pelo cliente poder pôr as dela por cima (10-11-2026).
+  const recebeDoPedido = recebe;
+  const taxasDoPedido = taxasDaNegociacao;
+
   const envios = await Promise.all(
     elegiveis.map(async (c) => {
       if (jaTemViva.has(c.profissional.id) || disseQueNao.has(c.profissional.id)) {
@@ -589,6 +620,7 @@ export async function distribuirPedido(
       // negociação ("não será o cliente a propor pela primeira vez").
       let token: string;
       let negociacaoId: number;
+      const daMudanca = mudancaPorParceiro?.get(c.profissional.id);
       try {
         const acesso = gerarTokenDeAcesso();
         negociacaoId = await criarNegociacao({
@@ -603,6 +635,14 @@ export async function distribuirPedido(
           // Numa oferta paga a CLYON, pela carteira: é sempre «na plataforma».
           formaDePagamento: oferta ? "na_plataforma" : lerForma(pedido.formaDePagamento),
           oferta: oferta ? { modo: oferta.modo, taxas: taxasDaOferta } : undefined,
+          mudanca: daMudanca
+            ? {
+                tarifaCongeladaJson: daMudanca.tarifaCongeladaJson,
+                pessoas: daMudanca.pessoas,
+                prazoRespostaEm: daMudanca.prazoRespostaEm,
+                taxas: daMudanca.taxas,
+              }
+            : undefined,
         }, { reabrir: reabrir || perdeuParaOutro.has(c.profissional.id) });
         token = acesso.token;
       } catch (err) {
@@ -613,6 +653,11 @@ export async function distribuirPedido(
         );
         return { recebeu: false, avisado: false };
       }
+
+      // Numa mudança escolhida pelo cliente: o preço da hora DELE, as taxas da mudança e o que lhe fica.
+      const valorDoAviso = daMudanca ? daMudanca.precoHora : pedido.valorDesejadoCliente;
+      const taxasDaNegociacao = daMudanca ? daMudanca.taxas : taxasDoPedido;
+      const recebe = daMudanca ? quantoRecebe(daMudanca.precoHora, daMudanca.taxas) : recebeDoPedido;
 
       // A negociacao ja esta criada a este ponto: o trabalho CHEGOU. O email e
       // o aviso, e falha por razoes suas.
@@ -627,7 +672,7 @@ export async function distribuirPedido(
         urgencia: pedido.urgency,
         descricao: pedido.description,
         quantidadeDeFotos: pedido.quantidadeDeFotos,
-        valorDesejadoCliente: pedido.valorDesejadoCliente,
+        valorDesejadoCliente: valorDoAviso,
         recebeLiquido: recebe,
         distanciaKm: c.distanciaKm,
         // Sem a factura: desde 22-09-2026 é da parceira, não do profissional.
@@ -722,10 +767,11 @@ export async function distribuirPedido(
               servico: pedido.serviceType,
               descricao: pedido.description,
               urgencia: pedido.urgency,
-              valorDesejadoCliente: pedido.valorDesejadoCliente,
+              valorDesejadoCliente: valorDoAviso,
               baseDoPreco: pedido.baseDoPreco,
               // As mesmas do email: as que a negociação, acabada de nascer,
-              // gravou (as do pedido, ou as de hoje num pedido novo).
+              // gravou (as do pedido, ou as de hoje num pedido novo; numa
+              // mudança escolhida pelo cliente, as da mudança).
               taxas: taxasDaNegociacao,
               distanciaKm: c.distanciaKm,
               link: `${pedido.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${token}`,

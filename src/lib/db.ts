@@ -1342,7 +1342,7 @@ let negociacoesEnsured = false;
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 16;
+const VERSAO_DAS_NEGOCIACOES = 17;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1597,6 +1597,15 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * `avaliacao-que-conta.ts`.
      */
     `ALTER TABLE negociacoes ADD COLUMN avaliacaoContactoVerificado TINYINT NULL DEFAULT NULL`,
+    /*
+     * v17 (10-11-2026) — A MUDANÇA COM O PARCEIRO ESCOLHIDO PELO CLIENTE. A
+     * tarifa dele congelada no momento da escolha (`congelarTarifa`, JSON), a
+     * equipa escolhida (2 ou 3) e o prazo para responder (3 h entre as 8h e as
+     * 21h de Lisboa). Nulas em todas as outras. Ver lista-de-parceiros-da-mudanca.ts.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN tarifaCongeladaJson TEXT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN pessoasEscolhidas TINYINT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN prazoRespostaEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
 
@@ -2084,6 +2093,18 @@ export async function criarNegociacao(
      * como lhe chegou. Ver `oferta-clyon.ts`.
      */
     oferta?: { modo: "distribuida" | "directa"; taxas: { cliente: number; profissional: number } };
+    /**
+     * A MUDANÇA COM O PARCEIRO ESCOLHIDO PELO CLIENTE — 10-11-2026. A tarifa
+     * dele congelada (JSON de `congelarTarifa`), a equipa escolhida, o prazo
+     * para responder e as taxas da mudança (a da plataforma só do lado dele).
+     * Só no INSERT: uma negociação que já existia não é reescrita por aqui.
+     */
+    mudanca?: {
+      tarifaCongeladaJson: string;
+      pessoas: 2 | 3;
+      prazoRespostaEm: Date;
+      taxas: { cliente: number; profissional: number };
+    };
   },
   /**
    * Recomeçar do zero: se já houver negociação com este profissional, ela é
@@ -2168,17 +2189,29 @@ export async function criarNegociacao(
    */
   const taxas = dados.oferta
     ? dados.oferta.taxas
-    : taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(dados.pedidoId), modeloDeHoje());
+    : dados.mudanca
+      ? taxasParaAForma(forma, dados.mudanca.taxas, modeloDeHoje())
+      : taxasParaAForma(forma, await taxasParaUmaNegociacaoNova(dados.pedidoId), modeloDeHoje());
   // Numa oferta não há acréscimo nenhum: o valor fixo é o valor, e acabou.
   const acrescimo = dados.oferta ? 0 : acrescimoDaForma(forma);
 
+  // As colunas da mudança só entram quando há mudança: as outras negociações
+  // não dependem de a migração v17 ter corrido.
+  const daMudanca = dados.mudanca
+    ? {
+        colunas: "tarifaCongeladaJson, pessoasEscolhidas, prazoRespostaEm, ",
+        marcas: "?, ?, ?, ",
+        valores: [dados.mudanca.tarifaCongeladaJson, dados.mudanca.pessoas, dados.mudanca.prazoRespostaEm],
+      }
+    : { colunas: "", marcas: "", valores: [] as Array<string | number | Date> };
   const [res] = await pool.execute(
     `INSERT INTO negociacoes
-       (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson, ofertaClyon,
+       (${daMudanca.colunas}pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson, ofertaClyon,
         taxaCliente, taxaProfissional, formaDePagamento, acrescimoPagamento)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (${daMudanca.marcas}?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE ${aoRepetir}`,
     [
+      ...daMudanca.valores,
       dados.pedidoId,
       dados.providerId,
       dados.acessoTokenHash,
@@ -2797,6 +2830,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             n.materiaisJson, n.materiaisUsadosJson,
             -- A viagem, para o cartão saber da chegada por confirmar (d3, 31-10-2026).
             n.aCaminhoEm, n.chegouEm, n.chegadaConfirmadaEm,
+            -- O parceiro escolhido pelo cliente numa mudança, e o prazo dele (10-11-2026).
+            n.prazoRespostaEm, n.pessoasEscolhidas, (n.tarifaCongeladaJson IS NOT NULL) AS escolhidoPeloCliente,
             p.name AS profissionalNome, p.email AS profissionalEmail,
             -- Para a adjudicação ao cliente: quem o contacta, e por onde (23-10-2026).
             p.phone AS profissionalTelefone, p.responsavel AS profissionalResponsavel,
@@ -8554,7 +8589,8 @@ let _simulatorOrdersEnsured = false;
 // 22 — `motivoTaxaClyon` (25-10-2026), o motivo de uma taxa abaixo do escalão.
 // 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
 // 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
-const MIGRATION_VERSION = 27;
+// 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
+const MIGRATION_VERSION = 28;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -8791,6 +8827,10 @@ export async function ensureSimulatorOrdersTable() {
     `ALTER TABLE simulatorOrders ADD COLUMN alteracaoPendenteJson LONGTEXT NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN alteracaoPendenteEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN pormenoresDoCliente LONGTEXT NULL DEFAULT NULL`,
+    // v28 — A ESCOLHA DOS PARCEIROS NUMA MUDANÇA (10-11-2026): os cartões que o
+    // cliente viu (preços, horas, km, estimativas), a equipa e quem escolheu — a
+    // prova do que lhe foi mostrado. Ver lista-de-parceiros-da-mudanca.ts.
+    `ALTER TABLE simulatorOrders ADD COLUMN escolhaDosParceirosJson LONGTEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -18110,4 +18150,147 @@ export async function categoriasDoProfissional(providerId: number): Promise<stri
     lista = cru.split(",").map((x) => x.trim()).filter(Boolean);
   }
   return normalizarCategorias(lista);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * A LISTA DOS PARCEIROS DAS MUDANÇAS — 10-11-2026 (fase 2).
+ * Os candidatos (perfil, tarifa, nota que conta) numa ida à base; a regra de
+ * quem entra está em `lista-de-parceiros-da-mudanca.ts`, e não aqui.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+export type CandidatoDaMudancaNaBase = import("@/lib/lista-de-parceiros-da-mudanca").CandidatoDaMudanca & {
+  email: string | null;
+  telefone: string | null;
+  avisaPorWhatsApp: boolean;
+  baseLat: number | null;
+  baseLng: number | null;
+};
+
+export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudancaNaBase[]> {
+  const { eContaDeTeste } = await import("@/lib/perfil-publico-do-profissional");
+  const { SQL_AVALIACAO_QUE_CONTA } = await import("@/lib/avaliacao-que-conta");
+  await ensureProvidersSchema();
+  await ensureTarifasDasMudancasTable();
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT p.id, p.name, p.email, p.phone, p.whatsappAvisos, p.isActive, p.estado, p.categorias, p.raioKm,
+            p.emiteFatura, p.emiteGuiaTransporte, p.guiaVerificadaEm, p.baseLat, p.baseLng,
+            COALESCE(p.contaDeTeste, 0) AS contaDeTeste, p.fotoViaturaUrl, p.fotosViaturaJson,
+            ${SQL_DO_VERIFICADO} AS parceiroVerificado,
+            t.precoHora2, t.precoHora3, t.minimoHoras, t.precoKm, t.kmMinimo, t.kmMaximo,
+            t.caixa, t.cartaoMetro, t.filmeRolo, t.plasticoBolhaRolo, t.aparecerNaLista
+       FROM providers p
+       JOIN tarifasDasMudancas t ON t.providerId = p.id
+      WHERE p.isActive = 1 AND p.estado = 'aprovado' AND p.isClyon = 0 AND t.aparecerNaLista = 1`,
+  )) as [Array<Record<string, unknown>>, unknown];
+  if (rows.length === 0) return [];
+
+  // A nota que conta (d10.3) — se a conta falhar, nenhuma nota, e nunca todas.
+  const notas = new Map<number, { media: number; quantas: number }>();
+  try {
+    const ids = rows.map((r) => Number(r.id));
+    const [n] = (await pool.execute(
+      `SELECT n.providerId, AVG(n.estrelas) AS media, COUNT(*) AS quantas
+         FROM negociacoes n
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
+         JOIN providers p ON p.id = n.providerId
+        WHERE n.providerId IN (${ids.map(() => "?").join(",")})
+          AND n.estado = 'acordada' AND n.confirmadoEm IS NOT NULL AND n.estrelas IS NOT NULL
+          AND ${SQL_AVALIACAO_QUE_CONTA()}
+        GROUP BY n.providerId`,
+      ids,
+    )) as [Array<{ providerId: number; media: string | number | null; quantas: number }>, unknown];
+    for (const l of n) {
+      if (l.media != null) notas.set(Number(l.providerId), { media: Number(l.media), quantas: Number(l.quantas) });
+    }
+  } catch (e) {
+    console.error("[lista das mudanças] as notas não se leram; saem sem nota:", e instanceof Error ? e.message : e);
+  }
+
+  return rows.map((r) => {
+    const id = Number(r.id);
+    const nome = String(r.name ?? "");
+    const fotos = lerFotos(r.fotosViaturaJson, (r.fotoViaturaUrl as string | null) ?? null);
+    const nota = notas.get(id);
+    return {
+      id,
+      nome,
+      email: (r.email as string) ?? null,
+      telefone: (r.phone as string) ?? null,
+      avisaPorWhatsApp: Number(r.whatsappAvisos) === 1,
+      isActive: Number(r.isActive) === 1,
+      estado: (r.estado as string) ?? null,
+      categorias: listaDeJson(r.categorias),
+      raioKm: r.raioKm == null ? null : Number(r.raioKm),
+      emiteFatura: Number(r.emiteFatura) === 1,
+      emiteGuiaTransporte: Number(r.emiteGuiaTransporte) === 1,
+      guiaVerificadaEm: (r.guiaVerificadaEm as Date | null) ?? null,
+      baseLat: r.baseLat == null ? null : Number(r.baseLat),
+      baseLng: r.baseLng == null ? null : Number(r.baseLng),
+      contaDeTeste: Number(r.contaDeTeste) === 1 || eContaDeTeste(nome),
+      verificado: Number(r.parceiroVerificado) === 1,
+      fotografia: fotos[0] ?? null,
+      tarifa: {
+        precoHora2: Number(r.precoHora2),
+        precoHora3: numeroOuNull(r.precoHora3),
+        minimoHoras: Number(r.minimoHoras),
+        precoKm: Number(r.precoKm),
+        kmMinimo: Number(r.kmMinimo),
+        kmMaximo: Number(r.kmMaximo),
+        caixa: numeroOuNull(r.caixa),
+        cartaoMetro: numeroOuNull(r.cartaoMetro),
+        filmeRolo: numeroOuNull(r.filmeRolo),
+        plasticoBolhaRolo: numeroOuNull(r.plasticoBolhaRolo),
+        aparecerNaLista: Number(r.aparecerNaLista) === 1,
+      },
+      notaMedia: nota ? nota.media : null,
+      avaliacoes: nota ? nota.quantas : 0,
+    };
+  });
+}
+
+/** Grava no pedido a lista que o cliente viu e o que escolheu (a prova). */
+export async function gravarEscolhaDosParceiros(pedidoId: number, escolha: unknown): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE simulatorOrders SET escolhaDosParceirosJson = ? WHERE id = ?", [
+    JSON.stringify(escolha),
+    pedidoId,
+  ]);
+}
+
+/* O interruptor «Lista de parceiros nas mudanças» (Configs) — 10-11-2026.
+ * Ligado por omissão (o dono pediu a lista); desligado, as mudanças voltam ao
+ * caminho de antes (o pedido vai à Mesa). */
+const CHAVE_DA_LISTA_DAS_MUDANCAS = "listaDeParceirosNasMudancas";
+
+export async function listaDeParceirosNasMudancasLigada(): Promise<boolean> {
+  try {
+    await ensurePlataformaConfiguracoes();
+    const pool = await getPool();
+    if (!pool) return true;
+    const [rows] = (await pool.execute("SELECT valor FROM plataformaConfiguracoes WHERE chave = ? LIMIT 1", [
+      CHAVE_DA_LISTA_DAS_MUDANCAS,
+    ])) as [Array<{ valor: string }>, unknown];
+    return rows[0]?.valor !== "0";
+  } catch (e) {
+    console.error("[lista das mudanças] não li o interruptor — fica ligado:", e instanceof Error ? e.message : e);
+    return true;
+  }
+}
+
+export async function mudarListaDeParceirosNasMudancas(ligar: boolean, porQuem: string): Promise<boolean> {
+  await ensurePlataformaConfiguracoes();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(
+    `INSERT INTO plataformaConfiguracoes (chave, valor, porQuem) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE valor = VALUES(valor), porQuem = VALUES(porQuem)`,
+    [CHAVE_DA_LISTA_DAS_MUDANCAS, ligar ? "1" : "0", porQuem.slice(0, 120)],
+  );
+  return ligar;
 }

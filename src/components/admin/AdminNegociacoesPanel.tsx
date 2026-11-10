@@ -229,6 +229,10 @@ type Negociacao = {
   guiaEmTransicao?: boolean;
   /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
   coincidencias?: Coincidencia[];
+  /** Numa mudança, o parceiro escolhido pelo cliente na lista, a equipa e o prazo para responder (10-11-2026). */
+  escolhidoPeloCliente?: number | boolean | null;
+  pessoasEscolhidas?: number | null;
+  prazoRespostaEm?: string | null;
 };
 
 /**
@@ -3590,6 +3594,18 @@ export default function AdminNegociacoesPanel({
                     >
                       {n.estado}
                     </span>
+                    {/* Escolhido pelo cliente na lista das mudanças, com o prazo para responder (10-11-2026). */}
+                    {Number(n.escolhidoPeloCliente) === 1 && (
+                      <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-xs font-semibold text-sky-200">
+                        escolhido pelo cliente{n.pessoasEscolhidas ? ` · equipa de ${n.pessoasEscolhidas}` : ""}
+                        {(() => {
+                          const prazo = instanteDaBase(n.prazoRespostaEm ?? null);
+                          if (!prazo) return null;
+                          const passou = prazo.getTime() < Date.now() && n.estado === "aberta";
+                          return ` · ${passou ? "prazo passou" : "responder até"} ${dataEHoraEmLisboa(prazo)}`;
+                        })()}
+                      </span>
+                    )}
                     {/* A confiança (04-11-2026, d10.1 e d10.3): a guia por verificar trava o fecho; os contactos iguais dão alerta. */}
                     {n.guiaPorVerificar && (
                       <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200" title={GUIA_POR_VERIFICAR_FRASE}>

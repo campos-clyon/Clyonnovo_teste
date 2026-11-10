@@ -41,7 +41,8 @@ import {
   linhaDasCoisas,
   linhaDoAcesso,
 } from "@/lib/perguntas-do-espaco";
-import { TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/textos-do-pedido";
+import { PASSOS_DA_MUDANCA_COM_ESCOLHA, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/textos-do-pedido";
+import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/ParceirosDaMudanca";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
@@ -181,6 +182,22 @@ export default function SimulatorThreePhaseForm() {
   /* Só se marca o que falta DEPOIS de ele tentar enviar: pintar de vermelho um
      campo em que ninguém tocou é ralhar antes de a pessoa fazer nada. */
   const [phase3Attempted, setPhase3Attempted] = useState(false);
+  /*
+   * A LISTA DE PARCEIROS NUMA MUDANÇA — 10-11-2026 (fase 2). No passo 3, antes
+   * do contacto, o cliente escolhe até três parceiros; `semListaNaMudanca`
+   * quando não há lista (desligada, sem parceiros, ou a rota falhou) — aí o
+   * pedido segue como sempre. Voltar ao passo 2 recomeça a escolha.
+   */
+  const [escolhaDaMudanca, setEscolhaDaMudanca] = useState<EscolhaDaMudanca | null>(null);
+  const [semListaNaMudanca, setSemListaNaMudanca] = useState(false);
+  /** O pedido foi logo aos parceiros escolhidos (o ecrã de sucesso diz outra coisa). */
+  const [foiAosEscolhidos, setFoiAosEscolhidos] = useState(0);
+  useEffect(() => {
+    if (phase < 3) {
+      setSemListaNaMudanca(false);
+      setEscolhaDaMudanca(null);
+    }
+  }, [phase]);
 
   /*
    * O RASCUNHO VOLTA AO ABRIR (14-10-2026, auditoria de SEO). Era apagado
@@ -460,6 +477,10 @@ export default function SimulatorThreePhaseForm() {
     );
   };
 
+  /** No passo 3 de uma mudança, a lista vem antes do contacto — até escolher ou não haver lista. */
+  const aMostrarALista =
+    phase === 3 && !isAnalyzing && formData.serviceType === "mudanca" && !escolhaDaMudanca && !semListaNaMudanca;
+
   const canProceedToPhase2 = isPhase1Valid();
   const canProceedToPhase3 = isPhase2Valid();
   const canAnalyze = isPhase3Valid();
@@ -521,7 +542,8 @@ export default function SimulatorThreePhaseForm() {
 
     // Ou o pedido ficou gravado, com número, ou não ficou — e diz-se porquê.
     const work = (async (): Promise<
-      { id: number; emailDoLink: string | null; contaGuardada: string | null } | { erro: string | null }
+      | { id: number; emailDoLink: string | null; contaGuardada: string | null; parceirosEscolhidos: number }
+      | { erro: string | null }
     > => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
       let apiResult: EstimateResult | null = null;
@@ -653,6 +675,14 @@ export default function SimulatorThreePhaseForm() {
           motivoFotosNaoEnviadas: motivoFalhaFotos,
           // De onde veio a visita (14-10-2026) — vai para o rawOrderJson.
           origemDaVisita: origemDaVisita() ?? undefined,
+          // A escolha da lista de parceiros numa mudança (10-11-2026): ids opacos, a rota confere-os.
+          ...(formData.serviceType === "mudanca" && escolhaDaMudanca && escolhaDaMudanca.ids.length > 0
+            ? {
+                parceirosEscolhidos: escolhaDaMudanca.ids,
+                pessoas: escolhaDaMudanca.pessoas,
+                procurarMaisParceiros: escolhaDaMudanca.procurarMais,
+              }
+            : {}),
         };
         setPasso("guardar");
         const saveRes = await fetch("/api/simulador/pedido", {
@@ -666,7 +696,9 @@ export default function SimulatorThreePhaseForm() {
           id?: unknown;
           emailDoLink?: unknown;
           contaGuardada?: unknown;
+          parceirosEscolhidos?: unknown;
           error?: unknown;
+          campo?: unknown;
         };
         const id = Number(saved.id);
         if (saveRes.ok && Number.isInteger(id) && id > 0) {
@@ -674,8 +706,11 @@ export default function SimulatorThreePhaseForm() {
             id,
             emailDoLink: typeof saved.emailDoLink === "string" ? saved.emailDoLink : null,
             contaGuardada: typeof saved.contaGuardada === "string" ? saved.contaGuardada : null,
+            parceirosEscolhidos: typeof saved.parceirosEscolhidos === "number" ? saved.parceirosEscolhidos : 0,
           };
         }
+        // Um parceiro escolhido deixou de estar disponível: volta-se à lista.
+        if (saved.campo === "parceirosEscolhidos") setEscolhaDaMudanca(null);
         return { erro: typeof saved.error === "string" && saved.error ? saved.error : null };
       } catch {
         return { erro: "A ligação à internet falhou a meio do envio." };
@@ -712,6 +747,7 @@ export default function SimulatorThreePhaseForm() {
 
     setEmailDoLink(resultado.emailDoLink);
     setContaGuardada(resultado.contaGuardada);
+    setFoiAosEscolhidos(resultado.parceirosEscolhidos);
     setSuccessOrderId(resultado.id);
     // Enviado: o rascunho já não é de nada, e não pode voltar a abrir-se.
     try {
@@ -723,6 +759,9 @@ export default function SimulatorThreePhaseForm() {
 
   const handleReset = () => {
     setFormData({ precisaFatura: false });
+    setEscolhaDaMudanca(null);
+    setSemListaNaMudanca(false);
+    setFoiAosEscolhidos(0);
     setRecuperado(null);
     setSuccessOrderId(null);
     setEmailDoLink(null);
@@ -823,12 +862,15 @@ export default function SimulatorThreePhaseForm() {
                 Icone: CheckCircle,
                 cor: "text-green-600",
                 // Os textos vêm de textos-do-pedido.ts — os mesmos que a app recebe (S12).
+                // Numa mudança enviada logo aos escolhidos, os passos dessa (10-11-2026).
                 ...TRES_PASSOS_DEPOIS_DE_ENVIAR[0],
+                ...(foiAosEscolhidos > 0 ? PASSOS_DA_MUDANCA_COM_ESCOLHA[0] : {}),
               },
               {
                 Icone: Clock,
                 cor: "text-acao",
                 ...TRES_PASSOS_DEPOIS_DE_ENVIAR[1],
+                ...(foiAosEscolhidos > 0 ? PASSOS_DA_MUDANCA_COM_ESCOLHA[1] : {}),
               },
               /*
                 «SÓ PAGA DEPOIS DE CONFIRMAR QUE FICOU FEITO» SAIU — 29-09-2026.
@@ -1037,8 +1079,39 @@ export default function SimulatorThreePhaseForm() {
                 />
               )}
 
+              {/* A lista de parceiros numa mudança, antes do contacto (10-11-2026). */}
+              {aMostrarALista && (
+                <ParceirosDaMudanca
+                  origem={formData.originAddress}
+                  destino={formData.destinationAddress}
+                  tipologia={formData.tipologia}
+                  origemAcesso={formData.originAccess}
+                  destinoAcesso={formData.destinationAccess}
+                  inicial={null}
+                  onPedir={(e) => {
+                    setEscolhaDaMudanca(e);
+                    setFalhaNoEnvio(null);
+                  }}
+                  onSemLista={() => setSemListaNaMudanca(true)}
+                />
+              )}
+
+              {/* A escolha feita, por cima do contacto: dá para a mudar. */}
+              {phase === 3 && !isAnalyzing && escolhaDaMudanca && formData.serviceType === "mudanca" && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                  Vai pedir orçamento a {escolhaDaMudanca.nomes.join(", ")} (equipa de {escolhaDaMudanca.pessoas}).{" "}
+                  <button
+                    type="button"
+                    onClick={() => setEscolhaDaMudanca(null)}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    Mudar a escolha
+                  </button>
+                </div>
+              )}
+
               {/* Phase 3: Contact & Review — escondido durante o envio (loading) */}
-              {phase === 3 && !isAnalyzing && (
+              {phase === 3 && !isAnalyzing && !aMostrarALista && (
                 <Phase3Contact
                   formData={formData}
                   updateField={updateField}
@@ -1200,7 +1273,7 @@ export default function SimulatorThreePhaseForm() {
                     </button>
                   )}
 
-                  {phase === 3 && (
+                  {phase === 3 && !aMostrarALista && (
                     <div className="ml-auto flex flex-col items-end gap-2">
                       {/* Um botão cinzento sem explicação é um beco.
                           A pessoa vê que não pode avançar, não vê porquê, e

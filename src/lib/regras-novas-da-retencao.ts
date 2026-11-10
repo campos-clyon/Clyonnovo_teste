@@ -357,6 +357,8 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   alteracaoPendenteJson: "nulo",
   alteracaoPendenteEm: "nulo",
   pormenoresDoCliente: "nulo",
+  // A lista que o cliente viu numa mudança (10-11-2026): parceiros e preços, nada da pessoa.
+  escolhaDosParceirosJson: "fica",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

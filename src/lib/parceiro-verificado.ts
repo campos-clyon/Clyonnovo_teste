@@ -45,6 +45,9 @@ export function estaVerificado(l: Record<string, unknown> | null | undefined): b
 /** O selo, como o cliente o lê. */
 export const SELO_DO_VERIFICADO = "verificado pela CLYON";
 
+/** O selo no cartão da lista dos parceiros das mudanças (10-11-2026): só com as três. */
+export const SELO_DO_CARTAO = "Parceiro verificado";
+
 /** Quem faz o trabalho, numa frase: com «verificado» só se o for. */
 export function parceiroNaFrase(nome: string, verificado: boolean): string {
   return verificado ? `${nome}, parceiro verificado pela CLYON` : `${nome}, parceiro da CLYON`;

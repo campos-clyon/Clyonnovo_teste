@@ -38,6 +38,7 @@ import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 import { completarContaComOPedido, guardarDadosDoCliente } from "@/lib/conta-server";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 import { camposDaCategoriaParaGravar, comAsLinhasDaCategoria } from "@/lib/pedido-por-categoria";
+import { enviarAosEscolhidos, prepararEscolhaDaMudanca } from "@/lib/mudanca-com-parceiros-escolhidos";
 
 export const runtime = "nodejs";
 
@@ -125,6 +126,26 @@ export async function POST(req: NextRequest) {
      */
     Object.assign(order, camposDaCategoriaParaGravar(order));
     order.description = comAsLinhasDaCategoria(order.description, order) || order.description;
+
+    /*
+     * A MUDANÇA COM OS PARCEIROS ESCOLHIDOS PELO CLIENTE — 10-11-2026 (fase 2).
+     * `parceirosEscolhidos` são os ids opacos da lista (`POST
+     * /api/mudancas/parceiros`) e `pessoas` a equipa (2 ou 3). A lista refaz-se
+     * AQUI, e cada id tem de lá estar: um id que não seja de um parceiro
+     * elegível e com tarifa activa recusa o pedido antes de se gravar. Sem
+     * escolha, ou com o interruptor das Configs desligado, é o caminho de
+     * sempre (a Mesa). Ver mudanca-com-parceiros-escolhidos.ts.
+     */
+    const daMudanca = await prepararEscolhaDaMudanca(order);
+    if (daMudanca.caminho === "recusado") {
+      return NextResponse.json({ ok: false, error: daMudanca.erro, campo: daMudanca.campo }, { status: 400 });
+    }
+    const escolhaDaMudanca = daMudanca.caminho === "escolhidos" ? daMudanca.escolha : null;
+    // Os ids opacos não ficam no formulário guardado: a escolha conferida grava-se à parte.
+    if (!escolhaDaMudanca) {
+      delete order.parceirosEscolhidos;
+      delete order.procurarMaisParceiros;
+    }
 
     // ── Ligação à conta do cliente ────────────────────────────────────────────
     // Se existir uma sessão de cliente autenticada, o pedido fica SEMPRE ligado
@@ -674,13 +695,32 @@ export async function POST(req: NextRequest) {
        * promessa pública é "propostas em 6 horas" — a análise vive dentro
        * desse prazo.
        */
-      await appendOrderHistory(id, {
-        type: "created",
-        by: null,
-        message:
-          "À espera da análise da CLYON. Rever a informação e usar " +
-          "“Enviar aos profissionais” para o publicar.",
-      });
+      if (escolhaDaMudanca) {
+        // Vai logo aos parceiros escolhidos, sem a análise da CLYON (decisão do dono, 10-11-2026).
+        await enviarAosEscolhidos(
+          {
+            id,
+            description: row.description ?? null,
+            city: row.city ?? null,
+            urgency: row.urgency ?? null,
+            quantidadeDeFotos: anexos.length,
+            valorDesejadoCliente:
+              valoresParaGravar.valorDesejadoCliente != null ? Number(valoresParaGravar.valorDesejadoCliente) : null,
+            precisaFatura: row.precisaFatura === 1,
+            formaDePagamento: row.formaDePagamento,
+            baseUrl,
+          },
+          escolhaDaMudanca,
+        );
+      } else {
+        await appendOrderHistory(id, {
+          type: "created",
+          by: null,
+          message:
+            "À espera da análise da CLYON. Rever a informação e usar " +
+            "“Enviar aos profissionais” para o publicar.",
+        });
+      }
       } catch (err) {
         // Já respondemos ao cliente. Um erro aqui não pode ser mostrado a
         // ninguém — fica no log, e o pedido está gravado na mesma.
@@ -738,6 +778,8 @@ export async function POST(req: NextRequest) {
       emailDoLink,
       // A conta criada pela caixa «Guardar os meus dados», ou `null`.
       contaGuardada,
+      // Numa mudança com a lista: a quantos parceiros escolhidos o pedido vai (10-11-2026).
+      parceirosEscolhidos: escolhaDaMudanca ? escolhaDaMudanca.escolhidos.length : 0,
       // O token vai na resposta para o formulário poder levar o cliente ao
       // pedido sem esperar pelo email. Vai só aqui, ao próprio, no momento em
       // que o criou — nunca numa listagem nem numa leitura posterior.

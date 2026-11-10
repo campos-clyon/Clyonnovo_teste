@@ -37,6 +37,7 @@ import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
+import AdminListaDasMudancasPanel from "@/components/admin/AdminListaDasMudancasPanel";
 import AdminContaDaTransferenciaPanel from "@/components/admin/AdminContaDaTransferenciaPanel";
 import AdminSessoesPanel from "@/components/admin/AdminSessoesPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
@@ -3455,6 +3456,9 @@ export default function ColaboradorAdminClient({
                   <AdminRotinasPanel />
                 </div>
               )}
+
+              {/* A lista de parceiros nas mudanças — 10-11-2026 (fase 2). Ligada por omissão. */}
+              <AdminListaDasMudancasPanel />
 
               {/* Os métodos de pagamento da adjudicação — 27-10-2026. */}
               <AdminMetodosDePagamentoPanel />

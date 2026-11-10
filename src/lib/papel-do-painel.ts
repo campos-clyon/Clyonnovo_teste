@@ -279,6 +279,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/media/gallery",
   // Os métodos de pagamento da adjudicação (27-10-2026): lê-os quem a prepara.
   "/api/admin/metodos-de-pagamento",
+  // O interruptor da lista de parceiros nas mudanças (10-11-2026).
+  "/api/admin/lista-das-mudancas",
   "/api/admin/sessao",
 ] as const;
 
@@ -396,6 +398,7 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // Os métodos de pagamento (27-10-2026): escrevem-se nas Configs, vão na adjudicação da Mesa.
   { prefixo: "/api/admin/metodos-de-pagamento", seccoes: ["configs", "negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/retencao", seccoes: ["configs"] },
+  { prefixo: "/api/admin/lista-das-mudancas", seccoes: ["configs"] },
   { prefixo: "/api/admin/arquivo", seccoes: ["configs"] },
   { prefixo: "/api/media/gallery", seccoes: ["configs"] },
 ];
@@ -475,6 +478,7 @@ const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
   "/api/admin/negociacoes/valor",
   "/api/admin/taxas",
   "/api/admin/metodos-de-pagamento",
+  "/api/admin/lista-das-mudancas",
 ];
 
 /**
