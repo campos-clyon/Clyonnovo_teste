@@ -4,6 +4,11 @@ import { lerBase } from "@/lib/base-do-preco";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
+  emailDoPedidoMuda,
+  registarEmailDoPedidoMudado,
+  SO_O_ADMINISTRADOR_MUDA_O_EMAIL_DO_PEDIDO,
+} from "@/lib/email-do-pedido";
+import {
   getSimulatorOrderById,
   updateSimulatorOrder,
   appendOrderHistory,
@@ -68,6 +73,19 @@ export async function POST(
     const t = v.trim().slice(0, max);
     return t.length > 0 ? t : null;
   };
+
+  /*
+   * O EMAIL DO PEDIDO É DO ADMINISTRADOR — d24, 10-11-2026. É por ele que o
+   * pedido aparece na conta do cliente; mudá-lo é mudar o pedido de conta. O
+   * formulário manda-o sempre: só conta se for diferente do que lá está.
+   */
+  const emailDoPedido = emailDoPedidoMuda(
+    pedido.contactEmail,
+    corpo.contactEmail === undefined ? undefined : (texto(corpo.contactEmail, 200) ?? ""),
+  );
+  if (emailDoPedido.muda && colab?.papel !== "admin") {
+    return NextResponse.json({ error: SO_O_ADMINISTRADOR_MUDA_O_EMAIL_DO_PEDIDO }, { status: 403 });
+  }
 
   try {
     const address = texto(corpo.address, 300);
@@ -186,7 +204,8 @@ export async function POST(
       description: texto(corpo.description, 4000),
       contactName: texto(corpo.contactName, 120),
       contactPhone: texto(corpo.contactPhone, 30),
-      contactEmail: texto(corpo.contactEmail, 200),
+      // Sem o campo, fica o que estava (d24).
+      contactEmail: corpo.contactEmail === undefined ? undefined : texto(corpo.contactEmail, 200),
       address,
       city,
       postalCode,
@@ -222,6 +241,16 @@ export async function POST(
       );
     } catch (e) {
       console.error("[admin/pedidos/editar] fontes da descrição:", e);
+    }
+
+    if (emailDoPedido.muda) {
+      await registarEmailDoPedidoMudado({
+        pedidoId,
+        antes: emailDoPedido.antes,
+        depois: emailDoPedido.depois,
+        colab,
+        onde: "editar o pedido",
+      });
     }
 
     // Fica escrito QUEM editou. Os profissionais leem o pedido da base a cada

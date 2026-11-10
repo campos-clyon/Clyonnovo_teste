@@ -14006,6 +14006,8 @@ export type Acontecimento =
   | "conta_dados_mudados"
   /* O administrador mudou o email de entrada de um parceiro (d24). */
   | "profissional_email_mudado"
+  /* O administrador mudou o email de um pedido, e com ele a conta onde aparece (d24). */
+  | "pedido_email_mudado"
   /* O trabalho fechado passou para outro profissional. Ver `passarOTrabalhoAOutroProfissional`. */
   | "profissional_trocado"
   /*

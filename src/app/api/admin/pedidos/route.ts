@@ -10,6 +10,11 @@ import {
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
+import {
+  emailDoPedidoMuda,
+  registarEmailDoPedidoMudado,
+  SO_O_ADMINISTRADOR_MUDA_O_EMAIL_DO_PEDIDO,
+} from "@/lib/email-do-pedido";
 
 export const runtime = "nodejs";
 
@@ -70,12 +75,23 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/pedidos  — { id, ...fields }
 export async function PATCH(req: NextRequest) {
-  const { err } = await requireAdmin(req);
+  const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
   const body = await req.json();
   const { id, ...fields } = body;
   if (!id) return NextResponse.json({ error: "Falta o identificador do pedido." }, { status: 400 });
+
+  // O email do pedido é do administrador, e fica registado (d24, 10-11-2026).
+  let emailDoPedido = emailDoPedidoMuda(null, undefined);
+  if ("contactEmail" in fields) {
+    const actual = await getSimulatorOrderById(Number(id));
+    if (!actual) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
+    emailDoPedido = emailDoPedidoMuda(actual.contactEmail, fields.contactEmail ?? "");
+    if (emailDoPedido.muda && colab?.papel !== "admin") {
+      return NextResponse.json({ error: SO_O_ADMINISTRADOR_MUDA_O_EMAIL_DO_PEDIDO }, { status: 403 });
+    }
+  }
 
   const updateData: Record<string, unknown> = { ...fields };
   if (updateData.dataAgendada && typeof updateData.dataAgendada === "string") {
@@ -87,6 +103,15 @@ export async function PATCH(req: NextRequest) {
   }
 
   await updateSimulatorOrder(Number(id), updateData as Parameters<typeof updateSimulatorOrder>[1]);
+  if (emailDoPedido.muda) {
+    await registarEmailDoPedidoMudado({
+      pedidoId: Number(id),
+      antes: emailDoPedido.antes,
+      depois: emailDoPedido.depois,
+      colab,
+      onde: "lista dos pedidos",
+    });
+  }
   const order = await getSimulatorOrderById(Number(id));
   return NextResponse.json({ ok: true, order });
 }

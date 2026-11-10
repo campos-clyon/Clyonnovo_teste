@@ -4,6 +4,11 @@ import { negociacoesDoPedido } from "@/lib/db";
 import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
+import {
+  emailDoPedidoMuda,
+  registarEmailDoPedidoMudado,
+  SO_O_ADMINISTRADOR_MUDA_O_EMAIL_DO_PEDIDO,
+} from "@/lib/email-do-pedido";
 
 export const runtime = "nodejs";
 
@@ -46,6 +51,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ ok: false, message: "Body JSON inválido." }, { status: 400 });
   }
 
+  // O email do pedido é do administrador, e fica registado (d24, 10-11-2026).
+  const emailDoPedido = emailDoPedidoMuda(
+    order.contactEmail,
+    "contactEmail" in body ? (body.contactEmail ?? "") : undefined,
+  );
+  if (emailDoPedido.muda && colab?.papel !== "admin") {
+    return NextResponse.json({ ok: false, error: SO_O_ADMINISTRADOR_MUDA_O_EMAIL_DO_PEDIDO, message: SO_O_ADMINISTRADOR_MUDA_O_EMAIL_DO_PEDIDO }, { status: 403 });
+  }
+
   // Ao tomar um pedido sem enviar assignedAt, preenche agora
   if (body.assignedToId != null && !body.assignedAt) {
     body.assignedAt = new Date();
@@ -79,6 +93,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       { ok: false, message: "Não foi possível atualizar o pedido. " + (err?.message ?? "") },
       { status: 500 }
     );
+  }
+
+  if (emailDoPedido.muda) {
+    await registarEmailDoPedidoMudado({
+      pedidoId: Number(id),
+      antes: emailDoPedido.antes,
+      depois: emailDoPedido.depois,
+      colab,
+      onde: "ficha do pedido",
+    });
   }
 
   if (fecha) {
