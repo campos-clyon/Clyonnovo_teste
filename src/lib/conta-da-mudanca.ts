@@ -1,4 +1,4 @@
-import { TAXA_IVA } from "@/lib/taxas-plataforma";
+import { TAXA_IVA } from "./taxas-plataforma";
 
 /**
  * A CONTA DE UMA MUDANÇA PELO PREÇO DO PROFISSIONAL — 10-11-2026 (fase 1).

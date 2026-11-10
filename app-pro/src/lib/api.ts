@@ -202,9 +202,17 @@ export async function enviarFicheiro<T>(
   return lerResposta<T>(r, semSessao, tokenUsado);
 }
 
-/** Os erros por campo que as rotas de gravar devolvem (`erros: [{campo, mensagem}]`). */
+/**
+ * Os erros por campo que as rotas de gravar devolvem: `erros: [{campo, mensagem}]`
+ * ou, nas rotas mais novas (os preços das mudanças, 10-11-2026), `erros: {campo: mensagem}`.
+ */
 export function errosPorCampo(e: unknown): Record<string, string> {
-  if (!(e instanceof ErroDaApi) || !Array.isArray(e.corpo.erros)) return {};
+  if (!(e instanceof ErroDaApi)) return {};
+  const erros = e.corpo.erros;
+  if (erros && typeof erros === "object" && !Array.isArray(erros)) {
+    return Object.fromEntries(Object.entries(erros as Record<string, unknown>).filter((p): p is [string, string] => typeof p[1] === "string"));
+  }
+  if (!Array.isArray(erros)) return {};
   const saida: Record<string, string> = {};
   for (const x of e.corpo.erros as Array<{ campo?: unknown; mensagem?: unknown }>) {
     if (typeof x.campo === "string" && typeof x.mensagem === "string" && !saida[x.campo]) saida[x.campo] = x.mensagem;

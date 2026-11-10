@@ -167,15 +167,17 @@ export function Interruptor({
   dica,
   valor,
   aoMudar,
+  desactivado = false,
 }: {
   rotulo: string;
   dica?: string;
   valor: boolean;
   aoMudar: (v: boolean) => void;
+  desactivado?: boolean;
 }) {
   const c = useCores();
   return (
-    <View style={estilos.interruptor}>
+    <View style={[estilos.interruptor, desactivado ? { opacity: 0.5 } : null]}>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={{ color: c.tinta, fontWeight: "600", fontSize: LETRA.normal }}>{rotulo}</Text>
         {dica ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{dica}</Text> : null}
@@ -183,6 +185,7 @@ export function Interruptor({
       <Switch
         value={valor}
         onValueChange={aoMudar}
+        disabled={desactivado}
         accessibilityLabel={rotulo}
         trackColor={{ false: c.linha, true: c.marca }}
         thumbColor={c.superficie}

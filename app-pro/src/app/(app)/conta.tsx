@@ -121,6 +121,10 @@ export default function Conta() {
           valor={valorOuFalta(perfil, "servicos", perfil ? `${perfil.raioKm} km` : null)}
           aoCarregar={() => abrir("/conta/servicos")}
         />
+        {/* Os preços das mudanças (10-11-2026): só a quem faz mudanças, como no painel. */}
+        {perfil?.categorias.includes("mudancas") ? (
+          <ItemDoMenu icone="car-outline" titulo="Preços das mudanças" aoCarregar={() => abrir("/conta/mudancas")} />
+        ) : null}
         <ItemDoMenu
           icone="document-text-outline"
           titulo="Faturação e IVA"
