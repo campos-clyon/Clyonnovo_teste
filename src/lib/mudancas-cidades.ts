@@ -28,7 +28,7 @@
  * dizem-no, a partir da constante; e continua a não haver faixa por cidade.
  */
 
-import { PRECO_DA_MUDANCA_CURTO } from "./tabela-das-mudancas";
+import { DESLOCACAO_DA_MUDANCA_CURTA, PRECO_DA_MUDANCA_CURTO } from "./tabela-das-mudancas";
 // Sem «@/»: o next.config e o middleware lêem este ficheiro (ver a nota abaixo).
 import { TERRAS_JUNTAS_AO_CONCELHO } from "./paginas-consolidadas";
 
@@ -246,7 +246,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança Sintra → Lisboa?",
         resposta:
-          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ", e acima de 50 km 1,30 € por km, ida e volta. Recebe propostas grátis em menos de 6 horas.",
+          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + "; " + DESLOCACAO_DA_MUDANCA_CURTA + ". Recebe propostas grátis em menos de 6 horas.",
       },
     ],
     testemunho: null,

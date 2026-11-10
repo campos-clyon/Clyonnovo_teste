@@ -54,6 +54,20 @@ import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
  * com o IVA ao lado. E a regra b) passou a apanhar o «Fazemos, sim»: quem faz
  * é o parceiro, também na voz da Vitória e nas traduções fixas dela.
  *
+ * E, na parte do Site da mesma d28:
+ *   u) «pelo site» / «no nosso site» → «plataforma», no que o cliente e o
+ *      parceiro lêem;
+ *   v) a distância das mudanças (o raio incluído e o preço por km) só de
+ *      tabela-das-mudancas.ts — nenhum «acima de 50 km» nem «1,30 € por km»
+ *      à mão, nem a regra antiga dos 30 km;
+ *   w) a taxa nunca como número escrito no código (0.11): lê-se de
+ *      taxas-plataforma.ts;
+ *   x) o que se diz ao parceiro sobre quem confirma é a frase de trabalho.ts,
+ *      com o prazo da confirmação automática — nunca «é um colega da CLYON que
+ *      confirma» nem «sem essa confirmação a CLYON não lhe pode entregar».
+ *   E a regra b) apanha o «Analisámos o seu pedido e preparámos um orçamento»
+ *   do email antigo do orçamento.
+ *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
  * passar de TAMANHO_MAXIMO. Desce o número quando a lista desce.
@@ -79,7 +93,11 @@ type Regra =
   | "p-sem-iva-sozinho"
   | "q-verificado"
   | "r-pecas-e-entulho"
-  | "t-grelha-antiga";
+  | "t-grelha-antiga"
+  | "u-site"
+  | "v-distancia-a-mao"
+  | "w-taxa-no-codigo"
+  | "x-confirmacao";
 
 interface Excepcao {
   ficheiro: string;
@@ -234,6 +252,9 @@ const VOZ: RegExp[] = [
   /\bEmpresa de Recolha\b/i,
   // O sim da Vitória a quem pergunta «vocês fazem…?» (d28, 10-11-2026): quem faz é o parceiro.
   /\bfazemos,? sim\b/i,
+  // O email antigo do orçamento (d28, parte do Site): a CLYON não analisa nem prepara orçamentos como uma empresa.
+  /\banalis[áa]mos o seu pedido\b/i,
+  /\bprepar[áa]mos (um|o seu|o) orçamento\b/i,
 ];
 
 const NEGA = /\b(não|nem|sem|nunca|nenhum|nenhuns)\b/i;
@@ -402,6 +423,61 @@ const MINIMO_POR_ITEM_ANTIGO = /(?<![\d.,])48[.,]78(?!\d)/u;
 const ALMADA_POR_ZONA = /\bAlmada\b[^.;!?]{0,40}?(?<![\d.,])2[23]0\s?(?:€|euros?(?!\p{L}))/iu;
 const GRELHA_ANTIGA: RegExp[] = [MINIMO_POR_ITEM_ANTIGO, ALMADA_POR_ZONA];
 const A_REGRA_T_SE_APLICA = A_REGRA_R_SE_APLICA;
+
+/*
+ * u) «PLATAFORMA», NÃO «SITE» — d28 (parte do Site), 10-11-2026; a regra é do
+ * dono (27-10-2026): a CLYON fala sempre como plataforma. As mensagens que o
+ * formulário inicial põe no WhatsApp do cliente diziam «pelo site», e a faixa
+ * dos cookies «no nosso site». Fora do backoffice, que fala com a equipa. A
+ * página da história conta o site de então («chegava pelo site»), e fica; e
+ * o histórico do pedido, que a equipa lê, diz por onde a conta foi juntada
+ * («pela app de cliente» ou «pelo site») — aí é o canal, não a CLYON.
+ */
+const PELO_SITE = /(?<!\p{L})(pelo|no nosso|do nosso|o nosso) site(?!\p{L})/iu;
+const A_HISTORIA = new Set(["src/app/sobre-nos/page.tsx", "src/lib/juntar-a-conta.ts"]);
+
+/*
+ * v) A DISTÂNCIA DAS MUDANÇAS SÓ DA TABELA — d28 (parte do Site).
+ *
+ * O raio incluído e o preço por km vivem em tabela-das-mudancas.ts
+ * (RAIO_INCLUIDO_KM, PRECO_POR_KM_LONGE, e as frases feitas com eles). Uma FAQ
+ * de cidade dizia-os à mão, e o aviso ao modelo dizia outra regra («percurso
+ * >30km: +30min», sem custo de deslocação). Lidos da fonte chegam aqui como
+ * «‹›».
+ */
+const FONTE_DAS_MUDANCAS = "src/lib/tabela-das-mudancas.ts";
+const DISTANCIA_A_MAO: RegExp[] = [
+  /(?<![\d.,])1[.,]30?\s?(€|euros?)\s?(\/|por|o|ao)\s?(km|quil[óo]metro)/iu,
+  /(?<!\p{L})acima d[eo]s? 50 ?km(?!\p{L})/iu,
+  /(?<![\d.,])50 ?km(?!\p{L})[^.;!?]{0,60}ida e volta/iu,
+  /percurso\s?(>|acima de|passar dos)\s?30 ?km/iu,
+];
+const A_REGRA_V_SE_APLICA = (f: string) => f.startsWith("src/") && f !== FONTE_DAS_MUDANCAS;
+
+/*
+ * w) A TAXA NUNCA COMO NÚMERO NO CÓDIGO — d28 (parte do Site).
+ *
+ * A regra k vê as percentagens nas frases; esta vê o número na conta. Um
+ * 0.11 escrito num ficheiro fica para trás no dia em que a taxa mudar: em
+ * src/, lê-se de taxas-plataforma.ts (ou das taxas que o pedido guardou).
+ */
+const FONTE_DAS_TAXAS = "src/lib/taxas-plataforma.ts";
+const TAXA_COMO_NUMERO = 0.11;
+const A_REGRA_W_SE_APLICA = (f: string) => f.startsWith("src/") && f !== FONTE_DAS_TAXAS;
+
+/*
+ * x) QUEM CONFIRMA, COMO A CONFIRMAÇÃO AUTOMÁTICA — d28 (parte do Site).
+ *
+ * O email «Foi contratado» dizia ao parceiro «sem fotografias, é um colega da
+ * CLYON que confirma com ele — e sem essa confirmação a CLYON não lhe pode
+ * entregar o valor». Desde 30-10-2026 o prazo corre para todos: o trabalho
+ * fecha sozinho ao fim de DIAS_ATE_LIBERTAR_SOZINHO dias. A frase é a de
+ * trabalho.ts (quemConfirmaAntesDeMarcar), no email, no painel e na app.
+ */
+const CONFIRMACAO_ANTIGA: RegExp[] = [
+  /é um colega da CLYON que confirma/iu,
+  /sem essa confirmação a CLYON não lhe pode entregar/iu,
+];
 
 /*
  * n) «PARCEIRO», NÃO «PROFISSIONAL», NO QUE O CLIENTE LÊ — 29-10-2026 (dono).
@@ -702,6 +778,11 @@ function lerFicheiro(f: string): { textos: Array<{ linha: number; texto: string 
       }
     }
 
+    // w) a taxa escrita como número
+    if (ts.isNumericLiteral(n) && Number(n.text) === TAXA_COMO_NUMERO && A_REGRA_W_SE_APLICA(f)) {
+      codigo.push({ ficheiro: f, linha: linhaDe(n), regra: "w-taxa-no-codigo", texto: n.getText(sf) });
+    }
+
     // g) o relógio do processo
     if (ts.isCallExpression(n) && !NO_RELOGIO_DE_LISBOA.has(f)) {
       const callee = n.expression;
@@ -771,6 +852,12 @@ function achadosDe(f: string): Achado[] {
     if (A_REGRA_R_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of PRECOS_DA_D7) marcar("r-pecas-e-entulho", re.exec(texto));
     // t) O SQL fica de fora.
     if (A_REGRA_T_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of GRELHA_ANTIGA) marcar("t-grelha-antiga", re.exec(texto));
+    // u) Fora do backoffice; o SQL, os registos e a página da história ficam de fora.
+    if (publico && !A_HISTORIA.has(f) && !E_SQL.test(texto) && !texto.startsWith("[")) marcar("u-site", PELO_SITE.exec(texto));
+    // v) O SQL fica de fora.
+    if (A_REGRA_V_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of DISTANCIA_A_MAO) marcar("v-distancia-a-mao", re.exec(texto));
+    // x) Em todo o lado: é a frase antiga, não um tema.
+    for (const re of CONFIRMACAO_ANTIGA) marcar("x-confirmacao", re.exec(texto));
     // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.
     if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const p = profissionalAoCliente(texto);
@@ -1071,6 +1158,41 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(voz("Com todo o gosto! Fica anotado: recolha de móveis.")).toBe(false);
   });
 
+  it("as regras u, v, w e x apanham o que devem; a regra b, o email antigo do orçamento (d28, parte do Site)", () => {
+    // u) «site» dito a quem usa a plataforma.
+    expect(PELO_SITE.test("Olá! Tentei pedir um orçamento pelo site e o pedido não foi enviado.")).toBe(true);
+    expect(PELO_SITE.test("Utilizamos cookies para melhorar a sua experiência no nosso site.")).toBe(true);
+    expect(PELO_SITE.test("Olá! Acabei de enviar um pedido pela plataforma.")).toBe(false);
+    expect(PELO_SITE.test("Utilizamos cookies para melhorar a sua experiência na plataforma.")).toBe(false);
+    expect(PELO_SITE.test("pelo sitemap")).toBe(false);
+    // v) a distância das mudanças à mão.
+    const dist = (t: string) => DISTANCIA_A_MAO.some((re) => re.test(t));
+    expect(dist("Paga-se à hora, e acima de 50 km 1,30 € por km, ida e volta.")).toBe(true);
+    expect(dist("1,30 €/km")).toBe(true);
+    expect(dist("Até 50 km a deslocação está incluída, depois contam todos, ida e volta.")).toBe(true);
+    expect(dist("(percurso >30km: +30min)")).toBe(true);
+    expect(dist("Paga-se à hora: ‹›; ‹›. Recebe propostas grátis.")).toBe(false);
+    expect(dist("Até ‹› km a deslocação está incluída; acima disso, ‹› por km (ida e volta), mais portagens.")).toBe(false);
+    expect(dist("limite máximo 70 km da base CLYON")).toBe(false);
+    expect(dist("o combustível a 0,50 €/km")).toBe(false);
+    expect(A_REGRA_V_SE_APLICA("src/lib/mudancas-cidades.ts")).toBe(true);
+    expect(A_REGRA_V_SE_APLICA(FONTE_DAS_MUDANCAS)).toBe(false);
+    // w) a taxa como número: só a fonte a pode escrever.
+    expect(A_REGRA_W_SE_APLICA("src/lib/ajuda-plataforma.ts")).toBe(true);
+    expect(A_REGRA_W_SE_APLICA(FONTE_DAS_TAXAS)).toBe(false);
+    // x) quem confirma.
+    const conf = (t: string) => CONFIRMACAO_ANTIGA.some((re) => re.test(t));
+    expect(
+      conf("Depois, o cliente confirma — sem fotografias, é um colega da CLYON que confirma com ele — e sem essa confirmação a CLYON não lhe pode entregar o valor."),
+    ).toBe(true);
+    expect(conf("Depois de carregar em «Está feito», um colega da CLYON confirma o trabalho com o cliente.")).toBe(false);
+    // b) o email antigo do orçamento.
+    const voz = (t: string) => VOZ.some((re) => re.test(t));
+    expect(voz("Analisámos o seu pedido e preparámos um orçamento personalizado.")).toBe(true);
+    expect(voz("Preparámos um orçamento para si")).toBe(true);
+    expect(voz("O seu pedido já tem orçamento. Quem faz o trabalho é um parceiro da sua zona.")).toBe(false);
+  });
+
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {
     const tem = (lista: RegExp[], s: string) => lista.some((re) => re.test(s));
     for (const f of FRASES_PROIBIDAS.promessa) expect(PROMESSAS.some(({ re }) => re.test(`no ${f}`)), f).toBe(true);
@@ -1325,5 +1447,110 @@ describe("t) o modelo lê a grelha publicada e a Vitória diz quem faz (d28)", (
       expect(t, lingua).toBeTruthy();
       expect(t, lingua).toMatch(/partners|partenaires|colaboradores/);
     }
+  });
+});
+
+/*
+ * u–x) A PARTE DO SITE DA d28 — 10-11-2026 (ordem do CEO, aprovada pelo dono).
+ *
+ * As regras de cima lêem os textos; estas provam as cinco correcções pelo que
+ * as funções devolvem, para a frase certa não poder sair sem o teste dar por isso.
+ */
+describe("u–x) emails, taxa, plataforma e distância pelas fontes (d28, parte do Site)", () => {
+  it("o email «Foi contratado» diz quem confirma e o prazo como a confirmação automática", async () => {
+    const { PROMESSA_POR_FORMA, promessaDaForma } = await import("./pagamento-na-plataforma");
+    const { DIAS_ATE_LIBERTAR_SOZINHO, QUEM_CONFIRMA_COM_E_SEM_FOTOS, QUEM_CONFIRMA_COM_E_SEM_FOTOS_NUM_TRABALHO_CLYON, quemConfirmaAntesDeMarcar } =
+      await import("./trabalho");
+    const caudas = [
+      ...Object.values(PROMESSA_POR_FORMA).map((p) => p.emailProParaQueServeAProva),
+      promessaDaForma("dinheiro", "sem_iva").emailProParaQueServeAProva,
+    ];
+    for (const c of caudas) {
+      expect(c).not.toMatch(/colega/i);
+      expect(c).not.toMatch(/sem essa confirmação/i);
+      expect(c).not.toMatch(/fotografia/i);
+      expect(c).toMatch(/confirma/i);
+    }
+    // A frase de quem confirma traz o prazo da confirmação automática, nos dois casos.
+    for (const frase of [QUEM_CONFIRMA_COM_E_SEM_FOTOS, QUEM_CONFIRMA_COM_E_SEM_FOTOS_NUM_TRABALHO_CLYON]) {
+      expect(frase).toContain("fecha sozinho " + DIAS_ATE_LIBERTAR_SOZINHO + " dias depois");
+    }
+    expect(quemConfirmaAntesDeMarcar(false)).toBe(QUEM_CONFIRMA_COM_E_SEM_FOTOS);
+    expect(quemConfirmaAntesDeMarcar(true)).toBe(QUEM_CONFIRMA_COM_E_SEM_FOTOS_NUM_TRABALHO_CLYON);
+    // E o email usa-a, logo antes do que a confirmação faz ao dinheiro.
+    const email = readFileSync(join(RAIZ, "src/lib/email-trabalho.ts"), "utf8");
+    expect(email).toMatch(/\$\{quemConfirmaAntesDeMarcar\(p\.ofertaClyon === true\)\}\s+\$\{promessa\.emailProParaQueServeAProva\}/);
+    // Num Trabalho CLYON quem confirma é a CLYON: o aviso do escolhido di-lo.
+    expect(readFileSync(join(RAIZ, "src/lib/avisar-escolhido-da-oferta.ts"), "utf8")).toMatch(/ofertaClyon: true/);
+  });
+
+  it("o email do orçamento fala como plataforma: quem faz é o parceiro", async () => {
+    const { TEXTOS_DO_EMAIL_DO_ORCAMENTO } = await import("./textos-do-orcamento");
+    const tudo = Object.values(TEXTOS_DO_EMAIL_DO_ORCAMENTO).join(" ");
+    expect(VOZ.some((re) => re.test(tudo))).toBe(false);
+    expect(tudo).not.toMatch(/(?<!\p{L})(fazemos|carregamos|levamos|transportamos|a nossa equipa|a sua reserva)(?!\p{L})/iu);
+    expect(profissionalAoCliente(tudo)).toBeNull();
+    for (const frase of [TEXTOS_DO_EMAIL_DO_ORCAMENTO.abertura, TEXTOS_DO_EMAIL_DO_ORCAMENTO.naPagina]) {
+      expect(frase).toMatch(/Quem faz o trabalho é um parceiro/);
+      expect(frase).toMatch(/a CLYON organiza o pedido, guarda o acordo/);
+    }
+    // O HTML e o assunto lêem as três frases, e as antigas não ficaram no ficheiro (fora dos comentários).
+    const fonte = readFileSync(join(RAIZ, "src/lib/email-orcamento.ts"), "utf8").replace(/^[ \t]*\/?\*.*$/gm, "");
+    for (const chaveDoTexto of ["titulo", "porBaixoDoNome", "abertura"]) {
+      expect(fonte).toContain("$" + "{TEXTOS_DO_EMAIL_DO_ORCAMENTO." + chaveDoTexto + "}");
+    }
+    expect(fonte).not.toMatch(/Analis[áa]mos|prepar[áa]mos|a sua reserva|Recolha · Mudança · Esvaziamento|O seu orçamento CLYON/);
+    // A página do mesmo orçamento diz o mesmo.
+    const pagina = readFileSync(join(RAIZ, "src/app/orcamento/[token]/page.tsx"), "utf8");
+    expect(pagina).toContain("{TEXTOS_DO_EMAIL_DO_ORCAMENTO.naPagina}");
+    expect(pagina).toContain("{TEXTOS_DO_EMAIL_DO_ORCAMENTO.porBaixoDoNome}");
+    expect(pagina).not.toMatch(/Analis[áa]mos|prepar[áa]mos|Recolha &middot; Mudança/);
+  });
+
+  it("o exemplo da ajuda faz as contas com a taxa de taxas-plataforma.ts", async () => {
+    const { TAXA_TOTAL, TAXA_IVA } = await import("./taxas-plataforma");
+    const { PERGUNTAS_DO_PROFISSIONAL } = await import("./ajuda-plataforma");
+    const fonte = readFileSync(join(RAIZ, "src/lib/ajuda-plataforma.ts"), "utf8");
+    expect(fonte).toMatch(/const taxa = TAXA_TOTAL;/);
+    const n = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
+    const daTaxa = Math.round(100 * TAXA_TOTAL * 100) / 100;
+    const iva = Math.round(100 * TAXA_IVA * 100) / 100;
+    const exemplo = PERGUNTAS_DO_PROFISSIONAL.map((p) => p.resposta).find((r) => r.includes("Exemplo, num pedido com a taxa de"));
+    expect(exemplo).toBeTruthy();
+    expect(exemplo).toContain("fica com " + n(100 - daTaxa) + " € e entrega " + n(iva + daTaxa) + " € à CLYON");
+    expect(exemplo).toContain(n(daTaxa) + " € de taxa");
+  });
+
+  it("a distância das mudanças é uma só, na página de cidade e no que o modelo lê", async () => {
+    const { RAIO_INCLUIDO_KM, PRECO_POR_KM_LONGE, DESLOCACAO_DA_MUDANCA, DESLOCACAO_DA_MUDANCA_CURTA, DESLOCACAO_DA_MUDANCA_PARA_O_MODELO, REGRAS_DA_MUDANCA_PARA_O_MODELO } =
+      await import("./tabela-das-mudancas");
+    const porKm = PRECO_POR_KM_LONGE.toFixed(2).replace(".", ",") + " € por km";
+    for (const frase of [DESLOCACAO_DA_MUDANCA, DESLOCACAO_DA_MUDANCA_CURTA]) {
+      expect(frase).toContain(RAIO_INCLUIDO_KM + " km");
+      expect(frase).toContain(porKm);
+      expect(frase).toMatch(/ida e volta/);
+    }
+    expect(DESLOCACAO_DA_MUDANCA_PARA_O_MODELO).toContain("até " + RAIO_INCLUIDO_KM + " km incluída");
+    expect(DESLOCACAO_DA_MUDANCA_PARA_O_MODELO).toContain(PRECO_POR_KM_LONGE + " €/km sobre todos os km, ida e volta");
+    expect(REGRAS_DA_MUDANCA_PARA_O_MODELO).toContain("Deslocação: " + DESLOCACAO_DA_MUDANCA_PARA_O_MODELO + ".");
+
+    const { getCidadeMudancaBySlug } = await import("./mudancas-cidades");
+    const sintra = getCidadeMudancaBySlug("sintra");
+    const resposta = sintra?.faqs.find((q) => /Quanto custa uma mudança Sintra/.test(q.pergunta))?.resposta ?? "";
+    expect(resposta).toContain(DESLOCACAO_DA_MUDANCA_CURTA);
+
+    const { buildAnalysisPrompt } = await import("./prompt-do-orcamento");
+    const prompt = buildAnalysisPrompt("(o pedido)", "(as regras)");
+    expect(prompt).toContain("Para mudança, a deslocação é a da tabela das mudanças: " + DESLOCACAO_DA_MUDANCA_PARA_O_MODELO + ".");
+    expect(prompt).not.toMatch(/>\s?30 ?km|embutido na taxa horária/i);
+  }, 60_000);
+
+  it("o formulário inicial e a faixa dos cookies dizem «plataforma»", () => {
+    const hero = readFileSync(join(RAIZ, "src/components/HeroQuoteForm.tsx"), "utf8");
+    expect(hero).toContain("Tentei pedir um orçamento pela plataforma");
+    expect(hero).toContain("Acabei de enviar um pedido pela plataforma");
+    const cookies = readFileSync(join(RAIZ, "src/components/CookieConsent.tsx"), "utf8");
+    expect(cookies).toContain("a sua experiência na plataforma");
+    expect(ACHADOS.filter((a) => a.regra === "u-site")).toEqual([]);
   });
 });

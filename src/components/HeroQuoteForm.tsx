@@ -13,7 +13,7 @@ import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 
 /** Quando o envio falha, o caminho que sobra. O BUSINESS_PHONE já traz o +351. */
 const WHATSAPP_DA_FALHA = `https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent(
-  "Olá! Tentei pedir um orçamento pelo site e o pedido não foi enviado.",
+  "Olá! Tentei pedir um orçamento pela plataforma e o pedido não foi enviado.",
 )}`;
 
 // A lista única dos serviços (29-10-2026): a do simulador, com os nomes de `service-categories.ts`.
@@ -482,7 +482,7 @@ export default function HeroQuoteForm() {
           <div className="mt-6 flex w-full max-w-[300px] flex-col gap-2">
             <a
               href={`https://wa.me/${BUSINESS_PHONE.replace(/[^\d]/g, "")}?text=${encodeURIComponent(
-                `Olá! Acabei de enviar um pedido pelo site${form.tipoServico ? ` (${form.tipoServico})` : ""}.`,
+                `Olá! Acabei de enviar um pedido pela plataforma${form.tipoServico ? ` (${form.tipoServico})` : ""}.`,
               )}`}
               target="_blank"
               rel="noopener noreferrer"

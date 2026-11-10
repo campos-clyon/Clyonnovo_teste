@@ -2,6 +2,13 @@
  * src/lib/email-orcamento.ts
  * Envia email de orçamento ao cliente via Resend após aprovação do pedido.
  * Inclui link para página personalizada clyon.pt/orcamento/[token].
+ *
+ * NA VOZ DE PLATAFORMA — 10-11-2026 (d28). Era o último email a falar como
+ * empresa: «Recolha · Mudança · Esvaziamento» por baixo do nome, e
+ * «Analisámos o seu pedido e preparámos um orçamento personalizado… a sua
+ * reserva». Quem faz o trabalho é o parceiro; a CLYON organiza o pedido,
+ * guarda o acordo e acompanha o pagamento. As frases vivem em
+ * textos-do-orcamento.ts, as mesmas da página /orcamento/<token>.
  */
 
 import { Resend } from "resend";
@@ -14,6 +21,7 @@ import { comFacturaEmPalavras } from "./conta-em-palavras";
 import { etiquetaDoPreco, modeloDaNegociacao } from "./iva-incluido";
 
 import { NOMES_DOS_SERVICOS } from "./service-categories";
+import { TEXTOS_DO_EMAIL_DO_ORCAMENTO } from "./textos-do-orcamento";
 /** «+351 931 632 622», como se lê — o `tel:` continua com o número cru. 29-09-2026. */
 const TELEFONE_PARA_LER = telefoneLegivel(BUSINESS_PHONE, { comIndicativo: true });
 
@@ -70,7 +78,7 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>O seu orçamento CLYON</title>
+  <title>${TEXTOS_DO_EMAIL_DO_ORCAMENTO.titulo}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f7fa;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fa;padding:32px 16px;">
@@ -81,7 +89,7 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
         <tr>
           <td style="background:#0077B6;padding:28px 36px;">
             <p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">CLYON</p>
-            <p style="margin:4px 0 0;color:#90e0ef;font-size:13px;">Recolha · Mudança · Esvaziamento</p>
+            <p style="margin:4px 0 0;color:#90e0ef;font-size:13px;">${TEXTOS_DO_EMAIL_DO_ORCAMENTO.porBaixoDoNome}</p>
           </td>
         </tr>
 
@@ -92,7 +100,7 @@ function buildHtml(p: SendOrcamentoEmailParams): string {
               Olá, ${e(p.clienteName.split(" ")[0])}!
             </p>
             <p style="margin:0 0 24px;font-size:15px;color:#4a5568;line-height:1.6;">
-              Analisámos o seu pedido e preparámos um orçamento personalizado. Consulte os detalhes abaixo e confirme ou cancele a sua reserva.
+              ${TEXTOS_DO_EMAIL_DO_ORCAMENTO.abertura}
             </p>
 
             <!-- Resumo -->
@@ -211,7 +219,7 @@ export async function sendOrcamentoEmail(params: SendOrcamentoEmailParams): Prom
       // natural de quem tem uma dúvida sobre um orçamento. Vai ter a alguém.
       replyTo: BUSINESS_EMAIL,
       to:      [params.to],
-      subject: `O seu orçamento CLYON — ${servico}`,
+      subject: `${TEXTOS_DO_EMAIL_DO_ORCAMENTO.titulo} — ${servico}`,
       html:    legivelNoResumo(buildHtml(params)),
     });
     if (error) {

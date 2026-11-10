@@ -229,6 +229,19 @@ export const PRECO_DA_MUDANCA_CURTO = `${PRECO_POR_HORA} € + IVA por hora · m
 export const DESLOCACAO_DA_MUDANCA =
   `Até ${RAIO_INCLUIDO_KM} km a deslocação está incluída; acima disso, ${euros(PRECO_POR_KM_LONGE)} por km (ida e volta), mais portagens.`;
 
+/**
+ * A MESMA DESLOCAÇÃO, A MEIO DE UMA FRASE E PARA O MODELO — 10-11-2026 (d28).
+ *
+ * Uma FAQ de cidade dizia «acima de 50 km 1,30 € por km» escrito à mão, e o
+ * aviso ao modelo dizia outra regra («percurso >30km: +30min», sem custo de
+ * deslocação). Quem fala da distância de uma mudança lê uma destas — o teste
+ * da orquestra chumba os números à mão.
+ */
+export const DESLOCACAO_DA_MUDANCA_CURTA =
+  `acima de ${RAIO_INCLUIDO_KM} km, ${euros(PRECO_POR_KM_LONGE)} por km, ida e volta`;
+export const DESLOCACAO_DA_MUDANCA_PARA_O_MODELO =
+  `até ${RAIO_INCLUIDO_KM} km incluída; acima, ${PRECO_POR_KM_LONGE} €/km sobre todos os km, ida e volta, mais portagens`;
+
 /** A frase inteira, para uma página ou uma resposta. */
 export const PRECO_DA_MUDANCA_POR_EXTENSO =
   `${euros(PRECO_POR_HORA)} + IVA por hora (${euros(PRECO_POR_HORA_COM_IVA)} com IVA), ` +
@@ -293,7 +306,7 @@ export const REGRAS_DA_MUDANCA_PARA_O_MODELO = `MUDANÇA — À HORA (tabela CLY
   HORAS ESTIMADAS PELA TIPOLOGIA: ${(Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[])
     .map((t) => `${TIPOLOGIA_POR_EXTENSO[t]} ${HORAS_POR_TIPOLOGIA[t]}h`)
     .join(" · ")} · desmontagem/montagem +${HORAS_A_MAIS_COM_DESMONTAGEM}h.
-  Deslocação: até ${RAIO_INCLUIDO_KM} km incluída; acima, ${PRECO_POR_KM_LONGE} €/km sobre todos os km, ida e volta, mais portagens.
+  Deslocação: ${DESLOCACAO_DA_MUDANCA_PARA_O_MODELO}.
   Cada andar sem elevador: ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € por pessoa (${POR_ANDAR_SEM_ELEVADOR} € a equipa de ${PESSOAS_NA_EQUIPA}).
   Elevador exterior: ${ELEVADOR_EXTERIOR} € por serviço. Materiais de embalamento à parte, pela tabela.
   O preço é POR HORA: o total sai das horas feitas no dia; isto é só a estimativa.`;

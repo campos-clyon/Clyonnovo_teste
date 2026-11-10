@@ -21,6 +21,7 @@ import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
 import { promessaDaForma, prazoDoEmailPorExtenso } from "./pagamento-na-plataforma";
+import { quemConfirmaAntesDeMarcar } from "./trabalho";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
@@ -131,6 +132,11 @@ export type AvisoDeContratacao = {
    * receber em notas e quanto não é dele. Nulo em tudo o resto.
    */
   dividaEmDinheiro?: { recebidoDoCliente: number; total: number } | null;
+  /**
+   * Um Trabalho CLYON (oferta de valor fixo): quem confirma é a CLYON, com o
+   * cliente — a frase de quem confirma muda, o prazo é o mesmo (10-11-2026, d28).
+   */
+  ofertaClyon?: boolean;
   baseUrl?: string;
 };
 
@@ -203,6 +209,7 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
 
     <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
       Quando estiver feito, carregue em «Está feito» na sua conta — não precisa de fotografias.
+      ${quemConfirmaAntesDeMarcar(p.ofertaClyon === true)}
       ${promessa.emailProParaQueServeAProva}
     </p>`;
 

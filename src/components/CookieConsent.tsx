@@ -174,10 +174,10 @@ export default function CookieConsent({ posicao = "barraDoSite" }: { posicao?: P
                 </div>
                 <div className="hidden sm:block">
                   <p className="text-base font-semibold text-white">
-                    Utilizamos cookies para melhorar a sua experiência no nosso site.
+                    Utilizamos cookies para melhorar a sua experiência na plataforma.
                   </p>
                   <p className="mt-2 text-sm leading-7 text-slate-300">
-                    Os cookies essenciais mantêm o site funcional. Pode gerir preferências de analítica e marketing
+                    Os cookies essenciais mantêm a plataforma a funcionar. Pode gerir preferências de analítica e marketing
                     sempre que quiser.
                   </p>
                   <Link href="/privacidade" className="mt-2 inline-block text-sm font-medium text-cyan-300 underline underline-offset-4 hover:text-cyan-200">

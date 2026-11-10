@@ -61,6 +61,7 @@ export async function avisarProfissionalEscolhido(a: {
         formaDePagamento: linha?.formaDePagamento ?? null,
         criadaEm: linha?.createdAt ?? null,
         dividaEmDinheiro: null,
+        ofertaClyon: true,
         baseUrl: a.baseUrl,
       });
       await avisarProfissionalContratadoPorPush({

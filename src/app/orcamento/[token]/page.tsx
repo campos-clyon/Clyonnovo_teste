@@ -4,6 +4,7 @@ import OrcamentoClient from "./OrcamentoClient";
 import type { Metadata } from "next";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { pecasEmLisboa } from "@/lib/hora-de-lisboa";
+import { TEXTOS_DO_EMAIL_DO_ORCAMENTO } from "@/lib/textos-do-orcamento";
 
 export async function generateMetadata(
   { params }: { params: Promise<{ token: string }> }
@@ -51,7 +52,7 @@ export default async function OrcamentoPage(
         <div className="mx-auto max-w-lg flex items-center justify-between">
           <div>
             <span className="text-lg font-bold text-[#0077B6] tracking-tight">CLYON</span>
-            <span className="ml-2 text-xs text-tinta-fraca">Recolha &middot; Mudança &middot; Esvaziamento</span>
+            <span className="ml-2 hidden text-xs text-tinta-fraca sm:inline">{TEXTOS_DO_EMAIL_DO_ORCAMENTO.porBaixoDoNome}</span>
           </div>
           <a
             href={`tel:${BUSINESS_PHONE}`}
@@ -74,7 +75,7 @@ export default async function OrcamentoPage(
               Confirme ou cancele o seu pedido
             </h1>
             <p className="mt-3 text-slate-500 text-base leading-relaxed max-w-md mx-auto">
-              Analisámos o seu pedido e preparámos uma proposta. Confirme para avançar ou cancele se mudou de ideias.
+              {TEXTOS_DO_EMAIL_DO_ORCAMENTO.naPagina}
             </p>
           </div>
 

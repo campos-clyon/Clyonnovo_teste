@@ -17,7 +17,7 @@ import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { quotaEmPontos } from "./quota-da-clyon";
-import { TAXA_IVA, TAXA_MAXIMA, type Taxas } from "./taxas-plataforma";
+import { TAXA_IVA, TAXA_MAXIMA, TAXA_TOTAL, type Taxas } from "./taxas-plataforma";
 
 export type PerguntaFrequente = {
   pergunta: string;
@@ -51,10 +51,14 @@ export function taxasDaAjuda(v: unknown): Taxas | null {
  * O EXEMPLO DO «RECEBI EM DINHEIRO» — 03-11-2026 (d15). Uma proposta de 100 €
  * + IVA num pedido com a taxa de 11 % (a regra geral de 22-10-2026). As contas
  * fazem-se aqui, para os números do exemplo baterem sempre uns com os outros.
+ *
+ * A taxa do exemplo lê-se de `TAXA_TOTAL` (taxas-plataforma.ts) desde
+ * 10-11-2026 (d28) — estava escrita à mão. O exemplo diz a taxa que usa
+ * («num pedido com a taxa de…»); a de cada pedido é a que ele guardou.
  */
 const EXEMPLO_EM_DINHEIRO = (() => {
   const semIva = 100;
-  const taxa = 0.11;
+  const taxa = TAXA_TOTAL;
   const iva = Math.round(semIva * TAXA_IVA * 100) / 100;
   const daTaxa = Math.round(semIva * taxa * 100) / 100;
   const n = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));

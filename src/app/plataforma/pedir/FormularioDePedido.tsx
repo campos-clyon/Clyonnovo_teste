@@ -756,7 +756,7 @@ export default function SimulatorThreePhaseForm() {
                     </button>
                     <a
                       href={`https://wa.me/${BUSINESS_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent(
-                        "Olá! Tentei enviar um pedido pelo site e não consegui.",
+                        "Olá! Tentei enviar um pedido pela plataforma e não consegui.",
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
