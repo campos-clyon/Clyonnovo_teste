@@ -11,6 +11,7 @@ import {
   type Respostas,
   type ValorDaResposta,
 } from "./perguntas-do-pedido";
+import { camposDaEscolha, linhaDaEscolha, type EscolhaDosParceiros } from "./parceiros-da-mudanca";
 
 /**
  * O NOVO PEDIDO (E3 v3, 29-10-2026) — o simulador do site, na app.
@@ -372,6 +373,10 @@ export type Rascunho = {
   sugestoesRecusadas?: string[];
   /** Quando mudou pela última vez (ISO), para a caixa do pedido a meio (d5, 03-11-2026). */
   guardadoEm?: string;
+  /** Na mudança: os parceiros que escolheu na lista (11-11-2026) — ids opacos da rota, nomes e a equipa. */
+  parceiros?: EscolhaDosParceiros;
+  /** Na mudança: não houve lista para escolher (desligada, sem parceiros, sem resposta) — o pedido segue como sempre. */
+  semListaDeParceiros?: boolean;
 };
 
 export function rascunhoVazio(): Rascunho {
@@ -720,7 +725,7 @@ export function faltaNoPasso(r: Rascunho, passo: Rascunho["passo"], c: Catalogo,
  * passo, filtrado), e o resumo valida tudo antes de enviar. O `passo` do
  * rascunho continua a dizer em que parte do simulador se está.
  */
-export type EcraDoPedir = "onde" | "oque" | "destino" | "fotos" | "acesso" | "quando" | "contacto" | "resumo";
+export type EcraDoPedir = "onde" | "oque" | "destino" | "fotos" | "acesso" | "quando" | "parceiros" | "contacto" | "resumo";
 
 const PARTE_DO_ECRA: Record<EcraDoPedir, { passo: Rascunho["passo"]; campos: readonly string[] | null }> = {
   onde: { passo: 2, campos: ["morada"] },
@@ -729,21 +734,26 @@ const PARTE_DO_ECRA: Record<EcraDoPedir, { passo: Rascunho["passo"]; campos: rea
   fotos: { passo: 1, campos: ["fotos"] },
   acesso: { passo: 2, campos: ["acesso", "acessoDestino"] },
   quando: { passo: 3, campos: ["quando", "data"] },
+  // A escolha dos parceiros confere-se no ecrã (a lista vem da rota) e, no fim, na rota do pedido.
+  parceiros: { passo: 3, campos: [] },
   contacto: { passo: 3, campos: ["nif", "nome", "telefone"] },
   resumo: { passo: 3, campos: null },
 };
 
-export const ECRAS_DO_PEDIR: readonly EcraDoPedir[] = ["onde", "oque", "destino", "fotos", "acesso", "quando", "contacto", "resumo"];
+export const ECRAS_DO_PEDIR: readonly EcraDoPedir[] = ["onde", "oque", "destino", "fotos", "acesso", "quando", "parceiros", "contacto", "resumo"];
 const eEcra = (v: unknown): v is EcraDoPedir => typeof v === "string" && (ECRAS_DO_PEDIR as readonly string[]).includes(v);
 
-/** Os ecrãs deste pedido, pela ordem: «Para onde vai?» só na mudança. */
-export function ecrasDoPedir(r: Pick<Rascunho, "servico">, c: Catalogo): EcraDoPedir[] {
+/**
+ * Os ecrãs deste pedido, pela ordem: «Para onde vai?» só na mudança, e os
+ * parceiros (11-11-2026) só na mudança e enquanto houver lista para escolher.
+ */
+export function ecrasDoPedir(r: Pick<Rascunho, "servico"> & Partial<Pick<Rascunho, "semListaDeParceiros">>, c: Catalogo): EcraDoPedir[] {
   const mudanca = detalhesDe(r, c) === "mudanca";
-  return ECRAS_DO_PEDIR.filter((e) => e !== "destino" || mudanca);
+  return ECRAS_DO_PEDIR.filter((e) => (e !== "destino" || mudanca) && (e !== "parceiros" || (mudanca && r.semListaDeParceiros !== true)));
 }
 
 /** O ecrã onde está (um rascunho dos três passos começa na primeira pergunta do passo). */
-export function ecraDe(r: Pick<Rascunho, "ecra" | "passo" | "servico">, c: Catalogo): EcraDoPedir {
+export function ecraDe(r: Pick<Rascunho, "ecra" | "passo" | "servico"> & Partial<Pick<Rascunho, "semListaDeParceiros">>, c: Catalogo): EcraDoPedir {
   const lista = ecrasDoPedir(r, c);
   if (eEcra(r.ecra) && lista.includes(r.ecra)) return r.ecra;
   return r.passo === 3 ? "quando" : "onde";
@@ -778,6 +788,9 @@ export function perguntaDoEcra(e: EcraDoPedir, d: Detalhes | null, semAndarAqui 
       return semAndarAqui ? "A carrinha fica perto?" : "Andar e elevador";
     case "quando":
       return "Quando precisa?";
+    case "parceiros":
+      // O título da rota substitui este logo que a lista chega.
+      return "Parceiros disponíveis para a sua mudança";
     case "contacto":
       return "Os seus contactos";
     case "resumo":
@@ -788,6 +801,7 @@ export function perguntaDoEcra(e: EcraDoPedir, d: Detalhes | null, semAndarAqui 
 /** O ecrã onde se altera uma linha do resumo. */
 export function ecraDaLinha(l: { rotulo: string; passo: Rascunho["passo"] }): EcraDoPedir {
   if (l.rotulo === "Fotografias") return "fotos";
+  if (l.rotulo === "Parceiros") return "parceiros";
   if (l.rotulo === "Para" || l.rotulo === "Percurso") return "destino";
   if (l.rotulo === "Acesso" || l.rotulo === "Acesso no destino") return "acesso";
   if (l.rotulo === "De" || l.rotulo === "Morada") return "onde";
@@ -1015,6 +1029,9 @@ export function linhasDoResumo(r: Rascunho, c: Catalogo): Array<{ rotulo: string
   if (r.desmontagem !== undefined) linhas.push({ rotulo: "Desmontagem", texto: r.desmontagem ? "Sim" : "Não", passo: 2 });
   const quando = textoDoQuando(r);
   if (quando) linhas.push({ rotulo: "Quando", texto: quando, passo: 3 });
+  if (mudanca && r.parceiros && r.parceiros.ids.length > 0 && !r.semListaDeParceiros) {
+    linhas.push({ rotulo: "Parceiros", texto: linhaDaEscolha(r.parceiros), passo: 3 });
+  }
   if (d === "manutencao" && r.repeticao && r.repeticao !== "pontual") {
     linhas.push({ rotulo: "Repetir", texto: nomeDe(REPETICAO, r.repeticao) ?? "", passo: 3 });
   }
@@ -1126,6 +1143,8 @@ export function corpoDoPedido(
     order.destinationAddress = moradaParaOSite(r.destino);
     order.destinationAccess = acessoParaOSite(r.acessoDestino);
     if (r.distanciaKm) order.movingDistance = { distanceKm: r.distanciaKm };
+    // Os parceiros que escolheu na lista (11-11-2026): a rota do pedido confere-os e envia-o logo a eles.
+    if (!r.semListaDeParceiros) Object.assign(order, camposDaEscolha(r.parceiros));
   } else {
     order.address = moradaParaOSite(r.morada);
     order.floor = semAndar(e) ? "rés-do-chão" : r.acesso.floor;

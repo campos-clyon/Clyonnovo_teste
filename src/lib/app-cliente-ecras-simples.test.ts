@@ -240,7 +240,9 @@ const base = (extra: Partial<Rascunho>): Rascunho => ({ ...rascunhoVazio(), ...e
 describe("Pedir, uma pergunta por ecrã", () => {
   it("a ordem: onde → o que → fotografias → andar → quando → contacto → resumo; na mudança, «Para onde vai?»", () => {
     expect(ecrasDoPedir(base({ servico: "recolha_moveis" }), c)).toEqual(["onde", "oque", "fotos", "acesso", "quando", "contacto", "resumo"]);
-    expect(ecrasDoPedir(base({ servico: "mudanca" }), c)).toEqual(["onde", "oque", "destino", "fotos", "acesso", "quando", "contacto", "resumo"]);
+    // Desde 11-11-2026, na mudança, a lista dos parceiros antes do contacto (sem lista, sai).
+    expect(ecrasDoPedir(base({ servico: "mudanca" }), c)).toEqual(["onde", "oque", "destino", "fotos", "acesso", "quando", "parceiros", "contacto", "resumo"]);
+    expect(ecrasDoPedir(base({ servico: "mudanca", semListaDeParceiros: true }), c)).toEqual(["onde", "oque", "destino", "fotos", "acesso", "quando", "contacto", "resumo"]);
     expect(perguntaDoEcra("onde", "moveis")).toBe("Onde é?");
     expect(perguntaDoEcra("acesso", "moveis")).toBe("Andar e elevador");
     expect(perguntaDoEcra("acesso", null, true)).toBe("A carrinha fica perto?");
@@ -279,7 +281,8 @@ describe("Pedir, uma pergunta por ecrã", () => {
     const novo = ler("app-cliente/src/componentes/NovoPedido.tsx");
     expect(novo).toContain("<PrecoEmLinhas conta={referencia.conta} rotuloDoTotal={ROTULO_DO_TOTAL_DE_REFERENCIA} />");
     // «Sim, é esta» só no «É nesta morada?» (02-11-2026); nos outros ecrãs, «Continuar».
-    expect(novo).toMatch(/const tituloDoBotao = ultimo \? "Enviar pedido" : ecra === "onde" && aEscolher && moradas \? botaoDaEscolha\(moradas\.length\) : "Continuar";/);
+    // Desde 11-11-2026, na lista dos parceiros da mudança, o botão da rota («Pedir orçamento»).
+    expect(novo).toMatch(/const tituloDoBotao = ultimo \? "Enviar pedido" : ecra === "onde" && aEscolher && moradas \? botaoDaEscolha\(moradas\.length\) : ecra === "parceiros" \? \(botaoDaLista\(listaAgora, idsDaLista\.length\) \?\? "Continuar"\) : "Continuar";/);
     expect(novo).toContain("<Botao titulo={tituloDoBotao}");
     expect(novo).toContain("<Progresso indice={indice} total={ecras.length} />");
   });

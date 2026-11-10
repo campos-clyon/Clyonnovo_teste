@@ -88,6 +88,24 @@ import {
   type SugestaoDoPedido,
 } from "../lib/sugestoes-do-pedido";
 import { aparenciaDoServico, CORES } from "../tema";
+import { ParceirosDaMudanca } from "./ParceirosDaMudanca";
+import {
+  alternarParceiro,
+  botaoDaLista,
+  corpoDaLista,
+  escolhaFeita,
+  listaValida,
+  passosDaResposta,
+  ROTA_DOS_PARCEIROS,
+  soOsDaLista,
+  type ListaDosParceiros,
+  type Pessoas,
+} from "../lib/parceiros-da-mudanca";
+
+/** Os ecrãs antes da lista dos parceiros: voltar a um deles volta a pedir a lista (as moradas, a casa ou o dia podem mudar). */
+const ANTES_DOS_PARCEIROS: readonly EcraDoPedir[] = ["onde", "oque", "destino", "fotos", "acesso", "quando"];
+/** O que a rota do pedido também diz quando falta a escolha («conferirEscolha»). */
+const ESCOLHA_UM_PARCEIRO = "Escolha pelo menos um parceiro.";
 
 /**
  * E3 — PEDIR, UMA PERGUNTA POR ECRÃ (02-11-2026, ordem do CEO com o sim do
@@ -1137,6 +1155,14 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
   const [enviando, setEnviando] = useState(false);
   const [erroDoEnvio, setErroDoEnvio] = useState<string | null>(null);
   const [enviado, setEnviado] = useState<{ id: number; aviso: string | null } | null>(null);
+  // Numa mudança enviada logo aos parceiros escolhidos, os passos que a rota do pedido manda (11-11-2026).
+  const [passosDoEnvio, setPassosDoEnvio] = useState<Array<{ titulo: string; texto: string }> | null>(null);
+  // A lista dos parceiros da mudança (11-11-2026): o que a rota respondeu, e a escolha enquanto ele a faz.
+  const [listaDosParceiros, setListaDosParceiros] = useState<ListaDosParceiros | null>(null);
+  const [aLerAListaDosParceiros, setALerAListaDosParceiros] = useState(false);
+  const [pessoasDaLista, setPessoasDaLista] = useState<Pessoas>(2);
+  const [idsDaLista, setIdsDaLista] = useState<string[]>([]);
+  const [procurarMaisParceiros, setProcurarMaisParceiros] = useState(false);
   const [perguntarAvisos, setPerguntarAvisos] = useState(false);
   const [paraEntrar, setParaEntrar] = useState(false);
   const [entrouAgora, setEntrouAgora] = useState(false);
@@ -1354,8 +1380,60 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origem?.formattedAddress, destino?.formattedAddress, catalogo]);
 
+  /*
+   * A LISTA DOS PARCEIROS DA MUDANÇA (11-11-2026), como o simulador do site: ao
+   * chegar ao ecrã, e a cada troca da equipa, pede-se a lista com o mesmo corpo
+   * que o pedido vai levar. Desligada ou sem resposta: o pedido segue como
+   * sempre, sem o ecrã. Sem parceiros: o ecrã diz que a CLYON procura, e segue.
+   */
+  const ecraAgora = r && catalogo ? ecraDe(r, catalogo) : null;
+  const naLista = ecraAgora === "parceiros";
+  useEffect(() => {
+    if (!naLista) return;
+    // Ao entrar: a escolha que já tinha feito (se voltou atrás).
+    const antes = rascunho.current?.parceiros;
+    setPessoasDaLista(antes?.pessoas ?? 2);
+    setIdsDaLista(antes?.ids ?? []);
+    setProcurarMaisParceiros(antes?.procurarMais ?? false);
+  }, [naLista]);
+  useEffect(() => {
+    if (!naLista || !catalogo || !rascunho.current) return;
+    const corpo = corpoDaLista(corpoDoPedido(rascunho.current, catalogo, { emailDaSessao: null, rascunhosAntes: 0 }).order, pessoasDaLista);
+    let vivo = true;
+    const semLista = () => {
+      if (!vivo || !montado.current) return;
+      setListaDosParceiros(null);
+      setMarcados(new Set());
+      setFalta(null);
+      mudar({ semListaDeParceiros: true, parceiros: undefined, ecra: "contacto", passo: passoDoEcra("contacto") });
+    };
+    if (!corpo) {
+      semLista();
+      return;
+    }
+    setALerAListaDosParceiros(true);
+    pedir<unknown>(ROTA_DOS_PARCEIROS, { metodo: "POST", corpo, semSessao: true })
+      .then((resposta) => {
+        if (!vivo) return;
+        const l = listaValida(resposta);
+        if (!l || !l.ligado) return semLista();
+        setListaDosParceiros(l);
+        // Quem já não está na lista (mudou a equipa) sai da escolha.
+        setIdsDaLista((ids) => soOsDaLista(ids, l));
+      })
+      .catch(() => semLista())
+      .finally(() => {
+        if (vivo) setALerAListaDosParceiros(false);
+      });
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [naLista, pessoasDaLista, catalogo]);
+
   if (enviado) {
-    const passos = catalogo?.textos.tresPassos ?? [];
+    // Numa mudança enviada logo aos parceiros escolhidos, os passos que a rota do pedido manda (11-11-2026).
+    const passos = passosDoEnvio ?? catalogo?.textos.tresPassos ?? [];
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }}>
         <RolagemComTeclado contentContainerStyle={{ padding: 20, gap: 16 }}>
@@ -1438,8 +1516,17 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
   // «É nesta morada?»: com sessão, enquanto lê as moradas, uma roda; depois, os cartões ou a procura.
   const aLerAsMoradas = ligado && moradas === null;
   const aEscolher = ligado && !!moradas && abreAEscolher(moradas, r.morada, outraMorada);
-  const pergunta = ecra === "onde" && aEscolher && moradas ? perguntaDaEscolha(moradas.length, mudanca) : perguntaDoEcra(ecra, d, semAndar(e));
-  const tituloDoBotao = ultimo ? "Enviar pedido" : ecra === "onde" && aEscolher && moradas ? botaoDaEscolha(moradas.length) : "Continuar";
+  const listaAgora = ecra === "parceiros" && !aLerAListaDosParceiros ? listaDosParceiros : null;
+  const pergunta =
+    ecra === "onde" && aEscolher && moradas
+      ? perguntaDaEscolha(moradas.length, mudanca)
+      : ecra === "parceiros" && listaAgora?.ligado && listaAgora.textos.titulo
+        ? listaAgora.textos.titulo
+        : perguntaDoEcra(ecra, d, semAndar(e));
+  // Na lista dos parceiros, o botão da rota («Pedir orçamento (2)»), 11-11-2026.
+  const tituloDoBotao = ultimo ? "Enviar pedido" : ecra === "onde" && aEscolher && moradas ? botaoDaEscolha(moradas.length) : ecra === "parceiros" ? (botaoDaLista(listaAgora, idsDaLista.length) ?? "Continuar") : "Continuar";
+  // Com parceiros escolhidos, os preços são os deles: a estimativa geral da CLYON sai do ecrã (11-11-2026).
+  const comParceiros = mudanca && !r.semListaDeParceiros && (ecra === "parceiros" || (r.parceiros?.ids.length ?? 0) > 0);
 
   const emFaltaAgora = camposEmFaltaNoEcra(r, ecra, c);
   const erroDe = (campo: string) => (marcados.has(campo) ? (emFaltaAgora.find((x) => x.campo === campo)?.texto ?? null) : null);
@@ -1459,10 +1546,12 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
     );
   }
 
-  function irPara(p: EcraDoPedir) {
+  function irPara(p: EcraDoPedir, mais: Partial<Rascunho> = {}) {
     setMarcados(new Set());
     setFalta(null);
-    mudar({ ecra: p, passo: passoDoEcra(p) });
+    // Voltar a um ecrã de antes da lista volta a pedi-la a seguir (11-11-2026).
+    const lista = ANTES_DOS_PARCEIROS.includes(p) ? { semListaDeParceiros: undefined } : {};
+    mudar({ ...lista, ...mais, ecra: p, passo: passoDoEcra(p) });
     scroll.current?.scrollTo({ y: 0, animated: false });
   }
 
@@ -1496,9 +1585,20 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
       return;
     }
     if (ecra === "fotos" && r.fotos.filter((x) => x.estado === "enviada").length === 0 && !r.semFotosAceite) return setSemFotos(true);
+    if (ecra === "parceiros") return avancarDosParceiros();
     if (!ultimo) irPara(seguinte());
     else if (!ligado) setParaEntrar(true);
     else void enviar();
+  }
+
+  /** «Pedir orçamento» na lista: guarda a escolha e segue para o contacto. Sem lista, segue sem ela. */
+  function avancarDosParceiros() {
+    if (aLerAListaDosParceiros) return;
+    const l = listaDosParceiros;
+    if (!l || !l.ligado || l.parceiros.length === 0) return irPara("contacto", { semListaDeParceiros: true, parceiros: undefined });
+    const escolha = escolhaFeita(idsDaLista, l, pessoasDaLista, procurarMaisParceiros);
+    if (!escolha) return setFalta(ESCOLHA_UM_PARCEIRO);
+    irPara("contacto", { parceiros: escolha });
   }
 
   async function enviar() {
@@ -1507,7 +1607,7 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
     setErroDoEnvio(null);
     try {
       const corpo = corpoDoPedido(r, c, { emailDaSessao: email, rascunhosAntes: await rascunhosComecados() });
-      const resposta = await pedir<{ id?: unknown }>(ROTA_DO_ENVIO, { metodo: "POST", corpo });
+      const resposta = await pedir<{ id?: unknown; passos?: unknown; parceirosEscolhidos?: unknown }>(ROTA_DO_ENVIO, { metodo: "POST", corpo });
       const id = Number(resposta.id);
       if (!Number.isInteger(id) || id <= 0) throw new ErroDaApi("Não foi possível registar o pedido.", 500);
       const aviso = avisoDasFotografias(r);
@@ -1517,14 +1617,20 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
       setOutraMorada(false);
       rascunho.current = rascunhoVazio();
       setR(rascunho.current);
+      setPassosDoEnvio(typeof resposta.parceirosEscolhidos === "number" && resposta.parceirosEscolhidos > 0 ? passosDaResposta(resposta.passos) : null);
       setEnviado({ id, aviso });
       void recarregarALista();
       if (!(await jaPerguntouPelosAvisos())) setPerguntarAvisos(true);
     } catch (e) {
       // O telefone errado vem com o campo; o 401 da S14 diz para entrar; o resto, a frase da especificação.
       if (e instanceof ErroDaApi && e.corpo.campo === "telefone") {
-        setFalta(e.message);
         irPara("contacto");
+        setFalta(e.message);
+      }
+      // Um parceiro escolhido deixou de estar disponível (ou a equipa): volta-se à lista, com a frase da rota.
+      else if (e instanceof ErroDaApi && (e.corpo.campo === "parceirosEscolhidos" || e.corpo.campo === "pessoas")) {
+        irPara("parceiros", { parceiros: undefined, semListaDeParceiros: undefined });
+        setFalta(e.message);
       }
       else if (e instanceof ErroDaApi && e.estado === 401) setParaEntrar(true);
       else setErroDoEnvio("Não foi possível registar o pedido.");
@@ -1601,7 +1707,7 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
               </View>
             ) : null}
             {/* A faixa da referência em todos os ecrãs (d1); no «oque» fica a caixa e no resumo a conta. */}
-            {servico && ecra !== "oque" && ecra !== "resumo" ? <FaixaDaReferencia referencia={referencia} /> : null}
+            {servico && ecra !== "oque" && ecra !== "resumo" && !comParceiros ? <FaixaDaReferencia referencia={referencia} /> : null}
             {ecra === "oque" ? <EcraOQue r={r} c={c} mudar={mudar} referencia={referencia} sugestoes={cartaoDasSugestoes("oque")} /> : null}
             {ecra === "destino" ? (
               <Marcado campo="destino">
@@ -1636,8 +1742,23 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
               </View>
             ) : null}
             {ecra === "quando" ? <EcraQuando r={r} c={c} mudar={mudar} /> : null}
+            {ecra === "parceiros" ? (
+              <ParceirosDaMudanca
+                lista={listaDosParceiros}
+                aCarregar={aLerAListaDosParceiros}
+                pessoas={pessoasDaLista}
+                aoMudarPessoas={setPessoasDaLista}
+                ids={idsDaLista}
+                aoTocar={(id) => {
+                  setFalta(null);
+                  setIdsDaLista((antes) => alternarParceiro(antes, id, listaDosParceiros?.ligado ? listaDosParceiros.maximo : 0));
+                }}
+                procurarMais={procurarMaisParceiros}
+                aoMudarProcurarMais={setProcurarMaisParceiros}
+              />
+            ) : null}
             {ecra === "contacto" ? <EcraContacto r={r} mudar={mudar} /> : null}
-            {ecra === "resumo" ? <EcraResumo r={r} c={c} mudar={mudar} referencia={referencia} irPara={irPara} /> : null}
+            {ecra === "resumo" ? <EcraResumo r={r} c={c} mudar={mudar} referencia={comParceiros ? null : referencia} irPara={irPara} /> : null}
 
             {falta ? <Aviso texto={falta} tom="mau" /> : null}
             {erroDoEnvio ? (
@@ -1652,7 +1773,7 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
         </RolagemComTeclado>
         {/* O botão fica sempre à vista, por baixo (nunca tapado pela barra nem pelo teclado). */}
         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: CORES.linha, backgroundColor: CORES.fundo }}>
-          <Botao titulo={tituloDoBotao} ocupado={enviando} desligado={ecra === "onde" && aLerAsMoradas} aoCarregar={avancar} />
+          <Botao titulo={tituloDoBotao} ocupado={enviando} desligado={(ecra === "onde" && aLerAsMoradas) || (ecra === "parceiros" && aLerAListaDosParceiros)} aoCarregar={avancar} />
         </View>
       </FornecedorDoCampoEmFalta>
       <Confirmacao
