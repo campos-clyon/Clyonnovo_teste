@@ -89,6 +89,8 @@ export const ECRA_DO_PAINEL_NA_APP: Record<string, string> = {
   faturacao: "/conta/faturacao",
   banco: "/conta/banco",
   seguranca: "/conta/palavra-passe",
+  // Os preços das mudanças (10-11-2026): até a app ter o ecrã, abre a conta.
+  "precos-mudancas": "/conta",
 };
 
 export function caminhoDoPainel(params: URLSearchParams): string {

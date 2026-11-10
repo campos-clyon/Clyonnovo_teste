@@ -1,4 +1,5 @@
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
+import type { TarifaDasMudancas } from "@/lib/conta-da-mudanca";
 import { MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA } from "@/lib/fotografias-da-carrinha";
 import { drizzle } from "drizzle-orm/mysql2";
 import { ORIGEM_DO_CONTACTO_A_MEIO } from "@/lib/contacto-a-meio";
@@ -17990,4 +17991,123 @@ export async function alteracoesPendentes(): Promise<
       ORDER BY alteracaoPendenteEm ASC LIMIT 100`,
   )) as [Array<{ id: number; serviceType: string | null; city: string | null; alteracaoPendenteJson: string | null; alteracaoPendenteEm: Date }>, unknown];
   return rows;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * OS PREÇOS DAS MUDANÇAS DE CADA PROFISSIONAL — 10-11-2026 (fase 1).
+ * Uma linha por profissional. A conta e os limites estão em
+ * `conta-da-mudanca.ts`; aqui só se lê e grava. Nada disto chega ao cliente
+ * nesta fase.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+let tarifasDasMudancasReady = false;
+
+/** As colunas que vieram depois da primeira versão entram aqui (idempotente). */
+const MIGRACOES_DAS_TARIFAS_DAS_MUDANCAS: string[] = [
+  "ALTER TABLE tarifasDasMudancas ADD COLUMN aparecerNaLista TINYINT(1) NOT NULL DEFAULT 0",
+  "ALTER TABLE tarifasDasMudancas ADD COLUMN actualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+];
+
+export async function ensureTarifasDasMudancasTable(): Promise<void> {
+  if (tarifasDasMudancasReady) return;
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS tarifasDasMudancas (
+      providerId        INT UNSIGNED NOT NULL PRIMARY KEY,
+      precoHora2        DECIMAL(7,2) NOT NULL,
+      precoHora3        DECIMAL(7,2) NULL DEFAULT NULL,
+      minimoHoras       DECIMAL(4,1) NOT NULL,
+      precoKm           DECIMAL(5,2) NOT NULL,
+      kmMinimo          INT          NOT NULL DEFAULT 0,
+      kmMaximo          INT          NOT NULL,
+      caixa             DECIMAL(6,2) NULL DEFAULT NULL,
+      cartaoMetro       DECIMAL(6,2) NULL DEFAULT NULL,
+      filmeRolo         DECIMAL(6,2) NULL DEFAULT NULL,
+      plasticoBolhaRolo DECIMAL(6,2) NULL DEFAULT NULL,
+      aparecerNaLista   TINYINT(1)   NOT NULL DEFAULT 0,
+      actualizadoEm     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await correrMigracoes(pool, "tarifasDasMudancas", MIGRACOES_DAS_TARIFAS_DAS_MUDANCAS, "tarifasDasMudancas");
+  tarifasDasMudancasReady = true;
+}
+
+export type LinhaDaTarifaDasMudancas = TarifaDasMudancas & { actualizadoEm: string | null };
+
+function numeroOuNull(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+export async function tarifaDasMudancasDe(providerId: number): Promise<LinhaDaTarifaDasMudancas | null> {
+  await ensureTarifasDasMudancasTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    `SELECT precoHora2, precoHora3, minimoHoras, precoKm, kmMinimo, kmMaximo,
+            caixa, cartaoMetro, filmeRolo, plasticoBolhaRolo, aparecerNaLista, actualizadoEm
+       FROM tarifasDasMudancas WHERE providerId = ? LIMIT 1`,
+    [providerId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const r = rows[0];
+  if (!r) return null;
+  const em = r.actualizadoEm;
+  return {
+    precoHora2: Number(r.precoHora2),
+    precoHora3: numeroOuNull(r.precoHora3),
+    minimoHoras: Number(r.minimoHoras),
+    precoKm: Number(r.precoKm),
+    kmMinimo: Number(r.kmMinimo),
+    kmMaximo: Number(r.kmMaximo),
+    caixa: numeroOuNull(r.caixa),
+    cartaoMetro: numeroOuNull(r.cartaoMetro),
+    filmeRolo: numeroOuNull(r.filmeRolo),
+    plasticoBolhaRolo: numeroOuNull(r.plasticoBolhaRolo),
+    aparecerNaLista: Number(r.aparecerNaLista) === 1,
+    actualizadoEm: em instanceof Date ? em.toISOString() : em ? String(em) : null,
+  };
+}
+
+/** Grava a tarifa inteira (já validada por `validarTarifa`). */
+export async function gravarTarifaDasMudancas(providerId: number, t: TarifaDasMudancas): Promise<void> {
+  await ensureTarifasDasMudancasTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const valores = [
+    t.precoHora2, t.precoHora3, t.minimoHoras, t.precoKm, t.kmMinimo, t.kmMaximo,
+    t.caixa, t.cartaoMetro, t.filmeRolo, t.plasticoBolhaRolo, t.aparecerNaLista ? 1 : 0,
+  ];
+  await pool.execute(
+    `INSERT INTO tarifasDasMudancas
+       (providerId, precoHora2, precoHora3, minimoHoras, precoKm, kmMinimo, kmMaximo,
+        caixa, cartaoMetro, filmeRolo, plasticoBolhaRolo, aparecerNaLista, actualizadoEm)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE
+       precoHora2 = VALUES(precoHora2), precoHora3 = VALUES(precoHora3),
+       minimoHoras = VALUES(minimoHoras), precoKm = VALUES(precoKm),
+       kmMinimo = VALUES(kmMinimo), kmMaximo = VALUES(kmMaximo),
+       caixa = VALUES(caixa), cartaoMetro = VALUES(cartaoMetro),
+       filmeRolo = VALUES(filmeRolo), plasticoBolhaRolo = VALUES(plasticoBolhaRolo),
+       aparecerNaLista = VALUES(aparecerNaLista), actualizadoEm = NOW()`,
+    [providerId, ...valores],
+  );
+}
+
+/** As categorias gravadas do profissional, em grupos (para saber se faz mudanças). */
+export async function categoriasDoProfissional(providerId: number): Promise<string[]> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute("SELECT categorias FROM providers WHERE id = ? LIMIT 1", [providerId])) as [
+    Array<{ categorias: string | null }>,
+    unknown,
+  ];
+  const cru = rows[0]?.categorias ?? null;
+  let lista = listaDeJson(cru);
+  if (lista.length === 0 && typeof cru === "string" && cru.trim() && !cru.trim().startsWith("[")) {
+    lista = cru.split(",").map((x) => x.trim()).filter(Boolean);
+  }
+  return normalizarCategorias(lista);
 }

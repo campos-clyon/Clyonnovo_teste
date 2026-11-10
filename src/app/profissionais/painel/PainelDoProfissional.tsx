@@ -15,6 +15,7 @@ import {
   MapPin,
   ArrowLeft,
   Star,
+  Truck,
   UserCog,
   Wallet,
   X,
@@ -38,6 +39,7 @@ import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
 import ConviteDaAppPro from "./ConviteDaAppPro";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
+import PrecosDasMudancas from "./PrecosDasMudancas";
 import PerfilPorCompletar from "./PerfilPorCompletar";
 import ComoFunciona from "./ComoFunciona";
 import InterruptorDoTema from "./InterruptorDoTema";
@@ -73,6 +75,7 @@ type Ecra =
   | "avaliacoes"
   | "ajuda"
   | "como-funciona"
+  | "precos-mudancas"
   | SeccaoDoPerfil;
 
 const ECRAS_VALIDOS: Ecra[] = [
@@ -84,6 +87,7 @@ const ECRAS_VALIDOS: Ecra[] = [
   "avaliacoes",
   "ajuda",
   "como-funciona",
+  "precos-mudancas",
   "dados",
   "servicos",
   "faturacao",
@@ -788,6 +792,15 @@ function PainelNoBrowser() {
           porCompletar={quantasFaltam("servicos")}
           onClick={() => abrir("servicos")}
         />
+        {/* Os preços das mudanças (10-11-2026): só a quem faz mudanças. */}
+        {perfil?.categorias.includes("mudancas") && (
+          <LinhaDeMenu
+            icone={Truck}
+            rotulo="Preços das mudanças"
+            activo={ecra === "precos-mudancas"}
+            onClick={() => abrir("precos-mudancas")}
+          />
+        )}
         <LinhaDeMenu
           icone={FileText}
           rotulo="Faturação e IVA"
@@ -923,6 +936,8 @@ function PainelNoBrowser() {
           />
         )}
         {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}
+
+        {ecra === "precos-mudancas" && <PrecosDasMudancas onVoltar={() => abrir("menu")} />}
 
         {ecra === "como-funciona" && (
           <ComoFunciona

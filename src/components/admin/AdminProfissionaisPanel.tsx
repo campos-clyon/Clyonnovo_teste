@@ -22,6 +22,7 @@ import {
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import ConfirmacoesDoVerificado from "@/components/admin/ConfirmacoesDoVerificado";
+import TarifaDasMudancasNaFicha from "@/components/admin/TarifaDasMudancasNaFicha";
 import { Miniatura } from "@/components/Anexo";
 import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/MoradaDaBase";
 import { CATEGORIAS_DOS_PROFISSIONAIS, nomeDaCategoria, normalizarCategorias } from "@/lib/service-categories";
@@ -620,6 +621,7 @@ function Cartao({
             })}
           </p>
           <PorqueNaoRecebeu providerId={p.id} />
+          {categorias.includes("mudancas") && <TarifaDasMudancasNaFicha providerId={p.id} />}
 
           {/* Sem coordenadas o raio não é aplicado. Não é um detalhe: o
               profissional pediu 40 km e está a receber por nome de cidade. */}
