@@ -119,3 +119,13 @@ describe("as ligações", () => {
     expect(ler("src/lib/fila-do-cliente.ts")).not.toMatch(/interromp|MARCA_DE_MAO/);
   });
 });
+
+describe("as atrasadas com mais de 48 h saem sozinhas (10-11-2026)", () => {
+  it("o prazo é de dois dias, e a base descarta-as ao abrir a Mesa e em cada passagem da ponte", async () => {
+    const { PRAZO_PARA_DESCARTAR_S } = await import("./fila-do-cliente");
+    expect(PRAZO_PARA_DESCARTAR_S).toBe(48 * 3600);
+    const db = readFileSync(join(process.cwd(), "src", "lib", "db.ts"), "utf8").replace(/\r\n/g, "\n");
+    expect(db).toMatch(/UPDATE whatsappFila SET enviadoEm = NOW\(\)\s+WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL/);
+    expect(db.match(/await descartarAtrasadasVelhas\(pool/g)?.length).toBe(2);
+  });
+});

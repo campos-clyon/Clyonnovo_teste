@@ -98,7 +98,9 @@ export async function verAImagem(base64: string, mime: string | null): Promise<s
   // Pouco tempo de propósito: a resposta ao cliente ainda espera pela rajada
   // depois disto, e a rota da ponte tem 60 s ao todo.
   for (const [i, nome] of modelos.slice(0, 2).entries()) {
-    const segundos = i === 0 ? 10 : 6;
+    // 10-11-2026: 10 s não chegavam ao gemini-3.6-flash numa fotografia grande
+    // (falhou às 16h17); 14 + 6 = 20 s ainda cabem nos 60 s da rota.
+    const segundos = i === 0 ? 14 : 6;
     const comecou = Date.now();
     try {
       const model = client.getGenerativeModel({ model: nome, generationConfig: { temperature: 0 } });

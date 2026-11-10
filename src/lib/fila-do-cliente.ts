@@ -26,6 +26,15 @@ import { horaDeFalar } from "./assistente-interruptores";
 /** Duas horas na fila e já não sai sozinha. */
 export const PRAZO_DA_FILA_S = 2 * 3600;
 
+/**
+ * DOIS DIAS E JÁ NÃO SE DECIDE — 10-11-2026 (dono: «pode corrigir»). Uma
+ * atrasada que ninguém enviou em 48 h já não serve ao cliente (respostas de
+ * 5 e 8 dias, uma com o preço antigo das peças, 32 €, ficaram na Mesa à
+ * espera de um gesto). Passado este prazo sai sozinha da caixa, descartada
+ * como o botão «Descartar»: não chega a sair, e o selo deixa de a contar.
+ */
+export const PRAZO_PARA_DESCARTAR_S = 48 * 3600;
+
 /** O cliente escreveu há menos disto: a conversa está viva, e a Vitória responde. */
 export const CONVERSA_VIVA_S = 30 * 60;
 

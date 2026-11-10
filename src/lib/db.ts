@@ -5673,7 +5673,7 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
    */
   try {
     const [linhas] = (await pool.execute(
-      "SELECT COUNT(*) AS n FROM whatsappFila WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL",
+      "SELECT COUNT(*) AS n FROM whatsappFila WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL AND criadoEm >= NOW() - INTERVAL 48 HOUR",
     )) as any[];
     saida.whatsapp = (saida.whatsapp ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
   } catch (e) {
@@ -10303,6 +10303,7 @@ export async function filaWhatsAppParaAPonte(limite = 20, agora: Date = new Date
   if (!pool) return [];
   const { oQueFazerNaFila } = await import("./fila-do-cliente");
   const { horaDeFalar } = await import("./assistente-interruptores");
+  await descartarAtrasadasVelhas(pool as never);
   const [rows] = (await pool.execute(
     `SELECT id, telefone, texto, (soltaEm IS NOT NULL) AS solta,
             TIMESTAMPDIFF(SECOND, COALESCE(soltaEm, criadoEm), NOW()) AS idadeS
@@ -10368,11 +10369,29 @@ export type MensagemAtrasadaWhatsApp = MensagemNaFilaWhatsApp & {
   haMinutos: number;
 };
 
+/**
+ * As atrasadas com mais de 48 h saem da caixa sozinhas, descartadas (não
+ * chegaram a sair) — 10-11-2026. Corre ao abrir a Mesa e em cada passagem
+ * da ponte; o LIMIT trava o custo.
+ */
+async function descartarAtrasadasVelhas(pool: { execute: (sql: string, p?: unknown[]) => Promise<unknown> }): Promise<void> {
+  const { PRAZO_PARA_DESCARTAR_S } = await import("./fila-do-cliente");
+  await pool
+    .execute(
+      `UPDATE whatsappFila SET enviadoEm = NOW()
+        WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL
+          AND criadoEm < NOW() - INTERVAL ${PRAZO_PARA_DESCARTAR_S} SECOND
+        LIMIT 200`,
+    )
+    .catch((e) => console.error("[whatsapp/fila] não descartei as velhas:", e instanceof Error ? e.message : e));
+}
+
 /** As atrasadas — a caixa da Mesa onde a equipa decide (d7). */
 export async function filaWhatsAppAtrasadas(limite = 50): Promise<MensagemAtrasadaWhatsApp[]> {
   await ensureFilaWhatsAppTable();
   const pool = await getPool();
   if (!pool) return [];
+  await descartarAtrasadasVelhas(pool as never);
   const [rows] = (await pool.execute(
     `SELECT id, telefone, texto, TIMESTAMPDIFF(MINUTE, criadoEm, NOW()) AS haMinutos
        FROM whatsappFila
