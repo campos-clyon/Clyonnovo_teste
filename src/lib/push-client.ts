@@ -44,8 +44,15 @@ export async function isPushEnabled(): Promise<boolean> {
   }
 }
 
+/**
+ * Para onde vai a subscrição. Por omissão, a rota do cliente e do profissional
+ * (pela sessão do cookie); o backoffice manda-a à dele, com o token (d23).
+ */
+export type DestinoDaSubscricao = { rota: string; cabecalhos?: Record<string, string> };
+const DESTINO_DE_SEMPRE: DestinoDaSubscricao = { rota: "/api/push/subscribe" };
+
 /** Ativa as notificações do navegador. Devolve true se ficou subscrito. */
-export async function enablePush(): Promise<boolean> {
+export async function enablePush(destino: DestinoDaSubscricao = DESTINO_DE_SEMPRE): Promise<boolean> {
   if (!isPushSupported()) return false;
 
   const permission = await Notification.requestPermission();
@@ -64,26 +71,26 @@ export async function enablePush(): Promise<boolean> {
     });
   }
 
-  const res = await fetch("/api/push/subscribe", {
+  const res = await fetch(destino.rota, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subscription: sub.toJSON() }),
+    headers: { "Content-Type": "application/json", ...(destino.cabecalhos ?? {}) },
+    body: JSON.stringify({ accao: "ligar", subscription: sub.toJSON() }),
   });
   return res.ok;
 }
 
 /** Desativa as notificações do navegador neste dispositivo. */
-export async function disablePush(): Promise<void> {
+export async function disablePush(destino?: DestinoDaSubscricao): Promise<void> {
   if (!isPushSupported()) return;
   const reg = await navigator.serviceWorker.getRegistration("/sw.js");
   if (!reg) return;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return;
 
-  await fetch("/api/push/unsubscribe", {
+  await fetch(destino?.rota ?? "/api/push/unsubscribe", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ endpoint: sub.endpoint }),
+    headers: { "Content-Type": "application/json", ...(destino?.cabecalhos ?? {}) },
+    body: JSON.stringify({ accao: "desligar", endpoint: sub.endpoint }),
   }).catch(() => {});
   await sub.unsubscribe().catch(() => {});
 }

@@ -355,7 +355,8 @@ export async function POST(req: NextRequest) {
       const { registarMensagemWhatsApp } = await import("@/lib/db");
       await registarMensagemWhatsApp(telefone, "out", `${MARCA_DE_MAO} ${daMao}`).catch(() => {});
     }
-    await interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp");
+    // Foi uma pessoa: quem respondeu já tem a conversa — sem aviso à equipa (d23).
+    await interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp", "pessoa");
     return NextResponse.json({ ok: true });
   }
 

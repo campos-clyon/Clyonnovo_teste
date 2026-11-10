@@ -1,5 +1,6 @@
 "use client";
 
+import AvisosDaEquipa from "@/components/admin/AvisosDaEquipa";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
@@ -1365,6 +1366,9 @@ export default function AdminWhatsAppPanel() {
             </div>
           </div>
         )}
+
+        {/* Os avisos no telemóvel: as conversas que a Vitória passa a uma pessoa e as que esperam há mais de 2 h (d23). */}
+        <AvisosDaEquipa token={token} />
 
         {/* Os separadores: as listas antigas, agora com o número ao lado do nome. */}
         <div className="mt-3 flex flex-wrap gap-1.5 border-b border-slate-800 pb-3">

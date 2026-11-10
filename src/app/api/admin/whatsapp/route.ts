@@ -918,7 +918,8 @@ async function naConversa(
       return null;
     }
     case "interromper":
-      await interromperNumeroWhatsApp(telefone, nota ?? "Pelo backoffice");
+      // Foi uma pessoa, no backoffice: sem aviso à equipa (d23).
+      await interromperNumeroWhatsApp(telefone, nota ?? "Pelo backoffice", "pessoa");
       return null;
     case "retomar":
       await retomarNumeroWhatsApp(telefone);

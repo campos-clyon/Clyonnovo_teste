@@ -326,6 +326,21 @@ function motivoDoFecho(fecho: NonNullable<FactosDaConversa["fecho"]>): string {
   return fecho.motivo ? `${quem}: ${fecho.motivo}` : quem;
 }
 
+/**
+ * «DEIXO-A ANOTADA PARA UMA PESSOA DA CLYON LHE RESPONDER» — 10-11-2026 (d23).
+ *
+ * A Vitória não soube responder e prometeu uma pessoa (`PERGUNTA_ANOTADA`, em
+ * voz-da-vitoria.ts — um teste garante que a frase continua a conter esta
+ * marca). A última palavra era dela, e a conversa caía em «À espera do
+ * cliente»: a promessa ficava sem ninguém. Agora é «Por responder» — à espera
+ * de nós —, e entra no «Do nosso lado» da Mesa passadas 2 h.
+ */
+export const MARCA_DA_PERGUNTA_ANOTADA = "anotada para uma pessoa da CLYON";
+
+export function deixouAnotadoParaUmaPessoa(texto: string | null | undefined): boolean {
+  return (texto ?? "").toLowerCase().includes(MARCA_DA_PERGUNTA_ANOTADA.toLowerCase());
+}
+
 /** Em que pé está esta conversa, e porquê. */
 export function naMesa(f: FactosDaConversa): ConversaNaMesa {
   const dono: ConversaNaMesa["dono"] = f.entregue ? "equipa" : "assistente";
@@ -396,6 +411,23 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
       estado: "por_responder",
       porque: `${reaberta}escreveu ${haQuanto(palavra.haSegundos)}: «${resumoDaMensagem(palavra.texto)}»${quem}${lida}`
         .replace(/^escreveu/, "Escreveu"),
+    };
+  }
+
+  /*
+   * A VITÓRIA DEIXOU-A ANOTADA PARA UMA PESSOA (d23) — falta a resposta de
+   * cá. Um «Já respondi» do painel depois dela, ou uma resposta da equipa
+   * (que passa a ser a última palavra), tiram-na daqui.
+   */
+  if (
+    palavra?.de === "vitoria" &&
+    deixouAnotadoParaUmaPessoa(palavra.texto) &&
+    !(f.respondida?.haSegundos != null && palavra.haSegundos != null && f.respondida.haSegundos <= palavra.haSegundos)
+  ) {
+    return {
+      ...base,
+      estado: "por_responder",
+      porque: `A Vitória deixou uma pergunta anotada para uma pessoa ${haQuanto(palavra.haSegundos)} — falta responder${lida}`,
     };
   }
 

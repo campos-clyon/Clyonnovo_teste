@@ -11603,17 +11603,37 @@ export async function saudeDaCompreensao(): Promise<{ quando: string; motivo: st
   }
 }
 
-export async function interromperNumeroWhatsApp(telefone: string, motivo?: string): Promise<void> {
+/**
+ * ENTREGAR A CONVERSA A UMA PESSOA — o assistente cala-se até alguém a devolver.
+ *
+ * QUEM ENTREGA — 10-11-2026 (d23). Quando é a Vitória (por omissão: todas as
+ * portas dela chamam isto sem o terceiro argumento), a equipa do WhatsApp
+ * recebe um aviso no telemóvel, com o n.º do pedido ou o contacto — antes, a
+ * conversa ficava calada e ninguém sabia. Quando é uma pessoa («pessoa»: a
+ * resposta à mão no telemóvel, o botão do backoffice, o fecho desfeito), quem
+ * a entregou já a tem — não se avisa ninguém. Só a PRIMEIRA entrega avisa: um
+ * número já entregue que volta a passar aqui só muda o motivo.
+ */
+export async function interromperNumeroWhatsApp(
+  telefone: string,
+  motivo?: string,
+  quem: "vitoria" | "pessoa" = "vitoria",
+): Promise<void> {
   const digitos = soDigitos(telefone);
   if (digitos.length < 9) throw new Error("Número demasiado curto");
   await ensureWhatsappEstadoTables();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  const jaEstava = await numeroInterrompidoWhatsApp(digitos).catch(() => false);
   await pool.execute(
     `INSERT INTO whatsappInterrompidos (telefone, motivo) VALUES (?, ?)
      ON DUPLICATE KEY UPDATE motivo = VALUES(motivo)`,
     [digitos, motivo?.trim() || null],
   );
+  if (quem === "vitoria" && !jaEstava) {
+    const { avisarAEquipaDaEntrega } = await import("./avisos-a-equipa-na-base");
+    await avisarAEquipaDaEntrega(digitos, motivo?.trim() || null);
+  }
 }
 
 export async function retomarNumeroWhatsApp(telefone: string): Promise<void> {
@@ -16767,7 +16787,7 @@ export async function desfazerFechoDoAssistente(
   // Quem desfez vai ter de falar com o cliente. O assistente cala-se aí.
   const telefone = await telefoneDoPedido(r.pedidoId);
   if (telefone) {
-    await interromperNumeroWhatsApp(telefone, "Fecho desfeito - fale com o cliente").catch(() => {});
+    await interromperNumeroWhatsApp(telefone, "Fecho desfeito - fale com o cliente", "pessoa").catch(() => {});
   }
 
   return { ok: true, pedidoId: r.pedidoId, repostas };

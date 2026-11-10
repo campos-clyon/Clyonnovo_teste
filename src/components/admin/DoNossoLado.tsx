@@ -2,6 +2,7 @@
 
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 
+import AvisosDaEquipa from "@/components/admin/AvisosDaEquipa";
 import { ProcuraGlobalContext } from "@/components/admin/NoutrosSitios";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
@@ -112,6 +113,8 @@ export default function DoNossoLado({
           <p className="text-[11px] text-slate-500">
             O que está à espera de nós. Carregue numa linha para abrir o pedido.
           </p>
+          {/* Os avisos no telemóvel do que fica parado aqui (d23). */}
+          <AvisosDaEquipa token={token} />
           {visiveis.length === 0 ? (
             <p className="mt-1.5 text-xs text-slate-400">Nada à espera de nós.</p>
           ) : (

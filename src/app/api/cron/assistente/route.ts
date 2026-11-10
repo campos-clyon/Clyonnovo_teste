@@ -3,6 +3,7 @@ import { registarSemFalhar } from "@/lib/db";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 import { correrOAssistente } from "@/lib/assistente-automatico";
 import { correrAsRecolhasParadas } from "@/lib/recolhas-paradas";
+import { correrOsAvisosDaEquipaNaBase } from "@/lib/avisos-a-equipa-na-base";
 import { bearerConfere } from "@/lib/segredo-igual";
 
 export const runtime = "nodejs";
@@ -120,7 +121,41 @@ export async function GET(req: NextRequest) {
         },
       }),
     );
-    return NextResponse.json({ ok: true, ...r, recolhasParadas: paradas, paradasFalharam });
+    /*
+     * OS AVISOS À EQUIPA — 10-11-2026 (d23). O que está parado no «Do nosso
+     * lado» há mais de 2 h, no «Por decidir» há mais de 1 h, e as conversas
+     * que a Vitória entregou fora de horas: um aviso no telemóvel da equipa,
+     * uma vez por espera, só das 08h às 21h. Ver `avisos-a-equipa.ts`. Uma
+     * falha aqui não estraga a passagem.
+     */
+    const avisosDaEquipa = await correrOsAvisosDaEquipaNaBase().catch((e) => {
+      console.error("[cron/assistente] avisos à equipa:", e);
+      return null;
+    });
+    if (avisosDaEquipa && avisosDaEquipa.enviados + avisosDaEquipa.entregasEnviadas > 0) {
+      await registarSemFalhar({
+        acontecimento: "assistente_alerta",
+        autorTipo: "assistente",
+        autorNome: "avisos à equipa",
+        resumo: `${avisosDaEquipa.enviados} aviso(s) do que está parado, ${avisosDaEquipa.entregasEnviadas} conversa(s) entregue(s) anunciada(s).`,
+        detalhe: { linhas: avisosDaEquipa.linhas.slice(0, 40), falhas: avisosDaEquipa.falhas.slice(0, 10) },
+      });
+    }
+    return NextResponse.json({
+      ok: true,
+      ...r,
+      recolhasParadas: paradas,
+      paradasFalharam,
+      avisosDaEquipa: avisosDaEquipa
+        ? {
+            emHorario: avisosDaEquipa.emHorario,
+            acimaDosPrazos: avisosDaEquipa.acimaDosPrazos,
+            enviados: avisosDaEquipa.enviados,
+            entregasEnviadas: avisosDaEquipa.entregasEnviadas,
+            falhas: avisosDaEquipa.falhas.length,
+          }
+        : null,
+    });
   } catch (error) {
     console.error("[cron/assistente]", error);
     return NextResponse.json({ error: "Erro na passagem do assistente" }, { status: 500 });
