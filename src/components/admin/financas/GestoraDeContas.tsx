@@ -19,6 +19,10 @@ import PainelDasFinancas from "./PainelDasFinancas";
 import ListaDeTransacoes, { type FiltroDoTipo } from "./ListaDeTransacoes";
 import FormularioDoMovimento from "./FormularioDoMovimento";
 import ContasECategorias from "./ContasECategorias";
+import ResumoDasFinancas from "./ResumoDasFinancas";
+import GastosDaClyon from "./GastosDaClyon";
+import type { Gasto } from "@/lib/financas-gastos";
+import type { EntradaDaPlataforma, PagamentoAAssistente, PeriodoDaSocia } from "@/lib/financas-do-mes";
 
 /**
  * A GESTORA DE CONTAS DA CLYON — a secção das Carteiras, desde 14-10-2026.
@@ -33,16 +37,31 @@ import ContasECategorias from "./ContasECategorias";
  * IBAN para lho mandar —, que ficou cá dentro e não se perdeu.
  */
 
-type Separador = "painel" | "transacoes" | "contas" | "profissionais";
+type Separador = "painel" | "gastos" | "transacoes" | "saldos" | "contas" | "profissionais";
 
 const SEPARADORES: Array<{ id: Separador; rotulo: string }> = [
-  { id: "painel", rotulo: "Painel" },
+  // O resumo do mês, os gastos e a previsão do ano — 07-11-2026 (d21).
+  { id: "painel", rotulo: "Resumo do mês" },
+  { id: "gastos", rotulo: "Gastos" },
   { id: "transacoes", rotulo: "Transações" },
+  { id: "saldos", rotulo: "Saldos do mês" },
   { id: "contas", rotulo: "Contas e categorias" },
   { id: "profissionais", rotulo: "A pagar aos profissionais" },
 ];
 
-type Dados = { contas: Conta[]; categorias: Categoria[]; movimentos: Movimento[]; hoje: string };
+type Dados = {
+  contas: Conta[];
+  categorias: Categoria[];
+  movimentos: Movimento[];
+  hoje: string;
+  /** `null`: não se conseguiu ler os pagamentos. */
+  entradas: EntradaDaPlataforma[] | null;
+  gastos: Gasto[];
+  /** `null` para quem não é o administrador. */
+  assistentes: PagamentoAAssistente[] | null;
+  socia: PeriodoDaSocia[] | null;
+  eAdmin: boolean;
+};
 
 /**
  * A categoria do último lançado à mão, de cada tipo: o formulário abre nela,
@@ -104,6 +123,11 @@ export default function GestoraDeContas({ novasPorTransferir = 0 }: { novasPorTr
           categorias: d.categorias ?? [],
           movimentos: d.movimentos ?? [],
           hoje: d.hoje ?? diaEmLisboa(new Date()),
+          entradas: d.entradas === undefined ? [] : d.entradas,
+          gastos: d.gastos ?? [],
+          assistentes: d.assistentes ?? null,
+          socia: d.socia ?? null,
+          eAdmin: d.eAdmin === true,
         });
         setErro("");
       } catch {
@@ -134,8 +158,9 @@ export default function GestoraDeContas({ novasPorTransferir = 0 }: { novasPorTr
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">Plataforma</p>
             <h2 className="mt-1 font-[Poppins] text-2xl font-bold text-white">Finanças</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-              As contas da CLYON: o que entra e o que sai, por categoria. O que os clientes pagam e o que se
-              transfere aos profissionais entra sozinho; o resto lança-se aqui.
+              As contas da CLYON: o bruto, o IVA, a receita, os gastos e o lucro de cada mês, e a previsão do ano.
+              O que os clientes pagam e o que se transfere aos profissionais entra sozinho; os gastos e o resto lançam-se aqui.
+              As contas de teste ficam sempre de fora.
             </p>
           </div>
           {separador !== "profissionais" && (
@@ -192,7 +217,7 @@ export default function GestoraDeContas({ novasPorTransferir = 0 }: { novasPorTr
               </button>
             ))}
           </div>
-          {(separador === "painel" || separador === "transacoes") && (
+          {(separador === "painel" || separador === "gastos" || separador === "transacoes" || separador === "saldos") && (
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -246,6 +271,32 @@ export default function GestoraDeContas({ novasPorTransferir = 0 }: { novasPorTr
         </p>
       ) : dados ? (
         separador === "painel" ? (
+          <ResumoDasFinancas
+            dados={{
+              entradas: dados.entradas ?? [],
+              semEntradas: dados.entradas == null,
+              movimentos: dados.movimentos,
+              categorias: dados.categorias,
+              gastos: dados.gastos,
+              assistentes: dados.eAdmin ? dados.assistentes : null,
+              socia: dados.socia,
+              eAdmin: dados.eAdmin,
+            }}
+            mes={mes}
+            hoje={dados.hoje}
+            onVerGastos={() => setSeparador("gastos")}
+          />
+        ) : separador === "gastos" ? (
+          <GastosDaClyon
+            gastos={dados.gastos}
+            categorias={dados.categorias}
+            mes={mes}
+            hoje={dados.hoje}
+            token={token}
+            podeEliminar={podeApagar}
+            onMudou={() => void carregar(true)}
+          />
+        ) : separador === "saldos" ? (
           <PainelDasFinancas
             contas={dados.contas}
             categorias={dados.categorias}

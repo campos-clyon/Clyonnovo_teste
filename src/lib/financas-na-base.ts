@@ -1,4 +1,7 @@
 import { getPool } from "./db";
+import { contaDaLinha } from "./conta-do-pagamento";
+import { dividirEntrada, type EntradaDaPlataforma, type PagamentoAAssistente } from "./financas-do-mes";
+import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import {
   CATEGORIAS_DE_ORIGEM,
@@ -483,4 +486,88 @@ export async function apagarCategoria(id: number): Promise<Resultado> {
     return { ok: false, erro: `Tem ${n[0].n} movimento(s). Mude-os de categoria antes de a apagar.` };
   }
   return escrever("DELETE FROM financasCategorias WHERE id = ?", [id], "");
+}
+
+// ─── As contas do mês (d21, 07-11-2026) ─────────────────────────────────────
+
+/**
+ * Uma leitura que, se falhar, não deita a gestora abaixo: as contas do mês
+ * dizem que não conseguiram ler, e o resto abre na mesma.
+ */
+async function lerOuNada(sql: string, onde: string): Promise<Array<Record<string, unknown>> | null> {
+  try {
+    return await lerSeHouver(sql);
+  } catch (e) {
+    console.error(`[financas] ${onde}`, e);
+    return null;
+  }
+}
+
+/**
+ * OS PAGAMENTOS DADOS POR PAGOS, EM TRÊS PARTES — IVA, taxa da plataforma e
+ * a parte do profissional —, pela conta em degraus de cada trabalho
+ * (`contaDaLinha`, a mesma dos Pagamentos). Só produção; os pagamentos de
+ * teste e as contas de teste ficam de fora, sempre.
+ */
+export async function entradasDaPlataforma(): Promise<EntradaDaPlataforma[] | null> {
+  const linhas = await lerOuNada(
+    `SELECT pg.id, pg.pedidoId, pg.metodo, pg.valor, pg.valorPago, pg.comissaoEupago, pg.pagoEm, pg.trid, pg.parte,
+            n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.semFactura, n.ofertaClyon,
+            n.pagamentoParaQue, n.createdAt AS negociacaoCriadaEm,
+            o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon
+       FROM pagamentos pg
+       LEFT JOIN negociacoes n ON n.id = pg.negociacaoId
+       LEFT JOIN providers pr ON pr.id = pg.providerId
+       LEFT JOIN simulatorOrders o ON o.id = pg.pedidoId
+      WHERE pg.estado = 'pago' AND pg.pagoEm IS NOT NULL AND pg.ambiente = 'producao'
+        AND COALESCE(pg.deTeste, 0) = 0 AND COALESCE(pr.contaDeTeste, 0) = 0`,
+    "entradas",
+  );
+  if (!linhas) return null;
+  const fora: EntradaDaPlataforma[] = [];
+  for (const l of linhas) {
+    const d = instanteDaBase((l.pagoEm as Date | string | null) ?? null);
+    if (!d) continue;
+    const valor = Number(l.valorPago ?? l.valor ?? 0);
+    if (!(valor > 0)) continue;
+    fora.push(
+      dividirEntrada({
+        id: Number(l.id),
+        pedidoId: Number(l.pedidoId),
+        dia: diaEmLisboa(d),
+        metodo: String(l.metodo ?? ""),
+        valor,
+        formaDoTrabalho: (l.formaDePagamento as string) ?? null,
+        trid: (l.trid as string) ?? null,
+        parte: (l.parte as string) ?? null,
+        comissaoEupago: l.comissaoEupago != null ? Number(l.comissaoEupago) : null,
+        conta: contaDaLinha(l, true, false),
+      }),
+    );
+  }
+  return fora;
+}
+
+/** As comissões pagas aos assistentes — um período marcado como pago é um pagamento. */
+export async function pagamentosAosAssistentes(): Promise<PagamentoAAssistente[] | null> {
+  const linhas = await lerOuNada(
+    `SELECT cp.valorPago, cp.pagoEm, cp.periodoInicio, cp.periodoFim, c.nome
+       FROM comissoesPagas cp
+       LEFT JOIN colaboradores c ON c.id = cp.assistenteId`,
+    "assistentes",
+  );
+  if (!linhas) return null;
+  return linhas.flatMap((l) => {
+    const d = instanteDaBase((l.pagoEm as Date | string | null) ?? null);
+    const valor = Number(l.valorPago ?? 0);
+    if (!d || !(valor > 0)) return [];
+    return [
+      {
+        dia: diaEmLisboa(d),
+        valor,
+        nome: String(l.nome ?? "Assistente"),
+        periodo: `${String(l.periodoInicio ?? "")} a ${String(l.periodoFim ?? "")}`,
+      },
+    ];
+  });
 }
