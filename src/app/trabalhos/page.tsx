@@ -1,5 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { og } from "@/lib/open-graph";
+import { jsonLd } from "@/lib/json-ld";
+import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, MessageSquareQuote, Sparkles } from "lucide-react";
@@ -12,12 +14,14 @@ import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
 export const revalidate = 300;
 
+const TITULO = "Trabalhos Realizados — Recolha e Esvaziamento";
+const DESCRICAO = `Recolhas de móveis e entulho, esvaziamentos e mudanças feitos em Lisboa, Margem Sul e Setúbal, em fotos reais. ${NOTAS_EM_LINHA}.`;
+
 export const metadata: Metadata = {
-  title: "Trabalhos Realizados — Recolha e Esvaziamento",
+  title: TITULO,
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
-  description:
-    `Recolhas de móveis e entulho, esvaziamentos e mudanças feitos em Lisboa, Margem Sul e Setúbal, em fotos reais. ${NOTAS_EM_LINHA}.`,
+  description: DESCRICAO,
   keywords: [
     "trabalhos CLYON",
     "portefólio recolha de móveis",
@@ -50,6 +54,24 @@ export const metadata: Metadata = {
  * confirmar. Não se atribui serviço nenhum a nenhuma — a fonte não o diz.
  */
 const testimonials = reviews.slice(0, 4);
+
+/*
+ * 10-11-2026 (d29): a página diz ao Google o que é — uma colecção de trabalhos,
+ * sobre a CLYON, com o seu caminho. Sem nota nem avaliações declaradas (as
+ * razões estão em /avaliacoes) e sem as fotografias: vêm da base e mudam.
+ */
+const breadcrumbSchema = caminhoDaPagina([["Trabalhos", "/trabalhos"]]);
+
+const paginaSchema = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: TITULO,
+  url: `${SITE_URL}/trabalhos`,
+  description: DESCRICAO,
+  inLanguage: "pt-PT",
+  // O negócio é o LocalBusiness do layout, por @id — não se repete aqui.
+  about: PRESTADOR,
+};
 
 const stats = [
   // Era "163", escrito à mão — o total antigo que o prova-social.test.ts
@@ -344,6 +366,9 @@ export default async function TrabalhosPage() {
           </div>
         </div>
       </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(paginaSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
     </div>
   );
 }

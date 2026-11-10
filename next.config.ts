@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 import { getAllCidadeSlugs } from "./src/lib/mudancas-cidades";
-import { TERRAS_JUNTAS_AO_CONCELHO, redirectsDasConsolidacoes } from "./src/lib/paginas-consolidadas";
+import {
+  TERRAS_JUNTAS_AO_CONCELHO,
+  redirectsDasConsolidacoes,
+  redirectsDasFormasCompridas,
+} from "./src/lib/paginas-consolidadas";
 
 /*
  * As cidades que TEM mesmo pagina de mudancas.
@@ -108,8 +112,14 @@ const nextConfig: NextConfig = {
         destination: "/orcamento-recolha-lisboa",
         permanent: true,
       },
+      /*
+       * O «ç» ESCRITO COMO O BROWSER O MANDA — 10-11-2026 (d29). Estavam com
+       * a letra («/recolha/orçamento», «/orçamento») e nunca casavam: o pedido
+       * chega com %C3%A7, e os dois endereços davam 404. É a mesma escrita de
+       * /mudan%C3%A7as, mais abaixo.
+       */
       {
-        source: "/recolha/orçamento",
+        source: "/recolha/or%C3%A7amento",
         destination: "/orcamento-recolha-lisboa",
         permanent: true,
       },
@@ -125,7 +135,7 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: "/orçamento",
+        source: "/or%C3%A7amento",
         destination: "/simulador",
         permanent: true,
       },
@@ -280,12 +290,21 @@ const nextConfig: NextConfig = {
        * A limpeza pos-obra e um caso de recolha de entulho, e a pagina de
        * entulho da cidade responde-lhe melhor do que o catalogo de servicos.
        */
-      ...paraOConcelho("/limpeza-pos-obra-", (concelho) => `/recolha-entulho-${concelho}`),
-      {
-        source: "/limpeza-pos-obra-:city",
-        destination: "/recolha-entulho-:city",
-        permanent: true,
-      },
+      /*
+       * SÓ PARA AS TERRAS QUE TÊM PÁGINA — 10-11-2026 (d29). Havia aqui um
+       * «/limpeza-pos-obra-:city → /recolha-entulho-:city» para qualquer
+       * terra: /limpeza-pos-obra-porto fazia 308 para /recolha-entulho-porto,
+       * que não existe — um redirect definitivo para um 404. Agora há um
+       * redirect por terra com página (a de uma terra junta vai directa à do
+       * concelho) e as outras seguem para a página geral do entulho, no
+       * apanha-tudo a seguir.
+       *
+       * E AS FORMAS COMPRIDAS: /recolha-de-moveis-<terra> e
+       * /esvaziamento-de-casas-<terra> davam 404 — as páginas são
+       * /recolha-moveis-<terra> e /esvaziamento-casas-<terra>. Só nas terras
+       * que existem; a lista e o porquê vivem em `paginas-consolidadas.ts`.
+       */
+      ...redirectsDasFormasCompridas(),
       {
         source: "/limpeza-pos-obra-:city(.*)",
         destination: "/recolha-de-entulho",

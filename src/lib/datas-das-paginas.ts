@@ -33,10 +33,13 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // (dono). Antes, 28-10-2026 (d1): as avaliações por fonte, a promessa do prazo e os
   // botões do orçamento mudaram o texto destas páginas.
   "/": "2026-11-04",
-  "/avaliacoes": "2026-11-01",
+  // 10-11-2026 (d29): os dados estruturados de /avaliacoes, /trabalhos, /precos e /blog
+  // (o que a página diz ao Google sobre si: o caminho, as perguntas, a lista dos artigos).
+  "/avaliacoes": "2026-11-10",
   "/faq": "2026-11-04",
   "/sobre-nos": "2026-11-04",
-  "/trabalhos": "2026-11-01",
+  "/trabalhos": "2026-11-10",
+  "/blog": "2026-11-10",
   "/servicos": "2026-11-04",
   "/recolha-de-moveis": "2026-11-04",
   "/recolha-de-sofas": "2026-11-04",
@@ -50,7 +53,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/orcamento-recolha-lisboa": "2026-11-04",
   "/como-funciona": "2026-11-01",
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
-  "/precos": "2026-11-04",
+  "/precos": "2026-11-10",
   "/empresas": "2026-11-04",
   // 31-10-2026: o sem IVA nunca sozinho — cada preço com o com IVA ao lado (antes,
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).

@@ -147,3 +147,74 @@ export function redirectsDasConsolidacoes() {
     })),
   ];
 }
+
+/**
+ * AS TERRAS COM PÁGINAS DE SERVIÇO — 10-11-2026 (d29).
+ *
+ * Os slugs de `CITIES` (seo-data.ts), escritos aqui porque este ficheiro não
+ * importa nada e o next.config precisa deles; `redirects-sem-contradicoes.test.ts`
+ * confere a lista com `CITIES`. Terra nova em `CITIES` entra também aqui — o
+ * teste chumba se faltar.
+ */
+export const TERRAS_DAS_PAGINAS_DE_SERVICO = [
+  "lisboa",
+  "benfica",
+  "lumiar",
+  "alvalade",
+  "olivais",
+  "sintra",
+  "cascais",
+  "oeiras",
+  "amadora",
+  "loures",
+  "odivelas",
+  "carnaxide",
+  "monte-abraao",
+  "queluz",
+  "almada",
+  "costa-da-caparica",
+  "seixal",
+  "amora",
+  "corroios",
+  "barreiro",
+  "moita",
+  "montijo",
+  "alcochete",
+  "setubal",
+  "palmela",
+  "sesimbra",
+] as const;
+
+/**
+ * OUTRAS MANEIRAS DE ESCREVER O ENDEREÇO DE UMA PÁGINA DE CIDADE — d29.
+ *
+ * As páginas de cidade chamam-se /recolha-moveis-lisboa e
+ * /esvaziamento-casas-lisboa, mas as páginas gerais são /recolha-de-moveis e
+ * /esvaziamento-de-casas — e quem escreve, ou liga de fora, junta as duas
+ * formas: /recolha-de-moveis-lisboa dava 404. A limpeza pós-obra (serviço que
+ * saiu) ia para /recolha-entulho-<o que viesse>, e numa terra sem página isso
+ * era um redirect definitivo para um 404.
+ *
+ * Chave: o prefixo que as pessoas escrevem. Valor: o serviço da página gerada.
+ */
+export const FORMAS_COMPRIDAS_DO_ENDERECO: Readonly<Record<string, string>> = {
+  "/recolha-de-moveis-": "recolha-moveis",
+  "/esvaziamento-de-casas-": "esvaziamento-casas",
+  "/limpeza-pos-obra-": "recolha-entulho",
+};
+
+/**
+ * Um redirect por terra que tem página, DIRECTO à página que responde: a de
+ * uma terra junta ao concelho vai logo à do concelho, e a que tem uma estática
+ * a dizer o mesmo vai à estática (um salto, nunca dois). Onde a forma comprida
+ * JÁ É a página (/esvaziamento-de-casas-amadora), não há redirect.
+ */
+export function redirectsDasFormasCompridas() {
+  return Object.entries(FORMAS_COMPRIDAS_DO_ENDERECO).flatMap(([prefixo, servico]) =>
+    TERRAS_DAS_PAGINAS_DE_SERVICO.map((terra) => ({
+      source: `${prefixo}${terra}`,
+      destination: GERADAS_QUE_FAZEM_301[`${servico}-${terra}`] ?? `/${servico}-${terra}`,
+      permanent: true,
+    })).filter((r) => r.source !== r.destination),
+  );
+}

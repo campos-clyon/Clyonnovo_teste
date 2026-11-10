@@ -7,7 +7,13 @@ import { buildCustomRoute } from "next/dist/lib/build-custom-route";
 import { middleware } from "@/middleware";
 import nextConfig from "../../next.config";
 import { getAllCidadeSlugs } from "./mudancas-cidades";
-import { cidadeDaPaginaDeMudancas } from "./paginas-consolidadas";
+import {
+  FORMAS_COMPRIDAS_DO_ENDERECO,
+  GERADAS_QUE_FAZEM_301,
+  TERRAS_DAS_PAGINAS_DE_SERVICO,
+  cidadeDaPaginaDeMudancas,
+} from "./paginas-consolidadas";
+import { CITIES, getAllCityServiceSlugs } from "./seo-data";
 
 /**
  * UM ENDEREÇO, UMA REGRA — 26-10-2026.
@@ -198,5 +204,106 @@ describe("os redirects antigos vivem só no next.config", () => {
     for (const origem of Object.keys(SO_NO_NEXT_CONFIG)) {
       expect((await noMiddleware(origem)).para, origem).toBeNull();
     }
+  });
+});
+
+/**
+ * TRÊS FAMÍLIAS DE ENDEREÇOS QUE DAVAM 404 — 10-11-2026 (d29).
+ *
+ * — /limpeza-pos-obra-<terra> fazia 308 para /recolha-entulho-<terra> fosse
+ *   qual fosse a terra: numa sem página, o destino era um 404.
+ * — /recolha-de-moveis-<terra> e /esvaziamento-de-casas-<terra> (a forma das
+ *   páginas gerais colada à terra) davam 404: as páginas de cidade são
+ *   /recolha-moveis-<terra> e /esvaziamento-casas-<terra>.
+ * — /orçamento e /recolha/orçamento estavam escritos com a letra «ç» e nunca
+ *   casavam com o pedido, que chega com %C3%A7.
+ */
+describe("d29: as três famílias que davam 404 vão num salto à página certa", () => {
+  const geradas = new Set(getAllCityServiceSlugs().map((p) => `/${p.slug[0]}`));
+  const existe = (destino: string) => geradas.has(destino) || paginaExiste(destino);
+
+  it("a lista das terras é a de CITIES", () => {
+    expect([...TERRAS_DAS_PAGINAS_DE_SERVICO]).toEqual(CITIES.map((c) => c.slug));
+  });
+
+  it("cada terra com página, nas três formas: 308 directo a uma página que responde", async () => {
+    const regras = await regrasDoNextConfig();
+    let vistos = 0;
+    for (const [prefixo, servico] of Object.entries(FORMAS_COMPRIDAS_DO_ENDERECO)) {
+      for (const terra of TERRAS_DAS_PAGINAS_DE_SERVICO) {
+        const origem = `${prefixo}${terra}`;
+        // A página que responde por este serviço nesta terra: a dela, a do
+        // concelho a que se juntou, ou a estática que diz o mesmo.
+        const destino = GERADAS_QUE_FAZEM_301[`${servico}-${terra}`] ?? `/${servico}-${terra}`;
+        if (origem === destino) {
+          // /esvaziamento-de-casas-amadora É a página: nada a redirecciona.
+          expect(primeiraRegra(regras, origem), origem).toBeNull();
+          expect(paginaExiste(origem), origem).toBe(true);
+          continue;
+        }
+        const regra = primeiraRegra(regras, origem);
+        expect(regra?.destination, origem).toBe(destino);
+        expect(regra?.statusCode, origem).toBe(308);
+        expect(primeiraRegra(regras, destino)?.source ?? null, `${origem} → ${destino}`).toBeNull();
+        expect(await noMiddleware(destino), `${origem} → ${destino}`).toEqual({ status: 200, para: null, robots: null });
+        expect(existe(destino), `${origem} → ${destino}`).toBe(true);
+        vistos++;
+      }
+    }
+    // 3 formas × 26 terras, menos a que já é a página.
+    expect(vistos).toBe(3 * TERRAS_DAS_PAGINAS_DE_SERVICO.length - 1);
+  });
+
+  it("uma terra junta ao concelho vai directa à página do concelho", async () => {
+    const regras = await regrasDoNextConfig();
+    expect(primeiraRegra(regras, "/recolha-de-moveis-amora")?.destination).toBe("/recolha-moveis-seixal");
+    expect(primeiraRegra(regras, "/esvaziamento-de-casas-costa-da-caparica")?.destination).toBe("/esvaziamento-casas-almada");
+    expect(primeiraRegra(regras, "/limpeza-pos-obra-corroios")?.destination).toBe("/recolha-entulho-seixal");
+  });
+
+  it("a limpeza pós-obra de uma terra sem página vai à página geral do entulho, e não a um 404", async () => {
+    const regras = await regrasDoNextConfig();
+    for (const origem of ["/limpeza-pos-obra-porto", "/limpeza-pos-obra-vila-franca-de-xira"]) {
+      const regra = primeiraRegra(regras, origem);
+      expect(regra?.destination, origem).toBe("/recolha-de-entulho");
+      expect(regra?.statusCode, origem).toBe(308);
+    }
+    expect(primeiraRegra(regras, "/recolha-de-entulho")).toBeNull();
+    expect(paginaExiste("/recolha-de-entulho")).toBe(true);
+    // Nenhum destino leva o nome da terra tal como veio: é assim que se chega a um 404.
+    for (const r of regras) expect(r.destination, r.source).not.toContain(":city");
+  });
+
+  it("as formas compridas não apanham as páginas que começam da mesma maneira", async () => {
+    const regras = await regrasDoNextConfig();
+    for (const pagina of ["/recolha-de-moveis", "/recolha-de-moveis-urgente", "/esvaziamento-de-casas", "/esvaziamento-de-casas-amadora"]) {
+      expect(primeiraRegra(regras, pagina)?.source ?? null, pagina).toBeNull();
+      expect(paginaExiste(pagina), pagina).toBe(true);
+    }
+    // Uma terra que não existe não é redireccionada para lado nenhum.
+    expect(primeiraRegra(regras, "/recolha-de-moveis-porto")).toBeNull();
+    expect(primeiraRegra(regras, "/esvaziamento-de-casas-porto")).toBeNull();
+  });
+
+  it("o «ç» de /orçamento e de /recolha/orçamento casa como o browser o manda", async () => {
+    const regras = await regrasDoNextConfig();
+    const casos: Array<[string, string]> = [
+      ["/or%C3%A7amento", "/simulador"],
+      ["/or%c3%a7amento", "/simulador"],
+      ["/recolha/or%C3%A7amento", "/orcamento-recolha-lisboa"],
+      ["/recolha/or%c3%a7amento", "/orcamento-recolha-lisboa"],
+    ];
+    for (const [origem, destino] of casos) {
+      const regra = primeiraRegra(regras, origem);
+      expect(regra?.destination, origem).toBe(destino);
+      expect(regra?.statusCode, origem).toBe(308);
+      expect(primeiraRegra(regras, destino)?.source ?? null, `${origem} → ${destino}`).toBeNull();
+      expect(paginaExiste(destino), destino).toBe(true);
+    }
+  });
+
+  it("nenhuma origem do next.config leva letras com acento: escrita assim, nunca casa", async () => {
+    const regras = await regrasDoNextConfig();
+    for (const r of regras) expect(r.source, r.source).toMatch(/^[\x20-\x7E]+$/);
   });
 });

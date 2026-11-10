@@ -13,6 +13,8 @@ import { BUSINESS_PHONE, NOTA_DE_PRECO, PRAZO_DE_RESPOSTA, SITE_URL } from "@/li
 import { precoDe, maisIva, comMaiuscula } from "@/lib/precos-publicos";
 import { PAGINAS_DE_PRECO } from "@/lib/quanto-custa";
 import { NO_MESMO_DIA } from "@/lib/promessas-publicas";
+import { jsonLd } from "@/lib/json-ld";
+import { caminhoDaPagina } from "@/lib/dados-estruturados";
 
 /**
  * A etiqueta oficial de um serviço.
@@ -160,6 +162,38 @@ const faqs = [
       "Sim. A CLYON recebe pedidos de particulares, empresas, senhorios, equipas de obra e condomínios, pontuais ou recorrentes.",
   },
 ];
+
+/*
+ * OS DADOS ESTRUTURADOS — 10-11-2026 (d29). Só o que está à vista: as
+ * perguntas (a MESMA lista dos cartões), as tabelas por serviço a que a página
+ * liga, e o caminho. SEM PREÇOS: os cartões dizem «… € + IVA», e uma oferta
+ * com esse número punha no Google o valor sem IVA sozinho — os números com o
+ * IVA ao lado estão nas tabelas de cada serviço, que têm os seus dados.
+ */
+const breadcrumbSchema = caminhoDaPagina([["Preços", "/precos"]]);
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: { "@type": "Answer", text: faq.answer },
+  })),
+};
+
+const tabelasSchema = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Tabelas completas, por serviço",
+  numberOfItems: PAGINAS_DE_PRECO.length,
+  itemListElement: PAGINAS_DE_PRECO.map((p, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    name: p.nome,
+    url: `${SITE_URL}${p.caminho}`,
+  })),
+};
 
 export const revalidate = 86400;
 
@@ -398,6 +432,10 @@ export default function PrecosPage() {
           </div>
         </div>
       </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(tabelasSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
     </div>
   );
 }

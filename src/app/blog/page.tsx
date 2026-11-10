@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { og } from "@/lib/open-graph";
+import { jsonLd } from "@/lib/json-ld";
+import { caminhoDaPagina, ID_DA_ORGANIZACAO } from "@/lib/dados-estruturados";
 import Link from "next/link";
 import { ArrowRight, Clock3, Search } from "lucide-react";
 
@@ -19,10 +21,13 @@ import { SITE_URL } from "@/lib/seo-data";
  * que este índice passa a apontar. A descrição dizia ainda «escrito por quem
  * faz o serviço no terreno»: a CLYON é uma plataforma.
  */
+const TITULO = "Blog — Guias de Recolha, Entulho e Mudanças";
+const DESCRICAO =
+  "Guias práticos: esvaziar uma casa herdada, recolha de monos pela câmara ou por parceiros, preços de recolha de entulho e como preparar uma mudança.";
+
 export const metadata: Metadata = {
-  title: "Blog — Guias de Recolha, Entulho e Mudanças",
-  description:
-    "Guias práticos: esvaziar uma casa herdada, recolha de monos pela câmara ou por parceiros, preços de recolha de entulho e como preparar uma mudança.",
+  title: TITULO,
+  description: DESCRICAO,
   keywords: [
     "como esvaziar casa herança",
     "como recolher entulho de obra",
@@ -42,6 +47,35 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 86400;
+
+/*
+ * 10-11-2026 (d29): o índice diz ao Google o que é — a lista dos artigos no
+ * ar, pela ordem e com o título com que aparecem no ecrã — e o seu caminho.
+ * Lê a MESMA lista que os cartões: um artigo retirado sai dos dois.
+ */
+const breadcrumbSchema = caminhoDaPagina([["Blog", "/blog"]]);
+
+function blogSchema(posts: ReturnType<typeof artigosPublicados>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: TITULO,
+    url: `${SITE_URL}/blog`,
+    description: DESCRICAO,
+    inLanguage: "pt-PT",
+    publisher: { "@id": ID_DA_ORGANIZACAO },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: posts.length,
+      itemListElement: posts.map((post, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: post.title,
+        url: `${SITE_URL}/blog/${post.slug}`,
+      })),
+    },
+  };
+}
 
 export default function BlogPage() {
   const posts = artigosPublicados();
@@ -131,6 +165,9 @@ export default function BlogPage() {
           </div>
         </div>
       </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(blogSchema(posts)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
     </div>
   );
 }

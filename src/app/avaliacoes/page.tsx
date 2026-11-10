@@ -17,18 +17,21 @@ import {
   PRAZO_DE_RESPOSTA,
   NOTAS_EM_FRASE,
 } from "@/lib/seo-data";
+import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 
 /*
  * Os números da descrição estavam escritos à mão ("37", "118", "155") e
  * "verificadas" prometia uma verificação que ninguém faz — passam a vir de
  * AVALIACOES, com o sítio onde se confirmam (30-09-2026).
  */
+const TITULO = "Avaliações de Clientes — Lisboa e Setúbal";
+const DESCRICAO = `${NOTAS_EM_FRASE}: o que dizem os clientes da CLYON em Lisboa, Margem Sul e Setúbal.`;
+
 export const metadata: Metadata = {
-  title: "Avaliações de Clientes — Lisboa e Setúbal",
+  title: TITULO,
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
-  description:
-    `${NOTAS_EM_FRASE}: o que dizem os clientes da CLYON em Lisboa, Margem Sul e Setúbal.`,
+  description: DESCRICAO,
   alternates: {
     canonical: "https://clyon.pt/avaliacoes",
   },
@@ -66,7 +69,23 @@ export const revalidate = 86400;
  * As estrelas que ficam são as das páginas dos profissionais: avaliações
  * feitas NA plataforma, por clientes, sobre o profissional — que é o caso
  * que as regras permitem.
+ *
+ * 10-11-2026 (d29): a página passa a dizer ao Google o que É — uma página sobre
+ * a CLYON, com o seu caminho — e continua sem nota nem avaliações declaradas:
+ * as três razões de cima não mudaram.
  */
+const breadcrumbSchema = caminhoDaPagina([["Avaliações", "/avaliacoes"]]);
+
+const paginaSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: TITULO,
+  url: `${SITE_URL}/avaliacoes`,
+  description: DESCRICAO,
+  inLanguage: "pt-PT",
+  // O negócio é o LocalBusiness do layout, por @id — não se repete aqui.
+  about: PRESTADOR,
+};
 
 const STATS = [
   // Desde 28-10-2026 só o Google (dono): a nota e a contagem da Fixando, e as
@@ -311,6 +330,9 @@ export default function AvaliacoesPage() {
           </div>
         </div>
       </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(paginaSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
     </div>
   );
 }
