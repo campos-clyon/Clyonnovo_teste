@@ -81,17 +81,18 @@ export function guiaVerificada(profissional: {
  *
  * O INTERRUPTOR É SÓ ESTA DATA. Passada ela, a regra volta a valer para todos
  * sem deploy nenhum: a hora compara-se a cada pedido. Em Novembro Lisboa está
- * em UTC, por isso «23:59:59Z» é o fim do dia 11 em Lisboa.
+ * em UTC, por isso «23:59:59Z» é o fim do dia 18 em Lisboa (10-11-2026: o dono
+ * prolongou a transição 7 dias, de 11/11 para 18/11).
  *
  * «Aprovado antes» lê `providers.aprovadoEm`, que nasceu a 04-11-2026 (d10.2):
  * vazio é um aprovado de antes; uma data é de quando foi aprovado. Uma linha
  * que nem traz a coluna não ganha a transição — na dúvida, a regra.
  */
-export const TRANSICAO_DA_GUIA_ATE = "2026-11-11T23:59:59Z";
+export const TRANSICAO_DA_GUIA_ATE = "2026-11-18T23:59:59Z";
 /** Os aprovados antes deste instante (00:00 de 04-11-2026 em Lisboa, = UTC) têm a transição. */
 export const APROVADOS_ANTES_DE = "2026-11-04T00:00:00Z";
 
-/** «11/11» — o último dia da transição, em Lisboa. */
+/** «18/11» — o último dia da transição, em Lisboa (era 11/11; o dono prolongou-a 7 dias a 10-11-2026). */
 export const ULTIMO_DIA_DA_TRANSICAO = new Date(TRANSICAO_DA_GUIA_ATE).toLocaleDateString("pt-PT", {
   timeZone: "Europe/Lisbon",
   day: "2-digit",

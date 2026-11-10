@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /**
  * A TRANSIÇÃO DE 7 DIAS DA GUIA — 04-11-2026 (d10 v2, escolha do dono).
  *
- * Até 11-11, um parceiro aprovado ANTES de 04-11 com a guia por verificar pode
+ * Até 18-11 (era 11-11; prolongada a 10-11), um parceiro aprovado ANTES de 04-11 com a guia por verificar pode
  * ser contratado e escolhido nos trabalhos que exigem a guia; quem foi aprovado
  * a 04-11 ou depois precisa dela verificada desde já; passado o prazo, a regra
  * volta para todos sem deploy; com a guia verificada, contrata-se sempre.
@@ -35,8 +35,8 @@ import { negociacaoParaAVista } from "./negociacao-na-vista";
 import { negociacaoParaAApp } from "./pedido-para-a-app";
 
 const DENTRO = new Date("2026-11-08T12:00:00Z");
-const NO_ULTIMO_MINUTO = new Date("2026-11-11T23:59:00Z");
-const DEPOIS = new Date("2026-11-12T00:00:01Z");
+const NO_ULTIMO_MINUTO = new Date("2026-11-18T23:59:00Z");
+const DEPOIS = new Date("2026-11-19T00:00:01Z");
 
 const ENTULHO = { serviceType: "recolha_entulho", precisaGuiaTransporte: 0 };
 const APROVADO_ANTES = { estado: "aprovado", aprovadoEm: null, emiteGuiaTransporte: 1, guiaVerificadaEm: null };
@@ -49,11 +49,11 @@ beforeEach(() => {
 });
 
 describe("o interruptor é uma data", () => {
-  it("11/11 em Lisboa (Novembro = UTC), para os aprovados antes de 04/11", () => {
-    expect(TRANSICAO_DA_GUIA_ATE).toBe("2026-11-11T23:59:59Z");
+  it("18/11 em Lisboa (Novembro = UTC; prolongada a 10/11), para os aprovados antes de 04/11", () => {
+    expect(TRANSICAO_DA_GUIA_ATE).toBe("2026-11-18T23:59:59Z");
     expect(APROVADOS_ANTES_DE).toBe("2026-11-04T00:00:00Z");
-    expect(ULTIMO_DIA_DA_TRANSICAO).toBe("11/11");
-    expect(AVISO_DA_TRANSICAO).toBe("guia por verificar — pode ser contratado até 11/11");
+    expect(ULTIMO_DIA_DA_TRANSICAO).toBe("18/11");
+    expect(AVISO_DA_TRANSICAO).toBe("guia por verificar — pode ser contratado até 18/11");
   });
 
   it("na dúvida, a regra: sem o estado, sem a coluna, ou com uma data estragada, não há transição", () => {
@@ -67,7 +67,7 @@ describe("o interruptor é uma data", () => {
 });
 
 describe("os quatro casos da ordem, como as rotas os chamam", () => {
-  it("aprovado antes, dentro do prazo → contrata (até ao último minuto de 11/11)", async () => {
+  it("aprovado antes, dentro do prazo → contrata (até ao último minuto de 18/11)", async () => {
     linha = { ...ENTULHO, ...APROVADO_ANTES };
     expect(await guiaImpedeANegociacao(42, DENTRO)).toBe(false);
     expect(await guiaImpedeANegociacao(42, NO_ULTIMO_MINUTO)).toBe(false);
