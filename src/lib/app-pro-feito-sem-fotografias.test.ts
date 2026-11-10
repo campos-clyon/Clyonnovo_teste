@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { depoisDeMarcar, obrigadoDoFeito } from "../../app-pro/src/lib/trabalhos";
-import { pedirEmDemo } from "../../app-pro/src/lib/demo";
+import { pedirEmDemo } from "../../app-pro/src/lib/demo.web";
 import { DIAS_ATE_LIBERTAR_SOZINHO, OBRIGADO_DEPOIS_DE_FEITO } from "./trabalho";
 
 /**

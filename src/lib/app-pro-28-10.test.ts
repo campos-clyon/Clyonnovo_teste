@@ -9,7 +9,7 @@ import {
   type RespostaDoFeito,
   type Trabalho,
 } from "../../app-pro/src/lib/trabalhos";
-import { pedirEmDemo } from "../../app-pro/src/lib/demo";
+import { pedirEmDemo } from "../../app-pro/src/lib/demo.web";
 import { mensagemDepoisDeFeito } from "./trabalho";
 import { ondeEstaODinheiro, tituloDoConfirmado } from "./fim-do-trabalho";
 import { ROTULOS_DA_CARTEIRA } from "./rotulos-da-carteira";

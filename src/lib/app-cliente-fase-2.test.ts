@@ -528,7 +528,8 @@ describe("A4 — E5, o pedido (R5 e R8)", () => {
       texto: "452,03 € com IVA. Pelo trabalho todo. O trabalho é feito por Rui, o parceiro que escolheu. As outras propostas fecham.",
     });
     const e5 = ler("src/componentes/VistaDoPedido.tsx");
-    expect(e5).toContain("pequeno={catalogo?.textos.fraseUnica ?? null}");
+    // d25 (10-11-2026): «Contratar» já não abre uma confirmação; a frase única fica por baixo das propostas.
+    expect(e5).toContain("{catalogo?.textos.fraseUnica ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{catalogo.textos.fraseUnica}</Text> : null}");
   });
 
   it("«Recusar» só com o texto do site (S8/S9), e diz «com outras» ou «única»", () => {

@@ -22,10 +22,17 @@ export function Proposta({
   aoRecusar,
   aoVerAvaliacoes,
   aoPropor,
+  aContratar = false,
+  desligado = false,
 }: {
   n: NegociacaoV3;
   textos: TextosDoPedido;
+  /** Contrata logo e abre o pagamento (d25): sem confirmação no meio. */
   aoContratar: () => void;
+  /** Esta proposta está a ser contratada agora. */
+  aContratar?: boolean;
+  /** Outra proposta está a ser contratada: nenhum «Contratar» responde. */
+  desligado?: boolean;
   aoRecusar: () => void;
   aoVerAvaliacoes: () => void;
   /** «Propor outro valor» (R8 `propor`), quando a API o deixa. */
@@ -69,7 +76,7 @@ export function Proposta({
       {n.materiaisTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.materiaisTexto}</Text> : null}
       {n.formaTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text> : null}
       {parado ? <Aviso tom="aviso" texto={parado} /> : null}
-      {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} desligado={!!parado} /> : null}
+      {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} ocupado={aContratar} desligado={!!parado || desligado} /> : null}
       {aoPropor && n.accoes.includes("propor") ? <Ligacao titulo="Ou proponha outro valor" centrada aoCarregar={aoPropor} /> : null}
       {podeRecusar(n, textos) ? <Ligacao titulo="Recusar" tom="mau" centrada aoCarregar={aoRecusar} /> : null}
       {n.historico && n.historico.length > 0 ? (

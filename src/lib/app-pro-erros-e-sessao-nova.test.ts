@@ -239,7 +239,7 @@ describe("d14 — a sessão nova fica no lugar da antiga", () => {
   });
 
   it("na demonstração, as duas rotas também devolvem a sessão nova", () => {
-    const DEMO = semNotas("app-pro/src/lib/demo.ts");
+    const DEMO = semNotas("app-pro/src/lib/demo.web.ts");
     expect(DEMO).toContain(
       'if (caminho === "/api/profissionais/palavra-passe" || caminho === "/api/profissionais/sair-de-todos") { return { ok: true, token: "demo" } as T; }',
     );

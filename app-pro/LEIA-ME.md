@@ -58,6 +58,10 @@ cd app-pro
 set EXPO_PUBLIC_DEMO=1&& npx expo start --web
 ```
 
+Os exemplos estão em `src/lib/demo.web.ts`, que só entra no bundle da web; o
+`src/lib/demo.ts` (o que o Android e o iPhone usam) não leva nada (d25,
+10-11-2026).
+
 ## Instalar num telemóvel Android
 
 As builds fazem-se na nuvem da Expo (EAS); este computador não precisa de

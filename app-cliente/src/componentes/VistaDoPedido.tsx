@@ -26,6 +26,7 @@ import { usePedidos } from "../estado/Pedidos";
 import { abrirNoNavegador, whatsappDaClyon } from "../lib/abrir";
 import { ErroDaApi, mensagemDe, pedir as pedirComConta } from "../lib/api";
 import type { Pedir } from "../lib/erros";
+import { abreOPagamentoDepoisDeContratar } from "../lib/pagamento";
 import { LINK } from "../lib/pedido-do-link";
 import {
   accaoDeContratar,
@@ -33,12 +34,12 @@ import {
   contratadaDe,
   corpoDePropor,
   perguntaDeRecusar,
+  porqueNaoSeContrata,
   propostasEmAberto,
   ROTA_DAS_ACCOES,
   ROTA_DO_PEDIDO,
   TEXTOS_DA_ALTERACAO,
   textoDaEspera,
-  textoDeContratar,
   whatsappTrocaDeProfissional,
   type ExtrasDosTextosV3,
   type Negociacao,
@@ -111,19 +112,22 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
   const [avaliacoesDe, setAvaliacoesDe] = useState<Profissional | null>(null);
   const [fotoAberta, setFotoAberta] = useState<number | null>(null);
 
-  const carregar = useCallback(async (silencioso = false) => {
+  const carregar = useCallback(async (silencioso = false): Promise<Resposta | null> => {
     if (!Number.isInteger(pedidoId)) {
       setErro("Pedido não encontrado.");
       setALer(false);
-      return;
+      return null;
     }
     if (!silencioso) setALer(true);
     try {
-      setR(await pedir<Resposta>(ROTA_DO_PEDIDO(pedidoId)));
+      const lido = await pedir<Resposta>(ROTA_DO_PEDIDO(pedidoId));
+      setR(lido);
       setErro(null);
+      return lido;
     } catch (e) {
       // Uma leitura sozinha que falha (sem rede, por um momento) não pinta o ecrã de erro: a seguinte tenta outra vez.
       if (!silencioso && !(e instanceof ErroDaApi && e.estado === 401 && !convidado)) setErro(mensagemDe(e, "Não foi possível ler o pedido."));
+      return null;
     } finally {
       if (!silencioso) setALer(false);
     }
@@ -205,16 +209,35 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
     [pedir, carregar, depoisDeAgir, convidado, recarregarALista],
   );
 
-  async function confirmarContratar() {
-    if (!aContratar) return;
-    const accao = accaoDeContratar(aContratar);
-    if (!accao) return;
-    setOcupado(true);
-    setErroNaConfirmacao(null);
-    const e = await agir({ pedidoId, negociacaoId: aContratar.id, accao });
-    setOcupado(false);
+  /**
+   * «CONTRATAR» ABRE LOGO O PAGAMENTO — 10-11-2026 (d25, ordem do CEO com o sim
+   * do dono), como o site desde a d20: um toque contrata (sem confirmação no
+   * meio, como o «Contratar este parceiro» do site) e, com o que pagar, abre o
+   * ecrã de pagar. A guia por verificar (d10) deixa o botão parado com o porquê
+   * e não chega aqui; se o servidor recusar na mesma (409), diz-se a frase dele
+   * e fica-se no pedido. Pelo link sem conta não se paga: fica-se no pedido,
+   * com «Criar conta para pagar».
+   */
+  async function contratar(n: NegociacaoV3) {
+    const accao = accaoDeContratar(n);
+    if (!accao || porqueNaoSeContrata(n) || aContratar) return;
+    setAContratar(n);
+    setAvisoDaAccao(null);
+    try {
+      await pedir(ROTA_DAS_ACCOES, { metodo: "POST", corpo: { pedidoId, negociacaoId: n.id, accao } });
+    } catch (e) {
+      if (e instanceof ErroDaApi && e.estado === 409) await carregar();
+      if (!convidado) void recarregarALista();
+      setAvisoDaAccao(mensagemDe(e));
+      setAContratar(null);
+      return;
+    }
+    const lido = await carregar();
+    if (!convidado) void recarregarALista();
+    else setFeito(true);
     setAContratar(null);
-    if (e) setAvisoDaAccao(e);
+    const n2 = lido ? contratadaDe(lido) : null;
+    if (!convidado && abreOPagamentoDepoisDeContratar(n2?.pagamento, Date.now())) router.push(`/pagar/${pedidoId}`);
   }
 
   async function confirmarRecusar() {
@@ -272,7 +295,6 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
   const contratada = contratadaDe(r) as NegociacaoV3 | null;
   const propostas = propostasEmAberto(r) as NegociacaoV3[];
   const espera = textoDaEspera(r);
-  const contratar = aContratar ? textoDeContratar(aContratar) : null;
   const alteracoes = p.alteracoes ?? null;
   const acesso =
     typeof p.acesso === "string" ? p.acesso : p.acesso ? [p.acesso.origem && `Origem: ${p.acesso.origem}`, p.acesso.destino && `Destino: ${p.acesso.destino}`].filter(Boolean).join("\n") : null;
@@ -353,10 +375,9 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
               key={n.id}
               n={n}
               textos={r.textos}
-              aoContratar={() => {
-                setErroNaConfirmacao(null);
-                setAContratar(n);
-              }}
+              aoContratar={() => void contratar(n)}
+              aContratar={aContratar?.id === n.id}
+              desligado={!!aContratar}
               aoRecusar={() => setARecusar(n)}
               aoVerAvaliacoes={() => setAvaliacoesDe(n.profissional)}
               aoPropor={() => {
@@ -366,6 +387,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
               }}
             />
           ))}
+          {/* A frase única, que ia na confirmação de «Contratar» (sai na d25, 10-11-2026), fica por baixo das propostas. */}
+          {catalogo?.textos.fraseUnica ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{catalogo.textos.fraseUnica}</Text> : null}
         </View>
       ) : null}
 
@@ -486,18 +509,6 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
           }}
         />
       ) : null}
-
-      <Confirmacao
-        visivel={!!aContratar}
-        titulo={contratar?.titulo ?? ""}
-        texto={contratar?.texto}
-        pequeno={catalogo?.textos.fraseUnica ?? null}
-        confirmar="Contratar"
-        ocupado={ocupado}
-        erro={erroNaConfirmacao}
-        aoConfirmar={() => void confirmarContratar()}
-        aoVoltar={() => setAContratar(null)}
-      />
 
       <Confirmacao
         visivel={!!aRecusar}

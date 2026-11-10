@@ -182,3 +182,18 @@ function fraseDoServidor(corpo: unknown): string | null {
   const e = corpo && typeof corpo === "object" ? (corpo as Record<string, unknown>).error : null;
   return typeof e === "string" && e.trim() ? e.trim() : null;
 }
+
+/**
+ * «CONTRATAR» ABRE LOGO O PAGAMENTO — 10-11-2026 (d25), como o site desde a
+ * d20: contratado o parceiro, o cliente vai direito ao ecrã de pagar, sem
+ * confirmação no meio nem voltar ao pedido para carregar em «Pagar». Só quando
+ * há lá o que fazer: por pagar, um MB WAY a confirmar, ou a transferência à
+ * espera (que o ecrã de pagar mostra sem oferecer o MB WAY nem o Multibanco,
+ * d13). Pago, a pagar ao parceiro no local, ou com a porta fechada, fica-se no
+ * pedido, que já diz o que há.
+ */
+export function abreOPagamentoDepoisDeContratar(pg: Pagamento | null | undefined, agora: number): boolean {
+  if (!pg) return false;
+  const tipo = estadoDoPagar(pg, agora).tipo;
+  return tipo === "por-pagar" || tipo === "a-confirmar-mbway" || tipo === "a-espera-da-transferencia";
+}

@@ -63,7 +63,8 @@ describe("a proposta mostra a frase e o «Contratar» fica parado", () => {
   });
 
   it("o botão de contratar fica desligado enquanto houver porquê", () => {
-    expect(PROPOSTA).toMatch(/<Botao titulo="Contratar" aoCarregar=\{aoContratar\} desligado=\{!!parado\} \/>/);
+    // d25: também fica parado enquanto outra proposta está a ser contratada.
+    expect(PROPOSTA).toMatch(/<Botao titulo="Contratar" aoCarregar=\{aoContratar\} ocupado=\{aContratar\} desligado=\{!!parado \|\| desligado\} \/>/);
   });
 
   it("o tipo da negociação conhece o campo", () => {
