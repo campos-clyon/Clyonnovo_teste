@@ -73,6 +73,9 @@ vi.mock("@/lib/pagamentos-na-base", () => ({
   },
 }));
 
+// Os avisos do pagamento apanhado (10-11-2026, d26) têm teste próprio: d26-conferencia-avisa-como-o-webhook.
+vi.mock("@/lib/avisar-pagamento-recebido", () => ({ avisarQueOPagamentoEntrou: async () => {} }));
+
 beforeAll(() => {
   vi.stubEnv("CRON_SECRET", "cron-de-teste");
   vi.stubEnv("EUPAGO_API_KEY", "chave-de-teste");

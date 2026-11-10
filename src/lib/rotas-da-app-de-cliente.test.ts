@@ -38,8 +38,7 @@ vi.mock("@/lib/db", () => ({
   ),
   negociacaoPorTokenHash: vi.fn(async () => undefined),
   negociacoesDoPedido: vi.fn(async (id: number) => negociacoes.get(Number(id)) ?? []),
-  gravarNegociacao: vi.fn(async () => {}),
-  encerrarOutrasNegociacoes: vi.fn(async () => 0),
+  gravarNegociacao: vi.fn(async () => ({ ok: true, encerradas: 0 })),
   appendOrderHistory: vi.fn(async () => {}),
   confirmarExecucao: vi.fn(async () => true),
   avaliarProfissional: vi.fn(async () => true),
@@ -92,6 +91,7 @@ import { responderAoAjuste } from "@/lib/responder-ajuste";
 import { assinarSessaoDoCliente } from "@/lib/cliente-auth";
 import { assinarSessaoDoProfissional } from "@/lib/profissional-auth";
 import { hashDeToken } from "@/lib/pedido-acesso";
+import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
 import { GET as listaDePedidos } from "@/app/api/cliente/pedidos/route";
@@ -480,6 +480,20 @@ describe("R8 — as acções do cliente, pela mesma função em todas as portas"
     expect(await r.json()).toEqual({ ok: true, estado: "acordada" });
     expect(avisarQueFoiContratado).toHaveBeenCalledTimes(1);
     expect(avisarProfissionalContratadoPorPush).toHaveBeenCalledTimes(1);
+  });
+
+  it("d26: a gravação leva o estado que se leu, e quem chega em segundo lê «já foi decidido» sem avisar ninguém", async () => {
+    // Outra pessoa fechou outra proposta do mesmo pedido entre a leitura e a gravação.
+    vi.mocked(db.gravarNegociacao).mockResolvedValueOnce({ ok: false, porque: "ja_decidido" });
+    const r = await agirNaConta(
+      pedido("/api/users/me/negociacao", { metodo: "POST", bearer: tokenDoCliente, corpo: { accao: "contratar", pedidoId: 482, negociacaoId: 11 } }),
+    );
+    expect(r.status).toBe(409);
+    expect(await r.json()).toEqual({ ok: false, error: JA_FOI_DECIDIDO, jaDecidido: true });
+    expect(vi.mocked(db.gravarNegociacao).mock.calls[0][2]).toEqual({ estado: "aguarda_contratacao", pedidoId: 482 });
+    expect(avisarQueFoiContratado).not.toHaveBeenCalled();
+    expect(avisarProfissionalContratadoPorPush).not.toHaveBeenCalled();
+    expect(db.appendOrderHistory).not.toHaveBeenCalled();
   });
 
   it("cancelar o pedido não precisa de negociação — na conta e no link", async () => {

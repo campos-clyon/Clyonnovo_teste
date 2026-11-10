@@ -6,7 +6,6 @@ import { assumirPedidoSeLivre } from "@/lib/assistentes";
 import {
   negociacoesDoPedido,
   gravarNegociacao,
-  encerrarOutrasNegociacoes,
   appendOrderHistory,
   confirmarExecucao,
   darPorEntreguePelaClyon,
@@ -22,6 +21,7 @@ import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-
 import { avisarQueFoiContratadoSemFalhar } from "@/lib/agir-como-cliente";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -507,11 +507,24 @@ export async function POST(req: NextRequest) {
     }
 
     const nova = resultado.negociacao;
-    await gravarNegociacao(negociacaoId, {
-      estado: nova.estado,
-      valorAcordado: nova.valorAcordado ?? null,
-      propostasJson: JSON.stringify(nova.propostas),
-    });
+    // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
+    const perdem = nova.estado === "acordada" ? quemFicaSemOTrabalho(todas, negociacaoId) : [];
+    /*
+     * SÓ SE NINGUÉM DECIDIU PRIMEIRO — 10-11-2026 (d26). A escrita leva o
+     * estado que se leu, e fechar uma (esta contratada, as outras encerradas)
+     * faz-se numa só transacção. Quem chega em segundo — outro colega, ou o
+     * próprio cliente no link dele — lê «já foi decidido», e ninguém é avisado.
+     */
+    const gravou = await gravarNegociacao(
+      negociacaoId,
+      {
+        estado: nova.estado,
+        valorAcordado: nova.valorAcordado ?? null,
+        propostasJson: JSON.stringify(nova.propostas),
+      },
+      { estado: linha.estado, pedidoId },
+    );
+    if (!gravou.ok) return NextResponse.json({ error: JA_FOI_DECIDIDO, jaDecidido: true }, { status: 409 });
 
     const quem = colab?.nome ?? "a CLYON";
     const rotulo: Record<AccaoDeAdmin, string> = {
@@ -528,12 +541,7 @@ export async function POST(req: NextRequest) {
 
     // Fechar uma fecha as outras: os restantes profissionais deixam de propor
     // valores para um trabalho que já tem dono.
-    let encerradas = 0;
-    // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
-    const perdem = nova.estado === "acordada" ? quemFicaSemOTrabalho(todas, negociacaoId) : [];
-    if (nova.estado === "acordada") {
-      encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
-    }
+    const encerradas = gravou.encerradas;
     if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId, quem: perdem, porque: "outro" });
     /*
      * CONTRATADO PELA MESA (S19, BO12 — 29-10-2026). Em nome do cliente, o

@@ -103,7 +103,9 @@ describe("o IBAN nunca no código, e só o administrador o vê", () => {
   });
 
   it("o «Recebido» e o aviso do euPago avisam o parceiro pelo mesmo caminho", () => {
-    expect(ler("src/app/api/pagamentos/webhook/route.ts")).toContain("avisarProfissionalClientePagouPorPush(");
+    // O do euPago passa por `avisarQueOPagamentoEntrou` (10-11-2026, d26), o mesmo da conferência.
+    expect(ler("src/app/api/pagamentos/webhook/route.ts")).toContain("await avisarQueOPagamentoEntrou(p);");
+    expect(ler("src/lib/avisar-pagamento-recebido.ts")).toContain("avisarProfissionalClientePagouPorPush(");
     expect(ler("src/app/api/admin/pagamentos/recebido/route.ts")).toContain("avisarProfissionalClientePagouPorPush(");
   });
 });

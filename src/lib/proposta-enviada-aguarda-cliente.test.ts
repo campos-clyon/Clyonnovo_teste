@@ -36,10 +36,15 @@ describe("a proposta enviada leva o valor fixo para «A aguardar cliente»", () 
   });
 
   it("mudar o valor ou o preço volta a pô-la por enviar", () => {
-    const depoisDoValor = ROTA.slice(ROTA.indexOf("await mudarValorDoTrabalhoClyon("));
-    expect(depoisDoValor.slice(0, 700)).toContain("await limparPropostaEnviada(pedidoId);");
-    const depoisDoPreco = ROTA.slice(ROTA.indexOf("await definirPrecoAoClienteClyon("));
-    expect(depoisDoPreco.slice(0, 200)).toContain("await limparPropostaEnviada(pedidoId);");
+    // Dentro do bloco de cada acção — e só depois de a mudança ser aceite
+    // (10-11-2026, d26; a ordem guarda-a `d26-tres-bugs-altos.test.ts`).
+    const iValor = ROTA.indexOf("await mudarValorDoTrabalhoClyon(");
+    expect(iValor).toBeGreaterThan(-1);
+    const depoisDoValor = ROTA.slice(iValor, ROTA.indexOf('if (accao === "cancelar")', iValor));
+    expect(depoisDoValor).toContain("await limparPropostaEnviada(pedidoId);");
+    const iPreco = ROTA.indexOf("await definirPrecoAoClienteClyon(");
+    expect(iPreco).toBeGreaterThan(-1);
+    expect(ROTA.slice(iPreco, iPreco + 600)).toContain("await limparPropostaEnviada(pedidoId);");
   });
 
   it("na Mesa, «escolher» com proposta enviada vai para «A aguardar cliente»", () => {

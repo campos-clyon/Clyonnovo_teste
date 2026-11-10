@@ -3,7 +3,6 @@ import {
   getSimulatorOrderById,
   negociacoesDoPedido,
   gravarNegociacao,
-  encerrarOutrasNegociacoes,
   appendOrderHistory,
   registarSemFalhar,
   updateSimulatorOrder,
@@ -730,15 +729,29 @@ async function fecharPeloCliente(
     fechada = r2.negociacao;
   }
   const r2 = { negociacao: fechada };
-  await gravarNegociacao(alvo.negociacaoId, {
-    estado: r2.negociacao.estado,
-    valorAcordado: r2.negociacao.valorAcordado ?? null,
-    propostasJson: JSON.stringify(r2.negociacao.propostas),
-  });
   // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
   const { quemVaiFicarSemOTrabalho, avisarQuemFicouSemOTrabalho } = await import("@/lib/avisar-quem-perdeu");
   const perdem = await quemVaiFicarSemOTrabalho(alvo.pedidoId, alvo.negociacaoId);
-  const encerradas = await encerrarOutrasNegociacoes(alvo.pedidoId, alvo.negociacaoId);
+  /*
+   * SÓ SE NINGUÉM DECIDIU PRIMEIRO — 10-11-2026 (d26). O fecho (esta
+   * contratada, as outras encerradas) faz-se numa só transacção, com o estado
+   * que se leu. Se o cliente ou a equipa fecharam outra proposta no site no
+   * mesmo instante, este não grava nada: a conversa passa a uma pessoa.
+   */
+  const gravou = await gravarNegociacao(
+    alvo.negociacaoId,
+    {
+      estado: r2.negociacao.estado,
+      valorAcordado: r2.negociacao.valorAcordado ?? null,
+      propostasJson: JSON.stringify(r2.negociacao.propostas),
+    },
+    { estado: alvo.estado.estado, pedidoId: alvo.pedidoId },
+  );
+  if (!gravou.ok) {
+    await passarAUmaPessoa(telefone, "Quis fechar - o pedido já tinha sido decidido");
+    return;
+  }
+  const encerradas = gravou.encerradas;
   if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId: alvo.pedidoId, quem: perdem, porque: "outro" });
   await registarAccao(
     alvo.pedidoId,

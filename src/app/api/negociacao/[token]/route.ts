@@ -26,6 +26,7 @@ import { modoDaOferta } from "@/lib/oferta-clyon";
 import { responderOfertaClyon } from "@/lib/responder-oferta-clyon";
 import { agirComoCliente, eAccaoSoDoCliente, type CorpoDoCliente } from "@/lib/agir-como-cliente";
 import { lerMateriaisDaProposta } from "@/lib/materiais-da-proposta";
+import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 
 export const runtime = "nodejs";
 
@@ -245,11 +246,20 @@ export async function POST(
   try {
     // O profissional nunca fecha sozinho: aceitar o valor do cliente deixa a
     // negociação à espera de o cliente o contratar (o aperto de mão duplo).
-    await gravarNegociacao(negociacaoId, {
-      estado: nova.estado,
-      valorAcordado: nova.valorAcordado ?? null,
-      propostasJson: JSON.stringify(nova.propostas),
-    });
+    // E só grava se ninguém decidiu primeiro (10-11-2026, d26): a escrita leva
+    // o estado que se leu, como na rota do painel.
+    const gravou = await gravarNegociacao(
+      negociacaoId,
+      {
+        estado: nova.estado,
+        valorAcordado: nova.valorAcordado ?? null,
+        propostasJson: JSON.stringify(nova.propostas),
+      },
+      { estado: linha.estado, pedidoId },
+    );
+    if (!gravou.ok) {
+      return NextResponse.json({ ok: false, error: JA_FOI_DECIDIDO, jaDecidido: true }, { status: 409 });
+    }
   } catch (err) {
     console.error("[negociacao] falha ao gravar:", err);
     return NextResponse.json(

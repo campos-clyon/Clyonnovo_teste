@@ -2282,17 +2282,84 @@ export async function arquivarNegociacao(
   return Number(r?.affectedRows ?? 0) > 0;
 }
 
+/** O que `gravarNegociacao` devolve: gravou (e quantas outras fechou), ou alguém decidiu primeiro. */
+export type NegociacaoGravada = { ok: true; encerradas: number } | { ok: false; porque: "ja_decidido" };
+
+/**
+ * GRAVA O QUE O MOTOR DECIDIU — e, desde 10-11-2026 (d26), só se ninguém
+ * decidiu primeiro.
+ *
+ * Cada porta lê a negociação, passa-a pelo motor e grava o resultado. Entre
+ * ler e gravar cabe outra pessoa: o cliente a contratar um parceiro enquanto a
+ * equipa, em nome dele, contrata outro — e cada um fechava a sua proposta e
+ * matava a do outro, ou ficavam dois contratados no mesmo pedido.
+ *
+ * Com `seAinda` (o estado que a porta leu, e o pedido):
+ *
+ *   · a escrita leva a condição — `WHERE estado = o que se leu`. Se a linha já
+ *     não está assim, não grava e devolve `ja_decidido`;
+ *   · um FECHO (`acordada`) faz-se numa só transacção: prende o pedido e as
+ *     suas negociações (a mesma ordem de `atribuirOfertaClyon`), recusa se
+ *     outra já está contratada, grava esta e encerra as restantes. Quem chega
+ *     em segundo espera pela tranca e encontra o trabalho já entregue.
+ *
+ * Sem `seAinda` grava como sempre (a redistribuição e as contrapropostas da
+ * conversa, que não fecham nada).
+ */
 export async function gravarNegociacao(
   id: number,
   dados: { estado: string; valorAcordado: number | null; propostasJson: string },
-): Promise<void> {
+  seAinda?: { estado: string; pedidoId: number },
+): Promise<NegociacaoGravada> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
-  await pool.execute(
-    "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ?",
-    [dados.estado, dados.valorAcordado, dados.propostasJson, id],
-  );
+  if (!seAinda) {
+    await pool.execute(
+      "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ?",
+      [dados.estado, dados.valorAcordado, dados.propostasJson, id],
+    );
+    return { ok: true, encerradas: 0 };
+  }
+
+  const gravarSeAinda = "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ? AND estado = ?";
+  const valores = [dados.estado, dados.valorAcordado, dados.propostasJson, id, seAinda.estado];
+
+  if (dados.estado !== "acordada") {
+    const [r] = (await pool.execute(gravarSeAinda, valores)) as any[];
+    return Number(r?.affectedRows ?? 0) > 0 ? { ok: true, encerradas: 0 } : { ok: false, porque: "ja_decidido" };
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    // Primeiro o pedido, depois as negociações — sempre por esta ordem.
+    await conn.execute("SELECT id FROM simulatorOrders WHERE id = ? FOR UPDATE", [seAinda.pedidoId]);
+    const [linhas] = (await conn.execute("SELECT id, estado FROM negociacoes WHERE pedidoId = ? FOR UPDATE", [
+      seAinda.pedidoId,
+    ])) as [Array<{ id: number; estado: string }>, unknown];
+    if (linhas.some((l) => Number(l.id) !== id && l.estado === "acordada")) {
+      await conn.rollback();
+      return { ok: false, porque: "ja_decidido" };
+    }
+    const [r] = (await conn.execute(gravarSeAinda, valores)) as any[];
+    if (Number(r?.affectedRows ?? 0) === 0) {
+      await conn.rollback();
+      return { ok: false, porque: "ja_decidido" };
+    }
+    const [outras] = (await conn.execute(
+      `UPDATE negociacoes SET estado = 'morta'
+        WHERE pedidoId = ? AND id <> ? AND estado IN ('aberta', 'aguarda_contratacao')`,
+      [seAinda.pedidoId, id],
+    )) as any[];
+    await conn.commit();
+    return { ok: true, encerradas: Number(outras?.affectedRows ?? 0) };
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    throw e;
+  } finally {
+    conn.release();
+  }
 }
 
 /**

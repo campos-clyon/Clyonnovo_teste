@@ -1109,9 +1109,10 @@ describe("fica escrito que foi o assistente", () => {
     // E o retrato é tirado ANTES de se mexer em nada.
     const f = NEGOCIACAO.indexOf("async function fecharPeloCliente(");
     const fecho = NEGOCIACAO.slice(f, NEGOCIACAO.indexOf("async function recusarPeloCliente("));
-    expect(fecho.indexOf("const outras = ")).toBeLessThan(
-      fecho.indexOf("encerrarOutrasNegociacoes("),
-    );
+    // Desde 10-11-2026 (d26) é `gravarNegociacao` que encerra as outras, na transacção do fecho.
+    expect(fecho.indexOf("const outras = ")).toBeGreaterThan(-1);
+    expect(fecho.indexOf("await gravarNegociacao(")).toBeGreaterThan(-1);
+    expect(fecho.indexOf("const outras = ")).toBeLessThan(fecho.indexOf("await gravarNegociacao("));
   });
 
   it("mas NAO se desfaz um trabalho que ja andou", () => {

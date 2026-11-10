@@ -3,9 +3,9 @@ import { lerForma } from "@/lib/forma-de-pagamento";
 import {
   negociacoesDoProfissional,
   gravarNegociacao,
-  encerrarOutrasNegociacoes,
   appendOrderHistory,
 } from "@/lib/db";
+import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { avisarDaProposta } from "@/lib/avisar-da-proposta";
@@ -213,11 +213,25 @@ export async function POST(req: NextRequest) {
     }
 
     const nova = resultado.negociacao;
-    await gravarNegociacao(negociacaoId, {
-      estado: nova.estado,
-      valorAcordado: nova.valorAcordado ?? null,
-      propostasJson: JSON.stringify(nova.propostas),
-    });
+    // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
+    const { quemVaiFicarSemOTrabalho, avisarQuemFicouSemOTrabalho } = await import("@/lib/avisar-quem-perdeu");
+    const perdem = nova.estado === "acordada" ? await quemVaiFicarSemOTrabalho(linha.pedidoId, negociacaoId) : [];
+    /*
+     * SÓ SE NINGUÉM DECIDIU PRIMEIRO — 10-11-2026 (d26). A escrita leva o
+     * estado que se leu: se o cliente recusou, contratou outro ou respondeu
+     * entretanto, o parceiro lê «já foi decidido» em vez de escrever por cima.
+     * Um fecho, se o motor lá chegar, faz-se numa só transacção.
+     */
+    const gravou = await gravarNegociacao(
+      negociacaoId,
+      {
+        estado: nova.estado,
+        valorAcordado: nova.valorAcordado ?? null,
+        propostasJson: JSON.stringify(nova.propostas),
+      },
+      { estado: linha.estado, pedidoId: linha.pedidoId },
+    );
+    if (!gravou.ok) return NextResponse.json({ error: JA_FOI_DECIDIDO, jaDecidido: true }, { status: 409 });
 
     /*
      * OS MATERIAIS DA PROPOSTA — 31-10-2026. Ao propor (ou aceitar), ele diz se
@@ -240,10 +254,7 @@ export async function POST(req: NextRequest) {
     // se o motor chegar a "acordada" por outro caminho, as outras negociações
     // do mesmo pedido têm de terminar, como na rota do token.
     if (nova.estado === "acordada") {
-      // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
-      const { quemVaiFicarSemOTrabalho, avisarQuemFicouSemOTrabalho } = await import("@/lib/avisar-quem-perdeu");
-      const perdem = await quemVaiFicarSemOTrabalho(linha.pedidoId, negociacaoId);
-      const encerradas = await encerrarOutrasNegociacoes(linha.pedidoId, negociacaoId);
+      const encerradas = gravou.encerradas;
       await appendOrderHistory(linha.pedidoId, {
         type: "created",
         by: null,

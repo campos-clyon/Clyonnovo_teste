@@ -767,11 +767,6 @@ export async function PATCH(req: NextRequest) {
       const base = baseValida(corpo.base) ? corpo.base : null;
       const r = await mudarValorDoTrabalhoClyon(pedidoId, valor.valor, taxa.taxa, base, motivoDaTaxa.motivo);
       const soOMotivo = r.ok && r.soOMotivo === true;
-      // O cliente tem uma proposta com o valor antigo: volta a ser preciso enviá-la.
-      // S19 (BO16): e, se já a tinha, fica a saber que o preço mudou.
-      const tinhaOPreco = !soOMotivo && Boolean(((await getSimulatorOrderById(pedidoId)) as { propostaEnviadaEm?: unknown } | undefined)?.propostaEnviadaEm);
-      if (!soOMotivo) await limparPropostaEnviada(pedidoId);
-      if (tinhaOPreco) await avisarCliente(pedidoId, "preco_mudou");
       /*
        * SÓ O MOTIVO (d18): o valor, a taxa e a unidade ficaram — a proposta do
        * cliente continua certa e ninguém volta a ter de aceitar.
@@ -796,6 +791,19 @@ export async function PATCH(req: NextRequest) {
         const [texto, estado] = porque[r.porque];
         return NextResponse.json({ error: texto }, { status: estado });
       }
+
+      /*
+       * SÓ DEPOIS DE A MUDANÇA SER ACEITE — 10-11-2026 (d26). Estava antes da
+       * recusa aí em cima: um valor igual, ou um trabalho já feito ou
+       * arrumado, apagava a proposta enviada (e o «Aceito este preço» do
+       * cliente) e dizia-lhe «o preço mudou» sem nada ter mudado.
+       *
+       * O cliente tem uma proposta com o valor antigo: volta a ser preciso enviá-la.
+       * S19 (BO16): e, se já a tinha, fica a saber que o preço mudou.
+       */
+      const tinhaOPreco = Boolean(((await getSimulatorOrderById(pedidoId)) as { propostaEnviadaEm?: unknown } | undefined)?.propostaEnviadaEm);
+      await limparPropostaEnviada(pedidoId);
+      if (tinhaOPreco) await avisarCliente(pedidoId, "preco_mudou");
 
       const ganhos = quantoOProfissionalRecebe(valor.valor, taxasDoTrabalhoClyon(taxa.taxa));
       const avisados = await avisarValorNovoDoTrabalhoClyon({
@@ -991,9 +999,11 @@ export async function PATCH(req: NextRequest) {
       // S19 (BO16): se o cliente já tinha o preço, fica a saber que mudou.
       const tinhaOPreco = Boolean(((await getSimulatorOrderById(pedidoId)) as { propostaEnviadaEm?: unknown } | undefined)?.propostaEnviadaEm);
       const r = await definirPrecoAoClienteClyon(pedidoId, lido.valor);
-      await limparPropostaEnviada(pedidoId);
-      if (r && tinhaOPreco) await avisarCliente(pedidoId, "preco_mudou");
       if (!r) return NextResponse.json({ error: "Esse pedido não é um Trabalho CLYON." }, { status: 404 });
+      // Só depois de o preço ficar gravado (10-11-2026, d26): recusado, nem se
+      // apaga a proposta enviada nem se avisa o cliente.
+      await limparPropostaEnviada(pedidoId);
+      if (tinhaOPreco) await avisarCliente(pedidoId, "preco_mudou");
       await appendOrderHistory(pedidoId, {
         type: "note",
         by: por,

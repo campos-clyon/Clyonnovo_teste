@@ -18,6 +18,7 @@ import {
   motivoDoPedidoFechado,
   pagamentoForaDeVigor,
 } from "@/lib/conferir-o-pagamento";
+import { avisarQueOPagamentoEntrou } from "@/lib/avisar-pagamento-recebido";
 import { bearerConfere } from "@/lib/segredo-igual";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 
@@ -125,6 +126,13 @@ async function conferirUm(
 
   if (feito.feito) {
     s.apanhados += 1;
+    /*
+     * O CLIENTE E O PARCEIRO FICAM A SABER — 10-11-2026 (d26). O mesmo aviso
+     * do webhook, e uma vez por pagamento: só depois de `darPorPago` dizer
+     * `feito`, que só acontece uma vez por linha. Se o webhook chegar depois,
+     * já não encontra a linha por pagar e não repete o aviso. Nunca lança.
+     */
+    await avisarQueOPagamentoEntrou(p);
     await registarSemFalhar({
       acontecimento: "pagamento_recebido",
       pedidoId: p.pedidoId,

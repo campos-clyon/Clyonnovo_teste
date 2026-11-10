@@ -132,7 +132,7 @@ describe("S19 — o resto da B3 (29-10-2026)", () => {
     ["BO10 rejeitar no modal", "src/app/api/admin/pedidos/[id]/route.ts", /semAvisoAoCliente: true/],
     ["BO11 propor em nome do cliente", "src/app/api/admin/negociacoes/agir/route.ts", /avisarCliente\(pedidoId, "proposta_pela_clyon"/],
     ["BO14 valor corrigido", "src/app/api/admin/negociacoes/valor/route.ts", /avisarProfissional\(Number\(linha\.providerId\), "valor_corrigido"/],
-    ["BO16 preço do Trabalho CLYON", "src/app/api/admin/trabalhos-clyon/route.ts", /if \(r && tinhaOPreco\) await avisarCliente\(pedidoId, "preco_mudou"\)/],
+    ["BO16 preço do Trabalho CLYON", "src/app/api/admin/trabalhos-clyon/route.ts", /if \(tinhaOPreco\) await avisarCliente\(pedidoId, "preco_mudou"\)/],
     ["BO21 ajuste respondido", "src/app/api/admin/negociacoes/ajuste/route.ts", /avisarCliente\(Number\(n\.pedidoId\), "ajuste_respondido"/],
     ["BO29 avaliar pela CLYON", "src/app/api/admin/negociacoes/agir/route.ts", /avisarProfissional\(Number\(linha\.providerId\), "avaliado"/],
     ["BO35 trocar", "src/app/api/admin/negociacoes/trocar-profissional/route.ts", /avisarProfissional\(providerId, "passou_para_si"/],

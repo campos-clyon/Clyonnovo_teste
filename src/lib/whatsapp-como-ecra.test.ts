@@ -145,7 +145,10 @@ describe("o cérebro (whatsapp-negociacao)", () => {
   });
 
   it("fechar por WhatsApp encerra as outras negociações, como em todo o lado", () => {
-    expect(CEREBRO).toContain("encerrarOutrasNegociacoes(alvo.pedidoId, alvo.negociacaoId)");
+    // Desde 10-11-2026 (d26) na mesma transacção que grava o fecho: `gravarNegociacao`
+    // com o estado que se leu, que devolve quantas encerrou.
+    expect(CEREBRO).toContain("{ estado: alvo.estado.estado, pedidoId: alvo.pedidoId },");
+    expect(CEREBRO).toContain("const encerradas = gravou.encerradas;");
   });
 
   it("tudo fica no histórico e no registo permanente como WhatsApp", () => {

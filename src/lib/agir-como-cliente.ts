@@ -4,7 +4,6 @@ import { responderAoAjuste, respostaDoCorpo, type RespostaDaRota } from "@/lib/r
 import {
   negociacoesDoPedido,
   gravarNegociacao,
-  encerrarOutrasNegociacoes,
   appendOrderHistory,
   confirmarExecucao,
   avaliarProfissional,
@@ -37,6 +36,7 @@ import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-p
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 
 /**
  * O CLIENTE AGE NUM PEDIDO — uma função só, para as três portas (d8, R8,
@@ -367,11 +367,24 @@ export async function agirComoCliente(a: {
     if (!resultado.ok) return falha(409, resultado.erro);
 
     const nova = resultado.negociacao;
-    await gravarNegociacao(negociacaoId, {
-      estado: nova.estado,
-      valorAcordado: nova.valorAcordado ?? null,
-      propostasJson: JSON.stringify(nova.propostas),
-    });
+    // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
+    const perdem = nova.estado === "acordada" ? quemFicaSemOTrabalho(todas, negociacaoId) : [];
+    /*
+     * SÓ SE NINGUÉM DECIDIU PRIMEIRO — 10-11-2026 (d26). A escrita leva o
+     * estado que se leu, e o fecho (esta contratada, as outras encerradas)
+     * faz-se numa só transacção: de dois fechos ao mesmo tempo passa um, e o
+     * outro lê «já foi decidido» sem avisar ninguém.
+     */
+    const gravou = await gravarNegociacao(
+      negociacaoId,
+      {
+        estado: nova.estado,
+        valorAcordado: nova.valorAcordado ?? null,
+        propostasJson: JSON.stringify(nova.propostas),
+      },
+      { estado: linha.estado, pedidoId },
+    );
+    if (!gravou.ok) return falha(409, JA_FOI_DECIDIDO, { jaDecidido: true });
 
     /*
      * FECHAR UMA FECHA AS OUTRAS, e o profissional fica a saber — pelas três
@@ -379,9 +392,7 @@ export async function agirComoCliente(a: {
      * espera de abrir o site para descobrir que tinha trabalho.
      */
     if (nova.estado === "acordada") {
-      // Quem fica sem o trabalho — lido antes de encerrar, avisado depois (28-10-2026, d5).
-      const perdem = quemFicaSemOTrabalho(todas, negociacaoId);
-      const encerradas = await encerrarOutrasNegociacoes(pedidoId, negociacaoId);
+      const encerradas = gravou.encerradas;
       await appendOrderHistory(pedidoId, {
         type: "created",
         by: null,

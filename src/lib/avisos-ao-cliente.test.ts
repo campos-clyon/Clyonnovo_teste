@@ -111,7 +111,8 @@ describe("S10 — cada aviso da R6 tem quem o mande", () => {
     ["src/app/api/profissionais/trabalho/ajuste/route.ts", '"ajuste"'],
     ["src/app/api/admin/negociacoes/agir/route.ts", '"confirmado"'],
     ["src/app/api/admin/pagamentos/criar/route.ts", '"referencia"'],
-    ["src/app/api/pagamentos/webhook/route.ts", '"pago"'],
+    // Desde 10-11-2026 (d26) o «pago» do webhook e o da conferência saem da mesma função.
+    ["src/lib/avisar-pagamento-recebido.ts", '"pago"'],
     ["src/app/api/admin/trabalhos-clyon/route.ts", '"preco_clyon"'],
     ["src/app/api/admin/trabalhos-clyon/escolher/route.ts", '"escolhido"'],
   ];

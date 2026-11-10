@@ -26,7 +26,7 @@ vi.mock("@/lib/db", () => ({
   getSimulatorOrderByAcessoTokenHash: vi.fn(async () => pedido()),
   negociacaoPorTokenHash: vi.fn(async () => undefined),
   negociacoesDoPedido: vi.fn(async () => negociacoes.map((n) => ({ ...n }))),
-  gravarNegociacao: vi.fn(async () => {}),
+  gravarNegociacao: vi.fn(async () => ({ ok: true, encerradas: 0 })),
   appendOrderHistory: vi.fn(async () => {}),
   perfilDoProfissional: vi.fn(async () => ({ email: "pro.teste@exemplo.pt", name: "Profissional Teste" })),
   registarSemFalhar: vi.fn(async () => {}),

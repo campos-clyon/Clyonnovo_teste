@@ -381,7 +381,11 @@ describe("4. na plataforma, pago em mão: a dívida na Carteira, com referência
       "const linhas = (await pagamentosDaNegociacao(trabalho.negociacaoId)).filter(eDoCliente);",
     );
     const webhook = semComentarios(ler("src/app/api/pagamentos/webhook/route.ts"));
-    expect(webhook).toContain('if (p.parte !== "divida") await avisarOClienteDoPedido(');
+    // O aviso do «pago» é um só, para o webhook e para a conferência (10-11-2026, d26).
+    expect(webhook).toContain("await avisarQueOPagamentoEntrou(p);");
+    expect(semComentarios(ler("src/lib/avisar-pagamento-recebido.ts"))).toContain(
+      'if (p.parte !== "divida") await avisarOClienteDoPedido(',
+    );
     expect(webhook).toContain("pagamentoForaDeVigor(p, daMesmaConta(p, await pagamentosDaNegociacao(p.negociacaoId)))");
   });
 

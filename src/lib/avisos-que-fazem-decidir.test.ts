@@ -184,7 +184,9 @@ describe("(c) quem fica sem o trabalho é avisado, sem preços dos outros", () =
     ];
     for (const f of sitios) {
       const s = ler(f);
-      const encerra = s.indexOf("await encerrarOutrasNegociacoes(");
+      // Desde 10-11-2026 (d26) encerra-se na transacção do fecho: a gravação com o estado que se leu.
+      const encerra = s.search(/const gravou = await gravarNegociacao\(/);
+      expect(s, f).toContain("gravou.encerradas");
       const le = s.search(/quemFicaSemOTrabalho\(|quemVaiFicarSemOTrabalho\(/);
       const avisa = s.indexOf("avisarQuemFicouSemOTrabalho({", encerra);
       expect(encerra, f).toBeGreaterThan(-1);
