@@ -435,9 +435,14 @@ export async function POST(req: NextRequest) {
    * na mudança: o valor é o da grelha (`ESVAZIAMENTO_POR_ESPACO`), e o modelo
    * fica com o resto. Sem volume não há número (proposta com fotografias).
    */
-  const daGrelha =
-    order.serviceType === "mudanca" ||
-    (eEsvaziamentoDeEspaco(order.serviceType) && fastEstimate.status !== "needs_more_info");
+  /*
+   * E EM TODA A GRELHA PUBLICADA — 10-11-2026 (d22). O entulho, os móveis por
+   * peça (do seletor ou descritos em texto), o esvaziamento pela tipologia e os
+   * monos ficavam com o número do modelo, só travado pelo mínimo: o site, a app
+   * e a Mesa davam três contas para o mesmo pedido. O motor diz quando o preço
+   * saiu de uma grelha publicada (`pelaGrelha`), e aí o número é o dele.
+   */
+  const daGrelha = fastEstimate.pelaGrelha === true;
   if (daGrelha && fastEstimate.estimatedPriceWithoutVat) {
     analysis = {
       ...analysis,
@@ -454,7 +459,7 @@ export async function POST(req: NextRequest) {
         ...(analysis.internalNotes ?? []),
         order.serviceType === "mudanca"
           ? `Mudança: preço da tabela à hora (${fastEstimate.estimatedPriceWithoutVat}€ s/IVA), e não o do modelo.`
-          : `Esvaziamento por espaço: preço da grelha publicada (${fastEstimate.estimateMinWithoutVat}–${fastEstimate.estimateMaxWithoutVat}€ s/IVA), e não o do modelo.`,
+          : `Preço da grelha publicada (${fastEstimate.estimateMinWithoutVat}–${fastEstimate.estimateMaxWithoutVat}€ s/IVA), e não o do modelo.`,
       ],
     };
   }

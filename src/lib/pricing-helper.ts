@@ -16,6 +16,7 @@ import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_ESPACO,
+  PRECOS,
   MANUTENCAO_POR_TIPO,
   MINIMO_DA_MANUTENCAO,
   NOTA_DOS_MATERIAIS,
@@ -37,13 +38,24 @@ import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import { comIva, type AcessoDoEntulho } from "./quanto-custa";
 import {
+  estimativaDoEsvaziamento,
   quantidadeDoEntulhoDoPedido,
   valorDoEntulho,
   valorDosMoveis,
+  type Estimativa,
+  type ItensDosMoveis,
   type QuantidadeDoEntulho,
   type ValorDosMoveis,
 } from "./preco-de-referencia";
-import { QUANTO_TRABALHO, TIPOS_DE_TRABALHO, nomeDaOpcao } from "./respostas-do-simulador";
+import {
+  QUANTO_TRABALHO,
+  TIPOS_DE_TRABALHO,
+  lerAcesso,
+  lerRecheio,
+  lerTipologiaDoEsvaziamento,
+  nomeDaOpcao,
+  razoesDoAcessoDificil,
+} from "./respostas-do-simulador";
 
 /*
  * O MÍNIMO DO ENTULHO É O DOS 10 SACOS DA GRELHA — 17-10-2026. Era 90 €. O
@@ -166,12 +178,14 @@ export function entulhoPelaConta(q: QuantidadeDoEntulho | null, acesso?: AcessoD
     };
   }
   // Acima da grelha: proposta com fotografias, com a referência pelos sacos (d7; era 144 €/m³).
+  // O ponto é o mesmo de dentro da grelha, o topo (d22, 10-11-2026): era o piso, e 201
+  // sacos davam 804 € quando 200 davam 960 € — o preço descia com mais entulho.
   const ultimo = ENTULHO_POR_VOLUME[ENTULHO_POR_VOLUME.length - 1].m3;
   const pelosSacos = precoDosSacos(ref.sacos);
   return {
     sacos: ref.sacos,
     m3: ref.m3,
-    semIva: arredondar(pelosSacos.de + s),
+    semIva: arredondar(pelosSacos.ate + s),
     minimo: arredondar(pelosSacos.de + s),
     maximo: arredondar(pelosSacos.ate + s),
     linha: comAndares(
@@ -199,6 +213,143 @@ export function moveisPorPeca(input: FastEstimateInput): ValorDosMoveis | null {
     { pequeno: Number(input.movelItemsPequeno) || 0, medio: Number(input.movelItemsMedio) || 0, grande: Number(input.movelItemsGrande) || 0 },
     { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance },
   );
+}
+
+/*
+ * O PONTO DA FAIXA NO MOTOR — 10-11-2026 (d22). Uma regra só para todas as
+ * faixas publicadas que o motor conta (o entulho, dentro e acima da grelha, o
+ * esvaziamento pela tipologia, os monos): o valor do pedido é o TOPO da faixa —
+ * a regra que o entulho já seguia desde 25-10-2026 —, o início quando a R12 diz
+ * «o início da faixa» (pouca coisa), e o «desde» quando só há «desde». O mínimo
+ * e o máximo do pedido são sempre os da faixa. A garagem, o sótão e a cave têm a
+ * regra publicada deles (`estimativaDoEspaco`: o meio, ou o topo com acesso
+ * difícil) e ficam como estão.
+ */
+export function pontoDaEstimativa(e: Estimativa): { de: number; ate: number; valor: number } | null {
+  switch (e.tipo) {
+    case "faixa":
+    case "topo":
+      return { de: e.de, ate: e.ate, valor: e.ate };
+    case "inicio":
+      return { de: e.de, ate: e.ate, valor: e.de };
+    case "desde":
+      return { de: e.de, ate: e.de, valor: e.de };
+    case "valor":
+      return { de: e.valor, ate: e.valor, valor: e.valor };
+    case "proposta":
+      return null;
+  }
+}
+
+/** Uma faixa publicada já posta no seu ponto, com a linha para as notas. */
+export type FaixaPublicada = { de: number; ate: number; valor: number; linha: string };
+
+const semAcentosDoMotor = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * A tipologia do esvaziamento — a chave de `ESVAZIAMENTO_POR_TIPOLOGIA`: a dita
+ * no pedido (a da grelha, ou a da mudança, «T1» → «T0/T1»), ou a que a descrição
+ * diz («T2», «moradia»). `null` sem nenhuma.
+ */
+export function tipologiaDoEsvaziamentoDoPedido(input: FastEstimateInput): string | null {
+  const svc = input.serviceType ?? "";
+  if (svc !== "esvaziamento_casa" && svc !== "esvaziamento_apartamento") return null;
+  const daGrelha = lerTipologiaDoEsvaziamento(svc, input.tipologia);
+  if (daGrelha) return daGrelha;
+  const pelaMudanca = (t: Tipologia | null): string | null =>
+    t === "T0" || t === "T1" ? "T0/T1" : t === "T2" ? "T2" : t === "T3" || t === "T4+" ? "T3/T4" : null;
+  const t = pelaMudanca(tipologiaDoTexto(input.tipologia)) ?? pelaMudanca(tipologiaDoTexto(input.description));
+  if (t) return lerTipologiaDoEsvaziamento(svc, t);
+  if (/\b(moradia|vivenda)\b/.test(semAcentosDoMotor(input.description ?? ""))) return lerTipologiaDoEsvaziamento(svc, "moradia");
+  return null;
+}
+
+/** O andar sem elevador ou o estacionamento longe/difícil — as razões da R12 para o topo da faixa. */
+function acessoDificilDoPedido(input: FastEstimateInput): boolean {
+  return razoesDoAcessoDificil(lerAcesso({ floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance })).length > 0;
+}
+
+/**
+ * O ESVAZIAMENTO DE CASA E DE APARTAMENTO PELA TIPOLOGIA — 10-11-2026 (d22). O
+ * motor ignorava a tipologia: um T2, publicado a 320–420 €, saía a 250 € (o
+ * mínimo de zona de Lisboa). Agora é a linha da grelha, posta na faixa como a
+ * R12 a põe (`estimativaDoEsvaziamento`), no ponto do motor. `null` sem
+ * tipologia: fica a conta de sempre.
+ */
+export function esvaziamentoPelaTipologia(input: FastEstimateInput): FaixaPublicada | null {
+  const svc = input.serviceType ?? "";
+  const r = estimativaDoEsvaziamento(svc, tipologiaDoEsvaziamentoDoPedido(input), lerRecheio(input.recheio), acessoDificilDoPedido(input));
+  const p = r ? pontoDaEstimativa(r.estimativa) : null;
+  if (!r || !p) return null;
+  const faixa = r.linha.maximo != null ? `${r.linha.minimo} a ${r.linha.maximo} €` : `desde ${r.linha.minimo} €`;
+  return { ...p, linha: `Grelha do esvaziamento (${r.linha.tipo}): ${faixa} s/IVA → ${p.valor} € s/IVA` };
+}
+
+/**
+ * OS MONOS PELA FAIXA PUBLICADA — 10-11-2026 (d22): 30 – 100 € sem IVA
+ * (`PRECOS.recolha_monos`), no ponto do motor; o mesmo topo com acesso difícil.
+ * Era a fórmula de custo com um mínimo de 48,78 € por item. A carga completa
+ * (8 ou mais itens, ou «enche a caixa de um camião») não tem linha publicada e
+ * fica com a conta de sempre.
+ */
+export function monosPelaFaixa(input: FastEstimateInput, cargaCompleta: boolean): FaixaPublicada | null {
+  if (input.serviceType !== "recolha_monos" || cargaCompleta) return null;
+  const preco = PRECOS.recolha_monos;
+  if (preco?.minimo == null || preco.maximo == null) return null;
+  const p = pontoDaEstimativa(
+    acessoDificilDoPedido(input)
+      ? { tipo: "topo", de: preco.minimo, ate: preco.maximo, motivo: "pelo acesso difícil" }
+      : { tipo: "faixa", de: preco.minimo, ate: preco.maximo },
+  );
+  if (!p) return null;
+  return { ...p, linha: `Faixa publicada dos monos: ${preco.minimo} a ${preco.maximo} € s/IVA → ${p.valor} € s/IVA` };
+}
+
+/** As palavras que contam um item mas não dizem o tamanho dele. */
+const PALAVRAS_SEM_TAMANHO = /^(monos?|movel|moveis|eletrodomestico|electrodomestico)/;
+
+/**
+ * AS PEÇAS DE UM PEDIDO DESCRITO EM TEXTO — 10-11-2026 (d22). A lista de itens
+ * do pedido (`heavyItems`) ou a descrição, cada peça pelo seu tamanho
+ * (`classifyItem`). `null` quando não se identifica nenhuma peça, ou quando a
+ * descrição fala da casa toda («tudo», «carga completa»).
+ */
+export function pecasDoTexto(input: FastEstimateInput): ItensDosMoveis | null {
+  const itens: ItensDosMoveis = { pequeno: 0, medio: 0, grande: 0 };
+  let quantos = 0;
+  const somar = (frase: string, n: number) => {
+    if (!(n > 0)) return;
+    const t = classifyItem(frase);
+    itens[t] = (itens[t] ?? 0) + n;
+    quantos += n;
+  };
+  const lista = (input.heavyItems ?? []).filter((x) => typeof x === "string" && x.trim());
+  if (lista.length > 0) {
+    for (const x of lista) somar(x, 1);
+  } else {
+    const descritos = itensDescritos(input.description ?? "");
+    if (!descritos) return null;
+    // «monos», «móveis», «eletrodomésticos» não dizem que peça é: a lista pode ser só uma parte.
+    if (descritos.some((d) => PALAVRAS_SEM_TAMANHO.test(semAcentosDoMotor(d.frase)))) return null;
+    for (const d of descritos) somar(d.frase, d.quantidade);
+  }
+  return quantos > 0 ? itens : null;
+}
+
+/**
+ * OS MÓVEIS DESCRITOS EM TEXTO PELA TABELA — 10-11-2026 (d22). O pedido que diz
+ * as peças por palavras (o WhatsApp, os contactos, o backoffice, o simulador
+ * sem o seletor das peças) conta-se como o seletor: peça a peça
+ * (`PRECO_POR_ITEM`), nunca abaixo da recolha mínima, mais os andares —
+ * `valorDosMoveis`, a mesma da R12. Com o volume escolhido («enche uma
+ * carrinha»…) a lista escrita pode ser só uma parte, e fica a conta de sempre.
+ */
+export function moveisPelaDescricao(input: FastEstimateInput): ValorDosMoveis | null {
+  if (input.serviceType !== "recolha_moveis" || input.movelMode === "item") return null;
+  if (input.volumeTier && input.volumeTier !== "incerto") return null;
+  const itens = pecasDoTexto(input);
+  if (!itens) return null;
+  return valorDosMoveis(itens, { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance });
 }
 
 /** As peças de referência do site, uma por linha, para os exemplos do modelo. */
@@ -430,6 +581,8 @@ export interface FastEstimateInput {
   volumeTier?: "carrinha" | "camiao_caixa" | "camiao_lixo" | "incerto";
   /** Garagem, sótão e cave: a resposta do acesso (`perguntas-do-espaco.ts`). */
   acessoDoEspaco?: string;
+  /** Esvaziamento de casa e de apartamento: quão cheia está (`RECHEIOS`, d22). */
+  recheio?: string;
   /*
    * O entulho e os móveis como a R12 os lê (03-11-2026, d4 e d6 v2): as
    * respostas da R7 (`entulho`, `tipoDeSaco`, `quantidade`, `ensacados`,
@@ -469,6 +622,7 @@ export const CAMPOS_DO_PEDIDO_PARA_O_MOTOR = [
   "entulhoVolume",
   "volumeTier",
   "acessoDoEspaco",
+  "recheio",
   "needsDismantling",
   "movelMode",
   "movelItemsPequeno",
@@ -525,6 +679,12 @@ export interface FastEstimateResult {
   schedulingFee?: number;
   /** O mesmo em texto, já formatado, para não haver arredondamentos pelo caminho. */
   schedulingFeeLabel?: string;
+  /**
+   * O preço saiu de uma grelha publicada (d22, 10-11-2026): os móveis por peça,
+   * o entulho dentro da grelha, o esvaziamento pela tipologia, os monos, a
+   * garagem/sótão/cave e a mudança à hora. A análise com o modelo não lhe mexe.
+   */
+  pelaGrelha?: boolean;
 }
 
 // ─── Ranges de referência por tipo de serviço ─────────────────────────────────
@@ -648,15 +808,31 @@ export function countItemsFromDescription(description: string): number | null {
   const d = description.toLowerCase();
 
   // Carga completa explícita → mínimo de zona
-  const fullLoadKw = ["carga completa", "tudo", "toda a casa", "todo o apartamento", "quarto inteiro", "sala inteira", "escritório inteiro"];
-  if (fullLoadKw.some((kw) => d.includes(kw))) return 6;
+  if (FULL_LOAD_KW.some((kw) => d.includes(kw))) return 6;
+  const descritos = itensDescritos(description);
+  if (!descritos || descritos.length === 0) return null;
+  const total = descritos.reduce((a, x) => a + x.quantidade, 0);
+  return total > 0 ? total : null;
+}
+
+const FULL_LOAD_KW = ["carga completa", "tudo", "toda a casa", "todo o apartamento", "quarto inteiro", "sala inteira", "escritório inteiro"];
+
+/**
+ * Os itens que a descrição nomeia, cada um com a quantidade e a frase que o
+ * diz («frigorífico bar», «cama de casal») — para contar e para dizer o
+ * tamanho. `null` quando a descrição fala da carga completa.
+ */
+export function itensDescritos(description: string): Array<{ quantidade: number; frase: string }> | null {
+  if (!description) return [];
+  const d = description.toLowerCase();
+  if (FULL_LOAD_KW.some((kw) => d.includes(kw))) return null;
 
   // Keywords de itens de mobiliário/eletrodomésticos
   const itemKeywords = [
     "sofá", "sofa", "frigorifico", "frigorífico", "arca", "mesa",
     "cadeira", "cama", "colchão", "colchao", "roupeiro", "armário", "armario",
     "estante", "televisão", "televisao", "televisor", "tv", "maquina", "máquina",
-    "microondas", "forno", "computador", "secretária", "secretaria",
+    "micro-ondas", "microondas", "forno", "fogão", "fogao", "mesinha", "computador", "secretária", "secretaria",
     "cadeirão", "cadeirao", "banco", "prateleira", "cómoda", "comoda",
     "beliche", "berço", "berco", "bicicleta", "mono", "móvel", "movel",
     "eletrodoméstico", "electrodomestico", "aparador", "vitrine", "poltrona",
@@ -681,9 +857,7 @@ export function countItemsFromDescription(description: string): number | null {
   );
 
   const matches = [...d.matchAll(combinedRegex)];
-  if (matches.length === 0) return null;
-
-  let total = 0;
+  const out: Array<{ quantidade: number; frase: string }> = [];
   let lastEnd = -1;
   for (const m of matches) {
     const start = m.index ?? 0;
@@ -694,11 +868,12 @@ export function countItemsFromDescription(description: string): number | null {
       const asDigit = parseInt(qtyToken, 10);
       qty = !isNaN(asDigit) ? asDigit : numberWordMap[qtyToken] ?? 1;
     }
-    total += qty;
     lastEnd = start + m[0].length;
+    // A frase da peça: a palavra e o que a qualifica, até à vírgula ou ao «e» seguinte.
+    const resto = d.slice(lastEnd, lastEnd + 30).split(/[,.;:\n]| e | com | mais /)[0];
+    out.push({ quantidade: qty, frase: `${m[2]}${resto}` });
   }
-
-  return total > 0 ? total : null;
+  return out;
 }
 
 /**
@@ -768,8 +943,21 @@ export function resolveItemCount(input: FastEstimateInput): number {
  * Classifica um item descrito em texto como "pequeno", "medio" ou "grande".
  * Heurística baseada em palavras-chave comuns em pedidos CLYON.
  */
-function classifyItem(description: string): "pequeno" | "medio" | "grande" {
+export function classifyItem(description: string): "pequeno" | "medio" | "grande" {
   const d = description.toLowerCase();
+
+  /*
+   * Os exemplos publicados no seletor das peças (`MovelItemSelector`, d22,
+   * 10-11-2026) mandam primeiro: pequeno — micro-ondas, forno, mesinha de
+   * cabeceira; médio — fogão, frigorífico bar, cadeirão. E a cama de solteiro é
+   * média; a de casal, grande (`PECAS_DE_REFERENCIA`).
+   */
+  const d0 = semAcentosDoMotor(d);
+  if (/micro-?ondas|\bforno\b|mesinha|mesas? de cabeceira/.test(d0)) return "pequeno";
+  if (/fogao|frigorificos? (bar|pequeno)|cadeirao|camas? (de )?(solteiro|individual|crianca)/.test(d0)) return "medio";
+  if (/camas? (de )?(casal|dupla|king|queen)/.test(d0)) return "grande";
+  // Uma cama ou um colchão sem dizer o tamanho: a peça média (nem a pequena, nem a de casal).
+  if (/\bcamas?\b|colch/.test(d0)) return "medio";
 
   // Itens grandes (>2m): sofás, camas, roupeiros, frigoríficos, máquinas, etc.
   const large = [
@@ -1252,12 +1440,14 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // ── 6a. Móveis por peça (d6 v2, 03-11-2026): a conta da R12, um valor fixo ──
   // Peça a peça, nunca abaixo da recolha mínima (d7, 04-11-2026), e os andares
   // por trabalho depois do mínimo; sem mínimo de zona.
-  const pecas = moveisPorPeca(input);
+  // E os móveis descritos em texto (d22, 10-11-2026): pela mesma tabela, peça a peça.
+  const pecasPeloSeletor = moveisPorPeca(input);
+  const pecas = pecasPeloSeletor ?? moveisPelaDescricao(input);
   if (pecas) {
     precoSemIva = pecas.valor;
     const c = pecas.itens;
     const linha =
-      `Móveis por peça: ${c.pequeno} × ${PRECO_POR_ITEM.pequeno} + ${c.medio} × ${PRECO_POR_ITEM.medio} + ${c.grande} × ${PRECO_POR_ITEM.grande} € = ${c.soma} €` +
+      `Móveis por peça${pecasPeloSeletor ? "" : " (descritos no pedido)"}: ${c.pequeno} × ${PRECO_POR_ITEM.pequeno} + ${c.medio} × ${PRECO_POR_ITEM.medio} + ${c.grande} × ${PRECO_POR_ITEM.grande} € = ${c.soma} €` +
       (c.pelaRecolhaMinima ? ` → recolha mínima ${RECOLHA_MINIMA_DOS_MOVEIS} €` : "") +
       (pecas.sup.valor > 0 ? ` + ${pecas.sup.valor} € dos andares` : "") +
       ` = ${pecas.valor} € s/IVA`;
@@ -1286,6 +1476,16 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     );
   }
 
+  // ── 6c. O esvaziamento pela tipologia e os monos: a faixa publicada (d22) ──
+  // No ponto do motor (`pontoDaEstimativa`); o acesso difícil leva ao topo, como na R12.
+  const faixaPublicada =
+    esvaziamentoPelaTipologia(input) ?? monosPelaFaixa(input, eCargaCompleta(svc, input.volumeTier, resolveItemCount(input)));
+  if (faixaPublicada) {
+    precoSemIva = faixaPublicada.valor;
+    notes.push(`${faixaPublicada.linha} (a grelha publicada substitui a fórmula de custo)`);
+    assumptions.push(faixaPublicada.linha);
+  }
+
   // ── 7. Agravamentos adicionais (taxas fixas do documento) ────────────────────
   //
   // ⚠️ A URGÊNCIA SAIU DAQUI. Somava +40 € (hoje) e +20 € (amanhã) ao preço
@@ -1302,7 +1502,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   let extras = 0;
   // Numa mudança o acesso já está na tabela (andares, elevador exterior). No entulho, o
   // estacionamento longe conta como mais um andar, na grelha (d1 v2, 03-11-2026).
-  if (input.parkingDistance === "difficult" && svc !== "mudanca" && svc !== "recolha_entulho" && !espaco && !pecas) { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
+  if (input.parkingDistance === "difficult" && svc !== "mudanca" && svc !== "recolha_entulho" && !espaco && !pecas && !faixaPublicada) { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
 
   // ── 7. Fallback se dados insuficientes ───────────────────────────────────────
   if (missing.length > 0 && precoSemIva <= 0) {
@@ -1340,6 +1540,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // Na garagem, no sótão e na cave, o preço fica dentro da faixa, mesmo com o mínimo de zona.
   const precoComMinimo = pecas
     ? pecas.valor
+    : faixaPublicada
+    ? faixaPublicada.valor
     : espaco
     ? Math.min(espaco.ate, Math.max(espaco.de, precoComMinimoBruto))
     : precoComMinimoBruto;
@@ -1367,7 +1569,9 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   const withVat = comIva(finalSemIva);
   const vat = Math.round((withVat - finalSemIva) * 100) / 100;
 
-  const recSemIva = pecas ? finalSemIva : Math.round(precoRecomendado * 100) / 100;
+  // Com a grelha publicada, o recomendado é o da grelha: o mínimo de zona não a ultrapassa (d22).
+  const pelaGrelha = !!pecas || !!faixaPublicada || !!espaco || svc === "mudanca" || (!!grelha && !grelha.proposta);
+  const recSemIva = pecas || faixaPublicada || espaco ? finalSemIva : Math.round(precoRecomendado * 100) / 100;
   const recComIva = comIva(recSemIva);
 
   // Dificuldade estimada
@@ -1392,6 +1596,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   const extrasDoPreco = Math.round((precoComMinimo - precoSemIva) * 100) / 100;
   const minVal = pecas
     ? pecas.valor
+    : faixaPublicada
+    ? faixaPublicada.de
     : espaco
     ? espaco.de
     : grelha
@@ -1399,6 +1605,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     : Math.max(minimumThreshold, Math.round(finalSemIva * 0.90 * 100) / 100);
   const maxVal = pecas
     ? pecas.valor
+    : faixaPublicada
+    ? faixaPublicada.ate
     : espaco
     ? espaco.ate
     : grelha
@@ -1427,6 +1635,10 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     confidence: missing.length > 0 || grelha?.proposta ? "low" : distKmFuel > 0 ? "high" : "medium",
     summary: grelha
       ? `Estimativa pela grelha publicada do entulho (${grelha.linha.replace(/^Grelha do entulho: /, "")}).`
+      : faixaPublicada
+      ? `Estimativa pela grelha publicada (${faixaPublicada.linha}).`
+      : pecas
+      ? "Estimativa pela tabela publicada das peças."
       : `Estimativa calculada com fórmula de custo real CLYON: combustível + pessoal + overhead × ${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%).`,
     assumptions,
     missingFields: missing,
@@ -1449,6 +1661,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     analysisSource: "local_fast_estimate",
     schedulingFee: taxaAgendamento,
     schedulingFeeLabel: taxaAgendamento > 0 ? formatarTaxa(taxaAgendamento) : undefined,
+    pelaGrelha,
   };
 }
 

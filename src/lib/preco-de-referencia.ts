@@ -695,6 +695,31 @@ function porqueDaMudanca(m: PedidoDeMudanca, o: OrcamentoDaMudanca): string[] {
   return l;
 }
 
+/*
+ * O ESVAZIAMENTO PELA TIPOLOGIA, UMA SÓ VEZ — 10-11-2026 (d22). A R12, o
+ * simulador do site e o motor (`pricing-helper.ts`) lêem a mesma linha de
+ * `ESVAZIAMENTO_POR_TIPOLOGIA` e põem-na no mesmo sítio da faixa: o topo com
+ * acesso difícil ou muito cheia, o início com pouca coisa, a faixa inteira no
+ * resto; a moradia só tem o «desde». `null` sem tipologia da grelha.
+ */
+export function estimativaDoEsvaziamento(
+  servico: string,
+  tipologia: string | null | undefined,
+  recheio: Recheio | null | undefined,
+  acessoDificil: boolean,
+): { linha: (typeof ESVAZIAMENTO_POR_TIPOLOGIA)[number]; estimativa: Estimativa } | null {
+  if (servico !== "esvaziamento_casa" && servico !== "esvaziamento_apartamento") return null;
+  const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === tipologia && (servico === "esvaziamento_casa" || x.maximo != null));
+  if (!t) return null;
+  let e: Estimativa;
+  if (t.maximo == null) e = { tipo: "desde", de: t.minimo };
+  else if (acessoDificil) e = { tipo: "topo", de: t.minimo, ate: t.maximo, motivo: PELO_ACESSO };
+  else if (recheio === "muito") e = { tipo: "topo", de: t.minimo, ate: t.maximo, motivo: "por estar muito cheia" };
+  else if (recheio === "pouco") e = { tipo: "inicio", de: t.minimo, ate: t.maximo, motivo: "por haver pouca coisa" };
+  else e = { tipo: "faixa", de: t.minimo, ate: t.maximo };
+  return { linha: t, estimativa: e };
+}
+
 /* ── O pedido inteiro ──────────────────────────────────────────────────── */
 
 /** A estimativa escrita e em três linhas (`null` quando não cabe numa conta destas, como o «por divisão»). */
@@ -793,14 +818,9 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
     if (estado === "misto") porque.push("O que está por ensacar: o tempo de carga entra na proposta.");
   } else if ((p.servico === "esvaziamento_casa" || p.servico === "esvaziamento_apartamento") && p.tipologia) {
     // O esvaziamento pela tipologia da grelha publicada; o recheio e o acesso posicionam-no na faixa.
-    const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === p.tipologia && (p.servico === "esvaziamento_casa" || x.maximo != null));
-    if (t) {
-      let e: Estimativa;
-      if (t.maximo == null) e = { tipo: "desde", de: t.minimo };
-      else if (razoes.length > 0) e = { tipo: "topo", de: t.minimo, ate: t.maximo, motivo: PELO_ACESSO };
-      else if (p.recheio === "muito") e = { tipo: "topo", de: t.minimo, ate: t.maximo, motivo: "por estar muito cheia" };
-      else if (p.recheio === "pouco") e = { tipo: "inicio", de: t.minimo, ate: t.maximo, motivo: "por haver pouca coisa" };
-      else e = { tipo: "faixa", de: t.minimo, ate: t.maximo };
+    const r = estimativaDoEsvaziamento(p.servico, p.tipologia, p.recheio, razoes.length > 0);
+    if (r) {
+      const { linha: t, estimativa: e } = r;
       acessoNoTopo = t.maximo != null;
       especifica = daEstimativa(e);
       porque.push(`${t.tipo}: a linha da grelha do esvaziamento.`);
@@ -968,6 +988,8 @@ export type FormularioDoSimulador = {
   hasElevator?: string;
   parkingDistance?: string;
   tipologia?: string;
+  /** Esvaziamento: quão cheia está (`RECHEIOS`). */
+  recheio?: string;
   originAccess?: { floor?: string; hasElevator?: string; difficultAccess?: boolean };
   destinationAccess?: { floor?: string; hasElevator?: string; difficultAccess?: boolean };
   movingDistance?: { distanceKm?: number };
@@ -1009,6 +1031,11 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
       corpo.tipoDeSaco = "pequeno";
       corpo.quantidade = f.entulhoQuantidade;
     }
+  }
+  if (s === "esvaziamento_casa" || s === "esvaziamento_apartamento") {
+    // A tipologia e o recheio do esvaziamento (d22, 10-11-2026), quando o formulário os tem.
+    if (f.tipologia) corpo.tipologia = f.tipologia;
+    if (f.recheio) corpo.recheio = f.recheio;
   }
   if (s === "mudanca") {
     corpo.tipologia = f.tipologia;

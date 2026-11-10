@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
   if (porConta.erro) return porConta.erro;
 
   try {
-    const { order, estimate, chatHistory } = await req.json();
+    // A `estimate` que o browser manda já não se lê (d22, 10-11-2026): ver «O motor de preços», abaixo.
+    const { order, chatHistory } = await req.json();
     if (!order) {
       return NextResponse.json({ error: "Pedido em falta." }, { status: 400 });
     }
@@ -152,7 +153,16 @@ export async function POST(req: NextRequest) {
     //
     // A origem do pedido não é tocada — continua a ser gravada tal como veio,
     // e é o que distingue "Contactos" de "Simulador" no painel.
-    let estimativa = estimate ?? null;
+    /*
+     * E O SERVIDOR CALCULA SEMPRE — 10-11-2026 (d22). A estimativa que o
+     * browser mandava ficava gravada tal como vinha: era o valor de partida
+     * que o profissional via, e qualquer pessoa podia mandar o número que
+     * quisesse a esta rota pública. E mesmo sem ninguém a mexer, era a conta do
+     * modelo, não a da grelha publicada. Agora o motor corre aqui para todos os
+     * pedidos, com a grelha (`calculateFastEstimate`), e o corpo do pedido não
+     * manda no preço.
+     */
+    let estimativa: Awaited<ReturnType<typeof calculateFastEstimate>> | null = null;
     let estimativaDoServidor = false;
     /*
      * Recalcular também quando a estimativa do browser veio sem distância.
@@ -165,8 +175,7 @@ export async function POST(req: NextRequest) {
      * Aqui há sempre uma resposta: código postal, nome da cidade, ou o valor
      * por omissão. Nenhuma é a medição real, e todas são melhores do que zero.
      */
-    const semDistancia = !(Number(order.distanceFromBase?.distanceKm) > 0);
-    if (!estimativa || semDistancia) {
+    {
       try {
         const morada =
           moradaCompleta(order.address ?? {}) ||
@@ -479,7 +488,8 @@ export async function POST(req: NextRequest) {
               internalNotes: estimativa.internalNotes,
               labor: estimativa.labor ?? null,
             },
-            externalMarketEstimate: estimativa.externalMarketEstimate ?? null,
+            // A pesquisa de mercado vinha só da estimativa do browser, que já não se lê (d22).
+            externalMarketEstimate: null,
             savedAt: new Date().toISOString(),
           })
         : null,

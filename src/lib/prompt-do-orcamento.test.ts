@@ -86,8 +86,10 @@ describe("o prompt do orçamento", () => {
 describe("na mudança, o preço é o da tabela", () => {
   it("a rota põe o preço do motor por cima do do modelo", () => {
     const rota = ler("src/app/api/simulator/analyze/route.ts");
-    // Desde 29-10-2026 a mesma regra serve a garagem, o sótão e a cave (`daGrelha`).
-    expect(rota).toContain('order.serviceType === "mudanca" ||');
+    // Desde 29-10-2026 a mesma regra serve a garagem, o sótão e a cave (`daGrelha`); desde a d22
+    // (10-11-2026) toda a grelha publicada: o motor diz-o em `pelaGrelha`, e a mudança é sempre.
+    expect(rota).toContain("const daGrelha = fastEstimate.pelaGrelha === true;");
+    expect(ler("src/lib/pricing-helper.ts")).toMatch(/const pelaGrelha = [^;]*svc === "mudanca"/);
     const i = rota.indexOf("if (daGrelha && fastEstimate.estimatedPriceWithoutVat) {");
     expect(i).toBeGreaterThan(-1);
     // Depois do Gemini (e do seu fallback), antes da pesquisa externa e da resposta.
