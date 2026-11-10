@@ -152,6 +152,7 @@ export async function GET(req: NextRequest) {
             acimaDosPrazos: avisosDaEquipa.acimaDosPrazos,
             enviados: avisosDaEquipa.enviados,
             entregasEnviadas: avisosDaEquipa.entregasEnviadas,
+            semNinguem: avisosDaEquipa.semNinguem,
             falhas: avisosDaEquipa.falhas.length,
           }
         : null,

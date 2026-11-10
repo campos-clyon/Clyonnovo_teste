@@ -101,6 +101,7 @@ async function destinatarios(seccao: SeccaoDoAviso): Promise<string[]> {
   return contas.filter((c) => recebeOAviso(c, seccao)).map((c) => chaveDaEquipa(Number(c.id)));
 }
 
+/** A quantos aparelhos da equipa chegou (0 = ninguém com avisos ligados, ou falhou tudo). */
 async function enviar(aviso: AvisoAEquipa): Promise<number> {
   const { sendPushToUser } = await import("./webpush");
   const para = await destinatarios(aviso.seccao);
@@ -110,7 +111,7 @@ async function enviar(aviso: AvisoAEquipa): Promise<number> {
   } catch {
     /* fica o caminho */
   }
-  await Promise.all(
+  const chegou = await Promise.all(
     para.map((chave) =>
       sendPushToUser(
         chave,
@@ -128,18 +129,22 @@ async function enviar(aviso: AvisoAEquipa): Promise<number> {
       ),
     ),
   );
-  return para.length;
+  return chegou.reduce((s, n) => s + n, 0);
 }
 
 /* ── A tabela que impede repetir ────────────────────────────────────────── */
 
-async function reservar(aviso: AvisoAEquipa, enviado: boolean): Promise<boolean> {
+/**
+ * Guarda a espera e diz se há que a enviar: nova, ou a mesma ainda por
+ * enviar (não chegou a ninguém na passagem anterior). Nunca a dá por enviada
+ * — isso é `marcarEnviado`, depois de chegar a alguém.
+ */
+async function reservar(aviso: AvisoAEquipa): Promise<boolean> {
   const p = await pool();
-  const [linhas] = (await p.execute("SELECT desdeMs FROM avisosDaEquipa WHERE chave = ? LIMIT 1", [aviso.chave])) as [
-    Array<{ desdeMs: number | string }>,
-    unknown,
-  ];
-  const agoraMs = Date.now();
+  const [linhas] = (await p.execute(
+    "SELECT desdeMs, enviadoMs, comoFicou FROM avisosDaEquipa WHERE chave = ? LIMIT 1",
+    [aviso.chave],
+  )) as [Array<{ desdeMs: number | string; enviadoMs: number | string | null; comoFicou: string | null }>, unknown];
   const valores = [
     aviso.tipo,
     aviso.pedidoId,
@@ -149,8 +154,8 @@ async function reservar(aviso: AvisoAEquipa, enviado: boolean): Promise<boolean>
     aviso.corpo.slice(0, 500),
     aviso.url.slice(0, 300),
     aviso.desde.getTime(),
-    enviado ? agoraMs : null,
-    enviado ? "enviado" : null,
+    null,
+    null,
   ];
   if (linhas.length === 0) {
     try {
@@ -166,7 +171,10 @@ async function reservar(aviso: AvisoAEquipa, enviado: boolean): Promise<boolean>
       throw e;
     }
   }
-  if (!eUmaEsperaNova(new Date(Number(linhas[0].desdeMs)), aviso.desde)) return false;
+  if (!eUmaEsperaNova(new Date(Number(linhas[0].desdeMs)), aviso.desde)) {
+    // A mesma espera: só se ainda não chegou a ninguém (nem foi dispensada).
+    return linhas[0].enviadoMs == null && linhas[0].comoFicou == null;
+  }
   const [r] = (await p.execute(
     `UPDATE avisosDaEquipa
         SET tipo = ?, pedidoId = ?, telefone = ?, seccao = ?, titulo = ?, corpo = ?, url = ?, desdeMs = ?, enviadoMs = ?, comoFicou = ?
@@ -307,7 +315,7 @@ export async function avisarAEquipaDaEntrega(telefone: string, motivo: string | 
     const pedidos = await pedidosDoTelefone(telefone).catch(() => [] as number[]);
     const agora = new Date();
     await anunciarAEntrega(
-      { reservar, enviar },
+      { reservar, enviar, marcarEnviado },
       avisoDaEntrega({ telefone, pedidoId: pedidos[0] ?? null, motivo, agora }),
       agora,
     );

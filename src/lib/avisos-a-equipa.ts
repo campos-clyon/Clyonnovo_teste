@@ -23,6 +23,11 @@ import { telefoneLegivel } from "./telefone-legivel";
  * escrever depois de lhe respondermos, outra proposta chegou depois do envio)
  * avisa outra vez — é outra coisa à espera de nós.
  *
+ * SÓ SE DÁ POR ENVIADO O QUE CHEGOU A ALGUÉM (d23, correcção do mesmo dia).
+ * Sem ninguém com avisos ligados, ou com o envio todo a falhar, o aviso fica
+ * por enviar e volta a tentar-se na passagem seguinte em horário — o primeiro
+ * lote não se perde enquanto os avisos não estiverem ligados.
+ *
  * SÓ EM HORÁRIO, 08h–21h em Lisboa. Fora de horas nada se envia: o que está
  * parado continua parado e é contado na primeira passagem das 08h; as
  * entregas a uma pessoa ficam guardadas e saem nessa passagem.
@@ -183,16 +188,16 @@ export type DependenciasDosAvisos = {
   lerDoNossoLado: () => Promise<LinhaDoNossoLado[]>;
   lerPorDecidir: () => Promise<PedidoPorDecidir[]>;
   /**
-   * Guarda o aviso se for uma espera nova e devolve `true`; com a mesma
-   * espera já guardada, `false`. Com `enviado`, fica dado como enviado.
+   * Guarda o aviso e devolve `true` se há que o enviar: uma espera nova, ou a
+   * mesma espera ainda por enviar. `false` se já chegou a alguém.
    */
-  reservar: (aviso: AvisoAEquipa, enviado: boolean) => Promise<boolean>;
+  reservar: (aviso: AvisoAEquipa) => Promise<boolean>;
   /** As entregas guardadas e ainda por enviar. */
   entregasPorEnviar: () => Promise<AvisoAEquipa[]>;
   /** A conversa continua entregue a uma pessoa? Uma já devolvida não se anuncia. */
   aindaEntregue: (telefone: string) => Promise<boolean>;
   marcarEnviado: (chave: string, como: "enviado" | "dispensado") => Promise<void>;
-  /** Envia à equipa da secção; devolve a quantos aparelhos foi (0 = ninguém com avisos ligados). */
+  /** Envia à equipa da secção; devolve a quantos aparelhos CHEGOU (0 = ninguém com avisos ligados, ou falhou tudo). */
   enviar: (aviso: AvisoAEquipa) => Promise<number>;
 };
 
@@ -202,6 +207,8 @@ export type ResultadoDosAvisos = {
   acimaDosPrazos: number;
   enviados: number;
   entregasEnviadas: number;
+  /** Os que não chegaram a ninguém nesta passagem e ficam por enviar. */
+  semNinguem: number;
   linhas: string[];
   falhas: string[];
 };
@@ -220,6 +227,7 @@ export async function correrOsAvisosDaEquipa(
     acimaDosPrazos: 0,
     enviados: 0,
     entregasEnviadas: 0,
+    semNinguem: 0,
     linhas: [],
     falhas: [],
   };
@@ -232,7 +240,10 @@ export async function correrOsAvisosDaEquipa(
         await deps.marcarEnviado(a.chave, "dispensado");
         continue;
       }
-      await deps.enviar(a);
+      if ((await deps.enviar(a)) === 0) {
+        r.semNinguem++;
+        continue; // fica por enviar: volta na passagem seguinte
+      }
       await deps.marcarEnviado(a.chave, "enviado");
       r.entregasEnviadas++;
       r.linhas.push(`Entrega anunciada: ${a.pedidoId != null ? `#${a.pedidoId}` : "conversa sem pedido"}.`);
@@ -255,8 +266,12 @@ export async function correrOsAvisosDaEquipa(
 
   for (const a of avisos) {
     try {
-      if (!(await deps.reservar(a, true))) continue;
-      await deps.enviar(a);
+      if (!(await deps.reservar(a))) continue;
+      if ((await deps.enviar(a)) === 0) {
+        r.semNinguem++;
+        continue; // fica por enviar: volta na passagem seguinte
+      }
+      await deps.marcarEnviado(a.chave, "enviado");
       r.enviados++;
       r.linhas.push(`${a.tipo === "por_decidir" ? "Por decidir" : "Do nosso lado"}: ${a.pedidoId != null ? `#${a.pedidoId}` : "conversa sem pedido"}.`);
     } catch (e) {
@@ -271,15 +286,16 @@ export async function correrOsAvisosDaEquipa(
  * enviada); fora de horas fica guardada e sai na passagem das 08h. Nunca lança.
  */
 export async function anunciarAEntrega(
-  deps: Pick<DependenciasDosAvisos, "reservar" | "enviar">,
+  deps: Pick<DependenciasDosAvisos, "reservar" | "enviar" | "marcarEnviado">,
   aviso: AvisoAEquipa,
   agora: Date = new Date(),
 ): Promise<"enviado" | "guardado" | "repetido"> {
   try {
-    const ja = emHorarioDaEquipa(agora);
-    if (!(await deps.reservar(aviso, ja))) return "repetido";
-    if (!ja) return "guardado";
-    await deps.enviar(aviso);
+    if (!(await deps.reservar(aviso))) return "repetido";
+    if (!emHorarioDaEquipa(agora)) return "guardado";
+    // Sem ninguém a recebê-lo, fica guardado para a passagem seguinte.
+    if ((await deps.enviar(aviso)) === 0) return "guardado";
+    await deps.marcarEnviado(aviso.chave, "enviado");
     return "enviado";
   } catch (e) {
     console.error("[avisos-a-equipa] entrega:", e instanceof Error ? e.message : e);

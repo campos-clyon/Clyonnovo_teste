@@ -66,9 +66,12 @@ export function soAAppRecebe(para: AppNativa, bilhetes: Bilhete[]): boolean {
  * profissional, «cliente» para o que é do cliente. Nos telemóveis só toca a
  * app certa, mesmo com as duas no mesmo email; o navegador continua a receber
  * como recebia (ver `push-nativo.ts`).
+ *
+ * DEVOLVE A QUANTOS APARELHOS CHEGOU — 10-11-2026 (d23). Quem não precisa
+ * ignora-o; os avisos à equipa só se dão por enviados com pelo menos um.
  */
-export async function sendPushToUser(email: string, payload: PushPayload, para: AppNativa): Promise<void> {
-  if (!email) return;
+export async function sendPushToUser(email: string, payload: PushPayload, para: AppNativa): Promise<number> {
+  if (!email) return 0;
 
   let subs: StoredPushSubscription[];
   let deletePushSubscription: (endpoint: string) => Promise<void>;
@@ -78,9 +81,9 @@ export async function sendPushToUser(email: string, payload: PushPayload, para: 
     subs = await db.getPushSubscriptionsByEmail(email);
   } catch (err) {
     console.error("[webpush] não li as subscrições:", err instanceof Error ? err.message : err);
-    return;
+    return 0;
   }
-  if (!subs.length) return;
+  if (!subs.length) return 0;
 
   const daApp = aparelhosDaApp(subs, para);
   const doNavegador = subs.filter((s) => appDoAparelho(s) === "web");
@@ -88,11 +91,13 @@ export async function sendPushToUser(email: string, payload: PushPayload, para: 
   const bilhetes = daApp.length
     ? await enviarAvisoNaApp(daApp, payload, { para, esquecer: deletePushSubscription })
     : [];
-  if (soAAppRecebe(para, bilhetes)) return;
-  if (!doNavegador.length || !ensureConfigured()) return;
+  const naApp = bilhetes.filter((b) => !b.erro).length;
+  if (soAAppRecebe(para, bilhetes)) return naApp;
+  if (!doNavegador.length || !ensureConfigured()) return naApp;
 
   const data = JSON.stringify(payload);
 
+  let noNavegador = 0;
   await Promise.all(
     doNavegador.map(async (s) => {
       try {
@@ -100,6 +105,7 @@ export async function sendPushToUser(email: string, payload: PushPayload, para: 
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           data,
         );
+        noNavegador++;
       } catch (err: any) {
         const code = err?.statusCode;
         if (code === 404 || code === 410) {
@@ -111,4 +117,5 @@ export async function sendPushToUser(email: string, payload: PushPayload, para: 
       }
     }),
   );
+  return naApp + noNavegador;
 }

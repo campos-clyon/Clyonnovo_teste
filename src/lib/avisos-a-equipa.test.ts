@@ -29,17 +29,21 @@ import { PERGUNTA_ANOTADA } from "./voz-da-vitoria";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
 /** Uma loja em memória, com a mesma regra da tabela: a mesma espera não avisa duas vezes. */
-function loja(dados: { doNossoLado?: LinhaDoNossoLado[]; porDecidir?: { id: number; criadoEm: Date | null }[] } = {}) {
+function loja(
+  dados: { doNossoLado?: LinhaDoNossoLado[]; porDecidir?: { id: number; criadoEm: Date | null }[] } = {},
+  /** A quantos aparelhos chega cada envio (0 = ninguém com avisos ligados, ou falhou tudo). */
+  chega: () => number = () => 1,
+) {
   const guardados = new Map<string, { desde: Date; enviado: boolean; aviso: AvisoAEquipa; como?: string }>();
   const enviados: AvisoAEquipa[] = [];
   const entregues = new Set<string>();
   const deps: DependenciasDosAvisos = {
     lerDoNossoLado: async () => dados.doNossoLado ?? [],
     lerPorDecidir: async () => dados.porDecidir ?? [],
-    reservar: async (a, enviado) => {
+    reservar: async (a) => {
       const g = guardados.get(a.chave);
-      if (g && !eUmaEsperaNova(g.desde, a.desde)) return false;
-      guardados.set(a.chave, { desde: a.desde, enviado, aviso: a });
+      if (g && !eUmaEsperaNova(g.desde, a.desde)) return !g.enviado && !g.como;
+      guardados.set(a.chave, { desde: a.desde, enviado: false, aviso: a });
       return true;
     },
     entregasPorEnviar: async () =>
@@ -53,8 +57,9 @@ function loja(dados: { doNossoLado?: LinhaDoNossoLado[]; porDecidir?: { id: numb
       }
     },
     enviar: async (a) => {
-      enviados.push(a);
-      return 1;
+      const n = chega();
+      if (n > 0) enviados.push(a);
+      return n;
     },
   };
   return { deps, enviados, guardados, entregues };
@@ -181,15 +186,57 @@ describe("fora de horas não sai nada, e às 08h sai", () => {
   });
 });
 
+describe("só fica enviado o que chegou a alguém", () => {
+  it("sem ninguém com avisos ligados, fica por enviar e sai na passagem seguinte", async () => {
+    let aparelhos = 0;
+    const l = loja(
+      { porDecidir: [{ id: 601, criadoEm: new Date("2026-11-10T12:00:00Z") }, { id: 602, criadoEm: new Date("2026-11-10T13:00:00Z") }] },
+      () => aparelhos,
+    );
+    const agora = new Date("2026-11-10T15:00:00Z");
+    const r1 = await correrOsAvisosDaEquipa(l.deps, agora);
+    expect(r1.enviados).toBe(0);
+    expect(r1.semNinguem).toBe(2);
+    expect([...l.guardados.values()].every((g) => !g.enviado)).toBe(true);
+
+    // Alguém liga os avisos: a passagem seguinte entrega o lote — uma vez.
+    aparelhos = 1;
+    const r2 = await correrOsAvisosDaEquipa(l.deps, new Date(agora.getTime() + 600_000));
+    expect(r2.enviados).toBe(2);
+    const r3 = await correrOsAvisosDaEquipa(l.deps, new Date(agora.getTime() + 1_200_000));
+    expect(r3.enviados).toBe(0);
+    expect(l.enviados).toHaveLength(2);
+  });
+
+  it("uma entrega que não chegou a ninguém fica guardada e volta a tentar-se", async () => {
+    let aparelhos = 0;
+    const l = loja({}, () => aparelhos);
+    const agora = new Date("2026-11-10T15:00:00Z");
+    l.entregues.add("912345678");
+    expect(await anunciarAEntrega(l.deps, avisoDaEntrega({ telefone: "912345678", pedidoId: 700, motivo: null, agora }), agora)).toBe("guardado");
+    expect((await correrOsAvisosDaEquipa(l.deps, new Date(agora.getTime() + 600_000))).entregasEnviadas).toBe(0);
+    aparelhos = 2;
+    expect((await correrOsAvisosDaEquipa(l.deps, new Date(agora.getTime() + 1_200_000))).entregasEnviadas).toBe(1);
+    expect((await correrOsAvisosDaEquipa(l.deps, new Date(agora.getTime() + 1_800_000))).entregasEnviadas).toBe(0);
+  });
+
+  it("na base: reservar nunca dá por enviado; só marcarEnviado, depois de chegar", () => {
+    const BASE = ler("src/lib/avisos-a-equipa-na-base.ts");
+    expect(BASE).toContain("return linhas[0].enviadoMs == null && linhas[0].comoFicou == null;");
+    expect(BASE).toContain("return chegou.reduce((s, n) => s + n, 0);");
+    expect(ler("src/lib/webpush.ts")).toContain("return naApp + noNavegador;");
+  });
+});
+
 describe("a entrega a uma pessoa gera um push", () => {
   it("em horário, sai logo, com o n.º do pedido ou o contacto", async () => {
     const l = loja();
     const agora = new Date("2026-11-10T15:00:00Z");
     expect(await anunciarAEntrega(l.deps, avisoDaEntrega({ telefone: "912345678", pedidoId: 700, motivo: "Não sei responder", agora }), agora)).toBe("enviado");
-    expect(await anunciarAEntrega(l.deps, avisoDaEntrega({ telefone: "+351 935 000 111", pedidoId: null, motivo: null, agora }), agora)).toBe("enviado");
+    expect(await anunciarAEntrega(l.deps, avisoDaEntrega({ telefone: "+351 910 000 111", pedidoId: null, motivo: null, agora }), agora)).toBe("enviado");
     expect(l.enviados).toHaveLength(2);
     expect(l.enviados[0].corpo).toContain("Pedido #700");
-    expect(l.enviados[1].corpo).toContain("935 000 111");
+    expect(l.enviados[1].corpo).toContain("910 000 111");
     expect(l.enviados.every((a) => a.seccao === "whatsapp")).toBe(true);
   });
 

@@ -467,7 +467,8 @@ describe("os avisos que o site já manda chegam à app", () => {
 
   it("e não lança se a base falhar", async () => {
     vi.mocked(db.getPushSubscriptionsByEmail).mockRejectedValue(new Error("DB not available"));
-    await expect(sendPushToUser("rui@exemplo.pt", { title: "t", body: "b" }, "pro")).resolves.toBeUndefined();
+    // Desde 10-11-2026 (d23) devolve a quantos aparelhos chegou: com a base em baixo, a nenhum.
+    await expect(sendPushToUser("rui@exemplo.pt", { title: "t", body: "b" }, "pro")).resolves.toBe(0);
   });
 });
 
