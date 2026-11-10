@@ -182,7 +182,7 @@ REGRAS ABSOLUTAS
       Móveis por peça, a tabela do site (s/IVA): ${PECAS_EM_TEXTO}; a soma das peças nunca fica abaixo da recolha mínima de ${RECOLHA_MINIMA}, e os andares somam-se depois do mínimo.
       EXEMPLO CORRETO: ${MESA_COM_CADEIRAS} — é uma peça da tabela, NÃO um valor de carga completa nem de esvaziamento (esses começam nos ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}); sozinha, conta a recolha mínima de ${RECOLHA_MINIMA}.
       EXEMPLO CORRETO: 1 ${SOFA.peca.toLowerCase()}, rés-do-chão, estacionamento à porta → ${pecaPelaTabela(SOFA)}
-      Para múltiplos itens soltos: aplica desconto de eficiência (~60% do custo por item adicional).
+      Para múltiplos itens soltos: somam-se as peças da tabela, uma a uma (a eficiência de ter a equipa no local conta só nas horas, não no preço).
    b) CARGA COMPLETA (≥8 itens) e ESVAZIAMENTO: o preço sai das faixas publicadas no site (sem IVA, com o IVA ao lado):
 ${FAIXAS_DO_ESVAZIAMENTO}
       Os apartamentos ficam dentro de ${comOIva(APARTAMENTOS)}.

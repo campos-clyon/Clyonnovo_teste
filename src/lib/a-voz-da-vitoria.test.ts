@@ -7,6 +7,7 @@ import {
   eClienteDeVolta,
   perguntaSeFazemos,
   reclamaDoAtendimento,
+  SIM_OS_PARCEIROS_FAZEM,
 } from "./voz-da-vitoria";
 import {
   type EstadoDaRecolha,
@@ -50,10 +51,12 @@ describe("a conversa do Abílio, como devia ter sido", () => {
     "A morada é Rua 3 de março 14B 2860-321 Moita",
   ]);
 
-  it("à pergunta «fazem?», responde «Fazemos, sim!» — e janelas são monos, não móveis", () => {
+  it("à pergunta «fazem?», responde que sim, e que quem faz é o parceiro (d28) — e janelas são monos, não móveis", () => {
     expect(c.respostas[0].estado.dados.serviceType).toBe("recolha_monos");
     expect(c.disse[0]).toContain("Aqui é a Vitória, assistente online da CLYON");
-    expect(c.disse[0]).toContain("Fazemos, sim!");
+    expect(c.disse[0]).toContain(SIM_OS_PARCEIROS_FAZEM);
+    expect(SIM_OS_PARCEIROS_FAZEM).toBe("Sim, é um serviço que os parceiros fazem!");
+    expect(c.disse[0]).not.toMatch(/fazemos/i);
     expect(c.disse[0]).not.toContain("— certo");
     expect(c.disse[0]).toContain("Com quem tenho o gosto de falar?");
   });

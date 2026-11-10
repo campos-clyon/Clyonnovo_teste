@@ -330,9 +330,10 @@ describe("as peças do caso, uma a uma", () => {
     expect(respostaAoMaterial("Aceitam isto?")).toBe("Quanto ao material, deixo anotado para uma pessoa da CLYON confirmar consigo.");
   });
 
-  it("a quem perguntou «Vocês recolhem…?» o «Fazemos, sim!» chega — sem um segundo sim", () => {
+  it("a quem perguntou «Vocês recolhem…?» o sim chega, a dizer que quem faz é o parceiro (d28) — sem um segundo sim", () => {
     const r = responderNaRecolha(recolhaNova(), "Vocês recolhem frigoríficos?", AGORA, false);
-    expect(r.resposta).toContain("Fazemos, sim! Fica anotado: recolha de monos.");
+    expect(r.resposta).toContain("Sim, é um serviço que os parceiros fazem! Fica anotado: recolha de monos.");
+    expect(r.resposta).not.toMatch(/fazemos/i);
     expect(r.resposta).not.toContain("Sim, é material");
     // Mas o que não se recolhe diz-se, mesmo aí.
     const amianto = responderNaRecolha(recolhaNova(), "Vocês recolhem entulho com fibrocimento?", AGORA, false);

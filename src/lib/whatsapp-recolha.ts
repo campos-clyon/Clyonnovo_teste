@@ -82,6 +82,7 @@ import {
   respostaADisponibilidade,
   respostaAHora,
   respostaAoMaterial,
+  SIM_OS_PARCEIROS_FAZEM,
 } from "./voz-da-vitoria";
 import { eMarcaDeImagem } from "./rajada-do-whatsapp";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
@@ -3005,7 +3006,7 @@ export function lerOVolumeEQuemCarrega(d: DadosDaRecolha, texto: string): void {
 export function respostasAsPerguntas(
   texto: string,
   d: DadosDaRecolha,
-  /** Já se disse «Fazemos, sim!» — o sim ao material seria o mesmo sim outra vez. */
+  /** Já se disse o sim de `SIM_OS_PARCEIROS_FAZEM` — o sim ao material seria o mesmo sim outra vez. */
   jaDisseQueFazemos = false,
 ): string {
   if (!texto) return "";
@@ -3724,7 +3725,8 @@ export function responderNaRecolha(
  *
  * Por ordem, e só uma destas coisas:
  *   1. quem volta: «Que bom voltar a falar consigo, Abílio!»;
- *   2. o serviço, na primeira resposta: «Fazemos, sim!» a quem perguntou, ou
+ *   2. o serviço, na primeira resposta: o sim a quem perguntou
+ *      (`SIM_OS_PARCEIROS_FAZEM` — quem faz é o parceiro, d28), ou
  *      «Com todo o gosto!» — e o que se percebeu, para ele poder corrigir;
  *   3. o nome, quando chegou agora: «Muito prazer, Abílio!»;
  *   4. a resposta à pergunta que estava feita: um agradecimento curto, que
@@ -3754,7 +3756,7 @@ export function vozAntesDaPergunta(
   }
   if (antes.passo === "servico" && d.serviceType) {
     const etiqueta = (ETIQUETAS[d.serviceType] ?? d.serviceType).toLowerCase();
-    const sim = texto && perguntaSeFazemos(texto) ? "Fazemos, sim!" : "Com todo o gosto!";
+    const sim = texto && perguntaSeFazemos(texto) ? SIM_OS_PARCEIROS_FAZEM : "Com todo o gosto!";
     return `${sim} Fica anotado: ${etiqueta}.\n\n${disponibilidade}`;
   }
   if (disponibilidade) return disponibilidade;
@@ -4385,7 +4387,7 @@ export function responderComCompreensao(
    */
   const naoCompramos =
     cru && !contexto.jaDisseQueNaoCompra && querVenderBens(cru) ? NAO_COMPRAMOS : "";
-  // O agradecimento, o «fazemos, sim» e o «que bom voltar» — os mesmos modos
+  // O agradecimento, o sim a quem pergunta se fazemos e o «que bom voltar» — os mesmos modos
   // do plano B. Ver `vozAntesDaPergunta`.
   const voz = vozAntesDaPergunta(cru, estado, d, passo, abertura !== "", pelasImagens);
   return {

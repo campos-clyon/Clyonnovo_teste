@@ -16,6 +16,8 @@ import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_ESPACO,
+  ESVAZIAMENTO_POR_TIPOLOGIA,
+  NOME_DO_TAMANHO,
   PRECOS,
   MANUTENCAO_POR_TIPO,
   MINIMO_DA_MANUTENCAO,
@@ -31,12 +33,13 @@ import {
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
   pecaEmLinha,
+  precoDaPeca,
   precoDosSacos,
   type QuantoDaManutencao,
 } from "./precos-publicos";
 import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
-import { comIva, type AcessoDoEntulho } from "./quanto-custa";
+import { comIva, comIvaEscrito, euros, semIvaEscrito, type AcessoDoEntulho, type Valor } from "./quanto-custa";
 import {
   estimativaDoEsvaziamento,
   quantidadeDoEntulhoDoPedido,
@@ -352,8 +355,46 @@ export function moveisPelaDescricao(input: FastEstimateInput): ValorDosMoveis | 
   return valorDosMoveis(itens, { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance });
 }
 
+/** «40 € s/IVA (49,20 € c/IVA)» — o sem IVA nunca sozinho, nem no que o modelo lê. */
+const comOIvaAoLado = (v: Valor) => `${semIvaEscrito(v)} s/IVA (${comIvaEscrito(v)} c/IVA)`;
+const valorExacto = (valor: number): Valor => ({ tipo: "exacto", valor });
+function faixaDasFontes(p: { minimo?: number | null; maximo?: number | null } | undefined, onde: string): Valor {
+  if (p?.minimo == null) throw new Error(`${onde} sem preço em precos-publicos.ts`);
+  return p.maximo != null ? { tipo: "faixa", de: p.minimo, ate: p.maximo } : { tipo: "desde", de: p.minimo };
+}
+
 /** As peças de referência do site, uma por linha, para os exemplos do modelo. */
-export const PECAS_PARA_O_MODELO = PECAS_DE_REFERENCIA.map((p) => `    ${pecaEmLinha(p)} s/IVA`).join("\n");
+export const PECAS_PARA_O_MODELO = PECAS_DE_REFERENCIA.map(
+  (p) => `    ${pecaEmLinha(p)} s/IVA (${euros(comIva(precoDaPeca(p)))} c/IVA)`,
+).join("\n");
+
+/*
+ * OS ITENS SOLTOS E A CARGA COMPLETA PELA GRELHA PUBLICADA — 10-11-2026 (d28).
+ *
+ * A estrutura de custos que o motor manda ao modelo ainda tinha a sua tabela,
+ * escrita à mão: um mínimo por item que o site nunca publicou, um «desconto de
+ * eficiência» por cima dele, e valores por zona para a carga completa e o
+ * esvaziamento (a Margem Sul, Almada, Lisboa…), abaixo das faixas por tipologia.
+ * A d8 (28-10-2026) tinha-os tirado do prompt (`prompt-do-orcamento.ts`); aqui
+ * ficaram «para outra decisão». Passam a ser as linhas das fontes — a tabela das
+ * peças, a recolha mínima, os andares, a faixa dos monos e as tipologias do
+ * esvaziamento —, cada número sem IVA com o valor com IVA ao lado. O teste da
+ * orquestra (regra t) chumba os números antigos.
+ */
+export const ITENS_SOLTOS_PARA_O_MODELO = [
+  `  Móveis por peça, a tabela do site: ${(["pequeno", "medio", "grande"] as const)
+    .map((t) => `${NOME_DO_TAMANHO[t]} ${comOIvaAoLado(valorExacto(PRECO_POR_ITEM[t]))}`)
+    .join("; ")}. As peças somam-se uma a uma.`,
+  `  Recolha mínima dos móveis: ${comOIvaAoLado(valorExacto(RECOLHA_MINIMA_DOS_MOVEIS))} — a soma das peças nunca fica abaixo dela.`,
+  `  Andares, por trabalho e depois do mínimo: +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_COM_ELEVADOR))} por andar com elevador, +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_SEM_ELEVADOR))} sem elevador.`,
+  `  Monos: ${comOIvaAoLado(faixaDasFontes(PRECOS.recolha_monos, "recolha_monos"))}; com acesso difícil, o topo da faixa.`,
+].join("\n");
+
+/** A carga completa e o esvaziamento de casa ou apartamento: as faixas publicadas, uma por linha. */
+export const CARGA_COMPLETA_PARA_O_MODELO = [
+  `  - Uma divisão cheia ou uma carga completa sem ser a casa toda: ${comOIvaAoLado(faixaDasFontes({ minimo: PRECOS.esvaziamento_casa?.minimo }, "esvaziamento_casa"))}`,
+  ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => `  - ${t.tipo}: ${comOIvaAoLado(faixaDasFontes(t, t.chave))}`),
+].join("\n");
 
 /**
  * Carrega todas as configurações de preços ativas do backoffice
@@ -468,30 +509,21 @@ ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
 
 MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
 
-ITENS SOLTOS (1 a 7 itens — recolha de móveis / monos):
-  NÃO aplicar mínimo de zona. Calcular pela fórmula real.
-  Mínimo por item: 48,78 € s/IVA (~60 € c/IVA) por item individual.
-  EXEMPLOS — as peças de referência publicadas no site (sem IVA):
+ITENS SOLTOS (1 a 7 itens — recolha de móveis / monos) — a grelha publicada no site:
+  NÃO aplicar mínimo de zona.
+${ITENS_SOLTOS_PARA_O_MODELO}
+  EXEMPLOS — as peças de referência publicadas no site:
 ${PECAS_PARA_O_MODELO}
-  DESCONTO DE EFICIÊNCIA: para múltiplos itens soltos, NÃO somar linearmente.
-    Uma mesa com cadeiras é uma peça da tabela, não um mínimo de zona (NÃO 270 €!).
-    A equipa já está no local — cada item adicional custa ~60% do primeiro.
+    Uma mesa com cadeiras é uma peça da tabela, não um valor de carga completa.
 
 ESVAZIAMENTO DE GARAGEM, SÓTÃO E CAVE (29-10-2026) — a grelha publicada, por faixa de volume (s/IVA):
 ${ESVAZIAMENTO_POR_ESPACO.map((e) => `  - ${e.espaco}: carrinha ${e.faixas.carrinha.de}–${e.faixas.carrinha.ate} € | caixa de camião ${e.faixas.camiao_caixa.de}–${e.faixas.camiao_caixa.ate} € | camião ${e.faixas.camiao_lixo.de}–${e.faixas.camiao_lixo.ate} €`).join("\n")}
   Acesso difícil (alçapão, escada estreita, mais de 10 degraus, parque com horário, estacionamento longe): o topo da faixa, nunca acima.
   Não são carga completa: só a faixa «camião» leva o mínimo de zona. Sem volume ("não sei"): proposta com fotografias.
 
-CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO:
-  Aplicar VALOR RECOMENDADO por zona e distância (mais favorável à empresa):
-  - Amora / Seixal / Fernão Ferro / Corroios: 220 € s/IVA
-  - Almada / Barreiro / Setúbal:              220 € s/IVA
-  - Lisboa acesso normal, ≤ 15 km:            250 € s/IVA
-  - Lisboa acesso normal, 15-25 km:           270 € s/IVA
-  - Lisboa distância > 25 km:                 300 € s/IVA
-  - Lisboa andar > 3º sem elevador:           360 € s/IVA
-  - Loures / VFX / Sintra / Cascais ≤ 20 km: 270 € s/IVA
-  - Loures / VFX / Sintra / Cascais > 20 km: 300 € s/IVA
+CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO — as faixas publicadas no site:
+${CARGA_COMPLETA_PARA_O_MODELO}
+  Dentro da faixa, o acesso e a distância decidem o lugar: perto, rés-do-chão ou elevador, estacionamento à porta → o início; longe, andares a pé ou acesso difícil → o fim.
 
 ENTULHO: mínimo fixo ${MINIMO_DO_ENTULHO} € s/IVA — sem mínimo de zona
 MUDANÇA: mínimo ${PRECO_POR_HORA * MINIMO_DE_HORAS} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h) — sem mínimo de zona
@@ -540,9 +572,12 @@ HORAS: Recolha 1-7 itens: 0.5h/item | Carga completa: 4h | Entulho 1-10 sacos: 1
 ${REGRAS_DA_MUDANCA_PARA_O_MODELO}
 
 MÍNIMOS (REGRA CRÍTICA):
-  ITENS SOLTOS (1-7 itens): SEM mínimo de zona. Preço real pela fórmula. Mínimo 48,78€ s/IVA por item.
-    Exemplos s/IVA (as peças de referência do site): ${PECAS_DE_REFERENCIA.map(pecaEmLinha).join(" | ")}
-  CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO: mínimo de zona — Local 220€ | Almada 230€ | Lisboa 250€ | Lisboa difícil/Loures 270€
+  ITENS SOLTOS (1-7 itens): SEM mínimo de zona — a grelha publicada no site.
+${ITENS_SOLTOS_PARA_O_MODELO}
+    Exemplos (as peças de referência do site):
+${PECAS_PARA_O_MODELO}
+  CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO — as faixas publicadas no site:
+${CARGA_COMPLETA_PARA_O_MODELO}
   ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: mínimo ${MINIMO_DA_MUDANCA}€ s/IVA (${MINIMO_DE_HORAS}h × ${PRECO_POR_HORA}€/h)
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
 ${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
@@ -1208,7 +1243,7 @@ function applyZoneMinimum(
     if (priceWithoutVat < itemMin) {
       return {
         price: itemMin,
-        note: `Mínimo por item aplicado: 1× 48,78€ + ${Math.max(0, effectiveCount - 1)}× 29,27€ (60%) = ${itemMin.toFixed(2)} € s/IVA`,
+        note: `Mínimo por item aplicado: 1× ${euros(perItemMin)} + ${Math.max(0, effectiveCount - 1)}× ${euros(perItemMin * additionalRate)} (60%) = ${itemMin.toFixed(2)} € s/IVA`,
         minimumThreshold: itemMin,
       };
     }

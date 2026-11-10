@@ -120,7 +120,8 @@ export function boasVindasDeVolta(primeiroNome: string | null | undefined): stri
 
 /**
  * PERGUNTOU SE FAZEMOS — «Vocês fazem recolha de janelas?», «recolhem
- * frigoríficos?», «levam colchões?». Responde-se primeiro: «Fazemos, sim!».
+ * frigoríficos?», «levam colchões?». Responde-se primeiro, com o sim:
+ * `SIM_OS_PARCEIROS_FAZEM`.
  */
 export function perguntaSeFazemos(texto: string): boolean {
   const t = semAcentos(texto);
@@ -130,6 +131,15 @@ export function perguntaSeFazemos(texto: string): boolean {
     /^(fazem|recolhem|levam)\b[^?]*\?/.test(t)
   );
 }
+
+/**
+ * O SIM A QUEM PERGUNTA SE FAZEMOS — 10-11-2026 (d28). A resposta punha a
+ * CLYON a fazer o trabalho, na primeira pessoa. Quem faz é o parceiro
+ * escolhido; a CLYON é a plataforma. O sim fica, com a mesma simpatia, e diz
+ * quem faz — como o «Sim, é material que os parceiros recolhem.». O teste da
+ * orquestra (regra b) chumba a frase antiga.
+ */
+export const SIM_OS_PARCEIROS_FAZEM = "Sim, é um serviço que os parceiros fazem!";
 
 /**
  * O QUE A CLYON NÃO FAZ, DE MOMENTO — 25-10-2026.

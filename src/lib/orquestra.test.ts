@@ -48,6 +48,12 @@ import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
  * E desde 04-11-2026 (d7): r) em src/, nenhum preço de peça à mão (vem de
  * `PRECO_POR_ITEM`), nenhum «sem mínimo» e nenhum «desde 120 €/m³».
  *
+ * E desde 10-11-2026 (d28): t) em src/, nenhum texto traz os números da
+ * tabela antiga do motor — o mínimo por item de 48,78 € e os valores por zona
+ * de Almada (220 / 230 €); o que o modelo lê para dar preços sai das fontes,
+ * com o IVA ao lado. E a regra b) passou a apanhar o «Fazemos, sim»: quem faz
+ * é o parceiro, também na voz da Vitória e nas traduções fixas dela.
+ *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
  * passar de TAMANHO_MAXIMO. Desce o número quando a lista desce.
@@ -72,7 +78,8 @@ type Regra =
   | "n-parceiro"
   | "p-sem-iva-sozinho"
   | "q-verificado"
-  | "r-pecas-e-entulho";
+  | "r-pecas-e-entulho"
+  | "t-grelha-antiga";
 
 interface Excepcao {
   ficheiro: string;
@@ -225,6 +232,8 @@ const VOZ: RegExp[] = [
   /(?<!dados )\brecolhemos\b(?![^.]{0,40}\bdados\b)/i,
   /\besvaziamos\b/i,
   /\bEmpresa de Recolha\b/i,
+  // O sim da Vitória a quem pergunta «vocês fazem…?» (d28, 10-11-2026): quem faz é o parceiro.
+  /\bfazemos,? sim\b/i,
 ];
 
 const NEGA = /\b(não|nem|sem|nunca|nenhum|nenhuns)\b/i;
@@ -377,6 +386,22 @@ const SEM_MINIMO = /(?<!\p{L})(sem m[íi]nimo(?! de zona)|n[ãa]o h[áa] m[íi]n
 const ENTULHO_A_120 = /(?<![\d.,])120\s?€\s?(\/|por)\s?(m³|m3|metro)|m³[^.;]{0,25}desde\s+120\s?€/iu;
 const PRECOS_DA_D7: RegExp[] = [PECA_COM_PRECO_A_MAO, SEM_MINIMO, ENTULHO_A_120];
 const A_REGRA_R_SE_APLICA = (f: string) => f.startsWith("src/") && !FONTES_DE_PRECOS.has(f);
+
+/*
+ * t) A TABELA ANTIGA DO MOTOR NÃO VOLTA — d28, 10-11-2026 (ordem do CEO).
+ *
+ * A estrutura de custos que o motor manda ao modelo (`pricing-helper.ts`) tinha
+ * ficado «para outra decisão» na d8: um «mínimo por item» de 48,78 € que o site
+ * nunca publicou (as peças são 15 / 30 / 50 € e a recolha mínima 40 €, + IVA) e
+ * valores por zona para a carga completa e o esvaziamento (Almada a 220 € numa
+ * tabela e a 230 € na outra), abaixo das faixas publicadas por tipologia. Em
+ * src/ (fora das fontes dos preços), nenhum texto os diz: o que o modelo lê
+ * sai de `precos-publicos.ts`, e chega aqui como «‹›».
+ */
+const MINIMO_POR_ITEM_ANTIGO = /(?<![\d.,])48[.,]78(?!\d)/u;
+const ALMADA_POR_ZONA = /\bAlmada\b[^.;!?]{0,40}?(?<![\d.,])2[23]0\s?(?:€|euros?(?!\p{L}))/iu;
+const GRELHA_ANTIGA: RegExp[] = [MINIMO_POR_ITEM_ANTIGO, ALMADA_POR_ZONA];
+const A_REGRA_T_SE_APLICA = A_REGRA_R_SE_APLICA;
 
 /*
  * n) «PARCEIRO», NÃO «PROFISSIONAL», NO QUE O CLIENTE LÊ — 29-10-2026 (dono).
@@ -744,6 +769,8 @@ function achadosDe(f: string): Achado[] {
     if (!NAO_FALAM.has(f)) for (const re of MAL_ESCRITAS) marcar("m-mal-escrito", re.exec(texto));
     // r) O SQL fica de fora.
     if (A_REGRA_R_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of PRECOS_DA_D7) marcar("r-pecas-e-entulho", re.exec(texto));
+    // t) O SQL fica de fora.
+    if (A_REGRA_T_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of GRELHA_ANTIGA) marcar("t-grelha-antiga", re.exec(texto));
     // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.
     if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const p = profissionalAoCliente(texto);
@@ -1019,6 +1046,31 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(A_REGRA_R_SE_APLICA("app-cliente/src/componentes/Preco.tsx")).toBe(false);
   });
 
+  it("a regra t apanha o mínimo por item antigo e os valores de Almada por zona; a regra b, o «Fazemos, sim» (d28, 10-11-2026)", () => {
+    const tem = (s: string) => GRELHA_ANTIGA.some((re) => re.test(s));
+    // O que o modelo lia antes da d28.
+    expect(tem("Mínimo por item: 48,78 € s/IVA (~60 € c/IVA) por item individual.")).toBe(true);
+    expect(tem("Preço real pela fórmula. Mínimo 48,78€ s/IVA por item.")).toBe(true);
+    expect(tem("mínimo de 48.78 € por item")).toBe(true);
+    expect(tem("Mínimo por item aplicado: 1× 48,78€ + 2× 29,27€ (60%)")).toBe(true);
+    expect(tem("- Almada / Barreiro / Setúbal: 220 € s/IVA")).toBe(true);
+    expect(tem("mínimo de zona — Local 220€ | Almada 230€ | Lisboa 250€")).toBe(true);
+    // O que se escreve agora: das fontes, interpolado; e os outros números ficam em paz.
+    expect(tem("Recolha mínima dos móveis: ‹› — a soma das peças nunca fica abaixo dela.")).toBe(false);
+    expect(tem("Mínimo por item aplicado: 1× ‹› + ‹›× ‹› (60%) = ‹› € s/IVA")).toBe(false);
+    expect(tem("- ‹›: ‹›")).toBe(false);
+    expect(tem("Recolha de móveis em Almada. Um T2 fica entre 320 e 420 € + IVA.")).toBe(false);
+    expect(tem("148,78 € ou 48,785")).toBe(false);
+    expect(A_REGRA_T_SE_APLICA("src/lib/pricing-helper.ts")).toBe(true);
+    expect(A_REGRA_T_SE_APLICA("src/lib/precos-publicos.ts")).toBe(false);
+    // b) quem faz é o parceiro, também no sim da Vitória.
+    const voz = (s: string) => VOZ.some((re) => re.test(s));
+    expect(voz("Fazemos, sim! Fica anotado: recolha de monos.")).toBe(true);
+    expect(voz("fazemos sim")).toBe(true);
+    expect(voz("Sim, é um serviço que os parceiros fazem! Fica anotado: recolha de monos.")).toBe(false);
+    expect(voz("Com todo o gosto! Fica anotado: recolha de móveis.")).toBe(false);
+  });
+
   it("as frases proibidas que os avisos citam são as que as regras apanham", () => {
     const tem = (lista: RegExp[], s: string) => lista.some((re) => re.test(s));
     for (const f of FRASES_PROIBIDAS.promessa) expect(PROMESSAS.some(({ re }) => re.test(`no ${f}`)), f).toBe(true);
@@ -1207,5 +1259,71 @@ describe("s) a /quero-ser-parceiro não fala de entulho (d18)", () => {
   it("e a frase de abertura diz o que fica: móveis e monos, esvaziamentos, mudanças e reparações", () => {
     const textos = lerFicheiro("src/app/quero-ser-parceiro/page.tsx").textos.map((t) => t.texto);
     expect(textos.some((t) => t.includes("Recolhas de móveis e monos, esvaziamentos, mudanças e reparações."))).toBe(true);
+  });
+});
+
+/*
+ * t) O QUE O MODELO LÊ PARA DAR PREÇOS É A GRELHA PUBLICADA, E QUEM FAZ É O
+ * PARCEIRO — 10-11-2026 (decisão d28).
+ *
+ * A regra t lê o código (acima); aqui lê-se o texto já montado, como o modelo
+ * o recebe — a estrutura de custos do motor e o prompt inteiro —, e as
+ * traduções fixas da Vitória, que são um JSON e a árvore do TypeScript não vê.
+ */
+describe("t) o modelo lê a grelha publicada e a Vitória diz quem faz (d28)", () => {
+  const VELHOS: Array<[string, RegExp]> = [
+    ["o mínimo por item de 48,78 €", MINIMO_POR_ITEM_ANTIGO],
+    ["«Mínimo por item»", /m[íi]nimo por item/i],
+    ["Almada com valor por zona", ALMADA_POR_ZONA],
+    ["a tabela por zona", /VALOR RECOMENDADO por zona|m[íi]nimo de zona — Local/i],
+    ["o desconto de eficiência no preço", /desconto de efici[êe]ncia/i],
+  ];
+
+  it("a estrutura de custos do motor e o prompt inteiro não trazem a tabela antiga", async () => {
+    const { getActivePricingRulesForGemini } = await import("./pricing-helper");
+    const { buildAnalysisPrompt } = await import("./prompt-do-orcamento");
+    const regras = await getActivePricingRulesForGemini();
+    const prompt = buildAnalysisPrompt("(o pedido)", regras);
+    for (const [nome, re] of VELHOS) {
+      expect(regras, nome).not.toMatch(re);
+      expect(prompt, nome).not.toMatch(re);
+    }
+  }, 60_000);
+
+  it("os itens soltos e a carga completa saem das fontes, com o IVA ao lado", async () => {
+    const { getActivePricingRulesForGemini, ITENS_SOLTOS_PARA_O_MODELO, CARGA_COMPLETA_PARA_O_MODELO, PECAS_PARA_O_MODELO } =
+      await import("./pricing-helper");
+    const { PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, PRECOS, ESVAZIAMENTO_POR_TIPOLOGIA } = await import("./precos-publicos");
+    const { comIva, euros } = await import("./quanto-custa");
+    const regras = await getActivePricingRulesForGemini();
+    for (const bloco of [ITENS_SOLTOS_PARA_O_MODELO, CARGA_COMPLETA_PARA_O_MODELO, PECAS_PARA_O_MODELO]) expect(regras).toContain(bloco);
+    const par = (v: number) => `${euros(v)} s/IVA (${euros(comIva(v))} c/IVA)`;
+    for (const t of ["pequeno", "medio", "grande"] as const) expect(ITENS_SOLTOS_PARA_O_MODELO).toContain(par(PRECO_POR_ITEM[t]));
+    expect(ITENS_SOLTOS_PARA_O_MODELO).toContain(`Recolha mínima dos móveis: ${par(RECOLHA_MINIMA_DOS_MOVEIS)}`);
+    expect(ITENS_SOLTOS_PARA_O_MODELO).toContain(`${PRECOS.recolha_monos.minimo} – ${euros(PRECOS.recolha_monos.maximo!)} s/IVA`);
+    for (const linha of ESVAZIAMENTO_POR_TIPOLOGIA) expect(CARGA_COMPLETA_PARA_O_MODELO).toContain(`- ${linha.tipo}: `);
+    // O sem IVA nunca sozinho: cada «s/IVA» destes blocos traz o «c/IVA» logo a seguir.
+    for (const bloco of [ITENS_SOLTOS_PARA_O_MODELO, CARGA_COMPLETA_PARA_O_MODELO, PECAS_PARA_O_MODELO]) {
+      const sem = bloco.match(/s\/IVA/g) ?? [];
+      const comOsDois = bloco.match(/s\/IVA \([^)]*c\/IVA\)/g) ?? [];
+      expect(sem.length).toBeGreaterThan(0);
+      expect(comOsDois.length).toBe(sem.length);
+    }
+  }, 60_000);
+
+  it("a Vitória diz que sim sem pôr a CLYON a fazer o trabalho — em português e nas traduções fixas", async () => {
+    const { SIM_OS_PARCEIROS_FAZEM } = await import("./voz-da-vitoria");
+    expect(SIM_OS_PARCEIROS_FAZEM).toMatch(/^Sim, .*parceiros fazem!$/);
+    expect(VOZ.some((re) => re.test(SIM_OS_PARCEIROS_FAZEM))).toBe(false);
+    const json = readFileSync(join(RAIZ, "src/lib/traducoes-fixas-da-vitoria.json"), "utf8");
+    expect(json).not.toMatch(/fazemos,? sim/i);
+    expect(json).not.toMatch(/something we do|nous le faisons|lo hacemos/i);
+    for (const re of GRELHA_ANTIGA) expect(json).not.toMatch(re);
+    const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
+    for (const lingua of ["en", "fr", "es"] as const) {
+      const t = traducaoFixa(SIM_OS_PARCEIROS_FAZEM, lingua);
+      expect(t, lingua).toBeTruthy();
+      expect(t, lingua).toMatch(/partners|partenaires|colaboradores/);
+    }
   });
 });
