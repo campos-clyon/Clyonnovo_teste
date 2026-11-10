@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CABECALHO_DO_TOKEN_DO_PAGAMENTO } from "@/lib/cabecalho-do-pagamento";
 import { chaveDoPedidoHttp } from "@/lib/sessao-de-convidado";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { registarSemFalhar } from "@/lib/db";
@@ -68,6 +69,20 @@ function metodoValido(v: unknown): MetodoDePagamento | null {
     : null;
 }
 
+/**
+ * O TOKEN DO LINK, PELO CABEÇALHO — d24, 10-11-2026.
+ *
+ * Ia no endereço (`?token=`), e um endereço fica nos registos dos servidores
+ * e no histórico do browser. O ecrã do pagamento manda-o agora no cabeçalho
+ * `CABECALHO_DO_TOKEN_DO_PAGAMENTO`. O `?token=` continua a ser lido, para
+ * os ecrãs que ainda estejam abertos com a versão antiga.
+ */
+function tokenDoPagamentoNoPedido(req: NextRequest): string | undefined {
+  const doCabecalho = req.headers.get(CABECALHO_DO_TOKEN_DO_PAGAMENTO)?.trim();
+  if (doCabecalho) return doCabecalho;
+  return req.nextUrl.searchParams.get("token") ?? undefined;
+}
+
 async function quemEstaAPagar(req: NextRequest) {
   const sessao = await sessaoDoCliente(req);
   return sessao?.user?.email ?? null;
@@ -87,7 +102,7 @@ export async function GET(req: NextRequest) {
   const acesso = await trabalhoQueSePodePagar(
     Number(p.get("pedidoId")),
     Number(p.get("negociacaoId")),
-    { token: p.get("token") ?? undefined, email: await quemEstaAPagar(req) },
+    { token: tokenDoPagamentoNoPedido(req), email: await quemEstaAPagar(req) },
   );
   if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
 

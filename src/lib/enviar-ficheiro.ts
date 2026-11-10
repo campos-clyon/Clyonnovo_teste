@@ -58,7 +58,19 @@ async function pelaNossaFuncao(f: File): Promise<ResultadoDoEnvio> {
   };
 }
 
-async function diretoAoArmazenamento(f: File): Promise<ResultadoDoEnvio> {
+/**
+ * QUEM ENVIA — d24, 10-11-2026. O envio directo tem tectos mais baixos para
+ * quem não tem sessão (`TAMANHO_MAXIMO_SEM_SESSAO`). O backoffice não tem
+ * cookie: manda o seu `Authorization`, para o PDF e o vídeo grande passarem.
+ * O cliente com conta vai pelo cookie do site, sozinho.
+ */
+export type OpcoesDoEnvio = { autorizacao?: string | null };
+
+function cabecalhosDoEnvio(o: OpcoesDoEnvio): Record<string, string> {
+  return o.autorizacao ? { Authorization: o.autorizacao } : {};
+}
+
+async function diretoAoArmazenamento(f: File, o: OpcoesDoEnvio): Promise<ResultadoDoEnvio> {
   /*
    * SÓ QUANDO HÁ MESMO UM FICHEIRO A ENVIAR — 07-10-2026. O cliente do
    * armazenamento são uns 30 KB que o painel do profissional e o simulador
@@ -69,6 +81,7 @@ async function diretoAoArmazenamento(f: File): Promise<ResultadoDoEnvio> {
   const blob = await upload(chave, f, {
     access: "public",
     handleUploadUrl: "/api/blob/token",
+    headers: cabecalhosDoEnvio(o),
     // Parte o ficheiro e envia os pedaços em paralelo, com nova tentativa nos
     // que falharem. Num vídeo de 40 MB em rede móvel, sem isto uma falha a
     // meio deitava fora tudo o que já tinha subido.
@@ -91,10 +104,10 @@ async function diretoAoArmazenamento(f: File): Promise<ResultadoDoEnvio> {
  * devolve uma URL; o browser faz `PUT` directamente para ela. O ficheiro nunca
  * passa pela nossa função, e por isso não há tecto de 4,5 MB.
  */
-async function porUrlAssinada(f: File): Promise<ResultadoDoEnvio> {
+async function porUrlAssinada(f: File, o: OpcoesDoEnvio): Promise<ResultadoDoEnvio> {
   const r = await fetch("/api/blob/presign", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...cabecalhosDoEnvio(o) },
     body: JSON.stringify({ nome: f.name, tipo: f.type, tamanho: f.size }),
   });
   const d = (await r.json()) as { url?: string; tipo?: string; error?: string; detalhe?: string };
@@ -133,7 +146,7 @@ async function porUrlAssinada(f: File): Promise<ResultadoDoEnvio> {
   return { ok: true, ficheiro: { url: feito.url, name: f.name, size: f.size, type: f.type } };
 }
 
-export async function enviarFicheiro(original: File): Promise<ResultadoDoEnvio> {
+export async function enviarFicheiro(original: File, opcoes: OpcoesDoEnvio = {}): Promise<ResultadoDoEnvio> {
   let ficheiro = original;
 
   // Reduzir nunca deita nada fora: se falhar, devolve o original.
@@ -164,14 +177,14 @@ export async function enviarFicheiro(original: File): Promise<ResultadoDoEnvio> 
    * falharem, o que numa rede móvel conta. Mas hoje não há token nenhum, e por
    * isso devolvia 501 a tudo o que passasse dos 4 MB.
    */
-  const assinado = await porUrlAssinada(ficheiro).catch((err) => ({
+  const assinado = await porUrlAssinada(ficheiro, opcoes).catch((err) => ({
     ok: false as const,
     motivo: err instanceof Error ? err.message : String(err),
   }));
   if (assinado.ok) return assinado;
 
   try {
-    return await diretoAoArmazenamento(ficheiro);
+    return await diretoAoArmazenamento(ficheiro, opcoes);
   } catch (err) {
     const bruto = err instanceof Error ? err.message : String(err);
     const mb = Math.round(ficheiro.size / 1024 / 1024);
@@ -212,7 +225,7 @@ export async function enviarFicheiro(original: File): Promise<ResultadoDoEnvio> 
       try {
         const r = await fetch("/api/blob/token", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...cabecalhosDoEnvio(opcoes) },
           body: JSON.stringify({
             type: "blob.generate-client-token",
             payload: {

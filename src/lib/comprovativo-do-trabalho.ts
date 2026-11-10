@@ -79,12 +79,44 @@ export async function comprovativoDoTrabalho(negociacaoId: number, para: ParaQue
 /*
  * O LINK PARA O CLIENTE — assinado, e não um número que se adivinhe.
  *
- * `<negociação>-<c|p>-<assinatura>`: a assinatura é um HMAC com o segredo do
- * servidor (`JWT_SECRET`), por isso mudar o número no link não abre o
- * comprovativo de outro pedido. Não caduca: é um recibo, e o cliente pode
- * voltar a ele daqui a meses.
+ * DESDE 10-11-2026 (d24): `<negociação>-<c|p>-<caduca>-<assinatura>`.
+ *
+ *   · SEGREDO PRÓPRIO. O HMAC usava o `JWT_SECRET` tal e qual, o mesmo que
+ *     assina as sessões. Agora usa `COMPROVATIVO_SECRET` quando existe e, sem
+ *     ele, uma chave tirada do `JWT_SECRET` só para isto (HMAC com um rótulo):
+ *     um segredo não serve dois fins com a mesma chave;
+ *   · PRAZO. O link leva a data em que caduca, dentro da assinatura, e vale
+ *     `DIAS_DO_LINK_DO_COMPROVATIVO` dias. Um PDF com a morada e o telefone
+ *     não fica aberto para sempre a quem apanhar o link. Caducado, pede-se
+ *     outro (o botão do backoffice gera um novo).
+ *
+ * Os links ANTIGOS (`<negociação>-<c|p>-<assinatura>`, sem prazo) já foram
+ * pelo WhatsApp: continuam a abrir até `LINKS_ANTIGOS_ATE`, e depois não.
  */
-function assinatura(negociacaoId: number, para: ParaQuem): string | null {
+export const DIAS_DO_LINK_DO_COMPROVATIVO = 90;
+/** Até quando abrem os links sem prazo enviados antes de 10-11-2026 (90 dias). */
+export const LINKS_ANTIGOS_ATE = new Date("2027-02-08T23:59:59Z");
+
+function chaveDoComprovativo(): string | null {
+  const proprio = process.env.COMPROVATIVO_SECRET?.trim();
+  if (proprio) return proprio;
+  const base = process.env.JWT_SECRET;
+  if (!base) return null;
+  return crypto.createHmac("sha256", base).update("clyon:comprovativo:v2").digest("base64url");
+}
+
+function assinaturaComPrazo(negociacaoId: number, para: ParaQuem, caduca: string): string | null {
+  const chave = chaveDoComprovativo();
+  if (!chave) return null;
+  return crypto
+    .createHmac("sha256", chave)
+    .update(`comprovativo:v2:${negociacaoId}:${para}:${caduca}`)
+    .digest("base64url")
+    .slice(0, 32);
+}
+
+/** A assinatura dos links antigos — só para os ler até `LINKS_ANTIGOS_ATE`. */
+function assinaturaAntiga(negociacaoId: number, para: ParaQuem): string | null {
   const segredo = process.env.JWT_SECRET;
   if (!segredo) return null;
   return crypto
@@ -94,21 +126,41 @@ function assinatura(negociacaoId: number, para: ParaQuem): string | null {
     .slice(0, 24);
 }
 
-export function tokenDoComprovativo(negociacaoId: number, para: ParaQuem): string | null {
-  const a = assinatura(negociacaoId, para);
-  return a ? `${negociacaoId}-${para === "cliente" ? "c" : "p"}-${a}` : null;
+function iguais(a: string, b: string): boolean {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
-export function lerTokenDoComprovativo(token: string): { negociacaoId: number; para: ParaQuem } | null {
-  const m = /^(\d{1,10})-([cp])-([A-Za-z0-9_-]{24})$/.exec(token);
-  if (!m) return null;
-  const negociacaoId = Number(m[1]);
-  const para: ParaQuem = m[2] === "c" ? "cliente" : "profissional";
-  const esperada = assinatura(negociacaoId, para);
-  if (!esperada) return null;
-  const a = Buffer.from(m[3]);
-  const b = Buffer.from(esperada);
-  return a.length === b.length && crypto.timingSafeEqual(a, b) ? { negociacaoId, para } : null;
+export function tokenDoComprovativo(
+  negociacaoId: number,
+  para: ParaQuem,
+  agora: Date = new Date(),
+): string | null {
+  const caduca = Math.floor(agora.getTime() / 1000 + DIAS_DO_LINK_DO_COMPROVATIVO * 86400).toString(36);
+  const a = assinaturaComPrazo(negociacaoId, para, caduca);
+  return a ? `${negociacaoId}-${para === "cliente" ? "c" : "p"}-${caduca}-${a}` : null;
+}
+
+export function lerTokenDoComprovativo(
+  token: string,
+  agora: Date = new Date(),
+): { negociacaoId: number; para: ParaQuem } | null {
+  const novo = /^([0-9]{1,10})-([cp])-([0-9a-z]{4,10})-([A-Za-z0-9_-]{32})$/.exec(token);
+  if (novo) {
+    const negociacaoId = Number(novo[1]);
+    const para: ParaQuem = novo[2] === "c" ? "cliente" : "profissional";
+    const esperada = assinaturaComPrazo(negociacaoId, para, novo[3]);
+    if (!esperada || !iguais(novo[4], esperada)) return null;
+    if (parseInt(novo[3], 36) * 1000 < agora.getTime()) return null;
+    return { negociacaoId, para };
+  }
+  const antigo = /^([0-9]{1,10})-([cp])-([A-Za-z0-9_-]{24})$/.exec(token);
+  if (!antigo || agora.getTime() > LINKS_ANTIGOS_ATE.getTime()) return null;
+  const negociacaoId = Number(antigo[1]);
+  const para: ParaQuem = antigo[2] === "c" ? "cliente" : "profissional";
+  const esperada = assinaturaAntiga(negociacaoId, para);
+  return esperada && iguais(antigo[3], esperada) ? { negociacaoId, para } : null;
 }
 
 export function linkDoComprovativo(negociacaoId: number, para: ParaQuem): string | null {

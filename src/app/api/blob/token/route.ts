@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { obterTokenDoBlob } from "@/lib/blob-token";
-import { tamanhoMaximoDoTipo, tipoDoFicheiro, tiposDaMesmaEspecie } from "@/lib/tipo-ficheiro";
+import { tamanhoMaximoDoEnvio, tipoDoFicheiro, tiposDaMesmaEspecie } from "@/lib/tipo-ficheiro";
+import { envioComSessao } from "@/lib/envio-com-sessao";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,8 @@ export const runtime = "nodejs";
 
 /*
  * O tamanho máximo é o do tipo (imagem 50, PDF 25, vídeo 150 MB) — ver
- * `tipo-ficheiro.ts`. Era 300 MB para tudo.
+ * `tipo-ficheiro.ts`. Era 300 MB para tudo. Desde 10-11-2026 (d24), sem
+ * sessão só fotografias (20 MB) e vídeos (50 MB): `tamanhoMaximoDoEnvio`.
  */
 
 /** Trinta autorizações por hora e por IP — ver a mesma conta em /api/blob/presign. */
@@ -65,6 +67,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // deployment se autentica com a sua própria identidade e não há token — isto
   // não é possível, e é melhor dizê-lo com todas as letras do que devolver um
   // "Access denied" que manda quem está a resolver procurar no sítio errado.
+  // Lida antes do `handleUpload`, que consome o pedido.
+  const comSessao =
+    corpo?.type === "blob.generate-client-token" ? await envioComSessao(req) : false;
+
   const credencial = obterTokenDoBlob();
   if (!credencial.ok || credencial.modo !== "token") {
     return NextResponse.json(
@@ -93,9 +99,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
          */
         const veredicto = tipoDoFicheiro(caminho, "");
         if (!veredicto.ok) throw new Error(veredicto.motivo);
+        const maximo = tamanhoMaximoDoEnvio(veredicto.tipo, comSessao);
+        if (maximo === 0) {
+          throw new Error("Este tipo de ficheiro não se envia por aqui. Envie fotografias ou vídeos.");
+        }
         return {
           allowedContentTypes: tiposDaMesmaEspecie(veredicto.tipo),
-          maximumSizeInBytes: tamanhoMaximoDoTipo(veredicto.tipo),
+          maximumSizeInBytes: maximo,
           // O sufixo aleatório é o que torna o endereço público impossível de
           // adivinhar — o caminho que o browser escolhe não é.
           addRandomSuffix: true,

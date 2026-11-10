@@ -19,6 +19,8 @@ import {
   ContaComPendencias,
   actualizarPerfilDoProfissional,
   mudarEmailDoProfissional,
+  fecharSessoesDoProfissional,
+  registarSemFalhar,
   EmailDeOutraConta,
 } from "@/lib/db";
 import {
@@ -191,9 +193,30 @@ export async function PATCH(
     // de se escrever o que quer que seja.
     if (dadosValidados) {
       if (dadosValidados.email !== undefined) {
-        await mudarEmailDoProfissional(providerId, dadosValidados.email);
+        const mudanca = await mudarEmailDoProfissional(providerId, dadosValidados.email);
         feito.push("email mudado");
         console.info(`[admin/profissionais] email de #${providerId} mudado por ${colab.nome}`);
+        /*
+         * d24, 10-11-2026: um email novo fecha as sessões abertas da conta
+         * (painel e app) e fica no registo permanente, com quem o mudou e o
+         * antes e o depois.
+         */
+        if (mudanca.mudou) {
+          await fecharSessoesDoProfissional(providerId);
+          await registarSemFalhar({
+            acontecimento: "profissional_email_mudado",
+            providerId,
+            autorTipo: "clyon",
+            autorNome: colab.nome,
+            resumo: `Email de entrada do profissional #${providerId} mudado por ${colab.nome} (sessões terminadas).`,
+            detalhe: {
+              porId: colab.id ?? null,
+              papel: colab.papel,
+              mudancas: { email: { antes: mudanca.antes, depois: dadosValidados.email.trim().toLowerCase() } },
+              sessoesCortadas: true,
+            },
+          });
+        }
       }
       const colunas = dadosValidados.colunas;
       if (Object.keys(colunas).length > 0) {

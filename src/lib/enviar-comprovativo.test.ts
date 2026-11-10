@@ -17,7 +17,8 @@ beforeAll(() => {
 describe("o link assinado", () => {
   it("abre o comprovativo dele, e só o dele", () => {
     const t = tokenDoComprovativo(464, "cliente")!;
-    expect(t).toMatch(/^464-c-[A-Za-z0-9_-]{24}$/);
+    // Desde 10-11-2026 (d24) leva a data em que caduca: ver d24-correccoes-baixas.test.ts.
+    expect(t).toMatch(/^464-c-[0-9a-z]+-[A-Za-z0-9_-]{32}$/);
     expect(lerTokenDoComprovativo(t)).toEqual({ negociacaoId: 464, para: "cliente" });
     // Mudar o número, ou o «para quem», não abre outro.
     expect(lerTokenDoComprovativo(t.replace("464-", "465-"))).toBeNull();

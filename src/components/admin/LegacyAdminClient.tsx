@@ -3249,7 +3249,7 @@ export default function ColaboradorAdminClient({
 
           {activeSection === "contas" && (
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-              <ContasPanel authToken={token} podeApagar={papel === "admin"} />
+              <ContasPanel authToken={token} podeApagar={papel === "admin"} podeMudarEmail={papel === "admin"} />
             </section>
           )}
 

@@ -130,7 +130,7 @@ Este email foi enviado automaticamente através do formulário de contacto em cl
                 <tr>
                   <td style="background-color: #ecfeff; border-radius: 12px; padding: 16px 20px; border-left: 4px solid #0891b2;">
                     <p style="margin: 0; color: #0e7490; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Serviço Solicitado</p>
-                    <p style="margin: 6px 0 0; color: #164e63; font-size: 18px; font-weight: 700;">${servico}</p>
+                    <p style="margin: 6px 0 0; color: #164e63; font-size: 18px; font-weight: 700;">${e(servico)}</p>
                   </td>
                 </tr>
               </table>

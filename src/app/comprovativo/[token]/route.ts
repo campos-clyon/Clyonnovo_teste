@@ -18,7 +18,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   const lido = lerTokenDoComprovativo(token);
   const semIndice = { "X-Robots-Tag": "noindex, nofollow" };
   if (!lido) {
-    return new NextResponse("Este link de comprovativo não é válido.", {
+    // Desde 10-11-2026 (d24) o link caduca: quem o tem antigo pede outro.
+    return new NextResponse("Este link de comprovativo não é válido ou já caducou. Peça um novo à CLYON.", {
       status: 404,
       headers: { "Content-Type": "text/plain; charset=utf-8", ...semIndice },
     });

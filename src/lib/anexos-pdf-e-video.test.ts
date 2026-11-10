@@ -243,7 +243,7 @@ describe("o envio direto passa a funcionar SEM token de escrita", () => {
     // tipo — ver `tamanhoMaximoDoTipo` em tipo-ficheiro.ts.
     expect(ROTA).toContain('operations: ["put"]');
     expect(ROTA).toContain("allowedContentTypes: [veredicto.tipo]");
-    expect(ROTA).toContain("const maximo = tamanhoMaximoDoTipo(veredicto.tipo)");
+    expect(ROTA).toContain("const maximo = tamanhoMaximoDoEnvio(veredicto.tipo, comSessao)");
     expect(ROTA).toContain("maximumSizeInBytes: maximo");
     expect(ROTA).toContain("validUntil: Date.now() + VALIDADE_MS");
   });
@@ -262,8 +262,8 @@ describe("o envio direto passa a funcionar SEM token de escrita", () => {
   });
 
   it("o ecrã tenta a URL assinada ANTES do caminho que precisa de token", () => {
-    const i = ENVIAR.indexOf("porUrlAssinada(ficheiro)");
-    const j = ENVIAR.indexOf("diretoAoArmazenamento(ficheiro)", i);
+    const i = ENVIAR.indexOf("porUrlAssinada(ficheiro, opcoes)");
+    const j = ENVIAR.indexOf("diretoAoArmazenamento(ficheiro, opcoes)", i);
     expect(i).toBeGreaterThan(-1);
     expect(j).toBeGreaterThan(i);
   });

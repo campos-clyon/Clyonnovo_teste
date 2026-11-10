@@ -164,3 +164,37 @@ export function tiposDaMesmaEspecie(tipo: string): string[] {
   const especie = especieDoTipo(tipo);
   return TIPOS_ACEITES.filter((t) => especieDoTipo(t) === especie);
 }
+
+/*
+ * O QUE PASSA SEM SESSÃO NO ENVIO DIRECTO — d24, 10-11-2026.
+ *
+ * O envio directo (`/api/blob/token` e `/api/blob/presign`) é para ficheiros
+ * acima de 4 MB e é aberto: o simulador e o formulário do pedido funcionam
+ * sem conta. Os tectos de cima (50/25/150 MB) são para quem tem sessão — a
+ * equipa no backoffice, o cliente com conta. Sem sessão, só o que os ecrãs
+ * abertos deixam escolher: fotografias e vídeos (o PDF não, nenhum ecrã
+ * aberto o aceita), e o vídeo até aos 50 MB em que o simulador já trava.
+ *
+ * A candidatura a parceiro não passa por aqui: as fotografias da carrinha vão
+ * pela rota dela (`/api/parceiros/candidatura/fotografias`), imagem a imagem.
+ */
+export const TAMANHO_MAXIMO_SEM_SESSAO: Record<EspecieDoAnexo, number> = {
+  imagem: 20 * MB,
+  pdf: 0,
+  video: 50 * MB,
+};
+
+/** O tecto para este tipo, com ou sem sessão. Zero = este tipo não passa. */
+export function tamanhoMaximoDoEnvio(tipo: string, comSessao: boolean): number {
+  return (comSessao ? TAMANHO_MAXIMO_POR_ESPECIE : TAMANHO_MAXIMO_SEM_SESSAO)[especieDoTipo(tipo)];
+}
+
+/** A frase para quem não pode enviar isto sem sessão. */
+export function recusaDoEnvioSemSessao(tipo: string, tamanho: number): string | null {
+  const maximo = TAMANHO_MAXIMO_SEM_SESSAO[especieDoTipo(tipo)];
+  if (maximo === 0) return "Este tipo de ficheiro não se envia por aqui. Envie fotografias ou vídeos.";
+  if (tamanho > maximo) {
+    return `O ficheiro tem ${Math.round(tamanho / MB)} MB e o máximo para este tipo são ${maximo / MB} MB.`;
+  }
+  return null;
+}

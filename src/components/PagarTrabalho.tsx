@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, Copy, Loader2, Smartphone, Landmark } from "lucide-react";
+import { CABECALHO_DO_TOKEN_DO_PAGAMENTO } from "@/lib/cabecalho-do-pagamento";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
 import { comoORecebemos, pagamentoDoClienteParaMostrar } from "@/lib/pagamento-visto-pelo-cliente";
 import { diferencaEmPalavras } from "@/lib/horas-do-trabalho";
@@ -170,13 +171,13 @@ export default function PagarTrabalho({
   const [copiado, setCopiado] = useState("");
   const [agora, setAgora] = useState(() => Date.now());
 
-  const params = useRef(
-    `pedidoId=${pedidoId}&negociacaoId=${negociacaoId}${token ? `&token=${encodeURIComponent(token)}` : ""}`,
-  );
+  // O token do link vai no cabeçalho, e não no endereço (d24, 10-11-2026).
+  const params = useRef(`pedidoId=${pedidoId}&negociacaoId=${negociacaoId}`);
+  const cabecalhos = useRef<Record<string, string>>(token ? { [CABECALHO_DO_TOKEN_DO_PAGAMENTO]: token } : {});
 
   const ler = useCallback(async () => {
     try {
-      const r = await fetch(`/api/pagamentos?${params.current}`, { cache: "no-store" });
+      const r = await fetch(`/api/pagamentos?${params.current}`, { cache: "no-store", headers: cabecalhos.current });
       if (!r.ok) {
         setFalhouALer(true);
         return;

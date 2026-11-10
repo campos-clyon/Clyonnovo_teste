@@ -38,7 +38,9 @@ export default function EntrarForm() {
       const dados = await res.json();
       if (!res.ok) {
         setErro(dados.error ?? "Não foi possível entrar.");
-        if (dados.semPalavraPasse) setSemPalavraPasse(true);
+        // A rota já não diz se a conta tem palavra-passe (d24): a ajuda do
+        // link novo aparece a quem não conseguiu entrar.
+        if (res.status === 401) setSemPalavraPasse(true);
         return;
       }
       // Quem veio de um link de pedido volta a ele (02-10-2026); só caminhos do site.
@@ -273,7 +275,7 @@ export default function EntrarForm() {
               {erro}
               {semPalavraPasse && (
                 <p className="mt-2 text-xs text-red-700">
-                  O email de aprovação tem o link para a criar. Se já não o tiver,{" "}
+                  Ainda não criou palavra-passe, ou esqueceu-se dela? O email de aprovação tem o link para a criar. Se já não o tiver,{" "}
                   <button
                     type="button"
                     onClick={() => irPara("repor")}

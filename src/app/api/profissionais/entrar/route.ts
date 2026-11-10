@@ -22,9 +22,8 @@ export const runtime = "nodejs";
  * escreveu estão inscritos na plataforma — e a lista de profissionais da CLYON
  * não é para se descobrir a adivinhar.
  *
- * A excepção é a conta sem palavra-passe: aí diz-se, porque é a própria pessoa
- * a bater à porta certa e o silêncio deixá-la-ia sem saber o que fazer. Mas só
- * depois de o email conferir com uma conta aprovada.
+ * A conta sem palavra-passe também (d24, 10-11-2026): o ecrã de entrada mostra
+ * a quem não consegue entrar o caminho do link para a criar.
  */
 export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "profissional-entrar", 10, 600);
@@ -90,18 +89,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: GENERICO }, { status: 401 });
     }
 
-    if (!p.passwordHash) {
-      return NextResponse.json(
-        {
-          error:
-            "Ainda não criou palavra-passe. Procure o email de aprovação, ou peça um link novo.",
-          semPalavraPasse: true,
-        },
-        { status: 409 },
-      );
-    }
-
-    if (!(await palavraPasseConfere(palavraPasse, p.passwordHash))) {
+    /*
+     * SEM PALAVRA-PASSE, A MESMA RESPOSTA QUE UMA ERRADA — d24, 10-11-2026.
+     *
+     * A resposta não diz que contas existem nem como estão: é o 401 de sempre,
+     * e o ecrã mostra a todos o caminho do link novo (`EntrarForm`).
+     */
+    if (!p.passwordHash || !(await palavraPasseConfere(palavraPasse, p.passwordHash))) {
       return NextResponse.json({ error: GENERICO }, { status: 401 });
     }
 

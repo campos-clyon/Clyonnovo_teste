@@ -101,7 +101,8 @@ export default function FormularioDoMovimento({
     setErro("");
     try {
       const { enviarFicheiro } = await import("@/lib/enviar-ficheiro");
-      const r = await enviarFicheiro(f);
+      // Com a sessão do backoffice: os PDF só passam assim no envio directo (d24).
+      const r = await enviarFicheiro(f, { autorizacao: token ? `Bearer ${token}` : null });
       if (r.ok) setAnexo({ url: r.ficheiro.url, nome: r.ficheiro.name });
       else setErro(`O anexo não subiu: ${r.motivo}`);
     } catch {

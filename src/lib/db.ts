@@ -4528,10 +4528,16 @@ export class EmailDeOutraConta extends Error {}
  *     endereço antigo — e quem lá está é precisamente quem pode já não dever
  *     entrar.
  */
-export async function mudarEmailDoProfissional(providerId: number, email: string): Promise<void> {
+export async function mudarEmailDoProfissional(
+  providerId: number,
+  email: string,
+): Promise<{ mudou: boolean; antes: string | null }> {
   await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  // O de antes, para o registo e para saber se mudou mesmo (d24, 10-11-2026).
+  const [actual] = (await pool.execute("SELECT email FROM providers WHERE id = ? LIMIT 1", [providerId])) as any[];
+  const antes: string | null = (actual as Array<{ email: string | null }>)[0]?.email?.trim().toLowerCase() ?? null;
   const [outros] = await pool.execute(
     "SELECT id FROM providers WHERE LOWER(TRIM(email)) = ? AND id <> ? LIMIT 1",
     [email.trim().toLowerCase(), providerId],
@@ -4548,6 +4554,7 @@ export async function mudarEmailDoProfissional(providerId: number, email: string
       WHERE id = ?`,
     [email.trim().toLowerCase(), email.trim().toLowerCase(), email.trim().toLowerCase(), providerId],
   );
+  return { mudou: antes !== email.trim().toLowerCase(), antes };
 }
 
 export type ProfissionalParaEntrar = {
@@ -13992,6 +13999,13 @@ export type Acontecimento =
   | "pagamento_declarado"
   // As contas
   | "conta_apagada"
+  /*
+   * A EQUIPA MUDOU O EMAIL, O NOME, O TELEFONE OU O NIF DE UM CLIENTE — d24,
+   * 10-11-2026. Quem, quando, e o antes e o depois (no detalhe).
+   */
+  | "conta_dados_mudados"
+  /* O administrador mudou o email de entrada de um parceiro (d24). */
+  | "profissional_email_mudado"
   /* O trabalho fechado passou para outro profissional. Ver `passarOTrabalhoAOutroProfissional`. */
   | "profissional_trocado"
   /*

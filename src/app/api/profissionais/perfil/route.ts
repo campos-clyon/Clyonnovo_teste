@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geocodificarLocalidade } from "@/lib/geocodificar";
+import { urlDoNossoBlob } from "@/lib/url-externo-seguro";
 import {
   perfilDoProfissional,
   avaliacoesDoProfissional,
@@ -398,12 +399,15 @@ export async function PUT(req: NextRequest) {
   if ("fotoViaturaUrl" in corpo) {
     const u = texto(corpo.fotoViaturaUrl);
     if (!u) mudancas.fotoViaturaUrl = null;
-    else if (!u.startsWith("https://") || !u.includes(".public.blob.vercel-storage.com/")) {
+    // Só o NOSSO store (d24, 10-11-2026): procurar «.public.blob.vercel-storage.com/»
+    // em qualquer sítio do texto deixava passar outro anfitrião, e o sufixo
+    // sozinho deixava passar o Blob de outra pessoa.
+    else if (!urlDoNossoBlob(u)) {
       erros.push({
         campo: "fotoViaturaUrl",
         mensagem: "A fotografia tem de ser enviada por aqui, não colada de outro sítio.",
       });
-    } else mudancas.fotoViaturaUrl = u.slice(0, 500);
+    } else mudancas.fotoViaturaUrl = urlDoNossoBlob(u)!.slice(0, 500);
   }
 
   /*

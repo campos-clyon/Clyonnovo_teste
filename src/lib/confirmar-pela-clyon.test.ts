@@ -477,7 +477,7 @@ describe("descarregar as fotos do pedido", () => {
     // Um proxy que busca "o URL que vier" é uma porta de SSRF — o servidor a
     // bater em endpoints internos por ordem de quem chama.
     const PROXY = ler("src/app/api/admin/fotos/route.ts");
-    expect(PROXY).toContain('.public.blob.vercel-storage.com');
+    expect(PROXY).toContain("urlDoNossoBlob(alvo.href)");
     expect(PROXY).toContain('alvo.protocol !== "https:"');
     expect(PROXY).toContain("attachment; filename=");
     expect(PROXY).toContain("requireAdmin");

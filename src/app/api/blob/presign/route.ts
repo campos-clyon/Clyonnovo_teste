@@ -4,7 +4,8 @@ import { issueSignedToken, presignUrl } from "@vercel/blob";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { limitarPorContaDoCliente } from "@/lib/cliente-auth";
 import { obterTokenDoBlob } from "@/lib/blob-token";
-import { tamanhoMaximoDoTipo, tipoDoFicheiro } from "@/lib/tipo-ficheiro";
+import { recusaDoEnvioSemSessao, tamanhoMaximoDoEnvio, tipoDoFicheiro } from "@/lib/tipo-ficheiro";
+import { envioComSessao } from "@/lib/envio-com-sessao";
 
 export const runtime = "nodejs";
 
@@ -122,8 +123,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: veredicto.motivo }, { status: 415 });
   }
 
-  // O tecto é o do tipo, e decide-se depois de o tipo estar decidido.
-  const maximo = tamanhoMaximoDoTipo(veredicto.tipo);
+  /*
+   * O tecto é o do tipo, e decide-se depois de o tipo estar decidido. Sem
+   * sessão, o mais baixo (d24, 10-11-2026 — ver `TAMANHO_MAXIMO_SEM_SESSAO`).
+   */
+  const comSessao = await envioComSessao(req);
+  if (!comSessao) {
+    const recusa = recusaDoEnvioSemSessao(veredicto.tipo, tamanho);
+    if (recusa) return NextResponse.json({ error: recusa }, { status: 413 });
+  }
+  const maximo = tamanhoMaximoDoEnvio(veredicto.tipo, comSessao);
   if (tamanho > maximo) {
     return NextResponse.json(
       {

@@ -493,7 +493,8 @@ export default function RegistarPedido({
     const { enviarFicheiro } = await import("@/lib/enviar-ficheiro");
     setAEnviarFotos((n) => n + lista.length);
     for (const original of Array.from(lista)) {
-      const r = await enviarFicheiro(original);
+      // Com a sessão do backoffice: os PDF e os vídeos grandes só passam assim (d24).
+      const r = await enviarFicheiro(original, { autorizacao: token ? `Bearer ${token}` : null });
       if (r.ok) setFotos((v) => [...v, r.ficheiro]);
       else {
         /*

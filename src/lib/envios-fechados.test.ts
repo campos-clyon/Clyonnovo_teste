@@ -75,7 +75,9 @@ describe("a assinatura pública", () => {
     expect(PRESIGN).toContain("allowedContentTypes: [veredicto.tipo]");
     expect(PRESIGN).toContain("maximumSizeInBytes: maximo");
     expect(TOKEN).toContain("allowedContentTypes: tiposDaMesmaEspecie(veredicto.tipo)");
-    expect(TOKEN).toContain("maximumSizeInBytes: tamanhoMaximoDoTipo(veredicto.tipo)");
+    // Desde 10-11-2026 (d24) o tecto do tipo depende de haver sessão.
+    expect(TOKEN).toContain("maximumSizeInBytes: maximo");
+    expect(TOKEN).toContain("tamanhoMaximoDoEnvio(veredicto.tipo, comSessao)");
     for (const rota of [PRESIGN, TOKEN]) {
       expect(rota).not.toContain("300 * 1024 * 1024");
     }

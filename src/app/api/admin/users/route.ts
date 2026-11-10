@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ExecuteValues } from "mysql2";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
-import { withConnection, ensureUsersSchema } from "@/lib/db";
+import { withConnection, ensureUsersSchema, registarSemFalhar } from "@/lib/db";
+import { inicioDoSegundo } from "@/lib/inicio-do-segundo";
 import { apagarConversasDaConta } from "@/lib/conversas-na-base";
 import { clientesDosPedidos, type PedidoParaContar } from "@/lib/clientes-dos-pedidos";
 
@@ -162,11 +163,22 @@ export async function PATCH(request: NextRequest) {
      * conta. Não muda o `role` — nada no site lho lê hoje, mas é a palavra
      * «admin» numa conta — e não marca uma conta como apagada, que é apagar
      * por outro nome. Apagar é do administrador.
+     *
+     * O EMAIL TAMBÉM É SÓ DO ADMINISTRADOR — d24, 10-11-2026, como nos
+     * parceiros desde 01-10 (`CAMPOS_SO_DO_ADMINISTRADOR`). O email é a conta:
+     * é por ele que se entra e que os pedidos se ligam. Mudá-lo, e levar os
+     * pedidos com ele (`migrarPedidos`), é do administrador.
      */
     if (auth.colaborador?.papel !== "admin") {
       if (role !== undefined || (deletedAt !== undefined && deletedAt !== null)) {
         return NextResponse.json(
           { error: "Só o administrador muda o papel de uma conta ou a apaga." },
+          { status: 403 },
+        );
+      }
+      if (body.email !== undefined || body.migrarPedidos !== undefined) {
+        return NextResponse.json(
+          { error: "Só o administrador muda o email de uma conta." },
           { status: 403 },
         );
       }
@@ -206,17 +218,28 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Email inválido." }, { status: 400 });
     }
 
+    /*
+     * O QUE MUDOU, PARA O REGISTO — d24, 10-11-2026. Cada mudança de email,
+     * nome, telefone ou NIF fica no `registoPermanente`, com quem a fez e o
+     * antes e o depois. Até aqui não ficava nada.
+     */
+    type Antes = { email: string | null; name: string | null; phone: string | null; nif: string | null };
+    const mudancas: Record<string, { antes: string | null; depois: string | null }> = {};
+    let emailFinal: string | null = null;
+    let nomeFinal: string | null = null;
+    let pedidosMovidos = 0;
+    let sessoesCortadas = false;
+
     await ensureUsersSchema();
     try {
       await withConnection(async (conn) => {
-        // O email antigo, para migrar os pedidos se for pedido.
-        let emailAntigo: string | null = null;
-        if (emailNovo !== undefined) {
-          const [linhas] = (await conn.execute("SELECT email FROM users WHERE id = ? LIMIT 1", [
-            id,
-          ])) as [Array<{ email: string }>, unknown];
-          emailAntigo = linhas[0]?.email?.toLowerCase() ?? null;
-        }
+        // Os dados de antes: o email para migrar os pedidos, e tudo para o registo.
+        const [linhas] = (await conn.execute(
+          "SELECT email, name, phone, nif FROM users WHERE id = ? LIMIT 1",
+          [id],
+        )) as [Antes[], unknown];
+        const antes = linhas[0];
+        const emailAntigo: string | null = antes?.email?.toLowerCase() ?? null;
 
         const updates: string[] = [];
         const params: ExecuteValues[] = [];
@@ -241,15 +264,39 @@ export async function PATCH(request: NextRequest) {
           updates.push("nif = ?");
           params.push(nif);
         }
-        if (emailNovo !== undefined && emailNovo !== emailAntigo) {
+        const emailMudou = emailNovo !== undefined && emailNovo !== emailAntigo;
+        if (emailMudou) {
           updates.push("email = ?");
           params.push(emailNovo);
+          /*
+           * AS SESSÕES DA CONTA CAEM (d24). As da app pelo corte
+           * (`sessoesClienteDesde`, como no «Sair de todos os aparelhos»); as
+           * do site caem sozinhas, porque levam o email antigo e
+           * `clienteDaSessao` exige uma conta com esse email.
+           */
+          updates.push("sessoesClienteDesde = ?");
+          params.push(inicioDoSegundo(new Date()));
         }
 
         if (updates.length === 0) return;
         updates.push("updatedAt = NOW()");
         params.push(id);
         await conn.execute(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, params);
+
+        const campo = (nomeDoCampo: string, valorAntes: string | null | undefined, valorDepois: string | null | undefined) => {
+          if (valorDepois === undefined) return;
+          const a = valorAntes ?? null;
+          if (a !== valorDepois) mudancas[nomeDoCampo] = { antes: a, depois: valorDepois };
+        };
+        campo("nome", antes?.name, nome);
+        campo("telefone", antes?.phone, telefone);
+        campo("nif", antes?.nif, nif);
+        if (emailMudou) {
+          mudancas.email = { antes: emailAntigo, depois: emailNovo ?? null };
+          sessoesCortadas = true;
+        }
+        emailFinal = emailMudou ? (emailNovo ?? null) : emailAntigo;
+        nomeFinal = nome !== undefined ? nome : (antes?.name ?? null);
 
         // Os pedidos seguem o email novo — senão somem da conta ao entrar.
         if (
@@ -258,10 +305,11 @@ export async function PATCH(request: NextRequest) {
           emailAntigo &&
           emailNovo !== emailAntigo
         ) {
-          await conn.execute(
+          const [movidos] = (await conn.execute(
             "UPDATE simulatorOrders SET contactEmail = ? WHERE LOWER(contactEmail) = ?",
             [emailNovo, emailAntigo],
-          );
+          )) as [{ affectedRows?: number }, unknown];
+          pedidosMovidos = Number(movidos?.affectedRows ?? 0);
         }
       });
     } catch (e: unknown) {
@@ -274,6 +322,32 @@ export async function PATCH(request: NextRequest) {
         );
       }
       throw e;
+    }
+
+    if (Object.keys(mudancas).length > 0) {
+      const quem = auth.colaborador?.nome ?? "a equipa";
+      const nomes = Object.keys(mudancas).join(", ");
+      await registarSemFalhar({
+        acontecimento: "conta_dados_mudados",
+        clienteEmail: emailFinal,
+        clienteNome: nomeFinal,
+        autorTipo: "clyon",
+        autorNome: quem,
+        resumo:
+          `Conta #${id}: ${nomes} mudado por ${quem}` +
+          (mudancas.email ? ` (sessões terminadas${pedidosMovidos > 0 ? `, ${pedidosMovidos} pedido(s) movido(s)` : ""})` : "") +
+          ".",
+        detalhe: {
+          contaId: Number(id),
+          porId: auth.colaborador?.id ?? null,
+          papel: auth.colaborador?.papel ?? null,
+          mudancas,
+          migrarPedidos: body.migrarPedidos === true,
+          pedidosMovidos,
+          sessoesCortadas,
+        },
+      });
+      console.info(`[api/admin/users] conta #${id}: ${nomes} mudado por ${quem}`);
     }
 
     // M2 (30-10-2026): desactivar a conta (deletedAt) leva as conversas dela.

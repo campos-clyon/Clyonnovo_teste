@@ -151,6 +151,7 @@ describe("as ligações", () => {
      * pessoa, que vê quem as abre e pode trocá-las depois de aprovadas.
      */
     const ROTA = ler("src/app/api/profissionais/perfil/route.ts");
-    expect(ROTA).toContain(".public.blob.vercel-storage.com/");
+    // Desde 10-11-2026 (d24): o NOSSO store, e não o texto em qualquer sítio.
+    expect(ROTA).toContain("urlDoNossoBlob(u)");
   });
 });

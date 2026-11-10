@@ -159,3 +159,24 @@ export function urlDeAnexoDaConversa(
   if (!EXTENSOES_DO_ANEXO.test(decodeURIComponent(url.pathname))) return null;
   return href.length > 500 ? null : href;
 }
+
+/**
+ * UM ENDEREÇO DO NOSSO STORE, e não de um Vercel Blob qualquer (d24,
+ * 10-11-2026). Qualquer pessoa tem um store na Vercel, e todos acabam em
+ * `.public.blob.vercel-storage.com`: conferir só o sufixo (ou, pior, procurar
+ * o texto em qualquer sítio do endereço) deixava passar ficheiros de outro.
+ *
+ * Quando se sabe o anfitrião do nosso store (`anfitriaoDoNossoBlob`), só ele
+ * passa. Sem ele (ambiente sem variáveis) fica o sufixo, como em
+ * `fotografiaDaCandidatura`: adivinhá-lo mal deitava fora tudo.
+ */
+export function urlDoNossoBlob(
+  valor: unknown,
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  const href = urlDeAnexoPermitido(valor);
+  if (!href) return null;
+  const nosso = anfitriaoDoNossoBlob(env);
+  if (nosso && new URL(href).hostname.toLowerCase() !== nosso) return null;
+  return href;
+}

@@ -28,9 +28,14 @@ interface ContasPanelProps {
    * dos outros.
    */
   podeApagar?: boolean;
+  /**
+   * Mudar o email de um cliente é do administrador — d24, 10-11-2026. Para um
+   * assistente o campo fica só para ler (a rota recusa-o na mesma).
+   */
+  podeMudarEmail?: boolean;
 }
 
-export default function ContasPanel({ authToken, podeApagar = true }: ContasPanelProps) {
+export default function ContasPanel({ authToken, podeApagar = true, podeMudarEmail = podeApagar }: ContasPanelProps) {
   const [users, setUsers] = useState<UserAccount[]>([]);
   /** Clientes que pediram orçamento e nunca criaram conta. */
   const [semConta, setSemConta] = useState(0);
@@ -391,6 +396,7 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
       {aEditar && (
         <EditarConta
           conta={aEditar}
+          podeMudarEmail={podeMudarEmail}
           onGuardar={async (patch) => {
             const ok = await updateUser(aEditar.id, patch);
             if (ok) setAEditar(null);
@@ -442,10 +448,12 @@ export default function ContasPanel({ authToken, podeApagar = true }: ContasPane
  */
 function EditarConta({
   conta,
+  podeMudarEmail,
   onGuardar,
   onFechar,
 }: {
   conta: UserAccount;
+  podeMudarEmail: boolean;
   onGuardar: (patch: Record<string, unknown>) => Promise<void>;
   onFechar: () => void;
 }) {
@@ -456,7 +464,7 @@ function EditarConta({
   const [migrarPedidos, setMigrarPedidos] = useState(true);
   const [aGuardar, setAGuardar] = useState(false);
 
-  const emailMudou = email.trim().toLowerCase() !== conta.email.toLowerCase();
+  const emailMudou = podeMudarEmail && email.trim().toLowerCase() !== conta.email.toLowerCase();
   const caixa =
     "mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-cyan-500";
 
@@ -486,7 +494,15 @@ function EditarConta({
           </label>
           <label className="block text-xs font-semibold text-slate-500">
             Email
-            <input value={email} onChange={(e) => setEmail(e.target.value)} className={caixa} />
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              readOnly={!podeMudarEmail}
+              className={podeMudarEmail ? caixa : `${caixa} bg-slate-50 text-slate-500`}
+            />
+            {!podeMudarEmail && (
+              <span className="mt-1 block font-normal text-slate-400">Só o administrador muda o email.</span>
+            )}
           </label>
 
           {emailMudou && (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { urlDoNossoBlob } from "@/lib/url-externo-seguro";
 
 export const runtime = "nodejs";
 
@@ -36,12 +37,14 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "URL inválido" }, { status: 400 });
   }
-  if (alvo.protocol !== "https:" || !alvo.hostname.endsWith(".public.blob.vercel-storage.com")) {
+  // O NOSSO store, e não qualquer `.public.blob.vercel-storage.com` (d24, 10-11-2026).
+  if (alvo.protocol !== "https:" || !urlDoNossoBlob(alvo.href)) {
     return NextResponse.json({ error: "Só fotos do armazenamento CLYON" }, { status: 400 });
   }
 
   try {
-    const resposta = await fetch(alvo.toString());
+    // Sem seguir redirecções: um 302 levava o servidor para fora da lista.
+    const resposta = await fetch(alvo.toString(), { redirect: "manual" });
     if (!resposta.ok || !resposta.body) {
       return NextResponse.json({ error: "A foto não está acessível" }, { status: 502 });
     }
