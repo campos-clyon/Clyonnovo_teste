@@ -41,7 +41,7 @@ import {
   linhaDasCoisas,
   linhaDoAcesso,
 } from "@/lib/perguntas-do-espaco";
-import { PASSOS_DA_MUDANCA_COM_ESCOLHA, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/textos-do-pedido";
+import { passosDaMudancaComEscolha, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/textos-do-pedido";
 import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/ParceirosDaMudanca";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
@@ -864,13 +864,13 @@ export default function SimulatorThreePhaseForm() {
                 // Os textos vêm de textos-do-pedido.ts — os mesmos que a app recebe (S12).
                 // Numa mudança enviada logo aos escolhidos, os passos dessa (10-11-2026).
                 ...TRES_PASSOS_DEPOIS_DE_ENVIAR[0],
-                ...(foiAosEscolhidos > 0 ? PASSOS_DA_MUDANCA_COM_ESCOLHA[0] : {}),
+                ...(foiAosEscolhidos > 0 ? passosDaMudancaComEscolha(foiAosEscolhidos)[0] : {}),
               },
               {
                 Icone: Clock,
                 cor: "text-acao",
                 ...TRES_PASSOS_DEPOIS_DE_ENVIAR[1],
-                ...(foiAosEscolhidos > 0 ? PASSOS_DA_MUDANCA_COM_ESCOLHA[1] : {}),
+                ...(foiAosEscolhidos > 0 ? passosDaMudancaComEscolha(foiAosEscolhidos)[1] : {}),
               },
               /*
                 «SÓ PAGA DEPOIS DE CONFIRMAR QUE FICOU FEITO» SAIU — 29-09-2026.

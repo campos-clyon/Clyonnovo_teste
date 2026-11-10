@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { negociacoesDoProfissional, getPool, custosEBaseDoProfissional } from "@/lib/db";
+import { negociacoesDoProfissional, getPool, custosEBaseDoProfissional, mudancasEscolhidasDoProfissional } from "@/lib/db";
+import { mudancaEscolhida, semDerrubar } from "@/lib/mudanca-escolhida-pelo-cliente";
+import type { MudancaEscolhidaNaBase } from "@/lib/db";
 import { getActivePricingMap } from "@/lib/pricing-helper";
 import {
   parametrosDoMapa,
@@ -85,6 +87,17 @@ function valorPendenteDoCliente(json: string | null | undefined): number | null 
   }
 }
 
+/** Ele já pôs um número nesta negociação (o prazo para responder deixa de contar). */
+function jaRespondeuNaNegociacao(json: string | null | undefined): boolean {
+  if (typeof json !== "string" || !json.trim()) return false;
+  try {
+    const lista = JSON.parse(json);
+    return Array.isArray(lista) && lista.some((p: { por?: unknown }) => p?.por === "profissional");
+  } catch {
+    return false;
+  }
+}
+
 function ponto(
   lat: string | number | null | undefined,
   lng: string | number | null | undefined,
@@ -116,6 +129,16 @@ export async function GET(req: NextRequest) {
     const aCaminho = await transferenciasAEspera(linhas.map((l) => Number(l.id))).catch(() => new Set<number>());
 
     const agora = new Date();
+
+    /*
+     * AS MUDANÇAS EM QUE O CLIENTE O ESCOLHEU — 11-11-2026 (fase 2). Uma leitura
+     * à parte, que nunca derruba a lista: sem ela, o ecrã fica como antes.
+     */
+    const escolhidas = await semDerrubar(
+      () => mudancasEscolhidasDoProfissional(sessao.providerId),
+      new Map<number, MudancaEscolhidaNaBase>(),
+      "meus-pedidos",
+    );
 
     /*
      * A SUGESTÃO DA CLYON, CALCULADA PARA ELE.
@@ -599,6 +622,27 @@ export async function GET(req: NextRequest) {
          * ninguém quis e para aquele em que ele é o primeiro de sete.
          */
         concorrentes: Number(l.concorrentes ?? 0),
+        /*
+         * O CLIENTE ESCOLHEU-O — 11-11-2026 (fase 2). Numa mudança com a lista
+         * de parceiros: a equipa, a hora dele congelada (e o que recebe à hora),
+         * a estimativa e o prazo para responder, já escritos. Null em todas as
+         * outras. Ver mudanca-escolhida-pelo-cliente.ts.
+         */
+        mudancaEscolhida: (() => {
+          const m = escolhidas.get(Number(l.id));
+          if (!m) return null;
+          return mudancaEscolhida(
+            {
+              tarifaCongeladaJson: m.tarifaCongeladaJson,
+              pessoasEscolhidas: m.pessoasEscolhidas,
+              prazoRespostaEm: instanteDaBase(m.prazoRespostaEm),
+              horas: m.horas,
+              km: m.km,
+              jaRespondeu: l.estado !== "aberta" || jaRespondeuNaNegociacao(l.propostasJson),
+            },
+            agora,
+          );
+        })(),
         /*
          * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Como lhe chegou
          * («distribuida»: a CLYON escolhe entre os que aceitarem; «directa»:

@@ -1223,7 +1223,7 @@ export default function Trabalhos({
                           ele prometia um número que ninguém lhe garantiu.
                         */}
                         {/* Num trabalho CLYON o número é fixo: não se desconta, não se propõe. */}
-                        {p.ofertaClyon ? "valor fixo · CLYON" : p.valorDaClyon != null ? "valor CLYON" : "sugestão CLYON"}
+                        {p.ofertaClyon ? "valor fixo · CLYON" : p.mudancaEscolhida ? "a sua hora · recebe" : p.valorDaClyon != null ? "valor CLYON" : "sugestão CLYON"}
                       </span>
                     )}
                     {/*
@@ -2157,6 +2157,28 @@ function DetalheDoTrabalho({
         </section>
       )}
 
+      {/* O cliente escolheu-o (11-11-2026): numa mudança com a lista de parceiros, em vez do valor de partida. */}
+      {pedido.mudancaEscolhida && pedido.estado === "aberta" && (
+        <section className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-sm shadow-sm">
+          <p className="text-base font-bold text-cyan-900">{pedido.mudancaEscolhida.titulo}</p>
+          <p className="mt-1 font-semibold text-slate-800">{pedido.mudancaEscolhida.equipaTexto}</p>
+          {pedido.mudancaEscolhida.estimativa && (
+            <>
+              <p className="mt-1 text-slate-800">{pedido.mudancaEscolhida.estimativa.texto}</p>
+              <p className="text-slate-600">{pedido.mudancaEscolhida.estimativa.recebeTexto}</p>
+            </>
+          )}
+          <p className="mt-2 font-semibold text-slate-800">{pedido.mudancaEscolhida.horaTexto}</p>
+          <p className="text-base font-bold text-emerald-700">{pedido.mudancaEscolhida.recebeTexto}</p>
+          {pedido.mudancaEscolhida.prazoTexto && (
+            <p className={`mt-2 font-semibold ${pedido.mudancaEscolhida.prazoPassou ? "text-slate-600" : "text-amber-800"}`}>
+              {pedido.mudancaEscolhida.prazoTexto}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-slate-600">{pedido.mudancaEscolhida.regraDaProposta}</p>
+        </section>
+      )}
+
       {/* O valor */}
       <section className="mt-3 rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm">
         {/*
@@ -2192,6 +2214,20 @@ function DetalheDoTrabalho({
            * para «sugestão», como no cartão — chamar «valor CLYON» a uma conta
            * feita para ele prometia um número que ninguém lhe garantiu.
            */
+          // Numa mudança em que o cliente o escolheu, o número é a hora dele, no líquido (11-11-2026).
+          if (antesDePropor && pedido.mudancaEscolhida) {
+            return (
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="flex items-center gap-1.5 text-sm text-slate-600">
+                  <HandCoins className="h-4 w-4 text-emerald-600" aria-hidden="true" />A sua hora · recebe
+                </span>
+                <span className="block text-2xl font-bold text-emerald-600">
+                  {euros(pedido.mudancaEscolhida.recebeHora)}
+                  {sufixoDe(pedido)}
+                </span>
+              </div>
+            );
+          }
           const daClyon = antesDePropor ? (pedido.valorDaClyon ?? null) : null;
           const suaConta = antesDePropor ? (pedido.sugestao ?? null) : null;
           const emCima = daClyon ?? suaConta?.recebeSePropuser ?? null;

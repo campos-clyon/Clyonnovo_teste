@@ -45,7 +45,8 @@ export type Separador =
  */
 export function valorNoCartao(p: Pedido, separador: Separador): number | null {
   if (separador !== "novos") return null;
-  return p.valorDaClyon ?? p.sugestao?.recebeSePropuser ?? null;
+  // Numa mudança em que o cliente o escolheu, a hora dele, no líquido (11-11-2026).
+  return p.mudancaEscolhida?.recebeHora ?? p.valorDaClyon ?? p.sugestao?.recebeSePropuser ?? null;
 }
 
 /**

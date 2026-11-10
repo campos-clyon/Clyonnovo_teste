@@ -4954,6 +4954,54 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
 }
 
 /**
+ * AS MUDANÇAS EM QUE O CLIENTE O ESCOLHEU — 11-11-2026 (fase 2). Para cada
+ * negociação dele com a tarifa congelada: a tarifa, a equipa, o prazo e, do
+ * pedido, as horas e o percurso que o cliente viu (`escolhaDosParceirosJson`).
+ *
+ * À parte de `negociacoesDoProfissional` de propósito: se as colunas da v17
+ * faltassem, a lista dele não partia — quem chama apanha o erro, o mapa fica
+ * vazio e o ecrã fica como antes. Só as linhas com tarifa: o JSON grande do
+ * pedido nunca sai inteiro.
+ */
+export type MudancaEscolhidaNaBase = {
+  tarifaCongeladaJson: string;
+  pessoasEscolhidas: number | null;
+  prazoRespostaEm: Date | string | null;
+  horas: string | null;
+  km: string | null;
+};
+
+export async function mudancasEscolhidasDoProfissional(providerId: number): Promise<Map<number, MudancaEscolhidaNaBase>> {
+  const mapa = new Map<number, MudancaEscolhidaNaBase>();
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return mapa;
+  const [rows] = (await pool.execute(
+    `SELECT n.id, n.tarifaCongeladaJson, n.pessoasEscolhidas, n.prazoRespostaEm,
+            CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.horas')) END AS horas,
+            CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.kmPercurso')) END AS km
+       FROM negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.providerId = ? AND n.tarifaCongeladaJson IS NOT NULL
+      LIMIT 200`,
+    [providerId],
+  )) as any[];
+  for (const r of rows as any[]) {
+    mapa.set(Number(r.id), {
+      tarifaCongeladaJson: String(r.tarifaCongeladaJson),
+      pessoasEscolhidas: r.pessoasEscolhidas != null ? Number(r.pessoasEscolhidas) : null,
+      prazoRespostaEm: r.prazoRespostaEm ?? null,
+      horas: r.horas ?? null,
+      km: r.km ?? null,
+    });
+  }
+  return mapa;
+}
+
+/**
  * Existe uma conta com este email?
  *
  * Decide para onde apontar um aviso de proposta: quem tem conta vai para

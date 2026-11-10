@@ -11,6 +11,7 @@
  * Este ficheiro é puro (sem React Native): os testes do site importam-no —
  * ver `src/lib/app-pro.test.ts` na raiz do repositório.
  */
+import type { MudancaEscolhida } from "../../../src/lib/mudanca-escolhida-pelo-cliente";
 import {
   accoesDisponiveis,
   MAX_PROPOSTAS_POR_LADO,
@@ -89,6 +90,13 @@ export type Trabalho = {
   recebeSeAceitar: number | null;
   recebeSeFechado: number | null;
   valorDaClyon: number | null;
+  /**
+   * O CLIENTE ESCOLHEU-O — 11-11-2026. Numa mudança com a lista de parceiros:
+   * a equipa, a hora dele congelada (e o que recebe à hora), a estimativa e o
+   * prazo, já escritos pela API (mudanca-escolhida-pelo-cliente.ts). Ausente
+   * numa lista guardada antes desta versão.
+   */
+  mudancaEscolhida?: MudancaEscolhida | null;
   sugestao: Sugestao | null;
   taxas: Taxas;
   formaDePagamento: "na_plataforma" | "dinheiro" | "pos_recolha";
@@ -826,6 +834,8 @@ function valorDoCartaoSemUnidade(t: Trabalho): ValorDoCartao {
     return { valor: t.recebeSeFechado, legenda: "recebe, sem IVA" };
   }
   if (separadorDe(t) === "novos") {
+    // O cliente escolheu-o pela hora dele: o número grande é o que recebe à hora (11-11-2026).
+    if (t.mudancaEscolhida) return { valor: t.mudancaEscolhida.recebeHora, legenda: "a sua hora · recebe" };
     if (t.valorDaClyon != null) {
       return { valor: t.valorDaClyon, legenda: t.ofertaClyon ? "valor fixo · CLYON" : "valor CLYON" };
     }
@@ -1142,14 +1152,14 @@ export function whatsAppDaClyon(texto: string): string | null {
 // vive fora do src/lib e não se pode importar daqui. O teste do site compara
 // os dois, caso a caso, para não divergirem.
 
-/** O número grande do cartão nos novos: o valor da CLYON, ou a conta feita para ele. */
-export function valorNoCartao(t: Pick<Trabalho, "valorDaClyon" | "sugestao">, separador: Separador): number | null {
+/** O número grande do cartão nos novos: a hora dele numa mudança em que o cliente o escolheu, o valor da CLYON, ou a conta feita para ele. */
+export function valorNoCartao(t: Pick<Trabalho, "valorDaClyon" | "sugestao" | "mudancaEscolhida">, separador: Separador): number | null {
   if (separador !== "novos") return null;
-  return t.valorDaClyon ?? t.sugestao?.recebeSePropuser ?? null;
+  return t.mudancaEscolhida?.recebeHora ?? t.valorDaClyon ?? t.sugestao?.recebeSePropuser ?? null;
 }
 
 /** O limiar de «bem pago» DELE, em €/km — ou null, e vale o da casa. */
-export function bomPorKmDe(t: Pick<Trabalho, "valorDaClyon" | "sugestao" | "distanciaKm">, separador: Separador): number | null {
+export function bomPorKmDe(t: Pick<Trabalho, "valorDaClyon" | "sugestao" | "distanciaKm" | "mudancaEscolhida">, separador: Separador): number | null {
   const s = t.sugestao;
   if (!s || !s.comOsSeusCustos || s.semDistancia) return null;
   if (valorNoCartao(t, separador) != null && t.valorDaClyon == null) return null;

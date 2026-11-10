@@ -1,4 +1,5 @@
 import type { Proposta } from "@/lib/negociacao";
+import type { MudancaEscolhida } from "@/lib/mudanca-escolhida-pelo-cliente";
 import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
 import type { ModoDaOferta } from "@/lib/oferta-clyon";
 import type { ResumoDasHoras } from "@/lib/horas-do-trabalho";
@@ -139,6 +140,12 @@ export type Pedido = {
    * colocamos aqui" — é o número grande do cartão.
    */
   valorDaClyon?: number | null;
+  /**
+   * O CLIENTE ESCOLHEU-O — 11-11-2026 (meus-pedidos). Numa mudança com a lista
+   * de parceiros: a equipa, a hora dele congelada, o que recebe à hora, a
+   * estimativa e o prazo, já escritos. Ver mudanca-escolhida-pelo-cliente.ts.
+   */
+  mudancaEscolhida?: MudancaEscolhida | null;
   /**
    * POR HORA — 31-10-2026 (meus-pedidos). As horas previstas do pedido (para o
    * total estimado, mínimo 3) e o bloco das horas; `null` quando não é por hora.

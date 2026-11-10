@@ -4,7 +4,9 @@ import {
   negociacoesDoProfissional,
   gravarNegociacao,
   appendOrderHistory,
+  mudancasEscolhidasDoProfissional,
 } from "@/lib/db";
+import { problemaDaHoraProposta, semDerrubar } from "@/lib/mudanca-escolhida-pelo-cliente";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -195,6 +197,21 @@ export async function POST(req: NextRequest) {
       case "propor": {
         const valor =
           typeof corpo.valor === "string" ? Number(corpo.valor.replace(",", ".")) : corpo.valor;
+        /*
+         * UMA MUDANÇA EM QUE O CLIENTE O ESCOLHEU — 11-11-2026 (fase 2). A
+         * proposta é à hora (o pedido é por hora) e não passa da hora dele que
+         * ficou congelada quando o cliente o escolheu; pode descer. Ver
+         * mudanca-escolhida-pelo-cliente.ts.
+         */
+        const escolhida = await semDerrubar(
+          async () => (await mudancasEscolhidasDoProfissional(sessao.providerId)).get(negociacaoId) ?? null,
+          null,
+          "negociacao",
+        );
+        if (escolhida) {
+          const problema = problemaDaHoraProposta(escolhida.tarifaCongeladaJson, escolhida.pessoasEscolhidas, Number(valor));
+          if (problema) return NextResponse.json({ error: problema, acimaDaHora: true }, { status: 409 });
+        }
         resultado = propor(estadoActual, "profissional", Number(valor), agora);
         break;
       }

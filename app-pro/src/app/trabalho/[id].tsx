@@ -261,7 +261,8 @@ function Concorrencia({ t }: { t: Trabalho }) {
  */
 function ValorSugeridoPelaClyon({ t }: { t: Trabalho }) {
   const c = useCores();
-  if (t.valorDaClyon == null) return null;
+  // Numa mudança em que o cliente o escolheu, o que manda é a hora dele (`MudancaEscolhidaPeloCliente`), 11-11-2026.
+  if (t.valorDaClyon == null || t.mudancaEscolhida) return null;
   const base = lerBase(t.baseDoPreco);
   const estimativa = estimativaAoLado(t, t.valorDaClyon);
   return (
@@ -333,7 +334,7 @@ function OutrosAnexos({ t }: { t: Trabalho }) {
 function SugeriaParaOsSeusCustos({ t }: { t: Trabalho }) {
   const c = useCores();
   const s = t.sugestao;
-  if (t.valorDaClyon == null || !s || Math.abs(t.valorDaClyon - s.recebeSePropuser) < 1) return null;
+  if (t.valorDaClyon == null || t.mudancaEscolhida || !s || Math.abs(t.valorDaClyon - s.recebeSePropuser) < 1) return null;
   return (
     <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
       Para os seus custos, sugeria {euros(s.recebeSePropuser)}
@@ -351,7 +352,10 @@ function Accoes({ t }: { t: Trabalho }) {
   const c = useCores();
   const { recarregar } = useTrabalhos();
   const e = escolhasDe(t);
-  const [texto, setTexto] = useState(e.referenciaParaPropor != null ? String(e.referenciaParaPropor).replace(".", ",") : "");
+  // Numa mudança em que o cliente o escolheu, a proposta começa na hora dele (pode descer, nunca subir).
+  const escolhida = t.mudancaEscolhida ?? null;
+  const inicial = e.referenciaParaPropor ?? (escolhida && e.primeiraProposta ? escolhida.hora : null);
+  const [texto, setTexto] = useState(inicial != null ? String(inicial).replace(".", ",") : "");
   const [aPropor, setAPropor] = useState(!e.podeAceitar && e.podePropor);
   const [confirmarSaida, setConfirmarSaida] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
@@ -506,7 +510,8 @@ function Accoes({ t }: { t: Trabalho }) {
   return (
     <Caixa>
       <TituloDaCaixa>{e.podeAceitar ? "O cliente fez uma proposta" : "A sua proposta"}</TituloDaCaixa>
-      {t.estado === "aberta" ? <Concorrencia t={t} /> : null}
+      {escolhida ? <MudancaEscolhidaPeloCliente m={escolhida} /> : null}
+      {t.estado === "aberta" && !escolhida ? <Concorrencia t={t} /> : null}
       {e.primeiraProposta ? <ValorSugeridoPelaClyon t={t} /> : null}
       {e.primeiraProposta ? <SugeriaParaOsSeusCustos t={t} /> : null}
       <AvisosDoValor t={t} />
@@ -542,7 +547,7 @@ function Accoes({ t }: { t: Trabalho }) {
         </View>
       ) : null}
 
-      {sugestao && e.primeiraProposta && e.podePropor ? (
+      {sugestao && e.primeiraProposta && e.podePropor && !escolhida ? (
         <View style={[estilos.sugestao, { backgroundColor: c.marcaSuave }]}>
           <Text style={{ color: c.marca, fontWeight: "700" }}>Sugestão CLYON, calculada para si</Text>
           <Text style={{ color: c.tinta }}>
@@ -609,7 +614,8 @@ function Accoes({ t }: { t: Trabalho }) {
             accessibilityLabel="Valor a propor, sem IVA"
             style={[estilos.campo, { borderColor: c.linha, color: c.tinta, backgroundColor: c.fundo }]}
           />
-          {sugestao ? (
+          {escolhida ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{escolhida.regraDaProposta}</Text> : null}
+          {sugestao && !escolhida ? (
             <View style={{ flexDirection: "row", gap: ESPACO.s, flexWrap: "wrap" }}>
               {[0.1, 0.2, 0.4].map((p) => {
                 const v = Math.round(sugestao.precoSugerido * (1 + p));
@@ -666,6 +672,27 @@ function Accoes({ t }: { t: Trabalho }) {
         cliente lhe responder.
       </Text>
     </Caixa>
+  );
+}
+
+/**
+ * «O CLIENTE ESCOLHEU-O» — 11-11-2026. Numa mudança com a lista de parceiros,
+ * em vez do valor de partida da plataforma: a equipa, a estimativa, a hora
+ * dele congelada (e o que recebe à hora) e o prazo para responder. Os textos
+ * vêm da API (mudanca-escolhida-pelo-cliente.ts), como no painel.
+ */
+function MudancaEscolhidaPeloCliente({ m }: { m: NonNullable<Trabalho["mudancaEscolhida"]> }) {
+  const c = useCores();
+  return (
+    <View style={[estilos.sugestao, { backgroundColor: c.marcaSuave }]}>
+      <Text style={{ color: c.marca, fontSize: LETRA.media, fontWeight: "800" }}>{m.titulo}</Text>
+      <Text style={{ color: c.tinta, fontWeight: "600" }}>{m.equipaTexto}</Text>
+      {m.estimativa ? <Text style={{ color: c.tinta, lineHeight: 21 }}>{m.estimativa.texto}</Text> : null}
+      {m.estimativa ? <Text style={{ color: c.suave, lineHeight: 20 }}>{m.estimativa.recebeTexto}</Text> : null}
+      <Text style={{ color: c.tinta, fontWeight: "600", marginTop: ESPACO.xs }}>{m.horaTexto}</Text>
+      <Text style={{ color: c.bom, fontSize: LETRA.media, fontWeight: "800" }}>{m.recebeTexto}</Text>
+      {m.prazoTexto ? <Etiqueta texto={m.prazoTexto} tom={m.prazoPassou ? "neutro" : "aviso"} /> : null}
+    </View>
   );
 }
 

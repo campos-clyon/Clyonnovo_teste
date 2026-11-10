@@ -43,6 +43,18 @@ export const PASSOS_DA_MUDANCA_COM_ESCOLHA: ReadonlyArray<{ titulo: string; text
   TRES_PASSOS_DEPOIS_DE_ENVIAR[2],
 ];
 
+/**
+ * Os mesmos três passos, a dizer a quantos parceiros o pedido foi (11-11-2026):
+ * «O pedido já seguiu para os 2 parceiros que escolheu». O simulador do site e
+ * a app de cliente (pela resposta do `POST /api/simulador/pedido`) dizem isto.
+ */
+export function passosDaMudancaComEscolha(quantos: number): ReadonlyArray<{ titulo: string; texto: string }> {
+  const n = Math.max(1, Math.floor(quantos));
+  const titulo =
+    n === 1 ? "O pedido já seguiu para o parceiro que escolheu" : `O pedido já seguiu para os ${n} parceiros que escolheu`;
+  return [{ ...PASSOS_DA_MUDANCA_COM_ESCOLHA[0], titulo }, PASSOS_DA_MUDANCA_COM_ESCOLHA[1], PASSOS_DA_MUDANCA_COM_ESCOLHA[2]];
+}
+
 /** «Podem mostrar as minhas fotos…» — a caixa do simulador, numa só frase. */
 export const AUTORIZA_FOTOS =
   "Podem mostrar as minhas fotos no site e nas redes da CLYON (opcional), sem nada que me identifique — nem pessoas, nem morada.";
