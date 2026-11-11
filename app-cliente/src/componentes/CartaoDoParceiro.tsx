@@ -21,9 +21,12 @@ export function CartaoDoParceiro({
   marcado,
   cheio,
   aoTocar,
+  embalamento = false,
 }: {
   p: CartaoDaLista;
   pessoas: Pessoas;
+  /** O cliente pediu as caixas e o embalamento: mostra-se a linha deles (11-11-2026). */
+  embalamento?: boolean;
   marcado: boolean;
   /** Já tem o máximo escolhido: este não se pode marcar. */
   cheio: boolean;
@@ -71,6 +74,11 @@ export function CartaoDoParceiro({
         </View>
       </View>
       <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "700", lineHeight: 21 }}>{p.estimativa.texto}</Text>
+      {embalamento && p.embalamento ? (
+        <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>
+          {p.estimativaComEmbalamento ? p.estimativaComEmbalamento.texto : p.embalamento.texto}
+        </Text>
+      ) : null}
       {hora ? <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{`${hora.texto} · equipa de ${pessoas}`}</Text> : null}
       {p.horasTexto ? (
         <Text style={{ color: CORES.suave, fontSize: 13.5, lineHeight: 19 }}>
@@ -94,7 +102,9 @@ export function CartaoDoParceiro({
               {p.materiais.map((m) => (
                 <Text key={m.chave} style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{`${m.nome}: ${m.texto}`}</Text>
               ))}
-              {p.kit.total ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{`Com o kit: ${p.estimativaComKit.texto}`}</Text> : null}
+              {embalamento && p.embalamento && p.estimativaComEmbalamento ? (
+                <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{p.embalamento.texto}</Text>
+              ) : null}
             </View>
           ) : null}
         </View>

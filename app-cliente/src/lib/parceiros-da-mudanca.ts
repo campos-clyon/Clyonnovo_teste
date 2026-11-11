@@ -27,6 +27,8 @@ export type EscolhaDosParceiros = {
   nomes: string[];
   pessoas: Pessoas;
   procurarMais: boolean;
+  /** Pediu também as caixas e o embalamento completo (11-11-2026). */
+  embalamento?: boolean;
 };
 
 /**
@@ -51,6 +53,9 @@ export type CartaoDaLista = {
   kit: { texto: string; total: { texto: string } | null };
   estimativa: { texto: string };
   estimativaComKit: { texto: string };
+  /** As caixas e o embalamento (11-11-2026), só se o cliente os pedir; null quando não há. */
+  embalamento: { texto: string } | null;
+  estimativaComEmbalamento: { texto: string } | null;
 };
 
 export type TextosDaLista = {
@@ -58,6 +63,8 @@ export type TextosDaLista = {
   escolha: string;
   semParceirosSegue: string;
   procurarMais: string;
+  /** «Também preciso de caixas e embalamento» (11-11-2026). */
+  pedirEmbalamento: string;
   botao: string;
   notaDaEstimativa: string;
   quemFaz: string;
@@ -67,7 +74,10 @@ export type ListaDosParceiros =
   | { ligado: false }
   | {
       ligado: true;
+      /** A equipa com que a rota fez a conta: 3 num T3 ou maior, mesmo que se peçam 2. */
       pessoas: Pessoas;
+      /** A casa só se faz com 3 pessoas: o botão das 2 não se mostra. */
+      soComTres: boolean;
       resumo: string | null;
       recomendaTres: string | null;
       maximo: number;
@@ -148,6 +158,8 @@ function cartaoValido(v: unknown): CartaoDaLista | null {
     kit: { texto: texto(kit.texto) ?? "", total: comTexto(kit.total) },
     estimativa,
     estimativaComKit: comTexto(c.estimativaComKit) ?? estimativa,
+    embalamento: comTexto(c.embalamento),
+    estimativaComEmbalamento: comTexto(c.estimativaComEmbalamento),
   };
 }
 
@@ -165,6 +177,7 @@ export function listaValida(v: unknown): ListaDosParceiros | null {
     escolha: texto(t.escolha) ?? "",
     semParceirosSegue: texto(t.semParceirosSegue) ?? "",
     procurarMais: texto(t.procurarMais) ?? "",
+    pedirEmbalamento: texto(t.pedirEmbalamento) ?? "",
     botao: texto(t.botao) ?? "",
     notaDaEstimativa: texto(t.notaDaEstimativa) ?? "",
     quemFaz: texto(t.quemFaz) ?? "",
@@ -180,6 +193,7 @@ export function listaValida(v: unknown): ListaDosParceiros | null {
   return {
     ligado: true,
     pessoas: o.pessoas === 3 ? 3 : 2,
+    soComTres: o.soComTres === true,
     resumo: texto(o.resumo),
     recomendaTres: texto(o.recomendaTres),
     maximo: Math.min(maximo, MAXIMO_POR_OMISSAO),
@@ -206,16 +220,30 @@ export function soOsDaLista(ids: readonly string[], l: ListaDosParceiros | null)
 }
 
 /** A escolha a guardar no rascunho: os nomes pela ordem da lista; «procurar mais» só com um parceiro na lista. */
-export function escolhaFeita(ids: readonly string[], l: ListaDosParceiros, pessoas: Pessoas, procurarMais: boolean): EscolhaDosParceiros | null {
+export function escolhaFeita(
+  ids: readonly string[],
+  l: ListaDosParceiros,
+  pessoas: Pessoas,
+  procurarMais: boolean,
+  embalamento = false,
+): EscolhaDosParceiros | null {
   if (!l.ligado) return null;
   const escolhidos = l.parceiros.filter((p) => ids.includes(p.id));
   if (escolhidos.length === 0) return null;
-  return {
+  const e: EscolhaDosParceiros = {
     ids: escolhidos.map((p) => p.id),
     nomes: escolhidos.map((p) => p.nome),
-    pessoas,
+    // A equipa da conta: num T3 ou maior a rota diz 3, mesmo que se tenham pedido 2.
+    pessoas: l.soComTres ? 3 : pessoas,
     procurarMais: l.parceiros.length === 1 && procurarMais,
   };
+  if (embalamento && escolhidos.some((p) => p.embalamento != null)) e.embalamento = true;
+  return e;
+}
+
+/** A equipa que o ecrã mostra: a da rota quando a casa só se faz com 3. */
+export function pessoasDoEcra(l: ListaDosParceiros | null, escolhidas: Pessoas): Pessoas {
+  return l && l.ligado && l.soComTres ? 3 : escolhidas;
 }
 
 /** O título do botão do ecrã: «Pedir orçamento (2)», da rota. */
@@ -227,7 +255,12 @@ export function botaoDaLista(l: ListaDosParceiros | null, quantos: number): stri
 /** Os campos que vão no pedido (a rota do pedido confere-os). */
 export function camposDaEscolha(e: EscolhaDosParceiros | undefined | null): Record<string, unknown> {
   if (!e || e.ids.length === 0) return {};
-  return { parceirosEscolhidos: [...e.ids], pessoas: e.pessoas, procurarMaisParceiros: e.procurarMais };
+  return {
+    parceirosEscolhidos: [...e.ids],
+    pessoas: e.pessoas,
+    procurarMaisParceiros: e.procurarMais,
+    ...(e.embalamento ? { embalamento: true } : {}),
+  };
 }
 
 /** «Vai pedir orçamento a A e B (equipa de 2).» — a linha do resumo. */

@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { CartaoDoParceiro } from "./CartaoDoParceiro";
 import { Text } from "./Texto";
 import { Aviso, Carregando, Escolhas, Paragrafo, Recolhido } from "./ui";
-import type { ListaDosParceiros, Pessoas } from "../lib/parceiros-da-mudanca";
+import { pessoasDoEcra, type ListaDosParceiros, type Pessoas } from "../lib/parceiros-da-mudanca";
 import { CORES } from "../tema";
 
 /** As duas equipas, como os botões do simulador do site. */
@@ -29,6 +29,8 @@ export function ParceirosDaMudanca({
   aoTocar,
   procurarMais,
   aoMudarProcurarMais,
+  embalamento = false,
+  aoMudarEmbalamento,
 }: {
   lista: ListaDosParceiros | null;
   aCarregar: boolean;
@@ -38,12 +40,19 @@ export function ParceirosDaMudanca({
   aoTocar: (id: string) => void;
   procurarMais: boolean;
   aoMudarProcurarMais: (v: boolean) => void;
+  /** As caixas e o embalamento (11-11-2026). */
+  embalamento?: boolean;
+  aoMudarEmbalamento?: (v: boolean) => void;
 }) {
   const l = lista && lista.ligado ? lista : null;
+  // Num T3 ou maior só há equipa de 3 (a rota di-lo): o botão das 2 sai, e o ecrã mostra 3.
+  const daConta = pessoasDoEcra(lista, pessoas);
+  const equipas = l?.soComTres ? EQUIPAS.filter((e) => e.id === "3") : EQUIPAS;
+  const comEmbalamento = !!l && l.parceiros.some((p) => p.embalamento != null);
   return (
     <View style={{ gap: 16 }}>
       {l?.resumo ? <Paragrafo suave>{l.resumo}</Paragrafo> : null}
-      <Escolhas opcoes={EQUIPAS} valor={pessoas === 3 ? "3" : "2"} aoEscolher={(v) => aoMudarPessoas(v === "3" ? 3 : 2)} rotulo="Pessoas na equipa" />
+      <Escolhas opcoes={equipas} valor={daConta === 3 ? "3" : "2"} aoEscolher={(v) => aoMudarPessoas(v === "3" ? 3 : 2)} rotulo="Pessoas na equipa" />
       {l?.recomendaTres ? <Aviso tom="aviso" texto={l.recomendaTres} /> : null}
 
       {aCarregar ? <Carregando texto="A procurar parceiros para estas moradas…" /> : null}
@@ -62,11 +71,23 @@ export function ParceirosDaMudanca({
       {!aCarregar && l && l.parceiros.length > 0 ? (
         <View style={{ gap: 12 }}>
           {l.textos.escolha ? <Paragrafo>{l.textos.escolha}</Paragrafo> : null}
+          {comEmbalamento && aoMudarEmbalamento && l.textos.pedirEmbalamento ? (
+            <Pressable
+              onPress={() => aoMudarEmbalamento(!embalamento)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: embalamento }}
+              style={{ flexDirection: "row", gap: 12, paddingVertical: 8, alignItems: "flex-start" }}
+            >
+              <Ionicons name={embalamento ? "checkbox" : "square-outline"} size={22} color={CORES.marca} />
+              <Text style={{ flex: 1, color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{l.textos.pedirEmbalamento}</Text>
+            </Pressable>
+          ) : null}
           {l.parceiros.map((p) => (
             <CartaoDoParceiro
               key={p.id}
               p={p}
-              pessoas={pessoas}
+              pessoas={daConta}
+              embalamento={embalamento}
               marcado={ids.includes(p.id)}
               cheio={ids.length >= l.maximo}
               aoTocar={() => aoTocar(p.id)}
