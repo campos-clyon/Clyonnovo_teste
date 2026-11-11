@@ -19,6 +19,11 @@ import {
 import { MINIMO_PARA_LEVANTAR } from "../../../src/lib/carteira";
 import { diaEmLisboa } from "../../../src/lib/hora-de-lisboa";
 import { CATEGORIAS_DOS_PROFISSIONAIS, type GrupoDeServicos } from "../../../src/lib/service-categories";
+import {
+  faltaDosPrecosDasMudancas,
+  type FaltaDosPrecosDasMudancas,
+  type PrecosDasMudancasNaConta,
+} from "../../../src/lib/precos-das-mudancas-do-profissional";
 
 export { FICHA_DA_DISTINCAO, MINIMO_PARA_LEVANTAR };
 export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
@@ -61,6 +66,11 @@ export type Perfil = {
   fotoViaturaUrl: string | null;
   fotosViatura: string[];
   categorias: string[];
+  /**
+   * Os preços das mudanças (11-11-2026, d4): o estado para a linha do menu e a
+   * falta para o cartão; null a quem não tem «Mudanças». Um site de antes não o manda.
+   */
+  precosDasMudancas?: PrecosDasMudancasNaConta | null;
   raioKm: number;
   custoKm: number | null;
   custoHoraPessoa: number | null;
@@ -115,6 +125,23 @@ export function resumoDe(p: Perfil): ResumoDoPerfil {
 /** Quantos campos faltam numa secção — o número ao lado da linha do menu. */
 export function faltasEm(p: Perfil, seccao: SeccaoComFalta): Falta[] {
   return faltasDaSeccao(resumoDe(p).faltas, seccao);
+}
+
+/**
+ * Os preços das mudanças por pôr — a falta do cartão, pela mesma conta do
+ * painel: só a quem tem «Mudanças» e ainda não gravou preços.
+ */
+export function faltaDasMudancasDe(p: Perfil): FaltaDosPrecosDasMudancas | null {
+  return faltaDosPrecosDasMudancas(p.categorias.includes("mudancas"), p.precosDasMudancas?.estado);
+}
+
+/**
+ * O estado dos preços na linha do menu: «na lista» é sossego; «por preencher»
+ * e «fora da lista» pedem um toque (`aviso`). Null sem estado.
+ */
+export function estadoDasMudancasNoMenu(p: Perfil | null): { rotulo: string; aviso: boolean } | null {
+  const e = p?.precosDasMudancas;
+  return e ? { rotulo: e.rotulo, aviso: e.estado !== "na_lista" } : null;
 }
 
 /** As distinções dele e, sem coroa, quantas avaliações faltam para ela. */

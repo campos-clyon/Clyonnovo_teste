@@ -21,6 +21,8 @@ import {
   diaCurto,
   distincoesDoPerfil,
   ESTADO_DA_CONTA,
+  estadoDasMudancasNoMenu,
+  faltaDasMudancasDe,
   faltasEm,
   FICHA_DA_DISTINCAO,
   mediaCurta,
@@ -77,6 +79,7 @@ export default function Conta() {
   const [aSair, setASair] = useState(false);
   const [aSairDeTodos, setASairDeTodos] = useState(false);
   const [deTodos, setDeTodos] = useState<{ tom: "bom" | "mau"; texto: string } | null>(null);
+  const mudancas = estadoDasMudancasNoMenu(perfil);
 
   /*
    * «SAIR DE TODOS OS APARELHOS» — 25-10-2026 (d14). O site fecha as sessões
@@ -123,7 +126,14 @@ export default function Conta() {
         />
         {/* Os preços das mudanças (10-11-2026): só a quem faz mudanças, como no painel. */}
         {perfil?.categorias.includes("mudancas") ? (
-          <ItemDoMenu icone="car-outline" titulo="Preços das mudanças" aoCarregar={() => abrir("/conta/mudancas")} />
+          <ItemDoMenu
+            icone="car-outline"
+            titulo="Preços das mudanças"
+            // O estado (11-11-2026): «na lista» é sossego, os outros dois pedem um toque.
+            valor={mudancas?.rotulo}
+            aviso={mudancas?.aviso}
+            aoCarregar={() => abrir("/conta/mudancas")}
+          />
         ) : null}
         {/* A ficha no Google (11-11-2026): a nota do Google no cartão da lista das mudanças. */}
         {perfil?.categorias.includes("mudancas") ? (
@@ -243,17 +253,44 @@ function Cabecalho({ perfil, nome }: { perfil: Perfil | null; nome: string | nul
 function PorCompletar({ perfil }: { perfil: Perfil }) {
   const c = useCores();
   const r = resumoDe(perfil);
-  if (r.completo) return null;
+  /*
+   * Os preços das mudanças por pôr (11-11-2026, d4), como no painel: vêm à
+   * parte das faltas do perfil porque abrem outro ecrã e não entram na
+   * percentagem — mas são um travão: sem preços, não aparece na lista.
+   */
+  const faltaDasMudancas = faltaDasMudancasDe(perfil);
+  if (r.completo && !faltaDasMudancas) return null;
+  const temTravao = r.essenciais.length > 0 || Boolean(faltaDasMudancas);
   const mostrar = (r.essenciais.length > 0 ? r.essenciais : r.melhorias).slice(0, 3);
   return (
     <Caixa estilo={{ borderColor: c.aviso }}>
-      <TituloDaCaixa>{r.essenciais.length > 0 ? "Falta terminar o seu perfil" : "Dê-nos os seus números"}</TituloDaCaixa>
-      <View style={[estilos.barra, { backgroundColor: c.fundo }]}>
-        <View style={{ width: `${r.percentagem}%`, height: "100%", backgroundColor: c.marca, borderRadius: 999 }} />
-      </View>
-      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
-        {r.feitos} de {r.total} preenchidos · {r.percentagem} %
-      </Text>
+      <TituloDaCaixa>{temTravao ? "Falta terminar o seu perfil" : "Dê-nos os seus números"}</TituloDaCaixa>
+      {/* Com o perfil todo preenchido e só os preços das mudanças por pôr, a barra a 100 % enganava. */}
+      {r.completo ? null : (
+        <>
+          <View style={[estilos.barra, { backgroundColor: c.fundo }]}>
+            <View style={{ width: `${r.percentagem}%`, height: "100%", backgroundColor: c.marca, borderRadius: 999 }} />
+          </View>
+          <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
+            {r.feitos} de {r.total} preenchidos · {r.percentagem} %
+          </Text>
+        </>
+      )}
+      {faltaDasMudancas ? (
+        <Pressable
+          key={faltaDasMudancas.chave}
+          onPress={() => abrir("/conta/mudancas")}
+          accessibilityRole="button"
+          style={({ pressed }) => [estilos.falta, { borderTopColor: c.linha, opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Ionicons name="warning-outline" size={18} color={c.aviso} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: c.tinta, fontWeight: "700" }}>{faltaDasMudancas.rotulo}</Text>
+            <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{faltaDasMudancas.porque}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={c.suave} />
+        </Pressable>
+      ) : null}
       {mostrar.map((f) => (
         <Pressable
           key={f.chave}

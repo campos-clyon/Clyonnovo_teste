@@ -6,7 +6,7 @@ import { RolagemComTeclado } from "../../componentes/Teclado";
 import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Interruptor, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
-import { euros, horaCurta } from "../../lib/trabalhos";
+import { euros } from "../../lib/trabalhos";
 import {
   EXEMPLO_DA_MUDANCA,
   MATERIAIS,
@@ -19,6 +19,13 @@ import {
   type TarifaDasMudancas,
 } from "../../../../src/lib/conta-da-mudanca";
 import { dataEHoraEmLisboa } from "../../../../src/lib/hora-de-lisboa";
+import {
+  TEXTOS_DOS_PRECOS_DAS_MUDANCAS as TEXTOS,
+  avisoDasTresPessoas,
+  dicaDoInterruptor,
+  interruptorAoAbrir,
+  mensagemDeGravado,
+} from "../../../../src/lib/precos-das-mudancas-do-profissional";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 /**
@@ -32,6 +39,13 @@ import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
  *
  * `GET/PUT /api/profissionais/tarifas-mudancas`. Euros sem IVA; null = «não
  * forneço» (ou, na hora com 3, «não faço com 3»).
+ *
+ * 11-11-2026 (d4): a lista está aberta aos clientes. Os textos e as regras são
+ * os de `precos-das-mudancas-do-profissional.ts`, os mesmos do painel: o
+ * interruptor «Aparecer na lista» nasce ligado para quem tem «Mudanças» e
+ * ainda não gravou, a hora de 3 pessoas de fora avisa que fica fora dos T3 ou
+ * maiores, e depois de gravar diz-se a frase que a rota manda (quem ficou
+ * fora da lista fica a sabê-lo).
  */
 
 type Chave =
@@ -74,6 +88,8 @@ type TarifaGravada = TarifaDasMudancas & { actualizadoEm?: string | null };
 type RespostaDoGet = {
   tarifa: TarifaGravada | null;
   podeAparecerNaLista: boolean;
+  /** Desde 11-11-2026: como o interruptor aparece ao abrir. Um site de antes não o manda. */
+  interruptorAoAbrir?: boolean;
   regras?: { taxaDaPlataforma: number; modoDaTaxa: string; materialComIva: boolean; iva: number };
 };
 
@@ -95,7 +111,7 @@ export default function EcraDosPrecosDasMudancas() {
   const [aGravar, setAGravar] = useState(false);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [erro, setErro] = useState<string | null>(null);
-  const [gravadoAs, setGravadoAs] = useState<string | null>(null);
+  const [gravado, setGravado] = useState<string | null>(null);
 
   function encher(t: TarifaGravada | null) {
     if (!t) return;
@@ -129,6 +145,12 @@ export default function EcraDosPrecosDasMudancas() {
       const d = await pedir<RespostaDoGet>("/api/profissionais/tarifas-mudancas");
       encher(d.tarifa ?? null);
       setPodeAparecer(Boolean(d.podeAparecerNaLista));
+      // Sem nada gravado, o interruptor nasce ligado para quem tem «Mudanças».
+      setNaLista(
+        typeof d.interruptorAoAbrir === "boolean"
+          ? d.interruptorAoAbrir
+          : interruptorAoAbrir(d.tarifa ?? null, Boolean(d.podeAparecerNaLista)),
+      );
       if (d.regras) {
         setRegras({
           taxa: Number(d.regras.taxaDaPlataforma),
@@ -155,7 +177,7 @@ export default function EcraDosPrecosDasMudancas() {
       const { [k]: _, ...resto } = s;
       return resto;
     });
-    setGravadoAs(null);
+    setGravado(null);
   };
 
   const alternarDeFora = (k: Opcional) => {
@@ -165,7 +187,7 @@ export default function EcraDosPrecosDasMudancas() {
       const { [k]: _, ...resto } = s;
       return resto;
     });
-    setGravadoAs(null);
+    setGravado(null);
   };
 
   // O que vai para o site: o que está «de fora» vai a null.
@@ -190,7 +212,7 @@ export default function EcraDosPrecosDasMudancas() {
 
   async function gravar() {
     setErro(null);
-    setGravadoAs(null);
+    setGravado(null);
     if (!validacao.ok) {
       setErros(validacao.erros as Record<string, string>);
       setErro("Há campos por corrigir — veja a vermelho.");
@@ -199,12 +221,13 @@ export default function EcraDosPrecosDasMudancas() {
     setAGravar(true);
     setErros({});
     try {
-      const d = await pedir<{ ok?: boolean; tarifa?: TarifaGravada | null }>("/api/profissionais/tarifas-mudancas", {
+      const d = await pedir<{ ok?: boolean; tarifa?: TarifaGravada | null; mensagem?: string }>("/api/profissionais/tarifas-mudancas", {
         metodo: "PUT",
         corpo,
       });
       encher(d.tarifa ?? null);
-      setGravadoAs(horaCurta(new Date().toISOString()));
+      // A frase da rota; a de um site de antes sai da mesma lib.
+      setGravado(typeof d.mensagem === "string" ? d.mensagem : mensagemDeGravado(Boolean(d.tarifa?.aparecerNaLista), podeAparecer));
     } catch (e) {
       const porCampo = errosPorCampo(e);
       setErros(porCampo);
@@ -241,10 +264,7 @@ export default function EcraDosPrecosDasMudancas() {
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={[nota, { color: c.tinta }]}>
-        Os seus preços para mudanças, sem IVA. Quando um cliente o escolher, o trabalho fica com os preços desse dia: pode mudá-los aqui
-        depois, mas os trabalhos já escolhidos não mudam. Por agora ficam só guardados na sua conta.
-      </Text>
+      <Text style={[nota, { color: c.tinta }]}>{TEXTOS.abertura}</Text>
 
       <Caixa>
         <TituloDaCaixa>A equipa</TituloDaCaixa>
@@ -265,6 +285,7 @@ export default function EcraDosPrecosDasMudancas() {
           aoMudar={mudar("precoHora3")}
           placeholder="ex.: 60"
           erro={erros.precoHora3}
+          aviso={avisoDasTresPessoas(deFora.precoHora3 ? null : campos.precoHora3)}
         />
         <CampoDeTexto
           rotulo="Mínimo de horas"
@@ -325,16 +346,12 @@ export default function EcraDosPrecosDasMudancas() {
 
       <Caixa>
         <Interruptor
-          rotulo="Aparecer na lista das mudanças"
-          dica={
-            podeAparecer
-              ? "Quando a lista abrir aos clientes, aparece com estes preços."
-              : "Só com o serviço «Mudanças» nos seus serviços. Junte-o em Conta › Serviços e raio."
-          }
+          rotulo={TEXTOS.interruptor}
+          dica={dicaDoInterruptor(podeAparecer && naLista, podeAparecer)}
           valor={podeAparecer && naLista}
           aoMudar={(v) => {
             setNaLista(v);
-            setGravadoAs(null);
+            setGravado(null);
           }}
           desactivado={!podeAparecer}
         />
@@ -387,7 +404,7 @@ export default function EcraDosPrecosDasMudancas() {
       </Caixa>
 
       {erro ? <Mensagem texto={erro} /> : null}
-      {gravadoAs ? <Mensagem tom="bom" texto={`Guardado às ${gravadoAs}.`} /> : null}
+      {gravado ? <Mensagem tom="bom" texto={gravado} /> : null}
       <Botao titulo="Gravar os preços" ocupado={aGravar} aoCarregar={() => void gravar()} />
       {actualizadoEm ? (
         <Text style={[nota, { textAlign: "center" }]}>Última gravação: {dataEHoraEmLisboa(new Date(actualizadoEm))}</Text>
@@ -406,6 +423,7 @@ function CampoOpcional({
   aoMudar,
   placeholder,
   erro,
+  aviso,
 }: {
   rotulo: string;
   deFora: boolean;
@@ -415,6 +433,8 @@ function CampoOpcional({
   aoMudar: (v: string) => void;
   placeholder?: string;
   erro?: string;
+  /** Um aviso em âmbar (não é erro: grava-se na mesma), de fora ou com o campo vazio. */
+  aviso?: string | null;
 }) {
   const c = useCores();
   return (
@@ -434,6 +454,11 @@ function CampoOpcional({
         <Ionicons name={deFora ? "checkbox" : "square-outline"} size={20} color={deFora ? c.marca : c.suave} />
         <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1 }}>{rotuloDeFora}</Text>
       </Pressable>
+      {aviso && !erro ? (
+        <Text accessibilityRole="alert" style={{ color: c.aviso, fontWeight: "600", fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
+          {aviso}
+        </Text>
+      ) : null}
     </View>
   );
 }

@@ -94,6 +94,7 @@ export function ItemDoMenu({
   icone,
   titulo,
   valor,
+  aviso = false,
   aoCarregar,
   perigo = false,
   ultimo = false,
@@ -101,6 +102,8 @@ export function ItemDoMenu({
   icone: React.ComponentProps<typeof Ionicons>["name"];
   titulo: string;
   valor?: string | null;
+  /** O valor pede um toque (11-11-2026): em âmbar e a negro, como o «destaque» do painel. */
+  aviso?: boolean;
   aoCarregar: () => void;
   perigo?: boolean;
   ultimo?: boolean;
@@ -122,7 +125,7 @@ export function ItemDoMenu({
         {titulo}
       </Text>
       {valor ? (
-        <Text numberOfLines={1} style={[estilos.valorDoItem, { color: c.suave }]}>
+        <Text numberOfLines={1} style={[estilos.valorDoItem, aviso ? { color: c.aviso, fontWeight: "700" } : { color: c.suave }]}>
           {valor}
         </Text>
       ) : null}
