@@ -175,11 +175,12 @@ describe("o assistente do WhatsApp diz o modelo a quem pergunta o preço de uma 
   it("numa mudança, a nota do preço diz o preço de cada parceiro e o simulador; nos outros serviços, não", () => {
     lembrarPrecoPublico(SEM_PARCEIROS);
     const nota = notaDoPrecoPara("quanto custa?", "quando", false, "mudanca");
-    expect(nota).toContain("cada parceiro tem o seu preço por hora");
-    expect(nota).toContain("a referência é 50,00 € + IVA por hora (61,50 € com IVA), equipa de 3, mínimo de 3 horas");
+    expect(nota).toContain("cada parceiro tem o seu preço por hora e o seu mínimo de horas");
+    // Dita como referência (d7, 11-11-2026): «na referência, são…», e não «a referência é…».
+    expect(nota).toContain("na referência, são 50,00 € + IVA por hora (61,50 € com IVA), equipa de 3, mínimo de 3 horas");
     expect(nota).toContain("clyon.pt/simulador?servico=mudanca");
     lembrarPrecoPublico({ tipo: "parceiros", parceiros: 2, desde: { semIvaCent: 4000, comIvaCent: 4920 } });
-    expect(notaDoPrecoPara("quanto custa?", "quando", false, "mudanca")).toContain("desde 40,00 € + IVA/h (49,20 € com IVA), equipa de 2");
+    expect(notaDoPrecoPara("quanto custa?", "quando", false, "mudanca")).toContain("desde 40,00 € + IVA/h (49,20 € com IVA) com 2 pessoas.");
     lembrarPrecoPublico(SEM_PARCEIROS);
     expect(notaDoPrecoPara("quanto custa?", "quando", false, "recolha_moveis")).not.toContain("por hora");
   });

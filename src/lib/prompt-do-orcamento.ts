@@ -15,7 +15,6 @@ import {
 } from "@/lib/precos-publicos";
 import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import {
-  MINIMO_DE_HORAS,
   PRECO_POR_HORA,
   DESLOCACAO_DA_MUDANCA_PARA_O_MODELO,
   RAIO_INCLUIDO_KM,
@@ -104,7 +103,7 @@ const FAIXAS_DO_ESVAZIAMENTO = [
   .map((l) => `        ${l}`)
   .join("\n");
 
-/** Três mudanças de exemplo, contadas pela tabela — os números mudam com ela. */
+/** Três mudanças de exemplo, contadas pela tabela de REFERÊNCIA — os números mudam com ela. */
 const EXEMPLOS_DA_MUDANCA = (["T1", "T2", "T3"] as Tipologia[])
   .map((t) => {
     // Em intervalo e com a proteção, desde 11-11-2026 (tabela-das-mudancas.ts).
@@ -112,6 +111,21 @@ const EXEMPLOS_DA_MUDANCA = (["T1", "T2", "T3"] as Tipologia[])
     return `${TIPOLOGIA_POR_EXTENSO[t]}, sem andares a pé, até ${RAIO_INCLUIDO_KM} km: ${o.intervalo[0]}–${o.intervalo[1]} h × ${PRECO_POR_HORA} € + proteção = ${o.totalSemIvaMinimo}–${o.totalSemIvaMaximo} € s/IVA`;
   })
   .join(" | ");
+
+/**
+ * O FECHO DA REGRA DA MUDANÇA — 11-11-2026 (d7). Com parceiros na lista, a
+ * estimativa é a do «desde» da lista (os exemplos vão nas regras, contados com
+ * a tarifa do parceiro mais barato); sem nenhum, os exemplos da tabela de
+ * referência, ditos como referência. Antes dizia-se sempre a hora e o mínimo
+ * da referência, como se fossem um preço da CLYON.
+ */
+function fechoDaMudanca(): string {
+  if (precoPublicoConhecido().tipo === "parceiros") {
+    return `      A estimativa da mudança faz-se pelo «desde» da lista (acima); o preço final é o do parceiro que o cliente escolher na lista (nunca prometas um preço fixo).`;
+  }
+  return `      A estimativa da mudança é a da referência, calculada pelo sistema, e diz-se sempre como referência; o preço final é o do parceiro que o cliente escolher na lista (nunca prometas um preço fixo).
+      EXEMPLOS NA REFERÊNCIA: ${EXEMPLOS_DA_MUDANCA}`;
+}
 
 export function buildAnalysisPrompt(formattedData: string, pricingRules: string, hasPhotos = false): string {
   return `És o orçamentista sénior da CLYON, uma plataforma portuguesa (sede em Fernão Ferro, Seixal) que liga clientes a parceiros — quem faz o trabalho é o parceiro escolhido; a CLYON organiza, guarda o acordo e o pagamento.
@@ -178,7 +192,7 @@ REGRAS ABSOLUTAS
 0. NÚMERO DE ITENS: usa SEMPRE o valor em "CONTAGEM DE ITENS (PRÉ-CALCULADA)" acima — está correto e já contabiliza todos os itens mencionados na descrição. NUNCA contes os itens tu mesmo a partir do texto livre nem assumas 1 item quando o valor pré-calculado é maior. Um pedido com 3 ou 4 itens TEM de ser cobrado como 3 ou 4 itens, nunca como 1.
 1. USA a fórmula geral para recolhas de móveis/monos e esvaziamento: (combustível + pessoal + overhead) × (1 + margem) = preço s/IVA.
    Para ENTULHO usa EXCLUSIVAMENTE a grelha da regra 2.c (NÃO a fórmula geral custo×margem).
-   Para MUDANÇA usa EXCLUSIVAMENTE a regra 2.d: estima pela referência (${PRECO_POR_HORA} € s/IVA por hora, mínimo ${MINIMO_DE_HORAS} horas); o preço é o de cada parceiro.
+   Para MUDANÇA usa EXCLUSIVAMENTE a regra 2.d: o preço por hora e o mínimo de horas são os de cada parceiro.
 2. MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
    a) ITENS SOLTOS (1–7 itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
       Móveis por peça, a tabela do site (s/IVA): ${PECAS_EM_TEXTO}; a soma das peças nunca fica abaixo da recolha mínima de ${RECOLHA_MINIMA}, e os andares somam-se depois do mínimo.
@@ -202,8 +216,7 @@ ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
    d) MUDANÇA — à hora, ao preço de cada parceiro (NÃO usar a fórmula geral custo×margem):
 ${regrasDaMudancaParaOModelo(precoPublicoConhecido())}
       Mudanças NÃO têm limite de distância.
-      A estimativa da mudança é a da referência, calculada pelo sistema; o preço final é o do parceiro que o cliente escolher na lista (nunca prometas um preço fixo).
-      EXEMPLOS: ${EXEMPLOS_DA_MUDANCA}
+${fechoDaMudanca()}
    e) RECOLHAS (móveis/monos/entulho/esvaziamento): limite máximo 70 km da base CLYON.
       Se distância > 70 km → status "onsite_required", confidence "low", recommendation "visita_presencial".
    f) MANUTENÇÃO DA CASA (reparações e remodelações) — a grelha publicada por tipo de trabalho (NÃO a fórmula geral custo×margem):

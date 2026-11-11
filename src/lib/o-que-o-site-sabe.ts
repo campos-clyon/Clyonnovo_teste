@@ -58,7 +58,7 @@ import {
   PRECO_POR_HORA,
   PRECO_POR_KM_LONGE,
 } from "./tabela-das-mudancas";
-import { precoDaMudancaNoWhatsApp, precoPublicoConhecido } from "./preco-publico-das-mudancas";
+import { eurosDaLista, precoDaMudancaNoWhatsApp, precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import { NOSSA_EQUIPA, PROPRIO_DIA } from "./frases-proibidas";
 import { nomeDoServico } from "./service-categories";
 import { TAXA_IVA } from "./taxas-plataforma";
@@ -170,7 +170,7 @@ PREÇO, IVA E FATURA
 - Itens a mais no dia (orçamento de valor total): ${ITENS_A_MAIS_PARA_O_CLIENTE}, combinado com o cliente antes de avançar.
 - Preços de referência do site, ${SEM_IVA_NA_FRASE} — o preço final é sempre o da proposta do parceiro:
 ${linhasDosPrecos().join("\n")}
-- Mudança à hora: nunca prometas um preço fixo — cada parceiro tem o seu preço por hora, e o cliente escolhe na lista do simulador de mudanças. Na referência (sem parceiros na lista): cada andar sem elevador ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € + IVA por pessoa (${POR_ANDAR_SEM_ELEVADOR} € + IVA a equipa); elevador exterior ${ELEVADOR_EXTERIOR} € + IVA; mínimo ${MINIMO_DE_HORAS} horas (${MINIMO_DA_MUDANCA} € + IVA). Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
+- Mudança à hora: nunca prometas um preço fixo — cada parceiro tem o seu preço por hora e o seu mínimo de horas, e o cliente escolhe na lista do simulador de mudanças. Um valor da referência diz-se sempre como referência («na referência…»), nunca como o preço da CLYON. Na referência (sem parceiros na lista): cada andar sem elevador ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € + IVA por pessoa (${POR_ANDAR_SEM_ELEVADOR} € + IVA a equipa); elevador exterior ${ELEVADOR_EXTERIOR} € + IVA${precoPublicoConhecido().tipo === "parceiros" ? "" : `; mínimo de ${MINIMO_DE_HORAS} horas da referência (${MINIMO_DA_MUDANCA} € + IVA)`}. Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
     .map((m) => `${m.nome.toLowerCase()} ${euros(m.preco)} + IVA por ${m.unidade}`)
     .join("; ")}).
 
@@ -276,6 +276,6 @@ export function eurosNoTexto(texto: string): number[] {
 export function euroDasFontes(n: number): boolean {
   // O «desde» das mudanças, quando há parceiros na lista (11-11-2026), também é fonte.
   const p = precoPublicoConhecido();
-  if (p.tipo === "parceiros" && [p.desde.semIvaCent, p.desde.comIvaCent].some((c) => Math.abs(c / 100 - n) < 0.011)) return true;
+  if (eurosDaLista(p).some((v) => Math.abs(v - n) < 0.011)) return true;
   return EUROS_DAS_FONTES.some((f) => Math.abs(f - n) < 0.011);
 }

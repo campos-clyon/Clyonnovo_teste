@@ -68,6 +68,12 @@ import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
  *   E a regra b) apanha o «Analisámos o seu pedido e preparámos um orçamento»
  *   do email antigo do orçamento.
  *
+ * E desde 11-11-2026 (d7, a parte do I&D): y) as mudanças são ao preço de cada
+ * parceiro — nos textos ao modelo e da Vitória, a hora e o mínimo de horas da
+ * tabela de referência só se dizem como referência («na referência…»), com a
+ * lista vazia; com parceiros na lista não se dizem, e o mínimo é o do parceiro.
+ * Nenhum «mínimo N horas» escrito à mão nesses ficheiros.
+ *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
  * passar de TAMANHO_MAXIMO. Desce o número quando a lista desce.
@@ -1560,5 +1566,119 @@ describe("u–x) emails, taxa, plataforma e distância pelas fontes (d28, parte 
     const cookies = readFileSync(join(RAIZ, "src/components/CookieConsent.tsx"), "utf8");
     expect(cookies).toContain("a sua experiência na plataforma");
     expect(ACHADOS.filter((a) => a.regra === "u-site")).toEqual([]);
+  });
+});
+
+/*
+ * y) AS MUDANÇAS AO PREÇO DE CADA PARCEIRO, NA VITÓRIA E NO AVISO AO MODELO —
+ * 11-11-2026 (d7, ordem do CEO aprovada pelo dono; a parte do I&D).
+ *
+ * A Vitória e o modelo que estima diziam a hora, a equipa e o mínimo de horas
+ * da tabela de referência como se fossem um preço da CLYON — até com parceiros
+ * na lista («Para estimar usa a referência…»). A regra:
+ *   · com parceiros na lista, nem a hora nem o mínimo da referência: o «desde»
+ *     da lista (2 e 3 pessoas) e o mínimo do parceiro;
+ *   · com a lista vazia, só na frase que diz «referência»;
+ *   · nos ficheiros, nenhum mínimo de horas escrito à mão (a regra l já chumba
+ *     os euros à mão): os números vêm de tabela-das-mudancas.ts.
+ */
+describe("y) as mudanças ao preço de cada parceiro, na Vitória e no aviso ao modelo (d7)", () => {
+  const MINIMO_DE_HORAS_A_MAO = /m[íi]nimo (?:de )?\d+(?:[.,]\d+)? ?h(?:oras?)?(?![a-zà-ú])/iu;
+  const COM = {
+    tipo: "parceiros" as const,
+    parceiros: 2,
+    desde: { semIvaCent: 4000, comIvaCent: 4920 },
+    desde3: { semIvaCent: 5500, comIvaCent: 6765 },
+    minimoHoras: { de: 2, ate: 4 },
+  };
+
+  async function oQueSeDiz(preco: typeof COM | { tipo: "referencia" }) {
+    const m = await import("./preco-publico-das-mudancas");
+    const { getActivePricingRulesForGemini } = await import("./pricing-helper");
+    const { buildAnalysisPrompt } = await import("./prompt-do-orcamento");
+    const { oQueOSiteSabe } = await import("./o-que-o-site-sabe");
+    const { notaDoPrecoPara } = await import("./whatsapp-recolha");
+    m.lembrarPrecoPublico(preco);
+    try {
+      const doMotor = await getActivePricingRulesForGemini();
+      return {
+        daReferencia: m.dizAHoraOuOMinimoDaReferencia,
+        textos: {
+          "a Vitória, a quem pergunta o preço": notaDoPrecoPara("Quanto custa?", "quando", false, "mudanca"),
+          "o que a Vitória sabe": oQueOSiteSabe(),
+          "as regras da mudança para o modelo": m.regrasDaMudancaParaOModelo(preco),
+          "a estrutura de custos que vai ao modelo": doMotor,
+          "o aviso ao modelo que estima": buildAnalysisPrompt("(o pedido)", doMotor),
+        } as Record<string, string>,
+      };
+    } finally {
+      m.lembrarPrecoPublico(m.SEM_PARCEIROS);
+    }
+  }
+
+  it("a regra apanha as frases de antes, e deixa o «desde» da lista", async () => {
+    const { dizAHoraOuOMinimoDaReferencia: daReferencia } = await import("./preco-publico-das-mudancas");
+    const { PRECO_POR_HORA, MINIMO_DE_HORAS } = await import("./tabela-das-mudancas");
+    for (const frase of [
+      `Para estimar usa a referência de ${PRECO_POR_HORA} €/hora (equipa de 3), mínimo ${MINIMO_DE_HORAS} horas.`,
+      `estima pela referência (${PRECO_POR_HORA} € s/IVA por hora, mínimo ${MINIMO_DE_HORAS} horas)`,
+      `Equipa de 3 a ${PRECO_POR_HORA} €/h + IVA`,
+      `mínimo de ${MINIMO_DE_HORAS} horas`,
+    ]) {
+      expect(daReferencia(frase), frase).toBe(true);
+    }
+    expect(daReferencia("O mais baixo hoje, com 2 pessoas: 40 €/hora; com 3 pessoas: 55 €/hora.")).toBe(false);
+    expect(daReferencia("o mínimo de horas é o de cada parceiro (na lista de hoje: entre 2 e 4 horas)")).toBe(false);
+    expect("mínimo 3 horas").toMatch(MINIMO_DE_HORAS_A_MAO);
+    expect("mínimo de 2,5 h").toMatch(MINIMO_DE_HORAS_A_MAO);
+    expect("o mínimo de horas é o do parceiro").not.toMatch(MINIMO_DE_HORAS_A_MAO);
+  });
+
+  it("com parceiros na lista, ninguém diz a hora nem o mínimo da referência", async () => {
+    const { daReferencia, textos } = await oQueSeDiz(COM);
+    for (const [quem, texto] of Object.entries(textos)) {
+      expect(texto.split("\n").filter(daReferencia), quem).toEqual([]);
+    }
+    expect(textos["a Vitória, a quem pergunta o preço"]).toContain("com 2 pessoas e desde");
+    expect(textos["as regras da mudança para o modelo"]).toContain("O mínimo de horas é o de cada parceiro");
+  }, 60_000);
+
+  it("com a lista vazia, só na frase que diz «referência»", async () => {
+    const { daReferencia, textos } = await oQueSeDiz({ tipo: "referencia" });
+    let ditas = 0;
+    for (const [quem, texto] of Object.entries(textos)) {
+      // Frase a frase no que o cliente lê; linha a linha no que vai ao modelo.
+      const partes = quem.startsWith("a Vitória") ? texto.split(/(?<=[.!?])\s+/) : texto.split("\n");
+      for (const parte of partes.filter(daReferencia)) {
+        ditas += 1;
+        expect(parte, quem).toMatch(/refer[êe]ncia/i);
+      }
+    }
+    // A referência publicada continua a dizer-se (a Vitória responde por ela).
+    expect(ditas).toBeGreaterThan(2);
+    expect(textos["a Vitória, a quem pergunta o preço"]).toContain("na referência, são ");
+  }, 60_000);
+
+  it("nenhum mínimo de horas escrito à mão nos textos ao modelo e da Vitória", () => {
+    const fora = FONTES.filter(FALA_DE_PRECOS).flatMap((f) =>
+      lerFicheiro(f)
+        .textos.filter((t) => MINIMO_DE_HORAS_A_MAO.test(t.texto))
+        .map((t) => `${f}:${t.linha} — ${t.texto.slice(0, 80)}`),
+    );
+    expect(fora).toEqual([]);
+    // O ficheiro das frases (fora das fontes de preços, e por isso lido aqui à parte).
+    const doPrecoPublico = lerFicheiro("src/lib/preco-publico-das-mudancas.ts").textos.filter((t) => MINIMO_DE_HORAS_A_MAO.test(t.texto));
+    expect(doPrecoPublico.map((t) => t.texto.slice(0, 80))).toEqual([]);
+  });
+
+  it("nas traduções fixas, a hora e o mínimo da referência só na frase da referência", async () => {
+    const { dizAHoraOuOMinimoDaReferencia: daReferencia } = await import("./preco-publico-das-mudancas");
+    const dados = JSON.parse(readFileSync(join(RAIZ, "src/lib/traducoes-fixas-da-vitoria.json"), "utf8")) as { frases: string[][] };
+    const ditas = dados.frases.filter((l) => daReferencia(l[0]));
+    expect(ditas.length).toBe(1);
+    expect(ditas[0][0]).toMatch(/na referência, são /);
+    expect(ditas[0][1]).toMatch(/as a reference/);
+    expect(ditas[0][2]).toMatch(/à titre de référence/);
+    expect(ditas[0][3]).toMatch(/como referencia/);
   });
 });

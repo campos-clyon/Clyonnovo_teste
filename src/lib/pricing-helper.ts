@@ -11,7 +11,7 @@ import {
   tipologiaDoTexto,
   type Tipologia,
 } from "./tabela-das-mudancas";
-import { precoPublicoConhecido, regrasDaMudancaParaOModelo } from "./preco-publico-das-mudancas";
+import { minimoDaMudancaParaOModelo, precoPublicoConhecido, regrasDaMudancaParaOModelo } from "./preco-publico-das-mudancas";
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
@@ -526,7 +526,7 @@ ${CARGA_COMPLETA_PARA_O_MODELO}
   Dentro da faixa, o acesso e a distância decidem o lugar: perto, rés-do-chão ou elevador, estacionamento à porta → o início; longe, andares a pé ou acesso difícil → o fim.
 
 ENTULHO: mínimo fixo ${MINIMO_DO_ENTULHO} € s/IVA — sem mínimo de zona
-MUDANÇA: mínimo ${PRECO_POR_HORA * MINIMO_DE_HORAS} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h) — sem mínimo de zona
+MUDANÇA: ${minimoDaMudancaParaOModelo(precoPublicoConhecido())} — sem mínimo de zona
 
 AGRAVAMENTOS (adicionais ao preço final s/IVA):
   - Estacionamento difícil (taxa fixa): +15 € (no entulho não: lá conta como mais um andar, na grelha)
@@ -578,7 +578,7 @@ ${ITENS_SOLTOS_PARA_O_MODELO}
 ${PECAS_PARA_O_MODELO}
   CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO — as faixas publicadas no site:
 ${CARGA_COMPLETA_PARA_O_MODELO}
-  ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: mínimo ${MINIMO_DA_MUDANCA}€ s/IVA (${MINIMO_DE_HORAS}h × ${PRECO_POR_HORA}€/h)
+  ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: ${minimoDaMudancaParaOModelo(precoPublicoConhecido())}
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
 ${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
   RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
