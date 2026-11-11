@@ -319,7 +319,7 @@ describe("ao cliente diz-se «parceiro»; o que ele recebe fica do lado dele", (
 
 describe("o mapa: a morada exacta só depois de contratado", () => {
   const origem = { lat: 38.71, lng: -9.14, morada: "Rua Augusta 1, Lisboa", cidade: "Lisboa" };
-  const destino = { lat: 38.67, lng: -9.16, morada: "Rua do Mar 5, Almada", cidade: "Almada" };
+  const destino = { lat: 38.67, lng: -9.16, morada: "Rua Exemplo 5, Almada", cidade: "Almada" };
 
   it("só a negociação acordada vê a morada", () => {
     expect(podeVerAMoradaExacta("aberta")).toBe(false);
@@ -352,13 +352,13 @@ describe("o mapa: a morada exacta só depois de contratado", () => {
       cidadeOrigem: "Lisboa",
       cidadeDestino: "Almada",
       moradaOrigem: "Rua Augusta 1, Lisboa",
-      moradaDestino: "Rua do Mar 5, Almada",
+      moradaDestino: "Rua Exemplo 5, Almada",
     })!;
     expect(antes.exacto).toBe(false);
     expect(JSON.stringify(antes)).not.toContain("Rua Augusta");
     expect(antes.mapa).toBe(caminhoDoMapaDoPercurso(7, false));
     expect(antes.texto).toBe("12,3 km · cerca de 21 min");
-    const depois = percursoParaOParceiro({ ...{ negociacaoId: 7, percurso: null, kmDoPercurso: 62, cidadeOrigem: "Lisboa", cidadeDestino: "Setúbal" }, estado: "acordada", moradaOrigem: "Rua Augusta 1, Lisboa", moradaDestino: "Av. Luísa Todi 1, Setúbal" })!;
+    const depois = percursoParaOParceiro({ ...{ negociacaoId: 7, percurso: null, kmDoPercurso: 62, cidadeOrigem: "Lisboa", cidadeDestino: "Setúbal" }, estado: "acordada", moradaOrigem: "Rua Augusta 1, Lisboa", moradaDestino: "Rua Teste 1, Setúbal" })!;
     expect(depois.exacto).toBe(true);
     expect(decodeURIComponent(depois.direccoes!)).toContain("Rua Augusta 1, Lisboa");
   });
