@@ -34,6 +34,8 @@ export function sqlDasNegociacoesDaConta(quantos: number): string {
                  n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
                  n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
                  n.materiaisJson, n.materiaisUsadosJson,
+                 -- A folha da mudança (11-11-2026): a folha, o histórico e a tarifa (o mínimo de horas).
+                 n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, n.tarifaCongeladaJson,
                  -- O modelo do preço: a abertura e a marca «sem fatura» (21-10-2026).
                  n.createdAt, n.semFactura,
                  -- Só para a regra a esconder (d33): não sai para o cliente.

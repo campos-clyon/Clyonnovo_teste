@@ -12,6 +12,8 @@
  * ver `src/lib/app-pro.test.ts` na raiz do repositório.
  */
 import type { MudancaEscolhida } from "../../../src/lib/mudanca-escolhida-pelo-cliente";
+import type { FolhaParaOParceiro } from "../../../src/lib/folha-da-mudanca";
+import type { PercursoParaOParceiro } from "../../../src/lib/mapa-do-percurso";
 import {
   accoesDisponiveis,
   MAX_PROPOSTAS_POR_LADO,
@@ -97,6 +99,8 @@ export type Trabalho = {
    * numa lista guardada antes desta versão.
    */
   mudancaEscolhida?: MudancaEscolhida | null;
+  /** O percurso de uma mudança com a lista: mapa, km e tempo (11-11-2026) — ver mapa-do-percurso.ts. */
+  percurso?: PercursoParaOParceiro | null;
   sugestao: Sugestao | null;
   taxas: Taxas;
   formaDePagamento: "na_plataforma" | "dinheiro" | "pos_recolha";
@@ -213,6 +217,8 @@ export type HorasNaApp = {
   resumo: ResumoDasHoras | null;
   campos: { dia: string | null; inicio: string; fim: string; materiais: Record<string, number> };
   podeDarPorFeito: boolean;
+  /** A folha da mudança (11-11-2026) — só numa mudança com a lista de parceiros. */
+  folha?: FolhaParaOParceiro | null;
 };
 
 /*

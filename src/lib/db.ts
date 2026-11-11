@@ -1339,10 +1339,34 @@ export async function profissionaisActivos(): Promise<ProfissionalNaBase[]> {
 // ── Negociações ─────────────────────────────────────────────────────────────
 
 let negociacoesEnsured = false;
+
+/**
+ * A TAXA DO PROFISSIONAL COM OITO CASAS — v18 (11-11-2026).
+ *
+ * Na folha da mudança o material não leva taxa: a taxa que se grava ao
+ * confirmar é a efectiva (a das horas e dos km a dividir pelo total), para o
+ * pagamento dar ao cêntimo o que a folha disse ao parceiro. Com quatro casas
+ * (DECIMAL(6,4)) um total de 500 € podia errar uns cêntimos. Alarga-se uma vez:
+ * lê-se a escala no information_schema e só se mexe se ainda for menor do que 8
+ * — nunca a cada arranque. Alargar não muda nenhum valor guardado.
+ */
+async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
+  try {
+    const [linhas] = (await pool.execute(
+      `SELECT NUMERIC_SCALE AS escala FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'negociacoes' AND COLUMN_NAME = 'taxaProfissional' LIMIT 1`,
+    )) as [Array<{ escala: number | string | null }>, unknown];
+    const escala = Number(linhas[0]?.escala ?? 8);
+    if (!(escala < 8)) return;
+    await pool.execute("ALTER TABLE negociacoes MODIFY COLUMN taxaProfissional DECIMAL(10,8) NULL DEFAULT NULL");
+  } catch (e) {
+    console.error("[negociacoes] não alarguei a taxa do profissional:", e instanceof Error ? e.message : e);
+  }
+}
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 17;
+const VERSAO_DAS_NEGOCIACOES = 18;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1606,8 +1630,21 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN tarifaCongeladaJson TEXT NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN pessoasEscolhidas TINYINT NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN prazoRespostaEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v18 (11-11-2026) — A FOLHA DA MUDANÇA (folha-da-mudanca.ts): a folha que o
+     * parceiro enviou (pausas, pessoas, km, material e a conta pela tarifa
+     * congelada), o histórico de cada edição, os lembretes ao cliente (2 h e
+     * 24 h) e quando foi à Mesa como «Folha por confirmar» (48 h). Nulas em
+     * todas as negociações que não são de uma mudança com a lista.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN folhaJson LONGTEXT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN folhaHistoricoJson LONGTEXT NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN folhaLembrete2hEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN folhaLembrete24hEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN folhaNaMesaEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
+  await alargarATaxaDoProfissional(pool);
 
   negociacoesEnsured = true;
   versaoDasNegociacoes = VERSAO_DAS_NEGOCIACOES;
@@ -2135,6 +2172,7 @@ export async function criarNegociacao(
        execucaoEnviadaEm = NULL, provaJson = NULL,
        aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
        valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL, materiaisJson = NULL,
+       folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL,
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
        avaliacaoOrigem = NULL, avaliadoPor = NULL, avaliacaoComoDisse = NULL,
@@ -2832,6 +2870,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             n.aCaminhoEm, n.chegouEm, n.chegadaConfirmadaEm,
             -- O parceiro escolhido pelo cliente numa mudança, e o prazo dele (10-11-2026).
             n.prazoRespostaEm, n.pessoasEscolhidas, (n.tarifaCongeladaJson IS NOT NULL) AS escolhidoPeloCliente,
+            -- A folha da mudança (v18, 11-11-2026): se há, e se foi à Mesa às 48 h.
+            (n.folhaJson IS NOT NULL) AS temFolha, n.folhaNaMesaEm,
             p.name AS profissionalNome, p.email AS profissionalEmail,
             -- Para a adjudicação ao cliente: quem o contacta, e por onde (23-10-2026).
             p.phone AS profissionalTelefone, p.responsavel AS profissionalResponsavel,
@@ -4263,7 +4303,8 @@ export async function passarOTrabalhoAOutroProfissional(
               formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?, duracaoMinutos = ?,
               execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL,
               aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
-              valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL
+              valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL,
+              folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL
         WHERE id = ?`,
       [...comoEstava, paraId],
     );
@@ -4969,6 +5010,14 @@ export type MudancaEscolhidaNaBase = {
   prazoRespostaEm: Date | string | null;
   horas: string | null;
   km: string | null;
+  /** A folha da mudança (v18) e o histórico dela. */
+  folhaJson: string | null;
+  folhaHistoricoJson: string | null;
+  folhaNaMesaEm: Date | string | null;
+  /** O percurso guardado no pedido (km, minutos, traçado) — ver mapa-do-percurso.ts. */
+  percursoJson: string | null;
+  cidadeOrigem: string | null;
+  cidadeDestino: string | null;
 };
 
 export async function mudancasEscolhidasDoProfissional(providerId: number): Promise<Map<number, MudancaEscolhidaNaBase>> {
@@ -4982,7 +5031,12 @@ export async function mudancasEscolhidasDoProfissional(providerId: number): Prom
             CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
                  THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.horas')) END AS horas,
             CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
-                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.kmPercurso')) END AS km
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.kmPercurso')) END AS km,
+            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, o.percursoJson,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.originAddress.city')) END AS cidadeOrigem,
+            CASE WHEN JSON_VALID(o.rawOrderJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.destinationAddress.city')) END AS cidadeDestino
        FROM negociacoes n
        JOIN simulatorOrders o ON o.id = n.pedidoId
       WHERE n.providerId = ? AND n.tarifaCongeladaJson IS NOT NULL
@@ -4996,6 +5050,12 @@ export async function mudancasEscolhidasDoProfissional(providerId: number): Prom
       prazoRespostaEm: r.prazoRespostaEm ?? null,
       horas: r.horas ?? null,
       km: r.km ?? null,
+      folhaJson: r.folhaJson ?? null,
+      folhaHistoricoJson: r.folhaHistoricoJson ?? null,
+      folhaNaMesaEm: r.folhaNaMesaEm ?? null,
+      percursoJson: r.percursoJson ?? null,
+      cidadeOrigem: r.cidadeOrigem && r.cidadeOrigem !== "null" ? String(r.cidadeOrigem) : null,
+      cidadeDestino: r.cidadeDestino && r.cidadeDestino !== "null" ? String(r.cidadeDestino) : null,
     });
   }
   return mapa;
@@ -6658,19 +6718,37 @@ export async function confirmarHorasDoTrabalho(
   negociacaoId: number,
   pedidoId: number,
   por: "cliente" | "clyon",
+  /**
+   * Numa folha da mudança (v18): a taxa efectiva do profissional (o material
+   * sem taxa) e a linha do histórico. Sem ela, nada muda nas outras.
+   */
+  folha?: { taxaProfissional: number; edicao: unknown } | null,
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [res] = (await pool.execute(
-    `UPDATE negociacoes
+    folha
+      ? `UPDATE negociacoes
+        SET horasConfirmadasEm = NOW(), horasConfirmadasPor = ?,
+            valorPorHora = COALESCE(valorPorHora, valorAcordado),
+            valorAcordado = valorDasHoras,
+            taxaProfissional = ?,
+            ${HISTORICO_DA_FOLHA_MAIS}
+      WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+        AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL
+        AND horasConfirmadasEm IS NULL AND valorDasHoras IS NOT NULL
+        AND folhaJson IS NOT NULL`
+      : `UPDATE negociacoes
         SET horasConfirmadasEm = NOW(), horasConfirmadasPor = ?,
             valorPorHora = COALESCE(valorPorHora, valorAcordado),
             valorAcordado = valorDasHoras
       WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
         AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL
         AND horasConfirmadasEm IS NULL AND valorDasHoras IS NOT NULL`,
-    [por, negociacaoId, pedidoId],
+    folha
+      ? [por, folha.taxaProfissional, JSON.stringify(folha.edicao), negociacaoId, pedidoId]
+      : [por, negociacaoId, pedidoId],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
 }
@@ -6684,10 +6762,24 @@ export async function contestarHorasDoTrabalho(
   negociacaoId: number,
   pedidoId: number,
   motivo: string,
+  /** Numa folha da mudança (v18): a linha do histórico. */
+  edicaoDaFolha?: unknown,
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  if (edicaoDaFolha) {
+    const [r] = (await pool.execute(
+      `UPDATE negociacoes
+          SET horasContestadasEm = NOW(), horasContestacao = ?,
+              ${HISTORICO_DA_FOLHA_MAIS}
+        WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
+          AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL
+          AND horasConfirmadasEm IS NULL`,
+      [motivo.slice(0, 300), JSON.stringify(edicaoDaFolha), negociacaoId, pedidoId],
+    )) as any[];
+    return Number(r.affectedRows ?? 0) > 0;
+  }
   const [res] = (await pool.execute(
     `UPDATE negociacoes
         SET horasContestadasEm = NOW(), horasContestacao = ?
@@ -6697,6 +6789,186 @@ export async function contestarHorasDoTrabalho(
     [motivo.slice(0, 300), negociacaoId, pedidoId],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * A FOLHA DA MUDANÇA — v18 (11-11-2026). As regras e a conta estão em
+ * folha-da-mudanca.ts (puro); aqui só se lê e se escreve.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Acrescenta uma linha (JSON, no parâmetro) ao histórico da folha, no mesmo UPDATE. */
+const HISTORICO_DA_FOLHA_MAIS =
+  "folhaHistoricoJson = JSON_ARRAY_APPEND(COALESCE(IF(JSON_VALID(folhaHistoricoJson), folhaHistoricoJson, NULL), JSON_ARRAY()), '$', CAST(? AS JSON))";
+
+export type FolhaDaNegociacaoNaBase = {
+  id: number;
+  pedidoId: number;
+  providerId: number;
+  estado: string;
+  tarifaCongeladaJson: string | null;
+  pessoasEscolhidas: number | null;
+  taxaCliente: string | number | null;
+  folhaJson: string | null;
+  folhaHistoricoJson: string | null;
+  folhaNaMesaEm: Date | string | null;
+  /** Os km do percurso que o cliente viu (`escolhaDosParceirosJson`). */
+  kmPercurso: string | null;
+};
+
+/** A tarifa congelada, a equipa, a folha e os km do percurso de uma negociação. Null se não existir. */
+export async function folhaDaNegociacao(negociacaoId: number): Promise<FolhaDaNegociacaoNaBase | null> {
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.tarifaCongeladaJson, n.pessoasEscolhidas, n.taxaCliente,
+            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm,
+            CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
+                 THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.kmPercurso')) END AS kmPercurso
+       FROM negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.id = ? LIMIT 1`,
+    [negociacaoId],
+  )) as [FolhaDaNegociacaoNaBase[], unknown];
+  return linhas[0] ?? null;
+}
+
+/**
+ * GRAVA A FOLHA — as horas (nas colunas de sempre, para o fim e o dinheiro as
+ * lerem como lêem as outras), a folha, e uma linha no histórico, num UPDATE
+ * só. Enviar outra vez limpa o «Não concordo», os lembretes e a Mesa: é uma
+ * folha nova à espera do cliente.
+ */
+export async function gravarFolhaDoTrabalho(
+  negociacaoId: number,
+  providerId: number,
+  h: {
+    inicioEm: Date;
+    fimEm: Date;
+    minutos: number;
+    horasFaturadas: number;
+    valorPorHora: number;
+    valorDasHoras: number;
+    folhaJson: string;
+    edicao: unknown;
+  },
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes
+        SET horasInicioEm = ?, horasFimEm = ?, horasMinutos = ?, horasFaturadas = ?,
+            valorPorHora = ?, valorDasHoras = ?, materiaisUsadosJson = NULL,
+            horasMarcadasEm = NOW(), horasContestadasEm = NULL, horasContestacao = NULL,
+            folhaJson = ?, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL,
+            ${HISTORICO_DA_FOLHA_MAIS}
+      WHERE id = ? AND providerId = ? AND estado = 'acordada'
+        AND confirmadoEm IS NULL AND horasConfirmadasEm IS NULL
+        AND tarifaCongeladaJson IS NOT NULL`,
+    [
+      toMySQLDateTime(h.inicioEm),
+      toMySQLDateTime(h.fimEm),
+      Math.round(h.minutos),
+      h.horasFaturadas,
+      h.valorPorHora,
+      h.valorDasHoras,
+      h.folhaJson,
+      JSON.stringify(h.edicao),
+      negociacaoId,
+      providerId,
+    ],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+export type FolhaPorResponder = {
+  id: number;
+  pedidoId: number;
+  providerId: number;
+  folhaJson: string;
+  horasMarcadasEm: Date | string | null;
+  folhaLembrete2hEm: Date | string | null;
+  folhaLembrete24hEm: Date | string | null;
+};
+
+/** As folhas enviadas à espera do cliente (sem resposta e ainda fora da Mesa) — para a rotina dos lembretes. */
+export async function folhasPorResponder(): Promise<FolhaPorResponder[]> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [linhas] = (await pool.execute(
+    `SELECT id, pedidoId, providerId, folhaJson, horasMarcadasEm, folhaLembrete2hEm, folhaLembrete24hEm
+       FROM negociacoes
+      WHERE folhaJson IS NOT NULL AND estado = 'acordada' AND confirmadoEm IS NULL
+        AND horasMarcadasEm IS NOT NULL AND horasConfirmadasEm IS NULL
+        AND horasContestadasEm IS NULL AND folhaNaMesaEm IS NULL
+      ORDER BY horasMarcadasEm ASC
+      LIMIT 200`,
+  )) as [FolhaPorResponder[], unknown];
+  return linhas;
+}
+
+/**
+ * Marca o passo da rotina (lembrete das 2 h, das 24 h, ou a Mesa) — só se a
+ * folha ainda estiver à espera e o passo por dar: duas passagens ao mesmo
+ * tempo não mandam o lembrete duas vezes (quem chega em segundo recebe false).
+ */
+export async function marcarPassoDaFolha(
+  negociacaoId: number,
+  passo: "lembrete_2h" | "lembrete_24h" | "mesa",
+  edicao: unknown,
+): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const coluna = passo === "lembrete_2h" ? "folhaLembrete2hEm" : passo === "lembrete_24h" ? "folhaLembrete24hEm" : "folhaNaMesaEm";
+  // O lembrete das 24 h dá também o das 2 h por dado (uma passagem atrasada não manda os dois).
+  const tambem = passo === "lembrete_24h" ? ", folhaLembrete2hEm = COALESCE(folhaLembrete2hEm, NOW())" : "";
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes
+        SET ${coluna} = NOW()${tambem}, ${HISTORICO_DA_FOLHA_MAIS}
+      WHERE id = ? AND ${coluna} IS NULL AND folhaJson IS NOT NULL AND estado = 'acordada'
+        AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL AND horasConfirmadasEm IS NULL
+        AND horasContestadasEm IS NULL AND folhaNaMesaEm IS NULL`,
+    [JSON.stringify(edicao), negociacaoId],
+  )) as any[];
+  return Number(res.affectedRows ?? 0) > 0;
+}
+
+export type PercursoDoMapaNaBase = {
+  negociacaoId: number;
+  pedidoId: number;
+  providerId: number;
+  estado: string;
+  rawOrderJson: string | null;
+  percursoJson: string | null;
+};
+
+/** O que o mapa do percurso precisa de uma negociação DELE (a rota confere o providerId). */
+export async function percursoDaNegociacao(negociacaoId: number, providerId: number): Promise<PercursoDoMapaNaBase | null> {
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.estado, o.rawOrderJson, o.percursoJson
+       FROM negociacoes n
+       JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.id = ? AND n.providerId = ? AND n.tarifaCongeladaJson IS NOT NULL
+      LIMIT 1`,
+    [negociacaoId, providerId],
+  )) as [PercursoDoMapaNaBase[], unknown];
+  return linhas[0] ?? null;
+}
+
+/** Guarda o percurso no pedido — uma vez: não escreve por cima de um que já lá esteja. */
+export async function guardarPercursoDoPedido(pedidoId: number, percursoJson: string): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute("UPDATE simulatorOrders SET percursoJson = ? WHERE id = ? AND percursoJson IS NULL", [percursoJson, pedidoId]);
 }
 
 /**
@@ -8638,7 +8910,7 @@ let _simulatorOrdersEnsured = false;
 // 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
 // 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
-const MIGRATION_VERSION = 28;
+const MIGRATION_VERSION = 29;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -8879,6 +9151,10 @@ export async function ensureSimulatorOrdersTable() {
     // cliente viu (preços, horas, km, estimativas), a equipa e quem escolheu — a
     // prova do que lhe foi mostrado. Ver lista-de-parceiros-da-mudanca.ts.
     `ALTER TABLE simulatorOrders ADD COLUMN escolhaDosParceirosJson LONGTEXT NULL DEFAULT NULL`,
+    // v29 — O PERCURSO DE UMA MUDANÇA (11-11-2026): km, minutos e o traçado do
+    // Routes, guardados uma vez para o mapa não pagar duas chamadas. Ver
+    // mapa-do-percurso.ts.
+    `ALTER TABLE simulatorOrders ADD COLUMN percursoJson MEDIUMTEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

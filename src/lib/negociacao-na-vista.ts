@@ -257,6 +257,11 @@ export function negociacaoParaAVista(
       horasContestacao: n.horasContestacao ?? null,
       materiaisJson: n.materiaisJson ?? null,
       materiaisUsadosJson: n.materiaisUsadosJson ?? null,
+      // A folha da mudança (11-11-2026): o cliente vê-a inteira, e o histórico.
+      folhaJson: n.folhaJson ?? null,
+      folhaHistoricoJson: n.folhaHistoricoJson ?? null,
+      folhaNaMesaEm: n.folhaNaMesaEm ?? null,
+      tarifaCongeladaJson: n.tarifaCongeladaJson ?? null,
     },
     materiaisJson: n.materiaisJson ?? null,
     provaJson: n.provaJson ?? null,

@@ -31,6 +31,9 @@ export type TipoDeAvisoAoCliente =
   | "chegou"
   // As horas de um trabalho por hora, marcadas pelo parceiro (31-10-2026).
   | "horas"
+  // A folha da mudança (11-11-2026): enviada pelo parceiro, e os lembretes das 2 h e das 24 h.
+  | "folha"
+  | "folha_lembrete"
   | "ajuste"
   | "feito"
   | "feito_sem_fotografias"
@@ -94,6 +97,10 @@ export function avisoAoCliente(
       };
     case "horas":
       return { title: `${nome} marcou as horas`, body: `Pedido #${id}: veja as horas do trabalho e confirme.` };
+    case "folha":
+      return { title: `${nome} enviou a folha da mudança`, body: `Pedido #${id}: veja as horas, os km e o material, e confirme.` };
+    case "folha_lembrete":
+      return { title: "A folha da mudança espera por si", body: `Pedido #${id}: confira a folha e confirme, ou diga que não concorda.` };
     case "ajuste":
       return { title: `${nome} pediu para mudar o valor`, body: `Pedido #${id}: veja o valor novo e responda.` };
     case "feito":

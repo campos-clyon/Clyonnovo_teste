@@ -36,6 +36,10 @@
       "schedule": "50 * * * *"
     },
     {
+      "path": "/api/cron/folhas-da-mudanca",
+      "schedule": "25 * * * *"
+    },
+    {
       "path": "/api/cron/licoes-da-vitoria",
       "schedule": "20 5 * * *"
     }

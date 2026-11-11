@@ -14,6 +14,7 @@ import {
   appendOrderHistory,
   confirmarHorasDoTrabalho,
   contestarHorasDoTrabalho,
+  folhaDaNegociacao,
   gravarHorasDoTrabalho,
   negociacaoNoTerreno,
   negociacoesDoProfissional,
@@ -40,6 +41,8 @@ import { lerMateriaisDaProposta, lerQuantidadesUsadas, materiaisUsados } from "@
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissional } from "@/lib/avisos-do-backoffice";
 import { avisarClienteDasHoras } from "@/lib/avisos-do-terreno";
+import { contextoDaLinha, edicaoDaContestacao, enviarAFolha, extraDaConfirmacao } from "@/lib/folha-no-servidor";
+import { resumoDaFolha } from "@/lib/folha-da-mudanca";
 
 export type Resposta = { status: number; corpo: Record<string, unknown> };
 
@@ -63,7 +66,18 @@ export function resumoDaLinha(l: LinhaComHoras): ResumoDasHoras | null {
 export async function marcarHorasPeloProfissional(a: {
   providerId: number;
   nome: string | null;
-  corpo: { negociacaoId?: unknown; dia?: unknown; inicio?: unknown; fim?: unknown; materiais?: unknown };
+  corpo: {
+    negociacaoId?: unknown;
+    dia?: unknown;
+    inicio?: unknown;
+    fim?: unknown;
+    materiais?: unknown;
+    // A folha da mudança (11-11-2026): só numa mudança com a lista de parceiros.
+    pausas?: unknown;
+    pessoas?: unknown;
+    km?: unknown;
+    motivoDosKm?: unknown;
+  };
   agora?: Date;
 }): Promise<Resposta> {
   const agora = a.agora ?? new Date();
@@ -98,6 +112,28 @@ export async function marcarHorasPeloProfissional(a: {
     if (!chegadaOk) return falha(409, "Marque primeiro que chegou, e espere que o cliente o confirme.");
     if (horasConfirmadas(linha)) return falha(409, "As horas já estão confirmadas.");
     return falha(409, "Este trabalho já não está à espera das horas.");
+  }
+
+  /*
+   * A FOLHA DA MUDANÇA (11-11-2026): numa mudança com a lista de parceiros
+   * (tarifa congelada), as horas vêm com as pausas, a equipa, os km e o
+   * material, e a conta é a da tarifa dele — folha-no-servidor.ts. Todas as
+   * outras seguem exactamente como antes.
+   */
+  const daFolha = await folhaDaNegociacao(negociacaoId);
+  const ctx = daFolha ? contextoDaLinha(daFolha, linha, agora) : null;
+  if (daFolha && ctx) {
+    return enviarAFolha({
+      providerId: a.providerId,
+      nome: a.nome,
+      negociacaoId,
+      pedidoId: linha.pedidoId,
+      folhaNaBase: daFolha,
+      ctx,
+      linha,
+      corpo: a.corpo,
+      agora,
+    });
   }
 
   const dia =
@@ -197,13 +233,21 @@ export async function confirmarAsHoras(a: {
 }): Promise<Resposta> {
   if (!horasMarcadas(a.linha)) return falha(409, "Ainda não há horas marcadas neste trabalho.");
   if (horasConfirmadas(a.linha)) return falha(409, "As horas já estão confirmadas.");
-  const gravou = await confirmarHorasDoTrabalho(a.negociacaoId, a.pedidoId, a.por);
+  const daFolha = await extraDaConfirmacao(a.negociacaoId, a.por, a.onde);
+  const gravou = await confirmarHorasDoTrabalho(
+    a.negociacaoId,
+    a.pedidoId,
+    a.por,
+    daFolha ? { taxaProfissional: daFolha.taxaProfissional, edicao: daFolha.edicao } : null,
+  );
   if (!gravou) return falha(409, "As horas já não estão à espera de confirmação.");
 
   const resumo = resumoDaLinha({ ...a.linha, horasConfirmadasEm: new Date(), horasConfirmadasPor: a.por, valorAcordado: a.linha.valorDasHoras });
-  const frase =
-    `Horas confirmadas ${a.por === "clyon" ? "pela CLYON" : "pelo cliente"} (negociação #${a.negociacaoId}, ${a.onde}): ` +
-    `${resumo?.textoParaAEquipa ?? ""} Passa a ser o valor do trabalho.`;
+  const frase = daFolha
+    ? `Folha da mudança confirmada ${a.por === "clyon" ? "pela CLYON" : "pelo cliente"} (negociação #${a.negociacaoId}, ${a.onde}): ` +
+      `${resumoDaFolha(daFolha.folha)} Passa a ser o valor do trabalho.`
+    : `Horas confirmadas ${a.por === "clyon" ? "pela CLYON" : "pelo cliente"} (negociação #${a.negociacaoId}, ${a.onde}): ` +
+      `${resumo?.textoParaAEquipa ?? ""} Passa a ser o valor do trabalho.`;
   await appendOrderHistory(a.pedidoId, { type: "created", by: null, message: frase }).catch(() => {});
   await registarSemFalhar({
     acontecimento: "horas_confirmadas",
@@ -212,7 +256,7 @@ export async function confirmarAsHoras(a: {
     providerId: a.providerId,
     autorTipo: a.por === "clyon" ? "clyon" : "cliente",
     autorNome: a.autorNome,
-    valorProfissional: resumo?.total ?? null,
+    valorProfissional: daFolha ? daFolha.folha.conta.semIvaCent / 100 : (resumo?.total ?? null),
     resumo: frase,
   });
   after(() => avisarProfissional(a.providerId, a.por === "clyon" ? "horas_confirmadas_pela_clyon" : "horas_confirmadas", {
@@ -237,7 +281,12 @@ export async function contestarAsHoras(a: {
   if (!lido.ok) return falha(400, lido.erro);
   if (!horasMarcadas(a.linha)) return falha(409, "Ainda não há horas marcadas neste trabalho.");
   if (horasConfirmadas(a.linha)) return falha(409, "As horas já estão confirmadas.");
-  const gravou = await contestarHorasDoTrabalho(a.negociacaoId, a.pedidoId, lido.motivo);
+  const gravou = await contestarHorasDoTrabalho(
+    a.negociacaoId,
+    a.pedidoId,
+    lido.motivo,
+    await edicaoDaContestacao(a.negociacaoId, lido.motivo, a.onde),
+  );
   if (!gravou) return falha(409, "As horas já não estão à espera de confirmação.");
 
   const frase = `O cliente não concorda com as horas (negociação #${a.negociacaoId}, ${a.onde}): «${lido.motivo}». Vai à Mesa.`;

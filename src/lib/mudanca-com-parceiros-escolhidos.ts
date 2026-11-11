@@ -1,6 +1,7 @@
 import { appendOrderHistory, gravarEscolhaDosParceiros, listaDeParceirosNasMudancasLigada } from "./db";
 import { congelarTarifa, REGRAS_DAS_MUDANCAS } from "./conta-da-mudanca";
 import { distribuirPedido, resumoDaDistribuicao } from "./distribuir-pedido";
+import { percursoDoPedido } from "./percurso-do-pedido";
 import { avisarCliente } from "./avisos-do-backoffice";
 import { lerForma } from "./forma-de-pagamento";
 import { lerPessoas, resumoDaMudanca, type Pessoas } from "./lista-de-parceiros-da-mudanca";
@@ -40,6 +41,7 @@ export type EscolhaPreparada = {
   kmPercurso: number;
   horas: number;
   origemPonto: Ponto;
+  destinoPonto?: Ponto;
   procurarMais: boolean;
 };
 
@@ -99,6 +101,7 @@ export async function prepararEscolhaDaMudanca(
       kmPercurso: lista.kmPercurso,
       horas: lista.horas,
       origemPonto: lista.origemPonto,
+      destinoPonto: lista.destinoPonto,
       procurarMais: order.procurarMaisParceiros === true,
     },
   };
@@ -195,4 +198,7 @@ export async function enviarAosEscolhidos(
 
   await appendOrderHistory(pedido.id, { type: "created", by: null, message: linhaDoHistorico(e, prazo, resumoDaDistribuicao(r)) });
   if (r.receberam > 0) await avisarCliente(pedido.id, "enviado").catch(() => undefined);
+
+  // O percurso com o traçado, guardado já no pedido: o mapa do parceiro lê-o sem pagar outra chamada (11-11-2026).
+  await percursoDoPedido(pedido.id, null, e.origemPonto, e.destinoPonto ?? null).catch(() => null);
 }

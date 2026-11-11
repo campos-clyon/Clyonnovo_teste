@@ -328,6 +328,8 @@ export async function listaDosPedidosDoCliente(
               n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
               n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
               n.materiaisJson, n.materiaisUsadosJson,
+              -- A folha da mudança (11-11-2026): a folha, o histórico e a tarifa (o mínimo de horas).
+              n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, n.tarifaCongeladaJson,
               -- Só para a regra a esconder (d33): não sai para o cliente.
               n.ofertaClyon,
               p.name AS profissionalNome, p.phone AS profissionalTelefone,

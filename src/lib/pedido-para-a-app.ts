@@ -30,6 +30,17 @@ import {
   resumoDasHoras,
   valorPorHoraDe,
 } from "./horas-do-trabalho";
+import {
+  CONFIRMO_A_FOLHA,
+  TITULO_DA_FOLHA,
+  estadoDaFolha,
+  estadoDaFolhaParaOCliente,
+  folhaDeJson,
+  folhaNoEcra,
+  historicoParaVer,
+  lerHistoricoDaFolha,
+} from "./folha-da-mudanca";
+import { tarifaCongeladaDeJson } from "./conta-da-mudanca";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
 import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
@@ -175,8 +186,24 @@ export function horasParaOCliente(n: NegociacaoDoCliente, emCima: number | null,
   const r = resumoDasHoras(h, taxas, modelo);
   const comMateriais = (r?.materiais.length ?? 0) > 0;
   const precoHora = valorPorHora != null ? precoPorHoraParaOCliente(valorPorHora, n.horasPrevistas, taxas, modelo) : null;
+  /*
+   * A FOLHA DA MUDANÇA (11-11-2026): numa mudança com a lista de parceiros o
+   * cliente vê a folha inteira — horas, pausas, equipa, km e material, em
+   * degraus, com IVA e sem IVA — e confirma ou diz que não concorda pelas
+   * mesmas acções das horas. Null nas outras (ficam exactamente como antes).
+   */
+  const enviada = folhaDeJson(h.folhaJson ?? null);
+  const estadoDaFolhaAgora = enviada ? estadoDaFolha(h) : null;
+  const folha = enviada
+    ? {
+        ...folhaNoEcra(enviada, "cliente", tarifaCongeladaDeJson(h.tarifaCongeladaJson ?? null)?.minimoHoras ?? enviada.conta.horas.cobradas),
+        estado: estadoDaFolhaAgora,
+        historico: historicoParaVer(lerHistoricoDaFolha(h.folhaHistoricoJson ?? null)),
+      }
+    : null;
   return {
-    titulo: TITULO_DAS_HORAS,
+    titulo: folha ? TITULO_DA_FOLHA : TITULO_DAS_HORAS,
+    folha,
     porHoraTexto: precoHora?.porHora ?? null,
     estimativaTexto: horasConfirmadas(h) ? null : (precoHora?.estimativa ?? null),
     horasPrevistas: horasDaEstimativa(n.horasPrevistas),
@@ -203,9 +230,9 @@ export function horasParaOCliente(n: NegociacaoDoCliente, emCima: number | null,
           contestacao: r.contestacao,
         }
       : null,
-    estadoTexto: estadoDasHorasParaOCliente(h),
+    estadoTexto: folha ? estadoDaFolhaParaOCliente(estadoDaFolhaAgora) : estadoDasHorasParaOCliente(h),
     podeResponder: n.estado === "acordada" && clientePodeResponderAsHoras(h),
-    botaoConfirmar: comMateriais ? CONFIRMO_AS_HORAS_E_OS_MATERIAIS : CONFIRMO_AS_HORAS,
+    botaoConfirmar: folha ? CONFIRMO_A_FOLHA : comMateriais ? CONFIRMO_AS_HORAS_E_OS_MATERIAIS : CONFIRMO_AS_HORAS,
     botaoNaoConcordo: NAO_CONCORDO,
   };
 }

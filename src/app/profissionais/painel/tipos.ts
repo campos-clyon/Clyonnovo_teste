@@ -1,3 +1,5 @@
+import type { FolhaParaOParceiro } from "@/lib/folha-da-mudanca";
+import type { PercursoParaOParceiro } from "@/lib/mapa-do-percurso";
 import type { Proposta } from "@/lib/negociacao";
 import type { MudancaEscolhida } from "@/lib/mudanca-escolhida-pelo-cliente";
 import type { SugestaoParaOProfissional } from "@/lib/sugestao-para-o-profissional";
@@ -164,7 +166,11 @@ export type Pedido = {
     resumo: ResumoDasHoras | null;
     campos: { dia: string | null; inicio: string; fim: string; materiais: Record<string, number> };
     podeDarPorFeito: boolean;
+    /** A folha da mudança (11-11-2026) — só numa mudança com a lista de parceiros. Ver folha-da-mudanca.ts. */
+    folha?: FolhaParaOParceiro | null;
   } | null;
+  /** O percurso de uma mudança com a lista: o mapa, os km e o tempo (11-11-2026). */
+  percurso?: PercursoParaOParceiro | null;
   /** Os materiais da proposta dele (31-10-2026). */
   materiais?: MateriaisDaProposta | null;
   materiaisTexto?: string | null;

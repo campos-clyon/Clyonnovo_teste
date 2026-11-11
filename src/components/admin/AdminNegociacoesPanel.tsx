@@ -49,6 +49,7 @@ import ConfirmarChegadaNaMesa from "@/components/admin/ConfirmarChegadaNaMesa";
 import { clientePodeConfirmarChegada, viagemComConfirmacao } from "@/lib/viagem-ate-ao-cliente";
 import { sufixoDaBase, totalEstimadoNoBackoffice } from "@/lib/valor-por-base";
 import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO } from "@/lib/horas-do-trabalho";
+import { FOLHA_POR_CONFIRMAR } from "@/lib/folha-da-mudanca";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
 import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
@@ -219,6 +220,9 @@ type Negociacao = {
   horasContestadasEm?: string | null;
   horasContestacao?: string | null;
   materiaisJson?: string | null;
+  /** A folha da mudança (11-11-2026): se há, e quando foi à Mesa por 48 h sem resposta do cliente. */
+  temFolha?: number | boolean | null;
+  folhaNaMesaEm?: string | null;
   /** A viagem pela app Pro (d3, 31-10-2026) — ver ConfirmarChegadaNaMesa. */
   aCaminhoEm?: string | null;
   chegouEm?: string | null;
@@ -459,7 +463,16 @@ function precisaDeSi(n: Negociacao): boolean {
  */
 function horasEmDisputa(n: Negociacao): boolean {
   if (n.estado !== "acordada") return false;
-  return horasContestadas(n);
+  return horasContestadas(n) || folhaPorConfirmar(n);
+}
+
+/**
+ * A FOLHA DA MUDANÇA SEM RESPOSTA — 11-11-2026. 48 h depois de o parceiro a
+ * enviar, sem o cliente confirmar nem dizer «Não concordo», vai a «Precisa de
+ * si» como «Folha por confirmar». Nunca se confirma sozinha.
+ */
+function folhaPorConfirmar(n: Negociacao): boolean {
+  return n.estado === "acordada" && !!n.folhaNaMesaEm && !n.horasConfirmadasEm && !n.horasContestadasEm;
 }
 const comHorasEmDisputa = (p: Pedido) => p.negociacoes.some(horasEmDisputa);
 
@@ -505,7 +518,8 @@ function orcamentoEnviadoCobre(p: Pedido): boolean {
 
 /** O que falta fazer, em duas palavras, para o distintivo do cartao. */
 function oQueFalta(n: Negociacao): string {
-  if (horasEmDisputa(n)) return `horas contestadas${n.horasContestacao ? `: «${n.horasContestacao}»` : ""}`;
+  if (folhaPorConfirmar(n)) return `${FOLHA_POR_CONFIRMAR.toLowerCase()} (48 h sem resposta do cliente)`;
+  if (horasEmDisputa(n)) return `${n.temFolha ? "folha contestada" : "horas contestadas"}${n.horasContestacao ? `: «${n.horasContestacao}»` : ""}`;
   // Sem fotografias (26-10-2026): o cliente não recebeu nada para confirmar.
   if (esperaConfirmacao(n) && porConfirmarComOCliente(n)) return "por confirmar com o cliente";
   if (esperaConfirmacao(n)) return "trabalho feito — falta confirmar";

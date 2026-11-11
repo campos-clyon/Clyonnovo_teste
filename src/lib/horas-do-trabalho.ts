@@ -251,6 +251,11 @@ export type HorasNaBase = {
   valorDasHoras?: number | string | null;
   materiaisJson?: string | null;
   materiaisUsadosJson?: string | null;
+  /** A folha da mudança (v18, 11-11-2026) — ver folha-da-mudanca.ts. Só nas mudanças com a lista. */
+  folhaJson?: string | null;
+  folhaHistoricoJson?: string | null;
+  folhaNaMesaEm?: Date | string | null;
+  tarifaCongeladaJson?: string | null;
 };
 
 export const horasMarcadas = (t: HorasNaBase): boolean => tem(t.horasMarcadasEm);

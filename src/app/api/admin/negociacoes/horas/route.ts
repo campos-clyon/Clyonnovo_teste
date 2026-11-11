@@ -19,6 +19,9 @@ import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { acertoDasHoras } from "@/lib/pagamento-para-o-cliente";
 import { diaEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
+import { corrigirAFolhaPelaClyon } from "@/lib/folha-no-servidor";
+import { estadoDaFolha, folhaDeJson, folhaNoEcra, historicoParaVer, lerHistoricoDaFolha } from "@/lib/folha-da-mudanca";
+import { tarifaCongeladaDeJson } from "@/lib/conta-da-mudanca";
 
 export const runtime = "nodejs";
 
@@ -64,6 +67,18 @@ export async function GET(req: NextRequest) {
       estadoTexto: estadoDasHorasParaQuemFez(linha as never),
       resumo,
       materiaisTexto: materiaisParaOProfissional(m),
+      // A folha da mudança (11-11-2026), como o parceiro a vê (com o que recebe), e o histórico.
+      folha: (() => {
+        const l = linha as { folhaJson?: string | null; folhaHistoricoJson?: string | null; tarifaCongeladaJson?: string | null };
+        const fo = folhaDeJson(l.folhaJson ?? null);
+        if (!fo) return null;
+        const t = tarifaCongeladaDeJson(l.tarifaCongeladaJson ?? null);
+        return {
+          ...folhaNoEcra(fo, "parceiro", t?.minimoHoras ?? 3),
+          estado: estadoDaFolha(linha as never),
+          historico: historicoParaVer(lerHistoricoDaFolha(l.folhaHistoricoJson ?? null)),
+        };
+      })(),
       acerto: acerto
         ? {
             ...acerto,
@@ -110,6 +125,18 @@ export async function POST(req: NextRequest) {
       if (horasConfirmadas(linha as never)) {
         return NextResponse.json({ error: "As horas já estão confirmadas." }, { status: 409 });
       }
+      // A folha da mudança (11-11-2026): corrige-se pela folha, com a tarifa congelada.
+      const pelaFolha = await corrigirAFolhaPelaClyon({
+        negociacaoId,
+        providerId: Number(linha.providerId),
+        linha: linha as never,
+        corpo: corpo as never,
+        porQuem,
+      });
+      if (pelaFolha && pelaFolha.status !== 200) return NextResponse.json(pelaFolha.corpo, { status: pelaFolha.status });
+      if (pelaFolha) {
+        comHoras = { ...comHoras, horasMarcadasEm: new Date(), valorDasHoras: pelaFolha.corpo.valorDasHoras, horasContestadasEm: null, horasContestacao: null };
+      } else {
       const inicioGravado = instanteDaBase((linha as { horasInicioEm?: Date | string | null }).horasInicioEm ?? null);
       const dia =
         typeof corpo.dia === "string" && /^\d{4}-\d{2}-\d{2}$/.test(corpo.dia)
@@ -149,6 +176,7 @@ export async function POST(req: NextRequest) {
         horasContestadasEm: null,
         horasContestacao: null,
       };
+      }
     }
     const r = await confirmarAsHoras({
       negociacaoId,

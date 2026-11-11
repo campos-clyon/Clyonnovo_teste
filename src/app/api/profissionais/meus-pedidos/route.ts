@@ -20,6 +20,7 @@ import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import {
+  diaDoInicio,
   estadoDasHorasParaQuemFez,
   horaNoCampo,
   horasConfirmadas,
@@ -32,6 +33,18 @@ import {
 } from "@/lib/horas-do-trabalho";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
 import { resumoDaLinha } from "@/lib/horas-no-servidor";
+import {
+  camposDaFolha,
+  contextoDaFolha,
+  estadoDaFolha,
+  estadoDaFolhaParaOParceiro,
+  folhaDeJson,
+  folhaNoEcra,
+  historicoParaVer,
+  lerHistoricoDaFolha,
+  regraDaFolha,
+} from "@/lib/folha-da-mudanca";
+import { percursoDeJson, percursoParaOParceiro } from "@/lib/mapa-do-percurso";
 import { podeMostrarConcluir } from "@/lib/viagem-ate-ao-cliente";
 import { diaEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
@@ -464,6 +477,37 @@ export async function GET(req: NextRequest) {
                 })(),
               },
               podeDarPorFeito: podeDarPorFeitoComAsHoras(comHoras, l),
+              /*
+               * A FOLHA DA MUDANÇA — 11-11-2026. Numa mudança com a lista de
+               * parceiros: o contexto (a tarifa DELE congelada, a equipa, os km do
+               * percurso e a hora acordada) para o ecrã fazer a mesma conta
+               * antes de enviar (folha-da-mudanca.ts), os campos já preenchidos,
+               * a folha enviada, o estado e o histórico. Null nas outras.
+               */
+              folha: (() => {
+                const e = escolhidas.get(Number(l.id));
+                if (!e) return null;
+                const contexto = {
+                  tarifaCongeladaJson: e.tarifaCongeladaJson,
+                  pessoasEscolhidas: e.pessoasEscolhidas,
+                  kmDoPercurso: e.km,
+                  valorPorHoraAcordado: valorHora,
+                  diaPorOmissao: diaDoInicio(l.chegouEm ?? null, agora),
+                };
+                const ctx = contextoDaFolha(contexto);
+                if (!ctx) return null;
+                const enviada = folhaDeJson(e.folhaJson);
+                const estado = estadoDaFolha({ ...l, folhaJson: e.folhaJson, folhaNaMesaEm: e.folhaNaMesaEm }, agora);
+                return {
+                  contexto,
+                  campos: camposDaFolha(enviada, ctx),
+                  enviada: enviada ? folhaNoEcra(enviada, "parceiro", ctx.tarifa.minimoHoras) : null,
+                  estado,
+                  estadoTexto: estadoDaFolhaParaOParceiro(estado, l.horasContestacao ?? null),
+                  historico: historicoParaVer(lerHistoricoDaFolha(e.folhaHistoricoJson)),
+                  regra: regraDaFolha(ctx.tarifa.minimoHoras),
+                };
+              })(),
             },
             ...materiais,
           };
@@ -628,6 +672,26 @@ export async function GET(req: NextRequest) {
          * a estimativa e o prazo para responder, já escritos. Null em todas as
          * outras. Ver mudanca-escolhida-pelo-cliente.ts.
          */
+        /*
+         * O PERCURSO DA MUDANÇA — 11-11-2026: «X km · cerca de Y min», o mapa
+         * (imagem do site) e o «Abrir no Google Maps». Antes de contratado só as
+         * localidades; a morada exacta só com a negociação acordada (as moradas
+         * vêm da vista, que já segue essa regra). Ver mapa-do-percurso.ts.
+         */
+        percurso: (() => {
+          const e = escolhidas.get(Number(l.id));
+          if (!e) return null;
+          return percursoParaOParceiro({
+            negociacaoId: Number(l.id),
+            estado: l.estado,
+            percurso: percursoDeJson(e.percursoJson),
+            kmDoPercurso: e.km != null && Number.isFinite(Number(e.km)) ? Number(e.km) : null,
+            cidadeOrigem: e.cidadeOrigem,
+            cidadeDestino: e.cidadeDestino,
+            moradaOrigem: (vista.address as string | undefined) ?? null,
+            moradaDestino: (vista.moradaDestino as string | undefined) ?? null,
+          });
+        })(),
         mudancaEscolhida: (() => {
           const m = escolhidas.get(Number(l.id));
           if (!m) return null;

@@ -32,6 +32,7 @@ import { MARQUE_AS_HORAS_PRIMEIRO } from "../../../src/lib/horas-do-trabalho";
 import { estimativaAoLado, horasPorMarcar, sufixoDoValor } from "../lib/trabalhos";
 import { AvaliarOCliente } from "./AvaliarOCliente";
 import { MapaDaMorada } from "./MapaDaMorada";
+import { MapaDoPercurso } from "./MapaDoPercurso";
 import {
   avisoDaEtapa,
   clienteDesde,
@@ -384,8 +385,8 @@ function OndeEComQuem({ t }: { t: Trabalho }) {
   return (
     <Caixa>
       <TituloDaCaixa>Onde e com quem</TituloDaCaixa>
-      {/* O mapa antes da morada, como no painel (A13). */}
-      <MapaDaMorada morada={t.morada} />
+      {/* O mapa antes da morada, como no painel (A13). Numa mudança com a lista, o percurso porta a porta (11-11-2026). */}
+      {t.percurso ? <MapaDoPercurso percurso={t.percurso} /> : <MapaDaMorada morada={t.morada} />}
       <Linha rotulo="Cliente" valor={t.contactoNome} />
       {/* «Cliente desde … · N trabalhos confirmados» — só quando é real (A13). */}
       {clienteDesde(t.clienteContexto) ? (

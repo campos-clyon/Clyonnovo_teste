@@ -5,6 +5,7 @@ import { Clock, Loader2 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import type { ResumoDasHoras } from "@/lib/horas-do-trabalho";
 import { REGRA_DAS_HORAS } from "@/lib/horas-do-trabalho";
+import { FOLHA_POR_CONFIRMAR, type FolhaNoEcra } from "@/lib/folha-da-mudanca";
 
 /**
  * AS HORAS DE UM TRABALHO POR HORA, NA MESA — 31-10-2026.
@@ -30,6 +31,8 @@ type Resposta = {
     contestadasEm: string | null;
   }) | null;
   materiaisTexto: string | null;
+  /** A folha da mudança (11-11-2026), com o que o parceiro recebe e o histórico. */
+  folha: (FolhaNoEcra & { estado: string | null; historico: Array<{ quando: string; texto: string }> }) | null;
   acerto: { aPagar: number; aDevolver: number; pagoAteAgora: number; final: number; aDevolverTexto: string | null } | null;
 };
 
@@ -100,7 +103,8 @@ export default function HorasNaMesa({
           accao,
           inicio,
           fim,
-          materiais: Object.fromEntries((r?.resumo?.materiais ?? []).map((l) => [l.id, l.quantidade])),
+          // Numa folha da mudança o material fica como o parceiro o pôs na folha.
+          ...(r?.folha ? {} : { materiais: Object.fromEntries((r?.resumo?.materiais ?? []).map((l) => [l.id, l.quantidade])) }),
         }),
       });
       const dados = await res.json().catch(() => ({}));
@@ -153,7 +157,37 @@ export default function HorasNaMesa({
           </dd>
         </div>
       </dl>
-      <p className="mt-1.5 text-slate-400">{h.textoParaAEquipa}</p>
+      <p className="mt-1.5 text-slate-400">{r.folha ? r.folha.resumo : h.textoParaAEquipa}</p>
+      {/* A FOLHA DA MUDANÇA (11-11-2026): em degraus, como o parceiro a vê, e o histórico de cada edição. */}
+      {r.folha && (
+        <div className="mt-2 rounded-lg border border-cyan-900/60 p-2">
+          <p className="font-semibold text-cyan-300">
+            {r.folha.titulo}
+            {r.folha.estado === "por_confirmar" ? ` — ${FOLHA_POR_CONFIRMAR}` : ""}
+          </p>
+          <dl className="mt-1 space-y-0.5">
+            {r.folha.linhas.map((l, i) => (
+              <div key={i} className="flex justify-between gap-3">
+                <dt className={l.forte ? "font-semibold text-slate-100" : "text-slate-400"}>
+                  {l.rotulo}
+                  {l.nota ? <span className="text-slate-500"> — {l.nota}</span> : null}
+                </dt>
+                <dd className={`tabular-nums ${l.forte ? "font-semibold text-slate-100" : "text-slate-300"}`}>{l.valor}</dd>
+              </div>
+            ))}
+          </dl>
+          {r.folha.avisoDaEquipa && <p className="mt-1 text-amber-200">{r.folha.avisoDaEquipa}</p>}
+          {r.folha.historico.length > 0 && (
+            <ul className="mt-1.5 space-y-0.5 text-slate-500">
+              {r.folha.historico.map((e, i) => (
+                <li key={i}>
+                  {e.quando} — {e.texto}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {h.materiais.length > 0 && (
         <p className="mt-1 text-slate-400">
           Materiais usados: {h.materiais.map((l) => `${l.quantidade} × ${l.nome} (${eur(l.total)})`).join(", ")}

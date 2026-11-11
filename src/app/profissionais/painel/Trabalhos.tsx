@@ -81,6 +81,8 @@ import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
 import { MARQUE_AS_HORAS_PRIMEIRO, totalEstimadoCurto } from "@/lib/horas-do-trabalho";
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
+import { FolhaDaMudanca } from "./FolhaDaMudanca";
+import { MapaDoPercurso } from "./MapaDoPercurso";
 
 /**
  * A UNIDADE DO VALOR — 31-10-2026. Num pedido por hora todos os números do
@@ -2176,8 +2178,12 @@ function DetalheDoTrabalho({
             </p>
           )}
           <p className="mt-2 text-xs text-slate-600">{pedido.mudancaEscolhida.regraDaProposta}</p>
+          {/* O percurso (11-11-2026): só as localidades até ser contratado. */}
+          {pedido.percurso && <MapaDoPercurso percurso={pedido.percurso} />}
         </section>
       )}
+      {/* Contratado: o mapa porta a porta, com o traçado (11-11-2026). */}
+      {fechado && pedido.percurso && pedido.fase !== "confirmado" && pedido.fase !== "pago" && <MapaDoPercurso percurso={pedido.percurso} />}
 
       {/* O valor */}
       <section className="mt-3 rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm">
@@ -2351,7 +2357,11 @@ function DetalheDoTrabalho({
       )}
 
       {/* AS HORAS DO TRABALHO — 31-10-2026: num trabalho por hora, antes do «Está feito». */}
-      {fechado && pedido.porHora && (pedido.porHora.podeMarcar || pedido.porHora.marcadas) && (
+      {/* A FOLHA DA MUDANÇA — 11-11-2026: numa mudança com a lista de parceiros, em vez das horas simples. */}
+      {fechado && pedido.porHora && (pedido.porHora.podeMarcar || pedido.porHora.marcadas) && pedido.porHora.folha && (
+        <FolhaDaMudanca pedido={pedido} onGravou={onRecarregar} />
+      )}
+      {fechado && pedido.porHora && (pedido.porHora.podeMarcar || pedido.porHora.marcadas) && !pedido.porHora.folha && (
         <HorasDoTrabalho pedido={pedido} onGravou={onRecarregar} />
       )}
 

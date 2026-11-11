@@ -51,6 +51,12 @@ export type DadosDoComprovativo = {
   pagoEm: string | null;
   /** Como passou, já em palavras («MB WAY», «Transferência»), quando se sabe. */
   como: string | null;
+  /**
+   * A FOLHA DA MUDANÇA (11-11-2026), quando houver: as horas, as pausas, a
+   * equipa, os km e o material, como o cliente os confirmou (sem os totais,
+   * que estão nos valores).
+   */
+  folha?: Array<{ rotulo: string; valor: string; nota?: string | null }> | null;
 };
 
 /** Um euro como se escreve cá: «1 234,50 €». */
@@ -142,6 +148,7 @@ export function conteudoDoComprovativo(d: DadosDoComprovativo, emitidoEm: Date) 
         ? { rotulo: "Cliente", nome: d.cliente?.trim() || "—", extra: d.telefoneDoCliente?.trim() || null }
         : { rotulo: "Profissional", nome: d.profissional, extra: null },
     trabalho,
+    folha: (d.folha ?? []).filter((l) => !/^Total|^IVA|^Taxa da plataforma|^Recebe/.test(l.rotulo)),
     valores,
     pagamento: pagoEm ? `Pago a ${pagoEm}${d.como ? ` · ${d.como}` : ""}` : null,
     nota,
@@ -226,6 +233,27 @@ export async function comprovativoEmPdf(d: DadosDoComprovativo, emitidoEm = new 
     y -= 15;
   }
   y -= 14;
+
+  // A folha da mudança, quando há (11-11-2026).
+  if (c.folha.length > 0) {
+    escrever(pagina, "FOLHA DA MUDANÇA", M, y, 8, negrito, CINZENTO);
+    y -= 8;
+    traco(y);
+    y -= 16;
+    for (const l of c.folha) {
+      escrever(pagina, l.rotulo, M, y, 10, normal, CINZENTO);
+      aDireita(l.valor, y, 10, normal);
+      y -= 13;
+      if (l.nota) {
+        for (const n of linhas(l.nota, 8.5, normal, L)) {
+          escrever(pagina, n, M + 8, y, 8.5, normal, CINZENTO);
+          y -= 11;
+        }
+      }
+      y -= 3;
+    }
+    y -= 14;
+  }
 
   // Os valores.
   escrever(pagina, "VALORES", M, y, 8, negrito, CINZENTO);

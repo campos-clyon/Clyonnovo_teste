@@ -113,3 +113,30 @@ describe("as peças", () => {
     expect(P).toContain('{t.recebido && <BotaoDoComprovativo negociacaoId={t.negociacaoId} pedidoId={t.pedidoId} para="cliente" />}');
   });
 });
+
+describe("a folha da mudança no comprovativo (11-11-2026)", () => {
+  const folha = [
+    { rotulo: "No local", valor: "das 09:00 às 17:30", nota: "8 h 30 min" },
+    { rotulo: "Horas (equipa de 2)", valor: "320,00 €", nota: "8 h × 40,00 €/h" },
+    { rotulo: "Filme", valor: "45,00 €", nota: "3 rolos de filme × 15,00 €" },
+    { rotulo: "Total sem IVA", valor: "420,00 €" },
+    { rotulo: "IVA (23 %)", valor: "96,60 €" },
+    { rotulo: "Total com IVA", valor: "516,60 €" },
+    { rotulo: "Taxa da plataforma", valor: "−35,50 €" },
+    { rotulo: "Recebe", valor: "384,50 €" },
+  ];
+
+  it("leva as linhas do trabalho, sem repetir os totais (estão nos valores)", () => {
+    const c = conteudoDoComprovativo({ ...base, para: "cliente", pagoEm: null, como: null, folha }, EMITIDO);
+    expect(c.folha.map((l) => l.rotulo)).toEqual(["No local", "Horas (equipa de 2)", "Filme"]);
+  });
+
+  it("sem folha, nada muda", () => {
+    expect(conteudoDoComprovativo({ ...base, para: "cliente", pagoEm: null, como: null }, EMITIDO).folha).toEqual([]);
+  });
+
+  it("o PDF faz-se com a folha", async () => {
+    const bytes = await comprovativoEmPdf({ ...base, para: "profissional", pagoEm: null, como: null, folha });
+    expect(bytes.length).toBeGreaterThan(1000);
+  });
+});

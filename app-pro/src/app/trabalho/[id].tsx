@@ -7,6 +7,7 @@ import { Text, TextInput } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FICHA_DO_AVISO } from "../../../../src/lib/avisos-antes-de-cotar";
 import { Botao, Caixa, Etiqueta, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { MapaDoPercurso } from "../../componentes/MapaDoPercurso";
 import { AjusteNoLocal, TrabalhoContratado } from "../../componentes/TrabalhoContratado";
 import { Arrumar } from "../../componentes/Arrumar";
 import { AvisosDoValor } from "../../componentes/AvisosDoValor";
@@ -511,6 +512,8 @@ function Accoes({ t }: { t: Trabalho }) {
     <Caixa>
       <TituloDaCaixa>{e.podeAceitar ? "O cliente fez uma proposta" : "A sua proposta"}</TituloDaCaixa>
       {escolhida ? <MudancaEscolhidaPeloCliente m={escolhida} /> : null}
+      {/* O percurso (11-11-2026): só as localidades até ser contratado. */}
+      {escolhida ? <MapaDoPercurso percurso={t.percurso} /> : null}
       {t.estado === "aberta" && !escolhida ? <Concorrencia t={t} /> : null}
       {e.primeiraProposta ? <ValorSugeridoPelaClyon t={t} /> : null}
       {e.primeiraProposta ? <SugeriaParaOsSeusCustos t={t} /> : null}

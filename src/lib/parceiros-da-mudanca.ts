@@ -139,6 +139,8 @@ export type ResultadoDaLista =
       kmEstimado: boolean;
       horas: number;
       origemPonto: Ponto;
+      /** O destino, para o percurso com o traçado (mapa do parceiro, 11-11-2026). */
+      destinoPonto: Ponto;
     }
   | { ok: false; erro: string };
 
@@ -197,6 +199,7 @@ export async function listaDosParceirosDaMudanca(
     kmEstimado: percurso.origem !== "estrada",
     horas: horasDaMudanca(pedido.tipologia, pedido.desmontagem, pedido.pessoas),
     origemPonto: o,
+    destinoPonto: d,
   };
 }
 

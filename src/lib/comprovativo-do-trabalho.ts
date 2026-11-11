@@ -1,6 +1,8 @@
 import crypto from "crypto";
+import { folhaDeJson, folhaNoEcra } from "./folha-da-mudanca";
+import { tarifaCongeladaDeJson } from "./conta-da-mudanca";
 import { moradaCompleta, trabalhosParaGerir, type TrabalhoParaGerir } from "./trabalhos-para-gerir";
-import { getPool } from "./db";
+import { folhaDaNegociacao, getPool } from "./db";
 import { comprovativoEmPdf, emEuros, type ParaQuem } from "./comprovativo-pdf";
 import { nomeDoRecebimento } from "./dinheiro-do-trabalho";
 import { nomeDeComoPagou } from "./pagamento-declarado";
@@ -42,6 +44,19 @@ async function moradaDoPedido(pedidoId: number): Promise<string | null> {
   }
 }
 
+/** As linhas da folha da mudança (11-11-2026) — só com a folha confirmada; null nas outras. */
+async function linhasDaFolhaDoTrabalho(negociacaoId: number, para: ParaQuem) {
+  try {
+    const f = await folhaDaNegociacao(negociacaoId);
+    const folha = folhaDeJson(f?.folhaJson ?? null);
+    if (!f || !folha) return null;
+    const t = tarifaCongeladaDeJson(f.tarifaCongeladaJson ?? null);
+    return folhaNoEcra(folha, para === "cliente" ? "cliente" : "parceiro", t?.minimoHoras ?? folha.conta.horas.cobradas).linhas;
+  } catch {
+    return null;
+  }
+}
+
 export async function comprovativoDoTrabalho(negociacaoId: number, para: ParaQuem): Promise<ResultadoDoComprovativo> {
   const [t] = await trabalhosParaGerir(negociacaoId);
   if (!t || !t.conta) return { ok: false, erro: "Trabalho não encontrado.", estado: 404 };
@@ -64,6 +79,7 @@ export async function comprovativoDoTrabalho(negociacaoId: number, para: ParaQue
     dataDoTrabalho: t.dataDoTrabalho,
     semFactura: t.semFactura,
     conta: t.conta,
+    folha: await linhasDaFolhaDoTrabalho(negociacaoId, para),
     pagoEm: doCliente ? (t.clientePagouEm ?? t.declarado?.em ?? t.confirmadoEm) : t.pagoEm,
     como: doCliente
       ? t.comoEntrou

@@ -51,7 +51,40 @@ export default function HorasDoTrabalho({
           </p>
         </>
       )}
-      {m && (
+      {/* A FOLHA DA MUDANÇA (11-11-2026): a folha inteira, em degraus, com e sem IVA. */}
+      {m && h.folha && (
+        <>
+          <dl className="mt-2 space-y-1.5 text-sm">
+            {h.folha.linhas.map((l, i) => (
+              <div key={i} className="flex items-start justify-between gap-3">
+                <dt className={l.forte ? "font-bold text-tinta" : "text-slate-700"}>
+                  {l.rotulo}
+                  {l.nota && <span className="block text-xs font-normal text-slate-500">{l.nota}</span>}
+                </dt>
+                <dd className={`shrink-0 text-right ${l.forte ? "font-bold text-tinta" : "text-slate-800"}`}>{l.valor}</dd>
+              </div>
+            ))}
+          </dl>
+          {h.folha.avisoDaEquipa && <p className="mt-2 text-xs font-semibold text-amber-800">{h.folha.avisoDaEquipa}</p>}
+          {h.estadoTexto && <p className="mt-2 text-xs text-emerald-800">{h.estadoTexto}</p>}
+          {m.contestadas && m.contestacao && (
+            <p className="mt-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-700">O que disse: «{m.contestacao}»</p>
+          )}
+          {h.folha.historico.length > 0 && (
+            <details className="mt-2 text-xs text-slate-600">
+              <summary className="cursor-pointer font-semibold">Histórico da folha</summary>
+              <ul className="mt-1 space-y-1">
+                {h.folha.historico.map((e, i) => (
+                  <li key={i}>
+                    {e.quando} — {e.texto}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </>
+      )}
+      {m && !h.folha && (
         <>
           <p className="mt-2 text-sm font-semibold text-tinta">{m.texto}</p>
           {m.materiais.length > 0 && (
@@ -71,7 +104,7 @@ export default function HorasDoTrabalho({
           )}
         </>
       )}
-      <p className="mt-2 text-[11px] text-tinta-fraca">{h.regraTexto}</p>
+      <p className="mt-2 text-[11px] text-tinta-fraca">{h.folha ? h.folha.regra : h.regraTexto}</p>
 
       {podeResponder && !aContestar && (
         <div className="mt-3 space-y-2">

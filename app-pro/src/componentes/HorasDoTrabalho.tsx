@@ -17,6 +17,7 @@ import {
 } from "../../../src/lib/horas-do-trabalho";
 import type { Trabalho } from "../lib/trabalhos";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
+import { FolhaDaMudanca } from "./FolhaDaMudanca";
 
 /**
  * AS HORAS DO TRABALHO — 31-10-2026, o mesmo bloco do painel.
@@ -30,6 +31,12 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  * confirmar.
  */
 export function HorasDoTrabalho({ t }: { t: Trabalho }) {
+  // A folha da mudança (11-11-2026): numa mudança com a lista de parceiros, em vez das horas simples.
+  if (t.baseDoPreco === "hora" && t.porHora?.folha && (t.porHora.podeMarcar || t.porHora.marcadas)) return <FolhaDaMudanca t={t} />;
+  return <HorasSimples t={t} />;
+}
+
+function HorasSimples({ t }: { t: Trabalho }) {
   const c = useCores();
   const { recarregar } = useTrabalhos();
   const h = t.porHora;
