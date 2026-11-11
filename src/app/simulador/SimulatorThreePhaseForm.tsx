@@ -57,9 +57,10 @@ import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
 import { SEM_PARCEIROS, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { horasDaMudanca } from "@/lib/lista-de-parceiros-da-mudanca";
 import {
-  HORAS_POR_TIPOLOGIA,
+  TIPOLOGIAS,
   TIPOLOGIA_POR_EXTENSO,
   orcamentoDaMudanca,
+  pessoasParaACasa,
   type Tipologia,
 } from "@/lib/tabela-das-mudancas";
 
@@ -684,6 +685,8 @@ export default function SimulatorThreePhaseForm() {
                 parceirosEscolhidos: escolhaDaMudanca.ids,
                 pessoas: escolhaDaMudanca.pessoas,
                 procurarMaisParceiros: escolhaDaMudanca.procurarMais,
+                // As caixas e o embalamento, se os pediu na lista (11-11-2026).
+                embalamento: escolhaDaMudanca.embalamento === true,
               }
             : {}),
         };
@@ -1691,14 +1694,28 @@ function Phase2Location({
     let vivo = true;
     fetch("/api/mudancas/preco-publico")
       .then((r) => (r.ok ? r.json() : null))
-      .then((p: { tipo?: string; desde?: { semIvaCent?: unknown; comIvaCent?: unknown } } | null) => {
+      .then(
+        (
+          p: { tipo?: string; desde?: { semIvaCent?: unknown; comIvaCent?: unknown }; desde3?: { semIvaCent?: unknown; comIvaCent?: unknown } } | null,
+        ) => {
         if (!vivo || !p) return;
         const s = Number(p.desde?.semIvaCent);
         const c = Number(p.desde?.comIvaCent);
+        const s3 = Number(p.desde3?.semIvaCent);
+        const c3 = Number(p.desde3?.comIvaCent);
         setPrecoDasMudancas(
-          p.tipo === "parceiros" && s > 0 && c > 0 ? { tipo: "parceiros", parceiros: 1, desde: { semIvaCent: s, comIvaCent: c } } : SEM_PARCEIROS,
+          p.tipo === "parceiros" && s > 0 && c > 0
+            ? {
+                tipo: "parceiros",
+                parceiros: 1,
+                desde: { semIvaCent: s, comIvaCent: c },
+                // A equipa de 3 (T3 ou maior só com 3, 11-11-2026).
+                ...(s3 > 0 && c3 > 0 ? { desde3: { semIvaCent: s3, comIvaCent: c3 } } : {}),
+              }
+            : SEM_PARCEIROS,
         );
-      })
+        },
+      )
       .catch(() => {});
     return () => {
       vivo = false;
@@ -1914,7 +1931,7 @@ function Phase2Location({
           </div>
           <div className="p-5 space-y-4">
             <div className="flex flex-wrap gap-2">
-              {(Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[]).map((t) => (
+              {([...TIPOLOGIAS] as Tipologia[]).map((t) => (
                 <button
                   key={t}
                   type="button"
@@ -1931,6 +1948,8 @@ function Phase2Location({
             </div>
             {(() => {
               const conta = orcamentoDaMudanca({
+                // Com a proteção, como a lista dos parceiros (11-11-2026).
+                protecao: true,
                 tipologia: (formData.tipologia as Tipologia | undefined) ?? null,
                 desmontagem:
                   formData.originAccess?.difficultAccess === true ||
@@ -1947,16 +1966,15 @@ function Phase2Location({
                       {/* A mesma frase que a R12 dá à app (preco-de-referencia.ts, S13), pelo preço público. */}
                       {ROTULO_DA_ESTIMATIVA_DA_MUDANCA}:{" "}
                       <strong>
-                        {estimativaDaMudanca(
-                          conta,
-                          precoDasMudancas,
-                          horasDaMudanca(
+                        {estimativaDaMudanca(conta, precoDasMudancas, {
+                          horas: horasDaMudanca(
                             (formData.tipologia as Tipologia | undefined) ?? null,
                             formData.originAccess?.difficultAccess === true ||
                               formData.destinationAccess?.difficultAccess === true,
                             2,
                           ),
-                        )}
+                          pessoas: pessoasParaACasa((formData.tipologia as Tipologia | undefined) ?? null, 2),
+                        })}
                       </strong>
                     </p>
                   )}

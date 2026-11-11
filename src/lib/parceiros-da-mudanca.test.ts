@@ -49,7 +49,7 @@ vi.mock("@/lib/avisos-do-backoffice", () => ({ avisarCliente: vi.fn(async () => 
 process.env.JWT_SECRET = "segredo-de-teste";
 
 import { conferirEscolha, idOpacoDoParceiro, lerPedidoDaLista, listaDosParceirosDaMudanca, respostaDaLista } from "./parceiros-da-mudanca";
-import { enviarAosEscolhidos, prepararEscolhaDaMudanca } from "./mudanca-com-parceiros-escolhidos";
+import { enviarAosEscolhidos, pedidoDaListaDoPedido, prepararEscolhaDaMudanca } from "./mudanca-com-parceiros-escolhidos";
 import { congelarTarifa, tarifaCongeladaDeJson } from "./conta-da-mudanca";
 
 const TARIFA = {
@@ -132,8 +132,33 @@ describe("a lista no servidor", () => {
     expect(JSON.stringify(resposta)).not.toContain("escolhiveis");
     expect(JSON.stringify(resposta)).not.toContain("p1@exemplo.pt");
     expect(JSON.stringify(resposta)).not.toContain("912345678");
-    expect(resposta.resumo).toBe("T2 · Seixal → Almada · cerca de 5,5 h com 2 pessoas");
+    expect(resposta.resumo).toBe("T2 · Seixal → Almada · entre 6,5 e 9 h com 2 pessoas");
+    expect([resposta.horasMinimo, resposta.horasMaximo, resposta.pessoas, resposta.soComTres]).toEqual([6.5, 9, 2, false]);
+    expect(resposta.recomendaTres).toBeNull();
     expect(resposta.ordenacao.frase).toBeTruthy();
+  });
+
+  it("T3 e T4+ com 2 pessoas pedidas: a rota responde como 3 e di-lo (a app publicada pede 2 por omissão)", async () => {
+    for (const [tipologia, horas] of [["T3", [7, 9]], ["T4+", [9, 12]]] as const) {
+      const lido = lerPedidoDaLista({ origem: ORDER.originAddress, destino: ORDER.destinationAddress, tipologia, pessoas: 2 });
+      if (!lido.ok) throw new Error(lido.erro);
+      expect([lido.pedido.pessoas, lido.pedido.pessoasPedidas, lido.pedido.soComTres]).toEqual([3, 2, true]);
+      const r = await listaDosParceirosDaMudanca(lido.pedido);
+      if (!r.ok) throw new Error(r.erro);
+      const resposta = respostaDaLista(lido.pedido, r);
+      expect([resposta.pessoas, resposta.pessoasPedidas, resposta.soComTres]).toEqual([3, 2, true]);
+      expect([resposta.horasMinimo, resposta.horasMaximo]).toEqual(horas);
+      expect(resposta.resumo).toBe(`${tipologia === "T3" ? "T3" : "T4 ou maior"} · Seixal → Almada · entre ${horas[0]} e ${horas[1]} h com 3 pessoas`);
+      expect(resposta.recomendaTres).toMatch(/^Num T3 ou maior a mudança faz-se com 3 pessoas/);
+      if (tipologia === "T4+") expect(resposta.recomendaTres).toContain("4 pessoas ou duas viaturas");
+      for (const c of resposta.parceiros) {
+        expect(c.pessoas).toBe(3);
+        expect(c.horasTexto).toBe(`Entre ${horas[0]} e ${horas[1]} h com 3 pessoas`);
+      }
+    }
+    // E o pedido que a app manda com pessoas: 2 lê-se como 3, para congelar o preço da equipa de 3.
+    const doPedido = pedidoDaListaDoPedido({ ...ORDER, tipologia: "T3", pessoas: 2, embalamento: true });
+    expect(doPedido.ok && [doPedido.pedido.pessoas, doPedido.pedido.embalamento]).toEqual([3, true]);
   });
 
   it("o id opaco muda com o segredo e com o parceiro", () => {

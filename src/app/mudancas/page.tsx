@@ -31,7 +31,7 @@ import {
   PROPOSTAS_EM_ATE,
 } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
-import { EXTRAS_DA_MUDANCA } from "@/lib/tabela-das-mudancas";
+import { EXTRAS_DA_MUDANCA, HORAS_COM_TRES_PESSOAS, intervaloDeHorasCurto } from "@/lib/tabela-das-mudancas";
 import {
   ofertaDaMudanca,
   precoDaMudancaNaCabeca,
@@ -90,10 +90,17 @@ export async function generateMetadata(): Promise<Metadata> {
  * (que ajuda o cliente a reconhecer-se) e o que faz variar o preço.
  */
 const tiposDeMudanca: Array<{ tipo: string; description: string; href?: string }> = [
-  // As horas habituais da tabela (13-10-2026) — ver `HORAS_POR_TIPOLOGIA`.
-  { tipo: "Pequena mudança — quarto, estúdio, T0/T1", description: "Poucos móveis e caixas · cerca de 3 h", href: "/pequenas-mudancas" },
-  { tipo: "Mudança T2 (até 40m³)", description: "Apartamento familiar médio · cerca de 4 h" },
-  { tipo: "Mudança T3/T4 (até 60m³)", description: "Apartamento ou moradia grande · 5 a 7 h" },
+  // As horas habituais da tabela, em intervalo com 3 pessoas (11-11-2026) — ver `HORAS_COM_TRES_PESSOAS`.
+  {
+    tipo: "Pequena mudança — quarto, estúdio, T0/T1",
+    description: `Poucos móveis e caixas · ${HORAS_COM_TRES_PESSOAS.itens[0]}–${HORAS_COM_TRES_PESSOAS.T1[1]} h com 3 pessoas`,
+    href: "/pequenas-mudancas",
+  },
+  { tipo: "Mudança T2 (até 40m³)", description: `Apartamento familiar médio · ${intervaloDeHorasCurto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas` },
+  {
+    tipo: "Mudança T3/T4 (até 60m³)",
+    description: `Apartamento ou moradia grande · um dia inteiro, ${HORAS_COM_TRES_PESSOAS.T3[0]}–${HORAS_COM_TRES_PESSOAS["T4+"][1]} h com 3 pessoas`,
+  },
   // Os tipos com página própria ligam-lhe (09-10-2026, `tipos-de-mudanca.ts`).
   { tipo: "Mudança de escritório", description: "Depende do volume e equipamento", href: "/mudancas-de-escritorio" },
   { tipo: "Transporte de móveis (até 3 peças)", description: "Sofá, cama ou armário isolado", href: "/transporte-de-moveis" },

@@ -99,12 +99,14 @@ describe("S13 — o preço de referência", () => {
       destino: { floor: "rés-do-chão", hasElevator: null },
     };
     const j = await (await chamar({ servico: "mudanca", ...pedido })).json();
-    const doSite = `${ROTULO_DA_ESTIMATIVA_DA_MUDANCA}: ${estimativaDaMudanca(orcamentoDaMudanca(pedido))}`;
+    // Com a proteção, como o simulador do site e a lista dos parceiros (11-11-2026).
+    const comProtecao = orcamentoDaMudanca({ ...pedido, protecao: true });
+    const doSite = `${ROTULO_DA_ESTIMATIVA_DA_MUDANCA}: ${estimativaDaMudanca(comProtecao)}`;
     // Desde a d6 o rótulo da R12 é «Estimativa»; o texto é o mesmo da caixa do site.
-    expect(j.linhas.map(linhaEscrita)).toContain(`Estimativa: ${estimativaDaMudanca(orcamentoDaMudanca(pedido))}`);
-    // Sem parceiros na lista (o preço público por omissão), a referência, dita como referência (11-11-2026).
+    expect(j.linhas.map(linhaEscrita)).toContain(`Estimativa: ${estimativaDaMudanca(comProtecao)}`);
+    // Sem parceiros na lista (o preço público por omissão), a referência, em intervalo (11-11-2026).
     expect(doSite).toMatch(
-      /^Estimativa para a sua mudança: cerca de [\d,]+ h — [\d ,]+ € \+ IVA \([\d ,]+ € com IVA\) na referência \(equipa de 3\)\. Cada parceiro tem o seu preço por hora; o total sai das horas, dos km e do material que confirma na folha do dia\.$/,
+      /^Estimativa para a sua mudança: entre [\d,]+ e [\d,]+ h com 3 pessoas — [\d ,]+ – [\d ,]+ € \+ IVA \([\d ,]+ – [\d ,]+ € com IVA\) na referência, com a proteção\. Cada parceiro tem o seu preço por hora; o total sai das horas, dos km e do material que confirma na folha do dia\.$/,
     );
     // O simulador do site escreve a mesma frase pela mesma função.
     const SIM = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");

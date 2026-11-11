@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Star } from "lucide-react";
 import type { AddressData, MovingAccess } from "../types";
 import type { CartaoDoParceiro } from "@/lib/lista-de-parceiros-da-mudanca";
+import { PEDIR_EMBALAMENTO, soComTresPessoas, type Tipologia } from "@/lib/tabela-das-mudancas";
 
 /**
  * «PARCEIROS DISPONÍVEIS PARA A SUA MUDANÇA» — 10-11-2026 (fase 2).
@@ -14,6 +15,11 @@ import type { CartaoDoParceiro } from "@/lib/lista-de-parceiros-da-mudanca";
  *
  * Os números e os textos vêm TODOS da rota (`POST /api/mudancas/parceiros`):
  * este ecrã não faz contas, como a app de cliente também não vai fazer.
+ *
+ * 11-11-2026: as horas e a estimativa vêm em intervalo, com a proteção já
+ * dentro; as caixas e o embalamento aparecem numa linha à parte quando o
+ * cliente marca «Também preciso de caixas e embalamento». Num T3 ou maior só
+ * há equipa de 3: o botão das 2 pessoas fica desligado, com o porquê.
  */
 
 export type EscolhaDaMudanca = {
@@ -21,10 +27,15 @@ export type EscolhaDaMudanca = {
   nomes: string[];
   pessoas: 2 | 3;
   procurarMais: boolean;
+  /** Pediu também as caixas e o embalamento completo (11-11-2026). */
+  embalamento?: boolean;
 };
 
 type RespostaDaLista = {
   ok: boolean;
+  /** A equipa com que a conta foi feita (3 num T3 ou maior, mesmo que se peçam 2). */
+  pessoas?: 2 | 3;
+  soComTres?: boolean;
   ligado?: boolean;
   error?: string;
   resumo?: string;
@@ -38,6 +49,7 @@ type RespostaDaLista = {
     escolha: string;
     semParceirosSegue: string;
     procurarMais: string;
+    pedirEmbalamento?: string;
     botao: string;
     notaDaEstimativa: string;
     quemFaz: string;
@@ -69,6 +81,12 @@ export default function ParceirosDaMudanca({
   const [aCarregar, setACarregar] = useState(true);
   const [escolhidos, setEscolhidos] = useState<string[]>(inicial?.ids ?? []);
   const [procurarMais, setProcurarMais] = useState(inicial?.procurarMais ?? false);
+  const [embalamento, setEmbalamento] = useState(inicial?.embalamento ?? false);
+  // Num T3 ou maior só há equipa de 3: as 2 pessoas não se escolhem.
+  const soComTres = soComTresPessoas((tipologia || null) as Tipologia | null);
+  useEffect(() => {
+    if (soComTres && pessoas === 2) setPessoas(3);
+  }, [soComTres, pessoas]);
   const semLista = useRef(onSemLista);
   semLista.current = onSemLista;
 
@@ -112,6 +130,9 @@ export default function ParceirosDaMudanca({
   }, [origem?.lat, origem?.lng, origem?.formattedAddress, destino?.lat, destino?.lng, destino?.formattedAddress, tipologia, desmontagem, pessoas]);
 
   const maximo = resposta?.maximoDeEscolhidos ?? 3;
+  /** A equipa da conta: a que a rota diz (3 num T3 ou maior), ou a escolhida. */
+  const pessoasDaConta: 2 | 3 = resposta?.pessoas ?? (soComTres ? 3 : pessoas);
+  const comEmbalamento = (resposta?.parceiros ?? []).some((p) => p.embalamento != null);
   const parceiros = resposta?.parceiros ?? [];
   const textos = resposta?.textos;
 
@@ -122,7 +143,13 @@ export default function ParceirosDaMudanca({
 
   const pedir = () => {
     const nomes = parceiros.filter((p) => escolhidos.includes(p.id)).map((p) => p.nome);
-    onPedir({ ids: escolhidos, nomes, pessoas, procurarMais: parceiros.length === 1 && procurarMais });
+    onPedir({
+      ids: escolhidos,
+      nomes,
+      pessoas: pessoasDaConta,
+      procurarMais: parceiros.length === 1 && procurarMais,
+      embalamento: comEmbalamento && embalamento,
+    });
   };
 
   return (
@@ -134,19 +161,25 @@ export default function ParceirosDaMudanca({
 
       <div>
         <div className="inline-flex rounded-xl border border-gray-300 bg-white p-1" role="group" aria-label="Pessoas na equipa">
-          {([2, 3] as const).map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setPessoas(n)}
-              aria-pressed={pessoas === n}
-              className={`min-h-[40px] rounded-lg px-4 text-sm font-semibold transition ${
-                pessoas === n ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {n} pessoas
-            </button>
-          ))}
+          {([2, 3] as const).map((n) => {
+            const desligado = n === 2 && soComTres;
+            const escolhido = pessoasDaConta === n;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPessoas(n)}
+                disabled={desligado}
+                aria-pressed={escolhido}
+                title={desligado ? "Num T3 ou maior a mudança faz-se com 3 pessoas" : undefined}
+                className={`min-h-[40px] rounded-lg px-4 text-sm font-semibold transition ${
+                  escolhido ? "bg-blue-600 text-white" : desligado ? "cursor-not-allowed text-gray-400" : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {n} pessoas
+              </button>
+            );
+          })}
         </div>
         {resposta?.recomendaTres && <p className="mt-2 text-sm text-amber-800">{resposta.recomendaTres}</p>}
       </div>
@@ -174,11 +207,23 @@ export default function ParceirosDaMudanca({
       {!aCarregar && parceiros.length > 0 && (
         <>
           <p className="text-sm text-gray-700">{textos?.escolha}</p>
+          {comEmbalamento && (
+            <label className="flex items-start gap-2 text-sm text-gray-800">
+              <input
+                type="checkbox"
+                checked={embalamento}
+                onChange={(e) => setEmbalamento(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-blue-600"
+              />
+              {textos?.pedirEmbalamento ?? PEDIR_EMBALAMENTO}
+            </label>
+          )}
           <ul className="list-none space-y-3 p-0">
             {parceiros.map((p) => {
               const marcado = escolhidos.includes(p.id);
               const cheio = !marcado && escolhidos.length >= maximo;
-              const hora = pessoas === 3 ? p.precoHora[3] : p.precoHora[2];
+              const hora = pessoasDaConta === 3 ? p.precoHora[3] : p.precoHora[2];
+              const protecao = p.protecao ?? p.kit;
               return (
                 <li key={p.id}>
                   <label
@@ -232,7 +277,7 @@ export default function ParceirosDaMudanca({
                             <div>
                               <dt className="sr-only">Preço da hora</dt>
                               <dd>
-                                {hora.texto} · equipa de {pessoas}
+                                {hora.texto} · equipa de {pessoasDaConta}
                               </dd>
                             </div>
                           )}
@@ -243,8 +288,20 @@ export default function ParceirosDaMudanca({
                             </dd>
                           </div>
                         </dl>
+                        {embalamento && p.embalamento && (
+                          <p className="mt-2 text-sm text-gray-800">
+                            {p.estimativaComEmbalamento ? (
+                              <strong>{p.estimativaComEmbalamento.texto}</strong>
+                            ) : (
+                              p.embalamento.texto
+                            )}
+                          </p>
+                        )}
                         <details className="mt-2 text-sm text-gray-700">
-                          <summary className="cursor-pointer text-blue-700">{p.kit.texto}</summary>
+                          <summary className="cursor-pointer text-blue-700">{protecao.texto}</summary>
+                          {embalamento && p.embalamento && p.estimativaComEmbalamento && (
+                            <p className="mt-2 text-xs text-gray-600">{p.embalamento.texto}</p>
+                          )}
                           {p.materiais.length > 0 && (
                             <ul className="mt-2 list-none space-y-0.5 p-0 text-xs text-gray-600">
                               {p.materiais.map((m) => (
@@ -254,7 +311,6 @@ export default function ParceirosDaMudanca({
                               ))}
                             </ul>
                           )}
-                          {p.kit.total && <p className="mt-1 text-xs text-gray-600">Com o kit: {p.estimativaComKit.texto}</p>}
                         </details>
                       </div>
                     </div>

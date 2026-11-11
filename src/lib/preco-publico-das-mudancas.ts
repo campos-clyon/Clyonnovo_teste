@@ -4,16 +4,22 @@ import { TAXA_IVA } from "./taxas-plataforma";
 import {
   DESLOCACAO_DA_MUDANCA_PARA_O_MODELO,
   ELEVADOR_EXTERIOR,
-  HORAS_A_MAIS_COM_DESMONTAGEM,
-  HORAS_POR_TIPOLOGIA,
   MINIMO_DE_HORAS,
+  NOTA_DO_T4_OU_MAIOR,
   PESSOAS_NA_EQUIPA,
   POR_ANDAR_SEM_ELEVADOR,
   POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
   PRECO_POR_HORA,
-  TIPOLOGIA_POR_EXTENSO,
-  type Tipologia,
+  HORAS_COM_TRES_PESSOAS,
+  desmontagemPorTipologiaEmTexto,
+  horasPorTipologiaEmTexto,
+  intervaloDeHorasEmTexto,
 } from "./tabela-das-mudancas";
+
+/** «com 3 pessoas, um T1 leva entre 4 e 5 h, um T2 entre 5 e 7 h e um T3 entre 7 e 9 h» — da tabela. */
+export const HORAS_DA_MUDANCA_NUMA_FRASE =
+  `com 3 pessoas, um T1 leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T1)}, um T2 ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} ` +
+  `e um T3 ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T3)} (um T3 ou maior faz-se só com 3 pessoas)`;
 
 /**
  * O PREÇO PÚBLICO DAS MUDANÇAS — 11-11-2026 («Textos e nota Google»).
@@ -39,7 +45,14 @@ import {
 export type ValorDaHora = { semIvaCent: number; comIvaCent: number };
 
 export type PrecoPublicoDasMudancas =
-  | { tipo: "parceiros"; parceiros: number; desde: ValorDaHora }
+  | {
+      tipo: "parceiros";
+      parceiros: number;
+      /** O preço da hora mais baixo com 2 pessoas. */
+      desde: ValorDaHora;
+      /** O mais baixo com 3 pessoas (11-11-2026: T3 e T4+ só com 3); ausente se nenhum faz com 3. */
+      desde3?: ValorDaHora;
+    }
   | { tipo: "referencia" };
 
 /** Sem parceiros na lista (ou sem base): a referência. */
@@ -61,6 +74,7 @@ export function precoPublicoDosCandidatos(candidatos: readonly CandidatoDaMudanc
     cidade: null,
   };
   let menor: number | null = null;
+  let menor3: number | null = null;
   let quantos = 0;
   for (const c of candidatos) {
     if (!c.tarifa || porqueFicaDeFora(c, 0, ctx) !== null) continue;
@@ -68,10 +82,17 @@ export function precoPublicoDosCandidatos(candidatos: readonly CandidatoDaMudanc
     if (!Number.isFinite(cent) || cent <= 0) continue;
     quantos += 1;
     if (menor == null || cent < menor) menor = cent;
+    const cent3 = c.tarifa.precoHora3 == null ? NaN : Math.round(Number(c.tarifa.precoHora3) * 100);
+    if (Number.isFinite(cent3) && cent3 > 0 && (menor3 == null || cent3 < menor3)) menor3 = cent3;
   }
   if (menor == null) return SEM_PARCEIROS;
   const v = aoCliente(menor, REGRAS_DAS_MUDANCAS, true);
-  return { tipo: "parceiros", parceiros: quantos, desde: { semIvaCent: v.semIvaCent, comIvaCent: v.comIvaCent } };
+  const p: PrecoPublicoDasMudancas = { tipo: "parceiros", parceiros: quantos, desde: { semIvaCent: v.semIvaCent, comIvaCent: v.comIvaCent } };
+  if (menor3 != null) {
+    const v3 = aoCliente(menor3, REGRAS_DAS_MUDANCAS, true);
+    p.desde3 = { semIvaCent: v3.semIvaCent, comIvaCent: v3.comIvaCent };
+  }
+  return p;
 }
 
 /* ── O ÚLTIMO CONHECIDO — para quem fala sem poder esperar pela base ──────── */
@@ -173,7 +194,7 @@ export function precoDaMudancaNoWhatsApp(p: PrecoPublicoDasMudancas): string {
       ? `Nas mudanças, cada parceiro tem o seu preço por hora — ${precoDaMudancaCurto(p)}.`
       : `Nas mudanças, cada parceiro tem o seu preço por hora; a ${REFERENCIA_DA_MUDANCA.replace(/^referência: /, "referência é ")}.`;
   return (
-    `${abre} No simulador de mudanças (clyon.pt/simulador?servico=mudanca) vê os parceiros disponíveis, ` +
+    `${abre} As horas dependem da casa: ${HORAS_DA_MUDANCA_NUMA_FRASE}. No simulador de mudanças (clyon.pt/simulador?servico=mudanca) vê os parceiros disponíveis, ` +
     "com a nota, o preço por hora, a equipa de 2 ou 3 e o material, e escolhe; o valor final sai das horas, " +
     "dos km e do material confirmados na folha do dia."
   );
@@ -188,9 +209,11 @@ export function regrasDaMudancaParaOModelo(p: PrecoPublicoDasMudancas): string {
   return `MUDANÇA — À HORA, AO PREÇO DE CADA PARCEIRO (valores sem IVA, o que o cliente paga):
   ${hora}
   O cliente vê no simulador os parceiros disponíveis (nota, preço por hora, equipa de 2 ou 3, material) e escolhe; nunca prometas um preço fixo.
-  HORAS ESTIMADAS PELA TIPOLOGIA (equipa de ${PESSOAS_NA_EQUIPA}): ${(Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[])
-    .map((t) => `${TIPOLOGIA_POR_EXTENSO[t]} ${HORAS_POR_TIPOLOGIA[t]}h`)
-    .join(" · ")} · desmontagem/montagem +${HORAS_A_MAIS_COM_DESMONTAGEM}h.
+  HORAS ESTIMADAS PELA TIPOLOGIA, SEMPRE EM INTERVALO (diz «entre X e Y horas», nunca um número só):
+    equipa de 3: ${horasPorTipologiaEmTexto(3)};
+    equipa de 2: ${horasPorTipologiaEmTexto(2)} — T3 e T4+ só com 3 pessoas. ${NOTA_DO_T4_OU_MAIOR}
+    Desmontagem/montagem soma aos dois extremos: ${desmontagemPorTipologiaEmTexto()}.
+  Material: a proteção (filme, cartão, plástico bolha) entra na estimativa; as caixas e o embalamento completo só se o cliente os pedir.
   Deslocação (referência): ${DESLOCACAO_DA_MUDANCA_PARA_O_MODELO}.
   Cada andar sem elevador (referência): ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € por pessoa (${POR_ANDAR_SEM_ELEVADOR} € a equipa de ${PESSOAS_NA_EQUIPA}).
   Elevador exterior (referência): ${ELEVADOR_EXTERIOR} € por serviço. Materiais de embalamento: os do parceiro.

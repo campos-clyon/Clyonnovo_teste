@@ -1,5 +1,5 @@
 import { SERVICOS_PUBLICOS } from "./service-categories";
-import { HORAS_A_MAIS_COM_DESMONTAGEM, HORAS_POR_TIPOLOGIA, TIPOLOGIA_POR_EXTENSO, type Tipologia } from "./tabela-das-mudancas";
+import { HORAS_DA_DESMONTAGEM, TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, horasEscritas, type Tipologia } from "./tabela-das-mudancas";
 import { PERGUNTAS_DO_ESPACO, RESPOSTAS_DA_QUANTIDADE, TITULO_DA_QUANTIDADE, TITULO_DAS_COISAS } from "./perguntas-do-espaco";
 import { esvaziamentoComOIvaAoLado, precoDoItem } from "./preco-de-referencia";
 import {
@@ -292,7 +292,7 @@ function espaco(servico: string): PerguntaDoSimulador[] {
 }
 
 function mudanca(): PerguntaDoSimulador[] {
-  const tipologias = (Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[]).map((t) => ({ id: t, nome: TIPOLOGIA_POR_EXTENSO[t] }));
+  const tipologias = ([...TIPOLOGIAS] as Tipologia[]).map((t) => ({ id: t, nome: TIPOLOGIA_POR_EXTENSO[t] }));
   const ponta = (prefixo: "origem" | "destino", onde: string): PerguntaDoSimulador[] => [
     ...perguntasDoAcesso(prefixo, onde),
     { id: `${prefixo}.difficultAccess`, titulo: `Há alguma dificuldade no acesso${onde}?`, tipo: "escolha", obrigatoria: false, ecra: "acesso", opcoes: SIM_NAO },
@@ -308,7 +308,7 @@ function mudanca(): PerguntaDoSimulador[] {
   ];
   return [
     { id: "tipologia", titulo: "O tamanho da casa", tipo: "escolha", obrigatoria: true, ecra: "oque", opcoes: tipologias },
-    desmontagem("É preciso desmontar e montar móveis?", `Acrescenta cerca de ${HORAS_A_MAIS_COM_DESMONTAGEM} hora.`),
+    desmontagem("É preciso desmontar e montar móveis?", `Acrescenta de ${horasEscritas(HORAS_DA_DESMONTAGEM.itens)} h a ${horasEscritas(HORAS_DA_DESMONTAGEM["T4+"])} h, conforme o tamanho da casa.`),
     ...ponta("origem", " na casa de onde sai"),
     ...ponta("destino", " na casa para onde vai"),
   ];

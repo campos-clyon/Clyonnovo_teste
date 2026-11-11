@@ -64,7 +64,8 @@ export type ConteudoDaPaginaDePreco = {
   exemplos?: {
     titulo: string;
     intro: string;
-    itens: Array<{ titulo: string; conta: string[]; totalSemIva: number; nota?: string }>;
+    /** `totalSemIvaAte`: o extremo de cima, quando a estimativa é um intervalo (as mudanças, desde 11-11-2026). */
+    itens: Array<{ titulo: string; conta: string[]; totalSemIva: number; totalSemIvaAte?: number; nota?: string }>;
   };
   /** Uma caixa de apoio — «quanto é 1 m³», «o que conta como mono». */
   caixa?: { titulo: string; itens: string[] };
@@ -317,8 +318,23 @@ export default function PaginaDePreco({ c }: { c: ConteudoDaPaginaDePreco }) {
                         ))}
                       </ul>
                       <p className="mt-4 text-sm text-slate-700">
-                        <span className="text-lg font-bold tabular-nums text-slate-900">≈ {euros(e.totalSemIva)}</span> + IVA
-                        <span className="text-slate-500"> · ≈ {euros(comIva(e.totalSemIva))} com IVA</span>
+                        {e.totalSemIvaAte != null && e.totalSemIvaAte !== e.totalSemIva ? (
+                          <>
+                            <span className="text-lg font-bold tabular-nums text-slate-900">
+                              {euros(e.totalSemIva).replace(" €", "")}–{euros(e.totalSemIvaAte)}
+                            </span>{" "}
+                            + IVA
+                            <span className="text-slate-500">
+                              {" "}
+                              · {euros(comIva(e.totalSemIva)).replace(" €", "")}–{euros(comIva(e.totalSemIvaAte))} com IVA
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-lg font-bold tabular-nums text-slate-900">≈ {euros(e.totalSemIva)}</span> + IVA
+                            <span className="text-slate-500"> · ≈ {euros(comIva(e.totalSemIva))} com IVA</span>
+                          </>
+                        )}
                       </p>
                       {e.nota && <p className="mt-2 text-xs text-slate-500">{e.nota}</p>}
                     </article>

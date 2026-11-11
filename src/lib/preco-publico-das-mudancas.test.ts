@@ -64,7 +64,9 @@ describe("o «desde» sai dos parceiros que entrariam na lista", () => {
       candidato({ tarifa: { ...TARIFA, precoHora2: 45 } }),
       candidato({ tarifa: { ...TARIFA, precoHora2: 38.5 } }),
     ]);
-    expect(p).toEqual({ tipo: "parceiros", parceiros: 2, desde: { semIvaCent: 3850, comIvaCent: 4736 } });
+    expect(p).toMatchObject({ tipo: "parceiros", parceiros: 2, desde: { semIvaCent: 3850, comIvaCent: 4736 } });
+    // E o mais baixo com 3 pessoas (11-11-2026: T3 e T4+ só com 3), quando algum faz com 3.
+    if (TARIFA.precoHora3 != null) expect(p.tipo === "parceiros" && p.desde3).toBeTruthy();
   });
 
   it("fora: contas de teste, fora da lista, sem tarifa, inactivos, não aprovados, sem mudanças", () => {

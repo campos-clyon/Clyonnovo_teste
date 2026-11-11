@@ -8,7 +8,25 @@ import {
   type TarifaCongelada,
   type TarifaDasMudancas,
 } from "./conta-da-mudanca";
-import { HORAS_POR_TIPOLOGIA, TIPOLOGIA_POR_EXTENSO, type Tipologia } from "./tabela-das-mudancas";
+import {
+  EMBALAMENTO_POR_TIPOLOGIA,
+  METROS_POR_ROLO_DE_CARTAO,
+  NOTA_DO_T4_OU_MAIOR,
+  PEDIR_EMBALAMENTO,
+  PROTECAO_POR_TIPOLOGIA,
+  SO_COM_TRES_PESSOAS,
+  TIPOLOGIAS,
+  TIPOLOGIA_POR_EXTENSO,
+  horasEscritas,
+  intervaloDeHoras,
+  intervaloDeHorasEmTexto,
+  meioDoIntervalo,
+  pessoasParaACasa,
+  soComTresPessoas,
+  type IntervaloDeHoras,
+  type QuantidadesDeMaterial,
+  type Tipologia,
+} from "./tabela-das-mudancas";
 import { avaliarElegibilidade, type ProfissionalParaAvaliar } from "./profissional-elegivel";
 import type { FormaDePagamento } from "./forma-de-pagamento";
 import { SELO_DO_CARTAO } from "./parceiro-verificado";
@@ -75,52 +93,65 @@ export function lerPessoas(v: unknown): Pessoas | null {
 }
 
 export function lerTipologia(v: unknown): Tipologia | null {
-  return typeof v === "string" && Object.prototype.hasOwnProperty.call(HORAS_POR_TIPOLOGIA, v) ? (v as Tipologia) : null;
+  return typeof v === "string" && (TIPOLOGIAS as readonly string[]).includes(v) ? (v as Tipologia) : null;
 }
 
-/* ── AS HORAS ─────────────────────────────────────────────────────────────── */
+/* ── AS HORAS — em intervalo, pela tabela (11-11-2026) ───────────────────────
+ * As horas saem de `tabela-das-mudancas.ts` (`intervaloDeHoras`): com 3 e com
+ * 2 pessoas, mais a desmontagem por tipologia. Num T3 ou maior só há equipa
+ * de 3: pedir 2 conta como 3 (`pessoasParaACasa`). Eram × 4/3 de um número
+ * só, com 1 h a mais na desmontagem. */
 
-/** A tabela das horas é para 3 pessoas; com 2, quatro terços (arredondado à meia hora, para cima). */
-const FACTOR_DE_DUAS_PESSOAS = 4 / 3;
-/** Desmontar e montar acrescenta uma hora, com 2 ou com 3. */
-export const HORAS_DA_DESMONTAGEM = 1;
-
-const meiaHoraAcima = (h: number) => Math.ceil(h * 2 - 1e-9) / 2;
-
-/**
- * As horas habituais para esta casa, com esta equipa — antes do mínimo de
- * cada parceiro. 3 pessoas: a tabela; 2 pessoas: × 4/3 à meia hora acima.
- * Mais a desmontagem. Sem tipologia, conta-se a casa mais pequena.
- */
-export function horasDaMudanca(tipologia: Tipologia | null, desmontagem: boolean, pessoas: Pessoas): number {
-  const base = HORAS_POR_TIPOLOGIA[tipologia ?? "itens"];
-  const daEquipa = pessoas === 3 ? base : meiaHoraAcima(base * FACTOR_DE_DUAS_PESSOAS);
-  return daEquipa + (desmontagem ? HORAS_DA_DESMONTAGEM : 0);
+/** As horas habituais para esta casa, com esta equipa — antes do mínimo de cada parceiro. */
+export function horasDaMudanca(tipologia: Tipologia | null, desmontagem: boolean, pessoas: Pessoas): IntervaloDeHoras {
+  return intervaloDeHoras(tipologia, desmontagem, pessoasParaACasa(tipologia, pessoas), 0);
 }
 
-/** As horas deste parceiro: as habituais, nunca abaixo do mínimo dele. */
-export function horasDoParceiro(horas: number, minimoHoras: number): number {
-  return Math.max(horas, minimoHoras);
+/** As horas deste parceiro: as habituais, nos dois extremos, nunca abaixo do mínimo dele. */
+export function horasDoParceiro(horas: IntervaloDeHoras, minimoHoras: number): IntervaloDeHoras {
+  return [Math.max(horas[0], minimoHoras), Math.max(horas[1], minimoHoras)];
 }
 
-/** Recomendação: em T3 ou maior, 3 pessoas. */
+/** Em T3 ou maior, só 3 pessoas. */
 export function recomendaTresPessoas(tipologia: Tipologia | null): boolean {
-  return tipologia === "T3" || tipologia === "T4+";
+  return soComTresPessoas(tipologia);
 }
 
-/* ── O KIT POR ALTO ──────────────────────────────────────────────────────────
- * As quantidades de referência de material, por tipologia — num só sítio. É
- * «por alto»: o cliente pode precisar de mais ou de menos, e o valor final
- * conta o que se gastou. As chaves são as da tabela MATERIAIS. */
-export const KIT_POR_TIPOLOGIA: Readonly<Record<Tipologia, Readonly<Partial<Record<QuantidadeDoMaterial, number>>>>> =
-  Object.freeze({
-    itens: Object.freeze({ filmeRolos: 1 }),
-    T0: Object.freeze({ caixas: 10, filmeRolos: 1 }),
-    T1: Object.freeze({ caixas: 10, filmeRolos: 1 }),
-    T2: Object.freeze({ caixas: 20, filmeRolos: 2, plasticoBolhaRolos: 1 }),
-    T3: Object.freeze({ caixas: 30, filmeRolos: 3, plasticoBolhaRolos: 1, cartaoMetros: 10 }),
-    "T4+": Object.freeze({ caixas: 40, filmeRolos: 4, plasticoBolhaRolos: 2, cartaoMetros: 20 }),
-  });
+/** «Num T3 ou maior a mudança faz-se com 3 pessoas…», com a nota do T4 ou maior; null nas outras casas. */
+export function avisoDaEquipa(tipologia: Tipologia | null): string | null {
+  if (!soComTresPessoas(tipologia)) return null;
+  return tipologia === "T4+" ? `${SO_COM_TRES_PESSOAS} ${NOTA_DO_T4_OU_MAIOR}` : SO_COM_TRES_PESSOAS;
+}
+
+/* ── O MATERIAL, NAS UNIDADES DA TARIFA ──────────────────────────────────────
+ * A proteção (por omissão) e o embalamento completo (se o cliente o pedir)
+ * estão em `tabela-das-mudancas.ts`, com o cartão em rolos; a tarifa dos
+ * parceiros conta o cartão em metros (`METROS_POR_ROLO_DE_CARTAO` por rolo). */
+export function quantidadesNaTarifa(q: QuantidadesDeMaterial | null | undefined): Partial<Record<QuantidadeDoMaterial, number>> {
+  const r: Partial<Record<QuantidadeDoMaterial, number>> = {};
+  if (!q) return r;
+  if (q.caixas) r.caixas = q.caixas;
+  if (q.filmeRolos) r.filmeRolos = q.filmeRolos;
+  if (q.cartaoRolos) r.cartaoMetros = q.cartaoRolos * METROS_POR_ROLO_DE_CARTAO;
+  if (q.plasticoBolhaRolos) r.plasticoBolhaRolos = q.plasticoBolhaRolos;
+  return r;
+}
+
+/** A proteção de cada tipologia, nas unidades da tarifa. */
+export const KIT_POR_TIPOLOGIA: Readonly<Record<Tipologia, Readonly<Partial<Record<QuantidadeDoMaterial, number>>>>> = Object.freeze(
+  Object.fromEntries(TIPOLOGIAS.map((t) => [t, Object.freeze(quantidadesNaTarifa(PROTECAO_POR_TIPOLOGIA[t]))])) as Record<
+    Tipologia,
+    Readonly<Partial<Record<QuantidadeDoMaterial, number>>>
+  >,
+);
+
+/** O embalamento completo de cada tipologia, nas unidades da tarifa (vazio em alguns móveis). */
+export const EMBALAMENTO_NA_TARIFA: Readonly<Record<Tipologia, Readonly<Partial<Record<QuantidadeDoMaterial, number>>>>> = Object.freeze(
+  Object.fromEntries(TIPOLOGIAS.map((t) => [t, Object.freeze(quantidadesNaTarifa(EMBALAMENTO_POR_TIPOLOGIA[t]))])) as Record<
+    Tipologia,
+    Readonly<Partial<Record<QuantidadeDoMaterial, number>>>
+  >,
+);
 
 /* ── O QUE O CLIENTE PAGA, DE UM VALOR DO PARCEIRO ───────────────────────── */
 
@@ -137,7 +168,6 @@ export function aoCliente(cent: number, regras: RegrasDaConta, levaTaxa: boolean
 }
 
 const eur = (cent: number) => formatarEuros(cent / 100);
-const horasEmTexto = (h: number) => (Number.isInteger(h) ? String(h) : String(h).replace(".", ","));
 
 /** «61,50 € com IVA (50,00 € sem IVA)» — o com IVA à frente e o sem IVA nunca sozinho. */
 export function valorEmTexto(v: { semIvaCent: number; comIvaCent: number }, sufixo = ""): string {
@@ -206,13 +236,27 @@ export function porqueFicaDeFora(
   if (!c.tarifa) return "sem_tarifa";
   if (!c.tarifa.aparecerNaLista) return "fora_da_lista";
   if (!(c.tarifa.kmMaximo >= ctx.kmPercurso)) return "longe_demais";
-  if (ctx.pessoas === 3 && c.tarifa.precoHora3 == null) return "sem_equipa_de_3";
+  if (pessoasParaACasa(ctx.tipologia, ctx.pessoas) === 3 && c.tarifa.precoHora3 == null) return "sem_equipa_de_3";
   return null;
 }
 
 /* ── O CARTÃO ─────────────────────────────────────────────────────────────── */
 
 export type ValorAoCliente = { semIvaCent: number; comIvaCent: number; texto: string };
+
+/** Uma estimativa em intervalo: os dois extremos e, nos campos de cima, o MEIO (é por ele que se ordena). */
+export type EstimativaAoCliente = ValorAoCliente & {
+  minimo: { semIvaCent: number; comIvaCent: number };
+  maximo: { semIvaCent: number; comIvaCent: number };
+};
+
+export type MaterialDoCartao = {
+  linhas: Array<{ nome: string; quantidade: number; unidade: string } & Omit<ValorAoCliente, never>>;
+  /** O que este nível levaria e este parceiro não fornece. */
+  naoFornece: string[];
+  total: ValorAoCliente | null;
+  texto: string;
+};
 
 export type CartaoDoParceiro = {
   /** Opaco: é este que volta no `parceirosEscolhidos` do pedido. */
@@ -227,52 +271,136 @@ export type CartaoDoParceiro = {
   /** A nota do Google (ficha confirmada por um administrador), separada da da CLYON; null sem ela. */
   notaGoogle: NotaDoGoogleNoCartao | null;
   fotografia: string | null;
+  /**
+   * O preço da hora com 2 e com 3 pessoas. Numa casa que só se faz com 3 (T3
+   * ou maior), o «2» leva o MESMO valor do «3»: a app de cliente publicada
+   * antes de 11-11-2026 mostra sempre o «2» quando o cliente não mudou a
+   * equipa, e assim mostra o preço com que a conta foi feita.
+   */
   precoHora: { 2: ValorAoCliente; 3: ValorAoCliente | null };
   fazComTres: boolean;
+  /** A equipa com que a conta foi feita (3 numa casa que só se faz com 3). */
+  pessoas: Pessoas;
   minimoHoras: number;
   minimoTexto: string;
   materiais: Array<{ chave: string; nome: string; unidade: string } & ValorAoCliente>;
-  kit: {
-    linhas: Array<{ nome: string; quantidade: number; unidade: string } & ValorAoCliente>;
-    /** O que o kit levaria e este parceiro não fornece. */
-    naoFornece: string[];
-    total: ValorAoCliente | null;
-    texto: string;
-  };
+  /** A PROTEÇÃO (por omissão, já na estimativa). `kit` é o nome de antes, para a app publicada. */
+  kit: MaterialDoCartao;
+  protecao: MaterialDoCartao;
+  /** As caixas e o embalamento completo, só se o cliente o pedir; null em alguns móveis. */
+  embalamento: MaterialDoCartao | null;
+  /** O meio do intervalo (cabe num número só). */
   horas: number;
+  horasMinimo: number;
+  horasMaximo: number;
   horasTexto: string;
   km: number;
-  /** Horas + km, sem material — é por esta que se ordena. */
-  estimativa: ValorAoCliente;
-  /** A mesma, com o kit por alto. */
-  estimativaComKit: ValorAoCliente;
+  /** Horas + km + a proteção — é pelo meio desta que se ordena. */
+  estimativa: EstimativaAoCliente;
+  /** A mesma, com as caixas e o embalamento; null quando não há (alguns móveis, ou ele não fornece). */
+  estimativaComEmbalamento: EstimativaAoCliente | null;
+  /** Para a app publicada antes de 11-11-2026 («Com o kit: …»): a do embalamento, ou a estimativa. */
+  estimativaComKit: EstimativaAoCliente;
 };
 
-function pluralDaUnidade(unidade: string, n: number): string {
-  if (n === 1) return unidade;
-  return unidade === "metro" ? "metros" : `${unidade}s`;
+const NOMES_NO_KIT: Record<QuantidadeDoMaterial, [um: string, varios: string]> = {
+  caixas: ["caixa", "caixas"],
+  cartaoMetros: ["metro de cartão", "metros de cartão"],
+  filmeRolos: ["rolo de filme", "rolos de filme"],
+  plasticoBolhaRolos: ["rolo de plástico bolha", "rolos de plástico bolha"],
+};
+
+const FORMATO_INTEIRO = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0, minimumFractionDigits: 0 });
+const eurInteiro = (cent: number) => FORMATO_INTEIRO.format(Math.round(cent / 100));
+/** «544–668 €» — ao euro, que é uma estimativa; um valor só quando os dois arredondam ao mesmo. */
+function faixaEmEuros(minCent: number, maxCent: number): string {
+  const a = eurInteiro(minCent);
+  const b = eurInteiro(maxCent);
+  return a === b ? a : `${a.replace(/\s*€$/, "")}–${b}`;
 }
 
-const KIT_NOMES: Record<QuantidadeDoMaterial, string> = {
-  caixas: "caixa",
-  cartaoMetros: "metro de cartão",
-  filmeRolos: "rolo de filme",
-  plasticoBolhaRolos: "rolo de plástico bolha",
-};
-const KIT_NOMES_PLURAL: Record<QuantidadeDoMaterial, string> = {
-  caixas: "caixas",
-  cartaoMetros: "metros de cartão",
-  filmeRolos: "rolos de filme",
-  plasticoBolhaRolos: "rolos de plástico bolha",
-};
+/** «544–668 € com IVA (442–543 € sem IVA)» — o com IVA à frente, o sem IVA nunca sozinho. */
+export function faixaEmTexto(min: { semIvaCent: number; comIvaCent: number }, max: { semIvaCent: number; comIvaCent: number }): string {
+  return `${faixaEmEuros(min.comIvaCent, max.comIvaCent)} com IVA (${faixaEmEuros(min.semIvaCent, max.semIvaCent)} sem IVA)`;
+}
+
+function estimativaEmIntervalo(
+  min: ContaDaMudanca,
+  max: ContaDaMudanca,
+  texto: (faixa: string) => string,
+): EstimativaAoCliente {
+  const a = contaParaTexto(min);
+  const b = contaParaTexto(max);
+  return {
+    semIvaCent: Math.round((a.semIvaCent + b.semIvaCent) / 2),
+    comIvaCent: Math.round((a.comIvaCent + b.comIvaCent) / 2),
+    minimo: a,
+    maximo: b,
+    texto: texto(faixaEmTexto(a, b)),
+  };
+}
 
 function contaParaTexto(c: ContaDaMudanca): { semIvaCent: number; comIvaCent: number } {
   return { semIvaCent: c.semIvaCent, comIvaCent: c.totalCent };
 }
 
+/** As quantidades de um nível que este parceiro fornece, e os nomes do que não fornece. */
+function oQueFornece(
+  t: TarifaCongelada,
+  q: Readonly<Partial<Record<QuantidadeDoMaterial, number>>>,
+): { fornece: Partial<Record<QuantidadeDoMaterial, number>>; naoFornece: string[] } {
+  const fornece: Partial<Record<QuantidadeDoMaterial, number>> = {};
+  const naoFornece: string[] = [];
+  for (const m of MATERIAIS) {
+    const n = q[m.quantidade];
+    if (!n) continue;
+    if (t.materiaisCent[m.chave] == null) naoFornece.push(m.nome);
+    else fornece[m.quantidade] = n;
+  }
+  return { fornece, naoFornece };
+}
+
+/** O material de um nível no cartão: as linhas, o total e a frase. */
+function materialDoCartao(
+  t: TarifaCongelada,
+  regras: RegrasDaConta,
+  fornece: Partial<Record<QuantidadeDoMaterial, number>>,
+  naoFornece: string[],
+  rotulo: string,
+  semNada: string,
+): MaterialDoCartao {
+  const linhas = MATERIAIS.flatMap((m) => {
+    const q = fornece[m.quantidade];
+    const preco = t.materiaisCent[m.chave];
+    if (!q || preco == null) return [];
+    const semIvaCent = Math.round(q * preco);
+    const comIvaCent = regras.materialComIva ? comIva(semIvaCent, regras) : semIvaCent;
+    return [{ nome: m.nome, quantidade: q, unidade: m.unidade, semIvaCent, comIvaCent, texto: valorEmTexto({ semIvaCent, comIvaCent }) }];
+  });
+  const total =
+    linhas.length > 0
+      ? (() => {
+          const semIvaCent = linhas.reduce((s, l) => s + l.semIvaCent, 0);
+          const comIvaCent = linhas.reduce((s, l) => s + l.comIvaCent, 0);
+          return { semIvaCent, comIvaCent, texto: valorEmTexto({ semIvaCent, comIvaCent }) };
+        })()
+      : null;
+  const partes = (Object.keys(fornece) as QuantidadeDoMaterial[]).map((k) => {
+    const q = fornece[k] as number;
+    return `${q} ${q === 1 ? NOMES_NO_KIT[k][0] : NOMES_NO_KIT[k][1]}`;
+  });
+  const falta = naoFornece.length > 0 ? ` · não fornece: ${naoFornece.map((n) => n.toLowerCase()).join(", ")}` : "";
+  const texto = total && partes.length > 0 ? `${rotulo}: ${partes.join(", ")} — ${total.texto}${falta}` : semNada;
+  return { linhas, naoFornece, total, texto };
+}
+
 /**
  * O cartão de UM parceiro elegível, com a tarifa congelada agora (é a mesma
  * conta que fica no pedido se o cliente o escolher). Null se a conta não fechar.
+ *
+ * Desde 11-11-2026: as horas num intervalo (nunca abaixo do mínimo dele), a
+ * estimativa nos dois extremos com a proteção por omissão, e as caixas e o
+ * embalamento numa linha à parte.
  */
 export function cartaoDoParceiro(
   c: CandidatoDaMudanca & { tarifa: TarifaDasMudancas },
@@ -282,23 +410,25 @@ export function cartaoDoParceiro(
 ): CartaoDoParceiro | null {
   const t: TarifaCongelada = congelarTarifa(c.tarifa, undefined, agora);
   const regras = t.regras;
-  const horas = horasDoParceiro(horasDaMudanca(ctx.tipologia, ctx.desmontagem, ctx.pessoas), t.minimoHoras);
+  const pessoas = pessoasParaACasa(ctx.tipologia, ctx.pessoas);
+  const [hMin, hMax] = horasDoParceiro(horasDaMudanca(ctx.tipologia, ctx.desmontagem, pessoas), t.minimoHoras);
+  const tipologia = ctx.tipologia ?? "itens";
 
-  const conta = valorDaMudanca(t, { pessoas: ctx.pessoas, horas, km: ctx.kmPercurso });
-  if (!conta.ok) return null;
+  const prot = oQueFornece(t, KIT_POR_TIPOLOGIA[tipologia]);
+  const emb = oQueFornece(t, EMBALAMENTO_NA_TARIFA[tipologia]);
+  const comEmbalamento: Partial<Record<QuantidadeDoMaterial, number>> = { ...prot.fornece };
+  for (const [k, v] of Object.entries(emb.fornece) as Array<[QuantidadeDoMaterial, number]>) comEmbalamento[k] = (comEmbalamento[k] ?? 0) + v;
 
-  // O kit por alto, só com o que ele fornece.
-  const kit = KIT_POR_TIPOLOGIA[ctx.tipologia ?? "itens"];
-  const materiaisDoKit: Partial<Record<QuantidadeDoMaterial, number>> = {};
-  const naoFornece: string[] = [];
-  for (const m of MATERIAIS) {
-    const q = kit[m.quantidade];
-    if (!q) continue;
-    if (t.materiaisCent[m.chave] == null) naoFornece.push(m.nome);
-    else materiaisDoKit[m.quantidade] = q;
-  }
-  const comKit = valorDaMudanca(t, { pessoas: ctx.pessoas, horas, km: ctx.kmPercurso, materiais: materiaisDoKit });
-  if (!comKit.ok) return null;
+  const conta = (horas: number, materiais: Partial<Record<QuantidadeDoMaterial, number>>) =>
+    valorDaMudanca(t, { pessoas, horas, km: ctx.kmPercurso, materiais });
+  const protMin = conta(hMin, prot.fornece);
+  const protMax = conta(hMax, prot.fornece);
+  if (!protMin.ok || !protMax.ok) return null;
+  const temEmbalamento = Object.keys(emb.fornece).length > 0;
+  const embMin = temEmbalamento ? conta(hMin, comEmbalamento) : null;
+  const embMax = temEmbalamento ? conta(hMax, comEmbalamento) : null;
+  if (embMin && !embMin.ok) return null;
+  if (embMax && !embMax.ok) return null;
 
   const hora = (cent: number | null): ValorAoCliente | null => {
     if (cent == null) return null;
@@ -313,35 +443,41 @@ export function cartaoDoParceiro(
     return [{ chave: m.chave, nome: m.nome, unidade: m.unidade, ...v, texto: `${valorEmTexto(v)} por ${m.unidade}` }];
   });
 
-  const linhasDoKit = comKit.materiais.linhas.map((l) => {
-    const semIvaCent = l.cent;
-    const comIvaCent = regras.materialComIva ? comIva(l.cent, regras) : l.cent;
-    return { nome: l.nome, quantidade: l.quantidade, unidade: l.unidade, semIvaCent, comIvaCent, texto: valorEmTexto({ semIvaCent, comIvaCent }) };
-  });
-  const totalDoKit =
-    linhasDoKit.length > 0
-      ? (() => {
-          const semIvaCent = comKit.materiais.cent;
-          const comIvaCent = comKit.totalCent - conta.totalCent;
-          return { semIvaCent, comIvaCent, texto: valorEmTexto({ semIvaCent, comIvaCent }) };
-        })()
-      : null;
-  const partesDoKit = (Object.keys(materiaisDoKit) as QuantidadeDoMaterial[]).map((k) => {
-    const q = materiaisDoKit[k] as number;
-    return `${q} ${q === 1 ? KIT_NOMES[k] : KIT_NOMES_PLURAL[k]}`;
-  });
-  const tipoNoTexto = ctx.tipologia ? TIPOLOGIA_POR_EXTENSO[ctx.tipologia] : TIPOLOGIA_POR_EXTENSO.itens;
-  const textoDoKit =
-    partesDoKit.length > 0 && totalDoKit
-      ? `Material por alto para ${ctx.tipologia === "itens" || !ctx.tipologia ? tipoNoTexto : `um ${tipoNoTexto}`}: ${partesDoKit.join(", ")} — ${totalDoKit.texto}`
-      : "Este parceiro não fornece o material de embalagem.";
+  const tipoNoTexto = tipologia === "itens" ? TIPOLOGIA_POR_EXTENSO.itens : `um ${TIPOLOGIA_POR_EXTENSO[tipologia]}`;
+  const protecao = materialDoCartao(
+    t,
+    regras,
+    prot.fornece,
+    prot.naoFornece,
+    `Proteção para ${tipoNoTexto}, já na estimativa`,
+    "Este parceiro não fornece o material de proteção.",
+  );
+  const embalamento =
+    EMBALAMENTO_POR_TIPOLOGIA[tipologia] == null
+      ? null
+      : materialDoCartao(
+          t,
+          regras,
+          emb.fornece,
+          emb.naoFornece,
+          `Caixas e embalamento para ${tipoNoTexto}`,
+          "Este parceiro não fornece caixas nem plástico bolha.",
+        );
+
+  const comProtecao = Object.keys(prot.fornece).length > 0;
+  const estimativa = estimativaEmIntervalo(protMin, protMax, (f) => `Estimativa: ${f}${comProtecao ? ", com a proteção" : ", sem o material"}`);
+  const estimativaComEmbalamento =
+    embMin && embMax && embMin.ok && embMax.ok ? estimativaEmIntervalo(embMin, embMax, (f) => `Com caixas e embalamento: ${f}`) : null;
+  const estimativaComKit = estimativaComEmbalamento
+    ? { ...estimativaComEmbalamento, texto: `${faixaEmTexto(estimativaComEmbalamento.minimo, estimativaComEmbalamento.maximo)}, se também precisar de caixas e embalamento` }
+    : { ...estimativa, texto: `${faixaEmTexto(estimativa.minimo, estimativa.maximo)}${comProtecao ? ", com a proteção" : ""}` };
 
   const temNota = c.notaMedia != null && c.avaliacoes >= AVALIACOES_PARA_A_NOTA;
   const media = temNota ? Math.round((c.notaMedia as number) * 10) / 10 : 0;
-
-  const estimativa = contaParaTexto(conta);
-  const estimativaComKit = contaParaTexto(comKit);
+  const p2 = hora(t.precoHora2Cent) as ValorAoCliente;
   const p3 = hora(t.precoHora3Cent);
+  const intervalo: IntervaloDeHoras = [hMin, hMax];
+  const horasTexto = `${intervaloDeHorasEmTexto(intervalo)} com ${pessoas} pessoas`;
 
   return {
     id,
@@ -354,17 +490,23 @@ export function cartaoDoParceiro(
     novo: temNota ? null : NOVO_NA_CLYON,
     notaGoogle: null,
     fotografia: c.fotografia,
-    precoHora: { 2: hora(t.precoHora2Cent) as ValorAoCliente, 3: p3 },
+    precoHora: { 2: soComTresPessoas(ctx.tipologia) && p3 ? p3 : p2, 3: p3 },
     fazComTres: p3 != null,
+    pessoas,
     minimoHoras: t.minimoHoras,
-    minimoTexto: `Mínimo de ${horasEmTexto(t.minimoHoras)} ${t.minimoHoras === 1 ? "hora" : "horas"}`,
+    minimoTexto: `Mínimo de ${horasEscritas(t.minimoHoras)} ${t.minimoHoras === 1 ? "hora" : "horas"}`,
     materiais,
-    kit: { linhas: linhasDoKit, naoFornece, total: totalDoKit, texto: textoDoKit },
-    horas,
-    horasTexto: `Cerca de ${horasEmTexto(horas)} h com ${ctx.pessoas} pessoas`,
+    kit: protecao,
+    protecao,
+    embalamento,
+    horas: meioDoIntervalo(intervalo),
+    horasMinimo: hMin,
+    horasMaximo: hMax,
+    horasTexto: horasTexto.charAt(0).toUpperCase() + horasTexto.slice(1),
     km: ctx.kmPercurso,
-    estimativa: { ...estimativa, texto: valorEmTexto(estimativa) },
-    estimativaComKit: { ...estimativaComKit, texto: valorEmTexto(estimativaComKit) },
+    estimativa,
+    estimativaComEmbalamento,
+    estimativaComKit,
   };
 }
 
@@ -381,7 +523,7 @@ export const ORDENACAO = Object.freeze({
   pago: false as const,
   titulo: "Como ordenamos",
   frase:
-    "Ordenamos pela estimativa (horas e quilómetros, sem o material), do valor mais baixo para o mais alto; " +
+    "Ordenamos pela estimativa (o meio do intervalo de horas, os quilómetros e a proteção, sem as caixas), do valor mais baixo para o mais alto; " +
     "em caso de empate, pela nota dada na CLYON por clientes de trabalhos feitos e confirmados. " +
     "Nenhum parceiro paga para aparecer mais acima.",
 });
@@ -404,27 +546,32 @@ export const NOVO_NA_CLYON = "Novo na CLYON";
 export const TEXTOS_DA_LISTA = Object.freeze({
   titulo: "Parceiros disponíveis para a sua mudança",
   escolha: `Escolha até ${MAXIMO_DE_ESCOLHIDOS} parceiros. O pedido vai logo aos que escolher, com os preços que vê aqui.`,
-  recomendaTres: "Para T3 ou maior recomendamos 3 pessoas.",
+  recomendaTres: SO_COM_TRES_PESSOAS,
+  soComTres: SO_COM_TRES_PESSOAS,
   semParceiros: "Ainda não temos parceiros de mudanças com preço para esta zona.",
   semParceirosSegue: "Pode enviar o pedido na mesma: a CLYON procura parceiros da sua zona e as propostas chegam-lhe por aqui.",
   procurarMais: "Pedir também à CLYON que procure mais parceiros",
+  pedirEmbalamento: PEDIR_EMBALAMENTO,
   botao: "Pedir orçamento",
   notaDaEstimativa:
-    "Estimativa com os preços de cada parceiro, para as horas habituais numa casa como a sua e o percurso entre as duas moradas. " +
-    "O valor final conta as horas feitas, os quilómetros e o material que usar.",
+    "Estimativa com os preços de cada parceiro, entre as horas habituais numa casa como a sua, com o percurso entre as duas moradas " +
+    "e o material de proteção dos móveis e do chão. O valor final conta as horas feitas, os quilómetros e o material que usar.",
   quemFaz: "O trabalho é feito pelo parceiro que escolher.",
 });
 
-/** «T2 · Seixal → Almada · cerca de 5,5 h com 2 pessoas» */
+/** «T3 · Seixal → Almada · entre 7 e 9 h com 3 pessoas» */
 export function resumoDaMudanca(
   tipologia: Tipologia | null,
   origem: string | null,
   destino: string | null,
-  horas: number,
+  horas: IntervaloDeHoras | number,
   pessoas: Pessoas,
 ): string {
   const tipo = TIPOLOGIA_POR_EXTENSO[tipologia ?? "itens"];
   const tipoComMaiuscula = tipo.charAt(0).toUpperCase() + tipo.slice(1);
   const caminho = origem && destino ? `${origem} → ${destino}` : origem || destino || null;
-  return [tipoComMaiuscula, caminho, `cerca de ${horasEmTexto(horas)} h com ${pessoas} pessoas`].filter(Boolean).join(" · ");
+  const iv: IntervaloDeHoras = typeof horas === "number" ? [horas, horas] : horas;
+  return [tipoComMaiuscula, caminho, `${intervaloDeHorasEmTexto(iv)} com ${pessoasParaACasa(tipologia, pessoas)} pessoas`]
+    .filter(Boolean)
+    .join(" · ");
 }

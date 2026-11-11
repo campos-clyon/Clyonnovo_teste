@@ -1,5 +1,5 @@
 import { SERVICOS_PUBLICOS, nomeDoServico } from "./service-categories";
-import { HORAS_POR_TIPOLOGIA, TIPOLOGIA_POR_EXTENSO, type Tipologia } from "./tabela-das-mudancas";
+import { TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, type Tipologia } from "./tabela-das-mudancas";
 import { FRASE_UNICA, SUBTITULO_INICIAL } from "./frase-unica";
 import { TELEFONE_DA_CLYON } from "./telefone-da-clyon";
 import { NOTA_DOS_PRECOS, precoDeReferencia } from "./preco-de-referencia";
@@ -91,7 +91,7 @@ export function catalogoDaApp() {
       { id: "unknown", nome: "Não sei" },
     ],
     entulhoNota: "Se estiver no chão, o parceiro carrega-o no local.",
-    tipologias: (Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[]).map((t) => ({
+    tipologias: ([...TIPOLOGIAS] as Tipologia[]).map((t) => ({
       id: t,
       nome: TIPOLOGIA_POR_EXTENSO[t],
     })),

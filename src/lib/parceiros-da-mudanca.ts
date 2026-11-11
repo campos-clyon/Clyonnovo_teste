@@ -7,7 +7,7 @@ import { profissionaisBloqueadosEmDinheiro } from "./bloqueio-do-profissional";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import { notasNoGoogle, PRAZO_DA_NOTA_DO_GOOGLE_MS } from "./ficha-no-google";
 import type { TarifaDasMudancas } from "./conta-da-mudanca";
-import type { Tipologia } from "./tabela-das-mudancas";
+import { pessoasParaACasa, soComTresPessoas, type IntervaloDeHoras, type Tipologia } from "./tabela-das-mudancas";
 import {
   MAXIMO_DE_ESCOLHIDOS,
   ORDENACAO,
@@ -19,7 +19,7 @@ import {
   notaDoGoogleNoCartao,
   ordenarCartoes,
   porqueFicaDeFora,
-  recomendaTresPessoas,
+  avisoDaEquipa,
   resumoDaMudanca,
   type CartaoDoParceiro,
   type ContextoDaMudanca,
@@ -69,7 +69,14 @@ export type PedidoDaLista = {
   destino: PontaDaMudanca;
   tipologia: Tipologia | null;
   desmontagem: boolean;
+  /** A equipa da conta: a pedida, ou 3 numa casa que só se faz com 3 (T3 ou maior). */
   pessoas: Pessoas;
+  /** A equipa que o cliente (ou a app) pediu. */
+  pessoasPedidas: Pessoas;
+  /** A casa só se faz com 3 pessoas (11-11-2026): com 2 pedidas, a conta é com 3. */
+  soComTres: boolean;
+  /** O cliente pediu também as caixas e o embalamento completo (11-11-2026). */
+  embalamento: boolean;
   /** AAAA-MM-DD, opcional. Ainda não decide nada (a agenda dos parceiros vem depois). */
   data: string | null;
   formaDePagamento: FormaDePagamento;
@@ -110,7 +117,11 @@ export function lerPedidoDaLista(corpo: unknown): { ok: true; pedido: PedidoDaLi
       destino,
       tipologia,
       desmontagem: c.desmontagem === true,
-      pessoas,
+      // Num T3 ou maior só há equipa de 3: pedir 2 (a app publicada pede 2 por omissão) conta como 3.
+      pessoas: pessoasParaACasa(tipologia, pessoas),
+      pessoasPedidas: pessoas,
+      soComTres: soComTresPessoas(tipologia),
+      embalamento: c.embalamento === true,
       data,
       formaDePagamento: lerForma(c.formaDePagamento),
     },
@@ -142,7 +153,8 @@ export type ResultadoDaLista =
       escolhiveis: EscolhivelDaLista[];
       kmPercurso: number;
       kmEstimado: boolean;
-      horas: number;
+      /** O intervalo de horas habitual da casa, com a equipa da conta (antes do mínimo de cada parceiro). */
+      horas: IntervaloDeHoras;
       origemPonto: Ponto;
       /** O destino, para o percurso com o traçado (mapa do parceiro, 11-11-2026). */
       destinoPonto: Ponto;
@@ -239,12 +251,18 @@ export function respostaDaLista(pedido: PedidoDaLista, r: Extract<ResultadoDaLis
     ok: true as const,
     ligado: true as const,
     pessoas: pedido.pessoas,
+    pessoasPedidas: pedido.pessoasPedidas,
+    soComTres: pedido.soComTres,
+    embalamento: pedido.embalamento,
     tipologia: pedido.tipologia,
-    horas: r.horas,
+    /** O meio do intervalo; os extremos em horasMinimo e horasMaximo. */
+    horas: (r.horas[0] + r.horas[1]) / 2,
+    horasMinimo: r.horas[0],
+    horasMaximo: r.horas[1],
     kmPercurso: r.kmPercurso,
     kmEstimado: r.kmEstimado,
     resumo: resumoDaMudanca(pedido.tipologia, pedido.origem.cidade, pedido.destino.cidade, r.horas, pedido.pessoas),
-    recomendaTres: recomendaTresPessoas(pedido.tipologia) ? TEXTOS_DA_LISTA.recomendaTres : null,
+    recomendaTres: avisoDaEquipa(pedido.tipologia),
     maximoDeEscolhidos: MAXIMO_DE_ESCOLHIDOS,
     parceiros: r.cartoes,
     semParceiros: r.cartoes.length === 0 ? TEXTOS_DA_LISTA.semParceiros : null,

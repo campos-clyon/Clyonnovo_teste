@@ -15,6 +15,7 @@ import {
   type PedidoDaLista,
 } from "./parceiros-da-mudanca";
 import type { Ponto } from "./distancia-entre-pontos";
+import type { IntervaloDeHoras } from "./tabela-das-mudancas";
 import type { CartaoDoParceiro } from "./lista-de-parceiros-da-mudanca";
 
 /**
@@ -39,7 +40,8 @@ export type EscolhaPreparada = {
   escolhidos: EscolhivelDaLista[];
   cartoesVistos: CartaoDoParceiro[];
   kmPercurso: number;
-  horas: number;
+  /** O intervalo de horas habitual (11-11-2026). */
+  horas: IntervaloDeHoras;
   origemPonto: Ponto;
   destinoPonto?: Ponto;
   procurarMais: boolean;
@@ -64,6 +66,7 @@ export function pedidoDaListaDoPedido(order: Record<string, unknown>) {
     tipologia: order.tipologia,
     desmontagem: ao?.difficultAccess === true || ad?.difficultAccess === true || order.desmontagem === true,
     pessoas: order.pessoas,
+    embalamento: order.embalamento === true,
     data: typeof order.dataPreferida === "string" ? order.dataPreferida : null,
     formaDePagamento: order.formaDePagamento,
   });
@@ -116,7 +119,11 @@ export function provaDaEscolha(e: EscolhaPreparada, prazo: Date, agora: Date) {
     tipologia: e.pedidoDaLista.tipologia,
     desmontagem: e.pedidoDaLista.desmontagem,
     kmPercurso: e.kmPercurso,
-    horas: e.horas,
+    horas: (e.horas[0] + e.horas[1]) / 2,
+    horasMinimo: e.horas[0],
+    horasMaximo: e.horas[1],
+    pessoasPedidas: e.pedidoDaLista.pessoasPedidas,
+    embalamento: e.pedidoDaLista.embalamento,
     resumo: resumoDaMudanca(e.pedidoDaLista.tipologia, e.pedidoDaLista.origem.cidade, e.pedidoDaLista.destino.cidade, e.horas, e.pessoas),
     escolhidos: e.escolhidos.map((x) => ({ id: x.id, providerId: x.providerId, nome: x.nome })),
     procurarMais: e.procurarMais,
@@ -134,6 +141,7 @@ export function linhaDoHistorico(e: EscolhaPreparada, prazo: Date, resumo: strin
     `(equipa de ${e.pessoas}). Enviado logo aos escolhidos, sem a análise da CLYON, com a tarifa de cada um congelada. ` +
     `Prazo de resposta: ${dataEHoraEmLisboa(prazo)} (3 h, entre as 8h e as 21h). ` +
     (e.procurarMais ? "O cliente pediu também que a CLYON procure mais parceiros. " : "") +
+    (e.pedidoDaLista.embalamento ? "O cliente precisa também de caixas e embalamento. " : "") +
     resumo
   );
 }

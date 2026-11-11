@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BLOG_POSTS } from "./blog-data";
 import { CIDADES_MUDANCAS } from "./mudancas-cidades";
-import { HORAS_POR_TIPOLOGIA, PESSOAS_NA_EQUIPA, PRECO_POR_HORA } from "./tabela-das-mudancas";
+import { PESSOAS_NA_EQUIPA, PRECO_POR_HORA } from "./tabela-das-mudancas";
 import {
   SEM_PARCEIROS,
   precoDaMudancaNaDescricao,
@@ -80,9 +80,9 @@ describe("os artigos de mudanças dizem o modelo e a referência", () => {
     expect(texto).toContain("cada parceiro tem o seu preço por hora");
     expect(a.description).toContain(`${PRECO_POR_HORA} €/h + IVA`);
     const linhas = a.sections.flatMap((s) => s.bullets ?? []);
-    expect(linhas).toContain(
-      `T2: cerca de ${HORAS_POR_TIPOLOGIA.T2} horas — ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA na referência`,
-    );
+    // Em intervalo e com a proteção (11-11-2026).
+    expect(linhas).toContain("T2: entre 5 e 7 h com 3 pessoas — 310–410 € + IVA (381,30–504,30 € com IVA) na referência, com a proteção");
+    expect(linhas).toContain("T3: entre 7 e 9 h, só com 3 pessoas — 442–542 € + IVA (543,66–666,66 € com IVA) na referência, com a proteção");
     expect(a.updatedDate).toBe("2026-11-11");
   });
 

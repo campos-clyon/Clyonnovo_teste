@@ -38,8 +38,8 @@ export const ELEVADOR_EXTERIOR = 120;
 /** «Cada andar para apartamento sem elevador são mais 15 euros por pessoa.» */
 export const POR_ANDAR_SEM_ELEVADOR_POR_PESSOA = 15;
 export const POR_ANDAR_SEM_ELEVADOR = POR_ANDAR_SEM_ELEVADOR_POR_PESSOA * PESSOAS_NA_EQUIPA;
-/** Desmontar e montar móveis acrescenta horas à equipa. */
-export const HORAS_A_MAIS_COM_DESMONTAGEM = 1;
+/* Desmontar e montar móveis acrescenta horas à equipa — desde 11-11-2026 por
+ * tipologia (`HORAS_DA_DESMONTAGEM`, mais abaixo); era 1 h para qualquer casa. */
 
 /** C. Materiais de embalamento. */
 export type Material = { id: string; nome: string; preco: number; unidade: string };
@@ -66,24 +66,201 @@ export function valorDePartidaPorHora(taxas?: Taxas): number {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * AS HORAS, PELA TIPOLOGIA
+ * AS HORAS, PELA TIPOLOGIA — EM INTERVALO (11-11-2026)
+ *
+ * Eram um número só (T3 = 5 h, 13-10-2026). O dono viu cerca de 300 € para um
+ * T3 e achou irreal; a pesquisa de mercado de 11-11-2026 confirmou-o: o preço
+ * por hora estava certo, as HORAS é que estavam curtas (um T3 é um dia inteiro
+ * — 7 a 9 h com 3 pessoas). Decisão do CEO, aprovada pelo dono:
+ *
+ *   · as horas dizem-se num intervalo [mínimo, máximo], com 3 e com 2 pessoas;
+ *   · T3 e T4+ só se fazem com 3 pessoas;
+ *   · desmontar e montar soma horas por tipologia, aos dois extremos;
+ *   · nunca abaixo do mínimo de horas do parceiro (ou do da referência);
+ *   · o material de PROTEÇÃO entra por omissão na estimativa, e o EMBALAMENTO
+ *     completo (caixas) só se o cliente o pedir.
+ *
+ * Um sítio só: a lista dos parceiros, o simulador, as páginas, a referência da
+ * app, a Vitória e o aviso ao modelo lêem estas tabelas. O valor final continua
+ * a ser o da folha do dia.
  * ────────────────────────────────────────────────────────────────────────── */
 
 export type Tipologia = "itens" | "T0" | "T1" | "T2" | "T3" | "T4+";
 
+/** Todas, do mais pequeno ao maior. «itens» é a pequena mudança: alguns móveis, sem casa inteira. */
+export const TIPOLOGIAS: readonly Tipologia[] = Object.freeze(["itens", "T0", "T1", "T2", "T3", "T4+"] as Tipologia[]);
+
+/** Um intervalo de horas: [mínimo, máximo] — iguais quando não há intervalo («3 h»). */
+export type IntervaloDeHoras = readonly [minimo: number, maximo: number];
+
+/** As horas com 3 pessoas (carrinha, motorista e dois ajudantes). */
+export const HORAS_COM_TRES_PESSOAS: Readonly<Record<Tipologia, IntervaloDeHoras>> = Object.freeze({
+  itens: [3, 3],
+  T0: [3, 4],
+  T1: [4, 5],
+  T2: [5, 7],
+  T3: [7, 9],
+  "T4+": [9, 12],
+});
+
+/** As horas com 2 pessoas. `null`: a casa não se oferece com 2 (T3 e T4+ só com 3). */
+export const HORAS_COM_DUAS_PESSOAS: Readonly<Record<Tipologia, IntervaloDeHoras | null>> = Object.freeze({
+  itens: [3, 3],
+  T0: [4, 5],
+  T1: [5, 6.5],
+  T2: [6.5, 9],
+  T3: null,
+  "T4+": null,
+});
+
+/** Desmontar e montar móveis: as horas a mais, por tipologia, nos dois extremos do intervalo. */
+export const HORAS_DA_DESMONTAGEM: Readonly<Record<Tipologia, number>> = Object.freeze({
+  itens: 0.5,
+  T0: 1,
+  T1: 1,
+  T2: 1.5,
+  T3: 2,
+  "T4+": 3,
+});
+
+/** Esta casa só se faz com 3 pessoas (T3 e T4+)? Sem tipologia, conta a casa mais pequena. */
+export function soComTresPessoas(tipologia: Tipologia | null | undefined): boolean {
+  return HORAS_COM_DUAS_PESSOAS[tipologia ?? "itens"] == null;
+}
+
+/** A equipa que faz esta casa: a pedida, ou 3 quando a casa só se faz com 3. */
+export function pessoasParaACasa(tipologia: Tipologia | null | undefined, pedidas: 2 | 3): 2 | 3 {
+  return soComTresPessoas(tipologia) ? 3 : pedidas;
+}
+
+/** Num T3 ou maior, com 2 pessoas não: a frase que o diz. */
+export const SO_COM_TRES_PESSOAS = "Num T3 ou maior a mudança faz-se com 3 pessoas: as horas e os preços são para 3.";
+
+/** A nota de um T4 ou maior. */
+export const NOTA_DO_T4_OU_MAIOR = "Para um T4 ou maior recomendamos 4 pessoas ou duas viaturas — fale connosco.";
+
 /**
- * Quantas horas se contam antes de alguém ver o trabalho — a proposta aceite
- * pelo dono a 13-10-2026. «itens» é a pequena mudança: alguns móveis, sem casa
- * inteira.
+ * O INTERVALO DE HORAS de uma casa, com esta equipa: a tabela (numa casa que
+ * só se faz com 3, a de 3, mesmo que se peçam 2), mais a desmontagem nos dois
+ * extremos, e nunca abaixo de `minimoHoras` — o mínimo do parceiro, ou o da
+ * referência. Sem tipologia, conta-se a casa mais pequena.
  */
-export const HORAS_POR_TIPOLOGIA: Record<Tipologia, number> = {
-  itens: 3,
-  T0: 3,
-  T1: 3,
-  T2: 4,
-  T3: 5,
-  "T4+": 7,
-};
+export function intervaloDeHoras(
+  tipologia: Tipologia | null | undefined,
+  desmontagem: boolean,
+  pessoas: 2 | 3 = 3,
+  minimoHoras: number = MINIMO_DE_HORAS,
+): IntervaloDeHoras {
+  const t = tipologia ?? "itens";
+  const tabela = (pessoas === 2 ? HORAS_COM_DUAS_PESSOAS[t] : null) ?? HORAS_COM_TRES_PESSOAS[t];
+  const mais = desmontagem ? HORAS_DA_DESMONTAGEM[t] : 0;
+  const min = Number.isFinite(minimoHoras) && minimoHoras > 0 ? minimoHoras : 0;
+  return [Math.max(min, tabela[0] + mais), Math.max(min, tabela[1] + mais)];
+}
+
+/** O meio do intervalo — é por ele que a lista ordena e que o motor estima. */
+export function meioDoIntervalo(iv: IntervaloDeHoras): number {
+  return (iv[0] + iv[1]) / 2;
+}
+
+/** «6,5» — as horas como se escrevem. */
+export function horasEscritas(h: number): string {
+  const r = Math.round(h * 100) / 100;
+  return Number.isInteger(r) ? String(r) : String(r).replace(".", ",");
+}
+
+/** «entre 7 e 9 h», ou «3 h» quando os dois extremos são iguais. */
+export function intervaloDeHorasEmTexto(iv: IntervaloDeHoras): string {
+  return iv[0] === iv[1] ? `${horasEscritas(iv[0])} h` : `entre ${horasEscritas(iv[0])} e ${horasEscritas(iv[1])} h`;
+}
+
+/** «7–9 h», curto, para tabelas e para o aviso ao modelo. */
+export function intervaloDeHorasCurto(iv: IntervaloDeHoras): string {
+  return iv[0] === iv[1] ? `${horasEscritas(iv[0])} h` : `${horasEscritas(iv[0])}–${horasEscritas(iv[1])} h`;
+}
+
+/** A tabela das horas numa linha: «alguns móveis 3 h · T0 / estúdio 3–4 h · …». */
+export function horasPorTipologiaEmTexto(pessoas: 2 | 3): string {
+  return TIPOLOGIAS.map((t) => {
+    const iv = pessoas === 2 ? HORAS_COM_DUAS_PESSOAS[t] : HORAS_COM_TRES_PESSOAS[t];
+    return `${TIPOLOGIA_POR_EXTENSO[t]} ${iv ? intervaloDeHorasCurto(iv) : "só com 3 pessoas"}`;
+  }).join(" · ");
+}
+
+/** A desmontagem numa linha: «+0,5 h em alguns móveis · +1 h em T0 / estúdio · …». */
+export function desmontagemPorTipologiaEmTexto(): string {
+  return TIPOLOGIAS.map((t) => `+${horasEscritas(HORAS_DA_DESMONTAGEM[t])} h em ${TIPOLOGIA_POR_EXTENSO[t]}`).join(" · ");
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * O MATERIAL, EM DOIS NÍVEIS (11-11-2026)
+ *
+ *   · a PROTEÇÃO — filme para os móveis, cartão para o chão, plástico bolha
+ *     para o que parte — entra por omissão na estimativa;
+ *   · o EMBALAMENTO COMPLETO — as caixas e mais plástico bolha — só se o
+ *     cliente o pedir, numa linha à parte (`PEDIR_EMBALAMENTO`).
+ *
+ * As quantidades estão nas unidades da tarifa dos parceiros (caixas, rolos de
+ * filme, rolos de plástico bolha), e o cartão em ROLOS: a tarifa conta-o em
+ * metros, e um rolo de cartão canelado de proteção conta
+ * `METROS_POR_ROLO_DE_CARTAO` metros (um rolo de 1 m × 10 m cobre a entrada,
+ * o corredor e as escadas de uma casa até T3; um T4 ou maior leva dois). Na
+ * tabela de referência (`MATERIAIS`) o cartão é por rolo.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export const METROS_POR_ROLO_DE_CARTAO = 10;
+
+export type QuantidadesDeMaterial = Readonly<{
+  caixas?: number;
+  filmeRolos?: number;
+  cartaoRolos?: number;
+  plasticoBolhaRolos?: number;
+}>;
+
+export const PROTECAO_POR_TIPOLOGIA: Readonly<Record<Tipologia, QuantidadesDeMaterial>> = Object.freeze({
+  itens: Object.freeze({ filmeRolos: 1 }),
+  T0: Object.freeze({ filmeRolos: 1 }),
+  T1: Object.freeze({ filmeRolos: 2, cartaoRolos: 1 }),
+  T2: Object.freeze({ filmeRolos: 3, cartaoRolos: 1 }),
+  T3: Object.freeze({ filmeRolos: 4, cartaoRolos: 1, plasticoBolhaRolos: 1 }),
+  "T4+": Object.freeze({ filmeRolos: 6, cartaoRolos: 2, plasticoBolhaRolos: 1 }),
+});
+
+/** O embalamento completo, POR CIMA da proteção. `null`: alguns móveis não levam caixas. */
+export const EMBALAMENTO_POR_TIPOLOGIA: Readonly<Record<Tipologia, QuantidadesDeMaterial | null>> = Object.freeze({
+  itens: null,
+  T0: Object.freeze({ caixas: 20, plasticoBolhaRolos: 1 }),
+  T1: Object.freeze({ caixas: 30, plasticoBolhaRolos: 1 }),
+  T2: Object.freeze({ caixas: 45, plasticoBolhaRolos: 2 }),
+  T3: Object.freeze({ caixas: 70, plasticoBolhaRolos: 1 }),
+  "T4+": Object.freeze({ caixas: 100, plasticoBolhaRolos: 2 }),
+});
+
+/** A opção do ecrã da lista e do simulador. */
+export const PEDIR_EMBALAMENTO = "Também preciso de caixas e embalamento";
+
+/** As quantidades na tabela de referência (`MATERIAIS`, por id). */
+export function materiaisDeReferencia(q: QuantidadesDeMaterial | null | undefined): Record<string, number> {
+  const m: Record<string, number> = {};
+  if (!q) return m;
+  if (q.caixas) m.caixa = q.caixas;
+  if (q.filmeRolos) m.filme = q.filmeRolos;
+  if (q.cartaoRolos) m.cartao_canelado = q.cartaoRolos;
+  if (q.plasticoBolhaRolos) m.plastico_bolha = q.plasticoBolhaRolos;
+  return m;
+}
+
+/** «3 rolos de filme, 1 rolo de cartão» — as quantidades, por extenso. */
+export function materialEmTexto(q: QuantidadesDeMaterial | null | undefined): string {
+  if (!q) return "";
+  const p: string[] = [];
+  const um = (n: number, s: string, pl: string) => `${n} ${n === 1 ? s : pl}`;
+  if (q.caixas) p.push(um(q.caixas, "caixa", "caixas"));
+  if (q.filmeRolos) p.push(um(q.filmeRolos, "rolo de filme", "rolos de filme"));
+  if (q.cartaoRolos) p.push(um(q.cartaoRolos, "rolo de cartão", "rolos de cartão"));
+  if (q.plasticoBolhaRolos) p.push(um(q.plasticoBolhaRolos, "rolo de plástico bolha", "rolos de plástico bolha"));
+  return p.join(", ");
+}
 
 /** O nome por extenso, para as páginas e os resumos. */
 export const TIPOLOGIA_POR_EXTENSO: Record<Tipologia, string> = {
@@ -119,13 +296,13 @@ export function tipologiaDoTexto(texto: string | null | undefined): Tipologia | 
 }
 
 /**
- * As horas estimadas — a tipologia, mais a desmontagem, nunca abaixo do
- * mínimo. Sem tipologia conhecida, conta-se o mínimo: o profissional diz
- * quantas prevê quando vir o trabalho.
+ * As horas estimadas, num número só — o MEIO do intervalo com 3 pessoas (a
+ * tabela, mais a desmontagem), nunca abaixo do mínimo. Para o motor e para as
+ * horas previstas de um pedido. Sem tipologia conhecida, conta-se o mínimo: o
+ * profissional diz quantas prevê quando vir o trabalho.
  */
 export function horasEstimadas(tipologia: Tipologia | null | undefined, desmontagem = false): number {
-  const base = tipologia ? HORAS_POR_TIPOLOGIA[tipologia] : MINIMO_DE_HORAS;
-  return Math.max(MINIMO_DE_HORAS, base + (desmontagem ? HORAS_A_MAIS_COM_DESMONTAGEM : 0));
+  return Math.max(MINIMO_DE_HORAS, meioDoIntervalo(intervaloDeHoras(tipologia ?? "itens", desmontagem, 3)));
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -157,54 +334,92 @@ export type PedidoDeMudanca = {
   elevadorExterior?: boolean;
   /** Quantidades por `Material.id`. */
   materiais?: Record<string, number>;
+  /** Somar o material de proteção da tipologia (`PROTECAO_POR_TIPOLOGIA`) — é o que o site estima. */
+  protecao?: boolean;
+  /** Somar também o embalamento completo (`EMBALAMENTO_POR_TIPOLOGIA`), quando o cliente o pede. */
+  embalamento?: boolean;
 };
 
 export type OrcamentoDaMudanca = {
+  /** O meio do intervalo (o motor e quem precisa de um número só). */
   horas: number;
+  /** O intervalo de horas da equipa de 3: [mínimo, máximo]. */
+  intervalo: IntervaloDeHoras;
   maoDeObra: number;
   deslocacao: number;
   andares: number;
   custoDosAndares: number;
   elevadorExterior: number;
   materiais: number;
-  /** Tudo, sem IVA — o que o cliente paga antes do imposto. */
+  /** Tudo, sem IVA, ao meio do intervalo — o que o cliente paga antes do imposto. */
   totalSemIva: number;
   totalComIva: number;
+  /** Os dois extremos, sem IVA e com IVA. */
+  totalSemIvaMinimo: number;
+  totalSemIvaMaximo: number;
+  totalComIvaMinimo: number;
+  totalComIvaMaximo: number;
   /** A conta linha a linha, para o profissional e para a equipa. */
   linhas: string[];
 };
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 const arred = (v: number) => Math.round(v * 100) / 100;
+/** «250,00–350,00 €», ou um valor só quando os extremos são iguais. */
+const eurosDeA = (de: number, ate: number) => (de === ate ? euros(de) : `${euros(de).replace(" €", "")}–${euros(ate)}`);
+
+function somarQuantidades(...qs: Array<Record<string, number> | undefined>): Record<string, number> {
+  const r: Record<string, number> = {};
+  for (const q of qs) for (const [k, v] of Object.entries(q ?? {})) r[k] = (r[k] ?? 0) + v;
+  return r;
+}
+
+function valorDosMateriais(q: Record<string, number>): number {
+  return arred(MATERIAIS.reduce((s, m) => s + Math.max(0, Math.floor(q[m.id] ?? 0)) * m.preco, 0));
+}
 
 /**
- * A ESTIMATIVA DE UMA MUDANÇA, pela tabela. É uma estimativa: a mudança paga-se
- * pelas horas feitas no dia — o que aqui se calcula é o que se espera.
+ * A ESTIMATIVA DE UMA MUDANÇA, pela tabela de referência (equipa de 3). É uma
+ * estimativa: a mudança paga-se pelas horas feitas no dia. Desde 11-11-2026
+ * em intervalo — as horas da tipologia de 3 a 9, de 9 a 12… —, com os totais
+ * nos dois extremos e ao meio.
  */
 export function orcamentoDaMudanca(p: PedidoDeMudanca): OrcamentoDaMudanca {
-  const horas = horasEstimadas(p.tipologia, p.desmontagem === true);
-  const maoDeObra = arred(horas * PRECO_POR_HORA);
+  const intervalo = intervaloDeHoras(p.tipologia ?? null, p.desmontagem === true, 3);
+  const horas = meioDoIntervalo(intervalo);
+  const maoMin = arred(intervalo[0] * PRECO_POR_HORA);
+  const maoMax = arred(intervalo[1] * PRECO_POR_HORA);
   const desl = deslocacao(p.kmPercurso);
   const andares =
     andaresAPe(p.origem?.floor, p.origem?.hasElevator) + andaresAPe(p.destino?.floor, p.destino?.hasElevator);
   const custoDosAndares = andares * POR_ANDAR_SEM_ELEVADOR;
   const elevador = p.elevadorExterior ? ELEVADOR_EXTERIOR : 0;
-  const materiais = arred(
-    MATERIAIS.reduce((s, m) => s + Math.max(0, Math.floor(p.materiais?.[m.id] ?? 0)) * m.preco, 0),
-  );
-  const totalSemIva = arred(maoDeObra + desl + custoDosAndares + elevador + materiais);
+  const t = p.tipologia ?? "itens";
+  const daProtecao = p.protecao ? materiaisDeReferencia(PROTECAO_POR_TIPOLOGIA[t]) : {};
+  const doEmbalamento = p.embalamento ? materiaisDeReferencia(EMBALAMENTO_POR_TIPOLOGIA[t]) : {};
+  const valorProtecao = valorDosMateriais(daProtecao);
+  const valorEmbalamento = valorDosMateriais(doEmbalamento);
+  const valorAvulso = valorDosMateriais(p.materiais ?? {});
+  const materiais = valorDosMateriais(somarQuantidades(daProtecao, doEmbalamento, p.materiais));
+  const fixo = desl + custoDosAndares + elevador + materiais;
+  const totalSemIvaMinimo = arred(maoMin + fixo);
+  const totalSemIvaMaximo = arred(maoMax + fixo);
+  const totalSemIva = arred((totalSemIvaMinimo + totalSemIvaMaximo) / 2);
 
   const linhas = [
-    `${horas} h × ${euros(PRECO_POR_HORA)} (viatura, motorista e 2 ajudantes) = ${euros(maoDeObra)}`,
+    `${intervaloDeHorasEmTexto(intervalo).replace(/^entre/, "Entre")} × ${euros(PRECO_POR_HORA)} (viatura, motorista e 2 ajudantes) = ${eurosDeA(maoMin, maoMax)}`,
     desl > 0 ? `Deslocação: ${Number(p.kmPercurso).toFixed(0)} km × 2 × ${euros(PRECO_POR_KM_LONGE)} = ${euros(desl)} (mais portagens)` : null,
     andares > 0 ? `${andares} ${andares === 1 ? "andar" : "andares"} a pé × ${euros(POR_ANDAR_SEM_ELEVADOR)} = ${euros(custoDosAndares)}` : null,
     elevador > 0 ? `Elevador exterior: ${euros(elevador)}` : null,
-    materiais > 0 ? `Materiais de embalamento: ${euros(materiais)}` : null,
+    valorProtecao > 0 ? `Proteção (${materialEmTexto(PROTECAO_POR_TIPOLOGIA[t])}): ${euros(valorProtecao)}` : null,
+    valorEmbalamento > 0 ? `Caixas e embalamento (${materialEmTexto(EMBALAMENTO_POR_TIPOLOGIA[t])}): ${euros(valorEmbalamento)}` : null,
+    valorAvulso > 0 ? `Materiais de embalamento: ${euros(valorAvulso)}` : null,
   ].filter((l): l is string => l != null);
 
   return {
     horas,
-    maoDeObra,
+    intervalo,
+    maoDeObra: arred(horas * PRECO_POR_HORA),
     deslocacao: desl,
     andares,
     custoDosAndares,
@@ -212,6 +427,10 @@ export function orcamentoDaMudanca(p: PedidoDeMudanca): OrcamentoDaMudanca {
     materiais,
     totalSemIva,
     totalComIva: arred(totalSemIva * (1 + TAXA_IVA)),
+    totalSemIvaMinimo,
+    totalSemIvaMaximo,
+    totalComIvaMinimo: arred(totalSemIvaMinimo * (1 + TAXA_IVA)),
+    totalComIvaMaximo: arred(totalSemIvaMaximo * (1 + TAXA_IVA)),
     linhas,
   };
 }
@@ -312,4 +531,16 @@ export function tabelaEmLinhas(): Array<{ titulo: string; linhas: LinhaDaTabelaD
       ),
     },
   ];
+}
+
+/* ── A REFERÊNCIA DE UMA CASA, COM A PROTEÇÃO — 11-11-2026 ──────────────── */
+
+/** «310,00–410,00 € + IVA (381,30–504,30 € com IVA)» — o sem IVA nunca sozinho. */
+export function faixaDaMudancaEmTexto(deSemIva: number, ateSemIva: number): string {
+  return `${eurosDeA(deSemIva, ateSemIva)} + IVA (${eurosDeA(arred(deSemIva * (1 + TAXA_IVA)), arred(ateSemIva * (1 + TAXA_IVA)))} com IVA)`;
+}
+
+/** A estimativa de referência de uma casa (equipa de 3, com a proteção, sem andares nem km). */
+export function referenciaDaCasa(t: Tipologia, desmontagem = false): OrcamentoDaMudanca {
+  return orcamentoDaMudanca({ tipologia: t, desmontagem, protecao: true });
 }

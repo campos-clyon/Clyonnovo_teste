@@ -45,11 +45,11 @@ describe("o motor responde aos campos", () => {
     expect(estimateLaborHours(mudanca)).toBe(3);
   });
 
-  it("as horas vêm da tipologia, e a desmontagem soma uma", () => {
-    expect(estimateLaborHours({ ...mudanca, tipologia: "T3" })).toBe(5);
+  it("as horas vêm da tipologia (o meio do intervalo), e a desmontagem soma as da tipologia", () => {
+    expect(estimateLaborHours({ ...mudanca, tipologia: "T3" })).toBe(8);
     expect(
       estimateLaborHours({ ...mudanca, tipologia: "T3", originAccess: { difficultAccess: true } }),
-    ).toBe(6);
+    ).toBe(10);
   });
 
   it("os andares e o percurso já não são horas — são dinheiro, pela tabela", () => {

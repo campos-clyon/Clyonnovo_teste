@@ -130,8 +130,8 @@ describe("os valores: por hora até confirmar, o total depois", () => {
   });
 
   it("as horas previstas de uma mudança saem da tipologia; os outros trabalhos, o mínimo", () => {
-    expect(horasPrevistasDoPedido({ serviceType: "mudanca", description: "mudança de um T2" })).toBe(4);
-    expect(horasPrevistasDoPedido({ serviceType: "mudanca", tipologia: "T3", desmontagem: true })).toBe(6);
+    expect(horasPrevistasDoPedido({ serviceType: "mudanca", description: "mudança de um T2" })).toBe(6); // o meio de 5–7 h (11-11-2026)
+    expect(horasPrevistasDoPedido({ serviceType: "mudanca", tipologia: "T3", desmontagem: true })).toBe(10); // 7–9 h + 2 h
     expect(horasPrevistasDoPedido({ serviceType: "mudanca" })).toBe(3);
     expect(horasPrevistasDoPedido({ serviceType: "manutencao_casa" })).toBe(3);
   });

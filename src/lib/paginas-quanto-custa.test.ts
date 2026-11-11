@@ -28,8 +28,8 @@ import {
 import { servicoDaLigacao } from "./servico-na-ligacao";
 import {
   ELEVADOR_EXTERIOR,
-  HORAS_A_MAIS_COM_DESMONTAGEM,
-  HORAS_POR_TIPOLOGIA,
+  HORAS_COM_TRES_PESSOAS,
+  HORAS_DA_DESMONTAGEM,
   POR_ANDAR_SEM_ELEVADOR,
   PRECO_POR_HORA,
   PRECO_POR_KM_LONGE,
@@ -135,10 +135,19 @@ describe("os números são os das tabelas do motor", () => {
     }
   });
 
-  it("mudanças: cada tipologia são as horas da tabela vezes o preço da hora", () => {
+  it("mudanças: cada tipologia é o intervalo de horas vezes o preço da hora, mais a proteção (11-11-2026)", () => {
     const linhas = linhasDasMudancas();
-    const horas = Object.values(HORAS_POR_TIPOLOGIA);
-    expect(linhas.map((l) => l.valor)).toEqual(horas.map((h) => ({ tipo: "cerca", valor: h * PRECO_POR_HORA })));
+    // A proteção na referência: filme 10 €/rolo, cartão 30 €/rolo, plástico bolha 22 €/rolo.
+    const protecao = [10, 10, 2 * 10 + 30, 3 * 10 + 30, 4 * 10 + 30 + 22, 6 * 10 + 2 * 30 + 22];
+    const esperado = Object.values(HORAS_COM_TRES_PESSOAS).map(([a, b], i) =>
+      a === b
+        ? { tipo: "cerca", valor: a * PRECO_POR_HORA + protecao[i] }
+        : { tipo: "faixa", de: a * PRECO_POR_HORA + protecao[i], ate: b * PRECO_POR_HORA + protecao[i] },
+    );
+    expect(linhas.map((l) => l.valor)).toEqual(esperado);
+    // O T3: 7–9 h e 92 € de proteção = 442–542 € + IVA.
+    expect(linhas[4].valor).toEqual({ tipo: "faixa", de: 442, ate: 542 });
+    expect(linhas[4].exemplo).toBe("Entre 7 e 9 h da equipa de 3, com a proteção · só com 3 pessoas");
   });
 
   it("mudanças: os extras são os da tabela", () => {
@@ -146,23 +155,25 @@ describe("os números são os das tabelas do motor", () => {
     expect(valores).toEqual([
       { tipo: "exacto", valor: PRECO_POR_HORA },
       { tipo: "exacto", valor: POR_ANDAR_SEM_ELEVADOR },
-      { tipo: "cerca", valor: HORAS_A_MAIS_COM_DESMONTAGEM * PRECO_POR_HORA },
+      { tipo: "faixa", de: HORAS_DA_DESMONTAGEM.itens * PRECO_POR_HORA, ate: HORAS_DA_DESMONTAGEM["T4+"] * PRECO_POR_HORA },
       { tipo: "exacto", valor: ELEVADOR_EXTERIOR },
       { tipo: "exacto", valor: PRECO_POR_KM_LONGE },
     ]);
   });
 
   it("mudanças: os quatro exemplos, com a conta feita à mão", () => {
-    const totais = exemplosDeMudanca().map((e) => e.totalSemIva);
+    // Em intervalo e com a proteção desde 11-11-2026: [de, até].
+    const totais = exemplosDeMudanca().map((e) => [e.totalSemIva, e.totalSemIvaAte]);
+    const km120 = Math.round(120 * 2 * PRECO_POR_KM_LONGE * 100) / 100;
     expect(totais).toEqual([
-      // T1, com elevador nas duas casas.
-      HORAS_POR_TIPOLOGIA.T1 * PRECO_POR_HORA,
-      // T2, de um 3.º andar sem elevador para um rés-do-chão.
-      HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA + 3 * POR_ANDAR_SEM_ELEVADOR,
-      // T3, com desmontagem e montagem.
-      (HORAS_POR_TIPOLOGIA.T3 + HORAS_A_MAIS_COM_DESMONTAGEM) * PRECO_POR_HORA,
+      // T1, com elevador nas duas casas: 4–5 h, proteção 50 €.
+      [4 * PRECO_POR_HORA + 50, 5 * PRECO_POR_HORA + 50],
+      // T2, de um 3.º andar sem elevador para um rés-do-chão: 5–7 h, proteção 60 €.
+      [5 * PRECO_POR_HORA + 3 * POR_ANDAR_SEM_ELEVADOR + 60, 7 * PRECO_POR_HORA + 3 * POR_ANDAR_SEM_ELEVADOR + 60],
+      // T3, com desmontagem e montagem: 7–9 h + 2 h, proteção 92 €.
+      [9 * PRECO_POR_HORA + 92, 11 * PRECO_POR_HORA + 92],
       // T2 a 120 km: todos os km, ida e volta.
-      HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA + Math.round(120 * 2 * PRECO_POR_KM_LONGE * 100) / 100,
+      [5 * PRECO_POR_HORA + km120 + 60, 7 * PRECO_POR_HORA + km120 + 60],
     ]);
   });
 });

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { FORA_DO_PLANO, nomeDoServico } from "./service-categories";
-import { HORAS_POR_TIPOLOGIA } from "./tabela-das-mudancas";
+import { TIPOLOGIAS } from "./tabela-das-mudancas";
 import { ESVAZIAMENTO_POR_TIPOLOGIA } from "./precos-publicos";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import { formaDaResposta, semDadosPessoais } from "./descricao-pelo-modelo";
@@ -127,7 +127,7 @@ const TIPOLOGIA_DO_ESVAZIAMENTO: CampoDoLeitor = {
 const TIPOLOGIA_DA_MUDANCA: CampoDoLeitor = {
   id: "tipologia",
   tipo: "opcao",
-  opcoes: Object.keys(HORAS_POR_TIPOLOGIA),
+  opcoes: [...TIPOLOGIAS],
   explicacao: "o tamanho da casa: itens (só alguns móveis), T0, T1, T2, T3, T4+ (T4 ou maior)",
 };
 

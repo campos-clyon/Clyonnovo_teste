@@ -74,8 +74,8 @@ describe("o prompt do orçamento", () => {
 
   it("os exemplos da mudança são contados pela tabela", async () => {
     const p = await oPrompt();
-    const t2 = orcamentoDaMudanca({ tipologia: "T2" });
-    expect(p).toContain(`${t2.horas} h × ${PRECO_POR_HORA} € = ${t2.totalSemIva} € s/IVA`);
+    const t2 = orcamentoDaMudanca({ tipologia: "T2", protecao: true });
+    expect(p).toContain(`${t2.intervalo[0]}–${t2.intervalo[1]} h × ${PRECO_POR_HORA} € + proteção = ${t2.totalSemIvaMinimo}–${t2.totalSemIvaMaximo} € s/IVA`);
   });
 
   it("e os dados do pedido já não dizem um preço por saco", () => {
@@ -227,7 +227,9 @@ describe("as faixas do orçamentista são as das fontes", () => {
 
   it("cada euro que o prompt escreve é de uma fonte (ou uma conta da tabela das mudanças)", () => {
     const daMudanca = new Set(
-      (["T1", "T2", "T3"] as const).map((t) => orcamentoDaMudanca({ tipologia: t }).totalSemIva),
+      (["T1", "T2", "T3"] as const)
+        .map((t) => orcamentoDaMudanca({ tipologia: t, protecao: true }))
+        .flatMap((o) => [o.totalSemIvaMinimo, o.totalSemIvaMaximo]),
     );
     // As contas da grelha do entulho (d4, 03-11-2026): o big bag (38 sacos) e o exemplo do dono
     // (50 sacos num 2.º andar com elevador = 210–250 €).

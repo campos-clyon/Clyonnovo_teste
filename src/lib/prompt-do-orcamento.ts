@@ -107,8 +107,9 @@ const FAIXAS_DO_ESVAZIAMENTO = [
 /** Três mudanças de exemplo, contadas pela tabela — os números mudam com ela. */
 const EXEMPLOS_DA_MUDANCA = (["T1", "T2", "T3"] as Tipologia[])
   .map((t) => {
-    const o = orcamentoDaMudanca({ tipologia: t });
-    return `${TIPOLOGIA_POR_EXTENSO[t]}, sem andares a pé, até ${RAIO_INCLUIDO_KM} km: ${o.horas} h × ${PRECO_POR_HORA} € = ${o.totalSemIva} € s/IVA`;
+    // Em intervalo e com a proteção, desde 11-11-2026 (tabela-das-mudancas.ts).
+    const o = orcamentoDaMudanca({ tipologia: t, protecao: true });
+    return `${TIPOLOGIA_POR_EXTENSO[t]}, sem andares a pé, até ${RAIO_INCLUIDO_KM} km: ${o.intervalo[0]}–${o.intervalo[1]} h × ${PRECO_POR_HORA} € + proteção = ${o.totalSemIvaMinimo}–${o.totalSemIvaMaximo} € s/IVA`;
   })
   .join(" | ");
 

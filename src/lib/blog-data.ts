@@ -20,14 +20,17 @@ import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
 import { getCidadeLocal } from "./cidades-local";
 import {
   EXTRAS_DA_MUDANCA,
-  HORAS_A_MAIS_COM_DESMONTAGEM,
-  HORAS_POR_TIPOLOGIA,
+  HORAS_COM_TRES_PESSOAS,
+  HORAS_DA_DESMONTAGEM,
   MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
   PESSOAS_NA_EQUIPA,
   PRECO_POR_HORA,
   RAIO_INCLUIDO_KM,
   TIPOLOGIA_POR_EXTENSO,
+  horasEscritas,
+  intervaloDeHorasEmTexto,
+  referenciaDaCasa,
   type Tipologia,
 } from "./tabela-das-mudancas";
 import { MODELO_DA_MUDANCA, REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
@@ -44,13 +47,20 @@ import { MODELO_DA_MUDANCA, REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
  * REFERÊNCIA (o blog não lê a base) e o artigo diz o modelo — compare e escolha.
  */
 const TIPOLOGIAS_DA_CASA: Tipologia[] = ["T0", "T1", "T2", "T3", "T4+"];
+/* DESDE 11-11-2026 EM INTERVALO, com a proteção dos móveis e do chão (tabela-das-mudancas.ts). */
+/** «310–410 €» — a referência de uma casa, sem IVA. */
+const faixaDaCasa = (t: Tipologia, comOIva = false) => {
+  const o = referenciaDaCasa(t);
+  const [a, b] = comOIva ? [comIva(o.totalSemIvaMinimo), comIva(o.totalSemIvaMaximo)] : [o.totalSemIvaMinimo, o.totalSemIvaMaximo];
+  return `${euros(a).replace(" €", "")}–${euros(b)}`;
+};
 const HORAS_E_PRECO_POR_TIPOLOGIA = [
   ...TIPOLOGIAS_DA_CASA.map((t) => {
-    const h = HORAS_POR_TIPOLOGIA[t];
-    const horas = t === "T4+" ? `${h} horas ou mais` : `cerca de ${h} horas`;
-    return `${TIPOLOGIA_POR_EXTENSO[t]}: ${horas} — ${h * PRECO_POR_HORA} € + IVA na referência`;
+    const horas = intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS[t]);
+    const equipa = t === "T3" || t === "T4+" ? ", só com 3 pessoas" : " com 3 pessoas";
+    return `${TIPOLOGIA_POR_EXTENSO[t]}: ${horas}${equipa} — ${faixaDaCasa(t)} + IVA (${faixaDaCasa(t, true)} com IVA) na referência, com a proteção`;
   }),
-  `Com desmontagem e montagem de móveis: mais ${HORAS_A_MAIS_COM_DESMONTAGEM} hora (${HORAS_A_MAIS_COM_DESMONTAGEM * PRECO_POR_HORA} € + IVA na referência)`,
+  `Com desmontagem e montagem de móveis: mais ${horasEscritas(HORAS_DA_DESMONTAGEM.T1)} h num T1 e até ${horasEscritas(HORAS_DA_DESMONTAGEM["T4+"])} h num T4 ou maior`,
 ];
 
 /*
@@ -709,7 +719,7 @@ export const BLOG_POSTS: BlogPost[] = [
     metaTitle: "Quanto Custa uma Mudança em Lisboa em 2026?",
     description:
       // A hora com o com IVA ao lado; dizia «…, T3 250 €, sem IVA.» (31-10-2026).
-      `Quanto custa uma mudança em Lisboa: cada parceiro tem o seu preço por hora; na referência, ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))}/h com IVA) — T2 cerca de ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA.`,
+      `Quanto custa uma mudança em Lisboa: cada parceiro tem o seu preço por hora; na referência, ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))}/h com IVA) — T2 ${faixaDaCasa("T2")} + IVA.`,
     category: "Mudanças",
     keywords: [
       "quanto custa mudança lisboa",
@@ -1328,7 +1338,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quanto custa",
         paragraphs: [
           `Paga-se à hora. ${MODELO_DA_MUDANCA}`,
-          `Um T2, por exemplo, leva cerca de ${HORAS_POR_TIPOLOGIA.T2} horas com 3 pessoas — ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA na referência (${euros(comIva(HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA))} com IVA); os km entre as margens contam pela tarifa do parceiro. A tabela por tipologia está em [quanto custa uma mudança em Lisboa](/blog/quanto-custa-uma-mudanca-em-lisboa).`,
+          `Um T2, por exemplo, leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — ${faixaDaCasa("T2")} + IVA na referência, com a proteção (${faixaDaCasa("T2", true)} com IVA); os km entre as margens contam pela tarifa do parceiro. A tabela por tipologia está em [quanto custa uma mudança em Lisboa](/blog/quanto-custa-uma-mudanca-em-lisboa).`,
           EXTRAS_DA_MUDANCA,
         ],
       },
@@ -1354,7 +1364,7 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         question: "Quanto custa a mudança de um T2 de Lisboa para o Seixal?",
-        answer: `Conte com cerca de ${HORAS_POR_TIPOLOGIA.T2} horas com 3 pessoas — na referência, ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA —, mais os km e o material, se os houver. Cada parceiro tem o seu preço por hora: no simulador vê os disponíveis e escolhe.`,
+        answer: `Conte com ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — na referência, com a proteção, ${faixaDaCasa("T2")} + IVA (${faixaDaCasa("T2", true)} com IVA) —, mais os km e as caixas, se as pedir. Cada parceiro tem o seu preço por hora: no simulador vê os disponíveis e escolhe.`,
       },
       {
         question: "O preço inclui IVA?",

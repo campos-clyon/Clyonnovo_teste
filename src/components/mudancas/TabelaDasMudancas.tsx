@@ -3,9 +3,13 @@ import Link from "next/link";
 import { SEM_PARCEIROS, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { PEDIR_MUDANCA } from "@/lib/tipos-de-mudanca";
 import {
-  HORAS_POR_TIPOLOGIA,
-  HORAS_A_MAIS_COM_DESMONTAGEM,
+  HORAS_COM_DUAS_PESSOAS,
+  HORAS_COM_TRES_PESSOAS,
   MINIMO_DE_HORAS,
+  NOTA_DO_T4_OU_MAIOR,
+  TIPOLOGIAS,
+  desmontagemPorTipologiaEmTexto,
+  intervaloDeHorasCurto,
   PRECO_POR_HORA,
   PRECO_POR_HORA_COM_IVA,
   TIPOLOGIA_POR_EXTENSO,
@@ -39,7 +43,7 @@ export default function TabelaDasMudancas({
   compacta?: boolean;
   preco?: PrecoPublicoDasMudancas;
 }) {
-  const tipologias = Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[];
+  const tipologias = [...TIPOLOGIAS] as Tipologia[];
   return (
     <div>
       {preco.tipo === "parceiros" ? (
@@ -98,16 +102,21 @@ export default function TabelaDasMudancas({
       )}
 
       <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
-        <h3 className="text-sm font-semibold text-slate-900">Quantas horas costuma levar (equipa de 3)</h3>
+        <h3 className="text-sm font-semibold text-slate-900">Quantas horas costuma levar</h3>
+        {/* Em intervalo desde 11-11-2026: com 3 e com 2 pessoas; T3 ou maior só com 3. */}
         <ul className="mt-2 flex flex-wrap gap-2">
-          {tipologias.map((t) => (
-            <li key={t} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
-              {TIPOLOGIA_POR_EXTENSO[t]}: <strong>{HORAS_POR_TIPOLOGIA[t]} h</strong>
-            </li>
-          ))}
+          {tipologias.map((t) => {
+            const com2 = HORAS_COM_DUAS_PESSOAS[t];
+            return (
+              <li key={t} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
+                {TIPOLOGIA_POR_EXTENSO[t]}: <strong>{intervaloDeHorasCurto(HORAS_COM_TRES_PESSOAS[t])}</strong> com 3
+                {com2 ? <> · {intervaloDeHorasCurto(com2)} com 2</> : <> · só com 3</>}
+              </li>
+            );
+          })}
         </ul>
         <p className="mt-2 text-xs text-slate-500">
-          Com desmontagem e montagem de móveis, conte mais {HORAS_A_MAIS_COM_DESMONTAGEM} h. São horas
+          Com desmontagem e montagem de móveis: {desmontagemPorTipologiaEmTexto()}. {NOTA_DO_T4_OU_MAIOR} São horas
           habituais, não um limite: o parceiro diz quantas prevê ao ver o que vai.
         </p>
       </div>

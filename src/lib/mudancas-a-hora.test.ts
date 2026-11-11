@@ -38,12 +38,12 @@ describe("a tabela", () => {
     expect(MINIMO_DE_HORAS).toBe(3);
   });
 
-  it("as horas pela tipologia, nunca abaixo do mínimo", () => {
-    expect(horasEstimadas("T0")).toBe(3);
-    expect(horasEstimadas("T2")).toBe(4);
-    expect(horasEstimadas("T3")).toBe(5);
-    expect(horasEstimadas("T4+")).toBe(7);
-    expect(horasEstimadas("T2", true)).toBe(5);
+  it("as horas pela tipologia (o meio do intervalo com 3 pessoas, 11-11-2026), nunca abaixo do mínimo", () => {
+    expect(horasEstimadas("T0")).toBe(3.5);
+    expect(horasEstimadas("T2")).toBe(6);
+    expect(horasEstimadas("T3")).toBe(8);
+    expect(horasEstimadas("T4+")).toBe(10.5);
+    expect(horasEstimadas("T2", true)).toBe(7.5);
     expect(horasEstimadas(null)).toBe(3);
   });
 
@@ -79,13 +79,17 @@ describe("a tabela", () => {
       destino: { floor: "0", hasElevator: "no" },
       materiais: { caixa: 20, fita: 2 },
     });
-    expect(c.horas).toBe(4);
-    expect(c.maoDeObra).toBe(200);
+    // 11-11-2026: entre 5 e 7 h com 3 pessoas.
+    expect(c.intervalo).toEqual([5, 7]);
+    expect(c.horas).toBe(6);
+    expect(c.maoDeObra).toBe(300);
     expect(c.deslocacao).toBe(208);
     expect(c.custoDosAndares).toBe(135);
     expect(c.materiais).toBe(44);
-    expect(c.totalSemIva).toBe(587);
-    expect(c.totalComIva).toBe(722.01);
+    expect(c.totalSemIvaMinimo).toBe(250 + 208 + 135 + 44);
+    expect(c.totalSemIvaMaximo).toBe(350 + 208 + 135 + 44);
+    expect(c.totalSemIva).toBe(687);
+    expect(c.totalComIva).toBe(845.01);
   });
 
   it("o valor de partida é o do profissional: com a taxa de 5 %, dá os 50 € ao cliente", () => {
@@ -128,14 +132,14 @@ describe("«por hora» é uma base, ao lado de «total» e «por carga»", () =>
 
 describe("o motor usa a tabela", () => {
   it("as horas de uma mudança vêm da tipologia, e não das 7 fixas", () => {
-    expect(estimateLaborHours({ serviceType: "mudanca", description: "Mudança de um T2" })).toBe(4);
-    expect(estimateLaborHours({ serviceType: "mudanca", tipologia: "T4+" })).toBe(7);
+    expect(estimateLaborHours({ serviceType: "mudanca", description: "Mudança de um T2" })).toBe(6);
+    expect(estimateLaborHours({ serviceType: "mudanca", tipologia: "T4+" })).toBe(10.5);
     expect(estimateLaborHours({ serviceType: "mudanca" })).toBe(3);
   });
 
-  it("um T1 sem nada de especial: 3 h a 50 € = 150 € sem IVA", async () => {
+  it("um T1 sem nada de especial: o meio de 4–5 h a 50 € = 225 € sem IVA", async () => {
     const e = await calculateFastEstimate({ serviceType: "mudanca", tipologia: "T1" });
-    expect(e.estimatedPriceWithoutVat).toBe(150);
+    expect(e.estimatedPriceWithoutVat).toBe(225);
   });
 
   it("a sugestão ao profissional, num pedido à hora, é por hora", () => {

@@ -315,7 +315,7 @@ describe("d1 — o acesso leva a referência ao topo da faixa, e diz porquê", (
     const pedido = { servico: "mudanca", tipologia: "T2", origem: { floor: "3º", hasElevator: "no" }, destino: { floor: "rés-do-chão" }, floor: "3º", hasElevator: "no", parkingDistance: "difficult" };
     const r = daR12(pedido);
     expect(r.linhas.map((l) => l.rotulo)).toEqual(["Estimativa"]);
-    expect(r.porque).toEqual(["T2: cerca de 4 h da equipa de 3.", "3 andares a pé, sem elevador: a tabela conta cada um."]);
+    expect(r.porque).toEqual(["T2: entre 5 e 7 h da equipa de 3.", "3 andares a pé, sem elevador: a tabela conta cada um."]);
   });
 
   it("garagem, sótão e cave: o topo como antes, agora com o porquê", () => {

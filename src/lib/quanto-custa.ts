@@ -18,8 +18,8 @@ import {
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import {
   ELEVADOR_EXTERIOR,
-  HORAS_A_MAIS_COM_DESMONTAGEM,
-  HORAS_POR_TIPOLOGIA,
+  HORAS_COM_TRES_PESSOAS,
+  HORAS_DA_DESMONTAGEM,
   MINIMO_DE_HORAS,
   PESSOAS_NA_EQUIPA,
   POR_ANDAR_SEM_ELEVADOR,
@@ -27,8 +27,11 @@ import {
   PRECO_POR_HORA,
   PRECO_POR_KM_LONGE,
   RAIO_INCLUIDO_KM,
+  TIPOLOGIAS,
   TIPOLOGIA_POR_EXTENSO,
   andaresAPe,
+  horasEscritas,
+  intervaloDeHorasEmTexto,
   orcamentoDaMudanca,
   type PedidoDeMudanca,
   type Tipologia,
@@ -462,16 +465,21 @@ export function linhaDoEsvaziamento(chave: string): LinhaDaTabela {
  * MUDANÇAS — à hora, pela tabela do dono (13-10-2026)
  * ────────────────────────────────────────────────────────────────────────── */
 
-const TIPOLOGIAS: Tipologia[] = ["itens", "T0", "T1", "T2", "T3", "T4+"];
-
-/** Uma linha por tipologia: as horas que se contam antes de alguém ver o trabalho. */
+/**
+ * Uma linha por tipologia: as horas que se contam antes de alguém ver o
+ * trabalho — desde 11-11-2026 num intervalo, e o valor com a proteção (filme,
+ * cartão, plástico bolha), como a lista dos parceiros.
+ */
 export function linhasDasMudancas(): LinhaDaTabela[] {
-  return TIPOLOGIAS.map((t) => {
-    const horas = HORAS_POR_TIPOLOGIA[t];
+  return TIPOLOGIAS.map((t: Tipologia) => {
+    const o = orcamentoDaMudanca({ tipologia: t, protecao: true });
+    const horas = intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS[t]);
     return {
       oQue: t === "itens" ? "Pequena mudança (alguns móveis)" : TIPOLOGIA_POR_EXTENSO[t],
-      exemplo: `≈ ${horas} horas da equipa de ${PESSOAS_NA_EQUIPA}`,
-      valor: { tipo: "cerca", valor: orcamentoDaMudanca({ tipologia: t }).totalSemIva } as Valor,
+      exemplo: `${horas.charAt(0).toUpperCase() + horas.slice(1)} da equipa de ${PESSOAS_NA_EQUIPA}, com a proteção${t === "T3" || t === "T4+" ? " · só com 3 pessoas" : ""}`,
+      valor: (o.totalSemIvaMinimo === o.totalSemIvaMaximo
+        ? { tipo: "cerca", valor: o.totalSemIva }
+        : { tipo: "faixa", de: o.totalSemIvaMinimo, ate: o.totalSemIvaMaximo }) as Valor,
     };
   });
 }
@@ -494,8 +502,8 @@ export function extrasDasMudancas(): LinhaDaTabela[] {
     },
     {
       oQue: "Desmontar e montar móveis",
-      exemplo: `Acrescenta cerca de ${HORAS_A_MAIS_COM_DESMONTAGEM} hora`,
-      valor: { tipo: "cerca", valor: HORAS_A_MAIS_COM_DESMONTAGEM * PRECO_POR_HORA },
+      exemplo: `Acrescenta de ${horasEscritas(HORAS_DA_DESMONTAGEM.itens)} h (alguns móveis) a ${horasEscritas(HORAS_DA_DESMONTAGEM["T4+"])} h (T4 ou maior)`,
+      valor: { tipo: "faixa", de: HORAS_DA_DESMONTAGEM.itens * PRECO_POR_HORA, ate: HORAS_DA_DESMONTAGEM["T4+"] * PRECO_POR_HORA },
     },
     {
       oQue: "Elevador exterior",
@@ -512,7 +520,15 @@ export function extrasDasMudancas(): LinhaDaTabela[] {
   ];
 }
 
-export type ExemploDeMudanca = { titulo: string; pedido: PedidoDeMudanca; conta: string[]; totalSemIva: number };
+export type ExemploDeMudanca = {
+  titulo: string;
+  pedido: PedidoDeMudanca;
+  conta: string[];
+  /** O extremo de baixo (desde 11-11-2026 a estimativa é um intervalo). */
+  totalSemIva: number;
+  /** O extremo de cima. */
+  totalSemIvaAte: number;
+};
 
 /**
  * Mudanças inteiras, feitas pela mesma função que estima o pedido no
@@ -538,8 +554,8 @@ export function exemplosDeMudanca(): ExemploDeMudanca[] {
     },
   ];
   return casos.map(({ titulo, pedido }) => {
-    const o = orcamentoDaMudanca(pedido);
-    return { titulo, pedido, conta: o.linhas, totalSemIva: o.totalSemIva };
+    const o = orcamentoDaMudanca({ ...pedido, protecao: true });
+    return { titulo, pedido, conta: o.linhas, totalSemIva: o.totalSemIvaMinimo, totalSemIvaAte: o.totalSemIvaMaximo };
   });
 }
 

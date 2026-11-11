@@ -15,6 +15,9 @@ export const revalidate = 3600;
  */
 export async function GET() {
   const preco = await precoPublicoDasMudancas();
-  const corpo = preco.tipo === "parceiros" ? { tipo: preco.tipo, desde: preco.desde } : { tipo: preco.tipo };
+  const corpo =
+    preco.tipo === "parceiros"
+      ? { tipo: preco.tipo, desde: preco.desde, ...(preco.desde3 ? { desde3: preco.desde3 } : {}) }
+      : { tipo: preco.tipo };
   return NextResponse.json(corpo, { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600" } });
 }

@@ -33,14 +33,17 @@ import {
   type Valor,
 } from "./quanto-custa";
 import {
-  HORAS_A_MAIS_COM_DESMONTAGEM,
-  HORAS_POR_TIPOLOGIA,
+  HORAS_DA_DESMONTAGEM,
   MINIMO_DE_HORAS,
   PESSOAS_NA_EQUIPA,
   PRECO_POR_HORA,
   RAIO_INCLUIDO_KM,
   TIPOLOGIA_POR_EXTENSO,
+  horasEscritas,
+  intervaloDeHorasEmTexto,
   orcamentoDaMudanca,
+  pessoasParaACasa,
+  type IntervaloDeHoras,
   type OrcamentoDaMudanca,
   type PedidoDeMudanca,
 } from "./tabela-das-mudancas";
@@ -350,36 +353,49 @@ export function totalDosItens(itens: ItensDosMoveis): string | null {
 
 export const ROTULO_DA_ESTIMATIVA_DA_MUDANCA = "Estimativa para a sua mudança";
 
+/** A equipa e as horas da lista, para o «desde» (`horasDaMudanca`). */
+export type HorasDaLista = { horas: IntervaloDeHoras; pessoas: 2 | 3 };
+
+/** O preço da hora mais baixo da lista para esta equipa, em euros sem IVA; null sem ele. */
+function desdeDaEquipa(preco: PrecoPublicoDasMudancas, pessoas: 2 | 3): number | null {
+  if (preco.tipo !== "parceiros") return null;
+  const v = pessoas === 3 ? preco.desde3 : preco.desde;
+  return v ? v.semIvaCent / 100 : null;
+}
+
 /**
- * A estimativa de uma mudança, pelo preço público (11-11-2026):
- *   · com parceiros na lista — «cerca de 5,5 h com 2 pessoas — desde 220 € + IVA
- *     (270,60 € com IVA), ao preço por hora mais baixo da lista. …»;
- *   · sem eles — «cerca de 4 h — 200 € + IVA (246 € com IVA) na referência
- *     (equipa de 3). …».
- * `horasCom2` são as horas da mesma casa com 2 pessoas (`horasDaMudanca`).
+ * A estimativa de uma mudança, pelo preço público — desde 11-11-2026 EM INTERVALO:
+ *   · com parceiros na lista — «entre 5 e 7 h com 3 pessoas — desde 310 – 434 € + IVA
+ *     (…), ao preço por hora mais baixo da lista, sem o material. …»;
+ *   · sem eles — «entre 5 e 7 h com 3 pessoas — 310 – 410 € + IVA (…) na
+ *     referência, com a proteção. …».
+ * `lista` são as horas da casa com a equipa da lista (2 pessoas, ou 3 num T3 ou maior).
  */
 export function estimativaDaMudanca(
-  conta: Pick<OrcamentoDaMudanca, "horas" | "totalSemIva">,
+  conta: Pick<OrcamentoDaMudanca, "intervalo" | "totalSemIvaMinimo" | "totalSemIvaMaximo">,
   preco: PrecoPublicoDasMudancas = precoPublicoConhecido(),
-  horasCom2?: number,
+  lista?: HorasDaLista,
 ): string {
-  if (preco.tipo === "parceiros" && horasCom2 != null && horasCom2 > 0) {
-    const total = Math.round(horasCom2 * preco.desde.semIvaCent) / 100;
+  const desde = lista ? desdeDaEquipa(preco, lista.pessoas) : null;
+  if (lista && desde != null) {
+    const [de, ate] = [Math.round(lista.horas[0] * desde * 100) / 100, Math.round(lista.horas[1] * desde * 100) / 100];
     return (
-      `cerca de ${String(horasCom2).replace(".", ",")} h com 2 pessoas — desde ${valorSemEComIva(total)}, ao preço por hora mais baixo da lista. ` +
-      "Na lista vê a conta de cada parceiro, com os km e o material; o total sai do que confirma na folha do dia."
+      `${intervaloDeHorasEmTexto(lista.horas)} com ${lista.pessoas} pessoas — desde ${de === ate ? valorSemEComIva(de) : faixaSemEComIva(de, ate)}, ` +
+      "ao preço por hora mais baixo da lista, sem o material. " +
+      "Na lista vê a conta de cada parceiro, com os km e a proteção; o total sai do que confirma na folha do dia."
     );
   }
-  const horas = String(conta.horas).replace(".", ",");
+  const [de, ate] = [conta.totalSemIvaMinimo, conta.totalSemIvaMaximo];
   return (
-    `cerca de ${horas} h — ${valorSemEComIva(conta.totalSemIva)} na referência (equipa de ${PESSOAS_NA_EQUIPA}). ` +
+    `${intervaloDeHorasEmTexto(conta.intervalo)} com ${PESSOAS_NA_EQUIPA} pessoas — ${de === ate ? valorSemEComIva(de) : faixaSemEComIva(de, ate)} na referência, com a proteção. ` +
     "Cada parceiro tem o seu preço por hora; o total sai das horas, dos km e do material que confirma na folha do dia."
   );
 }
 
-/** A estimativa em cêntimos para o «desde» com 2 pessoas, ou null sem parceiros. */
-function totalDesdeComDuas(preco: PrecoPublicoDasMudancas, horasCom2: number): number | null {
-  return preco.tipo === "parceiros" ? Math.round(horasCom2 * preco.desde.semIvaCent) / 100 : null;
+/** O «desde» da lista em euros sem IVA, nos dois extremos, ou null sem parceiros para esta equipa. */
+function totalDesdeDaLista(preco: PrecoPublicoDasMudancas, lista: HorasDaLista): [number, number] | null {
+  const desde = desdeDaEquipa(preco, lista.pessoas);
+  return desde == null ? null : [Math.round(lista.horas[0] * desde * 100) / 100, Math.round(lista.horas[1] * desde * 100) / 100];
 }
 
 /* ── Garagem, sótão e cave ───────────────────────────────────────────── */
@@ -725,8 +741,8 @@ function porqueDaQuantidade(m: MedidaDoEntulho, ref: ReferenciaDoEntulho | null,
 /** O porquê da estimativa da mudança, pela tabela: as horas, a desmontagem, os andares a pé, os km. */
 function porqueDaMudanca(m: PedidoDeMudanca, o: OrcamentoDaMudanca): string[] {
   const l: string[] = [];
-  if (m.tipologia) l.push(`${maiuscula(TIPOLOGIA_POR_EXTENSO[m.tipologia])}: cerca de ${HORAS_POR_TIPOLOGIA[m.tipologia]} h da equipa de ${PESSOAS_NA_EQUIPA}.`);
-  if (m.desmontagem) l.push(`Desmontar e montar: mais cerca de ${HORAS_A_MAIS_COM_DESMONTAGEM} h.`);
+  if (m.tipologia) l.push(`${maiuscula(TIPOLOGIA_POR_EXTENSO[m.tipologia])}: ${intervaloDeHorasEmTexto(o.intervalo)} da equipa de ${PESSOAS_NA_EQUIPA}${m.desmontagem ? ", com a desmontagem" : ""}.`);
+  if (m.desmontagem) l.push(`Desmontar e montar: mais ${horasEscritas(HORAS_DA_DESMONTAGEM[m.tipologia ?? "itens"])} h, nos dois extremos.`);
   if (o.andares > 0) l.push(`${o.andares} ${o.andares === 1 ? "andar" : "andares"} a pé, sem elevador: a tabela conta cada um.`);
   if (o.deslocacao > 0) l.push(`${Number(m.kmPercurso).toFixed(0)} km de percurso: acima de ${RAIO_INCLUIDO_KM} km contam-se todos, ida e volta.`);
   return l;
@@ -828,13 +844,15 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
   } else if (p.servico === "mudanca" && p.mudanca?.tipologia) {
     // A mudança à hora (13-10-2026): a tabela, que já conta os andares e os km.
     // Desde 11-11-2026, o preço público: o «desde» dos parceiros com 2 pessoas, ou a referência.
-    const o = orcamentoDaMudanca(p.mudanca);
+    // Desde 11-11-2026 em intervalo, com a proteção na referência; num T3 ou maior, a equipa de 3.
+    const o = orcamentoDaMudanca({ ...p.mudanca, protecao: true });
     const pp = precoPublicoConhecido();
-    const horasCom2 = horasDaMudanca(p.mudanca.tipologia ?? null, p.mudanca.desmontagem === true, 2);
-    const desde = totalDesdeComDuas(pp, horasCom2);
+    const tip = p.mudanca.tipologia ?? null;
+    const lista: HorasDaLista = { horas: horasDaMudanca(tip, p.mudanca.desmontagem === true, 2), pessoas: pessoasParaACasa(tip, 2) };
+    const desde = totalDesdeDaLista(pp, lista);
     especifica = {
-      texto: estimativaDaMudanca(o, pp, horasCom2),
-      conta: desde != null ? tres(desde, null, true) : tres(o.totalSemIva, null),
+      texto: estimativaDaMudanca(o, pp, lista),
+      conta: desde != null ? tres(desde[0], desde[1], true) : tres(o.totalSemIvaMinimo, o.totalSemIvaMaximo),
     };
     porque.push(...porqueDaMudanca(p.mudanca, o));
   } else if (p.servico === "recolha_entulho" && (p.entulho || p.acesso)) {

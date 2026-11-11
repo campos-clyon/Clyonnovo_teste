@@ -14,7 +14,7 @@ import {
 } from "@/lib/quanto-custa";
 import { SITE_URL } from "@/lib/seo-data";
 import {
-  HORAS_POR_TIPOLOGIA,
+  HORAS_COM_TRES_PESSOAS,
   MATERIAIS,
   MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
@@ -24,7 +24,8 @@ import {
   PRECO_POR_KM_LONGE,
   RAIO_INCLUIDO_KM,
   deslocacao,
-  orcamentoDaMudanca,
+  intervaloDeHorasEmTexto,
+  referenciaDaCasa,
 } from "@/lib/tabela-das-mudancas";
 import { TAXA_IVA } from "@/lib/taxas-plataforma";
 import {
@@ -49,14 +50,23 @@ import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
  */
 const pagina = paginaDePreco("/precos/mudancas");
 const IVA = `${Math.round(TAXA_IVA * 100)} %`;
-const total = (t: "T0" | "T1" | "T2" | "T3" | "T4+") => orcamentoDaMudanca({ tipologia: t }).totalSemIva;
+/** A referência de uma casa, em intervalo e com a proteção (11-11-2026): «310–410 €». */
+type Casa = "T0" | "T1" | "T2" | "T3" | "T4+";
+const faixa = (t: Casa) => {
+  const o = referenciaDaCasa(t);
+  return `${euros(o.totalSemIvaMinimo).replace(" €", "")}–${euros(o.totalSemIvaMaximo)}`;
+};
+const faixaComIva = (t: Casa) => {
+  const o = referenciaDaCasa(t);
+  return `${euros(comIva(o.totalSemIvaMinimo)).replace(" €", "")}–${euros(comIva(o.totalSemIvaMaximo))}`;
+};
 const KM_DO_EXEMPLO = 120;
 const caixaMaisBarata = Math.min(...MATERIAIS.map((m) => m.preco));
 
 const descricaoCom = (preco: PrecoPublicoDasMudancas) =>
   descricaoQueCabe([
     `Mudanças à hora, ${precoDaMudancaNaDescricao(preco)}.`,
-    `Na referência, T1 ≈ ${euros(total("T1"))}, T2 ≈ ${euros(total("T2"))} + IVA.`,
+    `Na referência, T1 ${faixa("T1")}, T2 ${faixa("T2")} + IVA.`,
     "Compare os parceiros e escolha.",
   ]);
 
@@ -86,7 +96,8 @@ export default async function PrecoDasMudancasPage() {
           `No simulador vê os parceiros disponíveis, com a nota, o preço por hora, a equipa de 2 ou 3 e o material, e escolhe; ` +
           `o valor final sai das horas, dos km e do material que confirma na folha do dia. ` +
           `Na referência (${euros(PRECO_POR_HORA)} + IVA por hora, ${euros(comIva(PRECO_POR_HORA))} com IVA, equipa de ${PESSOAS_NA_EQUIPA}), ` +
-          `um T1 fica em cerca de ${euros(total("T1"))}, um T2 em ${euros(total("T2"))} e um T3 em ${euros(total("T3"))}, sempre + IVA.`,
+          `com a proteção dos móveis e do chão, um T1 fica entre ${faixa("T1")}, um T2 entre ${faixa("T2")} e um T3 entre ${faixa("T3")}, sempre + IVA ` +
+          `(um T3 com IVA: ${faixaComIva("T3")}). Um T3 leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T3)} com 3 pessoas — um dia inteiro.`,
         tabela: { titulo: "Na referência, por tipologia", linhas: linhasDasMudancas() },
         extras: {
           titulo: "Os extras, na referência",
@@ -121,12 +132,14 @@ export default async function PrecoDasMudancasPage() {
           {
             question: "Quanto custa a mudança de um T2?",
             answer:
-              `Contam-se cerca de ${HORAS_POR_TIPOLOGIA.T2} horas com 3 pessoas: na referência, ${euros(total("T2"))} + IVA (${euros(comIva(total("T2")))} com IVA), ` +
+              `Conta-se ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas: na referência, com a proteção, ${faixa("T2")} + IVA (${faixaComIva("T2")} com IVA), ` +
               `com elevador nas duas casas e até ${RAIO_INCLUIDO_KM} km (cada andar sem elevador acresce ${euros(POR_ANDAR_SEM_ELEVADOR)}). Com o parceiro que escolher, é o preço por hora dele.`,
           },
           {
             question: "Quanto custa a mudança de um T0 ou T1?",
-            answer: `O mínimo de horas do parceiro que escolher; na referência, ${MINIMO_DE_HORAS} horas, ${euros(MINIMO_DA_MUDANCA)} + IVA (${euros(comIva(MINIMO_DA_MUDANCA))} com IVA).`,
+            answer:
+              `Um T0 leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T0)} com 3 pessoas e um T1 ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T1)}, nunca menos do que o mínimo do parceiro. ` +
+              `Na referência, com a proteção: T0 ${faixa("T0")} + IVA (${faixaComIva("T0")} com IVA), T1 ${faixa("T1")} + IVA (${faixaComIva("T1")} com IVA).`,
           },
           {
             question: "Quanto custa uma mudança para longe?",
