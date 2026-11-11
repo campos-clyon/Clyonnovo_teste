@@ -8,6 +8,7 @@ import { garantirTabelaDasCobrancas, origemLida } from "./marcas-da-divida-na-ba
 import {
   fraseDaMarcacao,
   fraseDoDesfazer,
+  type EstadoDaParte,
   type OrigemDaMarca,
   type ParteDaDivida,
 } from "./cobrancas-ao-profissional";
@@ -100,20 +101,56 @@ type Resultado =
   | { ok: true; frase: string; fechou: boolean; pagamentoId: number | null }
   | { ok: false; porque: string; status: number };
 
-async function gravarMarca(m: {
-  negociacaoId: number;
-  providerId: number;
-  pedidoId: number | null;
-  parte: ParteDaDivida;
-  valor: number;
-  pagoEm: Date;
-  metodo: string;
-  nota: string | null;
-  marcadoPor: string;
-  origem: OrigemDaMarca;
-  pagamentoId: number | null;
-}): Promise<number | null> {
+/** A base, ou a ligação de uma transacção em curso. */
+type Ligacao = { execute: (sql: string, params?: any[]) => Promise<any> };
+
+/**
+ * TUDO OU NADA — 11-11-2026. Marcar e desfazer escrevem em duas tabelas (as
+ * marcas e `pagamentos`): uma ligação que caia a meio não pode deixar a marca
+ * sem a linha do dinheiro, nem a linha cancelada com a marca de pé. O padrão é
+ * o do levantamento (`criarLevantamento`): uma transacção, com a linha da
+ * negociação presa (`FOR UPDATE`) — quem chega em segundo espera e lê o que o
+ * primeiro deixou. Devolver `ok: false` ou lançar desfaz tudo.
+ */
+async function numaTransaccao<T extends { ok: boolean }>(
+  negociacaoId: number,
+  dentro: (conn: Ligacao) => Promise<T>,
+): Promise<T> {
   const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute("SELECT id FROM negociacoes WHERE id = ? FOR UPDATE", [negociacaoId]);
+    const r = await dentro(conn);
+    if (r.ok) await conn.commit();
+    else await conn.rollback();
+    return r;
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+async function gravarMarca(
+  m: {
+    negociacaoId: number;
+    providerId: number;
+    pedidoId: number | null;
+    parte: ParteDaDivida;
+    valor: number;
+    pagoEm: Date;
+    metodo: string;
+    nota: string | null;
+    marcadoPor: string;
+    origem: OrigemDaMarca;
+    pagamentoId: number | null;
+  },
+  ligacao?: Ligacao,
+): Promise<number | null> {
+  const pool = ligacao ?? (await getPool());
   if (!pool) throw new Error("DB not available");
   try {
     const [r] = (await pool.execute(
@@ -192,6 +229,10 @@ export async function marcarPartesCobertas(d: {
  * fecha a dívida, com o valor só do que se marcou agora (o que se marcou antes
  * já está contado). Senão, as referências vivas da dívida deixam de se
  * oferecer — eram do valor inteiro, e o profissional pede outra do que falta.
+ *
+ * NUMA SÓ TRANSACÇÃO (11-11-2026): as marcas, a linha que fecha a dívida e as
+ * referências substituídas ficam todas, ou não fica nenhuma. O registo e o
+ * histórico escrevem-se depois, só do que ficou.
  */
 export async function marcarPartes(d: {
   negociacaoId: number;
@@ -215,6 +256,13 @@ export async function marcarPartes(d: {
   const pedidoId = neg[0]?.pedidoId != null ? Number(neg[0].pedidoId) : null;
 
   const agora = d.agora ?? new Date();
+  const origem = d.origem ?? "marcacao";
+  type Marcado =
+    | { ok: true; aMarcar: EstadoDaParte[]; faltam: EstadoDaParte[]; feitas: number[]; valor: number; pagamentoId: number | null }
+    | { ok: false; porque: string; status: number };
+
+  const r = await numaTransaccao<Marcado>(d.negociacaoId, async (conn) => {
+  // Com a negociação presa: o que outro marcou antes já se lê aqui.
   const divida = (await dividasDoProfissional(providerId, agora)).find((x) => x.negociacaoId === d.negociacaoId);
   if (!divida) {
     return {
@@ -229,28 +277,28 @@ export async function marcarPartes(d: {
   if (aMarcar.length === 0) return { ok: false, porque: "Essas partes já estão pagas.", status: 409 };
   const faltam = divida.partes.filter((p) => !p.paga && !d.partes.includes(p.parte));
   const fecha = faltam.length === 0;
-  const origem = d.origem ?? "marcacao";
 
   // As marcas primeiro: o índice único é que diz se outra pessoa marcou entretanto.
   const feitas: number[] = [];
   for (const p of aMarcar) {
-    const id = await gravarMarca({
-      negociacaoId: d.negociacaoId,
-      providerId,
-      pedidoId,
-      parte: p.parte,
-      valor: p.valor,
-      pagoEm: d.quando,
-      metodo: d.metodo,
-      nota: d.nota,
-      marcadoPor: d.quem,
-      origem,
-      pagamentoId: null,
-    });
+    const id = await gravarMarca(
+      {
+        negociacaoId: d.negociacaoId,
+        providerId,
+        pedidoId,
+        parte: p.parte,
+        valor: p.valor,
+        pagoEm: d.quando,
+        metodo: d.metodo,
+        nota: d.nota,
+        marcadoPor: d.quem,
+        origem,
+        pagamentoId: null,
+      },
+      conn,
+    );
+    // Recusar desfaz a transacção: as marcas que já tinham entrado saem com ela.
     if (id == null) {
-      if (feitas.length > 0) {
-        await pool.query(`DELETE FROM cobrancasAoProfissional WHERE id IN (?)`, [feitas]);
-      }
       return { ok: false, porque: "Esta parte foi marcada entretanto. Recarregue a página.", status: 409 };
     }
     feitas.push(id);
@@ -269,22 +317,28 @@ export async function marcarPartes(d: {
       quando: d.quando,
       ambiente: conf.ok ? conf.config.ambiente : "producao",
       aParte: divida.aParte === true,
+      ligacao: conn,
     });
     if (!r.feito) {
-      await pool.query(`DELETE FROM cobrancasAoProfissional WHERE id IN (?)`, [feitas]);
       return { ok: false, porque: "A dívida foi paga entretanto por outro caminho. Recarregue a página.", status: 409 };
     }
     pagamentoId = r.pagamentoId ?? null;
     if (pagamentoId) {
-      await pool.query(`UPDATE cobrancasAoProfissional SET pagamentoId = ? WHERE id IN (?)`, [pagamentoId, feitas]);
+      for (const id of feitas) {
+        await conn.execute(`UPDATE cobrancasAoProfissional SET pagamentoId = ? WHERE id = ?`, [pagamentoId, id]);
+      }
     }
   } else {
-    await pool.execute(
+    await conn.execute(
       `UPDATE pagamentos SET estado = 'substituido'
         WHERE negociacaoId = ? AND estado = 'pendente' AND parte = ?`,
       [d.negociacaoId, divida.aParte ? "divida" : "trabalho"],
     );
   }
+  return { ok: true, aMarcar, faltam, feitas, valor, pagamentoId };
+  });
+  if (!r.ok) return r;
+  const { aMarcar, faltam, feitas, valor, pagamentoId } = r;
 
   const frase = fraseDaMarcacao({
     partes: aMarcar.map((p) => ({ parte: p.parte, valor: p.valor })),
@@ -321,7 +375,7 @@ export async function marcarPartes(d: {
       message: `${comNota} Registado por ${d.quem}.`,
     }).catch(() => {});
   }
-  return { ok: true, frase, fechou: fecha, pagamentoId };
+  return { ok: true, frase, fechou: faltam.length === 0, pagamentoId };
 }
 
 /**
@@ -332,6 +386,10 @@ export async function marcarPartes(d: {
  * cancelada (não se apaga) e as outras partes que ela levava ficam marcadas
  * por si, com o seu dinheiro. Uma dívida fechada por uma referência, um
  * abatimento ou um pagamento registado noutro sítio corrige-se lá.
+ *
+ * NUMA SÓ TRANSACÇÃO (11-11-2026): cancelar a linha, soltar as outras partes e
+ * tirar a marca — os três, ou nenhum. Uma falha a meio não deixa a dívida
+ * «paga» sem pagamento, nem o pagamento cancelado com a marca de pé.
  */
 export async function desfazerParte(d: {
   negociacaoId: number;
@@ -343,10 +401,17 @@ export async function desfazerParte(d: {
   if (!pool) return { ok: false, porque: "Base de dados indisponível.", status: 503 };
   await garantirTabelaDasCobrancas();
 
-  const [ms] = (await pool.execute(
+  const motivo = d.motivo.trim().slice(0, 200);
+  const agora = new Date();
+  type Desfeito =
+    | { ok: true; m: Record<string, unknown>; pagamentoId: number | null }
+    | { ok: false; porque: string; status: number };
+
+  const r = await numaTransaccao<Desfeito>(d.negociacaoId, async (conn) => {
+  const [ms] = (await conn.execute(
     `SELECT id, providerId, pedidoId, valor, origem, pagamentoId
        FROM cobrancasAoProfissional
-      WHERE negociacaoId = ? AND parte = ? AND activa = 1 LIMIT 1`,
+      WHERE negociacaoId = ? AND parte = ? AND activa = 1 LIMIT 1 FOR UPDATE`,
     [d.negociacaoId, d.parte],
   )) as [Array<Record<string, unknown>>, unknown];
   const m = ms[0];
@@ -368,10 +433,8 @@ export async function desfazerParte(d: {
     };
   }
 
-  const motivo = d.motivo.trim().slice(0, 200);
-  const agora = new Date();
   if (pagamentoId != null) {
-    const [r] = (await pool.execute(
+    const [r] = (await conn.execute(
       `UPDATE pagamentos
           SET estado = 'cancelado', negociacaoPaga = NULL, trid = NULL, erro = ?
         WHERE id = ? AND estado = 'pago'`,
@@ -381,17 +444,21 @@ export async function desfazerParte(d: {
       return { ok: false, porque: "O pagamento desta marca mudou entretanto. Recarregue a página.", status: 409 };
     }
     // As outras partes que este pagamento levava ficam pagas por si.
-    await pool.execute(
+    await conn.execute(
       `UPDATE cobrancasAoProfissional SET pagamentoId = NULL WHERE pagamentoId = ? AND activa = 1 AND id <> ?`,
       [pagamentoId, Number(m.id)],
     );
   }
-  await pool.execute(
+  await conn.execute(
     `UPDATE cobrancasAoProfissional
         SET activa = NULL, desfeitoEm = ?, desfeitoPor = ?, motivoDesfeito = ?
       WHERE id = ? AND activa = 1`,
     [toMySQLDateTime(agora), d.quem.slice(0, 120), motivo || null, Number(m.id)],
   );
+  return { ok: true, m, pagamentoId };
+  });
+  if (!r.ok) return r;
+  const { m, pagamentoId } = r;
 
   const pedidoId = m.pedidoId != null ? Number(m.pedidoId) : null;
   const valor = Number(m.valor);

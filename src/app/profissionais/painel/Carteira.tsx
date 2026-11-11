@@ -10,6 +10,8 @@ import type { LinhaDaCarteira, ResumoDaCarteira } from "@/lib/trabalhos-da-carte
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 // Os nomes da carteira, os mesmos da app (28-10-2026, d4): nenhum se escreve à mão aqui.
 import { ROTULOS_DA_CARTEIRA as R } from "@/lib/rotulos-da-carteira";
+// As frases da dívida, as mesmas da app (11-11-2026): pela dívida inteira, nunca pelo que falta.
+import { faltaDaDivida, fraseDaDividaEmMao, fraseDaDividaNoSaldo, linhasDasPartesDaDivida } from "@/lib/frases-da-divida";
 
 /**
  * A carteira.
@@ -404,17 +406,33 @@ function DividaNoSaldo({ d }: { d: DividaDaCarteira }) {
             {d.pedidoId != null ? `#${d.pedidoId} · ` : ""}
             {d.titulo}
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-            O cliente pagou-lhe {euros(d.recebidoDoCliente)} em mão.{" "}
-            {d.iva > 0
-              ? `São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma`
-              : `A taxa da plataforma (${euros(d.comissao)}) é da CLYON`}
-            {" "}— desconta-se do próximo valor que a CLYON lhe transferir.
-          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{fraseDaDividaNoSaldo(d)}</p>
+          <PartesDaDivida d={d} />
         </div>
         <span className="shrink-0 text-base font-bold text-amber-900">{euros(d.total)}</span>
       </div>
     </article>
+  );
+}
+
+/**
+ * AS DUAS PARTES, CADA UMA COM O SEU ESTADO — 11-11-2026. «IVA: … — pago a
+ * 05/11» e «Taxa da plataforma: … — por pagar», e o que falta quando uma já
+ * está paga. Os textos são de `frases-da-divida.ts` (os mesmos da app).
+ */
+function PartesDaDivida({ d }: { d: DividaDaCarteira }) {
+  const linhas = linhasDasPartesDaDivida(d);
+  const falta = faltaDaDivida(d);
+  if (linhas.length === 0) return null;
+  return (
+    <div className="mt-1 text-xs leading-relaxed">
+      {linhas.map((l) => (
+        <p key={l.parte} className={l.paga ? "text-slate-500" : "font-medium text-amber-800"}>
+          {l.texto}
+        </p>
+      ))}
+      {falta && <p className="font-semibold text-amber-800">{falta}</p>}
+    </div>
   );
 }
 
@@ -459,11 +477,8 @@ function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
             {d.titulo}
           </p>
           {/* Sem fatura não há IVA (um pago em mão, 04-11-2026, d9): só a taxa é da CLYON. */}
-          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-            {d.iva > 0
-              ? `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, com IVA. São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma.`
-              : `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, sem IVA. A taxa da plataforma (${euros(d.comissao)}) é da CLYON.`}
-          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{fraseDaDividaEmMao(d)}</p>
+          <PartesDaDivida d={d} />
           {/*
             O PRAZO — 01-10-2026. Passados 7 dias deixa de poder propor e
             aceitar trabalhos em dinheiro; dizê-lo antes é o que evita a surpresa.

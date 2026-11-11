@@ -1211,10 +1211,17 @@ export async function registarRecebimentoAMao(d: {
    * o `trid` de `tridDoAbatimentoAParte`, que é quem impede a repetição.
    */
   aParte?: boolean;
+  /**
+   * DENTRO DA TRANSACÇÃO DE QUEM CHAMA — 11-11-2026. Marcar a última parte de
+   * uma dívida escreve as marcas e esta linha de uma vez (`marcarPartes`): com
+   * a ligação dela, ou fica tudo ou não fica nada. Sem ela, como sempre.
+   */
+  ligacao?: { execute: (sql: string, params?: any[]) => Promise<any> };
 }): Promise<ResultadoDeAplicar & { pagamentoId?: number }> {
   await garantirTabelas();
-  const pool = await getPool();
-  if (!pool) throw new Error("DB not available");
+  const base = await getPool();
+  if (!base) throw new Error("DB not available");
+  const pool = d.ligacao ?? base;
 
   try {
     const [r] = (await pool.execute(

@@ -6,6 +6,7 @@ import * as APP from "../../app-pro/src/lib/fotografias-da-carrinha";
 import { LADO_MAXIMO as LADO_DO_SITE } from "./reduzir-imagem";
 import { avisoDosItens, TABELA_DOS_ITENS_A_MAIS } from "./itens-a-mais";
 import { PRECO_POR_ITEM } from "./precos-publicos";
+import { fraseDaDividaEmMao } from "./frases-da-divida";
 
 /**
  * A PARTE DA APP CLYON PRO DAS DECISÕES d7, d9, d10 E d17 — 04-11-2026.
@@ -109,14 +110,30 @@ describe("d9 — a dívida de um pago em mão, com e sem IVA, como no painel", (
   const CARTEIRA = ler("app-pro/src/app/(app)/carteira.tsx");
   const DIVIDA = CARTEIRA.slice(CARTEIRA.indexOf("function Divida("), CARTEIRA.indexOf("function Campo("));
 
-  it("as duas frases do painel estão na app, à letra", () => {
-    const frases = [...PAINEL.matchAll(/`(O cliente pagou-lhe \$\{euros\(d\.recebidoDoCliente\)\} em mão, (?:com|sem) IVA\.[^`]*)`/g)].map(
+  /*
+   * 11-11-2026: as frases saíram do painel para `frases-da-divida.ts` (a dívida
+   * tem duas partes, e a frase lê a dívida inteira, não o que falta). A app
+   * passa a lê-las de lá; enquanto não passa, as que tem escritas têm de dar,
+   * à letra, o que a lib dá.
+   */
+  it("as duas frases da app são as de frases-da-divida.ts, à letra", () => {
+    expect(PAINEL).toContain("{fraseDaDividaEmMao(d)}");
+    if (DIVIDA.includes("fraseDaDividaEmMao(")) return;
+    const frases = [...DIVIDA.matchAll(/`(O cliente pagou-lhe \$\{euros\(d\.recebidoDoCliente\)\} em mão, (?:com|sem) IVA\.[^`]*)`/g)].map(
       (m) => m[1],
     );
-    expect(frases, "as frases com e sem IVA no painel").toHaveLength(2);
-    for (const f of frases) expect(DIVIDA).toContain(f);
-    // Com IVA só quando há IVA.
-    expect(DIVIDA).toMatch(/\{d\.iva > 0\s*\? `O cliente pagou-lhe \$\{euros\(d\.recebidoDoCliente\)\} em mão, com IVA\./);
+    expect(frases, "as frases com e sem IVA na app").toHaveLength(2);
+    const escrita = (f: string) =>
+      f
+        .replace("${euros(d.recebidoDoCliente)}", "123,00 €")
+        .replace("${euros(d.iva)}", "23,00 €")
+        .replace("${euros(d.comissao)}", "10,00 €");
+    expect(frases.map(escrita).sort()).toEqual(
+      [
+        fraseDaDividaEmMao({ recebidoDoCliente: 123, iva: 23, comissao: 10 }),
+        fraseDaDividaEmMao({ recebidoDoCliente: 123, iva: 0, comissao: 10 }),
+      ].sort(),
+    );
   });
 
   it("a frase de antes, que dizia «com IVA» com o IVA a zero, saiu", () => {

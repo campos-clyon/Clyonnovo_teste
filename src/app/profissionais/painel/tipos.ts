@@ -256,6 +256,15 @@ export type DividaDaCarteira = {
   iva: number;
   comissao: number;
   recebidoDoCliente: number;
+  /**
+   * AS DUAS PARTES — 11-11-2026. Por pagar, `total`, `iva` e `comissao` são o
+   * que FALTA; a dívida inteira vem em `ivaDaDivida` e `comissaoDaDivida`, e o
+   * estado de cada parte em `partes`. As frases: `frases-da-divida.ts`.
+   */
+  partes?: Array<{ parte: "iva" | "taxa"; valor: number; paga: boolean; pagoEm: string | null }>;
+  porPagar?: number;
+  ivaDaDivida?: number;
+  comissaoDaDivida?: number;
   /** Até quando tem para a pagar antes de ficar bloqueado no dinheiro (01-10-2026). */
   venceEm?: string | null;
   /**
