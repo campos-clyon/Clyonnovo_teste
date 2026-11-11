@@ -125,6 +125,10 @@ export default function Conta() {
         {perfil?.categorias.includes("mudancas") ? (
           <ItemDoMenu icone="car-outline" titulo="Preços das mudanças" aoCarregar={() => abrir("/conta/mudancas")} />
         ) : null}
+        {/* A ficha no Google (11-11-2026): a nota do Google no cartão da lista das mudanças. */}
+        {perfil?.categorias.includes("mudancas") ? (
+          <ItemDoMenu icone="star-outline" titulo="A minha ficha no Google" aoCarregar={() => abrir("/conta/google")} />
+        ) : null}
         <ItemDoMenu
           icone="document-text-outline"
           titulo="Faturação e IVA"

@@ -23,6 +23,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import ConfirmacoesDoVerificado from "@/components/admin/ConfirmacoesDoVerificado";
 import TarifaDasMudancasNaFicha from "@/components/admin/TarifaDasMudancasNaFicha";
+import FichaDoGoogleNaFicha from "@/components/admin/FichaDoGoogleNaFicha";
 import { Miniatura } from "@/components/Anexo";
 import MoradaDaBase, { type BaseEscolhida } from "@/app/profissionais/painel/MoradaDaBase";
 import { CATEGORIAS_DOS_PROFISSIONAIS, nomeDaCategoria, normalizarCategorias } from "@/lib/service-categories";
@@ -622,6 +623,14 @@ function Cartao({
           </p>
           <PorqueNaoRecebeu providerId={p.id} />
           {categorias.includes("mudancas") && <TarifaDasMudancasNaFicha providerId={p.id} />}
+          {/* A ficha do Google (11-11-2026): o profissional propõe, o administrador confirma. */}
+          <FichaDoGoogleNaFicha
+            providerId={p.id}
+            nome={p.name}
+            nif={p.nif ?? null}
+            morada={[p.moradaFiscal, p.codigoPostalFiscal, p.localidadeFiscal].filter(Boolean).join(", ") || p.city || null}
+            eAdministrador={eAdministrador}
+          />
 
           {/* Sem coordenadas o raio não é aplicado. Não é um detalhe: o
               profissional pediu 40 km e está a receber por nome de cidade. */}

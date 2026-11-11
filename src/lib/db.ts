@@ -766,7 +766,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 9;
+const VERSAO_DOS_PROFISSIONAIS = 10;
 let versaoDosProfissionais = 0;
 
 /**
@@ -1120,6 +1120,25 @@ export async function ensureProvidersSchema(): Promise<void> {
        */
       { name: "aprovadoEm", sql: "ALTER TABLE providers ADD COLUMN aprovadoEm DATETIME NULL DEFAULT NULL" },
       { name: "aprovadoPor", sql: "ALTER TABLE providers ADD COLUMN aprovadoPor VARCHAR(120) NULL DEFAULT NULL" },
+      /*
+       * A FICHA NO GOOGLE — 11-11-2026. O parceiro propõe (`googlePlaceIdProposto`),
+       * o administrador confirma (`googlePlaceId`, quando e quem). Só o
+       * place_id: a nota, as avaliações, o nome e a morada da ficha NÃO se
+       * guardam (termos da Google Maps Platform) — ver `ficha-no-google.ts`.
+       */
+      { name: "googlePlaceId", sql: "ALTER TABLE providers ADD COLUMN googlePlaceId VARCHAR(300) NULL DEFAULT NULL" },
+      {
+        name: "googlePlaceIdProposto",
+        sql: "ALTER TABLE providers ADD COLUMN googlePlaceIdProposto VARCHAR(300) NULL DEFAULT NULL",
+      },
+      {
+        name: "googlePlaceConfirmadoEm",
+        sql: "ALTER TABLE providers ADD COLUMN googlePlaceConfirmadoEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "googlePlaceConfirmadoPor",
+        sql: "ALTER TABLE providers ADD COLUMN googlePlaceConfirmadoPor VARCHAR(120) NULL DEFAULT NULL",
+      },
     ];
     for (const col of providerColumnsToAdd) {
       try {
@@ -15286,6 +15305,7 @@ export async function apagarProfissional(
                 categorias = NULL, zonas = NULL,
                 baseLat = NULL, baseLng = NULL,
                 gmailDoTeste = NULL,
+                googlePlaceId = NULL, googlePlaceIdProposto = NULL,
                 isActive = 0, estado = 'apagado'
           WHERE id = ?`,
         [providerId],
@@ -18488,6 +18508,8 @@ export type CandidatoDaMudancaNaBase = import("@/lib/lista-de-parceiros-da-mudan
   avisaPorWhatsApp: boolean;
   baseLat: number | null;
   baseLng: number | null;
+  /** O place_id da ficha do Google CONFIRMADA por um administrador (nunca a proposta). */
+  googlePlaceId: string | null;
 };
 
 export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudancaNaBase[]> {
@@ -18504,6 +18526,7 @@ export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudanca
             p.emiteFatura, p.emiteGuiaTransporte, p.guiaVerificadaEm, p.baseLat, p.baseLng,
             COALESCE(p.contaDeTeste, 0) AS contaDeTeste, p.fotoViaturaUrl, p.fotosViaturaJson,
             ${SQL_DO_VERIFICADO} AS parceiroVerificado,
+            CASE WHEN p.googlePlaceConfirmadoEm IS NOT NULL THEN p.googlePlaceId END AS googlePlaceConfirmado,
             t.precoHora2, t.precoHora3, t.minimoHoras, t.precoKm, t.kmMinimo, t.kmMaximo,
             t.caixa, t.cartaoMetro, t.filmeRolo, t.plasticoBolhaRolo, t.aparecerNaLista
        FROM providers p
@@ -18572,8 +18595,104 @@ export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudanca
       },
       notaMedia: nota ? nota.media : null,
       avaliacoes: nota ? nota.quantas : 0,
+      googlePlaceId: typeof r.googlePlaceConfirmado === "string" && r.googlePlaceConfirmado ? r.googlePlaceConfirmado : null,
     };
   });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * A FICHA DO PARCEIRO NO GOOGLE — 11-11-2026.
+ * Só o place_id se guarda (proposto pelo parceiro, confirmado por um
+ * administrador). A nota e o resto pedem-se ao Google no momento —
+ * `ficha-no-google.ts`.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+export type FichaDoGoogleNaBase = {
+  placeId: string | null;
+  proposto: string | null;
+  confirmadoEm: Date | null;
+  confirmadoPor: string | null;
+};
+
+export async function fichaDoGoogleDoProfissional(providerId: number): Promise<FichaDoGoogleNaBase | null> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [rows] = (await pool.execute(
+    `SELECT googlePlaceId, googlePlaceIdProposto, googlePlaceConfirmadoEm, googlePlaceConfirmadoPor
+       FROM providers WHERE id = ? LIMIT 1`,
+    [providerId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const r = rows[0];
+  if (!r) return null;
+  const confirmadoEm = (r.googlePlaceConfirmadoEm as Date | null) ?? null;
+  return {
+    // Sem a data da confirmação, não há ficha confirmada.
+    placeId: confirmadoEm ? ((r.googlePlaceId as string | null) ?? null) : null,
+    proposto: (r.googlePlaceIdProposto as string | null) ?? null,
+    confirmadoEm,
+    confirmadoPor: (r.googlePlaceConfirmadoPor as string | null) ?? null,
+  };
+}
+
+/** O parceiro propõe uma ficha. A já confirmada continua a contar até um administrador confirmar a nova. */
+export async function proporFichaDoGoogle(providerId: number, placeId: string): Promise<void> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  // Propor a que já está confirmada não deixa nada à espera.
+  await pool.execute(
+    `UPDATE providers
+        SET googlePlaceIdProposto = CASE WHEN googlePlaceId = ? AND googlePlaceConfirmadoEm IS NOT NULL THEN NULL ELSE ? END,
+            updatedAt = updatedAt
+      WHERE id = ?`,
+    [placeId, placeId, providerId],
+  );
+}
+
+/**
+ * O administrador confirma a ficha proposta — a que ele viu (`placeId`): se
+ * entretanto o parceiro propôs outra, não se confirma nada.
+ */
+export async function confirmarFichaDoGoogle(providerId: number, placeId: string, porQuem: string): Promise<boolean> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE providers
+        SET googlePlaceId = googlePlaceIdProposto, googlePlaceIdProposto = NULL,
+            googlePlaceConfirmadoEm = NOW(), googlePlaceConfirmadoPor = ?, updatedAt = updatedAt
+      WHERE id = ? AND googlePlaceIdProposto = ?`,
+    [porQuem.slice(0, 120), providerId, placeId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r.affectedRows ?? 0) > 0;
+}
+
+/** O administrador recusa a ficha proposta (a que ele viu). A confirmada, se houver, fica. */
+export async function recusarFichaDoGoogle(providerId: number, placeId: string): Promise<boolean> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE providers SET googlePlaceIdProposto = NULL, updatedAt = updatedAt
+      WHERE id = ? AND googlePlaceIdProposto = ?`,
+    [providerId, placeId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r.affectedRows ?? 0) > 0;
+}
+
+/** O administrador tira a ficha confirmada: a nota do Google deixa de aparecer já. */
+export async function retirarFichaDoGoogle(providerId: number): Promise<boolean> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE providers
+        SET googlePlaceId = NULL, googlePlaceConfirmadoEm = NULL, googlePlaceConfirmadoPor = NULL, updatedAt = updatedAt
+      WHERE id = ? AND googlePlaceId IS NOT NULL`,
+    [providerId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r.affectedRows ?? 0) > 0;
 }
 
 /** Grava no pedido a lista que o cliente viu e o que escolheu (a prova). */

@@ -40,6 +40,7 @@ import AvisosNoTelemovel from "./AvisosNoTelemovel";
 import ConviteDaAppPro from "./ConviteDaAppPro";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PrecosDasMudancas from "./PrecosDasMudancas";
+import FichaNoGoogle from "./FichaNoGoogle";
 import PerfilPorCompletar from "./PerfilPorCompletar";
 import ComoFunciona from "./ComoFunciona";
 import InterruptorDoTema from "./InterruptorDoTema";
@@ -76,6 +77,7 @@ type Ecra =
   | "ajuda"
   | "como-funciona"
   | "precos-mudancas"
+  | "ficha-google"
   | SeccaoDoPerfil;
 
 const ECRAS_VALIDOS: Ecra[] = [
@@ -88,6 +90,7 @@ const ECRAS_VALIDOS: Ecra[] = [
   "ajuda",
   "como-funciona",
   "precos-mudancas",
+  "ficha-google",
   "dados",
   "servicos",
   "faturacao",
@@ -801,6 +804,15 @@ function PainelNoBrowser() {
             onClick={() => abrir("precos-mudancas")}
           />
         )}
+        {/* A ficha no Google (11-11-2026): a nota do Google no cartão da lista das mudanças. */}
+        {perfil?.categorias.includes("mudancas") && (
+          <LinhaDeMenu
+            icone={Star}
+            rotulo="A minha ficha no Google"
+            activo={ecra === "ficha-google"}
+            onClick={() => abrir("ficha-google")}
+          />
+        )}
         <LinhaDeMenu
           icone={FileText}
           rotulo="Faturação e IVA"
@@ -938,6 +950,7 @@ function PainelNoBrowser() {
         {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}
 
         {ecra === "precos-mudancas" && <PrecosDasMudancas onVoltar={() => abrir("menu")} />}
+        {ecra === "ficha-google" && <FichaNoGoogle onVoltar={() => abrir("menu")} />}
 
         {ecra === "como-funciona" && (
           <ComoFunciona

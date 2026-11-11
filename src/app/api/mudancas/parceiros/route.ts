@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (!lido.ok) return NextResponse.json({ ok: false, error: lido.erro }, { status: 400 });
 
   try {
-    const r = await listaDosParceirosDaMudanca(lido.pedido);
+    const r = await listaDosParceirosDaMudanca(lido.pedido, new Date(), undefined, { comNotaDoGoogle: true });
     if (!r.ok) return NextResponse.json({ ok: false, error: r.erro }, { status: 422 });
     return NextResponse.json(respostaDaLista(lido.pedido, r), { headers: { "Cache-Control": "no-store" } });
   } catch (e) {

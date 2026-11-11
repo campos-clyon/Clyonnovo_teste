@@ -152,6 +152,7 @@ function Navegacao() {
             <Stack.Screen name="conta/perfil" options={{ headerShown: true, title: "Perfil" }} />
             <Stack.Screen name="conta/servicos" options={{ headerShown: true, title: "Serviços e raio" }} />
             <Stack.Screen name="conta/mudancas" options={{ headerShown: true, title: "Preços das mudanças" }} />
+            <Stack.Screen name="conta/google" options={{ headerShown: true, title: "A minha ficha no Google" }} />
             <Stack.Screen name="conta/faturacao" options={{ headerShown: true, title: "Faturação e IVA" }} />
             <Stack.Screen name="conta/banco" options={{ headerShown: true, title: "Conta bancária" }} />
             <Stack.Screen name="conta/palavra-passe" options={{ headerShown: true, title: "Palavra-passe" }} />

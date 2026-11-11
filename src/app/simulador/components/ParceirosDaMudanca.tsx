@@ -219,6 +219,14 @@ export default function ParceirosDaMudanca({
                             <span>{p.novo}</span>
                           )}
                         </p>
+                        {/* A nota do Google (11-11-2026): noutra linha, nunca misturada com a da CLYON, com a atribuição. */}
+                        {p.notaGoogle && (
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-gray-600">
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+                            <span>{p.notaGoogle.texto}</span>
+                            <span className="text-[11px] font-medium text-gray-500">· {p.notaGoogle.atribuicao}</span>
+                          </p>
+                        )}
                         <dl className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-700 sm:grid-cols-2">
                           {hora && (
                             <div>

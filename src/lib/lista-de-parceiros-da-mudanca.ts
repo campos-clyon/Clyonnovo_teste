@@ -36,6 +36,37 @@ export const MAXIMO_DE_ESCOLHIDOS = 3;
 /** Com quantas avaliações a nota aparece. Antes disso, «Novo na CLYON». */
 export const AVALIACOES_PARA_A_NOTA = 3;
 
+/* ── A NOTA DO GOOGLE — 11-11-2026 ────────────────────────────────────────────
+ * Vem da ficha do Google CONFIRMADA por um administrador (ficha-no-google.ts),
+ * pedida no momento e nunca guardada na base. Fica SEPARADA da nota da CLYON:
+ * nunca uma média das duas. Com menos de 5 avaliações no Google, não aparece.
+ * A atribuição vai sempre com ela (termos da Google Maps Platform: dados do
+ * Google fora de um mapa do Google levam «Google Maps»). */
+export const AVALIACOES_PARA_A_NOTA_DO_GOOGLE = 5;
+export const ATRIBUICAO_DO_GOOGLE = "Google Maps";
+
+export type NotaDoGoogleNoCartao = { media: number; avaliacoes: number; texto: string; atribuicao: string };
+
+/** «4,6 no Google (230 avaliações)», ou null (sem resposta, valores estranhos, menos de 5 avaliações). */
+export function notaDoGoogleNoCartao(
+  n: { rating: number; userRatingCount: number } | null | undefined,
+): NotaDoGoogleNoCartao | null {
+  if (!n) return null;
+  const { rating, userRatingCount } = n;
+  if (typeof rating !== "number" || !Number.isFinite(rating) || rating < 1 || rating > 5) return null;
+  if (!Number.isInteger(userRatingCount) || userRatingCount < AVALIACOES_PARA_A_NOTA_DO_GOOGLE) return null;
+  const media = Math.round(rating * 10) / 10;
+  const mediaEmTexto = media.toFixed(1).replace(".", ",");
+  // Milhares com espaço a partir de 10 000, como em pt-PT (sem depender do Intl do telemóvel).
+  const quantas = userRatingCount >= 10000 ? String(userRatingCount).replace(/\B(?=(\d{3})+(?!\d))/g, " ") : String(userRatingCount);
+  return {
+    media,
+    avaliacoes: userRatingCount,
+    texto: `${mediaEmTexto} no Google (${quantas} avaliações)`,
+    atribuicao: ATRIBUICAO_DO_GOOGLE,
+  };
+}
+
 export type Pessoas = 2 | 3;
 
 export function lerPessoas(v: unknown): Pessoas | null {
@@ -193,8 +224,8 @@ export type CartaoDoParceiro = {
   nota: { media: number; avaliacoes: number; texto: string } | null;
   /** «Novo na CLYON» quando ainda não tem as avaliações para a nota. */
   novo: string | null;
-  /** A nota do Google entra numa fase seguinte (com o place id confirmado por um administrador). */
-  notaGoogle: null;
+  /** A nota do Google (ficha confirmada por um administrador), separada da da CLYON; null sem ela. */
+  notaGoogle: NotaDoGoogleNoCartao | null;
   fotografia: string | null;
   precoHora: { 2: ValorAoCliente; 3: ValorAoCliente | null };
   fazComTres: boolean;

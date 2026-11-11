@@ -72,6 +72,9 @@ const IDENTIFICAM = [
   "baseLng",
   // O Gmail do telemóvel dele, para o teste da CLYON Pro (27-10-2026): é um contacto.
   "gmailDoTeste",
+  // A ficha do Google dele (11-11-2026): leva ao nome e � morada da empresa.
+  "googlePlaceId",
+  "googlePlaceIdProposto",
 ] as const;
 
 /**
@@ -102,6 +105,8 @@ const NAO_IDENTIFICAM = new Set([
   // As três confirmações do «verificado» (01-11-2026): datas e o nome de quem da equipa confirmou.
   "nifConfirmadoEm", "nifConfirmadoPor", "identidadeConfirmadaEm", "identidadeConfirmadaPor",
   "contactoConfirmadoEm", "contactoConfirmadoPor",
+  // Quando e quem da equipa confirmou a ficha do Google (11-11-2026).
+  "googlePlaceConfirmadoEm", "googlePlaceConfirmadoPor",
   // Avaliações, distintivos, estado da conta.
   "avaliacao", "quantasAvaliacoes", "destaque", "verificado",
   // Uma data de último acesso sem nome, email nem telefone não diz quem é

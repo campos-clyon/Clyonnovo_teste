@@ -91,6 +91,8 @@ export const ECRA_DO_PAINEL_NA_APP: Record<string, string> = {
   seguranca: "/conta/palavra-passe",
   // Os preços das mudanças (10-11-2026).
   "precos-mudancas": "/conta/mudancas",
+  // A ficha no Google (11-11-2026).
+  "ficha-google": "/conta/google",
 };
 
 export function caminhoDoPainel(params: URLSearchParams): string {

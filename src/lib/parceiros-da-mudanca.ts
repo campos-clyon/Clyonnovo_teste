@@ -5,6 +5,7 @@ import { distanciaParaElegibilidade, pontoValido, type Ponto } from "./distancia
 import { geocodificarMorada } from "./geocodificar";
 import { profissionaisBloqueadosEmDinheiro } from "./bloqueio-do-profissional";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
+import { notasNoGoogle, PRAZO_DA_NOTA_DO_GOOGLE_MS } from "./ficha-no-google";
 import type { TarifaDasMudancas } from "./conta-da-mudanca";
 import type { Tipologia } from "./tabela-das-mudancas";
 import {
@@ -15,6 +16,7 @@ import {
   horasDaMudanca,
   lerPessoas,
   lerTipologia,
+  notaDoGoogleNoCartao,
   ordenarCartoes,
   porqueFicaDeFora,
   recomendaTresPessoas,
@@ -33,7 +35,10 @@ import {
  * pode forçar um id — só passa o que ESTA conta devolve agora.
  *
  * O que fica de fora do cartão, de propósito: o número do parceiro na base, o
- * telefone, o email, a morada e qualquer ligação ao Google.
+ * telefone, o email, a morada e qualquer ligação ao Google (o place_id e o link
+ * da ficha). Da ficha confirmada só sai a nota e o número de avaliações, com a
+ * atribuição — e só na rota da lista (`comNotaDoGoogle`): a conferência do
+ * pedido não pergunta ao Google, e a prova do pedido nunca guarda a nota.
  */
 
 /* ── O ID OPACO ───────────────────────────────────────────────────────────── */
@@ -144,10 +149,19 @@ export type ResultadoDaLista =
     }
   | { ok: false; erro: string };
 
+export type OpcoesDaLista = {
+  /** Pedir ao Google a nota das fichas confirmadas (só a rota pública da lista). */
+  comNotaDoGoogle?: boolean;
+  /** Para os testes. */
+  busca?: typeof fetch;
+  prazoDoGoogleMs?: number;
+};
+
 export async function listaDosParceirosDaMudanca(
   pedido: PedidoDaLista,
   agora: Date = new Date(),
   candidatos?: CandidatoDaMudancaNaBase[],
+  opcoes: OpcoesDaLista = {},
 ): Promise<ResultadoDaLista> {
   const [o, d] = await Promise.all([ponto(pedido.origem), ponto(pedido.destino)]);
   if (!o) return { ok: false, erro: "Não conseguimos localizar a morada de origem." };
@@ -177,6 +191,8 @@ export async function listaDosParceirosDaMudanca(
 
   const cartoes: CartaoDoParceiro[] = [];
   const escolhiveis: EscolhivelDaLista[] = [];
+  /** id opaco → place_id CONFIRMADO. Fica no servidor. */
+  const fichas = new Map<string, string>();
   const chave = segredo();
   todos.forEach((c, i) => {
     const distanciaKm =
@@ -188,8 +204,22 @@ export async function listaDosParceirosDaMudanca(
     const cartao = cartaoDoParceiro({ ...candidato, tarifa: c.tarifa }, ctx, id, agora);
     if (!cartao) return;
     cartoes.push(cartao);
+    if (c.googlePlaceId) fichas.set(id, c.googlePlaceId);
     escolhiveis.push({ id, providerId: c.id, nome: c.nome, tarifa: c.tarifa, distanciaKm });
   });
+
+  // A nota do Google: em paralelo, com prazo curto; falha ou < 5 avaliações = sem a linha.
+  if (opcoes.comNotaDoGoogle && fichas.size > 0) {
+    const notas = await notasNoGoogle([...fichas.values()], {
+      busca: opcoes.busca,
+      prazoMs: opcoes.prazoDoGoogleMs ?? PRAZO_DA_NOTA_DO_GOOGLE_MS,
+      agora: agora.getTime(),
+    }).catch(() => new Map());
+    for (const cartao of cartoes) {
+      const placeId = fichas.get(cartao.id);
+      cartao.notaGoogle = placeId ? notaDoGoogleNoCartao(notas.get(placeId)) : null;
+    }
+  }
 
   return {
     ok: true,

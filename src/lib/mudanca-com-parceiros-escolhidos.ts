@@ -122,7 +122,8 @@ export function provaDaEscolha(e: EscolhaPreparada, prazo: Date, agora: Date) {
     procurarMais: e.procurarMais,
     prazoRespostaEm: prazo.toISOString(),
     // Os cartões tal como saíram: preços, horas, km e estimativas, sem contactos.
-    cartoesVistos: e.cartoesVistos,
+    // Sem a nota do Google: os termos não deixam guardá-la (só o place_id, na ficha).
+    cartoesVistos: e.cartoesVistos.map((c) => ({ ...c, notaGoogle: null })),
   };
 }
 
