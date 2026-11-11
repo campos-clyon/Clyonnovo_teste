@@ -1,6 +1,15 @@
 import { tarifaCongeladaDeJson, valorDaMudanca, type TarifaCongelada } from "./conta-da-mudanca";
 import { diaEmLisboa, horaEmLisboa, pecasEmLisboa } from "./hora-de-lisboa";
 import { formatarEuros } from "./formatar-euros";
+import {
+  ACCAO_DE_CONFIRMAR_A_HORA,
+  botaoConfirmo,
+  regraDoValorMaisBaixo,
+  textoDaPropostaMaisBaixa,
+  textoDepoisDeConfirmar,
+  textoDoPrazoTerminado,
+  TEXTOS_DO_ESCOLHIDO,
+} from "./escolhidos-sem-resposta";
 
 /**
  * O PEDIDO DE MUDANÇA DIRIGIDO A ELE — 11-11-2026 (fase 2, lado do profissional).
@@ -45,6 +54,27 @@ export type MudancaEscolhida = {
   prazoTexto: string | null;
   prazoPassou: boolean;
   regraDaProposta: string;
+  /**
+   * A PRIMEIRA RESPOSTA, NUM TOQUE (d6, 11-11-2026): «Confirmo: faço por X/h +
+   * IVA» em vez do formulário, com «Propor um valor mais baixo» ao lado. Null
+   * quando já respondeu — aí o ecrã é o da negociação de sempre. Os mesmos
+   * textos no painel e na app Pro (`escolhidos-sem-resposta.ts`).
+   */
+  primeiraResposta: {
+    /** A acção a enviar à rota da negociação, sem valor: o servidor lê a hora congelada. */
+    accao: string;
+    confirmar: string;
+    proporMaisBaixo: string;
+    naoEstouInteressado: string;
+    rotuloDoValor: string;
+    regraDoValorMaisBaixo: string;
+    enviarProposta: string;
+    voltar: string;
+  } | null;
+  /** Depois de confirmar ou de propor mais baixo, enquanto o cliente não responde: a frase no lugar dos botões. */
+  respostaTexto: string | null;
+  /** O rótulo do cartão na lista de pedidos: «Responda até 14:30» ou «Prazo terminado». */
+  rotuloDoPrazo: string | null;
 };
 
 export type DadosDaMudancaEscolhida = {
@@ -57,6 +87,9 @@ export type DadosDaMudancaEscolhida = {
   km: number | string | null | undefined;
   /** Já pôs um número nesta negociação: o prazo deixa de contar. */
   jaRespondeu: boolean;
+  /** O estado e as propostas da negociação, para a frase de depois de responder (d6). */
+  estado?: string | null;
+  propostasJson?: string | null;
 };
 
 const eur = (cent: number) => formatarEuros(cent / 100);
@@ -86,7 +119,8 @@ export function recebePorHoraCent(t: TarifaCongelada, horaCent: number): number 
 /** «Responda até 14:30» no mesmo dia em Lisboa; «Responda até 12/11 às 10:00» noutro. */
 export function textoDoPrazo(prazo: Date, agora: Date = new Date()): { texto: string; passou: boolean } {
   const hora = horaEmLisboa(prazo);
-  if (prazo.getTime() <= agora.getTime()) return { texto: `O prazo para responder terminou às ${hora}.`, passou: true };
+  // Depois do prazo ainda pode responder, mas o cliente já foi avisado (d6).
+  if (prazo.getTime() <= agora.getTime()) return { texto: textoDoPrazoTerminado(prazo, agora), passou: true };
   if (diaEmLisboa(prazo) === diaEmLisboa(agora)) return { texto: `Responda até ${hora}`, passou: false };
   const p = pecasEmLisboa(prazo);
   return { texto: `Responda até ${dois(p.dia)}/${dois(p.mes)} às ${hora}`, passou: false };
@@ -122,6 +156,8 @@ export function mudancaEscolhida(d: DadosDaMudancaEscolhida, agora: Date = new D
   }
 
   const prazo = !d.jaRespondeu && d.prazoRespostaEm ? textoDoPrazo(d.prazoRespostaEm, agora) : null;
+  const aberta = (d.estado ?? "aberta") === "aberta";
+  const respostaTexto = aberta ? textoDaResposta(d.propostasJson, horaCent, t.regras.iva, d.prazoRespostaEm) : null;
 
   return {
     titulo: TITULO_DA_MUDANCA_ESCOLHIDA,
@@ -136,7 +172,46 @@ export function mudancaEscolhida(d: DadosDaMudancaEscolhida, agora: Date = new D
     prazoTexto: prazo?.texto ?? null,
     prazoPassou: prazo?.passou ?? false,
     regraDaProposta: REGRA_DA_PROPOSTA_ESCOLHIDA,
+    primeiraResposta:
+      !d.jaRespondeu && aberta
+        ? {
+            accao: ACCAO_DE_CONFIRMAR_A_HORA,
+            confirmar: botaoConfirmo(horaCent),
+            proporMaisBaixo: TEXTOS_DO_ESCOLHIDO.proporMaisBaixo,
+            naoEstouInteressado: TEXTOS_DO_ESCOLHIDO.naoEstouInteressado,
+            rotuloDoValor: TEXTOS_DO_ESCOLHIDO.rotuloDoValor,
+            regraDoValorMaisBaixo: regraDoValorMaisBaixo(horaCent),
+            enviarProposta: TEXTOS_DO_ESCOLHIDO.enviarProposta,
+            voltar: TEXTOS_DO_ESCOLHIDO.voltar,
+          }
+        : null,
+    respostaTexto,
+    rotuloDoPrazo: prazo ? (prazo.passou ? TEXTOS_DO_ESCOLHIDO.prazoTerminado : prazo.texto) : null,
   };
+}
+
+/**
+ * A frase de depois da PRIMEIRA resposta dele, enquanto está com o cliente:
+ * confirmou a hora congelada (com a variante de depois do prazo) ou propôs
+ * um valor mais baixo. Null a partir da segunda proposta, ou quando a última
+ * palavra já é do cliente — aí vale o ecrã da negociação.
+ */
+function textoDaResposta(propostasJson: string | null | undefined, horaCent: number, iva: number, prazo: Date | null): string | null {
+  if (!propostasJson) return null;
+  let lista: Array<{ por?: string; valor?: number; estado?: string; criadaEm?: string }>;
+  try {
+    const l = JSON.parse(propostasJson);
+    lista = Array.isArray(l) ? l : [];
+  } catch {
+    return null;
+  }
+  const dele = lista.filter((x) => x?.por === "profissional");
+  const ultima = lista[lista.length - 1];
+  if (dele.length !== 1 || ultima !== dele[0] || ultima.estado !== "pendente" || !Number.isFinite(Number(ultima.valor))) return null;
+  const valorCent = Math.round(Number(ultima.valor) * 100);
+  if (valorCent !== horaCent) return textoDaPropostaMaisBaixa(valorCent, iva);
+  const quando = ultima.criadaEm ? new Date(ultima.criadaEm).getTime() : NaN;
+  return textoDepoisDeConfirmar(horaCent, iva, !!prazo && Number.isFinite(quando) && quando > prazo.getTime());
 }
 
 /**

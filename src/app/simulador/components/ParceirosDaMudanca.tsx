@@ -49,8 +49,11 @@ type RespostaDaLista = {
   textos?: {
     titulo: string;
     escolha: string;
+    /** d6: «Os parceiros que escolher têm 3 horas para responder…» */
+    prazo?: string;
     semParceirosSegue: string;
     procurarMais: string;
+    procurarMaisAjuda?: string;
     deixarEscolher?: string;
     pedirEmbalamento?: string;
     botao: string;
@@ -164,7 +167,8 @@ export default function ParceirosDaMudanca({
       ),
       nomes,
       pessoas: pessoasDaConta,
-      procurarMais: parceiros.length === 1 && procurarMais,
+      // d6 (11-11-2026): a opção aparece sempre que há parceiros; só marcada o pedido vai a mais.
+      procurarMais: parceiros.length > 0 && procurarMais,
       embalamento: comEmbalamento && embalamento,
     });
   };
@@ -226,6 +230,7 @@ export default function ParceirosDaMudanca({
       {!aCarregar && parceiros.length > 0 && (
         <>
           <p className="text-sm text-gray-700">{textos?.escolha}</p>
+          {textos?.prazo && <p className="text-sm text-gray-700">{textos.prazo}</p>}
           {comEmbalamento && (
             <label className="flex items-start gap-2 text-sm text-gray-800">
               <input
@@ -330,17 +335,19 @@ export default function ParceirosDaMudanca({
             })}
           </ul>
 
-          {parceiros.length === 1 && (
-            <label className="flex items-start gap-2 text-sm text-gray-800">
-              <input
-                type="checkbox"
-                checked={procurarMais}
-                onChange={(e) => setProcurarMais(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-blue-600"
-              />
+          {/* d6 (11-11-2026): sempre que há parceiros, desmarcada por omissão. A CLYON só procura mais se o cliente pedir. */}
+          <label className="flex items-start gap-2 text-sm text-gray-800">
+            <input
+              type="checkbox"
+              checked={procurarMais}
+              onChange={(e) => setProcurarMais(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-blue-600"
+            />
+            <span>
               {textos?.procurarMais}
-            </label>
-          )}
+              {textos?.procurarMaisAjuda && <span className="mt-0.5 block text-xs text-gray-600">{textos.procurarMaisAjuda}</span>}
+            </span>
+          </label>
 
           <p className="text-xs leading-relaxed text-gray-600">
             {textos?.notaDaEstimativa} {textos?.quemFaz}

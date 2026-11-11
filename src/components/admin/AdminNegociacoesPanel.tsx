@@ -81,6 +81,8 @@ import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade, corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
+import { rotuloDoPrazoTerminado, type EstadoNaMesa } from "@/lib/escolhidos-sem-resposta";
+import { EscolhidosNaMesa } from "./EscolhidosNaMesa";
 import {
   atrasadosPrimeiro,
   diasAEsperarConfirmacao,
@@ -594,6 +596,9 @@ type Pedido = {
   concluidoVistoEm: string | null;
   /** Quando o orçamento foi ao cliente (21-10-2026) — ver `orcamentoEnviadoCobre`. */
   propostaEnviadaEm?: string | null;
+  /** Numa mudança com parceiros escolhidos pelo cliente (d6): o resumo da escolha e o que a Mesa mostra. */
+  escolhidosJson?: string | null;
+  escolhidosNaMesa?: EstadoNaMesa | null;
   /**
    * A validade do link do cliente — que serve de MARCA DE VERSÃO.
    *
@@ -1632,6 +1637,27 @@ export default function AdminNegociacoesPanel({
       await carregar(true, temTudo);
     } catch {
       /* sem rede, fica onde estava — o «Já enviei» continua à mão */
+    }
+  }
+
+  /** «O cliente pediu que procurássemos» (d6): o pedido feito por telefone ou WhatsApp, registado por quem o ouviu. */
+  async function registarQueOClientePediu(p: Pedido) {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/admin/negociacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao: "cliente_pediu_mais_parceiros", pedidoId: p.id }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setErro(d.error ?? "Não foi possível registar.");
+        return;
+      }
+      setAviso(`#${p.id}: registado que o cliente pediu à CLYON que procure mais parceiros.`);
+      await carregar(true, temTudo);
+    } catch {
+      setErro("Erro de rede.");
     }
   }
 
@@ -3531,6 +3557,15 @@ export default function AdminNegociacoesPanel({
         )}
 
         <div className="mt-3 space-y-2 border-t border-slate-800 pt-3">
+          {/* Os escolhidos sem resposta (d6, 11-11-2026): o selo, a linha e os botões da equipa. */}
+          {p.escolhidosNaMesa && (
+            <EscolhidosNaMesa
+              estado={p.escolhidosNaMesa}
+              aEnviar={ocupado === `r${p.id}`}
+              onEnviarAMais={() => redistribuir(p.id)}
+              onRegistar={() => registarQueOClientePediu(p)}
+            />
+          )}
           {p.negociacoes.length === 0 && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="text-xs font-semibold text-amber-200">
@@ -3616,7 +3651,9 @@ export default function AdminNegociacoesPanel({
                           const prazo = instanteDaBase(n.prazoRespostaEm ?? null);
                           if (!prazo) return null;
                           const passou = prazo.getTime() < Date.now() && n.estado === "aberta";
-                          return ` · ${passou ? "prazo passou" : "responder até"} ${dataEHoraEmLisboa(prazo)}`;
+                          // Sem resposta dele (sem proposta) e com o prazo passado: «sem resposta · prazo terminou DD/MM, HH:MM» (d6).
+                          const calado = passou && !propostasDe(n.propostasJson ?? null).some((x) => x.por === "profissional");
+                          return calado ? ` · ${rotuloDoPrazoTerminado(prazo)}` : ` · ${passou ? "prazo passou" : "responder até"} ${dataEHoraEmLisboa(prazo)}`;
                         })()}
                       </span>
                     )}

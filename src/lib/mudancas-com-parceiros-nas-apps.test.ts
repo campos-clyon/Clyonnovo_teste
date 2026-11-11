@@ -82,7 +82,7 @@ describe("«O cliente escolheu-o» — o bloco do parceiro escolhido (meus-pedid
   it("o prazo: «Responda até HH:mm» no mesmo dia em Lisboa, com o dia noutro, e some depois de ele responder", () => {
     expect(textoDoPrazo(prazo, AGORA)).toEqual({ texto: "Responda até 13:00", passou: false });
     expect(textoDoPrazo(instanteEmLisboa("2026-11-12T10:00") as Date, AGORA).texto).toBe("Responda até 12/11 às 10:00");
-    expect(textoDoPrazo(instanteEmLisboa("2026-11-11T09:00") as Date, AGORA)).toEqual({ texto: "O prazo para responder terminou às 09:00.", passou: true });
+    expect(textoDoPrazo(instanteEmLisboa("2026-11-11T09:00") as Date, AGORA)).toEqual({ texto: "O prazo terminou às 09:00. Ainda pode responder, mas o cliente já foi avisado.", passou: true });
     const respondido = mudancaEscolhida({ tarifaCongeladaJson: CONGELADA, pessoasEscolhidas: 2, prazoRespostaEm: prazo, horas: 5, km: 20, jaRespondeu: true }, AGORA)!;
     expect(respondido.prazoTexto).toBeNull();
     expect(respondido.prazoRespostaEm).toBeNull();

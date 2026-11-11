@@ -710,6 +710,8 @@ export async function GET(req: NextRequest) {
               horas: m.horas,
               km: m.km,
               jaRespondeu: l.estado !== "aberta" || jaRespondeuNaNegociacao(l.propostasJson),
+              estado: l.estado,
+              propostasJson: l.propostasJson,
             },
             agora,
           );

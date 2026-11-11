@@ -14,6 +14,8 @@ import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 import { pedidoArrumado, PEDIDO_ARRUMADO_NAO_SE_ENVIA } from "@/lib/pedido-arrumado";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { pagamentosQuePrendem } from "@/lib/pagamentos-na-base";
+import { BOTOES_DA_MESA, podeAbrirAMaisParceiros } from "@/lib/escolhidos-sem-resposta";
+import { registarEnvioAMais, resumoDosEscolhidos } from "@/lib/escolhidos-sem-resposta-no-servidor";
 
 export const runtime = "nodejs";
 
@@ -77,6 +79,21 @@ export async function POST(req: NextRequest) {
    * Recusa-se com o nome e com a saída: quem quer mesmo mandar a outros tem
    * primeiro de desfazer o fecho, e isso é um gesto à parte, com registo.
    */
+  /*
+   * OS PARCEIROS QUE O CLIENTE ESCOLHEU — 11-11-2026 (d6). Numa mudança com a
+   * lista, a CLYON só abre o pedido a mais parceiros se o cliente o pedir (na
+   * lista, no aviso, ou dito à equipa e registado). Voltar a mandar a um que
+   * já o tinha não abre a ninguém novo, e passa.
+   */
+  const escolhidos = await resumoDosEscolhidos(pedidoId);
+  const soVoltaAMandar = Number.isInteger(Number(corpo.voltarAMandar)) && Number(corpo.voltarAMandar) > 0;
+  if (!soVoltaAMandar && !podeAbrirAMaisParceiros(escolhidos)) {
+    return NextResponse.json(
+      { error: `O cliente escolheu os parceiros deste pedido. ${BOTOES_DA_MESA.dicaDoEnviarDesligado}`, soAPedidoDoCliente: true },
+      { status: 409 },
+    );
+  }
+
   const fechada = (await negociacoesDoPedido(pedidoId)).find((n) => n.estado === "acordada");
   if (fechada) {
     /*
@@ -288,6 +305,8 @@ export async function POST(req: NextRequest) {
       by: null,
       message: `Redistribuído. ` + resumoDaDistribuicao(r),
     });
+    // A pedido do cliente (d6): fica escrito quando e a quantos, e o selo da Mesa apaga-se.
+    if (escolhidos && !soVoltaAMandar && r.receberam > 0) await registarEnvioAMais(pedidoId, r.receberam);
 
     return NextResponse.json({ ok: true, ...r });
   } catch (error) {

@@ -2746,6 +2746,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     propostaEnviadaEm: Date | null;
     /** As horas previstas (pedido por hora, 31-10-2026). */
     horasPrevistas: number;
+    /** O resumo da escolha dos parceiros numa mudança (d6): o aviso ao cliente, o que ele respondeu e se pediu à CLYON. */
+    escolhidosJson: string | null;
     createdAt: Date;
     negociacoes: Array<{
       id: number;
@@ -2852,6 +2854,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             o.dataAgendada,
             -- Quando o orcamento foi ao cliente: passa a «A aguardar cliente» (21-10-2026).
             o.propostaEnviadaEm,
+            ${RESUMO_DA_ESCOLHA_SQL} AS escolhidosJson,
             COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
@@ -2946,6 +2949,7 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     linkExpiraEm: (p.acessoTokenExpiraEm as Date) ?? null,
     dataAgendada: (p.dataAgendada as Date) ?? null,
     propostaEnviadaEm: (p.propostaEnviadaEm as Date) ?? null,
+    escolhidosJson: (p.escolhidosJson as string) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
   }));
@@ -7294,6 +7298,38 @@ export async function tarifaCongeladaDaNegociacao(
   const l = linhas[0];
   if (!l || l.tarifaCongeladaJson == null) return null;
   return { tarifaCongeladaJson: String(l.tarifaCongeladaJson), pessoasEscolhidas: l.pessoasEscolhidas != null ? Number(l.pessoasEscolhidas) : null };
+}
+
+/**
+ * O prazo do escolhido e a marca do aviso ao cliente, para a resposta dele
+ * dizer se chegou depois do prazo (d6). Null se não for uma mudança escolhida
+ * ou se a leitura falhar — a resposta segue na mesma.
+ */
+export async function prazoDoEscolhido(
+  negociacaoId: number,
+  providerId: number,
+): Promise<{ prazoRespostaEm: Date | string | null; marcaSemResposta: string | null } | null> {
+  try {
+    await ensureNegociacoesTable();
+    await ensureSimulatorOrdersTable();
+    const pool = await getPool();
+    if (!pool) return null;
+    const [linhas] = (await pool.execute(
+      `SELECT n.prazoRespostaEm,
+              CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
+                   THEN CAST(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.semResposta') AS CHAR) END AS marca
+         FROM negociacoes n
+         JOIN simulatorOrders o ON o.id = n.pedidoId
+        WHERE n.id = ? AND n.providerId = ? AND n.tarifaCongeladaJson IS NOT NULL
+        LIMIT 1`,
+      [negociacaoId, providerId],
+    )) as [Array<{ prazoRespostaEm: Date | string | null; marca: string | null }>, unknown];
+    const l = linhas[0];
+    return l ? { prazoRespostaEm: l.prazoRespostaEm ?? null, marcaSemResposta: l.marca ?? null } : null;
+  } catch (e) {
+    console.error("[escolhidos sem resposta] o prazo do escolhido não se leu:", e instanceof Error ? e.message : e);
+    return null;
+  }
 }
 
 /** Guarda o percurso no pedido — uma vez: não escreve por cima de um que já lá esteja. */
@@ -19031,6 +19067,189 @@ export async function gravarEscolhaDosParceiros(pedidoId: number, escolha: unkno
     JSON.stringify(escolha),
     pedidoId,
   ]);
+}
+
+/* ── OS ESCOLHIDOS SEM RESPOSTA — 11-11-2026 (d6) ───────────────────────────
+ * Tudo vive dentro de `escolhaDosParceirosJson` (sem coluna nova): a marca do
+ * aviso ao cliente (`semResposta`), o que ele respondeu (`decisaoDoCliente`),
+ * se pediu à CLYON que procure (`procurarMais`) e o envio a mais parceiros
+ * (`enviadoAMais`). As regras e os textos: `escolhidos-sem-resposta.ts`. */
+
+/** O resumo pequeno da escolha (sem os cartões vistos), para a Mesa e para o cliente. */
+const RESUMO_DA_ESCOLHA_SQL = `CASE WHEN JSON_VALID(o.escolhaDosParceirosJson) THEN CAST(JSON_OBJECT(
+              'em', JSON_EXTRACT(o.escolhaDosParceirosJson, '$.em'),
+              'procurarMais', JSON_EXTRACT(o.escolhaDosParceirosJson, '$.procurarMais'),
+              'semResposta', JSON_EXTRACT(o.escolhaDosParceirosJson, '$.semResposta'),
+              'decisao', JSON_EXTRACT(o.escolhaDosParceirosJson, '$.decisaoDoCliente'),
+              'enviadoAMais', JSON_EXTRACT(o.escolhaDosParceirosJson, '$.enviadoAMais')
+            ) AS CHAR) END`;
+
+export type PedidoComEscolhidosNaBase = {
+  id: number;
+  status: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  procurarMais: boolean;
+  jaAvisado: boolean;
+  negociacoes: Array<{
+    id: number;
+    estado: string | null;
+    propostasJson: string | null;
+    confirmadoEm: Date | string | null;
+    prazoRespostaEm: Date | string | null;
+    escolhidoPeloCliente: number;
+    profissionalNome: string | null;
+  }>;
+};
+
+/**
+ * Os pedidos de mudança com parceiros escolhidos pelo cliente, por fechar e
+ * AINDA SEM AVISO, com TODAS as negociações de cada um (para saber se alguém
+ * respondeu). O prazo confere-se fora, no relógio de Lisboa — a base lê-se em UTC.
+ */
+export async function pedidosComEscolhidosPorResponder(limite = 200): Promise<PedidoComEscolhidosNaBase[]> {
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [pedidos] = (await pool.execute(
+    `SELECT o.id, o.status, o.contactName, o.contactPhone, o.contactEmail,
+            JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.procurarMais')) AS procurarMais
+       FROM simulatorOrders o
+      WHERE o.status NOT IN ('cancelado', 'concluido', 'arquivado', 'rejeitado')
+        AND o.escolhaDosParceirosJson IS NOT NULL AND JSON_VALID(o.escolhaDosParceirosJson)
+        AND JSON_EXTRACT(o.escolhaDosParceirosJson, '$.semResposta') IS NULL
+        AND EXISTS (SELECT 1 FROM negociacoes n
+                     WHERE n.pedidoId = o.id AND n.tarifaCongeladaJson IS NOT NULL AND n.prazoRespostaEm IS NOT NULL)
+      ORDER BY o.id DESC
+      LIMIT ?`,
+    [String(limite)],
+  )) as [Array<Record<string, unknown>>, unknown];
+  if (pedidos.length === 0) return [];
+  const ids = pedidos.map((p) => Number(p.id));
+  const [negs] = (await pool.execute(
+    `SELECT n.id, n.pedidoId, n.estado, n.propostasJson, n.confirmadoEm, n.prazoRespostaEm,
+            (n.tarifaCongeladaJson IS NOT NULL) AS escolhidoPeloCliente, p.name AS profissionalNome
+       FROM negociacoes n
+       LEFT JOIN providers p ON p.id = n.providerId
+      WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
+      ORDER BY n.id`,
+    ids,
+  )) as [Array<Record<string, unknown>>, unknown];
+  return pedidos.map((p) => ({
+    id: Number(p.id),
+    status: (p.status as string) ?? null,
+    contactName: (p.contactName as string) ?? null,
+    contactPhone: (p.contactPhone as string) ?? null,
+    contactEmail: (p.contactEmail as string) ?? null,
+    procurarMais: String(p.procurarMais) === "true",
+    jaAvisado: false,
+    negociacoes: negs
+      .filter((n) => Number(n.pedidoId) === Number(p.id))
+      .map((n) => ({
+        id: Number(n.id),
+        estado: (n.estado as string) ?? null,
+        propostasJson: (n.propostasJson as string) ?? null,
+        confirmadoEm: (n.confirmadoEm as Date | string | null) ?? null,
+        prazoRespostaEm: (n.prazoRespostaEm as Date | string | null) ?? null,
+        escolhidoPeloCliente: Number(n.escolhidoPeloCliente) === 1 ? 1 : 0,
+        profissionalNome: (n.profissionalNome as string) ?? null,
+      })),
+  }));
+}
+
+/**
+ * RESERVA O AVISO AO CLIENTE — uma vez por pedido. A marca só se grava se
+ * ainda não houver nenhuma: `true` é de quem a gravou; quem chegar depois
+ * (outra passagem, outra instância) recebe `false` e cala-se.
+ */
+export async function reservarAvisoSemResposta(pedidoId: number, marca: unknown): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders
+        SET escolhaDosParceirosJson = JSON_SET(escolhaDosParceirosJson, '$.semResposta', CAST(? AS JSON))
+      WHERE id = ? AND JSON_VALID(escolhaDosParceirosJson)
+        AND JSON_EXTRACT(escolhaDosParceirosJson, '$.semResposta') IS NULL`,
+    [JSON.stringify(marca), pedidoId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r.affectedRows ?? 0) === 1;
+}
+
+/** Fecha a marca com os canais por onde o aviso saiu (só por cima de uma marca que já lá esteja). */
+export async function fecharAvisoSemResposta(pedidoId: number, marca: unknown): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `UPDATE simulatorOrders
+        SET escolhaDosParceirosJson = JSON_SET(escolhaDosParceirosJson, '$.semResposta', CAST(? AS JSON))
+      WHERE id = ? AND JSON_VALID(escolhaDosParceirosJson)
+        AND JSON_EXTRACT(escolhaDosParceirosJson, '$.semResposta') IS NOT NULL`,
+    [JSON.stringify(marca), pedidoId],
+  );
+}
+
+/** As chaves da escolha que se podem mudar depois de o pedido seguir (nunca a prova do que o cliente viu). */
+const CHAVES_QUE_MUDAM_NA_ESCOLHA = ["decisaoDoCliente", "procurarMais", "enviadoAMais", "escolhidos", "prazoRespostaEm"] as const;
+
+/**
+ * MUDA PEDAÇOS DA ESCOLHA, numa só escrita (`JSON_SET`): o que o cliente
+ * respondeu, o pedido à CLYON, o envio a mais parceiros. Só num pedido que
+ * tenha escolha gravada; devolve `false` se não havia.
+ */
+export async function mudarEscolhaDoPedido(
+  pedidoId: number,
+  mudancas: Partial<Record<(typeof CHAVES_QUE_MUDAM_NA_ESCOLHA)[number], unknown>>,
+): Promise<boolean> {
+  const chaves = CHAVES_QUE_MUDAM_NA_ESCOLHA.filter((c) => mudancas[c] !== undefined);
+  if (chaves.length === 0) return false;
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders
+        SET escolhaDosParceirosJson = JSON_SET(escolhaDosParceirosJson, ${chaves.map((c) => `'$.${c}', CAST(? AS JSON)`).join(", ")})
+      WHERE id = ? AND escolhaDosParceirosJson IS NOT NULL AND JSON_VALID(escolhaDosParceirosJson)`,
+    [...chaves.map((c) => JSON.stringify(mudancas[c])), pedidoId],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r.affectedRows ?? 0) === 1;
+}
+
+/**
+ * A escolha de um pedido, para as acções do cliente e da equipa: o resumo
+ * (`escolhidosDeJson` lê-o), quem ele escolheu e a equipa. Null num pedido
+ * sem parceiros escolhidos.
+ */
+export async function escolhaDoPedido(pedidoId: number): Promise<{
+  resumoJson: string;
+  escolhidos: Array<{ id?: string; providerId?: number; nome?: string }>;
+  pessoas: number | null;
+} | null> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [linhas] = (await pool.execute(
+    `SELECT ${RESUMO_DA_ESCOLHA_SQL} AS resumoJson,
+            CAST(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.escolhidos') AS CHAR) AS escolhidos,
+            JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.pessoas')) AS pessoas
+       FROM simulatorOrders o
+      WHERE o.id = ? AND o.escolhaDosParceirosJson IS NOT NULL AND JSON_VALID(o.escolhaDosParceirosJson)
+      LIMIT 1`,
+    [pedidoId],
+  )) as [Array<{ resumoJson: string | null; escolhidos: string | null; pessoas: string | null }>, unknown];
+  const l = linhas[0];
+  if (!l?.resumoJson) return null;
+  let escolhidos: Array<{ id?: string; providerId?: number; nome?: string }> = [];
+  try {
+    const lista = JSON.parse(l.escolhidos ?? "[]");
+    if (Array.isArray(lista)) escolhidos = lista;
+  } catch {
+    escolhidos = [];
+  }
+  return { resumoJson: l.resumoJson, escolhidos, pessoas: l.pessoas != null && Number.isFinite(Number(l.pessoas)) ? Number(l.pessoas) : null };
 }
 
 /* O interruptor «Lista de parceiros nas mudanças» (Configs) — 10-11-2026.

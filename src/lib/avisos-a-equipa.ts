@@ -2,6 +2,7 @@ import { pecasEmLisboa } from "./hora-de-lisboa";
 import { haQuanto } from "./mesa-das-conversas";
 import type { LinhaDoNossoLado } from "./do-nosso-lado";
 import { telefoneLegivel } from "./telefone-legivel";
+import { TITULO_DO_AVISO_SEM_RESPOSTA } from "./escolhidos-sem-resposta";
 
 /**
  * OS AVISOS À EQUIPA — o que está parado chega ao telemóvel. d23, 10-11-2026.
@@ -43,8 +44,9 @@ export const HORA_EM_QUE_ACABA = 21;
 /** Mais de 2 h no «Do nosso lado». */
 export const PRAZO_DO_NOSSO_LADO_S = 2 * 3600;
 /**
- * O parceiro escolhido que não respondeu (11-11-2026): o prazo dele JÁ é a
- * espera — avisa-se logo que passa, sem as 2 h por cima.
+ * Os escolhidos sem resposta (11-11-2026): o prazo deles JÁ é a espera —
+ * sem as 2 h por cima. O aviso sai quando a linha traz o texto (`aviso`):
+ * depois de o cliente ter sido avisado, ou quando ele pede à CLYON que procure.
  */
 export const PRAZO_SEM_RESPOSTA_S = 0;
 /** Mais de 1 h no «Por decidir». */
@@ -119,7 +121,7 @@ export function avisosDoNossoLado(linhas: readonly LinhaDoNossoLado[], agora: Da
   const out: AvisoAEquipa[] = [];
   for (const l of linhas) {
     const semResposta = l.tipo === "sem_resposta";
-    if (semResposta ? l.esperaS < PRAZO_SEM_RESPOSTA_S : l.esperaS <= PRAZO_DO_NOSSO_LADO_S) continue;
+    if (semResposta ? !l.aviso || l.esperaS < PRAZO_SEM_RESPOSTA_S : l.esperaS <= PRAZO_DO_NOSSO_LADO_S) continue;
     const seccao: SeccaoDoAviso = l.tipo === "conversa" ? "whatsapp" : "mesa";
     const quem = l.pedidoId != null ? `Pedido #${l.pedidoId}` : `Conversa ${telefoneLegivel(l.telefone ?? "")}`;
     out.push({
@@ -129,8 +131,8 @@ export function avisosDoNossoLado(linhas: readonly LinhaDoNossoLado[], agora: Da
       telefone: l.pedidoId != null ? null : l.telefone,
       desde: new Date(agora.getTime() - l.esperaS * 1000),
       seccao,
-      titulo: semResposta ? "Parceiro não respondeu" : `Do nosso lado ${haQuanto(l.esperaS)}`,
-      corpo: `${quem}: ${l.oQue}.`,
+      titulo: semResposta ? TITULO_DO_AVISO_SEM_RESPOSTA : `Do nosso lado ${haQuanto(l.esperaS)}`,
+      corpo: l.aviso ?? `${quem}: ${l.oQue}.`,
       url: ligacaoDoPedido(seccao, l.pedidoId),
     });
   }

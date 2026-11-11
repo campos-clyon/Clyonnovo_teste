@@ -12,6 +12,9 @@ import {
 } from "@/lib/db";
 import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { confiancaDasNegociacoes, type ConfiancaDaNegociacao } from "@/lib/confianca-na-mesa";
+import { escolhidosDeJson, estadoNaMesa } from "@/lib/escolhidos-sem-resposta";
+import { registarQueOClientePediu } from "@/lib/escolhidos-sem-resposta-no-servidor";
+import { pedidoFechado } from "@/lib/pedido-arrumado";
 
 export const runtime = "nodejs";
 
@@ -52,9 +55,17 @@ export async function GET(req: NextRequest) {
       console.error("[api/admin/negociacoes GET] confiança:", e);
       return new Map<number, ConfiancaDaNegociacao>();
     });
+    // Os escolhidos sem resposta (d6): o selo, a linha e os botões saem escritos daqui, pela regra de todos.
+    const agora = new Date();
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
+        escolhidosNaMesa: estadoNaMesa(
+          JSON.parse(JSON.stringify(p.negociacoes)),
+          escolhidosDeJson(p.escolhidosJson),
+          agora,
+          pedidoFechado(p.status),
+        ),
         negociacoes: p.negociacoes.map((n) => ({ ...n, ...(confianca.get(Number(n.id)) ?? {}) })),
       })),
     });
@@ -77,6 +88,11 @@ export async function POST(req: NextRequest) {
     corpo = await req.json();
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+  // «O cliente pediu que procurássemos» (d6): o pedido feito por telefone ou WhatsApp, registado por quem o ouviu.
+  if (corpo.accao === "cliente_pediu_mais_parceiros" && Number.isInteger(Number(corpo.pedidoId)) && Number(corpo.pedidoId) > 0) {
+    const r = await registarQueOClientePediu(Number(corpo.pedidoId), colab?.nome ?? "a CLYON");
+    return NextResponse.json(r.corpo, { status: r.status });
   }
   if (
     !["concluido_visto", "orcamento_enviado", "enviar_pela_clyon"].includes(String(corpo.accao)) ||

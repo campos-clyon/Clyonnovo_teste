@@ -37,6 +37,7 @@ import { modoDaOferta } from "@/lib/oferta-clyon";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
+import { agirSobreOsEscolhidos, eAccaoDosEscolhidos } from "@/lib/escolhidos-sem-resposta-no-servidor";
 
 /**
  * O CLIENTE AGE NUM PEDIDO — uma função só, para as três portas (d8, R8,
@@ -75,6 +76,12 @@ export const ACCOES_SO_DO_CLIENTE = [
   "contratar",
   "aprovar_ajuste",
   "recusar_ajuste",
+  // Os escolhidos sem resposta (d6, 11-11-2026): só o cliente espera, escolhe outro ou pede à CLYON que procure.
+  "ver_escolhidos",
+  "esperar_pelos_escolhidos",
+  "lista_para_escolher_outro",
+  "escolher_outros_parceiros",
+  "pedir_a_clyon_que_procure",
 ] as const;
 
 export function eAccaoSoDoCliente(accao: unknown): boolean {
@@ -108,6 +115,9 @@ export type CorpoDoCliente = {
   versao?: unknown;
   /** A marca da folha da mudança que ele tem no ecrã (`horas.folha.marca`) — o-que-o-cliente-viu.ts. */
   marcaDaFolha?: unknown;
+  /** «Escolher outro parceiro» (d6): os ids dos cartões escolhidos e a assinatura do preço de cada um. */
+  parceiros?: unknown;
+  assinaturas?: unknown;
 };
 
 const TRATADO_PELA_CLYON = "Este trabalho é tratado directamente pela CLYON.";
@@ -229,6 +239,15 @@ export async function agirComoCliente(a: {
         resumo: frase,
       });
       return { status: 200, corpo: { ok: true, cancelado: true, encerradas: r.encerradas } };
+    }
+
+    /*
+     * ── Os escolhidos sem resposta (d6, 11-11-2026) ────────────────────────
+     * Numa mudança com a lista: esperar, escolher outro parceiro ou pedir à
+     * CLYON que procure. É sobre o pedido, não sobre uma negociação.
+     */
+    if (eAccaoDosEscolhidos(accao)) {
+      return await agirSobreOsEscolhidos({ pedido: a.pedido, accao: String(accao), corpo, baseUrl: a.baseUrl, agora: a.agora });
     }
 
     // ── O resto é sobre UMA negociação do pedido ─────────────────────────

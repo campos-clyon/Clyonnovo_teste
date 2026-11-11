@@ -1,3 +1,4 @@
+import { AJUDA_DO_PROCURAR_MAIS, LINHA_DAS_3_HORAS } from "./escolhidos-sem-resposta";
 import {
   MATERIAIS,
   congelarTarifa,
@@ -568,7 +569,11 @@ export const TEXTOS_DA_LISTA = Object.freeze({
   /** 11-11-2026: sem parceiros com preço na zona, diz-se como o pedido segue e a referência — não «ainda não temos». */
   semParceiros: "Os parceiros da sua zona respondem a este pedido com o preço por hora de cada um.",
   semParceirosSegue: `A ${REFERENCIA_DA_MUDANCA}.`,
+  /** d6 (11-11-2026): os escolhidos têm 3 horas para responder, e o que acontece se nenhum responder. */
+  prazo: LINHA_DAS_3_HORAS,
   procurarMais: "Pedir também à CLYON que procure mais parceiros",
+  /** d6: a opção aparece sempre que há parceiros na lista, com esta ajuda por baixo. */
+  procurarMaisAjuda: AJUDA_DO_PROCURAR_MAIS,
   /** 11-11-2026: quem não quer escolher segue o caminho de sempre (a Mesa escolhe). */
   deixarEscolher: DEIXAR_A_CLYON_ESCOLHER,
   pedirEmbalamento: PEDIR_EMBALAMENTO,

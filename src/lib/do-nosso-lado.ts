@@ -3,6 +3,16 @@ import { instanteDaBase } from "./hora-de-lisboa";
 import { ESPERA_RECENTE_S, haQuanto } from "./mesa-das-conversas";
 import { estaExpirada, type Proposta as PropostaDoMotor } from "./negociacao";
 import { quemNegoceia } from "./quem-negoceia";
+import {
+  avisoAEquipaClientePediu,
+  avisoAEquipaSemResposta,
+  escolhidosDeJson,
+  oClientePediuAClyon,
+  oQueDaMesa,
+  O_QUE_DA_MESA_QUANDO_PEDIU,
+  semRespostaDosEscolhidos,
+  TITULO_DO_GRUPO_SEM_RESPOSTA,
+} from "./escolhidos-sem-resposta";
 
 /**
  * «DO NOSSO LADO» — o que está à espera da CLYON, no topo da Mesa. d14,
@@ -39,6 +49,8 @@ export type LinhaDoNossoLado = {
   telefone: string | null;
   /** Há quantos segundos está à espera. */
   esperaS: number;
+  /** O corpo do aviso à equipa, já escrito (os escolhidos sem resposta, d6). Sem ele, o aviso faz-se de `oQue`. */
+  aviso?: string;
   /** O que espera, em poucas palavras. */
   oQue: string;
 };
@@ -54,7 +66,7 @@ export const TITULOS_DO_NOSSO_LADO: Record<TipoDoNossoLado, string> = {
   preco_clyon: "Trabalhos CLYON aceites, com o preço por enviar ao cliente",
   propostas: "Propostas de parceiros por enviar ao cliente",
   data_passada: "Trabalhos com a data passada e sem «Está feito»",
-  sem_resposta: "Mudanças: o parceiro escolhido não respondeu no prazo",
+  sem_resposta: TITULO_DO_GRUPO_SEM_RESPOSTA,
 };
 
 /* ── As formas que se lêem — o mínimo de cada fonte ─────────────────────── */
@@ -87,6 +99,8 @@ export type PedidoParaOLado = {
   contactEmail: string | null;
   propostaEnviadaEm?: string | null;
   dataAgendada?: string | null;
+  /** O resumo da escolha dos parceiros numa mudança (d6) — `escolhidosDeJson`. */
+  escolhidosJson?: string | null;
   negociacoes: NegociacaoParaOLado[];
 };
 
@@ -286,45 +300,52 @@ export function datasPassadasDoNossoLado(
 
 /* ── 5. O parceiro escolhido que não respondeu ───────────────────────────── */
 
-/** A negociação foi escolhida pelo cliente na lista das mudanças? (1, "1" ou true) */
-const escolhidaPeloCliente = (n: NegociacaoParaOLado) =>
-  n.escolhidoPeloCliente === true || Number(n.escolhidoPeloCliente) === 1;
-
-/** Respondeu: pôs um número, aceitou, ficou acordada ou tem o trabalho confirmado. */
-const respondeu = (n: NegociacaoParaOLado) =>
-  n.estado === "aguarda_contratacao" ||
-  n.estado === "acordada" ||
-  n.confirmadoEm != null ||
-  propostasDe(n.propostasJson).some((x) => x.por === "profissional");
-
 /**
  * 11-11-2026: numa mudança em que o cliente escolheu os parceiros da lista, o
  * pedido foi logo a eles, sem passar pela Mesa. Se o prazo de resposta
- * (`prazoRespostaEm`) passou e nenhum dos escolhidos respondeu, o pedido
- * fica à espera de nós: «parceiro não respondeu». Espera desde o prazo.
+ * (`prazoRespostaEm`) passou e nenhum parceiro respondeu, o pedido fica à
+ * espera de nós: «escolhidos sem resposta» (d6). Espera desde o prazo. A regra
+ * é a de `escolhidos-sem-resposta.ts` — a mesma da rotina que avisa o cliente.
  */
 export function semRespostaDoNossoLado(pedidos: PedidoParaOLado[], agora: Date): LinhaDoNossoLado[] {
   const out: LinhaDoNossoLado[] = [];
   for (const p of pedidos) {
     if (FECHADO.has(p.status ?? "")) continue;
-    const escolhidas = p.negociacoes.filter(escolhidaPeloCliente);
-    if (escolhidas.length === 0 || escolhidas.some(respondeu)) continue;
-    const prazos = escolhidas
-      .map((n) => instanteDaBase(n.prazoRespostaEm ?? null)?.getTime())
-      .filter((t): t is number => t != null);
-    if (prazos.length === 0) continue;
-    const prazo = Math.max(...prazos);
-    if (prazo > agora.getTime()) continue;
-    const quantos = escolhidas.length;
+    if (!p.negociacoes.some((n) => n.escolhidoPeloCliente === true || Number(n.escolhidoPeloCliente) === 1)) continue;
+    const e = escolhidosDeJson(p.escolhidosJson ?? null);
+    // Já foi a mais parceiros, a pedido do cliente: deixou de estar do nosso lado.
+    if (e?.enviadoAMais) continue;
+    const desde = (iso: string | null | undefined) => {
+      const t = instanteDaBase(iso ?? null)?.getTime();
+      return t == null ? 0 : Math.max(0, Math.floor((agora.getTime() - t) / 1000));
+    };
+    /*
+     * O CLIENTE PEDIU À CLYON QUE PROCURE (na lista, no aviso ou dito à
+     * equipa): falta enviar o pedido a mais parceiros — é o aviso que pede
+     * acção. Só enquanto o pedido não está fechado com ninguém.
+     */
+    if (oClientePediuAClyon(e) && !p.negociacoes.some((n) => n.estado === "acordada")) {
+      out.push({
+        tipo: "sem_resposta",
+        pedidoId: p.id,
+        telefone: null,
+        esperaS: desde(e?.decisao?.saida === "pedir_a_clyon" ? e.decisao.em : e?.em),
+        oQue: O_QUE_DA_MESA_QUANDO_PEDIU,
+        aviso: avisoAEquipaClientePediu(p.id),
+      });
+      continue;
+    }
+    const s = semRespostaDosEscolhidos(p.negociacoes, agora);
+    if (!s) continue;
+    // A equipa é avisada quando o cliente já foi (ou quando o aviso dele falhou): o texto diz qual.
+    const marca = e?.marca && e.marca.saiu != null ? e.marca : null;
     out.push({
       tipo: "sem_resposta",
       pedidoId: p.id,
       telefone: null,
-      esperaS: Math.max(0, Math.floor((agora.getTime() - prazo) / 1000)),
-      oQue:
-        quantos === 1
-          ? "parceiro não respondeu — o escolhido pelo cliente deixou passar o prazo"
-          : `parceiro não respondeu — nenhum dos ${quantos} escolhidos pelo cliente respondeu no prazo`,
+      esperaS: Math.max(0, Math.floor((agora.getTime() - s.prazo.getTime()) / 1000)),
+      oQue: oQueDaMesa(s),
+      ...(marca ? { aviso: avisoAEquipaSemResposta(p.id, s, marca.saiu === true) } : {}),
     });
   }
   return out;

@@ -10,8 +10,10 @@ import { DEIXAR_A_CLYON_ESCOLHER, PRAZO_DA_LISTA_MS, TEXTOS_DA_LISTA } from "./l
  *
  * 1. O cliente pode «Deixar a CLYON escolher por mim» (o caminho de sempre).
  * 2. A lista tem 8 s para chegar; depois segue sem ela.
- * 3. Se o prazo do escolhido passa sem resposta, a Mesa mostra «parceiro não
- *    respondeu» e a equipa é avisada (o mecanismo da d23: 08h–21h em Lisboa).
+ * 3. Se o prazo do escolhido passa sem resposta, a Mesa mostra «escolhidos
+ *    sem resposta» (d6) e a equipa é avisada depois de o cliente o ter sido
+ *    (o mecanismo da d23: 08h–21h em Lisboa). O resto da d6 está em
+ *    escolhidos-sem-resposta.test.ts.
  */
 
 const AGORA = new Date("2026-11-11T15:00:00Z");
@@ -34,11 +36,11 @@ const escolhida = (o: Partial<PedidoParaOLado["negociacoes"][number]> = {}) => (
 });
 
 describe("o parceiro escolhido que não respondeu", () => {
-  it("prazo passado, sem proposta: aparece na Mesa como «parceiro não respondeu»", () => {
+  it("prazo passado, sem proposta: aparece na Mesa como «escolhidos sem resposta»", () => {
     const l = semRespostaDoNossoLado([pedido([escolhida()])], AGORA);
     expect(l).toHaveLength(1);
     expect(l[0]).toMatchObject({ tipo: "sem_resposta", pedidoId: 610, esperaS: 3600 });
-    expect(l[0].oQue).toContain("parceiro não respondeu");
+    expect(l[0].oQue).toBe("mudança — o escolhido pelo cliente não respondeu em 3 horas");
     const g = doNossoLado({ conversas: null, pedidos: [pedido([escolhida()])], trabalhosClyon: [], agora: AGORA });
     expect(g.find((x) => x.tipo === "sem_resposta")?.linhas).toHaveLength(1);
   });
@@ -53,11 +55,16 @@ describe("o parceiro escolhido que não respondeu", () => {
     expect(semRespostaDoNossoLado([pedido([escolhida({ escolhidoPeloCliente: 0 })])], AGORA)).toEqual([]);
   });
 
-  it("avisa a equipa logo que o prazo passa (sem as 2 h do «Do nosso lado»)", () => {
-    const linhas = semRespostaDoNossoLado([pedido([escolhida({ prazoRespostaEm: ha(0.1) })])], AGORA);
-    const avisos = avisosDoNossoLado(linhas, AGORA);
+  it("avisa a equipa sem as 2 h do «Do nosso lado», logo que o cliente foi avisado (d6)", () => {
+    // Antes de o cliente ser avisado, a linha está na Mesa mas a equipa ainda não é avisada.
+    expect(avisosDoNossoLado(semRespostaDoNossoLado([pedido([escolhida({ prazoRespostaEm: ha(0.1) })])], AGORA), AGORA)).toEqual([]);
+    const avisado = {
+      ...pedido([escolhida({ prazoRespostaEm: ha(0.1) })]),
+      escolhidosJson: JSON.stringify({ semResposta: { avisadoEm: AGORA.toISOString(), prazoEm: ha(0.1), escolhidos: 1, caso: "sem_resposta", canais: ["whatsapp"], saiu: true } }),
+    };
+    const avisos = avisosDoNossoLado(semRespostaDoNossoLado([avisado], AGORA), AGORA);
     expect(avisos).toHaveLength(1);
-    expect(avisos[0]).toMatchObject({ seccao: "mesa", pedidoId: 610, titulo: "Parceiro não respondeu" });
+    expect(avisos[0]).toMatchObject({ seccao: "mesa", pedidoId: 610, titulo: "Escolhidos sem resposta" });
     expect(avisos[0].chave).toBe("nosso_lado:sem_resposta:p610");
   });
 });

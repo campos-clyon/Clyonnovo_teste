@@ -34,6 +34,8 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "trabalhos-clyon-sem-resposta", titulo: "Trabalhos CLYON sem resposta do cliente vão para os Arquivados", horario: "50 * * * *", intervaloMin: 60 },
   // 11-11-2026: a folha da mudança sem resposta do cliente — lembretes às 2 h e 24 h, Mesa às 48 h.
   { nome: "folhas-da-mudanca", titulo: "Folhas da mudança: lembretes ao cliente e Mesa", horario: "25 * * * *", intervaloMin: 60 },
+  // 11-11-2026 (d6): os escolhidos de uma mudança que não responderam em 3 h — o cliente é avisado uma vez, entre as 8h e as 21h.
+  { nome: "escolhidos-sem-resposta", titulo: "Mudanças: escolhidos sem resposta, aviso ao cliente", horario: "5 * * * *", intervaloMin: 60 },
   { nome: "libertar-por-prazo", titulo: "Trabalhos libertados por prazo", horario: "0 4 * * *", intervaloMin: 24 * 60 },
   { nome: "purgar-pedidos", titulo: "Purga dos pedidos antigos", horario: "30 4 * * *", intervaloMin: 24 * 60 },
   { nome: "licoes-da-vitoria", titulo: "Lições da Vitória", horario: "20 5 * * *", intervaloMin: 24 * 60 },

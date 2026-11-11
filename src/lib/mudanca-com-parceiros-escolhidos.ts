@@ -172,24 +172,23 @@ export function linhaDoEnvioFalhado(nomes: string[]): string {
   );
 }
 
-export async function enviarAosEscolhidos(
-  pedido: {
-    id: number;
-    description: string | null;
-    city: string | null;
-    urgency: string | null;
-    quantidadeDeFotos: number;
-    valorDesejadoCliente: number | null;
-    precisaFatura: boolean;
-    formaDePagamento: unknown;
-    baseUrl: string;
-  },
-  e: EscolhaPreparada,
-  agora: Date = new Date(),
-): Promise<void> {
-  const prazo = prazoDeResposta(agora);
+/** O pedido, como a distribuição aos escolhidos o lê. */
+export type PedidoParaOsEscolhidos = {
+  id: number;
+  description: string | null;
+  city: string | null;
+  urgency: string | null;
+  quantidadeDeFotos: number;
+  valorDesejadoCliente: number | null;
+  precisaFatura: boolean;
+  formaDePagamento: unknown;
+  baseUrl: string;
+};
+
+/** O que a distribuição grava na negociação de cada escolhido: a tarifa congelada, a equipa e o prazo. */
+function porParceiroDaEscolha(e: Pick<EscolhaPreparada, "escolhidos" | "pessoas">, prazo: Date, agora: Date) {
   const taxas = { cliente: 0, profissional: REGRAS_DAS_MUDANCAS.taxa };
-  const porParceiro = new Map(
+  return new Map(
     e.escolhidos.map((x) => {
       const congelada = congelarTarifa(x.tarifa, REGRAS_DAS_MUDANCAS, agora);
       const hora = e.pessoas === 3 ? congelada.precoHora3Cent : congelada.precoHora2Cent;
@@ -205,20 +204,11 @@ export async function enviarAosEscolhidos(
       ] as const;
     }),
   );
+}
 
-  // A prova primeiro: se a distribuição falhar a meio, o que o cliente viu já está escrito.
-  await gravarEscolhaDosParceiros(pedido.id, provaDaEscolha(e, prazo, agora)).catch((err) =>
-    console.error("[mudança escolhida] a prova não se gravou:", err),
-  );
-
-  const nomes = e.escolhidos.map((x) => x.nome);
-  const falhou = () =>
-    appendOrderHistory(pedido.id, { type: "created", by: null, message: linhaDoEnvioFalhado(nomes) }).catch((err) =>
-      console.error("[mudança escolhida] a linha do envio falhado não se gravou:", err),
-    );
-  let r: Awaited<ReturnType<typeof distribuirPedido>>;
-  try {
-    r = await distribuirPedido(
+/** Envia SÓ aos escolhidos (soPara ∩ elegíveis), com a tarifa de cada um congelada. */
+function distribuirSoAosEscolhidos(pedido: PedidoParaOsEscolhidos, e: EscolhaPreparada, prazo: Date, agora: Date) {
+  return distribuirPedido(
     {
       id: pedido.id,
       serviceType: "mudanca",
@@ -236,8 +226,47 @@ export async function enviarAosEscolhidos(
       lng: (e.zonaPonto ?? e.origemPonto).lng,
       baseUrl: pedido.baseUrl,
     },
-    { soPara: e.escolhidos.map((x) => x.providerId), exigirElegibilidade: true, mudancaPorParceiro: porParceiro },
+    { soPara: e.escolhidos.map((x) => x.providerId), exigirElegibilidade: true, mudancaPorParceiro: porParceiroDaEscolha(e, prazo, agora) },
+  );
+}
+
+/**
+ * «ESCOLHER OUTRO PARCEIRO», DEPOIS DO AVISO — 11-11-2026 (d6). O cliente
+ * escolheu mais parceiros da lista do pedido: vai SÓ a esses, com a tarifa de
+ * cada um congelada e um prazo novo. Não toca nas negociações dos que já
+ * tinha escolhido (continuam a poder responder) nem na prova do que ele viu
+ * ao pedir — quem chama acrescenta os nomes à escolha.
+ */
+export async function enviarAOutrosEscolhidos(
+  pedido: PedidoParaOsEscolhidos,
+  e: EscolhaPreparada,
+  agora: Date = new Date(),
+): Promise<{ receberam: number; prazo: Date }> {
+  const prazo = prazoDeResposta(agora);
+  const r = await distribuirSoAosEscolhidos(pedido, e, prazo, agora);
+  return { receberam: r.receberam, prazo };
+}
+
+export async function enviarAosEscolhidos(
+  pedido: PedidoParaOsEscolhidos,
+  e: EscolhaPreparada,
+  agora: Date = new Date(),
+): Promise<void> {
+  const prazo = prazoDeResposta(agora);
+
+  // A prova primeiro: se a distribuição falhar a meio, o que o cliente viu já está escrito.
+  await gravarEscolhaDosParceiros(pedido.id, provaDaEscolha(e, prazo, agora)).catch((err) =>
+    console.error("[mudança escolhida] a prova não se gravou:", err),
+  );
+
+  const nomes = e.escolhidos.map((x) => x.nome);
+  const falhou = () =>
+    appendOrderHistory(pedido.id, { type: "created", by: null, message: linhaDoEnvioFalhado(nomes) }).catch((err) =>
+      console.error("[mudança escolhida] a linha do envio falhado não se gravou:", err),
     );
+  let r: Awaited<ReturnType<typeof distribuirPedido>>;
+  try {
+    r = await distribuirSoAosEscolhidos(pedido, e, prazo, agora);
   } catch (err) {
     // A distribuição rebentou: a Mesa fica a saber pelo histórico do pedido (11-11-2026).
     console.error("[mudança escolhida] a distribuição falhou:", err);

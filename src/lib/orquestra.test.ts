@@ -543,6 +543,8 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
     // O aviso antes de cotar e o email da aprovação são ao profissional (01-11-2026, regra q).
     "src/lib/avisos-antes-de-cotar.ts",
     "src/lib/email-aprovacao-profissional.ts",
+    // O que o parceiro escolhido lê no painel e na app Pro: «Confirmo: faço por X/h + IVA», o prazo e os erros (11-11-2026, d6).
+    "src/lib/escolhidos-sem-resposta-do-escolhido.ts",
   ]).has(f);
 /*
  * Entre a equipa: a base, as contas, as notas e as instruções que só a equipa
@@ -576,6 +578,8 @@ const ENTRE_A_EQUIPA = new Set([
   "src/lib/cobrancas-ao-profissional.ts",
   "src/lib/cobrancas-na-base.ts",
   "src/lib/marcas-da-divida-na-base.ts",
+  // Os escolhidos sem resposta (11-11-2026, d6): o selo e a linha da Mesa, os botões da equipa, o histórico e o aviso à equipa.
+  "src/lib/escolhidos-sem-resposta-na-mesa.ts",
   "src/lib/assistente-interruptores.ts",
   "src/lib/assistentes.ts",
   "src/lib/avisos-do-backoffice.ts",

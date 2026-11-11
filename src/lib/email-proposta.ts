@@ -368,3 +368,44 @@ export async function avisarTrabalhoConfirmado(p: {
       ${botao(url, t.botao)}`),
   );
 }
+
+// ── Os escolhidos não responderam: avisar o cliente (d6, 11-11-2026) ────────
+
+/**
+ * O email do aviso «escolhidos sem resposta». Os textos chegam prontos de
+ * `escolhidos-sem-resposta.ts`; cada saída é um botão para o pedido, onde o
+ * cliente a confirma. Sem valores: não há número novo a dar. Nunca lança.
+ */
+export async function avisarClienteDosEscolhidosSemResposta(p: {
+  para: string;
+  email: {
+    assunto: string;
+    abertura: string;
+    pergunta: string | null;
+    blocos: Array<{ titulo: string; texto: string }>;
+    nota: string | null;
+    fecho: string;
+  };
+  /** A ligação do pedido: a página com os botões. */
+  ligacao: string;
+}): Promise<boolean> {
+  const paragrafo = (texto: string) =>
+    `<p style="margin:0 0 14px;color:#334155;font-size:15px;line-height:1.6;">${e(texto)}</p>`;
+  const blocos = p.email.blocos
+    .map(
+      (b) =>
+        `${botao(p.ligacao, e(b.titulo))}
+      <p style="margin:8px 0 20px;color:#475569;font-size:14px;line-height:1.6;text-align:center;">${e(b.texto)}</p>`,
+    )
+    .join("\n");
+  return enviar(
+    p.para,
+    p.email.assunto,
+    moldura(`
+      ${p.email.abertura.split("\n\n").map(paragrafo).join("\n")}
+      ${p.email.nota ? paragrafo(p.email.nota) : ""}
+      ${p.email.pergunta ? `<p style="margin:0 0 16px;color:#0f172a;font-size:16px;font-weight:700;">${e(p.email.pergunta)}</p>` : ""}
+      ${blocos}
+      ${paragrafo(p.email.fecho)}`),
+  );
+}

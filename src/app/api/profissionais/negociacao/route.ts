@@ -5,8 +5,20 @@ import {
   gravarNegociacao,
   appendOrderHistory,
   tarifaCongeladaDaNegociacao,
+  prazoDoEscolhido,
 } from "@/lib/db";
-import { guardaDaHoraCongelada } from "@/lib/mudanca-escolhida-pelo-cliente";
+import { guardaDaHoraCongelada, horaCongeladaCent, pessoasDaEscolha, SEM_CONFERIR_A_HORA } from "@/lib/mudanca-escolhida-pelo-cliente";
+import { tarifaCongeladaDeJson } from "@/lib/conta-da-mudanca";
+import {
+  ACCAO_DE_CONFIRMAR_A_HORA,
+  erroDaConfirmacao,
+  ERROS_DO_ESCOLHIDO,
+  linhaDaRespostaTardia,
+  textoDaPropostaMaisBaixa,
+  textoDepoisDeConfirmar,
+} from "@/lib/escolhidos-sem-resposta";
+import { pedidoFechado } from "@/lib/pedido-arrumado";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -102,7 +114,41 @@ export async function POST(req: NextRequest) {
      * o `avisosAceites` só serve para saber que o ecrã os mostrou. Quais eram,
      * e se ainda são, é aqui que se decide.
      */
-    const compromete = corpo.accao === "propor" || corpo.accao === "aceitar";
+    /*
+     * «CONFIRMO: FAÇO POR X/H + IVA» — 11-11-2026 (d6). Numa mudança em que o
+     * cliente o escolheu, a primeira resposta é um toque: a hora dele, que
+     * ficou congelada na negociação, vai como proposta num só pedido — o
+     * valor lê-se da base, nunca do corpo. Depois do prazo ainda se confirma;
+     * com o pedido cancelado, fechado, contratado a outro ou já respondido,
+     * lê a frase certa (`erroDaConfirmacao`).
+     */
+    const confirmaAHora = corpo.accao === ACCAO_DE_CONFIRMAR_A_HORA;
+    let horaConfirmada: { cent: number; iva: number } | null = null;
+    if (confirmaAHora) {
+      const estadoDoPedido = (linha as { estadoDoPedido?: string | null }).estadoDoPedido ?? null;
+      const naoPode = erroDaConfirmacao({
+        estado: linha.estado,
+        propostasJson: linha.propostasJson,
+        estadoDoPedido,
+        pedidoFechado: pedidoFechado(estadoDoPedido),
+      });
+      if (naoPode) return NextResponse.json({ error: naoPode.erro, semBotoes: naoPode.semBotoes }, { status: 409 });
+      let congelada: Awaited<ReturnType<typeof tarifaCongeladaDaNegociacao>>;
+      try {
+        congelada = await tarifaCongeladaDaNegociacao(negociacaoId, sessao.providerId);
+      } catch (e) {
+        console.error("[negociacao] a hora congelada não se leu; a confirmação não segue:", e instanceof Error ? e.message : e);
+        return NextResponse.json({ error: SEM_CONFERIR_A_HORA }, { status: 503 });
+      }
+      const tarifa = tarifaCongeladaDeJson(congelada?.tarifaCongeladaJson ?? null);
+      if (!congelada || !tarifa) return NextResponse.json({ error: ERROS_DO_ESCOLHIDO.semHora }, { status: 409 });
+      horaConfirmada = {
+        cent: horaCongeladaCent(tarifa, pessoasDaEscolha(congelada.pessoasEscolhidas)) ?? tarifa.precoHora2Cent,
+        iva: tarifa.regras.iva,
+      };
+    }
+
+    const compromete = corpo.accao === "propor" || corpo.accao === "aceitar" || confirmaAHora;
 
     /*
      * DÍVIDA EM ATRASO FECHA OS TRABALHOS EM DINHEIRO — 01-10-2026.
@@ -213,6 +259,12 @@ export async function POST(req: NextRequest) {
         resultado = propor(estadoActual, "profissional", Number(valor), agora);
         break;
       }
+      // «Confirmo: faço por X/h + IVA» (d6): a hora congelada, lida da base lá em cima, como proposta num só pedido.
+      case ACCAO_DE_CONFIRMAR_A_HORA: {
+        if (!horaConfirmada) return NextResponse.json({ error: ERROS_DO_ESCOLHIDO.semHora }, { status: 409 });
+        resultado = propor(estadoActual, "profissional", horaConfirmada.cent / 100, agora);
+        break;
+      }
       case "aceitar":
         resultado = aceitar(estadoActual, "profissional", agora);
         break;
@@ -247,6 +299,36 @@ export async function POST(req: NextRequest) {
       { estado: linha.estado, pedidoId: linha.pedidoId },
     );
     if (!gravou.ok) return NextResponse.json({ error: JA_FOI_DECIDIDO, jaDecidido: true }, { status: 409 });
+
+    /*
+     * O ESCOLHIDO RESPONDEU — 11-11-2026 (d6). Se a primeira resposta dele
+     * (confirmar, propor mais baixo ou «Não estou interessado») chega depois
+     * do prazo, fica escrito no pedido; e a resposta leva a frase que o
+     * painel e a app mostram no lugar dos botões.
+     */
+    let textoDoEscolhido: string | null = null;
+    let depoisDoPrazo = false;
+    if (confirmaAHora || corpo.accao === "propor" || corpo.accao === "desistir") {
+      const doEscolhido = await prazoDoEscolhido(negociacaoId, sessao.providerId);
+      const prazo = instanteDaBase(doEscolhido?.prazoRespostaEm ?? null);
+      const primeiraResposta = !estadoActual.propostas.some((x) => x.por === "profissional");
+      depoisDoPrazo = !!prazo && primeiraResposta && prazo.getTime() < agora.getTime();
+      if (depoisDoPrazo) {
+        await appendOrderHistory(linha.pedidoId, {
+          type: "note",
+          by: null,
+          message: linhaDaRespostaTardia(sessao.nome ?? "O profissional", agora),
+        }).catch(() => {});
+      }
+      if (horaConfirmada) textoDoEscolhido = textoDepoisDeConfirmar(horaConfirmada.cent, horaConfirmada.iva, depoisDoPrazo);
+      else if (doEscolhido && corpo.accao === "propor") {
+        const tarifa = tarifaCongeladaDeJson(
+          (await tarifaCongeladaDaNegociacao(negociacaoId, sessao.providerId).catch(() => null))?.tarifaCongeladaJson ?? null,
+        );
+        const ultima = nova.propostas[nova.propostas.length - 1];
+        if (tarifa && ultima) textoDoEscolhido = textoDaPropostaMaisBaixa(Math.round(ultima.valor * 100), tarifa.regras.iva);
+      }
+    }
 
     /*
      * OS MATERIAIS DA PROPOSTA — 31-10-2026. Ao propor (ou aceitar), ele diz se
@@ -285,7 +367,7 @@ export async function POST(req: NextRequest) {
     // prazo, ver `AS_PROPOSTAS_EXPIRAM`), mas fica parada — e perder um
     // trabalho porque ninguém foi ver a página é a pior forma de o perder.
     // Nunca lança: a proposta já está gravada.
-    if (corpo.accao === "propor" && nova.valorAcordado == null) {
+    if ((corpo.accao === "propor" || confirmaAHora) && nova.valorAcordado == null) {
       const ultima = nova.propostas[nova.propostas.length - 1];
       if (ultima) {
         await avisarDaProposta({
@@ -333,6 +415,9 @@ export async function POST(req: NextRequest) {
       estado: nova.estado,
       valorAcordado: nova.valorAcordado ?? null,
       propostas: nova.propostas,
+      // Numa mudança em que o cliente o escolheu (d6): a frase de depois de confirmar ou de propor.
+      ...(confirmaAHora ? { confirmou: true, depoisDoPrazo } : {}),
+      ...(textoDoEscolhido ? { texto: textoDoEscolhido } : {}),
     });
   } catch (error) {
     console.error("[profissionais/negociacao]", error);

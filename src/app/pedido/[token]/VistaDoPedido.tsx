@@ -18,6 +18,8 @@ import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 import { negociacoesDoPedido } from "@/lib/db";
 import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib/fim-do-trabalho-clyon";
 import FimDoTrabalhoClyon from "@/components/FimDoTrabalhoClyon";
+import EscolhidosSemResposta from "@/components/EscolhidosSemResposta";
+import { escolhidosParaOCliente } from "@/lib/escolhidos-sem-resposta-no-servidor";
 
 /**
  * O PEDIDO COMO O CLIENTE O VÊ — e num sítio só.
@@ -119,6 +121,13 @@ export default async function VistaDoPedido({
         )
       : null;
 
+  /*
+   * OS PARCEIROS QUE ESCOLHEU (d6, 11-11-2026): numa mudança com a lista, a
+   * linha do prazo enquanto corre e, se passar sem resposta, o cartão com as
+   * três saídas. Null em todos os outros pedidos.
+   */
+  const escolhidos = pedido.valorFixoClyon == null && pedido.serviceType === "mudanca" ? await escolhidosParaOCliente(pedido) : null;
+
   const fotos = fotosDoPedido(pedido.filesJson);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
   const base = lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco);
@@ -172,6 +181,10 @@ export default async function VistaDoPedido({
         com os parceiros é a CLYON: o bloco dizia «Ainda sem propostas. O pedido
         foi enviado aos parceiros da zona…» com o parceiro já escolhido.
       */}
+      {escolhidos && (escolhidos.cartao || escolhidos.prazoTexto) && (
+        <EscolhidosSemResposta pedidoId={pedido.id} token={token} inicial={escolhidos} soParaVer={soParaVer || !token} />
+      )}
+
       {pedido.valorFixoClyon == null && (
       <PropostasRecebidas
         token={token}

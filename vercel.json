@@ -40,6 +40,10 @@
       "schedule": "25 * * * *"
     },
     {
+      "path": "/api/cron/escolhidos-sem-resposta",
+      "schedule": "5 * * * *"
+    },
+    {
       "path": "/api/cron/licoes-da-vitoria",
       "schedule": "20 5 * * *"
     }

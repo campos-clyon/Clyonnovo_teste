@@ -20,6 +20,7 @@ import PrecoDaClyon from "@/components/PrecoDaClyon";
 import FimDoTrabalhoClyon from "@/components/FimDoTrabalhoClyon";
 import AjudaDoPedido from "@/components/AjudaDoPedido";
 import AlterarPedido from "@/components/AlterarPedido";
+import EscolhidosSemResposta from "@/components/EscolhidosSemResposta";
 
 function parseFilesUrls(json: string | null): string[] {
   if (!json) return [];
@@ -338,6 +339,11 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
             respondeu — os pedidos estão aqui, e é aqui que a resposta faz
             sentido. É a mesma negociação e o mesmo motor; muda só como se
             prova quem está a falar. */}
+        {/* Os parceiros que escolheu numa mudança (d6, 11-11-2026): o prazo e, sem resposta, as três saídas. */}
+        {order.serviceType === "mudanca" && (
+          <EscolhidosSemResposta key={`escolhidos:${order.id}`} pedidoId={order.id} onMudou={() => onRecarregar?.()} />
+        )}
+
         {propostas.length > 0 && (
           <PropostasRecebidas
             pedidoId={order.id}

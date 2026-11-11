@@ -83,6 +83,7 @@ import { MARQUE_AS_HORAS_PRIMEIRO, totalEstimadoCurto } from "@/lib/horas-do-tra
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { FolhaDaMudanca } from "./FolhaDaMudanca";
 import { MapaDoPercurso } from "./MapaDoPercurso";
+import { ConfirmarAHora } from "./ConfirmarAHora";
 
 /**
  * A UNIDADE DO VALOR — 31-10-2026. Num pedido por hora todos os números do
@@ -2177,7 +2178,12 @@ function DetalheDoTrabalho({
               {pedido.mudancaEscolhida.prazoTexto}
             </p>
           )}
-          <p className="mt-2 text-xs text-slate-600">{pedido.mudancaEscolhida.regraDaProposta}</p>
+          {/* Depois de confirmar ou de propor mais baixo (d6): a frase no lugar dos botões. */}
+          {pedido.mudancaEscolhida.respostaTexto && (
+            <p role="status" className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 font-semibold leading-relaxed text-emerald-900">
+              {pedido.mudancaEscolhida.respostaTexto}
+            </p>
+          )}
           {/* O percurso (11-11-2026): só as localidades até ser contratado. */}
           {pedido.percurso && <MapaDoPercurso percurso={pedido.percurso} />}
         </section>
@@ -2541,7 +2547,22 @@ function DetalheDoTrabalho({
         antigas para trabalhar — ao terceiro pedido já não sabia qual era qual.
         O link continua a funcionar; deixou é de ser o único caminho.
       */}
-      {!fechado && pedido.estado !== "desistida" && pedido.estado !== "morta" && (
+      {/*
+        A PRIMEIRA RESPOSTA DO ESCOLHIDO, NUM TOQUE — 11-11-2026 (d6): «Confirmo:
+        faço por X/h + IVA» ou «Propor um valor mais baixo», em vez do
+        formulário. A partir da segunda proposta volta a negociação de sempre.
+      */}
+      {!fechado && pedido.estado === "aberta" && pedido.mudancaEscolhida?.primeiraResposta && pedido.negociacaoId ? (
+        <ConfirmarAHora
+          key={`confirmar:${pedido.negociacaoId}`}
+          negociacaoId={pedido.negociacaoId}
+          textos={pedido.mudancaEscolhida.primeiraResposta}
+          hora={pedido.mudancaEscolhida.hora}
+          taxas={pedido.taxas}
+          onMudou={onRecarregar}
+        />
+      ) : null}
+      {!fechado && pedido.estado !== "desistida" && pedido.estado !== "morta" && !(pedido.estado === "aberta" && pedido.mudancaEscolhida?.primeiraResposta) && (
         <NegociacaoProfissional
           // Volta a montar quando a negociação muda: o valor de um Trabalho CLYON
           // pode mudar com o ecrã aberto, e o estado de dentro nasce das props (08-10-2026).
