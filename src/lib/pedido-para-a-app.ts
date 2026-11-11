@@ -15,7 +15,8 @@ import {
   CONFIRMO_AS_HORAS,
   CONFIRMO_AS_HORAS_E_OS_MATERIAIS,
   NAO_CONCORDO,
-  REGRA_DAS_HORAS,
+  minimoDoParceiro,
+  regraDasHoras,
   TITULO_DAS_HORAS,
   clientePodeResponderAsHoras,
   duracaoEmPalavras,
@@ -159,15 +160,17 @@ export function textosDaConta(conta: PrecoDoCliente, nota: string): TextosDoPrec
  */
 export function textosDoPrecoPorHora(
   valorPorHora: number,
-  n: Pick<NegociacaoDoCliente, "taxaCliente" | "semFactura" | "criadaEm" | "horasPrevistas">,
+  n: Pick<NegociacaoDoCliente, "taxaCliente" | "semFactura" | "criadaEm" | "horasPrevistas"> & Partial<Pick<NegociacaoDoCliente, "horas">>,
 ): TextosDoPreco {
   const taxas = taxasDaNegociacao(n);
   const modelo = modeloDaLinha(n, n.criadaEm);
   const conta = precoDoCliente(valorPorHora, taxas, modelo);
-  const p = precoPorHoraParaOCliente(valorPorHora, n.horasPrevistas, taxas, modelo);
+  // Numa mudança da lista, o mínimo é o do parceiro (d7, 11-11-2026).
+  const minimo = minimoDoParceiro(n.horas);
+  const p = precoPorHoraParaOCliente(valorPorHora, n.horasPrevistas, taxas, modelo, minimo);
   return {
     principal: `${emEuros(conta.aPagar)}/hora${conta.ivaIncluido ? " com IVA" : " sem IVA"}`,
-    detalhe: porHoraParaOCliente(conta),
+    detalhe: porHoraParaOCliente(conta, minimo),
     nota: p.estimativa,
   };
 }
@@ -186,7 +189,9 @@ export function horasParaOCliente(n: NegociacaoDoCliente, emCima: number | null,
   const valorPorHora = n.estado === "acordada" ? valorPorHoraDe(h) : emCima;
   const r = resumoDasHoras(h, taxas, modelo);
   const comMateriais = (r?.materiais.length ?? 0) > 0;
-  const precoHora = valorPorHora != null ? precoPorHoraParaOCliente(valorPorHora, n.horasPrevistas, taxas, modelo) : null;
+  // Numa mudança da lista, o mínimo é o do parceiro (d7, 11-11-2026); nas outras, null (o da casa).
+  const minimoDaTarifa = minimoDoParceiro(h);
+  const precoHora = valorPorHora != null ? precoPorHoraParaOCliente(valorPorHora, n.horasPrevistas, taxas, modelo, minimoDaTarifa) : null;
   /*
    * A FOLHA DA MUDANÇA (11-11-2026): numa mudança com a lista de parceiros o
    * cliente vê a folha inteira — horas, pausas, equipa, km e material, em
@@ -210,7 +215,9 @@ export function horasParaOCliente(n: NegociacaoDoCliente, emCima: number | null,
     porHoraTexto: precoHora?.porHora ?? null,
     estimativaTexto: horasConfirmadas(h) ? null : (precoHora?.estimativa ?? null),
     horasPrevistas: horasDaEstimativa(n.horasPrevistas),
-    regraTexto: REGRA_DAS_HORAS,
+    regraTexto: regraDasHoras(minimoDaTarifa),
+    /** O mínimo de horas do parceiro numa mudança da lista; null nas outras (d7). */
+    minimoHoras: minimoDaTarifa,
     marcadas: r
       ? {
           texto: r.textoParaOCliente,

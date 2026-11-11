@@ -18,6 +18,7 @@ import {
   POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
   PRECO_POR_HORA,
   HORAS_COM_TRES_PESSOAS,
+  TIPOLOGIAS,
   TIPOLOGIA_POR_EXTENSO,
   desmontagemPorTipologiaEmTexto,
   horasEscritas,
@@ -85,8 +86,16 @@ export type PrecoPublicoDasMudancas =
       minimoHoras?: { de: number; ate: number };
       /** Um exemplo por tipologia, pelo parceiro mais barato de cada uma (d7). */
       exemplos?: ExemploDaMudanca[];
+      /**
+       * A estimativa de TODAS as casas, sem e com desmontagem — para o passo 2 do
+       * simulador, a R12 e o motor dizerem o número do cartão da lista (d7, parte do Site).
+       */
+      estimativas?: EstimativaDaLista[];
     }
   | { tipo: "referencia" };
+
+/** Um exemplo, com a desmontagem dita: a conta do cartão da lista para essa casa. */
+export type EstimativaDaLista = ExemploDaMudanca & { desmontagem: boolean };
 
 /** As casas dos exemplos: duas que se fazem com 2 pessoas e uma que só se faz com 3. */
 export const TIPOLOGIAS_DOS_EXEMPLOS: readonly Tipologia[] = Object.freeze(["T1", "T2", "T3"] as Tipologia[]);
@@ -134,6 +143,10 @@ export function precoPublicoDosCandidatos(candidatos: readonly CandidatoDaMudanc
   if (minimos.length > 0) p.minimoHoras = { de: Math.min(...minimos), ate: Math.max(...minimos) };
   const exemplos = exemplosDaLista(naLista, ctx);
   if (exemplos.length > 0) p.exemplos = exemplos;
+  const estimativas = [false, true].flatMap((desmontagem) =>
+    exemplosDaLista(naLista, { ...ctx, desmontagem }, TIPOLOGIAS).map((e) => ({ ...e, desmontagem })),
+  );
+  if (estimativas.length > 0) p.estimativas = estimativas;
   return p;
 }
 
@@ -147,9 +160,10 @@ export function precoPublicoDosCandidatos(candidatos: readonly CandidatoDaMudanc
 export function exemplosDaLista(
   naLista: ReadonlyArray<CandidatoDaMudanca & { tarifa: TarifaDasMudancas }>,
   base: ContextoDaMudanca,
+  tipologias: readonly Tipologia[] = TIPOLOGIAS_DOS_EXEMPLOS,
 ): ExemploDaMudanca[] {
   const exemplos: ExemploDaMudanca[] = [];
-  for (const tipologia of TIPOLOGIAS_DOS_EXEMPLOS) {
+  for (const tipologia of tipologias) {
     const c = { ...base, tipologia };
     let melhor: ExemploDaMudanca | null = null;
     let meio = Infinity;
@@ -217,17 +231,40 @@ export function precoDaMudancaCurto(p: PrecoPublicoDasMudancas): string {
   return REFERENCIA_DA_MUDANCA;
 }
 
+/** «desde … com 2 pessoas e desde … com 3», ou a referência — a meio de uma frase (d7: o de 2 e o de 3). */
+export function precoDaMudancaNumaFrase(p: PrecoPublicoDasMudancas): string {
+  return p.tipo === "parceiros" ? desdeDaListaEmTexto(p) : REFERENCIA_DA_MUDANCA;
+}
+
+/** «desde 40 €/h + IVA (49,20 € com IVA) com 2 pessoas» — curto, para uma descrição. */
+export function desdeCurtoDaLista(p: Extract<PrecoPublicoDasMudancas, { tipo: "parceiros" }>): string {
+  return `desde ${numero(p.desde.semIvaCent)} €/h + IVA (${numero(p.desde.comIvaCent)} € com IVA) com 2 pessoas`;
+}
+
+/**
+ * A linha por baixo do «desde» numa página (d7): a equipa de 3 e os exemplos da lista,
+ * com a proteção e os km. `null` na referência (a lista vazia).
+ */
+export function precoDaMudancaEmDetalhe(p: PrecoPublicoDasMudancas): string | null {
+  if (p.tipo !== "parceiros") return null;
+  const com3 = p.desde3 ? `Com 3 pessoas, desde ${euros(p.desde3.semIvaCent)} + IVA/h (${euros(p.desde3.comIvaCent)} com IVA).` : null;
+  const partes = [com3, exemplosDaListaNumaFrase(p)].filter((x): x is string => !!x);
+  return partes.length > 0 ? partes.join(" ") : null;
+}
+
 /** A frase da cabeça de uma página: o «desde» e o convite a comparar, ou a referência. */
 export function precoDaMudancaNaCabeca(p: PrecoPublicoDasMudancas): string {
   if (p.tipo === "parceiros") {
-    return `Mudanças à hora ${precoDaMudancaCurto(p)} — compare os parceiros e escolha.`;
+    // O «desde» de 2 e de 3 pessoas (d7): a cabeça só dizia o de 2.
+    return `Mudanças à hora ${desdeDaListaEmTexto(p)} — compare os parceiros e escolha.`;
   }
   return `Mudanças à hora: cada parceiro tem o seu preço. A ${REFERENCIA_DA_MUDANCA}.`;
 }
 
-/** A resposta inteira, para «Quanto custa uma mudança?». */
+/** A resposta inteira, para «Quanto custa uma mudança?»: o «desde», os exemplos da lista (d7) e o modelo. */
 export function precoDaMudancaPorExtenso(p: PrecoPublicoDasMudancas): string {
-  return `${precoDaMudancaNaCabeca(p)} ${MODELO_DA_MUDANCA}`;
+  const exemplos = exemplosDaListaNumaFrase(p);
+  return `${precoDaMudancaNaCabeca(p)} ${exemplos ? `${exemplos} ` : ""}${MODELO_DA_MUDANCA}`;
 }
 
 /** Para títulos, por ordem de preferência — fica o primeiro que couber nos 60 caracteres. */
@@ -294,6 +331,49 @@ export function exemploDaListaEmTexto(e: ExemploDaMudanca): string {
   return `${casa} com ${e.pessoas} pessoas (${intervaloDeHorasEmTexto(e.horas)}), ${faixaEmTexto(e.minimo, e.maximo)}`;
 }
 
+/** «com a proteção e os km» — o que a conta de um exemplo leva (há parceiros que não fornecem a proteção). */
+export function oQueOExemploLeva(e: Pick<ExemploDaMudanca, "comProtecao">): string {
+  return e.comProtecao ? "com a proteção e os km" : "com os km";
+}
+
+/**
+ * Os exemplos da lista numa frase — a mesma na Vitória, nas páginas, no blog e na FAQ:
+ * «Por exemplo, pelo parceiro com o preço mais baixo, já com a proteção e os km: um T1…; um T2…; um T3….»
+ * `null` sem parceiros na lista, ou sem exemplos.
+ */
+export function exemplosDaListaNumaFrase(p: PrecoPublicoDasMudancas): string | null {
+  const exemplos = p.tipo === "parceiros" ? (p.exemplos ?? []) : [];
+  if (exemplos.length === 0) return null;
+  return `Por exemplo, pelo parceiro com o preço mais baixo, ${exemplos.every((e) => e.comProtecao) ? "já com a proteção e os km" : "já com os km"}: ${exemplos.map(exemploDaListaEmTexto).join("; ")}.`;
+}
+
+/** O exemplo da lista para uma casa (T1, T2 ou T3), ou null. */
+export function exemploDaLista(p: PrecoPublicoDasMudancas, tipologia: Tipologia): ExemploDaMudanca | null {
+  return p.tipo === "parceiros" ? ((p.exemplos ?? []).find((e) => e.tipologia === tipologia) ?? null) : null;
+}
+
+/**
+ * A ESTIMATIVA PELA LISTA para uma casa, sem ou com desmontagem: a conta do
+ * cartão do parceiro que a faz mais barata hoje (as horas, nunca abaixo do
+ * mínimo dele, a proteção que ele fornece e os km mínimos dele). É o que o
+ * passo 2 do simulador, a R12 e o motor dizem — o mesmo número do cartão do
+ * passo 3. `null` sem parceiros, ou sem nenhum que faça essa casa.
+ */
+export function estimativaPelaLista(
+  p: PrecoPublicoDasMudancas,
+  tipologia: Tipologia | null | undefined,
+  desmontagem: boolean,
+): EstimativaDaLista | null {
+  if (p.tipo !== "parceiros") return null;
+  const t = tipologia ?? "itens";
+  return (p.estimativas ?? []).find((e) => e.tipologia === t && e.desmontagem === desmontagem) ?? null;
+}
+
+/** «entre 2 e 3 horas», ou «2 horas» — o mínimo de horas dos parceiros da lista de hoje; null sem ele. */
+export function minimoDaListaEmTexto(p: PrecoPublicoDasMudancas): string | null {
+  return p.tipo === "parceiros" && p.minimoHoras ? minimoDosParceirosEmTexto(p.minimoHoras) : null;
+}
+
 /** A referência, dita como referência: «na referência, são … + IVA por hora (… com IVA), equipa de 3, mínimo de 3 horas». */
 export const NA_REFERENCIA_DA_MUDANCA = REFERENCIA_DA_MUDANCA.replace(/^referência: /, "na referência, são ");
 
@@ -311,11 +391,7 @@ export function precoDaMudancaNoWhatsApp(p: PrecoPublicoDasMudancas): string {
   }
   const minimo = p.minimoHoras ? ` (hoje, ${minimoDosParceirosEmTexto(p.minimoHoras)})` : "";
   const abre = `Nas mudanças, cada parceiro tem o seu preço por hora e o seu mínimo de horas${minimo}: ${desdeDaListaEmTexto(p)}.`;
-  const exemplos = p.exemplos ?? [];
-  const meio =
-    exemplos.length > 0
-      ? `Por exemplo, pelo parceiro com o preço mais baixo, ${exemplos.every((e) => e.comProtecao) ? "já com a proteção e os km" : "já com os km"}: ${exemplos.map(exemploDaListaEmTexto).join("; ")}.`
-      : `As horas dependem da casa: ${HORAS_DA_MUDANCA_NUMA_FRASE}.`;
+  const meio = exemplosDaListaNumaFrase(p) ?? `As horas dependem da casa: ${HORAS_DA_MUDANCA_NUMA_FRASE}.`;
   return `${abre} ${meio} ${fecho}`;
 }
 
@@ -397,4 +473,68 @@ export function regrasDaMudancaParaOModelo(p: PrecoPublicoDasMudancas): string {
   Cada andar sem elevador (referência): ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € por pessoa (${POR_ANDAR_SEM_ELEVADOR} € a equipa de ${PESSOAS_NA_EQUIPA}).
   Elevador exterior (referência): ${ELEVADOR_EXTERIOR} € por serviço. Materiais de embalamento: os do parceiro.
   O total sai das horas, dos km e do material confirmados na folha do dia; isto é só a estimativa.`;
+}
+
+/* ── O QUE SAI PELA ROTA PÚBLICA, E COMO SE LÊ DE VOLTA (d7, parte do Site) ──
+ *
+ * `/api/mudancas/preco-publico` devolvia só o «desde»; o simulador refazia a
+ * conta do passo 2 sem a proteção, e o cartão do passo 3 dava mais ~240 € num
+ * T2. Passa a levar também o mínimo de horas, os exemplos e as estimativas
+ * por casa — os mesmos números, sem dados de ninguém. Quantos parceiros há
+ * continua a não sair.
+ */
+
+export function precoPublicoParaFora(p: PrecoPublicoDasMudancas): Record<string, unknown> {
+  if (p.tipo !== "parceiros") return { tipo: p.tipo };
+  return {
+    tipo: p.tipo,
+    desde: p.desde,
+    ...(p.desde3 ? { desde3: p.desde3 } : {}),
+    ...(p.minimoHoras ? { minimoHoras: p.minimoHoras } : {}),
+    ...(p.exemplos ? { exemplos: p.exemplos } : {}),
+    ...(p.estimativas ? { estimativas: p.estimativas } : {}),
+  };
+}
+
+function valorDeFora(v: unknown): ValorDaHora | null {
+  const o = v as { semIvaCent?: unknown; comIvaCent?: unknown } | null | undefined;
+  const s = Number(o?.semIvaCent);
+  const c = Number(o?.comIvaCent);
+  return Number.isFinite(s) && Number.isFinite(c) && s > 0 && c > 0 ? { semIvaCent: s, comIvaCent: c } : null;
+}
+
+function exemploDeFora(v: unknown): EstimativaDaLista | null {
+  const o = v as Record<string, unknown> | null | undefined;
+  if (!o || !TIPOLOGIAS.includes(o.tipologia as Tipologia)) return null;
+  const minimo = valorDeFora(o.minimo);
+  const maximo = valorDeFora(o.maximo);
+  const horas = Array.isArray(o.horas) ? o.horas.map(Number) : [];
+  if (!minimo || !maximo || horas.length !== 2 || !horas.every((h) => Number.isFinite(h) && h > 0)) return null;
+  return {
+    tipologia: o.tipologia as Tipologia,
+    pessoas: Number(o.pessoas) === 3 ? 3 : 2,
+    horas: [horas[0], horas[1]],
+    minimo,
+    maximo,
+    comProtecao: o.comProtecao === true,
+    desmontagem: o.desmontagem === true,
+  };
+}
+
+/** Lê o que a rota pública devolveu; o que não se percebe fica a referência. */
+export function precoPublicoDeFora(v: unknown): PrecoPublicoDasMudancas {
+  const o = v as Record<string, unknown> | null | undefined;
+  const desde = valorDeFora(o?.desde);
+  if (!o || o.tipo !== "parceiros" || !desde) return SEM_PARCEIROS;
+  const p: Extract<PrecoPublicoDasMudancas, { tipo: "parceiros" }> = { tipo: "parceiros", parceiros: 1, desde };
+  const desde3 = valorDeFora(o.desde3);
+  if (desde3) p.desde3 = desde3;
+  const m = o.minimoHoras as { de?: unknown; ate?: unknown } | undefined;
+  if (m && Number(m.de) > 0 && Number(m.ate) >= Number(m.de)) p.minimoHoras = { de: Number(m.de), ate: Number(m.ate) };
+  const lista = (x: unknown) => (Array.isArray(x) ? x.map(exemploDeFora).filter((e): e is EstimativaDaLista => e != null) : []);
+  const exemplos = lista(o.exemplos).map(({ desmontagem: _d, ...e }) => e);
+  if (exemplos.length > 0) p.exemplos = exemplos;
+  const estimativas = lista(o.estimativas);
+  if (estimativas.length > 0) p.estimativas = estimativas;
+  return p;
 }

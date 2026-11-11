@@ -549,7 +549,7 @@ export async function pedidoDoClienteParaAApp(
           emDuasEntregas: ecra.emDuasEntregas,
           atalhos: ecra.esperaPorSi && n.estado === "aberta" ? atalhosDaContraproposta(ecra.valores?.aPagar) : [],
           // A legenda da contraproposta, a mesma do site (d8, 31-10-2026): `frase-da-contraproposta.ts`.
-          proporAjuda: legendaDaContraproposta({ porHora: !!ecra.horas, ivaIncluido: ecra.valores?.ivaIncluido }),
+          proporAjuda: legendaDaContraproposta({ porHora: !!ecra.horas, ivaIncluido: ecra.valores?.ivaIncluido, minimoHoras: ecra.horas?.minimoHoras }),
         };
       })(),
       // O convidado não paga (R15): vê o estado na própria negociação, sem referência criada aqui.

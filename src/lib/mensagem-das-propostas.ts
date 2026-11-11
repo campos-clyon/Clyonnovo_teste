@@ -36,6 +36,13 @@ export const SAO_PRECOS_POR_CARGA =
 export const SAO_PRECOS_POR_HORA =
   `Atenção: são preços POR HORA, com um mínimo de ${MINIMO_DE_HORAS} horas — o total depende das horas de trabalho no dia.`;
 
+/**
+ * E NUMA MUDANÇA DA LISTA — d7, 11-11-2026: o mínimo é o da tarifa de cada
+ * parceiro (o que a folha cobra), e não o da casa. O total sai da folha do dia.
+ */
+export const SAO_PRECOS_POR_HORA_DO_PARCEIRO =
+  "Atenção: são preços POR HORA, com o mínimo de horas de cada parceiro — o total sai das horas, dos km e do material confirmados na folha do dia.";
+
 /** «23 %», escrito uma vez a partir da constante. */
 const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
 
@@ -360,6 +367,8 @@ export type DadosDaMensagem = {
   base?: BaseDoPreco | null;
   /** Por hora: as horas previstas do pedido, para a estimativa (mínimo 3) — 31-10-2026. */
   horasPrevistas?: number | null;
+  /** Uma mudança em que o cliente escolheu os parceiros na lista: o mínimo é o de cada um (d7, 11-11-2026). */
+  mudancaDaLista?: boolean;
   /*
    * SEM LINK — 03-10-2026. *«Não coloque a mensagem do link e nem o link,
    * vamos fazer manualmente.»* A mensagem diz as propostas e pede-lhe que
@@ -381,7 +390,13 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
   const unidade = unidadeDaBase(base);
   // Pelo trabalho todo, os 32 € por item a mais — 22-10-2026, *«a mensagem também tem de deixar claro».*
   const avisoDaUnidade =
-    base === "carga" ? SAO_PRECOS_POR_CARGA : base === "hora" ? SAO_PRECOS_POR_HORA : avisoDosItens(base, "cliente");
+    base === "carga"
+      ? SAO_PRECOS_POR_CARGA
+      : base === "hora"
+        ? d.mudancaDaLista
+          ? SAO_PRECOS_POR_HORA_DO_PARCEIRO
+          : SAO_PRECOS_POR_HORA
+        : avisoDosItens(base, "cliente");
 
   /*
    * "para a recolha de entulho em Carnaxide" — ou, quando o serviço é novo e o

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { categoriasDoProfissional, gravarTarifaDasMudancas, tarifaDasMudancasDe } from "@/lib/db";
@@ -108,6 +109,13 @@ export async function PUT(req: NextRequest) {
       );
     }
     await gravarTarifaDasMudancas(sessao.providerId, { ...v.tarifa, aparecerNaLista });
+    // O preço público das mudanças lê-se outra vez já (d7, 11-11-2026): as páginas diziam o «desde»
+    // antigo até uma hora depois de o parceiro gravar a tarifa ou sair da lista.
+    try {
+      revalidateTag("preco-publico-das-mudancas");
+    } catch {
+      /* fora de um pedido do Next (testes) */
+    }
     const tarifa = await tarifaDasMudancasDe(sessao.providerId);
     const estado = estadoDosPrecosDasMudancas(tarifa);
     return NextResponse.json({

@@ -7,7 +7,7 @@ import {
   precoDeReferencia,
   valorSemEComIva,
 } from "./preco-de-referencia";
-import { PRECO_DO_SACO_EM_TEXTO, comIva, euros } from "./quanto-custa";
+import { PRECO_DO_SACO_EM_TEXTO } from "./quanto-custa";
 import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
 import {
   COMO_SE_RECOLHE_ENTULHO,
@@ -18,22 +18,10 @@ import {
 } from "./sacos-de-entulho";
 import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
 import { getCidadeLocal } from "./cidades-local";
-import {
-  EXTRAS_DA_MUDANCA,
-  HORAS_COM_TRES_PESSOAS,
-  HORAS_DA_DESMONTAGEM,
-  MINIMO_DA_MUDANCA,
-  MINIMO_DE_HORAS,
-  PESSOAS_NA_EQUIPA,
-  PRECO_POR_HORA,
-  RAIO_INCLUIDO_KM,
-  TIPOLOGIA_POR_EXTENSO,
-  horasEscritas,
-  intervaloDeHorasEmTexto,
-  referenciaDaCasa,
-  type Tipologia,
-} from "./tabela-das-mudancas";
-import { MODELO_DA_MUDANCA, REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
+import { EXTRAS_DA_MUDANCA } from "./tabela-das-mudancas";
+import { MODELO_DA_MUDANCA } from "./modelo-da-mudanca";
+import { SEM_PARCEIROS, type PrecoPublicoDasMudancas } from "./preco-publico-das-mudancas";
+import { mudancaNoBlog } from "./mudanca-no-blog";
 
 /*
  * AS HORAS DE CADA TIPOLOGIA, EM LINHAS — 14-10-2026.
@@ -45,24 +33,12 @@ import { MODELO_DA_MUDANCA, REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
  *
  * DESDE 11-11-2026 CADA PARCEIRO TEM O SEU PREÇO: os números ficam como
  * REFERÊNCIA (o blog não lê a base) e o artigo diz o modelo — compare e escolha.
+ *
+ * E DESDE A d7 (11-11-2026) O BLOG LÊ O PREÇO PÚBLICO: com parceiros na lista,
+ * os artigos de mudanças dizem o que a lista dá; a referência fica para a
+ * lista vazia. As frases vivem em `mudanca-no-blog.ts`, e os artigos montam-se
+ * com o preço que a página lhes passa (`artigos(preco)`).
  */
-const TIPOLOGIAS_DA_CASA: Tipologia[] = ["T0", "T1", "T2", "T3", "T4+"];
-/* DESDE 11-11-2026 EM INTERVALO, com a proteção dos móveis e do chão (tabela-das-mudancas.ts). */
-/** «310–410 €» — a referência de uma casa, sem IVA. */
-const faixaDaCasa = (t: Tipologia, comOIva = false) => {
-  const o = referenciaDaCasa(t);
-  const [a, b] = comOIva ? [comIva(o.totalSemIvaMinimo), comIva(o.totalSemIvaMaximo)] : [o.totalSemIvaMinimo, o.totalSemIvaMaximo];
-  return `${euros(a).replace(" €", "")}–${euros(b)}`;
-};
-const HORAS_E_PRECO_POR_TIPOLOGIA = [
-  ...TIPOLOGIAS_DA_CASA.map((t) => {
-    const horas = intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS[t]);
-    const equipa = t === "T3" || t === "T4+" ? ", só com 3 pessoas" : " com 3 pessoas";
-    return `${TIPOLOGIA_POR_EXTENSO[t]}: ${horas}${equipa} — ${faixaDaCasa(t)} + IVA (${faixaDaCasa(t, true)} com IVA) na referência, com a proteção`;
-  }),
-  `Com desmontagem e montagem de móveis: mais ${horasEscritas(HORAS_DA_DESMONTAGEM.T1)} h num T1 e até ${horasEscritas(HORAS_DA_DESMONTAGEM["T4+"])} h num T4 ou maior`,
-];
-
 /*
  * O QUE ESTE FICHEIRO DEIXOU DE PUBLICAR — 30-09-2026.
  *
@@ -157,7 +133,10 @@ const EXEMPLOS_DE_ENTULHO = ["lisboa", "oeiras", "almada", "seixal", "setubal", 
   .map(entulhoNaCamara)
   .filter((x): x is string => x != null);
 
-export const BLOG_POSTS: BlogPost[] = [
+function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
+  /** As mudanças, pela lista ou pela referência (d7). */
+  const M = mudancaNoBlog(preco);
+  return [
   {
     slug: "recolha-gratuita-de-moveis-usados-costa-da-caparica",
     title:
@@ -718,8 +697,8 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Quanto custa uma mudança em Lisboa em 2026? Guia completo de preços",
     metaTitle: "Quanto Custa uma Mudança em Lisboa em 2026?",
     description:
-      // A hora com o com IVA ao lado; dizia «…, T3 250 €, sem IVA.» (31-10-2026).
-      `Quanto custa uma mudança em Lisboa: cada parceiro tem o seu preço por hora; na referência, ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))}/h com IVA) — T2 ${faixaDaCasa("T2")} + IVA.`,
+      // Pela lista, ou pela referência dita como referência (d7) — ver `mudanca-no-blog.ts`.
+      M.descricaoDoQuantoCusta,
     category: "Mudanças",
     keywords: [
       "quanto custa mudança lisboa",
@@ -740,11 +719,11 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Preços por tipologia: à hora, ao preço de cada parceiro",
         paragraphs: [
           `Na CLYON a mudança paga-se à hora, ao preço do parceiro que escolher. ${MODELO_DA_MUDANCA}`,
-          `Para ter uma ideia antes de comparar, a ${REFERENCIA_DA_MUDANCA}.`,
+          M.paraTerUmaIdeia,
           "Ao comparar preços à hora, veja para quantas pessoas é e se a carrinha vem incluída: na lista, cada parceiro diz o preço com 2 e com 3 pessoas.",
-          "Antes de alguém ver a casa, contam-se estas horas pela tipologia (equipa de 3; com 2 pessoas leva mais tempo), sem andares a pé nem distâncias longas. No fim pagam-se as horas confirmadas na folha do dia:",
+          M.antesDasLinhas,
         ],
-        bullets: HORAS_E_PRECO_POR_TIPOLOGIA,
+        bullets: M.linhasPorTipologia,
       },
       {
         title: "O que faz o preço subir ou descer",
@@ -846,7 +825,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "pequenas-mudancas-em-lisboa-quando-compensa",
-    updatedDate: "2026-10-14",
+    updatedDate: "2026-11-11",
     title: "Pequenas mudanças em Lisboa: quando compensa contratar uma equipa",
     metaTitle: "Pequenas Mudanças em Lisboa: Quando Compensa",
     description:
@@ -870,7 +849,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "O que é uma pequena mudança",
         paragraphs: [
           "Consideramos pequena mudança o transporte de 1 a 3 peças grandes: sofá, cama, armário, secretária, frigorífico ou máquina de lavar. É diferente de uma mudança completa porque não envolve dezenas de caixas e mobiliário de todas as divisões.",
-          `Pagam-se como as mudanças: à hora, ao preço do parceiro que escolher, com o mínimo de horas dele. Na referência, ${PRECO_POR_HORA} € + IVA por hora pela equipa de ${PESSOAS_NA_EQUIPA}, com o mínimo de ${MINIMO_DE_HORAS} horas — ${MINIMO_DA_MUDANCA} € + IVA (${euros(comIva(MINIMO_DA_MUDANCA))} com IVA). Uma pequena mudança conta-se, à partida, pelo mínimo, e por isso fica bem abaixo de uma mudança completa. No simulador vê o preço de cada parceiro.`,
+          M.pequenasMudancas,
         ],
       },
       {
@@ -890,8 +869,7 @@ export const BLOG_POSTS: BlogPost[] = [
     faq: [
       {
         question: "Posso transportar só um sofá?",
-        answer:
-          `Sim. É um dos pedidos mais comuns. Paga-se à hora, ao preço do parceiro que escolher, com o mínimo de horas dele (na referência, ${MINIMO_DE_HORAS} horas, ${MINIMO_DA_MUDANCA} € + IVA); o tamanho do sofá, a distância e o acesso nos dois endereços dizem se esse mínimo chega.`,
+        answer: M.soUmSofa,
       },
       {
         question: "E se o móvel não couber no elevador?",
@@ -1305,7 +1283,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "mudanca-entre-lisboa-e-a-margem-sul",
     title: "Mudança entre Lisboa e a Margem Sul: pontes, tempos e quanto custa",
     metaTitle: "Mudança entre Lisboa e a Margem Sul",
-    description: `De Lisboa para Almada, Seixal ou Barreiro, ou o contrário: a ponte, o tempo e o preço — à hora, ao preço do parceiro (referência ${PRECO_POR_HORA} €/h + IVA).`,
+    description: M.descricaoDaMargemSul,
     category: "Mudanças",
     keywords: [
       "mudança lisboa margem sul",
@@ -1338,7 +1316,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "Quanto custa",
         paragraphs: [
           `Paga-se à hora. ${MODELO_DA_MUDANCA}`,
-          `Um T2, por exemplo, leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — ${faixaDaCasa("T2")} + IVA na referência, com a proteção (${faixaDaCasa("T2", true)} com IVA); os km entre as margens contam pela tarifa do parceiro. A tabela por tipologia está em [quanto custa uma mudança em Lisboa](/blog/quanto-custa-uma-mudanca-em-lisboa).`,
+          M.umT2PorExemplo,
           EXTRAS_DA_MUDANCA,
         ],
       },
@@ -1364,15 +1342,19 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         question: "Quanto custa a mudança de um T2 de Lisboa para o Seixal?",
-        answer: `Conte com ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — na referência, com a proteção, ${faixaDaCasa("T2")} + IVA (${faixaDaCasa("T2", true)} com IVA) —, mais os km e as caixas, se as pedir. Cada parceiro tem o seu preço por hora: no simulador vê os disponíveis e escolhe.`,
+        answer: M.t2ParaOSeixal,
       },
       {
         question: "O preço inclui IVA?",
-        answer: `Na lista dos parceiros cada preço por hora aparece sem IVA e com IVA (na referência, ${valorSemEComIva(PRECO_POR_HORA)} por hora). Há fatura em todas as vendas.`,
+        answer: M.incluiIva,
       },
     ],
   },
-];
+  ];
+}
+
+/** Os artigos como se escrevem com a lista vazia (a referência) — para quem não lê a base (o sitemap, os testes). */
+export const BLOG_POSTS: BlogPost[] = artigos(SEM_PARCEIROS);
 
 /** Um pedaço de parágrafo: texto corrido, ou uma ligação interna. */
 export type ParteDoTexto = { texto: string } | { texto: string; href: string };
@@ -1400,8 +1382,9 @@ export function partesDoTexto(paragrafo: string): ParteDoTexto[] {
 }
 
 
-export function getAllBlogPosts() {
-  return BLOG_POSTS;
+/** Todos os artigos; com o preço público das mudanças (d7), os de mudanças dizem o que a lista dá. */
+export function getAllBlogPosts(preco?: PrecoPublicoDasMudancas) {
+  return preco && preco.tipo === "parceiros" ? artigos(preco) : BLOG_POSTS;
 }
 
 export function getBlogPost(slug: string) {

@@ -160,6 +160,7 @@ export default async function ProfissionaisPage() {
             */}
             <div className="border-t border-[#E2EEF3] bg-[#F4F8FB] px-6 py-4 text-left">
               <p className="text-xs leading-relaxed text-slate-600">{exemplo.frase}</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">{exemplo.nasMudancas}</p>
               <ul className="mt-3 space-y-1.5">
                 {COMO_RECEBE.map((c) => (
                   <li key={c.forma} className="text-xs leading-relaxed text-slate-500">

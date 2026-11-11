@@ -1,5 +1,6 @@
 import { getAllBlogPosts, type BlogPost } from "@/lib/blog-data";
 import { ARTIGOS_RETIRADOS } from "@/lib/paginas-consolidadas";
+import type { PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 
 /**
  * OS ARTIGOS QUE ESTÃO NO AR — 29-09-2026.
@@ -16,11 +17,11 @@ import { ARTIGOS_RETIRADOS } from "@/lib/paginas-consolidadas";
  * forma de não o esquecer num deles: um sitemap que pede um endereço que
  * responde 301 ensina o Google a desconfiar do sitemap todo.
  */
-export function artigosPublicados(): BlogPost[] {
-  return getAllBlogPosts().filter((artigo) => !(artigo.slug in ARTIGOS_RETIRADOS));
+export function artigosPublicados(preco?: PrecoPublicoDasMudancas): BlogPost[] {
+  return getAllBlogPosts(preco).filter((artigo) => !(artigo.slug in ARTIGOS_RETIRADOS));
 }
 
 /** Um artigo que está no ar, ou nada — o retirado não se serve, redirecciona. */
-export function artigoPublicado(slug: string): BlogPost | undefined {
-  return artigosPublicados().find((artigo) => artigo.slug === slug);
+export function artigoPublicado(slug: string, preco?: PrecoPublicoDasMudancas): BlogPost | undefined {
+  return artigosPublicados(preco).find((artigo) => artigo.slug === slug);
 }

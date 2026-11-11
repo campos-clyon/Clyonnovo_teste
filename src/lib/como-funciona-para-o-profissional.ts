@@ -1,6 +1,6 @@
 import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
-import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
+import { TAXA_DAS_MUDANCAS_EM_FRASE, quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import { precoParaOCliente } from "./preco-do-cliente";
 import type { ModeloDoPreco } from "./iva-incluido";
 import { quotaDaClyon } from "./quota-da-clyon";
@@ -171,6 +171,8 @@ export function comissaoEmPalavras(
   frase: string;
   /** Por baixo do número do cliente: o que lá está dentro. */
   notaDoCliente: string;
+  /** A taxa das mudanças pela lista de parceiros (d7, 11-11-2026) — de `taxas-plataforma.ts`. */
+  nasMudancas: string;
 } {
   const proposta = euros(VALOR_DO_EXEMPLO);
   const cliente = euros(precoParaOCliente(VALOR_DO_EXEMPLO, taxas, modelo));
@@ -187,6 +189,7 @@ export function comissaoEmPalavras(
     cliente,
     recebe,
     quota,
+    nasMudancas: TAXA_DAS_MUDANCAS_EM_FRASE,
     notaDoCliente: semAcrescimo
       ? comIva
         ? "O seu valor, com IVA incluído"

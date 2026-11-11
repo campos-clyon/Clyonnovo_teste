@@ -119,6 +119,41 @@ function aosCentimos(n: number): number {
 export const TAXA_TOTAL = TAXA_CLIENTE + TAXA_PROFISSIONAL;
 
 /**
+ * A TAXA DAS MUDANÇAS PELA LISTA DE PARCEIROS — na fonte única desde
+ * 11-11-2026 (d7). Vivia em `conta-da-mudanca.ts`, fora do que a orquestra
+ * vigia, e a ajuda do parceiro só dizia a taxa das negociações.
+ *
+ * Numa mudança em que o cliente escolhe o parceiro na lista, a taxa conta-se
+ * só sobre as HORAS e os KM, e sai do preço do parceiro; o material não leva
+ * taxa. O valor é o de 10-11-2026 e não mudou com a mudança de casa. Cada
+ * pedido guarda as regras do dia em que foi escolhido (a tarifa congelada).
+ *
+ * Uma mudança que chega sem lista (pela Mesa) segue a taxa das negociações.
+ */
+export const TAXA_DAS_MUDANCAS = 0.1;
+
+/** «10 %» — a taxa das mudanças pela lista, escrita. */
+export const TAXA_DAS_MUDANCAS_EM_PONTOS = `${String(Math.round(TAXA_DAS_MUDANCAS * 10000) / 100).replace(".", ",")} %`;
+
+/**
+ * A FRASE DA TAXA DAS MUDANÇAS, para o parceiro — a mesma na ajuda, no «Como
+ * funciona» e nas páginas /profissionais e /quero-ser-parceiro.
+ */
+export const TAXA_DAS_MUDANCAS_EM_FRASE =
+  `Nas mudanças em que o cliente o escolhe na lista de parceiros, pelos seus preços, a taxa da plataforma é de ${TAXA_DAS_MUDANCAS_EM_PONTOS} ` +
+  "e conta só sobre as horas e os km; o material que fornecer não leva taxa.";
+
+/**
+ * A mesma regra, sem o número — para quem não lê a taxa em vigor (a lista de
+ * perguntas que a app CLYON Pro traz consigo): um número dentro de uma app
+ * instalada fica para trás no dia em que a taxa mudar. O número vê-o no ecrã
+ * «Preços das mudanças», que o lê do servidor.
+ */
+export const TAXA_DAS_MUDANCAS_SEM_NUMERO =
+  "Nas mudanças em que o cliente o escolhe na lista de parceiros, pelos seus preços, a taxa da plataforma conta só sobre as horas e os km " +
+  "(vê-a no ecrã dos seus preços das mudanças); o material que fornecer não leva taxa.";
+
+/**
  * IVA à taxa normal portuguesa.
  *
  * Aplica-se a todos os trabalhos, e desde 22-09-2026 sem ressalva nenhuma.

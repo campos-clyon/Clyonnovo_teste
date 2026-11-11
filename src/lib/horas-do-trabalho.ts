@@ -35,7 +35,8 @@
  * Quem lê os textos daqui é o cliente — por isso dizem «parceiro».
  */
 
-import { MINIMO_DE_HORAS, horasEstimadas, tipologiaDoTexto, type Tipologia } from "./tabela-das-mudancas";
+import { MINIMO_DE_HORAS, horasEscritas, horasEstimadas, tipologiaDoTexto, type Tipologia } from "./tabela-das-mudancas";
+import { tarifaCongeladaDeJson } from "./conta-da-mudanca";
 import { diaEmLisboa, horaEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { precoDoCliente, type PrecoDoCliente } from "./preco-do-cliente";
 import { TAXA_IVA, quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
@@ -60,7 +61,34 @@ export const MOTIVO_MINIMO_DA_CONTESTACAO = 5;
 export const MOTIVO_MAXIMO_DA_CONTESTACAO = 300;
 
 /** A regra, numa frase — por baixo das horas, nos três lados. */
-export const REGRA_DAS_HORAS = `Conta-se ao quarto de hora, para cima, com um mínimo de ${MINIMO_DE_HORAS_FATURADAS} horas.`;
+/*
+ * O MÍNIMO DO PARCEIRO NAS MUDANÇAS DA LISTA — d7, 11-11-2026.
+ *
+ * Numa mudança em que o cliente escolheu o parceiro na lista, o mínimo de
+ * horas é o da tarifa dele (congelada na negociação) e é o que a folha cobra.
+ * Os textos ao cliente diziam «mínimo 3 horas» em todas: o mínimo da casa só
+ * vale onde não há tarifa congelada (os outros trabalhos por hora).
+ */
+
+/** O mínimo de horas de uma negociação: o da tarifa congelada, ou null quando não a tem. */
+export function minimoDoParceiro(t: { tarifaCongeladaJson?: string | null } | null | undefined): number | null {
+  const m = tarifaCongeladaDeJson(t?.tarifaCongeladaJson ?? null)?.minimoHoras;
+  return typeof m === "number" && Number.isFinite(m) && m > 0 ? m : null;
+}
+
+/** «3 horas», «1 hora», «2,5 horas» — o mínimo dito, o da casa quando não vem outro. */
+export function minimoDeHorasEmPalavras(minimoHoras?: number | null): string {
+  const m = minimoHoras != null && Number.isFinite(minimoHoras) && minimoHoras > 0 ? minimoHoras : MINIMO_DE_HORAS_FATURADAS;
+  return `${horasEscritas(m)} ${m === 1 ? "hora" : "horas"}`;
+}
+
+/** A regra, numa frase — por baixo das horas, nos três lados; com o mínimo do parceiro numa mudança da lista. */
+export function regraDasHoras(minimoHoras?: number | null): string {
+  return `Conta-se ao quarto de hora, para cima, com um mínimo de ${minimoDeHorasEmPalavras(minimoHoras)}.`;
+}
+
+/** A regra, numa frase — por baixo das horas, nos três lados. */
+export const REGRA_DAS_HORAS = regraDasHoras();
 
 /* ── Os botões e os títulos, iguais em todos os ecrãs ──────────────────── */
 export const TITULO_DAS_HORAS = "Horas do trabalho";
@@ -364,9 +392,13 @@ export function valorParaPagar(
  * ────────────────────────────────────────────────────────────────────────── */
 
 /** «50,00 €/hora + IVA (61,50 €/hora com IVA), mínimo 3 horas» — o preço por hora ao cliente. */
-export function porHoraParaOCliente(p: Pick<PrecoDoCliente, "semIva" | "total" | "ivaIncluido">): string {
+export function porHoraParaOCliente(
+  p: Pick<PrecoDoCliente, "semIva" | "total" | "ivaIncluido">,
+  /** Numa mudança da lista, o mínimo do parceiro (d7, 11-11-2026); sem ele, o da casa. */
+  minimoHoras?: number | null,
+): string {
   const com = p.ivaIncluido ? ` (${eur(p.total)}/hora com IVA)` : "";
-  return `${eur(p.semIva)}/hora + IVA${com}, mínimo ${MINIMO_DE_HORAS_FATURADAS} horas`;
+  return `${eur(p.semIva)}/hora + IVA${com}, mínimo ${minimoDeHorasEmPalavras(minimoHoras)}`;
 }
 
 /** «Estimativa para 4 h: 200,00 € + IVA (246,00 € com IVA)» — o total esperado, ao cliente. */
@@ -381,10 +413,11 @@ export function precoPorHoraParaOCliente(
   horasPrevistas: number | null | undefined,
   taxas: Taxas | undefined,
   modelo: ModeloDoPreco,
+  minimoHoras?: number | null,
 ): { porHora: string; estimativa: string; horas: number } {
   const horas = horasDaEstimativa(horasPrevistas);
   return {
-    porHora: porHoraParaOCliente(precoDoCliente(valorPorHora, taxas, modelo)),
+    porHora: porHoraParaOCliente(precoDoCliente(valorPorHora, taxas, modelo), minimoHoras),
     estimativa: estimativaParaOCliente(horas, precoDoCliente(estimativaDasHoras(valorPorHora, horas), taxas, modelo)),
     horas,
   };

@@ -4,7 +4,8 @@ import { FRASE_UNICA, SUBTITULO_INICIAL } from "./frase-unica";
 import { TELEFONE_DA_CLYON } from "./telefone-da-clyon";
 import { NOTA_DOS_PRECOS, precoDeReferencia } from "./preco-de-referencia";
 import { PASSOS_DE_COMO_FUNCIONA } from "./como-funciona";
-import { PERGUNTAS_FREQUENTES } from "./perguntas-frequentes";
+import { perguntasFrequentes } from "./perguntas-frequentes";
+import { precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import { REGIONS, getRegionCities } from "./seo-data";
 import { AVALIACOES_NO_GOOGLE, NOTAS_EM_FRASE } from "./avaliacoes-publicas";
 import { reviews } from "./reviews-data";
@@ -82,7 +83,8 @@ export function catalogoDaApp() {
       url: AVALIACOES_NO_GOOGLE.url,
       testemunhos: reviews.map((r) => ({ nome: r.name.trim().split(/\s+/)[0], mes: r.date, texto: r.text })),
     },
-    perguntas: PERGUNTAS_FREQUENTES.flatMap((c) => c.questions.map((q) => ({ p: q.q, r: q.a }))),
+    // Pelo preço público das mudanças (d7, 11-11-2026): a rota lê-o antes de montar o catálogo.
+    perguntas: perguntasFrequentes(precoPublicoConhecido()).flatMap((c) => c.questions.map((q) => ({ p: q.q, r: q.a }))),
     // Sem big bags nem contentores: a recolha é em sacos ou a granel, à mão.
     entulho: [
       { id: "ensacado", nome: "Já está em sacos" },

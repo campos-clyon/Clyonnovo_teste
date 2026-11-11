@@ -8,6 +8,7 @@ import { ArrowRight, Clock3, Search } from "lucide-react";
 // Os artigos NO AR, e não todos os de blog-data: os retirados (29-09-2026)
 // saem da listagem aqui e em mais lado nenhum. Ver `artigos-do-blog.ts`.
 import { artigosPublicados } from "@/lib/artigos-do-blog";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { SITE_URL } from "@/lib/seo-data";
 
 /*
@@ -46,7 +47,8 @@ export const metadata: Metadata = {
   }),
 };
 
-export const revalidate = 86400;
+/** De hora a hora (era ao dia): as descrições dos artigos de mudanças lêem o preço público (d7, 11-11-2026). */
+export const revalidate = 3600;
 
 /*
  * 10-11-2026 (d29): o índice diz ao Google o que é — a lista dos artigos no
@@ -77,8 +79,8 @@ function blogSchema(posts: ReturnType<typeof artigosPublicados>) {
   };
 }
 
-export default function BlogPage() {
-  const posts = artigosPublicados();
+export default async function BlogPage() {
+  const posts = artigosPublicados(await precoPublicoDasMudancas());
 
   return (
     <div className="min-h-screen bg-white">

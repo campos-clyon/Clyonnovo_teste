@@ -1,7 +1,9 @@
 import {
   ofertaDaMudanca,
   precoDaMudancaCurto,
+  precoDaMudancaEmDetalhe,
   precoDaMudancaNaDescricao,
+  precoDaMudancaNumaFrase,
   type PrecoPublicoDasMudancas,
 } from "@/lib/preco-publico-das-mudancas";
 import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
@@ -84,7 +86,7 @@ function perguntasGerais(nome: string, preco: PrecoPublicoDasMudancas): Array<{ 
     {
       pergunta: "O preço pode mudar no dia da mudança?",
       // À hora desde 13-10-2026; ao preço de cada parceiro desde 11-11-2026.
-      resposta: `O preço da hora é o do parceiro que escolher, e fica congelado no pedido (${precoDaMudancaCurto(preco)}); o total sai das horas, dos km e do material que confirma na folha do dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que se prevêem as horas.`,
+      resposta: `O preço da hora é o do parceiro que escolher, e fica congelado no pedido (${precoDaMudancaNumaFrase(preco)}); o total sai das horas, dos km e do material que confirma na folha do dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que se prevêem as horas.`,
     },
     {
       pergunta: "Fazem mudanças ao fim de semana?",
@@ -306,6 +308,8 @@ export default async function MudancasCidadePage({ params }: Props) {
               <p className="text-xs font-medium text-slate-500">Preço {emTerra(c.nome)}</p>
               {/* O preço público (11-11-2026): o «desde» dos parceiros, ou a referência. */}
               <p className="mt-1 text-2xl font-bold text-emerald-600">{precoDaMudancaCurto(preco)}</p>
+              {/* Com parceiros na lista (d7): a equipa de 3 e um exemplo por tipologia, com a proteção e os km. */}
+              {precoDaMudancaEmDetalhe(preco) && <p className="mt-1 text-sm text-slate-700">{precoDaMudancaEmDetalhe(preco)}</p>}
               <p className="text-xs text-tinta-fraca">
                 Cada parceiro tem o seu preço por hora: compare na lista e escolha ·{" "}
                 <Link href="/precos/mudancas" className="underline">

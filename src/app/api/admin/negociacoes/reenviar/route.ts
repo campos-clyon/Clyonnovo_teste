@@ -9,11 +9,13 @@ import {
   getPool,
   assistentePode,
   reporAvisoAoProfissional,
+  tarifaCongeladaDaNegociacao,
 } from "@/lib/db";
 import { telemovelParaWhatsApp } from "@/lib/whatsapp-cloud";
 import { avisoDePedidoAoProfissional } from "@/lib/aviso-de-pedido-ao-profissional";
 import { lerBase } from "@/lib/base-do-preco";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
+import { horaCongeladaEmEuros } from "@/lib/mudanca-escolhida-pelo-cliente";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 import { avisarProfissional } from "@/lib/email-profissional";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -169,8 +171,28 @@ export async function POST(req: NextRequest) {
       linhas as Array<{ name: string; email: string | null; phone: string | null; whatsappAvisos: number | null }>
     )[0];
 
-    const minimo =
-      pedido.valorDesejadoCliente != null ? Number(pedido.valorDesejadoCliente) : null;
+    /*
+     * NUMA MUDANÇA ESCOLHIDA PELO CLIENTE, A HORA DELE — d7, 11-11-2026. O
+     * primeiro aviso disse-lhe a hora da tarifa congelada (distribuir-pedido.ts);
+     * o reenvio dizia o valor de partida do pedido, que nessa negociação não é
+     * o preço de nada. Lê-se a tarifa congelada desta negociação; se a leitura
+     * falhar, não se diz valor nenhum (o link leva-o ao pedido).
+     */
+    let horaCongelada: number | null = null;
+    let eDaLista = false;
+    try {
+      const congelada = await tarifaCongeladaDaNegociacao(alvo.id, alvo.providerId);
+      eDaLista = congelada != null;
+      horaCongelada = horaCongeladaEmEuros(congelada?.tarifaCongeladaJson, congelada?.pessoasEscolhidas);
+    } catch (e) {
+      console.error("[reenviar] não li a tarifa congelada da negociação", alvo.id, e instanceof Error ? e.message : e);
+      eDaLista = true;
+    }
+    const minimo = eDaLista
+      ? horaCongelada
+      : pedido.valorDesejadoCliente != null
+        ? Number(pedido.valorDesejadoCliente)
+        : null;
 
     const enviado = await avisarProfissional({
       paraEmail: profissional?.email ?? "",

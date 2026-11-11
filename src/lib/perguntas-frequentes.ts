@@ -1,5 +1,6 @@
 import { EXTRAS_DA_MUDANCA } from "./tabela-das-mudancas";
 import { MODELO_DA_MUDANCA } from "./modelo-da-mudanca";
+import { exemplosDaListaNumaFrase, precoDaMudancaNumaFrase, type PrecoPublicoDasMudancas } from "./preco-publico-das-mudancas";
 import {
   AVALIACOES,
   MES_DAS_CONTAGENS,
@@ -260,3 +261,27 @@ export const PERGUNTAS_FREQUENTES = [
     ],
   },
 ];
+
+/** A pergunta do preço das mudanças — a única que lê o preço público. */
+const PERGUNTA_DO_PRECO_DA_MUDANCA = "Quanto custa uma mudança em Lisboa?";
+
+/**
+ * AS PERGUNTAS FREQUENTES, PELO PREÇO PÚBLICO DAS MUDANÇAS — d7, 11-11-2026.
+ *
+ * A resposta «Quanto custa uma mudança em Lisboa?» dizia só o modelo, sem
+ * número (a página não lia a base). Com parceiros na lista passa a dizer o que
+ * a lista dá: o «desde» por hora de 2 e de 3 pessoas e um exemplo por
+ * tipologia, com a proteção e os km. Com a lista vazia fica como estava.
+ * A página /faq e o catálogo da app de cliente lêem daqui.
+ */
+export function perguntasFrequentes(preco: PrecoPublicoDasMudancas): typeof PERGUNTAS_FREQUENTES {
+  if (preco.tipo !== "parceiros") return PERGUNTAS_FREQUENTES;
+  const exemplos = exemplosDaListaNumaFrase(preco);
+  const resposta =
+    `Uma mudança paga-se à hora, ${precoDaMudancaNumaFrase(preco)}.${exemplos ? ` ${exemplos}` : ""} ${MODELO_DA_MUDANCA} ${EXTRAS_DA_MUDANCA} ` +
+    `Envie a morada de origem, a de destino e fotografias das divisões: recebe propostas grátis em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
+  return PERGUNTAS_FREQUENTES.map((c) => ({
+    ...c,
+    questions: c.questions.map((q) => (q.q === PERGUNTA_DO_PRECO_DA_MUDANCA ? { ...q, a: resposta } : q)),
+  }));
+}

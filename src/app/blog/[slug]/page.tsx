@@ -13,6 +13,7 @@ import { notFound } from "next/navigation";
  * `artigos-do-blog.ts`.
  */
 import { artigoPublicado, artigosPublicados } from "@/lib/artigos-do-blog";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { partesDoTexto } from "@/lib/blog-data";
 import { PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { BUSINESS_NAME, CONTACT_PATH, SITE_URL } from "@/lib/seo-data";
@@ -50,7 +51,8 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = artigoPublicado(slug);
+  // Os artigos de mudanças dizem o que a lista dá (d7, 11-11-2026): o preço público, lido de hora a hora.
+  const post = artigoPublicado(slug, await precoPublicoDasMudancas());
 
   if (!post) {
     // Sem « | CLYON»: é o template do layout que o acrescenta (29-09-2026).
@@ -79,12 +81,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export const revalidate = 86400;
+/** De hora a hora (era ao dia): os artigos de mudanças lêem o preço público das mudanças (d7, 11-11-2026). */
+export const revalidate = 3600;
 export const dynamicParams = false;
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = artigoPublicado(slug);
+  const preco = await precoPublicoDasMudancas();
+  const post = artigoPublicado(slug, preco);
 
   if (!post) notFound();
 
@@ -142,7 +146,7 @@ export default async function BlogPostPage({ params }: Props) {
     [post.title, `/blog/${post.slug}`],
   ]);
 
-  const relatedPosts = artigosPublicados().filter((item) => item.slug !== post.slug).slice(0, 3);
+  const relatedPosts = artigosPublicados(preco).filter((item) => item.slug !== post.slug).slice(0, 3);
   // Zonas onde este serviço se faz — só para artigos com serviço associado
   const { servico: servicoDasZonas, zonas } = zonasDoArtigo(post.slug);
 

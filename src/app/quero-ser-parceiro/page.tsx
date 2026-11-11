@@ -193,6 +193,7 @@ export default async function QueroSerParceiroPage() {
             <p className="text-sm leading-relaxed text-slate-700">
               {exemplo.frase} A taxa da plataforma só existe quando fecha um trabalho.
             </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-700">{exemplo.nasMudancas}</p>
             <ul className="mx-auto mt-3 max-w-xl space-y-1.5 text-left">
               {COMO_RECEBE.map((c) => (
                 <li key={c.forma} className="text-sm leading-relaxed text-slate-600">

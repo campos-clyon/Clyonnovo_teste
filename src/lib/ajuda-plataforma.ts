@@ -17,7 +17,7 @@ import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { quotaEmPontos } from "./quota-da-clyon";
-import { TAXA_IVA, TAXA_MAXIMA, TAXA_TOTAL, type Taxas } from "./taxas-plataforma";
+import { TAXA_DAS_MUDANCAS_EM_FRASE, TAXA_DAS_MUDANCAS_SEM_NUMERO, TAXA_IVA, TAXA_MAXIMA, TAXA_TOTAL, type Taxas } from "./taxas-plataforma";
 
 export type PerguntaFrequente = {
   pergunta: string;
@@ -82,7 +82,8 @@ export function perguntasDoProfissional(taxas: Taxas | null): PerguntaFrequente[
         // o valor acordado, e o cliente paga mais 5 % por cima» — as taxas de ORIGEM, de constantes.
         // A das negociações é a das Configs; um trabalho de valor fixo da CLYON traz a dele.
         `Nas negociações, a CLYON fica com ${aTaxaDasNegociacoes(taxas)}; nos trabalhos ` +
-        "de valor fixo da CLYON, a taxa é a de cada trabalho. Nunca tem de fazer " +
+        // A das mudanças pela lista (d7, 11-11-2026): a ajuda só dizia a das negociações.
+        `de valor fixo da CLYON, a taxa é a de cada trabalho. ${taxas ? TAXA_DAS_MUDANCAS_EM_FRASE : TAXA_DAS_MUDANCAS_SEM_NUMERO} Nunca tem de fazer ` +
         "contas: os valores que vê na sua conta já são líquidos, com a taxa da plataforma descontada. " +
         "O que aparece é o que recebe. O cliente vê o seu valor com IVA " +
         "incluído. Se ele pagar em dinheiro, no local, recebe dele o preço com IVA e entrega " +

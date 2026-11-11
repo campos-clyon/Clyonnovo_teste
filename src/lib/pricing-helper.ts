@@ -11,7 +11,16 @@ import {
   tipologiaDoTexto,
   type Tipologia,
 } from "./tabela-das-mudancas";
-import { minimoDaMudancaParaOModelo, precoPublicoConhecido, regrasDaMudancaParaOModelo } from "./preco-publico-das-mudancas";
+import {
+  NA_REFERENCIA_DA_MUDANCA,
+  desdeDaListaEmTexto,
+  estimativaPelaLista,
+  exemploDaListaEmTexto,
+  minimoDaMudancaParaOModelo,
+  oQueOExemploLeva,
+  precoPublicoConhecido,
+  regrasDaMudancaParaOModelo,
+} from "./preco-publico-das-mudancas";
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
@@ -1081,6 +1090,32 @@ function desmontagemNaMudanca(input: FastEstimateInput): boolean {
   return pedida || input.originAccess?.difficultAccess === true || input.destinationAccess?.difficultAccess === true;
 }
 
+/**
+ * A MENSAGEM AO CLIENTE NUMA MUDANÇA — d7, 11-11-2026. Dizia «Mudança à hora:
+ * 50 € + IVA por hora (mínimo 3 h)» como se fosse o preço, com ou sem
+ * parceiros. Com parceiros na lista, o «desde» de 2 e de 3 e a estimativa do
+ * cartão mais barato; com a lista vazia, a referência, dita como referência.
+ */
+export function mensagemDaMudanca(
+  pelaLista: ReturnType<typeof estimativaPelaLista>,
+  horas: number,
+  semIva: number,
+  comOIva: number,
+): string {
+  const pp = precoPublicoConhecido();
+  if (pelaLista && pp.tipo === "parceiros") {
+    return (
+      `Mudança à hora, ao preço do parceiro que escolher: ${desdeDaListaEmTexto(pp)}. ` +
+      `Estimativa pelo parceiro com o preço mais baixo, ${oQueOExemploLeva(pelaLista)} mínimos dele: ${exemploDaListaEmTexto(pelaLista)}. ` +
+      "O total sai das horas, dos km e do material confirmados na folha do dia."
+    );
+  }
+  return (
+    `Mudança à hora, ao preço de cada parceiro; ${NA_REFERENCIA_DA_MUDANCA}. ` +
+    `Estimativa na referência: cerca de ${horas} h — à volta de ${semIva.toFixed(2)} € + IVA (${comOIva.toFixed(2)} € c/IVA). O total sai das horas feitas no dia.`
+  );
+}
+
 export function estimateLaborHours(input: FastEstimateInput): number {
   let hours = LABOR_MIN_HOURS;
   const svc = input.serviceType;
@@ -1214,10 +1249,19 @@ function applyZoneMinimum(
   }
 
   // Mudança: o mínimo da tabela do dono — 3 horas a 50 € (13-10-2026).
+  // Desde a d7 (11-11-2026) só na REFERÊNCIA (lista vazia): com parceiros na lista, o
+  // mínimo é o do parceiro e já vem na estimativa pela lista (`estimativaPelaLista`).
   if (svc === "mudanca") {
+    if (precoPublicoConhecido().tipo === "parceiros") {
+      return { price: priceWithoutVat, note: null, minimumThreshold: 0 };
+    }
     const minimo = PRECO_POR_HORA * MINIMO_DE_HORAS;
     if (priceWithoutVat < minimo) {
-      return { price: minimo, note: `Mínimo de mudança aplicado: ${minimo} € s/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h)`, minimumThreshold: minimo };
+      return {
+        price: minimo,
+        note: `Mínimo da referência aplicado (sem parceiros na lista): ${minimo} € s/IVA, ${comIva(minimo)} € c/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h)`,
+        minimumThreshold: minimo,
+      };
     }
     return { price: priceWithoutVat, note: null, minimumThreshold: minimo };
   }
@@ -1432,6 +1476,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // ── 5. Custo total + margem de lucro (fórmula geral) ─────────────────────────
   const custoTotal = custoCombustivel + custoPessoal + overhead;
   let precoSemIva = Math.round(custoTotal * (1 + margem) * 100) / 100;
+  /** Numa mudança com parceiros na lista: a estimativa do cartão mais barato (d7, 11-11-2026). */
+  let mudancaPelaLista: ReturnType<typeof estimativaPelaLista> = null;
 
   // ── 5b. Override para mudança: preçário horário comercial ────────────────────
   // O cliente paga taxa horária total (equipa + veículo), mínimo 3 horas.
@@ -1450,9 +1496,25 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
       origem: { floor: input.originAccess?.floor ?? input.floor, hasElevator: input.originAccess?.hasElevator ?? input.hasElevator },
       destino: { floor: input.destinationAccess?.floor, hasElevator: input.destinationAccess?.hasElevator },
     });
-    precoSemIva = conta.totalSemIva;
-    notes.push(`Mudança à hora (tabela CLYON): ${conta.linhas.join(" · ")} = ${precoSemIva}€ s/IVA`);
-    assumptions.push(...conta.linhas);
+    /*
+     * PELA LISTA, QUANDO HÁ PARCEIROS — d7, 11-11-2026. O motor estimava pela
+     * referência mesmo com parceiros na lista, e ficava abaixo do que a lista
+     * dá. Com parceiros, a estimativa é a do cartão do parceiro com o preço
+     * mais baixo para esta casa (as horas, nunca abaixo do mínimo dele, a
+     * proteção e os km mínimos dele); a referência fica para a lista vazia.
+     */
+    mudancaPelaLista = estimativaPelaLista(precoPublicoConhecido(), tipologiaDaMudanca(input), desmontagemNaMudanca(input));
+    if (mudancaPelaLista) {
+      const e = mudancaPelaLista;
+      precoSemIva = Math.round((e.minimo.semIvaCent + e.maximo.semIvaCent) / 2) / 100;
+      const linha = `Pela lista de parceiros (o preço mais baixo de hoje, ${oQueOExemploLeva(e)} mínimos dele): ${exemploDaListaEmTexto(e)}`;
+      notes.push(`Mudança à hora, ao preço do parceiro — ${linha}`);
+      assumptions.push(linha);
+    } else {
+      precoSemIva = conta.totalSemIva;
+      notes.push(`Mudança à hora (tabela de referência, sem parceiros na lista): ${conta.linhas.join(" · ")} = ${precoSemIva}€ s/IVA`);
+      assumptions.push(...conta.linhas);
+    }
   } else {
     notes.push(
       `Custo total: combustível ${custoCombustivel}€ + pessoal ${custoPessoal}€ + overhead ${overhead}€ = ${custoTotal.toFixed(2)}€ → ×${(1 + margem).toFixed(2)} (margem ${(margem * 100).toFixed(0)}%) = ${precoSemIva}€ s/IVA`
@@ -1629,7 +1691,9 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // No entulho, o intervalo é o da grelha (mais os agravamentos): nunca abaixo
   // do «desde», e a faixa dos sacos é a da R12. Nos móveis por peça, um valor fixo.
   const extrasDoPreco = Math.round((precoComMinimo - precoSemIva) * 100) / 100;
-  const minVal = pecas
+  const minVal = mudancaPelaLista
+    ? mudancaPelaLista.minimo.semIvaCent / 100
+    : pecas
     ? pecas.valor
     : faixaPublicada
     ? faixaPublicada.de
@@ -1638,7 +1702,9 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     : grelha
     ? Math.max(minimumThreshold, Math.round((grelha.minimo + extrasDoPreco) * 100) / 100)
     : Math.max(minimumThreshold, Math.round(finalSemIva * 0.90 * 100) / 100);
-  const maxVal = pecas
+  const maxVal = mudancaPelaLista
+    ? mudancaPelaLista.maximo.semIvaCent / 100
+    : pecas
     ? pecas.valor
     : faixaPublicada
     ? faixaPublicada.ate
@@ -1679,7 +1745,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     missingFields: missing,
     customerMessage:
       svc === "mudanca"
-        ? `Mudança à hora: ${PRECO_POR_HORA} € + IVA por hora (mínimo ${MINIMO_DE_HORAS} h). Estimativa: cerca de ${laborHours} h — à volta de ${finalSemIva.toFixed(2)} € + IVA (${withVat.toFixed(2)} € c/IVA). O total sai das horas feitas no dia.`
+        ? mensagemDaMudanca(mudancaPelaLista, laborHours, finalSemIva, withVat)
         : `Estimativa de referência: à volta de ${finalSemIva.toFixed(2)} € + IVA (${withVat.toFixed(2)} € c/IVA). Inclui equipa de ${numPessoas} pessoas, ${laborHours}h de trabalho.`,
     internalNotes: [
       ...notes,

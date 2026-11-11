@@ -91,9 +91,14 @@ describe("os textos", () => {
   const COM: PrecoPublicoDasMudancas = { tipo: "parceiros", parceiros: 1, desde: { semIvaCent: 4000, comIvaCent: 4920 } };
 
   it("com parceiros: o «desde», a equipa de 2 e o convite a comparar", () => {
+    // Desde a d7 (11-11-2026) a cabeça diz o «desde» de 2 e, quando algum parceiro faz com 3, o de 3.
     expect(precoDaMudancaNaCabeca(COM)).toBe(
-      "Mudanças à hora desde 40,00 € + IVA/h (49,20 € com IVA), equipa de 2 — compare os parceiros e escolha.",
+      "Mudanças à hora desde 40,00 € + IVA/h (49,20 € com IVA) com 2 pessoas — compare os parceiros e escolha.",
     );
+    expect(precoDaMudancaNaCabeca({ ...COM, desde3: { semIvaCent: 5500, comIvaCent: 6765 } })).toBe(
+      "Mudanças à hora desde 40,00 € + IVA/h (49,20 € com IVA) com 2 pessoas e desde 55,00 € + IVA/h (67,65 € com IVA) com 3 — compare os parceiros e escolha.",
+    );
+    expect(precoDaMudancaCurto(COM)).toBe("desde 40,00 € + IVA/h (49,20 € com IVA), equipa de 2");
     expect(ofertaDaMudanca(COM)?.priceSpecification.price).toBe(40);
   });
 

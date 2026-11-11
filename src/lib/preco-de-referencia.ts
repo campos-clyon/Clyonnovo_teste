@@ -46,9 +46,17 @@ import {
   type IntervaloDeHoras,
   type OrcamentoDaMudanca,
   type PedidoDeMudanca,
+  type Tipologia,
 } from "./tabela-das-mudancas";
 import { PERGUNTAS_DO_ESPACO, acessoDificilDoEspaco } from "./perguntas-do-espaco";
-import { precoPublicoConhecido, REFERENCIA_DA_MUDANCA, type PrecoPublicoDasMudancas } from "./preco-publico-das-mudancas";
+import {
+  estimativaPelaLista,
+  oQueOExemploLeva,
+  precoPublicoConhecido,
+  REFERENCIA_DA_MUDANCA,
+  type PrecoPublicoDasMudancas,
+} from "./preco-publico-das-mudancas";
+import { faixaEmTexto } from "./lista-de-parceiros-da-mudanca";
 import { horasDaMudanca } from "./lista-de-parceiros-da-mudanca";
 import { referenciaEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { TAXA_IVA } from "./taxas-plataforma";
@@ -196,7 +204,8 @@ export function comIvaDaEtiqueta(servico: string): string | null {
   if (servico === "mudanca") {
     // Ao preço de cada parceiro (11-11-2026): o «desde» conhecido, ou a referência.
     const pp = precoPublicoConhecido();
-    return pp.tipo === "parceiros" ? `desde ${euros(pp.desde.comIvaCent / 100)}/hora com IVA` : `${euros(comIva(PRECO_POR_HORA))}/hora com IVA`;
+    // Sem parceiros, a referência — e dita como referência também na linha do com IVA (d7).
+    return pp.tipo === "parceiros" ? `desde ${euros(pp.desde.comIvaCent / 100)}/hora com IVA` : `referência ${euros(comIva(PRECO_POR_HORA))}/hora com IVA`;
   }
   if (servico === "recolha_moveis") return MOVEIS_POR_PECA_COM_IVA;
   const u = p.unidade ? `/${p.unidade}` : "";
@@ -356,6 +365,9 @@ export const ROTULO_DA_ESTIMATIVA_DA_MUDANCA = "Estimativa para a sua mudança";
 /** A equipa e as horas da lista, para o «desde» (`horasDaMudanca`). */
 export type HorasDaLista = { horas: IntervaloDeHoras; pessoas: 2 | 3 };
 
+/** A casa e a desmontagem, para a estimativa pela lista (d7): a conta do cartão, com a proteção. */
+export type CasaDaLista = { tipologia: Tipologia | null; desmontagem: boolean };
+
 /** O preço da hora mais baixo da lista para esta equipa, em euros sem IVA; null sem ele. */
 function desdeDaEquipa(preco: PrecoPublicoDasMudancas, pessoas: 2 | 3): number | null {
   if (preco.tipo !== "parceiros") return null;
@@ -375,7 +387,22 @@ export function estimativaDaMudanca(
   conta: Pick<OrcamentoDaMudanca, "intervalo" | "totalSemIvaMinimo" | "totalSemIvaMaximo">,
   preco: PrecoPublicoDasMudancas = precoPublicoConhecido(),
   lista?: HorasDaLista,
+  casa?: CasaDaLista,
 ): string {
+  /*
+   * COM A PROTEÇÃO, COMO O CARTÃO DO PASSO 3 — d7, 11-11-2026. O passo 2 dizia
+   * «desde … sem o material» e o cartão da lista somava a proteção e os km:
+   * cerca de 240 € a mais entre dois ecrãs seguidos, num T2. Passa a ser a
+   * conta do cartão do parceiro com o preço mais baixo (`estimativaPelaLista`).
+   */
+  const pelaLista = casa ? estimativaPelaLista(preco, casa.tipologia, casa.desmontagem) : null;
+  if (pelaLista) {
+    return (
+      `${intervaloDeHorasEmTexto(pelaLista.horas)} com ${pelaLista.pessoas} pessoas — desde ${faixaEmTexto(pelaLista.minimo, pelaLista.maximo)}, ` +
+      `pelo parceiro com o preço mais baixo, ${oQueOExemploLeva(pelaLista)} mínimos dele. ` +
+      "Na lista vê a conta de cada parceiro para o seu percurso; o total sai do que confirma na folha do dia."
+    );
+  }
   const desde = lista ? desdeDaEquipa(preco, lista.pessoas) : null;
   if (lista && desde != null) {
     const [de, ate] = [Math.round(lista.horas[0] * desde * 100) / 100, Math.round(lista.horas[1] * desde * 100) / 100];
@@ -392,8 +419,10 @@ export function estimativaDaMudanca(
   );
 }
 
-/** O «desde» da lista em euros sem IVA, nos dois extremos, ou null sem parceiros para esta equipa. */
-function totalDesdeDaLista(preco: PrecoPublicoDasMudancas, lista: HorasDaLista): [number, number] | null {
+/** O «desde» da lista em euros sem IVA, nos dois extremos (a conta do cartão, com a proteção), ou null sem parceiros para esta equipa. */
+function totalDesdeDaLista(preco: PrecoPublicoDasMudancas, lista: HorasDaLista, casa?: CasaDaLista): [number, number] | null {
+  const pelaLista = casa ? estimativaPelaLista(preco, casa.tipologia, casa.desmontagem) : null;
+  if (pelaLista) return [pelaLista.minimo.semIvaCent / 100, pelaLista.maximo.semIvaCent / 100];
   const desde = desdeDaEquipa(preco, lista.pessoas);
   return desde == null ? null : [Math.round(lista.horas[0] * desde * 100) / 100, Math.round(lista.horas[1] * desde * 100) / 100];
 }
@@ -849,9 +878,10 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
     const pp = precoPublicoConhecido();
     const tip = p.mudanca.tipologia ?? null;
     const lista: HorasDaLista = { horas: horasDaMudanca(tip, p.mudanca.desmontagem === true, 2), pessoas: pessoasParaACasa(tip, 2) };
-    const desde = totalDesdeDaLista(pp, lista);
+    const casa: CasaDaLista = { tipologia: tip, desmontagem: p.mudanca.desmontagem === true };
+    const desde = totalDesdeDaLista(pp, lista, casa);
     especifica = {
-      texto: estimativaDaMudanca(o, pp, lista),
+      texto: estimativaDaMudanca(o, pp, lista, casa),
       conta: desde != null ? tres(desde[0], desde[1], true) : tres(o.totalSemIvaMinimo, o.totalSemIvaMaximo),
     };
     porque.push(...porqueDaMudanca(p.mudanca, o));

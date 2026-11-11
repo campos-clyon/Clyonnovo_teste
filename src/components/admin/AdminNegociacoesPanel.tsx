@@ -1673,6 +1673,8 @@ export default function AdminNegociacoesPanel({
       base: lerBase(p.baseDoPreco),
       // Por hora, a estimativa pelas horas previstas (31-10-2026).
       horasPrevistas: p.horasPrevistas ?? null,
+      // Numa mudança da lista, o mínimo é o de cada parceiro (d7, 11-11-2026).
+      mudancaDaLista: p.negociacoes.some((n) => Number(n.escolhidoPeloCliente) === 1),
     });
   }
 
@@ -3541,6 +3543,7 @@ export default function AdminNegociacoesPanel({
               fechado: trabalhoFechado(p.negociacoes),
               base: lerBase(p.baseDoPreco),
               horasPrevistas: p.horasPrevistas ?? null,
+              mudancaDaLista: p.negociacoes.some((n) => Number(n.escolhidoPeloCliente) === 1),
               // Sem link na mensagem (03-10-2026): ele está à parte, por cima, para quem o quiser mandar.
             })}
             /*

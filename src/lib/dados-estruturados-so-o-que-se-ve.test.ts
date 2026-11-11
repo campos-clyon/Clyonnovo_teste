@@ -51,7 +51,8 @@ describe("d29: dados estruturados de /avaliacoes, /precos, /blog e /trabalhos", 
 
   it("a lista de /blog é a dos artigos no ar, a mesma dos cartões", () => {
     const codigo = ler("src/app/blog/page.tsx");
-    expect(codigo).toContain("const posts = artigosPublicados();");
+    // Desde a d7 (11-11-2026) com o preço público das mudanças: a mesma lista nos cartões e no que se diz ao Google.
+    expect(codigo).toContain("const posts = artigosPublicados(await precoPublicoDasMudancas());");
     expect(codigo).toContain("jsonLd(blogSchema(posts))");
     expect(codigo).toContain("{posts.map((post) => (");
   });

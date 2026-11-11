@@ -4,7 +4,12 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
-import { precoDaMudancaCurto, precoDaMudancaNaDescricao, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
+import {
+  exemplosDaListaNumaFrase,
+  precoDaMudancaNaDescricao,
+  precoDaMudancaNumaFrase,
+  type PrecoPublicoDasMudancas,
+} from "@/lib/preco-publico-das-mudancas";
 import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
@@ -83,7 +88,7 @@ export default async function TransporteDeMoveisPage() {
           },
           {
             question: "Quanto custa transportar um móvel?",
-            answer: `Depende do tamanho e do peso, dos andares e do elevador nas duas moradas, e da distância entre elas. Paga-se à hora, ao preço do parceiro que escolher (${precoDaMudancaCurto(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.`,
+            answer: `Depende do tamanho e do peso, dos andares e do elevador nas duas moradas, e da distância entre elas. Paga-se à hora, ao preço do parceiro que escolher (${precoDaMudancaNumaFrase(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.${exemplosDaListaNumaFrase(preco) ? ` ${exemplosDaListaNumaFrase(preco)}` : ""}`,
           },
         ],
         ctaTitulo: "Tem um móvel para levar?",

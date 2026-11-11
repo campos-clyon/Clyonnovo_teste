@@ -122,7 +122,13 @@ describe("(4) a contraproposta, o «Copiar», a referência que ninguém envia, 
     expect(legendaDaContraproposta({ porHora: true, ivaIncluido: true })).toBe(
       "É o que paga por hora se ele aceitar, com IVA incluído (mínimo 3 horas).",
     );
-    expect(ler(PROPOSTAS)).toContain("legendaDaContraproposta({ porHora: !!n.horas, ivaIncluido: n.valores?.ivaIncluido })");
+    // Numa mudança da lista, o mínimo é o do parceiro (d7, 11-11-2026).
+    expect(legendaDaContraproposta({ porHora: true, ivaIncluido: true, minimoHoras: 2 })).toBe(
+      "É o que paga por hora se ele aceitar, com IVA incluído (mínimo 2 horas).",
+    );
+    expect(ler(PROPOSTAS)).toContain(
+      "legendaDaContraproposta({ porHora: !!n.horas, ivaIncluido: n.valores?.ivaIncluido, minimoHoras: n.horas?.minimoHoras })",
+    );
     expect(ler("src/lib/pedidos-do-cliente.ts")).toContain("proporAjuda: legendaDaContraproposta(");
     const vista = ler("app-cliente/src/componentes/VistaDoPedido.tsx");
     expect(vista).toContain("aPropor?.proporAjuda ?? r.textos.proporAjuda");

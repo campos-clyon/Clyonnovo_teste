@@ -231,7 +231,8 @@ describe("páginas consolidadas: um endereço por pesquisa", () => {
     expect(artigosPublicados().map((a) => a.slug)).not.toContain("limpeza-pos-obra-e-retirada-de-residuos");
     for (const f of ["src/app/blog/page.tsx", "src/app/blog/[slug]/page.tsx", "src/app/sitemap.ts"]) {
       const codigo = semComentarios(ler(f));
-      expect(codigo, f).toContain("artigosPublicados()");
+      // Desde a d7 (11-11-2026) o blog passa-lhe o preço público das mudanças: «artigosPublicados(preco)».
+      expect(codigo, f).toMatch(/artigosPublicados\(/);
       expect(codigo, f).not.toContain("getAllBlogPosts");
       expect(codigo, f).not.toContain("getBlogPost(");
     }

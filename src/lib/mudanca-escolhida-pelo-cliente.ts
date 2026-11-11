@@ -111,6 +111,17 @@ export function horaCongeladaCent(t: TarifaCongelada, pessoas: 2 | 3): number | 
   return pessoas === 3 ? t.precoHora3Cent : t.precoHora2Cent;
 }
 
+/**
+ * A hora dele nesta negociação, em euros sem IVA — a da tarifa congelada, para
+ * a equipa que o cliente escolheu. É o valor do primeiro aviso e do «Reenviar
+ * ao profissional» (d7, 11-11-2026). Null sem tarifa congelada.
+ */
+export function horaCongeladaEmEuros(tarifaCongeladaJson: string | null | undefined, pessoasEscolhidas: unknown): number | null {
+  const t = tarifaCongeladaDeJson(tarifaCongeladaJson ?? null);
+  if (!t) return null;
+  return (horaCongeladaCent(t, pessoasDaEscolha(pessoasEscolhidas)) ?? t.precoHora2Cent) / 100;
+}
+
 /** O que fica para ele de uma hora (cêntimos, sem IVA), pelas regras congeladas. */
 export function recebePorHoraCent(t: TarifaCongelada, horaCent: number): number {
   return t.regras.modo === "de_dentro" ? horaCent - Math.round(horaCent * t.regras.taxa) : horaCent;

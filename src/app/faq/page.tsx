@@ -4,7 +4,8 @@ import { og } from "@/lib/open-graph";
 import Link from "next/link";
 
 import FAQClient from "./FAQClient";
-import { PERGUNTAS_FREQUENTES } from "@/lib/perguntas-frequentes";
+import { perguntasFrequentes } from "@/lib/perguntas-frequentes";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import {
   AVALIACOES,
   MES_DAS_CONTAGENS,
@@ -47,11 +48,11 @@ export const metadata: Metadata = {
  * de pagar e a factura vêm das constantes de seo-data.ts — as mesmas das
  * outras páginas.
  */
-const faqCategories = PERGUNTAS_FREQUENTES;
+/** De hora a hora (era ao dia): a resposta do preço das mudanças lê o preço público (d7, 11-11-2026). */
+export const revalidate = 3600;
 
-export const revalidate = 86400;
-
-export default function FAQPage() {
+export default async function FAQPage() {
+  const faqCategories = perguntasFrequentes(await precoPublicoDasMudancas());
   const allQuestions = faqCategories.flatMap((cat) => cat.questions);
 
   return (

@@ -4,7 +4,12 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
-import { precoDaMudancaCurto, precoDaMudancaNaDescricao, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
+import {
+  exemplosDaListaNumaFrase,
+  precoDaMudancaNaDescricao,
+  precoDaMudancaNumaFrase,
+  type PrecoPublicoDasMudancas,
+} from "@/lib/preco-publico-das-mudancas";
 import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
@@ -86,7 +91,7 @@ export default async function MudancasDeEscritorioPage() {
           },
           {
             question: "Quanto custa uma mudança de escritório?",
-            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Paga-se à hora, ao preço do parceiro que escolher (${precoDaMudancaCurto(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.`,
+            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Paga-se à hora, ao preço do parceiro que escolher (${precoDaMudancaNumaFrase(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.${exemplosDaListaNumaFrase(preco) ? ` ${exemplosDaListaNumaFrase(preco)}` : ""}`,
           },
         ],
         ctaTitulo: "A sua empresa vai mudar de sítio?",

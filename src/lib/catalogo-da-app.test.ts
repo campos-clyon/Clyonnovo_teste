@@ -99,7 +99,12 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     const pagina = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
     // As páginas leem as mesmas constantes, e não uma cópia.
     expect(pagina("src/app/como-funciona/page.tsx")).toContain("PASSOS_DE_COMO_FUNCIONA.map(");
-    expect(pagina("src/app/faq/page.tsx")).toContain("const faqCategories = PERGUNTAS_FREQUENTES;");
+    // Desde a d7 (11-11-2026) pelo preço público das mudanças: a página e o catálogo lêem a mesma função.
+    expect(pagina("src/app/faq/page.tsx")).toContain("const faqCategories = perguntasFrequentes(await precoPublicoDasMudancas());");
+    expect(pagina("src/lib/catalogo-da-app.ts")).toContain("perguntas: perguntasFrequentes(precoPublicoConhecido()).flatMap(");
+    const { perguntasFrequentes } = await import("@/lib/perguntas-frequentes");
+    const { SEM_PARCEIROS } = await import("@/lib/preco-publico-das-mudancas");
+    expect(perguntasFrequentes(SEM_PARCEIROS)).toBe(PERGUNTAS_FREQUENTES);
     expect(pagina("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("...TRES_PASSOS_DEPOIS_DE_ENVIAR[0]");
     // Avaliações só do Google, com o mês da contagem.
     expect(j.avaliacoes.resumo).toMatch(/avaliações no Google \(\w+ de \d{4}\)$/);

@@ -249,7 +249,7 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
     expect(comIvaDaEtiqueta("esvaziamento_garagem")).toBe("desde 147,60 € com IVA");
     // O m³ ao preço dos sacos desde a d7 (04-11-2026): era «desde 147,60 €/m³».
     expect(comIvaDaEtiqueta("recolha_entulho")).toBe("196,80 – 236,16 €/m³ com IVA");
-    expect(comIvaDaEtiqueta("mudanca")).toBe(`${euros(PRECO_POR_HORA_COM_IVA)}/hora com IVA`);
+    expect(comIvaDaEtiqueta("mudanca")).toBe(`referência ${euros(PRECO_POR_HORA_COM_IVA)}/hora com IVA`);
     expect(comIvaDaEtiqueta("outro")).toBeNull();
 
     const contactos = ler("src/app/contactos/page.tsx");

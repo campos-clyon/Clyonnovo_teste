@@ -1,4 +1,4 @@
-import { TAXA_IVA } from "./taxas-plataforma";
+import { TAXA_DAS_MUDANCAS, TAXA_IVA } from "./taxas-plataforma";
 
 /**
  * A CONTA DE UMA MUDANÇA PELO PREÇO DO PROFISSIONAL — 10-11-2026 (fase 1).
@@ -39,8 +39,11 @@ export const MODO_DA_TAXA_DAS_MUDANCAS: ModoDaTaxa = "de_dentro";
 /** Se o material leva IVA na conta do cliente. */
 export const MATERIAL_COM_IVA = true;
 
-/** A taxa da plataforma nas mudanças pelo preço do profissional (fração). */
-export const TAXA_DAS_MUDANCAS = 0.1;
+/**
+ * A taxa da plataforma nas mudanças pelo preço do profissional (fração).
+ * Desde 11-11-2026 (d7) vive na fonte única, `taxas-plataforma.ts`.
+ */
+export { TAXA_DAS_MUDANCAS };
 
 export type RegrasDaConta = {
   /** Fração (0,1 = 10 %). */

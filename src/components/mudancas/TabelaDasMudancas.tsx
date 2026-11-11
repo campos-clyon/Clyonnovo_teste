@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-import { SEM_PARCEIROS, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
+import {
+  SEM_PARCEIROS,
+  oQueOExemploLeva,
+  type PrecoPublicoDasMudancas,
+} from "@/lib/preco-publico-das-mudancas";
+import { faixaEmTexto } from "@/lib/lista-de-parceiros-da-mudanca";
 import { PEDIR_MUDANCA } from "@/lib/tipos-de-mudanca";
 import {
   HORAS_COM_DUAS_PESSOAS,
@@ -35,6 +40,11 @@ const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
  * o «desde» deles (equipa de 2); sem nenhum, a tabela de antes, como
  * REFERÊNCIA. A tabela por baixo é sempre a de referência: a hora, os km e o
  * material de cada parceiro vêem-se na lista do simulador.
+ *
+ * PELA LISTA — d7, 11-11-2026. Com parceiros na lista, a cabeça diz também o
+ * «desde» da equipa de 3 e, no lugar da tabela de referência, vêm os exemplos
+ * da lista (uma casa por tipologia, com a proteção e os km): a referência só
+ * aparece com a lista vazia.
  */
 export default function TabelaDasMudancas({
   compacta = false,
@@ -53,8 +63,16 @@ export default function TabelaDasMudancas({
             {euros(preco.desde.semIvaCent / 100)} <span className="text-lg font-semibold text-slate-600">+ IVA por hora</span>
           </p>
           <p className="mt-1 text-sm text-slate-600">
-            {euros(preco.desde.comIvaCent / 100)} com IVA · equipa de 2. Cada parceiro tem o seu preço por hora: na
-            lista vê a nota, o preço com 2 ou 3 pessoas e o material de cada um, e escolhe.
+            {euros(preco.desde.comIvaCent / 100)} com IVA · equipa de 2
+            {preco.desde3 && (
+              <>
+                {" "}
+                · com 3 pessoas, desde {euros(preco.desde3.semIvaCent / 100)} + IVA por hora (
+                {euros(preco.desde3.comIvaCent / 100)} com IVA)
+              </>
+            )}
+            . Cada parceiro tem o seu preço por hora: na lista vê a nota, o preço com 2 ou 3 pessoas e o material de
+            cada um, e escolhe.
           </p>
         </>
       ) : (
@@ -76,7 +94,28 @@ export default function TabelaDasMudancas({
         <span className="text-slate-600"> — o valor final sai das horas, dos km e do material que confirma na folha do dia.</span>
       </p>
 
-      {!compacta && (
+      {!compacta && preco.tipo === "parceiros" && (preco.exemplos ?? []).length > 0 && (
+        <>
+          <h3 className="mt-6 text-sm font-semibold text-slate-900">Pela lista de hoje, por tipologia</h3>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+            {(preco.exemplos ?? []).map((e) => (
+              <li key={e.tipologia} className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                <p className="text-sm font-semibold text-emerald-800">{TIPOLOGIA_POR_EXTENSO[e.tipologia]}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{faixaEmTexto(e.minimo, e.maximo)}</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  {intervaloDeHorasCurto(e.horas)} com {e.pessoas} pessoas, {oQueOExemploLeva(e)}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-slate-500">
+            Pelo parceiro com o preço mais baixo de hoje, com os km mínimos dele. Na lista vê a conta de cada parceiro
+            para o seu percurso.
+          </p>
+        </>
+      )}
+
+      {!compacta && preco.tipo !== "parceiros" && (
         <>
         <h3 className="mt-6 text-sm font-semibold text-slate-900">A tabela de referência</h3>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
@@ -121,9 +160,11 @@ export default function TabelaDasMudancas({
         </p>
       </div>
 
-      <p className="mt-3 text-xs text-slate-500">
-        Valores sem IVA e, por baixo de cada um, o mesmo com IVA (23 %).
-      </p>
+      {preco.tipo !== "parceiros" && (
+        <p className="mt-3 text-xs text-slate-500">
+          Valores sem IVA e, por baixo de cada um, o mesmo com IVA (23 %).
+        </p>
+      )}
     </div>
   );
 }

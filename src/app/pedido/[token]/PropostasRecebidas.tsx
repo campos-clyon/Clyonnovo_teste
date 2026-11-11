@@ -861,7 +861,7 @@ export default function PropostasRecebidas({
                       direccao="abaixo"
                       aEnviar={aEnviar === n.id}
                       sufixo={n.horas ? "/hora" : n.porCarga ? "/carga" : ""}
-                      legendaDoValor={() => legendaDaContraproposta({ porHora: !!n.horas, ivaIncluido: n.valores?.ivaIncluido })}
+                      legendaDoValor={() => legendaDaContraproposta({ porHora: !!n.horas, ivaIncluido: n.valores?.ivaIncluido, minimoHoras: n.horas?.minimoHoras })}
                       onPropor={(preco) => agir(n.id, "propor", preco)}
                     />
                     <p className="mt-2 text-xs text-slate-500">

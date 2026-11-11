@@ -59,7 +59,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
   "/precos/esvaziamento-de-casas": "2026-11-04",
   "/precos/mudancas": "2026-11-11",
-  "/contactos": "2026-11-04",
+  "/contactos": "2026-11-11",
   "/servicos/esvaziamento-apartamento": "2026-11-01",
   "/servicos/manutencao-casa": "2026-11-01",
   "/recolha-de-monos": "2026-10-31",
@@ -78,7 +78,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/mudancas-de-escritorio": "2026-11-11",
   // 31-10-2026 (d6 de 28-10): o primeiro ecrã, o número da semana, a app CLYON Pro.
   // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
-  "/quero-ser-parceiro": "2026-11-04",
+  // 11-11-2026 (d7): a taxa das mudanças pela lista de parceiros, dita ao lado do exemplo.
+  "/quero-ser-parceiro": "2026-11-11",
 };
 
 /**

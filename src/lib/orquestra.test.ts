@@ -1686,3 +1686,371 @@ describe("y) as mudanças ao preço de cada parceiro, na Vitória e no aviso ao 
     expect(ditas[0][3]).toMatch(/como referencia/);
   });
 });
+
+/*
+ * z) AS MUDANÇAS PELA LISTA NAS PÁGINAS, NO BLOG, NA FAQ E NO SIMULADOR; O
+ *    MÍNIMO DO PARCEIRO; A TAXA DAS MUDANÇAS NA FONTE ÚNICA — d7, 11-11-2026
+ *    (parte do Site).
+ *
+ * A regra y guardou a Vitória e o aviso ao modelo. Ficavam as páginas, o blog
+ * e a FAQ a publicar os totais «na referência» com parceiros na lista (a lista
+ * dava cerca do dobro num T2), o passo 2 do simulador sem a proteção que o
+ * cartão do passo 3 somava, «mínimo 3 horas» fixo nas mudanças da lista, e a
+ * taxa das mudanças fora de taxas-plataforma.ts. As regras:
+ *   · com parceiros na lista, nenhuma página, artigo ou resposta diz a hora
+ *     nem o mínimo da referência — diz o «desde» de 2 e de 3 e os exemplos;
+ *   · com a lista vazia, só na frase que diz «referência»;
+ *   · o passo 2 do simulador diz o número do cartão (com a proteção);
+ *   · numa negociação com tarifa congelada, o mínimo é o do parceiro;
+ *   · a taxa das mudanças vive em taxas-plataforma.ts, e a ajuda e o «Como
+ *     funciona» dizem-na de lá.
+ */
+describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulador (d7, parte do Site)", () => {
+  const TARIFA = {
+    precoHora2: 55,
+    precoHora3: 65,
+    minimoHoras: 2,
+    precoKm: 1,
+    kmMinimo: 20,
+    kmMaximo: 100,
+    caixa: 2,
+    cartaoMetro: 1.5,
+    filmeRolo: 9,
+    plasticoBolhaRolo: 12,
+    aparecerNaLista: true,
+  };
+  const candidato = (tarifa = TARIFA) =>
+    ({
+      nome: "Exemplo",
+      contaDeTeste: false,
+      verificado: true,
+      tarifa,
+      notaMedia: null,
+      avaliacoes: 0,
+      isActive: true,
+      estado: "aprovado",
+      categorias: ["mudanca"],
+      raioKm: 50,
+      emiteFatura: true,
+      emiteGuiaTransporte: false,
+      guiaVerificadaEm: null,
+    }) as never;
+
+  async function comALista() {
+    const m = await import("./preco-publico-das-mudancas");
+    const preco = m.precoPublicoDosCandidatos([candidato(), candidato({ ...TARIFA, precoHora2: 60, precoHora3: 70, minimoHoras: 4 })]);
+    if (preco.tipo !== "parceiros") throw new Error("a lista de exemplo ficou vazia");
+    return { m, preco };
+  }
+
+  /** Todas as frases de um valor qualquer (strings dentro de objectos e listas). */
+  function frases(v: unknown): string[] {
+    if (typeof v === "string") return v.split(/(?<=[.!?;])\s+/);
+    if (Array.isArray(v)) return v.flatMap(frases);
+    if (v && typeof v === "object") return Object.values(v).flatMap(frases);
+    return [];
+  }
+
+  /** O que as páginas, o blog, a FAQ e o simulador dizem, com este preço público. */
+  async function oQueSePublica(preco: import("./preco-publico-das-mudancas").PrecoPublicoDasMudancas) {
+    const m = await import("./preco-publico-das-mudancas");
+    const { conteudoDoPrecoDasMudancas, descricaoDoPrecoDasMudancas } = await import("./pagina-do-preco-das-mudancas");
+    const { mudancaNoBlog } = await import("./mudanca-no-blog");
+    const { getAllBlogPosts } = await import("./blog-data");
+    const { perguntasFrequentes } = await import("./perguntas-frequentes");
+    const { estimativaDaMudanca, comIvaDaEtiqueta, precoDeReferencia } = await import("./preco-de-referencia");
+    const { mensagemDaMudanca } = await import("./pricing-helper");
+    const { tituloDaMudanca } = await import("./titulos-seo");
+    const { horasDaMudanca } = await import("./lista-de-parceiros-da-mudanca");
+    const { orcamentoDaMudanca, pessoasParaACasa } = await import("./tabela-das-mudancas");
+    m.lembrarPrecoPublico(preco);
+    try {
+      const passo2 = (["itens", "T0", "T1", "T2", "T3", "T4+"] as const).flatMap((tipologia) =>
+        [false, true].map((desmontagem) =>
+          estimativaDaMudanca(
+            orcamentoDaMudanca({ tipologia, desmontagem, protecao: true }),
+            preco,
+            { horas: horasDaMudanca(tipologia, desmontagem, 2), pessoas: pessoasParaACasa(tipologia, 2) },
+            { tipologia, desmontagem },
+          ),
+        ),
+      );
+      return {
+        daReferencia: m.dizAHoraOuOMinimoDaReferencia,
+        textos: {
+          "a página /precos/mudancas": [conteudoDoPrecoDasMudancas(preco), descricaoDoPrecoDasMudancas(preco)],
+          "as frases das mudanças no blog": mudancaNoBlog(preco),
+          "os artigos do blog": getAllBlogPosts(preco),
+          "as perguntas frequentes": perguntasFrequentes(preco),
+          "a cabeça, a descrição e o título das páginas": [
+            m.precoDaMudancaNaCabeca(preco),
+            m.precoDaMudancaPorExtenso(preco),
+            m.precoDaMudancaNumaFrase(preco),
+            m.precoDaMudancaEmDetalhe(preco),
+            m.precoDaMudancaCurto(preco),
+            m.precoDaMudancaNaDescricao(preco),
+            m.precoDaMudancaNoTitulo(preco),
+            tituloDaMudanca("Almada", preco),
+          ],
+          "a estimativa do passo 2 do simulador": passo2,
+          "a mensagem do motor ao cliente": mensagemDaMudanca(m.estimativaPelaLista(preco, "T2", false), 6, 360, 442.8),
+          "os cartões dos serviços": [comIvaDaEtiqueta("mudanca"), precoDeReferencia("mudanca")],
+        } as Record<string, unknown>,
+      };
+    } finally {
+      m.lembrarPrecoPublico(m.SEM_PARCEIROS);
+    }
+  }
+
+  it("com parceiros na lista, nenhuma página, artigo ou resposta diz a hora nem o mínimo da referência", async () => {
+    const { preco } = await comALista();
+    const { daReferencia, textos } = await oQueSePublica(preco);
+    for (const [quem, v] of Object.entries(textos)) {
+      expect(frases(v).filter(daReferencia), quem).toEqual([]);
+      // Nem a referência como preço: com a lista, sai de cena.
+      expect(frases(v).filter((f) => /na refer[êe]ncia|refer[êe]ncia:? \d/i.test(f)), quem).toEqual([]);
+    }
+  }, 60_000);
+
+  it("e dizem o que a lista dá: o «desde» de 2 e de 3 e um exemplo por tipologia, com a proteção e os km", async () => {
+    const { m, preco } = await comALista();
+    const { conteudoDoPrecoDasMudancas, descricaoDoPrecoDasMudancas } = await import("./pagina-do-preco-das-mudancas");
+    const { mudancaNoBlog } = await import("./mudanca-no-blog");
+    const { perguntasFrequentes } = await import("./perguntas-frequentes");
+    const { getAllBlogPosts } = await import("./blog-data");
+    const desde = m.desdeDaListaEmTexto(preco);
+    expect(desde).toContain("com 2 pessoas e desde");
+    const t2 = m.exemploDaLista(preco, "T2");
+    expect(t2?.comProtecao).toBe(true);
+    const doT2 = m.exemploDaListaEmTexto(t2!);
+    const exemplos = m.exemplosDaListaNumaFrase(preco)!;
+    expect(exemplos).toContain("já com a proteção e os km");
+    expect(exemplos).toContain(doT2);
+
+    const pagina = conteudoDoPrecoDasMudancas(preco);
+    expect(pagina.resposta).toContain(desde);
+    expect(pagina.resposta).toContain(exemplos);
+    expect(pagina.tabela.titulo).toBe("Pela lista de hoje, por tipologia");
+    expect(pagina.tabela.linhas.length).toBe(6);
+    expect(pagina.extras).toBeUndefined();
+    expect(pagina.exemplos).toBeUndefined();
+    expect(pagina.faqs.find((f) => f.question === "Há um preço mínimo?")?.answer).toContain("(hoje, entre 2 e 4 horas)");
+
+    expect(m.precoDaMudancaNaCabeca(preco)).toContain(desde);
+    expect(m.precoDaMudancaPorExtenso(preco)).toContain(exemplos);
+    expect(m.precoDaMudancaEmDetalhe(preco)).toContain("Com 3 pessoas, desde ");
+    const noBlog = mudancaNoBlog(preco);
+    expect(noBlog.paraTerUmaIdeia).toContain(desde);
+    expect(noBlog.linhasPorTipologia.length).toBe(6);
+    const artigo = getAllBlogPosts(preco).find((a) => a.slug === "quanto-custa-uma-mudanca-em-lisboa")!;
+    expect(JSON.stringify(artigo)).toContain(doT2);
+    const faq = perguntasFrequentes(preco)
+      .flatMap((c) => c.questions)
+      .find((q) => q.q === "Quanto custa uma mudança em Lisboa?")!;
+    expect(faq.a).toContain(desde);
+    expect(faq.a).toContain(exemplos);
+    // As descrições que o Google mostra cabem (≤ 155), com e sem parceiros.
+    const { SEM_PARCEIROS } = m;
+    for (const p of [preco, SEM_PARCEIROS]) {
+      const b = mudancaNoBlog(p);
+      for (const d of [descricaoDoPrecoDasMudancas(p), b.descricaoDoQuantoCusta, b.descricaoDaMargemSul]) {
+        expect(d.length, d).toBeLessThanOrEqual(155);
+        expect(d.length, d).toBeGreaterThan(60);
+      }
+    }
+  });
+
+  it("com a lista vazia, a referência só na frase que diz «referência»", async () => {
+    const { SEM_PARCEIROS } = await import("./preco-publico-das-mudancas");
+    const { daReferencia, textos } = await oQueSePublica(SEM_PARCEIROS);
+    let ditas = 0;
+    for (const [quem, v] of Object.entries(textos)) {
+      // A tabela, os extras e os exemplos de /precos/mudancas dizem «referência» no título do bloco.
+      const lido =
+        quem === "a página /precos/mudancas"
+          ? (v as [Record<string, unknown>, string]).map((x) => (typeof x === "string" ? x : { resposta: x.resposta, faqs: x.faqs, caixa: x.caixa }))
+          : v;
+      for (const f of frases(lido).filter(daReferencia)) {
+        ditas += 1;
+        expect(f, quem).toMatch(/refer[êe]ncia/i);
+      }
+    }
+    expect(ditas).toBeGreaterThan(4);
+    const { conteudoDoPrecoDasMudancas } = await import("./pagina-do-preco-das-mudancas");
+    const pagina = conteudoDoPrecoDasMudancas(SEM_PARCEIROS);
+    for (const titulo of [pagina.tabela.titulo, pagina.extras?.titulo, pagina.exemplos?.intro]) {
+      expect(titulo).toMatch(/refer[êe]ncia/i);
+    }
+  }, 60_000);
+
+  it("o passo 2 do simulador diz o número do cartão do passo 3: com a proteção e os km", async () => {
+    const { m, preco } = await comALista();
+    const { cartaoDoParceiro, horasDaMudanca, faixaEmTexto } = await import("./lista-de-parceiros-da-mudanca");
+    const { estimativaDaMudanca } = await import("./preco-de-referencia");
+    const { orcamentoDaMudanca, pessoasParaACasa } = await import("./tabela-das-mudancas");
+    for (const tipologia of ["T1", "T2", "T3"] as const) {
+      const ctx = { tipologia, desmontagem: false, pessoas: 2 as const, kmPercurso: 0, formaDePagamento: "na_plataforma" as const, cidade: null };
+      // O cartão mais barato do passo 3, para a mesma casa.
+      const cartao = cartaoDoParceiro(candidato(), ctx, "x")!;
+      expect(cartao.protecao.linhas.length).toBeGreaterThan(0);
+      const doPasso2 = m.estimativaPelaLista(preco, tipologia, false)!;
+      expect(doPasso2.minimo).toEqual({ semIvaCent: cartao.estimativa.minimo.semIvaCent, comIvaCent: cartao.estimativa.minimo.comIvaCent });
+      expect(doPasso2.maximo).toEqual({ semIvaCent: cartao.estimativa.maximo.semIvaCent, comIvaCent: cartao.estimativa.maximo.comIvaCent });
+      const frase = estimativaDaMudanca(
+        orcamentoDaMudanca({ tipologia, protecao: true }),
+        preco,
+        { horas: horasDaMudanca(tipologia, false, 2), pessoas: pessoasParaACasa(tipologia, 2) },
+        { tipologia, desmontagem: false },
+      );
+      expect(frase).toContain(faixaEmTexto(cartao.estimativa.minimo, cartao.estimativa.maximo));
+      expect(frase).toContain("com a proteção e os km mínimos dele");
+      expect(frase).not.toContain("sem o material");
+    }
+    // A rota pública leva as estimativas (sem dizer quantos parceiros há), e o simulador lê-as inteiras.
+    const paraFora = JSON.parse(JSON.stringify(m.precoPublicoParaFora(preco)));
+    expect(m.precoPublicoDeFora(paraFora)).toEqual({ ...preco, parceiros: 1 });
+    expect(Object.keys(paraFora)).not.toContain("parceiros");
+    expect(m.precoPublicoDeFora({ tipo: "parceiros" })).toEqual(m.SEM_PARCEIROS);
+    expect(m.precoPublicoDeFora(null)).toEqual(m.SEM_PARCEIROS);
+    const simulador = readFileSync(join(RAIZ, "src/app/simulador/SimulatorThreePhaseForm.tsx"), "utf8");
+    expect(simulador).toContain("setPrecoDasMudancas(precoPublicoDeFora(p))");
+    expect(readFileSync(join(RAIZ, "src/app/api/mudancas/preco-publico/route.ts"), "utf8")).toContain("precoPublicoParaFora(preco)");
+  });
+
+  it("o motor estima pela lista quando há parceiros, e pela referência (dita como referência) com a lista vazia", async () => {
+    const { m, preco } = await comALista();
+    const { mensagemDaMudanca } = await import("./pricing-helper");
+    const t2 = m.estimativaPelaLista(preco, "T2", false)!;
+    m.lembrarPrecoPublico(preco);
+    try {
+      const msg = mensagemDaMudanca(t2, 6, 0, 0);
+      expect(msg).toContain(m.desdeDaListaEmTexto(preco));
+      expect(msg).toContain(m.exemploDaListaEmTexto(t2));
+      expect(m.dizAHoraOuOMinimoDaReferencia(msg)).toBe(false);
+    } finally {
+      m.lembrarPrecoPublico(m.SEM_PARCEIROS);
+    }
+    const naReferencia = mensagemDaMudanca(null, 6, 360, 442.8);
+    expect(naReferencia).toContain(m.NA_REFERENCIA_DA_MUDANCA);
+    expect(naReferencia).toContain("Estimativa na referência");
+    const fonte = readFileSync(join(RAIZ, "src/lib/pricing-helper.ts"), "utf8");
+    expect(fonte).toContain("mudancaPelaLista = estimativaPelaLista(precoPublicoConhecido(), tipologiaDaMudanca(input), desmontagemNaMudanca(input));");
+    expect(fonte).not.toContain("por hora (mínimo ${MINIMO_DE_HORAS} h)");
+    expect(fonte).not.toContain("Mínimo de mudança aplicado:");
+  });
+
+  it("numa negociação com tarifa congelada, o mínimo é o do parceiro — nunca «mínimo 3 horas» fixo", async () => {
+    const { congelarTarifa } = await import("./conta-da-mudanca");
+    const h = await import("./horas-do-trabalho");
+    const { legendaDaContraproposta } = await import("./frase-da-contraproposta");
+    const { SAO_PRECOS_POR_HORA_DO_PARCEIRO, mensagemDasPropostas } = await import("./mensagem-das-propostas");
+    const { textosDoPrecoPorHora } = await import("./pedido-para-a-app");
+    const { MINIMO_DE_HORAS } = await import("./tabela-das-mudancas");
+    const MINIMO_FIXO = new RegExp(`m[íi]nimo (?:de )?${MINIMO_DE_HORAS} horas`, "i");
+    for (const minimoHoras of [1, 2, 4, 5]) {
+      const tarifaCongeladaJson = JSON.stringify(congelarTarifa({ ...TARIFA, minimoHoras }));
+      expect(h.minimoDoParceiro({ tarifaCongeladaJson })).toBe(minimoHoras);
+      const dito = `mínimo ${minimoHoras} ${minimoHoras === 1 ? "hora" : "horas"}`;
+      const textos = [
+        h.porHoraParaOCliente({ semIva: 55, total: 67.65, ivaIncluido: true }, minimoHoras),
+        h.precoPorHoraParaOCliente(55, 6, { cliente: 0, profissional: 0 }, "iva_incluido", minimoHoras).porHora,
+        h.regraDasHoras(minimoHoras),
+        legendaDaContraproposta({ porHora: true, ivaIncluido: true, minimoHoras }),
+        legendaDaContraproposta({ porHora: true, ivaIncluido: false, minimoHoras }),
+        textosDoPrecoPorHora(55, {
+          taxaCliente: 0,
+          semFactura: 0,
+          criadaEm: new Date("2026-11-11T10:00:00Z"),
+          horasPrevistas: 6,
+          horas: { tarifaCongeladaJson },
+        } as never).detalhe ?? "",
+        SAO_PRECOS_POR_HORA_DO_PARCEIRO,
+      ];
+      for (const t of textos) expect(t, t).not.toMatch(MINIMO_FIXO);
+      expect(textos[0]).toContain(dito);
+      expect(textos[3]).toContain(`(${dito})`);
+      expect(textos[5]).toContain(dito);
+    }
+    // Sem tarifa congelada (os outros trabalhos por hora), o mínimo da casa continua.
+    expect(h.minimoDoParceiro({ tarifaCongeladaJson: null })).toBeNull();
+    expect(h.porHoraParaOCliente({ semIva: 50, total: 61.5, ivaIncluido: true })).toMatch(MINIMO_FIXO);
+    expect(h.REGRA_DAS_HORAS).toBe(h.regraDasHoras());
+    // A mensagem das propostas: com a lista, o mínimo de cada parceiro.
+    const base = { nomeCliente: "Ana", servico: "mudança", cidade: "Lisboa", propostas: [], base: "hora" as const };
+    expect(mensagemDasPropostas({ ...base, mudancaDaLista: true })).not.toMatch(MINIMO_FIXO);
+    // Quem lê a tarifa congelada para o dizer.
+    const app = readFileSync(join(RAIZ, "src/lib/pedido-para-a-app.ts"), "utf8");
+    expect(app).toContain("const minimoDaTarifa = minimoDoParceiro(h);");
+    expect(app).toContain("regraTexto: regraDasHoras(minimoDaTarifa),");
+    for (const f of ["src/app/pedido/[token]/PropostasRecebidas.tsx", "src/lib/pedidos-do-cliente.ts"]) {
+      expect(readFileSync(join(RAIZ, f), "utf8"), f).toMatch(/legendaDaContraproposta\(\{[^}]*minimoHoras: /);
+    }
+    const painel = readFileSync(join(RAIZ, "src/components/admin/AdminNegociacoesPanel.tsx"), "utf8");
+    expect(painel.match(/mudancaDaLista: p\.negociacoes\.some/g)?.length).toBe(2);
+  });
+
+  it("o «Reenviar ao profissional» diz a hora dele, congelada, como o primeiro aviso", async () => {
+    const { congelarTarifa } = await import("./conta-da-mudanca");
+    const { horaCongeladaEmEuros } = await import("./mudanca-escolhida-pelo-cliente");
+    const json = JSON.stringify(congelarTarifa(TARIFA));
+    expect(horaCongeladaEmEuros(json, 2)).toBe(TARIFA.precoHora2);
+    expect(horaCongeladaEmEuros(json, 3)).toBe(TARIFA.precoHora3);
+    expect(horaCongeladaEmEuros(null, 2)).toBeNull();
+    const rota = readFileSync(join(RAIZ, "src/app/api/admin/negociacoes/reenviar/route.ts"), "utf8").replace(/\s+/g, " ");
+    expect(rota).toContain("await tarifaCongeladaDaNegociacao(alvo.id, alvo.providerId)");
+    expect(rota).toContain("horaCongelada = horaCongeladaEmEuros(congelada?.tarifaCongeladaJson, congelada?.pessoasEscolhidas);");
+    // O valor de partida do pedido só quando a negociação não é de uma mudança escolhida.
+    expect(rota).toContain("const minimo = eDaLista ? horaCongelada : pedido.valorDesejadoCliente != null");
+  });
+
+  it("o preço público lê-se outra vez quando um parceiro grava a tarifa, e o blog e a FAQ lêem-no", () => {
+    const rota = readFileSync(join(RAIZ, "src/app/api/profissionais/tarifas-mudancas/route.ts"), "utf8");
+    const gravar = rota.indexOf("await gravarTarifaDasMudancas(");
+    expect(gravar).toBeGreaterThan(0);
+    expect(rota.indexOf('revalidateTag("preco-publico-das-mudancas")', gravar)).toBeGreaterThan(gravar);
+    expect(readFileSync(join(RAIZ, "src/lib/ler-preco-publico-das-mudancas.ts"), "utf8")).toContain('tags: ["preco-publico-das-mudancas"]');
+    for (const f of ["src/app/blog/[slug]/page.tsx", "src/app/blog/page.tsx", "src/app/faq/page.tsx"]) {
+      const fonte = readFileSync(join(RAIZ, f), "utf8");
+      expect(fonte, f).toContain("precoPublicoDasMudancas()");
+      expect(fonte, f).toContain("export const revalidate = 3600;");
+    }
+  });
+
+  it("a taxa das mudanças só da fonte única, e a ajuda e o «Como funciona» dizem-na de lá", async () => {
+    const t = await import("./taxas-plataforma");
+    const { REGRAS_DAS_MUDANCAS, TAXA_DAS_MUDANCAS } = await import("./conta-da-mudanca");
+    const { perguntasDoProfissional, PERGUNTAS_DO_PROFISSIONAL } = await import("./ajuda-plataforma");
+    const { comissaoEmPalavras } = await import("./como-funciona-para-o-profissional");
+    expect(TAXA_DAS_MUDANCAS).toBe(t.TAXA_DAS_MUDANCAS);
+    expect(REGRAS_DAS_MUDANCAS.taxa).toBe(t.TAXA_DAS_MUDANCAS);
+    expect(t.TAXA_DAS_MUDANCAS_EM_FRASE).toContain(t.TAXA_DAS_MUDANCAS_EM_PONTOS);
+    expect(t.TAXA_DAS_MUDANCAS_EM_PONTOS).toBe(`${String(Math.round(t.TAXA_DAS_MUDANCAS * 10000) / 100).replace(".", ",")} %`);
+    expect(t.TAXA_DAS_MUDANCAS_EM_FRASE).toContain("só sobre as horas e os km");
+    expect(t.TAXA_DAS_MUDANCAS_EM_FRASE).toContain("o material que fornecer não leva taxa");
+    // Um sítio só: em src/, mais ninguém lhe dá um valor.
+    const quemADefine = FONTES.filter((f) => f.startsWith("src/") && !f.endsWith(".test.ts")).filter((f) =>
+      /\bTAXA_DAS_MUDANCAS\s*(?::[^=]+)?=\s*[\d.]/.test(readFileSync(join(RAIZ, f), "utf8")),
+    );
+    expect(quemADefine).toEqual(["src/lib/taxas-plataforma.ts"]);
+    // A ajuda (com e sem a taxa das Configs) e o «Como funciona».
+    const taxas = { cliente: 0, profissional: t.TAXA_TOTAL };
+    const quantoLeva = (lista: Array<{ pergunta: string; resposta: string }>) => lista.find((p) => p.pergunta === "Quanto é que a CLYON leva?")?.resposta;
+    expect(quantoLeva(perguntasDoProfissional(taxas))).toContain(t.TAXA_DAS_MUDANCAS_EM_FRASE);
+    // A lista que a app CLYON Pro traz consigo diz a regra sem o número (como a taxa das negociações).
+    expect(quantoLeva(PERGUNTAS_DO_PROFISSIONAL)).toContain(t.TAXA_DAS_MUDANCAS_SEM_NUMERO);
+    expect(t.TAXA_DAS_MUDANCAS_SEM_NUMERO).not.toMatch(/\d\s?%/);
+    expect(t.TAXA_DAS_MUDANCAS_SEM_NUMERO).toContain("só sobre as horas e os km");
+    expect(comissaoEmPalavras(taxas, "iva_incluido").nasMudancas).toBe(t.TAXA_DAS_MUDANCAS_EM_FRASE);
+    for (const f of ["src/app/profissionais/page.tsx", "src/app/quero-ser-parceiro/page.tsx"]) {
+      expect(readFileSync(join(RAIZ, f), "utf8"), f).toContain("{exemplo.nasMudancas}");
+    }
+  });
+
+  it("a tabela das páginas: com parceiros, os exemplos da lista; a de referência só com a lista vazia", () => {
+    const t = readFileSync(join(RAIZ, "src/components/mudancas/TabelaDasMudancas.tsx"), "utf8").replace(/\s+/g, " ");
+    expect(t).toContain('{!compacta && preco.tipo !== "parceiros" && ( <> <h3 className="mt-6 text-sm font-semibold text-slate-900">A tabela de referência</h3>');
+    expect(t).toContain("Pela lista de hoje, por tipologia");
+    expect(t).toContain("preco.desde3 && (");
+    expect(readFileSync(join(RAIZ, "src/app/mudancas/[cidade]/page.tsx"), "utf8")).toContain("{precoDaMudancaEmDetalhe(preco)}");
+  });
+});
