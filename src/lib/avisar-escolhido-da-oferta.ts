@@ -32,6 +32,8 @@ export async function avisarProfissionalEscolhido(a: {
   providerId: number;
   baseUrl: string;
   whatsapp?: boolean;
+  /** Atribuído directamente, combinado por fora (11-11-2026): o WhatsApp diz que não há nada para aceitar, e o dia. */
+  porFora?: boolean;
 }): Promise<{ saiu: boolean; profissional: string; valor: number | null; valorDoTrabalho: number | null }> {
   try {
     const [perfil, pedido, negociacoes] = await Promise.all([
@@ -86,6 +88,14 @@ export async function avisarProfissionalEscolhido(a: {
               localidade: pedido?.city ?? null,
               valor,
               link: `${a.baseUrl}/profissionais/painel`,
+              porFora: a.porFora === true,
+              quando: a.porFora
+                ? (linha as { dataCombinada?: unknown } | undefined)?.dataCombinada
+                  ? new Date((linha as unknown as { dataCombinada: string }).dataCombinada)
+                  : pedido?.dataAgendada
+                    ? new Date(pedido.dataAgendada as unknown as string)
+                    : null
+                : null,
             },
             new Date(),
           ),

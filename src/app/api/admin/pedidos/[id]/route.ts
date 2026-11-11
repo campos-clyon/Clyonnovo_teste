@@ -32,7 +32,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     await markOrderAsViewed(Number(id)).catch(() => {});
   }
 
-  return NextResponse.json({ order });
+  /*
+   * QUEM TEM O TRABALHO — 11-11-2026 (o #505). O editor diz, antes de gravar
+   * o valor, com quem o trabalho fica; e o «Duplicar» propõe o mesmo.
+   */
+  let atribuido: { providerId: number; profissional: string } | null = null;
+  try {
+    const n = (await negociacoesDoPedido(Number(id))).find((x) => x.estado === "acordada");
+    if (n) atribuido = { providerId: Number(n.providerId), profissional: String(n.profissionalNome ?? "") };
+  } catch {
+    /* sem negociações legíveis, sem atribuído */
+  }
+
+  return NextResponse.json({ order, atribuido });
 }
 
 // PATCH /api/admin/pedidos/[id]

@@ -9,6 +9,7 @@ import {
 import type { ModoDaOferta } from "./oferta-clyon";
 import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
 import { lerBase, notaDaCargaParaOCliente, precoComBase } from "./base-do-preco";
+import { diaEHoraCurtosEmLisboa } from "./hora-de-lisboa";
 
 /*
  * ── O AVISO NO WHATSAPP DO PROFISSIONAL ────────────────────────────────────
@@ -76,14 +77,31 @@ export function avisoDeOfertaAoProfissional(
 /** O WhatsApp a quem a CLYON escolheu. Sai a todos, como o aviso da data: é o trabalho dele. */
 export function avisoDeEscolhaAoProfissional(
   nomeDoProfissional: string | null,
-  o: { pedidoId: number; servico: string | null; localidade: string | null; valor: number; link: string },
+  o: {
+    pedidoId: number;
+    servico: string | null;
+    localidade: string | null;
+    valor: number;
+    link: string;
+    /**
+     * Atribuído directamente pela CLYON, combinado por fora (11-11-2026, o
+     * #591): não há nada para aceitar, e diz-se o dia.
+     */
+    porFora?: boolean;
+    quando?: Date | null;
+  },
   agora: Date,
 ): string {
   const onde = o.localidade ? ` em ${o.localidade}` : "";
+  const trabalho = `${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId})`;
+  const dia =
+    o.quando && !Number.isNaN(o.quando.getTime()) ? ` Fica marcado para ${diaEHoraCurtosEmLisboa(o.quando)}.` : "";
   return [
     `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
-    `O trabalho é seu: a CLYON escolheu-o para ${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId}), ` +
-      `com ganhos estimados de ${eurosPorExtenso(o.valor)}.`,
+    o.porFora
+      ? `O trabalho de ${trabalho} é seu, como ficou combinado, com ganhos estimados de ${eurosPorExtenso(o.valor)}. ` +
+        `Não precisa de aceitar nada.${dia}`
+      : `O trabalho é seu: a CLYON escolheu-o para ${trabalho}, com ganhos estimados de ${eurosPorExtenso(o.valor)}.${dia}`,
     `A morada e o contacto do cliente já estão no seu painel: ${o.link}`,
   ].join("\n\n");
 }
@@ -104,7 +122,8 @@ export function avisoDeValorNovoAoProfissional(
     localidade: string | null;
     valor: number;
     ganhos: number;
-    motivo: "valor_novo" | "de_novo";
+    /** «valor_mantido» (11-11-2026): já era dele e continua a ser — não há nada para aceitar. */
+    motivo: "valor_novo" | "de_novo" | "valor_mantido";
     eraDele: boolean;
     link: string;
     base?: string | null;
@@ -119,6 +138,14 @@ export function avisoDeValorNovoAoProfissional(
     o.motivo === "de_novo"
       ? `O trabalho CLYON de ${trabalho} voltou a estar disponível, ${numeros}.`
       : `O valor do trabalho CLYON de ${trabalho} mudou: agora é ${numeros}.`;
+  if (o.motivo === "valor_mantido") {
+    return [
+      `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
+      `O valor do trabalho CLYON de ${trabalho} foi actualizado: agora é ${numeros}.`,
+      "O trabalho continua a ser seu, como combinado — não precisa de fazer nada.",
+      `Ver no painel: ${o.link}`,
+    ].join("\n\n");
+  }
   const pergunta =
     o.motivo === "valor_novo" && o.eraDele
       ? "O trabalho continua a ser seu se aceitar o valor novo. Deseja aceitar?"

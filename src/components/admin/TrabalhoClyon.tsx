@@ -20,9 +20,11 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import type { EstadoFechado } from "@/lib/pedidos-fechados";
 import RegistarPedido from "@/components/admin/RegistarPedido";
 import { FormularioDaOferta } from "@/components/admin/FormularioDaOferta";
+import AtribuirDirectamente from "@/components/admin/AtribuirDirectamente";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 import {
   ROTULO_DA_FASE,
+  mensagemDeValorComAtribuido,
   faltaOMotivoDaTaxa,
   lerValorFixo,
   taxaAbaixoDoEscalao,
@@ -636,6 +638,10 @@ export function TrabalhoClyonComAccoes({
     void mexer({ accao: "reoferecer", negociacaoId }, (d) => String(d.feito ?? `#${t.pedidoId} oferecido outra vez.`));
   };
 
+  // «Atribuir directamente a…» (11-11-2026, o #591): a confirmação é no cartão.
+  const atribuir = (providerId: number) =>
+    void mexer({ accao: "atribuir", providerId }, (d) => String(d.feito ?? `#${t.pedidoId} atribuído.`));
+
   async function avaliar(n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined, comoDisse: string): Promise<string | null> {
     if (!token) return "Sem sessão.";
     try {
@@ -768,6 +774,8 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       onPorque={() => void porquePoucos(t.pedidoId)}
       onVisto={marcarVisto}
       onReoferecer={reoferecer}
+      onAtribuir={atribuir}
+      token={token}
       onAvaliar={avaliar}
       onPropostaAberta={propostaAberta}
       onJaEnviei={jaEnviei}
@@ -839,6 +847,8 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
                       valorInicial={original.valor}
                       taxaInicial={original.taxa}
                       motivoInicial={original.motivo}
+                      // «Manter com o mesmo profissional» (11-11-2026, o #591).
+                      atribuirInicial={original.atribuido ?? null}
                       onOferecido={(msg) => {
                         onAviso(msg);
                         onMudou();
@@ -872,6 +882,8 @@ function CartaoDoTrabalho({
   onPorque,
   onVisto,
   onReoferecer,
+  onAtribuir,
+  token = null,
   onAvaliar,
   onPropostaAberta,
   onJaEnviei,
@@ -907,6 +919,9 @@ function CartaoDoTrabalho({
   onVisto: () => void;
   /** Voltar a oferecer a quem recusou — a um, ou a todos (`null`). */
   onReoferecer: (negociacaoId: number | null) => void;
+  /** «Atribuir directamente a…» — 11-11-2026 (o #591). */
+  onAtribuir?: (providerId: number) => void;
+  token?: string | null;
   onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;
   onPropostaAberta: () => void;
   onJaEnviei: () => void;
@@ -1360,14 +1375,16 @@ function CartaoDoTrabalho({
           )}
           <p className="text-[11px] text-slate-400">
             {a
-              ? `${a.profissional} já o tem: fica com ele se aceitar o valor novo — e é avisado. Se recusar, volta a ser oferecido aos outros.`
+              ? mensagemDeValorComAtribuido(a.profissional)
               : "Quem já o aceitou volta a ter de aceitar o valor novo, e é avisado por WhatsApp."}
           </p>
           <div className="flex gap-2">
             <button
               onClick={async () => {
-                if (taxaEscolhida != null && (await onValor(valorEscrito, taxaEscolhida, baseEscolhida, motivoEscrito)))
-                  setAMudarValor(false);
+                if (taxaEscolhida == null) return;
+                // Com alguém atribuído, diz-se antes que fica com ele (11-11-2026, o #505).
+                if (a && !window.confirm(`Mudar o valor do #${t.pedidoId}?\n\n${mensagemDeValorComAtribuido(a.profissional)}`)) return;
+                if (await onValor(valorEscrito, taxaEscolhida, baseEscolhida, motivoEscrito)) setAMudarValor(false);
               }}
               disabled={
                 ocupado === t.pedidoId ||
@@ -1388,6 +1405,20 @@ function CartaoDoTrabalho({
             </button>
           </div>
         </div>
+      )}
+
+      {/*
+        «ATRIBUIR DIRECTAMENTE A…» — 11-11-2026 (o #591). Enquanto ninguém o
+        tem e não foi feito nem cancelado: fica com quem já está combinado, sem
+        ele ter de aceitar.
+      */}
+      {aberto && !a && onAtribuir && (r.fase === "a_espera" || r.fase === "escolher" || r.fase === "sem_ninguem") && (
+        <AtribuirDirectamente
+          token={token}
+          pedidoId={t.pedidoId}
+          ocupado={ocupado === t.pedidoId}
+          onAtribuir={(providerId) => onAtribuir(providerId)}
+        />
       )}
 
       {/*

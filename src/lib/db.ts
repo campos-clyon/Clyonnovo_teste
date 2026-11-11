@@ -3092,6 +3092,11 @@ function propostaDaClyonComOValor(valor: number): string {
   return JSON.stringify([{ por: "cliente", valor, criadaEm: new Date(), estado: "pendente" }]);
 }
 
+/** A proposta da CLYON já aceite — num trabalho que fica com quem o tem (11-11-2026). */
+function propostaDaClyonAceite(valor: number): string {
+  return JSON.stringify([{ por: "cliente", valor, criadaEm: new Date(), estado: "aceite" }]);
+}
+
 /**
  * MUDAR O VALOR OU A TAXA DE UM TRABALHO CLYON — 08-10-2026.
  *
@@ -3111,6 +3116,11 @@ function propostaDaClyonComOValor(valor: number): string {
  *
  * Recusa-se num trabalho já feito (execução enviada ou confirmada: o dinheiro
  * já tem dono) e num pedido arrumado (cancelado, arquivado, rejeitado).
+ *
+ * DESDE 11-11-2026 (dono, o #505): com alguém atribuído, o trabalho FICA com
+ * ele — muda o valor acordado e a taxa da negociação dele, sem voltar a pedir
+ * «aceito» e sem tocar em mais ninguém. Redistribuir é um botão à parte. Com o
+ * cliente já a ter pago (ou o profissional já pago), recusa-se («ja_pago»).
  */
 export async function mudarValorDoTrabalhoClyon(
   pedidoId: number,
@@ -3133,8 +3143,13 @@ export async function mudarValorDoTrabalhoClyon(
       avisar: ProfissionalAAvisar[];
       /** O valor, a taxa e a unidade eram os mesmos: só se escreveu o motivo, e ninguém foi incomodado. */
       soOMotivo?: boolean;
+      /**
+       * Já estava atribuído (11-11-2026): o trabalho FICOU com ele, com o valor
+       * e a taxa novos, sem ter de voltar a aceitar. Mais ninguém foi tocado.
+       */
+      mantem?: { negociacaoId: number; providerId: number; profissional: string };
     }
-  | { ok: false; porque: "nao_e_clyon" | "arrumado" | "ja_feito" | "igual" }
+  | { ok: false; porque: "nao_e_clyon" | "arrumado" | "ja_feito" | "igual" | "ja_pago" }
 > {
   await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
@@ -3195,7 +3210,7 @@ export async function mudarValorDoTrabalhoClyon(
       return { ok: false, porque: "igual" };
     }
     const [negs] = (await conn.execute(
-      `SELECT n.id, n.providerId, n.estado, n.ofertaClyon, n.execucaoEnviadaEm, n.confirmadoEm,
+      `SELECT n.id, n.providerId, n.estado, n.ofertaClyon, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
               n.estadoAntesDeCancelar, pr.name AS profissional, pr.phone AS telefone,
               COALESCE(pr.whatsappAvisos, 0) AS whatsappAvisos
          FROM negociacoes n
@@ -3211,6 +3226,7 @@ export async function mudarValorDoTrabalhoClyon(
         ofertaClyon: string | null;
         execucaoEnviadaEm: Date | null;
         confirmadoEm: Date | null;
+        pagoEm?: Date | null;
         estadoAntesDeCancelar: string | null;
         profissional: string | null;
         telefone: string | null;
@@ -3223,6 +3239,36 @@ export async function mudarValorDoTrabalhoClyon(
       return { ok: false, porque: "ja_feito" };
     }
 
+    /*
+     * JÁ ATRIBUÍDO, FICA COM ELE — 11-11-2026 (dono, o #505 com o Jorge).
+     * *«Só queria mudar o valor porque já está acordado com ele. Redistribuir
+     * tem de ser uma opção à parte. Apenas notifique o profissional que já foi
+     * atribuído, sem remover o trabalho dele.»*
+     *
+     * A negociação dele continua «acordada»: muda o valor acordado e a taxa
+     * (a conta em degraus de sempre sai deles e do preço do pedido), e a
+     * proposta da CLYON passa a ser a do valor novo, já aceite. Ninguém mais é
+     * tocado. Se o cliente já pagou, ou ele já recebeu, não se muda aqui: o
+     * pagamento ficava diferente do trabalho.
+     */
+    const atribuida = negs.find((n) => n.estado === "acordada");
+    if (atribuida) {
+      let clientePagou = false;
+      try {
+        const [pagos] = (await conn.execute(
+          "SELECT COUNT(*) AS pagos FROM pagamentos WHERE negociacaoPaga = ? AND pagoEm IS NOT NULL",
+          [atribuida.id],
+        )) as [Array<{ pagos: number }>, unknown];
+        clientePagou = Number(pagos[0]?.pagos ?? 0) > 0;
+      } catch {
+        /* sem tabela, sem pagamento */
+      }
+      if (clientePagou || atribuida.pagoEm != null) {
+        await conn.rollback();
+        return { ok: false, porque: "ja_pago" };
+      }
+    }
+
     await conn.execute(
       `UPDATE simulatorOrders
           SET valorFixoClyon = ?, taxaClyon = ?, precoClienteClyon = ?, valorDesejadoCliente = ?,
@@ -3232,6 +3278,30 @@ export async function mudarValorDoTrabalhoClyon(
     );
     // O motivo vai com a taxa (25-10-2026, d18): nulo quando ela não fica abaixo do escalão.
     await conn.execute("UPDATE simulatorOrders SET motivoTaxaClyon = ? WHERE id = ?", [motivoDaTaxa, pedidoId]);
+
+    if (atribuida) {
+      await conn.execute(
+        `UPDATE negociacoes
+            SET valorAcordado = ?, taxaCliente = 0, taxaProfissional = ?, propostasJson = ?
+          WHERE id = ? AND estado = 'acordada'`,
+        [valor, taxa, propostaDaClyonAceite(valor), atribuida.id],
+      );
+      await conn.commit();
+      const dele: ProfissionalAAvisar = {
+        negociacaoId: Number(atribuida.id),
+        providerId: Number(atribuida.providerId),
+        profissional: String(atribuida.profissional ?? ""),
+        telefone: atribuida.telefone ?? null,
+        eraDele: true,
+        avisaPorWhatsApp: Number(atribuida.whatsappAvisos) === 1,
+      };
+      return {
+        ok: true,
+        antes: { valor: Number(p.valorFixoClyon), taxa: p.taxaClyon == null ? null : Number(p.taxaClyon), base: baseAntes },
+        avisar: [dele],
+        mantem: { negociacaoId: dele.negociacaoId, providerId: dele.providerId, profissional: dele.profissional },
+      };
+    }
 
     const propostas = propostaDaClyonComOValor(valor);
     const avisar: ProfissionalAAvisar[] = [];
@@ -3746,6 +3816,146 @@ export async function atribuirOfertaClyon(negociacaoId: number): Promise<Atribui
     } catch {
       /* a ligação já caiu — o erro de cima é o que interessa */
     }
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+export type AtribuicaoDirecta =
+  | {
+      ok: true;
+      pedidoId: number;
+      negociacaoId: number;
+      providerId: number;
+      profissional: string;
+      valor: number;
+      taxa: number;
+      /** Os outros que tinham a oferta em aberto e ficaram de fora. */
+      encerradas: number;
+    }
+  | {
+      ok: false;
+      porque: "nao_e_clyon" | "arrumado" | "ja_feito" | "outro_tem" | "ja_e_dele" | "sem_profissional" | "sem_taxa";
+      detalhe?: string;
+    };
+
+/**
+ * ATRIBUIR DIRECTAMENTE UM TRABALHO CLYON — 11-11-2026 (dono, o #591).
+ *
+ * *«Quero só atribuir o pedido a ele e ficar ligado a ele, sem ele ter de
+ * fazer nada.»* O acordo foi feito por fora (ao telefone, em pessoa): a
+ * negociação dele nasce, ou volta, já «acordada», com o valor fixo e a taxa
+ * do pedido — sem oferta para aceitar e sem distribuir a mais ninguém. Quem
+ * tinha a oferta em aberto fica «morta», como quando a CLYON escolhe.
+ *
+ * Numa transacção, com as trancas pela ordem de sempre (o pedido, depois as
+ * negociações). Recusa-se num pedido arrumado, num trabalho já feito, e quando
+ * outro profissional já o tem (aí é «Trocar profissional»).
+ */
+export async function atribuirDirectamenteTrabalhoClyon(
+  pedidoId: number,
+  providerId: number,
+): Promise<AtribuicaoDirecta> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+
+  const [provs] = (await pool.execute(
+    "SELECT id, name, estado FROM providers WHERE id = ? AND isClyon = 0 LIMIT 1",
+    [providerId],
+  )) as [Array<{ id: number; name: string | null; estado: string | null }>, unknown];
+  const prov = provs[0];
+  if (!prov || prov.estado === "apagado") return { ok: false, porque: "sem_profissional" };
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [pedidos] = (await conn.execute(
+      "SELECT id, status, valorFixoClyon, taxaClyon, dataAgendada FROM simulatorOrders WHERE id = ? FOR UPDATE",
+      [pedidoId],
+    )) as [
+      Array<{ status: string | null; valorFixoClyon: string | null; taxaClyon: string | null; dataAgendada: Date | null }>,
+      unknown,
+    ];
+    const p = pedidos[0];
+    const desistir = async (porque: Exclude<AtribuicaoDirecta, { ok: true }>["porque"], detalhe?: string) => {
+      await conn.rollback();
+      return { ok: false as const, porque, detalhe };
+    };
+    if (!p || p.valorFixoClyon == null) return await desistir("nao_e_clyon");
+    if (pedidoArrumado(p.status)) return await desistir("arrumado");
+    if (p.taxaClyon == null) return await desistir("sem_taxa");
+    const [negs] = (await conn.execute(
+      `SELECT n.id, n.providerId, n.estado, n.execucaoEnviadaEm, n.confirmadoEm, pr.name AS profissional
+         FROM negociacoes n
+         LEFT JOIN providers pr ON pr.id = n.providerId
+        WHERE n.pedidoId = ?
+        FOR UPDATE`,
+      [pedidoId],
+    )) as [
+      Array<{
+        id: number;
+        providerId: number;
+        estado: string;
+        execucaoEnviadaEm: Date | null;
+        confirmadoEm: Date | null;
+        profissional: string | null;
+      }>,
+      unknown,
+    ];
+    if (negs.some((n) => n.execucaoEnviadaEm != null || n.confirmadoEm != null)) return await desistir("ja_feito");
+    const acordada = negs.find((n) => n.estado === "acordada");
+    if (acordada) {
+      return Number(acordada.providerId) === providerId
+        ? await desistir("ja_e_dele")
+        : await desistir("outro_tem", String(acordada.profissional ?? ""));
+    }
+
+    const valor = Number(p.valorFixoClyon);
+    const taxa = Number(p.taxaClyon);
+    let negociacaoId = Number(negs.find((n) => Number(n.providerId) === providerId)?.id ?? 0);
+    if (!negociacaoId) {
+      // O acesso é pelo painel; o token desta linha não sai para lado nenhum.
+      const { randomBytes, createHash } = await import("crypto");
+      const hash = createHash("sha256").update(randomBytes(32)).digest("hex");
+      const [r] = (await conn.execute(
+        `INSERT INTO negociacoes (pedidoId, providerId, acessoTokenHash, acessoTokenExpiraEm, propostasJson)
+         VALUES (?, ?, ?, NULL, '[]')`,
+        [pedidoId, providerId, hash],
+      )) as [{ insertId?: number }, unknown];
+      negociacaoId = Number(r.insertId);
+    }
+    await conn.execute(
+      `UPDATE negociacoes
+          SET estado = 'acordada', valorAcordado = ?, propostasJson = ?,
+              taxaCliente = 0, taxaProfissional = ?, formaDePagamento = 'na_plataforma', acrescimoPagamento = NULL,
+              ofertaClyon = 'directa', atribuidaEm = NOW(), estadoAntesDeCancelar = NULL,
+              -- O dia do pedido é o dia combinado, se ainda não houver outro.
+              dataCombinada = COALESCE(dataCombinada, ?)
+        WHERE id = ?`,
+      [valor, propostaDaClyonAceite(valor), taxa, p.dataAgendada ?? null, negociacaoId],
+    );
+    const [res] = (await conn.execute(
+      `UPDATE negociacoes SET estado = 'morta'
+        WHERE pedidoId = ? AND id <> ? AND estado IN ('aberta', 'aguarda_contratacao')`,
+      [pedidoId, negociacaoId],
+    )) as any[];
+    await conn.commit();
+    return {
+      ok: true,
+      pedidoId,
+      negociacaoId,
+      providerId,
+      profissional: String(prov.name ?? ""),
+      valor,
+      taxa,
+      encerradas: Number(res?.affectedRows ?? 0),
+    };
+  } catch (e) {
+    await conn.rollback().catch(() => {});
     throw e;
   } finally {
     conn.release();

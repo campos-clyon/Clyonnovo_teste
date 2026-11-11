@@ -40,7 +40,7 @@ export async function avisarValorNovoDoTrabalhoClyon(a: {
   valor: number;
   taxa: number;
   quem: ProfissionalAAvisar[];
-  motivo: "valor_novo" | "de_novo";
+  motivo: "valor_novo" | "de_novo" | "valor_mantido";
   baseUrl: string;
 }): Promise<number> {
   if (a.quem.length === 0) return 0;

@@ -115,15 +115,42 @@ describe("mudar o valor ou a taxa", () => {
     expect(base.commits).toBe(1);
   });
 
-  it("o escolhido fica com ele à espera do «aceito» — a pergunta passa a ser só a ele", async () => {
+  /*
+   * O #505 — 11-11-2026. *«O trabalho já estava atribuído ao Jorge. Fiz
+   * alteração de valor e mudei a taxa, e o trabalho voltou a redistribuir.»*
+   * Com alguém atribuído, o trabalho FICA com ele: a negociação dele continua
+   * «acordada», com o valor e a taxa novos, e mais ninguém é tocado.
+   */
+  it("o #505: atribuído e mudar valor e taxa — continua com ele, acordado, sem redistribuir", async () => {
+    base.pedido = { id: 505, status: "atribuido", valorFixoClyon: "300.00", taxaClyon: "0.2000" };
     base.negs = [neg(1, "acordada"), neg(2, "morta"), neg(3, "desistida")];
-    const r = await db.mudarValorDoTrabalhoClyon(420, 350, 0.15);
+    const r = await db.mudarValorDoTrabalhoClyon(505, 350, 0.15);
     if (!r.ok) throw new Error("devia ter mudado");
+    // Só ele é avisado, e como quem já o tem.
     expect(r.avisar).toEqual([expect.objectContaining({ negociacaoId: 1, eraDele: true })]);
-    const [n] = escritasNas();
-    expect(n.id).toBe(1);
-    expect(n.params[2]).toBe("directa");
-    expect(base.escritas.find((e) => /UPDATE negociacoes/.test(e.sql))!.sql).toMatch(/atribuidaEm = NULL/);
+    expect(r.mantem).toEqual({ negociacaoId: 1, providerId: 10, profissional: "PRO1" });
+    // O preço do pedido muda (a conta em degraus sai dele).
+    const pedido = base.escritas.find((e) => /UPDATE simulatorOrders\s+SET valorFixoClyon/.test(e.sql))!;
+    expect(pedido.params).toEqual([350, 0.15, 350, 350, null, 505]);
+    // Uma só escrita nas negociações: a dele, que continua acordada.
+    const negs = escritasNas();
+    expect(negs.map((n) => n.id)).toEqual([1]);
+    const sql = base.escritas.find((e) => /UPDATE negociacoes/.test(e.sql))!.sql;
+    expect(sql).not.toMatch(/estado = 'aberta'/);
+    expect(sql).not.toMatch(/atribuidaEm = NULL/);
+    expect(sql).toMatch(/WHERE id = \? AND estado = 'acordada'/);
+    // [valorAcordado, taxa, propostas, id]
+    expect(negs[0].params[0]).toBe(350);
+    expect(negs[0].params[1]).toBe(0.15);
+    expect(JSON.parse(String(negs[0].params[2]))).toMatchObject([{ por: "cliente", valor: 350, estado: "aceite" }]);
+    expect(base.commits).toBe(1);
+  });
+
+  it("atribuído e o cliente já pagou (ou ele já recebeu): o valor não se muda aqui", async () => {
+    base.negs = [neg(1, "acordada", { pagoEm: new Date() })];
+    expect(await db.mudarValorDoTrabalhoClyon(420, 350, 0.2)).toEqual({ ok: false, porque: "ja_pago" });
+    expect(base.escritas).toEqual([]);
+    expect(base.rollbacks).toBe(1);
   });
 
   it("sem ninguém com a pergunta feita, o valor novo volta a quem recusou e a quem ficou de fora", async () => {
@@ -237,6 +264,14 @@ describe("o que o profissional lê", () => {
     expect(t).toContain("O trabalho continua a ser seu se aceitar o valor novo.");
   });
 
+  it("o #505: o valor mudou e o trabalho continua a ser dele — sem nada para aceitar", () => {
+    const t = avisoDeValorNovoAoProfissional("João", { ...o, motivo: "valor_mantido", eraDele: true }, AGORA);
+    expect(t).toContain("foi actualizado: agora é no valor de 350,00 € — ganhos estimados de 280,00 €");
+    expect(t).toContain("O trabalho continua a ser seu, como combinado — não precisa de fazer nada.");
+    expect(t).not.toContain("aceitar");
+    expect(t).toContain(o.link);
+  });
+
   it("voltou a estar disponível", () => {
     const t = avisoDeValorNovoAoProfissional("João", { ...o, motivo: "de_novo", eraDele: false }, AGORA);
     expect(t).toContain("voltou a estar disponível, no valor de 350,00 €");
@@ -271,6 +306,25 @@ describe("as peças ligadas", () => {
     expect(iQuem).toBeLessThan(iCancela);
     expect(patch.slice(iQuem, iCancela)).toContain("if (antes.jaFeito)");
     expect(patch.slice(iCancela)).toContain("quem: antes.vivos");
+  });
+
+  it("o #505: com alguém atribuído só ele é avisado, de que fica com o trabalho, e nada se distribui", () => {
+    const valor = patch.slice(patch.indexOf('if (accao === "valor")'), patch.indexOf('if (accao === "cancelar")'));
+    expect(valor).toContain('motivo: mantem ? "valor_mantido" : "valor_novo"');
+    expect(valor).toContain('await avisarProfissional(mantem.providerId, "valor_corrigido"');
+    expect(valor).toContain("ja_pago:");
+    expect(valor).not.toContain("distribuirPedido(");
+    expect(valor).not.toContain("reabrirOsOutrosDoTrabalhoClyon(");
+  });
+
+  it("o ecrã diz, antes de gravar, que fica com quem o tem", () => {
+    const frase = "Mantém-se com ";
+    expect(ler("src/lib/oferta-clyon.ts")).toContain(frase);
+    for (const ecra of ["src/components/admin/TrabalhoClyon.tsx", "src/components/admin/RegistarPedido.tsx"]) {
+      const E = ler(ecra);
+      expect(E).toContain("mensagemDeValorComAtribuido(");
+      expect(E).toMatch(/window\.confirm\(`Mudar o valor do #/);
+    }
   });
 
   it("a recusa devolve o trabalho aos outros", () => {

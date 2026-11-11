@@ -337,3 +337,15 @@ export const ROTULO_DA_FASE: Record<FaseDaOferta, string> = {
   paga: "Pago ao profissional",
   cancelada: "Cancelado",
 };
+
+/*
+ * ── MUDAR O VALOR COM ALGUÉM ATRIBUÍDO — 11-11-2026 (dono, o #505) ─────────
+ *
+ * *«Só queria mudar o valor porque já está acordado com ele. Redistribuir tem
+ * de ser uma opção à parte.»* A frase que o ecrã mostra (e a confirmação
+ * repete) antes de gravar: o trabalho fica com ele, e só ele é avisado.
+ */
+export function mensagemDeValorComAtribuido(profissional: string | null | undefined): string {
+  const quem = (profissional ?? "").trim() || "o profissional atribuído";
+  return `Mantém-se com ${quem}; só o valor muda e ${quem} é avisado. Não volta a ser oferecido a mais ninguém.`;
+}

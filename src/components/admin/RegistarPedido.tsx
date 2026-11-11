@@ -12,7 +12,7 @@ import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import BotoesDaBase from "@/components/admin/BotoesDaBase";
 import { rotuloDoValorPorBase, sufixoDaBase, minimoDasHorasEmPalavras } from "@/lib/valor-por-base";
 import { horasPrevistasDoPedido } from "@/lib/horas-do-trabalho";
-import { faltaOMotivoDaTaxa } from "@/lib/oferta-clyon";
+import { faltaOMotivoDaTaxa, mensagemDeValorComAtribuido } from "@/lib/oferta-clyon";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { RES_DO_CHAO, eResDoChao } from "@/lib/res-do-chao";
@@ -238,7 +238,13 @@ export default function RegistarPedido({
    */
   ofertaDaCopia?: (
     r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco },
-    original: { valor: string; taxa: number | null; motivo?: string },
+    original: {
+      valor: string;
+      taxa: number | null;
+      motivo?: string;
+      /** Quem tinha o original atribuído — «Manter com o mesmo profissional» (11-11-2026). */
+      atribuido?: { providerId: number; profissional: string } | null;
+    },
   ) => ReactNode;
   /**
    * A ESCOLHA DO «POR DECIDIR» NO FIM DO REGISTO — 20-10-2026. *«Que seja
@@ -271,6 +277,8 @@ export default function RegistarPedido({
   const [motivoTaxaClyon, setMotivoTaxaClyon] = useState("");
   const [aGravarValorClyon, setAGravarValorClyon] = useState(false);
   const [notaValorClyon, setNotaValorClyon] = useState<{ ok: boolean; texto: string } | null>(null);
+  /** Quem tem o trabalho em edição (11-11-2026, o #505): mudar o valor fica com ele. */
+  const [atribuido, setAtribuido] = useState<{ providerId: number; profissional: string } | null>(null);
   /*
    * A HORA DE PARTIDA, para a ajuda do valor à hora — 25-10-2026. Com o campo
    * vazio, o servidor parte da hora da tabela com as taxas de hoje
@@ -305,7 +313,12 @@ export default function RegistarPedido({
    */
   const [copia, setCopia] = useState<{
     de: number;
-    clyon: { valor: string; taxa: number | null; motivo?: string } | null;
+    clyon: {
+      valor: string;
+      taxa: number | null;
+      motivo?: string;
+      atribuido?: { providerId: number; profissional: string } | null;
+    } | null;
   } | null>(null);
   const idEmEdicao = copia ? null : editarId;
   /*
@@ -584,6 +597,11 @@ export default function RegistarPedido({
         const d = await res.json();
         const o = d.order;
         if (!vivo || !o) return;
+        setAtribuido(
+          d.atribuido && Number(d.atribuido.providerId) > 0
+            ? { providerId: Number(d.atribuido.providerId), profissional: String(d.atribuido.profissional ?? "") }
+            : null,
+        );
         // A hora de Lisboa, e não a do computador de quem edita.
         const paraDataLocal = (v: unknown): string => (v ? campoEmLisboa(String(v)) : "");
         /*
@@ -687,9 +705,12 @@ export default function RegistarPedido({
     }
     setCopia({
       de: editarId,
-      clyon: valorFixo != null ? { valor: valorClyon, taxa: taxaClyon, motivo: motivoTaxaClyon } : null,
+      clyon:
+        valorFixo != null ? { valor: valorClyon, taxa: taxaClyon, motivo: motivoTaxaClyon, atribuido } : null,
     });
     setValorFixo(null);
+    // A cópia ainda não é de ninguém: quem o original tinha vai na oferta dela.
+    setAtribuido(null);
     setNotaValorClyon(null);
     setCriadoId(null);
     setResultado(null);
@@ -758,8 +779,14 @@ export default function RegistarPedido({
               : copia
               ? `Ainda não está gravado, e o #${copia.de} fica como está. Mude o que for preciso — o dia, sobretudo: um que já passou não fica — e carregue em «Calcular preço e alcance» para criar o pedido novo.` +
                 (copia.clyon
-                  ? ` Depois oferece-se a valor fixo, como um Trabalho CLYON novo, com o valor e a taxa do #${copia.de} já escritos.`
+                  ? ` Depois oferece-se a valor fixo, como um Trabalho CLYON novo, com o valor e a taxa do #${copia.de} já escritos` +
+                    (copia.clyon.atribuido
+                      ? ` — e, por omissão, fica logo com ${copia.clyon.atribuido.profissional || "o mesmo profissional"}, sem ele ter de aceitar.`
+                      : ".")
                   : "")
+              : editarId != null && atribuido
+              ? `Gravar não volta a enviar este pedido a ninguém: mantém-se com ${atribuido.profissional || "o profissional atribuído"}, que é avisado se o dia ou a morada mudarem.` +
+                (valorFixo != null ? " O valor e a taxa gravam-se no botão deles." : "")
               : editarId != null && valorFixo != null
               ? "Trabalho CLYON. Gravar o pedido não o volta a enviar: a oferta continua com quem a recebeu, que passa a ler o que aqui ficar. O valor e a taxa gravam-se no botão deles."
               : editarId != null
@@ -1231,12 +1258,20 @@ export default function RegistarPedido({
               {taxaClyon == null
                 ? `Trabalho antigo: ${valorFixo.toFixed(2).replace(".", ",")} € era o que o pro recebia. Ao gravar com uma taxa, o valor passa a ser o preço ao cliente. `
                 : ""}
-              Quem já o tinha aceite volta a ter de aceitar o valor novo, e é avisado por WhatsApp.
+              {atribuido
+                ? mensagemDeValorComAtribuido(atribuido.profissional)
+                : "Quem já o tinha aceite volta a ter de aceitar o valor novo, e é avisado por WhatsApp."}
             </span>
             <button
               type="button"
               onClick={async () => {
                 if (!token || idEmEdicao == null || taxaClyon == null) return;
+                // Com alguém atribuído, diz-se antes que fica com ele (11-11-2026, o #505).
+                if (
+                  atribuido &&
+                  !window.confirm(`Mudar o valor do #${idEmEdicao}?\n\n${mensagemDeValorComAtribuido(atribuido.profissional)}`)
+                )
+                  return;
                 setAGravarValorClyon(true);
                 setNotaValorClyon(null);
                 try {

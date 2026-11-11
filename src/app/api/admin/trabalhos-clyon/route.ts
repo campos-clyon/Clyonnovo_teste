@@ -54,6 +54,8 @@ import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { choquesDoProfissional } from "@/lib/choques-de-agenda";
 import { vaiAoPorDecidir } from "@/lib/prazo-do-cliente-clyon";
+import { atribuirDirectamente } from "@/lib/atribuir-directamente";
+import { avisarProfissional } from "@/lib/avisos-do-backoffice";
 
 export const runtime = "nodejs";
 
@@ -242,6 +244,11 @@ export async function POST(req: NextRequest) {
     motivoTaxa?: unknown;
     deNegociacao?: unknown;
     base?: unknown;
+    /**
+     * «Atribuir directamente a…» (11-11-2026): o profissional com quem já está
+     * combinado. Fica logo com o trabalho, sem oferta e sem distribuir.
+     */
+    atribuirA?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -289,6 +296,10 @@ export async function POST(req: NextRequest) {
     }
     soPara = ids;
   }
+  const atribuirA = corpo.atribuirA == null ? null : Number(corpo.atribuirA);
+  if (atribuirA != null && (!Number.isInteger(atribuirA) || atribuirA <= 0)) {
+    return NextResponse.json({ error: "Profissional inválido." }, { status: 400 });
+  }
   const modo: ModoDaOferta = soPara?.length === 1 ? "directa" : "distribuida";
 
   const pedido = await getSimulatorOrderById(pedidoId);
@@ -329,6 +340,43 @@ export async function POST(req: NextRequest) {
       { error: "Este pedido já foi enviado aos profissionais." },
       { status: 409 },
     );
+  }
+
+  /*
+   * ATRIBUIR DIRECTAMENTE — 11-11-2026 (o #591). A guia vê-se antes de marcar
+   * o pedido: recusado, ele fica como estava.
+   */
+  if (atribuirA != null) {
+    const { guiaImpedeOProfissional } = await import("@/lib/guia-na-base");
+    const { GUIA_POR_VERIFICAR_FRASE } = await import("@/lib/guia-antes-de-contratar");
+    if (await guiaImpedeOProfissional(pedidoId, atribuirA)) {
+      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
+    }
+    try {
+      await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida, motivoDaTaxa.motivo);
+      const quem = colab?.nome ?? "a CLYON";
+      const r = await atribuirDirectamente({
+        pedidoId,
+        providerId: atribuirA,
+        quem,
+        por: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+      });
+      if (!r.ok) return NextResponse.json({ error: r.erro, guiaPorVerificar: r.guiaPorVerificar }, { status: r.estado });
+      return NextResponse.json({
+        ok: true,
+        modo: "directa",
+        atribuido: true,
+        profissional: r.profissional,
+        feito: r.feito + fraseDoMotivoDaTaxa(valor.valor, taxa.taxa, motivoDaTaxa.motivo),
+        valor: valor.valor,
+        receberam: 1,
+        chegouAAlguem: true,
+      });
+    } catch (e) {
+      console.error("[admin/trabalhos-clyon POST atribuir]", e);
+      return NextResponse.json({ error: "Não foi possível atribuir o trabalho." }, { status: 500 });
+    }
   }
 
   try {
@@ -412,8 +460,8 @@ export async function POST(req: NextRequest) {
  *
  *   · «valor» — o valor (preço ao cliente, sem IVA) e a taxa. *«Caso o valor
  *     seja alterado, mesmo que os pros já tenham aceitado, ele deve aparecer
- *     novamente com o valor actualizado para aceitar.»* Quem já o tinha fica
- *     com ele se aceitar o valor novo; se recusar, volta aos outros. Ver
+ *     novamente com o valor actualizado para aceitar.»* Desde 11-11-2026 (o
+ *     #505), quem já o tinha atribuído FICA com ele e é o único avisado. Ver
  *     `mudarValorDoTrabalhoClyon`.
  *   · «preco» — o preço ao cliente de um trabalho ANTIGO, em que o valor era o
  *     que o profissional recebia: é a diferença que dá o lucro.
@@ -450,6 +498,8 @@ export async function PATCH(req: NextRequest) {
     comoDisse?: unknown;
     /** O «Enviar valores para pagamento» (05-11-2026, d19): a mensagem, como a equipa a deixou. */
     texto?: unknown;
+    /** «Atribuir directamente a…» (11-11-2026): o profissional. */
+    providerId?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -764,6 +814,29 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: true, feito: resumo });
     }
 
+    /*
+     * ── «Atribuir directamente a…» — 11-11-2026 (o #591) ──
+     *
+     * Um Trabalho CLYON que já existe (oferecido, à espera, ou sem ninguém)
+     * fica com o profissional com quem já está combinado, sem ele ter de
+     * aceitar. Ver `atribuir-directamente.ts`.
+     */
+    if (accao === "atribuir") {
+      const providerId = Number(corpo.providerId);
+      if (!Number.isInteger(providerId) || providerId <= 0) {
+        return NextResponse.json({ error: "Escolha o profissional." }, { status: 400 });
+      }
+      const r = await atribuirDirectamente({
+        pedidoId,
+        providerId,
+        quem,
+        por,
+        baseUrl: urlDeAccaoDoPedido(req.headers),
+      });
+      if (!r.ok) return NextResponse.json({ error: r.erro, guiaPorVerificar: r.guiaPorVerificar }, { status: r.estado });
+      return NextResponse.json({ ok: true, feito: r.feito, avisado: r.avisado });
+    }
+
     // ── O valor e a taxa ─────────────────────────────────────────────────────
     if (accao === "valor") {
       const valor = lerValorFixo(corpo.valor);
@@ -797,6 +870,10 @@ export async function PATCH(req: NextRequest) {
           arrumado: ["Este trabalho está cancelado ou arquivado — já não se muda o valor.", 409],
           ja_feito: ["Este trabalho já foi feito — o valor já não se muda aqui.", 409],
           igual: ["O valor, a taxa e a unidade são os mesmos — não mudou nada, e ninguém foi incomodado.", 400],
+          ja_pago: [
+            "O cliente já pagou este trabalho (ou o profissional já recebeu): o valor já não se muda aqui, para o pagamento não ficar diferente do trabalho. Acerte a diferença nos Pagamentos.",
+            409,
+          ],
         } as const;
         const [texto, estado] = porque[r.porque];
         return NextResponse.json({ error: texto }, { status: estado });
@@ -816,14 +893,22 @@ export async function PATCH(req: NextRequest) {
       if (tinhaOPreco) await avisarCliente(pedidoId, "preco_mudou");
 
       const ganhos = quantoOProfissionalRecebe(valor.valor, taxasDoTrabalhoClyon(taxa.taxa));
+      /*
+       * JÁ ATRIBUÍDO, FICA COM ELE — 11-11-2026 (o #505). Só ele é avisado, e
+       * de que o valor mudou: não tem nada para aceitar.
+       */
+      const mantem = r.mantem ?? null;
       const avisados = await avisarValorNovoDoTrabalhoClyon({
         pedidoId,
         valor: valor.valor,
         taxa: taxa.taxa,
         quem: r.avisar,
-        motivo: "valor_novo",
+        motivo: mantem ? "valor_mantido" : "valor_novo",
         baseUrl: urlDeAccaoDoPedido(req.headers),
       });
+      if (mantem) {
+        await avisarProfissional(mantem.providerId, "valor_corrigido", { pedidoId, negociacaoId: mantem.negociacaoId });
+      }
       const baseDepois = base ?? r.antes.base;
       const antes =
         `${euros(r.antes.valor)}${unidadeDaBase(r.antes.base)}${r.antes.taxa != null ? ` a ${Math.round(r.antes.taxa * 100)} %` : " (antigo, sem taxa)"}`;
@@ -831,7 +916,9 @@ export async function PATCH(req: NextRequest) {
       const dele = r.avisar.find((q) => q.eraDele);
       const resumo =
         `Valor do Trabalho CLYON mudado por ${quem}: de ${antes} para ${depois}. ` +
-        (r.avisar.length === 0
+        (mantem
+          ? `Continua com ${mantem.profissional || "quem o tinha"}, sem voltar a aceitar e sem redistribuir; só ele foi avisado (${avisados === 1 ? "WhatsApp enviado" : "o WhatsApp não saiu"}, e a notificação no telemóvel). `
+          : r.avisar.length === 0
           ? "Ninguém o tinha por responder."
           : (dele
               ? `${dele.profissional} já o tinha: fica com ele se aceitar o valor novo. `
@@ -853,7 +940,7 @@ export async function PATCH(req: NextRequest) {
           avisados: r.avisar,
         },
       });
-      return NextResponse.json({ ok: true, feito: resumo, ganhos, avisar: r.avisar.length, avisados });
+      return NextResponse.json({ ok: true, feito: resumo, ganhos, avisar: r.avisar.length, avisados, mantemCom: mantem?.profissional ?? null });
     }
 
     // ── Cancelar ─────────────────────────────────────────────────────────────

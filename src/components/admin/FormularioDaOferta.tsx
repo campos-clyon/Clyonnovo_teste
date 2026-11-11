@@ -41,6 +41,7 @@ export function FormularioDaOferta({
   motivoInicial,
   deNegociacao = false,
   baseInicial,
+  atribuirInicial = null,
 }: {
   token: string | null;
   pedidoId: number;
@@ -56,6 +57,11 @@ export function FormularioDaOferta({
   deNegociacao?: boolean;
   /** A do pedido: pelo trabalho todo, por carga ou por hora (22-10-2026). */
   baseInicial: BaseDoPreco;
+  /**
+   * Numa cópia de um trabalho que estava atribuído (11-11-2026, o #591): o
+   * mesmo profissional, marcado por omissão — «Manter com o mesmo profissional».
+   */
+  atribuirInicial?: { providerId: number; profissional: string } | null;
 }) {
   const [valor, setValor] = useState(valorInicial ?? "");
   // A taxa da CLYON, 10/15/20 % — 08-10-2026. Sem escolha não se oferece:
@@ -64,8 +70,13 @@ export function FormularioDaOferta({
   // Abaixo do escalão, o motivo é obrigatório (25-10-2026, d18).
   const [motivoTaxa, setMotivoTaxa] = useState(motivoInicial ?? "");
   const [base, setBase] = useState<BaseDoPreco>(baseInicial);
-  const [modo, setModo] = useState<"distribuir" | "escolher">("distribuir");
+  /*
+   * «ATRIBUIR DIRECTAMENTE A…» — 11-11-2026 (o #591). O acordo foi feito por
+   * fora: fica logo com ele, sem ele ter de aceitar e sem ir a mais ninguém.
+   */
+  const [modo, setModo] = useState<"distribuir" | "escolher" | "atribuir">(atribuirInicial ? "atribuir" : "distribuir");
   const [escolhidos, setEscolhidos] = useState<number[]>([]);
+  const [atribuirA, setAtribuirA] = useState<number | null>(atribuirInicial?.providerId ?? null);
   const [todos, setTodos] = useState<ProfissionalNaLista[] | null>(null);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
@@ -75,7 +86,7 @@ export function FormularioDaOferta({
 
   // A lista de todos os activos só se pede quando se vai escolher.
   useEffect(() => {
-    if (modo !== "escolher" || todos != null || !token) return;
+    if (modo === "distribuir" || todos != null || !token) return;
     let vivo = true;
     (async () => {
       try {
@@ -115,10 +126,21 @@ export function FormularioDaOferta({
     taxa != null &&
     !aEnviar &&
     !faltaOMotivoDaTaxa(valor, taxa, motivoTaxa) &&
-    (modo === "distribuir" ? elegiveis.length > 0 : escolhidos.length > 0);
+    (modo === "distribuir" ? elegiveis.length > 0 : modo === "atribuir" ? atribuirA != null : escolhidos.length > 0);
+  const nomeDoAtribuido =
+    todos?.find((p) => p.id === atribuirA)?.nome ??
+    (atribuirInicial && atribuirInicial.providerId === atribuirA ? atribuirInicial.profissional : null);
 
   async function oferecer() {
     if (!token || !lido.ok || taxa == null) return;
+    if (
+      modo === "atribuir" &&
+      !window.confirm(
+        `Atribuir o #${pedidoId} directamente a ${nomeDoAtribuido ?? "este profissional"}?\n\n` +
+          "Fica logo com ele, como acordado por fora — sem ter de aceitar, e sem ir a mais ninguém. Ele é avisado de que o trabalho é dele, com o dia.",
+      )
+    )
+      return;
     setAEnviar(true);
     setErro("");
     try {
@@ -132,6 +154,7 @@ export function FormularioDaOferta({
           base,
           motivoTaxa,
           ...(modo === "escolher" ? { profissionais: escolhidos } : {}),
+          ...(modo === "atribuir" && atribuirA != null ? { atribuirA } : {}),
           ...(deNegociacao ? { deNegociacao: true } : {}),
         }),
       });
@@ -140,8 +163,9 @@ export function FormularioDaOferta({
         setErro(dados.error ?? "Não foi possível oferecer.");
         return;
       }
-      const msg =
-        dados.receberam > 0
+      const msg = dados.atribuido
+        ? String(dados.feito ?? `#${pedidoId} atribuído a ${dados.profissional ?? "um profissional"}.`)
+        : dados.receberam > 0
           ? `#${pedidoId} oferecido a ${dados.receberam} ${dados.receberam === 1 ? "profissional" : "profissionais"}: ${euros(lido.valor)}, ganhos estimados de ${euros(ganhos)}.` +
             (dados.modo === "directa" ? " Se aceitar, fica com ele." : " Escolha entre os que aceitarem.")
           : `#${pedidoId} não chegou a ninguém — o histórico do pedido diz porquê.`;
@@ -212,7 +236,46 @@ export function FormularioDaOferta({
             </span>
           </span>
         </label>
+        <label className="flex items-start gap-2 text-sm text-slate-200">
+          <input
+            type="radio"
+            name={`modo-${pedidoId}`}
+            checked={modo === "atribuir"}
+            onChange={() => setModo("atribuir")}
+            className="mt-1"
+          />
+          <span>
+            {atribuirInicial
+              ? `Manter com o mesmo profissional (${atribuirInicial.profissional || "o do original"})`
+              : "Atribuir directamente a…"}
+            <span className="block text-xs text-slate-400">
+              Já está combinado com ele: fica logo com o trabalho, sem ter de aceitar nada.
+            </span>
+          </span>
+        </label>
       </fieldset>
+
+      {modo === "atribuir" && (
+        <label className="block text-xs text-slate-400">
+          Profissional
+          <select
+            value={atribuirA ?? ""}
+            onChange={(e) => setAtribuirA(e.target.value ? Number(e.target.value) : null)}
+            className="mt-1 h-9 w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-sm text-white"
+          >
+            <option value="">Escolha…</option>
+            {atribuirInicial && !todos?.some((p) => p.id === atribuirInicial.providerId) && (
+              <option value={atribuirInicial.providerId}>{atribuirInicial.profissional || `#${atribuirInicial.providerId}`}</option>
+            )}
+            {(todos ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+                {p.elegivel ? "" : " (fora do raio)"}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {modo === "escolher" && (
         <div className="max-h-64 overflow-y-auto rounded-lg border border-slate-800 bg-slate-900/60 p-2">
@@ -263,7 +326,9 @@ export function FormularioDaOferta({
         className="flex items-center gap-2 rounded-xl bg-acao px-4 py-2 text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-40"
       >
         {aEnviar ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
-        {modo === "escolher" && escolhidos.length === 1
+        {modo === "atribuir"
+          ? `Atribuir a ${nomeDoAtribuido ?? "…"}`
+          : modo === "escolher" && escolhidos.length === 1
           ? `Oferecer a ${todos?.find((p) => p.id === escolhidos[0])?.nome ?? "um profissional"}`
           : "Oferecer a valor fixo"}
       </button>
