@@ -24,6 +24,8 @@ import { PEDIR_EMBALAMENTO, soComTresPessoas, type Tipologia } from "@/lib/tabel
 
 export type EscolhaDaMudanca = {
   ids: string[];
+  /** A assinatura do preço de cada cartão escolhido, tal como veio na lista (11-11-2026): o pedido devolve-as. */
+  assinaturas?: Record<string, string>;
   nomes: string[];
   pessoas: 2 | 3;
   procurarMais: boolean;
@@ -157,6 +159,9 @@ export default function ParceirosDaMudanca({
     const nomes = parceiros.filter((p) => escolhidos.includes(p.id)).map((p) => p.nome);
     onPedir({
       ids: escolhidos,
+      assinaturas: Object.fromEntries(
+        parceiros.filter((p) => escolhidos.includes(p.id) && typeof p.assinatura === "string").map((p) => [p.id, p.assinatura as string]),
+      ),
       nomes,
       pessoas: pessoasDaConta,
       procurarMais: parceiros.length === 1 && procurarMais,

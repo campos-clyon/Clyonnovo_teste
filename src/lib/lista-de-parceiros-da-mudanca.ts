@@ -261,6 +261,12 @@ export type MaterialDoCartao = {
 export type CartaoDoParceiro = {
   /** Opaco: é este que volta no `parceirosEscolhidos` do pedido. */
   id: string;
+  /**
+   * A assinatura do preço mostrado (11-11-2026): quem a põe é o servidor
+   * (parceiros-da-mudanca.ts) e o pedido devolve-a em `assinaturasDoPreco`,
+   * por id. Se o parceiro mudou o preço entretanto, a escolha não se grava.
+   */
+  assinatura?: string;
   nome: string;
   verificado: boolean;
   /** «Parceiro verificado», ou null. */

@@ -217,8 +217,10 @@ describe("os estados e os prazos (nunca se confirma sozinha)", () => {
     expect(passoDaFolha(base, depois(2))).toBe("lembrete_2h");
     expect(passoDaFolha({ ...base, folhaLembrete2hEm: depois(2) }, depois(23))).toBeNull();
     expect(passoDaFolha({ ...base, folhaLembrete2hEm: depois(2) }, depois(24))).toBe("lembrete_24h");
-    // Uma passagem atrasada não manda os dois de seguida.
-    expect(passoDaFolha(base, depois(30))).toBe("lembrete_24h");
+    // Uma passagem atrasada não manda os dois de seguida (29 h depois são as 20h de Lisboa: dentro da janela dos lembretes).
+    expect(passoDaFolha(base, depois(29))).toBe("lembrete_24h");
+    // Às 21h de Lisboa a janela já fechou (11-11-2026): o lembrete espera pelas 8h — ver o-que-o-cliente-viu.test.ts.
+    expect(passoDaFolha(base, depois(30))).toBeNull();
     expect(passoDaFolha({ ...base, folhaLembrete2hEm: depois(2), folhaLembrete24hEm: depois(24) }, depois(47))).toBeNull();
     expect(passoDaFolha({ ...base, folhaLembrete24hEm: depois(24) }, depois(48))).toBe("mesa");
     expect(PRAZOS_DA_FOLHA.mesaMs).toBe(48 * 3_600_000);

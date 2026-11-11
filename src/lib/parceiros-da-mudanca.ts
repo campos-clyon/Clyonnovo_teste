@@ -6,6 +6,7 @@ import { geocodificarMorada } from "./geocodificar";
 import { profissionaisBloqueadosEmDinheiro } from "./bloqueio-do-profissional";
 import { FORMA_POR_OMISSAO, lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import { pontoDaZona } from "./zona-da-lista";
+import { aindaSeAceitaSemMarca, lerMarca, LISTA_POR_VER, PRECO_MUDOU } from "./o-que-o-cliente-viu";
 import { notasNoGoogle, PRAZO_DA_NOTA_DO_GOOGLE_MS } from "./ficha-no-google";
 import type { TarifaDasMudancas } from "./conta-da-mudanca";
 import { pessoasParaACasa, soComTresPessoas, type IntervaloDeHoras, type Tipologia } from "./tabela-das-mudancas";
@@ -64,6 +65,58 @@ export function mesmoId(a: string, b: string): boolean {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
+}
+
+/* ── A ASSINATURA DO PREÇO ────────────────────────────────────────────────── */
+
+/** Os números que se congelam no pedido — é sobre eles que se assina. */
+function precoAssinado(t: TarifaDasMudancas): string {
+  return JSON.stringify([
+    t.precoHora2,
+    t.precoHora3,
+    t.minimoHoras,
+    t.precoKm,
+    t.kmMinimo,
+    t.kmMaximo,
+    t.caixa,
+    t.cartaoMetro,
+    t.filmeRolo,
+    t.plasticoBolhaRolo,
+  ]);
+}
+
+/**
+ * A ASSINATURA DO PREÇO MOSTRADO (11-11-2026): HMAC, com o segredo do servidor,
+ * da tarifa com que o cartão foi feito. Vai em cada cartão (`assinatura`) e o
+ * pedido devolve-a; o cliente não a consegue fazer, e ela muda quando o
+ * parceiro muda qualquer preço (hora de 2 e de 3, mínimo, km, material).
+ */
+export function assinaturaDoPreco(providerId: number, tarifa: TarifaDasMudancas, chave: string = segredo()): string {
+  return createHmac("sha256", chave).update(`preco-da-mudanca:${providerId}:${precoAssinado(tarifa)}`).digest("base64url").slice(0, 22);
+}
+
+/**
+ * AS ASSINATURAS QUE VIERAM NO PEDIDO (`assinaturasDoPreco`: { idDoCartao:
+ * assinatura }) contra as dos escolhidos, feitas com a tarifa de AGORA. Uma
+ * diferente — ou em falta, quando vieram outras — recusa a escolha inteira:
+ * não se grava com um preço que o cliente não viu. Sem nenhuma (apps de antes
+ * de 11-11-2026): passa até `SEM_MARCA_ATE`, e depois manda ver a lista.
+ */
+export function conferirAssinaturasDoPreco(
+  vistas: unknown,
+  escolhidos: Array<Pick<EscolhivelDaLista, "id" | "providerId" | "tarifa">>,
+  agora: Date = new Date(),
+  chave: string = segredo(),
+): { ok: true; comAssinatura: boolean } | { ok: false; erro: string } {
+  const mapa = vistas && typeof vistas === "object" && !Array.isArray(vistas) ? (vistas as Record<string, unknown>) : null;
+  if (mapa == null || Object.keys(mapa).length === 0) {
+    return aindaSeAceitaSemMarca(agora) ? { ok: true, comAssinatura: false } : { ok: false, erro: LISTA_POR_VER };
+  }
+  for (const e of escolhidos) {
+    const vista = lerMarca(Object.prototype.hasOwnProperty.call(mapa, e.id) ? mapa[e.id] : null);
+    if (vista == null || !mesmoId(vista, assinaturaDoPreco(e.providerId, e.tarifa, chave))) return { ok: false, erro: PRECO_MUDOU };
+  }
+  return { ok: true, comAssinatura: true };
 }
 
 /* ── O PEDIDO DA LISTA ────────────────────────────────────────────────────── */
@@ -231,6 +284,8 @@ export async function listaDosParceirosDaMudanca(
     const id = idOpacoDoParceiro(c.id, chave);
     const cartao = cartaoDoParceiro({ ...candidato, tarifa: c.tarifa }, ctx, id, agora);
     if (!cartao) return;
+    // A assinatura do preço deste cartão: o pedido devolve-a e confere-se no envio.
+    cartao.assinatura = assinaturaDoPreco(c.id, c.tarifa, chave);
     cartoes.push(cartao);
     if (c.googlePlaceId) fichas.set(id, c.googlePlaceId);
     escolhiveis.push({ id, providerId: c.id, nome: c.nome, tarifa: c.tarifa, distanciaKm });

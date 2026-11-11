@@ -106,6 +106,8 @@ export type CorpoDoCliente = {
   comentario?: unknown;
   /** A versão do preço da CLYON que ele viu (`valorClyon.versao`) — S7. */
   versao?: unknown;
+  /** A marca da folha da mudança que ele tem no ecrã (`horas.folha.marca`) — o-que-o-cliente-viu.ts. */
+  marcaDaFolha?: unknown;
 };
 
 const TRATADO_PELA_CLYON = "Este trabalho é tratado directamente pela CLYON.";
@@ -282,7 +284,7 @@ export async function agirComoCliente(a: {
       };
       const r =
         accao === "confirmar_horas"
-          ? await confirmarAsHoras({ ...comum, por: "cliente" })
+          ? await confirmarAsHoras({ ...comum, por: "cliente", marcaVista: corpo.marcaDaFolha })
           : await contestarAsHoras({ ...comum, motivo: corpo.motivo });
       return { status: r.status, corpo: r.corpo };
     }

@@ -1661,6 +1661,13 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN folhaLembrete2hEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN folhaLembrete24hEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN folhaNaMesaEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v19 (11-11-2026) — O RASCUNHO DA FOLHA: o que o parceiro vai guardando
+     * durante o dia (início, pausas, equipa, km e quantidades), antes de
+     * enviar a folha. Não avisa ninguém e não conta para nada; enviar a folha
+     * limpa-o. Nula em todas as outras.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN folhaRascunhoJson TEXT NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -2191,7 +2198,7 @@ export async function criarNegociacao(
        execucaoEnviadaEm = NULL, provaJson = NULL,
        aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
        valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL, materiaisJson = NULL,
-       folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL,
+       folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL, folhaRascunhoJson = NULL,
        confirmadoEm = NULL, pagoEm = NULL,
        estrelas = NULL, comentario = NULL, avaliadoEm = NULL,
        avaliacaoOrigem = NULL, avaliadoPor = NULL, avaliacaoComoDisse = NULL,
@@ -4533,7 +4540,7 @@ export async function passarOTrabalhoAOutroProfissional(
               execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL,
               aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
               valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL,
-              folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL
+              folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL, folhaRascunhoJson = NULL
         WHERE id = ?`,
       [...comoEstava, paraId],
     );
@@ -5243,6 +5250,8 @@ export type MudancaEscolhidaNaBase = {
   folhaJson: string | null;
   folhaHistoricoJson: string | null;
   folhaNaMesaEm: Date | string | null;
+  /** O rascunho da folha (v19); null sem ele. */
+  folhaRascunhoJson?: string | null;
   /** O percurso guardado no pedido (km, minutos, traçado) — ver mapa-do-percurso.ts. */
   percursoJson: string | null;
   cidadeOrigem: string | null;
@@ -5261,7 +5270,7 @@ export async function mudancasEscolhidasDoProfissional(providerId: number): Prom
                  THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.horas')) END AS horas,
             CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
                  THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.kmPercurso')) END AS km,
-            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, o.percursoJson,
+            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, n.folhaRascunhoJson, o.percursoJson,
             CASE WHEN JSON_VALID(o.rawOrderJson)
                  THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.originAddress.city')) END AS cidadeOrigem,
             CASE WHEN JSON_VALID(o.rawOrderJson)
@@ -5282,6 +5291,7 @@ export async function mudancasEscolhidasDoProfissional(providerId: number): Prom
       folhaJson: r.folhaJson ?? null,
       folhaHistoricoJson: r.folhaHistoricoJson ?? null,
       folhaNaMesaEm: r.folhaNaMesaEm ?? null,
+      folhaRascunhoJson: r.folhaRascunhoJson ?? null,
       percursoJson: r.percursoJson ?? null,
       cidadeOrigem: r.cidadeOrigem && r.cidadeOrigem !== "null" ? String(r.cidadeOrigem) : null,
       cidadeDestino: r.cidadeDestino && r.cidadeDestino !== "null" ? String(r.cidadeDestino) : null,
@@ -6982,7 +6992,16 @@ export async function confirmarHorasDoTrabalho(
    * Numa folha da mudança (v18): a taxa efectiva do profissional (o material
    * sem taxa) e a linha do histórico. Sem ela, nada muda nas outras.
    */
-  folha?: { taxaProfissional: number; edicao: unknown } | null,
+  folha?: {
+    taxaProfissional: number;
+    edicao: unknown;
+    /**
+     * A FOLHA VISTA (11-11-2026): o texto da folha com que a taxa foi contada
+     * e que o cliente tem no ecrã. Só confirma se a gravada ainda for esta —
+     * no mesmo comando; uma correcção do parceiro a meio devolve false.
+     */
+    folhaJson?: string | null;
+  } | null,
 ): Promise<boolean> {
   await ensureNegociacoesTable();
   const pool = await getPool();
@@ -6998,7 +7017,7 @@ export async function confirmarHorasDoTrabalho(
       WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
         AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL
         AND horasConfirmadasEm IS NULL AND valorDasHoras IS NOT NULL
-        AND folhaJson IS NOT NULL`
+        AND folhaJson IS NOT NULL${folha.folhaJson != null ? " AND folhaJson = ?" : ""}`
       : `UPDATE negociacoes
         SET horasConfirmadasEm = NOW(), horasConfirmadasPor = ?,
             valorPorHora = COALESCE(valorPorHora, valorAcordado),
@@ -7007,7 +7026,7 @@ export async function confirmarHorasDoTrabalho(
         AND confirmadoEm IS NULL AND horasMarcadasEm IS NOT NULL
         AND horasConfirmadasEm IS NULL AND valorDasHoras IS NOT NULL`,
     folha
-      ? [por, folha.taxaProfissional, JSON.stringify(folha.edicao), negociacaoId, pedidoId]
+      ? [por, folha.taxaProfissional, JSON.stringify(folha.edicao), negociacaoId, pedidoId, ...(folha.folhaJson != null ? [folha.folhaJson] : [])]
       : [por, negociacaoId, pedidoId],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
@@ -7073,6 +7092,8 @@ export type FolhaDaNegociacaoNaBase = {
   folhaNaMesaEm: Date | string | null;
   /** O «Não concordo» do cliente à folha que está gravada (null sem ele). */
   horasContestadasEm?: Date | string | null;
+  /** O rascunho que o parceiro foi guardando (v19); null sem ele. */
+  folhaRascunhoJson?: string | null;
   /** Os km do percurso que o cliente viu (`escolhaDosParceirosJson`). */
   kmPercurso: string | null;
 };
@@ -7085,7 +7106,7 @@ export async function folhaDaNegociacao(negociacaoId: number): Promise<FolhaDaNe
   if (!pool) throw new Error("DB not available");
   const [linhas] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.tarifaCongeladaJson, n.pessoasEscolhidas, n.taxaCliente,
-            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, n.horasContestadasEm,
+            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, n.horasContestadasEm, n.folhaRascunhoJson,
             CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
                  THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.kmPercurso')) END AS kmPercurso
        FROM negociacoes n
@@ -7124,7 +7145,7 @@ export async function gravarFolhaDoTrabalho(
         SET horasInicioEm = ?, horasFimEm = ?, horasMinutos = ?, horasFaturadas = ?,
             valorPorHora = ?, valorDasHoras = ?, materiaisUsadosJson = NULL,
             horasMarcadasEm = NOW(), horasContestadasEm = NULL, horasContestacao = NULL,
-            folhaJson = ?, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL,
+            folhaJson = ?, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL, folhaRascunhoJson = NULL,
             ${HISTORICO_DA_FOLHA_MAIS}
       WHERE id = ? AND providerId = ? AND estado = 'acordada'
         AND confirmadoEm IS NULL AND horasConfirmadasEm IS NULL
@@ -7143,6 +7164,28 @@ export async function gravarFolhaDoTrabalho(
     ],
   )) as any[];
   return Number(res.affectedRows ?? 0) > 0;
+}
+
+/**
+ * GUARDA O RASCUNHO DA FOLHA (v19) — só a coluna do rascunho, na negociação
+ * DELE, num trabalho fechado com tarifa congelada e ainda sem a folha
+ * confirmada. Não toca nas horas, na folha enviada, nos lembretes nem no
+ * histórico: o cliente não fica a saber de nada.
+ */
+export async function gravarRascunhoDaFolha(negociacaoId: number, providerId: number, rascunhoJson: string): Promise<boolean> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [res] = (await pool.execute(
+    `UPDATE negociacoes
+        SET folhaRascunhoJson = ?
+      WHERE id = ? AND providerId = ? AND estado = 'acordada'
+        AND confirmadoEm IS NULL AND horasConfirmadasEm IS NULL
+        AND tarifaCongeladaJson IS NOT NULL`,
+    [rascunhoJson, negociacaoId, providerId],
+  )) as any[];
+  // O MySQL conta linhas MUDADAS: o mesmo rascunho gravado duas vezes dá 0 — conta-se as que casaram.
+  return Number(res.affectedRows ?? 0) > 0 || /Rows matched: [1-9]/.test(String(res.info ?? ""));
 }
 
 export type FolhaPorResponder = {

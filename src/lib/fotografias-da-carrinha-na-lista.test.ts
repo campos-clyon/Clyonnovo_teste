@@ -65,7 +65,7 @@ process.env.JWT_SECRET = "segredo-de-teste";
 import { POST } from "@/app/api/mudancas/parceiros/route";
 import { candidatosDaListaDasMudancas } from "@/lib/db";
 import { profissionaisBloqueadosEmDinheiro } from "@/lib/bloqueio-do-profissional";
-import { ESCOLHA_INDISPONIVEL, idOpacoDoParceiro } from "./parceiros-da-mudanca";
+import { ESCOLHA_INDISPONIVEL, assinaturaDoPreco, idOpacoDoParceiro } from "./parceiros-da-mudanca";
 import { prepararEscolhaDaMudanca } from "./mudanca-com-parceiros-escolhidos";
 import { pontoDaZona } from "./zona-da-lista";
 import { CONCELHOS_DA_COBERTURA } from "./concelhos-da-cobertura";
@@ -229,10 +229,22 @@ describe("2. a lista responde igual com e sem a forma de pagamento", () => {
     estado.comDivida = new Set([1]);
     const emDinheiro = await prepararEscolhaDaMudanca({ ...ORDER, formaDePagamento: "dinheiro", parceirosEscolhidos: [idOpacoDoParceiro(1)] });
     expect(emDinheiro).toEqual({ caminho: "recusado", erro: ESCOLHA_INDISPONIVEL, campo: "parceirosEscolhidos" });
-    const naPlataforma = await prepararEscolhaDaMudanca({ ...ORDER, formaDePagamento: "na_plataforma", parceirosEscolhidos: [idOpacoDoParceiro(1)] });
+    // Com a assinatura do preço que o cartão mostrou (desde 11-11-2026 o envio confere-a).
+    const visto = (n: number) => ({ [idOpacoDoParceiro(n)]: assinaturaDoPreco(n, TARIFA) });
+    const naPlataforma = await prepararEscolhaDaMudanca({
+      ...ORDER,
+      formaDePagamento: "na_plataforma",
+      parceirosEscolhidos: [idOpacoDoParceiro(1)],
+      assinaturasDoPreco: visto(1),
+    });
     expect(naPlataforma.caminho).toBe("escolhidos");
     // O outro parceiro, em dinheiro, segue.
-    const outro = await prepararEscolhaDaMudanca({ ...ORDER, formaDePagamento: "dinheiro", parceirosEscolhidos: [idOpacoDoParceiro(2)] });
+    const outro = await prepararEscolhaDaMudanca({
+      ...ORDER,
+      formaDePagamento: "dinheiro",
+      parceirosEscolhidos: [idOpacoDoParceiro(2)],
+      assinaturasDoPreco: visto(2),
+    });
     expect(outro.caminho).toBe("escolhidos");
   });
 

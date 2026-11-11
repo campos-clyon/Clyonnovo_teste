@@ -32,7 +32,7 @@ type Resposta = {
   }) | null;
   materiaisTexto: string | null;
   /** A folha da mudança (11-11-2026), com o que o parceiro recebe e o histórico. */
-  folha: (FolhaNoEcra & { estado: string | null; historico: Array<{ quando: string; texto: string }> }) | null;
+  folha: (FolhaNoEcra & { estado: string | null; historico: Array<{ quando: string; texto: string }>; marca?: string | null }) | null;
   acerto: { aPagar: number; aDevolver: number; pagoAteAgora: number; final: number; aDevolverTexto: string | null } | null;
 };
 
@@ -103,12 +103,19 @@ export default function HorasNaMesa({
           accao,
           inicio,
           fim,
+          // A folha que a equipa tem no ecrã (11-11-2026): se o parceiro a corrigiu entretanto, não se confirma às cegas.
+          ...(accao === "confirmar" && r?.folha?.marca ? { marcaDaFolha: r.folha.marca } : {}),
           // Numa folha da mudança o material fica como o parceiro o pôs na folha.
           ...(r?.folha ? {} : { materiais: Object.fromEntries((r?.resumo?.materiais ?? []).map((l) => [l.id, l.quantidade])) }),
         }),
       });
       const dados = await res.json().catch(() => ({}));
-      if (!res.ok) return setErro(dados.error ?? "Não foi possível gravar.");
+      if (!res.ok) {
+        setErro(dados.error ?? "Não foi possível gravar.");
+        // A folha mudou entretanto: mostra-se a nova.
+        if (dados.folhaMudou) await ler();
+        return;
+      }
       setACorrigir(false);
       await ler();
       onMudou();

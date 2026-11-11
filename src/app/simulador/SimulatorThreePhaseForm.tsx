@@ -662,6 +662,8 @@ export default function SimulatorThreePhaseForm() {
           ...(formData.serviceType === "mudanca" && escolhaDaMudanca && escolhaDaMudanca.ids.length > 0
             ? {
                 parceirosEscolhidos: escolhaDaMudanca.ids,
+                // O preço que ele viu em cada cartão: se mudou entretanto, a rota manda-o de volta à lista (11-11-2026).
+                assinaturasDoPreco: escolhaDaMudanca.assinaturas ?? {},
                 pessoas: escolhaDaMudanca.pessoas,
                 procurarMaisParceiros: escolhaDaMudanca.procurarMais,
                 // As caixas e o embalamento, se os pediu na lista (11-11-2026).

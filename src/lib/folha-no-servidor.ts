@@ -14,6 +14,7 @@ import {
   folhaDaNegociacao,
   folhasPorResponder,
   gravarFolhaDoTrabalho,
+  gravarRascunhoDaFolha,
   marcarPassoDaFolha,
   negociacaoNoTerreno,
   registarSemFalhar,
@@ -27,6 +28,7 @@ import {
   folhaNoEcra,
   FOLHA_IGUAL_A_CONTESTADA,
   lerFolha,
+  lerRascunhoDaFolha,
   mesmaFolha,
   passoDaFolha,
   resumoDaFolha,
@@ -40,6 +42,7 @@ import { diaDoInicio, horasMarcadas, valorPorHoraDe, type HorasNaBase } from "@/
 import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarClienteDasHoras } from "@/lib/avisos-do-terreno";
+import { marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 
 export type Resposta = { status: number; corpo: Record<string, unknown> };
 const falha = (status: number, error: string, campo?: string): Resposta => ({ status, corpo: { ok: false, error, ...(campo ? { campo } : {}) } });
@@ -152,7 +155,7 @@ export async function extraDaConfirmacao(
   por: "cliente" | "clyon",
   onde: string,
   agora: Date = new Date(),
-): Promise<{ taxaProfissional: number; edicao: unknown; folha: FolhaDaMudanca } | null> {
+): Promise<{ taxaProfissional: number; edicao: unknown; folha: FolhaDaMudanca; folhaJson: string; marca: string } | null> {
   const f = await folhaDaNegociacao(negociacaoId).catch(() => null);
   const folha = folhaDeJson(f?.folhaJson ?? null);
   if (!f || !folha) return null;
@@ -164,6 +167,9 @@ export async function extraDaConfirmacao(
     taxaProfissional: d.taxaProfissional,
     edicao: edicaoDaFolha("confirmada", por, `${quem}, ${onde}.${equipa}`, agora),
     folha,
+    // A folha tal como está gravada: a confirmação só passa se ainda for esta (o-que-o-cliente-viu.ts).
+    folhaJson: String(f.folhaJson),
+    marca: marcaDaFolha(String(f.folhaJson)) as string,
   };
 }
 
@@ -209,6 +215,7 @@ export async function corrigirAFolhaPelaClyon(a: {
   const lida = lerFolha(corpo, ctx, agora);
   if (!lida.ok) return falha(400, lida.erro, lida.campo);
   const folha = lida.folha;
+  const folhaJson = JSON.stringify(folha);
   const gravou = await gravarFolhaDoTrabalho(a.negociacaoId, a.providerId, {
     inicioEm: new Date(folha.inicioEm),
     fimEm: new Date(folha.fimEm),
@@ -216,11 +223,33 @@ export async function corrigirAFolhaPelaClyon(a: {
     horasFaturadas: folha.conta.horas.cobradas,
     valorPorHora: folha.horaCent / 100,
     valorDasHoras: folha.conta.semIvaCent / 100,
-    folhaJson: JSON.stringify(folha),
+    folhaJson,
     edicao: edicaoDaFolha("corrigida", "clyon", `${resumoDaFolha(folha)} (por ${a.porQuem})`, agora),
   });
   if (!gravou) return falha(409, "A folha já não se pode mudar.");
-  return { status: 200, corpo: { ok: true, valorDasHoras: folha.conta.semIvaCent / 100 } };
+  // A marca da folha que a CLYON acabou de escrever: é essa que ela confirma a seguir.
+  return { status: 200, corpo: { ok: true, valorDasHoras: folha.conta.semIvaCent / 100, marca: marcaDaFolha(folhaJson) } };
+}
+
+/* ── O rascunho: guarda-se sem avisar ninguém ───────────────────────────── */
+
+/**
+ * GUARDA O RASCUNHO DA FOLHA (11-11-2026) — o parceiro, na negociação DELE
+ * (quem chama já conferiu que é dele, por hora e com tarifa congelada). Só
+ * horas e quantidades, podem estar a meio. Não escreve no histórico do pedido,
+ * não muda a folha enviada nem os lembretes, e NÃO AVISA O CLIENTE: o cliente
+ * só sabe da folha quando ela é enviada.
+ */
+export async function guardarRascunhoDaFolha(a: {
+  providerId: number;
+  negociacaoId: number;
+  corpo: CorpoDaFolha;
+  agora?: Date;
+}): Promise<Resposta> {
+  const rascunho = lerRascunhoDaFolha(a.corpo, a.agora ?? new Date());
+  const gravou = await gravarRascunhoDaFolha(a.negociacaoId, a.providerId, JSON.stringify(rascunho));
+  if (!gravou) return falha(409, "A folha já não se pode mudar neste trabalho.");
+  return { status: 200, corpo: { ok: true, rascunho: true, folhaRascunho: rascunho } };
 }
 
 /* ── A rotina: lembretes às 2 h e às 24 h, e a Mesa às 48 h ────────────── */

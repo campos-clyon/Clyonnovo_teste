@@ -48,7 +48,8 @@ import {
   lerHora,
   lerMotivoDaContestacao,
 } from "./horas-do-trabalho";
-import { dataEHoraEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
+import { dataEHoraEmLisboa, instanteDaBase, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
+import { JANELA_DE_RESPOSTA } from "./prazo-de-resposta-do-parceiro";
 
 /* ── Os títulos e os botões, iguais em todos os ecrãs ─────────────────────── */
 export const TITULO_DA_FOLHA = "Folha da mudança";
@@ -526,6 +527,18 @@ export const folhaPrecisaDaMesa = (t: FolhaNaBase, agora: Date = new Date()): bo
 export type PassoDaFolha = "lembrete_2h" | "lembrete_24h" | "mesa";
 
 /**
+ * A JANELA DOS LEMBRETES AO CLIENTE (11-11-2026): das 8h às 21h de Lisboa,
+ * a mesma do prazo de resposta do parceiro. Uma folha enviada às 22h30 não
+ * dá um WhatsApp depois da meia-noite: o lembrete sai às 8h.
+ */
+export const JANELA_DOS_LEMBRETES = JANELA_DE_RESPOSTA;
+
+export function horaDeLembrar(agora: Date): boolean {
+  const hora = pecasEmLisboa(agora).hora;
+  return hora >= JANELA_DOS_LEMBRETES.abre && hora < JANELA_DOS_LEMBRETES.fecha;
+}
+
+/**
  * O QUE A ROTINA FAZ AGORA a uma folha enviada sem resposta — ou nada. Uma
  * passagem atrasada não manda os dois lembretes de seguida: faz o mais
  * adiantado que ainda não fez. E nunca confirma.
@@ -535,6 +548,8 @@ export function passoDaFolha(t: FolhaNaBase, agora: Date = new Date()): PassoDaF
   if (!tem(t.horasMarcadasEm) || tem(t.horasConfirmadasEm) || tem(t.horasContestadasEm) || tem(t.folhaNaMesaEm)) return null;
   const passou = agora.getTime() - instanteDaBase(t.horasMarcadasEm ?? null)!.getTime();
   if (passou >= PRAZOS_DA_FOLHA.mesaMs) return "mesa";
+  // Os lembretes vão ao cliente: fora da janela esperam pela abertura (a Mesa não espera).
+  if (!horaDeLembrar(agora)) return null;
   if (passou >= PRAZOS_DA_FOLHA.segundoLembreteMs) return tem(t.folhaLembrete24hEm) ? null : "lembrete_24h";
   if (passou >= PRAZOS_DA_FOLHA.primeiroLembreteMs) return tem(t.folhaLembrete2hEm) || tem(t.folhaLembrete24hEm) ? null : "lembrete_2h";
   return null;
@@ -706,4 +721,79 @@ export type FolhaParaOParceiro = {
   estadoTexto: string | null;
   historico: Array<{ quando: string; texto: string }>;
   regra: string;
+  /** O rascunho que ele foi guardando (11-11-2026); null sem ele. */
+  rascunho?: RascunhoDaFolha | null;
 };
+
+/* ── O RASCUNHO ───────────────────────────────────────────────────────────── */
+
+/**
+ * O RASCUNHO DA FOLHA — 11-11-2026. O que o parceiro vai guardando durante o
+ * dia para não o perder (a hora a que começou, as pausas, a equipa, os km e as
+ * quantidades de material), antes de enviar a folha. SÓ HORAS E QUANTIDADES:
+ * sem moradas, sem nomes, sem texto livre (o motivo dos km fica para a folha).
+ * Pode estar a meio — um início sem fim, uma pausa por fechar. Não faz conta,
+ * não avisa o cliente e não vale como folha: enviar a folha é outro passo.
+ */
+export type RascunhoDaFolha = {
+  dia: string | null;
+  inicio: string | null;
+  fim: string | null;
+  pausas: Array<{ inicio: string; fim: string | null }>;
+  pessoas: 2 | 3 | null;
+  km: number | null;
+  materiais: Partial<Record<QuantidadeDoMaterial, number>>;
+  /** Quando foi guardado (ISO). */
+  guardadoEm: string;
+};
+
+const hhmm = (v: unknown): string | null => {
+  const h = lerHora(typeof v === "string" ? v : null);
+  return h ? `${dois(h.h)}:${dois(h.m)}` : null;
+};
+
+const quantidade = (v: unknown, max: number): number | null => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v.trim().replace(",", ".")) : NaN;
+  return Number.isFinite(n) && n >= 0 && n <= max ? Math.round(n * 10) / 10 : null;
+};
+
+/** Lê o rascunho que veio no pedido. O que não se percebe fica de fora (null), nunca dá erro: é um rascunho. */
+export function lerRascunhoDaFolha(corpo: CorpoDaFolha, agora: Date = new Date()): RascunhoDaFolha {
+  const pausas: RascunhoDaFolha["pausas"] = [];
+  for (const p of Array.isArray(corpo.pausas) ? corpo.pausas.slice(0, MAXIMO_DE_PAUSAS) : []) {
+    const o = (p ?? {}) as { inicio?: unknown; fim?: unknown };
+    const inicio = hhmm(o.inicio);
+    if (inicio) pausas.push({ inicio, fim: hhmm(o.fim) });
+  }
+  const materiais: RascunhoDaFolha["materiais"] = {};
+  const m = corpo.materiais && typeof corpo.materiais === "object" ? (corpo.materiais as Record<string, unknown>) : {};
+  for (const x of MATERIAIS) {
+    const q = quantidade(m[x.quantidade], 10_000);
+    if (q != null && q > 0) materiais[x.quantidade] = q;
+  }
+  const pessoas = Number(corpo.pessoas);
+  return {
+    dia: typeof corpo.dia === "string" && /^\d{4}-\d{2}-\d{2}$/.test(corpo.dia) ? corpo.dia : null,
+    inicio: hhmm(corpo.inicio),
+    fim: hhmm(corpo.fim),
+    pausas,
+    pessoas: pessoas === 2 || pessoas === 3 ? pessoas : null,
+    km: quantidade(corpo.km, 5_000),
+    materiais,
+    guardadoEm: agora.toISOString(),
+  };
+}
+
+/** O rascunho gravado, relido pela mesma regra (um JSON estragado é «sem rascunho»). */
+export function rascunhoDeJson(texto: string | null | undefined): RascunhoDaFolha | null {
+  if (!texto) return null;
+  try {
+    const o = JSON.parse(texto) as CorpoDaFolha & { guardadoEm?: unknown };
+    if (!o || typeof o !== "object") return null;
+    const quando = typeof o.guardadoEm === "string" ? new Date(o.guardadoEm) : null;
+    if (!quando || Number.isNaN(quando.getTime())) return null;
+    return lerRascunhoDaFolha(o, quando);
+  } catch {
+    return null;
+  }
+}

@@ -38,7 +38,7 @@ import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
 import { completarContaComOPedido, guardarDadosDoCliente } from "@/lib/conta-server";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 import { camposDaCategoriaParaGravar, comAsLinhasDaCategoria } from "@/lib/pedido-por-categoria";
-import { enviarAosEscolhidos, prepararEscolhaDaMudanca } from "@/lib/mudanca-com-parceiros-escolhidos";
+import { enviarAosEscolhidos, linhaDoEnvioFalhado, prepararEscolhaDaMudanca } from "@/lib/mudanca-com-parceiros-escolhidos";
 import { passosDaMudancaComEscolha } from "@/lib/textos-do-pedido";
 
 export const runtime = "nodejs";
@@ -139,7 +139,10 @@ export async function POST(req: NextRequest) {
      */
     const daMudanca = await prepararEscolhaDaMudanca(order);
     if (daMudanca.caminho === "recusado") {
-      return NextResponse.json({ ok: false, error: daMudanca.erro, campo: daMudanca.campo }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: daMudanca.erro, campo: daMudanca.campo, ...(daMudanca.precoMudou ? { precoMudou: true } : {}) },
+        { status: 400 },
+      );
     }
     const escolhaDaMudanca = daMudanca.caminho === "escolhidos" ? daMudanca.escolha : null;
     // Os ids opacos não ficam no formulário guardado: a escolha conferida grava-se à parte.
@@ -590,6 +593,8 @@ export async function POST(req: NextRequest) {
      * que ficou gravado seria a pior mentira que este ecrã podia contar.
      */
     after(async () => {
+      // A partir daqui, uma falha do envio aos escolhidos escreve-a o próprio envio (enviarAosEscolhidos).
+      let chegouAoEnvio = false;
       try {
       await appendOrderHistory(id, {
         type: "created",
@@ -698,6 +703,7 @@ export async function POST(req: NextRequest) {
        */
       if (escolhaDaMudanca) {
         // Vai logo aos parceiros escolhidos, sem a análise da CLYON (decisão do dono, 10-11-2026).
+        chegouAoEnvio = true;
         await enviarAosEscolhidos(
           {
             id,
@@ -726,6 +732,18 @@ export async function POST(req: NextRequest) {
         // Já respondemos ao cliente. Um erro aqui não pode ser mostrado a
         // ninguém — fica no log, e o pedido está gravado na mesma.
         console.error("[simulador/pedido] trabalho pós-resposta falhou:", err);
+        /*
+         * A MESA TEM DE SABER (11-11-2026): ao cliente já se disse que o pedido
+         * seguiu para os parceiros que escolheu. Se o envio falhou, fica uma
+         * linha no histórico do pedido — sem ela, o pedido ficava calado.
+         */
+        if (escolhaDaMudanca && !chegouAoEnvio) {
+          await appendOrderHistory(id, {
+            type: "created",
+            by: null,
+            message: linhaDoEnvioFalhado(escolhaDaMudanca.escolhidos.map((x) => x.nome)),
+          }).catch((e) => console.error("[simulador/pedido] a linha do envio falhado não se gravou:", e));
+        }
       }
     });
 

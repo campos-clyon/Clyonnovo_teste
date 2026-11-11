@@ -22,6 +22,7 @@ import { diaEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { corrigirAFolhaPelaClyon } from "@/lib/folha-no-servidor";
 import { estadoDaFolha, folhaDeJson, folhaNoEcra, historicoParaVer, lerHistoricoDaFolha } from "@/lib/folha-da-mudanca";
 import { tarifaCongeladaDeJson } from "@/lib/conta-da-mudanca";
+import { marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 
 export const runtime = "nodejs";
 
@@ -35,7 +36,9 @@ export const runtime = "nodejs";
  *
  * POST `{ pedidoId, negociacaoId, accao }`, só administradores (muda o valor
  * do trabalho, como o ajuste):
- *   · «confirmar» — confirma as horas como estão, pela CLYON;
+ *   · «confirmar» — confirma as horas como estão, pela CLYON; numa folha da
+ *     mudança leva `marcaDaFolha` (a `folha.marca` do GET) e, se o parceiro a
+ *     corrigiu entretanto, responde 409 «A folha mudou — veja a nova e confirme.»;
  *   · «corrigir» — a CLYON escreve outras horas (`dia`, `inicio`, `fim`,
  *     `materiais`) e confirma-as no mesmo passo: é assim que se resolve um
  *     «Não concordo» falado com os dois.
@@ -77,6 +80,8 @@ export async function GET(req: NextRequest) {
           ...folhaNoEcra(fo, "parceiro", t?.minimoHoras ?? 3),
           estado: estadoDaFolha(linha as never),
           historico: historicoParaVer(lerHistoricoDaFolha(l.folhaHistoricoJson ?? null)),
+          // A marca desta folha: o «Confirmar» devolve-a em `marcaDaFolha` (o-que-o-cliente-viu.ts).
+          marca: marcaDaFolha(l.folhaJson ?? null),
         };
       })(),
       acerto: acerto
@@ -103,6 +108,8 @@ export async function POST(req: NextRequest) {
     inicio?: unknown;
     fim?: unknown;
     materiais?: unknown;
+    /** A marca da folha que a equipa tem no ecrã (`folha.marca` do GET). */
+    marcaDaFolha?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -121,6 +128,8 @@ export async function POST(req: NextRequest) {
 
   try {
     let comHoras = linha as Record<string, unknown>;
+    // «Confirmar»: a folha que a equipa viu. «Corrigir»: a que ela própria acabou de escrever.
+    let marcaVista: unknown = corpo.marcaDaFolha;
     if (corpo.accao === "corrigir") {
       if (horasConfirmadas(linha as never)) {
         return NextResponse.json({ error: "As horas já estão confirmadas." }, { status: 409 });
@@ -135,6 +144,7 @@ export async function POST(req: NextRequest) {
       });
       if (pelaFolha && pelaFolha.status !== 200) return NextResponse.json(pelaFolha.corpo, { status: pelaFolha.status });
       if (pelaFolha) {
+        marcaVista = pelaFolha.corpo.marca;
         comHoras = { ...comHoras, horasMarcadasEm: new Date(), valorDasHoras: pelaFolha.corpo.valorDasHoras, horasContestadasEm: null, horasContestacao: null };
       } else {
       const inicioGravado = instanteDaBase((linha as { horasInicioEm?: Date | string | null }).horasInicioEm ?? null);
@@ -186,6 +196,7 @@ export async function POST(req: NextRequest) {
       onde: corpo.accao === "corrigir" ? `corrigidas no backoffice por ${porQuem}` : `no backoffice por ${porQuem}`,
       autorNome: porQuem,
       linha: comHoras as never,
+      marcaVista,
     });
     return NextResponse.json(r.corpo, { status: r.status });
   } catch (e) {

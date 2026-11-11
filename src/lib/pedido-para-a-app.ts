@@ -41,6 +41,7 @@ import {
   lerHistoricoDaFolha,
 } from "./folha-da-mudanca";
 import { tarifaCongeladaDeJson } from "./conta-da-mudanca";
+import { marcaDaFolha } from "./o-que-o-cliente-viu";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
 import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
@@ -199,6 +200,8 @@ export function horasParaOCliente(n: NegociacaoDoCliente, emCima: number | null,
         ...folhaNoEcra(enviada, "cliente", tarifaCongeladaDeJson(h.tarifaCongeladaJson ?? null)?.minimoHoras ?? enviada.conta.horas.cobradas),
         estado: estadoDaFolhaAgora,
         historico: historicoParaVer(lerHistoricoDaFolha(h.folhaHistoricoJson ?? null)),
+        // A marca desta folha: o «Confirmo a folha» devolve-a em `marcaDaFolha` (o-que-o-cliente-viu.ts).
+        marca: marcaDaFolha(h.folhaJson ?? null),
       }
     : null;
   return {

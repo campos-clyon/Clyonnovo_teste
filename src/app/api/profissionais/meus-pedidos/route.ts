@@ -42,6 +42,7 @@ import {
   folhaNoEcra,
   historicoParaVer,
   lerHistoricoDaFolha,
+  rascunhoDeJson,
   regraDaFolha,
 } from "@/lib/folha-da-mudanca";
 import { percursoDeJson, percursoParaOParceiro } from "@/lib/mapa-do-percurso";
@@ -506,6 +507,8 @@ export async function GET(req: NextRequest) {
                   estadoTexto: estadoDaFolhaParaOParceiro(estado, l.horasContestacao ?? null),
                   historico: historicoParaVer(lerHistoricoDaFolha(e.folhaHistoricoJson)),
                   regra: regraDaFolha(ctx.tarifa.minimoHoras),
+                  // O rascunho que ele foi guardando (11-11-2026): só horas e quantidades.
+                  rascunho: rascunhoDeJson(e.folhaRascunhoJson ?? null),
                 };
               })(),
             },

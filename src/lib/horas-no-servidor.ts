@@ -41,7 +41,8 @@ import { lerMateriaisDaProposta, lerQuantidadesUsadas, materiaisUsados } from "@
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissional } from "@/lib/avisos-do-backoffice";
 import { avisarClienteDasHoras } from "@/lib/avisos-do-terreno";
-import { contextoDaLinha, edicaoDaContestacao, enviarAFolha, extraDaConfirmacao } from "@/lib/folha-no-servidor";
+import { contextoDaLinha, edicaoDaContestacao, enviarAFolha, extraDaConfirmacao, guardarRascunhoDaFolha } from "@/lib/folha-no-servidor";
+import { conferirMarcaDaFolha, FOLHA_MUDOU, FOLHA_SEM_MARCA, marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 import { resumoDaFolha } from "@/lib/folha-da-mudanca";
 
 export type Resposta = { status: number; corpo: Record<string, unknown> };
@@ -77,6 +78,8 @@ export async function marcarHorasPeloProfissional(a: {
     pessoas?: unknown;
     km?: unknown;
     motivoDosKm?: unknown;
+    /** `true`: guarda só o rascunho da folha, sem enviar nem avisar o cliente (11-11-2026). */
+    rascunho?: unknown;
   };
   agora?: Date;
 }): Promise<Resposta> {
@@ -98,6 +101,23 @@ export async function marcarHorasPeloProfissional(a: {
    * deles não espera pelas horas.
    */
   if (trabalhoClyon) return falha(409, "Num Trabalho CLYON as horas combinam-se com a CLYON.");
+
+  /*
+   * O RASCUNHO DA FOLHA (11-11-2026): `rascunho: true` guarda o que ele tem
+   * escrito (pode estar a meio) e mais nada — sem histórico, sem lembretes e
+   * sem aviso ao cliente. Só numa mudança com a lista (tarifa congelada),
+   * depois do «Cheguei» dele e enquanto a folha não estiver confirmada; não
+   * espera pelo «sim» do cliente à chegada, para a hora de início não se perder.
+   */
+  if (a.corpo.rascunho === true) {
+    const daFolha = await folhaDaNegociacao(negociacaoId);
+    if (!daFolha || !contextoDaLinha(daFolha, linha, agora)) return falha(409, "Este trabalho não tem folha da mudança.");
+    if (linha.estado !== "acordada" || linha.confirmadoEm != null) return falha(409, "Este trabalho já não está à espera das horas.");
+    if (linha.chegouEm == null) return falha(409, "Marque primeiro que chegou.");
+    if (horasConfirmadas(linha)) return falha(409, "As horas já estão confirmadas.");
+    return guardarRascunhoDaFolha({ providerId: a.providerId, negociacaoId, corpo: a.corpo, agora });
+  }
+
   const chegadaOk = podeMostrarConcluir(linha, trabalhoClyon);
   if (
     !podeMarcarHoras({
@@ -230,17 +250,42 @@ export async function confirmarAsHoras(a: {
   onde: string;
   autorNome: string | null;
   linha: LinhaComHoras;
+  /**
+   * A MARCA DA FOLHA que quem confirma tem no ecrã (`marcaDaFolha` no pedido).
+   * Só conta numa folha da mudança — ver o-que-o-cliente-viu.ts.
+   */
+  marcaVista?: unknown;
+  agora?: Date;
 }): Promise<Resposta> {
   if (!horasMarcadas(a.linha)) return falha(409, "Ainda não há horas marcadas neste trabalho.");
   if (horasConfirmadas(a.linha)) return falha(409, "As horas já estão confirmadas.");
-  const daFolha = await extraDaConfirmacao(a.negociacaoId, a.por, a.onde);
+  const agora = a.agora ?? new Date();
+  const mudou: Resposta = { status: 409, corpo: { ok: false, error: FOLHA_MUDOU, folhaMudou: true } };
+  const daFolha = await extraDaConfirmacao(a.negociacaoId, a.por, a.onde, agora);
+  /*
+   * A FOLHA VISTA (11-11-2026): a marca que veio tem de ser a da folha gravada
+   * AGORA; e o comando que confirma leva essa mesma folha na condição — se o
+   * parceiro a corrigir entre esta leitura e a escrita, não confirma nada.
+   */
+  if (daFolha) {
+    const conferida = conferirMarcaDaFolha(a.marcaVista, daFolha.marca, agora);
+    if (conferida === "mudou") return mudou;
+    if (conferida === "sem_marca_recusada") return { status: 409, corpo: { ok: false, error: FOLHA_SEM_MARCA, folhaMudou: true } };
+  }
   const gravou = await confirmarHorasDoTrabalho(
     a.negociacaoId,
     a.pedidoId,
     a.por,
-    daFolha ? { taxaProfissional: daFolha.taxaProfissional, edicao: daFolha.edicao } : null,
+    daFolha ? { taxaProfissional: daFolha.taxaProfissional, edicao: daFolha.edicao, folhaJson: daFolha.folhaJson } : null,
   );
-  if (!gravou) return falha(409, "As horas já não estão à espera de confirmação.");
+  if (!gravou) {
+    // Não confirmou: ou já não está à espera, ou a folha mudou a meio — relê-se para o dizer certo.
+    if (daFolha) {
+      const agoraGravada = await folhaDaNegociacao(a.negociacaoId).catch(() => null);
+      if (agoraGravada?.folhaJson != null && marcaDaFolha(agoraGravada.folhaJson) !== daFolha.marca) return mudou;
+    }
+    return falha(409, "As horas já não estão à espera de confirmação.");
+  }
 
   const resumo = resumoDaLinha({ ...a.linha, horasConfirmadasEm: new Date(), horasConfirmadasPor: a.por, valorAcordado: a.linha.valorDasHoras });
   const frase = daFolha

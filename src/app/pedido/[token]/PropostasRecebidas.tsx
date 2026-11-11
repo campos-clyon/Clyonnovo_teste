@@ -201,6 +201,10 @@ export default function PropostasRecebidas({
           ...(accao === "avaliar" ? { estrelas, comentario } : {}),
           // O porquê do «Não concordo» com as horas (31-10-2026).
           ...(accao === "contestar_horas" ? { motivo } : {}),
+          // A folha que ele tem no ecrã (11-11-2026): se o parceiro a corrigiu entretanto, o servidor diz que mudou.
+          ...(accao === "confirmar_horas"
+            ? { marcaDaFolha: negociacoes.find((n) => n.id === id)?.horas?.folha?.marca ?? undefined }
+            : {}),
         }),
       });
       const dados = await res.json();

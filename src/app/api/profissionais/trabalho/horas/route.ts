@@ -19,6 +19,13 @@ export const runtime = "nodejs";
  * marcar outra vez é corrigir, e limpa um «Não concordo» do cliente. Avisa o
  * cliente (push e WhatsApp). Ver `horas-no-servidor.ts`.
  *
+ * O RASCUNHO DA FOLHA (11-11-2026): numa mudança com a lista de parceiros,
+ * `rascunho: true` guarda só o que ele tem escrito (`dia`, `inicio`, `fim`,
+ * `pausas`, `pessoas`, `km`, `materiais` — só horas e quantidades, podem
+ * estar a meio), sem enviar a folha e SEM AVISAR O CLIENTE. Responde
+ * `{ ok, rascunho: true, folhaRascunho }`; o mesmo rascunho volta em
+ * `meus-pedidos` (`folha.rascunho`) e apaga-se quando a folha é enviada.
+ *
  * Responde `{ ok, primeiraVez, horas, mensagem }` — `horas` é o resumo
  * (`resumoDasHoras`), o mesmo que o painel e a app mostram.
  */
@@ -26,7 +33,18 @@ export async function POST(req: NextRequest) {
   const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
-  let corpo: { negociacaoId?: unknown; dia?: unknown; inicio?: unknown; fim?: unknown; materiais?: unknown };
+  let corpo: {
+    negociacaoId?: unknown;
+    dia?: unknown;
+    inicio?: unknown;
+    fim?: unknown;
+    materiais?: unknown;
+    pausas?: unknown;
+    pessoas?: unknown;
+    km?: unknown;
+    motivoDosKm?: unknown;
+    rascunho?: unknown;
+  };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
