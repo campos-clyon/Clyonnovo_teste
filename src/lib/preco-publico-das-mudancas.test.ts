@@ -40,7 +40,7 @@ const TARIFA: TarifaDasMudancas = {
 
 function candidato(over: Partial<CandidatoDaMudanca> = {}): CandidatoDaMudanca {
   return {
-    nome: "Parceiro Exemplo",
+    nome: "Exemplo",
     contaDeTeste: false,
     verificado: true,
     fotografia: null,
