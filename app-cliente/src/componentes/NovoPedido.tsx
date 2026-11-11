@@ -92,6 +92,7 @@ import { ParceirosDaMudanca } from "./ParceirosDaMudanca";
 import {
   alternarParceiro,
   botaoDaLista,
+  comPrazoDaLista,
   corpoDaLista,
   escolhaFeita,
   listaValida,
@@ -1415,7 +1416,8 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
       return;
     }
     setALerAListaDosParceiros(true);
-    pedir<unknown>(ROTA_DOS_PARCEIROS, { metodo: "POST", corpo, semSessao: true })
+    // 11-11-2026: 8 s e segue sem a lista, como no site.
+    comPrazoDaLista(pedir<unknown>(ROTA_DOS_PARCEIROS, { metodo: "POST", corpo, semSessao: true }))
       .then((resposta) => {
         if (!vivo) return;
         const l = listaValida(resposta);
@@ -1760,6 +1762,13 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
                 aoMudarProcurarMais={setProcurarMaisParceiros}
                 embalamento={embalamentoDaLista}
                 aoMudarEmbalamento={setEmbalamentoDaLista}
+                aoDeixarEscolher={() => {
+                  // O caminho de sempre (o mesmo de quando não há lista): a CLYON escolhe na Mesa.
+                  setListaDosParceiros(null);
+                  setMarcados(new Set());
+                  setFalta(null);
+                  mudar({ semListaDeParceiros: true, parceiros: undefined, ecra: "contacto", passo: passoDoEcra("contacto") });
+                }}
               />
             ) : null}
             {ecra === "contacto" ? <EcraContacto r={r} mudar={mudar} /> : null}

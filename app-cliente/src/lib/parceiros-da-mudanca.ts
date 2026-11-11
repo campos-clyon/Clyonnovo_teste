@@ -19,6 +19,29 @@ export const ROTA_DOS_PARCEIROS = "/api/mudancas/parceiros";
 /** O que o site manda quando a rota não diz (é o `MAXIMO_DE_ESCOLHIDOS` da lib do site). */
 export const MAXIMO_POR_OMISSAO = 3;
 
+/** O botão de quem não quer escolher (11-11-2026) — o mesmo do site; a rota manda-o em `textos.deixarEscolher`. */
+export const DEIXAR_A_CLYON_ESCOLHER = "Deixar a CLYON escolher por mim";
+
+/** Quanto se espera pela lista antes de seguir sem ela (11-11-2026): 8 s, como no site. */
+export const PRAZO_DA_LISTA_MS = 8000;
+
+/** A lista, ou o erro do prazo aos 8 s: uma lista que não chega não prende o pedido. */
+export function comPrazoDaLista<T>(p: Promise<T>, ms: number = PRAZO_DA_LISTA_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const relogio = setTimeout(() => reject(new Error("PRAZO_DA_LISTA")), ms);
+    p.then(
+      (v) => {
+        clearTimeout(relogio);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(relogio);
+        reject(e);
+      },
+    );
+  });
+}
+
 export type Pessoas = 2 | 3;
 
 /** A escolha que fica no rascunho. */
@@ -63,6 +86,8 @@ export type TextosDaLista = {
   escolha: string;
   semParceirosSegue: string;
   procurarMais: string;
+  /** «Deixar a CLYON escolher por mim» (11-11-2026). */
+  deixarEscolher: string;
   /** «Também preciso de caixas e embalamento» (11-11-2026). */
   pedirEmbalamento: string;
   botao: string;
@@ -177,6 +202,7 @@ export function listaValida(v: unknown): ListaDosParceiros | null {
     escolha: texto(t.escolha) ?? "",
     semParceirosSegue: texto(t.semParceirosSegue) ?? "",
     procurarMais: texto(t.procurarMais) ?? "",
+    deixarEscolher: texto(t.deixarEscolher) ?? DEIXAR_A_CLYON_ESCOLHER,
     pedirEmbalamento: texto(t.pedirEmbalamento) ?? "",
     botao: texto(t.botao) ?? "",
     notaDaEstimativa: texto(t.notaDaEstimativa) ?? "",

@@ -2,8 +2,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, View } from "react-native";
 import { CartaoDoParceiro } from "./CartaoDoParceiro";
 import { Text } from "./Texto";
-import { Aviso, Carregando, Escolhas, Paragrafo, Recolhido } from "./ui";
-import { pessoasDoEcra, type ListaDosParceiros, type Pessoas } from "../lib/parceiros-da-mudanca";
+import { Aviso, Botao, Carregando, Escolhas, Paragrafo, Recolhido } from "./ui";
+import { DEIXAR_A_CLYON_ESCOLHER, pessoasDoEcra, type ListaDosParceiros, type Pessoas } from "../lib/parceiros-da-mudanca";
 import { CORES } from "../tema";
 
 /** As duas equipas, como os botões do simulador do site. */
@@ -31,6 +31,7 @@ export function ParceirosDaMudanca({
   aoMudarProcurarMais,
   embalamento = false,
   aoMudarEmbalamento,
+  aoDeixarEscolher,
 }: {
   lista: ListaDosParceiros | null;
   aCarregar: boolean;
@@ -43,6 +44,8 @@ export function ParceirosDaMudanca({
   /** As caixas e o embalamento (11-11-2026). */
   embalamento?: boolean;
   aoMudarEmbalamento?: (v: boolean) => void;
+  /** Não quer escolher: o pedido segue o caminho de sempre, e a CLYON escolhe (11-11-2026). */
+  aoDeixarEscolher?: () => void;
 }) {
   const l = lista && lista.ligado ? lista : null;
   // Num T3 ou maior só há equipa de 3 (a rota di-lo): o botão das 2 sai, e o ecrã mostra 3.
@@ -113,6 +116,9 @@ export function ParceirosDaMudanca({
             <Recolhido titulo={l.ordenacao.titulo}>
               <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{l.ordenacao.frase}</Text>
             </Recolhido>
+          ) : null}
+          {aoDeixarEscolher ? (
+            <Botao titulo={l.textos.deixarEscolher || DEIXAR_A_CLYON_ESCOLHER} tipo="secundario" aoCarregar={aoDeixarEscolher} />
           ) : null}
         </View>
       ) : null}
