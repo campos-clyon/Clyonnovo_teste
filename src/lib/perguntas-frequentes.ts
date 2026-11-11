@@ -1,4 +1,5 @@
-import { EXTRAS_DA_MUDANCA, PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-das-mudancas";
+import { EXTRAS_DA_MUDANCA } from "./tabela-das-mudancas";
+import { MODELO_DA_MUDANCA } from "./modelo-da-mudanca";
 import {
   AVALIACOES,
   MES_DAS_CONTAGENS,
@@ -240,8 +241,11 @@ export const PERGUNTAS_FREQUENTES = [
         /*
          * E DESDE 13-10-2026 HÁ TABELA — à hora, a do dono, a mesma que o motor
          * usa (`tabela-das-mudancas.ts`). Já não há divergência para evitar.
+         *
+         * E DESDE 11-11-2026 CADA PARCEIRO TEM O SEU PREÇO: a resposta diz o
+         * modelo, sem número (esta página não lê a base; o «desde» está em /mudancas).
          */
-        a: `Uma mudança paga-se à hora: ${PRECO_DA_MUDANCA_POR_EXTENSO} ${EXTRAS_DA_MUDANCA} Envie a morada de origem, a de destino e fotografias das divisões: recebe propostas grátis em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+        a: `Uma mudança paga-se à hora. ${MODELO_DA_MUDANCA} ${EXTRAS_DA_MUDANCA} Envie a morada de origem, a de destino e fotografias das divisões: recebe propostas grátis em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
       },
       {
         q: "Fazem mudanças para outras cidades como Porto ou Coimbra?",

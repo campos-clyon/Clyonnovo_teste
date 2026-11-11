@@ -31,17 +31,16 @@ import {
   PROPOSTAS_EM_ATE,
 } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
+import { EXTRAS_DA_MUDANCA } from "@/lib/tabela-das-mudancas";
 import {
-  ELEVADOR_EXTERIOR,
-  EXTRAS_DA_MUDANCA,
-  OFERTA_DA_MUDANCA,
-  POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
-  PRECO_DA_MUDANCA_NA_DESCRICAO,
-  PRECO_DA_MUDANCA_NO_TITULO,
-  PRECO_DA_MUDANCA_POR_EXTENSO,
-  PRECO_POR_KM_LONGE,
-  RAIO_INCLUIDO_KM,
-} from "@/lib/tabela-das-mudancas";
+  ofertaDaMudanca,
+  precoDaMudancaNaCabeca,
+  precoDaMudancaNaDescricao,
+  precoDaMudancaNoTitulo,
+  precoDaMudancaPorExtenso,
+  type PrecoPublicoDasMudancas,
+} from "@/lib/preco-publico-das-mudancas";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { comOPrimeiroQueCabe } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 
@@ -51,20 +50,33 @@ import { descricaoQueCabe } from "@/lib/descricoes-seo";
  * a tabela que a página publica desde 13-10. O dono manteve-a («Mantenha as
  * mudanças a 50 € + IVA por hora»), e vai com a equipa ao lado. A descrição
  * fica até 155 caracteres, o essencial primeiro (ver descricoes-seo.ts).
+ *
+ * AO PREÇO DE CADA PARCEIRO — 11-11-2026: o título e a descrição dizem o
+ * preço público (o «desde» dos parceiros da lista, ou a referência), lido de
+ * hora a hora (`preco-publico-das-mudancas.ts`).
  */
-const TITULO = comOPrimeiroQueCabe("Mudanças em Lisboa e Setúbal", ...PRECO_DA_MUDANCA_NO_TITULO);
-const DESCRICAO = descricaoQueCabe([
-  `Mudanças em Lisboa, Margem Sul e Setúbal a ${PRECO_DA_MUDANCA_NA_DESCRICAO}.`,
-  `Propostas ${PROPOSTAS_EM_ATE}.`,
-  "Orçamento grátis.",
-]);
+export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: TITULO,
-  description: DESCRICAO,
-  alternates: { canonical: `${SITE_URL}/mudancas` },
-  openGraph: og({ title: TITULO, description: DESCRICAO, url: `${SITE_URL}/mudancas` }),
-};
+const tituloCom = (preco: PrecoPublicoDasMudancas) =>
+  comOPrimeiroQueCabe("Mudanças em Lisboa e Setúbal", ...precoDaMudancaNoTitulo(preco));
+const descricaoCom = (preco: PrecoPublicoDasMudancas) =>
+  descricaoQueCabe([
+    `Mudanças em Lisboa, Margem Sul e Setúbal à hora, ${precoDaMudancaNaDescricao(preco)}.`,
+    `Propostas ${PROPOSTAS_EM_ATE}.`,
+    "Orçamento grátis.",
+  ]);
+
+export async function generateMetadata(): Promise<Metadata> {
+  const preco = await precoPublicoDasMudancas();
+  const TITULO = tituloCom(preco);
+  const DESCRICAO = descricaoCom(preco);
+  return {
+    title: TITULO,
+    description: DESCRICAO,
+    alternates: { canonical: `${SITE_URL}/mudancas` },
+    openGraph: og({ title: TITULO, description: DESCRICAO, url: `${SITE_URL}/mudancas` }),
+  };
+}
 
 /*
  * A grelha de preços das mudanças foi substituída por esta lista sem números.
@@ -88,25 +100,25 @@ const tiposDeMudanca: Array<{ tipo: string; description: string; href?: string }
 ];
 
 /** O que pesa no orçamento — substitui os números que estavam na grelha. */
-// Os números são os da tabela (`tabela-das-mudancas.ts`), e levam o IVA ao lado (25-10-2026).
-const euro = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(2).replace(".", ",")} € + IVA`;
+// Desde 11-11-2026 sem números: a hora, os km e o material são os da tarifa de cada parceiro.
 const fatoresDePreco = [
+  "O preço por hora do parceiro que escolher, e se a equipa é de 2 ou de 3",
   "As horas de trabalho — o volume e a tipologia",
-  `Andares sem elevador (${euro(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa e por andar)`,
-  `Distância acima de ${RAIO_INCLUIDO_KM} km (${euro(PRECO_POR_KM_LONGE)} por km, ida e volta)`,
+  "Andares sem elevador (mais tempo a carregar)",
+  "Os km do percurso, pela tarifa do parceiro",
   "Desmontagem e montagem de móveis (mais horas)",
-  "Material de embalamento, pela tabela",
-  `Elevador exterior, quando é preciso (${euro(ELEVADOR_EXTERIOR)})`,
+  "Material de embalamento, ao preço do parceiro",
 ];
 
-const faqs = [
+const faqsCom = (preco: PrecoPublicoDasMudancas) => [
   {
     question: "Quanto custa uma mudança em Lisboa?",
     // Respondia "entre 150EUR e 280EUR em média" — e esta resposta vai para o
     // FAQPage do JSON-LD, por isso o número aparecia também no Google. O motor
     // factura a partir de 490 €. Fica a explicação do que faz variar o preço.
     // Desde 13-10-2026 há tabela: à hora, a do dono — ver `tabela-das-mudancas.ts`.
-    answer: `A mudança paga-se à hora: ${PRECO_DA_MUDANCA_POR_EXTENSO} ${EXTRAS_DA_MUDANCA} Descreve a mudança e recebe propostas de parceiros ${PROPOSTAS_EM_ATE}.`,
+    // E desde 11-11-2026, ao preço de cada parceiro (o preço público).
+    answer: `${precoDaMudancaPorExtenso(preco)} ${EXTRAS_DA_MUDANCA} Descreve a mudança e o pedido segue para os parceiros que escolher, com resposta ${PROPOSTAS_EM_ATE}.`,
   },
   {
     question: "Fazem desmontagem e montagem de móveis?",
@@ -163,7 +175,7 @@ const differentiators = [
   "Horário combinado com o parceiro",
 ];
 
-const serviceSchema = {
+const serviceSchemaCom = (preco: PrecoPublicoDasMudancas) => ({
   "@context": "https://schema.org",
   "@type": "Service",
   name: "Serviço de Mudanças",
@@ -176,11 +188,12 @@ const serviceSchema = {
    * Estava aqui um `PriceSpecification` a "150", que o motor não praticava
    * (facturava a partir de 490 €), e saiu. Desde 17-10-2026 declara-se a
    * tabela à hora, a mesma que a secção dos preços mostra (`OFERTA_DA_MUDANCA`).
+   * Desde 11-11-2026, o «desde» real dos parceiros, ou nenhum sem parceiros.
    */
-  offers: OFERTA_DA_MUDANCA,
-};
+  ...(ofertaDaMudanca(preco) ? { offers: ofertaDaMudanca(preco) } : {}),
+});
 
-const faqSchema = {
+const faqSchemaCom = (faqs: Array<{ question: string; answer: string }>) => ({
   "@context": "https://schema.org",
   "@type": "FAQPage",
   mainEntity: faqs.map((faq) => ({
@@ -188,7 +201,7 @@ const faqSchema = {
     name: faq.question,
     acceptedAnswer: { "@type": "Answer", text: faq.answer },
   })),
-};
+});
 
 const breadcrumbSchema = {
   "@context": "https://schema.org",
@@ -200,9 +213,11 @@ const breadcrumbSchema = {
   ],
 };
 
-export const revalidate = 86400;
-
-export default function MudancasPage() {
+export default async function MudancasPage() {
+  const preco = await precoPublicoDasMudancas();
+  const faqs = faqsCom(preco);
+  const serviceSchema = serviceSchemaCom(preco);
+  const faqSchema = faqSchemaCom(faqs);
   const lisboaCities = getCitiesByRegion("lisboa");
   const margemSulCities = getCitiesByRegion("margem-sul");
   const setubalCities = getCitiesByRegion("setubal");
@@ -225,8 +240,11 @@ export default function MudancasPage() {
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 Ligamos a sua mudança a parceiros da sua zona que tratam dela do
                 início ao fim: embalagem, carga, transporte, descarga e montagem de
-                móveis. Recebe propostas com o valor fechado, e escolhe.
+                móveis. Vê os parceiros disponíveis, com a nota e o preço por hora de
+                cada um, e escolhe.
               </p>
+              {/* O preço público (11-11-2026): o «desde» dos parceiros da lista, ou a referência. */}
+              <p className="mt-3 text-base font-semibold text-slate-800">{precoDaMudancaNaCabeca(preco)}</p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 {/* Ia para /contactos: o pedido faz-se no simulador, já em «Mudança» (09-10-2026). */}
                 <Link
@@ -327,12 +345,13 @@ export default function MudancasPage() {
           <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-[0_20px_50px_-20px_rgba(5,150,105,0.12)] sm:p-8">
             <h2 className="text-2xl font-bold text-slate-900">Quanto custa uma mudança</h2>
             <p className="mt-2 text-slate-600">
-              A mudança paga-se à hora, pela tabela da CLYON. Recebe propostas grátis{" "}
-              {PROPOSTAS_EM_ATE}, com o preço da hora e as horas que o parceiro prevê.
+              A mudança paga-se à hora, ao preço do parceiro que escolher. No simulador vê os parceiros
+              disponíveis, com a nota, o preço por hora, a equipa de 2 ou 3 e o material, e escolhe; o valor
+              final sai das horas, dos km e do material que confirma na folha do dia.
             </p>
 
             <div className="mt-6">
-              <TabelaDasMudancas />
+              <TabelaDasMudancas preco={preco} />
             </div>
             {/* A página «quanto custa», com os exemplos feitos (17-10-2026). */}
             <p className="mt-4 text-sm">

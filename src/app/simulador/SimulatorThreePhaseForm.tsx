@@ -54,6 +54,8 @@ import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
 import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
+import { SEM_PARCEIROS, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
+import { horasDaMudanca } from "@/lib/lista-de-parceiros-da-mudanca";
 import {
   HORAS_POR_TIPOLOGIA,
   TIPOLOGIA_POR_EXTENSO,
@@ -192,6 +194,7 @@ export default function SimulatorThreePhaseForm() {
   const [semListaNaMudanca, setSemListaNaMudanca] = useState(false);
   /** O pedido foi logo aos parceiros escolhidos (o ecrã de sucesso diz outra coisa). */
   const [foiAosEscolhidos, setFoiAosEscolhidos] = useState(0);
+
   useEffect(() => {
     if (phase < 3) {
       setSemListaNaMudanca(false);
@@ -1677,6 +1680,31 @@ function Phase2Location({
 }) {
   const isMudanca = formData.serviceType === "mudanca";
 
+  /*
+   * O PREÇO PÚBLICO DAS MUDANÇAS — 11-11-2026. O «desde» dos parceiros da
+   * lista (ou a referência), o mesmo que as páginas dizem: lido uma vez,
+   * quando o serviço é uma mudança.
+   */
+  const [precoDasMudancas, setPrecoDasMudancas] = useState<PrecoPublicoDasMudancas>(SEM_PARCEIROS);
+  useEffect(() => {
+    if (formData.serviceType !== "mudanca") return;
+    let vivo = true;
+    fetch("/api/mudancas/preco-publico")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p: { tipo?: string; desde?: { semIvaCent?: unknown; comIvaCent?: unknown } } | null) => {
+        if (!vivo || !p) return;
+        const s = Number(p.desde?.semIvaCent);
+        const c = Number(p.desde?.comIvaCent);
+        setPrecoDasMudancas(
+          p.tipo === "parceiros" && s > 0 && c > 0 ? { tipo: "parceiros", parceiros: 1, desde: { semIvaCent: s, comIvaCent: c } } : SEM_PARCEIROS,
+        );
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [formData.serviceType]);
+
   // ── Percurso da mudança ─────────────────────────────────────────────────
   const [calcStatus, setCalcStatus] = useState<DistanceStatus>("idle");
 
@@ -1913,11 +1941,23 @@ function Phase2Location({
               });
               return (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-                  <TabelaDasMudancas compacta />
+                  <TabelaDasMudancas compacta preco={precoDasMudancas} />
                   {formData.tipologia && (
                     <p className="mt-3 text-sm text-gray-800">
-                      {/* A mesma frase que a R12 dá à app (preco-de-referencia.ts, S13). */}
-                      {ROTULO_DA_ESTIMATIVA_DA_MUDANCA}: <strong>{estimativaDaMudanca(conta)}</strong>
+                      {/* A mesma frase que a R12 dá à app (preco-de-referencia.ts, S13), pelo preço público. */}
+                      {ROTULO_DA_ESTIMATIVA_DA_MUDANCA}:{" "}
+                      <strong>
+                        {estimativaDaMudanca(
+                          conta,
+                          precoDasMudancas,
+                          horasDaMudanca(
+                            (formData.tipologia as Tipologia | undefined) ?? null,
+                            formData.originAccess?.difficultAccess === true ||
+                              formData.destinationAccess?.difficultAccess === true,
+                            2,
+                          ),
+                        )}
+                      </strong>
                     </p>
                   )}
                 </div>

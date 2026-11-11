@@ -222,9 +222,6 @@ export function orcamentoDaMudanca(p: PedidoDeMudanca): OrcamentoDaMudanca {
 
 export const PRECO_POR_HORA_COM_IVA = arred(PRECO_POR_HORA * (1 + TAXA_IVA));
 
-/** «50 € + IVA por hora · mínimo 3 horas» — para os cartões e as etiquetas. */
-export const PRECO_DA_MUDANCA_CURTO = `${PRECO_POR_HORA} € + IVA por hora · mínimo ${MINIMO_DE_HORAS} horas`;
-
 /** A deslocação numa frase. */
 export const DESLOCACAO_DA_MUDANCA =
   `Até ${RAIO_INCLUIDO_KM} km a deslocação está incluída; acima disso, ${euros(PRECO_POR_KM_LONGE)} por km (ida e volta), mais portagens.`;
@@ -242,74 +239,21 @@ export const DESLOCACAO_DA_MUDANCA_CURTA =
 export const DESLOCACAO_DA_MUDANCA_PARA_O_MODELO =
   `até ${RAIO_INCLUIDO_KM} km incluída; acima, ${PRECO_POR_KM_LONGE} €/km sobre todos os km, ida e volta, mais portagens`;
 
-/** A frase inteira, para uma página ou uma resposta. */
-export const PRECO_DA_MUDANCA_POR_EXTENSO =
-  `${euros(PRECO_POR_HORA)} + IVA por hora (${euros(PRECO_POR_HORA_COM_IVA)} com IVA), ` +
-  `com carrinha, motorista e 2 ajudantes — mínimo de ${MINIMO_DE_HORAS} horas. ` +
-  DESLOCACAO_DA_MUDANCA;
-
-/*
- * O PREÇO À HORA NOS TÍTULOS E NAS DESCRIÇÕES — 14-10-2026.
- *
- * «Mantenha as mudanças a 50 € + IVA por hora» — o dono, depois de a
- * auditoria de SEO notar que os 61,50 €/h com IVA ficam acima das
- * referências públicas. O número fica, e diz-se logo para quantas pessoas é:
- * a equipa toda, com a carrinha. As páginas de mudanças não diziam preço
- * nenhum no Google («Sem Stress», «Orçamento em 6h»).
- */
-
-/** Para títulos, por ordem de preferência — fica o primeiro que couber nos 60 caracteres. */
-export const PRECO_DA_MUDANCA_NO_TITULO = [
-  `Equipa de ${PESSOAS_NA_EQUIPA} a ${PRECO_POR_HORA} €/h + IVA`,
-  `${PRECO_POR_HORA} €/h + IVA`,
-] as const;
-
-/** Para uma descrição: o número e para quantos é. Sem ponto final. */
-export const PRECO_DA_MUDANCA_NA_DESCRICAO =
-  `${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA} (carrinha, motorista e 2 ajudantes), ` +
-  `mínimo ${MINIMO_DE_HORAS} horas`;
-
-/*
- * O PREÇO DA HORA NOS DADOS ESTRUTURADOS — 17-10-2026.
- *
- * As páginas de mudanças tiraram o `offers` porque declaravam ao Google um
- * preço que o motor não praticava («desde 150 €», quando facturava 490 €).
- * Desde 13-10-2026 a tabela à hora está à vista em todas elas, e é ela que se
- * declara: o mesmo número, à hora, sem IVA. Um sítio só, para as páginas não
- * divergirem.
- */
-export const OFERTA_DA_MUDANCA = {
-  "@type": "Offer",
-  priceCurrency: "EUR",
-  priceSpecification: {
-    "@type": "UnitPriceSpecification",
-    price: PRECO_POR_HORA,
-    priceCurrency: "EUR",
-    unitCode: "HUR",
-    unitText: "hora",
-    valueAddedTaxIncluded: false,
-  },
-} as const;
-
 /** O mínimo de uma mudança sem extras: as horas mínimas da equipa, sem IVA. */
 export const MINIMO_DA_MUDANCA = PRECO_POR_HORA * MINIMO_DE_HORAS;
 
-/** Os extras numa frase — andares, elevador exterior, desmontagem, materiais. */
-export const EXTRAS_DA_MUDANCA =
-  `Cada andar sem elevador acresce ${euros(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa ` +
-  `(${euros(POR_ANDAR_SEM_ELEVADOR)} para a equipa de ${PESSOAS_NA_EQUIPA}); elevador exterior, ${euros(ELEVADOR_EXTERIOR)}; ` +
-  `desmontar e montar móveis acrescenta horas; os materiais de embalamento pagam-se à parte, pela tabela.`;
+/*
+ * OS TEXTOS DO PREÇO DA HORA SAÍRAM DAQUI — 11-11-2026. Desde 10–11-11 as
+ * mudanças são ao preço de cada parceiro: o «desde», a referência, os títulos,
+ * os dados estruturados e o aviso ao modelo estão em
+ * `preco-publico-das-mudancas.ts`. Esta tabela fica como REFERÊNCIA (quando
+ * não há parceiros na lista) e para o motor que estima.
+ */
 
-/** As regras, para o aviso ao modelo que estima — a mesma tabela, em texto. */
-export const REGRAS_DA_MUDANCA_PARA_O_MODELO = `MUDANÇA — À HORA (tabela CLYON, valores sem IVA, o que o cliente paga):
-  Carrinha + motorista + 2 ajudantes: ${PRECO_POR_HORA} €/hora, mínimo ${MINIMO_DE_HORAS} horas.
-  HORAS ESTIMADAS PELA TIPOLOGIA: ${(Object.keys(HORAS_POR_TIPOLOGIA) as Tipologia[])
-    .map((t) => `${TIPOLOGIA_POR_EXTENSO[t]} ${HORAS_POR_TIPOLOGIA[t]}h`)
-    .join(" · ")} · desmontagem/montagem +${HORAS_A_MAIS_COM_DESMONTAGEM}h.
-  Deslocação: ${DESLOCACAO_DA_MUDANCA_PARA_O_MODELO}.
-  Cada andar sem elevador: ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € por pessoa (${POR_ANDAR_SEM_ELEVADOR} € a equipa de ${PESSOAS_NA_EQUIPA}).
-  Elevador exterior: ${ELEVADOR_EXTERIOR} € por serviço. Materiais de embalamento à parte, pela tabela.
-  O preço é POR HORA: o total sai das horas feitas no dia; isto é só a estimativa.`;
+/** O que pesa numa mudança, sem números: as horas e a tarifa do parceiro. */
+export const EXTRAS_DA_MUDANCA =
+  "Andares sem elevador, desmontagem e montagem de móveis pesam nas horas; os km e o material de embalamento " +
+  "são os da tarifa do parceiro que escolher.";
 
 /** O mesmo valor com IVA, escrito como a tabela os escreve («61,50 €»). */
 const comIvaEscrito = (v: number) => euros(arred(v * (1 + TAXA_IVA)));

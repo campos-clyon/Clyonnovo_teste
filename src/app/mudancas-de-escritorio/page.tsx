@@ -4,7 +4,8 @@ import PaginaDeTipoDeMudanca from "@/components/mudancas/PaginaDeTipoDeMudanca";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
 import { AO_FIM_DE_SEMANA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
-import { PESSOAS_NA_EQUIPA, PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NO_TITULO } from "@/lib/tabela-das-mudancas";
+import { precoDaMudancaCurto, precoDaMudancaNaDescricao, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 
 /*
@@ -17,23 +18,31 @@ import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
  * `PAGINAS_DE_TIPO_DE_MUDANCA` (tipos-de-mudanca.ts).
  */
 const titulo = "Mudanças de Escritório em Lisboa e Setúbal";
-// Com o preço desde 14-10-2026 — a mesma tabela à hora das mudanças.
-const descricao = descricaoQueCabe([
+// Com o preço desde 14-10-2026; desde 11-11-2026 o preço público (o «desde» dos parceiros, ou a referência).
+const descricaoCom = (preco: PrecoPublicoDasMudancas) => descricaoQueCabe([
   "Mudanças de escritório, lojas e consultórios em Lisboa, Margem Sul e Setúbal, com fatura e hora fora do expediente.",
-  `A ${PRECO_DA_MUDANCA_NO_TITULO[1]} pela equipa de ${PESSOAS_NA_EQUIPA}.`,
+  `À hora, ${precoDaMudancaNaDescricao(preco)}.`,
   `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
 ]);
 
-export const metadata: Metadata = {
-  title: titulo,
-  description: descricao,
-  alternates: { canonical: `${SITE_URL}/mudancas-de-escritorio` },
-  openGraph: og({ title: titulo, description: descricao, url: `${SITE_URL}/mudancas-de-escritorio` }),
-};
+/** De hora a hora: o preço da hora é o preço público das mudanças (cache de 1 h). */
+export const revalidate = 3600;
 
-export default function MudancasDeEscritorioPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const descricao = descricaoCom(await precoPublicoDasMudancas());
+  return {
+    title: titulo,
+    description: descricao,
+    alternates: { canonical: `${SITE_URL}/mudancas-de-escritorio` },
+    openGraph: og({ title: titulo, description: descricao, url: `${SITE_URL}/mudancas-de-escritorio` }),
+  };
+}
+
+export default async function MudancasDeEscritorioPage() {
+  const preco = await precoPublicoDasMudancas();
   return (
     <PaginaDeTipoDeMudanca
+      preco={preco}
       c={{
         caminho: "/mudancas-de-escritorio",
         nome: "Mudanças de escritório",
@@ -77,7 +86,7 @@ export default function MudancasDeEscritorioPage() {
           },
           {
             question: "Quanto custa uma mudança de escritório?",
-            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Paga-se à hora, pela tabela da CLYON: ${PRECO_DA_MUDANCA_CURTO}. Recebe propostas ${PROPOSTAS_EM_ATE}, com o preço da hora e as horas previstas.`,
+            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Paga-se à hora, ao preço do parceiro que escolher (${precoDaMudancaCurto(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.`,
           },
         ],
         ctaTitulo: "A sua empresa vai mudar de sítio?",

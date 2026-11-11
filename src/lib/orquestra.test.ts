@@ -1522,8 +1522,9 @@ describe("u–x) emails, taxa, plataforma e distância pelas fontes (d28, parte 
   });
 
   it("a distância das mudanças é uma só, na página de cidade e no que o modelo lê", async () => {
-    const { RAIO_INCLUIDO_KM, PRECO_POR_KM_LONGE, DESLOCACAO_DA_MUDANCA, DESLOCACAO_DA_MUDANCA_CURTA, DESLOCACAO_DA_MUDANCA_PARA_O_MODELO, REGRAS_DA_MUDANCA_PARA_O_MODELO } =
+    const { RAIO_INCLUIDO_KM, PRECO_POR_KM_LONGE, DESLOCACAO_DA_MUDANCA, DESLOCACAO_DA_MUDANCA_CURTA, DESLOCACAO_DA_MUDANCA_PARA_O_MODELO } =
       await import("./tabela-das-mudancas");
+    const { regrasDaMudancaParaOModelo, SEM_PARCEIROS, MODELO_DA_MUDANCA_CURTO } = await import("./preco-publico-das-mudancas");
     const porKm = PRECO_POR_KM_LONGE.toFixed(2).replace(".", ",") + " € por km";
     for (const frase of [DESLOCACAO_DA_MUDANCA, DESLOCACAO_DA_MUDANCA_CURTA]) {
       expect(frase).toContain(RAIO_INCLUIDO_KM + " km");
@@ -1532,12 +1533,15 @@ describe("u–x) emails, taxa, plataforma e distância pelas fontes (d28, parte 
     }
     expect(DESLOCACAO_DA_MUDANCA_PARA_O_MODELO).toContain("até " + RAIO_INCLUIDO_KM + " km incluída");
     expect(DESLOCACAO_DA_MUDANCA_PARA_O_MODELO).toContain(PRECO_POR_KM_LONGE + " €/km sobre todos os km, ida e volta");
-    expect(REGRAS_DA_MUDANCA_PARA_O_MODELO).toContain("Deslocação: " + DESLOCACAO_DA_MUDANCA_PARA_O_MODELO + ".");
+    expect(regrasDaMudancaParaOModelo(SEM_PARCEIROS)).toContain("Deslocação (referência): " + DESLOCACAO_DA_MUDANCA_PARA_O_MODELO + ".");
 
     const { getCidadeMudancaBySlug } = await import("./mudancas-cidades");
     const sintra = getCidadeMudancaBySlug("sintra");
     const resposta = sintra?.faqs.find((q) => /Quanto custa uma mudança Sintra/.test(q.pergunta))?.resposta ?? "";
-    expect(resposta).toContain(DESLOCACAO_DA_MUDANCA_CURTA);
+    // Desde 11-11-2026 os km são os da tarifa de cada parceiro: a página diz o modelo, sem número à mão.
+    expect(resposta).toContain(MODELO_DA_MUDANCA_CURTO);
+    expect(resposta).toContain("os km pela tarifa dele");
+    expect(resposta).not.toMatch(/\d+(,\d+)? € por km/);
 
     const { buildAnalysisPrompt } = await import("./prompt-do-orcamento");
     const prompt = buildAnalysisPrompt("(o pedido)", "(as regras)");

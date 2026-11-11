@@ -3,55 +3,61 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BLOG_POSTS } from "./blog-data";
 import { CIDADES_MUDANCAS } from "./mudancas-cidades";
+import { HORAS_POR_TIPOLOGIA, PESSOAS_NA_EQUIPA, PRECO_POR_HORA } from "./tabela-das-mudancas";
 import {
-  HORAS_POR_TIPOLOGIA,
-  PESSOAS_NA_EQUIPA,
-  PRECO_DA_MUDANCA_NA_DESCRICAO,
-  PRECO_DA_MUDANCA_NO_TITULO,
-  PRECO_POR_HORA,
-} from "./tabela-das-mudancas";
+  SEM_PARCEIROS,
+  precoDaMudancaNaDescricao,
+  precoDaMudancaNoTitulo,
+  type PrecoPublicoDasMudancas,
+} from "./preco-publico-das-mudancas";
 import { cabeNoGoogle, tituloCompleto, tituloDaMudanca } from "./titulos-seo";
 
 /*
  * «MANTENHA AS MUDANÇAS A 50 € + IVA POR HORA» — o dono, 14-10-2026.
  *
- * O preço fica, e passa a ir ao Google com a equipa ao lado: as páginas de
- * mudanças diziam «Sem Stress» e «Orçamento em 6h», e o artigo «Quanto custa
- * uma mudança em Lisboa» não dava preço nenhum.
+ * E DESDE 11-11-2026, AO PREÇO DE CADA PARCEIRO: o título e a descrição dizem
+ * o preço público — o «desde» dos parceiros da lista, ou, sem nenhum, a
+ * referência (e dizem que é referência). As URLs e a estrutura não mudam.
  */
 const ler = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
+const COM_PARCEIROS: PrecoPublicoDasMudancas = { tipo: "parceiros", parceiros: 2, desde: { semIvaCent: 4250, comIvaCent: 5228 } };
 
 describe("o preço das mudanças no título", () => {
-  it("diz o número, o IVA e para quantos é, onde couber", () => {
-    expect(PRECO_DA_MUDANCA_NO_TITULO[0]).toBe(`Equipa de ${PESSOAS_NA_EQUIPA} a ${PRECO_POR_HORA} €/h + IVA`);
-    expect(tituloDaMudanca("Moita")).toBe(`Mudanças na Moita — Equipa de 3 a ${PRECO_POR_HORA} €/h + IVA`);
+  it("com parceiros, o «desde» deles; sem nenhum, a referência — sempre com o IVA", () => {
+    expect(precoDaMudancaNoTitulo(COM_PARCEIROS)[0]).toBe("Desde 42,50 €/h + IVA");
+    expect(precoDaMudancaNoTitulo(SEM_PARCEIROS)[0]).toBe(`Referência ${PRECO_POR_HORA} €/h + IVA`);
+    expect(tituloDaMudanca("Moita")).toBe(`Mudanças na Moita — Referência ${PRECO_POR_HORA} €/h + IVA`);
+    expect(tituloDaMudanca("Moita", COM_PARCEIROS)).toBe("Mudanças na Moita — Desde 42,50 €/h + IVA");
   });
 
   it("todas as terras cabem nos 60 caracteres, e nenhuma tem o número sem IVA", () => {
     const maus: string[] = [];
-    for (const c of CIDADES_MUDANCAS) {
-      const t = tituloDaMudanca(c.nome);
-      if (!cabeNoGoogle(t) || !t.includes(c.nome) || (t.includes("€") && !t.includes("+ IVA"))) {
-        maus.push(`${tituloCompleto(t).length} ${tituloCompleto(t)}`);
+    for (const p of [SEM_PARCEIROS, COM_PARCEIROS]) {
+      for (const c of CIDADES_MUDANCAS) {
+        const t = tituloDaMudanca(c.nome, p);
+        if (!cabeNoGoogle(t) || !t.includes(c.nome) || (t.includes("€") && !t.includes("+ IVA"))) {
+          maus.push(`${tituloCompleto(t).length} ${tituloCompleto(t)}`);
+        }
       }
     }
     expect(maus).toEqual([]);
   });
 
-  it("a página geral e as das terras usam-no", () => {
+  it("a página geral e as das terras usam-no, pelo preço público", () => {
     expect(ler("src/app/mudancas/page.tsx")).toContain(
-      'comOPrimeiroQueCabe("Mudanças em Lisboa e Setúbal", ...PRECO_DA_MUDANCA_NO_TITULO)',
+      'comOPrimeiroQueCabe("Mudanças em Lisboa e Setúbal", ...precoDaMudancaNoTitulo(preco))',
     );
-    expect(ler("src/app/mudancas/[cidade]/page.tsx")).toContain("const title = tituloDaMudanca(c.nome);");
+    expect(ler("src/app/mudancas/[cidade]/page.tsx")).toContain("const title = tituloDaMudanca(c.nome, preco);");
   });
 });
 
 describe("o preço das mudanças na descrição", () => {
-  it("vai com a equipa e o mínimo", () => {
-    expect(PRECO_DA_MUDANCA_NA_DESCRICAO).toContain(`${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA}`);
-    expect(PRECO_DA_MUDANCA_NA_DESCRICAO).toMatch(/mínimo \d+ horas$/);
+  it("com parceiros, o «desde» com o com IVA ao lado; sem eles, a referência", () => {
+    expect(precoDaMudancaNaDescricao(COM_PARCEIROS)).toBe("desde 42,50 €/h + IVA (52,28 € com IVA), equipa de 2 — compare parceiros e escolha");
+    expect(precoDaMudancaNaDescricao(SEM_PARCEIROS)).toContain(`referência ${PRECO_POR_HORA} €/h + IVA`);
+    expect(precoDaMudancaNaDescricao(SEM_PARCEIROS)).toContain(`equipa de ${PESSOAS_NA_EQUIPA}`);
     for (const f of ["src/app/mudancas/page.tsx", "src/app/mudancas/[cidade]/page.tsx"]) {
-      expect(ler(f), f).toContain("${PRECO_DA_MUDANCA_NA_DESCRICAO}.");
+      expect(ler(f), f).toContain("${precoDaMudancaNaDescricao(preco)}.");
     }
   });
 });
@@ -64,20 +70,23 @@ describe("as terras das mudanças levam a preposição certa", () => {
   });
 });
 
-describe("os artigos de mudanças dizem a tabela", () => {
+describe("os artigos de mudanças dizem o modelo e a referência", () => {
   const artigo = (slug: string) => BLOG_POSTS.find((p) => p.slug === slug)!;
 
-  it("«Quanto custa uma mudança em Lisboa» dá as horas e o preço de cada tipologia", () => {
+  it("«Quanto custa uma mudança em Lisboa» dá as horas e o preço de referência de cada tipologia", () => {
     const a = artigo("quanto-custa-uma-mudanca-em-lisboa");
     const texto = JSON.stringify(a);
     expect(texto).not.toContain("e não de uma tabela");
+    expect(texto).toContain("cada parceiro tem o seu preço por hora");
     expect(a.description).toContain(`${PRECO_POR_HORA} €/h + IVA`);
     const linhas = a.sections.flatMap((s) => s.bullets ?? []);
-    expect(linhas).toContain(`T2: cerca de ${HORAS_POR_TIPOLOGIA.T2} horas — ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA`);
-    expect(a.updatedDate).toBe("2026-10-14");
+    expect(linhas).toContain(
+      `T2: cerca de ${HORAS_POR_TIPOLOGIA.T2} horas — ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA na referência`,
+    );
+    expect(a.updatedDate).toBe("2026-11-11");
   });
 
-  it("as pequenas mudanças já não prometem «uma a duas horas» — o mínimo são 3", () => {
+  it("as pequenas mudanças já não prometem «uma a duas horas» — o mínimo são 3, na referência", () => {
     const texto = JSON.stringify(artigo("pequenas-mudancas-em-lisboa-quando-compensa"));
     expect(texto).not.toContain("uma a duas horas");
     expect(texto).toContain("mínimo de 3 horas");

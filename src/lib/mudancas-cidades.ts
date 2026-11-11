@@ -26,9 +26,12 @@
  * E DESDE 13-10-2026 HÁ UM PREÇO QUE SE PODE DIZER: a tabela à hora do dono
  * (`tabela-das-mudancas.ts`) — o mesmo número no site e no motor. As FAQ
  * dizem-no, a partir da constante; e continua a não haver faixa por cidade.
+ *
+ * DESDE 11-11-2026 CADA PARCEIRO TEM O SEU PREÇO: as FAQ dizem o modelo, sem
+ * número (`modelo-da-mudanca.ts`); o «desde» real está no topo da página.
  */
 
-import { DESLOCACAO_DA_MUDANCA_CURTA, PRECO_DA_MUDANCA_CURTO } from "./tabela-das-mudancas";
+import { MODELO_DA_MUDANCA_CURTO } from "./modelo-da-mudanca";
 // Sem «@/»: o next.config e o middleware lêem este ficheiro (ver a nota abaixo).
 import { TERRAS_JUNTAS_AO_CONCELHO } from "./paginas-consolidadas";
 
@@ -102,7 +105,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança dentro de Lisboa?",
         resposta:
-          "Depende do volume, da complexidade dos acessos e da distância entre as duas moradas — e a mudança paga-se à hora, pela tabela da CLYON (" + PRECO_DA_MUDANCA_CURTO + "). Prédios sem elevador em bairros antigos como Alfama ou Graça exigem subida manual e mais tempo, e isso pesa. Diga a tipologia e as duas moradas: recebe propostas grátis em menos de 6 horas.",
+          "Depende do volume, da complexidade dos acessos e da distância entre as duas moradas — e a mudança paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um. Prédios sem elevador em bairros antigos como Alfama ou Graça exigem subida manual e mais tempo, e isso pesa. Diga a tipologia e as duas moradas: recebe propostas grátis em menos de 6 horas.",
       },
       {
         pergunta: "Precisam de licença EMEL para estacionar no dia da mudança?",
@@ -246,7 +249,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança Sintra → Lisboa?",
         resposta:
-          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + "; " + DESLOCACAO_DA_MUDANCA_CURTA + ". Recebe propostas grátis em menos de 6 horas.",
+          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ", e os km pela tarifa dele: no simulador vê os parceiros, a nota e o preço de cada um. Recebe propostas grátis em menos de 6 horas.",
       },
     ],
     testemunho: null,
@@ -566,7 +569,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Almada?",
         resposta:
-          "Depende do volume, dos acessos nas duas moradas e da distância entre elas: um T2 no Pragal, com elevador e garagem, e um T2 em Almada velha, sem elevador, não custam o mesmo. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, dos acessos nas duas moradas e da distância entre elas: um T2 no Pragal, com elevador e garagem, e um T2 em Almada velha, sem elevador, não custam o mesmo. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -605,7 +608,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança do Seixal para Lisboa?",
         resposta:
-          "Depende do volume, dos acessos e do trajecto, com a portagem da ponte 25 de Abril incluída na proposta. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, dos acessos e do trajecto, com a portagem da ponte 25 de Abril incluída na proposta. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -644,7 +647,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Setúbal?",
         resposta:
-          "Depende do volume, dos andares e dos acessos nas duas moradas, e da distância entre elas. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, dos andares e dos acessos nas duas moradas, e da distância entre elas. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -683,7 +686,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Cascais?",
         resposta:
-          "Depende do volume, dos acessos (escadas exteriores contam) e da distância entre as duas moradas. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, dos acessos (escadas exteriores contam) e da distância entre as duas moradas. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -722,7 +725,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança na Amadora?",
         resposta:
-          "Depende do volume, do andar, de haver elevador e de quantos móveis é preciso desmontar, e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, do andar, de haver elevador e de quantos móveis é preciso desmontar, e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -761,7 +764,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Benfica?",
         resposta:
-          "Depende do volume, do andar, do tamanho do elevador e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, do andar, do tamanho do elevador e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -800,7 +803,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Alvalade?",
         resposta:
-          "Depende do volume, do andar sem elevador e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, do andar sem elevador e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -839,7 +842,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança nos Olivais?",
         resposta:
-          "Depende do volume, do andar, do elevador e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, do andar, do elevador e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -878,7 +881,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Loures?",
         resposta:
-          "Depende do volume, dos acessos e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, dos acessos e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -917,7 +920,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Monte Abraão?",
         resposta:
-          "Depende do volume, do andar, do acesso entre o prédio e a carrinha e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, do andar, do acesso entre o prédio e a carrinha e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -956,7 +959,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Queluz?",
         resposta:
-          "Depende do volume, dos acessos nas duas moradas e da distância entre elas. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, dos acessos nas duas moradas e da distância entre elas. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -995,7 +998,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança na Amora?",
         resposta:
-          "Depende do volume, do andar, de haver elevador e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, do andar, de haver elevador e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,
@@ -1034,7 +1037,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança na Moita?",
         resposta:
-          "Depende do volume, dos acessos e da distância até ao destino. Paga-se à hora, pela tabela da CLYON: " + PRECO_DA_MUDANCA_CURTO + ".",
+          "Depende do volume, dos acessos e da distância até ao destino. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ": no simulador vê os parceiros, a nota e o preço de cada um.",
       },
     ],
     testemunho: null,

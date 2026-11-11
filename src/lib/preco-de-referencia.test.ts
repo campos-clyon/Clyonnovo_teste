@@ -102,10 +102,13 @@ describe("S13 — o preço de referência", () => {
     const doSite = `${ROTULO_DA_ESTIMATIVA_DA_MUDANCA}: ${estimativaDaMudanca(orcamentoDaMudanca(pedido))}`;
     // Desde a d6 o rótulo da R12 é «Estimativa»; o texto é o mesmo da caixa do site.
     expect(j.linhas.map(linhaEscrita)).toContain(`Estimativa: ${estimativaDaMudanca(orcamentoDaMudanca(pedido))}`);
-    expect(doSite).toMatch(/^Estimativa para a sua mudança: cerca de [\d,]+ h — [\d ,]+ € \+ IVA \([\d ,]+ € com IVA\)\. O total sai das horas feitas no dia\.$/);
+    // Sem parceiros na lista (o preço público por omissão), a referência, dita como referência (11-11-2026).
+    expect(doSite).toMatch(
+      /^Estimativa para a sua mudança: cerca de [\d,]+ h — [\d ,]+ € \+ IVA \([\d ,]+ € com IVA\) na referência \(equipa de 3\)\. Cada parceiro tem o seu preço por hora; o total sai das horas, dos km e do material que confirma na folha do dia\.$/,
+    );
     // O simulador do site escreve a mesma frase pela mesma função.
     const SIM = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");
-    expect(SIM).toMatch(/\{ROTULO_DA_ESTIMATIVA_DA_MUDANCA\}: <strong>\{estimativaDaMudanca\(conta\)\}<\/strong>/);
+    expect(SIM).toMatch(/\{ROTULO_DA_ESTIMATIVA_DA_MUDANCA\}:\{" "\}\s*<strong>\s*\{estimativaDaMudanca\(\s*conta,\s*precoDasMudancas,/);
     expect(SIM).toMatch(/<PrecoDeReferencia\s+servico=\{formData\.serviceType\}/);
   });
 });

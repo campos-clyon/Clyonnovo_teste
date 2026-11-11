@@ -1,7 +1,7 @@
 import { emTerra } from "./preposicao-da-terra";
 import { ENTULHO_ATE_10_SACOS, PRECOS, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, maisIva } from "./precos-publicos";
 import { comIva, euros } from "./quanto-custa";
-import { PRECO_DA_MUDANCA_NO_TITULO } from "./tabela-das-mudancas";
+import { SEM_PARCEIROS, precoDaMudancaNoTitulo, type PrecoPublicoDasMudancas } from "./preco-publico-das-mudancas";
 
 /**
  * OS TÍTULOS QUE O GOOGLE MOSTRA INTEIROS.
@@ -150,7 +150,10 @@ export function tituloDaCidade(
  * O título de uma página de mudanças numa terra: «Mudanças na Moita — Equipa
  * de 3 a 50 €/h + IVA» (14-10-2026). Onde nem o preço curto cabe, fica o
  * prazo — nunca o número sem o IVA.
+ *
+ * Desde 11-11-2026 o preço é o do preço público (`preco-publico-das-mudancas.ts`):
+ * «Desde 40 €/h + IVA» com parceiros na lista; sem eles, «Referência 50 €/h + IVA».
  */
-export function tituloDaMudanca(nome: string): string {
-  return comOPrimeiroQueCabe(`Mudanças ${emTerra(nome)}`, ...PRECO_DA_MUDANCA_NO_TITULO, SEM_PRECO);
+export function tituloDaMudanca(nome: string, preco: PrecoPublicoDasMudancas = SEM_PARCEIROS): string {
+  return comOPrimeiroQueCabe(`Mudanças ${emTerra(nome)}`, ...precoDaMudancaNoTitulo(preco), SEM_PRECO);
 }

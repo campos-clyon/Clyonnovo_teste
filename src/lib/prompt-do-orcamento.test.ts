@@ -1,3 +1,4 @@
+import { regrasDaMudancaParaOModelo, SEM_PARCEIROS } from "./preco-publico-das-mudancas";
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -24,7 +25,6 @@ import { SACOS_POR_BIG_BAG } from "./sacos-de-entulho";
 import {
   MINIMO_DA_MUDANCA,
   PRECO_POR_HORA,
-  REGRAS_DA_MUDANCA_PARA_O_MODELO,
   orcamentoDaMudanca,
 } from "./tabela-das-mudancas";
 import { comIva, comIvaEscrito, euros, semIvaEscrito, type Valor } from "./quanto-custa";
@@ -53,7 +53,7 @@ describe("o prompt do orçamento", () => {
     for (const comFotos of [false, true]) {
       const p = await oPrompt(comFotos);
       expect(p).toContain(`${PRECO_POR_HORA} €/hora`);
-      expect(p).toContain(REGRAS_DA_MUDANCA_PARA_O_MODELO);
+      expect(p).toContain(regrasDaMudancaParaOModelo(SEM_PARCEIROS));
       for (const r of PROIBIDOS) expect(p, String(r)).not.toMatch(r);
     }
   });

@@ -25,12 +25,12 @@ import {
   MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
   PESSOAS_NA_EQUIPA,
-  PRECO_DA_MUDANCA_POR_EXTENSO,
   PRECO_POR_HORA,
   RAIO_INCLUIDO_KM,
   TIPOLOGIA_POR_EXTENSO,
   type Tipologia,
 } from "./tabela-das-mudancas";
+import { MODELO_DA_MUDANCA, REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
 
 /*
  * AS HORAS DE CADA TIPOLOGIA, EM LINHAS — 14-10-2026.
@@ -39,15 +39,18 @@ import {
  * «o valor sai da descrição do caso, e não de uma tabela». Desde 13-10-2026
  * há tabela, e o dono manteve-a (50 € + IVA por hora). Os números saem de
  * tabela-das-mudancas.ts, para o artigo não voltar a divergir dela.
+ *
+ * DESDE 11-11-2026 CADA PARCEIRO TEM O SEU PREÇO: os números ficam como
+ * REFERÊNCIA (o blog não lê a base) e o artigo diz o modelo — compare e escolha.
  */
 const TIPOLOGIAS_DA_CASA: Tipologia[] = ["T0", "T1", "T2", "T3", "T4+"];
 const HORAS_E_PRECO_POR_TIPOLOGIA = [
   ...TIPOLOGIAS_DA_CASA.map((t) => {
     const h = HORAS_POR_TIPOLOGIA[t];
     const horas = t === "T4+" ? `${h} horas ou mais` : `cerca de ${h} horas`;
-    return `${TIPOLOGIA_POR_EXTENSO[t]}: ${horas} — ${h * PRECO_POR_HORA} € + IVA`;
+    return `${TIPOLOGIA_POR_EXTENSO[t]}: ${horas} — ${h * PRECO_POR_HORA} € + IVA na referência`;
   }),
-  `Com desmontagem e montagem de móveis: mais ${HORAS_A_MAIS_COM_DESMONTAGEM} hora (${HORAS_A_MAIS_COM_DESMONTAGEM * PRECO_POR_HORA} € + IVA)`,
+  `Com desmontagem e montagem de móveis: mais ${HORAS_A_MAIS_COM_DESMONTAGEM} hora (${HORAS_A_MAIS_COM_DESMONTAGEM * PRECO_POR_HORA} € + IVA na referência)`,
 ];
 
 /*
@@ -706,7 +709,7 @@ export const BLOG_POSTS: BlogPost[] = [
     metaTitle: "Quanto Custa uma Mudança em Lisboa em 2026?",
     description:
       // A hora com o com IVA ao lado; dizia «…, T3 250 €, sem IVA.» (31-10-2026).
-      `Quanto custa uma mudança em Lisboa: ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))}/h com IVA) pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas — T1 cerca de ${HORAS_POR_TIPOLOGIA.T1 * PRECO_POR_HORA} €, T2 ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} €, T3 ${HORAS_POR_TIPOLOGIA.T3 * PRECO_POR_HORA} € + IVA.`,
+      `Quanto custa uma mudança em Lisboa: cada parceiro tem o seu preço por hora; na referência, ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))}/h com IVA) — T2 cerca de ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA.`,
     category: "Mudanças",
     keywords: [
       "quanto custa mudança lisboa",
@@ -718,17 +721,18 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "8 min",
     publishDate: "2026-06-01",
-    updatedDate: "2026-10-14",
+    updatedDate: "2026-11-11",
     heroLabel: "Mudanças",
     intro:
       "O preço de uma mudança em Lisboa depende de vários fatores: o tamanho do apartamento, a distância entre moradas, o andar (com ou sem elevador), a necessidade de desmontagem e montagem de móveis e se quer incluir embalagem. Este guia ajuda a perceber valores reais e a evitar surpresas.",
     sections: [
       {
-        title: "Preços por tipologia: a tabela à hora",
+        title: "Preços por tipologia: à hora, ao preço de cada parceiro",
         paragraphs: [
-          `Na CLYON a mudança paga-se à hora, pela mesma tabela em toda a zona: ${PRECO_DA_MUDANCA_POR_EXTENSO}`,
-          "Ao comparar com outros preços à hora, veja se são por pessoa ou sem carrinha: aqui o valor é da equipa toda — três pessoas e a viatura.",
-          "Antes de alguém ver a casa, contam-se estas horas pela tipologia, sem andares a pé nem distâncias longas. A proposta traz as horas previstas, e no fim pagam-se as horas feitas:",
+          `Na CLYON a mudança paga-se à hora, ao preço do parceiro que escolher. ${MODELO_DA_MUDANCA}`,
+          `Para ter uma ideia antes de comparar, a ${REFERENCIA_DA_MUDANCA}.`,
+          "Ao comparar preços à hora, veja para quantas pessoas é e se a carrinha vem incluída: na lista, cada parceiro diz o preço com 2 e com 3 pessoas.",
+          "Antes de alguém ver a casa, contam-se estas horas pela tipologia (equipa de 3; com 2 pessoas leva mais tempo), sem andares a pé nem distâncias longas. No fim pagam-se as horas confirmadas na folha do dia:",
         ],
         bullets: HORAS_E_PRECO_POR_TIPOLOGIA,
       },
@@ -856,7 +860,7 @@ export const BLOG_POSTS: BlogPost[] = [
         title: "O que é uma pequena mudança",
         paragraphs: [
           "Consideramos pequena mudança o transporte de 1 a 3 peças grandes: sofá, cama, armário, secretária, frigorífico ou máquina de lavar. É diferente de uma mudança completa porque não envolve dezenas de caixas e mobiliário de todas as divisões.",
-          `Pagam-se pela mesma tabela das mudanças: ${PRECO_POR_HORA} € + IVA por hora pela equipa de ${PESSOAS_NA_EQUIPA}, com o mínimo de ${MINIMO_DE_HORAS} horas — ${MINIMO_DA_MUDANCA} € + IVA. Uma pequena mudança conta-se, à partida, por esse mínimo, e por isso fica bem abaixo de uma mudança completa. Andares a pé e distâncias acima de ${RAIO_INCLUIDO_KM} km acrescem, e vêm na proposta.`,
+          `Pagam-se como as mudanças: à hora, ao preço do parceiro que escolher, com o mínimo de horas dele. Na referência, ${PRECO_POR_HORA} € + IVA por hora pela equipa de ${PESSOAS_NA_EQUIPA}, com o mínimo de ${MINIMO_DE_HORAS} horas — ${MINIMO_DA_MUDANCA} € + IVA (${euros(comIva(MINIMO_DA_MUDANCA))} com IVA). Uma pequena mudança conta-se, à partida, pelo mínimo, e por isso fica bem abaixo de uma mudança completa. No simulador vê o preço de cada parceiro.`,
         ],
       },
       {
@@ -877,7 +881,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         question: "Posso transportar só um sofá?",
         answer:
-          `Sim. É um dos pedidos mais comuns. Paga-se pela tabela à hora, com o mínimo de ${MINIMO_DE_HORAS} horas (${MINIMO_DA_MUDANCA} € + IVA); o tamanho do sofá, a distância e o acesso nos dois endereços dizem se esse mínimo chega.`,
+          `Sim. É um dos pedidos mais comuns. Paga-se à hora, ao preço do parceiro que escolher, com o mínimo de horas dele (na referência, ${MINIMO_DE_HORAS} horas, ${MINIMO_DA_MUDANCA} € + IVA); o tamanho do sofá, a distância e o acesso nos dois endereços dizem se esse mínimo chega.`,
       },
       {
         question: "E se o móvel não couber no elevador?",
@@ -1222,7 +1226,7 @@ export const BLOG_POSTS: BlogPost[] = [
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
-    updatedDate: "2026-10-31",
+    updatedDate: "2026-11-11",
     heroLabel: "Esvaziamento",
     intro:
       "Entre um inquilino que sai e outro que entra, ou antes de uma escritura, o apartamento tem de ficar vazio numa data que não se mexe. Este guia mostra como planear o esvaziamento para chegar a essa data com a casa pronta — e quanto custa, com os valores de referência da CLYON.",
@@ -1291,7 +1295,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "mudanca-entre-lisboa-e-a-margem-sul",
     title: "Mudança entre Lisboa e a Margem Sul: pontes, tempos e quanto custa",
     metaTitle: "Mudança entre Lisboa e a Margem Sul",
-    description: `De Lisboa para Almada, Seixal ou Barreiro, ou o contrário: a ponte, o tempo e o preço — ${PRECO_POR_HORA} €/h + IVA pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas.`,
+    description: `De Lisboa para Almada, Seixal ou Barreiro, ou o contrário: a ponte, o tempo e o preço — à hora, ao preço do parceiro (referência ${PRECO_POR_HORA} €/h + IVA).`,
     category: "Mudanças",
     keywords: [
       "mudança lisboa margem sul",
@@ -1305,7 +1309,7 @@ export const BLOG_POSTS: BlogPost[] = [
     updatedDate: "2026-10-31",
     heroLabel: "Mudanças",
     intro:
-      "Muita gente muda de casa entre as duas margens do Tejo — de Lisboa para Almada, para o Seixal ou para o Barreiro, ou no sentido contrário. A travessia muda pouco a conta, mas muda o planeamento. Este guia junta o que pesa numa mudança entre margens, com a tabela da CLYON.",
+      "Muita gente muda de casa entre as duas margens do Tejo — de Lisboa para Almada, para o Seixal ou para o Barreiro, ou no sentido contrário. A travessia muda pouco a conta, mas muda o planeamento. Este guia junta o que pesa numa mudança entre margens, e como se escolhe o parceiro.",
     sections: [
       {
         title: "Que ponte",
@@ -1323,8 +1327,8 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         title: "Quanto custa",
         paragraphs: [
-          PRECO_DA_MUDANCA_POR_EXTENSO,
-          `Entre Lisboa e a Margem Sul, a distância fica quase sempre dentro dos ${RAIO_INCLUIDO_KM} km incluídos. Um T2, por exemplo, leva cerca de ${HORAS_POR_TIPOLOGIA.T2} horas — ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA. A tabela por tipologia está em [quanto custa uma mudança em Lisboa](/blog/quanto-custa-uma-mudanca-em-lisboa).`,
+          `Paga-se à hora. ${MODELO_DA_MUDANCA}`,
+          `Um T2, por exemplo, leva cerca de ${HORAS_POR_TIPOLOGIA.T2} horas com 3 pessoas — ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA na referência (${euros(comIva(HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA))} com IVA); os km entre as margens contam pela tarifa do parceiro. A tabela por tipologia está em [quanto custa uma mudança em Lisboa](/blog/quanto-custa-uma-mudanca-em-lisboa).`,
           EXTRAS_DA_MUDANCA,
         ],
       },
@@ -1350,11 +1354,11 @@ export const BLOG_POSTS: BlogPost[] = [
       },
       {
         question: "Quanto custa a mudança de um T2 de Lisboa para o Seixal?",
-        answer: `Conte com cerca de ${HORAS_POR_TIPOLOGIA.T2} horas, ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA, mais os extras se os houver — andares sem elevador, desmontagem, materiais. O valor certo vem na proposta.`,
+        answer: `Conte com cerca de ${HORAS_POR_TIPOLOGIA.T2} horas com 3 pessoas — na referência, ${HORAS_POR_TIPOLOGIA.T2 * PRECO_POR_HORA} € + IVA —, mais os km e o material, se os houver. Cada parceiro tem o seu preço por hora: no simulador vê os disponíveis e escolhe.`,
       },
       {
         question: "O preço inclui IVA?",
-        answer: `A tabela é sem IVA: ${valorSemEComIva(PRECO_POR_HORA)} por hora. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.`,
+        answer: `Na lista dos parceiros cada preço por hora aparece sem IVA e com IVA (na referência, ${valorSemEComIva(PRECO_POR_HORA)} por hora). Há fatura em todas as vendas.`,
       },
     ],
   },

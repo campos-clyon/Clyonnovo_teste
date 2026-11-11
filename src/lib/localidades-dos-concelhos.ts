@@ -28,7 +28,7 @@ import { ENTULHO_10_SACOS_NA_FRASE, faixaSemEComIva } from "./descricoes-seo";
 import { MOVEIS_POR_PECA_CURTO, precoDaPecaComOIva } from "./preco-de-referencia";
 import { comIva, euros } from "./quanto-custa";
 import { NAO_HA_CONTENTORES, PESO_DO_SACO } from "./sacos-de-entulho";
-import { MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_POR_HORA, PRECO_POR_HORA_COM_IVA } from "./tabela-das-mudancas";
+import { MODELO_DA_MUDANCA_CURTO } from "./modelo-da-mudanca";
 
 export interface LocalidadeDoConcelho {
   /** A terra, como se diz. */
@@ -64,9 +64,8 @@ const ESV_APARTAMENTO = faixaSemEComIva(
   PRECOS.esvaziamento_apartamento.maximo!,
 );
 const ESV_MORADIA = desdeComIva(tipologia("moradia").minimo);
-const HORA_DA_MUDANCA =
-  `${euros(PRECO_POR_HORA)}/h + IVA (${euros(PRECO_POR_HORA_COM_IVA)}/h com IVA) ` +
-  `pela equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} horas`;
+// Ao preço de cada parceiro desde 11-11-2026: o modelo, sem número (esta página não lê a base para o texto).
+const HORA_DA_MUDANCA = `${MODELO_DA_MUDANCA_CURTO} — no simulador vê os parceiros, a nota e o preço de cada um`;
 
 /** Chave: o caminho da página que fica, sem a barra inicial («recolha-moveis-seixal», «mudancas/seixal»). */
 export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcelho[]>> = {
@@ -140,14 +139,14 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/mudancas/amora",
       titulo: "Mudanças na Amora",
       texto:
-        `Para quem muda de casa da Amora para Lisboa, a travessia é pela ponte 25 de Abril, com a portagem incluída na proposta. Nos prédios da Cruz de Pau e do Fogueteiro, diga o andar e se há elevador: cada andar feito a pé entra na proposta. Numa moradia, lembre-se da garagem e da arrecadação, que é o que mais se esquece no pedido e faz crescer o volume no dia. A mudança paga-se à hora, com carrinha, motorista e 2 ajudantes: ${HORA_DA_MUDANCA}. Quem a faz é o parceiro que escolher entre as propostas. ${PROMESSA_DO_PRAZO}`,
+        `Para quem muda de casa da Amora para Lisboa, a travessia é pela ponte 25 de Abril, com a portagem incluída na proposta. Nos prédios da Cruz de Pau e do Fogueteiro, diga o andar e se há elevador: cada andar feito a pé entra na proposta. Numa moradia, lembre-se da garagem e da arrecadação, que é o que mais se esquece no pedido e faz crescer o volume no dia. A mudança paga-se à hora, ${HORA_DA_MUDANCA}. Quem a faz é o parceiro que escolher entre as propostas. ${PROMESSA_DO_PRAZO}`,
     },
     {
       nome: "Corroios",
       enderecoAntigo: "/mudancas/corroios",
       titulo: "Mudanças em Corroios",
       texto:
-        `Em Corroios, a mudança organiza-se pelo tipo de casa. Nas torres do Miratejo, combine o elevador com o condomínio e diga o andar; nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha encosta ao portão e a carga faz-se mais depressa. Corroios tem estação da Fertagus e o terminal do Metro Sul do Tejo, mas para os móveis o caminho é a estrada: Almada fica ao lado, e para Lisboa a travessia é pela ponte 25 de Abril, com a portagem na proposta. Paga-se à hora, pela tabela da CLYON: ${HORA_DA_MUDANCA}. Um parceiro faz a mudança; a CLYON junta as propostas e acompanha o pedido até ao fim. ${PROMESSA_DO_PRAZO}`,
+        `Em Corroios, a mudança organiza-se pelo tipo de casa. Nas torres do Miratejo, combine o elevador com o condomínio e diga o andar; nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha encosta ao portão e a carga faz-se mais depressa. Corroios tem estação da Fertagus e o terminal do Metro Sul do Tejo, mas para os móveis o caminho é a estrada: Almada fica ao lado, e para Lisboa a travessia é pela ponte 25 de Abril, com a portagem na proposta. Paga-se à hora, ${HORA_DA_MUDANCA}. Um parceiro faz a mudança; a CLYON junta as propostas e acompanha o pedido até ao fim. ${PROMESSA_DO_PRAZO}`,
     },
   ],
   "recolha-moveis-almada": [
@@ -196,7 +195,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/mudancas/costa-da-caparica",
       titulo: "Mudanças na Costa da Caparica",
       texto:
-        `Para entrar ou sair da Costa da Caparica, a via rápida é o IC20, que liga à A2 e à ponte 25 de Abril; a portagem da ponte entra na proposta. Aqui, a época pesa mais do que a distância: entre junho e setembro, a zona junto à praia enche e não há onde encostar a carrinha, por isso vale a pena marcar de manhã cedo ou fora da época. Na Fonte da Telha e nas Terras da Costa, descreva o acesso até à porta. Paga-se à hora, pela tabela da CLYON: ${HORA_DA_MUDANCA}. Um parceiro faz a mudança; a CLYON junta as propostas e acompanha o pedido até ao fim. ${PROMESSA_DO_PRAZO}`,
+        `Para entrar ou sair da Costa da Caparica, a via rápida é o IC20, que liga à A2 e à ponte 25 de Abril; a portagem da ponte entra na proposta. Aqui, a época pesa mais do que a distância: entre junho e setembro, a zona junto à praia enche e não há onde encostar a carrinha, por isso vale a pena marcar de manhã cedo ou fora da época. Na Fonte da Telha e nas Terras da Costa, descreva o acesso até à porta. Paga-se à hora, ${HORA_DA_MUDANCA}. Um parceiro faz a mudança; a CLYON junta as propostas e acompanha o pedido até ao fim. ${PROMESSA_DO_PRAZO}`,
     },
   ],
 };

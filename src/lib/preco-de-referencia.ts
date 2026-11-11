@@ -45,6 +45,8 @@ import {
   type PedidoDeMudanca,
 } from "./tabela-das-mudancas";
 import { PERGUNTAS_DO_ESPACO, acessoDificilDoEspaco } from "./perguntas-do-espaco";
+import { precoPublicoConhecido, REFERENCIA_DA_MUDANCA, type PrecoPublicoDasMudancas } from "./preco-publico-das-mudancas";
+import { horasDaMudanca } from "./lista-de-parceiros-da-mudanca";
 import { referenciaEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { TAXA_IVA } from "./taxas-plataforma";
 import { PESO_DO_SACO, SACOS_POR_CARGA, SACOS_POR_METRO_CUBICO, lerQuantidadeDeEntulho } from "./sacos-de-entulho";
@@ -188,7 +190,11 @@ export const MOVEIS_POR_PECA_COM_IVA =
 export function comIvaDaEtiqueta(servico: string): string | null {
   const p = PRECOS[servico];
   if (!p || p.minimo == null) return null;
-  if (servico === "mudanca") return `${euros(comIva(PRECO_POR_HORA))}/hora com IVA`;
+  if (servico === "mudanca") {
+    // Ao preço de cada parceiro (11-11-2026): o «desde» conhecido, ou a referência.
+    const pp = precoPublicoConhecido();
+    return pp.tipo === "parceiros" ? `desde ${euros(pp.desde.comIvaCent / 100)}/hora com IVA` : `${euros(comIva(PRECO_POR_HORA))}/hora com IVA`;
+  }
   if (servico === "recolha_moveis") return MOVEIS_POR_PECA_COM_IVA;
   const u = p.unidade ? `/${p.unidade}` : "";
   if (p.maximo != null && !/^desde\b/.test(p.etiqueta)) return `${faixaComIva(p.minimo, p.maximo)}${u} com IVA`;
@@ -265,7 +271,12 @@ export function precoDeReferencia(servico: string | null | undefined): string | 
   if (!servico) return null;
   if (servico === "recolha_moveis") return MOVEIS_POR_PECA;
   if (servico === "mudanca") {
-    return `${euros(PRECO_POR_HORA)}/hora + IVA (${euros(comIva(PRECO_POR_HORA))}/hora com IVA), mínimo ${MINIMO_DE_HORAS} horas`;
+    // Ao preço de cada parceiro (11-11-2026): o «desde» conhecido (equipa de 2), ou a referência.
+    const pp = precoPublicoConhecido();
+    if (pp.tipo === "parceiros") {
+      return `desde ${euros(pp.desde.semIvaCent / 100)}/hora + IVA (${euros(pp.desde.comIvaCent / 100)}/hora com IVA), equipa de 2 — cada parceiro tem o seu preço`;
+    }
+    return REFERENCIA_DA_MUDANCA;
   }
   if (servico === "recolha_entulho") {
     // O m³ ao preço dos sacos, ensacado ou a granel (d7, 04-11-2026): era «desde 120 €/m³».
@@ -339,10 +350,36 @@ export function totalDosItens(itens: ItensDosMoveis): string | null {
 
 export const ROTULO_DA_ESTIMATIVA_DA_MUDANCA = "Estimativa para a sua mudança";
 
-/** «cerca de 4 h — 200 € + IVA (246 € com IVA). O total sai das horas feitas no dia.» */
-export function estimativaDaMudanca(conta: Pick<OrcamentoDaMudanca, "horas" | "totalSemIva">): string {
+/**
+ * A estimativa de uma mudança, pelo preço público (11-11-2026):
+ *   · com parceiros na lista — «cerca de 5,5 h com 2 pessoas — desde 220 € + IVA
+ *     (270,60 € com IVA), ao preço por hora mais baixo da lista. …»;
+ *   · sem eles — «cerca de 4 h — 200 € + IVA (246 € com IVA) na referência
+ *     (equipa de 3). …».
+ * `horasCom2` são as horas da mesma casa com 2 pessoas (`horasDaMudanca`).
+ */
+export function estimativaDaMudanca(
+  conta: Pick<OrcamentoDaMudanca, "horas" | "totalSemIva">,
+  preco: PrecoPublicoDasMudancas = precoPublicoConhecido(),
+  horasCom2?: number,
+): string {
+  if (preco.tipo === "parceiros" && horasCom2 != null && horasCom2 > 0) {
+    const total = Math.round(horasCom2 * preco.desde.semIvaCent) / 100;
+    return (
+      `cerca de ${String(horasCom2).replace(".", ",")} h com 2 pessoas — desde ${valorSemEComIva(total)}, ao preço por hora mais baixo da lista. ` +
+      "Na lista vê a conta de cada parceiro, com os km e o material; o total sai do que confirma na folha do dia."
+    );
+  }
   const horas = String(conta.horas).replace(".", ",");
-  return `cerca de ${horas} h — ${valorSemEComIva(conta.totalSemIva)}. O total sai das horas feitas no dia.`;
+  return (
+    `cerca de ${horas} h — ${valorSemEComIva(conta.totalSemIva)} na referência (equipa de ${PESSOAS_NA_EQUIPA}). ` +
+    "Cada parceiro tem o seu preço por hora; o total sai das horas, dos km e do material que confirma na folha do dia."
+  );
+}
+
+/** A estimativa em cêntimos para o «desde» com 2 pessoas, ou null sem parceiros. */
+function totalDesdeComDuas(preco: PrecoPublicoDasMudancas, horasCom2: number): number | null {
+  return preco.tipo === "parceiros" ? Math.round(horasCom2 * preco.desde.semIvaCent) / 100 : null;
 }
 
 /* ── Garagem, sótão e cave ───────────────────────────────────────────── */
@@ -790,8 +827,15 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
     if (!e) porque.push("Sem saber quanto há, a proposta sai das fotografias.");
   } else if (p.servico === "mudanca" && p.mudanca?.tipologia) {
     // A mudança à hora (13-10-2026): a tabela, que já conta os andares e os km.
+    // Desde 11-11-2026, o preço público: o «desde» dos parceiros com 2 pessoas, ou a referência.
     const o = orcamentoDaMudanca(p.mudanca);
-    especifica = { texto: estimativaDaMudanca(o), conta: tres(o.totalSemIva, null) };
+    const pp = precoPublicoConhecido();
+    const horasCom2 = horasDaMudanca(p.mudanca.tipologia ?? null, p.mudanca.desmontagem === true, 2);
+    const desde = totalDesdeComDuas(pp, horasCom2);
+    especifica = {
+      texto: estimativaDaMudanca(o, pp, horasCom2),
+      conta: desde != null ? tres(desde, null, true) : tres(o.totalSemIva, null),
+    };
     porque.push(...porqueDaMudanca(p.mudanca, o));
   } else if (p.servico === "recolha_entulho" && (p.entulho || p.acesso)) {
     // O entulho (d4, 03-11-2026): os sacos um a um, o granel ao mesmo preço (d7), e os andares por trabalho.

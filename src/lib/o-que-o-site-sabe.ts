@@ -55,10 +55,10 @@ import {
   MINIMO_DE_HORAS,
   POR_ANDAR_SEM_ELEVADOR,
   POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
-  PRECO_DA_MUDANCA_POR_EXTENSO,
   PRECO_POR_HORA,
   PRECO_POR_KM_LONGE,
 } from "./tabela-das-mudancas";
+import { precoDaMudancaNoWhatsApp, precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import { NOSSA_EQUIPA, PROPRIO_DIA } from "./frases-proibidas";
 import { nomeDoServico } from "./service-categories";
 import { TAXA_IVA } from "./taxas-plataforma";
@@ -132,7 +132,8 @@ function linhasDosPrecos(): string[] {
   );
   // O granel ao preço dos sacos (d7, 04-11-2026): 1 m³ = 40 sacos.
   for (const v of ENTULHO_POR_VOLUME) linhas.push(`  · Entulho, ${v.m3} m³ (≈ ${v.sacos} sacos, ensacado ou a granel): ${faixa(v.de, v.ate)}.`);
-  linhas.push(`  · Mudança: ${PRECO_DA_MUDANCA_POR_EXTENSO}`);
+  // Ao preço de cada parceiro (11-11-2026): o preço público, o último lido da base.
+  linhas.push(`  · Mudança: ${precoDaMudancaNoWhatsApp(precoPublicoConhecido())}`);
   return linhas;
 }
 
@@ -169,7 +170,7 @@ PREÇO, IVA E FATURA
 - Itens a mais no dia (orçamento de valor total): ${ITENS_A_MAIS_PARA_O_CLIENTE}, combinado com o cliente antes de avançar.
 - Preços de referência do site, ${SEM_IVA_NA_FRASE} — o preço final é sempre o da proposta do parceiro:
 ${linhasDosPrecos().join("\n")}
-- Mudança à hora: cada andar sem elevador ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € + IVA por pessoa (${POR_ANDAR_SEM_ELEVADOR} € + IVA a equipa); elevador exterior ${ELEVADOR_EXTERIOR} € + IVA; mínimo ${MINIMO_DE_HORAS} horas (${MINIMO_DA_MUDANCA} € + IVA). Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
+- Mudança à hora: nunca prometas um preço fixo — cada parceiro tem o seu preço por hora, e o cliente escolhe na lista do simulador de mudanças. Na referência (sem parceiros na lista): cada andar sem elevador ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € + IVA por pessoa (${POR_ANDAR_SEM_ELEVADOR} € + IVA a equipa); elevador exterior ${ELEVADOR_EXTERIOR} € + IVA; mínimo ${MINIMO_DE_HORAS} horas (${MINIMO_DA_MUDANCA} € + IVA). Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
     .map((m) => `${m.nome.toLowerCase()} ${euros(m.preco)} + IVA por ${m.unidade}`)
     .join("; ")}).
 
@@ -273,5 +274,8 @@ export function eurosNoTexto(texto: string): number[] {
 
 /** O número bate com uma fonte (ao cêntimo)? */
 export function euroDasFontes(n: number): boolean {
+  // O «desde» das mudanças, quando há parceiros na lista (11-11-2026), também é fonte.
+  const p = precoPublicoConhecido();
+  if (p.tipo === "parceiros" && [p.desde.semIvaCent, p.desde.comIvaCent].some((c) => Math.abs(c / 100 - n) < 0.011)) return true;
   return EUROS_DAS_FONTES.some((f) => Math.abs(f - n) < 0.011);
 }

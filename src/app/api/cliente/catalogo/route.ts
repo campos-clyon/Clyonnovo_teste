@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { catalogoDaApp } from "@/lib/catalogo-da-app";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,8 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "cliente-catalogo", 120, 300);
   if (limite.erro) return limite.erro;
+  // O preço de referência das mudanças é o preço público (11-11-2026): o «desde» dos parceiros, ou a referência.
+  await precoPublicoDasMudancas();
   return NextResponse.json(catalogoDaApp(), {
     headers: { "Cache-Control": "public, max-age=300, s-maxage=300" },
   });

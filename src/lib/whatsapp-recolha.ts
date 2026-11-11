@@ -35,7 +35,7 @@ import { TAXA_IVA } from "./taxas-plataforma";
 import { partirMorada } from "./morada-partida";
 import { nifDaFactura } from "./pedido-valores";
 import { PRAZO_DE_RESPOSTA } from "./seo-data";
-import { PRECO_DA_MUDANCA_CURTO } from "./tabela-das-mudancas";
+import { precoDaMudancaNoWhatsApp, precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import {
   andarDaResposta,
   andarNaFrase,
@@ -1338,7 +1338,8 @@ export function notaDoPrecoPara(
    * (essas continuam a não se dizer antes do registo, decisão de 11-10-2026):
    * é o preço da hora que o site publica.
    */
-  const daMudanca = servico === "mudanca" ? ` Nas mudanças, a tabela é ${PRECO_DA_MUDANCA_CURTO}.` : "";
+  // E desde 11-11-2026 ao preço de cada parceiro: o modelo, o «desde» (ou a referência) e o simulador.
+  const daMudanca = servico === "mudanca" ? ` ${precoDaMudancaNoWhatsApp(precoPublicoConhecido())}` : "";
   return `${nota}${daMudanca}${falaDoIva(texto) ? ` ${O_IVA_ESTA_INCLUIDO}` : ""}\n\n`;
 }
 

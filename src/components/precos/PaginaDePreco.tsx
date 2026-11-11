@@ -74,7 +74,8 @@ export type ConteudoDaPaginaDePreco = {
   faqs: FAQItem[];
   relacionados: Array<{ href: string; titulo: string }>;
   /** O que se declara ao Google — só o que a página mostra. */
-  oferta: Record<string, unknown>;
+  /** Sem oferta (as mudanças sem parceiros na lista, 11-11-2026), o serviço vai sem preço. */
+  oferta?: Record<string, unknown>;
   ctaTitulo: string;
   mensagemWhatsApp: string;
 };

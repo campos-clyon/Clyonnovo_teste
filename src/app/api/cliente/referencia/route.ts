@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { lerPedidoParaReferencia, referenciaDoPedido } from "@/lib/preco-de-referencia";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,8 @@ export async function POST(req: NextRequest) {
   const pedido = lerPedidoParaReferencia(corpo);
   if (!pedido) return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
 
+  // A mudança diz o preço público (11-11-2026): o «desde» dos parceiros da lista, ou a referência.
+  if (pedido.servico === "mudanca") await precoPublicoDasMudancas();
   const { linhas, nota, conta, porque } = referenciaDoPedido(pedido);
   return NextResponse.json({ ok: true, linhas, nota, conta, porque });
 }

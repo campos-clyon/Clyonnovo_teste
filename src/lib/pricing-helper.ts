@@ -6,12 +6,12 @@ import {
   MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
   PRECO_POR_HORA,
-  REGRAS_DA_MUDANCA_PARA_O_MODELO,
   horasEstimadas,
   orcamentoDaMudanca,
   tipologiaDoTexto,
   type Tipologia,
 } from "./tabela-das-mudancas";
+import { precoPublicoConhecido, regrasDaMudancaParaOModelo } from "./preco-publico-das-mudancas";
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
@@ -505,7 +505,7 @@ ENTULHO — tabela de TEMPO (só para as horas e a equipa; o preço do entulho �
   - Entulho no chão (não ensacado): × 1.3 no tempo
   - Acesso difícil: +30 min
 
-${REGRAS_DA_MUDANCA_PARA_O_MODELO}
+${regrasDaMudancaParaOModelo(precoPublicoConhecido())}
 
 MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
 
@@ -569,7 +569,7 @@ HORÁRIO: 08h00–18h00 (fora deste horário requer agendamento prévio)
 
 HORAS: Recolha 1-7 itens: 0.5h/item | Carga completa: 4h | Entulho 1-10 sacos: 1h, 11-30: 1.5h, 31-80: 2.5h, 81-150: 4h | Mudança: pela tipologia (ver abaixo)
 
-${REGRAS_DA_MUDANCA_PARA_O_MODELO}
+${regrasDaMudancaParaOModelo(precoPublicoConhecido())}
 
 MÍNIMOS (REGRA CRÍTICA):
   ITENS SOLTOS (1-7 itens): SEM mínimo de zona — a grelha publicada no site.

@@ -8,7 +8,7 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 import { jsonLd } from "@/lib/json-ld";
 import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 import { BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
-import { OFERTA_DA_MUDANCA } from "@/lib/tabela-das-mudancas";
+import { ofertaDaMudanca, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 
 /**
@@ -46,7 +46,7 @@ export type ConteudoDoTipoDeMudanca = {
   mensagemWhatsApp: string;
 };
 
-export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanca }) {
+export default function PaginaDeTipoDeMudanca({ c, preco }: { c: ConteudoDoTipoDeMudanca; preco: PrecoPublicoDasMudancas }) {
   const url = `${SITE_URL}${c.caminho}`;
   const outros = TIPOS_DE_MUDANCA.filter((t) => t.href !== c.caminho);
 
@@ -62,7 +62,8 @@ export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanc
         provider: PRESTADOR,
         areaServed: CIDADES_MUDANCAS.map((cidade) => ({ "@type": "City", name: cidade.nome })),
         // A tabela à hora, a que a secção «Quanto custa» mostra (17-10-2026).
-        offers: OFERTA_DA_MUDANCA,
+        // O «desde» real dos parceiros, ou nenhum preço sem parceiros na lista (11-11-2026).
+        ...(ofertaDaMudanca(preco) ? { offers: ofertaDaMudanca(preco) } : {}),
       },
       {
         "@type": "FAQPage",
@@ -147,7 +148,7 @@ export default function PaginaDeTipoDeMudanca({ c }: { c: ConteudoDoTipoDeMudanc
         <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
           <h2 className="text-2xl font-bold text-slate-900">Quanto custa</h2>
           <div className="mt-4">
-            <TabelaDasMudancas compacta />
+            <TabelaDasMudancas compacta preco={preco} />
           </div>
           <p className="mt-4 text-sm text-slate-600">
             O que mais pesa no número de horas e nos extras:

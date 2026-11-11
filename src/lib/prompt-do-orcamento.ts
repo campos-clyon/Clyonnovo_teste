@@ -19,11 +19,11 @@ import {
   PRECO_POR_HORA,
   DESLOCACAO_DA_MUDANCA_PARA_O_MODELO,
   RAIO_INCLUIDO_KM,
-  REGRAS_DA_MUDANCA_PARA_O_MODELO,
   TIPOLOGIA_POR_EXTENSO,
   orcamentoDaMudanca,
   type Tipologia,
 } from "@/lib/tabela-das-mudancas";
+import { precoPublicoConhecido, regrasDaMudancaParaOModelo } from "@/lib/preco-publico-das-mudancas";
 
 /**
  * AS INSTRUÇÕES AO MODELO QUE ESTIMA O ORÇAMENTO — 25-10-2026.
@@ -177,7 +177,7 @@ REGRAS ABSOLUTAS
 0. NÚMERO DE ITENS: usa SEMPRE o valor em "CONTAGEM DE ITENS (PRÉ-CALCULADA)" acima — está correto e já contabiliza todos os itens mencionados na descrição. NUNCA contes os itens tu mesmo a partir do texto livre nem assumas 1 item quando o valor pré-calculado é maior. Um pedido com 3 ou 4 itens TEM de ser cobrado como 3 ou 4 itens, nunca como 1.
 1. USA a fórmula geral para recolhas de móveis/monos e esvaziamento: (combustível + pessoal + overhead) × (1 + margem) = preço s/IVA.
    Para ENTULHO usa EXCLUSIVAMENTE a grelha da regra 2.c (NÃO a fórmula geral custo×margem).
-   Para MUDANÇA usa EXCLUSIVAMENTE a tabela à hora da regra 2.d (${PRECO_POR_HORA} € s/IVA por hora, mínimo ${MINIMO_DE_HORAS} horas).
+   Para MUDANÇA usa EXCLUSIVAMENTE a regra 2.d: estima pela referência (${PRECO_POR_HORA} € s/IVA por hora, mínimo ${MINIMO_DE_HORAS} horas); o preço é o de cada parceiro.
 2. MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
    a) ITENS SOLTOS (1–7 itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
       Móveis por peça, a tabela do site (s/IVA): ${PECAS_EM_TEXTO}; a soma das peças nunca fica abaixo da recolha mínima de ${RECOLHA_MINIMA}, e os andares somam-se depois do mínimo.
@@ -198,10 +198,10 @@ ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
       EXEMPLO: 10 sacos ensacados, acesso normal → ${ENTULHO_ATE_10_SACOS.minimo} a ${ENTULHO_ATE_10_SACOS.maximo} € s/IVA.
       EXEMPLO: 50 sacos num 2.º andar com elevador → ${50 * PRECO_POR_SACO.minimo + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR} a ${50 * PRECO_POR_SACO.maximo + 2 * RECOLHA_POR_ANDAR_COM_ELEVADOR} € s/IVA.
       EXEMPLO: 3 m³ de obra de um T1/T2, a granel (≈ ${TRES_METROS.sacos} sacos) → ${TRES_METROS.de} a ${TRES_METROS.ate} € s/IVA, o mesmo que ${TRES_METROS.sacos} sacos ensacados.
-   d) MUDANÇA — a tabela CLYON à hora (NÃO usar a fórmula geral custo×margem):
-${REGRAS_DA_MUDANCA_PARA_O_MODELO}
+   d) MUDANÇA — à hora, ao preço de cada parceiro (NÃO usar a fórmula geral custo×margem):
+${regrasDaMudancaParaOModelo(precoPublicoConhecido())}
       Mudanças NÃO têm limite de distância.
-      O preço final da mudança é o da tabela, calculado pelo sistema; usa-a também no teu summary.
+      A estimativa da mudança é a da referência, calculada pelo sistema; o preço final é o do parceiro que o cliente escolher na lista (nunca prometas um preço fixo).
       EXEMPLOS: ${EXEMPLOS_DA_MUDANCA}
    e) RECOLHAS (móveis/monos/entulho/esvaziamento): limite máximo 70 km da base CLYON.
       Se distância > 70 km → status "onsite_required", confidence "low", recommendation "visita_presencial".

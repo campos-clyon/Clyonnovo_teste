@@ -1,4 +1,10 @@
-import { OFERTA_DA_MUDANCA, PRECO_DA_MUDANCA_CURTO, PRECO_DA_MUDANCA_NA_DESCRICAO } from "@/lib/tabela-das-mudancas";
+import {
+  ofertaDaMudanca,
+  precoDaMudancaCurto,
+  precoDaMudancaNaDescricao,
+  type PrecoPublicoDasMudancas,
+} from "@/lib/preco-publico-das-mudancas";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import type { Metadata } from "next";
 // Com outro nome: esta página já tem uma constante `jsonLd`, que é o objecto.
 import { jsonLd as paraScriptJsonLd } from "@/lib/json-ld";
@@ -49,8 +55,11 @@ interface Props {
  * Uma vez por dia: o bloco dos profissionais da cidade vem da base, e um
  * profissional aprovado hoje não deve esperar pelo próximo deploy para
  * aparecer na página da zona dele (o mesmo das páginas de recolha).
+ *
+ * De hora a hora desde 11-11-2026: o preço da hora é o «desde» dos parceiros
+ * da lista (`preco-publico-das-mudancas.ts`, com cache de 1 h).
  */
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 /**
  * AS PERGUNTAS QUE TODAS AS CIDADES TÊM — 09-10-2026.
@@ -61,7 +70,7 @@ export const revalidate = 86400;
  * das da cidade, com o nome dela, e das constantes de `promessas-publicas`:
  * o que se promete aqui é o mesmo que se promete no resto do site.
  */
-function perguntasGerais(nome: string): Array<{ pergunta: string; resposta: string }> {
+function perguntasGerais(nome: string, preco: PrecoPublicoDasMudancas): Array<{ pergunta: string; resposta: string }> {
   return [
     {
       pergunta: `Como funciona o pedido de mudança ${emTerra(nome)}?`,
@@ -74,8 +83,8 @@ function perguntasGerais(nome: string): Array<{ pergunta: string; resposta: stri
     },
     {
       pergunta: "O preço pode mudar no dia da mudança?",
-      // À hora desde 13-10-2026: o que se acorda é o preço da hora.
-      resposta: `Fica acordado por escrito o preço da hora (${PRECO_DA_MUDANCA_CURTO}); o total depende das horas de trabalho no dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que o parceiro prevê as horas.`,
+      // À hora desde 13-10-2026; ao preço de cada parceiro desde 11-11-2026.
+      resposta: `O preço da hora é o do parceiro que escolher, e fica congelado no pedido (${precoDaMudancaCurto(preco)}); o total sai das horas, dos km e do material que confirma na folha do dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que se prevêem as horas.`,
     },
     {
       pergunta: "Fazem mudanças ao fim de semana?",
@@ -114,7 +123,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
    * 6h | CLYON | CLYON». O `comExtra` deita fora o «Orçamento em 6h» numa
    * terra de nome comprido em vez de deixar o Google cortar o título.
    */
-  const title = tituloDaMudanca(c.nome);
+  const preco = await precoPublicoDasMudancas();
+  const title = tituloDaMudanca(c.nome, preco);
   // O PREÇO À HORA, E PARA QUANTOS É (14-10-2026). Aqui não havia número
   // nenhum: a meta description dizia «Preços desde 150€» para um serviço que
   // o motor facturava a partir de 490 €, e saiu. Desde 13-10-2026 há tabela,
@@ -125,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // prazo, que é o que a pessoa quer saber. O essencial primeiro; o resto só
   // se couber inteiro (ver descricoes-seo.ts).
   const description = descricaoQueCabe([
-    `Mudanças ${emTerra(c.nome)} a ${PRECO_DA_MUDANCA_NA_DESCRICAO}.`,
+    `Mudanças ${emTerra(c.nome)} à hora, ${precoDaMudancaNaDescricao(preco)}.`,
     `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
     "Orçamento grátis.",
   ]);
@@ -150,7 +160,8 @@ export default async function MudancasCidadePage({ params }: Props) {
   const c = getCidadeMudancaBySlug(cidade);
   if (!c) notFound();
 
-  const faqs = [...c.faqs, ...perguntasGerais(c.nome)];
+  const preco = await precoPublicoDasMudancas();
+  const faqs = [...c.faqs, ...perguntasGerais(c.nome, preco)];
   const local = getCidadeLocal(c.slug);
   // As terras que se juntaram a esta página (d13, 28-10-2026): a Amora e
   // Corroios ao Seixal, a Costa da Caparica a Almada.
@@ -194,9 +205,10 @@ export default async function MudancasCidadePage({ params }: Props) {
          * Aqui estava um `AggregateOffer` com `lowPrice` a 140–220 € consoante
          * a cidade, que o motor nunca praticava, e saiu. Desde 17-10-2026
          * declara-se a tabela à hora, a que a página mostra no cartão do preço
-         * (`OFERTA_DA_MUDANCA`).
+         * (`OFERTA_DA_MUDANCA`). Desde 11-11-2026, o «desde» real dos
+         * parceiros, ou nenhum preço quando não há parceiros na lista.
          */
-        offers: OFERTA_DA_MUDANCA,
+        ...(ofertaDaMudanca(preco) ? { offers: ofertaDaMudanca(preco) } : {}),
       },
       {
         "@type": "FAQPage",
@@ -292,10 +304,10 @@ export default async function MudancasCidadePage({ params }: Props) {
             */}
             <div className="col-span-full rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-medium text-slate-500">Preço {emTerra(c.nome)}</p>
-              {/* A tabela à hora (13-10-2026) — a mesma em todas as cidades. */}
-              <p className="mt-1 text-2xl font-bold text-emerald-600">{PRECO_DA_MUDANCA_CURTO}</p>
+              {/* O preço público (11-11-2026): o «desde» dos parceiros, ou a referência. */}
+              <p className="mt-1 text-2xl font-bold text-emerald-600">{precoDaMudancaCurto(preco)}</p>
               <p className="text-xs text-tinta-fraca">
-                Carrinha, motorista e 2 ajudantes ·{" "}
+                Cada parceiro tem o seu preço por hora: compare na lista e escolha ·{" "}
                 <Link href="/precos/mudancas" className="underline">
                   quanto custa, do T0 ao T4
                 </Link>

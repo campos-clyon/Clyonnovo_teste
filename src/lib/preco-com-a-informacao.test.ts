@@ -1,3 +1,4 @@
+import { precoDaMudancaCurto, precoDaMudancaPorExtenso, SEM_PARCEIROS } from "./preco-publico-das-mudancas";
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -7,8 +8,6 @@ import { ESVAZIAMENTO_POR_ESPACO, PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE,
 import { CITIES, NA_PROPOSTA_COM_IVA, SERVICES } from "./seo-data";
 import { tituloDaCidade } from "./titulos-seo";
 import {
-  PRECO_DA_MUDANCA_CURTO,
-  PRECO_DA_MUDANCA_POR_EXTENSO,
   PRECO_POR_HORA_COM_IVA,
   tabelaEmLinhas,
 } from "./tabela-das-mudancas";
@@ -129,8 +128,11 @@ describe("nenhum preço sai sozinho", () => {
 
   it("as frases de preço das mudanças já trazem o IVA dentro", () => {
     // Por isso o teste de cima as deixa passar pelo nome.
-    expect(PRECO_DA_MUDANCA_CURTO).toContain("IVA");
-    expect(PRECO_DA_MUDANCA_POR_EXTENSO).toContain("IVA");
+    const comParceiros = { tipo: "parceiros", parceiros: 1, desde: { semIvaCent: 4000, comIvaCent: 4920 } } as const;
+    for (const p of [SEM_PARCEIROS, comParceiros]) {
+      expect(precoDaMudancaCurto(p)).toMatch(/\+ IVA.*com IVA/);
+      expect(precoDaMudancaPorExtenso(p)).toMatch(/\+ IVA.*com IVA/);
+    }
   });
 
   it("e a lista de referências das páginas de cidade leva o com IVA ao lado de cada valor", () => {

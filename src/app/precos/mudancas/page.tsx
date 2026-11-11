@@ -18,7 +18,6 @@ import {
   MATERIAIS,
   MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
-  OFERTA_DA_MUDANCA,
   PESSOAS_NA_EQUIPA,
   POR_ANDAR_SEM_ELEVADOR,
   PRECO_POR_HORA,
@@ -28,6 +27,13 @@ import {
   orcamentoDaMudanca,
 } from "@/lib/tabela-das-mudancas";
 import { TAXA_IVA } from "@/lib/taxas-plataforma";
+import {
+  ofertaDaMudanca,
+  precoDaMudancaNaCabeca,
+  precoDaMudancaNaDescricao,
+  type PrecoPublicoDasMudancas,
+} from "@/lib/preco-publico-das-mudancas";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 
 /*
  * QUANTO CUSTA UMA MUDANÇA — 17-10-2026. Ver `quanto-custa.ts`.
@@ -36,6 +42,10 @@ import { TAXA_IVA } from "@/lib/taxas-plataforma";
  * lugares, com médias de 590 € e faixas de 50 a 1 700 €. A CLYON tem a
  * tabela do dono, à hora (13-10-2026): aqui está ela, por tipologia, com os
  * extras e quatro mudanças feitas pela mesma conta do simulador.
+ *
+ * AO PREÇO DE CADA PARCEIRO — 11-11-2026: a cabeça diz o preço público (o
+ * «desde» dos parceiros da lista, ou a referência); a tabela por tipologia,
+ * os extras e os exemplos ficam como REFERÊNCIA, e dizem-no.
  */
 const pagina = paginaDePreco("/precos/mudancas");
 const IVA = `${Math.round(TAXA_IVA * 100)} %`;
@@ -43,22 +53,28 @@ const total = (t: "T0" | "T1" | "T2" | "T3" | "T4+") => orcamentoDaMudanca({ tip
 const KM_DO_EXEMPLO = 120;
 const caixaMaisBarata = Math.min(...MATERIAIS.map((m) => m.preco));
 
-const descricao = descricaoQueCabe([
-  `Mudanças a ${PRECO_POR_HORA} € + IVA por hora, equipa de ${PESSOAS_NA_EQUIPA}, mínimo ${MINIMO_DE_HORAS} h.`,
-  `T1 ≈ ${euros(total("T1"))}, T2 ≈ ${euros(total("T2"))}, T3 ≈ ${euros(total("T3"))} + IVA.`,
-  "Extras e exemplos feitos.",
-]);
+const descricaoCom = (preco: PrecoPublicoDasMudancas) =>
+  descricaoQueCabe([
+    `Mudanças à hora, ${precoDaMudancaNaDescricao(preco)}.`,
+    `Na referência, T1 ≈ ${euros(total("T1"))}, T2 ≈ ${euros(total("T2"))} + IVA.`,
+    "Compare os parceiros e escolha.",
+  ]);
 
-export const metadata: Metadata = {
-  title: pagina.titulo,
-  description: descricao,
-  alternates: { canonical: `${SITE_URL}${pagina.caminho}` },
-  openGraph: og({ title: pagina.titulo, description: descricao, url: `${SITE_URL}${pagina.caminho}` }),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const descricao = descricaoCom(await precoPublicoDasMudancas());
+  return {
+    title: pagina.titulo,
+    description: descricao,
+    alternates: { canonical: `${SITE_URL}${pagina.caminho}` },
+    openGraph: og({ title: pagina.titulo, description: descricao, url: `${SITE_URL}${pagina.caminho}` }),
+  };
+}
 
-export const revalidate = 86400;
+/** De hora a hora: o preço público das mudanças (cache de 1 h). */
+export const revalidate = 3600;
 
-export default function PrecoDasMudancasPage() {
+export default async function PrecoDasMudancasPage() {
+  const preco = await precoPublicoDasMudancas();
   return (
     <PaginaDePreco
       c={{
@@ -66,36 +82,37 @@ export default function PrecoDasMudancasPage() {
         tom: "mudanca",
         h1: "Quanto custa uma mudança?",
         resposta:
-          `Uma mudança paga-se à hora: ${euros(PRECO_POR_HORA)} + IVA por hora (${euros(comIva(PRECO_POR_HORA))} com IVA) ` +
-          `pela equipa de ${PESSOAS_NA_EQUIPA}, com carrinha, motorista e 2 ajudantes, e um mínimo de ${MINIMO_DE_HORAS} horas. ` +
-          `Um T1 fica em cerca de ${euros(total("T1"))}, um T2 em ${euros(total("T2"))} e um T3 em ${euros(total("T3"))}, sempre + IVA. ` +
-          `Andares sem elevador, desmontagem e percursos acima de ${RAIO_INCLUIDO_KM} km acrescem.`,
-        tabela: { titulo: "Quanto custa, por tipologia", linhas: linhasDasMudancas() },
+          `${precoDaMudancaNaCabeca(preco)} ` +
+          `No simulador vê os parceiros disponíveis, com a nota, o preço por hora, a equipa de 2 ou 3 e o material, e escolhe; ` +
+          `o valor final sai das horas, dos km e do material que confirma na folha do dia. ` +
+          `Na referência (${euros(PRECO_POR_HORA)} + IVA por hora, ${euros(comIva(PRECO_POR_HORA))} com IVA, equipa de ${PESSOAS_NA_EQUIPA}), ` +
+          `um T1 fica em cerca de ${euros(total("T1"))}, um T2 em ${euros(total("T2"))} e um T3 em ${euros(total("T3"))}, sempre + IVA.`,
+        tabela: { titulo: "Na referência, por tipologia", linhas: linhasDasMudancas() },
         extras: {
-          titulo: "Os extras",
-          intro: "Somam-se às horas, quando se aplicam.",
+          titulo: "Os extras, na referência",
+          intro: "Somam-se às horas, quando se aplicam. Cada parceiro tem a sua tarifa: a hora, os km e o material de cada um vêem-se na lista.",
           linhas: extrasDasMudancas(),
         },
         exemplos: {
           titulo: "Quatro mudanças, com as contas feitas",
           intro:
-            "Feitas pela mesma conta que estima o seu pedido no simulador. São estimativas: a mudança paga-se pelas horas feitas no dia.",
+            "Feitas pela tabela de referência. São estimativas: com o parceiro que escolher, a conta é a da tarifa dele, e paga-se pelas horas confirmadas na folha do dia.",
           itens: exemplosDeMudanca(),
         },
         caixa: {
           titulo: "O que vem na hora",
           itens: [
-            "Carrinha, motorista e 2 ajudantes",
+            "A carrinha e a equipa do parceiro — 2 ou 3 pessoas, à sua escolha",
             "Carregar, transportar e descarregar",
-            `A deslocação, até ${RAIO_INCLUIDO_KM} km de percurso`,
-            `Materiais de embalamento à parte, pela tabela (caixas a partir de ${euros(caixaMaisBarata)})`,
+            "Os km do percurso, pela tarifa do parceiro",
+            `Materiais de embalamento à parte, ao preço do parceiro (na referência, caixas a partir de ${euros(caixaMaisBarata)})`,
           ],
         },
         fatores: [
           "A tipologia, e quanta coisa vai",
           "Os andares e o elevador nas duas casas",
           "Desmontar e montar móveis",
-          `A distância: acima de ${RAIO_INCLUIDO_KM} km contam todos os km, ida e volta`,
+          "O preço por hora do parceiro que escolher, e os km pela tarifa dele",
           "O estacionamento à porta das duas casas",
           "Ter tudo embalado antes do dia poupa horas",
         ],
@@ -104,32 +121,32 @@ export default function PrecoDasMudancasPage() {
           {
             question: "Quanto custa a mudança de um T2?",
             answer:
-              `Contam-se cerca de ${HORAS_POR_TIPOLOGIA.T2} horas: ${euros(total("T2"))} + IVA (${euros(comIva(total("T2")))} com IVA), ` +
-              `com elevador nas duas casas e até ${RAIO_INCLUIDO_KM} km. Cada andar sem elevador acresce ${euros(POR_ANDAR_SEM_ELEVADOR)}.`,
+              `Contam-se cerca de ${HORAS_POR_TIPOLOGIA.T2} horas com 3 pessoas: na referência, ${euros(total("T2"))} + IVA (${euros(comIva(total("T2")))} com IVA), ` +
+              `com elevador nas duas casas e até ${RAIO_INCLUIDO_KM} km (cada andar sem elevador acresce ${euros(POR_ANDAR_SEM_ELEVADOR)}). Com o parceiro que escolher, é o preço por hora dele.`,
           },
           {
             question: "Quanto custa a mudança de um T0 ou T1?",
-            answer: `O mínimo: ${MINIMO_DE_HORAS} horas, ${euros(MINIMO_DA_MUDANCA)} + IVA (${euros(comIva(MINIMO_DA_MUDANCA))} com IVA).`,
+            answer: `O mínimo de horas do parceiro que escolher; na referência, ${MINIMO_DE_HORAS} horas, ${euros(MINIMO_DA_MUDANCA)} + IVA (${euros(comIva(MINIMO_DA_MUDANCA))} com IVA).`,
           },
           {
             question: "Quanto custa uma mudança para longe?",
             answer:
-              `Até ${RAIO_INCLUIDO_KM} km de percurso a deslocação está incluída. Acima disso, ${euros(PRECO_POR_KM_LONGE)} por km, ` +
+              `Os km contam pela tarifa de cada parceiro, e cada um diz até que distância vai. Na referência, até ${RAIO_INCLUIDO_KM} km de percurso a deslocação está incluída; acima disso, ${euros(PRECO_POR_KM_LONGE)} por km, ` +
               `contando todos os km, ida e volta, mais portagens: ${KM_DO_EXEMPLO} km são ${euros(deslocacao(KM_DO_EXEMPLO))} de deslocação, mais as horas.`,
           },
           {
             question: "O preço é fechado?",
             answer:
-              "A hora é fechada; o total sai das horas feitas no dia. Cada proposta diz quantas horas o parceiro prevê, " +
-              "e é por isso que vale a pena dizer no pedido o que vai, os andares e o elevador.",
+              "A hora é a do parceiro que escolher, e fica congelada no pedido; o total sai das horas, dos km e do material que confirma na folha do dia. " +
+              "É por isso que vale a pena dizer no pedido o que vai, os andares e o elevador.",
           },
           {
             question: "Há um preço mínimo?",
-            answer: `Sim: ${MINIMO_DE_HORAS} horas da equipa, ${euros(MINIMO_DA_MUDANCA)} + IVA.`,
+            answer: `Sim: o mínimo de horas de cada parceiro, que se vê na lista. Na referência, ${MINIMO_DE_HORAS} horas da equipa, ${euros(MINIMO_DA_MUDANCA)} + IVA (${euros(comIva(MINIMO_DA_MUDANCA))} com IVA).`,
           },
           {
             question: "Os preços já têm IVA?",
-            answer: `Os valores da tabela são sem IVA, e a coluna ao lado tem o valor com IVA (${IVA}). ${PRECO_FECHADO}`,
+            answer: `Os valores da tabela são sem IVA, e a coluna ao lado tem o valor com IVA (${IVA}); na lista dos parceiros, cada preço aparece sem e com IVA. ${PRECO_FECHADO}`,
           },
         ],
         relacionados: [
@@ -140,7 +157,7 @@ export default function PrecoDasMudancasPage() {
           { href: "/blog/mudanca-entre-lisboa-e-a-margem-sul", titulo: "Mudança entre Lisboa e a Margem Sul" },
           { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório" },
         ],
-        oferta: OFERTA_DA_MUDANCA,
+        oferta: ofertaDaMudanca(preco),
         ctaTitulo: "Tem uma mudança para fazer?",
         mensagemWhatsApp: "Olá! Tenho uma mudança para fazer. Podem dar-me um orçamento?",
       }}

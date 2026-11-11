@@ -20,7 +20,7 @@ import { lerALicao, licaoDoCaso } from "./propor-licoes";
 import { PERGUNTA_ANOTADA, O_QUE_ELA_FAZ } from "./voz-da-vitoria";
 import { recolhaNova, responderComCompreensao, responderNaRecolha, type EstadoDaRecolha } from "./whatsapp-recolha";
 import { respostaLivre } from "./whatsapp-compreensao";
-import { PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-das-mudancas";
+import { precoDaMudancaNoWhatsApp, SEM_PARCEIROS } from "./preco-publico-das-mudancas";
 import { QUEM_FAZ_O_TRABALHO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
 import { ITENS_A_MAIS_PARA_O_CLIENTE } from "./itens-a-mais";
@@ -47,7 +47,7 @@ describe("o que o site sabe — lido das fontes", () => {
     expect(texto).toContain(QUEM_FAZ_O_TRABALHO);
     expect(texto).toContain(PROMESSA_DO_PRAZO);
     expect(texto).toContain(RESPOSTA_SOBRE_CONTENTORES);
-    expect(texto).toContain(PRECO_DA_MUDANCA_POR_EXTENSO);
+    expect(texto).toContain(precoDaMudancaNoWhatsApp(SEM_PARCEIROS));
     expect(texto).toContain(ITENS_A_MAIS_PARA_O_CLIENTE);
   });
 

@@ -36,7 +36,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 10-11-2026 (d29): os dados estruturados de /avaliacoes, /trabalhos, /precos e /blog
   // (o que a página diz ao Google sobre si: o caminho, as perguntas, a lista dos artigos).
   "/avaliacoes": "2026-11-10",
-  "/faq": "2026-11-04",
+  "/faq": "2026-11-11",
   "/sobre-nos": "2026-11-04",
   "/trabalhos": "2026-11-10",
   "/blog": "2026-11-10",
@@ -58,7 +58,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 31-10-2026: o sem IVA nunca sozinho — cada preço com o com IVA ao lado (antes,
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
   "/precos/esvaziamento-de-casas": "2026-11-04",
-  "/precos/mudancas": "2026-10-31",
+  "/precos/mudancas": "2026-11-11",
   "/contactos": "2026-11-04",
   "/servicos/esvaziamento-apartamento": "2026-11-01",
   "/servicos/manutencao-casa": "2026-11-01",
@@ -71,10 +71,11 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/precos/recolha-de-monos-e-moveis": "2026-11-04",
   "/esvaziamento-de-casas": "2026-11-01",
   "/esvaziamento-de-casas-amadora": "2026-11-01",
-  "/mudancas": "2026-11-01",
-  "/transporte-de-moveis": "2026-11-01",
-  "/pequenas-mudancas": "2026-11-01",
-  "/mudancas-de-escritorio": "2026-11-01",
+  // 11-11-2026: as mudanças ao preço de cada parceiro (o «desde» dos parceiros da lista, ou a referência).
+  "/mudancas": "2026-11-11",
+  "/transporte-de-moveis": "2026-11-11",
+  "/pequenas-mudancas": "2026-11-11",
+  "/mudancas-de-escritorio": "2026-11-11",
   // 31-10-2026 (d6 de 28-10): o primeiro ecrã, o número da semana, a app CLYON Pro.
   // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
   "/quero-ser-parceiro": "2026-11-04",

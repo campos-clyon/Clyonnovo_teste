@@ -8,7 +8,7 @@ import { PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
 import { faixaSemEComIva, valorSemEComIva } from "./preco-de-referencia";
 import { RECOLHA_DA_CAMARA, primeiraFrase } from "./recolha-da-camara";
 import { COMO_SE_RECOLHE_ENTULHO, NAO_HA_CONTENTORES, RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
-import { PRECO_DA_MUDANCA_POR_EXTENSO } from "./tabela-das-mudancas";
+import { MODELO_DA_MUDANCA } from "./modelo-da-mudanca";
 import { getAllCityServiceSlugs } from "./seo-data";
 import { getAllCidadeSlugs } from "./mudancas-cidades";
 
@@ -114,9 +114,9 @@ describe("os números saem de onde o site os tira", () => {
     expect(texto).not.toMatch(/também sem IVA/);
   });
 
-  it("mudança: a tabela por extenso, e o simulador já em «Mudança»", () => {
+  it("mudança: o modelo (cada parceiro, o seu preço), e o simulador já em «Mudança»", () => {
     const a = artigo("mudanca-entre-lisboa-e-a-margem-sul");
-    expect(textoDe(a)).toContain(PRECO_DA_MUDANCA_POR_EXTENSO);
+    expect(textoDe(a)).toContain(MODELO_DA_MUDANCA);
     expect(ligacoesDe(a).map((l) => l.href)).toContain("/simulador?servico=mudanca");
   });
 });

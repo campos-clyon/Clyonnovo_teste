@@ -172,8 +172,12 @@ export const PRECOS: Record<string, PrecoPublico> = {
    * E DESDE 13-10-2026 PUBLICAM — à hora, a tabela do dono, a mesma que o
    * motor usa (`tabela-das-mudancas.ts`). O piso é o mínimo de 3 horas.
    * Lidos de lá desde 27-10-2026 (d12): estavam escritos à mão aqui.
+   *
+   * DESDE 11-11-2026 CADA PARCEIRO TEM O SEU PREÇO: a etiqueta diz que é a
+   * referência (estes cartões não lêem a base); o «desde» dos parceiros está
+   * nas páginas das mudanças (`preco-publico-das-mudancas.ts`).
    */
-  mudanca: { etiqueta: `${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS },
+  mudanca: { etiqueta: `referência ${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS },
 
   montagem_moveis: { etiqueta: "desde 49 €", minimo: 49 },
   jardinagem: { etiqueta: "desde 64 €", minimo: 64 },

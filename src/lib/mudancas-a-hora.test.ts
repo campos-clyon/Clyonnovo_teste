@@ -22,6 +22,7 @@ import { mensagemDasPropostas, propostasParaOCliente, SAO_PRECOS_POR_HORA } from
 import { porHoraSeFor } from "./sugestao-ajustada";
 import { haAcrescimoPorItem } from "./itens-a-mais";
 import { notaDoPrecoPara } from "./whatsapp-recolha";
+import { lembrarPrecoPublico, SEM_PARCEIROS } from "./preco-publico-das-mudancas";
 
 /**
  * AS MUDANÇAS À HORA — 13-10-2026, a tabela do dono e as decisões dele:
@@ -166,9 +167,16 @@ describe("o motor usa a tabela", () => {
   });
 });
 
-describe("o assistente do WhatsApp diz a tabela a quem pergunta o preço de uma mudança", () => {
-  it("numa mudança, a nota do preço leva a hora; nos outros serviços, não", () => {
-    expect(notaDoPrecoPara("quanto custa?", "quando", false, "mudanca")).toContain("50 € + IVA por hora · mínimo 3 horas");
+describe("o assistente do WhatsApp diz o modelo a quem pergunta o preço de uma mudança (11-11-2026)", () => {
+  it("numa mudança, a nota do preço diz o preço de cada parceiro e o simulador; nos outros serviços, não", () => {
+    lembrarPrecoPublico(SEM_PARCEIROS);
+    const nota = notaDoPrecoPara("quanto custa?", "quando", false, "mudanca");
+    expect(nota).toContain("cada parceiro tem o seu preço por hora");
+    expect(nota).toContain("a referência é 50,00 € + IVA por hora (61,50 € com IVA), equipa de 3, mínimo de 3 horas");
+    expect(nota).toContain("clyon.pt/simulador?servico=mudanca");
+    lembrarPrecoPublico({ tipo: "parceiros", parceiros: 2, desde: { semIvaCent: 4000, comIvaCent: 4920 } });
+    expect(notaDoPrecoPara("quanto custa?", "quando", false, "mudanca")).toContain("desde 40,00 € + IVA/h (49,20 € com IVA), equipa de 2");
+    lembrarPrecoPublico(SEM_PARCEIROS);
     expect(notaDoPrecoPara("quanto custa?", "quando", false, "recolha_moveis")).not.toContain("por hora");
   });
 });
@@ -176,12 +184,12 @@ describe("o assistente do WhatsApp diz a tabela a quem pergunta o preço de uma 
 describe("o site publica a tabela", () => {
   const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
   it("a página das mudanças, as das cidades e as dos tipos mostram o preço à hora", () => {
-    expect(ler("src/app/mudancas/page.tsx")).toContain("<TabelaDasMudancas />");
-    expect(ler("src/components/mudancas/PaginaDeTipoDeMudanca.tsx")).toContain("<TabelaDasMudancas compacta />");
-    expect(ler("src/app/mudancas/[cidade]/page.tsx")).toContain("{PRECO_DA_MUDANCA_CURTO}");
-    // Lido de tabela-das-mudancas.ts desde 27-10-2026 (d12); o valor continua 50 €/h e 150 €.
-    expect(ler("src/lib/precos-publicos.ts")).toContain("mudanca: { etiqueta: `${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS }");
-    expect(PRECOS.mudanca).toEqual({ etiqueta: "50 €/hora + IVA", minimo: 150 });
+    expect(ler("src/app/mudancas/page.tsx")).toContain("<TabelaDasMudancas preco={preco} />");
+    expect(ler("src/components/mudancas/PaginaDeTipoDeMudanca.tsx")).toContain("<TabelaDasMudancas compacta preco={preco} />");
+    expect(ler("src/app/mudancas/[cidade]/page.tsx")).toContain("{precoDaMudancaCurto(preco)}");
+    // Lido de tabela-das-mudancas.ts desde 27-10-2026 (d12); desde 11-11-2026 diz que é a referência.
+    expect(ler("src/lib/precos-publicos.ts")).toContain("mudanca: { etiqueta: `referência ${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS }");
+    expect(PRECOS.mudanca).toEqual({ etiqueta: "referência 50 €/hora + IVA", minimo: 150 });
     expect(ler("src/lib/mudancas-cidades.ts")).not.toMatch(/Não há tabela/);
   });
 

@@ -93,6 +93,8 @@ export async function recolherPedidoPorWhatsApp(
   /** Sem ir buscar os pedidos abertos dele — quando pediu claramente um pedido novo (26-10-2026). */
   opcoes: { semPedidosAbertos?: boolean; videos?: number } = {},
 ): Promise<void> {
+  /* O preço público das mudanças (11-11-2026): lido antes de responder, para a Vitória dizer o «desde» dos parceiros (ou a referência). */
+  await import("./ler-preco-publico-das-mudancas").then((m) => m.precoPublicoDasMudancas()).catch(() => undefined);
   const {
     recolhaWhatsApp,
     guardarRecolhaWhatsApp,
@@ -1788,6 +1790,8 @@ export async function tratarMensagemDoCliente(
         videos?: number;
       },
 ): Promise<void> {
+  /* O preço público das mudanças (11-11-2026): lido antes de responder, para a Vitória dizer o «desde» dos parceiros (ou a referência). */
+  await import("./ler-preco-publico-das-mudancas").then((m) => m.precoPublicoDasMudancas()).catch(() => undefined);
   // O painel manda primeiro: desligado, bloqueado ou entregue a uma pessoa,
   // o cérebro não diz UMA palavra — nem sequer a de "não o conheço".
   const { podeOWhatsAppFalarCom } = await import("@/lib/db");

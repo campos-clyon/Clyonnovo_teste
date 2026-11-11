@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Truck } from "lucide-react";
 
-import { PRECO_DA_MUDANCA_CURTO } from "@/lib/tabela-das-mudancas";
+import { MODELO_DA_MUDANCA_CURTO } from "@/lib/modelo-da-mudanca";
 
 /**
  * «VAI MUDAR DE CASA?» — 17-10-2026.
@@ -24,8 +24,8 @@ export default function VaiMudarDeCasa() {
           <div>
             <h2 className="text-xl font-bold text-slate-900">Vai mudar de casa?</h2>
             <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-600">
-              O que fica vai na mudança; o que sai, numa recolha. As mudanças pagam-se à hora, pela tabela da
-              CLYON: {PRECO_DA_MUDANCA_CURTO}.
+              O que fica vai na mudança; o que sai, numa recolha. As mudanças pagam-se à hora,{" "}
+              {MODELO_DA_MUDANCA_CURTO}: compare os parceiros, a nota e o preço de cada um, e escolha.
             </p>
           </div>
         </div>

@@ -63,7 +63,7 @@ describe("a página de cada cidade", () => {
   const P = ler("src/app/mudancas/[cidade]/page.tsx");
 
   it("o FAQPage sai uma vez só, com as perguntas da cidade e as gerais", () => {
-    expect(P).toContain("const faqs = [...c.faqs, ...perguntasGerais(c.nome)];");
+    expect(P).toContain("const faqs = [...c.faqs, ...perguntasGerais(c.nome, preco)];");
     expect(P).toContain("mainEntity: faqs.map((f) => ({");
     expect(P).toContain("includeSchema={false}");
   });
@@ -160,8 +160,8 @@ describe("os três tipos de mudança", () => {
     ]) {
       const t = ler(f);
       expect(t, f).not.toMatch(/desde \d+\s?€|\d+\s?€|\d+ euros/i);
-      // Desde 17-10-2026 declara-se a tabela à hora, pela constante — e só ela.
-      expect(t.replace(/offers: OFERTA_DA_MUDANCA/g, ""), f).not.toMatch(/\boffers:/);
+      // Desde 17-10-2026 declara-se a tabela à hora, pela constante — e só ela; desde 11-11-2026, o preço público.
+      expect(t.replace(/offers: ofertaDaMudanca\(preco\)/g, ""), f).not.toMatch(/\boffers:/);
     }
   });
 });

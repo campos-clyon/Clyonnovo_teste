@@ -1,4 +1,3 @@
-import { EXTRAS_DA_MUDANCA, PRECO_DA_MUDANCA_POR_EXTENSO } from "@/lib/tabela-das-mudancas";
 import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
