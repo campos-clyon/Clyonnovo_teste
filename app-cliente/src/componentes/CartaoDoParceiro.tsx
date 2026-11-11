@@ -71,6 +71,14 @@ export function CartaoDoParceiro({
             {p.nota ? <Ionicons name="star" size={14} color={CORES.estrela} /> : null}
             <Text style={{ color: CORES.suave, fontSize: 13.5 }}>{p.nota ? p.nota.texto : (p.novo ?? "")}</Text>
           </View>
+          {/* A nota do Google (11-11-2026): noutra linha, separada da da CLYON, com a atribuição. */}
+          {p.notaGoogle ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 4 }}>
+              <Ionicons name="star" size={14} color={CORES.estrela} />
+              <Text style={{ color: CORES.suave, fontSize: 13.5 }}>{p.notaGoogle.texto}</Text>
+              <Text style={{ color: CORES.suave, fontSize: 12, fontWeight: "500" }}>{`· ${p.notaGoogle.atribuicao}`}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
       <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "700", lineHeight: 21 }}>{p.estimativa.texto}</Text>
