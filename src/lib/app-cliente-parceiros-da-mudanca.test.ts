@@ -21,6 +21,7 @@ import {
   linhaDaEscolha,
   listaValida,
   passosDaResposta,
+  pessoasDoEcra,
   semListaParaEscolher,
   soOsDaLista,
 } from "../../app-cliente/src/lib/parceiros-da-mudanca";
@@ -212,5 +213,37 @@ describe("o pedido da app leva a escolha, e a lista pede-se com o mesmo corpo", 
     expect(s).toContain('e.corpo.campo === "parceirosEscolhidos" || e.corpo.campo === "pessoas"');
     expect(s).toContain('irPara("parceiros", { parceiros: undefined, semListaDeParceiros: undefined });');
     expect(ler("app-cliente/src/lib/parceiros-da-mudanca.ts")).toContain('export const ROTA_DOS_PARCEIROS = "/api/mudancas/parceiros";');
+  });
+});
+
+describe("as horas em intervalo e o T3 só com 3 pessoas, na app (11-11-2026)", () => {
+  const T3: ContextoDaMudanca = { ...CTX, tipologia: "T3", pessoas: 2 };
+  const cartaoT3 = cartaoDoParceiro({ ...candidato(), tarifa: TARIFA }, T3, "t3", AGORA)!;
+  const respostaT3 = JSON.parse(JSON.stringify({ ...resposta([cartaoT3]), pessoas: 3, soComTres: true, tipologia: "T3" }));
+
+  it("a app lê a equipa da rota: num T3 o ecrã mostra 3 e a escolha vai com 3", () => {
+    const l = listaValida(respostaT3)!;
+    if (!l.ligado) throw new Error("ligado");
+    expect(l.soComTres).toBe(true);
+    expect(pessoasDoEcra(l, 2)).toBe(3);
+    expect(escolhaFeita(["t3"], l, 2, false)).toMatchObject({ pessoas: 3 });
+    expect(l.parceiros[0].horasTexto).toBe("Entre 7 e 9 h com 3 pessoas");
+  });
+
+  it("as caixas e o embalamento: a linha vem da rota, e o pedido leva-os só se os pedir", () => {
+    const l = listaValida(respostaT3)!;
+    if (!l.ligado) throw new Error("ligado");
+    expect(l.textos.pedirEmbalamento).toBe("Também preciso de caixas e embalamento");
+    expect(l.parceiros[0].embalamento?.texto).toBe(cartaoT3.embalamento?.texto);
+    expect(l.parceiros[0].estimativaComEmbalamento?.texto).toBe(cartaoT3.estimativaComEmbalamento?.texto);
+    const com = escolhaFeita(["t3"], l, 3, false, true)!;
+    expect(camposDaEscolha(com)).toMatchObject({ embalamento: true, pessoas: 3 });
+    expect(camposDaEscolha(escolhaFeita(["t3"], l, 3, false)!)).not.toHaveProperty("embalamento");
+  });
+
+  it("o ecrã esconde as 2 pessoas num T3 ou maior e mostra a opção das caixas", () => {
+    const ecra = readFileSync(join(process.cwd(), "app-cliente/src/componentes/ParceirosDaMudanca.tsx"), "utf8");
+    expect(ecra).toContain('l?.soComTres ? EQUIPAS.filter((e) => e.id === "3") : EQUIPAS');
+    expect(ecra).toContain("l.textos.pedirEmbalamento");
   });
 });

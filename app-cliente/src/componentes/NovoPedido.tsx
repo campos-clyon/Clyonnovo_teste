@@ -1161,6 +1161,8 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
   const [listaDosParceiros, setListaDosParceiros] = useState<ListaDosParceiros | null>(null);
   const [aLerAListaDosParceiros, setALerAListaDosParceiros] = useState(false);
   const [pessoasDaLista, setPessoasDaLista] = useState<Pessoas>(2);
+  /** «Também preciso de caixas e embalamento» (11-11-2026). */
+  const [embalamentoDaLista, setEmbalamentoDaLista] = useState(false);
   const [idsDaLista, setIdsDaLista] = useState<string[]>([]);
   const [procurarMaisParceiros, setProcurarMaisParceiros] = useState(false);
   const [perguntarAvisos, setPerguntarAvisos] = useState(false);
@@ -1395,6 +1397,7 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
     setPessoasDaLista(antes?.pessoas ?? 2);
     setIdsDaLista(antes?.ids ?? []);
     setProcurarMaisParceiros(antes?.procurarMais ?? false);
+    setEmbalamentoDaLista(antes?.embalamento ?? false);
   }, [naLista]);
   useEffect(() => {
     if (!naLista || !catalogo || !rascunho.current) return;
@@ -1596,7 +1599,7 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
     if (aLerAListaDosParceiros) return;
     const l = listaDosParceiros;
     if (!l || !l.ligado || l.parceiros.length === 0) return irPara("contacto", { semListaDeParceiros: true, parceiros: undefined });
-    const escolha = escolhaFeita(idsDaLista, l, pessoasDaLista, procurarMaisParceiros);
+    const escolha = escolhaFeita(idsDaLista, l, pessoasDaLista, procurarMaisParceiros, embalamentoDaLista);
     if (!escolha) return setFalta(ESCOLHA_UM_PARCEIRO);
     irPara("contacto", { parceiros: escolha });
   }
@@ -1755,6 +1758,8 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
                 }}
                 procurarMais={procurarMaisParceiros}
                 aoMudarProcurarMais={setProcurarMaisParceiros}
+                embalamento={embalamentoDaLista}
+                aoMudarEmbalamento={setEmbalamentoDaLista}
               />
             ) : null}
             {ecra === "contacto" ? <EcraContacto r={r} mudar={mudar} /> : null}
