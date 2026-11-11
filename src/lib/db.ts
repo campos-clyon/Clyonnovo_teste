@@ -5906,6 +5906,37 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
     }
   }
   /*
+   * O QUE OS PROFISSIONAIS DEVEM — 11-11-2026 (dono: «Sim, acende»). Cada
+   * trabalho pago em mão com o IVA ou a taxa da plataforma por pagar (pendente
+   * ou parcial) acende o selo dos Pagamentos, como no separador «A receber dos
+   * profissionais». A mesma conta (`dividasDosProfissionais`); as contas de
+   * teste ficam de fora.
+   */
+  try {
+    const { dividasDosProfissionais } = await import("./cobrancas-na-base");
+    const { estadoDaCobranca } = await import("./cobrancas-ao-profissional");
+    const porProfissional = await dividasDosProfissionais();
+    const ids = [...porProfissional.keys()];
+    let teste = new Set<number>();
+    if (ids.length > 0) {
+      const [l] = (await pool.query("SELECT id FROM providers WHERE id IN (?) AND COALESCE(contaDeTeste, 0) = 1", [
+        ids,
+      ])) as any[];
+      teste = new Set((l as Array<{ id: number }>).map((r) => Number(r.id)));
+    }
+    let porCobrar = 0;
+    for (const [pid, dividas] of porProfissional) {
+      if (teste.has(pid)) continue;
+      porCobrar += dividas.filter((d) => estadoDaCobranca(d.partes) !== "pago").length;
+    }
+    saida.pagamentos = (saida.pagamentos ?? 0) + porCobrar;
+  } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code !== "ER_NO_SUCH_TABLE" && code !== "ER_BAD_FIELD_ERROR") {
+      console.error("[contarPorFazer:aReceberDosProfissionais]", e instanceof Error ? e.message : e);
+    }
+  }
+  /*
    * AS LIÇÕES DA VITÓRIA POR REVER — 27-10-2026 (d11). Uma fila, como a de
    * cima: fica no selo do WhatsApp até alguém aprovar, corrigir ou recusar.
    * Sem a tabela (a rotina ainda não correu) não há nada a somar.

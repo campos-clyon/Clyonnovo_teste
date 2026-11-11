@@ -309,3 +309,15 @@ describe("as Finanças contam o dinheiro uma vez", () => {
     expect(base).toMatch(/c\.activa = 1 AND c\.pagamentoId IS NULL/);
   });
 });
+
+describe("o selo dos Pagamentos no menu (11-11-2026)", () => {
+  it("conta os trabalhos com o IVA ou a taxa por pagar, sem as contas de teste", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const db = readFileSync(join(process.cwd(), "src", "lib", "db.ts"), "utf8").replace(/\r\n/g, "\n");
+    const bloco = db.slice(db.indexOf("export async function contarPorFazer("));
+    expect(bloco).toContain('await import("./cobrancas-na-base")');
+    expect(bloco).toContain('estadoDaCobranca(d.partes) !== "pago"');
+    expect(bloco).toContain("COALESCE(contaDeTeste, 0) = 1");
+  });
+});
