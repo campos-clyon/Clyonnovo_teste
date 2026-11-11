@@ -128,14 +128,15 @@ describe("a lista na app de cliente lê a rota tal como vem", () => {
     expect(l.ligado && l.parceiros.map((p) => p.id)).toEqual(["d"]);
   });
 
-  it("até três; quem sai da lista sai da escolha; «procurar mais» só com um parceiro", () => {
+  it("até três; quem sai da lista sai da escolha; «procurar mais» sempre que há parceiros e ele o marca (d6)", () => {
     expect(alternarParceiro(["a", "b", "c"], "d", 3)).toEqual(["a", "b", "c"]);
     expect(alternarParceiro(["a", "b"], "b", 3)).toEqual(["a"]);
     const l = listaValida(resposta([cartao("a")]))!;
     expect(soOsDaLista(["a", "z"], l)).toEqual(["a"]);
     expect(escolhaFeita(["a"], l, 3, true)).toEqual({ ids: ["a"], assinaturas: {}, nomes: ["Mudanças Exemplo"], pessoas: 3, procurarMais: true });
     const duas = listaValida(resposta([cartao("a"), cartao("b", "Outra")]))!;
-    expect(escolhaFeita(["b", "a"], duas, 2, true)).toEqual({ ids: ["a", "b"], assinaturas: {}, nomes: ["Mudanças Exemplo", "Outra"], pessoas: 2, procurarMais: false });
+    expect(escolhaFeita(["b", "a"], duas, 2, true)).toEqual({ ids: ["a", "b"], assinaturas: {}, nomes: ["Mudanças Exemplo", "Outra"], pessoas: 2, procurarMais: true });
+    expect(escolhaFeita(["b", "a"], duas, 2, false)?.procurarMais).toBe(false);
     expect(escolhaFeita([], duas, 2, false)).toBeNull();
   });
 });

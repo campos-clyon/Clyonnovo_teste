@@ -54,6 +54,8 @@ import { SE_O_CLIENTE_NAO_RESPONDER } from "../../../../src/lib/prazo-do-cliente
 import { estimativaAoLado, sufixoDoValor } from "../../lib/trabalhos";
 import { escolhaInicial, faltaResponderAosMateriais, materiaisParaEnviar } from "../../lib/materiais";
 import { MateriaisDaProposta } from "../../componentes/MateriaisDaProposta";
+import { ConfirmarAHora } from "../../componentes/ConfirmarAHora";
+import { primeiraRespostaDe } from "../../lib/confirmar-a-hora";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 export default function DetalheDoTrabalho() {
@@ -500,6 +502,32 @@ function Accoes({ t }: { t: Trabalho }) {
     );
   }
 
+  /*
+   * A PRIMEIRA RESPOSTA DO ESCOLHIDO, NUM TOQUE — 11-11-2026 (d6): «Confirmo:
+   * faço por X/h + IVA» ou «Propor um valor mais baixo», em vez do formulário,
+   * como no painel. A partir da segunda proposta volta a negociação de sempre.
+   */
+  const primeira = primeiraRespostaDe(t);
+  if (escolhida && primeira) {
+    return (
+      <Caixa>
+        <MudancaEscolhidaPeloCliente m={escolhida} />
+        <MapaDoPercurso percurso={t.percurso} />
+        <AvisosDoValor t={t} />
+        {t.materiaisTexto ? <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{t.materiaisTexto}</Text> : null}
+        <ConfirmarAHora
+          negociacaoId={t.negociacaoId}
+          textos={primeira}
+          hora={escolhida.hora}
+          taxas={t.taxas}
+          aoMudar={recarregar}
+          sair={(p) => <Sair confirmar={confirmarSaida} setConfirmar={setConfirmarSaida} titulo={p.titulo} aEnviar={p.aEnviar} aoConfirmar={p.aoConfirmar} />}
+        />
+        <NotaDaNegociacao />
+      </Caixa>
+    );
+  }
+
   // ── Pedido normal: negociação com o cliente ──
   const valorProposto = lerValor(texto);
   const sugestao =
@@ -653,7 +681,7 @@ function Accoes({ t }: { t: Trabalho }) {
 
       {/* A proposta dele à espera do cliente, com o valor e o que recebe — o painel (A16; B2, linha 65). */}
       <APropostaDele t={t} />
-      {!e.podeAceitar && !e.podePropor ? (
+      {!e.podeAceitar && !e.podePropor && !escolhida?.respostaTexto ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>A sua proposta está com o cliente. Avisamos quando ele responder.</Text>
       ) : null}
       {!e.podePropor && e.propostasPorUsar === 0 ? (
@@ -668,13 +696,20 @@ function Accoes({ t }: { t: Trabalho }) {
       {e.podeDesistir && !avisos ? (
         <Sair confirmar={confirmarSaida} setConfirmar={setConfirmarSaida} titulo="Não estou interessado" aEnviar={aEnviar} aoConfirmar={() => void agir({ accao: "desistir" })} />
       ) : null}
-      {/* A nota do painel: a negociação é só de valores. */}
-      <Text style={{ color: c.suave, fontSize: LETRA.pequena, lineHeight: 18, marginTop: ESPACO.xs }}>
-        Porque é que não há mensagens: a negociação é só de valores. Sem conversa não há combinação por fora — e é isso
-        que mantém o acordo por escrito, dos dois lados. Tem {MAX_PROPOSTAS_POR_EXTENSO} propostas, e a sua fica de pé até o
-        cliente lhe responder.
-      </Text>
+      <NotaDaNegociacao />
     </Caixa>
+  );
+}
+
+/** A nota do painel: a negociação é só de valores. */
+function NotaDaNegociacao() {
+  const c = useCores();
+  return (
+    <Text style={{ color: c.suave, fontSize: LETRA.pequena, lineHeight: 18, marginTop: ESPACO.xs }}>
+      Porque é que não há mensagens: a negociação é só de valores. Sem conversa não há combinação por fora — e é isso
+      que mantém o acordo por escrito, dos dois lados. Tem {MAX_PROPOSTAS_POR_EXTENSO} propostas, e a sua fica de pé até o
+      cliente lhe responder.
+    </Text>
   );
 }
 
@@ -694,7 +729,11 @@ function MudancaEscolhidaPeloCliente({ m }: { m: NonNullable<Trabalho["mudancaEs
       {m.estimativa ? <Text style={{ color: c.suave, lineHeight: 20 }}>{m.estimativa.recebeTexto}</Text> : null}
       <Text style={{ color: c.tinta, fontWeight: "600", marginTop: ESPACO.xs }}>{m.horaTexto}</Text>
       <Text style={{ color: c.bom, fontSize: LETRA.media, fontWeight: "800" }}>{m.recebeTexto}</Text>
-      {m.prazoTexto ? <Etiqueta texto={m.prazoTexto} tom={m.prazoPassou ? "neutro" : "aviso"} /> : null}
+      {/* Depois do prazo a frase é comprida («…ainda pode responder, mas o cliente já foi avisado»): em texto, não em etiqueta. */}
+      {m.prazoTexto && m.prazoPassou ? <Text style={{ color: c.suave, lineHeight: 20 }}>{m.prazoTexto}</Text> : null}
+      {m.prazoTexto && !m.prazoPassou ? <Etiqueta texto={m.prazoTexto} tom="aviso" /> : null}
+      {/* Depois de confirmar ou de propor mais baixo (d6): a frase da rota, no lugar dos botões. */}
+      {m.respostaTexto ? <Mensagem tom="bom" texto={m.respostaTexto} /> : null}
     </View>
   );
 }

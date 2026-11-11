@@ -16,9 +16,13 @@ const EQUIPAS: ReadonlyArray<{ id: "2" | "3"; nome: string }> = [
  * O ECRÃ «PARCEIROS DISPONÍVEIS PARA A SUA MUDANÇA» — 11-11-2026, o do
  * simulador do site (`ParceirosDaMudanca.tsx`) na app: o resumo, a equipa (2
  * ou 3 — trocar volta a pedir a lista), os cartões (até três escolhidos),
- * «Como ordenamos» recolhido e, com um só parceiro, a caixa «Pedir também à
- * CLYON que procure mais parceiros». O botão de baixo é o do Pedir
- * (`NovoPedido.tsx`). Os textos vêm todos da rota.
+ * «Como ordenamos» recolhido e a caixa «Pedir também à CLYON que procure mais
+ * parceiros». O botão de baixo é o do Pedir (`NovoPedido.tsx`). Os textos vêm
+ * todos da rota.
+ *
+ * d6 (11-11-2026): por baixo de «Escolha até 3 parceiros…», a linha das 3
+ * horas (`textos.prazo`); e a caixa de pedir à CLYON aparece SEMPRE que há
+ * parceiros (era só com um), desmarcada por omissão, com a ajuda por baixo.
  */
 export function ParceirosDaMudanca({
   lista,
@@ -71,6 +75,7 @@ export function ParceirosDaMudanca({
       {!aCarregar && l && l.parceiros.length > 0 ? (
         <View style={{ gap: 12 }}>
           {l.textos.escolha ? <Paragrafo>{l.textos.escolha}</Paragrafo> : null}
+          {l.textos.prazo ? <Paragrafo>{l.textos.prazo}</Paragrafo> : null}
           {comEmbalamento && aoMudarEmbalamento && l.textos.pedirEmbalamento ? (
             <Pressable
               onPress={() => aoMudarEmbalamento(!embalamento)}
@@ -93,7 +98,7 @@ export function ParceirosDaMudanca({
               aoTocar={() => aoTocar(p.id)}
             />
           ))}
-          {l.parceiros.length === 1 && l.textos.procurarMais ? (
+          {l.textos.procurarMais ? (
             <Pressable
               onPress={() => aoMudarProcurarMais(!procurarMais)}
               accessibilityRole="checkbox"
@@ -101,7 +106,10 @@ export function ParceirosDaMudanca({
               style={{ flexDirection: "row", gap: 12, paddingVertical: 8, alignItems: "flex-start" }}
             >
               <Ionicons name={procurarMais ? "checkbox" : "square-outline"} size={22} color={CORES.marca} />
-              <Text style={{ flex: 1, color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{l.textos.procurarMais}</Text>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{l.textos.procurarMais}</Text>
+                {l.textos.procurarMaisAjuda ? <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{l.textos.procurarMaisAjuda}</Text> : null}
+              </View>
             </Pressable>
           ) : null}
           {l.textos.notaDaEstimativa || l.textos.quemFaz ? (

@@ -71,8 +71,12 @@ export type CartaoDaLista = {
 export type TextosDaLista = {
   titulo: string;
   escolha: string;
+  /** d6 (11-11-2026): «Os parceiros que escolher têm 3 horas para responder…» — vazio num site antigo. */
+  prazo: string;
   semParceirosSegue: string;
   procurarMais: string;
+  /** d6: a ajuda por baixo de «Pedir também à CLYON que procure mais parceiros». */
+  procurarMaisAjuda: string;
   /** «Também preciso de caixas e embalamento» (11-11-2026). */
   pedirEmbalamento: string;
   botao: string;
@@ -180,6 +184,18 @@ function cartaoValido(v: unknown): CartaoDaLista | null {
 }
 
 /**
+ * Os cartões que se podem mostrar, pela ordem da rota (os desta lista e os de
+ * «Escolher outro parceiro», d6). Um cartão sem preço com IVA fica de fora.
+ */
+export function cartoesValidos(v: unknown): CartaoDaLista[] {
+  return (Array.isArray(v) ? v : [])
+    .map(cartaoValido)
+    .filter((c): c is CartaoDaLista => !!c)
+    // O preço ao cliente leva sempre o IVA à frente (a rota escreve-o assim).
+    .filter((c) => /com\s+iva/i.test(c.estimativa.texto) && /com\s+iva/i.test(c.precoHora[2]?.texto ?? ""));
+}
+
+/**
  * A resposta da rota, ou `null` quando não serve (erro, forma estranha). Uma
  * lista desligada é `{ ligado: false }`. Um cartão sem preço com IVA fica de fora.
  */
@@ -191,19 +207,17 @@ export function listaValida(v: unknown): ListaDosParceiros | null {
   const textos: TextosDaLista = {
     titulo: texto(t.titulo) ?? "",
     escolha: texto(t.escolha) ?? "",
+    prazo: texto(t.prazo) ?? "",
     semParceirosSegue: texto(t.semParceirosSegue) ?? "",
     procurarMais: texto(t.procurarMais) ?? "",
+    procurarMaisAjuda: texto(t.procurarMaisAjuda) ?? "",
     pedirEmbalamento: texto(t.pedirEmbalamento) ?? "",
     botao: texto(t.botao) ?? "",
     notaDaEstimativa: texto(t.notaDaEstimativa) ?? "",
     quemFaz: texto(t.quemFaz) ?? "",
   };
   if (!textos.titulo || !textos.botao) return null;
-  const parceiros = (Array.isArray(o.parceiros) ? o.parceiros : [])
-    .map(cartaoValido)
-    .filter((c): c is CartaoDaLista => !!c)
-    // O preço ao cliente leva sempre o IVA à frente (a rota escreve-o assim).
-    .filter((c) => /com\s+iva/i.test(c.estimativa.texto) && /com\s+iva/i.test(c.precoHora[2]?.texto ?? ""));
+  const parceiros = cartoesValidos(o.parceiros);
   const ord = (o.ordenacao ?? null) as { titulo?: unknown; frase?: unknown } | null;
   const maximo = typeof o.maximoDeEscolhidos === "number" && o.maximoDeEscolhidos >= 1 ? Math.floor(o.maximoDeEscolhidos) : MAXIMO_POR_OMISSAO;
   return {
@@ -235,7 +249,11 @@ export function soOsDaLista(ids: readonly string[], l: ListaDosParceiros | null)
   return ids.filter((id) => l.parceiros.some((p) => p.id === id));
 }
 
-/** A escolha a guardar no rascunho: os nomes pela ordem da lista; «procurar mais» só com um parceiro na lista. */
+/**
+ * A escolha a guardar no rascunho: os nomes pela ordem da lista. «Procurar
+ * mais» vale sempre que há parceiros na lista (d6, 11-11-2026 — era só com um):
+ * a CLYON só envia o pedido a mais parceiros se o cliente o marcar.
+ */
 export function escolhaFeita(
   ids: readonly string[],
   l: ListaDosParceiros,
@@ -253,7 +271,7 @@ export function escolhaFeita(
     nomes: escolhidos.map((p) => p.nome),
     // A equipa da conta: num T3 ou maior a rota diz 3, mesmo que se tenham pedido 2.
     pessoas: l.soComTres ? 3 : pessoas,
-    procurarMais: l.parceiros.length === 1 && procurarMais,
+    procurarMais: l.parceiros.length > 0 && procurarMais,
   };
   if (embalamento && escolhidos.some((p) => p.embalamento != null)) e.embalamento = true;
   return e;

@@ -10,6 +10,7 @@ import { Acompanhar } from "./Acompanhar";
 import { AlterarOPedido } from "./AlterarOPedido";
 import { Avaliacoes } from "./Avaliacoes";
 import { Avaliar } from "./Avaliar";
+import { EscolhidosSemResposta } from "./EscolhidosSemResposta";
 import { Mensagens } from "./Mensagens";
 import { ResumoDoPagamento } from "./Pagar";
 import { Preco } from "./Preco";
@@ -50,6 +51,7 @@ import {
   type RespostaDoPedido,
 } from "../lib/pedidos";
 import { intervaloDeLeitura, momentoDoPedido, passosDoPedido } from "../lib/passos-do-pedido";
+import { valeAPenaLer } from "../lib/escolhidos-sem-resposta";
 import { CORES } from "../tema";
 import { PEDIR_TROCA_DE_PARCEIRO } from "../../../src/lib/frases-do-pedido";
 
@@ -99,6 +101,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
   const [aLer, setALer] = useState(true);
   const [avisoDaAccao, setAvisoDaAccao] = useState<string | null>(null);
   const [feito, setFeito] = useState(false);
+  // De cada vez que o pedido se relê, o cartão dos parceiros escolhidos relê-se com ele (d6, 11-11-2026).
+  const [releitura, setReleitura] = useState(0);
 
   const [aContratar, setAContratar] = useState<Negociacao | null>(null);
   const [aRecusar, setARecusar] = useState<Negociacao | null>(null);
@@ -124,6 +128,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       const lido = await pedir<Resposta>(ROTA_DO_PEDIDO(pedidoId));
       setR(lido);
       setErro(null);
+      setReleitura((n) => n + 1);
       return lido;
     } catch (e) {
       // Uma leitura sozinha que falha (sem rede, por um momento) não pinta o ecrã de erro: a seguinte tenta outra vez.
@@ -360,6 +365,18 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
           }
         />
       ) : null}
+
+      {/*
+        Os parceiros que escolheu (d6, 11-11-2026): numa mudança com a lista, a linha do prazo enquanto corre e,
+        se passar sem resposta, o cartão com as três saídas. Nos outros pedidos a rota não manda nada, e não se vê.
+      */}
+      <EscolhidosSemResposta
+        pedidoId={pedidoId}
+        pedir={pedir}
+        activo={valeAPenaLer({ trabalhoClyon: !!p.trabalhoClyon, contratado: !!contratada, fechado: p.estadoTexto === "Cancelado" || p.estadoTexto === "Concluído" })}
+        releitura={releitura}
+        aoMudar={depoisDeAgir}
+      />
 
       {/* a) À espera. */}
       {espera ? (
