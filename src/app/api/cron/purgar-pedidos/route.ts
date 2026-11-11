@@ -24,6 +24,8 @@ import {
   purgaArmada,
 } from "@/lib/retencao";
 import { purgarPresencaAntiga } from "@/lib/presenca-na-base";
+import { purgarProgramaDaApp } from "@/lib/programa-da-app-na-base";
+import { DIAS_DO_PROGRAMA_DEPOIS_DE_SAIR } from "@/lib/programa-da-app";
 import { bearerConfere } from "@/lib/segredo-igual";
 import { purgarConversas } from "@/lib/conversas-na-base";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
@@ -243,6 +245,17 @@ export async function GET(req: NextRequest) {
       0,
       passosQueFalharam,
     );
+    /*
+     * O PROGRAMA DE ACESSO ANTECIPADO DA APP — 11-11-2026: as inscrições de
+     * quem saiu há mais de DIAS_DO_PROGRAMA_DEPOIS_DE_SAIR (30) dias e as que ficaram sem conta.
+     * À parte dos pedidos, com o mesmo `PURGA_ARMADA` (a seco só conta).
+     */
+    const programaApagado = await passoSecundario(
+      "programa da app",
+      () => purgarProgramaDaApp(DIAS_DO_PROGRAMA_DEPOIS_DE_SAIR, { aSerio: armada }),
+      0,
+      passosQueFalharam,
+    );
     const errosDaAppEmPalavras =
       (errosDaApp > 0
         ? (armada ? ". Dos erros da app, " : ". Dos erros da app, seriam ") +
@@ -255,6 +268,10 @@ export async function GET(req: NextRequest) {
       (presencaApagada > 0
         ? (armada ? ". Da presença no backoffice, " : ". Da presença no backoffice, seriam ") +
           `${presencaApagada} linha(s) apagada(s) (mais de ${MESES_DA_PRESENCA_NO_BACKOFFICE} meses)`
+        : "") +
+      (programaApagado > 0
+        ? (armada ? ". Do programa da app, " : ". Do programa da app, seriam ") +
+          `${programaApagado} inscrição(ões) apagada(s) (saíram há mais de ${DIAS_DO_PROGRAMA_DEPOIS_DE_SAIR} dias, ou sem conta)`
         : "");
 
     /*

@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react";
 
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import PalavraPasseDaConta from "./PalavraPasseDaConta";
+import ProgramaDaApp from "@/components/ProgramaDaApp";
 
 /**
  * Segurança da conta do cliente.
@@ -36,6 +37,9 @@ export default function Seguranca() {
       </div>
 
       <PalavraPasseDaConta />
+
+      {/* O programa de acesso antecipado da app (11-11-2026): para quem disse «Agora não», e para sair. */}
+      <ProgramaDaApp modo="conta" origem="conta" />
 
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-800">Entrar com o Google</h3>

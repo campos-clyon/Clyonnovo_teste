@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apagarInscricoesDaConta } from "@/lib/programa-da-app-na-base";
 import type { ExecuteValues } from "mysql2";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { withConnection, ensureUsersSchema, registarSemFalhar } from "@/lib/db";
@@ -140,6 +141,8 @@ export async function DELETE(request: NextRequest) {
     }
     // M2 (30-10-2026): as conversas da conta saem ou ficam anónimas no mesmo passo.
     await apagarConversasDaConta(id);
+    // O programa de acesso antecipado da app (11-11-2026): a inscrição desta conta sai também.
+    await apagarInscricoesDaConta(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin/users DELETE]", err);

@@ -27,6 +27,8 @@ import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import ContasPanel from "@/components/admin/ContasPanel";
+import ProgramaDaAppPanel from "@/components/admin/ProgramaDaAppPanel";
+import AdminLinkDoProgramaDaAppPanel from "@/components/admin/AdminLinkDoProgramaDaAppPanel";
 import { SECCOES_COM_AVISO } from "@/lib/novidades-do-backoffice";
 import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSeccao";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
@@ -852,6 +854,8 @@ export default function ColaboradorAdminClient({
    * esvazia com o «Já pagámos» (`contarPorFazer`, db.ts).
    */
   const [porFazer, setPorFazer] = useState<Record<string, number>>({});
+  // O separador aberto nas Contas (11-11-2026): as contas, ou o programa da app.
+  const [separadorDasContas, setSeparadorDasContas] = useState<"contas" | "programa">("contas");
 
   /** Ids marcados na tabela de pedidos, para acções em lote. */
   const [pedidosMarcados, setPedidosMarcados] = useState<Set<number>>(new Set());
@@ -3250,7 +3254,35 @@ export default function ColaboradorAdminClient({
 
           {activeSection === "contas" && (
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-              <ContasPanel authToken={token} podeApagar={papel === "admin"} podeMudarEmail={papel === "admin"} />
+              {/*
+                O PROGRAMA DA APP — 11-11-2026: um separador das Contas, só do
+                administrador (as rotas são `requireAdminGeral`). Os inscritos
+                por pôr na Play acendem o selo das Contas (`porFazer.contas`).
+              */}
+              {papel === "admin" && (
+                <div className="mb-5 flex flex-wrap gap-1.5 border-b border-slate-100 pb-3">
+                  {([
+                    ["contas", "Contas de clientes"],
+                    ["programa", "Programa da app"],
+                  ] as const).map(([id, rotulo]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setSeparadorDasContas(id)}
+                      className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                        separadorDasContas === id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {rotulo}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {papel === "admin" && separadorDasContas === "programa" ? (
+                <ProgramaDaAppPanel authToken={token} />
+              ) : (
+                <ContasPanel authToken={token} podeApagar={papel === "admin"} podeMudarEmail={papel === "admin"} />
+              )}
             </section>
           )}
 
@@ -3465,6 +3497,9 @@ export default function ColaboradorAdminClient({
 
               {/* A conta da transferência bancária (≥ 700 € com IVA) — 02-11-2026. Só o administrador. */}
               {papel === "admin" && <AdminContaDaTransferenciaPanel />}
+
+              {/* O link do programa de acesso antecipado da app — 11-11-2026. Só o administrador. */}
+              {papel === "admin" && <AdminLinkDoProgramaDaAppPanel />}
 
               {/* SESSÕES ABERTAS NO BACKOFFICE — 27-10-2026 (d15). Só o
                   administrador: quem está dentro, de onde, e «Terminar esta

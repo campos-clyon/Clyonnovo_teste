@@ -48,6 +48,11 @@ vi.mock("@/lib/presenca-na-base", () => ({
   purgarPresencaAntiga: vi.fn(async () => 0),
 }));
 
+// O programa de acesso antecipado da app (11-11-2026).
+vi.mock("@/lib/programa-da-app-na-base", () => ({
+  purgarProgramaDaApp: vi.fn(async () => 0),
+}));
+
 vi.mock("@/lib/regras-novas-na-base", () => ({
   purgarComAsRegrasNovas: vi.fn(async (o: { aSerio: boolean }) => ({ ...ZERO, aSerio: o.aSerio })),
   regrasNovasDaNoite: vi.fn(async (o: { aSerio: boolean }) => ({ aSerio: o.aSerio, e: { lista: ["simulador/x.jpg"] } })),

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
 import { MENSAGEM_DO_LINK, pareceUmTokenDaConta } from "@/lib/palavra-passe-do-cliente";
+import ProgramaDaApp from "@/components/ProgramaDaApp";
 
 /**
  * Abre o link de confirmação do registo (01-11-2026).
@@ -19,6 +20,11 @@ export default function ConfirmarEmail() {
   const jaCorreu = useRef(false);
   const [estado, setEstado] = useState<"a-confirmar" | "feito" | "erro">("a-confirmar");
   const [erro, setErro] = useState<string>("");
+
+  // Recarrega por inteiro: a sessão nova (o cookie) chega a todo o site.
+  const abrirAConta = useCallback(() => {
+    setTimeout(() => window.location.replace("/conta"), 1200);
+  }, []);
 
   useEffect(() => {
     if (jaCorreu.current) return;
@@ -43,9 +49,13 @@ export default function ConfirmarEmail() {
         });
         const dados = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
         if (res.ok && dados.ok) {
+          /*
+           * O CONVITE DO PROGRAMA DE ACESSO ANTECIPADO DA APP (11-11-2026):
+           * a conta acabou de nascer, e é aqui que se pergunta. A ida para
+           * /conta passou para `abrirAConta` — depois da resposta, ou já, se
+           * não houver nada a perguntar.
+           */
           setEstado("feito");
-          // Recarrega por inteiro: a sessão nova (o cookie) chega a todo o site.
-          setTimeout(() => window.location.replace("/conta"), 1500);
           return;
         }
         setErro(dados.error || "Não foi possível confirmar. Tente outra vez.");
@@ -75,13 +85,15 @@ export default function ConfirmarEmail() {
 
   if (estado === "feito") {
     return (
-      <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl">
+      <div className="w-full max-w-sm space-y-4">
+      <div className="w-full rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl">
         <CheckCircle2 className="mx-auto h-9 w-9 text-acao" aria-hidden="true" />
         <h1 className="mt-3 text-lg font-bold text-tinta">Email confirmado</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           A sua conta está pronta. Na app CLYON, entre com o email e a palavra-passe que escolheu.
         </p>
-        <p className="mt-3 text-xs text-slate-500">A abrir a sua conta…</p>
+      </div>
+      <ProgramaDaApp modo="convite" origem="registo" onFechar={abrirAConta} />
       </div>
     );
   }

@@ -263,6 +263,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "carteiras", rota: "/api/admin/carteiras/pagamento-do-profissional", porque: "registar o pagamento do profissional à CLYON é dinheiro — do administrador" },
   // O convite da app de cliente (01-11-2026): o botão só aparece ao administrador.
   { seccao: "contas", rota: "/api/admin/convite-app-cliente", porque: "enviar um email a todas as contas de cliente é do administrador" },
+  { seccao: "contas", rota: "/api/admin/programa-da-app", porque: "os emails que vão para a Play e o convite que sai em nome da CLYON são do administrador (11-11-2026)" },
+  { seccao: "configs", rota: "/api/admin/programa-da-app/link", porque: "o link do programa da app vai no email aos clientes; muda-o o administrador (11-11-2026)" },
   { seccao: "configs", rota: "/api/admin/seguranca/alterar-senha", porque: "a palavra-passe do administrador é dele" },
   { seccao: "configs", rota: "/api/colaboradores/admin/settings/simulador", porque: "os valores do motor já não aparecem no ecrã, e um deles é o pagamento aos assistentes" },
   // As regras novas da retenção (d32, 26-10-2026): o assistente vê o ensaio; ligar é do dono.

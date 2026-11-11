@@ -64,6 +64,19 @@ export async function GET(req: NextRequest) {
       const { contarRotinasVermelhas } = await import("@/lib/licoes-da-vitoria-na-base");
       const vermelhas = await contarRotinasVermelhas();
       if (vermelhas > 0) porFazer.configs = (porFazer.configs ?? 0) + vermelhas;
+      /*
+       * O PROGRAMA DE ACESSO ANTECIPADO DA APP — 11-11-2026. Os inscritos por
+       * pôr na lista da Play ficam no selo das Contas até alguém os marcar
+       * «adicionados» — uma fila, como as de cima. Só para o administrador: o
+       * separador é dele. Uma falha aqui não apaga o resto dos selos.
+       */
+      try {
+        const { contarInscritosPorAdicionar } = await import("@/lib/programa-da-app-na-base");
+        const inscritos = await contarInscritosPorAdicionar();
+        if (inscritos > 0) porFazer.contas = (porFazer.contas ?? 0) + inscritos;
+      } catch (e) {
+        console.error("[novidades] programa da app:", e instanceof Error ? e.message : e);
+      }
     } else {
       // As agendas das assistentes (31-10-2026) são da secção «Assistentes», só do administrador.
       contadas.equipa = 0;

@@ -15668,6 +15668,16 @@ export async function apagarContaDeCliente(
     }
 
     /*
+     * O PROGRAMA DE ACESSO ANTECIPADO DA APP — 11-11-2026. A inscrição (o
+     * email que foi, ou ia, para a lista de testadores da Play) sai na mesma
+     * transacção: pelo email da conta e pelo id. Sem a tabela, nada a apagar.
+     */
+    {
+      const { apagarInscricaoNaTransaccao } = await import("./programa-da-app-na-base");
+      await apagarInscricaoNaTransaccao(conn, alvo, contaIds);
+    }
+
+    /*
      * AS AVALIAÇÕES QUE OS PARCEIROS LHE DERAM — 01-11-2026 (decisão do dono).
      * Guardam-se enquanto a conta existir, sem prazo na purga, e saem aqui,
      * na mesma transacção. Ligadas ao email, com um comentário sobre ele:

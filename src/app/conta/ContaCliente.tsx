@@ -12,6 +12,7 @@ import DadosPessoais  from "./components/DadosPessoais";
 import Faturacao      from "./components/Faturacao";
 import Notificacoes   from "./components/Notificacoes";
 import Seguranca      from "./components/Seguranca";
+import ProgramaDaApp  from "@/components/ProgramaDaApp";
 import {
   propostasAEsperaDoCliente,
   type UserProfile,
@@ -170,6 +171,13 @@ export default function ContaCliente({
         />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-2xl px-8 py-10">
+            {/* O convite do programa de acesso antecipado da app (11-11-2026):
+                enquanto não respondeu, por cima dos pedidos. */}
+            {(section === "pedidos" || section === "menu") && (
+              <div className="mb-6">
+                <ProgramaDaApp modo="convite" origem="conta" />
+              </div>
+            )}
             <SectionContent
               section={section}
               user={effectiveUser}
@@ -187,6 +195,10 @@ export default function ContaCliente({
           para trás — o gesto das aplicações que já têm no telemóvel. */}
       <div className="lg:hidden">
         {section === "menu" ? (
+          <>
+          <div className="px-4 pt-4">
+            <ProgramaDaApp modo="convite" origem="conta" />
+          </div>
           <MenuMovel
             nome={effectiveUser.name ?? nome}
             email={email}
@@ -196,6 +208,7 @@ export default function ContaCliente({
             retido={retidoDoCliente}
             onSection={setSection}
           />
+          </>
         ) : (
           <main className="px-4 pb-16">
             <CabecalhoDeEcra
