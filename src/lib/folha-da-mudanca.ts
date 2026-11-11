@@ -217,6 +217,36 @@ function instanteDaPausa(dia: string, inicioDoTrabalho: { h: number; m: number }
 }
 
 /**
+ * A MESMA FOLHA? — 11-11-2026. O que o cliente vê e paga: o dia, as horas, as
+ * pausas, a equipa, os km, o material e a hora. O motivo dos km não conta: é
+ * uma explicação, não um número.
+ */
+export function mesmaFolha(a: FolhaDaMudanca, b: FolhaDaMudanca): boolean {
+  const material = (f: FolhaDaMudanca) =>
+    JSON.stringify(
+      Object.entries(f.materiais ?? {})
+        .filter(([, q]) => Number(q) > 0)
+        .sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)),
+    );
+  return (
+    a.dia === b.dia &&
+    a.inicio === b.inicio &&
+    a.fim === b.fim &&
+    JSON.stringify(a.pausas ?? []) === JSON.stringify(b.pausas ?? []) &&
+    a.pessoas === b.pessoas &&
+    a.km === b.km &&
+    a.horaCent === b.horaCent &&
+    material(a) === material(b) &&
+    a.conta.totalCent === b.conta.totalCent
+  );
+}
+
+/** O que o parceiro lê quando reenvia, igual, a folha com que o cliente não concordou. */
+export const FOLHA_IGUAL_A_CONTESTADA =
+  "O cliente não concordou com esta folha. Corrija o que for diferente do que foi feito antes de a enviar outra vez. " +
+  "Se a folha está certa, fale com a CLYON: confirmamos com o cliente.";
+
+/**
  * LÊ A FOLHA QUE O PARCEIRO ESCREVEU e faz a conta. É a mesma função na rota
  * (que grava) e nos ecrãs (que mostram o valor antes de enviar).
  */

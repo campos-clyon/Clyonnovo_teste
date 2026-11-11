@@ -8,6 +8,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { percursoDaNegociacao } from "@/lib/db";
 import { parametrosDoMapa, podeVerAMoradaExacta, pontasDoPedido } from "@/lib/mapa-do-percurso";
 import { percursoDoPedido } from "@/lib/percurso-do-pedido";
+import { faseDoTrabalho } from "@/lib/trabalho";
 
 export const runtime = "nodejs";
 
@@ -41,7 +42,8 @@ export async function GET(req: NextRequest) {
   /*
    * O PERCURSO DE UMA MUDANÇA (11-11-2026) — `?percurso=<negociação>`, só para
    * o parceiro dessa negociação. Antes de contratado, só as duas cidades (sem
-   * traçado); depois, os dois pontos e o traçado do Routes, guardado no pedido.
+   * traçado); depois, os dois pontos e o traçado do Routes, guardado no pedido
+   * — e, com o trabalho acabado, outra vez só as cidades.
    * Quem decide é a base, nunca um parâmetro — ver mapa-do-percurso.ts.
    */
   const percurso = req.nextUrl.searchParams.get("percurso");
@@ -105,7 +107,8 @@ async function mapaDoPercurso(req: NextRequest, negociacaoId: number, providerId
     if (!n) return new NextResponse(null, { status: 404 });
     const pontas = pontasDoPedido(n.rawOrderJson);
     if (!pontas) return new NextResponse(null, { status: 204 });
-    const exacto = podeVerAMoradaExacta(n.estado);
+    // Contratado e com o trabalho por acabar: a regra do contacto (d3), decidida pela base.
+    const exacto = podeVerAMoradaExacta({ estado: n.estado, fase: faseDoTrabalho(n), arquivadoEm: n.arquivadoProfissionalEm });
     const ponto = (p: { lat: number | null; lng: number | null }) => (p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : null);
     // O traçado só se pergunta (e paga) quando se pode mostrar.
     const guardado = exacto ? await percursoDoPedido(n.pedidoId, n.percursoJson, ponto(pontas.origem), ponto(pontas.destino)) : null;
@@ -124,7 +127,7 @@ async function mapaDoPercurso(req: NextRequest, negociacaoId: number, providerId
     return new NextResponse(await resposta.arrayBuffer(), {
       headers: {
         "Content-Type": resposta.headers.get("content-type") ?? "image/png",
-        // De um parceiro só, e muda quando ele é contratado: nada de cache partilhada.
+        // De um parceiro só, e muda quando ele é contratado e quando o trabalho acaba: nada de cache partilhada.
         "Cache-Control": "private, max-age=3600",
       },
     });

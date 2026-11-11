@@ -84,7 +84,6 @@ function candidato(id: number, mais: Record<string, unknown> = {}) {
     baseLng: -9.1,
     contaDeTeste: false,
     verificado: false,
-    fotografia: null,
     tarifa: TARIFA,
     notaMedia: null,
     avaliacoes: 0,

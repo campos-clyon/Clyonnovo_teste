@@ -1,3 +1,6 @@
+import { contactoJaNaoServe } from "./contacto-so-enquanto-ha-trabalho";
+import type { FaseDoTrabalho } from "./trabalho";
+
 /**
  * O MAPA DO PERCURSO DE UMA MUDANÇA — 11-11-2026 (ordem do CEO com o sim do dono).
  *
@@ -14,6 +17,11 @@
  * a cidade. Depois, a morada exacta: o traçado, os dois pontos e as direcções
  * de porta a porta. É a mesma regra da vista do pedido (`vistaParaOEstado`).
  *
+ * E SÓ ENQUANTO HÁ TRABALHO (11-11-2026): confirmado, pago, arquivado ou com a
+ * negociação morta, volta a ser só a localidade — a regra do contacto do
+ * cliente (`contacto-so-enquanto-ha-trabalho.ts`, d3 de 28-10-2026), que o
+ * mapa e o «Abrir no Google Maps» passam a seguir.
+ *
  * PURA (sem base, sem rede, sem process.env): a rota, o painel, a app Pro e os
  * testes usam as mesmas funções.
  */
@@ -29,9 +37,16 @@ export type PercursoGuardado = {
 
 export type PontaDoMapa = { lat: number | null; lng: number | null; morada: string | null; cidade: string | null };
 
-/** A morada exacta só com o parceiro contratado — como `vistaParaOEstado`. */
-export function podeVerAMoradaExacta(estadoDaNegociacao: string | null | undefined): boolean {
-  return estadoDaNegociacao === "acordada";
+/** O que decide a morada exacta: o estado da negociação, a fase do trabalho e o arquivo dele. */
+export type TrabalhoDoPercurso = { estado: string | null | undefined; fase: FaseDoTrabalho; arquivadoEm?: unknown };
+
+/**
+ * A morada exacta só com o parceiro contratado E enquanto há trabalho por
+ * fazer ou por confirmar — a mesma função que tira o contacto do cliente.
+ */
+export function podeVerAMoradaExacta(t: TrabalhoDoPercurso): boolean {
+  if (t.estado !== "acordada") return false;
+  return !contactoJaNaoServe({ estado: t.estado, fase: t.fase, arquivadoEm: t.arquivadoEm });
 }
 
 export function percursoDeJson(texto: string | null | undefined): PercursoGuardado | null {
@@ -130,12 +145,15 @@ export type PercursoParaOParceiro = {
 
 /**
  * O bloco do percurso no pedido dirigido ao parceiro. As moradas exactas só
- * entram aqui com a negociação «acordada» (e só as manda quem já as pode ver:
- * a vista do pedido).
+ * entram aqui com a negociação «acordada» e o trabalho por acabar (e só as
+ * manda quem já as pode ver: a vista do pedido).
  */
 export function percursoParaOParceiro(d: {
   negociacaoId: number;
   estado: string;
+  /** A fase do trabalho e o arquivo do parceiro: acabado, só as localidades. */
+  fase: FaseDoTrabalho;
+  arquivadoEm?: unknown;
   percurso: PercursoGuardado | null;
   kmDoPercurso: number | null;
   cidadeOrigem: string | null;
@@ -145,7 +163,7 @@ export function percursoParaOParceiro(d: {
 }): PercursoParaOParceiro | null {
   const km = d.percurso?.km ?? d.kmDoPercurso;
   if (km == null || !Number.isFinite(km)) return null;
-  const exacto = podeVerAMoradaExacta(d.estado);
+  const exacto = podeVerAMoradaExacta(d);
   const origem: PontaDoMapa = { lat: null, lng: null, morada: exacto ? d.moradaOrigem ?? null : null, cidade: d.cidadeOrigem };
   const destino: PontaDoMapa = { lat: null, lng: null, morada: exacto ? d.moradaDestino ?? null : null, cidade: d.cidadeDestino };
   const comMoradas = exacto && origem.morada != null && destino.morada != null;

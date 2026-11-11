@@ -6,13 +6,18 @@ import { lerPedidoDaLista, listaDosParceirosDaMudanca, respostaDaLista } from "@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Quantas vezes por dia a mesma máquina pode ver a lista (11-11-2026). */
+const LISTAS_POR_DIA = 100;
+
 /**
  * OS PARCEIROS DISPONÍVEIS PARA UMA MUDANÇA — 10-11-2026 (fase 2).
  *
- * Pública (quem pede uma mudança ainda não tem conta), com limite por IP: cada
- * chamada pergunta percursos ao Google. O simulador do site e a app de cliente
- * chamam ESTA rota, e o pedido (`/api/simulador/pedido`) volta a fazer a mesma
- * lista para conferir a escolha.
+ * Pública (quem pede uma mudança ainda não tem conta), com dois limites por IP
+ * (de 5 em 5 minutos e por dia): cada chamada pergunta percursos ao Google, e
+ * quem preenche um pedido não precisa de a chamar centenas de vezes. O
+ * simulador do site e a app de cliente chamam ESTA rota, e o pedido
+ * (`/api/simulador/pedido`) volta a fazer a mesma lista para conferir a
+ * escolha — e é só aí que a forma de pagamento conta.
  *
  * Com o interruptor das Configs desligado, responde `ligado: false` e o
  * simulador segue pelo caminho de antes (o pedido vai à Mesa).
@@ -20,6 +25,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "mudancas-parceiros", 20, 300);
   if (limite.erro) return limite.erro;
+  const porDia = await limitarRotaPublica(req, "mudancas-parceiros-dia", LISTAS_POR_DIA, 86400);
+  if (porDia.erro) return porDia.erro;
 
   let corpo: unknown;
   try {

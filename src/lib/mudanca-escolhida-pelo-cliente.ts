@@ -174,3 +174,39 @@ export function problemaDaHoraProposta(
   }
   return null;
 }
+
+/**
+ * A GUARDA, COM A LEITURA — 11-11-2026. As duas portas da proposta (a app e o
+ * painel, e o link) lêem a tarifa congelada da negociação e conferem o valor
+ * antes do motor. SE A LEITURA FALHAR, RECUSA: sem saber qual é a hora
+ * congelada não se aceita valor nenhum (antes, uma leitura falhada deixava
+ * passar). Uma tarifa gravada que não se consegue ler recusa da mesma maneira.
+ *
+ * Null quando a proposta pode seguir (não é uma mudança escolhida, ou o valor
+ * cabe na hora congelada).
+ */
+export const SEM_CONFERIR_A_HORA = "Não foi possível conferir o valor agora. Tente outra vez daqui a pouco.";
+
+export type RecusaDaHoraProposta = { status: 409 | 503; erro: string; acimaDaHora: boolean };
+
+export async function guardaDaHoraCongelada(
+  ler: () => Promise<{ tarifaCongeladaJson: string | null | undefined; pessoasEscolhidas: unknown } | null>,
+  valor: number,
+  onde: string,
+): Promise<RecusaDaHoraProposta | null> {
+  let escolhida: { tarifaCongeladaJson: string | null | undefined; pessoasEscolhidas: unknown } | null;
+  try {
+    escolhida = await ler();
+  } catch (e) {
+    console.error(`[${onde}] a hora congelada não se leu; a proposta não segue:`, e instanceof Error ? e.message : e);
+    return { status: 503, erro: SEM_CONFERIR_A_HORA, acimaDaHora: false };
+  }
+  const json = escolhida?.tarifaCongeladaJson;
+  if (!escolhida || json == null || json === "") return null;
+  if (!tarifaCongeladaDeJson(json)) {
+    console.error(`[${onde}] a tarifa congelada não se percebe; a proposta não segue.`);
+    return { status: 503, erro: SEM_CONFERIR_A_HORA, acimaDaHora: false };
+  }
+  const problema = problemaDaHoraProposta(json, escolhida.pessoasEscolhidas, valor);
+  return problema ? { status: 409, erro: problema, acimaDaHora: true } : null;
+}

@@ -4,9 +4,9 @@ import {
   negociacoesDoProfissional,
   gravarNegociacao,
   appendOrderHistory,
-  mudancasEscolhidasDoProfissional,
+  tarifaCongeladaDaNegociacao,
 } from "@/lib/db";
-import { problemaDaHoraProposta, semDerrubar } from "@/lib/mudanca-escolhida-pelo-cliente";
+import { guardaDaHoraCongelada } from "@/lib/mudanca-escolhida-pelo-cliente";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -203,15 +203,13 @@ export async function POST(req: NextRequest) {
          * ficou congelada quando o cliente o escolheu; pode descer. Ver
          * mudanca-escolhida-pelo-cliente.ts.
          */
-        const escolhida = await semDerrubar(
-          async () => (await mudancasEscolhidasDoProfissional(sessao.providerId)).get(negociacaoId) ?? null,
-          null,
+        // Se a hora congelada não se conseguir ler, a proposta NÃO segue (11-11-2026).
+        const recusa = await guardaDaHoraCongelada(
+          () => tarifaCongeladaDaNegociacao(negociacaoId, sessao.providerId),
+          Number(valor),
           "negociacao",
         );
-        if (escolhida) {
-          const problema = problemaDaHoraProposta(escolhida.tarifaCongeladaJson, escolhida.pessoasEscolhidas, Number(valor));
-          if (problema) return NextResponse.json({ error: problema, acimaDaHora: true }, { status: 409 });
-        }
+        if (recusa) return NextResponse.json({ error: recusa.erro, ...(recusa.acimaDaHora ? { acimaDaHora: true } : {}) }, { status: recusa.status });
         resultado = propor(estadoActual, "profissional", Number(valor), agora);
         break;
       }

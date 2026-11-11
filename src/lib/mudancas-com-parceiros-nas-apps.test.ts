@@ -107,11 +107,11 @@ describe("a proposta numa mudança escolhida: à hora, nunca acima da congelada"
   it("as duas portas do profissional (a app/painel e o link) conferem ANTES do motor da negociação", () => {
     for (const f of ["src/app/api/profissionais/negociacao/route.ts", "src/app/api/negociacao/[token]/route.ts"]) {
       const s = semComentarios(ler(f));
-      const guarda = s.indexOf("problemaDaHoraProposta(escolhida.tarifaCongeladaJson, escolhida.pessoasEscolhidas,");
+      const guarda = s.indexOf("await guardaDaHoraCongelada(");
       const motor = s.indexOf('propor(estadoActual, "profissional"');
       expect(guarda, f).toBeGreaterThan(0);
       expect(guarda, f).toBeLessThan(motor);
-      expect(s, f).toContain("mudancasEscolhidasDoProfissional(");
+      expect(s, f).toContain("() => tarifaCongeladaDaNegociacao(negociacaoId,");
     }
   });
 

@@ -181,7 +181,6 @@ export type CandidatoDaMudanca = ProfissionalParaAvaliar & {
   nome: string;
   contaDeTeste: boolean;
   verificado: boolean;
-  fotografia: string | null;
   tarifa: TarifaDasMudancas | null;
   /** A média das avaliações que contam (avaliacao-que-conta.ts), e quantas são. */
   notaMedia: number | null;
@@ -270,7 +269,12 @@ export type CartaoDoParceiro = {
   novo: string | null;
   /** A nota do Google (ficha confirmada por um administrador), separada da da CLYON; null sem ela. */
   notaGoogle: NotaDoGoogleNoCartao | null;
-  fotografia: string | null;
+  /**
+   * Sempre null (11-11-2026): as fotografias da carrinha são só para a equipa —
+   * ao parceiro dizemos «O cliente não as vê». O campo fica para a app de
+   * cliente publicada, que o lê.
+   */
+  fotografia: null;
   /**
    * O preço da hora com 2 e com 3 pessoas. Numa casa que só se faz com 3 (T3
    * ou maior), o «2» leva o MESMO valor do «3»: a app de cliente publicada
@@ -489,7 +493,7 @@ export function cartaoDoParceiro(
       : null,
     novo: temNota ? null : NOVO_NA_CLYON,
     notaGoogle: null,
-    fotografia: c.fotografia,
+    fotografia: null,
     precoHora: { 2: soComTresPessoas(ctx.tipologia) && p3 ? p3 : p2, 3: p3 },
     fazComTres: p3 != null,
     pessoas,

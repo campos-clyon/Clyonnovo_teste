@@ -6,9 +6,9 @@ import {
   getSimulatorOrderByAcessoTokenHash,
   perfilDoProfissional,
   gravarMateriaisDaProposta,
-  mudancasEscolhidasDoProfissional,
+  tarifaCongeladaDaNegociacao,
 } from "@/lib/db";
-import { problemaDaHoraProposta, semDerrubar } from "@/lib/mudanca-escolhida-pelo-cliente";
+import { guardaDaHoraCongelada } from "@/lib/mudanca-escolhida-pelo-cliente";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -227,15 +227,13 @@ export async function POST(
       const valor =
         typeof corpo.valor === "string" ? Number(corpo.valor.replace(",", ".")) : Number(corpo.valor);
       // Numa mudança em que o cliente o escolheu, a hora não passa da congelada (11-11-2026; a mesma guarda da app).
-      const escolhida = await semDerrubar(
-        async () => (await mudancasEscolhidasDoProfissional(providerId)).get(negociacaoId) ?? null,
-        null,
+      // Se a hora congelada não se conseguir ler, a proposta NÃO segue (11-11-2026).
+      const recusa = await guardaDaHoraCongelada(
+        () => tarifaCongeladaDaNegociacao(negociacaoId, providerId),
+        valor,
         "negociacao/token",
       );
-      if (escolhida) {
-        const problema = problemaDaHoraProposta(escolhida.tarifaCongeladaJson, escolhida.pessoasEscolhidas, valor);
-        if (problema) return NextResponse.json({ error: problema, acimaDaHora: true }, { status: 409 });
-      }
+      if (recusa) return NextResponse.json({ error: recusa.erro, ...(recusa.acimaDaHora ? { acimaDaHora: true } : {}) }, { status: recusa.status });
       resultado = propor(estadoActual, "profissional", valor, agora);
       break;
     }

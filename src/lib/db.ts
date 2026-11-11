@@ -7071,6 +7071,8 @@ export type FolhaDaNegociacaoNaBase = {
   folhaJson: string | null;
   folhaHistoricoJson: string | null;
   folhaNaMesaEm: Date | string | null;
+  /** O «Não concordo» do cliente à folha que está gravada (null sem ele). */
+  horasContestadasEm?: Date | string | null;
   /** Os km do percurso que o cliente viu (`escolhaDosParceirosJson`). */
   kmPercurso: string | null;
 };
@@ -7083,7 +7085,7 @@ export async function folhaDaNegociacao(negociacaoId: number): Promise<FolhaDaNe
   if (!pool) throw new Error("DB not available");
   const [linhas] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.providerId, n.estado, n.tarifaCongeladaJson, n.pessoasEscolhidas, n.taxaCliente,
-            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm,
+            n.folhaJson, n.folhaHistoricoJson, n.folhaNaMesaEm, n.horasContestadasEm,
             CASE WHEN JSON_VALID(o.escolhaDosParceirosJson)
                  THEN JSON_UNQUOTE(JSON_EXTRACT(o.escolhaDosParceirosJson, '$.kmPercurso')) END AS kmPercurso
        FROM negociacoes n
@@ -7202,6 +7204,11 @@ export type PercursoDoMapaNaBase = {
   pedidoId: number;
   providerId: number;
   estado: string;
+  /** A fase do trabalho e o arquivo do parceiro: acabado, o mapa volta às localidades. */
+  execucaoEnviadaEm: Date | string | null;
+  confirmadoEm: Date | string | null;
+  pagoEm: Date | string | null;
+  arquivadoProfissionalEm: Date | string | null;
   rawOrderJson: string | null;
   percursoJson: string | null;
 };
@@ -7213,7 +7220,9 @@ export async function percursoDaNegociacao(negociacaoId: number, providerId: num
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [linhas] = (await pool.execute(
-    `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.estado, o.rawOrderJson, o.percursoJson
+    `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.estado,
+            n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm, n.arquivadoProfissionalEm,
+            o.rawOrderJson, o.percursoJson
        FROM negociacoes n
        JOIN simulatorOrders o ON o.id = n.pedidoId
       WHERE n.id = ? AND n.providerId = ? AND n.tarifaCongeladaJson IS NOT NULL
@@ -7221,6 +7230,27 @@ export async function percursoDaNegociacao(negociacaoId: number, providerId: num
     [negociacaoId, providerId],
   )) as [PercursoDoMapaNaBase[], unknown];
   return linhas[0] ?? null;
+}
+
+/**
+ * A tarifa congelada de UMA negociação dele (11-11-2026) — para a guarda da
+ * proposta. Sem base, rebenta: quem chama recusa a proposta em vez de a deixar
+ * passar sem conferir. Null quando a negociação não tem tarifa congelada.
+ */
+export async function tarifaCongeladaDaNegociacao(
+  negociacaoId: number,
+  providerId: number,
+): Promise<{ tarifaCongeladaJson: string | null; pessoasEscolhidas: number | null } | null> {
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    "SELECT tarifaCongeladaJson, pessoasEscolhidas FROM negociacoes WHERE id = ? AND providerId = ? LIMIT 1",
+    [negociacaoId, providerId],
+  )) as [Array<{ tarifaCongeladaJson: string | null; pessoasEscolhidas: number | null }>, unknown];
+  const l = linhas[0];
+  if (!l || l.tarifaCongeladaJson == null) return null;
+  return { tarifaCongeladaJson: String(l.tarifaCongeladaJson), pessoasEscolhidas: l.pessoasEscolhidas != null ? Number(l.pessoasEscolhidas) : null };
 }
 
 /** Guarda o percurso no pedido — uma vez: não escreve por cima de um que já lá esteja. */
@@ -15718,6 +15748,8 @@ export async function apagarContaDeCliente(
   // O mesmo remedio do apagarProfissional: sem isto, o DELETE da
   // pushSubscriptions estoirava numa base onde ninguem activou avisos.
   await ensurePushSubscriptionsTable();
+  // O traçado do percurso sai com a morada (11-11-2026): a coluna tem de existir.
+  await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
 
@@ -15803,7 +15835,7 @@ export async function apagarContaDeCliente(
                 nifFactura = NULL,
                 address = NULL, floor = NULL,
                 description = NULL, fontesDaDescricao = NULL, filesJson = NULL,
-                rawOrderJson = NULL, chatJson = NULL, historyJson = NULL,
+                rawOrderJson = NULL, percursoJson = NULL, chatJson = NULL, historyJson = NULL,
                 acessoTokenHash = NULL, acessoTokenExpiraEm = NULL
           WHERE LOWER(contactEmail) = ?`,
         [alvo],
@@ -18778,7 +18810,7 @@ export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudanca
   const [rows] = (await pool.execute(
     `SELECT p.id, p.name, p.email, p.phone, p.whatsappAvisos, p.isActive, p.estado, p.categorias, p.raioKm,
             p.emiteFatura, p.emiteGuiaTransporte, p.guiaVerificadaEm, p.baseLat, p.baseLng,
-            COALESCE(p.contaDeTeste, 0) AS contaDeTeste, p.fotoViaturaUrl, p.fotosViaturaJson,
+            COALESCE(p.contaDeTeste, 0) AS contaDeTeste,
             ${SQL_DO_VERIFICADO} AS parceiroVerificado,
             CASE WHEN p.googlePlaceConfirmadoEm IS NOT NULL THEN p.googlePlaceId END AS googlePlaceConfirmado,
             t.precoHora2, t.precoHora3, t.minimoHoras, t.precoKm, t.kmMinimo, t.kmMaximo,
@@ -18814,7 +18846,6 @@ export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudanca
   return rows.map((r) => {
     const id = Number(r.id);
     const nome = String(r.name ?? "");
-    const fotos = lerFotos(r.fotosViaturaJson, (r.fotoViaturaUrl as string | null) ?? null);
     const nota = notas.get(id);
     return {
       id,
@@ -18833,7 +18864,6 @@ export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudanca
       baseLng: r.baseLng == null ? null : Number(r.baseLng),
       contaDeTeste: Number(r.contaDeTeste) === 1 || eContaDeTeste(nome),
       verificado: Number(r.parceiroVerificado) === 1,
-      fotografia: fotos[0] ?? null,
       tarifa: {
         precoHora2: Number(r.precoHora2),
         precoHora3: numeroOuNull(r.precoHora3),

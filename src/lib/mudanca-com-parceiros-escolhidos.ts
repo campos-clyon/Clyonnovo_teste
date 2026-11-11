@@ -43,6 +43,8 @@ export type EscolhaPreparada = {
   /** O intervalo de horas habitual (11-11-2026). */
   horas: IntervaloDeHoras;
   origemPonto: Ponto;
+  /** O ponto da localidade da origem (zona-da-lista.ts): quem apareceu na lista é quem recebe. */
+  zonaPonto?: Ponto;
   destinoPonto?: Ponto;
   procurarMais: boolean;
 };
@@ -88,7 +90,8 @@ export async function prepararEscolhaDaMudanca(
   const lido = pedidoDaListaDoPedido(order);
   if (!lido.ok) return { caminho: "recusado", erro: lido.erro, campo: "parceirosEscolhidos" };
 
-  const lista = await listaDosParceirosDaMudanca(lido.pedido, agora);
+  // É AQUI, no envio, que se confere o que depende da forma de pagamento — a lista pública não muda com ela.
+  const lista = await listaDosParceirosDaMudanca(lido.pedido, agora, undefined, { comFiltroDoPagamento: true });
   if (!lista.ok) return { caminho: "recusado", erro: lista.erro, campo: "parceirosEscolhidos" };
 
   const conferida = conferirEscolha(ids, lista.escolhiveis);
@@ -104,6 +107,7 @@ export async function prepararEscolhaDaMudanca(
       kmPercurso: lista.kmPercurso,
       horas: lista.horas,
       origemPonto: lista.origemPonto,
+      zonaPonto: lista.zonaPonto,
       destinoPonto: lista.destinoPonto,
       procurarMais: order.procurarMaisParceiros === true,
     },
@@ -198,8 +202,9 @@ export async function enviarAosEscolhidos(
       precisaGuiaTransporte: false,
       baseDoPreco: "hora",
       formaDePagamento: lerForma(pedido.formaDePagamento),
-      lat: e.origemPonto.lat,
-      lng: e.origemPonto.lng,
+      // A distância de cada um mede-se até à localidade, como na lista que o cliente viu.
+      lat: (e.zonaPonto ?? e.origemPonto).lat,
+      lng: (e.zonaPonto ?? e.origemPonto).lng,
       baseUrl: pedido.baseUrl,
     },
     { soPara: e.escolhidos.map((x) => x.providerId), exigirElegibilidade: true, mudancaPorParceiro: porParceiro },

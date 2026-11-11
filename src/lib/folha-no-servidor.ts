@@ -25,7 +25,9 @@ import {
   edicaoDaFolha,
   folhaDeJson,
   folhaNoEcra,
+  FOLHA_IGUAL_A_CONTESTADA,
   lerFolha,
+  mesmaFolha,
   passoDaFolha,
   resumoDaFolha,
   subiuAEquipa,
@@ -78,6 +80,15 @@ export async function enviarAFolha(a: {
   const lida = lerFolha(a.corpo, a.ctx, agora);
   if (!lida.ok) return falha(400, lida.erro, lida.campo);
   const folha = lida.folha;
+  /*
+   * DEPOIS DE UM «NÃO CONCORDO», A MESMA FOLHA NÃO VOLTA (11-11-2026): reenviar
+   * limpa a contestação e recomeça os lembretes ao cliente — só com uma folha
+   * diferente. Igual, fica como está, à espera da CLYON.
+   */
+  const contestada = folhaDeJson(a.folhaNaBase.folhaJson ?? null);
+  if (a.folhaNaBase.horasContestadasEm != null && contestada && mesmaFolha(contestada, folha)) {
+    return falha(409, FOLHA_IGUAL_A_CONTESTADA);
+  }
   const primeiraVez = !horasMarcadas(a.linha);
   const resumo = resumoDaFolha(folha);
   const edicao = edicaoDaFolha(primeiraVez ? "enviada" : "corrigida", "parceiro", resumo, agora);

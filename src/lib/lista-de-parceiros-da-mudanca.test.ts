@@ -52,7 +52,6 @@ function candidato(mais: Partial<CandidatoDaMudanca> = {}): CandidatoDaMudanca {
     guiaVerificadaEm: null,
     contaDeTeste: false,
     verificado: true,
-    fotografia: null,
     tarifa: TARIFA,
     notaMedia: 4.84,
     avaliacoes: 5,

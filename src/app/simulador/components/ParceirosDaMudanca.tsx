@@ -247,15 +247,6 @@ export default function ParceirosDaMudanca({
                         onChange={() => alternar(p.id)}
                         className="mt-1 h-5 w-5 shrink-0 accent-blue-600"
                       />
-                      {p.fotografia && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={p.fotografia}
-                          alt=""
-                          loading="lazy"
-                          className="h-16 w-16 shrink-0 rounded-xl border border-gray-200 object-cover"
-                        />
-                      )}
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                           <p className="text-base font-semibold text-gray-900">{p.nome}</p>

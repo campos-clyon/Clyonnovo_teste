@@ -675,8 +675,9 @@ export async function GET(req: NextRequest) {
         /*
          * O PERCURSO DA MUDANÇA — 11-11-2026: «X km · cerca de Y min», o mapa
          * (imagem do site) e o «Abrir no Google Maps». Antes de contratado só as
-         * localidades; a morada exacta só com a negociação acordada (as moradas
-         * vêm da vista, que já segue essa regra). Ver mapa-do-percurso.ts.
+         * localidades; a morada exacta só com a negociação acordada e enquanto
+         * há trabalho (as moradas vêm da vista; a fase decide o resto). Ver
+         * mapa-do-percurso.ts.
          */
         percurso: (() => {
           const e = escolhidas.get(Number(l.id));
@@ -684,6 +685,9 @@ export async function GET(req: NextRequest) {
           return percursoParaOParceiro({
             negociacaoId: Number(l.id),
             estado: l.estado,
+            // Acabado (confirmado, pago, arquivado), o percurso volta às localidades — como o contacto (d3).
+            fase,
+            arquivadoEm: l.arquivadoProfissionalEm ?? null,
             percurso: percursoDeJson(e.percursoJson),
             kmDoPercurso: e.km != null && Number.isFinite(Number(e.km)) ? Number(e.km) : null,
             cidadeOrigem: e.cidadeOrigem,

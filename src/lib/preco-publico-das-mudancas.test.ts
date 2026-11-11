@@ -43,7 +43,6 @@ function candidato(over: Partial<CandidatoDaMudanca> = {}): CandidatoDaMudanca {
     nome: "Exemplo",
     contaDeTeste: false,
     verificado: true,
-    fotografia: null,
     tarifa: TARIFA,
     notaMedia: null,
     avaliacoes: 0,
