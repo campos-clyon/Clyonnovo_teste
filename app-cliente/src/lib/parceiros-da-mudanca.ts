@@ -24,6 +24,12 @@ export type Pessoas = 2 | 3;
 /** A escolha que fica no rascunho. */
 export type EscolhaDosParceiros = {
   ids: string[];
+  /**
+   * O PREÇO VISTO — d5, 11-11-2026: a assinatura do preço de cada cartão
+   * escolhido, tal como veio na lista (por id). O pedido devolve-as em
+   * `assinaturasDoPreco`; se o preço mudou entretanto, volta-se à lista.
+   */
+  assinaturas?: Record<string, string>;
   nomes: string[];
   pessoas: Pessoas;
   procurarMais: boolean;
@@ -39,6 +45,8 @@ export type EscolhaDosParceiros = {
 export type CartaoDaLista = {
   /** Opaco: é este que volta no `parceirosEscolhidos` do pedido. */
   id: string;
+  /** A assinatura do preço mostrado neste cartão (22 caracteres, feita pelo site); null num site antigo. */
+  assinatura: string | null;
   nome: string;
   /** O selo, já escrito pela rota (ou null). */
   selo: string | null;
@@ -136,6 +144,7 @@ function cartaoValido(v: unknown): CartaoDaLista | null {
   const foto = texto(c.fotografia, 600);
   return {
     id,
+    assinatura: texto(c.assinatura, 128),
     nome,
     selo: texto(c.selo, 60),
     nota:
@@ -239,6 +248,8 @@ export function escolhaFeita(
   if (escolhidos.length === 0) return null;
   const e: EscolhaDosParceiros = {
     ids: escolhidos.map((p) => p.id),
+    // O preço que ele viu em cada cartão escolhido (d5): volta no pedido.
+    assinaturas: Object.fromEntries(escolhidos.filter((p) => p.assinatura).map((p) => [p.id, p.assinatura as string])),
     nomes: escolhidos.map((p) => p.nome),
     // A equipa da conta: num T3 ou maior a rota diz 3, mesmo que se tenham pedido 2.
     pessoas: l.soComTres ? 3 : pessoas,
@@ -259,15 +270,32 @@ export function botaoDaLista(l: ListaDosParceiros | null, quantos: number): stri
   return quantos > 0 ? `${l.textos.botao} (${quantos})` : l.textos.botao;
 }
 
-/** Os campos que vão no pedido (a rota do pedido confere-os). */
+/**
+ * Os campos que vão no pedido (a rota do pedido confere-os).
+ *
+ * `assinaturasDoPreco` (d5, 11-11-2026): uma por cada id escolhido, só as dos
+ * escolhidos. Se o preço de um mudou, a rota responde 400 com `precoMudou` e
+ * `campo: "parceirosEscolhidos"`, e o Pedir volta à lista com a frase dela.
+ */
 export function camposDaEscolha(e: EscolhaDosParceiros | undefined | null): Record<string, unknown> {
   if (!e || e.ids.length === 0) return {};
+  const assinaturas: Record<string, string> = {};
+  for (const id of e.ids) {
+    const a = e.assinaturas?.[id];
+    if (typeof a === "string" && a.length > 0) assinaturas[id] = a;
+  }
   return {
     parceirosEscolhidos: [...e.ids],
+    assinaturasDoPreco: assinaturas,
     pessoas: e.pessoas,
     procurarMaisParceiros: e.procurarMais,
     ...(e.embalamento ? { embalamento: true } : {}),
   };
+}
+
+/** A rota do pedido recusou a escolha: o preço de um escolhido mudou, ou um deles já não está na lista. */
+export function voltaALista(corpoDoErro: Record<string, unknown> | null | undefined): boolean {
+  return corpoDoErro?.precoMudou === true || corpoDoErro?.campo === "parceirosEscolhidos" || corpoDoErro?.campo === "pessoas";
 }
 
 /** «Vai pedir orçamento a A e B (equipa de 2).» — a linha do resumo. */

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text, TextInput } from "./Texto";
 import { Botao, Caixa, Mensagem, TituloDaCaixa } from "./ui";
@@ -15,10 +15,13 @@ import {
   folhaNoEcra,
   lerFolha,
   type FolhaNoEcra,
+  type RascunhoDaFolha,
 } from "../../../src/lib/folha-da-mudanca";
 import { HORA_DE_FIM, HORA_DE_INICIO, agoraNoCampo } from "../../../src/lib/horas-do-trabalho";
 import type { QuantidadeDoMaterial } from "../../../src/lib/conta-da-mudanca";
 import type { Trabalho } from "../lib/trabalhos";
+import { camposDeAbrir, folhaAMeioVale, rascunhoMaisRecente } from "../lib/folha-a-meio";
+import { apagarFolhaAMeio, guardarFolhaAMeio, lerFolhaAMeio } from "../lib/folha-guardada";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /**
@@ -29,24 +32,108 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  * percurso; corrigir pede o motivo) e o material pelas unidades da tarifa
  * dele. O valor faz-se aqui com a MESMA conta do site (`lerFolha`) antes de
  * enviar; o site refaz e grava. O cliente confirma — nunca sozinha.
+ *
+ * O RASCUNHO — d5, 11-11-2026. O que ele escreve já não vive só no ecrã: a
+ * cada mudança fica no telemóvel (`folha-guardada.ts`: só horas e
+ * quantidades, sem moradas nem nomes) e, pouco depois, no site
+ * (`rascunho: true` na mesma rota — não envia a folha nem avisa o cliente).
+ * Ao reabrir repõe-se o mais novo dos dois; sem início escrito, vem a hora do
+ * «Cheguei» (hora de Lisboa). Enviar a folha apaga o rascunho.
  */
+const ROTA_DAS_HORAS = "/api/profissionais/trabalho/horas";
+/** Quanto se espera, depois da última tecla, para mandar o rascunho ao site. */
+const ESPERA_DO_RASCUNHO_MS = 1500;
+
 export function FolhaDaMudanca({ t }: { t: Trabalho }) {
   const c = useCores();
   const { recarregar } = useTrabalhos();
   const h = t.porHora!;
   const f = h.folha!;
   const campos = f.campos;
-  const [inicio, setInicio] = useState(campos.inicio);
-  const [fim, setFim] = useState(campos.fim);
-  const [pausas, setPausas] = useState<Array<{ inicio: string; fim: string }>>(campos.pausas);
-  const [pessoas, setPessoas] = useState<2 | 3>(campos.pessoas);
-  const [km, setKm] = useState(campos.km);
+  const editavel = h.podeMarcar;
+  // O rascunho que o site guardou; o do telemóvel lê-se a seguir (é um ficheiro).
+  const doSite = editavel ? (f.rascunho ?? null) : null;
+  const [aoAbrir] = useState(() => camposDeAbrir(campos, t.chegouEm, doSite));
+  const [inicio, setInicio] = useState(aoAbrir.inicio);
+  const [fim, setFim] = useState(aoAbrir.fim);
+  const [pausas, setPausas] = useState<Array<{ inicio: string; fim: string }>>(aoAbrir.pausas);
+  const [pessoas, setPessoas] = useState<2 | 3>(aoAbrir.pessoas);
+  const [km, setKm] = useState(aoAbrir.km);
   const [motivoDosKm, setMotivoDosKm] = useState(campos.motivoDosKm);
-  const [materiais, setMateriais] = useState<Partial<Record<QuantidadeDoMaterial, string>>>(campos.materiais);
+  const [materiais, setMateriais] = useState<Partial<Record<QuantidadeDoMaterial, string>>>(aoAbrir.materiais);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
-  const editavel = h.podeMarcar;
+  /** Ele já escreveu alguma coisa desde que abriu: a partir daí guarda-se, e nada se repõe por cima. */
+  const mexeu = useRef(false);
+  const reposto = useRef<string | null>(doSite?.guardadoEm ?? null);
+  const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function repor(r: RascunhoDaFolha) {
+    const a = camposDeAbrir(campos, t.chegouEm, r);
+    reposto.current = r.guardadoEm;
+    setInicio(a.inicio);
+    setFim(a.fim);
+    setPausas(a.pausas);
+    setPessoas(a.pessoas);
+    setKm(a.km);
+    setMateriais(a.materiais);
+  }
+
+  // Ao reabrir: o rascunho do telemóvel, se for mais novo do que o do site (ficou sem rede) e ainda valer.
+  useEffect(() => {
+    if (!editavel) return;
+    let vivo = true;
+    void lerFolhaAMeio(t.negociacaoId).then((doTelemovel) => {
+      if (!vivo || mexeu.current || !doTelemovel || !folhaAMeioVale(t, doTelemovel)) return;
+      if (rascunhoMaisRecente(doSite, doTelemovel) === doTelemovel && doTelemovel.guardadoEm !== reposto.current) repor(doTelemovel);
+    });
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t.negociacaoId, editavel]);
+
+  // O rascunho do site chegou depois (a lista do ecrã era a guardada): repõe-se, se ele ainda não escreveu nada.
+  useEffect(() => {
+    if (!doSite || mexeu.current || doSite.guardadoEm === reposto.current) return;
+    if (reposto.current == null || Date.parse(doSite.guardadoEm) > Date.parse(reposto.current)) repor(doSite);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doSite?.guardadoEm]);
+
+  // A cada mudança dele: no telemóvel já, e no site pouco depois da última tecla. Só horas e quantidades.
+  useEffect(() => {
+    if (!editavel || !mexeu.current) return;
+    const rascunho = { dia: campos.dia, inicio: inicio.trim(), fim: fim.trim(), pausas, pessoas, km, materiais };
+    void guardarFolhaAMeio(t.negociacaoId, rascunho);
+    if (espera.current) clearTimeout(espera.current);
+    espera.current = setTimeout(() => {
+      espera.current = null;
+      // Falhar aqui não é notícia: o rascunho ficou no telemóvel e vai outra vez na próxima mudança.
+      pedir(ROTA_DAS_HORAS, { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, rascunho: true, ...rascunho } }).catch(() => undefined);
+    }, ESPERA_DO_RASCUNHO_MS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inicio, fim, pausas, pessoas, km, materiais]);
+  useEffect(
+    () => () => {
+      if (espera.current) clearTimeout(espera.current);
+    },
+    [],
+  );
+
+  /** Uma mudança feita por ele (e não uma reposição): marca que mexeu e muda o campo. */
+  const porEle =
+    <T,>(mudar: (v: T) => void) =>
+    (v: T) => {
+      mexeu.current = true;
+      mudar(v);
+    };
+  const mudarInicio = porEle(setInicio);
+  const mudarFim = porEle(setFim);
+  const mudarPausas = porEle(setPausas);
+  const mudarPessoas = porEle(setPessoas);
+  const mudarKm = porEle(setKm);
+  const mudarMateriais = porEle(setMateriais);
 
   const corpo = { dia: campos.dia, inicio: inicio.trim(), fim: fim.trim(), pausas, pessoas, km, motivoDosKm, materiais };
   const previsao = useMemo((): { ecra: FolhaNoEcra | null; erro: string | null } => {
@@ -62,11 +149,17 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
   async function enviar() {
     setAEnviar(true);
     setErro(null);
+    // Um rascunho à espera de ir já não vai: a folha vai inteira.
+    if (espera.current) clearTimeout(espera.current);
+    espera.current = null;
     try {
-      const r = await pedir<{ ok: boolean; mensagem?: string | null }>("/api/profissionais/trabalho/horas", {
+      const r = await pedir<{ ok: boolean; mensagem?: string | null }>(ROTA_DAS_HORAS, {
         metodo: "POST",
         corpo: { negociacaoId: t.negociacaoId, ...corpo },
       });
+      // A folha foi enviada: o rascunho apaga-se (o site apaga o dele).
+      mexeu.current = false;
+      void apagarFolhaAMeio(t.negociacaoId);
       setMensagem(r.mensagem ?? null);
       await recarregar();
     } catch (e) {
@@ -125,22 +218,22 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
       {editavel ? (
         <View style={{ gap: ESPACO.s }}>
           <View style={{ flexDirection: "row", gap: ESPACO.s }}>
-            {campoDeHora(HORA_DE_INICIO, inicio, setInicio)}
-            {campoDeHora(HORA_DE_FIM, fim, setFim)}
+            {campoDeHora(HORA_DE_INICIO, inicio, mudarInicio)}
+            {campoDeHora(HORA_DE_FIM, fim, mudarFim)}
           </View>
           {pausas.map((p, i) => (
             <View key={i} style={estilos.linha}>
               <Text style={{ flex: 1, color: c.tinta }}>Pausa {i + 1}</Text>
-              {campoCurto(p.inicio, (v) => setPausas(pausas.map((x, k) => (k === i ? { ...x, inicio: v } : x))), `Pausa ${i + 1}: início`)}
+              {campoCurto(p.inicio, (v) => mudarPausas(pausas.map((x, k) => (k === i ? { ...x, inicio: v } : x))), `Pausa ${i + 1}: início`)}
               <Text style={{ color: c.suave }}>às</Text>
-              {campoCurto(p.fim, (v) => setPausas(pausas.map((x, k) => (k === i ? { ...x, fim: v } : x))), `Pausa ${i + 1}: fim`)}
-              <Pressable accessibilityRole="button" accessibilityLabel={`Tirar a pausa ${i + 1}`} onPress={() => setPausas(pausas.filter((_, k) => k !== i))}>
+              {campoCurto(p.fim, (v) => mudarPausas(pausas.map((x, k) => (k === i ? { ...x, fim: v } : x))), `Pausa ${i + 1}: fim`)}
+              <Pressable accessibilityRole="button" accessibilityLabel={`Tirar a pausa ${i + 1}`} onPress={() => mudarPausas(pausas.filter((_, k) => k !== i))}>
                 <Text style={{ color: c.mau, fontWeight: "700", paddingHorizontal: 6 }}>×</Text>
               </Pressable>
             </View>
           ))}
           {pausas.length < MAXIMO_DE_PAUSAS ? (
-            <Pressable accessibilityRole="button" onPress={() => setPausas([...pausas, { inicio: "", fim: "" }])}>
+            <Pressable accessibilityRole="button" onPress={() => mudarPausas([...pausas, { inicio: "", fim: "" }])}>
               <Text style={{ color: c.marca, fontWeight: "700" }}>{BOTAO_MAIS_PAUSA}</Text>
             </Pressable>
           ) : null}
@@ -155,7 +248,7 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
                   key={n}
                   accessibilityRole="button"
                   accessibilityState={{ selected: escolhido, disabled: desligado }}
-                  onPress={desligado ? undefined : () => setPessoas(n)}
+                  onPress={desligado ? undefined : () => mudarPessoas(n)}
                   style={[estilos.opcao, { borderColor: escolhido ? c.marca : c.linha, opacity: desligado ? 0.4 : 1 }]}
                 >
                   <Text style={{ color: escolhido ? c.marca : c.tinta, fontWeight: "700" }}>
@@ -171,7 +264,7 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
           </Text>
           <TextInput
             value={km}
-            onChangeText={setKm}
+            onChangeText={mudarKm}
             keyboardType="decimal-pad"
             accessibilityLabel="Km"
             style={[estilos.campo, { width: 110, borderColor: c.linha, color: c.tinta, backgroundColor: c.fundo }]}
@@ -198,7 +291,7 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
                   </Text>
                   <TextInput
                     value={materiais[m.quantidade] ?? ""}
-                    onChangeText={(v) => setMateriais({ ...materiais, [m.quantidade]: v })}
+                    onChangeText={(v) => mudarMateriais({ ...materiais, [m.quantidade]: v })}
                     keyboardType={m.decimal ? "decimal-pad" : "number-pad"}
                     placeholder="0"
                     placeholderTextColor={c.suave}

@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { ErroDaApi, pedir } from "../lib/api";
 import { fasesDe, juntarNovidades, mapasAManter, novidadesEntre, type MeusPedidos, type Novidade, type Trabalho } from "../lib/trabalhos";
 import { apagarListaGuardada, guardarLista, lerListaGuardada } from "../lib/lista-guardada";
+import { apagarFolhasAMeio, ficarSoComAsFolhasVivas } from "../lib/folha-guardada";
 import { ficarSoComOsMapas } from "../lib/imagens-guardadas";
 
 /**
@@ -75,6 +76,8 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       setLidaEm(null);
       guardarLista(r.pedidos ?? []);
       ficarSoComOsMapas(mapasAManter(lista));
+      // Os rascunhos da folha da mudança: só os dos trabalhos vivos (d5).
+      void ficarSoComAsFolhasVivas(lista);
     } catch (e) {
       setErro(e instanceof ErroDaApi ? e.message : "Não foi possível ler os trabalhos.");
     } finally {
@@ -93,6 +96,7 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       setCarregando(true);
       // Sem sessão, os dados dos clientes não ficam no telemóvel.
       apagarListaGuardada();
+      apagarFolhasAMeio();
       return;
     }
     // A lista da última vez aparece logo; o site, quando responder, substitui-a.

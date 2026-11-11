@@ -61,7 +61,7 @@ describe("a app de cliente", () => {
     expect(APP).toContain('n.accoes.includes("confirmar_horas") && n.accoes.includes("contestar_horas")');
     expect(APP).toContain('void responder("confirmar_horas")');
     expect(APP).toContain('void responder("contestar_horas")');
-    expect(APP).toContain("corpoDasHoras({ pedidoId, negociacaoId: n.id, accao, motivo })");
+    expect(APP).toContain("corpoDasHoras({ pedidoId, negociacaoId: n.id, accao, motivo, marcaDaFolha: n.horas?.folha?.marca ?? null })");
     expect(APP_LIB).toMatch(/accao: p\.accao, motivo: \(p\.motivo \?\? ""\)\.trim\(\)/);
     expect(APP_VISTA).toContain("<HorasDoTrabalho pedidoId={pedidoId} n={contratada} agir={agir} />");
   });

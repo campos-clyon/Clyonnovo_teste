@@ -133,9 +133,9 @@ describe("a lista na app de cliente lê a rota tal como vem", () => {
     expect(alternarParceiro(["a", "b"], "b", 3)).toEqual(["a"]);
     const l = listaValida(resposta([cartao("a")]))!;
     expect(soOsDaLista(["a", "z"], l)).toEqual(["a"]);
-    expect(escolhaFeita(["a"], l, 3, true)).toEqual({ ids: ["a"], nomes: ["Mudanças Exemplo"], pessoas: 3, procurarMais: true });
+    expect(escolhaFeita(["a"], l, 3, true)).toEqual({ ids: ["a"], assinaturas: {}, nomes: ["Mudanças Exemplo"], pessoas: 3, procurarMais: true });
     const duas = listaValida(resposta([cartao("a"), cartao("b", "Outra")]))!;
-    expect(escolhaFeita(["b", "a"], duas, 2, true)).toEqual({ ids: ["a", "b"], nomes: ["Mudanças Exemplo", "Outra"], pessoas: 2, procurarMais: false });
+    expect(escolhaFeita(["b", "a"], duas, 2, true)).toEqual({ ids: ["a", "b"], assinaturas: {}, nomes: ["Mudanças Exemplo", "Outra"], pessoas: 2, procurarMais: false });
     expect(escolhaFeita([], duas, 2, false)).toBeNull();
   });
 });
@@ -209,7 +209,8 @@ describe("o pedido da app leva a escolha, e a lista pede-se com o mesmo corpo", 
   it("o ecrã da app chama a rota da lista, sem sessão, e volta à lista quando a rota do pedido recusa a escolha", () => {
     const s = ler("app-cliente/src/componentes/NovoPedido.tsx");
     expect(s).toContain("pedir<unknown>(ROTA_DOS_PARCEIROS, { metodo: \"POST\", corpo, semSessao: true })");
-    expect(s).toContain('e.corpo.campo === "parceirosEscolhidos" || e.corpo.campo === "pessoas"');
+    expect(s).toContain("e instanceof ErroDaApi && voltaALista(e.corpo)");
+    expect(ler("app-cliente/src/lib/parceiros-da-mudanca.ts")).toContain('corpoDoErro?.campo === "parceirosEscolhidos" || corpoDoErro?.campo === "pessoas"');
     expect(s).toContain('irPara("parceiros", { parceiros: undefined, semListaDeParceiros: undefined });');
     expect(ler("app-cliente/src/lib/parceiros-da-mudanca.ts")).toContain('export const ROTA_DOS_PARCEIROS = "/api/mudancas/parceiros";');
   });

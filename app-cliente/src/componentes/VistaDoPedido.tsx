@@ -35,6 +35,7 @@ import {
   corpoDePropor,
   perguntaDeRecusar,
   porqueNaoSeContrata,
+  aFolhaMudou,
   propostasEmAberto,
   ROTA_DAS_ACCOES,
   ROTA_DO_PEDIDO,
@@ -199,7 +200,9 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         depoisDeAgir();
         return null;
       } catch (e) {
-        if (e instanceof ErroDaApi && e.estado === 409) {
+        // Um 409 é «já não está assim»: relê-se o pedido antes de dizer a frase. É também o caso da folha da
+        // mudança que o parceiro corrigiu entretanto (`folhaMudou`, d5): o ecrã fica com a folha nova e a frase do site.
+        if (e instanceof ErroDaApi && (e.estado === 409 || aFolhaMudou(e.corpo))) {
           await carregar();
           if (!convidado) void recarregarALista();
         }

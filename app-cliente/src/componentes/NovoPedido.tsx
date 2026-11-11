@@ -94,6 +94,7 @@ import {
   botaoDaLista,
   corpoDaLista,
   escolhaFeita,
+  voltaALista,
   listaValida,
   passosDaResposta,
   ROTA_DOS_PARCEIROS,
@@ -1630,8 +1631,9 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
         irPara("contacto");
         setFalta(e.message);
       }
-      // Um parceiro escolhido deixou de estar disponível (ou a equipa): volta-se à lista, com a frase da rota.
-      else if (e instanceof ErroDaApi && (e.corpo.campo === "parceirosEscolhidos" || e.corpo.campo === "pessoas")) {
+      // Um parceiro escolhido deixou de estar disponível (ou a equipa), ou o preço de um deles mudou (`precoMudou`,
+      // d5): volta-se à lista, que se pede outra vez (preços e assinaturas de agora), com a frase da rota.
+      else if (e instanceof ErroDaApi && voltaALista(e.corpo)) {
         irPara("parceiros", { parceiros: undefined, semListaDeParceiros: undefined });
         setFalta(e.message);
       }

@@ -255,6 +255,12 @@ export type FolhaParaOCliente = {
   regra: string;
   estado: "enviada" | "por_confirmar" | "contestada" | "confirmada" | null;
   historico: Array<{ quando: string; texto: string }>;
+  /**
+   * A MARCA DESTA FOLHA — d5, 11-11-2026 (`horas.folha.marca`, 32 caracteres):
+   * o «Confirmo a folha» devolve-a em `marcaDaFolha`, e o site só confirma se a
+   * folha gravada ainda for a que está no ecrã. Um site antigo não a manda.
+   */
+  marca?: string | null;
 };
 
 export type HorasDoTrabalho = {
@@ -276,12 +282,31 @@ export type HorasDoTrabalho = {
 export const MOTIVO_MINIMO_DAS_HORAS = 5;
 export const MOTIVO_MAXIMO_DAS_HORAS = 300;
 
-/** O corpo de «Confirmo as horas» / «Não concordo» (R8, 31-10-2026). */
-export function corpoDasHoras(p: { pedidoId: number; negociacaoId: number; accao: "confirmar_horas" | "contestar_horas"; motivo?: string }) {
-  return p.accao === "contestar_horas"
-    ? { pedidoId: p.pedidoId, negociacaoId: p.negociacaoId, accao: p.accao, motivo: (p.motivo ?? "").trim() }
-    : { pedidoId: p.pedidoId, negociacaoId: p.negociacaoId, accao: p.accao };
+/**
+ * O corpo de «Confirmo as horas» / «Não concordo» (R8, 31-10-2026).
+ *
+ * A FOLHA VISTA — d5, 11-11-2026: o «Confirmo a folha» leva a marca da folha
+ * que está no ecrã (`marcaDaFolha`). Se o parceiro a corrigiu entretanto, o
+ * site responde 409 com `folhaMudou` e a frase; o ecrã relê o pedido e mostra
+ * a folha nova com essa frase. O «Não concordo» não leva marca.
+ */
+export function corpoDasHoras(p: {
+  pedidoId: number;
+  negociacaoId: number;
+  accao: "confirmar_horas" | "contestar_horas";
+  motivo?: string;
+  /** `horas.folha.marca` da folha que ele tem no ecrã; fora da folha da mudança não há. */
+  marcaDaFolha?: string | null;
+}) {
+  if (p.accao === "contestar_horas") {
+    return { pedidoId: p.pedidoId, negociacaoId: p.negociacaoId, accao: p.accao, motivo: (p.motivo ?? "").trim() };
+  }
+  const marca = typeof p.marcaDaFolha === "string" && p.marcaDaFolha.length > 0 ? p.marcaDaFolha : null;
+  return { pedidoId: p.pedidoId, negociacaoId: p.negociacaoId, accao: p.accao, ...(marca ? { marcaDaFolha: marca } : {}) };
 }
+
+/** O site disse que a folha já não é a que estava no ecrã (409 com `folhaMudou`). */
+export const aFolhaMudou = (corpoDoErro: Record<string, unknown> | null | undefined): boolean => corpoDoErro?.folhaMudou === true;
 
 export type FaseDoTrabalho = "a_negociar" | "a_executar" | "a_confirmar" | "confirmado" | "pago";
 

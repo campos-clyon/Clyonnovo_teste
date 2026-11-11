@@ -35,7 +35,9 @@ export function HorasDoTrabalho({
   async function responder(accao: "confirmar_horas" | "contestar_horas") {
     setOcupado(accao);
     setErro(null);
-    const e = await agir(corpoDasHoras({ pedidoId, negociacaoId: n.id, accao, motivo }));
+    // A folha que está no ecrã vai com o «Confirmo» (d5): se mudou entretanto, o site di-lo, o pedido relê-se
+    // (`agir`, no 409) e a frase dele fica por cima da folha nova.
+    const e = await agir(corpoDasHoras({ pedidoId, negociacaoId: n.id, accao, motivo, marcaDaFolha: n.horas?.folha?.marca ?? null }));
     setOcupado(null);
     if (e) setErro(e);
     else setAContestar(false);
