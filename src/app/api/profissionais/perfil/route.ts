@@ -11,7 +11,9 @@ import {
   invalidarVerificacaoDaGuia,
   custosFixosDeJson,
   trabalhosConcluidosDoProfissional,
+  tarifaDasMudancasDe,
 } from "@/lib/db";
+import { precosDasMudancasNaConta } from "@/lib/precos-das-mudancas-do-profissional";
 import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import { TIPOS_DE_VEICULO, tipoDeVeiculoValido } from "@/lib/convite-profissional";
 import {
@@ -108,6 +110,19 @@ export async function GET(req: NextRequest) {
 
     const iban = typeof p.iban === "string" ? p.iban : "";
 
+    // Os preços das mudanças (11-11-2026): o estado para a linha do menu e para
+    // o cartão do perfil, a quem tem «Mudanças». Se a leitura falhar, o perfil
+    // sai na mesma, sem o estado.
+    const categoriasDele = normalizarCategorias(listaGravada(p.categorias));
+    let precosDasMudancas: ReturnType<typeof precosDasMudancasNaConta> = null;
+    if (categoriasDele.includes("mudancas")) {
+      try {
+        precosDasMudancas = precosDasMudancasNaConta(await tarifaDasMudancasDe(sessao.providerId), true);
+      } catch (e) {
+        console.error("[profissionais/perfil GET] preços das mudanças", e instanceof Error ? e.message : e);
+      }
+    }
+
     const resposta = NextResponse.json({
       perfil: {
         nome: p.name ?? "",
@@ -135,7 +150,8 @@ export async function GET(req: NextRequest) {
          */
         fotosViatura: await fotosDaViatura(sessao.providerId),
         // Em grupos (29-10-2026): um serviço antigo gravado conta pelo seu grupo.
-        categorias: normalizarCategorias(listaGravada(p.categorias)),
+        categorias: categoriasDele,
+        precosDasMudancas,
         raioKm: p.raioKm != null ? Number(p.raioKm) : 30,
         // Os custos dele, para a sugestão de valor. Nulos = referência da CLYON.
         custoKm: p.custoKm != null ? Number(p.custoKm) : null,

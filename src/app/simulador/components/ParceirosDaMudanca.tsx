@@ -83,6 +83,9 @@ export default function ParceirosDaMudanca({
   const [escolhidos, setEscolhidos] = useState<string[]>(inicial?.ids ?? []);
   const [procurarMais, setProcurarMais] = useState(inicial?.procurarMais ?? false);
   const [embalamento, setEmbalamento] = useState(inicial?.embalamento ?? false);
+  // 11-11-2026: a escolha da equipa só aparece com parceiros na lista. Fica à
+  // vista depois de os ter havido, para quem mudou para 3 e ficou sem nenhum poder voltar.
+  const [houveParceiros, setHouveParceiros] = useState(false);
   // Num T3 ou maior só há equipa de 3: as 2 pessoas não se escolhem.
   const soComTres = soComTresPessoas((tipologia || null) as Tipologia | null);
   useEffect(() => {
@@ -121,6 +124,7 @@ export default function ParceirosDaMudanca({
           return;
         }
         setResposta(j);
+        if ((j.parceiros?.length ?? 0) > 0) setHouveParceiros(true);
         // Quem já não está na lista (mudou a equipa) sai da escolha.
         setEscolhidos((atual) => atual.filter((id) => j.parceiros?.some((p) => p.id === id)));
       } catch {
@@ -167,6 +171,7 @@ export default function ParceirosDaMudanca({
         {resposta?.resumo && <p className="mt-1 text-sm text-gray-600">{resposta.resumo}</p>}
       </div>
 
+      {(parceiros.length > 0 || houveParceiros) && (
       <div>
         <div className="inline-flex rounded-xl border border-gray-300 bg-white p-1" role="group" aria-label="Pessoas na equipa">
           {([2, 3] as const).map((n) => {
@@ -191,6 +196,7 @@ export default function ParceirosDaMudanca({
         </div>
         {resposta?.recomendaTres && <p className="mt-2 text-sm text-amber-800">{resposta.recomendaTres}</p>}
       </div>
+      )}
 
       {aCarregar && (
         <p className="flex items-center gap-2 text-sm text-gray-600">

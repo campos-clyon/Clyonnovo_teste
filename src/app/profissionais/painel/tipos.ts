@@ -306,6 +306,8 @@ export type DadosDaCarteira = {
 };
 
 export type Perfil = {
+  /** Os preços das mudanças (11-11-2026): o estado para o menu e para o cartão; null sem «Mudanças». */
+  precosDasMudancas?: import("@/lib/precos-das-mudancas-do-profissional").PrecosDasMudancasNaConta | null;
   nome: string;
   email: string;
   telefone: string;

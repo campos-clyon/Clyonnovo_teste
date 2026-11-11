@@ -339,7 +339,7 @@ describe("o painel conta uma vez e mostra em quatro sítios", () => {
   });
 
   it("o cartão desaparece sozinho quando não falta nada", () => {
-    expect(CARTAO).toContain("if (resumo.completo) return null");
+    expect(CARTAO).toContain("if (resumo.completo && !faltaDasMudancas) return null");
   });
 
   it("as melhorias nascem fechadas quando há travões por resolver", () => {

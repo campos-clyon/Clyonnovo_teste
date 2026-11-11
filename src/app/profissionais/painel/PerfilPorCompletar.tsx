@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, ChevronRight, Sparkles } from "lucide-react";
 import type { Falta, ResumoDoPerfil, SeccaoComFalta } from "@/lib/perfil-por-completar";
+import type { FaltaDosPrecosDasMudancas } from "@/lib/precos-das-mudancas-do-profissional";
 
 /**
  * O QUE FALTA NO PERFIL, À CABEÇA DO MENU.
@@ -55,10 +56,19 @@ function Linha({
 
 export default function PerfilPorCompletar({
   resumo,
+  faltaDasMudancas,
+  onAbrirMudancas,
   onAbrir,
   onComoFunciona,
 }: {
   resumo: ResumoDoPerfil;
+  /**
+   * Os preços das mudanças por pôr (11-11-2026): só a quem tem «Mudanças».
+   * Vem à parte das faltas do perfil porque abre outro ecrã e não entra na
+   * percentagem — mas é um travão: sem preços, não aparece na lista.
+   */
+  faltaDasMudancas?: FaltaDosPrecosDasMudancas | null;
+  onAbrirMudancas?: () => void;
   onAbrir: (seccao: SeccaoComFalta) => void;
   /** Abre o ecrã que explica o que cada campo faz à conta. */
   onComoFunciona?: () => void;
@@ -67,10 +77,10 @@ export default function PerfilPorCompletar({
 
   // Nada a dizer é a melhor notícia que este cartão pode dar. Diz-se
   // desaparecendo: um parabéns permanente ocupa o lugar dos trabalhos.
-  if (resumo.completo) return null;
+  if (resumo.completo && !faltaDasMudancas) return null;
 
   const { essenciais, melhorias, percentagem } = resumo;
-  const temTravao = essenciais.length > 0;
+  const temTravao = essenciais.length > 0 || Boolean(faltaDasMudancas);
   const aMostrar = verTudo ? [...essenciais, ...melhorias] : essenciais.length > 0 ? essenciais : melhorias.slice(0, 2);
   const escondidas = (verTudo ? 0 : essenciais.length > 0 ? melhorias.length : Math.max(0, melhorias.length - 2));
 
@@ -107,7 +117,8 @@ export default function PerfilPorCompletar({
         diz que não emite guia de transporte não é penalizado por não ter o
         número de transportador.
       */}
-      <div className="mt-3">
+      {/* Com o perfil todo preenchido e só os preços das mudanças por pôr, a barra a 100 % enganava. */}
+      <div className={resumo.completo ? "hidden" : "mt-3"}>
         <div className="flex items-baseline justify-between text-xs">
           <span className="font-medium text-slate-600">
             {resumo.feitos} de {resumo.total} preenchidos
@@ -127,6 +138,12 @@ export default function PerfilPorCompletar({
       </div>
 
       <div className="mt-2 space-y-0.5">
+        {faltaDasMudancas && (
+          <Linha
+            falta={{ ...faltaDasMudancas, seccao: "servicos", peso: "essencial" }}
+            onAbrir={() => onAbrirMudancas?.()}
+          />
+        )}
         {aMostrar.map((f) => (
           <Linha key={f.chave} falta={f} onAbrir={onAbrir} />
         ))}

@@ -45,6 +45,7 @@ import PerfilPorCompletar from "./PerfilPorCompletar";
 import ComoFunciona from "./ComoFunciona";
 import InterruptorDoTema from "./InterruptorDoTema";
 import { resumoDoPerfil, faltasDaSeccao, type SeccaoComFalta } from "@/lib/perfil-por-completar";
+import { faltaDosPrecosDasMudancas } from "@/lib/precos-das-mudancas-do-profissional";
 import {
   aplicarTema,
   guardarTema,
@@ -716,6 +717,11 @@ function PainelNoBrowser() {
       {resumo && (
         <PerfilPorCompletar
           resumo={resumo}
+          faltaDasMudancas={faltaDosPrecosDasMudancas(
+            perfil?.categorias.includes("mudancas") === true,
+            perfil?.precosDasMudancas?.estado,
+          )}
+          onAbrirMudancas={() => abrir("precos-mudancas")}
           onAbrir={(seccao) => abrir(seccao)}
           onComoFunciona={() => abrir("como-funciona")}
         />
@@ -801,6 +807,14 @@ function PainelNoBrowser() {
             icone={Truck}
             rotulo="Preços das mudanças"
             activo={ecra === "precos-mudancas"}
+            // O estado (11-11-2026): «na lista» é sossego, os outros dois pedem um toque.
+            valor={perfil.precosDasMudancas?.estado === "na_lista" ? perfil.precosDasMudancas.rotulo : undefined}
+            destaque={
+              perfil.precosDasMudancas && perfil.precosDasMudancas.estado !== "na_lista"
+                ? perfil.precosDasMudancas.rotulo
+                : undefined
+            }
+            aviso
             onClick={() => abrir("precos-mudancas")}
           />
         )}
@@ -949,7 +963,7 @@ function PainelNoBrowser() {
         )}
         {ecra === "ajuda" && <Ajuda onVoltar={() => abrir("menu")} />}
 
-        {ecra === "precos-mudancas" && <PrecosDasMudancas onVoltar={() => abrir("menu")} />}
+        {ecra === "precos-mudancas" && <PrecosDasMudancas onVoltar={() => abrir("menu")} onGravado={carregar} />}
         {ecra === "ficha-google" && <FichaNoGoogle onVoltar={() => abrir("menu")} />}
 
         {ecra === "como-funciona" && (

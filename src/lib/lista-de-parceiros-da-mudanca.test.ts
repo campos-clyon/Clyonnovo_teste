@@ -271,7 +271,8 @@ describe("os textos do ecrã", () => {
 
   it("até 3, e as frases da especificação", () => {
     expect(MAXIMO_DE_ESCOLHIDOS).toBe(3);
-    expect(TEXTOS_DA_LISTA.semParceiros).toBe("Ainda não temos parceiros de mudanças com preço para esta zona.");
+    expect(TEXTOS_DA_LISTA.semParceiros).toBe("Os parceiros da sua zona respondem a este pedido com o preço por hora de cada um.");
+    expect(TEXTOS_DA_LISTA.semParceirosSegue).toBe("A referência: 50,00 € + IVA por hora (61,50 € com IVA), equipa de 3, mínimo de 3 horas.");
     expect(TEXTOS_DA_LISTA.procurarMais).toBe("Pedir também à CLYON que procure mais parceiros");
     expect(TEXTOS_DA_LISTA.recomendaTres).toBe("Num T3 ou maior a mudança faz-se com 3 pessoas: as horas e os preços são para 3.");
     expect(TEXTOS_DA_LISTA.pedirEmbalamento).toBe("Também preciso de caixas e embalamento");

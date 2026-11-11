@@ -14,6 +14,13 @@ import {
   type TarifaDasMudancas,
 } from "@/lib/conta-da-mudanca";
 import { dataEHoraEmLisboa } from "@/lib/hora-de-lisboa";
+import {
+  TEXTOS_DOS_PRECOS_DAS_MUDANCAS as TEXTOS,
+  avisoDasTresPessoas,
+  dicaDoInterruptor,
+  interruptorAoAbrir,
+  mensagemDeGravado,
+} from "@/lib/precos-das-mudancas-do-profissional";
 
 /**
  * OS PREÇOS DAS MUDANÇAS — 10-11-2026 (fase 1).
@@ -23,7 +30,11 @@ import { dataEHoraEmLisboa } from "@/lib/hora-de-lisboa";
  * vai fazer a conta a sério (`valorDaMudanca`), para ele ver o que o cliente
  * paga e o que lhe fica antes de gravar.
  *
- * Nesta fase nada disto chega aos clientes: fica guardado na conta dele.
+ * 11-11-2026: a lista está aberta aos clientes. Com «Aparecer na lista»
+ * ligado, ele aparece com estes preços; o interruptor nasce ligado para quem
+ * ainda não gravou, e a hora de 3 pessoas vazia avisa que fica fora dos T3 ou
+ * maiores. Os textos são os de `precos-das-mudancas-do-profissional.ts`, os
+ * mesmos da app CLYON Pro.
  */
 
 type Campos = Record<
@@ -63,6 +74,7 @@ const percentagem = (f: number) => `${Math.round(f * 1000) / 10} %`.replace(".",
 function Campo({
   etiqueta,
   ajuda,
+  aviso,
   erro,
   valor,
   onMudar,
@@ -70,6 +82,8 @@ function Campo({
 }: {
   etiqueta: string;
   ajuda?: string;
+  /** Um aviso em âmbar, no lugar da ajuda (não é erro: grava-se na mesma). */
+  aviso?: string | null;
   erro?: string;
   valor: string;
   onMudar: (v: string) => void;
@@ -88,12 +102,24 @@ function Campo({
         <span className="shrink-0 text-sm text-slate-500">{sufixo}</span>
       </div>
       {erro && <span className="mt-1 block text-xs text-red-700">{erro}</span>}
-      {ajuda && !erro && <span className="mt-1 block text-xs text-slate-500">{ajuda}</span>}
+      {aviso && !erro && (
+        <span role="status" className="mt-1 block text-xs font-medium text-amber-700">
+          {aviso}
+        </span>
+      )}
+      {ajuda && !erro && !aviso && <span className="mt-1 block text-xs text-slate-500">{ajuda}</span>}
     </label>
   );
 }
 
-export default function PrecosDasMudancas({ onVoltar }: { onVoltar: () => void }) {
+export default function PrecosDasMudancas({
+  onVoltar,
+  onGravado,
+}: {
+  onVoltar: () => void;
+  /** Depois de gravar: o menu e o cartão do perfil voltam a ler o estado. */
+  onGravado?: () => void;
+}) {
   const [campos, setCampos] = useState<Campos>(VAZIO);
   const [naLista, setNaLista] = useState(false);
   const [podeAparecer, setPodeAparecer] = useState(false);
@@ -135,6 +161,8 @@ export default function PrecosDasMudancas({ onVoltar }: { onVoltar: () => void }
         }
         encher(d.tarifa ?? null);
         setPodeAparecer(Boolean(d.podeAparecerNaLista));
+        // Sem nada gravado, o interruptor nasce ligado para quem tem «Mudanças».
+        setNaLista(interruptorAoAbrir(d.tarifa ?? null, Boolean(d.podeAparecerNaLista)));
         if (d.regras) {
           setRegras({
             taxa: Number(d.regras.taxaDaPlataforma),
@@ -192,7 +220,11 @@ export default function PrecosDasMudancas({ onVoltar }: { onVoltar: () => void }
         return;
       }
       encher(d.tarifa ?? null);
-      setMensagem({ tom: "ok", texto: "Preços gravados." });
+      setMensagem({
+        tom: "ok",
+        texto: typeof d.mensagem === "string" ? d.mensagem : mensagemDeGravado(Boolean(d.tarifa?.aparecerNaLista), podeAparecer),
+      });
+      onGravado?.();
     } catch {
       setMensagem({ tom: "erro", texto: "Erro de rede. Tente outra vez." });
     } finally {
@@ -204,7 +236,7 @@ export default function PrecosDasMudancas({ onVoltar }: { onVoltar: () => void }
 
   return (
     <>
-      <CabecalhoDeEcra titulo="Preços das mudanças" onVoltar={onVoltar} />
+      <CabecalhoDeEcra titulo={TEXTOS.titulo} onVoltar={onVoltar} />
 
       {aCarregar ? (
         <p className="flex items-center gap-2 text-sm text-slate-500">
@@ -212,11 +244,7 @@ export default function PrecosDasMudancas({ onVoltar }: { onVoltar: () => void }
         </p>
       ) : (
         <div className="space-y-4">
-          <p className="text-sm leading-relaxed text-slate-600">
-            Os seus preços para mudanças, sem IVA. Quando um cliente o escolher, o trabalho fica com
-            os preços desse dia: pode mudá-los aqui depois, mas os trabalhos já escolhidos não mudam.
-            Por agora ficam só guardados na sua conta.
-          </p>
+          <p className="text-sm leading-relaxed text-slate-600">{TEXTOS.abertura}</p>
 
           <section className="space-y-3 rounded-2xl border border-[#E2EEF3] bg-white p-4 shadow-sm">
             <h2 className="text-base font-bold text-[#0B1929]">A equipa</h2>
@@ -225,6 +253,7 @@ export default function PrecosDasMudancas({ onVoltar }: { onVoltar: () => void }
               etiqueta="Hora com 3 pessoas"
               sufixo="€/h"
               ajuda="Vazio = não faz mudanças com 3 pessoas."
+              aviso={avisoDasTresPessoas(campos.precoHora3)}
               valor={campos.precoHora3}
               onMudar={mudar("precoHora3")}
               erro={e("precoHora3")}
@@ -286,12 +315,8 @@ export default function PrecosDasMudancas({ onVoltar }: { onVoltar: () => void }
               className="flex w-full items-center gap-3 text-left disabled:opacity-50"
             >
               <span className="flex-1">
-                <span className="block text-sm font-medium text-slate-800">Aparecer na lista das mudanças</span>
-                <span className="block text-xs text-slate-500">
-                  {podeAparecer
-                    ? "Quando a lista abrir aos clientes, aparece com estes preços."
-                    : "Só com o serviço «Mudanças» nos seus serviços."}
-                </span>
+                <span className="block text-sm font-medium text-slate-800">{TEXTOS.interruptor}</span>
+                <span className="block text-xs text-slate-500">{dicaDoInterruptor(naLista, podeAparecer)}</span>
               </span>
               <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${naLista ? "bg-acao" : "bg-slate-300"}`}>
                 <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${naLista ? "left-6" : "left-1"}`} />

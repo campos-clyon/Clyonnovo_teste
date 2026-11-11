@@ -3,6 +3,14 @@ import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { categoriasDoProfissional, gravarTarifaDasMudancas, tarifaDasMudancasDe } from "@/lib/db";
 import { LIMITES_DA_TARIFA, REGRAS_DAS_MUDANCAS, validarTarifa } from "@/lib/conta-da-mudanca";
+import {
+  ROTULO_DO_ESTADO_DOS_PRECOS,
+  TEXTOS_DOS_PRECOS_DAS_MUDANCAS,
+  aparecerNaListaAoGravar,
+  estadoDosPrecosDasMudancas,
+  interruptorAoAbrir,
+  mensagemDeGravado,
+} from "@/lib/precos-das-mudancas-do-profissional";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +22,12 @@ export const dynamic = "force-dynamic";
  * regras da conta (para a pré-visualização no painel e na app).
  * PUT: grava a tarifa inteira. Só quem tem a categoria «Mudanças» pode ligar
  * `aparecerNaLista`.
+ *
+ * 11-11-2026: a lista está aberta. O GET diz o estado («por preencher», «fora
+ * da lista», «na lista»), como o interruptor deve aparecer ao abrir
+ * (`interruptorAoAbrir`: ligado para quem ainda não gravou) e os textos do
+ * ecrã; o PUT, sem `aparecerNaLista` no corpo, liga-o na primeira gravação e
+ * devolve o estado e a frase a mostrar.
  *
  * O `providerId` sai SEMPRE da sessão: nunca do corpo.
  */
@@ -39,9 +53,14 @@ export async function GET(req: NextRequest) {
       tarifaDasMudancasDe(sessao.providerId),
       podeAparecer(sessao.providerId),
     ]);
+    const estado = estadoDosPrecosDasMudancas(tarifa);
     return NextResponse.json({
       tarifa,
       podeAparecerNaLista: pode,
+      estado,
+      rotuloDoEstado: ROTULO_DO_ESTADO_DOS_PRECOS[estado],
+      interruptorAoAbrir: interruptorAoAbrir(tarifa, pode),
+      textos: TEXTOS_DOS_PRECOS_DAS_MUDANCAS,
       limites: LIMITES_DA_TARIFA,
       regras: regras(),
     });
@@ -68,7 +87,18 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
-    if (v.tarifa.aparecerNaLista && !(await podeAparecer(sessao.providerId))) {
+    const [gravada, pode] = await Promise.all([
+      tarifaDasMudancasDe(sessao.providerId),
+      podeAparecer(sessao.providerId),
+    ]);
+    // Nasce ligado na primeira gravação; quem diz sim ou não fica com o que disse.
+    const enviado = (corpo as { aparecerNaLista?: unknown } | null)?.aparecerNaLista;
+    const aparecerNaLista = aparecerNaListaAoGravar({
+      enviado: typeof enviado === "boolean" ? enviado : undefined,
+      gravada,
+      temMudancas: pode,
+    });
+    if (aparecerNaLista && !pode) {
       return NextResponse.json(
         {
           error: "Para aparecer na lista das mudanças, junte «Mudanças» aos seus serviços.",
@@ -77,9 +107,16 @@ export async function PUT(req: NextRequest) {
         { status: 403 },
       );
     }
-    await gravarTarifaDasMudancas(sessao.providerId, v.tarifa);
+    await gravarTarifaDasMudancas(sessao.providerId, { ...v.tarifa, aparecerNaLista });
     const tarifa = await tarifaDasMudancasDe(sessao.providerId);
-    return NextResponse.json({ ok: true, tarifa });
+    const estado = estadoDosPrecosDasMudancas(tarifa);
+    return NextResponse.json({
+      ok: true,
+      tarifa,
+      estado,
+      rotuloDoEstado: ROTULO_DO_ESTADO_DOS_PRECOS[estado],
+      mensagem: mensagemDeGravado(estado === "na_lista", pode),
+    });
   } catch (e) {
     console.error("[tarifas-mudancas] PUT", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Não foi possível gravar os preços." }, { status: 500 });

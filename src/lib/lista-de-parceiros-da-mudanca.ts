@@ -31,6 +31,7 @@ import { avaliarElegibilidade, type ProfissionalParaAvaliar } from "./profission
 import type { FormaDePagamento } from "./forma-de-pagamento";
 import { SELO_DO_CARTAO } from "./parceiro-verificado";
 import { formatarEuros } from "./formatar-euros";
+import { REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
 
 /**
  * A LISTA DOS PARCEIROS DE UMA MUDANÇA — 10-11-2026 (fase 2).
@@ -558,8 +559,9 @@ export const TEXTOS_DA_LISTA = Object.freeze({
   escolha: `Escolha até ${MAXIMO_DE_ESCOLHIDOS} parceiros. O pedido vai logo aos que escolher, com os preços que vê aqui.`,
   recomendaTres: SO_COM_TRES_PESSOAS,
   soComTres: SO_COM_TRES_PESSOAS,
-  semParceiros: "Ainda não temos parceiros de mudanças com preço para esta zona.",
-  semParceirosSegue: "Pode enviar o pedido na mesma: a CLYON procura parceiros da sua zona e as propostas chegam-lhe por aqui.",
+  /** 11-11-2026: sem parceiros com preço na zona, diz-se como o pedido segue e a referência — não «ainda não temos». */
+  semParceiros: "Os parceiros da sua zona respondem a este pedido com o preço por hora de cada um.",
+  semParceirosSegue: `A ${REFERENCIA_DA_MUDANCA}.`,
   procurarMais: "Pedir também à CLYON que procure mais parceiros",
   /** 11-11-2026: quem não quer escolher segue o caminho de sempre (a Mesa escolhe). */
   deixarEscolher: DEIXAR_A_CLYON_ESCOLHER,
