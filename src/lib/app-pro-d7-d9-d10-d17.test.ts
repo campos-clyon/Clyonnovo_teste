@@ -6,7 +6,7 @@ import * as APP from "../../app-pro/src/lib/fotografias-da-carrinha";
 import { LADO_MAXIMO as LADO_DO_SITE } from "./reduzir-imagem";
 import { avisoDosItens, TABELA_DOS_ITENS_A_MAIS } from "./itens-a-mais";
 import { PRECO_POR_ITEM } from "./precos-publicos";
-import { fraseDaDividaEmMao } from "./frases-da-divida";
+import { faltaDaDivida, fraseDaDividaEmMao, linhasDasPartesDaDivida } from "./frases-da-divida";
 
 /**
  * A PARTE DA APP CLYON PRO DAS DECISÕES d7, d9, d10 E d17 — 04-11-2026.
@@ -113,27 +113,91 @@ describe("d9 — a dívida de um pago em mão, com e sem IVA, como no painel", (
   /*
    * 11-11-2026: as frases saíram do painel para `frases-da-divida.ts` (a dívida
    * tem duas partes, e a frase lê a dívida inteira, não o que falta). A app
-   * passa a lê-las de lá; enquanto não passa, as que tem escritas têm de dar,
-   * à letra, o que a lib dá.
+   * lê-as de lá desde a d3 — a tolerância de transição acabou: a app TEM de
+   * chamar a lib, e não pode voltar a escrever a frase nem a escolhê-la pelo
+   * que falta do IVA.
    */
+  const PAINEL_SEM = semComentarios(PAINEL);
+  const funcao = (codigo: string, nome: string) => {
+    const i = codigo.indexOf(`function ${nome}(`);
+    expect(i, `function ${nome}`).toBeGreaterThan(-1);
+    const f = codigo.indexOf("\nfunction ", i + 1);
+    return codigo.slice(i, f === -1 ? undefined : f);
+  };
+
   it("as duas frases da app são as de frases-da-divida.ts, à letra", () => {
     expect(PAINEL).toContain("{fraseDaDividaEmMao(d)}");
-    if (DIVIDA.includes("fraseDaDividaEmMao(")) return;
-    const frases = [...DIVIDA.matchAll(/`(O cliente pagou-lhe \$\{euros\(d\.recebidoDoCliente\)\} em mão, (?:com|sem) IVA\.[^`]*)`/g)].map(
-      (m) => m[1],
+    expect(DIVIDA).toContain("{fraseDaDividaEmMao(d)}");
+    expect(CARTEIRA).toContain("{fraseDaDividaNoSaldo(d)}");
+    expect(CARTEIRA).toContain('from "../../../../src/lib/frases-da-divida";');
+    // Nem a frase à mão, nem a escolha pelo que falta do IVA, em todo o ecrã.
+    expect(CARTEIRA).not.toContain("O cliente pagou-lhe");
+    expect(CARTEIRA).not.toMatch(/\bd\.iva\b/);
+    expect(CARTEIRA).not.toContain("em mão, sem IVA");
+    // O caso que falhava: o IVA já pago (falta 0) num trabalho com IVA.
+    const comOIvaPago = { recebidoDoCliente: 123, iva: 0, comissao: 11, ivaDaDivida: 23, comissaoDaDivida: 11 };
+    expect(fraseDaDividaEmMao(comOIvaPago)).toContain("em mão, com IVA");
+    expect(fraseDaDividaEmMao(comOIvaPago)).not.toContain("sem IVA");
+  });
+
+  it("as linhas das partes e o «falta» são os da lib, na app como no painel", () => {
+    const daApp = funcao(CARTEIRA, "PartesDaDivida");
+    const doPainel = funcao(PAINEL_SEM, "PartesDaDivida");
+    for (const codigo of [daApp, doPainel]) {
+      // As mesmas chamadas, com a dívida inteira, nos dois lados.
+      expect(codigo).toContain("const linhas = linhasDasPartesDaDivida(d);");
+      expect(codigo).toContain("const falta = faltaDaDivida(d);");
+      expect(codigo).toContain("if (linhas.length === 0) return null;");
+      // O texto vem inteiro da lib: uma linha por parte, e o que falta.
+      expect(codigo).toContain("linhas.map((l) => (");
+      expect(codigo).toContain("key={l.parte}");
+      expect(codigo).toContain("{l.texto}");
+      expect(codigo).toContain("{falta}");
+      // Nenhum dos dois escreve o texto à mão.
+      expect(codigo).not.toMatch(/Falta pagar|por pagar|pago a |Taxa da plataforma:|IVA:/);
+    }
+    // As linhas aparecem nas duas dívidas (com referência e só do saldo), nos dois lados.
+    for (const codigo of [CARTEIRA, PAINEL_SEM]) {
+      expect(funcao(codigo, "Divida")).toContain("<PartesDaDivida d={d} />");
+      expect(funcao(codigo, "DividaNoSaldo")).toContain("<PartesDaDivida d={d} />");
+    }
+    // A parte por pagar distingue-se da paga, nos dois lados.
+    expect(daApp).toContain("l.paga ? c.suave : c.aviso");
+    expect(doPainel).toContain('l.paga ? "text-slate-500" : "font-medium text-amber-800"');
+  });
+
+  it("o tipo da app aceita o que a rota manda, e uma resposta antiga não parte o ecrã", () => {
+    const CONTA = ler("app-pro/src/lib/conta.ts");
+    const tipo = CONTA.slice(CONTA.indexOf("export type DividaDaCarteira = {"), CONTA.indexOf("export type LinhaDaCarteira"));
+    expect(tipo).toContain("ivaDaDivida?: number;");
+    expect(tipo).toContain("comissaoDaDivida?: number;");
+    expect(tipo).toContain("porPagar?: number;");
+    expect(tipo).toContain('partes?: { parte: "iva" | "taxa"; valor: number; paga: boolean; pagoEm?: string | null }[];');
+    // Site antigo, sem `partes`: a frase cai no que falta e não há linhas nem «falta».
+    const antiga = { recebidoDoCliente: 123, iva: 23, comissao: 11 };
+    expect(fraseDaDividaEmMao(antiga)).toBe(
+      "O cliente pagou-lhe 123,00 € em mão, com IVA. São da CLYON 23,00 € de IVA e 11,00 € de taxa da plataforma.",
     );
-    expect(frases, "as frases com e sem IVA na app").toHaveLength(2);
-    const escrita = (f: string) =>
-      f
-        .replace("${euros(d.recebidoDoCliente)}", "123,00 €")
-        .replace("${euros(d.iva)}", "23,00 €")
-        .replace("${euros(d.comissao)}", "10,00 €");
-    expect(frases.map(escrita).sort()).toEqual(
-      [
-        fraseDaDividaEmMao({ recebidoDoCliente: 123, iva: 23, comissao: 10 }),
-        fraseDaDividaEmMao({ recebidoDoCliente: 123, iva: 0, comissao: 10 }),
-      ].sort(),
-    );
+    expect(linhasDasPartesDaDivida(antiga)).toEqual([]);
+    expect(faltaDaDivida(antiga)).toBeNull();
+    // Com o IVA pago: as duas linhas e o que falta, como o painel as mostra.
+    const d = {
+      recebidoDoCliente: 123,
+      iva: 0,
+      comissao: 11,
+      ivaDaDivida: 23,
+      comissaoDaDivida: 11,
+      porPagar: 11,
+      partes: [
+        { parte: "iva" as const, valor: 23, paga: true, pagoEm: "2026-11-05T12:00:00.000Z" },
+        { parte: "taxa" as const, valor: 11, paga: false, pagoEm: null },
+      ],
+    };
+    expect(linhasDasPartesDaDivida(d).map((l) => l.texto)).toEqual([
+      "IVA: 23,00 € — pago a 05/11",
+      "Taxa da plataforma: 11,00 € — por pagar",
+    ]);
+    expect(faltaDaDivida(d)).toBe("Falta pagar 11,00 € (a taxa da plataforma).");
   });
 
   it("a frase de antes, que dizia «com IVA» com o IVA a zero, saiu", () => {

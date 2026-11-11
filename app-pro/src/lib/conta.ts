@@ -150,9 +150,20 @@ export type DividaDaCarteira = {
   negociacaoId: number;
   pedidoId: number | null;
   titulo: string;
+  /** Por pagar, o que FALTA (o mesmo que `porPagar`). */
   total: number;
+  /** Por pagar, o que falta do IVA e da taxa — a frase NÃO se escolhe por aqui. */
   iva: number;
   comissao: number;
+  /**
+   * AS DUAS PARTES — 11-11-2026. A dívida inteira e o estado de cada parte,
+   * como a rota da carteira os manda. Ausentes num site antigo: as frases de
+   * `frases-da-divida.ts` caem no que falta e não mostram linhas.
+   */
+  ivaDaDivida?: number;
+  comissaoDaDivida?: number;
+  porPagar?: number;
+  partes?: { parte: "iva" | "taxa"; valor: number; paga: boolean; pagoEm?: string | null }[];
   recebidoDoCliente: number;
   paga: boolean;
   abatida: boolean;

@@ -22,6 +22,12 @@ import { euros } from "../../lib/trabalhos";
 import { LinhaDoMovimento } from "../../componentes/LinhaDoMovimento";
 import { PROMESSA } from "../../../../src/lib/pagamento-na-plataforma";
 import { ROTULOS_DA_CARTEIRA as R } from "../../../../src/lib/rotulos-da-carteira";
+import {
+  faltaDaDivida,
+  fraseDaDividaEmMao,
+  fraseDaDividaNoSaldo,
+  linhasDasPartesDaDivida,
+} from "../../../../src/lib/frases-da-divida";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 /**
@@ -400,14 +406,37 @@ function DividaNoSaldo({ d }: { d: DividaDaCarteira }) {
         </Text>
         <Text style={{ color: c.aviso, fontWeight: "800", fontSize: LETRA.media }}>{euros(d.total)}</Text>
       </View>
-      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-        O cliente pagou-lhe {euros(d.recebidoDoCliente)} em mão.{" "}
-        {d.iva > 0
-          ? `São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma`
-          : `A taxa da plataforma (${euros(d.comissao)}) é da CLYON`}{" "}
-        — desconta-se do próximo valor que a CLYON lhe transferir.
-      </Text>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{fraseDaDividaNoSaldo(d)}</Text>
+      <PartesDaDivida d={d} />
     </Caixa>
+  );
+}
+
+/**
+ * AS DUAS PARTES, CADA UMA COM O SEU ESTADO — 11-11-2026. «IVA: … — pago a
+ * 05/11» e «Taxa da plataforma: … — por pagar», e o que falta quando uma já
+ * está paga. Os textos são de `frases-da-divida.ts`, os mesmos do painel
+ * (`PartesDaDivida` em `Carteira.tsx`). Sem `partes` (site antigo) não mostra nada.
+ */
+function PartesDaDivida({ d }: { d: DividaDaCarteira }) {
+  const c = useCores();
+  const linhas = linhasDasPartesDaDivida(d);
+  const falta = faltaDaDivida(d);
+  if (linhas.length === 0) return null;
+  return (
+    <View style={{ gap: 2 }}>
+      {linhas.map((l) => (
+        <Text
+          key={l.parte}
+          style={{ color: l.paga ? c.suave : c.aviso, fontWeight: l.paga ? "400" : "600", fontSize: LETRA.pequena + 1, lineHeight: 20 }}
+        >
+          {l.texto}
+        </Text>
+      ))}
+      {falta ? (
+        <Text style={{ color: c.aviso, fontWeight: "700", fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{falta}</Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -446,13 +475,12 @@ function Divida({ d, aoMudar }: { d: DividaDaCarteira; aoMudar: () => Promise<vo
       </View>
       {/*
         Sem fatura não há IVA (um pago em mão, 04-11-2026, d9): só a taxa é da
-        CLYON. As duas frases são as do painel (`Carteira.tsx`), à letra.
+        CLYON. Desde 11-11-2026 (d3) a frase lê a dívida INTEIRA, de
+        `frases-da-divida.ts` — a mesma do painel: com o IVA já pago, o que
+        falta do IVA é zero e a frase de antes enganava-se no IVA.
       */}
-      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
-        {d.iva > 0
-          ? `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, com IVA. São da CLYON ${euros(d.iva)} de IVA e ${euros(d.comissao)} de taxa da plataforma.`
-          : `O cliente pagou-lhe ${euros(d.recebidoDoCliente)} em mão, sem IVA. A taxa da plataforma (${euros(d.comissao)}) é da CLYON.`}
-      </Text>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{fraseDaDividaEmMao(d)}</Text>
+      <PartesDaDivida d={d} />
       {prazo ? (
         <Text style={{ color: c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600", lineHeight: 20 }}>
           {passou
