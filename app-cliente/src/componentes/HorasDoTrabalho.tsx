@@ -52,6 +52,32 @@ export function HorasDoTrabalho({
             No fim, o parceiro marca a hora de início e a de fim, e confirma-as aqui.
           </Text>
         </>
+      ) : h.folha ? (
+        <>
+          {/* A folha da mudança (11-11-2026): em degraus, com e sem IVA. */}
+          {h.folha.linhas.map((l, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: CORES.tinta, fontSize: 14, fontWeight: l.forte ? "700" : "400" }}>{l.rotulo}</Text>
+                {l.nota ? <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17 }}>{l.nota}</Text> : null}
+              </View>
+              <Text style={{ color: CORES.tinta, fontSize: 14, fontWeight: l.forte ? "700" : "600" }}>{l.valor}</Text>
+            </View>
+          ))}
+          {h.folha.avisoDaEquipa ? <Aviso texto={h.folha.avisoDaEquipa} tom="aviso" /> : null}
+          {h.estadoTexto ? <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{h.estadoTexto}</Text> : null}
+          {m.contestadas && m.contestacao ? (
+            <Text style={{ color: CORES.suave, fontSize: 13 }}>{`O que disse: «${m.contestacao}»`}</Text>
+          ) : null}
+          {h.folha.historico.length > 0 ? (
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: CORES.tinta, fontSize: 13, fontWeight: "600" }}>Histórico da folha</Text>
+              {h.folha.historico.map((e, i) => (
+                <Text key={i} style={{ color: CORES.suave, fontSize: 12 }}>{`${e.quando} — ${e.texto}`}</Text>
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : (
         <>
           <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600", lineHeight: 21 }}>{m.texto}</Text>
@@ -73,7 +99,7 @@ export function HorasDoTrabalho({
           ) : null}
         </>
       )}
-      <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17 }}>{h.regraTexto}</Text>
+      <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17 }}>{h.folha ? h.folha.regra : h.regraTexto}</Text>
       {erro && !aContestar ? <Aviso texto={erro} tom="mau" /> : null}
       {podeResponder ? (
         <View style={{ gap: 8 }}>
@@ -88,7 +114,7 @@ export function HorasDoTrabalho({
       ) : null}
       <Confirmacao
         visivel={aContestar}
-        titulo="Não concorda com as horas?"
+        titulo={h.folha ? "Não concorda com a folha?" : "Não concorda com as horas?"}
         texto="Diga em poucas palavras porquê. A equipa da CLYON vê consigo e com o parceiro."
         confirmar="Enviar"
         ocupado={ocupado === "contestar_horas"}

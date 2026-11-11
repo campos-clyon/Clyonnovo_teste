@@ -239,8 +239,28 @@ export type HorasMarcadas = {
   contestacao: string | null;
 };
 
+/**
+ * A FOLHA DA MUDANÇA — 11-11-2026, como a API a escreve (`folhaNoEcra` do
+ * site, do lado do cliente): as horas, as pausas, a equipa, os km e o
+ * material em degraus, com IVA e sem IVA, e o histórico de cada edição. Só
+ * numa mudança com a lista de parceiros. A app não faz contas.
+ */
+export type LinhaDaFolha = { rotulo: string; valor: string; nota?: string | null; forte?: boolean };
+export type FolhaParaOCliente = {
+  titulo: string;
+  linhas: LinhaDaFolha[];
+  totalTexto: string;
+  avisoDaEquipa: string | null;
+  resumo: string;
+  regra: string;
+  estado: "enviada" | "por_confirmar" | "contestada" | "confirmada" | null;
+  historico: Array<{ quando: string; texto: string }>;
+};
+
 export type HorasDoTrabalho = {
   titulo: string;
+  /** A folha da mudança (11-11-2026) — null fora das mudanças com a lista. */
+  folha?: FolhaParaOCliente | null;
   porHoraTexto: string | null;
   estimativaTexto: string | null;
   horasPrevistas: number;
