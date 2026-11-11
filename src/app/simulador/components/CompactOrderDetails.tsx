@@ -14,6 +14,11 @@ interface CompactOrderDetailsProps {
   maxSizeMB?: number;
   /** O que fotografar, quando o serviço pede uma coisa própria (garagem, sótão, cave). */
   dicaDasFotos?: string;
+  /**
+   * A descrição (ou uma fotografia) é o que falta para avançar (11-11-2026):
+   * o campo deixa de dizer «Opcional» e diz o que pôr.
+   */
+  descricaoPrecisa?: boolean;
 }
 
 export default function CompactOrderDetails({
@@ -25,6 +30,7 @@ export default function CompactOrderDetails({
   maxFiles = 10,
   maxSizeMB = 50,
   dicaDasFotos,
+  descricaoPrecisa = false,
 }: CompactOrderDetailsProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,9 +84,15 @@ export default function CompactOrderDetails({
         <label htmlFor={idDaDescricao} className="block text-xs font-medium text-slate-900">
           Descrição adicional
         </label>
-        <p id={`${idDaDescricao}-ajuda`} className="text-xs text-slate-600">
-          Opcional — ajude o parceiro com detalhes
-        </p>
+        {descricaoPrecisa ? (
+          <p id={`${idDaDescricao}-ajuda`} className="text-xs font-medium text-red-600">
+            Necessária para avançar — diga o que precisa (o quê, quantas peças, o que está avariado) ou junte uma fotografia
+          </p>
+        ) : (
+          <p id={`${idDaDescricao}-ajuda`} className="text-xs text-slate-600">
+            Opcional — ajude o parceiro com detalhes
+          </p>
+        )}
         <textarea
           id={idDaDescricao}
           aria-describedby={`${idDaDescricao}-ajuda`}

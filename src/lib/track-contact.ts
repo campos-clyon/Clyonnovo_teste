@@ -1,4 +1,5 @@
 import { origemDaVisita } from "@/lib/origem-da-visita";
+import { paginaDaEquipa } from "./pagina-da-equipa";
 
 /**
  * trackLeadEvent — envia evento de contacto para /api/leads/events
@@ -56,6 +57,8 @@ export function trackContactEvent(payload: TrackEventPayload): void {
  */
 export function trackLeadEvent(payload: TrackLeadEventPayload): void {
   if (typeof window === "undefined") return;
+  // As páginas da equipa e dos parceiros não contam como lead (11-11-2026).
+  if (paginaDaEquipa(payload.sourcePage ?? window.location?.pathname)) return;
 
   const utmParams = Object.fromEntries(new URLSearchParams(window.location.search));
   // Duas páginas depois da entrada, o endereço já não tem as UTM: vale a

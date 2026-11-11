@@ -15,6 +15,22 @@ import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
 import { servicoNaPesquisa, servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
 import { PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, RECOLHA_POR_ANDAR_COM_ELEVADOR, RECOLHA_POR_ANDAR_SEM_ELEVADOR, eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
 import { valorDosMoveis } from "@/lib/preco-de-referencia";
+import { estimativaParaOCliente } from "@/lib/estimativa-para-o-cliente";
+import { requireAdmin } from "@/lib/admin-auth-helper";
+
+/**
+ * A análise inteira (mão de obra, pressupostos, notas internas) só vai à
+ * equipa com sessão; ao público vão os números (11-11-2026, ver
+ * estimativa-para-o-cliente.ts). Sem cabeçalho de sessão nem se pergunta à base.
+ */
+async function eDaEquipa(req: NextRequest): Promise<boolean> {
+  if (!req.headers.get("authorization")) return false;
+  try {
+    return (await requireAdmin(req)).err == null;
+  } catch {
+    return false;
+  }
+}
 
 // Gemini abortado após este tempo — cliente nunca fica preso
 const GEMINI_TIMEOUT_MS = 4000;
@@ -217,6 +233,9 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Body JSON inválido" }, { status: 400 });
   }
 
+  const daEquipa = await eDaEquipa(req);
+  const responder = (r: EstimateResult) => Response.json(daEquipa ? r : estimativaParaOCliente(r));
+
   // ── 1. Estimativa rápida local (sempre calculada, < 50ms) ────────────────
   const fastEstimate = await calculateFastEstimate(order as never);
 
@@ -240,7 +259,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return Response.json({
+    return responder({
       ...fastEstimate,
       analysisSource: "clyon_pricing" as AnalysisSource,
       confidence: "medium" as const,
@@ -539,7 +558,7 @@ export async function POST(req: NextRequest) {
     ...(externalMarketEstimate ? { externalMarketEstimate } : {}),
   };
 
-  return Response.json(result);
+  return responder(result);
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

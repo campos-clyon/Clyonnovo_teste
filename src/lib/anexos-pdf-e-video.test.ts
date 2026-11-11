@@ -324,8 +324,9 @@ describe("a política de segurança deixa o armazenamento trabalhar", () => {
     expect(CFG.slice(i, CFG.indexOf('",', i))).toContain("https://*.public.blob.vercel-storage.com");
   });
 
-  it("e o frame-src continua fechado", () => {
+  it("e o frame-src continua fechado ao armazenamento", () => {
     // Deixou de ser preciso abri-lo: o PDF passou a abrir noutro separador.
-    expect(CFG).toContain("\"frame-src 'none'\"");
+    // Desde 11-11-2026 só lá está o Google tag (a lista do Google para o Ads).
+    expect(CFG).toContain("\"frame-src https://www.googletagmanager.com\"");
   });
 });

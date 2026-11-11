@@ -45,6 +45,7 @@ import { passosDaMudancaComEscolha, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/t
 import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/ParceirosDaMudanca";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
+import { faltaNaFase1 as calcularFaltaNaFase1, FALTA_A_DESCRICAO, linhaDasPecas, comLinhaDasPecas } from "@/lib/falta-na-fase-1";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
@@ -394,31 +395,9 @@ export default function SimulatorThreePhaseForm() {
     updateField("destinationAccess", { ...formData.destinationAccess, [field]: value });
   };
 
-  const isPhase1Valid = () => {
-    // Deve ter serviço selecionado
-    if (!formData.serviceType) return false;
-
-    // Para entulho: precisa de estado + (quantidade OU "não tenho a certeza")
-    if (formData.serviceType === "recolha_entulho") {
-      const hasEntulhoData =
-        formData.entulhoState &&
-        (formData.entulhoQuantidade || formData.entulhoQuantidadeIncerta);
-      if (!hasEntulhoData) return false;
-      // Para entulho: tem dados suficientes (campo de descrição agora é opcional)
-      return true;
-    }
-
-    // Garagem, sótão e cave (29-10-2026): a quantidade e o acesso são obrigatórios.
-    if (eEsvaziamentoDeEspaco(formData.serviceType) && (!formData.volumeTier || !formData.acessoDoEspaco)) return false;
-
-    // Para outros serviços: precisa de PELO MENOS UMA DAS:
-    // 1. Descrição preenchida
-    // 2. Fotos/vídeos adicionados
-    const hasDescription = !!formData.description?.trim();
-    const hasFiles = (formData.files || []).length > 0;
-
-    return hasDescription || hasFiles;
-  };
+  // O que falta no passo 1 (11-11-2026): a regra em falta-na-fase-1.ts, e o ecrã diz a lista.
+  const faltaNaFase1 = calcularFaltaNaFase1(formData);
+  const isPhase1Valid = () => faltaNaFase1.length === 0;
 
   const isPhase2Valid = () => {
     if (formData.serviceType === "mudanca") {
@@ -1253,6 +1232,11 @@ export default function SimulatorThreePhaseForm() {
                     </button>
                   )}
 
+                  {phase === 1 && !canProceedToPhase2 && faltaNaFase1.length > 0 && (
+                    <p className="ml-auto self-center text-xs font-medium text-red-600 text-right">
+                      Falta preencher: {faltaNaFase1.join(", ")}.
+                    </p>
+                  )}
                   {phase < 3 && (
                     <button
                       onClick={() => {
@@ -1272,7 +1256,7 @@ export default function SimulatorThreePhaseForm() {
                         setPhase(phase + 1);
                       }}
                       disabled={!canProceedToPhase2}
-                      className="ml-auto flex items-center gap-2 px-6 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:bg-gray-300 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 active:scale-95"
+                      className={`${phase === 1 && !canProceedToPhase2 ? "" : "ml-auto "}flex items-center gap-2 px-6 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:bg-gray-300 text-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 active:scale-95`}
                     >
                       Seguinte
                       <ChevronRight className="w-4 h-4" />
@@ -1495,22 +1479,27 @@ function Phase1Service({
               updateField("movelItemsPequeno", 0);
               updateField("movelItemsMedio", 0);
               updateField("movelItemsGrande", 0);
+              updateField("description", comLinhaDasPecas(formData.description, ""));
             }
           }}
           onPequenoChange={(n) => {
             updateField("movelItemsPequeno", n);
             const total = n + (formData.movelItemsMedio ?? 0) + (formData.movelItemsGrande ?? 0);
             updateField("quantityExact", total > 0 ? String(total) : undefined);
+            // A linha das peças na descrição, como o modo por volume (11-11-2026).
+            updateField("description", comLinhaDasPecas(formData.description, linhaDasPecas(n, formData.movelItemsMedio ?? 0, formData.movelItemsGrande ?? 0)));
           }}
           onMedioChange={(n) => {
             updateField("movelItemsMedio", n);
             const total = (formData.movelItemsPequeno ?? 0) + n + (formData.movelItemsGrande ?? 0);
             updateField("quantityExact", total > 0 ? String(total) : undefined);
+            updateField("description", comLinhaDasPecas(formData.description, linhaDasPecas(formData.movelItemsPequeno ?? 0, n, formData.movelItemsGrande ?? 0)));
           }}
           onGrandeChange={(n) => {
             updateField("movelItemsGrande", n);
             const total = (formData.movelItemsPequeno ?? 0) + (formData.movelItemsMedio ?? 0) + n;
             updateField("quantityExact", total > 0 ? String(total) : undefined);
+            updateField("description", comLinhaDasPecas(formData.description, linhaDasPecas(formData.movelItemsPequeno ?? 0, formData.movelItemsMedio ?? 0, n)));
           }}
         />
       )}
@@ -1563,6 +1552,7 @@ function Phase1Service({
         maxFiles={10}
         maxSizeMB={50}
         dicaDasFotos={eEsvaziamentoDeEspaco(formData.serviceType) ? DICA_DAS_FOTOS_DO_ESPACO : undefined}
+        descricaoPrecisa={calcularFaltaNaFase1(formData).includes(FALTA_A_DESCRICAO)}
       />
     </div>
   );

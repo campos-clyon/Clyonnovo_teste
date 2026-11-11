@@ -57,3 +57,23 @@ describe("CSP — o Google tag do Ads", () => {
     expect(diretiva("connect-src")).toContain("https://www.googletagmanager.com");
   });
 });
+
+describe("CSP — a conversão do Google Ads (11-11-2026)", () => {
+  it("o script-src deixa carregar o script da conversão", () => {
+    const script = diretiva("script-src");
+    for (const host of ["https://www.googleadservices.com", "https://googleads.g.doubleclick.net", "https://www.google.com"]) {
+      expect(script, host).toContain(host);
+    }
+  });
+
+  it("o connect-src leva o www.google.pt e o ad.doubleclick.net (pelo *.doubleclick.net)", () => {
+    const connect = diretiva("connect-src");
+    expect(connect).toContain("https://www.google.pt");
+    expect(connect).toContain("https://*.doubleclick.net");
+    expect(connect).toContain("https://www.googleadservices.com");
+  });
+
+  it("o frame-src só abre ao Google tag", () => {
+    expect(diretiva("frame-src")).toEqual(["https://www.googletagmanager.com"]);
+  });
+});

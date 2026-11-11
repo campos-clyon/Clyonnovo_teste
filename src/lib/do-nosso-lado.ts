@@ -29,7 +29,7 @@ import { quemNegoceia } from "./quem-negoceia";
 /** Mais de 2 h sem resposta a um cliente é já «do nosso lado». */
 export const DUAS_HORAS_S = 2 * 3600;
 
-export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada";
+export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada" | "sem_resposta";
 
 export type LinhaDoNossoLado = {
   tipo: TipoDoNossoLado;
@@ -54,6 +54,7 @@ export const TITULOS_DO_NOSSO_LADO: Record<TipoDoNossoLado, string> = {
   preco_clyon: "Trabalhos CLYON aceites, com o preço por enviar ao cliente",
   propostas: "Propostas de parceiros por enviar ao cliente",
   data_passada: "Trabalhos com a data passada e sem «Está feito»",
+  sem_resposta: "Mudanças: o parceiro escolhido não respondeu no prazo",
 };
 
 /* ── As formas que se lêem — o mínimo de cada fonte ─────────────────────── */
@@ -74,6 +75,9 @@ export type NegociacaoParaOLado = {
   confirmadoEm?: string | null;
   dataCombinada?: string | null;
   actualizadaEm?: string | null;
+  /** Escolhido pelo cliente na lista das mudanças (1), e até quando devia responder (11-11-2026). */
+  escolhidoPeloCliente?: number | string | boolean | null;
+  prazoRespostaEm?: string | null;
 };
 
 export type PedidoParaOLado = {
@@ -280,6 +284,52 @@ export function datasPassadasDoNossoLado(
   return out;
 }
 
+/* ── 5. O parceiro escolhido que não respondeu ───────────────────────────── */
+
+/** A negociação foi escolhida pelo cliente na lista das mudanças? (1, "1" ou true) */
+const escolhidaPeloCliente = (n: NegociacaoParaOLado) =>
+  n.escolhidoPeloCliente === true || Number(n.escolhidoPeloCliente) === 1;
+
+/** Respondeu: pôs um número, aceitou, ficou acordada ou tem o trabalho confirmado. */
+const respondeu = (n: NegociacaoParaOLado) =>
+  n.estado === "aguarda_contratacao" ||
+  n.estado === "acordada" ||
+  n.confirmadoEm != null ||
+  propostasDe(n.propostasJson).some((x) => x.por === "profissional");
+
+/**
+ * 11-11-2026: numa mudança em que o cliente escolheu os parceiros da lista, o
+ * pedido foi logo a eles, sem passar pela Mesa. Se o prazo de resposta
+ * (`prazoRespostaEm`) passou e nenhum dos escolhidos respondeu, o pedido
+ * fica à espera de nós: «parceiro não respondeu». Espera desde o prazo.
+ */
+export function semRespostaDoNossoLado(pedidos: PedidoParaOLado[], agora: Date): LinhaDoNossoLado[] {
+  const out: LinhaDoNossoLado[] = [];
+  for (const p of pedidos) {
+    if (FECHADO.has(p.status ?? "")) continue;
+    const escolhidas = p.negociacoes.filter(escolhidaPeloCliente);
+    if (escolhidas.length === 0 || escolhidas.some(respondeu)) continue;
+    const prazos = escolhidas
+      .map((n) => instanteDaBase(n.prazoRespostaEm ?? null)?.getTime())
+      .filter((t): t is number => t != null);
+    if (prazos.length === 0) continue;
+    const prazo = Math.max(...prazos);
+    if (prazo > agora.getTime()) continue;
+    const quantos = escolhidas.length;
+    out.push({
+      tipo: "sem_resposta",
+      pedidoId: p.id,
+      telefone: null,
+      esperaS: Math.max(0, Math.floor((agora.getTime() - prazo) / 1000)),
+      oQue:
+        quantos === 1
+          ? "parceiro não respondeu — o escolhido pelo cliente deixou passar o prazo"
+          : `parceiro não respondeu — nenhum dos ${quantos} escolhidos pelo cliente respondeu no prazo`,
+    });
+  }
+  return out;
+}
+
 /* ── Tudo junto ─────────────────────────────────────────────────────────── */
 
 /**
@@ -310,6 +360,7 @@ export function doNossoLado(fontes: {
     ["preco_clyon", precosClyonDoNossoLado(fontes.trabalhosClyon, fontes.agora)],
     ["propostas", propostasDoNossoLado(fontes.pedidos, fontes.agora)],
     ["data_passada", datasPassadasDoNossoLado(fontes.pedidos, fontes.trabalhosClyon, fontes.agora)],
+    ["sem_resposta", semRespostaDoNossoLado(fontes.pedidos, fontes.agora)],
   ];
   return grupos.map(([tipo, linhas]) => ({ tipo, titulo: TITULOS_DO_NOSSO_LADO[tipo], linhas: porEspera(linhas) }));
 }

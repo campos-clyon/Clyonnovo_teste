@@ -22,7 +22,7 @@ const lerNaBase = unstable_cache(
     if (!(await db.listaDeParceirosNasMudancasLigada())) return SEM_PARCEIROS;
     return precoPublicoDosCandidatos(await db.candidatosDaListaDasMudancas());
   },
-  ["preco-publico-das-mudancas-v2"],
+  ["preco-publico-das-mudancas-v3"],
   { revalidate: SEGUNDOS_DO_PRECO_PUBLICO, tags: ["preco-publico-das-mudancas"] },
 );
 

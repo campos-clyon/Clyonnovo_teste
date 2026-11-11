@@ -543,6 +543,12 @@ export function ordenarCartoes(cartoes: CartaoDoParceiro[]): CartaoDoParceiro[] 
 
 export const NOVO_NA_CLYON = "Novo na CLYON";
 
+/** O botão de quem não quer escolher parceiro (11-11-2026) — o mesmo no site e na app de cliente. */
+export const DEIXAR_A_CLYON_ESCOLHER = "Deixar a CLYON escolher por mim";
+
+/** Quanto se espera pela lista antes de seguir sem ela (11-11-2026): 8 s, no site e na app. */
+export const PRAZO_DA_LISTA_MS = 8000;
+
 export const TEXTOS_DA_LISTA = Object.freeze({
   titulo: "Parceiros disponíveis para a sua mudança",
   escolha: `Escolha até ${MAXIMO_DE_ESCOLHIDOS} parceiros. O pedido vai logo aos que escolher, com os preços que vê aqui.`,
@@ -551,6 +557,8 @@ export const TEXTOS_DA_LISTA = Object.freeze({
   semParceiros: "Ainda não temos parceiros de mudanças com preço para esta zona.",
   semParceirosSegue: "Pode enviar o pedido na mesma: a CLYON procura parceiros da sua zona e as propostas chegam-lhe por aqui.",
   procurarMais: "Pedir também à CLYON que procure mais parceiros",
+  /** 11-11-2026: quem não quer escolher segue o caminho de sempre (a Mesa escolhe). */
+  deixarEscolher: DEIXAR_A_CLYON_ESCOLHER,
   pedirEmbalamento: PEDIR_EMBALAMENTO,
   botao: "Pedir orçamento",
   notaDaEstimativa:

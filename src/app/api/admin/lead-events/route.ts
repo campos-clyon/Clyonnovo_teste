@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { FORA_DAS_PAGINAS_DA_EQUIPA_SQL } from "@/lib/pagina-da-equipa";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { withConnection, toMySQLDateTime } from "@/lib/db";
 import { inicioDoPeriodoEmLisboa } from "@/lib/hora-de-lisboa";
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest) {
     // Nada se grava no futuro: «desde a meia-noite de Lisboa» é o dia de hoje.
     const hoje = getPeriodStart("hoje");
 
-    const conditions: string[] = ["createdAt >= ?"];
+    // Os eventos das páginas da equipa já gravados também não contam (11-11-2026).
+    const conditions: string[] = ["createdAt >= ?", FORA_DAS_PAGINAS_DA_EQUIPA_SQL];
     const params: string[] = [startDate];
     if (eventType) {
       conditions.push("eventType = ?");
@@ -81,7 +83,8 @@ export async function GET(request: NextRequest) {
           SUM(CASE WHEN eventType = 'page_view'             AND createdAt >= ?      THEN 1 ELSE 0 END) AS paginasHoje,
           SUM(CASE WHEN eventType = 'page_view'             AND createdAt >= ?   THEN 1 ELSE 0 END) AS paginasSemana,
           COUNT(*) AS total
-         FROM leadEvents`,
+         FROM leadEvents
+         WHERE ${FORA_DAS_PAGINAS_DA_EQUIPA_SQL}`,
         [hoje, hoje, hoje, hoje, hoje, hoje, semanaStart, semanaStart, semanaStart, semanaStart, semanaStart, semanaStart, hoje, semanaStart],
       );
 
@@ -90,7 +93,7 @@ export async function GET(request: NextRequest) {
       const [paginasRows] = await conn.execute(
         `SELECT pagePath, COUNT(*) AS visitas
            FROM leadEvents
-          WHERE eventType = 'page_view' AND createdAt >= ? AND pagePath IS NOT NULL
+          WHERE eventType = 'page_view' AND createdAt >= ? AND pagePath IS NOT NULL AND ${FORA_DAS_PAGINAS_DA_EQUIPA_SQL}
           GROUP BY pagePath
           ORDER BY visitas DESC
           LIMIT 15`,

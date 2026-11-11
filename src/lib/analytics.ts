@@ -4,6 +4,7 @@
 
 import { trackLeadEvent } from "@/lib/track-contact";
 import { contarCliqueDeWhatsAppNoGoogleAds } from "@/lib/conversao-do-anuncio";
+import { paginaDaEquipa } from "@/lib/pagina-da-equipa";
 
 declare global {
   interface Window {
@@ -52,6 +53,8 @@ export function cliqueJaMedido(janelaMs = 300): boolean {
 // WhatsApp events
 export function trackWhatsAppClick(location: string, context?: string): void {
   ultimoCliqueDeContacto = Date.now();
+  // Um clique da equipa ou de um parceiro não é lead nem conversão (11-11-2026).
+  if (typeof window !== "undefined" && paginaDaEquipa(window.location?.pathname)) return;
   trackEvent("whatsapp_click", { click_location: location, context });
   contarCliqueDeWhatsAppNoGoogleAds();
   trackLeadEvent({ type: "click_whatsapp", action: "Clique WhatsApp", label: location, service: context });

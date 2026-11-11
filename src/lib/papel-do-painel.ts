@@ -277,6 +277,9 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/retencao",
   "/api/admin/arquivo",
   "/api/media/gallery",
+  // A estimativa inteira (mão de obra, notas) que a ficha do pedido recalcula
+  // (11-11-2026): a rota é pública, mas só devolve tudo a quem passa aqui.
+  "/api/simulator/analyze",
   // Os métodos de pagamento da adjudicação (27-10-2026): lê-os quem a prepara.
   "/api/admin/metodos-de-pagamento",
   // O interruptor da lista de parceiros nas mudanças (10-11-2026).
@@ -403,6 +406,7 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/lista-das-mudancas", seccoes: ["configs"] },
   { prefixo: "/api/admin/arquivo", seccoes: ["configs"] },
   { prefixo: "/api/media/gallery", seccoes: ["configs"] },
+  { prefixo: "/api/simulator/analyze", seccoes: ["pedidos", "negociacoes_clyon", "agenda", "trabalhos_clyon"] },
 ];
 
 function casa(entrada: EntradaDaRota, limpo: string): boolean {

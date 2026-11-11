@@ -42,6 +42,11 @@ export const HORA_EM_QUE_ACABA = 21;
 
 /** Mais de 2 h no «Do nosso lado». */
 export const PRAZO_DO_NOSSO_LADO_S = 2 * 3600;
+/**
+ * O parceiro escolhido que não respondeu (11-11-2026): o prazo dele JÁ é a
+ * espera — avisa-se logo que passa, sem as 2 h por cima.
+ */
+export const PRAZO_SEM_RESPOSTA_S = 0;
 /** Mais de 1 h no «Por decidir». */
 export const PRAZO_DO_POR_DECIDIR_S = 3600;
 
@@ -113,7 +118,8 @@ const ligacaoDoPedido = (seccao: SeccaoDoAviso, pedidoId: number | null) =>
 export function avisosDoNossoLado(linhas: readonly LinhaDoNossoLado[], agora: Date): AvisoAEquipa[] {
   const out: AvisoAEquipa[] = [];
   for (const l of linhas) {
-    if (l.esperaS <= PRAZO_DO_NOSSO_LADO_S) continue;
+    const semResposta = l.tipo === "sem_resposta";
+    if (semResposta ? l.esperaS < PRAZO_SEM_RESPOSTA_S : l.esperaS <= PRAZO_DO_NOSSO_LADO_S) continue;
     const seccao: SeccaoDoAviso = l.tipo === "conversa" ? "whatsapp" : "mesa";
     const quem = l.pedidoId != null ? `Pedido #${l.pedidoId}` : `Conversa ${telefoneLegivel(l.telefone ?? "")}`;
     out.push({
@@ -123,7 +129,7 @@ export function avisosDoNossoLado(linhas: readonly LinhaDoNossoLado[], agora: Da
       telefone: l.pedidoId != null ? null : l.telefone,
       desde: new Date(agora.getTime() - l.esperaS * 1000),
       seccao,
-      titulo: `Do nosso lado ${haQuanto(l.esperaS)}`,
+      titulo: semResposta ? "Parceiro não respondeu" : `Do nosso lado ${haQuanto(l.esperaS)}`,
       corpo: `${quem}: ${l.oQue}.`,
       url: ligacaoDoPedido(seccao, l.pedidoId),
     });

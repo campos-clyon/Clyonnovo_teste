@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import {
   CONFIRMACOES,
@@ -271,6 +272,12 @@ export async function PATCH(
         );
       }
       feito.push(corpo.contaDeTeste ? "marcada como conta de teste" : "deixou de ser conta de teste");
+      // O «desde» das mudanças conta só parceiros reais (11-11-2026): lê-se outra vez já, sem esperar a hora da cache.
+      try {
+        revalidateTag("preco-publico-das-mudancas");
+      } catch {
+        /* fora de um pedido do Next (testes) */
+      }
       console.info(
         `[admin/profissionais] #${providerId} ${corpo.contaDeTeste ? "marcado" : "desmarcado"} como teste por ${colab.nome}`,
       );

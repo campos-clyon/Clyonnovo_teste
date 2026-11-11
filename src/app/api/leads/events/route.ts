@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLeadEvent } from "@/lib/db";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { paginaDaEquipa } from "@/lib/pagina-da-equipa";
 
 // POST /api/leads/events — registar evento de tracking de contacto
 export async function POST(request: NextRequest) {
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitizedType = String(eventType).slice(0, 80);
+
+    // As páginas da equipa e dos parceiros não contam (11-11-2026): responde
+    // que sim, para o browser não repetir, e não grava.
+    if (paginaDaEquipa(typeof pagePath === "string" ? pagePath : null) || paginaDaEquipa(typeof pageUrl === "string" ? pageUrl : null)) {
+      return NextResponse.json({ success: true });
+    }
 
     await createLeadEvent({
       eventType: sanitizedType,

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Star } from "lucide-react";
 import type { AddressData, MovingAccess } from "../types";
-import type { CartaoDoParceiro } from "@/lib/lista-de-parceiros-da-mudanca";
+import { DEIXAR_A_CLYON_ESCOLHER, PRAZO_DA_LISTA_MS, type CartaoDoParceiro } from "@/lib/lista-de-parceiros-da-mudanca";
 import { PEDIR_EMBALAMENTO, soComTresPessoas, type Tipologia } from "@/lib/tabela-das-mudancas";
 
 /**
@@ -49,6 +49,7 @@ type RespostaDaLista = {
     escolha: string;
     semParceirosSegue: string;
     procurarMais: string;
+    deixarEscolher?: string;
     pedirEmbalamento?: string;
     botao: string;
     notaDaEstimativa: string;
@@ -95,10 +96,14 @@ export default function ParceirosDaMudanca({
   useEffect(() => {
     let vivo = true;
     setACarregar(true);
+    // 11-11-2026: a lista não pode prender o pedido — 8 s e segue sem ela.
+    const prazo = new AbortController();
+    const relogio = setTimeout(() => prazo.abort(), PRAZO_DA_LISTA_MS);
     void (async () => {
       try {
         const r = await fetch("/api/mudancas/parceiros", {
           method: "POST",
+          signal: prazo.signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             origem: { lat: origem?.lat, lng: origem?.lng, morada: origem?.formattedAddress, cidade: origem?.city },
@@ -121,11 +126,14 @@ export default function ParceirosDaMudanca({
       } catch {
         if (vivo) semLista.current();
       } finally {
+        clearTimeout(relogio);
         if (vivo) setACarregar(false);
       }
     })();
     return () => {
       vivo = false;
+      clearTimeout(relogio);
+      prazo.abort();
     };
   }, [origem?.lat, origem?.lng, origem?.formattedAddress, destino?.lat, destino?.lng, destino?.formattedAddress, tipologia, desmontagem, pessoas]);
 
@@ -342,7 +350,15 @@ export default function ParceirosDaMudanca({
             </details>
           )}
 
-          <div className="flex justify-end">
+          <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+            {/* 11-11-2026: escolher não é obrigatório — sem escolha, o pedido segue o caminho de sempre. */}
+            <button
+              type="button"
+              onClick={onSemLista}
+              className="min-h-[48px] rounded-xl border border-gray-300 bg-white px-5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+            >
+              {textos?.deixarEscolher ?? DEIXAR_A_CLYON_ESCOLHER}
+            </button>
             <button
               type="button"
               onClick={pedir}

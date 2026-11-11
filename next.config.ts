@@ -499,7 +499,15 @@ const nextConfig: NextConfig = {
             morada. Ninguém via, porque o hook cai para o proxy do servidor —
             só a consola ficava vermelha e cada pesquisa pagava o caminho caro.
           */
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://va.vercel-scripts.com https://maps.googleapis.com https://maps.gstatic.com",
+          /*
+            E O GOOGLE ADS (11-11-2026): a lista do Google para a conversão
+            (developers.google.com/tag-platform/security/guides/csp, secção
+            «Google Ads») pede nos scripts www.googleadservices.com e
+            www.google.com — o gtag puxa de lá o script da conversão, e a
+            política recusava-o. O googleads.g.doubleclick.net vai junto (é de
+            onde vem o do remarketing).
+          */
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://va.vercel-scripts.com https://maps.googleapis.com https://maps.gstatic.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com",
           // Estilos: self + inline (necessário para Tailwind/shadcn)
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           // Fontes
@@ -564,7 +572,7 @@ const nextConfig: NextConfig = {
             O `vercel.com` e o `blob.vercel-storage.com` ficam: são os do envio
             directo de ficheiros, que corre no browser.
           */
-          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://maps.googleapis.com",
+          "connect-src 'self' https://vercel.com https://blob.vercel-storage.com https://*.public.blob.vercel-storage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://*.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://www.google.pt https://maps.googleapis.com",
           /*
             VIDEO E AUDIO — e esta linha nao existia de todo.
 
@@ -574,8 +582,9 @@ const nextConfig: NextConfig = {
             que fazia parecer um problema do ficheiro e nao da politica.
           */
           "media-src 'self' blob: https://*.public.blob.vercel-storage.com",
-          // Frames: nenhum (embeds externos não usados)
-          "frame-src 'none'",
+          // Frames: só o do Google tag — a lista do Google para o Ads pede-o no
+          // frame-src (11-11-2026). Nenhum outro embed externo.
+          "frame-src https://www.googletagmanager.com",
           // Quem pode pôr ESTE site dentro de uma moldura: só ele próprio. É o
           // X-Frame-Options de cima, dito na língua que os browsers de hoje
           // preferem — contra o clique enganado numa página alheia.
