@@ -96,7 +96,7 @@ export default async function PrecoDasMudancasPage() {
           `No simulador vê os parceiros disponíveis, com a nota, o preço por hora, a equipa de 2 ou 3 e o material, e escolhe; ` +
           `o valor final sai das horas, dos km e do material que confirma na folha do dia. ` +
           `Na referência (${euros(PRECO_POR_HORA)} + IVA por hora, ${euros(comIva(PRECO_POR_HORA))} com IVA, equipa de ${PESSOAS_NA_EQUIPA}), ` +
-          `com a proteção dos móveis e do chão, um T1 fica entre ${faixa("T1")}, um T2 entre ${faixa("T2")} e um T3 entre ${faixa("T3")}, sempre + IVA ` +
+          `com a proteção dos móveis e do chão, um T1 fica em ${faixa("T1")}, um T2 em ${faixa("T2")} e um T3 em ${faixa("T3")}, sempre + IVA ` +
           `(um T3 com IVA: ${faixaComIva("T3")}). Um T3 leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T3)} com 3 pessoas — um dia inteiro.`,
         tabela: { titulo: "Na referência, por tipologia", linhas: linhasDasMudancas() },
         extras: {
