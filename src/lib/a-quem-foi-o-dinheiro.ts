@@ -186,6 +186,14 @@ export type TaxaDoPagoEmMao = {
    * pagamento (d9) a conta (`valor`) pode já não bater com ele: diz-se.
    */
   fechadaCom?: number | null;
+  /**
+   * O QUE FALTA COBRAR — 11-11-2026 (dono). O IVA e a taxa pagam-se cada um
+   * por si (`cobrancas-ao-profissional.ts`): com uma parte já paga à parte,
+   * falta só a outra. Cobrada, zero.
+   */
+  porCobrar?: number;
+  /** As partes já pagas sem linha em `pagamentos` (marcadas à parte). */
+  jaPagoEmPartes?: number;
 };
 
 export function taxaDoPagoEmMao(t: {
@@ -200,10 +208,20 @@ export function taxaDoPagoEmMao(t: {
   /** O método e o valor da linha à parte, quando existe (04-11-2026, d9). */
   taxaAParteComo?: string | null;
   taxaAParteValor?: number | null;
+  /** A soma das partes da dívida pagas à parte, sem linha em `pagamentos` (11-11-2026). */
+  jaPagoEmPartes?: number | null;
 }): TaxaDoPagoEmMao | null {
+  const emPartes = aosCentimos(Number(t.jaPagoEmPartes ?? 0) || 0);
+  // Só quando há partes pagas à parte: sem elas, a resposta é a de sempre.
+  const emPartesSeHouver = (valor: number, cobrada: boolean) =>
+    emPartes > 0
+      ? { porCobrar: cobrada ? 0 : Math.max(0, aosCentimos(valor - emPartes)), jaPagoEmPartes: emPartes }
+      : {};
   if (lerForma(t.formaDePagamento ?? null) === "dinheiro") {
     if (t.dividaDoProfissional == null || !Number.isFinite(t.dividaDoProfissional)) return null;
-    return { valor: aosCentimos(t.dividaDoProfissional), cobrada: t.clientePagouEm != null, descontaNoSaldo: false };
+    const valor = aosCentimos(t.dividaDoProfissional);
+    const cobrada = t.clientePagouEm != null;
+    return { valor, cobrada, descontaNoSaldo: false, ...emPartesSeHouver(valor, cobrada) };
   }
   if (!pagoAoProfissionalRegistado(t.formaDePagamento, t.comoEntrou)) return null;
   if (!Number.isFinite(t.valorAcordado)) return null;
@@ -219,6 +237,7 @@ export function taxaDoPagoEmMao(t: {
       cobrada && t.taxaAParteValor != null && Number.isFinite(Number(t.taxaAParteValor))
         ? aosCentimos(Number(t.taxaAParteValor))
         : null,
+    ...emPartesSeHouver(d.total, cobrada),
   };
 }
 
@@ -232,7 +251,14 @@ export function taxaDoPagoEmMao(t: {
  */
 export function fraseDaParteDaClyon(x: TaxaDoPagoEmMao, euros: (v: number) => string): string {
   const parte = `a parte da CLYON, ${euros(x.valor)}`;
+  const emPartes = aosCentimos(x.jaPagoEmPartes ?? 0);
   if (!x.cobrada) {
+    if (emPartes > 0) {
+      return (
+        `${parte}, está paga em parte (${euros(emPartes)}); faltam ${euros(x.porCobrar ?? aosCentimos(x.valor - emPartes))} ` +
+        "— ver Pagamentos › A receber dos profissionais"
+      );
+    }
     return `${parte}, está por pagar pelo profissional — pela referência na carteira dele, ou descontada no saldo`;
   }
   const como = String(x.como ?? "").trim();
@@ -244,7 +270,8 @@ export function fraseDaParteDaClyon(x: TaxaDoPagoEmMao, euros: (v: number) => st
       : como.startsWith("pro_") || como === "multibanco" || como === "mbway"
         ? "foi paga pelo profissional"
         : "está fechada";
-  const diferenca = x.fechadaCom != null ? aosCentimos(x.valor - x.fechadaCom) : 0;
+  // O que se pagou à parte (o IVA, antes) mais a linha que fechou a dívida (11-11-2026).
+  const diferenca = x.fechadaCom != null ? aosCentimos(x.valor - x.fechadaCom - emPartes) : 0;
   if (Math.abs(diferenca) > 0.005) {
     return (
       `a parte da CLYON é ${euros(x.valor)} pela conta de hoje; ${fechada} com ${euros(x.fechadaCom as number)}` +
@@ -284,7 +311,11 @@ export function monteNasCarteiras(t: {
 /** O que falta cobrar aos profissionais nos trabalhos pagos em mão. */
 export function porCobrarNosPagosEmMao(linhas: ReadonlyArray<{ taxaEmMao?: TaxaDoPagoEmMao | null }>): number {
   return aosCentimos(
-    linhas.reduce((n, t) => n + (t.taxaEmMao && !t.taxaEmMao.cobrada ? t.taxaEmMao.valor : 0), 0),
+    // O que FALTA: com uma parte paga à parte, só a outra (11-11-2026).
+    linhas.reduce(
+      (n, t) => n + (t.taxaEmMao && !t.taxaEmMao.cobrada ? (t.taxaEmMao.porCobrar ?? t.taxaEmMao.valor) : 0),
+      0,
+    ),
   );
 }
 

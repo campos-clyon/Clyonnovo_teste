@@ -5,11 +5,9 @@ import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { dividasDe } from "@/lib/carteira";
 import { registarRecebimentoAMao } from "@/lib/pagamentos-na-base";
 import { configuracaoDoEupago } from "@/lib/eupago";
-import {
-  eMetodoDoProfissional,
-  fraseDoPagamentoDoProfissional,
-  planoDoPagamentoDoProfissional,
-} from "@/lib/pagamento-da-divida";
+import { eMetodoDoProfissional, fraseDoPagamentoDoProfissional } from "@/lib/pagamento-da-divida";
+import { planoDoPagamentoEmPartes } from "@/lib/cobrancas-ao-profissional";
+import { marcarPartes, marcarPartesCobertas } from "@/lib/cobrancas-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,11 +17,16 @@ export const dynamic = "force-dynamic";
  *
  * O profissional pagou a dívida (IVA e taxa da plataforma de trabalhos pagos
  * em mão) por outra via — transferência, MB WAY, numerário — e a equipa
- * regista-o: valor, método e nota. Fecha as dívidas inteiras que o valor
- * cobre, das mais antigas para as mais novas (`planoDoPagamentoDoProfissional`),
- * cada uma com a sua linha em `pagamentos` (o índice único impede repetir) e
- * no registo permanente, e o histórico de cada pedido diz «O profissional
- * pagou Y € à CLYON (método)», com quem e quando.
+ * regista-o: valor, método e nota.
+ *
+ * DESDE 11-11-2026 (dono) PAGA PARTES: o IVA e a taxa da plataforma de cada
+ * dívida têm estado próprio (`cobrancas-ao-profissional.ts`). O valor cobre as
+ * partes pendentes das dívidas mais antigas para as mais novas, e em cada uma
+ * o IVA antes da taxa (`planoDoPagamentoEmPartes`). Uma dívida que fica sem
+ * nada pendente fecha-se com a sua linha em `pagamentos` (o valor do que este
+ * pagamento cobriu nela; o índice único impede repetir) e as partes ficam
+ * marcadas com ela; uma que fica a meio (só o IVA) fica com o IVA marcado. O
+ * registo permanente e o histórico de cada pedido dizem-no, com quem e quando.
  *
  * NÃO MEXE NO SALDO: não é abatimento, não sai do «Pode pedir já» — liberta-o,
  * porque o que estava reservado para a dívida deixa de estar.
@@ -57,10 +60,8 @@ export async function POST(req: NextRequest) {
     const agora = new Date();
     const linhas = await negociacoesDoProfissional(providerId);
     const trabalhos = await trabalhosDaCarteira(linhas);
-    const plano = planoDoPagamentoDoProfissional(
-      dividasDe(trabalhos, agora).filter((d) => !d.paga),
-      valor,
-    );
+    const abertas = dividasDe(trabalhos, agora).filter((d) => !d.paga);
+    const plano = planoDoPagamentoEmPartes(abertas, valor);
     if (!plano.ok) return NextResponse.json({ error: plano.porque }, { status: 409 });
 
     const conf = configuracaoDoEupago(process.env);
@@ -69,14 +70,32 @@ export async function POST(req: NextRequest) {
 
     const fechadas: Array<{ negociacaoId: number; pedidoId: number | null; valor: number }> = [];
     const ficaram: number[] = [];
-    for (const d of plano.fecha) {
+    for (const passo of plano.passos) {
+      const d = abertas.find((x) => x.negociacaoId === passo.negociacaoId);
+      if (!d) continue;
       const pedidoId = linhas.find((l) => Number(l.id) === d.negociacaoId)?.pedidoId ?? null;
+      if (!passo.fecha) {
+        // Só uma parte desta dívida (o IVA): marca-se, e a taxa fica pendente.
+        const m = await marcarPartes({
+          negociacaoId: d.negociacaoId,
+          partes: passo.partes,
+          metodo,
+          quando: agora,
+          nota: nota || null,
+          quem: porQuem,
+          origem: "bloco",
+          agora,
+        });
+        if (m.ok) fechadas.push({ negociacaoId: d.negociacaoId, pedidoId, valor: passo.valor });
+        else ficaram.push(d.negociacaoId);
+        continue;
+      }
       const r = await registarRecebimentoAMao({
         negociacaoId: d.negociacaoId,
         pedidoId: pedidoId ?? 0,
         providerId,
         metodo,
-        valor: d.total,
+        valor: passo.valor,
         quando: agora,
         ambiente,
         // Num trabalho da plataforma pago em mão a negociação já está fechada
@@ -89,7 +108,18 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const frase = fraseDoPagamentoDoProfissional({ valor: d.total, metodo, pedidoId });
+      await marcarPartesCobertas({
+        divida: d,
+        providerId,
+        pedidoId,
+        metodo,
+        quando: agora,
+        nota: nota || null,
+        quem: porQuem,
+        origem: "bloco",
+        pagamentoId: r.pagamentoId ?? null,
+      });
+      const frase = fraseDoPagamentoDoProfissional({ valor: passo.valor, metodo, pedidoId });
       // O registo É o trabalho aqui: se não se escrever, diz-se (lança).
       await registar({
         acontecimento: "divida_paga_pelo_profissional",
@@ -98,7 +128,7 @@ export async function POST(req: NextRequest) {
         providerId,
         autorTipo: "clyon",
         autorNome: porQuem,
-        valor: d.total,
+        valor: passo.valor,
         resumo: frase + (nota ? ` Nota: ${nota}` : ""),
         detalhe: { pagamentoId: r.pagamentoId, metodo, iva: d.iva, comissao: d.comissao, nota: nota || null },
         visivelProfissional: true,
@@ -110,7 +140,7 @@ export async function POST(req: NextRequest) {
           message: `${frase} Registado por ${porQuem}.` + (nota ? ` Nota: ${nota}` : ""),
         }).catch(() => {});
       }
-      fechadas.push({ negociacaoId: d.negociacaoId, pedidoId, valor: d.total });
+      fechadas.push({ negociacaoId: d.negociacaoId, pedidoId, valor: passo.valor });
     }
 
     if (fechadas.length === 0) {

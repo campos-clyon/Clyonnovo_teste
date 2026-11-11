@@ -3,6 +3,8 @@ import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { METODO_DO_ABATIMENTO, temDividaDoProfissional } from "./divida-do-profissional";
 import { pagoAoProfissionalRegistado } from "./pago-em-mao";
+import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
+import type { MarcaDaParte } from "./cobrancas-ao-profissional";
 
 type LinhaAVerificar = { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown };
 
@@ -74,7 +76,7 @@ export function camposDoPagamento(
   pagos: Map<number, PagamentoQueFecha>,
 ): Pick<
   TrabalhoNaCarteira,
-  "clientePagouEm" | "dividaPagaEm" | "dividaAbatida" | "comoEntrou" | "valorQueEntrou"
+  "clientePagouEm" | "dividaPagaEm" | "dividaAbatida" | "comoEntrou" | "valorQueEntrou" | "dividaFechadaPor"
 > {
   const p = pagos.get(Number(l.id)) ?? null;
   /*
@@ -89,6 +91,7 @@ export function camposDoPagamento(
       comoEntrou: p.metodo,
       valorQueEntrou: p.valor,
       dividaPagaEm: a?.em ?? null,
+      dividaFechadaPor: a ? (a.metodo ?? METODO_DO_ABATIMENTO) : null,
       // Só o abatimento sai do saldo. Paga por ele à mão, ou quitada no acerto
       // de 01-11-2026, a dívida fica paga sem tocar no disponível.
       dividaAbatida:
@@ -103,6 +106,7 @@ export function camposDoPagamento(
     valorQueEntrou: p?.valor ?? null,
     clientePagouEm: p?.pagoEm ?? null,
     dividaPagaEm: comDivida ? (p?.pagoEm ?? null) : null,
+    dividaFechadaPor: comDivida && p ? p.metodo : null,
     dividaAbatida:
       comDivida && p != null && p.metodo === METODO_DO_ABATIMENTO
         ? { valor: p.valor, em: p.pagoEm, levantamentoId: p.levantamentoId }
@@ -148,6 +152,15 @@ export async function trabalhosDaCarteira(
    * MySQL por cada abertura do painel de cada profissional.
    */
   const pagos = await pagamentosAVerificarComDetalhe(linhas);
+  /*
+   * O IVA E A TAXA, CADA UM COM O SEU ESTADO — 11-11-2026 (dono). As marcas
+   * das partes da dívida (`cobrancas-ao-profissional.ts`). Sem a tabela, ou se
+   * a leitura falhar, nenhuma: a dívida lê-se inteira, como antes.
+   */
+  const marcas = await marcasDasNegociacoes(linhas.map((l) => Number(l.id))).catch((e) => {
+    console.error("[carteira] não li as partes marcadas da dívida:", e);
+    return new Map<number, MarcaDaParte[]>();
+  });
 
   return linhas.map((l) => ({
     negociacaoId: l.id,
@@ -186,5 +199,6 @@ export async function trabalhosDaCarteira(
     negociacaoCriadaEm: l.createdAt ?? null,
     // Quem paga um trabalho CLYON é a CLYON — ver `pagoPelaClyon` em carteira.ts.
     pagoPelaClyon: typeof l.ofertaClyon === "string" && l.ofertaClyon !== "",
+    marcasDaDivida: marcas.get(Number(l.id)) ?? [],
   }));
 }

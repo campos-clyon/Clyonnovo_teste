@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { dividaDoProfissional } from "@/lib/divida-do-profissional";
+import { marcasDasNegociacoes } from "@/lib/marcas-da-divida-na-base";
+import { oQueFaltaDaDivida } from "@/lib/cobrancas-ao-profissional";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { registarSemFalhar } from "@/lib/db";
 import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
@@ -83,6 +86,14 @@ export async function GET(req: NextRequest) {
   try {
     const linhas = await pagamentosDaNegociacao(negociacaoId);
     const conf = configuracaoDoEupago(process.env);
+    // A dívida do profissional pede só o que falta das duas partes (11-11-2026).
+    const marcas = (await marcasDasNegociacoes([negociacaoId])).get(negociacaoId) ?? [];
+    const falta = (t: typeof acesso.trabalho, comFactura: boolean) => {
+      const p = quantoSePedeNesteTrabalho(t, comFactura);
+      return p.quemPaga === "profissional"
+        ? oQueFaltaDaDivida(dividaDoProfissional(t.acordado, t.taxas), marcas).total
+        : p.valor;
+    };
     return NextResponse.json({
       /*
        * Dizer que não está configurado é diferente de dizer que não há
@@ -115,8 +126,8 @@ export async function GET(req: NextRequest) {
         return {
           quemPaga: p.quemPaga,
           ivaIncluido: t.modelo === "iva_incluido",
-          valorAPedir: p.valor,
-          valorAPedirComFactura: quantoSePedeNesteTrabalho(t, true).valor,
+          valorAPedir: falta(t, false),
+          valorAPedirComFactura: falta(t, true),
           telefoneSugerido:
             p.quemPaga === "profissional" ? t.telefoneDoProfissional : t.telefoneDoCliente,
         };
@@ -179,8 +190,23 @@ export async function POST(req: NextRequest) {
    * Há factura em todas as vendas — o `comFactura` grava-se ligado.
    */
   const comFactura = t.modelo === "iva_incluido" || corpo.comFactura === true;
-  const { valor, quemPaga } = quantoSePedeNesteTrabalho(t, comFactura);
+  const pedido = quantoSePedeNesteTrabalho(t, comFactura);
+  const quemPaga = pedido.quemPaga;
   const doProfissional = quemPaga === "profissional";
+  /*
+   * SÓ O QUE FALTA DA DÍVIDA — 11-11-2026 (dono). Com o IVA (ou a taxa) já
+   * marcado nos Pagamentos › A receber dos profissionais, pede-se só a outra
+   * parte (`cobrancas-ao-profissional.ts`).
+   */
+  const valor = doProfissional
+    ? oQueFaltaDaDivida(
+        dividaDoProfissional(t.acordado, t.taxas),
+        (await marcasDasNegociacoes([Number(corpo.negociacaoId)])).get(Number(corpo.negociacaoId)) ?? [],
+      ).total
+    : pedido.valor;
+  if (doProfissional && !(valor > 0)) {
+    return NextResponse.json({ error: "A dívida deste trabalho já está paga." }, { status: 409 });
+  }
   // A dívida do profissional só nasce com o trabalho feito: antes disso o
   // cliente ainda não lhe pagou nada (ver `cobrar-divida-do-profissional.ts`).
   if (doProfissional && !t.libertado) {

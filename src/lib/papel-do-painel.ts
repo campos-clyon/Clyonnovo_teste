@@ -385,6 +385,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/pagamentos/pago-ao-profissional", seccoes: ["pagamentos"] },
   // O histórico de um trabalho aberto nos Pagamentos (26-10-2026, d25): só lê.
   { prefixo: "/api/admin/pagamentos/historico", seccoes: ["pagamentos"] },
+  // «A receber dos profissionais» (11-11-2026): o IVA e a taxa de cada dívida. Marcar e desfazer: só o administrador.
+  { prefixo: "/api/admin/pagamentos/a-receber-dos-profissionais", seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/levantamentos", seccoes: ["levantamentos"] },
 
   { prefixo: "/api/admin/leads", seccoes: ["leads"] },

@@ -27,6 +27,7 @@ import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import DinheiroDoProfissional from "@/components/admin/DinheiroDoProfissional";
+import { estadoDaParteEmPalavras, type EstadoDaParte } from "@/lib/cobrancas-ao-profissional";
 
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 /**
@@ -69,6 +70,8 @@ type Trabalho = {
   /** Em dinheiro com IVA incluído: o IVA e a comissão que o profissional deve à CLYON. */
   dividaDoProfissional: number | null;
   dividaPaga: boolean;
+  /** O IVA e a taxa, cada um com o seu estado (11-11-2026) — os mesmos de Pagamentos › A receber dos profissionais. */
+  partesDaDivida?: EstadoDaParte[] | null;
   /** Valor do trabalho menos o que ele recebe — a parte da CLYON do lado dele. */
   taxaDescontada: number;
   forma: "plataforma" | "dinheiro";
@@ -559,6 +562,13 @@ export default function AdminCarteirasPanel() {
                 {t.dividaPaga
                   ? `pagou à CLYON ${euros(t.dividaDoProfissional)}`
                   : `deve à CLYON ${euros(t.dividaDoProfissional)}`}
+              </p>
+            )}
+            {t.partesDaDivida && t.partesDaDivida.length > 0 && (
+              <p className="text-[10px] tabular-nums text-slate-400">
+                {t.partesDaDivida
+                  .map((p) => `${p.parte === "iva" ? "IVA" : "taxa"} ${euros(p.valor)} · ${estadoDaParteEmPalavras(p)}`)
+                  .join(" — ")}
               </p>
             )}
           </div>

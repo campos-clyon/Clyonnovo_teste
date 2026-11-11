@@ -1,4 +1,5 @@
 import { getPool } from "./db";
+import { partesPagasSemLinha } from "./marcas-da-divida-na-base";
 import { contaDaLinha } from "./conta-do-pagamento";
 import { dividirEntrada, type EntradaDaPlataforma, type PagamentoAAssistente } from "./financas-do-mes";
 import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
@@ -18,6 +19,7 @@ import {
   type DadosDoMovimento,
   type Icone,
   type LevantamentoDaPlataforma,
+  type ParteDaDividaPaga,
   type Movimento,
   type PagamentoAoProfissional,
   type PapelDaConta,
@@ -244,8 +246,9 @@ async function dinheiroDaPlataforma(): Promise<{
   recebimentos: RecebimentoDaPlataforma[];
   pagosAosProfissionais: PagamentoAoProfissional[];
   levantamentos: LevantamentoDaPlataforma[];
+  partesDaDividaPagas: ParteDaDividaPaga[];
 }> {
-  const [recebidos, pagos, levantados] = await Promise.all([
+  const [recebidos, pagos, levantados, partes] = await Promise.all([
     lerSeHouver(
       `SELECT pg.id, pg.pedidoId, pg.metodo, pg.valor, pg.valorPago, pg.comissaoEupago, pg.pagoEm,
               pg.ambiente, pg.deTeste, pg.trid, COALESCE(pr.contaDeTeste, 0) AS contaDeTeste,
@@ -272,6 +275,11 @@ async function dinheiroDaPlataforma(): Promise<{
          JOIN providers pr ON pr.id = l.providerId
         WHERE l.estado = 'pago'`,
     ),
+    // O IVA ou a taxa pagos à parte, sem linha em `pagamentos` (11-11-2026).
+    partesPagasSemLinha().catch((e) => {
+      console.error("[financas] partes da dívida:", e);
+      return [] as Array<Record<string, unknown>>;
+    }),
   ]);
 
   return {
@@ -300,6 +308,16 @@ async function dinheiroDaPlataforma(): Promise<{
       contaDeTeste: Number(l.contaDeTeste) === 1,
       formaDoTrabalho: (l.formaDePagamento as string) ?? null,
       comoEntrou: (l.comoEntrou as string) ?? null,
+    })),
+    partesDaDividaPagas: partes.map((l) => ({
+      id: Number(l.id),
+      pedidoId: l.pedidoId != null ? Number(l.pedidoId) : null,
+      parte: String(l.parte ?? ""),
+      valor: Number(l.valor ?? 0),
+      pagoEm: (l.pagoEm as Date | string | null) ?? null,
+      metodo: String(l.metodo ?? ""),
+      profissional: (l.profissional as string) ?? null,
+      contaDeTeste: Number(l.contaDeTeste) === 1,
     })),
     levantamentos: levantados.map((l) => ({
       id: Number(l.id),

@@ -19,6 +19,9 @@ import { eSemFactura, modeloDaLinha } from "@/lib/sem-factura";
 import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { resumoDaQuitacao } from "@/lib/quitacao-na-base";
 import { monteNasCarteiras } from "@/lib/a-quem-foi-o-dinheiro";
+import { dividasDosProfissionais } from "@/lib/cobrancas-na-base";
+import type { DividaNaCarteira } from "@/lib/carteira";
+import type { EstadoDaParte } from "@/lib/cobrancas-ao-profissional";
 
 export const runtime = "nodejs";
 
@@ -94,6 +97,12 @@ type TrabalhoPorPagar = {
   dividaDoProfissional: number | null;
   /** Essa dívida já entrou (referência paga, ou registada à mão). */
   dividaPaga: boolean;
+  /**
+   * O IVA E A TAXA, CADA UM COM O SEU ESTADO — 11-11-2026 (dono). Da carteira
+   * dele (`dividasDe`), a mesma do separador «A receber dos profissionais».
+   * Nulo enquanto a dívida não nasceu (trabalho por confirmar).
+   */
+  partesDaDivida: EstadoDaParte[] | null;
   /** O que se desconta ao profissional: o valor do trabalho menos o que ele recebe. */
   taxaDescontada: number;
   /** Pago pela plataforma, ou em dinheiro na mão dele. */
@@ -277,6 +286,32 @@ export async function GET(req: NextRequest) {
         .map((l) => Number(l.negociacaoId)),
     );
 
+    /*
+     * O QUE CADA UM DEVE À CLYON, PELA CARTEIRA DELE — 11-11-2026 (dono). A
+     * mesma conta do separador «A receber dos profissionais» e do bloqueio
+     * (`dividasDosProfissionais` → `dividasDe`), com o IVA e a taxa cada um no
+     * seu estado: o que falta é a soma das partes pendentes, e os dois ecrãs
+     * dão sempre o mesmo número.
+     */
+    const comDividaPossivel = [
+      ...new Set(
+        linhas
+          .filter(
+            (l) =>
+              l.negociacaoId != null &&
+              (lerForma(l.formaDePagamento) === "dinheiro" ||
+                pagoAoProfissionalRegistado(
+                  l.formaDePagamento,
+                  recebidos.get(Number(l.negociacaoId))?.metodo,
+                )),
+          )
+          .map((l) => Number(l.id)),
+      ),
+    ];
+    const dividasDaCarteira = await dividasDosProfissionais(comDividaPossivel);
+    const dividaDaNegociacao = new Map<number, DividaNaCarteira>();
+    for (const ds of dividasDaCarteira.values()) for (const d of ds) dividaDaNegociacao.set(d.negociacaoId, d);
+
     for (const l of linhas) {
       const id = Number(l.id);
       if (!porProfissional.has(id)) porProfissional.set(id, novaFicha(l));
@@ -314,14 +349,20 @@ export async function GET(req: NextRequest) {
        */
       const fecho = recebidos.get(Number(l.negociacaoId)) ?? null;
       const emMaoRegistado = pagoAoProfissionalRegistado(l.formaDePagamento, fecho?.metodo);
-      const divida = comDivida
-        ? dividaDoProfissional(acordado, taxas).total
-        : emMaoRegistado
-          ? dividaDoRegistoEmMao(acordado, taxas, fecho?.valor).total
-          : null;
-      const dividaPaga = comDivida
-        ? pagas.has(Number(l.negociacaoId))
-        : emMaoRegistado && fecho?.abatimentoAParte != null;
+      const daCarteira = dividaDaNegociacao.get(Number(l.negociacaoId)) ?? null;
+      // Por pagar: o que falta (a soma das partes pendentes); paga: a dívida inteira.
+      const divida = daCarteira
+        ? daCarteira.total
+        : comDivida
+          ? dividaDoProfissional(acordado, taxas).total
+          : emMaoRegistado
+            ? dividaDoRegistoEmMao(acordado, taxas, fecho?.valor).total
+            : null;
+      const dividaPaga = daCarteira
+        ? daCarteira.paga
+        : comDivida
+          ? pagas.has(Number(l.negociacaoId))
+          : emMaoRegistado && fecho?.abatimentoAParte != null;
 
       const trabalhoClyon = typeof l.ofertaClyon === "string" && l.ofertaClyon !== "";
       const doLucro = lucroDoTrabalho({
@@ -359,6 +400,7 @@ export async function GET(req: NextRequest) {
         ivaIncluido: modelo === "iva_incluido",
         dividaDoProfissional: divida,
         dividaPaga,
+        partesDaDivida: daCarteira?.partes ?? null,
         // Ao centimo, e no servidor: a subtraccao em virgula flutuante no ecra
         // dava 11,399999 € na linha de um trabalho de 190 €.
         taxaDescontada: Math.round((acordado - recebe) * 100) / 100,
@@ -402,9 +444,6 @@ export async function GET(req: NextRequest) {
       if (monte === "em_mao") {
         if (l.confirmadoEm != null) {
           ficha.recebidoEmMao = Math.round((ficha.recebidoEmMao + recebe) * 100) / 100;
-          if (divida != null && !dividaPaga) {
-            ficha.aPagarAClyon = Math.round((ficha.aPagarAClyon + divida) * 100) / 100;
-          }
           clyon.ganha = Math.round((clyon.ganha + comissao) * 100) / 100;
           if (!trabalhoClyon) clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         } else {
@@ -439,6 +478,15 @@ export async function GET(req: NextRequest) {
      * porque a ficha deles continua a ser útil — é lá que se vê que falta o
      * IBAN antes de haver trabalho para pagar.
      */
+    // O que deve à CLYON: a soma das partes pendentes, da carteira dele (11-11-2026).
+    for (const [pid, ds] of dividasDaCarteira) {
+      const ficha = porProfissional.get(pid);
+      if (ficha) {
+        ficha.aPagarAClyon =
+          Math.round(ds.filter((d) => !d.paga).reduce((s, d) => s + d.porPagar, 0) * 100) / 100;
+      }
+    }
+
     const carteiras = [...porProfissional.values()].sort(
       (a, b) =>
         b.totalPorPagar - a.totalPorPagar ||

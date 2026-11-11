@@ -633,6 +633,24 @@ export type PagamentoAoProfissional = {
   comoEntrou?: string | null;
 };
 
+/**
+ * UMA PARTE DA DÍVIDA PAGA PELO PROFISSIONAL SEM LINHA EM `pagamentos` —
+ * 11-11-2026. O IVA (ou a taxa) marcado à parte nos Pagamentos › A receber dos
+ * profissionais: o dinheiro entrou, e só a tabela `cobrancasAoProfissional` o
+ * sabe. As partes que fecharam a dívida estão na linha de `pagamentos`, e
+ * essas não vêm aqui (`cobrancas-ao-profissional.ts`).
+ */
+export type ParteDaDividaPaga = {
+  id: number;
+  pedidoId: number | null;
+  parte: string;
+  valor: number;
+  pagoEm: Date | string | null;
+  metodo: string;
+  profissional: string | null;
+  contaDeTeste: boolean;
+};
+
 /** Um levantamento dado por pago. */
 export type LevantamentoDaPlataforma = {
   id: number;
@@ -686,6 +704,7 @@ export function movimentosDaPlataforma(
     recebimentos: RecebimentoDaPlataforma[];
     pagosAosProfissionais: PagamentoAoProfissional[];
     levantamentos: LevantamentoDaPlataforma[];
+    partesDaDividaPagas?: ParteDaDividaPaga[];
   },
   onde: { contaPlataforma: number; contaCaixa: number; categoria: (s: CategoriaDoSistema) => number },
 ): Movimento[] {
@@ -741,6 +760,28 @@ export function movimentosDaPlataforma(
         automatico: { de: "comissao_eupago", pedidoId: r.pedidoId },
       });
     }
+  }
+
+  for (const p of d.partesDaDividaPagas ?? []) {
+    const dia = diaDe(p.pagoEm);
+    const valor = aosCentimos(p.valor);
+    if (!dia || !(valor > 0) || p.contaDeTeste) continue;
+    if (!p.metodo.startsWith("pro_")) continue;
+    const como = NOME_DO_METODO[p.metodo];
+    fora.push({
+      ...base,
+      id: `auto:parte-da-divida:${p.id}`,
+      tipo: "receita",
+      valor,
+      dia,
+      descricao:
+        `${p.parte === "iva" ? "IVA" : "Taxa da plataforma"} de ${p.profissional ?? "profissional"}` +
+        (p.pedidoId != null ? ` — #${p.pedidoId}` : "") +
+        (como ? ` (${como})` : ""),
+      categoriaId: onde.categoria("dividas_dos_profissionais"),
+      contaId: p.metodo === "pro_numerario" ? onde.contaCaixa : onde.contaPlataforma,
+      automatico: { de: "recebimento", pedidoId: p.pedidoId ?? 0 },
+    });
   }
 
   for (const p of d.pagosAosProfissionais) {

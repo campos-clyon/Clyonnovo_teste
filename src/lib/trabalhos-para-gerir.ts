@@ -1,3 +1,5 @@
+import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
+import type { MarcaDaParte } from "./cobrancas-ao-profissional";
 import { ensureNegociacoesTable, ensureSimulatorOrdersTable, getPool } from "@/lib/db";
 import { taxaAbaixoDoEscalao, taxaPeloValor } from "@/lib/oferta-clyon";
 import { faseDoDinheiro, recebidoDoCliente } from "@/lib/dinheiro-do-trabalho";
@@ -172,6 +174,19 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
 
   const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 
+  /*
+   * AS PARTES DA DÍVIDA PAGAS À PARTE — 11-11-2026 (dono). O IVA (ou a taxa)
+   * marcado nos Pagamentos › A receber dos profissionais, sem linha em
+   * `pagamentos`: a parte da CLYON por cobrar desconta-o.
+   */
+  const marcas = await marcasDasNegociacoes(
+    (linhas as Array<Record<string, unknown>>).map((l) => Number(l.negociacaoId)).filter((n) => n > 0),
+  ).catch(() => new Map<number, MarcaDaParte[]>());
+  const pagoEmPartes = (negociacaoId: number) =>
+    Math.round(
+      (marcas.get(negociacaoId) ?? []).filter((m) => m.pagamentoId == null).reduce((s, m) => s + m.valor, 0) * 100,
+    ) / 100;
+
   return linhas.map((l) => {
     const acordado = Number(l.valorAcordado);
     const taxas = taxasDaNegociacao(l);
@@ -286,6 +301,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
         taxaAParteEm: l.taxaAParteEm ?? null,
         taxaAParteComo: (l.taxaAParteComo as string) ?? null,
         taxaAParteValor: l.taxaAParteValor == null ? null : Number(l.taxaAParteValor),
+        jaPagoEmPartes: pagoEmPartes(Number(l.negociacaoId)),
       }),
       /*
        * CORRIGIR O PAGAMENTO REGISTADO — 04-11-2026 (d9). Só nos registados à

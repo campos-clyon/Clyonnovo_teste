@@ -1,3 +1,5 @@
+import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
+import { oQueFaltaDaDivida } from "./cobrancas-ao-profissional";
 import { registarSemFalhar } from "./db";
 import { trabalhoVistoPeloBackoffice } from "./acesso-ao-pagamento";
 import {
@@ -114,7 +116,16 @@ export async function gerarReferenciaDaDivida(
     if (!aCobrar) {
       return { ok: false, porque: "Este trabalho não tem nada a pagar pelo profissional." };
     }
-    const divida = aCobrar.divida;
+    /*
+     * SÓ O QUE FALTA — 11-11-2026 (dono). O IVA e a taxa pagam-se cada um por
+     * si (`cobrancas-ao-profissional.ts`): com uma parte já marcada, a
+     * referência é da outra.
+     */
+    const marcas = (await marcasDasNegociacoes([negociacaoId])).get(negociacaoId) ?? [];
+    const divida = oQueFaltaDaDivida(aCobrar.divida, marcas);
+    if (!aCobrar.jaPaga && !(divida.total > 0)) {
+      return { ok: false, porque: "Já está paga.", divida, jaPaga: true };
+    }
     // As referências DESTA dívida — num pago em mão, só as da parte «divida».
     const desta = jaHa.filter((l) => lerParte(l.parte) === aCobrar.parte);
     /*

@@ -566,6 +566,10 @@ const ENTRE_A_EQUIPA = new Set([
   // («created», que o cliente não vê — historico-para-o-cliente.ts) e registo.
   "src/lib/pagamento-da-divida.ts",
   "src/lib/quitacao-na-base.ts",
+  // O IVA e a taxa da dívida marcados um a um (11-11-2026): Pagamentos › A receber dos profissionais, e o histórico da equipa.
+  "src/lib/cobrancas-ao-profissional.ts",
+  "src/lib/cobrancas-na-base.ts",
+  "src/lib/marcas-da-divida-na-base.ts",
   "src/lib/assistente-interruptores.ts",
   "src/lib/assistentes.ts",
   "src/lib/avisos-do-backoffice.ts",

@@ -1,3 +1,4 @@
+import { marcarPartesCobertas } from "./cobrancas-na-base";
 import {
   appendOrderHistory,
   levantamentosDoProfissional,
@@ -192,6 +193,18 @@ async function abaterUma(
   // Já paga entretanto (por referência, ou outro abatimento): a base disse
   // que não, e é ela que manda. Fica como estava.
   if (!r.feito) return null;
+
+  // O IVA e a taxa que estavam pendentes ficam marcados com este abatimento (11-11-2026).
+  await marcarPartesCobertas({
+    divida: d,
+    providerId: c.providerId,
+    pedidoId: c.pedidoId,
+    metodo: METODO_DO_ABATIMENTO,
+    quando: c.agora,
+    quem: c.autor,
+    origem: "abatimento",
+    pagamentoId: r.pagamentoId ?? null,
+  });
 
   /*
    * A FRASE DO HISTÓRICO — 01-11-2026 (dono): «Abatidos Y € da dívida do #N na

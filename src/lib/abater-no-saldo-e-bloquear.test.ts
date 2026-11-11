@@ -152,6 +152,11 @@ describe("1. quando o levantamento é pago, o reservado paga a dívida", () => {
       abatida: false,
       abatidaNoLevantamento: null,
       nasceuEm: new Date(Date.UTC(2026, 9, dia)),
+      partes: [],
+      porPagar: total,
+      totalDaDivida: total,
+      ivaDaDivida: 0,
+      comissaoDaDivida: 0,
     });
     const p = planoDeAbatimento([d(3, 50, 12), d(1, 300, 10), d(2, 100, 11)], 200);
     // A de 300 (a mais antiga) não cabe; abatem-se a de 100 e a de 50.
@@ -172,6 +177,11 @@ describe("1. quando o levantamento é pago, o reservado paga a dívida", () => {
       abatida: false,
       abatidaNoLevantamento: null,
       nasceuEm: null,
+      partes: [],
+      porPagar: 0,
+      totalDaDivida: 10,
+      ivaDaDivida: 0,
+      comissaoDaDivida: 0,
     };
     expect(planoDeAbatimento([paga], 1000).abater).toEqual([]);
     expect(planoDeAbatimento([{ ...paga, paga: false }], 0).abater).toEqual([]);

@@ -4,6 +4,7 @@ import { estaLibertado, faseDoTrabalho, quandoLiberta, type Trabalho } from "./t
 import { modeloDaNegociacao } from "./iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
 import { dividaDoRegistoEmMao, foiPagoEmMaoPor, pagoAoProfissionalRegistado } from "./pago-em-mao";
+import { partesDaDivida, porPagarDasPartes, type EstadoDaParte, type MarcaDaParte } from "./cobrancas-ao-profissional";
 
 /**
  * A carteira do profissional.
@@ -134,6 +135,14 @@ export type TrabalhoNaCarteira = Trabalho & {
    * fica disponível. Ver `oferta-clyon.ts`.
    */
   pagoPelaClyon?: boolean;
+  /**
+   * AS PARTES DA DÍVIDA JÁ MARCADAS — 11-11-2026 (dono). O IVA e a taxa da
+   * plataforma pagam-se cada um por si (`cobrancas-ao-profissional.ts`); são
+   * as marcas activas de `cobrancasAoProfissional` deste trabalho.
+   */
+  marcasDaDivida?: MarcaDaParte[];
+  /** O método da linha que fechou a dívida inteira em `pagamentos`, quando fechou. */
+  dividaFechadaPor?: string | null;
 };
 
 /** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
@@ -549,7 +558,50 @@ export type DividaNaCarteira = {
    * `pagamentos` (`tridDoAbatimentoAParte`), sem tocar em `negociacaoPaga`.
    */
   aParte?: boolean;
+  /**
+   * AS DUAS PARTES, CADA UMA COM O SEU ESTADO — 11-11-2026 (dono). Por pagar,
+   * `total`, `iva` e `comissao` são o que FALTA de cada parte (é isso que
+   * se paga por referência, se abate no saldo e conta para o bloqueio); paga,
+   * são a dívida inteira, como sempre. A dívida inteira está sempre em
+   * `totalDaDivida`.
+   */
+  partes: EstadoDaParte[];
+  /** O que falta pagar: a soma das partes pendentes. */
+  porPagar: number;
+  totalDaDivida: number;
+  ivaDaDivida: number;
+  comissaoDaDivida: number;
 };
+
+/**
+ * A DÍVIDA COM AS PARTES — a conta de sempre (`d`), o estado de cada parte e,
+ * por pagar, o que falta. Uma dívida está paga quando fechou em `pagamentos`
+ * ou quando já não tem nenhuma parte pendente.
+ */
+function comAsPartes(
+  t: TrabalhoNaCarteira,
+  d: { total: number; iva: number; comissao: number },
+  fechada: boolean,
+): Pick<DividaNaCarteira, "total" | "iva" | "comissao" | "paga" | "partes" | "porPagar" | "totalDaDivida" | "ivaDaDivida" | "comissaoDaDivida"> {
+  const fecho = fechada
+    ? { em: (t.dividaAbatida?.em ?? t.dividaPagaEm ?? null) as Date | string | null, metodo: t.dividaAbatida ? "abatimento" : (t.dividaFechadaPor ?? null) }
+    : null;
+  const partes = partesDaDivida(d, (t.marcasDaDivida ?? []).filter((m) => m.negociacaoId === t.negociacaoId), fecho);
+  const porPagar = fechada ? 0 : porPagarDasPartes(partes);
+  const paga = fechada || porPagar <= 0;
+  const falta = (p: "iva" | "taxa") => partes.find((x) => x.parte === p && !x.paga)?.valor ?? 0;
+  return {
+    total: paga ? d.total : porPagar,
+    iva: paga ? d.iva : falta("iva"),
+    comissao: paga ? d.comissao : falta("taxa"),
+    paga,
+    partes,
+    porPagar,
+    totalDaDivida: d.total,
+    ivaDaDivida: d.iva,
+    comissaoDaDivida: d.comissao,
+  };
+}
 
 export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
   const saida: DividaNaCarteira[] = [];
@@ -572,14 +624,12 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
       if (d.total <= 0) continue;
       saida.push({
         negociacaoId: t.negociacaoId,
-        total: d.total,
-        iva: d.iva,
-        comissao: d.comissao,
         recebidoDoCliente: d.recebidoDoCliente,
         // Paga por qualquer caminho: abatida, paga por ele à mão ou quitada no
-        // acerto de 01-11-2026 (`pagamento-da-divida.ts`). Só a abatida sai
-        // do disponível (`abatidoEmDividasDe`).
-        paga: t.dividaPagaEm != null || t.dividaAbatida != null,
+        // acerto de 01-11-2026 (`pagamento-da-divida.ts`) — ou, desde
+        // 11-11-2026, com as duas partes marcadas. Só a abatida sai do
+        // disponível (`abatidoEmDividasDe`).
+        ...comAsPartes(t, d, t.dividaPagaEm != null || t.dividaAbatida != null),
         abatida: t.dividaAbatida != null,
         abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
         nasceuEm: quandoLiberta(t),
@@ -595,11 +645,8 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
     const d = dividaDoProfissional(v, taxasDaNegociacao(t));
     saida.push({
       negociacaoId: t.negociacaoId,
-      total: d.total,
-      iva: d.iva,
-      comissao: d.comissao,
       recebidoDoCliente: d.recebidoDoCliente,
-      paga: t.dividaPagaEm != null,
+      ...comAsPartes(t, d, t.dividaPagaEm != null),
       abatida: t.dividaAbatida != null,
       abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
       nasceuEm: quandoLiberta(t),

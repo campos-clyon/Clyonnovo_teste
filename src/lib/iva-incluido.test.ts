@@ -281,7 +281,7 @@ describe("a carteira do profissional: «A pagar à CLYON»", () => {
   it("feito e por pagar: deve 124,95 € — e o recebido em mão é o líquido dele", () => {
     const t = [emDinheiro()];
     expect(aPagarAClyonDe(t, agora)).toBe(124.95);
-    expect(dividasDe(t, agora)).toEqual([
+    expect(dividasDe(t, agora)).toMatchObject([
       {
         negociacaoId: 7,
         total: 124.95,

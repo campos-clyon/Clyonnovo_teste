@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAdminAuth, useEAdministrador, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import PagosEmMaoAfectados from "./PagosEmMaoAfectados";
+import AReceberDosProfissionais, { useAReceberDosProfissionais } from "./AReceberDosProfissionais";
 import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import {
   AGRUPAMENTOS,
@@ -688,6 +689,15 @@ function GestorDoDinheiro({
     }
   };
   const [separador, setSeparador] = useState<Separador>(novosRecebidos > 0 ? "recebidos" : "por_receber");
+  /*
+   * «A RECEBER DOS PROFISSIONAIS» — 11-11-2026 (dono). O IVA e a taxa da
+   * plataforma que os profissionais devem de trabalhos pagos em mão, cada um
+   * com o seu estado. Vive na secção dos profissionais, ao lado dos outros
+   * separadores, mas é outra lista (por profissional, e não trabalho a
+   * trabalho do cliente) — por isso tem o seu interruptor.
+   */
+  const [verAReceber, setVerAReceber] = useState(false);
+  const aReceber = useAReceberDosProfissionais(token);
   // O número chega um instante depois de a secção abrir (o menu guarda-o antes de o apagar).
   useEffect(() => {
     if (novosRecebidos > 0) setSeparador("recebidos");
@@ -1131,6 +1141,7 @@ function GestorDoDinheiro({
 
   function escolher(s: Separador) {
     setSeparador(s);
+    setVerAReceber(false);
     setAberto(null);
     setErro("");
     setQuantos(POR_PAGINA);
@@ -1414,9 +1425,9 @@ function GestorDoDinheiro({
                 {SECCOES[seccao].titulo}
               </h3>
               <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{SECCOES[seccao].ajuda}</p>
-              <div role="tablist" aria-label={SECCOES[seccao].titulo} className={`mt-2 grid gap-2 ${seccao === "clyon" ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3"}`}>
+              <div role="tablist" aria-label={SECCOES[seccao].titulo} className={`mt-2 grid gap-2 ${seccao === "clyon" ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"}`}>
                 {daSeccao.map((c) => {
-                  const activo = c.id === separador;
+                  const activo = c.id === separador && !verAReceber;
                   const porCobrar = c.id === "em_mao" ? porCobrarNosPagosEmMao(c.linhas) : 0;
                   return (
                     <button
@@ -1449,6 +1460,38 @@ function GestorDoDinheiro({
                     </button>
                   );
                 })}
+                {seccao === "profissional" && (
+                  <button
+                    role="tab"
+                    aria-selected={verAReceber}
+                    onClick={() => {
+                      setVerAReceber(true);
+                      void aReceber.ler();
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-left transition ${
+                      verAReceber
+                        ? "border-cyan-500/60 bg-cyan-500/10"
+                        : "border-slate-800 bg-slate-900/60 hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-ambar-texto">
+                      A receber dos profissionais
+                      {aReceber.dados && aReceber.dados.totais.pendentes + aReceber.dados.totais.parciais > 0 && (
+                        <span className="ml-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          {aReceber.dados.totais.pendentes + aReceber.dados.totais.parciais}
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block text-sm font-bold tabular-nums text-white">
+                      {aReceber.dados ? euros(aReceber.dados.totais.devido) : "…"}
+                    </span>
+                    {aReceber.dados && aReceber.dados.totais.parciais > 0 && (
+                      <span className="mt-0.5 block text-[11px] tabular-nums text-slate-400">
+                        {aReceber.dados.totais.parciais} pago{aReceber.dados.totais.parciais !== 1 ? "s" : ""} em parte
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
               {registo && <RegistoDaSeccao seccao={seccao} registo={registo} />}
             </section>
@@ -1456,6 +1499,20 @@ function GestorDoDinheiro({
         })}
       </div>
 
+      {verAReceber && (
+        <AReceberDosProfissionais
+          token={token}
+          dados={aReceber.dados}
+          erro={aReceber.erro}
+          onMudou={async () => {
+            await aReceber.ler();
+            onMudou();
+          }}
+        />
+      )}
+
+      {/* O resto do gestor fica escondido enquanto «A receber dos profissionais» está aberto. */}
+      <div className={verAReceber ? "hidden" : undefined}>
       {/*
         SEM FACTURA ESTE MÊS — 25-10-2026 (d19): quantos pagamentos do mês
         foram sem factura e que parte do valor, sem IVA. Conta a lista toda
@@ -1902,6 +1959,7 @@ function GestorDoDinheiro({
           )}
         </Gaveta>
       )}
+      </div>
     </div>
   );
 }

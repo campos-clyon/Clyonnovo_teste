@@ -14532,6 +14532,9 @@ export type Acontecimento =
    * decisão do dono). Nenhuma das duas sai do saldo. Ver `pagamento-da-divida.ts`.
    */
   | "divida_paga_pelo_profissional"
+  // O IVA e a taxa da plataforma de uma dívida marcados um a um, e desfeitos (11-11-2026). Ver cobrancas-ao-profissional.ts.
+  | "parte_da_divida_paga"
+  | "parte_da_divida_desfeita"
   | "divida_quitada"
   // Um pagamento registado à mão corrigido pelo administrador: fatura e valor (04-11-2026, d9).
   | "pagamento_corrigido"

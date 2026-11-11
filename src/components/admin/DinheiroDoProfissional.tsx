@@ -112,8 +112,10 @@ export default function DinheiroDoProfissional({
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
             <p className="text-sm font-semibold text-white">Registar pagamento do profissional à CLYON</p>
             <p className="mt-1 text-xs text-slate-500">
-              Fecha as dívidas inteiras que o valor cobre, das mais antigas para as mais novas. Não mexe no
-              saldo dele: fica no registo e no histórico de cada pedido, com o seu nome e a hora.
+              Paga as partes que o valor cobre — das dívidas mais antigas para as mais novas, e em cada uma
+              o IVA antes da taxa da plataforma. Não mexe no saldo dele: fica no registo e no histórico de
+              cada pedido, com o seu nome e a hora. Para marcar uma parte de um trabalho, use Pagamentos ›
+              A receber dos profissionais.
             </p>
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">

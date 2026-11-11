@@ -333,7 +333,13 @@ export function historicoDoDinheiro(
             ? `A CLYON transferiu ${euros(v)} ao profissional${pedidoId != null ? ` pelo #${pedidoId}` : ""}.`
             : base.texto,
       });
-    } else if (a === "divida_abatida" || a === "divida_paga_pelo_profissional") {
+    } else if (
+      a === "divida_abatida" ||
+      a === "divida_paga_pelo_profissional" ||
+      // O IVA e a taxa marcados um a um, e as marcas desfeitas (11-11-2026).
+      a === "parte_da_divida_paga" ||
+      a === "parte_da_divida_desfeita"
+    ) {
       saida.push({ ...base, direccao: "profissional_para_clyon" });
     } else if (a === "divida_quitada") {
       // A linha do acerto inteiro (sem pedido); as de cada trabalho ficam no pedido.
@@ -350,6 +356,8 @@ export const ACONTECIMENTOS_DO_HISTORICO_DO_PROFISSIONAL = [
   "levantamento_pago",
   "divida_abatida",
   "divida_paga_pelo_profissional",
+  "parte_da_divida_paga",
+  "parte_da_divida_desfeita",
   "divida_quitada",
   "pagamento_recebido",
 ] as const;
