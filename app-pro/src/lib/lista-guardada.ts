@@ -1,6 +1,7 @@
 import { File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
-import { listaValida, type ListaGuardada, type Trabalho } from "./trabalhos";
+import { listaGuardadaEm } from "./guardado";
+import type { ListaGuardada } from "./trabalhos";
 
 /**
  * A ÚLTIMA LISTA DE TRABALHOS, GUARDADA NO TELEMÓVEL — versão 13.
@@ -13,7 +14,12 @@ import { listaValida, type ListaGuardada, type Trabalho } from "./trabalhos";
  * site, que é a única verdade.
  *
  * Tem nomes, telefones e moradas de clientes: fica dentro da app (o Android
- * não a deixa ler a mais ninguém) e APAGA-SE AO SAIR da conta.
+ * não a deixa ler a mais ninguém) e APAGA-SE AO SAIR da conta. Desde
+ * 11-11-2026 só os tem dos trabalhos VIVOS: de um trabalho que já acabou
+ * guarda-se o resto, sem morada, contacto nem percurso (`listaParaGuardar`).
+ *
+ * As regras estão em `guardado.ts` (puro, com testes); aqui só se diz onde
+ * é o ficheiro.
  */
 
 const NOME = "trabalhos.json";
@@ -29,36 +35,4 @@ function ficheiro(): File | null {
   }
 }
 
-/** Guarda a lista acabada de ler. Nunca lança: falhar aqui não pode estragar a lista. */
-export function guardarLista(trabalhos: Trabalho[], agora = new Date()): void {
-  const f = ficheiro();
-  if (!f) return;
-  try {
-    if (!f.exists) f.create();
-    f.write(JSON.stringify({ trabalhos, lidaEm: agora.toISOString() } satisfies ListaGuardada));
-  } catch {
-    /* sem espaço ou sem permissão: fica sem cópia, e é só isso */
-  }
-}
-
-/** A lista da última vez, ou null. Um ficheiro estragado conta como nenhum. */
-export async function lerListaGuardada(): Promise<ListaGuardada | null> {
-  const f = ficheiro();
-  if (!f) return null;
-  try {
-    if (!f.exists) return null;
-    return listaValida(JSON.parse(await f.text()));
-  } catch {
-    return null;
-  }
-}
-
-/** Ao sair da conta: os dados dos clientes não ficam no telemóvel. */
-export function apagarListaGuardada(): void {
-  const f = ficheiro();
-  try {
-    if (f?.exists) f.delete();
-  } catch {
-    /* já não estava lá */
-  }
-}
+export const { guardarLista, lerListaGuardada, apagarListaGuardada } = listaGuardadaEm(ficheiro);

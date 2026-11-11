@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { ErroDaApi, pedir } from "../lib/api";
-import { fasesDe, juntarNovidades, novidadesEntre, type MeusPedidos, type Novidade, type Trabalho } from "../lib/trabalhos";
+import { fasesDe, juntarNovidades, mapasAManter, novidadesEntre, type MeusPedidos, type Novidade, type Trabalho } from "../lib/trabalhos";
 import { apagarListaGuardada, guardarLista, lerListaGuardada } from "../lib/lista-guardada";
+import { ficarSoComOsMapas } from "../lib/imagens-guardadas";
 
 /**
  * A LISTA DE TRABALHOS, UMA PARA A APP INTEIRA.
@@ -73,6 +74,7 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       setErro(null);
       setLidaEm(null);
       guardarLista(r.pedidos ?? []);
+      ficarSoComOsMapas(mapasAManter(lista));
     } catch (e) {
       setErro(e instanceof ErroDaApi ? e.message : "Não foi possível ler os trabalhos.");
     } finally {

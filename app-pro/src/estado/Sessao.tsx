@@ -3,6 +3,7 @@ import { ErroDaApi, pedir, quandoPerderASessao } from "../lib/api";
 import { esquecerToken, guardarToken, lerToken } from "../lib/sessao";
 import { desligarAvisos, ligarAvisosSeQuiser } from "../lib/avisos";
 import { esquecerDestino } from "../lib/destino-pendente";
+import { apagarImagensGuardadas } from "../lib/imagens-guardadas";
 
 /**
  * A SESSÃO DO PROFISSIONAL NA APP.
@@ -38,6 +39,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
 
   const sair = useCallback(async () => {
     esquecerDestino();
+    // Os mapas e as fotografias dos trabalhos não ficam no telemóvel de quem saiu.
+    apagarImagensGuardadas();
     await desligarAvisos();
     await esquecerToken();
     setLigado(false);

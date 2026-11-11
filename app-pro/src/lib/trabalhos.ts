@@ -381,12 +381,78 @@ export function sugestaoComOutraEquipa(s: Sugestao, horas: number, pessoas: numb
 /** A última lista lida do site, guardada no telemóvel (`lista-guardada.ts`, versão 13). */
 export type ListaGuardada = { trabalhos: Trabalho[]; lidaEm: string };
 
-/** Só aceita a forma que se escreveu: um ficheiro estragado conta como nenhum. */
+/**
+ * O QUE FICA GUARDADO DE UM TRABALHO QUE JÁ ACABOU — 11-11-2026.
+ *
+ * A lista guardada serve para ele chegar ao trabalho que vai fazer a seguir
+ * sem rede. De um trabalho que já acabou (confirmado, pago, arquivado,
+ * desistido, cancelado) o telemóvel não precisa de saber onde foi nem de quem
+ * era: fica o resto (o valor, as datas, a fase), sem a morada, o contacto e o
+ * percurso. Com rede, o ecrã mostra o que o site mandar.
+ */
+type DadosDeQuemFecha = Pick<
+  Trabalho,
+  "estado" | "fase" | "pedidoCancelado" | "arquivadoEm" | "confirmadoEm" | "pagoEm"
+>;
+
+/** Já não há nada para fazer neste trabalho: não é para lá que ele vai a seguir. */
+export function trabalhoFechado(t: Partial<DadosDeQuemFecha>): boolean {
+  return (
+    t.fase === "confirmado" ||
+    t.fase === "pago" ||
+    t.estado === "desistida" ||
+    t.estado === "morta" ||
+    t.pedidoCancelado === true ||
+    !!t.arquivadoEm ||
+    !!t.confirmadoEm ||
+    !!t.pagoEm
+  );
+}
+
+/** A lista como se guarda: os vivos inteiros, os fechados sem morada, contacto nem percurso. */
+export function listaParaGuardar(trabalhos: Trabalho[]): Trabalho[] {
+  return trabalhos.map((t) =>
+    t && typeof t === "object" && trabalhoFechado(t)
+      ? { ...t, morada: null, moradaDestino: null, contactoNome: null, contactoTelefone: null, percurso: null }
+      : t,
+  );
+}
+
+/** O texto que vai para o ficheiro — o único sítio onde ele se escreve. */
+export function textoDaListaGuardada(trabalhos: Trabalho[], lidaEm: string): string {
+  return JSON.stringify({ trabalhos: listaParaGuardar(trabalhos), lidaEm } satisfies ListaGuardada);
+}
+
+/**
+ * Só aceita a forma que se escreveu: um ficheiro estragado conta como nenhum.
+ * Uma lista guardada por uma versão anterior sai daqui já pela regra de cima.
+ */
 export function listaValida(v: unknown): ListaGuardada | null {
   if (!v || typeof v !== "object") return null;
   const o = v as { trabalhos?: unknown; lidaEm?: unknown };
   if (!Array.isArray(o.trabalhos) || typeof o.lidaEm !== "string" || Number.isNaN(Date.parse(o.lidaEm))) return null;
-  return { trabalhos: o.trabalhos as Trabalho[], lidaEm: o.lidaEm };
+  return { trabalhos: listaParaGuardar(o.trabalhos as Trabalho[]), lidaEm: o.lidaEm };
+}
+
+/**
+ * O nome do ficheiro onde a imagem de um mapa fica enquanto o trabalho está
+ * vivo (`imagens-guardadas.ts`). Só letras e algarismos: o caminho do site não
+ * vai para o nome.
+ */
+export function nomeDoMapaGuardado(mapa: string): string {
+  let h = 5381;
+  for (let i = 0; i < mapa.length; i++) h = ((h << 5) + h + mapa.charCodeAt(i)) >>> 0;
+  return `mapa-${h.toString(36)}-${mapa.length}.png`;
+}
+
+/** Os mapas que podem continuar no telemóvel: só os dos trabalhos vivos. */
+export function mapasAManter(trabalhos: Trabalho[]): string[] {
+  const nomes: string[] = [];
+  for (const t of trabalhos) {
+    const mapa = t.percurso?.mapa;
+    if (mapa && !trabalhoFechado(t)) nomes.push(nomeDoMapaGuardado(mapa));
+  }
+  return nomes;
 }
 
 // ── Arquivar e repor (as regras do `arrumar.ts` do painel) ─────────────────
