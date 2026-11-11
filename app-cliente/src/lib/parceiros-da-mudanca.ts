@@ -41,6 +41,8 @@ export type CartaoDaLista = {
   /** O selo, já escrito pela rota (ou null). */
   selo: string | null;
   nota: { media: number; avaliacoes: number; texto: string } | null;
+  /** A nota do Google (ficha confirmada pela CLYON), já escrita pela rota, com a atribuição; nunca misturada com a da CLYON. */
+  notaGoogle: { texto: string; atribuicao: string } | null;
   novo: string | null;
   fotografia: string | null;
   fazComTres: boolean;
@@ -117,6 +119,9 @@ function cartaoValido(v: unknown): CartaoDaLista | null {
   const dois = comTexto(ph["2"]);
   if (!id || !nome || !estimativa || !dois) return null;
   const nota = c.nota as { media?: unknown; avaliacoes?: unknown; texto?: unknown } | null;
+  const google = (c.notaGoogle ?? null) as { texto?: unknown; atribuicao?: unknown } | null;
+  const textoDoGoogle = google ? texto(google.texto, 80) : null;
+  const atribuicao = google ? texto(google.atribuicao, 40) : null;
   const kit = (c.kit ?? {}) as { texto?: unknown; total?: unknown };
   const foto = texto(c.fotografia, 600);
   return {
@@ -127,6 +132,8 @@ function cartaoValido(v: unknown): CartaoDaLista | null {
       nota && typeof nota.media === "number" && typeof nota.avaliacoes === "number" && texto(nota.texto)
         ? { media: nota.media, avaliacoes: nota.avaliacoes, texto: texto(nota.texto) as string }
         : null,
+    // Sem a atribuição, não se mostra (os termos do Google pedem-na).
+    notaGoogle: textoDoGoogle && atribuicao ? { texto: textoDoGoogle, atribuicao } : null,
     novo: texto(c.novo, 60),
     // Um endereço https, ou um caminho do site («/…», que o ecrã junta ao endereço do site).
     fotografia: foto && (/^https:\/\//.test(foto) || /^\/(?!\/)/.test(foto)) ? foto : null,
