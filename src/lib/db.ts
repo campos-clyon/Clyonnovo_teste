@@ -989,6 +989,16 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "mbway",
         sql: "ALTER TABLE providers ADD COLUMN mbway VARCHAR(20) NULL DEFAULT NULL",
       },
+      /*
+       * QUANDO MUDARAM O IBAN, O TITULAR OU O MB WAY — d1, 12-11-2026.
+       * Só acrescenta: as contas de antes ficam a NULL (não se sabe), e só
+       * uma mudança a sério daqui para a frente a preenche. Ver
+       * `dados-de-pagamento-mudados.ts`.
+       */
+      {
+        name: "ibanMudadoEm",
+        sql: "ALTER TABLE providers ADD COLUMN ibanMudadoEm DATETIME NULL DEFAULT NULL",
+      },
 
       // ── Morada fiscal (19-08-2026) ───────────────────────────────────────
       // A da declaração de actividade, que pode não ser onde ele trabalha. Vai
@@ -8106,13 +8116,22 @@ export async function criarLevantamento(dados: {
 
 /** Os pedidos de transferência, para o backoffice. */
 export async function levantamentosParaAdmin(): Promise<
-  Array<LevantamentoNaBase & { profissionalNome: string | null }>
+  Array<
+    LevantamentoNaBase & {
+      profissionalNome: string | null;
+      profissionalResponsavel: string | null;
+      ibanMudadoEm: Date | string | null;
+    }
+  >
 > {
   await ensureLevantamentosTable();
+  // A coluna `ibanMudadoEm` nasce no esquema dos providers (d1, 12-11-2026).
+  await ensureProvidersSchema();
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = await pool.execute(
-    `SELECT l.*, p.name AS profissionalNome
+    `SELECT l.*, p.name AS profissionalNome, p.responsavel AS profissionalResponsavel,
+            p.ibanMudadoEm AS ibanMudadoEm
        FROM levantamentos l
        LEFT JOIN providers p ON p.id = l.providerId
       ORDER BY FIELD(l.estado, 'pedido', 'pago', 'recusado'), l.createdAt DESC
@@ -8288,7 +8307,7 @@ export async function perfilDoProfissional(
             moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo, fotoViaturaUrl,
             categorias, zonas, raioKm,
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
-            guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, createdAt,
+            guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, ibanMudadoEm, responsavel, createdAt,
             custoKm, custoHoraPessoa, pessoasNaEquipa,
             custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent,
             whatsappAvisos, whatsappAvisosEm
@@ -8382,6 +8401,19 @@ export async function actualizarPerfilDoProfissional(
     if (!colunas.includes(coluna)) continue;
     quedas.push(`${em} = IF(${coluna} <=> ?, ${em}, NULL)`, `${por} = IF(${coluna} <=> ?, ${por}, NULL)`);
     valoresDasQuedas.push(dados[coluna], dados[coluna]);
+  }
+  /*
+   * A DATA DA MUDANÇA DOS DADOS DE PAGAMENTO — d1, 12-11-2026. Quando o IBAN,
+   * o titular ou o MB WAY mudam DE FACTO, `ibanMudadoEm` passa a agora; gravar
+   * o mesmo valor deixa-a como estava. Antes na lista do SET, como as quedas:
+   * compara com o valor antigo.
+   */
+  const dePagamento = (["iban", "ibanTitular", "mbway"] as const).filter((c) => colunas.includes(c));
+  if (dePagamento.length > 0) {
+    quedas.push(
+      `ibanMudadoEm = IF(${dePagamento.map((c) => `${c} <=> ?`).join(" AND ")}, ibanMudadoEm, UTC_TIMESTAMP())`,
+    );
+    valoresDasQuedas.push(...dePagamento.map((c) => dados[c]));
   }
 
   await pool.execute(

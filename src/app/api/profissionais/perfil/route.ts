@@ -12,7 +12,20 @@ import {
   custosFixosDeJson,
   trabalhosConcluidosDoProfissional,
   tarifaDasMudancasDe,
+  palavraPasseGuardada,
 } from "@/lib/db";
+import { palavraPasseConfere } from "@/lib/profissional-auth";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
+import {
+  CAMPOS_DE_PAGAMENTO,
+  CAMPO_DA_PALAVRA_PASSE,
+  CODIGOS_DA_PALAVRA_PASSE,
+  camposDePagamentoMudados,
+  mudancaDosDadosDePagamento,
+  titularBateComONome,
+} from "@/lib/dados-de-pagamento-mudados";
+import { enviarEmailDosDadosDePagamento } from "@/lib/email-dados-de-pagamento-do-profissional";
 import { precosDasMudancasNaConta } from "@/lib/precos-das-mudancas-do-profissional";
 import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import { TIPOS_DE_VEICULO, tipoDeVeiculoValido } from "@/lib/convite-profissional";
@@ -186,6 +199,21 @@ export async function GET(req: NextRequest) {
         temIban: Boolean(iban),
         ibanTitular: p.ibanTitular ?? "",
         mbway: p.mbway ?? "",
+        /*
+         * QUANDO MUDARAM OS DADOS DE PAGAMENTO, e se o titular bate com o nome
+         * (d1, 12-11-2026) — o painel e a app mostram o mesmo aviso que os
+         * Levantamentos do backoffice. Null = não se sabe (contas de antes).
+         */
+        ibanMudadoEm: instanteDaBase(p.ibanMudadoEm as string | Date | null)?.toISOString() ?? null,
+        ibanMudadoRecente:
+          mudancaDosDadosDePagamento(instanteDaBase(p.ibanMudadoEm as string | Date | null))?.recente ?? false,
+        titularBateComONome: iban
+          ? titularBateComONome(
+              p.ibanTitular as string | null,
+              p.name as string | null,
+              p.responsavel as string | null,
+            )
+          : null,
         desde: p.createdAt ?? null,
         avaliacao: reputacao.media,
         quantasAvaliacoes: reputacao.quantas,
@@ -604,10 +632,55 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
+    const mexeNoPagamento = CAMPOS_DE_PAGAMENTO.some((c) => c in mudancas);
+    const guardado =
+      tocouNaGuia || mexeNoPagamento ? await perfilDoProfissional(sessao.providerId) : undefined;
+
+    /*
+     * O IBAN, O TITULAR E O MB WAY PEDEM A PALAVRA-PASSE — d1, 12-11-2026.
+     *
+     * Só quando mudam DE FACTO: o painel e a app mandam o titular e o MB WAY em
+     * cada gravação da conta, e gravar o mesmo valor não é mudar. Os outros
+     * campos do perfil continuam sem palavra-passe. O 401 leva um `codigo`,
+     * para o ecrã não o confundir com a sessão que expirou (que vem sem ele).
+     */
+    const pagamentoMudado = mexeNoPagamento ? camposDePagamentoMudados(guardado, mudancas) : [];
+    if (pagamentoMudado.length > 0) {
+      const limite = await limitarRotaPublica(req, "profissional-perfil-pagamento", 10, 600);
+      if (limite.erro) return limite.erro;
+
+      const palavraPasse = corpo[CAMPO_DA_PALAVRA_PASSE];
+      if (typeof palavraPasse !== "string" || !palavraPasse) {
+        return NextResponse.json(
+          {
+            error: "Para mudar o IBAN, o titular ou o MB WAY, confirme com a sua palavra-passe.",
+            codigo: CODIGOS_DA_PALAVRA_PASSE.emFalta,
+          },
+          { status: 401 },
+        );
+      }
+      const hash = await palavraPasseGuardada(sessao.providerId);
+      if (!hash) {
+        return NextResponse.json(
+          {
+            error:
+              "A sua conta ainda não tem palavra-passe. Peça-a em «Esqueci-me da palavra-passe», na página de entrada, e volte a gravar.",
+            codigo: CODIGOS_DA_PALAVRA_PASSE.semPalavraPasse,
+          },
+          { status: 401 },
+        );
+      }
+      if (!(await palavraPasseConfere(palavraPasse, hash))) {
+        return NextResponse.json(
+          { error: "A palavra-passe não confere.", codigo: CODIGOS_DA_PALAVRA_PASSE.errada },
+          { status: 401 },
+        );
+      }
+    }
+
     // O painel manda a guia em cada gravação da Faturação: o selo só cai se
     // ela mudou mesmo (`guia-mudou.ts`, 20-10-2026).
-    const guiaMudou =
-      tocouNaGuia && guiaMudouDeFacto(await perfilDoProfissional(sessao.providerId), mudancas);
+    const guiaMudou = tocouNaGuia && guiaMudouDeFacto(guardado, mudancas);
 
     /*
      * A FOTOGRAFIA DE ANTES TEM DE SAIR DO BLOB.
@@ -636,7 +709,29 @@ export async function PUT(req: NextRequest) {
     // cliente vê tem de continuar a garantir um número que alguém confirmou.
     if (guiaMudou) await invalidarVerificacaoDaGuia(sessao.providerId);
 
-    return NextResponse.json({ ok: true, guiaPorVerificar: guiaMudou });
+    /*
+     * O EMAIL «SE NÃO FOI VOCÊ, FALE CONNOSCO» — d1, 12-11-2026. A data já
+     * ficou gravada no UPDATE (`ibanMudadoEm`). Um email que não sai não
+     * desfaz a gravação: fica no registo.
+     */
+    if (pagamentoMudado.length > 0) {
+      const para = typeof guardado?.email === "string" ? guardado.email : "";
+      const ibanNovo = typeof mudancas.iban === "string" ? mudancas.iban : null;
+      const mbwayNovo = typeof mudancas.mbway === "string" ? mudancas.mbway : null;
+      const enviado = await enviarEmailDosDadosDePagamento({
+        para,
+        nome: String(mudancas.name ?? guardado?.name ?? ""),
+        campos: pagamentoMudado,
+        ibanFinal: ibanNovo ? ibanNovo.slice(-4) : null,
+        mbwayFinal: mbwayNovo ? mbwayNovo.slice(-3) : null,
+        em: new Date(),
+      }).catch(() => false);
+      if (!enviado) {
+        console.error("[profissionais/perfil PUT] o email da mudança dos dados de pagamento não saiu", sessao.providerId);
+      }
+    }
+
+    return NextResponse.json({ ok: true, guiaPorVerificar: guiaMudou, dadosDePagamentoMudados: pagamentoMudado });
   } catch (error) {
     console.error("[profissionais/perfil PUT]", error);
     return NextResponse.json({ error: "Não foi possível guardar" }, { status: 500 });

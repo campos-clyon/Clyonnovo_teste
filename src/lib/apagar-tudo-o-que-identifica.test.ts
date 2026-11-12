@@ -72,7 +72,7 @@ const IDENTIFICAM = [
   "baseLng",
   // O Gmail do telemóvel dele, para o teste da CLYON Pro (27-10-2026): é um contacto.
   "gmailDoTeste",
-  // A ficha do Google dele (11-11-2026): leva ao nome e � morada da empresa.
+  // A ficha do Google dele (11-11-2026): leva ao nome e � morada da empresa.
   "googlePlaceId",
   "googlePlaceIdProposto",
 ] as const;
@@ -143,6 +143,9 @@ const NAO_IDENTIFICAM = new Set([
   // Quando a app abriu, com que versão, e quando escreveu o Gmail (27-10-2026):
   // datas e um número de versão, sem nome, email nem telefone.
   "appAbertaEm", "appVersao", "gmailDoTesteEm",
+  // Quando mudaram o IBAN, o titular ou o MB WAY (12-11-2026, d1): uma data,
+  // e o IBAN, o titular e o MB WAY já se limpam.
+  "ibanMudadoEm",
 ]);
 
 /** As colunas que `ensureProvidersSchema` acrescenta a `providers`. */

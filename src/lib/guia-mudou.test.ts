@@ -34,9 +34,12 @@ describe("a guia mudou mesmo?", () => {
 
   it("o painel e o backoffice decidem pela mesma regra, antes de gravar", () => {
     const ROTA = ler("src/app/api/profissionais/perfil/route.ts");
-    expect(ROTA).toContain("guiaMudouDeFacto(await perfilDoProfissional(sessao.providerId), mudancas)");
+    // Desde 12-11-2026 (d1) o «antes» lê-se uma vez, para a guia e para os dados de pagamento.
+    expect(ROTA).toContain("await perfilDoProfissional(sessao.providerId) : undefined");
+    expect(ROTA).toContain("guiaMudouDeFacto(guardado, mudancas)");
     // Ler o «antes» tem de vir antes do UPDATE — depois já é o «depois».
-    expect(ROTA.indexOf("guiaMudouDeFacto(await")).toBeLessThan(
+    expect(ROTA.indexOf("guiaMudouDeFacto(guardado")).toBeGreaterThan(ROTA.indexOf("await perfilDoProfissional(sessao.providerId) : undefined"));
+    expect(ROTA.indexOf("guiaMudouDeFacto(guardado")).toBeLessThan(
       ROTA.indexOf("await actualizarPerfilDoProfissional(sessao.providerId, mudancas)"),
     );
     expect(ROTA).not.toMatch(/guiaMudou = true/);

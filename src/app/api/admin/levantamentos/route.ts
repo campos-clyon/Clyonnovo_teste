@@ -5,6 +5,8 @@ import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { formatarIban } from "@/lib/iban";
 import { abatimentosDosLevantamentos } from "@/lib/pagamentos-na-base";
 import { abaterDividasNoSaldo, previsaoDoAbatimento } from "@/lib/abater-dividas-no-saldo";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
+import { mudancaDosDadosDePagamento, titularBateComONome } from "@/lib/dados-de-pagamento-mudados";
 
 export const runtime = "nodejs";
 
@@ -62,6 +64,15 @@ export async function GET(req: NextRequest) {
         createdAt: l.createdAt,
         dividas: l.estado === "pedido" ? (previsoes.get(Number(l.providerId)) ?? null) : null,
         abatido: abatidos.get(Number(l.id)) ?? [],
+        /*
+         * ANTES DE TRANSFERIR — d1, 12-11-2026: há quantos dias mudaram os
+         * dados de pagamento (forte nos primeiros 7) e se o titular do
+         * levantamento bate com o nome da conta (ou do responsável). Ver
+         * `dados-de-pagamento-mudados.ts`.
+         */
+        ibanMudadoEm: instanteDaBase(l.ibanMudadoEm)?.toISOString() ?? null,
+        ibanMudado: mudancaDosDadosDePagamento(instanteDaBase(l.ibanMudadoEm)),
+        titularBate: titularBateComONome(l.titular, l.profissionalNome, l.profissionalResponsavel),
       })),
     });
   } catch (error) {

@@ -349,6 +349,12 @@ export type Perfil = {
   iban: string;
   temIban: boolean;
   ibanTitular: string;
+  /** Quando mudaram o IBAN, o titular ou o MB WAY (d1, 12-11-2026). Null = não se sabe. */
+  ibanMudadoEm?: string | null;
+  /** Mudaram há menos de 7 dias. */
+  ibanMudadoRecente?: boolean;
+  /** O titular bate com o nome da conta? Null sem IBAN ou sem nome para conferir. */
+  titularBateComONome?: boolean | null;
   desde: string | null;
   /** Média das avaliações, ou null enquanto não houver nenhuma. */
   avaliacao: number | null;

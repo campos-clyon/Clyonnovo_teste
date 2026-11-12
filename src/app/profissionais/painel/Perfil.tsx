@@ -15,6 +15,8 @@ import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/palavra-passe-minima";
+import { haQuantoTempo, mudancaDosDadosDePagamento } from "@/lib/dados-de-pagamento-mudados";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
   RUBRICAS_DOS_CUSTOS_FIXOS,
   custosFixosPorTrabalhoDe,
@@ -92,6 +94,44 @@ function EtiquetaDoCusto({ texto, falta }: { texto: string; falta?: Falta }) {
       {texto}
       {falta && <PorPreencher dica={falta.porque} />}
     </span>
+  );
+}
+
+/**
+ * OS DADOS DE PAGAMENTO MUDARAM — d1, 12-11-2026.
+ *
+ * O mesmo que os Levantamentos do backoffice mostram antes de transferir:
+ * «IBAN mudado há X dias» (forte nos primeiros 7) e o titular que não bate com
+ * o nome. Se não foi ele, é aqui que dá por isso.
+ */
+function AvisoDosDadosDePagamento({ em, titularBate }: { em: string | null; titularBate: boolean | null }) {
+  const mudanca = mudancaDosDadosDePagamento(instanteDaBase(em));
+  if (!mudanca && titularBate !== false) return null;
+  return (
+    <div className="space-y-2">
+      {mudanca && (
+        <p
+          className={`flex items-start gap-2 rounded-xl border px-4 py-3 text-sm ${
+            mudanca.recente ? "border-amber-300 bg-amber-50 text-amber-900" : "border-slate-200 bg-slate-50 text-slate-700"
+          }`}
+        >
+          {mudanca.recente && <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}
+          <span>
+            <strong className="font-semibold">IBAN mudado {haQuantoTempo(mudanca.dias)}</strong> (IBAN, titular ou MB
+            WAY). Se não reconhece esta mudança, fale connosco já.
+          </span>
+        </p>
+      )}
+      {titularBate === false && (
+        <p className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            <strong className="font-semibold">O titular não bate com o nome da conta.</strong> Confirme o nome tal como
+            está no banco: uma transferência para um nome que não confere pode ser devolvida.
+          </span>
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -224,6 +264,8 @@ export default function Perfil({
   const [nova, setNova] = useState("");
   const [aVer, setAVer] = useState(false);
   const [aApagarConta, setAApagarConta] = useState(false);
+  // A palavra-passe que confirma uma mudança do IBAN, do titular ou do MB WAY (d1, 12-11-2026).
+  const [palavraPasseDoBanco, setPalavraPasseDoBanco] = useState("");
 
   /*
    * Cada secção responde por si.
@@ -259,14 +301,19 @@ export default function Perfil({
         // Uma sessão que expirou não é um erro do formulário. Dizer-lhe
         // "Não autenticado" ao lado dos campos deixava-a a procurar o que
         // tinha escrito de errado — quando o que precisa é de voltar a entrar.
+        /*
+         * O 401 da palavra-passe dos dados de pagamento (d1, 12-11-2026) traz
+         * um `codigo` e diz o que falta; o 401 sem ele é a sessão que expirou.
+         */
         setErro(
-          res.status === 401
+          res.status === 401 && !r.codigo
             ? "A sua sessão expirou. Volte a entrar e grave outra vez."
             : (r.error ?? "Não foi possível guardar."),
         );
         return;
       }
       setGravadoAs(new Date());
+      setPalavraPasseDoBanco("");
       onGravado();
     } catch {
       setErro("Sem ligação. O que escreveu não se perdeu — tente outra vez.");
@@ -1102,6 +1149,16 @@ export default function Perfil({
               </p>
             )}
 
+            {/*
+              O MESMO AVISO DOS LEVANTAMENTOS DO BACKOFFICE — d1, 12-11-2026.
+              Quando mudaram os dados de pagamento (forte nos primeiros 7 dias),
+              e se o titular não bate com o nome da conta.
+            */}
+            <AvisoDosDadosDePagamento
+              em={perfil.ibanMudadoEm ?? null}
+              titularBate={perfil.titularBateComONome ?? null}
+            />
+
             <Campo
               etiqueta={dados.temIban ? "Novo IBAN" : "IBAN"}
               /* O triângulo só aqui, e não também no MB WAY: são dois caminhos
@@ -1156,6 +1213,27 @@ export default function Perfil({
               />
             </Campo>
 
+            {/*
+              A PALAVRA-PASSE CONFIRMA A MUDANÇA — d1, 12-11-2026. Quem apanhasse
+              a sessão aberta trocava o IBAN e o levantamento seguinte ia para
+              outra pessoa. Gravar o mesmo valor não a pede.
+            */}
+            <Campo
+              etiqueta="A sua palavra-passe"
+              ajuda="Só é pedida quando muda o IBAN, o titular ou o MB WAY. Enviamos-lhe um email a confirmar a mudança."
+            >
+              <input
+                className={CAIXA}
+                type="password"
+                value={palavraPasseDoBanco}
+                onChange={(e) => {
+                  setPalavraPasseDoBanco(e.target.value);
+                  setErro("");
+                }}
+                autoComplete="current-password"
+              />
+            </Campo>
+
             <Guardar
               onClick={() => {
                 /*
@@ -1181,6 +1259,8 @@ export default function Perfil({
                   ...(porTocar ? {} : { iban: dados.iban }),
                   ibanTitular: dados.ibanTitular,
                   mbway: dados.mbway,
+                  // Só conta quando o IBAN, o titular ou o MB WAY mudam (d1, 12-11-2026).
+                  ...(palavraPasseDoBanco ? { palavraPasse: palavraPasseDoBanco } : {}),
                 });
               }}
               rotulo="Guardar conta"

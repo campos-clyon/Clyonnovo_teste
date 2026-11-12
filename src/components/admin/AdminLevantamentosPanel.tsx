@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { Check, Copy, Loader2, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Loader2, RefreshCw, X } from "lucide-react";
+import { haQuantoTempo } from "@/lib/dados-de-pagamento-mudados";
 import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import {
   AGRUPAMENTOS,
@@ -57,6 +58,13 @@ type Levantamento = {
   dividas?: { aPagarAClyon: number; abate: number; ficaPorPagar: number } | null;
   /** JÁ TRANSFERIDO: as dívidas abatidas no saldo com este levantamento. */
   abatido?: Array<{ negociacaoId: number; pedidoId: number; valor: number }>;
+  /**
+   * ANTES DE TRANSFERIR (d1, 12-11-2026): quando mudaram o IBAN, o titular ou o
+   * MB WAY (null = não se sabe, contas de antes) e se o titular bate com o nome.
+   */
+  ibanMudadoEm?: string | null;
+  ibanMudado?: { dias: number; recente: boolean } | null;
+  titularBate?: boolean | null;
 };
 
 type Separador = "pedido" | "pago" | "recusado";
@@ -200,6 +208,11 @@ export default function AdminLevantamentosPanel() {
       !window.confirm(
         `Marcar como transferido: ${euros(l.valor)} para ${l.profissionalNome ?? `#${l.providerId}`}?\n\n` +
           `IBAN ${l.iban}\n\n` +
+          // Os sinais de uma conta tomada, ditos ANTES de transferir (d1, 12-11-2026).
+          (l.ibanMudado?.recente
+            ? `ATENÇÃO: IBAN mudado ${haQuantoTempo(l.ibanMudado.dias)}. Confirme com o profissional por telefone antes de transferir.\n\n`
+            : "") +
+          (l.titularBate === false ? `ATENÇÃO: o titular não bate com o nome do profissional.\n\n` : "") +
           // A dívida abatida diz-se ANTES, para ninguém se surpreender depois.
           (l.dividas && l.dividas.abate > 0
             ? `Deve ${euros(l.dividas.aPagarAClyon)} à CLYON: abatem-se ${euros(l.dividas.abate)} no saldo que fica.\n\n`
@@ -510,6 +523,32 @@ export default function AdminLevantamentosPanel() {
                         <div className="min-w-0 flex-1">
                           <p className="break-all font-mono text-xs text-slate-200">{l.iban}</p>
                           {l.titular && <p className="text-[11px] text-slate-400">{l.titular}</p>}
+                          {/*
+                            ANTES DE TRANSFERIR — d1, 12-11-2026. Um IBAN mudado
+                            há menos de 7 dias é o sinal de uma conta tomada por
+                            outra pessoa: marca forte. E o titular que não bate
+                            com o nome é transferência devolvida, ou para outro.
+                          */}
+                          {l.ibanMudado && (
+                            <p
+                              className={`mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] ${
+                                l.ibanMudado.recente
+                                  ? "bg-red-500/20 font-bold text-red-200 ring-1 ring-red-500/60"
+                                  : "text-slate-400"
+                              }`}
+                              title="Mudou o IBAN, o titular ou o MB WAY"
+                            >
+                              {l.ibanMudado.recente && <AlertTriangle className="h-3 w-3" aria-hidden="true" />}
+                              IBAN mudado {haQuantoTempo(l.ibanMudado.dias)}
+                              {l.ibanMudadoEm ? ` (${quandoCurto(l.ibanMudadoEm)})` : ""}
+                            </p>
+                          )}
+                          {l.titularBate === false && (
+                            <p className="mt-1 inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-amber-200">
+                              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                              {l.titular ? "o titular não bate com o nome" : "sem titular para conferir com o nome"}
+                            </p>
+                          )}
                         </div>
                         <button
                           onClick={() => {

@@ -545,6 +545,8 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
     "src/lib/email-aprovacao-profissional.ts",
     // O que o parceiro escolhido lê no painel e na app Pro: «Confirmo: faço por X/h + IVA», o prazo e os erros (11-11-2026, d6).
     "src/lib/escolhidos-sem-resposta-do-escolhido.ts",
+    // O email ao profissional quando mudam o IBAN, o titular ou o MB WAY (12-11-2026, d1).
+    "src/lib/email-dados-de-pagamento-do-profissional.ts",
   ]).has(f);
 /*
  * Entre a equipa: a base, as contas, as notas e as instruções que só a equipa
