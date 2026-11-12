@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   falhasDoEnvio,
@@ -179,9 +179,13 @@ describe("d9 (2) — o envio de um ficheiro: a segunda via e a frase certa", () 
       ].sort(),
     );
     expect(pacote.dependencies["@react-native-community/netinfo"]).toBeUndefined();
-    // O expo-file-system da app já traz o módulo antigo (o do uploadAsync), nos dois sistemas.
-    const modulo = ler("app-pro/node_modules/expo-file-system/expo-module.config.json");
-    expect(modulo).toContain("expo.modules.filesystem.legacy.FileSystemLegacyModule");
+  });
+
+  // O expo-file-system da app já traz o módulo antigo (o do uploadAsync). Só onde os pacotes da app estão
+  // instalados: a CI do site não instala app-pro/node_modules (como o teste do AbortSignal na versao-14).
+  const MODULO = join(process.cwd(), "app-pro/node_modules/expo-file-system/expo-module.config.json");
+  it.runIf(existsSync(MODULO))("o expo-file-system instalado traz o módulo do uploadAsync", () => {
+    expect(readFileSync(MODULO, "utf8")).toContain("expo.modules.filesystem.legacy.FileSystemLegacyModule");
   });
 });
 
