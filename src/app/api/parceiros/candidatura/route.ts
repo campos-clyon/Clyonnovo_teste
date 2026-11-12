@@ -15,6 +15,7 @@ import {
   MENSAGEM_SEM_FOTOGRAFIA_NA_APP,
 } from "@/lib/fotografias-da-carrinha";
 import { apagarFotosDoBlob } from "@/lib/db";
+import { separarErrosDaCandidatura } from "@/lib/campos-da-candidatura";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,7 +126,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (erros.length > 0 || !fotografias.ok) {
-    return NextResponse.json({ erros }, { status: 400 });
+    /*
+     * UM ERRO SEM SÍTIO NO ECRÃ VAI COMO MENSAGEM GERAL — 12-11-2026 (d9).
+     *
+     * O site e a app mostram os erros por baixo dos campos que conhecem
+     * (`campos-da-candidatura.ts`), e quando há erros por campo ignoram a
+     * mensagem geral. Um campo que não está na lista ficava calado, e o
+     * candidato lia «falta» sem nada assinalado. Com ou sem o cabeçalho da app,
+     * esse erro vai em `error`, que os dois mostram.
+     */
+    const { porCampo, geral } = separarErrosDaCandidatura(erros);
+    if (porCampo.length === 0) {
+      return NextResponse.json(
+        { error: geral ?? "Não foi possível enviar a candidatura. Reveja o que escreveu e tente outra vez." },
+        { status: 400 },
+      );
+    }
+    return NextResponse.json(geral ? { erros: porCampo, error: geral } : { erros: porCampo }, { status: 400 });
   }
 
   try {

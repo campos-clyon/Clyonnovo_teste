@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Camera, CheckCircle2, Loader2, X } from "lucide-react";
 import { CATEGORIAS_DOS_PROFISSIONAIS } from "@/lib/service-categories";
@@ -14,6 +14,13 @@ import {
   MENSAGEM_SEM_FOTOGRAFIA,
   ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA,
 } from "@/lib/fotografias-da-carrinha";
+import {
+  camposComErro,
+  idDoCampo,
+  resumoDoQueFalta,
+  separarErrosDaCandidatura,
+  type ErroDaCandidatura,
+} from "@/lib/campos-da-candidatura";
 
 /**
  * O tecto do Vercel é 4,5 MB de corpo; abaixo disto, com folga. A fotografia
@@ -58,10 +65,36 @@ export default function FormularioDeCandidatura() {
   const [aJuntar, setAJuntar] = useState(false);
 
   const [aEnviar, setAEnviar] = useState(false);
-  const [erros, setErros] = useState<Array<{ campo: string; mensagem: string }>>([]);
+  const [erros, setErros] = useState<ErroDaCandidatura[]>([]);
+  /* Sobe a cada envio recusado: é o sinal para o ecrã descer até ao primeiro campo com erro. */
+  const [pedidoDeFoco, setPedidoDeFoco] = useState(0);
   const [feito, setFeito] = useState(false);
 
   const erroDe = (campo: string) => erros.find((e) => e.campo === campo)?.mensagem;
+
+  /*
+   * DESCER ATÉ AO PRIMEIRO CAMPO COM ERRO, E FOCÁ-LO — 12-11-2026 (d9).
+   *
+   * Só depois de um envio recusado (`pedidoDeFoco`), e não a cada erro que
+   * muda: escolher um serviço limpa o erro dele, e o ecrã não pode saltar
+   * para outro campo enquanto a pessoa escreve.
+   */
+  useEffect(() => {
+    if (pedidoDeFoco === 0) return;
+    const primeiro = camposComErro(erros)[0];
+    if (!primeiro) return;
+    const caixa = document.getElementById(idDoCampo(primeiro));
+    if (!caixa) return;
+    caixa.scrollIntoView({ behavior: "smooth", block: "center" });
+    const alvo = caixa.querySelector<HTMLElement>("input, select, textarea, button") ?? caixa;
+    alvo.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidoDeFoco]);
+
+  function recusar(lista: ErroDaCandidatura[]) {
+    setErros(lista);
+    setPedidoDeFoco((n) => n + 1);
+  }
 
   function alternar(id: string) {
     setServicos((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -119,7 +152,7 @@ export default function FormularioDeCandidatura() {
     setErros([]);
     // Sem fotografia, a candidatura não segue — e o servidor recusa-a na mesma.
     if (fotografias.length === 0) {
-      setErros([{ campo: "fotografias", mensagem: MENSAGEM_SEM_FOTOGRAFIA }]);
+      recusar([{ campo: "fotografias", mensagem: MENSAGEM_SEM_FOTOGRAFIA }]);
       return;
     }
     setAEnviar(true);
@@ -149,17 +182,34 @@ export default function FormularioDeCandidatura() {
       // e a pessoa lia "Sem ligação" com a ligação perfeita.
       const dados = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErros(
-          Array.isArray(dados.erros) && dados.erros.length > 0
-            ? dados.erros
-            : [
+        /*
+         * Os erros com sítio no ecrã vão para os campos; os de um campo que o
+         * ecrã não conhece, e a mensagem geral da rota, vão por baixo do botão.
+         * Antes, havendo erros por campo, a mensagem geral perdia-se.
+         */
+        const { porCampo, geral } = separarErrosDaCandidatura(
+          Array.isArray(dados.erros)
+            ? (dados.erros as unknown[]).filter(
+                (e): e is ErroDaCandidatura =>
+                  typeof (e as ErroDaCandidatura)?.campo === "string" &&
+                  typeof (e as ErroDaCandidatura)?.mensagem === "string",
+              )
+            : [],
+        );
+        const mensagemGeral = [geral, typeof dados.error === "string" ? dados.error : null]
+          .filter(Boolean)
+          .join(" ");
+        recusar([
+          ...porCampo,
+          ...(mensagemGeral || porCampo.length === 0
+            ? [
                 {
                   campo: "geral",
-                  mensagem:
-                    dados.error ?? "Não foi possível enviar a candidatura. Tente novamente dentro de momentos.",
+                  mensagem: mensagemGeral || "Não foi possível enviar a candidatura. Tente novamente dentro de momentos.",
                 },
-              ],
-        );
+              ]
+            : []),
+        ]);
         return;
       }
       setFeito(true);
@@ -210,7 +260,7 @@ export default function FormularioDeCandidatura() {
   return (
     <div className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm sm:p-6">
       <div className="space-y-4">
-        <label className="block">
+        <label id={idDoCampo("nome")} className="block scroll-mt-24">
           <span className="text-sm font-medium text-slate-700">Nome ou empresa *</span>
           {/*
             NENHUM EXEMPLO PODE SER O NOME DE UMA EMPRESA A SÉRIO.
@@ -234,7 +284,7 @@ export default function FormularioDeCandidatura() {
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
+          <label id={idDoCampo("telefone")} className="block scroll-mt-24">
             <span className="text-sm font-medium text-slate-700">Telemóvel *</span>
             <input
               value={telefone}
@@ -248,7 +298,7 @@ export default function FormularioDeCandidatura() {
             )}
           </label>
 
-          <label className="block">
+          <label id={idDoCampo("email")} className="block scroll-mt-24">
             <span className="text-sm font-medium text-slate-700">Email *</span>
             <input
               value={email}
@@ -264,7 +314,7 @@ export default function FormularioDeCandidatura() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
+          <label id={idDoCampo("cidade")} className="block scroll-mt-24">
             <span className="text-sm font-medium text-slate-700">De onde trabalha *</span>
             <input
               value={cidade}
@@ -304,7 +354,7 @@ export default function FormularioDeCandidatura() {
           4; sem nenhuma, a candidatura não segue. Só a equipa as vê: não vão
           para o perfil público nem para os clientes.
         */}
-        <div>
+        <div id={idDoCampo("fotografias")} className="scroll-mt-24">
           <span className="text-sm font-medium text-slate-700">{ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA} *</span>
           <span className="mt-0.5 block text-xs text-slate-500">{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}</span>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -360,7 +410,7 @@ export default function FormularioDeCandidatura() {
           )}
         </div>
 
-        <div>
+        <div id={idDoCampo("servicos")} className="scroll-mt-24">
           <span className="text-sm font-medium text-slate-700">O que faz *</span>
           <span className="mt-0.5 block text-xs text-slate-500">
             Só lhe chegam pedidos destas categorias. Pode mudar depois.
@@ -420,8 +470,13 @@ export default function FormularioDeCandidatura() {
             {erroDe("geral")}
           </p>
         )}
-        {erros.length > 0 && !erroDe("geral") && (
-          <p className="mt-2 text-sm text-red-600">Falta preencher o que está assinalado acima.</p>
+        {/*
+          O NOME DE CADA CAMPO QUE FALTA, JUNTO AO BOTÃO — 12-11-2026 (d9).
+          «Falta preencher o que está assinalado acima» não dizia o quê, e o
+          assinalado estava fora do ecrã.
+        */}
+        {resumoDoQueFalta(erros) && (
+          <p className="mt-2 text-sm font-medium text-red-600">{resumoDoQueFalta(erros)}</p>
         )}
       </div>
 
