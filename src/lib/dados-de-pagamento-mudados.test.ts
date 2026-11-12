@@ -55,11 +55,11 @@ import {
 import { montarHtmlDosDadosDePagamento } from "./email-dados-de-pagamento-do-profissional";
 
 const IBAN_GUARDADO = "PT50000201231234567890154";
-const IBAN_NOVO = "PT78000350651234567890172";
+const IBAN_NOVO = "PT77000000000000000000000"; // inventado: só zeros, com o dígito de controlo certo
 
 const GUARDADO = {
   id: 7,
-  name: "João Pedro Silva",
+  name: "João Rui Silva",
   email: "pro@exemplo.pt",
   iban: IBAN_GUARDADO,
   ibanTitular: "João Silva",
@@ -100,7 +100,7 @@ describe("a rota do perfil pede a palavra-passe para os dados de pagamento", () 
   });
 
   it("o titular e o MB WAY pedem-na da mesma forma", async () => {
-    for (const corpo of [{ ibanTitular: "Outra Pessoa" }, { mbway: "934 000 111" }]) {
+    for (const corpo of [{ ibanTitular: "Outra Pessoa" }, { mbway: "900 000 001" }]) {
       const r = await PUT(pedido(corpo));
       expect(r.status, JSON.stringify(corpo)).toBe(401);
     }
@@ -120,7 +120,7 @@ describe("a rota do perfil pede a palavra-passe para os dados de pagamento", () 
     expect((await r.json()).dadosDePagamentoMudados).toEqual(["iban"]);
     expect(actualizarPerfilDoProfissional).toHaveBeenCalledWith(7, expect.objectContaining({ iban: IBAN_NOVO }));
     expect(enviarEmailDosDadosDePagamento).toHaveBeenCalledWith(
-      expect.objectContaining({ para: "pro@exemplo.pt", campos: ["iban"], ibanFinal: "0172" }),
+      expect.objectContaining({ para: "pro@exemplo.pt", campos: ["iban"], ibanFinal: "0000" }),
     );
   });
 
@@ -192,12 +192,12 @@ describe("as regras", () => {
   });
 
   it("o titular bate com o nome: acentos, partículas e «Lda» não contam; outra pessoa não bate", () => {
-    expect(titularBateComONome("JOAO SILVA", "João Pedro Silva")).toBe(true);
-    expect(titularBateComONome("João Pedro da Silva", "João Pedro Silva")).toBe(true);
-    expect(titularBateComONome("Mudanças Rápidas, Lda", "Mudanças Rápidas Unipessoal")).toBe(true);
-    expect(titularBateComONome("Ana Sousa", "Mudanças Rápidas Lda", "Ana Maria Sousa")).toBe(true);
-    expect(titularBateComONome("Maria Costa", "João Pedro Silva")).toBe(false);
-    expect(titularBateComONome("Silva", "João Pedro Silva")).toBe(false);
+    expect(titularBateComONome("JOAO SILVA", "João Rui Silva")).toBe(true);
+    expect(titularBateComONome("João Rui da Silva", "João Rui Silva")).toBe(true);
+    expect(titularBateComONome("Transportes Ribamar, Lda", "Transportes Ribamar unipessoal")).toBe(true);
+    expect(titularBateComONome("Ana Gomes", "Transportes Ribamar Lda", "Ana Maria Gomes")).toBe(true);
+    expect(titularBateComONome("Maria Costa", "João Rui Silva")).toBe(false);
+    expect(titularBateComONome("Silva", "João Rui Silva")).toBe(false);
     expect(titularBateComONome("", "João Silva")).toBe(false);
     expect(titularBateComONome("João Silva", null, "")).toBeNull();
   });
@@ -205,13 +205,13 @@ describe("as regras", () => {
   it("o email diz o que mudou, sem o IBAN inteiro, e «se não reconhece a mudança, fale connosco»", () => {
     const html = montarHtmlDosDadosDePagamento({
       para: "pro@exemplo.pt",
-      nome: "João Pedro Silva",
+      nome: "João Rui Silva",
       campos: ["iban", "ibanTitular"],
-      ibanFinal: "0172",
+      ibanFinal: "0000",
       em: new Date("2026-11-12T14:30:00Z"),
     });
     expect(html).toContain("IBAN e titular da conta");
-    expect(html).toContain("terminado em 0172");
+    expect(html).toContain("terminado em 0000");
     expect(html).not.toContain(IBAN_NOVO);
     expect(html).toContain("Se não reconhece esta mudança, fale connosco");
     expect(html).toContain("12/11/2026 · 14:30");

@@ -117,7 +117,7 @@ function palavrasDoNome(nome: string): string[] {
  * Um nome que não bate com o IBAN é transferência devolvida — ou dinheiro para
  * outra pessoa. Bate quando um dos nomes (o da conta, ou o do responsável de
  * uma empresa) e o titular têm as mesmas palavras, ou todas as do mais curto
- * estão no outro, com pelo menos duas («João Silva» bate com «João Pedro
+ * estão no outro, com pelo menos duas («João Silva» bate com «João Rui
  * Silva»). Acentos, maiúsculas, «de/da/dos» e «Lda»/«Unipessoal» não contam.
  *
  * Sem titular: não bate (não há com que conferir). Sem nome nenhum: `null` —
