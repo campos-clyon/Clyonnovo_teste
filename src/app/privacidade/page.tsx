@@ -11,6 +11,12 @@ import {
   DIAS_DOS_ERROS_DA_APP,
   MESES_ATE_ANONIMIZAR_O_ARQUIVO,
 } from "@/lib/retencao";
+/* 12-11-2026 (d6): a transferência, a folha da mudança e a lista pública — números e nomes das constantes. */
+import { LIMITE_DA_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
+import { TEXTOS_DOS_PRECOS_DAS_MUDANCAS } from "@/lib/precos-das-mudancas-do-profissional";
+
+/** «700 €» — o limite da transferência, sem cêntimos quando é redondo. */
+const LIMITE_EM_EUROS = `${String(Math.round(LIMITE_DA_TRANSFERENCIA)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} €`;
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
@@ -42,7 +48,7 @@ export default function PrivacidadePage() {
             <strong>CLYON</strong> encontram-no nas secções 13 e 14.
           </p>
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 1 de novembro de 2026.
+            Última atualização: 12 de novembro de 2026.
           </p>
         </div>
       </section>
@@ -150,6 +156,18 @@ export default function PrivacidadePage() {
                     <strong>Dados de faturação (opcionais):</strong> NIF e morada de faturação
                     quando o cliente solicita recibo ou fatura.
                   </li>
+                  {/* 12-11-2026 (d6) — a transferência e a folha da mudança (Jurídico; CEO e dono). */}
+                  <li>
+                    <strong>Pagamento por transferência:</strong> nos trabalhos de {LIMITE_EM_EUROS} ou
+                    mais, com IVA, o nome do titular e a conta de onde transferiu, como aparecem no
+                    extrato da CLYON, e a conta para a devolução, se a houver.
+                  </li>
+                  <li>
+                    <strong>Folha da mudança:</strong> nas mudanças com a lista de parceiros, as horas
+                    de início e de fim, as pausas, os quilómetros, o material e as localidades de origem
+                    e de destino, registados pelo parceiro, e a sua confirmação ou contestação, com o
+                    motivo.
+                  </li>
                   <li>
                     <strong>Dados técnicos:</strong> endereço IP, tipo de browser, páginas
                     visitadas — recolhidos automaticamente para análise agregada.
@@ -189,6 +207,14 @@ export default function PrivacidadePage() {
                     Gerar as referências de pagamento (MB WAY ou Multibanco), confirmar os
                     pagamentos feitos pela plataforma e entregar ao parceiro o valor que
                     lhe cabe.
+                  </li>
+                  <li>
+                    Confirmar as transferências bancárias, nos trabalhos de {LIMITE_EM_EUROS} ou
+                    mais, e fazer as devoluções a que houver lugar.
+                  </li>
+                  <li>
+                    Calcular o valor final de uma mudança com a lista de parceiros pela folha que
+                    confirma, e tratar a contestação, se a fizer.
                   </li>
                   <li>
                     Emitir, através da {EMPRESA_PARCEIRA_AO_PUBLICO}, a fatura que o
@@ -414,6 +440,16 @@ export default function PrivacidadePage() {
                   <li>
                     <strong>Dados de faturação:</strong> 10 anos, conforme legislação em vigor.
                   </li>
+                  {/*
+                    12-11-2026 (d6). A folha vive na negociação (folha-da-mudanca.ts),
+                    que fica com o registo do dinheiro do trabalho. Não há campo para
+                    o IBAN da devolução: chega por escrito e usa-se só para ela.
+                  */}
+                  <li>
+                    <strong>Folha da mudança e dados da transferência:</strong> guardados como o resto
+                    do registo do dinheiro do trabalho (10 anos). A conta que nos indicar para uma
+                    devolução usa-se só para essa devolução.
+                  </li>
                   <li>
                     <strong>Cookies e dados de navegação:</strong> conforme indicado na política de
                     cookies.
@@ -571,8 +607,22 @@ export default function PrivacidadePage() {
                   </li>
                   <li>
                     <strong>Dados de faturação:</strong> NIF, morada fiscal, regime de IVA e, para o
-                    entulho e os monos, a guia de transporte de resíduos e o número de registo de
+                    entulho e os monos, a guia de transporte de resíduos e o código APA do registo de
                     transportador.
+                  </li>
+                  {/* 12-11-2026 (d5): a prova do registo e o destino do entulho; (d6) a lista pública. */}
+                  <li>
+                    <strong>Guia de resíduos:</strong> a prova do registo de transportador no SILiAmb
+                    que nos enviar (uma imagem ou um PDF, que só a administração da CLYON vê e que não
+                    mostramos a clientes) e o nome do operador onde descarrega o entulho. Servem para
+                    verificar o registo antes de poder ser contratado em trabalhos com entulho.
+                  </li>
+                  <li>
+                    <strong>Lista das mudanças:</strong> se ligar «
+                    {TEXTOS_DOS_PRECOS_DAS_MUDANCAS.interruptor}», mostramos aos clientes da sua zona o
+                    seu nome, os seus preços, a nota na CLYON e, se a sua ficha no Google tiver sido
+                    confirmada por nós, a nota e o número de avaliações do Google, que pedimos no
+                    momento e não guardamos. Desliga-se quando quiser.
                   </li>
                   <li>
                     <strong>Dados para receber e pagar:</strong> IBAN e titular da conta, para lhe
@@ -660,8 +710,8 @@ export default function PrivacidadePage() {
                   </li>
                 </ul>
                 <strong>O que se apaga:</strong> nome, email, telefone, NIF, IBAN e titular, número
-                MB WAY, morada fiscal, morada da base, número de registo de transportador, serviços,
-                fotografias da viatura, palavra-passe e os identificadores dos avisos no
+                MB WAY, morada fiscal, morada da base, número de registo de transportador e a prova
+                desse registo, serviços, fotografias da viatura, palavra-passe e os identificadores dos avisos no
                 telemóvel. Deixa de receber pedidos.
                 <br />
                 <br />
@@ -718,8 +768,9 @@ export default function PrivacidadePage() {
                     <strong>avaliações</strong> que dá aos parceiros.
                   </li>
                   <li>
-                    <strong>Pagamentos:</strong> o método escolhido (MB WAY ou Referência Multibanco) e,
-                    no MB WAY, o número para onde vai o pedido de pagamento. A app não guarda cartões.
+                    <strong>Pagamentos:</strong> o método escolhido (MB WAY, Referência Multibanco ou,
+                    nos trabalhos de {LIMITE_EM_EUROS} ou mais, transferência bancária) e, no MB WAY, o
+                    número para onde vai o pedido de pagamento. A app não guarda cartões.
                   </li>
                   <li>
                     <strong>O que fica no telemóvel:</strong> o rascunho do pedido, a última lista dos

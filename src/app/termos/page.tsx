@@ -41,6 +41,22 @@ import { MAXIMO_EM_NUMERARIO, taxasParaAForma } from "@/lib/forma-de-pagamento";
 import { IVA_INCLUIDO_DESDE_POR_EXTENSO } from "@/lib/iva-incluido";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "@/lib/divida-do-profissional";
+/*
+ * OS TERMOS DE 12-11-2026 (d5 e d6, Jurídico; CEO e dono). Os números do modelo
+ * de 02–11/11 vêm das mesmas constantes que o site lê: a transferência
+ * (`LIMITE_DA_TRANSFERENCIA`), as mudanças pela lista (`MAXIMO_DE_ESCOLHIDOS`,
+ * o prazo de `prazo-de-resposta-do-parceiro.ts`, `TAXA_DAS_MUDANCAS`, a ordem
+ * `ORDENACAO.frase`) e a guia de resíduos (`GUIA_NOS_TERMOS`).
+ * `termos-12-11.test.ts` exige-as aqui.
+ */
+import { LIMITE_DA_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
+import { DEIXAR_A_CLYON_ESCOLHER, MAXIMO_DE_ESCOLHIDOS, ORDENACAO } from "@/lib/lista-de-parceiros-da-mudanca";
+import { HORAS_PARA_RESPONDER, JANELA_DE_RESPOSTA } from "@/lib/prazo-de-resposta-do-parceiro";
+import { SAIDAS_DO_CLIENTE } from "@/lib/escolhidos-sem-resposta";
+import { TAXA_DAS_MUDANCAS_EM_PONTOS } from "@/lib/taxas-plataforma";
+import { TEXTOS_DOS_PRECOS_DAS_MUDANCAS } from "@/lib/precos-das-mudancas-do-profissional";
+import { SELO_DO_CARTAO } from "@/lib/parceiro-verificado";
+import { GUIA_NOS_TERMOS } from "@/lib/guia-de-residuos";
 
 /** As taxas mudam no backoffice: a página relê-as de hora a hora. */
 export const revalidate = 3600;
@@ -83,6 +99,7 @@ const INDICE: [string, string][] = [
   ["quem-pode", "3. Quem pode usar a plataforma"],
   ["conta", "4. Conta e formas de entrar"],
   ["como-funciona", "5. Como funciona um pedido"],
+  ["mudancas-com-lista", "5-A. Mudanças com a lista de parceiros"],
   ["precos", "6. Preços, taxas e IVA"],
   ["pagamento", "7. Pagamento"],
   ["cancelamento", "7-A. Cancelamento e reembolso"],
@@ -117,10 +134,11 @@ export default async function TermosPage() {
             que fazemos, o que não fazemos, e quem responde por cada coisa.
             Valem para clientes e para parceiros.
           </p>
-          {/* A data acompanha a última mudança do texto: 01-11-2026 (a definição
-              de parceiro e de «verificado», as avaliações ao cliente). */}
+          {/* A data acompanha a última mudança do texto: 12-11-2026 (d5 e d6: a
+              transferência, as mudanças pela lista, a dívida em partes, o
+              «verificado», a ordem da lista e a guia de resíduos). */}
           <p className="mt-3 text-sm text-slate-500">
-            Última atualização: 1 de novembro de 2026.
+            Última atualização: 12 de novembro de 2026.
           </p>
         </div>
       </section>
@@ -233,10 +251,22 @@ export default async function TermosPage() {
             combinado, o apoio ao longo do processo e, se escolher pagar pela
             plataforma, a guarda do valor até à confirmação do trabalho.
           </p>
+          {/*
+            A EXCEPÇÃO — 12-11-2026 (d6). Confirmado no código: «Deixar a CLYON
+            escolher por mim» salta a lista e o pedido segue o caminho de
+            sempre — a equipa revê-o e envia-o aos parceiros elegíveis da zona,
+            que respondem com propostas, e é o cliente quem aceita uma
+            (SimulatorThreePhaseForm.tsx, onSemLista; api/simulador/pedido). «Pedir
+            à CLYON que procure» envia-o a mais parceiros (DEPOIS_DE_CADA_SAIDA).
+          */}
           <p>
-            A CLYON não seleciona o parceiro por si, não garante que receba
-            propostas, e não garante um preço — o preço resulta do que
-            combinar com o parceiro.
+            A CLYON não seleciona o parceiro por si, salvo quando o cliente nos
+            pede que o façamos. Numa mudança, com «{DEIXAR_A_CLYON_ESCOLHER}», a
+            equipa da CLYON revê o pedido e escolhe a que parceiros da zona o
+            mostra; com «{SAIDAS_DO_CLIENTE.pedirAClyon}», envia-o a mais
+            parceiros. Também nesses casos é o cliente quem aceita a proposta. A
+            CLYON não garante que receba propostas, e não garante um preço — o
+            preço resulta do que combinar com o parceiro.
           </p>
         </S>
 
@@ -314,6 +344,40 @@ export default async function TermosPage() {
           </p>
         </S>
 
+        {/*
+          AS MUDANÇAS PELA LISTA — 12-11-2026 (d6, texto do Jurídico). O que o
+          código faz: lista-de-parceiros-da-mudanca.ts (a lista e a ordem),
+          mudanca-com-parceiros-escolhidos.ts (a tarifa congelada e o envio
+          só aos escolhidos), prazo-de-resposta-do-parceiro.ts (o prazo),
+          escolhidos-sem-resposta.ts (as três saídas), folha-da-mudanca.ts (a
+          folha, que nunca se confirma sozinha) e conta-da-mudanca.ts (a conta).
+        */}
+        <S id="mudancas-com-lista" titulo="5-A. Mudanças com a lista de parceiros">
+          <p>
+            Em algumas mudanças mostramos-lhe os parceiros disponíveis na sua
+            zona, cada um com o seu preço por hora (para 2 e para 3 pessoas), o
+            mínimo de horas, o preço do quilómetro e o do material.{" "}
+            {ORDENACAO.frase}
+          </p>
+          <p>
+            Pode escolher até {MAXIMO_DE_ESCOLHIDOS} parceiros: o pedido vai
+            logo aos escolhidos, com os preços desse momento, que ficam fixos
+            para o seu pedido. Cada escolhido tem {HORAS_PARA_RESPONDER} horas
+            para aceitar ou recusar o pedido, contadas entre as {JANELA_DE_RESPOSTA.abre}h e as{" "}
+            {JANELA_DE_RESPOSTA.fecha}h, hora de Lisboa. Se não responderem,
+            avisamo-lo e pode esperar, escolher outro parceiro da lista ou
+            pedir-nos que procuremos mais.
+          </p>
+          <p>
+            No dia, o parceiro regista a hora de chegada à origem, as pausas
+            (que não se cobram), a hora de fim, os quilómetros e o material
+            gasto. O valor final calcula-se com os preços fixados e só fica
+            fechado quando confirmar essa folha.{" "}
+            <strong>A folha nunca se confirma sozinha</strong>, e pode
+            contestá-la dizendo porquê.
+          </p>
+        </S>
+
         <S id="precos" titulo="6. Preços, taxas e IVA">
           <p>
             <strong>A estimativa é automática e indicativa.</strong> Sai de um
@@ -346,6 +410,12 @@ export default async function TermosPage() {
             fica com {quota} do que o cliente paga sem IVA, e o parceiro
             recebe o valor que propôs, descontada a taxa da plataforma. No pagamento em
             dinheiro, a divisão é a descrita no ponto 7.
+          </p>
+          <p>
+            Nas mudanças com a lista de parceiros (ponto 5-A), a taxa da
+            plataforma é de {TAXA_DAS_MUDANCAS_EM_PONTOS} e conta só sobre as
+            horas e os quilómetros, descontada do preço do parceiro. O material
+            não tem taxa, mas leva IVA.
           </p>
           <p>
             <strong>Há fatura em todas as vendas.</strong> É emitida pela{" "}
@@ -397,6 +467,22 @@ export default async function TermosPage() {
               trabalhos de valor igual ou superior a{" "}
               {eurosRedondos(MAXIMO_EM_NUMERARIO)} (Lei n.º 92/2017).
             </li>
+            {/*
+              A TRANSFERÊNCIA — 02-11-2026 (dono), escrita a 12-11-2026 (d6).
+              Cada forma de pagar é um ponto à parte desta lista, para se
+              trocar sozinha quando o modelo de pagamento mudar.
+            */}
+            <li>
+              <strong>
+                Por transferência bancária, nos trabalhos de{" "}
+                {eurosRedondos(LIMITE_DA_TRANSFERENCIA)} ou mais, com IVA.
+              </strong>{" "}
+              Transfere para a conta da CLYON indicada na página do pedido, com
+              o descritivo «Pedido #» seguido do número do pedido. O pagamento
+              só conta quando a CLYON confirmar que entrou, e até lá o trabalho
+              não começa. A partir daí, valem as regras do pagamento pela
+              plataforma.
+            </li>
           </ul>
           {/*
             O DINHEIRO ANTES DO IVA INCLUÍDO — o regime de 21-09-2026, que
@@ -434,7 +520,10 @@ export default async function TermosPage() {
               Se o pedido for cancelado antes de o trabalho estar feito, o que
               tiver pago à CLYON é-lhe devolvido pelo mesmo meio, no prazo de{" "}
               {DIAS_PARA_DEVOLVER} dias.
-            </strong>
+            </strong>{" "}
+            Se pagou por transferência, devolvemos por transferência para a
+            conta de onde o dinheiro veio, ou para outra que nos indique por
+            escrito.
           </p>
           <p>
             Depois de o trabalho estar confirmado — por si, ou automaticamente
@@ -475,6 +564,10 @@ export default async function TermosPage() {
             {" "}— e, no pagamento pela plataforma, o valor é entregue ao
             parceiro. Se alguma coisa estiver mal, fale connosco antes
             disso.
+          </p>
+          <p>
+            Nas mudanças com a lista de parceiros, o trabalho só se confirma
+            quando o cliente confirma a folha (ponto 5-A).
           </p>
           <p>
             <strong>A garantia do serviço é do parceiro.</strong> Se alguma
@@ -528,16 +621,19 @@ export default async function TermosPage() {
             A inscrição é gratuita e sujeita a aprovação. Ao inscrever-se,
             declara que exerce a actividade por conta própria, que está
             regularizado perante as Finanças e a Segurança Social, e que tem os
-            meios e as autorizações necessárias ao que se propõe fazer —
-            incluindo, quando aplicável, registo de transportador de resíduos e
-            guia de acompanhamento.
+            meios e as autorizações necessários ao que se propõe fazer.{" "}
+            {GUIA_NOS_TERMOS}
           </p>
-          {/* O QUE QUER DIZER «VERIFICADO» — 01-11-2026, decisão do dono. */}
+          {/*
+            O QUE QUER DIZER «VERIFICADO» — 01-11-2026, decisão do dono; desde
+            12-11-2026 (d6) o que o código faz: o selo só com as três
+            confirmações (parceiro-verificado.ts), e quem confirma não aprova (d10.2).
+          */}
           <p>
-            Quando dizemos que um parceiro é «verificado», queremos dizer que,
-            antes de o aprovar, a CLYON confirmou o NIF, a identidade e o
-            contacto dele. Não é uma garantia da qualidade de cada trabalho,
-            que é do parceiro (ponto 8).
+            O selo «{SELO_DO_CARTAO}» só aparece em quem tem três confirmações
+            feitas pela equipa da CLYON: o NIF, a identidade e o contacto. Quem
+            confirma não é quem aprova. O selo não garante a qualidade de cada
+            trabalho, que é do parceiro (ponto 8).
           </p>
           <p>
             <strong>Não existe qualquer relação laboral com a CLYON.</strong>{" "}
@@ -557,7 +653,11 @@ export default async function TermosPage() {
             Recebe através da CLYON o valor que propôs, descontada a taxa da plataforma —
             ou em dinheiro, no local, quando o cliente escolhe essa forma de
             pagamento: nesse caso recebe do cliente o preço com IVA incluído e
-            entrega à CLYON, por referência, o IVA e a taxa da plataforma.
+            entrega à CLYON o IVA e a taxa da plataforma, por referência MB WAY
+            ou Multibanco gerada quando o trabalho é confirmado, ou por
+            abatimento no seu saldo. Pode pagá-los em separado. O que entregar
+            ou for abatido conta primeiro para o IVA, que é do Estado, e depois
+            para a taxa, começando pelos trabalhos mais antigos.
           </p>
           {/*
             A DÍVIDA DOS TRABALHOS EM DINHEIRO — 01-10-2026, decisão do dono:
@@ -570,6 +670,23 @@ export default async function TermosPage() {
             reservado no seu saldo disponível e pode ser abatido no levantamento
             seguinte; passado o prazo, deixa de poder aceitar ou propor em
             trabalhos pagos em dinheiro até a dívida estar paga.
+          </p>
+          {/*
+            A ORDEM DA LISTA NO CONTRATO DOS PARCEIROS — 12-11-2026 (d6):
+            Regulamento (UE) 2019/1150, art. 5.º. A frase é a que o cliente lê
+            em «Como ordenamos» (ORDENACAO.frase).
+          */}
+          <p>
+            Nas mudanças com a lista de parceiros (ponto 5-A), os clientes da
+            sua zona vêem-no com os seus preços, por esta ordem:{" "}
+            {ORDENACAO.frase} Para aparecer, precisa de ter os preços gravados e
+            «{TEXTOS_DOS_PRECOS_DAS_MUDANCAS.interruptor}» ligado. Os preços que
+            o cliente vê ficam fixos para esse pedido. Se for escolhido, tem{" "}
+            {HORAS_PARA_RESPONDER} horas para aceitar ou recusar o pedido, contadas entre as{" "}
+            {JANELA_DE_RESPOSTA.abre}h e as {JANELA_DE_RESPOSTA.fecha}h, hora de
+            Lisboa. A taxa da plataforma nestas mudanças é de{" "}
+            {TAXA_DAS_MUDANCAS_EM_PONTOS} e conta só sobre as horas e os
+            quilómetros; o material que fornecer não leva taxa.
           </p>
           <p>
             Os dados do cliente que lhe são mostrados destinam-se{" "}

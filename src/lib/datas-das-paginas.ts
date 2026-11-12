@@ -25,8 +25,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 03-11-2026 (d6 v2): a recolha de móveis por peça — pequena 15 €, média 30 €, grande 50 € + IVA —
   // em vez de «40 – 120 €», nas páginas que a mostram (os cartões, as frases, as tabelas).
   // As três páginas legais dizem a data no próprio texto («Última atualização»).
-  "/termos": "2026-11-01",
-  "/privacidade": "2026-11-01",
+  "/termos": "2026-11-12",
+  "/privacidade": "2026-11-12",
   "/cookies": "2026-10-29",
 
   // 29-10-2026: «parceiro» em vez de «profissional» em tudo o que o cliente lê

@@ -87,7 +87,10 @@ describe("parceiro, empresa parceira e «verificado» nos Termos", () => {
   });
 
   it("diz o que quer dizer «verificado»: NIF, identidade e contacto", () => {
-    expect(TERMOS).toContain("a CLYON confirmou o NIF, a identidade e o\n            contacto dele");
+    // 12-11-2026 (d6): o selo só com as três confirmações, e quem confirma não aprova.
+    expect(TERMOS).toContain("só aparece em quem tem três confirmações");
+    expect(TERMOS).toContain("o NIF, a identidade e o contacto. Quem");
+    expect(TERMOS).not.toContain("antes de o aprovar, a CLYON confirmou");
   });
 });
 
@@ -103,12 +106,12 @@ describe("os erros das apps e as zonas na Privacidade", () => {
     expect(PRIVACIDADE.slice(i)).not.toMatch(/\bzonas\b/);
   });
 
-  it("a data das duas é a da publicação", () => {
-    expect(TERMOS).toContain("Última atualização: 1 de novembro de 2026.");
-    expect(PRIVACIDADE).toContain("Última atualização: 1 de novembro de 2026.");
+  it("a data das duas é a da última publicação (12-11-2026, d5 e d6)", () => {
+    expect(TERMOS).toContain("Última atualização: 12 de novembro de 2026.");
+    expect(PRIVACIDADE).toContain("Última atualização: 12 de novembro de 2026.");
     const datas = ler("src/lib/datas-das-paginas.ts");
-    expect(datas).toContain('"/termos": "2026-11-01"');
-    expect(datas).toContain('"/privacidade": "2026-11-01"');
+    expect(datas).toContain('"/termos": "2026-11-12"');
+    expect(datas).toContain('"/privacidade": "2026-11-12"');
   });
 });
 

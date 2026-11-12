@@ -77,9 +77,12 @@ describe("o que saiu, e o que entrou", () => {
      * trabalho feito passaram a opcionais (d22) — e a data foi com ele.
      * A 29-10-2026 «profissional» passou a «parceiro» (dono), e a data foi
      * outra vez com ele. A 01-11-2026 entraram a definição de parceiro e de
-     * «verificado» e as avaliações ao cliente (Jurídico; dono). Quem voltar a mudar os Termos muda a data lá e aqui.
+     * «verificado» e as avaliações ao cliente (Jurídico; dono). A 12-11-2026
+     * (d5 e d6) a transferência, as mudanças pela lista, a dívida em partes,
+     * o «verificado», a ordem da lista e a guia. Quem voltar a mudar os Termos
+     * muda a data lá e aqui.
      */
-    expect(CODIGO).toContain("Última atualização: 1 de novembro de 2026.");
+    expect(CODIGO).toContain("Última atualização: 12 de novembro de 2026.");
     expect(CODIGO.match(/Última atualização:/g)).toHaveLength(1);
     // 30-10-2026: sem fotografias; o prazo conta a partir do «Está feito».
     expect(CODIGO).toMatch(/depois de o parceiro o marcar\s+como feito/);
