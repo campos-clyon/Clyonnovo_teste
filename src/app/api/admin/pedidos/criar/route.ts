@@ -15,6 +15,7 @@ import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { emailValido } from "@/lib/inscricao-profissional";
 import { geocodificarMoradaDetalhado } from "@/lib/geocodificar";
 import { camposDoServico } from "@/lib/campos-do-servico";
+import { origemDaConversa } from "@/lib/codigo-de-origem";
 
 export const runtime = "nodejs";
 
@@ -317,6 +318,24 @@ export async function POST(req: NextRequest) {
         : valorDeArranque(corpo.valor ?? null, estimativa);
     const acesso = gerarTokenDeAcesso();
 
+    /*
+     * O CÓDIGO DE ORIGEM DA CONVERSA PASSA PARA O PEDIDO — 12-11-2026 (d8). Era
+     * só o pedido registado pela Vitória que o levava (d4); o que a equipa cria
+     * à mão a partir da mesma conversa ficava sem canal. É a mesma leitura
+     * (`origemDaConversa`): sem código, a pessoa escreveu à mão — fica de fora.
+     */
+    const conversaDeOrigem = texto(corpo.recolhaWhatsApp, 40);
+    let codigoDeOrigem: string | null = null;
+    if (conversaDeOrigem) {
+      const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+      codigoDeOrigem = origemDaConversa(
+        await mensagensDoNumeroWhatsApp(conversaDeOrigem, 300).catch((e) => {
+          console.error("[admin/pedidos/criar] conversa não lida para o código de origem:", e);
+          return [];
+        }),
+      );
+    }
+
     const linha = {
       serviceType,
       description,
@@ -352,6 +371,7 @@ export async function POST(req: NextRequest) {
         // Da conversa de WhatsApp conta como WhatsApp — é de lá que o pedido veio.
         origemPedido: texto(corpo.recolhaWhatsApp, 40) ? "whatsapp" : "backoffice",
         registadoPor: colab?.nome ?? null,
+        ...(codigoDeOrigem ? { codigoDeOrigem } : {}),
         address: {
           formattedAddress: coords?.moradaNormalizada ?? address,
           coordenadasAproximadas: coordsAproximadas || undefined,

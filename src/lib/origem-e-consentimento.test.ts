@@ -64,8 +64,9 @@ describe("o canal que o backoffice mostra", () => {
     expect(ler("src/app/contactos/ContactosClient.tsx")).toContain("origemDaVisita: origemDaVisita() ?? undefined,");
     expect(ler("src/components/HeroQuoteForm.tsx")).toContain("const o = origemDaVisita();");
     const rota = ler("src/app/api/hero-quote/route.ts");
-    expect(rota).toContain("gclid:               gclid ?? null,");
-    expect(rota).toContain("...(origemDaVisita ? { origemDaVisita } : {}),");
+    // Desde 12-11-2026 (d8), limpos à entrada: o gclid só se tiver a forma de um.
+    expect(rota).toContain("gclid:               gclidValido(gclid),");
+    expect(rota).toContain("origemParaGravar(origemDaVisita)");
     expect(ler("src/components/admin/PedidoDetailModal.tsx")).toContain("canalDoPedido(order.rawOrderJson)");
   });
 });

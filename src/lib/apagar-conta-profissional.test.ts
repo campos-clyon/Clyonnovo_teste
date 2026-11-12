@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { ONDE_PROFISSIONAIS_DO_PAINEL } from "./profissionais-do-painel";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -143,7 +144,9 @@ describe("a rota", () => {
 describe("o que fica de fora da vista", () => {
   it("as linhas apagadas saem da lista do painel", () => {
     // Sem isto, "Profissional removido" ficava na lista para sempre.
-    expect(LISTA).toContain("estado <> 'apagado'");
+    // Desde 12-11-2026 (d8) a condição vive num sítio só, partilhada com o «Por aprovar» do Início.
+    expect(LISTA).toContain("WHERE ${ONDE_PROFISSIONAIS_DO_PAINEL}");
+    expect(ONDE_PROFISSIONAIS_DO_PAINEL).toContain("estado <> 'apagado'");
   });
 
   it("'apagado' não é um estado que o PATCH consiga pôr", () => {

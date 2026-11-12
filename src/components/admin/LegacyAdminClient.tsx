@@ -23,6 +23,8 @@ import AdminAssistentesPanel from "@/components/admin/AdminAssistentesPanel";
 import { origemDoPedido, origemPeloSlug, origemDoLead } from "@/lib/acesso";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "@/lib/quota-da-clyon";
+import type { UltimaMudancaDeTaxa } from "@/lib/ultima-mudanca-de-taxa";
+import { fraseDaMudancaDeTaxa } from "@/components/admin/frase-da-mudanca-de-taxa";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { modeloDeHoje } from "@/lib/iva-incluido";
@@ -739,6 +741,8 @@ export default function ColaboradorAdminClient({
   const [taxasAGravar, setTaxasAGravar] = useState(false);
   const [taxasErro, setTaxasErro] = useState("");
   const [taxasGuardadas, setTaxasGuardadas] = useState("");
+  // A última mudança, do registo permanente — quem, quando, de quanto para quanto (d2, 12-11-2026).
+  const [ultimaMudancaDeTaxa, setUltimaMudancaDeTaxa] = useState<UltimaMudancaDeTaxa | null>(null);
 
   // Estatísticas do gestor de imagens (para a aba "Imagens do site")
   const [imageStats, setImageStats] = useState<{
@@ -1076,6 +1080,7 @@ export default function ColaboradorAdminClient({
       if (!r.ok) return;
       const d = await r.json();
       setTaxas({ cliente: d.cliente, profissional: d.profissional, origem: d.origem });
+      setUltimaMudancaDeTaxa(d.ultimaMudanca ?? null);
       // Em pontos percentuais, que é como uma pessoa as escreve: 5 e não 0,05.
       setTaxasRascunho({
         cliente: emPontos(d.cliente),
@@ -1104,6 +1109,7 @@ export default function ColaboradorAdminClient({
         return;
       }
       setTaxas({ cliente: d.cliente, profissional: d.profissional, origem: d.origem });
+      setUltimaMudancaDeTaxa(d.ultimaMudanca ?? null);
       setTaxasGuardadas("Guardado. Vale para os pedidos que chegarem a partir de agora.");
     } catch {
       setTaxasErro("Erro de rede.");
@@ -3661,6 +3667,15 @@ export default function ColaboradorAdminClient({
                       pedido fechado, nem uma proposta que o cliente já recebeu.
                     </p>
                   </div>
+
+                  {taxas !== null && (
+                    <p className="mt-2 text-xs leading-relaxed text-slate-300" data-ultima-mudanca-de-taxa>
+                      <span className="text-slate-500">Última mudança: </span>
+                      {ultimaMudancaDeTaxa
+                        ? fraseDaMudancaDeTaxa(ultimaMudancaDeTaxa)
+                        : "nenhuma no registo permanente."}
+                    </p>
+                  )}
 
                   {taxas === null ? (
                     <p className="mt-3 text-xs text-slate-500">A ler as taxas…</p>

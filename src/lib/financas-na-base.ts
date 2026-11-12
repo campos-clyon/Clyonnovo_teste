@@ -3,6 +3,7 @@ import { partesPagasSemLinha } from "./marcas-da-divida-na-base";
 import { contaDaLinha } from "./conta-do-pagamento";
 import { dividirEntrada, type EntradaDaPlataforma, type PagamentoAAssistente } from "./financas-do-mes";
 import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
+import { canalCurtoDoPedido } from "./canal-do-pedido";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import {
   CATEGORIAS_DE_ORIGEM,
@@ -562,6 +563,37 @@ export async function entradasDaPlataforma(): Promise<EntradaDaPlataforma[] | nu
         conta: contaDaLinha(l, true, false),
       }),
     );
+  }
+  return fora;
+}
+
+/**
+ * O CANAL DE CADA PEDIDO PAGO — 12-11-2026 (d8), para a linha «trabalhos pagos
+ * por canal». Só os três campos do rawOrderJson que dizem a origem, lidos na
+ * base (um JSON estragado não parte a leitura: JSON_VALID primeiro). As mesmas
+ * regras das entradas: produção, sem testes.
+ */
+export async function canaisDosPedidosPagos(): Promise<Record<string, string> | null> {
+  const linhas = await lerOuNada(
+    `SELECT DISTINCT pg.pedidoId,
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.codigoDeOrigem')) END AS codigoDeOrigem,
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN JSON_EXTRACT(o.rawOrderJson, '$.origemDaVisita') END AS origemDaVisita,
+            CASE WHEN JSON_VALID(o.rawOrderJson) THEN JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')) END AS origemPedido
+       FROM pagamentos pg
+       LEFT JOIN providers pr ON pr.id = pg.providerId
+       JOIN simulatorOrders o ON o.id = pg.pedidoId
+      WHERE pg.estado = 'pago' AND pg.pagoEm IS NOT NULL AND pg.ambiente = 'producao'
+        AND COALESCE(pg.deTeste, 0) = 0 AND COALESCE(pr.contaDeTeste, 0) = 0`,
+    "canais",
+  );
+  if (!linhas) return null;
+  const fora: Record<string, string> = {};
+  for (const l of linhas) {
+    fora[String(l.pedidoId)] = canalCurtoDoPedido({
+      codigoDeOrigem: l.codigoDeOrigem,
+      origemDaVisita: l.origemDaVisita,
+      origemPedido: l.origemPedido,
+    });
   }
   return fora;
 }

@@ -56,6 +56,8 @@ type Dados = {
   hoje: string;
   /** `null`: não se conseguiu ler os pagamentos. */
   entradas: EntradaDaPlataforma[] | null;
+  /** O canal de cada pedido pago, pelo número (d8, 12-11-2026). `null`: não se leu. */
+  canais: Record<string, string> | null;
   gastos: Gasto[];
   /** `null` para quem não é o administrador. */
   assistentes: PagamentoAAssistente[] | null;
@@ -124,6 +126,7 @@ export default function GestoraDeContas({ novasPorTransferir = 0 }: { novasPorTr
           movimentos: d.movimentos ?? [],
           hoje: d.hoje ?? diaEmLisboa(new Date()),
           entradas: d.entradas === undefined ? [] : d.entradas,
+          canais: d.canais ?? null,
           gastos: d.gastos ?? [],
           assistentes: d.assistentes ?? null,
           socia: d.socia ?? null,
@@ -275,6 +278,7 @@ export default function GestoraDeContas({ novasPorTransferir = 0 }: { novasPorTr
             dados={{
               entradas: dados.entradas ?? [],
               semEntradas: dados.entradas == null,
+              canais: dados.canais,
               movimentos: dados.movimentos,
               categorias: dados.categorias,
               gastos: dados.gastos,

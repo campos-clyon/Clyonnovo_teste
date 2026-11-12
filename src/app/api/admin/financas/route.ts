@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { listarAssistentes } from "@/lib/assistentes";
 import type { PeriodoDaSocia } from "@/lib/financas-do-mes";
 import { gastosDaClyon } from "@/lib/financas-gastos-na-base";
-import { entradasDaPlataforma, pagamentosAosAssistentes, tudoDaGestora } from "@/lib/financas-na-base";
+import { canaisDosPedidosPagos, entradasDaPlataforma, pagamentosAosAssistentes, tudoDaGestora } from "@/lib/financas-na-base";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 
 export const runtime = "nodejs";
@@ -29,14 +29,16 @@ export async function GET(req: NextRequest) {
   if (err) return err;
   const eAdmin = colab?.papel === "admin";
   try {
-    const [tudo, entradas, gastos, assistentes, socia] = await Promise.all([
+    const [tudo, entradas, canais, gastos, assistentes, socia] = await Promise.all([
       tudoDaGestora(),
       entradasDaPlataforma(),
+      // O canal de cada pedido pago — a linha «trabalhos pagos por canal» (d8, 12-11-2026).
+      canaisDosPedidosPagos(),
       gastosDaClyon(),
       eAdmin ? pagamentosAosAssistentes() : Promise.resolve(null),
       eAdmin ? periodosDaSocia() : Promise.resolve(null),
     ]);
-    return NextResponse.json({ ...tudo, entradas, gastos, assistentes, socia, eAdmin, hoje: diaEmLisboa(new Date()) });
+    return NextResponse.json({ ...tudo, entradas, canais, gastos, assistentes, socia, eAdmin, hoje: diaEmLisboa(new Date()) });
   } catch (e) {
     console.error("[admin/financas GET]", e);
     return NextResponse.json({ error: "Não foi possível ler as finanças." }, { status: 500 });

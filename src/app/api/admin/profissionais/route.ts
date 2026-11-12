@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { DIAS_DA_MEDIDA, temposDeResposta, type TempoDeResposta } from "@/lib/tempo-de-resposta";
 import { ibanEncurtado } from "@/lib/iban";
+import { ONDE_PROFISSIONAIS_DO_PAINEL } from "@/lib/profissionais-do-painel";
 import { textoDaApp } from "@/lib/app-pro-no-telemovel";
 import { resumoDaMigracao } from "@/lib/categorias-em-grupos";
 
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
         -- 'apagado' é a linha vazia que fica quando uma conta com história é
         -- apagada: as negociações antigas precisam dela, o painel não. Sem
         -- isto, "Profissional removido" ficava na lista para sempre.
-        WHERE isClyon = 0 AND (estado IS NULL OR estado <> 'apagado')
+        WHERE ${ONDE_PROFISSIONAIS_DO_PAINEL}
         ORDER BY
           -- Quem espera verificação primeiro: é o que trava pedidos.
           (emiteGuiaTransporte = 1 AND guiaVerificadaEm IS NULL) DESC,

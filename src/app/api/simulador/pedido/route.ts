@@ -40,6 +40,7 @@ import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 import { camposDaCategoriaParaGravar, comAsLinhasDaCategoria } from "@/lib/pedido-por-categoria";
 import { enviarAosEscolhidos, linhaDoEnvioFalhado, prepararEscolhaDaMudanca } from "@/lib/mudanca-com-parceiros-escolhidos";
 import { passosDaMudancaComEscolha } from "@/lib/textos-do-pedido";
+import { origemParaGravar } from "@/lib/origem-para-gravar";
 
 export const runtime = "nodejs";
 
@@ -112,6 +113,10 @@ export async function POST(req: NextRequest) {
     if (horaPreferida.hora && !dataPreferida.dia) {
       return NextResponse.json({ ok: false, error: HORA_SEM_DIA, campo: "horaPreferida" }, { status: 400 });
     }
+    // A origem da visita, com o gclid quando o browser o mandou (só com consentimento de marketing) — d8, 12-11-2026.
+    const origemLimpa = origemParaGravar(order.origemDaVisita);
+    if (origemLimpa) order.origemDaVisita = origemLimpa;
+    else delete order.origemDaVisita;
     const rascunhosAntes = lerRascunhosAntes(order.rascunhosAntes);
     if (rascunhosAntes == null) delete order.rascunhosAntes;
     else order.rascunhosAntes = rascunhosAntes;

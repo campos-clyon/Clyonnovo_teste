@@ -13,6 +13,7 @@ import {
   type PeriodoDaSocia,
 } from "@/lib/financas-do-mes";
 import { totalMensalDosRecorrentes } from "@/lib/financas-gastos";
+import { trabalhosPagosPorCanal } from "@/lib/canal-do-pedido";
 import { emEuros, mesCurto, mesDoDia, nomeDoMes, somarMeses } from "@/lib/financas";
 
 /**
@@ -59,6 +60,8 @@ export type DadosDoResumo = DadosDasContas & {
   eAdmin: boolean;
   /** Não se conseguiu ler os pagamentos: os números da plataforma ficam a zero, e diz-se. */
   semEntradas: boolean;
+  /** O canal de cada pedido pago, pelo número — `null` se não se leu (d8, 12-11-2026). */
+  canais?: Record<string, string> | null;
 };
 
 export default function ResumoDasFinancas({
@@ -139,6 +142,8 @@ export default function ResumoDasFinancas({
           </div>
         )}
       </section>
+
+      <PorCanal c={c} canais={dados.canais ?? null} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <PorOnde c={c} />
@@ -386,6 +391,36 @@ function ListaDeEntradas({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * TRABALHOS PAGOS POR CANAL — 12-11-2026 (d8). De onde veio cada trabalho pago
+ * no mês: o anúncio, a pesquisa, o WhatsApp sem código, a equipa. É a linha
+ * que diz se um euro do Google Ads deu trabalho pago.
+ */
+function PorCanal({ c, canais }: { c: ContasDoMes; canais: Record<string, string> | null }) {
+  if (canais == null) {
+    return <p className="text-xs text-slate-500">Trabalhos pagos por canal: não foi possível ler a origem dos pedidos agora.</p>;
+  }
+  const linhas = trabalhosPagosPorCanal(c.entradas, canais);
+  return (
+    <section aria-label="Trabalhos pagos por canal" className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <h3 className="text-sm font-semibold text-slate-200">Trabalhos pagos por canal</h3>
+      {linhas.length === 0 ? (
+        <p className="mt-2 text-sm text-slate-400">Nenhum trabalho pago neste mês.</p>
+      ) : (
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          {linhas.map((l, i) => (
+            <span key={l.canal}>
+              {i > 0 && <span className="text-slate-600"> · </span>}
+              {l.canal}: <span className={numero}>{l.trabalhos}</span>{" "}
+              <span className="text-[11px] text-slate-500">({emEuros(l.valor)})</span>
+            </span>
+          ))}
+        </p>
+      )}
+    </section>
   );
 }
 

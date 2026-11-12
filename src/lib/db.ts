@@ -37,6 +37,9 @@ import {
 } from "@/lib/pedido-arrumado";
 import { IVA_INCLUIDO_DESDE, modeloDeHoje } from "@/lib/iva-incluido";
 import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { lerMudancaDeTaxa, type UltimaMudancaDeTaxa } from "@/lib/ultima-mudanca-de-taxa";
+import { profissionalRespondeu } from "@/lib/profissional-respondeu";
+import { ONDE_POR_APROVAR } from "@/lib/profissionais-do-painel";
 import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 // (30-10-2026) as fotografias deixaram de contar para o prazo e para o selo.
@@ -440,6 +443,7 @@ export async function taxasParaUmaNegociacaoNova(pedidoId: number): Promise<Taxa
 export async function guardarTaxas(
   novas: { cliente: number; profissional: number },
   quem: string,
+  perfil: string | null = null,
 ): Promise<Taxas> {
   const valida = (n: number, nome: string) => {
     if (!Number.isFinite(n) || n < 0 || n > TAXA_MAXIMA) {
@@ -480,10 +484,20 @@ export async function guardarTaxas(
       `Taxas da plataforma alteradas: cliente ${pct(antes.cliente)} → ${pct(cliente)}, ` +
       `profissional ${pct(antes.profissional)} → ${pct(profissional)}. ` +
       "Só se aplica a negociações criadas a partir de agora.",
-    detalhe: { antes, depois: { cliente, profissional } },
+    detalhe: { antes, depois: { cliente, profissional }, perfil },
   });
 
   return { cliente, profissional };
+}
+
+/**
+ * A ÚLTIMA LINHA `taxas_alteradas` do registo permanente — para o ecrã das
+ * Taxas dizer quem mudou, quando, e de quanto para quanto (d2, 12-11-2026).
+ * Só leitura. Ver `ultima-mudanca-de-taxa.ts`.
+ */
+export async function ultimaMudancaDasTaxas(): Promise<UltimaMudancaDeTaxa | null> {
+  const [linha] = await registoParaOBackoffice({ acontecimento: "taxas_alteradas", limite: 1 });
+  return lerMudancaDeTaxa(linha ?? null);
 }
 
 export async function upsertSimulatorSetting(data: {
@@ -4914,22 +4928,25 @@ export async function actividadeDosProfissionais(): Promise<
    * dois estava avariado. Um numero que nao bate com o outro ecra nao se
    * discute — deixa-se de olhar para ele.
    */
+  /*
+   * «RESPONDEU» — 12-11-2026 (d8). Contava `JSON_LENGTH(propostasJson) > 1`,
+   * e a negociação nasce vazia: a primeira proposta do profissional não
+   * entrava. A conta passou para `profissionalRespondeu` — uma proposta dele,
+   * ou a aceitação —, linha a linha.
+   */
   const [rows] = await pool.execute(
-    `SELECT n.providerId,
-            COUNT(*) AS recebidos,
-            SUM(JSON_LENGTH(n.propostasJson) > 1) AS comProposta,
-            SUM(n.estado = 'acordada') AS fechados
+    `SELECT n.providerId, n.estado, n.propostasJson
        FROM negociacoes n
-       JOIN simulatorOrders o ON o.id = n.pedidoId
-      GROUP BY n.providerId`,
+       JOIN simulatorOrders o ON o.id = n.pedidoId`,
   ) as any[];
 
   for (const r of rows as Array<Record<string, unknown>>) {
-    mapa.set(Number(r.providerId), {
-      recebidos: Number(r.recebidos ?? 0),
-      comProposta: Number(r.comProposta ?? 0),
-      fechados: Number(r.fechados ?? 0),
-    });
+    const id = Number(r.providerId);
+    const a = mapa.get(id) ?? { recebidos: 0, comProposta: 0, fechados: 0 };
+    a.recebidos += 1;
+    if (profissionalRespondeu(r.propostasJson, r.estado)) a.comProposta += 1;
+    if (r.estado === "acordada") a.fechados += 1;
+    mapa.set(id, a);
   }
   return mapa;
 }
@@ -16969,7 +16986,8 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     conta(
       "SELECT COUNT(*) AS n FROM candidaturasProfissionais WHERE estado IN ('nova','convidada')",
     ),
-    conta("SELECT COUNT(*) AS n FROM providers WHERE estado = 'pendente'"),
+    // O mesmo filtro do separador dos Profissionais (d8, 12-11-2026): sem as contas da CLYON.
+    conta(`SELECT COUNT(*) AS n FROM providers WHERE ${ONDE_POR_APROVAR}`),
     conta("SELECT COUNT(*) AS n FROM whatsappInterrompidos"),
     conta("SELECT COUNT(*) AS n FROM whatsappFila WHERE enviadoEm IS NULL"),
     conta(

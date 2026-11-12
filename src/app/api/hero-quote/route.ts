@@ -8,6 +8,7 @@ import { notifyNewOrder } from "@/lib/whatsapp";
 import { SITE_URL } from "@/lib/seo-data";
 import { problemaDoTelefone, juntarIndicativo, MENSAGENS_DO_TELEFONE } from "@/lib/telefone-do-cliente";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
+import { gclidValido, origemParaGravar } from "@/lib/origem-para-gravar";
 
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 export const runtime = "nodejs";
@@ -174,7 +175,7 @@ export async function POST(req: NextRequest) {
       utmSource:           utmSource ?? null,
       utmMedium:           utmMedium ?? null,
       utmCampaign:         utmCampaign ?? null,
-      gclid:               gclid ?? null,
+      gclid:               gclidValido(gclid),
     });
     leadGravado = true;
   } catch (e) {
@@ -196,7 +197,7 @@ export async function POST(req: NextRequest) {
     utmSource: utmSource ?? null,
     utmMedium: utmMedium ?? null,
     utmCampaign: utmCampaign ?? null,
-    gclid: gclid ?? null,
+    gclid: gclidValido(gclid),
   }).catch((e) => console.error("[hero-quote] createLeadEvent error:", e));
 
   // ── Criar pedido (pedidos backoffice) ─────────────────────────────────────────
@@ -268,7 +269,11 @@ export async function POST(req: NextRequest) {
         address: { formattedAddress: morada },
         receiver: { name: nomeCompleto, phone: telefoneFull },
         _source: "hero_quote_form",
-        ...(origemDaVisita ? { origemDaVisita } : {}),
+        // Limpa, com o gclid só se for um (d8, 12-11-2026) — ver origem-para-gravar.ts.
+        ...(() => {
+          const limpa = origemParaGravar(origemDaVisita);
+          return limpa ? { origemDaVisita: limpa } : {};
+        })(),
       }),
     };
 

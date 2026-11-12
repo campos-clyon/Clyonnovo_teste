@@ -69,3 +69,73 @@ export function origemDoCodigoDoPedido(rawOrderJson: string | null | undefined):
     return null;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * OS TRABALHOS PAGOS POR CANAL — 12-11-2026 (d8). Uma linha nas Finanças:
+ * de cada canal, quantos trabalhos foram pagos no mês e quanto entrou. Para
+ * isto o canal tem de ser um só nome por canal: o anúncio que chegou pelo
+ * site («Google Ads · campanha») e o que chegou pelo WhatsApp («(A1)») são o
+ * mesmo anúncio.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export const SEM_ORIGEM = "Sem origem registada";
+
+/** Os campos do rawOrderJson que dizem o canal (lidos à parte, na base). */
+export type OrigemGuardadaDoPedido = {
+  origemDaVisita?: unknown;
+  codigoDeOrigem?: unknown;
+  origemPedido?: unknown;
+};
+
+/** Um nome por canal: «Google Ads», «google (orgânico)», «Facebook», «WhatsApp sem código»… */
+export function canalCurtoDoPedido(o: OrigemGuardadaDoPedido | null | undefined): string {
+  if (!o) return SEM_ORIGEM;
+  let visita: Origem | null = null;
+  if (typeof o.origemDaVisita === "string") {
+    try {
+      visita = JSON.parse(o.origemDaVisita) as Origem;
+    } catch {
+      visita = null;
+    }
+  } else if (o.origemDaVisita && typeof o.origemDaVisita === "object") {
+    visita = o.origemDaVisita as Origem;
+  }
+  const doSite = canalDaOrigem(visita);
+  if (doSite) return doSite.split(" · ")[0];
+  const codigo = typeof o.codigoDeOrigem === "string" ? o.codigoDeOrigem : null;
+  if (codigo && lerCodigoDeOrigem(codigo)) {
+    return codigo[0] === "A" ? "Google Ads" : CANAIS[codigo[0] as LetraDoCanal];
+  }
+  if (o.origemPedido === "whatsapp") return "WhatsApp sem código";
+  if (o.origemPedido === "backoffice") return "Registado pela equipa";
+  return SEM_ORIGEM;
+}
+
+export type TrabalhosDoCanal = { canal: string; trabalhos: number; valor: number };
+
+/**
+ * De cada canal, os trabalhos (pedidos distintos) com pagamento e quanto
+ * pagou o cliente. Os acertos no saldo (sem dinheiro) não são pagamentos, e a
+ * parte da CLYON que o profissional lhe passa depois de um pagamento em mão
+ * já está no valor em mão — contá-la outra vez dobrava o trabalho. Os mais
+ * pagos primeiro; «sem origem» no fim.
+ */
+export function trabalhosPagosPorCanal(
+  entradas: Array<{ pedidoId: number; valor: number; natureza?: string; daParteDaClyon?: boolean }>,
+  canais: Record<string, string>,
+): TrabalhosDoCanal[] {
+  const porCanal = new Map<string, { pedidos: Set<number>; valor: number }>();
+  for (const e of entradas) {
+    if (e.natureza === "acerto_no_saldo" || e.daParteDaClyon) continue;
+    const canal = canais[String(e.pedidoId)] ?? SEM_ORIGEM;
+    const g = porCanal.get(canal) ?? { pedidos: new Set<number>(), valor: 0 };
+    g.pedidos.add(e.pedidoId);
+    g.valor += e.valor;
+    porCanal.set(canal, g);
+  }
+  return [...porCanal.entries()]
+    .map(([canal, g]) => ({ canal, trabalhos: g.pedidos.size, valor: Math.round(g.valor * 100) / 100 }))
+    .sort((a, b) =>
+      a.canal === SEM_ORIGEM ? 1 : b.canal === SEM_ORIGEM ? -1 : b.trabalhos - a.trabalhos || b.valor - a.valor,
+    );
+}

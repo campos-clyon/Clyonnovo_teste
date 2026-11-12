@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
-import { guardarTaxas, taxasActuais } from "@/lib/db";
+import { guardarTaxas, taxasActuais, ultimaMudancaDasTaxas } from "@/lib/db";
 import { TAXA_MAXIMA, TAXAS_DE_ORIGEM } from "@/lib/taxas-plataforma";
 
 export const runtime = "nodejs";
@@ -32,7 +32,16 @@ export async function GET(req: NextRequest) {
 
   try {
     const taxas = await taxasActuais();
+    /*
+     * A última mudança, do registo permanente (d2, 12-11-2026): quem, quando,
+     * de quanto para quanto. Falhar a lê-la não pode esconder as taxas.
+     */
+    const ultimaMudanca = await ultimaMudancaDasTaxas().catch((e) => {
+      console.error("[admin/taxas GET] não li a última mudança:", e);
+      return null;
+    });
     return NextResponse.json({
+      ultimaMudanca,
       cliente: taxas.cliente,
       profissional: taxas.profissional,
       /** Para o ecrã poder dizer «voltar ao que era» sem inventar números. */
@@ -92,8 +101,11 @@ export async function PUT(req: NextRequest) {
     const ficaram = await guardarTaxas(
       { cliente: cliente / 100, profissional: profissional / 100 },
       colab?.nome ?? "a CLYON",
+      // Só o administrador chega aqui (requireAdminGeral): fica escrito na linha.
+      "administrador",
     );
-    return NextResponse.json({ ok: true, ...ficaram, origem: TAXAS_DE_ORIGEM });
+    const ultimaMudanca = await ultimaMudancaDasTaxas().catch(() => null);
+    return NextResponse.json({ ok: true, ...ficaram, origem: TAXAS_DE_ORIGEM, ultimaMudanca });
   } catch (error) {
     // A mensagem de `guardarTaxas` é escrita para ser lida por uma pessoa —
     // "a taxa do cliente tem de estar entre 0 % e 50 %" — e vai tal e qual.
