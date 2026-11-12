@@ -11,7 +11,7 @@ import { lerMoradaGuardada, lerMoradasParaOPedido } from "../lib/morada-do-clien
 import { abreAEscolher, botaoDaEscolha, indiceDaMorada, OUTRA_MORADA, perguntaDaEscolha, USAR_UMA_GUARDADA } from "../lib/moradas-do-pedido";
 import { Text } from "./Texto";
 import { PrecoEmLinhas } from "./Preco";
-import { animarAMudanca, Aviso, Botao, Campo, Carregando, Confirmacao, EscolhaFeita, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
+import { animarAMudanca, Aviso, Botao, Campo, Carregando, Confirmacao, descerAteOCampo, EscolhaFeita, Escolhas, Folha, Ligacao, LinhaDoResumo, Paragrafo, PrecoDeReferencia, Subtitulo, Titulo } from "./ui";
 import { soAEscolhida } from "../lib/escolha-recolhida";
 import { useCatalogo } from "../estado/Catalogo";
 import { usePedidos } from "../estado/Pedidos";
@@ -1535,19 +1535,9 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
   const emFaltaAgora = camposEmFaltaNoEcra(r, ecra, c);
   const erroDe = (campo: string) => (marcados.has(campo) ? (emFaltaAgora.find((x) => x.campo === campo)?.texto ?? null) : null);
 
+  // O ajudante comum das duas apps (d9): rola até ao campo e foca-o.
   function descerAte(campo: string) {
-    const lugar = lugares.current.get(campo);
-    const vista = lugar?.vista.current;
-    const alvo = conteudo.current;
-    if (!vista || !alvo) return;
-    vista.measureLayout(
-      alvo,
-      (_x, y) => {
-        scroll.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
-        lugar?.focar?.();
-      },
-      () => lugar?.focar?.(),
-    );
+    descerAteOCampo(lugares.current.get(campo), conteudo.current, scroll.current);
   }
 
   function irPara(p: EcraDoPedir, mais: Partial<Rascunho> = {}) {

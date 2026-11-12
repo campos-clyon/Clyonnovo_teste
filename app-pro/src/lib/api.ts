@@ -1,7 +1,10 @@
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import { EM_DEMO, pedirEmDemo } from "./demo";
-import { versaoDaApp } from "./erro-da-app";
+import { FileSystemUploadType, uploadAsync } from "expo-file-system/legacy";
+import { contadorDeErros, corpoDoErro, ecraDe, enviarErroDaApp, versaoDaApp } from "./erro-da-app";
+import { contaSemPalavraPasse, eDaPalavraPasse, quatrocentosEUmComCodigo } from "./palavra-passe-no-corpo";
+import { corpoDeTexto, FalhaDoFicheiro, recuperarDoEnvio, registarOPrazo, type FalhaDoEnvio, type RespostaDoEnvio } from "./envio-de-ficheiro";
 import { guardarToken, lerToken } from "./sessao";
 
 /**
@@ -42,6 +45,8 @@ function versaoDestaApp(): string {
   return versaoLida;
 }
 
+export { contaSemPalavraPasse, eDaPalavraPasse };
+
 export class ErroDaApi extends Error {
   constructor(
     message: string,
@@ -81,7 +86,7 @@ export async function pedirComSessaoNova<T extends { token?: unknown }>(caminho:
     if (typeof r.token === "string" && r.token) await guardarToken(r.token);
   } catch (e) {
     trocasEmCurso -= 1;
-    if (e instanceof ErroDaApi && e.estado === 401) aoPerderASessao?.();
+    if (e instanceof ErroDaApi && e.estado === 401 && !quatrocentosEUmComCodigo(401, e.corpo)) aoPerderASessao?.();
     throw e;
   }
   trocasEmCurso -= 1;
@@ -195,11 +200,85 @@ export async function enviarFicheiro<T>(
   try {
     // Sem Content-Type: o fetch escreve-o, com a fronteira do multipart.
     r = await fetch(`${SITE}${caminho}`, { method: "POST", headers: cabecalhos, body: corpo, signal: sinal });
-  } catch {
-    if (sinal?.aborted) throw new ErroDaApi(MENSAGEM_DE_FICHEIRO_LENTO, 0);
-    throw new ErroDaApi("A fotografia não seguiu: sem ligação à internet. Tente outra vez.", 0);
+  } catch (erroDoFetch) {
+    if (sinal?.aborted) {
+      registarOPrazo(caminho, erroDoFetch, contarAFalhaDoEnvio);
+      throw new ErroDaApi(MENSAGEM_DE_FICHEIRO_LENTO, 0);
+    }
+    // d9 (12-11-2026): o erro real fica registado, tenta-se pelo uploadAsync, e «sem ligação» só sem rede.
+    let segunda: RespostaDoEnvio;
+    try {
+      segunda = await recuperarDoEnvio({
+        caminho,
+        erroDoFetch,
+        porUpload: () => enviarPeloSistemaDeFicheiros(caminho, campos, ficheiro, cabecalhos),
+        haRede: confirmarARede,
+        aoRegistar: contarAFalhaDoEnvio,
+      });
+    } catch (e) {
+      throw new ErroDaApi(e instanceof FalhaDoFicheiro ? e.message : MENSAGEM_DE_FICHEIRO_LENTO, 0);
+    }
+    return tratarResposta<T>(segunda.estado, segunda.corpo, semSessao, tokenUsado);
   }
   return lerResposta<T>(r, semSessao, tokenUsado);
+}
+
+/**
+ * A SEGUNDA VIA DO ENVIO (d9): o `uploadAsync` do expo-file-system manda o
+ * ficheiro pelo lado nativo, com o mesmo campo `file`, os mesmos campos de
+ * texto e os mesmos cabeçalhos. O módulo já vem na app (o expo-file-system é o
+ * da lista guardada): isto não muda a parte nativa.
+ */
+async function enviarPeloSistemaDeFicheiros(
+  caminho: string,
+  campos: Record<string, string>,
+  ficheiro: { uri: string; nome: string; tipo: string },
+  cabecalhos: Record<string, string>,
+): Promise<RespostaDoEnvio> {
+  let prazo: ReturnType<typeof setTimeout> | undefined;
+  const esgotou = new Promise<never>((_, rejeitar) => {
+    prazo = setTimeout(() => rejeitar(new Error("o uploadAsync passou do prazo")), PRAZO_DO_FICHEIRO_MS);
+  });
+  try {
+    const r = await Promise.race([
+      uploadAsync(`${SITE}${caminho}`, ficheiro.uri, {
+        httpMethod: "POST",
+        uploadType: FileSystemUploadType.MULTIPART,
+        fieldName: "file",
+        mimeType: ficheiro.tipo,
+        parameters: campos,
+        headers: cabecalhos,
+      }),
+      esgotou,
+    ]);
+    return { estado: r.status, corpo: corpoDeTexto(r.body) };
+  } finally {
+    if (prazo) clearTimeout(prazo);
+  }
+}
+
+/**
+ * HÁ REDE? (d9) Um pedido pequeno ao site (só o cabeçalho do robots.txt), com
+ * 5 s de prazo: qualquer resposta quer dizer que há rede; um erro de rede quer
+ * dizer que não há; o prazo esgotado fica «por saber» (null). Sem módulo
+ * nativo novo, para a correcção caber num EAS Update.
+ */
+export const PRAZO_DA_PROVA_DA_REDE_MS = 5_000;
+async function confirmarARede(): Promise<boolean | null> {
+  const sinal = sinalComPrazo(PRAZO_DA_PROVA_DA_REDE_MS);
+  try {
+    await fetch(`${SITE}/robots.txt`, { method: "HEAD", signal: sinal });
+    return true;
+  } catch {
+    return sinal?.aborted ? null : false;
+  }
+}
+
+/** Cada falha do envio vai uma vez ao erro-da-app do site (sem sessão nem dados de pessoas). */
+const contarOErroDoEnvio = contadorDeErros((corpo) => enviarErroDaApp(SITE, corpo));
+function contarAFalhaDoEnvio(f: FalhaDoEnvio): void {
+  const segmentos = ["envio", ...f.caminho.split("/").filter((x) => x && x !== "api")];
+  contarOErroDoEnvio(corpoDoErro(`${f.tentativa} (${f.rede}): ${f.erro}`, ecraDe(segmentos), versaoDestaApp()));
 }
 
 /**
@@ -227,8 +306,15 @@ async function lerResposta<T>(r: Response, semSessao: boolean, tokenUsado: strin
   } catch {
     /* resposta sem corpo */
   }
+  return tratarResposta<T>(r.status, corpo, semSessao, tokenUsado);
+}
 
-  if (r.status === 401 && !semSessao) await perdeuASessao(tokenUsado);
+/** O mesmo para as duas vias do envio: o estado e o corpo já lido. */
+async function tratarResposta<T>(estado: number, corpo: Record<string, unknown>, semSessao: boolean, tokenUsado: string | null): Promise<T> {
+  const r = { status: estado, ok: estado >= 200 && estado < 300 };
+  // Um 401 COM `codigo` (a palavra-passe dos dados de pagamento, d1) diz o que falta: nunca faz sair.
+  const naoSai = semSessao || quatrocentosEUmComCodigo(estado, corpo);
+  if (r.status === 401 && !naoSai) await perdeuASessao(tokenUsado);
   if (!r.ok) {
     const mensagem =
       typeof corpo.error === "string"

@@ -70,9 +70,12 @@ describe("d17 — a candidatura na app manda as fotografias", () => {
     const fim = REGISTO.indexOf("setAEnviar(true)", i);
     expect(fim).toBeGreaterThan(i);
     const enviar = REGISTO.slice(i, fim);
-    expect(enviar).toMatch(/if \(fotografias\.length === 0\) \{\s*setErros\(\{ fotografias: MENSAGEM_SEM_FOTOGRAFIA \}\);\s*return;/);
-    expect(REGISTO).toContain("erro={erros.fotografias}");
-    expect(REGISTO).toMatch(/\{erro \? <Text style=\{\{ color: c\.mau \}\}>\{erro\}<\/Text> : null\}/);
+    // Desde a d9 (12-11-2026): tudo o que falta de uma vez (errosDaCandidatura), e a caixa fica a vermelho.
+    expect(enviar).toMatch(
+      /const locais = errosDaCandidatura\(\{ nome, email, telefone, cidade, servicos, fotografias \}\);\s*if \(Object\.keys\(locais\)\.length > 0\) \{\s*formulario\.mostrarErros\(locais\);\s*return;/,
+    );
+    expect(ler("app-pro/src/lib/candidatura.ts")).toContain("if (c.fotografias.length === 0) erros.fotografias = MENSAGEM_SEM_FOTOGRAFIA;");
+    expect(REGISTO).toContain('<CaixaComErro campo="fotografias">');
   });
 
   it("o campo tem o rótulo e a ajuda do site, e no máximo 4", () => {

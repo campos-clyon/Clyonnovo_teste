@@ -92,12 +92,23 @@ export type Perfil = {
   emiteGuiaTransporte: boolean;
   numeroTransportador: string;
   guiaVerificada: boolean;
+  /** A guia de resíduos (d5, 12-11-2026): o operador licenciado onde descarrega. */
+  destinoDosResiduos?: string;
+  /** A prova do registo no SILiAmb: só o nome e a data (o ficheiro só o administrador abre). */
+  provaDaGuia?: { nome: string | null; em: string } | null;
+  /** O aviso do formato do código APA, calculado pelo site (ou null). */
+  avisoDoCodigoApa?: string | null;
   estado: string;
   /** Já vem encurtado do site («PT50 ···· 3233»): o IBAN inteiro nunca sai de lá. */
   iban: string;
   temIban: boolean;
   ibanTitular: string;
   mbway: string;
+  /** Quando mudaram o IBAN, o titular ou o MB WAY (d1, 12-11-2026); null nas contas de antes. */
+  ibanMudadoEm?: string | null;
+  ibanMudadoRecente?: boolean;
+  /** O titular bate com o nome da conta? null quando não se sabe. */
+  titularBateComONome?: boolean | null;
   desde: string | null;
   avaliacao: number | null;
   quantasAvaliacoes: number;

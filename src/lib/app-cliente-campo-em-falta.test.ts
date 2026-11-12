@@ -63,8 +63,11 @@ describe("o ecrã: desce, pinta e põe o foco", () => {
     expect(novo).toContain("const lista = camposEmFaltaNoEcra(r, ecra, c);");
     expect(novo).toContain("setMarcados(new Set(lista.map((x) => x.campo)));");
     expect(novo).toContain("descerAte(lista[0].campo)");
-    expect(novo).toContain("scroll.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });");
-    expect(novo).toContain("lugar?.focar?.();");
+    // Desde 12-11-2026 (d9) pelo ajudante comum de ui.tsx: rola com 24 de folga e foca.
+    expect(novo).toContain("descerAteOCampo(lugares.current.get(campo), conteudo.current, scroll.current);");
+    expect(ui).toContain("export const FOLGA_POR_CIMA_DO_CAMPO = 24;");
+    expect(ui).toContain("rolagem?.scrollTo({ y: Math.max(0, y - FOLGA_POR_CIMA_DO_CAMPO), animated: true });");
+    expect(ui).toContain("lugar?.focar?.();");
   });
 
   it("cada campo do pedido tem o seu nome, e os de texto ficam com o rótulo e o contorno a vermelho", () => {

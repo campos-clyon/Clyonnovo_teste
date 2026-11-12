@@ -68,7 +68,9 @@ describe("as chamadas ao site têm prazo", () => {
 
   it("cada uma das duas chamadas leva o seu prazo, e o fim do prazo diz que a rede está lenta", () => {
     expect(vezes(API, "await fetch(`${SITE}${caminho}`")).toBe(2);
-    expect(vezes(API, "signal: sinal")).toBe(2);
+    // A terceira é a prova da rede do envio de ficheiros (d9, 12-11-2026), com 5 s.
+    expect(vezes(API, "signal: sinal")).toBe(3);
+    expect(API).toContain("const sinal = sinalComPrazo(PRAZO_DA_PROVA_DA_REDE_MS);");
 
     const iPedir = API.indexOf("export async function pedir<T>(");
     const iFotografia = API.indexOf("export async function enviarFotografia(");
@@ -84,7 +86,10 @@ describe("as chamadas ao site têm prazo", () => {
     const FICHEIRO = API.slice(iFicheiro, iErros);
     expect(FICHEIRO).toContain("const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);");
     expect(FICHEIRO).toContain("signal: sinal");
-    expect(FICHEIRO).toContain("if (sinal?.aborted) throw new ErroDaApi(MENSAGEM_DE_FICHEIRO_LENTO, 0);");
+    // Desde a d9 (12-11-2026) o prazo fica também no registo de diagnóstico.
+    expect(FICHEIRO).toMatch(
+      /if \(sinal\?\.aborted\) \{\s*registarOPrazo\(caminho, erroDoFetch, contarAFalhaDoEnvio\);\s*throw new ErroDaApi\(MENSAGEM_DE_FICHEIRO_LENTO, 0\);/,
+    );
 
     expect(API).toMatch(/MENSAGEM_DE_REDE_LENTA = "[^"]*rede está lenta[^"]*"/);
     expect(API).toMatch(/MENSAGEM_DE_FICHEIRO_LENTO = "[^"]*rede está lenta[^"]*"/);

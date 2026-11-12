@@ -6,7 +6,7 @@ import { RolagemComTeclado, useAlturaDoTeclado } from "./Teclado";
 import { CORES } from "../tema";
 import { useRef, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useCampoEmFalta } from "./CampoEmFalta";
+import { useCampoEmFalta, type LugarDoCampo } from "./CampoEmFalta";
 import { MUDAR, rotuloDoCartao, soAEscolhida } from "../lib/escolha-recolhida";
 
 /**
@@ -331,6 +331,30 @@ export function Escolhas<T extends string>({
       )}
       {erro ? <Text style={{ color: CORES.mau, fontSize: 13, fontWeight: "600" }}>{erro}</Text> : null}
     </View>
+  );
+}
+
+/**
+ * O FORMULÁRIO QUE NÃO PASSA — o ajudante comum (d9, 12-11-2026). Nasceu no
+ * pedido (`descerAte`, NovoPedido.tsx): depois de pintar o vermelho, rola
+ * até ao campo, com folga por cima, e põe lá o foco. A app Pro tem o mesmo em
+ * `useFormulario` (app-pro/src/componentes/ui.tsx).
+ */
+export const FOLGA_POR_CIMA_DO_CAMPO = 24;
+export function descerAteOCampo(
+  lugar: LugarDoCampo | undefined,
+  conteudo: View | null,
+  rolagem: { scrollTo: (o: { y: number; animated?: boolean }) => void } | null,
+): void {
+  const vista = lugar?.vista.current;
+  if (!vista || !conteudo) return;
+  vista.measureLayout(
+    conteudo,
+    (_x, y) => {
+      rolagem?.scrollTo({ y: Math.max(0, y - FOLGA_POR_CIMA_DO_CAMPO), animated: true });
+      lugar?.focar?.();
+    },
+    () => lugar?.focar?.(),
   );
 }
 

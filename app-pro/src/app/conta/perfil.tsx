@@ -4,7 +4,7 @@ import { Image, Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
-import { Botao, Caixa, CampoDeTexto, Linha, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { Botao, Caixa, CaixaComErro, CampoDeTexto, FormularioComErros, Linha, Mensagem, TituloDaCaixa, useFormulario } from "../../componentes/ui";
 import { escolherFotografias, reduzirFotografia } from "../../componentes/Fotografias";
 import { VerFotografias } from "../../componentes/VerFotografias";
 import { useConta } from "../../estado/Conta";
@@ -57,6 +57,14 @@ export default function EcraDoPerfil() {
 
 const semIndicativo = (t: string) => t.replace(/[\s.-]/g, "").replace(/^(\+351|00351)/, "");
 
+/** Os nomes curtos do aviso «Falta: …», pela ordem do ecrã (d9, 12-11-2026). */
+const ROTULOS_DOS_DADOS: Record<string, string> = {
+  nome: "nome ou empresa",
+  telefone: "telefone",
+  cidade: "morada da base",
+  tipoVeiculo: "viatura",
+};
+
 function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<void> }) {
   const c = useCores();
   const [nome, setNome] = useState(perfil.nome);
@@ -66,7 +74,9 @@ function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<v
   const [lng, setLng] = useState<number | null>(perfil.baseLng);
   const [veiculo, setVeiculo] = useState(perfil.tipoVeiculo);
   const [sugestoes, setSugestoes] = useState<Sugestao[]>([]);
-  const [erros, setErros] = useState<Record<string, string>>({});
+  // d9: o que falta fica a vermelho, o ecrã desce até ao primeiro e o aviso diz o quê.
+  const formulario = useFormulario(ROTULOS_DOS_DADOS);
+  const erros = formulario.erros;
   const [erro, setErro] = useState<string | null>(null);
   const [gravadoAs, setGravadoAs] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
@@ -108,7 +118,7 @@ function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<v
 
   async function gravar() {
     setAGravar(true);
-    setErros({});
+    formulario.limparErros();
     setErro(null);
     setGravadoAs(null);
     try {
@@ -120,7 +130,7 @@ function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<v
       await aoGravar();
     } catch (e) {
       const porCampo = errosPorCampo(e);
-      setErros(porCampo);
+      formulario.mostrarErros(porCampo);
       if (Object.keys(porCampo).length === 0) {
         setErro(e instanceof ErroDaApi && e.estado === 401 ? "A sua sessão expirou. Volte a entrar e grave outra vez." : e instanceof ErroDaApi ? e.message : "Não foi possível guardar.");
       }
@@ -130,19 +140,19 @@ function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<v
   }
 
   return (
-    <>
+    <FormularioComErros formulario={formulario}>
       {faltas.length > 0 ? (
         <Mensagem tom="aviso" texto={`${faltas.length === 1 ? "Falta um campo" : `Faltam ${faltas.length} campos`} aqui: ${faltas.map((f) => f.rotulo.toLowerCase()).join(", ")}.`} />
       ) : null}
       <Caixa>
-        <CampoDeTexto rotulo="Nome ou empresa" value={nome} onChangeText={setNome} erro={erros.nome} autoCapitalize="words" />
+        <CampoDeTexto rotulo="Nome ou empresa" value={nome} onChangeText={setNome} campo="nome" autoCapitalize="words" />
         <CampoDeTexto
           rotulo="Telefone"
           prefixo="+351"
           value={telefone}
           onChangeText={setTelefone}
           keyboardType="phone-pad"
-          erro={erros.telefone}
+          campo="telefone"
           maxLength={13}
         />
         <View style={{ gap: 6 }}>
@@ -155,7 +165,7 @@ function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<v
               setLat(null);
               setLng(null);
             }}
-            erro={erros.cidade}
+            campo="cidade"
             dica={
               lat != null
                 ? "Base confirmada no mapa. É daqui que se mede a distância a cada pedido."
@@ -194,7 +204,7 @@ function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<v
         </Text>
       </Caixa>
 
-      <Caixa>
+      <CaixaComErro campo="tipoVeiculo">
         <TituloDaCaixa>A sua viatura</TituloDaCaixa>
         {TIPOS_DE_VEICULO.map((v) => {
           const activa = veiculo === v.id;
@@ -211,13 +221,13 @@ function Dados({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<v
             </Pressable>
           );
         })}
-        {erros.tipoVeiculo ? <Text style={{ color: c.mau }}>{erros.tipoVeiculo}</Text> : null}
-      </Caixa>
+      </CaixaComErro>
 
       {erro ? <Mensagem texto={erro} /> : null}
+      {formulario.aviso ? <Mensagem texto={formulario.aviso} /> : null}
       {gravadoAs ? <Mensagem tom="bom" texto={`Guardado às ${gravadoAs}.`} /> : null}
       <Botao titulo="Guardar" ocupado={aGravar} aoCarregar={() => void gravar()} />
-    </>
+    </FormularioComErros>
   );
 }
 

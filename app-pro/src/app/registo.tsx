@@ -5,15 +5,15 @@ import { Image, Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../componentes/Texto";
-import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../componentes/ui";
+import { Botao, Caixa, CaixaComErro, CampoDeTexto, FormularioComErros, Mensagem, TituloDaCaixa, useFormulario } from "../componentes/ui";
 import { escolherFotografias, reduzirFotografiaDaCandidatura } from "../componentes/Fotografias";
 import { VerFotografias } from "../componentes/VerFotografias";
 import { enviarFicheiro, ErroDaApi, errosPorCampo, pedir } from "../lib/api";
+import { errosDaCandidatura, ROTULOS_DA_CANDIDATURA } from "../lib/candidatura";
 import { SERVICOS_DA_INSCRICAO } from "../lib/conta";
 import {
   AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA,
   MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA,
-  MENSAGEM_SEM_FOTOGRAFIA,
   ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA,
 } from "../lib/fotografias-da-carrinha";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
@@ -56,21 +56,26 @@ export default function Registo() {
   const [fotografias, setFotografias] = useState<string[]>([]);
   const [aJuntar, setAJuntar] = useState(0);
   const [aEnviar, setAEnviar] = useState(false);
-  const [erros, setErros] = useState<Record<string, string>>({});
+  // d9 (12-11-2026): o que falta fica a vermelho, o ecrã desce até ao primeiro e o aviso diz o quê.
+  const formulario = useFormulario(ROTULOS_DA_CANDIDATURA);
   const [erroGeral, setErroGeral] = useState<string | null>(null);
+  // O «Falta: …» só depois de tocar em Enviar (o erro do envio de uma fotografia fica só na caixa dela).
+  const [tentou, setTentou] = useState(false);
   const [feito, setFeito] = useState(false);
 
   function alternar(id: string) {
     setServicos((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-    setErros(({ servicos: _, ...resto }) => resto);
+    formulario.tirarErro("servicos");
   }
 
   async function enviar() {
-    setErros({});
+    formulario.limparErros();
     setErroGeral(null);
-    // Sem fotografia, a candidatura não segue — como no site, e o servidor recusa-a na mesma.
-    if (fotografias.length === 0) {
-      setErros({ fotografias: MENSAGEM_SEM_FOTOGRAFIA });
+    setTentou(true);
+    // Tudo o que falta de uma vez, com as frases da rota; sem fotografia não segue — como no site.
+    const locais = errosDaCandidatura({ nome, email, telefone, cidade, servicos, fotografias });
+    if (Object.keys(locais).length > 0) {
+      formulario.mostrarErros(locais);
       return;
     }
     setAEnviar(true);
@@ -93,7 +98,9 @@ export default function Registo() {
     } catch (e) {
       const porCampo = errosPorCampo(e);
       if (Object.keys(porCampo).length > 0) {
-        setErros(porCampo);
+        formulario.mostrarErros(porCampo);
+        // Um erro sem sítio no ecrã vem junto, em `error` (a rota, d9): mostra-se também.
+        if (e instanceof ErroDaApi && typeof e.corpo.error === "string") setErroGeral(e.corpo.error);
       } else if (e instanceof ErroDaApi && e.estado === 0) {
         setErroGeral("Sem ligação. O que escreveu não se perdeu — tente outra vez.");
       } else {
@@ -130,124 +137,126 @@ export default function Registo() {
     );
   }
 
-  const nErros = Object.keys(erros).length;
-
   return (
-      <RolagemComTeclado style={{ flex: 1, backgroundColor: c.fundo }} contentContainerStyle={pagina} keyboardShouldPersistTaps="handled">
-        <Text style={[estilos.texto, { color: c.suave }]}>
-          Diga-nos quem é e o que faz. Alguém da CLYON lê a candidatura e responde-lhe; se avançar, recebe por email o
-          link para escolher a palavra-passe.
-        </Text>
+      <RolagemComTeclado
+        style={{ flex: 1, backgroundColor: c.fundo }}
+        contentContainerStyle={pagina}
+        keyboardShouldPersistTaps="handled"
+      >
+        <FormularioComErros formulario={formulario}>
+          <Text style={[estilos.texto, { color: c.suave }]}>
+            Diga-nos quem é e o que faz. Alguém da CLYON lê a candidatura e responde-lhe; se avançar, recebe por email o
+            link para escolher a palavra-passe.
+          </Text>
 
-        <Caixa>
-          <CampoDeTexto
-            rotulo="Nome ou empresa *"
-            value={nome}
-            onChangeText={setNome}
-            placeholder="Ex.: Transportes e Mudanças, Lda."
-            autoComplete="name"
-            erro={erros.nome}
+          <Caixa>
+            <CampoDeTexto
+              rotulo="Nome ou empresa *"
+              value={nome}
+              onChangeText={setNome}
+              placeholder="Ex.: Transportes e Mudanças, Lda."
+              autoComplete="name"
+              campo="nome"
+            />
+            <CampoDeTexto
+              rotulo="Telemóvel *"
+              value={telefone}
+              onChangeText={setTelefone}
+              placeholder="912 345 678"
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              campo="telefone"
+            />
+            <CampoDeTexto
+              rotulo="Email *"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="nome@empresa.pt"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              campo="email"
+            />
+            <CampoDeTexto
+              rotulo="De onde trabalha *"
+              value={cidade}
+              onChangeText={setCidade}
+              placeholder="Ex.: Seixal"
+              dica="A localidade da sua base. É daqui que se mede o que lhe fica perto."
+              campo="cidade"
+            />
+          </Caixa>
+
+          <Caixa>
+            <TituloDaCaixa>Viatura</TituloDaCaixa>
+            {VEICULOS.map((v) => {
+              const activo = tipoVeiculo === v.id;
+              return (
+                <Pressable
+                  key={v.id}
+                  onPress={() => setTipoVeiculo(activo ? null : v.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: activo }}
+                  style={({ pressed }) => [estilos.opcao, { borderColor: activo ? c.marca : c.linha, opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Ionicons name={activo ? "radio-button-on" : "radio-button-off"} size={22} color={activo ? c.marca : c.suave} />
+                  <Text style={{ flex: 1, color: c.tinta }}>{v.rotulo}</Text>
+                </Pressable>
+              );
+            })}
+          </Caixa>
+
+          <FotografiasDaCarrinha
+            fotografias={fotografias}
+            aoMudar={setFotografias}
+            aJuntar={aJuntar}
+            aoMudarAJuntar={setAJuntar}
+            aoMudarErro={(e) => (e ? formulario.marcarErro("fotografias", e) : formulario.tirarErro("fotografias"))}
           />
-          <CampoDeTexto
-            rotulo="Telemóvel *"
-            value={telefone}
-            onChangeText={setTelefone}
-            placeholder="912 345 678"
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            textContentType="telephoneNumber"
-            erro={erros.telefone}
-          />
-          <CampoDeTexto
-            rotulo="Email *"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="nome@empresa.pt"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType="emailAddress"
-            erro={erros.email}
-          />
-          <CampoDeTexto
-            rotulo="De onde trabalha *"
-            value={cidade}
-            onChangeText={setCidade}
-            placeholder="Ex.: Seixal"
-            dica="A localidade da sua base. É daqui que se mede o que lhe fica perto."
-            erro={erros.cidade}
-          />
-        </Caixa>
 
-        <Caixa>
-          <TituloDaCaixa>Viatura</TituloDaCaixa>
-          {VEICULOS.map((v) => {
-            const activo = tipoVeiculo === v.id;
-            return (
-              <Pressable
-                key={v.id}
-                onPress={() => setTipoVeiculo(activo ? null : v.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: activo }}
-                style={({ pressed }) => [estilos.opcao, { borderColor: activo ? c.marca : c.linha, opacity: pressed ? 0.7 : 1 }]}
-              >
-                <Ionicons name={activo ? "radio-button-on" : "radio-button-off"} size={22} color={activo ? c.marca : c.suave} />
-                <Text style={{ flex: 1, color: c.tinta }}>{v.rotulo}</Text>
-              </Pressable>
-            );
-          })}
-        </Caixa>
+          <CaixaComErro campo="servicos">
+            <TituloDaCaixa>O que faz *</TituloDaCaixa>
+            <Text style={[estilos.dica, { color: c.suave }]}>Só lhe chegam pedidos destas categorias. Pode mudar depois.</Text>
+            {/* Os mesmos do /quero-ser-parceiro: os do plano, sem «Outro serviço» (27-10-2026). */}
+            {SERVICOS_DA_INSCRICAO.map((s) => {
+              const activo = servicos.includes(s.id);
+              return (
+                <Pressable
+                  key={s.id}
+                  onPress={() => alternar(s.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: activo }}
+                  style={({ pressed }) => [estilos.opcao, { borderColor: activo ? c.marca : c.linha, opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Ionicons name={activo ? "checkbox" : "square-outline"} size={22} color={activo ? c.marca : c.suave} />
+                  <Text style={{ flex: 1, color: c.tinta }}>{s.label}</Text>
+                </Pressable>
+              );
+            })}
+          </CaixaComErro>
 
-        <FotografiasDaCarrinha
-          fotografias={fotografias}
-          aoMudar={setFotografias}
-          aJuntar={aJuntar}
-          aoMudarAJuntar={setAJuntar}
-          erro={erros.fotografias}
-          aoMudarErro={(e) => setErros(({ fotografias: _, ...resto }) => (e ? { ...resto, fotografias: e } : resto))}
-        />
+          <Caixa>
+            <CampoDeTexto
+              rotulo="Quer dizer mais alguma coisa? (opcional)"
+              value={mensagem}
+              onChangeText={setMensagem}
+              placeholder="Há quanto tempo trabalha nisto, quantas pessoas tem na equipa, o que costuma fazer."
+              multiline
+            />
+          </Caixa>
 
-        <Caixa>
-          <TituloDaCaixa>O que faz *</TituloDaCaixa>
-          <Text style={[estilos.dica, { color: c.suave }]}>Só lhe chegam pedidos destas categorias. Pode mudar depois.</Text>
-          {/* Os mesmos do /quero-ser-parceiro: os do plano, sem «Outro serviço» (27-10-2026). */}
-          {SERVICOS_DA_INSCRICAO.map((s) => {
-            const activo = servicos.includes(s.id);
-            return (
-              <Pressable
-                key={s.id}
-                onPress={() => alternar(s.id)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: activo }}
-                style={({ pressed }) => [estilos.opcao, { borderColor: activo ? c.marca : c.linha, opacity: pressed ? 0.7 : 1 }]}
-              >
-                <Ionicons name={activo ? "checkbox" : "square-outline"} size={22} color={activo ? c.marca : c.suave} />
-                <Text style={{ flex: 1, color: c.tinta }}>{s.label}</Text>
-              </Pressable>
-            );
-          })}
-          {erros.servicos ? <Text style={{ color: c.mau }}>{erros.servicos}</Text> : null}
-        </Caixa>
-
-        <Caixa>
-          <CampoDeTexto
-            rotulo="Quer dizer mais alguma coisa? (opcional)"
-            value={mensagem}
-            onChangeText={setMensagem}
-            placeholder="Há quanto tempo trabalha nisto, quantas pessoas tem na equipa, o que costuma fazer."
-            multiline
-          />
-        </Caixa>
-
-        {/* Os erros por baixo do botão, como no site: é onde ele está a olhar. */}
-        {/* Enquanto uma fotografia sobe, espera-se por ela: a candidatura leva os endereços. */}
-        <Botao titulo={aEnviar ? "A enviar…" : "Enviar candidatura"} aoCarregar={enviar} ocupado={aEnviar || aJuntar > 0} />
-        {erroGeral ? <Mensagem texto={erroGeral} /> : null}
-        {nErros > 0 && !erroGeral ? <Mensagem texto="Falta preencher o que está assinalado acima." /> : null}
-        <Text style={[estilos.dica, { color: c.suave, textAlign: "center" }]}>
-          Ao enviar, fica só uma candidatura registada. Não cria conta nem o obriga a nada.
-        </Text>
+          {/* Os erros por baixo do botão, como no site: é onde ele está a olhar. */}
+          {/* Enquanto uma fotografia sobe, espera-se por ela: a candidatura leva os endereços. */}
+          <Botao titulo={aEnviar ? "A enviar…" : "Enviar candidatura"} aoCarregar={enviar} ocupado={aEnviar || aJuntar > 0} />
+          {erroGeral ? <Mensagem texto={erroGeral} /> : null}
+          {tentou && formulario.aviso ? <Mensagem texto={formulario.aviso} /> : null}
+          <Text style={[estilos.dica, { color: c.suave, textAlign: "center" }]}>
+            Ao enviar, fica só uma candidatura registada. Não cria conta nem o obriga a nada.
+          </Text>
+        </FormularioComErros>
       </RolagemComTeclado>
   );
 }
@@ -266,7 +275,6 @@ function FotografiasDaCarrinha({
   aoMudar,
   aJuntar,
   aoMudarAJuntar,
-  erro,
   aoMudarErro,
 }: {
   fotografias: string[];
@@ -274,7 +282,6 @@ function FotografiasDaCarrinha({
   /** Quantas estão a subir agora — o «Enviar candidatura» espera por elas. */
   aJuntar: number;
   aoMudarAJuntar: Dispatch<SetStateAction<number>>;
-  erro: string | undefined;
   aoMudarErro: (erro: string | null) => void;
 }) {
   const c = useCores();
@@ -307,7 +314,7 @@ function FotografiasDaCarrinha({
   }
 
   return (
-    <Caixa>
+    <CaixaComErro campo="fotografias">
       <TituloDaCaixa>{ROTULO_DAS_FOTOGRAFIAS_DA_CARRINHA} *</TituloDaCaixa>
       <Text style={[estilos.dica, { color: c.suave }]}>{AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA}</Text>
       {fotografias.length > 0 || aJuntar > 0 ? (
@@ -353,8 +360,7 @@ function FotografiasDaCarrinha({
       <Text style={[estilos.dica, { color: c.suave }]}>
         {fotografias.length} de {MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA} fotografias
       </Text>
-      {erro ? <Text style={{ color: c.mau }}>{erro}</Text> : null}
-    </Caixa>
+    </CaixaComErro>
   );
 }
 

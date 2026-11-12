@@ -49,8 +49,17 @@ export function useAlturaDoTeclado(): number {
 }
 
 type Mensuravel = { measureInWindow?: (cb: (x: number, y: number, w: number, h: number) => void) => void };
-type Rolagem = { levar: (campo: Mensuravel | null) => void };
+type Rolagem = { levar: (campo: Mensuravel | null) => void; mostrar: (campo: Mensuravel | null) => void };
 const ContextoDaRolagem = createContext<Rolagem | null>(null);
+
+/**
+ * Para o formulário que não passa (d9, 12-11-2026): rola até o campo ficar no
+ * cimo da rolagem, com folga — esteja o teclado aberto ou não.
+ */
+export function useMostrarNaRolagem(): (campo: Mensuravel | null) => void {
+  const r = useContext(ContextoDaRolagem);
+  return useCallback((campo) => r?.mostrar(campo), [r]);
+}
 
 /** Para o TextInput: ao ganhar o foco, chama a função com o próprio campo. */
 export function useLevarAoTeclado(): (campo: Mensuravel | null) => void {
@@ -94,6 +103,15 @@ export const RolagemComTeclado = forwardRef<ScrollView, Props>(function RolagemC
         pendente.current = campo;
         // Com o teclado já aberto (passar de um campo para outro), sobe logo.
         if (ultimoTopoDoTeclado != null) setTimeout(() => subir(campo), 60);
+      },
+      mostrar: (campo) => {
+        const vista = rolagem.current as unknown as Mensuravel | null;
+        if (!campo?.measureInWindow || !vista?.measureInWindow) return;
+        vista.measureInWindow((_x, yDaRolagem) => {
+          campo.measureInWindow?.((_x2, y) => {
+            rolagem.current?.scrollTo({ y: Math.max(0, posicao.current + (y - yDaRolagem) - FOLGA), animated: true });
+          });
+        });
       },
     }),
     [subir],

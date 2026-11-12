@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
-import { Botao, Caixa, CampoDeTexto, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { Botao, Caixa, CaixaComErro, CampoDeTexto, FormularioComErros, Mensagem, TituloDaCaixa, useFormulario } from "../../componentes/ui";
 import { useConta } from "../../estado/Conta";
 import { ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
 import { faltasEm, SERVICOS_DA_INSCRICAO, type Perfil } from "../../lib/conta";
@@ -54,6 +54,20 @@ export default function EcraDosServicos() {
   );
 }
 
+/** Os nomes curtos do aviso «Falta: …», pela ordem do ecrã (d9, 12-11-2026). */
+const ROTULOS_DOS_SERVICOS: Record<string, string> = {
+  categorias: "o que faz",
+  raioKm: "raio de acção",
+  custoKm: "custo por km",
+  custoHoraPessoa: "custo por hora e pessoa",
+  pessoasNaEquipa: "pessoas na equipa",
+  horasPorTrabalho: "tempo médio por trabalho",
+  trabalhosPorMes: "trabalhos por mês",
+  custosFixosAnuais: "custos fixos",
+  margemPercent: "margem de lucro",
+  riscoPercent: "seguro de risco",
+};
+
 function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<void> }) {
   const c = useCores();
   const [categorias, setCategorias] = useState<string[]>(perfil.categorias);
@@ -72,7 +86,9 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
   const [fixos, setFixos] = useState<Record<string, string>>(
     Object.fromEntries(RUBRICAS_DOS_CUSTOS_FIXOS.map(({ chave }) => [chave, fmt(perfil.custosFixosAnuais?.[chave] ?? null)])),
   );
-  const [erros, setErros] = useState<Record<string, string>>({});
+  // d9: o que falta fica a vermelho, o ecrã desce até ao primeiro e o aviso diz o quê.
+  const formulario = useFormulario(ROTULOS_DOS_SERVICOS);
+  const erros = formulario.erros;
   const [erro, setErro] = useState<string | null>(null);
   const [gravadoAs, setGravadoAs] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
@@ -94,7 +110,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
 
   async function gravar() {
     setAGravar(true);
-    setErros({});
+    formulario.limparErros();
     setErro(null);
     setGravadoAs(null);
     try {
@@ -117,21 +133,20 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
       await aoGravar();
     } catch (e) {
       const porCampo = errosPorCampo(e);
-      setErros(porCampo);
+      formulario.mostrarErros(porCampo);
       if (Object.keys(porCampo).length === 0) setErro(e instanceof ErroDaApi ? e.message : "Não foi possível guardar.");
-      else setErro("Há campos por corrigir — veja a vermelho.");
     } finally {
       setAGravar(false);
     }
   }
 
   return (
-    <>
+    <FormularioComErros formulario={formulario}>
       {faltas.length > 0 ? (
         <Mensagem tom="aviso" texto={`${faltas.length === 1 ? "Falta um campo" : `Faltam ${faltas.length} campos`} aqui: ${faltas.map((f) => f.rotulo.toLowerCase()).join(", ")}.`} />
       ) : null}
 
-      <Caixa>
+      <CaixaComErro campo="categorias">
         <TituloDaCaixa>O que faz</TituloDaCaixa>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>Recebe pedidos só dos serviços que escolher.</Text>
         {escolhas.map((s) => {
@@ -149,10 +164,9 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
             </Pressable>
           );
         })}
-        {erros.categorias ? <Text style={{ color: c.mau }}>{erros.categorias}</Text> : null}
-      </Caixa>
+      </CaixaComErro>
 
-      <Caixa>
+      <CaixaComErro campo="raioKm">
         <TituloDaCaixa>Raio de acção</TituloDaCaixa>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
           Recebe os pedidos até esta distância da sua base, por estrada.
@@ -188,8 +202,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
             </Pressable>
           ))}
         </View>
-        {erros.raioKm ? <Text style={{ color: c.mau }}>{erros.raioKm}</Text> : null}
-      </Caixa>
+      </CaixaComErro>
 
       <Caixa>
         <TituloDaCaixa>Os meus custos</TituloDaCaixa>
@@ -197,14 +210,14 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           Entram na sugestão de valor de cada pedido. Pode deixar vazio: aí entra a referência da CLYON — que é o custo de um profissional
           médio, e não o seu.
         </Text>
-        <CampoDeTexto rotulo="Custo por km (€)" value={custos.custoKm} onChangeText={mudar("custoKm")} keyboardType="decimal-pad" placeholder="0,50" erro={erros.custoKm} />
+        <CampoDeTexto rotulo="Custo por km (€)" value={custos.custoKm} onChangeText={mudar("custoKm")} keyboardType="decimal-pad" placeholder="0,50" campo="custoKm" />
         <CampoDeTexto
           rotulo="Custo por hora e pessoa (€)"
           value={custos.custoHoraPessoa}
           onChangeText={mudar("custoHoraPessoa")}
           keyboardType="decimal-pad"
           placeholder="9"
-          erro={erros.custoHoraPessoa}
+          campo="custoHoraPessoa"
         />
         <CampoDeTexto
           rotulo="Pessoas na equipa"
@@ -212,7 +225,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           onChangeText={mudar("pessoasNaEquipa")}
           keyboardType="number-pad"
           placeholder="3"
-          erro={erros.pessoasNaEquipa}
+          campo="pessoasNaEquipa"
         />
         <CampoDeTexto
           rotulo="Tempo médio por trabalho (horas)"
@@ -221,11 +234,11 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           keyboardType="decimal-pad"
           placeholder="ex.: 2,5"
           dica="Deslocação e recolha incluídas. Com isto preenchido, a conta usa o seu tempo em vez de o estimar a partir do pedido."
-          erro={erros.horasPorTrabalho}
+          campo="horasPorTrabalho"
         />
       </Caixa>
 
-      <Caixa>
+      <CaixaComErro campo="custosFixosAnuais">
         <TituloDaCaixa>Custos fixos, por ano</TituloDaCaixa>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
           O que paga tenha ou não trabalho. O site divide pelos trabalhos que faz num ano e põe a parte de cada trabalho na conta.
@@ -246,7 +259,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           onChangeText={mudar("trabalhosPorMes")}
           keyboardType="number-pad"
           placeholder="20"
-          erro={erros.trabalhosPorMes}
+          campo="trabalhosPorMes"
         />
         {anual != null && anual > 0 ? (
           <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1 }}>
@@ -256,8 +269,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
               : " — indique os trabalhos por mês para o site dividir"}
           </Text>
         ) : null}
-        {erros.custosFixosAnuais ? <Text style={{ color: c.mau }}>{erros.custosFixosAnuais}</Text> : null}
-      </Caixa>
+      </CaixaComErro>
 
       <Caixa>
         <TituloDaCaixa>A margem e o risco</TituloDaCaixa>
@@ -271,7 +283,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
             "Sobre o custo mínimo de cada trabalho. A sugestão de valor propõe custo mais esta margem." +
             (margemDeReferencia != null ? ` Vazio, entram os ${margemDeReferencia} % da referência.` : "")
           }
-          erro={erros.margemPercent}
+          campo="margemPercent"
         />
         <CampoDeTexto
           rotulo="Seguro de risco (%)"
@@ -280,14 +292,15 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           keyboardType="number-pad"
           placeholder="0"
           dica="De 0 a 25 %. Uma reserva para partidos, cancelamentos e viagens em vão: entra no custo mínimo, antes da margem."
-          erro={erros.riscoPercent}
+          campo="riscoPercent"
         />
       </Caixa>
 
       {erro ? <Mensagem texto={erro} /> : null}
+      {formulario.aviso ? <Mensagem texto={formulario.aviso} /> : null}
       {gravadoAs ? <Mensagem tom="bom" texto={`Guardado às ${gravadoAs}.`} /> : null}
       <Botao titulo="Guardar" ocupado={aGravar} aoCarregar={() => void gravar()} />
-    </>
+    </FormularioComErros>
   );
 }
 

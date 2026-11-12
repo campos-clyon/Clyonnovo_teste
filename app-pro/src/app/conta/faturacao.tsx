@@ -1,11 +1,25 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
-import { Botao, Caixa, CampoDeTexto, Escolhas, Interruptor, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { Botao, Caixa, CampoDeTexto, Escolhas, FormularioComErros, GrupoComErro, Interruptor, Mensagem, TituloDaCaixa, useFormulario } from "../../componentes/ui";
 import { useConta } from "../../estado/Conta";
-import { ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
+import { escolherFotografias, reduzirFotografiaDaCandidatura } from "../../componentes/Fotografias";
+import { enviarFicheiro, ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
+import {
+  AJUDA_DA_GUIA,
+  AJUDA_DA_PROVA_DA_GUIA,
+  avisoDoCodigoApa,
+  EXEMPLO_DO_CODIGO_APA,
+  EXEMPLO_DO_DESTINO_DOS_RESIDUOS,
+  MAXIMO_DO_DESTINO_DOS_RESIDUOS,
+  MENSAGENS_DA_PROVA,
+  ROTULO_DA_PROVA_DA_GUIA,
+  ROTULO_DO_CODIGO_APA,
+  ROTULO_DO_DESTINO_DOS_RESIDUOS,
+} from "../../../../src/lib/guia-de-residuos";
+import { diaEmLisboa } from "../../../../src/lib/hora-de-lisboa";
 import { faltasEm, type Perfil } from "../../lib/conta";
 import { horaCurta } from "../../lib/trabalhos";
 import { ESPACO, LETRA, useCores } from "../../tema";
@@ -41,6 +55,17 @@ export default function EcraDaFaturacao() {
   );
 }
 
+/** Os nomes curtos do aviso «Falta: …», pela ordem do ecrã (d9, 12-11-2026). */
+const ROTULOS_DA_FATURACAO: Record<string, string> = {
+  nif: "NIF",
+  moradaFiscal: "morada fiscal",
+  codigoPostalFiscal: "código postal",
+  localidadeFiscal: "localidade",
+  regimeIva: "regime de IVA",
+  numeroTransportador: "código APA",
+  destinoDosResiduos: "para onde leva o entulho",
+};
+
 function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Promise<void> }) {
   const c = useCores();
   const [emiteFatura, setEmiteFatura] = useState(perfil.emiteFatura);
@@ -51,7 +76,10 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
   const [regime, setRegime] = useState<"isento" | "normal">(perfil.regimeIva === "normal" ? "normal" : "isento");
   const [emiteGuia, setEmiteGuia] = useState(perfil.emiteGuiaTransporte);
   const [transportador, setTransportador] = useState(perfil.numeroTransportador);
-  const [erros, setErros] = useState<Record<string, string>>({});
+  const [destino, setDestino] = useState(perfil.destinoDosResiduos ?? "");
+  // d9: o que falta fica a vermelho, o ecrã desce até ao primeiro e o aviso diz o quê.
+  const formulario = useFormulario(ROTULOS_DA_FATURACAO);
+  const erros = formulario.erros;
   const [erro, setErro] = useState<string | null>(null);
   const [gravadoAs, setGravadoAs] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
@@ -59,7 +87,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
 
   async function gravar() {
     setAGravar(true);
-    setErros({});
+    formulario.limparErros();
     setErro(null);
     setGravadoAs(null);
     const guiaMudou = emiteGuia !== perfil.emiteGuiaTransporte || transportador.trim() !== perfil.numeroTransportador;
@@ -74,22 +102,23 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           localidadeFiscal: localidade.trim(),
           regimeIva: regime,
           ...(guiaMudou ? { emiteGuiaTransporte: emiteGuia, numeroTransportador: transportador.trim() } : {}),
+          // O destino do entulho (d5): só segue quando muda, e só com a guia ligada (como no painel).
+          ...(emiteGuia && destino.trim() !== (perfil.destinoDosResiduos ?? "").trim() ? { destinoDosResiduos: destino.trim() } : {}),
         },
       });
       setGravadoAs(horaCurta(new Date().toISOString()));
       await aoGravar();
     } catch (e) {
       const porCampo = errosPorCampo(e);
-      setErros(porCampo);
+      formulario.mostrarErros(porCampo);
       if (Object.keys(porCampo).length === 0) setErro(e instanceof ErroDaApi ? e.message : "Não foi possível guardar.");
-      else setErro("Há campos por corrigir — veja a vermelho.");
     } finally {
       setAGravar(false);
     }
   }
 
   return (
-    <>
+    <FormularioComErros formulario={formulario}>
       {faltas.length > 0 ? (
         <Mensagem tom="aviso" texto={`${faltas.length === 1 ? "Falta um campo" : `Faltam ${faltas.length} campos`} aqui: ${faltas.map((f) => f.rotulo.toLowerCase()).join(", ")}.`} />
       ) : null}
@@ -99,8 +128,8 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
 
       <Caixa>
         <Interruptor rotulo="Emito fatura" valor={emiteFatura} aoMudar={setEmiteFatura} />
-        <CampoDeTexto rotulo="NIF" value={nif} onChangeText={setNif} keyboardType="number-pad" maxLength={9} erro={erros.nif} />
-        <CampoDeTexto rotulo="Morada fiscal" value={morada} onChangeText={setMorada} placeholder="Rua e número" erro={erros.moradaFiscal} />
+        <CampoDeTexto rotulo="NIF" value={nif} onChangeText={setNif} keyboardType="number-pad" maxLength={9} campo="nif" />
+        <CampoDeTexto rotulo="Morada fiscal" value={morada} onChangeText={setMorada} placeholder="Rua e número" campo="moradaFiscal" />
         <View style={estilos.lado}>
           <View style={{ width: 130 }}>
             <CampoDeTexto
@@ -110,15 +139,15 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
               keyboardType="numbers-and-punctuation"
               placeholder="0000-000"
               maxLength={8}
-              erro={erros.codigoPostalFiscal}
+              campo="codigoPostalFiscal"
             />
           </View>
           <View style={{ flex: 1 }}>
-            <CampoDeTexto rotulo="Localidade" value={localidade} onChangeText={setLocalidade} erro={erros.localidadeFiscal} />
+            <CampoDeTexto rotulo="Localidade" value={localidade} onChangeText={setLocalidade} campo="localidadeFiscal" />
           </View>
         </View>
         {emiteFatura ? (
-          <View style={{ gap: 6 }}>
+          <GrupoComErro campo="regimeIva">
             <Text style={{ color: c.tinta, fontWeight: "600" }}>Regime de IVA</Text>
             <Escolhas
               opcoes={[
@@ -128,8 +157,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
               valor={regime}
               aoEscolher={setRegime}
             />
-            {erros.regimeIva ? <Text style={{ color: c.mau }}>{erros.regimeIva}</Text> : null}
-          </View>
+          </GrupoComErro>
         ) : null}
       </Caixa>
 
@@ -142,29 +170,160 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           aoMudar={setEmiteGuia}
         />
         {emiteGuia ? (
-          <CampoDeTexto
-            rotulo="Número de registo de transportador"
-            value={transportador}
-            onChangeText={setTransportador}
-            autoCapitalize="characters"
-            erro={erros.numeroTransportador}
-            dica={
-              perfil.guiaVerificada
-                ? "Verificado. Mudar o número volta a pô-lo por verificar."
-                : "Ainda por verificar do nosso lado."
-            }
-          />
+          <>
+            {/* A guia de resíduos (d5, 12-11-2026): os textos e as regras são os do site (guia-de-residuos.ts). */}
+            <CampoDeTexto
+              rotulo={ROTULO_DO_CODIGO_APA}
+              value={transportador}
+              onChangeText={setTransportador}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder={EXEMPLO_DO_CODIGO_APA}
+              campo="numeroTransportador"
+              dica={
+                perfil.guiaVerificada
+                  ? "Verificado. Mudar o código volta a pô-lo por verificar."
+                  : "Ainda por verificar do nosso lado."
+              }
+            />
+            {/* O formato avisa e não bloqueia. */}
+            {avisoDoCodigoApa(transportador) ? (
+              <Text style={{ color: c.aviso, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{avisoDoCodigoApa(transportador)}</Text>
+            ) : null}
+            <ProvaDaGuia prova={perfil.provaDaGuia ?? null} aoMudar={aoGravar} />
+            <CampoDeTexto
+              rotulo={ROTULO_DO_DESTINO_DOS_RESIDUOS}
+              value={destino}
+              onChangeText={setDestino}
+              placeholder={EXEMPLO_DO_DESTINO_DOS_RESIDUOS}
+              maxLength={MAXIMO_DO_DESTINO_DOS_RESIDUOS}
+              campo="destinoDosResiduos"
+            />
+            <AjudaDaGuia />
+          </>
         ) : null}
       </Caixa>
 
       {erro ? <Mensagem texto={erro} /> : null}
+      {formulario.aviso ? <Mensagem texto={formulario.aviso} /> : null}
       {gravadoAs ? <Mensagem tom="bom" texto={`Guardado às ${gravadoAs}.`} /> : null}
       <Botao titulo="Guardar" ocupado={aGravar} aoCarregar={() => void gravar()} />
-    </>
+    </FormularioComErros>
+  );
+}
+
+/** «12/11/2026», o dia em Lisboa. */
+function diaCurto(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const [a, m, dia] = diaEmLisboa(d).split("-");
+  return `${dia}/${m}/${a}`;
+}
+
+/**
+ * A PROVA DO REGISTO NO SILiAmb — d5, 12-11-2026, como no painel
+ * (`ProvaDaGuia`, Perfil.tsx). Sobe para `/api/profissionais/prova-da-guia`
+ * (campo `file`), apaga-se com DELETE na mesma rota. Só a administração a
+ * abre: a app só vê o nome e a data. Na app vai uma fotografia ou uma captura
+ * de ecrã (da galeria); o PDF envia-se pelo painel do site.
+ */
+function ProvaDaGuia({ prova, aoMudar }: { prova: { nome: string | null; em: string } | null; aoMudar: () => Promise<void> }) {
+  const c = useCores();
+  const [aEnviar, setAEnviar] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [feito, setFeito] = useState<string | null>(null);
+
+  async function enviar(origem: "camara" | "galeria") {
+    setErro(null);
+    setFeito(null);
+    const r = await escolherFotografias(origem, 1);
+    if ("erro" in r) return setErro(r.erro);
+    const a = r.fotografias[0];
+    if (!a) return;
+    setAEnviar(true);
+    try {
+      const f = await reduzirFotografiaDaCandidatura(a);
+      const d = await enviarFicheiro<{ provaDaGuia?: unknown }>("/api/profissionais/prova-da-guia", {}, f);
+      if (!d.provaDaGuia) throw new Error("sem prova");
+      setFeito(MENSAGENS_DA_PROVA.enviada);
+      await aoMudar();
+    } catch (e) {
+      setErro(e instanceof ErroDaApi ? e.message : MENSAGENS_DA_PROVA.falhou);
+    } finally {
+      setAEnviar(false);
+    }
+  }
+
+  async function apagar() {
+    setErro(null);
+    setFeito(null);
+    setAEnviar(true);
+    try {
+      await pedir("/api/profissionais/prova-da-guia", { metodo: "DELETE" });
+      await aoMudar();
+    } catch (e) {
+      setErro(e instanceof ErroDaApi ? e.message : "Não foi possível apagar.");
+    } finally {
+      setAEnviar(false);
+    }
+  }
+
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: c.tinta, fontWeight: "600", fontSize: LETRA.normal }}>{ROTULO_DA_PROVA_DA_GUIA}</Text>
+      {prova ? (
+        <View style={estilos.lado}>
+          <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.pequena + 1 }}>
+            Enviada{prova.nome ? ` (${prova.nome})` : ""} a {diaCurto(prova.em)}
+          </Text>
+          <Pressable accessibilityRole="button" onPress={() => void apagar()} disabled={aEnviar} hitSlop={8}>
+            <Text style={{ color: c.mau, fontWeight: "700", fontSize: LETRA.pequena + 1 }}>Apagar</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      <View style={estilos.lado}>
+        <View style={{ flex: 1 }}>
+          <Botao titulo="Fotografar" tipo="secundario" ocupado={aEnviar} aoCarregar={() => void enviar("camara")} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Botao titulo="Da galeria" tipo="secundario" ocupado={aEnviar} aoCarregar={() => void enviar("galeria")} />
+        </View>
+      </View>
+      {feito ? <Text style={{ color: c.bom, fontSize: LETRA.pequena + 1 }}>{feito}</Text> : null}
+      {erro ? <Text style={{ color: c.mau, fontSize: LETRA.pequena + 1 }}>{erro}</Text> : null}
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>{AJUDA_DA_PROVA_DA_GUIA}</Text>
+    </View>
+  );
+}
+
+/** O texto A do Jurídico, fechado por omissão (como o `AjudaDaGuia` do painel). */
+function AjudaDaGuia() {
+  const c = useCores();
+  const [aberta, setAberta] = useState(false);
+  const texto = { color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 19 } as const;
+  return (
+    <View style={[estilos.ajuda, { borderColor: c.linha, backgroundColor: c.fundo }]}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: aberta }} onPress={() => setAberta((v) => !v)}>
+        <Text style={{ color: c.tinta, fontWeight: "700", fontSize: LETRA.pequena + 2 }}>{AJUDA_DA_GUIA.titulo}</Text>
+      </Pressable>
+      {aberta ? (
+        <View style={{ gap: 6 }}>
+          <Text style={texto}>{AJUDA_DA_GUIA.abertura}</Text>
+          {AJUDA_DA_GUIA.passos.map((p, i) => (
+            <Text key={p} style={texto}>
+              {i + 1}. {p}
+            </Text>
+          ))}
+          <Text style={texto}>{AJUDA_DA_GUIA.privacidade}</Text>
+          <Text style={texto}>{AJUDA_DA_GUIA.eGar}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const estilos = StyleSheet.create({
+  ajuda: { borderWidth: 1, borderRadius: 12, padding: ESPACO.m, gap: ESPACO.s },
   vazio: { flex: 1, alignItems: "center", justifyContent: "center" },
   pagina: { padding: ESPACO.l, gap: ESPACO.l },
   lado: { flexDirection: "row", gap: ESPACO.s, alignItems: "flex-start" },

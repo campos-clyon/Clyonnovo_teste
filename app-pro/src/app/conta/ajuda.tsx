@@ -4,7 +4,7 @@ import { Linking, Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
-import { Botao, Caixa, CampoDeTexto, Escolhas, Etiqueta, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { Botao, Caixa, CampoDeTexto, Escolhas, Etiqueta, FormularioComErros, GrupoComErro, Mensagem, TituloDaCaixa, useFormulario } from "../../componentes/ui";
 import { ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
 import { diaCurto } from "../../lib/conta";
 import {
@@ -127,18 +127,27 @@ export default function Ajuda() {
   );
 }
 
+
+/** Os nomes curtos do aviso «Falta: …», pela ordem do ecrã (d9). */
+const ROTULOS_DA_AJUDA: Record<string, string> = {
+  assunto: "assunto",
+  mensagem: "o que se passa",
+};
+
 function NovoPedido({ aoEnviar }: { aoEnviar: () => void }) {
   const c = useCores();
   const [assunto, setAssunto] = useState<AssuntoDeAjuda>("pedidos");
   const [mensagem, setMensagem] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
-  const [erros, setErros] = useState<Record<string, string>>({});
+  // d9 (12-11-2026): o que falta fica a vermelho, o ecrã desce até ao primeiro e o aviso diz o quê.
+  const formulario = useFormulario(ROTULOS_DA_AJUDA);
+  const erros = formulario.erros;
   const [erro, setErro] = useState<string | null>(null);
   const [feito, setFeito] = useState(false);
 
   async function enviar() {
     setAEnviar(true);
-    setErros({});
+    formulario.limparErros();
     setErro(null);
     setFeito(false);
     try {
@@ -148,7 +157,7 @@ function NovoPedido({ aoEnviar }: { aoEnviar: () => void }) {
       aoEnviar();
     } catch (e) {
       const porCampo = errosPorCampo(e);
-      setErros(porCampo);
+      formulario.mostrarErros(porCampo);
       if (Object.keys(porCampo).length === 0) setErro(e instanceof ErroDaApi ? e.message : "Não foi possível enviar");
     } finally {
       setAEnviar(false);
@@ -156,10 +165,11 @@ function NovoPedido({ aoEnviar }: { aoEnviar: () => void }) {
   }
 
   return (
+    <FormularioComErros formulario={formulario}>
     <Caixa>
       <TituloDaCaixa>Escrever à CLYON</TituloDaCaixa>
       <Text style={{ color: c.tinta, fontWeight: "600" }}>Assunto</Text>
-      <View style={{ gap: ESPACO.xs }}>
+      <GrupoComErro campo="assunto">
         {ASSUNTOS_DE_AJUDA.map((a) => {
           const activo = a.id === assunto;
           return (
@@ -175,8 +185,7 @@ function NovoPedido({ aoEnviar }: { aoEnviar: () => void }) {
             </Pressable>
           );
         })}
-      </View>
-      {erros.assunto ? <Text style={{ color: c.mau }}>{erros.assunto}</Text> : null}
+      </GrupoComErro>
       <CampoDeTexto
         rotulo="O que se passa"
         value={mensagem}
@@ -185,12 +194,14 @@ function NovoPedido({ aoEnviar }: { aoEnviar: () => void }) {
         maxLength={4000}
         placeholder="Descreva com algum detalhe. Se for sobre um pedido, diga o número."
         dica={`Pelo menos ${MINIMO_DA_MENSAGEM} caracteres.`}
-        erro={erros.mensagem}
+        campo="mensagem"
       />
       {erro ? <Mensagem texto={erro} /> : null}
+      {formulario.aviso ? <Mensagem texto={formulario.aviso} /> : null}
       {feito ? <Mensagem tom="bom" texto="Recebemos o seu pedido. Respondemos por aqui e por email. Se for urgente, ligue-nos." /> : null}
       <Botao titulo="Enviar" ocupado={aEnviar} desactivado={mensagem.trim().length < MINIMO_DA_MENSAGEM} aoCarregar={() => void enviar()} />
     </Caixa>
+    </FormularioComErros>
   );
 }
 

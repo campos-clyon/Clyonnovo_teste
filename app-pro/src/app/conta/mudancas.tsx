@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RolagemComTeclado } from "../../componentes/Teclado";
 import { Text } from "../../componentes/Texto";
-import { Botao, Caixa, CampoDeTexto, Interruptor, Mensagem, TituloDaCaixa } from "../../componentes/ui";
+import { Botao, Caixa, CaixaComErro, CampoDeTexto, FormularioComErros, Interruptor, Mensagem, TituloDaCaixa, useFormulario } from "../../componentes/ui";
 import { ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
 import { euros } from "../../lib/trabalhos";
 import {
@@ -97,6 +97,18 @@ const paraOCampo = (n: number | null | undefined) => (n == null ? "" : String(n)
 const doCentimo = (c: number) => euros(c / 100);
 const percentagem = (f: number) => `${Math.round(f * 1000) / 10} %`.replace(".", ",");
 
+/** Os nomes curtos do aviso «Falta: …», pela ordem do ecrã (d9, 12-11-2026). */
+const ROTULOS_DAS_MUDANCAS: Record<string, string> = {
+  precoHora2: "hora com 2 pessoas",
+  precoHora3: "hora com 3 pessoas",
+  minimoHoras: "mínimo de horas",
+  precoKm: "preço do km",
+  kmMinimo: "km mínimos por trabalho",
+  kmMaximo: "distância máxima",
+  ...Object.fromEntries(MATERIAIS.map((m) => [m.chave, m.nome.toLowerCase()])),
+  aparecerNaLista: "aparecer na lista",
+};
+
 export default function EcraDosPrecosDasMudancas() {
   const c = useCores();
   const margens = useSafeAreaInsets();
@@ -109,7 +121,9 @@ export default function EcraDosPrecosDasMudancas() {
   const [aCarregar, setACarregar] = useState(true);
   const [erroDeLeitura, setErroDeLeitura] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
-  const [erros, setErros] = useState<Record<string, string>>({});
+  // d9: o que falta fica a vermelho, o ecrã desce até ao primeiro e o aviso diz o quê.
+  const formulario = useFormulario(ROTULOS_DAS_MUDANCAS);
+  const erros = formulario.erros;
   const [erro, setErro] = useState<string | null>(null);
   const [gravado, setGravado] = useState<string | null>(null);
 
@@ -172,21 +186,13 @@ export default function EcraDosPrecosDasMudancas() {
 
   const mudar = (k: Chave) => (v: string) => {
     setCampos((s) => ({ ...s, [k]: v }));
-    setErros((s) => {
-      if (!s[k]) return s;
-      const { [k]: _, ...resto } = s;
-      return resto;
-    });
+    formulario.tirarErro(k);
     setGravado(null);
   };
 
   const alternarDeFora = (k: Opcional) => {
     setDeFora((s) => ({ ...s, [k]: !s[k] }));
-    setErros((s) => {
-      if (!s[k]) return s;
-      const { [k]: _, ...resto } = s;
-      return resto;
-    });
+    formulario.tirarErro(k);
     setGravado(null);
   };
 
@@ -214,12 +220,11 @@ export default function EcraDosPrecosDasMudancas() {
     setErro(null);
     setGravado(null);
     if (!validacao.ok) {
-      setErros(validacao.erros as Record<string, string>);
-      setErro("Há campos por corrigir — veja a vermelho.");
+      formulario.mostrarErros(validacao.erros as Record<string, string>);
       return;
     }
     setAGravar(true);
-    setErros({});
+    formulario.limparErros();
     try {
       const d = await pedir<{ ok?: boolean; tarifa?: TarifaGravada | null; mensagem?: string }>("/api/profissionais/tarifas-mudancas", {
         metodo: "PUT",
@@ -230,10 +235,9 @@ export default function EcraDosPrecosDasMudancas() {
       setGravado(typeof d.mensagem === "string" ? d.mensagem : mensagemDeGravado(Boolean(d.tarifa?.aparecerNaLista), podeAparecer));
     } catch (e) {
       const porCampo = errosPorCampo(e);
-      setErros(porCampo);
+      formulario.mostrarErros(porCampo);
       if (Object.keys(porCampo).length === 0) setErro(e instanceof ErroDaApi ? e.message : "Não foi possível guardar.");
       else if (e instanceof ErroDaApi && e.estado === 403) setErro(e.message);
-      else setErro("Há campos por corrigir — veja a vermelho.");
     } finally {
       setAGravar(false);
     }
@@ -264,6 +268,7 @@ export default function EcraDosPrecosDasMudancas() {
       contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}
       keyboardShouldPersistTaps="handled"
     >
+      <FormularioComErros formulario={formulario}>
       <Text style={[nota, { color: c.tinta }]}>{TEXTOS.abertura}</Text>
 
       <Caixa>
@@ -274,7 +279,7 @@ export default function EcraDosPrecosDasMudancas() {
           onChangeText={mudar("precoHora2")}
           keyboardType="decimal-pad"
           placeholder="ex.: 45"
-          erro={erros.precoHora2}
+          campo="precoHora2"
         />
         <CampoOpcional
           rotulo="Hora com 3 pessoas (€/h)"
@@ -285,6 +290,7 @@ export default function EcraDosPrecosDasMudancas() {
           aoMudar={mudar("precoHora3")}
           placeholder="ex.: 60"
           erro={erros.precoHora3}
+          campo="precoHora3"
           aviso={avisoDasTresPessoas(deFora.precoHora3 ? null : campos.precoHora3)}
         />
         <CampoDeTexto
@@ -294,7 +300,7 @@ export default function EcraDosPrecosDasMudancas() {
           keyboardType="decimal-pad"
           placeholder="ex.: 3"
           dica="As horas cobradas nunca ficam abaixo deste mínimo."
-          erro={erros.minimoHoras}
+          campo="minimoHoras"
         />
       </Caixa>
 
@@ -306,7 +312,7 @@ export default function EcraDosPrecosDasMudancas() {
           onChangeText={mudar("precoKm")}
           keyboardType="decimal-pad"
           placeholder="ex.: 0,80"
-          erro={erros.precoKm}
+          campo="precoKm"
         />
         <CampoDeTexto
           rotulo="Km mínimos por trabalho"
@@ -315,7 +321,7 @@ export default function EcraDosPrecosDasMudancas() {
           keyboardType="number-pad"
           placeholder="ex.: 20"
           dica="Os km cobrados nunca ficam abaixo deste número."
-          erro={erros.kmMinimo}
+          campo="kmMinimo"
         />
         <CampoDeTexto
           rotulo="Distância máxima que aceita (km)"
@@ -323,7 +329,7 @@ export default function EcraDosPrecosDasMudancas() {
           onChangeText={mudar("kmMaximo")}
           keyboardType="number-pad"
           placeholder="ex.: 100"
-          erro={erros.kmMaximo}
+          campo="kmMaximo"
         />
       </Caixa>
 
@@ -340,11 +346,12 @@ export default function EcraDosPrecosDasMudancas() {
             valor={campos[m.chave]}
             aoMudar={mudar(m.chave)}
             erro={erros[m.chave]}
+            campo={m.chave}
           />
         ))}
       </Caixa>
 
-      <Caixa>
+      <CaixaComErro campo="aparecerNaLista">
         <Interruptor
           rotulo={TEXTOS.interruptor}
           dica={dicaDoInterruptor(podeAparecer && naLista, podeAparecer)}
@@ -355,8 +362,7 @@ export default function EcraDosPrecosDasMudancas() {
           }}
           desactivado={!podeAparecer}
         />
-        {erros.aparecerNaLista ? <Text style={{ color: c.mau }}>{erros.aparecerNaLista}</Text> : null}
-      </Caixa>
+      </CaixaComErro>
 
       <Caixa>
         <TituloDaCaixa>Exemplo da conta</TituloDaCaixa>
@@ -404,11 +410,13 @@ export default function EcraDosPrecosDasMudancas() {
       </Caixa>
 
       {erro ? <Mensagem texto={erro} /> : null}
+      {formulario.aviso ? <Mensagem texto={formulario.aviso} /> : null}
       {gravado ? <Mensagem tom="bom" texto={gravado} /> : null}
       <Botao titulo="Gravar os preços" ocupado={aGravar} aoCarregar={() => void gravar()} />
       {actualizadoEm ? (
         <Text style={[nota, { textAlign: "center" }]}>Última gravação: {dataEHoraEmLisboa(new Date(actualizadoEm))}</Text>
       ) : null}
+      </FormularioComErros>
     </RolagemComTeclado>
   );
 }
@@ -423,6 +431,7 @@ function CampoOpcional({
   aoMudar,
   placeholder,
   erro,
+  campo,
   aviso,
 }: {
   rotulo: string;
@@ -433,6 +442,8 @@ function CampoOpcional({
   aoMudar: (v: string) => void;
   placeholder?: string;
   erro?: string;
+  /** O nome do campo no formulário (d9): para o ecrã descer até ele. */
+  campo?: string;
   /** Um aviso em âmbar (não é erro: grava-se na mesma), de fora ou com o campo vazio. */
   aviso?: string | null;
 }) {
@@ -442,7 +453,7 @@ function CampoOpcional({
       {deFora ? (
         <Text style={{ color: c.tinta, fontWeight: "600", fontSize: LETRA.normal }}>{rotulo}</Text>
       ) : (
-        <CampoDeTexto rotulo={rotulo} value={valor} onChangeText={aoMudar} keyboardType="decimal-pad" placeholder={placeholder} erro={erro} />
+        <CampoDeTexto rotulo={rotulo} value={valor} onChangeText={aoMudar} keyboardType="decimal-pad" placeholder={placeholder} erro={erro} campo={campo} />
       )}
       <Pressable
         onPress={aoAlternar}

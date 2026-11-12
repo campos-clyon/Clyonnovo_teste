@@ -185,7 +185,8 @@ describe("d14 — a sessão nova fica no lugar da antiga", () => {
     expect(TROCA).toContain('r = await pedir<T>(caminho, { metodo: "POST", corpo });');
     expect(TROCA).toContain('if (typeof r.token === "string" && r.token) await guardarToken(r.token);');
     // O 401 da própria troca continua a fazer sair.
-    expect(TROCA).toContain("if (e instanceof ErroDaApi && e.estado === 401) aoPerderASessao?.();");
+    // Desde a d1 (12-11-2026), um 401 com `codigo` não faz sair.
+    expect(TROCA).toContain("if (e instanceof ErroDaApi && e.estado === 401 && !quatrocentosEUmComCodigo(401, e.corpo)) aoPerderASessao?.();");
     expect(API).toContain('import { guardarToken, lerToken } from "./sessao";');
   });
 
@@ -206,7 +207,8 @@ describe("d14 — a sessão nova fica no lugar da antiga", () => {
      */
     expect(API).toContain("const tokenUsado = semSessao ? null : await lerToken();");
     expect(API).toContain("return lerResposta<T>(r, semSessao, tokenUsado);");
-    expect(API).toContain("if (r.status === 401 && !semSessao) await perdeuASessao(tokenUsado);");
+    expect(API).toContain("if (r.status === 401 && !naoSai) await perdeuASessao(tokenUsado);");
+    expect(API).toContain("const naoSai = semSessao || quatrocentosEUmComCodigo(estado, corpo);");
     expect(API).not.toContain("if (r.status === 401 && !semSessao) aoPerderASessao?.();");
   });
 
