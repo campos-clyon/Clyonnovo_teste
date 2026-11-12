@@ -780,7 +780,7 @@ let providersSchemaEnsured = false;
 // deixava as migrações correr em arranques frios — um processo já quente
 // continuava a servir pedidos contra uma tabela sem as colunas novas, e a
 // falhar em consultas que as nomeiam.
-const VERSAO_DOS_PROFISSIONAIS = 10;
+const VERSAO_DOS_PROFISSIONAIS = 11;
 let versaoDosProfissionais = 0;
 
 /**
@@ -994,6 +994,17 @@ export async function ensureProvidersSchema(): Promise<void> {
       {
         name: "regimeIva",
         sql: "ALTER TABLE providers ADD COLUMN regimeIva VARCHAR(10) NOT NULL DEFAULT 'isento'",
+      },
+      /*
+       * QUANDO CONFIRMOU O REGIME DE IVA — d10, 12-11-2026. A coluna de cima
+       * nasceu com 'isento' por omissão, e por isso não diz se ele escolheu ou
+       * se ficou o de omissão. No modelo de 15-11 o cliente vê o tipo de fatura
+       * ao escolher (`perfil-fiscal.ts`): só conta o confirmado. Nula = por
+       * confirmar; preenche-se na inscrição e quando ele grava o perfil.
+       */
+      {
+        name: "regimeIvaConfirmadoEm",
+        sql: "ALTER TABLE providers ADD COLUMN regimeIvaConfirmadoEm DATETIME NULL DEFAULT NULL",
       },
 
       // ── Carteira (18-08-2026) ────────────────────────────────────────────
@@ -1303,9 +1314,9 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
        (name, slug, email, phone, nif, city,
         moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
         categorias, zonas, raioKm,
-        emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador, destinoDosResiduos,
+        emiteFatura, regimeIva, regimeIvaConfirmadoEm, emiteGuiaTransporte, numeroTransportador, destinoDosResiduos,
         baseLat, baseLng, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? = 1, UTC_TIMESTAMP(), NULL), ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
     [
       dados.name,
       dados.slug,
@@ -1323,6 +1334,8 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.raioKm,
       dados.emiteFatura ? 1 : 0,
       dados.regimeIva,
+      // Quem emite fatura escolheu o regime na inscrição: fica confirmado (d10).
+      dados.emiteFatura ? 1 : 0,
       dados.emiteGuiaTransporte ? 1 : 0,
       dados.numeroTransportador,
       dados.destinoDosResiduos ?? null,
@@ -1434,7 +1447,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 18;
+const VERSAO_DAS_NEGOCIACOES = 20;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1717,6 +1730,15 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * limpa-o. Nula em todas as outras.
      */
     `ALTER TABLE negociacoes ADD COLUMN folhaRascunhoJson TEXT NULL DEFAULT NULL`,
+    /*
+     * v20 (12-11-2026, d10) — O MODELO DE 15-11-2026 (`novo-modelo.ts`): o regime
+     * de IVA do parceiro congelado quando o trabalho é contratado (a conta do
+     * cliente não pode mudar a meio) e como o cliente escolheu pagar ao parceiro
+     * (transferência, MB WAY ou dinheiro — `pagar-ao-parceiro.ts`). Nulas em
+     * todas as negociações de antes, que seguem o modelo antigo.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN regimeDoProfissional VARCHAR(10) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN pagarAoParceiroPor VARCHAR(20) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -2375,6 +2397,7 @@ export async function negociacoesDoPedido(pedidoId: number): Promise<
     // quem decide isso é quem monta a resposta, não esta função.
     `SELECT n.*, p.name AS profissionalNome, p.phone AS profissionalTelefone,
             p.emiteFatura, p.regimeIva, p.guiaVerificadaEm,
+            p.regimeIvaConfirmadoEm, p.emiteGuiaTransporte,
             -- A transição de 7 dias da guia (d10 v2, 04-11-2026): o estado e quando foi aprovado.
             p.estado AS profissionalEstado, p.aprovadoEm,
             ${SQL_DO_VERIFICADO} AS parceiroVerificado
@@ -8437,8 +8460,8 @@ export async function perfilDoProfissional(
             baseLat, baseLng,
             moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo, fotoViaturaUrl,
             categorias, zonas, raioKm,
-            emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
-            destinoDosResiduos, provaDaGuiaNome, provaDaGuiaEm,
+            emiteFatura, regimeIva, regimeIvaConfirmadoEm, emiteGuiaTransporte, numeroTransportador,
+            destinoDosResiduos, provaDaGuiaNome, provaDaGuiaEm, aprovadoEm,
             guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, ibanMudadoEm, responsavel, createdAt,
             custoKm, custoHoraPessoa, pessoasNaEquipa,
             custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent,
@@ -8549,6 +8572,12 @@ export async function actualizarPerfilDoProfissional(
     );
     valoresDasQuedas.push(...dePagamento.map((c) => dados[c]));
   }
+  /*
+   * O REGIME DE IVA FICA CONFIRMADO quando ele o grava — d10, 12-11-2026.
+   * É a resposta dele à pergunta «com IVA ou isento?» que o cliente lê ao
+   * escolher no modelo de 15-11 (`perfil-fiscal.ts`).
+   */
+  if (colunas.includes("regimeIva")) quedas.push("regimeIvaConfirmadoEm = UTC_TIMESTAMP()");
 
   await pool.execute(
     `UPDATE providers SET ${[...quedas, ...colunas.map((c) => `${c} = ?`)].join(", ")} WHERE id = ?`,
@@ -15054,6 +15083,9 @@ export type Acontecimento =
   | "divida_quitada"
   // Um pagamento registado à mão corrigido pelo administrador: fatura e valor (04-11-2026, d9).
   | "pagamento_corrigido"
+  // O modelo de 15-11-2026 (d10): uma fatura do trabalho junta ao pedido, e como o cliente escolheu pagar ao parceiro.
+  | "fatura_do_trabalho"
+  | "forma_de_pagar_ao_parceiro"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —
    * com ou sem factura, e por onde. Não é dinheiro que entrou: é o que fica

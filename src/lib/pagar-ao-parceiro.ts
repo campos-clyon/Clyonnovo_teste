@@ -1,0 +1,62 @@
+import { MAXIMO_EM_NUMERARIO } from "./forma-de-pagamento";
+
+/**
+ * COMO O CLIENTE PAGA AO PARCEIRO — d10, desde 15-11-2026 (dono, 12-11-2026).
+ *
+ * No modelo novo o cliente paga o trabalho diretamente ao parceiro que contratou
+ * e escolhe como: transferência para o IBAN dele, MB WAY para o número dele, ou
+ * dinheiro no local. A referência Multibanco não é uma destas: serve só ao
+ * parceiro para passar à CLYON a taxa da plataforma.
+ *
+ * Grava-se em `negociacoes.pagarAoParceiroPor` (coluna nova, nula = ainda não
+ * escolheu). O dinheiro tem o tecto legal de sempre (`MAXIMO_EM_NUMERARIO`).
+ *
+ * Puro: o cliente e o parceiro lêem isto.
+ */
+
+export type ComoPagarAoParceiro = "transferencia" | "mbway" | "dinheiro";
+
+export const COMO_PAGAR_AO_PARCEIRO: ComoPagarAoParceiro[] = ["transferencia", "mbway", "dinheiro"];
+
+export function comoPagarValido(v: unknown): v is ComoPagarAoParceiro {
+  return typeof v === "string" && (COMO_PAGAR_AO_PARCEIRO as string[]).includes(v);
+}
+
+/** O que vier (base, corpo, ecrã) → uma forma, ou `null` (ainda não escolheu). */
+export function lerComoPagar(v: unknown): ComoPagarAoParceiro | null {
+  return comoPagarValido(v) ? v : null;
+}
+
+export const COMO_PAGAR_EM_PALAVRAS: Record<ComoPagarAoParceiro, { curta: string; cliente: string; parceiro: string }> = {
+  transferencia: {
+    curta: "Transferência bancária",
+    cliente: "Paga por transferência para o IBAN do parceiro, que aparece no pedido depois de o contratar.",
+    parceiro: "O cliente paga-lhe por transferência para o seu IBAN.",
+  },
+  mbway: {
+    curta: "MB WAY",
+    cliente: "Paga por MB WAY para o número do parceiro, que aparece no pedido depois de o contratar.",
+    parceiro: "O cliente paga-lhe por MB WAY para o seu número.",
+  },
+  dinheiro: {
+    curta: "Dinheiro no local",
+    cliente: "Paga ao parceiro em dinheiro, no local.",
+    parceiro: "O cliente paga-lhe em dinheiro, no local.",
+  },
+};
+
+/** As que se oferecem ao cliente para este total (com IVA): sem dinheiro a partir do tecto legal. */
+export function comoPagarDisponiveis(totalComIva: number | null | undefined): ComoPagarAoParceiro[] {
+  if (typeof totalComIva === "number" && totalComIva >= MAXIMO_EM_NUMERARIO) {
+    return COMO_PAGAR_AO_PARCEIRO.filter((c) => c !== "dinheiro");
+  }
+  return [...COMO_PAGAR_AO_PARCEIRO];
+}
+
+/** A frase que o cliente lê sobre o pagamento, no modelo novo. */
+export const PAGA_DIRETAMENTE_AO_PARCEIRO =
+  "Paga diretamente ao parceiro que contratar — por transferência, MB WAY ou dinheiro no local. O preço já inclui a taxa da plataforma e o IVA.";
+
+/** As duas faturas de cada trabalho, ditas ao cliente. */
+export const AS_DUAS_FATURAS =
+  "Recebe duas faturas, as duas juntas ao pedido: a do trabalho, emitida pelo parceiro, e a da taxa da plataforma.";

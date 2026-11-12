@@ -23,6 +23,7 @@ import {
 import { dividaDoProfissional, temDividaDoProfissional, type DividaDoProfissional } from "./divida-do-profissional";
 import { dividaACobrar } from "./pago-em-mao";
 import { lerParte } from "./parte-do-pagamento";
+import { taxaAPassarAClyon } from "./taxa-a-passar-a-clyon";
 
 /**
  * A REFERÊNCIA COM QUE O PROFISSIONAL PAGA À CLYON O IVA E A COMISSÃO DE UM
@@ -105,9 +106,16 @@ export async function gerarReferenciaDaDivida(
       {
         negociacaoId,
         formaDePagamento: t.formaDePagamento,
-        dividaEmDinheiro: temDividaDoProfissional(t.formaDePagamento, t.modelo)
-          ? dividaDoProfissional(t.acordado, t.taxas)
-          : null,
+        /*
+         * O MODELO DE 15-11 (d10): em qualquer forma, o parceiro recebeu do
+         * cliente e passa à CLYON a taxa da plataforma e o IVA dela — uma
+         * referência por trabalho (`taxa-a-passar-a-clyon.ts`).
+         */
+        dividaEmDinheiro: t.novoModelo
+          ? taxaAPassarAClyon(t.acordado, t.taxas)
+          : temDividaDoProfissional(t.formaDePagamento, t.modelo)
+            ? dividaDoProfissional(t.acordado, t.taxas)
+            : null,
         acordado: t.acordado,
         taxas: t.taxas,
       },
@@ -235,7 +243,11 @@ export async function gerarReferenciaDaDivida(
       resumo:
         `${NOME_DO_METODO[metodo]}: gerados ${divida.total.toFixed(2).replace(".", ",")} € de IVA e ` +
         `taxa da plataforma, a pagar pelo profissional (` +
-        (aCobrar.caso === "em_mao" ? "o cliente pagou-lhe em mão" : "trabalho pago em dinheiro") +
+        (t.novoModelo
+          ? "o cliente pagou-lhe o trabalho; é a taxa da plataforma e o IVA dela"
+          : aCobrar.caso === "em_mao"
+            ? "o cliente pagou-lhe em mão"
+            : "trabalho pago em dinheiro") +
         "). Ainda não está pago.",
       detalhe: {
         pagamentoId,

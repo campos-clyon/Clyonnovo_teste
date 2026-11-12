@@ -1,7 +1,11 @@
 import { getPool, ensureNegociacoesTable, negociacoesDoProfissional } from "./db";
 import { trabalhosDaCarteira } from "./carteira-do-profissional";
 import { pagamentosDaNegociacao } from "./pagamentos-na-base";
+import { explicacaoDoStandBy, type StandBy, type ValorEmAtraso } from "./valor-em-atraso";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { agoraDoModelo } from "./relogio-do-modelo";
 import {
+  standByDoNovoModelo,
   bloqueioEmDinheiro,
   explicacaoDoBloqueio,
   type BloqueioEmDinheiro,
@@ -114,4 +118,46 @@ export async function profissionaisBloqueadosEmDinheiro(agora: Date = new Date()
     console.error("[bloqueio-do-profissional] não li as dívidas em atraso:", e);
     return new Set();
   }
+}
+
+export type StandByDoProfissional = StandBy & {
+  /** A frase com o valor, o pedido e a referência — vazia fora do stand-by. */
+  explicacao: string;
+  /** Cada valor fora do prazo, com o pedido e a Multibanco viva. */
+  paraDizer: ValorEmAtraso[];
+};
+
+/**
+ * O STAND-BY DE UM PROFISSIONAL — d10, desde 15-11-2026. Antes da data, nunca
+ * (nem lê a base). Lê os trabalhos como a carteira os lê, para o stand-by e a
+ * carteira nunca discordarem sobre se o valor está pago.
+ */
+export async function standByDoProfissional(
+  providerId: number,
+  agora: Date = agoraDoModelo(),
+): Promise<StandByDoProfissional> {
+  const nada: StandByDoProfissional = { emStandBy: false, total: 0, porPagar: 0, valores: [], explicacao: "", paraDizer: [] };
+  if (!novoModeloEmVigor(agora)) return nada;
+  const linhas = await negociacoesDoProfissional(providerId);
+  const s = standByDoNovoModelo(await trabalhosDaCarteira(linhas), agora);
+  if (!s.emStandBy) return { ...s, explicacao: "", paraDizer: [] };
+  const paraDizer = await Promise.all(
+    s.valores.map(async (v) => {
+      const pedidoId = linhas.find((l) => l.id === v.negociacaoId)?.pedidoId ?? null;
+      const viva = (await pagamentosDaNegociacao(v.negociacaoId).catch(() => [])).find(
+        (p) =>
+          p.estado === "pendente" &&
+          p.metodo === "multibanco" &&
+          p.valor === v.total &&
+          p.referencia != null &&
+          (!p.expiraEm || new Date(p.expiraEm).getTime() > agora.getTime()),
+      );
+      return {
+        ...v,
+        pedidoId: pedidoId != null ? Number(pedidoId) : null,
+        multibanco: viva ? { entidade: viva.entidade, referencia: viva.referencia } : null,
+      };
+    }),
+  );
+  return { ...s, explicacao: explicacaoDoStandBy(paraDizer), paraDizer };
 }

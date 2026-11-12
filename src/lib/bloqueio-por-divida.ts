@@ -1,5 +1,6 @@
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
 import { dividasDe, type DividaNaCarteira, type TrabalhoNaCarteira } from "./carteira";
+import { standByDe, type StandBy } from "./valor-em-atraso";
 
 /**
  * O PROFISSIONAL QUE NÃO PAGA A DÍVIDA DEIXA DE FAZER TRABALHOS EM DINHEIRO —
@@ -53,6 +54,8 @@ export function dividasEmAtraso(trabalhos: TrabalhoNaCarteira[], agora: Date): D
   const saida: DividaEmAtraso[] = [];
   for (const d of dividasDe(trabalhos, agora)) {
     if (d.paga) continue;
+    // O modelo de 15-11 (d10) tem a sua regra: 4 dias e stand-by (`standByDoNovoModelo`).
+    if (d.novoModelo) continue;
     /*
      * Uma dívida sem referência por onde a pagar não bloqueia: bloquear por
      * uma dívida que ele não tem como pagar era castigá-lo por um caminho que
@@ -118,4 +121,17 @@ export function explicacaoDoBloqueio(dividas: DividaParaDizer[]): string {
     "os pagos pela plataforma continuam abertos. Pode pagar pela referência na sua carteira — " +
     "ou, se tiver saldo que chegue, fica abatido nele quando a próxima transferência que pedir for paga."
   );
+}
+
+/**
+ * O STAND-BY DO MODELO DE 15-11-2026 — d10 (`valor-em-atraso.ts`). Os valores em
+ * atraso dos trabalhos do modelo novo (a taxa da plataforma e o IVA dela), lidos
+ * pela mesma carteira: pago ou não pago é o que a carteira diz, e o pagamento
+ * confirmado pelo euPago tira-o do stand-by sem mais nada.
+ */
+export function standByDoNovoModelo(trabalhos: TrabalhoNaCarteira[], agora: Date): StandBy {
+  const valores = dividasDe(trabalhos, agora)
+    .filter((d) => d.novoModelo === true)
+    .map((d) => ({ negociacaoId: d.negociacaoId, total: d.total, nasceuEm: d.nasceuEm, paga: d.paga }));
+  return standByDe(valores, agora);
 }

@@ -5,6 +5,32 @@ import { faseParaOCliente, diasAteLibertar } from "./trabalho";
 import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local";
 import { instanteDaBase } from "./hora-de-lisboa";
 import type { HorasNaBase } from "./horas-do-trabalho";
+import { novoModeloEmVigor, TRABALHOS_CLYON_NO_MODELO_ANTIGO } from "./novo-modelo";
+import { perfilFiscalDoParceiro, type PerfilFiscal } from "./perfil-fiscal";
+import { totalNoNovoModelo } from "./pagamento-directo";
+import { lerComoPagar, type ComoPagarAoParceiro } from "./pagar-ao-parceiro";
+
+/**
+ * O QUE O CLIENTE VÊ DO MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). `null`
+ * antes da data e nos Trabalhos CLYON: nada muda no ecrã.
+ *
+ * Antes de contratar, serve para escolher: o tipo de fatura do parceiro, se emite
+ * a guia, e a conta do preço (sem IVA, a fatura do trabalho, a da taxa e o total).
+ * Depois de contratar, quem diz se paga ao parceiro é o servidor
+ * (`GET /api/pagamentos` → `pagaAoParceiro`; `/api/pagamentos/ao-parceiro` → IBAN e
+ * MB WAY): um trabalho já pago à CLYON antes de 15-11 segue o modelo antigo.
+ */
+export type NovoModeloNaVista = {
+  perfilFiscal: PerfilFiscal;
+  /**
+   * O total com IVA que o cliente paga ao parceiro (as duas faturas), em euros,
+   * do valor acordado ou, a negociar, da última proposta. `null` sem valor. Só o
+   * total: a divisão (a fatura da taxa) vem do servidor depois de contratar.
+   */
+  total: number | null;
+  /** Como o cliente escolheu pagar ao parceiro (`null` = ainda não escolheu). */
+  pagarAoParceiroPor: ComoPagarAoParceiro | null;
+};
 
 /**
  * A NEGOCIAÇÃO COMO O CLIENTE A VÊ — uma função só (d8, R5, 28-10-2026).
@@ -118,6 +144,8 @@ export type NegociacaoDoCliente = {
   horasPrevistas?: number | null;
   horas?: HorasNaBase | null;
   materiaisJson?: string | null;
+  /** O modelo de 15-11-2026 (d10) — `null` antes da data. */
+  novoModelo?: NovoModeloNaVista | null;
 };
 
 /**
@@ -139,6 +167,12 @@ export type LinhaParaAVista = HorasNaBase & {
   profissionalTelefone?: string | null;
   regimeIva?: unknown;
   guiaVerificadaEm?: unknown;
+  /** d10: o regime confirmado, a guia declarada, o regime congelado, o Trabalho CLYON e a forma de pagar ao parceiro. */
+  regimeIvaConfirmadoEm?: unknown;
+  emiteGuiaTransporte?: unknown;
+  regimeDoProfissional?: unknown;
+  ofertaClyon?: unknown;
+  pagarAoParceiroPor?: unknown;
   /** O estado da conta dele e quando foi aprovado — a transição da guia (d10 v2). Não saem para o ecrã. */
   profissionalEstado?: unknown;
   aprovadoEm?: unknown;
@@ -239,6 +273,7 @@ export function negociacaoParaAVista(
           o.agora,
         )
       : null,
+    novoModelo: novoModeloNaVista(n, valorAcordado, o.agora),
     porCarga: o.porCarga,
     // Por hora (31-10-2026): as horas e os materiais vão com a negociação.
     porHora: o.porHora === true,
@@ -297,3 +332,24 @@ export const QUANDO_EM_PALAVRAS: Readonly<Record<string, string>> = {
   next_week: "Próxima semana",
   flexible: "Sem pressa",
 };
+
+/** O bloco do modelo de 15-11 (d10) para uma negociação — `null` antes da data ou num Trabalho CLYON. */
+export function novoModeloNaVista(
+  n: LinhaParaAVista,
+  valorAcordado: number | null,
+  agora: Date,
+): NovoModeloNaVista | null {
+  if (!novoModeloEmVigor(agora)) return null;
+  const clyon = n.ofertaClyon != null && n.ofertaClyon !== "";
+  if (TRABALHOS_CLYON_NO_MODELO_ANTIGO && clyon) return null;
+  const perfilFiscal = perfilFiscalDoParceiro(n);
+  // O regime congelado quando foi contratado manda; antes disso, o do perfil.
+  const congelado = n.regimeDoProfissional === "normal" || n.regimeDoProfissional === "isento" ? n.regimeDoProfissional : null;
+  const propostas = propostasDe(n.propostasJson);
+  const valor = valorAcordado ?? (propostas.length > 0 ? Number(propostas[propostas.length - 1].valor) : null);
+  return {
+    perfilFiscal,
+    total: totalNoNovoModelo(n, valor, congelado ?? perfilFiscal.regimeParaAConta),
+    pagarAoParceiroPor: lerComoPagar(n.pagarAoParceiroPor),
+  };
+}

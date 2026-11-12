@@ -95,6 +95,8 @@ const IDENTIFICAM = [
  * devia limpar.
  */
 const NAO_IDENTIFICAM = new Set([
+  // d10 (12-11-2026): quando confirmou o regime de IVA — uma data, não identifica.
+  "regimeIvaConfirmadoEm",
   // Quem é na plataforma, não quem é na vida.
   "id", "createdAt", "updatedAt", "isActive", "estado", "papel", "tipo",
   // O trabalho que faz e como o faz.

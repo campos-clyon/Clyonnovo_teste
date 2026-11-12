@@ -35,6 +35,10 @@ import {
   tokenDoProfissional,
 } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
+import { perfilFiscalDoParceiro } from "@/lib/perfil-fiscal";
 import { guiaMudouDeFacto } from "@/lib/guia-mudou";
 import { avisoDoCodigoApa, destinoDosResiduosLimpo } from "@/lib/guia-de-residuos";
 import {
@@ -137,7 +141,22 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    /*
+     * O MODELO DE 15-11-2026 — d10. O que lhe falta para receber (IBAN, titular,
+     * MB WAY, regime de IVA), com o aviso ou o impedimento, e o perfil fiscal
+     * que o cliente vê ao escolher. `null` antes da data.
+     */
+    const agoraDoNovoModelo = agoraDoModelo();
+    const novoModelo = novoModeloEmVigor(agoraDoNovoModelo)
+      ? {
+          dadosParaReceber: estadoDosDadosParaReceber(p, agoraDoNovoModelo),
+          perfilFiscal: perfilFiscalDoParceiro(p),
+          regimeIvaConfirmado: p.regimeIvaConfirmadoEm != null,
+        }
+      : null;
+
     const resposta = NextResponse.json({
+      novoModelo,
       perfil: {
         nome: p.name ?? "",
         email: p.email ?? "",

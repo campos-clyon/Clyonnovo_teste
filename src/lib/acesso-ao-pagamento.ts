@@ -8,10 +8,13 @@ import { regimeDeIva, taxasDaNegociacao, type RegimeIva, type Taxas } from "./ta
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import type { ModeloDoPreco } from "./iva-incluido";
 import { modeloDaLinha } from "./sem-factura";
-import { estaLibertado } from "./trabalho";
+import { estaLibertado, quandoLiberta } from "./trabalho";
 import { lerBase } from "./base-do-preco";
 import { horasConfirmadas, horasPrevistasDaLinha, valorParaPagar } from "./horas-do-trabalho";
 import { sePagaPelaNegociacao } from "./trabalho-clyon-paga-se";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { agoraDoModelo } from "./relogio-do-modelo";
+import { negociacaoNoNovoModelo } from "./taxa-a-passar-a-clyon";
 
 /**
  * QUEM É QUE PODE PAGAR ESTE TRABALHO.
@@ -53,6 +56,12 @@ export type TrabalhoAPagar = {
    * daqui que, em dinheiro com IVA incluído, o profissional deve à CLYON.
    */
   libertado: boolean;
+  /**
+   * O MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). O cliente paga ao parceiro,
+   * e o que se pede por referência é só a taxa da plataforma e o IVA dela, ao
+   * parceiro (`taxa-a-passar-a-clyon.ts`). Falso antes da data, sempre.
+   */
+  novoModelo: boolean;
   /**
    * UM TRABALHO POR HORA — 31-10-2026. O `acordado` de cima é então o valor a
    * pagar AGORA: a estimativa (horas previstas, mínimo 3, × valor por hora)
@@ -118,7 +127,7 @@ export async function trabalhoQueSePodePagar(
   pedidoId: number,
   negociacaoId: number,
   credencial: CredencialDePagamento,
-  agora: Date = new Date(),
+  agora: Date = agoraDoModelo(),
 ): Promise<Acesso> {
   if (!Number.isInteger(pedidoId) || !Number.isInteger(negociacaoId)) {
     return { ok: false, estado: 400, erro: "Pedido ou negociação em falta." };
@@ -208,6 +217,21 @@ export async function trabalhoQueSePodePagar(
     return { ok: false, estado: 409, erro: "Este trabalho não tem valor acordado." };
   }
 
+  /*
+   * O MODELO DE 15-11 (d10). Só depois da data se vai ler os pagamentos: antes
+   * dela a resposta é sempre «não», sem custar uma consulta.
+   */
+  let novoModelo = false;
+  if (novoModeloEmVigor(agora)) {
+    const { pagamentosDaNegociacao } = await import("./pagamentos-na-base");
+    const pagamentos = await pagamentosDaNegociacao(negociacaoId);
+    novoModelo = negociacaoNoNovoModelo(
+      { ofertaClyon: (linha as { ofertaClyon?: unknown }).ofertaClyon, fechadoEm: quandoLiberta(linha) },
+      pagamentos,
+      agora,
+    );
+  }
+
   return {
     ok: true,
     trabalho: {
@@ -222,6 +246,7 @@ export async function trabalhoQueSePodePagar(
       // Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`.
       modelo: modeloDaLinha(linha, linha.createdAt),
       libertado: estaLibertado(linha, agora),
+      novoModelo,
       porHora: porHora
         ? { horasConfirmadas: horasConfirmadas(linha), valorFinal: horasConfirmadas(linha) ? acordado : null }
         : null,

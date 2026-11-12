@@ -1,6 +1,7 @@
 import { contaDoCliente, type Taxas } from "./taxas-plataforma";
 import type { ModeloDoPreco } from "./iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
+import { taxaAPassarAClyon } from "./taxa-a-passar-a-clyon";
 
 /**
  * O euPago — como se lhe pede dinheiro, e como se lê o que ele responde.
@@ -904,9 +905,14 @@ export function quantoSePedeNesteTrabalho(
     acrescimo: number;
     formaDePagamento: string;
     modelo: ModeloDoPreco;
+    /** O modelo de 15-11-2026 (d10): só a taxa e o IVA dela, pagos pelo parceiro. */
+    novoModelo?: boolean;
   },
   comFactura: boolean,
 ): { valor: number; quemPaga: QuemPaga } {
+  if (t.novoModelo === true) {
+    return { valor: taxaAPassarAClyon(t.acordado, t.taxas)?.total ?? 0, quemPaga: "profissional" };
+  }
   if (temDividaDoProfissional(t.formaDePagamento, t.modelo)) {
     return { valor: dividaDoProfissional(t.acordado, t.taxas).total, quemPaga: "profissional" };
   }

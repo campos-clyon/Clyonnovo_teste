@@ -5,6 +5,7 @@ import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { registarSemFalhar } from "@/lib/db";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { trabalhoQueSePodePagar } from "@/lib/acesso-ao-pagamento";
+import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
 import { METODO_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
 import {
   estadoDoPagamentoParaOCliente,
@@ -169,6 +170,13 @@ export async function POST(req: NextRequest) {
   });
   if (!acesso.ok) return NextResponse.json({ ok: false, error: acesso.erro }, { status: acesso.estado });
   const t = acesso.trabalho;
+  /*
+   * O MODELO DE 15-11-2026 — d10: o cliente paga diretamente ao parceiro. Não
+   * há referência nem transferência à CLYON para pedir. Antes da data, falso.
+   */
+  if (t.novoModelo) {
+    return NextResponse.json({ ok: false, error: PAGA_DIRETAMENTE_AO_PARCEIRO, pagaAoParceiro: true }, { status: 409 });
+  }
   /*
    * E POR CONTA, além de por endereço (Segurança, 28-10-2026): pelo cliente do
    * pedido, ou pelo próprio pedido quando ele não deu email — seja pelo link,
@@ -406,6 +414,13 @@ async function escolherTransferencia(req: NextRequest, corpo: Corpo) {
   });
   if (!acesso.ok) return NextResponse.json({ ok: false, error: acesso.erro }, { status: acesso.estado });
   const t = acesso.trabalho;
+  /*
+   * O MODELO DE 15-11-2026 — d10: o cliente paga diretamente ao parceiro. Não
+   * há referência nem transferência à CLYON para pedir. Antes da data, falso.
+   */
+  if (t.novoModelo) {
+    return NextResponse.json({ ok: false, error: PAGA_DIRETAMENTE_AO_PARCEIRO, pagaAoParceiro: true }, { status: 409 });
+  }
   const porConta = await limitarPorConta(
     "pagamentos-criar-conta",
     t.emailDoCliente ?? `pedido:${t.pedidoId}`,

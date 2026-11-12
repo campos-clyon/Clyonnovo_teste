@@ -171,6 +171,21 @@ export async function POST(
    * link do email o profissional também propõe e aceita, e uma porta sem a
    * regra era a regra a não existir. Ver `bloqueio-por-divida.ts`.
    */
+  /*
+   * O MODELO DE 15-11-2026 — d10: a mesma regra da rota do painel (dados para
+   * receber e stand-by). Antes da data não faz nada.
+   */
+  if (corpo.accao === "propor" || corpo.accao === "aceitar") {
+    try {
+      const { impedimentoDoNovoModelo } = await import("@/lib/novo-modelo-no-servidor");
+      const impedimento = await impedimentoDoNovoModelo(providerId);
+      if (impedimento) return NextResponse.json({ ok: false, ...impedimento.corpo }, { status: impedimento.status });
+    } catch (err) {
+      console.error("[negociacao] não verificou o modelo de 15-11:", err);
+      return NextResponse.json({ ok: false, error: "Não foi possível guardar. Tente novamente." }, { status: 500 });
+    }
+  }
+
   if (
     (corpo.accao === "propor" || corpo.accao === "aceitar") &&
     lerForma(linha.formaDePagamento) === "dinheiro"

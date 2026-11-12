@@ -5,6 +5,7 @@ import { modeloDaNegociacao } from "./iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
 import { dividaDoRegistoEmMao, foiPagoEmMaoPor, pagoAoProfissionalRegistado } from "./pago-em-mao";
 import { partesDaDivida, porPagarDasPartes, type EstadoDaParte, type MarcaDaParte } from "./cobrancas-ao-profissional";
+import { taxaAPassarAClyon } from "./taxa-a-passar-a-clyon";
 
 /**
  * A carteira do profissional.
@@ -143,6 +144,13 @@ export type TrabalhoNaCarteira = Trabalho & {
   marcasDaDivida?: MarcaDaParte[];
   /** O método da linha que fechou a dívida inteira em `pagamentos`, quando fechou. */
   dividaFechadaPor?: string | null;
+  /**
+   * O MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). O cliente pagou-lhe o
+   * trabalho diretamente: o valor está com ele (como no dinheiro) e, ao fechar,
+   * nasce o valor em atraso — a taxa da plataforma e o IVA dela. Decide-o
+   * `trabalhosDaCarteira`; ausente = modelo antigo.
+   */
+  noNovoModelo?: boolean;
 };
 
 /** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
@@ -224,11 +232,11 @@ function liquido(t: TrabalhoNaCarteira): number {
 }
 
 /** O serviço foi pago ao profissional em mão, no local? */
-export function foiPagoEmMao(t: Pick<TrabalhoNaCarteira, "formaDePagamento" | "comoEntrou">): boolean {
+export function foiPagoEmMao(t: Pick<TrabalhoNaCarteira, "formaDePagamento" | "comoEntrou" | "noNovoModelo">): boolean {
   // Combinado em dinheiro, OU registado nos Pagamentos como pago ao
   // profissional (01-11-2026) — a mesma pergunta dos Pagamentos. Ver
-  // `pago-em-mao.ts`.
-  return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou);
+  // `pago-em-mao.ts`. Desde 15-11-2026 (d10), todo o trabalho do modelo novo.
+  return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou) || t.noNovoModelo === true;
 }
 
 /**
@@ -558,6 +566,8 @@ export type DividaNaCarteira = {
    * `pagamentos` (`tridDoAbatimentoAParte`), sem tocar em `negociacaoPaga`.
    */
   aParte?: boolean;
+  /** Do modelo de 15-11 (d10): a taxa e o IVA dela, 4 dias e depois stand-by (`valor-em-atraso.ts`). */
+  novoModelo?: boolean;
   /**
    * AS DUAS PARTES, CADA UMA COM O SEU ESTADO — 11-11-2026 (dono). Por pagar,
    * `total`, `iva` e `comissao` são o que FALTA de cada parte (é isso que
@@ -606,6 +616,30 @@ function comAsPartes(
 export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
   const saida: DividaNaCarteira[] = [];
   for (const t of trabalhos) {
+    /*
+     * O MODELO DE 15-11-2026 — d10. O cliente pagou-lhe o trabalho; ao fechar,
+     * o valor em atraso é a fatura da taxa (a taxa e o IVA dela), uma
+     * referência por trabalho, paga pela linha da própria negociação como a do
+     * dinheiro (o webhook fecha-a sozinho). Partes: IVA = o IVA da taxa.
+     */
+    if (t.noNovoModelo === true) {
+      if (faseDoTrabalho(t) === "a_negociar") continue;
+      if (!estaLibertado(t, agora)) continue;
+      const v = t.valorAcordado;
+      if (v == null || !Number.isFinite(v)) continue;
+      const d = taxaAPassarAClyon(v, taxasDaNegociacao(t));
+      if (!d || d.total <= 0) continue;
+      saida.push({
+        negociacaoId: t.negociacaoId,
+        recebidoDoCliente: d.recebidoDoCliente,
+        ...comAsPartes(t, d, t.dividaPagaEm != null),
+        abatida: t.dividaAbatida != null,
+        abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
+        nasceuEm: quandoLiberta(t),
+        novoModelo: true,
+      });
+      continue;
+    }
     /*
      * PAGO EM MÃO NUM TRABALHO DA PLATAFORMA — 01-11-2026. A taxa (e o IVA,
      * se o cliente lho pagou) está com ele e é da CLYON. Nasce como a do

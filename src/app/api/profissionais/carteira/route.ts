@@ -14,7 +14,11 @@ import {
   levantavelDe,
   type TrabalhoNaCarteira,
 } from "@/lib/carteira";
-import { bloqueioEmDinheiro, explicacaoDoBloqueio, venceEm } from "@/lib/bloqueio-por-divida";
+import { bloqueioEmDinheiro, explicacaoDoBloqueio, standByDoNovoModelo, venceEm } from "@/lib/bloqueio-por-divida";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
+import { explicacaoDoStandBy, PAGAR_O_VALOR_EM_ATRASO, prazoDoValorEmAtraso } from "@/lib/valor-em-atraso";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { faseDoTrabalho } from "@/lib/trabalho";
@@ -193,6 +197,54 @@ export async function GET(req: NextRequest) {
       : "";
 
     /*
+     * O MODELO DE 15-11-2026 — d10. O valor em atraso (a taxa da plataforma e o
+     * IVA dela, por trabalho), o stand-by e os dados para receber. `null` antes
+     * da data: a app e o painel não mostram nada de novo.
+     */
+    const agoraDoNovoModelo = agoraDoModelo();
+    const novoModelo = novoModeloEmVigor(agoraDoNovoModelo)
+      ? (() => {
+          const s = standByDoNovoModelo(trabalhos, agoraDoNovoModelo);
+          const comReferencia = (negociacaoId: number) => {
+            const r = dividas.find((x) => x.negociacaoId === negociacaoId)?.referencia;
+            return r?.metodo === "multibanco" ? { entidade: r.entidade, referencia: r.referencia } : null;
+          };
+          const valores = dividasDe(trabalhos, agoraDoNovoModelo)
+            .filter((d) => d.novoModelo === true && !d.paga)
+            .map((d) => ({
+              negociacaoId: d.negociacaoId,
+              pedidoId: dividas.find((x) => x.negociacaoId === d.negociacaoId)?.pedidoId ?? null,
+              total: d.total,
+              iva: d.iva,
+              taxa: d.comissao,
+              nasceuEm: d.nasceuEm ? d.nasceuEm.toISOString() : null,
+              prazoAte: prazoDoValorEmAtraso(d)?.toISOString() ?? null,
+              multibanco: comReferencia(d.negociacaoId),
+            }));
+          return {
+            emVigor: true,
+            valorEmAtraso: s.porPagar,
+            valores,
+            standBy: s.emStandBy
+              ? {
+                  total: s.total,
+                  accao: PAGAR_O_VALOR_EM_ATRASO,
+                  explicacao: explicacaoDoStandBy(
+                    s.valores.map((v) => ({
+                      total: v.total,
+                      pedidoId: dividas.find((x) => x.negociacaoId === v.negociacaoId)?.pedidoId ?? null,
+                      multibanco: comReferencia(v.negociacaoId),
+                    })),
+                  ),
+                  negociacoes: s.valores.map((v) => v.negociacaoId),
+                }
+              : null,
+            dadosParaReceber: perfil ? estadoDosDadosParaReceber(perfil, agoraDoNovoModelo) : null,
+          };
+        })()
+      : null;
+
+    /*
      * TRABALHO A TRABALHO — 30-10-2026. O que falta receber, o que já recebeu
      * e de que trabalhos, pela mesma conta de `carteiraDe` (ver
      * `trabalhos-da-carteira.ts`). O backoffice lê a mesma função.
@@ -219,6 +271,7 @@ export async function GET(req: NextRequest) {
         ? { total: bloqueio.total, explicacao, negociacoes: bloqueio.dividas.map((d) => d.negociacaoId) }
         : null,
       dividas,
+      novoModelo,
       movimentos,
       iban: iban ? ibanEncurtado(iban) : "",
       temIban: Boolean(iban),

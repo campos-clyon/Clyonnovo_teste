@@ -79,6 +79,12 @@ export function pagamentoVistoPeloCliente(p: Pagamento) {
 
 export type EstadoDoPagamentoParaOCliente = {
   disponivel: boolean;
+  /**
+   * O MODELO DE 15-11-2026 — d10: o cliente paga diretamente ao parceiro (o
+   * IBAN e o MB WAY dele vêm na negociação, depois de contratar), e não há
+   * nada a pagar aqui. Falso antes da data.
+   */
+  pagaAoParceiro: boolean;
   pagamentos: Array<ReturnType<typeof pagamentoVistoPeloCliente>>;
   pago: boolean;
   valores: { semFactura: number; comFactura: number };
@@ -165,7 +171,9 @@ export async function estadoDoPagamentoParaOCliente(
      * 01-10-2026. Paga tudo ao profissional, em notas; quem deve à CLYON é o
      * profissional. A caixa de pagamento não aparece.
      */
-    !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo);
+    !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo) &&
+    // O modelo de 15-11 (d10): paga ao parceiro; a caixa não aparece.
+    !trabalho.novoModelo;
 
   /*
    * A DÍVIDA DO PROFISSIONAL NÃO SAI PARA O CLIENTE — 28-10-2026 (d10).
@@ -175,7 +183,7 @@ export async function estadoDoPagamentoParaOCliente(
    * cliente quanto fica a plataforma. O cliente pagou tudo ao profissional e
    * não tem nada a pagar aqui — por isso não recebe nenhuma, nem o «pago».
    */
-  const doCliente = !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo);
+  const doCliente = !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo) && !trabalho.novoModelo;
   // A diferença das horas (31-10-2026) vai à parte: as de cima são as do trabalho.
   const doClienteMesmo = doCliente ? linhas.filter((l) => l.parte !== "diferenca") : [];
   const daDiferenca = doCliente ? linhas.filter((l) => l.parte === "diferenca") : [];
@@ -198,6 +206,7 @@ export async function estadoDoPagamentoParaOCliente(
 
   return {
     disponivel,
+    pagaAoParceiro: trabalho.novoModelo === true,
     pagamentos: doClienteMesmo.map(pagamentoVistoPeloCliente),
     pago,
     /*

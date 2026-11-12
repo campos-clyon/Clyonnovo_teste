@@ -9,6 +9,7 @@ import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { gerarReferenciaDaDivida } from "@/lib/cobrar-divida-do-profissional";
+import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 
 /**
  * Avisa o profissional de que o trabalho dele foi confirmado.
@@ -79,7 +80,13 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
      * dinheiro: o IVA (se o cliente lho pagou) e a taxa, pela conta do registo.
      */
     const emMao = lido != null && pagoAoProfissionalRegistado(n.formaDePagamento, lido.comoEntrou);
-    const contaDaDivida = temDividaDoProfissional(n.formaDePagamento, modelo)
+    /*
+     * O MODELO DE 15-11 (d10): o parceiro recebeu do cliente; ao fechar nasce o
+     * valor em atraso — a taxa da plataforma e o IVA dela —, com a referência.
+     */
+    const contaDaDivida = lido?.noNovoModelo === true
+      ? taxaAPassarAClyon(valor, taxas)
+      : temDividaDoProfissional(n.formaDePagamento, modelo)
       ? dividaDoProfissional(valor, taxas)
       : emMao
         ? dividaDoRegistoEmMao(valor, taxas, lido?.valorQueEntrou)

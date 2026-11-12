@@ -5,6 +5,9 @@ import { METODO_DO_ABATIMENTO, temDividaDoProfissional } from "./divida-do-profi
 import { pagoAoProfissionalRegistado } from "./pago-em-mao";
 import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
 import type { MarcaDaParte } from "./cobrancas-ao-profissional";
+import { quandoLiberta } from "./trabalho";
+import { NOVO_MODELO_DESDE, eDoNovoModelo, novoModeloEmVigor } from "./novo-modelo";
+import { agoraDoModelo } from "./relogio-do-modelo";
 
 type LinhaAVerificar = { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown };
 
@@ -74,11 +77,26 @@ export async function pagamentosAVerificarComDetalhe(
 export function camposDoPagamento(
   l: { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown },
   pagos: Map<number, PagamentoQueFecha>,
+  /** O modelo de 15-11 (d10): o pagamento da negociação é o do parceiro — a taxa e o IVA dela. */
+  noNovoModelo = false,
 ): Pick<
   TrabalhoNaCarteira,
   "clientePagouEm" | "dividaPagaEm" | "dividaAbatida" | "comoEntrou" | "valorQueEntrou" | "dividaFechadaPor"
 > {
   const p = pagos.get(Number(l.id)) ?? null;
+  if (noNovoModelo) {
+    return {
+      comoEntrou: p?.metodo ?? null,
+      valorQueEntrou: p?.valor ?? null,
+      clientePagouEm: null,
+      dividaPagaEm: p?.pagoEm ?? null,
+      dividaFechadaPor: p ? p.metodo : null,
+      dividaAbatida:
+        p != null && p.metodo === METODO_DO_ABATIMENTO
+          ? { valor: p.valor, em: p.pagoEm, levantamentoId: p.levantamentoId }
+          : null,
+    };
+  }
   /*
    * PAGO AO PROFISSIONAL, EM MÃO, NUM TRABALHO DA PLATAFORMA — 01-11-2026.
    * A linha que fecha a negociação é o registo; a taxa que ele deve paga-se
@@ -162,7 +180,39 @@ export async function trabalhosDaCarteira(
     return new Map<number, MarcaDaParte[]>();
   });
 
-  return linhas.map((l) => ({
+  const agora = agoraDoModelo();
+  const vale = novoModeloEmVigor(agora);
+  return linhas.map((l) => {
+    /*
+     * O MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). Antes da data, nunca. Um
+     * pagamento à CLYON antes de 15-11 deixa o trabalho no modelo antigo; um
+     * trabalho que fechou antes também. Depois da data, o pagamento desta
+     * negociação é o do parceiro (a taxa e o IVA dela).
+     */
+    let noNovoModelo = false;
+    if (vale) {
+      const p = pagos.get(Number(l.id)) ?? null;
+      const pagoAntes = p && new Date(p.pagoEm).getTime() < NOVO_MODELO_DESDE.getTime() ? p.pagoEm : null;
+      const emMao = p != null && pagoAoProfissionalRegistado(l.formaDePagamento, p.metodo);
+      noNovoModelo =
+        !emMao &&
+        eDoNovoModelo(
+          {
+            ofertaClyon: l.ofertaClyon,
+            clientePagouEm: pagoAntes,
+            fechadoEm: quandoLiberta({
+              estado: l.estado,
+              execucaoEnviadaEm: l.execucaoEnviadaEm,
+              provaJson: l.provaJson,
+              confirmadoEm: l.confirmadoEm,
+              pagoEm: l.pagoEm,
+            } as Parameters<typeof quandoLiberta>[0]),
+          },
+          agora,
+        );
+    }
+    return {
+    noNovoModelo,
     negociacaoId: l.id,
     estado: l.estado,
     valorAcordado: l.valorAcordado != null ? Number(l.valorAcordado) : null,
@@ -193,12 +243,13 @@ export async function trabalhosDaCarteira(
      * e a comissão que entregou à CLYON, por referência ou abatidos no saldo
      * (01-10-2026). Ver `camposDoPagamento` e `dividasDe`.
      */
-    ...camposDoPagamento(l, pagos),
+    ...camposDoPagamento(l, pagos, noNovoModelo),
     // Sem ela, o trabalho conta como anterior ao corte — e a carteira deixava
     // levantar o que o cliente não pagou. Ver `verificaOPagamento`.
     negociacaoCriadaEm: l.createdAt ?? null,
     // Quem paga um trabalho CLYON é a CLYON — ver `pagoPelaClyon` em carteira.ts.
     pagoPelaClyon: typeof l.ofertaClyon === "string" && l.ofertaClyon !== "",
     marcasDaDivida: marcas.get(Number(l.id)) ?? [],
-  }));
+    };
+  });
 }

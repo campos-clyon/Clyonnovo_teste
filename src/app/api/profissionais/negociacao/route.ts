@@ -151,6 +151,17 @@ export async function POST(req: NextRequest) {
     const compromete = corpo.accao === "propor" || corpo.accao === "aceitar" || confirmaAHora;
 
     /*
+     * O MODELO DE 15-11-2026 — d10. Sem o IBAN, o MB WAY e o regime de IVA
+     * (passado o aviso), ou em stand-by por um valor em atraso, não aceita nem
+     * envia proposta. Antes da data não faz nada (nem vai à base).
+     */
+    if (compromete) {
+      const { impedimentoDoNovoModelo } = await import("@/lib/novo-modelo-no-servidor");
+      const impedimento = await impedimentoDoNovoModelo(sessao.providerId);
+      if (impedimento) return NextResponse.json(impedimento.corpo, { status: impedimento.status });
+    }
+
+    /*
      * DÍVIDA EM ATRASO FECHA OS TRABALHOS EM DINHEIRO — 01-10-2026.
      *
      * «Abater no saldo + bloquear», decisão do dono: uma dívida à CLYON por
