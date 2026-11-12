@@ -36,6 +36,15 @@ import {
   etiquetaDoVeiculo,
 } from "@/lib/convite-profissional";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import {
+  EXEMPLO_DO_CODIGO_APA,
+  EXEMPLO_DO_DESTINO_DOS_RESIDUOS,
+  LISTA_DO_ADMINISTRADOR_DA_GUIA,
+  MAXIMO_DO_DESTINO_DOS_RESIDUOS,
+  NOTA_DA_LISTA_DO_ADMINISTRADOR,
+  ROTULO_DO_DESTINO_DOS_RESIDUOS,
+  avisoDoCodigoApa,
+} from "@/lib/guia-de-residuos";
 import { tempoEmPalavras } from "@/lib/tempo-de-resposta";
 import {
   SO_O_ADMINISTRADOR_VERIFICA_A_GUIA,
@@ -61,6 +70,10 @@ type Profissional = {
   regimeIva: string;
   emiteGuiaTransporte: number;
   numeroTransportador: string | null;
+  /** A guia (d5, 12-11-2026): o destino do entulho e SE há prova (o endereço não vem). */
+  destinoDosResiduos?: string | null;
+  provaDaGuiaNome?: string | null;
+  provaDaGuiaEm?: string | null;
   guiaVerificadaEm: string | null;
   guiaVerificadaPor: string | null;
   // As três confirmações do «verificado» (01-11-2026).
@@ -742,10 +755,27 @@ function Cartao({
                   Declarou emitir guia de transporte
                 </p>
                 <p className="mt-0.5 text-xs text-amber-300">
-                  Registo n.º <span className="font-mono font-semibold">{p.numeroTransportador}</span>{" "}
+                  Código APA <span className="font-mono font-semibold">{p.numeroTransportador}</span>{" "}
                   — confirme no registo da APA. Até lá pode propor nos trabalhos de resíduos (entulho, ou com a
                   guia pedida), mas não pode ser contratado nem escolhido para eles.
                 </p>
+                {avisoDoCodigoApa(p.numeroTransportador) && (
+                  <p className="mt-1 text-xs text-amber-200">{avisoDoCodigoApa(p.numeroTransportador)}</p>
+                )}
+                <p className="mt-1 text-xs text-amber-300">
+                  {ROTULO_DO_DESTINO_DOS_RESIDUOS}: {p.destinoDosResiduos ? <strong>{p.destinoDosResiduos}</strong> : "não indicou"}
+                </p>
+                <ProvaDaGuiaNoBackoffice providerId={p.id} p={p} eAdministrador={eAdministrador} />
+                {/* O TEXTO C do Jurídico (d5): o que o administrador confere antes de verificar. */}
+                <details className="mt-2 text-xs text-amber-100">
+                  <summary className="cursor-pointer font-semibold">O que confirmar antes de verificar</summary>
+                  <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                    {LISTA_DO_ADMINISTRADOR_DA_GUIA.map((l) => (
+                      <li key={l}>{l}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5 text-amber-200">{NOTA_DA_LISTA_DO_ADMINISTRADOR}</p>
+                </details>
               </div>
             </div>
             {/* Só o administrador verifica a guia (04-11-2026, d10.2). */}
@@ -1024,6 +1054,7 @@ function Editor({
   const [regimeIva, setRegimeIva] = useState(p.regimeIva === "normal" ? "normal" : "isento");
   const [emiteGuia, setEmiteGuia] = useState(p.emiteGuiaTransporte === 1);
   const [numero, setNumero] = useState(p.numeroTransportador ?? "");
+  const [destino, setDestino] = useState(p.destinoDosResiduos ?? "");
   const [base, setBase] = useState<BaseEscolhida>({
     morada: p.city ?? "",
     lat: p.baseLat != null ? Number(p.baseLat) : null,
@@ -1397,8 +1428,18 @@ function Editor({
             <input
               value={numero}
               onChange={(e) => setNumero(e.target.value)}
-              placeholder="Número de registo de transportador"
+              placeholder={EXEMPLO_DO_CODIGO_APA}
+              aria-label="Código APA"
               className="w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
+            />
+            {avisoDoCodigoApa(numero) && <p className="mt-1 text-xs text-amber-300">{avisoDoCodigoApa(numero)}</p>}
+            <input
+              value={destino}
+              onChange={(e) => setDestino(e.target.value)}
+              placeholder={EXEMPLO_DO_DESTINO_DOS_RESIDUOS}
+              aria-label={ROTULO_DO_DESTINO_DOS_RESIDUOS}
+              maxLength={MAXIMO_DO_DESTINO_DOS_RESIDUOS}
+              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500"
             />
             {numeroMudou && p.guiaVerificadaEm && (
               <p className="mt-1 text-xs text-amber-700">
@@ -1426,6 +1467,9 @@ function Editor({
             regimeIva,
             emiteGuiaTransporte: emiteGuia,
             numeroTransportador: emiteGuia ? numero : null,
+            ...(emiteGuia && destino.trim() !== (p.destinoDosResiduos ?? "").trim()
+              ? { destinoDosResiduos: destino }
+              : {}),
             ...dadosMudados,
             ...(baseMudou
               ? { cidade: base.morada, baseLat: base.lat, baseLng: base.lng }
@@ -1439,6 +1483,79 @@ function Editor({
         Guardar alterações
       </button>
     </div>
+  );
+}
+
+/**
+ * A PROVA DO REGISTO NO BACKOFFICE — 12-11-2026 (d5). Diz se há prova e de
+ * quando; só o administrador a abre, pela rota dele (o ficheiro vem por ela,
+ * com o Authorization, e abre-se num separador — o endereço no armazenamento
+ * nunca chega ao browser).
+ */
+function ProvaDaGuiaNoBackoffice({
+  providerId,
+  p,
+  eAdministrador,
+}: {
+  providerId: number;
+  p: { provaDaGuiaNome?: string | null; provaDaGuiaEm?: string | null };
+  eAdministrador: boolean;
+}) {
+  const { token } = useAdminAuth();
+  const [erro, setErro] = useState("");
+  const [aAbrir, setAAbrir] = useState(false);
+
+  if (!p.provaDaGuiaEm) {
+    return <p className="mt-1 text-xs text-amber-300">Prova do registo: ainda não enviou.</p>;
+  }
+
+  async function abrir() {
+    setErro("");
+    setAAbrir(true);
+    // O separador abre-se já, no clique: depois de um await o browser bloqueia-o.
+    const janela = window.open("", "_blank");
+    try {
+      const res = await fetch(`/api/admin/profissionais/${providerId}/prova-da-guia`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        janela?.close();
+        const d = await res.json().catch(() => ({}));
+        setErro(d.error ?? "Não foi possível abrir a prova.");
+        return;
+      }
+      const url = URL.createObjectURL(await res.blob());
+      if (janela) janela.location.href = url;
+      else window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      janela?.close();
+      setErro("Erro de rede.");
+    } finally {
+      setAAbrir(false);
+    }
+  }
+
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-amber-300">
+      <span>
+        Prova do registo{p.provaDaGuiaNome ? ` (${p.provaDaGuiaNome})` : ""} enviada a{" "}
+        {new Date(p.provaDaGuiaEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
+      </span>
+      {eAdministrador ? (
+        <button
+          type="button"
+          onClick={() => void abrir()}
+          disabled={aAbrir}
+          className="rounded-md border border-amber-500/40 px-2 py-0.5 font-semibold text-amber-100 hover:bg-amber-500/20 disabled:opacity-50"
+        >
+          Ver a prova
+        </button>
+      ) : (
+        <span className="text-amber-200">Só o administrador a abre.</span>
+      )}
+      {erro && <span role="alert" className="text-red-300">{erro}</span>}
+    </p>
   );
 }
 

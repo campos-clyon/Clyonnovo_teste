@@ -1,4 +1,5 @@
 import { GRUPOS_DE_SERVICOS, SERVICE_CATEGORIES, gruposDe, normalizarCategorias } from "./service-categories";
+import { destinoDosResiduosLimpo } from "./guia-de-residuos";
 
 /**
  * O que se pede a quem se quer inscrever como profissional.
@@ -113,6 +114,8 @@ export type DadosDeInscricao = {
   regimeIva: RegimeDeIva;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string | null;
+  /** O operador licenciado onde descarrega o entulho (d5, 12-11-2026). Opcional. */
+  destinoDosResiduos: string | null;
 };
 
 export type ResultadoDeInscricao =
@@ -380,6 +383,8 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       numeroTransportador = numeroBruto;
     }
   }
+  // O formato do código APA (APA + 8 algarismos) só AVISA no formulário: não se recusa aqui (d5).
+  const destinoDosResiduos = emiteGuiaTransporte ? destinoDosResiduosLimpo(c.destinoDosResiduos) : null;
 
   if (erros.length > 0) return { ok: false, erros };
 
@@ -401,6 +406,7 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       regimeIva,
       emiteGuiaTransporte,
       numeroTransportador,
+      destinoDosResiduos,
     },
   };
 }

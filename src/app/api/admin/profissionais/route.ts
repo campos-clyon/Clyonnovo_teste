@@ -40,6 +40,9 @@ export async function GET(req: NextRequest) {
       `SELECT id, name, email, phone, nif, city, categorias, raioKm,
               emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
+              -- A guia (d5, 12-11-2026): o destino e SE há prova. O endereço da
+              -- prova não vai na lista: abre-se pela rota do administrador.
+              destinoDosResiduos, provaDaGuiaNome, provaDaGuiaEm,
               -- As três confirmações do «verificado» (01-11-2026).
               nifConfirmadoEm, nifConfirmadoPor, identidadeConfirmadaEm, identidadeConfirmadaPor,
               contactoConfirmadoEm, contactoConfirmadoPor,

@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
       regimeIva: d.regimeIva,
       emiteGuiaTransporte: d.emiteGuiaTransporte,
       numeroTransportador: d.numeroTransportador,
+      destinoDosResiduos: d.destinoDosResiduos,
       baseLat: base?.lat ?? null,
       baseLng: base?.lng ?? null,
     });

@@ -5,6 +5,17 @@ import { CheckCircle2, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { CATEGORIAS_DOS_PROFISSIONAIS } from "@/lib/service-categories";
 import { RAIO_MAXIMO_KM, type ErroDeInscricao } from "@/lib/inscricao-profissional";
 import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
+import {
+  AJUDA_DA_PROVA_DA_GUIA,
+  EXEMPLO_DO_CODIGO_APA,
+  EXEMPLO_DO_DESTINO_DOS_RESIDUOS,
+  MAXIMO_DO_DESTINO_DOS_RESIDUOS,
+  ROTULO_DA_PROVA_DA_GUIA,
+  ROTULO_DO_CODIGO_APA,
+  ROTULO_DO_DESTINO_DOS_RESIDUOS,
+  avisoDoCodigoApa,
+} from "@/lib/guia-de-residuos";
+import AjudaDaGuia from "@/components/AjudaDaGuia";
 
 // A lista única das categorias (29-10-2026) — a mesma do backoffice e da app Pro.
 const CATEGORIAS = CATEGORIAS_DOS_PROFISSIONAIS;
@@ -68,7 +79,10 @@ export default function InscricaoForm({
     regimeIva: "" as "" | "isento" | "normal",
     emiteGuiaTransporte: false,
     numeroTransportador: "",
+    destinoDosResiduos: "",
   });
+  /* A prova do registo (d5, 12-11-2026): segue a seguir à inscrição, com o convite. */
+  const [prova, setProva] = useState<File | null>(null);
   const [erros, setErros] = useState<ErroDeInscricao[]>([]);
   const [erroGeral, setErroGeral] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
@@ -85,7 +99,7 @@ export default function InscricaoForm({
    * uma suposição escrita à frente de quem não a fez.
    */
   const [aceitaTermos, setAceitaTermos] = useState(false);
-  const [enviado, setEnviado] = useState<{ precisaVerificacaoDeGuia: boolean } | null>(null);
+  const [enviado, setEnviado] = useState<{ precisaVerificacaoDeGuia: boolean; provaFalhou?: string | null } | null>(null);
 
   const erro = (campo: string) => erros.find((e) => e.campo === campo)?.mensagem;
 
@@ -146,7 +160,27 @@ export default function InscricaoForm({
         );
         return;
       }
-      setEnviado({ precisaVerificacaoDeGuia: dados.precisaVerificacaoDeGuia === true });
+      /*
+       * A PROVA, DEPOIS DA INSCRIÇÃO — 12-11-2026 (d5). A inscrição já ficou
+       * gravada; uma prova que não sobe não a desfaz: diz-se que se junta no
+       * painel.
+       */
+      let provaFalhou: string | null = null;
+      if (form.emiteGuiaTransporte && prova) {
+        try {
+          const fd = new FormData();
+          fd.append("file", prova);
+          fd.append("convite", convite);
+          const rp = await fetch("/api/profissionais/inscricao/prova-da-guia", { method: "POST", body: fd });
+          if (!rp.ok) {
+            const dp = await respostaEmJson(rp);
+            provaFalhou = dp?.error ?? "A prova não seguiu. Junte-a no seu painel, em Faturação e IVA.";
+          }
+        } catch {
+          provaFalhou = "A prova não seguiu. Junte-a no seu painel, em Faturação e IVA.";
+        }
+      }
+      setEnviado({ precisaVerificacaoDeGuia: dados.precisaVerificacaoDeGuia === true, provaFalhou });
     } catch {
       // Agora só chega aqui quem NÃO teve resposta nenhuma — que é o que "erro
       // de rede" quer mesmo dizer.
@@ -171,6 +205,11 @@ export default function InscricaoForm({
             Declarou emitir guia de transporte. Vamos confirmar o número de registo
             antes de o distintivo aparecer no seu perfil — um distintivo que
             qualquer um ligasse sozinho não valia nada para o cliente.
+          </p>
+        )}
+        {enviado.provaFalhou && (
+          <p role="alert" className="mx-auto mt-3 max-w-md rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+            {enviado.provaFalhou}
           </p>
         )}
       </div>
@@ -557,23 +596,57 @@ export default function InscricaoForm({
               htmlFor="numeroTransportador"
               className="block text-sm font-medium text-gray-900"
             >
-              Número de registo de transportador *
+              {ROTULO_DO_CODIGO_APA} *
             </label>
             <input
               id="numeroTransportador"
               value={form.numeroTransportador}
               onChange={(e) => set("numeroTransportador", e.target.value)}
-              placeholder="Ex.: APA-123456"
+              placeholder={EXEMPLO_DO_CODIGO_APA}
+              autoComplete="off"
+              spellCheck={false}
               className={`mt-1.5 ${inputCls(erro("numeroTransportador"))}`}
             />
             {erro("numeroTransportador") && (
               <p className="mt-1 text-xs text-red-600">{erro("numeroTransportador")}</p>
+            )}
+            {/* O formato avisa e não bloqueia (d5). */}
+            {!erro("numeroTransportador") && avisoDoCodigoApa(form.numeroTransportador) && (
+              <p className="mt-1 text-xs text-amber-700">{avisoDoCodigoApa(form.numeroTransportador)}</p>
             )}
             <p className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-amber-700">
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               Confirmamos este número antes de o distintivo aparecer. Um distintivo que
               qualquer um ligasse sozinho não valia nada para o cliente.
             </p>
+
+            <label htmlFor="provaDaGuia" className="mt-4 block text-sm font-medium text-gray-900">
+              {ROTULO_DA_PROVA_DA_GUIA}
+            </label>
+            <input
+              id="provaDaGuia"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={(e) => setProva(e.target.files?.[0] ?? null)}
+              className="mt-1.5 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-800"
+            />
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">{AJUDA_DA_PROVA_DA_GUIA}</p>
+
+            <label htmlFor="destinoDosResiduos" className="mt-4 block text-sm font-medium text-gray-900">
+              {ROTULO_DO_DESTINO_DOS_RESIDUOS}
+            </label>
+            <input
+              id="destinoDosResiduos"
+              value={form.destinoDosResiduos}
+              onChange={(e) => set("destinoDosResiduos", e.target.value)}
+              placeholder={EXEMPLO_DO_DESTINO_DOS_RESIDUOS}
+              maxLength={MAXIMO_DO_DESTINO_DOS_RESIDUOS}
+              className={`mt-1.5 ${inputCls(erro("destinoDosResiduos"))}`}
+            />
+
+            <div className="mt-4">
+              <AjudaDaGuia />
+            </div>
           </div>
         )}
       </fieldset>

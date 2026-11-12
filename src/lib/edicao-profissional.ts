@@ -1,3 +1,4 @@
+import { destinoDosResiduosLimpo } from "./guia-de-residuos";
 import {
   categoriasDoCorpo,
   regimeDeIvaValido,
@@ -66,6 +67,8 @@ export type CamposEditaveis = {
   regimeIva?: RegimeDeIva;
   emiteGuiaTransporte?: boolean;
   numeroTransportador?: string | null;
+  /** O operador licenciado onde descarrega o entulho (d5, 12-11-2026). */
+  destinoDosResiduos?: string | null;
 };
 
 export type ResultadoDeEdicao =
@@ -155,6 +158,11 @@ export function validarEdicao(corpo: unknown): ResultadoDeEdicao {
     } else {
       alteracoes.numeroTransportador = numero || null;
     }
+  }
+
+  // O destino do entulho (d5): texto livre, o administrador confere-o no SILOGR.
+  if ("destinoDosResiduos" in c) {
+    alteracoes.destinoDosResiduos = destinoDosResiduosLimpo(c.destinoDosResiduos);
   }
 
   if (erros.length > 0) return { ok: false, erros };

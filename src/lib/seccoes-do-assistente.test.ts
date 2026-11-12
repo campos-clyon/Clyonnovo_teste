@@ -236,6 +236,7 @@ const CHAMADAS_FORA_DOS_BLOCOS: Record<string, SeccaoDoAssistente | "todas" | nu
 const ECRA_DE_OUTRA: Partial<Record<string, string>> = { trabalhos_clyon: "negociacoes_clyon" };
 
 const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; porque: string }> = [
+  { seccao: "profissionais", rota: "/api/admin/profissionais/1/prova-da-guia", porque: "a prova do registo de transportador abre-a só o administrador, que é quem verifica a guia (d5, 12-11-2026)" },
   { seccao: "configs", rota: "/api/admin/conta-da-transferencia", porque: "o IBAN para onde vai o dinheiro do cliente é só do administrador (02-11-2026)" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/negociacoes/apagar", porque: "apagar é do administrador" },
   // Gerar e conferir a referência euPago abriram-se à Mesa a 27-10-2026 (d14).

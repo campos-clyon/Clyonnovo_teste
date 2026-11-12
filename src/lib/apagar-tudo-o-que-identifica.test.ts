@@ -75,6 +75,9 @@ const IDENTIFICAM = [
   // A ficha do Google dele (11-11-2026): leva ao nome e � morada da empresa.
   "googlePlaceId",
   "googlePlaceIdProposto",
+  // A prova do registo de transportador (d5, 12-11-2026): tem o nome e o NIF dele.
+  "provaDaGuiaUrl",
+  "provaDaGuiaNome",
 ] as const;
 
 /**
@@ -102,6 +105,8 @@ const NAO_IDENTIFICAM = new Set([
   "margemPercent", "horasPorTrabalho", "riscoPercent",
   "emiteFatura", "regimeIva", "emiteGuiaTransporte",
   "guiaVerificadaEm", "guiaVerificadaPor",
+  // A data da prova e o operador onde descarrega (d5, 12-11-2026): o nome de um aterro, nao de uma pessoa.
+  "provaDaGuiaEm", "destinoDosResiduos",
   // As três confirmações do «verificado» (01-11-2026): datas e o nome de quem da equipa confirmou.
   "nifConfirmadoEm", "nifConfirmadoPor", "identidadeConfirmadaEm", "identidadeConfirmadaPor",
   "contactoConfirmadoEm", "contactoConfirmadoPor",

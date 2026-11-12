@@ -344,6 +344,12 @@ export type Perfil = {
   regimeIva: string;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string;
+  /** O operador licenciado onde descarrega o entulho (d5, 12-11-2026). */
+  destinoDosResiduos?: string;
+  /** Se há prova do registo: o nome do ficheiro e a data. O endereço nunca vem (só o administrador o abre). */
+  provaDaGuia?: { nome: string | null; em: string } | null;
+  /** O aviso do formato do código APA, ou null. Não bloqueia nada. */
+  avisoDoCodigoApa?: string | null;
   guiaVerificada: boolean;
   estado: string;
   iban: string;

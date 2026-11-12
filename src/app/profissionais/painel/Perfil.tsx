@@ -12,6 +12,18 @@ import {
 } from "@/lib/perfil-por-completar";
 import Nota from "@/components/Nota";
 import { TIPOS_DE_VEICULO } from "@/lib/convite-profissional";
+import {
+  AJUDA_DA_PROVA_DA_GUIA,
+  EXEMPLO_DO_CODIGO_APA,
+  EXEMPLO_DO_DESTINO_DOS_RESIDUOS,
+  MAXIMO_DO_DESTINO_DOS_RESIDUOS,
+  MENSAGENS_DA_PROVA,
+  ROTULO_DA_PROVA_DA_GUIA,
+  ROTULO_DO_CODIGO_APA,
+  ROTULO_DO_DESTINO_DOS_RESIDUOS,
+  avisoDoCodigoApa,
+} from "@/lib/guia-de-residuos";
+import AjudaDaGuia from "@/components/AjudaDaGuia";
 import ApagarContaModal, { LinhaApagarConta } from "@/components/ApagarContaModal";
 import { RAIO_MAXIMO_KM, RAIO_MINIMO_KM } from "@/lib/inscricao-profissional";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/palavra-passe-minima";
@@ -1098,22 +1110,46 @@ export default function Perfil({
             />
 
             {dados.emiteGuiaTransporte && (
-              <Campo
-                etiqueta="Número de registo de transportador"
-                falta={porque("numero-transportador")}
-                ajuda={
-                  dados.guiaVerificada
-                    ? "Verificado. Mudar o número volta a pô-lo por verificar."
-                    : "Ainda por verificar do nosso lado."
-                }
-              >
-                <input
-                  className={CAIXA}
-                  value={dados.numeroTransportador}
-                  onChange={(e) => mudar("numeroTransportador", e.target.value)}
-                  placeholder="APA-123456"
+              <>
+                <Campo
+                  etiqueta={ROTULO_DO_CODIGO_APA}
+                  falta={porque("numero-transportador")}
+                  ajuda={
+                    dados.guiaVerificada
+                      ? "Verificado. Mudar o código volta a pô-lo por verificar."
+                      : "Ainda por verificar do nosso lado."
+                  }
+                >
+                  <input
+                    className={CAIXA}
+                    value={dados.numeroTransportador}
+                    onChange={(e) => mudar("numeroTransportador", e.target.value)}
+                    placeholder={EXEMPLO_DO_CODIGO_APA}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </Campo>
+                {/* O formato avisa e não bloqueia (d5, 12-11-2026). */}
+                {avisoDoCodigoApa(dados.numeroTransportador) && (
+                  <p className="-mt-2 text-xs leading-relaxed text-amber-700">
+                    {avisoDoCodigoApa(dados.numeroTransportador)}
+                  </p>
+                )}
+                <ProvaDaGuia
+                  prova={dados.provaDaGuia ?? null}
+                  onMudou={(p) => setDados((d) => ({ ...d, provaDaGuia: p }))}
                 />
-              </Campo>
+                <Campo etiqueta={ROTULO_DO_DESTINO_DOS_RESIDUOS}>
+                  <input
+                    className={CAIXA}
+                    value={dados.destinoDosResiduos ?? ""}
+                    onChange={(e) => mudar("destinoDosResiduos", e.target.value)}
+                    placeholder={EXEMPLO_DO_DESTINO_DOS_RESIDUOS}
+                    maxLength={MAXIMO_DO_DESTINO_DOS_RESIDUOS}
+                  />
+                </Campo>
+                <AjudaDaGuia />
+              </>
             )}
 
             <Guardar
@@ -1127,6 +1163,7 @@ export default function Perfil({
                   regimeIva: dados.regimeIva,
                   emiteGuiaTransporte: dados.emiteGuiaTransporte,
                   numeroTransportador: dados.numeroTransportador,
+                  ...(dados.emiteGuiaTransporte ? { destinoDosResiduos: dados.destinoDosResiduos ?? "" } : {}),
                 })
               }
             />
@@ -1377,6 +1414,107 @@ export default function Perfil({
  * número que a rota impõe (`MAX_FOTOS_DA_VIATURA` lê o mesmo ficheiro).
  */
 const MAXIMO_DE_VIATURAS = MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA;
+
+/**
+ * A PROVA DO REGISTO NO SILiAmb — 12-11-2026 (d5). Envia-se à parte (rota
+ * própria, imagem ou PDF até 4 MB). O painel só sabe se há prova e de quando:
+ * o ficheiro só o abre a administração da CLYON.
+ */
+function ProvaDaGuia({
+  prova,
+  onMudou,
+}: {
+  prova: { nome: string | null; em: string } | null;
+  onMudou: (p: { nome: string | null; em: string } | null) => void;
+}) {
+  const [aEnviar, setAEnviar] = useState(false);
+  const [erro, setErro] = useState("");
+  const [feito, setFeito] = useState("");
+
+  async function enviar(f: File) {
+    setAEnviar(true);
+    setErro("");
+    setFeito("");
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+      const res = await fetch("/api/profissionais/prova-da-guia", { method: "POST", body: fd });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.provaDaGuia) {
+        setErro(d.error ?? MENSAGENS_DA_PROVA.falhou);
+        return;
+      }
+      onMudou(d.provaDaGuia);
+      setFeito(MENSAGENS_DA_PROVA.enviada);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(false);
+    }
+  }
+
+  async function apagar() {
+    setAEnviar(true);
+    setErro("");
+    setFeito("");
+    try {
+      const res = await fetch("/api/profissionais/prova-da-guia", { method: "DELETE" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(d.error ?? "Não foi possível apagar.");
+        return;
+      }
+      onMudou(null);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAEnviar(false);
+    }
+  }
+
+  return (
+    // Um <div> e não o <Campo>: o <Campo> é um <label>, e um botão «Apagar» lá dentro
+    // seria accionado por um toque no rótulo.
+    <div>
+      <span className="block text-sm font-medium text-slate-700">{ROTULO_DA_PROVA_DA_GUIA}</span>
+      <div className="mt-1.5">
+      {prova && (
+        <span className="mb-2 flex flex-wrap items-center gap-2 text-sm text-slate-700">
+          <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+          <span>
+            Enviada{prova.nome ? ` (${prova.nome})` : ""} a{" "}
+            {new Date(prova.em).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
+          </span>
+          <button
+            type="button"
+            onClick={() => void apagar()}
+            disabled={aEnviar}
+            className="text-xs font-semibold text-red-700 underline underline-offset-2 disabled:opacity-50"
+          >
+            Apagar
+          </button>
+        </span>
+      )}
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        disabled={aEnviar}
+        aria-label={ROTULO_DA_PROVA_DA_GUIA}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void enviar(f);
+        }}
+        className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-800"
+      />
+      {aEnviar && <span className="mt-1 block text-xs text-slate-500">A enviar…</span>}
+      {feito && <span className="mt-1 block text-xs text-emerald-700">{feito}</span>}
+      {erro && <span role="alert" className="mt-1 block text-xs text-red-700">{erro}</span>}
+      </div>
+      <span className="mt-1 block text-xs text-slate-500">{AJUDA_DA_PROVA_DA_GUIA}</span>
+    </div>
+  );
+}
 
 function FotoDaViatura({
   fotos,

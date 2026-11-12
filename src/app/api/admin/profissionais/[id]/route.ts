@@ -398,6 +398,7 @@ export async function PATCH(
       "emiteFatura",
       "emiteGuiaTransporte",
       "numeroTransportador",
+      "destinoDosResiduos",
     ];
     if (CAMPOS_DE_PERFIL.some((k) => k in corpo)) {
       const validacao = validarEdicao(corpo);

@@ -841,6 +841,28 @@ export async function ensureProvidersSchema(): Promise<void> {
         name: "guiaVerificadaPor",
         sql: "ALTER TABLE providers ADD COLUMN guiaVerificadaPor VARCHAR(120) NULL",
       },
+      /*
+       * A PROVA DO REGISTO E O DESTINO — 12-11-2026 (d5, `guia-de-residuos.ts`).
+       * A prova é um ficheiro que só o administrador vê: o endereço fica aqui e
+       * nunca sai para um browser (o administrador abre-a pela rota dele). O
+       * destino é o operador licenciado onde ele descarrega o entulho.
+       */
+      {
+        name: "provaDaGuiaUrl",
+        sql: "ALTER TABLE providers ADD COLUMN provaDaGuiaUrl VARCHAR(600) NULL",
+      },
+      {
+        name: "provaDaGuiaNome",
+        sql: "ALTER TABLE providers ADD COLUMN provaDaGuiaNome VARCHAR(160) NULL",
+      },
+      {
+        name: "provaDaGuiaEm",
+        sql: "ALTER TABLE providers ADD COLUMN provaDaGuiaEm DATETIME NULL DEFAULT NULL",
+      },
+      {
+        name: "destinoDosResiduos",
+        sql: "ALTER TABLE providers ADD COLUMN destinoDosResiduos VARCHAR(200) NULL",
+      },
       // Ninguém entra aprovado. 'pendente' → 'aprovado' | 'rejeitado' | 'suspenso'.
       {
         name: "estado",
@@ -1243,6 +1265,8 @@ export type InscricaoDeProfissional = {
   regimeIva: string;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string | null;
+  /** O operador licenciado onde descarrega o entulho (d5, 12-11-2026). */
+  destinoDosResiduos?: string | null;
   baseLat: number | null;
   baseLng: number | null;
 };
@@ -1265,9 +1289,9 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
        (name, slug, email, phone, nif, city,
         moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
         categorias, zonas, raioKm,
-        emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
+        emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador, destinoDosResiduos,
         baseLat, baseLng, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
     [
       dados.name,
       dados.slug,
@@ -1287,6 +1311,7 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.regimeIva,
       dados.emiteGuiaTransporte ? 1 : 0,
       dados.numeroTransportador,
+      dados.destinoDosResiduos ?? null,
       dados.baseLat,
       dados.baseLng,
     ],
@@ -4687,6 +4712,7 @@ export async function actualizarProfissional(
     regimeIva?: string;
     emiteGuiaTransporte?: boolean;
     numeroTransportador?: string | null;
+    destinoDosResiduos?: string | null;
   },
 ): Promise<void> {
   await ensureProvidersSchema();
@@ -4750,10 +4776,98 @@ export async function actualizarProfissional(
     }
   }
 
+  if (alteracoes.destinoDosResiduos !== undefined) {
+    partes.push("destinoDosResiduos = ?");
+    valores.push(alteracoes.destinoDosResiduos);
+  }
+
   if (partes.length === 0) return;
 
   valores.push(providerId);
   await pool.execute(`UPDATE providers SET ${partes.join(", ")} WHERE id = ?`, valores);
+}
+
+/**
+ * A PROVA DO REGISTO DE TRANSPORTADOR — 12-11-2026 (d5).
+ *
+ * Grava o endereço do ficheiro novo e devolve o do anterior, para sair do Blob
+ * DEPOIS de a base já ter o novo (a mesma ordem das fotografias da viatura).
+ * Só se escreve aqui: o `actualizarPerfilDoProfissional` não aceita estas
+ * colunas, e nenhuma rota do parceiro devolve o endereço.
+ */
+export async function guardarProvaDaGuia(
+  providerId: number,
+  url: string,
+  nome: string,
+): Promise<{ anterior: string | null }> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute("SELECT provaDaGuiaUrl FROM providers WHERE id = ? LIMIT 1", [
+    providerId,
+  ])) as any[];
+  const anterior = ((linhas as Array<{ provaDaGuiaUrl: string | null }>)[0]?.provaDaGuiaUrl ?? null) || null;
+  await pool.execute(
+    "UPDATE providers SET provaDaGuiaUrl = ?, provaDaGuiaNome = ?, provaDaGuiaEm = NOW() WHERE id = ?",
+    [url.slice(0, 600), nome.slice(0, 160), providerId],
+  );
+  return { anterior: anterior && anterior !== url ? anterior : null };
+}
+
+/** Tira a prova (o parceiro apagou-a). Devolve o endereço que saiu, para o tirar do Blob. */
+export async function apagarProvaDaGuia(providerId: number): Promise<string | null> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute("SELECT provaDaGuiaUrl FROM providers WHERE id = ? LIMIT 1", [
+    providerId,
+  ])) as any[];
+  const url = ((linhas as Array<{ provaDaGuiaUrl: string | null }>)[0]?.provaDaGuiaUrl ?? null) || null;
+  await pool.execute(
+    "UPDATE providers SET provaDaGuiaUrl = NULL, provaDaGuiaNome = NULL, provaDaGuiaEm = NULL WHERE id = ?",
+    [providerId],
+  );
+  return url;
+}
+
+/** O endereço da prova, só para a rota do administrador. */
+export async function provaDaGuiaDe(
+  providerId: number,
+): Promise<{ url: string; nome: string | null } | null> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [linhas] = (await pool.execute(
+    "SELECT provaDaGuiaUrl, provaDaGuiaNome FROM providers WHERE id = ? LIMIT 1",
+    [providerId],
+  )) as any[];
+  const l = (linhas as Array<{ provaDaGuiaUrl: string | null; provaDaGuiaNome: string | null }>)[0];
+  return l?.provaDaGuiaUrl ? { url: l.provaDaGuiaUrl, nome: l.provaDaGuiaNome ?? null } : null;
+}
+
+/**
+ * A PROVA PELA INSCRIÇÃO — 12-11-2026 (d5). A inscrição não tem sessão: quem
+ * envia a prova a seguir mostra o convite que acabou de gastar. Vale só para o
+ * profissional que esse convite criou, na primeira hora, e só enquanto ele não
+ * tiver prova nenhuma — depois disso é no painel, com a sessão dele.
+ */
+export async function profissionalDaInscricaoRecente(tokenHash: string): Promise<number | null> {
+  await ensureConvitesTable();
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [linhas] = (await pool.execute(
+    `SELECT c.providerId
+       FROM convitesProfissionais c
+       JOIN providers p ON p.id = c.providerId
+      WHERE c.tokenHash = ? AND c.usadoEm IS NOT NULL AND c.revogadoEm IS NULL
+        AND c.usadoEm > NOW() - INTERVAL 60 MINUTE
+        AND p.provaDaGuiaUrl IS NULL AND p.estado = 'pendente'
+      LIMIT 1`,
+    [tokenHash],
+  )) as any[];
+  const id = Number((linhas as Array<{ providerId: unknown }>)[0]?.providerId);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 /** Guarda as coordenadas da base, para quando a geocodificação corre mais tarde. */
@@ -8307,6 +8421,7 @@ export async function perfilDoProfissional(
             moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo, fotoViaturaUrl,
             categorias, zonas, raioKm,
             emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
+            destinoDosResiduos, provaDaGuiaNome, provaDaGuiaEm,
             guiaVerificadaEm, estado, isActive, iban, ibanTitular, mbway, ibanMudadoEm, responsavel, createdAt,
             custoKm, custoHoraPessoa, pessoasNaEquipa,
             custosFixosJson, trabalhosPorMes, margemPercent, horasPorTrabalho, riscoPercent,
@@ -8344,6 +8459,8 @@ export async function actualizarPerfilDoProfissional(
     "regimeIva",
     "emiteGuiaTransporte",
     "numeroTransportador",
+    // O destino do entulho (d5, 12-11-2026). A PROVA não está cá: grava-se só pela rota dela.
+    "destinoDosResiduos",
     "moradaFiscal",
     "codigoPostalFiscal",
     "localidadeFiscal",
@@ -15530,7 +15647,7 @@ export async function apagarProfissional(
       // A fotografia da viatura vem daqui porque daqui a pouco a coluna é
       // limpa: depois do UPDATE já não há por onde saber o endereço do
       // ficheiro, e ele fica no Blob, público, para sempre.
-      "SELECT id, name, email, estado, fotoViaturaUrl, fotosViaturaJson FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
+      "SELECT id, name, email, estado, provaDaGuiaUrl, fotoViaturaUrl, fotosViaturaJson FROM providers WHERE id = ? LIMIT 1 FOR UPDATE",
       [providerId],
     )) as any[];
     const p = (
@@ -15539,6 +15656,8 @@ export async function apagarProfissional(
         name: string;
         email: string | null;
         estado: string | null;
+        /** A prova do registo de transportador (d5): sai do Blob com a viatura. */
+        provaDaGuiaUrl?: string | null;
         fotoViaturaUrl: string | null;
         fotosViaturaJson: string | null;
       }>
@@ -15686,6 +15805,7 @@ export async function apagarProfissional(
                 iban = NULL, ibanTitular = NULL, mbway = NULL, responsavel = NULL,
                 moradaFiscal = NULL, codigoPostalFiscal = NULL, localidadeFiscal = NULL,
                 numeroTransportador = NULL,
+                provaDaGuiaUrl = NULL, provaDaGuiaNome = NULL,
                 fotoViaturaUrl = NULL, fotosViaturaJson = NULL,
                 categorias = NULL, zonas = NULL,
                 baseLat = NULL, baseLng = NULL,
@@ -15745,6 +15865,11 @@ export async function apagarProfissional(
      * fazer metade do trabalho e ficar com a consciência tranquila.
      */
     const fotosDeleteViatura = lerFotos(p.fotosViaturaJson, p.fotoViaturaUrl);
+    // A prova do registo de transportador (d5, 12-11-2026) tem o nome e o NIF dele: sai também.
+    if (p.provaDaGuiaUrl) {
+      const saiu = await apagarFotosDoBlob([p.provaDaGuiaUrl]).catch(() => 0);
+      if (saiu < 1) console.error(`[apagarProfissional] a prova da guia de #${providerId} ficou no Blob`);
+    }
     let fotoDaViaturaApagada = false;
     if (fotosDeleteViatura.length > 0) {
       const sairam = await apagarFotosDoBlob(fotosDeleteViatura);

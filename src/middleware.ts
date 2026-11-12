@@ -195,7 +195,9 @@ function exigeChave(caminho: string): boolean {
      * não `/profissionais/...`, por isso a condição acima não a apanha. Sem
      * esta linha, tirá-la do `exigeTestador` deixava-a sem portão nenhum.
      */
-    caminho === "/api/profissionais/inscricao"
+    caminho === "/api/profissionais/inscricao" ||
+    // A prova do registo, enviada logo a seguir (d5, 12-11-2026): o mesmo portão.
+    caminho === "/api/profissionais/inscricao/prova-da-guia"
   );
 }
 

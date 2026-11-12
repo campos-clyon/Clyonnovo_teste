@@ -36,6 +36,7 @@ import {
 } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { guiaMudouDeFacto } from "@/lib/guia-mudou";
+import { avisoDoCodigoApa, destinoDosResiduosLimpo } from "@/lib/guia-de-residuos";
 import {
   nifValido,
   telefoneValido,
@@ -191,6 +192,16 @@ export async function GET(req: NextRequest) {
         regimeIva: String(p.regimeIva ?? "isento"),
         emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,
         numeroTransportador: p.numeroTransportador ?? "",
+        /*
+         * A GUIA, d5 (12-11-2026): o destino do entulho e SE há prova — o nome
+         * do ficheiro e a data, nunca o endereço (só o administrador o abre).
+         * O formato do código vem como aviso, para a app o mostrar igual.
+         */
+        destinoDosResiduos: p.destinoDosResiduos ?? "",
+        provaDaGuia: p.provaDaGuiaEm
+          ? { nome: (p.provaDaGuiaNome as string | null) ?? null, em: p.provaDaGuiaEm as Date }
+          : null,
+        avisoDoCodigoApa: avisoDoCodigoApa((p.numeroTransportador as string | null) ?? ""),
         guiaVerificada: p.guiaVerificadaEm != null,
         estado: String(p.estado ?? "pendente"),
         // Nunca o IBAN completo: esta resposta abre-se em qualquer sítio onde
@@ -591,6 +602,11 @@ export async function PUT(req: NextRequest) {
       mudancas.numeroTransportador = n || null;
       tocouNaGuia = true;
     }
+  }
+
+  // O destino do entulho (d5, 12-11-2026). Opcional; o administrador confere-o no SILOGR.
+  if ("destinoDosResiduos" in corpo) {
+    mudancas.destinoDosResiduos = destinoDosResiduosLimpo(corpo.destinoDosResiduos);
   }
 
   if ("mbway" in corpo) {
