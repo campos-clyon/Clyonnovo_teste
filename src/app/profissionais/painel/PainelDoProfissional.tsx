@@ -705,6 +705,35 @@ function PainelNoBrowser() {
         dias fecha-lhe as propostas em dinheiro. Diz-se à entrada, com o valor
         e a referência, e um toque leva-o à carteira, onde a pode pagar.
       */}
+      {/*
+        O MODELO DE 15-11-2026 — d10. Em stand-by (um valor em atraso há mais
+        de 4 dias): continua a ver os pedidos, e aqui diz-se porquê e por onde
+        pagar. Sem o IBAN, o MB WAY ou o regime de IVA: o aviso (até 22-11) ou
+        o impedimento. Nada disto aparece antes da data (`novoModelo` nulo).
+      */}
+      {carteira?.novoModelo?.standBy && (
+        <button
+          onClick={() => abrir("carteira")}
+          className="mb-4 block w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-left text-sm leading-relaxed text-red-800"
+        >
+          <span className="block font-semibold">{carteira.novoModelo.standBy.accao}</span>
+          {carteira.novoModelo.standBy.explicacao}
+        </button>
+      )}
+      {carteira?.novoModelo?.dadosParaReceber &&
+        (carteira.novoModelo.dadosParaReceber.estado === "aviso" ||
+          carteira.novoModelo.dadosParaReceber.estado === "impede") && (
+          <button
+            onClick={() => abrir("banco")}
+            className={`mb-4 block w-full rounded-2xl border px-4 py-3 text-left text-sm leading-relaxed ${
+              carteira.novoModelo.dadosParaReceber.estado === "impede"
+                ? "border-red-200 bg-red-50 text-red-800"
+                : "border-amber-200 bg-amber-50 text-amber-900"
+            }`}
+          >
+            {carteira.novoModelo.dadosParaReceber.frase}
+          </button>
+        )}
       {carteira?.bloqueioEmDinheiro && (
         <button
           onClick={() => abrir("carteira")}

@@ -19,6 +19,7 @@ import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a
 import EscolherValor from "@/components/EscolherValor";
 import Nota from "@/components/Nota";
 import PagarTrabalho from "@/components/PagarTrabalho";
+import PagarAoParceiro from "@/components/PagarAoParceiro";
 import AjusteNoLocal from "./AjusteNoLocal";
 import HistoricoDaProposta from "./HistoricoDaProposta";
 import HorasDoTrabalho from "./HorasDoTrabalho";
@@ -360,6 +361,10 @@ export default function PropostasRecebidas({
           estiver aberta, não desenha nada em vez de mostrar uma caixa que dá
           erro a quem carregar nela.
         */}
+        {/* O modelo de 15-11 (d10): paga ao parceiro. Fora dele, o bloco não desenha nada. */}
+        {pedidoId != null && (
+          <PagarAoParceiro pedidoId={pedidoId} negociacaoId={acordada.id} token={token} soParaVer={soParaVer} />
+        )}
         {pedidoId != null &&
           (acordada.fase === "a_executar" || acordada.fase === "a_confirmar") && (
             <PagarTrabalho

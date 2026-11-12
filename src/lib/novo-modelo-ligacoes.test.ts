@@ -135,3 +135,18 @@ describe("as portas", () => {
     expect(ler("src/lib/relogio-do-modelo.ts")).toContain('process.env.VERCEL_ENV === "production"');
   });
 });
+
+describe("os ecrãs", () => {
+  it("o simulador só muda a pergunta do pagamento a partir da data", () => {
+    const v = ler("src/app/plataforma/pedir/components/ValoresEFaturacao.tsx");
+    expect(v).toContain("pedidoNovoNoNovoModelo(new Date()) ?");
+    expect(v).toContain("{PAGA_DIRETAMENTE_AO_PARCEIRO}");
+  });
+
+  it("o pedido, o painel e o backoffice só desenham o modelo novo quando o servidor o diz", () => {
+    expect(ler("src/components/PagarAoParceiro.tsx")).toContain("if (!visto?.pagaAoParceiro) return null;");
+    expect(ler("src/components/admin/FaturasDoTrabalho.tsx")).toContain("if (!token || !dados?.novoModelo) return null;");
+    expect(ler("src/app/profissionais/painel/PainelDoProfissional.tsx")).toContain("carteira?.novoModelo?.standBy &&");
+    expect(ler("src/app/pedido/[token]/PropostasRecebidas.tsx")).toContain("<PagarAoParceiro ");
+  });
+});

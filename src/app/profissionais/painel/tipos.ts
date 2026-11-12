@@ -297,6 +297,31 @@ export type DadosDaCarteira = {
    * há mais de 7 dias. A explicação traz o valor e a referência. 01-10-2026.
    */
   bloqueioEmDinheiro?: { total: number; explicacao: string; negociacoes: number[] } | null;
+  /**
+   * O MODELO DE 15-11-2026 — d10. O valor em atraso (a taxa da plataforma e o
+   * IVA dela, por trabalho), o stand-by e o que falta no perfil para receber.
+   * `null` (ou ausente) antes da data.
+   */
+  novoModelo?: {
+    emVigor: boolean;
+    valorEmAtraso: number;
+    valores: Array<{
+      negociacaoId: number;
+      pedidoId: number | null;
+      total: number;
+      iva: number;
+      taxa: number;
+      nasceuEm: string | null;
+      prazoAte: string | null;
+      multibanco: { entidade: string | null; referencia: string | null } | null;
+    }>;
+    standBy: { total: number; accao: string; explicacao: string; negociacoes: number[] } | null;
+    dadosParaReceber:
+      | { estado: "completos" | "ainda_nao_vale" }
+      | { estado: "aviso"; falta: string[]; ate: string; frase: string }
+      | { estado: "impede"; falta: string[]; frase: string }
+      | null;
+  } | null;
   dividas?: DividaDaCarteira[];
   movimentos: Movimento[];
   iban: string;

@@ -6,6 +6,8 @@ import type { ErroDeValor } from "@/lib/pedido-valores";
 import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 import { modeloDeHoje } from "@/lib/iva-incluido";
+import { pedidoNovoNoNovoModelo } from "@/lib/novo-modelo";
+import { AS_DUAS_FATURAS, COMO_PAGAR_AO_PARCEIRO, COMO_PAGAR_EM_PALAVRAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
 import { perguntaDoOrcamento } from "@/lib/orcamento-do-cliente";
 
 /**
@@ -145,6 +147,25 @@ export default function ValoresEFaturacao({
         `formasDisponiveis`. Um pedido não pode nascer com uma forma que os
         Termos ainda não prometem.
       */}
+      {/*
+        O MODELO DE 15-11-2026 — d10. Paga diretamente ao parceiro que contratar
+        (transferência, MB WAY ou dinheiro), e escolhe como depois de contratar,
+        na página do pedido. Antes da data, a pergunta de sempre.
+      */}
+      {pedidoNovoNoNovoModelo(new Date()) ? (
+        <div>
+          <h3 className="text-base font-bold text-slate-900">Como vai pagar</h3>
+          <p className="mt-1 text-sm text-slate-600">{PAGA_DIRETAMENTE_AO_PARCEIRO}</p>
+          <ul className="mt-3 space-y-1 text-sm text-slate-700">
+            {COMO_PAGAR_AO_PARCEIRO.map((c) => (
+              <li key={c}>
+                <span className="font-semibold">{COMO_PAGAR_EM_PALAVRAS[c].curta}</span> — {COMO_PAGAR_EM_PALAVRAS[c].cliente}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">{AS_DUAS_FATURAS}</p>
+        </div>
+      ) : (
       <div>
         <h3 className="text-base font-bold text-slate-900">Como prefere pagar?</h3>
         <p className="mt-1 text-sm text-slate-600">
@@ -182,6 +203,7 @@ export default function ValoresEFaturacao({
           ))}
         </div>
       </div>
+      )}
 
       <div>
         <h3 className="text-base font-bold text-slate-900">Precisa de documentos?</h3>

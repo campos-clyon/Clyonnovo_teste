@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AlteracoesDoCliente from "./AlteracoesDoCliente";
 import DoNossoLado from "./DoNossoLado";
+import FaturasDoTrabalho from "./FaturasDoTrabalho";
 import type { ComponentType } from "react";
 import {
   Briefcase,
@@ -2955,6 +2956,8 @@ export default function AdminNegociacoesPanel({
                 </div>
               ) : null;
             })()}
+            {/* O modelo de 15-11 (d10): as duas faturas. Fora dele não aparece. */}
+            <FaturasDoTrabalho negociacaoId={Number(acordada.id)} token={token} />
 
             {/*
               COBRAR O CLIENTE — 18-09-2026.
