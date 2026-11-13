@@ -21,6 +21,7 @@ import { lerBase, precoComBase } from "./base-do-preco";
 import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 import { ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { prazoAutomaticoPorExtenso, promessaDaForma } from "./pagamento-na-plataforma";
+import { PAGA_AO_CONTRATADO } from "./o-pagamento-da-vitoria";
 import { DIAS_ATE_LIBERTAR_SOZINHO, prazoCorre } from "./trabalho";
 
 /**
@@ -370,7 +371,11 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
      * plataforma chega uma referência logo a seguir a fechar. Ver
      * `pagamento-na-plataforma.ts`.
      */
-    const comoPaga = promessaDaForma(forma, modelo).whatsappAntesDeAceitar;
+    // d10: um trabalho do modelo de 15-11 (o servidor diz — `noNovoModelo`) lê os textos novos.
+    const novo = n.noNovoModelo === true;
+    const comoPaga = promessaDaForma(forma, modelo, novo).whatsappAntesDeAceitar;
+    // E a frase do total não supõe a forma: no modelo novo escolhe-se no pedido.
+    const formaDita = novo ? "na_plataforma" : forma;
 
     // ── Há uma proposta do profissional à espera de resposta ───────────────
     if (n.estado === "aberta") {
@@ -410,7 +415,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
             texto:
               `${ola} Acabou de receber uma proposta de ${pro} para ${servico}: ` +
               `${dele(pendente.valor)}. ` +
-              `${totalEmPalavras(pendente.valor, modelo, taxas, forma, base)} ` +
+              `${totalEmPalavras(pendente.valor, modelo, taxas, formaDita, base)} ` +
               `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
               `${comoPaga} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar${comIvaNaResposta(modelo)}.`,
           });
@@ -430,7 +435,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         quando: comoData(n.actualizadaEm) ?? agora,
         texto:
           `${ola} Boas notícias: ${pro} aceitou os ${dele(acordado)} que propôs para ` +
-          `${servico}. ${totalEmPalavras(acordado, modelo, taxas, forma, base)} ` +
+          `${servico}. ${totalEmPalavras(acordado, modelo, taxas, formaDita, base)} ` +
           `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
           `${comoPaga} Falta só a sua palavra para ficar combinado.`,
       });
@@ -453,7 +458,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
       texto:
         `${ola} Está combinado com ${pro} para ${servico}` +
         (acordado != null
-          ? forma === "dinheiro"
+          ? forma === "dinheiro" && !novo
             ? `, por ${dele(acordado)}. ${totalEmPalavras(acordado, modelo, taxas, "dinheiro", base)}` +
               ` Ele já tem a morada e o seu contacto.`
             : `, por ${dele(acordado)}, ${
@@ -461,8 +466,8 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
                 modelo === "iva_incluido"
                   ? `IVA incluído (${desdobramentoDoIva(precoDoCliente(acordado, taxas, modelo))})`
                   : "sem IVA"
-              }. Ele já tem a morada e o seu contacto.`
-          : `. Ele já tem a morada e o seu contacto.`) +
+              }.${novo ? ` ${PAGA_AO_CONTRATADO}` : ""} Ele já tem a morada e o seu contacto.`
+          : `.${novo ? ` ${PAGA_AO_CONTRATADO}` : ""} Ele já tem a morada e o seu contacto.`) +
         eANota +
         (combinada ? "" : " Se já tem dia pensado, diga-me qual que eu deixo marcado."),
     });
@@ -694,6 +699,26 @@ export type ResumoDaPassagem = {
   /** O que se passou, em palavras, para o registo e para o painel. */
   linhas: string[];
 };
+
+/**
+ * O MODELO DE 15-11-2026 EM CADA NEGOCIAÇÃO — d10. As frases do dinheiro de um
+ * trabalho dependem dele, e quem o sabe é o servidor (`segueONovoModelo`: um
+ * pagamento à CLYON antes da data, um trabalho já fechado, ou um Trabalho CLYON
+ * ficam no antigo). Antes da data não vai à base. Se a leitura falhar, vale a
+ * data — um pedido novo nasce no modelo de hoje.
+ */
+export async function marcarONovoModelo(pedidos: PedidoParaOAssistente[], agora: Date): Promise<void> {
+  const { novoModeloEmVigor } = await import("./novo-modelo");
+  if (!novoModeloEmVigor(agora)) return;
+  const { segueONovoModelo } = await import("./novo-modelo-no-servidor");
+  await Promise.all(
+    pedidos.flatMap((p) =>
+      p.negociacoes.map(async (n) => {
+        n.noNovoModelo = await segueONovoModelo(n, agora).catch(() => true);
+      }),
+    ),
+  );
+}
 
 /**
  * Uma passagem do assistente. Chamada pelo cron e pelo botão do painel.
@@ -997,6 +1022,7 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
     );
     resumo.linhas.push(`Atenção: só foram vistos os ${PEDIDOS_POR_PASSAGEM} pedidos mais recentes.`);
   }
+  await marcarONovoModelo(pedidos, (await import("./relogio-do-modelo")).agoraDoModelo());
 
   /*
    * O MAPA DE TUDO O QUE AINDA FAZ SENTIDO.

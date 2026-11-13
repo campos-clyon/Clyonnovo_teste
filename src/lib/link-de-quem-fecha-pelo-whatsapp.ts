@@ -19,8 +19,15 @@ import { urlDeAccao } from "./url-do-site";
  */
 
 /** A frase do link, pela forma de pagamento. PT-PT, «parceiro» ao cliente. */
-export function fraseDoLinkDoFecho(forma: FormaDePagamento, link: string): string {
+export function fraseDoLinkDoFecho(forma: FormaDePagamento, link: string, novoModelo = false): string {
   const acompanhar = "confirmar a chegada do parceiro e o trabalho feito";
+  /*
+   * d10, desde 15-11-2026: o cliente paga ao parceiro, e é no pedido que vê o
+   * IBAN e o MB WAY dele e escolhe como paga. A Vitória não os diz por aqui.
+   */
+  if (novoModelo) {
+    return `Para ver como pagar ao parceiro (o IBAN e o MB WAY dele estão lá), as faturas, e para ${acompanhar}, abra o seu pedido:\n${link}`;
+  }
   return forma === "dinheiro"
     ? `Para acompanhar o trabalho — ${acompanhar} — abra o seu pedido:\n${link}`
     : `Para pagar por MB WAY ou Multibanco e acompanhar o trabalho — ${acompanhar} — abra o seu pedido:\n${link}`;

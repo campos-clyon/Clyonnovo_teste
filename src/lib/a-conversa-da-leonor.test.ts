@@ -459,7 +459,8 @@ describe("depois do registo, a Vitória continua", () => {
     expect(respostaFrequente("O preço já inclui IVA?")).toBe(O_IVA_NA_PROPOSTA);
     expect(respostaFrequente("Vocês trazem big bags?")).toBe(RESPOSTA_SOBRE_CONTENTORES);
     expect(respostaFrequente("São vocês que fazem o trabalho?")).toBe(QUEM_FAZ_O_TRABALHO);
-    expect(respostaFrequente("Posso pagar em dinheiro?")).toBe(COMO_SE_PAGA);
+    // Antes de 15-11-2026 (d10), a frase de sempre; o depois está em a-vitoria-no-novo-modelo.test.ts.
+    expect(respostaFrequente("Posso pagar em dinheiro?", new Date("2026-11-13T12:00:00Z"))).toBe(COMO_SE_PAGA);
     // O que não reconhece fica para a equipa, como sempre.
     expect(respostaFrequente("Vocês levam também o lixo do quintal ao domingo?")).toBeNull();
     expect(respostaFrequente("Só não é preciso tirar o frigorífico")).toBeNull();

@@ -74,7 +74,7 @@ describe("o link de quem fecha pelo WhatsApp", () => {
     const i = NEG.indexOf("async function fecharPeloCliente(");
     const corpo = NEG.slice(i, NEG.indexOf("async function recusarUmaNaBase", i));
     expect(corpo).toContain("await linkParaQuemFechou(alvo.pedidoId,");
-    expect(corpo).toContain("fraseDoLinkDoFecho(alvo.formaDePagamento, link)");
+    expect(corpo).toContain("fraseDoLinkDoFecho(alvo.formaDePagamento, link, novo)");
     expect(corpo).toMatch(/O parceiro recebeu a morada e o seu contacto\.\$\{sobreODia\}\$\{doLink\}/);
     // O link só se gera depois de a negociação estar gravada como fechada.
     expect(corpo.indexOf("await gravarNegociacao(")).toBeLessThan(corpo.indexOf("await linkParaQuemFechou("));

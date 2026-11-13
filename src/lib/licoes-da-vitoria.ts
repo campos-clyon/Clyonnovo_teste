@@ -22,6 +22,9 @@ import { inicioDoDiaEmLisboa, segundaDaSemanaEmLisboa, somarDiasAoDia } from "./
 import { semAcentos } from "./leitor-da-recolha";
 import { euroDasFontes, eurosNoTexto } from "./o-que-o-site-sabe";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
+import { agoraDoModelo } from "./relogio-do-modelo";
 import { eDaEquipa, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
 import { PROPRIO_DIA, VOCE_SEM_ACENTO } from "./frases-proibidas";
 import { TAXA_IVA } from "./taxas-plataforma";
@@ -218,6 +221,17 @@ export function licoesEmCache(): readonly LicaoEmUso[] {
 }
 
 /**
+ * AS LIÇÕES QUE AINDA VALEM, PELA DATA — d10. Desde 15-11-2026 uma lição que
+ * fale do dinheiro como antes (a caução, o valor retido, pagar à CLYON) fica
+ * de fora: a resposta dela deixou de ser verdade. Não se apaga — a equipa
+ * revê-a no painel; até lá, a Vitória responde pelo site.
+ */
+export function licoesQueValem(licoes: readonly LicaoEmUso[], agora: Date = agoraDoModelo()): readonly LicaoEmUso[] {
+  if (!novoModeloEmVigor(agora)) return licoes;
+  return licoes.filter((l) => falaDoModeloAntigo(l.respostaProposta, "cliente") == null);
+}
+
+/**
  * A RESPOSTA DE UMA LIÇÃO a esta pergunta — a da lição mais parecida, ou
  * `null`. Só para perguntas, e só com uma semelhança clara: na dúvida, a
  * pergunta continua a ficar anotada para uma pessoa da CLYON.
@@ -225,11 +239,13 @@ export function licoesEmCache(): readonly LicaoEmUso[] {
 export function respostaPelasLicoes(
   texto: string,
   licoes: readonly LicaoEmUso[] = EM_USO,
+  agora: Date = agoraDoModelo(),
 ): { id: number; resposta: string } | null {
   const t = String(texto ?? "").trim();
-  if (!t || !pareceUmaPergunta(t) || licoes.length === 0) return null;
+  const validas = licoesQueValem(licoes, agora);
+  if (!t || !pareceUmaPergunta(t) || validas.length === 0) return null;
   let melhor: { id: number; resposta: string; indice: number } | null = null;
-  for (const l of licoes) {
+  for (const l of validas) {
     const s = semelhanca(t, l.pergunta);
     if (s.comuns < 2 || s.indice < 0.5) continue;
     if (!melhor || s.indice > melhor.indice) melhor = { id: l.id, resposta: l.respostaProposta.trim(), indice: s.indice };
@@ -249,19 +265,24 @@ export function quandoSeUsarUmaLicao(f: ((id: number) => void) | null): void {
  * Primeiro o que o site diz (`respostaFrequente`), depois a lição aprovada
  * mais parecida. `contar: false` só pergunta se há, sem contar o uso.
  */
-export function respostaDoSiteOuDasLicoes(texto: string, opcoes: { contar?: boolean } = {}): string | null {
-  const site = respostaFrequente(texto);
+export function respostaDoSiteOuDasLicoes(
+  texto: string,
+  opcoes: { contar?: boolean; agora?: Date } = {},
+): string | null {
+  const agora = opcoes.agora ?? agoraDoModelo();
+  const site = respostaFrequente(texto, agora);
   if (site) return site;
-  const l = respostaPelasLicoes(texto);
+  const l = respostaPelasLicoes(texto, EM_USO, agora);
   if (!l) return null;
   if (opcoes.contar !== false) AO_USAR?.(l.id);
   return l.resposta;
 }
 
 /** O bloco das lições para o aviso ao modelo — vazio quando não há nenhuma. */
-export function licoesParaOModelo(licoes: readonly LicaoEmUso[] = EM_USO): string {
-  if (licoes.length === 0) return "";
-  const linhas = licoes
+export function licoesParaOModelo(licoes: readonly LicaoEmUso[] = EM_USO, agora: Date = agoraDoModelo()): string {
+  const validas = licoesQueValem(licoes, agora);
+  if (validas.length === 0) return "";
+  const linhas = validas
     .slice(0, 40)
     .map((l) => `- Pergunta: «${l.pergunta.slice(0, 300)}» → Resposta: «${l.respostaProposta.slice(0, 500)}»`);
   return `O QUE A EQUIPA DA CLYON TE ENSINOU (lições aprovadas por uma pessoa — usa a resposta quando a pergunta for a mesma, com outras palavras):\n${linhas.join("\n")}`;

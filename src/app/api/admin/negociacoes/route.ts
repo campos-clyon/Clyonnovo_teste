@@ -15,8 +15,35 @@ import { confiancaDasNegociacoes, type ConfiancaDaNegociacao } from "@/lib/confi
 import { escolhidosDeJson, estadoNaMesa } from "@/lib/escolhidos-sem-resposta";
 import { registarQueOClientePediu } from "@/lib/escolhidos-sem-resposta-no-servidor";
 import { pedidoFechado } from "@/lib/pedido-arrumado";
+import { eDoNovoModelo, novoModeloEmVigor } from "@/lib/novo-modelo";
+import { segueONovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export const runtime = "nodejs";
+
+/**
+ * AS NEGOCIAÇÕES DO MODELO DE 15-11-2026 — d10. Antes da data, nenhuma, sem ir à
+ * base. Depois: as fechadas perguntam ao servidor (`segueONovoModelo`: um
+ * pagamento à CLYON antes da data deixa-as no antigo); as que ainda não fecharam
+ * não têm nada pago — seguem o novo, menos os Trabalhos CLYON.
+ */
+async function modeloDasNegociacoes(
+  negociacoes: Array<{ id: unknown; estado?: unknown; ofertaClyon?: unknown }>,
+): Promise<Set<number>> {
+  const agora = agoraDoModelo();
+  const ids = new Set<number>();
+  if (!novoModeloEmVigor(agora)) return ids;
+  await Promise.all(
+    negociacoes.map(async (n) => {
+      const sim =
+        n.estado === "acordada"
+          ? await segueONovoModelo(n as Parameters<typeof segueONovoModelo>[0], agora).catch(() => true)
+          : eDoNovoModelo({ ofertaClyon: n.ofertaClyon }, agora);
+      if (sim) ids.add(Number(n.id));
+    }),
+  );
+  return ids;
+}
 
 /** Pedidos da plataforma e as negociações de cada um, para o painel. */
 export async function GET(req: NextRequest) {
@@ -57,6 +84,8 @@ export async function GET(req: NextRequest) {
     });
     // Os escolhidos sem resposta (d6): o selo, a linha e os botões saem escritos daqui, pela regra de todos.
     const agora = new Date();
+    // d10: o modelo de 15-11 de cada negociação, para a mensagem do orçamento (`mensagemDasPropostas`).
+    const doNovoModelo = await modeloDasNegociacoes(pedidos.flatMap((p) => p.negociacoes));
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
@@ -66,7 +95,11 @@ export async function GET(req: NextRequest) {
           agora,
           pedidoFechado(p.status),
         ),
-        negociacoes: p.negociacoes.map((n) => ({ ...n, ...(confianca.get(Number(n.id)) ?? {}) })),
+        negociacoes: p.negociacoes.map((n) => ({
+          ...n,
+          ...(confianca.get(Number(n.id)) ?? {}),
+          ...(doNovoModelo.has(Number(n.id)) ? { noNovoModelo: true } : {}),
+        })),
       })),
     });
   } catch (error) {

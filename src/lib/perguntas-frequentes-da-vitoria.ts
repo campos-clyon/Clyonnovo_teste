@@ -16,7 +16,15 @@ import { O_QUE_E_UMA_CARGA } from "./base-do-preco";
 import { semAcentos } from "./leitor-da-recolha";
 import { NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
-import { COMO_SE_PAGA, NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA } from "./seo-data";
+import { NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA, comoSePaga, faturaEmPalavras } from "./seo-data";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { agoraDoModelo } from "./relogio-do-modelo";
+import {
+  COMO_SE_PAGA_NO_WHATSAPP,
+  OS_DADOS_DO_PARCEIRO_ESTAO_NO_PEDIDO,
+  SEM_PAGAMENTO_ADIANTADO,
+} from "./o-pagamento-da-vitoria";
+import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 
 /** Fotografias e vídeos: sim, por aqui. */
 export const PODE_MANDAR_IMAGENS =
@@ -113,6 +121,47 @@ export function perguntaComoSePaga(texto: string): boolean {
 }
 
 /**
+ * «COMO SE PAGA?», PELA DATA — d10. Até 15-11-2026, a frase de sempre do site
+ * (`comoSePaga`); desde então, ao parceiro, as duas faturas e nada adiantado.
+ */
+export function respostaComoSePaga(agora: Date = agoraDoModelo()): string {
+  return novoModeloEmVigor(agora) ? COMO_SE_PAGA_NO_WHATSAPP : comoSePaga(agora);
+}
+
+/*
+ * AS PERGUNTAS DO MODELO DE 15-11-2026 (d10) — só se respondem desde a data.
+ * Antes dela continuam a ir para a equipa, como hoje.
+ */
+
+/** «Tenho de pagar caução?», «é preciso sinal?», «pago adiantado?». */
+export function perguntaPeloAdiantado(texto: string): boolean {
+  const t = semAcentos(texto);
+  return (
+    /\b(caucao|(dar|pagar|deixar)\s+(um\s+|o\s+)?sinal|adiantado|adiantamento|antecipado|pagar\s+antes|pago\s+antes|paga-se\s+antes)\b/.test(t) &&
+    (/\?/.test(texto) || /\b(tenho|temos|preciso|e\s+preciso|ha|tem|e\s+para)\b/.test(t))
+  );
+}
+
+/** «Qual é o IBAN?», «para que conta transfiro?», «qual é o MB WAY dele?». */
+export function perguntaPelosDadosDoParceiro(texto: string): boolean {
+  const t = semAcentos(texto);
+  return (
+    /\b(iban|nib)\b/.test(t) ||
+    /\b(para\s+(que|qual)\s+(conta|numero)|a\s+que\s+conta|onde)\s+(e\s+que\s+)?(transfiro|transferir|faco\s+a\s+transferencia|envio\s+o\s+dinheiro)\b/.test(t) ||
+    /\b(qual|que)\s+(e\s+)?(o\s+)?(numero\s+)?(de\s+|do\s+)?mb\s?way\b/.test(t)
+  );
+}
+
+/** «Passam fatura?», «quem emite a fatura?», «recebo fatura?». */
+export function perguntaPelaFatura(texto: string): boolean {
+  const t = semAcentos(texto);
+  return (
+    /\bquem\s+(e\s+que\s+)?(passa|emite|faz|da)\s+(a\s+|as\s+)?fac?turas?\b/.test(t) ||
+    (/\?/.test(texto) && /\b(passam|emitem|dao|da|ha|tem|vem|recebo|levo)\s+(a\s+|uma\s+|as\s+)?fac?turas?\b/.test(t))
+  );
+}
+
+/**
  * COMO FUNCIONA — 28-10-2026 (decisão d35).
  *
  * *«so how does it work now?»* — a meio do registo, depois do resumo. A
@@ -168,7 +217,7 @@ export function perguntaOQueAconteceAgora(texto: string): boolean {
  * que se reconhecem. Duas perguntas na mesma rajada levam as duas respostas,
  * pela ordem desta lista.
  */
-export function respostaFrequente(texto: string): string | null {
+export function respostaFrequente(texto: string, agora: Date = agoraDoModelo()): string | null {
   const t = texto.trim();
   if (!t) return null;
   const respostas: string[] = [];
@@ -179,7 +228,12 @@ export function respostaFrequente(texto: string): string | null {
   if (perguntaPeloIva(t)) respostas.push(O_IVA_NA_PROPOSTA);
   if (perguntaPorContentores(t)) respostas.push(RESPOSTA_SOBRE_CONTENTORES);
   if (perguntaQuemFaz(t)) respostas.push(QUEM_FAZ_O_TRABALHO);
-  if (perguntaComoSePaga(t)) respostas.push(COMO_SE_PAGA);
+  const novo = novoModeloEmVigor(agora);
+  if (perguntaComoSePaga(t)) respostas.push(respostaComoSePaga(agora));
+  // d10: as do modelo de 15-11 — antes da data vão para a equipa, como hoje.
+  else if (novo && perguntaPeloAdiantado(t)) respostas.push(`${SEM_PAGAMENTO_ADIANTADO} ${PAGA_DIRETAMENTE_AO_PARCEIRO}`);
+  if (novo && perguntaPelosDadosDoParceiro(t)) respostas.push(OS_DADOS_DO_PARCEIRO_ESTAO_NO_PEDIDO);
+  if (novo && perguntaPelaFatura(t) && !perguntaPeloIva(t)) respostas.push(faturaEmPalavras(agora));
   if (perguntaComoFunciona(t)) respostas.push(COMO_FUNCIONA);
   return respostas.length > 0 ? respostas.join("\n\n") : null;
 }

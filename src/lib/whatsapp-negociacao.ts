@@ -27,6 +27,7 @@ import {
 import { modeloDaNegociacao, type ModeloDoPreco } from "@/lib/iva-incluido";
 import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
+import { PAGA_AO_CONTRATADO } from "@/lib/o-pagamento-da-vitoria";
 import {
   lerBase,
   precoComBase,
@@ -852,14 +853,16 @@ async function fecharPeloCliente(
    */
   const factura = comFacturaEmPalavras(valor, alvo.modelo, alvo.taxas, alvo.base);
   const preco = precoComBase(euros(conta.aPagar), alvo.base);
+  // d10: no modelo de 15-11 paga ao parceiro, como escolher no pedido, e há duas faturas.
+  const novo = await noNovoModelo({ id: alvo.negociacaoId });
   const fechado =
-    alvo.formaDePagamento === "dinheiro"
+    alvo.formaDePagamento === "dinheiro" && !novo
       ? `Fechado com ${alvo.profissionalNome}, por ${preco}. ` +
         `${totalEmPalavras(valor, alvo.modelo, alvo.taxas, "dinheiro", alvo.base)}`
       : `Fechado com ${alvo.profissionalNome}: ${preco} a pagar, ${
           // Com IVA incluído, e de que é feito — 03-10-2026. Ver `desdobramentoDoIva`.
           conta.ivaIncluido ? `IVA incluído (${desdobramentoDoIva(conta)})` : "sem IVA"
-        }.` + (factura ? ` ${factura}` : "");
+        }.` + (factura ? ` ${factura}` : "") + (novo ? ` ${PAGA_AO_CONTRATADO}` : "");
   /*
    * O LINK DO PEDIDO — 01-11-2026 (ordem do CEO, aprovada pelo dono). Quem
    * fecha pelo WhatsApp nunca o tinha: pagar sozinho, confirmar a chegada e o
@@ -877,7 +880,7 @@ async function fecharPeloCliente(
     existeContaComEmail,
     substituirTokenDoPedido,
   });
-  const doLink = link ? `\n\n${fraseDoLinkDoFecho(alvo.formaDePagamento, link)}` : "";
+  const doLink = link ? `\n\n${fraseDoLinkDoFecho(alvo.formaDePagamento, link, novo)}` : "";
   await enviarTextoWhatsApp(
     telefone,
     `${fechado}${comNotaDaCarga(alvo.base)}\n\n` +
@@ -1673,15 +1676,17 @@ async function ecraDoPedido(pedidoId: number): Promise<string> {
     // No modelo dela: com IVA incluído desde o corte de 01-10-2026.
     const modeloDela = modeloDaNegociacao(acordada.createdAt);
     const conta = precoDoCliente(acordado, taxasDela, modeloDela);
+    // d10: no modelo de 15-11 paga-se ao parceiro, como escolher no pedido.
+    const novoDela = await noNovoModelo(acordada);
     // Um número só, o dele — ver `preco-do-cliente.ts`. Em dinheiro, o
     // preço e a quem o entrega.
     const comoPaga =
-      formaDela === "dinheiro"
+      formaDela === "dinheiro" && !novoDela
         ? ` por ${precoComBase(euros(conta.aPagar), base)}. ` +
           `${totalEmPalavras(acordado, modeloDela, taxasDela, "dinheiro", base)}`
         : ` ${precoComBase(euros(conta.aPagar), base)} a pagar, ${
             conta.ivaIncluido ? `IVA incluído (${desdobramentoDoIva(conta)})` : "sem IVA"
-          }.`;
+          }.` + (novoDela ? ` ${PAGA_AO_CONTRATADO}` : "");
     return (
       `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} —${comoPaga}` +
       comNotaDaCarga(base) +
@@ -2901,6 +2906,8 @@ async function comoEstaNegociacaoSePaga(
   forma: FormaDePagamento;
   /** O modelo do preço — com IVA incluído desde o corte de 01-10-2026. */
   modelo: ModeloDoPreco;
+  /** d10: segue o modelo de 15-11-2026 (o cliente paga ao parceiro)? */
+  novoModelo: boolean;
 }> {
   const linhas = await negociacoesDoPedido(pedidoId).catch(() => []);
   const n = linhas.find((x) => Number(x.id) === negociacaoId);
@@ -2909,7 +2916,22 @@ async function comoEstaNegociacaoSePaga(
     taxas: taxasDaNegociacao(n),
     forma: lerForma((n as { formaDePagamento?: unknown } | undefined)?.formaDePagamento),
     modelo: modeloDaNegociacao(n?.createdAt),
+    novoModelo: await noNovoModelo(n ?? { id: negociacaoId }),
   };
+}
+
+/**
+ * ESTA NEGOCIAÇÃO SEGUE O MODELO DE 15-11-2026? — d10. A pergunta é a do
+ * servidor (`segueONovoModelo`); antes da data é sempre `false`, sem ir à base.
+ * Se a leitura falhar, vale a data: um pedido novo nasce no modelo de hoje.
+ */
+async function noNovoModelo(n: { id: number | string }): Promise<boolean> {
+  const { novoModeloEmVigor } = await import("@/lib/novo-modelo");
+  const { agoraDoModelo } = await import("@/lib/relogio-do-modelo");
+  const agora = agoraDoModelo();
+  if (!novoModeloEmVigor(agora)) return false;
+  const { segueONovoModelo } = await import("@/lib/novo-modelo-no-servidor");
+  return segueONovoModelo(n as Parameters<typeof segueONovoModelo>[0], agora).catch(() => true);
 }
 
 export async function aceitacaoParaOWhatsApp(dados: {
@@ -2945,9 +2967,11 @@ export async function aceitacaoParaOWhatsApp(dados: {
    * a taxa, e é isso que se lhe devolve: «aceitou os 300,00 €», e não os
    * 285,71 € do profissional com a taxa a ser somada a seguir.
    */
-  const { taxas, forma, modelo } = await comoEstaNegociacaoSePaga(dados.pedidoId, dados.negociacaoId);
+  const { taxas, forma, modelo, novoModelo } = await comoEstaNegociacaoSePaga(dados.pedidoId, dados.negociacaoId);
   const preco = precoParaOCliente(dados.valor, taxas, modelo);
-  const totalDito = totalEmPalavras(dados.valor, modelo, taxas, forma, dados.base);
+  // d10: no modelo de 15-11 a forma escolhe-se no pedido (transferência, MB WAY ou dinheiro) — a frase não a supõe.
+  const formaDaFrase: FormaDePagamento = novoModelo ? "na_plataforma" : forma;
+  const totalDito = totalEmPalavras(dados.valor, modelo, taxas, formaDaFrase, dados.base);
   const saiu = await enviarBotoesWhatsApp(
     dados.telefone,
     `Boas notícias: ${dados.profissionalNome} aceitou os ${precoComBase(euros(preco), dados.base)} ` +
@@ -2959,7 +2983,7 @@ export async function aceitacaoParaOWhatsApp(dados: {
        * confirmado», e a quem paga pela plataforma chega a referência logo a
        * seguir a fechar. Ver `pagamento-na-plataforma.ts`.
        */
-      `${promessaDaForma(forma, modelo).whatsappAntesDeAceitar} Falta só a sua confirmação para ficar combinado.`,
+      `${promessaDaForma(forma, modelo, novoModelo).whatsappAntesDeAceitar} Falta só a sua confirmação para ficar combinado.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(preco, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Afinal não" },
@@ -2986,7 +3010,7 @@ export async function propostaParaOWhatsApp(dados: {
    * milissegundo de diferença dava duas chaves e duas mensagens.
    */
   const { chaveDaProposta } = await import("@/lib/assistente-automatico");
-  const { linhas, taxas, forma, modelo } = await comoEstaNegociacaoSePaga(
+  const { linhas, taxas, forma, modelo, novoModelo } = await comoEstaNegociacaoSePaga(
     dados.pedidoId,
     dados.negociacaoId,
   );
@@ -3029,7 +3053,9 @@ export async function propostaParaOWhatsApp(dados: {
    * para uma proposta. Agora a proposta chega-lhe como ele a paga.
    */
   const preco = precoParaOCliente(dados.valor, taxas, modelo);
-  const totalDito = totalEmPalavras(dados.valor, modelo, taxas, forma, dados.base);
+  // d10: no modelo de 15-11 a forma escolhe-se no pedido (transferência, MB WAY ou dinheiro) — a frase não a supõe.
+  const formaDaFrase: FormaDePagamento = novoModelo ? "na_plataforma" : forma;
+  const totalDito = totalEmPalavras(dados.valor, modelo, taxas, formaDaFrase, dados.base);
   /*
    * O SERVIÇO EM PALAVRAS, e não o identificador da base.
    *
@@ -3049,7 +3075,7 @@ export async function propostaParaOWhatsApp(dados: {
       `para ${servico} (pedido #${dados.pedidoId}).\n\n` +
       `${totalDito} ${ORCAMENTO_A_DISTANCIA}${comNotaDaCarga(dados.base)}\n\n` +
       // Como e quando paga, conforme a forma que escolheu. Ver `pagamento-na-plataforma.ts`.
-      `${promessaDaForma(forma, modelo).whatsappAntesDeAceitar} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar${comIvaNaResposta(modelo)}.`,
+      `${promessaDaForma(forma, modelo, novoModelo).whatsappAntesDeAceitar} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar${comIvaNaResposta(modelo)}.`,
     [
       { id: `ct:${dados.pedidoId}:${dados.negociacaoId}`, titulo: tituloDeFechar(preco, dados.base) },
       { id: `rc:${dados.pedidoId}:${dados.negociacaoId}`, titulo: "Recusar" },

@@ -17632,6 +17632,13 @@ export type PedidoParaOAssistente = {
      * que montam pedidos à mão (sem ela, o modelo de antes).
      */
     criadaEm?: Date | null;
+    /** Trabalho CLYON (valor fixo) — fica no modelo antigo (d10). */
+    ofertaClyon?: string | null;
+    /**
+     * d10: segue o modelo de 15-11-2026 (o cliente paga ao parceiro)? Posto pelo
+     * assistente antes de falar (`segueONovoModelo`); sem ele, o de antes.
+     */
+    noNovoModelo?: boolean;
   }>;
 };
 
@@ -17674,7 +17681,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.propostasJson,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
-            n.updatedAt AS actualizadaEm, n.createdAt AS criadaEm,
+            n.updatedAt AS actualizadaEm, n.createdAt AS criadaEm, n.ofertaClyon,
             p.name AS profissionalNome, p.regimeIva
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
@@ -17704,6 +17711,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
       taxaCliente: (n.taxaCliente as string | number | null) ?? null,
       taxaProfissional: (n.taxaProfissional as string | number | null) ?? null,
       formaDePagamento: n.formaDePagamento == null ? null : String(n.formaDePagamento),
+      ofertaClyon: n.ofertaClyon == null ? null : String(n.ofertaClyon),
     });
   }
 

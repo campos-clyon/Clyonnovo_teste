@@ -18,8 +18,16 @@
  * ESTE FICHEIRO É PURO.
  */
 import { ITENS_A_MAIS_PARA_O_CLIENTE } from "./itens-a-mais";
-import { PROMESSA } from "./pagamento-na-plataforma";
-import { O_IVA_NA_PROPOSTA, O_QUE_E_A_CARGA, PODE_MANDAR_IMAGENS } from "./perguntas-frequentes-da-vitoria";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { REGRAS_DO_PAGAMENTO_PARA_O_MODELO } from "./o-pagamento-da-vitoria";
+import { promessaGeral } from "./pagamento-na-plataforma";
+import {
+  O_IVA_NA_PROPOSTA,
+  O_QUE_E_A_CARGA,
+  PODE_MANDAR_IMAGENS,
+  respostaComoSePaga,
+} from "./perguntas-frequentes-da-vitoria";
+import { agoraDoModelo } from "./relogio-do-modelo";
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
@@ -46,7 +54,7 @@ import {
   PROMESSA_DO_PRAZO,
 } from "./promessas-publicas";
 import { A_GRANEL, PESO_DO_SACO, RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
-import { COMO_SE_PAGA, FACTURA_EM_PALAVRAS, PRAZO_DE_RESPOSTA } from "./seo-data";
+import { PRAZO_DE_RESPOSTA, faturaEmPalavras } from "./seo-data";
 import { servicosPorExtenso } from "./servicos-da-vitoria";
 import {
   ELEVADOR_EXTERIOR,
@@ -145,15 +153,19 @@ function linhasDosPrecos(): string[] {
  * referência a quem pergunta pela tabela do site, sempre sem IVA com o valor
  * com IVA ao lado, e a dizer que o preço final é o da proposta.
  */
-export function oQueOSiteSabe(): string {
+export function oQueOSiteSabe(agora: Date = agoraDoModelo()): string {
   const iva = `${Math.round(TAXA_IVA * 100)} %`;
+  // d10: os textos do dinheiro pela data — até 15-11-2026, os de hoje.
+  const novo = novoModeloEmVigor(agora);
+  const promessa = promessaGeral(agora);
+  const doPagamento = novo ? REGRAS_DO_PAGAMENTO_PARA_O_MODELO.map((r) => `\n- ${r}`).join("") : "";
   return `O QUE O SITE DA CLYON DIZ (clyon.pt) — é o teu conhecimento. Responde com isto, e só com isto:
 
 QUEM É A CLYON
 - A CLYON é uma plataforma: o cliente faz o pedido, parceiros da zona respondem com o preço deles, e o cliente escolhe. Serviços: ${servicosPorExtenso()}.
 - ${QUEM_FAZ_O_TRABALHO}
-- «É a CLYON que faz o trabalho?» ${PROMESSA.faqQuemFaz}
-- «Quem responde por um trabalho mal feito?» ${PROMESSA.faqQuemResponde}
+- «É a CLYON que faz o trabalho?» ${promessa.faqQuemFaz}
+- «Quem responde por um trabalho mal feito?» ${promessa.faqQuemResponde}
 - ${AO_FIM_DE_SEMANA}
 
 O PEDIDO E AS PROPOSTAS
@@ -164,7 +176,7 @@ O PEDIDO E AS PROPOSTAS
 
 PREÇO, IVA E FATURA
 - ${PRECO_FECHADO}
-- ${FACTURA_EM_PALAVRAS}
+- ${faturaEmPalavras(agora)}
 - ${O_IVA_NA_PROPOSTA}
 - Por carga: ${O_QUE_E_A_CARGA}
 - Itens a mais no dia (orçamento de valor total): ${ITENS_A_MAIS_PARA_O_CLIENTE}, combinado com o cliente antes de avançar.
@@ -175,7 +187,7 @@ ${linhasDosPrecos().join("\n")}
     .join("; ")}).
 
 COMO SE PAGA
-- ${COMO_SE_PAGA}
+- ${respostaComoSePaga(agora)}${doPagamento}
 
 ENTULHO
 - ${RESPOSTA_SOBRE_CONTENTORES}

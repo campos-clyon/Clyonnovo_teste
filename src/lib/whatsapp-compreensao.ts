@@ -27,6 +27,8 @@ import { foraDoPlanoPorExtenso, servicosPorExtenso, SERVICOS_DA_VITORIA } from "
 import { licoesParaOModelo, motivoParaBloquear } from "./licoes-da-vitoria";
 import { oQueOSiteSabe } from "./o-que-o-site-sabe";
 import { escadaLimpa, modeloDoGemini } from "./modelo-do-gemini";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { agoraDoModelo } from "./relogio-do-modelo";
 
 /*
  * AS OPÇÕES DO SERVIÇO SÃO AS QUE A CLYON FAZ — 25-10-2026.
@@ -48,10 +50,26 @@ export const FORA_DO_PLANO_PARA_O_MODELO = foraDoPlanoPorExtenso()
  * Dizia «uma empresa portuguesa de recolha de móveis, (…)», e o modelo falava
  * como quem vai lá buscar. Quem faz o trabalho é o profissional escolhido.
  */
-export const QUEM_E_A_CLYON =
+export const QUEM_E_A_CLYON_NO_MODELO_ANTIGO =
   `uma plataforma portuguesa que liga clientes a parceiros de ${servicosPorExtenso()}: ` +
   "o cliente faz o pedido, os parceiros da zona respondem com o preço deles e fazem o trabalho, " +
   "e a CLYON organiza, guarda o acordo e o pagamento";
+/** O de sempre — até 15-11-2026. */
+export const QUEM_E_A_CLYON = QUEM_E_A_CLYON_NO_MODELO_ANTIGO;
+
+/**
+ * Desde 15-11-2026 (d10) a CLYON já não guarda o pagamento: o cliente paga o
+ * trabalho diretamente ao parceiro.
+ */
+export const QUEM_E_A_CLYON_NO_NOVO_MODELO =
+  `uma plataforma portuguesa que liga clientes a parceiros de ${servicosPorExtenso()}: ` +
+  "o cliente faz o pedido, os parceiros da zona respondem com o preço deles e fazem o trabalho, " +
+  "a CLYON organiza e guarda o acordo, e o cliente paga o trabalho diretamente ao parceiro que contratou";
+
+/** O que a CLYON é, pela data (d10). */
+export function quemEACLYON(agora: Date = agoraDoModelo()): string {
+  return novoModeloEmVigor(agora) ? QUEM_E_A_CLYON_NO_NOVO_MODELO : QUEM_E_A_CLYON_NO_MODELO_ANTIGO;
+}
 
 /** O que a pessoa quer fazer com esta mensagem, para lá dos dados que dá. */
 export type Intencao =
@@ -181,7 +199,7 @@ function instrucoes(
     year: "numeric",
   });
 
-  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Falas com um cliente por WhatsApp e o teu trabalho é PERCEBER o que ele escreve, para preencher o pedido dele.
+  return `És o assistente da CLYON, ${quemEACLYON()}. Falas com um cliente por WhatsApp e o teu trabalho é PERCEBER o que ele escreve, para preencher o pedido dele.
 
 Hoje é ${dia}.
 
@@ -650,7 +668,7 @@ function instrucoesDoFio(jaSabido: Record<string, unknown>, agora: Date): string
     year: "numeric",
   });
 
-  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Vais ler uma CONVERSA INTEIRA de WhatsApp entre a CLYON e um cliente, e o teu trabalho é dizer o que o cliente já contou sobre o pedido dele.
+  return `És o assistente da CLYON, ${quemEACLYON()}. Vais ler uma CONVERSA INTEIRA de WhatsApp entre a CLYON e um cliente, e o teu trabalho é dizer o que o cliente já contou sobre o pedido dele.
 
 Hoje é ${dia}. Cada linha traz a data em que foi escrita, entre parénteses rectos, e quem falou.
 
@@ -851,7 +869,7 @@ function instrucoesDaResposta(mesa: PropostaNaMesa[]): string {
           .join("\n")
       : "(nenhuma neste momento)";
 
-  return `És o assistente da CLYON, ${QUEM_E_A_CLYON}. Um cliente recebeu propostas de parceiros e acabou de responder. O teu trabalho é PERCEBER o que ele quis dizer.
+  return `És o assistente da CLYON, ${quemEACLYON()}. Um cliente recebeu propostas de parceiros e acabou de responder. O teu trabalho é PERCEBER o que ele quis dizer.
 
 AS PROPOSTAS QUE ELE TEM EM CIMA DA MESA:
 ${lista}

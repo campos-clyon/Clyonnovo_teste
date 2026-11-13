@@ -4,6 +4,8 @@ import { precoDoCliente, semEComIva } from "./preco-do-cliente";
 import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
 
 import { promessaDaForma } from "./pagamento-na-plataforma";
+import { PAGA_AO_CONTRATADO } from "./o-pagamento-da-vitoria";
+import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 import {
   FORMA_EM_PALAVRAS,
   FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO,
@@ -121,6 +123,8 @@ export type PropostaParaOCliente = {
    * com IVA) por unidade · …»). `null` quando o parceiro não disse.
    */
   materiais?: string | null;
+  /** d10: um trabalho do modelo de 15-11-2026 — o cliente paga ao parceiro. */
+  novoModelo?: boolean;
 };
 
 type NegociacaoParaLer = {
@@ -144,6 +148,11 @@ type NegociacaoParaLer = {
   criadaEm?: string | Date | null;
   /** Os materiais da proposta (31-10-2026) — ver materiais-da-proposta.ts. */
   materiaisJson?: string | null;
+  /**
+   * d10: segue o modelo de 15-11-2026? Quem o diz é o servidor
+   * (`segueONovoModelo`, posto pela rota da Mesa); sem ele, o de antes.
+   */
+  noNovoModelo?: boolean;
 };
 
 /** Os dois números de uma proposta — «294,00 € + IVA = 361,62 €» — ou o de sempre antes do corte. */
@@ -164,6 +173,7 @@ function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente
     modelo,
     aPagar: conta.aPagar,
     forma: lerForma(n.formaDePagamento),
+    ...(n.noNovoModelo === true ? { novoModelo: true } : {}),
     // Só quando o parceiro disse (sem a pergunta respondida, a proposta fica como era).
     ...((): { materiais?: string } => {
       const m = materiaisParaOCliente(lerMateriaisDaProposta(n.materiaisJson ?? null), taxasDaNegociacao(n), modelo);
@@ -440,7 +450,10 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     if (base === "hora") linhas.push(estimativaDaLinha(d.fechado, d.horasPrevistas));
     if (d.fechado.materiais) linhas.push(d.fechado.materiais);
     if (avisoDaUnidade) linhas.push(avisoDaUnidade);
-    if (d.fechado.forma === "dinheiro") {
+    if (d.fechado.novoModelo) {
+      // d10: paga ao parceiro, como escolher no pedido, e há duas faturas.
+      linhas.push(PAGA_AO_CONTRATADO);
+    } else if (d.fechado.forma === "dinheiro") {
       /*
         EM DINHEIRO SÃO DUAS ENTREGAS — 29-09-2026. O número de cima é o total
         dele, mas não vai todo para o mesmo sítio: o serviço em notas ao
@@ -464,7 +477,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     linhas.push("");
     // Para que serve confirmar depende de por onde passa o dinheiro. Sem o
     // «no link em baixo» desde 03-10-2026 — a mensagem já não leva o link.
-    linhas.push(promessaDaForma(d.fechado.forma, d.fechado.modelo).whatsappConfirmar);
+    linhas.push(promessaDaForma(d.fechado.forma, d.fechado.modelo, d.fechado.novoModelo === true).whatsappConfirmar);
   } else if (quantas === 0) {
     /*
      * SEM PROPOSTAS TAMBÉM SE ESCREVE — e diz-se a verdade.
@@ -545,7 +558,11 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * (uma redistribuição depois dele). Aí cada linha diz o seu, e a frase
      * explica as duas.
      */
-    if (todasComIva) {
+    // d10: no modelo de 15-11 paga-se ao parceiro que escolher, como escolher no pedido.
+    const todasNoNovoModelo = d.propostas.length > 0 && d.propostas.every((p) => p.novoModelo === true);
+    if (todasComIva && todasNoNovoModelo) {
+      linhas.push(`O valor a pagar é o com IVA. ${PAGA_DIRETAMENTE_AO_PARCEIRO}`);
+    } else if (todasComIva) {
       linhas.push(
         emDinheiro
           ? `O valor a pagar é o com IVA. ${FORMA_EM_PALAVRAS.dinheiro.cliente}`
