@@ -3,14 +3,19 @@
     {
       "id": "pro-2026-11-13",
       "nota": "Agora cada atualização diz o que traz, antes de reiniciar e logo a seguir.",
-      "updates": []
+      "updates": [
+        "01a1d548-474f-7a58-86f8-40edaaafbf57"
+      ]
     }
   ],
   "cliente": [
     {
       "id": "cliente-2026-11-13",
       "nota": "Agora cada atualização diz o que traz, antes de reiniciar e logo a seguir.",
-      "updates": []
+      "updates": [
+        "01a1d547-b21d-7333-b14e-febc3dd95aff",
+        "01a1d548-2125-7130-9bc4-1684928f05df"
+      ]
     }
   ]
 }
