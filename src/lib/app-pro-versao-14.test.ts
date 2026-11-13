@@ -86,10 +86,12 @@ describe("as chamadas ao site têm prazo", () => {
     const FICHEIRO = API.slice(iFicheiro, iErros);
     expect(FICHEIRO).toContain("const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);");
     expect(FICHEIRO).toContain("signal: sinal");
-    // Desde a d9 (12-11-2026) o prazo fica também no registo de diagnóstico.
-    expect(FICHEIRO).toMatch(
-      /if \(sinal\?\.aborted\) \{\s*registarOPrazo\(caminho, erroDoFetch, contarAFalhaDoEnvio\);\s*throw new ErroDaApi\(MENSAGEM_DE_FICHEIRO_LENTO, 0\);/,
-    );
+    // Desde a d9 (12-11-2026) o prazo fica também no registo de diagnóstico; desde a d14 (13-11-2026),
+    // o de cada via (uploadAsync primeiro, fetch depois) pára o envio e é o enviarPorVias que o regista.
+    expect(FICHEIRO).toContain("if (sinal?.aborted) throw new PrazoDoEnvio(erroDoFetch);");
+    expect(FICHEIRO).toContain("prazo = setTimeout(() => rejeitar(new PrazoDoEnvio(");
+    expect(FICHEIRO).toContain("throw new ErroDaApi(e instanceof FalhaDoFicheiro ? e.message : MENSAGEM_DE_FICHEIRO_LENTO, 0);");
+    expect(FICHEIRO).toContain("aoRegistar: contarAFalhaDoEnvio");
 
     expect(API).toMatch(/MENSAGEM_DE_REDE_LENTA = "[^"]*rede está lenta[^"]*"/);
     expect(API).toMatch(/MENSAGEM_DE_FICHEIRO_LENTO = "[^"]*rede está lenta[^"]*"/);

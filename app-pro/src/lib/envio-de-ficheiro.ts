@@ -8,10 +8,13 @@
  * frase. Agora:
  * 1. guarda-se o erro real num registo de diagnóstico (aqui, em memória, e
  *    uma vez por erro no `erro-da-app` do site, sem dados de pessoas);
- * 2. tenta-se outra vez por outro caminho — o `uploadAsync` do expo-file-system,
- *    que lê o ficheiro do disco pelo lado nativo;
+ * 2. tenta-se outra vez por outro caminho (a segunda via);
  * 3. só se diz «sem ligação» quando se confirma que não há rede; com rede,
  *    diz-se que o envio falhou e que não é da rede.
+ *
+ * Desde a d14 (13-11-2026) a ORDEM inverteu-se: primeiro o `uploadAsync` do
+ * expo-file-system (lê o ficheiro do disco pelo lado nativo), e o `fetch` com
+ * FormData só como segunda via — ver `enviarPorVias`.
  *
  * Esta parte é pura (corre nos testes do site): quem lhe dá o `fetch`, o
  * `uploadAsync` e a prova da rede é `api.ts`.
@@ -75,29 +78,59 @@ export class FalhaDoFicheiro extends Error {
 }
 
 /**
- * Depois de o `fetch` lançar (não chegou ao site, e não foi o prazo): regista
- * o erro, tenta por `porUpload` e, se também falhar, regista, pergunta à rede
- * e lança a frase certa. Se a segunda via chegar ao site, devolve a resposta.
+ * Uma via esgotou o prazo. Pode ter chegado ao site (o envio ia a meio):
+ * não se tenta a outra via, para a fotografia não subir duas vezes, e o ecrã
+ * mostra a frase da rede lenta.
  */
-export async function recuperarDoEnvio(opcoes: {
+export class PrazoDoEnvio extends Error {
+  constructor(readonly erro: unknown) {
+    super(`prazo: ${textoDoErro(erro)}`);
+  }
+}
+
+/** Uma via do envio: qual é, e como se manda. Lança se não chegou ao site. */
+export type ViaDoEnvio = { tentativa: Tentativa; enviar: () => Promise<RespostaDoEnvio> };
+
+/**
+ * A ORDEM DAS VIAS — 13-11-2026 (decisão d14).
+ *
+ * Na build do runtime dcf63afc o `fetch` com FormData falha sempre
+ * («Unsupported FormDataPart implementation», erros da app de 13/11) e era o
+ * `uploadAsync` que salvava o envio. Agora a app manda PRIMEIRO pelo
+ * `uploadAsync` e o `fetch` passa a segunda via — só quando o `uploadAsync` não
+ * existe (não entra em `vias`) ou falha sem ter chegado ao site.
+ *
+ * Tenta as vias por ordem. Uma resposta do site (qualquer estado) devolve-se
+ * logo. Uma via que falha de verdade fica registada; o prazo esgotado
+ * (`PrazoDoEnvio`) regista-se e pára tudo. Se a última também falhar,
+ * pergunta-se à rede e lança-se a frase certa: «sem ligação» só sem rede
+ * confirmada.
+ */
+export async function enviarPorVias(opcoes: {
   caminho: string;
-  erroDoFetch: unknown;
-  porUpload: (() => Promise<RespostaDoEnvio>) | null;
+  vias: readonly ViaDoEnvio[];
   haRede: () => Promise<boolean | null>;
   aoRegistar?: (f: FalhaDoEnvio) => void;
   agora?: () => Date;
 }): Promise<RespostaDoEnvio> {
   const agora = opcoes.agora ?? (() => new Date());
-  let ultima: unknown = opcoes.erroDoFetch;
+  let ultima: unknown = new Error("sem via de envio");
   let tentativa: Tentativa = "fetch";
-  if (opcoes.porUpload) {
-    // A primeira falha fica registada antes de se tentar a segunda.
-    registar({ quando: agora().toISOString(), caminho: opcoes.caminho, tentativa: "fetch", erro: textoDoErro(ultima), rede: "por saber" }, opcoes.aoRegistar);
+  for (let i = 0; i < opcoes.vias.length; i++) {
+    const via = opcoes.vias[i];
     try {
-      return await opcoes.porUpload();
+      return await via.enviar();
     } catch (e) {
+      if (e instanceof PrazoDoEnvio) {
+        registarOPrazo(opcoes.caminho, e.erro, opcoes.aoRegistar, agora(), via.tentativa);
+        throw e;
+      }
       ultima = e;
-      tentativa = "uploadAsync";
+      tentativa = via.tentativa;
+      // Antes de tentar a via seguinte, a falha desta fica registada.
+      if (i < opcoes.vias.length - 1) {
+        registar({ quando: agora().toISOString(), caminho: opcoes.caminho, tentativa, erro: textoDoErro(e), rede: "por saber" }, opcoes.aoRegistar);
+      }
     }
   }
   let rede: boolean | null = null;
@@ -113,8 +146,14 @@ export async function recuperarDoEnvio(opcoes: {
 }
 
 /** O prazo esgotou: fica no registo, e o ecrã mostra a frase da rede lenta. */
-export function registarOPrazo(caminho: string, erro: unknown, aoRegistar?: (f: FalhaDoEnvio) => void, agora: Date = new Date()): void {
-  registar({ quando: agora.toISOString(), caminho, tentativa: "fetch", erro: `prazo: ${textoDoErro(erro)}`, rede: "por saber" }, aoRegistar);
+export function registarOPrazo(
+  caminho: string,
+  erro: unknown,
+  aoRegistar?: (f: FalhaDoEnvio) => void,
+  agora: Date = new Date(),
+  tentativa: Tentativa = "uploadAsync",
+): void {
+  registar({ quando: agora.toISOString(), caminho, tentativa, erro: `prazo: ${textoDoErro(erro)}`, rede: "por saber" }, aoRegistar);
 }
 
 /** O corpo de uma resposta em texto (o `uploadAsync` devolve texto), ou {}. */

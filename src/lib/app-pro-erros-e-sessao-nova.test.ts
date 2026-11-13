@@ -198,7 +198,7 @@ describe("d14 — a sessão nova fica no lugar da antiga", () => {
     expect(PERDEU).toContain("if (tokenUsado !== null && tokenUsado !== (await lerToken())) return;");
     expect(PERDEU).toContain("aoPerderASessao?.();");
     // As duas portas para o site passam o token que levaram.
-    expect(API.split("lerResposta<T>(r, ").length - 1).toBe(2);
+    expect(API.split("lerResposta<T>(r, ").length - 1).toBe(1);
     expect(API).toContain("return lerResposta<T>(r, !!opcoes.semSessao, tokenUsado);");
     /*
      * A dos ficheiros também, desde 04-11-2026 (d17): com a sessão, leva o
@@ -206,7 +206,8 @@ describe("d14 — a sessão nova fica no lugar da antiga", () => {
      * candidatura), não leva token nenhum e um 401 não faz sair ninguém.
      */
     expect(API).toContain("const tokenUsado = semSessao ? null : await lerToken();");
-    expect(API).toContain("return lerResposta<T>(r, semSessao, tokenUsado);");
+    // Desde a d14 (13-11-2026) a resposta das duas vias (uploadAsync primeiro, fetch depois) vem já lida.
+    expect(API).toContain("return tratarResposta<T>(resposta.estado, resposta.corpo, semSessao, tokenUsado);");
     expect(API).toContain("if (r.status === 401 && !naoSai) await perdeuASessao(tokenUsado);");
     expect(API).toContain("const naoSai = semSessao || quatrocentosEUmComCodigo(estado, corpo);");
     expect(API).not.toContain("if (r.status === 401 && !semSessao) aoPerderASessao?.();");

@@ -1,10 +1,11 @@
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
+import { Platform } from "react-native";
 import { EM_DEMO, pedirEmDemo } from "./demo";
 import { FileSystemUploadType, uploadAsync } from "expo-file-system/legacy";
 import { contadorDeErros, corpoDoErro, ecraDe, enviarErroDaApp, versaoDaApp } from "./erro-da-app";
 import { contaSemPalavraPasse, eDaPalavraPasse, quatrocentosEUmComCodigo } from "./palavra-passe-no-corpo";
-import { corpoDeTexto, FalhaDoFicheiro, recuperarDoEnvio, registarOPrazo, type FalhaDoEnvio, type RespostaDoEnvio } from "./envio-de-ficheiro";
+import { corpoDeTexto, enviarPorVias, FalhaDoFicheiro, PrazoDoEnvio, type FalhaDoEnvio, type RespostaDoEnvio, type ViaDoEnvio } from "./envio-de-ficheiro";
 import { guardarToken, lerToken } from "./sessao";
 
 /**
@@ -187,47 +188,34 @@ export async function enviarFicheiro<T>(
   opcoes: { semSessao?: boolean } = {},
 ): Promise<T> {
   if (EM_DEMO) return pedirEmDemo<T>(caminho, "POST", { ...campos, url: ficheiro.uri });
-  const corpo = new FormData();
-  for (const [k, v] of Object.entries(campos)) corpo.append(k, v);
-  // O React Native lê o ficheiro do disco a partir de {uri, name, type}.
-  corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);
   const cabecalhos: Record<string, string> = { Accept: "application/json", [CABECALHO_DA_VERSAO]: versaoDestaApp() };
   const semSessao = !!opcoes.semSessao;
   const tokenUsado = semSessao ? null : await lerToken();
   if (tokenUsado) cabecalhos.Authorization = `Bearer ${tokenUsado}`;
-  const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);
-  let r: Response;
+  // d14 (13-11-2026): primeiro o uploadAsync; o fetch com FormData só se ele não existir ou falhar sem chegar ao site.
+  const vias: ViaDoEnvio[] = [];
+  if (haUploadAsync()) vias.push({ tentativa: "uploadAsync", enviar: () => enviarPeloSistemaDeFicheiros(caminho, campos, ficheiro, cabecalhos) });
+  vias.push({ tentativa: "fetch", enviar: () => enviarPeloFetch(caminho, campos, ficheiro, cabecalhos) });
+  let resposta: RespostaDoEnvio;
   try {
-    // Sem Content-Type: o fetch escreve-o, com a fronteira do multipart.
-    r = await fetch(`${SITE}${caminho}`, { method: "POST", headers: cabecalhos, body: corpo, signal: sinal });
-  } catch (erroDoFetch) {
-    if (sinal?.aborted) {
-      registarOPrazo(caminho, erroDoFetch, contarAFalhaDoEnvio);
-      throw new ErroDaApi(MENSAGEM_DE_FICHEIRO_LENTO, 0);
-    }
-    // d9 (12-11-2026): o erro real fica registado, tenta-se pelo uploadAsync, e «sem ligação» só sem rede.
-    let segunda: RespostaDoEnvio;
-    try {
-      segunda = await recuperarDoEnvio({
-        caminho,
-        erroDoFetch,
-        porUpload: () => enviarPeloSistemaDeFicheiros(caminho, campos, ficheiro, cabecalhos),
-        haRede: confirmarARede,
-        aoRegistar: contarAFalhaDoEnvio,
-      });
-    } catch (e) {
-      throw new ErroDaApi(e instanceof FalhaDoFicheiro ? e.message : MENSAGEM_DE_FICHEIRO_LENTO, 0);
-    }
-    return tratarResposta<T>(segunda.estado, segunda.corpo, semSessao, tokenUsado);
+    resposta = await enviarPorVias({ caminho, vias, haRede: confirmarARede, aoRegistar: contarAFalhaDoEnvio });
+  } catch (e) {
+    throw new ErroDaApi(e instanceof FalhaDoFicheiro ? e.message : MENSAGEM_DE_FICHEIRO_LENTO, 0);
   }
-  return lerResposta<T>(r, semSessao, tokenUsado);
+  return tratarResposta<T>(resposta.estado, resposta.corpo, semSessao, tokenUsado);
+}
+
+/** O uploadAsync só existe no telemóvel (no navegador o expo-file-system não o traz). */
+function haUploadAsync(): boolean {
+  return Platform.OS !== "web" && typeof uploadAsync === "function";
 }
 
 /**
- * A SEGUNDA VIA DO ENVIO (d9): o `uploadAsync` do expo-file-system manda o
- * ficheiro pelo lado nativo, com o mesmo campo `file`, os mesmos campos de
- * texto e os mesmos cabeçalhos. O módulo já vem na app (o expo-file-system é o
- * da lista guardada): isto não muda a parte nativa.
+ * A PRIMEIRA VIA DO ENVIO (d14; era a segunda na d9): o `uploadAsync` do
+ * expo-file-system manda o ficheiro pelo lado nativo, com o campo `file`, os
+ * campos de texto e os cabeçalhos de sempre — o mesmo pedido para o site. O
+ * módulo já vem na app (o expo-file-system é o da lista guardada): isto não
+ * muda a parte nativa.
  */
 async function enviarPeloSistemaDeFicheiros(
   caminho: string,
@@ -237,7 +225,7 @@ async function enviarPeloSistemaDeFicheiros(
 ): Promise<RespostaDoEnvio> {
   let prazo: ReturnType<typeof setTimeout> | undefined;
   const esgotou = new Promise<never>((_, rejeitar) => {
-    prazo = setTimeout(() => rejeitar(new Error("o uploadAsync passou do prazo")), PRAZO_DO_FICHEIRO_MS);
+    prazo = setTimeout(() => rejeitar(new PrazoDoEnvio(new Error("o uploadAsync passou do prazo"))), PRAZO_DO_FICHEIRO_MS);
   });
   try {
     const r = await Promise.race([
@@ -255,6 +243,35 @@ async function enviarPeloSistemaDeFicheiros(
   } finally {
     if (prazo) clearTimeout(prazo);
   }
+}
+
+/** A SEGUNDA VIA (d14): o `fetch` com FormData, com o mesmo campo `file` e os mesmos cabeçalhos. */
+async function enviarPeloFetch(
+  caminho: string,
+  campos: Record<string, string>,
+  ficheiro: { uri: string; nome: string; tipo: string },
+  cabecalhos: Record<string, string>,
+): Promise<RespostaDoEnvio> {
+  const corpo = new FormData();
+  for (const [k, v] of Object.entries(campos)) corpo.append(k, v);
+  // O React Native lê o ficheiro do disco a partir de {uri, name, type}.
+  corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);
+  const sinal = sinalComPrazo(PRAZO_DO_FICHEIRO_MS);
+  let r: Response;
+  try {
+    // Sem Content-Type: o fetch escreve-o, com a fronteira do multipart.
+    r = await fetch(`${SITE}${caminho}`, { method: "POST", headers: cabecalhos, body: corpo, signal: sinal });
+  } catch (erroDoFetch) {
+    if (sinal?.aborted) throw new PrazoDoEnvio(erroDoFetch);
+    throw erroDoFetch;
+  }
+  let lido: Record<string, unknown> = {};
+  try {
+    lido = (await r.json()) as Record<string, unknown>;
+  } catch {
+    /* resposta sem corpo */
+  }
+  return { estado: r.status, corpo: lido };
 }
 
 /**

@@ -61,7 +61,8 @@ describe("d17 — a candidatura na app manda as fotografias", () => {
     const API = ler("app-pro/src/lib/api.ts");
     expect(API).toMatch(/const tokenUsado = semSessao \? null : await lerToken\(\)/);
     expect(API).toMatch(/corpo\.append\("file", /);
-    expect(API).toMatch(/return lerResposta<T>\(r, semSessao, tokenUsado\)/);
+    // Desde a d14 (13-11-2026) a resposta vem das duas vias (uploadAsync primeiro, fetch depois), já lida.
+    expect(API).toMatch(/return tratarResposta<T>\(resposta\.estado, resposta\.corpo, semSessao, tokenUsado\)/);
   });
 
   it("sem fotografia não envia, e o erro do campo «fotografias» aparece por baixo dele", () => {

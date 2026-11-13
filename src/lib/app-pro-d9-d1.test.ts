@@ -8,7 +8,8 @@ import {
   MAXIMO_DO_REGISTO,
   MENSAGEM_DO_FICHEIRO_QUE_FALHOU,
   MENSAGEM_DO_FICHEIRO_SEM_REDE,
-  recuperarDoEnvio,
+  enviarPorVias,
+  PrazoDoEnvio,
   registarOPrazo,
   corpoDeTexto,
   type FalhaDoEnvio,
@@ -49,46 +50,127 @@ function ficheirosEm(pasta: string): string[] {
   return saida;
 }
 
-describe("d9 (2) — o envio de um ficheiro: a segunda via e a frase certa", () => {
+describe("d9 (2) e d14 — o envio de um ficheiro: as duas vias e a frase certa", () => {
   beforeEach(() => limparFalhasDoEnvio());
   const agora = () => new Date("2026-11-12T15:00:00Z");
   const respostaBoa = { estado: 200, corpo: { url: "https://exemplo/fotografia.jpg" } };
+  const falhar = (m: string) => async (): Promise<never> => {
+    throw new Error(m);
+  };
 
-  it("o fetch falha e o uploadAsync chega ao site: devolve a resposta, e o erro do fetch fica no registo", async () => {
-    const vistas: FalhaDoEnvio[] = [];
+  it("d14: o uploadAsync vai PRIMEIRO; chegando ao site, o fetch nem se tenta e nada fica no registo", async () => {
+    const ordem: string[] = [];
     let perguntouARede = false;
-    const r = await recuperarDoEnvio({
+    const r = await enviarPorVias({
       caminho: "/api/parceiros/candidatura/fotografias",
-      erroDoFetch: new TypeError("Network request failed"),
-      porUpload: async () => respostaBoa,
+      vias: [
+        { tentativa: "uploadAsync", enviar: async () => (ordem.push("uploadAsync"), respostaBoa) },
+        { tentativa: "fetch", enviar: async () => (ordem.push("fetch"), respostaBoa) },
+      ],
       haRede: async () => {
         perguntouARede = true;
         return true;
       },
+      agora,
+    });
+    expect(r).toEqual(respostaBoa);
+    expect(ordem).toEqual(["uploadAsync"]);
+    expect(perguntouARede).toBe(false);
+    expect(falhasDoEnvio()).toEqual([]);
+  });
+
+  it("d14: uma resposta do site com erro (4xx/5xx) também é chegar: não se manda outra vez pelo fetch", async () => {
+    const ordem: string[] = [];
+    const recusa = { estado: 400, corpo: { error: "Formato não aceite." } };
+    const r = await enviarPorVias({
+      caminho: "/x",
+      vias: [
+        { tentativa: "uploadAsync", enviar: async () => (ordem.push("uploadAsync"), recusa) },
+        { tentativa: "fetch", enviar: async () => (ordem.push("fetch"), respostaBoa) },
+      ],
+      haRede: async () => true,
+    });
+    expect(r).toEqual(recusa);
+    expect(ordem).toEqual(["uploadAsync"]);
+  });
+
+  it("d14: o uploadAsync falha sem chegar ao site e o fetch salva: devolve a resposta, e o erro do uploadAsync fica no registo", async () => {
+    const vistas: FalhaDoEnvio[] = [];
+    const ordem: string[] = [];
+    const r = await enviarPorVias({
+      caminho: "/api/parceiros/candidatura/fotografias",
+      vias: [
+        {
+          tentativa: "uploadAsync",
+          enviar: async () => {
+            ordem.push("uploadAsync");
+            throw new Error("Unable to read file");
+          },
+        },
+        { tentativa: "fetch", enviar: async () => (ordem.push("fetch"), respostaBoa) },
+      ],
+      haRede: async () => true,
       aoRegistar: (f) => vistas.push(f),
       agora,
     });
     expect(r).toEqual(respostaBoa);
-    expect(perguntouARede).toBe(false);
+    expect(ordem).toEqual(["uploadAsync", "fetch"]);
     expect(falhasDoEnvio()).toEqual([
       {
         quando: "2026-11-12T15:00:00.000Z",
         caminho: "/api/parceiros/candidatura/fotografias",
-        tentativa: "fetch",
-        erro: "TypeError: Network request failed",
+        tentativa: "uploadAsync",
+        erro: "Unable to read file",
         rede: "por saber",
       },
     ]);
     expect(vistas).toHaveLength(1);
   });
 
-  it("as duas vias falham COM rede: não diz «sem ligação», diz que o envio falhou", async () => {
-    const e = await recuperarDoEnvio({
+  it("d14: sem uploadAsync (não entra nas vias) vai só pelo fetch, e isso não é uma falha", async () => {
+    const r = await enviarPorVias({ caminho: "/x", vias: [{ tentativa: "fetch", enviar: async () => respostaBoa }], haRede: async () => true });
+    expect(r).toEqual(respostaBoa);
+    expect(falhasDoEnvio()).toEqual([]);
+  });
+
+  it("d14: o prazo esgotado do uploadAsync pára tudo (pode ter chegado): não tenta o fetch, regista o prazo", async () => {
+    let tentouOFetch = false;
+    const e = await enviarPorVias({
       caminho: "/x",
-      erroDoFetch: new TypeError("Network request failed"),
-      porUpload: async () => {
-        throw new Error("Unable to read file");
-      },
+      vias: [
+        {
+          tentativa: "uploadAsync",
+          enviar: async () => {
+            throw new PrazoDoEnvio(new Error("o uploadAsync passou do prazo"));
+          },
+        },
+        {
+          tentativa: "fetch",
+          enviar: async () => {
+            tentouOFetch = true;
+            return respostaBoa;
+          },
+        },
+      ],
+      haRede: async () => true,
+    }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(PrazoDoEnvio);
+    expect(tentouOFetch).toBe(false);
+    expect(falhasDoEnvio().map((f) => [f.tentativa, f.erro])).toEqual([["uploadAsync", "prazo: o uploadAsync passou do prazo"]]);
+  });
+
+  it("as duas vias falham COM rede: não diz «sem ligação», diz que o envio falhou", async () => {
+    const e = await enviarPorVias({
+      caminho: "/x",
+      vias: [
+        { tentativa: "uploadAsync", enviar: falhar("Unable to read file") },
+        {
+          tentativa: "fetch",
+          enviar: async () => {
+            throw new TypeError("Unsupported FormDataPart implementation");
+          },
+        },
+      ],
       haRede: async () => true,
       agora,
     }).catch((x: unknown) => x);
@@ -96,27 +178,27 @@ describe("d9 (2) — o envio de um ficheiro: a segunda via e a frase certa", () 
     expect((e as FalhaDoFicheiro).message).toBe(MENSAGEM_DO_FICHEIRO_QUE_FALHOU);
     expect((e as FalhaDoFicheiro).message).not.toMatch(/sem ligação/i);
     expect((e as FalhaDoFicheiro).rede).toBe("com rede");
-    // Os dois erros reais ficam guardados, cada um com a sua via.
+    // Os dois erros reais ficam guardados, cada um com a sua via, pela ordem nova.
     expect(falhasDoEnvio().map((f) => [f.tentativa, f.erro, f.rede])).toEqual([
-      ["fetch", "TypeError: Network request failed", "por saber"],
-      ["uploadAsync", "Unable to read file", "com rede"],
+      ["uploadAsync", "Unable to read file", "por saber"],
+      ["fetch", "TypeError: Unsupported FormDataPart implementation", "com rede"],
     ]);
   });
 
   it("só sem rede confirmada diz «sem ligação»", async () => {
-    const falhar = async () => {
-      throw new Error("x");
-    };
-    const semRede = await recuperarDoEnvio({ caminho: "/x", erroDoFetch: new Error("a"), porUpload: falhar, haRede: async () => false }).catch((x: unknown) => x);
+    const vias = [
+      { tentativa: "uploadAsync" as const, enviar: falhar("x") },
+      { tentativa: "fetch" as const, enviar: falhar("a") },
+    ];
+    const semRede = await enviarPorVias({ caminho: "/x", vias, haRede: async () => false }).catch((x: unknown) => x);
     expect((semRede as Error).message).toBe(MENSAGEM_DO_FICHEIRO_SEM_REDE);
     expect(MENSAGEM_DO_FICHEIRO_SEM_REDE).toMatch(/sem ligação/i);
     // Sem saber (a prova esgotou ou rebentou), não se acusa a rede.
-    const porSaber = await recuperarDoEnvio({ caminho: "/x", erroDoFetch: new Error("a"), porUpload: falhar, haRede: async () => null }).catch((x: unknown) => x);
+    const porSaber = await enviarPorVias({ caminho: "/x", vias, haRede: async () => null }).catch((x: unknown) => x);
     expect((porSaber as Error).message).toBe(MENSAGEM_DO_FICHEIRO_QUE_FALHOU);
-    const rebentou = await recuperarDoEnvio({
+    const rebentou = await enviarPorVias({
       caminho: "/x",
-      erroDoFetch: new Error("a"),
-      porUpload: falhar,
+      vias,
       haRede: async () => {
         throw new Error("b");
       },
@@ -137,18 +219,40 @@ describe("d9 (2) — o envio de um ficheiro: a segunda via e a frase certa", () 
     expect(corpoDeTexto(null)).toEqual({});
   });
 
-  it("api.ts liga as duas vias: o mesmo campo `file`, os mesmos cabeçalhos, a prova da rede e o erro-da-app", () => {
+  it("api.ts liga as duas vias pela ordem da d14: uploadAsync primeiro, fetch depois, o mesmo pedido para o site", () => {
     const API = semComentarios(ler("app-pro/src/lib/api.ts"));
     expect(API).toContain('import { FileSystemUploadType, uploadAsync } from "expo-file-system/legacy";');
     expect(API).toMatch(/uploadType: FileSystemUploadType\.MULTIPART,\s*fieldName: "file",\s*mimeType: ficheiro\.tipo,\s*parameters: campos,\s*headers: cabecalhos,/);
-    expect(API).toMatch(/porUpload: \(\) => enviarPeloSistemaDeFicheiros\(caminho, campos, ficheiro, cabecalhos\),\s*haRede: confirmarARede,\s*aoRegistar: contarAFalhaDoEnvio,/);
-    expect(API).toContain("return tratarResposta<T>(segunda.estado, segunda.corpo, semSessao, tokenUsado);");
+    const i = API.indexOf("export async function enviarFicheiro<T>(");
+    const FICHEIRO = API.slice(i, API.indexOf("export function errosPorCampo("));
+    // A ordem: o uploadAsync entra primeiro (se existir), o fetch a seguir, e é o enviarPorVias que as corre.
+    const iUpload = FICHEIRO.indexOf('vias.push({ tentativa: "uploadAsync", enviar: () => enviarPeloSistemaDeFicheiros(caminho, campos, ficheiro, cabecalhos) });');
+    const iFetch = FICHEIRO.indexOf('vias.push({ tentativa: "fetch", enviar: () => enviarPeloFetch(caminho, campos, ficheiro, cabecalhos) });');
+    expect(iUpload).toBeGreaterThan(-1);
+    expect(iFetch).toBeGreaterThan(iUpload);
+    expect(FICHEIRO).toContain('if (haUploadAsync()) vias.push({ tentativa: "uploadAsync"');
+    expect(FICHEIRO).toContain("resposta = await enviarPorVias({ caminho, vias, haRede: confirmarARede, aoRegistar: contarAFalhaDoEnvio });");
+    expect(FICHEIRO).toContain("return tratarResposta<T>(resposta.estado, resposta.corpo, semSessao, tokenUsado);");
+    // O fetch é a mesma forma de antes: campo `file`, os campos de texto e os mesmos cabeçalhos, sem Content-Type à mão.
+    expect(FICHEIRO).toContain('corpo.append("file", { uri: ficheiro.uri, name: ficheiro.nome, type: ficheiro.tipo } as unknown as Blob);');
+    expect(FICHEIRO).toContain('await fetch(`${SITE}${caminho}`, { method: "POST", headers: cabecalhos, body: corpo, signal: sinal });');
+    expect(FICHEIRO).not.toContain("Content-Type");
+    // O prazo das duas vias pára tudo (não se manda outra vez o que pode já ter chegado).
+    expect(FICHEIRO).toContain('rejeitar(new PrazoDoEnvio(new Error("o uploadAsync passou do prazo")))');
+    expect(FICHEIRO).toContain("if (sinal?.aborted) throw new PrazoDoEnvio(erroDoFetch);");
+    expect(FICHEIRO).toContain("throw new ErroDaApi(e instanceof FalhaDoFicheiro ? e.message : MENSAGEM_DE_FICHEIRO_LENTO, 0);");
+    expect(API).not.toContain("recuperarDoEnvio");
     expect(API).toContain('await fetch(`${SITE}/robots.txt`, { method: "HEAD", signal: sinal });');
     expect(API).toContain("contadorDeErros((corpo) => enviarErroDaApp(SITE, corpo))");
     // A frase «sem ligação» do ficheiro já não está escrita no envio: vem de envio-de-ficheiro.ts, só sem rede.
-    const i = API.indexOf("export async function enviarFicheiro<T>(");
-    const FICHEIRO = API.slice(i, API.indexOf("export function errosPorCampo("));
     expect(FICHEIRO).not.toMatch(/sem ligação/i);
+  });
+
+  it("d14: todos os envios de ficheiros da app Pro passam por enviarFicheiro (e assim pela ordem nova)", () => {
+    const comFormData = ficheirosEm("app-pro/src").filter((f) => /new FormData\(/.test(semComentarios(ler(f))));
+    expect(comFormData).toEqual(["app-pro/src/lib/api.ts"]);
+    const comUpload = ficheirosEm("app-pro/src").filter((f) => /uploadAsync\(/.test(semComentarios(ler(f))));
+    expect(comUpload).toEqual(["app-pro/src/lib/api.ts"]);
   });
 
   it("sem módulo nativo novo: as dependências da app são as de antes (a fingerprint não muda por isto)", () => {
