@@ -2,7 +2,8 @@ import { perfilDoProfissional } from "./db";
 import { estadoDosDadosParaReceber } from "./dados-para-receber";
 import { standByDoProfissional } from "./bloqueio-do-profissional";
 import { eDoNovoModelo, novoModeloEmVigor } from "./novo-modelo";
-import { totaisDoNovoModelo, type TotaisDoNovoModelo } from "./total-ao-cliente";
+import { regimeDaNegociacao, totaisDoNovoModelo, type TotaisDoNovoModelo } from "./total-ao-cliente";
+import type { RegimeDoProfissional } from "./pagamento-directo";
 import { agoraDoModelo } from "./relogio-do-modelo";
 import { PAGAR_O_VALOR_EM_ATRASO } from "./valor-em-atraso";
 
@@ -193,6 +194,37 @@ export async function novoModeloParaOCliente(
     const r = daBase.get(id);
     if (!r) continue;
     mapa.set(id, { segue: segue.has(id), totais: totaisDoNovoModelo(r, valoresDaLinha(l)) });
+  }
+  return mapa;
+}
+
+/**
+ * O REGIME COM QUE SE FAZ O TOTAL DE CADA NEGOCIAÇÃO — d17 (13-11-2026), para a
+ * mensagem do orçamento que a equipa copia na Mesa (`mensagemDasPropostas`)
+ * dizer o número do cartão. O congelado ao contratar, ou o do perfil
+ * (`regimeDaNegociacao`). Só para os ids dados (os do modelo novo); vazio sem
+ * ids, e vazio se a leitura falhar (a mensagem fica com a conta de antes).
+ */
+export async function regimesDasNegociacoes(
+  ids: ReadonlyArray<number>,
+): Promise<Map<number, RegimeDoProfissional>> {
+  const mapa = new Map<number, RegimeDoProfissional>();
+  const validos = ids.filter((id) => Number.isInteger(id) && id > 0);
+  if (validos.length === 0) return mapa;
+  try {
+    const { getPool } = await import("./db");
+    const pool = await getPool();
+    if (!pool) return mapa;
+    const [rows] = (await pool.execute(
+      `SELECT x.id, x.regimeDoProfissional, p.regimeIva, p.regimeIvaConfirmadoEm
+         FROM negociacoes x
+         JOIN providers p ON p.id = x.providerId
+        WHERE x.id IN (${validos.map(() => "?").join(",")})`,
+      validos,
+    )) as unknown as [Array<Record<string, unknown>>, unknown];
+    for (const r of Array.isArray(rows) ? rows : []) mapa.set(Number(r.id), regimeDaNegociacao(r));
+  } catch (err) {
+    console.error("[novo-modelo-no-servidor] regimes:", err instanceof Error ? err.message : err);
   }
   return mapa;
 }

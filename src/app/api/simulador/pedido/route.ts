@@ -355,6 +355,8 @@ export async function POST(req: NextRequest) {
         validacao.valores.valorDesejadoCliente,
         modelo === "iva_incluido" ? await taxasActuais() : undefined,
         modelo,
+        // d17: no modelo de 15-11 a volta é a conta inversa do total (`total-ao-cliente.ts`).
+        novoModeloEmVigor(agoraDoModelo()),
       );
       valoresParaGravar = {
         valorDesejadoCliente: String(v.valorDesejadoCliente),

@@ -383,11 +383,25 @@ export async function agirComoCliente(a: {
       case "propor": {
         // O que ele escreveu é o que paga — vira aqui o valor do profissional,
         // com as taxas e no modelo DAQUELA negociação.
-        const valor = valorDaPropostaDoCliente(
-          corpo,
-          taxasDaNegociacao(linha),
-          modeloDaNegociacao(linha.createdAt),
-        );
+        /*
+         * d17 (13-11-2026): no modelo de 15-11 o preço escrito é o total das duas
+         * faturas, e a volta é a conta inversa do cartão, pelo regime do parceiro
+         * (`valorDoPrecoEscrito`). Um ecrã antigo que mande `valor` lê-se como sempre.
+         */
+        const { negociacoesNoNovoModelo } = await import("./novo-modelo-no-servidor");
+        const { agoraDoModelo } = await import("./relogio-do-modelo");
+        const { valorDoPrecoEscrito } = await import("./total-ao-cliente");
+        const noNovo = (await negociacoesNoNovoModelo([linha], agoraDoModelo())).has(Number(linha.id));
+        const temPreco = corpo.preco !== undefined && corpo.preco !== null && corpo.preco !== "";
+        const valor =
+          noNovo && temPreco
+            ? (valorDoPrecoEscrito(
+                linha,
+                typeof corpo.preco === "string" ? Number(corpo.preco.trim().replace(",", ".")) : Number(corpo.preco),
+                modeloDaNegociacao(linha.createdAt),
+                true,
+              )?.valor ?? Number.NaN)
+            : valorDaPropostaDoCliente(corpo, taxasDaNegociacao(linha), modeloDaNegociacao(linha.createdAt));
         resultado = propor(estadoActual, "cliente", valor, agora);
         break;
       }

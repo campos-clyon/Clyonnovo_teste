@@ -15,7 +15,7 @@ import { confiancaDasNegociacoes, type ConfiancaDaNegociacao } from "@/lib/confi
 import { escolhidosDeJson, estadoNaMesa } from "@/lib/escolhidos-sem-resposta";
 import { registarQueOClientePediu } from "@/lib/escolhidos-sem-resposta-no-servidor";
 import { pedidoFechado } from "@/lib/pedido-arrumado";
-import { negociacoesNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export const runtime = "nodejs";
@@ -68,6 +68,8 @@ export async function GET(req: NextRequest) {
     const agora = new Date();
     // d10: o modelo de 15-11 de cada negociação, para a mensagem do orçamento (`mensagemDasPropostas`).
     const doNovoModelo = await modeloDasNegociacoes(pedidos.flatMap((p) => p.negociacoes));
+    // d17: e o regime de cada uma, para o texto dizer o total do cartão (`totalAoClienteDaNegociacao`).
+    const regimes = await regimesDasNegociacoes([...doNovoModelo]);
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
@@ -81,6 +83,9 @@ export async function GET(req: NextRequest) {
           ...n,
           ...(confianca.get(Number(n.id)) ?? {}),
           ...(doNovoModelo.has(Number(n.id)) ? { noNovoModelo: true } : {}),
+          ...(doNovoModelo.has(Number(n.id)) && regimes.has(Number(n.id))
+            ? { regimeParaOTotal: regimes.get(Number(n.id)) }
+            : {}),
         })),
       })),
     });

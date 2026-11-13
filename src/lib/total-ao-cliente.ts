@@ -1,7 +1,8 @@
-import { contaDoValorAcordado, type RegimeDoProfissional } from "./pagamento-directo";
+import { contaDoValorAcordado, MAXIMO_DO_PAGAMENTO_DIRECTO_CENT, type RegimeDoProfissional } from "./pagamento-directo";
 import { perfilFiscalDoParceiro, type ProfissionalParaOPerfil } from "./perfil-fiscal";
 import { taxasDaNegociacao, type Taxas } from "./taxas-plataforma";
-import type { PrecoDoCliente } from "./preco-do-cliente";
+import { baseDoPrecoDoCliente, precoParaOCliente, type PrecoDoCliente } from "./preco-do-cliente";
+import type { ModeloDoPreco } from "./iva-incluido";
 
 /**
  * O TOTAL QUE O CLIENTE PAGA NO MODELO DE 15-11-2026 — uma conta só (d17, CEO e
@@ -133,4 +134,78 @@ export function precoDoNovoModelo(t: TotalAoCliente): PrecoDoCliente {
     ivaIncluido: true,
     aPagar: t.total,
   };
+}
+
+/*
+ * ── A CONTA INVERSA — o preço que o cliente ESCREVE (d17, 13-11-2026) ───────
+ *
+ * «Posso pagar 358» é um total: o que lhe sai do bolso, com as duas faturas.
+ * No modelo de 15-11 esse total depende do regime do parceiro, por isso a volta
+ * para o valor do parceiro (sem IVA, o que se grava nas propostas) faz-se pela
+ * MESMA conta de `totalAoCliente`, e não pela antiga (`baseDoPrecoDoCliente`,
+ * valor × taxa × 1,23), que com um parceiro isento dava um valor ~18 % abaixo.
+ *
+ * A REGRA DO ARREDONDAMENTO É A DE SEMPRE: fica o de baixo. O total sobe aos
+ * saltos de 1 ou 2 cêntimos por cêntimo do parceiro (o IVA arredonda por
+ * fatura; até 4 com taxa do cliente), e há totais a que nenhum valor chega. Escolhe-se o maior valor cujo
+ * total não passa do escrito: `total(valorDoTotalAoCliente(x)) = x` quando x é
+ * alcançável, e até 3 cêntimos abaixo quando não é (como na conta antiga) — o cliente nunca
+ * passa a pagar mais do que escreveu, e quem chama mostra-lhe o que ficou.
+ *
+ * `null` para um preço que não é preço nenhum (zero, negativo, lixo, acima
+ * do total de `MAXIMO_DO_PAGAMENTO_DIRECTO_CENT`) ou abaixo do total de 1 cêntimo.
+ */
+export function valorDoTotalAoCliente(
+  total: number | null | undefined,
+  taxas: Taxas,
+  regime: RegimeDoProfissional,
+): number | null {
+  if (total == null || !Number.isFinite(total) || total <= 0) return null;
+  const alvo = Math.round((total + Number.EPSILON) * 100);
+  const totalDe = (cent: number): number | null => {
+    const c = contaDoValorAcordado(cent / 100, taxas, regime);
+    return c ? c.totalAoClienteCent : null;
+  };
+  const primeiro = totalDe(1);
+  if (primeiro == null || primeiro > alvo) return null;
+  // Acima do total do máximo aceite é um erro de escrita, como no valor.
+  const doMaximo = totalDe(MAXIMO_DO_PAGAMENTO_DIRECTO_CENT);
+  if (doMaximo == null || alvo > doMaximo) return null;
+  // O total cresce com o valor (nunca desce): procura-se o último que cabe.
+  let baixo = 1;
+  let alto = Math.min(alvo, MAXIMO_DO_PAGAMENTO_DIRECTO_CENT);
+  while (baixo < alto) {
+    const meio = Math.floor((baixo + alto + 1) / 2);
+    const t = totalDe(meio);
+    if (t != null && t <= alvo) baixo = meio;
+    else alto = meio - 1;
+  }
+  return baixo / 100;
+}
+
+/** A conta inversa de uma negociação, com as taxas gravadas nela e o regime dela. */
+export function valorDoTotalDaNegociacao(linha: LinhaParaOTotal, total: number | null | undefined): number | null {
+  return valorDoTotalAoCliente(total, taxasDaNegociacao(linha), regimeDaNegociacao(linha));
+}
+
+/**
+ * O PREÇO ESCRITO PELO CLIENTE, numa negociação — a porta única do WhatsApp e
+ * do ecrã do pedido. No modelo novo, a conta inversa desta negociação; fora
+ * dele, a de sempre (`baseDoPrecoDoCliente`, no modelo do preço). Devolve o
+ * valor do parceiro e o total que ficou (o escrito, ou um pouco abaixo).
+ */
+export function valorDoPrecoEscrito(
+  linha: LinhaParaOTotal,
+  preco: number,
+  modelo: ModeloDoPreco,
+  noNovoModelo: boolean,
+): { valor: number; ficou: number } | null {
+  if (noNovoModelo) {
+    const valor = valorDoTotalDaNegociacao(linha, preco);
+    const t = valor == null ? null : totalAoClienteDaNegociacao(linha, valor);
+    return valor == null || !t ? null : { valor, ficou: t.total };
+  }
+  const taxas = taxasDaNegociacao(linha);
+  const valor = baseDoPrecoDoCliente(preco, taxas, modelo);
+  return valor == null ? null : { valor, ficou: precoParaOCliente(valor, taxas, modelo) };
 }

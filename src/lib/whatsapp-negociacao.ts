@@ -17,8 +17,8 @@ import {
   type Proposta,
 } from "@/lib/negociacao";
 import { taxasDaNegociacao, type Taxas } from "@/lib/taxas-plataforma";
+import { valorDoPrecoEscrito } from "@/lib/total-ao-cliente";
 import {
-  baseDoPrecoDoCliente,
   comIvaNaResposta,
   desdobramentoDoIva,
   precoParaOCliente,
@@ -2616,12 +2616,15 @@ export async function tratarMensagemDoCliente(
             new Date(String((b as { updatedAt?: unknown }).updatedAt ?? 0)).getTime() -
             new Date(String((a as { updatedAt?: unknown }).updatedAt ?? 0)).getTime(),
         );
+      // d17: no modelo de 15-11 o escrito é o total das duas faturas, pelo regime do parceiro.
+      const novas = await nasNovoModelo(candidatas);
       for (const n of candidatas) {
-        const taxas = taxasDaNegociacao(n);
-        // O que ele escreve é um preço no modelo DESTA negociação (01-10-2026).
+        // O que ele escreve é um preço no modelo DESTA negociação (01-10-2026), e
+        // no de 15-11 a conta inversa do total do cartão (`valorDoPrecoEscrito`).
         const modelo = modeloDaNegociacao(n.createdAt);
-        const valor = baseDoPrecoDoCliente(preco, taxas, modelo);
-        if (valor == null) continue;
+        const escrito = valorDoPrecoEscrito(n, preco, modelo, novas.has(Number(n.id)));
+        if (escrito == null) continue;
+        const valor = escrito.valor;
         const estado: Negociacao = {
           estado: n.estado as Negociacao["estado"],
           valorAcordado: n.valorAcordado != null ? Number(n.valorAcordado) : null,
@@ -2635,8 +2638,8 @@ export async function tratarMensagemDoCliente(
           propostasJson: JSON.stringify(r.negociacao.propostas),
         });
         const baseDele = await baseDoPedido(pedidoId);
-        // O que fica: o escrito, ou um cêntimo abaixo — ver `preco-do-cliente.ts`.
-        const ficou = precoParaOCliente(valor, taxas, modelo);
+        // O que fica: o escrito, ou um cêntimo abaixo — ver `total-ao-cliente.ts`.
+        const ficou = escrito.ficou;
         await registarAccao(
           pedidoId,
           Number(n.id),

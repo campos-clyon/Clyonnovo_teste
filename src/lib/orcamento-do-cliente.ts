@@ -1,6 +1,7 @@
 import { baseDoPrecoDoCliente } from "./preco-do-cliente";
 import { temIvaIncluido, type ModeloDoPreco } from "./iva-incluido";
-import type { Taxas } from "./taxas-plataforma";
+import { TAXAS_DE_ORIGEM, type Taxas } from "./taxas-plataforma";
+import { valorDoTotalAoCliente } from "./total-ao-cliente";
 
 /**
  * «QUANTO CONTA GASTAR?» — O NÚMERO DO CLIENTE, COM IVA, E O QUE O
@@ -50,8 +51,24 @@ export function valoresDoQueOClienteEscreveu(
   escrito: number,
   taxas: Taxas | undefined,
   modelo: ModeloDoPreco,
+  /**
+   * d17 (13-11-2026): o pedido nasce no modelo de 15-11 (`pedidoNovoNoNovoModelo`)?
+   * Quem chama diz; sem isto, a conta de antes.
+   */
+  noNovoModelo = false,
 ): ValoresDoOrcamento {
   if (!temIvaIncluido(modelo)) return { valorDesejadoCliente: escrito, valorDoClienteComIva: null };
+  /*
+   * NO MODELO DE 15-11 (d17) o escrito é um total das duas faturas, e a volta é
+   * a conta inversa de `total-ao-cliente.ts` — a mesma do cartão. Ainda não há
+   * parceiro: faz-se como com IVA (`regimeParaAConta` de quem não confirmou),
+   * que é o total mais alto; com um parceiro isento, a proposta chega-lhe abaixo
+   * do que escreveu, nunca acima. Fica o cêntimo de baixo, como sempre.
+   */
+  if (noNovoModelo) {
+    const base = valorDoTotalAoCliente(escrito, taxas ?? TAXAS_DE_ORIGEM, "normal");
+    return { valorDesejadoCliente: base ?? escrito, valorDoClienteComIva: escrito };
+  }
   /*
    * A volta fica no cêntimo DE BAIXO quando não há um valor exacto (ver
    * `baseDoPrecoDoCliente`): o profissional nunca vê um número que, com taxa e

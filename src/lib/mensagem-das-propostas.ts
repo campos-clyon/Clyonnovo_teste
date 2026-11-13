@@ -1,5 +1,7 @@
 import type { Proposta } from "./negociacao";
-import { taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
+import { taxasDaNegociacao, TAXA_IVA, type Taxas } from "./taxas-plataforma";
+import { precoDoNovoModelo, totalAoCliente, totalAoClienteDaNegociacao } from "./total-ao-cliente";
+import type { RegimeDoProfissional } from "./pagamento-directo";
 import { precoDoCliente, semEComIva } from "./preco-do-cliente";
 import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
 
@@ -125,6 +127,11 @@ export type PropostaParaOCliente = {
   materiais?: string | null;
   /** d10: um trabalho do modelo de 15-11-2026 — o cliente paga ao parceiro. */
   novoModelo?: boolean;
+  /**
+   * d17: a conta do total do modelo novo (as taxas e o regime do parceiro), para
+   * a estimativa das horas dizer a mesma conta. Só quando o total é dele.
+   */
+  contaDoNovoModelo?: { taxas: Taxas; regime: RegimeDoProfissional };
 };
 
 type NegociacaoParaLer = {
@@ -153,6 +160,12 @@ type NegociacaoParaLer = {
    * (`segueONovoModelo`, posto pela rota da Mesa); sem ele, o de antes.
    */
   noNovoModelo?: boolean;
+  /**
+   * d17 (13-11-2026): o regime com que se faz o total do modelo novo (o congelado
+   * ou o do perfil), posto pela rota da Mesa. Com ele, o número da mensagem é o
+   * do cartão (`totalAoClienteDaNegociacao`); sem ele, a conta de antes.
+   */
+  regimeParaOTotal?: RegimeDoProfissional | null;
 };
 
 /** Os dois números de uma proposta — «294,00 € + IVA = 361,62 €» — ou o de sempre antes do corte. */
@@ -163,7 +176,18 @@ function precoDaLinha(p: PropostaParaOCliente): string {
 /** A proposta, contada no modelo da negociação. */
 function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente {
   const modelo = modeloDaNegociacao(n.criadaEm);
-  const conta = precoDoCliente(valor, taxasDaNegociacao(n), modelo);
+  /*
+   * d17 (13-11-2026): no modelo de 15-11 o número é o do cartão, pelo regime do
+   * parceiro — com um isento, 358,05 € e não 430,50 € em 350 € a 10 %.
+   */
+  const regime = n.noNovoModelo === true ? (n.regimeParaOTotal ?? null) : null;
+  const total = regime
+    ? totalAoClienteDaNegociacao(
+        { taxaCliente: n.taxaCliente, taxaProfissional: n.taxaProfissional, regimeDoProfissional: regime },
+        valor,
+      )
+    : null;
+  const conta = total ? precoDoNovoModelo(total) : precoDoCliente(valor, taxasDaNegociacao(n), modelo);
   return {
     profissional: n.profissionalNome,
     valor,
@@ -174,6 +198,7 @@ function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente
     aPagar: conta.aPagar,
     forma: lerForma(n.formaDePagamento),
     ...(n.noNovoModelo === true ? { novoModelo: true } : {}),
+    ...(total && regime ? { contaDoNovoModelo: { taxas: taxasDaNegociacao(n), regime } } : {}),
     // Só quando o parceiro disse (sem a pergunta respondida, a proposta fica como era).
     ...((): { materiais?: string } => {
       const m = materiaisParaOCliente(lerMateriaisDaProposta(n.materiaisJson ?? null), taxasDaNegociacao(n), modelo);
@@ -188,6 +213,11 @@ function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente
  */
 function estimativaDaLinha(p: PropostaParaOCliente, horasPrevistas: number | null | undefined): string {
   const horas = horasDaEstimativa(horasPrevistas);
+  // d17: no modelo novo, a estimativa pela conta do cartão.
+  const doNovo = p.contaDoNovoModelo
+    ? totalAoCliente(estimativaDasHoras(p.valor, horas), p.contaDoNovoModelo.taxas, p.contaDoNovoModelo.regime)
+    : null;
+  if (doNovo) return `   ≈ ${semEComIva(precoDoNovoModelo(doNovo))} em ${horasEmPalavras(horas)} (estimativa)`;
   const conta = precoDoCliente(estimativaDasHoras(p.valor, horas), { cliente: p.taxaCliente, profissional: 0 }, p.modelo);
   return `   ≈ ${semEComIva(conta)} em ${horasEmPalavras(horas)} (estimativa)`;
 }

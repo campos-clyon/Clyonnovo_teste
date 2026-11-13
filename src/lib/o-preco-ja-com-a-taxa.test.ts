@@ -203,7 +203,9 @@ describe("um número só, em todo o lado onde o cliente lê", () => {
 
   it("no WhatsApp, a contraproposta dele entra como o que ele paga", () => {
     const CEREBRO = semComentarios(ler("src/lib/whatsapp-negociacao.ts"));
-    expect(CEREBRO).toContain("const valor = baseDoPrecoDoCliente(preco, taxas, modelo);");
+    // d17: pela porta única — a conta inversa do total no modelo de 15-11, a de sempre antes.
+    expect(CEREBRO).toContain("const escrito = valorDoPrecoEscrito(n, preco, modelo, novas.has(Number(n.id)));");
+    expect(CEREBRO).toContain("const valor = escrito.valor;");
     expect(CEREBRO).toContain('propor(estado, "cliente", valor, new Date())');
     expect(CEREBRO).toContain("Contraproposta de ${precoComBase(euros(ficou), baseDele)} enviada");
   });
