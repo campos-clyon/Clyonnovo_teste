@@ -5,6 +5,9 @@ import { dividasDosProfissionais, desfazerParte, marcarPartes } from "@/lib/cobr
 import { eParteDaDivida, estadoDaCobranca, type ParteDaDivida } from "@/lib/cobrancas-ao-profissional";
 import { eMetodoDoProfissional } from "@/lib/pagamento-da-divida";
 import { diaEmLisboa, inicioDoDiaEmLisboa } from "@/lib/hora-de-lisboa";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { estadoDoValorEmAtraso } from "@/lib/estado-do-valor-em-atraso";
+import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,8 +32,25 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
   try {
-    const agora = new Date();
+    // A data do modelo de 15-11 (simulada fora da produção) — d10.
+    const agora = agoraDoModelo();
     const porProfissional = await dividasDosProfissionais(undefined, agora);
+    /*
+     * O VALOR EM ATRASO DO MODELO DE 15-11 (d10): em cada trabalho do modelo novo, a
+     * referência viva do euPago e o estado — no prazo, ou stand-by a partir do 5.º dia.
+     */
+    const doNovoModelo = new Map<number, { referencia: { entidade: string | null; referencia: string | null } | null }>();
+    for (const ds of porProfissional.values()) {
+      for (const d of ds) {
+        if (!d.novoModelo) continue;
+        const viva = d.paga
+          ? null
+          : ((await pagamentosDaNegociacao(d.negociacaoId)).find(
+              (p) => p.estado === "pendente" && p.referencia != null && (!p.expiraEm || new Date(p.expiraEm).getTime() > agora.getTime()),
+            ) ?? null);
+        doNovoModelo.set(d.negociacaoId, { referencia: viva ? { entidade: viva.entidade ?? null, referencia: viva.referencia ?? null } : null });
+      }
+    }
     const ids = [...porProfissional.keys()];
     const nomes = new Map<number, { nome: string; contaDeTeste: boolean }>();
     const pool = await getPool();
@@ -58,6 +78,13 @@ export async function GET(req: NextRequest) {
             porPagar: d.paga ? 0 : d.porPagar,
             total: d.totalDaDivida,
             partes: d.partes,
+            // d10: o valor em atraso do modelo de 15-11 (nulo nos trabalhos de antes).
+            valorEmAtraso: d.novoModelo
+              ? {
+                  ...estadoDoValorEmAtraso({ paga: d.paga, porPagar: d.paga ? 0 : d.porPagar, nasceuEm: d.nasceuEm }, agora),
+                  referencia: doNovoModelo.get(d.negociacaoId)?.referencia ?? null,
+                }
+              : null,
           }))
           // Do maior n.º do pedido para o menor (dono, 29-10-2026).
           .sort((a, b) => (b.pedidoId ?? 0) - (a.pedidoId ?? 0) || b.negociacaoId - a.negociacaoId);

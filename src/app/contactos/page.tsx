@@ -19,7 +19,8 @@ import {
 } from "@/lib/seo-data";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { comIvaDaEtiqueta } from "@/lib/preco-de-referencia";
-import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import { PROMESSA, promessaGeral } from "@/lib/pagamento-na-plataforma";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 /**
  * A página de contactos, refeita para ser encontrada.
@@ -80,7 +81,8 @@ export const metadata: Metadata = {
   }),
 };
 
-export const revalidate = 86400;
+// De hora a hora: o pagamento muda a 15-11-2026 (d10).
+export const revalidate = 3600;
 
 /**
  * As perguntas que se fazem ANTES de ligar.
@@ -326,7 +328,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Escolhe, e só depois se paga",
-                  PROMESSA.faqComoSePaga,
+                  promessaGeral(agoraDoModelo()).faqComoSePaga,
                 ],
               ].map(([titulo, texto], i) => (
                 <li

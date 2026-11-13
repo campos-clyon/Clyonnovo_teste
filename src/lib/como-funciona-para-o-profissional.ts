@@ -6,6 +6,7 @@ import type { ModeloDoPreco } from "./iva-incluido";
 import { quotaDaClyon } from "./quota-da-clyon";
 import { FORMA_EM_PALAVRAS } from "./forma-de-pagamento";
 import { PROMESSA } from "./pagamento-na-plataforma";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, novoModeloEmVigor } from "./novo-modelo";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 import type { SeccaoComFalta } from "./perfil-por-completar";
 
@@ -144,6 +145,22 @@ export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
  * no backoffice: com as de origem (5 % e 6 %) a página diria 329,00 € e
  * 10,48 %, que é o que ainda vale para quem não gravou as novas.
  */
+/*
+ * OS PASSOS NO MODELO DE 15-11-2026 (d10): muda o do dinheiro — o cliente paga-lhe
+ * diretamente, e a fatura do trabalho é dele.
+ */
+const PASSO_DO_DINHEIRO_NO_NOVO_MODELO =
+  "O cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY ou em dinheiro no " +
+  "local — o preço com IVA. Fica com a sua parte, emite ao cliente a fatura do trabalho e passa à CLYON " +
+  "a taxa da plataforma e o IVA dela, por referência, uma por trabalho. Propõe o seu valor, sem IVA, e o " +
+  "cliente vê-o com IVA incluído. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
+  `não lhe custa um cêntimo. A fatura da taxa da plataforma é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
+
+export function passosDoProfissional(agora: Date = new Date()): PassoDoProfissional[] {
+  if (!novoModeloEmVigor(agora)) return PASSOS_DO_PROFISSIONAL;
+  return PASSOS_DO_PROFISSIONAL.map((p) => (p.seccao === "banco" ? { ...p, texto: PASSO_DO_DINHEIRO_NO_NOVO_MODELO } : p));
+}
+
 export const VALOR_DO_EXEMPLO = 350;
 
 function euros(v: number): string {
@@ -221,7 +238,7 @@ export function comissaoEmPalavras(
  * acontece ao valor até à confirmação e o prazo do levantamento, que é o que
  * ele pergunta antes de se inscrever.
  */
-export const COMO_RECEBE: Array<{ forma: string; texto: string }> = [
+const COMO_RECEBE_NO_MODELO_ANTIGO: Array<{ forma: string; texto: string }> = [
   {
     forma: FORMA_EM_PALAVRAS.na_plataforma.curta,
     texto:
@@ -234,6 +251,33 @@ export const COMO_RECEBE: Array<{ forma: string; texto: string }> = [
     texto: FORMA_EM_PALAVRAS.dinheiro.profissional,
   },
 ];
+/** O de sempre — a app CLYON Pro ainda o lê (as Apps passam a `comoRecebe`). */
+export const COMO_RECEBE: Array<{ forma: string; texto: string }> = COMO_RECEBE_NO_MODELO_ANTIGO;
+
+/*
+ * DESDE 15-11-2026 (d10): o cliente paga-lhe diretamente, e ele passa à CLYON a
+ * taxa da plataforma e o IVA dela — o valor em atraso, com 4 dias para o pagar.
+ */
+const COMO_RECEBE_NO_NOVO_MODELO: Array<{ forma: string; texto: string }> = [
+  {
+    forma: "O cliente paga-lhe",
+    texto:
+      "Por transferência para o seu IBAN, por MB WAY ou em dinheiro no local, como o cliente escolher. " +
+      "Recebe o preço com IVA e emite ao cliente a fatura do trabalho.",
+  },
+  {
+    forma: "Passa à CLYON a taxa",
+    texto:
+      "Quando o trabalho fecha, a taxa da plataforma e o IVA dela ficam na sua carteira como valor em atraso, " +
+      `com a referência Multibanco ou MB WAY para os pagar. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias; depois, a ` +
+      "conta fica em stand-by até pagar.",
+  },
+];
+
+/** Como recebe, pela data. */
+export function comoRecebe(agora: Date = new Date()): Array<{ forma: string; texto: string }> {
+  return novoModeloEmVigor(agora) ? COMO_RECEBE_NO_NOVO_MODELO : COMO_RECEBE_NO_MODELO_ANTIGO;
+}
 
 /**
  * O QUE A CLYON NÃO FAZ.

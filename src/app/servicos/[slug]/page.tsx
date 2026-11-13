@@ -15,6 +15,8 @@ import GuiasDoServico from "@/components/GuiasDoServico";
 import ServicoForaDoPlano, { NAO_FAZ_ESTE_SERVICO } from "@/components/ServicoForaDoPlano";
 import { O_QUE_PODE_FAZER } from "@/lib/voz-da-vitoria";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
@@ -169,6 +171,12 @@ const GUIAS: Record<string, string> = {
   "montagem-moveis": "mudancas",
 };
 
+/* O terceiro passo pela data (d10): desde 15-11-2026 paga-se ao parceiro. */
+const ESCOLHE_NO_MODELO_ANTIGO =
+  "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Pela plataforma, o valor só chega ao parceiro depois de confirmar que ficou feito.";
+const ESCOLHE_NO_NOVO_MODELO =
+  "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Paga diretamente ao parceiro, por transferência, MB WAY ou dinheiro, e recebe as duas faturas no pedido.";
+
 const REGIOES_DO_SERVICO = [
   { href: "/regioes/lisboa", texto: "Lisboa" },
   { href: "/regioes/margem-sul", texto: "Margem Sul" },
@@ -187,7 +195,8 @@ export function generateStaticParams() {
 }
 
 export const dynamicParams = false;
-export const revalidate = 86400;
+// De hora a hora: o modelo de 15-11-2026 (d10) muda o «Como funciona» pela data.
+export const revalidate = 3600;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -229,6 +238,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ServicoGerado({ params }: Props) {
   const { slug } = await params;
+  const novo = novoModeloEmVigor(agoraDoModelo());
   const cat = categoriaDe(slug);
   if (!cat) notFound();
   // Fora do plano (27-10-2026): diz que não se faz, sem preço nem botão para o simulador.
@@ -300,7 +310,7 @@ export default async function ServicoGerado({ params }: Props) {
               // Dizia «Só paga depois de confirmar», que se lia como «depois do
               // trabalho feito» — e quem paga pela plataforma paga a referência
               // logo a seguir a aceitar (29-09-2026).
-              "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Pela plataforma, o valor só chega ao parceiro depois de confirmar que ficou feito.",
+              novo ? ESCOLHE_NO_NOVO_MODELO : ESCOLHE_NO_MODELO_ANTIGO,
             ].map((passo) => (
               <li
                 key={passo}

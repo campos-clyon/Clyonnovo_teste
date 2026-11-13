@@ -15,7 +15,9 @@ import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
-import { PROMESSA } from "./pagamento-na-plataforma";
+import { PROMESSA, PROMESSA_DO_NOVO_MODELO } from "./pagamento-na-plataforma";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "./novo-modelo";
+import { contaDoValorAcordado } from "./pagamento-directo";
 import { quotaEmPontos } from "./quota-da-clyon";
 import { TAXA_DAS_MUDANCAS_EM_FRASE, TAXA_DAS_MUDANCAS_SEM_NUMERO, TAXA_IVA, TAXA_MAXIMA, TAXA_TOTAL, type Taxas } from "./taxas-plataforma";
 
@@ -73,7 +75,7 @@ const EXEMPLO_EM_DINHEIRO = (() => {
   };
 })();
 
-export function perguntasDoProfissional(taxas: Taxas | null): PerguntaFrequente[] {
+function perguntasDoProfissionalNoModeloAntigo(taxas: Taxas | null): PerguntaFrequente[] {
   return [
     {
       pergunta: "Quanto é que a CLYON leva?",
@@ -201,11 +203,91 @@ export function perguntasDoProfissional(taxas: Taxas | null): PerguntaFrequente[
   ];
 }
 
+/*
+ * O EXEMPLO NO MODELO DE 15-11-2026 (d10) — a conta de `pagamento-directo.ts`, com
+ * um parceiro com IVA: o cliente paga-lhe o total, e ele passa à CLYON a taxa e o
+ * IVA dela.
+ */
+const EXEMPLO_NO_NOVO_MODELO = (() => {
+  const c = contaDoValorAcordado(100, { cliente: 0, profissional: TAXA_TOTAL }, "normal");
+  const n = (cent: number) => {
+    const v = cent / 100;
+    return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ",");
+  };
+  return c
+    ? {
+        taxa: `${Math.round(TAXA_TOTAL * 100)} %`,
+        total: n(c.totalAoClienteCent),
+        fica: n(c.ficaAoProfissionalCent),
+        passa: n(c.aPassarAClyonCent),
+        daTaxa: n(c.taxaCent),
+        ivaDaTaxa: n(c.ivaDaTaxaCent),
+      }
+    : null;
+})();
+
+/** As respostas do dinheiro no modelo de 15-11-2026 (d10). As outras ficam. */
+function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFrequente> {
+  return {
+    "Quanto é que a CLYON leva?": {
+      pergunta: "Quanto é que a CLYON leva?",
+      resposta:
+        `Nas negociações, a taxa da plataforma é ${aTaxaDasNegociacoes(taxas)}; nos trabalhos de valor fixo ` +
+        `da CLYON, a taxa é a de cada trabalho. ${taxas ? TAXA_DAS_MUDANCAS_EM_FRASE : TAXA_DAS_MUDANCAS_SEM_NUMERO} ` +
+        "O cliente paga-lhe diretamente o preço com IVA, que já inclui a taxa da plataforma e o IVA dela. Quando o " +
+        "trabalho fecha, essa parte fica na sua carteira, em «A pagar à CLYON», como valor em atraso, com a " +
+        `referência para a pagar. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias; depois, a conta fica em stand-by ` +
+        "— continua a ver os pedidos, mas não aceita nem envia propostas até o pagar. O pagamento confirmado " +
+        "tira-a do stand-by sozinho.",
+    },
+    "Quando é que recebo o dinheiro?": {
+      pergunta: "Quando é que recebo o dinheiro?",
+      resposta:
+        PROMESSA_DO_NOVO_MODELO.proComoRecebe +
+        ` Nos trabalhos que o cliente já tinha pago antes de ${NOVO_MODELO_DESDE_POR_EXTENSO}, recebe da CLYON como ` +
+        "antes, depois de o trabalho fechar: pede a transferência na sua carteira.",
+    },
+    "Recebi em dinheiro: e agora?": {
+      pergunta: "O cliente pagou-me: e agora?",
+      resposta: [
+        "1. O cliente paga-lhe o preço da proposta, com IVA — por transferência para o seu IBAN, por MB WAY ou em " +
+          "dinheiro no local, como escolheu no pedido.",
+        "2. Fica consigo a sua parte. A taxa da plataforma e o IVA dela são da CLYON: quando o trabalho fecha, " +
+          "aparecem na Carteira, em «A pagar à CLYON», como valor em atraso, com «Pagar por MB WAY» ou «Gerar " +
+          "referência Multibanco».",
+        `3. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. Se passarem, a conta fica em stand-by até pagar; o ` +
+          "pagamento confirmado desbloqueia-a sozinho.",
+        "4. A fatura do trabalho é sua: emita-a ao cliente e junte-a ao pedido. A da taxa da plataforma é passada " +
+          `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
+        ...(EXEMPLO_NO_NOVO_MODELO
+          ? [
+              `Exemplo, num pedido com a taxa de ${EXEMPLO_NO_NOVO_MODELO.taxa} e um parceiro com IVA: proposta de 100 € + IVA. ` +
+                `O cliente paga-lhe ${EXEMPLO_NO_NOVO_MODELO.total} €; fica com ${EXEMPLO_NO_NOVO_MODELO.fica} € e passa ` +
+                `${EXEMPLO_NO_NOVO_MODELO.passa} € à CLYON (${EXEMPLO_NO_NOVO_MODELO.daTaxa} € de taxa e ${EXEMPLO_NO_NOVO_MODELO.ivaDaTaxa} € de IVA dela).`,
+            ]
+          : []),
+      ].join("\n"),
+    },
+  };
+}
+
+/**
+ * As perguntas do profissional, pela data: desde 15-11-2026 (d10) as do dinheiro
+ * dizem o modelo novo. O painel passa as taxas em vigor.
+ */
+export function perguntasDoProfissional(taxas: Taxas | null, agora: Date = new Date()): PerguntaFrequente[] {
+  const antigas = perguntasDoProfissionalNoModeloAntigo(taxas);
+  if (!novoModeloEmVigor(agora)) return antigas;
+  const novas = respostasDoNovoModelo(taxas);
+  return antigas.map((p) => novas[p.pergunta] ?? p);
+}
+
 /**
  * As perguntas sem a percentagem — para quem ainda não lê a taxa em vigor (a
- * app CLYON Pro importa esta lista). O painel usa `perguntasDoProfissional`.
+ * app CLYON Pro importa esta lista; as Apps passam a `perguntasDoProfissional`).
+ * O painel usa `perguntasDoProfissional`.
  */
-export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = perguntasDoProfissional(null);
+export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = perguntasDoProfissionalNoModeloAntigo(null);
 
 /** Os assuntos por que um pedido de ajuda pode ser classificado. */
 export const ASSUNTOS_DE_AJUDA = [

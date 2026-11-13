@@ -47,6 +47,8 @@ import { reviews } from "@/lib/reviews-data";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { jsonLd } from "@/lib/json-ld";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 /*
  * A PÁGINA QUE DIZ O QUE A CLYON É.
@@ -241,6 +243,15 @@ const TAMBEM = [
   { href: "/recolha-gratuita-de-moveis-usados", titulo: "doar móveis usados" },
 ];
 
+/*
+ * COMO SE PAGA — d10: desde 15-11-2026 paga-se ao parceiro (`novoModeloEmVigor`).
+ * O texto de antes fica para quem ainda o lê antes da data.
+ */
+const PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO =
+  "Pela plataforma, por MB WAY ou Multibanco, ou em dinheiro ao parceiro. Pela plataforma, o valor só é entregue depois de confirmar que ficou tudo bem.";
+const PAGA_COMO_PREFERIR_NO_NOVO_MODELO =
+  "Paga diretamente ao parceiro que contratar: por transferência, MB WAY ou dinheiro no local. O preço já inclui a taxa da plataforma e o IVA.";
+
 const PRINCIPIOS = [
   {
     icone: BadgeCheck,
@@ -260,7 +271,7 @@ const PRINCIPIOS = [
   {
     icone: Banknote,
     titulo: "Paga como preferir",
-    texto: "Pela plataforma, por MB WAY ou Multibanco, ou em dinheiro ao parceiro. Pela plataforma, o valor só é entregue depois de confirmar que ficou tudo bem.",
+    texto: PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO,
   },
   {
     icone: FileText,
@@ -370,9 +381,11 @@ const faqSchema = {
   })),
 };
 
-export const revalidate = 86400;
+// De hora a hora: o modelo de 15-11-2026 (d10) muda o «Paga como preferir» pela data.
+export const revalidate = 3600;
 
 export default function SobreNosPage() {
+  const novo = novoModeloEmVigor(agoraDoModelo());
   return (
     <div className="min-h-screen bg-white">
       {/* ── Herói ─────────────────────────────────────────────────────── */}
@@ -551,7 +564,9 @@ export default function SobreNosPage() {
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-tinta sm:text-4xl">Seis regras que não se negociam</h2>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {PRINCIPIOS.map((p) => (
+            {PRINCIPIOS.map((p) =>
+              p.texto === PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO && novo ? { ...p, texto: PAGA_COMO_PREFERIR_NO_NOVO_MODELO } : p,
+            ).map((p) => (
               <div key={p.titulo} className="rounded-[26px] border border-cyan-100 bg-white p-6">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acao text-white">
                   <p.icone className="h-5 w-5" />

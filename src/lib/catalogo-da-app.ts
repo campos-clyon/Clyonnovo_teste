@@ -3,7 +3,8 @@ import { TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, type Tipologia } from "./tabela-das-
 import { FRASE_UNICA, SUBTITULO_INICIAL } from "./frase-unica";
 import { TELEFONE_DA_CLYON } from "./telefone-da-clyon";
 import { NOTA_DOS_PRECOS, precoDeReferencia } from "./preco-de-referencia";
-import { PASSOS_DE_COMO_FUNCIONA } from "./como-funciona";
+import { passosDeComoFunciona } from "./como-funciona";
+import { agoraDoModelo } from "./relogio-do-modelo";
 import { perguntasFrequentes } from "./perguntas-frequentes";
 import { precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import { REGIONS, getRegionCities } from "./seo-data";
@@ -75,7 +76,7 @@ export function catalogoDaApp() {
       }),
       nota: NOTA_DOS_PRECOS,
     },
-    comoFunciona: PASSOS_DE_COMO_FUNCIONA.map((p) => ({ titulo: p.titulo, texto: p.texto })),
+    comoFunciona: passosDeComoFunciona(agoraDoModelo()).map((p) => ({ titulo: p.titulo, texto: p.texto })),
     zonas: REGIONS.map((r) => ({ nome: r.name, localidades: getRegionCities(r.slug).map((c) => c.name) })),
     // Só as do Google, com o mês da contagem (regra j da orquestra).
     avaliacoes: {
@@ -84,7 +85,7 @@ export function catalogoDaApp() {
       testemunhos: reviews.map((r) => ({ nome: r.name.trim().split(/\s+/)[0], mes: r.date, texto: r.text })),
     },
     // Pelo preço público das mudanças (d7, 11-11-2026): a rota lê-o antes de montar o catálogo.
-    perguntas: perguntasFrequentes(precoPublicoConhecido()).flatMap((c) => c.questions.map((q) => ({ p: q.q, r: q.a }))),
+    perguntas: perguntasFrequentes(precoPublicoConhecido(), agoraDoModelo()).flatMap((c) => c.questions.map((q) => ({ p: q.q, r: q.a }))),
     // Sem big bags nem contentores: a recolha é em sacos ou a granel, à mão.
     entulho: [
       { id: "ensacado", nome: "Já está em sacos" },

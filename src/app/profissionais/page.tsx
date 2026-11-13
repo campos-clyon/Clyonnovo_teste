@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Camera, HandCoins, Lock, MapPin } from "lucide-react";
 import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 import { taxasActuais } from "@/lib/db";
-import { COMO_RECEBE, comissaoEmPalavras } from "@/lib/como-funciona-para-o-profissional";
+import { comoRecebe, comissaoEmPalavras } from "@/lib/como-funciona-para-o-profissional";
+import { promessaGeral } from "@/lib/pagamento-na-plataforma";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
@@ -54,6 +56,10 @@ const O_QUE_RECEBE = [
   },
 ];
 
+/** Pela data (d10): desde 15-11-2026 o cliente paga ao parceiro. */
+const oQueRecebe = (agora: Date) =>
+  O_QUE_RECEBE.map((v) => (v.description === PROMESSA.recrutamentoCorpo ? { ...v, description: promessaGeral(agora).recrutamentoCorpo } : v));
+
 export default async function ProfissionaisPage() {
   /*
    * As taxas EM VIGOR, e não as de origem — 30-09-2026. O quadro dizia
@@ -92,7 +98,7 @@ export default async function ProfissionaisPage() {
       <section className="py-10 sm:py-14">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="grid gap-4 sm:grid-cols-2">
-            {O_QUE_RECEBE.map((item) => (
+            {oQueRecebe(agoraDoModelo()).map((item) => (
               <div
                 key={item.title}
                 className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm"
@@ -162,7 +168,7 @@ export default async function ProfissionaisPage() {
               <p className="text-xs leading-relaxed text-slate-600">{exemplo.frase}</p>
               <p className="mt-2 text-xs leading-relaxed text-slate-600">{exemplo.nasMudancas}</p>
               <ul className="mt-3 space-y-1.5">
-                {COMO_RECEBE.map((c) => (
+                {comoRecebe(agoraDoModelo()).map((c) => (
                   <li key={c.forma} className="text-xs leading-relaxed text-slate-500">
                     <strong className="font-semibold text-slate-700">{c.forma}:</strong> {c.texto}
                   </li>

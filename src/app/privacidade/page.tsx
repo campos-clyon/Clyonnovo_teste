@@ -14,6 +14,20 @@ import {
 /* 12-11-2026 (d6): a transferência, a folha da mudança e a lista pública — números e nomes das constantes. */
 import { LIMITE_DA_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
 import { TEXTOS_DOS_PRECOS_DAS_MUDANCAS } from "@/lib/precos-das-mudancas-do-profissional";
+/*
+ * A PRIVACIDADE DE 15-11-2026 — d10 (Jurídico; CEO e dono): o cliente paga ao
+ * parceiro, o IBAN e o MB WAY do parceiro passam ao cliente que o contratou, o
+ * nome e o NIF do cliente passam ao parceiro para a fatura, duas faturas, e o
+ * euPago só para a taxa da plataforma. Só a partir da data (`novoModeloEmVigor`);
+ * antes, a página é a de 12-11-2026. O texto antigo fica para os trabalhos já
+ * pagos à CLYON antes da data (`RegrasAnteriores` e as frases «nos trabalhos
+ * pagos à CLYON antes de…»). `termos-15-11.test.ts` desenha os dois lados.
+ */
+import { PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+
+/** O modelo de 15-11 muda o texto pela data: a página relê-se de hora a hora. */
+export const revalidate = 3600;
 
 /** «700 €» — o limite da transferência, sem cêntimos quando é redondo. */
 const LIMITE_EM_EUROS = `${String(Math.round(LIMITE_DA_TRANSFERENCIA)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} €`;
@@ -29,6 +43,7 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacidadePage() {
+  const novo = novoModeloEmVigor(agoraDoModelo());
   return (
     <div className="min-h-screen bg-white">
       {/* ── Hero ── */}
@@ -47,9 +62,15 @@ export default function PrivacidadePage() {
             11 e 12 o que a app trata e como apagar a conta; os clientes que usam a app{" "}
             <strong>CLYON</strong> encontram-no nas secções 13 e 14.
           </p>
+          {novo ? (
+            <p className="mt-3 text-sm text-slate-500">
+              Em vigor desde {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}.
+            </p>
+          ) : (
           <p className="mt-3 text-sm text-slate-500">
             Última atualização: 12 de novembro de 2026.
           </p>
+          )}
         </div>
       </section>
 
@@ -108,9 +129,20 @@ export default function PrivacidadePage() {
                 parceiros independentes</strong> — recolha de móveis,
                 esvaziamento de casas e apartamentos, recolha de entulho,
                 recolha de monos e mudanças em Lisboa, Margem Sul e Setúbal.
+                {novo ? (
+                  <>
+                    Quem executa o trabalho é o parceiro que o cliente escolher, e
+                    é a ele que o cliente paga o trabalho; a fatura da taxa da
+                    plataforma é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}, e a do
+                    trabalho pelo parceiro.
+                  </>
+                ) : (
+                  <>
                 Quem executa o trabalho é o parceiro que o cliente
                 escolher; os pagamentos feitos pela plataforma são recebidos
                 pela CLYON; e quem emite a fatura é a {EMPRESA_PARCEIRA_AO_PUBLICO}.
+                  </>
+                )}
                 <br />
                 <br />
                 Isto tem uma consequência que interessa: quando contrata um
@@ -154,14 +186,26 @@ export default function PrivacidadePage() {
                   </li>
                   <li>
                     <strong>Dados de faturação (opcionais):</strong> NIF e morada de faturação
-                    quando o cliente solicita recibo ou fatura.
+                    {novo
+                      ? ", se os quiser nas faturas do trabalho e da taxa da plataforma."
+                      : " quando o cliente solicita recibo ou fatura."}
                   </li>
                   {/* 12-11-2026 (d6) — a transferência e a folha da mudança (Jurídico; CEO e dono). */}
                   <li>
-                    <strong>Pagamento por transferência:</strong> nos trabalhos de {LIMITE_EM_EUROS} ou
+                    <strong>Pagamento por transferência:</strong>{" "}
+                    {novo ? <>nos trabalhos pagos à CLYON antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}, </> : null}
+                    nos trabalhos de {LIMITE_EM_EUROS} ou
                     mais, com IVA, o nome do titular e a conta de onde transferiu, como aparecem no
                     extrato da CLYON, e a conta para a devolução, se a houver.
                   </li>
+                  {novo && (
+                    <li>
+                      <strong>Pagamento ao parceiro:</strong> a forma que escolheu para
+                      pagar ao parceiro (transferência, MB WAY ou dinheiro) e as duas
+                      faturas do trabalho, que ficam juntas ao pedido. A fatura do
+                      parceiro chega-nos dele e tem os seus dados de faturação.
+                    </li>
+                  )}
                   <li>
                     <strong>Folha da mudança:</strong> nas mudanças com a lista de parceiros, as horas
                     de início e de fim, as pausas, os quilómetros, o material e as localidades de origem
@@ -203,8 +247,15 @@ export default function PrivacidadePage() {
                     Passar ao parceiro que contratar a morada e o contacto, para
                     ele poder lá chegar e falar consigo.
                   </li>
+                  {novo && (
+                    <li>
+                      Mostrar-lhe, depois de contratar, o IBAN e o número MB WAY do
+                      parceiro, para lhe pagar o trabalho; e passar ao parceiro o seu
+                      nome e, se o indicar, o NIF, para ele emitir a fatura do trabalho.
+                    </li>
+                  )}
                   <li>
-                    Gerar as referências de pagamento (MB WAY ou Multibanco), confirmar os
+                    {novo ? <>Nos trabalhos pagos à CLYON antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}, gerar</> : "Gerar"} as referências de pagamento (MB WAY ou Multibanco), confirmar os
                     pagamentos feitos pela plataforma e entregar ao parceiro o valor que
                     lhe cabe.
                   </li>
@@ -217,8 +268,18 @@ export default function PrivacidadePage() {
                     confirma, e tratar a contestação, se a fizer.
                   </li>
                   <li>
+                    {novo ? (
+                      <>
+                        Emitir, através da {EMPRESA_PARCEIRA_AO_PUBLICO}, a fatura da
+                        taxa da plataforma, juntar ao pedido as duas faturas do
+                        trabalho, e cumprir as obrigações contabilísticas.
+                      </>
+                    ) : (
+                      <>
                     Emitir, através da {EMPRESA_PARCEIRA_AO_PUBLICO}, a fatura que o
                     cliente pedir, e cumprir as obrigações contabilísticas.
+                      </>
+                    )}
                   </li>
                   <li>
                     Guardar as avaliações: as que dá ao parceiro, que ele vê sem saber quem as
@@ -243,6 +304,14 @@ export default function PrivacidadePage() {
                     localidade, a descrição do trabalho e o valor; desliga-se no
                     painel ou respondendo «parar».
                   </li>
+                  {novo && (
+                    <li>
+                      Cobrar ao <strong>parceiro</strong> a taxa da plataforma e o IVA
+                      dela: gerar a referência ou o pedido MB WAY no euPago, registar o
+                      valor em atraso e o pagamento confirmado, e pôr a conta em
+                      stand-by, ou tirá-la, conforme o ponto 10 dos Termos.
+                    </li>
+                  )}
                 </ul>
                 Não usamos os dados para publicidade a terceiros nem os vendemos.
               </>
@@ -258,7 +327,17 @@ export default function PrivacidadePage() {
                 <ul className="mt-3 list-disc space-y-1.5 pl-5">
                   <li>
                     <strong>Execução de contrato</strong> — quando o cliente pede orçamento e contrata
-                    o serviço de recolha ou esvaziamento.
+                    {novo ? (
+                      <>
+                        {" "}o serviço; e, para os parceiros, o acordo de parceria. É nesta
+                        base que mostramos o IBAN e o número MB WAY do parceiro ao cliente
+                        que o contratou (e só a ele), para que o parceiro receba o
+                        pagamento do trabalho que aceitou, e que passamos ao parceiro o
+                        nome e o NIF do cliente para a fatura.
+                      </>
+                    ) : (
+                      " o serviço de recolha ou esvaziamento."
+                    )}
                   </li>
                   <li>
                     <strong>Obrigação legal</strong> — para faturação, contabilidade e requisitos
@@ -290,7 +369,17 @@ export default function PrivacidadePage() {
                     <strong>Parceiros independentes</strong> que respondem ao pedido. Antes de os
                     contratar veem a zona, as fotografias e o valor que indicou — nunca a morada
                     exata nem o seu contacto, que só passam depois de os escolher.
+                    {novo
+                      ? " Ao parceiro que contratar passam também o seu nome e, se o indicar, o NIF e a morada de faturação, para a fatura do trabalho."
+                      : null}
                   </li>
+                  {novo && (
+                    <li>
+                      <strong>O cliente que contrata um parceiro</strong> — vê, na página
+                      desse pedido, o IBAN, o titular da conta e o número MB WAY do
+                      parceiro, para lhe pagar. Mais ninguém os vê.
+                    </li>
+                  )}
                   <li>
                     <strong>Alojamento e base de dados</strong> — Vercel (alojamento do site) e
                     Railway (base de dados), ambos na União Europeia.
@@ -321,9 +410,22 @@ export default function PrivacidadePage() {
                       manda o texto das mensagens (whatsapp-compreensao.ts).
                   */}
                   <li>
+                    {novo ? (
+                      <>
+                        <strong>Pagamentos</strong> — euPago, para gerar as referências MB
+                        WAY e Multibanco com que os parceiros pagam a taxa da plataforma e
+                        confirmar esses pagamentos (e, nos trabalhos pagos à CLYON antes de{" "}
+                        {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}, os pagamentos dos clientes). Recebe o valor a pagar e, no MB
+                        WAY, o número de telemóvel para onde vai o pedido de pagamento. O
+                        pagamento do trabalho ao parceiro não passa pelo euPago.
+                      </>
+                    ) : (
+                      <>
                     <strong>Pagamentos</strong> — euPago, para gerar as referências MB WAY e
                     Multibanco e confirmar os pagamentos. Recebe o valor a pagar e, no MB WAY, o
                     número de telemóvel para onde vai o pedido de pagamento.
+                      </>
+                    )}
                   </li>
                   {/*
                     PELA CATEGORIA, SEM O NOME — 26-10-2026, decisão do dono:
@@ -332,9 +434,19 @@ export default function PrivacidadePage() {
                     destinatários»).
                   */}
                   <li>
+                    {novo ? (
+                      <>
+                        <strong>Faturação</strong> — a {EMPRESA_PARCEIRA_AO_PUBLICO}, que emite
+                        a fatura da taxa da plataforma. Recebe os dados de faturação — nome,
+                        NIF e morada — e o valor da taxa.
+                      </>
+                    ) : (
+                      <>
                     <strong>Faturação</strong> — a {EMPRESA_PARCEIRA_AO_PUBLICO} que emite as
                     faturas. Recebe os dados de faturação — nome, NIF e morada — e os valores do
                     trabalho.
+                      </>
+                    )}
                   </li>
                   <li>
                     <strong>Análise dos pedidos</strong> — Google (Gemini), para ler as fotografias
@@ -450,6 +562,19 @@ export default function PrivacidadePage() {
                     do registo do dinheiro do trabalho (10 anos). A conta que nos indicar para uma
                     devolução usa-se só para essa devolução.
                   </li>
+                  {novo && (
+                    <>
+                      <li>
+                        <strong>As duas faturas do trabalho:</strong> guardadas com o
+                        pedido, como o resto do registo do dinheiro do trabalho (10 anos).
+                      </li>
+                      <li>
+                        <strong>IBAN, titular e número MB WAY do parceiro:</strong>{" "}
+                        enquanto a conta do parceiro existir. O cliente vê-os só na página
+                        do pedido que contratou.
+                      </li>
+                    </>
+                  )}
                   <li>
                     <strong>Cookies e dados de navegação:</strong> conforme indicado na política de
                     cookies.
@@ -625,10 +750,32 @@ export default function PrivacidadePage() {
                     momento e não guardamos. Desliga-se quando quiser.
                   </li>
                   <li>
+                    {novo ? (
+                      <>
+                        <strong>Dados para receber e pagar:</strong> IBAN, titular da conta
+                        e número MB WAY, obrigatórios para receber trabalhos. Mostramo-los ao
+                        cliente que o contratar, na página desse pedido e só a ele, para que
+                        lhe pague o trabalho; nos trabalhos pagos à CLYON antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}, o
+                        IBAN serve também para lhe transferirmos o que ganhou. O número MB
+                        WAY serve ainda para pagar a taxa da plataforma. A sua app nunca lhe
+                        mostra o IBAN inteiro e não guarda cartões.
+                      </>
+                    ) : (
+                      <>
                     <strong>Dados para receber e pagar:</strong> IBAN e titular da conta, para lhe
                     transferirmos o que ganhou, e o número MB WAY, se o indicar, para pagar o que deve
                     à CLYON. A app nunca mostra o IBAN inteiro e não guarda cartões.
+                      </>
+                    )}
                   </li>
+                  {novo && (
+                    <li>
+                      <strong>Faturas e taxa:</strong> a fatura do trabalho que junta ao
+                      pedido (com os dados do cliente que ela tiver), o valor em atraso de
+                      cada trabalho, as referências do euPago e o pagamento confirmado, e se
+                      a conta está em stand-by.
+                    </li>
+                  )}
                   <li>
                     <strong>O que junta a um trabalho:</strong> as fotografias e a nota de um ajuste ao
                     valor no local ou da prova de que o trabalho está feito, e a hora a que diz que vai
@@ -668,8 +815,13 @@ export default function PrivacidadePage() {
                 <strong>Google (Firebase Cloud Messaging)</strong>, para entregar os avisos no
                 telemóvel; <strong>Vercel</strong>, onde ficam guardadas as fotografias;{" "}
                 <strong>Google Maps</strong>, para encontrar a morada da base; e{" "}
-                <strong>euPago</strong>, para gerar as referências das dívidas e, no MB WAY, o número
-                para onde vai o pedido de pagamento. A base legal é a execução do acordo de parceria,
+                <strong>euPago</strong>, para gerar as referências{" "}
+                {novo ? "da taxa da plataforma" : "das dívidas"} e, no MB WAY, o número
+                para onde vai o pedido de pagamento.
+                {novo
+                  ? " O IBAN, o titular e o número MB WAY passam também ao cliente que o contratar (secção 5)."
+                  : null}{" "}
+                A base legal é a execução do acordo de parceria,
                 as obrigações fiscais para a faturação e, nos avisos no telemóvel e no WhatsApp, o
                 seu consentimento. Os dados ficam enquanto a conta existir; para a apagar, veja a
                 secção seguinte.
@@ -721,7 +873,10 @@ export default function PrivacidadePage() {
                 fiscal obriga (secção 6).
                 <br />
                 <br />
-                Se houver dinheiro seu por pagar ou um trabalho por confirmar, o pedido é recusado e a
+                {novo
+                  ? "Se houver um valor em atraso por pagar à CLYON, dinheiro seu por receber ou um trabalho por confirmar"
+                  : "Se houver dinheiro seu por pagar ou um trabalho por confirmar"}
+                , o pedido é recusado e a
                 conta fica suspensa — deixa de receber pedidos — até isso estar resolvido. A app e o
                 painel dizem o que falta; depois, pode apagá-la.
               </>
@@ -768,7 +923,16 @@ export default function PrivacidadePage() {
                     <strong>avaliações</strong> que dá aos parceiros.
                   </li>
                   <li>
-                    <strong>Pagamentos:</strong> o método escolhido (MB WAY, Referência Multibanco ou,
+                    <strong>Pagamentos:</strong>{" "}
+                    {novo ? (
+                      <>
+                        a forma que escolheu para pagar ao parceiro (transferência, MB WAY
+                        ou dinheiro) e as duas faturas do trabalho. Depois de contratar, a
+                        app mostra-lhe o IBAN e o número MB WAY do parceiro, só para lhe
+                        pagar. Nos trabalhos pagos à CLYON antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}:{" "}
+                      </>
+                    ) : null}
+                    o método escolhido (MB WAY, Referência Multibanco ou,
                     nos trabalhos de {LIMITE_EM_EUROS} ou mais, transferência bancária) e, no MB WAY, o
                     número para onde vai o pedido de pagamento. A app não guarda cartões.
                   </li>
@@ -806,7 +970,8 @@ export default function PrivacidadePage() {
                 <strong>Google (Firebase Cloud Messaging)</strong>, para entregar os avisos no
                 telemóvel; <strong>Google</strong>, se escolher entrar com a conta Google;{" "}
                 <strong>Vercel</strong>, onde ficam guardadas as fotografias e os vídeos;{" "}
-                <strong>Google Maps</strong>, para encontrar a morada; e <strong>euPago</strong>, para
+                <strong>Google Maps</strong>, para encontrar a morada; e <strong>euPago</strong>,
+                {novo ? <> nos trabalhos pagos à CLYON antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO},</> : null} para
                 gerar as referências e os pedidos MB WAY. A base legal é a execução do pedido que faz
                 e, nos avisos no telemóvel, o seu consentimento. Os prazos são os da secção 6; para
                 apagar a conta, veja a secção seguinte.

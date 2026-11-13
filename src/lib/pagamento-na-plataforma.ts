@@ -6,6 +6,18 @@ import {
 } from "./forma-de-pagamento";
 import type { ModeloDoPreco } from "./iva-incluido";
 import { ROTULOS_DA_CARTEIRA } from "./rotulos-da-carteira";
+import { NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "./novo-modelo";
+import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
+
+/*
+ * O MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). O cliente paga ao parceiro, e
+ * o parceiro passa à CLYON a taxa da plataforma e o IVA dela («A pagar à CLYON»,
+ * o valor em atraso). Os textos de baixo com «ANTIGO» no nome continuam certos
+ * para os trabalhos já pagos à CLYON antes da data e para os Trabalhos CLYON; os
+ * do modelo novo escolhem-se pela data (`promessaGeral`, `comoSePagaNoSite`) e,
+ * num trabalho, pelo servidor (`promessaDaForma(…, novoModelo)`). A regra s do
+ * teste da orquestra só deixa as palavras do modelo antigo nos nomes «ANTIGO».
+ */
 
 /**
  * O QUE SE DIZ SOBRE O DINHEIRO — e a quem.
@@ -105,7 +117,7 @@ export const A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS = false;
  * que se escrevesse aqui ficava certa para uns pedidos e errada para os
  * seguintes. O número exacto está no ecrã e nas mensagens de cada trabalho.
  */
-const PELA_PLATAFORMA =
+const PELA_PLATAFORMA_NO_MODELO_ANTIGO =
   "pela plataforma — depois de aceitar a proposta recebe uma referência MB WAY ou " +
   "Multibanco, e o valor fica com a CLYON até confirmar que o trabalho está feito; só " +
   "então é entregue ao parceiro";
@@ -123,7 +135,16 @@ const EM_DINHEIRO =
   "a pagar à parte";
 
 /** O texto genérico do pagamento, para quem ainda não escolheu. */
-export const COMO_SE_PAGA = `No pedido escolhe como prefere pagar: ${PELA_PLATAFORMA} — ou ${EM_DINHEIRO}.`;
+const COMO_SE_PAGA_NO_MODELO_ANTIGO = `No pedido escolhe como prefere pagar: ${PELA_PLATAFORMA_NO_MODELO_ANTIGO} — ou ${EM_DINHEIRO}.`;
+export const COMO_SE_PAGA = COMO_SE_PAGA_NO_MODELO_ANTIGO;
+
+/** Desde 15-11-2026 (d10): paga-se ao parceiro, e há duas faturas. */
+export const COMO_SE_PAGA_NO_NOVO_MODELO = `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${AS_DUAS_FATURAS}`;
+
+/** O texto genérico do pagamento, pela data. */
+export function comoSePagaNoSite(agora: Date = new Date()): string {
+  return novoModeloEmVigor(agora) ? COMO_SE_PAGA_NO_NOVO_MODELO : COMO_SE_PAGA_NO_MODELO_ANTIGO;
+}
 
 /**
  * OS TEXTOS PARA QUANDO NÃO SE SABE A FORMA — descrevem as duas.
@@ -176,10 +197,10 @@ type Promessa = {
   metaDosProfissionais: string;
 };
 
-export const PROMESSA: Promessa = {
+const PROMESSA_DO_MODELO_ANTIGO: Promessa = {
   clienteTitulo: "Como é que o pagamento funciona",
   clienteCorpo:
-    `Paga da forma que ficou escolhida no pedido: ${PELA_PLATAFORMA} — ou ${EM_DINHEIRO}. ` +
+    `Paga da forma que ficou escolhida no pedido: ${PELA_PLATAFORMA_NO_MODELO_ANTIGO} — ou ${EM_DINHEIRO}. ` +
     "Em qualquer dos casos, é a sua confirmação que dá o trabalho por concluído dos dois lados.",
   /*
    * «Em curso», e não «Retido» nem «Combinado».
@@ -243,6 +264,45 @@ export const PROMESSA: Promessa = {
     "Inscreva-se e receba pedidos com fotografias, zona e o valor que o cliente quer pagar. " +
     "Responde com um valor e sabe o que recebe antes de aceitar — acordado por escrito antes de sair de casa.",
 };
+
+/** Os textos de sempre — para quem ainda os lê antes de 15-11 (e a app, até mudar). */
+export const PROMESSA: Promessa = PROMESSA_DO_MODELO_ANTIGO;
+
+/**
+ * OS MESMOS TEXTOS NO MODELO DE 15-11-2026 (d10). Mudam só os que falam do
+ * dinheiro; os trabalhos já pagos à CLYON antes da data seguem como foram
+ * combinados, e as carteiras dizem-no.
+ */
+export const PROMESSA_DO_NOVO_MODELO: Promessa = {
+  ...PROMESSA_DO_MODELO_ANTIGO,
+  clienteCorpo:
+    `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${AS_DUAS_FATURAS} Os trabalhos que já tinha pago antes de ` +
+    `${NOVO_MODELO_DESDE_POR_EXTENSO} seguem como foram combinados. Em qualquer caso, é a sua confirmação ` +
+    "que dá o trabalho por concluído dos dois lados.",
+  proCorpo:
+    "Nos trabalhos novos, o cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY " +
+    "ou em dinheiro no local — o preço com IVA, que já inclui a taxa da plataforma e o IVA dela. Quando o " +
+    `trabalho fecha, essa parte fica em «${ROTULOS_DA_CARTEIRA.aPagarAClyon.rotulo}» como valor em atraso, ` +
+    "com a referência Multibanco ou MB WAY para a pagar. Nos trabalhos que o cliente já tinha pago antes de " +
+    `${NOVO_MODELO_DESDE_POR_EXTENSO}, recebe como antes: passam a «${ROTULOS_DA_CARTEIRA.porReceber.rotulo}» ` +
+    "depois de o cliente confirmar, e aí pede a transferência.",
+  faqComoSePaga:
+    "Quando aceita, o valor fica combinado por escrito e o parceiro recebe os dados " +
+    `para lá ir. ${PAGA_DIRETAMENTE_AO_PARCEIRO}`,
+  proComoRecebe:
+    "O cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY ou em dinheiro no " +
+    "local — o preço com IVA. Fica com a sua parte; a taxa da plataforma e o IVA dela passa-os depois à " +
+    "CLYON, por referência Multibanco ou MB WAY, uma por trabalho.",
+  recrutamentoCorpo:
+    "O preço fica acordado antes de sair de casa, escrito na plataforma, e nem o cliente " +
+    "nem ninguém o muda sozinho — se o trabalho mudar à porta, corrige-se aqui, com " +
+    "registo. O cliente paga-lhe diretamente, e passa depois à CLYON só a taxa da plataforma e o IVA dela.",
+};
+
+/** Os textos gerais do dinheiro, pela data (d10). */
+export function promessaGeral(agora: Date = new Date()): Promessa {
+  return novoModeloEmVigor(agora) ? PROMESSA_DO_NOVO_MODELO : PROMESSA_DO_MODELO_ANTIGO;
+}
 
 /**
  * OS TEXTOS PARA QUANDO SE SABE A FORMA — a do trabalho que está no ecrã.
@@ -311,7 +371,7 @@ type PromessaDaForma = {
 const BOTAO_DE_CONFIRMAR = "Está bem feito, dar por concluído";
 const MORADA_POR_EMAIL = "Vamos enviar-lhe a morada e o contacto por email.";
 
-const NA_PLATAFORMA: PromessaDaForma = {
+const NA_PLATAFORMA_NO_MODELO_ANTIGO: PromessaDaForma = {
   clienteEmCurso:
     "Paga pela plataforma: recebe uma referência MB WAY ou Multibanco para pagar à CLYON. " +
     "O valor fica com a CLYON e só chega a {PRO} depois de confirmar aqui que o trabalho está feito.",
@@ -407,8 +467,8 @@ const EM_NOTAS: PromessaDaForma = {
  * `lerForma` nunca o devolve enquanto estiver desligado; está aqui para o
  * tipo ficar completo e para o dia em que se ligar não haver texto em falta.
  */
-const DEPOIS_DA_RECOLHA: PromessaDaForma = {
-  ...NA_PLATAFORMA,
+const DEPOIS_DA_RECOLHA_NO_MODELO_ANTIGO: PromessaDaForma = {
+  ...NA_PLATAFORMA_NO_MODELO_ANTIGO,
   clienteEmCurso:
     `${FORMA_EM_PALAVRAS.pos_recolha.cliente} O valor só chega a {PRO} depois de o pagar à ` +
     "CLYON e de confirmar aqui que o trabalho está feito.",
@@ -421,9 +481,39 @@ const DEPOIS_DA_RECOLHA: PromessaDaForma = {
 };
 
 export const PROMESSA_POR_FORMA: Record<FormaDePagamento, PromessaDaForma> = {
-  na_plataforma: NA_PLATAFORMA,
+  na_plataforma: NA_PLATAFORMA_NO_MODELO_ANTIGO,
   dinheiro: EM_NOTAS,
-  pos_recolha: DEPOIS_DA_RECOLHA,
+  pos_recolha: DEPOIS_DA_RECOLHA_NO_MODELO_ANTIGO,
+};
+
+/*
+ * UM TRABALHO DO MODELO DE 15-11-2026 (d10) — seja qual for a forma: o cliente
+ * paga ao parceiro (transferência, MB WAY ou dinheiro, `pagarAoParceiroPor`), e o
+ * parceiro passa à CLYON a taxa da plataforma e o IVA dela quando o trabalho
+ * fecha. Quem diz se um trabalho é deste modelo é o servidor (`eDoNovoModelo`).
+ */
+const PASSA_A_TAXA =
+  "A taxa da plataforma e o IVA dela passa-os à CLYON por referência Multibanco ou MB WAY, quando o trabalho fechar.";
+export const NO_NOVO_MODELO: PromessaDaForma = {
+  clienteEmCurso:
+    "Paga diretamente a {PRO} — por transferência, MB WAY ou dinheiro, como escolher no pedido. " +
+    "Confirme aqui quando o trabalho estiver feito.",
+  clienteDepoisDePagar:
+    "O trabalho paga-se diretamente ao parceiro. Se pagou isto por engano, fale connosco.",
+  botaoDeConfirmar: BOTAO_DE_CONFIRMAR,
+  depoisDeConfirmar: "Deu o trabalho por concluído. Obrigado.",
+  proLegendaDoValor: "sem IVA e já sem a taxa da plataforma — o cliente paga-lhe o preço com IVA, e a taxa e o IVA dela passam à CLYON",
+  emailProAoContratar: `O cliente paga-lhe diretamente, por transferência, MB WAY ou dinheiro. ${PASSA_A_TAXA}`,
+  emailProParaQueServeAProva:
+    "Com o trabalho fechado, recebe a referência para passar à CLYON a taxa da plataforma e o IVA dela.",
+  emailClienteAoPedirConfirmacao: "Veja e confirme que está tudo bem.",
+  proAoFechar: `O cliente paga-lhe diretamente, por transferência, MB WAY ou dinheiro. ${PASSA_A_TAXA} ${MORADA_POR_EMAIL}`,
+  whatsappConfirmar:
+    "Quando o trabalho estiver feito, é só confirmá-lo — é isso que o dá por concluído dos dois lados.",
+  whatsappAntesDeAceitar: PAGA_DIRETAMENTE_AO_PARCEIRO,
+  backofficeAConfirmar:
+    "Falta o cliente confirmar — é a confirmação que fecha o pedido. Modelo de 15/11: o cliente paga ao " +
+    "parceiro; ao fechar, o parceiro passa à CLYON a taxa e o IVA dela (valor em atraso).",
 };
 
 /**
@@ -432,7 +522,9 @@ export const PROMESSA_POR_FORMA: Record<FormaDePagamento, PromessaDaForma> = {
  * Recebe o valor cru de propósito: `null`, vazio ou lixo lêem-se como a forma
  * de sempre (`lerForma`), e ninguém tem de se lembrar de o normalizar antes.
  */
-export function promessaDaForma(forma: unknown, modelo: ModeloDoPreco): PromessaDaForma {
+export function promessaDaForma(forma: unknown, modelo: ModeloDoPreco, novoModelo = false): PromessaDaForma {
+  // d10: um trabalho do modelo de 15-11 (o servidor decide) lê os textos do modelo novo.
+  if (novoModelo) return NO_NOVO_MODELO;
   const f = lerForma(forma);
   /*
    * ANTES DO IVA INCLUÍDO, O DINHEIRO DE SEMPRE — 01-10-2026. As negociações

@@ -7,9 +7,10 @@ import Nota from "@/components/Nota";
 import { MINIMO_PARA_LEVANTAR } from "@/lib/carteira";
 import type { DadosDaCarteira, DividaDaCarteira } from "./tipos";
 import type { LinhaDaCarteira, ResumoDaCarteira } from "@/lib/trabalhos-da-carteira";
-import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import { PROMESSA, promessaGeral } from "@/lib/pagamento-na-plataforma";
 // Os nomes da carteira, os mesmos da app (28-10-2026, d4): nenhum se escreve à mão aqui.
 import { ROTULOS_DA_CARTEIRA as R } from "@/lib/rotulos-da-carteira";
+import { PAGAR_O_VALOR_EM_ATRASO } from "@/lib/valor-em-atraso";
 // As frases da dívida, as mesmas da app (11-11-2026): pela dívida inteira, nunca pelo que falta.
 import { faltaDaDivida, fraseDaDividaEmMao, fraseDaDividaNoSaldo, linhasDasPartesDaDivida } from "@/lib/frases-da-divida";
 
@@ -242,7 +243,13 @@ export default function Carteira({
                 d.descontaNoSaldo ? (
                   <DividaNoSaldo key={d.negociacaoId} d={d} />
                 ) : (
-                  <Divida key={d.negociacaoId} d={d} onMudou={onRecarregar} />
+                  <Divida
+                    key={d.negociacaoId}
+                    d={d}
+                    onMudou={onRecarregar}
+                    // d10: no modelo de 15-11 é o valor em atraso desse trabalho (a taxa e o IVA dela).
+                    valorEmAtraso={dados.novoModelo?.valores.find((v) => v.negociacaoId === d.negociacaoId) ?? null}
+                  />
                 ),
               )}
             </section>
@@ -251,7 +258,7 @@ export default function Carteira({
       )}
 
       <Nota titulo={PROMESSA.proTitulo} icone="cadeado" className="mt-3">
-        {PROMESSA.proCorpo}
+        {promessaGeral().proCorpo}
       </Nota>
     </>
   );
@@ -436,7 +443,15 @@ function PartesDaDivida({ d }: { d: DividaDaCarteira }) {
   );
 }
 
-function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
+function Divida({
+  d,
+  onMudou,
+  valorEmAtraso = null,
+}: {
+  d: DividaDaCarteira;
+  onMudou: () => void;
+  valorEmAtraso?: { prazoAte: string | null } | null;
+}) {
   const [aPedir, setAPedir] = useState<"multibanco" | "mbway" | null>(null);
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
@@ -477,13 +492,29 @@ function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
             {d.titulo}
           </p>
           {/* Sem fatura não há IVA (um pago em mão, 04-11-2026, d9): só a taxa é da CLYON. */}
+          {valorEmAtraso ? (
+            <>
+              <p className="mt-0.5 text-xs font-semibold text-amber-900">{PAGAR_O_VALOR_EM_ATRASO}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                A taxa da plataforma e o IVA dela deste trabalho, que o cliente lhe pagou com o preço.
+              </p>
+              {diaDe(valorEmAtraso.prazoAte) && (
+                <p className="mt-1 text-xs font-medium text-amber-800">
+                  Pague até {diaDe(valorEmAtraso.prazoAte)}. Depois disso a conta fica em stand-by: vê os pedidos, mas não aceita nem envia propostas até pagar.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{fraseDaDividaEmMao(d)}</p>
           <PartesDaDivida d={d} />
+            </>
+          )}
           {/*
             O PRAZO — 01-10-2026. Passados 7 dias deixa de poder propor e
             aceitar trabalhos em dinheiro; dizê-lo antes é o que evita a surpresa.
           */}
-          {diaDe(d.venceEm ?? null) && (
+          {!valorEmAtraso && diaDe(d.venceEm ?? null) && (
             <p className="mt-1 text-xs font-medium text-amber-800">
               {d.venceEm && new Date(d.venceEm).getTime() < Date.now()
                 ? `Passou o prazo (${diaDe(d.venceEm ?? null)}): enquanto não pagar, não pode propor nem aceitar trabalhos em dinheiro.`
@@ -516,7 +547,9 @@ function Divida({ d, onMudou }: { d: DividaDaCarteira; onMudou: () => void }) {
           )}
         </dl>
       ) : (
-        <p className="mt-3 text-xs text-slate-500">Ainda não há uma referência viva para esta dívida.</p>
+        <p className="mt-3 text-xs text-slate-500">
+          {valorEmAtraso ? "Ainda não há uma referência viva para este valor em atraso." : "Ainda não há uma referência viva para esta dívida."}
+        </p>
       )}
 
       {erro && (

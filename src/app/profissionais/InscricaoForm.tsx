@@ -16,6 +16,7 @@ import {
   avisoDoCodigoApa,
 } from "@/lib/guia-de-residuos";
 import AjudaDaGuia from "@/components/AjudaDaGuia";
+import { NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "@/lib/novo-modelo";
 
 // A lista única das categorias (29-10-2026) — a mesma do backoffice e da app Pro.
 const CATEGORIAS = CATEGORIAS_DOS_PROFISSIONAIS;
@@ -63,6 +64,12 @@ export default function InscricaoForm({
   telefoneConvidado?: string;
   veiculoConvidado?: string;
 }) {
+  /*
+   * O MODELO DE 15-11-2026 (d10): o cliente paga-lhe diretamente. A inscrição pede
+   * o IBAN (com o titular) e o MB WAY, e o regime de IVA a toda a gente — cada
+   * parceiro emite a fatura do seu trabalho. Antes da data, o formulário de sempre.
+   */
+  const [novo] = useState(() => novoModeloEmVigor());
   const [form, setForm] = useState({
     nome: nomeConvidado,
     email: emailConvidado,
@@ -75,8 +82,11 @@ export default function InscricaoForm({
     localidadeFiscal: "",
     categorias: [] as string[],
     raioKm: "30",
-    emiteFatura: false,
+    emiteFatura: novoModeloEmVigor(),
     regimeIva: "" as "" | "isento" | "normal",
+    iban: "",
+    ibanTitular: "",
+    mbway: "",
     emiteGuiaTransporte: false,
     numeroTransportador: "",
     destinoDosResiduos: "",
@@ -422,6 +432,59 @@ export default function InscricaoForm({
 
       </fieldset>
 
+      {novo && (
+        <fieldset className="space-y-3">
+          <legend className="text-base font-bold text-slate-900">Para o cliente lhe pagar</legend>
+          <p className="text-sm text-slate-600">
+            Desde {NOVO_MODELO_DESDE_POR_EXTENSO} o cliente paga-lhe diretamente, por
+            transferência ou MB WAY. Só o cliente que o contratar vê estes dados, na
+            página desse pedido.
+          </p>
+          <div>
+            <label htmlFor="iban" className="block text-sm font-medium text-gray-900">
+              IBAN *
+            </label>
+            <input
+              id="iban"
+              autoComplete="off"
+              value={form.iban}
+              onChange={(e) => set("iban", e.target.value)}
+              placeholder="PT50 0000 0000 0000 0000 0000 0"
+              className={`mt-1.5 ${inputCls(erro("iban"))}`}
+            />
+            {erro("iban") && <p className="mt-1 text-xs text-red-600">{erro("iban")}</p>}
+          </div>
+          <div>
+            <label htmlFor="ibanTitular" className="block text-sm font-medium text-gray-900">
+              Titular da conta *
+            </label>
+            <input
+              id="ibanTitular"
+              autoComplete="off"
+              value={form.ibanTitular}
+              onChange={(e) => set("ibanTitular", e.target.value)}
+              className={`mt-1.5 ${inputCls(erro("ibanTitular"))}`}
+            />
+            {erro("ibanTitular") && <p className="mt-1 text-xs text-red-600">{erro("ibanTitular")}</p>}
+          </div>
+          <div>
+            <label htmlFor="mbway" className="block text-sm font-medium text-gray-900">
+              Número MB WAY *
+            </label>
+            <input
+              id="mbway"
+              autoComplete="off"
+              inputMode="tel"
+              value={form.mbway}
+              onChange={(e) => set("mbway", e.target.value)}
+              placeholder="912 345 678"
+              className={`mt-1.5 ${inputCls(erro("mbway"))}`}
+            />
+            {erro("mbway") && <p className="mt-1 text-xs text-red-600">{erro("mbway")}</p>}
+          </div>
+        </fieldset>
+      )}
+
       {/* ── Documentos ──────────────────────────────────────────────── */}
       <fieldset className="space-y-3">
         <legend className="text-base font-bold text-slate-900">Documentos que emite</legend>
@@ -434,6 +497,7 @@ export default function InscricaoForm({
           <input
             type="checkbox"
             checked={form.emiteFatura}
+            disabled={novo}
             onChange={(e) => set("emiteFatura", e.target.checked)}
             className="mt-0.5 h-5 w-5 shrink-0 accent-cyan-600"
           />

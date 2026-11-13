@@ -27,6 +27,15 @@
  *     (`precoDoCliente`).
  *
  *   · O TELEFONE DO PROFISSIONAL SÓ DEPOIS DE CONTRATADO.
+ *
+ *   · NO MODELO DE 15-11-2026 (d10) O CLIENTE VÊ A FATURA DA TAXA — e só aí. É
+ *     ele quem paga ao parceiro as duas faturas (a do trabalho e a da taxa da
+ *     plataforma, com o IVA dela) e quem recebe a da CLYON. Essa conta não sai
+ *     por esta porta: sai do servidor, depois de contratar e só num trabalho do
+ *     modelo novo, por `/api/pagamentos/ao-parceiro` (`conta.faturaDaTaxa`).
+ *     Antes da data, e nos trabalhos que ficam no modelo antigo (já pagos à
+ *     CLYON, Trabalhos CLYON), essa rota responde `pagaAoParceiro: false` e o
+ *     cliente não vê a taxa. A taxa do profissional continua sem sair daqui.
  */
 import { oClienteVeEsta, type Proposta } from "./negociacao";
 

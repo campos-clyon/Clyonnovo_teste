@@ -9,6 +9,8 @@ import { NOTA_DOS_PRECOS } from "./preco-de-referencia";
 import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { FRASES_PROIBIDAS } from "./frases-proibidas";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
+import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
+import { TRABALHOS_CLYON_NO_MODELO_ANTIGO } from "./novo-modelo";
 
 /*
  * O TESTE DA ORQUESTRA — 27-10-2026 (decisão d12).
@@ -74,6 +76,17 @@ import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
  * lista vazia; com parceiros na lista não se dizem, e o mínimo é o do parceiro.
  * Nenhum «mínimo N horas» escrito à mão nesses ficheiros.
  *
+ * E desde 13-11-2026 (d10, o modelo de 15-11): s) no que o cliente e o parceiro
+ * lêem, nada da caução, do valor «cativo», da CLYON a receber ou a guardar o
+ * pagamento, nem do cliente a pagar à CLYON ou «pela plataforma»; e o que o
+ * parceiro deve é o «valor em atraso», nunca «em dívida»
+ * (`palavras-do-modelo-antigo.ts`). As frases antigas continuam certas para os
+ * trabalhos já pagos à CLYON antes de 15-11: só podem viver numa declaração com
+ * «ANTIGO» no nome ou dentro de `<RegrasAnteriores>`, e o código escolhe-as pela
+ * data (`novoModeloEmVigor`). Os Termos e a Privacidade lêem-se desenhados nos
+ * dois lados da data (`termos-15-11.test.ts`); os Trabalhos CLYON ficam no
+ * modelo antigo enquanto `TRABALHOS_CLYON_NO_MODELO_ANTIGO` estiver ligado.
+ *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
  * passar de TAMANHO_MAXIMO. Desce o número quando a lista desce.
@@ -103,7 +116,8 @@ type Regra =
   | "u-site"
   | "v-distancia-a-mao"
   | "w-taxa-no-codigo"
-  | "x-confirmacao";
+  | "x-confirmacao"
+  | "s-modelo-antigo";
 
 interface Excepcao {
   ficheiro: string;
@@ -547,6 +561,8 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
     "src/lib/escolhidos-sem-resposta-do-escolhido.ts",
     // O email ao profissional quando mudam o IBAN, o titular ou o MB WAY (12-11-2026, d1).
     "src/lib/email-dados-de-pagamento-do-profissional.ts",
+    // Os nomes da carteira do profissional (painel e app Pro) — d10, 13-11-2026.
+    "src/lib/rotulos-da-carteira.ts",
   ]).has(f);
 /*
  * Entre a equipa: a base, as contas, as notas e as instruções que só a equipa
@@ -739,10 +755,48 @@ interface Achado {
   texto: string;
 }
 
-function lerFicheiro(f: string): { textos: Array<{ linha: number; texto: string }>; codigo: Achado[] } {
+/*
+ * s) ONDE AS FRASES DO MODELO ANTIGO PODEM VIVER — d10, 13-11-2026. Numa
+ * declaração (variável, propriedade, função) com «antig» no nome, ou dentro de
+ * <RegrasAnteriores>. Os Termos e a Privacidade lêem-se desenhados (o
+ * `termos-15-11.test.ts`), e os Trabalhos CLYON ficam no modelo antigo por
+ * decisão (`TRABALHOS_CLYON_NO_MODELO_ANTIGO`).
+ */
+const NOME_DO_MODELO_ANTIGO = /antig/i;
+const DESENHADOS_NOS_DOIS_LADOS = new Set(["src/app/termos/page.tsx", "src/app/privacidade/page.tsx"]);
+const DO_TRABALHO_CLYON = new Set([
+  "src/lib/proposta-clyon-ao-cliente.ts",
+  "src/lib/mensagem-de-adjudicacao.ts",
+  "src/lib/valores-para-pagamento.ts",
+]);
+const A_REGRA_S_SE_APLICA = (f: string) =>
+  (O_CLIENTE_LE(f) || DO_LADO_DO_PROFISSIONAL(f)) &&
+  !DESENHADOS_NOS_DOIS_LADOS.has(f) &&
+  !(TRABALHOS_CLYON_NO_MODELO_ANTIGO && DO_TRABALHO_CLYON.has(f));
+const ePorRegrasAnteriores = (n: ts.Node, sf: ts.SourceFile) =>
+  (ts.isJsxElement(n) && n.openingElement.tagName.getText(sf) === "RegrasAnteriores") ||
+  ((ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) && n.tagName.getText(sf) === "RegrasAnteriores");
+function doModeloAntigo(n: ts.Node, sf: ts.SourceFile): boolean {
+  for (let p: ts.Node | undefined = n; p; p = p.parent) {
+    if (ePorRegrasAnteriores(p, sf)) return true;
+    if (
+      (ts.isVariableDeclaration(p) ||
+        ts.isPropertyAssignment(p) ||
+        ts.isFunctionDeclaration(p) ||
+        ts.isMethodDeclaration(p) ||
+        ts.isPropertyDeclaration(p)) &&
+      p.name &&
+      NOME_DO_MODELO_ANTIGO.test(p.name.getText(sf))
+    )
+      return true;
+  }
+  return false;
+}
+
+function lerFicheiro(f: string): { textos: Array<{ linha: number; texto: string; antigo?: boolean }>; codigo: Achado[] } {
   const fonte = readFileSync(join(RAIZ, f), "utf8");
   const sf = ts.createSourceFile(f, fonte, ts.ScriptTarget.Latest, true, f.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-  const textos: Array<{ linha: number; texto: string }> = [];
+  const textos: Array<{ linha: number; texto: string; antigo?: boolean }> = [];
   const codigo: Achado[] = [];
   const linhaDe = (n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1;
   const limpar = (s: string) => s.replace(/ /g, " ").replace(/\s+/g, " ").trim();
@@ -760,6 +814,8 @@ function lerFicheiro(f: string): { textos: Array<{ linha: number; texto: string 
       .map((c) => {
         if (ts.isJsxText(c)) return c.text;
         if (ts.isJsxExpression(c)) return resolver(c.expression);
+        // s) o texto antigo dentro de <RegrasAnteriores> lê-se nele, não no pai.
+        if (ePorRegrasAnteriores(c, sf)) return " ";
         if (ts.isJsxElement(c) || ts.isJsxFragment(c)) return textoDoJsx(c);
         return " ";
       })
@@ -770,12 +826,12 @@ function lerFicheiro(f: string): { textos: Array<{ linha: number; texto: string 
     if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) {
       const pai = n.parent;
       const eNomeDePropriedade = pai && (ts.isPropertyAssignment(pai) || ts.isPropertySignature(pai)) && pai.name === n;
-      if (!eNomeDePropriedade) textos.push({ linha: linhaDe(n), texto: limpar(n.text) });
+      if (!eNomeDePropriedade) textos.push({ linha: linhaDe(n), texto: limpar(n.text), antigo: doModeloAntigo(n, sf) });
     } else if (ts.isTemplateExpression(n)) {
       const t = n.head.text + n.templateSpans.map((s) => resolver(s.expression) + s.literal.text).join("");
-      textos.push({ linha: linhaDe(n), texto: limpar(t) });
+      textos.push({ linha: linhaDe(n), texto: limpar(t), antigo: doModeloAntigo(n, sf) });
     } else if (ts.isJsxElement(n) || ts.isJsxFragment(n)) {
-      textos.push({ linha: linhaDe(n), texto: limpar(textoDoJsx(n)) });
+      textos.push({ linha: linhaDe(n), texto: limpar(textoDoJsx(n)), antigo: doModeloAntigo(n, sf) });
     }
 
     // f) um mapa { id do serviço: "Nome" } copiado à mão. Os de minúscula
@@ -835,7 +891,7 @@ function achadosDe(f: string): Achado[] {
   const { textos, codigo } = lerFicheiro(f);
   const out: Achado[] = [...codigo];
   const publico = !DO_BACKOFFICE(f);
-  for (const { linha, texto } of textos) {
+  for (const { linha, texto, antigo } of textos) {
     if (!texto) continue;
     const marcar = (regra: Regra, m: RegExpExecArray | null) => {
       if (m) out.push({ ficheiro: f, linha, regra, texto: m[0] });
@@ -872,6 +928,11 @@ function achadosDe(f: string): Achado[] {
     if (publico && !A_HISTORIA.has(f) && !E_SQL.test(texto) && !texto.startsWith("[")) marcar("u-site", PELO_SITE.exec(texto));
     // v) O SQL fica de fora.
     if (A_REGRA_V_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of DISTANCIA_A_MAO) marcar("v-distancia-a-mao", re.exec(texto));
+    // s) O SQL e os registos ficam de fora; as frases antigas só onde o nome o diz.
+    if (A_REGRA_S_SE_APLICA(f) && !antigo && !E_SQL.test(texto) && !texto.startsWith("[")) {
+      const s = falaDoModeloAntigo(texto, O_CLIENTE_LE(f) ? "cliente" : "todos");
+      if (s) out.push({ ficheiro: f, linha, regra: "s-modelo-antigo", texto: s });
+    }
     // x) Em todo o lado: é a frase antiga, não um tema.
     for (const re of CONFIRMACAO_ANTIGA) marcar("x-confirmacao", re.exec(texto));
     // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.

@@ -6,6 +6,8 @@ import {
   MES_DAS_CONTAGENS,
   COMO_SE_PAGA,
   FACTURA_EM_PALAVRAS,
+  comoSePaga,
+  faturaEmPalavras,
   NOTA_DE_PRECO,
   PRAZO_DE_RESPOSTA,
 } from "./seo-data";
@@ -19,6 +21,8 @@ import { NO_MESMO_DIA, PROMESSA_DO_PRAZO } from "./promessas-publicas";
  * `src/app/faq/page.tsx`; vivem aqui para a página e o catálogo da app de
  * cliente (R7) dizerem o mesmo, carácter a carácter.
  */
+import { novoModeloEmVigor } from "./novo-modelo";
+
 export const PERGUNTAS_FREQUENTES = [
   {
     category: "Recolha de Móveis em Lisboa",
@@ -274,7 +278,32 @@ const PERGUNTA_DO_PRECO_DA_MUDANCA = "Quanto custa uma mudança em Lisboa?";
  * tipologia, com a proteção e os km. Com a lista vazia fica como estava.
  * A página /faq e o catálogo da app de cliente lêem daqui.
  */
-export function perguntasFrequentes(preco: PrecoPublicoDasMudancas): typeof PERGUNTAS_FREQUENTES {
+export function perguntasFrequentes(
+  preco: PrecoPublicoDasMudancas,
+  agora: Date = new Date(),
+): typeof PERGUNTAS_FREQUENTES {
+  return pagamentoPelaData(perguntasPeloPreco(preco), agora);
+}
+
+/*
+ * O MODELO DE 15-11-2026 (d10): o «como se paga» e a fatura mudam pela data. As
+ * respostas que os dizem trocam-se pelas de `seo-data.ts` (a mesma frase do resto do site).
+ */
+function pagamentoPelaData(lista: typeof PERGUNTAS_FREQUENTES, agora: Date): typeof PERGUNTAS_FREQUENTES {
+  if (!novoModeloEmVigor(agora)) return lista;
+  return lista.map((c) => ({
+    ...c,
+    questions: c.questions.map((q) =>
+      q.a === COMO_SE_PAGA
+        ? { ...q, a: comoSePaga(agora) }
+        : q.a.includes(FACTURA_EM_PALAVRAS)
+          ? { ...q, a: q.a.replace(FACTURA_EM_PALAVRAS, faturaEmPalavras(agora)) }
+          : q,
+    ),
+  }));
+}
+
+function perguntasPeloPreco(preco: PrecoPublicoDasMudancas): typeof PERGUNTAS_FREQUENTES {
   if (preco.tipo !== "parceiros") return PERGUNTAS_FREQUENTES;
   const exemplos = exemplosDaListaNumaFrase(preco);
   const resposta =

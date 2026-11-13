@@ -1,6 +1,8 @@
 import { EMPRESA_PARCEIRA_AO_PUBLICO, IDENTIFICACAO, TAXA_IVA } from "@/lib/identificacao-legal";
 import { GERADAS_QUE_FAZEM_301, TERRAS_JUNTAS_AO_CONCELHO } from "@/lib/paginas-consolidadas";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -569,6 +571,15 @@ export const NOTA_DE_PRECO = {
  * se pedir factura, acrescem 23 %».
  * E desde 26-10-2026 sem o nome da parceira (decisão do dono): só a categoria.
  */
+/** Desde 15-11-2026 (d10): duas faturas por trabalho. */
+export function faturaEmPalavras(agora: Date = new Date()): string {
+  if (!novoModeloEmVigor(agora)) return FACTURA_EM_PALAVRAS;
+  return (
+    `O preço de cada proposta vem com IVA incluído (${IVA_EM_PALAVRAS}) e já inclui a taxa da ` +
+    `plataforma. ${AS_DUAS_FATURAS} A da taxa é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}, com o seu NIF se o quiser.`
+  );
+}
+
 export const FACTURA_EM_PALAVRAS =
   `O preço de cada proposta vem com IVA incluído (${IVA_EM_PALAVRAS}) e já inclui a taxa da ` +
   "plataforma. Há fatura em todas as vendas, com o seu NIF se o quiser na fatura, emitida " +
@@ -590,11 +601,21 @@ export const FACTURA_EM_PALAVRAS =
  * ⚠️ SÃO DUAS FORMAS porque `PAGAR_DEPOIS_LIGADO` está desligado. No dia em que
  * o pós-recolha abrir, esta frase tem de ganhar a terceira.
  */
-export const COMO_SE_PAGA =
+const COMO_SE_PAGA_NO_MODELO_ANTIGO =
   "No pedido escolhe como prefere pagar: pela plataforma — depois de aceitar a proposta " +
   "recebe uma referência MB WAY ou Multibanco, e o valor fica com a CLYON até confirmar " +
   "que o trabalho está feito; só então é entregue ao parceiro — ou em dinheiro, ao " +
   "parceiro, no fim do trabalho: o mesmo preço, com IVA incluído, sem nada a pagar à parte.";
+/** O de sempre (a Vitória ainda o lê — o I&D troca-o pelo `comoSePaga`). */
+export const COMO_SE_PAGA = COMO_SE_PAGA_NO_MODELO_ANTIGO;
+
+/**
+ * DESDE 15-11-2026 (d10): o cliente paga ao parceiro, e há duas faturas. A
+ * frase vem de `pagar-ao-parceiro.ts`, a mesma do simulador e do pedido.
+ */
+export function comoSePaga(agora: Date = new Date()): string {
+  return novoModeloEmVigor(agora) ? `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${AS_DUAS_FATURAS}` : COMO_SE_PAGA_NO_MODELO_ANTIGO;
+}
 
 /**
  * O prazo de resposta, num sítio só.

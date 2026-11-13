@@ -137,13 +137,18 @@ export type AvisoDeContratacao = {
    * cliente — a frase de quem confirma muda, o prazo é o mesmo (10-11-2026, d28).
    */
   ofertaClyon?: boolean;
+  /**
+   * O MODELO DE 15-11-2026 (d10): o cliente paga-lhe o total com IVA, e ele passa à
+   * CLYON a taxa da plataforma e o IVA dela. Nulo fora do modelo novo.
+   */
+  novoModelo?: { recebidoDoCliente: number; aPassarAClyon: number } | null;
   baseUrl?: string;
 };
 
 export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const servico = ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? p.serviceType ?? "Serviço";
-  const promessa = promessaDaForma(p.formaDePagamento, modeloDaNegociacao(p.criadaEm));
+  const promessa = promessaDaForma(p.formaDePagamento, modeloDaNegociacao(p.criadaEm), p.novoModelo != null);
 
   const corpo = `
     <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
@@ -161,7 +166,13 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
         <p style="margin:0;font-size:28px;font-weight:700;color:#047857;">${euros(p.recebeLiquido)}</p>
         <p style="margin:4px 0 0;font-size:12px;color:#059669;">${promessa.proLegendaDoValor}</p>
         ${
-          p.dividaEmDinheiro
+          p.novoModelo
+            ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#065f46;">
+                 O cliente paga-lhe <strong>${euros(p.novoModelo.recebidoDoCliente)}</strong>, com IVA.
+                 Quando o trabalho fechar, passa à CLYON <strong>${euros(p.novoModelo.aPassarAClyon)}</strong>
+                 (a taxa da plataforma e o IVA dela) pela referência da sua carteira.
+               </p>`
+            : p.dividaEmDinheiro
             ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#065f46;">
                  O cliente paga-lhe <strong>${euros(p.dividaEmDinheiro.recebidoDoCliente)}</strong> em dinheiro, com IVA.
                  Depois da confirmação, entrega à CLYON <strong>${euros(p.dividaEmDinheiro.total)}</strong>
@@ -266,13 +277,15 @@ export type PedidoDeConfirmacao = {
    * profissional, e ele entrega à CLYON o IVA e a comissão.
    */
   criadaEm: Date | string | null;
+  /** O modelo de 15-11-2026 (d10): o cliente paga ao parceiro — o servidor decide. */
+  novoModelo?: boolean;
   baseUrl?: string;
 };
 
 export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise<boolean> {
   const url = linkDoPedido(p.baseUrl ?? urlDeAccao(), p.token);
   const nome = p.paraNome?.trim().split(/\s+/)[0] ?? null;
-  const promessa = promessaDaForma(p.formaDePagamento, modeloDaNegociacao(p.criadaEm));
+  const promessa = promessaDaForma(p.formaDePagamento, modeloDaNegociacao(p.criadaEm), p.novoModelo === true);
 
   const corpo = `
     <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>

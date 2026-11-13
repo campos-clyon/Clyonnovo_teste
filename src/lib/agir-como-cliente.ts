@@ -593,8 +593,19 @@ export async function avisarQueFoiContratadoSemFalhar(c: {
           : null,
       formaDePagamento: linha.formaDePagamento ?? null,
       criadaEm: linha.createdAt ?? null,
+      // d10: contratado a partir de 15-11 (nada pago à CLYON), o cliente paga-lhe a ele.
+      novoModelo: await (async () => {
+        if (c.valorAcordado == null) return null;
+        const { segueONovoModelo } = await import("./novo-modelo-no-servidor");
+        if (!(await segueONovoModelo({ id: negociacaoId }))) return null;
+        const { taxaAPassarAClyon } = await import("./taxa-a-passar-a-clyon");
+        const { perfilFiscalDoParceiro } = await import("./perfil-fiscal");
+        const t = taxaAPassarAClyon(c.valorAcordado, taxasDaNegociacao(linha), perfilFiscalDoParceiro(alvo as object).regimeParaAConta);
+        return t ? { recebidoDoCliente: t.recebidoDoCliente, aPassarAClyon: t.total } : null;
+      })(),
       dividaEmDinheiro:
         c.valorAcordado != null &&
+        !(await (await import("./novo-modelo-no-servidor")).segueONovoModelo({ id: negociacaoId })) &&
         temDividaDoProfissional(linha.formaDePagamento, modeloDaNegociacao(linha.createdAt))
           ? dividaDoProfissional(c.valorAcordado, taxasDaNegociacao(linha))
           : null,

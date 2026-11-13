@@ -98,9 +98,9 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     const { join } = await import("node:path");
     const pagina = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
     // As páginas leem as mesmas constantes, e não uma cópia.
-    expect(pagina("src/app/como-funciona/page.tsx")).toContain("PASSOS_DE_COMO_FUNCIONA.map(");
+    expect(pagina("src/app/como-funciona/page.tsx")).toContain("passosDeComoFunciona(agoraDoModelo()).map(");
     // Desde a d7 (11-11-2026) pelo preço público das mudanças: a página e o catálogo lêem a mesma função.
-    expect(pagina("src/app/faq/page.tsx")).toContain("const faqCategories = perguntasFrequentes(await precoPublicoDasMudancas());");
+    expect(pagina("src/app/faq/page.tsx")).toContain("const faqCategories = perguntasFrequentes(await precoPublicoDasMudancas(), agoraDoModelo());");
     expect(pagina("src/lib/catalogo-da-app.ts")).toContain("perguntas: perguntasFrequentes(precoPublicoConhecido()).flatMap(");
     const { perguntasFrequentes } = await import("@/lib/perguntas-frequentes");
     const { SEM_PARCEIROS } = await import("@/lib/preco-publico-das-mudancas");

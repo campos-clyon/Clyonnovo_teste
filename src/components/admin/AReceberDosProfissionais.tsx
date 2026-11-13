@@ -32,6 +32,12 @@ export type TrabalhoAReceber = {
   porPagar: number;
   total: number;
   partes: EstadoDaParte[];
+  /** d10: no modelo de 15-11, o valor em atraso (a taxa e o IVA dela), o estado e a referência. */
+  valorEmAtraso?: {
+    estado: "pago" | "no_prazo" | "stand_by" | "sem_data";
+    frase: string;
+    referencia: { entidade: string | null; referencia: string | null } | null;
+  } | null;
 };
 
 export type ProfissionalAReceber = {
@@ -264,6 +270,19 @@ function LinhaDoTrabalho({
           {t.porPagar > 0 ? ` · faltam ${euros(t.porPagar)}` : ""}
         </p>
       </div>
+
+      {t.valorEmAtraso && (
+        <p
+          className={`mt-1 text-[12px] ${t.valorEmAtraso.estado === "stand_by" ? "font-semibold text-red-300" : t.valorEmAtraso.estado === "pago" ? "text-emerald-300" : "text-amber-200"}`}
+        >
+          Modelo de 15/11 · {t.valorEmAtraso.frase}
+          {t.valorEmAtraso.referencia?.referencia
+            ? ` · Multibanco: entidade ${t.valorEmAtraso.referencia.entidade ?? "—"}, referência ${t.valorEmAtraso.referencia.referencia}`
+            : t.valorEmAtraso.estado !== "pago"
+              ? " · sem referência viva"
+              : ""}
+        </p>
+      )}
 
       <ul className="mt-1 space-y-0.5">
         {t.partes.map((x) => (

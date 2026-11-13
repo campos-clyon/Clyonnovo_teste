@@ -12,7 +12,8 @@ import {
 
 import { BUSINESS_PHONE, COMO_SE_PAGA, PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "@/lib/trabalho";
-import { PASSOS_DE_COMO_FUNCIONA } from "@/lib/como-funciona";
+import { passosDeComoFunciona } from "@/lib/como-funciona";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 /*
  * ESTA PÁGINA DESCREVIA O MODELO ANTIGO — reescrita a 30-09-2026.
@@ -46,7 +47,8 @@ export const metadata: Metadata = {
   }),
 };
 
-const stages = PASSOS_DE_COMO_FUNCIONA.map((p, i) => ({
+// Pela data (d10): desde 15-11-2026 paga-se ao parceiro. Lê-se a cada render.
+const estagios = () => passosDeComoFunciona(agoraDoModelo()).map((p, i) => ({
   step: p.passo,
   title: p.titulo,
   description: p.texto,
@@ -67,9 +69,11 @@ const assistantRules = [
   "Acompanha o pedido até ao fim, e é a quem recorre se alguma coisa correr mal.",
 ];
 
-export const revalidate = 86400;
+// De hora a hora: os passos mudam a 15-11-2026 (d10).
+export const revalidate = 3600;
 
 export default function ComoFuncionaPage() {
+  const stages = estagios();
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
     "Olá! Tenho uma dúvida sobre como funciona a CLYON.",

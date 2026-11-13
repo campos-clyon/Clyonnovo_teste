@@ -28,6 +28,7 @@ import { lerBase } from "@/lib/base-do-preco";
 import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { lerMateriaisDaProposta } from "@/lib/materiais-da-proposta";
 import NegociacaoProfissional from "./NegociacaoProfissional";
+import { segueONovoModelo } from "@/lib/novo-modelo-no-servidor";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { estadoParaOProfissional } from "@/lib/pedido-arrumado";
@@ -339,6 +340,8 @@ export default async function PaginaDoPedidoProfissional({
         criadaEm={negociacao.createdAt ? new Date(negociacao.createdAt).toISOString() : null}
         // Trabalho CLYON de valor fixo — ver `oferta-clyon.ts`.
         ofertaClyon={modoDaOferta(negociacao.ofertaClyon)}
+        // d10: o modelo de 15-11 — o servidor decide (antes da data, sempre não).
+        novoModelo={await segueONovoModelo(negociacao as unknown as Parameters<typeof segueONovoModelo>[0])}
         cancelada={linha.status === "cancelado"}
         // O que o número mede e os materiais da proposta (31-10-2026).
         base={lerBase((linha as unknown as Record<string, unknown>).baseDoPreco)}

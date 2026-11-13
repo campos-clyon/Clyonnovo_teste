@@ -1,7 +1,8 @@
 import { ensureSimulatorOrdersTable, getPool } from "./db";
 import { carteiraDoCliente, type TrabalhoDoCliente } from "./carteira-do-cliente";
 import { negociacoesDaContaNoEcra, porPedido, sqlDasNegociacoesDaConta } from "./pedidos-da-conta";
-import { PROMESSA } from "./pagamento-na-plataforma";
+import { PROMESSA, promessaGeral } from "./pagamento-na-plataforma";
+import { agoraDoModelo } from "./relogio-do-modelo";
 import { nomeDoServico } from "./service-categories";
 import { diaCurtoEmLisboa } from "./pedido-para-a-app";
 
@@ -63,6 +64,6 @@ export async function carteiraDoClienteParaAApp(email: string, agora: Date = new
       fase: l.fase === "retido" ? "em curso" : "concluído",
       quandoTexto: diaCurtoEmLisboa(l.quando),
     })),
-    nota: { titulo: PROMESSA.clienteTitulo, texto: PROMESSA.clienteCorpo },
+    nota: { titulo: PROMESSA.clienteTitulo, texto: promessaGeral(agoraDoModelo()).clienteCorpo },
   };
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validarInscricao } from "@/lib/inscricao-profissional";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import {
   criarProfissional,
   profissionalPorEmail,
@@ -73,7 +74,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const validacao = validarInscricao(corpo);
+  // d10: a data do modelo de 15-11 (simulada fora da produção).
+  const validacao = validarInscricao(corpo, agoraDoModelo());
   if (!validacao.ok) {
     return NextResponse.json(
       { ok: false, error: validacao.erros[0].mensagem, erros: validacao.erros },
@@ -131,6 +133,10 @@ export async function POST(req: NextRequest) {
       emiteGuiaTransporte: d.emiteGuiaTransporte,
       numeroTransportador: d.numeroTransportador,
       destinoDosResiduos: d.destinoDosResiduos,
+      iban: d.iban,
+      ibanTitular: d.ibanTitular,
+      mbway: d.mbway,
+      regimeConfirmado: d.regimeConfirmado,
       baseLat: base?.lat ?? null,
       baseLng: base?.lng ?? null,
     });

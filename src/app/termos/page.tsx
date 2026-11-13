@@ -57,6 +57,24 @@ import { TAXA_DAS_MUDANCAS_EM_PONTOS } from "@/lib/taxas-plataforma";
 import { TEXTOS_DOS_PRECOS_DAS_MUDANCAS } from "@/lib/precos-das-mudancas-do-profissional";
 import { SELO_DO_CARTAO } from "@/lib/parceiro-verificado";
 import { GUIA_NOS_TERMOS } from "@/lib/guia-de-residuos";
+/*
+ * OS TERMOS DE 15-11-2026 — d10 (Jurídico; CEO e dono): o cliente paga ao
+ * parceiro, duas faturas, nada pago à CLYON, valor em atraso e stand-by.
+ * Mostram-se só a partir da data (`novoModeloEmVigor`, o mesmo interruptor do
+ * resto do site; a página relê-se de hora a hora). Antes da data a página é a de
+ * 12-11-2026, tal e qual. O texto antigo não se apaga: passa para a caixa
+ * `RegrasAnteriores`, porque continua a valer para os trabalhos já pagos à
+ * CLYON antes da data (o corte do código, `CORTE_DO_MODELO`).
+ * `termos-15-11.test.ts` desenha a página nos dois lados da data.
+ */
+import {
+  DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO,
+  IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
+  PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO,
+  novoModeloEmVigor,
+} from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { RegrasAnteriores } from "@/components/RegrasAnteriores";
 
 /** As taxas mudam no backoffice: a página relê-as de hora a hora. */
 export const revalidate = 3600;
@@ -121,6 +139,8 @@ export default async function TermosPage() {
   // A taxa do dinheiro ANTES do IVA incluído — só para a frase de transição.
   const taxaNoDinheiro = pct(taxasParaAForma("dinheiro", taxas, "sem_iva").cliente);
   const iva = `${Math.round(TAXA_IVA * 100)} %`;
+  // O modelo de 15-11-2026 (d10): o texto novo só a partir da data.
+  const novo = novoModeloEmVigor(agoraDoModelo());
 
   return (
     <div className="min-h-screen bg-white">
@@ -137,9 +157,20 @@ export default async function TermosPage() {
           {/* A data acompanha a última mudança do texto: 12-11-2026 (d5 e d6: a
               transferência, as mudanças pela lista, a dívida em partes, o
               «verificado», a ordem da lista e a guia de resíduos). */}
+          {novo ? (
+            <p className="mt-3 text-sm text-slate-500">
+              Em vigor desde {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}: é a partir desse
+              dia que valem as regras de pagamento e de faturação dos pontos 6, 7,
+              7-A e 10. Os trabalhos já pagos à CLYON antes dessa data, os que nessa
+              data já estavam concluídos e os trabalhos de valor fixo combinados com
+              a CLYON continuam com as regras anteriores, até ao fim; essas regras
+              mantêm-se escritas nesses pontos.
+            </p>
+          ) : (
           <p className="mt-3 text-sm text-slate-500">
             Última atualização: 12 de novembro de 2026.
           </p>
+          )}
         </div>
       </section>
 
@@ -239,6 +270,24 @@ export default async function TermosPage() {
             SEM O NOME DA PARCEIRA — 26-10-2026, decisão do dono: ela não se
             expõe ao público; o nome vai só na factura que o cliente recebe.
           */}
+          {novo ? (
+            <>
+              <p>
+                Cada trabalho tem duas faturas: a da taxa da plataforma, emitida
+                pela {EMPRESA_PARCEIRA_AO_PUBLICO} (que não é o parceiro que faz
+                o serviço), e a do trabalho, emitida pelo parceiro — ver o ponto 6.
+              </p>
+              <p>
+                O que contrata connosco é o acesso à plataforma e aos serviços que
+                ela presta: a estimativa, a apresentação do pedido aos parceiros,
+                o espaço de negociação, o registo do que foi combinado, o apoio ao
+                longo do processo e a fatura da taxa da plataforma.{" "}
+                <strong>O dinheiro do trabalho não passa pela CLYON:</strong> paga-o
+                diretamente ao parceiro que contratou (ponto 7).
+              </p>
+            </>
+          ) : (
+          <>
           <p>
             A fatura ao cliente é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}
             (que não é o parceiro que faz o serviço), em todas as vendas — ver
@@ -251,6 +300,8 @@ export default async function TermosPage() {
             combinado, o apoio ao longo do processo e, se escolher pagar pela
             plataforma, a guarda do valor até à confirmação do trabalho.
           </p>
+          </>
+          )}
           {/*
             A EXCEPÇÃO — 12-11-2026 (d6). Confirmado no código: «Deixar a CLYON
             escolher por mim» salta a lista e o pedido segue o caminho de
@@ -334,7 +385,14 @@ export default async function TermosPage() {
               Quando aceita uma proposta, o trabalho fica fechado com esse
               parceiro e as outras negociações do mesmo pedido terminam. É
               nesse momento — e só nesse — que a morada exata e o seu contacto
-              passam a estar disponíveis para ele.
+              passam a estar disponíveis para ele{novo ? (
+                <>
+                  , e que o IBAN e o número MB WAY do parceiro passam a estar
+                  disponíveis para si, para lhe pagar (ponto 7).
+                </>
+              ) : (
+                "."
+              )}
             </li>
           </ol>
           <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
@@ -399,6 +457,21 @@ export default async function TermosPage() {
             conta-se sobre o valor sem IVA, como antes. A frase de transição é
             a que o dono escreveu — a data vem de `IVA_INCLUIDO_DESDE`.
           */}
+          {novo ? (
+            <p>
+              <strong>
+                O preço de cada proposta é o total que o cliente paga, com IVA
+                incluído, e tem duas partes: o trabalho do parceiro e a taxa da
+                plataforma.
+              </strong>{" "}
+              O parceiro propõe o seu valor sem IVA; desse valor, {quota} é a
+              taxa da plataforma e o resto é o trabalho do parceiro. A taxa da
+              plataforma leva sempre IVA à taxa de {iva}. O trabalho do parceiro
+              leva IVA se o parceiro cobrar IVA; se o parceiro estiver isento de
+              IVA, o trabalho não leva IVA, e o preço que vê já tem isso em
+              conta. Paga as duas partes ao parceiro, numa só vez (ponto 7).
+            </p>
+          ) : (
           <p>
             <strong>
               O preço de cada proposta é o que o cliente paga pelo trabalho, com
@@ -411,18 +484,58 @@ export default async function TermosPage() {
             recebe o valor que propôs, descontada a taxa da plataforma. No pagamento em
             dinheiro, a divisão é a descrita no ponto 7.
           </p>
+          )}
           <p>
             Nas mudanças com a lista de parceiros (ponto 5-A), a taxa da
             plataforma é de {TAXA_DAS_MUDANCAS_EM_PONTOS} e conta só sobre as
-            horas e os quilómetros, descontada do preço do parceiro. O material
+            horas e os quilómetros, descontada do preço do parceiro.{" "}
+            {novo ? (
+              <>
+                O material não tem taxa e é faturado pelo parceiro, com IVA se
+                ele cobrar IVA.
+              </>
+            ) : (
+              <>
+            O material
             não tem taxa, mas leva IVA.
+              </>
+            )}
           </p>
+          {novo ? (
+            <>
+              <p>
+                <strong>
+                  Cada trabalho tem duas faturas, as duas juntas ao pedido, na sua
+                  conta e na app:
+                </strong>
+              </p>
+              <ul className="ml-5 list-disc space-y-2">
+                <li>
+                  <strong>a da taxa da plataforma</strong>, emitida pela{" "}
+                  {EMPRESA_PARCEIRA_AO_PUBLICO} (que não é o parceiro que faz o
+                  serviço), com o IVA dela;
+                </li>
+                <li>
+                  <strong>a do trabalho</strong>, emitida pelo parceiro, com IVA
+                  ou com a menção da isenção de IVA, conforme o regime dele.
+                </li>
+              </ul>
+              <p>
+                As duas levam o seu NIF, se o indicar, ou saem em nome de
+                consumidor final. Para isso, o seu nome e o seu NIF passam também
+                ao parceiro que contratar. No perfil de cada parceiro vê, antes de
+                o escolher, o tipo de fatura que ele emite (com IVA ou com
+                isenção) e se emite a guia de resíduos.
+              </p>
+            </>
+          ) : (
           <p>
             <strong>Há fatura em todas as vendas.</strong> É emitida pela{" "}
             {EMPRESA_PARCEIRA_AO_PUBLICO} (não pelo parceiro que faz o
             serviço), com o NIF do cliente se ele o indicar, ou como consumidor
             final.
           </p>
+          )}
           <p>
             Os preços de referência apresentados no site (por exemplo, «desde»)
             são indicativos e sem IVA. Na proposta, o preço já vem com IVA
@@ -447,6 +560,56 @@ export default async function TermosPage() {
           quem factura é a parceira — não há profissionais a filtrar.
         */}
         <S id="pagamento" titulo="7. Pagamento">
+          {novo && (
+            <>
+              <p>
+                <strong>
+                  Paga diretamente ao parceiro que contratou.
+                </strong>{" "}
+                Escolhe como:
+              </p>
+              <ul className="ml-5 list-disc space-y-3">
+                <li>
+                  <strong>por transferência bancária</strong>, para o IBAN do
+                  parceiro;
+                </li>
+                <li>
+                  <strong>por MB WAY</strong>, para o número MB WAY do parceiro;
+                </li>
+                <li>
+                  <strong>em dinheiro, no local.</strong> Não é possível pagar em
+                  dinheiro trabalhos de valor igual ou superior a{" "}
+                  {eurosRedondos(MAXIMO_EM_NUMERARIO)} (Lei n.º 92/2017).
+                </li>
+              </ul>
+              <p>
+                Paga o preço total da proposta (ponto 6), que já inclui a taxa da
+                plataforma e o IVA. Não paga nada à parte: a taxa da plataforma
+                recebe-a o parceiro consigo, por conta da CLYON, e entrega-a
+                depois à CLYON. O momento do pagamento combina-o com o parceiro;
+                se nada combinarem, paga no fim do trabalho.
+              </p>
+              <p>
+                <strong>
+                  O IBAN e o número MB WAY do parceiro aparecem na página do
+                  pedido depois de o contratar, e só a si.
+                </strong>{" "}
+                Pague só para esses dados. Se alguém lhe pedir que pague para outra
+                conta ou outro número — mesmo que diga falar em nome do parceiro ou
+                da CLYON —, não pague e fale connosco antes.
+              </p>
+              <p>
+                <strong>
+                  O dinheiro do trabalho é recebido pelo parceiro e fica sob a
+                  responsabilidade dele.
+                </strong>{" "}
+                A CLYON não recebe, não guarda e não devolve o valor do trabalho.
+                Guarde o comprovativo da transferência ou do MB WAY; no pagamento
+                em dinheiro, a fatura do parceiro é o seu comprovativo.
+              </p>
+            </>
+          )}
+          <RegrasAnteriores emCaixa={novo}>
           <p>No pedido, o cliente escolhe como paga:</p>
           <ul className="ml-5 list-disc space-y-3">
             <li>
@@ -495,6 +658,7 @@ export default async function TermosPage() {
             referência, a taxa da plataforma ({taxaNoDinheiro} sobre o valor
             do parceiro).
           </p>
+          </RegrasAnteriores>
         </S>
 
         {/*
@@ -515,6 +679,18 @@ export default async function TermosPage() {
             já tiver contratado um parceiro, pedimos-lhe que diga porquê: o
             parceiro que perde o trabalho tem direito a saber.
           </p>
+          {novo && (
+            <p>
+              Não paga nada à CLYON, por isso não há nada a devolver pela CLYON.
+              Se tiver pago alguma coisa ao parceiro antes do trabalho e o pedido
+              for cancelado, a devolução é com ele: foi ele quem recebeu, e é ele
+              quem devolve, nos termos da lei e do que combinaram. Temos o registo
+              do pedido e do que foi combinado e ajudamos a resolver (pontos 8 e
+              17). Se a fatura da taxa da plataforma já tiver sido emitida, é
+              anulada.
+            </p>
+          )}
+          <RegrasAnteriores emCaixa={novo}>
           <p>
             <strong>
               Se o pedido for cancelado antes de o trabalho estar feito, o que
@@ -532,6 +708,7 @@ export default async function TermosPage() {
             não o traz de volta. Qualquer reclamação sobre o trabalho segue os
             pontos 8 e 17.
           </p>
+          </RegrasAnteriores>
         </S>
 
         <S id="execucao" titulo="8. Execução, confirmação e garantia">
@@ -561,9 +738,19 @@ export default async function TermosPage() {
               {DIAS_ATE_LIBERTAR_SOZINHO} dias depois de o parceiro o marcar
               como feito
             </strong>
+            {novo ? (
+              <>
+                {" "}— e, nos trabalhos já pagos à CLYON antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}, o valor é
+                entregue ao parceiro. Se alguma coisa estiver mal, fale connosco
+                antes disso.
+              </>
+            ) : (
+              <>
             {" "}— e, no pagamento pela plataforma, o valor é entregue ao
             parceiro. Se alguma coisa estiver mal, fale connosco antes
             disso.
+              </>
+            )}
           </p>
           <p>
             Nas mudanças com a lista de parceiros, o trabalho só se confirma
@@ -647,6 +834,60 @@ export default async function TermosPage() {
             factura ao cliente é da parceira, e a comissão depende das taxas da
             negociação. Não se diz aqui que documento ele passa à CLYON.
           */}
+          {novo && (
+            <>
+              <p>
+                É o prestador do serviço perante o cliente: responde pela execução
+                e pelos danos e cumpre as obrigações fiscais que lhe correspondem.{" "}
+                <strong>Recebe o pagamento diretamente do cliente</strong>, por
+                transferência, MB WAY ou dinheiro no local, como o cliente
+                escolher. Esse dinheiro é recebido por si e é da sua
+                responsabilidade: a CLYON não o recebe, não o guarda e não responde
+                por ele perante o cliente, incluindo nas devoluções.
+              </p>
+              <p>
+                <strong>Fatura.</strong> Emite ao cliente a fatura do trabalho, pela
+                parte que é sua, e junta-a ao pedido na app CLYON Pro ou no painel.
+                No seu perfil indica o tipo de fatura que emite — com IVA ou com
+                isenção de IVA — e se emite a guia de resíduos; o cliente vê-o antes
+                de o escolher, e o que indicar tem de corresponder à verdade. A
+                fatura da taxa da plataforma ao cliente é emitida pela{" "}
+                {EMPRESA_PARCEIRA_AO_PUBLICO}.
+              </p>
+              <p>
+                <strong>IBAN e MB WAY.</strong> Para receber trabalhos precisa de
+                ter no perfil o IBAN, com o titular da conta, e o número MB WAY. Só
+                o cliente que o contratar os vê, na página desse pedido, para lhe
+                pagar; não aparecem a mais ninguém, nem na lista nem no seu perfil
+                público. Quem se inscreve a partir de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO} preenche-os na
+                inscrição. Quem já estava aprovado antes dessa data pode preenchê-los
+                até {IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO}, inclusive; a partir daí, enquanto faltarem, não pode aceitar
+                pedidos nem enviar propostas.
+              </p>
+              <p>
+                <strong>A taxa da plataforma e o valor em atraso.</strong> A taxa
+                da plataforma (ponto 6; nas mudanças com a lista, a do ponto 5-A) e
+                o IVA dela estão incluídos no preço que o cliente lhe paga e
+                pertencem à CLYON: recebe-os do cliente por conta da CLYON e
+                entrega-os à CLYON. Quando o trabalho fecha, esse valor fica na sua
+                conta como <strong>valor em atraso</strong>, com uma referência
+                Multibanco ou um pedido MB WAY, gerados pelo euPago, para o pagar.
+                Tem {DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias para o pagar, e o
+                pagamento conta quando o euPago o confirmar.
+              </p>
+              <p>
+                <strong>Stand-by.</strong> Se passarem{" "}
+                {DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias sem que o valor em atraso
+                esteja pago, a sua conta fica em stand-by: continua a ver os
+                pedidos, mas não pode aceitar pedidos nem enviar propostas — ao
+                tentar, aparece «Pagar o valor em atraso», com a forma de o pagar.
+                Os trabalhos que já tem contratados continuam a ser seus e pode
+                terminá-los. Assim que o euPago confirmar o pagamento, a conta volta
+                ao normal sozinha, sem precisar de nos pedir nada.
+              </p>
+            </>
+          )}
+          <RegrasAnteriores emCaixa={novo}>
           <p>
             É o prestador do serviço perante o cliente: responde pela execução e
             pelos danos e cumpre as obrigações fiscais que lhe correspondem.
@@ -669,8 +910,9 @@ export default async function TermosPage() {
             de o trabalho estar confirmado. Enquanto não estiver pago, fica
             reservado no seu saldo disponível e pode ser abatido no levantamento
             seguinte; passado o prazo, deixa de poder aceitar ou propor em
-            trabalhos pagos em dinheiro até a dívida estar paga.
+            trabalhos pagos em dinheiro até {novo ? "esse valor estar pago" : "a dívida estar paga"}.
           </p>
+          </RegrasAnteriores>
           {/*
             A ORDEM DA LISTA NO CONTRATO DOS PARCEIROS — 12-11-2026 (d6):
             Regulamento (UE) 2019/1150, art. 5.º. A frase é a que o cliente lê
@@ -689,8 +931,9 @@ export default async function TermosPage() {
             quilómetros; o material que fornecer não leva taxa.
           </p>
           <p>
-            Os dados do cliente que lhe são mostrados destinam-se{" "}
-            <strong>exclusivamente</strong> a executar aquele trabalho. Não os
+            Os dados do cliente que lhe são mostrados
+            {novo ? " — incluindo o nome e o NIF para a fatura — " : " "}destinam-se{" "}
+            <strong>exclusivamente</strong> a executar{novo ? " e a faturar" : ""} aquele trabalho. Não os
             pode usar para outro fim, guardar depois de concluído, nem passar a
             terceiros. Contactar clientes da plataforma para trabalhos fora dela
             é motivo de encerramento da conta. Se avaliar um cliente, faça-o só
@@ -736,6 +979,18 @@ export default async function TermosPage() {
               Tentar aceder a partes da plataforma que não lhe são destinadas,
               ou perturbar o seu funcionamento.
             </li>
+            {novo && (
+              <>
+                <li>
+                  Pedir ao cliente, ou fazer, o pagamento de um trabalho para uma
+                  conta ou um número diferentes dos que estão na página do pedido.
+                </li>
+                <li>
+                  Usar o IBAN ou o número MB WAY de um parceiro para outra coisa
+                  que não seja pagar-lhe aquele trabalho.
+                </li>
+              </>
+            )}
             <li>
               Combinar por fora um trabalho que chegou pela plataforma, para
               evitar a taxa.
@@ -755,6 +1010,13 @@ export default async function TermosPage() {
             lei nos impedir de o comunicar. As medidas serão proporcionais ao
             que as motivou.
           </p>
+          {novo && (
+            <p>
+              O stand-by do ponto 10 não é um encerramento: acaba sozinho quando o
+              valor em atraso é pago. Se achar que foi posto em stand-by por
+              engano, escreva-nos para {IDENTIFICACAO.email}.
+            </p>
+          )}
         </S>
 
         <S id="responsabilidade" titulo="13. Responsabilidade">
@@ -772,6 +1034,14 @@ export default async function TermosPage() {
             não respondemos pela veracidade do que cada utilizador declara sobre
             si.
           </p>
+          {novo && (
+            <p>
+              O pagamento do trabalho faz-se entre o cliente e o parceiro. A CLYON
+              não responde pelo dinheiro que não recebeu, nem por pagamentos
+              feitos para dados diferentes dos que estão na página do pedido —
+              salvo se o erro desses dados for da plataforma.
+            </p>
+          )}
           <p>
             Não garantimos que a plataforma esteja sempre disponível. Fazemos o
             possível por avisar de interrupções previstas.
@@ -840,6 +1110,15 @@ export default async function TermosPage() {
             As alterações não se aplicam retroactivamente a trabalhos já
             fechados.
           </p>
+          {novo && (
+            <p>
+              As regras de pagamento de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO} valem para os trabalhos que não
+              estavam pagos à CLYON nem concluídos nessa data. Os trabalhos já
+              pagos à CLYON antes dela, os já concluídos e os de valor fixo
+              combinados com a CLYON continuam, até ao fim, com as regras com que
+              foram contratados.
+            </p>
+          )}
         </S>
 
         <S id="litigios" titulo="17. Reclamações, litígios e lei aplicável">

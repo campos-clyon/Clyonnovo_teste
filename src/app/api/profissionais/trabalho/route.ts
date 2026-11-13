@@ -216,6 +216,10 @@ export async function POST(req: NextRequest) {
           // pela plataforma lê que é a confirmação que liberta o profissional.
           formaDePagamento: trabalho.formaDePagamento ?? null,
           criadaEm: trabalho.createdAt ?? null,
+          // d10: um trabalho do modelo de 15-11 não fala do dinheiro guardado pela CLYON.
+          novoModelo: await (await import("@/lib/novo-modelo-no-servidor")).segueONovoModelo(
+            trabalho as unknown as Parameters<typeof import("@/lib/novo-modelo-no-servidor").segueONovoModelo>[0],
+          ),
           baseUrl: urlDeAccaoDoPedido(req.headers),
         });
         // E no telemóvel, se ele tiver os avisos ligados: o prazo começou a

@@ -432,7 +432,8 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
   // O que está em cima da mesa: a proposta por responder, ou o valor fechado.
   const emCima = pendente?.valor ?? n.valorAcordado;
   const modelo = modeloDaLinha(n, n.criadaEm);
-  const promessa = promessaDaForma(n.formaDePagamento, modelo);
+  // d10: a vista traz `novoModelo` (nula antes de 15-11 e nos Trabalhos CLYON).
+  const promessa = promessaDaForma(n.formaDePagamento, modelo, n.novoModelo != null);
   const prova = provaDe(n.provaJson);
   const pendenteDoAjuste = n.ajuste?.pendente ?? null;
   // Desde 30-10-2026 confirma sempre o cliente (a CLYON pode antecipar-se no backoffice).

@@ -58,6 +58,7 @@ import {
  */
 
 import CartaoDoPerfil from "./CartaoDoPerfil";
+import { rotuloDoMbway } from "@/lib/novo-modelo";
 
 export type SeccaoDoPerfil = "dados" | "servicos" | "faturacao" | "banco" | "seguranca";
 
@@ -1238,7 +1239,7 @@ export default function Perfil({
               errado.
             */}
             <Campo
-              etiqueta="MB WAY (opcional)"
+              etiqueta={rotuloDoMbway()}
               ajuda="Outra forma de lhe pagarmos. Pode ser um número diferente do de contacto."
             >
               <input

@@ -50,9 +50,10 @@ export const metadata: Metadata = {
  */
 /** De hora a hora (era ao dia): a resposta do preço das mudanças lê o preço público (d7, 11-11-2026). */
 export const revalidate = 3600;
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export default async function FAQPage() {
-  const faqCategories = perguntasFrequentes(await precoPublicoDasMudancas());
+  const faqCategories = perguntasFrequentes(await precoPublicoDasMudancas(), agoraDoModelo());
   const allQuestions = faqCategories.flatMap((cat) => cat.questions);
 
   return (

@@ -5,9 +5,9 @@ import { Camera, ExternalLink, HandCoins, MapPin, MinusCircle, ShieldCheck, Smar
 import { taxasActuais } from "@/lib/db";
 import { SITE_URL } from "@/lib/seo-data";
 import {
-  PASSOS_DO_PROFISSIONAL,
+  passosDoProfissional,
   O_QUE_A_CLYON_NAO_FAZ,
-  COMO_RECEBE,
+  comoRecebe,
   comissaoEmPalavras,
 } from "@/lib/como-funciona-para-o-profissional";
 import FormularioDeCandidatura from "./FormularioDeCandidatura";
@@ -76,6 +76,7 @@ const PORQUE = [
  * sem isto, a página ficava com as do dia do build até ao deploy seguinte.
  */
 export const revalidate = 3600;
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export default async function QueroSerParceiroPage() {
   const [taxas, daSemana, doMesPorConcelho] = await Promise.all([
@@ -195,7 +196,7 @@ export default async function QueroSerParceiroPage() {
             </p>
             <p className="mt-2 text-sm leading-relaxed text-slate-700">{exemplo.nasMudancas}</p>
             <ul className="mx-auto mt-3 max-w-xl space-y-1.5 text-left">
-              {COMO_RECEBE.map((c) => (
+              {comoRecebe(agoraDoModelo()).map((c) => (
                 <li key={c.forma} className="text-sm leading-relaxed text-slate-600">
                   <strong className="font-semibold text-slate-800">{c.forma}:</strong> {c.texto}
                 </li>
@@ -256,7 +257,7 @@ export default async function QueroSerParceiroPage() {
           </p>
 
           <ol className="mt-6 space-y-5">
-            {PASSOS_DO_PROFISSIONAL.map((passo, i) => (
+            {passosDoProfissional(agoraDoModelo()).map((passo, i) => (
               <li key={passo.chave} className="flex gap-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-sm font-bold text-cyan-700">
                   {i + 1}

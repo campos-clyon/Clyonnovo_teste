@@ -15,8 +15,10 @@ export const TOTAL_A_PAGAR = "Total a pagar";
 export const COMO_PAGA = "Como paga";
 export const MB_WAY = "MB WAY";
 export const REFERENCIA_MULTIBANCO = "Referência Multibanco";
-export const O_VALOR_FICA_COM_A_CLYON =
+/** Só nos trabalhos pagos à CLYON (antes de 15-11-2026, e os Trabalhos CLYON) — d10. */
+const O_VALOR_FICA_COM_A_CLYON_NO_MODELO_ANTIGO =
   "O valor fica com a CLYON e só chega ao parceiro depois de confirmar que o trabalho está feito.";
+export const O_VALOR_FICA_COM_A_CLYON = O_VALOR_FICA_COM_A_CLYON_NO_MODELO_ANTIGO;
 
 /** «140,00 €» — o formato dos valores no bloco de pagar. */
 export const emEurosNoPagamento = (v: number) =>

@@ -102,7 +102,12 @@ export type DividaParaDizer = {
  * que o recusa e no painel. Uma recusa sem o número nem por onde pagar é uma
  * chamada para o apoio.
  */
+/** Os trabalhos em dinheiro de antes de 15-11-2026 (o modelo antigo — d10). */
 export function explicacaoDoBloqueio(dividas: DividaParaDizer[]): string {
+  return explicacaoDoBloqueioNoModeloAntigo(dividas);
+}
+
+function explicacaoDoBloqueioNoModeloAntigo(dividas: DividaParaDizer[]): string {
   if (dividas.length === 0) return "";
   const total = Math.round(dividas.reduce((s, d) => s + d.total, 0) * 100) / 100;
   const cada = dividas

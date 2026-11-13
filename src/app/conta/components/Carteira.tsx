@@ -4,7 +4,7 @@ import { Lock, CheckCircle2 } from "lucide-react";
 import Nota from "@/components/Nota";
 import { carteiraDoCliente, type TrabalhoDoCliente } from "@/lib/carteira-do-cliente";
 import { tService } from "@/lib/translations";
-import { PROMESSA } from "@/lib/pagamento-na-plataforma";
+import { PROMESSA, promessaGeral } from "@/lib/pagamento-na-plataforma";
 import { TAXA_IVA } from "@/lib/taxas-plataforma";
 import { IVA_INCLUIDO_DESDE_POR_EXTENSO } from "@/lib/iva-incluido";
 import type { Order } from "./types";
@@ -127,7 +127,7 @@ export default function Carteira({ orders }: { orders: Order[] }) {
       )}
 
       <Nota titulo={PROMESSA.clienteTitulo} comecaAberta>
-        {PROMESSA.clienteCorpo}
+        {promessaGeral().clienteCorpo}
       </Nota>
 
       {/*

@@ -1292,6 +1292,12 @@ export type InscricaoDeProfissional = {
   numeroTransportador: string | null;
   /** O operador licenciado onde descarrega o entulho (d5, 12-11-2026). */
   destinoDosResiduos?: string | null;
+  /** Desde 15-11-2026 (d10): para o cliente lhe pagar. Nulos antes. */
+  iban?: string | null;
+  ibanTitular?: string | null;
+  mbway?: string | null;
+  /** O regime escolhido na inscrição fica confirmado (d10). */
+  regimeConfirmado?: boolean;
   baseLat: number | null;
   baseLng: number | null;
 };
@@ -1315,8 +1321,9 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
         moradaFiscal, codigoPostalFiscal, localidadeFiscal, tipoVeiculo,
         categorias, zonas, raioKm,
         emiteFatura, regimeIva, regimeIvaConfirmadoEm, emiteGuiaTransporte, numeroTransportador, destinoDosResiduos,
+        iban, ibanTitular, mbway,
         baseLat, baseLng, estado, isActive, isClyon)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? = 1, UTC_TIMESTAMP(), NULL), ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? = 1, UTC_TIMESTAMP(), NULL), ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', 1, 0)`,
     [
       dados.name,
       dados.slug,
@@ -1335,10 +1342,13 @@ export async function criarProfissional(dados: InscricaoDeProfissional): Promise
       dados.emiteFatura ? 1 : 0,
       dados.regimeIva,
       // Quem emite fatura escolheu o regime na inscrição: fica confirmado (d10).
-      dados.emiteFatura ? 1 : 0,
+      (dados.regimeConfirmado ?? dados.emiteFatura) ? 1 : 0,
       dados.emiteGuiaTransporte ? 1 : 0,
       dados.numeroTransportador,
       dados.destinoDosResiduos ?? null,
+      dados.iban ?? null,
+      dados.ibanTitular ?? null,
+      dados.mbway ?? null,
       dados.baseLat,
       dados.baseLng,
     ],
@@ -2517,6 +2527,25 @@ export async function gravarNegociacao(
     if (Number(r?.affectedRows ?? 0) === 0) {
       await conn.rollback();
       return { ok: false, porque: "ja_decidido" };
+    }
+    /*
+     * O REGIME DO PARCEIRO CONGELA AO CONTRATAR — d10, desde 15-11-2026. É ele que
+     * decide o total que o cliente paga ao parceiro (com IVA ou isento): o número
+     * que o cliente viu não muda se o perfil mudar depois. Sem o regime
+     * confirmado, conta como com IVA (`perfil-fiscal.ts`). Antes da data, nada.
+     */
+    {
+      const { NOVO_MODELO_DESDE, REGIME_DE_IVA_OBRIGATORIO } = await import("./novo-modelo");
+      const { agoraDoModelo } = await import("./relogio-do-modelo");
+      if (agoraDoModelo().getTime() >= NOVO_MODELO_DESDE.getTime()) {
+        const confirmado = REGIME_DE_IVA_OBRIGATORIO ? "p.regimeIvaConfirmadoEm IS NOT NULL AND " : "";
+        await conn.execute(
+          `UPDATE negociacoes n JOIN providers p ON p.id = n.providerId
+              SET n.regimeDoProfissional = CASE WHEN ${confirmado}p.regimeIva IN ('normal', 'isento') THEN p.regimeIva ELSE 'normal' END
+            WHERE n.id = ? AND n.regimeDoProfissional IS NULL AND n.ofertaClyon IS NULL`,
+          [id],
+        );
+      }
     }
     const [outras] = (await conn.execute(
       `UPDATE negociacoes SET estado = 'morta'

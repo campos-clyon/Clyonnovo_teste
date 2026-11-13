@@ -372,7 +372,8 @@ describe("dentro do ecrã, o triângulo está no campo certo", () => {
 
 describe("quem ainda não entrou lê os mesmos passos", () => {
   it("a página pública mostra o «como funciona» do mesmo ficheiro", () => {
-    expect(PUBLICA).toContain("PASSOS_DO_PROFISSIONAL");
+    // Pela data desde 13-11-2026 (d10): a mesma lista, por passosDoProfissional.
+    expect(PUBLICA).toContain("passosDoProfissional(agoraDoModelo())");
     expect(PUBLICA).toContain("O_QUE_A_CLYON_NAO_FAZ");
   });
 

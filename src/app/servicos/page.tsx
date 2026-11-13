@@ -22,7 +22,11 @@ import {
   SITE_URL,
   NOTAS_EM_LINHA,
   CONTAGENS_EM_LINHA,
+  comoSePaga,
+  faturaEmPalavras,
 } from "@/lib/seo-data";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { MENOR_PRECO_PUBLICADO, PRECOS, SEM_IVA_NA_FRASE, precoDe, maisIva } from "@/lib/precos-publicos";
 import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { comIvaEscrito, referenciaDoEntulho, semIvaEscrito } from "@/lib/quanto-custa";
@@ -211,6 +215,13 @@ const steps = [
  */
 const reviews = avaliacoes.slice(0, 3);
 
+const COMO_PAGAR_NO_MODELO_ANTIGO = `${COMO_SE_PAGA} ${FACTURA_EM_PALAVRAS}`;
+/** Pela data (d10): desde 15-11-2026 paga-se ao parceiro, com duas faturas. */
+const faqsPelaData = (agora: Date) =>
+  novoModeloEmVigor(agora)
+    ? faqs.map((f) => (f.a === COMO_PAGAR_NO_MODELO_ANTIGO ? { ...f, a: `${comoSePaga(agora)} ${faturaEmPalavras(agora)}` } : f))
+    : faqs;
+
 const faqs = [
   {
     q: "Que tipo de pedidos a CLYON aceita?",
@@ -228,7 +239,7 @@ const faqs = [
     q: "Como pagar?",
     // Dizia "MB WAY, transferência ou numerário. Emitimos fatura sempre." —
     // nem as formas eram estas, nem é a CLYON que factura (30-09-2026).
-    a: `${COMO_SE_PAGA} ${FACTURA_EM_PALAVRAS}`,
+    a: COMO_PAGAR_NO_MODELO_ANTIGO,
   },
   {
     q: "Trabalham com empresas e condomínios?",
@@ -236,7 +247,8 @@ const faqs = [
   },
 ];
 
-export const revalidate = 86400;
+// De hora a hora: o «Como pagar?» muda a 15-11-2026 (d10).
+export const revalidate = 3600;
 
 const serviceListSchema = {
   "@context": "https://schema.org",
@@ -254,15 +266,15 @@ const serviceListSchema = {
   })),
 };
 
-const faqSchema = {
+const faqSchemaDe = (lista: typeof faqs) => ({
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: faqs.map((f) => ({
+  mainEntity: lista.map((f) => ({
     "@type": "Question",
     name: f.q,
     acceptedAnswer: { "@type": "Answer", text: f.a },
   })),
-};
+});
 
 // ─── Chat card ─────────────────────────────────────────────────────────────
 function ChatCard({ service }: { service: Service }) {
@@ -329,6 +341,7 @@ function ChatCard({ service }: { service: Service }) {
 }
 
 export default function ServicosPage() {
+  const asFaqs = faqsPelaData(agoraDoModelo());
   return (
     <div className="min-h-screen bg-white">
       {/* ── HERO ─────────────────────────────────────────────────────── */}
@@ -499,7 +512,7 @@ export default function ServicosPage() {
             Perguntas frequentes
           </h2>
           <div className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
-            {faqs.map((f) => (
+            {asFaqs.map((f) => (
               <details key={f.q} className="group px-4 py-3.5 open:bg-slate-50 sm:px-5">
                 <summary className="flex cursor-pointer items-start justify-between gap-3 text-sm font-semibold text-slate-900 sm:text-base [&::-webkit-details-marker]:hidden">
                   <span>{f.q}</span>
@@ -574,7 +587,7 @@ export default function ServicosPage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(faqSchemaDe(asFaqs)) }}
       />
     </div>
   );

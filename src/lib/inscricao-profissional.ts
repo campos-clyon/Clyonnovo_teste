@@ -1,5 +1,8 @@
 import { GRUPOS_DE_SERVICOS, SERVICE_CATEGORIES, gruposDe, normalizarCategorias } from "./service-categories";
 import { destinoDosResiduosLimpo } from "./guia-de-residuos";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { ibanValido, normalizarIban } from "./iban";
+import { lerMbway } from "./mbway";
 
 /**
  * O que se pede a quem se quer inscrever como profissional.
@@ -116,6 +119,14 @@ export type DadosDeInscricao = {
   numeroTransportador: string | null;
   /** O operador licenciado onde descarrega o entulho (d5, 12-11-2026). Opcional. */
   destinoDosResiduos: string | null;
+  /**
+   * DESDE 15-11-2026 (d10): o IBAN (com o titular) e o MB WAY, para o cliente lhe
+   * pagar, obrigatórios; e o regime de IVA confirmado na inscrição. Antes, nulos.
+   */
+  iban: string | null;
+  ibanTitular: string | null;
+  mbway: string | null;
+  regimeConfirmado: boolean;
 };
 
 export type ResultadoDeInscricao =
@@ -245,9 +256,11 @@ export const MENSAGEM_SEM_SINAIS = {
   cidade: "A cidade não pode ter os sinais < nem >.",
 } as const;
 
-export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
+export function validarInscricao(corpo: unknown, agora: Date = new Date()): ResultadoDeInscricao {
   const erros: ErroDeInscricao[] = [];
   const c = (corpo ?? {}) as Record<string, unknown>;
+  // d10: a partir de 15-11-2026 cada parceiro fatura o seu trabalho e recebe do cliente.
+  const novo = novoModeloEmVigor(agora);
 
   const nome = texto(c.nome);
   if (nome.length < 3) {
@@ -295,7 +308,8 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
 
   // O NIF é opcional para quem não emite fatura, e obrigatório para quem
   // emite — sem ele não há fatura nenhuma, e a declaração ficava vazia.
-  const emiteFatura = c.emiteFatura === true;
+  // d10: desde 15-11-2026 não há «não emito fatura» — o trabalho é faturado por ele.
+  const emiteFatura = novo || c.emiteFatura === true;
   const nifBruto = texto(c.nif);
   let nif: string | null = null;
   if (nifBruto) {
@@ -385,6 +399,8 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
   }
   // O formato do código APA (APA + 8 algarismos) só AVISA no formulário: não se recusa aqui (d5).
   const destinoDosResiduos = emiteGuiaTransporte ? destinoDosResiduosLimpo(c.destinoDosResiduos) : null;
+  const paraReceber = dadosParaReceberDaInscricao(c, novo);
+  erros.push(...paraReceber.erros);
 
   if (erros.length > 0) return { ok: false, erros };
 
@@ -407,6 +423,34 @@ export function validarInscricao(corpo: unknown): ResultadoDeInscricao {
       emiteGuiaTransporte,
       numeroTransportador,
       destinoDosResiduos,
+      iban: paraReceber.iban,
+      ibanTitular: paraReceber.ibanTitular,
+      mbway: paraReceber.mbway,
+      regimeConfirmado: emiteFatura,
     },
   };
+}
+
+/**
+ * O IBAN, O TITULAR E O MB WAY DA INSCRIÇÃO — d10. Antes de 15-11-2026 não se
+ * pedem (ficam nulos, como sempre); depois, os três são obrigatórios: sem eles o
+ * cliente não tem para onde pagar.
+ */
+export function dadosParaReceberDaInscricao(
+  c: Record<string, unknown>,
+  novo: boolean,
+): { iban: string | null; ibanTitular: string | null; mbway: string | null; erros: ErroDeInscricao[] } {
+  const erros: ErroDeInscricao[] = [];
+  if (!novo) return { iban: null, ibanTitular: null, mbway: null, erros };
+  const ibanBruto = texto(c.iban);
+  const iban = ibanBruto && ibanValido(ibanBruto) ? normalizarIban(ibanBruto) : null;
+  if (!ibanBruto) erros.push({ campo: "iban", mensagem: "Indique o IBAN da conta onde o cliente lhe paga." });
+  else if (!iban) erros.push({ campo: "iban", mensagem: "IBAN inválido." });
+  const ibanTitular = texto(c.ibanTitular).slice(0, 120) || null;
+  if (!ibanTitular) erros.push({ campo: "ibanTitular", mensagem: "Indique o titular da conta." });
+  else if (temSinaisDeHtml(ibanTitular)) erros.push({ campo: "ibanTitular", mensagem: "O titular não pode ter sinais como < ou >." });
+  const m = lerMbway(texto(c.mbway));
+  if (!m.ok) erros.push({ campo: "mbway", mensagem: m.mensagem });
+  else if (!m.valor) erros.push({ campo: "mbway", mensagem: "Indique o número MB WAY onde o cliente lhe paga." });
+  return { iban, ibanTitular: ibanTitular && !temSinaisDeHtml(ibanTitular) ? ibanTitular : null, mbway: m.ok ? m.valor : null, erros };
 }

@@ -3,7 +3,7 @@
 import { AlertTriangle, ChevronRight, MinusCircle } from "lucide-react";
 import { CabecalhoDeEcra } from "@/components/portal/Portal";
 import {
-  PASSOS_DO_PROFISSIONAL,
+  passosDoProfissional,
   O_QUE_A_CLYON_NAO_FAZ,
 } from "@/lib/como-funciona-para-o-profissional";
 import type { Falta, SeccaoComFalta } from "@/lib/perfil-por-completar";
@@ -47,7 +47,7 @@ export default function ComoFunciona({
         </p>
 
         <ol className="mt-5 space-y-5">
-          {PASSOS_DO_PROFISSIONAL.map((passo, i) => {
+          {passosDoProfissional().map((passo, i) => {
             const emFalta = passo.seccao ? faltasDaSeccao(faltas, passo.seccao) : [];
             return (
               <li key={passo.chave} className="flex gap-3">

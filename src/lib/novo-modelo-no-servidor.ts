@@ -30,6 +30,36 @@ export type ImpedimentoDoNovoModelo = {
   };
 };
 
+/**
+ * ESTA NEGOCIAÇÃO SEGUE O MODELO DE 15-11? — para os textos de um trabalho (os
+ * emails, a página do parceiro). A mesma pergunta de `acesso-ao-pagamento.ts`:
+ * um pagamento à CLYON antes de 15-11, um trabalho que fechou antes, ou um
+ * Trabalho CLYON ficam no antigo. Antes da data devolve `false` sem ir à base.
+ */
+export async function segueONovoModelo(
+  n: {
+    id: number | string;
+    ofertaClyon?: unknown;
+    estado?: unknown;
+    execucaoEnviadaEm?: unknown;
+    provaJson?: unknown;
+    confirmadoEm?: unknown;
+    pagoEm?: unknown;
+  },
+  agora: Date = agoraDoModelo(),
+): Promise<boolean> {
+  if (!novoModeloEmVigor(agora)) return false;
+  const { pagamentosDaNegociacao } = await import("./pagamentos-na-base");
+  const { negociacaoNoNovoModelo } = await import("./taxa-a-passar-a-clyon");
+  const { quandoLiberta } = await import("./trabalho");
+  const pagamentos = await pagamentosDaNegociacao(Number(n.id));
+  return negociacaoNoNovoModelo(
+    { ofertaClyon: n.ofertaClyon, fechadoEm: quandoLiberta(n as Parameters<typeof quandoLiberta>[0]) },
+    pagamentos,
+    agora,
+  );
+}
+
 export async function impedimentoDoNovoModelo(
   providerId: number,
   agora: Date = agoraDoModelo(),

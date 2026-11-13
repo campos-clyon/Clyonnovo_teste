@@ -66,6 +66,11 @@ const NUM_TRABALHO_CLYON: ReadonlySet<TipoDeAvisoAoCliente> = new Set(["preco_cl
 
 const primeiroNome = (nome: string | null | undefined) => (nome ?? "").trim().split(/\s+/)[0] || "O parceiro";
 
+const PAGAMENTO_RECEBIDO_NO_MODELO_ANTIGO = (id: number | string) => ({
+  title: "Pagamento recebido",
+  body: `A CLYON recebeu o pagamento do pedido #${id}.`,
+});
+
 export function avisoAoCliente(
   tipo: TipoDeAvisoAoCliente,
   d: { pedidoId: number; nome?: string | null; dia?: Date | string | null; motivo?: string | null },
@@ -117,8 +122,9 @@ export function avisoAoCliente(
       return { title: "Trabalho confirmado", body: `O trabalho do pedido #${id} ficou confirmado. Pode avaliar ${nome}.` };
     case "referencia":
       return { title: "Referência de pagamento", body: `A referência do pedido #${id} está pronta. Toque para a ver.` };
+    // Só a quem pagou à CLYON: os trabalhos de antes de 15-11-2026 e os Trabalhos CLYON (d10).
     case "pago":
-      return { title: "Pagamento recebido", body: `A CLYON recebeu o pagamento do pedido #${id}.` };
+      return PAGAMENTO_RECEBIDO_NO_MODELO_ANTIGO(id);
     case "preco_clyon":
       return { title: "O preço do seu pedido", body: `A CLYON enviou o preço do pedido #${id}. Toque para ver e responder.` };
     case "dia_pela_clyon": {

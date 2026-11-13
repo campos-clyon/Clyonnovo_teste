@@ -75,6 +75,7 @@ export default function NegociacaoProfissional({
   taxas,
   formaDePagamento = null,
   criadaEm = null,
+  novoModelo = false,
   ofertaClyon = null,
   cancelada = false,
   base = "total",
@@ -120,6 +121,8 @@ export default function NegociacaoProfissional({
    * comissão; antes do corte, o de sempre.
    */
   criadaEm?: string | null;
+  /** O modelo de 15-11-2026 (d10): o cliente paga ao parceiro. O servidor decide. */
+  novoModelo?: boolean;
   /**
    * UM TRABALHO CLYON DE VALOR FIXO — 02-10-2026. Nulo = um pedido como os
    * outros. Com ele, o ecrã é outro: o valor fixo e «Aceitar» ou «Recusar»,
@@ -312,7 +315,7 @@ export default function NegociacaoProfissional({
    * dinheiro, «Fechado em 112,80 €, já com a taxa descontada» a quem vai
    * receber 120,00 € em mão.
    */
-  const promessa = promessaDaForma(formaDePagamento, modeloDaNegociacao(criadaEm));
+  const promessa = promessaDaForma(formaDePagamento, modeloDaNegociacao(criadaEm), novoModelo);
 
   if (negociacao.estado === "acordada") {
     return (

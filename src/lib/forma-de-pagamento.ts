@@ -176,16 +176,18 @@ export function excedeONumerario(valorEmNumerario: number | null | undefined): b
  * notas de outra maneira do que um já pago. O cliente lê-o ao escolher e outra
  * vez ao fechar.
  */
+/** O pagamento à CLYON — só nos trabalhos de antes de 15-11-2026 e nos Trabalhos CLYON (d10). */
+const NA_PLATAFORMA_NO_MODELO_ANTIGO = {
+  curta: "Pagamento pela plataforma",
+  cliente: "Recebe uma referência MB WAY ou Multibanco depois de fechar. O valor fica combinado por escrito.",
+  profissional: "O cliente paga pela plataforma. Recebe o líquido, já com a taxa da plataforma descontada.",
+};
+
 export const FORMA_EM_PALAVRAS: Record<
   FormaDePagamento,
   { curta: string; cliente: string; profissional: string }
 > = {
-  na_plataforma: {
-    curta: "Pagamento pela plataforma",
-    cliente:
-      "Recebe uma referência MB WAY ou Multibanco depois de fechar. O valor fica combinado por escrito.",
-    profissional: "O cliente paga pela plataforma. Recebe o líquido, já com a taxa da plataforma descontada.",
-  },
+  na_plataforma: NA_PLATAFORMA_NO_MODELO_ANTIGO,
   /*
    * EM DINHEIRO, DESDE O IVA INCLUÍDO — 01-10-2026.
    *

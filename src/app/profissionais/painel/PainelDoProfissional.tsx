@@ -72,6 +72,7 @@ import {
   type AvisoDoProfissional,
 } from "@/lib/avisos-do-profissional";
 import { dataEHora } from "@/lib/historico-negociacao";
+import { ROTULOS_DA_CARTEIRA } from "@/lib/rotulos-da-carteira";
 
 /**
  * O SINO GUARDA-SE NO APARELHO (d13, 13-11-2026): o que ficou lido e a
@@ -880,7 +881,7 @@ function PainelNoBrowser() {
           }
           destaque={
             carteira && carteira.carteira.disponivel === 0 && carteira.carteira.cativo > 0
-              ? `${euros(carteira.carteira.cativo)} cativo`
+              ? `${euros(carteira.carteira.cativo)} ${ROTULOS_DA_CARTEIRA.aEsperaDaConfirmacao.rotulo.toLowerCase()}`
               : carteira && carteira.carteira.disponivel === 0
                 ? "0,00 €"
                 : undefined
