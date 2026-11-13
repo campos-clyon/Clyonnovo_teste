@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, KeyRound, Loader2, Smartphone } from "lucide-react";
 import { MINIMO_DA_PALAVRA_PASSE } from "@/lib/palavra-passe-minima";
 import { abrirNaAppNoAndroid } from "@/lib/links-da-app";
+import { TEXTOS_DA_ACEITACAO, VERSAO_DOS_TERMOS } from "@/lib/aceitacao-dos-termos";
 
 /**
  * Criar a palavra-passe a partir do link do email.
@@ -13,10 +14,12 @@ import { abrirNaAppNoAndroid } from "@/lib/links-da-app";
  * digitação num campo mascarado — e havendo o botão de a mostrar, o segundo
  * campo passa a ser só mais uma coisa para preencher.
  */
-export default function DefinirSenhaForm({ token }: { token: string }) {
+export default function DefinirSenhaForm({ token, pedirTermos = false }: { token: string; pedirTermos?: boolean }) {
   const router = useRouter();
   const [palavraPasse, setPalavraPasse] = useState("");
   const [visivel, setVisivel] = useState(false);
+  // d20: a caixa dos Termos — nunca vem marcada.
+  const [aceitaTermos, setAceitaTermos] = useState(false);
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
   // O caso mais comum de um 403 aqui é a própria pessoa a reabrir o email
@@ -42,7 +45,11 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
       const res = await fetch("/api/profissionais/definir-senha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, palavraPasse }),
+        body: JSON.stringify({
+          token,
+          palavraPasse,
+          ...(pedirTermos && aceitaTermos ? { aceitaTermos: VERSAO_DOS_TERMOS } : {}),
+        }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -129,6 +136,29 @@ export default function DefinirSenhaForm({ token }: { token: string }) {
               do que uma palavra com símbolos.
             </p>
           </div>
+
+          {pedirTermos && (
+            <label className="flex items-start gap-3 text-sm leading-relaxed text-slate-700">
+              <input
+                type="checkbox"
+                checked={aceitaTermos}
+                onChange={(e) => setAceitaTermos(e.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-cyan-700"
+              />
+              <span>
+                Li e aceito os{" "}
+                <a
+                  href={TEXTOS_DA_ACEITACAO.url}
+                  target="_blank"
+                  rel="noopener"
+                  className="font-semibold text-cyan-700 underline underline-offset-4"
+                >
+                  Termos da CLYON
+                </a>
+                {TEXTOS_DA_ACEITACAO.caixaDaPalavraPasse.split("Termos da CLYON")[1]}
+              </span>
+            </label>
+          )}
 
           {erro && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

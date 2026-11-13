@@ -13,6 +13,10 @@ import {
   DURACAO_SESSAO_SEGUNDOS,
 } from "@/lib/profissional-auth";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { eAVersaoEmVigor } from "@/lib/aceitacao-dos-termos";
+import { gravarAceitacao } from "@/lib/aceitacao-dos-termos-na-base";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export const runtime = "nodejs";
 
@@ -30,7 +34,7 @@ export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "profissional-definir-senha", 10, 600);
   if (limite.erro) return limite.erro;
 
-  let corpo: { token?: unknown; palavraPasse?: unknown; paraApp?: unknown };
+  let corpo: { token?: unknown; palavraPasse?: unknown; paraApp?: unknown; aceitaTermos?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -97,6 +101,20 @@ export async function POST(req: NextRequest) {
       linha.id,
       await hashDaPalavraPasse(corpo.palavraPasse as string),
     );
+
+    /*
+     * A ACEITAÇÃO DOS TERMOS — d20 (13-11-2026). A caixa vem por baixo da
+     * palavra-passe, nunca marcada; marcada, `aceitaTermos` traz a versão que
+     * ele viu. Só se grava a partir da data e só a versão em vigor. NÃO É
+     * CONDIÇÃO: sem ela, a palavra-passe guarda-se na mesma e o painel volta a
+     * pedir (o bloqueio está por confirmar — `aceitacao-dos-termos.ts`). Uma
+     * falha a gravar não estraga a entrada.
+     */
+    if (eAVersaoEmVigor(corpo.aceitaTermos) && novoModeloEmVigor(agoraDoModelo())) {
+      await gravarAceitacao(linha.id, corpo.paraApp === true ? "app" : "definir-senha", new Date()).catch((e) =>
+        console.error("[profissionais/definir-senha] aceitação dos Termos:", e),
+      );
+    }
 
     /*
      * Aqui fica lembrado sem perguntar: quem acabou de definir a

@@ -33,17 +33,60 @@ export function taxaAPassarAClyon(
   };
 }
 
-type PagamentoParaOCorte = { estado: string; pagoEm?: Date | string | null };
+type PagamentoParaOCorte = {
+  estado: string;
+  pagoEm?: Date | string | null;
+  /** Quando a referência foi emitida (a linha de `pagamentos` nasceu). */
+  criadoEm?: Date | string | null;
+  metodo?: string | null;
+  /** «divida» é a referência do profissional, nunca a do cliente (`parte-do-pagamento.ts`). */
+  parte?: string | null;
+  /** O prazo da referência, quando o euPago o deu. */
+  expiraEm?: Date | string | null;
+};
+
+function comoData(v: unknown): Date | null {
+  if (v == null || v === "") return null;
+  const d = v instanceof Date ? v : new Date(String(v));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * A REFERÊNCIA MULTIBANCO EMITIDA AO CLIENTE ANTES DE 15-11 — d20 (CEO e dono,
+ * 13-11-2026). Paga dentro do prazo dela, mesmo depois da data, conta como paga
+ * à CLYON antes do corte: o cliente recebeu-a no modelo antigo e pagou-a como
+ * lhe foi pedida. Uma que caducou sem ser paga não conta (não está «pago»). Só a
+ * do cliente: a «divida» é do profissional. Um MB WAY dura minutos e não entra
+ * aqui (ver o relatório do Jurídico, §4 n.º 5).
+ */
+export function referenciaEmitidaAntesDoCorte(p: PagamentoParaOCorte): boolean {
+  if (p.estado !== "pago") return false;
+  if (p.metodo !== "multibanco") return false;
+  if (p.parte === "divida") return false;
+  const criada = comoData(p.criadoEm);
+  if (!criada || criada.getTime() >= NOVO_MODELO_DESDE.getTime()) return false;
+  const pago = comoData(p.pagoEm);
+  const expira = comoData(p.expiraEm);
+  // Paga depois do prazo que a referência dizia não é «dentro do prazo».
+  if (pago && expira && pago.getTime() > expira.getTime()) return false;
+  return true;
+}
 
 /**
  * Quando é que alguém pagou esta negociação à CLYON ANTES de 15-11 (a caução do
  * cliente, o total, ou o valor do dinheiro do regime anterior) — ou `null`.
+ * Conta também a referência Multibanco emitida antes da data e paga depois,
+ * dentro do prazo (`referenciaEmitidaAntesDoCorte`, d20). É a ÚNICA regra do
+ * corte com os pagamentos lidos: a carteira, o acesso ao pagamento e os textos
+ * de um trabalho perguntam todos aqui.
  */
 export function pagoAClyonAntesDoCorte(pagamentos: ReadonlyArray<PagamentoParaOCorte>): Date | null {
   for (const p of pagamentos) {
     if (p.estado !== "pago" || p.pagoEm == null) continue;
-    const d = p.pagoEm instanceof Date ? p.pagoEm : new Date(String(p.pagoEm));
-    if (!Number.isNaN(d.getTime()) && d.getTime() < NOVO_MODELO_DESDE.getTime()) return d;
+    const d = comoData(p.pagoEm);
+    if (!d) continue;
+    if (d.getTime() < NOVO_MODELO_DESDE.getTime()) return d;
+    if (referenciaEmitidaAntesDoCorte(p)) return d;
   }
   return null;
 }

@@ -6,7 +6,8 @@ import { pagoAoProfissionalRegistado } from "./pago-em-mao";
 import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
 import type { MarcaDaParte } from "./cobrancas-ao-profissional";
 import { quandoLiberta } from "./trabalho";
-import { NOVO_MODELO_DESDE, eDoNovoModelo, novoModeloEmVigor } from "./novo-modelo";
+import { eDoNovoModelo, novoModeloEmVigor } from "./novo-modelo";
+import { pagoAClyonAntesDoCorte } from "./taxa-a-passar-a-clyon";
 import { agoraDoModelo } from "./relogio-do-modelo";
 
 type LinhaAVerificar = { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown };
@@ -192,7 +193,9 @@ export async function trabalhosDaCarteira(
     let noNovoModelo = false;
     if (vale) {
       const p = pagos.get(Number(l.id)) ?? null;
-      const pagoAntes = p && new Date(p.pagoEm).getTime() < NOVO_MODELO_DESDE.getTime() ? p.pagoEm : null;
+      // A regra do corte é uma só (`pagoAClyonAntesDoCorte`): pago antes de 15-11, ou
+      // por uma referência Multibanco emitida antes e paga dentro do prazo (d20).
+      const pagoAntes = p ? pagoAClyonAntesDoCorte([{ ...p, estado: "pago" }]) : null;
       const emMao = p != null && pagoAoProfissionalRegistado(l.formaDePagamento, p.metodo);
       noNovoModelo =
         !emMao &&

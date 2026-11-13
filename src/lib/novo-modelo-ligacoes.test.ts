@@ -5,7 +5,7 @@ import { dividasDe, foiPagoEmMao, type TrabalhoNaCarteira } from "./carteira";
 import { camposDoPagamento } from "./carteira-do-profissional";
 import { bloqueioEmDinheiro, standByDoNovoModelo } from "./bloqueio-por-divida";
 import { quantoSePedeNesteTrabalho } from "./eupago";
-import { taxaAPassarAClyon, negociacaoNoNovoModelo } from "./taxa-a-passar-a-clyon";
+import { taxaAPassarAClyon, negociacaoNoNovoModelo, pagoAClyonAntesDoCorte } from "./taxa-a-passar-a-clyon";
 import { novoModeloNaVista } from "./negociacao-na-vista";
 import { PAGAR_O_VALOR_EM_ATRASO } from "./valor-em-atraso";
 
@@ -75,10 +75,52 @@ describe("a carteira no modelo novo", () => {
 describe("o corte, com os pagamentos lidos", () => {
   it("pago à CLYON antes de 15-11 fica no antigo; pago depois (o parceiro) não conta", () => {
     expect(negociacaoNoNovoModelo({}, [{ estado: "pago", pagoEm: "2026-11-10T10:00:00Z" }], DIA_16)).toBe(false);
+    // Uma referência nascida depois da data é a do parceiro (a taxa): não conta.
+    expect(
+      negociacaoNoNovoModelo({}, [{ estado: "pago", pagoEm: "2026-11-17T10:00:00Z", criadoEm: "2026-11-16T10:00:00Z", metodo: "multibanco" }], DIA_16),
+    ).toBe(true);
     expect(negociacaoNoNovoModelo({}, [{ estado: "pago", pagoEm: "2026-11-17T10:00:00Z" }], DIA_16)).toBe(true);
     expect(negociacaoNoNovoModelo({}, [{ estado: "pendente", pagoEm: null }], DIA_16)).toBe(true);
     expect(negociacaoNoNovoModelo({}, [], HOJE)).toBe(false);
     expect(negociacaoNoNovoModelo({ ofertaClyon: "valor_fixo" }, [], DIA_16)).toBe(false);
+  });
+});
+
+describe("a referência Multibanco emitida ao cliente antes de 15-11 (d20)", () => {
+  const DIA_17 = new Date("2026-11-17T10:00:00Z");
+  const ref = {
+    estado: "pago",
+    metodo: "multibanco",
+    parte: "trabalho",
+    criadoEm: "2026-11-14T18:00:00Z",
+    pagoEm: "2026-11-16T09:30:00Z",
+    expiraEm: "2026-11-18T23:59:59Z",
+  };
+
+  it("emitida a 14-11 e paga a 16-11, dentro do prazo: fica no modelo antigo", () => {
+    expect(pagoAClyonAntesDoCorte([ref])).toEqual(new Date("2026-11-16T09:30:00Z"));
+    expect(negociacaoNoNovoModelo({}, [ref], DIA_17)).toBe(false);
+  });
+
+  it("emitida a 14-11 e caducada sem ser paga: modelo novo", () => {
+    expect(negociacaoNoNovoModelo({}, [{ ...ref, estado: "expirado", pagoEm: null }], DIA_17)).toBe(true);
+    expect(negociacaoNoNovoModelo({}, [{ ...ref, estado: "pendente", pagoEm: null }], DIA_17)).toBe(true);
+  });
+
+  it("paga depois do prazo que tinha, emitida a 15-11, por MB WAY ou a do parceiro: não conta", () => {
+    expect(negociacaoNoNovoModelo({}, [{ ...ref, pagoEm: "2026-11-19T10:00:00Z" }], new Date("2026-11-20T10:00:00Z"))).toBe(true);
+    expect(negociacaoNoNovoModelo({}, [{ ...ref, criadoEm: "2026-11-15T00:00:00Z" }], DIA_17)).toBe(true);
+    expect(negociacaoNoNovoModelo({}, [{ ...ref, metodo: "mbway" }], DIA_17)).toBe(true);
+    expect(negociacaoNoNovoModelo({}, [{ ...ref, parte: "divida" }], DIA_17)).toBe(true);
+  });
+
+  it("uma só regra: a carteira, o acesso ao pagamento e os textos de um trabalho perguntam a pagoAClyonAntesDoCorte", () => {
+    expect(ler("src/lib/carteira-do-profissional.ts")).toContain("pagoAClyonAntesDoCorte([{ ...p, estado: \"pago\" }])");
+    expect(ler("src/lib/carteira-do-profissional.ts")).not.toContain("NOVO_MODELO_DESDE");
+    expect(ler("src/lib/acesso-ao-pagamento.ts")).toContain("negociacaoNoNovoModelo(");
+    expect(ler("src/lib/novo-modelo-no-servidor.ts")).toContain("negociacaoNoNovoModelo(");
+    // A carteira lê da base o que a regra precisa.
+    expect(ler("src/lib/pagamentos-na-base.ts")).toContain("criadoEm, expiraEm, parte");
   });
 });
 

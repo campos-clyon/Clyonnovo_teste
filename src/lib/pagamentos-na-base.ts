@@ -1034,6 +1034,13 @@ export type PagamentoQueFecha = {
   valor: number;
   levantamentoId: number | null;
   /**
+   * PARA O CORTE DE 15-11 (d20): quando a referência foi emitida, o prazo dela
+   * e de que conta é. Ver `pagoAClyonAntesDoCorte` em `taxa-a-passar-a-clyon.ts`.
+   */
+  criadoEm?: Date | null;
+  expiraEm?: Date | null;
+  parte?: string | null;
+  /**
    * PAGO AO PROFISSIONAL, EM MÃO — 01-11-2026: a taxa que ele devia, paga com
    * o saldo dele. Não fecha a negociação (essa já está fechada pelo registo
    * `ao_profissional`), por isso vive numa linha `abatimento` com
@@ -1070,7 +1077,8 @@ export async function negociacoesPagasComDetalhe(
   if (!pool) throw new Error("DB not available");
 
   const [linhas] = (await pool.execute(
-    `SELECT negociacaoPaga AS negociacaoId, pagoEm, metodo, valor, valorPago, levantamentoId
+    `SELECT negociacaoPaga AS negociacaoId, pagoEm, metodo, valor, valorPago, levantamentoId,
+            criadoEm, expiraEm, parte
        FROM pagamentos
       WHERE negociacaoPaga IN (${ids.map(() => "?").join(", ")})`,
     ids,
@@ -1085,6 +1093,9 @@ export async function negociacoesPagasComDetalhe(
       metodo: String(l.metodo ?? ""),
       valor: numero(l.valorPago) ?? numero(l.valor) ?? 0,
       levantamentoId: l.levantamentoId != null ? Number(l.levantamentoId) : null,
+      criadoEm: (l.criadoEm as Date | null) ?? null,
+      expiraEm: (l.expiraEm as Date | null) ?? null,
+      parte: l.parte != null ? String(l.parte) : null,
     });
   }
 

@@ -29,6 +29,17 @@ export const NOVO_MODELO_DESDE = new Date("2026-11-15T00:00:00Z");
 /** Como os Termos a dizem. Um teste confere que bate com a data de cima. */
 export const NOVO_MODELO_DESDE_POR_EXTENSO = "15 de novembro de 2026";
 
+/**
+ * A VERSÃO DOS TERMOS E DA PRIVACIDADE DO MODELO NOVO — d20 (CEO e dono,
+ * 13-11-2026). Nasce da data única do modelo: a página mostra-a no topo, a caixa
+ * de aceitação di-la, e é ela que se grava quando o parceiro aceita. Um teste
+ * confere que as três são a mesma.
+ */
+export const VERSAO_DOS_TERMOS = NOVO_MODELO_DESDE.toISOString().slice(0, 10);
+
+/** Como a página e a caixa a dizem. */
+export const VERSAO_DOS_TERMOS_POR_EXTENSO = NOVO_MODELO_DESDE_POR_EXTENSO;
+
 /** O nome que os textos do Jurídico usam (exec-d10-juridico, §0). */
 export const PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO = NOVO_MODELO_DESDE_POR_EXTENSO;
 

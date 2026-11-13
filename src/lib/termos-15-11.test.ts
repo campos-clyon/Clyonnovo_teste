@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
-import { NOVO_MODELO_DESDE_POR_EXTENSO } from "./novo-modelo";
+import { NOVO_MODELO_DESDE_POR_EXTENSO, VERSAO_DOS_TERMOS_POR_EXTENSO } from "./novo-modelo";
 
 /**
  * OS TERMOS E A PRIVACIDADE DE 15-11-2026 — d10 (Jurídico; CEO e dono).
@@ -55,6 +55,8 @@ describe("os Termos e a Privacidade nos dois lados de 15-11-2026", () => {
     const t = texto(html);
     expect(t).toContain("Última atualização: 12 de novembro de 2026.");
     expect(html).not.toContain("data-regras-anteriores");
+    expect(t).not.toContain("Versão de");
+    expect(t).not.toContain("Aceitação destas condições");
     for (const novo of ["Em vigor desde", "valor em atraso", "Stand-by", "Paga diretamente ao parceiro", "duas faturas"]) {
       expect(t, novo).not.toContain(novo);
     }
@@ -68,6 +70,16 @@ describe("os Termos e a Privacidade nos dois lados de 15-11-2026", () => {
     const html = await termos();
     const t = texto(html);
     expect(t).toContain(`Em vigor desde ${NOVO_MODELO_DESDE_POR_EXTENSO}`);
+    // d20: a versão de 15-11 no topo, a mesma que a caixa de aceitação grava.
+    expect(t).toContain(`Versão de ${VERSAO_DOS_TERMOS_POR_EXTENSO}.`);
+    // d20: a referência Multibanco emitida antes da data e paga antes de expirar fica nas regras anteriores.
+    expect(t).toContain("cuja referência Multibanco da CLYON foi emitida antes dela e é paga antes de a referência expirar");
+    expect(t).toContain("incluindo os pagos depois por uma referência Multibanco emitida antes dela");
+    expect(t).toContain("Aceitação destas condições.");
+    // Os [A CONFIRMAR] do Jurídico (d20, §4) não vão para o texto público.
+    expect(t).not.toContain("A CONFIRMAR");
+    expect(t).not.toContain("paga no fim do trabalho");
+    expect(t).not.toContain("Enquanto não aceitar");
     expect(t).toContain("Paga diretamente ao parceiro que contratou.");
     expect(t).toContain("Cada trabalho tem duas faturas");
     expect(t).toContain("valor em atraso");
@@ -96,6 +108,9 @@ describe("os Termos e a Privacidade nos dois lados de 15-11-2026", () => {
     agora = new Date("2026-11-15T09:00:00Z");
     const depois = texto(await privacidade());
     expect(depois).toContain(`Em vigor desde ${NOVO_MODELO_DESDE_POR_EXTENSO}`);
+    expect(depois).toContain(`Versão de ${VERSAO_DOS_TERMOS_POR_EXTENSO}.`);
+    expect(depois).toContain("Aceitação dos Termos:");
+    expect(antes).not.toContain("Aceitação dos Termos");
     expect(depois).toContain("Pagamento ao parceiro:");
     expect(depois).toContain("O cliente que contrata um parceiro");
     expect(depois).toContain("com que os parceiros pagam a taxa da plataforma");

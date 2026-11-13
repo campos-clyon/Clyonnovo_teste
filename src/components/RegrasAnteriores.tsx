@@ -16,7 +16,8 @@ import { NOVO_MODELO_DESDE_POR_EXTENSO } from "@/lib/novo-modelo";
  */
 export const TITULO_DAS_REGRAS_ANTIGAS =
   `Regras anteriores a ${NOVO_MODELO_DESDE_POR_EXTENSO} — valem só para os trabalhos já pagos à CLYON antes ` +
-  "dessa data, para os que nessa data já estavam concluídos e para os trabalhos de valor fixo combinados com a CLYON.";
+  "dessa data (incluindo os pagos depois por uma referência Multibanco emitida antes dela), para os que nessa " +
+  "data já estavam concluídos e para os trabalhos de valor fixo combinados com a CLYON.";
 
 export function RegrasAnteriores({ emCaixa, children }: { emCaixa: boolean; children: ReactNode }) {
   if (!emCaixa) return <>{children}</>;

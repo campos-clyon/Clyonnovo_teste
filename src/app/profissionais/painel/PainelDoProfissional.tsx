@@ -39,6 +39,7 @@ import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./t
 import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
 import ConviteDaAppPro from "./ConviteDaAppPro";
+import AceitarOsTermos from "./AceitarOsTermos";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PrecosDasMudancas from "./PrecosDasMudancas";
 import FichaNoGoogle from "./FichaNoGoogle";
@@ -1001,6 +1002,9 @@ function PainelNoBrowser() {
 
   return (
     <main className="mx-auto w-full max-w-6xl gap-8 px-4 pb-16 pt-4 sm:px-6 sm:pt-8 lg:flex lg:items-start">
+      {/* d20: a aceitação dos Termos de 15-11, no primeiro acesso depois da data — AceitarOsTermos.tsx. */}
+      <AceitarOsTermos />
+
       {/* ── O menu ────────────────────────────────────────────────────────── */}
       <div className={`w-full lg:w-80 lg:shrink-0 ${noMenu ? "" : "hidden lg:block"}`}>
         {menu}

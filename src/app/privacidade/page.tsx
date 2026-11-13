@@ -23,7 +23,11 @@ import { TEXTOS_DOS_PRECOS_DAS_MUDANCAS } from "@/lib/precos-das-mudancas-do-pro
  * pagos à CLYON antes da data (`RegrasAnteriores` e as frases «nos trabalhos
  * pagos à CLYON antes de…»). `termos-15-11.test.ts` desenha os dois lados.
  */
-import { PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "@/lib/novo-modelo";
+import {
+  PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO,
+  VERSAO_DOS_TERMOS_POR_EXTENSO,
+  novoModeloEmVigor,
+} from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 /** O modelo de 15-11 muda o texto pela data: a página relê-se de hora a hora. */
@@ -64,7 +68,8 @@ export default function PrivacidadePage() {
           </p>
           {novo ? (
             <p className="mt-3 text-sm text-slate-500">
-              Em vigor desde {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}.
+              Versão de {VERSAO_DOS_TERMOS_POR_EXTENSO}. Em vigor desde{" "}
+              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}.
             </p>
           ) : (
           <p className="mt-3 text-sm text-slate-500">
@@ -333,7 +338,9 @@ export default function PrivacidadePage() {
                         base que mostramos o IBAN e o número MB WAY do parceiro ao cliente
                         que o contratou (e só a ele), para que o parceiro receba o
                         pagamento do trabalho que aceitou, e que passamos ao parceiro o
-                        nome e o NIF do cliente para a fatura.
+                        nome e o NIF do cliente para a fatura. É também nesta base que
+                        guardamos a aceitação dos Termos pelo parceiro (data, hora e
+                        versão).
                       </>
                     ) : (
                       " o serviço de recolha ou esvaziamento."
@@ -573,6 +580,10 @@ export default function PrivacidadePage() {
                         enquanto a conta do parceiro existir. O cliente vê-os só na página
                         do pedido que contratou.
                       </li>
+                      <li>
+                        <strong>Aceitação dos Termos pelo parceiro:</strong> enquanto a
+                        conta existir.
+                      </li>
                     </>
                   )}
                   <li>
@@ -774,6 +785,13 @@ export default function PrivacidadePage() {
                       pedido (com os dados do cliente que ela tiver), o valor em atraso de
                       cada trabalho, as referências do euPago e o pagamento confirmado, e se
                       a conta está em stand-by.
+                    </li>
+                  )}
+                  {novo && (
+                    <li>
+                      <strong>Aceitação dos Termos:</strong> a data e a hora em que aceitou
+                      os Termos e a versão que aceitou, e de onde o fez (painel ou app).
+                      Servem para provar o que foi acordado consigo.
                     </li>
                   )}
                   <li>

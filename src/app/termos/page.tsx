@@ -71,6 +71,7 @@ import {
   DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO,
   IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
   PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO,
+  VERSAO_DOS_TERMOS_POR_EXTENSO,
   novoModeloEmVigor,
 } from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
@@ -159,11 +160,14 @@ export default async function TermosPage() {
               «verificado», a ordem da lista e a guia de resíduos). */}
           {novo ? (
             <p className="mt-3 text-sm text-slate-500">
-              Em vigor desde {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}: é a partir desse
-              dia que valem as regras de pagamento e de faturação dos pontos 6, 7,
-              7-A e 10. Os trabalhos já pagos à CLYON antes dessa data, os que nessa
-              data já estavam concluídos e os trabalhos de valor fixo combinados com
-              a CLYON continuam com as regras anteriores, até ao fim; essas regras
+              Versão de {VERSAO_DOS_TERMOS_POR_EXTENSO}. Em vigor desde{" "}
+              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}: é a partir desse dia que
+              valem as regras de pagamento e de faturação dos pontos 6, 7, 7-A e 10.
+              Os trabalhos já pagos à CLYON antes dessa data, os que nessa data já
+              estavam concluídos e os trabalhos de valor fixo combinados com a CLYON
+              continuam com as regras anteriores, até ao fim. Conta também como pago
+              antes dessa data o trabalho cuja referência Multibanco da CLYON foi
+              emitida antes dela e é paga antes de a referência expirar. Essas regras
               mantêm-se escritas nesses pontos.
             </p>
           ) : (
@@ -586,8 +590,9 @@ export default async function TermosPage() {
                 Paga o preço total da proposta (ponto 6), que já inclui a taxa da
                 plataforma e o IVA. Não paga nada à parte: a taxa da plataforma
                 recebe-a o parceiro consigo, por conta da CLYON, e entrega-a
-                depois à CLYON. O momento do pagamento combina-o com o parceiro;
-                se nada combinarem, paga no fim do trabalho.
+                depois à CLYON. O momento do pagamento combina-o com o parceiro.
+                Se pagar alguma coisa antes do trabalho, peça ao parceiro o recibo
+                ou a fatura desse valor.
               </p>
               <p>
                 <strong>
@@ -606,6 +611,20 @@ export default async function TermosPage() {
                 A CLYON não recebe, não guarda e não devolve o valor do trabalho.
                 Guarde o comprovativo da transferência ou do MB WAY; no pagamento
                 em dinheiro, a fatura do parceiro é o seu comprovativo.
+              </p>
+              <p>
+                <strong>
+                  Trabalhos acordados antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}.
+                </strong>{" "}
+                Se aceitou uma proposta antes dessa data e ainda não pagou nada à
+                CLYON, o trabalho passa a seguir estas regras: paga diretamente ao
+                parceiro, e a página do pedido mostra-lhe os dados dele. O preço
+                total que aceitou não sobe; se o parceiro estiver isento de IVA,
+                desce, e a página mostra o valor certo. Se já tinha uma referência
+                Multibanco da CLYON emitida antes dessa data, pode pagá-la até à data
+                que ela indica, e o trabalho continua com as regras
+                anteriores, na caixa abaixo. Não pague as duas coisas: ou a
+                referência da CLYON, ou o parceiro.
               </p>
             </>
           )}
@@ -740,9 +759,11 @@ export default async function TermosPage() {
             </strong>
             {novo ? (
               <>
-                {" "}— e, nos trabalhos já pagos à CLYON antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}, o valor é
-                entregue ao parceiro. Se alguma coisa estiver mal, fale connosco
-                antes disso.
+                {" "}— e, nos trabalhos que seguem as regras anteriores (já pagos à
+                CLYON), o valor é entregue ao parceiro. Se alguma coisa estiver mal,
+                fale connosco antes disso. A confirmação, por si ou por este prazo, é
+                também o momento em que a taxa da plataforma passa a ser devida pelo
+                parceiro à CLYON (ponto 10); não muda nada no que paga.
               </>
             ) : (
               <>
@@ -869,11 +890,13 @@ export default async function TermosPage() {
                 da plataforma (ponto 6; nas mudanças com a lista, a do ponto 5-A) e
                 o IVA dela estão incluídos no preço que o cliente lhe paga e
                 pertencem à CLYON: recebe-os do cliente por conta da CLYON e
-                entrega-os à CLYON. Quando o trabalho fecha, esse valor fica na sua
-                conta como <strong>valor em atraso</strong>, com uma referência
-                Multibanco ou um pedido MB WAY, gerados pelo euPago, para o pagar.
-                Tem {DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias para o pagar, e o
-                pagamento conta quando o euPago o confirmar.
+                entrega-os à CLYON. Quando o trabalho fica confirmado (pelo
+                cliente, ou pelo prazo do ponto 8), esse valor fica na sua conta
+                como <strong>valor em atraso</strong>, com uma referência Multibanco
+                ou um pedido MB WAY, gerados pelo euPago, para o pagar. Tem{" "}
+                {DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias, contados dessa
+                confirmação, para o pagar, e o pagamento conta quando o euPago o
+                confirmar.
               </p>
               <p>
                 <strong>Stand-by.</strong> Se passarem{" "}
@@ -884,6 +907,27 @@ export default async function TermosPage() {
                 Os trabalhos que já tem contratados continuam a ser seus e pode
                 terminá-los. Assim que o euPago confirmar o pagamento, a conta volta
                 ao normal sozinha, sem precisar de nos pedir nada.
+              </p>
+              <p>
+                <strong>
+                  Trabalhos acordados antes de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}.
+                </strong>{" "}
+                Os que o cliente já tinha pago à CLYON — incluindo os pagos depois
+                por uma referência Multibanco emitida antes dessa data —, os que já
+                estavam concluídos e os de valor fixo combinados com a CLYON seguem
+                as regras anteriores, na caixa abaixo: recebe através da CLYON. Os
+                outros passam a estas regras: o cliente paga-lhe diretamente e passa
+                à CLYON a taxa da plataforma e o IVA dela. Na página de cada
+                trabalho vê por que regras ele segue.
+              </p>
+              <p>
+                <strong>Aceitação destas condições.</strong> Pedimos-lhe que aceite
+                estes Termos na versão em vigor, com uma caixa que marca, nunca
+                pré-marcada: ao criar a palavra-passe, se for aprovado a partir de{" "}
+                {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}; e no primeiro acesso ao
+                painel ou à app CLYON Pro depois dessa data, se já tinha conta.
+                Guardamos a data e a hora em que aceitou e a versão que aceitou (a do
+                topo desta página).
               </p>
             </>
           )}
@@ -1017,6 +1061,13 @@ export default async function TermosPage() {
               engano, escreva-nos para {IDENTIFICACAO.email}.
             </p>
           )}
+          {novo && (
+            <p>
+              Não aceitar uma versão nova destes Termos também não é um
+              encerramento: a conta continua sua, e pode encerrá-la sem custo se
+              não concordar (ponto 16).
+            </p>
+          )}
         </S>
 
         <S id="responsabilidade" titulo="13. Responsabilidade">
@@ -1101,11 +1152,21 @@ export default async function TermosPage() {
         </S>
 
         <S id="alteracoes" titulo="16. Alterações a estes termos">
+          {novo ? (
+            <p>
+              Podemos alterar estes termos. Se a alteração for relevante, avisamos
+              com pelo menos 30 dias de antecedência por email ou na plataforma;
+              aos parceiros, avisamos sempre num suporte que possam guardar (email,
+              com o texto novo) e nunca com menos de 15 dias. Se não concordar, pode
+              encerrar a conta sem custo, a qualquer momento durante o aviso.
+            </p>
+          ) : (
           <p>
             Podemos alterar estes termos. Se a alteração for relevante,
             avisamos com pelo menos 30 dias de antecedência por email ou na
             plataforma. Se não concordar, pode encerrar a conta sem custo.
           </p>
+          )}
           <p>
             As alterações não se aplicam retroactivamente a trabalhos já
             fechados.
@@ -1114,9 +1175,10 @@ export default async function TermosPage() {
             <p>
               As regras de pagamento de {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO} valem para os trabalhos que não
               estavam pagos à CLYON nem concluídos nessa data. Os trabalhos já
-              pagos à CLYON antes dela, os já concluídos e os de valor fixo
-              combinados com a CLYON continuam, até ao fim, com as regras com que
-              foram contratados.
+              pagos à CLYON antes dela — incluindo os pagos depois por uma
+              referência Multibanco emitida antes dela —, os já concluídos e os de
+              valor fixo combinados com a CLYON continuam, até ao fim, com as
+              regras com que foram acordados.
             </p>
           )}
         </S>
