@@ -3,20 +3,10 @@ import { CABECALHO_DO_TOKEN_DO_PAGAMENTO } from "@/lib/cabecalho-do-pagamento";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { trabalhoQueSePodePagar } from "@/lib/acesso-ao-pagamento";
-import { perfilDoProfissional, registarSemFalhar } from "@/lib/db";
-import { dadosParaPagarAoParceiro } from "@/lib/dados-para-receber";
-import { perfilFiscalDoParceiro } from "@/lib/perfil-fiscal";
-import { contaDoValorAcordado } from "@/lib/pagamento-directo";
-import {
-  AS_DUAS_FATURAS,
-  COMO_PAGAR_EM_PALAVRAS,
-  PAGA_DIRETAMENTE_AO_PARCEIRO,
-  comoPagarDisponiveis,
-  lerComoPagar,
-} from "@/lib/pagar-ao-parceiro";
-import { congelarRegimeDoProfissional, gravarComoPagarAoParceiro, oQueONovoModeloGravou } from "@/lib/pagar-ao-parceiro-na-base";
-import { faturasDaNegociacao } from "@/lib/faturas-do-trabalho-na-base";
-import { asDuasFaturas } from "@/lib/faturas-do-trabalho";
+import { registarSemFalhar } from "@/lib/db";
+import { COMO_PAGAR_EM_PALAVRAS, lerComoPagar } from "@/lib/pagar-ao-parceiro";
+import { gravarComoPagarAoParceiro } from "@/lib/pagar-ao-parceiro-na-base";
+import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,41 +38,8 @@ async function emailDaSessao(req: NextRequest): Promise<string | null> {
   return sessao?.user?.email ?? null;
 }
 
-async function oQueOClienteVe(
-  t: Extract<Awaited<ReturnType<typeof trabalhoQueSePodePagar>>, { ok: true }>["trabalho"],
-) {
-  const perfil = await perfilDoProfissional(t.providerId);
-  const fiscal = perfilFiscalDoParceiro(perfil ?? {});
-  const regime = await congelarRegimeDoProfissional(t.negociacaoId, fiscal.regimeParaAConta);
-  const gravado = await oQueONovoModeloGravou(t.negociacaoId);
-  const c = contaDoValorAcordado(t.acordado, t.taxas, regime);
-  const faturas = asDuasFaturas(await faturasDaNegociacao(t.negociacaoId));
-  const total = c ? c.totalAoClienteCent / 100 : null;
-  return {
-    pagaAoParceiro: true,
-    frase: PAGA_DIRETAMENTE_AO_PARCEIRO,
-    parceiro: t.profissionalNome,
-    paraPagar: dadosParaPagarAoParceiro(perfil ?? {}, { contratado: true, doNovoModelo: true }),
-    perfilFiscal: { ...fiscal, regimeParaAConta: regime },
-    conta: c
-      ? {
-          semIva: c.servicoCent / 100,
-          faturaDoParceiro: c.faturaDoProfissionalCent / 100,
-          ivaDoParceiro: c.ivaDoProfissionalCent / 100,
-          faturaDaTaxa: c.faturaDaClyonCent / 100,
-          ivaDaTaxa: c.ivaDaTaxaCent / 100,
-          total,
-        }
-      : null,
-    comoPagar: lerComoPagar(gravado.pagarAoParceiroPor),
-    opcoes: comoPagarDisponiveis(total).map((id) => ({ id, ...COMO_PAGAR_EM_PALAVRAS[id] })),
-    faturas: {
-      frase: AS_DUAS_FATURAS,
-      daTaxa: faturas.clyon ? { url: faturas.clyon.url, nome: faturas.clyon.nome, em: faturas.clyon.carregadaEm } : null,
-      doTrabalho: faturas.parceiro ? { url: faturas.parceiro.url, nome: faturas.parceiro.nome, em: faturas.parceiro.carregadaEm } : null,
-    },
-  };
-}
+/** O mesmo bloco da app de cliente (R5): uma função só (d17). */
+const oQueOClienteVe = oQueOClienteVeDoParceiro;
 
 export async function GET(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "pagar-ao-parceiro-ver", 60, 300);
@@ -124,7 +81,16 @@ export async function POST(req: NextRequest) {
   try {
     const visto = await oQueOClienteVe(t);
     if (!visto.opcoes.some((o) => o.id === como)) {
-      return NextResponse.json({ ok: false, error: "Neste valor não é possível pagar em dinheiro (Lei n.º 92/2017)." }, { status: 409 });
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            como === "dinheiro"
+              ? "Neste valor não é possível pagar em dinheiro (Lei n.º 92/2017)."
+              : "O parceiro ainda não tem os dados para esta forma de pagamento. Escolha outra.",
+        },
+        { status: 409 },
+      );
     }
     await gravarComoPagarAoParceiro(t.negociacaoId, como);
     await registarSemFalhar({

@@ -185,7 +185,9 @@ describe("«sem IVA» está escrito onde há um número", () => {
     expect(APP).toContain("principal: `${emEuros(conta.aPagar)} sem IVA`");
     expect(APP).toContain("principal: `${emEuros(conta.aPagar)} com IVA`");
     // O total vem da conta da casa (`precoDoCliente`), e não de uma soma escrita à mão.
-    expect(ler("src/lib/negociacao-no-ecra.ts")).toContain("precoDoCliente(");
+    // Desde a d17 por uma função só (`precoDaNegociacao`), que no modelo antigo é a `precoDoCliente`.
+    expect(ler("src/lib/negociacao-no-ecra.ts")).toContain("precoDaNegociacao(");
+    expect(APP).toContain("precoDoCliente(");
     expect(PROPOSTAS).not.toContain("decomporIva");
   });
 });

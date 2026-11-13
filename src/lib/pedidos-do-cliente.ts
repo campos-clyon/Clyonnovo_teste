@@ -9,6 +9,7 @@ import {
 import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { negociacaoParaAVista, QUANDO_EM_PALAVRAS, type NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
 import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
+import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente";
 import { historicoParaOCliente, type EntradaParaOCliente, aClyonPrecisaDeSi, mensagensDoPedido } from "@/lib/historico-para-o-cliente";
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { horasPrevistasDaLinha, diferencaEmPalavras } from "@/lib/horas-do-trabalho";
@@ -403,6 +404,16 @@ export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente
    */
   const semIva = quantoOClientePaga(acesso.trabalho.acordado, acesso.trabalho.taxas, "sem_iva", false);
   const comIvaESemIva = (comIva: number) => (e.ivaIncluido ? `${emEuros(comIva)} (${emEuros(semIva)} sem IVA)` : emEuros(comIva));
+  /*
+   * O MODELO DE 15-11 NA APP — d17 (13-11-2026). O mesmo bloco «Pagar a …» do
+   * site (`oQueOClienteVeDoParceiro`, o que a rota /api/pagamentos/ao-parceiro
+   * devolve): o total pelo regime do parceiro, quem passa a fatura, o IBAN e o
+   * MB WAY (só aqui, depois de contratar), as formas que ele pode receber e as
+   * faturas. As apps instaladas lêem-no sem update; `null` fora do modelo novo.
+   */
+  const aoParceiro = e.pagaAoParceiro ? await oQueOClienteVeDoParceiro(acesso.trabalho) : null;
+  const totalDoParceiro = aoParceiro?.conta?.total ?? null;
+  const semIvaDoParceiro = aoParceiro?.conta?.semIva ?? null;
   return {
     disponivel: e.disponivel,
     pago: e.doCliente && e.pago,
@@ -411,7 +422,8 @@ export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente
     pagoEm: pago ? isoOuNulo(pago.pagoEm) : null,
     // Em dinheiro com IVA incluído paga tudo ao profissional, no local: a
     // referência que exista é a dívida DELE, e não sai para o cliente.
-    emDinheiroAoProfissional: !e.doCliente,
+    // No modelo novo (d17) não é «em dinheiro»: paga ao parceiro como escolher — ver `aoParceiro`.
+    emDinheiroAoProfissional: !e.doCliente && !e.pagaAoParceiro,
     pendentes: e.doCliente
       ? e.pagamentos
           .filter((p) => p.estado === "pendente")
@@ -438,10 +450,16 @@ export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente
     aEsperaDaTransferencia: e.aEsperaDaTransferencia,
     // O modelo de 15-11-2026 (d10): paga diretamente ao parceiro (a app mostra «Pagar a …»). Falso antes da data.
     pagaAoParceiro: e.pagaAoParceiro,
-    ivaIncluido: e.ivaIncluido,
-    valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
+    aoParceiro,
+    ivaIncluido: e.ivaIncluido || aoParceiro != null,
+    valoresTexto:
+      totalDoParceiro != null && semIvaDoParceiro != null
+        ? { comFactura: `${emEuros(totalDoParceiro)} (${emEuros(semIvaDoParceiro)} sem IVA)`, semFactura: emEuros(semIvaDoParceiro) }
+        : { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
     // «Serviço / IVA / Total a pagar» (02-11-2026): o mesmo desdobramento do bloco de pagar do site; o IVA é a diferença.
-    conta: !e.ivaIncluido
+    conta: totalDoParceiro != null && semIvaDoParceiro != null
+      ? precoEmTresLinhas(semIvaDoParceiro, totalDoParceiro, TAXA_IVA)
+      : !e.ivaIncluido
       ? null
       : e.desdobramento
         ? precoEmTresLinhas(e.desdobramento.semIva, e.desdobramento.total, TAXA_IVA)

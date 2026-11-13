@@ -26,6 +26,8 @@ export type Pedido = {
   clientePagou?: boolean | null;
   /** O cliente escolheu transferência bancária e ela ainda não entrou (02-11-2026). */
   pagamentoACaminho?: "transferencia" | null;
+  /** O trabalho segue o modelo de 15-11 (d17): o cliente paga-lhe a ele. Decidido no servidor. */
+  noNovoModelo?: boolean;
   diasAteLibertar: number | null;
   provaJson: string | null;
   /** O JSON das propostas, tal como vem da base. */

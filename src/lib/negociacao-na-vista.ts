@@ -8,7 +8,7 @@ import type { HorasNaBase } from "./horas-do-trabalho";
 import { novoModeloEmVigor, TRABALHOS_CLYON_NO_MODELO_ANTIGO } from "./novo-modelo";
 import type { PerguntaDoFecho } from "./fecho-do-modelo-novo";
 import { perfilFiscalDoParceiro, type PerfilFiscal } from "./perfil-fiscal";
-import { totalNoNovoModelo } from "./pagamento-directo";
+import { totaisDoNovoModelo, totalDoValor, type TotaisDoNovoModelo } from "./total-ao-cliente";
 import { lerComoPagar, type ComoPagarAoParceiro } from "./pagar-ao-parceiro";
 
 /**
@@ -27,8 +27,12 @@ export type NovoModeloNaVista = {
    * O total com IVA que o cliente paga ao parceiro (as duas faturas), em euros,
    * do valor acordado ou, a negociar, da última proposta. `null` sem valor. Só o
    * total: a divisão (a fatura da taxa) vem do servidor depois de contratar.
+   * A conta é `totalAoClienteDaNegociacao` (`total-ao-cliente.ts`, d17): o
+   * mesmo número do bloco «Pagar a …», do email e da app.
    */
   total: number | null;
+  /** O mesmo total sem IVA — nunca se mostra sozinho (d17). */
+  semIva: number | null;
   /** Como o cliente escolheu pagar ao parceiro (`null` = ainda não escolheu). */
   pagarAoParceiroPor: ComoPagarAoParceiro | null;
 };
@@ -148,6 +152,14 @@ export type NegociacaoDoCliente = {
   /** O modelo de 15-11-2026 (d10) — `null` antes da data. */
   novoModelo?: NovoModeloNaVista | null;
   /**
+   * OS TOTAIS DO MODELO NOVO DE CADA VALOR (d17) — o acordado, as propostas e
+   * os ajustes, já no preço do cliente, para o cartão, a linha do tempo e a app
+   * dizerem o número do bloco «Pagar a …». Feitos no servidor
+   * (`novoModeloParaOCliente`); `null` fora do modelo novo. Não saem para o ecrã:
+   * saem os textos feitos com eles.
+   */
+  totaisNoNovoModelo?: TotaisDoNovoModelo | null;
+  /**
    * «O TRABALHO JÁ FOI FEITO?» (d15, 13-11-2026) — 48 h depois da data, no modelo
    * novo, sem o «Está feito» do parceiro. Posta no servidor
    * (`negociacoesDaVistaDoCliente`), com o modelo conferido pelos pagamentos.
@@ -226,8 +238,15 @@ export function negociacaoParaAVista(
     agora: Date;
     /** O pedido exige a guia de resíduos (`trabalhoExigeGuia`) — 04-11-2026, d10.1. */
     exigeGuia?: boolean;
+    /**
+     * O que o servidor sabe desta negociação no modelo de 15-11 (d17,
+     * `novoModeloParaOCliente`): se segue o modelo novo com os pagamentos lidos,
+     * e os totais pelas taxas dela. Sem ele, a conta faz-se com o que a linha traz.
+     */
+    novoModeloDoServidor?: { segue: boolean; totais: TotaisDoNovoModelo } | null;
   },
 ): NegociacaoDoCliente {
+  const novoModelo = novoModeloComTotais(n, numeroOuNulo(n.valorAcordado), o.agora, o.novoModeloDoServidor);
   const contratado = n.estado === "acordada";
   const valorAcordado = numeroOuNulo(n.valorAcordado);
   // Para o cliente, pago ao profissional antes de confirmar não fecha (BO27, 29-10-2026).
@@ -280,7 +299,8 @@ export function negociacaoParaAVista(
           o.agora,
         )
       : null,
-    novoModelo: novoModeloNaVista(n, valorAcordado, o.agora),
+    novoModelo: novoModelo?.vista ?? null,
+    totaisNoNovoModelo: novoModelo?.totais ?? null,
     porCarga: o.porCarga,
     // Por hora (31-10-2026): as horas e os materiais vão com a negociação.
     porHora: o.porHora === true,
@@ -340,23 +360,46 @@ export const QUANDO_EM_PALAVRAS: Readonly<Record<string, string>> = {
   flexible: "Sem pressa",
 };
 
-/** O bloco do modelo de 15-11 (d10) para uma negociação — `null` antes da data ou num Trabalho CLYON. */
+/**
+ * O bloco do modelo de 15-11 (d10) para uma negociação — `null` antes da data,
+ * num Trabalho CLYON, ou quando o servidor diz que ela fica no modelo antigo (um
+ * pagamento à CLYON antes do corte — `pagoAClyonAntesDoCorte`, d17).
+ */
 export function novoModeloNaVista(
   n: LinhaParaAVista,
   valorAcordado: number | null,
   agora: Date,
+  doServidor?: { segue: boolean; totais: TotaisDoNovoModelo } | null,
 ): NovoModeloNaVista | null {
+  return novoModeloComTotais(n, valorAcordado, agora, doServidor)?.vista ?? null;
+}
+
+/** O mesmo bloco e os totais de cada valor da negociação (d17). */
+export function novoModeloComTotais(
+  n: LinhaParaAVista,
+  valorAcordado: number | null,
+  agora: Date,
+  doServidor?: { segue: boolean; totais: TotaisDoNovoModelo } | null,
+): { vista: NovoModeloNaVista; totais: TotaisDoNovoModelo } | null {
   if (!novoModeloEmVigor(agora)) return null;
   const clyon = n.ofertaClyon != null && n.ofertaClyon !== "";
   if (TRABALHOS_CLYON_NO_MODELO_ANTIGO && clyon) return null;
+  if (doServidor && !doServidor.segue) return null;
   const perfilFiscal = perfilFiscalDoParceiro(n);
-  // O regime congelado quando foi contratado manda; antes disso, o do perfil.
-  const congelado = n.regimeDoProfissional === "normal" || n.regimeDoProfissional === "isento" ? n.regimeDoProfissional : null;
   const propostas = propostasDe(n.propostasJson);
   const valor = valorAcordado ?? (propostas.length > 0 ? Number(propostas[propostas.length - 1].valor) : null);
+  // Os totais do servidor (as taxas da negociação); sem ele, os da linha.
+  const totais =
+    doServidor?.totais ??
+    totaisDoNovoModelo(n, [valorAcordado, ...propostas.map((p) => p.valor), ...ajustesDe(n.ajustesJson ?? null).flatMap((a) => [a.valorNovo, a.valorAntigo])]);
+  const t = totalDoValor(totais, valor);
   return {
-    perfilFiscal,
-    total: totalNoNovoModelo(n, valor, congelado ?? perfilFiscal.regimeParaAConta),
-    pagarAoParceiroPor: lerComoPagar(n.pagarAoParceiroPor),
+    vista: {
+      perfilFiscal,
+      total: t?.total ?? null,
+      semIva: t?.semIva ?? null,
+      pagarAoParceiroPor: lerComoPagar(n.pagarAoParceiroPor),
+    },
+    totais,
   };
 }

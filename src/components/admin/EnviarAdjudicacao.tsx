@@ -10,6 +10,7 @@ import {
   linkDaAdjudicacao,
   type ReferenciaNaAdjudicacao,
   type TrabalhoAdjudicado,
+  type AdjudicacaoNoNovoModelo,
 } from "@/lib/mensagem-de-adjudicacao";
 
 /**
@@ -32,6 +33,12 @@ import {
  * link e o motivo vão pela rota da adjudicação (/api/admin/negociacoes/adjudicacao).
  *
  * NÃO MANDA A MENSAGEM: abre o WhatsApp do cliente com ela escrita.
+ *
+ * NO MODELO DE 15-11 (d17, 13-11-2026) o cliente paga ao parceiro: o bloco do
+ * pagamento é o texto D das Vendas (sem «Paga à CLYON»), com o total do bloco
+ * «Pagar a …» e o link do pedido, onde estão os dados para pagar. Não se
+ * oferecem referências ao cliente nem os dados do dono. Quem decide o modelo é o
+ * servidor (a rota da adjudicação); a marca da Mesa só esconde as caixas.
  */
 
 type Props = {
@@ -41,6 +48,8 @@ type Props = {
   metodosLidos: boolean;
   /** O estilo do botão, para combinar com o cartão onde está. */
   classeDoBotao: string;
+  /** A negociação segue o modelo de 15-11 (`noNovoModelo` da Mesa, d17). */
+  novoModelo?: boolean;
 };
 
 type Resposta = {
@@ -55,7 +64,12 @@ type Resposta = {
   };
 };
 
-type Preparada = { link: string | null; referencias: ReferenciaNaAdjudicacao[] };
+type Preparada = {
+  link: string | null;
+  referencias: ReferenciaNaAdjudicacao[];
+  /** O modelo de 15-11, como o servidor o decidiu (d17). */
+  novoModelo?: AdjudicacaoNoNovoModelo | null;
+};
 
 export default function EnviarAdjudicacao({
   negociacaoId,
@@ -63,6 +77,7 @@ export default function EnviarAdjudicacao({
   metodosDePagamento,
   metodosLidos,
   classeDoBotao,
+  novoModelo = false,
 }: Props) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(false);
@@ -78,9 +93,10 @@ export default function EnviarAdjudicacao({
   const [erro, setErro] = useState("");
   const [preparada, setPreparada] = useState<Preparada | null>(null);
 
-  const comDono = doDono && temDadosDoDono;
+  // No modelo novo (d17): só o link do pedido; sem referências ao cliente nem os dados do dono.
+  const comDono = !novoModelo && doDono && temDadosDoDono;
   const motivoValido = lerMotivoDosDadosDoDono(motivoDoDono).ok;
-  const precisaDoServidor = comLink || multibanco || mbway || comDono;
+  const precisaDoServidor = novoModelo || comLink || multibanco || mbway || comDono;
   const fixo = preparada != null;
 
   const link = (p: Preparada) =>
@@ -93,6 +109,7 @@ export default function EnviarAdjudicacao({
           motivoDosDadosDoDono: comDono ? motivoDoDono : null,
           referencias: p.referencias,
           link: p.link,
+          novoModelo: p.novoModelo ?? null,
         },
       },
       new Date(),
@@ -104,15 +121,17 @@ export default function EnviarAdjudicacao({
     const feitas: ReferenciaNaAdjudicacao[] = [];
     let linkDoPedido: string | null = null;
     try {
-      for (const metodo of [multibanco ? "multibanco" : null, mbway ? "mbway" : null]) {
+      for (const metodo of novoModelo ? [] : [multibanco ? "multibanco" : null, mbway ? "mbway" : null]) {
         if (!metodo) continue;
         const r = await fetch("/api/admin/pagamentos/criar", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           // Sem valor: quem decide quanto se pede é o servidor.
+          // `origem`: no modelo de 15-11 o servidor recusa referências pedidas daqui (d17).
           body: JSON.stringify({
             negociacaoId,
             metodo,
+            origem: "adjudicacao",
             ...(metodo === "mbway" ? { telemovel } : {}),
           }),
         });
@@ -133,26 +152,32 @@ export default function EnviarAdjudicacao({
         });
       }
       // O link do pedido e o motivo dos dados do dono (d15).
-      if (comLink || comDono) {
+      let doNovoModelo: AdjudicacaoNoNovoModelo | null = null;
+      if (novoModelo || comLink || comDono) {
         const r = await fetch("/api/admin/negociacoes/adjudicacao", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             negociacaoId,
-            comLink,
+            comLink: novoModelo || comLink,
             dadosDoDono: comDono,
             motivoDosDadosDoDono: comDono ? motivoDoDono : null,
           }),
         });
-        const d = (await r.json().catch(() => ({}))) as { link?: string | null; error?: string };
+        const d = (await r.json().catch(() => ({}))) as {
+          link?: string | null;
+          error?: string;
+          novoModelo?: AdjudicacaoNoNovoModelo | null;
+        };
         if (!r.ok) {
           setErro(d.error ?? "Não foi possível preparar a mensagem.");
           if (feitas.length > 0) setPreparada({ link: null, referencias: feitas });
           return;
         }
         linkDoPedido = d.link ?? null;
+        doNovoModelo = d.novoModelo ?? null;
       }
-      setPreparada({ link: linkDoPedido, referencias: feitas });
+      setPreparada({ link: linkDoPedido, referencias: feitas, novoModelo: doNovoModelo });
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -177,6 +202,13 @@ export default function EnviarAdjudicacao({
       {aberto && (
         <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-200">
           <p className="font-semibold text-slate-100">Formas de pagamento na mensagem</p>
+          {novoModelo && (
+            <p className="mt-2 text-slate-300">
+              Modelo de 15-11: o cliente paga diretamente ao parceiro. A mensagem leva o total e o link do pedido, onde
+              estão os dados para pagar. Sem referências ao cliente.
+            </p>
+          )}
+          {!novoModelo && (<>
           <label className="mt-2 flex items-center gap-2">
             <input type="checkbox" checked={comLink} disabled={fixo} onChange={(e) => setComLink(e.target.checked)} />
             Link do pedido: o cliente paga pela plataforma (MB WAY, Multibanco ou transferência)
@@ -244,6 +276,7 @@ export default function EnviarAdjudicacao({
             </label>
           )}
           {metodosLidos && !temDadosDoDono && <p className="ml-6 text-slate-400">Sem métodos de pagamento nas Configs.</p>}
+          </>)}
           {!precisaDoServidor && (
             <p className="mt-2 text-amber-300">Sem nenhuma forma escolhida, a mensagem diz que os dados seguem a seguir.</p>
           )}

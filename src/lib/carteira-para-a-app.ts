@@ -37,8 +37,11 @@ export async function carteiraDoClienteParaAApp(email: string, agora: Date = new
     ];
     linhasPorPedido = porPedido(negs);
   }
+  // O mesmo total do pedido no modelo de 15-11 (d17): pelo servidor, com os pagamentos lidos.
+  const { novoModeloParaOCliente } = await import("./novo-modelo-no-servidor");
+  const doServidor = await novoModeloParaOCliente([...linhasPorPedido.values()].flat(), agora);
   const trabalhos: TrabalhoDoCliente[] = pedidos.flatMap((p) =>
-    negociacoesDaContaNoEcra(p as { id: unknown }, linhasPorPedido.get(Number(p.id)), agora).map((n) => ({
+    negociacoesDaContaNoEcra(p as { id: unknown }, linhasPorPedido.get(Number(p.id)), agora, doServidor).map((n) => ({
       negociacaoId: n.id,
       pedidoId: Number(p.id),
       estado: n.estado,

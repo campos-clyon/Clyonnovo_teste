@@ -13,6 +13,10 @@ import { lerBase } from "./base-do-preco";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { precoDoCliente, precoParaOCliente } from "./preco-do-cliente";
 import { modeloDaNegociacao } from "./iva-incluido";
+import { eDoNovoModelo } from "./novo-modelo";
+import { agoraDoModelo } from "./relogio-do-modelo";
+import { perfilFiscalDoParceiro } from "./perfil-fiscal";
+import { totalAoClienteDaNegociacao } from "./total-ao-cliente";
 
 /**
  * Avisar o outro lado de que há uma proposta à espera.
@@ -60,9 +64,18 @@ export async function avisarDaProposta(dados: {
        */
       // E no modelo dela — com IVA incluído desde o corte de 01-10-2026.
       const modelo = modeloDaNegociacao(negociacao.createdAt);
-      const preco = precoParaOCliente(dados.valor, taxas, modelo);
+      /*
+       * NO MODELO DE 15-11 (d17), O TOTAL DO REGIME DO PARCEIRO — o mesmo número
+       * do cartão da proposta, do bloco «Pagar a …» e da app (`total-ao-cliente.ts`).
+       * Uma negociação aberta ainda não tem nada pago: basta a data e a marca de
+       * Trabalho CLYON.
+       */
+      const doNovoModelo = eDoNovoModelo({ ofertaClyon: negociacao.ofertaClyon }, agoraDoModelo())
+        ? totalAoClienteDaNegociacao(negociacao, dados.valor)
+        : null;
+      const preco = doNovoModelo ? doNovoModelo.total : precoParaOCliente(dados.valor, taxas, modelo);
       // E de que é feito — o sem IVA e o imposto, para o email (03-10-2026).
-      const conta = precoDoCliente(dados.valor, taxas, modelo);
+      const conta = doNovoModelo ? { semIva: doNovoModelo.semIva, iva: doNovoModelo.iva } : precoDoCliente(dados.valor, taxas, modelo);
       const email = pedido.contactEmail;
       /*
        * SEM EMAIL, A PROPOSTA SEGUE PARA O WHATSAPP — com botões.
@@ -115,7 +128,9 @@ export async function avisarDaProposta(dados: {
         pedidoId: dados.pedidoId,
         profissionalNome: negociacao.profissionalNome,
         preco,
-        ivaIncluido: modelo === "iva_incluido",
+        ivaIncluido: doNovoModelo != null || modelo === "iva_incluido",
+        // Quem passa a fatura do trabalho, no modelo novo (d17).
+        fatura: doNovoModelo ? perfilFiscalDoParceiro(negociacao).fatura : null,
         // E de que é feito — o sem IVA e o imposto (03-10-2026).
         semIvaEIva: { semIva: conta.semIva, iva: conta.iva },
         base,

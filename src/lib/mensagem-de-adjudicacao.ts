@@ -78,7 +78,22 @@ export type TrabalhoAdjudicado = {
     referencias: ReferenciaNaAdjudicacao[];
     /** O link do pedido, gerado no servidor ao preparar a mensagem (d15). */
     link?: string | null;
+    /**
+     * O MODELO DE 15-11 — d17 (13-11-2026), decidido no servidor
+     * (`/api/admin/negociacoes/adjudicacao`). O cliente paga ao parceiro: o
+     * bloco do pagamento é o texto D das Vendas, sem «Paga à CLYON» e sem
+     * referências; o total é o do bloco «Pagar a …» (`total-ao-cliente.ts`).
+     */
+    novoModelo?: AdjudicacaoNoNovoModelo | null;
   };
+};
+
+/** O que o servidor dá à adjudicação no modelo de 15-11 (d17). */
+export type AdjudicacaoNoNovoModelo = {
+  total: number;
+  semIva: number;
+  /** As formas que o parceiro pode receber (`comoPagarDisponiveis` com os dados dele). */
+  formas: ReadonlyArray<"transferencia" | "mbway" | "dinheiro">;
 };
 
 /** Uma referência euPago gerada no servidor para este pedido. */
@@ -165,6 +180,41 @@ export function blocoDasFormasDePagamento(
   return [abertura, ...partes, euPago, aQuem].filter(Boolean).join("\n\n");
 }
 
+const FORMA_NA_FRASE: Record<"transferencia" | "mbway" | "dinheiro", string> = {
+  transferencia: "transferência",
+  mbway: "MB WAY",
+  dinheiro: "em dinheiro no local",
+};
+
+/** «por transferência, MB WAY ou em dinheiro no local» — só as que o parceiro pode receber. */
+function formasEmPalavras(formas: AdjudicacaoNoNovoModelo["formas"]): string {
+  const l = formas.map((f) => FORMA_NA_FRASE[f]);
+  if (l.length === 0) return "";
+  if (l.length === 1) return `por ${l[0]}`;
+  return `por ${l.slice(0, -1).join(", ")} ou ${l[l.length - 1]}`;
+}
+
+/**
+ * O BLOCO DO PAGAMENTO NO MODELO DE 15-11 — o texto D das Vendas (d17,
+ * 13-11-2026). Sem «Paga à CLYON», sem referências ao cliente, sem os dados do
+ * dono: o cliente paga ao parceiro, pelos dados que estão no pedido.
+ */
+export function blocoDoPagamentoAoParceiro(
+  n: AdjudicacaoNoNovoModelo,
+  parceiro: string | null | undefined,
+  link: string | null | undefined,
+): string {
+  const quem = parceiro?.trim() || "o parceiro";
+  const como = formasEmPalavras(n.formas);
+  return [
+    `O total é ${euros(n.total)} com IVA (${euros(n.semIva)} sem IVA), já com a taxa da plataforma.`,
+    `Paga diretamente a ${quem}, no fim do trabalho (salvo se combinarem outra coisa)${como ? `: ${como}` : ""}. ` +
+      (link?.trim() ? `Os dados para pagar estão no seu pedido, e só lá:\n${link.trim()}` : "Os dados para pagar estão no seu pedido, e só lá."),
+    "Se alguém lhe pedir que pague para outros dados, não pague e fale connosco.",
+    "Recebe duas faturas no pedido: a do trabalho, do parceiro, e a da taxa da plataforma. Guarde o comprovativo do pagamento.",
+  ].join("\n");
+}
+
 const maiuscula = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): string {
@@ -202,9 +252,14 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
     `Olá${nome ? `, ${nome}` : ""}! Obrigado pela confirmação.`,
     fica,
     quemFaz,
-    // Sem formas escolhidas, nunca os dados do dono (d15): os dados seguem a seguir.
-    blocoDasFormasDePagamento(t.formas ?? { comDadosDoDono: false, referencias: [] }, t.metodosDePagamento),
-    "Depois de pagar, envie-nos o comprovativo por aqui, por favor.",
+    ...(t.formas?.novoModelo
+      ? // O modelo de 15-11 (d17): o texto D, que já diz para guardar o comprovativo.
+        [blocoDoPagamentoAoParceiro(t.formas.novoModelo, empresa, t.formas.link)]
+      : [
+          // Sem formas escolhidas, nunca os dados do dono (d15): os dados seguem a seguir.
+          blocoDasFormasDePagamento(t.formas ?? { comDadosDoDono: false, referencias: [] }, t.metodosDePagamento),
+          "Depois de pagar, envie-nos o comprovativo por aqui, por favor.",
+        ]),
     "Obrigado pela preferência,\nEquipa CLYON",
   ].join("\n\n");
 }

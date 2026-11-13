@@ -15,34 +15,16 @@ import { confiancaDasNegociacoes, type ConfiancaDaNegociacao } from "@/lib/confi
 import { escolhidosDeJson, estadoNaMesa } from "@/lib/escolhidos-sem-resposta";
 import { registarQueOClientePediu } from "@/lib/escolhidos-sem-resposta-no-servidor";
 import { pedidoFechado } from "@/lib/pedido-arrumado";
-import { eDoNovoModelo, novoModeloEmVigor } from "@/lib/novo-modelo";
-import { segueONovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { negociacoesNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export const runtime = "nodejs";
 
-/**
- * AS NEGOCIAÇÕES DO MODELO DE 15-11-2026 — d10. Antes da data, nenhuma, sem ir à
- * base. Depois: as fechadas perguntam ao servidor (`segueONovoModelo`: um
- * pagamento à CLYON antes da data deixa-as no antigo); as que ainda não fecharam
- * não têm nada pago — seguem o novo, menos os Trabalhos CLYON.
- */
-async function modeloDasNegociacoes(
+/** As negociações do modelo de 15-11 (d10): a regra é uma só — `negociacoesNoNovoModelo`. */
+function modeloDasNegociacoes(
   negociacoes: Array<{ id: unknown; estado?: unknown; ofertaClyon?: unknown }>,
 ): Promise<Set<number>> {
-  const agora = agoraDoModelo();
-  const ids = new Set<number>();
-  if (!novoModeloEmVigor(agora)) return ids;
-  await Promise.all(
-    negociacoes.map(async (n) => {
-      const sim =
-        n.estado === "acordada"
-          ? await segueONovoModelo(n as Parameters<typeof segueONovoModelo>[0], agora).catch(() => true)
-          : eDoNovoModelo({ ofertaClyon: n.ofertaClyon }, agora);
-      if (sim) ids.add(Number(n.id));
-    }),
-  );
-  return ids;
+  return negociacoesNoNovoModelo(negociacoes, agoraDoModelo());
 }
 
 /** Pedidos da plataforma e as negociações de cada um, para o painel. */

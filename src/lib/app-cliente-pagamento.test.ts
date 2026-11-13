@@ -25,7 +25,8 @@ describe("o valor que a app mostra", () => {
     const fonte = ler("src/lib/pedidos-do-cliente.ts");
     expect(fonte).toContain('const semIva = quantoOClientePaga(acesso.trabalho.acordado, acesso.trabalho.taxas, "sem_iva", false);');
     expect(fonte).toContain("e.ivaIncluido ? `${emEuros(comIva)} (${emEuros(semIva)} sem IVA)` : emEuros(comIva)");
-    expect(fonte).toContain("valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },");
+    // Fora do modelo de 15-11; no modelo novo, o total do bloco «Pagar a …» (d17).
+    expect(fonte).toContain(": { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },");
   });
 
   it("«Copiar» o valor copia só o número que o banco pede", () => {

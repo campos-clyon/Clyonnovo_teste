@@ -88,6 +88,14 @@ export async function negociacoesDaVistaDoCliente(
   // Por hora (31-10-2026): as horas previstas do pedido, para a estimativa.
   const porHora = lerBase(pedido.baseDoPreco) === "hora";
   const horasPrevistas = porHora ? horasPrevistasDaLinha(pedido as unknown as Record<string, unknown>) : null;
+  /*
+   * O MODELO DE 15-11 VISTO PELO SERVIDOR — d17 (13-11-2026): se cada uma segue
+   * o modelo novo com os pagamentos lidos (um pagamento à CLYON antes do corte
+   * deixa-a no antigo), e o total de cada valor pelas taxas dela — o mesmo
+   * número do bloco «Pagar a …». Antes da data, vazio e sem ir à base.
+   */
+  const { novoModeloParaOCliente } = await import("@/lib/novo-modelo-no-servidor");
+  const doServidor = await novoModeloParaOCliente(linhas, agora);
   const vistas = linhas.map((n) =>
     negociacaoParaAVista(n, {
       porCarga,
@@ -97,6 +105,7 @@ export async function negociacoesDaVistaDoCliente(
       agora,
       // A guia antes de contratar (04-11-2026, d10.1): o cliente vê porquê.
       exigeGuia: trabalhoExigeGuia(pedido),
+      novoModeloDoServidor: doServidor.get(Number(n.id)) ?? null,
     }),
   );
   /*

@@ -45,13 +45,34 @@ export const COMO_PAGAR_EM_PALAVRAS: Record<ComoPagarAoParceiro, { curta: string
   },
 };
 
-/** As que se oferecem ao cliente para este total (com IVA): sem dinheiro a partir do tecto legal. */
-export function comoPagarDisponiveis(totalComIva: number | null | undefined): ComoPagarAoParceiro[] {
-  if (typeof totalComIva === "number" && totalComIva >= MAXIMO_EM_NUMERARIO) {
-    return COMO_PAGAR_AO_PARCEIRO.filter((c) => c !== "dinheiro");
-  }
-  return [...COMO_PAGAR_AO_PARCEIRO];
+/** Os dados que o parceiro tem para receber — só se lê se estão preenchidos. */
+export type DadosDoParceiroParaPagar = { iban?: string | null; mbway?: string | null } | null | undefined;
+
+/**
+ * As que se oferecem ao cliente para este total (com IVA): sem dinheiro a partir
+ * do tecto legal; e, com os dados do parceiro (d17, 13-11-2026), só as que ele
+ * pode receber — sem IBAN não há «Transferência», sem número não há «MB WAY».
+ * Sem os dados (`undefined`), não se filtra por eles.
+ */
+export function comoPagarDisponiveis(
+  totalComIva: number | null | undefined,
+  dados?: DadosDoParceiroParaPagar,
+): ComoPagarAoParceiro[] {
+  const tem = (v: unknown) => typeof v === "string" && v.trim() !== "";
+  return COMO_PAGAR_AO_PARCEIRO.filter((c) => {
+    if (c === "dinheiro") return !(typeof totalComIva === "number" && totalComIva >= MAXIMO_EM_NUMERARIO);
+    if (dados === undefined) return true;
+    if (c === "transferencia") return tem(dados?.iban);
+    return tem(dados?.mbway);
+  });
 }
+
+/**
+ * O PARCEIRO AINDA SEM IBAN NEM MB WAY — d17 (texto F das Vendas, 13-11-2026).
+ * Possível na transição de 15 a 22-11: o cliente vê isto no bloco «Pagar a …».
+ */
+export const PARCEIRO_SEM_DADOS_PARA_PAGAR =
+  "O parceiro ainda não pôs os dados para transferência ou MB WAY. Pode pagar-lhe em dinheiro no local, ou esperar: avisamo-lo aqui assim que os dados estiverem no pedido.";
 
 /** A frase que o cliente lê sobre o pagamento, no modelo novo. */
 export const PAGA_DIRETAMENTE_AO_PARCEIRO =

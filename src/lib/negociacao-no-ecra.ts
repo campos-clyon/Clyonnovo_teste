@@ -1,7 +1,4 @@
-import { negociacaoParaAApp, esperaPeloCliente } from "./pedido-para-a-app";
-import { precoDoCliente, precoParaOCliente } from "./preco-do-cliente";
-import { taxasDaNegociacao } from "./taxas-plataforma";
-import { modeloDaLinha } from "./sem-factura";
+import { negociacaoParaAApp, esperaPeloCliente, precoDaNegociacao } from "./pedido-para-a-app";
 import { historicoDaNegociacao, type EventoDaNegociacao } from "./historico-negociacao";
 import { lerForma } from "./forma-de-pagamento";
 import { propostaPendente, type Negociacao } from "./negociacao";
@@ -55,8 +52,6 @@ export function negociacaoParaOEcra(
   pedidoId: number | null = null,
 ) {
   const app = negociacaoParaAApp(n, base, agora);
-  const taxas = taxasDaNegociacao(n);
-  const modelo = modeloDaLinha(n, n.criadaEm);
   const contratado = n.estado === "acordada";
   const motor: Negociacao = {
     estado: n.estado as Negociacao["estado"],
@@ -65,7 +60,8 @@ export function negociacaoParaOEcra(
   };
   const pendente = contratado ? null : propostaPendente(motor, agora);
   const emCima = pendente?.valor ?? n.valorAcordado;
-  const conta = emCima != null ? precoDoCliente(emCima, taxas, modelo) : null;
+  // No modelo de 15-11 (d17), o total do regime do parceiro — o do bloco «Pagar a …».
+  const conta = emCima != null ? precoDaNegociacao(emCima, n) : null;
   const emDinheiro = lerForma(n.formaDePagamento) === "dinheiro";
 
   const historico: EventoNoEcra[] = historicoDaNegociacao(
@@ -80,7 +76,7 @@ export function negociacaoParaOEcra(
       valorAcordado: n.valorAcordado,
     },
     "cliente",
-  ).map((e) => ({ ...e, valor: e.valor != null ? precoParaOCliente(e.valor, taxas, modelo) : null }));
+  ).map((e) => ({ ...e, valor: e.valor != null ? precoDaNegociacao(e.valor, n).aPagar : null }));
 
   return {
     ...app,

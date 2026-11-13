@@ -9,6 +9,7 @@ import { trabalhoExigeGuia } from "@/lib/guia-antes-de-contratar";
 import { resumoDoPedidoParaOCliente, type PedidoParaOResumo } from "@/lib/pedidos-do-cliente";
 import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib/fim-do-trabalho-clyon";
+import { novoModeloParaOCliente, type NovoModeloDoServidor } from "@/lib/novo-modelo-no-servidor";
 
 /**
  * OS PEDIDOS DA CONTA DO CLIENTE, PRONTOS PARA O ECRÃ — 28-10-2026 (d10).
@@ -42,6 +43,8 @@ export function sqlDasNegociacoesDaConta(quantos: number): string {
                  n.ofertaClyon,
                  p.name AS profissionalNome, p.phone AS profissionalTelefone,
                  p.regimeIva, p.guiaVerificadaEm,
+                 -- O modelo de 15-11 (d17): o regime confirmado, a guia declarada, o regime congelado e como paga ao parceiro.
+                 p.regimeIvaConfirmadoEm, p.emiteGuiaTransporte, n.regimeDoProfissional, n.pagarAoParceiroPor,
                  -- A transição de 7 dias da guia (d10 v2, 04-11-2026).
                  p.estado AS profissionalEstado, p.aprovadoEm,
                  -- «verificado» só com as três confirmações (01-11-2026).
@@ -68,6 +71,8 @@ export function negociacoesDaContaNoEcra(
   pedido: { id: unknown; trabalhoClyon?: unknown; baseDoPreco?: unknown },
   linhas: Linha[] | undefined,
   agora: Date = new Date(),
+  /** O modelo de 15-11 visto pelo servidor (d17, `novoModeloParaOCliente`). */
+  doServidor: Map<number, NovoModeloDoServidor> = new Map(),
 ): NegociacaoNoEcra[] {
   const base = lerBase(pedido.baseDoPreco);
   const pedidoId = Number(pedido.id);
@@ -86,6 +91,7 @@ export function negociacoesDaContaNoEcra(
         agora,
         // A guia antes de contratar (04-11-2026, d10.1): o entulho, ou a guia pedida.
         exigeGuia: trabalhoExigeGuia(pedido as Record<string, unknown>),
+        novoModeloDoServidor: doServidor.get(Number(n.id)) ?? null,
       }),
       base,
       agora,
@@ -119,6 +125,8 @@ export async function pedidoDaContaParaOEcra<T extends Record<string, unknown>>(
       pedido as T & { id: unknown; trabalhoClyon?: unknown; baseDoPreco?: unknown },
       linhas,
       agora,
+      // O mesmo total do bloco «Pagar a …» (d17): pelo servidor, com os pagamentos lidos.
+      await novoModeloParaOCliente(negociacoesParaOCliente(linhas, pedido.trabalhoClyon), agora),
     ),
     // O histórico só pela lista fechada, como a página (d33, 26-10-2026).
     historyJson: historicoParaOCliente(pedido.historyJson, { trabalhoClyon: pedido.trabalhoClyon }),

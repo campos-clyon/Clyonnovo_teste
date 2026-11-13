@@ -224,7 +224,9 @@ describe("na conta do cliente — 21-10-2026, «coloque o sem fatura também na 
     expect(ler("src/app/pedido/[token]/VistaDoPedido.tsx")).toContain("negociacoesNoEcraDoPedido(pedido)");
     expect(ler("src/lib/pedidos-da-conta.ts")).toContain("negociacaoParaAVista(n as unknown as LinhaParaAVista, {");
     // E o modelo de cada uma decide-se no servidor (d10), uma vez para os três ecrãs.
-    expect(ler("src/lib/negociacao-no-ecra.ts")).toContain("const modelo = modeloDaLinha(n, n.criadaEm);");
+    // Desde a d17 (13-11-2026) o ecrã pergunta o preço a uma função só, que lê o modelo da linha.
+    expect(ler("src/lib/negociacao-no-ecra.ts")).toContain("precoDaNegociacao(emCima, n)");
+    expect(ler("src/lib/pedido-para-a-app.ts")).toContain("precoDoCliente(valorDoProfissional, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm))");
     expect(ler("src/lib/pedido-para-a-app.ts")).toContain("modeloDaLinha(n, n.criadaEm)");
   });
 });

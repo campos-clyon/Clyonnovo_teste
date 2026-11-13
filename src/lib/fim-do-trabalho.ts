@@ -5,6 +5,7 @@ import { lerForma } from "./forma-de-pagamento";
 import { DIAS_ATE_LIBERTAR_SOZINHO, lerQuemConfirmou } from "./trabalho";
 import type { DestinoDoValor } from "./carteira";
 import { ROTULOS_DA_CARTEIRA, type ChaveDaCarteira } from "./rotulos-da-carteira";
+import { taxaAPassarAClyon } from "./taxa-a-passar-a-clyon";
 
 /**
  * O FIM DO TRABALHO, DITO IGUAL NO PAINEL, NA APP E NO AVISO — 28-10-2026 (d4).
@@ -118,9 +119,16 @@ export function fraseDoDinheiro(
     /** Em dinheiro com IVA incluído: o que o cliente lhe deu e o que é da CLYON. */
     divida?: { recebidoDoCliente: number; total: number } | null;
     pagoEm?: Date | string | null;
+    /** O modelo de 15-11 (d17): o cliente pagou-lhe, e passa à CLYON a taxa da plataforma e o IVA dela. */
+    noNovoModelo?: boolean;
   },
 ): string {
   const x = euros(v.liquido);
+  if (v.noNovoModelo && caso === "em_mao_com_divida") {
+    return v.divida
+      ? `O cliente paga-lhe diretamente: ${x} do trabalho são seus. Passe à CLYON a taxa da plataforma e o IVA dela, ${euros(v.divida.total)}, com a referência na carteira.`
+      : `O cliente paga-lhe diretamente: ${x} do trabalho são seus. Veja na carteira a taxa da plataforma a passar à CLYON.`;
+  }
   switch (caso) {
     case "disponivel":
       return `${x} estão na sua carteira, prontos a transferir — o pedido de transferência é tratado em menos de 24 horas.`;
@@ -150,6 +158,12 @@ export type TrabalhoParaODinheiro = {
   /** Quando a negociação abriu (`criadaEm`): decide se há IVA incluído. */
   criadaEm?: Date | string | null;
   pagoEm?: Date | string | null;
+  /**
+   * O trabalho segue o modelo de 15-11 (d17) — `noNovoModelo` da rota dos
+   * trabalhos, decidido no servidor com os pagamentos lidos. O cliente paga-lhe
+   * a ele, e ele passa à CLYON a taxa da plataforma e o IVA dela.
+   */
+  noNovoModelo?: boolean;
 };
 
 /**
@@ -164,13 +178,16 @@ export function ondeEstaODinheiro(
   const taxas = taxasDaNegociacao(
     t.taxas ? { taxaCliente: t.taxas.cliente, taxaProfissional: t.taxas.profissional } : null,
   );
-  const emDinheiro = lerForma(t.formaDePagamento) === "dinheiro";
-  const comDivida = emDinheiro && temDividaDoProfissional(t.formaDePagamento, modeloDaNegociacao(t.criadaEm ?? null));
+  const noNovoModelo = t.noNovoModelo === true;
+  // No modelo de 15-11 (d17) é como em mão: o cliente pagou-lhe, e a taxa da plataforma é da CLYON.
+  const emDinheiro = noNovoModelo || lerForma(t.formaDePagamento) === "dinheiro";
+  const comDivida =
+    noNovoModelo || (emDinheiro && temDividaDoProfissional(t.formaDePagamento, modeloDaNegociacao(t.criadaEm ?? null)));
   const caso = casoDoDinheiro({ fase: t.fase, emDinheiro, comDivida, clientePagou: t.clientePagou });
   if (!caso) return null;
   const liquido = quantoOProfissionalRecebe(acordado, taxas);
-  const divida = comDivida ? dividaDoProfissional(acordado, taxas) : null;
-  return { caso, liquido, frase: fraseDoDinheiro(caso, { liquido, divida, pagoEm: t.pagoEm }) };
+  const divida = noNovoModelo ? taxaAPassarAClyon(acordado, taxas) : comDivida ? dividaDoProfissional(acordado, taxas) : null;
+  return { caso, liquido, frase: fraseDoDinheiro(caso, { liquido, divida, pagoEm: t.pagoEm, noNovoModelo }) };
 }
 
 /** O nome da carteira de cada caso — o mesmo que a carteira mostra. */
@@ -226,6 +243,17 @@ export function avisoDoConfirmado(p: {
 }): { title: string; body: string } {
   const inicio = `O pedido #${p.pedidoId} ficou confirmado.`;
   const x = euros(p.liquido);
+  /*
+   * O MODELO DE 15-11, SEJA QUAL FOR O CASO — d17. O cliente pagou-lhe a ele:
+   * nunca «na sua carteira», «quando o cliente pagar» nem «entregue à CLYON».
+   */
+  if (p.noNovoModelo) {
+    const resto =
+      p.aPagarAClyon != null && Number.isFinite(p.aPagarAClyon)
+        ? `Passe à CLYON a taxa da plataforma e o IVA dela: ${euros(p.aPagarAClyon)}, com a referência na carteira.`
+        : "Veja na carteira a taxa da plataforma a passar à CLYON.";
+    return { title: "Trabalho confirmado", body: `${inicio} ${resto}` };
+  }
   let resto: string;
   switch (p.caso) {
     case "disponivel":
@@ -235,11 +263,7 @@ export function avisoDoConfirmado(p: {
       resto = `Os ${x} ficam na carteira quando o cliente pagar.`;
       break;
     case "em_mao_com_divida":
-      resto = p.noNovoModelo
-        ? p.aPagarAClyon != null && Number.isFinite(p.aPagarAClyon)
-          ? `Passe à CLYON a taxa da plataforma e o IVA dela: ${euros(p.aPagarAClyon)}, com a referência na carteira.`
-          : "Veja na carteira a taxa da plataforma a passar à CLYON."
-        : p.aPagarAClyon != null && Number.isFinite(p.aPagarAClyon)
+      resto = p.aPagarAClyon != null && Number.isFinite(p.aPagarAClyon)
           ? `Pago em dinheiro: entregue à CLYON ${euros(p.aPagarAClyon)}.`
           : "Pago em dinheiro: veja na carteira o que entrega à CLYON.";
       break;

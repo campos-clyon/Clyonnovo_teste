@@ -179,8 +179,9 @@ describe("um número só, em todo o lado onde o cliente lê", () => {
     const ECRA = semComentarios(ler("src/app/pedido/[token]/PropostasRecebidas.tsx"));
     // Desde 28-10-2026 (d10) a linha do tempo chega feita, já no preço dele.
     expect(ECRA).toContain("<HistoricoDaProposta eventos={n.historico} />");
+    // Desde a d17 pela mesma função do preço do cartão (no modelo novo, o total do regime do parceiro).
     expect(semComentarios(ler("src/lib/negociacao-no-ecra.ts"))).toContain(
-      "valor: e.valor != null ? precoParaOCliente(e.valor, taxas, modelo) : null",
+      "valor: e.valor != null ? precoDaNegociacao(e.valor, n).aPagar : null",
     );
     const HIST = ler("src/components/HistoricoDaNegociacao.tsx");
     expect(HIST).toContain("euros(valorVisto ? valorVisto(e.valor) : e.valor)");
@@ -207,7 +208,8 @@ describe("um número só, em todo o lado onde o cliente lê", () => {
 
   it("o email e o aviso no telemóvel levam o preço dele; o do profissional, o valor dele", () => {
     const AVISO = semComentarios(ler("src/lib/avisar-da-proposta.ts"));
-    expect(AVISO).toContain("const preco = precoParaOCliente(dados.valor, taxas, modelo);");
+    // No modelo de 15-11 (d17) o total do regime do parceiro; fora dele, o de sempre.
+    expect(AVISO).toContain("const preco = doNovoModelo ? doNovoModelo.total : precoParaOCliente(dados.valor, taxas, modelo);");
     expect(AVISO).toContain("valor: preco,");
     const EMAIL = semComentarios(ler("src/lib/email-proposta.ts"));
     expect(EMAIL).toContain('Tem uma proposta de ${precoComBase(euros(p.preco), p.base ?? "total")}');

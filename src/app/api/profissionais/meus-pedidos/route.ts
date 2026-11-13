@@ -55,6 +55,8 @@ import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { foiPagoEmMao, verificaOPagamento } from "@/lib/carteira";
 import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
 import { transferenciasAEspera } from "@/lib/pagamentos-na-base";
+import { negociacoesNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export const runtime = "nodejs";
 // Nunca em cache: a sugestão de cada pedido depende dos custos que ele acabou
@@ -141,6 +143,16 @@ export async function GET(req: NextRequest) {
     const pagos = await pagamentosAVerificar(linhas);
     // O cliente escolheu pagar por transferência e ela ainda não entrou (02-11-2026).
     const aCaminho = await transferenciasAEspera(linhas.map((l) => Number(l.id))).catch(() => new Set<number>());
+    /*
+     * OS TRABALHOS DO MODELO DE 15-11 — d17 (13-11-2026), pela regra da Mesa
+     * (`negociacoesNoNovoModelo`, com os pagamentos lidos). Neles o cliente paga
+     * ao parceiro: «o cliente ainda não pagou à CLYON» deixa de existir. Antes
+     * da data, nenhum, sem ir à base.
+     */
+    const doNovoModelo = await negociacoesNoNovoModelo(
+      linhas as unknown as Parameters<typeof negociacoesNoNovoModelo>[0],
+      agoraDoModelo(),
+    ).catch(() => new Set<number>());
 
     const agora = new Date();
 
@@ -393,6 +405,8 @@ export async function GET(req: NextRequest) {
          */
         clientePagou:
           // Num trabalho CLYON a pergunta não existe: quem lhe paga é a CLYON.
+          // No modelo de 15-11 (d17) também não: o cliente paga-lhe a ele.
+          !doNovoModelo.has(Number(l.id)) &&
           !modoDaOferta(l.ofertaClyon) &&
           verificaOPagamento({ negociacaoCriadaEm: l.createdAt }) && !foiPagoEmMao(l)
             ? pagos.has(l.id)
@@ -402,7 +416,13 @@ export async function GET(req: NextRequest) {
          * com `clientePagou` falso: o parceiro vê que vem a caminho e que não
          * deve começar antes de a CLYON a dar por recebida.
          */
-        pagamentoACaminho: aCaminho.has(l.id) && !pagos.has(l.id) ? ("transferencia" as const) : null,
+        pagamentoACaminho: aCaminho.has(l.id) && !pagos.has(l.id) && !doNovoModelo.has(Number(l.id)) ? ("transferencia" as const) : null,
+        /*
+         * O TRABALHO SEGUE O MODELO DE 15-11 — d17. O painel e a app Pro lêem
+         * isto (e `clientePagou: null`) para dizer onde está o dinheiro: o
+         * cliente paga-lhe, e ele passa à CLYON a taxa da plataforma e o IVA dela.
+         */
+        noNovoModelo: doNovoModelo.has(Number(l.id)),
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,
         actualizadoEm: l.updatedAt,

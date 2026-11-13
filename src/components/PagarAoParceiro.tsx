@@ -18,6 +18,8 @@ type Visto = {
   frase?: string;
   parceiro?: string;
   paraPagar?: { iban: string | null; titular: string | null; mbway: string | null } | null;
+  /** O parceiro ainda sem IBAN nem MB WAY (d17): a frase em vez dos dados. */
+  semDados?: string | null;
   perfilFiscal?: { fatura: string; guia: string | null };
   conta?: { semIva: number; total: number | null; faturaDoParceiro: number; faturaDaTaxa: number } | null;
   comoPagar?: string | null;
@@ -118,6 +120,7 @@ export default function PagarAoParceiro({
           )}
         </dl>
       )}
+      {visto.semDados && <p className="mt-3 text-slate-700">{visto.semDados}</p>}
       <p className="mt-2 text-xs text-slate-500">
         Pague só para estes dados. Se alguém lhe pedir que pague para outra conta ou outro número, não pague e fale connosco.
       </p>

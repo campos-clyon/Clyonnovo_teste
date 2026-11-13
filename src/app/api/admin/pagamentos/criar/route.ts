@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dividaDoProfissional } from "@/lib/divida-do-profissional";
+import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 import { marcasDasNegociacoes } from "@/lib/marcas-da-divida-na-base";
 import { oQueFaltaDaDivida } from "@/lib/cobrancas-ao-profissional";
 import { requireAdmin } from "@/lib/admin-auth-helper";
@@ -60,7 +61,22 @@ type Corpo = {
   metodo?: unknown;
   comFactura?: unknown;
   telemovel?: unknown;
+  /** «adjudicacao» quando vem do «Enviar adjudicação» (d17). */
+  origem?: unknown;
 };
+
+/**
+ * O QUE O PROFISSIONAL DEVE À CLYON NESTE TRABALHO — no modelo de 15-11 (d17)
+ * é a taxa da plataforma e o IVA dela (`taxaAPassarAClyon`, a mesma da carteira
+ * e da referência da confirmação); antes, a dívida do dinheiro de sempre.
+ */
+function dividaDeste(t: { acordado: number; taxas: Parameters<typeof dividaDoProfissional>[1]; novoModelo?: boolean }) {
+  if (t.novoModelo === true) {
+    const d = taxaAPassarAClyon(t.acordado, t.taxas);
+    if (d) return d;
+  }
+  return dividaDoProfissional(t.acordado, t.taxas);
+}
 
 /**
  * O QUE JÁ FOI PEDIDO A ESTE CLIENTE — e se ele pagou.
@@ -91,7 +107,7 @@ export async function GET(req: NextRequest) {
     const falta = (t: typeof acesso.trabalho, comFactura: boolean) => {
       const p = quantoSePedeNesteTrabalho(t, comFactura);
       return p.quemPaga === "profissional"
-        ? oQueFaltaDaDivida(dividaDoProfissional(t.acordado, t.taxas), marcas).total
+        ? oQueFaltaDaDivida(dividaDeste(t), marcas).total
         : p.valor;
     };
     return NextResponse.json({
@@ -179,6 +195,18 @@ export async function POST(req: NextRequest) {
   const t = acesso.trabalho;
 
   /*
+   * NO MODELO DE 15-11 NÃO HÁ REFERÊNCIA AO CLIENTE NA ADJUDICAÇÃO — d17. O
+   * cliente paga ao parceiro; o que se pede por aqui é só a taxa ao parceiro,
+   * e essa não vai na mensagem ao cliente.
+   */
+  if (t.novoModelo && corpo.origem === "adjudicacao") {
+    return NextResponse.json(
+      { error: "No modelo de 15-11 o cliente paga ao parceiro: a adjudicação não leva referências." },
+      { status: 409 },
+    );
+  }
+
+  /*
    * QUANTO, E A QUEM — numa função só (`quantoSePedeNesteTrabalho`).
    *
    * EM DINHEIRO COBRA-SE SÓ A PARTE DA CLYON — 21-09-2026. O serviço já foi
@@ -200,7 +228,7 @@ export async function POST(req: NextRequest) {
    */
   const valor = doProfissional
     ? oQueFaltaDaDivida(
-        dividaDoProfissional(t.acordado, t.taxas),
+        dividaDeste(t),
         (await marcasDasNegociacoes([Number(corpo.negociacaoId)])).get(Number(corpo.negociacaoId)) ?? [],
       ).total
     : pedido.valor;
@@ -218,10 +246,20 @@ export async function POST(req: NextRequest) {
   const recusa = porqueNaoPodeCobrar(metodo, valor);
   if (recusa) return NextResponse.json({ error: recusa }, { status: 400 });
 
+  /*
+   * NO MODELO DE 15-11 O MB WAY DA TAXA VAI SÓ PARA O TELEFONE DO PROFISSIONAL
+   * — d17. Nunca para um número escrito à mão: escrito o do cliente, era pedir-lhe
+   * a taxa que o parceiro tem de pagar (e o cliente podia pagar duas vezes).
+   */
+  if (metodo === "mbway" && t.novoModelo && !t.telefoneDoProfissional) {
+    return NextResponse.json({ error: "O profissional não tem telefone na ficha para o MB WAY." }, { status: 409 });
+  }
   const telemovel =
     metodo === "mbway"
-      ? (typeof corpo.telemovel === "string" ? corpo.telemovel.trim() : "") ||
-        (doProfissional ? t.telefoneDoProfissional : t.telefoneDoCliente)
+      ? t.novoModelo
+        ? t.telefoneDoProfissional
+        : (typeof corpo.telemovel === "string" ? corpo.telemovel.trim() : "") ||
+          (doProfissional ? t.telefoneDoProfissional : t.telefoneDoCliente)
       : null;
 
   try {

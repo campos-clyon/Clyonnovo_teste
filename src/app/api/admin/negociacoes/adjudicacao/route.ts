@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { linkParaQuemFechou } from "@/lib/link-de-quem-fecha-pelo-whatsapp";
-import { lerMotivoDosDadosDoDono } from "@/lib/mensagem-de-adjudicacao";
+import { lerMotivoDosDadosDoDono, type AdjudicacaoNoNovoModelo } from "@/lib/mensagem-de-adjudicacao";
+import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
+import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { linkParaPagar } from "@/lib/valores-para-pagamento";
 
@@ -38,8 +40,23 @@ export async function POST(req: NextRequest) {
   if (!Number.isInteger(negociacaoId) || negociacaoId <= 0) {
     return NextResponse.json({ error: "Negociação não indicada." }, { status: 400 });
   }
-  const comLink = corpo.comLink === true;
+  /*
+   * O MODELO DE 15-11 — d17 (13-11-2026). Quem decide é o servidor, com os
+   * pagamentos lidos (`trabalhoVistoPeloBackoffice` → `negociacaoNoNovoModelo`).
+   * No modelo novo o cliente paga ao parceiro: a mensagem leva o texto D, o
+   * total do bloco «Pagar a …» e o link do pedido (onde estão os dados para
+   * pagar, e só lá). Nem referências ao cliente, nem os dados do dono.
+   */
+  const acesso = await trabalhoVistoPeloBackoffice(negociacaoId);
+  const noNovoModelo = acesso.ok && acesso.trabalho.novoModelo;
+  const comLink = noNovoModelo || corpo.comLink === true;
   const dadosDoDono = corpo.dadosDoDono === true;
+  if (noNovoModelo && dadosDoDono) {
+    return NextResponse.json(
+      { error: "No modelo de 15-11 o cliente paga ao parceiro: os dados do dono não entram na adjudicação." },
+      { status: 409 },
+    );
+  }
   const motivo = dadosDoDono ? lerMotivoDosDadosDoDono(corpo.motivoDosDadosDoDono) : null;
   if (motivo && !motivo.ok) return NextResponse.json({ error: motivo.erro }, { status: 400 });
   if (!comLink && !dadosDoDono) return NextResponse.json({ ok: true, link: null });
@@ -86,5 +103,16 @@ export async function POST(req: NextRequest) {
       message: `Adjudicação com os dados de pagamento do dono (Configs), e não pela plataforma. Motivo: «${motivo.motivo}».`,
     });
   }
-  return NextResponse.json({ ok: true, link });
+  let novoModelo: AdjudicacaoNoNovoModelo | null = null;
+  if (noNovoModelo && acesso.ok) {
+    const visto = await oQueOClienteVeDoParceiro(acesso.trabalho);
+    if (visto.conta?.total != null) {
+      novoModelo = {
+        total: visto.conta.total,
+        semIva: visto.conta.semIva,
+        formas: visto.opcoes.map((o) => o.id),
+      };
+    }
+  }
+  return NextResponse.json({ ok: true, link, novoModelo });
 }

@@ -3338,6 +3338,8 @@ export default function AdminNegociacoesPanel({
                 metodosDePagamento={metodosDePagamento}
                 metodosLidos={metodosLidos}
                 classeDoBotao="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20"
+                // O modelo de 15-11 (d17): a marca da rota da Mesa; o servidor volta a decidir ao preparar.
+                novoModelo={(acordada as { noNovoModelo?: boolean }).noNovoModelo === true}
               />
             ) : null;
           })()}

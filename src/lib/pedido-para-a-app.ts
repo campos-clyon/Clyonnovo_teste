@@ -48,6 +48,7 @@ import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
 import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
 import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 import { ACCAO_DO_FECHO } from "./fecho-do-modelo-novo";
+import { precoDoNovoModelo, totalDoValor } from "./total-ao-cliente";
 
 /**
  * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
@@ -135,11 +136,30 @@ export type TextosDoPreco = {
 /** Os textos do preço que o cliente paga por um valor do profissional, no modelo DESTA negociação. */
 export function textosDoPreco(
   valorDoProfissional: number,
-  n: Pick<NegociacaoDoCliente, "taxaCliente" | "semFactura" | "criadaEm">,
+  n: Pick<NegociacaoDoCliente, "taxaCliente" | "semFactura" | "criadaEm"> &
+    Partial<Pick<NegociacaoDoCliente, "novoModelo" | "totaisNoNovoModelo">>,
   base: BaseDoPreco,
 ): TextosDoPreco {
-  const conta = precoDoCliente(valorDoProfissional, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm));
-  return textosDaConta(conta, notaDoPrecoParaOCliente(base));
+  const conta = precoDaNegociacao(valorDoProfissional, n);
+  const textos = textosDaConta(conta, notaDoPrecoParaOCliente(base));
+  // No modelo novo (d17), quem passa a fatura do trabalho vai ao lado do preço.
+  return n.novoModelo && n.totaisNoNovoModelo && totalDoValor(n.totaisNoNovoModelo, valorDoProfissional)
+    ? { ...textos, detalhe: `${textos.detalhe} · ${n.novoModelo.perfilFiscal.fatura}` }
+    : textos;
+}
+
+/**
+ * O PREÇO DO CLIENTE PARA UM VALOR DESTA NEGOCIAÇÃO — d17 (13-11-2026). No
+ * modelo de 15-11, o total do regime do parceiro (`total-ao-cliente.ts`), o
+ * mesmo do bloco «Pagar a …»; fora dele, a conta de sempre.
+ */
+export function precoDaNegociacao(
+  valorDoProfissional: number,
+  n: Pick<NegociacaoDoCliente, "taxaCliente" | "semFactura" | "criadaEm"> &
+    Partial<Pick<NegociacaoDoCliente, "novoModelo" | "totaisNoNovoModelo">>,
+): PrecoDoCliente {
+  const t = n.novoModelo ? totalDoValor(n.totaisNoNovoModelo, valorDoProfissional) : null;
+  return t ? precoDoNovoModelo(t) : precoDoCliente(valorDoProfissional, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm));
 }
 
 /** Os mesmos textos para uma conta já feita (a da proposta CLYON, por exemplo). */
@@ -552,10 +572,7 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
         ? null
         : base === "hora"
           ? contratado && horasConfirmadas(n.horas ?? {})
-            ? textosDaConta(
-                precoDoCliente(emCima, taxasDaNegociacao(n), modeloDaLinha(n, n.criadaEm)),
-                "Total das horas confirmadas.",
-              )
+            ? textosDaConta(precoDaNegociacao(emCima, n), "Total das horas confirmadas.")
             : textosDoPrecoPorHora(contratado ? (valorPorHoraDe({ ...(n.horas ?? {}), valorAcordado: emCima }) ?? emCima) : emCima, n)
           : textosDoPreco(emCima, n, base),
     // As horas e os materiais (31-10-2026) — `null` quando não há.

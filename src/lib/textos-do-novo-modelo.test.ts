@@ -154,7 +154,10 @@ describe("a regra d33 com o modelo novo: o cliente vê a fatura da taxa, e só a
     const fora = get.indexOf("if (!acesso.trabalho.novoModelo) return NextResponse.json({ pagaAoParceiro: false });");
     expect(fora).toBeGreaterThan(-1);
     expect(fora).toBeLessThan(get.indexOf("oQueOClienteVe(acesso.trabalho)"));
-    expect(rota).toContain("faturaDaTaxa: c.faturaDaClyonCent / 100");
+    // Desde a d17 o bloco é uma função só, para a rota e a R5 da app de cliente.
+    expect(rota).toContain("oQueOClienteVeDoParceiro");
+    const bloco = readFileSync(join(process.cwd(), "src/lib/pagar-ao-parceiro-para-o-cliente.ts"), "utf8");
+    expect(bloco).toContain("faturaDaTaxa: c.faturaDaTaxa,");
   });
 });
 

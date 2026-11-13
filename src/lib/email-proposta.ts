@@ -110,6 +110,11 @@ export async function avisarClienteDaProposta(p: {
    * `desdobramentoDoIva`.
    */
   semIvaEIva?: { semIva: number; iva: number } | null;
+  /**
+   * QUEM PASSA A FATURA DO TRABALHO — no modelo de 15-11 (d17): «Fatura com IVA»
+   * ou «Fatura com isenção de IVA (art. 53.º)», pelo perfil do parceiro.
+   */
+  fatura?: string | null;
   /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
   base?: BaseDoPreco;
   /**
@@ -144,7 +149,7 @@ export async function avisarClienteDaProposta(p: {
           p.ivaIncluido
             ? `com IVA incluído${p.semIvaEIva ? ` (${e(desdobramentoDoIva(p.semIvaEIva))})` : ""}`
             : "sem IVA"
-        }. Pode aceitar, propor outro valor, ou esperar por mais propostas.
+        }.${p.fatura ? ` ${e(p.fatura)}, passada pelo parceiro.` : ""} Pode aceitar, propor outro valor, ou esperar por mais propostas.
       </p>
       ${
         // Por carga, a unidade; pelo trabalho todo, os 32 € por item a mais (22-10-2026).
