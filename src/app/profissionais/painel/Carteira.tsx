@@ -9,7 +9,7 @@ import type { DadosDaCarteira, DividaDaCarteira } from "./tipos";
 import type { LinhaDaCarteira, ResumoDaCarteira } from "@/lib/trabalhos-da-carteira";
 import { PROMESSA, promessaGeral } from "@/lib/pagamento-na-plataforma";
 // Os nomes da carteira, os mesmos da app (28-10-2026, d4): nenhum se escreve à mão aqui.
-import { ROTULOS_DA_CARTEIRA as R } from "@/lib/rotulos-da-carteira";
+import { ROTULOS_DA_CARTEIRA, rotulosDaCarteira } from "@/lib/rotulos-da-carteira";
 import { PAGAR_O_VALOR_EM_ATRASO } from "@/lib/valor-em-atraso";
 // As frases da dívida, as mesmas da app (11-11-2026): pela dívida inteira, nunca pelo que falta.
 import { faltaDaDivida, fraseDaDividaEmMao, fraseDaDividaNoSaldo, linhasDasPartesDaDivida } from "@/lib/frases-da-divida";
@@ -58,6 +58,11 @@ export default function Carteira({
 
   const { carteira } = dados;
   /*
+   * AS NOTAS DO MODELO DE 15-11 — d16 (13-11-2026), as mesmas da app Pro: quem
+   * diz se vale é o servidor (`dados.novoModelo`), nunca o relógio do browser.
+   */
+  const R = rotulosDaCarteira(dados.novoModelo != null);
+  /*
    * O QUE PODE PEDIR é o disponível menos o que deve à CLYON — «abater no
    * saldo», 01-10-2026. A rota do levantamento recusa o resto; o botão não o
    * pode prometer.
@@ -87,7 +92,7 @@ export default function Carteira({
         recebeu, e o que está retido com a razão. Os números vêm de
         `contaDaCarteira` (o mesmo que a app e o backoffice).
       */}
-      {dados.resumo && <TresBlocos resumo={dados.resumo} />}
+      {dados.resumo && <TresBlocos resumo={dados.resumo} novoModelo={dados.novoModelo != null} />}
 
       <section className="mt-3 overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
         {/*
@@ -263,7 +268,8 @@ export default function Carteira({
   );
 }
 
-function TresBlocos({ resumo }: { resumo: ResumoDaCarteira }) {
+function TresBlocos({ resumo, novoModelo }: { resumo: ResumoDaCarteira; novoModelo: boolean }) {
+  const R = rotulosDaCarteira(novoModelo);
   const retido = resumo.aEsperaDaConfirmacao + resumo.clienteAindaNaoPagou;
   return (
     <section className="grid gap-3 sm:grid-cols-3">
@@ -305,6 +311,8 @@ function TresBlocos({ resumo }: { resumo: ResumoDaCarteira }) {
  * trabalho nunca sai pela purga (ver `retencao.ts`).
  */
 function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
+  // Só os nomes (iguais nos dois modelos).
+  const R = ROTULOS_DA_CARTEIRA;
   const [separador, setSeparador] = useState<"por_receber" | "recebido">("por_receber");
   const mostradas = linhas.filter((l) =>
     separador === "recebido" ? l.grupo === "recebido" : l.grupo !== "recebido",
@@ -599,6 +607,7 @@ function PedirTransferencia({
   onIban: () => void;
   onFeito: () => void;
 }) {
+  const R = rotulosDaCarteira(dados.novoModelo != null);
   // O que pode pedir — o disponível menos o que deve à CLYON (01-10-2026).
   const maximo = levantavelDosDados(dados);
   const [valor, setValor] = useState(String(maximo).replace(".", ","));
