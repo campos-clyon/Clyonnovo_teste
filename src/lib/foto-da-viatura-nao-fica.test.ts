@@ -135,7 +135,7 @@ describe("a rota do envio", () => {
 describe("tirar a fotografia pelo perfil", () => {
   it("lê a anterior ANTES do UPDATE — depois já não há por onde saber", () => {
     const leitura = PERFIL.indexOf("urlDaFotoDaViatura(sessao.providerId)");
-    const grava = PERFIL.indexOf("actualizarPerfilDoProfissional(sessao.providerId, mudancas)");
+    const grava = PERFIL.indexOf("actualizarPerfilDoProfissional(sessao.providerId, mudancas");
     expect(leitura).toBeGreaterThan(-1);
     expect(grava).toBeGreaterThan(leitura);
   });

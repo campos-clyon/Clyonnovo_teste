@@ -38,7 +38,7 @@ import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional"
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
-import { perfilFiscalDoParceiro } from "@/lib/perfil-fiscal";
+import { perfilFiscalDoParceiro, regimeParaOEcra } from "@/lib/perfil-fiscal";
 import { guiaMudouDeFacto } from "@/lib/guia-mudou";
 import { avisoDoCodigoApa, destinoDosResiduosLimpo } from "@/lib/guia-de-residuos";
 import {
@@ -208,7 +208,14 @@ export async function GET(req: NextRequest) {
         avisosNoWhatsApp: Number(p.whatsappAvisos) === 1,
         avisosNoWhatsAppEm: (p.whatsappAvisosEm as Date | null) ?? null,
         emiteFatura: Number(p.emiteFatura) === 1,
-        regimeIva: String(p.regimeIva ?? "isento"),
+        /*
+         * O REGIME SÓ SAI QUANDO ESTÁ CONFIRMADO — d19, 13-11-2026. A coluna
+         * nasce com «isento» por omissão, e devolvê-lo punha o ecrã a mostrar
+         * «isento» marcado a quem nunca respondeu. Vazio = por confirmar: o
+         * ecrã começa sem nenhum marcado e pergunta.
+         */
+        regimeIva: regimeParaOEcra(p),
+        regimeIvaConfirmado: regimeParaOEcra(p) !== "",
         emiteGuiaTransporte: Number(p.emiteGuiaTransporte) === 1,
         numeroTransportador: p.numeroTransportador ?? "",
         /*
@@ -582,11 +589,18 @@ export async function PUT(req: NextRequest) {
 
   if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;
 
-  if ("regimeIva" in corpo) {
+  /*
+   * O regime grava-se como sempre; CONFIRMA-SE só quando ele o escolheu neste
+   * ecrã (`confirmarRegime: true`) — d19, 13-11-2026. Vazio não é erro: é o
+   * ecrã de quem ainda não escolheu, e fica tudo como estava.
+   */
+  let confirmarRegime = false;
+  if ("regimeIva" in corpo && corpo.regimeIva !== "" && corpo.regimeIva != null) {
     if (!regimeDeIvaValido(corpo.regimeIva)) {
       erros.push({ campo: "regimeIva", mensagem: "Escolha o regime de IVA." });
     } else {
       mudancas.regimeIva = corpo.regimeIva;
+      confirmarRegime = corpo.confirmarRegime === true;
     }
   }
 
@@ -731,7 +745,7 @@ export async function PUT(req: NextRequest) {
     const fotoAntiga =
       "fotoViaturaUrl" in mudancas ? await urlDaFotoDaViatura(sessao.providerId) : null;
 
-    await actualizarPerfilDoProfissional(sessao.providerId, mudancas);
+    await actualizarPerfilDoProfissional(sessao.providerId, mudancas, { confirmarRegime });
 
     // Só depois de a base já não lhe apontar: ao contrário, uma falha a meio
     // deixava o perfil a mostrar uma imagem partida.

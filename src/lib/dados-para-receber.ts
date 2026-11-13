@@ -60,6 +60,21 @@ export function dadosEmFalta(p: ProfissionalComDadosParaReceber): DadoParaRecebe
   return falta;
 }
 
+/**
+ * «DADOS PARA RECEBER» NO BACKOFFICE — d19, 13-11-2026: quantos dos quatro tem
+ * (IBAN, titular, MB WAY, regime de IVA confirmado) e quais faltam. Só de
+ * leitura; a mesma pergunta de `dadosEmFalta`, que é a do impedimento.
+ */
+export function resumoDosDadosParaReceber(p: ProfissionalComDadosParaReceber): {
+  tem: number;
+  de: number;
+  falta: DadoParaReceber[];
+} {
+  const falta = dadosEmFalta(p);
+  const de = REGIME_DE_IVA_OBRIGATORIO ? 4 : 3;
+  return { tem: de - falta.length, de, falta };
+}
+
 /** Foi aprovado antes de 15-11 (ganha os 7 dias de aviso)? Vazio = aprovado de antes. */
 export function aprovadoAntesDoNovoModelo(p: ProfissionalComDadosParaReceber): boolean {
   if (p.aprovadoEm === undefined) return false;

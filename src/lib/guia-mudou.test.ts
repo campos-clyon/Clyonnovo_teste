@@ -40,7 +40,7 @@ describe("a guia mudou mesmo?", () => {
     // Ler o «antes» tem de vir antes do UPDATE — depois já é o «depois».
     expect(ROTA.indexOf("guiaMudouDeFacto(guardado")).toBeGreaterThan(ROTA.indexOf("await perfilDoProfissional(sessao.providerId) : undefined"));
     expect(ROTA.indexOf("guiaMudouDeFacto(guardado")).toBeLessThan(
-      ROTA.indexOf("await actualizarPerfilDoProfissional(sessao.providerId, mudancas)"),
+      ROTA.indexOf("await actualizarPerfilDoProfissional(sessao.providerId, mudancas"),
     );
     expect(ROTA).not.toMatch(/guiaMudou = true/);
 

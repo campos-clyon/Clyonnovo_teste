@@ -12,6 +12,8 @@ import { ibanEncurtado } from "@/lib/iban";
 import { ONDE_PROFISSIONAIS_DO_PAINEL } from "@/lib/profissionais-do-painel";
 import { textoDaApp } from "@/lib/app-pro-no-telemovel";
 import { resumoDaMigracao } from "@/lib/categorias-em-grupos";
+import { resumoDosDadosParaReceber } from "@/lib/dados-para-receber";
+import { resumoDaReposicaoDoRegime } from "@/lib/regime-por-confirmar-na-base";
 
 export const runtime = "nodejs";
 
@@ -39,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     const [rows] = await pool.execute(
       `SELECT id, name, email, phone, nif, city, categorias, raioKm,
-              emiteFatura, regimeIva, emiteGuiaTransporte, numeroTransportador,
+              emiteFatura, regimeIva, regimeIvaConfirmadoEm, emiteGuiaTransporte, numeroTransportador,
               guiaVerificadaEm, guiaVerificadaPor, estado, isActive,
               -- A guia (d5, 12-11-2026): o destino e SE há prova. O endereço da
               -- prova não vai na lista: abre-se pela rota do administrador.
@@ -107,6 +109,12 @@ export async function GET(req: NextRequest) {
          * o novo — a máscara devolvida tal e qual é ignorada na gravação.
          */
         iban: typeof p.iban === "string" && p.iban ? ibanEncurtado(p.iban) : "",
+        /*
+         * DADOS PARA RECEBER — d19, 13-11-2026: n/4 (IBAN, titular, MB WAY,
+         * regime de IVA confirmado). Contado aqui, com o IBAN inteiro; ao
+         * browser só vai o número e o que falta.
+         */
+        dadosParaReceber: resumoDosDadosParaReceber(p),
         temPalavraPasse: Number(p.temPalavraPasse) === 1,
         contaDeTeste: Number(p.contaDeTeste) === 1,
         // «App: sim, aberta a … · versão», ou «sem app» — em hora de Lisboa, no servidor.
@@ -120,7 +128,9 @@ export async function GET(req: NextRequest) {
 
     // Quantos passaram de serviços a grupos a 29-10-2026, e quantos ganharam serviços com isso.
     const grupos = await resumoDaMigracao(pool as unknown as Parameters<typeof resumoDaMigracao>[0]);
-    return NextResponse.json({ profissionais, grupos });
+    // Quantos regimes voltaram a «por confirmar» (d19, 13-11-2026). Nulo antes de correr.
+    const regimesRepostos = await resumoDaReposicaoDoRegime();
+    return NextResponse.json({ profissionais, grupos, regimesRepostos });
   } catch (error) {
     console.error("[api/admin/profissionais GET]", error);
     return NextResponse.json({ error: "Erro ao listar profissionais" }, { status: 500 });

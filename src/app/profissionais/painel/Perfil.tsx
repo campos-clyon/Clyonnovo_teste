@@ -273,6 +273,12 @@ export default function Perfil({
    * é sempre de uma gravação concreta.
    */
   const [gravadoAs, setGravadoAs] = useState<Date | null>(null);
+  /*
+   * ELE ESCOLHEU O REGIME NESTE ECRÃ? — d19, 13-11-2026. Só então a gravação
+   * leva `confirmarRegime` e o regime fica confirmado; gravar o NIF ou a morada
+   * não responde por ele à pergunta «com IVA ou isento?».
+   */
+  const [regimeEscolhido, setRegimeEscolhido] = useState(false);
 
   // Palavra-passe — não vive no perfil, tem rota própria.
   const [actual, setActual] = useState("");
@@ -1036,8 +1042,8 @@ export default function Perfil({
               dele diz «sem NIF · morada fiscal por indicar», porque não liga
               um interruptor que não lhe diz respeito.
               
-              O regime de IVA fica atrás dele, esse sim: só existe se houver
-              factura.
+              O regime de IVA ficava atrás dele; desde 13-11-2026 (d19) também
+              sai, porque no modelo de 15-11 todos o confirmam.
             */}
             <Campo etiqueta="NIF" falta={porque("nif")}>
               <input
@@ -1086,44 +1092,52 @@ export default function Perfil({
               </Campo>
             </div>
 
-            {dados.emiteFatura && (
-              <>
-                <div>
-                  <span className="text-sm font-medium text-slate-700">Regime de IVA</span>
-                  <div className="mt-2 space-y-2">
-                    {[
-                      {
-                        id: "isento",
-                        titulo: "Isento (art. 53.º)",
-                        texto: "Não cobra IVA. O cliente não vê linha de imposto.",
-                      },
-                      {
-                        id: "normal",
-                        titulo: "Regime normal — 23 %",
-                        texto: "O IVA vem incluído no valor acordado e aparece na confirmação.",
-                      },
-                    ].map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => mudar("regimeIva", r.id)}
-                        aria-pressed={dados.regimeIva === r.id}
-                        className={`block w-full rounded-xl border-2 p-3 text-left transition ${
-                          dados.regimeIva === r.id
-                            ? "border-cyan-600 bg-cyan-50"
-                            : "border-slate-200 bg-white"
-                        }`}
-                      >
-                        <span className="block text-sm font-semibold text-slate-800">
-                          {r.titulo}
-                        </span>
-                        <span className="block text-xs text-slate-500">{r.texto}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+            {/*
+              O REGIME DE IVA A TODA A GENTE — d19, 13-11-2026. Desde 15-11 cada
+              parceiro fatura o seu trabalho e o regime confirmado é um dos dados
+              para receber (`dados-para-receber.ts`), passe ou não a caixa de cima.
+              Começa sem nenhum marcado enquanto não estiver confirmado.
+            */}
+            <div>
+              <span className="text-sm font-medium text-slate-700">Regime de IVA</span>
+              {!dados.regimeIva && (
+                <p className="mt-1 text-xs text-amber-700">Por confirmar: escolha um dos dois e guarde.</p>
+              )}
+              <div className="mt-2 space-y-2">
+                {[
+                  {
+                    id: "isento",
+                    titulo: "Isento (art. 53.º)",
+                    texto: "Não cobra IVA. O cliente não vê linha de imposto.",
+                  },
+                  {
+                    id: "normal",
+                    titulo: "Regime normal — 23 %",
+                    texto: "O IVA vem incluído no valor acordado e aparece na confirmação.",
+                  },
+                ].map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      mudar("regimeIva", r.id);
+                      setRegimeEscolhido(true);
+                    }}
+                    aria-pressed={dados.regimeIva === r.id}
+                    className={`block w-full rounded-xl border-2 p-3 text-left transition ${
+                      dados.regimeIva === r.id
+                        ? "border-cyan-600 bg-cyan-50"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold text-slate-800">
+                      {r.titulo}
+                    </span>
+                    <span className="block text-xs text-slate-500">{r.texto}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <Interruptor
               ligado={dados.emiteGuiaTransporte}
@@ -1183,7 +1197,10 @@ export default function Perfil({
                   moradaFiscal: dados.moradaFiscal,
                   codigoPostalFiscal: dados.codigoPostalFiscal,
                   localidadeFiscal: dados.localidadeFiscal,
-                  regimeIva: dados.regimeIva,
+                  // Só o regime escolhido aqui se confirma (d19); vazio não segue.
+                  ...(dados.regimeIva === "normal" || dados.regimeIva === "isento"
+                    ? { regimeIva: dados.regimeIva, ...(regimeEscolhido ? { confirmarRegime: true } : {}) }
+                    : {}),
                   emiteGuiaTransporte: dados.emiteGuiaTransporte,
                   numeroTransportador: dados.numeroTransportador,
                   ...(dados.emiteGuiaTransporte ? { destinoDosResiduos: dados.destinoDosResiduos ?? "" } : {}),

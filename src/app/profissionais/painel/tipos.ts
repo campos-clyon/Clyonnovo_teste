@@ -366,7 +366,9 @@ export type Perfil = {
   avisosNoWhatsApp?: boolean;
   avisosNoWhatsAppEm?: string | null;
   emiteFatura: boolean;
+  /** Só o confirmado (d19, 13-11-2026): vazio = por confirmar. */
   regimeIva: string;
+  regimeIvaConfirmado?: boolean;
   emiteGuiaTransporte: boolean;
   numeroTransportador: string;
   /** O operador licenciado onde descarrega o entulho (d5, 12-11-2026). */

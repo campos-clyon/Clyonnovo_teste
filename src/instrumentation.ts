@@ -72,6 +72,21 @@ export async function register() {
       } catch (err) {
         console.error("[instrumentation] acerto de 01/11/2026 falhou:", err);
       }
+
+      /*
+       * OS REGIMES DE IVA CONFIRMADOS SEM ESCOLHA — d19, 13-11-2026. Voltam a
+       * «por confirmar», uma vez só, com cópia antes; depois é uma leitura por
+       * arranque. Ver `regime-por-confirmar-na-base.ts`.
+       */
+      try {
+        const { reporRegimesSemEscolha } = await import("@/lib/regime-por-confirmar-na-base");
+        const r = await reporRegimesSemEscolha();
+        if (r.estado === "feita") {
+          console.log(`[instrumentation] d19: ${r.contados} regimes por confirmar contados, ${r.repostos} repostos`);
+        }
+      } catch (err) {
+        console.error("[instrumentation] d19 (regimes por confirmar) falhou:", err);
+      }
     }
   }
 }

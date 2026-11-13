@@ -118,7 +118,7 @@ describe("a rota do perfil pede a palavra-passe para os dados de pagamento", () 
     const r = await PUT(pedido({ iban: IBAN_NOVO, ibanTitular: "João Silva", palavraPasse: "certa" }));
     expect(r.status).toBe(200);
     expect((await r.json()).dadosDePagamentoMudados).toEqual(["iban"]);
-    expect(actualizarPerfilDoProfissional).toHaveBeenCalledWith(7, expect.objectContaining({ iban: IBAN_NOVO }));
+    expect(actualizarPerfilDoProfissional).toHaveBeenCalledWith(7, expect.objectContaining({ iban: IBAN_NOVO }), expect.anything());
     expect(enviarEmailDosDadosDePagamento).toHaveBeenCalledWith(
       expect.objectContaining({ para: "pro@exemplo.pt", campos: ["iban"], ibanFinal: "0000" }),
     );

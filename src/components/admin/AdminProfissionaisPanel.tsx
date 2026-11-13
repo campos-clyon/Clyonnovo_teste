@@ -46,6 +46,7 @@ import {
   avisoDoCodigoApa,
 } from "@/lib/guia-de-residuos";
 import { tempoEmPalavras } from "@/lib/tempo-de-resposta";
+import { NOMES_DOS_DADOS, type DadoParaReceber } from "@/lib/dados-para-receber";
 import {
   SO_O_ADMINISTRADOR_VERIFICA_A_GUIA,
   confirmacoesEmFalta,
@@ -111,7 +112,18 @@ type Profissional = {
   temApp?: boolean;
   actividade: Actividade;
   respondeEm?: RespondeEm | null;
+  /** d19 (13-11-2026): quantos dos quatro tem (IBAN, titular, MB WAY, regime confirmado). */
+  dadosParaReceber?: { tem: number; de: number; falta: DadoParaReceber[] };
 };
+
+/** Conta para o total «n/N completos»: aprovado e não de teste (d19). */
+function contaParaOsDados(p: Profissional): boolean {
+  return p.estado === "aprovado" && !p.contaDeTeste;
+}
+
+function dadosCompletos(p: Profissional): boolean {
+  return p.dadosParaReceber != null && p.dadosParaReceber.falta.length === 0;
+}
 
 /** O que a rota responde a uma acção — o editor precisa de o ler. */
 type Resposta = { ok: true; dados: Record<string, unknown> } | { ok: false; erro: string };
@@ -163,11 +175,14 @@ export default function AdminProfissionaisPanel({
   const [aviso, setAviso] = useState("");
   /** O link de criar palavra-passe, quando o email não saiu. */
   const [linkDaSenha, setLinkDaSenha] = useState("");
-  const [filtro, setFiltro] = useState<"todos" | EstadoDoProfissional | "por_verificar" | "sem_confirmacoes">("todos");
+  const [filtro, setFiltro] = useState<
+    "todos" | EstadoDoProfissional | "por_verificar" | "sem_confirmacoes" | "dados_para_receber"
+  >("todos");
   const [busca, setBusca] = useState("");
   const [aEditar, setAEditar] = useState<number | null>(null);
   const [verSuspensos, setVerSuspensos] = useState(false);
   const [grupos, setGrupos] = useState<{ migrados: number; ganham: number; ganhamAprovados: number } | null>(null);
+  const [regimesRepostos, setRegimesRepostos] = useState<{ feitaEm: string | null; repostos: number } | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -183,6 +198,7 @@ export default function AdminProfissionaisPanel({
       }
       setProfissionais(dados.profissionais ?? []);
       setGrupos(dados.grupos ?? null);
+      setRegimesRepostos(dados.regimesRepostos ?? null);
       setErro("");
     } catch {
       setErro("Erro de rede.");
@@ -311,13 +327,26 @@ export default function AdminProfissionaisPanel({
   }
 
   const contagens = useMemo(() => {
-    const c: Record<string, number> = { todos: profissionais.length, por_verificar: 0, sem_confirmacoes: 0 };
+    const c: Record<string, number> = {
+      todos: profissionais.length,
+      por_verificar: 0,
+      sem_confirmacoes: 0,
+      dados_para_receber: 0,
+      dados_completos: 0,
+      dados_de: 0,
+    };
     for (const e of ESTADOS_DO_PROFISSIONAL) c[e] = 0;
     for (const p of profissionais) {
       c[p.estado] = (c[p.estado] ?? 0) + 1;
       if (p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm) c.por_verificar += 1;
       // Aprovados sem as três confirmações (04-11-2026, d10.2).
       if (porVerificar(p as unknown as Record<string, unknown>)) c.sem_confirmacoes += 1;
+      // Dados para receber (d19): o filtro mostra os aprovados a quem falta algum.
+      if (contaParaOsDados(p)) {
+        c.dados_de += 1;
+        if (dadosCompletos(p)) c.dados_completos += 1;
+        else c.dados_para_receber += 1;
+      }
     }
     return c;
   }, [profissionais]);
@@ -329,6 +358,8 @@ export default function AdminProfissionaisPanel({
         if (!(p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm)) return false;
       } else if (filtro === "sem_confirmacoes") {
         if (!porVerificar(p as unknown as Record<string, unknown>)) return false;
+      } else if (filtro === "dados_para_receber") {
+        if (!contaParaOsDados(p) || dadosCompletos(p)) return false;
       } else if (filtro !== "todos" && p.estado !== filtro) {
         return false;
       }
@@ -368,6 +399,8 @@ export default function AdminProfissionaisPanel({
     { id: "aprovado", nome: "Aprovados" },
     // Aprovados sem as três confirmações: continuam aprovados, «por verificar» (04-11-2026, d10.2).
     { id: "sem_confirmacoes", nome: "Aprovados por verificar" },
+    // Aprovados a quem falta o IBAN, o titular, o MB WAY ou o regime confirmado (d19, 13-11-2026).
+    { id: "dados_para_receber", nome: "Dados para receber" },
     { id: "rejeitado", nome: "Rejeitados" },
   ];
 
@@ -391,7 +424,17 @@ export default function AdminProfissionaisPanel({
           contagem, que é a informação que muda. */}
       <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <p className="text-sm text-slate-400">
-          {contagens.todos} inscritos · {contagens.aprovado} a receber pedidos
+          {contagens.todos} inscritos · {contagens.aprovado} a receber pedidos · Dados para receber:{" "}
+          {contagens.dados_completos}/{contagens.dados_de} completos
+          {regimesRepostos && (
+            <span className="block text-xs text-slate-500">
+              {regimesRepostos.repostos} regime(s) de IVA voltaram a «por confirmar» a{" "}
+              {regimesRepostos.feitaEm
+                ? new Date(regimesRepostos.feitaEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })
+                : "—"}{" "}
+              (estavam confirmados sem escolha).
+            </span>
+          )}
         </p>
         <button
           onClick={() => carregar()}
@@ -411,7 +454,8 @@ export default function AdminProfissionaisPanel({
               ? contagens.todos - (contagens.suspenso ?? 0)
               : (contagens[f.id] ?? 0);
           const activo = filtro === f.id;
-          const urgente = (f.id === "por_verificar" || f.id === "sem_confirmacoes") && n > 0;
+          const urgente =
+            (f.id === "por_verificar" || f.id === "sem_confirmacoes" || f.id === "dados_para_receber") && n > 0;
           return (
             <button
               key={f.id}
@@ -666,6 +710,22 @@ function Cartao({
           <p className="mt-2 text-xs text-slate-400">
             Inscrito a {new Date(p.createdAt).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}
           </p>
+          {/*
+            DADOS PARA RECEBER — d19, 13-11-2026. Só de leitura: n/4 e o que
+            falta. O IBAN nunca vem inteiro (a rota encurta-o).
+          */}
+          {p.dadosParaReceber && (
+            <p
+              className={`mt-1 text-xs ${
+                p.dadosParaReceber.falta.length === 0 ? "text-emerald-300" : "text-amber-300"
+              }`}
+            >
+              Dados para receber: {p.dadosParaReceber.tem}/{p.dadosParaReceber.de}
+              {p.dadosParaReceber.falta.length > 0 &&
+                ` · falta ${p.dadosParaReceber.falta.map((d) => NOMES_DOS_DADOS[d]).join(", ")}`}
+              {p.iban && ` · IBAN ${p.iban}`}
+            </p>
+          )}
           {/* Quem tem a app CLYON Pro (27-10-2026) — o texto vem da rota, em hora de Lisboa. */}
           {p.app && (
             <p className={`mt-1 text-xs ${p.temApp ? "text-emerald-300" : "text-slate-500"}`}>{p.app}</p>

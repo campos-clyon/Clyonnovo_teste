@@ -63,6 +63,15 @@ export function regimeConfirmado(p: ProfissionalParaOPerfil): RegimeDoProfission
   return Number.isNaN(d.getTime()) ? null : r;
 }
 
+/**
+ * O regime que o ecrã do perfil mostra marcado — d19, 13-11-2026: só o
+ * confirmado. Vazio = por confirmar, e o ecrã começa sem nenhum marcado (a
+ * coluna nasce com «isento» por omissão, que não é uma resposta dele).
+ */
+export function regimeParaOEcra(p: ProfissionalParaOPerfil): "" | RegimeDoProfissional {
+  return regimeConfirmado(p) ?? "";
+}
+
 export function perfilFiscalDoParceiro(p: ProfissionalParaOPerfil): PerfilFiscal {
   const r = regimeConfirmado(p);
   const tipo: TipoDeFatura = r === "normal" ? "com_iva" : r === "isento" ? "isento" : "a_confirmar";

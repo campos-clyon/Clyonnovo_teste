@@ -8511,6 +8511,12 @@ export async function perfilDoProfissional(
 export async function actualizarPerfilDoProfissional(
   providerId: number,
   dados: Record<string, unknown>,
+  /**
+   * `confirmarRegime`: ele ESCOLHEU o regime de IVA neste ecrã (d19, 13-11-2026).
+   * Só isto carimba `regimeIvaConfirmadoEm`; o regime que vem sem escolha grava-se
+   * e fica como estava (por confirmar, ou confirmado de antes).
+   */
+  opcoes: { confirmarRegime?: boolean } = {},
 ): Promise<void> {
   await ensureProvidersSchema();
   const pool = await getPool();
@@ -8602,11 +8608,16 @@ export async function actualizarPerfilDoProfissional(
     valoresDasQuedas.push(...dePagamento.map((c) => dados[c]));
   }
   /*
-   * O REGIME DE IVA FICA CONFIRMADO quando ele o grava — d10, 12-11-2026.
+   * O REGIME DE IVA SÓ FICA CONFIRMADO QUANDO ELE O ESCOLHE — d19, 13-11-2026.
    * É a resposta dele à pergunta «com IVA ou isento?» que o cliente lê ao
-   * escolher no modelo de 15-11 (`perfil-fiscal.ts`).
+   * escolher no modelo de 15-11 (`perfil-fiscal.ts`). Até aqui carimbava-se
+   * sempre que `regimeIva` vinha no corpo — e o ecrã mandava-o sempre, com
+   * «isento» posto por omissão: quem gravou só o NIF ficou «isento
+   * confirmado» sem ter respondido. Agora só com `confirmarRegime`.
    */
-  if (colunas.includes("regimeIva")) quedas.push("regimeIvaConfirmadoEm = UTC_TIMESTAMP()");
+  if (colunas.includes("regimeIva") && opcoes.confirmarRegime === true) {
+    quedas.push("regimeIvaConfirmadoEm = UTC_TIMESTAMP()");
+  }
 
   await pool.execute(
     `UPDATE providers SET ${[...quedas, ...colunas.map((c) => `${c} = ?`)].join(", ")} WHERE id = ?`,

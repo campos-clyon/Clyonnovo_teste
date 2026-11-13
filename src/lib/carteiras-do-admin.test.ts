@@ -280,7 +280,9 @@ describe("a morada fiscal deixa de estar atrás do interruptor", () => {
      * por indicar», porque não liga um interruptor que não lhe diz respeito.
      */
     const i = PERFIL_ECRA.indexOf('{seccao === "faturacao" && (');
-    const gate = PERFIL_ECRA.indexOf("{dados.emiteFatura && (", i);
+    // Desde 13-11-2026 (d19) o regime de IVA também saiu de trás dele: pode já não haver interruptor nenhum.
+    const interruptor = PERFIL_ECRA.indexOf("{dados.emiteFatura && (", i);
+    const gate = interruptor > -1 ? interruptor : Number.POSITIVE_INFINITY;
     /*
      * Procura-se o ATRIBUTO, e não a etiqueta inteira.
      *
