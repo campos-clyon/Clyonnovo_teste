@@ -97,7 +97,10 @@ describe("as mensagens ao cliente passam a base", () => {
   it("e a passagem do assistente diz o mesmo que o caminho imediato", () => {
     expect(ASSISTENTE).toContain("const base = lerBase(p.baseDoPreco);");
     // A proposta, a aceitação e — desde 29-09-2026 — o «combinado» em dinheiro.
-    expect(ASSISTENTE.match(/totalEmPalavras\([^)]*, base\)/g)?.length).toBe(3);
+    // d17 (13-11-2026): a proposta e a aceitação passam por `totalDito` (uma chamada só),
+    // e no modelo de 15-11 pela frase do total do Site, também com a base.
+    expect(ASSISTENTE.match(/totalEmPalavras\([^)]*, base\)/g)?.length).toBe(2);
+    expect(ASSISTENTE).toContain("totalEmPalavrasDoNovoModelo(t, n, base)");
     expect(semComentarios(ler("src/lib/db.ts"))).toContain("o.createdAt, o.dataAgendada, o.baseDoPreco");
   });
 });

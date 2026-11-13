@@ -113,9 +113,13 @@ describe("a frase está escrita uma vez só", () => {
      * de IVA do profissional, que não entrava em conta nenhuma desde
      * 22-09-2026; o que decide se o preço leva IVA é a data em que ela abriu.
      */
-    expect(CEREBRO).toContain("totalEmPalavras(dados.valor, modelo, taxas, forma");
-    expect(AVISOS).toContain("totalEmPalavras(pendente.valor, modelo, taxas, forma");
-    expect(AVISOS).toContain("totalEmPalavras(acordado, modelo, taxas, forma");
+    // d17 (13-11-2026): a frase das duas mensagens num sítio só (`oTotalDito`, e
+    // `totalDito` no assistente); no modelo novo, `totalEmPalavrasDoNovoModelo`.
+    expect(CEREBRO).toContain("totalEmPalavras(valor, modelo, taxas, formaDaFrase, base)");
+    expect(CEREBRO).toContain("oTotalDito(dados.valor, taxas, modelo, forma, novoModelo, linha, dados.base)");
+    expect(AVISOS).toContain("totalEmPalavras(valor, modelo, taxas, formaDaFrase, base)");
+    expect(AVISOS).toContain("totalDito(pendente.valor, formaDita)");
+    expect(AVISOS).toContain("totalDito(acordado, formaDita)");
     expect(CEREBRO).not.toContain("dados.regimeIva");
     expect(AVISOS).not.toContain("n.regimeIva, taxas");
   });

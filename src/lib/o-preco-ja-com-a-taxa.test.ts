@@ -189,7 +189,9 @@ describe("um número só, em todo o lado onde o cliente lê", () => {
 
   it("no WhatsApp, a proposta e a aceitação chegam com o preço dele — e o botão também", () => {
     const CEREBRO = semComentarios(ler("src/lib/whatsapp-negociacao.ts"));
-    expect(CEREBRO).toContain("const preco = precoParaOCliente(dados.valor, taxas, modelo);");
+    // d17 (13-11-2026): `oTotalDito` — a conta de sempre, ou o total do Site no modelo de 15-11.
+    expect(CEREBRO).toContain("preco: precoParaOCliente(valor, taxas, modelo),");
+    expect(CEREBRO).toContain("const { preco, totalDito } = oTotalDito(dados.valor, taxas, modelo, forma, novoModelo, linha, dados.base);");
     // Com a unidade quando o pedido é por carga (30-09-2026).
     expect(CEREBRO).toContain("propõe ${precoComBase(euros(preco), dados.base)}");
     expect(CEREBRO).toContain("aceitou os ${precoComBase(euros(preco), dados.base)}");

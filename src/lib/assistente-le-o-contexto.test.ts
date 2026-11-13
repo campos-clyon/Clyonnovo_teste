@@ -325,7 +325,8 @@ describe("o que lhe dissemos e já não está de pé diz-se", () => {
     const i = NEG.indexOf("async function ecraDoPedido");
     const corpo = NEG.slice(i, NEG.indexOf("function avisoDasRetiradas", i));
     // Nos dois caminhos: sem nada vivo, e com a mesa.
-    expect(corpo.match(/avisoDasRetiradas\(linhas\)/g)?.length).toBe(2);
+    // d17: com o modelo de cada uma (`nasNovoModelo`), para o preço ser o que ele viu.
+    expect(corpo.match(/avisoDasRetiradas\(linhas, /g)?.length).toBe(2);
   });
 
   it("e a frase não acusa ninguém — não se sabe quem a fechou", () => {

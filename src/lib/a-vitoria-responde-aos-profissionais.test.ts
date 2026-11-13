@@ -68,7 +68,7 @@ import { NOVO_MODELO_DESDE } from "./novo-modelo";
 const ANTES = new Date("2026-11-14T15:00:00Z"); // sábado, 15h em Lisboa — antes da data
 const DEPOIS_EM_HORARIO = new Date("2026-11-16T15:00:00Z"); // segunda, 15h em Lisboa
 const DEPOIS_AS_22H = new Date("2026-11-16T22:00:00Z"); // segunda, 22h em Lisboa (Inverno: UTC)
-const PRO = { id: 7, nome: "Gaspar Exemplo" };
+const PRO = { id: 7, nome: "Telmo Exemplo" };
 const TELEFONE = "351910000007";
 
 beforeEach(() => {
@@ -332,7 +332,7 @@ describe("o teste da conversa — com a data e o interruptor ligado (só no test
     if (d.tipo !== "fora_de_horas") return;
     expect(d.texto).toBe(respostaForaDeHoras(PRO.nome, DEPOIS_AS_22H));
     expect(d.texto).toBe(
-      "Obrigada pela sua mensagem, Gaspar. Neste momento estamos fora do horário de atendimento (de segunda a sábado, das 8h às 20h). " +
+      "Obrigada pela sua mensagem, Telmo. Neste momento estamos fora do horário de atendimento (de segunda a sábado, das 8h às 20h). " +
         "Uma pessoa da equipa responde-lhe amanhã, a partir das 8h, por aqui.",
     );
     expect(d.texto?.startsWith(COMECO_DA_RESPOSTA_FORA_DE_HORAS)).toBe(true);

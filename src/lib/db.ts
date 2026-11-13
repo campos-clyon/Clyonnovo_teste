@@ -17714,6 +17714,13 @@ export type PedidoParaOAssistente = {
      * assistente antes de falar (`segueONovoModelo`); sem ele, o de antes.
      */
     noNovoModelo?: boolean;
+    /**
+     * d17: o regime congelado ao contratar e a confirmação do perfil — o total
+     * do modelo novo depende deles (`totalAoClienteDaNegociacao`). Opcionais
+     * só para os testes que montam pedidos à mão.
+     */
+    regimeDoProfissional?: string | null;
+    regimeIvaConfirmadoEm?: Date | string | null;
   }>;
 };
 
@@ -17757,7 +17764,8 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
             n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm, n.dataCombinada, n.avaliadoEm,
             n.updatedAt AS actualizadaEm, n.createdAt AS criadaEm, n.ofertaClyon,
-            p.name AS profissionalNome, p.regimeIva
+            n.regimeDoProfissional,
+            p.name AS profissionalNome, p.regimeIva, p.regimeIvaConfirmadoEm
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})`,
@@ -17787,6 +17795,8 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
       taxaProfissional: (n.taxaProfissional as string | number | null) ?? null,
       formaDePagamento: n.formaDePagamento == null ? null : String(n.formaDePagamento),
       ofertaClyon: n.ofertaClyon == null ? null : String(n.ofertaClyon),
+      regimeDoProfissional: n.regimeDoProfissional == null ? null : String(n.regimeDoProfissional),
+      regimeIvaConfirmadoEm: (n.regimeIvaConfirmadoEm as Date | string | null) ?? null,
     });
   }
 

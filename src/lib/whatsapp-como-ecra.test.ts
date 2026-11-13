@@ -182,7 +182,9 @@ describe("o cérebro (whatsapp-negociacao)", () => {
     // E desde 01-10-2026 no modelo da negociação: `precoDoCliente` é a
     // `contaDoCliente` com o IVA incluído desde o corte, e `aPagar` é o número
     // que se lhe diz (o total com IVA, ou o `semIva` antes do corte).
-    expect(CEREBRO).toContain("precoDoCliente(");
+    // d17 (13-11-2026): pela `precoDaVitoria` (o-total-da-vitoria.ts), que é a
+    // `precoDoCliente` antes de 15-11 e o total do Site no modelo novo.
+    expect(CEREBRO).toContain("precoDaVitoria(");
     expect(CEREBRO).toContain("a pagar");
     expect(CEREBRO).toContain(".aPagar");
   });
