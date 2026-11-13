@@ -511,22 +511,18 @@ export default function Trabalhos({
    * volta que salta um desalinha todas as que vêm depois.
    */
   /*
-   * OS QUE AINDA NÃO ABRIU — E SÓ OS CINCO MAIS RECENTES.
+   * TODOS OS QUE AINDA NÃO ABRIU.
    *
-   * "Os pedidos estão todos a mostrar novo, mas novo deve ser apenas os 5
-   * recentes ainda não abertos."
+   * Antes eram só os cinco mais recentes por abrir. Decisão do dono de
+   * 13-11-2026 (d13): «todos novos pedidos» — o «Novo» fica em todos os
+   * pedidos do Feed que ele ainda não abriu, e sai quando o abre. A linha
+   * «N pedidos novos desde a última vez» continua no topo.
    *
-   * Tem razão duas vezes. «Novo» queria dizer «está no separador dos novos», e
-   * um trabalho fica lá até ele responder — por isso o distintivo ficava em
-   * todos os cartões, para sempre. Um aviso que nunca se apaga passa a fazer
-   * parte do fundo.
+   * «Novo» não é «está no separador dos novos»: um trabalho fica lá até ele
+   * responder, e um aviso que nunca se apaga passa a fazer parte do fundo. Por
+   * isso conta o `abertoEm` — e o `lidosAgora`, que o apaga no toque.
    *
-   * E mesmo por abrir, vinte cartões marcados não destacam nada. Cinco é o que
-   * uma pessoa vê de uma vez sem contar; a partir daí é uma mancha.
-   *
-   * O conjunto calcula-se aqui e não dentro da lista, porque «os cinco mais
-   * recentes» é uma propriedade do conjunto todo — os que estão no ecrã e os
-   * que ficaram por baixo — e não de cada cartão sozinho.
+   * A app CLYON Pro faz o mesmo (`todosPorAbrir` em app-pro/src/lib/trabalhos.ts).
    */
   const porAbrir = useMemo(() => {
     const ids = pedidos
@@ -536,11 +532,6 @@ export default function Trabalhos({
           !p.abertoEm &&
           !lidosAgora.has(p.negociacaoId),
       )
-      .sort(
-        (a, b) =>
-          new Date(b.actualizadoEm).getTime() - new Date(a.actualizadoEm).getTime(),
-      )
-      .slice(0, 5)
       .map((p) => p.negociacaoId);
     return new Set(ids);
   }, [pedidos, lidosAgora]);

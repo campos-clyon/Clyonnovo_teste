@@ -11,7 +11,8 @@ export const runtime = "nodejs";
  * O painel dizia «novo» em todos os cartões, para sempre. Não era um erro de
  * cálculo: «novo» queria dizer «está no separador dos novos», e um trabalho
  * fica lá até ele responder. Ele reparou — "os pedidos estão todos a mostrar
- * novo, mas novo deve ser apenas os 5 recentes ainda não abertos".
+ * novo, mas novo deve ser apenas os 5 recentes ainda não abertos". Desde
+ * 13-11-2026 (d13) o «Novo» fica em TODOS os por abrir, não só nos cinco.
  *
  * Um aviso que nunca se apaga deixa de ser um aviso: passa a fazer parte do
  * fundo, e a coisa que ele devia destacar — o que chegou desde a última vez —

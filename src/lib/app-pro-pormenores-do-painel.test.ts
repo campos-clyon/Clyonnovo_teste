@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cincoPorAbrir, type Trabalho } from "../../app-pro/src/lib/trabalhos";
+import { todosPorAbrir, type Trabalho } from "../../app-pro/src/lib/trabalhos";
 
 /**
  * OS PORMENORES DO PAINEL NA APP — 21-10-2026.
@@ -19,17 +19,18 @@ function novo(id: number, actualizadoEm: string, abertoEm: string | null = null)
   return { negociacaoId: id, estado: "aberta", propostas: null, arquivadoEm: null, abertoEm, actualizadoEm } as unknown as Trabalho;
 }
 
-describe("«Novo» só nos cinco mais recentes por abrir", () => {
-  it("é a regra do painel: dos Novos, por abrir, os cinco actualizados há menos tempo", () => {
+describe("«Novo» em todos os pedidos novos por abrir (d13, 13-11-2026)", () => {
+  it("é a regra do painel: dos Novos, todos os que ainda não abriu — sem limite de cinco", () => {
     const lista = [
       ...Array.from({ length: 7 }, (_, i) => novo(i + 1, `2026-10-2${i % 2}T1${i}:00:00Z`)),
       novo(99, "2026-10-21T23:00:00Z", "2026-10-21T23:30:00Z"),
     ];
-    const marcados = cincoPorAbrir(lista);
-    expect(marcados.size).toBe(5);
+    const marcados = todosPorAbrir(lista);
+    expect(marcados.size).toBe(7);
     expect(marcados.has(99)).toBe(false);
     const painel = ler("src/app/profissionais/painel/Trabalhos.tsx");
-    expect(painel).toContain(".slice(0, 5)");
+    expect(painel).not.toContain(".slice(0, 5)");
+    expect(ler("app-pro/src/lib/trabalhos.ts")).not.toContain("cincoPorAbrir");
     expect(ler("app-pro/src/app/(app)/index.tsx")).toContain("porAbrir={porAbrir.has(item.trabalho.negociacaoId)}");
   });
 });

@@ -547,16 +547,16 @@ export function porOrdemDeChegada(lista: Trabalho[]): Trabalho[] {
 }
 
 /**
- * Os cartões com «Novo» e a borda a brilhar: os CINCO mais recentes por abrir
- * dos Novos — a regra do painel (`Trabalhos.tsx`, `porAbrir`). Vinte cartões
- * marcados não destacam nada; cinco é o que se vê de uma vez sem contar.
+ * Os cartões com «Novo» e a borda a brilhar: TODOS os do Feed que ele ainda não
+ * abriu — a regra do painel (`Trabalhos.tsx`, `porAbrir`). Eram só os cinco
+ * mais recentes; decisão do dono de 13-11-2026 (d13): «todos novos pedidos».
+ * Abrir o pedido tira o «Novo»; a linha «N pedidos novos desde a última vez»
+ * continua no topo do Feed.
  */
-export function cincoPorAbrir(lista: Trabalho[]): Set<number> {
+export function todosPorAbrir(lista: Trabalho[]): Set<number> {
   return new Set(
     lista
       .filter((t) => separadorDe(t) === "novos" && !t.abertoEm)
-      .sort((a, b) => Date.parse(b.actualizadoEm) - Date.parse(a.actualizadoEm))
-      .slice(0, 5)
       .map((t) => t.negociacaoId),
   );
 }

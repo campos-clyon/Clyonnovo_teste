@@ -68,16 +68,15 @@ describe("saber que ele abriu", () => {
 });
 
 describe("o distintivo «novo»", () => {
-  it("são os cinco mais recentes por abrir, e não o separador inteiro", () => {
+  it("são todos os por abrir do Feed, e não o separador inteiro (d13, 13-11-2026)", () => {
+    // Eram os cinco mais recentes; o dono quis «todos novos pedidos».
     expect(LIMPO).toContain("const novo = porAbrir.has(p.negociacaoId);");
     expect(LIMPO).not.toContain('const novo = separadorDe(p) === "novos";');
-    expect(LIMPO).toContain(".slice(0, 5)");
+    expect(LIMPO).not.toContain(".slice(0, 5)");
     expect(LIMPO).toContain("!p.abertoEm");
   });
 
   it("o conjunto calcula-se sobre a lista toda, e não cartão a cartão", () => {
-    // «Os cinco mais recentes» é uma propriedade do conjunto — os que estão no
-    // ecrã e os que ficaram por baixo — e não de cada cartão sozinho.
     expect(LIMPO).toContain("const porAbrir = useMemo(");
   });
 

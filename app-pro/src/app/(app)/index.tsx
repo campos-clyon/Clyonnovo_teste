@@ -12,7 +12,7 @@ import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import { useConta } from "../../estado/Conta";
 import {
-  cincoPorAbrir,
+  todosPorAbrir,
   contarPorSeparador,
   linhasDaLista,
   naOrdemDaRota,
@@ -75,7 +75,7 @@ export default function Trabalhos() {
   const numeroNoSino = numeroDoSino(porLer);
 
   const contas = useMemo(() => contarPorSeparador(trabalhos), [trabalhos]);
-  const porAbrir = useMemo(() => cincoPorAbrir(trabalhos), [trabalhos]);
+  const porAbrir = useMemo(() => todosPorAbrir(trabalhos), [trabalhos]);
   // Como no painel: nos Novos e na Negociação escolhe-se a ordem («Recentes»
   // é o que mexeu há menos tempo); nos outros, a ordem da rota, por grupos.
   const comOrdem = separador === "novos" || separador === "negociacao";
