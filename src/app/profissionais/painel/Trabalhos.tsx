@@ -85,6 +85,7 @@ import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { FolhaDaMudanca } from "./FolhaDaMudanca";
 import { MapaDoPercurso } from "./MapaDoPercurso";
 import { ConfirmarAHora } from "./ConfirmarAHora";
+import FaturaDoTrabalho from "./FaturaDoTrabalho";
 
 /**
  * A UNIDADE DO VALOR — 31-10-2026. Num pedido por hora todos os números do
@@ -2376,6 +2377,9 @@ function DetalheDoTrabalho({
           {obrigado}
         </p>
       )}
+
+      {/* A FATURA DO TRABALHO — d10: só num trabalho contratado do modelo de 15-11 (o servidor decide). */}
+      {fechado && pedido.negociacaoId ? <FaturaDoTrabalho negociacaoId={pedido.negociacaoId} /> : null}
 
       {/* AS HORAS DO TRABALHO — 31-10-2026: num trabalho por hora, antes do «Está feito». */}
       {/* A FOLHA DA MUDANÇA — 11-11-2026: numa mudança com a lista de parceiros, em vez das horas simples. */}

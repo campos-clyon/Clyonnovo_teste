@@ -160,12 +160,12 @@ describe("a regra d33 com o modelo novo: o cliente vê a fatura da taxa, e só a
 
 describe("o rótulo do MB WAY, igual no painel e na app Pro (paridade, d10)", () => {
   it("opcional antes de 15-11, obrigatório depois; os dois ecrãs lêem a mesma função", async () => {
-    const { rotuloDoMbway } = await import("./novo-modelo");
-    expect(rotuloDoMbway(ANTES)).toBe("MB WAY (opcional)");
-    expect(rotuloDoMbway(DEPOIS)).toBe("MB WAY (obrigatório)");
+    const { rotuloDoMbway } = await import("./rotulo-do-mbway");
+    expect(rotuloDoMbway(false)).toBe("MB WAY (opcional)");
+    expect(rotuloDoMbway(true)).toBe("MB WAY (obrigatório)");
     for (const f of ["src/app/profissionais/painel/Perfil.tsx", "app-pro/src/app/conta/banco.tsx"]) {
       const s = readFileSync(join(process.cwd(), f), "utf8");
-      expect(s, f).toContain("rotuloDoMbway()");
+      expect(s.includes("rotuloDoMbway(novoModeloEmVigor())") || s.includes("rotuloDoMbway(Boolean(perfil.novoModelo))"), f).toBe(true);
       expect(s, f).not.toContain('"MB WAY (opcional)"');
     }
   });

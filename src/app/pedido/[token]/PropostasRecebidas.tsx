@@ -727,6 +727,20 @@ export default function PropostasRecebidas({
                         guia verificada
                       </span>
                     )}
+                    {/*
+                      O MODELO DE 15-11-2026 (d10): cada parceiro fatura o seu trabalho —
+                      o tipo de fatura e a guia, antes de escolher. Nulo antes da data.
+                    */}
+                    {n.novoModelo && (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                        {n.novoModelo.perfilFiscal.fatura}
+                      </span>
+                    )}
+                    {n.novoModelo?.perfilFiscal.guia && !p.guiaVerificada && (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                        {n.novoModelo.perfilFiscal.guia}
+                      </span>
+                    )}
                   </div>
                   {/*
                     O perfil abre AQUI, no cartão, e não numa página nova — e sem

@@ -243,8 +243,7 @@ export default function Carteira({
                 d.descontaNoSaldo ? (
                   <DividaNoSaldo key={d.negociacaoId} d={d} />
                 ) : (
-                  <Divida
-                    key={d.negociacaoId}
+                  <Divida key={d.negociacaoId}
                     d={d}
                     onMudou={onRecarregar}
                     // d10: no modelo de 15-11 é o valor em atraso desse trabalho (a taxa e o IVA dela).

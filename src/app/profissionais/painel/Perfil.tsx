@@ -58,7 +58,9 @@ import {
  */
 
 import CartaoDoPerfil from "./CartaoDoPerfil";
-import { rotuloDoMbway } from "@/lib/novo-modelo";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { rotuloDoMbway } from "@/lib/rotulo-do-mbway";
+import { FRASES_DA_FATURA, FRASE_DA_GUIA } from "@/lib/perfil-fiscal";
 
 export type SeccaoDoPerfil = "dados" | "servicos" | "faturacao" | "banco" | "seguranca";
 
@@ -986,6 +988,26 @@ export default function Perfil({
         {seccao === "faturacao" && (
           <div className="space-y-4">
             {/*
+              O PERFIL FISCAL COMO O CLIENTE O VÊ — d10, desde 15-11-2026 (paridade
+              com a app Pro): o tipo de fatura e a guia, nas propostas dele.
+            */}
+            {novoModeloEmVigor() && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                <p className="font-semibold text-slate-900">Como o cliente o vê ao escolher</p>
+                <p className="mt-1 text-slate-700">
+                  {dados.regimeIva === "normal"
+                    ? FRASES_DA_FATURA.com_iva
+                    : dados.regimeIva === "isento"
+                      ? FRASES_DA_FATURA.isento
+                      : FRASES_DA_FATURA.a_confirmar}
+                  {dados.emiteGuiaTransporte && dados.guiaVerificada ? ` · ${FRASE_DA_GUIA}` : ""}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Cada parceiro emite ao cliente a fatura do seu trabalho. Guarde o regime de IVA para ficar confirmado.
+                </p>
+              </div>
+            )}
+            {/*
               «HÁ CLIENTES QUE SÓ CONTRATAM QUEM PASSA FATURA» SAIU — 29-09-2026.
               Desde 22-09-2026 a factura ao cliente é emitida pela parceira da
               CLYON, seja quem for o profissional: marcar ou não esta caixa já
@@ -1239,7 +1261,7 @@ export default function Perfil({
               errado.
             */}
             <Campo
-              etiqueta={rotuloDoMbway()}
+              etiqueta={rotuloDoMbway(novoModeloEmVigor())}
               ajuda="Outra forma de lhe pagarmos. Pode ser um número diferente do de contacto."
             >
               <input

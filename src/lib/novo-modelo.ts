@@ -92,15 +92,6 @@ export const REGIME_DE_IVA_OBRIGATORIO = true;
  * partilha-o (só regras puras).
  */
 
-/**
- * O RÓTULO DO MB WAY NO PERFIL — d10. Até 15-11 é opcional; a partir da data é
- * obrigatório para receber trabalhos (`dados-para-receber.ts`). O painel e a app
- * CLYON Pro lêem-no daqui, para dizerem o mesmo.
- */
-export function rotuloDoMbway(agora: Date = new Date()): string {
-  return novoModeloEmVigor(agora) ? "MB WAY (obrigatório)" : "MB WAY (opcional)";
-}
-
 /** O modelo novo já vale? */
 export function novoModeloEmVigor(agora: Date = new Date()): boolean {
   return agora.getTime() >= NOVO_MODELO_DESDE.getTime();

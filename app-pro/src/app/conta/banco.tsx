@@ -11,8 +11,8 @@ import { faltasEm, type Perfil } from "../../lib/conta";
 import { horaCurta } from "../../lib/trabalhos";
 import { ibanValido } from "../../../../src/lib/iban";
 import { lerMbway } from "../../../../src/lib/mbway";
-// d10: opcional até 15-11-2026, obrigatório depois — o mesmo rótulo do painel.
-import { rotuloDoMbway } from "../../../../src/lib/novo-modelo";
+// d10: opcional até 15-11-2026, obrigatório depois (o servidor diz) — o mesmo rótulo do painel.
+import { rotuloDoMbway } from "../../../../src/lib/rotulo-do-mbway";
 import {
   CAMPO_DA_PALAVRA_PASSE,
   camposDePagamentoMudados,
@@ -182,7 +182,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
         />
         <CampoDeTexto rotulo="Titular da conta" value={titular} onChangeText={setTitular} autoCapitalize="words" campo="ibanTitular" />
         <CampoDeTexto
-          rotulo={rotuloDoMbway()}
+          rotulo={rotuloDoMbway(Boolean(perfil.novoModelo))}
           value={mbway}
           onChangeText={setMbway}
           keyboardType="phone-pad"

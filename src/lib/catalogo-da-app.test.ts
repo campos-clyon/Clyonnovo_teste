@@ -101,7 +101,7 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     expect(pagina("src/app/como-funciona/page.tsx")).toContain("passosDeComoFunciona(agoraDoModelo()).map(");
     // Desde a d7 (11-11-2026) pelo preço público das mudanças: a página e o catálogo lêem a mesma função.
     expect(pagina("src/app/faq/page.tsx")).toContain("const faqCategories = perguntasFrequentes(await precoPublicoDasMudancas(), agoraDoModelo());");
-    expect(pagina("src/lib/catalogo-da-app.ts")).toContain("perguntas: perguntasFrequentes(precoPublicoConhecido()).flatMap(");
+    expect(pagina("src/lib/catalogo-da-app.ts")).toContain("perguntas: perguntasFrequentes(precoPublicoConhecido(), agoraDoModelo()).flatMap(");
     const { perguntasFrequentes } = await import("@/lib/perguntas-frequentes");
     const { SEM_PARCEIROS } = await import("@/lib/preco-publico-das-mudancas");
     expect(perguntasFrequentes(SEM_PARCEIROS)).toBe(PERGUNTAS_FREQUENTES);
