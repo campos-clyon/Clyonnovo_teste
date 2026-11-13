@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Modal, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "./Texto";
+import { marcarNotaVista, useNotaDaAtualizacao } from "./Novidades";
 import { AVISO_DA_ACTUALIZACAO, deveProcurar, ESPERA_ANTES_DE_RECARREGAR_MS, podeRecarregarAgora } from "../lib/actualizacoes";
 import { useCores } from "../tema";
 
@@ -24,6 +25,9 @@ import { useCores } from "../tema";
  * depois de «Mais tarde». Pôr `NEVER` (como a app de cliente) muda a
  * fingerprint — fica para a próxima build nativa.
  *
+ * O QUE TRAZ — d23, 13-11-2026: o aviso mostra a nota dessa atualização
+ * (pedida ao site com o id do manifest); sem rede, a frase de sempre.
+ *
  * Sem rede, ou sem nada novo, não acontece nada. Nunca no navegador nem em
  * desenvolvimento.
  */
@@ -35,11 +39,18 @@ export function ActualizacaoAutomatica() {
 
 function Vigia() {
   const segmentos = useSegments() as string[];
-  const { isUpdatePending } = Updates.useUpdates();
+  const { isUpdatePending, downloadedUpdate, availableUpdate } = Updates.useUpdates();
+  const updateId = downloadedUpdate?.updateId ?? availableUpdate?.updateId ?? null;
   const insets = useSafeAreaInsets();
   const c = useCores();
   const [aRecarregar, setARecarregar] = useState(false);
   const [aPerguntar, setAPerguntar] = useState(false);
+  // Pede-se logo que haja uma pronta, para o aviso já abrir com ela.
+  const nota = useNotaDaAtualizacao(isUpdatePending || aPerguntar, updateId);
+  // Viu-a no aviso (mesmo com «Mais tarde»): o cartão «O que há de novo» não a repete.
+  useEffect(() => {
+    if (aPerguntar && nota) void marcarNotaVista(updateId, nota);
+  }, [aPerguntar, nota, updateId]);
   const pronta = useRef(false);
   const aProcurar = useRef(false);
   const ultimaVez = useRef<number | null>(null);
@@ -113,7 +124,7 @@ function Vigia() {
         <View style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.55)", alignItems: "center", justifyContent: "center", padding: 24 }}>
           <View style={{ alignSelf: "stretch", maxWidth: 380, backgroundColor: c.superficie, borderRadius: 22, padding: 22, gap: 14 }}>
             <Text style={{ color: c.tinta, fontSize: 20, fontWeight: "800" }}>Há uma versão nova da app</Text>
-            <Text style={{ color: c.suave, fontSize: 15, lineHeight: 21 }}>Traz melhorias e correções. Demora só uns segundos.</Text>
+            <Text style={{ color: c.suave, fontSize: 15, lineHeight: 21 }}>{nota ? `${nota.nota} Demora só uns segundos.` : "Traz melhorias e correções. Demora só uns segundos."}</Text>
             <Pressable
               onPress={actualizarAgora}
               accessibilityRole="button"

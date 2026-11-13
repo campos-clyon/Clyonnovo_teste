@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Mensagem } from "../../componentes/ui";
 import { BordaABrilhar } from "../../componentes/BordaABrilhar";
 import { VersaoNova } from "../../componentes/VersaoNova";
+import { OQueHaDeNovo } from "../../componentes/Novidades";
 import { AvisosDoNovoModelo } from "../../componentes/AvisosDoNovoModelo";
 import { dataEHora } from "../../../../src/lib/historico-negociacao";
 import { useSessao } from "../../estado/Sessao";
@@ -160,6 +161,7 @@ export default function Trabalhos() {
         ListHeaderComponent={
           <>
             <VersaoNova />
+            <OQueHaDeNovo />
             {/*
               Os pedidos novos não são avisos (d13): no máximo UMA linha
               discreta, e os cartões deles com «Novo». Nunca uma pilha.

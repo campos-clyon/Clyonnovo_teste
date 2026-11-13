@@ -1,8 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Updates from "expo-updates";
-import { useState } from "react";
-import { Platform, Pressable } from "react-native";
+import { useEffect, useState } from "react";
+import { Platform, Pressable, View } from "react-native";
 import { Text } from "./Texto";
+import { marcarNotaVista, useNotaDaAtualizacao } from "./Novidades";
 import { CORES } from "../tema";
 
 /**
@@ -12,6 +13,9 @@ import { CORES } from "../tema";
  * a app procura-a ao abrir (ActualizacaoAutomatica) e pergunta antes de a usar.
  * Esta faixa diz que já está cá e reinicia num toque. Só aparece quando há
  * mesmo uma à espera; no navegador não existe.
+ *
+ * Desde a d23 (13-11-2026) diz também o que a versão nova traz: a nota dessa
+ * atualização, pedida ao site com o id do manifest. Sem rede, sem nota.
  */
 export function VersaoNova() {
   if (Platform.OS === "web" || !Updates.isEnabled) return null;
@@ -19,17 +23,25 @@ export function VersaoNova() {
 }
 
 function Faixa() {
-  const { isUpdatePending } = Updates.useUpdates();
+  const { isUpdatePending, downloadedUpdate, availableUpdate } = Updates.useUpdates();
+  const updateId = downloadedUpdate?.updateId ?? availableUpdate?.updateId ?? null;
+  const nota = useNotaDaAtualizacao(isUpdatePending, updateId);
   const [aReiniciar, setAReiniciar] = useState(false);
+  // Viu a nota aqui: o cartão «O que há de novo» não a repete depois de reiniciar.
+  useEffect(() => {
+    if (isUpdatePending && nota) void marcarNotaVista(updateId, nota);
+  }, [isUpdatePending, nota, updateId]);
   if (!isUpdatePending) return null;
   return (
     <Pressable
       onPress={() => {
         setAReiniciar(true);
-        void Updates.reloadAsync().catch(() => setAReiniciar(false));
+        void marcarNotaVista(updateId, nota)
+          .then(() => Updates.reloadAsync())
+          .catch(() => setAReiniciar(false));
       }}
       accessibilityRole="button"
-      accessibilityLabel="Há uma versão nova da app. Reiniciar para a usar."
+      accessibilityLabel={`Há uma versão nova da app.${nota ? ` ${nota.nota}` : ""} Reiniciar para a usar.`}
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
@@ -44,9 +56,10 @@ function Faixa() {
       })}
     >
       <Ionicons name="refresh" size={18} color={CORES.marca} />
-      <Text style={{ flex: 1, color: CORES.tinta, fontSize: 14 }}>
-        {aReiniciar ? "A reiniciar…" : "Há uma versão nova da app."}
-      </Text>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ color: CORES.tinta, fontSize: 14 }}>{aReiniciar ? "A reiniciar…" : "Há uma versão nova da app."}</Text>
+        {nota && !aReiniciar ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 18 }}>{nota.nota}</Text> : null}
+      </View>
       <Text style={{ color: CORES.marca, fontWeight: "800", fontSize: 14 }}>Reiniciar</Text>
     </Pressable>
   );

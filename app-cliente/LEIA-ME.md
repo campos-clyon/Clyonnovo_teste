@@ -132,6 +132,13 @@ nova pronta, pergunta: «Atualizar agora» ou «Mais tarde» («Mais tarde» vol
 perguntar da próxima vez que a app abrir). No simulador, na entrada, no pedido
 e nos links espera que o cliente saia do ecrã.
 
+**Cada atualização diz o que traz (d23, 13-11-2026).** A Action «Actualizar a
+app de cliente» só publica com uma nota nova no início da lista «cliente» de
+`src/lib/notas-das-apps.json` (uma ou duas linhas, sem palavras técnicas,
+«parceiro»); sem ela, falha e nada sai. O aviso e a faixa mostram a nota (GET
+`/api/apps/notas`) e, depois de reiniciar, o cartão «O que há de novo» aparece
+uma vez se o cliente não a viu (`componentes/Novidades.tsx`).
+
 ## A entrada pelo link
 
 - O link pedido na app fica preso a este telemóvel: um código do aparelho

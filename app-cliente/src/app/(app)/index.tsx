@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Aviso, Botao, Carregando, PrecoDeReferencia, Seccao } from "../../componentes/ui";
 import { VersaoNova } from "../../componentes/VersaoNova";
+import { OQueHaDeNovo } from "../../componentes/Novidades";
 import { useCatalogo } from "../../estado/Catalogo";
 import { usePedidos } from "../../estado/Pedidos";
 import { useSessao } from "../../estado/Sessao";
@@ -219,6 +220,7 @@ export default function Inicio() {
         }
       >
         <VersaoNova />
+        <OQueHaDeNovo />
 
         {/* 1. O cabeçalho curto: claro, com muito branco à volta. */}
         <View style={{ borderRadius: 24, backgroundColor: CORES.cianoFundo, padding: 20, gap: 12 }}>

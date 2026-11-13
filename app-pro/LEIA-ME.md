@@ -48,6 +48,14 @@ linhas (CRLF/LF) entram na fingerprint: mudá-los obriga a build nova. A app
 actualiza-se sozinha ao abrir e ao voltar ao primeiro plano, e espera que o
 profissional saia dos ecrãs onde está a escrever (`componentes/ActualizacaoAutomatica.tsx`).
 
+**Cada atualização diz o que traz (d23, 13-11-2026).** Publica-se só com
+`node scripts/publicar-app-pro.mjs` (da raiz; `--ensaio` verifica sem publicar):
+confirma a fingerprint e exige uma nota nova no início da lista «pro» de
+`src/lib/notas-das-apps.json` (uma ou duas linhas, sem palavras técnicas,
+«profissional»). O aviso e a faixa da versão nova mostram-na (GET
+`/api/apps/notas`) e, depois de reiniciar, o cartão «O que há de novo»
+aparece uma vez se ele não a viu (`componentes/Novidades.tsx`).
+
 ## Ver os ecrãs no computador
 
 Modo de demonstração, com trabalhos de exemplo (o navegador não pode chamar o
