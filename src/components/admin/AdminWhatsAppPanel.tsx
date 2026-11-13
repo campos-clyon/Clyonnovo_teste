@@ -25,6 +25,7 @@ import {
   Search,
   Trash2,
   Undo2,
+  Wrench,
   X,
 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
@@ -50,6 +51,7 @@ import {
   SEPARADORES_DA_MESA,
   type ConversaNaMesa,
   type EstadoNaMesa,
+  type SeparadorDaMesa,
 } from "@/lib/mesa-das-conversas";
 import { TELEFONE_DA_CLYON_DIGITOS } from "@/lib/telefone-da-clyon";
 
@@ -127,13 +129,14 @@ type Estado = {
 type Mensagem = { direccao: string; texto: string; criadoEm: string };
 
 /**
- * O separador aberto — um estado da mesa, ou as guardadas (21-10-2026).
+ * O separador aberto — um estado da mesa, as guardadas (21-10-2026) ou as
+ * dos profissionais registados (13-11-2026, d21).
  *
  * Os separadores antigos diziam QUEM tinha a conversa (o assistente, uma
  * pessoa, arquivada). Estes dizem O QUE FALTA FAZER — ver
  * `mesa-das-conversas.ts`. Quem a tem passou a ser uma etiqueta da linha.
  */
-type Separador = EstadoNaMesa | "guardada";
+type Separador = SeparadorDaMesa;
 
 /** Uma linha da mesa: a conversa no pé em que está, e o texto onde se procura. */
 type Linha = ConversaNaMesa & { nota: string };
@@ -172,6 +175,8 @@ const CORES: Record<Separador, string> = {
   a_espera: "bg-sky-500/15 text-sky-300",
   com_pedido: "bg-violet-500/15 text-violet-300",
   guardada: "bg-cyan-500/15 text-cyan-300",
+  // Os profissionais (d21): o laranja da paleta, que nenhum outro separador usa.
+  profissionais: "bg-laranja/14 text-laranja-texto",
   resolvida: "bg-emerald-500/15 text-emerald-300",
   bloqueada: "bg-slate-700/60 text-slate-300",
 };
@@ -853,7 +858,7 @@ export default function AdminWhatsAppPanel() {
     () =>
       (estado?.mesa ?? []).map((c) => ({
         ...c,
-        nota: [c.porque, c.motivoDaEntrega, c.guardada?.nota].filter(Boolean).join(" · "),
+        nota: [c.porque, c.motivoDaEntrega, c.guardada?.nota, c.profissional?.nome].filter(Boolean).join(" · "),
       })),
     [estado],
   );
@@ -1445,7 +1450,7 @@ export default function AdminWhatsAppPanel() {
                 </label>
                 {telefones.length > 0 && (
                   <>
-                    {separador === "por_responder" && (
+                    {(separador === "por_responder" || separador === "profissionais") && (
                       <button
                         onClick={() => void emLote("respondida", telefones)}
                         disabled={ocupado}
@@ -1623,7 +1628,7 @@ export default function AdminWhatsAppPanel() {
                         </TelefoneComWhatsApp>
                         {/* De onde veio esta linha. Só faz falta quando a lista
                             deixou de ser a do separador aberto. */}
-                        {aProcurar && (
+                        {(aProcurar || separador === "profissionais") && (
                           <span
                             className={`rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES[l.estado]}`}
                           >
@@ -1649,6 +1654,16 @@ export default function AdminWhatsAppPanel() {
                         {l.passo && l.dono === "assistente" && l.estado !== "resolvida" && (
                           <span className="rounded-full bg-slate-800 px-2 py-0.5 font-sans text-[11px] text-slate-300">
                             {PASSO_DA_RECOLHA[l.passo] ?? l.passo}
+                          </span>
+                        )}
+                        {/* Quem escreve é um profissional registado — pelo telefone da ficha (d21). */}
+                        {l.profissional && (
+                          <span
+                            title="O telefone bate com a ficha de um profissional"
+                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES.profissionais}`}
+                          >
+                            <Wrench className="h-3 w-3" aria-hidden="true" />
+                            Profissional{l.profissional.nome ? `: ${l.profissional.nome}` : ""}
                           </span>
                         )}
                         {l.guardada && (

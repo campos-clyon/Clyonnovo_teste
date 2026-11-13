@@ -41,13 +41,21 @@ import { eDaEquipa, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
 
 export type EstadoNaMesa = "por_responder" | "a_meio" | "a_espera" | "com_pedido" | "resolvida" | "bloqueada";
 
+/**
+ * Os separadores que não são um estado: marcas por cima dele. Uma conversa
+ * guardada, ou de um profissional, continua também no separador do seu
+ * estado.
+ */
+export type SeparadorDaMesa = EstadoNaMesa | "guardada" | "profissionais";
+
 /** Os separadores, pela ordem em que se trabalham. */
-export const SEPARADORES_DA_MESA: Array<{ id: EstadoNaMesa | "guardada"; titulo: string; vazio: string }> = [
+export const SEPARADORES_DA_MESA: Array<{ id: SeparadorDaMesa; titulo: string; vazio: string }> = [
   { id: "por_responder", titulo: "Por responder", vazio: "Ninguém à espera de resposta. 👍" },
   { id: "a_meio", titulo: "A meio", vazio: "Nenhuma recolha parada a meio." },
   { id: "a_espera", titulo: "À espera do cliente", vazio: "Nenhuma conversa à espera do cliente." },
   { id: "com_pedido", titulo: "Com pedido", vazio: "Nenhuma conversa com pedido em curso." },
   { id: "guardada", titulo: "Guardadas", vazio: "Nada guardado para continuar." },
+  { id: "profissionais", titulo: "Profissionais", vazio: "Nenhum profissional registado escreveu." },
   { id: "resolvida", titulo: "Resolvidas", vazio: "Nada resolvido ainda." },
   { id: "bloqueada", titulo: "Bloqueadas", vazio: "Ninguém bloqueado." },
 ];
@@ -124,6 +132,11 @@ export type FactosDaConversa = {
   /** O último pedido deste número, vivo ou não. */
   ultimoPedido: { id: number; status: string | null } | null;
   guardada: { nota: string | null; quando: string } | null;
+  /**
+   * Quem escreve é um profissional registado — o telefone da ficha bate com
+   * este número (últimos 9 dígitos). 13-11-2026 (d21).
+   */
+  profissional?: { id: number; nome: string } | null;
   /** O que a Vitória percebeu ao ler a conversa, se ainda vale (nada de novo depois). */
   leitura?: { estado: string; motivo: string | null; lidaHaSegundos?: number | null } | null;
 };
@@ -159,6 +172,8 @@ export type ConversaNaMesa = {
   guardada: { nota: string | null } | null;
   /** Quem a fechou, quando está resolvida: «equipa», «vitoria» ou «pedido». */
   fechadaPor: string | null;
+  /** O profissional registado com este telefone, se for um (d21). */
+  profissional: { id: number; nome: string } | null;
 };
 
 export type QuemFalou = "cliente" | "vitoria" | "equipa";
@@ -378,6 +393,7 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
         : null,
     guardada: f.guardada ? { nota: f.guardada.nota } : null,
     fechadaPor: null as string | null,
+    profissional: f.profissional ?? null,
   };
 
   if (f.bloqueada) return { ...base, estado: "bloqueada", porque: "Bloqueada — o site não lhe responde." };
@@ -528,9 +544,13 @@ export function ordenarNaMesa(linhas: ConversaNaMesa[], separador: string): Conv
   });
 }
 
-/** Quantas há em cada separador — as guardadas contam à parte, por cima do estado. */
-export function contarNaMesa(linhas: ConversaNaMesa[]): Record<EstadoNaMesa | "guardada", number> {
-  const c: Record<EstadoNaMesa | "guardada", number> = {
+/**
+ * Quantas há em cada separador — as guardadas contam à parte, por cima do
+ * estado. Nos «Profissionais» o selo é o que está POR RESPONDER (d21): é isso
+ * que espera por nós, como o vermelho do «Por responder».
+ */
+export function contarNaMesa(linhas: ConversaNaMesa[]): Record<SeparadorDaMesa, number> {
+  const c: Record<SeparadorDaMesa, number> = {
     por_responder: 0,
     a_meio: 0,
     a_espera: 0,
@@ -538,16 +558,42 @@ export function contarNaMesa(linhas: ConversaNaMesa[]): Record<EstadoNaMesa | "g
     resolvida: 0,
     bloqueada: 0,
     guardada: 0,
+    profissionais: 0,
   };
   for (const l of linhas) {
     c[l.estado] += 1;
     if (l.guardada) c.guardada += 1;
+    if (l.profissional && l.estado === "por_responder") c.profissionais += 1;
   }
   return c;
 }
 
-/** As linhas de um separador — as guardadas, venham de onde vierem. */
+/** Uma conversa de um profissional registado — vai também para os «Profissionais». */
+export function eDeProfissional(l: Pick<ConversaNaMesa, "profissional">): boolean {
+  return l.profissional != null;
+}
+
+/**
+ * As linhas de um separador — as guardadas e as dos profissionais, venham de
+ * onde vierem.
+ *
+ * «PROFISSIONAIS» — 13-11-2026 (d21). Nos 7 dias até 13/11, 62 das 68
+ * respostas a profissionais foram à mão e 12 vezes esperaram mais de 4 h: no
+ * meio dos clientes, perdiam-se. Aqui juntam-se as conversas de quem tem
+ * ficha de profissional (pelo telefone), com a mesma regra de quem falou por
+ * último. Continuam também no separador do seu estado — esconder um
+ * profissional por responder do «Por responder» era trocar um esquecimento
+ * por outro. Primeiro as por responder, pela ordem desse separador; depois as
+ * outras, a mais recente primeiro.
+ */
 export function linhasDoSeparador(linhas: ConversaNaMesa[], separador: string): ConversaNaMesa[] {
+  if (separador === "profissionais") {
+    const dePros = linhas.filter(eDeProfissional);
+    return [
+      ...ordenarNaMesa(dePros.filter((l) => l.estado === "por_responder"), "por_responder"),
+      ...ordenarNaMesa(dePros.filter((l) => l.estado !== "por_responder"), "outro"),
+    ];
+  }
   const doSeparador =
     separador === "guardada" ? linhas.filter((l) => l.guardada) : linhas.filter((l) => l.estado === separador);
   return ordenarNaMesa(doSeparador, separador);

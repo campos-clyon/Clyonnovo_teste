@@ -11902,6 +11902,36 @@ export async function profissionalDoTelefone(
 }
 
 /**
+ * OS PROFISSIONAIS DA MESA DO WHATSAPP — 13-11-2026 (decisão d21).
+ *
+ * Os telefones das fichas de profissional, pela chave da mesa (os últimos 9
+ * dígitos), para o separador «Profissionais». O mesmo critério de
+ * `profissionalDoTelefone`: sem a conta da CLYON e sem os apagados. As colunas
+ * (`phone`, `isClyon`, `estado`, `name`) estão no CREATE TABLE de
+ * `providers` e no ALTER do `estado`. Lança se a base falhar — quem chama
+ * decide (a mesa segue sem o separador).
+ */
+export async function telefonesDosProfissionaisWhatsApp(): Promise<Map<string, { id: number; nome: string }>> {
+  const mapa = new Map<string, { id: number; nome: string }>();
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return mapa;
+  const [rows] = (await pool.execute(
+    `SELECT id, name, RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '[^0-9]', ''), 9) AS chave
+       FROM providers
+      WHERE isClyon = 0 AND (estado IS NULL OR estado <> 'apagado')
+        AND phone IS NOT NULL AND phone <> ''
+      ORDER BY id DESC`,
+  )) as [Array<{ id: number; name: string | null; chave: string | null }>, unknown];
+  for (const r of rows) {
+    const chave = String(r.chave ?? "");
+    if (chave.length < 9 || mapa.has(chave)) continue;
+    mapa.set(chave, { id: Number(r.id), nome: String(r.name ?? "") });
+  }
+  return mapa;
+}
+
+/**
  * A CONTA DO CLIENTE COM ESTE TELEFONE — 26-10-2026 (decisão d30).
  *
  * *«Antes de iniciar os pedidos, olhar pelo número de telefone daquele

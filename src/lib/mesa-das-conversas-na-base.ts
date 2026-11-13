@@ -11,6 +11,9 @@ import { naMesa, type ConversaNaMesa, type FactosDaConversa } from "./mesa-das-c
  * Desde 23-10-2026 junta também o retrato do telemóvel e os «Já respondi».
  * Só para os números que o site conhece: o telemóvel da CLYON também fala com
  * profissionais, fornecedores e contactos pessoais, e a mesa é dos clientes.
+ *
+ * Desde 13-11-2026 (d21) diz também se o número é de um profissional
+ * registado (o telefone da ficha) — para o separador «Profissionais».
  */
 
 const ultimos9 = (t: string) => t.replace(/\D/g, "").slice(-9);
@@ -28,7 +31,7 @@ export async function mesaDasConversasWhatsApp(): Promise<ConversaNaMesa[]> {
 export async function mesaComOTelemovelWhatsApp(): Promise<MesaDasConversas> {
   const db = await import("./db");
   const vazio = { porChave: new Map(), tiradoHaSegundos: null };
-  const [factos, entregues, bloqueados, fechadas, guardadas, recolhas, pedidos, leituras, telemovel, respondidas] =
+  const [factos, entregues, bloqueados, fechadas, guardadas, recolhas, pedidos, leituras, telemovel, respondidas, profissionais] =
     await Promise.all([
       db.factosDasConversasWhatsApp(),
       db.listarNumerosInterrompidosWhatsApp().catch(() => []),
@@ -44,6 +47,8 @@ export async function mesaComOTelemovelWhatsApp(): Promise<MesaDasConversas> {
         return vazio;
       }),
       db.respondidasWhatsApp().catch(() => new Map()),
+      // Sem a lista dos profissionais, a mesa é a de antes — o separador fica vazio.
+      db.telefonesDosProfissionaisWhatsApp().catch(() => new Map<string, { id: number; nome: string }>()),
     ]);
 
   const entregueDe = new Map(entregues.map((e) => [ultimos9(e.telefone), e] as const));
@@ -85,6 +90,7 @@ export async function mesaComOTelemovelWhatsApp(): Promise<MesaDasConversas> {
       pedidoVivo: pedido?.vivo ?? null,
       ultimoPedido: pedido?.ultimo ?? null,
       guardada: guardada ? { nota: guardada.nota, quando: guardada.criadoEm } : null,
+      profissional: profissionais.get(chave) ?? null,
       // A leitura da Vitória só vale enquanto não houver mensagem nova.
       leitura:
         leitura && leitura.ateMensagemId >= ultimoId
