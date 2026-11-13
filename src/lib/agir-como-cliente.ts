@@ -38,6 +38,8 @@ import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { agirSobreOsEscolhidos, eAccaoDosEscolhidos } from "@/lib/escolhidos-sem-resposta-no-servidor";
+import { ACCAO_DO_FECHO, lerRespostaDoFecho } from "@/lib/fecho-do-modelo-novo";
+import { responderAoFecho } from "@/lib/fecho-do-modelo-novo-na-base";
 
 /**
  * O CLIENTE AGE NUM PEDIDO — uma função só, para as três portas (d8, R8,
@@ -82,6 +84,8 @@ export const ACCOES_SO_DO_CLIENTE = [
   "lista_para_escolher_outro",
   "escolher_outros_parceiros",
   "pedir_a_clyon_que_procure",
+  // O fecho do modelo novo (d15, 13-11-2026): «O trabalho já foi feito?», 48 h depois da data sem «Está feito».
+  "trabalho_ja_feito",
 ] as const;
 
 export function eAccaoSoDoCliente(accao: unknown): boolean {
@@ -115,6 +119,8 @@ export type CorpoDoCliente = {
   versao?: unknown;
   /** A marca da folha da mudança que ele tem no ecrã (`horas.folha.marca`) — o-que-o-cliente-viu.ts. */
   marcaDaFolha?: unknown;
+  /** A resposta a «O trabalho já foi feito?» (d15): «sim» ou «nao». */
+  resposta?: unknown;
   /** «Escolher outro parceiro» (d6): os ids dos cartões escolhidos e a assinatura do preço de cada um. */
   parceiros?: unknown;
   assinaturas?: unknown;
@@ -275,6 +281,19 @@ export async function agirComoCliente(a: {
       // O valor acordado novo é o do profissional (d10): ao cliente, só que respondeu.
       if (r.status !== 200) return r;
       return { status: 200, corpo: { ok: true, ajusteRespondido: true, estadoDoAjuste: r.corpo.estadoDoAjuste } };
+    }
+
+    /*
+     * ── «O TRABALHO JÁ FOI FEITO?» — d15, 13-11-2026 ──────────────────────
+     * No modelo de 15-11, 48 h depois da data sem o «Está feito» do parceiro.
+     * O «Sim» fecha o trabalho numa transacção (as guardas da d27) e a taxa
+     * nasce; o «Ainda não» fica escrito. A regra e a base em
+     * `fecho-do-modelo-novo*.ts` — a mesma para o link do email.
+     */
+    if (accao === ACCAO_DO_FECHO) {
+      const resposta = lerRespostaDoFecho(corpo.resposta);
+      if (!resposta) return falha(400, "Diga se o trabalho já foi feito.");
+      return responderAoFecho({ negociacaoId, pedidoId, resposta, onde: NA_PORTA[a.porta], agora: a.agora });
     }
 
     // ── Confirmar que o profissional chegou (30-10-2026) ─────────────────

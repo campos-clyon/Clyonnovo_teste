@@ -65,7 +65,7 @@ describe("1. as conversas em que o cliente falou por último há mais de 2 h", (
 
   it("sem acesso às conversas (null), o grupo fica vazio e o resto continua", () => {
     const g = doNossoLado({ conversas: null, pedidos: [], trabalhosClyon: [], agora: AGORA });
-    expect(g.map((x) => x.tipo)).toEqual(["conversa", "preco_clyon", "propostas", "data_passada", "sem_resposta"]);
+    expect(g.map((x) => x.tipo)).toEqual(["conversa", "preco_clyon", "propostas", "data_passada", "sem_resposta", "sem_fecho"]);
     expect(g[0].linhas).toEqual([]);
   });
 

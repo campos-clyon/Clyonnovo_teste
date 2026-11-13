@@ -44,6 +44,10 @@
       "schedule": "5 * * * *"
     },
     {
+      "path": "/api/cron/fecho-do-modelo-novo",
+      "schedule": "35 * * * *"
+    },
+    {
       "path": "/api/cron/licoes-da-vitoria",
       "schedule": "20 5 * * *"
     }

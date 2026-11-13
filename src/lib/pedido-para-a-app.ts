@@ -47,6 +47,7 @@ import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-pr
 import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
 import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
 import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
+import { ACCAO_DO_FECHO } from "./fecho-do-modelo-novo";
 
 /**
  * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
@@ -457,6 +458,8 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
         // E o fim só com as horas confirmadas.
         ...(n.fase === "a_confirmar" && horasNaoTravamOFim(n.horas ?? {}) ? ["confirmar"] : []),
         ...((n.fase === "confirmado" || n.fase === "pago") && !n.estrelas ? ["avaliar"] : []),
+        // «O trabalho já foi feito?» (d15, 13-11-2026): com `resposta: "sim" | "nao"`.
+        ...(n.perguntaDoFecho ? [ACCAO_DO_FECHO] : []),
       ]
     : accoesDisponiveis(motor, "cliente", agora);
 
@@ -618,6 +621,14 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
      * escolher. `null` antes da data e nos Trabalhos CLYON.
      */
     novoModelo: n.novoModelo ?? null,
+    /*
+     * «O TRABALHO JÁ FOI FEITO?» — d15, 13-11-2026. A pergunta de um toque, já
+     * escrita (pergunta, explicação, os dois botões), quando a data passou há
+     * 48 h no modelo novo e o parceiro não disse «Está feito». A app manda
+     * `{ accao: perguntaDoFecho.accao, negociacaoId, resposta: "sim" | "nao" }`
+     * por `/api/users/me/negociacao`. `null` no resto.
+     */
+    perguntaDoFecho: n.perguntaDoFecho ?? null,
   };
 }
 

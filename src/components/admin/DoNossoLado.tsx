@@ -14,6 +14,7 @@ import {
   type TrabalhoClyonParaOLado,
 } from "@/lib/do-nosso-lado";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
+import type { TrabalhoParaOFecho } from "@/lib/fecho-do-modelo-novo";
 
 /**
  * «DO NOSSO LADO» — o cartão do topo da Mesa (d14, 03-11-2026). Só leitura:
@@ -51,6 +52,35 @@ export default function DoNossoLado({
   const [fechado, setFechado] = useState(false);
   const lidasEm = useRef(0);
   const [agora, setAgora] = useState(() => new Date());
+  /*
+   * O FECHO DO MODELO NOVO (d15, 13-11-2026): os contratados do modelo de 15-11
+   * com a data passada há mais de 24 h e sem «Está feito» — todos, lidos à parte
+   * (a Mesa só carrega 60 pedidos). De 2 em 2 minutos, como as conversas.
+   */
+  const [semFecho, setSemFecho] = useState<TrabalhoParaOFecho[] | null>(null);
+  const semFechoLidoEm = useRef(0);
+  const lerSemFecho = useCallback(
+    async (forcar = false) => {
+      if (!token) return;
+      if (!forcar && Date.now() - semFechoLidoEm.current < CONVERSAS_DE_MS) return;
+      semFechoLidoEm.current = Date.now();
+      try {
+        const r = await fetch("/api/admin/negociacoes/sem-fecho", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        setSemFecho(Array.isArray(d?.trabalhos) ? (d.trabalhos as TrabalhoParaOFecho[]) : []);
+      } catch {
+        /* fica o que já se tinha lido */
+      }
+    },
+    [token],
+  );
+  useEffect(() => {
+    void lerSemFecho(true);
+  }, [lerSemFecho]);
 
   const lerConversas = useCallback(
     async (forcar = false) => {
@@ -82,10 +112,11 @@ export default function DoNossoLado({
   // O relógio anda com a Mesa (a batida de 20 s); as conversas, de 2 em 2 min.
   useAutoRefresh(() => {
     setAgora(new Date());
+    void lerSemFecho();
     return lerConversas();
   });
 
-  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, agora });
+  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, semFecho, agora });
   const total = grupos.reduce((s, g) => s + g.linhas.length, 0);
   const visiveis = grupos.filter((g) => g.linhas.length > 0 || (g.tipo === "conversa" && podeVerConversas && conversasFalharam));
 

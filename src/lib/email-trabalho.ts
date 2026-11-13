@@ -323,3 +323,43 @@ export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise
     "email-confirmacao",
   );
 }
+
+// ── 3. «O trabalho já foi feito?» — o modelo de 15-11 (d15, 13-11-2026) ──────
+
+/**
+ * 48 h depois da data de um trabalho do modelo novo, sem o «Está feito» do
+ * parceiro, o cliente recebe UMA pergunta de um toque. O link é só para isto
+ * (`/pedido/fecho/<token>`, com validade): não abre o pedido nem faz mais nada.
+ * SÓ SAI com o interruptor das Configs ligado — ver `fecho-do-modelo-novo-na-base.ts`.
+ */
+export async function avisarDaPerguntaDoFecho(p: {
+  para: string;
+  nomeDoCliente: string | null;
+  nomeDoParceiro: string | null;
+  pedidoId: number;
+  link: string;
+}): Promise<boolean> {
+  const { ASSUNTO_DO_EMAIL_DO_FECHO, PERGUNTA_DO_FECHO, explicacaoDoFecho } = await import(
+    "./fecho-do-modelo-novo"
+  );
+  const nome = p.nomeDoCliente?.trim().split(/\s+/)[0] ?? null;
+  const corpo = `
+    <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
+    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#0B1929;">
+      ${nome ? `${e(nome)}, o` : "O"} trabalho já foi feito?
+    </h1>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">
+      ${e(explicacaoDoFecho(p.nomeDoParceiro))}
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center">
+        <a href="${e(p.link)}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;padding:13px 30px;border-radius:10px;font-size:15px;font-weight:600;">
+          Responder com um toque
+        </a>
+      </td></tr>
+    </table>
+    <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
+      Se ainda não foi feito, abra o link e diga-nos — ou responda a este email.
+    </p>`;
+  return enviar(p.para, `${ASSUNTO_DO_EMAIL_DO_FECHO} — pedido #${p.pedidoId}`, moldura(PERGUNTA_DO_FECHO, corpo), "email-fecho");
+}

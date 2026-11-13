@@ -6,6 +6,7 @@ import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local"
 import { instanteDaBase } from "./hora-de-lisboa";
 import type { HorasNaBase } from "./horas-do-trabalho";
 import { novoModeloEmVigor, TRABALHOS_CLYON_NO_MODELO_ANTIGO } from "./novo-modelo";
+import type { PerguntaDoFecho } from "./fecho-do-modelo-novo";
 import { perfilFiscalDoParceiro, type PerfilFiscal } from "./perfil-fiscal";
 import { totalNoNovoModelo } from "./pagamento-directo";
 import { lerComoPagar, type ComoPagarAoParceiro } from "./pagar-ao-parceiro";
@@ -146,6 +147,12 @@ export type NegociacaoDoCliente = {
   materiaisJson?: string | null;
   /** O modelo de 15-11-2026 (d10) — `null` antes da data. */
   novoModelo?: NovoModeloNaVista | null;
+  /**
+   * «O TRABALHO JÁ FOI FEITO?» (d15, 13-11-2026) — 48 h depois da data, no modelo
+   * novo, sem o «Está feito» do parceiro. Posta no servidor
+   * (`negociacoesDaVistaDoCliente`), com o modelo conferido pelos pagamentos.
+   */
+  perguntaDoFecho?: PerguntaDoFecho | null;
 };
 
 /**

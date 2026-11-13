@@ -273,6 +273,7 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/sessoes", porque: "ver quem está dentro do backoffice é do administrador" },
   { seccao: "configs", rota: "/api/admin/sessoes/terminar", porque: "terminar a sessão de alguém é do administrador" },
   { seccao: "configs", rota: "/api/admin/retencao/interruptor", porque: "ligar as regras novas da retenção (anonimizar e apagar) é do administrador" },
+  { seccao: "configs", rota: "/api/admin/fecho-do-modelo/interruptor", porque: "ligar o email «O trabalho já foi feito?» ao cliente é do administrador, com o sim do dono (d15, 13-11-2026)" },
   // «Só ver» — 03-10-2026: as rotas que SÓ escrevem dinheiro ficam inteiras com o administrador.
   { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },

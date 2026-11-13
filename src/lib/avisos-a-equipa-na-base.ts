@@ -270,10 +270,21 @@ async function lerDoNossoLado(agora: Date): Promise<LinhaDoNossoLado[]> {
       resumo: resumoDaOferta(negociacoes, o.estadoDoPedido),
     };
   });
+  /*
+   * O FECHO DO MODELO NOVO (d15, 13-11-2026): os contratados sem «Está feito»
+   * com a data passada há mais de 24 h — todos, e não só os 60 da Mesa. Antes
+   * de 15-11 a leitura devolve vazio sem ir à base; uma falha não cala o resto.
+   */
+  const { trabalhosSemFechoNaBase } = await import("./fecho-do-modelo-novo-na-base");
+  const semFecho = await trabalhosSemFechoNaBase(agora).catch((e) => {
+    console.error("[avisos-a-equipa] o fecho do modelo novo não se leu:", e instanceof Error ? e.message : e);
+    return [];
+  });
   const grupos = doNossoLado({
     conversas,
     pedidos: JSON.parse(JSON.stringify(pedidos)),
     trabalhosClyon,
+    semFecho,
     agora,
   });
   return grupos.flatMap((g) => g.linhas);

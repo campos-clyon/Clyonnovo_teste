@@ -39,6 +39,7 @@ import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel"
 import NoutrosSitios, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
+import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFecho";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
 import AdminListaDasMudancasPanel from "@/components/admin/AdminListaDasMudancasPanel";
@@ -858,6 +859,13 @@ export default function ColaboradorAdminClient({
    * esvazia com o «Já pagámos» (`contarPorFazer`, db.ts).
    */
   const [porFazer, setPorFazer] = useState<Record<string, number>>({});
+  /*
+   * A FILA DOS SEPARADORES DOS PEDIDOS — 13-11-2026 (d15). Os contratados do
+   * modelo novo sem «Está feito» há mais de 24 h ficam no selo da Mesa
+   * (porFazer.negociacoes_clyon) até alguém fechar o trabalho.
+   */
+  const porFazerNoSeparador = (s: AdminSection) => seccoesDoSeparador(s).reduce((n, x) => n + (porFazer[x] ?? 0), 0);
+  const porFazerNosPedidos = separadoresDosPedidos.reduce((t, s) => t + porFazerNoSeparador(s), 0);
   // O separador aberto nas Contas (11-11-2026): as contas, ou o programa da app.
   const [separadorDasContas, setSeparadorDasContas] = useState<"contas" | "programa">("contas");
 
@@ -1861,7 +1869,7 @@ export default function ColaboradorAdminClient({
                       const ePedidos = item.id === "pedidos";
                       const active = ePedidos ? ECRA_DOS_PEDIDOS.includes(activeSection) : activeSection === item.id;
                       const novasDesdeQueOlhou = ePedidos
-                        ? separadoresDosPedidos.reduce((t, s) => t + novasNoSeparador(s), 0)
+                        ? separadoresDosPedidos.reduce((t, s) => t + novasNoSeparador(s), 0) + porFazerNosPedidos
                         : (novidades[item.id] ?? 0);
                       // E o que está por fazer, que fica até se fazer (26-10-2026, d25).
                       const aFazer = ePedidos ? 0 : (porFazer[item.id] ?? 0);
@@ -2081,7 +2089,7 @@ export default function ColaboradorAdminClient({
               <div role="tablist" aria-label="Pedidos" className="flex flex-wrap gap-1.5">
                 {separadoresDosPedidos.map((s) => {
                   const aqui = activeSection === s;
-                  const novas = novasNoSeparador(s);
+                  const novas = novasNoSeparador(s) + porFazerNoSeparador(s);
                   return (
                     <button
                       key={s}
@@ -3543,6 +3551,9 @@ export default function ColaboradorAdminClient({
                 </p>
                 <AdminRetencaoPanel />
               </div>
+
+              {/* O email «O trabalho já foi feito?» do modelo novo (d15): desligado por omissão, só o administrador. */}
+              <InterruptorDoEmailDoFecho />
 
               {/*
                 O LIVRO DE MOVIMENTOS — Fase 1 dos pagamentos.

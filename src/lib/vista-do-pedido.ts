@@ -88,7 +88,7 @@ export async function negociacoesDaVistaDoCliente(
   // Por hora (31-10-2026): as horas previstas do pedido, para a estimativa.
   const porHora = lerBase(pedido.baseDoPreco) === "hora";
   const horasPrevistas = porHora ? horasPrevistasDaLinha(pedido as unknown as Record<string, unknown>) : null;
-  return linhas.map((n) =>
+  const vistas = linhas.map((n) =>
     negociacaoParaAVista(n, {
       porCarga,
       porHora,
@@ -98,6 +98,19 @@ export async function negociacoesDaVistaDoCliente(
       // A guia antes de contratar (04-11-2026, d10.1): o cliente vê porquê.
       exigeGuia: trabalhoExigeGuia(pedido),
     }),
+  );
+  /*
+   * «O TRABALHO JÁ FOI FEITO?» — d15, 13-11-2026. Só nos contratados do modelo
+   * novo sem «Está feito» (`novoModelo` já diz que é depois de 15-11 e não é
+   * Trabalho CLYON); o resto da regra — 48 h, os pagamentos — confere-se na base.
+   */
+  const { perguntaDoFechoNaBase } = await import("@/lib/fecho-do-modelo-novo-na-base");
+  return Promise.all(
+    vistas.map(async (v) =>
+      v.estado === "acordada" && v.novoModelo != null && !v.execucaoEnviadaEm && !v.confirmadoEm
+        ? { ...v, perguntaDoFecho: await perguntaDoFechoNaBase({ negociacaoId: v.id, pedidoId: pedido.id }, agora) }
+        : v,
+    ),
   );
 }
 

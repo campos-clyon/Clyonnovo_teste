@@ -7,6 +7,13 @@ import {
 } from "@/lib/db";
 import { COOKIE_SESSAO_PROFISSIONAL, tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
+import { dividasDoProfissional } from "@/lib/cobrancas-na-base";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import {
+  NAO_SE_CONFIRMOU_O_QUE_FALTA_PAGAR,
+  fraseDaContaComValorPorPagar,
+  valorPorPagarAntesDeApagar,
+} from "@/lib/conta-com-valor-por-pagar";
 
 export const runtime = "nodejs";
 
@@ -53,6 +60,25 @@ export async function DELETE(req: NextRequest) {
       { error: "Falta a confirmação. Escreva ELIMINAR para continuar." },
       { status: 400 },
     );
+  }
+
+  /*
+   * COM VALORES POR PAGAR À CLYON, NÃO SE ELIMINA — d15, 13-11-2026. A taxa da
+   * plataforma e o IVA por pagar (`porPagar` das dívidas, a mesma conta da
+   * carteira) travam ANTES de suspender: nada muda na conta, e ele sabe porquê.
+   * Na dúvida (a leitura falhou), também não se elimina.
+   */
+  try {
+    const porPagar = valorPorPagarAntesDeApagar(await dividasDoProfissional(sessao.providerId, agoraDoModelo()));
+    if (porPagar > 0) {
+      return NextResponse.json(
+        { error: fraseDaContaComValorPorPagar(porPagar), valorPorPagar: porPagar, comValoresPorPagar: true },
+        { status: 409 },
+      );
+    }
+  } catch (error) {
+    console.error("[api/profissionais/conta DELETE] o que falta pagar não se leu:", error);
+    return NextResponse.json({ error: NAO_SE_CONFIRMOU_O_QUE_FALTA_PAGAR }, { status: 503 });
   }
 
   try {

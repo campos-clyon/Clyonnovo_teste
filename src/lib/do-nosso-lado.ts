@@ -13,6 +13,7 @@ import {
   semRespostaDosEscolhidos,
   TITULO_DO_GRUPO_SEM_RESPOSTA,
 } from "./escolhidos-sem-resposta";
+import { linhasDoFecho, TITULO_DO_GRUPO_DO_FECHO, type TrabalhoParaOFecho } from "./fecho-do-modelo-novo";
 
 /**
  * «DO NOSSO LADO» — o que está à espera da CLYON, no topo da Mesa. d14,
@@ -39,7 +40,7 @@ import {
 /** Mais de 2 h sem resposta a um cliente é já «do nosso lado». */
 export const DUAS_HORAS_S = 2 * 3600;
 
-export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada" | "sem_resposta";
+export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada" | "sem_resposta" | "sem_fecho";
 
 export type LinhaDoNossoLado = {
   tipo: TipoDoNossoLado;
@@ -67,6 +68,8 @@ export const TITULOS_DO_NOSSO_LADO: Record<TipoDoNossoLado, string> = {
   propostas: "Propostas de parceiros por enviar ao cliente",
   data_passada: "Trabalhos com a data passada e sem «Está feito»",
   sem_resposta: TITULO_DO_GRUPO_SEM_RESPOSTA,
+  // d15 (13-11-2026): o modelo de 15-11 — 24 h depois da data, sem «Está feito».
+  sem_fecho: TITULO_DO_GRUPO_DO_FECHO,
 };
 
 /* ── As formas que se lêem — o mínimo de cada fonte ─────────────────────── */
@@ -364,6 +367,13 @@ export function doNossoLado(fontes: {
   conversas: ConversaParaOLado[] | null;
   pedidos: PedidoParaOLado[];
   trabalhosClyon: TrabalhoClyonParaOLado[];
+  /**
+   * d15 (13-11-2026): os contratados do modelo novo sem «Está feito», lidos à
+   * parte (`/api/admin/negociacoes/sem-fecho`, todos e não só os 60 da Mesa).
+   * Um pedido que está aqui sai do grupo «data passada»: é a mesma espera, dita
+   * pela regra do modelo novo.
+   */
+  semFecho?: readonly TrabalhoParaOFecho[] | null;
   agora: Date;
 }): GrupoDoNossoLado[] {
   const porEspera = (l: LinhaDoNossoLado[]) =>
@@ -376,12 +386,15 @@ export function doNossoLado(fontes: {
       }
       return b.esperaS - a.esperaS;
     });
+  const semFecho = linhasDoFecho(fontes.semFecho ?? [], fontes.agora);
+  const noFecho = new Set(semFecho.map((l) => l.pedidoId ?? -1));
   const grupos: Array<[TipoDoNossoLado, LinhaDoNossoLado[]]> = [
     ["conversa", fontes.conversas ? conversasDoNossoLado(fontes.conversas) : []],
     ["preco_clyon", precosClyonDoNossoLado(fontes.trabalhosClyon, fontes.agora)],
     ["propostas", propostasDoNossoLado(fontes.pedidos, fontes.agora)],
-    ["data_passada", datasPassadasDoNossoLado(fontes.pedidos, fontes.trabalhosClyon, fontes.agora)],
+    ["data_passada", datasPassadasDoNossoLado(fontes.pedidos, fontes.trabalhosClyon, fontes.agora).filter((l) => !noFecho.has(l.pedidoId ?? -1))],
     ["sem_resposta", semRespostaDoNossoLado(fontes.pedidos, fontes.agora)],
+    ["sem_fecho", semFecho],
   ];
   return grupos.map(([tipo, linhas]) => ({ tipo, titulo: TITULOS_DO_NOSSO_LADO[tipo], linhas: porEspera(linhas) }));
 }

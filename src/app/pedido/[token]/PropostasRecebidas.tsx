@@ -23,6 +23,7 @@ import PagarAoParceiro from "@/components/PagarAoParceiro";
 import AjusteNoLocal from "./AjusteNoLocal";
 import HistoricoDaProposta from "./HistoricoDaProposta";
 import HorasDoTrabalho from "./HorasDoTrabalho";
+import RespostaDoFecho from "@/components/RespostaDoFecho";
 import type { NegociacaoNoEcra } from "@/lib/negociacao-no-ecra";
 import { avaliacoesNaClyon } from "@/lib/avaliacoes-publicas";
 import { perguntaDeRecusar } from "@/lib/recusar-proposta";
@@ -462,6 +463,21 @@ export default function PropostasRecebidas({
               </a>
             )}
           </details>
+        )}
+
+        {/*
+          «O TRABALHO JÁ FOI FEITO?» — d15, 13-11-2026. No modelo de 15-11, 48 h
+          depois da data sem o «Está feito» do parceiro: um toque fecha o
+          trabalho. O servidor decide quando aparece (perguntaDoFecho).
+        */}
+        {acordada.perguntaDoFecho && (
+          <RespostaDoFecho
+            pergunta={acordada.perguntaDoFecho}
+            urlDaResposta={urlDaAccao}
+            corpoExtra={{ accao: acordada.perguntaDoFecho.accao, negociacaoId: acordada.id, pedidoId }}
+            soParaVer={soParaVer}
+            aoResponder={() => recarregar()}
+          />
         )}
 
         {acordada.fase === "a_confirmar" && (

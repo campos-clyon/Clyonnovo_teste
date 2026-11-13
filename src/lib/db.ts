@@ -1457,7 +1457,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 20;
+const VERSAO_DAS_NEGOCIACOES = 21;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1749,6 +1749,18 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN regimeDoProfissional VARCHAR(10) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN pagarAoParceiroPor VARCHAR(20) NULL DEFAULT NULL`,
+    /*
+     * v21 (13-11-2026, d15) — O FECHO DO MODELO NOVO (`fecho-do-modelo-novo.ts`):
+     * quando o cliente respondeu «Ainda não» à pergunta «O trabalho já foi
+     * feito?», quando lhe foi o email, e o link desse email (só o hash, com
+     * validade; serve só para responder a esta pergunta). Nulas em todas as
+     * outras. Aditivas: nada se apaga.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN fechoNaoEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN fechoEmailEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN fechoTokenHash VARCHAR(64) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN fechoTokenExpiraEm DATETIME NULL DEFAULT NULL`,
+    `CREATE INDEX idx_negociacoes_fecho_token ON negociacoes (fechoTokenHash)`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -6352,6 +6364,22 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
     if (code !== "ER_NO_SUCH_TABLE" && code !== "ER_BAD_FIELD_ERROR") {
       console.error("[contarPorFazer:aReceberDosProfissionais]", e instanceof Error ? e.message : e);
     }
+  }
+  /*
+   * O FECHO DO MODELO NOVO — 13-11-2026 (d15). Os contratados do modelo de
+   * 15-11 com a data passada há mais de 24 h e sem «Está feito» ficam no selo
+   * da Mesa até alguém (o parceiro, o cliente ou a equipa) fechar o trabalho —
+   * uma fila, que não se apaga por se olhar. Antes de 15-11 não vai à base.
+   */
+  try {
+    const { trabalhosSemFechoNaBase } = await import("./fecho-do-modelo-novo-na-base");
+    const { linhasDoFecho } = await import("./fecho-do-modelo-novo");
+    const { agoraDoModelo } = await import("./relogio-do-modelo");
+    const agora = agoraDoModelo();
+    const semFecho = linhasDoFecho(await trabalhosSemFechoNaBase(agora), agora).length;
+    if (semFecho > 0) saida.negociacoes_clyon = (saida.negociacoes_clyon ?? 0) + semFecho;
+  } catch (e) {
+    console.error("[contarPorFazer:fechoDoModeloNovo]", e instanceof Error ? e.message : e);
   }
   /*
    * AS LIÇÕES DA VITÓRIA POR REVER — 27-10-2026 (d11). Uma fila, como a de
@@ -15156,6 +15184,10 @@ export type Acontecimento =
   // O modelo de 15-11-2026 (d10): uma fatura do trabalho junta ao pedido, e como o cliente escolheu pagar ao parceiro.
   | "fatura_do_trabalho"
   | "forma_de_pagar_ao_parceiro"
+  // O fecho do modelo novo (d15, 13-11-2026): a resposta do cliente a «O trabalho já foi feito?» e o interruptor do email.
+  | "fecho_respondido"
+  | "fecho_interruptor"
+  | "fecho_perguntado"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —
    * com ou sem factura, e por onde. Não é dinheiro que entrou: é o que fica
