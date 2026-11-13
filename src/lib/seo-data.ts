@@ -2,7 +2,7 @@ import { EMPRESA_PARCEIRA_AO_PUBLICO, IDENTIFICACAO, TAXA_IVA } from "@/lib/iden
 import { GERADAS_QUE_FAZEM_301, TERRAS_JUNTAS_AO_CONCELHO } from "@/lib/paginas-consolidadas";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
-import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
+import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO, SO_PARA_OS_DADOS_DO_PEDIDO } from "@/lib/pagar-ao-parceiro";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -586,6 +586,24 @@ export const FACTURA_EM_PALAVRAS =
   `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
 
 /**
+ * AS EMPRESAS DESDE 15-11-2026 — d16 (texto J das Vendas). Os pedidos frequentes
+ * seguem pelo Trabalho CLYON, que fica no modelo de antes: um só caminho, uma
+ * fatura por trabalho. Antes da data, a frase geral de sempre.
+ */
+export const PAGAMENTO_DAS_EMPRESAS_NO_NOVO_MODELO =
+  "Para pedidos frequentes — condomínios, imobiliárias, alojamento local, escritórios — combinamos " +
+  "consigo um só caminho: o pedido é organizado pela CLYON, paga por transferência ou referência " +
+  "Multibanco e recebe uma fatura por trabalho, com o NIF da empresa. Quem faz o trabalho é sempre um " +
+  "parceiro independente da sua zona; a CLYON organiza o pedido, o acordo e a fatura.";
+
+/** O pagamento e a fatura em /empresas, pela data do modelo. */
+export function pagamentoDasEmpresas(agora: Date = new Date()): string {
+  return novoModeloEmVigor(agora)
+    ? PAGAMENTO_DAS_EMPRESAS_NO_NOVO_MODELO
+    : `${FACTURA_EM_PALAVRAS} Para a fatura levar o NIF da empresa, diga-o no pedido.`;
+}
+
+/**
  * COMO SE PAGA, quando ainda não se sabe a forma que o cliente vai escolher.
  *
  * As páginas públicas diziam «MB Way, Revolut e Novo Banco, após o serviço»
@@ -614,7 +632,9 @@ export const COMO_SE_PAGA = COMO_SE_PAGA_NO_MODELO_ANTIGO;
  * frase vem de `pagar-ao-parceiro.ts`, a mesma do simulador e do pedido.
  */
 export function comoSePaga(agora: Date = new Date()): string {
-  return novoModeloEmVigor(agora) ? `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${AS_DUAS_FATURAS}` : COMO_SE_PAGA_NO_MODELO_ANTIGO;
+  return novoModeloEmVigor(agora)
+    ? `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${SO_PARA_OS_DADOS_DO_PEDIDO} ${AS_DUAS_FATURAS}`
+    : COMO_SE_PAGA_NO_MODELO_ANTIGO;
 }
 
 /**

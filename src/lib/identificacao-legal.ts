@@ -31,6 +31,7 @@
  */
 
 import { TELEFONE_DA_CLYON_LEGIVEL } from "./telefone-da-clyon";
+import { novoModeloEmVigor } from "./novo-modelo";
 
 /**
  * A MORADA DA CLYON ÀS PARTES — 28-10-2026 (d1).
@@ -181,6 +182,19 @@ export const EMPRESA_PARCEIRA_EM_INGLES = "CLYON's partner company";
  * frase muda num sítio só.
  */
 export const QUEM_FACTURA_EM_PALAVRAS = `A fatura é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
+
+/**
+ * DESDE 15-11-2026 (d16, texto B das Vendas): duas faturas — a do trabalho, do
+ * parceiro, e a da taxa da plataforma, da empresa parceira da CLYON. Os Trabalhos
+ * CLYON continuam com a frase de cima.
+ */
+export const QUEM_FATURA_NO_NOVO_MODELO =
+  `A fatura do trabalho é emitida pelo parceiro; a da taxa da plataforma, pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
+
+/** Quem emite a fatura, pela data do modelo (`novo-modelo.ts`). */
+export function quemFaturaEmPalavras(agora: Date = new Date()): string {
+  return novoModeloEmVigor(agora) ? QUEM_FATURA_NO_NOVO_MODELO : QUEM_FACTURA_EM_PALAVRAS;
+}
 
 /**
  * Falta alguma coisa para cumprir o artigo 10.º do DL 7/2004?

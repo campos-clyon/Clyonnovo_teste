@@ -98,7 +98,8 @@ describe("o simulador", () => {
     expect(LIMPO).not.toContain("Profissionais da sua zona receberam o pedido");
     expect(LIMPO).not.toContain("irá analisar os dados e entrar em contacto");
     // Os três passos vivem em textos-do-pedido.ts desde 29-10-2026 (S12), lidos pelo simulador e pela app.
-    expect(LIMPO).toContain("...TRES_PASSOS_DEPOIS_DE_ENVIAR[0]");
+    // Desde a d16 (13-11-2026) escolhidos pela data do modelo (`tresPassosDepoisDeEnviar`).
+    expect(LIMPO).toContain("...passosDepoisDeEnviar[0]");
     expect(readFileSync(join(process.cwd(), "src/lib/textos-do-pedido.ts"), "utf8")).toContain(
       "A CLYON confere o pedido e envia-o aos parceiros da sua zona",
     );

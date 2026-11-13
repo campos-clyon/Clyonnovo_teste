@@ -14,6 +14,9 @@ import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { urlDeAccao } from "./url-do-site";
 import { comChave } from "./acesso-mvp";
+import { DEPOIS_DE_APROVADO_NO_NOVO_MODELO } from "./como-funciona-para-o-profissional";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { agoraDoModelo } from "./relogio-do-modelo";
 
 export interface AprovacaoParams {
   para: string;
@@ -23,9 +26,12 @@ export interface AprovacaoParams {
   baseUrl?: string;
   /** Dias de validade do link, para o dizer ao próprio. */
   diasDeValidade: number;
+  /** O «agora» do modelo (d16) — por omissão, o do servidor. */
+  agora?: Date;
 }
 
-function montarHtml(p: AprovacaoParams): string {
+/** O HTML do email — exportado para os testes (d16). */
+export function montarHtml(p: AprovacaoParams): string {
   // O caminho de definir a palavra-passe está aberto pelo token, mas assim
   // que ele a define cai no painel — que está atrás da chave. Levá-la no link
   // é o que evita que a conta seja criada e a porta seguinte dê 404.
@@ -33,6 +39,18 @@ function montarHtml(p: AprovacaoParams): string {
     `${p.baseUrl ?? urlDeAccao()}/profissionais/definir-senha/${p.token}`,
   );
   const primeiroNome = p.nome.trim().split(/\s+/)[0] ?? p.nome;
+  /*
+   * DESDE 15-11-2026 (d16): o IBAN, o titular, o MB WAY e o regime de IVA são
+   * obrigatórios para propor — quem é aprovado a partir daí precisa deles no
+   * primeiro dia, e o email di-lo logo a seguir ao botão.
+   */
+  const oQueFalta = novoModeloEmVigor(p.agora ?? agoraDoModelo())
+    ? `
+          <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#475569;">
+            ${e(DEPOIS_DE_APROVADO_NO_NOVO_MODELO)}
+          </p>
+`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -71,7 +89,7 @@ function montarHtml(p: AprovacaoParams): string {
               </a>
             </td></tr>
           </table>
-
+${oQueFalta}
           <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
             Este link serve uma vez e expira em ${p.diasDeValidade} dias. Não o
             reencaminhe — quem o abrir fica com o acesso à sua conta. Se expirar, peça

@@ -41,7 +41,8 @@ import {
   linhaDasCoisas,
   linhaDoAcesso,
 } from "@/lib/perguntas-do-espaco";
-import { passosDaMudancaComEscolha, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "@/lib/textos-do-pedido";
+import { NOVO_MODELO_DESDE } from "@/lib/novo-modelo";
+import { passosDaMudancaComEscolha, tresPassosDepoisDeEnviar } from "@/lib/textos-do-pedido";
 import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/ParceirosDaMudanca";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
@@ -196,6 +197,10 @@ export default function SimulatorThreePhaseForm() {
   const [semListaNaMudanca, setSemListaNaMudanca] = useState(false);
   /** O pedido foi logo aos parceiros escolhidos (o ecrã de sucesso diz outra coisa). */
   const [foiAosEscolhidos, setFoiAosEscolhidos] = useState(0);
+  // d16: o servidor diz se o modelo de 15-11 vale (a data simulada só lá existe).
+  const [noNovoModelo, setNoNovoModelo] = useState(false);
+  const momentoDoModelo = noNovoModelo ? NOVO_MODELO_DESDE : new Date(0);
+  const passosDepoisDeEnviar = tresPassosDepoisDeEnviar(momentoDoModelo);
 
   useEffect(() => {
     if (phase < 3) {
@@ -525,7 +530,7 @@ export default function SimulatorThreePhaseForm() {
 
     // Ou o pedido ficou gravado, com número, ou não ficou — e diz-se porquê.
     const work = (async (): Promise<
-      | { id: number; emailDoLink: string | null; contaGuardada: string | null; parceirosEscolhidos: number }
+      | { id: number; emailDoLink: string | null; contaGuardada: string | null; parceirosEscolhidos: number; novoModelo: boolean }
       | { erro: string | null }
     > => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
@@ -684,6 +689,7 @@ export default function SimulatorThreePhaseForm() {
           emailDoLink?: unknown;
           contaGuardada?: unknown;
           parceirosEscolhidos?: unknown;
+          novoModelo?: unknown;
           error?: unknown;
           campo?: unknown;
         };
@@ -694,6 +700,7 @@ export default function SimulatorThreePhaseForm() {
             emailDoLink: typeof saved.emailDoLink === "string" ? saved.emailDoLink : null,
             contaGuardada: typeof saved.contaGuardada === "string" ? saved.contaGuardada : null,
             parceirosEscolhidos: typeof saved.parceirosEscolhidos === "number" ? saved.parceirosEscolhidos : 0,
+            novoModelo: saved.novoModelo === true,
           };
         }
         // Um parceiro escolhido deixou de estar disponível: volta-se à lista.
@@ -735,6 +742,7 @@ export default function SimulatorThreePhaseForm() {
     setEmailDoLink(resultado.emailDoLink);
     setContaGuardada(resultado.contaGuardada);
     setFoiAosEscolhidos(resultado.parceirosEscolhidos);
+    setNoNovoModelo(resultado.novoModelo);
     setSuccessOrderId(resultado.id);
     // Enviado: o rascunho já não é de nada, e não pode voltar a abrir-se.
     try {
@@ -850,14 +858,14 @@ export default function SimulatorThreePhaseForm() {
                 cor: "text-green-600",
                 // Os textos vêm de textos-do-pedido.ts — os mesmos que a app recebe (S12).
                 // Numa mudança enviada logo aos escolhidos, os passos dessa (10-11-2026).
-                ...TRES_PASSOS_DEPOIS_DE_ENVIAR[0],
-                ...(foiAosEscolhidos > 0 ? passosDaMudancaComEscolha(foiAosEscolhidos)[0] : {}),
+                ...passosDepoisDeEnviar[0],
+                ...(foiAosEscolhidos > 0 ? passosDaMudancaComEscolha(foiAosEscolhidos, momentoDoModelo)[0] : {}),
               },
               {
                 Icone: Clock,
                 cor: "text-acao",
-                ...TRES_PASSOS_DEPOIS_DE_ENVIAR[1],
-                ...(foiAosEscolhidos > 0 ? passosDaMudancaComEscolha(foiAosEscolhidos)[1] : {}),
+                ...passosDepoisDeEnviar[1],
+                ...(foiAosEscolhidos > 0 ? passosDaMudancaComEscolha(foiAosEscolhidos, momentoDoModelo)[1] : {}),
               },
               /*
                 «SÓ PAGA DEPOIS DE CONFIRMAR QUE FICOU FEITO» SAIU — 29-09-2026.
@@ -868,7 +876,7 @@ export default function SimulatorThreePhaseForm() {
               {
                 Icone: ShieldCheck,
                 cor: "text-acao",
-                ...TRES_PASSOS_DEPOIS_DE_ENVIAR[2],
+                ...passosDepoisDeEnviar[2],
               },
             ].map(({ Icone, cor, titulo, texto }) => (
               <li key={titulo} className="flex items-start gap-3">

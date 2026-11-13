@@ -52,7 +52,12 @@ const VEICULOS = [
 const CAIXA =
   "w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-base text-slate-900 outline-none transition focus:border-cyan-600";
 
-export default function FormularioDeCandidatura() {
+export default function FormularioDeCandidatura({
+  depoisDeAprovado,
+}: {
+  /** O que falta depois de aprovado — do servidor, pela data do modelo (d16, `depoisDeAprovado`). */
+  depoisDeAprovado: string;
+}) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -239,7 +244,7 @@ export default function FormularioDeCandidatura() {
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-700">
           Vamos olhar para ela e falamos consigo. Se avançar, recebe no email{" "}
           <strong>{email}</strong> o link para escolher a sua palavra-passe e entrar.
-          O NIF, a morada fiscal e o IBAN preenche-os lá dentro, com calma.
+          {depoisDeAprovado}
         </p>
         <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-slate-500">
           Não pedimos nada para se inscrever, e responder a pedidos nunca lhe custa

@@ -40,6 +40,8 @@ import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
 import { camposDaCategoriaParaGravar, comAsLinhasDaCategoria } from "@/lib/pedido-por-categoria";
 import { enviarAosEscolhidos, linhaDoEnvioFalhado, prepararEscolhaDaMudanca } from "@/lib/mudanca-com-parceiros-escolhidos";
 import { passosDaMudancaComEscolha } from "@/lib/textos-do-pedido";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { origemParaGravar } from "@/lib/origem-para-gravar";
 
 export const runtime = "nodejs";
@@ -805,7 +807,9 @@ export async function POST(req: NextRequest) {
       // Numa mudança com a lista: a quantos parceiros escolhidos o pedido vai (10-11-2026).
       parceirosEscolhidos: escolhaDaMudanca ? escolhaDaMudanca.escolhidos.length : 0,
       // E os passos do «Pedido enviado» que o dizem, para a app de cliente os mostrar como o site (11-11-2026).
-      passos: escolhaDaMudanca ? passosDaMudancaComEscolha(escolhaDaMudanca.escolhidos.length) : undefined,
+      passos: escolhaDaMudanca ? passosDaMudancaComEscolha(escolhaDaMudanca.escolhidos.length, agoraDoModelo()) : undefined,
+      // O modelo de 15-11 (d16): o «Pedido enviado» diz que se paga ao parceiro. Pela data do servidor.
+      novoModelo: novoModeloEmVigor(agoraDoModelo()),
       // O token vai na resposta para o formulário poder levar o cliente ao
       // pedido sem esperar pelo email. Vai só aqui, ao próprio, no momento em
       // que o criou — nunca numa listagem nem numa leitura posterior.

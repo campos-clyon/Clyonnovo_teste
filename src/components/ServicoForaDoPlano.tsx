@@ -15,6 +15,8 @@ import { O_QUE_PODE_FAZER } from "@/lib/voz-da-vitoria";
 
 export const NAO_FAZ_ESTE_SERVICO = "De momento a CLYON não faz este serviço.";
 
+/* d16 (13-11-2026): «e o pagamento» saiu — desde 15-11 o cliente paga ao parceiro, e a frase
+ * fica certa nos dois lados da data (a página é estática). */
 export default function ServicoForaDoPlano({ titulo }: { titulo: string }) {
   return (
     <div className="min-h-screen bg-white">
@@ -27,7 +29,7 @@ export default function ServicoForaDoPlano({ titulo }: { titulo: string }) {
           <p className="mt-6 text-base leading-relaxed text-tinta-fraca sm:text-lg">
             Na CLYON pode pedir {O_QUE_PODE_FAZER}. Descreve o que precisa, os parceiros da
             zona enviam propostas e escolhe com quem quer trabalhar — a CLYON organiza o pedido e
-            guarda o acordo e o pagamento.
+            guarda o acordo.
           </p>
           <Link
             href="/servicos"

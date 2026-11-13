@@ -94,6 +94,9 @@ function lista(falta: DadoParaReceber[]): string {
   return nomes.length <= 1 ? nomes.join("") : `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}`;
 }
 
+/** Os quatro, numa frase («o IBAN, o titular da conta, o número MB WAY e o regime de IVA») — d16. */
+export const OS_DADOS_PARA_RECEBER_EM_PALAVRAS = lista(["iban", "titular", "mbway", "regime"]);
+
 export function estadoDosDadosParaReceber(
   p: ProfissionalComDadosParaReceber,
   agora: Date = new Date(),

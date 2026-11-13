@@ -60,3 +60,12 @@ export const PAGA_DIRETAMENTE_AO_PARCEIRO =
 /** As duas faturas de cada trabalho, ditas ao cliente. */
 export const AS_DUAS_FATURAS =
   "Recebe duas faturas, as duas juntas ao pedido: a do trabalho, emitida pelo parceiro, e a da taxa da plataforma.";
+
+/**
+ * SÓ PARA OS DADOS DO PEDIDO — d16 (13-11-2026, texto A das Vendas). No modelo
+ * novo o cliente transfere para o IBAN de quem contratou: diz-se onde estão os
+ * dados e que não se paga para outros. Sem «quando» se paga — o momento ainda
+ * não está confirmado.
+ */
+export const SO_PARA_OS_DADOS_DO_PEDIDO =
+  "Os dados para pagar aparecem no seu pedido depois de contratar o parceiro: pague só para esses. Se alguém lhe pedir que pague para outros dados, não pague e fale connosco.";

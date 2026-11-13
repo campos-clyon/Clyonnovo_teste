@@ -116,6 +116,7 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
       caso: destino ? casoDoDestino(destino, temDivida) : null,
       liquido: quantoOProfissionalRecebe(valor, taxas),
       aPagarAClyon: contaDaDivida ? contaDaDivida.total : null,
+      noNovoModelo: lido?.noNovoModelo === true,
     });
     if (!destino) return;
 
@@ -129,6 +130,7 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
       divida: contaDaDivida
         ? {
             ...contaDaDivida,
+            noNovoModelo: lido?.noNovoModelo === true,
             referencia:
               referencia?.ok && referencia.pagamento.metodo === "multibanco"
                 ? {

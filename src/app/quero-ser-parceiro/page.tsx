@@ -9,6 +9,7 @@ import {
   O_QUE_A_CLYON_NAO_FAZ,
   comoRecebe,
   comissaoEmPalavras,
+  depoisDeAprovado,
 } from "@/lib/como-funciona-para-o-profissional";
 import FormularioDeCandidatura from "./FormularioDeCandidatura";
 import { modeloDeHoje } from "@/lib/iva-incluido";
@@ -85,7 +86,7 @@ export default async function QueroSerParceiroPage() {
     // Por zona (04-11-2026, d16): só os concelhos com o mínimo — ver ProcuraNaZona.
     pedidosDoMesPorConcelho(MINIMO_PARA_MOSTRAR),
   ]);
-  const exemplo = comissaoEmPalavras(taxas, modeloDeHoje());
+  const exemplo = comissaoEmPalavras(taxas, modeloDeHoje(), agoraDoModelo());
   const pedidosDaSemana = pedidosParaMostrar(daSemana);
 
   return (
@@ -313,7 +314,7 @@ export default async function QueroSerParceiroPage() {
             para escolher a palavra-passe e entrar.
           </p>
           <div className="mt-6">
-            <FormularioDeCandidatura />
+            <FormularioDeCandidatura depoisDeAprovado={depoisDeAprovado(agoraDoModelo())} />
           </div>
         </div>
       </section>

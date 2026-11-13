@@ -28,6 +28,14 @@ export const DO_MODELO_ANTIGO: ReadonlyArray<{ re: RegExp; aQuem: AQuemSeDiz; no
   },
   { nome: "o valor fica com a CLYON", aQuem: "todos", re: /(valor|dinheiro|pagamento) fica (com a CLYON|connosco)/iu },
   { nome: "o cliente paga à CLYON", aQuem: "todos", re: /o cliente paga à CLYON/iu },
+  // d16 (13-11-2026): o fim do simulador e as mensagens do pedido — no modelo novo o cliente não recebe referência.
+  {
+    nome: "recebe a referência para pagar",
+    aQuem: "cliente",
+    re: /recebe (a|uma) referência (MB WAY ou Multibanco |Multibanco |MB WAY )?(para (o )?pagar|para pagamento)/iu,
+  },
+  // d16: o que a CLYON é — organiza e guarda o acordo; o pagamento do trabalho já não passa por ela.
+  { nome: "a CLYON guarda o pagamento", aQuem: "todos", re: /guarda o acordo e o pagamento/iu },
   { nome: "em dívida", aQuem: "todos", re: /(?<!\p{L})em d[íi]vida(?!\p{L})/iu },
   { nome: "pagar pela plataforma", aQuem: "todos", re: /(?<!\p{L})(pag\p{L}*|pagamento) pela plataforma/iu },
   { nome: "pela plataforma, o valor", aQuem: "todos", re: /(?<!\p{L})pela plataforma,? (o valor|por MB WAY|ele paga|o cliente paga)/iu },

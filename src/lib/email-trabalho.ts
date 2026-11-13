@@ -23,7 +23,7 @@ import { comChave } from "./acesso-mvp";
 import { promessaDaForma, prazoDoEmailPorExtenso } from "./pagamento-na-plataforma";
 import { quemConfirmaAntesDeMarcar } from "./trabalho";
 import { modeloDaNegociacao } from "./iva-incluido";
-import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO } from "./identificacao-legal";
 import { BUSINESS_EMAIL } from "./seo-data";
 
 import { NOMES_DOS_SERVICOS } from "./service-categories";
@@ -34,7 +34,8 @@ function euros(v: number | null): string {
   return v.toFixed(2).replace(".", ",") + " €";
 }
 
-function moldura(titulo: string, corpo: string): string {
+/** `novoModelo`: o trabalho segue o modelo de 15-11 (duas faturas) — d16. */
+function moldura(titulo: string, corpo: string, novoModelo = false): string {
   return `<!DOCTYPE html>
 <html lang="pt">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(titulo)}</title></head>
@@ -49,7 +50,7 @@ function moldura(titulo: string, corpo: string): string {
         <tr><td style="background:#f8fafc;padding:18px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
             A CLYON liga clientes a parceiros independentes. Quem executa o trabalho
-            é o parceiro. ${QUEM_FACTURA_EM_PALAVRAS}
+            é o parceiro. ${novoModelo ? QUEM_FATURA_NO_NOVO_MODELO : QUEM_FACTURA_EM_PALAVRAS}
           </p>
         </td></tr>
       </table>
@@ -227,7 +228,7 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
   return enviar(
     p.paraEmail,
     `Foi contratado — pedido #${p.pedidoId}`,
-    moldura("O trabalho é seu", corpo),
+    moldura("O trabalho é seu", corpo, p.novoModelo != null),
     "email-contratado",
   );
 }
@@ -319,7 +320,7 @@ export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise
   return enviar(
     p.paraEmail,
     `O trabalho está feito — confirme o pedido #${p.pedidoId}`,
-    moldura("Confirme o trabalho", corpo),
+    moldura("Confirme o trabalho", corpo, p.novoModelo === true),
     "email-confirmacao",
   );
 }
@@ -361,5 +362,5 @@ export async function avisarDaPerguntaDoFecho(p: {
     <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
       Se ainda não foi feito, abra o link e diga-nos — ou responda a este email.
     </p>`;
-  return enviar(p.para, `${ASSUNTO_DO_EMAIL_DO_FECHO} — pedido #${p.pedidoId}`, moldura(PERGUNTA_DO_FECHO, corpo), "email-fecho");
+  return enviar(p.para, `${ASSUNTO_DO_EMAIL_DO_FECHO} — pedido #${p.pedidoId}`, moldura(PERGUNTA_DO_FECHO, corpo, true), "email-fecho");
 }

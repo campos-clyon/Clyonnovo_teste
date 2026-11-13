@@ -26,6 +26,8 @@ import { precoDe } from "@/lib/precos-publicos";
 import { MORADA_DA_CLYON } from "@/lib/identificacao-legal";
 import { ID_DO_NEGOCIO, LOCALIDADES_SERVIDAS } from "@/lib/dados-estruturados";
 import { IMAGEM_DE_PARTILHA } from "@/lib/open-graph";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 /*
  * A meta description global deixou de levar o preço da recolha de móveis
@@ -155,6 +157,16 @@ const LOGO_DO_NEGOCIO = `${SITE_URL}/logo-clyon-icon.png`;
  */
 const PERFIS_DO_NEGOCIO = ["https://www.google.com/maps?cid=6227316191619861484", PERFIL_NA_FIXANDO_URL];
 
+/*
+ * O QUE A CLYON É, NOS DADOS ESTRUTURADOS — d16 (13-11-2026). Desde 15-11 o cliente
+ * paga ao parceiro: a CLYON organiza e guarda o acordo, mas não o pagamento. A
+ * escolha faz-se no RootLayout, pela data do modelo.
+ */
+const DESCRICAO_DO_NEGOCIO_NO_MODELO_ANTIGO =
+  "Plataforma que liga clientes a parceiros independentes de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe; a CLYON guarda o acordo e o pagamento.";
+const DESCRICAO_DO_NEGOCIO_NO_NOVO_MODELO =
+  "Plataforma que liga clientes a parceiros independentes de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe, e é a ele que o cliente paga; a CLYON organiza o pedido e guarda o acordo.";
+
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": ["LocalBusiness", "HomeAndConstructionBusiness"],
@@ -187,8 +199,7 @@ const localBusinessSchema = {
    * LocalBusiness: trocá-lo por Organization mexe no SEO local e fica para
    * quando o Marketing o medir.
    */
-  description:
-    "Plataforma que liga clientes a parceiros independentes de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe; a CLYON guarda o acordo e o pagamento.",
+  description: DESCRICAO_DO_NEGOCIO_NO_MODELO_ANTIGO,
   // A mesma morada dos Termos e da etiqueta `address` (identificacao-legal.ts, 28-10-2026, d1).
   address: {
     "@type": "PostalAddress",
@@ -332,7 +343,14 @@ export default function RootLayout({
         <meta name="address" content={BUSINESS_ADDRESS} />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLd(localBusinessSchema) }}
+          dangerouslySetInnerHTML={{
+            __html: jsonLd({
+              ...localBusinessSchema,
+              description: novoModeloEmVigor(agoraDoModelo())
+                ? DESCRICAO_DO_NEGOCIO_NO_NOVO_MODELO
+                : DESCRICAO_DO_NEGOCIO_NO_MODELO_ANTIGO,
+            }),
+          }}
         />
         <script
           type="application/ld+json"

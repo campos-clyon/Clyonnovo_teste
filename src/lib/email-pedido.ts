@@ -18,7 +18,8 @@ import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { e } from "./escapar-html";
 import { linkDoPedido } from "./pedido-acesso";
 import { urlDeAccao } from "./url-do-site";
-import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { quemFaturaEmPalavras } from "./identificacao-legal";
+import { agoraDoModelo } from "./relogio-do-modelo";
 import { BUSINESS_EMAIL } from "./seo-data";
 import { PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { TAXA_IVA } from "./taxas-plataforma";
@@ -130,7 +131,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
         <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
             A CLYON liga clientes a parceiros independentes. Quem executa o
-            trabalho é o parceiro que escolher. ${QUEM_FACTURA_EM_PALAVRAS}
+            trabalho é o parceiro que escolher. ${quemFaturaEmPalavras(agoraDoModelo())}
           </p>
         </td></tr>
 

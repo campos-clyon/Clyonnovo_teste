@@ -13,7 +13,8 @@ describe("a página para empresas", () => {
   const P = ler("src/app/empresas/page.tsx");
 
   it("diz a fatura, o registo na APA e a e-GAR pelas constantes do site", () => {
-    expect(P).toContain("{FACTURA_EM_PALAVRAS}");
+    // d16 (13-11-2026): pela data do modelo; antes de 15-11 é a frase de sempre (textos-do-pagamento-d16.test.ts).
+    expect(P).toContain("{pagamentoDasEmpresas(agoraDoModelo())}");
     expect(P).toContain("{IDENTIFICACAO.codigoAPA}");
     expect(P).toContain("e-GAR");
     expect(P).not.toMatch(/APA\d{6,}/);
@@ -31,7 +32,8 @@ describe("a página para empresas", () => {
   });
 
   it("e /sobre-nos diz quem passa a fatura", () => {
-    expect(ler("src/app/sobre-nos/page.tsx")).toContain("{QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.");
+    // d16: desde 15-11 as duas faturas (QUEM_FATURA_NO_NOVO_MODELO), antes a de sempre.
+    expect(ler("src/app/sobre-nos/page.tsx")).toContain("{novo ? QUEM_FATURA_NO_NOVO_MODELO : QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.");
   });
 
   /*

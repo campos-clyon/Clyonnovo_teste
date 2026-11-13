@@ -67,7 +67,7 @@ export default async function ProfissionaisPage() {
    * CLYON fica com 11 % do que o cliente paga, e só as taxas gravadas no
    * backoffice o sabem. Sem base, `taxasActuais` devolve as de origem.
    */
-  const exemplo = comissaoEmPalavras(await taxasActuais(), modeloDeHoje());
+  const exemplo = comissaoEmPalavras(await taxasActuais(), modeloDeHoje(), agoraDoModelo());
 
   return (
     <div className="min-h-screen bg-white">

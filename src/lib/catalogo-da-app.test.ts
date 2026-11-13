@@ -93,7 +93,11 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     const { TRES_PASSOS_DEPOIS_DE_ENVIAR } = await import("@/lib/textos-do-pedido");
     expect(j.comoFunciona.map((p: { texto: string }) => p.texto)).toEqual(PASSOS_DE_COMO_FUNCIONA.map((p) => p.texto));
     expect(j.perguntas.length).toBe(PERGUNTAS_FREQUENTES.flatMap((c) => c.questions).length);
-    expect(j.textos.tresPassos).toEqual(TRES_PASSOS_DEPOIS_DE_ENVIAR);
+    // Pela data do modelo (d16): antes de 15-11 são os de sempre.
+    const { tresPassosDepoisDeEnviar } = await import("@/lib/textos-do-pedido");
+    const { agoraDoModelo } = await import("@/lib/relogio-do-modelo");
+    expect(j.textos.tresPassos).toEqual(tresPassosDepoisDeEnviar(agoraDoModelo()));
+    expect(tresPassosDepoisDeEnviar(new Date("2026-11-13T12:00:00Z"))).toBe(TRES_PASSOS_DEPOIS_DE_ENVIAR);
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const pagina = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
@@ -105,7 +109,9 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     const { perguntasFrequentes } = await import("@/lib/perguntas-frequentes");
     const { SEM_PARCEIROS } = await import("@/lib/preco-publico-das-mudancas");
     expect(perguntasFrequentes(SEM_PARCEIROS)).toBe(PERGUNTAS_FREQUENTES);
-    expect(pagina("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("...TRES_PASSOS_DEPOIS_DE_ENVIAR[0]");
+    // d16: o simulador lê os três passos pela data que o servidor lhe diz.
+    expect(pagina("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("...passosDepoisDeEnviar[0]");
+    expect(pagina("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("tresPassosDepoisDeEnviar(momentoDoModelo)");
     // Avaliações só do Google, com o mês da contagem.
     expect(j.avaliacoes.resumo).toMatch(/avaliações no Google \(\w+ de \d{4}\)$/);
   });

@@ -194,6 +194,8 @@ export async function avisarProfissionalConfirmadoPorPush(dados: {
   liquido?: number | null;
   /** Em dinheiro com IVA incluído: o IVA e a taxa da plataforma que entrega à CLYON. */
   aPagarAClyon?: number | null;
+  /** O trabalho segue o modelo de 15-11 (d16). */
+  noNovoModelo?: boolean;
 }): Promise<void> {
   if (!dados.email) return;
   try {
@@ -204,6 +206,7 @@ export async function avisarProfissionalConfirmadoPorPush(dados: {
             caso: dados.caso,
             liquido: dados.liquido,
             aPagarAClyon: dados.aPagarAClyon ?? null,
+            noNovoModelo: dados.noNovoModelo === true,
           })
         : null;
     await sendPushToUser(dados.email, {

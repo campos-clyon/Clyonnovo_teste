@@ -10,6 +10,7 @@ import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import type { DestinoDoValor } from "./carteira";
 import { BUSINESS_EMAIL } from "./seo-data";
 import { desdobramentoDoIva } from "./preco-do-cliente";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO } from "./novo-modelo";
 
 
 /**
@@ -235,6 +236,32 @@ export function textoDoTrabalhoConfirmado(p: {
   divida?: DividaNoEmail | null;
 }): { assunto: string; corpo: string; botao: string } {
   const valor = `<strong>${euros(p.liquido)}</strong>`;
+  /*
+   * NO MODELO DE 15-11-2026 (d16): o cliente pagou-lhe diretamente o preço com IVA,
+   * e a fatura do trabalho é dele. O que passa à CLYON é só a taxa da plataforma e
+   * o IVA dela — o valor em atraso, com 4 dias para o pagar. Não se diz «em dinheiro»
+   * (pode ter sido por transferência ou MB WAY) nem «o IVA é da CLYON».
+   */
+  if (p.destino === "em_mao" && p.divida?.noNovoModelo) {
+    const d = p.divida;
+    const ref = d.referencia;
+    const comoPagar = ref
+      ? `Pague-os por Multibanco — Entidade <strong>${e(ref.entidade ?? "—")}</strong>, ` +
+        `Referência <strong>${e(ref.referencia ?? "—")}</strong>, Valor <strong>${euros(d.total)}</strong>` +
+        (ref.expiraEm ? `, válida até ${dataCurta(ref.expiraEm)}` : "") +
+        ". Também a encontra na sua carteira, em «A pagar à CLYON», onde pode pedir uma por MB WAY."
+      : "A referência para os pagar está na sua carteira, em «A pagar à CLYON» — por Multibanco ou MB WAY.";
+    return {
+      assunto: `Trabalho #${p.pedidoId} confirmado — passe à CLYON a taxa da plataforma`,
+      corpo:
+        "O cliente confirmou o trabalho. O que ele lhe pagou é seu: emita-lhe a fatura do trabalho e " +
+        "junte-a ao pedido. A taxa da plataforma e o IVA dela são da CLYON: " +
+        `<strong>${euros(d.total)}</strong> (${euros(d.comissao)} de taxa e ${euros(d.iva)} de IVA dela), ` +
+        `como valor em atraso, com ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias para pagar. ${comoPagar} ` +
+        "Se os dias passarem, a conta fica em stand-by até pagar.",
+      botao: "Abrir a carteira",
+    };
+  }
   if (p.destino === "em_mao" && p.divida) {
     /*
      * "O cliente paga ao profissional, no local, o preço COM IVA; o
@@ -310,6 +337,8 @@ export type DividaNoEmail = {
   comissao: number;
   total: number;
   referencia?: { entidade: string | null; referencia: string | null; expiraEm: Date | null } | null;
+  /** O trabalho segue o modelo de 15-11 (d16): `iva` é o IVA da taxa, e o cliente pagou-lhe a ele. */
+  noNovoModelo?: boolean;
 };
 
 function dataCurta(d: Date): string {

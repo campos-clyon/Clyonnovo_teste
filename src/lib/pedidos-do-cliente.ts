@@ -28,10 +28,12 @@ import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a
 import { RECUSAR } from "@/lib/recusar-proposta";
 import { legendaDaContraproposta } from "@/lib/frase-da-contraproposta";
 import { AINDA_SEM_PROPOSTAS } from "@/lib/promessas-publicas";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { negociacaoParaOEcra } from "@/lib/negociacao-no-ecra";
 import { alteracoesParaAApp, faseDaAlteracao } from "@/lib/alteracoes-do-cliente";
 import {
   RODAPE_DO_PEDIDO,
+  rodapeDoPedido,
   acessoDoPedido,
   atalhosDaContraproposta,
   dataPreferidaTexto,
@@ -670,7 +672,7 @@ export async function pedidoDoClienteParaAApp(
       // À espera das primeiras propostas, com o prazo (d8, 31-10-2026): a mesma frase do /pedido/[token].
       aindaSemPropostas: AINDA_SEM_PROPOSTAS,
       // S22: o rodapé do site e o título das propostas.
-      rodape: RODAPE_DO_PEDIDO,
+      rodape: trabalhoClyon ? RODAPE_DO_PEDIDO : rodapeDoPedido(agoraDoModelo()),
       responderam: responderamEmPalavras(negociacoes.filter((n) => n.estado === "aberta" || n.estado === "aguarda_contratacao").length),
     },
   };

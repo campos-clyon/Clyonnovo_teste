@@ -59,7 +59,7 @@ import {
 
 import CartaoDoPerfil from "./CartaoDoPerfil";
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
-import { rotuloDoMbway } from "@/lib/rotulo-do-mbway";
+import { ajudaDoMbway, rotuloDoMbway } from "@/lib/rotulo-do-mbway";
 import { FRASES_DA_FATURA, FRASE_DA_GUIA } from "@/lib/perfil-fiscal";
 
 export type SeccaoDoPerfil = "dados" | "servicos" | "faturacao" | "banco" | "seguranca";
@@ -1279,7 +1279,7 @@ export default function Perfil({
             */}
             <Campo
               etiqueta={rotuloDoMbway(novoModeloEmVigor())}
-              ajuda="Outra forma de lhe pagarmos. Pode ser um número diferente do de contacto."
+              ajuda={ajudaDoMbway(novoModeloEmVigor())}
             >
               <input
                 className={CAIXA}

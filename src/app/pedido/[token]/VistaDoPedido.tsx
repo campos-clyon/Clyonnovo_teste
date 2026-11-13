@@ -8,7 +8,8 @@ import { marcarVistasPeloCliente } from "@/lib/pedidos-do-cliente";
 import { QUANDO_EM_PALAVRAS } from "@/lib/negociacao-na-vista";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
-import { QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
+import { QUEM_FACTURA_EM_PALAVRAS, quemFaturaEmPalavras } from "@/lib/identificacao-legal";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import PrecoDaClyon from "@/components/PrecoDaClyon";
 import AjudaDoPedido from "@/components/AjudaDoPedido";
 import AlterarPedido from "@/components/AlterarPedido";
@@ -403,7 +404,9 @@ export default async function VistaDoPedido({
       */}
       <p className="mt-6 text-center text-xs leading-relaxed text-tinta-fraca">
         A CLYON liga clientes a parceiros independentes. Quem executa o trabalho é o
-        parceiro que escolher. {QUEM_FACTURA_EM_PALAVRAS}
+        parceiro que escolher.{" "}
+        {/* d16: num Trabalho CLYON a fatura é uma só, como antes; nos outros, pela data do modelo. */}
+        {pedido.valorFixoClyon != null ? QUEM_FACTURA_EM_PALAVRAS : quemFaturaEmPalavras(agoraDoModelo())}
       </p>
     </main>
   );

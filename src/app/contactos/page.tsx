@@ -14,6 +14,7 @@ import {
   AVALIACOES,
   MES_DAS_CONTAGENS,
   FACTURA_EM_PALAVRAS,
+  faturaEmPalavras,
   NA_PROPOSTA_COM_IVA,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
@@ -363,7 +364,8 @@ export default function ContactosPage() {
               cobrir o pior caso, o que costuma sair mais caro para si.
             </p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {TER_A_MAO.map(({ Icone, titulo, texto }) => (
+              {/* d16: desde 15-11 a fatura diz as duas (faturaEmPalavras, pela data). */}
+              {TER_A_MAO.map(({ Icone, titulo, texto: t }) => ({ Icone, titulo, texto: t.replace(FACTURA_EM_PALAVRAS, faturaEmPalavras(agoraDoModelo())) })).map(({ Icone, titulo, texto }) => (
                 <div
                   key={titulo}
                   className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"

@@ -1,7 +1,7 @@
 import { diaCurtoEmLisboa } from "./pedido-para-a-app";
 import { instanteDaBase } from "./hora-de-lisboa";
 import { horaDoAgendado } from "./pedido-da-app-de-cliente";
-import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
+import { QUEM_FACTURA_EM_PALAVRAS, quemFaturaEmPalavras } from "./identificacao-legal";
 import { QUEM_FAZ_O_TRABALHO } from "./textos-do-pedido";
 
 /**
@@ -100,6 +100,11 @@ export function dataPreferidaTexto(v: Date | string | null | undefined): string 
 
 /** O rodapé do pedido no site: quem faz o trabalho e quem passa a fatura. */
 export const RODAPE_DO_PEDIDO = `${QUEM_FAZ_O_TRABALHO} ${QUEM_FACTURA_EM_PALAVRAS}`;
+
+/** O rodapé pela data do modelo (d16): desde 15-11, as duas faturas. Os Trabalhos CLYON ficam com o de cima. */
+export function rodapeDoPedido(agora: Date = new Date()): string {
+  return `${QUEM_FAZ_O_TRABALHO} ${quemFaturaEmPalavras(agora)}`;
+}
 
 /** «3 profissionais responderam», ou nada. */
 export function responderamEmPalavras(n: number): string | null {

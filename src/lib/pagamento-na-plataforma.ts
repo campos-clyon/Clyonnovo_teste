@@ -7,7 +7,7 @@ import {
 import type { ModeloDoPreco } from "./iva-incluido";
 import { ROTULOS_DA_CARTEIRA } from "./rotulos-da-carteira";
 import { NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "./novo-modelo";
-import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
+import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO, SO_PARA_OS_DADOS_DO_PEDIDO } from "./pagar-ao-parceiro";
 
 /*
  * O MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). O cliente paga ao parceiro, e
@@ -139,7 +139,7 @@ const COMO_SE_PAGA_NO_MODELO_ANTIGO = `No pedido escolhe como prefere pagar: ${P
 export const COMO_SE_PAGA = COMO_SE_PAGA_NO_MODELO_ANTIGO;
 
 /** Desde 15-11-2026 (d10): paga-se ao parceiro, e há duas faturas. */
-export const COMO_SE_PAGA_NO_NOVO_MODELO = `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${AS_DUAS_FATURAS}`;
+export const COMO_SE_PAGA_NO_NOVO_MODELO = `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${SO_PARA_OS_DADOS_DO_PEDIDO} ${AS_DUAS_FATURAS}`;
 
 /** O texto genérico do pagamento, pela data. */
 export function comoSePagaNoSite(agora: Date = new Date()): string {

@@ -140,13 +140,26 @@ interface Excepcao {
  *    (28-10-2026) e a da app com o EAS Update de 29-10-2026: os dois dizem
  *    VALOR_QUE_MUDA_NO_LOCAL (ajuste-no-local.ts). A lista ficou vazia.
  */
-const EXCEPCOES: Excepcao[] = [];
+const EXCEPCOES: Excepcao[] = [
+  /*
+   * d16 (13-11-2026): a regra s ganhou «guarda o acordo e o pagamento» e «recebe a
+   * referência para pagar». Os avisos aos modelos da Vitória são do I&D, que os muda
+   * a seguir, sobre o commit do Site. TEMPORÁRIAS: saem com a parte do I&D.
+   */
+  {
+    ficheiro: "src/lib/leitura-das-conversas.ts",
+    regra: "s-modelo-antigo",
+    motivo: "d16: I&D/apps a seguir — o aviso ao modelo da leitura das conversas",
+  },
+  { ficheiro: "src/lib/prompt-do-orcamento.ts", regra: "s-modelo-antigo", motivo: "d16: I&D/apps a seguir — o aviso ao orçamentista" },
+  { ficheiro: "src/lib/propor-licoes.ts", regra: "s-modelo-antigo", motivo: "d16: I&D/apps a seguir — o aviso das lições da Vitória" },
+];
 
 /**
- * Desce sempre que a lista desce. Nunca sobe. Está em 0 desde 29-10-2026,
- * quando saiu a última temporária de «Valores fala» (a da app).
+ * Desce sempre que a lista desce. Nunca sobe. Esteve em 0 de 29-10-2026 a
+ * 13-11-2026; sobe a 3 só com as temporárias da d16 (o I&D fecha-as a seguir).
  */
-const TAMANHO_MAXIMO = 0;
+const TAMANHO_MAXIMO = 3;
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):
@@ -768,6 +781,8 @@ const DO_TRABALHO_CLYON = new Set([
   "src/lib/proposta-clyon-ao-cliente.ts",
   "src/lib/mensagem-de-adjudicacao.ts",
   "src/lib/valores-para-pagamento.ts",
+  // d16: o ecrã do Trabalho CLYON na app de cliente (fica no modelo antigo).
+  "app-cliente/src/componentes/TrabalhoClyon.tsx",
 ]);
 const A_REGRA_S_SE_APLICA = (f: string) =>
   (O_CLIENTE_LE(f) || DO_LADO_DO_PROFISSIONAL(f)) &&
@@ -1300,7 +1315,9 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     for (const e of EXCEPCOES) {
       expect(e.motivo.length, chave(e.ficheiro, e.regra)).toBeGreaterThan(10);
       // Só ficam as que pertencem a outra execução ou a uma decisão do dono.
-      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(apps|dono|painel):/);
+      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(apps|dono|painel|d16):/);
+      // As da d16 só entram como temporárias, com quem as fecha (13-11-2026).
+      if (e.motivo.startsWith("d16:")) expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^d16: I&D\/apps a seguir/);
       // As do painel só entram como temporárias (d8, 28-10-2026).
       if (e.motivo.startsWith("painel:")) expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^painel: temporária/);
     }

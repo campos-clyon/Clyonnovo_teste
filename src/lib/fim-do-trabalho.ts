@@ -221,6 +221,8 @@ export function avisoDoConfirmado(p: {
   liquido: number;
   /** Em dinheiro com IVA incluído: o que entrega à CLYON. */
   aPagarAClyon?: number | null;
+  /** O modelo de 15-11 (d16): o cliente pagou-lhe, e passa à CLYON a taxa e o IVA dela. */
+  noNovoModelo?: boolean;
 }): { title: string; body: string } {
   const inicio = `O pedido #${p.pedidoId} ficou confirmado.`;
   const x = euros(p.liquido);
@@ -233,8 +235,11 @@ export function avisoDoConfirmado(p: {
       resto = `Os ${x} ficam na carteira quando o cliente pagar.`;
       break;
     case "em_mao_com_divida":
-      resto =
-        p.aPagarAClyon != null && Number.isFinite(p.aPagarAClyon)
+      resto = p.noNovoModelo
+        ? p.aPagarAClyon != null && Number.isFinite(p.aPagarAClyon)
+          ? `Passe à CLYON a taxa da plataforma e o IVA dela: ${euros(p.aPagarAClyon)}, com a referência na carteira.`
+          : "Veja na carteira a taxa da plataforma a passar à CLYON."
+        : p.aPagarAClyon != null && Number.isFinite(p.aPagarAClyon)
           ? `Pago em dinheiro: entregue à CLYON ${euros(p.aPagarAClyon)}.`
           : "Pago em dinheiro: veja na carteira o que entrega à CLYON.";
       break;

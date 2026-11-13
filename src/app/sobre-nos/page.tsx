@@ -37,7 +37,7 @@ import {
   REGIONS,
   SITE_URL,
 } from "@/lib/seo-data";
-import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS } from "@/lib/identificacao-legal";
+import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO } from "@/lib/identificacao-legal";
 import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
@@ -386,6 +386,17 @@ export const revalidate = 3600;
 
 export default function SobreNosPage() {
   const novo = novoModeloEmVigor(agoraDoModelo());
+  // d16: desde 15-11 a fatura do trabalho é do parceiro e a da taxa da empresa parceira da CLYON.
+  const comAFaturaDoModelo = (t: string) => (novo ? t.replace(QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO) : t);
+  const faqsDoModelo = faqs.map((f) => ({ ...f, answer: comAFaturaDoModelo(f.answer) }));
+  const faqSchemaDoModelo = {
+    ...faqSchema,
+    mainEntity: faqsDoModelo.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+    })),
+  };
   return (
     <div className="min-h-screen bg-white">
       {/* ── Herói ─────────────────────────────────────────────────────── */}
@@ -565,7 +576,7 @@ export default function SobreNosPage() {
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {PRINCIPIOS.map((p) =>
-              p.texto === PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO && novo ? { ...p, texto: PAGA_COMO_PREFERIR_NO_NOVO_MODELO } : p,
+              p.texto === PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO && novo ? { ...p, texto: PAGA_COMO_PREFERIR_NO_NOVO_MODELO } : { ...p, texto: comAFaturaDoModelo(p.texto) },
             ).map((p) => (
               <div key={p.titulo} className="rounded-[26px] border border-cyan-100 bg-white p-6">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-acao text-white">
@@ -754,7 +765,7 @@ export default function SobreNosPage() {
               {IDENTIFICACAO.nomeComercial} é o nome comercial de {IDENTIFICACAO.nomeLegal},{" "}
               {IDENTIFICACAO.formaJuridica.toLowerCase()}, NIF {IDENTIFICACAO.nif}.
               {/* Quem passa a factura, dito onde se explica quem é quem (14-10-2026). */}
-              {" "}{QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.
+              {" "}{novo ? QUEM_FATURA_NO_NOVO_MODELO : QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.
             </p>
             <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
               <div className="rounded-2xl bg-fundo-alt px-4 py-3">
@@ -807,7 +818,7 @@ export default function SobreNosPage() {
 
       {/* ── Perguntas ──────────────────────────────────────────────────── */}
       <section className="bg-slate-50">
-        <FAQSection title="Perguntas sobre a CLYON" faqs={faqs} includeSchema={false} />
+        <FAQSection title="Perguntas sobre a CLYON" faqs={faqsDoModelo} includeSchema={false} />
       </section>
 
       {/* ── Fim ────────────────────────────────────────────────────────── */}
@@ -839,7 +850,7 @@ export default function SobreNosPage() {
       </section>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(aboutSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchemaDoModelo) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
     </div>
   );

@@ -1,6 +1,6 @@
 import { SERVICOS_PUBLICOS, nomeDoServico } from "./service-categories";
 import { TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, type Tipologia } from "./tabela-das-mudancas";
-import { FRASE_UNICA, SUBTITULO_INICIAL } from "./frase-unica";
+import { SUBTITULO_INICIAL, fraseUnica } from "./frase-unica";
 import { TELEFONE_DA_CLYON } from "./telefone-da-clyon";
 import { NOTA_DOS_PRECOS, precoDeReferencia } from "./preco-de-referencia";
 import { passosDeComoFunciona } from "./como-funciona";
@@ -11,8 +11,8 @@ import { REGIONS, getRegionCities } from "./seo-data";
 import { AVALIACOES_NO_GOOGLE, NOTAS_EM_FRASE } from "./avaliacoes-publicas";
 import { reviews } from "./reviews-data";
 import { DESMONTAGEM_A_PEDIDO, PEDIDO_URGENTE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
-import { QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
-import { AUTORIZA_FOTOS, QUEM_FAZ_O_TRABALHO, TRES_PASSOS_DEPOIS_DE_ENVIAR } from "./textos-do-pedido";
+import { quemFaturaEmPalavras } from "./identificacao-legal";
+import { AUTORIZA_FOTOS, QUEM_FAZ_O_TRABALHO, tresPassosDepoisDeEnviar } from "./textos-do-pedido";
 import { perguntasDoEspacoParaAApp } from "./perguntas-do-espaco";
 import { perguntasDoServico } from "./simulador-por-categoria";
 
@@ -107,15 +107,15 @@ export function catalogoDaApp() {
      */
     quando: ["hoje", "amanha", "esta_semana", "data", "flexivel"],
     textos: {
-      fraseUnica: FRASE_UNICA,
+      fraseUnica: fraseUnica(agoraDoModelo()),
       subtituloInicial: SUBTITULO_INICIAL,
       valorDesejadoEtiqueta: ETIQUETA_DO_VALOR_DESEJADO,
       valorDesejadoAjuda: AJUDA_DO_VALOR_DESEJADO,
       semFotos: SEM_FOTOGRAFIAS,
       autorizaFotos: AUTORIZA_FOTOS,
       desmontagem: DESMONTAGEM_A_PEDIDO,
-      rodape: `${QUEM_FAZ_O_TRABALHO} ${QUEM_FACTURA_EM_PALAVRAS}`,
-      tresPassos: TRES_PASSOS_DEPOIS_DE_ENVIAR,
+      rodape: `${QUEM_FAZ_O_TRABALHO} ${quemFaturaEmPalavras(agoraDoModelo())}`,
+      tresPassos: tresPassosDepoisDeEnviar(agoraDoModelo()),
       notaDosPrecos: NOTA_DOS_PRECOS,
       promessaDoPrazo: PROMESSA_DO_PRAZO,
       pedidoUrgente: PEDIDO_URGENTE,

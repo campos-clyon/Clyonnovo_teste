@@ -169,9 +169,9 @@ describe("depois de enviar, os passos dizem a quantos parceiros o pedido foi (si
   it("«O pedido já seguiu para os N parceiros que escolheu», no simulador e na resposta da rota", () => {
     expect(passosDaMudancaComEscolha(2)[0].titulo).toBe("O pedido já seguiu para os 2 parceiros que escolheu");
     expect(passosDaMudancaComEscolha(1)[0].titulo).toBe("O pedido já seguiu para o parceiro que escolheu");
-    expect(passosDaMudancaComEscolha(3).slice(1)).toEqual(PASSOS_DA_MUDANCA_COM_ESCOLHA.slice(1));
+    expect(passosDaMudancaComEscolha(3, new Date("2026-11-13T12:00:00Z")).slice(1)).toEqual(PASSOS_DA_MUDANCA_COM_ESCOLHA.slice(1));
     const rota = semComentarios(ler("src/app/api/simulador/pedido/route.ts"));
-    expect(rota).toContain("passos: escolhaDaMudanca ? passosDaMudancaComEscolha(escolhaDaMudanca.escolhidos.length) : undefined,");
-    expect(ler("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("passosDaMudancaComEscolha(foiAosEscolhidos)[0]");
+    expect(rota).toContain("passos: escolhaDaMudanca ? passosDaMudancaComEscolha(escolhaDaMudanca.escolhidos.length, agoraDoModelo()) : undefined,");
+    expect(ler("src/app/simulador/SimulatorThreePhaseForm.tsx")).toContain("passosDaMudancaComEscolha(foiAosEscolhidos, momentoDoModelo)[0]");
   });
 });

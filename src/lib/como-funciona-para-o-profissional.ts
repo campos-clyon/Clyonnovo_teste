@@ -7,6 +7,8 @@ import { quotaDaClyon } from "./quota-da-clyon";
 import { FORMA_EM_PALAVRAS } from "./forma-de-pagamento";
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, novoModeloEmVigor } from "./novo-modelo";
+import { contaDoValorAcordado } from "./pagamento-directo";
+import { OS_DADOS_PARA_RECEBER_EM_PALAVRAS } from "./dados-para-receber";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 import type { SeccaoComFalta } from "./perfil-por-completar";
 
@@ -180,6 +182,8 @@ function pontos(fraccao: number): string {
 export function comissaoEmPalavras(
   taxas: Taxas,
   modelo: ModeloDoPreco,
+  /** d16: com a data, desde 15-11-2026 o exemplo diz o modelo novo. Sem ela, o de sempre. */
+  agora?: Date,
 ): {
   proposta: string;
   cliente: string;
@@ -201,6 +205,19 @@ export function comissaoEmPalavras(
   // dele e o IVA vai por cima (Configs: cliente 0 %, CLYON 11 %).
   // Sem acréscimo, o cliente vê o valor do profissional, só com o IVA.
   const semAcrescimo = taxas.cliente === 0;
+  /*
+   * O EXEMPLO NO MODELO DE 15-11-2026 (d16): o cliente paga-lhe diretamente o preço com
+   * IVA; ele fica com a sua parte e passa à CLYON a taxa da plataforma e o IVA dela.
+   * Os números saem da mesma conta do pedido (`pagamento-directo.ts`), com IVA.
+   */
+  const conta = agora && novoModeloEmVigor(agora) ? contaDoValorAcordado(VALOR_DO_EXEMPLO, taxas, "normal") : null;
+  const fraseDoNovoModelo = conta
+    ? `Propõe o seu valor, sem IVA; o cliente vê o preço com IVA incluído e paga-lho diretamente. A CLYON fica com ` +
+      `${quota} ${semAcrescimo ? "desse valor" : "do que o cliente paga sem IVA"} — ex.: propõe ${proposta}, o cliente ` +
+      `paga-lhe ${euros(conta.totalAoClienteCent / 100)} (IVA incluído), fica com ${euros(conta.liquidoDoProfissionalCent / 100)} + IVA ` +
+      `e passa à CLYON ${euros(conta.aPassarAClyonCent / 100)} (${euros(conta.taxaCent / 100)} de taxa da plataforma e ` +
+      `${euros(conta.ivaDaTaxaCent / 100)} de IVA dela).`
+    : null;
   return {
     proposta,
     cliente,
@@ -214,7 +231,7 @@ export function comissaoEmPalavras(
       : comIva
         ? "Com a taxa da plataforma e IVA incluído"
         : "Já com a taxa da plataforma",
-    frase: semAcrescimo
+    frase: fraseDoNovoModelo ?? (semAcrescimo
       ? comIva
         ? `Propõe o seu valor, sem IVA; o cliente vê-o com IVA incluído. A CLYON fica com ` +
           `${quota} desse valor — ex.: propõe ${proposta}, o cliente vê ${cliente} (IVA incluído) ` +
@@ -227,7 +244,7 @@ export function comissaoEmPalavras(
           `${proposta}, o cliente vê ${cliente} (IVA incluído) e recebe ${recebe}.`
         : `Propõe o seu valor; o cliente vê-o já com a taxa da plataforma. A CLYON fica com ` +
           `${quota} do que o cliente paga — ex.: propõe ${proposta}, o cliente vê ${cliente} ` +
-          `e recebe ${recebe}.`,
+          `e recebe ${recebe}.`),
   };
 }
 
@@ -292,6 +309,22 @@ export const O_QUE_A_CLYON_NAO_FAZ: string[] = [
   "Não cobra mensalidade, não vende contactos e não desconta nada por responder a um pedido.",
   "Não escolhe por si: aceita os pedidos que quiser e ignora os outros, sem penalização.",
 ];
+
+/**
+ * DEPOIS DE APROVADO, O QUE FALTA — d16 (13-11-2026). O ecrã de sucesso da
+ * candidatura e o email de aprovação dizem o mesmo. Desde 15-11 o IBAN, o titular,
+ * o MB WAY e o regime de IVA são obrigatórios para propor (`dados-para-receber.ts`):
+ * quem é aprovado a partir daí precisa deles no primeiro dia.
+ */
+const DEPOIS_DE_APROVADO_NO_MODELO_ANTIGO = "O NIF, a morada fiscal e o IBAN preenche-os lá dentro, com calma.";
+export const DEPOIS_DE_APROVADO_NO_NOVO_MODELO =
+  `Para enviar propostas, preencha lá dentro ${OS_DADOS_PARA_RECEBER_EM_PALAVRAS}: são obrigatórios. ` +
+  "É para o IBAN e para o MB WAY que o cliente lhe paga, e o regime diz-lhe que fatura recebe.";
+
+/** O que falta depois de aprovado, pela data do modelo. */
+export function depoisDeAprovado(agora: Date = new Date()): string {
+  return novoModeloEmVigor(agora) ? DEPOIS_DE_APROVADO_NO_NOVO_MODELO : DEPOIS_DE_APROVADO_NO_MODELO_ANTIGO;
+}
 
 /** O passo que fala de uma secção do perfil — para ligar o aviso ao ecrã certo. */
 export function passoDaSeccao(seccao: SeccaoComFalta): PassoDoProfissional | undefined {

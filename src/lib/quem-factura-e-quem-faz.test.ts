@@ -57,7 +57,8 @@ describe("a fatura é da parceira, e diz-se assim", () => {
       "src/lib/email-trabalho.ts",
       "src/app/pedido/[token]/VistaDoPedido.tsx",
     ]) {
-      expect(ler(f), f).toContain("QUEM_FACTURA_EM_PALAVRAS");
+      // Desde a d16 (13-11-2026) pela frase de sempre ou pela que escolhe a data (`quemFaturaEmPalavras`).
+      expect(ler(f), f).toMatch(/QUEM_FACTURA_EM_PALAVRAS|quemFaturaEmPalavras\(/);
     }
   });
 

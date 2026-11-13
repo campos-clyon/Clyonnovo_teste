@@ -72,9 +72,12 @@ describe("as três divergências corrigidas", () => {
 
   it("o MB WAY é outra forma de pagarmos, e não «vai sempre para o IBAN»", () => {
     const frase = "Outra forma de lhe pagarmos. Pode ser um número diferente do de contacto.";
-    expect(ler("src/app/profissionais/painel/Perfil.tsx")).toContain(frase);
+    // Desde a d16 (13-11-2026) pela data: a frase de antes de 15-11 vem de `ajudaDoMbway(false)`.
+    expect(ler("src/app/profissionais/painel/Perfil.tsx")).toContain("ajuda={ajudaDoMbway(novoModeloEmVigor())}");
+    expect(ler("src/lib/rotulo-do-mbway.ts")).toContain(`"${frase}"`);
     const APP = ler("app-pro/src/app/conta/banco.tsx");
-    expect(APP).toContain(`dica="${frase}"`);
+    // d16: as Apps passam a app a `ajudaDoMbway` a seguir; até lá, a frase de antes.
+    expect(APP.includes(`dica="${frase}"`) || APP.includes("ajudaDoMbway(")).toBe(true);
     expect(APP).not.toContain("vão sempre para o IBAN");
   });
 });

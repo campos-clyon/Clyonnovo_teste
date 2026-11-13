@@ -8,7 +8,9 @@ import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { maisIva, PRECOS } from "@/lib/precos-publicos";
 import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
-import { BUSINESS_EMAIL, BUSINESS_PHONE, FACTURA_EM_PALAVRAS, SITE_URL } from "@/lib/seo-data";
+import { BUSINESS_EMAIL, BUSINESS_PHONE, SITE_URL, pagamentoDasEmpresas } from "@/lib/seo-data";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 
@@ -74,6 +76,9 @@ const migalhas = {
     { "@type": "ListItem", position: 2, name: "Empresas", item: URL },
   ],
 };
+
+// De hora a hora: o pagamento e a fatura mudam a 15-11-2026 pela data do modelo (d16).
+export const revalidate = 3600;
 
 export default function EmpresasPage() {
   return (
@@ -149,8 +154,8 @@ export default function EmpresasPage() {
         </h2>
         <dl className="mt-6 space-y-4 text-sm leading-7 text-slate-700">
           <div>
-            <dt className="font-semibold text-slate-900">Fatura</dt>
-            <dd>{FACTURA_EM_PALAVRAS} Para a fatura levar o NIF da empresa, diga-o no pedido.</dd>
+            <dt className="font-semibold text-slate-900">{novoModeloEmVigor(agoraDoModelo()) ? "Pagamento e fatura" : "Fatura"}</dt>
+            <dd>{pagamentoDasEmpresas(agoraDoModelo())}</dd>
           </div>
           <div>
             <dt className="font-semibold text-slate-900">Resíduos e destino licenciado</dt>
