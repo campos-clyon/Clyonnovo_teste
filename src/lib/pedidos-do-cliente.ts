@@ -434,6 +434,8 @@ export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente
      */
     transferencia: e.transferencia,
     aEsperaDaTransferencia: e.aEsperaDaTransferencia,
+    // O modelo de 15-11-2026 (d10): paga diretamente ao parceiro (a app mostra «Pagar a …»). Falso antes da data.
+    pagaAoParceiro: e.pagaAoParceiro,
     ivaIncluido: e.ivaIncluido,
     valoresTexto: { comFactura: comIvaESemIva(e.valores.comFactura), semFactura: emEuros(e.valores.semFactura) },
     // «Serviço / IVA / Total a pagar» (02-11-2026): o mesmo desdobramento do bloco de pagar do site; o IVA é a diferença.

@@ -13,6 +13,7 @@ import { Avaliar } from "./Avaliar";
 import { EscolhidosSemResposta } from "./EscolhidosSemResposta";
 import { Mensagens } from "./Mensagens";
 import { ResumoDoPagamento } from "./Pagar";
+import { PagarAoParceiro } from "./PagarAoParceiro";
 import { Preco } from "./Preco";
 import { MomentoDoPedido, PassosDoPedido } from "./PassoAPasso";
 import { Proposta } from "./Proposta";
@@ -437,6 +438,11 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
               telefoneSugerido={p.telefone ?? null}
             />
           </Cartao>
+          {/*
+            O modelo de 15-11 (d10): paga ao parceiro — o IBAN, o MB WAY, como vai pagar e as duas faturas.
+            Quem decide é o servidor; fora do modelo novo o bloco não desenha nada. O convidado vê-o depois de criar conta.
+          */}
+          {!convidado ? <PagarAoParceiro pedidoId={pedidoId} negociacaoId={contratada.id} pedirComo={pedir} /> : null}
           {/* As horas de um trabalho por hora (31-10-2026), antes do «Sim, ficou feito». */}
           <HorasDoTrabalho pedidoId={pedidoId} n={contratada} agir={agir} />
           <TrabalhoFeito pedidoId={pedidoId} n={contratada} agir={agir} />

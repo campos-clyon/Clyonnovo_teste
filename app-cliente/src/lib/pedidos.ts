@@ -14,6 +14,7 @@
 import { mensagemDaTrocaDeParceiro, mensagemDoProblema } from "../../../src/lib/frases-do-pedido";
 import type { PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 import type { TransferenciaParaOCliente } from "../../../src/lib/transferencia-bancaria";
+import type { NovoModeloDaNegociacao } from "./pagar-ao-parceiro";
 
 export const ROTA_DOS_PEDIDOS = "/api/cliente/pedidos";
 export const ROTA_DO_PEDIDO = (id: number) => `/api/cliente/pedidos/${id}`;
@@ -201,6 +202,12 @@ export type Pagamento = {
    */
   transferencia?: TransferenciaParaOCliente | null;
   aEsperaDaTransferencia?: boolean;
+  /**
+   * O MODELO DE 15-11-2026 (d10): o cliente paga diretamente ao parceiro — não
+   * há nada a pagar à CLYON aqui; o bloco «Pagar a …» (`PagarAoParceiro`) diz
+   * para onde. Falso (ou ausente) antes da data e num site antigo.
+   */
+  pagaAoParceiro?: boolean;
   ivaIncluido: boolean;
   valoresTexto: { comFactura: string; semFactura: string };
   /** «Serviço / IVA / Total a pagar», já escrito pela API (02-11-2026). Só com IVA incluído; um site antigo não o manda. */
@@ -356,6 +363,8 @@ export type Negociacao = {
   horas?: HorasDoTrabalho | null;
   /** «Materiais incluídos» ou «Materiais à parte: …», da proposta. */
   materiaisTexto?: string | null;
+  /** O modelo de 15-11-2026 (d10): o tipo de fatura do parceiro, para escolher. `null` antes da data. */
+  novoModelo?: NovoModeloDaNegociacao | null;
 };
 
 export type Pedido = {

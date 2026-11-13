@@ -22,6 +22,7 @@ import {
 import { diaEmLisboa } from "../../../../src/lib/hora-de-lisboa";
 import { faltasEm, type Perfil } from "../../lib/conta";
 import { horaCurta } from "../../lib/trabalhos";
+import { linhaDoPerfilFiscal } from "../../lib/novo-modelo";
 import { ESPACO, LETRA, useCores } from "../../tema";
 
 /**
@@ -122,6 +123,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
       {faltas.length > 0 ? (
         <Mensagem tom="aviso" texto={`${faltas.length === 1 ? "Falta um campo" : `Faltam ${faltas.length} campos`} aqui: ${faltas.map((f) => f.rotulo.toLowerCase()).join(", ")}.`} />
       ) : null}
+      {perfil.novoModelo ? <PerfilFiscal perfil={perfil} /> : null}
       {perfil.emiteGuiaTransporte && !perfil.guiaVerificada ? (
         <Mensagem tom="aviso" texto="A sua guia de transporte está ainda por verificar do nosso lado." />
       ) : null}
@@ -146,7 +148,8 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
             <CampoDeTexto rotulo="Localidade" value={localidade} onChangeText={setLocalidade} campo="localidadeFiscal" />
           </View>
         </View>
-        {emiteFatura ? (
+        {/* No modelo de 15-11 (d10) o regime diz ao cliente que fatura recebe: pergunta-se sempre. */}
+        {emiteFatura || perfil.novoModelo ? (
           <GrupoComErro campo="regimeIva">
             <Text style={{ color: c.tinta, fontWeight: "600" }}>Regime de IVA</Text>
             <Escolhas
@@ -209,6 +212,30 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
       {gravadoAs ? <Mensagem tom="bom" texto={`Guardado às ${gravadoAs}.`} /> : null}
       <Botao titulo="Guardar" ocupado={aGravar} aoCarregar={() => void gravar()} />
     </FormularioComErros>
+  );
+}
+
+/**
+ * O PERFIL FISCAL — d10, o modelo de 15-11-2026. Cada profissional fatura o seu
+ * trabalho ao cliente, e o cliente vê, ao escolher, o tipo de fatura e se emite
+ * a guia de resíduos (`perfil-fiscal.ts`). O regime só conta como confirmado
+ * depois de ele o gravar aqui; até lá o cliente lê «a confirmar».
+ */
+function PerfilFiscal({ perfil }: { perfil: Perfil }) {
+  const c = useCores();
+  const nm = perfil.novoModelo;
+  if (!nm) return null;
+  return (
+    <Caixa>
+      <TituloDaCaixa>O que o cliente vê ao escolher</TituloDaCaixa>
+      <Text style={{ color: c.tinta, fontSize: LETRA.normal, fontWeight: "700" }}>{linhaDoPerfilFiscal(nm.perfilFiscal)}</Text>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>
+        O cliente paga-lhe o trabalho diretamente e recebe duas faturas: a sua, do trabalho, e a da taxa da plataforma.
+      </Text>
+      {!nm.regimeIvaConfirmado ? (
+        <Mensagem tom="aviso" texto="Confirme o seu regime de IVA: escolha-o em baixo e carregue em Guardar." />
+      ) : null}
+    </Caixa>
   );
 }
 

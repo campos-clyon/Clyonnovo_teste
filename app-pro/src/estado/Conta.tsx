@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ErroDaApi, pedir } from "../lib/api";
 import type { Perfil, RespostaDaCarteira } from "../lib/conta";
+import type { NovoModeloDoPerfil } from "../lib/novo-modelo";
 
 /**
  * O PERFIL E A CARTEIRA, UMA VEZ PARA A APP INTEIRA — fase 4.
@@ -39,8 +40,9 @@ export function ContaProvider({ children, activo }: { children: ReactNode; activ
     if (aLer.current.perfil) return;
     aLer.current.perfil = true;
     try {
-      const r = await pedir<{ perfil: Perfil }>("/api/profissionais/perfil");
-      setPerfil(r.perfil);
+      const r = await pedir<{ perfil: Perfil; novoModelo?: NovoModeloDoPerfil | null }>("/api/profissionais/perfil");
+      // O modelo de 15-11 (d10) vem ao lado do perfil: junta-se, `null` antes da data.
+      setPerfil({ ...r.perfil, novoModelo: r.novoModelo ?? null });
       setErroDoPerfil(null);
     } catch (e) {
       setErroDoPerfil(e instanceof ErroDaApi ? e.message : "Não foi possível ler o perfil.");

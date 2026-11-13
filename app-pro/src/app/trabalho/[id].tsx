@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -56,6 +56,8 @@ import { escolhaInicial, faltaResponderAosMateriais, materiaisParaEnviar } from 
 import { MateriaisDaProposta } from "../../componentes/MateriaisDaProposta";
 import { ConfirmarAHora } from "../../componentes/ConfirmarAHora";
 import { primeiraRespostaDe } from "../../lib/confirmar-a-hora";
+import { AvisosDoNovoModelo } from "../../componentes/AvisosDoNovoModelo";
+import { impedimentoDoErro } from "../../lib/novo-modelo";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 export default function DetalheDoTrabalho() {
@@ -138,6 +140,8 @@ function Detalhe({ t }: { t: Trabalho }) {
           <TrabalhoContratado t={t} descricao={<DescricaoDoPedido texto={t.description} />} />
         ) : (
           <>
+            {/* O modelo de 15-11 (d10): em stand-by vê o pedido, e diz-se aqui porque não pode aceitar nem propor. */}
+            <AvisosDoNovoModelo />
             <Accoes t={t} />
             <DescricaoDoPedido texto={t.description} />
           </>
@@ -347,6 +351,12 @@ function SugeriaParaOsSeusCustos({ t }: { t: Trabalho }) {
   );
 }
 
+/** «Pagar o valor em atraso» ou «Preencher no perfil», debaixo do erro do modelo de 15-11 (d10). */
+function SaidaDoImpedimento({ impedimento }: { impedimento: ReturnType<typeof impedimentoDoErro> }) {
+  if (!impedimento) return null;
+  return <Botao titulo={impedimento.botao} aoCarregar={() => router.push(impedimento.destino as never)} />;
+}
+
 // ── Aceitar, propor, recusar ────────────────────────────────────────────────
 
 type Pendente = { accao: "aceitar" | "propor" | "desistir" | "recusar"; valor?: number };
@@ -364,6 +374,8 @@ function Accoes({ t }: { t: Trabalho }) {
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [avisos, setAvisos] = useState<{ pendente: Pendente; lista: string[] } | null>(null);
+  // O 403 do modelo de 15-11 (d10): stand-by ou dados em falta — com o botão para resolver.
+  const [impedimento, setImpedimento] = useState<ReturnType<typeof impedimentoDoErro>>(null);
   // As horas e as pessoas que ele mudou na conta (null = as da CLYON).
   const [horasDitas, setHorasDitas] = useState<number | null>(null);
   const [pessoasDitas, setPessoasDitas] = useState<number | null>(null);
@@ -375,6 +387,7 @@ function Accoes({ t }: { t: Trabalho }) {
   async function agir(p: Pendente, avisosAceites = false) {
     setAEnviar(true);
     setErro(null);
+    setImpedimento(null);
     try {
       await pedir("/api/profissionais/negociacao", {
         metodo: "POST",
@@ -399,6 +412,7 @@ function Accoes({ t }: { t: Trabalho }) {
           setAvisos({ pendente: p, lista: lista as string[] });
         } else {
           setErro(err.message);
+          setImpedimento(impedimentoDoErro(err.corpo));
           if (err.corpo.valorMudou) await recarregar();
         }
       } else {
@@ -492,6 +506,7 @@ function Accoes({ t }: { t: Trabalho }) {
         <SugeriaParaOsSeusCustos t={t} />
         <AvisosDoValor t={t} />
         {erro ? <Mensagem texto={erro} /> : null}
+        <SaidaDoImpedimento impedimento={impedimento} />
         {caixaDosAvisos ?? (
           <>
             {e.podeAceitar ? <Botao titulo="Aceitar o trabalho" ocupado={aEnviar} aoCarregar={() => void agir({ accao: "aceitar" })} /> : null}
@@ -692,6 +707,7 @@ function Accoes({ t }: { t: Trabalho }) {
       ) : null}
 
       {erro ? <Mensagem texto={erro} /> : null}
+      <SaidaDoImpedimento impedimento={impedimento} />
       {caixaDosAvisos}
       {e.podeDesistir && !avisos ? (
         <Sair confirmar={confirmarSaida} setConfirmar={setConfirmarSaida} titulo="Não estou interessado" aEnviar={aEnviar} aoConfirmar={() => void agir({ accao: "desistir" })} />

@@ -17,7 +17,17 @@ import {
   haQuantoTempo,
   mudancaDosDadosDePagamento,
 } from "../../../../src/lib/dados-de-pagamento-mudados";
+import { avisoDosDadosParaReceber } from "../../lib/novo-modelo";
 import { ESPACO, LETRA, useCores } from "../../tema";
+
+/**
+ * O MODELO DE 15-11-2026 (d10): o cliente paga ao profissional, e é para aqui
+ * que paga. O IBAN, o titular e o MB WAY passam a obrigatórios (aviso até 22-11
+ * a quem já estava aprovado), e só os vê o cliente que o contratar. Só com o
+ * `novoModelo` do perfil, que o site manda a partir da data.
+ */
+const SO_O_CLIENTE_CONTRATADO_VE =
+  "O cliente paga-lhe o trabalho por transferência para este IBAN, por MB WAY para este número ou em dinheiro no local. Só o cliente que o contratar vê estes dados, no pedido, depois de contratar.";
 
 /**
  * CONTA BANCÁRIA — o ecrã «banco» do painel. O IBAN inteiro nunca vem do site
@@ -146,6 +156,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
       {faltas.length > 0 ? (
         <Mensagem tom="aviso" texto={`${faltas.length === 1 ? "Falta um campo" : `Faltam ${faltas.length} campos`} aqui: ${faltas.map((f) => f.rotulo.toLowerCase()).join(", ")}.`} />
       ) : null}
+      {perfil.novoModelo ? <AvisoDoNovoModelo perfil={perfil} /> : null}
       <AvisoDosDadosDePagamento em={perfil.ibanMudadoEm ?? null} titularBate={perfil.titularBateComONome ?? null} />
       {perfil.temIban ? (
         <Caixa>
@@ -248,3 +259,15 @@ const estilos = StyleSheet.create({
   vazio: { flex: 1, alignItems: "center", justifyContent: "center" },
   pagina: { padding: ESPACO.l, gap: ESPACO.l },
 });
+
+/** O aviso do modelo de 15-11 (d10): o que falta, até quando, e quem vê estes dados. */
+function AvisoDoNovoModelo({ perfil }: { perfil: Perfil }) {
+  const c = useCores();
+  const aviso = avisoDosDadosParaReceber(perfil.novoModelo?.dadosParaReceber);
+  return (
+    <>
+      {aviso ? <Mensagem tom={aviso.impede ? "mau" : "aviso"} texto={aviso.frase} /> : null}
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{SO_O_CLIENTE_CONTRATADO_VE}</Text>
+    </>
+  );
+}

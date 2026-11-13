@@ -24,6 +24,7 @@ import {
   type FaltaDosPrecosDasMudancas,
   type PrecosDasMudancasNaConta,
 } from "../../../src/lib/precos-das-mudancas-do-profissional";
+import type { NovoModeloDaCarteira, NovoModeloDoPerfil } from "./novo-modelo";
 
 export { FICHA_DA_DISTINCAO, MINIMO_PARA_LEVANTAR };
 export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
@@ -114,6 +115,12 @@ export type Perfil = {
   quantasAvaliacoes: number;
   trabalhosConcluidos: number;
   ultimasAvaliacoes: Avaliacao[];
+  /**
+   * O MODELO DE 15-11-2026 (d10): o que falta para receber e o perfil fiscal que
+   * o cliente vê. Vem ao lado de `perfil` na rota e junta-se aqui ao ler; `null`
+   * (ou ausente) antes da data ou num site antigo.
+   */
+  novoModelo?: NovoModeloDoPerfil | null;
 };
 
 export const ESTADO_DA_CONTA: Record<string, string> = {
@@ -260,6 +267,8 @@ export type RespostaDaCarteira = {
   cativoPorFazer?: number;
   bloqueioEmDinheiro: { total: number; explicacao: string; negociacoes: number[] } | null;
   dividas: DividaDaCarteira[];
+  /** O modelo de 15-11-2026 (d10): o valor em atraso, o stand-by e os dados para receber. `null` antes da data. */
+  novoModelo?: NovoModeloDaCarteira | null;
   movimentos: Movimento[];
   iban: string;
   temIban: boolean;

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Mensagem } from "../../componentes/ui";
 import { BordaABrilhar } from "../../componentes/BordaABrilhar";
 import { VersaoNova } from "../../componentes/VersaoNova";
+import { AvisosDoNovoModelo } from "../../componentes/AvisosDoNovoModelo";
 import { dataEHora } from "../../../../src/lib/historico-negociacao";
 import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
@@ -179,6 +180,8 @@ export default function Trabalhos() {
                 <Mensagem texto={carteira.bloqueioEmDinheiro.explicacao} />
               </Pressable>
             ) : null}
+            {/* O modelo de 15-11 (d10): o stand-by e os dados para receber, como no painel. Nada antes da data. */}
+            <AvisosDoNovoModelo />
             {erro && lidaEm ? (
               <View style={{ marginBottom: ESPACO.s }}>
                 <Mensagem

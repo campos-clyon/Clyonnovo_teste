@@ -46,6 +46,7 @@ import { marcaDaFolha } from "./o-que-o-cliente-viu";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
 import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
+import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 
 /**
  * O PEDIDO, EM TEXTO PRONTO A MOSTRAR — para a app de cliente (d8, R4/R5,
@@ -479,7 +480,14 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
           ? "O seu valor — à espera da resposta"
           : "À espera da proposta";
 
-  const formaTexto = !contratado
+  /*
+   * O MODELO DE 15-11-2026 (d10): antes de contratar, com `novoModelo` (só a
+   * partir da data, e nunca num Trabalho CLYON), o cliente paga ao parceiro —
+   * a frase é a do simulador. Depois de contratar diz-o o bloco «Pagar a …».
+   */
+  const formaTexto = !contratado && n.novoModelo
+    ? PAGA_DIRETAMENTE_AO_PARCEIRO
+    : !contratado
     ? promessa.whatsappAntesDeAceitar
     : n.fase === "confirmado" || n.fase === "pago"
       ? promessa.depoisDeConfirmar
@@ -603,6 +611,12 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
     porConfirmarPelaClyon,
     diasAteLibertarTexto: n.diasAteLibertar != null ? prazoAutomaticoPorExtenso(n.diasAteLibertar) : null,
     botaoDeConfirmar: promessa.botaoDeConfirmar,
+    /*
+     * O MODELO DE 15-11-2026 (d10) — o mesmo bloco da página do pedido
+     * (`novoModeloNaVista`): o tipo de fatura do parceiro e a guia, para
+     * escolher. `null` antes da data e nos Trabalhos CLYON.
+     */
+    novoModelo: n.novoModelo ?? null,
   };
 }
 

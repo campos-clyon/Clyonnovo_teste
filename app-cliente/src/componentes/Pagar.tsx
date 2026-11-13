@@ -440,6 +440,8 @@ export function ResumoDoPagamento({
   }, [tipo, aoMudar]);
 
   if (!pg || !estado) return null;
+  // O modelo de 15-11 (d10): paga diretamente ao parceiro — o bloco «Pagar a …» diz como (`PagarAoParceiro`).
+  if (pg.pagaAoParceiro) return null;
   const irPagar = () => (aoCriarConta ? aoCriarConta() : router.push(`/pagar/${pedidoId}`));
 
   return (

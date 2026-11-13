@@ -62,6 +62,7 @@ import {
   type Trabalho,
 } from "../lib/trabalhos";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
+import { FaturaDoTrabalho } from "./FaturaDoTrabalho";
 
 /**
  * O TRABALHO QUE JÁ É DELE — fase 3 da CLYON Pro, 18-10-2026.
@@ -97,6 +98,8 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
         {t.fase === "a_confirmar" ? <OndeEComQuem t={t} /> : null}
         {/* Avaliar o cliente — 29-10-2026: feito ou confirmado, uma vez, e só o cliente a vê. */}
         <AvaliarOCliente negociacaoId={t.negociacaoId} />
+        {/* O modelo de 15-11 (d10): a fatura dele e a da taxa. Fora do modelo novo não desenha nada. */}
+        <FaturaDoTrabalho negociacaoId={t.negociacaoId} />
       </>
     );
   }
@@ -130,6 +133,8 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       {descricao}
       {!viajando && !semDia ? <ODia t={t} /> : null}
       <OndeEComQuem t={t} />
+      {/* O modelo de 15-11 (d10): a fatura dele e a da taxa. Fora do modelo novo não desenha nada. */}
+      <FaturaDoTrabalho negociacaoId={t.negociacaoId} />
     </>
   );
 }

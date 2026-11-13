@@ -28,6 +28,14 @@ import {
   fraseDaDividaNoSaldo,
   linhasDasPartesDaDivida,
 } from "../../../../src/lib/frases-da-divida";
+import {
+  negociacoesDoValorEmAtraso,
+  partesDoValorEmAtraso,
+  passouDoPrazo,
+  EXPLICACAO_DO_VALOR_EM_ATRASO,
+  PAGAR_O_VALOR_EM_ATRASO,
+  type NovoModeloDaCarteira,
+} from "../../lib/novo-modelo";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 /**
@@ -97,12 +105,16 @@ function Conteudo({
   const c = useCores();
   const k = dados.carteira;
   const reservado = Math.max(0, Math.round((k.disponivel - dados.levantavel) * 100) / 100);
-  const dividasAbertas = dados.dividas.filter((d) => !d.paga && !d.abatida);
+  // O modelo de 15-11 (d10): o valor em atraso tem a sua caixa; sai da lista antiga das dívidas.
+  const doValorEmAtraso = negociacoesDoValorEmAtraso(dados.novoModelo);
+  const dividasAbertas = dados.dividas.filter((d) => !d.paga && !d.abatida && !doValorEmAtraso.has(d.negociacaoId));
   const porReceber = dados.resumo?.porReceber ?? Math.round((k.disponivel + k.aCaminho) * 100) / 100;
 
   return (
     <>
       {dados.bloqueioEmDinheiro ? <Mensagem texto={dados.bloqueioEmDinheiro.explicacao} /> : null}
+      {/* O modelo de 15-11 (d10): o valor em atraso, logo em cima — o stand-by diz-se aqui. Nada antes da data. */}
+      {dados.novoModelo && dados.novoModelo.valores.length > 0 ? <ValorEmAtraso nm={dados.novoModelo} aoMudar={aoMudar} /> : null}
 
       {/* O mais importante em cima (pedido do dono, 18-10-2026): o que tem a receber, sem o futuro. */}
       <Caixa>
@@ -200,6 +212,95 @@ function Conteudo({
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{PROMESSA.proCorpo}</Text>
       </Caixa>
     </>
+  );
+}
+
+/**
+ * O VALOR EM ATRASO — d10, o modelo de 15-11-2026. Depois de receber do cliente o
+ * trabalho, o profissional passa à CLYON a taxa da plataforma e o IVA dela, um trabalho de
+ * cada vez, por referência Multibanco ou MB WAY (a mesma rota da carteira do
+ * painel, `/api/profissionais/divida`, que no modelo novo pede só a taxa e o
+ * IVA dela). Tem 4 dias; depois, a conta fica em stand-by até o pagamento ser
+ * confirmado. Os números e os prazos vêm todos do site.
+ */
+function ValorEmAtraso({ nm, aoMudar }: { nm: NovoModeloDaCarteira; aoMudar: () => Promise<void> }) {
+  const c = useCores();
+  const agora = Date.now();
+  return (
+    <Caixa estilo={{ borderColor: nm.standBy ? c.mau : c.aviso }}>
+      <TituloDaCaixa>{PAGAR_O_VALOR_EM_ATRASO}</TituloDaCaixa>
+      {nm.standBy ? (
+        <Text style={{ color: c.mau, fontSize: LETRA.pequena + 1, lineHeight: 20, fontWeight: "600" }}>{nm.standBy.explicacao}</Text>
+      ) : (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{EXPLICACAO_DO_VALOR_EM_ATRASO}</Text>
+      )}
+      {nm.valores.map((v) => (
+        <UmValorEmAtraso key={v.negociacaoId} v={v} passou={passouDoPrazo(v.prazoAte, agora)} aoMudar={aoMudar} />
+      ))}
+    </Caixa>
+  );
+}
+
+function UmValorEmAtraso({
+  v,
+  passou,
+  aoMudar,
+}: {
+  v: NovoModeloDaCarteira["valores"][number];
+  passou: boolean;
+  aoMudar: () => Promise<void>;
+}) {
+  const c = useCores();
+  const [aPedir, setAPedir] = useState<"multibanco" | "mbway" | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const ref = v.multibanco?.referencia ? v.multibanco : null;
+  const prazo = diaCurto(v.prazoAte);
+
+  async function gerar(metodo: "multibanco" | "mbway") {
+    setAPedir(metodo);
+    setErro(null);
+    setAviso(null);
+    try {
+      await pedir("/api/profissionais/divida", { metodo: "POST", corpo: { negociacaoId: v.negociacaoId, metodo } });
+      if (metodo === "mbway") setAviso("Enviámos o pedido para o seu MB WAY — abra a aplicação e confirme (tem 5 minutos).");
+      await aoMudar();
+    } catch (e) {
+      setErro(e instanceof ErroDaApi ? e.message : "Não foi possível.");
+    } finally {
+      setAPedir(null);
+    }
+  }
+
+  return (
+    <View style={[estilos.transferir, { borderTopColor: c.linha }]}>
+      <View style={estilos.lado}>
+        <Text style={{ flex: 1, color: c.tinta, fontWeight: "700" }}>{v.pedidoId != null ? `Pedido #${v.pedidoId}` : "Trabalho"}</Text>
+        <Text style={{ color: passou ? c.mau : c.aviso, fontWeight: "800", fontSize: LETRA.media }}>{euros(v.total)}</Text>
+      </View>
+      <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{partesDoValorEmAtraso(v, euros)}</Text>
+      {prazo ? (
+        <Text style={{ color: passou ? c.mau : c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600", lineHeight: 20 }}>
+          {passou ? `Passou o prazo (${prazo}).` : `Pague até ${prazo}.`}
+        </Text>
+      ) : null}
+      {ref ? (
+        <View style={[estilos.referencia, { backgroundColor: c.fundo }]}>
+          <Campo rotulo="Entidade" valor={ref.entidade ?? "—"} />
+          <Campo rotulo="Referência" valor={ref.referencia ?? "—"} />
+          <Campo rotulo="Valor" valor={euros(v.total)} />
+        </View>
+      ) : null}
+      {ref ? (
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>Pague no homebanking ou numa caixa Multibanco, pelo valor exacto.</Text>
+      ) : null}
+      {erro ? <Mensagem texto={erro} /> : null}
+      {aviso ? <Mensagem tom="bom" texto={aviso} /> : null}
+      {!ref ? (
+        <Botao titulo="Gerar referência Multibanco" ocupado={aPedir === "multibanco"} aoCarregar={() => void gerar("multibanco")} />
+      ) : null}
+      <Botao titulo="Pagar por MB WAY" tipo="secundario" ocupado={aPedir === "mbway"} aoCarregar={() => void gerar("mbway")} />
+    </View>
   );
 }
 

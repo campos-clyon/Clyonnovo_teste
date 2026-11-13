@@ -4,6 +4,7 @@ import { Preco } from "./Preco";
 import { Text } from "./Texto";
 import { Aviso, Botao, Cartao, Ligacao } from "./ui";
 import { accaoDeContratar, podeRecusar, porqueNaoSeContrata, type NegociacaoV3, type TextosDoPedido } from "../lib/pedidos";
+import { linhaDaFaturaDoParceiro } from "../lib/pagar-ao-parceiro";
 import { CORES } from "../tema";
 
 /**
@@ -43,6 +44,8 @@ export function Proposta({
   const contratar = accaoDeContratar(n);
   // d10.1: a guia de resíduos por verificar — a frase do site e o «Contratar» parado.
   const parado = porqueNaoSeContrata(n);
+  // O modelo de 15-11 (d10): o tipo de fatura do parceiro e a guia, antes de escolher. Nada antes da data.
+  const fatura = linhaDaFaturaDoParceiro(n.novoModelo);
   const trabalhos = `${p.trabalhosConcluidos} ${p.trabalhosConcluidos === 1 ? "trabalho" : "trabalhos"} na CLYON`;
   return (
     <Cartao destaque={!!contratar}>
@@ -74,6 +77,7 @@ export function Proposta({
       <Text style={{ color: CORES.suave, fontSize: 13 }}>{n.estadoTexto}</Text>
       {n.preco ? <Preco preco={n.preco} /> : null}
       {n.materiaisTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.materiaisTexto}</Text> : null}
+      {fatura ? <Text style={{ color: CORES.tinta, fontSize: 13.5, fontWeight: "600" }}>{fatura}</Text> : null}
       {n.formaTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text> : null}
       {parado ? <Aviso tom="aviso" texto={parado} /> : null}
       {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} ocupado={aContratar} desligado={!!parado || desligado} /> : null}
