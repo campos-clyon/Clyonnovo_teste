@@ -28,6 +28,7 @@ import {
   Hourglass,
   LogOut,
   Wrench,
+  X,
 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
@@ -395,6 +396,8 @@ function haQuantoTempo(iso: string): string {
 export default function Trabalhos({
   pedidos,
   realcados,
+  linhaDosNovos,
+  onFecharLinhaDosNovos,
   onVoltar,
   onRecarregar,
   aberto,
@@ -403,6 +406,12 @@ export default function Trabalhos({
   pedidos: Pedido[];
   /** Negociações com novidades desde a última visita — ganham contorno. */
   realcados?: Set<number>;
+  /**
+   * «3 pedidos novos desde a última vez» (d13, 13-11-2026): os pedidos novos
+   * não são avisos — dão no máximo esta linha, e os cartões levam «Novo».
+   */
+  linhaDosNovos?: string | null;
+  onFecharLinhaDosNovos?: () => void;
   onVoltar: () => void;
   onRecarregar: () => void;
   /*
@@ -681,6 +690,21 @@ export default function Trabalhos({
           );
         })}
       </div>
+
+      {/* Os pedidos novos desde a última vez: UMA linha discreta, nunca uma pilha (d13). */}
+      {linhaDosNovos && separador === "novos" && (
+        <div className="mb-3 flex items-center gap-2 border-b border-slate-200 pb-2">
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-500">{linhaDosNovos}</p>
+          <button
+            type="button"
+            onClick={onFecharLinhaDosNovos}
+            aria-label="Fechar"
+            className="shrink-0 cursor-pointer rounded-lg border-none bg-transparent p-1 text-slate-400 hover:text-slate-600"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       {/*
         POR QUE ORDEM.

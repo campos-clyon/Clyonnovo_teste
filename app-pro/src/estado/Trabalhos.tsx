@@ -1,7 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { ErroDaApi, pedir } from "../lib/api";
-import { fasesDe, juntarNovidades, mapasAManter, novidadesEntre, type MeusPedidos, type Novidade, type Trabalho } from "../lib/trabalhos";
+import { mapasAManter, type MeusPedidos, type Trabalho } from "../lib/trabalhos";
+import {
+  fasesDosTrabalhos,
+  juntarAvisos,
+  marcarComoLido,
+  marcarTodosComoLidos,
+  oQueMudou,
+  quantosPorLer,
+  retomarSeForDestaConta,
+  type AvisoDoProfissional,
+  type AvisosGuardados,
+} from "../../../src/lib/avisos-do-profissional";
+import { apagarAvisosGuardados, guardarAvisos, lerAvisosDoTelemovel } from "../lib/avisos-guardados";
 import { apagarListaGuardada, guardarLista, lerListaGuardada } from "../lib/lista-guardada";
 import { apagarFolhasAMeio, ficarSoComAsFolhasVivas } from "../lib/folha-guardada";
 import { ficarSoComOsMapas } from "../lib/imagens-guardadas";
@@ -29,12 +41,20 @@ type Estado = {
   /** Ele abriu o trabalho: deixa de contar como novo já, sem esperar pela próxima leitura. */
   marcarAberto: (negociacaoId: number) => void;
   /**
-   * AS NOVIDADES DO PAINEL, DENTRO DA APP — 29-10-2026 (A16). O que mudou de
-   * uma leitura do site para a seguinte, com as frases do painel; ficam até
-   * ele as fechar ou sair.
+   * O SINO — 13-11-2026 (d13). «Foi contratado», «confirmado» e «Transferência
+   * … processada», do mais recente para o mais antigo (máx. 30), com as frases
+   * do painel; o lido fica guardado no telemóvel até ele sair da conta.
    */
-  novidades: Novidade[];
-  fecharNovidade: (id: string) => void;
+  avisos: AvisoDoProfissional[];
+  porLer: number;
+  marcarAvisoLido: (id: string) => void;
+  marcarTudoComoLido: () => void;
+  /**
+   * Os pedidos novos desde a última vez — NÃO são avisos: dão uma só linha no
+   * topo do Feed («3 pedidos novos desde a última vez») e o «Novo» no cartão.
+   */
+  pedidosNovos: number;
+  verPedidosNovos: () => void;
 };
 
 const Contexto = createContext<Estado | null>(null);
@@ -56,10 +76,20 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
   const aLer = useRef(false);
   // O site já respondeu nesta sessão: a lista guardada nunca passa por cima da dele.
   const doSite = useRef(false);
-  const [novidades, setNovidades] = useState<Novidade[]>([]);
-  // A fase de cada negociação na última leitura do SITE (a guardada não conta:
-  // na primeira leitura há passado, e o passado não é notícia).
+  const [avisos, setAvisos] = useState<AvisoDoProfissional[]>([]);
+  const [pedidosNovos, setPedidosNovos] = useState(0);
+  // A fase de cada negociação na última leitura do SITE. Na primeira leitura
+  // desta abertura vem do telemóvel (`avisos-guardados.ts`), se for desta
+  // conta; sem ela não há notícias — há passado, e o passado não é notícia.
   const fasesAnteriores = useRef<Map<number, string> | null>(null);
+  const avisosAgora = useRef<AvisoDoProfissional[]>([]);
+  const guardados = useRef<Promise<AvisosGuardados | null> | null>(null);
+
+  const pousarAvisos = useCallback((lista: AvisoDoProfissional[]) => {
+    avisosAgora.current = lista;
+    setAvisos(lista);
+    if (fasesAnteriores.current) guardarAvisos(fasesAnteriores.current, lista);
+  }, []);
 
   const recarregar = useCallback(async () => {
     if (aLer.current) return;
@@ -68,9 +98,20 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       const r = await pedir<MeusPedidos>("/api/profissionais/meus-pedidos");
       doSite.current = true;
       const lista = r.pedidos ?? [];
-      const chegadas = novidadesEntre(fasesAnteriores.current, lista);
-      fasesAnteriores.current = fasesDe(lista);
-      if (chegadas.length > 0) setNovidades((v) => juntarNovidades(v, chegadas));
+      let anterior = fasesAnteriores.current;
+      let base = avisosAgora.current;
+      if (!anterior && guardados.current) {
+        const g = retomarSeForDestaConta(await guardados.current, lista);
+        guardados.current = null;
+        if (g) {
+          anterior = g.fases;
+          base = g.avisos;
+        }
+      }
+      const mudou = oQueMudou(anterior, lista);
+      fasesAnteriores.current = fasesDosTrabalhos(lista);
+      pousarAvisos(juntarAvisos(base, mudou.avisos));
+      if (mudou.pedidosNovos.length > 0) setPedidosNovos((n) => n + mudou.pedidosNovos.length);
       setTrabalhos(lista);
       setErro(null);
       setLidaEm(null);
@@ -84,13 +125,17 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       aLer.current = false;
       setCarregando(false);
     }
-  }, []);
+  }, [pousarAvisos]);
 
   useEffect(() => {
     if (!activo) {
       doSite.current = false;
       fasesAnteriores.current = null;
-      setNovidades([]);
+      guardados.current = null;
+      avisosAgora.current = [];
+      setAvisos([]);
+      setPedidosNovos(0);
+      apagarAvisosGuardados();
       setTrabalhos([]);
       setLidaEm(null);
       setCarregando(true);
@@ -99,6 +144,8 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       apagarFolhasAMeio();
       return;
     }
+    // O sino da última vez: só se usa quando o site responder e provar que é desta conta.
+    guardados.current = lerAvisosDoTelemovel();
     // A lista da última vez aparece logo; o site, quando responder, substitui-a.
     let vivo = true;
     void lerListaGuardada().then((guardada) => {
@@ -130,14 +177,18 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       recarregar,
       porId: (id) => trabalhos.find((t) => t.negociacaoId === id),
       porPedidoId: (pedidoId) => trabalhos.find((t) => t.pedidoId === pedidoId),
-      novidades,
-      fecharNovidade: (id) => setNovidades((v) => v.filter((n) => n.id !== id)),
+      avisos,
+      porLer: quantosPorLer(avisos),
+      marcarAvisoLido: (id) => pousarAvisos(marcarComoLido(avisosAgora.current, id)),
+      marcarTudoComoLido: () => pousarAvisos(marcarTodosComoLidos(avisosAgora.current)),
+      pedidosNovos,
+      verPedidosNovos: () => setPedidosNovos(0),
       marcarAberto: (id) =>
         setTrabalhos((lista) =>
           lista.map((t) => (t.negociacaoId === id && !t.abertoEm ? { ...t, abertoEm: new Date().toISOString() } : t)),
         ),
     }),
-    [trabalhos, carregando, erro, lidaEm, recarregar, novidades],
+    [trabalhos, carregando, erro, lidaEm, recarregar, avisos, pedidosNovos, pousarAvisos],
   );
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }

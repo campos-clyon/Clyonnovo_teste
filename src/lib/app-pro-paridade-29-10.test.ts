@@ -17,14 +17,11 @@ import {
   caminhoDoMapa,
   chaveDoGrupo,
   clienteDesde,
-  fasesDe,
   GRUPOS,
   haQuantoTempoNoCartao,
-  juntarNovidades,
   linhasDaLista,
   maisRecentePrimeiro,
   naOrdemDaRota,
-  novidadesEntre,
   RECUSA,
   SEM_DESCRICAO,
   SEPARADORES,
@@ -41,6 +38,7 @@ import {
   semDiaNaAgenda,
 } from "../../app-pro/src/lib/agenda";
 import { legendaDosConfirmados } from "./fim-do-trabalho";
+import { fasesDosTrabalhos, juntarAvisos, oQueMudou } from "./avisos-do-profissional";
 
 /**
  * A PARIDADE PAINEL × APP PRO — 29-10-2026, ordem do CEO aprovada pelo dono:
@@ -314,31 +312,33 @@ describe("A14 — a lista, com os nomes, os grupos e as horas do painel", () => 
 
 // ── A16 — as novidades e a proposta à espera ────────────────────────────────
 
-describe("A16 — as novidades do painel, dentro da app", () => {
-  it("as frases são as do painel", () => {
-    const app = cru("app-pro/src/lib/trabalhos.ts");
-    // Frase a frase, nas duas fontes.
+describe("A16 — os avisos do painel, dentro da app (o sino desde 13-11-2026, d13)", () => {
+  it("as frases vêm da mesma fonte nas duas: `src/lib/avisos-do-profissional.ts`", () => {
+    const fonte = cru("src/lib/avisos-do-profissional.ts");
     for (const pedaco of [
-      "Pedido novo dentro do seu raio — #${pd.pedidoId}. Abra para propor.",
       "Foi contratado — pedido #${pd.pedidoId}. A morada e o contacto já estão abertos.",
       "Trabalho #${pd.pedidoId} confirmado",
       " € já estão disponíveis na carteira.",
       " — o valor já está disponível na carteira.",
       "Transferência do trabalho #${pd.pedidoId} processada.",
     ]) {
-      expect(PAINEL, pedaco).toContain(pedaco);
-      expect(app, pedaco).toContain(pedaco);
+      expect(fonte, pedaco).toContain(pedaco);
+      // Nenhuma das duas tem a sua cópia: uma frase escrita à mão divergia.
+      expect(PAINEL, pedaco).not.toContain(pedaco);
+      expect(cru("app-pro/src/lib/trabalhos.ts"), pedaco).not.toContain(pedaco);
     }
+    expect(ler("src/app/profissionais/painel/PainelDoProfissional.tsx")).toContain('} from "@/lib/avisos-do-profissional";');
+    expect(ler("app-pro/src/estado/Trabalhos.tsx")).toContain('} from "../../../src/lib/avisos-do-profissional";');
   });
 
-  it("na primeira leitura não há novidades; depois, só o que é notícia para ele", () => {
+  it("na primeira leitura não há avisos; depois, só o que é notícia para ele — e o pedido novo não é aviso", () => {
     const antes = [
       T({ negociacaoId: 1, pedidoId: 11, estado: "aberta", fase: "a_negociar" }),
       T({ negociacaoId: 2, pedidoId: 12, estado: "acordada", fase: "a_executar" }),
       T({ negociacaoId: 3, pedidoId: 13, estado: "acordada", fase: "a_confirmar", recebeSeFechado: 311.5 }),
       T({ negociacaoId: 4, pedidoId: 14, estado: "acordada", fase: "confirmado" }),
     ];
-    expect(novidadesEntre(null, antes)).toEqual([]);
+    expect(oQueMudou(null, antes)).toEqual({ avisos: [], pedidosNovos: [] });
     const depois = [
       T({ negociacaoId: 1, pedidoId: 11, estado: "acordada", fase: "a_executar" }),
       T({ negociacaoId: 2, pedidoId: 12, estado: "acordada", fase: "a_confirmar" }),
@@ -346,26 +346,30 @@ describe("A16 — as novidades do painel, dentro da app", () => {
       T({ negociacaoId: 4, pedidoId: 14, estado: "acordada", fase: "pago" }),
       T({ negociacaoId: 5, pedidoId: 15 }),
     ];
-    const n = novidadesEntre(fasesDe(antes), depois);
-    expect(n.map((x) => x.texto)).toEqual([
+    const n = oQueMudou(fasesDosTrabalhos(antes), depois, new Date("2026-11-13T10:00:00Z"));
+    expect(n.avisos.map((x) => x.texto)).toEqual([
       "Foi contratado — pedido #11. A morada e o contacto já estão abertos.",
       "Trabalho #13 confirmado — 311,50 € já estão disponíveis na carteira.",
       "Transferência do trabalho #14 processada.",
-      "Pedido novo dentro do seu raio — #15. Abra para propor.",
     ]);
     // Passar a «à espera da confirmação» foi ele — não é notícia (o #12 não aparece).
-    expect(n.map((x) => x.negociacaoId)).toEqual([1, 3, 4, 5]);
+    expect(n.avisos.map((x) => x.negociacaoId)).toEqual([1, 3, 4]);
+    expect(n.pedidosNovos).toEqual([5]);
     // A mesma notícia não vira duas linhas.
-    expect(juntarNovidades(n, n)).toHaveLength(4);
+    expect(juntarAvisos(n.avisos, n.avisos)).toHaveLength(3);
   });
 
-  it("a lista mostra-as, um toque abre o trabalho, e saem ao sair", () => {
+  it("o sino está no cabeçalho da app e do painel, um toque abre o trabalho, e sai ao sair", () => {
     const ecra = ler("app-pro/src/app/(app)/index.tsx");
-    expect(ecra).toContain("{novidades.map((n) => (");
-    expect(ecra).toContain("router.push(`/trabalho/${n.negociacaoId}`);");
+    expect(ecra).toContain("<Sino aberto={sinoAberto} onFechar={() => setSinoAberto(false)} />");
+    expect(ecra).toContain("router.push(`/trabalho/${a.negociacaoId}`);");
     const estado = ler("app-pro/src/estado/Trabalhos.tsx");
-    expect(estado).toContain("const chegadas = novidadesEntre(fasesAnteriores.current, lista);");
-    expect(estado).toMatch(/fasesAnteriores\.current = null;\s*setNovidades\(\[\]\);/);
+    expect(estado).toContain("const mudou = oQueMudou(anterior, lista);");
+    expect(estado).toMatch(/fasesAnteriores\.current = null;[\s\S]*?apagarAvisosGuardados\(\);/);
+    const painel = ler("src/app/profissionais/painel/PainelDoProfissional.tsx");
+    expect(painel).toContain("const mudou = oQueMudou(anterior, novos);");
+    expect(painel).toContain("abrirTrabalho(a.negociacaoId);");
+    expect(painel).toMatch(/limparFotografias\(\);\s*esquecerAvisosDoAparelho\(\);/);
   });
 
   it("a proposta dele à espera do cliente mostra o valor e o que recebe", () => {

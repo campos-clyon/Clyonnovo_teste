@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
-import { useMemo, useState } from "react";
-import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "../../componentes/Texto";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Mensagem } from "../../componentes/ui";
@@ -38,6 +38,13 @@ import {
   type Trabalho,
 } from "../../lib/trabalhos";
 import { porKmPorExtenso, sinaisDoTrabalho } from "../../../../src/lib/sinais-do-trabalho";
+import {
+  linhaDosPedidosNovos,
+  MARCAR_TUDO_COMO_LIDO,
+  numeroDoSino,
+  SEM_AVISOS,
+  TITULO_DOS_AVISOS,
+} from "../../../../src/lib/avisos-do-profissional";
 import { ESPACO, LETRA, RAIO, useCores, type Cores } from "../../tema";
 
 /**
@@ -56,11 +63,16 @@ export default function Trabalhos() {
   const c = useCores();
   const margens = useSafeAreaInsets();
   const { nome } = useSessao();
-  const { trabalhos, carregando, erro, lidaEm, recarregar, novidades, fecharNovidade } = useTrabalhos();
+  const { trabalhos, carregando, erro, lidaEm, recarregar, porLer, pedidosNovos, verPedidosNovos } = useTrabalhos();
   const { carteira } = useConta();
   const [separador, setSeparador] = useState<Separador>("novos");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
   const [aPuxar, setAPuxar] = useState(false);
+  const [sinoAberto, setSinoAberto] = useState(false);
+  // A linha dos pedidos novos é de uma visita só: ao sair do Feed, já foi vista.
+  useFocusEffect(useCallback(() => () => verPedidosNovos(), [verPedidosNovos]));
+  const linhaDosNovos = linhaDosPedidosNovos(pedidosNovos);
+  const numeroNoSino = numeroDoSino(porLer);
 
   const contas = useMemo(() => contarPorSeparador(trabalhos), [trabalhos]);
   const porAbrir = useMemo(() => cincoPorAbrir(trabalhos), [trabalhos]);
@@ -86,10 +98,28 @@ export default function Trabalhos() {
     <View style={{ flex: 1, backgroundColor: c.fundo, paddingTop: margens.top }}>
       <View style={estilos.cabeca}>
         <Text style={[estilos.titulo, { color: c.tinta }]}>Trabalhos</Text>
-        <Text style={[estilos.ola, { color: c.suave }]} numberOfLines={1}>
-          {nome ? `Olá, ${nome.split(" ")[0]}` : ""}
-        </Text>
+        <View style={estilos.direita}>
+          <Text style={[estilos.ola, { color: c.suave }]} numberOfLines={1}>
+            {nome ? `Olá, ${nome.split(" ")[0]}` : ""}
+          </Text>
+          {/* O sino (d13): os avisos saíram do meio do Feed para aqui, com o número por ler. */}
+          <Pressable
+            onPress={() => setSinoAberto(true)}
+            accessibilityRole="button"
+            accessibilityLabel={porLer > 0 ? `${TITULO_DOS_AVISOS}, ${porLer} por ler` : TITULO_DOS_AVISOS}
+            hitSlop={8}
+            style={({ pressed }) => [estilos.sino, { borderColor: c.linha, opacity: pressed ? 0.6 : 1 }]}
+          >
+            <Ionicons name="notifications-outline" size={20} color={c.tinta} />
+            {numeroNoSino ? (
+              <View style={[estilos.numeroDoSino, { backgroundColor: c.marca, borderColor: c.fundo }]}>
+                <Text style={[estilos.textoDoNumeroDoSino, { color: c.sobreMarca }]}>{numeroNoSino}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
       </View>
+      <Sino aberto={sinoAberto} onFechar={() => setSinoAberto(false)} />
 
       {/* Separadores: altura fixa e o número num círculo, para nunca cortarem. */}
       <View style={estilos.faixa}>
@@ -129,24 +159,20 @@ export default function Trabalhos() {
         ListHeaderComponent={
           <>
             <VersaoNova />
-            {/* As novidades do painel (A16): um toque abre o trabalho, o × fecha. */}
-            {novidades.map((n) => (
-              <View key={n.id} style={[estilos.novidade, { backgroundColor: c.superficie, borderColor: c.marca }]}>
-                <Pressable
-                  style={{ flex: 1 }}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    fecharNovidade(n.id);
-                    router.push(`/trabalho/${n.negociacaoId}`);
-                  }}
-                >
-                  <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 19, fontWeight: "600" }}>{n.texto}</Text>
-                </Pressable>
-                <Pressable onPress={() => fecharNovidade(n.id)} accessibilityRole="button" accessibilityLabel="Fechar o aviso" hitSlop={8}>
-                  <Ionicons name="close" size={18} color={c.suave} />
+            {/*
+              Os pedidos novos não são avisos (d13): no máximo UMA linha
+              discreta, e os cartões deles com «Novo». Nunca uma pilha.
+            */}
+            {linhaDosNovos && separador === "novos" ? (
+              <View style={[estilos.linhaDosNovos, { borderColor: c.linha }]}>
+                <Text style={{ flex: 1, color: c.suave, fontSize: LETRA.pequena + 1, fontWeight: "600" }} numberOfLines={1}>
+                  {linhaDosNovos}
+                </Text>
+                <Pressable onPress={verPedidosNovos} accessibilityRole="button" accessibilityLabel="Fechar" hitSlop={8}>
+                  <Ionicons name="close" size={16} color={c.suave} />
                 </Pressable>
               </View>
-            ))}
+            ) : null}
             {/* A dívida que fecha os trabalhos em dinheiro, à entrada — como no painel; um toque leva à carteira. */}
             {carteira?.bloqueioEmDinheiro ? (
               <Pressable onPress={() => router.push("/carteira")} accessibilityRole="button" style={{ marginBottom: ESPACO.s }}>
@@ -196,6 +222,69 @@ export default function Trabalhos() {
         }
       />
     </View>
+  );
+}
+
+/**
+ * A LISTA DO SINO (d13): do mais recente para o mais antigo, os por ler com um
+ * ponto e a letra mais forte; um toque abre o trabalho e dá-o por lido.
+ */
+function Sino({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
+  const c = useCores();
+  const margens = useSafeAreaInsets();
+  const { avisos, porLer, marcarAvisoLido, marcarTudoComoLido } = useTrabalhos();
+  return (
+    <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
+      <Pressable style={estilos.veu} onPress={onFechar} accessibilityLabel="Fechar os avisos" />
+      <View style={[estilos.folhaDoSino, { backgroundColor: c.superficie, paddingBottom: margens.bottom + ESPACO.m }]}>
+        <View style={estilos.cabecaDoSino}>
+          <Text style={{ flex: 1, color: c.tinta, fontSize: LETRA.media, fontWeight: "800" }} accessibilityRole="header">
+            {TITULO_DOS_AVISOS}
+          </Text>
+          <Pressable onPress={onFechar} accessibilityRole="button" accessibilityLabel="Fechar" hitSlop={8}>
+            <Ionicons name="close" size={22} color={c.suave} />
+          </Pressable>
+        </View>
+        {porLer > 0 ? (
+          <Pressable
+            onPress={marcarTudoComoLido}
+            accessibilityRole="button"
+            style={({ pressed }) => [estilos.marcarTudo, { opacity: pressed ? 0.6 : 1 }]}
+          >
+            <Text style={{ color: c.marca, fontSize: LETRA.pequena + 1, fontWeight: "700" }}>{MARCAR_TUDO_COMO_LIDO}</Text>
+          </Pressable>
+        ) : null}
+        <FlatList
+          data={avisos}
+          keyExtractor={(a) => a.id}
+          style={{ flexGrow: 0 }}
+          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: c.linha }} />}
+          ListEmptyComponent={
+            <Text style={{ color: c.suave, fontSize: LETRA.normal, lineHeight: 22, paddingVertical: ESPACO.l }}>{SEM_AVISOS}</Text>
+          }
+          renderItem={({ item: a }) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${a.lido ? "" : "Por ler: "}${a.texto}`}
+              onPress={() => {
+                marcarAvisoLido(a.id);
+                onFechar();
+                router.push(`/trabalho/${a.negociacaoId}`);
+              }}
+              style={({ pressed }) => [estilos.aviso, { opacity: pressed ? 0.7 : 1 }]}
+            >
+              <View style={[estilos.pontoDoAviso, { backgroundColor: a.lido ? "transparent" : c.marca }]} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 19, fontWeight: a.lido ? "400" : "700" }}>
+                  {a.texto}
+                </Text>
+                <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>{dataEHora(a.em)}</Text>
+              </View>
+            </Pressable>
+          )}
+        />
+      </View>
+    </Modal>
   );
 }
 
@@ -360,12 +449,47 @@ const estilos = StyleSheet.create({
     paddingTop: ESPACO.m,
     paddingBottom: ESPACO.xs,
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: ESPACO.m,
   },
   titulo: { fontSize: LETRA.titulo + 2, fontWeight: "800" },
   ola: { fontSize: LETRA.pequena + 1, fontWeight: "600", flexShrink: 1 },
+  direita: { flexDirection: "row", alignItems: "center", gap: ESPACO.s, flexShrink: 1 },
+  sino: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  numeroDoSino: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textoDoNumeroDoSino: { fontSize: 10, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  veu: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)" },
+  folhaDoSino: {
+    maxHeight: "75%",
+    borderTopLeftRadius: RAIO.l,
+    borderTopRightRadius: RAIO.l,
+    paddingHorizontal: ESPACO.l,
+    paddingTop: ESPACO.m,
+  },
+  cabecaDoSino: { flexDirection: "row", alignItems: "center", gap: ESPACO.m, paddingBottom: ESPACO.s },
+  marcarTudo: { alignSelf: "flex-start", paddingVertical: ESPACO.xs, marginBottom: ESPACO.xs },
+  aviso: { flexDirection: "row", alignItems: "flex-start", gap: ESPACO.s, paddingVertical: ESPACO.m },
+  pontoDoAviso: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
+  linhaDosNovos: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: ESPACO.s,
+    borderBottomWidth: 1,
+    paddingBottom: ESPACO.s,
+    marginBottom: ESPACO.s,
+  },
   faixa: { height: 52, justifyContent: "center" },
   separadores: { paddingHorizontal: ESPACO.l, gap: ESPACO.s, alignItems: "center" },
   separador: {
@@ -383,15 +507,6 @@ const estilos = StyleSheet.create({
   lista: { paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xs, paddingBottom: ESPACO.xxl },
   ordens: { alignItems: "center", gap: 6, paddingBottom: ESPACO.s },
   ordem: { borderWidth: 1, borderRadius: 999, paddingHorizontal: ESPACO.s + 2, paddingVertical: 5 },
-  novidade: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: ESPACO.s,
-    borderWidth: 1,
-    borderRadius: RAIO.l,
-    padding: ESPACO.m,
-    marginBottom: ESPACO.s,
-  },
   vazio: { textAlign: "center", fontSize: LETRA.normal, lineHeight: 22, paddingHorizontal: ESPACO.l, paddingTop: ESPACO.xxl },
   involucro: { borderRadius: RAIO.l },
   brilho: { shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8 },

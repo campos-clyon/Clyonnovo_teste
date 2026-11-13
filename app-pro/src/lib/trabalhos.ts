@@ -715,70 +715,8 @@ export function tempoDoCartao(
 }
 
 // ── As novidades dentro da app (A16, 29-10-2026) ─────────────────────────────
-
-export type Novidade = { id: string; texto: string; negociacaoId: number };
-
-/**
- * O QUE MUDOU DESDE A ÚLTIMA LEITURA — as novidades do painel
- * (`PainelDoProfissional.tsx`), com as mesmas frases: um pedido novo, «Foi
- * contratado», «confirmado — X € já estão disponíveis na carteira» e
- * «Transferência … processada». Só as mudanças que são notícia PARA ELE:
- * passar a «à espera da confirmação» foi ele a dar o trabalho por feito.
- *
- * `anterior` é a fase de cada negociação na leitura anterior; na primeira
- * leitura não há novidades — há passado, e o passado não é notícia.
- */
-export function novidadesEntre(anterior: ReadonlyMap<number, string> | null, novos: Trabalho[]): Novidade[] {
-  if (!anterior) return [];
-  const saida: Novidade[] = [];
-  for (const pd of novos) {
-    const faseAntiga = anterior.get(pd.negociacaoId);
-    if (faseAntiga === undefined) {
-      saida.push({
-        id: `novo-${pd.negociacaoId}`,
-        texto: `Pedido novo dentro do seu raio — #${pd.pedidoId}. Abra para propor.`,
-        negociacaoId: pd.negociacaoId,
-      });
-    } else if (faseAntiga !== pd.fase) {
-      if (pd.fase === "a_executar") {
-        saida.push({
-          id: `contratado-${pd.negociacaoId}`,
-          texto: `Foi contratado — pedido #${pd.pedidoId}. A morada e o contacto já estão abertos.`,
-          negociacaoId: pd.negociacaoId,
-        });
-      } else if (pd.fase === "confirmado") {
-        const liquido = pd.recebeSeFechado;
-        saida.push({
-          id: `confirmado-${pd.negociacaoId}`,
-          texto:
-            `Trabalho #${pd.pedidoId} confirmado` +
-            (liquido != null
-              ? ` — ${liquido.toFixed(2).replace(".", ",")} € já estão disponíveis na carteira.`
-              : " — o valor já está disponível na carteira."),
-          negociacaoId: pd.negociacaoId,
-        });
-      } else if (pd.fase === "pago") {
-        saida.push({
-          id: `pago-${pd.negociacaoId}`,
-          texto: `Transferência do trabalho #${pd.pedidoId} processada.`,
-          negociacaoId: pd.negociacaoId,
-        });
-      }
-    }
-  }
-  return saida;
-}
-
-/** A fotografia de cada leitura, para a seguinte: a fase de cada negociação. */
-export function fasesDe(lista: Trabalho[]): Map<number, string> {
-  return new Map(lista.map((t) => [t.negociacaoId, t.fase]));
-}
-
-/** Junta sem repetir: o mesmo acontecimento não vira duas linhas. */
-export function juntarNovidades(antes: Novidade[], chegadas: Novidade[]): Novidade[] {
-  const ids = new Set(antes.map((n) => n.id));
-  return [...antes, ...chegadas.filter((n) => !ids.has(n.id))];
-}
+// Desde 13-11-2026 (d13) são o sino: as regras estão em
+// `src/lib/avisos-do-profissional.ts`, as mesmas do painel.
 
 // ── O detalhe do pedido (A13, 29-10-2026) ────────────────────────────────────
 

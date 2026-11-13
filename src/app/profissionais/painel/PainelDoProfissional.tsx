@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  Bell,
   BookOpen,
   Briefcase,
   CalendarDays,
@@ -53,6 +54,52 @@ import {
   type TemaDoPainel,
 } from "@/lib/tema-do-painel";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
+import {
+  fasesDosTrabalhos,
+  juntarAvisos,
+  lerAvisosGuardados,
+  linhaDosPedidosNovos,
+  MARCAR_TUDO_COMO_LIDO,
+  marcarComoLido,
+  marcarTodosComoLidos,
+  numeroDoSino,
+  oQueMudou,
+  quantosPorLer,
+  retomarSeForDestaConta,
+  SEM_AVISOS,
+  textoDosAvisos,
+  TITULO_DOS_AVISOS,
+  type AvisoDoProfissional,
+} from "@/lib/avisos-do-profissional";
+import { dataEHora } from "@/lib/historico-negociacao";
+
+/**
+ * O SINO GUARDA-SE NO APARELHO (d13, 13-11-2026): o que ficou lido e a
+ * fotografia das fases, para a próxima visita. Só números de pedido, fases e as
+ * frases — nada do cliente — e sai ao sair da conta.
+ */
+const CHAVE_DOS_AVISOS = "clyon:pro:avisos";
+function lerAvisosDoAparelho(): string | null {
+  try {
+    return window.localStorage.getItem(CHAVE_DOS_AVISOS);
+  } catch {
+    return null;
+  }
+}
+function guardarAvisosNoAparelho(fases: ReadonlyMap<number, string>, avisos: readonly AvisoDoProfissional[]): void {
+  try {
+    window.localStorage.setItem(CHAVE_DOS_AVISOS, textoDosAvisos(fases, avisos));
+  } catch {
+    /* navegação privada ou sem espaço: o sino começa de novo na próxima visita */
+  }
+}
+function esquecerAvisosDoAparelho(): void {
+  try {
+    window.localStorage.removeItem(CHAVE_DOS_AVISOS);
+  } catch {
+    /* já não estava lá */
+  }
+}
 
 /**
  * O painel do profissional.
@@ -262,9 +309,23 @@ function PainelNoBrowser() {
    * de pousar os dados. Na primeira não há novidades — há passado, e o
    * passado não é notícia.
    */
-  const [novidades, setNovidades] = useState<Array<{ id: string; texto: string }>>([]);
+  /*
+   * DESDE 13-11-2026 (d13) É UM SINO. Os pedidos novos não são avisos — dão
+   * uma linha só no topo da lista, e os cartões levam «Novo» —, e o resto vai
+   * para o sino do cabeçalho, com o número por ler. As regras e as frases são
+   * as da app Pro: `src/lib/avisos-do-profissional.ts`.
+   */
+  const [avisos, setAvisos] = useState<AvisoDoProfissional[]>([]);
+  const [pedidosNovos, setPedidosNovos] = useState(0);
+  const [sinoAberto, setSinoAberto] = useState(false);
   const [realcados, setRealcados] = useState<Set<number>>(new Set());
   const fotografiaAnterior = useRef<Map<number, string> | null>(null);
+  const avisosAgora = useRef<AvisoDoProfissional[]>([]);
+  const pousarAvisos = useCallback((lista: AvisoDoProfissional[]) => {
+    avisosAgora.current = lista;
+    setAvisos(lista);
+    if (fotografiaAnterior.current) guardarAvisosNoAparelho(fotografiaAnterior.current, lista);
+  }, []);
 
   const carregar = useCallback(async () => {
     // Declaradas cá fora porque são esperadas DEPOIS do `finally` — é lá que o
@@ -317,57 +378,24 @@ function PainelNoBrowser() {
         setNome(dp.nome ?? "");
         const novos = (dp.pedidos ?? []) as Pedido[];
 
-        const anterior = fotografiaAnterior.current;
-        if (anterior) {
-          const chegadas: Array<{ id: string; texto: string }> = [];
-          const paraRealcar: number[] = [];
-          for (const pd of novos) {
-            const faseAntiga = anterior.get(pd.negociacaoId);
-            if (faseAntiga === undefined) {
-              chegadas.push({
-                id: `novo-${pd.negociacaoId}`,
-                texto: `Pedido novo dentro do seu raio — #${pd.pedidoId}. Abra para propor.`,
-              });
-              paraRealcar.push(pd.negociacaoId);
-            } else if (faseAntiga !== pd.fase) {
-              // Só as mudanças que são notícia PARA ELE. Passar a
-              // "a_confirmar" foi ele próprio a enviar a prova — não é novidade.
-              if (pd.fase === "a_executar") {
-                chegadas.push({
-                  id: `contratado-${pd.negociacaoId}`,
-                  texto: `Foi contratado — pedido #${pd.pedidoId}. A morada e o contacto já estão abertos.`,
-                });
-                paraRealcar.push(pd.negociacaoId);
-              } else if (pd.fase === "confirmado") {
-                const liquido = pd.recebeSeFechado;
-                chegadas.push({
-                  id: `confirmado-${pd.negociacaoId}`,
-                  texto:
-                    `Trabalho #${pd.pedidoId} confirmado` +
-                    (liquido != null
-                      ? ` — ${liquido.toFixed(2).replace(".", ",")} € já estão disponíveis na carteira.`
-                      : " — o valor já está disponível na carteira."),
-                });
-                paraRealcar.push(pd.negociacaoId);
-              } else if (pd.fase === "pago") {
-                chegadas.push({
-                  id: `pago-${pd.negociacaoId}`,
-                  texto: `Transferência do trabalho #${pd.pedidoId} processada.`,
-                });
-              }
-            }
-          }
-          if (chegadas.length > 0) {
-            // Junta sem repetir: o mesmo acontecimento não vira duas linhas
-            // por o ciclo correr duas vezes antes de ele fechar o aviso.
-            setNovidades((v) => {
-              const ids = new Set(v.map((x) => x.id));
-              return [...v, ...chegadas.filter((c) => !ids.has(c.id))];
-            });
-            setRealcados((v) => new Set([...v, ...paraRealcar]));
+        // Na primeira leitura desta visita, a fotografia vem do aparelho — se
+        // for desta conta (`retomarSeForDestaConta`).
+        let anterior = fotografiaAnterior.current;
+        let base = avisosAgora.current;
+        if (!anterior) {
+          const guardado = retomarSeForDestaConta(lerAvisosGuardados(lerAvisosDoAparelho()), novos);
+          if (guardado) {
+            anterior = guardado.fases;
+            base = guardado.avisos;
           }
         }
-        fotografiaAnterior.current = new Map(novos.map((x) => [x.negociacaoId, x.fase]));
+        const mudou = oQueMudou(anterior, novos);
+        fotografiaAnterior.current = fasesDosTrabalhos(novos);
+        pousarAvisos(juntarAvisos(base, mudou.avisos));
+        if (mudou.pedidosNovos.length > 0) setPedidosNovos((n) => n + mudou.pedidosNovos.length);
+        // O contorno fica para o contratado e o confirmado; os novos têm «Novo».
+        const paraRealcar = mudou.avisos.filter((a) => !a.id.startsWith("pago-")).map((a) => a.negociacaoId);
+        if (paraRealcar.length > 0) setRealcados((v) => new Set([...v, ...paraRealcar]));
 
         setPedidos((antes) =>
           JSON.stringify(antes) === JSON.stringify(novos) ? antes : novos,
@@ -408,7 +436,7 @@ function PainelNoBrowser() {
     } catch {
       /* fica como estava */
     }
-  }, [router]);
+  }, [router, pousarAvisos]);
 
   useEffect(() => {
     carregar();
@@ -489,6 +517,7 @@ function PainelNoBrowser() {
     // Sair leva a fotografia atrás: senão, quem abrir o painel a seguir no
     // mesmo separador via, por um instante, os trabalhos de quem saiu.
     limparFotografias();
+    esquecerAvisosDoAparelho();
     await fetch("/api/profissionais/sair", { method: "POST" });
     router.push("/profissionais/entrar");
   }
@@ -508,6 +537,8 @@ function PainelNoBrowser() {
   ).length;
 
   const porFazer = pedidos.filter((p) => p.estado === "acordada" && p.fase === "a_executar").length;
+  const porLer = quantosPorLer(avisos);
+  const numeroNoSino = numeroDoSino(porLer);
   const noMenu = ecra === "menu";
 
   /*
@@ -530,41 +561,6 @@ function PainelNoBrowser() {
   // ecrã grande, ecrã inteiro no telemóvel.
   const menu = (
     <>
-      {/*
-        AS NOVIDADES, ditas e nao so pousadas.
-
-        `aria-live="polite"`: o leitor de ecra anuncia cada chegada sem
-        interromper o que estiver a ler. Tocar no aviso abre os trabalhos,
-        que e onde a novidade esta; o X fecha so o aviso.
-      */}
-      {novidades.length > 0 && (
-        <div
-          aria-live="polite"
-          className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md flex-col gap-2 sm:inset-x-auto sm:right-4"
-        >
-          {novidades.map((n) => (
-            <div
-              key={n.id}
-              className="flex items-start gap-2 rounded-2xl border border-[#00B4CC]/40 bg-white p-3.5 shadow-lg"
-            >
-              <button
-                onClick={() => abrir("trabalhos")}
-                className="flex-1 cursor-pointer border-none bg-transparent p-0 text-left text-sm font-medium leading-snug text-slate-800"
-              >
-                {n.texto}
-              </button>
-              <button
-                onClick={() => setNovidades((v) => v.filter((x) => x.id !== n.id))}
-                aria-label="Fechar o aviso"
-                className="shrink-0 cursor-pointer rounded-lg border-none bg-transparent p-1 text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
       <header className="mb-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold text-[#0B1929]">
@@ -633,6 +629,85 @@ function PainelNoBrowser() {
           browser, que numa aplicação instalada no telemóvel nem sequer
           existe.
         */}
+        {/*
+          O SINO (d13, 13-11-2026). Os avisos saíram do canto do ecrã — uma
+          pilha que se fechava um a um — para aqui, com o número por ler.
+        */}
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setSinoAberto((v) => !v)}
+            aria-label={porLer > 0 ? `${TITULO_DOS_AVISOS}, ${porLer} por ler` : TITULO_DOS_AVISOS}
+            aria-expanded={sinoAberto}
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition active:bg-slate-100"
+          >
+            <Bell className="h-4 w-4" aria-hidden="true" />
+            {numeroNoSino && (
+              <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-[#00B4CC] px-1 text-center text-[11px] font-bold leading-[18px] text-white">
+                {numeroNoSino}
+              </span>
+            )}
+          </button>
+          {sinoAberto && (
+            <div
+              role="dialog"
+              aria-label={TITULO_DOS_AVISOS}
+              className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg"
+            >
+              <div className="mb-1 flex items-center gap-2">
+                <p className="flex-1 text-sm font-bold text-slate-800">{TITULO_DOS_AVISOS}</p>
+                <button
+                  type="button"
+                  onClick={() => setSinoAberto(false)}
+                  aria-label="Fechar"
+                  className="cursor-pointer rounded-lg border-none bg-transparent p-1 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+              {porLer > 0 && (
+                <button
+                  type="button"
+                  onClick={() => pousarAvisos(marcarTodosComoLidos(avisosAgora.current))}
+                  className="mb-1 cursor-pointer border-none bg-transparent p-0 text-sm font-semibold text-cyan-700"
+                >
+                  {MARCAR_TUDO_COMO_LIDO}
+                </button>
+              )}
+              {avisos.length === 0 ? (
+                <p className="py-3 text-sm leading-relaxed text-slate-500">{SEM_AVISOS}</p>
+              ) : (
+                <ul className="max-h-[60vh] divide-y divide-slate-100 overflow-y-auto">
+                  {avisos.map((a) => (
+                    <li key={a.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          pousarAvisos(marcarComoLido(avisosAgora.current, a.id));
+                          setSinoAberto(false);
+                          abrirTrabalho(a.negociacaoId);
+                        }}
+                        className="flex w-full cursor-pointer items-start gap-2 border-none bg-transparent px-0 py-2.5 text-left"
+                      >
+                        <span
+                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${a.lido ? "bg-transparent" : "bg-[#00B4CC]"}`}
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className={`block text-sm leading-snug text-slate-800 ${a.lido ? "" : "font-semibold"}`}>
+                            {a.lido ? "" : <span className="sr-only">Por ler: </span>}
+                            {a.texto}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-slate-500">{dataEHora(a.em)}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
         <button
           onClick={voltar}
           aria-label="Voltar"
@@ -771,10 +846,10 @@ function PainelNoBrowser() {
           rotulo="Os meus trabalhos"
           activo={ecra === "trabalhos"}
           destaque={
-            // As novidades ganham ao resto: "por fazer" é estado, novidade é
-            // acontecimento — e o acontecimento é o que ele ainda não sabe.
-            novidades.length > 0
-              ? `${novidades.length} novidade${novidades.length === 1 ? "" : "s"}`
+            // Os pedidos novos desde a última vez ganham ao resto: "por fazer"
+            // é estado, novo é acontecimento — o que ele ainda não sabe.
+            pedidosNovos > 0
+              ? `${pedidosNovos} novo${pedidosNovos === 1 ? "" : "s"}`
               : porFazer > 0
                 ? `${porFazer} por fazer`
                 : aResponder > 0
@@ -944,6 +1019,8 @@ function PainelNoBrowser() {
           <Trabalhos
             pedidos={pedidos}
             realcados={realcados}
+            linhaDosNovos={linhaDosPedidosNovos(pedidosNovos)}
+            onFecharLinhaDosNovos={() => setPedidosNovos(0)}
             aberto={trabalhoAberto}
             onAbrir={abrirTrabalho}
             onVoltar={() => {
@@ -951,7 +1028,7 @@ function PainelNoBrowser() {
               // o realce ja cumpriu, e um destaque que nunca se apaga deixa
               // de destacar seja o que for.
               setRealcados(new Set());
-              setNovidades([]);
+              setPedidosNovos(0);
               abrir("menu");
             }}
             onRecarregar={carregar}
