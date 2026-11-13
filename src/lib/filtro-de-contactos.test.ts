@@ -1,12 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { CONTACTO_ESCONDIDO, filtrarContactos, pareceTelefone } from "./filtro-de-contactos";
+import {
+  CONTACTO_ESCONDIDO,
+  CONTACTO_ESCONDIDO_NO_MODELO_ANTIGO,
+  CONTACTO_ESCONDIDO_NO_NOVO_MODELO,
+  contactoEscondido,
+  filtrarContactos,
+  MARCADOR_DO_CONTACTO_ESCONDIDO,
+  pareceTelefone,
+  temContactoEscondido,
+} from "./filtro-de-contactos";
+
+/* d16: a frase do contacto tapado muda a 15-11 — aqui lê-se a de antes, com um dia fixo. */
+const ANTES_DE_15_11 = new Date("2026-11-13T12:00:00Z");
 
 /**
  * O FILTRO DE CONTACTOS — decisão 2a do dono (30-10-2026): nas conversas de
  * um pedido os contactos ficam tapados, também depois do pagamento.
  */
 
-const tapa = (s: string) => filtrarContactos(s);
+const tapa = (s: string) => filtrarContactos(s, [], ANTES_DE_15_11);
 const tapado = (s: string) => expect(tapa(s).texto).toContain(CONTACTO_ESCONDIDO);
 const intacto = (s: string) => {
   const r = tapa(s);
@@ -115,5 +127,23 @@ describe("o original guarda-se para a equipa", () => {
     expect(pareceTelefone("912 345 678")).toBe(true);
     expect(pareceTelefone("120 150")).toBe(false);
     expect(pareceTelefone("1500 2000")).toBe(false);
+  });
+});
+
+describe("d16: a frase do contacto tapado pela data do modelo (15-11-2026)", () => {
+  const DEPOIS = new Date("2026-11-15T10:00:00Z");
+  it("antes de 15-11, a de sempre; desde 15-11, só o acordo", () => {
+    expect(filtrarContactos("ligue 912 345 678", [], ANTES_DE_15_11).texto).toBe(`ligue ${CONTACTO_ESCONDIDO_NO_MODELO_ANTIGO}`);
+    expect(filtrarContactos("ligue 912 345 678", [], DEPOIS).texto).toBe(`ligue ${CONTACTO_ESCONDIDO_NO_NOVO_MODELO}`);
+    expect(contactoEscondido(DEPOIS)).not.toMatch(/pagamento/);
+    expect(CONTACTO_ESCONDIDO).toBe(CONTACTO_ESCONDIDO_NO_MODELO_ANTIGO);
+  });
+  it("o marcador apanha as duas versões — também as mensagens já gravadas com a antiga", () => {
+    for (const v of [CONTACTO_ESCONDIDO_NO_MODELO_ANTIGO, CONTACTO_ESCONDIDO_NO_NOVO_MODELO]) {
+      expect(v.startsWith(MARCADOR_DO_CONTACTO_ESCONDIDO)).toBe(true);
+      expect(temContactoEscondido(`ligue ${v}`)).toBe(true);
+    }
+    expect(temContactoEscondido("ligue amanhã")).toBe(false);
+    expect(temContactoEscondido(filtrarContactos("joao@gmail.com", [], DEPOIS).texto)).toBe(true);
   });
 });

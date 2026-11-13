@@ -40,6 +40,7 @@ import NoutrosSitios, { ProcuraGlobalContext, type ProcuraGlobal } from "@/compo
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFecho";
+import InterruptorDaVitoriaAosProfissionais from "@/components/admin/InterruptorDaVitoriaAosProfissionais";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
 import AdminListaDasMudancasPanel from "@/components/admin/AdminListaDasMudancasPanel";
@@ -3554,6 +3555,9 @@ export default function ColaboradorAdminClient({
 
               {/* O email «O trabalho já foi feito?» do modelo novo (d15): desligado por omissão, só o administrador. */}
               <InterruptorDoEmailDoFecho />
+
+              {/* A Vitória aos profissionais (d21): desligada por omissão, só o administrador; liga-se com o sim do dono. */}
+              <InterruptorDaVitoriaAosProfissionais />
 
               {/*
                 O LIVRO DE MOVIMENTOS — Fase 1 dos pagamentos.

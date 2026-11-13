@@ -19,6 +19,8 @@ import {
 } from "./licoes-da-vitoria";
 import { PROPRIO_DIA } from "./frases-proibidas";
 import { oQueOSiteSabe } from "./o-que-o-site-sabe";
+import { oQueAClyonFaz } from "./frase-unica";
+import { agoraDoModelo } from "./relogio-do-modelo";
 
 /** Quantas lições, no máximo, por passagem — cada uma é uma chamada ao modelo. */
 export const LICOES_POR_PASSAGEM = 25;
@@ -33,7 +35,9 @@ export type PassagemDasLicoes = {
   falhas: number;
 };
 
-export const INSTRUCAO_DA_LICAO = `És a Vitória, assistente online da CLYON. A CLYON é uma plataforma: o cliente faz o pedido, parceiros da zona respondem com o preço deles e fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento.
+// O que a CLYON faz e o que o site diz, pela data do modelo (d16, 13-11-2026 — `frase-unica.ts`).
+export function instrucaoDaLicao(agora: Date = agoraDoModelo()): string {
+  return `És a Vitória, assistente online da CLYON. A CLYON é uma plataforma: o cliente faz o pedido, parceiros da zona respondem com o preço deles e fazem o trabalho; ${oQueAClyonFaz(agora)}.
 
 Vais ler uma PERGUNTA de um cliente no WhatsApp a que tu não soubeste responder, e, quando houver, a RESPOSTA que uma pessoa da CLYON lhe deu à mão. O teu trabalho é escrever a LIÇÃO: a pergunta em geral e a resposta que deves dar da próxima vez que alguém perguntar o mesmo.
 
@@ -45,7 +49,11 @@ Regras:
 - Se a resposta depender do caso daquele cliente (o preço do pedido dele, a data, quem vai, um problema com um trabalho), ou se nem o site nem a equipa a respondem, deixa "resposta" vazia.
 - Nunca um preço que não esteja no site; nunca um preço sem IVA sozinho; nunca «no ${PROPRIO_DIA}»; nunca contentores nem big bags; nunca «nós fazemos» — quem faz é o parceiro escolhido; nunca digas que és uma IA.
 
-${oQueOSiteSabe()}`;
+${oQueOSiteSabe(agora)}`;
+}
+
+/** A instrução como estava ao carregar o módulo — para os testes que lêem as regras. */
+export const INSTRUCAO_DA_LICAO = instrucaoDaLicao();
 
 /** A lição que o modelo escreveu — validada, ou `null`. Pura. */
 export function lerALicao(bruto: string | null | undefined): { pergunta: string; resposta: string } | null {
@@ -77,7 +85,7 @@ async function pedirALicao(pergunta: string, respostaDaEquipa: string | null): P
     try {
       const model = client.getGenerativeModel({
         model: nome,
-        systemInstruction: INSTRUCAO_DA_LICAO,
+        systemInstruction: instrucaoDaLicao(),
         generationConfig: { responseMimeType: "application/json", temperature: 0 },
       });
       const r = await Promise.race([

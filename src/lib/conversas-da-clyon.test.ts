@@ -15,7 +15,7 @@ import {
   type ConversaParaAPurga,
   type MensagemGuardada,
 } from "./conversas-da-clyon";
-import { CONTACTO_ESCONDIDO } from "./filtro-de-contactos";
+import { CONTACTO_ESCONDIDO, MARCADOR_DO_CONTACTO_ESCONDIDO } from "./filtro-de-contactos";
 import { DIAS_DAS_CONVERSAS_DE_SUPORTE, MESES_DAS_CONVERSAS_DE_PEDIDO } from "./retencao";
 import { lerMensagemNova } from "./conversa-com-a-clyon";
 
@@ -82,7 +82,7 @@ describe("quem pertence à conversa", () => {
 describe("o filtro nas conversas de pedido (2a)", () => {
   it("tapa no pedido e guarda o original", () => {
     const r = prepararMensagem(pedido, { texto: "ligue 912 345 678", anexoUrl: null });
-    expect(r.texto).toContain(CONTACTO_ESCONDIDO);
+    expect(r.texto).toContain(MARCADOR_DO_CONTACTO_ESCONDIDO);
     expect(r.filtrada).toBe(true);
     expect(r.textoOriginal).toBe("ligue 912 345 678");
   });

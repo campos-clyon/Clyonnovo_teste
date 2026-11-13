@@ -140,26 +140,14 @@ interface Excepcao {
  *    (28-10-2026) e a da app com o EAS Update de 29-10-2026: os dois dizem
  *    VALOR_QUE_MUDA_NO_LOCAL (ajuste-no-local.ts). A lista ficou vazia.
  */
-const EXCEPCOES: Excepcao[] = [
-  /*
-   * d16 (13-11-2026): a regra s ganhou «guarda o acordo e o pagamento» e «recebe a
-   * referência para pagar». Os avisos aos modelos da Vitória são do I&D, que os muda
-   * a seguir, sobre o commit do Site. TEMPORÁRIAS: saem com a parte do I&D.
-   */
-  {
-    ficheiro: "src/lib/leitura-das-conversas.ts",
-    regra: "s-modelo-antigo",
-    motivo: "d16: I&D/apps a seguir — o aviso ao modelo da leitura das conversas",
-  },
-  { ficheiro: "src/lib/prompt-do-orcamento.ts", regra: "s-modelo-antigo", motivo: "d16: I&D/apps a seguir — o aviso ao orçamentista" },
-  { ficheiro: "src/lib/propor-licoes.ts", regra: "s-modelo-antigo", motivo: "d16: I&D/apps a seguir — o aviso das lições da Vitória" },
-];
+const EXCEPCOES: Excepcao[] = [];
 
 /**
- * Desce sempre que a lista desce. Nunca sobe. Esteve em 0 de 29-10-2026 a
- * 13-11-2026; sobe a 3 só com as temporárias da d16 (o I&D fecha-as a seguir).
+ * Desce sempre que a lista desce. Nunca sobe. Está em 0 desde 29-10-2026; as 3
+ * temporárias da d16 (13-11-2026) saíram no mesmo dia com a parte do I&D — os
+ * avisos aos modelos lêem «o que a CLYON faz» de `frase-unica.ts`, pela data.
  */
-const TAMANHO_MAXIMO = 3;
+const TAMANHO_MAXIMO = 0;
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):
@@ -576,6 +564,8 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
     "src/lib/email-dados-de-pagamento-do-profissional.ts",
     // Os nomes da carteira do profissional (painel e app Pro) — d10, 13-11-2026.
     "src/lib/rotulos-da-carteira.ts",
+    // As respostas da Vitória aos profissionais no WhatsApp (d21, 13-11-2026).
+    "src/lib/vitoria-aos-profissionais.ts",
   ]).has(f);
 /*
  * Entre a equipa: a base, as contas, as notas e as instruções que só a equipa
@@ -612,6 +602,8 @@ const ENTRE_A_EQUIPA = new Set([
   // Os escolhidos sem resposta (11-11-2026, d6): o selo e a linha da Mesa, os botões da equipa, o histórico e o aviso à equipa.
   "src/lib/escolhidos-sem-resposta-na-mesa.ts",
   "src/lib/assistente-interruptores.ts",
+  // O interruptor e o registo da Vitória aos profissionais (d21, 13-11-2026).
+  "src/lib/vitoria-aos-profissionais-na-base.ts",
   "src/lib/assistentes.ts",
   "src/lib/avisos-do-backoffice.ts",
   "src/lib/cores-dos-profissionais.ts",
@@ -1315,9 +1307,7 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     for (const e of EXCEPCOES) {
       expect(e.motivo.length, chave(e.ficheiro, e.regra)).toBeGreaterThan(10);
       // Só ficam as que pertencem a outra execução ou a uma decisão do dono.
-      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(apps|dono|painel|d16):/);
-      // As da d16 só entram como temporárias, com quem as fecha (13-11-2026).
-      if (e.motivo.startsWith("d16:")) expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^d16: I&D\/apps a seguir/);
+      expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^(apps|dono|painel):/);
       // As do painel só entram como temporárias (d8, 28-10-2026).
       if (e.motivo.startsWith("painel:")) expect(e.motivo, chave(e.ficheiro, e.regra)).toMatch(/^painel: temporária/);
     }

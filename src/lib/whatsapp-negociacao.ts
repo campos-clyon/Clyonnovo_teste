@@ -2005,6 +2005,31 @@ export async function tratarMensagemDoCliente(
         if (soImagens) return;
         const { ePedidoParaParar } = await import("@/lib/aviso-de-pedido-ao-profissional");
         if (ePedidoParaParar(conteudo.texto)) return;
+        /*
+         * A VITÓRIA RESPONDE AOS PROFISSIONAIS — d21 (13-11-2026). As 9 perguntas
+         * de dinheiro do modelo de 15-11, com os valores da carteira dele, e fora
+         * de horas quando lhe respondem (uma vez por noite). SÓ com a data do
+         * modelo E o interruptor «Vitória: respostas automáticas aos
+         * profissionais» das Configs, DESLIGADO por omissão; sem os dois, segue
+         * como sempre. Ver `vitoria-aos-profissionais.ts`.
+         */
+        const { oQueDizerAoProfissional } = await import("@/lib/vitoria-aos-profissionais-na-base");
+        const decisao = await oQueDizerAoProfissional(telefone, pro, conteudo.texto).catch(
+          () => ({ tipo: "como_antes" }) as const,
+        );
+        if (decisao.tipo === "resposta") {
+          await enviarTextoWhatsApp(telefone, decisao.texto);
+          return;
+        }
+        if (decisao.tipo === "fora_de_horas") {
+          if (decisao.texto) {
+            await passarAUmaPessoa(telefone, "Profissional escreveu fora de horas — responder", decisao.texto);
+          } else {
+            const { interromperNumeroWhatsApp } = await import("@/lib/db");
+            await interromperNumeroWhatsApp(telefone, "Profissional escreveu fora de horas — responder").catch(() => {});
+          }
+          return;
+        }
         const { primeiroNome } = await import("@/lib/mensagem-whatsapp");
         const nome = primeiroNome(pro.nome);
         await passarAUmaPessoa(

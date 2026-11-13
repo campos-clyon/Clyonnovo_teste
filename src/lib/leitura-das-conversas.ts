@@ -1,5 +1,7 @@
 import { eDaEquipa, eMarcaDeImagem, MARCA_DE_AUDIO, oQueSeViuNaFotografia, semMarcaDeMao } from "./rajada-do-whatsapp";
 import { servicosPorExtenso } from "./servicos-da-vitoria";
+import { oQueAClyonFaz } from "./frase-unica";
+import { agoraDoModelo } from "./relogio-do-modelo";
 
 /**
  * A VITÓRIA LÊ AS CONVERSAS E FECHA AS QUE ACABARAM — 21-10-2026.
@@ -25,7 +27,10 @@ export const MENSAGENS_LIDAS = 40;
 
 // O que a CLYON faz sai da lista do site (`servicosPorExtenso`): dizia só
 // recolhas, esvaziamentos e mudanças, e a manutenção da casa voltou (25-10-2026).
-export const INSTRUCAO_DA_LEITURA = `És a Vitória, assistente da CLYON, uma plataforma portuguesa que liga clientes a parceiros de ${servicosPorExtenso()} (o cliente pede, os parceiros respondem com o preço deles e fazem o trabalho; a CLYON organiza, guarda o acordo e o pagamento). Vais ler uma conversa de WhatsApp entre um cliente e a CLYON, e dizer em que pé ela está. NÃO vais responder ao cliente — só classificar.
+// O que a CLYON faz vem da frase do site, pela data do modelo (d16, 13-11-2026: desde
+// 15-11 o pagamento do trabalho já não passa pela CLYON — `frase-unica.ts`).
+export function instrucaoDaLeitura(agora: Date = agoraDoModelo()): string {
+  return `És a Vitória, assistente da CLYON, uma plataforma portuguesa que liga clientes a parceiros de ${servicosPorExtenso()} (o cliente pede, os parceiros respondem com o preço deles e fazem o trabalho; ${oQueAClyonFaz(agora)}). Vais ler uma conversa de WhatsApp entre um cliente e a CLYON, e dizer em que pé ela está. NÃO vais responder ao cliente — só classificar.
 
 As linhas começam por quem escreveu: CLIENTE, VITÓRIA (a assistente automática) ou EQUIPA (uma pessoa da CLYON, à mão).
 
@@ -45,6 +50,10 @@ Regras:
 - Um «obrigado» do cliente no fim, depois de tudo tratado, pode ser "resolvida"; depois de um orçamento por aceitar, não.
 
 "motivo": uma frase curta em português de Portugal (no máximo 15 palavras) a dizer porquê. Exemplos: «o cliente disse que já arranjou quem fizesse», «serviço feito e pago», «só queria saber o preço — já respondido», «falta o cliente aceitar o orçamento enviado», «o cliente pediu para ligar amanhã».`;
+}
+
+/** A instrução como estava ao carregar o módulo — para os testes que lêem as regras. */
+export const INSTRUCAO_DA_LEITURA = instrucaoDaLeitura();
 
 /** Uma linha da conversa, como o modelo a lê. */
 function linhaParaALeitura(m: { direccao: string; texto: string }): string | null {
@@ -136,7 +145,7 @@ export async function lerAConversa(fio: string): Promise<Leitura | null> {
         generationConfig: { responseMimeType: "application/json", temperature: 0 },
       });
       const resposta = await Promise.race([
-        model.generateContent([{ text: INSTRUCAO_DA_LEITURA }, { text: `A CONVERSA:\n\n${fio}` }]),
+        model.generateContent([{ text: instrucaoDaLeitura() }, { text: `A CONVERSA:\n\n${fio}` }]),
         new Promise<never>((_, rejeitar) =>
           setTimeout(() => rejeitar(new Error(`demorou mais de ${segundos} s`)), segundos * 1000),
         ),

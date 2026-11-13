@@ -81,7 +81,8 @@ describe("M1 — o sinal para a equipa chega à mensagem guardada", () => {
   it("a rota passa as anteriores do mesmo autor, a base grava o alerta e a equipa vê-o", () => {
     const rota = semComentarios(ler("src/app/api/conversas/[id]/mensagens/route.ts"));
     expect(rota).toContain("textosAnterioresDoAutor(c.id, autor, autorId, 2)");
-    expect(rota).toContain("prepararMensagem(c, lida, anteriores)");
+    // d16 (13-11-2026): e o «agora» do modelo, para a frase do contacto tapado.
+    expect(rota).toContain("prepararMensagem(c, lida, anteriores, agoraDoModelo())");
     const base = semComentarios(ler("src/lib/conversas-na-base.ts"));
     expect(base).toContain("ADD COLUMN alerta VARCHAR(120)");
     expect(base).toMatch(/INSERT INTO mensagensDaConversa \([^)]*alerta/);

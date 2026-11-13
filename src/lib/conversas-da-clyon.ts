@@ -94,9 +94,11 @@ export function prepararMensagem(
   lida: { texto: string; anexoUrl: string | null },
   /** As mensagens anteriores do mesmo autor nesta conversa (para o telefone partido). */
   anteriores: string[] = [],
+  /** O «agora» do modelo — a frase do contacto tapado muda a 15-11 (d16). */
+  agora: Date = new Date(),
 ): { texto: string; textoOriginal: string | null; filtrada: boolean; alerta: string | null; anexoUrl: string | null } {
   if (c.tipo === "pedido") {
-    const f = filtrarContactos(lida.texto, anteriores);
+    const f = filtrarContactos(lida.texto, anteriores, agora);
     return {
       texto: f.texto,
       textoOriginal: f.filtrada ? f.original : null,

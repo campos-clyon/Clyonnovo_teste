@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   ALERTA_NUMERO_PARTIDO,
   ALERTA_PALAVRA,
-  CONTACTO_ESCONDIDO,
+  MARCADOR_DO_CONTACTO_ESCONDIDO,
   filtrarContactos,
 } from "./filtro-de-contactos";
 
@@ -11,7 +11,7 @@ describe("filtro de contactos — os contornos da Segurança (M1)", () => {
   const tapa = (s: string) => {
     const f = filtrarContactos(s);
     expect(f.filtrada, s).toBe(true);
-    expect(f.texto).toContain(CONTACTO_ESCONDIDO);
+    expect(f.texto).toContain(MARCADOR_DO_CONTACTO_ESCONDIDO);
     expect(f.texto).not.toMatch(/912|345|678/);
   };
 

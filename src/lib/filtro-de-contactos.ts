@@ -15,7 +15,30 @@
  * e só a equipa o vê.
  */
 
-export const CONTACTO_ESCONDIDO = "[contacto escondido — a CLYON guarda o acordo e o pagamento]";
+import { novoModeloEmVigor } from "./novo-modelo";
+
+/*
+ * O QUE FICA NO LUGAR DO CONTACTO, PELA DATA — d16 (I&D, 13-11-2026). Dizia «a CLYON
+ * guarda o acordo e o pagamento»; desde 15-11 o pagamento do trabalho já não passa
+ * pela CLYON, e fica só o acordo. As duas versões começam pelo mesmo marcador
+ * (`MARCADOR_DO_CONTACTO_ESCONDIDO`): quem procura um contacto tapado — nas
+ * mensagens novas e nas já gravadas com a versão antiga — procura-o a ele.
+ */
+export const MARCADOR_DO_CONTACTO_ESCONDIDO = "[contacto escondido";
+export const CONTACTO_ESCONDIDO_NO_MODELO_ANTIGO = `${MARCADOR_DO_CONTACTO_ESCONDIDO} — a CLYON guarda o acordo e o pagamento]`;
+export const CONTACTO_ESCONDIDO_NO_NOVO_MODELO = `${MARCADOR_DO_CONTACTO_ESCONDIDO} — a CLYON guarda o acordo]`;
+/** O de sempre (antes de 15-11-2026). */
+export const CONTACTO_ESCONDIDO = CONTACTO_ESCONDIDO_NO_MODELO_ANTIGO;
+
+/** O que fica no lugar do contacto, pela data do modelo (`novo-modelo.ts`). */
+export function contactoEscondido(agora: Date = new Date()): string {
+  return novoModeloEmVigor(agora) ? CONTACTO_ESCONDIDO_NO_NOVO_MODELO : CONTACTO_ESCONDIDO_NO_MODELO_ANTIGO;
+}
+
+/** Este texto tem um contacto tapado (de qualquer das duas versões)? */
+export function temContactoEscondido(texto: string | null | undefined): boolean {
+  return String(texto ?? "").includes(MARCADOR_DO_CONTACTO_ESCONDIDO);
+}
 
 export type TextoFiltrado = {
   /** O que o outro lado lê. */
@@ -199,7 +222,12 @@ function taparTelefones(texto: string): string {
  * Tapa os contactos de um texto livre. O resultado nunca é mais comprido do
  * que precisa: marcas seguidas juntam-se numa só.
  */
-export function filtrarContactos(original: string, anteriores: string[] = []): TextoFiltrado {
+export function filtrarContactos(
+  original: string,
+  anteriores: string[] = [],
+  /** Escolhe a frase do contacto tapado pela data do modelo (d16). */
+  agora: Date = new Date(),
+): TextoFiltrado {
   const texto0 = String(original ?? "");
   const alerta = alertaDe(texto0, anteriores);
   let t = normalizarParaProcura(texto0);
@@ -214,7 +242,7 @@ export function filtrarContactos(original: string, anteriores: string[] = []): T
   const filtrada = t.includes(MARCA);
   if (!filtrada) return { texto: texto0, filtrada: false, original: texto0, alerta };
   const junto = t.replace(new RegExp(`${MARCA}(?:[\\s.,;:/\\-–]*${MARCA})+`, "g"), MARCA);
-  return { texto: junto.split(MARCA).join(CONTACTO_ESCONDIDO), filtrada: true, original: texto0, alerta };
+  return { texto: junto.split(MARCA).join(contactoEscondido(agora)), filtrada: true, original: texto0, alerta };
 }
 
 /**

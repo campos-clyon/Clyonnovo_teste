@@ -6,6 +6,8 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { modeloDoGemini } from "./modelo-do-gemini";
+import { oQueAClyonFaz } from "./frase-unica";
+import { agoraDoModelo } from "./relogio-do-modelo";
 
 export const GEMINI_TIMEOUT_MS = 4000;
 
@@ -179,7 +181,7 @@ export async function generateOperationalSummary(order: Record<string, any>): Pr
     );
   }
 
-  const prompt = `És um assistente operacional da CLYON, uma plataforma que liga clientes a profissionais de mudanças e serviços da casa (quem faz o trabalho é o profissional escolhido; a CLYON organiza, guarda o acordo e o pagamento).
+  const prompt = `És um assistente operacional da CLYON, uma plataforma que liga clientes a profissionais de mudanças e serviços da casa (quem faz o trabalho é o profissional escolhido; ${oQueAClyonFaz(agoraDoModelo())}).
 Cria um RESUMO OPERACIONAL claro e conciso em PT-PT para o profissional que vai executar o trabalho.
 O resumo deve ter no máximo 200 palavras. Usa linguagem direta e prática.
 Inclui: o que fazer, moradas, itens a transportar/recolher (se mencionados), avisos de acesso.

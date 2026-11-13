@@ -29,6 +29,7 @@ import { oQueOSiteSabe } from "./o-que-o-site-sabe";
 import { escadaLimpa, modeloDoGemini } from "./modelo-do-gemini";
 import { novoModeloEmVigor } from "./novo-modelo";
 import { agoraDoModelo } from "./relogio-do-modelo";
+import { O_QUE_A_CLYON_FAZ_NO_MODELO_ANTIGO, O_QUE_A_CLYON_FAZ_NO_NOVO_MODELO } from "./frase-unica";
 
 /*
  * AS OPÇÕES DO SERVIÇO SÃO AS QUE A CLYON FAZ — 25-10-2026.
@@ -53,7 +54,7 @@ export const FORA_DO_PLANO_PARA_O_MODELO = foraDoPlanoPorExtenso()
 export const QUEM_E_A_CLYON_NO_MODELO_ANTIGO =
   `uma plataforma portuguesa que liga clientes a parceiros de ${servicosPorExtenso()}: ` +
   "o cliente faz o pedido, os parceiros da zona respondem com o preço deles e fazem o trabalho, " +
-  "e a CLYON organiza, guarda o acordo e o pagamento";
+  `e ${O_QUE_A_CLYON_FAZ_NO_MODELO_ANTIGO}`;
 /** O de sempre — até 15-11-2026. */
 export const QUEM_E_A_CLYON = QUEM_E_A_CLYON_NO_MODELO_ANTIGO;
 
@@ -64,7 +65,7 @@ export const QUEM_E_A_CLYON = QUEM_E_A_CLYON_NO_MODELO_ANTIGO;
 export const QUEM_E_A_CLYON_NO_NOVO_MODELO =
   `uma plataforma portuguesa que liga clientes a parceiros de ${servicosPorExtenso()}: ` +
   "o cliente faz o pedido, os parceiros da zona respondem com o preço deles e fazem o trabalho, " +
-  "a CLYON organiza e guarda o acordo, e o cliente paga o trabalho diretamente ao parceiro que contratou";
+  O_QUE_A_CLYON_FAZ_NO_NOVO_MODELO;
 
 /** O que a CLYON é, pela data (d10). */
 export function quemEACLYON(agora: Date = agoraDoModelo()): string {

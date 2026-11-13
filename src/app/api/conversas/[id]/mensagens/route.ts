@@ -13,6 +13,7 @@ import {
   vistaDaMensagem,
 } from "@/lib/conversas-da-clyon";
 import { lerMensagemNova } from "@/lib/conversa-com-a-clyon";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       conversaId: c.id,
       autor,
       autorId,
-      ...prepararMensagem(c, lida, anteriores),
+      ...prepararMensagem(c, lida, anteriores, agoraDoModelo()),
     });
     return NextResponse.json({ ok: true, mensagem: vistaDaMensagem(gravada, quem) });
   } catch (err) {

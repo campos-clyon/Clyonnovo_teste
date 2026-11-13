@@ -15187,6 +15187,8 @@ export type Acontecimento =
   // O fecho do modelo novo (d15, 13-11-2026): a resposta do cliente a «O trabalho já foi feito?» e o interruptor do email.
   | "fecho_respondido"
   | "fecho_interruptor"
+  // A Vitória aos profissionais (d21, 13-11-2026): o interruptor das Configs.
+  | "vitoria_profissionais_interruptor"
   | "fecho_perguntado"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —

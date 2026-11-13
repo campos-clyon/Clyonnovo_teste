@@ -16,7 +16,8 @@
  *
  * Puro.
  */
-import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
+import { AS_DUAS_FATURAS } from "./pagar-ao-parceiro";
+import { COMO_SE_PAGA_NO_NOVO_MODELO } from "./pagamento-na-plataforma";
 
 /** Não há nada a pagar antes, nem dinheiro à guarda de ninguém. */
 export const SEM_PAGAMENTO_ADIANTADO =
@@ -31,8 +32,12 @@ export const PAGA_AO_CONTRATADO =
   "Paga-lhe diretamente — por transferência, MB WAY ou dinheiro no local, como preferir; o IBAN e o MB WAY dele estão no seu pedido. " +
   AS_DUAS_FATURAS;
 
-/** «Como se paga?» no modelo novo: ao parceiro, as duas faturas, nada adiantado. */
-export const COMO_SE_PAGA_NO_WHATSAPP = `${PAGA_DIRETAMENTE_AO_PARCEIRO} ${AS_DUAS_FATURAS} ${SEM_PAGAMENTO_ADIANTADO}`;
+/** «Como se paga?» no modelo novo: ao parceiro, só para os dados do pedido, as duas faturas, nada adiantado. */
+/*
+ * d16 (I&D, 13-11-2026): o mesmo texto do site («como se paga» de 15-11, com «pague só
+ * para esses dados»), e o «nada adiantado» da Vitória a seguir.
+ */
+export const COMO_SE_PAGA_NO_WHATSAPP = `${COMO_SE_PAGA_NO_NOVO_MODELO} ${SEM_PAGAMENTO_ADIANTADO}`;
 
 /**
  * O QUE O MODELO TEM DE SABER — as regras do aviso ao modelo, no modelo novo.
