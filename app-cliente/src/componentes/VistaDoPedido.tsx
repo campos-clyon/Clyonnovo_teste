@@ -20,6 +20,7 @@ import { Proposta } from "./Proposta";
 import { Text } from "./Texto";
 import { TrabalhoClyon } from "./TrabalhoClyon";
 import { TrabalhoFeito } from "./TrabalhoFeito";
+import { TrabalhoJaFeito } from "./TrabalhoJaFeito";
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { Miniaturas, VerFotografias } from "./VerFotografias";
 import { Aviso, Botao, Campo, Cartao, Carregando, Confirmacao, Etiqueta, Ligacao, Paragrafo, Recolhido, Subtitulo, Titulo } from "./ui";
@@ -442,7 +443,11 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
             O modelo de 15-11 (d10): paga ao parceiro — o IBAN, o MB WAY, como vai pagar e as duas faturas.
             Quem decide é o servidor; fora do modelo novo o bloco não desenha nada. O convidado vê-o depois de criar conta.
           */}
-          {!convidado ? <PagarAoParceiro pedidoId={pedidoId} negociacaoId={contratada.id} pedirComo={pedir} /> : null}
+          {!convidado ? (
+            <PagarAoParceiro pedidoId={pedidoId} negociacaoId={contratada.id} pedirComo={pedir} daR5={contratada.pagamento ? contratada.pagamento.aoParceiro : undefined} />
+          ) : null}
+          {/* «O trabalho já foi feito?» (d15): só quando o servidor pergunta. */}
+          <TrabalhoJaFeito pedidoId={pedidoId} pergunta={contratada.perguntaDoFecho} pedir={pedir} aoMudar={depoisDeAgir} />
           {/* As horas de um trabalho por hora (31-10-2026), antes do «Sim, ficou feito». */}
           <HorasDoTrabalho pedidoId={pedidoId} n={contratada} agir={agir} />
           <TrabalhoFeito pedidoId={pedidoId} n={contratada} agir={agir} />

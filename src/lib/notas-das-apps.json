@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-13-2",
+      "nota": "A partir de 15/11 o cliente paga-lhe diretamente: à entrada vê o valor em atraso, o prazo e «Pagar o valor em atraso», escolhe o seu regime de IVA com um toque e aceita os novos Termos.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-13",
       "nota": "Agora cada atualização diz o que traz, antes de reiniciar e logo a seguir.",
       "updates": [

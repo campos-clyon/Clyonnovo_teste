@@ -27,8 +27,20 @@ export type VistoDoPagarAoParceiro = {
   frase?: string;
   parceiro?: string;
   paraPagar?: { iban: string | null; titular: string | null; mbway: string | null } | null;
+  /** O total pelo regime do parceiro e as duas faturas, numa frase já escrita pelo servidor (d18). */
+  totalEmTexto?: string | null;
+  /** Sem IBAN nem MB WAY (d17): o que o cliente lê em vez dos dados. */
+  semDados?: string | null;
   perfilFiscal?: { fatura: string; guia: string | null };
-  conta?: { semIva: number; total: number | null; faturaDoParceiro: number; faturaDaTaxa: number } | null;
+  /** As duas faturas e o total, pelo regime do parceiro (d17, `total-ao-cliente.ts`): números do servidor. */
+  conta?: {
+    semIva: number;
+    total: number | null;
+    faturaDoParceiro: number;
+    faturaDaTaxa: number;
+    ivaDoParceiro?: number;
+    ivaDaTaxa?: number;
+  } | null;
   comoPagar?: string | null;
   opcoes?: Array<{ id: string; curta: string; cliente: string }>;
   faturas?: {
@@ -57,5 +69,12 @@ export const SO_PARA_ESTES_DADOS =
 /*
  * O PREÇO NÃO SE ESCREVE AQUI (a regra da app de cliente: nenhum preço, taxa ou
  * imposto escrito na app). O total e as três linhas já vêm da R5 no cartão do
- * parceiro contratado (`preco`); este bloco diz só para onde e como pagar.
+ * parceiro contratado (`preco`); este bloco diz para onde e como pagar, e mostra
+ * a frase do total e das duas faturas que o servidor já escreveu (`totalEmTexto`, d18).
  */
+
+/** O que a R5 trouxe serve para desenhar o bloco sem um segundo pedido? (Um site antigo não o manda.) */
+export function vistoDaR5(v: unknown): VistoDoPagarAoParceiro | null {
+  const o = v as Partial<VistoDoPagarAoParceiro> | null | undefined;
+  return o && o.pagaAoParceiro === true ? (o as VistoDoPagarAoParceiro) : null;
+}

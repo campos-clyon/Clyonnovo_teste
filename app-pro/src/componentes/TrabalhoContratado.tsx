@@ -219,7 +219,7 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
        * (trabalho CLYON, pago em mão, ou de antes de a plataforma cobrar) não
        * mostra nada. A regra do valor que muda no local passou para «Mais opções».
        */}
-      {t.fase === "a_executar" && t.clientePagou === true ? (
+      {t.fase === "a_executar" && t.clientePagou === true && t.noNovoModelo !== true ? (
         <Mensagem tom="bom" texto="O cliente já pagou à CLYON. O valor está cá e é seu assim que ele confirmar que o trabalho está feito." />
       ) : null}
       {/*
@@ -227,10 +227,10 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
        * (`O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA`) — não começa antes de a
        * CLYON a dar por recebida.
        */}
-      {t.fase === "a_executar" && t.clientePagou === false && t.pagamentoACaminho === "transferencia" ? (
+      {t.fase === "a_executar" && t.clientePagou === false && t.pagamentoACaminho === "transferencia" && t.noNovoModelo !== true ? (
         <Mensagem tom="aviso" texto={O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA.inteira} />
       ) : null}
-      {t.fase === "a_executar" && t.clientePagou === false && t.pagamentoACaminho !== "transferencia" ? (
+      {t.fase === "a_executar" && t.clientePagou === false && t.pagamentoACaminho !== "transferencia" && t.noNovoModelo !== true ? (
         <Mensagem tom="aviso" texto="O cliente ainda não pagou à CLYON. Pode ir fazer o trabalho — mas o valor só passa a seu quando o pagamento entrar. Se preferir esperar, diga-nos e falamos com ele." />
       ) : null}
     </Caixa>
@@ -959,6 +959,7 @@ function Terminado({ t }: { t: Trabalho }) {
           diasAteLibertar: t.diasAteLibertar,
         })
       : null;
+  // A linha do dinheiro pela regra do site; `t` traz o `noNovoModelo` que o servidor disse (d17).
   const dinheiro = feito ? ondeEstaODinheiro(t) : null;
   const titulo = espera
     ? espera.titulo

@@ -14,9 +14,10 @@
  * As frases vêm dos ficheiros do site, por caminho relativo (as mesmas do
  * painel). Puro (sem React Native): os testes do site importam-no.
  */
-import { PAGAR_O_VALOR_EM_ATRASO } from "../../../src/lib/valor-em-atraso";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, PAGAR_O_VALOR_EM_ATRASO } from "../../../src/lib/valor-em-atraso";
 import { NOME_DA_FATURA, MENSAGENS_DA_FATURA } from "../../../src/lib/faturas-do-trabalho";
 import { COMO_PAGAR_EM_PALAVRAS } from "../../../src/lib/pagar-ao-parceiro";
+import { COMPLETAR_O_PERFIL } from "../../../src/lib/dados-para-receber";
 
 export { PAGAR_O_VALOR_EM_ATRASO, NOME_DA_FATURA, MENSAGENS_DA_FATURA, COMO_PAGAR_EM_PALAVRAS };
 
@@ -121,3 +122,94 @@ export function linhaDoPerfilFiscal(p: NovoModeloDoPerfil["perfilFiscal"]): stri
 /** A rota aceita imagem ou PDF; a app manda uma fotografia ou uma captura (sem módulo nativo novo). */
 export const AJUDA_DA_FATURA_NA_APP =
   "Fotografe a fatura que emitiu ao cliente ou escolha uma captura da galeria. O cliente vê-a no pedido, ao lado da fatura da taxa da plataforma.";
+
+// ── d18 (13-11-2026): a faixa do Início, o regime por um toque e os Termos ──
+
+/**
+ * A FAIXA DO VALOR EM ATRASO NO INÍCIO — d18. Fora do stand-by, quem tem um
+ * valor por passar à CLYON vê-o logo à entrada, com o prazo dos 4 dias (o prazo
+ * mais próximo vem do site, `prazoAte`) e o botão «Pagar o valor em atraso»,
+ * que leva à carteira. Em stand-by diz-se a frase do site (`standBy.explicacao`).
+ * `null` sem nada a pagar, e sempre antes de 15-11 (o site não manda `novoModelo`).
+ */
+export function faixaDoValorEmAtraso(
+  nm: NovoModeloDaCarteira | null | undefined,
+  euros: (n: number) => string,
+  dia: (iso: string | null) => string | null,
+): { standBy: boolean; titulo: string; texto: string; botao: string } | null {
+  if (!nm) return null;
+  if (nm.standBy) {
+    return { standBy: true, titulo: `Conta em stand-by · ${euros(nm.standBy.total)}`, texto: nm.standBy.explicacao, botao: PAGAR_O_VALOR_EM_ATRASO };
+  }
+  if (nm.valores.length === 0) return null;
+  const total = Math.round(nm.valores.reduce((s, v) => s + v.total, 0) * 100) / 100;
+  const prazos = nm.valores.map((v) => v.prazoAte).filter((p): p is string => !!p).sort();
+  const ate = prazos.length > 0 ? dia(prazos[0]) : null;
+  const trabalhos = nm.valores.length === 1 ? "de 1 trabalho" : `de ${nm.valores.length} trabalhos`;
+  return {
+    standBy: false,
+    titulo: `Valor em atraso · ${euros(total)}`,
+    texto:
+      `A taxa da plataforma e o IVA dela ${trabalhos}. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias depois de o trabalho ficar confirmado` +
+      (ate ? `: pague até ${ate}.` : ".") +
+      " Depois disso, a conta fica em stand-by até pagar.",
+    botao: PAGAR_O_VALOR_EM_ATRASO,
+  };
+}
+
+/** O botão da faixa dos dados para receber (d11 v2 revisto pelo CEO). */
+export { COMPLETAR_O_PERFIL };
+
+/** O regime de IVA com que o ecrã começa: só o confirmado; vazio = por confirmar (d19). */
+export function regimeInicial(regimeDoPerfil: string | null | undefined): "isento" | "normal" | "" {
+  return regimeDoPerfil === "normal" || regimeDoPerfil === "isento" ? regimeDoPerfil : "";
+}
+
+/** O que segue no PUT do perfil: o regime só com um toque, e então confirmado (d19). */
+export function corpoDoRegime(
+  regime: "isento" | "normal" | "",
+  escolhido: boolean,
+): { regimeIva?: "isento" | "normal"; confirmarRegime?: true } {
+  return escolhido && regime !== "" ? { regimeIva: regime, confirmarRegime: true } : {};
+}
+
+/** A mesma frase do painel por baixo de «Regime de IVA» quando está por confirmar. */
+export const REGIME_POR_CONFIRMAR = "Por confirmar: escolha um dos dois e guarde.";
+
+/** O que `GET /api/profissionais/termos` devolve (d20). Sem sessão vem só a parte pública. */
+export type EstadoDosTermos = {
+  versao: string;
+  versaoPorExtenso: string;
+  emVigor: boolean;
+  aceiteEm: string | null;
+  precisaDeAceitar: boolean;
+  textos: {
+    titulo: string;
+    resumo: string;
+    ligacao: string;
+    url: string;
+    caixa: string;
+    caixaDaPalavraPasse: string;
+    aceitar: string;
+    agoraNao: string;
+  };
+};
+
+export const ROTA_DOS_TERMOS = "/api/profissionais/termos";
+
+/** A resposta da rota serve? (Um site antigo dá 404; outra coisa qualquer não mostra nada.) */
+export function termosLidos(v: unknown): EstadoDosTermos | null {
+  const t = v as Partial<EstadoDosTermos> | null;
+  if (!t || typeof t.versao !== "string" || !t.textos || typeof t.textos.caixa !== "string") return null;
+  return t as EstadoDosTermos;
+}
+
+/** O ecrã do primeiro acesso aparece? Só com o servidor a dizê-lo — e não depois de «Agora não» nesta abertura. */
+export function mostrarOsTermos(t: EstadoDosTermos | null, adiadoNestaVersao: string | null): boolean {
+  return !!t && t.precisaDeAceitar && adiadoNestaVersao !== t.versao;
+}
+
+/** O corpo do definir-senha: a versão só com a caixa marcada, e só com os Termos em vigor (d20). */
+export function aceitaTermosNoCorpo(t: EstadoDosTermos | null, marcada: boolean): { aceitaTermos?: string } {
+  return t?.emVigor && marcada ? { aceitaTermos: t.versao } : {};
+}

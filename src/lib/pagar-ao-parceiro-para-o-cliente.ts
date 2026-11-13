@@ -15,6 +15,22 @@ import { congelarRegimeDoProfissional, oQueONovoModeloGravou } from "./pagar-ao-
 import { faturasDaNegociacao } from "./faturas-do-trabalho-na-base";
 import { asDuasFaturas } from "./faturas-do-trabalho";
 
+const emEuros = (n: number) => `${(Math.round(n * 100) / 100).toFixed(2).replace(".", ",")} €`;
+
+/**
+ * O TOTAL PELO REGIME DO PARCEIRO, NUMA FRASE — d18 (13-11-2026). A mesma do
+ * bloco do site (`src/components/PagarAoParceiro.tsx`): o total com IVA, o sem IVA
+ * ao lado (nunca sozinho) e as duas faturas. A app de cliente não escreve preços
+ * nem IVA: recebe esta frase pronta. `null` sem total.
+ */
+export function totalAoParceiroEmTexto(c: { total: number | null; semIva: number; faturaDoParceiro: number; faturaDaTaxa: number }): string | null {
+  if (c.total == null) return null;
+  return (
+    `Total: ${emEuros(c.total)} com IVA (${emEuros(c.semIva)} sem IVA) — fatura do trabalho ` +
+    `${emEuros(c.faturaDoParceiro)} e fatura da taxa da plataforma ${emEuros(c.faturaDaTaxa)}.`
+  );
+}
+
 /**
  * «PAGAR A …» — O QUE O CLIENTE VÊ DE UM TRABALHO DO MODELO DE 15-11 (d10; uma
  * função só desde a d17, 13-11-2026).
@@ -47,6 +63,8 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
     /** Sem IBAN nem MB WAY (d17, texto F): o que o cliente lê em vez dos dados. */
     semDados: paraPagar && !paraPagar.iban && !paraPagar.mbway ? PARCEIRO_SEM_DADOS_PARA_PAGAR : null,
     perfilFiscal: { ...fiscal, regimeParaAConta: regime },
+    /** A frase do total, a mesma do bloco do site — a app de cliente mostra-a tal e qual (d18). */
+    totalEmTexto: c ? totalAoParceiroEmTexto({ total, semIva: c.semIva, faturaDoParceiro: c.faturaDoParceiro, faturaDaTaxa: c.faturaDaTaxa }) : null,
     conta: c
       ? {
           semIva: c.semIva,

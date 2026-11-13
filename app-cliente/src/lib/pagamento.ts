@@ -48,6 +48,8 @@ export function multibancoVivo(p: Pick<PendenteDoPagamento, "metodo" | "expiraEm
 export type EstadoDoPagar =
   | { tipo: "pago"; quando: string | null }
   | { tipo: "no-local" }
+  /** O modelo de 15-11 (d10/d18): paga diretamente ao parceiro — o bloco «Pagar a …» diz para onde e como. */
+  | { tipo: "ao-parceiro" }
   /** O servidor não abre pagamentos para este trabalho agora (`disponivel: false`). */
   | { tipo: "indisponivel" }
   | { tipo: "a-confirmar-mbway"; fimEm: number; valorTexto: string }
@@ -71,6 +73,7 @@ export function estadoDoPagar(
   o: { esperavaMbway?: boolean; mbwayVistoEm?: number | null; outraForma?: boolean } = {},
 ): EstadoDoPagar {
   if (pg.pago) return { tipo: "pago", quando: pg.pagoEmTexto };
+  if (pg.pagaAoParceiro) return { tipo: "ao-parceiro" };
   if (pg.emDinheiroAoProfissional) return { tipo: "no-local" };
   /*
    * UMA TRANSFERÊNCIA À ESPERA NÃO É «POR PAGAR» — d13, 07-11-2026. A mesma

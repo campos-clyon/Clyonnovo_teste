@@ -10,6 +10,7 @@ import {
   rotaDePagarAoParceiro,
   ROTA_DE_PAGAR_AO_PARCEIRO,
   SO_PARA_ESTES_DADOS,
+  vistoDaR5,
   type VistoDoPagarAoParceiro,
 } from "../lib/pagar-ao-parceiro";
 import { CORES } from "../tema";
@@ -20,7 +21,9 @@ import { CORES } from "../tema";
  * de fatura do parceiro, o IBAN e o MB WAY dele, a escolha de como paga e as
  * faturas já juntas.
  *
- * Pergunta tudo a `/api/pagamentos/ao-parceiro`, que decide. Fora do modelo novo
+ * D18 (13-11-2026): a R5 já traz o bloco (`pagamento.aoParceiro`, o mesmo da
+ * rota): desenha-se logo com ele, sem segundo pedido. Sem ele (um site antigo),
+ * pergunta-se a `/api/pagamentos/ao-parceiro`, que decide. Fora do modelo novo
  * (antes de 15-11, um trabalho já pago à CLYON, um Trabalho CLYON) a resposta é
  * `pagaAoParceiro: false` e este bloco não desenha nada. O IBAN e o MB WAY só
  * vêm ao cliente que contratou, depois de contratar.
@@ -29,12 +32,19 @@ export function PagarAoParceiro({
   pedidoId,
   negociacaoId,
   pedirComo = pedir,
+  daR5,
 }: {
   pedidoId: number;
   negociacaoId: number;
   pedirComo?: Pedir;
+  /** O `pagamento.aoParceiro` da R5; `undefined` = o site não o mandou (pergunta-se à rota). */
+  daR5?: VistoDoPagarAoParceiro | null;
 }) {
-  const [visto, setVisto] = useState<VistoDoPagarAoParceiro | null>(null);
+  const [visto, setVisto] = useState<VistoDoPagarAoParceiro | null>(() => vistoDaR5(daR5));
+  // A R5 relê-se de 15 em 15 s: o bloco segue-a (o IBAN, a fatura junta…).
+  useEffect(() => {
+    if (daR5 !== undefined) setVisto(vistoDaR5(daR5));
+  }, [daR5]);
   const [erro, setErro] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -48,8 +58,8 @@ export function PagarAoParceiro({
   }, [pedidoId, negociacaoId, pedirComo]);
 
   useEffect(() => {
-    void ler();
-  }, [ler]);
+    if (daR5 === undefined) void ler();
+  }, [ler, daR5]);
 
   async function escolher(id: string) {
     setAGravar(true);
@@ -83,6 +93,7 @@ export function PagarAoParceiro({
     <Cartao>
       <Subtitulo>{visto.parceiro ? `Pagar a ${visto.parceiro}` : "Pagar ao parceiro"}</Subtitulo>
       {visto.frase ? <Text style={{ color: CORES.tinta, fontSize: 14.5, lineHeight: 21 }}>{visto.frase}</Text> : null}
+      {visto.totalEmTexto ? <Text style={{ color: CORES.tinta, fontSize: 14.5, lineHeight: 21, fontWeight: "600" }}>{visto.totalEmTexto}</Text> : null}
       {visto.perfilFiscal ? (
         <Text style={{ color: CORES.suave, fontSize: 13.5 }}>
           {visto.perfilFiscal.guia ? `${visto.perfilFiscal.fatura} · ${visto.perfilFiscal.guia}` : visto.perfilFiscal.fatura}
@@ -94,6 +105,7 @@ export function PagarAoParceiro({
           {p.mbway ? <Dado rotulo="MB WAY" valor={p.mbway} aoCopiar={() => void copiar("MB WAY", p.mbway ?? "")} copiado={copiado === "MB WAY"} /> : null}
         </View>
       ) : null}
+      {visto.semDados ? <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{visto.semDados}</Text> : null}
       <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{SO_PARA_ESTES_DADOS}</Text>
       {visto.opcoes && visto.opcoes.length > 0 ? (
         <View style={{ gap: 6 }}>

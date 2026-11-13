@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,7 +9,9 @@ import { Botao, Caixa, CaixaComErro, CampoDeTexto, FormularioComErros, Mensagem,
 import { escolherFotografias, reduzirFotografiaDaCandidatura } from "../componentes/Fotografias";
 import { VerFotografias } from "../componentes/VerFotografias";
 import { enviarFicheiro, ErroDaApi, errosPorCampo, pedir } from "../lib/api";
-import { errosDaCandidatura, ROTULOS_DA_CANDIDATURA } from "../lib/candidatura";
+import { errosDaCandidatura, ORIGEM_DA_APP, ROTULOS_DA_CANDIDATURA } from "../lib/candidatura";
+import { depoisDeAprovadoDoModelo } from "../../../src/lib/como-funciona-para-o-profissional";
+import { ROTA_DOS_TERMOS, termosLidos } from "../lib/novo-modelo";
 import { SERVICOS_DA_INSCRICAO } from "../lib/conta";
 import {
   AJUDA_DAS_FOTOGRAFIAS_DA_CARRINHA,
@@ -62,6 +64,24 @@ export default function Registo() {
   // O «Falta: …» só depois de tocar em Enviar (o erro do envio de uma fotografia fica só na caixa dela).
   const [tentou, setTentou] = useState(false);
   const [feito, setFeito] = useState(false);
+  /*
+   * O QUE FALTA DEPOIS DE APROVADO, PELO SERVIDOR — d16/d18 (13-11-2026). A parte
+   * pública de `GET /api/profissionais/termos` diz se o modelo de 15-11 está em
+   * vigor (`emVigor`); sem resposta (sem rede, site antigo), o texto de sempre.
+   * Nunca o relógio do telemóvel.
+   */
+  const [noNovoModelo, setNoNovoModelo] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    pedir<unknown>(ROTA_DOS_TERMOS, { semSessao: true })
+      .then((r) => {
+        if (vivo) setNoNovoModelo(termosLidos(r)?.emVigor === true);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   function alternar(id: string) {
     setServicos((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -91,6 +111,8 @@ export default function Registo() {
           servicos,
           mensagem: mensagem.trim() || null,
           fotografiasDoVeiculo: fotografias,
+          // De onde veio (d18): a app, no mesmo molde da origem do site.
+          origem: ORIGEM_DA_APP,
         },
         semSessao: true,
       });
@@ -124,8 +146,8 @@ export default function Registo() {
           <Text style={[estilos.texto, { color: c.tinta }]}>
             Vamos olhar para ela e falamos consigo. Se avançar, recebe no email{" "}
             <Text style={{ fontWeight: "700" }}>{email.trim()}</Text> o link para escolher a sua palavra-passe. Abra-o
-            neste telemóvel: a app abre sozinha e fica logo com a sessão iniciada. O NIF, a morada fiscal e o IBAN
-            preenche-os lá dentro, com calma.
+            neste telemóvel: a app abre sozinha e fica logo com a sessão iniciada.{" "}
+            {depoisDeAprovadoDoModelo(noNovoModelo)}
           </Text>
           <Text style={[estilos.dica, { color: c.suave }]}>
             Não pedimos nada para se inscrever, e responder a pedidos nunca lhe custa nada. Só há taxa da plataforma quando fecha

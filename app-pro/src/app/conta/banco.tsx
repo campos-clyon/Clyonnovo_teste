@@ -12,7 +12,7 @@ import { horaCurta } from "../../lib/trabalhos";
 import { ibanValido } from "../../../../src/lib/iban";
 import { lerMbway } from "../../../../src/lib/mbway";
 // d10: opcional até 15-11-2026, obrigatório depois (o servidor diz) — o mesmo rótulo do painel.
-import { rotuloDoMbway } from "../../../../src/lib/rotulo-do-mbway";
+import { ajudaDoMbway, rotuloDoMbway } from "../../../../src/lib/rotulo-do-mbway";
 import {
   CAMPO_DA_PALAVRA_PASSE,
   camposDePagamentoMudados,
@@ -187,7 +187,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           onChangeText={setMbway}
           keyboardType="phone-pad"
           placeholder="9xx xxx xxx"
-          dica="Outra forma de lhe pagarmos. Pode ser um número diferente do de contacto."
+          dica={ajudaDoMbway(Boolean(perfil.novoModelo))}
           campo="mbway"
         />
       </Caixa>

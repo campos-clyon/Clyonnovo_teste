@@ -77,3 +77,31 @@ export const ROTULOS_DA_CARTEIRA: Record<ChaveDaCarteira, RotuloDaCarteira> = {
     nota: "desde que começou na CLYON",
   },
 };
+
+/**
+ * A CARTEIRA DEPOIS DE 15-11-2026 — d16 (13-11-2026). No modelo novo o cliente
+ * paga ao profissional, e o dinheiro do trabalho deixa de passar pela CLYON: o
+ * que ainda está à espera da confirmação, por receber ou por cobrar é só dos
+ * trabalhos pagos (ou por pagar) à CLYON antes dessa data, e «A pagar à CLYON»
+ * passa a ser a taxa da plataforma e o IVA dela dos trabalhos que o cliente lhe
+ * pagou. Os rótulos não mudam; mudam as notas que falavam do dinheiro na CLYON.
+ *
+ * Quem diz se vale é o SERVIDOR (`novoModelo` da carteira), nunca o relógio do
+ * telemóvel: a app e o painel chamam isto com o que a rota mandou.
+ */
+const NOTAS_NO_NOVO_MODELO: Partial<Record<ChaveDaCarteira, string>> = {
+  porReceber: "trabalhos pagos à CLYON antes de 15 de novembro, já confirmados, que a CLYON ainda lhe vai transferir",
+  aEsperaDaConfirmacao:
+    "trabalhos que o cliente pagou à CLYON antes de 15 de novembro; passam a «Por receber» quando forem confirmados",
+  porCobrar: "trabalhos de antes de 15 de novembro; passa a «Por receber» quando o cliente pagar à CLYON",
+  aPagarAClyon: "a taxa da plataforma e o IVA dela, dos trabalhos que o cliente lhe pagou",
+};
+
+export function rotulosDaCarteira(novoModelo: boolean): Record<ChaveDaCarteira, RotuloDaCarteira> {
+  if (!novoModelo) return ROTULOS_DA_CARTEIRA;
+  const r = { ...ROTULOS_DA_CARTEIRA };
+  for (const [chave, nota] of Object.entries(NOTAS_NO_NOVO_MODELO) as Array<[ChaveDaCarteira, string]>) {
+    r[chave] = { ...r[chave], nota };
+  }
+  return r;
+}

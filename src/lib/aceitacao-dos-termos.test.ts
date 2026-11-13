@@ -143,10 +143,17 @@ describe("a aceitação gravada num profissional de teste", () => {
     expect(consultas.filter((c) => /aceitacoesDosTermos/.test(c) && !/CREATE/.test(c))).toHaveLength(0);
   });
 
-  it("sem sessão, 401", async () => {
+  it("sem sessão: o GET dá só a parte pública (d18, a caixa do definir-senha da app) e o POST 401", async () => {
     const rota = await import("@/app/api/profissionais/termos/route");
     const r = await rota.GET(new NextRequest("https://clyon.pt/api/profissionais/termos"));
-    expect(r.status).toBe(401);
+    expect(r.status).toBe(200);
+    const d = await r.json();
+    expect(d.precisaDeAceitar).toBe(false);
+    expect(d.aceiteEm).toBeNull();
+    expect(typeof d.emVigor).toBe("boolean");
+    expect(Object.keys(d).sort()).toEqual(["aceiteEm", "emVigor", "precisaDeAceitar", "textos", "versao", "versaoPorExtenso"]);
+    const post = await rota.POST(new NextRequest("https://clyon.pt/api/profissionais/termos", { method: "POST", body: JSON.stringify({ aceito: true }) }));
+    expect(post.status).toBe(401);
   });
 });
 

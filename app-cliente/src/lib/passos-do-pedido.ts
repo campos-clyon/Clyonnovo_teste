@@ -82,9 +82,13 @@ type NegociacaoDosPassos = { profissional: { nome: string } } & Pick<
 const concluido = (n: NegociacaoDosPassos | null) => !!n && (n.fase === "confirmado" || n.fase === "pago");
 const cancelado = (p: Pick<PedidoDosPassos, "estadoTexto">) => /^Cancelado/i.test(p.estadoTexto);
 
-/** O pagamento conta como passo? Não quando o cliente paga ao parceiro no local. */
+/**
+ * O pagamento conta como passo? Não quando o cliente paga ao parceiro no local,
+ * nem no modelo de 15-11 (d18), em que paga diretamente ao parceiro e a CLYON não
+ * o regista: o passo ficaria «falta» para sempre.
+ */
 function comPassoDoPagamento(n: NegociacaoDosPassos | null): boolean {
-  return !n?.pagamento?.emDinheiroAoProfissional;
+  return !n?.pagamento?.emDinheiroAoProfissional && !n?.pagamento?.pagaAoParceiro;
 }
 
 /**
@@ -175,7 +179,7 @@ export function momentoDoPedido(p: PedidoDosPassos, n: NegociacaoDosPassos | nul
     return { titulo: `${nome} vai a caminho`, texto: quando ? `Saiu ${quando}.` : null, tom: "marca" };
   }
   const pg = n.pagamento;
-  if (pg && !pg.pago && !pg.emDinheiroAoProfissional && pg.disponivel) {
+  if (pg && !pg.pago && !pg.emDinheiroAoProfissional && !pg.pagaAoParceiro && pg.disponivel) {
     return { titulo: "Falta o pagamento", texto: `${nome} já foi escolhido.`, tom: "aviso" };
   }
   if (n.dataCombinadaTexto) return { titulo: "Dia marcado", texto: n.dataCombinadaTexto, tom: "marca" };

@@ -158,13 +158,14 @@ describe("app Pro: o pagamento vem a caminho, por transferência", () => {
 
   it("com `pagamentoACaminho: \"transferencia\"`, mostra a constante e não o «Pode ir fazer o trabalho…»", () => {
     expect(ecra).toMatch(
-      /t\.clientePagou === false && t\.pagamentoACaminho === "transferencia" \? \(\s*<Mensagem tom="aviso" texto=\{O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA\.inteira\} \/>/,
+      /t\.clientePagou === false && t\.pagamentoACaminho === "transferencia" && t\.noNovoModelo !== true \? \(\s*<Mensagem tom="aviso" texto=\{O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA\.inteira\} \/>/,
     );
     const i = ecra.indexOf("Pode ir fazer o trabalho");
     expect(i).toBeGreaterThan(-1);
     // O «Pode ir…» só sai quando NÃO é uma transferência a caminho.
     const antes = ecra.slice(Math.max(0, i - 400), i);
-    expect(antes).toMatch(/t\.clientePagou === false && t\.pagamentoACaminho !== "transferencia" \? \(/);
+    // d17: e nunca num trabalho do modelo de 15-11 (o cliente paga ao profissional).
+    expect(antes).toMatch(/t\.clientePagou === false && t\.pagamentoACaminho !== "transferencia" && t\.noNovoModelo !== true \? \(/);
   });
 
   it("a app usa a constante (sem a frase à mão), e o painel também", () => {

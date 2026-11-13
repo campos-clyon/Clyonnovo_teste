@@ -22,7 +22,7 @@ import {
 import { diaEmLisboa } from "../../../../src/lib/hora-de-lisboa";
 import { faltasEm, type Perfil } from "../../lib/conta";
 import { horaCurta } from "../../lib/trabalhos";
-import { linhaDoPerfilFiscal } from "../../lib/novo-modelo";
+import { corpoDoRegime, linhaDoPerfilFiscal, regimeInicial, REGIME_POR_CONFIRMAR } from "../../lib/novo-modelo";
 import { ESPACO, LETRA, useCores } from "../../tema";
 
 /**
@@ -74,7 +74,14 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
   const [morada, setMorada] = useState(perfil.moradaFiscal);
   const [codigoPostal, setCodigoPostal] = useState(perfil.codigoPostalFiscal);
   const [localidade, setLocalidade] = useState(perfil.localidadeFiscal);
-  const [regime, setRegime] = useState<"isento" | "normal">(perfil.regimeIva === "normal" ? "normal" : "isento");
+  /*
+   * O REGIME SÓ SE CONFIRMA COM UM TOQUE — d19 (13-11-2026), como no painel. O
+   * site manda o regime vazio enquanto não estiver confirmado: o ecrã começa
+   * sem nenhum marcado, e só um toque numa das duas opções manda `regimeIva` com
+   * `confirmarRegime: true`. Gravar o NIF ou a morada não responde por ele.
+   */
+  const [regime, setRegime] = useState<"isento" | "normal" | "">(regimeInicial(perfil.regimeIva));
+  const [regimeEscolhido, setRegimeEscolhido] = useState(false);
   const [emiteGuia, setEmiteGuia] = useState(perfil.emiteGuiaTransporte);
   const [transportador, setTransportador] = useState(perfil.numeroTransportador);
   const [destino, setDestino] = useState(perfil.destinoDosResiduos ?? "");
@@ -101,7 +108,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
           moradaFiscal: morada.trim(),
           codigoPostalFiscal: codigoPostal.trim(),
           localidadeFiscal: localidade.trim(),
-          regimeIva: regime,
+          ...corpoDoRegime(regime, regimeEscolhido),
           ...(guiaMudou ? { emiteGuiaTransporte: emiteGuia, numeroTransportador: transportador.trim() } : {}),
           // O destino do entulho (d5): só segue quando muda, e só com a guia ligada (como no painel).
           ...(emiteGuia && destino.trim() !== (perfil.destinoDosResiduos ?? "").trim() ? { destinoDosResiduos: destino.trim() } : {}),
@@ -148,20 +155,22 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
             <CampoDeTexto rotulo="Localidade" value={localidade} onChangeText={setLocalidade} campo="localidadeFiscal" />
           </View>
         </View>
-        {/* No modelo de 15-11 (d10) o regime diz ao cliente que fatura recebe: pergunta-se sempre. */}
-        {emiteFatura || perfil.novoModelo ? (
-          <GrupoComErro campo="regimeIva">
-            <Text style={{ color: c.tinta, fontWeight: "600" }}>Regime de IVA</Text>
-            <Escolhas
-              opcoes={[
-                { valor: "isento", rotulo: "Isento (art. 53.º)" },
-                { valor: "normal", rotulo: "Normal — 23 %" },
-              ]}
-              valor={regime}
-              aoEscolher={setRegime}
-            />
-          </GrupoComErro>
-        ) : null}
+        {/* O regime a toda a gente (d19): já não fica escondido atrás de «Emito fatura». */}
+        <GrupoComErro campo="regimeIva">
+          <Text style={{ color: c.tinta, fontWeight: "600" }}>Regime de IVA</Text>
+          {regime === "" ? <Text style={{ color: c.aviso, fontSize: LETRA.pequena + 1 }}>{REGIME_POR_CONFIRMAR}</Text> : null}
+          <Escolhas<"isento" | "normal" | "">
+            opcoes={[
+              { valor: "isento", rotulo: "Isento (art. 53.º)" },
+              { valor: "normal", rotulo: "Normal — 23 %" },
+            ]}
+            valor={regime}
+            aoEscolher={(v) => {
+              setRegime(v);
+              setRegimeEscolhido(true);
+            }}
+          />
+        </GrupoComErro>
       </Caixa>
 
       <Caixa>

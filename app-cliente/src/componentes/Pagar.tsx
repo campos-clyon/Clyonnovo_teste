@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "./Texto";
 import { RolagemComTeclado } from "./Teclado";
 import { Preco, PrecoEmLinhas } from "./Preco";
+import { PagarAoParceiro } from "./PagarAoParceiro";
 import { Aviso, Botao, Campo, Cartao, Carregando, Ligacao, Paragrafo, Subtitulo } from "./ui";
 import { mensagemDe, pedir } from "../lib/api";
 import { whatsappDaClyon } from "../lib/abrir";
@@ -308,7 +309,10 @@ export function EcraDePagar({ pedidoId }: { pedidoId: number }) {
           )}
         </View>
 
-        {estado.tipo === "pago" ? (
+        {estado.tipo === "ao-parceiro" ? (
+          // O modelo de 15-11 (d18): paga diretamente ao parceiro — o IBAN, o MB WAY, como paga e as duas faturas.
+          <PagarAoParceiro pedidoId={pedidoId} negociacaoId={n.id} daR5={pg.aoParceiro} />
+        ) : estado.tipo === "pago" ? (
           <View style={{ gap: 14 }}>
             <Aviso tom="bom" texto={pagoNaData(estado.quando)} />
             <Botao titulo="Voltar ao pedido" tipo="secundario" aoCarregar={() => router.back()} />
@@ -442,6 +446,7 @@ export function ResumoDoPagamento({
   if (!pg || !estado) return null;
   // O modelo de 15-11 (d10): paga diretamente ao parceiro — o bloco «Pagar a …» diz como (`PagarAoParceiro`).
   if (pg.pagaAoParceiro) return null;
+  if (estado.tipo === "ao-parceiro") return null;
   const irPagar = () => (aoCriarConta ? aoCriarConta() : router.push(`/pagar/${pedidoId}`));
 
   return (

@@ -2,6 +2,7 @@ import {
   IBAN_E_MBWAY_OBRIGATORIOS_ATE,
   IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
   NOVO_MODELO_DESDE,
+  NOVO_MODELO_DESDE_POR_EXTENSO,
   REGIME_DE_IVA_OBRIGATORIO,
   novoModeloEmVigor,
 } from "./novo-modelo";
@@ -97,6 +98,17 @@ function lista(falta: DadoParaReceber[]): string {
 /** Os quatro, numa frase («o IBAN, o titular da conta, o número MB WAY e o regime de IVA») — d16. */
 export const OS_DADOS_PARA_RECEBER_EM_PALAVRAS = lista(["iban", "titular", "mbway", "regime"]);
 
+/**
+ * A FAIXA DOS 7 DIAS — d18 (13-11-2026), o texto revisto pelo CEO (d11 v2,
+ * «Faixa no painel e na app»). O painel e a app CLYON Pro mostram a mesma
+ * frase, que vem daqui pela rota (`novoModelo.dadosParaReceber.frase`); o botão
+ * ao lado é «Completar o perfil».
+ */
+export const FAIXA_DOS_DADOS_PARA_RECEBER =
+  `A partir de ${NOVO_MODELO_DESDE_POR_EXTENSO} recebe diretamente do cliente. Até ${IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO}, ` +
+  "complete no perfil o IBAN, o titular, o MB WAY e o regime de IVA (escolha e grave).";
+export const COMPLETAR_O_PERFIL = "Completar o perfil";
+
 export function estadoDosDadosParaReceber(
   p: ProfissionalComDadosParaReceber,
   agora: Date = new Date(),
@@ -106,14 +118,7 @@ export function estadoDosDadosParaReceber(
   if (falta.length === 0) return { estado: "completos" };
   const naTransicao = aprovadoAntesDoNovoModelo(p) && agora.getTime() <= IBAN_E_MBWAY_OBRIGATORIOS_ATE.getTime();
   if (naTransicao) {
-    return {
-      estado: "aviso",
-      falta,
-      ate: IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
-      frase:
-        `Os clientes passam a pagar-lhe diretamente. Preencha no seu perfil ${lista(falta)} até ` +
-        `${IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO}: a partir daí, sem eles, não pode aceitar pedidos nem enviar propostas.`,
-    };
+    return { estado: "aviso", falta, ate: IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO, frase: FAIXA_DOS_DADOS_PARA_RECEBER };
   }
   return {
     estado: "impede",

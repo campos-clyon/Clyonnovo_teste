@@ -7,7 +7,7 @@ import { Caixa, TituloDaCaixa } from "../../componentes/ui";
 import { useConta } from "../../estado/Conta";
 import { faltasEm, type SeccaoComFalta } from "../../lib/conta";
 import {
-  COMO_RECEBE,
+  comoRecebeDoModelo,
   O_QUE_A_CLYON_NAO_FAZ,
   PASSOS_DO_PROFISSIONAL,
 } from "../../../../src/lib/como-funciona-para-o-profissional";
@@ -57,7 +57,8 @@ export default function ComoFunciona() {
 
       <Caixa>
         <TituloDaCaixa>Como recebe</TituloDaCaixa>
-        {COMO_RECEBE.map((r) => (
+        {/* d16: pelo `novoModelo` que o servidor mandou no perfil, nunca pelo relógio do telemóvel. */}
+        {comoRecebeDoModelo(perfil?.novoModelo != null).map((r) => (
           <View key={r.forma} style={{ gap: 2 }}>
             <Text style={{ color: c.tinta, fontWeight: "700" }}>{r.forma}</Text>
             <Text style={{ color: c.suave, lineHeight: 21 }}>{r.texto}</Text>

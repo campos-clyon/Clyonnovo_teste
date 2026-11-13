@@ -20,8 +20,9 @@ import {
 } from "../../lib/conta";
 import { euros } from "../../lib/trabalhos";
 import { LinhaDoMovimento } from "../../componentes/LinhaDoMovimento";
-import { PROMESSA } from "../../../../src/lib/pagamento-na-plataforma";
+import { PROMESSA, PROMESSA_DO_NOVO_MODELO } from "../../../../src/lib/pagamento-na-plataforma";
 import { ROTULOS_DA_CARTEIRA as R } from "../../../../src/lib/rotulos-da-carteira";
+import { rotulosDaCarteira } from "../../../../src/lib/rotulos-da-carteira";
 import {
   faltaDaDivida,
   fraseDaDividaEmMao,
@@ -108,6 +109,15 @@ function Conteudo({
   // O modelo de 15-11 (d10): o valor em atraso tem a sua caixa; sai da lista antiga das dívidas.
   const doValorEmAtraso = negociacoesDoValorEmAtraso(dados.novoModelo);
   const dividasAbertas = dados.dividas.filter((d) => !d.paga && !d.abatida && !doValorEmAtraso.has(d.negociacaoId));
+  /*
+   * O MODELO DE 15-11 PELO SERVIDOR — d16 (13-11-2026): com o `novoModelo` da
+   * carteira, as notas que falavam do dinheiro na CLYON dizem que são dos
+   * trabalhos de antes da data, e a promessa de «como recebe» é a nova. Nunca
+   * pelo relógio do telemóvel.
+   */
+  const noNovoModelo = dados.novoModelo != null;
+  const R = rotulosDaCarteira(noNovoModelo);
+  const promessa = noNovoModelo ? PROMESSA_DO_NOVO_MODELO : PROMESSA;
   const porReceber = dados.resumo?.porReceber ?? Math.round((k.disponivel + k.aCaminho) * 100) / 100;
 
   return (
@@ -164,7 +174,8 @@ function Conteudo({
       {!dados.temIban ? (
         <Caixa estilo={{ borderColor: c.aviso }}>
           <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>
-            <Text style={{ fontWeight: "800" }}>Falta o IBAN.</Text> Sem ele não há para onde transferir o seu saldo.
+            <Text style={{ fontWeight: "800" }}>Falta o IBAN.</Text>{" "}
+            {noNovoModelo ? "É para ele que o cliente lhe paga por transferência." : "Sem ele não há para onde transferir o seu saldo."}
           </Text>
           <Botao titulo="Indicar o IBAN" tipo="secundario" aoCarregar={() => router.push("/conta/banco" as never)} />
         </Caixa>
@@ -208,8 +219,8 @@ function Conteudo({
       ) : null}
 
       <Caixa>
-        <TituloDaCaixa>{PROMESSA.proTitulo}</TituloDaCaixa>
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{PROMESSA.proCorpo}</Text>
+        <TituloDaCaixa>{promessa.proTitulo}</TituloDaCaixa>
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{promessa.proCorpo}</Text>
       </Caixa>
     </>
   );

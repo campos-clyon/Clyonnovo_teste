@@ -1,5 +1,8 @@
 import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO } from "./novo-modelo";
 
+/** Os 4 dias, para a app CLYON Pro (que não importa novo-modelo.ts: não tem a data). */
+export { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO };
+
 /**
  * O VALOR EM ATRASO E O STAND-BY — d10, desde 15-11-2026 (dono, 12-11-2026).
  *

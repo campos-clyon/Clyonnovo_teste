@@ -9,6 +9,7 @@ import { BordaABrilhar } from "../../componentes/BordaABrilhar";
 import { VersaoNova } from "../../componentes/VersaoNova";
 import { OQueHaDeNovo } from "../../componentes/Novidades";
 import { AvisosDoNovoModelo } from "../../componentes/AvisosDoNovoModelo";
+import { AceitarOsTermos } from "../../componentes/AceitarOsTermos";
 import { dataEHora } from "../../../../src/lib/historico-negociacao";
 import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
@@ -162,6 +163,8 @@ export default function Trabalhos() {
           <>
             <VersaoNova />
             <OQueHaDeNovo />
+            {/* d20: os Termos de 15-11 no primeiro acesso depois da data — só se o servidor disser. */}
+            <AceitarOsTermos />
             {/*
               Os pedidos novos não são avisos (d13): no máximo UMA linha
               discreta, e os cartões deles com «Novo». Nunca uma pilha.

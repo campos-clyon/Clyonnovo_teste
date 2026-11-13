@@ -291,6 +291,19 @@ const COMO_RECEBE_NO_NOVO_MODELO: Array<{ forma: string; texto: string }> = [
   },
 ];
 
+/**
+ * Como recebe, pelo que o SERVIDOR diz (d16, 13-11-2026): a app CLYON Pro não
+ * tem relógio do modelo — escolhe pelo `novoModelo` do perfil ou da carteira.
+ */
+export function comoRecebeDoModelo(novoModelo: boolean): Array<{ forma: string; texto: string }> {
+  return novoModelo ? COMO_RECEBE_NO_NOVO_MODELO : COMO_RECEBE_NO_MODELO_ANTIGO;
+}
+
+/** O que falta depois de aprovado, pelo que o servidor diz (d16) — o ecrã de sucesso da candidatura na app. */
+export function depoisDeAprovadoDoModelo(novoModelo: boolean): string {
+  return novoModelo ? DEPOIS_DE_APROVADO_NO_NOVO_MODELO : DEPOIS_DE_APROVADO_NO_MODELO_ANTIGO;
+}
+
 /** Como recebe, pela data. */
 export function comoRecebe(agora: Date = new Date()): Array<{ forma: string; texto: string }> {
   return novoModeloEmVigor(agora) ? COMO_RECEBE_NO_NOVO_MODELO : COMO_RECEBE_NO_MODELO_ANTIGO;

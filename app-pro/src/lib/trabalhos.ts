@@ -153,6 +153,13 @@ export type Trabalho = {
    * não o manda.
    */
   pagamentoACaminho?: "transferencia" | null;
+  /**
+   * O TRABALHO SEGUE O MODELO DE 15-11 — d17 (13-11-2026), decidido no servidor
+   * (`noNovoModelo` de `GET /api/profissionais/meus-pedidos`, com `clientePagou:
+   * null` e `pagamentoACaminho: null`). O cliente paga-lhe a ele: nunca se diz
+   * «o cliente ainda não pagou à CLYON». Opcional: um site antigo não o manda.
+   */
+  noNovoModelo?: boolean;
   /** O que uma carga vale na carrinha dele, num pedido por carga (`carga-da-carrinha.ts`). */
   cargaNaSuaCarrinha: { titulo: string; texto: string; curto: string } | null;
   /** Para o histórico da negociação: quando o cliente avaliou, e com quantas estrelas. */

@@ -43,3 +43,13 @@ export function errosDaCandidatura(c: {
   if (c.fotografias.length === 0) erros.fotografias = MENSAGEM_SEM_FOTOGRAFIA;
   return erros;
 }
+
+/**
+ * A ORIGEM DA CANDIDATURA FEITA NA APP — d18 (13-11-2026). O site manda a origem
+ * da visita (`origemParaACandidatura`); a app não tem visita, mas diz que veio
+ * dela, no mesmo molde (`OrigemDaCandidatura`, src/lib/origem-da-candidatura.ts):
+ * o código «O0» (outro canal, entrou direto na candidatura) e a fonte
+ * «app-clyon-pro». O servidor limpa-a com `limparOrigemDaCandidatura`, como a do
+ * site — há um teste que o confirma. Nada aqui identifica a pessoa.
+ */
+export const ORIGEM_DA_APP = { codigo: "O0", utm_source: "app-clyon-pro", utm_medium: "app" } as const;

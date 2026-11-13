@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sessaoVemDaApp, tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
+import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import {
@@ -39,7 +40,30 @@ async function estado(providerId: number, agora: Date) {
   };
 }
 
+/**
+ * SEM SESSÃO NENHUMA — d18 (13-11-2026): o ecrã de criar a palavra-passe da app
+ * ainda não tem sessão e precisa de saber, pelo servidor e nunca pelo relógio do
+ * telemóvel, se a caixa dos Termos aparece. Vai só o que é público (a versão, se
+ * está em vigor e os textos); nada de um profissional. Um token que não vale
+ * continua a dar 401.
+ */
+function semToken(req: NextRequest): boolean {
+  return !req.headers.get("authorization") && !tokenDoProfissional(req);
+}
+
 export async function GET(req: NextRequest) {
+  if (semToken(req)) {
+    const limite = await limitarRotaPublica(req, "termos-sem-sessao", 30, 300);
+    if (limite.erro) return limite.erro;
+    return NextResponse.json({
+      versao: VERSAO_DOS_TERMOS,
+      versaoPorExtenso: VERSAO_DOS_TERMOS_POR_EXTENSO,
+      emVigor: novoModeloEmVigor(agoraDoModelo()),
+      aceiteEm: null,
+      precisaDeAceitar: false,
+      textos: TEXTOS_DA_ACEITACAO,
+    });
+  }
   const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   try {

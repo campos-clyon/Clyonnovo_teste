@@ -14,7 +14,7 @@
 import { mensagemDaTrocaDeParceiro, mensagemDoProblema } from "../../../src/lib/frases-do-pedido";
 import type { PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 import type { TransferenciaParaOCliente } from "../../../src/lib/transferencia-bancaria";
-import type { NovoModeloDaNegociacao } from "./pagar-ao-parceiro";
+import type { NovoModeloDaNegociacao, VistoDoPagarAoParceiro } from "./pagar-ao-parceiro";
 
 export const ROTA_DOS_PEDIDOS = "/api/cliente/pedidos";
 export const ROTA_DO_PEDIDO = (id: number) => `/api/cliente/pedidos/${id}`;
@@ -208,6 +208,13 @@ export type Pagamento = {
    * para onde. Falso (ou ausente) antes da data e num site antigo.
    */
   pagaAoParceiro?: boolean;
+  /**
+   * O BLOCO «PAGAR A …» JÁ NA R5 — d17/d18 (13-11-2026): o mesmo que
+   * `GET /api/pagamentos/ao-parceiro` devolve (o total pelo regime do parceiro,
+   * as duas faturas, o IBAN, o titular e o MB WAY, como pagar e as faturas).
+   * `null` fora do modelo novo; ausente num site antigo (a app pergunta à rota).
+   */
+  aoParceiro?: VistoDoPagarAoParceiro | null;
   ivaIncluido: boolean;
   valoresTexto: { comFactura: string; semFactura: string };
   /** «Serviço / IVA / Total a pagar», já escrito pela API (02-11-2026). Só com IVA incluído; um site antigo não o manda. */
@@ -365,6 +372,22 @@ export type Negociacao = {
   materiaisTexto?: string | null;
   /** O modelo de 15-11-2026 (d10): o tipo de fatura do parceiro, para escolher. `null` antes da data. */
   novoModelo?: NovoModeloDaNegociacao | null;
+  /**
+   * «O TRABALHO JÁ FOI FEITO?» — d15 (13-11-2026). O servidor pergunta ao cliente
+   * quando o parceiro não deu o trabalho por feito; responde-se pela R8 com
+   * `{ accao, negociacaoId, resposta: "sim" | "nao" }`. `null` quando não se aplica.
+   */
+  perguntaDoFecho?: PerguntaDoFecho | null;
+};
+
+/** A pergunta do fecho, com os textos já escritos pelo servidor (`perguntaDoFechoParaOCliente`). */
+export type PerguntaDoFecho = {
+  negociacaoId: number;
+  accao: string;
+  pergunta: string;
+  explicacao: string;
+  sim: string;
+  nao: string;
 };
 
 export type Pedido = {
@@ -824,3 +847,11 @@ export const TEXTOS_DAS_MENSAGENS = {
   enviada: "Resposta enviada. A CLYON continua com o seu pedido.",
   escrever: "Escrever à CLYON",
 } as const;
+
+/**
+ * O corpo da resposta a «O trabalho já foi feito?» (d15): a acção que o servidor
+ * mandou na pergunta, a negociação e «sim» ou «nao» — pela R8.
+ */
+export function corpoDoFecho(pedidoId: number, p: Pick<PerguntaDoFecho, "accao" | "negociacaoId">, resposta: "sim" | "nao") {
+  return { pedidoId, negociacaoId: p.negociacaoId, accao: p.accao, resposta };
+}

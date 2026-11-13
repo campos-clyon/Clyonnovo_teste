@@ -1,14 +1,16 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Linking, Pressable, StyleSheet, View } from "react-native";
 import { RolagemComTeclado } from "../../componentes/Teclado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, TextInput } from "../../componentes/Texto";
 import { Botao, Mensagem } from "../../componentes/ui";
 import { useSessao } from "../../estado/Sessao";
-import { ErroDaApi, pedir } from "../../lib/api";
+import { ErroDaApi, pedir, SITE } from "../../lib/api";
 import { MINIMO_DA_PALAVRA_PASSE } from "../../../../src/lib/palavra-passe-minima";
+import { CaixaDeMarcar } from "../../componentes/AceitarOsTermos";
+import { aceitaTermosNoCorpo, ROTA_DOS_TERMOS, termosLidos, type EstadoDosTermos } from "../../lib/novo-modelo";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 /**
@@ -37,6 +39,25 @@ export default function DefinirSenha() {
   // a palavra-passe — o link é de uso único. Como no site, leva-o à entrada.
   const [jaUsado, setJaUsado] = useState(false);
   const [feito, setFeito] = useState(false);
+  /*
+   * A CAIXA DOS TERMOS — d20 (13-11-2026). Por baixo da palavra-passe, nunca
+   * marcada, e só quando o SERVIDOR diz que os Termos de 15-11 estão em vigor
+   * (`GET /api/profissionais/termos` sem sessão: só a parte pública). Marcada,
+   * `aceitaTermos` leva a versão; sem ela a palavra-passe guarda-se na mesma.
+   */
+  const [termos, setTermos] = useState<EstadoDosTermos | null>(null);
+  const [aceitaTermos, setAceitaTermos] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    pedir<unknown>(ROTA_DOS_TERMOS, { semSessao: true })
+      .then((r) => {
+        if (vivo) setTermos(termosLidos(r));
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   // Só depois de a sessão chegar ao `_layout`: antes disso os trabalhos ainda
   // estão guardados, e ir para lá dava em nada.
@@ -56,7 +77,7 @@ export default function DefinirSenha() {
     try {
       const r = await pedir<{ nome: string; token: string }>("/api/profissionais/definir-senha", {
         metodo: "POST",
-        corpo: { token, palavraPasse, paraApp: true },
+        corpo: { token, palavraPasse, paraApp: true, ...aceitaTermosNoCorpo(termos, aceitaTermos) },
         semSessao: true,
       });
       await entrarComToken(r.token, r.nome);
@@ -124,6 +145,14 @@ export default function DefinirSenha() {
                 {ligado ? "Voltar aos trabalhos" : "Entrar, ou pedir um link novo"}
               </Text>
             </Pressable>
+          ) : null}
+          {termos?.emVigor ? (
+            <View style={{ gap: ESPACO.xs }}>
+              <CaixaDeMarcar texto={termos.textos.caixaDaPalavraPasse} marcada={aceitaTermos} aoMudar={setAceitaTermos} />
+              <Pressable onPress={() => void Linking.openURL(`${SITE}${termos.textos.url}`)} accessibilityRole="link" hitSlop={6}>
+                <Text style={{ color: c.marca, fontSize: LETRA.pequena + 1, fontWeight: "600" }}>{termos.textos.ligacao}</Text>
+              </Pressable>
+            </View>
           ) : null}
           <Botao titulo="Guardar e entrar" aoCarregar={aoGuardar} ocupado={aGuardar} />
         </View>
