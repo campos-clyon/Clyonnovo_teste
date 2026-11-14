@@ -15,6 +15,11 @@
   ],
   "cliente": [
     {
+      "id": "cliente-2026-11-14",
+      "nota": "A partir de 15/11 paga diretamente ao parceiro que escolher: vê como ele fatura, o IBAN ou o MB WAY para lhe pagar, e as duas faturas ficam no pedido.",
+      "updates": []
+    },
+    {
       "id": "cliente-2026-11-13",
       "nota": "Agora cada atualização diz o que traz, antes de reiniciar e logo a seguir.",
       "updates": [
