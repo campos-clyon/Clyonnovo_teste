@@ -43,6 +43,7 @@ import http from "node:http";
 import path from "node:path";
 import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
+import { deveSairAgora, CODIGO_DA_SAIDA_DIARIA } from "./saida-diaria.js";
 
 const { Client, LocalAuth } = pkg;
 
@@ -553,7 +554,7 @@ saude.emparelhadaSemFicarProntaHa = () => (emparelhadaDesde ? Date.now() - empar
 const PRAZO_PARA_FICAR_PRONTA_MS = 10 * 60_000;
 
 async function rondaDaFila() {
-  if (!ligado) return;
+  if (!ligado || aSair) return;
   if (aBuscar) {
     const presaHa = Date.now() - aBuscarDesde;
     if (presaHa < TRANCA_PRESA_MS) return;
@@ -771,6 +772,48 @@ setInterval(() => {
 }, 60_000).unref();
 
 /**
+ * A SAÍDA DIÁRIA — 14-11-2026 (d24). Ver `saida-diaria.js`.
+ *
+ * O Chromium engorda desde cada arranque, e o Railway cobra a memória. Uma
+ * vez por dia, entre as 04h00 e as 04h59 DE LISBOA, a ponte sai com ordem e o
+ * Railway levanta-a de novo; a sessão fica no volume e volta a ligar sem
+ * emparelhar.
+ *
+ * Com ordem quer dizer: só quando não está a meio de nada (envio, ronda,
+ * mensagem a tratar, retrato) — senão adia para o minuto seguinte; pára a
+ * ronda, espera pelo despacho em curso, e fecha o Chromium com `destroy`
+ * (que fecha o navegador e grava o perfil, sem terminar a sessão — terminar
+ * seria `logout`). Nunca sai se arrancou há menos de uma hora.
+ */
+let aSair = false;
+let mensagensATratar = 0;
+const ARRANCOU_EM = Date.now();
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms).unref());
+
+async function saidaDiaria() {
+  if (aSair) return;
+  const ocupada =
+    Boolean(despachoDesde) || aBuscar || aRetratar || mensagensATratar > 0 || aEnviarAgora.size > 0;
+  if (!deveSairAgora({ agora: Date.now(), arrancouEm: ARRANCOU_EM, ocupada })) return;
+  aSair = true;
+  log("=====================================================");
+  log("SAÍDA DIÁRIA (04h de Lisboa): a fechar o WhatsApp com ordem para o Railway levantar de novo.");
+  log("A sessão fica no volume — volta a ligar sem emparelhar.");
+  log("=====================================================");
+  await Promise.race([despachando, esperar(2 * 60_000)]);
+  ligado = false;
+  try {
+    await Promise.race([client?.destroy(), esperar(60_000)]);
+  } catch (e) {
+    log("o Chromium não fechou limpo:", e.message);
+  }
+  log("a sair com o código", CODIGO_DA_SAIDA_DIARIA);
+  process.exit(CODIGO_DA_SAIDA_DIARIA);
+}
+
+setInterval(() => void saidaDiaria(), 60_000).unref();
+
+/**
  * Apagar as trancas que o Chromium deixa no perfil.
  *
  * O Chromium tranca a pasta do perfil para dois processos não escreverem lá ao
@@ -904,6 +947,8 @@ async function arrancar() {
 
   client.on("disconnected", (motivo) => {
     ligado = false;
+    // A sair de propósito (saída diária): não se religa, o Railway levanta-a.
+    if (aSair) return;
     // O arranque que vem a seguir volta a pôr o cronómetro no «emparelhado».
     emparelhadaDesde = 0;
     log("desligado:", motivo, "— a reiniciar em 5 s");
@@ -919,6 +964,8 @@ async function arrancar() {
    * e nesse caso o site cala o cérebro nesse número até alguém o devolver.
    */
   client.on("message_create", async (msg) => {
+    // Conta-se para a saída diária não cortar uma mensagem a meio.
+    mensagensATratar += 1;
     try {
       const chatId = msg.fromMe ? msg.to : msg.from;
       if (typeof chatId !== "string" || chatId.endsWith("@g.us") || chatId === "status@broadcast") {
@@ -1046,6 +1093,8 @@ async function arrancar() {
       if (r?.meu) await despachar(r.paraEnviar);
     } catch (e) {
       log("ao tratar uma mensagem:", e.message);
+    } finally {
+      mensagensATratar -= 1;
     }
   });
 

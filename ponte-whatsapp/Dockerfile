@@ -23,7 +23,7 @@ WORKDIR /app
 # versão é um commit ao lock, nunca uma surpresa num deploy.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
-COPY index.js ./
+COPY index.js saida-diaria.js ./
 
 # O emparelhamento fica em /app/auth. O volume monta-se no painel do Railway,
 # que recusa a instrução VOLUME aqui dentro ("use Railway Volumes"). Sem esse
