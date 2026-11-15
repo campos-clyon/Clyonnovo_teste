@@ -181,7 +181,8 @@ describe("o ecrã do pedido e a lista", () => {
     const v = ler("componentes/VistaDoPedido.tsx");
     expect(v).toContain("{momento ? <MomentoDoPedido momento={momento} /> : null}");
     expect(v).toContain("{passos ? <PassosDoPedido passos={passos} /> : null}");
-    expect(v).toContain("{momento ? null : <Etiqueta texto={p.estadoTexto} />}");
+    // d39: com o valor único, o cartão dele também tira a pílula.
+    expect(v).toContain("{momento || valorUnico ? null : <Etiqueta texto={p.estadoTexto} />}");
     expect(v.indexOf("<MomentoDoPedido")).toBeLessThan(v.indexOf("<Mensagens "));
     expect(ler("componentes/Acompanhar.tsx")).toContain("n.viagemTexto && !n.execucaoEnviadaEm && !semViagem");
   });

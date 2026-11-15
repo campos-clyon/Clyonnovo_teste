@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-15-2",
+      "nota": "Na Ajuda, as respostas sobre pagamentos seguem a forma de pagamento em vigor na sua conta.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-15",
       "nota": "Na Agenda pode marcar os dias e as horas em que não pode trabalhar — não recebe pedidos para esses dias.",
       "updates": [
@@ -21,6 +26,11 @@
     }
   ],
   "cliente": [
+    {
+      "id": "cliente-2026-11-15",
+      "nota": "Quando a CLYON lhe envia um orçamento, o pedido mostra o valor com e sem IVA e um botão para aceitar na conversa com a CLYON.\nE ao pagar ao parceiro avisa se os dados de pagamento dele mudaram.",
+      "updates": []
+    },
     {
       "id": "cliente-2026-11-14",
       "nota": "Quando o pagamento for feito diretamente ao parceiro, o pedido mostra a quem e como pagar, o total e as duas faturas, e pergunta-lhe se o trabalho já foi feito.",

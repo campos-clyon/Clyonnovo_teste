@@ -11,6 +11,7 @@
  * Puro de propósito (sem Expo nem React Native): os testes do site importam-no
  * e comparam-no com o que as rotas devolvem.
  */
+import { valorUnicoDe, type ValorUnico } from "./valor-unico";
 import { mensagemDaTrocaDeParceiro, mensagemDoProblema } from "../../../src/lib/frases-do-pedido";
 import type { PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 import type { TransferenciaParaOCliente } from "../../../src/lib/transferencia-bancaria";
@@ -413,6 +414,8 @@ export type Pedido = {
   accoes?: string[];
   precoAceiteEm?: string | null;
   precoAceiteEmTexto?: string | null;
+  /** d39: o valor único que a CLYON lhe enviou (título, valor com o IVA ao lado, quem faz); null nos outros pedidos. */
+  valorUnico?: ValorUnico | null;
 };
 
 export type TextosDoPedido = {
@@ -486,6 +489,8 @@ export function textoDeContratar(n: Negociacao): { titulo: string; texto: string
 export function textoDaEspera(r: Pick<RespostaDoPedido, "pedido" | "negociacoes"> & { textos?: Partial<TextosDoPedido> }): string | null {
   if (r.pedido.trabalhoClyon || r.negociacoes.some((n) => n.estado === "acordada")) return null;
   if (propostasEmAberto(r).length > 0) return null;
+  // d39: com o valor único, o cartão dele é o estado — nunca «ainda sem propostas».
+  if (valorUnicoDe(r.pedido)) return null;
   if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Concluído") return null;
   if (r.pedido.estadoTexto === "À espera de propostas") {
     // A frase do site, com o prazo (d8, 31-10-2026), vem da R5; um site antigo não a manda.

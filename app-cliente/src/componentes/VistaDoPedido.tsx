@@ -54,6 +54,7 @@ import {
 } from "../lib/pedidos";
 import { intervaloDeLeitura, momentoDoPedido, passosDoPedido } from "../lib/passos-do-pedido";
 import { valeAPenaLer } from "../lib/escolhidos-sem-resposta";
+import { ACEITAR, mensagemDeAceitar, PARA_ACEITAR, valorUnicoParaMostrar } from "../lib/valor-unico";
 import { CORES } from "../tema";
 import { PEDIR_TROCA_DE_PARCEIRO } from "../../../src/lib/frases-do-pedido";
 
@@ -305,6 +306,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
   const contratada = contratadaDe(r) as NegociacaoV3 | null;
   const propostas = propostasEmAberto(r) as NegociacaoV3[];
   const espera = textoDaEspera(r);
+  // d39: o valor único que a CLYON lhe enviou — em vez das propostas, até a CLYON escolher o parceiro.
+  const valorUnico = valorUnicoParaMostrar(r);
   const alteracoes = p.alteracoes ?? null;
   const acesso =
     typeof p.acesso === "string" ? p.acesso : p.acesso ? [p.acesso.origem && `Origem: ${p.acesso.origem}`, p.acesso.destino && `Destino: ${p.acesso.destino}`].filter(Boolean).join("\n") : null;
@@ -341,7 +344,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         <Titulo>{p.servico}</Titulo>
         <Text style={{ color: CORES.suave, fontSize: 13.5 }}>{cabecalho}</Text>
         {/* Com o aviso do momento, a pílula do estado repetia-o em cor discreta: sai (02-11-2026). */}
-        {momento ? null : <Etiqueta texto={p.estadoTexto} />}
+        {/* Com o valor único, o cartão dele diz o momento: a pílula («À espera de propostas») sai (d39). */}
+        {momento || valorUnico ? null : <Etiqueta texto={p.estadoTexto} />}
       </View>
 
       {/* O aviso do momento, em cor forte, e o passo a passo (02-11-2026). */}
@@ -379,6 +383,20 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         releitura={releitura}
         aoMudar={depoisDeAgir}
       />
+
+      {/*
+        O VALOR ÚNICO (d39, 15-11-2026): o título, o valor (com o IVA e o sem IVA ao lado) e quem faz vêm da rota.
+        Sem lista de parceiros. Aceitar é responder SIM à CLYON — a app não aceita sozinha (o servidor recusa-o).
+      */}
+      {valorUnico ? (
+        <Cartao destaque>
+          <Subtitulo>{valorUnico.titulo}</Subtitulo>
+          <Text titulo style={{ color: CORES.tinta, fontSize: 18, fontWeight: "700" }}>{valorUnico.valor}</Text>
+          <Paragrafo pequeno suave>{valorUnico.quemFaz}</Paragrafo>
+          <Paragrafo pequeno suave>{PARA_ACEITAR}</Paragrafo>
+          <Botao titulo={ACEITAR} tipo="whatsapp" aoCarregar={() => whatsappDaClyon(mensagemDeAceitar(p.id))} />
+        </Cartao>
+      ) : null}
 
       {/* a) À espera. */}
       {espera ? (
