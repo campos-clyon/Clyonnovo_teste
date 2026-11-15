@@ -1063,7 +1063,7 @@ export default function AdminCarteirasPanel() {
             </p>
             {/* Numa mudança, a folha final (d38 v2) no lugar do valor à mão. */}
             {isMudancaType(aCorrigir.t.servico) ? (
-              <FolhaFinalDaMudanca pedidoId={aCorrigir.t.pedidoId} negociacaoId={aCorrigir.t.negociacaoId} onGravado={() => void carregar(true)} />
+              <FolhaFinalDaMudanca pedidoId={aCorrigir.t.pedidoId} negociacaoId={aCorrigir.t.negociacaoId} onGravado={() => void carregar(true)} comEnvioAoCliente={false} />
             ) : (<>
             <p className="mt-3 text-xs text-slate-500">
               Estava acordado {euros(aCorrigir.t.valorAcordado)}. O que ficar aqui

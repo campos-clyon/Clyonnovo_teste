@@ -37,6 +37,7 @@ import {
 import { tarifaCongeladaDeJson } from "@/lib/conta-da-mudanca";
 import { marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 import { contextoDaFolhaFinal, folhaFinalParaOEcra, folhaFinalPelaEquipa } from "@/lib/folha-final-no-servidor";
+import { valorFinalAoCliente } from "@/lib/valor-final-no-servidor";
 
 export const runtime = "nodejs";
 
@@ -69,7 +70,11 @@ export const runtime = "nodejs";
  *     `precoHora`, a deslocação (`deslocacaoTipo` «km» com `km`/`precoKm`,
  *     ou «euros» com `deslocacaoEuros`), `materiais` [{descricao, valor}] e
  *     `motivo` (obrigatório se o profissional já foi pago). Com
- *     `previsualizar: true` só devolve a conta. Ver folha-final.ts.
+ *     `previsualizar: true` só devolve a conta. Ver folha-final.ts;
+ *   · «valor_final_ao_cliente» (d38 v2, commit d) — o «Enviar o valor final ao
+ *     cliente»: com `previsualizar: true` a conta e a mensagem; sem ele envia
+ *     pelo `canal` («whatsapp», «email», «ambos»), com `oQueMudou` se a equipa o
+ *     juntar. Ver valor-final-no-servidor.ts.
  */
 
 /** As frases do histórico da folha preenchida pela equipa (d26): a que a equipa lê e a que o cliente lê. */
@@ -208,6 +213,9 @@ export async function POST(req: NextRequest) {
     deslocacaoEuros?: unknown;
     previsualizar?: unknown;
     motivo?: unknown;
+    /** «valor_final_ao_cliente» (d38 v2, commit d). */
+    canal?: unknown;
+    oQueMudou?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -218,11 +226,33 @@ export async function POST(req: NextRequest) {
   const negociacaoId = Number(corpo.negociacaoId);
   const linha = await oTrabalho(pedidoId, negociacaoId);
   if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
-  if (corpo.accao !== "confirmar" && corpo.accao !== "corrigir" && corpo.accao !== "preencher" && corpo.accao !== "validar_telefone" && corpo.accao !== "folha_final") {
+  if (corpo.accao !== "confirmar" && corpo.accao !== "corrigir" && corpo.accao !== "preencher" && corpo.accao !== "validar_telefone" && corpo.accao !== "folha_final" && corpo.accao !== "valor_final_ao_cliente") {
     return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
   }
   await assumirPedidoSeLivre(pedidoId, colab);
   const porQuem = colab?.nome ?? "a CLYON";
+
+  /*
+   * O VALOR FINAL AO CLIENTE — d38 v2, commit d. Só administradores (a porta já
+   * o exige); nada sai sem `previsualizar` a falso, que é o botão «Enviar».
+   */
+  if (corpo.accao === "valor_final_ao_cliente") {
+    try {
+      const r = await valorFinalAoCliente({
+        pedidoId,
+        negociacaoId,
+        previsualizar: corpo.previsualizar === true,
+        canal: corpo.canal,
+        oQueMudou: corpo.oQueMudou,
+        porQuem,
+        colabId: colab?.id ?? null,
+      });
+      return NextResponse.json(r.corpo, { status: r.status });
+    } catch (e) {
+      console.error("[admin/negociacoes/horas POST valor_final_ao_cliente]", e);
+      return NextResponse.json({ error: "Não foi possível enviar o valor final." }, { status: 500 });
+    }
+  }
 
   /*
    * A FOLHA FINAL PELA EQUIPA — d38 v2. Só administradores (a porta já o

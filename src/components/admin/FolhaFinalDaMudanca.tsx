@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
+import EnviarValorFinalAoCliente from "@/components/admin/EnviarValorFinalAoCliente";
 
 /**
  * A FOLHA FINAL DA MUDANÇA, PELA EQUIPA — d38 v2, commit b (15-11-2026).
@@ -118,10 +119,13 @@ export default function FolhaFinalDaMudanca({
   pedidoId,
   negociacaoId,
   onGravado,
+  comEnvioAoCliente = true,
 }: {
   pedidoId: number;
   negociacaoId: number;
   onGravado?: () => void;
+  /** «Enviar o valor final ao cliente» (d38 v2, commit d): nos Pagamentos, na Mesa e nos Trabalhos CLYON. */
+  comEnvioAoCliente?: boolean;
 }) {
   const { token } = useAdminAuth();
   const eAdministrador = useEAdministrador();
@@ -430,6 +434,8 @@ export default function FolhaFinalDaMudanca({
             </>
           )}
           {gravado && <p className="text-[11px] text-emerald-300">{gravado}</p>}
+          {/* Depois de gravada: o valor final ao cliente, só com o botão (d38 v2, commit d). */}
+          {comEnvioAoCliente && d?.pode && d.ultima && <EnviarValorFinalAoCliente pedidoId={pedidoId} negociacaoId={negociacaoId} />}
           {erro && <p className="text-[11px] text-red-300">{erro}</p>}
         </div>
       )}

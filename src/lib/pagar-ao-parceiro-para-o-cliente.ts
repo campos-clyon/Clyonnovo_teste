@@ -52,7 +52,8 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
   const fiscal = perfilFiscalDoParceiro(perfil ?? {});
   const regime = await congelarRegimeDoProfissional(t.negociacaoId, fiscal.regimeParaAConta);
   const gravado = await oQueONovoModeloGravou(t.negociacaoId);
-  const c = totalAoCliente(t.acordado, t.taxas, regime);
+  // A reserva do valor único (d39) entra na fatura da CLYON, como na dívida do parceiro.
+  const c = totalAoCliente(t.acordado, t.taxas, regime, t.reservaCent ?? 0);
   const faturas = asDuasFaturas(await faturasDaNegociacao(t.negociacaoId));
   const total = c ? c.total : null;
   const paraPagar = dadosParaPagarAoParceiro(perfil ?? {}, { contratado: true, doNovoModelo: true });
