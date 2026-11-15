@@ -7,6 +7,7 @@ import { FORA_DO_PLANO, SERVICOS_PUBLICOS } from "./service-categories";
 import { PERGUNTAS_DO_PROFISSIONAL, perguntasDoProfissional } from "./ajuda-plataforma";
 import { PASSOS_DO_PROFISSIONAL } from "./como-funciona-para-o-profissional";
 import { avisoDosItens } from "./itens-a-mais";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 
 /**
  * A ACTUALIZAÇÃO SEM LOJA DE 25-10-2026 (EAS Update sobre a build 13).
@@ -168,11 +169,16 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     expect(ajuda).toContain("a CLYON fica com a taxa da plataforma em vigor");
     expect(ajuda).not.toContain("6 % sobre o valor acordado");
     expect(ajuda).not.toContain("5 % por cima");
-    // A data fixa (d29): esta é a resposta do modelo antigo; o relógio real passou os 15-11-2026.
-    const comAsDeHoje = perguntasDoProfissional({ cliente: 0, profissional: 0.11 }, new Date("2026-11-14T23:59:00Z"))
+    // d29: com a data explícita — no modelo antigo e no de 15-11-2026.
+    const comAsDeHoje = perguntasDoProfissional({ cliente: 0, profissional: 0.11 }, ANTES_DO_MODELO)
       .map((p) => `${p.pergunta} ${p.resposta}`)
       .join(" ");
     expect(comAsDeHoje).toContain("a CLYON fica com 11 % do valor do trabalho, sem IVA");
+    const noModeloNovo = perguntasDoProfissional({ cliente: 0, profissional: 0.11 }, DEPOIS_DO_MODELO)
+      .map((p) => `${p.pergunta} ${p.resposta}`)
+      .join(" ");
+    expect(noModeloNovo).toContain("a taxa da plataforma é 11 % do valor do trabalho, sem IVA");
+    expect(noModeloNovo).not.toContain("5 % por cima");
 
     const como = PASSOS_DO_PROFISSIONAL.map((p) => p.texto).join(" ");
     expect(como).toContain("o cliente vê-o com IVA incluído");

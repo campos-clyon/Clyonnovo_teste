@@ -9,6 +9,7 @@ import {
   pareceMorada,
   RAIO_MAXIMO_KM,
 } from "./inscricao-profissional";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO, comORelogioEm } from "./relogio-dos-testes";
 
 const valida = {
   nome: "Transportes Silva Lda",
@@ -27,6 +28,10 @@ const valida = {
   regimeIva: "isento",
   emiteGuiaTransporte: false,
   numeroTransportador: "",
+  // Desde 15-11-2026 (d10) obrigatórios; antes, ignorados — d29: a inscrição vale nos dois modelos.
+  iban: "PT50000201231234567890154",
+  ibanTitular: "Transportes Silva Lda",
+  mbway: "912345678",
 };
 
 const com = (p: Record<string, unknown>) => validarInscricao({ ...valida, ...p });
@@ -127,7 +132,10 @@ describe("validarInscricao", () => {
     });
   });
 
+  // «Quem não emite fatura» é do modelo antigo: desde 15-11-2026 todos emitem (d10).
   describe("fatura", () => {
+    comORelogioEm(ANTES_DO_MODELO);
+
     it("quem emite fatura tem de dar NIF", () => {
       expect(erros(com({ emiteFatura: true, nif: "" }))).toContain("nif");
     });
@@ -254,15 +262,16 @@ describe("morada fiscal", () => {
 
   // Quem não emite fatura não é obrigado a declarar morada nenhuma — mas se
   // começar a escrevê-la, tem de a acabar. Meia morada não serve para nada.
-  it("quem não emite fatura pode não a dar", () => {
-    const r = com({
+  it("quem não emite fatura pode não a dar (modelo antigo)", () => {
+    const r = validarInscricao({
+      ...valida,
       emiteFatura: false,
       nif: "",
       regimeIva: undefined,
       moradaFiscal: "",
       codigoPostalFiscal: "",
       localidadeFiscal: "",
-    });
+    }, ANTES_DO_MODELO);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.dados.moradaFiscal).toBeNull();
   });
@@ -280,6 +289,27 @@ describe("morada fiscal", () => {
     );
     expect(e).toContain("codigoPostalFiscal");
     expect(e).toContain("localidadeFiscal");
+  });
+});
+
+describe("a inscrição nos dois modelos — d29 (a data explícita)", () => {
+  it("antes de 15-11-2026, o IBAN, o titular e o MB WAY não são pedidos", () => {
+    const r = validarInscricao({ ...valida, iban: "", ibanTitular: "", mbway: "" }, ANTES_DO_MODELO);
+    expect(r.ok).toBe(true);
+  });
+
+  it("desde 15-11-2026, são obrigatórios — e com eles passa", () => {
+    expect(validarInscricao(valida, DEPOIS_DO_MODELO).ok).toBe(true);
+    expect(erros(validarInscricao({ ...valida, iban: "", ibanTitular: "", mbway: "" }, DEPOIS_DO_MODELO))).toEqual([
+      "iban",
+      "ibanTitular",
+      "mbway",
+    ]);
+  });
+
+  it("desde 15-11-2026 todos emitem fatura: o NIF deixa de ser opcional", () => {
+    expect(erros(validarInscricao({ ...valida, emiteFatura: false, nif: "" }, ANTES_DO_MODELO))).toEqual([]);
+    expect(erros(validarInscricao({ ...valida, emiteFatura: false, nif: "" }, DEPOIS_DO_MODELO))).toContain("nif");
   });
 });
 

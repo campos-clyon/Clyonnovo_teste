@@ -5,6 +5,7 @@ import { comissaoEmPalavras } from "./como-funciona-para-o-profissional";
 import { contaDaLinha, contaFecha } from "./conta-do-pagamento";
 import { quotaDaClyon, taxaDoProfissionalParaAQuota } from "./quota-da-clyon";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 
 /**
  * A REGRA GERAL — 22-10-2026. *«Essa regra é geral, mude em todo o site.»* —
@@ -99,8 +100,12 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
     expect(A).not.toContain("TAXA_CLIENTE");
     expect(A).not.toContain("TAXA_PROFISSIONAL");
     // Desde 28-10-2026 (d8) a percentagem é a das Configs, e não escrita à mão.
-    const quanto = perguntasDoProfissional(NOVAS).find((q) => q.pergunta === "Quanto é que a CLYON leva?")!.resposta;
-    expect(quanto).toContain("Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA; nos trabalhos ");
+    // d29: com a data explícita, nos dois modelos.
+    const quanto = (agora: Date) =>
+      perguntasDoProfissional(NOVAS, agora).find((q) => q.pergunta === "Quanto é que a CLYON leva?")!.resposta;
+    expect(quanto(ANTES_DO_MODELO)).toContain("Nas negociações, a CLYON fica com 11 % do valor do trabalho, sem IVA; nos trabalhos ");
+    expect(quanto(DEPOIS_DO_MODELO)).toContain("Nas negociações, a taxa da plataforma é 11 % do valor do trabalho, sem IVA; nos trabalhos ");
+    for (const agora of [ANTES_DO_MODELO, DEPOIS_DO_MODELO]) expect(quanto(agora)).not.toContain("5 %");
   });
 
   it("a caixa de confirmar da Mesa não mostra uma taxa de 0 %", () => {

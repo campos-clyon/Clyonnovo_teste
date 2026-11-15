@@ -14,6 +14,9 @@ import { GET as catalogo } from "@/app/api/cliente/catalogo/route";
 import { SERVICOS_PUBLICOS, NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
+import { FRASE_UNICA_NO_NOVO_MODELO } from "@/lib/frase-unica";
+import { passosDeComoFunciona } from "@/lib/como-funciona";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO, comORelogioEm } from "@/lib/relogio-dos-testes";
 
 async function ler() {
   const r = await catalogo(new NextRequest("https://clyon.pt/api/cliente/catalogo"));
@@ -21,7 +24,22 @@ async function ler() {
   return { r, j: await r.json() };
 }
 
+// d29: o catálogo lê a data do modelo — cada lado com o seu relógio.
+describe("S4 — no modelo de 15-11-2026", () => {
+  comORelogioEm(DEPOIS_DO_MODELO);
+
+  it("a frase única do modelo novo e o como funciona da data", async () => {
+    const { j } = await ler();
+    expect(j.textos.fraseUnica).toBe(FRASE_UNICA_NO_NOVO_MODELO);
+    expect(j.comoFunciona.map((p: { texto: string }) => p.texto)).toEqual(
+      passosDeComoFunciona(DEPOIS_DO_MODELO).map((p) => p.texto),
+    );
+  });
+});
+
 describe("S4 — GET /api/cliente/catalogo", () => {
+  comORelogioEm(ANTES_DO_MODELO);
+
   it("a frase única, carácter a carácter", async () => {
     const { j } = await ler();
     expect(j.textos.fraseUnica).toBe(

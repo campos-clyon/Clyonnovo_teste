@@ -122,6 +122,7 @@ import VistaDoPedido from "@/app/pedido/[token]/VistaDoPedido";
 import PropostasRecebidas from "@/app/pedido/[token]/PropostasRecebidas";
 import ContaPage from "@/app/conta/page";
 import SessaoTerminou from "@/app/conta/SessaoTerminou";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO, relogioEm, relogioReal } from "@/lib/relogio-dos-testes";
 
 /** O que nunca pode chegar ao browser do cliente. */
 const PROIBIDO = ["valorAcordado", "taxaCliente", "taxaProfissional", "propostasJson", '"propostas"', "350,00", ":350"];
@@ -170,14 +171,36 @@ describe("d10 (1) — GET /api/pagamentos não devolve a dívida do profissional
     }
   });
 
-  it("pela plataforma, a referência do cliente continua a sair", async () => {
-    negociacaoDoTrabalho = { ...NEGOCIACAO, estado: "acordada", valorAcordado: "350.00", formaDePagamento: null };
-    pagamentosDaBase = [{ ...DIVIDA, valor: 452.03 }];
-    const j = await (
-      await estadoDoPagamento(new NextRequest(`https://clyon.pt/api/pagamentos?pedidoId=610&negociacaoId=7001`))
-    ).json();
-    expect(j.pagamentos).toHaveLength(1);
-    expect(j.pagamentos[0].referencia).toBe("123456789");
+  // d29: com a data explícita. No modelo antigo a referência à CLYON sai; no de
+  // 15-11-2026 um trabalho sem nada pago à CLYON paga-se ao parceiro, e nada sai.
+  it("pela plataforma, a referência do cliente continua a sair (modelo antigo)", async () => {
+    relogioEm(ANTES_DO_MODELO);
+    try {
+      negociacaoDoTrabalho = { ...NEGOCIACAO, estado: "acordada", valorAcordado: "350.00", formaDePagamento: null };
+      pagamentosDaBase = [{ ...DIVIDA, valor: 452.03 }];
+      const j = await (
+        await estadoDoPagamento(new NextRequest(`https://clyon.pt/api/pagamentos?pedidoId=610&negociacaoId=7001`))
+      ).json();
+      expect(j.pagamentos).toHaveLength(1);
+      expect(j.pagamentos[0].referencia).toBe("123456789");
+    } finally {
+      relogioReal();
+    }
+  });
+
+  it("no modelo de 15-11-2026, a referência por pagar à CLYON já não sai", async () => {
+    relogioEm(DEPOIS_DO_MODELO);
+    try {
+      negociacaoDoTrabalho = { ...NEGOCIACAO, estado: "acordada", valorAcordado: "350.00", formaDePagamento: null };
+      pagamentosDaBase = [{ ...DIVIDA, valor: 452.03 }];
+      const j = await (
+        await estadoDoPagamento(new NextRequest(`https://clyon.pt/api/pagamentos?pedidoId=610&negociacaoId=7001`))
+      ).json();
+      expect(j.pagamentos).toEqual([]);
+      expect(JSON.stringify(j)).not.toContain("123456789");
+    } finally {
+      relogioReal();
+    }
   });
 });
 

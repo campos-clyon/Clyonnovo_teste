@@ -9,6 +9,7 @@ import { ABERTURA_DO_QUE_FALTA } from "./mensagem-do-que-falta";
 import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA } from "./voz-da-vitoria";
 import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
 import { assistenteComSeccoesPodeChamar } from "./papel-do-painel";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 
 /**
  * PAGAMENTO SÓ PELA PLATAFORMA — d15 (03-11-2026, aprovada pelo dono a 04-11).
@@ -112,7 +113,12 @@ describe("«Recebi em dinheiro: e agora?» na Ajuda do painel e da app Pro", () 
 
   it("está na lista que o painel e a app lêem, com os cinco pontos e o exemplo", () => {
     expect(p).toBeDefined();
-    expect(perguntasDoProfissional({ cliente: 0, profissional: 0.11 }).some((x) => x.pergunta === p!.pergunta)).toBe(true);
+    // d29: com a data explícita. Desde 15-11-2026 a mesma pergunta passa a «O cliente pagou-me: e agora?».
+    const tem = (agora: Date, pergunta: string) =>
+      perguntasDoProfissional({ cliente: 0, profissional: 0.11 }, agora).some((x) => x.pergunta === pergunta);
+    expect(tem(ANTES_DO_MODELO, p!.pergunta)).toBe(true);
+    expect(tem(DEPOIS_DO_MODELO, p!.pergunta)).toBe(false);
+    expect(tem(DEPOIS_DO_MODELO, "O cliente pagou-me: e agora?")).toBe(true);
     const linhas = p!.resposta.split("\n");
     expect(linhas.slice(0, 5).map((l) => l.slice(0, 2))).toEqual(["1.", "2.", "3.", "4.", "5."]);
     expect(linhas[5]).toMatch(/^Exemplo/);

@@ -5,6 +5,8 @@ import { NextRequest } from "next/server";
 import { COOKIE_SESSAO_PROFISSIONAL } from "./profissional-auth";
 import { NOVO_MODELO_DESDE, NOVO_MODELO_DESDE_POR_EXTENSO, VERSAO_DOS_TERMOS, VERSAO_DOS_TERMOS_POR_EXTENSO } from "./novo-modelo";
 import { TEXTOS_DA_ACEITACAO, eAVersaoEmVigor, precisaDeAceitar } from "./aceitacao-dos-termos";
+// d29: importada à cabeça — dentro do teste, com a suíte inteira a correr, passava dos 5 s.
+import * as rotaDosTermos from "@/app/api/profissionais/termos/route";
 
 /*
  * A ACEITAÇÃO DOS TERMOS DE 15-11-2026 — d20 (CEO e dono, 13-11-2026).
@@ -97,7 +99,7 @@ describe("a aceitação gravada num profissional de teste", () => {
   });
 
   it("depois da data: pede, grava versão + instante + origem, e deixa de pedir", async () => {
-    const rota = await import("@/app/api/profissionais/termos/route");
+    const rota = rotaDosTermos;
 
     const antes = await (await rota.GET(pedido("GET"))).json();
     expect(antes.precisaDeAceitar).toBe(true);
@@ -127,14 +129,14 @@ describe("a aceitação gravada num profissional de teste", () => {
   });
 
   it("pela app, a origem é «app» (vem da sessão, não do corpo)", async () => {
-    const rota = await import("@/app/api/profissionais/termos/route");
+    const rota = rotaDosTermos;
     await rota.POST(pedido("POST", { versao: VERSAO_DOS_TERMOS, aceito: true, origem: "painel" }, true));
     expect(tabela[0].origem).toBe("app");
   });
 
   it("antes da data: não pede e não grava, sem ir à tabela", async () => {
     agora = new Date("2026-11-14T12:00:00Z");
-    const rota = await import("@/app/api/profissionais/termos/route");
+    const rota = rotaDosTermos;
     const e = await (await rota.GET(pedido("GET"))).json();
     expect(e.precisaDeAceitar).toBe(false);
     expect(e.emVigor).toBe(false);
@@ -144,7 +146,7 @@ describe("a aceitação gravada num profissional de teste", () => {
   });
 
   it("sem sessão: o GET dá só a parte pública (d18, a caixa do definir-senha da app) e o POST 401", async () => {
-    const rota = await import("@/app/api/profissionais/termos/route");
+    const rota = rotaDosTermos;
     const r = await rota.GET(new NextRequest("https://clyon.pt/api/profissionais/termos"));
     expect(r.status).toBe(200);
     const d = await r.json();

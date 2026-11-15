@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, onTestFinished } from "vitest";
 import { NextRequest } from "next/server";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO, relogioEm, relogioReal } from "@/lib/relogio-dos-testes";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -282,7 +283,24 @@ describe("R5 — GET /api/cliente/pedidos/[id]", () => {
     expect((await umPedido(pedido("/api/cliente/pedidos/483", { bearer: tokenDoOutro }), comId("483"))).status).toBe(200);
   });
 
+  // d29: desde 15-11-2026 o detalhe diz também o tipo de fatura do parceiro.
+  it("no modelo de 15-11-2026, o mesmo dinheiro e o tipo de fatura do parceiro", async () => {
+    relogioEm(DEPOIS_DO_MODELO);
+    try {
+      const r = await umPedido(pedido("/api/cliente/pedidos/482", { bearer: tokenDoCliente }), comId("482"));
+      expect(r.status).toBe(200);
+      const n = (await r.json()).negociacoes[0];
+      expect(n.preco.principal).toBe("452,03 € com IVA");
+      expect(n.preco.detalhe).toBe("367,50 € + 84,53 € de IVA (23 %) · Tipo de fatura a confirmar");
+    } finally {
+      relogioReal();
+    }
+  });
+
   it("as mesmas negociações da página do pedido, e o mesmo dinheiro, em texto", async () => {
+    // d29: o modelo antigo, com a data explícita.
+    relogioEm(ANTES_DO_MODELO);
+    onTestFinished(() => relogioReal());
     const r = await umPedido(pedido("/api/cliente/pedidos/482", { bearer: tokenDoCliente }), comId("482"));
     expect(r.status).toBe(200);
     const j = await r.json();

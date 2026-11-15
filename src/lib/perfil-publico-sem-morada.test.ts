@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { cidadePublica, localidadeConhecida, zonasPublicas } from "./localidade-publica";
 import { eContaDeTeste } from "./perfil-publico-do-profissional";
 import { validarInscricao, temSinaisDeHtml } from "./inscricao-profissional";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 
 /**
  * A PÁGINA PÚBLICA DO PROFISSIONAL PUBLICAVA A MORADA DE CASA DELE.
@@ -164,14 +165,18 @@ describe("o nome e a cidade não aceitam < nem >", () => {
   });
 
   it("a inscrição recusa-os no nome e na cidade (as zonas saíram a 29-10-2026)", () => {
-    expect(validarInscricao(base).ok).toBe(true);
-    for (const [campo, corpo] of [
-      ["nome", { ...base, nome: "</script><script>alert(1)" }],
-      ["cidade", { ...base, cidade: "Almada<b>" }],
-    ] as const) {
-      const r = validarInscricao(corpo);
-      expect(r.ok, campo).toBe(false);
-      if (!r.ok) expect(r.erros.map((e) => e.campo)).toContain(campo);
+    // d29: a data explícita — sem NIF nem IBAN, a base só passa no modelo antigo
+    // (desde 15-11-2026 são obrigatórios); os sinais recusam-se nos dois.
+    expect(validarInscricao(base, ANTES_DO_MODELO).ok).toBe(true);
+    for (const agora of [ANTES_DO_MODELO, DEPOIS_DO_MODELO]) {
+      for (const [campo, corpo] of [
+        ["nome", { ...base, nome: "</script><script>alert(1)" }],
+        ["cidade", { ...base, cidade: "Almada<b>" }],
+      ] as const) {
+        const r = validarInscricao(corpo, agora);
+        expect(r.ok, campo).toBe(false);
+        if (!r.ok) expect(r.erros.map((e) => e.campo)).toContain(campo);
+      }
     }
   });
 

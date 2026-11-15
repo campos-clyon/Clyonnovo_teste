@@ -30,6 +30,8 @@ vi.mock("@/lib/db", () => ({
   negociacoesDoProfissional: vi.fn(async () => []),
   registarExecucao: vi.fn(async () => true),
   getSimulatorOrderById: vi.fn(async () => undefined),
+  // d29: no modelo de 15-11 a rota lê os pagamentos da negociação (nenhum, aqui).
+  getPool: vi.fn(async () => ({ execute: vi.fn(async () => [[], []]), query: vi.fn(async () => [[], []]) })),
 }));
 vi.mock("@/lib/email-trabalho", () => ({ pedirConfirmacaoAoCliente: vi.fn(async () => {}) }));
 vi.mock("@/lib/avisar-por-push", () => ({ avisarClienteDoTrabalhoFeitoPorPush: vi.fn(async () => {}) }));
@@ -53,6 +55,7 @@ import {
 import { clyonPodeConfirmarOTrabalho } from "./quem-negoceia";
 import { PASSOS_DO_PROFISSIONAL, COMO_RECEBE } from "./como-funciona-para-o-profissional";
 import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO, comORelogioEm } from "./relogio-dos-testes";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>
@@ -104,7 +107,20 @@ beforeEach(() => {
   } as never);
 });
 
+describe("a rota do «Está feito» no modelo de 15-11-2026", () => {
+  comORelogioEm(DEPOIS_DO_MODELO);
+
+  it("pede ao cliente que confirme, com o texto do modelo novo", async () => {
+    const r = await estaFeito(pedido({ negociacaoId: 31, nota: "" }));
+    expect(r.status).toBe(200);
+    expect(pedirConfirmacaoAoCliente).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(pedirConfirmacaoAoCliente).mock.calls[0][0]).toMatchObject({ novoModelo: true });
+  });
+});
+
 describe("a rota do «Está feito»", () => {
+  comORelogioEm(ANTES_DO_MODELO);
+
   it("aceita sem fotografias, pede ao cliente que confirme e anuncia o prazo", async () => {
     const r = await estaFeito(pedido({ negociacaoId: 31, nota: "" }));
     expect(r.status).toBe(200);
