@@ -50,7 +50,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-de-eletrodomesticos": "2026-11-04",
   "/recolha-de-moveis-urgente": "2026-10-29",
   "/retirar-moveis-velhos": "2026-11-04",
-  "/orcamento-recolha-lisboa": "2026-11-04",
+  "/orcamento-recolha-lisboa": "2026-11-15",
   "/como-funciona": "2026-11-01",
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
   "/precos": "2026-11-10",

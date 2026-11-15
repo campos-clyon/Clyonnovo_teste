@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -42,6 +42,7 @@ import {
   PROMESSA_DO_PRAZO,
 } from "@/lib/promessas-publicas";
 import { TELEFONE_DA_CLYON, TELEFONE_DA_CLYON_LEGIVEL, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { ESVAZIAMENTO_NA_LANDING, type VarianteDaLanding } from "@/lib/landing-do-esvaziamento";
 
 const PHONE_DISPLAY = TELEFONE_DA_CLYON_LEGIVEL;
 const PHONE_TEL = TELEFONE_DA_CLYON;
@@ -56,6 +57,8 @@ const WHATSAPP_BASE = WHATSAPP_DA_CLYON;
  * WhatsApp veio do anúncio — e o dono consegue contá-los, com ou sem cookies.
  */
 const MENSAGEM_DO_ANUNCIO = "Olá! Encontrei-vos no Google e quero um orçamento de recolha. Vou enviar fotos.";
+// Na versão do esvaziamento (d42, 15-11-2026) a frase diz «esvaziamento»; o começo é o mesmo.
+const MensagemDoWhatsApp = createContext(MENSAGEM_DO_ANUNCIO);
 // A cópia privada do número saiu. Era `const REVIEWS_COUNT = 163` e era o
 // único sítio do site com um número de prova social só seu — enquanto
 // existisse, esta landing divergia sozinha do resto, e foi o que aconteceu.
@@ -212,7 +215,7 @@ function WhatsAppIcon({ className }: { className?: string }) {
   return <MessageCircle className={className} aria-hidden="true" />;
 }
 
-export default function LandingClient() {
+export default function LandingClient({ variante = "recolha" }: { variante?: VarianteDaLanding }) {
   const [showStickyBar, setShowStickyBar] = useState(false);
   const heroRef = useRef<HTMLDivElement | null>(null);
 
@@ -233,9 +236,10 @@ export default function LandingClient() {
   }, []);
 
   return (
+    <MensagemDoWhatsApp.Provider value={variante === "esvaziamento" ? ESVAZIAMENTO_NA_LANDING.mensagem : MENSAGEM_DO_ANUNCIO}>
     <div className="bg-white text-slate-900" style={{ zoom: 0.89 }}>
       <TopBar />
-      <Hero heroRef={heroRef} />
+      <Hero heroRef={heroRef} variante={variante} />
       <TrustBar />
       <HowItWorks />
       <SendForQuote />
@@ -250,18 +254,20 @@ export default function LandingClient() {
       <FloatingWhatsAppButton />
       <div className="h-20 md:h-0" aria-hidden="true" />
     </div>
+    </MensagemDoWhatsApp.Provider>
   );
 }
 
 /* ----------------------------- Top Bar ----------------------------- */
 function TopBar() {
+  const mensagem = useContext(MensagemDoWhatsApp);
   return (
     <header className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <Image
             src="/logo-clyon-landing.png"
-            alt="CLYON - Recolha de móveis e entulho em Lisboa"
+            alt="CLYON - Recolha de móveis, monos e esvaziamentos em Lisboa"
             width={150}
             height={48}
             priority
@@ -272,7 +278,7 @@ function TopBar() {
           </span>
         </div>
         <a
-          href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
+          href={`${WHATSAPP_BASE}?text=${encodeURIComponent(mensagem)}`}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => trackWhatsApp("top_bar")}
@@ -287,7 +293,9 @@ function TopBar() {
 }
 
 /* ------------------------------ Hero ------------------------------ */
-function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) {
+function Hero({ heroRef, variante }: { heroRef: React.RefObject<HTMLDivElement | null>; variante: VarianteDaLanding }) {
+  const mensagem = useContext(MensagemDoWhatsApp);
+  const doEsvaziamento = variante === "esvaziamento";
   /*
    * O PREÇO NO PRIMEIRO ECRÃ — 21-10-2026 (análise diária do Ads).
    *
@@ -297,15 +305,28 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
    */
   // Por peça desde 03-11-2026 (d6); desde a d7 (04-11-2026) o «desde» é a recolha mínima, 40 € + IVA.
   const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 };
-  const bullets = [
-    {
-      icon: Sofa,
-      label: `Móveis ${semIvaEscrito(desdeMoveis)} + IVA (${comIvaEscrito(desdeMoveis)} com IVA)`,
-    },
-    { icon: Truck, label: "Carregamento feito pelo parceiro" },
-    { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
-    { icon: ShieldCheck, label: "Parceiros da sua zona" },
-  ];
+  /*
+   * A VERSÃO DO ESVAZIAMENTO — 15-11-2026 (d42). O que está incluído, do
+   * primeiro ao último passo, e o «desde» da casa, da fonte única.
+   */
+  const desdeEsvaziamento: Valor = { tipo: "desde", de: ESVAZIAMENTO_NA_LANDING.desde };
+  const bullets = doEsvaziamento
+    ? [
+        {
+          icon: Home,
+          label: `Esvaziamento ${semIvaEscrito(desdeEsvaziamento)} + IVA (${comIvaEscrito(desdeEsvaziamento)} com IVA)`,
+        },
+        ...ESVAZIAMENTO_NA_LANDING.incluido.map((label) => ({ icon: CheckCircle2, label })),
+      ]
+    : [
+        {
+          icon: Sofa,
+          label: `Móveis ${semIvaEscrito(desdeMoveis)} + IVA (${comIvaEscrito(desdeMoveis)} com IVA)`,
+        },
+        { icon: Truck, label: "Carregamento feito pelo parceiro" },
+        { icon: MapPin, label: "Lisboa, Margem Sul e Setúbal" },
+        { icon: ShieldCheck, label: "Parceiros da sua zona" },
+      ];
 
   return (
     <section
@@ -322,12 +343,15 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
               de móveis» e «recolha de monos» trazem quase todos os cliques, o
               entulho vem atrás. Sem a pílula por cima do título (o dono não
               quer «design de IA»). */}
+          {/* Sem «Entulho» no título desde 15-11-2026 (d42): a divulgação já
+              não fala de entulho (d18), e o site continua a aceitar os pedidos. */}
           <h1 className="text-balance text-3xl font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            Recolha de Móveis, Monos e Entulho em Lisboa
+            {doEsvaziamento ? ESVAZIAMENTO_NA_LANDING.titulo : "Recolha de Móveis, Monos e Esvaziamentos em Lisboa"}
           </h1>
           <p className="mt-4 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
-            Envie fotos, indique a morada e receba propostas de parceiros da
-            sua zona {PROPOSTAS_EM_ATE} — com carregamento e transporte.
+            {doEsvaziamento
+              ? <>Receba propostas de parceiros da sua zona {PROPOSTAS_EM_ATE}: uma empresa parceira, com a sua equipa, esvazia a casa toda.</>
+              : <>Envie fotos, indique a morada e receba propostas de parceiros da sua zona {PROPOSTAS_EM_ATE} — com carregamento e transporte.</>}
           </p>
 
           <ul className="mt-6 space-y-3">
@@ -344,13 +368,19 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
             ))}
           </ul>
 
+          {doEsvaziamento ? <PassosDoEsvaziamento /> : null}
+
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
-              href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
+              href={`${WHATSAPP_BASE}?text=${encodeURIComponent(mensagem)}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackWhatsApp("hero")}
-              className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600"
+              className={
+                doEsvaziamento
+                  ? "inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border border-emerald-500 bg-white px-6 py-4 text-base font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+                  : "inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600"
+              }
             >
               <WhatsAppIcon className="h-5 w-5" />
               Enviar Fotos no WhatsApp
@@ -366,15 +396,17 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
           </div>
 
           <p className="mt-3 text-xs text-slate-500">
-            Pedido de orçamento gratuito. Serviço de recolha pago mediante
-            avaliação.
+            {doEsvaziamento
+              ? "Pedido de orçamento gratuito. O esvaziamento é pago pela proposta escolhida."
+              : "Pedido de orçamento gratuito. Serviço de recolha pago mediante avaliação."}
           </p>
 
           <DirectContactStrip />
         </div>
 
-        <div className="lg:pl-4">
-          <LeadForm />
+        {/* No telemóvel o esvaziamento já tem os 3 passos e o botão no primeiro ecrã. */}
+        <div className={doEsvaziamento ? "hidden lg:block lg:pl-4" : "lg:pl-4"}>
+          <LeadForm variante={variante} />
         </div>
       </div>
     </section>
@@ -384,7 +416,7 @@ function Hero({ heroRef }: { heroRef: React.RefObject<HTMLDivElement | null> }) 
 /* --------------------- Direct Contact Strip --------------------- */
 function DirectContactStrip() {
   const quickMsg = encodeURIComponent(
-    MENSAGEM_DO_ANUNCIO,
+    useContext(MensagemDoWhatsApp),
   );
   const buttons = [
     {
@@ -443,19 +475,52 @@ function DirectContactStrip() {
 }
 
 /* ------------------------- Simulator CTA Card ------------------------- */
-function LeadForm() {
-  function handleOpenSimulator() {
-    const utms = getStoredUtms();
-    pushDataLayer({
-      event: "lead_form_submit",
-      form_name: "orcamento_recolha",
-      cta: "abrir_simulador",
-      ...utms,
-    });
-    // A conversão do Google Ads já não é este clique: conta-se quando o
-    // pedido fica registado (ver conversao-do-anuncio.ts).
-  }
+function abrirOSimulador() {
+  const utms = getStoredUtms();
+  pushDataLayer({
+    event: "lead_form_submit",
+    form_name: "orcamento_recolha",
+    cta: "abrir_simulador",
+    ...utms,
+  });
+  // A conversão do Google Ads já não é este clique: conta-se quando o
+  // pedido fica registado (ver conversao-do-anuncio.ts).
+}
 
+const PASSOS_DA_RECOLHA = ["Escolha o serviço", "Indique a morada e o acesso", "Deixe o seu contacto e envie"];
+
+function ListaDosPassos({ passos }: { passos: readonly string[] }) {
+  return (
+    <ul className="mt-5 space-y-2.5 text-sm text-slate-700">
+      {passos.map((passo, i) => (
+        <li key={passo} className="flex items-center gap-3">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-acao">{i + 1}</span>
+          {passo}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Os 3 passos e «Pedir propostas» no primeiro ecrã do telemóvel (d42). */
+function PassosDoEsvaziamento() {
+  return (
+    <div className="mt-6 lg:hidden">
+      <ListaDosPassos passos={ESVAZIAMENTO_NA_LANDING.passos} />
+      <a
+        href={ESVAZIAMENTO_NA_LANDING.simulador}
+        onClick={abrirOSimulador}
+        className="mt-5 inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600"
+      >
+        {ESVAZIAMENTO_NA_LANDING.botao}
+        <ArrowRight className="h-5 w-5" />
+      </a>
+    </div>
+  );
+}
+
+function LeadForm({ variante }: { variante: VarianteDaLanding }) {
+  const doEsvaziamento = variante === "esvaziamento";
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-300/40 sm:p-7">
       <div className="flex items-center gap-3">
@@ -472,35 +537,23 @@ function LeadForm() {
         </div>
       </div>
 
-      <ul className="mt-5 space-y-2.5 text-sm text-slate-700">
-        <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-acao">1</span>
-          Escolha o serviço
-        </li>
-        <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-acao">2</span>
-          Indique a morada e o acesso
-        </li>
-        <li className="flex items-center gap-3">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-cyan-50 text-xs font-bold text-acao">3</span>
-          Deixe o seu contacto e envie
-        </li>
-      </ul>
+      <ListaDosPassos passos={doEsvaziamento ? ESVAZIAMENTO_NA_LANDING.passos : PASSOS_DA_RECOLHA} />
 
       <a
-        href="/simulador"
-        onClick={handleOpenSimulator}
+        href={doEsvaziamento ? ESVAZIAMENTO_NA_LANDING.simulador : "/simulador"}
+        onClick={abrirOSimulador}
         className="mt-6 inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600"
       >
         <Sparkles className="h-5 w-5" />
-        Abrir Simulador de Orçamento
+        {doEsvaziamento ? ESVAZIAMENTO_NA_LANDING.botao : "Abrir Simulador de Orçamento"}
       </a>
       <p className="mt-3 text-center text-xs text-slate-500">
         Prefere enviar fotos diretamente? Use o WhatsApp abaixo.
       </p>
       <p className="text-center text-xs text-tinta-fraca">
-        O pedido de orçamento é gratuito. O serviço de recolha é pago mediante
-        avaliação.
+        {doEsvaziamento
+          ? "O pedido de orçamento é gratuito. O esvaziamento é pago pela proposta escolhida."
+          : "O pedido de orçamento é gratuito. O serviço de recolha é pago mediante avaliação."}
       </p>
     </div>
   );
@@ -644,6 +697,7 @@ function HowItWorks() {
 
 /* --------------------------- Send For Quote --------------------------- */
 function SendForQuote() {
+  const mensagem = useContext(MensagemDoWhatsApp);
   const cards = [
     {
       icon: Camera,
@@ -694,7 +748,7 @@ function SendForQuote() {
         </div>
         <div className="mt-8 flex justify-center">
           <a
-            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
+            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(mensagem)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsApp("send_for_quote")}
@@ -801,6 +855,7 @@ function ServicesSection() {
 
 /* --------------------------- Pricing Guide --------------------------- */
 function PricingGuide() {
+  const mensagem = useContext(MensagemDoWhatsApp);
   /*
    * COM OS PREÇOS DE REFERÊNCIA — 20-10-2026.
    *
@@ -872,7 +927,7 @@ function PricingGuide() {
         </div>
         <div className="mt-8 flex justify-center">
           <a
-            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
+            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(mensagem)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsApp("pricing")}
@@ -1081,6 +1136,7 @@ function FAQSection() {
 
 /* --------------------------- Final CTA --------------------------- */
 function FinalCTA() {
+  const mensagem = useContext(MensagemDoWhatsApp);
   return (
     <section className="bg-slate-900 py-16 sm:py-20">
       <div className="mx-auto max-w-3xl px-4 text-center">
@@ -1093,7 +1149,7 @@ function FinalCTA() {
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a
-            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
+            href={`${WHATSAPP_BASE}?text=${encodeURIComponent(mensagem)}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackWhatsApp("final_cta")}
@@ -1121,7 +1177,7 @@ function FinalCTA() {
 function StickyMobileCTA({ visible }: { visible: boolean }) {
   const [showMore, setShowMore] = useState(false);
   const quickMsg = encodeURIComponent(
-    MENSAGEM_DO_ANUNCIO,
+    useContext(MensagemDoWhatsApp),
   );
 
   return (
@@ -1202,9 +1258,10 @@ function StickyMobileCTA({ visible }: { visible: boolean }) {
 
 /* --------------------------- Floating WhatsApp --------------------------- */
 function FloatingWhatsAppButton() {
+  const mensagem = useContext(MensagemDoWhatsApp);
   return (
     <a
-      href={`${WHATSAPP_BASE}?text=${encodeURIComponent(MENSAGEM_DO_ANUNCIO)}`}
+      href={`${WHATSAPP_BASE}?text=${encodeURIComponent(mensagem)}`}
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => trackWhatsApp("floating_button")}

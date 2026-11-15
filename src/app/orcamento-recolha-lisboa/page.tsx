@@ -19,22 +19,23 @@ import LandingClient from "./LandingClient";
 const MOVEIS_DESDE = PRECOS.recolha_moveis.minimo!;
 const DESCRICAO = descricaoQueCabe([
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
-  "Recolha de móveis, monos e entulho em Lisboa, Margem Sul e Setúbal.",
+  // Sem entulho desde 15-11-2026 (d42): é a página do anúncio, e a divulgação não fala dele (d18).
+  "Recolha de móveis, monos e esvaziamentos em Lisboa, Margem Sul e Setúbal.",
   `Móveis desde ${euros(MOVEIS_DESDE)} + IVA (${euros(comIva(MOVEIS_DESDE))} com IVA), contados por peça.`,
   `${PRAZO_DE_RESPOSTA.frase}.`,
   "Carregamento incluído.",
 ]);
 
 export const metadata: Metadata = {
-  title: "Recolha de Móveis, Monos e Entulho em Lisboa",
+  title: "Recolha de Móveis, Monos e Esvaziamentos em Lisboa",
   description: DESCRICAO,
   alternates: {
     canonical: "https://clyon.pt/orcamento-recolha-lisboa",
   },
   openGraph: og({
-    title: "Recolha de Móveis, Monos e Entulho em Lisboa",
+    title: "Recolha de Móveis, Monos e Esvaziamentos em Lisboa",
     description:
-      "Orçamento por WhatsApp para recolha de entulho, móveis, monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal.",
+      "Orçamento por WhatsApp para recolha de móveis e monos e esvaziamento de casas em Lisboa, Margem Sul e Setúbal.",
     url: "https://clyon.pt/orcamento-recolha-lisboa",
   }),
 };

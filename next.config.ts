@@ -82,13 +82,31 @@ const nextConfig: NextConfig = {
    * provas vêm de variáveis de ambiente — ver `links-da-app.ts`.
    */
   async rewrites() {
-    return [
-      { source: "/.well-known/assetlinks.json", destination: "/api/app/assetlinks" },
-      {
-        source: "/.well-known/apple-app-site-association",
-        destination: "/api/app/apple-app-site-association",
-      },
-    ];
+    return {
+      /*
+       * A PÁGINA DO ANÚNCIO NA VERSÃO DO ESVAZIAMENTO — 15-11-2026 (d42).
+       * /orcamento-recolha-lisboa?servico=esvaziamento mostra a página
+       * estática /orcamento-recolha-lisboa/esvaziamento, sem mudar o endereço.
+       * Antes dos ficheiros (`beforeFiles`), porque a página do anúncio
+       * existe e ganharia. O teste `landing-do-esvaziamento.test.ts` guarda
+       * que os dois lados dizem o que `landing-do-esvaziamento.ts` diz.
+       */
+      beforeFiles: [
+        {
+          source: "/orcamento-recolha-lisboa",
+          has: [{ type: "query", key: "servico", value: "esvaziamento" }],
+          destination: "/orcamento-recolha-lisboa/esvaziamento",
+        },
+      ],
+      afterFiles: [
+        { source: "/.well-known/assetlinks.json", destination: "/api/app/assetlinks" },
+        {
+          source: "/.well-known/apple-app-site-association",
+          destination: "/api/app/apple-app-site-association",
+        },
+      ],
+      fallback: [],
+    };
   },
   async redirects() {
     return [
