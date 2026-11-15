@@ -16,6 +16,14 @@ import {
   Wallet,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import dynamic from "next/dynamic";
+
+/*
+ * O DESEMPENHO — d41, 15-11-2026: pedidos que entram, trabalhos feitos,
+ * conversão e gráficos, por baixo do «precisa de si». Carregado à parte (os
+ * gráficos pesam) para o resumo do dia aparecer primeiro.
+ */
+const DesempenhoDoInicio = dynamic(() => import("@/components/admin/DesempenhoDoInicio"), { ssr: false });
 
 /**
  * O INÍCIO — o que precisa de si, hoje.
@@ -37,9 +45,9 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
  * diz onde carregar. Por isso cada cartão é um link para o ecrã que resolve
  * aquilo, e um zero desaparece em vez de ocupar uma caixa.
  *
- * O que NÃO está aqui, de propósito: totais de negócio, gráficos, «leads
- * desta semana». Isso é para olhar uma vez por mês, e este ecrã é o primeiro
- * que se abre de manhã.
+ * O que NÃO está no «precisa de si», de propósito: totais de negócio e
+ * gráficos. Desde a d41 (15-11-2026) vivem numa secção à parte, «Desempenho»,
+ * no fim deste ecrã — o que pede trabalho continua a vir primeiro.
  */
 
 type Resumo = {
@@ -372,6 +380,8 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           </div>
         </section>
       )}
+
+      <DesempenhoDoInicio />
     </div>
   );
 }
