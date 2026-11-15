@@ -1738,6 +1738,10 @@ function DetalheDoTrabalho({
                   {quandoDoPedido.aviso}
                 </span>
               )}
+              {/* d35: o pedido cai em dias que marcou como indisponíveis. */}
+              {pedido.indisponibilidadeNoPedido && (
+                <span className="block text-xs font-medium text-amber-700">{pedido.indisponibilidadeNoPedido}</span>
+              )}
               {/*
                 O que o cliente pediu fica à vista quando o combinado é outro:
                 é essa diferença que diz que o trabalho mudou de dia.

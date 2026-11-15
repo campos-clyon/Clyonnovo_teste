@@ -230,6 +230,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/pedidos",
   "/api/admin/fotos",
   "/api/admin/profissionais",
+  // Quem está indisponível no dia do pedido (d35, 15-11-2026) — só leitura.
+  "/api/admin/indisponibilidades",
   "/api/admin/convites",
   // As candidaturas do site vivem no mesmo ecrã dos convites, e quem trata de
   // um trata do outro.
@@ -335,6 +337,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // O «porquê?» do alcance e o «Trocar profissional» também nos Trabalhos CLYON (19-10-2026).
   { prefixo: "/api/admin/negociacoes/trocar-profissional", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes/alcance", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
+  // Quem está indisponível no dia do pedido (d35, 15-11-2026) — só leitura, para o «Atribuir directamente a…».
+  { prefixo: "/api/admin/indisponibilidades", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   // O link do pedido e o motivo dos dados do dono no «Enviar adjudicação» (03-11-2026, d15): na Mesa e nos Trabalhos CLYON.
   { prefixo: "/api/admin/negociacoes/adjudicacao", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },

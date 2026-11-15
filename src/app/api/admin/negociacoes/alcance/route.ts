@@ -45,6 +45,8 @@ export async function GET(req: NextRequest) {
   try {
     const geo = await coordenadasDoPedido(pedido);
     const r = await avaliarAlcance({
+      pedidoId,
+      urgency: pedido.urgency ?? null,
       serviceType: pedido.serviceType ?? null,
       precisaFatura: Boolean(pedido.precisaFatura),
       precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),

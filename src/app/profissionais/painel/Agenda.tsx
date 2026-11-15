@@ -32,6 +32,7 @@ import {
 import type { Pedido } from "./tipos";
 import { arrumarTrabalho, confirmarArrumacao } from "./arrumar";
 import MarcarODia, { gravarADuracao, gravarODia } from "./MarcarODia";
+import Indisponibilidades from "./Indisponibilidades";
 
 /**
  * A agenda do profissional — os trabalhos contratados, por dia.
@@ -673,6 +674,8 @@ export default function Agenda({
   return (
     <>
       <CabecalhoDeEcra titulo="Agenda" onVoltar={onVoltar} />
+      {/* Os dias em que não pode trabalhar — d35, 15-11-2026. */}
+      <Indisponibilidades />
 
       {contratados.length === 0 && eventosFeitos.length === 0 ? (
         <div className="rounded-2xl border border-[#E2EEF3] bg-white p-8 text-center">

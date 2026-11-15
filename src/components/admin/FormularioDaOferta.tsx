@@ -84,6 +84,30 @@ export function FormularioDaOferta({
 
   const elegiveis = alcance?.elegiveis ?? [];
 
+  /* d35: quem se marcou indisponível no dia deste pedido — informa, não bloqueia. */
+  const [indisponiveis, setIndisponiveis] = useState<Record<string, { estado: string }>>({});
+  useEffect(() => {
+    if (modo === "distribuir" || !token) return;
+    let vivo = true;
+    fetch(`/api/admin/indisponibilidades?pedidoId=${pedidoId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : { porProfissional: {} }))
+      .then((d) => {
+        if (vivo) setIndisponiveis(d.porProfissional ?? {});
+      })
+      .catch(() => {
+        /* sem a informação, escolhe-se como antes */
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [modo, token, pedidoId]);
+  const dizIndisponivel = (id: number) =>
+    indisponiveis[String(id)]?.estado === "indisponivel"
+      ? " — indisponível neste dia"
+      : indisponiveis[String(id)]
+        ? " — tem indisponibilidade nesses dias"
+        : "";
+
   // A lista de todos os activos só se pede quando se vai escolher.
   useEffect(() => {
     if (modo === "distribuir" || todos != null || !token) return;
@@ -271,6 +295,7 @@ export function FormularioDaOferta({
               <option key={p.id} value={p.id}>
                 {p.nome}
                 {p.elegivel ? "" : " (fora do raio)"}
+                {dizIndisponivel(p.id)}
               </option>
             ))}
           </select>
@@ -301,6 +326,7 @@ export function FormularioDaOferta({
                           }
                         />
                         {p.nome}
+                        {dizIndisponivel(p.id) && <span className="text-[11px] text-rose-300">{dizIndisponivel(p.id)}</span>}
                       </span>
                       <span className="text-[11px] text-slate-500">
                         {p.elegivel

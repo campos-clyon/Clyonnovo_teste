@@ -5902,6 +5902,8 @@ type ProfissionalParaEscolher = {
   distanciaKm: number | null;
   elegivel: boolean;
   motivos: string[];
+  /** «indisponível neste dia» (d35) — informa, não bloqueia a escolha à mão. */
+  indisponibilidade?: string | null;
 };
 
 /**
@@ -6040,6 +6042,7 @@ function EscolherProfissionais({
               {!p.elegivel && p.motivos.length > 0 && (
                 <span className="text-amber-300/90">· {p.motivos.join(", ")}</span>
               )}
+              {p.indisponibilidade && <span className="text-rose-300/90">· {p.indisponibilidade}</span>}
             </label>
           ))}
         </div>

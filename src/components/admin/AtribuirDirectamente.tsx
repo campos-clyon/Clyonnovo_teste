@@ -26,6 +26,24 @@ export default function AtribuirDirectamente({
   const [aberto, setAberto] = useState(false);
   const [todos, setTodos] = useState<Profissional[] | null>(null);
   const [escolhido, setEscolhido] = useState<number | null>(null);
+  /* d35: quem se marcou indisponível no dia deste pedido — informa, não bloqueia. */
+  const [indisponiveis, setIndisponiveis] = useState<Record<string, { estado: string; texto: string; periodos: string[] }>>({});
+
+  useEffect(() => {
+    if (!aberto || !token) return;
+    let vivo = true;
+    fetch(`/api/admin/indisponibilidades?pedidoId=${pedidoId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : { porProfissional: {} }))
+      .then((d) => {
+        if (vivo) setIndisponiveis(d.porProfissional ?? {});
+      })
+      .catch(() => {
+        /* sem a informação, escolhe-se como antes */
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [aberto, token, pedidoId]);
 
   useEffect(() => {
     if (!aberto || todos != null || !token) return;
@@ -76,6 +94,7 @@ export default function AtribuirDirectamente({
         {(todos ?? []).map((p) => (
           <option key={p.id} value={p.id}>
             {p.nome}
+            {indisponiveis[String(p.id)]?.estado === "indisponivel" ? " — indisponível neste dia" : indisponiveis[String(p.id)] ? " — tem indisponibilidade nesses dias" : ""}
           </option>
         ))}
       </select>
@@ -105,6 +124,12 @@ export default function AtribuirDirectamente({
       >
         Cancelar
       </button>
+      {escolhido != null && indisponiveis[String(escolhido)] && (
+        <span className="basis-full text-[11px] text-rose-300">
+          {indisponiveis[String(escolhido)].estado === "indisponivel" ? "Indisponível neste dia" : "Tem indisponibilidade nesses dias"}:{" "}
+          {indisponiveis[String(escolhido)].periodos.join("; ")}. Pode atribuir na mesma — confirme com ele.
+        </span>
+      )}
       <span className="basis-full text-[11px] text-slate-500">
         Para quando já está combinado com ele por fora: não precisa de aceitar na app.
       </span>

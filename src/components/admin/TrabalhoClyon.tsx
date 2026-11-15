@@ -604,10 +604,15 @@ export function TrabalhoClyonComAccoes({
       }
       const chegam = d.elegiveis?.length ?? 0;
       const fora = (d.candidatos ?? 0) - chegam;
+      // d35: quem se marcou indisponível no dia do pedido (os nomes, para a equipa decidir).
+      const indisponiveis = ((d.todos ?? []) as Array<{ nome: string; elegivel: boolean; indisponibilidade?: string | null }>)
+        .filter((t) => t.elegivel && t.indisponibilidade)
+        .map((t) => `${t.nome} (${t.indisponibilidade})`);
       setAlcance(
-        fora > 0 && d.porque
+        (fora > 0 && d.porque
           ? `Hoje chegaria a ${chegam} de ${d.candidatos}. Os outros ${fora}: ${d.porque}.`
-          : `Hoje chegaria a ${chegam} de ${d.candidatos} — não há ninguém de fora.`,
+          : `Hoje chegaria a ${chegam} de ${d.candidatos} — não há ninguém de fora.`) +
+          (indisponiveis.length > 0 ? ` Indisponíveis neste dia: ${indisponiveis.join(", ")}.` : ""),
       );
     } catch {
       setAlcance("Erro de rede.");

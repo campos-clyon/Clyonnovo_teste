@@ -57,6 +57,8 @@ import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
 import { transferenciasAEspera } from "@/lib/pagamentos-na-base";
 import { negociacoesNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { indisponibilidadesDoProfissional } from "@/lib/indisponibilidades-na-base";
+import { notaDeIndisponibilidade } from "@/lib/indisponibilidade";
 
 export const runtime = "nodejs";
 // Nunca em cache: a sugestão de cada pedido depende dos custos que ele acabou
@@ -132,6 +134,8 @@ export async function GET(req: NextRequest) {
 
   try {
     const linhas = await negociacoesDoProfissional(sessao.providerId);
+    // d35: as indisponibilidades dele, para a nota nos pedidos por decidir. Sem elas, nenhuma nota.
+    const minhasIndisponibilidades = await indisponibilidadesDoProfissional(sessao.providerId).catch(() => []);
 
     /*
      * Quais é que o cliente já pagou — uma consulta para a lista toda.
@@ -631,6 +635,22 @@ export async function GET(req: NextRequest) {
         })(),
         city: (vista.city as string | undefined) ?? null,
         urgency: (vista.urgency as string | undefined) ?? null,
+        /*
+         * «TEM INDISPONIBILIDADE NESSES DIAS» — d35, 15-11-2026. Num pedido ainda
+         * por decidir (aberto), quando o dia ou a janela do pedido cruza com o que
+         * ele marcou como indisponível. Nulo sem cruzamento, ou depois de contratado.
+         */
+        indisponibilidadeNoPedido:
+          l.estado === "aberta" || l.estado === "aguarda_contratacao"
+            ? notaDeIndisponibilidade(
+                {
+                  dataAgendada: (l as unknown as { dataAgendada?: Date | string | null }).dataAgendada ?? null,
+                  urgency: (vista.urgency as string | undefined) ?? null,
+                  criadoEm: (l as unknown as { pedidoCriadoEm?: Date | string | null }).pedidoCriadoEm ?? null,
+                },
+                minhasIndisponibilidades,
+              )
+            : null,
         description: (vista.description as string | undefined) ?? null,
         filesJson: (vista.filesJson as string | undefined) ?? null,
         floor: (vista.floor as string | undefined) ?? null,

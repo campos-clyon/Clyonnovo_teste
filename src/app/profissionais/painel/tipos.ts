@@ -35,6 +35,8 @@ export type Pedido = {
   actualizadoEm: string;
   /** As datas do fim do trabalho — entram no histórico da negociação. */
   execucaoEnviadaEm: string | null;
+  /** «Tem indisponibilidade nesses dias» num pedido por decidir — d35, 15-11-2026. */
+  indisponibilidadeNoPedido?: string | null;
   /** Quando ficou feito (d36, 15-11-2026): o dia e a hora do que aconteceu, ou o fim da folha. */
   feitoEm?: string | null;
   confirmadoEm: string | null;

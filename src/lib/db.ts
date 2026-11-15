@@ -16007,6 +16007,12 @@ export async function apagarProfissional(
     } catch {
       /* sem tabela não há nada para apagar */
     }
+    // E a agenda dele (d35): os dias em que não podia trabalhar não são história de ninguém.
+    try {
+      await conn.execute("DELETE FROM indisponibilidades WHERE providerId = ?", [providerId]);
+    } catch {
+      /* sem tabela não há nada para apagar */
+    }
     await conn.execute("DELETE FROM convitesProfissionais WHERE providerId = ?", [providerId]);
     if (p.email) {
       await conn.execute("DELETE FROM convitesProfissionais WHERE email = ?", [p.email]);

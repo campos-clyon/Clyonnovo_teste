@@ -24,6 +24,7 @@ import { negociacaoNova } from "./negociacao";
 import { profissionaisBloqueadosEmDinheiro } from "./bloqueio-do-profissional";
 import { propostasDaOferta, TAXAS_DA_OFERTA, type ModoDaOferta } from "./oferta-clyon";
 import { avisoDeOfertaAoProfissional } from "./aviso-de-oferta-clyon";
+import { cruzamentosDoPedido } from "./indisponibilidades-na-base";
 
 /**
  * Levar um pedido a quem o pode fazer.
@@ -128,6 +129,7 @@ const MOTIVO_POR_EXTENSO: Record<string, string> = {
   nao_emite_guia: "sem guia de transporte verificada",
   divida_em_atraso: "têm dívida à CLYON em atraso (pedido em dinheiro)",
   nao_escolhido: "não foram escolhidos",
+  indisponivel: "marcaram-se indisponíveis nesse dia",
 };
 
 /** O mesmo, dito de UM profissional — para a lista de escolher à mão. */
@@ -267,6 +269,9 @@ async function activosComDividas(
  * opinião, e no dia em que discordasse da primeira ninguém saberia qual valia.
  */
 export async function avaliarAlcance(pedido: {
+  /** Para dizer quem está indisponível no dia do pedido (d35). Sem ele, não se diz. */
+  pedidoId?: number;
+  urgency?: string | null;
   serviceType: string | null;
   precisaFatura: boolean;
   precisaGuiaTransporte: boolean;
@@ -295,6 +300,8 @@ export async function avaliarAlcance(pedido: {
     distanciaKm: number | null;
     elegivel: boolean;
     motivos: string[];
+    /** «indisponível neste dia» ou a nota da data vaga — d35; informa, não bloqueia. */
+    indisponibilidade?: string | null;
   }>;
   candidatos: number;
   motivos: Record<string, number>;
@@ -342,6 +349,7 @@ export async function avaliarAlcance(pedido: {
     distanciaKm: number | null;
     elegivel: boolean;
     motivos: string[];
+    indisponibilidade?: string | null;
   }> = [];
   const foraDeAlcance: Array<{ profissional: ProfissionalNaBase; distanciaKm: number | null }> =
     [];
@@ -388,6 +396,19 @@ export async function avaliarAlcance(pedido: {
     },
     foraDeAlcance,
   );
+
+  /* INDISPONÍVEL NESTE DIA — d35: o backoffice vê-o ao lado do nome, e não bloqueia. */
+  if (pedido.pedidoId) {
+    const cruzamentos = await cruzamentosDoPedido(
+      pedido.pedidoId,
+      todos.map((t) => t.id),
+      { urgency: pedido.urgency ?? null },
+    );
+    for (const t of todos) {
+      const c = cruzamentos.get(t.id);
+      t.indisponibilidade = c ? (c.estado === "indisponivel" ? `${c.texto} (${c.periodos.join("; ")})` : c.texto) : null;
+    }
+  }
 
   return { elegiveis, todos, candidatos: candidatos.length, motivos: motivos as unknown as Record<string, number> };
 }
@@ -517,6 +538,28 @@ export async function distribuirPedido(
     // Os escolhidos pelo cliente passam também pela regra (10-11-2026): soPara ∩ elegíveis.
     if (exigirElegibilidade && !r.elegivel) continue;
     if (soPara ? soPara.includes(c.profissional.id) && !bloqueado : r.elegivel) elegiveis.push(c);
+  }
+
+  /*
+   * INDISPONÍVEL NESSE DIA — d35, 15-11-2026. Um pedido com data certa que cai
+   * num período que o profissional marcou como indisponível não lhe vai; com
+   * data vaga vai, e ele vê a nota (meus-pedidos). Os escolhidos à mão pela
+   * equipa não se filtram (o backoffice só avisa); os escolhidos pelo cliente,
+   * sim, como o resto da regra.
+   */
+  let indisponiveis = 0;
+  if (!soPara || exigirElegibilidade) {
+    const cruzamentos = await cruzamentosDoPedido(
+      pedido.id,
+      elegiveis.map((c) => c.profissional.id),
+      { urgency: pedido.urgency },
+    );
+    for (let i = elegiveis.length - 1; i >= 0; i--) {
+      if (cruzamentos.get(elegiveis[i].profissional.id)?.estado === "indisponivel") {
+        elegiveis.splice(i, 1);
+        indisponiveis++;
+      }
+    }
   }
 
   // Contado com a distância de cada um, não com uma distância única — senão o
@@ -805,7 +848,8 @@ export async function distribuirPedido(
           divida_em_atraso: candidatos.filter(
             (c) => soPara.includes(c.id) && forma === "dinheiro" && c.dividaEmAtraso,
           ).length,
+          ...(indisponiveis > 0 ? { indisponivel: indisponiveis } : {}),
         }
-      : (motivos as unknown as Record<string, number>),
+      : { ...(motivos as unknown as Record<string, number>), ...(indisponiveis > 0 ? { indisponivel: indisponiveis } : {}) },
   };
 }
