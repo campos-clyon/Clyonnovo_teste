@@ -8559,6 +8559,10 @@ export async function actualizarPerfilDoProfissional(
    * `confirmarRegime`: ele ESCOLHEU o regime de IVA neste ecrã (d19, 13-11-2026).
    * Só isto carimba `regimeIvaConfirmadoEm`; o regime que vem sem escolha grava-se
    * e fica como estava (por confirmar, ou confirmado de antes).
+   *
+   * d27 (15-11-2026): o perfil do profissional já não lhe passa o regime sem
+   * escolha — decide antes, contra a base (`regime-sem-confirmar.ts`). Sem
+   * escolha só o grava o administrador (a correcção do backoffice).
    */
   opcoes: { confirmarRegime?: boolean } = {},
 ): Promise<void> {

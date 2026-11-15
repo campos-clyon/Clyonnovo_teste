@@ -39,6 +39,7 @@ import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
 import { perfilFiscalDoParceiro, regimeParaOEcra } from "@/lib/perfil-fiscal";
+import { regimeQueSeGrava, type RegimeEscolhido } from "@/lib/regime-sem-confirmar";
 import { guiaMudouDeFacto } from "@/lib/guia-mudou";
 import { avisoDoCodigoApa, destinoDosResiduosLimpo } from "@/lib/guia-de-residuos";
 import {
@@ -590,17 +591,25 @@ export async function PUT(req: NextRequest) {
   if ("emiteFatura" in corpo) mudancas.emiteFatura = corpo.emiteFatura ? 1 : 0;
 
   /*
-   * O regime grava-se como sempre; CONFIRMA-SE só quando ele o escolheu neste
-   * ecrã (`confirmarRegime: true`) — d19, 13-11-2026. Vazio não é erro: é o
-   * ecrã de quem ainda não escolheu, e fica tudo como estava.
+   * O regime CONFIRMA-SE só quando ele o escolheu neste ecrã (`confirmarRegime:
+   * true`) — d19, 13-11-2026. Vazio não é erro: é o ecrã de quem ainda não
+   * escolheu, e fica tudo como estava.
+   *
+   * E SEM `confirmarRegime` JÁ NÃO SE GRAVA À CEGA — d27, 15-11-2026: a app
+   * instalada manda o regime de omissão em cada gravação da Faturação, e gravar
+   * o NIF reescrevia o regime guardado para «isento». Decide-se contra a base,
+   * antes do UPDATE (`regime-sem-confirmar.ts`).
    */
   let confirmarRegime = false;
+  let regimeSemConfirmacao: RegimeEscolhido | null = null;
   if ("regimeIva" in corpo && corpo.regimeIva !== "" && corpo.regimeIva != null) {
     if (!regimeDeIvaValido(corpo.regimeIva)) {
       erros.push({ campo: "regimeIva", mensagem: "Escolha o regime de IVA." });
-    } else {
+    } else if (corpo.confirmarRegime === true) {
       mudancas.regimeIva = corpo.regimeIva;
-      confirmarRegime = corpo.confirmarRegime === true;
+      confirmarRegime = true;
+    } else {
+      regimeSemConfirmacao = corpo.regimeIva as RegimeEscolhido;
     }
   }
 
@@ -682,8 +691,19 @@ export async function PUT(req: NextRequest) {
 
   try {
     const mexeNoPagamento = CAMPOS_DE_PAGAMENTO.some((c) => c in mudancas);
+    // d27: o regime sem `confirmarRegime` também se decide contra o que está gravado.
+    const precisaDoGuardado = tocouNaGuia || mexeNoPagamento || regimeSemConfirmacao != null;
     const guardado =
-      tocouNaGuia || mexeNoPagamento ? await perfilDoProfissional(sessao.providerId) : undefined;
+      precisaDoGuardado ? await perfilDoProfissional(sessao.providerId) : undefined;
+
+    // d27: o regime sem `confirmarRegime` só se grava se ele tocou noutro.
+    if (regimeSemConfirmacao) {
+      const r = regimeQueSeGrava(regimeSemConfirmacao, guardado, false);
+      if (r.grava) {
+        mudancas.regimeIva = regimeSemConfirmacao;
+        confirmarRegime = r.confirma;
+      }
+    }
 
     /*
      * O IBAN, O TITULAR E O MB WAY PEDEM A PALAVRA-PASSE — d1, 12-11-2026.

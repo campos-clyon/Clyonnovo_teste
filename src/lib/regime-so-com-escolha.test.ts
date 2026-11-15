@@ -46,9 +46,10 @@ describe("sem escolha não há carimbo", () => {
     );
   });
 
-  it("a rota só confirma quando o corpo traz confirmarRegime: true, e passa-o à base", () => {
+  it("a rota só confirma quando o corpo traz confirmarRegime: true (ou, d27, um toque noutro regime), e passa-o à base", () => {
     const rota = semComentarios(ler("src/app/api/profissionais/perfil/route.ts"));
-    expect(rota).toMatch(/confirmarRegime = corpo\.confirmarRegime === true/);
+    expect(rota).toMatch(/else if \(corpo\.confirmarRegime === true\) \{\s*mudancas\.regimeIva = corpo\.regimeIva;\s*confirmarRegime = true;/);
+    expect(rota).toMatch(/confirmarRegime = r\.confirma;/);
     expect(rota).toMatch(/actualizarPerfilDoProfissional\(sessao\.providerId, mudancas, \{ confirmarRegime \}\)/);
   });
 
