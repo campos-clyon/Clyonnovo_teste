@@ -1,3 +1,4 @@
+import { valorUnicoDaLinha } from "@/lib/valor-unico-ao-cliente";
 import {
   getSimulatorOrderById,
   negociacoesDoPedido,
@@ -52,6 +53,15 @@ export async function avisarDaProposta(dados: {
     const negociacao = negociacoes.find((n) => n.id === dados.negociacaoId);
     if (!negociacao) return;
     const taxas = taxasDaNegociacao(negociacao);
+
+    /*
+     * O VALOR ÚNICO (d39, 15-11-2026): o cliente recebeu um valor só, sem nomes,
+     * e é a CLYON quem escolhe. As propostas que chegam depois não lhe são
+     * anunciadas — nem por email, nem pelo WhatsApp, nem no telemóvel.
+     */
+    if (dados.quemPropos === "profissional" && valorUnicoDaLinha((pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente) != null) {
+      return;
+    }
 
     if (dados.quemPropos === "profissional") {
       /*

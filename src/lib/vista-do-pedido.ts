@@ -46,6 +46,8 @@ export async function negociacoesDaVistaDoCliente(
   pedido: {
     id: number;
     valorFixoClyon?: unknown;
+    /** O valor único (d39): só a contratada sai para o cliente. */
+    valorUnicoCliente?: unknown;
     baseDoPreco?: unknown;
     /** Para saber se o trabalho exige a guia de resíduos (04-11-2026, d10.1). */
     serviceType?: unknown;
@@ -70,6 +72,7 @@ export async function negociacoesDaVistaDoCliente(
   const linhas = negociacoesParaOCliente(
     await negociacoesDoPedido(pedido.id),
     pedido.valorFixoClyon != null,
+    pedido.valorUnicoCliente,
   );
   /*
    * O perfil de cada profissional vai JUNTO com a negociação — a homepage

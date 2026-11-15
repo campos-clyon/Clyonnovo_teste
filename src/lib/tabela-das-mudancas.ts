@@ -472,7 +472,7 @@ export const MINIMO_DA_MUDANCA = PRECO_POR_HORA * MINIMO_DE_HORAS;
 /** O que pesa numa mudança, sem números: as horas e a tarifa do parceiro. */
 export const EXTRAS_DA_MUDANCA =
   "Andares sem elevador, desmontagem e montagem de móveis pesam nas horas; os km e o material de embalamento " +
-  "são os da tarifa do parceiro que escolher.";
+  "são os da tarifa do parceiro escolhido.";
 
 /** O mesmo valor com IVA, escrito como a tabela os escreve («61,50 €»). */
 const comIvaEscrito = (v: number) => euros(arred(v * (1 + TAXA_IVA)));

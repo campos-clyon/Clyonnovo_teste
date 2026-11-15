@@ -44,7 +44,7 @@ export const PRECO_DOS_MOVEIS = MOVEIS_POR_PECA;
 /** Quando compensa pedir a um parceiro — igual nas duas terras. */
 export const QUANDO_COMPENSA_UM_PARCEIRO: string[] = [
   "Os móveis estão dentro de casa ou num andar sem elevador: o parceiro vai buscá-los lá dentro, e não tem de os pôr na rua.",
-  `Não pode esperar pela data da Câmara: recebe propostas ${PROPOSTAS_EM_ATE} e combina o dia com o parceiro que escolher.`,
+  `Não pode esperar pela data da Câmara: recebe propostas ${PROPOSTAS_EM_ATE} e combina o dia com o parceiro escolhido.`,
   "É preciso desmontar um roupeiro, uma cama ou uma estante antes de sair.",
   "Vai tudo de uma vez: móveis, eletrodomésticos, colchões e caixas num só pedido, com o preço fechado antes de começar.",
 ];

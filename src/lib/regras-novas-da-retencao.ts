@@ -361,6 +361,9 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   escolhaDosParceirosJson: "fica",
   // O percurso da mudança (11-11-2026): o traçado começa e acaba à porta da pessoa — sai.
   percursoJson: "nulo",
+  // O valor único ao cliente (15-11-2026, d39): um preço, nada da pessoa.
+  valorUnicoCliente: "fica",
+  valorUnicoEm: "fica",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

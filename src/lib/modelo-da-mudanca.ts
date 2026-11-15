@@ -19,7 +19,7 @@ export const REFERENCIA_DA_MUDANCA =
 export const MODELO_DA_MUDANCA =
   "Cada parceiro tem o seu preço por hora: no simulador de mudanças vê os parceiros disponíveis, com a nota, " +
   "o preço por hora, a equipa de 2 ou 3 pessoas e o material, e escolhe. O valor final sai das horas, dos km " +
-  "e do material que confirma na folha do dia. A mudança é feita pelo parceiro que escolher.";
+  "e do material que confirma na folha do dia. A mudança é feita pelo parceiro escolhido.";
 
-/** O mesmo, a meio de uma frase: «Paga-se à hora, ao preço por hora do parceiro que escolher». */
-export const MODELO_DA_MUDANCA_CURTO = "ao preço por hora do parceiro que escolher";
+/** O mesmo, a meio de uma frase: «Paga-se à hora, ao preço por hora do parceiro escolhido». */
+export const MODELO_DA_MUDANCA_CURTO = "ao preço por hora do parceiro escolhido";

@@ -111,7 +111,7 @@ const howItWorks = [
   {
     step: "03",
     title: "Retirada no local",
-    description: "O parceiro que escolher chega, desmonta se o pedir, carrega e transporta.",
+    description: "O parceiro escolhido chega, desmonta se o pedir, carrega e transporta.",
   },
 ];
 

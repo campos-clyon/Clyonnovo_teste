@@ -1105,7 +1105,7 @@ export function mensagemDaMudanca(
   const pp = precoPublicoConhecido();
   if (pelaLista && pp.tipo === "parceiros") {
     return (
-      `Mudança à hora, ao preço do parceiro que escolher: ${desdeDaListaEmTexto(pp)}. ` +
+      `Mudança à hora, ao preço do parceiro escolhido: ${desdeDaListaEmTexto(pp)}. ` +
       `Estimativa pelo parceiro com o preço mais baixo, ${oQueOExemploLeva(pelaLista)} mínimos dele: ${exemploDaListaEmTexto(pelaLista)}. ` +
       "O total sai das horas, dos km e do material confirmados na folha do dia."
     );

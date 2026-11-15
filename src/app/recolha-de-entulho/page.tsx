@@ -728,7 +728,7 @@ export default function RecolhaEntulhoPage() {
             variant="centered"
             title="Tem entulho para tirar?"
             primaryHref={PEDIR_ENTULHO}
-            description={`Descreva-o em dois minutos. ${PROMESSA_DO_PRAZO} O parceiro que escolher carrega-o — em sacos ou a granel — e leva-o para destino licenciado.`}
+            description={`Descreva-o em dois minutos. ${PROMESSA_DO_PRAZO} O parceiro escolhido carrega-o — em sacos ou a granel — e leva-o para destino licenciado.`}
             whatsappMessage="Olá! Preciso de recolha de entulho. Podem dar-me um orçamento?"
           />
         </div>

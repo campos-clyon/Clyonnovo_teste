@@ -91,7 +91,7 @@ export default async function MudancasDeEscritorioPage() {
           },
           {
             question: "Quanto custa uma mudança de escritório?",
-            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Paga-se à hora, ao preço do parceiro que escolher (${precoDaMudancaNumaFrase(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.${exemplosDaListaNumaFrase(preco) ? ` ${exemplosDaListaNumaFrase(preco)}` : ""}`,
+            answer: `Depende do volume, dos andares e das regras dos dois edifícios, da hora e da distância. Paga-se à hora, ao preço do parceiro escolhido (${precoDaMudancaNumaFrase(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.${exemplosDaListaNumaFrase(preco) ? ` ${exemplosDaListaNumaFrase(preco)}` : ""}`,
           },
         ],
         ctaTitulo: "A sua empresa vai mudar de sítio?",

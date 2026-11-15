@@ -229,6 +229,8 @@ export async function loadContaData(email: string, _nome?: string | null) {
            o.providerId, o.assignedToId, o.assignedToName,
            -- Só a marca, para o histórico (d33): o valor nunca sai daqui.
            (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
+           -- O valor único (d39): só a marca, para as propostas não saírem.
+           (o.valorUnicoCliente IS NOT NULL) AS valorUnico, o.valorUnicoCliente,
            o.baseDoPreco, o.propostaEnviadaEm, o.precoAceiteEm,
            p.name AS providerName, p.phone AS providerPhone
          FROM simulatorOrders o

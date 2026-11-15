@@ -237,7 +237,7 @@ const PROMESSA_DO_MODELO_ANTIGO: Promessa = {
     "Se não disser nada, o trabalho é dado por concluído sozinho daqui a {DIAS}. Se alguma coisa estiver mal, responda a este email antes disso — tratamos do assunto.",
   faqQuemFaz:
     "Não. A CLYON é a plataforma que liga o seu pedido a parceiros da sua " +
-    "zona. Quem desmonta, carrega e transporta é o parceiro que escolher: uma empresa parceira, com a sua equipa.",
+    "zona. Quem desmonta, carrega e transporta é o parceiro escolhido: uma empresa parceira, com a sua equipa.",
   faqComoSePaga:
     "Quando aceita, o valor fica combinado por escrito e o parceiro recebe os dados " +
     `para lá ir. ${COMO_SE_PAGA}`,

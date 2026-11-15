@@ -581,7 +581,7 @@ export const TEXTOS_DA_LISTA = Object.freeze({
   notaDaEstimativa:
     "Estimativa com os preços de cada parceiro, entre as horas habituais numa casa como a sua, com o percurso entre as duas moradas " +
     "e o material de proteção dos móveis e do chão. O valor final conta as horas feitas, os quilómetros e o material que usar.",
-  quemFaz: "O trabalho é feito pelo parceiro que escolher.",
+  quemFaz: "O trabalho é feito pelo parceiro escolhido.",
 });
 
 /** «T3 · Seixal → Almada · entre 7 e 9 h com 3 pessoas» */

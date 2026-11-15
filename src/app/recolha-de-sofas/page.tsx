@@ -206,7 +206,7 @@ export default function RecolhaDeSofasPage() {
                 Precisa de retirar um sofá velho, uma chaise longue ou um cadeirão? Pela CLYON, parceiros da sua zona fazem a <strong>recolha de sofás usados</strong> com carregamento do interior do imóvel, transporte e destino licenciado. Pode pedir em <strong>Lisboa, Amadora, Sintra, Oeiras, Cascais, Almada, Seixal, Barreiro e Setúbal</strong>.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-600">
-                A recolha de sofá em Lisboa é dos pedidos mais frequentes na CLYON — por mudança, renovação ou venda de casa. O parceiro que escolher entra no imóvel, carrega o sofá e leva-o para destino licenciado.
+                A recolha de sofá em Lisboa é dos pedidos mais frequentes na CLYON — por mudança, renovação ou venda de casa. O parceiro escolhido entra no imóvel, carrega o sofá e leva-o para destino licenciado.
               </p>
 
               {/* CTA Buttons */}

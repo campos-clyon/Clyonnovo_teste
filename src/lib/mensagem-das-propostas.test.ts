@@ -264,7 +264,7 @@ describe("a mensagem", () => {
       ...base,
       propostas: [umaProposta("TRSul", 270)],
     });
-    expect(m).toContain("quem faz o trabalho é o parceiro que escolher");
+    expect(m).toContain("quem faz o trabalho é o parceiro escolhido");
   });
 
   it("o link NÃO vai lá dentro — manda-se à mão (03-10-2026)", () => {

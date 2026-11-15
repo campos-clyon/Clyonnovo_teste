@@ -84,6 +84,32 @@ async function enviar(para: string, assunto: string, html: string): Promise<bool
   }
 }
 
+// ── O valor único (d39, 15-11-2026) ──────────────────────────────────────────
+
+/**
+ * O VALOR ÚNICO, POR EMAIL — as mesmas linhas da mensagem do WhatsApp
+ * (`linhasDoValorUnico`): sem nomes nem lista, e «Responda SIM». Só sai quando
+ * a equipa carrega em «Enviar por email» na Mesa. A resposta vai à CLYON.
+ */
+export async function avisarClienteDoValorUnico(p: {
+  para: string;
+  pedidoId: number;
+  linhas: string[];
+  valorComIva: string;
+}): Promise<boolean> {
+  const [ola, ...resto] = p.linhas;
+  return enviar(
+    p.para,
+    `O seu orçamento: ${p.valorComIva} — pedido #${p.pedidoId}`,
+    moldura(`
+      <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
+      <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:#0B1929;">${e(ola ?? "")}</h1>
+      ${resto
+        .map((l) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#334155;">${e(l).replace("Responda SIM", "Responda SIM a este email")}</p>`)
+        .join("")}`),
+  );
+}
+
 // ── O profissional propôs: avisar o cliente ─────────────────────────────────
 
 export async function avisarClienteDaProposta(p: {

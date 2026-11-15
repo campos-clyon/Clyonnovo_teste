@@ -8,6 +8,7 @@ import { marcarVistasPeloCliente } from "@/lib/pedidos-do-cliente";
 import { QUANDO_EM_PALAVRAS } from "@/lib/negociacao-na-vista";
 import Nota from "@/components/Nota";
 import PropostasRecebidas from "./PropostasRecebidas";
+import { valorUnicoDaLinha, valorUnicoParaOCliente } from "@/lib/valor-unico-ao-cliente";
 import { QUEM_FACTURA_EM_PALAVRAS, quemFaturaEmPalavras } from "@/lib/identificacao-legal";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import PrecoDaClyon from "@/components/PrecoDaClyon";
@@ -186,7 +187,28 @@ export default async function VistaDoPedido({
         <EscolhidosSemResposta pedidoId={pedido.id} token={token} inicial={escolhidos} soParaVer={soParaVer || !token} />
       )}
 
-      {pedido.valorFixoClyon == null && (
+      {/*
+        O VALOR ÚNICO — 15-11-2026 (d39). A CLYON enviou-lhe um valor só: até
+        escolher o parceiro, ele vê esse valor e não as propostas nem os nomes
+        (`negociacoesParaOCliente` só deixa sair a contratada).
+      */}
+      {(() => {
+        const v = valorUnicoDaLinha((pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente);
+        if (v == null || pedido.valorFixoClyon != null || negociacoesDoCliente.some((n) => n.estado === "acordada")) return null;
+        const t = valorUnicoParaOCliente(v, base);
+        return (
+          <section className="mb-6 rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-tinta">{t.titulo}</h2>
+            <p className="mt-2 text-xl font-bold text-tinta">{t.valor}</p>
+            <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">{t.quemFaz}</p>
+            <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">Para aceitar, responda SIM na conversa com a CLYON.</p>
+          </section>
+        );
+      })()}
+
+      {pedido.valorFixoClyon == null &&
+        !(valorUnicoDaLinha((pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente) != null &&
+          !negociacoesDoCliente.some((n) => n.estado === "acordada")) && (
       <PropostasRecebidas
         token={token}
         pedidoId={pedido.id}
@@ -404,7 +426,7 @@ export default async function VistaDoPedido({
       */}
       <p className="mt-6 text-center text-xs leading-relaxed text-tinta-fraca">
         A CLYON liga clientes a parceiros independentes. Quem executa o trabalho é o
-        parceiro que escolher.{" "}
+        parceiro escolhido.{" "}
         {/* d16: num Trabalho CLYON a fatura é uma só, como antes; nos outros, pela data do modelo. */}
         {pedido.valorFixoClyon != null ? QUEM_FACTURA_EM_PALAVRAS : quemFaturaEmPalavras(agoraDoModelo())}
       </p>

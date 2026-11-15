@@ -720,7 +720,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "A que horas convém marcar a mudança?",
         resposta:
-          "Cedo. De dia as ruas estão ocupadas e a carrinha pode ter de parar longe da porta. Diga a rua no pedido e combine a hora com o parceiro que escolher.",
+          "Cedo. De dia as ruas estão ocupadas e a carrinha pode ter de parar longe da porta. Diga a rua no pedido e combine a hora com o parceiro escolhido.",
       },
       {
         pergunta: "Quanto custa uma mudança na Amadora?",

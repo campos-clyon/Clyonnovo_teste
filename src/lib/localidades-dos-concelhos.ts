@@ -114,7 +114,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-entulho-corroios",
       titulo: "Recolha de entulho em Corroios",
       texto:
-        `Em Corroios, o tipo de casa muda o trabalho. Nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha costuma encostar ao portão e o entulho sai depressa; nas torres do Miratejo, desce de elevador, saco a saco, e convém avisar o condomínio. Em qualquer caso, recolhe-se em sacos de obra de ${PESO_DO_SACO} ou a granel, e nada fica na rua à espera. ${NAO_HA_CONTENTORES} Uma casa de banho remodelada cabe, em geral, em 1 m³, ${UM_METRO}; a obra de um T1 ou T2, até 3 m³, ${TRES_METROS}. O parceiro que escolher leva o entulho a operador licenciado. ${PROMESSA_DO_PRAZO}`,
+        `Em Corroios, o tipo de casa muda o trabalho. Nas moradias de Santa Marta do Pinhal e de Vale de Milhaços, a carrinha costuma encostar ao portão e o entulho sai depressa; nas torres do Miratejo, desce de elevador, saco a saco, e convém avisar o condomínio. Em qualquer caso, recolhe-se em sacos de obra de ${PESO_DO_SACO} ou a granel, e nada fica na rua à espera. ${NAO_HA_CONTENTORES} Uma casa de banho remodelada cabe, em geral, em 1 m³, ${UM_METRO}; a obra de um T1 ou T2, até 3 m³, ${TRES_METROS}. O parceiro escolhido leva o entulho a operador licenciado. ${PROMESSA_DO_PRAZO}`,
     },
   ],
   "esvaziamento-casas-seixal": [
@@ -139,7 +139,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/mudancas/amora",
       titulo: "Mudanças na Amora",
       texto:
-        `Para quem muda de casa da Amora para Lisboa, a travessia é pela ponte 25 de Abril, com a portagem incluída na proposta. Nos prédios da Cruz de Pau e do Fogueteiro, diga o andar e se há elevador: cada andar feito a pé entra na proposta. Numa moradia, lembre-se da garagem e da arrecadação, que é o que mais se esquece no pedido e faz crescer o volume no dia. A mudança paga-se à hora, ${HORA_DA_MUDANCA}. Quem a faz é o parceiro que escolher entre as propostas. ${PROMESSA_DO_PRAZO}`,
+        `Para quem muda de casa da Amora para Lisboa, a travessia é pela ponte 25 de Abril, com a portagem incluída na proposta. Nos prédios da Cruz de Pau e do Fogueteiro, diga o andar e se há elevador: cada andar feito a pé entra na proposta. Numa moradia, lembre-se da garagem e da arrecadação, que é o que mais se esquece no pedido e faz crescer o volume no dia. A mudança paga-se à hora, ${HORA_DA_MUDANCA}. Quem a faz é o parceiro escolhido entre as propostas. ${PROMESSA_DO_PRAZO}`,
     },
     {
       nome: "Corroios",

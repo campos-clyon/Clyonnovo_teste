@@ -225,7 +225,7 @@ const faqsPelaData = (agora: Date) =>
 const faqs = [
   {
     q: "Que tipo de pedidos a CLYON aceita?",
-    a: "Recolha de entulho, móveis, monos e recheios, esvaziamento de casas, mudanças e manutenção da casa, com reparações e remodelações — de particulares e empresas. Quem faz o trabalho é o parceiro que escolher.",
+    a: "Recolha de entulho, móveis, monos e recheios, esvaziamento de casas, mudanças e manutenção da casa, com reparações e remodelações — de particulares e empresas. Quem faz o trabalho é o parceiro escolhido.",
   },
   {
     q: "Recolhem no mesmo dia?",

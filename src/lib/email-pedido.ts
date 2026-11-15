@@ -131,7 +131,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
         <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
             A CLYON liga clientes a parceiros independentes. Quem executa o
-            trabalho é o parceiro que escolher. ${quemFaturaEmPalavras(agoraDoModelo())}
+            trabalho é o parceiro escolhido. ${quemFaturaEmPalavras(agoraDoModelo())}
           </p>
         </td></tr>
 

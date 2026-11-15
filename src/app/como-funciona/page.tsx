@@ -88,8 +88,8 @@ export default function ComoFuncionaPage() {
             Pede, recebe propostas, escolhe.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            A CLYON é uma plataforma: liga-o a parceiros independentes da sua zona. Quem faz o trabalho é o parceiro que
-            escolher — a CLYON confere o pedido antes de o enviar, guarda o que
+            A CLYON é uma plataforma: liga-o a parceiros independentes da sua zona. Quem faz o trabalho é o parceiro
+            escolhido — a CLYON confere o pedido antes de o enviar, guarda o que
             ficou combinado e acompanha até ao fim.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">

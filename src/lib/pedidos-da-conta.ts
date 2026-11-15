@@ -68,7 +68,7 @@ export function porPedido(linhas: Linha[]): Map<number, Linha[]> {
 
 /** As negociações de um pedido da conta, como o ecrã as mostra. */
 export function negociacoesDaContaNoEcra(
-  pedido: { id: unknown; trabalhoClyon?: unknown; baseDoPreco?: unknown },
+  pedido: { id: unknown; trabalhoClyon?: unknown; valorUnico?: unknown; baseDoPreco?: unknown },
   linhas: Linha[] | undefined,
   agora: Date = new Date(),
   /** O modelo de 15-11 visto pelo servidor (d17, `novoModeloParaOCliente`). */
@@ -82,7 +82,7 @@ export function negociacoesDaContaNoEcra(
    * quem fez proposta, sem a taxa do profissional. Ver
    * `negociacoes-para-o-cliente.ts`.
    */
-  return negociacoesParaOCliente(linhas, pedido.trabalhoClyon).map((n) =>
+  return negociacoesParaOCliente(linhas, pedido.trabalhoClyon, pedido.valorUnico).map((n) =>
     negociacaoParaOEcra(
       negociacaoParaAVista(n as unknown as LinhaParaAVista, {
         porCarga: base === "carga",
@@ -122,11 +122,11 @@ export async function pedidoDaContaParaOEcra<T extends Record<string, unknown>>(
     estadoTexto: resumo.estadoTexto,
     novidade: resumo.novidade,
     negociacoes: negociacoesDaContaNoEcra(
-      pedido as T & { id: unknown; trabalhoClyon?: unknown; baseDoPreco?: unknown },
+      pedido as T & { id: unknown; trabalhoClyon?: unknown; valorUnico?: unknown; baseDoPreco?: unknown },
       linhas,
       agora,
       // O mesmo total do bloco «Pagar a …» (d17): pelo servidor, com os pagamentos lidos.
-      await novoModeloParaOCliente(negociacoesParaOCliente(linhas, pedido.trabalhoClyon), agora),
+      await novoModeloParaOCliente(negociacoesParaOCliente(linhas, pedido.trabalhoClyon, pedido.valorUnico), agora),
     ),
     // O histórico só pela lista fechada, como a página (d33, 26-10-2026).
     historyJson: historicoParaOCliente(pedido.historyJson, { trabalhoClyon: pedido.trabalhoClyon }),

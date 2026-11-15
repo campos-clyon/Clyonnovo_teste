@@ -4,7 +4,9 @@ import {
   appendOrderHistory,
   comOsChoquesDaAgenda,
   getSimulatorOrderById,
+  gravarValorUnico,
   marcarConcluidoComoVisto,
+  parceirosParaOValorUnico,
   marcarOrcamentoEnviado,
   numeroBloqueadoWhatsApp,
   pedidosComNegociacoes,
@@ -18,6 +20,10 @@ import { pedidoFechado } from "@/lib/pedido-arrumado";
 import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { negociacoesComDadosDePagamentoMudados } from "@/lib/dados-de-pagamento-mudados-na-base";
+import { lerValorUnico, linhasDoValorUnico, valorUnicoComIva } from "@/lib/valor-unico";
+import { avisarClienteDoValorUnico } from "@/lib/email-proposta";
+import { lerBase } from "@/lib/base-do-preco";
+import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 
 export const runtime = "nodejs";
 
@@ -78,6 +84,13 @@ export async function GET(req: NextRequest) {
       console.error("[api/admin/negociacoes GET] dados de pagamento mudados:", e);
       return new Set<number>();
     });
+    // d39: a nota e o «verificado» de quem propôs, para o «Escolher por mim» do valor único.
+    const dosParceiros = await parceirosParaOValorUnico(
+      pedidos.filter((p) => p.valorUnicoCliente != null).flatMap((p) => p.negociacoes.map((n) => Number(n.providerId))),
+    ).catch((e) => {
+      console.error("[api/admin/negociacoes GET] parceiros do valor único:", e);
+      return new Map<number, { nota: { media: number; quantas: number } | null; verificado: boolean }>();
+    });
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
@@ -92,6 +105,7 @@ export async function GET(req: NextRequest) {
           ...(confianca.get(Number(n.id)) ?? {}),
           ...(doNovoModelo.has(Number(n.id)) ? { noNovoModelo: true } : {}),
           ...(dadosMudados.has(Number(n.id)) ? { dadosDePagamentoMudados: true } : {}),
+          ...(dosParceiros.has(Number(n.providerId)) ? { doValorUnico: dosParceiros.get(Number(n.providerId)) } : {}),
           ...(doNovoModelo.has(Number(n.id)) && regimes.has(Number(n.id))
             ? { regimeParaOTotal: regimes.get(Number(n.id)) }
             : {}),
@@ -112,7 +126,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { accao?: unknown; pedidoId?: unknown; texto?: unknown; marcarEnviado?: unknown };
+  let corpo: { accao?: unknown; pedidoId?: unknown; texto?: unknown; marcarEnviado?: unknown; valor?: unknown; email?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -122,6 +136,68 @@ export async function POST(req: NextRequest) {
   if (corpo.accao === "cliente_pediu_mais_parceiros" && Number.isInteger(Number(corpo.pedidoId)) && Number(corpo.pedidoId) > 0) {
     const r = await registarQueOClientePediu(Number(corpo.pedidoId), colab?.nome ?? "a CLYON");
     return NextResponse.json(r.corpo, { status: r.status });
+  }
+  /*
+   * O VALOR ÚNICO AO CLIENTE — 15-11-2026 (d39). Grava (ou tira, com
+   * `valor: null`) o valor único de um pedido que negoceia; as negociações
+   * continuam vivas. Com `email: true`, manda-lhe também o email com a mesma
+   * mensagem (só quando a equipa carrega).
+   */
+  if (corpo.accao === "valor_unico" && Number.isInteger(Number(corpo.pedidoId)) && Number(corpo.pedidoId) > 0) {
+    const pedidoId = Number(corpo.pedidoId);
+    const tirar = corpo.valor === null;
+    const lido = tirar ? null : lerValorUnico(corpo.valor);
+    if (lido && !lido.ok) return NextResponse.json({ error: lido.erro }, { status: 400 });
+    const valor = lido && lido.ok ? lido.valor : null;
+    const pedido = await getSimulatorOrderById(pedidoId);
+    if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+    if (!(await gravarValorUnico(pedidoId, valor))) {
+      return NextResponse.json(
+        { error: "Este pedido já não aceita valor único: é um Trabalho CLYON, está fechado ou já tem parceiro contratado." },
+        { status: 409 },
+      );
+    }
+    const quem = colab?.nome ?? "a CLYON";
+    await appendOrderHistory(pedidoId, {
+      type: "note",
+      by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+      message:
+        valor == null
+          ? `Valor único tirado por ${quem}: o cliente volta a ver as propostas.`
+          : `Valor único ao cliente: ${valorUnicoComIva(valor)}, por ${quem}. As propostas continuam abertas; a CLYON escolhe o parceiro.`,
+    });
+    let email: "enviado" | "sem_email" | "falhou" | null = null;
+    if (valor != null && corpo.email === true) {
+      const para = String(pedido.contactEmail ?? "").trim();
+      if (!para.includes("@")) email = "sem_email";
+      else {
+        const saiu = await avisarClienteDoValorUnico({
+          para,
+          pedidoId,
+          linhas: linhasDoValorUnico(
+            {
+              nomeCliente: pedido.contactName ?? null,
+              servico: servicoEmPalavras(pedido.serviceType ?? null).toLowerCase(),
+              servicoId: pedido.serviceType ?? null,
+              cidade: pedido.city ?? null,
+              valorSemIva: valor,
+              base: lerBase(pedido.baseDoPreco),
+            },
+            new Date(),
+          ),
+          valorComIva: valorUnicoComIva(valor),
+        });
+        email = saiu ? "enviado" : "falhou";
+        if (saiu) {
+          await appendOrderHistory(pedidoId, {
+            type: "note",
+            by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+            message: `Valor único enviado ao cliente por email, por ${quem}.`,
+          });
+        }
+      }
+    }
+    return NextResponse.json({ ok: true, valor, email });
   }
   if (
     !["concluido_visto", "orcamento_enviado", "enviar_pela_clyon"].includes(String(corpo.accao)) ||

@@ -86,7 +86,7 @@ function perguntasGerais(nome: string, preco: PrecoPublicoDasMudancas): Array<{ 
     {
       pergunta: "O preço pode mudar no dia da mudança?",
       // À hora desde 13-10-2026; ao preço de cada parceiro desde 11-11-2026.
-      resposta: `O preço da hora é o do parceiro que escolher, e fica congelado no pedido (${precoDaMudancaNumaFrase(preco)}); o total sai das horas, dos km e do material que confirma na folha do dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que se prevêem as horas.`,
+      resposta: `O preço da hora é o do parceiro escolhido, e fica congelado no pedido (${precoDaMudancaNumaFrase(preco)}); o total sai das horas, dos km e do material que confirma na folha do dia. Por isso vale a pena descrever bem o volume e os acessos: é com isso que se prevêem as horas.`,
     },
     {
       pergunta: "Fazem mudanças ao fim de semana?",

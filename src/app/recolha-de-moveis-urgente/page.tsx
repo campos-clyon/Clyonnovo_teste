@@ -99,7 +99,7 @@ const howItWorks = [
   {
     step: "03",
     title: "Recolha no local",
-    description: "O parceiro que escolher chega, desmonta se o pedir, carrega e transporta tudo.",
+    description: "O parceiro escolhido chega, desmonta se o pedir, carrega e transporta tudo.",
   },
 ];
 

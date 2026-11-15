@@ -180,7 +180,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "O serviço de recolha é pago?",
-    a: `Sim. A recolha é um serviço pago. O valor é o da proposta do parceiro que escolher, conforme o volume, o peso, a localização, o acesso e o tipo de material. ${PRECO_FECHADO}`,
+    a: `Sim. A recolha é um serviço pago. O valor é o da proposta do parceiro escolhido, conforme o volume, o peso, a localização, o acesso e o tipo de material. ${PRECO_FECHADO}`,
   },
   {
     q: "O parceiro carrega os materiais?",
@@ -663,7 +663,7 @@ function HowItWorks() {
     {
       icon: Truck,
       title: "Escolha e combine",
-      text: "O parceiro que escolher vai ao local, carrega e transporta tudo.",
+      text: "O parceiro escolhido vai ao local, carrega e transporta tudo.",
     },
   ];
 

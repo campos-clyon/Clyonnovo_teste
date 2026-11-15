@@ -117,7 +117,20 @@ type Regra =
   | "v-distancia-a-mao"
   | "w-taxa-no-codigo"
   | "x-confirmacao"
+  | "z-parceiro-escolhido"
   | "s-modelo-antigo";
+
+/*
+ * z) «O PARCEIRO ESCOLHIDO», E NÃO «O PARCEIRO QUE ESCOLHER» — d39 (15-11-2026).
+ * Desde o valor único, o parceiro é escolhido pelo cliente ou pela CLYON: o
+ * que o cliente lê diz a frase que serve aos dois caminhos. Os Termos têm a
+ * versão anterior a 15-11 escrita como era (as regras anteriores).
+ */
+const PARCEIRO_QUE_ESCOLHER = /\b[oO] parceiro (independente )?que escolher\b/;
+const ONDE_A_VERSAO_ANTERIOR_VIVE = new Set(["src/app/termos/page.tsx"]);
+export function parceiroQueEscolher(texto: string): string | null {
+  return PARCEIRO_QUE_ESCOLHER.exec(texto)?.[0] ?? null;
+}
 
 interface Excepcao {
   ficheiro: string;
@@ -648,6 +661,8 @@ const ONDE_O_SELO_VIVE = new Set([
   "src/app/termos/page.tsx",
   // `{p.verificado && …}`: só aparece com as três.
   "src/app/profissionais/[slug]/page.tsx",
+  // d39: o valor único só vai a quem o «Escolher por mim» deixa escolher — os verificados (`escolherPorMim`).
+  "src/lib/valor-unico-ao-cliente.ts",
   "app-cliente/src/componentes/Proposta.tsx",
   "app-cliente/src/lib/pedidos.ts",
 ]);
@@ -942,6 +957,8 @@ function achadosDe(f: string): Achado[] {
     }
     // x) Em todo o lado: é a frase antiga, não um tema.
     for (const re of CONFIRMACAO_ANTIGA) marcar("x-confirmacao", re.exec(texto));
+    // z) d39: «o parceiro escolhido» no que o cliente lê.
+    if (O_CLIENTE_LE(f) && !ONDE_A_VERSAO_ANTERIOR_VIVE.has(f) && !E_SQL.test(texto)) marcar("z-parceiro-escolhido", PARCEIRO_QUE_ESCOLHER.exec(texto));
     // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.
     if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const p = profissionalAoCliente(texto);
@@ -1120,6 +1137,14 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(O_CLIENTE_LE("src/lib/voz-da-vitoria.ts")).toBe(true);
     expect(O_CLIENTE_LE("src/lib/frase-unica.ts")).toBe(true);
     expect(FONTES.filter(O_CLIENTE_LE).length).toBeGreaterThan(300);
+  });
+
+  it("a regra z apanha «o parceiro que escolher» e deixa «o parceiro escolhido» (d39, 15-11-2026)", () => {
+    expect(parceiroQueEscolher("Quem faz o trabalho é o parceiro que escolher.")).toBe("o parceiro que escolher");
+    expect(parceiroQueEscolher("O parceiro que escolher chega e carrega.")).toBe("O parceiro que escolher");
+    expect(parceiroQueEscolher("Quem vai a sua casa é o parceiro independente que escolher;")).toBe("o parceiro independente que escolher");
+    expect(parceiroQueEscolher("Quem faz o trabalho é o parceiro escolhido.")).toBeNull();
+    expect(parceiroQueEscolher("o pedido segue para os que escolher")).toBeNull();
   });
 
   it("a regra n lê os emails ao cliente, a FAQ e as descrições do Google (d2, 31-10-2026)", () => {

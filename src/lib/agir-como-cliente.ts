@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { valorUnicoDaLinha } from "./valor-unico-ao-cliente";
 import { avisarProfissionalTrabalhoConfirmado } from "@/lib/avisar-confirmacao";
 import { responderAoAjuste, respostaDoCorpo, type RespostaDaRota } from "@/lib/responder-ajuste";
 import {
@@ -127,6 +128,9 @@ export type CorpoDoCliente = {
 };
 
 const TRATADO_PELA_CLYON = "Este trabalho é tratado directamente pela CLYON.";
+/** d39: o orçamento é o valor único — responde-se à CLYON. */
+export const VALOR_UNICO_PELA_CLYON =
+  "O orçamento deste pedido é o valor que a CLYON lhe enviou. Para aceitar, responda SIM na conversa com a CLYON.";
 
 /** Por onde confirmou — só para o histórico do pedido. */
 const NA_PORTA: Record<PortaDoCliente, string> = {
@@ -366,6 +370,20 @@ export async function agirComoCliente(a: {
      * que exige a guia de resíduos, só com ela verificada pela CLYON — nas
      * quatro portas, porque todas passam por aqui. Ver `guia-antes-de-contratar.ts`.
      */
+    /*
+     * ── O VALOR ÚNICO (d39, 15-11-2026) ──────────────────────────────────
+     * Com o valor único enviado, o cliente responde à CLYON e é a CLYON quem
+     * aceita a proposta do parceiro: pelo lado dele, nenhuma proposta se
+     * aceita, se contrapropõe nem se recusa (ele nem as vê).
+     */
+    if (
+      valorUnicoDaLinha((a.pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente) != null &&
+      linha.estado !== "acordada" &&
+      ["aceitar", "contratar", "propor", "recusar", "desistir"].includes(String(accao))
+    ) {
+      return falha(409, VALOR_UNICO_PELA_CLYON);
+    }
+
     if ((accao === "aceitar" || accao === "contratar") && (await guiaImpedeANegociacao(negociacaoId))) {
       return falha(409, GUIA_POR_VERIFICAR_FRASE, { guiaPorVerificar: true });
     }

@@ -256,7 +256,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
         title: "Como acelerar o pedido e evitar atrasos",
         paragraphs: [
           "O melhor ponto de partida é enviar morada, lista básica de peças, fotos quando possível, tipo de acesso ao imóvel e urgência do serviço. Se existir desmontagem prévia ou rua de acesso difícil, isso também deve ser referido.",
-          `Na CLYON, o simulador dá uma primeira referência de valor e envia o pedido a parceiros da zona, que respondem com propostas ${PROPOSTAS_EM_ATE}. A data e a hora combinam-se com o parceiro que escolher.`,
+          `Na CLYON, o simulador dá uma primeira referência de valor e envia o pedido a parceiros da zona, que respondem com propostas ${PROPOSTAS_EM_ATE}. A data e a hora combinam-se com o parceiro escolhido.`,
         ],
       },
       {
@@ -718,7 +718,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         title: "Preços por tipologia: à hora, ao preço de cada parceiro",
         paragraphs: [
-          `Na CLYON a mudança paga-se à hora, ao preço do parceiro que escolher. ${MODELO_DA_MUDANCA}`,
+          `Na CLYON a mudança paga-se à hora, ao preço do parceiro escolhido. ${MODELO_DA_MUDANCA}`,
           M.paraTerUmaIdeia,
           "Ao comparar preços à hora, veja para quantas pessoas é e se a carrinha vem incluída: na lista, cada parceiro diz o preço com 2 e com 3 pessoas.",
           M.antesDasLinhas,

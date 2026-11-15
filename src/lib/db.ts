@@ -2883,6 +2883,9 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     propostaEnviadaEm: Date | null;
     /** As horas previstas (pedido por hora, 31-10-2026). */
     horasPrevistas: number;
+    /** O valor único ao cliente, sem IVA (d39, 15-11-2026) — null sem ele. */
+    valorUnicoCliente: number | null;
+    valorUnicoEm: Date | null;
     /** O resumo da escolha dos parceiros numa mudança (d6): o aviso ao cliente, o que ele respondeu e se pediu à CLYON. */
     escolhidosJson: string | null;
     createdAt: Date;
@@ -2991,6 +2994,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             o.dataAgendada,
             -- Quando o orcamento foi ao cliente: passa a «A aguardar cliente» (21-10-2026).
             o.propostaEnviadaEm,
+            -- O valor único ao cliente (d39, 15-11-2026).
+            o.valorUnicoCliente, o.valorUnicoEm,
             ${RESUMO_DA_ESCOLHA_SQL} AS escolhidosJson,
             COALESCE(
               JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
@@ -3086,6 +3091,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
     linkExpiraEm: (p.acessoTokenExpiraEm as Date) ?? null,
     dataAgendada: (p.dataAgendada as Date) ?? null,
     propostaEnviadaEm: (p.propostaEnviadaEm as Date) ?? null,
+    valorUnicoCliente: p.valorUnicoCliente == null ? null : Number(p.valorUnicoCliente),
+    valorUnicoEm: (p.valorUnicoEm as Date) ?? null,
     escolhidosJson: (p.escolhidosJson as string) ?? null,
     createdAt: p.createdAt as Date,
     negociacoes: porPedido.get(Number(p.id)) ?? [],
@@ -4348,6 +4355,71 @@ export async function marcarOrcamentoEnviado(pedidoId: number): Promise<void> {
     "UPDATE simulatorOrders SET propostaEnviadaEm = NOW(), updatedAt = updatedAt WHERE id = ? AND valorFixoClyon IS NULL",
     [pedidoId],
   );
+}
+
+/*
+ * O VALOR ÚNICO AO CLIENTE — 15-11-2026 (d39). Grava-se (ou tira-se, com null)
+ * num pedido que negoceia e ainda está aberto; as negociações não mudam.
+ * Devolve se gravou: um Trabalho CLYON, um fechado ou um já contratado não.
+ */
+export async function gravarValorUnico(pedidoId: number, valor: number | null): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET valorUnicoCliente = ?, valorUnicoEm = ${valor == null ? "NULL" : "NOW()"}, updatedAt = updatedAt
+      WHERE id = ? AND valorFixoClyon IS NULL
+        AND (status IS NULL OR status NOT IN ('cancelado','rejeitado','arquivado','concluido'))
+        AND NOT EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = simulatorOrders.id AND n.estado = 'acordada')`,
+    [valor, pedidoId],
+  )) as any[];
+  return Number(r?.affectedRows ?? 0) === 1;
+}
+
+/**
+ * A NOTA QUE CONTA E O «VERIFICADO» DE CADA PARCEIRO — para o «Escolher por
+ * mim» do valor único (d39). A mesma regra da lista das mudanças. Se a leitura
+ * falhar, sem notas (nunca todas).
+ */
+export async function parceirosParaOValorUnico(
+  ids: number[],
+): Promise<Map<number, { nota: { media: number; quantas: number } | null; verificado: boolean }>> {
+  const m = new Map<number, { nota: { media: number; quantas: number } | null; verificado: boolean }>();
+  const limpos = [...new Set(ids.filter((n) => Number.isInteger(n) && n > 0))];
+  if (limpos.length === 0) return m;
+  const { SQL_AVALIACAO_QUE_CONTA } = await import("@/lib/avaliacao-que-conta");
+  await ensureProvidersSchema();
+  await ensureNegociacoesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return m;
+  const marcas = limpos.map(() => "?").join(",");
+  const [v] = (await pool.execute(
+    `SELECT p.id, ${SQL_DO_VERIFICADO} AS verificado FROM providers p WHERE p.id IN (${marcas})`,
+    limpos,
+  )) as [Array<{ id: number; verificado: number }>, unknown];
+  for (const l of v) m.set(Number(l.id), { nota: null, verificado: Number(l.verificado) === 1 });
+  try {
+    const [n] = (await pool.execute(
+      `SELECT n.providerId, AVG(n.estrelas) AS media, COUNT(*) AS quantas
+         FROM negociacoes n
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
+         JOIN providers p ON p.id = n.providerId
+        WHERE n.providerId IN (${marcas})
+          AND n.estado = 'acordada' AND n.confirmadoEm IS NOT NULL AND n.estrelas IS NOT NULL
+          AND ${SQL_AVALIACAO_QUE_CONTA()}
+        GROUP BY n.providerId`,
+      limpos,
+    )) as [Array<{ providerId: number; media: string | number | null; quantas: number }>, unknown];
+    for (const l of n) {
+      const k = Number(l.providerId);
+      if (l.media != null && m.has(k)) m.set(k, { ...m.get(k)!, nota: { media: Number(l.media), quantas: Number(l.quantas) } });
+    }
+  } catch (e) {
+    console.error("[valor único] as notas não se leram:", e instanceof Error ? e.message : e);
+  }
+  return m;
 }
 
 export async function limparPropostaEnviada(pedidoId: number): Promise<void> {
@@ -9574,7 +9646,8 @@ let _simulatorOrdersEnsured = false;
 // 23 — `anonimizadoEm` (26-10-2026, d32), quando o pedido perdeu os dados de quem o fez.
 // 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
-const MIGRATION_VERSION = 29;
+// 30 — `valorUnicoCliente` e `valorUnicoEm` (15-11-2026, d39), o valor único ao cliente.
+const MIGRATION_VERSION = 30;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -9819,6 +9892,12 @@ export async function ensureSimulatorOrdersTable() {
     // Routes, guardados uma vez para o mapa não pagar duas chamadas. Ver
     // mapa-do-percurso.ts.
     `ALTER TABLE simulatorOrders ADD COLUMN percursoJson MEDIUMTEXT NULL DEFAULT NULL`,
+    // v30 — O VALOR ÚNICO AO CLIENTE (15-11-2026, d39). Numa negociação com
+    // várias propostas, a CLYON manda-lhe um valor só, sem nomes; as propostas
+    // continuam vivas e a CLYON escolhe o parceiro. Sem IVA, como o valor fixo.
+    // Nulo em todos os outros pedidos. Ver `valor-unico.ts`.
+    `ALTER TABLE simulatorOrders ADD COLUMN valorUnicoCliente DECIMAL(10,2) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN valorUnicoEm DATETIME NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -17798,6 +17877,9 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
         -- dono decidiu que nao leva mensagens automaticas (02-10-2026). So o
         -- aviso da data, que tem passagem propria.
         AND o.valorFixoClyon IS NULL
+        -- O valor único (d39, 15-11-2026): o cliente fala com a CLYON, e as
+        -- propostas (com os nomes) não lhe são anunciadas.
+        AND o.valorUnicoCliente IS NULL
       ORDER BY o.createdAt DESC
       LIMIT ${Math.max(1, Math.min(500, Math.floor(limite)))}`,
   )) as [Array<Record<string, unknown>>, unknown];

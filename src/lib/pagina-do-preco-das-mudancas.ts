@@ -80,7 +80,7 @@ const FATORES = [
   "A tipologia, e quanta coisa vai",
   "Os andares e o elevador nas duas casas",
   "Desmontar e montar móveis",
-  "O preço por hora do parceiro que escolher, e os km pela tarifa dele",
+  "O preço por hora do parceiro escolhido, e os km pela tarifa dele",
   "O estacionamento à porta das duas casas",
   "Ter tudo embalado antes do dia poupa horas",
 ];
@@ -88,7 +88,7 @@ const FATORES = [
 const O_PRECO_E_FECHADO = {
   question: "O preço é fechado?",
   answer:
-    "A hora é a do parceiro que escolher, e fica congelada no pedido; o total sai das horas, dos km e do material que confirma na folha do dia. " +
+    "A hora é a do parceiro escolhido, e fica congelada no pedido; o total sai das horas, dos km e do material que confirma na folha do dia. " +
     "É por isso que vale a pena dizer no pedido o que vai, os andares e o elevador.",
 };
 
@@ -156,15 +156,15 @@ function comParceiros(preco: Extract<PrecoPublicoDasMudancas, { tipo: "parceiros
       {
         question: "Quanto custa a mudança de um T2?",
         answer: t2
-          ? `Pela lista de hoje, ${t2}, ${PELO_MAIS_BAIXO}. Com o parceiro que escolher, é o preço por hora dele, e na lista vê a conta de cada um para o seu percurso.`
-          : `Depende do parceiro que escolher: ${NO_SIMULADOR}`,
+          ? `Pela lista de hoje, ${t2}, ${PELO_MAIS_BAIXO}. Com o parceiro escolhido, é o preço por hora dele, e na lista vê a conta de cada um para o seu percurso.`
+          : `Depende do parceiro escolhido: ${NO_SIMULADOR}`,
       },
       {
         question: "Quanto custa a mudança de um T0 ou T1?",
         answer:
           t0 && t1
             ? `Pela lista de hoje, ${t0}; ${t1} — ${PELO_MAIS_BAIXO}. Nunca menos do que o mínimo de horas do parceiro.`
-            : `Depende do parceiro que escolher, e nunca menos do que o mínimo de horas dele: ${NO_SIMULADOR}`,
+            : `Depende do parceiro escolhido, e nunca menos do que o mínimo de horas dele: ${NO_SIMULADOR}`,
       },
       {
         question: "Quanto custa uma mudança para longe?",
@@ -202,7 +202,7 @@ function naReferencia(preco: PrecoPublicoDasMudancas): Conteudo {
     exemplos: {
       titulo: "Quatro mudanças, com as contas feitas",
       intro:
-        "Feitas pela tabela de referência. São estimativas: com o parceiro que escolher, a conta é a da tarifa dele, e paga-se pelas horas confirmadas na folha do dia.",
+        "Feitas pela tabela de referência. São estimativas: com o parceiro escolhido, a conta é a da tarifa dele, e paga-se pelas horas confirmadas na folha do dia.",
       itens: exemplosDeMudanca(),
     },
     caixa: {
@@ -220,7 +220,7 @@ function naReferencia(preco: PrecoPublicoDasMudancas): Conteudo {
         question: "Quanto custa a mudança de um T2?",
         answer:
           `Conta-se ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas: na referência, com a proteção, ${faixa("T2")} + IVA (${faixaComIva("T2")} com IVA), ` +
-          `com elevador nas duas casas e até ${RAIO_INCLUIDO_KM} km (cada andar sem elevador acresce ${euros(POR_ANDAR_SEM_ELEVADOR)}). Com o parceiro que escolher, é o preço por hora dele.`,
+          `com elevador nas duas casas e até ${RAIO_INCLUIDO_KM} km (cada andar sem elevador acresce ${euros(POR_ANDAR_SEM_ELEVADOR)}). Com o parceiro escolhido, é o preço por hora dele.`,
       },
       {
         question: "Quanto custa a mudança de um T0 ou T1?",

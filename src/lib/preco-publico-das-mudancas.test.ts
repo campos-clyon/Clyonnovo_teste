@@ -109,7 +109,7 @@ describe("os textos", () => {
   });
 
   it("o modelo: lista, nota, preço por hora, equipa de 2 ou 3, material, folha do dia", () => {
-    for (const t of ["parceiros disponíveis", "nota", "preço por hora", "equipa de 2 ou 3", "material", "folha do dia", "parceiro que escolher"]) {
+    for (const t of ["parceiros disponíveis", "nota", "preço por hora", "equipa de 2 ou 3", "material", "folha do dia", "parceiro escolhido"]) {
       expect(MODELO_DA_MUDANCA).toContain(t);
     }
     expect(precoDaMudancaPorExtenso(COM)).toContain(MODELO_DA_MUDANCA);

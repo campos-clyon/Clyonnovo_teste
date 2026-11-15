@@ -82,6 +82,8 @@ const POR_CENTO = `${Math.round(TAXA_IVA * 100)} %`;
 
 export type PropostaParaOCliente = {
   profissional: string;
+  /** A negociação de onde vem, quando se sabe (d39). */
+  negociacaoId?: number;
   /*
    * A TAXA DESTA NEGOCIAÇÃO, para a frase e a conta dizerem o mesmo.
    *
@@ -135,6 +137,8 @@ export type PropostaParaOCliente = {
 };
 
 type NegociacaoParaLer = {
+  /** O id da negociação, quando se tem (d39: o «Escolher por mim» do valor único). */
+  id?: number;
   estado: string;
   profissionalNome: string;
   propostasJson: string | null;
@@ -190,6 +194,7 @@ function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente
   const conta = total ? precoDoNovoModelo(total) : precoDoCliente(valor, taxasDaNegociacao(n), modelo);
   return {
     profissional: n.profissionalNome,
+    ...(typeof n.id === "number" ? { negociacaoId: n.id } : {}),
     valor,
     taxaCliente: taxasDaNegociacao(n).cliente,
     semIva: conta.semIva,
@@ -588,7 +593,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * (uma redistribuição depois dele). Aí cada linha diz o seu, e a frase
      * explica as duas.
      */
-    // d10: no modelo de 15-11 paga-se ao parceiro que escolher, como escolher no pedido.
+    // d10: no modelo de 15-11 paga-se ao parceiro escolhido, como escolher no pedido.
     const todasNoNovoModelo = d.propostas.length > 0 && d.propostas.every((p) => p.novoModelo === true);
     if (todasComIva && todasNoNovoModelo) {
       linhas.push(`O valor a pagar é o com IVA. ${PAGA_DIRETAMENTE_AO_PARCEIRO}`);
@@ -634,7 +639,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * trata do resto à mão.
      */
     linhas.push(
-      "Diga-nos qual prefere e tratamos do resto — quem faz o trabalho é o parceiro que escolher.",
+      "Diga-nos qual prefere e tratamos do resto — quem faz o trabalho é o parceiro escolhido.",
     );
   }
 

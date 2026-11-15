@@ -79,13 +79,31 @@ function propostasDe(v: unknown): Proposta[] {
   }
 }
 
+/**
+ * A marca de VALOR ÚNICO do pedido (d39, 15-11-2026): `valorUnicoCliente` da
+ * base (número ou texto), `(o.valorUnicoCliente IS NOT NULL)` (1/0) ou um booleano.
+ */
+export function temValorUnico(marca: unknown): boolean {
+  if (marca === true) return true;
+  if (marca == null || marca === false || marca === "") return false;
+  const n = Number(marca);
+  return Number.isFinite(n) && n > 0;
+}
+
 export function negociacoesParaOCliente<T extends LinhaParaOCliente>(
   linhas: readonly T[] | null | undefined,
   trabalhoClyon: unknown,
+  /**
+   * O VALOR ÚNICO — d39 (15-11-2026). Com ele, o cliente não vê as propostas
+   * nem quem as fez até a CLYON escolher: só sai a negociação contratada.
+   */
+  valorUnico: unknown = false,
 ): Array<NegociacaoParaOCliente<T>> {
   if (eTrabalhoClyonDoPedido(trabalhoClyon)) return [];
+  const soAContratada = temValorUnico(valorUnico);
 
   return (linhas ?? [])
+    .filter((n) => !soAContratada || n.estado === "acordada")
     .filter((n) => !nasceuDeUmaOferta(n.ofertaClyon))
     .filter((n) => oClienteVeEsta({ estado: String(n.estado), propostas: propostasDe(n.propostasJson) }))
     .map((n) => {

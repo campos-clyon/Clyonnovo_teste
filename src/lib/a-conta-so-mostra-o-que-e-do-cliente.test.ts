@@ -197,7 +197,8 @@ describe("o link do email passa pela mesma regra", () => {
     // Desde 28-10-2026 (d10) já prontas para o ecrã, pela mesma função.
     expect(PAGINA).toContain("await negociacoesNoEcraDoPedido(pedido)");
     expect(LINK).toContain("(await negociacoesDaVistaDoCliente(pedido, agora)).map(");
-    expect(LINK).toMatch(/negociacoesParaOCliente\(\s*await negociacoesDoPedido\(pedido\.id\),\s*pedido\.valorFixoClyon != null,?\s*\)/);
+    // d39: e a marca do valor único, que só deixa sair a contratada.
+    expect(LINK).toMatch(/negociacoesParaOCliente\(\s*await negociacoesDoPedido\(pedido\.id\),\s*pedido\.valorFixoClyon != null,\s*pedido\.valorUnicoCliente,?\s*\)/);
   });
 
   it("e sem mandar a taxa do profissional ao browser", () => {

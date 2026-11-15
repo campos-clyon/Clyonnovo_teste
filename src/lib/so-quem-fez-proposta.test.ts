@@ -107,7 +107,8 @@ describe("a regra vive num sítio só", () => {
       expect(ler(p), p).toContain("pedidoDaContaParaOEcra(");
     }
     expect(LINK).toContain("negociacoesParaOCliente(");
-    expect(CONTA).toContain("negociacoesParaOCliente(linhas, pedido.trabalhoClyon)");
+    // d39: e o valor único, que só deixa sair a contratada.
+    expect(CONTA).toContain("negociacoesParaOCliente(linhas, pedido.trabalhoClyon, pedido.valorUnico)");
   });
 
   it("no link do email o filtro corre no SERVIDOR", () => {

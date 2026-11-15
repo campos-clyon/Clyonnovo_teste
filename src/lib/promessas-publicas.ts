@@ -92,7 +92,7 @@ export const AINDA_SEM_PROPOSTAS =
  * profissional escolhido»), dita agora também pela Vitória a quem pergunta.
  */
 export const QUEM_FAZ_O_TRABALHO =
-  "O trabalho é feito pelo parceiro que escolher, entre os que lhe mandarem proposta; " +
+  "O trabalho é feito pelo parceiro escolhido, entre os que lhe mandarem proposta; " +
   "a CLYON recebe o pedido, junta as propostas e acompanha-o até ao fim.";
 
 export const AO_FIM_DE_SEMANA =

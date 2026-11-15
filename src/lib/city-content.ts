@@ -174,7 +174,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Monos em Lisboa — Alternativa Rápida à Câmara",
     h1: "Recolha de Monos em Lisboa — A Alternativa Rápida à Câmara Municipal",
     localIntro:
-      `Tem monos em casa que precisa de retirar? A remoção de monos da Câmara de Lisboa é gratuita para particulares e marca-se com antecedência. Pela CLYON, o parceiro vai buscá-los onde estiverem — num 5.º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. Descreve o pedido, recebe propostas ${PROPOSTAS_EM_ATE}, e o parceiro que escolher aparece no dia combinado e leva tudo.`,
+      `Tem monos em casa que precisa de retirar? A remoção de monos da Câmara de Lisboa é gratuita para particulares e marca-se com antecedência. Pela CLYON, o parceiro vai buscá-los onde estiverem — num 5.º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. Descreve o pedido, recebe propostas ${PROPOSTAS_EM_ATE}, e o parceiro escolhido aparece no dia combinado e leva tudo.`,
     accessNotes:
       "Em Lisboa, os acessos mais complicados são nos bairros históricos: Alfama, Mouraria, Graça e Castelo têm escadas estreitas, ruas empedradas e estacionamento impossível. Por isso o pedido deve dizer o andar e o tipo de escada: é com isso que o parceiro fecha o preço, e não há surpresas no dia.",
     neighborhoodHighlight:
@@ -303,7 +303,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis no Seixal - Amora, Corroios e Arrentela | CLYON",
     h1: "Recolha de Móveis no Seixal - Amora, Corroios e Arrentela",
     localIntro:
-      `Precisa de retirar móveis no Seixal? Pela CLYON, o pedido chega a parceiros que trabalham em todo o concelho — Amora, Corroios, Arrentela, Paio Pires, Cruz de Pau e Fernão Ferro. Recebe propostas ${PROPOSTAS_EM_ATE}, com o preço fechado, e combina a data com o parceiro que escolher.`,
+      `Precisa de retirar móveis no Seixal? Pela CLYON, o pedido chega a parceiros que trabalham em todo o concelho — Amora, Corroios, Arrentela, Paio Pires, Cruz de Pau e Fernão Ferro. Recebe propostas ${PROPOSTAS_EM_ATE}, com o preço fechado, e combina a data com o parceiro escolhido.`,
     accessNotes:
       "O Seixal tem uma mistura de prédios com elevador (Corroios, Cruz de Pau) e moradias (Fernão Ferro, Paio Pires). Diga no pedido se é prédio ou moradia, e o andar: é com isso que o parceiro prepara o trabalho.",
     neighborhoodHighlight:

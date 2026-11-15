@@ -1,5 +1,7 @@
 "use client";
 
+import { valorUnicoDaLinha, valorUnicoParaOCliente } from "@/lib/valor-unico-ao-cliente";
+import { lerBase } from "@/lib/base-do-preco";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, History, MapPin, MessageCircle, Send, Star, Image as ImageIcon, Zap, Building2 } from "lucide-react";
 import { Miniatura } from "@/components/Anexo";
@@ -343,6 +345,21 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
         {order.serviceType === "mudanca" && (
           <EscolhidosSemResposta key={`escolhidos:${order.id}`} pedidoId={order.id} onMudou={() => onRecarregar?.()} />
         )}
+
+        {/* O valor único (d39, 15-11-2026): até a CLYON escolher, só este valor. */}
+        {(() => {
+          const v = valorUnicoDaLinha((order as { valorUnicoCliente?: unknown }).valorUnicoCliente);
+          if (v == null || propostas.some((n) => n.estado === "acordada")) return null;
+          const t = valorUnicoParaOCliente(v, lerBase((order as { baseDoPreco?: string | null }).baseDoPreco));
+          return (
+            <section className="rounded-2xl border border-[#E2EEF3] bg-white p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-slate-900">{t.titulo}</h3>
+              <p className="mt-1 text-lg font-bold text-slate-900">{t.valor}</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">{t.quemFaz}</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Para aceitar, responda SIM na conversa com a CLYON.</p>
+            </section>
+          );
+        })()}
 
         {propostas.length > 0 && (
           <PropostasRecebidas

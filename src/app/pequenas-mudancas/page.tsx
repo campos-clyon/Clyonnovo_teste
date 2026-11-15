@@ -83,7 +83,7 @@ export default async function PequenasMudancasPage() {
           },
           {
             question: "Quanto custa uma pequena mudança?",
-            answer: `Depende do volume, dos andares e do elevador nas duas moradas, e da distância entre elas. Paga-se à hora, ao preço do parceiro que escolher (${precoDaMudancaNumaFrase(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.${exemplosDaListaNumaFrase(preco) ? ` ${exemplosDaListaNumaFrase(preco)}` : ""}`,
+            answer: `Depende do volume, dos andares e do elevador nas duas moradas, e da distância entre elas. Paga-se à hora, ao preço do parceiro escolhido (${precoDaMudancaNumaFrase(preco)}): na lista vê a nota, o preço por hora, a equipa e o material de cada um, e o pedido segue para os que escolher ${PROPOSTAS_EM_ATE}.${exemplosDaListaNumaFrase(preco) ? ` ${exemplosDaListaNumaFrase(preco)}` : ""}`,
           },
           {
             question: "Fazem pequenas mudanças ao fim de semana?",

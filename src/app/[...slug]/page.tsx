@@ -130,7 +130,7 @@ function getIncludedItems(serviceName: string, cityName: string, serviceSlug: st
   // combina e quem atende quando alguma coisa corre mal.
   return [
     `${serviceName} feito por parceiros`,
-    "Carga e transporte pelo parceiro que escolher",
+    "Carga e transporte pelo parceiro escolhido",
     "Acessos difíceis indicados no pedido entram na proposta",
     "Apoio da CLYON por telefone e WhatsApp",
     "Parceiros da sua zona",
@@ -655,7 +655,7 @@ export default async function ServiceCityPage({ params }: Props) {
                 O que saber sobre {city.name}
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
-                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `${emTerraNoInicio(city.name)} e zonas próximas, o pedido chega a parceiros da zona, que respondem com propostas de preço fechado. O parceiro que escolher retira os volumes combinados e protege os acessos.`}
+                {priorityContent?.accessNotes ?? cityBaseContent?.accessNotes ?? `${emTerraNoInicio(city.name)} e zonas próximas, o pedido chega a parceiros da zona, que respondem com propostas de preço fechado. O parceiro escolhido retira os volumes combinados e protege os acessos.`}
               </p>
               {/* Highlight local se for página prioritária */}
               {priorityContent?.neighborhoodHighlight && (
@@ -706,7 +706,7 @@ export default async function ServiceCityPage({ params }: Props) {
             {
               icon: Truck,
               title: "Quem faz é o parceiro",
-              desc: "O parceiro que escolher carrega, transporta e leva o que sai para destino licenciado.",
+              desc: "O parceiro escolhido carrega, transporta e leva o que sai para destino licenciado.",
             },
             {
               icon: ShieldCheck,
@@ -859,7 +859,7 @@ export default async function ServiceCityPage({ params }: Props) {
                   {/* Dizia «Pode pedir em Moita, Baixa da Banheira…» — cada terra leva a
                       sua preposição, e numa lista isso não se faz bem; diz-se sem ela. */}
                   Zonas onde pode pedir: {local.zonas.slice(0, -1).join(", ")} e {local.zonas[local.zonas.length - 1]}.
-                  O pedido chega aos parceiros da sua zona, e quem vai é o que escolher.
+                  O pedido chega aos parceiros da sua zona, e quem vai é o parceiro escolhido.
                 </p>
               </div>
 

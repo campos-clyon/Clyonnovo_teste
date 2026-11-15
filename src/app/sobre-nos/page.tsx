@@ -326,7 +326,7 @@ const faqs = [
   {
     question: "A CLYON faz os trabalhos ou é uma plataforma?",
     answer:
-      "É uma plataforma. Quem vai a sua casa é o parceiro independente que escolher; a CLYON lê cada pedido, verifica os parceiros, " +
+      "É uma plataforma. Quem vai a sua casa é o parceiro independente escolhido; a CLYON lê cada pedido, verifica os parceiros, " +
       "guarda o que se combina e atende se alguma coisa correr mal.",
   },
   {

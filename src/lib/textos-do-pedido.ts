@@ -87,4 +87,4 @@ export const AUTORIZA_FOTOS =
   "Podem mostrar as minhas fotos no site e nas redes da CLYON (opcional), sem nada que me identifique — nem pessoas, nem morada.";
 
 /** Quem faz o trabalho — o rodapé do pedido. */
-export const QUEM_FAZ_O_TRABALHO = "O trabalho é feito pelo parceiro que escolher.";
+export const QUEM_FAZ_O_TRABALHO = "O trabalho é feito pelo parceiro escolhido.";

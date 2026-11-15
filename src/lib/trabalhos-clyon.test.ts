@@ -341,7 +341,8 @@ describe("as peças estão ligadas", () => {
     // Desde 28-10-2026 (d10) pela mesma função do SSR (`pedidos-da-conta.ts`).
     expect(CONTA).toContain("pedidoDaContaParaOEcra(r, negociacoesPorPedido.get(Number(r.id)), agora)");
     expect(semNotas(ler("src/lib/pedidos-da-conta.ts"))).toContain(
-      "negociacoesParaOCliente(linhas, pedido.trabalhoClyon)",
+      // d39: e o valor único, que só deixa sair a contratada.
+      "negociacoesParaOCliente(linhas, pedido.trabalhoClyon, pedido.valorUnico)",
     );
     const SSR = semNotas(ler("src/lib/conta-server.ts"));
     expect(SSR).toContain("(o.valorFixoClyon IS NOT NULL) AS trabalhoClyon");

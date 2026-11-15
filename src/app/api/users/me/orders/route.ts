@@ -138,6 +138,8 @@ export async function GET(request: NextRequest) {
          -- Um trabalho CLYON de valor fixo (02-10-2026): só a marca, e nunca o
          -- valor, que é o que a CLYON paga ao profissional.
          (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
+         -- O valor único (d39): só a marca, para as propostas não saírem.
+         (o.valorUnicoCliente IS NOT NULL) AS valorUnico,
          -- Pelo trabalho todo ou por carga: muda o que o preço quer dizer.
          o.baseDoPreco,
          -- Num Trabalho CLYON, se o preço foi ao cliente e se ele o aceitou (S9).

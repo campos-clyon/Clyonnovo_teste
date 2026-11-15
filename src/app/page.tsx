@@ -470,7 +470,7 @@ export default function HomePage() {
               topo da página não o dizia, e as avaliações falam da «equipa».
             */}
             <p className="mt-3 text-xs leading-relaxed text-slate-500 sm:text-sm">
-              Quem faz o trabalho é o parceiro que escolher. A CLYON junta as
+              Quem faz o trabalho é o parceiro escolhido. A CLYON junta as
               propostas, e o preço fica fechado antes de começar.
             </p>
           </div>

@@ -92,7 +92,7 @@ export const PERGUNTAS_FREQUENTES = [
       },
       {
         q: "Fazem esvaziamento de casas de herança ou imóveis de senhorios?",
-        a: "Sim — senhorios que recebem o imóvel com o recheio deixado pelo inquilino, ou famílias a tratar de um espólio. Não precisa de estar presente: o acesso combina-se com o parceiro que escolher.",
+        a: "Sim — senhorios que recebem o imóvel com o recheio deixado pelo inquilino, ou famílias a tratar de um espólio. Não precisa de estar presente: o acesso combina-se com o parceiro escolhido.",
       },
       {
         q: "Quanto tempo demora o esvaziamento de uma casa?",
@@ -190,7 +190,7 @@ export const PERGUNTAS_FREQUENTES = [
          * cartão da proposta (PropostasRecebidas.tsx) — é isso que se diz
          * agora, e o código APA sai da constante (30-09-2026).
          */
-        a: `A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente, com o código ${IDENTIFICACAO.codigoAPA}. Quem transporta o entulho é o parceiro que escolher, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige. Quando o trabalho precisa de guia de acompanhamento de resíduos, o cartão de cada proposta mostra se a CLYON já verificou o número de transportador desse parceiro.`,
+        a: `A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente, com o código ${IDENTIFICACAO.codigoAPA}. Quem transporta o entulho é o parceiro escolhido, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige. Quando o trabalho precisa de guia de acompanhamento de resíduos, o cartão de cada proposta mostra se a CLYON já verificou o número de transportador desse parceiro.`,
       },
       {
         q: "Fazem fatura ou recibo?",

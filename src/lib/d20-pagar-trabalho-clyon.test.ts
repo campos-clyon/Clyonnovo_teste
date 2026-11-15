@@ -97,7 +97,8 @@ describe("1 — com o parceiro escolhido, o preço já foi acordado: sem «Aceit
 
 describe("2 — o bloco «Propostas» não aparece num Trabalho CLYON", () => {
   it("o link só desenha as propostas fora dos Trabalhos CLYON", () => {
-    expect(VISTA).toMatch(/\{pedido\.valorFixoClyon == null && \(\s*<PropostasRecebidas/);
+    // d39: e também não enquanto o valor único espera pela escolha da CLYON.
+    expect(VISTA).toMatch(/\{pedido\.valorFixoClyon == null &&[\s\S]{0,300}?\(\s*<PropostasRecebidas/);
   });
 
   it("e na conta só com propostas (um pedido com parceiro escolhido não diz «Ainda sem propostas»)", () => {

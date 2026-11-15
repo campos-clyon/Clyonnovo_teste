@@ -77,7 +77,8 @@ import { DADOS_DE_PAGAMENTO_MUDARAM, SELO_DOS_DADOS_MUDADOS } from "@/lib/dados-
  */
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
-import { valorUnicoSugerido } from "@/lib/valor-unico";
+import { avisoAcimaDoValorUnico, mensagemDoValorUnico, valorUnicoSugerido } from "@/lib/valor-unico";
+import ValorUnicoNaMesa from "./ValorUnicoNaMesa";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
@@ -181,6 +182,8 @@ type Proposta = {
 type Negociacao = {
   id: number;
   providerId: number;
+  /** d39: a nota e o «verificado» do parceiro, só nos pedidos com valor único. */
+  doValorUnico?: { nota: { media: number; quantas: number } | null; verificado: boolean };
   profissionalNome: string;
   profissionalEmail: string | null;
   /** Para a adjudicação ao cliente (23-10-2026). */
@@ -601,6 +604,9 @@ type Pedido = {
   concluidoVistoEm: string | null;
   /** Quando o orçamento foi ao cliente (21-10-2026) — ver `orcamentoEnviadoCobre`. */
   propostaEnviadaEm?: string | null;
+  /** O valor único ao cliente, sem IVA (d39, 15-11-2026). */
+  valorUnicoCliente?: number | null;
+  valorUnicoEm?: string | null;
   /** Numa mudança com parceiros escolhidos pelo cliente (d6): o resumo da escolha e o que a Mesa mostra. */
   escolhidosJson?: string | null;
   escolhidosNaMesa?: EstadoNaMesa | null;
@@ -1668,6 +1674,24 @@ export default function AdminNegociacoesPanel({
 
   /** A mensagem do orçamento — a do link e a do «Enviar pela CLYON» (23-10-2026). */
   function textoDoOrcamento(p: Pedido, propostas = propostasParaOCliente(p.negociacoes)): string {
+    /*
+     * O VALOR ÚNICO (d39, 15-11-2026): com ele, o «Enviar orçamento» e o «Enviar
+     * pela CLYON» mandam um valor só, sem nomes nem lista. Já fechado, a
+     * mensagem de sempre («Está combinado com…»).
+     */
+    if (p.valorUnicoCliente != null && !trabalhoFechado(p.negociacoes)) {
+      return mensagemDoValorUnico(
+        {
+          nomeCliente: p.contactName,
+          servico: nomeDoServico(p.serviceType),
+          servicoId: p.serviceType,
+          cidade: p.city,
+          valorSemIva: p.valorUnicoCliente,
+          base: lerBase(p.baseDoPreco),
+        },
+        new Date(),
+      );
+    }
     return mensagemDasPropostas({
       nomeCliente: p.contactName,
       servico: nomeDoServico(p.serviceType),
@@ -3485,6 +3509,33 @@ export default function AdminNegociacoesPanel({
             Reenviar ao cliente
           </button>
         </div>
+        {/*
+          O VALOR ÚNICO — 15-11-2026 (d39, caminho B). Um valor só ao cliente,
+          sem nomes; as propostas continuam vivas e a CLYON escolhe o parceiro
+          («Escolher por mim») e aceita a proposta dele pelo valor dele.
+        */}
+        {!concluido && !cancelado && !acordada &&
+          (p.valorUnicoCliente != null || propostasParaOCliente(p.negociacoes).length > 0) && (
+            <ValorUnicoNaMesa
+              pedidoId={p.id}
+              valorUnico={p.valorUnicoCliente ?? null}
+              propostas={propostasParaOCliente(p.negociacoes).map((x) => {
+                const n = p.negociacoes.find((y) => y.id === x.negociacaoId);
+                return {
+                  negociacaoId: x.negociacaoId ?? 0,
+                  nome: x.profissional,
+                  semIva: x.semIva,
+                  nota: n?.doValorUnico?.nota ?? null,
+                  verificado: n?.doValorUnico?.verificado ?? false,
+                };
+              })}
+              temEmail={Boolean((p.contactEmail ?? "").trim())}
+              onMudou={(msg) => {
+                if (msg) setAviso(msg);
+                void carregar(true, temTudo);
+              }}
+            />
+          )}
         {aFixar === p.id && (
           <div className="mt-3 flex">
             <OferecerComoTrabalhoClyon
@@ -5542,6 +5593,21 @@ function MotivoParaCancelarVarios({
   );
 }
 
+/**
+ * d39 (15-11-2026): a proposta desta negociação pede mais do que o valor único
+ * enviado ao cliente? Devolve o aviso a confirmar antes de aceitar, ou null.
+ */
+function avisoDoValorUnico(
+  p: Partial<Pick<Pedido, "valorUnicoCliente" | "negociacoes">>,
+  n: Negociacao,
+): string | null {
+  const vu = p.valorUnicoCliente;
+  if (vu == null || !p.negociacoes) return null;
+  const desta = propostasParaOCliente(p.negociacoes).find((x) => x.negociacaoId === n.id);
+  if (!desta || desta.semIva <= vu + 0.005) return null;
+  return avisoAcimaDoValorUnico(n.profissionalNome, desta.semIva, vu);
+}
+
 function AceitarNaLista({
   pedidoId,
   negociacao,
@@ -5552,7 +5618,7 @@ function AceitarNaLista({
   negociacao: Negociacao;
   onMudou: () => void;
   /** A base e as horas previstas — «Aceitar … · 72,00 €/hora» (31-10-2026). */
-  pedido: Pick<Pedido, "baseDoPreco" | "horasPrevistas">;
+  pedido: Pick<Pedido, "baseDoPreco" | "horasPrevistas"> & Partial<Pick<Pedido, "valorUnicoCliente" | "negociacoes">>;
 }) {
   const { token } = useAdminAuth();
   const [aEnviar, setAEnviar] = useState(false);
@@ -5588,6 +5654,9 @@ function AceitarNaLista({
 
   async function agir() {
     if (!token) return;
+    // d39: acima do valor único, avisa antes (a diferença ainda não tem tratamento).
+    const acima = avisoDoValorUnico(pedido, negociacao);
+    if (acima && !window.confirm(acima)) return;
     const texto =
       `${contratar ? "Contratar" : "Aceitar, em nome do cliente, a proposta de"} ` +
       `${negociacao.profissionalNome}${valor != null ? `: ${valorNaMesa(valor, pedido, negociacao)}` : ""}?\n\n` +
@@ -5652,11 +5721,14 @@ function RespostaDaClyon({
   propostas,
   onMudou,
   sufixo = "",
+  avisoAntesDeAceitar = null,
 }: {
   negociacao: Negociacao;
   pedidoId: number;
   propostas: Proposta[];
   onMudou: () => void;
+  /** d39: a proposta pede mais do que o valor único — pergunta-se antes de aceitar. */
+  avisoAntesDeAceitar?: string | null;
   /** «/hora» ou «/carga» — o que se contrapropõe é por essa unidade (31-10-2026). */
   sufixo?: string;
 }) {
@@ -5696,6 +5768,7 @@ function RespostaDaClyon({
 
   async function agir(accao: string, v?: string) {
     if (!authToken) return;
+    if (accao === "aceitar" && avisoAntesDeAceitar && !window.confirm(avisoAntesDeAceitar)) return;
     setAEnviar(accao);
     setErro("");
     try {
@@ -7071,7 +7144,7 @@ function TrocaDePropostas({
   negociacao: Negociacao;
   pedidoId: number;
   /** A base e as horas previstas — os valores levam «/hora» ou «/carga» (31-10-2026). */
-  pedido: Pick<Pedido, "baseDoPreco" | "horasPrevistas">;
+  pedido: Pick<Pedido, "baseDoPreco" | "horasPrevistas"> & Partial<Pick<Pedido, "valorUnicoCliente" | "negociacoes">>;
   /** Abre a fotografia POR CIMA da mesa, sem sair da página. */
   onVerFotos: (fotos: string[], i: number) => void;
   /** A CLYON responde pelo lado do cliente NESTE pedido — ver quem-negoceia.ts. */
@@ -7128,6 +7201,7 @@ function TrocaDePropostas({
         propostas={propostas}
         onMudou={onMudou}
         sufixo={sufixoDaBase(lerBase(pedido.baseDoPreco))}
+        avisoAntesDeAceitar={avisoDoValorUnico(pedido, negociacao)}
       />
 
       {/* Depois do acordo: a prova e a confirmação. */}

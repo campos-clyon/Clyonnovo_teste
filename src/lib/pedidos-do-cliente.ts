@@ -1,4 +1,5 @@
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
+import { valorUnicoDaLinha, valorUnicoParaOCliente } from "./valor-unico-ao-cliente";
 import {
   ensureSimulatorOrdersTable,
   getPool,
@@ -152,6 +153,8 @@ export type PedidoParaOResumo = {
   status?: unknown;
   canceladoPeloCliente?: unknown;
   trabalhoClyon?: unknown;
+  /** O valor único (d39): a marca `(o.valorUnicoCliente IS NOT NULL)` ou o valor. */
+  valorUnico?: unknown;
   baseDoPreco?: unknown;
   propostaEnviadaEm?: Date | string | null;
   precoAceiteEm?: Date | string | null;
@@ -188,7 +191,7 @@ export async function resumoDoPedidoParaOCliente(
   const porCarga = lerBase(r.baseDoPreco) === "carga";
   const porHora = lerBase(r.baseDoPreco) === "hora";
   const horasPrevistas = porHora ? horasPrevistasDaLinha(r as unknown as Record<string, unknown>) : null;
-  const visiveis = negociacoesParaOCliente(cruas, trabalhoClyon).map((n) =>
+  const visiveis = negociacoesParaOCliente(cruas, trabalhoClyon, r.valorUnico).map((n) =>
     negociacaoParaAVista(n as LinhaCrua & { estado: string; id: number }, { porCarga, porHora, horasPrevistas, agora }),
   );
   const cancelado = eCancelado(r.status, r.canceladoPeloCliente);
@@ -307,6 +310,8 @@ export async function listaDosPedidosDoCliente(
     `SELECT o.id, o.serviceType, o.city, o.status, o.createdAt, o.updatedAt, o.canceladoPeloCliente, o.baseDoPreco,
             -- Só a marca: o valor fixo é o que a CLYON paga ao profissional.
             (o.valorFixoClyon IS NOT NULL) AS trabalhoClyon,
+            -- O valor único (d39): só a marca, para as propostas não saírem.
+            (o.valorUnicoCliente IS NOT NULL) AS valorUnico,
             o.propostaEnviadaEm, o.precoAceiteEm,
             -- Só para saber se a CLYON espera resposta dele (S18): não sai para a app.
             o.historyJson,
@@ -526,7 +531,7 @@ export async function pedidoDoClienteParaAApp(
   const cancelado = eCancelado(pedido.status, o.canceladoPeloCliente);
   // O estado em palavras, pela mesma conta da lista e da conta do site (S9).
   const resumo = await resumoDoPedidoParaOCliente(
-    { ...(pedido as unknown as PedidoParaOResumo), trabalhoClyon },
+    { ...(pedido as unknown as PedidoParaOResumo), trabalhoClyon, valorUnico: (pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente ?? null },
     cruas,
     agora,
   );
@@ -664,6 +669,15 @@ export async function pedidoDoClienteParaAApp(
         precoClyon && enviadoEm
           ? { ...textosDaConta(precoClyon, notaDoPrecoParaOCliente(base, "clyon", pedido.serviceType ?? null)), versao: enviadoEm }
           : null,
+      /*
+       * O VALOR ÚNICO (d39, 15-11-2026): enquanto a CLYON não escolheu o
+       * parceiro, o cliente vê só este valor — as propostas não saem
+       * (`negociacoesParaOCliente`). Null em todos os outros pedidos.
+       */
+      valorUnico: (() => {
+        const v = valorUnicoDaLinha((pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente);
+        return v != null && !contratado && !trabalhoClyon ? valorUnicoParaOCliente(v, base) : null;
+      })(),
       // «Aceito este preço» (S7): quando o cliente o aceitou.
       precoAceiteEm: trabalhoClyon ? isoOuNulo(o.precoAceiteEm ?? null) : null,
       precoAceiteEmTexto: trabalhoClyon ? quandoEmLisboa(o.precoAceiteEm ?? null) : null,

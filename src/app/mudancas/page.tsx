@@ -109,7 +109,7 @@ const tiposDeMudanca: Array<{ tipo: string; description: string; href?: string }
 /** O que pesa no orçamento — substitui os números que estavam na grelha. */
 // Desde 11-11-2026 sem números: a hora, os km e o material são os da tarifa de cada parceiro.
 const fatoresDePreco = [
-  "O preço por hora do parceiro que escolher, e se a equipa é de 2 ou de 3",
+  "O preço por hora do parceiro escolhido, e se a equipa é de 2 ou de 3",
   "As horas de trabalho — o volume e a tipologia",
   "Andares sem elevador (mais tempo a carregar)",
   "Os km do percurso, pela tarifa do parceiro",
@@ -352,7 +352,7 @@ export default async function MudancasPage() {
           <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-[0_20px_50px_-20px_rgba(5,150,105,0.12)] sm:p-8">
             <h2 className="text-2xl font-bold text-slate-900">Quanto custa uma mudança</h2>
             <p className="mt-2 text-slate-600">
-              A mudança paga-se à hora, ao preço do parceiro que escolher. No simulador vê os parceiros
+              A mudança paga-se à hora, ao preço do parceiro escolhido. No simulador vê os parceiros
               disponíveis, com a nota, o preço por hora, a equipa de 2 ou 3 e o material, e escolhe; o valor
               final sai das horas, dos km e do material que confirma na folha do dia.
             </p>
