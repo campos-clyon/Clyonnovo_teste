@@ -6,7 +6,7 @@ import { isMudancaType } from "./calendar-helpers";
 import { tarifaCongeladaDeJson, type TarifaCongelada } from "./conta-da-mudanca";
 import { excedeONumerario, lerForma, MAXIMO_EM_NUMERARIO } from "./forma-de-pagamento";
 import { fazerAFolhaFinal, fraseDaFolhaFinal, type CorpoDaFolhaFinal, type FolhaFinalFeita } from "./folha-final";
-import { folhasFinaisDe, gravarFolhaFinal, type FolhaFinalGravada } from "./folha-final-na-base";
+import { folhasFinaisDe, gravarFolhaFinal, transferidoAntesDasFolhasFinais, type FolhaFinalGravada } from "./folha-final-na-base";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import type { RegimeDoProfissional } from "./pagamento-directo";
 
@@ -138,7 +138,18 @@ export async function folhaFinalPelaEquipa(a: {
   if (!feito.ok) return { status: 400, corpo: { error: feito.erro } };
   const f = feito.folha;
   const motivo = typeof a.corpo.motivo === "string" && a.corpo.motivo.trim() ? a.corpo.motivo.trim().slice(0, 300) : null;
-  const resposta = (extra: Record<string, unknown> = {}) => ({ ok: true, previa: f.previa, conta: f.conta, antes: c.antes, ...extra });
+  /*
+   * JÁ PAGO AO PROFISSIONAL (d38 v2, commit c): o que se lhe transferiu e a
+   * diferença. A favor dele fica-lhe na carteira (acerto da folha final); contra
+   * ele é uma dívida.
+   */
+  let acerto: { transferido: number; diferenca: number } | null = null;
+  if (c.jaPago) {
+    const t = (await transferidoAntesDasFolhasFinais([a.negociacaoId]).catch(() => new Map<number, number>())).get(a.negociacaoId);
+    const transferido = t ?? c.antes.profissional;
+    if (transferido != null) acerto = { transferido, diferenca: Math.round((f.previa.profissional - transferido) * 100) / 100 };
+  }
+  const resposta = (extra: Record<string, unknown> = {}) => ({ ok: true, previa: f.previa, conta: f.conta, antes: c.antes, acerto, ...extra });
 
   if (c.emDinheiro && excedeONumerario(f.previa.total)) {
     return {

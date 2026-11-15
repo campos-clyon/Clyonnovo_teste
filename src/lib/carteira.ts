@@ -142,6 +142,12 @@ export type TrabalhoNaCarteira = Trabalho & {
    * as marcas activas de `cobrancasAoProfissional` deste trabalho.
    */
   marcasDaDivida?: MarcaDaParte[];
+  /**
+   * O QUE SE LHE TRANSFERIU DE FACTO num trabalho já pago (`pagoEm`), quando
+   * uma folha final mudou o valor depois (d38 v2): o que ele recebia antes.
+   * Nulo = o que se transferiu é o que o trabalho vale hoje (como sempre).
+   */
+  pagoAoProfissionalValor?: number | null;
   /** O método da linha que fechou a dívida inteira em `pagamentos`, quando fechou. */
   dividaFechadaPor?: string | null;
   /**
@@ -223,6 +229,26 @@ export const MINIMO_PARA_LEVANTAR = 10;
 
 function aosCentimos(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * O QUE JÁ SAIU PARA ELE NUM TRABALHO PAGO — d38 v2. O valor transferido,
+ * nunca mais do que o trabalho vale hoje: se a folha final lhe deu mais, a
+ * diferença fica na carteira (o acerto a favor); se lhe deu menos, a
+ * carteira não lhe tira nada por aqui (a diferença contra ele é uma dívida,
+ * à parte).
+ */
+export function jaTransferidoDe(t: Pick<TrabalhoNaCarteira, "pagoAoProfissionalValor">, valor: number): number {
+  const p = t.pagoAoProfissionalValor;
+  if (p == null || !Number.isFinite(p) || p < 0) return valor;
+  return aosCentimos(Math.min(valor, p));
+}
+
+/** O acerto a favor do profissional num trabalho pago: o que a folha final lhe deu a mais. 0 sem acerto. */
+export function acertoAFavorDe(t: TrabalhoNaCarteira): number {
+  if (faseDoTrabalho(t) !== "pago") return 0;
+  const valor = liquido(t);
+  return aosCentimos(valor - jaTransferidoDe(t, valor));
 }
 
 function liquido(t: TrabalhoNaCarteira): number {
@@ -449,7 +475,8 @@ export function carteiraDe(
     // dinheiro continuar preso, que é a única coisa que não lhe podemos fazer.
     if (estaLibertado(t, agora)) {
       ganhoLibertado += valor;
-      if (faseDoTrabalho(t) === "pago") pagoDirecto += valor;
+      // O que saiu de facto (d38 v2): a mais da folha final fica disponível.
+      if (faseDoTrabalho(t) === "pago") pagoDirecto += jaTransferidoDe(t, valor);
     } else cativo += valor;
   }
 

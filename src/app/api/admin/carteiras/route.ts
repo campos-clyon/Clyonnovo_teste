@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { transferidoAntesDasFolhasFinais } from "@/lib/folha-final-na-base";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
@@ -346,6 +347,10 @@ export async function GET(req: NextRequest) {
     const dividasDaCarteira = await dividasDosProfissionais(comDividaPossivel);
     const dividaDaNegociacao = new Map<number, DividaNaCarteira>();
     for (const ds of dividasDaCarteira.values()) for (const d of ds) dividaDaNegociacao.set(d.negociacaoId, d);
+    // d38 v2: num pago com folha final depois, o que saiu de facto (o acerto a favor fica na carteira dele).
+    const transferidos = await transferidoAntesDasFolhasFinais(
+      linhas.filter((l) => l.pagoEm != null && l.negociacaoId != null).map((l) => Number(l.negociacaoId)),
+    ).catch(() => new Map<number, number>());
 
     for (const l of linhas) {
       const id = Number(l.id);
@@ -510,7 +515,8 @@ export async function GET(req: NextRequest) {
       }
 
       if (monte === "pago") {
-        ficha.jaPago = Math.round((ficha.jaPago + recebe) * 100) / 100;
+        const saiu = Math.min(recebe, transferidos.get(Number(l.negociacaoId)) ?? recebe);
+        ficha.jaPago = Math.round((ficha.jaPago + saiu) * 100) / 100;
         clyon.fechada = Math.round((clyon.fechada + comissao) * 100) / 100;
         if (!trabalhoClyon) clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         continue;

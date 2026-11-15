@@ -128,7 +128,7 @@ export default function FolhaFinalDaMudanca({
   const [aberto, setAberto] = useState(false);
   const [d, setD] = useState<DoServidor | null>(null);
   const [form, setForm] = useState<Formulario | null>(null);
-  const [previa, setPrevia] = useState<{ de: string; previa: Previa } | null>(null);
+  const [previa, setPrevia] = useState<{ de: string; previa: Previa; acerto: { transferido: number; diferenca: number } | null } | null>(null);
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [gravado, setGravado] = useState("");
@@ -190,7 +190,7 @@ export default function FolhaFinalDaMudanca({
         }
         throw new Error(j.error ?? "Não foi possível fazer a conta.");
       }
-      setPrevia({ de: chave, previa: j.previa as Previa });
+      setPrevia({ de: chave, previa: j.previa as Previa, acerto: (j.acerto ?? null) as { transferido: number; diferenca: number } | null });
       if (!previsualizar) {
         setGravado(`Gravado: ${eur((j.previa as Previa).semIva)} sem IVA passa a ser o valor final.`);
         setD(null);
@@ -366,6 +366,14 @@ export default function FolhaFinalDaMudanca({
                       Modelo de 15/11: fatura do parceiro {eur(previaActual.novoModelo.faturaDoParceiro)}
                       {previaActual.novoModelo.regime === "isento" ? " (isento de IVA)" : " (com IVA)"} + fatura da CLYON{" "}
                       {eur(previaActual.novoModelo.faturaDaClyon)} (com IVA).
+                    </p>
+                  )}
+                  {previa?.acerto && previa.acerto.diferenca !== 0 && (
+                    <p className={previa.acerto.diferenca > 0 ? "text-emerald-300" : "text-amber-300"}>
+                      Já se lhe transferiram {eur(previa.acerto.transferido)}.{" "}
+                      {previa.acerto.diferenca > 0
+                        ? `Os ${eur(previa.acerto.diferenca)} a mais ficam-lhe disponíveis na carteira (acerto da folha final do pedido #${pedidoId}).`
+                        : `Recebeu ${eur(-previa.acerto.diferenca)} a mais: a diferença é para lhe cobrar.`}
                     </p>
                   )}
                   {d.antes.valorAcordado != null && (

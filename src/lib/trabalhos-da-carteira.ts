@@ -18,6 +18,7 @@
  * Pura: sem base, sem relógio próprio (o `agora` vem de fora).
  */
 import {
+  acertoAFavorDe,
   carteiraDe,
   foiPagoEmMao,
   oClientePagou,
@@ -143,7 +144,7 @@ export function contaDaCarteira(
   };
 
   // Os libertados que esperam por uma transferência, do mais antigo ao mais novo.
-  const aPagar: Array<{ t: TrabalhoParaALista; b: ReturnType<typeof base>; quando: number }> = [];
+  const aPagar: Array<{ t: TrabalhoParaALista; b: ReturnType<typeof base>; quando: number; devido?: number }> = [];
 
   for (const t of trabalhos) {
     if (faseDoTrabalho(t) === "a_negociar") continue;
@@ -165,6 +166,17 @@ export function contaDaCarteira(
     }
     if (faseDoTrabalho(t) === "pago") {
       const em = iso(t.pagoEm);
+      /*
+       * O ACERTO A FAVOR — d38 v2. A folha final deu-lhe mais do que se lhe
+       * transferiu: o transferido conta como recebido, e a diferença fica por
+       * receber como qualquer trabalho libertado, com o nome do acerto.
+       */
+      const acerto = acertoAFavorDe(t);
+      if (acerto > 0.004) {
+        recebidos.push({ valor: c(b.recebe - acerto), em });
+        aPagar.push({ t, b, quando: t.pagoEm ? new Date(t.pagoEm).getTime() : 0, devido: acerto });
+        continue;
+      }
       linhas.push({ ...b, grupo: "recebido", razao: "pago", falta: 0, recebidoEm: em, como: COMO_FOI_PAGO.umAUm });
       recebidos.push({ valor: b.recebe, em });
       continue;
@@ -188,8 +200,8 @@ export function contaDaCarteira(
   let i = 0;
   let resto = saidas[0]?.valor ?? 0;
   let caminho = aCaminho;
-  for (const { b } of aPagar) {
-    let falta = b.recebe;
+  for (const { t, b, devido } of aPagar) {
+    let falta = devido ?? b.recebe;
     let ultima: (typeof saidas)[number] | null = null;
     while (falta > 0.004 && i < saidas.length) {
       const tira = Math.min(falta, resto);
@@ -205,7 +217,7 @@ export function contaDaCarteira(
       linhas.push({ ...b, grupo: "recebido", razao: "pago", falta: 0, recebidoEm: ultima?.em ?? null, como: ultima?.como ?? COMO_FOI_PAGO.transferencia });
       continue;
     }
-    const parte = falta < b.recebe ? " (parte já transferida)" : "";
+    const parte = devido != null ? ` (${acertoEmPalavras(t.pedidoId ?? null)})` : falta < b.recebe ? " (parte já transferida)" : "";
     const emCaminho = Math.min(falta, caminho);
     caminho = c(caminho - emCaminho);
     linhas.push({
@@ -247,6 +259,11 @@ export function contaDaCarteira(
       recebidoEmMao: cart.recebidoEmMao,
     },
   };
+}
+
+/** «acerto da folha final do pedido #524» — o que o profissional lê na linha do acerto a favor (d38 v2). */
+export function acertoEmPalavras(pedidoId: number | null): string {
+  return pedidoId != null ? `acerto da folha final do pedido #${pedidoId}` : "acerto da folha final";
 }
 
 function diaDe(v: string | null): string | null {

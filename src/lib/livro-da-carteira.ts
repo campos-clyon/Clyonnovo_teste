@@ -1,6 +1,7 @@
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { faseDoTrabalho, quandoLiberta } from "./trabalho";
 import {
+  jaTransferidoDe,
   oClientePagou,
   foiPagoEmMao,
   type Carteira,
@@ -193,7 +194,8 @@ export function movimentoDoPagamentoDirecto(
   return {
     providerId: t.providerId,
     tipo: "trabalho_pago",
-    valor: -ganho.valor,
+    // O que saiu de facto (d38 v2): o acerto a favor da folha final fica no saldo.
+    valor: -jaTransferidoDe(t, ganho.valor),
     disponivelEm: data(t.pagoEm),
     chave: `trabalho:${t.negociacaoId}:pago`,
     negociacaoId: t.negociacaoId,

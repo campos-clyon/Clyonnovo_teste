@@ -1,4 +1,5 @@
 import { negociacoesPagas, negociacoesPagasComDetalhe, type PagamentoQueFecha } from "./pagamentos-na-base";
+import { transferidoAntesDasFolhasFinais } from "./folha-final-na-base";
 import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { METODO_DO_ABATIMENTO, temDividaDoProfissional } from "./divida-do-profissional";
@@ -181,6 +182,15 @@ export async function trabalhosDaCarteira(
     return new Map<number, MarcaDaParte[]>();
   });
 
+  /*
+   * O QUE SE LHE TRANSFERIU ANTES DA FOLHA FINAL — d38 v2. Só nos pagos; sem
+   * a tabela, ou se a leitura falhar, nada: a carteira fica como sempre.
+   */
+  const transferidos = await transferidoAntesDasFolhasFinais(linhas.filter((l) => l.pagoEm != null).map((l) => Number(l.id))).catch((e) => {
+    console.error("[carteira] não li as folhas finais:", e);
+    return new Map<number, number>();
+  });
+
   const agora = agoraDoModelo();
   const vale = novoModeloEmVigor(agora);
   return linhas.map((l) => {
@@ -253,6 +263,7 @@ export async function trabalhosDaCarteira(
     // Quem paga um trabalho CLYON é a CLYON — ver `pagoPelaClyon` em carteira.ts.
     pagoPelaClyon: typeof l.ofertaClyon === "string" && l.ofertaClyon !== "",
     marcasDaDivida: marcas.get(Number(l.id)) ?? [],
+    pagoAoProfissionalValor: l.pagoEm != null ? (transferidos.get(Number(l.id)) ?? null) : null,
     };
   });
 }

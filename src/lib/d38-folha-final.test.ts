@@ -29,6 +29,7 @@ vi.mock("./acesso-ao-pagamento", () => ({
 vi.mock("./folha-final-na-base", () => ({
   folhasFinaisDe: vi.fn(async () => []),
   gravarFolhaFinal: vi.fn(async () => ({ ok: true, id: 1 })),
+  transferidoAntesDasFolhasFinais: vi.fn(async () => new Map()),
 }));
 
 import { contaDaFolhaFinal } from "./conta-da-mudanca";

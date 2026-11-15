@@ -232,3 +232,33 @@ export async function gravarFolhaFinal(g: GravarFolhaFinal): Promise<{ ok: true;
     conn.release();
   }
 }
+
+/**
+ * O QUE SE TRANSFERIU AO PROFISSIONAL ANTES DA FOLHA FINAL — d38 v2, commit c.
+ *
+ * Num trabalho já pago ao profissional, a primeira folha final gravada «já
+ * pago» guarda em `profissionalAntes` o que ele tinha recebido. A carteira
+ * usa-o para o «pago ao profissional» sair pelo que saiu de facto: se a folha
+ * final lhe deu mais, a diferença fica-lhe disponível (o acerto a favor).
+ */
+export async function transferidoAntesDasFolhasFinais(negociacaoIds: number[]): Promise<Map<number, number>> {
+  const ids = [...new Set(negociacaoIds.filter((i) => Number.isInteger(i) && i > 0))];
+  const mapa = new Map<number, number>();
+  if (ids.length === 0) return mapa;
+  await ensureFolhasFinais();
+  const pool = await getPool();
+  if (!pool) return mapa;
+  const [linhas] = (await pool.execute(
+    `SELECT f.negociacaoId, f.profissionalAntes FROM folhasFinais f
+       JOIN (SELECT negociacaoId, MIN(id) AS id FROM folhasFinais
+              WHERE jaPago = 1 AND profissionalAntes IS NOT NULL
+                AND negociacaoId IN (${ids.map(() => "?").join(",")})
+              GROUP BY negociacaoId) p ON p.id = f.id`,
+    ids,
+  )) as unknown as [Array<{ negociacaoId: number; profissionalAntes: unknown }>, unknown];
+  for (const l of linhas) {
+    const v = Number(l.profissionalAntes);
+    if (Number.isFinite(v) && v >= 0) mapa.set(Number(l.negociacaoId), v);
+  }
+  return mapa;
+}
