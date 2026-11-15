@@ -19,6 +19,7 @@
  */
 import {
   acertoAFavorDe,
+  acertoEmPalavras,
   creditoDaReservaDe,
   carteiraDe,
   foiPagoEmMao,
@@ -279,10 +280,8 @@ export function creditoEmPalavras(pedidoId: number | null): string {
   return pedidoId != null ? `diferença paga pela CLYON no pedido #${pedidoId}` : "diferença paga pela CLYON";
 }
 
-/** «acerto da folha final do pedido #524» — o que o profissional lê na linha do acerto a favor (d38 v2). */
-export function acertoEmPalavras(pedidoId: number | null): string {
-  return pedidoId != null ? `acerto da folha final do pedido #${pedidoId}` : "acerto da folha final";
-}
+/** «acerto da folha final do pedido #524» — vive em `carteira.ts` (a favor e contra dizem o mesmo). */
+export { acertoEmPalavras } from "./carteira";
 
 function diaDe(v: string | null): string | null {
   if (!v) return null;

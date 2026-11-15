@@ -59,9 +59,39 @@ export function tridDoAbatimentoAParte(negociacaoId: number): string {
   return `${PREFIXO_DO_ABATIMENTO_A_PARTE}${negociacaoId}`;
 }
 
-/** Esta linha de `pagamentos` é a que fecha a dívida de um pago em mão? */
+/**
+ * A LINHA À PARTE DO ACERTO DA FOLHA FINAL — d38 v2. Num trabalho já pago ao
+ * profissional, uma folha final que lhe dá menos do que se lhe transferiu
+ * deixa-o a dever a diferença à CLYON (`acertoContraDe` em `carteira.ts`).
+ * A negociação já está fechada pelo pagamento do cliente: o que fecha esta
+ * dívida vive numa linha à parte, com `negociacaoPaga` nula e este `trid`
+ * (o mesmo índice único impede-a de se fechar duas vezes).
+ */
+export const PREFIXO_DO_ACERTO_DA_FOLHA = "acerto-folha-";
+
+export function tridDoAcertoDaFolha(negociacaoId: number): string {
+  return `${PREFIXO_DO_ACERTO_DA_FOLHA}${negociacaoId}`;
+}
+
+/**
+ * O `trid` DA DÍVIDA À PARTE DE UMA NEGOCIAÇÃO, pelo método da linha que a
+ * fechou do lado do cliente: o registo «pago ao profissional» (ou nenhum, como
+ * era) é o pago em mão; qualquer outro é um trabalho pago pela plataforma, e a
+ * única dívida à parte que pode ter é o acerto da folha final.
+ */
+export function tridDaDividaAParte(negociacaoId: number, metodoQueFechou: unknown): string {
+  const m = String(metodoQueFechou ?? "").trim();
+  return m === "" || m === METODO_PAGO_AO_PROFISSIONAL
+    ? tridDoAbatimentoAParte(negociacaoId)
+    : tridDoAcertoDaFolha(negociacaoId);
+}
+
+/** Esta linha de `pagamentos` fecha uma dívida à parte (a de um pago em mão, ou o acerto da folha final)? */
 export function eLinhaDaDividaEmMao(trid: unknown): boolean {
-  return typeof trid === "string" && trid.startsWith(PREFIXO_DO_ABATIMENTO_A_PARTE);
+  return (
+    typeof trid === "string" &&
+    (trid.startsWith(PREFIXO_DO_ABATIMENTO_A_PARTE) || trid.startsWith(PREFIXO_DO_ACERTO_DA_FOLHA))
+  );
 }
 
 const aosCentimos = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -143,7 +173,7 @@ export type LinhaParaADivida = {
  * Nula quando o trabalho não tem nada a pagar pelo profissional.
  */
 export type DividaACobrar = {
-  caso: "dinheiro" | "em_mao";
+  caso: "dinheiro" | "em_mao" | "acerto";
   divida: DividaDoRegistoEmMao;
   /** A `parte` das linhas de `pagamentos` desta dívida. */
   parte: "trabalho" | "divida";
@@ -158,6 +188,8 @@ export function dividaACobrar(
     dividaEmDinheiro: DividaDoRegistoEmMao | null;
     acordado: number;
     taxas: Taxas;
+    /** O acerto da folha final por pagar (d38 v2), já contado por `dividasDe`. */
+    acertoContra?: number | null;
   },
   linhas: ReadonlyArray<LinhaParaADivida>,
 ): DividaACobrar | null {
@@ -176,7 +208,22 @@ export function dividaACobrar(
       jaPaga: linhas.some((l) => l.estado === "pago" && l.trid === trid),
     };
   }
-  if (!t.dividaEmDinheiro) return null;
+  if (!t.dividaEmDinheiro) {
+    /*
+     * O ACERTO DA FOLHA FINAL — d38 v2. Num trabalho já pago ao profissional,
+     * a folha final deu-lhe menos do que se lhe transferiu: deve a diferença,
+     * só taxa (sem IVA — não é uma venda), numa linha à parte.
+     */
+    const a = t.acertoContra ?? 0;
+    if (!(a > 0)) return null;
+    const trid = tridDoAcertoDaFolha(t.negociacaoId);
+    return {
+      caso: "acerto",
+      divida: { recebidoDoCliente: 0, liquido: 0, iva: 0, comissao: aosCentimos(a), total: aosCentimos(a) },
+      parte: "divida",
+      jaPaga: linhas.some((l) => l.estado === "pago" && l.trid === trid),
+    };
+  }
   return {
     caso: "dinheiro",
     divida: t.dividaEmDinheiro,

@@ -1,4 +1,10 @@
-import { negociacoesPagas, negociacoesPagasComDetalhe, type PagamentoQueFecha } from "./pagamentos-na-base";
+import {
+  acertosDaFolhaPagos,
+  negociacoesPagas,
+  negociacoesPagasComDetalhe,
+  type AcertoPago,
+  type PagamentoQueFecha,
+} from "./pagamentos-na-base";
 import { reservasDe } from "./reserva-na-base";
 import { transferidoAntesDasFolhasFinais } from "./folha-final-na-base";
 import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
@@ -82,6 +88,8 @@ export function camposDoPagamento(
   pagos: Map<number, PagamentoQueFecha>,
   /** O modelo de 15-11 (d10): o pagamento da negociação é o do parceiro — a taxa e o IVA dela. */
   noNovoModelo = false,
+  /** A linha à parte do acerto da folha final, paga (d38 v2) — `acertosDaFolhaPagos`. */
+  acerto: AcertoPago | null = null,
 ): Pick<
   TrabalhoNaCarteira,
   "clientePagouEm" | "dividaPagaEm" | "dividaAbatida" | "comoEntrou" | "valorQueEntrou" | "dividaFechadaPor"
@@ -122,6 +130,24 @@ export function camposDoPagamento(
     };
   }
   const comDivida = temDividaDoProfissional(l.formaDePagamento, modeloDaNegociacao(l.createdAt));
+  /*
+   * PAGO PELA PLATAFORMA, COM O ACERTO DA FOLHA FINAL CONTRA ELE — d38 v2. A
+   * linha que fecha a negociação é a do cliente; a dívida do acerto fecha-se
+   * numa linha à parte (`acertoAParte`), como a de um pago em mão.
+   */
+  const ac = !comDivida ? (acerto ?? null) : null;
+  if (ac) {
+    const metodo = ac.metodo ?? METODO_DO_ABATIMENTO;
+    return {
+      comoEntrou: p?.metodo ?? null,
+      valorQueEntrou: p?.valor ?? null,
+      clientePagouEm: p?.pagoEm ?? null,
+      dividaPagaEm: ac.em,
+      dividaFechadaPor: metodo,
+      dividaAbatida:
+        metodo === METODO_DO_ABATIMENTO ? { valor: ac.valor, em: ac.em, levantamentoId: ac.levantamentoId } : null,
+    };
+  }
   return {
     comoEntrou: p?.metodo ?? null,
     valorQueEntrou: p?.valor ?? null,
@@ -149,6 +175,7 @@ export function camposDoPagamento(
 export async function trabalhosDaCarteira(
   linhas: Array<{
     id: number;
+    pedidoId?: unknown;
     estado: string;
     valorAcordado?: unknown;
     taxaCliente?: unknown;
@@ -191,6 +218,14 @@ export async function trabalhosDaCarteira(
     console.error("[carteira] não li as folhas finais:", e);
     return new Map<number, number>();
   });
+  // O acerto contra ele já pago (d38 v2): só onde houve folha final depois de pago.
+  const acertos =
+    transferidos.size === 0
+      ? new Map<number, AcertoPago>()
+      : await acertosDaFolhaPagos([...transferidos.keys()]).catch((e) => {
+          console.error("[carteira] não li os acertos da folha final:", e);
+          return new Map<number, AcertoPago>();
+        });
 
   // A reserva do valor único (d39): a parte da CLYON na dívida, ou o crédito se ficar abaixo de zero.
   const reservas = await reservasDe(linhas.map((l) => Number(l.id))).catch(() => new Map<number, number>());
@@ -231,6 +266,7 @@ export async function trabalhosDaCarteira(
     return {
     noNovoModelo,
     negociacaoId: l.id,
+    pedidoId: l.pedidoId != null && Number.isFinite(Number(l.pedidoId)) ? Number(l.pedidoId) : undefined,
     estado: l.estado,
     valorAcordado: l.valorAcordado != null ? Number(l.valorAcordado) : null,
     // A comissão DESTE trabalho, e não a de hoje: a taxa pode mudar no
@@ -260,7 +296,7 @@ export async function trabalhosDaCarteira(
      * e a comissão que entregou à CLYON, por referência ou abatidos no saldo
      * (01-10-2026). Ver `camposDoPagamento` e `dividasDe`.
      */
-    ...camposDoPagamento(l, pagos, noNovoModelo),
+    ...camposDoPagamento(l, pagos, noNovoModelo, acertos.get(Number(l.id)) ?? null),
     // Sem ela, o trabalho conta como anterior ao corte — e a carteira deixava
     // levantar o que o cliente não pagou. Ver `verificaOPagamento`.
     negociacaoCriadaEm: l.createdAt ?? null,

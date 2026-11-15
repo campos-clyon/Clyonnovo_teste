@@ -5,6 +5,7 @@ import { registarRecebimentoAMao } from "./pagamentos-na-base";
 import { configuracaoDoEupago } from "./eupago";
 import { METODO_PAGO_AO_PROFISSIONAL } from "./pago-em-mao";
 import { garantirTabelaDasCobrancas, origemLida } from "./marcas-da-divida-na-base";
+import { ensureFolhasFinais } from "./folha-final-na-base";
 import {
   fraseDaMarcacao,
   fraseDoDesfazer,
@@ -58,10 +59,12 @@ export async function dividasDoProfissional(
 
 /**
  * QUEM PODE TER DÍVIDA — os profissionais com trabalhos combinados em dinheiro
- * ou registados «pago ao profissional». Só pré-filtra: quem deve, e quanto,
+ * ou registados «pago ao profissional», e (d38 v2) os pagos com folha final depois. Só pré-filtra: quem deve, e quanto,
  * decide-o `dividasDe`.
  */
 export async function profissionaisComDividaPossivel(): Promise<number[]> {
+  // O acerto da folha final (d38 v2): a tabela tem de existir para a pergunta não partir.
+  await ensureFolhasFinais().catch(() => undefined);
   const pool = await getPool();
   if (!pool) return [];
   try {
@@ -71,7 +74,10 @@ export async function profissionaisComDividaPossivel(): Promise<number[]> {
         WHERE n.estado = 'acordada' AND n.providerId IS NOT NULL
           AND (n.formaDePagamento = 'dinheiro'
                OR EXISTS (SELECT 1 FROM pagamentos p
-                           WHERE p.negociacaoId = n.id AND p.estado = 'pago' AND p.metodo = ?))`,
+                           WHERE p.negociacaoId = n.id AND p.estado = 'pago' AND p.metodo = ?)
+               OR (n.pagoEm IS NOT NULL
+                   AND EXISTS (SELECT 1 FROM folhasFinais f
+                                WHERE f.negociacaoId = n.id AND f.jaPago = 1)))`,
       [METODO_PAGO_AO_PROFISSIONAL],
     )) as [Array<{ providerId: number }>, unknown];
     return linhas.map((l) => Number(l.providerId)).filter((n) => Number.isInteger(n) && n > 0);
@@ -317,6 +323,7 @@ export async function marcarPartes(d: {
       quando: d.quando,
       ambiente: conf.ok ? conf.config.ambiente : "producao",
       aParte: divida.aParte === true,
+      tridAParte: divida.tridAParte,
       ligacao: conn,
     });
     if (!r.feito) {

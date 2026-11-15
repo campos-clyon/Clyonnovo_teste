@@ -78,6 +78,8 @@ export async function GET(req: NextRequest) {
             porPagar: d.paga ? 0 : d.porPagar,
             total: d.totalDaDivida,
             partes: d.partes,
+            // d38 v2: «acerto da folha final do pedido #N» (nulo na dívida de sempre).
+            rotulo: d.rotulo ?? null,
             // d10: o valor em atraso do modelo de 15-11 (nulo nos trabalhos de antes).
             valorEmAtraso: d.novoModelo
               ? {

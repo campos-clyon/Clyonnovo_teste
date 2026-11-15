@@ -1,6 +1,6 @@
 import { getPool, toMySQLDateTime } from "./db";
 import { IDENTIFICADOR_DE_TESTE, type Ambiente, type MetodoDePagamento } from "./eupago";
-import { tridDoAbatimentoAParte } from "./pago-em-mao";
+import { tridDaDividaAParte, tridDoAbatimentoAParte, tridDoAcertoDaFolha } from "./pago-em-mao";
 import { lerParte, type ParteDoPagamento } from "./parte-do-pagamento";
 
 /**
@@ -721,6 +721,16 @@ export async function darPorPago(
   try {
     await conn.beginTransaction();
     /*
+     * QUE DÍVIDA À PARTE É ESTA — d38 v2. Num pago em mão, a negociação fechou-se
+     * pelo registo «pago ao profissional»; num trabalho pago pela plataforma, a
+     * única dívida à parte é o acerto da folha final (`tridDaDividaAParte`).
+     */
+    const [fechou] = (await conn.execute(
+      `SELECT metodo FROM pagamentos WHERE negociacaoPaga = ? AND estado = 'pago' LIMIT 1`,
+      [negociacaoId],
+    )) as any[];
+    const tridAParte = tridDaDividaAParte(negociacaoId, (fechou as Array<{ metodo?: unknown }>)[0]?.metodo);
+    /*
      * A DÍVIDA DE UM PAGO EM MÃO — 04-11-2026 (d9). A negociação já está
      * fechada pelo registo `ao_profissional`: esta linha não lhe toca, e o
      * seu `trid` passa a ser o da linha à parte (`tridDoAbatimentoAParte`),
@@ -739,7 +749,7 @@ export async function darPorPago(
       [
         negociacaoId,
         negociacaoId,
-        tridDoAbatimentoAParte(negociacaoId),
+        tridAParte,
         d.trid.slice(0, 60),
         d.valorPago,
         d.comissao,
@@ -1088,6 +1098,38 @@ export type PagamentoQueFecha = {
   } | null;
 };
 
+/**
+ * O ACERTO DA FOLHA FINAL, PAGO — d38 v2: num trabalho já pago ao profissional,
+ * a linha à parte (`tridDoAcertoDaFolha`) que fecha a dívida do acerto contra
+ * ele. Lê-se como o `abatimentoAParte` de um pago em mão (`camposDoPagamento`).
+ */
+export type AcertoPago = { valor: number; em: Date; levantamentoId: number | null; metodo: string };
+
+export async function acertosDaFolhaPagos(negociacaoIds: number[]): Promise<Map<number, AcertoPago>> {
+  const ids = [...new Set(negociacaoIds.filter((n) => Number.isInteger(n) && n > 0))];
+  const mapa = new Map<number, AcertoPago>();
+  if (ids.length === 0) return mapa;
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) return mapa;
+  const [linhas] = (await pool.execute(
+    `SELECT negociacaoId, pagoEm, metodo, valor, valorPago, levantamentoId
+       FROM pagamentos
+      WHERE estado = 'pago' AND negociacaoPaga IS NULL
+        AND trid IN (${ids.map(() => "?").join(", ")})`,
+    ids.map((id) => tridDoAcertoDaFolha(id)),
+  )) as any[];
+  for (const a of linhas as Array<Record<string, unknown>>) {
+    mapa.set(Number(a.negociacaoId), {
+      valor: numero(a.valorPago) ?? numero(a.valor) ?? 0,
+      em: (a.pagoEm as Date | null) ?? new Date(0),
+      levantamentoId: a.levantamentoId != null ? Number(a.levantamentoId) : null,
+      metodo: String(a.metodo ?? "abatimento"),
+    });
+  }
+  return mapa;
+}
+
 /*
  * O começo desse `trid` — para os Pagamentos perguntarem à base, trabalho a
  * trabalho, se a parte da CLYON de um pago em mão já está cobrada (03-11-2026).
@@ -1156,6 +1198,7 @@ export async function negociacoesPagasComDetalhe(
       };
     }
   }
+
   return mapa;
 }
 
@@ -1252,6 +1295,11 @@ export async function registarRecebimentoAMao(d: {
    */
   aParte?: boolean;
   /**
+   * O `trid` da linha à parte (`DividaNaCarteira.tridAParte`): o do pago em
+   * mão, ou o do acerto da folha final (d38 v2). Em falta, o do pago em mão.
+   */
+  tridAParte?: string;
+  /**
    * DENTRO DA TRANSACÇÃO DE QUEM CHAMA — 11-11-2026. Marcar a última parte de
    * uma dívida escreve as marcas e esta linha de uma vez (`marcarPartes`): com
    * a ligação dela, ou fica tudo ou não fica nada. Sem ela, como sempre.
@@ -1280,7 +1328,7 @@ export async function registarRecebimentoAMao(d: {
         d.valor,
         toMySQLDateTime(d.quando),
         d.levantamentoId ?? null,
-        d.aParte ? tridDoAbatimentoAParte(d.negociacaoId) : null,
+        d.aParte ? (d.tridAParte ?? tridDoAbatimentoAParte(d.negociacaoId)) : null,
       ],
     )) as any[];
 

@@ -329,6 +329,10 @@ export async function GET(req: NextRequest) {
       doNovoModelo.has(Number(l.negociacaoId)) &&
       !pagoAoProfissionalRegistado(l.formaDePagamento, recebidos.get(Number(l.negociacaoId))?.metodo);
 
+    // d38 v2: num pago com folha final depois, o que saiu de facto (o acerto a favor fica na carteira dele).
+    const transferidos = await transferidoAntesDasFolhasFinais(
+      linhas.filter((l) => l.pagoEm != null && l.negociacaoId != null).map((l) => Number(l.negociacaoId)),
+    ).catch(() => new Map<number, number>());
     const comDividaPossivel = [
       ...new Set(
         linhas
@@ -336,6 +340,8 @@ export async function GET(req: NextRequest) {
             (l) =>
               l.negociacaoId != null &&
               (noNovo(l) ||
+                // d38 v2: um pago pode ter o acerto da folha final contra ele.
+                transferidos.has(Number(l.negociacaoId)) ||
                 lerForma(l.formaDePagamento) === "dinheiro" ||
                 pagoAoProfissionalRegistado(
                   l.formaDePagamento,
@@ -348,10 +354,6 @@ export async function GET(req: NextRequest) {
     const dividasDaCarteira = await dividasDosProfissionais(comDividaPossivel);
     const dividaDaNegociacao = new Map<number, DividaNaCarteira>();
     for (const ds of dividasDaCarteira.values()) for (const d of ds) dividaDaNegociacao.set(d.negociacaoId, d);
-    // d38 v2: num pago com folha final depois, o que saiu de facto (o acerto a favor fica na carteira dele).
-    const transferidos = await transferidoAntesDasFolhasFinais(
-      linhas.filter((l) => l.pagoEm != null && l.negociacaoId != null).map((l) => Number(l.negociacaoId)),
-    ).catch(() => new Map<number, number>());
     // d39: a reserva do valor único (na parte da CLYON, no modelo de 15-11).
     const reservas = await reservasDe(linhas.filter((l) => l.negociacaoId != null).map((l) => Number(l.negociacaoId))).catch(
       () => new Map<number, number>(),

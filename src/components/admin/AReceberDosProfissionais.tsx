@@ -32,6 +32,8 @@ export type TrabalhoAReceber = {
   porPagar: number;
   total: number;
   partes: EstadoDaParte[];
+  /** d38 v2: o nome da dívida quando não é a de sempre («acerto da folha final do pedido #N»). */
+  rotulo?: string | null;
   /** d10: no modelo de 15-11, o valor em atraso (a taxa e o IVA dela), o estado e a referência. */
   valorEmAtraso?: {
     estado: "pago" | "no_prazo" | "stand_by" | "sem_data";
@@ -263,6 +265,7 @@ function LinhaDoTrabalho({
         <p className="text-sm text-slate-200">
           <span className="font-semibold text-white">{t.pedidoId != null ? `#${t.pedidoId}` : `negociação ${t.negociacaoId}`}</span>
           {t.cliente ? ` · ${t.cliente}` : ""}
+          {t.rotulo ? ` · ${t.rotulo}` : ""}
           {t.nasceuEm ? ` · ${dataCurta(t.nasceuEm)}` : ""}
         </p>
         <p className={`text-[11px] font-semibold uppercase tracking-wide ${COR_DO_ESTADO[t.estado]}`}>

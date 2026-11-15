@@ -371,7 +371,9 @@ describe("4. na plataforma, pago em mão: a dívida na Carteira, com referência
     const base = ler("src/lib/pagamentos-na-base.ts");
     expect(base).toContain("negociacaoPaga = IF(parte IN ('diferenca', 'divida'), NULL, ?)");
     expect(base).toContain("trid = IF(parte = 'divida', ?, ?)");
-    expect(base).toContain("tridDoAbatimentoAParte(negociacaoId),");
+    // d38 v2: o trid da dívida à parte pelo método que fechou a negociação (pago em mão, ou o acerto da folha final).
+    expect(base).toContain("const tridAParte = tridDaDividaAParte(negociacaoId,");
+    expect(base).toMatch(/^\s+tridAParte,\s*$/m);
     expect(base).toContain("AND (parte = 'divida') = ?");
     const cobrar = semComentarios(ler("src/lib/cobrar-divida-do-profissional.ts"));
     expect(cobrar).toContain("const aCobrar = dividaACobrar(");

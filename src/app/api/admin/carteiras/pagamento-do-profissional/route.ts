@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
         // Num trabalho da plataforma pago em mão a negociação já está fechada
         // pelo registo: a dívida vive numa linha à parte (`tridDoAbatimentoAParte`).
         aParte: d.aParte === true,
+        tridAParte: d.tridAParte,
       });
       // Já paga entretanto (o índice disse que não): fica como está.
       if (!r.feito) {

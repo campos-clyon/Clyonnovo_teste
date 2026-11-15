@@ -4,7 +4,13 @@ import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma
 import { estaLibertado, faseDoTrabalho, quandoLiberta, type Trabalho } from "./trabalho";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
-import { dividaDoRegistoEmMao, foiPagoEmMaoPor, pagoAoProfissionalRegistado } from "./pago-em-mao";
+import {
+  dividaDoRegistoEmMao,
+  foiPagoEmMaoPor,
+  pagoAoProfissionalRegistado,
+  tridDoAbatimentoAParte,
+  tridDoAcertoDaFolha,
+} from "./pago-em-mao";
 import { partesDaDivida, porPagarDasPartes, type EstadoDaParte, type MarcaDaParte } from "./cobrancas-ao-profissional";
 import { taxaAPassarAClyon } from "./taxa-a-passar-a-clyon";
 
@@ -268,6 +274,28 @@ export function acertoAFavorDe(t: TrabalhoNaCarteira): number {
   if (faseDoTrabalho(t) !== "pago") return 0;
   const valor = liquido(t);
   return aosCentimos(valor - jaTransferidoDe(t, valor));
+}
+
+/**
+ * O ACERTO CONTRA O PROFISSIONAL num trabalho pago — d38 v2. A folha final deu-
+ * -lhe menos do que se lhe transferiu: a diferença (transferido − o que vale
+ * hoje) é uma dívida dele à CLYON, à parte (`dividasDe`). 0 sem acerto.
+ */
+export function acertoContraDe(t: TrabalhoNaCarteira): number {
+  if (faseDoTrabalho(t) !== "pago") return 0;
+  if (foiPagoEmMao(t)) return 0;
+  const p = t.pagoAoProfissionalValor;
+  if (p == null || !Number.isFinite(p) || p < 0) return 0;
+  return Math.max(0, aosCentimos(p - liquido(t)));
+}
+
+/** «acerto da folha final do pedido #524» — o nome do acerto, a favor (carteira) ou contra (dívida). */
+export function acertoEmPalavras(pedidoId: number | null): string {
+  return pedidoId != null ? `acerto da folha final do pedido #${pedidoId}` : "acerto da folha final";
+}
+
+function numeroDoPedido(v: unknown): number | null {
+  return v != null && Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null;
 }
 
 function liquido(t: TrabalhoNaCarteira): number {
@@ -617,6 +645,16 @@ export type DividaNaCarteira = {
   /** Do modelo de 15-11 (d10): a taxa e o IVA dela, 4 dias e depois stand-by (`valor-em-atraso.ts`). */
   novoModelo?: boolean;
   /**
+   * O ACERTO DA FOLHA FINAL — d38 v2: num trabalho já pago, a folha final deu-
+   * -lhe menos do que se lhe transferiu (`acertoContraDe`). Só a parte «taxa»,
+   * à parte como a de um pago em mão, nasce no dia em que se lhe pagou.
+   */
+  acertoDaFolhaFinal?: boolean;
+  /** O nome da dívida quando não é a de sempre («acerto da folha final do pedido #N»). */
+  rotulo?: string;
+  /** Numa dívida à parte, o `trid` da linha de `pagamentos` que a fecha. */
+  tridAParte?: string;
+  /**
    * AS DUAS PARTES, CADA UMA COM O SEU ESTADO — 11-11-2026 (dono). Por pagar,
    * `total`, `iva` e `comissao` são o que FALTA de cada parte (é isso que
    * se paga por referência, se abate no saldo e conta para o bloqueio); paga,
@@ -664,6 +702,31 @@ function comAsPartes(
 export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
   const saida: DividaNaCarteira[] = [];
   for (const t of trabalhos) {
+    /*
+     * O ACERTO DA FOLHA FINAL CONTRA ELE — d38 v2. O trabalho já lhe foi pago
+     * pela CLYON, e a folha final deu-lhe menos: deve a diferença. A negociação
+     * está fechada pelo pagamento do cliente; o que fecha esta dívida vive numa
+     * linha à parte (`tridDoAcertoDaFolha`), lida em `camposDoPagamento`.
+     */
+    const acerto = acertoContraDe(t);
+    if (acerto > 0) {
+      const d = { total: acerto, iva: 0, comissao: acerto };
+      const pagoEm = t.pagoEm ? new Date(t.pagoEm) : null;
+      saida.push({
+        negociacaoId: t.negociacaoId,
+        recebidoDoCliente: 0,
+        ...comAsPartes(t, d, t.dividaPagaEm != null || t.dividaAbatida != null),
+        abatida: t.dividaAbatida != null,
+        abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
+        nasceuEm: pagoEm && !Number.isNaN(pagoEm.getTime()) ? pagoEm : null,
+        aParte: true,
+        acertoDaFolhaFinal: true,
+        // O n.º do pedido, quando a leitura o traz (`trabalhosDaCarteira`, a lista da carteira).
+        rotulo: acertoEmPalavras(numeroDoPedido((t as { pedidoId?: unknown }).pedidoId)),
+        tridAParte: tridDoAcertoDaFolha(t.negociacaoId),
+      });
+      continue;
+    }
     /*
      * O MODELO DE 15-11-2026 — d10. O cliente pagou-lhe o trabalho; ao fechar,
      * o valor em atraso é a fatura da taxa (a taxa e o IVA dela), uma
@@ -717,6 +780,7 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
         abatidaNoLevantamento: t.dividaAbatida?.levantamentoId ?? null,
         nasceuEm: quandoLiberta(t),
         aParte: true,
+        tridAParte: tridDoAbatimentoAParte(t.negociacaoId),
       });
       continue;
     }

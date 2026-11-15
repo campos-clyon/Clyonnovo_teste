@@ -21,9 +21,10 @@ import {
   type Pagamento,
 } from "./pagamentos-na-base";
 import { dividaDoProfissional, temDividaDoProfissional, type DividaDoProfissional } from "./divida-do-profissional";
-import { dividaACobrar } from "./pago-em-mao";
+import { dividaACobrar, pagoAoProfissionalRegistado } from "./pago-em-mao";
 import { lerParte } from "./parte-do-pagamento";
 import { taxaAPassarAClyon } from "./taxa-a-passar-a-clyon";
+import { dividasDoProfissional } from "./cobrancas-na-base";
 
 /**
  * A REFERÊNCIA COM QUE O PROFISSIONAL PAGA À CLYON O IVA E A COMISSÃO DE UM
@@ -102,6 +103,21 @@ export async function gerarReferenciaDaDivida(
      * 'divida'`): a negociação já está paga pelo registo. Ver `dividaACobrar`.
      */
     const jaHa = await pagamentosDaNegociacao(negociacaoId);
+    /*
+     * O ACERTO DA FOLHA FINAL — d38 v2. Num trabalho já pago, a folha final que
+     * lhe deu menos do que se lhe transferiu deixa-o a dever a diferença. O
+     * valor é o da carteira dele (`dividasDe`), nunca outra conta.
+     */
+    const outraDivida =
+      t.novoModelo ||
+      temDividaDoProfissional(t.formaDePagamento, t.modelo) ||
+      jaHa.some((l) => l.estado === "pago" && pagoAoProfissionalRegistado(t.formaDePagamento, l.metodo));
+    // Só quando não há outra: é a única dívida que um trabalho pago pela plataforma pode ter.
+    const acerto = outraDivida
+      ? null
+      : ((await dividasDoProfissional(t.providerId)).find(
+          (d) => d.negociacaoId === negociacaoId && d.acertoDaFolhaFinal === true,
+        ) ?? null);
     const aCobrar = dividaACobrar(
       {
         negociacaoId,
@@ -118,6 +134,7 @@ export async function gerarReferenciaDaDivida(
             : null,
         acordado: t.acordado,
         taxas: t.taxas,
+        acertoContra: acerto?.totalDaDivida ?? null,
       },
       jaHa,
     );
@@ -245,7 +262,9 @@ export async function gerarReferenciaDaDivida(
         `taxa da plataforma, a pagar pelo profissional (` +
         (t.novoModelo
           ? "o cliente pagou-lhe o trabalho; é a taxa da plataforma e o IVA dela"
-          : aCobrar.caso === "em_mao"
+          : aCobrar.caso === "acerto"
+            ? `${acerto?.rotulo ?? "acerto da folha final"}: a folha final deu-lhe menos do que se lhe transferiu`
+            : aCobrar.caso === "em_mao"
             ? "o cliente pagou-lhe em mão"
             : "trabalho pago em dinheiro") +
         "). Ainda não está pago.",
