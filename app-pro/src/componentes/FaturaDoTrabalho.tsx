@@ -3,9 +3,9 @@ import { Linking, Pressable, View } from "react-native";
 import { Text } from "./Texto";
 import { Botao, Caixa, TituloDaCaixa } from "./ui";
 import { escolherFotografias, reduzirFotografiaDaCandidatura } from "./Fotografias";
-import { enviarFicheiro, ErroDaApi, pedir } from "../lib/api";
+import { enviarFicheiro, ErroDaApi, pedir, SITE } from "../lib/api";
 import { diaCurto } from "../lib/conta";
-import { AJUDA_DA_FATURA_NA_APP, MENSAGENS_DA_FATURA, NOME_DA_FATURA, ROTA_DA_FATURA, type FaturasDoTrabalho } from "../lib/novo-modelo";
+import { AJUDA_DA_FATURA_NA_APP, enderecoDaFatura, MENSAGENS_DA_FATURA, NOME_DA_FATURA, ROTA_DA_FATURA, type FaturasDoTrabalho } from "../lib/novo-modelo";
 import { ESPACO, LETRA, useCores } from "../tema";
 
 /**
@@ -94,14 +94,16 @@ export function FaturaDoTrabalho({ negociacaoId }: { negociacaoId: number }) {
 function Linha({ rotulo, estado, url, tom }: { rotulo: string; estado: string; url: string | null; tom?: "bom" | "aviso" }) {
   const c = useCores();
   const cor = tom === "bom" ? c.bom : tom === "aviso" ? c.aviso : c.suave;
+  // d28: o link da fatura vem sem origem (a rota de leitura do site); junta-se a do site.
+  const endereco = enderecoDaFatura(url, SITE);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: ESPACO.s }}>
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.tinta, fontWeight: "700", fontSize: LETRA.normal }}>{rotulo}</Text>
         <Text style={{ color: cor, fontSize: LETRA.pequena + 1 }}>{estado}</Text>
       </View>
-      {url ? (
-        <Pressable onPress={() => void Linking.openURL(url)} accessibilityRole="link" hitSlop={8}>
+      {endereco ? (
+        <Pressable onPress={() => void Linking.openURL(endereco)} accessibilityRole="link" hitSlop={8}>
           <Text style={{ color: c.marca, fontWeight: "700", fontSize: LETRA.pequena + 1 }}>Ver</Text>
         </Pressable>
       ) : null}

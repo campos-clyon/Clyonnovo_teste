@@ -63,6 +63,21 @@ export type FaturasDoTrabalho = {
 
 export const ROTA_DA_FATURA = (negociacaoId: number) => `/api/profissionais/trabalho/fatura?negociacaoId=${negociacaoId}`;
 
+/**
+ * O ENDEREÇO QUE SE ABRE DE UMA FATURA — d28 (15-11-2026). Desde a d28 o site
+ * manda as faturas como link relativo da rota de leitura
+ * (`/api/faturas-do-trabalho/<id>?ate=…&a=…`); o Android não abre um caminho
+ * sem origem. Junta-se a origem do site (`SITE`, a mesma das chamadas à API),
+ * como `abrirNoNavegador` faz na app de cliente. Um endereço https (as faturas
+ * de antes, no armazenamento público) abre-se tal e qual; outra coisa, nada.
+ */
+export function enderecoDaFatura(url: string | null | undefined, site: string): string | null {
+  if (!url) return null;
+  if (url.startsWith("https://")) return url;
+  if (url.startsWith("/") && !url.startsWith("//")) return `${site.replace(/\/+$/, "")}${url}`;
+  return null;
+}
+
 /** Para onde leva o aviso dos dados em falta: só o regime → Faturação; o resto → IBAN e MB WAY. */
 export function destinoDosDadosEmFalta(falta: readonly string[]): "/conta/banco" | "/conta/faturacao" {
   return falta.length > 0 && falta.every((f) => f === "regime") ? "/conta/faturacao" : "/conta/banco";
