@@ -13,10 +13,10 @@ import {
   SEM_PAGAMENTO_ADIANTADO,
 } from "./o-pagamento-da-vitoria";
 import { promessaDaForma } from "./pagamento-na-plataforma";
-import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
+import { AS_DUAS_FATURAS, DUAS_FATURAS_POR_TRABALHO_CURTA, PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
-import { COMO_SE_PAGA, FACTURA_EM_PALAVRAS } from "./seo-data";
+import { COMO_SE_PAGA, FACTURA_EM_PALAVRAS_ANTIGA } from "./seo-data";
 import { AS_DUAS_FATURAS_DO_TRABALHO } from "./voz-da-vitoria";
 import { QUEM_E_A_CLYON_NO_MODELO_ANTIGO, quemEACLYON } from "./whatsapp-compreensao";
 
@@ -88,6 +88,8 @@ describe("as perguntas do modelo novo — só desde 15-11", () => {
     const r = respostaFrequente("Passam fatura?", DEPOIS)!;
     // d30 (15-11-2026): a frase do Jurídico.
     expect(r).toBe(AS_DUAS_FATURAS_DO_TRABALHO);
+    // Uma só língua: a da Vitória é a curta do Jurídico que o site usa (d30).
+    expect(AS_DUAS_FATURAS_DO_TRABALHO).toBe(DUAS_FATURAS_POR_TRABALHO_CURTA);
     expect(respostaFrequente("Quem emite a fatura?", DEPOIS)).toBe(AS_DUAS_FATURAS_DO_TRABALHO);
     limpo(r);
   });
@@ -97,7 +99,7 @@ describe("o aviso ao modelo (o que o site sabe)", () => {
   it("até 14-11, o de hoje", () => {
     const t = oQueOSiteSabe(ANTES);
     expect(t).toContain(COMO_SE_PAGA);
-    expect(t).toContain(FACTURA_EM_PALAVRAS);
+    expect(t).toContain(FACTURA_EM_PALAVRAS_ANTIGA);
     for (const r of REGRAS_DO_PAGAMENTO_PARA_O_MODELO) expect(t).not.toContain(r);
   });
 

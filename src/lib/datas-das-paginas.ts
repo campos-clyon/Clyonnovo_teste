@@ -22,6 +22,8 @@
 export const ACTUALIZADO_EM: Record<string, string> = {
   // 15-11-2026 (d39): «o parceiro escolhido» em vez de «o parceiro que escolher» — o parceiro é
   // escolhido pelo cliente ou, num orçamento em valor único, pela CLYON.
+  // 15-11-2026 (d30): as duas faturas de cada trabalho e «a proposta já é o total a pagar» em vez de
+  // «há fatura em todas as vendas» e «o preço já vem com IVA»; /orcamento-recolha-lisboa sem entulho.
   // 04-11-2026 (d7): a recolha mínima dos móveis (40 € + IVA), os exemplos por peça pela tabela
   // (o sofá é uma peça grande) e o entulho a granel ao preço dos sacos (1 m³ = 40 sacos).
   // 03-11-2026 (d6 v2): a recolha de móveis por peça — pequena 15 €, média 30 €, grande 50 € + IVA —
@@ -43,10 +45,10 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/trabalhos": "2026-11-10",
   "/blog": "2026-11-10",
   "/servicos": "2026-11-15",
-  "/recolha-de-moveis": "2026-11-04",
+  "/recolha-de-moveis": "2026-11-15",
   "/recolha-de-sofas": "2026-11-15",
   "/recolha-de-camas": "2026-11-15",
-  "/recolha-de-armarios": "2026-11-04",
+  "/recolha-de-armarios": "2026-11-15",
   // 02-11-2026: liga às secções «recolha gratuita» de Lisboa e de Setúbal.
   "/recolha-gratuita-de-moveis-usados": "2026-11-02",
   "/recolha-de-eletrodomesticos": "2026-11-15",
@@ -55,24 +57,24 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/orcamento-recolha-lisboa": "2026-11-15",
   "/como-funciona": "2026-11-15",
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
-  "/precos": "2026-11-10",
-  "/empresas": "2026-11-04",
+  "/precos": "2026-11-15",
+  "/empresas": "2026-11-15",
   // 31-10-2026: o sem IVA nunca sozinho — cada preço com o com IVA ao lado (antes,
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
-  "/precos/esvaziamento-de-casas": "2026-11-04",
+  "/precos/esvaziamento-de-casas": "2026-11-15",
   "/precos/mudancas": "2026-11-15",
-  "/contactos": "2026-11-11",
-  "/servicos/esvaziamento-apartamento": "2026-11-01",
-  "/servicos/manutencao-casa": "2026-11-01",
-  "/recolha-de-monos": "2026-10-31",
+  "/contactos": "2026-11-15",
+  "/servicos/esvaziamento-apartamento": "2026-11-15",
+  "/servicos/manutencao-casa": "2026-11-15",
+  "/recolha-de-monos": "2026-11-15",
   // 03-11-2026 (d1 v2): os andares sem elevador por m³ na calculadora e nos factores do preço.
   // E no mesmo dia (d4): o saco a 4,00–4,80 € (10 sacos 40–48 €) e os andares por trabalho.
   "/recolha-de-entulho": "2026-11-15",
-  "/precos/recolha-de-entulho": "2026-11-04",
+  "/precos/recolha-de-entulho": "2026-11-15",
   // 04-11-2026 (d7): os móveis com a recolha mínima e o sofá, a cama e o armário como peças grandes.
-  "/precos/recolha-de-monos-e-moveis": "2026-11-04",
+  "/precos/recolha-de-monos-e-moveis": "2026-11-15",
   "/esvaziamento-de-casas": "2026-11-15",
-  "/esvaziamento-de-casas-amadora": "2026-11-01",
+  "/esvaziamento-de-casas-amadora": "2026-11-15",
   // 11-11-2026: as mudanças ao preço de cada parceiro (o «desde» dos parceiros da lista, ou a referência).
   "/mudancas": "2026-11-15",
   "/transporte-de-moveis": "2026-11-15",

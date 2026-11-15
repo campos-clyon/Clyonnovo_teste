@@ -42,6 +42,7 @@ import { PRECOS, maisIva } from "@/lib/precos-publicos";
 import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
+import { DUAS_FATURAS_POR_TRABALHO, DUAS_FATURAS_POR_TRABALHO_CURTA } from "@/lib/pagar-ao-parceiro";
 import { getCitiesByRegion } from "@/lib/city-content";
 import { reviews } from "@/lib/reviews-data";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
@@ -250,7 +251,10 @@ const TAMBEM = [
 const PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO =
   "Pela plataforma, por MB WAY ou Multibanco, ou em dinheiro ao parceiro. Pela plataforma, o valor só é entregue depois de confirmar que ficou tudo bem.";
 const PAGA_COMO_PREFERIR_NO_NOVO_MODELO =
-  "Paga diretamente ao parceiro que contratar: por transferência, MB WAY ou dinheiro no local. O preço já inclui a taxa da plataforma e o IVA.";
+  "Paga diretamente ao parceiro que contratar: por transferência, MB WAY ou dinheiro no local. O preço da proposta já é o total a pagar, com a taxa da plataforma.";
+
+/** A frase de quem passa a fatura em «Quem somos», antes de 15-11-2026 (d30). */
+const QUEM_FATURA_NO_MODELO_ANTIGO = `${QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.`;
 
 const PRINCIPIOS = [
   {
@@ -275,8 +279,8 @@ const PRINCIPIOS = [
   },
   {
     icone: FileText,
-    titulo: "Fatura, sempre",
-    texto: `${QUEM_FACTURA_EM_PALAVRAS} Particular ou empresa, recebe-a em todas as vendas.`,
+    titulo: "Duas faturas por trabalho",
+    texto: DUAS_FATURAS_POR_TRABALHO_CURTA,
   },
   {
     icone: Ban,
@@ -345,7 +349,7 @@ const faqs = [
   },
   {
     question: "Quem passa a fatura?",
-    answer: `${QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas, para particulares e para empresas.`,
+    answer: DUAS_FATURAS_POR_TRABALHO,
   },
   {
     question: "Onde fica a CLYON?",
@@ -765,7 +769,7 @@ export default function SobreNosPage() {
               {IDENTIFICACAO.nomeComercial} é o nome comercial de {IDENTIFICACAO.nomeLegal},{" "}
               {IDENTIFICACAO.formaJuridica.toLowerCase()}, NIF {IDENTIFICACAO.nif}.
               {/* Quem passa a factura, dito onde se explica quem é quem (14-10-2026). */}
-              {" "}{novo ? QUEM_FATURA_NO_NOVO_MODELO : QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.
+              {" "}{novo ? DUAS_FATURAS_POR_TRABALHO_CURTA : QUEM_FATURA_NO_MODELO_ANTIGO}
             </p>
             <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
               <div className="rounded-2xl bg-fundo-alt px-4 py-3">

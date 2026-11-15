@@ -76,7 +76,7 @@ describe("«Esvaziar a casa de um familiar»", () => {
   it("dá os valores da tabela, sem IVA e com a nota", () => {
     const texto = JSON.stringify(a);
     expect(texto).toContain(PRECOS.esvaziamento_apartamento.etiqueta);
-    expect(texto).toContain("sem IVA (na proposta, o preço já vem com IVA incluído)");
+    expect(texto).toContain("sem IVA (na proposta, o preço já é o total a pagar: com IVA incluído ou isento, conforme o regime do parceiro)");
   });
 
   it("liga às zonas do esvaziamento", () => {

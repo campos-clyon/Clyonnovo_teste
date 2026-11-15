@@ -23,7 +23,6 @@ import {
   Sofa,
   Sparkles,
   Star,
-  Trash2,
   Truck,
   Users,
   XCircle,
@@ -33,7 +32,8 @@ import {
 } from "@/lib/analytics";
 import { NOTAS_EM_LINHA } from "@/lib/seo-data";
 import { reviews as AVALIACOES_REAIS } from "@/lib/reviews-data";
-import { ENTULHO_ATE_10_SACOS, PECAS_EM_TEXTO, PRECOS } from "@/lib/precos-publicos";
+import { PECAS_EM_TEXTO, PRECOS } from "@/lib/precos-publicos";
+import { PAGA_AO_PARCEIRO_QUE_CONTRATOU } from "@/lib/pagar-ao-parceiro";
 import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import {
   ACRESCIMO_POR_URGENCIA,
@@ -196,10 +196,6 @@ const FAQ_ITEMS = [
     // implica custo adicional» e esta que «pode ter». Quem decide é o
     // profissional, e isso diz-se nas duas da mesma maneira.
     a: `Indique a urgência no pedido. ${PROMESSA_DO_PRAZO} ${ACRESCIMO_POR_URGENCIA}`,
-  },
-  {
-    q: "Recolhem entulho de obra?",
-    a: "Sim. Os parceiros recolhem sacos de obra, restos de remodelação, madeira, tijolo, azulejo e cimento, desde que não envolvam materiais perigosos.",
   },
   {
     q: "Que materiais não recolhem?",
@@ -767,12 +763,6 @@ function SendForQuote() {
 function ServicesSection() {
   const services = [
     {
-      icon: Trash2,
-      title: "Recolha de Entulho",
-      text: "Remoção de resíduos de obra e remodelação.",
-      examples: ["Sacos de obra", "Madeira e tijolo", "Azulejo e cimento"],
-    },
-    {
       icon: Sofa,
       title: "Recolha de Móveis",
       text: "Retirada de mobiliário usado de qualquer divisão.",
@@ -809,7 +799,7 @@ function ServicesSection() {
         title="Serviços de recolha e esvaziamento"
         subtitle="Soluções para particulares e empresas em toda a região de Lisboa, Margem Sul e Setúbal."
       />
-      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-10 grid gap-5 md:grid-cols-3">
         {services.map((service) => (
           <div
             key={service.title}
@@ -878,14 +868,7 @@ function PricingGuide() {
       icon: Package,
       preco: { tipo: "faixa", de: PRECOS.recolha_monos.minimo ?? 30, ate: PRECOS.recolha_monos.maximo ?? 100 },
     },
-    {
-      // O m³ ao preço dos sacos, ensacado ou a granel (d7, 04-11-2026): era «desde 120 € / m³».
-      title: "Entulho",
-      text: `Em sacos ou a granel, ao mesmo preço; até 10 sacos, ${ENTULHO_ATE_10_SACOS.minimo} – ${ENTULHO_ATE_10_SACOS.maximo} € + IVA.`,
-      icon: Trash2,
-      preco: { tipo: "faixa", de: PRECOS.recolha_entulho.minimo ?? 160, ate: PRECOS.recolha_entulho.maximo ?? 192 },
-      unidade: "m³",
-    },
+    // O cartão do entulho saiu a 15-11-2026 (d30/d12): o entulho está fora da divulgação.
     {
       title: "Esvaziamento",
       text: "Conforme o número de divisões e o volume.",
@@ -901,7 +884,7 @@ function PricingGuide() {
           title="Quanto custa a recolha?"
           subtitle="O valor depende do volume, peso, localização, acesso, distância até à carrinha, necessidade de desmontagem e urgência."
         />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
           {cards.map((card) => (
             <div
               key={card.title}
@@ -938,7 +921,8 @@ function PricingGuide() {
           </a>
         </div>
         <p className="mx-auto mt-5 max-w-2xl text-center text-xs text-slate-500">
-          O pedido de orçamento é gratuito; o serviço de recolha é pago. {PRECO_FECHADO}
+          O pedido de orçamento é gratuito; o serviço de recolha é pago.{" "}
+          {PAGA_AO_PARCEIRO_QUE_CONTRATOU} {PRECO_FECHADO}
         </p>
       </div>
     </section>
@@ -1144,8 +1128,8 @@ function FinalCTA() {
           Precisa libertar espaço?
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-slate-300">
-          Envie fotos agora e receba propostas para recolha de entulho, móveis,
-          monos ou esvaziamento de casas. {PROMESSA_DO_PRAZO}
+          Envie fotos agora e receba propostas para recolha de móveis, monos
+          ou esvaziamento de casas. {PROMESSA_DO_PRAZO}
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a

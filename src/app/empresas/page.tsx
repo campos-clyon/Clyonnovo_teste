@@ -8,7 +8,7 @@ import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { maisIva, PRECOS } from "@/lib/precos-publicos";
 import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
-import { BUSINESS_EMAIL, BUSINESS_PHONE, SITE_URL, pagamentoDasEmpresas } from "@/lib/seo-data";
+import { BUSINESS_EMAIL, BUSINESS_PHONE, NA_PROPOSTA_COM_IVA, SITE_URL, pagamentoDasEmpresas } from "@/lib/seo-data";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
@@ -142,7 +142,7 @@ export default function EmpresasPage() {
             ))}
           </ul>
           <p className="mt-3 text-xs text-slate-500">
-            Valores de referência, sem IVA. Na proposta, o preço já vem com IVA incluído.
+            Valores de referência, sem IVA. {NA_PROPOSTA_COM_IVA}
           </p>
         </div>
       </section>

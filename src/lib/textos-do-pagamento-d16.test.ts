@@ -21,7 +21,7 @@ import { agoraDoModelo } from "./relogio-do-modelo";
 import { FRASE_UNICA, FRASE_UNICA_NO_NOVO_MODELO, fraseUnica } from "./frase-unica";
 import { TRES_PASSOS_DEPOIS_DE_ENVIAR, passosDaMudancaComEscolha, tresPassosDepoisDeEnviar } from "./textos-do-pedido";
 import { QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO, quemFaturaEmPalavras } from "./identificacao-legal";
-import { FACTURA_EM_PALAVRAS, pagamentoDasEmpresas } from "./seo-data";
+import { FACTURA_EM_PALAVRAS_ANTIGA, pagamentoDasEmpresas } from "./seo-data";
 import { comissaoEmPalavras, depoisDeAprovado, DEPOIS_DE_APROVADO_NO_NOVO_MODELO, comoRecebe } from "./como-funciona-para-o-profissional";
 import { perguntasFrequentes } from "./perguntas-frequentes";
 import { montarHtml } from "./email-aprovacao-profissional";
@@ -60,7 +60,7 @@ describe("antes de 15-11, nada muda", () => {
     expect(passosDaMudancaComEscolha(2, HOJE)[2]).toBe(TRES_PASSOS_DEPOIS_DE_ENVIAR[2]);
     expect(quemFaturaEmPalavras(HOJE)).toBe(QUEM_FACTURA_EM_PALAVRAS);
     expect(rodapeDoPedido(HOJE)).toBe(RODAPE_DO_PEDIDO);
-    expect(pagamentoDasEmpresas(HOJE)).toContain(FACTURA_EM_PALAVRAS);
+    expect(pagamentoDasEmpresas(HOJE)).toContain(FACTURA_EM_PALAVRAS_ANTIGA);
     expect(comissaoEmPalavras(TAXAS, "iva_incluido", HOJE).frase).toBe(comissaoEmPalavras(TAXAS, "iva_incluido").frase);
     expect(depoisDeAprovado(HOJE)).toContain("com calma");
     expect(ajudaDoMbway(false)).toContain("lhe pagarmos");

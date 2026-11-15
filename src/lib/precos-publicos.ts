@@ -432,7 +432,7 @@ export function comMaiuscula(etiqueta: string): string {
 }
 
 /** Numa frase, depois do número: «40 – 120 €, sem IVA (na proposta, …)». */
-export const SEM_IVA_NA_FRASE = "sem IVA (na proposta, o preço já vem com IVA incluído)";
+export const SEM_IVA_NA_FRASE = "sem IVA (na proposta, o preço já é o total a pagar: com IVA incluído ou isento, conforme o regime do parceiro)";
 
 /*
  * AS PEÇAS SOLTAS, DENTRO DA FAIXA DA RECOLHA DE MÓVEIS — 14-10-2026.

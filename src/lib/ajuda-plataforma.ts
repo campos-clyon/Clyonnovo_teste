@@ -229,6 +229,15 @@ const EXEMPLO_NO_NOVO_MODELO = (() => {
 /** As respostas do dinheiro no modelo de 15-11-2026 (d10). As outras ficam. */
 function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFrequente> {
   return {
+    // d30 (15-11-2026): a fatura do trabalho é do profissional, com o IVA do regime dele.
+    "Que IVA devo cobrar?": {
+      pergunta: "Que IVA devo cobrar?",
+      resposta:
+        "O do seu regime. Cada trabalho tem duas faturas, juntas ao pedido: a do trabalho, emitida por si ao " +
+        "cliente, com IVA ou com isenção de IVA conforme o seu regime, e a da taxa da plataforma, emitida pela " +
+        `${EMPRESA_PARCEIRA_AO_PUBLICO}, com IVA. Declare o seu regime em Faturação e IVA: é o tipo de fatura ` +
+        "que o cliente vê no seu perfil antes de o escolher.",
+    },
     "Quanto é que a CLYON leva?": {
       pergunta: "Quanto é que a CLYON leva?",
       resposta:

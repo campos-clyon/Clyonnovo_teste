@@ -47,7 +47,8 @@ export type PassoDoProfissional = {
   seccao?: SeccaoComFalta;
 };
 
-export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = [
+/** Os passos antes de 15-11-2026 (o ramo antigo de `passosDoProfissional`). */
+const PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO: PassoDoProfissional[] = [
   {
     chave: "chegam",
     titulo: "Os pedidos chegam-lhe sozinhos",
@@ -157,6 +158,8 @@ const PASSO_DO_DINHEIRO_NO_NOVO_MODELO =
   "a taxa da plataforma e o IVA dela, por referência, uma por trabalho. Propõe o seu valor, sem IVA, e o " +
   "cliente vê-o com IVA incluído. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
   `não lhe custa um cêntimo. A fatura da taxa da plataforma é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
+
+export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO;
 
 export function passosDoProfissional(agora: Date = new Date()): PassoDoProfissional[] {
   if (!novoModeloEmVigor(agora)) return PASSOS_DO_PROFISSIONAL;

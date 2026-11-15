@@ -1,3 +1,4 @@
+import { DUAS_FATURAS_POR_TRABALHO_CURTA } from "./pagar-ao-parceiro";
 import { DESMONTAGEM_A_PEDIDO, NO_MESMO_DIA, O_DIA_DO_TRABALHO, PROMESSA_DO_PRAZO, PROPOSTAS_EM_ATE } from "./promessas-publicas";
 import { PECAS_DE_REFERENCIA, PRECOS, SEM_IVA_NA_FRASE, maisIva, precoDaPeca } from "./precos-publicos";
 import {
@@ -946,7 +947,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência mostram-se sem IVA, com o valor com IVA ao lado. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
+          `Os valores de referência mostram-se sem IVA, com o valor com IVA ao lado. O preço da proposta já é o total a pagar. ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
       },
       {
         question: "Dá para retirar o sofá no mesmo dia?",
@@ -1024,7 +1025,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
+          `Os valores de referência são sem IVA. O preço da proposta já é o total a pagar. ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
       },
       {
         question: "Quanto tempo demora a ter uma resposta?",
@@ -1111,7 +1112,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
+          `Os valores de referência são sem IVA. O preço da proposta já é o total a pagar. ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
       },
     ],
   },
@@ -1162,7 +1163,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
         title: "A recolha em sacos",
         paragraphs: [
           `${COMO_SE_RECOLHE_ENTULHO} Se o entulho estiver solto no chão, o parceiro ensaca-o no local. Os sacos descem por qualquer escada, e a rua não fica ocupada com um contentor.`,
-          `Como referência, a recolha conta-se ${ENTULHO_EM_FRASE}. Cada saco é de ${PESO_DO_SACO}, e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO}. Na proposta, o preço já vem com IVA incluído.`,
+          `Como referência, a recolha conta-se ${ENTULHO_EM_FRASE}. Cada saco é de ${PESO_DO_SACO}, e um metro cúbico são uns ${SACOS_POR_METRO_CUBICO}. O preço da proposta já é o total a pagar, com IVA ou isento conforme o regime do parceiro.`,
         ],
       },
       {
@@ -1195,7 +1196,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
+          `Os valores de referência são sem IVA. O preço da proposta já é o total a pagar. ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
       },
     ],
   },
@@ -1243,7 +1244,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
         title: "Quanto custa",
         paragraphs: [
           // Dizia «…começa desde 250 €, também sem IVA.» (31-10-2026): o com IVA vai ao lado.
-          `Como referência, esvaziar um apartamento fica em ${precoDeReferencia("esvaziamento_apartamento")}. Uma casa com mais recheio começa nos ${valorSemEComIva(PRECOS.esvaziamento_casa.minimo ?? 0)}. Na proposta, o preço já vem com IVA incluído.`,
+          `Como referência, esvaziar um apartamento fica em ${precoDeReferencia("esvaziamento_apartamento")}. Uma casa com mais recheio começa nos ${valorSemEComIva(PRECOS.esvaziamento_casa.minimo ?? 0)}. O preço da proposta já é o total a pagar, com IVA ou isento conforme o regime do parceiro.`,
           "O que mais faz variar é o volume, o andar e o elevador, a arrecadação ou a garagem, e os móveis para desmontar. Vender e doar antes baixa o volume — e o preço.",
         ],
       },
@@ -1275,7 +1276,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         question: "O preço inclui IVA?",
         answer:
-          "Os valores de referência são sem IVA. Na proposta, o preço já vem com IVA incluído, e há fatura em todas as vendas.",
+          `Os valores de referência são sem IVA. O preço da proposta já é o total a pagar. ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
       },
     ],
   },

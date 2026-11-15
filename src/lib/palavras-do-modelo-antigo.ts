@@ -41,6 +41,20 @@ export const DO_MODELO_ANTIGO: ReadonlyArray<{ re: RegExp; aQuem: AQuemSeDiz; no
   { nome: "pela plataforma, o valor", aQuem: "todos", re: /(?<!\p{L})pela plataforma,? (o valor|por MB WAY|ele paga|o cliente paga)/iu },
   // Ao cliente: no modelo novo não paga nada à CLYON. O «A pagar à CLYON» da carteira é do parceiro.
   { nome: "pagar à CLYON", aQuem: "cliente", re: /(?<!«A )(?<!\p{L})(paga|pagar|pague|pagou|pagá-lo|pagá-la) à CLYON/iu },
+  // d30 (15-11-2026, Jurídico): cada trabalho tem duas faturas, e a do trabalho é do
+  // parceiro — com IVA ou isenta, conforme o regime dele. «Há fatura em todas as
+  // vendas, emitida pela empresa parceira» e «o preço já vem com IVA» como promessa
+  // geral deixaram de ser verdade (texto novo em `pagar-ao-parceiro.ts`).
+  {
+    nome: "fatura em todas as vendas",
+    aQuem: "todos",
+    re: /fa(c)?tura em todas as vendas|todas as vendas t[êe]m fa(c)?tura|sempre com fa(c)?tura|(?<!\p{L})fa(c)?tura sempre(?!\p{L})/iu,
+  },
+  {
+    nome: "o preço já vem com IVA",
+    aQuem: "todos",
+    re: /(?<!\p{L})j[áa] v[eê]m? com (o )?IVA|(?<!\p{L})vem com IVA inclu[íi]do|j[áa] inclui a taxa da plataforma e o IVA(?! dela)/iu,
+  },
 ];
 
 /** A caução de um arrendamento (o blog) não é a do site. */

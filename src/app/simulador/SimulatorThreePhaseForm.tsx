@@ -54,7 +54,7 @@ import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { servicoDaLigacao } from "@/lib/servico-na-ligacao";
-import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
+import { DUAS_FATURAS_POR_TRABALHO_CURTA } from "@/lib/pagar-ao-parceiro";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
 import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
@@ -2252,11 +2252,11 @@ function Phase3Contact({
           «acrescem 23 % de IVA». Com os preços a IVA incluído há factura em
           todas as vendas e o preço não muda; a pergunta passou a ser só se
           a factura leva o NIF (a coluna `precisaFatura` guarda a resposta).
+          Desde 15-11-2026 (d30), as duas faturas do trabalho: a do parceiro e a da taxa.
         */}
         <p className="text-sm font-semibold text-gray-900">Quer o seu NIF na fatura? *</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-          Há fatura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}, e o preço
-          das propostas já vem com IVA incluído. Com ou sem NIF, o preço é o mesmo.
+          {DUAS_FATURAS_POR_TRABALHO_CURTA} Com ou sem NIF, o preço é o mesmo.
         </p>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           {[

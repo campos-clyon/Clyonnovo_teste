@@ -16,7 +16,7 @@ import {
   BUSINESS_NAME,
   BUSINESS_PHONE,
   COMO_SE_PAGA,
-  FACTURA_EM_PALAVRAS,
+  FACTURA_EM_PALAVRAS_ANTIGA,
   NOTA_DE_PRECO,
   PRAZO_DE_RESPOSTA,
   SITE_URL,
@@ -215,7 +215,7 @@ const steps = [
  */
 const reviews = avaliacoes.slice(0, 3);
 
-const COMO_PAGAR_NO_MODELO_ANTIGO = `${COMO_SE_PAGA} ${FACTURA_EM_PALAVRAS}`;
+const COMO_PAGAR_NO_MODELO_ANTIGO = `${COMO_SE_PAGA} ${FACTURA_EM_PALAVRAS_ANTIGA}`;
 /** Pela data (d10): desde 15-11-2026 paga-se ao parceiro, com duas faturas. */
 const faqsPelaData = (agora: Date) =>
   novoModeloEmVigor(agora)

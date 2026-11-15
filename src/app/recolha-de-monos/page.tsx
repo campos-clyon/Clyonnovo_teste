@@ -24,7 +24,7 @@ import {
   SITE_URL,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
+import { PRECOS, SEM_IVA_NA_FRASE, maisIva } from "@/lib/precos-publicos";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import { NO_MESMO_DIA, O_DIA_DO_TRABALHO, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
@@ -95,7 +95,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a recolha de monos?",
-    answer: `A recolha de monos custa ${PRECO_MONOS.etiqueta}, consoante a quantidade e o tipo de materiais — para pequenas quantidades, a partir de ${PRECO_MONOS.minimo} €. São valores orientativos e sem IVA (na proposta, o preço já vem com IVA incluído): envie fotos para um orçamento preciso e rápido.`,
+    answer: `A recolha de monos custa ${PRECO_MONOS.etiqueta}, consoante a quantidade e o tipo de materiais — para pequenas quantidades, a partir de ${PRECO_MONOS.minimo} €. São valores orientativos e ${SEM_IVA_NA_FRASE}: envie fotos para um orçamento preciso e rápido.`,
   },
   {
     question: "Recolhem monos em apartamentos sem elevador?",

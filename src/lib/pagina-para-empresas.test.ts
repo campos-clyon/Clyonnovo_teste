@@ -22,7 +22,7 @@ describe("a página para empresas", () => {
 
   it("os preços vão com o IVA ao lado", () => {
     expect(P).toContain("maisIva(PRECOS.recolha_entulho.etiqueta)");
-    expect(P).toContain("Valores de referência, sem IVA. Na proposta, o preço já vem com IVA incluído.");
+    expect(P).toContain("Valores de referência, sem IVA. {NA_PROPOSTA_COM_IVA}");
   });
 
   it("está no sitemap, no rodapé e em /sobre-nos", () => {
@@ -32,8 +32,8 @@ describe("a página para empresas", () => {
   });
 
   it("e /sobre-nos diz quem passa a fatura", () => {
-    // d16: desde 15-11 as duas faturas (QUEM_FATURA_NO_NOVO_MODELO), antes a de sempre.
-    expect(ler("src/app/sobre-nos/page.tsx")).toContain("{novo ? QUEM_FATURA_NO_NOVO_MODELO : QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.");
+    // d16: desde 15-11 as duas faturas; d30: com o texto do Jurídico (a curta), antes a de sempre.
+    expect(ler("src/app/sobre-nos/page.tsx")).toContain("{novo ? DUAS_FATURAS_POR_TRABALHO_CURTA : QUEM_FATURA_NO_MODELO_ANTIGO}");
   });
 
   /*

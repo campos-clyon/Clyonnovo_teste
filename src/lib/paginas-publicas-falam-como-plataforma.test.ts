@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { BLOG_POSTS, partesDoTexto } from "./blog-data";
 import { CIDADES_MUDANCAS } from "./mudancas-cidades";
 import { reviews } from "./reviews-data";
-import { TAXA_IVA } from "./taxas-plataforma";
 import { PRECO_FECHADO, PROPOSTAS_EM_ATE } from "./promessas-publicas";
+import { DUAS_FATURAS_POR_TRABALHO_CURTA } from "./pagar-ao-parceiro";
 import { PRAZO_DE_RESPOSTA } from "./seo-data";
 
 /**
@@ -121,12 +121,12 @@ describe("as páginas públicas não falam como quem executa", () => {
     for (const faq of artigo.faq) expect(faq.answer).not.toMatch(/^Pode fazer|^Sim/);
   });
 
-  it("a frase do preço fechado diz que o IVA já vem dentro, a partir da constante", () => {
-    expect(PRECO_FECHADO).toContain(`${Math.round(TAXA_IVA * 100)} %`);
-    expect(PRECO_FECHADO).toContain("já inclui a taxa da plataforma e o IVA");
+  it("a frase do preço fechado diz que a proposta é o total, e as duas faturas (d30)", () => {
+    expect(PRECO_FECHADO).toContain("já é o total a pagar, com a taxa da plataforma");
     // Desde 02-10-2026 não há preço «sem IVA» a que o IVA se acrescente.
     expect(PRECO_FECHADO).not.toMatch(/acrescem|sem IVA/i);
-    expect(PRECO_FECHADO).toContain("Há fatura em todas as vendas.");
+    expect(PRECO_FECHADO).toContain(DUAS_FATURAS_POR_TRABALHO_CURTA);
+    expect(PRECO_FECHADO).not.toContain("Há fatura em todas as vendas.");
     // «em até» é construção brasileira; em PT-PT, «em menos de» (30-09-2026).
     expect(PROPOSTAS_EM_ATE).toBe(`em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`);
   });

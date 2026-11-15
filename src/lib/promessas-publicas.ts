@@ -1,5 +1,5 @@
 import { PRAZO_DE_RESPOSTA } from "./seo-data";
-import { TAXA_IVA } from "./taxas-plataforma";
+import { DUAS_FATURAS_POR_TRABALHO_CURTA } from "./pagar-ao-parceiro";
 
 /**
  * O QUE AS PÁGINAS PÚBLICAS PROMETEM — ESCRITO UMA VEZ. (30-09-2026)
@@ -107,7 +107,10 @@ export const AO_FIM_DE_SEMANA =
  * dizia «Sem IVA; se pedir factura, acrescem 23 %», e ficou assim na página
  * dos anúncios e nas /regioes até 14-10-2026: anunciava um preço que depois
  * aparecia 23 % mais alto na proposta. Ver iva-incluido.ts.
+ *
+ * DESDE 15-11-2026 (d30) a fatura do trabalho é do parceiro, com IVA ou isenta:
+ * diz-se que a proposta é o total a pagar, e as duas faturas.
  */
 export const PRECO_FECHADO =
-  `O preço de cada proposta já inclui a taxa da plataforma e o IVA (${Math.round(TAXA_IVA * 100)} %), ` +
-  "e fica fechado antes de começar. Há fatura em todas as vendas.";
+  "O preço de cada proposta já é o total a pagar, com a taxa da plataforma, e fica fechado antes de começar. " +
+  DUAS_FATURAS_POR_TRABALHO_CURTA;

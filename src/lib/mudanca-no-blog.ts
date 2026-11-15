@@ -1,3 +1,4 @@
+import { DUAS_FATURAS_POR_TRABALHO_CURTA } from "./pagar-ao-parceiro";
 import { descricaoQueCabe } from "./descricoes-seo";
 import { faixaEmTexto } from "./lista-de-parceiros-da-mudanca";
 import { REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
@@ -124,7 +125,7 @@ function pelaLista(preco: Extract<PrecoPublicoDasMudancas, { tipo: "parceiros" }
     t2ParaOSeixal:
       (umT2 ? `Pela lista de hoje, ${umT2} — ` : "Depende do parceiro escolhido — ") +
       "mais os km do percurso acima desses, e as caixas, se as pedir. Cada parceiro tem o seu preço por hora: no simulador vê os disponíveis e escolhe.",
-    incluiIva: `Na lista dos parceiros cada preço por hora aparece sem IVA e com IVA (hoje, ${desde}). Há fatura em todas as vendas.`,
+    incluiIva: `Na lista dos parceiros cada preço por hora aparece sem IVA e com IVA (hoje, ${desde}). ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
   };
 }
 
@@ -148,7 +149,7 @@ function naReferencia(): MudancaNoBlog {
     descricaoDaMargemSul: `De Lisboa para Almada, Seixal ou Barreiro, ou o contrário: a ponte, o tempo e o preço — à hora, ao preço do parceiro (referência ${PRECO_POR_HORA} €/h + IVA).`,
     umT2PorExemplo: `Um T2, por exemplo, leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — ${faixaDaCasa("T2")} + IVA na referência, com a proteção (${faixaDaCasa("T2", true)} com IVA); os km entre as margens contam pela tarifa do parceiro. ${TABELA_NO_BLOG}`,
     t2ParaOSeixal: `Conte com ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — na referência, com a proteção, ${faixaDaCasa("T2")} + IVA (${faixaDaCasa("T2", true)} com IVA) —, mais os km e as caixas, se as pedir. Cada parceiro tem o seu preço por hora: no simulador vê os disponíveis e escolhe.`,
-    incluiIva: `Na lista dos parceiros cada preço por hora aparece sem IVA e com IVA (na referência, ${valorSemEComIva(PRECO_POR_HORA)} por hora). Há fatura em todas as vendas.`,
+    incluiIva: `Na lista dos parceiros cada preço por hora aparece sem IVA e com IVA (na referência, ${valorSemEComIva(PRECO_POR_HORA)} por hora). ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
   };
 }
 

@@ -76,11 +76,29 @@ export const PARCEIRO_SEM_DADOS_PARA_PAGAR =
 
 /** A frase que o cliente lê sobre o pagamento, no modelo novo. */
 export const PAGA_DIRETAMENTE_AO_PARCEIRO =
-  "Paga diretamente ao parceiro que contratar — por transferência, MB WAY ou dinheiro no local. O preço já inclui a taxa da plataforma e o IVA.";
+  "Paga diretamente ao parceiro que contratar — por transferência, MB WAY ou dinheiro no local. O preço da proposta já é o total a pagar, com a taxa da plataforma.";
+
+/** Ao pé do preço e da chamada da página dos anúncios — d30 (15-11-2026). */
+export const PAGA_AO_PARCEIRO_QUE_CONTRATOU = "Paga diretamente ao parceiro que contratou.";
 
 /** As duas faturas de cada trabalho, ditas ao cliente. */
 export const AS_DUAS_FATURAS =
   "Recebe duas faturas, as duas juntas ao pedido: a do trabalho, emitida pelo parceiro, e a da taxa da plataforma.";
+
+/**
+ * AS DUAS FATURAS, COMO O JURÍDICO AS DIZ — d30 (15-11-2026). Substituem «Há fatura
+ * em todas as vendas, emitida pela empresa parceira da CLYON, e o preço já vem com
+ * IVA»: a fatura do trabalho é do parceiro, com IVA ou isenta conforme o regime
+ * dele. A longa para as páginas e a ajuda; a curta onde não cabe.
+ */
+export const DUAS_FATURAS_POR_TRABALHO =
+  "Cada trabalho tem duas faturas, juntas ao pedido: a do trabalho, emitida pelo parceiro, com IVA ou com isenção de IVA " +
+  "conforme o regime dele, e a da taxa da plataforma, emitida pela empresa parceira da CLYON, com IVA. O preço da " +
+  "proposta já é o total a pagar, e no perfil de cada parceiro vê, antes de o escolher, o tipo de fatura que ele emite.";
+
+export const DUAS_FATURAS_POR_TRABALHO_CURTA =
+  "Cada trabalho tem duas faturas: a do trabalho, passada pelo parceiro (com IVA ou isento, conforme o regime dele), " +
+  "e a da taxa da plataforma, passada pela empresa parceira da CLYON.";
 
 /**
  * SÓ PARA OS DADOS DO PEDIDO — d16 (13-11-2026, texto A das Vendas). No modelo

@@ -7,7 +7,7 @@ import { MAX_PROPOSTAS_POR_EXTENSO } from "@/lib/negociacao";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import { pedidoNovoNoNovoModelo } from "@/lib/novo-modelo";
-import { AS_DUAS_FATURAS, COMO_PAGAR_AO_PARCEIRO, COMO_PAGAR_EM_PALAVRAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
+import { AS_DUAS_FATURAS, DUAS_FATURAS_POR_TRABALHO_CURTA, COMO_PAGAR_AO_PARCEIRO, COMO_PAGAR_EM_PALAVRAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
 import { perguntaDoOrcamento } from "@/lib/orcamento-do-cliente";
 
 /**
@@ -232,8 +232,7 @@ export default function ValoresEFaturacao({
                 Quero o meu NIF na fatura
               </span>
               <span className="mt-0.5 block text-xs leading-relaxed text-slate-600">
-                Há fatura em todas as vendas, emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}.
-                O preço é o mesmo, com ou sem NIF.
+                {DUAS_FATURAS_POR_TRABALHO_CURTA} O preço é o mesmo, com ou sem NIF.
               </span>
             </span>
           </label>

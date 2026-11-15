@@ -32,7 +32,7 @@ import { promessaDaForma } from "./pagamento-na-plataforma";
 import { mensagemDaReferencia } from "./mensagem-da-referencia";
 import { textoDoTrabalhoConfirmado } from "./email-proposta";
 import { nifDaFactura } from "./pedido-valores";
-import { FACTURA_EM_PALAVRAS, NA_PROPOSTA_COM_IVA, NOTA_DE_PRECO } from "./seo-data";
+import { FACTURA_EM_PALAVRAS_ANTIGA, NA_PROPOSTA_COM_IVA, NOTA_DE_PRECO } from "./seo-data";
 
 /**
  * PREÇOS COM IVA INCLUÍDO — decisão do dono, 01-10-2026.
@@ -438,13 +438,14 @@ describe("o pedido: sai «precisa de fatura?», fica o NIF", () => {
 
 describe("os textos públicos", () => {
   it("os preços de referência ficam sem IVA, com a nota do dono", () => {
-    expect(NA_PROPOSTA_COM_IVA).toBe("Na proposta, o preço já vem com IVA incluído.");
+    // d30 (15-11-2026): a proposta é o total; a fatura do trabalho é do parceiro, com IVA ou isenta.
+    expect(NA_PROPOSTA_COM_IVA).toBe("Na proposta, o preço já é o total a pagar: com IVA incluído ou isento, conforme o regime do parceiro.");
     expect(NOTA_DE_PRECO.curta).toContain("Valores orientativos, sem IVA.");
     expect(NOTA_DE_PRECO.curta).toContain(NA_PROPOSTA_COM_IVA);
     expect(NOTA_DE_PRECO.completa).toContain(NA_PROPOSTA_COM_IVA);
-    expect(FACTURA_EM_PALAVRAS).toContain("com IVA incluído");
-    expect(FACTURA_EM_PALAVRAS).toContain("Há fatura em todas as vendas");
-    expect(FACTURA_EM_PALAVRAS).not.toContain("Se pedir fatura, acrescem");
+    expect(FACTURA_EM_PALAVRAS_ANTIGA).toContain("com IVA incluído");
+    expect(FACTURA_EM_PALAVRAS_ANTIGA).toContain("Há fatura em todas as vendas");
+    expect(FACTURA_EM_PALAVRAS_ANTIGA).not.toContain("Se pedir fatura, acrescem");
   });
 
   it("os Termos dizem o modelo novo e a frase de transição do dono", () => {

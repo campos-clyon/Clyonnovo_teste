@@ -13,7 +13,7 @@ import {
   CIDADES_COM_PAGINA,
   AVALIACOES,
   MES_DAS_CONTAGENS,
-  FACTURA_EM_PALAVRAS,
+  FACTURA_EM_PALAVRAS_ANTIGA,
   faturaEmPalavras,
   NA_PROPOSTA_COM_IVA,
   PRAZO_DE_RESPOSTA,
@@ -186,7 +186,7 @@ const TER_A_MAO = [
     // trabalho — a frase certa vive em seo-data.ts (30-09-2026). «Diga-o no
     // pedido» à cabeça sobrou de quando só havia fatura a quem a pedia; desde
     // 02-10-2026 há em todas as vendas, e o que se diz no pedido é o NIF.
-    texto: `${FACTURA_EM_PALAVRAS} Para o NIF ir na fatura, diga-o no pedido.`,
+    texto: `${FACTURA_EM_PALAVRAS_ANTIGA} Para o NIF ir na fatura, diga-o no pedido.`,
   },
 ] as const;
 
@@ -365,7 +365,7 @@ export default function ContactosPage() {
             </p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {/* d16: desde 15-11 a fatura diz as duas (faturaEmPalavras, pela data). */}
-              {TER_A_MAO.map(({ Icone, titulo, texto: t }) => ({ Icone, titulo, texto: t.replace(FACTURA_EM_PALAVRAS, faturaEmPalavras(agoraDoModelo())) })).map(({ Icone, titulo, texto }) => (
+              {TER_A_MAO.map(({ Icone, titulo, texto: t }) => ({ Icone, titulo, texto: t.replace(FACTURA_EM_PALAVRAS_ANTIGA, faturaEmPalavras(agoraDoModelo())) })).map(({ Icone, titulo, texto }) => (
                 <div
                   key={titulo}
                   className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"

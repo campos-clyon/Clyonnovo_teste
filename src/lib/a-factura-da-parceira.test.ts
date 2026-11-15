@@ -129,7 +129,8 @@ describe("quem emite a fatura não é quem presta o serviço nem quem gere o sit
       "src/lib/seo-data.ts",
     ]) {
       // «{…}» no JSX, «${…}» na frase do seo-data.ts.
-      expect(ler(ecra), ecra).toMatch(/emitida pela \$?\{EMPRESA_PARCEIRA_AO_PUBLICO\}/);
+      // d30: os ecrãs do pedido dizem-no pela frase do Jurídico (DUAS_FATURAS_POR_TRABALHO…).
+      expect(ler(ecra), ecra).toMatch(/emitida pela \$?\{EMPRESA_PARCEIRA_AO_PUBLICO\}|DUAS_FATURAS_POR_TRABALHO/);
       // O código, sem os comentários (que podem contar a história da constante).
       const codigo = ler(ecra).replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
       expect(codigo, ecra).not.toContain("ENTIDADE_QUE_FACTURA");

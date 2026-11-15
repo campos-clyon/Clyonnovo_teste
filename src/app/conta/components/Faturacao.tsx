@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle2, AlertCircle, Info } from "lucide-react";
 import type { UserProfile } from "./types";
 import Nota from "@/components/Nota";
-import { EMPRESA_PARCEIRA_AO_PUBLICO, TAXA_IVA } from "@/lib/identificacao-legal";
-import { IVA_INCLUIDO_DESDE_POR_EXTENSO } from "@/lib/iva-incluido";
+import { DUAS_FATURAS_POR_TRABALHO } from "@/lib/pagar-ao-parceiro";
 
 interface Props {
   user: UserProfile;
@@ -165,15 +164,14 @@ export default function Faturacao({ user, onUpdate }: Props) {
         {/* "Ao valor da proposta" deixava a dúvida de se a taxa ainda
             acrescia. Não acresce: desde 29-09-2026 o preço da proposta já a
             traz, e o IVA soma-se a esse preço (30-09-2026). */}
-        {/* Desde 02-10-2026 o IVA vem dentro do preço e há fatura em todas as
-            vendas. Dizia «acrescem 23 % de IVA ao preço da proposta» e «se
+        {/* Desde 02-10-2026 o IVA vinha dentro do preço, com uma só fatura, da
+            parceira. Dizia «acrescem 23 % de IVA ao preço da proposta» e «se
             precisa mesmo de fatura, diga-o no pedido». */}
         {/* Sem o nome da parceira desde 26-10-2026 (decisão do dono). */}
-        A fatura é emitida pela {EMPRESA_PARCEIRA_AO_PUBLICO}, em todas as
-        vendas. Desde {IVA_INCLUIDO_DESDE_POR_EXTENSO}, o
-        preço da proposta já inclui a taxa da plataforma e o IVA ({Math.round(TAXA_IVA * 100)} %).
-        Estes dados são os que vão nela, por isso vale a pena estarem certos
-        antes de fechar um trabalho.
+        {/* Desde 15-11-2026 (d30): duas faturas por trabalho, a do trabalho é do
+            parceiro, com IVA ou isenta conforme o regime dele. */}
+        {DUAS_FATURAS_POR_TRABALHO} Estes dados são os que vão nas faturas, por
+        isso vale a pena estarem certos antes de fechar um trabalho.
       </Nota>
     </div>
   );

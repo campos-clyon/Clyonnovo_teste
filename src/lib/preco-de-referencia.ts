@@ -262,7 +262,7 @@ export const ENTULHO_NA_FAQ =
 
 /** A nota que vai por baixo de qualquer preço de referência (G2). */
 export const NOTA_DOS_PRECOS =
-  "Valor de referência. O preço de cada trabalho é o da proposta do parceiro escolhido, e na proposta já vem com IVA incluído.";
+  "Valor de referência. O preço de cada trabalho é o da proposta do parceiro escolhido, e a proposta já é o total a pagar, com IVA ou isento conforme o regime dele.";
 
 /** O rótulo da linha do serviço (nas listas de preços; já não no simulador, desde a d6). */
 export const ROTULO_DA_REFERENCIA = "Preço de referência";

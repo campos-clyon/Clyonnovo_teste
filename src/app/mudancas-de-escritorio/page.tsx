@@ -12,6 +12,7 @@ import {
 } from "@/lib/preco-publico-das-mudancas";
 import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { PRAZO_DE_RESPOSTA, SITE_URL } from "@/lib/seo-data";
+import { DUAS_FATURAS_POR_TRABALHO_CURTA } from "@/lib/pagar-ao-parceiro";
 
 /*
  * MUDANÇAS DE ESCRITÓRIO — 09-10-2026. Escritórios, lojas e consultórios:
@@ -78,7 +79,7 @@ export default async function MudancasDeEscritorioPage() {
           {
             question: "A fatura sai com o NIF da empresa?",
             answer:
-              "Sim. Todas as vendas têm fatura, e no pedido indica o NIF da empresa para ela sair em seu nome.",
+              `Sim. No pedido indica o NIF da empresa para as faturas saírem em seu nome. ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
           },
           {
             question: "A mudança pode ser fora do horário de expediente?",

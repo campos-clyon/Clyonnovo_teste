@@ -2,7 +2,13 @@ import { EMPRESA_PARCEIRA_AO_PUBLICO, IDENTIFICACAO, TAXA_IVA } from "@/lib/iden
 import { GERADAS_QUE_FAZEM_301, TERRAS_JUNTAS_AO_CONCELHO } from "@/lib/paginas-consolidadas";
 import { TELEFONE_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
-import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO, SO_PARA_OS_DADOS_DO_PEDIDO } from "@/lib/pagar-ao-parceiro";
+import {
+  AS_DUAS_FATURAS,
+  DUAS_FATURAS_POR_TRABALHO,
+  DUAS_FATURAS_POR_TRABALHO_CURTA,
+  PAGA_DIRETAMENTE_AO_PARCEIRO,
+  SO_PARA_OS_DADOS_DO_PEDIDO,
+} from "@/lib/pagar-ao-parceiro";
 
 export type RegionKey = "lisboa" | "margem-sul" | "setubal";
 
@@ -542,7 +548,8 @@ const IVA_EM_PALAVRAS = `${Math.round(TAXA_IVA * 100)} %`;
  * do dono. A grelha continua a ser uma estimativa sem imposto; a proposta é o
  * preço final, e é isso que a nota diz. Há factura em todas as vendas.
  */
-export const NA_PROPOSTA_COM_IVA = "Na proposta, o preço já vem com IVA incluído.";
+// d30 (15-11-2026): a fatura do trabalho é do parceiro, com IVA ou isenta — a proposta é o total.
+export const NA_PROPOSTA_COM_IVA = "Na proposta, o preço já é o total a pagar: com IVA incluído ou isento, conforme o regime do parceiro.";
 
 export const NOTA_DE_PRECO = {
   /** Uma linha, para pôr junto de uma grelha. */
@@ -553,7 +560,7 @@ export const NOTA_DE_PRECO = {
   completa:
     "Valores orientativos, sem IVA. O preço a sério é a proposta que recebe, fechada " +
     `antes de o trabalho começar, e já inclui a taxa da plataforma. ${NA_PROPOSTA_COM_IVA} ` +
-    `Há fatura em todas as vendas, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
+    DUAS_FATURAS_POR_TRABALHO_CURTA,
 } as const;
 
 /**
@@ -573,14 +580,12 @@ export const NOTA_DE_PRECO = {
  */
 /** Desde 15-11-2026 (d10): duas faturas por trabalho. */
 export function faturaEmPalavras(agora: Date = new Date()): string {
-  if (!novoModeloEmVigor(agora)) return FACTURA_EM_PALAVRAS;
-  return (
-    `O preço de cada proposta vem com IVA incluído (${IVA_EM_PALAVRAS}) e já inclui a taxa da ` +
-    `plataforma. ${AS_DUAS_FATURAS} A da taxa é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}, com o seu NIF se o quiser.`
-  );
+  if (!novoModeloEmVigor(agora)) return FACTURA_EM_PALAVRAS_ANTIGA;
+  return DUAS_FATURAS_POR_TRABALHO;
 }
 
-export const FACTURA_EM_PALAVRAS =
+/** O ramo antigo de `faturaEmPalavras` (antes de 15-11-2026). */
+export const FACTURA_EM_PALAVRAS_ANTIGA =
   `O preço de cada proposta vem com IVA incluído (${IVA_EM_PALAVRAS}) e já inclui a taxa da ` +
   "plataforma. Há fatura em todas as vendas, com o seu NIF se o quiser na fatura, emitida " +
   `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
@@ -600,7 +605,7 @@ export const PAGAMENTO_DAS_EMPRESAS_NO_NOVO_MODELO =
 export function pagamentoDasEmpresas(agora: Date = new Date()): string {
   return novoModeloEmVigor(agora)
     ? PAGAMENTO_DAS_EMPRESAS_NO_NOVO_MODELO
-    : `${FACTURA_EM_PALAVRAS} Para a fatura levar o NIF da empresa, diga-o no pedido.`;
+    : `${FACTURA_EM_PALAVRAS_ANTIGA} Para a fatura levar o NIF da empresa, diga-o no pedido.`;
 }
 
 /**

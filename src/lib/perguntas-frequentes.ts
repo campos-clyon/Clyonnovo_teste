@@ -5,7 +5,7 @@ import {
   AVALIACOES,
   MES_DAS_CONTAGENS,
   COMO_SE_PAGA,
-  FACTURA_EM_PALAVRAS,
+  FACTURA_EM_PALAVRAS_ANTIGA,
   comoSePaga,
   faturaEmPalavras,
   NOTA_DE_PRECO,
@@ -199,7 +199,7 @@ export const PERGUNTAS_FREQUENTES = [
         // ao cliente é a parceira de `ENTIDADE_QUE_FACTURA`, sobre o preço da
         // proposta inteiro (30-09-2026). E «Sim, quando a pede» deixou de ser
         // verdade a 02-10-2026: há fatura em todas as vendas.
-        a: `Sim, em todas as vendas. ${FACTURA_EM_PALAVRAS}`,
+        a: `Sim. ${FACTURA_EM_PALAVRAS_ANTIGA}`,
       },
     ],
   },
@@ -296,8 +296,8 @@ function pagamentoPelaData(lista: typeof PERGUNTAS_FREQUENTES, agora: Date): typ
     questions: c.questions.map((q) =>
       q.a === COMO_SE_PAGA
         ? { ...q, a: comoSePaga(agora) }
-        : q.a.includes(FACTURA_EM_PALAVRAS)
-          ? { ...q, a: q.a.replace(FACTURA_EM_PALAVRAS, faturaEmPalavras(agora)) }
+        : q.a.includes(FACTURA_EM_PALAVRAS_ANTIGA)
+          ? { ...q, a: q.a.replace(FACTURA_EM_PALAVRAS_ANTIGA, faturaEmPalavras(agora)) }
           : q,
     ),
   }));
