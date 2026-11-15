@@ -9,6 +9,7 @@ import {
   verAsFotografiasNovas,
   type PedidoComDescricao,
 } from "@/lib/descricao-do-pedido-na-base";
+import { descricaoEmPortugues } from "@/lib/descricao-em-portugues";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -86,15 +87,26 @@ export async function POST(req: NextRequest) {
   try {
     let fontes = fontesDoPedido(doFormulario, agora);
     fontes = await verAsFotografiasNovas(fontes, doFormulario, agora);
+    /*
+     * SEMPRE EM PORTUGUÊS (d46): o que vier noutra língua traduz-se aqui também
+     * — e diz-se, para quem lê antes de gravar. Se o tradutor falhar, fica o
+     * texto como está e a nota diz que falta traduzir.
+     */
     const r = await escreverADescricao(fontes, pedidoParaADescricao(doFormulario));
-    if (r.ok) return NextResponse.json({ ok: true, texto: r.texto, por: "modelo" });
-    const regras = descricaoPelasRegras(fontes, doFormulario.serviceType);
+    if (r.ok) {
+      const t = await descricaoEmPortugues(r.texto);
+      return NextResponse.json({ ok: true, texto: t.descricao, por: "modelo", traduzida: t.original != null && !t.porTraduzir, porTraduzir: t.porTraduzir });
+    }
+    const t = await descricaoEmPortugues(descricaoPelasRegras(fontes, doFormulario.serviceType));
+    const regras = t.descricao;
     return NextResponse.json({
       ok: true,
       texto: regras,
       por: "regras",
       igual: textoNormal(regras) === textoNormal(doFormulario.description),
       motivo: r.motivo.slice(0, 200),
+      traduzida: t.original != null && !t.porTraduzir,
+      porTraduzir: t.porTraduzir,
     });
   } catch (e) {
     console.error("[admin/pedidos/arrumar-descricao]", e);

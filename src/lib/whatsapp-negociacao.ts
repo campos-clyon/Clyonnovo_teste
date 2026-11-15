@@ -472,7 +472,7 @@ export async function registarARecolha(
     // Quantas fotografias mandou — a descrição di-lo ao profissional (26-10-2026).
     const comAsFotos =
       (opcoes.fotosNaConversa ?? 0) > (dados.fotosRecebidas ?? 0) ? { ...dados, fotosRecebidas: opcoes.fotosNaConversa } : dados;
-    const { id, fotos: fotosNoPedido } = await registarPedidoDaRecolha(telefone, comAsFotos);
+    const { id, fotos: fotosNoPedido, porTraduzir } = await registarPedidoDaRecolha(telefone, comAsFotos);
     const pool = await getPool();
     if (pool) {
       await pool
@@ -502,6 +502,16 @@ export async function registarARecolha(
       telefone,
       mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true),
     );
+    /*
+     * A DESCRIÇÃO FICOU POR TRADUZIR (d46): o tradutor falhou e ela está na
+     * língua do cliente. Passa à equipa — depois de falar, porque o portão
+     * engole o que sair depois de interromper.
+     */
+    if (porTraduzir) {
+      await interromperNumeroWhatsApp(telefone, `Descrição do pedido #${id} por traduzir — o tradutor falhou; traduzir antes de enviar aos parceiros`).catch(
+        (e) => console.error("[whatsapp/recolha] não passei à equipa o pedido por traduzir:", e),
+      );
+    }
     return id;
   } catch (e) {
     console.error("[whatsapp/recolha] não registou o pedido:", e);

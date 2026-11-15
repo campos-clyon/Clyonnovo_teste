@@ -13,6 +13,25 @@ import {
   type FontesDaDescricao,
 } from "./fontes-da-descricao";
 import { escreverADescricao, type PedidoParaADescricao } from "./descricao-pelo-modelo";
+import { descricaoEmPortugues, paraABase, type DescricaoEmPortugues } from "./descricao-em-portugues";
+
+/**
+ * O «POR TRADUZIR» FICA NO HISTÓRICO — 15-11-2026 (d46). A descrição ficou
+ * noutra língua porque o tradutor falhou: a equipa vê-o no pedido. Nunca atira.
+ */
+async function avisarPorTraduzir(pedidoId: number, t: DescricaoEmPortugues): Promise<void> {
+  if (!t.porTraduzir) return;
+  try {
+    const { appendOrderHistory } = await import("./db");
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message: `A descrição ficou POR TRADUZIR: o cliente escreveu noutra língua e o tradutor falhou (${(t.motivo ?? "sem motivo").slice(0, 160)}). Traduza-a antes de a enviar aos parceiros.`,
+    });
+  } catch {
+    /* sem histórico, fica a marca no pedido */
+  }
+}
 
 /**
  * A DESCRIÇÃO DO PEDIDO NA BASE — quem lê e grava as fontes, e quem chama o
@@ -123,7 +142,7 @@ export async function juntarAConversaNaDescricao(
   pedidoId: number,
   novos: DadosDaRecolha,
   agora: Date = new Date(),
-): Promise<{ antes: string; descricao: string; mudou: boolean; fontesMudaram: boolean } | null> {
+): Promise<{ antes: string; descricao: string; mudou: boolean; fontesMudaram: boolean; porTraduzir?: boolean } | null> {
   const { getSimulatorOrderById, gravarDescricaoEFontes } = await import("./db");
   const p = (await getSimulatorOrderById(pedidoId)) as unknown as PedidoComDescricao | undefined;
   if (!p) return null;
@@ -133,14 +152,19 @@ export async function juntarAConversaNaDescricao(
   // Nada de novo («ok», «obrigada»): a descrição fica como está — também a que o modelo escreveu.
   const fontesMudaram = JSON.stringify(fontes) !== JSON.stringify(doPedido);
   if (!fontesMudaram) return { antes, descricao: antes, mudou: false, fontesMudaram: false };
-  const descricao = descricaoPelasRegras(fontes, p.serviceType);
+  // Sempre em português (d46): o que o cliente disse noutra língua traduz-se antes de gravar.
+  const t = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType));
+  const descricao = t.descricao;
   const mudou = descricao !== antes;
   await gravarDescricaoEFontes(
     pedidoId,
     mudou ? descricao : undefined,
     JSON.stringify(comAEscrita(fontes, descricao, "regras", agora)),
+    undefined,
+    paraABase(t),
   );
-  return { antes, descricao, mudou, fontesMudaram: true };
+  if (mudou) await avisarPorTraduzir(pedidoId, t);
+  return { antes, descricao, mudou, fontesMudaram: true, porTraduzir: t.porTraduzir };
 }
 
 /**
@@ -199,16 +223,28 @@ export async function reescreverADescricao(pedidoId: number, agora: Date = new D
     fontes = await verAsFotografiasNovas(fontes, p, agora);
     const r = await escreverADescricao(fontes, pedidoParaADescricao(p));
     if (r.ok) {
-      const gravou = await gravarDescricaoEFontes(pedidoId, r.texto, JSON.stringify(comAEscrita(fontes, r.texto, "modelo", agora)), lida);
+      // O modelo escreve em português; se mesmo assim ficar alguma coisa noutra língua, traduz-se (d46).
+      const t = await descricaoEmPortugues(r.texto);
+      const gravou = await gravarDescricaoEFontes(
+        pedidoId,
+        t.descricao,
+        JSON.stringify(comAEscrita(fontes, t.descricao, "modelo", agora)),
+        lida,
+        paraABase(t),
+      );
+      if (gravou) await avisarPorTraduzir(pedidoId, t);
       return gravou ? { ok: true } : { ok: false, motivo: "a descrição mudou entretanto" };
     }
-    const regras = descricaoPelasRegras(fontes, p.serviceType);
+    const tr = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType));
+    const regras = tr.descricao;
     const gravou = await gravarDescricaoEFontes(
       pedidoId,
       regras,
       JSON.stringify(comAEscrita(fontes, regras, "regras", agora, r.motivo.slice(0, 300))),
       lida,
+      paraABase(tr),
     );
+    if (gravou) await avisarPorTraduzir(pedidoId, tr);
     if (gravou) {
       await appendOrderHistory(pedidoId, {
         type: "created",

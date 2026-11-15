@@ -97,6 +97,9 @@ export const INSTRUCAO_DA_DESCRICAO = [
   "REGRAS: só o que está nas fontes — não inventes coisas, quantidades, dias nem acessos. Sem preços, sem valores, sem euros. " +
     "Sem nomes, telefones, emails nem moradas (nem ruas, nem números de porta, nem códigos postais). " +
     "Português de Portugal, frases curtas, sem cumprimentos nem emojis. Listas vazias quando não há nada.",
+  // d46 (15-11-2026): o #623 ficou com os pormenores em inglês — a descrição é sempre em português.
+  "Se o cliente escreveu noutra língua (inglês, francês, espanhol), escreve tudo em português de Portugal, com os nomes " +
+    "que se usam cá («colchão de solteiro», «esferovite», «caixas de cartão», «sacos do lixo», «candeeiro», «tapete»).",
 ].join("\n");
 
 /* ──────────────────────────────────────────────────────────────────────────

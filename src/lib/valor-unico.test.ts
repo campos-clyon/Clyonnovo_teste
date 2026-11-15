@@ -186,7 +186,8 @@ describe("d39 B — a base", () => {
   it("a migração é aditiva e a versão sobe", () => {
     expect(DB).toContain("ALTER TABLE simulatorOrders ADD COLUMN valorUnicoCliente DECIMAL(10,2) NULL DEFAULT NULL");
     expect(DB).toContain("ALTER TABLE simulatorOrders ADD COLUMN valorUnicoEm DATETIME NULL DEFAULT NULL");
-    expect(DB).toContain("const MIGRATION_VERSION = 30;");
+    // 30 nesta decisão; as seguintes (d46…) só a sobem.
+    expect(Number(DB.match(/const MIGRATION_VERSION = (\d+);/)?.[1])).toBeGreaterThanOrEqual(30);
   });
   it("grava-se só num pedido que negoceia, aberto e sem contratado — e as negociações não mudam", () => {
     const g = DB.slice(DB.indexOf("export async function gravarValorUnico("), DB.indexOf("export async function parceirosParaOValorUnico("));

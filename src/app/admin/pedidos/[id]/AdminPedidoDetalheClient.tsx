@@ -13,6 +13,7 @@ import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import AvaliacoesAoClienteDoPedido from "@/components/admin/AvaliacoesAoClienteDoPedido";
+import DescricaoDoPedido from "@/components/admin/DescricaoDoPedido";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,11 @@ type Order = {
   id: number;
   serviceType?: string | null;
   description?: string | null;
+  /** d46: a descrição noutra língua, à parte. */
+  descricaoOriginal?: string | null;
+  linguaDaDescricao?: string | null;
+  descricaoPorTraduzir?: number | null;
+  descricaoNoutraLingua?: boolean;
   filesJson?: string | null;
   address?: string | null;
   city?: string | null;
@@ -818,10 +824,20 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                 </div>
               </div>
 
-              {order.description && (
+              {(order.description || order.descricaoOriginal) && (
                 <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4">
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Descrição do pedido</p>
-                  <p className="whitespace-pre-line break-words text-sm leading-relaxed text-slate-300">{order.description}</p>
+                  <DescricaoDoPedido
+                    pedidoId={order.id}
+                    token={token ?? ""}
+                    descricao={order.description}
+                    original={order.descricaoOriginal}
+                    lingua={order.linguaDaDescricao}
+                    porTraduzir={order.descricaoPorTraduzir}
+                    noutraLingua={order.descricaoNoutraLingua}
+                    escuro
+                    onTraduzida={() => void fetchOrder()}
+                  />
                 </div>
               )}
             </div>

@@ -141,6 +141,10 @@ export interface SimulatorOrder {
   id: number;
   serviceType?: string | null;
   description?: string | null;
+  /** d46 (15-11-2026): a descrição como o cliente a escreveu noutra língua, a língua, e se ficou por traduzir. */
+  descricaoOriginal?: string | null;
+  linguaDaDescricao?: string | null;
+  descricaoPorTraduzir?: number | null;
   filesJson?: string | null;
   address?: string | null;
   city?: string | null;
@@ -319,6 +323,10 @@ export interface InsertProviderCoverage {
 export interface InsertSimulatorOrder {
   serviceType?: string | null;
   description?: string | null;
+  /** d46 (15-11-2026): a descrição como o cliente a escreveu noutra língua, a língua, e se ficou por traduzir. */
+  descricaoOriginal?: string | null;
+  linguaDaDescricao?: string | null;
+  descricaoPorTraduzir?: number | null;
   filesJson?: string | null;
   address?: string | null;
   city?: string | null;

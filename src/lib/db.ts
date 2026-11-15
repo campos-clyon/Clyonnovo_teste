@@ -9658,7 +9658,8 @@ let _simulatorOrdersEnsured = false;
 // 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
 // 30 — `valorUnicoCliente` e `valorUnicoEm` (15-11-2026, d39), o valor único ao cliente.
-const MIGRATION_VERSION = 30;
+// 31 — `descricaoOriginal`, `linguaDaDescricao` e `descricaoPorTraduzir` (15-11-2026, d46), a descrição sempre em português.
+const MIGRATION_VERSION = 31;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -9909,6 +9910,14 @@ export async function ensureSimulatorOrdersTable() {
     // Nulo em todos os outros pedidos. Ver `valor-unico.ts`.
     `ALTER TABLE simulatorOrders ADD COLUMN valorUnicoCliente DECIMAL(10,2) NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN valorUnicoEm DATETIME NULL DEFAULT NULL`,
+    // v31 — A DESCRIÇÃO SEMPRE EM PORTUGUÊS (15-11-2026, d46). O texto como o
+    // cliente o escreveu noutra língua fica aqui, à parte, com a língua; a
+    // descrição é a traduzida. «Por traduzir» quando o tradutor falhou — a
+    // equipa vê-o no pedido. Nulos nos pedidos em português e nos de antes.
+    // Ver `descricao-em-portugues.ts`.
+    `ALTER TABLE simulatorOrders ADD COLUMN descricaoOriginal LONGTEXT NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN linguaDaDescricao VARCHAR(5) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN descricaoPorTraduzir TINYINT(1) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -9923,12 +9932,40 @@ export async function createSimulatorOrder(data: InsertSimulatorOrder): Promise<
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  /*
+   * A DESCRIÇÃO EM PORTUGUÊS — 15-11-2026 (d46). Todos os pedidos nascem aqui
+   * (o simulador, o formulário da inicial, o backoffice, a Vitória): o que
+   * vier noutra língua traduz-se antes de gravar, e o original fica à parte.
+   * Quem já a traduziu (a Vitória) manda `linguaDaDescricao` — não se repete.
+   */
+  let porTraduzir: string | null = null;
+  if (typeof data.description === "string" && data.description.trim() && data.linguaDaDescricao === undefined) {
+    const { descricaoEmPortugues } = await import("./descricao-em-portugues");
+    const t = await descricaoEmPortugues(data.description);
+    if (t.original != null) {
+      data = {
+        ...data,
+        description: t.descricao,
+        descricaoOriginal: t.original,
+        linguaDaDescricao: t.lingua,
+        descricaoPorTraduzir: t.porTraduzir ? 1 : 0,
+      };
+      if (t.porTraduzir) porTraduzir = t.motivo ?? "o tradutor não respondeu";
+    }
+  }
   const cols = Object.keys(data).filter((k) => (data as Record<string, unknown>)[k] !== undefined);
   const vals = cols.map((k) => (data as Record<string, unknown>)[k]);
   const placeholders = cols.map(() => "?").join(", ");
   const sql = `INSERT INTO simulatorOrders (${cols.join(", ")}) VALUES (${placeholders})`;
   const [result] = await pool.execute(sql, vals as ExecuteValues[]) as any[];
   const insertId = result.insertId ?? 0;
+  if (porTraduzir && insertId) {
+    await appendOrderHistory(insertId, {
+      type: "created",
+      by: null,
+      message: `A descrição veio noutra língua e ficou POR TRADUZIR (o tradutor falhou: ${porTraduzir.slice(0, 160)}). Traduza-a antes de a enviar aos parceiros.`,
+    }).catch(() => {});
+  }
   return insertId;
 }
 
@@ -10059,12 +10096,23 @@ export async function gravarDescricaoEFontes(
   descricao: string | undefined,
   fontesJson: string,
   descricaoAntes?: string | null,
+  /** A tradução da d46: o original (se havia outra língua), a língua e o «por traduzir». */
+  traducao?: { original: string | null; lingua: string | null; porTraduzir: boolean },
 ): Promise<boolean> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
-  const sets = descricao !== undefined ? "description = ?, fontesDaDescricao = ?" : "fontesDaDescricao = ?";
+  let sets = descricao !== undefined ? "description = ?, fontesDaDescricao = ?" : "fontesDaDescricao = ?";
   const vals: ExecuteValues[] = descricao !== undefined ? [descricao, fontesJson] : [fontesJson];
+  if (descricao !== undefined && traducao) {
+    // O original só muda quando há um novo noutra língua; o «por traduzir» acompanha sempre a descrição.
+    sets += ", descricaoPorTraduzir = ?";
+    vals.push(traducao.porTraduzir ? 1 : 0);
+    if (traducao.original != null) {
+      sets += ", descricaoOriginal = ?, linguaDaDescricao = ?";
+      vals.push(traducao.original, traducao.lingua);
+    }
+  }
   let onde = "id = ?";
   vals.push(id);
   if (descricaoAntes !== undefined) {
@@ -16362,7 +16410,7 @@ export async function apagarContaDeCliente(
             SET contactName = NULL, contactPhone = NULL, contactEmail = NULL,
                 nifFactura = NULL,
                 address = NULL, floor = NULL,
-                description = NULL, fontesDaDescricao = NULL, filesJson = NULL,
+                description = NULL, fontesDaDescricao = NULL, descricaoOriginal = NULL, filesJson = NULL,
                 rawOrderJson = NULL, percursoJson = NULL, chatJson = NULL, historyJson = NULL,
                 acessoTokenHash = NULL, acessoTokenExpiraEm = NULL
           WHERE LOWER(contactEmail) = ?`,

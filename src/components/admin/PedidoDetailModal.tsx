@@ -19,6 +19,7 @@ import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { SACOS_POR_BIG_BAG, sacosDeBigBags } from "@/lib/sacos-de-entulho";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
+import DescricaoDoPedido from "@/components/admin/DescricaoDoPedido";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,11 @@ export type PedidoOrder = {
   id: number;
   serviceType?: string | null;
   description?: string | null;
+  /** d46: a descrição noutra língua, à parte. */
+  descricaoOriginal?: string | null;
+  linguaDaDescricao?: string | null;
+  descricaoPorTraduzir?: number | null;
+  descricaoNoutraLingua?: boolean;
   filesJson?: string | null;
   address?: string | null;
   city?: string | null;
@@ -1681,10 +1687,19 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               )}
                             </div>
                           </div>
-                          {order.description && (
+                          {(order.description || order.descricaoOriginal) && (
                             <div>
                               <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Descrição</p>
-                              <p className="whitespace-pre-line break-words text-sm leading-relaxed text-slate-700">{order.description}</p>
+                              <DescricaoDoPedido
+                                pedidoId={order.id}
+                                token={token}
+                                descricao={order.description}
+                                original={order.descricaoOriginal}
+                                lingua={order.linguaDaDescricao}
+                                porTraduzir={order.descricaoPorTraduzir}
+                                noutraLingua={order.descricaoNoutraLingua}
+                                onTraduzida={() => void fetchOrder()}
+                              />
                             </div>
                           )}
                         </div>

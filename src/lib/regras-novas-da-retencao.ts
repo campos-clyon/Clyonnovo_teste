@@ -365,6 +365,10 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   // O valor único ao cliente (15-11-2026, d39): um preço, nada da pessoa.
   valorUnicoCliente: "fica",
   valorUnicoEm: "fica",
+  // A descrição como o cliente a escreveu noutra língua (15-11-2026, d46): é a descrição — sai com ela.
+  descricaoOriginal: "nulo",
+  linguaDaDescricao: "fica",
+  descricaoPorTraduzir: "fica",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

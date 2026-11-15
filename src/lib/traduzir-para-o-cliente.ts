@@ -156,7 +156,11 @@ type PedidoAoGemini = { saiu: string; motivo: null } | { saiu: null; motivo: str
  * servidor), e o modelo leve no fim. Cada uma com o seu prazo, todas dentro
  * do tecto.
  */
-async function pedirAoGemini(texto: string, lingua: Lingua): Promise<PedidoAoGemini> {
+async function pedirAoGemini(
+  texto: string,
+  lingua: Lingua,
+  sistema: string = instrucoes(lingua),
+): Promise<PedidoAoGemini> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { saiu: null, motivo: "sem GEMINI_API_KEY" };
   let ultimoMotivo = "nenhum modelo respondeu";
@@ -179,7 +183,7 @@ async function pedirAoGemini(texto: string, lingua: Lingua): Promise<PedidoAoGem
     try {
       const model = client.getGenerativeModel({
         model: modelName,
-        systemInstruction: instrucoes(lingua),
+        systemInstruction: sistema,
         generationConfig: { temperature: 0 },
       });
       let relogio: ReturnType<typeof setTimeout> | undefined;
@@ -301,6 +305,24 @@ export async function traduzirTituloDeBotao(
   const traduzido = (await traduzirParaOCliente(titulo, lingua)).trim();
   if (!traduzido || traduzido.length > TITULO_DO_BOTAO_MAX) return titulo;
   return traduzido;
+}
+
+/**
+ * AO CONTRÁRIO: DE OUTRA LÍNGUA PARA PORTUGUÊS — 15-11-2026 (decisão d46).
+ *
+ * A mesma escada, a mesma nova tentativa, o mesmo tecto e o mesmo termómetro;
+ * muda só a instrução, que é de quem chama (`descricao-em-portugues.ts`).
+ * Sem tradução devolve `null` e o motivo — NUNCA o texto original como se
+ * fosse a tradução: quem chama decide o que fazer com ele.
+ */
+export async function pedirTraducaoParaPortugues(
+  texto: string,
+  de: Lingua,
+  sistema: string,
+): Promise<{ saiu: string; motivo: null } | { saiu: null; motivo: string }> {
+  const pedido = await pedirAoGemini(texto, de, sistema);
+  await anotar("tradutor", pedido.saiu ? null : `${pedido.motivo} — a descrição ficou por traduzir (${de} → pt)`);
+  return pedido;
 }
 
 /** Para os testes e para o painel: esquecer o que está guardado. */

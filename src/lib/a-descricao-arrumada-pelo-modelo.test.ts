@@ -571,10 +571,12 @@ describe("5. o modelo a falhar: fica a descrição das regras, e a falha fica à
     const i = BASE.indexOf("export async function reescreverADescricao(");
     const corpo = BASE.slice(i, BASE.indexOf("\n}", i));
     expect(corpo).toContain("const r = await escreverADescricao(fontes, pedidoParaADescricao(p));");
-    expect(corpo).toContain("const regras = descricaoPelasRegras(fontes, p.serviceType);");
+    // Desde a d46 (15-11-2026) passa pela tradução: sempre em português.
+    expect(corpo).toContain("const tr = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType));");
+    expect(corpo).toContain("const regras = tr.descricao;");
     expect(corpo).toContain("A descrição ficou arrumada pelas regras: o modelo não a escreveu");
     // Só grava se a descrição ainda for a que se leu: quem escreveu entretanto, ganha.
-    expect(corpo.match(/gravarDescricaoEFontes\([^;]*?,\s*lida,?\s*\)/g)?.length).toBe(2);
+    expect(corpo.match(/gravarDescricaoEFontes\([^;]*?,\s*lida,\s*paraABase\(\w+\),?\s*\)/g)?.length).toBe(2);
   });
 });
 
@@ -633,9 +635,11 @@ describe("7. onde o profissional a lê", () => {
     // Na app (React Native) o <Text> respeita o «\n» sozinho.
     expect(ler("app-pro/src/app/trabalho/[id].tsx")).toContain("<DescricaoDoPedido texto={t.description} />");
     // E no backoffice também (a ficha do pedido).
-    expect(ler("src/components/admin/PedidoDetailModal.tsx")).toContain("whitespace-pre-line break-words text-sm leading-relaxed text-slate-700\">{order.description}");
-    expect(ler("src/app/admin/pedidos/[id]/AdminPedidoDetalheClient.tsx")).toContain(
-      "whitespace-pre-line break-words text-sm leading-relaxed text-slate-300\">{order.description}",
+    // Desde a d46 pelo mesmo componente, com o original noutra língua por baixo.
+    expect(ler("src/components/admin/PedidoDetailModal.tsx")).toContain("descricao={order.description}");
+    expect(ler("src/app/admin/pedidos/[id]/AdminPedidoDetalheClient.tsx")).toContain("descricao={order.description}");
+    expect(ler("src/components/admin/DescricaoDoPedido.tsx")).toContain(
+      "whitespace-pre-line break-words text-sm leading-relaxed ${cor.texto}`}>{p.descricao}",
     );
   });
 

@@ -30,7 +30,7 @@ import { oPedidoDaEmpresa } from "./esvaziamento-na-recolha";
 export async function registarPedidoDaRecolha(
   telefone: string,
   d: DadosDaRecolha,
-): Promise<{ id: number; arranque: number | null; fotos: number }> {
+): Promise<{ id: number; arranque: number | null; fotos: number; porTraduzir: boolean }> {
   const serviceType = d.serviceType ?? "outro";
   const address = (d.address ?? "").trim();
   const postalCode = d.postalCode ?? null;
@@ -44,7 +44,16 @@ export async function registarPedidoDaRecolha(
   const pendentes = await contarFotosPendentesWhatsApp(telefone).catch(() => 0);
   // O esvaziamento de empresa (d43): o espaço e o «fora de horas», como no simulador do site.
   const daEmpresa = oPedidoDaEmpresa(d, descricaoParaOPedido(d, { fotos: Math.max(pendentes, d.fotosRecebidas ?? 0) }));
-  const description = daEmpresa.descricao;
+  /*
+   * SEMPRE EM PORTUGUÊS — 15-11-2026 (d46). O #623 ficou com «A lot of
+   * cardboard boxes…»: o cliente escreveu em inglês e a descrição foi assim
+   * aos parceiros. Traduz-se aqui, antes de gravar; o original fica à parte.
+   * Se o tradutor falhar, fica a original marcada «por traduzir», e a
+   * conversa passa à equipa (`registarARecolha`).
+   */
+  const { descricaoEmPortugues } = await import("./descricao-em-portugues");
+  const emPortugues = await descricaoEmPortugues(daEmpresa.descricao);
+  const description = emPortugues.descricao;
 
   let dataAgendada: Date | null = null;
   if (d.dataDesejada) {
@@ -147,6 +156,10 @@ export async function registarPedidoDaRecolha(
   const linha = {
     serviceType,
     description,
+    // A tradução (d46): `linguaDaDescricao` definida diz ao createSimulatorOrder que já está tratada.
+    descricaoOriginal: emPortugues.original,
+    linguaDaDescricao: emPortugues.lingua,
+    descricaoPorTraduzir: emPortugues.porTraduzir ? 1 : emPortugues.original != null ? 0 : null,
     contactName: d.contactName ?? "Cliente WhatsApp",
     // Com o «+» quando é de fora — ver `telefoneDaConversa` (26-10-2026).
     contactPhone: telefoneDaConversa(telefone),
@@ -204,6 +217,15 @@ export async function registarPedidoDaRecolha(
       "." +
       (arranque != null ? (porHora ? " Valor de partida: " + arranque + " € por hora." : " Estimativa: " + arranque + " €.") : " Sem estimativa."),
   });
+  if (emPortugues.original != null) {
+    await appendOrderHistory(id, {
+      type: "created",
+      by: null,
+      message: emPortugues.porTraduzir
+        ? `A descrição veio noutra língua e ficou POR TRADUZIR (o tradutor falhou: ${(emPortugues.motivo ?? "sem motivo").slice(0, 160)}). Traduza-a antes de a enviar aos parceiros.`
+        : "O cliente escreveu noutra língua: a descrição foi traduzida para português, e o que ele disse ficou guardado à parte.",
+    }).catch(() => {});
+  }
   /*
    * AS FOTOGRAFIAS QUE CHEGARAM ANTES DO PEDIDO — 10-10-2026.
    *
@@ -230,5 +252,5 @@ export async function registarPedidoDaRecolha(
   } catch (e) {
     console.error("[whatsapp/recolha] fontes da descrição:", e);
   }
-  return { id, arranque, fotos };
+  return { id, arranque, fotos, porTraduzir: emPortugues.porTraduzir };
 }

@@ -44,7 +44,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     /* sem negociações legíveis, sem atribuído */
   }
 
-  return NextResponse.json({ order, atribuido });
+  /*
+   * A DESCRIÇÃO NOUTRA LÍNGUA (d46): o painel mostra o botão «Traduzir para
+   * português» nos pedidos antigos que ainda a têm assim. A detecção é a do
+   * servidor — a mesma que traduz ao gravar.
+   */
+  let descricaoNoutraLingua = false;
+  try {
+    const { temOutraLingua } = await import("@/lib/descricao-em-portugues");
+    descricaoNoutraLingua = temOutraLingua(order.description);
+  } catch {
+    /* sem detecção, sem botão */
+  }
+
+  return NextResponse.json({ order: { ...order, descricaoNoutraLingua }, atribuido });
 }
 
 // PATCH /api/admin/pedidos/[id]

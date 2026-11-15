@@ -510,13 +510,25 @@ export default function RegistarPedido({
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ ...f, files: fotos, pedidoId: idEmEdicao ?? criadoId ?? null }),
       });
-      const d = (await res.json().catch(() => ({}))) as { texto?: string; por?: string; motivo?: string; igual?: boolean; error?: string };
+      const d = (await res.json().catch(() => ({}))) as {
+        texto?: string;
+        por?: string;
+        motivo?: string;
+        igual?: boolean;
+        error?: string;
+        traduzida?: boolean;
+        porTraduzir?: boolean;
+      };
       if (!res.ok || typeof d.texto !== "string") {
         setNotaDaArrumacao({ ok: false, texto: d.error ?? "Não foi possível arrumar a descrição." });
         return;
       }
       const recomeca = idEmEdicao != null && valorFixo == null;
-      const aviso = recomeca ? " Ao gravar, o pedido recomeça e as propostas actuais acabam." : "";
+      // A tradução (d46): diz-se se veio traduzida, ou se ficou noutra língua.
+      const aviso =
+        (d.traduzida ? " O que estava noutra língua foi traduzido para português." : "") +
+        (d.porTraduzir ? " Atenção: há texto noutra língua que o tradutor não traduziu — traduza-o à mão antes de gravar." : "") +
+        (recomeca ? " Ao gravar, o pedido recomeça e as propostas actuais acabam." : "");
       if (d.por === "modelo") {
         setTextoAntesDeArrumar(f.description);
         muda("description", d.texto);
