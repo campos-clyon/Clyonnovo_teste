@@ -71,6 +71,16 @@ export function eUmaPergunta(texto: string): boolean {
   return /\?\s*$/.test(texto.trim());
 }
 
+/**
+ * A FOTOGRAFIA QUE NÃO CHEGOU — 15-11-2026 (decisão d34). A ponte não a
+ * descarregou e a Vitória agradecia «as imagens» que ninguém viu: o parceiro
+ * recebia o pedido sem ela, e o cliente achava que tinha sido vista. Pede-se
+ * com delicadeza para a reenviar, e nunca se agradece o que não se viu. Sem
+ * emoji: o dela é só o do cumprimento e o do agradecimento final.
+ */
+export const PEDIR_PARA_REENVIAR_A_FOTOGRAFIA =
+  "Peço desculpa, a sua fotografia não me chegou: não a consegui abrir. Pode enviá-la outra vez, por favor?";
+
 export const PERGUNTA_ANOTADA =
   "Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.";
 

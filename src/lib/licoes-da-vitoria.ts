@@ -25,7 +25,7 @@ import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
 import { novoModeloEmVigor } from "./novo-modelo";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
 import { agoraDoModelo } from "./relogio-do-modelo";
-import { eDaEquipa, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
+import { eDaEquipa, eFotografiaFalhada, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
 import { PROPRIO_DIA, VOCE_SEM_ACENTO } from "./frases-proibidas";
 import { TAXA_IVA } from "./taxas-plataforma";
 
@@ -318,7 +318,7 @@ export function ePedidoRegistado(texto: string): boolean {
 function textoDoCliente(m: MensagemDoFio): string | null {
   if (m.direccao !== "in") return null;
   const t = m.texto.trim();
-  if (!t || eMarcaDeImagem(t) || t.startsWith("[áudio]")) return null;
+  if (!t || eMarcaDeImagem(t) || eFotografiaFalhada(t) || t.startsWith("[áudio]")) return null;
   return t;
 }
 

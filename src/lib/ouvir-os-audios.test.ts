@@ -98,7 +98,7 @@ describe("a ponte manda os áudios ao site, e não os deita fora", () => {
     const i = PONTE.indexOf("não descarregou — a página do WhatsApp Web mudou");
     expect(i).toBeGreaterThan(-1);
     const resto = PONTE.slice(i, PONTE.indexOf("return;", i));
-    expect(resto).toContain('site("POST", { telefone, midia: "foto", texto: legenda })');
+    expect(resto).toContain('site("POST", { telefone, midia: "foto", imagemFalhou: true, texto: legenda })');
   });
 });
 

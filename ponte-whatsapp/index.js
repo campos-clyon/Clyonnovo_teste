@@ -123,6 +123,23 @@ const saude = {
   emparelhadaSemFicarProntaHa: () => 0,
 };
 
+/**
+ * AS FOTOGRAFIAS QUE NÃO DESCARREGARAM — 15-11-2026 (decisão d34). Uma conta
+ * simples dos últimos 7 dias, para a porta (`/`) a mostrar: é o sinal de que a
+ * página do WhatsApp Web mudou e as fotografias se estão a perder. Vive na
+ * memória — um reinício recomeça-a; a conta certa está no fio do site (a marca
+ * «[fotografia não descarregada]»).
+ */
+const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
+const imagensQueFalharam = [];
+function contarImagemQueFalhou(agora = Date.now()) {
+  imagensQueFalharam.push(agora);
+  while (imagensQueFalharam.length > 0 && agora - imagensQueFalharam[0] > SEMANA_MS) imagensQueFalharam.shift();
+}
+function imagensQueFalharamNaSemana(agora = Date.now()) {
+  return imagensQueFalharam.filter((t) => agora - t <= SEMANA_MS).length;
+}
+
 http
   .createServer((req, res) => {
     const agora = Date.now();
@@ -136,6 +153,10 @@ http
       despachoPresoHaSegundos: preso ? Math.round(preso / 1000) : null,
       emparelhadaSemFicarProntaHaSegundos: saude.emparelhadaSemFicarProntaHa()
         ? Math.round(saude.emparelhadaSemFicarProntaHa() / 1000)
+        : null,
+      imagensQueNaoDescarregaramNaSemana: imagensQueFalharamNaSemana(agora),
+      ultimaImagemQueNaoDescarregou: imagensQueFalharam.length
+        ? new Date(imagensQueFalharam[imagensQueFalharam.length - 1]).toISOString()
         : null,
     };
     /*
@@ -1041,9 +1062,20 @@ async function arrancar() {
            * marca, sem os bytes: o site agradece as imagens e não as volta a
            * pedir no fim.
            */
+          /*
+           * E NÃO SE AGRADECE O QUE NÃO SE VIU — 15-11-2026 (decisão d34). A
+           * Vitória respondia «Obrigada pelas imagens!» a uma fotografia que
+           * ninguém viu. Vai marcada em `imagemFalhou`, e o site pede para a
+           * reenviar. E conta-se, para se ver na porta (`/`) quantas falharam
+           * na semana.
+           */
+          contarImagemQueFalhou();
           const legenda = (msg.body ?? "").trim();
-          log("← (foto sem bytes)", telefone, legenda.slice(0, 60).replace(/\n/g, " "));
-          const r = await site("POST", { telefone, midia: "foto", texto: legenda });
+          log(
+            "← (foto sem bytes)", telefone, legenda.slice(0, 60).replace(/\n/g, " "),
+            "— falhadas nos últimos 7 dias:", imagensQueFalharamNaSemana(),
+          );
+          const r = await site("POST", { telefone, midia: "foto", imagemFalhou: true, texto: legenda });
           if (r?.meu) await despachar(r.paraEnviar);
         }
         return;

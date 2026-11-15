@@ -274,7 +274,7 @@ describe("a rajada e a ponte trazem as imagens até à Vitória", () => {
     );
     const falhou = PONTE.indexOf("não descarregou — a página do WhatsApp Web mudou");
     expect(PONTE.slice(falhou, PONTE.indexOf("return;", falhou))).toContain(
-      'site("POST", { telefone, midia: "foto", texto: legenda })',
+      'site("POST", { telefone, midia: "foto", imagemFalhou: true, texto: legenda })',
     );
   });
 

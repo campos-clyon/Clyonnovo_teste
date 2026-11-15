@@ -12,7 +12,13 @@ import {
 import { ponteConfigurada } from "@/lib/whatsapp-cloud";
 import { pedidosDoTelefone, tratarMensagemDoCliente } from "@/lib/whatsapp-negociacao";
 import { ePedidoParaParar } from "@/lib/aviso-de-pedido-ao-profissional";
-import { MARCA_DE_AUDIO, MARCA_DE_FOTOGRAFIA, MARCA_DE_MAO, MARCA_DE_VIDEO } from "@/lib/rajada-do-whatsapp";
+import {
+  MARCA_DE_AUDIO,
+  MARCA_DE_FOTOGRAFIA,
+  MARCA_DE_FOTOGRAFIA_FALHADA,
+  MARCA_DE_MAO,
+  MARCA_DE_VIDEO,
+} from "@/lib/rajada-do-whatsapp";
 
 export const runtime = "nodejs";
 /*
@@ -109,6 +115,27 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
       tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto, videos }),
     );
   });
+}
+
+/**
+ * PEDE PARA REENVIAR A FOTOGRAFIA QUE NÃO CHEGOU — 15-11-2026 (decisão d34).
+ *
+ * Uma só vez por rajada de fotografias falhadas (`jaPediuParaReenviar`); e o
+ * envio passa pelas guardas de sempre (`enviarTextoWhatsApp`: quem pode
+ * ouvir, a repetição, a língua). Nunca atira: a marca já está no fio.
+ */
+async function pedirParaReenviarAFotografia(telefone: string): Promise<void> {
+  try {
+    const { mensagensComIdDoNumeroWhatsApp } = await import("@/lib/db");
+    const { jaPediuParaReenviar } = await import("@/lib/rajada-do-whatsapp");
+    const { PEDIR_PARA_REENVIAR_A_FOTOGRAFIA } = await import("@/lib/voz-da-vitoria");
+    const fio = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
+    if (jaPediuParaReenviar(fio, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA)) return;
+    const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
+    await enviarTextoWhatsApp(telefone, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA).catch(() => false);
+  } catch (e) {
+    console.error("[ponte] não pedi para reenviar a fotografia:", e instanceof Error ? e.message : e);
+  }
 }
 
 /**
@@ -226,8 +253,15 @@ export async function POST(req: NextRequest) {
      * UMA IMAGEM SEM OS BYTES — 20-10-2026: «foto» quando a ponte não a
      * conseguiu descarregar, «video» sempre (não se descarrega). O site fica a
      * saber que ela chegou, agradece-a, e não a volta a pedir.
+     *
+     * ERA. Desde 15-11-2026 (decisão d34) a «foto» sem bytes é uma fotografia
+     * que NÃO se viu: agradecê-la deixava o parceiro sem ela e o cliente a
+     * achar que tinha sido vista. Fica `MARCA_DE_FOTOGRAFIA_FALHADA` no fio e
+     * pede-se para a reenviar. A ponte nova di-lo também em `imagemFalhou`.
      */
     midia?: unknown;
+    /** A fotografia não descarregou na ponte (d34, 15-11-2026). */
+    imagemFalhou?: unknown;
     /** Com `accao: "interromper"`: o que o dono escreveu à mão (21-10-2026). */
     daMao?: unknown;
     /**
@@ -298,8 +332,8 @@ export async function POST(req: NextRequest) {
   // a fotografia de sempre.
   const marcaSemBytes: string | null = fotoBase64
     ? null
-    : corpo.midia === "foto"
-      ? MARCA_DE_FOTOGRAFIA
+    : corpo.midia === "foto" || corpo.imagemFalhou === true
+      ? MARCA_DE_FOTOGRAFIA_FALHADA
       : corpo.midia === "video"
         ? MARCA_DE_VIDEO
         : null;
@@ -533,6 +567,19 @@ export async function POST(req: NextRequest) {
        */
       const daLegenda = texto.trim() ? await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null) : null;
       await responderARajada(telefone, daLegenda ?? daFoto, texto);
+    } else if (marcaSemBytes === MARCA_DE_FOTOGRAFIA_FALHADA) {
+      /*
+       * A FOTOGRAFIA QUE NÃO DESCARREGOU — 15-11-2026 (decisão d34). Não se
+       * agradece o que não se viu: pede-se no instante para a reenviar (uma
+       * vez por rajada de fotografias falhadas), como ao áudio que não se
+       * ouviu. A legenda, essa, segue pela rajada como texto.
+       */
+      await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA_FALHADA).catch(() => null);
+      await pedirParaReenviarAFotografia(telefone);
+      if (texto.trim()) {
+        const daLegenda = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
+        await responderARajada(telefone, daLegenda, texto);
+      }
     } else if (marcaSemBytes) {
       // A imagem sem os bytes — ver `midia`. A marca vai para o fio, e a
       // rajada responde como a uma fotografia que chegou.

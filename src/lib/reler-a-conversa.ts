@@ -452,6 +452,8 @@ const SO_FOTOGRAFIA = /^\[(fotografia|vídeo)\]$/;
 /** A fotografia com o que se viu nela a seguir à marca — 21-10-2026. */
 const FOTOGRAFIA_VISTA = /^\[fotografia\]\s+([\s\S]+)$/;
 const MARCA_DE_AUDIO = /^\[áudio\]\s*/;
+/** A fotografia que não descarregou — `MARCA_DE_FOTOGRAFIA_FALHADA` (d34). */
+const FOTOGRAFIA_FALHADA = /^\[fotografia não descarregada\]$/;
 
 /**
  * A recolha que a conversa dá, lida pelas regras de hoje.
@@ -508,6 +510,8 @@ export function recolhaPeloFio(
       fotos += 1;
       continue;
     }
+    // A fotografia que não descarregou (d34, 15-11-2026): nem texto, nem fotografia.
+    if (FOTOGRAFIA_FALHADA.test(texto)) continue;
     const vista = FOTOGRAFIA_VISTA.exec(texto);
     if (vista) {
       fotos += 1;

@@ -1,4 +1,4 @@
-import { eDaEquipa, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
+import { eDaEquipa, eFotografiaFalhada, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
 
 /**
  * A MESA DAS CONVERSAS — em que pé está cada número, e porquê. 21-10-2026.
@@ -323,6 +323,7 @@ export function soAgradece(texto: string): boolean {
 /** O texto da mensagem para a linha: sem marcas, e as imagens como imagens. */
 function resumoDaMensagem(texto: string): string {
   if (eMarcaDeImagem(texto)) return "📷 imagem";
+  if (eFotografiaFalhada(texto)) return "📷 imagem que não abriu (pedida outra vez)";
   const t = semMarcaDeMao(texto).replace(/\s+/g, " ").trim();
   return t.length > 90 ? `${t.slice(0, 89)}…` : t;
 }

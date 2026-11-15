@@ -62,6 +62,23 @@ export const MARCA_DE_FOTOGRAFIA = "[fotografia]";
 export const MARCA_DE_VIDEO = "[vídeo]";
 
 /**
+ * A FOTOGRAFIA QUE NÃO DESCARREGOU — 15-11-2026 (decisão d34).
+ *
+ * Uma fotografia chegou ao telemóvel, a ponte não a conseguiu descarregar, e
+ * a Vitória respondeu «Obrigada pelas imagens!»: o parceiro recebeu o pedido
+ * sem a fotografia e o cliente ficou a achar que ela tinha sido vista. Esta
+ * marca não é uma imagem — não se agradece, não conta como fotografia (no fim
+ * pede-se na mesma) e não corre a rajada: leva no instante o pedido para a
+ * reenviar (`PEDIR_PARA_REENVIAR_A_FOTOGRAFIA`, em voz-da-vitoria.ts).
+ */
+export const MARCA_DE_FOTOGRAFIA_FALHADA = "[fotografia não descarregada]";
+
+/** Uma fotografia que chegou sem os bytes — ver `MARCA_DE_FOTOGRAFIA_FALHADA`. */
+export function eFotografiaFalhada(texto: string): boolean {
+  return texto.trim() === MARCA_DE_FOTOGRAFIA_FALHADA;
+}
+
+/**
  * O QUE A EQUIPA ESCREVEU À MÃO — 21-10-2026.
  *
  * *«Estamos perdidos entre quais pedidos já foram respondidos e quais ainda
@@ -112,7 +129,43 @@ export const MARCA_DE_AUDIO = "[áudio]";
 
 /** As marcas que, sozinhas, não são nada que se leia. */
 function soUmaMarca(texto: string): boolean {
-  return eMarcaDeImagem(texto) || texto.trim() === MARCA_DE_AUDIO;
+  return eMarcaDeImagem(texto) || texto.trim() === MARCA_DE_AUDIO || eFotografiaFalhada(texto);
+}
+
+/**
+ * O que já levou a sua resposta no instante e não corre a rajada: o áudio que
+ * não se ouviu e a fotografia que não descarregou (15-11-2026, d34).
+ */
+function jaRespondidaNoInstante(texto: string): boolean {
+  return texto.trim() === MARCA_DE_AUDIO || eFotografiaFalhada(texto);
+}
+
+/**
+ * JÁ SE PEDIU PARA REENVIAR? — 15-11-2026 (d34). Três fotografias falhadas
+ * seguidas levam UM pedido, não três: a contar do fim, só as fotografias
+ * falhadas e as nossas mensagens até ao pedido; uma palavra do cliente pelo
+ * meio e pede-se outra vez.
+ */
+export function jaPediuParaReenviar(mensagens: MensagemComId[], frase: string): boolean {
+  for (let i = mensagens.length - 1; i >= 0; i--) {
+    const m = mensagens[i];
+    if (m.direccao === "out") {
+      if (m.texto.trim() === frase.trim()) return true;
+      continue;
+    }
+    if (m.direccao === "in" && eFotografiaFalhada(m.texto)) continue;
+    return false;
+  }
+  return false;
+}
+
+/** Quantas fotografias falhadas chegaram desde a nossa última resposta (d34). */
+export function fotografiasFalhadasDaRajada(mensagens: MensagemComId[]): number {
+  let desde = -1;
+  mensagens.forEach((m, i) => {
+    if (m.direccao === "out") desde = i;
+  });
+  return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && eFotografiaFalhada(m.texto)).length;
 }
 
 /** O texto sem a marca do áudio à frente. */
@@ -140,7 +193,7 @@ export function eAUltimaDaRajada(minhaId: number, mensagens: MensagemComId[]): b
   let ultima = 0;
   for (const m of mensagens) {
     if (m.direccao !== "in") continue;
-    if (m.texto.trim() === MARCA_DE_AUDIO) continue;
+    if (jaRespondidaNoInstante(m.texto)) continue;
     if (m.id > ultima) ultima = m.id;
   }
   return ultima === 0 || ultima <= minhaId;
@@ -274,7 +327,7 @@ export function esperaPorQuemEscreveEmPartes(mensagens: MensagemComId[]): number
  */
 export function calarAPerguntaPorChegarOutra(texto: string, ultimaLida: number, mensagens: MensagemComId[]): boolean {
   if (!eUmaPerguntaNossa(texto)) return false;
-  return mensagens.some((m) => m.direccao === "in" && m.id > ultimaLida && m.texto.trim() !== MARCA_DE_AUDIO);
+  return mensagens.some((m) => m.direccao === "in" && m.id > ultimaLida && !jaRespondidaNoInstante(m.texto));
 }
 
 /**

@@ -31,6 +31,7 @@ import {
   desculpasPeloAtendimento,
   EM_QUE_POSSO_AJUDAR,
   MENSAGEM_DE_PASSAR_A_UMA_PESSOA,
+  PEDIR_PARA_REENVIAR_A_FOTOGRAFIA,
   PERGUNTA_ANOTADA,
   respostaADisponibilidade,
   respostaAHora,
@@ -85,6 +86,8 @@ function todasAsMensagens(): string[] {
     LEMBRETE_DO_RESUMO,
     `${CLARO_QUE_SIM} ${EM_QUE_POSSO_AJUDAR}`,
     PERGUNTA_ANOTADA,
+    // A fotografia que não descarregou (d34, 15-11-2026).
+    PEDIR_PARA_REENVIAR_A_FOTOGRAFIA,
     PASSO_A_ALGUEM_DA_EQUIPA,
     FICA_SEM_EFEITO,
     "De nada. Qualquer coisa, é só dizer.",
