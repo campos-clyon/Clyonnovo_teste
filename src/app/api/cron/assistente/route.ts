@@ -94,14 +94,15 @@ export async function GET(req: NextRequest) {
     const paradas = await correrAsRecolhasParadas().catch((e) => {
       console.error("[cron/assistente] recolhas paradas:", e);
       paradasFalharam = e instanceof Error ? e.message : String(e);
-      return { saltadas: 0, registadas: 0, linhas: [] as string[] };
+      return { saltadas: 0, registadas: 0, seguidas: 0, linhas: [] as string[] };
     });
-    if (paradas.saltadas + paradas.registadas > 0) {
+    // E a mensagem gentil a quem ficou calado (d25 v2, interruptor nas Configs).
+    if (paradas.saltadas + paradas.registadas + paradas.seguidas > 0) {
       await registarSemFalhar({
         acontecimento: "assistente_alerta",
         autorTipo: "assistente",
         autorNome: "recolhas paradas",
-        resumo: `${paradas.saltadas} pergunta(s) deixada(s) para depois, ${paradas.registadas} pedido(s) registado(s) sem resposta ao resumo.`,
+        resumo: `${paradas.seguidas} mensagem(ns) gentil(is) a quem ficou calado, ${paradas.saltadas} pergunta(s) deixada(s) para depois, ${paradas.registadas} pedido(s) registado(s) sem resposta ao resumo.`,
         detalhe: { linhas: paradas.linhas.slice(0, 40) },
       });
     }
@@ -118,6 +119,7 @@ export async function GET(req: NextRequest) {
           entregues: p.r.entregues,
           recolhasSaltadas: p.paradas.saltadas,
           recolhasRegistadas: p.paradas.registadas,
+          recolhasSeguidas: p.paradas.seguidas,
         },
       }),
     );

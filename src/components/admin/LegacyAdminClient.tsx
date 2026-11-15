@@ -41,6 +41,7 @@ import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFecho";
 import InterruptorDaVitoriaAosProfissionais from "@/components/admin/InterruptorDaVitoriaAosProfissionais";
+import InterruptorDoSeguimentoDaVitoria from "@/components/admin/InterruptorDoSeguimentoDaVitoria";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
 import AdminListaDasMudancasPanel from "@/components/admin/AdminListaDasMudancasPanel";
@@ -3558,6 +3559,9 @@ export default function ColaboradorAdminClient({
 
               {/* A Vitória aos profissionais (d21): desligada por omissão, só o administrador; liga-se com o sim do dono. */}
               <InterruptorDaVitoriaAosProfissionais />
+
+              {/* A mensagem gentil da Vitória a quem fica calado (d25 v2): desligada por omissão, só o administrador. */}
+              <InterruptorDoSeguimentoDaVitoria />
 
               {/*
                 O LIVRO DE MOVIMENTOS — Fase 1 dos pagamentos.

@@ -312,7 +312,12 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - QUEM JÁ TEM PEDIDO: quando a CLYON já falou do pedido dele no fio («Recebemos o seu pedido de recolha de monos (#812)»), o que ele diz acrescenta a esse pedido. «Trata-se da recolha de um sofá. Deste sofá.» → "descricao": "um sofá" — o serviço já está no pedido, não o mudes por isso. «Está a falar com a pessoa que pediu o orçamento», «Consulte o pedido de orçamento, está lá tudo» NÃO são o nome nem a descrição: não preenchas nada.
 - TODAS AS DATAS, PELA ORDEM: «Idealmente na sexta-feira, 30 de outubro, ou no sábado, 31 de outubro. No máximo, até domingo, 1 de novembro» → "quando": "idealmente sexta-feira, 30 de outubro, ou sábado, 31 de outubro; no máximo até domingo, 1 de novembro". Nunca só a última data, nem só a primeira.
 - O CLIENTE PODE ESCREVER NOUTRA LÍNGUA a meio da conversa: lê-o como se fosse português. «Third» à pergunta do andar é "3º"; «Yes» à do elevador é "sim"; «Yes like 50 meters» à da carrinha é "estacionamento": "a 50 metros" (com os metros, nunca só "não"). «Do you speak English?» NÃO é uma pergunta para a equipa nem um campo: não preenchas nada.
-- «So how does it work now?», «como funciona?», «e agora?» depois do resumo NÃO são um "sim": a intenção é "informar".`;
+- «So how does it work now?», «como funciona?», «e agora?» depois do resumo NÃO são um "sim": a intenção é "informar".
+- A FATURA COMO ELE A DISSE: «Pode ser sem fatura!», «pode ser sem», «não preciso de fatura», «dispenso a fatura» → "fatura": "não" — nunca "sim", por muito que a frase comece por «pode ser». «Gostaria de saber o valor total, já com IVA» → "fatura": "sim" (a pergunta da fatura já não se faz); se depois disser «sem fatura», vale o que disse depois. «O preço é com IVA?» é só uma pergunta: não preenchas "fatura".
+- UMA GARAGEM NÃO É UM R/C. «É uma garagem» não diz o piso: não preenchas "andar". «Garagem no -3», «piso -2», «AndR -3» (com gralha) → "andar": "-3" ou "-2", COM o sinal de menos — nunca "3". «Cave» é "-1".
+- A CORRECÇÃO DEPOIS DO RESUMO: «Isso é uma garagem no -3. Tudo o resto está ok» é uma correcção do andar ("andar": "-3"), e a intenção é "informar" — não "confirmar": ele ainda não viu o resumo certo.
+- A LIMPEZA DEPOIS DE ESVAZIAR FAZ-SE: «limpeza profunda da garagem, incluindo lavagem do pavimento» fica na "descricao" e o serviço continua a ser o esvaziamento ("esvaziamento_garagem").
+- «Consegue se houver lugar, senão fica em segunda fila» à pergunta da carrinha é "estacionamento": "sim" — e «segunda fila» NUNCA é segunda-feira nem "quando".`;
 
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
 export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:
@@ -351,7 +356,16 @@ A pergunta era «E a carrinha consegue encostar à porta?» e ele escreveu: "Sim
 {"intencao":"informar","campos":{"estacionamento":"sim"}}
 
 A pergunta era «Com quem tenho o gosto de falar?» e ela escreveu: "Está a falar com a pessoa que pediu o orçamento!"
-{"intencao":"informar","campos":{}}`;
+{"intencao":"informar","campos":{}}
+
+A pergunta era «E em que piso fica a garagem?» e ele escreveu: "Pode ser sem fatura!"
+{"intencao":"informar","campos":{"fatura":"não"}}
+
+A pergunta era «Está tudo certo?», o resumo dizia «Andar: r/c», e ele escreveu: "Isso é uma garagem no -3. Tudo o resto está ok"
+{"intencao":"informar","campos":{"andar":"-3"}}
+
+A pergunta era «Está tudo certo?» e ele escreveu: "AndR -3"
+{"intencao":"informar","campos":{"andar":"-3"}}`;
 
 /** Só o que interessa do que já se sabe, para o modelo não receber ruído. */
 function resumoDoSabido(dados: Record<string, unknown>): Record<string, unknown> {

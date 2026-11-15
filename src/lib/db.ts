@@ -15189,6 +15189,8 @@ export type Acontecimento =
   | "fecho_interruptor"
   // A Vitória aos profissionais (d21, 13-11-2026): o interruptor das Configs.
   | "vitoria_profissionais_interruptor"
+  // A mensagem gentil da Vitória a quem fica calado (d25 v2, 14-11-2026): o interruptor das Configs.
+  | "vitoria_seguimento_interruptor"
   | "fecho_perguntado"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —

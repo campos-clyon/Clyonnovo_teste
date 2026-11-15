@@ -1,5 +1,6 @@
 import type { DadosDaRecolha, PassoDaRecolha } from "./whatsapp-recolha";
 import { eDaEquipa } from "./rajada-do-whatsapp";
+import { horaDeFalar } from "./assistente-interruptores";
 
 /**
  * AS RECOLHAS QUE PARAM — 23-10-2026.
@@ -29,25 +30,99 @@ export const MINUTOS_PARA_SALTAR = 10;
 export const MINUTOS_PARA_REGISTAR = 30;
 export const HORAS_DE_LIMITE = 6;
 
-export type DecisaoDaRecolhaParada = "nada" | "saltar" | "registar";
+export type DecisaoDaRecolhaParada = "nada" | "seguir" | "saltar" | "registar";
+
+/*
+ * ──────────────────────────────────────────────────────────────────────────
+ * A MENSAGEM GENTIL A QUEM FICOU CALADO — 14-11-2026 (o dono, d25 v2).
+ *
+ * *«Cliente calado mais de 10 minutos a meio da recolha → UMA mensagem
+ * gentil com a mesma pergunta por outras palavras (no máximo 1 por pergunta,
+ * 2 por conversa, nunca entre as 21h e as 9h de Lisboa, nunca se a conversa
+ * estiver entregue a uma pessoa ou o pedido já registado), com interruptor
+ * nas Configs.»*
+ *
+ * Vem ANTES do salto dos 10 minutos: com o interruptor ligado, a pergunta
+ * repete-se uma vez com outras palavras; se ele continuar calado mais dez
+ * minutos, salta-se como sempre. Desligado, é tudo como era. O texto é
+ * `textoDoSeguimento` (whatsapp-recolha.ts); o interruptor,
+ * `seguimento-da-vitoria-na-base.ts` — DESLIGADO por omissão.
+ * ──────────────────────────────────────────────────────────────────────────
+ */
+export const MINUTOS_PARA_SEGUIR = 10;
+export const SEGUIMENTOS_POR_PERGUNTA = 1;
+export const SEGUIMENTOS_POR_CONVERSA = 2;
+
+export type SituacaoDoSeguimento = {
+  /** O interruptor das Configs. */
+  ligado: boolean;
+  agora: Date;
+  /** A conversa está entregue a uma pessoa da equipa (ou o número bloqueado). */
+  entregueAUmaPessoa?: boolean;
+  /** O pedido desta recolha já está registado. */
+  pedidoRegistado?: boolean;
+};
+
+/**
+ * QUANTO TEMPO PODE ESPERAR A MENSAGEM GENTIL — 13 horas. Uma pergunta feita
+ * às 20h50 que fica sem resposta não leva a mensagem às 21h (silêncio da
+ * noite): «fica para as 9h» — o dono. Doze horas e pouco depois; o salto e o
+ * registo continuam com as 6 horas de sempre.
+ */
+export const HORAS_DE_LIMITE_DO_SEGUIMENTO = 13;
+
+/** Tudo menos a hora: a mensagem gentil cabe nesta conversa? Pura. */
+function seguimentoCabe(
+  r: { passo: PassoDaRecolha; dados: DadosDaRecolha },
+  ultima: { direccao: string; texto: string; haSegundos: number | null } | null,
+  s: SituacaoDoSeguimento,
+): boolean {
+  if (!s.ligado || s.entregueAUmaPessoa || s.pedidoRegistado) return false;
+  // A meio da recolha: o serviço decide as perguntas, e o resumo tem o seu registo aos 30 minutos.
+  if (r.passo === "servico" || r.passo === "confirmar") return false;
+  if (!ultima || ultima.direccao !== "out" || ultima.haSegundos == null) return false;
+  if (ultima.haSegundos < MINUTOS_PARA_SEGUIR * 60 || ultima.haSegundos > HORAS_DE_LIMITE_DO_SEGUIMENTO * 3600) return false;
+  if (eDaEquipa(ultima.texto)) return false;
+  const feitos = Array.isArray(r.dados.seguimentos) ? r.dados.seguimentos : [];
+  if (feitos.length >= SEGUIMENTOS_POR_CONVERSA) return false;
+  if (feitos.filter((p) => p === r.passo).length >= SEGUIMENTOS_POR_PERGUNTA) return false;
+  return true;
+}
+
+/** Pode sair a mensagem gentil agora? Pura — a hora é a de Lisboa (`horaDeFalar`). */
+export function podeSeguir(
+  r: { passo: PassoDaRecolha; dados: DadosDaRecolha },
+  ultima: { direccao: string; texto: string; haSegundos: number | null } | null,
+  s: SituacaoDoSeguimento,
+): boolean {
+  return seguimentoCabe(r, ultima, s) && horaDeFalar(s.agora);
+}
 
 /** O que fazer com uma recolha a meio, pela última mensagem da conversa. Pura. */
 export function oQueFazerComARecolha(
   r: { passo: PassoDaRecolha; dados: DadosDaRecolha },
   ultima: { direccao: string; texto: string; haSegundos: number | null } | null,
   saltoDaPergunta: string,
+  /** Sem isto (ou desligado), não há mensagem gentil — é o comportamento de antes. */
+  seguimento?: SituacaoDoSeguimento,
 ): DecisaoDaRecolhaParada {
   if (!ultima || ultima.direccao !== "out" || ultima.haSegundos == null) return "nada";
   const s = ultima.haSegundos;
+  if (seguimento && seguimentoCabe(r, ultima, seguimento)) {
+    // De noite espera-se pelas 9h — nem a mensagem gentil, nem o salto no lugar dela.
+    return horaDeFalar(seguimento.agora) ? "seguir" : "nada";
+  }
   if (s > HORAS_DE_LIMITE * 3600) return "nada";
   if (eDaEquipa(ultima.texto)) return "nada";
   if (r.passo === "confirmar") return s >= MINUTOS_PARA_REGISTAR * 60 ? "registar" : "nada";
   if (r.passo === "servico") return "nada";
   if (ultima.texto.trim().startsWith(saltoDaPergunta)) return "nada";
+  // Com a mensagem gentil ligada, também o salto respeita o silêncio da noite.
+  if (seguimento?.ligado && !horaDeFalar(seguimento.agora)) return "nada";
   return s >= MINUTOS_PARA_SALTAR * 60 ? "saltar" : "nada";
 }
 
-export type PassagemDasRecolhas = { saltadas: number; registadas: number; linhas: string[] };
+export type PassagemDasRecolhas = { saltadas: number; registadas: number; seguidas: number; linhas: string[] };
 
 /**
  * A passagem: cada recolha em curso, a decisão, e o gesto. Só com o WhatsApp
@@ -55,11 +130,14 @@ export type PassagemDasRecolhas = { saltadas: number; registadas: number; linhas
  * bloqueado fica de fora (`podeOWhatsAppFalarCom`).
  */
 export async function correrAsRecolhasParadas(): Promise<PassagemDasRecolhas> {
-  const r: PassagemDasRecolhas = { saltadas: 0, registadas: 0, linhas: [] };
+  const r: PassagemDasRecolhas = { saltadas: 0, registadas: 0, seguidas: 0, linhas: [] };
   const db = await import("./db");
   if (!(await db.whatsappLigado().catch(() => false))) return r;
   if (!(await db.assistentePode("recolher").catch(() => false))) return r;
-  const { saltarAPergunta, SALTO_DA_PERGUNTA } = await import("./whatsapp-recolha");
+  const { saltarAPergunta, SALTO_DA_PERGUNTA, textoDoSeguimento } = await import("./whatsapp-recolha");
+  // O interruptor da mensagem gentil (Configs) — desligado na dúvida.
+  const { seguimentoDaVitoriaLigado } = await import("./seguimento-da-vitoria-na-base");
+  const seguimentoLigado = await seguimentoDaVitoriaLigado().catch(() => false);
   const { registarARecolha } = await import("./whatsapp-negociacao");
   const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
 
@@ -75,8 +153,21 @@ export async function correrAsRecolhasParadas(): Promise<PassagemDasRecolhas> {
         passo: guardada.passo as PassoDaRecolha,
         dados: (guardada.dados ?? {}) as DadosDaRecolha,
       };
-      const decisao = oQueFazerComARecolha(estado, ultima, SALTO_DA_PERGUNTA);
-      if (decisao === "saltar") {
+      // Entregue a uma pessoa e pedido registado já ficaram de fora acima (`podeOWhatsAppFalarCom`, `pedidoId`).
+      const decisao = oQueFazerComARecolha(estado, ultima, SALTO_DA_PERGUNTA, {
+        ligado: seguimentoLigado,
+        agora: new Date(),
+        entregueAUmaPessoa: false,
+        pedidoRegistado: false,
+      });
+      if (decisao === "seguir") {
+        const dados: DadosDaRecolha = { ...estado.dados, seguimentos: [...(estado.dados.seguimentos ?? []), estado.passo] };
+        // A marca grava-se antes de enviar: se o envio falhar, não se tenta outra vez (uma por pergunta).
+        await db.guardarRecolhaWhatsApp(telefone, estado.passo, dados);
+        await enviarTextoWhatsApp(telefone, textoDoSeguimento(estado.passo, dados));
+        r.seguidas += 1;
+        r.linhas.push(`${telefone}: mensagem gentil na pergunta «${estado.passo}»`);
+      } else if (decisao === "saltar") {
         const salto = saltarAPergunta(estado);
         await db.guardarRecolhaWhatsApp(telefone, salto.estado.passo, salto.estado.dados);
         await enviarTextoWhatsApp(telefone, salto.resposta);

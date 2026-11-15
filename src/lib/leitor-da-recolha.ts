@@ -499,6 +499,8 @@ export function remeteParaAsFotos(texto: string): boolean {
 export function semLugaresNemPassado(t: string): string {
   const DIAS = "segunda|terca|quarta|quinta|sexta|sabado|domingo";
   return t
+    // «senão fica em segunda fila» é o estacionamento, e não segunda-feira (13-11-2026, d25).
+    .replace(/\b(segunda|terceira)\s+(fila|mao|vez|opcao|via|linha)\b/g, " ")
     .replace(/\bquinta\s+(do|da|dos|das|sao|santa|santo|nova|velha|de\s+(?!manha|tarde|noite)\w+)\b/g, " ")
     .replace(
       new RegExp(
@@ -684,5 +686,110 @@ export function clienteCarrega(texto: string): boolean {
     /\b(somos\s+nos|sou\s+eu)\s+(que|quem)\s+(carrega|carregamos|carrego|poe|pomos|ponho)\b/,
     /\b(nao|nem)\s+(precisa|precisam|e\s+preciso|tem\s+de|tem\s+que|teem\s+de)\s+(de\s+)?sair\s+d[ao]\s+(viatura|carrinha|carro|camiao|veiculo|camioneta)\b/,
     /\b(ja\s+)?(esta|fica|deixamos|deixo|pomos|ponho)\s+tudo\s+(ca\s+em\s+baixo\s+)?(a\s+porta|junto\s+a\s+viatura|ao\s+pe\s+da\s+(carrinha|viatura))\s+e\s+(nos|eu)\s+(carregamos|carrego)\b/,
+  ].some((r) => r.test(t));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * A GARAGEM NO -3 — 13/14-11-2026 (decisão d25).
+ *
+ * Um cliente pediu o esvaziamento de uma garagem em Odivelas, na primeira
+ * mensagem com tudo: os móveis, a cama, a limpeza com lavagem do pavimento,
+ * «o valor total, já com IVA». Pelo caminho:
+ *   · «É uma garagem» ficou «Andar: r/c»;
+ *   · «Pode ser sem fatura!» ficou «Fatura: sim (com IVA de 23%)»;
+ *   · «Isso é uma garagem no -3» ficou «Andar: 3» — o sinal perdeu-se;
+ *   · «AndR -3» ouviu «Peço desculpa, não apanhei bem» e o mesmo resumo.
+ * Nomes, moradas e telefones dos testes são inventados (repositório público).
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * UM PISO ABAIXO DO CHÃO, DITO COM TODAS AS LETRAS — «-3», «piso -2»,
+ * «menos 2», «cave» (-1), «subcave» (-2). Devolve o andar como o simulador o
+ * grava («-3») ou null. Um código postal («2675-000») não é um piso: o «-»
+ * tem de vir no princípio, depois de um espaço, de «no»/«piso» ou de «(».
+ */
+export function andarNegativoDito(texto: string): string | null {
+  const t = semAcentos(texto);
+  const m = t.match(/(?:^|[\s(:,])[-−]\s?([1-9])(?!\d)(?!\s*(?:m|metros|km|sacos|pecas|pessoas|horas|h)\b)/);
+  if (m) return `-${m[1]}`;
+  // «menos 2» só quando é o piso — «menos 2 cadeiras» não é.
+  const menos = t.match(/\b(?:piso|andar|no)\s+menos\s+([1-9])\b|\bmenos\s+([1-9])\s*(?:$|[.,!?]|piso|andar)/);
+  if (menos) return `-${menos[1] ?? menos[2]}`;
+  if (/\bsub-?cave\b/.test(t)) return "-2";
+  if (/\bcave\b/.test(t)) return "-1";
+  return null;
+}
+
+/**
+ * A CORRECÇÃO DO ANDAR NUMA MENSAGEM CURTA — «AndR -3», «andar -3», «piso
+ * -2», «é no 2º», «-3». As gralhas de quem escreve depressa no telemóvel
+ * («andr», «anadr», «aandar») contam: o número está lá, e a palavra é
+ * parecida. Devolve o andar («-3», «2», «0») ou null.
+ */
+export function correcaoDoAndar(texto: string): string | null {
+  const t = semAcentos(texto).replace(/[.!?]+$/, "").trim();
+  if (t.length > 40) return null;
+  if (/^-\s?[1-9]$/.test(t)) return `-${t.replace(/\D/g, "")}`;
+  const m = t.match(
+    /^(?:(?:e|o|a)\s+)?(?:a+n+a?d?r?\w{0,2}|piso|pis|andar)\s*(?:e\s+)?(?:o\s+|no\s+)?:?\s*(-|−|menos\s+)?\s?(\d{1,2})\s*(?:o|º|°)?(?:\s*andar)?$/,
+  );
+  if (m) return m[1] ? `-${m[2]}` : String(Number(m[2]));
+  if (/^(?:(?:e|o|a)\s+)?(?:a+n+a?d?r?\w{0,2}|piso|andar)\s*:?\s*(r\/?c|res\s*do\s*chao|res-do-chao)$/.test(t)) return "0";
+  return null;
+}
+
+/** Fala de uma garagem, box ou arrecadação — onde o piso não se adivinha. */
+export function falaDeGaragem(texto: string): boolean {
+  return /\b(garagem|garagens|box|arrecadacao|arrecadacoes|parque de estacionamento)\b/.test(semAcentos(texto));
+}
+
+/** Diz com todas as letras o rés-do-chão — e só isso conta como r/c numa garagem. */
+export function dizOResDoChao(texto: string): boolean {
+  return /\b(r\/?c|res\s*do\s*chao|res-do-chao|terreo|piso\s*0|ao nivel da rua|nivel da rua|na rua)\b/.test(semAcentos(texto));
+}
+
+/**
+ * QUER A LIMPEZA DEPOIS DE ESVAZIAR — «limpeza profunda da garagem,
+ * incluindo lavagem do pavimento». Desde 14-11-2026 (o dono, d25 v2) os
+ * parceiros fazem-na: fica no pedido. Devolve null quando não se fala dela.
+ */
+export function pedeLimpeza(texto: string): { lavagem: boolean } | null {
+  const t = semAcentos(texto);
+  if (/\b(nao|sem)\s+(e\s+preciso\s+|precisa\s+de\s+|preciso\s+de\s+)?(a\s+)?limpeza\b/.test(t)) return null;
+  const limpeza = /\b(limpeza|limpar|lavagem|lavar)\b/.test(t);
+  if (!limpeza) return null;
+  return { lavagem: /\b(lavagem|lavar)\b[^.!?]{0,40}\b(pavimento|chao|piso)\b|\b(pavimento|chao)\b[^.!?]{0,20}\blav/.test(t) };
+}
+
+/**
+ * PEDE O VALOR COM IVA — «o valor total, já com IVA». Quem pede o preço com
+ * o IVA quer fatura (o dono, d25): fica «Fatura: sim» e a pergunta não se
+ * faz. Se depois disser «sem fatura», manda o que disse depois.
+ */
+export function querOValorComIva(texto: string): boolean {
+  const t = semAcentos(texto);
+  if (/\bsem\s+(o\s+)?iva\b|\bsem\s+fa(c)?tura\b/.test(t)) return false;
+  // «O preço é com IVA?» é uma pergunta, e não um pedido: só contam as frases que não acabam em «?».
+  const frases = t.match(/[^.!?\n]+[.!?]*/g) ?? [];
+  return frases.some(
+    (f) =>
+      !f.trim().endsWith("?") &&
+      /\b(ja\s+)?com\s+(o\s+)?iva\b|\biva\s+(incluido|incluso)\b|\b(incluido|incluso|incluindo)\s+(o\s+)?iva\b|\bcom\s+fa(c)?tura\b/.test(f),
+  );
+}
+
+/**
+ * DISPENSA A FATURA, DIGA COMO DISSER — «Pode ser sem fatura!», «pode ser
+ * sem», «não preciso de fatura», «dispenso a fatura». Vem ANTES de qualquer
+ * «pode ser» = sim: foi o «pode» do princípio que leu um não como um sim.
+ */
+export function dispensaAFatura(texto: string): boolean {
+  const t = semAcentos(texto).replace(/[.!,]+$/, "");
+  return [
+    /\bsem\s+(a\s+|o\s+)?(fa(c)?tura|nif|recibo)\b/,
+    /^(pode\s+ser|prefiro|preferia|melhor|pode\s+ir|vai)\s+sem\b/,
+    /\bnao\s+(preciso|precisamos|quero|queremos|necessito)\s+(de\s+)?(a\s+|o\s+)?(fa(c)?tura|nif)\b/,
+    /\b(dispenso|dispensamos)\s+(a\s+)?(fa(c)?tura|nif)\b/,
+    /\bfa(c)?tura\s*(:|\s)\s*nao\b/,
   ].some((r) => r.test(t));
 }

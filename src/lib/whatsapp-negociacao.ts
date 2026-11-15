@@ -127,6 +127,7 @@ export async function recolherPedidoPorWhatsApp(
     primeiraPerguntaDoServico,
     servicosDaListaNoFio,
     lerAsPartesDaRajada,
+    ditosDestaRecolha,
   } = await import("@/lib/whatsapp-recolha");
   const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
 
@@ -319,6 +320,13 @@ export async function recolherPedidoPorWhatsApp(
     // E a lista numerada que ele tem à frente: o número dele é dessa lista
     // (25-10-2026) — ver `servicosDaListaNoFio`.
     const lista = servicosDaListaNoFio(fio);
+    /*
+     * ANTES DE CADA PERGUNTA, RELÊ-SE A CONVERSA — 14-11-2026 (d25 v2). O que
+     * ele já escreveu nesta recolha (o «já com IVA», a garagem, a limpeza, o
+     * «sem fatura») preenche o que está vazio; o que lá está não se pergunta.
+     * Ver `ditosDestaRecolha` e `completarPeloQueJaDisse`.
+     */
+    const ditosAntes = ditosDestaRecolha(fio, texto);
     return c
       ? responderComCompreensao(e, c, agora, {
           texto: lido,
@@ -329,6 +337,7 @@ export async function recolherPedidoPorWhatsApp(
           visto,
           lista,
           perguntaPorFazer: partes.perguntaPorFazer,
+          ditosAntes,
         })
       : responderNaRecolha(e, lido, agora, cumprimentado, avisado, {
           fotos,
@@ -336,6 +345,7 @@ export async function recolherPedidoPorWhatsApp(
           visto,
           lista,
           perguntaPorFazer: partes.perguntaPorFazer,
+          ditosAntes,
         });
   };
 

@@ -391,7 +391,8 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     [/com quem estou a falar|com quem tenho o gosto|o seu nome|como se chama/, "nome"],
     [/qual e a morada|preciso da rua e do numero|rua e numero|a rua e o numero da porta/, "morada"],
     [/codigo postal|a localidade\?/, "codigoPostal"],
-    [/em que andar|percebi (bem )?o andar/, "andar"],
+    // «E em que piso fica a garagem?» — desde 14-11-2026 (d25).
+    [/em que andar|percebi (bem )?o andar|em que piso/, "andar"],
     [/elevador/, "elevador"],
     [/carrinha|estacionar/, "estacionamento"],
     [/quanto entulho|quantos sacos/, "entulhoQuantidade"],
@@ -404,6 +405,17 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
       "servico",
     ],
   ];
+  /*
+   * A PERGUNTA NO FIM DE UM RESUMO — «Fica assim: […] Só me falta uma coisa:
+   * o prédio tem elevador?» (14-11-2026, d25 v2). As linhas do resumo falam do
+   * elevador, da carrinha e do código postal; quem diz qual é a pergunta é o
+   * fim da mensagem.
+   */
+  const falta = t.lastIndexOf("so me falta uma coisa:");
+  if (falta >= 0) {
+    const fim = t.slice(falta);
+    for (const [re, passo] of regras) if (re.test(fim)) return passo;
+  }
   for (const [re, passo] of regras) if (re.test(t)) return passo;
   return null;
 }

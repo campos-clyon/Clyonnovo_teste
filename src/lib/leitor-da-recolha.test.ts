@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   andarDaResposta,
+  andarNegativoDito,
+  correcaoDoAndar,
+  dispensaAFatura,
+  falaDeGaragem,
+  pedeLimpeza,
+  querOValorComIva,
   andarNaFrase,
   clienteCarrega,
   desisteDoPedido,
@@ -324,5 +330,50 @@ describe("a conversa da Graciete (26-10-2026, nome inventado) — quem já tem p
     ]) {
       expect(jaFezOPedido(t), t).toBe(false);
     }
+  });
+});
+
+/*
+ * A GARAGEM NO -3 — 13-11-2026 (decisão d25). As frases do cliente da
+ * garagem em Odivelas (o nome e a rua da conversa ficam de fora: repositório
+ * público). A conversa inteira está em `a-conversa-do-silverio.test.ts`.
+ */
+describe("a garagem no -3 (13-11-2026) — as frases dele", () => {
+  it("«Pode ser sem fatura!» é um NÃO à fatura, diga-se como se disser", () => {
+    for (const t of ["Pode ser sem fatura!", "pode ser sem", "Não preciso de fatura", "Dispenso a fatura", "sem factura por favor"]) {
+      expect(dispensaAFatura(t), t).toBe(true);
+    }
+    for (const t of ["Pode ser", "Sim, com fatura", "Quero fatura com NIF"]) {
+      expect(dispensaAFatura(t), t).toBe(false);
+    }
+  });
+
+  it("«o valor total, já com IVA» pede a fatura; «é com IVA?» só pergunta", () => {
+    expect(querOValorComIva("Gostaria de saber o valor total, já com IVA, e a disponibilidade. Obrigado.")).toBe(true);
+    expect(querOValorComIva("O preço é com IVA?")).toBe(false);
+    expect(querOValorComIva("Pode ser sem fatura!")).toBe(false);
+  });
+
+  it("o piso abaixo do chão fica com o sinal — e a gralha conta", () => {
+    expect(andarNegativoDito("Isso é uma garagem no -3. Tudo o resto está ok")).toBe("-3");
+    expect(andarNegativoDito("fica no piso -2")).toBe("-2");
+    expect(andarNegativoDito("é na cave")).toBe("-1");
+    // Um código postal não é um piso.
+    expect(andarNegativoDito("Rua das Gaivotas Mansas 12, 2675-000 Odivelas")).toBeNull();
+    expect(correcaoDoAndar("AndR -3")).toBe("-3");
+    expect(correcaoDoAndar("andar -3")).toBe("-3");
+    expect(correcaoDoAndar("-3")).toBe("-3");
+    expect(correcaoDoAndar("Sim tem elevador no prédio")).toBeNull();
+  });
+
+  it("«É uma garagem» não diz o piso; a limpeza com lavagem fica dita", () => {
+    expect(falaDeGaragem("Rua das Gaivotas Mansas 12, 2675-000 Odivelas. É uma garagem")).toBe(true);
+    expect(pedeLimpeza("a limpeza profunda da garagem, incluindo lavagem do pavimento")).toEqual({ lavagem: true });
+    expect(pedeLimpeza("não é preciso limpeza")).toBeNull();
+  });
+
+  it("«senão fica em segunda fila» é a carrinha, e não segunda-feira", () => {
+    expect(pareceQuando("Consegue se houver lugar, senão fica em segunda fila")).toBe(false);
+    expect(pareceQuando("Pode ser na segunda de manhã")).toBe(true);
   });
 });
