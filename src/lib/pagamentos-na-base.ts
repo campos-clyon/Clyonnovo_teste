@@ -550,6 +550,35 @@ export async function pagamentosDaNegociacao(negociacaoId: number): Promise<Paga
 }
 
 /**
+ * OS PAGAMENTOS DE VÁRIAS NEGOCIAÇÕES NUMA CONSULTA SÓ — 15-11-2026 (d31), para
+ * as listas (os Pagamentos, as Carteiras) perguntarem pelo modelo de cada
+ * trabalho sem uma viagem à base por linha. A mesma leitura de
+ * `pagamentosDaNegociacao`, agrupada pela negociação.
+ */
+export async function pagamentosDasNegociacoes(negociacaoIds: ReadonlyArray<number>): Promise<Map<number, Pagamento[]>> {
+  const mapa = new Map<number, Pagamento[]>();
+  const ids = [...new Set(negociacaoIds.filter((id) => Number.isInteger(id) && id > 0))];
+  if (ids.length === 0) return mapa;
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  for (let i = 0; i < ids.length; i += 500) {
+    const lote = ids.slice(i, i + 500);
+    const [linhas] = (await pool.execute(
+      `SELECT * FROM pagamentos WHERE negociacaoId IN (${lote.map(() => "?").join(",")}) ORDER BY id DESC`,
+      lote,
+    )) as any[];
+    for (const l of linhas as Record<string, unknown>[]) {
+      const p = comoPagamento(l);
+      const lista = mapa.get(p.negociacaoId);
+      if (lista) lista.push(p);
+      else mapa.set(p.negociacaoId, [p]);
+    }
+  }
+  return mapa;
+}
+
+/**
  * Guarda o aviso, e diz se é a primeira vez que o vemos.
  *
  * `INSERT IGNORE` sobre o índice único (trid, estado): se voltar `false`, este

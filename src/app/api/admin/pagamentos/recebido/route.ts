@@ -17,6 +17,8 @@ import { valorDoPagamento } from "@/lib/pagamento-declarado";
 import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 import { fraseDoPagoEmDinheiro } from "@/lib/pagamento-da-divida";
 import { gerarReferenciaDaDivida } from "@/lib/cobrar-divida-do-profissional";
+import { segueONovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest) {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.providerId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
               n.estado, n.pagamentoParaQue, n.formaDePagamento, n.createdAt, n.semFactura,
+              n.ofertaClyon, n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.pagoEm,
               pr.name AS profissional
          FROM negociacoes n JOIN providers pr ON pr.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
@@ -123,8 +126,27 @@ export async function POST(req: NextRequest) {
      * em mão), e é isso que dá a referência dele por paga.
      */
     const modelo = modeloDaLinha(l, l.createdAt as Date | string | null);
-    const doProfissional = temDividaDoProfissional(l.formaDePagamento, modelo);
-    const valor = doProfissional
+    /*
+     * O MODELO DE 15-11-2026 — d31. O cliente pagou ao profissional
+     * diretamente: o que se regista aqui é a taxa que ELE passou à CLYON (a
+     * taxa e o IVA dela), nunca o valor do cliente — e o cliente não é avisado
+     * de pagamento nenhum.
+     */
+    const novoModelo = await segueONovoModelo({ ...l, id: negociacaoId });
+    if (novoModelo && metodo === "ao_profissional") {
+      return NextResponse.json(
+        { error: "Neste trabalho o cliente paga ao profissional diretamente — registe só a taxa que ele passou à CLYON." },
+        { status: 409 },
+      );
+    }
+    const taxaDoNovo = novoModelo ? taxaAPassarAClyon(Number(l.valorAcordado), taxasDaNegociacao(l)) : null;
+    if (novoModelo && !taxaDoNovo) {
+      return NextResponse.json({ error: "Não foi possível fazer a conta da taxa deste trabalho." }, { status: 409 });
+    }
+    const doProfissional = novoModelo || temDividaDoProfissional(l.formaDePagamento, modelo);
+    const valor = taxaDoNovo
+      ? taxaDoNovo.total
+      : doProfissional
       ? dividaDoProfissional(Number(l.valorAcordado), taxasDaNegociacao(l)).total
       : valorDoPagamento(
           contaDoCliente(Number(l.valorAcordado), taxasDaNegociacao(l)),
@@ -169,7 +191,7 @@ export async function POST(req: NextRequest) {
         ? `${fraseEmMao} Registado por ${porQuem}.`
         : (doProfissional
             ? `${porQuem} registou que ${String(l.profissional ?? "o profissional")} pagou à CLYON ${emEuros} ` +
-              `de IVA e taxa da plataforma (trabalho pago em dinheiro) — ${comoSeChama}. `
+              `de IVA e taxa da plataforma (${novoModelo ? "o cliente pagou-lhe diretamente" : "trabalho pago em dinheiro"}) — ${comoSeChama}. `
             : `${porQuem} registou que o cliente pagou ${emEuros} — ${comoSeChama}. `) +
           "Não passou pelo euPago: é um registo à mão.",
     });

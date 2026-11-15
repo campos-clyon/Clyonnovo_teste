@@ -10,6 +10,7 @@ import type { ModeloDoPreco } from "./iva-incluido";
 import { dividaDoProfissional } from "./divida-do-profissional";
 import { lerForma } from "./forma-de-pagamento";
 import { eSemFactura, modeloDaLinha, paraQueDaLinha } from "./sem-factura";
+import { contaDoValorAcordado, type RegimeDoProfissional } from "./pagamento-directo";
 
 /**
  * A CONTA DE UM PAGAMENTO, DEGRAU A DEGRAU — 15-10-2026.
@@ -64,6 +65,12 @@ export type ContaDoPagamento = {
   degraus: Degrau[];
   /** O que a conta não diz sozinha — num trabalho em dinheiro, quem deve o quê. */
   notas: string[];
+  /**
+   * O MODELO DE 15-11-2026 (d31): o cliente pagou ao profissional, e o último
+   * degrau é a taxa por receber dele (a taxa e o IVA dela), não o que se paga
+   * ao profissional. Ausente no modelo antigo.
+   */
+  novoModelo?: true;
 };
 
 export const aosCentimos = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -380,6 +387,75 @@ export function contaFecha(conta: ContaDoPagamento): boolean {
     else if (Math.abs(corrente - d.valor) > 0.005) return false;
   }
   const ultimo = conta.degraus[conta.degraus.length - 1];
-  if (!ultimo?.final || Math.abs(ultimo.valor - conta.profissional) > 0.005) return false;
+  // No modelo de 15-11 o último degrau é a taxa por receber do profissional (a taxa e o IVA dela).
+  const doUltimo = conta.novoModelo ? aosCentimos(conta.iva + conta.clyon) : conta.profissional;
+  if (!ultimo?.final || Math.abs(ultimo.valor - doUltimo) > 0.005) return false;
   return Math.abs(aosCentimos(conta.iva + conta.clyon + conta.profissional) - conta.total) < 0.005;
+}
+
+/** Os rótulos do modelo de 15-11 — um teste confere que o antigo não aparece. */
+export const TAXA_POR_RECEBER_DO_PARCEIRO = "Taxa por receber do parceiro";
+export const TAXA_RECEBIDA_DO_PARCEIRO = "Taxa recebida do parceiro";
+
+/**
+ * UM TRABALHO DO MODELO DE 15-11-2026 — d31 (CEO e dono, 15-11-2026).
+ *
+ * O cliente paga o trabalho DIRETAMENTE ao profissional (`novo-modelo.ts`): a
+ * CLYON não recebe nada do cliente nem paga nada ao profissional. O que há a
+ * receber é a fatura da taxa — a taxa da plataforma e o IVA dela — que o
+ * profissional passa à CLYON. Por isso a conta nunca diz «A receber do
+ * cliente» nem «A pagar ao profissional»: diz o que o cliente lhe pagou, o que
+ * fica com ele (a fatura dele) e a taxa por receber.
+ *
+ * Os números saem de `contaDoValorAcordado` (`pagamento-directo.ts`), a mesma
+ * conta da carteira e das referências. `iva` = o IVA da taxa; `profissional` =
+ * a fatura do profissional (o IVA dele, se tiver, é do Estado). Nula sem valor.
+ */
+export function contaDoNovoModelo(
+  acordado: number | null | undefined,
+  taxas: Taxas,
+  regime: RegimeDoProfissional,
+  /** A taxa já entrou (a referência paga, ou registada à mão)? */
+  taxaPaga: boolean,
+): ContaDoPagamento | null {
+  const c = contaDoValorAcordado(acordado, taxas, regime);
+  if (!c) return null;
+  const e = (v: number) => v / 100;
+  const total = e(c.totalAoClienteCent);
+  const doProfissional = e(c.faturaDoProfissionalCent);
+  const taxa = e(c.taxaCent);
+  const ivaDaTaxa = e(c.ivaDaTaxaCent);
+  const aPassar = e(c.aPassarAClyonCent);
+  const percentagem = aosCentimos((taxas.cliente + taxas.profissional) * 10000) / 10000;
+  return {
+    total,
+    iva: ivaDaTaxa,
+    semIva: aosCentimos(e(c.baseDoProfissionalCent) + taxa),
+    taxas: [{ rotulo: "Taxa da plataforma", percentagem, valor: taxa }],
+    clyon: taxa,
+    profissional: doProfissional,
+    novoModelo: true,
+    degraus: [
+      {
+        tipo: "inicio",
+        rotulo: "O cliente paga ao profissional",
+        valor: total,
+        nota: "diretamente ao profissional — não passa pela CLYON",
+      },
+      {
+        tipo: "menos",
+        rotulo: "Fatura do profissional",
+        valor: doProfissional,
+        nota: regime === "isento" ? "fica com ele — isento de IVA" : "fica com ele — com o IVA dele",
+      },
+      {
+        tipo: "igual",
+        rotulo: taxaPaga ? TAXA_RECEBIDA_DO_PARCEIRO : TAXA_POR_RECEBER_DO_PARCEIRO,
+        valor: aPassar,
+        nota: `${emEuros(taxa)} de taxa da plataforma + ${emEuros(ivaDaTaxa)} de IVA (${NOTA_DO_IVA}) — paga pelo profissional, por referência`,
+        final: true,
+      },
+    ],
+    notas: [],
+  };
 }

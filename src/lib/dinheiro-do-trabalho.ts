@@ -145,6 +145,13 @@ export type TrabalhoParaGerir = {
    * dele: a referência que paga esta dívida marca-a como paga.
    */
   dividaDoProfissional?: number | null;
+  /**
+   * O MODELO DE 15-11-2026 — d31. O cliente pagou o trabalho diretamente ao
+   * profissional: como no dinheiro, nada do cliente passa pela CLYON, e o
+   * pagamento da negociação é o DELE — a taxa e o IVA dela
+   * (`dividaDoProfissional`). Decide-o o servidor (`contratadasNoNovoModelo`).
+   */
+  novoModelo?: boolean;
 };
 
 /** Há uma dívida do profissional por receber? Só depois de confirmado o trabalho. */
@@ -155,7 +162,8 @@ export function dividaPorReceber(t: TrabalhoParaGerir): boolean {
 /** O cliente entregou o valor ao profissional, em mão. Nada passa pela CLYON. */
 export function pagouAoProfissional(t: TrabalhoParaGerir): boolean {
   // A mesma pergunta da carteira (01-11-2026) — ver `pago-em-mao.ts`.
-  return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou);
+  // Desde 15-11-2026 (d31), todo o trabalho do modelo novo: o cliente paga-lhe diretamente.
+  return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou) || t.novoModelo === true;
 }
 
 export function faseDoDinheiro(t: TrabalhoParaGerir): FaseDoDinheiro {
@@ -176,6 +184,17 @@ export function faseDoDinheiro(t: TrabalhoParaGerir): FaseDoDinheiro {
   if (t.clientePagouEm == null) return "a_receber";
   if (t.confirmadoEm == null) return "a_decorrer";
   return t.pagoEm != null ? "fechado" : "a_pagar";
+}
+
+/**
+ * O NOME DA FASE DE UM TRABALHO — d31. No modelo de 15-11 o que está por
+ * receber é a taxa, e quem a deve é o profissional: nunca «Por receber do
+ * cliente».
+ */
+export function rotuloDaFase(t: TrabalhoParaGerir): string {
+  const fase = faseDoDinheiro(t);
+  if (t.novoModelo === true && fase === "a_receber") return "Taxa por receber do parceiro";
+  return ROTULO_DA_FASE[fase];
 }
 
 export const ROTULO_DA_FASE: Record<FaseDoDinheiro, string> = {

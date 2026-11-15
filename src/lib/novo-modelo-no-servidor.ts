@@ -62,6 +62,46 @@ export async function segueONovoModelo(
   );
 }
 
+/**
+ * AS CONTRATADAS QUE SEGUEM O MODELO DE 15-11, NUMA LISTA — d31 (15-11-2026),
+ * para os Pagamentos e as Carteiras do backoffice. A mesma regra de
+ * `segueONovoModelo`, com os pagamentos de todas lidos numa consulta só
+ * (`pagamentosDasNegociacoes`). Antes da data, nenhuma, sem ir à base. Se a
+ * leitura falhar, lança: quem chama decide (uma lista de dinheiro não pode
+ * adivinhar o modelo em silêncio).
+ */
+export async function contratadasNoNovoModelo(
+  linhas: ReadonlyArray<{
+    id: number;
+    ofertaClyon?: unknown;
+    estado?: unknown;
+    execucaoEnviadaEm?: unknown;
+    provaJson?: unknown;
+    confirmadoEm?: unknown;
+    pagoEm?: unknown;
+  }>,
+  agora: Date = agoraDoModelo(),
+): Promise<Set<number>> {
+  const ids = new Set<number>();
+  if (!novoModeloEmVigor(agora) || linhas.length === 0) return ids;
+  const { pagamentosDasNegociacoes } = await import("./pagamentos-na-base");
+  const { negociacaoNoNovoModelo } = await import("./taxa-a-passar-a-clyon");
+  const { quandoLiberta } = await import("./trabalho");
+  const pagamentos = await pagamentosDasNegociacoes(linhas.map((l) => Number(l.id)));
+  for (const n of linhas) {
+    const sim = negociacaoNoNovoModelo(
+      {
+        ofertaClyon: n.ofertaClyon,
+        fechadoEm: quandoLiberta({ estado: "acordada", ...n } as unknown as Parameters<typeof quandoLiberta>[0]),
+      },
+      pagamentos.get(Number(n.id)) ?? [],
+      agora,
+    );
+    if (sim) ids.add(Number(n.id));
+  }
+  return ids;
+}
+
 export async function impedimentoDoNovoModelo(
   providerId: number,
   agora: Date = agoraDoModelo(),

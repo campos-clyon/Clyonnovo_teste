@@ -95,10 +95,16 @@ export function classificarPagamento(metodo: string | null | undefined): ClasseD
 /**
  * UM TRABALHO: a quem o cliente pagou. Pago em mão ao profissional (combinado
  * em dinheiro, ou registado `ao_profissional`) é dele; tudo o resto paga-se à
- * CLYON. É a mesma pergunta da carteira (`foiPagoEmMaoPor`).
+ * CLYON. É a mesma pergunta da carteira (`foiPagoEmMaoPor`). Desde 15-11-2026
+ * (d31), um trabalho do modelo novo é sempre do profissional: o cliente
+ * paga-lhe diretamente.
  */
-export function destinoDoTrabalho(t: { formaDePagamento?: string | null; comoEntrou?: string | null }): Destino {
-  return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou) ? "profissional" : "clyon";
+export function destinoDoTrabalho(t: {
+  formaDePagamento?: string | null;
+  comoEntrou?: string | null;
+  novoModelo?: boolean;
+}): Destino {
+  return t.novoModelo === true || foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou) ? "profissional" : "clyon";
 }
 
 /**
@@ -210,6 +216,12 @@ export function taxaDoPagoEmMao(t: {
   taxaAParteValor?: number | null;
   /** A soma das partes da dívida pagas à parte, sem linha em `pagamentos` (11-11-2026). */
   jaPagoEmPartes?: number | null;
+  /**
+   * O modelo de 15-11 (d31): a parte da CLYON é a taxa e o IVA dela
+   * (`dividaDoProfissional`), paga pela linha da própria negociação — como no
+   * dinheiro.
+   */
+  novoModelo?: boolean;
 }): TaxaDoPagoEmMao | null {
   const emPartes = aosCentimos(Number(t.jaPagoEmPartes ?? 0) || 0);
   // Só quando há partes pagas à parte: sem elas, a resposta é a de sempre.
@@ -217,11 +229,17 @@ export function taxaDoPagoEmMao(t: {
     emPartes > 0
       ? { porCobrar: cobrada ? 0 : Math.max(0, aosCentimos(valor - emPartes)), jaPagoEmPartes: emPartes }
       : {};
-  if (lerForma(t.formaDePagamento ?? null) === "dinheiro") {
+  if (t.novoModelo === true || lerForma(t.formaDePagamento ?? null) === "dinheiro") {
     if (t.dividaDoProfissional == null || !Number.isFinite(t.dividaDoProfissional)) return null;
     const valor = aosCentimos(t.dividaDoProfissional);
     const cobrada = t.clientePagouEm != null;
-    return { valor, cobrada, descontaNoSaldo: false, ...emPartesSeHouver(valor, cobrada) };
+    return {
+      valor,
+      cobrada,
+      descontaNoSaldo: false,
+      ...(t.novoModelo === true && cobrada ? { como: String(t.comoEntrou ?? "").trim() || null } : {}),
+      ...emPartesSeHouver(valor, cobrada),
+    };
   }
   if (!pagoAoProfissionalRegistado(t.formaDePagamento, t.comoEntrou)) return null;
   if (!Number.isFinite(t.valorAcordado)) return null;
@@ -301,6 +319,8 @@ export function monteNasCarteiras(t: {
   comoEntrou?: string | null;
   confirmadoEm?: unknown;
   pagoEm?: unknown;
+  /** O modelo de 15-11 (d31): o cliente pagou-lhe diretamente — nunca «A pagar». */
+  novoModelo?: boolean;
 }): MonteDaCarteira {
   if (destinoDoTrabalho(t) === "profissional") return "em_mao";
   if (t.pagoEm != null) return "pago";

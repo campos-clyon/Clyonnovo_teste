@@ -14,7 +14,11 @@ import { negociacoesPagas, negociacoesPagasComDetalhe } from "@/lib/pagamentos-n
 import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 import { contaDaCarteiraDoProfissional } from "@/lib/conta-da-carteira-na-base";
 import { lucroDoTrabalho } from "@/lib/assistentes";
-import { contaDaLinha, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
+import { contaDaLinha, contaDoNovoModelo, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
+import { contratadasNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
+import { contaDoValorAcordado } from "@/lib/pagamento-directo";
+import { regimeDaNegociacao } from "@/lib/total-ao-cliente";
 import { eSemFactura, modeloDaLinha } from "@/lib/sem-factura";
 import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { resumoDaQuitacao } from "@/lib/quitacao-na-base";
@@ -146,6 +150,8 @@ export async function GET(req: NextRequest) {
               -- do pagamento e, num Trabalho CLYON, o preço ao cliente e a taxa.
               n.acrescimoPagamento, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
               n.confirmadoEm, n.execucaoEnviadaEm, n.feitoEm, n.pagoEm,
+              -- O modelo de 15-11 (d31): a prova (o prazo) e o regime congelado.
+              n.provaJson, n.regimeDoProfissional, p.regimeIvaConfirmadoEm,
               -- Com ou sem factura, antes do IVA incluído (15-10-2026).
               n.pagamentoParaQue,
               -- A abertura da negociação decide o modelo do preço (IVA incluído).
@@ -293,13 +299,37 @@ export async function GET(req: NextRequest) {
      * seu estado: o que falta é a soma das partes pendentes, e os dois ecrãs
      * dão sempre o mesmo número.
      */
+    /*
+     * O MODELO DE 15-11-2026 — d31 (o #612). O cliente paga ao profissional
+     * diretamente: o trabalho nunca está «por pagar» pela CLYON, e o que ele
+     * deve é a taxa e o IVA dela. A regra de `segueONovoModelo`, numa consulta.
+     */
+    const doNovoModelo = await contratadasNoNovoModelo(
+      linhas
+        .filter((l) => l.negociacaoId != null)
+        .map((l) => ({
+          id: Number(l.negociacaoId),
+          ofertaClyon: l.ofertaClyon,
+          estado: "acordada",
+          execucaoEnviadaEm: l.execucaoEnviadaEm,
+          provaJson: l.provaJson,
+          confirmadoEm: l.confirmadoEm,
+          pagoEm: l.pagoEm,
+        })),
+    );
+    const noNovo = (l: Record<string, unknown>) =>
+      l.negociacaoId != null &&
+      doNovoModelo.has(Number(l.negociacaoId)) &&
+      !pagoAoProfissionalRegistado(l.formaDePagamento, recebidos.get(Number(l.negociacaoId))?.metodo);
+
     const comDividaPossivel = [
       ...new Set(
         linhas
           .filter(
             (l) =>
               l.negociacaoId != null &&
-              (lerForma(l.formaDePagamento) === "dinheiro" ||
+              (noNovo(l) ||
+                lerForma(l.formaDePagamento) === "dinheiro" ||
                 pagoAoProfissionalRegistado(
                   l.formaDePagamento,
                   recebidos.get(Number(l.negociacaoId))?.metodo,
@@ -350,17 +380,23 @@ export async function GET(req: NextRequest) {
       const fecho = recebidos.get(Number(l.negociacaoId)) ?? null;
       const emMaoRegistado = pagoAoProfissionalRegistado(l.formaDePagamento, fecho?.metodo);
       const daCarteira = dividaDaNegociacao.get(Number(l.negociacaoId)) ?? null;
+      // O modelo de 15-11 (d31): o cliente pagou-lhe diretamente; ele deve a taxa e o IVA dela.
+      const novo = noNovo(l);
       // Por pagar: o que falta (a soma das partes pendentes); paga: a dívida inteira.
       const divida = daCarteira
         ? daCarteira.total
-        : comDivida
+        : novo
+          ? (taxaAPassarAClyon(acordado, taxas)?.total ?? null)
+          : comDivida
           ? dividaDoProfissional(acordado, taxas).total
           : emMaoRegistado
             ? dividaDoRegistoEmMao(acordado, taxas, fecho?.valor).total
             : null;
       const dividaPaga = daCarteira
         ? daCarteira.paga
-        : comDivida
+        : novo
+          ? recebidos.has(Number(l.negociacaoId))
+          : comDivida
           ? pagas.has(Number(l.negociacaoId))
           : emMaoRegistado && fecho?.abatimentoAParte != null;
 
@@ -397,7 +433,9 @@ export async function GET(req: NextRequest) {
         feitoEm: (l.feitoEm ?? l.execucaoEnviadaEm)
           ? new Date((l.feitoEm ?? l.execucaoEnviadaEm) as string).toISOString()
           : null,
-        clientePaga: precoDoCliente(acordado, taxas, modelo).aPagar,
+        clientePaga: novo
+          ? (contaDoValorAcordado(acordado, taxas, regimeDaNegociacao(l))?.totalAoClienteCent ?? 0) / 100
+          : precoDoCliente(acordado, taxas, modelo).aPagar,
         ivaIncluido: modelo === "iva_incluido",
         dividaDoProfissional: divida,
         dividaPaga,
@@ -405,7 +443,7 @@ export async function GET(req: NextRequest) {
         // Ao centimo, e no servidor: a subtraccao em virgula flutuante no ecra
         // dava 11,399999 € na linha de um trabalho de 190 €.
         taxaDescontada: Math.round((acordado - recebe) * 100) / 100,
-        forma: lerForma(l.formaDePagamento) === "dinheiro" || emMaoRegistado ? "dinheiro" : "plataforma",
+        forma: novo || lerForma(l.formaDePagamento) === "dinheiro" || emMaoRegistado ? "dinheiro" : "plataforma",
         lucroDaClyon: semPrecoAoCliente ? null : doLucro.lucro,
         clienteSemIva: trabalhoClyon
           ? semPrecoAoCliente
@@ -421,6 +459,8 @@ export async function GET(req: NextRequest) {
           true,
         ),
       };
+      // O modelo de 15-11 (d31): a conta do modelo novo — a taxa por receber dele, nunca «a pagar ao profissional».
+      if (novo) trabalho.conta = contaDoNovoModelo(acordado, taxas, regimeDaNegociacao(l), dividaPaga === true);
 
       /* Três montes, e cada trabalho está exactamente num deles. */
       /*
@@ -441,6 +481,7 @@ export async function GET(req: NextRequest) {
         comoEntrou: fecho?.metodo ?? null,
         confirmadoEm: l.confirmadoEm,
         pagoEm: l.pagoEm,
+        novoModelo: novo,
       });
       if (monte === "em_mao") {
         if (l.confirmadoEm != null) {

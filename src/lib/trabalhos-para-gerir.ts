@@ -14,6 +14,13 @@ import { taxaDoPagoEmMao, type TaxaDoPagoEmMao } from "@/lib/a-quem-foi-o-dinhei
 import { PREFIXO_DO_ABATIMENTO_A_PARTE } from "@/lib/pago-em-mao";
 import { CORRIGEM_SE, valoresDeReferencia } from "@/lib/corrigir-pagamento-registado";
 import type { ComoEntrou } from "@/lib/dinheiro-do-trabalho";
+import { contaDoNovoModelo } from "@/lib/conta-do-pagamento";
+import { contaDoValorAcordado } from "@/lib/pagamento-directo";
+import { regimeDaNegociacao } from "@/lib/total-ao-cliente";
+import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
+import { contratadasNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 
 /*
  * OS TRABALHOS DOS PAGAMENTOS — cada negociação fechada, com as duas pontas
@@ -121,6 +128,14 @@ export type TrabalhoParaGerir = {
     comFactura: number | null;
     semFactura: number | null;
   } | null;
+  /**
+   * O MODELO DE 15-11-2026 — d31 (`contratadasNoNovoModelo`). O cliente pagou
+   * ao profissional diretamente: `clientePaga` é o total que lhe pagou,
+   * `dividaDoProfissional` a taxa e o IVA dela que ele passa à CLYON, e o
+   * pagamento da negociação (`clientePagouEm`) é o DELE. Nunca «por receber do
+   * cliente» nem «por pagar ao profissional». Ausente no modelo antigo.
+   */
+  novoModelo?: true;
 };
 
 /**
@@ -140,7 +155,9 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
   if (!pool) return [];
 
   const [linhas] = (await pool.execute(
-    `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.valorAcordado,
+    `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.valorAcordado, n.estado, n.provaJson,
+            -- O regime do modelo de 15-11 (d31): o congelado ao contratar, ou o do perfil.
+            n.regimeDoProfissional, pr.regimeIva, pr.regimeIvaConfirmadoEm,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
             n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm, n.feitoEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
@@ -187,9 +204,31 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       (marcas.get(negociacaoId) ?? []).filter((m) => m.pagamentoId == null).reduce((s, m) => s + m.valor, 0) * 100,
     ) / 100;
 
+  /*
+   * O MODELO DE 15-11-2026 — d31. Que trabalhos seguem o modelo novo: a regra
+   * de `segueONovoModelo`, com os pagamentos de todos lidos de uma vez. Se a
+   * leitura falhar, a lista falha (a rota diz o porquê): adivinhar o modelo
+   * mostrava «por receber do cliente» dinheiro que nunca vem à CLYON.
+   */
+  const doNovoModelo = await contratadasNoNovoModelo(
+    (linhas as Array<Record<string, unknown>>).map((l) => ({
+      id: Number(l.negociacaoId),
+      ofertaClyon: l.ofertaClyon,
+      estado: l.estado,
+      execucaoEnviadaEm: l.execucaoEnviadaEm,
+      provaJson: l.provaJson,
+      confirmadoEm: l.confirmadoEm,
+      pagoEm: l.pagoEm,
+    })),
+    agoraDoModelo(),
+  );
+
   return linhas.map((l) => {
     const acordado = Number(l.valorAcordado);
     const taxas = taxasDaNegociacao(l);
+    // Registado «pago ao profissional» à mão fica na regra de sempre (a carteira faz o mesmo).
+    const novoModelo =
+      doNovoModelo.has(Number(l.negociacaoId)) && !pagoAoProfissionalRegistado(l.formaDePagamento, l.comoEntrou);
     // As taxas já estão juntas do lado do profissional (marcada sem factura, ou um Trabalho CLYON)?
     // Então mudar a factura só mexe no IVA, e o profissional recebe o mesmo (22-10-2026).
     const soOIva = taxas.cliente === 0;
@@ -242,7 +281,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       pagoEm: iso(l.pagoEm),
       dividaDoProfissional: divida,
     };
-    return {
+    const linha: TrabalhoParaGerir & { valorDesalinhado: boolean } = {
       negociacaoId: Number(l.negociacaoId),
       pedidoId: Number(l.pedidoId),
       providerId: Number(l.providerId),
@@ -320,7 +359,70 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             }
           : null,
     };
+    return novoModelo ? noNovoModelo(linha, l, pagoEmPartes(Number(l.negociacaoId))) : linha;
   });
+}
+
+/**
+ * UM TRABALHO DO MODELO DE 15-11-2026 NOS PAGAMENTOS — d31 (CEO e dono,
+ * 15-11-2026). O cliente pagou-lhe diretamente; o pagamento da negociação é o
+ * do profissional (a taxa e o IVA dela), como no dinheiro. Por isso:
+ *
+ *   · `clientePaga` é o total que o cliente pagou ao profissional;
+ *   · `profissionalRecebe` é a fatura dele (o que fica com ele);
+ *   · `dividaDoProfissional` é a taxa por receber dele (a taxa + o IVA dela);
+ *   · a conta em degraus é a do modelo novo (`contaDoNovoModelo`) — nunca
+ *     «A receber do cliente» nem «A pagar ao profissional»;
+ *   · a fase e os separadores lêem `novoModelo` (`pagouAoProfissional`):
+ *     nunca «Por receber do cliente» nem «Por pagar ao profissional»;
+ *   · sem comprovativo de recebimento ao cliente, sem mudar a fatura e sem
+ *     corrigir o pagamento do cliente — a CLYON não o recebeu.
+ *
+ * Exportada para os testes provarem os dois modelos sem base.
+ */
+export function noNovoModelo<T extends TrabalhoParaGerir>(
+  linha: T,
+  l: Record<string, unknown>,
+  jaPagoEmPartes = 0,
+): T {
+  const acordado = linha.valorAcordado;
+  const regime = regimeDaNegociacao(l);
+  const c = contaDoValorAcordado(acordado, linha.taxas, regime);
+  const taxa = taxaAPassarAClyon(acordado, linha.taxas, regime);
+  const divida = taxa ? taxa.total : null;
+  const base = {
+    formaDePagamento: linha.formaDePagamento,
+    comoEntrou: linha.comoEntrou,
+    clientePagouEm: linha.clientePagouEm,
+    confirmadoEm: linha.confirmadoEm,
+    pagoEm: linha.pagoEm,
+    dividaDoProfissional: divida,
+    novoModelo: true,
+  };
+  return {
+    ...linha,
+    ...base,
+    novoModelo: true,
+    clientePaga: c ? c.totalAoClienteCent / 100 : linha.clientePaga,
+    profissionalRecebe: c ? c.ficaAoProfissionalCent / 100 : linha.profissionalRecebe,
+    fase: faseDoDinheiro(base),
+    recebido: false,
+    podeMudarFactura: false,
+    porqueNaoMudaFactura:
+      "No modelo de 15/11 o cliente paga ao profissional, e a fatura do trabalho é dele — aqui não se muda.",
+    conta: contaDoNovoModelo(acordado, linha.taxas, regime, linha.clientePagouEm != null),
+    taxaEmMao: taxaDoPagoEmMao({
+      formaDePagamento: linha.formaDePagamento,
+      comoEntrou: linha.comoEntrou,
+      dividaDoProfissional: divida,
+      clientePagouEm: linha.clientePagouEm,
+      valorAcordado: acordado,
+      taxas: linha.taxas,
+      jaPagoEmPartes,
+      novoModelo: true,
+    }),
+    correccao: null,
+  };
 }
 
 /**

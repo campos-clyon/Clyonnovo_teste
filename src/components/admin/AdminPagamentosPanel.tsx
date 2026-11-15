@@ -66,6 +66,7 @@ import { lerMotivoSemFactura, taxasSemFactura } from "@/lib/sem-factura";
 import { fraseDoSemFacturaNoMes, semFacturaNoMes } from "@/lib/sem-factura-no-mes";
 import CampoDoMotivoSemFactura from "@/components/admin/CampoDoMotivoSemFactura";
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
+import { TAXA_POR_RECEBER_DO_PARCEIRO, TAXA_RECEBIDA_DO_PARCEIRO } from "@/lib/conta-do-pagamento";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
 import {
@@ -323,6 +324,11 @@ type Trabalho = {
   motivoSemFactura?: string | null;
   /** Pago em mão: a parte da CLYON e se já está cobrada (03-11-2026, d3). */
   taxaEmMao?: TaxaDoPagoEmMao | null;
+  /**
+   * O modelo de 15-11 (d31): o cliente pagou ao profissional diretamente, e o
+   * que há a receber é a taxa dele (`dividaDoProfissional`).
+   */
+  novoModelo?: boolean;
   /** Corrigir o pagamento registado à mão — 04-11-2026 (d9). Nulo onde não se corrige. */
   correccao?: {
     valorRegistado: number | null;
@@ -2414,7 +2420,24 @@ function Linha({
       */}
       <p className="mt-1.5 text-xs text-slate-300">
         <span className="text-slate-500">Cliente:</span>{" "}
-        {emMao ? (
+        {t.novoModelo ? (
+          /*
+            O MODELO DE 15-11 — d31. O cliente paga ao profissional
+            diretamente; o que há a receber é a taxa dele, nunca o cliente.
+          */
+          <span className="text-slate-300">
+            paga {euros(t.clientePaga)} diretamente ao profissional
+            {t.dividaDoProfissional != null && (
+              <span className={t.clientePagouEm ? "text-emerald-300" : "text-amber-300"}>
+                {" · "}
+                {t.clientePagouEm
+                  ? `${TAXA_RECEBIDA_DO_PARCEIRO} ${euros(t.dividaDoProfissional)}`
+                  : `${TAXA_POR_RECEBER_DO_PARCEIRO} ${euros(t.dividaDoProfissional)}`}
+                {" (taxa + IVA)"}
+              </span>
+            )}
+          </span>
+        ) : emMao ? (
           <span className="text-slate-300">
             pagou {euros(t.clientePaga)} ao profissional, em mão
             {t.dividaDoProfissional != null && (
@@ -2459,7 +2482,9 @@ function Linha({
 
       <p className="mt-0.5 text-xs text-slate-300">
         <span className={cor ? `font-semibold ${cor.nome}` : "text-slate-500"}>{t.profissional}:</span>{" "}
-        {emMao ? (
+        {t.novoModelo ? (
+          <span className="text-slate-400">recebe do cliente diretamente — não há nada a transferir</span>
+        ) : emMao ? (
           <span className="text-slate-400">recebeu em mão — não há nada a transferir</span>
         ) : t.pagoEm ? (
           <span className="text-emerald-300">
@@ -2544,7 +2569,9 @@ function Linha({
       {aberto && soLeitura && (
         <div className="mt-3 space-y-1 border-t border-slate-800 pt-3 text-[11px] leading-relaxed">
           <p className="font-semibold text-emerald-300">
-            {emMao
+            {t.novoModelo
+              ? `Tudo fechado — o cliente pagou diretamente a ${t.profissional}, e a taxa dele está paga.`
+              : emMao
               ? `Tudo fechado — o cliente pagou a ${t.profissional} em mão${
                   t.dividaDoProfissional != null ? ", e a parte da CLYON está paga" : ""
                 }.`
@@ -2664,11 +2691,19 @@ function Linha({
                 </p>
               ) : !comoEntrou ? (
                 <>
+                  {t.novoModelo ? (
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      O cliente paga {euros(t.clientePaga)} diretamente ao profissional — não passa pela CLYON.{" "}
+                      {TAXA_POR_RECEBER_DO_PARCEIRO}: {euros(t.dividaDoProfissional)} (taxa da plataforma + IVA), pela
+                      referência na carteira dele.
+                    </p>
+                  ) : (
                   <p className="mt-1 text-[11px] text-slate-400">
                     O cliente pagou {euros(t.clientePaga)} ao profissional, em mão.{" "}
                     {t.profissional} deve à CLYON {euros(t.dividaDoProfissional)} (IVA e taxa da plataforma) —
                     a referência gera-se ao confirmar o trabalho, ou no cartão dele em Negociações.
                   </p>
+                  )}
                   <button
                     onClick={() => setComoEntrou(true)}
                     disabled={ocupado}
