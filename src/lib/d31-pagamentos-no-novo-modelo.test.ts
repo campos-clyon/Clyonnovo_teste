@@ -11,6 +11,7 @@ import { faseDoDinheiro, ladoDoProfissional, pagouAoProfissional, rotuloDaFase }
 import { destinoDoTrabalho, monteNasCarteiras, noSeparador, taxaDoPagoEmMao } from "./a-quem-foi-o-dinheiro";
 import { noNovoModelo, type TrabalhoParaGerir } from "./trabalhos-para-gerir";
 import type { SeparadorDoDinheiro } from "./filtros-dos-pagamentos";
+import { dividaDoRegistoEmMao } from "./pago-em-mao";
 
 /*
  * d31 (CEO e dono, 15-11-2026) — os Pagamentos do backoffice no modelo de
@@ -136,6 +137,27 @@ describe("d31 — um trabalho de cada modelo nos Pagamentos", () => {
     for (const t of lista.filter((x) => x.novoModelo)) {
       expect(SEPARADORES.filter((s) => noSeparador(t, s))).toEqual(["em_mao"]);
     }
+  });
+
+  it("registado «pago ao profissional» (o #588): só a taxa por receber, com a conta da carteira", () => {
+    const registado = noNovoModelo(
+      trabalhoAntigo({
+        comoEntrou: "ao_profissional",
+        clientePagouEm: "2026-11-15T12:18:27.000Z",
+        taxaEmMao: { valor: 38.5, cobrada: false, descontaNoSaldo: false },
+      }),
+      { valorQueEntrou: 350 },
+    );
+    const d = dividaDoRegistoEmMao(350, taxas, 350);
+    expect(registado.novoModelo).toBe(true);
+    expect(registado.dividaDoProfissional).toBe(d.total);
+    expect(registado.clientePagouEm).toBeNull();
+    expect(faseDoDinheiro(registado)).toBe("a_receber");
+    expect(rotuloDaFase(registado)).toBe(TAXA_POR_RECEBER_DO_PARCEIRO);
+    expect(SEPARADORES.filter((s) => noSeparador(registado, s))).toEqual(["em_mao"]);
+    expect(contaFecha(registado.conta!)).toBe(true);
+    expect(registado.conta!.degraus.at(-1)).toMatchObject({ rotulo: TAXA_POR_RECEBER_DO_PARCEIRO, valor: d.total });
+    for (const g of registado.conta!.degraus) expect(g.rotulo).not.toMatch(PROIBIDOS);
   });
 
   it("a parte da CLYON do modelo novo segue a do dinheiro", () => {

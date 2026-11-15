@@ -14,13 +14,15 @@ import { taxaDoPagoEmMao, type TaxaDoPagoEmMao } from "@/lib/a-quem-foi-o-dinhei
 import { PREFIXO_DO_ABATIMENTO_A_PARTE } from "@/lib/pago-em-mao";
 import { CORRIGEM_SE, valoresDeReferencia } from "@/lib/corrigir-pagamento-registado";
 import type { ComoEntrou } from "@/lib/dinheiro-do-trabalho";
-import { contaDoNovoModelo } from "@/lib/conta-do-pagamento";
+import { contaDoNovoModelo, contaDoRegistoNoNovoModelo } from "@/lib/conta-do-pagamento";
+
+const aosCentimosDaLinha = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 import { contaDoValorAcordado } from "@/lib/pagamento-directo";
 import { regimeDaNegociacao } from "@/lib/total-ao-cliente";
 import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 import { contratadasNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
-import { pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
+import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 
 /*
  * OS TRABALHOS DOS PAGAMENTOS — cada negociação fechada, com as duas pontas
@@ -226,9 +228,9 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
   return linhas.map((l) => {
     const acordado = Number(l.valorAcordado);
     const taxas = taxasDaNegociacao(l);
-    // Registado «pago ao profissional» à mão fica na regra de sempre (a carteira faz o mesmo).
-    const novoModelo =
-      doNovoModelo.has(Number(l.negociacaoId)) && !pagoAoProfissionalRegistado(l.formaDePagamento, l.comoEntrou);
+    // Registado «pago ao profissional» à mão também é do modelo novo (o #588): a parte da
+    // CLYON segue a regra de sempre do pago em mão, a mesma da carteira — ver `noNovoModelo`.
+    const novoModelo = doNovoModelo.has(Number(l.negociacaoId));
     // As taxas já estão juntas do lado do profissional (marcada sem factura, ou um Trabalho CLYON)?
     // Então mudar a factura só mexe no IVA, e o profissional recebe o mesmo (22-10-2026).
     const soOIva = taxas.cliente === 0;
@@ -386,6 +388,40 @@ export function noNovoModelo<T extends TrabalhoParaGerir>(
   jaPagoEmPartes = 0,
 ): T {
   const acordado = linha.valorAcordado;
+  /*
+   * REGISTADO «PAGO AO PROFISSIONAL» (o #588). A linha da negociação é o
+   * registo de que o cliente lhe pagou; a parte da CLYON é a da regra do pago
+   * em mão (`taxaEmMao`, a linha à parte), a mesma que a carteira dele cobra —
+   * não se inventa outro número. `clientePagouEm` passa a ser o da taxa.
+   */
+  if (pagoAoProfissionalRegistado(linha.formaDePagamento, linha.comoEntrou)) {
+    const entrou = l.valorQueEntrou == null ? null : Number(l.valorQueEntrou);
+    const d = dividaDoRegistoEmMao(acordado, linha.taxas, entrou);
+    const taxaPaga = linha.taxaEmMao?.cobrada === true;
+    const taxaEm = taxaPaga && l.taxaAParteEm ? new Date(l.taxaAParteEm as string).toISOString() : null;
+    const base = {
+      formaDePagamento: linha.formaDePagamento,
+      comoEntrou: linha.comoEntrou,
+      clientePagouEm: taxaPaga ? (taxaEm ?? linha.clientePagouEm) : null,
+      confirmadoEm: linha.confirmadoEm,
+      pagoEm: linha.pagoEm,
+      dividaDoProfissional: d.total,
+      novoModelo: true,
+    };
+    return {
+      ...linha,
+      ...base,
+      novoModelo: true,
+      clientePaga: d.recebidoDoCliente,
+      profissionalRecebe: aosCentimosDaLinha(d.recebidoDoCliente - d.total),
+      fase: faseDoDinheiro(base),
+      recebido: false,
+      podeMudarFactura: false,
+      porqueNaoMudaFactura:
+        "No modelo de 15/11 o cliente paga ao profissional, e a fatura do trabalho é dele — aqui não se muda.",
+      conta: contaDoRegistoNoNovoModelo(d, linha.taxas.cliente + linha.taxas.profissional, taxaPaga),
+    };
+  }
   const regime = regimeDaNegociacao(l);
   const c = contaDoValorAcordado(acordado, linha.taxas, regime);
   const taxa = taxaAPassarAClyon(acordado, linha.taxas, regime);

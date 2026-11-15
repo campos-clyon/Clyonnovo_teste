@@ -14,7 +14,12 @@ import { negociacoesPagas, negociacoesPagasComDetalhe } from "@/lib/pagamentos-n
 import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
 import { contaDaCarteiraDoProfissional } from "@/lib/conta-da-carteira-na-base";
 import { lucroDoTrabalho } from "@/lib/assistentes";
-import { contaDaLinha, contaDoNovoModelo, type ContaDoPagamento } from "@/lib/conta-do-pagamento";
+import {
+  contaDaLinha,
+  contaDoNovoModelo,
+  contaDoRegistoNoNovoModelo,
+  type ContaDoPagamento,
+} from "@/lib/conta-do-pagamento";
 import { contratadasNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
 import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 import { contaDoValorAcordado } from "@/lib/pagamento-directo";
@@ -461,6 +466,14 @@ export async function GET(req: NextRequest) {
       };
       // O modelo de 15-11 (d31): a conta do modelo novo — a taxa por receber dele, nunca «a pagar ao profissional».
       if (novo) trabalho.conta = contaDoNovoModelo(acordado, taxas, regimeDaNegociacao(l), dividaPaga === true);
+      // Do modelo novo e registado «pago ao profissional» (o #588): a parte da CLYON da regra do pago em mão.
+      else if (emMaoRegistado && doNovoModelo.has(Number(l.negociacaoId))) {
+        trabalho.conta = contaDoRegistoNoNovoModelo(
+          dividaDoRegistoEmMao(acordado, taxas, fecho?.valor),
+          taxas.cliente + taxas.profissional,
+          dividaPaga === true,
+        );
+      }
 
       /* Três montes, e cada trabalho está exactamente num deles. */
       /*

@@ -393,6 +393,51 @@ export function contaFecha(conta: ContaDoPagamento): boolean {
   return Math.abs(aosCentimos(conta.iva + conta.clyon + conta.profissional) - conta.total) < 0.005;
 }
 
+/**
+ * UM TRABALHO DO MODELO DE 15-11 REGISTADO «PAGO AO PROFISSIONAL» — d31 (o
+ * #588). A equipa anotou quanto o cliente lhe pagou; a parte da CLYON é a da
+ * regra de sempre do pago em mão (`dividaDoRegistoEmMao`: a taxa, e o IVA que o
+ * cliente lhe tiver pago), a mesma que a carteira dele cobra. Os degraus dizem
+ * isso: o que o cliente pagou, o que fica com o profissional, e a taxa por
+ * receber dele — nunca «A receber do cliente» nem «A pagar ao profissional».
+ */
+export function contaDoRegistoNoNovoModelo(
+  d: { recebidoDoCliente: number; liquido: number; iva: number; comissao: number; total: number },
+  percentagem: number | null,
+  taxaPaga: boolean,
+): ContaDoPagamento {
+  const fica = aosCentimos(d.recebidoDoCliente - d.total);
+  return {
+    total: d.recebidoDoCliente,
+    iva: d.iva,
+    semIva: aosCentimos(d.recebidoDoCliente - d.iva),
+    taxas: [{ rotulo: "Taxa da plataforma", percentagem, valor: d.comissao }],
+    clyon: d.comissao,
+    profissional: fica,
+    novoModelo: true,
+    degraus: [
+      {
+        tipo: "inicio",
+        rotulo: "O cliente pagou ao profissional",
+        valor: d.recebidoDoCliente,
+        nota: "diretamente ao profissional, como ficou registado — não passou pela CLYON",
+      },
+      { tipo: "menos", rotulo: "Fica com o profissional", valor: fica },
+      {
+        tipo: "igual",
+        rotulo: taxaPaga ? "Taxa recebida do parceiro" : "Taxa por receber do parceiro",
+        valor: d.total,
+        nota:
+          d.iva > 0
+            ? `${emEuros(d.comissao)} de taxa da plataforma + ${emEuros(d.iva)} de IVA`
+            : `${emEuros(d.comissao)} de taxa da plataforma`,
+        final: true,
+      },
+    ],
+    notas: [],
+  };
+}
+
 /** Os rótulos do modelo de 15-11 — um teste confere que o antigo não aparece. */
 export const TAXA_POR_RECEBER_DO_PARCEIRO = "Taxa por receber do parceiro";
 export const TAXA_RECEBIDA_DO_PARCEIRO = "Taxa recebida do parceiro";
