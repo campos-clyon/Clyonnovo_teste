@@ -3,7 +3,9 @@
     {
       "id": "pro-2026-11-15",
       "nota": "Na Agenda pode marcar os dias e as horas em que não pode trabalhar — não recebe pedidos para esses dias.",
-      "updates": []
+      "updates": [
+        "01a1df95-41a0-743a-b8b0-2f6b4975dc9e"
+      ]
     },
     {
       "id": "pro-2026-11-13-2",
