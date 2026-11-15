@@ -258,7 +258,21 @@ export async function recolherPedidoPorWhatsApp(
   const responder = async (e: Estado) => {
     // Só imagens: não há palavras para o modelo ler — ver `responderAsImagens`.
     if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio), visto });
-    const r = await responderAoTexto(e);
+    /*
+     * «PARECE UM ESVAZIAMENTO» — 15-11-2026 (d43). A resposta à pergunta, se
+     * estava pendente; depois, a pergunta (uma vez), relendo o que ele
+     * escreveu nesta recolha; e o que o esvaziamento de empresa grava. Ver
+     * `esvaziamento-na-recolha.ts`.
+     */
+    const esv = await import("@/lib/esvaziamento-na-recolha");
+    const textosDaRecolha = [...ditosDestaRecolha(fio, texto), texto];
+    const aoEsvaziamento = esv.responderAoEsvaziamento(e, texto, agora, textosDaRecolha);
+    if (aoEsvaziamento) return aoEsvaziamento;
+    e = esv.semAPerguntaDoEsvaziamento(e);
+    const r = esv.comOQueAEmpresaPrecisa(
+      esv.perguntarSeEUmEsvaziamento(await responderAoTexto(e), textosDaRecolha, agora),
+      textosDaRecolha,
+    );
     /*
      * IMAGENS COM TEXTO: a resposta ao texto, com o «Obrigada pelas
      * imagens!» à frente, e a marca de que ele as mandou — para no fim não se
@@ -655,6 +669,33 @@ async function passarAUmaPessoa(
   const { interromperNumeroWhatsApp } = await import("@/lib/db");
   await enviarTextoWhatsApp(telefone, mensagem);
   await interromperNumeroWhatsApp(telefone, porque).catch(() => {});
+}
+
+/**
+ * O VALOR ÚNICO, DECIDIDO — 15-11-2026 (d39). Aceite: agradece, fica no
+ * histórico do pedido e a conversa passa à equipa para escolher o parceiro
+ * (é a equipa quem aceita a proposta dele, na Mesa). O resto: a equipa.
+ * Nunca se aceita aqui proposta nenhuma.
+ */
+async function tratarOValorUnico(
+  telefone: string,
+  decisao: import("@/lib/valor-unico-no-whatsapp").DecisaoDoValorUnico,
+): Promise<void> {
+  const vu = await import("@/lib/valor-unico-no-whatsapp");
+  if (!decisao) {
+    await passarAUmaPessoa(telefone, "Respondeu sobre um valor único — confirmar");
+    return;
+  }
+  if (decisao.tipo === "pessoa") {
+    await passarAUmaPessoa(telefone, decisao.motivo);
+    return;
+  }
+  await appendOrderHistory(decisao.pedidoId, {
+    type: "valor_unico_aceite",
+    by: null,
+    message: "O cliente aceitou o valor único pelo WhatsApp. Falta escolher o parceiro e aceitar a proposta dele na Mesa.",
+  }).catch((e) => console.error("[whatsapp] o aceite do valor único não ficou no histórico:", e));
+  await passarAUmaPessoa(telefone, vu.motivoDoValorUnicoAceite(decisao.pedidoId), vu.VALOR_UNICO_ACEITE);
 }
 
 /**
@@ -1186,7 +1227,15 @@ async function traduzirParaAMaquina(original: string, pedidos: number[]): Promis
 
 async function alvosAccionaveis(pedidos: number[]): Promise<AlvoComValor[]> {
   const lista: AlvoComValor[] = [];
+  /*
+   * O VALOR ÚNICO (d39, 15-11-2026): num pedido com o valor único por
+   * decidir, o cliente não aceita nem recusa propostas — quem escolhe o
+   * parceiro é a CLYON. As propostas desses pedidos não são alvos.
+   */
+  const { pedidosComValorUnicoPorDecidir } = await import("@/lib/valor-unico-no-whatsapp-na-base");
+  const comValorUnico = new Set(await pedidosComValorUnicoPorDecidir(pedidos));
   for (const pedidoId of pedidos) {
+    if (comValorUnico.has(pedidoId)) continue;
     const linhas = await negociacoesDoPedido(pedidoId);
     const base = await baseDoPedido(pedidoId);
     // d17: o modelo de cada uma, pela regra do servidor (uma consulta por pedido).
@@ -2036,6 +2085,21 @@ export async function tratarMensagemDoCliente(
   }
 
   const pedidos = await pedidosDoTelefone(telefone);
+  /*
+   * «SIM, ACEITO O ORÇAMENTO DO PEDIDO #N.» — 15-11-2026 (d39). A mensagem
+   * que o «Aceitar» da app de cliente deixa escrita: antes de tudo o resto
+   * (até de uma recolha a meio), porque diz o pedido. Só um pedido DELE com
+   * valor único por decidir conta como aceite; outro número vai para a
+   * equipa confirmar. Ver `valor-unico-no-whatsapp.ts`.
+   */
+  if (conteudo.tipo === "texto" && !soImagens) {
+    const vu = await import("@/lib/valor-unico-no-whatsapp");
+    if (vu.pedidoDaAceitacaoEscrita(conteudo.texto) != null) {
+      const { pedidosComValorUnicoPorDecidir } = await import("@/lib/valor-unico-no-whatsapp-na-base");
+      await tratarOValorUnico(telefone, vu.decidirOValorUnico(conteudo.texto, await pedidosComValorUnicoPorDecidir(pedidos)));
+      return;
+    }
+  }
   if (pedidos.length === 0) {
     /*
      * UM NÚMERO SEM PEDIDO É UM PEDIDO POR FAZER.
@@ -2161,6 +2225,34 @@ export async function tratarMensagemDoCliente(
   }
   // A negociação lê palavras; as fotografias do pedido já ficaram nele.
   if (soImagens) return;
+
+  /*
+   * A RESPOSTA AO VALOR ÚNICO — 15-11-2026 (d39). «Sim», «aceito», «pode ser»
+   * com um só pedido de valor único por decidir é a aceitação dele, e vai para
+   * a equipa escolher o parceiro; um não, um valor ou um nome também vão para
+   * a equipa. Nunca pelo caminho das propostas (que aceitava a de um parceiro
+   * pelo SIM), e um botão antigo de uma proposta desse pedido também não.
+   */
+  {
+    const { pedidosComValorUnicoPorDecidir } = await import("@/lib/valor-unico-no-whatsapp-na-base");
+    const comValorUnico = await pedidosComValorUnicoPorDecidir(pedidos);
+    if (comValorUnico.length > 0) {
+      const vu = await import("@/lib/valor-unico-no-whatsapp");
+      if (conteudo.tipo === "botao") {
+        const doBotao = Number(/^(?:ct|rc):(\d+):\d+$/.exec(conteudo.id)?.[1]);
+        if (comValorUnico.includes(doBotao)) {
+          await passarAUmaPessoa(telefone, vu.motivoDaRespostaAoValorUnico(doBotao));
+          return;
+        }
+      } else {
+        const decisao = vu.decidirOValorUnico(conteudo.texto, comValorUnico);
+        if (decisao) {
+          await tratarOValorUnico(telefone, decisao);
+          return;
+        }
+      }
+    }
+  }
 
   // ── Botões: a acção e o alvo vêm no id — nada a interpretar ─────────────
   if (conteudo.tipo === "botao") {

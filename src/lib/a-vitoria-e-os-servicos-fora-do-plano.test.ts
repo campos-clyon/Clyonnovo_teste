@@ -73,11 +73,13 @@ describe("a lista numerada que a Vitória mostra", () => {
       expect(servicoDoTexto(n), linha).toBe(id);
       expect(servicoDoTexto(`${n}.`), linha).toBe(id);
     }
-    // Desde 29-10-2026 a garagem, o sótão e a cave são o 6, o 7 e o 8; a manutenção da casa é o 10.
+    // Desde 29-10-2026 a garagem, o sótão e a cave são o 6, o 7 e o 8; desde 15-11-2026 (d43) o 9 é o
+    // esvaziamento de armazém, escritório ou loja, e a manutenção da casa passou para o 11.
     expect(servicoDoTexto("7")).toBe("esvaziamento_sotao");
-    expect(servicoDoTexto("10")).toBe("manutencao_casa");
-    expect(servicoDoTexto("11")).toBe("outro");
-    expect(servicoDoTexto("12")).toBeNull();
+    expect(servicoDoTexto("9")).toBe("esvaziamento_empresa");
+    expect(servicoDoTexto("11")).toBe("manutencao_casa");
+    expect(servicoDoTexto("12")).toBe("outro");
+    expect(servicoDoTexto("13")).toBeNull();
     expect(IDS_DA_LISTA).toEqual(SERVICOS_PUBLICOS.map((c) => c.id));
   });
 
@@ -115,14 +117,15 @@ describe("a lista numerada que a Vitória mostra", () => {
 });
 
 describe("uma conversa pela lista numerada (sem o Gemini)", () => {
-  it("«Olá» leva a lista, e o 10 é a manutenção da casa", () => {
+  it("«Olá» leva a lista, e o 11 é a manutenção da casa (d43)", () => {
     const ola = responderNaRecolha(recolhaNova(), "Olá", T0, false, false);
     expect(ola.resposta).toContain(QUEM_FALA);
-    expect(ola.resposta).toContain("10. Manutenção da casa");
+    expect(ola.resposta).toContain("9. Esvaziamento de armazém, escritório ou loja");
+    expect(ola.resposta).toContain("11. Manutenção da casa");
     expect(ola.resposta).not.toMatch(/montagem|jardinagem/i);
 
     const lista = servicosDaLista(paraTeclado(ola.resposta));
-    const sete = responderNaRecolha(ola.estado, "10", T0, true, false, { lista });
+    const sete = responderNaRecolha(ola.estado, "11", T0, true, false, { lista });
     expect(sete.estado.dados.serviceType).toBe("manutencao_casa");
     expect(sete.resposta).toContain("manutenção da casa");
     expect(sete.estado.passo).toBe("nome");

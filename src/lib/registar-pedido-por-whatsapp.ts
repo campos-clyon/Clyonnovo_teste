@@ -11,6 +11,7 @@ import { nifDaFactura } from "./pedido-valores";
 import { andarComLado, descricaoParaOPedido, telefoneDaConversa } from "./pedido-da-recolha";
 import { valorDePartidaPorHora } from "./tabela-das-mudancas";
 import { origemDaConversa } from "./codigo-de-origem";
+import { oPedidoDaEmpresa } from "./esvaziamento-na-recolha";
 
 /**
  * O pedido que o bot do WhatsApp recolheu entra na base como os registados
@@ -41,7 +42,9 @@ export async function registarPedidoDaRecolha(
    */
   const { contarFotosPendentesWhatsApp } = await import("./db");
   const pendentes = await contarFotosPendentesWhatsApp(telefone).catch(() => 0);
-  const description = descricaoParaOPedido(d, { fotos: Math.max(pendentes, d.fotosRecebidas ?? 0) });
+  // O esvaziamento de empresa (d43): o espaço e o «fora de horas», como no simulador do site.
+  const daEmpresa = oPedidoDaEmpresa(d, descricaoParaOPedido(d, { fotos: Math.max(pendentes, d.fotosRecebidas ?? 0) }));
+  const description = daEmpresa.descricao;
 
   let dataAgendada: Date | null = null;
   if (d.dataDesejada) {
@@ -178,6 +181,7 @@ export async function registarPedidoDaRecolha(
         lng: coords?.lng ?? null,
       },
       ...proprios.paraOJson,
+      ...daEmpresa.json,
     }),
     valorDesejadoCliente: arranque != null ? String(arranque) : null,
     baseDoPreco: porHora ? "hora" : "total",

@@ -243,6 +243,22 @@ export type DadosDaRecolha = {
    */
   espaco?: "garagem";
   /**
+   * O ESPAÇO DE UMA EMPRESA E O «FORA DE HORAS» — 15-11-2026 (d43). Só no
+   * `esvaziamento_empresa`: o pedido grava-os como o simulador do site
+   * (`espacoDaEmpresa`, `foraDeHoras` «sim»), lidos do que ele escreveu —
+   * ver `esvaziamento-na-recolha.ts`.
+   */
+  espacoDaEmpresa?: "armazem" | "escritorio" | "loja" | "outro";
+  foraDeHoras?: boolean;
+  /**
+   * «PARECE UM ESVAZIAMENTO» — 15-11-2026 (d43). A pergunta sai uma vez por
+   * recolha (`esvaziamentoPerguntado`); enquanto espera a resposta, fica aqui
+   * para onde o pedido passaria. Fora de `PassoDaRecolha` pela razão da
+   * desistência: os switches são exaustivos.
+   */
+  aConfirmarEsvaziamento?: "esvaziamento_casa" | "esvaziamento_empresa";
+  esvaziamentoPerguntado?: boolean;
+  /**
    * PEDIU A LIMPEZA DEPOIS DE ESVAZIAR — 14-11-2026 (o dono, d25 v2: os
    * parceiros fazem-na). Vai na descrição do pedido; `lavagem` quando
    * falou da lavagem do pavimento.
@@ -455,6 +471,18 @@ const PISTAS: Array<[string, RegExp]> = [
   [
     "esvaziamento_cave",
     /\b(esvazia\w*|limpar|limpeza|despejar|vagar|desocupar|arrumar|tirar\s+tudo)\s+(\S+\s+){0,3}caves?\b|\bcave\s+(toda|cheia|inteira|atulhada)\b/,
+  ],
+  /*
+   * O ARMAZÉM, O ESCRITÓRIO E A LOJA — 15-11-2026 (d43). Um serviço próprio
+   * (`esvaziamento_empresa`), com a mesma regra da garagem: só com o trabalho
+   * (esvaziar, vagar, despejar…), «cheio/todo» ou «o recheio do…». «Comprei o
+   * sofá numa loja» continua a ser uma recolha — e aí a Vitória pergunta uma
+   * vez se é um esvaziamento (`esvaziamento-na-recolha.ts`). Depois da
+   * mudança, que vem primeiro: «mudança de escritório» é uma mudança.
+   */
+  [
+    "esvaziamento_empresa",
+    /\b(esvazia\w*|limpar|limpeza|despejar|vagar|desocupar|libertar|arrumar|tirar\s+tudo|fechar|encerrar|trespassar)\s+(\S+\s+){0,3}(armaze(m|ns)|escritorios?|lojas?)\b|\b(armaze(m|ns)|escritorios?|lojas?)\s+(esta\s+|estao\s+|fica\s+)?(todo|toda|cheio|cheia|inteiro|inteira|atulhad[oa])\b|\brecheio\s+(de|do|da|dum|duma)\s+(um\s+|uma\s+|o\s+|a\s+)?(armazem|escritorio|loja)\b/,
   ],
   [
     "recolha_entulho",
