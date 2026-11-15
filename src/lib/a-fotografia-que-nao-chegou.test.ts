@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -87,6 +87,18 @@ async function daPonte(corpo: Record<string, unknown>) {
 }
 
 describe("a conversa: uma fotografia que não descarregou", () => {
+  // Os módulos que a rota carrega a meio, já carregados: com a suite inteira a
+  // correr, um import lento deixava o relógio de mentira a andar antes do tempo.
+  beforeAll(async () => {
+    await Promise.all([
+      import("@/app/api/whatsapp/ponte/route"),
+      import("@/lib/rajada-do-whatsapp"),
+      import("@/lib/rajada-em-curso"),
+      import("@/lib/voz-da-vitoria"),
+      import("next/server"),
+    ]);
+  }, 60_000);
+
   beforeEach(() => {
     process.env.PONTE_WHATSAPP_SEGREDO = "segredo-de-teste";
     mundo.fio = [];
@@ -122,12 +134,16 @@ describe("a conversa: uma fotografia que não descarregou", () => {
 
   it("a legenda segue pela rajada como texto, sem contar a fotografia como vista", async () => {
     vi.useFakeTimers();
-    const r = daPonte({ midia: "foto", imagemFalhou: true, texto: "Um sofá e um colchão" });
-    await vi.advanceTimersByTimeAsync(60_000);
+    let acabou = false;
+    const r = daPonte({ midia: "foto", imagemFalhou: true, texto: "Um sofá e um colchão" }).finally(() => {
+      acabou = true;
+    });
+    // Um segundo de cada vez, até a rota acabar: a espera da rajada só começa depois dos imports.
+    for (let i = 0; i < 120 && !acabou; i++) await vi.advanceTimersByTimeAsync(1_000);
     await r;
     expect(mundo.enviadas[0]).toBe(PEDIR_PARA_REENVIAR_A_FOTOGRAFIA);
     expect(mundo.cerebro).toEqual([{ texto: "Um sofá e um colchão", imagens: 0 }]);
-  });
+  }, 30_000);
 
   it("depois de ele escrever, uma nova falhada volta a pedir", async () => {
     await daPonte({ midia: "foto", imagemFalhou: true, texto: "" });
