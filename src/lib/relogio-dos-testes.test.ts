@@ -146,6 +146,7 @@ function testesQueTocamNoModelo(): Map<string, string> {
 const JA_EXISTIAM: ReadonlySet<string> = new Set([
   "src/lib/a-conta-so-mostra-o-que-e-do-cliente.test.ts",
   "src/lib/a-conversa-da-leonor.test.ts",
+  "src/lib/a-fotografia-que-nao-chegou.test.ts", // d34 (I&D), entrou em paralelo a 15-11
   "src/lib/a-conversa-da-mudanca-pela-lista.test.ts",
   "src/lib/a-conversa-do-oliver.test.ts",
   "src/lib/a-vitoria-aprende.test.ts",
