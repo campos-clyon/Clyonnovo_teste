@@ -112,11 +112,19 @@ describe("os textos", () => {
     expect(comONome("Olá {nome}!", "Ana Maria Silva")).toBe("Olá Ana!");
     expect(comONome("Olá {nome}!", null)).toBe("Olá!");
   });
-  it("o rascunho é válido, liga ao «Saber mais» e usa o telefone da fonte única", () => {
-    const r = rascunhoDoAviso("https://clyon.pt");
+  it("os textos aprovados (15-11): válidos, os 7 pontos no WhatsApp e no email, as 6 perguntas, e o telefone da fonte única", () => {
+    const r = rascunhoDoAviso();
     expect(typeof validarConteudo(r)).toBe("object");
-    expect(ligaAoSaberMais(r)).toBe(true);
-    expect(r.textoWhatsApp).toContain("https://clyon.pt/profissionais/novo-modelo");
+    expect(r.titulo).toBe("CLYON: o que muda a partir de 15 de novembro");
+    expect(r.textoWhatsApp.startsWith("Olá! Novidades importantes da CLYON para os profissionais.")).toBe(true);
+    expect(r.textoWhatsApp.endsWith("Dúvidas? Responda a esta mensagem.")).toBe(true);
+    for (let n = 1; n <= 7; n++) expect(r.textoWhatsApp).toContain(`*${n}. `);
+    for (let n = 1; n <= 7; n++) expect(r.textoEmail).toContain(`### ${n}. `);
+    for (let n = 1; n <= 6; n++) expect(r.textoEmail).toContain(`**${n}. `);
+    expect(r.textoEmail).toContain("Passa 36,90 € à CLYON.");
+    expect(r.textoEmail).toContain("931 632 622");
+    // O WhatsApp aprovado não leva ligação: o «Saber mais» não depende do interruptor para enviar.
+    expect(ligaAoSaberMais(r)).toBe(false);
     expect(ler("src/lib/aviso-aos-profissionais.ts")).not.toMatch(/931\s?632\s?622/);
   });
 });

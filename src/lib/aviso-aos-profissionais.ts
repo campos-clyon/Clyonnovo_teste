@@ -20,6 +20,7 @@
 
 import { e } from "./escapar-html";
 import { TELEFONE_DA_CLYON_NACIONAL } from "./telefone-da-clyon";
+import { TAXA_DAS_MUDANCAS, TAXA_IVA } from "./taxas-plataforma";
 
 /** A chave DESTE aviso. Uma versão nova do texto não volta a enviar a quem já recebeu. */
 export const CHAVE_DO_AVISO = "novo-modelo-15-11";
@@ -308,38 +309,74 @@ export function htmlDoEmailDoAviso(p: {
 </html>`;
 }
 
-/* ── Os textos de partida (rascunho da d11, 12-11; o CEO dá a versão final) ─ */
+/* ── Os textos aprovados (d11, 15-11-2026: o WhatsApp é o que o dono aprovou, letra a letra) ─ */
 
 export const FAIXA_DO_PAINEL =
   "A partir de 15/11 recebe directamente do cliente. Até 22/11, preencha o IBAN e o MB WAY no perfil.";
 
-export function rascunhoDoAviso(urlDoSite: string): ConteudoDoAviso {
-  const saberMais = `${urlDoSite.replace(/\/+$/, "")}${CAMINHO_DO_SABER_MAIS}`;
+/*
+ * A frase dos trabalhos de antes de 15-11 fala da caução — e é verdade para
+ * esses trabalhos, que seguem no modelo antigo até ao fim. Vive numa
+ * declaração com «ANTIGO» no nome, como a regra s da orquestra pede.
+ */
+export const TRABALHOS_DO_MODELO_ANTIGO_NO_AVISO = "Os trabalhos com caução de antes de 15/11 continuam como estavam.";
+export const PERGUNTA_DOS_TRABALHOS_DO_MODELO_ANTIGO =
+  "**6. Tenho um trabalho com caução feito antes de 15/11. Muda alguma coisa?**\nNão. Os trabalhos com caução de antes de 15/11 continuam como estavam: o pagamento segue pela CLYON, como foi combinado.";
+
+const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+
+/** O exemplo da pergunta 1, feito com a taxa de 10 % e o IVA de `taxas-plataforma.ts`. */
+function exemploDaTaxa(): string {
+  const trabalho = 300;
+  const taxa = trabalho * TAXA_DAS_MUDANCAS;
+  const iva = Math.round(taxa * TAXA_IVA * 100) / 100;
+  const pct = Math.round(TAXA_DAS_MUDANCAS * 100);
+  return `Exemplo de uma negociação de ${trabalho} € sem IVA, com a taxa de ${pct} %: a taxa são ${euros(taxa)} e o IVA dela ${euros(iva)}. Passa ${euros(taxa + iva)} à CLYON.`;
+}
+
+export const ASSUNTO_DO_AVISO = "CLYON: o que muda a partir de 15 de novembro";
+
+export function rascunhoDoAviso(_urlDoSite?: string): ConteudoDoAviso {
+  const ivaPct = Math.round(TAXA_IVA * 100);
   return {
-    titulo: "A partir de 15/11, recebe directamente do cliente",
+    titulo: ASSUNTO_DO_AVISO,
     textoEmail: [
       "Olá {nome},",
-      "### O que muda a 15 de novembro",
-      "A partir de 15/11/2026, às 00h (hora de Lisboa):",
-      [
-        "1. **O cliente paga-lhe directamente.** Pode pagar por transferência, por MB WAY ou em dinheiro no local, e é ele que escolhe. O dinheiro do trabalho já não passa pela CLYON.",
-        "2. **Passa à CLYON a taxa da plataforma e o IVA dela.** Cada trabalho fechado gera uma referência Multibanco, que também pode pagar por MB WAY. Tem 4 dias para pagar.",
-        "3. **Se não pagar a tempo, o valor fica em atraso.** A partir do 5.º dia, continua a ver os pedidos, mas não pode aceitar nem enviar ofertas até pagar. O botão «Pagar o valor em atraso» mostra o que falta. Quando o pagamento é confirmado, a conta desbloqueia sozinha.",
-        "4. **Cada um passa a sua fatura.** O profissional fatura o trabalho ao cliente e a CLYON fatura a taxa da plataforma. As duas faturas ficam juntas no pedido.",
-        "5. **O perfil diz como trabalha.** Indique se emite fatura, se é com IVA ou com isenção, e se emite guia de transporte. O cliente vê isto quando escolhe.",
-      ].join("\n"),
-      "**O que tem de fazer:** preencher o IBAN e o MB WAY no perfil **até 22/11**. A partir dessa data, sem os dois, não pode aceitar nem enviar ofertas.",
-      "**Trabalhos de antes:** os trabalhos de antes de 15/11 em que o cliente já pagou à CLYON continuam como estavam, até ao fim.",
+      "A partir de 15/11/2026, às 00h (hora de Lisboa), o pagamento dos trabalhos muda. Eis o que precisa de saber.",
+      "### 1. Recebe directamente do cliente",
+      "O cliente paga-lhe directamente, por transferência, por MB WAY ou em dinheiro no local, e é ele que escolhe. O dinheiro do trabalho já não passa pela CLYON.",
+      "### 2. Passa à CLYON a taxa da plataforma e o IVA dela",
+      "Cada trabalho fechado gera uma referência Multibanco, que também pode pagar por MB WAY. Tem **4 dias** para pagar. Se não pagar a tempo, o valor fica em atraso: a partir do 5.º dia continua a ver os pedidos, mas não pode aceitar nem enviar ofertas até pagar. O botão «Pagar o valor em atraso» mostra o que falta, e quando o pagamento é confirmado a conta desbloqueia sozinha.",
+      "### 3. Faturas",
+      "Cada um passa a sua fatura: o profissional fatura o trabalho ao cliente e a CLYON fatura a taxa da plataforma. As duas faturas ficam juntas no pedido. No perfil, indique se emite fatura, se é com IVA ou com isenção, e se emite guia de transporte. O cliente vê isto quando escolhe.",
+      "### 4. Até 22/11, preencha o IBAN e o MB WAY no perfil",
+      "A partir dessa data, sem os dois, deixa de poder aceitar e enviar ofertas.",
+      "### 5. Os dias em que não pode trabalhar",
+      "Na Agenda da app pode marcar os dias e as horas em que não pode trabalhar. Nesses dias não recebe pedidos.",
+      "### 6. Mudanças à hora",
+      "No fim da mudança, preencha a folha na app: as horas, a deslocação e o material. Se não conseguir, ligue-nos e a equipa preenche consigo.",
+      "### 7. Os avisos na app",
+      "Os avisos estão agora no sino 🔔, e cada actualização da app diz o que traz.",
+      TRABALHOS_DO_MODELO_ANTIGO_NO_AVISO,
+      "### Perguntas frequentes",
+      `**1. Quanto passo à CLYON em cada trabalho?**\nPassa a taxa da plataforma do trabalho, mais ${ivaPct} % de IVA sobre essa taxa. O IVA conta só sobre a taxa, não sobre o trabalho todo. ${exemploDaTaxa()} O valor certo de cada trabalho aparece no trabalho fechado, com a referência.`,
+      "**2. E se o cliente não me pagar?**\nO pagamento do trabalho é entre o profissional e o cliente. Combine a forma de pagamento antes de começar e confirme que recebeu antes de fechar o trabalho. Se houver um problema, fale connosco pelo WhatsApp e ajudamos a falar com o cliente.",
+      "**3. O cliente pode pagar por Multibanco?**\nNão. O cliente paga-lhe por transferência, por MB WAY ou em dinheiro. A referência Multibanco serve só para pagar a taxa à CLYON.",
+      "**4. Não emito fatura (ou sou isento). Posso continuar?**\nPode. Indique no perfil se emite fatura, e se é com IVA ou com isenção. O cliente vê isto quando escolhe o profissional, por isso escreva exactamente como trabalha. A fatura da taxa da plataforma é sempre emitida pela CLYON.",
+      "**5. Passaram os 4 dias. O que acontece?**\nO valor fica em atraso. Continua a ver os pedidos, mas a partir do 5.º dia não pode aceitar nem enviar ofertas. Toque em «Pagar o valor em atraso», pague por referência ou MB WAY, e a conta desbloqueia sozinha quando o pagamento é confirmado.",
+      PERGUNTA_DOS_TRABALHOS_DO_MODELO_ANTIGO,
       `Dúvidas: fale connosco pelo WhatsApp ${TELEFONE_DA_CLYON_NACIONAL}.`,
     ].join("\n\n"),
     textoWhatsApp: [
-      "Olá {nome}! Uma novidade importante da CLYON para os profissionais.",
-      "*A partir de 15/11, recebe directamente do cliente.* O cliente paga-lhe por transferência, MB WAY ou em dinheiro no local (é ele que escolhe).",
-      "Depois de fechar o trabalho, passa à CLYON *a taxa da plataforma e o IVA dela*. Paga pela referência Multibanco ou por MB WAY, *em 4 dias*. Se passar o prazo, o valor fica em atraso: a partir do 5.º dia não pode aceitar nem enviar ofertas até pagar (botão «Pagar o valor em atraso»).",
-      "O profissional fatura o trabalho e a CLYON fatura a taxa. No perfil, indique se emite fatura (com IVA ou isento) e guia de transporte. O cliente vê isto quando escolhe.",
-      "👉 *Até 22/11, preencha o IBAN e o MB WAY no perfil.* Sem eles, deixa de poder aceitar e enviar ofertas.",
-      "Os trabalhos de antes de 15/11 em que o cliente já pagou à CLYON continuam como estavam.",
-      `Tudo explicado aqui: ${saberMais}`,
+      "Olá! Novidades importantes da CLYON para os profissionais.",
+      "*1. A partir de 15/11, recebe directamente do cliente.* O cliente paga-lhe por transferência, MB WAY ou em dinheiro no local (é ele que escolhe).",
+      "*2. Depois, passa à CLYON a taxa da plataforma e o IVA dela,* pela referência Multibanco ou MB WAY, em 4 dias. Se passar o prazo, a partir do 5.º dia não pode aceitar nem enviar ofertas até pagar (botão «Pagar o valor em atraso»).",
+      "*3. Faturas:* o profissional fatura o trabalho e a CLYON fatura a taxa. No perfil, indique se emite fatura (com IVA ou isento) e guia de transporte.",
+      "*4. Até 22/11, preencha o IBAN e o MB WAY no perfil.* Sem eles, deixa de poder aceitar e enviar ofertas.",
+      "*5. Na Agenda da app pode marcar os dias e as horas em que não pode trabalhar* — não recebe pedidos para esses dias.",
+      "*6. Mudanças à hora:* no fim, preencha a folha (horas, deslocação e material) na app. Se não conseguir, ligue-nos e a equipa preenche consigo.",
+      "*7. Na app,* os avisos estão agora no sino 🔔 e cada actualização diz o que traz.",
+      TRABALHOS_DO_MODELO_ANTIGO_NO_AVISO,
       "Dúvidas? Responda a esta mensagem.",
     ].join("\n\n"),
   };
