@@ -10,8 +10,10 @@ import {
   definirLucroManual,
   definirComissaoSobre,
   definirEstadoDoAssistente,
+  definirExcepcaoDaSaida,
   definirPalavraPasseDoAssistente,
   definirSeccoesDoAssistente,
+  definirSaidaDoAssistente,
   erroDaPalavraPasseDeAssistente,
   erroDoNomeDeAssistente,
   existeColaboradorComNome,
@@ -26,6 +28,7 @@ import { appendOrderHistory, definirPrecoAoClienteClyon } from "@/lib/db";
 import { lerPrecoAoCliente } from "@/lib/oferta-clyon";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { normalizarSeccoes } from "@/lib/papel-do-painel";
+import { ROTULO_DA_EXCEPCAO, diaDeSaidaValido } from "@/lib/saida-da-assistente";
 import { diaEscrito, intervaloValido, type Periodo } from "@/lib/periodos-de-comissao";
 
 export const runtime = "nodejs";
@@ -270,6 +273,48 @@ export async function POST(req: NextRequest) {
             corpo.comissaoSobre === "todos"
               ? "Passa a ganhar sobre todos os trabalhos concluídos."
               : "Passa a ganhar só sobre os trabalhos de que é responsável.",
+        });
+      }
+
+      // ── O dia de saída (d40, 15-11-2026) ───────────────────────────────────
+      // Só o administrador (esta rota é requireAdminGeral). `null` apaga o dia.
+      if (corpo.saiuA !== undefined) {
+        const dia = corpo.saiuA === null || corpo.saiuA === "" ? null : diaDeSaidaValido(corpo.saiuA);
+        if (corpo.saiuA !== null && corpo.saiuA !== "" && dia === null) {
+          return NextResponse.json({ error: "Escolha o dia em que saiu." }, { status: 400 });
+        }
+        const r = await definirSaidaDoAssistente(id, dia, colab?.nome ?? null);
+        if (!r) return NextResponse.json({ error: "Assistente não encontrado." }, { status: 404 });
+        return NextResponse.json({
+          ok: true,
+          feito: dia
+            ? `${r.nome} saiu a ${diaEscrito(dia)}: o que for feito depois não conta para ela, salvo os marcados.`
+            : `Dia de saída de ${r.nome} apagado — volta a contar como antes.`,
+        });
+      }
+
+      // ── Um trabalho que conta depois da saída, por excepção (d40) ─────────
+      if (corpo.excepcaoDaSaida != null && typeof corpo.excepcaoDaSaida === "object") {
+        const { pedidoId: idCru, marcar } = corpo.excepcaoDaSaida as Record<string, unknown>;
+        const pedidoId = Number(String(idCru ?? "").replace("#", "").trim());
+        if (!Number.isInteger(pedidoId) || pedidoId <= 0 || typeof marcar !== "boolean") {
+          return NextResponse.json({ error: "Escreva o número do pedido." }, { status: 400 });
+        }
+        const r = await definirExcepcaoDaSaida(id, pedidoId, marcar, colab?.nome ?? null);
+        if (!r.ok) return NextResponse.json({ error: r.erro }, { status: r.estado });
+        const quem = colab?.nome ?? "a CLYON";
+        await appendOrderHistory(pedidoId, {
+          type: "note",
+          by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+          message: marcar
+            ? `Marcado por ${quem}: conta para ${r.nome} depois da saída — ${ROTULO_DA_EXCEPCAO}.`
+            : `Desmarcado por ${quem}: deixa de contar para ${r.nome} depois da saída.`,
+        });
+        return NextResponse.json({
+          ok: true,
+          feito: marcar
+            ? `#${pedidoId} conta para ${r.nome} quando ficar concluído, na quinzena em que for feito.`
+            : `#${pedidoId} já não conta para ${r.nome} depois da saída.`,
         });
       }
 

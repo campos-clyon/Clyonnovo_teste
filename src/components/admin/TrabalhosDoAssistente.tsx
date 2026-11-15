@@ -10,6 +10,7 @@ import {
   relatorioEmCsv,
   type Relatorio,
 } from "@/lib/relatorio-das-comissoes";
+import { ROTULO_DA_EXCEPCAO } from "@/lib/saida-da-assistente";
 
 /**
  * A COMISSÃO POR PERÍODOS, COM OS TRABALHOS POR TRÁS DE CADA NÚMERO.
@@ -60,6 +61,8 @@ type Trabalho = {
   fonteDoValor: FonteDoValor;
   lucro: number;
   comissaoAssistente: number;
+  /** Depois da saída da assistente, só conta por estar marcado (d40). */
+  porExcepcao?: boolean;
 };
 
 type Detalhe = {
@@ -112,8 +115,16 @@ type AindaNaoConta = {
   cidade: string | null;
   profissional: string | null;
   operador: string;
-  motivo: "por_fazer" | "falta_confirmar" | "confirmado_sem_concluir" | "cancelado" | "arquivado" | "conta_de_teste";
+  motivo:
+    | "depois_da_saida"
+    | "por_fazer"
+    | "falta_confirmar"
+    | "confirmado_sem_concluir"
+    | "cancelado"
+    | "arquivado"
+    | "conta_de_teste";
   porque: string;
+  porExcepcao?: boolean;
 };
 
 /** Uma quinzena por vir (ou a actual), com o que se espera — ver `previsaoPorPeriodo` (17-10-2026). */
@@ -136,6 +147,7 @@ type Previsao = {
     motivo: AindaNaoConta["motivo"];
     lucro: number;
     fonteDoValor: FonteDoValor;
+    porExcepcao?: boolean;
   }>;
 };
 
@@ -143,6 +155,8 @@ type Resposta = {
   nome: string;
   comissaoSobre?: "todos" | "seus";
   comissaoPercent?: number;
+  /** «Saiu a 10/11/2026», ou nada (d40). */
+  rotuloDaSaida?: string | null;
   periodos: Periodo[];
   resumo?: Resumo;
   aindaNaoContam?: AindaNaoConta[];
@@ -151,6 +165,7 @@ type Resposta = {
 
 /** A cor da razão: o que vai contar, o que precisa de alguém, e o que nunca conta. */
 const COR_DO_MOTIVO: Record<AindaNaoConta["motivo"], string> = {
+  depois_da_saida: "text-slate-500",
   por_fazer: "text-slate-300",
   falta_confirmar: "text-amber-300",
   confirmado_sem_concluir: "text-red-300",
@@ -238,7 +253,7 @@ export function paraCsv(d: Detalhe): string {
     t.cidade,
     t.profissional,
     t.operador ?? "",
-    `${dataCurta(t.concluidoEm)}${t.dataAproximada ? " (aproximada)" : ""}`,
+    `${dataCurta(t.concluidoEm)}${t.dataAproximada ? " (aproximada)" : ""}${t.porExcepcao ? ` · ${ROTULO_DA_EXCEPCAO}` : ""}`,
     num(t.valor),
     t.conta ? num(t.lucro) : "",
     FONTE[t.fonteDoValor],
@@ -414,6 +429,7 @@ function TabelaDaPrevisao({ p }: { p: Previsao }) {
               <td className="py-1.5 pr-3 text-slate-200">
                 {t.cliente ?? "—"}
                 {t.servico && <span className="block text-[10px] text-slate-500">{t.servico}</span>}
+                {t.porExcepcao && <span className="block text-[10px] text-cyan-300">{ROTULO_DA_EXCEPCAO}</span>}
               </td>
               <td className="py-1.5 pr-3 text-slate-300">
                 {diaEscrito(t.dia)}
@@ -672,6 +688,7 @@ function TabelaDeTrabalhos({
                   {[t.servico, t.cidade, t.concluidoEm ? `concluído a ${dataCurta(t.concluidoEm)}` : null]
                     .filter(Boolean)
                     .join(" · ")}
+                  {t.porExcepcao && <span className="ml-1 text-cyan-300">· {ROTULO_DA_EXCEPCAO}</span>}
                   {t.dataAproximada && (
                     <span
                       className="ml-1 text-amber-300"
@@ -872,6 +889,13 @@ export default function TrabalhosDoAssistente({
 
   return (
     <div>
+      {/* A SAÍDA — d40, 15-11-2026: dita por cima de tudo, para quem lê o extracto. */}
+      {d.rotuloDaSaida && (
+        <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-100">
+          <strong>{d.rotuloDaSaida}</strong> — o que foi feito depois não conta, salvo os trabalhos marcados como
+          «{ROTULO_DA_EXCEPCAO}». Os períodos já pagos não mudam.
+        </p>
+      )}
       {podeGerir && (
         <div className="mb-3 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2.5">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Resumo entre datas</p>

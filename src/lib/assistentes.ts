@@ -22,6 +22,14 @@ import {
   type EstadoDoPeriodo,
   type Periodo,
 } from "@/lib/periodos-de-comissao";
+import {
+  comExcepcao,
+  contaDepoisDaSaida,
+  excepcoesDoJson,
+  ROTULO_DA_EXCEPCAO,
+  rotuloDaSaida,
+  type SaidaDaConta,
+} from "@/lib/saida-da-assistente";
 import { comissaoDaClyon, quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
 
 /**
@@ -89,6 +97,8 @@ export type Assistente = {
   /** Percentagem da comissão da CLYON que lhe cabe (0–100). */
   comissaoPercent: number;
   comissaoSobre: ComissaoSobre;
+  /** O dia de saída e os pedidos que contam depois dele (d40) — ver `saida-da-assistente.ts`. */
+  saida: SaidaDaConta;
   estatisticas: EstatisticasDeTrabalho;
   /** Os períodos, sem as linhas — essas vêm à parte, em `trabalhosDoAssistente`. */
   comissoes: {
@@ -111,6 +121,8 @@ type LinhaDeAssistente = {
   seccoesJson: string | null;
   commissionPercent: string | number | null;
   comissaoSobre: string | null;
+  saiuA: string | null;
+  excepcoesDaSaidaJson: string | null;
   createdAt: Date | string | null;
   updatedAt: Date | string | null;
 };
@@ -138,6 +150,21 @@ export async function ensureAssistentesSchema(): Promise<void> {
     // «todos» ou «seus» (08-10-2026). NULL = «seus», o que as contas sempre foram.
     try {
       await conn.execute(`ALTER TABLE colaboradores ADD COLUMN comissaoSobre VARCHAR(10) NULL DEFAULT NULL`);
+    } catch {
+      /* já existe */
+    }
+    /*
+     * A SAÍDA (d40, 15-11-2026): o último dia de Lisboa que conta, em texto
+     * `YYYY-MM-DD` como os períodos (um DATE passava pelo fuso da ligação), e a
+     * lista dos pedidos que contam depois dele por excepção. NULL = ainda cá está.
+     */
+    try {
+      await conn.execute(`ALTER TABLE colaboradores ADD COLUMN saiuA CHAR(10) NULL DEFAULT NULL`);
+    } catch {
+      /* já existe */
+    }
+    try {
+      await conn.execute(`ALTER TABLE colaboradores ADD COLUMN excepcoesDaSaidaJson TEXT NULL DEFAULT NULL`);
     } catch {
       /* já existe */
     }
@@ -240,13 +267,19 @@ function seccoesDaLinha(json: string | null): SeccaoDoAssistente[] {
   return seccoesGuardadas(json);
 }
 
+/** A saída gravada na conta — ver `saida-da-assistente.ts`. */
+function saidaDaLinha(l: { saiuA?: string | null; excepcoesDaSaidaJson?: string | null }): SaidaDaConta {
+  const saiuA = typeof l.saiuA === "string" && /^\d{4}-\d{2}-\d{2}$/.test(l.saiuA.trim()) ? l.saiuA.trim() : null;
+  return { saiuA, excepcoes: excepcoesDoJson(l.excepcoesDaSaidaJson) };
+}
+
 function comissaoDaLinha(v: string | number | null): number {
   const n = Number(v);
   return Number.isFinite(n) && v !== null ? n : COMISSAO_ASSISTENTE_POR_OMISSAO;
 }
 
 const SELECT_ASSISTENTE = `SELECT id, nome, funcao, isAdmin, active, seccoesJson, commissionPercent, comissaoSobre,
-                                  createdAt, updatedAt
+                                  saiuA, excepcoesDaSaidaJson, createdAt, updatedAt
                              FROM colaboradores`;
 
 /**
@@ -260,6 +293,7 @@ export async function assistentePorId(id: number): Promise<{
   seccoes: SeccaoDoAssistente[];
   comissaoPercent: number;
   comissaoSobre: ComissaoSobre;
+  saida: SaidaDaConta;
 } | undefined> {
   await ensureAssistentesSchema();
   return withConnection(async (conn) => {
@@ -276,6 +310,7 @@ export async function assistentePorId(id: number): Promise<{
       seccoes: seccoesDaLinha(l.seccoesJson),
       comissaoPercent: comissaoDaLinha(l.commissionPercent),
       comissaoSobre: lerComissaoSobre(l.comissaoSobre),
+      saida: saidaDaLinha(l),
     };
   });
 }
@@ -407,6 +442,8 @@ export type TrabalhoDoAssistente = {
   /** O que a CLYON ficou neste trabalho, sem IVA. */
   lucro: number;
   comissaoAssistente: number;
+  /** Depois da saída da assistente, só conta por estar marcado (d40). */
+  porExcepcao?: boolean;
 };
 
 export type LinhaCruaDoTrabalho = {
@@ -440,6 +477,8 @@ export type LinhaCruaDoTrabalho = {
   /** Quem operou o pedido — quem o aceitou ou foi o primeiro a agir nele. */
   assignedToName?: string | null;
   profissional?: string | null;
+  /** Posto por `noAlcanceDe`: conta depois da saída só por excepção (d40). */
+  porExcepcao?: boolean;
 };
 
 /**
@@ -567,6 +606,7 @@ export function detalheDaComissao(
       fonteDoValor: r.fonte,
       lucro,
       comissaoAssistente: centimos((lucro * minhaPercent) / 100),
+      ...(l.porExcepcao ? { porExcepcao: true } : {}),
     };
   });
 
@@ -649,12 +689,39 @@ export type TotaisDasComissoes = {
   trabalhos: number;
 };
 
-/** As linhas que contam para esta conta: todas, ou só aquelas de que foi responsável. */
+/**
+ * As linhas que contam para esta conta: todas, ou só aquelas de que foi
+ * responsável — e, depois do dia de saída (d40), só as marcadas por excepção
+ * (essas contam mesmo numa conta «os seus»). Um pedido já num período pago
+ * (`pagos`) fica como estava: o pago não muda.
+ */
 export function noAlcanceDe<T extends LinhaQueConta>(
   linhas: T[],
-  a: { id: number; comissaoSobre: ComissaoSobre },
+  a: { id: number; comissaoSobre: ComissaoSobre; saida?: SaidaDaConta | null },
+  pagos?: ReadonlySet<number>,
 ): T[] {
-  return a.comissaoSobre === "todos" ? linhas : linhas.filter((l) => Number(l.assignedToId) === a.id);
+  const doResponsavel = (l: T) => a.comissaoSobre === "todos" || Number(l.assignedToId) === a.id;
+  const saida = a.saida;
+  if (!saida?.saiuA) return linhas.filter(doResponsavel);
+  const excepcoes = new Set(saida.excepcoes);
+  const out: T[] = [];
+  for (const l of linhas) {
+    const id = Number(l.id);
+    if (!doResponsavel(l) && !excepcoes.has(id)) continue;
+    if (pagos?.has(id)) {
+      out.push(l);
+      continue;
+    }
+    const r = contaDepoisDaSaida(id, diaQueConta(l), saida);
+    if (!r.conta) continue;
+    out.push(r.porExcepcao ? { ...l, porExcepcao: true } : l);
+  }
+  return out;
+}
+
+/** Os pedidos já fotografados nos períodos pagos de uma conta. */
+export function pedidosPagos(pagamentos: PagamentoDeComissao[]): Set<number> {
+  return new Set(pagamentos.flatMap((p) => p.trabalhos.map((t) => Number(t.pedidoId))));
 }
 
 /** O dia de Lisboa em que o trabalho ficou concluído — ou `null`. */
@@ -783,6 +850,7 @@ export function comissoesPorPeriodo(args: {
           fonteDoValor: t.fonteDoValor,
           lucro: t.lucro,
           comissaoAssistente: t.comissaoAssistente,
+          ...(v?.porExcepcao ? { porExcepcao: true } : {}),
         };
       });
       /*
@@ -984,6 +1052,8 @@ export async function trabalhosQueContam(desde: string = INICIO_DAS_COMISSOES): 
  * para se saber que nunca vão contar.
  */
 export type MotivoDeNaoContar =
+  /* Vai ficar feito depois do dia de saída da assistente, sem excepção (d40). */
+  | "depois_da_saida"
   | "por_fazer"
   | "falta_confirmar"
   | "confirmado_sem_concluir"
@@ -1016,6 +1086,8 @@ export type TrabalhoQueAindaNaoConta = {
   motivo: MotivoDeNaoContar;
   /** A razão por extenso, como se lê no ecrã. */
   porque: string;
+  /** Marcado para contar depois da saída (d40). */
+  porExcepcao?: boolean;
 };
 
 const diaDaBase = (v: Date | string | null | undefined): string | null => {
@@ -1086,10 +1158,12 @@ export async function trabalhosQueAindaNaoContam(desde: string = INICIO_DAS_COMI
 /** As linhas lidas, já com a razão, só as desta conta, por número de pedido. */
 export function aindaNaoContamDe(
   linhas: LinhaQueAindaNaoConta[],
-  a: { id: number; comissaoSobre: ComissaoSobre },
+  a: { id: number; comissaoSobre: ComissaoSobre; saida?: SaidaDaConta | null },
+  hoje: string = diaEmLisboa(new Date()),
 ): TrabalhoQueAindaNaoConta[] {
+  const excepcoes = new Set(a.saida?.saiuA ? a.saida.excepcoes : []);
   return linhas
-    .filter((l) => a.comissaoSobre === "todos" || Number(l.assignedToId) === a.id)
+    .filter((l) => a.comissaoSobre === "todos" || Number(l.assignedToId) === a.id || excepcoes.has(Number(l.id)))
     .map((l) => ({
       pedidoId: Number(l.id),
       cliente: (l.contactName ?? "").trim() || null,
@@ -1097,9 +1171,44 @@ export function aindaNaoContamDe(
       cidade: l.city ?? null,
       profissional: l.profissional ?? null,
       operador: operadorDoTrabalho(l),
-      ...porqueAindaNaoConta(l),
+      ...porqueComASaida(l, a.saida, hoje),
     }))
     .sort(porNumeroDoPedido);
+}
+
+/**
+ * O dia em que se espera que um trabalho por concluir fique feito: o dia em
+ * que já foi feito, se foi; o dia marcado, se ainda não passou; senão hoje.
+ * É o mesmo dia que a previsão usa.
+ */
+export function diaEsperado(l: LinhaQueAindaNaoConta, hoje: string): string {
+  const feito = diaDaBase(l.feitoEm ?? l.execucaoEnviadaEm);
+  if (feito) return feito;
+  const marcado = l.confirmadoEm ? null : diaDaBase(l.dataCombinada ?? l.dataAgendada);
+  return marcado != null && marcado >= hoje ? marcado : hoje;
+}
+
+/**
+ * A razão de não contar ainda, com a saída (d40): um trabalho que vai contar
+ * mas fica depois do dia de saída, sem excepção, nunca vai contar para ela; um
+ * marcado diz que conta por excepção.
+ */
+export function porqueComASaida(
+  l: LinhaQueAindaNaoConta,
+  saida: SaidaDaConta | null | undefined,
+  hoje: string,
+): { motivo: MotivoDeNaoContar; porque: string; porExcepcao?: boolean } {
+  const r = porqueAindaNaoConta(l);
+  if (!saida?.saiuA || !VAO_CONTAR.has(r.motivo)) return r;
+  const s = contaDepoisDaSaida(Number(l.id), diaEsperado(l, hoje), saida);
+  if (s.porExcepcao) return { ...r, porque: `${r.porque} · ${ROTULO_DA_EXCEPCAO}`, porExcepcao: true };
+  if (!s.conta) {
+    return {
+      motivo: "depois_da_saida",
+      porque: `fica depois da saída (${rotuloDaSaida(saida.saiuA).replace("Saiu a ", "")}) — não conta, salvo se for marcado`,
+    };
+  }
+  return r;
 }
 
 /**
@@ -1131,6 +1240,8 @@ export type TrabalhoPrevisto = {
   motivo: MotivoDeNaoContar;
   lucro: number;
   fonteDoValor: FonteDoValor;
+  /** Conta depois da saída só por estar marcado (d40). */
+  porExcepcao?: boolean;
 };
 
 export type PrevisaoDoPeriodo = {
@@ -1154,7 +1265,7 @@ const VAO_CONTAR: ReadonlySet<MotivoDeNaoContar> = new Set<MotivoDeNaoContar>([
 
 export function previsaoPorPeriodo(args: {
   linhas: LinhaQueAindaNaoConta[];
-  a: { id: number; comissaoSobre: ComissaoSobre };
+  a: { id: number; comissaoSobre: ComissaoSobre; saida?: SaidaDaConta | null };
   minhaPercent: number;
   hoje: string;
 }): PrevisaoDoPeriodo[] {
@@ -1166,9 +1277,11 @@ export function previsaoPorPeriodo(args: {
     return x;
   };
 
+  const excepcoes = new Set(a.saida?.saiuA ? a.saida.excepcoes : []);
   for (const l of linhas) {
-    if (a.comissaoSobre !== "todos" && Number(l.assignedToId) !== a.id) continue;
-    const { motivo } = porqueAindaNaoConta(l);
+    if (a.comissaoSobre !== "todos" && Number(l.assignedToId) !== a.id && !excepcoes.has(Number(l.id))) continue;
+    // Com a saída (d40): o que fica depois dela, sem excepção, sai da previsão.
+    const { motivo, porExcepcao } = porqueComASaida(l, a.saida, hoje);
     if (!VAO_CONTAR.has(motivo)) continue;
     const marcado = motivo === "por_fazer" ? diaDaBase(l.dataCombinada ?? l.dataAgendada) : null;
     const diaMarcado = marcado != null && marcado >= hoje;
@@ -1188,6 +1301,7 @@ export function previsaoPorPeriodo(args: {
         motivo,
         lucro: centimos(r.lucro),
         fonteDoValor: r.fonte,
+        ...(porExcepcao ? { porExcepcao: true } : {}),
       },
     });
   }
@@ -1297,6 +1411,10 @@ export type ComissoesDoAssistente = {
   nome: string;
   comissaoPercent: number;
   comissaoSobre: ComissaoSobre;
+  /** O dia de saída e as excepções (d40). */
+  saida: SaidaDaConta;
+  /** «Saiu a 10/11/2026», ou `null`. */
+  rotuloDaSaida: string | null;
   periodos: PeriodoDaComissao[];
   totais: TotaisDasComissoes;
   /** O resumo entre duas datas, quando se pediu — ver `resumoEntreDatas`. */
@@ -1312,7 +1430,7 @@ export type ComissoesDoAssistente = {
  * e, se se pedir, o resumo de um intervalo sobre as mesmas linhas.
  */
 async function comissoesDe(
-  a: { id: number; comissaoPercent: number; comissaoSobre: ComissaoSobre },
+  a: { id: number; comissaoPercent: number; comissaoSobre: ComissaoSobre; saida?: SaidaDaConta },
   intervalo?: Periodo,
 ) {
   const [linhas, pagamentos, porContar] = await Promise.all([
@@ -1320,8 +1438,8 @@ async function comissoesDe(
     pagamentosDosAssistentes([a.id]),
     trabalhosQueAindaNaoContam(),
   ]);
-  const minhas = noAlcanceDe(linhas, a);
   const pagas = pagamentos.get(a.id) ?? [];
+  const minhas = noAlcanceDe(linhas, a, pedidosPagos(pagas));
   const hoje = diaEmLisboa(new Date());
   const r = comissoesPorPeriodo({
     linhas: minhas,
@@ -1329,7 +1447,7 @@ async function comissoesDe(
     minhaPercent: a.comissaoPercent,
     hoje,
   });
-  const aindaNaoContam = aindaNaoContamDe(porContar, a);
+  const aindaNaoContam = aindaNaoContamDe(porContar, a, hoje);
   const previsao = previsaoPorPeriodo({ linhas: porContar, a, minhaPercent: a.comissaoPercent, hoje });
   return intervalo
     ? {
@@ -1353,6 +1471,8 @@ export async function trabalhosDoAssistente(
     nome: a.nome,
     comissaoPercent: a.comissaoPercent,
     comissaoSobre: a.comissaoSobre,
+    saida: a.saida,
+    rotuloDaSaida: a.saida.saiuA ? rotuloDaSaida(a.saida.saiuA) : null,
     periodos: c.periodos,
     totais: c.totais,
     aindaNaoContam: c.aindaNaoContam,
@@ -1381,9 +1501,11 @@ export async function listarAssistentes(): Promise<{ assistentes: Assistente[] }
     assistentes: linhas.map((l) => {
       const comissaoSobre = lerComissaoSobre(l.comissaoSobre);
       const comissaoPercent = comissaoDaLinha(l.commissionPercent);
+      const saida = saidaDaLinha(l);
+      const pagas = pagamentos.get(l.id) ?? [];
       const c = comissoesPorPeriodo({
-        linhas: noAlcanceDe(trabalhos, { id: l.id, comissaoSobre }),
-        pagamentos: pagamentos.get(l.id) ?? [],
+        linhas: noAlcanceDe(trabalhos, { id: l.id, comissaoSobre, saida }, pedidosPagos(pagas)),
+        pagamentos: pagas,
         minhaPercent: comissaoPercent,
         hoje,
       });
@@ -1394,6 +1516,7 @@ export async function listarAssistentes(): Promise<{ assistentes: Assistente[] }
         seccoes: seccoesDaLinha(l.seccoesJson),
         comissaoPercent,
         comissaoSobre,
+        saida,
         estatisticas: stats.get(l.id)!,
         // Sem as linhas: o ecrã das contas recarrega-se de vinte em vinte segundos.
         comissoes: { periodos: c.periodos.map(({ detalhe: _linhas, ...resumo }) => resumo), totais: c.totais },
@@ -1561,6 +1684,105 @@ export function definirComissaoDoAssistente(id: number, percent: number): Promis
 
 export function definirComissaoSobre(id: number, sobre: ComissaoSobre): Promise<boolean> {
   return actualizarAssistente(id, "comissaoSobre = ?", [sobre]);
+}
+
+/**
+ * O DIA DE SAÍDA — d40, 15-11-2026. Só o administrador (a rota é
+ * `requireAdminGeral`). `null` apaga-o. Fica no registo permanente quem mudou,
+ * de que dia para que dia. Não desactiva a conta: isso é outro botão.
+ */
+export async function definirSaidaDoAssistente(
+  id: number,
+  dia: string | null,
+  por: string | null,
+): Promise<{ nome: string; antes: string | null } | undefined> {
+  const a = await assistentePorId(id);
+  if (!a) return undefined;
+  const mudou = await actualizarAssistente(id, "saiuA = ?", [dia as string]);
+  if (!mudou) return undefined;
+  const escrito = (d: string | null) => (d ? d.split("-").reverse().join("/") : "sem dia");
+  await registarSemFalhar({
+    acontecimento: "assistente_saida",
+    autorTipo: "clyon",
+    autorNome: por,
+    resumo: `Saída de ${a.nome}: de ${escrito(a.saida.saiuA)} para ${escrito(dia)}.`,
+    detalhe: { assistenteId: id, antes: a.saida.saiuA, depois: dia },
+  });
+  return { nome: a.nome, antes: a.saida.saiuA };
+}
+
+export type ResultadoDaExcepcao =
+  | { ok: true; nome: string; excepcoes: number[] }
+  | { ok: false; erro: string; estado: number };
+
+/**
+ * UM TRABALHO QUE CONTA DEPOIS DA SAÍDA — d40. «Conta para <nome> (falou com
+ * o cliente)», marcado ou desmarcado um a um pelo administrador. A lista vive
+ * na conta (`excepcoesDaSaidaJson`), lida e escrita na mesma transacção com a
+ * linha trancada: dois cliques ao mesmo tempo não perdem uma marca. Fica no
+ * histórico do pedido (quem chama) e no registo permanente.
+ */
+export async function definirExcepcaoDaSaida(
+  id: number,
+  pedidoId: number,
+  marcar: boolean,
+  por: string | null,
+): Promise<ResultadoDaExcepcao> {
+  await ensureAssistentesSchema();
+  await ensureSimulatorOrdersTable();
+  const r = await withConnection(async (conn): Promise<ResultadoDaExcepcao> => {
+    await conn.beginTransaction();
+    try {
+      const [linhas] = (await conn.execute(
+        `SELECT nome, saiuA, excepcoesDaSaidaJson FROM colaboradores
+          WHERE id = ? AND funcao = 'assistente' AND isAdmin = 0 LIMIT 1 FOR UPDATE`,
+        [id],
+      )) as [Array<{ nome: string; saiuA: string | null; excepcoesDaSaidaJson: string | null }>, unknown];
+      const l = linhas[0];
+      if (!l) {
+        await conn.rollback();
+        return { ok: false, erro: "Assistente não encontrado.", estado: 404 };
+      }
+      if (!saidaDaLinha(l).saiuA) {
+        await conn.rollback();
+        return { ok: false, erro: `Escreva primeiro o dia em que ${l.nome} saiu.`, estado: 409 };
+      }
+      if (marcar) {
+        const [pedido] = (await conn.execute("SELECT id FROM simulatorOrders WHERE id = ? LIMIT 1", [pedidoId])) as [
+          Array<{ id: number }>,
+          unknown,
+        ];
+        if (pedido.length === 0) {
+          await conn.rollback();
+          return { ok: false, erro: `O pedido #${pedidoId} não existe.`, estado: 404 };
+        }
+      }
+      const antes = excepcoesDoJson(l.excepcoesDaSaidaJson);
+      const depois = comExcepcao(antes, pedidoId, marcar);
+      await conn.execute(
+        "UPDATE colaboradores SET excepcoesDaSaidaJson = ?, updatedAt = NOW() WHERE id = ?",
+        [JSON.stringify(depois), id],
+      );
+      await conn.commit();
+      return { ok: true, nome: l.nome, excepcoes: depois };
+    } catch (error) {
+      await conn.rollback().catch(() => undefined);
+      throw error;
+    }
+  });
+  if (r.ok) {
+    await registarSemFalhar({
+      acontecimento: "comissao_excepcao",
+      pedidoId,
+      autorTipo: "clyon",
+      autorNome: por,
+      resumo: marcar
+        ? `#${pedidoId} passa a contar para ${r.nome} depois da saída (falou com o cliente).`
+        : `#${pedidoId} deixa de contar para ${r.nome} depois da saída.`,
+      detalhe: { assistenteId: id, pedidoId, marcar, excepcoes: r.excepcoes },
+    });
+  }
+  return r;
 }
 
 const eurosDoRegisto = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;

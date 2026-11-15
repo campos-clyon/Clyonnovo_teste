@@ -15119,6 +15119,12 @@ export type Acontecimento =
   | "comissao_paga"
   | "comissao_anulada"
   /*
+   * A SAÍDA DE UMA ASSISTENTE e os trabalhos que contam depois dela por
+   * excepção — d40, 15-11-2026 (ver saida-da-assistente.ts).
+   */
+  | "assistente_saida"
+  | "comissao_excepcao"
+  /*
    * O valor de um trabalho ja fechado foi corrigido.
    *
    * Acontece porque numa boa parte dos trabalhos o orcamento fecha-se a porta,

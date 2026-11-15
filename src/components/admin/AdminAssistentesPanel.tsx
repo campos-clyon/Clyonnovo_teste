@@ -17,6 +17,7 @@ import {
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import TrabalhosDoAssistente from "./TrabalhosDoAssistente";
 import { INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
+import { rotuloDaSaida } from "@/lib/saida-da-assistente";
 
 /** «23/09» — o primeiro dia que conta, escrito como se lê. */
 const INICIO_ESCRITO = diaEscrito(INICIO_DAS_COMISSOES).slice(0, 5);
@@ -78,6 +79,8 @@ type Assistente = {
   seccoes: SeccaoDoAssistente[];
   comissaoPercent: number;
   comissaoSobre: "todos" | "seus";
+  /** O dia de saída e os pedidos que contam depois dele (d40). */
+  saida?: { saiuA: string | null; excepcoes: number[] };
   estatisticas: Estatisticas;
   comissoes: { totais: TotaisDasComissoes };
   createdAt: string | null;
@@ -180,6 +183,9 @@ export default function AdminAssistentesPanel() {
   // Qual conta está com os detalhes abertos
   const [aberto, setAberto] = useState<number | null>(null);
   const [comissaoRascunho, setComissaoRascunho] = useState<Record<number, string>>({});
+  // A saída e as excepções (d40): o dia escolhido e o pedido a marcar, por conta.
+  const [saidaRascunho, setSaidaRascunho] = useState<Record<number, string>>({});
+  const [excepcaoRascunho, setExcepcaoRascunho] = useState<Record<number, string>>({});
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -471,6 +477,11 @@ export default function AdminAssistentesPanel() {
                       assistente · {percent(a.comissaoPercent)} do lucro ·{" "}
                       {a.comissaoSobre === "todos" ? "todos os trabalhos" : "só os dela"}
                     </span>
+                    {a.saida?.saiuA && (
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-200">
+                        {rotuloDaSaida(a.saida.saiuA)}
+                      </span>
+                    )}
                     {!a.activo && (
                       <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-300">
                         desactivado
@@ -611,6 +622,113 @@ export default function AdminAssistentesPanel() {
                     </p>
                   </div>
 
+                  {/*
+                    A SAÍDA — d40, 15-11-2026. O último dia que conta para ela; o que
+                    for feito depois só conta se estiver marcado aqui («falou com o
+                    cliente»). Não desactiva a conta: isso é o botão de baixo.
+                  */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Saiu a</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="date"
+                        value={saidaRascunho[a.id] || a.saida?.saiuA || ""}
+                        onChange={(ev) => setSaidaRascunho((r) => ({ ...r, [a.id]: ev.target.value }))}
+                        className="rounded-lg border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none focus:border-cyan-500"
+                        aria-label={`Dia em que ${a.nome} saiu`}
+                      />
+                      {Boolean(saidaRascunho[a.id]) && saidaRascunho[a.id] !== (a.saida?.saiuA ?? "") && (
+                        <button
+                          onClick={() => {
+                            const dia = saidaRascunho[a.id];
+                            if (!window.confirm(`${a.nome} saiu a ${diaEscrito(dia)}? O que for feito depois deixa de contar para ela, salvo os trabalhos marcados.`)) return;
+                            agir({ id: a.id, saiuA: dia }, a.id).then((ok) => {
+                              if (ok) setSaidaRascunho((r) => ({ ...r, [a.id]: "" }));
+                            });
+                          }}
+                          disabled={ocupado === a.id}
+                          className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+                        >
+                          Guardar
+                        </button>
+                      )}
+                      {a.saida?.saiuA && (
+                        <button
+                          onClick={() => {
+                            if (!window.confirm(`Apagar o dia de saída de ${a.nome}? Volta a contar tudo como antes.`)) return;
+                            agir({ id: a.id, saiuA: null }, a.id);
+                          }}
+                          disabled={ocupado === a.id}
+                          className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+                        >
+                          Apagar o dia
+                        </button>
+                      )}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-slate-500">
+                      Depois deste dia, nenhum trabalho conta para {a.nome} — com «todos» ou «só os dela» —, pelo dia em
+                      que foi feito. O próprio dia ainda conta. Os períodos já pagos não mudam.
+                    </p>
+
+                    {a.saida?.saiuA && (
+                      <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2.5">
+                        <p className="text-xs font-semibold text-white">Trabalhos que contam depois da saída</p>
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          Conta para {a.nome} (falou com o cliente): entra quando ficar concluído, na quinzena em que for
+                          feito.
+                        </p>
+                        {a.saida.excepcoes.length > 0 ? (
+                          <ul className="mt-2 flex flex-wrap gap-1.5">
+                            {a.saida.excepcoes.map((pid) => (
+                              <li
+                                key={pid}
+                                className="flex items-center gap-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-xs text-cyan-100"
+                              >
+                                #{pid}
+                                <button
+                                  onClick={() => {
+                                    if (!window.confirm(`#${pid} deixa de contar para ${a.nome}?`)) return;
+                                    agir({ id: a.id, excepcaoDaSaida: { pedidoId: pid, marcar: false } }, a.id);
+                                  }}
+                                  disabled={ocupado === a.id}
+                                  className="text-[10px] text-slate-400 hover:text-red-300 disabled:opacity-40"
+                                  aria-label={`Desmarcar #${pid}`}
+                                >
+                                  tirar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-2 text-[11px] text-slate-500">Nenhum marcado.</p>
+                        )}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <input
+                            inputMode="numeric"
+                            placeholder="N.º do pedido"
+                            value={excepcaoRascunho[a.id] ?? ""}
+                            onChange={(ev) => setExcepcaoRascunho((r) => ({ ...r, [a.id]: ev.target.value }))}
+                            className="w-32 rounded-lg border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-white outline-none focus:border-cyan-500"
+                            aria-label={`Pedido que conta para ${a.nome} depois da saída`}
+                          />
+                          <button
+                            onClick={() => {
+                              const pid = (excepcaoRascunho[a.id] ?? "").replace("#", "").trim();
+                              if (!pid) return;
+                              agir({ id: a.id, excepcaoDaSaida: { pedidoId: pid, marcar: true } }, a.id).then((ok) => {
+                                if (ok) setExcepcaoRascunho((r) => ({ ...r, [a.id]: "" }));
+                              });
+                            }}
+                            disabled={ocupado === a.id || !(excepcaoRascunho[a.id] ?? "").trim()}
+                            className="rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+                          >
+                            Conta para {a.nome}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Trabalhos, por extenso */}
                   <div className="grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
                     <p>
@@ -633,7 +751,7 @@ export default function AdminAssistentesPanel() {
                     entra na conta.
                   */}
                   <TrabalhosDoAssistente
-                    key={`${a.id}-${a.comissaoPercent}-${a.comissaoSobre}`}
+                    key={`${a.id}-${a.comissaoPercent}-${a.comissaoSobre}-${a.saida?.saiuA ?? ""}-${a.saida?.excepcoes.join(",") ?? ""}`}
                     token={token}
                     fonte={`/api/admin/assistentes?trabalhos=${a.id}`}
                     gerir={(corpo) => agir({ id: a.id, ...corpo }, a.id)}
