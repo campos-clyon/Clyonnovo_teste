@@ -93,14 +93,11 @@ describe("os Termos e a Privacidade nos dois lados de 15-11-2026", () => {
     expect(t).toContain("Se pagou por transferência, devolvemos por transferência");
     // Fora da caixa, nenhuma palavra do modelo antigo.
     const fora = texto(semAsRegrasAnteriores(html));
-    // d30: Termos — EXCEPÇÃO TEMPORÁRIA. «Na proposta, o preço já vem com IVA incluído» (§ dos preços)
-    // e «que já inclui a taxa da plataforma e o IVA» (§ do pagamento) passaram a ser frases do modelo
-    // antigo a 15-11-2026; quem trata dos Termos troca-as pelo texto do Jurídico. Saem daqui quando a
-    // página dos Termos as trocar.
-    const foraSemAFraseDoIva = fora
-      .replace(/Na proposta, o preço já vem com IVA\s+incluído\./g, "")
-      .replace(/que já inclui a taxa da\s+plataforma e o IVA\./g, "");
-    expect(falaDoModeloAntigo(foraSemAFraseDoIva, "cliente")).toBeNull();
+    // d30: sem excepção — o IVA diz-se pelo regime do parceiro.
+    expect(falaDoModeloAntigo(fora, "cliente")).toBeNull();
+    expect(fora).toContain("Na proposta, o preço já é o total a pagar: com IVA incluído ou isento, conforme o regime do parceiro.");
+    expect(fora).toMatch(/que já inclui a taxa da\s+plataforma e, se o parceiro cobrar IVA, o IVA\./);
+    expect(fora).not.toMatch(/o preço já vem com IVA\s+incluído/);
     expect(fora).not.toContain("Há fatura em todas as vendas.");
     expect(fora).not.toMatch(/em d[íi]vida/);
   });

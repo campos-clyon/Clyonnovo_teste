@@ -563,8 +563,11 @@ export default async function TermosPage() {
           )}
           <p>
             Os preços de referência apresentados no site (por exemplo, «desde»)
-            são indicativos e sem IVA. Na proposta, o preço já vem com IVA
-            incluído.
+            são indicativos e sem IVA.{" "}
+            {/* d30 (15-11-2026): no modelo novo o IVA é o do regime do parceiro. */}
+            {novo
+              ? "Na proposta, o preço já é o total a pagar: com IVA incluído ou isento, conforme o regime do parceiro."
+              : "Na proposta, o preço já vem com IVA incluído."}
           </p>
           <p>
             Para pedidos com negociação aberta antes de {IVA_INCLUIDO_DESDE_POR_EXTENSO}{" "}
@@ -609,7 +612,7 @@ export default async function TermosPage() {
               </ul>
               <p>
                 Paga o preço total da proposta (ponto 6), que já inclui a taxa da
-                plataforma e o IVA. Não paga nada à parte: a taxa da plataforma
+                plataforma e, se o parceiro cobrar IVA, o IVA. Não paga nada à parte: a taxa da plataforma
                 recebe-a o parceiro consigo, por conta da CLYON, e entrega-a
                 depois à CLYON. O momento do pagamento combina-o com o parceiro.
                 Se pagar alguma coisa antes do trabalho, peça ao parceiro o recibo
