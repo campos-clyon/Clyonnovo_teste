@@ -33,6 +33,15 @@ export type EntradaDoPagamentoDirecto = {
   regime: RegimeDoProfissional;
   /** O IVA; `TAXA_IVA` por omissão. */
   iva?: number;
+  /**
+   * A RESERVA PARA IMPREVISTOS — d39 (15-11-2026): o valor único ao cliente
+   * menos o que ele pagaria pela proposta do parceiro, sem IVA, em cêntimos
+   * (`reserva.ts`). Entra na fatura da CLYON, nunca na do parceiro. Negativa
+   * (o parceiro pediu mais), a parte da CLYON desce; abaixo de zero, a fatura
+   * da CLYON fica a zero, o parceiro fatura o que o cliente paga e a CLYON
+   * paga-lhe a diferença por crédito na carteira. 0 por omissão.
+   */
+  reservaCent?: number;
 };
 
 export type ContaDoPagamentoDirecto = {
@@ -40,6 +49,12 @@ export type ContaDoPagamentoDirecto = {
   materialCent: number;
   /** T — a taxa da plataforma, sem IVA. */
   taxaCent: number;
+  /** R — a reserva para imprevistos (d39), sem IVA; pode ser negativa. 0 sem valor único. */
+  reservaCent: number;
+  /** T + R, quando é positivo: a base da fatura da CLYON. Sem reserva, = T. */
+  baseDaFaturaDaClyonCent: number;
+  /** −(T + R), quando T + R é negativo: o que a CLYON paga ao parceiro por crédito na carteira. */
+  creditoAoProfissionalCent: number;
   /** IT — o IVA da taxa. */
   ivaDaTaxaCent: number;
   /** FC = T + IT — a fatura da taxa, emitida pela empresa parceira da CLYON. */
@@ -58,7 +73,7 @@ export type ContaDoPagamentoDirecto = {
   ficaAoProfissionalCent: number;
   /** = B — o líquido do parceiro, sem IVA. */
   liquidoDoProfissionalCent: number;
-  /** = T — o que fica à CLYON, sem IVA (o IVA da taxa vai para o Estado). */
+  /** = T + R — o que fica à CLYON, sem IVA (o IVA da fatura dela vai para o Estado); negativo, é o crédito ao parceiro. */
   ficaAClyonCent: number;
   regime: RegimeDoProfissional;
 };
@@ -96,13 +111,25 @@ export function contaDoPagamentoDirecto(
   const pbProfissional = emPontos(e.taxas.profissional);
   const pbIva = emPontos(e.iva ?? TAXA_IVA);
   if (pbCliente < 0 || pbProfissional < 0 || pbIva < 0) return { ok: false, erro: "Taxa inválida." };
+  const reserva = e.reservaCent ?? 0;
+  if (!Number.isInteger(reserva)) return { ok: false, erro: "A reserva tem de vir em cêntimos inteiros." };
 
   const doProfissional = partePorPontos(servico, pbProfissional);
   const doCliente = partePorPontos(servico, pbCliente);
   const taxa = doProfissional + doCliente;
-  const ivaDaTaxa = partePorPontos(taxa, pbIva);
-  const faturaDaClyon = taxa + ivaDaTaxa;
-  const base = servico - doProfissional + material;
+  /*
+   * A PARTE DA CLYON = taxa + reserva (d39). Positiva: é a base da fatura da
+   * CLYON, com o IVA por cima. Negativa: a fatura da CLYON fica a zero, a do
+   * parceiro desce para o que o cliente paga, e a diferença é crédito dele.
+   */
+  const parteDaClyon = taxa + reserva;
+  const baseDaFaturaDaClyon = Math.max(0, parteDaClyon);
+  const credito = Math.max(0, -parteDaClyon);
+  const ivaDaTaxa = partePorPontos(baseDaFaturaDaClyon, pbIva);
+  const faturaDaClyon = baseDaFaturaDaClyon + ivaDaTaxa;
+  const liquido = servico - doProfissional + material;
+  const base = liquido - credito;
+  if (base < 0) return { ok: false, erro: "A reserva é maior do que o trabalho." };
   const ivaDoProfissional = e.regime === "normal" ? partePorPontos(base, pbIva) : 0;
   const faturaDoProfissional = base + ivaDoProfissional;
 
@@ -112,6 +139,9 @@ export function contaDoPagamentoDirecto(
       servicoCent: servico,
       materialCent: material,
       taxaCent: taxa,
+      reservaCent: reserva,
+      baseDaFaturaDaClyonCent: baseDaFaturaDaClyon,
+      creditoAoProfissionalCent: credito,
       ivaDaTaxaCent: ivaDaTaxa,
       faturaDaClyonCent: faturaDaClyon,
       baseDoProfissionalCent: base,
@@ -120,8 +150,8 @@ export function contaDoPagamentoDirecto(
       totalAoClienteCent: faturaDoProfissional + faturaDaClyon,
       aPassarAClyonCent: faturaDaClyon,
       ficaAoProfissionalCent: faturaDoProfissional,
-      liquidoDoProfissionalCent: base,
-      ficaAClyonCent: taxa,
+      liquidoDoProfissionalCent: liquido,
+      ficaAClyonCent: parteDaClyon,
       regime: e.regime,
     },
   };
@@ -143,6 +173,9 @@ export function emEurosDaConta(c: ContaDoPagamentoDirecto): ContaDoPagamentoDire
     servico: e(c.servicoCent),
     material: e(c.materialCent),
     taxa: e(c.taxaCent),
+    reserva: e(c.reservaCent),
+    baseDaFaturaDaClyon: e(c.baseDaFaturaDaClyonCent),
+    creditoAoProfissional: e(c.creditoAoProfissionalCent),
     ivaDaTaxa: e(c.ivaDaTaxaCent),
     faturaDaClyon: e(c.faturaDaClyonCent),
     baseDoProfissional: e(c.baseDoProfissionalCent),
@@ -165,9 +198,11 @@ export function contaDoValorAcordado(
   acordado: number | null | undefined,
   taxas: Taxas,
   regime: RegimeDoProfissional,
+  /** A reserva do valor único (d39), em cêntimos — só no valor acordado, nunca numa proposta. */
+  reservaCent = 0,
 ): ContaDoPagamentoDirecto | null {
   if (acordado == null || !Number.isFinite(acordado)) return null;
-  const r = contaDoPagamentoDirecto({ servicoCent: emCentimos(acordado), taxas, regime });
+  const r = contaDoPagamentoDirecto({ servicoCent: emCentimos(acordado), taxas, regime, reservaCent });
   return r.ok ? r.conta : null;
 }
 

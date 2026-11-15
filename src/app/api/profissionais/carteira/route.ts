@@ -147,6 +147,8 @@ export async function GET(req: NextRequest) {
           );
           return {
             ...d,
+            // d39: com valor único, a parte da CLYON leva a reserva — o painel diz-lho numa só linha.
+            comReserva: Boolean(trabalhos.find((t) => t.negociacaoId === d.negociacaoId)?.reservaCent),
             /*
              * ATÉ QUANDO TEM PARA A PAGAR — 01-10-2026. Passado o prazo, deixa
              * de poder propor e aceitar trabalhos em dinheiro. Ver

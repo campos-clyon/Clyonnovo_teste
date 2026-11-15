@@ -21,14 +21,17 @@ export function taxaAPassarAClyon(
   acordado: number,
   taxas: Taxas,
   regime: "normal" | "isento" = "normal",
+  /** A reserva do valor único (d39), em cêntimos: entra na parte da CLYON. */
+  reservaCent = 0,
 ): DividaDoProfissional | null {
-  const c = contaDoValorAcordado(acordado, taxas, regime);
+  const c = contaDoValorAcordado(acordado, taxas, regime, reservaCent);
   if (!c) return null;
   return {
     recebidoDoCliente: c.totalAoClienteCent / 100,
     liquido: c.ficaAoProfissionalCent / 100,
     iva: c.ivaDaTaxaCent / 100,
-    comissao: c.taxaCent / 100,
+    // A parte da CLYON: a taxa e, com valor único, a reserva (d39).
+    comissao: c.baseDaFaturaDaClyonCent / 100,
     total: c.aPassarAClyonCent / 100,
   };
 }

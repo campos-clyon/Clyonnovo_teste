@@ -28,6 +28,8 @@ export type Pedido = {
   pagamentoACaminho?: "transferencia" | null;
   /** O trabalho segue o modelo de 15-11 (d17): o cliente paga-lhe a ele. Decidido no servidor. */
   noNovoModelo?: boolean;
+  /** A reserva do valor único (d39), em cêntimos: entra no que passa à CLYON. */
+  reservaCent?: number | null;
   diasAteLibertar: number | null;
   provaJson: string | null;
   /** O JSON das propostas, tal como vem da base. */
@@ -256,6 +258,8 @@ export type Carteira = {
  */
 export type DividaDaCarteira = {
   negociacaoId: number;
+  /** Com valor único (d39): a parte da CLYON leva a reserva. */
+  comReserva?: boolean;
   pedidoId: number | null;
   titulo: string;
   total: number;

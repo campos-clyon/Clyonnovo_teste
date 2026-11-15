@@ -1,4 +1,5 @@
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
+import { PARTE_DA_CLYON_COM_RESERVA } from "./reserva";
 import { dividaDoProfissional, temDividaDoProfissional } from "./divida-do-profissional";
 import { modeloDaNegociacao } from "./iva-incluido";
 import { lerForma } from "./forma-de-pagamento";
@@ -121,12 +122,16 @@ export function fraseDoDinheiro(
     pagoEm?: Date | string | null;
     /** O modelo de 15-11 (d17): o cliente pagou-lhe, e passa à CLYON a taxa da plataforma e o IVA dela. */
     noNovoModelo?: boolean;
+    /** Com valor único (d39): a parte da CLYON leva a reserva, dita numa só linha. */
+    comReserva?: boolean;
   },
 ): string {
   const x = euros(v.liquido);
   if (v.noNovoModelo && caso === "em_mao_com_divida") {
     return v.divida
-      ? `O cliente paga-lhe diretamente: ${x} do trabalho são seus. Passe à CLYON a taxa da plataforma e o IVA dela, ${euros(v.divida.total)}, com a referência na carteira.`
+      ? v.comReserva
+        ? `O cliente paga-lhe diretamente: ${x} do trabalho são seus. Passe à CLYON a ${PARTE_DA_CLYON_COM_RESERVA} e o IVA dela, ${euros(v.divida.total)}, com a referência na carteira.`
+        : `O cliente paga-lhe diretamente: ${x} do trabalho são seus. Passe à CLYON a taxa da plataforma e o IVA dela, ${euros(v.divida.total)}, com a referência na carteira.`
       : `O cliente paga-lhe diretamente: ${x} do trabalho são seus. Veja na carteira a taxa da plataforma a passar à CLYON.`;
   }
   switch (caso) {
@@ -164,6 +169,8 @@ export type TrabalhoParaODinheiro = {
    * a ele, e ele passa à CLYON a taxa da plataforma e o IVA dela.
    */
   noNovoModelo?: boolean;
+  /** A reserva do valor único (d39), em cêntimos — entra no que passa à CLYON. */
+  reservaCent?: number | null;
 };
 
 /**
@@ -186,8 +193,9 @@ export function ondeEstaODinheiro(
   const caso = casoDoDinheiro({ fase: t.fase, emDinheiro, comDivida, clientePagou: t.clientePagou });
   if (!caso) return null;
   const liquido = quantoOProfissionalRecebe(acordado, taxas);
-  const divida = noNovoModelo ? taxaAPassarAClyon(acordado, taxas) : comDivida ? dividaDoProfissional(acordado, taxas) : null;
-  return { caso, liquido, frase: fraseDoDinheiro(caso, { liquido, divida, pagoEm: t.pagoEm, noNovoModelo }) };
+  const reserva = noNovoModelo ? (t.reservaCent ?? 0) : 0;
+  const divida = noNovoModelo ? taxaAPassarAClyon(acordado, taxas, "normal", reserva) : comDivida ? dividaDoProfissional(acordado, taxas) : null;
+  return { caso, liquido, frase: fraseDoDinheiro(caso, { liquido, divida, pagoEm: t.pagoEm, noNovoModelo, comReserva: reserva !== 0 }) };
 }
 
 /** O nome da carteira de cada caso — o mesmo que a carteira mostra. */

@@ -112,7 +112,7 @@ export async function gerarReferenciaDaDivida(
          * referência por trabalho (`taxa-a-passar-a-clyon.ts`).
          */
         dividaEmDinheiro: t.novoModelo
-          ? taxaAPassarAClyon(t.acordado, t.taxas)
+          ? taxaAPassarAClyon(t.acordado, t.taxas, "normal", t.reservaCent ?? 0)
           : temDividaDoProfissional(t.formaDePagamento, t.modelo)
             ? dividaDoProfissional(t.acordado, t.taxas)
             : null,

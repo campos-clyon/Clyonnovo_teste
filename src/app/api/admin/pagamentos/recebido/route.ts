@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { reservasDe } from "@/lib/reserva-na-base";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissionalClientePagouPorPush } from "@/lib/avisar-por-push";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
@@ -139,7 +140,9 @@ export async function POST(req: NextRequest) {
         { status: 409 },
       );
     }
-    const taxaDoNovo = novoModelo ? taxaAPassarAClyon(Number(l.valorAcordado), taxasDaNegociacao(l)) : null;
+    const taxaDoNovo = novoModelo
+      ? taxaAPassarAClyon(Number(l.valorAcordado), taxasDaNegociacao(l), "normal", (await reservasDe([negociacaoId])).get(negociacaoId) ?? 0)
+      : null;
     if (novoModelo && !taxaDoNovo) {
       return NextResponse.json({ error: "Não foi possível fazer a conta da taxa deste trabalho." }, { status: 409 });
     }

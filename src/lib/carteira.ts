@@ -1,4 +1,5 @@
 import { A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS } from "./pagamento-na-plataforma";
+import { contaDoValorAcordado } from "./pagamento-directo";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { estaLibertado, faseDoTrabalho, quandoLiberta, type Trabalho } from "./trabalho";
 import { modeloDaNegociacao } from "./iva-incluido";
@@ -148,6 +149,8 @@ export type TrabalhoNaCarteira = Trabalho & {
    * Nulo = o que se transferiu é o que o trabalho vale hoje (como sempre).
    */
   pagoAoProfissionalValor?: number | null;
+  /** A reserva do valor único (d39), em cêntimos — gravada ao fechar (reserva-na-base.ts). */
+  reservaCent?: number | null;
   /** O método da linha que fechou a dívida inteira em `pagamentos`, quando fechou. */
   dividaFechadaPor?: string | null;
   /**
@@ -242,6 +245,22 @@ export function jaTransferidoDe(t: Pick<TrabalhoNaCarteira, "pagoAoProfissionalV
   const p = t.pagoAoProfissionalValor;
   if (p == null || !Number.isFinite(p) || p < 0) return valor;
   return aosCentimos(Math.min(valor, p));
+}
+
+/**
+ * O CRÉDITO DA RESERVA NEGATIVA — d39. No modelo de 15-11, com valor único: se
+ * o parceiro pediu tanto mais que a parte da CLYON (taxa + reserva) fica abaixo
+ * de zero, ele fatura ao cliente o que o cliente paga e a CLYON paga-lhe o
+ * resto por crédito na carteira (`pagamento-directo.ts`). Conta com o trabalho
+ * feito, como a dívida. 0 em todos os outros.
+ */
+export function creditoDaReservaDe(t: TrabalhoNaCarteira, agora: Date): number {
+  if (t.noNovoModelo !== true || !t.reservaCent) return 0;
+  if (faseDoTrabalho(t) === "a_negociar" || !estaLibertado(t, agora)) return 0;
+  const v = t.valorAcordado;
+  if (v == null || !Number.isFinite(v)) return 0;
+  const c = contaDoValorAcordado(v, taxasDaNegociacao(t), "normal", t.reservaCent);
+  return c ? c.creditoAoProfissionalCent / 100 : 0;
 }
 
 /** O acerto a favor do profissional num trabalho pago: o que a folha final lhe deu a mais. 0 sem acerto. */
@@ -457,6 +476,8 @@ export function carteiraDe(
      */
     if (foiPagoEmMao(t)) {
       if (estaLibertado(t, agora)) recebidoEmMao += valor;
+      // A reserva negativa do valor único (d39): a CLYON paga-lhe a diferença por crédito.
+      ganhoLibertado += creditoDaReservaDe(t, agora);
       continue;
     }
 
@@ -654,7 +675,8 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
       if (!estaLibertado(t, agora)) continue;
       const v = t.valorAcordado;
       if (v == null || !Number.isFinite(v)) continue;
-      const d = taxaAPassarAClyon(v, taxasDaNegociacao(t));
+      // A parte da CLYON leva a reserva do valor único (d39); abaixo de zero, o crédito vai para a carteira.
+      const d = taxaAPassarAClyon(v, taxasDaNegociacao(t), "normal", t.reservaCent ?? 0);
       if (!d || d.total <= 0) continue;
       saida.push({
         negociacaoId: t.negociacaoId,

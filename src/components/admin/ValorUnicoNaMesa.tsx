@@ -23,7 +23,8 @@ import {
  * Depois de o cliente dizer que sim, «Escolher por mim» sugere o parceiro
  * (`escolherPorMim`), e a equipa aceita a proposta dele pelo «Aceitar» de
  * sempre — que avisa antes se ele pediu mais do que o valor único. A
- * diferença mostra-se só como texto: o tratamento ainda está por decidir.
+ * diferença é a reserva para imprevistos (d39): gravada ao fechar, na parte
+ * da CLYON (reserva.ts).
  */
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;

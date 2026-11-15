@@ -481,22 +481,33 @@ export function contaDoNovoModelo(
   regime: RegimeDoProfissional,
   /** A taxa já entrou (a referência paga, ou registada à mão)? */
   taxaPaga: boolean,
+  /** A reserva do valor único (d39), em cêntimos: entra na parte da CLYON. */
+  reservaCent = 0,
 ): ContaDoPagamento | null {
-  const c = contaDoValorAcordado(acordado, taxas, regime);
+  const c = contaDoValorAcordado(acordado, taxas, regime, reservaCent);
   if (!c) return null;
   const e = (v: number) => v / 100;
   const total = e(c.totalAoClienteCent);
   const doProfissional = e(c.faturaDoProfissionalCent);
   const taxa = e(c.taxaCent);
+  const reserva = e(c.reservaCent);
+  const parte = e(c.baseDaFaturaDaClyonCent);
   const ivaDaTaxa = e(c.ivaDaTaxaCent);
   const aPassar = e(c.aPassarAClyonCent);
+  const credito = e(c.creditoAoProfissionalCent);
   const percentagem = aosCentimos((taxas.cliente + taxas.profissional) * 10000) / 10000;
+  const comReserva = c.reservaCent !== 0;
   return {
     total,
     iva: ivaDaTaxa,
-    semIva: aosCentimos(e(c.baseDoProfissionalCent) + taxa),
-    taxas: [{ rotulo: "Taxa da plataforma", percentagem, valor: taxa }],
-    clyon: taxa,
+    semIva: aosCentimos(e(c.baseDoProfissionalCent) + parte),
+    taxas: comReserva
+      ? [
+          { rotulo: "Taxa da plataforma", percentagem, valor: taxa },
+          { rotulo: "Reserva para imprevistos", percentagem: null, valor: reserva },
+        ]
+      : [{ rotulo: "Taxa da plataforma", percentagem, valor: taxa }],
+    clyon: parte,
     profissional: doProfissional,
     novoModelo: true,
     degraus: [
@@ -516,10 +527,14 @@ export function contaDoNovoModelo(
         tipo: "igual",
         rotulo: taxaPaga ? TAXA_RECEBIDA_DO_PARCEIRO : TAXA_POR_RECEBER_DO_PARCEIRO,
         valor: aPassar,
-        nota: `${emEuros(taxa)} de taxa da plataforma + ${emEuros(ivaDaTaxa)} de IVA (${NOTA_DO_IVA}) — paga pelo profissional, por referência`,
+        nota: comReserva
+          ? `${emEuros(taxa)} de taxa da plataforma ${reserva >= 0 ? "+" : "−"} ${emEuros(Math.abs(reserva))} de reserva para imprevistos (valor único) + ${emEuros(ivaDaTaxa)} de IVA (${NOTA_DO_IVA}) — paga pelo profissional, por referência`
+          : `${emEuros(taxa)} de taxa da plataforma + ${emEuros(ivaDaTaxa)} de IVA (${NOTA_DO_IVA}) — paga pelo profissional, por referência`,
         final: true,
       },
     ],
-    notas: [],
+    notas: credito > 0
+      ? [`Valor único abaixo do que o parceiro pediu: a fatura da CLYON fica a zero e a CLYON paga-lhe ${emEuros(credito)} por crédito na carteira.`]
+      : [],
   };
 }

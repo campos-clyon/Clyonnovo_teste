@@ -229,11 +229,16 @@ export async function novoModeloParaOCliente(
       return new Map<number, Record<string, unknown>>();
     }),
   ]);
+  // d39: a reserva do valor único entra no total do acordado (a fatura da CLYON), nunca nas propostas.
+  const { reservasDe } = await import("./reserva-na-base");
+  const reservas = await reservasDe(ids).catch(() => new Map<number, number>());
   for (const l of linhas) {
     const id = Number(l.id);
     const r = daBase.get(id);
     if (!r) continue;
-    mapa.set(id, { segue: segue.has(id), totais: totaisDoNovoModelo(r, valoresDaLinha(l)) });
+    const daLinha = l as unknown as { estado?: unknown; valorAcordado?: unknown };
+    const comReserva = { ...r, estado: daLinha.estado, valorAcordado: daLinha.valorAcordado, reservaCent: reservas.get(id) ?? null };
+    mapa.set(id, { segue: segue.has(id), totais: totaisDoNovoModelo(comReserva, valoresDaLinha(l)) });
   }
   return mapa;
 }

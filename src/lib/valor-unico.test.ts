@@ -104,7 +104,7 @@ describe("d39 B — «Escolher por mim»", () => {
     const s = escolherPorMim([c(1, "A", 125, null), c(2, "B", 130, null)], 140);
     expect(s?.candidato.nome).toBe("A");
     expect(s?.diferenca).toBe(15);
-    expect(diferencaEmTexto(140, 125)).toBe("diferença: +15,00 € — tratamento por decidir");
+    expect(diferencaEmTexto(140, 125)).toBe("reserva para imprevistos: +15,00 € (fica na parte da CLYON)");
   });
 
   it("ninguém cabe: o mais barato, e avisa-se antes de aceitar", () => {
@@ -112,7 +112,7 @@ describe("d39 B — «Escolher por mim»", () => {
     expect(s?.candidato.nome).toBe("B");
     expect(s?.acimaDoValorUnico).toBe(true);
     expect(s?.diferenca).toBe(-10);
-    expect(diferencaEmTexto(140, 150)).toBe("diferença: −10,00 € — tratamento por decidir");
+    expect(diferencaEmTexto(140, 150)).toBe("reserva para imprevistos: −10,00 € (a parte da CLYON desce)");
     expect(avisoAcimaDoValorUnico("B", 150, 140)).toContain("mais do que o valor único");
   });
 

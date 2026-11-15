@@ -70,9 +70,10 @@ type Corpo = {
  * é a taxa da plataforma e o IVA dela (`taxaAPassarAClyon`, a mesma da carteira
  * e da referência da confirmação); antes, a dívida do dinheiro de sempre.
  */
-function dividaDeste(t: { acordado: number; taxas: Parameters<typeof dividaDoProfissional>[1]; novoModelo?: boolean }) {
+function dividaDeste(t: { acordado: number; taxas: Parameters<typeof dividaDoProfissional>[1]; novoModelo?: boolean; reservaCent?: number }) {
   if (t.novoModelo === true) {
-    const d = taxaAPassarAClyon(t.acordado, t.taxas);
+    // Com valor único, a parte da CLYON leva a reserva (d39).
+    const d = taxaAPassarAClyon(t.acordado, t.taxas, "normal", t.reservaCent ?? 0);
     if (d) return d;
   }
   return dividaDoProfissional(t.acordado, t.taxas);

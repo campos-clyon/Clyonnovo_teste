@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { reservasDe } from "@/lib/reserva-na-base";
 import { negociacoesDoProfissional, getPool, custosEBaseDoProfissional, mudancasEscolhidasDoProfissional } from "@/lib/db";
 import { mudancaEscolhida, semDerrubar } from "@/lib/mudanca-escolhida-pelo-cliente";
 import type { MudancaEscolhidaNaBase } from "@/lib/db";
@@ -157,6 +158,8 @@ export async function GET(req: NextRequest) {
       linhas as unknown as Parameters<typeof negociacoesNoNovoModelo>[0],
       agoraDoModelo(),
     ).catch(() => new Set<number>());
+    // d39: a reserva do valor único, nos do modelo de 15-11 — entra no que passa à CLYON.
+    const reservas = await reservasDe([...doNovoModelo]).catch(() => new Map<number, number>());
 
     const agora = new Date();
 
@@ -427,6 +430,7 @@ export async function GET(req: NextRequest) {
          * cliente paga-lhe, e ele passa à CLYON a taxa da plataforma e o IVA dela.
          */
         noNovoModelo: doNovoModelo.has(Number(l.id)),
+        reservaCent: reservas.get(Number(l.id)) ?? null,
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,
         actualizadoEm: l.updatedAt,

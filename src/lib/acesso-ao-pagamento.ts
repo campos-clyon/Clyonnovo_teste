@@ -3,6 +3,7 @@ import {
   getSimulatorOrderById,
   negociacoesDoPedido,
 } from "./db";
+import { reservaDaLinha } from "./reserva";
 import { hashDeToken, verificarTokenDeAcesso } from "./pedido-acesso";
 import { regimeDeIva, taxasDaNegociacao, type RegimeIva, type Taxas } from "./taxas-plataforma";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
@@ -45,6 +46,8 @@ export type TrabalhoAPagar = {
   formaDePagamento: FormaDePagamento;
   /** O acréscimo gravado (o «pagar depois»), em euros. Zero quase sempre. */
   acrescimo: number;
+  /** A reserva do valor único (d39), em cêntimos; 0 sem valor único. Ver reserva.ts. */
+  reservaCent?: number;
   /**
    * O MODELO DO PREÇO DESTA NEGOCIAÇÃO — 01-10-2026. Com IVA incluído desde
    * `IVA_INCLUIDO_DESDE`: o cliente leu o total com imposto, e é esse que se
@@ -250,6 +253,7 @@ export async function trabalhoQueSePodePagar(
       porHora: porHora
         ? { horasConfirmadas: horasConfirmadas(linha), valorFinal: horasConfirmadas(linha) ? acordado : null }
         : null,
+      reservaCent: reservaDaLinha(linha as { reservaCent?: unknown }),
       acrescimo: (() => {
         const a = Number((linha as { acrescimoPagamento?: unknown }).acrescimoPagamento ?? 0);
         return Number.isFinite(a) && a > 0 ? a : 0;

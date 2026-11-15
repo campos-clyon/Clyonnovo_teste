@@ -333,7 +333,8 @@ describe("regra 2 — «O trabalho já foi feito?» → «Sim» fecha e a taxa n
   it("a confirmação gera a referência da taxa no modelo novo (o mesmo aviso de qualquer confirmação)", () => {
     const f = ler("src/lib/avisar-confirmacao.ts");
     expect(f).toContain("lido?.noNovoModelo === true");
-    expect(f).toContain("taxaAPassarAClyon(valor, taxas)");
+    // d39: com a reserva do valor único na parte da CLYON.
+    expect(f).toContain('taxaAPassarAClyon(valor, taxas, "normal", lido.reservaCent ?? 0)');
     expect(f).toContain("await gerarReferenciaDaDivida(dados.negociacaoId");
   });
 

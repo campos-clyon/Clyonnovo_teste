@@ -3,6 +3,7 @@ import { perfilFiscalDoParceiro, type ProfissionalParaOPerfil } from "./perfil-f
 import { taxasDaNegociacao, type Taxas } from "./taxas-plataforma";
 import { baseDoPrecoDoCliente, precoParaOCliente, type PrecoDoCliente } from "./preco-do-cliente";
 import type { ModeloDoPreco } from "./iva-incluido";
+import { reservaParaOValor } from "./reserva";
 
 /**
  * O TOTAL QUE O CLIENTE PAGA NO MODELO DE 15-11-2026 — uma conta só (d17, CEO e
@@ -48,10 +49,12 @@ export function totalAoCliente(
   valor: number | null | undefined,
   taxas: Taxas,
   regime: RegimeDoProfissional,
+  /** A reserva do valor único (d39), em cêntimos: entra na fatura da CLYON. */
+  reservaCent = 0,
 ): TotalAoCliente | null {
-  const c = contaDoValorAcordado(valor, taxas, regime);
+  const c = contaDoValorAcordado(valor, taxas, regime, reservaCent);
   if (!c) return null;
-  const semIvaCent = c.baseDoProfissionalCent + c.taxaCent;
+  const semIvaCent = c.baseDoProfissionalCent + c.baseDaFaturaDaClyonCent;
   return {
     total: c.totalAoClienteCent / 100,
     semIva: semIvaCent / 100,
@@ -66,6 +69,10 @@ export function totalAoCliente(
 
 /** O que a conta lê de uma negociação (com o perfil do parceiro junto, como vem da base). */
 export type LinhaParaOTotal = ProfissionalParaOPerfil & {
+  /** A reserva do valor único (d39), gravada ao fechar; com o estado e o acordado, para só contar no acordado. */
+  reservaCent?: unknown;
+  estado?: unknown;
+  valorAcordado?: unknown;
   taxaCliente?: unknown;
   taxaProfissional?: unknown;
   /** O regime congelado quando foi contratada (`negociacoes.regimeDoProfissional`). */
@@ -84,7 +91,8 @@ export function totalAoClienteDaNegociacao(
   linha: LinhaParaOTotal,
   valor: number | null | undefined,
 ): TotalAoCliente | null {
-  return totalAoCliente(valor, taxasDaNegociacao(linha), regimeDaNegociacao(linha));
+  // A reserva do valor único só no acordado de uma negociação fechada (d39).
+  return totalAoCliente(valor, taxasDaNegociacao(linha), regimeDaNegociacao(linha), reservaParaOValor(linha, valor));
 }
 
 /**

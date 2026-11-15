@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { reservasDe } from "@/lib/reserva-na-base";
 import { transferidoAntesDasFolhasFinais } from "@/lib/folha-final-na-base";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
@@ -351,6 +352,10 @@ export async function GET(req: NextRequest) {
     const transferidos = await transferidoAntesDasFolhasFinais(
       linhas.filter((l) => l.pagoEm != null && l.negociacaoId != null).map((l) => Number(l.negociacaoId)),
     ).catch(() => new Map<number, number>());
+    // d39: a reserva do valor único (na parte da CLYON, no modelo de 15-11).
+    const reservas = await reservasDe(linhas.filter((l) => l.negociacaoId != null).map((l) => Number(l.negociacaoId))).catch(
+      () => new Map<number, number>(),
+    );
 
     for (const l of linhas) {
       const id = Number(l.id);
@@ -396,7 +401,7 @@ export async function GET(req: NextRequest) {
       const divida = daCarteira
         ? daCarteira.total
         : novo
-          ? (taxaAPassarAClyon(acordado, taxas)?.total ?? null)
+          ? (taxaAPassarAClyon(acordado, taxas, "normal", reservas.get(Number(l.negociacaoId)) ?? 0)?.total ?? null)
           : comDivida
           ? dividaDoProfissional(acordado, taxas).total
           : emMaoRegistado
@@ -444,7 +449,7 @@ export async function GET(req: NextRequest) {
           ? new Date((l.feitoEm ?? l.execucaoEnviadaEm) as string).toISOString()
           : null,
         clientePaga: novo
-          ? (contaDoValorAcordado(acordado, taxas, regimeDaNegociacao(l))?.totalAoClienteCent ?? 0) / 100
+          ? (contaDoValorAcordado(acordado, taxas, regimeDaNegociacao(l), reservas.get(Number(l.negociacaoId)) ?? 0)?.totalAoClienteCent ?? 0) / 100
           : precoDoCliente(acordado, taxas, modelo).aPagar,
         ivaIncluido: modelo === "iva_incluido",
         dividaDoProfissional: divida,
@@ -470,7 +475,7 @@ export async function GET(req: NextRequest) {
         ),
       };
       // O modelo de 15-11 (d31): a conta do modelo novo — a taxa por receber dele, nunca «a pagar ao profissional».
-      if (novo) trabalho.conta = contaDoNovoModelo(acordado, taxas, regimeDaNegociacao(l), dividaPaga === true);
+      if (novo) trabalho.conta = contaDoNovoModelo(acordado, taxas, regimeDaNegociacao(l), dividaPaga === true, reservas.get(Number(l.negociacaoId)) ?? 0);
       // Do modelo novo e registado «pago ao profissional» (o #588): a parte da CLYON da regra do pago em mão.
       else if (emMaoRegistado && doNovoModelo.has(Number(l.negociacaoId))) {
         trabalho.conta = contaDoRegistoNoNovoModelo(

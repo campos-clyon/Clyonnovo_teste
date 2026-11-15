@@ -1,4 +1,6 @@
 import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
+import { reservasDe } from "@/lib/reserva-na-base";
+import { reservaDaLinha } from "@/lib/reserva";
 import type { MarcaDaParte } from "./cobrancas-ao-profissional";
 import { ensureNegociacoesTable, ensureSimulatorOrdersTable, getPool } from "@/lib/db";
 import { taxaAbaixoDoEscalao, taxaPeloValor } from "@/lib/oferta-clyon";
@@ -225,6 +227,11 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
     agoraDoModelo(),
   );
 
+  // A reserva do valor único (d39), só nos do modelo de 15-11.
+  const reservas = await reservasDe([...doNovoModelo]).catch(() => new Map<number, number>());
+
+  const lComAReserva = (l: (typeof linhas)[number]) => ({ ...l, reservaCent: reservas.get(Number(l.negociacaoId)) ?? null });
+
   return linhas.map((l) => {
     const acordado = Number(l.valorAcordado);
     const taxas = taxasDaNegociacao(l);
@@ -361,7 +368,9 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             }
           : null,
     };
-    return novoModelo ? noNovoModelo(linha, l, pagoEmPartes(Number(l.negociacaoId))) : linha;
+    return novoModelo
+      ? noNovoModelo(linha, lComAReserva(l), pagoEmPartes(Number(l.negociacaoId)))
+      : linha;
   });
 }
 
@@ -423,8 +432,10 @@ export function noNovoModelo<T extends TrabalhoParaGerir>(
     };
   }
   const regime = regimeDaNegociacao(l);
-  const c = contaDoValorAcordado(acordado, linha.taxas, regime);
-  const taxa = taxaAPassarAClyon(acordado, linha.taxas, regime);
+  // A reserva do valor único (d39), lida à parte e posta na linha por quem chama.
+  const reserva = reservaDaLinha(l);
+  const c = contaDoValorAcordado(acordado, linha.taxas, regime, reserva);
+  const taxa = taxaAPassarAClyon(acordado, linha.taxas, regime, reserva);
   const divida = taxa ? taxa.total : null;
   const base = {
     formaDePagamento: linha.formaDePagamento,
@@ -446,7 +457,7 @@ export function noNovoModelo<T extends TrabalhoParaGerir>(
     podeMudarFactura: false,
     porqueNaoMudaFactura:
       "No modelo de 15/11 o cliente paga ao profissional, e a fatura do trabalho é dele — aqui não se muda.",
-    conta: contaDoNovoModelo(acordado, linha.taxas, regime, linha.clientePagouEm != null),
+    conta: contaDoNovoModelo(acordado, linha.taxas, regime, linha.clientePagouEm != null, reserva),
     taxaEmMao: taxaDoPagoEmMao({
       formaDePagamento: linha.formaDePagamento,
       comoEntrou: linha.comoEntrou,

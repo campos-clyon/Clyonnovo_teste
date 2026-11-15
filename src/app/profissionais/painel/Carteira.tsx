@@ -1,5 +1,6 @@
 "use client";
 
+import { PARTE_DA_CLYON_COM_RESERVA } from "@/lib/reserva";
 import { useState } from "react";
 import { ArrowRight, Building2, History, Loader2 } from "lucide-react";
 import { CabecalhoDeEcra, BotaoRedondo, euros } from "@/components/portal/Portal";
@@ -503,7 +504,9 @@ function Divida({
             <>
               <p className="mt-0.5 text-xs font-semibold text-amber-900">{PAGAR_O_VALOR_EM_ATRASO}</p>
               <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                A taxa da plataforma e o IVA dela deste trabalho, que o cliente lhe pagou com o preço.
+                {d.comReserva
+                  ? `A ${PARTE_DA_CLYON_COM_RESERVA} e o IVA dela deste trabalho, que o cliente lhe pagou com o preço.`
+                  : "A taxa da plataforma e o IVA dela deste trabalho, que o cliente lhe pagou com o preço."}
               </p>
               {diaDe(valorEmAtraso.prazoAte) && (
                 <p className="mt-1 text-xs font-medium text-amber-800">

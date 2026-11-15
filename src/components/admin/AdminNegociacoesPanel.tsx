@@ -5669,7 +5669,7 @@ function AceitarNaLista({
 
   async function agir() {
     if (!token) return;
-    // d39: acima do valor único, avisa antes (a diferença ainda não tem tratamento).
+    // d39: acima do valor único, avisa antes (a reserva fica negativa: a parte da CLYON desce).
     const acima = avisoDoValorUnico(pedido, negociacao);
     if (acima && !window.confirm(acima)) return;
     const texto =

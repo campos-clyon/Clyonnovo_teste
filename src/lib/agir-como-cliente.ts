@@ -651,7 +651,13 @@ export async function avisarQueFoiContratadoSemFalhar(c: {
         if (!(await segueONovoModelo({ id: negociacaoId }))) return null;
         const { taxaAPassarAClyon } = await import("./taxa-a-passar-a-clyon");
         const { perfilFiscalDoParceiro } = await import("./perfil-fiscal");
-        const t = taxaAPassarAClyon(c.valorAcordado, taxasDaNegociacao(linha), perfilFiscalDoParceiro(alvo as object).regimeParaAConta);
+        const t = taxaAPassarAClyon(
+          c.valorAcordado,
+          taxasDaNegociacao(linha),
+          perfilFiscalDoParceiro(alvo as object).regimeParaAConta,
+          // d39: a reserva do valor único (a linha vem com n.*).
+          (await import("./reserva")).reservaDaLinha(linha as { reservaCent?: unknown }),
+        );
         return t ? { recebidoDoCliente: t.recebidoDoCliente, aPassarAClyon: t.total } : null;
       })(),
       dividaEmDinheiro:

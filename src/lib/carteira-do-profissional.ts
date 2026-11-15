@@ -1,4 +1,5 @@
 import { negociacoesPagas, negociacoesPagasComDetalhe, type PagamentoQueFecha } from "./pagamentos-na-base";
+import { reservasDe } from "./reserva-na-base";
 import { transferidoAntesDasFolhasFinais } from "./folha-final-na-base";
 import { verificaOPagamento, type TrabalhoNaCarteira } from "./carteira";
 import { modeloDaNegociacao } from "./iva-incluido";
@@ -191,6 +192,9 @@ export async function trabalhosDaCarteira(
     return new Map<number, number>();
   });
 
+  // A reserva do valor único (d39): a parte da CLYON na dívida, ou o crédito se ficar abaixo de zero.
+  const reservas = await reservasDe(linhas.map((l) => Number(l.id))).catch(() => new Map<number, number>());
+
   const agora = agoraDoModelo();
   const vale = novoModeloEmVigor(agora);
   return linhas.map((l) => {
@@ -264,6 +268,7 @@ export async function trabalhosDaCarteira(
     pagoPelaClyon: typeof l.ofertaClyon === "string" && l.ofertaClyon !== "",
     marcasDaDivida: marcas.get(Number(l.id)) ?? [],
     pagoAoProfissionalValor: l.pagoEm != null ? (transferidos.get(Number(l.id)) ?? null) : null,
+    reservaCent: reservas.get(Number(l.id)) ?? null,
     };
   });
 }

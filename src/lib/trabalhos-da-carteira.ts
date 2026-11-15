@@ -19,6 +19,7 @@
  */
 import {
   acertoAFavorDe,
+  creditoDaReservaDe,
   carteiraDe,
   foiPagoEmMao,
   oClientePagou,
@@ -144,12 +145,18 @@ export function contaDaCarteira(
   };
 
   // Os libertados que esperam por uma transferência, do mais antigo ao mais novo.
-  const aPagar: Array<{ t: TrabalhoParaALista; b: ReturnType<typeof base>; quando: number; devido?: number }> = [];
+  const aPagar: Array<{ t: TrabalhoParaALista; b: ReturnType<typeof base>; quando: number; devido?: number; credito?: boolean }> = [];
 
   for (const t of trabalhos) {
     if (faseDoTrabalho(t) === "a_negociar") continue;
     const b = base(t);
     if (foiPagoEmMao(t)) {
+      // A reserva negativa do valor único (d39): o crédito da CLYON fica por receber nesta linha.
+      const credito = creditoDaReservaDe(t, agora);
+      if (credito > 0.004) {
+        aPagar.push({ t, b, quando: quandoLiberta(t)?.getTime() ?? 0, devido: credito, credito: true });
+        continue;
+      }
       if (estaLibertado(t, agora)) {
         linhas.push({ ...b, grupo: "recebido", razao: RAZOES.emMao, falta: 0, recebidoEm: b.diaDoTrabalho, como: COMO_FOI_PAGO.emMao });
       }
@@ -200,7 +207,7 @@ export function contaDaCarteira(
   let i = 0;
   let resto = saidas[0]?.valor ?? 0;
   let caminho = aCaminho;
-  for (const { t, b, devido } of aPagar) {
+  for (const { t, b, devido, credito } of aPagar) {
     let falta = devido ?? b.recebe;
     let ultima: (typeof saidas)[number] | null = null;
     while (falta > 0.004 && i < saidas.length) {
@@ -217,7 +224,13 @@ export function contaDaCarteira(
       linhas.push({ ...b, grupo: "recebido", razao: "pago", falta: 0, recebidoEm: ultima?.em ?? null, como: ultima?.como ?? COMO_FOI_PAGO.transferencia });
       continue;
     }
-    const parte = devido != null ? ` (${acertoEmPalavras(t.pedidoId ?? null)})` : falta < b.recebe ? " (parte já transferida)" : "";
+    const parte = credito
+      ? ` (${creditoEmPalavras(t.pedidoId ?? null)})`
+      : devido != null
+        ? ` (${acertoEmPalavras(t.pedidoId ?? null)})`
+        : falta < b.recebe
+          ? " (parte já transferida)"
+          : "";
     const emCaminho = Math.min(falta, caminho);
     caminho = c(caminho - emCaminho);
     linhas.push({
@@ -259,6 +272,11 @@ export function contaDaCarteira(
       recebidoEmMao: cart.recebidoEmMao,
     },
   };
+}
+
+/** «diferença paga pela CLYON no pedido #N» — o crédito da reserva negativa (d39). */
+export function creditoEmPalavras(pedidoId: number | null): string {
+  return pedidoId != null ? `diferença paga pela CLYON no pedido #${pedidoId}` : "diferença paga pela CLYON";
 }
 
 /** «acerto da folha final do pedido #524» — o que o profissional lê na linha do acerto a favor (d38 v2). */

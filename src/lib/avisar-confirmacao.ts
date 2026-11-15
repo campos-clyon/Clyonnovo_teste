@@ -85,7 +85,7 @@ export async function avisarProfissionalTrabalhoConfirmado(dados: {
      * valor em atraso — a taxa da plataforma e o IVA dela —, com a referência.
      */
     const contaDaDivida = lido?.noNovoModelo === true
-      ? taxaAPassarAClyon(valor, taxas)
+      ? taxaAPassarAClyon(valor, taxas, "normal", lido.reservaCent ?? 0)
       : temDividaDoProfissional(n.formaDePagamento, modelo)
       ? dividaDoProfissional(valor, taxas)
       : emMao

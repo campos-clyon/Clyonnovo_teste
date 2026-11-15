@@ -136,17 +136,21 @@ export function escolherPorMim(candidatos: readonly CandidatoAoValorUnico[], val
   return { candidato: escolhido, acimaDoValorUnico: escolhido.semIva > valorUnico + 0.005, diferenca, porque };
 }
 
-/** «diferença: +15,00 € — tratamento por decidir». Só informativo (d39 parte 1). */
+/**
+ * «reserva para imprevistos: +15,00 € (fica na parte da CLYON)» — d39, decidido
+ * a 15-11-2026: a diferença é a reserva, gravada ao fechar (reserva.ts).
+ */
 export function diferencaEmTexto(valorUnico: number, semIvaDoParceiro: number): string {
   const d = Math.round((valorUnico - semIvaDoParceiro) * 100) / 100;
   const sinal = d > 0 ? "+" : d < 0 ? "−" : "";
-  return `diferença: ${sinal}${euros(Math.abs(d))} — tratamento por decidir`;
+  const onde = d < 0 ? "a parte da CLYON desce" : "fica na parte da CLYON";
+  return `reserva para imprevistos: ${sinal}${euros(Math.abs(d))} (${onde})`;
 }
 
 /** O aviso antes de aceitar uma proposta acima do valor único. */
 export function avisoAcimaDoValorUnico(nome: string, semIvaDoParceiro: number, valorUnico: number): string {
   return (
     `${nome} pediu ${euros(semIvaDoParceiro)} + IVA, mais do que o valor único enviado ao cliente (${euros(valorUnico)} + IVA). ` +
-    `A diferença (${euros(semIvaDoParceiro - valorUnico)}) ainda não tem tratamento decidido. Aceitar mesmo assim?`
+    `A diferença (${euros(semIvaDoParceiro - valorUnico)}) sai da parte da CLYON: a reserva fica negativa e, se passar a taxa, a CLYON paga-lhe o resto por crédito na carteira. Aceitar mesmo assim?`
   );
 }

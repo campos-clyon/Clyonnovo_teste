@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { gravarReservaAoFechar } from "@/lib/reserva-na-base";
 import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { requireAdmin } from "@/lib/admin-auth-helper";
@@ -575,6 +576,10 @@ export async function POST(req: NextRequest) {
         valorAcordado: nova.valorAcordado ?? null,
         baseUrl: urlDeAccaoDoPedido(req.headers),
       });
+    }
+    // d39: num pedido com valor único, fechar grava a reserva (valor único − o do parceiro). Ver reserva.ts.
+    if (nova.estado === "acordada" && estadoActual.estado !== "acordada") {
+      await gravarReservaAoFechar(pedidoId, negociacaoId, quem).catch((e) => console.error("[agir] reserva não gravada:", e));
     }
     // Em nome do cliente, desistir é o cliente a não seguir com a proposta (28-10-2026, d5).
     if (accao === "desistir" && nova.estado === "desistida") {

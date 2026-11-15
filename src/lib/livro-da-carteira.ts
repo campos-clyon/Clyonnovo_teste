@@ -1,6 +1,7 @@
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import { faseDoTrabalho, quandoLiberta } from "./trabalho";
 import {
+  creditoDaReservaDe,
   jaTransferidoDe,
   oClientePagou,
   foiPagoEmMao,
@@ -343,8 +344,32 @@ export function livroDe(
   for (const t of trabalhos) {
     const m = movimentoDoAbatimento({ ...t, providerId });
     if (m) saida.push(m);
+    const credito = movimentoDoCreditoDaReserva({ ...t, providerId });
+    if (credito) saida.push(credito);
   }
   return saida;
+}
+
+/**
+ * O crédito da reserva negativa do valor único (d39) — ou nada. Um acerto: a
+ * CLYON paga-lhe a diferença, disponível quando o trabalho fica feito.
+ */
+export function movimentoDoCreditoDaReserva(
+  t: TrabalhoNaCarteira & { providerId: number; pedidoId?: number | null },
+): MovimentoDaCarteira | null {
+  const quando = quandoLiberta(t);
+  const credito = creditoDaReservaDe(t, quando ?? new Date(0));
+  if (!quando || credito <= 0) return null;
+  return {
+    providerId: t.providerId,
+    tipo: "acerto",
+    valor: aosCentimos(credito),
+    disponivelEm: quando,
+    chave: `reserva:${t.negociacaoId}`,
+    negociacaoId: t.negociacaoId,
+    pedidoId: t.pedidoId ?? null,
+    nota: "Diferença paga pela CLYON.",
+  };
 }
 
 /**

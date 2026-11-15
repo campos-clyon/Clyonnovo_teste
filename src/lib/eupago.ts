@@ -907,11 +907,13 @@ export function quantoSePedeNesteTrabalho(
     modelo: ModeloDoPreco;
     /** O modelo de 15-11-2026 (d10): só a taxa e o IVA dela, pagos pelo parceiro. */
     novoModelo?: boolean;
+    /** A reserva do valor único (d39): entra na parte da CLYON. */
+    reservaCent?: number;
   },
   comFactura: boolean,
 ): { valor: number; quemPaga: QuemPaga } {
   if (t.novoModelo === true) {
-    return { valor: taxaAPassarAClyon(t.acordado, t.taxas)?.total ?? 0, quemPaga: "profissional" };
+    return { valor: taxaAPassarAClyon(t.acordado, t.taxas, "normal", t.reservaCent ?? 0)?.total ?? 0, quemPaga: "profissional" };
   }
   if (temDividaDoProfissional(t.formaDePagamento, t.modelo)) {
     return { valor: dividaDoProfissional(t.acordado, t.taxas).total, quemPaga: "profissional" };
