@@ -4,6 +4,7 @@ vi.mock("@/lib/db", () => ({
   ensureNegociacoesTable: async () => {},
   ensureProvidersSchema: async () => {},
   ensureRegistoTable: async () => {},
+  ensureArquivoDePedidosTable: async () => {},
   ensureSimulatorOrdersTable: async () => {},
   getPool: async () => null,
 }));
@@ -146,8 +147,23 @@ describe("d41 — realizados, cancelados e conversão", () => {
     expect(d.conversao12Meses.variacao).toBeNull();
   });
 
+  it("a média por mês divide pelos meses com dados; o melhor e o pior só entre esses", () => {
+    const linhas = [
+      linha({ criado: "2026-06-25T10:00:00Z" }), // início a meio de junho: junho não conta
+      ...Array.from({ length: 10 }, () => linha({ criado: "2026-07-10T10:00:00Z" })),
+      ...Array.from({ length: 20 }, () => linha({ criado: "2026-08-10T10:00:00Z" })),
+      ...Array.from({ length: 30 }, () => linha({ criado: "2026-09-10T10:00:00Z" })),
+      ...Array.from({ length: 40 }, () => linha({ criado: "2026-10-10T10:00:00Z" })),
+    ];
+    const d = desempenhoDe(linhas, { agora: AGORA });
+    expect(d.entrados.mesesNaMedia).toBe(4);
+    expect(d.entrados.mediaPorMes.valor).toBe(25);
+    expect(d.extremos.entrados).toEqual({ melhor: "2026-10", pior: "2026-07" });
+  });
+
   it("melhor e pior mês só entre os completos", () => {
     const linhas = [
+      linha({ criado: "2025-01-01T10:00:00Z" }),
       ...Array.from({ length: 5 }, () => linha({ criado: "2026-04-10T10:00:00Z" })),
       ...Array.from({ length: 50 }, () => linha({ criado: "2026-11-10T10:00:00Z" })),
     ];
@@ -251,6 +267,16 @@ describe("d41 — as linhas da base", () => {
     expect(l?.deTeste).toBe(false);
     expect(linhaDoApagado(300, [retrato], new Set([7]))?.deTeste).toBe(true);
     expect(linhaDoApagado(300, [{ acontecimento: "pedido_cancelado" }], new Set())).toBeNull();
+  });
+
+  it("apagado: o estado do arquivo manda (concluído à mão sem negociação, ou cancelado)", () => {
+    const retrato = { acontecimento: "pedido_expurgado", negociacaoId: null, detalheJson: JSON.stringify({ criadoEm: "2026-07-01T09:00:00.000Z" }) };
+    const feito = linhaDoApagado(5, [retrato], new Set(), { status: "concluido", concluidoEm: "2026-07-05T10:00:00.000Z" });
+    expect(feito?.realizadoEm?.toISOString()).toBe("2026-07-05T10:00:00.000Z");
+    expect(feito?.cancelado).toBe(false);
+    const canc = linhaDoApagado(5, [retrato], new Set(), { status: "arquivado" });
+    expect(canc?.cancelado).toBe(true);
+    expect(canc?.realizadoEm).toBeNull();
   });
 
   it("apagado cancelado: o último cancelamento sem reabertura depois", () => {

@@ -87,7 +87,11 @@ function Bloco({
       </h3>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <Numero rotulo="Por dia (últimos 30 dias)" c={b.mediaPorDia} nota="30 dias anteriores" />
-        <Numero rotulo="Por mês (últimos 12 meses)" c={b.mediaPorMes} nota="12 meses anteriores" />
+        <Numero
+          rotulo={b.mesesNaMedia >= 12 ? "Por mês (últimos 12 meses)" : `Por mês (${b.mesesNaMedia} meses com dados)`}
+          c={b.mediaPorMes}
+          nota="12 meses anteriores"
+        />
         <Numero
           rotulo={`${rotuloDoMes(b.mesHomologo.mes)} (último mês completo)`}
           c={b.mesHomologo}

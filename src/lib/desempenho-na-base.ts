@@ -13,7 +13,10 @@
  *     Os apagados à mão no backoffice (`pedido_apagado`) não contam: são
  *     repetidos, enganos e testes.
  *
- * LEVE PARA A BASE: três consultas numa ligação do pool partilhado, sem N+1,
+ * 3. `arquivoDePedidos` — o estado (concluído, cancelado, arquivado) da cópia
+ *    de cada apagado, lido do JSON pela própria base (três campos, não o texto).
+ *
+ * LEVE PARA A BASE: quatro consultas numa ligação do pool partilhado, sem N+1,
  * e o resultado guardado 5 minutos no processo (a base tem 151 ligações e
  * 256 MB de buffer). O filtro por serviço e a conta fazem-se em memória, sobre
  * as mesmas linhas.
@@ -21,6 +24,7 @@
 import {
   ensureNegociacoesTable,
   ensureProvidersSchema,
+  ensureArquivoDePedidosTable,
   ensureRegistoTable,
   ensureSimulatorOrdersTable,
   getPool,
@@ -72,6 +76,7 @@ export function linhaDoApagado(
   pedidoId: number,
   eventos: readonly Linha[],
   profissionaisDeTeste: ReadonlySet<number>,
+  arquivo?: Linha | null,
 ): LinhaDoDesempenho | null {
   const retrato = eventos.find((e) => e.acontecimento === "pedido_expurgado" && e.negociacaoId == null);
   if (!retrato) return null;
@@ -103,7 +108,28 @@ export function linhaDoApagado(
     if (e.acontecimento === "pedido_cancelado" && (!canceladoEm || d > canceladoEm)) canceladoEm = d;
     if (e.acontecimento === "pedido_reaberto" && (!reabertoEm || d > reabertoEm)) reabertoEm = d;
   }
-  const cancelado = !realizadoEm && canceladoEm != null && (!reabertoEm || reabertoEm < canceladoEm);
+  let cancelado = !realizadoEm && canceladoEm != null && (!reabertoEm || reabertoEm < canceladoEm);
+
+  /*
+   * O ESTADO DO ARQUIVO MANDA, quando existe: a cópia do pedido guardada ao
+   * apagar (`arquivoDePedidos`) diz se ficou concluído, cancelado ou
+   * arquivado. Os pedidos antigos, fechados à mão sem negociação confirmada,
+   * só se sabem feitos por aqui.
+   */
+  const estado = typeof arquivo?.status === "string" ? arquivo.status : null;
+  if (estado === "concluido") {
+    realizadoEm =
+      realizadoEm ??
+      instanteDaBase((arquivo?.concluidoEm as string | null) ?? null) ??
+      instanteDaBase((arquivo?.updatedAt as string | null) ?? null) ??
+      instanteDaBase((retrato.ocorridoEm as string | Date | null) ?? null);
+    cancelado = false;
+  } else if (estado === "cancelado" || estado === "arquivado") {
+    if (!confirmadas.length) {
+      realizadoEm = null;
+      cancelado = true;
+    }
+  }
 
   return {
     id: pedidoId,
@@ -116,7 +142,7 @@ export function linhaDoApagado(
 }
 
 async function lerDaBase(): Promise<LinhaDoDesempenho[]> {
-  await Promise.all([ensureSimulatorOrdersTable(), ensureNegociacoesTable(), ensureProvidersSchema(), ensureRegistoTable()]);
+  await Promise.all([ensureSimulatorOrdersTable(), ensureNegociacoesTable(), ensureProvidersSchema(), ensureRegistoTable(), ensureArquivoDePedidosTable()]);
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const conn = await pool.getConnection();
@@ -154,12 +180,24 @@ async function lerDaBase(): Promise<LinhaDoDesempenho[]> {
         LIMIT 100000`,
     )) as [Linha[], unknown];
 
-    // 3. Os profissionais de teste (poucos).
+    // 3. O estado de cada apagado, pela cópia do arquivo (só três campos do JSON).
+    const [arquivo] = (await conn.query(
+      `SELECT a.pedidoId,
+              JSON_UNQUOTE(JSON_EXTRACT(a.dados, '$.pedido.status')) AS status,
+              JSON_UNQUOTE(JSON_EXTRACT(a.dados, '$.pedido.concluidoEm')) AS concluidoEm,
+              JSON_UNQUOTE(JSON_EXTRACT(a.dados, '$.pedido.updatedAt')) AS updatedAt
+         FROM arquivoDePedidos a
+         JOIN (SELECT pedidoId, MAX(id) AS id FROM arquivoDePedidos GROUP BY pedidoId) u ON u.id = a.id
+        WHERE JSON_VALID(a.dados)`,
+    )) as [Linha[], unknown];
+
+    // 4. Os profissionais de teste (poucos).
     const [teste] = (await conn.query(
       `SELECT id FROM providers WHERE COALESCE(contaDeTeste, 0) = 1`,
     )) as [Linha[], unknown];
 
     const deTeste = new Set(teste.map((t) => Number(t.id)));
+    const doArquivo = new Map(arquivo.map((a) => [Number(a.pedidoId), a]));
     const linhas = pedidos.map(linhaDoPedido);
     const existem = new Set(linhas.map((l) => l.id));
 
@@ -172,7 +210,7 @@ async function lerDaBase(): Promise<LinhaDoDesempenho[]> {
       else porPedido.set(id, [e]);
     }
     for (const [id, eventos] of porPedido) {
-      const l = linhaDoApagado(id, eventos, deTeste);
+      const l = linhaDoApagado(id, eventos, deTeste, doArquivo.get(id));
       if (l) linhas.push(l);
     }
     return linhas;

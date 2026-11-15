@@ -90,6 +90,8 @@ export type BlocoDoDesempenho = {
   previsaoDoAno: Comparacao;
   /** O ritmo dos últimos 90 dias, por dia. */
   ritmo90: number;
+  /** Quantos dos 12 meses completos têm dados (a média por mês divide por estes). */
+  mesesNaMedia: number;
 };
 
 export type Desempenho = {
@@ -104,7 +106,7 @@ export type Desempenho = {
   cancelados: { ultimos30: number; ultimos12Meses: number; anoAteHoje: number };
   /** Os 12 meses completos e o corrente, do mais antigo para o mais recente. */
   meses: MesDoDesempenho[];
-  /** Melhor e pior dos 12 meses completos. */
+  /** Melhor e pior dos 12 meses completos (só os que têm dados do princípio ao fim). */
   extremos: {
     entrados: { melhor: string; pior: string } | null;
     realizados: { melhor: string; pior: string } | null;
@@ -179,8 +181,16 @@ function bloco(m: Map<string, number>, hoje: string, inicioDosDados: string | nu
   const m12ate = somarDiasAoDia(`${mesActual}-01`, -1);
   const p12de = `${somarMeses(mesActual, -24)}-01`;
   const p12ate = somarDiasAoDia(m12de, -1);
+  /*
+   * A MÉDIA POR MÊS DIVIDE PELOS MESES COM DADOS. Os pedidos de antes do
+   * registo permanente (Junho de 2026) não existem em lado nenhum; dividir
+   * por 12 com sete meses vazios dava uma média que nunca aconteceu. Conta
+   * cada mês completo que começa no início dos dados ou depois.
+   */
+  let mesesNaMedia = 0;
+  for (let i = -12; i <= -1; i++) if (cobre(inicioDosDados, `${somarMeses(mesActual, i)}-01`)) mesesNaMedia += 1;
   const mediaPorMes = comparar(
-    somaEntre(m, m12de, m12ate) / 12,
+    mesesNaMedia > 0 ? somaEntre(m, `${somarMeses(mesActual, -mesesNaMedia)}-01`, m12ate) / mesesNaMedia : 0,
     cobre(inicioDosDados, p12de) ? somaEntre(m, p12de, p12ate) / 12 : null,
   );
 
@@ -215,7 +225,7 @@ function bloco(m: Map<string, number>, hoje: string, inicioDosDados: string | nu
       : null,
   );
 
-  return { mediaPorDia, mediaPorMes, mesHomologo, anoAteHoje, previsaoDoAno, ritmo90 };
+  return { mediaPorDia, mediaPorMes, mesHomologo, anoAteHoje, previsaoDoAno, ritmo90, mesesNaMedia };
 }
 
 /** O mês com mais e o com menos (o mais recente ganha um empate); `null` se forem todos zero. */
@@ -277,7 +287,8 @@ export function desempenhoDe(
       emCurso: i === 0,
     });
   }
-  const completos = meses.filter((x) => !x.emCurso);
+  // O melhor e o pior só entre os meses que têm dados do princípio ao fim.
+  const completos = meses.filter((x) => !x.emCurso && cobre(inicioDosDados, `${x.mes}-01`));
 
   // A conversão dos 12 meses completos contra a dos 12 antes (coorte).
   const coorte = (de: string, ate: string) => {
