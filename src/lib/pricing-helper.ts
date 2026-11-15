@@ -743,6 +743,8 @@ const SERVICE_REFERENCE_RANGES: Record<string, { min: number; max: number; sugge
   esvaziamento_garagem:      { min: 120, max: 420, suggested: 240 },
   esvaziamento_sotao:        { min: 150, max: 480, suggested: 295 },
   esvaziamento_cave:         { min: 140, max: 450, suggested: 275 },
+  // Armazém, escritório ou loja (d43, 15-11-2026): sem preço publicado; a referência interna é a da casa.
+  esvaziamento_empresa:      { min: 300, max: 800, suggested: 500 },
   // O mínimo é o da tabela (3 h × 50 €), e não os 210 € dos 70 €/h de antes (25-10-2026).
   mudanca:                   { min: MINIMO_DA_MUDANCA, max: 500, suggested: 280 },
   outro:                     { min: 100, max: 250, suggested: 160 },

@@ -70,6 +70,7 @@ const ESVAZIAMENTO = new Set([
   "esvaziamento_garagem",
   "esvaziamento_sotao",
   "esvaziamento_cave",
+  "esvaziamento_empresa",
 ]);
 
 /** Uma chave que o painel recebeu e esta lista conhece — o resto deita-se fora. */

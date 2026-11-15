@@ -100,6 +100,20 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     description: "Um parceiro sobe o que está na cave e leva-o para destino licenciado.",
     href: "/esvaziamento-de-casas#garagem-sotao-cave",
   },
+  /*
+   * ARMAZÉNS, ESCRITÓRIOS E LOJAS — 15-11-2026 (d43). Sem preço publicado:
+   * cada parceiro orça o espaço pelas fotografias. Fatura com o NIF da
+   * empresa, guia de transporte a pedido, fora de horas a pedido
+   * (esvaziamento-de-empresa.ts). Grupo «Esvaziamentos».
+   */
+  {
+    id: "esvaziamento_empresa",
+    slug: "esvaziamento-empresa",
+    label: "Esvaziamento de armazém, escritório ou loja",
+    emoji: "🏬",
+    description: "Um parceiro esvazia o espaço da empresa e leva tudo para destino licenciado, com fatura com NIF.",
+    href: "/empresas",
+  },
   {
     id: "mudanca",
     slug: "mudanca",
@@ -270,7 +284,8 @@ export const GRUPOS_DE_SERVICOS: readonly GrupoDeServicos[] = [
     emoji: "🏠",
     descricao: "Esvaziamento de casas, apartamentos, garagens, sótãos e caves.",
     // A garagem, o sótão e a cave entraram a 29-10-2026 (estavam «em breve»).
-    servicos: ["esvaziamento_casa", "esvaziamento_apartamento", "esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"],
+    // Os armazéns, escritórios e lojas a 15-11-2026 (d43).
+    servicos: ["esvaziamento_casa", "esvaziamento_apartamento", "esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave", "esvaziamento_empresa"],
     servicosEmBreve: [],
   },
   {

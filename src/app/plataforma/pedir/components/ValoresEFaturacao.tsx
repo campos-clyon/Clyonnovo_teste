@@ -33,6 +33,7 @@ const CATEGORIAS_COM_RESIDUOS = [
   "esvaziamento_garagem",
   "esvaziamento_sotao",
   "esvaziamento_cave",
+  "esvaziamento_empresa",
 ];
 
 export default function ValoresEFaturacao({

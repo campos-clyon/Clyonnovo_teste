@@ -56,6 +56,7 @@ export const GRUPO_DO_SERVICO: Readonly<Record<string, Grupo>> = {
   esvaziamento_garagem: "esvaziamento",
   esvaziamento_sotao: "esvaziamento",
   esvaziamento_cave: "esvaziamento",
+  esvaziamento_empresa: "esvaziamento",
   mudanca: "mudanca",
   manutencao_casa: "manutencao",
   outro: "outro",

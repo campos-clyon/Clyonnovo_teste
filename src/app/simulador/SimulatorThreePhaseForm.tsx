@@ -32,6 +32,8 @@ import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
 import PrecoDeReferencia from "./components/PrecoDeReferencia";
 import PerguntasDoEspaco from "./components/PerguntasDoEspaco";
+import PerguntasDaEmpresa from "./components/PerguntasDaEmpresa";
+import { ESVAZIAMENTO_DE_EMPRESA, comOEspacoDaEmpresa, comOsPedidosDaEmpresa } from "@/lib/esvaziamento-de-empresa";
 import { eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
 import {
   DICA_DAS_FOTOS_DO_ESPACO,
@@ -1422,6 +1424,22 @@ function Phase1Service({
         />
       )}
 
+      {/* Armazém, escritório ou loja (d43, 15-11-2026): o espaço e o «fora de horas», que escrevem na descrição. */}
+      {formData.serviceType === ESVAZIAMENTO_DE_EMPRESA && (
+        <PerguntasDaEmpresa
+          espaco={formData.espacoDaEmpresa}
+          foraDeHoras={formData.foraDeHoras}
+          onEspaco={(v) => {
+            updateField("espacoDaEmpresa", v);
+            updateField("description", comOEspacoDaEmpresa(formData.description, v));
+          }}
+          onForaDeHoras={(v) => {
+            updateField("foraDeHoras", v);
+            updateField("description", comOsPedidosDaEmpresa(formData.description, { foraDeHoras: v }));
+          }}
+        />
+      )}
+
       {/* Entulho Details (conditional) */}
       {formData.serviceType === "recolha_entulho" && (
         <EntulhoDetails
@@ -1516,7 +1534,7 @@ function Phase1Service({
 
       {/* Quantidade (volume) — categorias onde "quanto enche" é a pergunta certa.
           Entulho tem o seu próprio seletor acima; recolha_moveis usa MovelItemSelector no modo carga. */}
-      {["recolha_moveis", "recolha_monos", "esvaziamento_casa", "esvaziamento_apartamento"].includes(
+      {["recolha_moveis", "recolha_monos", "esvaziamento_casa", "esvaziamento_apartamento", ESVAZIAMENTO_DE_EMPRESA].includes(
         formData.serviceType ?? "",
       ) && formData.movelMode !== "item" && (
         <VolumeQuantitySelector

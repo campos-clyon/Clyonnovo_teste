@@ -252,6 +252,10 @@ function normalizeServiceType(value?: string | null): string {
     "esvaziamento de garagem":      "esvaziamento_garagem",
     "esvaziamento de sotao":        "esvaziamento_sotao",
     "esvaziamento de cave":         "esvaziamento_cave",
+    "esvaziamento de armazem":      "esvaziamento_empresa",
+    "esvaziamento de escritorio":   "esvaziamento_empresa",
+    "esvaziamento de loja":         "esvaziamento_empresa",
+    "esvaziamento de armazem, escritorio ou loja": "esvaziamento_empresa",
     "outro servico":                "outro",
     "outro serviço":                "outro",
   };

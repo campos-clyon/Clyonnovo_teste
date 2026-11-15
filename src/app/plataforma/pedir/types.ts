@@ -7,6 +7,7 @@ export type ServiceType =
   | "esvaziamento_garagem"
   | "esvaziamento_sotao"
   | "esvaziamento_cave"
+  | "esvaziamento_empresa"
   | "mudanca"
   | "montagem_moveis"
   | "jardinagem"

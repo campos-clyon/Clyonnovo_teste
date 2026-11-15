@@ -48,6 +48,7 @@ const SERVICOS: Record<string, ComoSeDiz> = {
   esvaziamento_garagem: { nome: "esvaziamento de garagem", possessivo: "o seu esvaziamento de garagem" },
   esvaziamento_sotao: { nome: "esvaziamento de sótão", possessivo: "o seu esvaziamento de sótão" },
   esvaziamento_cave: { nome: "esvaziamento de cave", possessivo: "o seu esvaziamento de cave" },
+  esvaziamento_empresa: { nome: "esvaziamento de armazém, escritório ou loja", possessivo: "o seu esvaziamento" },
   mudanca: { nome: "mudança", possessivo: "a sua mudança" },
   montagem_moveis: {
     nome: "montagem de móveis",

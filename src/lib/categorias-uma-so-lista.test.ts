@@ -73,6 +73,8 @@ describe("a lista única: quatro grupos (29-10-2026)", () => {
       "esvaziamento_garagem",
       "esvaziamento_sotao",
       "esvaziamento_cave",
+      // Armazém, escritório ou loja (d43, 15-11-2026).
+      "esvaziamento_empresa",
       "mudanca",
       "manutencao_casa",
       "outro",

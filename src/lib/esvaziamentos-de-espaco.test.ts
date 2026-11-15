@@ -28,7 +28,8 @@ const cru = (f: string) => readFileSync(join(RAIZ, f), "utf8").replace(/\r\n/g, 
 describe("os nomes, as frases e a ordem", () => {
   it("em Esvaziamentos: casa, apartamento, garagem, sótão, cave — com os nomes exactos", () => {
     const ids = SERVICOS_PUBLICOS.map((c) => c.id).filter((id) => id.startsWith("esvaziamento_"));
-    expect(ids).toEqual(["esvaziamento_casa", "esvaziamento_apartamento", "esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]);
+    // E o armazém, escritório ou loja a seguir à cave (d43, 15-11-2026).
+    expect(ids).toEqual(["esvaziamento_casa", "esvaziamento_apartamento", "esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave", "esvaziamento_empresa"]);
     expect(NOMES_DOS_SERVICOS.esvaziamento_garagem).toBe("Esvaziamento de garagem");
     expect(NOMES_DOS_SERVICOS.esvaziamento_sotao).toBe("Esvaziamento de sótão");
     expect(NOMES_DOS_SERVICOS.esvaziamento_cave).toBe("Esvaziamento de cave");

@@ -55,6 +55,7 @@ const ICONES: Record<string, LucideIcon> = {
   esvaziamento_garagem: Home,
   esvaziamento_sotao: Home,
   esvaziamento_cave: Home,
+  esvaziamento_empresa: Home,
   mudanca: Truck,
   montagem_moveis: Wrench,
   jardinagem: TreePine,

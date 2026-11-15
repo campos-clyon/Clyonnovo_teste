@@ -16,7 +16,17 @@ import { FORA_DO_PLANO, SERVICE_CATEGORIES, SERVICOS_PUBLICOS, type ServiceCateg
  * A lista inteira continua a dar o NOME dos serviços (os pedidos e os
  * profissionais antigos com montagem ou jardinagem têm de continuar a lê-lo).
  */
-export const SERVICOS_DA_VITORIA: readonly ServiceCategory[] = SERVICOS_PUBLICOS;
+/*
+ * O QUE O SITE JÁ TEM E A VITÓRIA AINDA NÃO — 15-11-2026 (d43).
+ *
+ * O esvaziamento de armazém, escritório ou loja entrou no site, no simulador
+ * e no backoffice; a Vitória é a parte seguinte (I&D), e até lá fica como
+ * estava: a mesma lista numerada, os mesmos números. Quando o I&D a ensinar,
+ * tira o id daqui.
+ */
+export const AINDA_NAO_NA_VITORIA: ReadonlySet<string> = new Set(["esvaziamento_empresa"]);
+
+export const SERVICOS_DA_VITORIA: readonly ServiceCategory[] = SERVICOS_PUBLICOS.filter((c) => !AINDA_NAO_NA_VITORIA.has(c.id));
 
 /** Os ids pela ordem da lista numerada — o número N é o serviço `[N - 1]`. */
 export const IDS_DA_LISTA: readonly string[] = SERVICOS_DA_VITORIA.map((c) => c.id);

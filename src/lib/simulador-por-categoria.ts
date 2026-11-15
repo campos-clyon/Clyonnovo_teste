@@ -1,4 +1,5 @@
 import { SERVICOS_PUBLICOS } from "./service-categories";
+import { ESPACOS_DA_EMPRESA, PEDIDOS_DA_EMPRESA } from "./esvaziamento-de-empresa";
 import { HORAS_DA_DESMONTAGEM, TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, horasEscritas, type Tipologia } from "./tabela-das-mudancas";
 import { PERGUNTAS_DO_ESPACO, RESPOSTAS_DA_QUANTIDADE, TITULO_DA_QUANTIDADE, TITULO_DAS_COISAS } from "./perguntas-do-espaco";
 import { esvaziamentoComOIvaAoLado, precoDoItem } from "./preco-de-referencia";
@@ -314,6 +315,26 @@ function mudanca(): PerguntaDoSimulador[] {
   ];
 }
 
+/*
+ * ARMAZÉM, ESCRITÓRIO OU LOJA — 15-11-2026 (d43). Que espaço é, quanto há
+ * para levar e se é fora de horas; a fatura com NIF e a guia de transporte
+ * são as perguntas de sempre do pedido. Sem tipologia nem preço publicado.
+ */
+function empresa(): PerguntaDoSimulador[] {
+  return [
+    {
+      id: "espacoDaEmpresa",
+      titulo: "Que espaço é?",
+      tipo: "escolha",
+      obrigatoria: true,
+      ecra: "oque",
+      opcoes: ESPACOS_DA_EMPRESA.map((e) => ({ id: e.id, nome: e.nome })),
+    },
+    ...perguntasDaCarga(),
+    { id: "foraDeHoras", titulo: `${PEDIDOS_DA_EMPRESA.foraDeHoras}?`, tipo: "escolha", obrigatoria: false, ecra: "oque", opcoes: SIM_NAO },
+  ];
+}
+
 function manutencao(): PerguntaDoSimulador[] {
   return [
     { id: "tipoDeTrabalho", titulo: "Que trabalho é?", tipo: "escolha", obrigatoria: true, ecra: "oque", opcoes: TIPOS_DE_TRABALHO },
@@ -340,6 +361,8 @@ export function perguntasDoServico(servico: string): PerguntaDoSimulador[] {
     case "esvaziamento_sotao":
     case "esvaziamento_cave":
       return espaco(servico);
+    case "esvaziamento_empresa":
+      return [...empresa(), ...perguntasDoAcesso()];
     case "mudanca":
       return mudanca();
     case "manutencao_casa":

@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FORA_DO_PLANO, SERVICE_CATEGORIES, SERVICOS_PUBLICOS } from "./service-categories";
-import { IDS_DA_LISTA, servicosPorExtenso } from "./servicos-da-vitoria";
+import { FORA_DO_PLANO, SERVICE_CATEGORIES } from "./service-categories";
+// A lista dela é a do site menos o que ainda não lhe foi ensinado (d43, 15-11-2026: o armazém/escritório/loja).
+import { IDS_DA_LISTA, SERVICOS_DA_VITORIA as SERVICOS_PUBLICOS, servicosPorExtenso } from "./servicos-da-vitoria";
 import { naoFazemosEsseServico, O_QUE_PODE_FAZER, QUEM_FALA } from "./voz-da-vitoria";
 import {
   fundirCampos,
@@ -41,7 +42,7 @@ import { paraTeclado } from "./whatsapp-cloud";
 const T0 = new Date("2026-10-25T14:00:00Z");
 
 // A lista de dez de antes de 25-10-2026 — sem a garagem, o sótão e a cave, que só entraram a 29-10-2026.
-const NOVOS_DE_29_10 = new Set(["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]);
+const NOVOS_DE_29_10 = new Set(["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave", "esvaziamento_empresa"]);
 const ANTIGOS = SERVICE_CATEGORIES.filter((c) => !NOVOS_DE_29_10.has(c.id));
 const LISTA_ANTIGA = ANTIGOS.map((c, i) => `${i + 1}. ${c.label}`).join("\n");
 const IDS_ANTIGOS = ANTIGOS.map((c) => c.id);

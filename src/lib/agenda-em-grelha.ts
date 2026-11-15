@@ -474,6 +474,7 @@ const COR_DO_SERVICO: Record<string, number> = {
   esvaziamento_garagem: 2,
   esvaziamento_sotao: 2,
   esvaziamento_cave: 2,
+  esvaziamento_empresa: 2,
   mudanca: 3,
   montagem_moveis: 4,
   manutencao_casa: 5,

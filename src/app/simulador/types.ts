@@ -7,6 +7,7 @@ export type ServiceType =
   | "esvaziamento_garagem"
   | "esvaziamento_sotao"
   | "esvaziamento_cave"
+  | "esvaziamento_empresa"
   | "mudanca"
   | "montagem_moveis"
   | "jardinagem"
@@ -108,6 +109,9 @@ export interface OrderData {
   // Garagem, sótão e cave (29-10-2026): o acesso e o que lá está (perguntas-do-espaco.ts).
   acessoDoEspaco?: string;
   coisasDoEspaco?: string[];
+  // Armazém, escritório ou loja (d43, 15-11-2026): esvaziamento-de-empresa.ts.
+  espacoDaEmpresa?: string;
+  foraDeHoras?: boolean;
   // Campos específicos para mudança (dois endereços)
   originAddress?: AddressData;
   originAddressValue?: string;

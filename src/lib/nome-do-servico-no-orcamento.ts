@@ -22,6 +22,7 @@ const NA_PESQUISA: Record<string, string> = {
   esvaziamento_garagem: "esvaziamento de garagem",
   esvaziamento_sotao: "esvaziamento de sótão",
   esvaziamento_cave: "esvaziamento de cave",
+  esvaziamento_empresa: "esvaziamento de armazém, escritório ou loja",
   mudanca: "mudança de casa",
   manutencao_casa: "reparações e manutenção da casa",
   outro: "serviço de transporte",

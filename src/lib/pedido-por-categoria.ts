@@ -1,4 +1,5 @@
 import { PESO_DO_SACO } from "./sacos-de-entulho";
+import { linhaDoEspacoDaEmpresa, linhaDosPedidosDaEmpresa } from "./esvaziamento-de-empresa";
 import {
   QUANTO_TRABALHO,
   RECHEIOS,
@@ -122,6 +123,14 @@ export function linhasDaCategoria(order: Record<string, unknown>): string[] {
     if (nome) l.push(`${PREFIXO_DA_TIPOLOGIA}${nome}.`);
     const r = nomeDaOpcao(RECHEIOS, lerRecheio(order.recheio));
     if (r) l.push(`${PREFIXO_DO_RECHEIO}${minuscula(r)}.`);
+  }
+  if (servico === "esvaziamento_empresa") {
+    // d43 (15-11-2026): o espaço e o «fora de horas», com as mesmas linhas do simulador do site.
+    const espaco = linhaDoEspacoDaEmpresa(typeof order.espacoDaEmpresa === "string" ? order.espacoDaEmpresa : null);
+    if (espaco) l.push(espaco);
+    const fora = order.foraDeHoras === true || order.foraDeHoras === "sim";
+    const pedidos = linhaDosPedidosDaEmpresa({ foraDeHoras: fora });
+    if (pedidos) l.push(pedidos);
   }
   if (servico === "manutencao_casa") {
     const m = lerManutencao(order);
