@@ -75,7 +75,10 @@ describe("«Guardar os meus dados»", () => {
   it("a conta nasce «pelo pedido», sem entrada, e não escreve por cima do que já lá está", () => {
     const i = CONTA.indexOf("export async function guardarDadosDoCliente(");
     const f = CONTA.slice(i, CONTA.indexOf("export async function", i + 10));
-    expect(f).toContain("'${CONTA_DO_PEDIDO}', 'user', NULL, NOW(), NOW()");
+    // d34 (15-11-2026): lastSignedIn é NOT NULL em produção — nasce com a hora do
+    // momento, a mesma do createdAt; a entrada a sério é a que vem depois.
+    expect(f).toContain("'${CONTA_DO_PEDIDO}', 'user', NOW(), NOW(), NOW()");
+    expect(f).not.toMatch(/'user',\s*NULL/);
     expect(f).toContain("phone = IF(phone IS NULL OR phone = '', VALUES(phone), phone)");
     expect(f).not.toContain("lastSignedIn = NOW()");
     // Ao entrar pela primeira vez, passa ao método normal.

@@ -61,9 +61,18 @@ export async function registarCliente(email: string, name: string | null): Promi
  * (e só com ela — é o consentimento), a conta nasce com o pedido: o email, o
  * nome, o telefone e a localidade que a pessoa escreveu.
  *
- * Nasce com `loginMethod = 'pedido'` e sem `lastSignedIn`: ainda ninguém
- * entrou nela. Entra-se como sempre — Google, ou o link por email em /entrar —
- * e aí `registarCliente` passa-a ao método normal. Numa conta que já existe só
+ * Nasce com `loginMethod = 'pedido'`: ainda ninguém entrou nela. Entra-se como
+ * sempre — Google, ou o link por email em /entrar — e aí `registarCliente`
+ * passa-a ao método normal.
+ *
+ * `lastSignedIn` NASCE COM A HORA DO MOMENTO — d34, 15-11-2026. Em produção a
+ * coluna é NOT NULL (a tabela veio da app antiga; o CREATE TABLE daqui diz
+ * NULL), e o NULL fazia o INSERT falhar calado: a conta não nascia. A hora é a
+ * mesma do `createdAt` (o mesmo NOW() da instrução), e é assim que se sabe que
+ * ninguém entrou: a estrela «de email verificado» (`avaliacao-que-conta.ts`)
+ * pede uma entrada DEPOIS do nascimento, ou um método que não seja «pedido».
+ *
+ * Numa conta que já existe só
  * se preenche o que estiver em branco: não se escreve por cima do que a pessoa
  * pôs no perfil.
  *
@@ -85,7 +94,7 @@ export async function guardarDadosDoCliente(d: {
     await withConnection(async (conn) => {
       await conn.execute(
         `INSERT INTO users (email, name, phone, addressCity, openId, loginMethod, role, lastSignedIn, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, NULL, '${CONTA_DO_PEDIDO}', 'user', NULL, NOW(), NOW())
+         VALUES (?, ?, ?, ?, NULL, '${CONTA_DO_PEDIDO}', 'user', NOW(), NOW(), NOW())
          ON DUPLICATE KEY UPDATE
            name = IF(name IS NULL OR name = '', VALUES(name), name),
            phone = IF(phone IS NULL OR phone = '', VALUES(phone), phone),

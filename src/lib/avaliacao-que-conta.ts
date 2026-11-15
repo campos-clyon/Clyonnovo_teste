@@ -17,7 +17,10 @@
  *   2. o cliente tem um CONTACTO VERIFICADO E DIFERENTE do do parceiro:
  *        · email verificado — uma conta de cliente com esse email em que alguém
  *          já entrou (`users.lastSignedIn`: Google, link por email ou
- *          palavra-passe com o email confirmado); ou
+ *          palavra-passe com o email confirmado). Desde a d34 (15-11-2026) a
+ *          conta nascida de um pedido (`loginMethod = 'pedido'`) já traz
+ *          `lastSignedIn` = `createdAt`: essa só conta com uma entrada depois
+ *          de nascer; ou
  *        · telefone verificado — o cliente escreveu-nos desse número no WhatsApp;
  *      e nem o telefone nem o email do pedido são os do parceiro.
  *
@@ -66,7 +69,9 @@ export const SQL_CONTACTO_VERIFICADO_E_DIFERENTE = (o = "o", p = "p") => {
     `(${o}.id IS NOT NULL AND (` +
     // Email verificado: uma conta onde já se entrou com ele.
     `(${email} <> '' AND EXISTS (SELECT 1 FROM users uv WHERE uv.email = ${email} ` +
-    `AND uv.lastSignedIn IS NOT NULL AND uv.deletedAt IS NULL)) ` +
+    `AND uv.lastSignedIn IS NOT NULL AND uv.deletedAt IS NULL ` +
+    // A conta do pedido nasce com lastSignedIn = createdAt (d34): ninguém entrou ainda.
+    `AND (COALESCE(uv.loginMethod, '') <> 'pedido' OR uv.lastSignedIn > uv.createdAt))) ` +
     // Telefone verificado: o cliente escreveu-nos desse número.
     `OR (LENGTH(${tel}) = 9 AND EXISTS (SELECT 1 FROM whatsappMensagens wv WHERE wv.direccao = 'in' ` +
     `AND wv.telefone IN (CONCAT('351', ${tel}), ${tel})))` +
