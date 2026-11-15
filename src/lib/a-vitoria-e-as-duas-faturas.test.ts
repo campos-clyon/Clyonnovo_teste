@@ -14,6 +14,7 @@ import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
  * dele) e a empresa parceira da CLYON a da taxa. A frase é a do Jurídico.
  */
 
+// relógio: datas explícitas — cada chamada leva a data (DEPOIS), nunca a do relógio.
 const DEPOIS = new Date("2026-11-15T10:00:00Z");
 
 const FRASE_DO_JURIDICO =
