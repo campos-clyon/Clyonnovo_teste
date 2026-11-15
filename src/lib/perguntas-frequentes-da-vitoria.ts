@@ -16,8 +16,9 @@ import { O_QUE_E_UMA_CARGA } from "./base-do-preco";
 import { semAcentos } from "./leitor-da-recolha";
 import { NO_MESMO_DIA, QUEM_FAZ_O_TRABALHO, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
-import { NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA, comoSePaga, faturaEmPalavras } from "./seo-data";
+import { NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA, comoSePaga } from "./seo-data";
 import { novoModeloEmVigor } from "./novo-modelo";
+import { AS_DUAS_FATURAS_DO_TRABALHO } from "./voz-da-vitoria";
 import { agoraDoModelo } from "./relogio-do-modelo";
 import {
   COMO_SE_PAGA_NO_WHATSAPP,
@@ -233,7 +234,8 @@ export function respostaFrequente(texto: string, agora: Date = agoraDoModelo()):
   // d10: as do modelo de 15-11 — antes da data vão para a equipa, como hoje.
   else if (novo && perguntaPeloAdiantado(t)) respostas.push(`${SEM_PAGAMENTO_ADIANTADO} ${PAGA_DIRETAMENTE_AO_PARCEIRO}`);
   if (novo && perguntaPelosDadosDoParceiro(t)) respostas.push(OS_DADOS_DO_PARCEIRO_ESTAO_NO_PEDIDO);
-  if (novo && perguntaPelaFatura(t) && !perguntaPeloIva(t)) respostas.push(faturaEmPalavras(agora));
+  // d30 (15-11-2026): as duas faturas, pela frase do Jurídico — ver `AS_DUAS_FATURAS_DO_TRABALHO`.
+  if (novo && perguntaPelaFatura(t) && !perguntaPeloIva(t)) respostas.push(AS_DUAS_FATURAS_DO_TRABALHO);
   if (perguntaComoFunciona(t)) respostas.push(COMO_FUNCIONA);
   return respostas.length > 0 ? respostas.join("\n\n") : null;
 }

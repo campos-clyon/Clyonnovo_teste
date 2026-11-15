@@ -16,7 +16,8 @@ import { promessaDaForma } from "./pagamento-na-plataforma";
 import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
-import { COMO_SE_PAGA, FACTURA_EM_PALAVRAS, faturaEmPalavras } from "./seo-data";
+import { COMO_SE_PAGA, FACTURA_EM_PALAVRAS } from "./seo-data";
+import { AS_DUAS_FATURAS_DO_TRABALHO } from "./voz-da-vitoria";
 import { QUEM_E_A_CLYON_NO_MODELO_ANTIGO, quemEACLYON } from "./whatsapp-compreensao";
 
 /**
@@ -85,9 +86,9 @@ describe("as perguntas do modelo novo — só desde 15-11", () => {
   it("a fatura: desde 15-11, as duas", () => {
     expect(respostaFrequente("Passam fatura?", ANTES)).toBeNull();
     const r = respostaFrequente("Passam fatura?", DEPOIS)!;
-    expect(r).toBe(faturaEmPalavras(DEPOIS));
-    expect(r).toContain(AS_DUAS_FATURAS);
-    expect(respostaFrequente("Quem emite a fatura?", DEPOIS)).toBe(faturaEmPalavras(DEPOIS));
+    // d30 (15-11-2026): a frase do Jurídico.
+    expect(r).toBe(AS_DUAS_FATURAS_DO_TRABALHO);
+    expect(respostaFrequente("Quem emite a fatura?", DEPOIS)).toBe(AS_DUAS_FATURAS_DO_TRABALHO);
     limpo(r);
   });
 });
@@ -103,7 +104,7 @@ describe("o aviso ao modelo (o que o site sabe)", () => {
   it("desde 15-11: o pagamento ao parceiro, as duas faturas, o IBAN só no pedido — sem as palavras antigas", () => {
     const t = oQueOSiteSabe(DEPOIS);
     expect(t).toContain(COMO_SE_PAGA_NO_WHATSAPP);
-    expect(t).toContain(faturaEmPalavras(DEPOIS));
+    expect(t).toContain(AS_DUAS_FATURAS_DO_TRABALHO);
     for (const r of REGRAS_DO_PAGAMENTO_PARA_O_MODELO) expect(t).toContain(r);
     expect(t).not.toContain(COMO_SE_PAGA);
     limpo(t);

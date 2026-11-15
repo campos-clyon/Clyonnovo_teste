@@ -55,6 +55,7 @@ import {
 } from "./promessas-publicas";
 import { A_GRANEL, PESO_DO_SACO, RESPOSTA_SOBRE_CONTENTORES } from "./sacos-de-entulho";
 import { PRAZO_DE_RESPOSTA, faturaEmPalavras } from "./seo-data";
+import { AS_DUAS_FATURAS_DO_TRABALHO } from "./voz-da-vitoria";
 import { servicosPorExtenso } from "./servicos-da-vitoria";
 import {
   ELEVADOR_EXTERIOR,
@@ -153,6 +154,14 @@ function linhasDosPrecos(): string[] {
  * referência a quem pergunta pela tabela do site, sempre sem IVA com o valor
  * com IVA ao lado, e a dizer que o preço final é o da proposta.
  */
+/**
+ * O PREÇO FECHADO, SEM A FATURA DO MODELO DE ANTES — 15-11-2026 (d30). A frase
+ * pública acaba em «Há fatura em todas as vendas.»; no modelo novo quem passa
+ * as faturas é dito pela frase do Jurídico (`AS_DUAS_FATURAS_DO_TRABALHO`), e
+ * a Vitória não pode ler as duas. A frase pública é do Site e não muda aqui.
+ */
+export const PRECO_FECHADO_SEM_A_FATURA = PRECO_FECHADO.replace(/\s*Há fatura em todas as vendas\.\s*$/, "");
+
 export function oQueOSiteSabe(agora: Date = agoraDoModelo()): string {
   const iva = `${Math.round(TAXA_IVA * 100)} %`;
   // d10: os textos do dinheiro pela data — até 15-11-2026, os de hoje.
@@ -175,8 +184,8 @@ O PEDIDO E AS PROPOSTAS
 - ${PODE_MANDAR_IMAGENS}
 
 PREÇO, IVA E FATURA
-- ${PRECO_FECHADO}
-- ${faturaEmPalavras(agora)}
+- ${novo ? PRECO_FECHADO_SEM_A_FATURA : PRECO_FECHADO}
+- ${novo ? AS_DUAS_FATURAS_DO_TRABALHO : faturaEmPalavras(agora)}
 - ${O_IVA_NA_PROPOSTA}
 - Por carga: ${O_QUE_E_A_CARGA}
 - Itens a mais no dia (orçamento de valor total): ${ITENS_A_MAIS_PARA_O_CLIENTE}, combinado com o cliente antes de avançar.

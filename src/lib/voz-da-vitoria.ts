@@ -31,6 +31,7 @@
  */
 
 import { semAcentos } from "./leitor-da-recolha";
+import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 
 export const NOME_DA_ASSISTENTE = "Vitória";
 
@@ -80,6 +81,18 @@ export function eUmaPergunta(texto: string): boolean {
  */
 export const PEDIR_PARA_REENVIAR_A_FOTOGRAFIA =
   "Peço desculpa, a sua fotografia não me chegou: não a consegui abrir. Pode enviá-la outra vez, por favor?";
+
+/**
+ * QUEM PASSA A FATURA — 15-11-2026 (decisão d30, frase revista pelo Jurídico).
+ * Dizia «Há fatura em todas as vendas, emitida pela empresa parceira da CLYON,
+ * e o preço já vem com IVA» — o modelo de antes. Desde 15-11 o parceiro passa
+ * a do trabalho (com IVA ou isento, conforme o regime dele) e a empresa
+ * parceira da CLYON a da taxa. É a resposta a «passam fatura?» e a linha do
+ * aviso ao modelo.
+ */
+export const AS_DUAS_FATURAS_DO_TRABALHO =
+  "Cada trabalho tem duas faturas: a do trabalho, passada pelo parceiro (com IVA ou isento, conforme o regime dele), " +
+  `e a da taxa da plataforma, passada pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
 
 export const PERGUNTA_ANOTADA =
   "Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.";
