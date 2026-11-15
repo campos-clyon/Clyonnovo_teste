@@ -18,6 +18,9 @@ import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { lerBase } from "@/lib/base-do-preco";
 import { MARQUE_AS_HORAS_PRIMEIRO, podeDarPorFeitoComAsHoras } from "@/lib/horas-do-trabalho";
 
+import { fraseDoFeitoEm } from "@/lib/feito-em";
+import { feitoEmDaNegociacao } from "@/lib/feito-em-na-base";
+
 export const runtime = "nodejs";
 
 /**
@@ -175,12 +178,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "A prova já tinha sido enviada." }, { status: 409 });
     }
 
+    // d36: o dia e a hora em que ficou feito — o fim da folha num trabalho à hora.
+    const feitoEm = (await feitoEmDaNegociacao(negociacaoId)) ?? new Date();
     await appendOrderHistory(trabalho.pedidoId, {
       type: "created",
       by: null,
-      message: comFotografias
-        ? `${sessao.nome} marcou o trabalho como feito (${fotos.length} fotografia(s)).`
-        : `${sessao.nome} marcou o trabalho como feito — por confirmar pelo cliente.`,
+      message:
+        (comFotografias
+          ? `${sessao.nome} marcou o trabalho como feito (${fotos.length} fotografia(s)).`
+          : `${sessao.nome} marcou o trabalho como feito — por confirmar pelo cliente.`) +
+        ` ${fraseDoFeitoEm(feitoEm)}`,
     });
 
     // O cliente tem de saber que o prazo começou a correr. Sem este email, os

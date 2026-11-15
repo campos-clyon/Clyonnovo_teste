@@ -194,10 +194,10 @@ describe("o painel e a rota", () => {
   const PAINEL = semNotas(ler("src/components/admin/AdminPagamentosPanel.tsx"));
   const ROTA = semNotas((ler("src/app/api/admin/pagamentos/route.ts") + ler("src/lib/trabalhos-para-gerir.ts")));
 
-  it("a rota manda o dia do trabalho: o combinado, o pedido, ou o do «feito»", () => {
+  it("a rota manda o dia do trabalho: o feito (d36), o combinado, o pedido, ou o do «Está feito»", () => {
     expect(ROTA).toContain("n.dataCombinada, n.execucaoEnviadaEm");
     expect(ROTA).toContain("o.dataAgendada");
-    expect(ROTA).toContain("dataDoTrabalho: iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm)");
+    expect(ROTA).toContain("dataDoTrabalho: iso(l.feitoEm) ?? iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm)");
   });
 
   it("o painel filtra por profissional pelo NÚMERO dele, e não pelo nome", () => {

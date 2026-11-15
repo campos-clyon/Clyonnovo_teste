@@ -54,6 +54,12 @@ import {
 import { taxasSemFactura } from "@/lib/sem-factura";
 import { purgaArmada } from "@/lib/retencao";
 import {
+  FEITO_EM_APAGADO,
+  FEITO_EM_AO_CONFIRMAR,
+  FEITO_EM_AO_DAR_POR_FEITO,
+  FEITO_EM_COM_AS_HORAS,
+} from "@/lib/feito-em";
+import {
   DIAS_DO_TELEMOVEL_HOJE,
   DIAS_DO_TELEMOVEL_NAS_REGRAS_NOVAS,
   primeiroNome,
@@ -1457,7 +1463,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 21;
+const VERSAO_DAS_NEGOCIACOES = 22;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1761,6 +1767,12 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN fechoTokenHash VARCHAR(64) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN fechoTokenExpiraEm DATETIME NULL DEFAULT NULL`,
     `CREATE INDEX idx_negociacoes_fecho_token ON negociacoes (fechoTokenHash)`,
+    /*
+     * v22 (15-11-2026, d36) — QUANDO O TRABALHO FOI FEITO (`feito-em.ts`): o
+     * instante em que foi dado por feito, ou o fim da folha num trabalho à
+     * hora. Nula nas de antes (não se preenche — ver feito-em.ts). Aditiva.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN feitoEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -2288,7 +2300,7 @@ export async function criarNegociacao(
        propostasJson = VALUES(propostasJson),
        acessoTokenHash = VALUES(acessoTokenHash),
        acessoTokenExpiraEm = VALUES(acessoTokenExpiraEm),
-       execucaoEnviadaEm = NULL, provaJson = NULL,
+       execucaoEnviadaEm = NULL, provaJson = NULL, feitoEm = NULL,
        aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
        valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL, materiaisJson = NULL,
        folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL, folhaRascunhoJson = NULL,
@@ -4654,7 +4666,7 @@ export async function passarOTrabalhoAOutroProfissional(
           SET estado = 'acordada', valorAcordado = ?,
               taxaCliente = ?, taxaProfissional = ?,
               formaDePagamento = ?, acrescimoPagamento = ?, dataCombinada = ?, duracaoMinutos = ?,
-              execucaoEnviadaEm = NULL, provaJson = NULL, confirmadoEm = NULL, pagoEm = NULL,
+              execucaoEnviadaEm = NULL, provaJson = NULL, feitoEm = NULL, confirmadoEm = NULL, pagoEm = NULL,
               aCaminhoEm = NULL, proximoEm = NULL, chegouEm = NULL, chegadaConfirmadaEm = NULL, ajustesJson = NULL,
               valorPorHora = NULL, horasInicioEm = NULL, horasFimEm = NULL, horasMinutos = NULL, horasFaturadas = NULL, valorDasHoras = NULL, horasMarcadasEm = NULL, horasConfirmadasEm = NULL, horasConfirmadasPor = NULL, horasContestadasEm = NULL, horasContestacao = NULL, materiaisUsadosJson = NULL,
               folhaJson = NULL, folhaHistoricoJson = NULL, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL, folhaRascunhoJson = NULL
@@ -4729,7 +4741,7 @@ export async function darPorEntreguePelaClyon(
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [r] = (await pool.execute(
-    `UPDATE negociacoes SET execucaoEnviadaEm = NOW()
+    `UPDATE negociacoes SET execucaoEnviadaEm = NOW(), ${FEITO_EM_AO_DAR_POR_FEITO}
       WHERE id = ? AND pedidoId = ? AND estado = 'acordada' AND execucaoEnviadaEm IS NULL`,
     [negociacaoId, pedidoId],
   )) as [{ affectedRows?: number }, unknown];
@@ -4751,7 +4763,7 @@ export async function retirarEntregaDadaPelaClyon(
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [r] = (await pool.execute(
-    `UPDATE negociacoes SET execucaoEnviadaEm = NULL
+    `UPDATE negociacoes SET execucaoEnviadaEm = NULL, ${FEITO_EM_APAGADO}
       WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
         AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL AND provaJson IS NULL`,
     [negociacaoId, pedidoId],
@@ -5222,6 +5234,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
      */
     createdAt: Date;
     execucaoEnviadaEm: Date | null;
+    /** Quando ficou feito (d36, 15-11-2026) — `feito-em.ts`. */
+    feitoEm?: Date | null;
     provaJson: string | null;
     confirmadoEm: Date | null;
     /** «cliente», «clyon» ou «prazo» — nulo nos de antes de 28-10-2026. */
@@ -5332,7 +5346,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- contava como antigo e deixava levantar o que nao foi pago.
             n.createdAt,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.acrescimoPagamento,
-            n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm, n.confirmadoPor, n.pagoEm,
+            n.execucaoEnviadaEm, n.feitoEm, n.provaJson, n.confirmadoEm, n.confirmadoPor, n.pagoEm,
             n.aCaminhoEm, n.proximoEm, n.chegouEm, n.chegadaConfirmadaEm, n.ajustesJson,
             n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
             n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
@@ -7184,7 +7198,8 @@ export async function gravarHorasDoTrabalho(
     `UPDATE negociacoes
         SET horasInicioEm = ?, horasFimEm = ?, horasMinutos = ?, horasFaturadas = ?,
             valorPorHora = ?, valorDasHoras = ?, materiaisUsadosJson = ?,
-            horasMarcadasEm = NOW(), horasContestadasEm = NULL, horasContestacao = NULL
+            horasMarcadasEm = NOW(), horasContestadasEm = NULL, horasContestacao = NULL,
+            ${FEITO_EM_COM_AS_HORAS}
       WHERE id = ? AND providerId = ? AND estado = 'acordada'
         AND confirmadoEm IS NULL AND horasConfirmadasEm IS NULL`,
     [
@@ -7370,6 +7385,7 @@ export async function gravarFolhaDoTrabalho(
         SET horasInicioEm = ?, horasFimEm = ?, horasMinutos = ?, horasFaturadas = ?,
             valorPorHora = ?, valorDasHoras = ?, materiaisUsadosJson = NULL,
             horasMarcadasEm = NOW(), horasContestadasEm = NULL, horasContestacao = NULL,
+            ${FEITO_EM_COM_AS_HORAS},
             folhaJson = ?, folhaLembrete2hEm = NULL, folhaLembrete24hEm = NULL, folhaNaMesaEm = NULL, folhaRascunhoJson = NULL,
             ${HISTORICO_DA_FOLHA_MAIS}
       WHERE id = ? AND providerId = ? AND estado = 'acordada'
@@ -7702,7 +7718,7 @@ export async function registarExecucao(
   if (!pool) throw new Error("DB not available");
   const [res] = await pool.execute(
     `UPDATE negociacoes
-        SET execucaoEnviadaEm = NOW(), provaJson = ?
+        SET execucaoEnviadaEm = NOW(), provaJson = ?, ${FEITO_EM_AO_DAR_POR_FEITO}
       WHERE id = ? AND providerId = ? AND estado = 'acordada'
         AND execucaoEnviadaEm IS NULL`,
     [provaJson, negociacaoId, providerId],
@@ -7749,7 +7765,7 @@ export async function confirmarExecucao(
             SET confirmadoEm = NOW(),
                 pagamentoParaQue = ?, pagamentoComo = ?,
                 pagamentoDeclaradoEm = NOW(), pagamentoDeclaradoPor = ?,
-                motivoSemFactura = ?, confirmadoPor = ?
+                motivoSemFactura = ?, confirmadoPor = ?, ${FEITO_EM_AO_CONFIRMAR}
           WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
             AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL
             AND (horasMarcadasEm IS NULL OR horasConfirmadasEm IS NOT NULL)`,
@@ -7765,7 +7781,7 @@ export async function confirmarExecucao(
       )
     : await pool.execute(
         `UPDATE negociacoes
-            SET confirmadoEm = NOW(), confirmadoPor = ?
+            SET confirmadoEm = NOW(), confirmadoPor = ?, ${FEITO_EM_AO_CONFIRMAR}
           WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
             AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL
             AND (horasMarcadasEm IS NULL OR horasConfirmadasEm IS NOT NULL)`,
@@ -7840,7 +7856,7 @@ export async function libertarTrabalhosPorPrazo(
 
   // Quem confirmou: o prazo (28-10-2026, d4) — ver `tituloDoConfirmado`.
   await pool.execute(
-    `UPDATE negociacoes SET confirmadoEm = NOW(), confirmadoPor = 'prazo'
+    `UPDATE negociacoes SET confirmadoEm = NOW(), confirmadoPor = 'prazo', ${FEITO_EM_AO_CONFIRMAR}
       WHERE id IN (${alvos.map(() => "?").join(",")}) AND confirmadoEm IS NULL`,
     alvos.map((a) => a.negociacaoId),
   );

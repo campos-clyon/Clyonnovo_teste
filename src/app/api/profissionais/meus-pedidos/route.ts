@@ -434,6 +434,8 @@ export async function GET(req: NextRequest) {
          * momento do acordo, que é onde a maior parte da história começa.
          */
         execucaoEnviadaEm: l.execucaoEnviadaEm ?? null,
+        // Quando ficou feito (d36, 15-11-2026) — a agenda mostra-o no dia em que foi feito.
+        feitoEm: l.feitoEm ?? null,
         // O trabalho no terreno, pela app (18-10-2026): quando saiu e quando chegou.
         aCaminhoEm: l.aCaminhoEm ?? null,
         proximoEm: l.proximoEm ?? null,

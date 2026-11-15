@@ -45,6 +45,11 @@ export type TrabalhoNaAgenda = {
   execucaoEnviadaEm?: string | Date | null;
   confirmadoEm?: string | Date | null;
   /**
+   * Quando ficou feito — d36, 15-11-2026 (`feito-em.ts`). Num trabalho feito,
+   * é esta a data que a agenda mostra (a marcada continua em `dataCombinada`).
+   */
+  feitoEm?: string | Date | null;
+  /**
    * O pedido está «concluído» — fechado à mão no backoffice, sem passar pela
    * confirmação da negociação. Também é feito.
    */
@@ -55,8 +60,11 @@ export type NaAgenda = {
   estado: EstadoNaAgenda;
   /** O instante que conta, já escolhido entre as duas datas. */
   quando: Date | null;
-  /** De onde saiu: o que se combinou, ou o que o cliente tinha pedido. */
-  origem: "combinada" | "do_cliente" | "nenhuma";
+  /**
+   * De onde saiu: o que se combinou, o que o cliente tinha pedido, ou — num
+   * trabalho feito com a data gravada (d36) — o dia e a hora em que foi feito.
+   */
+  origem: "combinada" | "do_cliente" | "nenhuma" | "feito";
   /** Dias de atraso, contados em dias de calendário. Zero quando não há. */
   diasDeAtraso: number;
   /**
@@ -197,6 +205,14 @@ export function naAgenda(t: TrabalhoNaAgenda, agora: Date = new Date()): NaAgend
    */
   const feito = Boolean(t.execucaoEnviadaEm || t.confirmadoEm || t.pedidoConcluido);
   if (feito) {
+    /*
+     * FEITO A — d36, 15-11-2026. Com o «feito em» gravado, o trabalho fica no
+     * dia e na hora em que foi feito (numa data vaga, passa a ser esse o dia;
+     * numa marcada, a marcada continua em `dataCombinada`, para se ver a
+     * diferença). Sem ele (os de antes), fica na data de sempre.
+     */
+    const feitoEm = paraData(t.feitoEm);
+    if (feitoEm) return { estado: "feito", quando: feitoEm, origem: "feito", diasDeAtraso: 0, horaJaPassou: false };
     return { estado: "feito", quando, origem, diasDeAtraso: 0, horaJaPassou: false };
   }
 

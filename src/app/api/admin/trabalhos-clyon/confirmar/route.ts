@@ -12,6 +12,8 @@ import {
 import { CONFIRME_AS_HORAS_PRIMEIRO, FALTA_A_FOLHA, faltaAFolha, horasNaoTravamOFim } from "@/lib/horas-do-trabalho";
 import { lerBase } from "@/lib/base-do-preco";
 import { confirmarDandoPorEntregue } from "@/lib/confirmar-sem-prova";
+import { fraseDoFeitoEm } from "@/lib/feito-em";
+import { feitoEmDaNegociacao } from "@/lib/feito-em-na-base";
 
 export const runtime = "nodejs";
 
@@ -120,7 +122,13 @@ export async function POST(req: NextRequest) {
       `CLYON (${quem}) confirmou o trabalho de ${linha.profissional}` +
       (corpo.semProva === true ? " sem as fotografias dele" : "") +
       ". O valor fica disponível na carteira dele.";
-    await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo });
+    // d36: e quando ficou feito (o fim da folha num trabalho à hora).
+    const feitoEm = await feitoEmDaNegociacao(negociacaoId);
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message: feitoEm ? `${resumo} ${fraseDoFeitoEm(feitoEm)}` : resumo,
+    });
     await registarSemFalhar({
       acontecimento: "execucao_confirmada",
       pedidoId,

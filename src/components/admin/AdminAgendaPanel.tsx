@@ -95,11 +95,13 @@ type Trabalho = TrabalhoDaAgenda;
 function comDiaPorGravar(t: Trabalho, combinada: string | null, agora: Date): Trabalho {
   const a = naAgenda({ dataCombinada: combinada, dataAgendada: t.dataDoCliente }, agora);
   const feito = t.estado === "feito";
+  // Um feito com a data gravada (d36) fica no dia em que foi feito.
+  const ficaNoFeito = feito && t.origem === "feito";
   return {
     ...t,
     dataCombinada: combinada,
-    quando: a.quando ? a.quando.toISOString() : null,
-    origem: a.origem,
+    quando: ficaNoFeito ? t.quando : a.quando ? a.quando.toISOString() : null,
+    origem: ficaNoFeito ? "feito" : a.origem,
     estado: feito ? "feito" : a.estado,
     diasDeAtraso: feito ? 0 : a.diasDeAtraso,
     horaJaPassou: feito ? false : a.horaJaPassou,

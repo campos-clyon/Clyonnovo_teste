@@ -22,6 +22,8 @@ import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { confirmarDandoPorEntregue } from "@/lib/confirmar-sem-prova";
+import { fraseDoFeitoEm } from "@/lib/feito-em";
+import { feitoEmDaNegociacao } from "@/lib/feito-em-na-base";
 import { FALTA_A_FOLHA, faltaAFolha } from "@/lib/horas-do-trabalho";
 import { lerBase } from "@/lib/base-do-preco";
 import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
@@ -424,6 +426,7 @@ export async function POST(req: NextRequest) {
       const frase =
         fraseDaDeclaracao(paraQue, como, valor) + (motivoSemFactura ? ` Motivo: «${motivoSemFactura}».` : "");
 
+      const feitoEm = await feitoEmDaNegociacao(negociacaoId);
       await appendOrderHistory(pedidoId, {
         type: "created",
         by: null,
@@ -432,7 +435,9 @@ export async function POST(req: NextRequest) {
           (semProva ? " e sem a prova do profissional" : "") +
           ` — ` +
           `negociação #${negociacaoId}. Pagamento: ${frase} ` +
-          "Confirma-se nos Pagamentos quando o dinheiro estiver visto.",
+          "Confirma-se nos Pagamentos quando o dinheiro estiver visto." +
+          // d36: quando ficou feito (o fim da folha num trabalho à hora).
+          (feitoEm ? ` ${fraseDoFeitoEm(feitoEm)}` : ""),
       });
 
       /*

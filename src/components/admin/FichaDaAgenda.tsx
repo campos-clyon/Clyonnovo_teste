@@ -83,9 +83,11 @@ export type TrabalhoDaAgenda = {
   /** Quanto tempo leva, em minutos — null é «as duas horas do costume» (03-10-2026). */
   duracaoMinutos?: number | null;
   dataDoCliente: string | null;
+  /** Quando ficou feito (d36, 15-11-2026) — num feito, é a data que se mostra. */
+  feitoEm?: string | null;
   estado: EstadoNaAgenda;
   quando: string | null;
-  origem: "combinada" | "do_cliente" | "nenhuma";
+  origem: "combinada" | "do_cliente" | "nenhuma" | "feito";
   diasDeAtraso: number;
   horaJaPassou: boolean;
   jaConfirmado: boolean;
@@ -244,7 +246,12 @@ export default function FichaDaAgenda({
 
   const agora = new Date();
   const situacao = naAgenda(
-    { dataCombinada: t.dataCombinada, dataAgendada: t.dataDoCliente },
+    {
+      dataCombinada: t.dataCombinada,
+      dataAgendada: t.dataDoCliente,
+      // Um feito com a data gravada fica no dia em que foi feito (d36).
+      ...(t.estado === "feito" ? { feitoEm: t.feitoEm ?? null, pedidoConcluido: true } : {}),
+    },
     agora,
   );
 
@@ -421,7 +428,11 @@ export default function FichaDaAgenda({
           >
             <p className="text-xl font-bold text-white">{quandoPorExtenso(situacao, agora)}</p>
             <p className="mt-0.5 text-xs text-slate-500">
-              {t.origem === "combinada"
+              {t.origem === "feito"
+                ? t.dataCombinada
+                  ? `É o dia e a hora em que foi feito. Estava marcado para ${new Date(t.dataCombinada).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}.`
+                  : "É o dia e a hora em que foi feito."
+                : t.origem === "combinada"
                 ? "Combinado depois de o trabalho ser fechado."
                 : t.origem === "do_cliente"
                   ? "É a data que o cliente pediu no formulário — ainda não foi combinada com ninguém."

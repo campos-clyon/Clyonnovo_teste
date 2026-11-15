@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
               -- Para o lucro da CLYON em cada trabalho (09-10-2026): o acréscimo
               -- do pagamento e, num Trabalho CLYON, o preço ao cliente e a taxa.
               n.acrescimoPagamento, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
-              n.confirmadoEm, n.execucaoEnviadaEm, n.pagoEm,
+              n.confirmadoEm, n.execucaoEnviadaEm, n.feitoEm, n.pagoEm,
               -- Com ou sem factura, antes do IVA incluído (15-10-2026).
               n.pagamentoParaQue,
               -- A abertura da negociação decide o modelo do preço (IVA incluído).
@@ -393,8 +393,9 @@ export async function GET(req: NextRequest) {
         confirmadoEm: l.confirmadoEm ? new Date(l.confirmadoEm as string).toISOString() : null,
         /* Ele ja mandou a prova e falta so alguem confirmar? Muda a espera. */
         aguardaConfirmacao: l.confirmadoEm == null && l.execucaoEnviadaEm != null,
-        feitoEm: l.execucaoEnviadaEm
-          ? new Date(l.execucaoEnviadaEm as string).toISOString()
+        // Quando foi feito (d36): `feitoEm`; nos de antes, o «Está feito».
+        feitoEm: (l.feitoEm ?? l.execucaoEnviadaEm)
+          ? new Date((l.feitoEm ?? l.execucaoEnviadaEm) as string).toISOString()
           : null,
         clientePaga: precoDoCliente(acordado, taxas, modelo).aPagar,
         ivaIncluido: modelo === "iva_incluido",

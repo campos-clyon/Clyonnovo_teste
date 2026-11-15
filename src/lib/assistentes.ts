@@ -435,6 +435,8 @@ export type LinhaCruaDoTrabalho = {
   lucroManual?: number | string | null;
   /** 1 quando alguém corrigiu à mão a data da conclusão (14-10-2026). */
   concluidoEmManual?: number | string | null;
+  /** Quando o trabalho foi feito (d36, 15-11-2026) — da negociação confirmada; nula nos de antes. */
+  feitoEm?: Date | string | null;
   /** Quem operou o pedido — quem o aceitou ou foi o primeiro a agir nele. */
   assignedToName?: string | null;
   profissional?: string | null;
@@ -661,6 +663,29 @@ function diaDaConclusao(l: { concluidoEm?: Date | string | null }): string | nul
   return d ? diaEmLisboa(d) : null;
 }
 
+/** O início do período de um dia (ou `undefined` sem dia, ou antes do início das comissões). */
+function periodoDoDiaOuNada(dia: string | null): string | undefined {
+  return dia ? periodoDoDia(dia)?.inicio : undefined;
+}
+
+/**
+ * O DIA QUE CONTA PARA O PERÍODO — d36, 15-11-2026: o dia em que o trabalho foi
+ * FEITO (`feitoEm`), e não o da confirmação. O dia corrigido à mão pelo dono
+ * (`concluidoEmManual`) continua a mandar; sem `feitoEm` (os de antes), o da
+ * conclusão, como sempre.
+ */
+export function diaQueConta(l: {
+  concluidoEm?: Date | string | null;
+  concluidoEmManual?: number | string | null;
+  feitoEm?: Date | string | null;
+}): string | null {
+  if (Number(l.concluidoEmManual ?? 0) !== 1) {
+    const f = instanteDaBase(l.feitoEm ?? null);
+    if (f) return diaEmLisboa(f);
+  }
+  return diaDaConclusao(l);
+}
+
 /*
  * POR NÚMERO DE PEDIDO — 15-10-2026. *«Coloque esses trabalhos em ordem pelo
  * número do pedido.»* Iam do concluído mais recente para o mais antigo, e um
@@ -704,8 +729,18 @@ export function comissoesPorPeriodo(args: {
   const linhasPorPeriodo = new Map<string, LinhaQueConta[]>();
   for (const l of linhas) {
     if (l.status !== "concluido") continue;
-    const dia = diaDaConclusao(l);
-    const inicio = pagoNoPeriodo.get(Number(l.id)) ?? (dia ? periodoDoDia(dia)?.inicio : undefined);
+    /*
+     * O PERÍODO DO DIA EM QUE FOI FEITO — d36, 15-11-2026 (`diaQueConta`). Mas
+     * NUNCA para dentro de um período já pago: feito a 14 e confirmado a 17,
+     * com o 1–15 pago a 16, ficava lá dentro sem ninguém o pagar. Aí vai para
+     * o período da conclusão, como antes. E um pedido já pago não sai de onde
+     * foi pago (o pago congela).
+     */
+    const doFeito = periodoDoDiaOuNada(diaQueConta(l));
+    const daConclusao = periodoDoDiaOuNada(diaDaConclusao(l));
+    const inicio =
+      pagoNoPeriodo.get(Number(l.id)) ??
+      (doFeito && !pagamentoDoPeriodo.has(doFeito) ? doFeito : (daConclusao ?? doFeito));
     if (!inicio) continue;
     const lista = linhasPorPeriodo.get(inicio) ?? [];
     lista.push(l);
@@ -853,7 +888,8 @@ export function resumoEntreDatas(args: {
   const pagos = new Set(pagamentos.flatMap((p) => p.trabalhos.map((t) => Number(t.pedidoId))));
   const doIntervalo = linhas.filter((l) => {
     if (l.status !== "concluido") return false;
-    const dia = diaDaConclusao(l);
+    // O dia em que foi feito (d36), como nos períodos.
+    const dia = diaQueConta(l);
     return dia != null && dia >= intervalo.inicio && dia <= intervalo.fim;
   });
   const r = detalheDaComissao(doIntervalo, minhaPercent);
@@ -911,7 +947,7 @@ export async function trabalhosQueContam(desde: string = INICIO_DAS_COMISSOES): 
               o.assignedAt, o.updatedAt, o.precoFinal, o.estimateTotal,
               o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual, o.concluidoEmManual,
               n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento,
-              pn.name AS profissional,
+              pn.name AS profissional, n.feitoEm,
               COALESCE(o.concluidoEm, c.confirmadoEm, o.updatedAt) AS concluidoEm
          FROM simulatorOrders o
          LEFT JOIN (
@@ -965,6 +1001,7 @@ export type LinhaQueAindaNaoConta = LinhaCruaDoTrabalho & {
   dataAgendada?: Date | string | null;
   dataCombinada?: Date | string | null;
   execucaoEnviadaEm?: Date | string | null;
+  feitoEm?: Date | string | null;
   confirmadoEm?: Date | string | null;
   deTeste?: number | string | null;
 };
@@ -1001,7 +1038,8 @@ export function porqueAindaNaoConta(l: LinhaQueAindaNaoConta): { motivo: MotivoD
       porque: `confirmado${confirmado ? ` a ${diaEMes(confirmado)}` : ""}, mas o pedido não ficou como concluído — mude o estado em Pedidos`,
     };
   }
-  const feito = diaDaBase(l.execucaoEnviadaEm);
+  // O dia em que foi feito (d36); nos de antes, o do «Está feito».
+  const feito = diaDaBase(l.feitoEm ?? l.execucaoEnviadaEm);
   if (l.execucaoEnviadaEm) {
     return { motivo: "falta_confirmar", porque: `feito${feito ? ` a ${diaEMes(feito)}` : ""} — falta confirmar` };
   }
@@ -1020,7 +1058,7 @@ export async function trabalhosQueAindaNaoContam(desde: string = INICIO_DAS_COMI
   return withConnection(async (conn) => {
     const [r] = (await conn.execute(
       `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId, o.assignedToName,
-              o.dataAgendada, n.dataCombinada, n.execucaoEnviadaEm, n.confirmadoEm,
+              o.dataAgendada, n.dataCombinada, n.execucaoEnviadaEm, n.feitoEm, n.confirmadoEm,
               o.precoFinal, o.estimateTotal,
               o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual,
               n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento,

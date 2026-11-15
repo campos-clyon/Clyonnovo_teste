@@ -71,6 +71,12 @@ const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sáb
  * dia em que alguém corrige seis.
  */
 function quandoE(p: Pedido): string | null {
+  /*
+   * FEITO A — d36, 15-11-2026. Um trabalho já feito fica no dia e na hora em
+   * que foi feito (numa mudança à hora, o fim da folha); a data marcada fica
+   * no trabalho, para se ver a diferença.
+   */
+  if (p.feitoEm && ESTADO_DO_FEITO[p.fase]) return p.feitoEm;
   return p.dataCombinada ?? p.dataAgendada ?? null;
 }
 

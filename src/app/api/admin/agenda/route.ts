@@ -49,6 +49,8 @@ export async function GET(req: NextRequest) {
               n.formaDePagamento, n.createdAt AS negociacaoCriadaEm, n.pagamentoParaQue, n.semFactura,
               n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon,
               n.dataCombinada, n.duracaoMinutos, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
+              -- Quando ficou feito (d36, 15-11-2026): num feito, a data que a agenda mostra.
+              n.feitoEm,
               -- O terreno e o ajuste no local, pela app do profissional (18-10-2026).
               n.aCaminhoEm, n.chegouEm, n.ajustesJson,
               o.dataAgendada, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
@@ -79,6 +81,7 @@ export async function GET(req: NextRequest) {
           dataAgendada: l.dataAgendada as Date | null,
           execucaoEnviadaEm: l.execucaoEnviadaEm as Date | null,
           confirmadoEm: l.confirmadoEm as Date | null,
+          feitoEm: l.feitoEm as Date | null,
           // Pago ao profissional NÃO entra: pagar adiantado não é ter feito (08-10-2026).
           pedidoConcluido: l.estadoDoPedido === "concluido",
         },
@@ -153,6 +156,8 @@ export async function GET(req: NextRequest) {
         /* Quanto tempo leva — null é «as duas horas do costume» (03-10-2026). */
         duracaoMinutos: l.duracaoMinutos != null ? Number(l.duracaoMinutos) : null,
         dataDoCliente: l.dataAgendada ? new Date(l.dataAgendada as string).toISOString() : null,
+        /* Quando ficou feito (d36) — o dia e a hora do que aconteceu. */
+        feitoEm: l.feitoEm ? new Date(l.feitoEm as string).toISOString() : null,
         estado: a.estado,
         quando: a.quando ? a.quando.toISOString() : null,
         origem: a.origem,

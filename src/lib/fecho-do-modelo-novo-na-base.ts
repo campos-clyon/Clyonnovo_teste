@@ -1,3 +1,4 @@
+import { FEITO_EM_AO_CONFIRMAR, FEITO_EM_AO_DAR_POR_FEITO } from "@/lib/feito-em";
 import { after } from "next/server";
 import {
   appendOrderHistory,
@@ -203,7 +204,7 @@ export async function fecharPeloClienteSemEstaFeito(
       return false;
     }
     const [entregue] = (await conn.execute(
-      `UPDATE negociacoes SET execucaoEnviadaEm = NOW()
+      `UPDATE negociacoes SET execucaoEnviadaEm = NOW(), ${FEITO_EM_AO_DAR_POR_FEITO}
         WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
           AND execucaoEnviadaEm IS NULL AND confirmadoEm IS NULL`,
       [negociacaoId, pedidoId],
@@ -213,7 +214,7 @@ export async function fecharPeloClienteSemEstaFeito(
       return false;
     }
     const [confirmado] = (await conn.execute(
-      `UPDATE negociacoes SET confirmadoEm = NOW(), confirmadoPor = 'cliente', fechoNaoEm = NULL
+      `UPDATE negociacoes SET confirmadoEm = NOW(), confirmadoPor = 'cliente', fechoNaoEm = NULL, ${FEITO_EM_AO_CONFIRMAR}
         WHERE id = ? AND pedidoId = ? AND estado = 'acordada'
           AND execucaoEnviadaEm IS NOT NULL AND confirmadoEm IS NULL
           AND (horasMarcadasEm IS NULL OR horasConfirmadasEm IS NOT NULL)`,

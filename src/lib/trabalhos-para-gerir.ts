@@ -83,11 +83,11 @@ export type TrabalhoParaGerir = {
    * As datas que aqui havia eram todas do DINHEIRO: quando o cliente pagou,
    * quando foi confirmado, quando se transferiu. Um trabalho por receber não
    * tem nenhuma delas, e «os trabalhos desta semana» não se podia perguntar.
-   * É o dia combinado com o cliente, ou o que ele pediu, ou — se não houver
-   * nenhum — o dia em que foi dado por feito.
+   * É o dia em que foi feito (`feitoEm`, d36), ou o combinado com o cliente,
+   * ou o que ele pediu, ou — se não houver nenhum — o dia do «Está feito».
    */
   dataDoTrabalho: string | null;
-  /** Quando foi dado por feito (a prova enviada). */
+  /** Quando foi feito (`feitoEm`, d36 — o fim da folha num trabalho à hora); nos de antes, o «Está feito». */
   feitoEm: string | null;
   /** Quando o pedido entrou — 19-10-2026, «data de criação e de agendamento». */
   pedidoCriadoEm: string | null;
@@ -142,7 +142,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
   const [linhas] = (await pool.execute(
     `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.valorAcordado,
             n.taxaCliente, n.taxaProfissional, n.formaDePagamento,
-            n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm,
+            n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm, n.feitoEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
             n.createdAt AS negociacaoCriadaEm, n.semFactura, n.motivoSemFactura,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
@@ -284,8 +284,9 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       ...base,
       fase: faseDoDinheiro(base),
       recebido,
-      dataDoTrabalho: iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm),
-      feitoEm: iso(l.execucaoEnviadaEm),
+      // d36 (15-11-2026): feito, é o dia em que foi feito; senão o combinado, o pedido, ou o «Está feito».
+      dataDoTrabalho: iso(l.feitoEm) ?? iso(l.dataCombinada) ?? iso(l.dataAgendada) ?? iso(l.execucaoEnviadaEm),
+      feitoEm: iso(l.feitoEm) ?? iso(l.execucaoEnviadaEm),
       pedidoCriadoEm: iso(l.pedidoCriadoEm),
       agendadoPara: iso(l.dataCombinada) ?? iso(l.dataAgendada),
       conta,
