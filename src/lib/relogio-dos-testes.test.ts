@@ -117,9 +117,11 @@ function testesQueTocamNoModelo(): Map<string, string> {
   for (const t of TESTES) {
     if (rel(t) === "src/lib/relogio-dos-testes.test.ts") continue;
     const s = semComentarios(ler(t));
+    // Um nome dentro de um texto («expect(rota).toContain("f(")») não é uma chamada.
+    const semTextos = s.replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, '""');
     let porque: string | null = null;
     for (const [nome, de] of funcoes) {
-      if (new RegExp(`\\b${nome}\\s*\\(`).test(s)) {
+      if (new RegExp(`\\b${nome}\\s*\\(`).test(semTextos)) {
         porque = `chama ${nome} (${de})`;
         break;
       }
@@ -152,25 +154,20 @@ const JA_EXISTIAM: ReadonlySet<string> = new Set([
   "src/lib/a-vitoria-aprende.test.ts",
   "src/lib/a-vitoria-no-novo-modelo.test.ts",
   "src/lib/a-vitoria-responde-aos-profissionais.test.ts",
-  "src/lib/abater-no-saldo-e-bloquear.test.ts",
   "src/lib/aceito-este-preco.test.ts",
   "src/lib/adjudicacao-com-referencia.test.ts",
   "src/lib/apagar-conta-com-valor-por-pagar.test.ts",
   "src/lib/app-cliente-parceiros-da-mudanca.test.ts",
-  "src/lib/app-pro-igual-ao-painel.test.ts",
   "src/lib/apps-d10-novo-modelo.test.ts",
   "src/lib/apps-d10-os-dois-modos.test.ts",
   "src/lib/apps-d18-o-modelo-novo-nas-apps.test.ts",
-  "src/lib/assistente-situacoes-diversas.test.ts",
   "src/lib/campos-da-candidatura.test.ts",
-  "src/lib/compreensao-em-baixo.test.ts",
   "src/lib/conferir-pagamentos-rotina.test.ts",
   "src/lib/conta-da-mudanca.test.ts",
   "src/lib/contacto-so-enquanto-ha-trabalho.test.ts",
   "src/lib/conversa-com-a-clyon.test.ts",
   "src/lib/corte-das-sessoes.test.ts",
   "src/lib/d13-transferencia-igual-no-site-e-na-app.test.ts",
-  "src/lib/d17-a-conta-inversa.test.ts",
   "src/lib/d17-o-mesmo-total-em-todo-o-lado.test.ts",
   "src/lib/d24-correccoes-baixas.test.ts",
   "src/lib/d24-email-da-conta-so-do-administrador.test.ts",
@@ -186,7 +183,6 @@ const JA_EXISTIAM: ReadonlySet<string> = new Set([
   "src/lib/entulho-e-moveis-d7.test.ts",
   "src/lib/erros-da-app-de-cliente.test.ts",
   "src/lib/erros-da-app.test.ts",
-  "src/lib/fecho-do-modelo-novo.test.ts",
   "src/lib/filtro-de-contactos-m1.test.ts",
   "src/lib/filtro-de-contactos.test.ts",
   "src/lib/fotografias-da-carrinha-na-lista.test.ts",
@@ -199,24 +195,19 @@ const JA_EXISTIAM: ReadonlySet<string> = new Set([
   "src/lib/manutencao-em-todo-o-lado.test.ts",
   "src/lib/margem-de-referencia.test.ts",
   "src/lib/mudancas-com-parceiros-nas-apps.test.ts",
-  "src/lib/novo-modelo-ligacoes.test.ts",
   "src/lib/novo-modelo.test.ts",
-  "src/lib/o-fio-vai-com-a-mensagem.test.ts",
   "src/lib/origem-no-pedido-feito-a-mao.test.ts",
   "src/lib/orquestra.test.ts",
   "src/lib/pagina-para-empresas.test.ts",
   "src/lib/pedido-da-app-de-cliente.test.ts",
   "src/lib/pedido-do-link-na-app.test.ts",
   "src/lib/percurso-so-enquanto-ha-trabalho.test.ts",
-  "src/lib/perfil-por-completar.test.ts",
   "src/lib/porque-e-que-a-leitura-falhou.test.ts",
   "src/lib/programa-da-app.test.ts",
   "src/lib/recusar-proposta.test.ts",
-  "src/lib/reler-a-conversa.test.ts",
   "src/lib/rotas-que-nao-mentem.test.ts",
   "src/lib/servicos-fora-do-plano.test.ts",
   "src/lib/sessao-da-app.test.ts",
-  "src/lib/sessao-de-convidado.test.ts",
   "src/lib/sessao-do-cliente.test.ts",
   "src/lib/simulador-por-categoria.test.ts",
   "src/lib/textos-do-novo-modelo.test.ts",
