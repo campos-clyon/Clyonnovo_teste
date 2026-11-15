@@ -8,6 +8,8 @@ import AdminConvitesPanel from "@/components/admin/AdminConvitesPanel";
 import AdminErrosDaAppPanel from "@/components/admin/AdminErrosDaAppPanel";
 import AdminGmailsDoTestePanel from "@/components/admin/AdminGmailsDoTestePanel";
 import CoberturaPorConcelho from "@/components/admin/CoberturaPorConcelho";
+import AvisoATodosOsProfissionais from "@/components/admin/AvisoATodosOsProfissionais";
+import { useEAdministrador } from "@/hooks/useAdminAuth";
 
 /**
  * A SECÇÃO DOS PROFISSIONAIS DO BACKOFFICE — dois botões e três separadores.
@@ -40,10 +42,15 @@ import CoberturaPorConcelho from "@/components/admin/CoberturaPorConcelho";
  * E A COBERTURA POR CONCELHO — 04-11-2026 (d16, Fase A): o quadro só de
  * leitura. Monta-se só quando se abre (é a conta mais pesada da secção).
  */
-type Aba = "inscritos" | "candidaturas" | "convites" | "erros" | "gmails" | "cobertura";
+/*
+ * E O AVISO A TODOS OS PROFISSIONAIS — 15-11-2026 (d11): o último separador,
+ * só para o administrador. Ver `AvisoATodosOsProfissionais`.
+ */
+type Aba = "inscritos" | "candidaturas" | "convites" | "erros" | "gmails" | "cobertura" | "aviso";
 
 export default function AdminProfissionaisSeccao() {
   const [aba, setAba] = useState<Aba>("inscritos");
+  const eAdministrador = useEAdministrador();
   const [inscritos, setInscritos] = useState<number | null>(null);
   const [porTratar, setPorTratar] = useState(0);
   const [porUsar, setPorUsar] = useState(0);
@@ -97,6 +104,9 @@ export default function AdminProfissionaisSeccao() {
       alerta: gmailsPorPor > 0,
     },
     { id: "cobertura", rotulo: "Cobertura por concelho", numero: null, dica: "", alerta: false },
+    ...(eAdministrador
+      ? [{ id: "aviso" as Aba, rotulo: "Aviso a todos os profissionais", numero: null, dica: "", alerta: false }]
+      : []),
   ];
 
   return (
@@ -207,6 +217,11 @@ export default function AdminProfissionaisSeccao() {
         <div role="tabpanel" id="painel-cobertura" aria-labelledby="separador-cobertura" hidden={aba !== "cobertura"}>
           {aba === "cobertura" && <CoberturaPorConcelho />}
         </div>
+        {eAdministrador && (
+          <div role="tabpanel" id="painel-aviso" aria-labelledby="separador-aviso" hidden={aba !== "aviso"}>
+            {aba === "aviso" && <AvisoATodosOsProfissionais />}
+          </div>
+        )}
       </div>
     </section>
   );

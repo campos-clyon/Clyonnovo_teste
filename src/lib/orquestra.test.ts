@@ -579,6 +579,9 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
     "src/lib/rotulos-da-carteira.ts",
     // As respostas da Vitória aos profissionais no WhatsApp (d21, 13-11-2026).
     "src/lib/vitoria-aos-profissionais.ts",
+    // O aviso a todos os profissionais do modelo de 15-11: o email, o WhatsApp e a página «Saber mais» (d11, 15-11-2026).
+    "src/lib/aviso-aos-profissionais.ts",
+    "src/lib/aviso-aos-profissionais-na-base.ts",
   ]).has(f);
 /*
  * Entre a equipa: a base, as contas, as notas e as instruções que só a equipa

@@ -39,6 +39,7 @@ import { propostasDe, type DadosDaCarteira, type Pedido, type Perfil } from "./t
 import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
 import ConviteDaAppPro from "./ConviteDaAppPro";
+import AvisoDoNovoModelo from "./AvisoDoNovoModelo";
 import AceitarOsTermos from "./AceitarOsTermos";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PrecosDasMudancas from "./PrecosDasMudancas";
@@ -730,6 +731,9 @@ function PainelNoBrowser() {
 
       {/* O convite para o teste da app CLYON Pro — ver ConviteDaAppPro.tsx (23-10-2026). */}
       <ConviteDaAppPro />
+
+      {/* O aviso do modelo de 15-11 (d11): só com «Mostrar o aviso do novo modelo» ligado nas Configs. */}
+      <AvisoDoNovoModelo onCompletarPerfil={() => abrir("banco")} />
 
       {/*
         E O MESMO PEDIDO, PARA O WHATSAPP — 20-09-2026.

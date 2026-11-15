@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import crypto from "node:crypto";
 import {
   filaWhatsAppParaAPonte,
@@ -235,6 +235,21 @@ export async function GET(req: NextRequest) {
   if (erro) return erro;
   // Desligado no painel = nada sai, nem o que já estava na fila. A fila
   // espera; ligar outra vez solta-a — e o painel mostra o que lá está.
+  /*
+   * O AVISO A TODOS OS PROFISSIONAIS (d11, 15-11-2026) anda à boleia desta
+   * ronda: depois de responder, uma passagem do motor (um WhatsApp por vez,
+   * 20–45 s entre cada, 9h–21h de Lisboa, e um lote pequeno de emails). Só
+   * faz alguma coisa com um envio começado no backoffice; nunca atrasa nem
+   * parte a ronda da ponte.
+   */
+  after(async () => {
+    try {
+      const { passagemDoAviso } = await import("@/lib/aviso-aos-profissionais-na-base");
+      await passagemDoAviso("ponte");
+    } catch (e) {
+      console.error("[ponte] aviso aos profissionais:", e instanceof Error ? e.message : e);
+    }
+  });
   if (!(await whatsappLigado())) return NextResponse.json({ paraEnviar: [] });
   return NextResponse.json({ paraEnviar: await filaWhatsAppParaAPonte() });
 }

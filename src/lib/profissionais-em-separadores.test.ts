@@ -52,7 +52,9 @@ describe("as listas são separadores", () => {
     expect(SECCAO).toContain('role="tablist"');
     expect(SECCAO).toContain('role="tab"');
     expect(SECCAO).toContain("aria-selected={activa}");
-    expect(SECCAO.match(/role="tabpanel"/g)).toHaveLength(6);
+    // O sétimo, o aviso a todos os profissionais (d11, 15-11-2026), só para o administrador.
+    expect(SECCAO.match(/role="tabpanel"/g)).toHaveLength(7);
+    expect(SECCAO).toMatch(/\{eAdministrador && \(\s*<div role="tabpanel" id="painel-aviso"/);
     expect(SECCAO).toContain('hidden={aba !== "gmails"}');
     // A cobertura (d16) só se monta quando se abre: é a conta mais pesada, e não tem número no separador.
     expect(SECCAO).toContain('hidden={aba !== "cobertura"}');

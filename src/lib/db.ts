@@ -15319,6 +15319,9 @@ export type Acontecimento =
   | "vitoria_profissionais_interruptor"
   // A mensagem gentil da Vitória a quem fica calado (d25 v2, 14-11-2026): o interruptor das Configs.
   | "vitoria_seguimento_interruptor"
+  // O aviso a todos os profissionais (d11, 15-11-2026): versões, envio, parar, o interruptor e cada destinatário.
+  | "aviso_profissionais"
+  | "aviso_profissionais_destinatario"
   | "fecho_perguntado"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —

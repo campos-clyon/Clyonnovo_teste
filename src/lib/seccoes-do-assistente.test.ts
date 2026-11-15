@@ -275,6 +275,9 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/retencao/interruptor", porque: "ligar as regras novas da retenção (anonimizar e apagar) é do administrador" },
   { seccao: "configs", rota: "/api/admin/fecho-do-modelo/interruptor", porque: "ligar o email «O trabalho já foi feito?» ao cliente é do administrador, com o sim do dono (d15, 13-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-aos-profissionais/interruptor", porque: "ligar as respostas automáticas da Vitória aos profissionais é do administrador, com o sim do dono (d21, 13-11-2026)" },
+  // O aviso a todos os profissionais (d11, 15-11-2026): enviar a todos e o interruptor da faixa são do administrador.
+  { seccao: "profissionais", rota: "/api/admin/aviso-aos-profissionais", porque: "o aviso a todos os profissionais (envio em massa) é só do administrador (d11, 15-11-2026)" },
+  { seccao: "configs", rota: "/api/admin/aviso-aos-profissionais", porque: "o interruptor «Mostrar o aviso do novo modelo» é do administrador, com o sim do dono (d11, 15-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-seguimento/interruptor", porque: "ligar a mensagem gentil da Vitória a quem fica calado é do administrador, com o sim do dono (d25, 14-11-2026)" },
   // «Só ver» — 03-10-2026: as rotas que SÓ escrevem dinheiro ficam inteiras com o administrador.
   { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
