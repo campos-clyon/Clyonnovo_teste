@@ -4,6 +4,8 @@ import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { validarPedidoDeAjuda } from "@/lib/ajuda-plataforma";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export const runtime = "nodejs";
 
@@ -24,6 +26,8 @@ export async function GET(req: NextRequest) {
     const [linhas, taxas] = await Promise.all([ajudasDoProfissional(sessao.providerId), taxasActuais()]);
     return NextResponse.json({
       taxas,
+      // O modelo das respostas pelo relógio do servidor, nunca o do navegador (d27 parte 3).
+      novoModelo: novoModeloEmVigor(agoraDoModelo()),
       pedidos: linhas.map((p) => {
         let respostas: Array<{ texto: string; em: string; por: string }> = [];
         try {

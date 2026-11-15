@@ -12,6 +12,7 @@ import {
   rotuloDoAssunto,
 } from "@/lib/ajuda-plataforma";
 import type { Taxas } from "@/lib/taxas-plataforma";
+import { NOVO_MODELO_DESDE } from "@/lib/novo-modelo";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 
 /**
@@ -57,7 +58,12 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
   const [meus, setMeus] = useState<PedidoDeAjuda[]>([]);
   // A taxa em vigor vem com a lista; até chegar, a resposta diz o nome da taxa sem número.
   const [taxas, setTaxas] = useState<Taxas | null>(null);
-  const perguntas = useMemo(() => perguntasDoProfissional(taxas), [taxas]);
+  // O modelo vem do servidor (d27 parte 3): o relógio do navegador não decide as respostas.
+  const [novoModelo, setNovoModelo] = useState(false);
+  const perguntas = useMemo(
+    () => perguntasDoProfissional(taxas, novoModelo ? NOVO_MODELO_DESDE : new Date(0)),
+    [taxas, novoModelo],
+  );
 
   const carregar = useCallback(async () => {
     try {
@@ -66,6 +72,7 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
       const dados = await res.json();
       setMeus(dados.pedidos ?? []);
       setTaxas(taxasDaAjuda(dados.taxas));
+      setNovoModelo(dados.novoModelo === true);
     } catch {
       /* a lista do que já escreveu é útil, não é essencial */
     }
