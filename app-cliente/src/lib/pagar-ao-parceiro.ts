@@ -31,6 +31,12 @@ export type VistoDoPagarAoParceiro = {
   totalEmTexto?: string | null;
   /** Sem IBAN nem MB WAY (d17): o que o cliente lê em vez dos dados. */
   semDados?: string | null;
+  /**
+   * Os dados de pagamento do parceiro mudaram depois de contratar (d28): a frase
+   * já escrita pelo servidor, que a app mostra tal e qual. Sem ela (ou um site
+   * antigo), nada. A app não decide se mudaram: só o servidor o sabe.
+   */
+  dadosMudaram?: string | null;
   perfilFiscal?: { fatura: string; guia: string | null };
   /** As duas faturas e o total, pelo regime do parceiro (d17, `total-ao-cliente.ts`): números do servidor. */
   conta?: {
@@ -77,4 +83,10 @@ export const SO_PARA_ESTES_DADOS =
 export function vistoDaR5(v: unknown): VistoDoPagarAoParceiro | null {
   const o = v as Partial<VistoDoPagarAoParceiro> | null | undefined;
   return o && o.pagaAoParceiro === true ? (o as VistoDoPagarAoParceiro) : null;
+}
+
+/** A frase dos dados que mudaram depois de contratar (d28), se o servidor a mandou; senão `null`. */
+export function avisoDosDadosMudados(v: VistoDoPagarAoParceiro | null | undefined): string | null {
+  const t = v?.dadosMudaram;
+  return typeof t === "string" && t.trim() ? t : null;
 }

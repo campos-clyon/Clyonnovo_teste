@@ -145,8 +145,9 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
   it("os três ecrãs importam o texto do src/lib, e não têm cópia", () => {
     const AJUDA = semNotas("app-pro/src/app/conta/ajuda.tsx");
     expect(AJUDA).toContain('} from "../../../../src/lib/ajuda-plataforma"');
-    // Desde 29-10-2026 (d8) com a taxa em vigor, que a rota manda: `perguntasDoProfissional(taxas)`.
-    expect(AJUDA).toContain("perguntasDoProfissional(taxas)");
+    // Desde 29-10-2026 (d8) com a taxa em vigor, que a rota manda; desde 15-11-2026 (d27) pelo modelo
+    // que o servidor diz (`perguntasDaAjuda`, app-pro/src/lib/novo-modelo.ts), que chama `perguntasDoProfissional`.
+    expect(AJUDA).toContain("perguntasDaAjuda(taxas, noNovoModelo)");
     expect(AJUDA).toContain("{perguntas.map(");
     const COMO = semNotas("app-pro/src/app/conta/como-funciona.tsx");
     expect(COMO).toContain('} from "../../../../src/lib/como-funciona-para-o-profissional"');
@@ -167,7 +168,8 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     expect(ajuda).toContain("a CLYON fica com a taxa da plataforma em vigor");
     expect(ajuda).not.toContain("6 % sobre o valor acordado");
     expect(ajuda).not.toContain("5 % por cima");
-    const comAsDeHoje = perguntasDoProfissional({ cliente: 0, profissional: 0.11 })
+    // A data fixa (d29): esta é a resposta do modelo antigo; o relógio real passou os 15-11-2026.
+    const comAsDeHoje = perguntasDoProfissional({ cliente: 0, profissional: 0.11 }, new Date("2026-11-14T23:59:00Z"))
       .map((p) => `${p.pergunta} ${p.resposta}`)
       .join(" ");
     expect(comAsDeHoje).toContain("a CLYON fica com 11 % do valor do trabalho, sem IVA");

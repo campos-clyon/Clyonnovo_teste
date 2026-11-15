@@ -7,6 +7,7 @@ import { abrirNoNavegador } from "../lib/abrir";
 import { mensagemDe, pedir } from "../lib/api";
 import type { Pedir } from "../lib/erros";
 import {
+  avisoDosDadosMudados,
   rotaDePagarAoParceiro,
   ROTA_DE_PAGAR_AO_PARCEIRO,
   SO_PARA_ESTES_DADOS,
@@ -27,6 +28,10 @@ import { CORES } from "../tema";
  * (antes de 15-11, um trabalho já pago à CLYON, um Trabalho CLYON) a resposta é
  * `pagaAoParceiro: false` e este bloco não desenha nada. O IBAN e o MB WAY só
  * vêm ao cliente que contratou, depois de contratar.
+ *
+ * D28 (15-11-2026): se os dados de pagamento do parceiro mudaram depois de
+ * contratar, o servidor manda a frase (`dadosMudaram`) e ela aparece antes do
+ * IBAN e do MB WAY. A app não tem lógica própria: sem o campo, nada.
  */
 export function PagarAoParceiro({
   pedidoId,
@@ -89,6 +94,7 @@ export function PagarAoParceiro({
 
   if (!visto?.pagaAoParceiro) return null;
   const p = visto.paraPagar;
+  const mudaram = avisoDosDadosMudados(visto);
   return (
     <Cartao>
       <Subtitulo>{visto.parceiro ? `Pagar a ${visto.parceiro}` : "Pagar ao parceiro"}</Subtitulo>
@@ -99,6 +105,7 @@ export function PagarAoParceiro({
           {visto.perfilFiscal.guia ? `${visto.perfilFiscal.fatura} · ${visto.perfilFiscal.guia}` : visto.perfilFiscal.fatura}
         </Text>
       ) : null}
+      {mudaram ? <Aviso tom="aviso" texto={mudaram} /> : null}
       {p ? (
         <View style={{ gap: 8 }}>
           {p.iban ? <Dado rotulo="IBAN" valor={p.iban} nota={p.titular} aoCopiar={() => void copiar("IBAN", p.iban ?? "")} copiado={copiado === "IBAN"} /> : null}

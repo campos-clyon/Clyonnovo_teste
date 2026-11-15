@@ -7,10 +7,11 @@ import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, CampoDeTexto, Escolhas, Etiqueta, FormularioComErros, GrupoComErro, Mensagem, TituloDaCaixa, useFormulario } from "../../componentes/ui";
 import { ErroDaApi, errosPorCampo, pedir } from "../../lib/api";
 import { diaCurto } from "../../lib/conta";
+import { perguntasDaAjuda } from "../../lib/novo-modelo";
+import { useConta } from "../../estado/Conta";
 import {
   ASSUNTOS_DE_AJUDA,
   MINIMO_DA_MENSAGEM,
-  perguntasDoProfissional,
   rotuloDoAssunto,
   taxasDaAjuda,
   type AssuntoDeAjuda,
@@ -28,6 +29,10 @@ import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
  * A TAXA EM VIGOR — 28-10-2026 (d8). «Quanto é que a CLYON leva?» diz a taxa
  * que a rota manda com a lista (`taxas`), como o painel; até ela chegar (ou
  * sem ela), diz o nome da taxa sem número, e nunca um número escrito à mão.
+ *
+ * O MODELO PELO SERVIDOR — 15-11-2026 (d27, parte 3). As respostas do dinheiro
+ * seguem o modelo que o servidor diz (`novoModelo` do perfil), como «Como
+ * funciona» e a carteira — nunca o relógio do telemóvel.
  */
 
 type PedidoDeAjuda = {
@@ -52,7 +57,9 @@ export default function Ajuda() {
   const [aberta, setAberta] = useState<number | null>(null);
   const [pedidos, setPedidos] = useState<PedidoDeAjuda[]>([]);
   const [taxas, setTaxas] = useState<Taxas | null>(null);
-  const perguntas = useMemo(() => perguntasDoProfissional(taxas), [taxas]);
+  const { perfil } = useConta();
+  const noNovoModelo = perfil?.novoModelo != null;
+  const perguntas = useMemo(() => perguntasDaAjuda(taxas, noNovoModelo), [taxas, noNovoModelo]);
   const telefone = IDENTIFICACAO.telefone;
 
   const ler = useCallback(() => {

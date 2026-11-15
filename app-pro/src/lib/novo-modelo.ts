@@ -18,6 +18,8 @@ import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, PAGAR_O_VALOR_EM_ATRASO } from "../.
 import { NOME_DA_FATURA, MENSAGENS_DA_FATURA } from "../../../src/lib/faturas-do-trabalho";
 import { COMO_PAGAR_EM_PALAVRAS } from "../../../src/lib/pagar-ao-parceiro";
 import { COMPLETAR_O_PERFIL } from "../../../src/lib/dados-para-receber";
+import { perguntasDoProfissional, type PerguntaFrequente } from "../../../src/lib/ajuda-plataforma";
+import type { Taxas } from "../../../src/lib/taxas-plataforma";
 
 export { PAGAR_O_VALOR_EM_ATRASO, NOME_DA_FATURA, MENSAGENS_DA_FATURA, COMO_PAGAR_EM_PALAVRAS };
 
@@ -212,4 +214,23 @@ export function mostrarOsTermos(t: EstadoDosTermos | null, adiadoNestaVersao: st
 /** O corpo do definir-senha: a versão só com a caixa marcada, e só com os Termos em vigor (d20). */
 export function aceitaTermosNoCorpo(t: EstadoDosTermos | null, marcada: boolean): { aceitaTermos?: string } {
   return t?.emVigor && marcada ? { aceitaTermos: t.versao } : {};
+}
+
+// ── d27, parte 3 (15-11-2026): a Ajuda pelo modelo que o servidor diz ──
+
+/** Um instante antes de qualquer modelo e um depois de todos: a função do site pede uma data; a app não tem a do modelo. */
+const ANTES_DE_TUDO = new Date(0);
+const DEPOIS_DE_TUDO = new Date(8.64e15);
+
+/**
+ * AS PERGUNTAS DA AJUDA PELO SERVIDOR — d27. `perguntasDoProfissional` escolhe
+ * o modelo por uma data; com o relógio do telemóvel, um telemóvel com a data
+ * errada (ou o servidor ainda no modelo antigo) dava respostas de outro modelo.
+ * Aqui a escolha é a do servidor — `novoModelo` do perfil, como «Como
+ * funciona» e a carteira. A data do modelo continua a não viver na app: o sim
+ * ou não do servidor passa à função do site como o primeiro instante possível
+ * (modelo antigo) ou o último (modelo novo).
+ */
+export function perguntasDaAjuda(taxas: Taxas | null, noNovoModelo: boolean): PerguntaFrequente[] {
+  return perguntasDoProfissional(taxas, noNovoModelo ? DEPOIS_DE_TUDO : ANTES_DE_TUDO);
 }
