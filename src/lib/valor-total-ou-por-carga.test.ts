@@ -25,11 +25,11 @@ const proposta = (base?: string) =>
   );
 
 describe("a nota ao lado do preço, para o cliente", () => {
-  it("pelo trabalho todo: os itens a mais pela tabela das peças (d7; eram 32 €)", () => {
+  it("pelo trabalho todo: os itens a mais pela tabela das peças (d7; eram 32 €; curta desde a d47)", () => {
     const n = notaDoPrecoParaOCliente("total");
     expect(n).toContain("fotografias");
-    // «32 € mais IVA» — o dono, 22-10-2026: o sem IVA nunca sozinho.
-    expect(n).toContain("cada item a mais conta pela tabela das peças: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)");
+    // «32 € mais IVA» — o dono, 22-10-2026: o sem IVA nunca sozinho. Curta desde a d47 (15-11-2026).
+    expect(n).toContain("o extra paga-se à parte pela tabela (peça pequena 15 €, média 30 €, grande 50 € + IVA)");
     expect(n).not.toContain("32 €");
   });
 
@@ -43,8 +43,9 @@ describe("a nota ao lado do preço, para o cliente", () => {
 describe("a proposta de um Trabalho CLYON ao cliente (o #466)", () => {
   it("por carga, o número diz «por carga» e a nota explica", () => {
     const m = proposta("carga");
-    expect(m).toContain("442,80 € por carga — já com IVA.");
-    expect(m).toContain("É um preço POR CARGA");
+    // d47: curta — «X € + IVA = Y € por carga», e mais uma carga ao mesmo preço.
+    expect(m).toContain("360 € + IVA = 442,80 € por carga.");
+    expect(m).toContain("Se for preciso mais uma carga, paga-se ao mesmo preço por carga");
     expect(m).not.toContain("32 €");
   });
 
@@ -53,15 +54,17 @@ describe("a proposta de um Trabalho CLYON ao cliente (o #466)", () => {
       { cliente: "Vasco Ramalhete", servico: "recolha_moveis", localidade: "Sobreda", quando: null, preco, base: "total" },
       agora,
     );
-    expect(m).toContain("é o valor final a pagar, já com IVA.");
-    expect(m).toContain("cada item a mais conta pela tabela das peças");
+    expect(m).toContain("360 € + IVA = 442,80 €.");
+    expect(m).toContain("o extra paga-se à parte pela tabela (peça pequena");
   });
 
   it("pelo trabalho todo, nos outros serviços, a nota do serviço — sem a tabela das peças (d20)", () => {
     for (const m of [proposta("total"), proposta(undefined)]) {
-      expect(m).toContain("é o valor final a pagar, já com IVA.");
-      expect(m).toContain("Este valor cobre o que está nas fotografias e na descrição.");
-      expect(m).not.toContain("tabela das peças");
+      expect(m).toContain("360 € + IVA = 442,80 €.");
+      expect(m).toContain("Inclui o que está nas fotografias e na descrição.");
+      // O esvaziamento conta o volume, não a peça (d20, d47).
+      expect(m).not.toContain("peça pequena");
+      expect(m).toContain("o volume a mais paga-se à parte");
     }
   });
 });
@@ -112,7 +115,8 @@ describe("as mensagens das negociações levam a nota em todos os preços", () =
     expect(ler("src/lib/whatsapp-negociacao.ts")).toContain("return `\\n\\n${notaDoPrecoParaOCliente(base)}`;");
     expect(ler("src/lib/assistente-automatico.ts")).toContain("const eANota = ` ${notaDoPrecoParaOCliente(base)}`;");
     expect(ler("src/lib/email-proposta.ts")).toContain('notaDoPrecoParaOCliente(p.base ?? "total")');
-    expect(ler("src/lib/mensagem-das-propostas.ts")).toContain(': avisoDosItens(base, "cliente");');
+    // d47: na lista das propostas, o que cobre e o extra pela regra do serviço.
+    expect(ler("src/lib/mensagem-das-propostas.ts")).toContain("`${INCLUI} ${extraNoLocal(d.servicoId ?? null, base)}`");
   });
 });
 

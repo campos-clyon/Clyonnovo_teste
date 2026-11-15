@@ -130,6 +130,7 @@ import {
   trabalhoFechado,
 } from "@/lib/mensagem-das-propostas";
 import { linkDeWhatsApp, numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
+import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
@@ -1699,6 +1700,7 @@ export default function AdminNegociacoesPanel({
     return mensagemDasPropostas({
       nomeCliente: p.contactName,
       servico: nomeDoServico(p.serviceType),
+      servicoId: p.serviceType,
       cidade: p.city,
       propostas,
       fechado: trabalhoFechado(p.negociacoes),
@@ -1715,9 +1717,9 @@ export default function AdminNegociacoesPanel({
    * «ENVIAR PELA CLYON» — 23-10-2026, como nos Trabalhos CLYON: o mesmo
    * orçamento, pelo número da plataforma, e a conversa fica com a CLYON.
    */
-  async function mandarPelaClyon(p: Pedido) {
+  async function mandarPelaClyon(p: Pedido, outraVez = false): Promise<void> {
     if (!token) return;
-    if (!window.confirm(`Enviar o orçamento do #${p.id} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
+    if (!outraVez && !window.confirm(`Enviar o orçamento do #${p.id} ao cliente, pelo WhatsApp da CLYON?\n\nA conversa fica com a CLYON.`)) return;
     setOcupado(`c${p.id}`);
     setErro("");
     try {
@@ -1730,9 +1732,18 @@ export default function AdminNegociacoesPanel({
           texto: textoDoOrcamento(p),
           // Fechado, a mensagem diz «Está combinado com…»: não há orçamento à espera.
           marcarEnviado: !trabalhoFechado(p.negociacoes),
+          outraVez,
         }),
       });
       const d = await res.json().catch(() => ({}));
+      // Já foi há pouco (d47): pergunta-se, e só com o sim vai outra vez.
+      if (res.status === 409 && d.jaEnviada === true && !outraVez) {
+        setOcupado(null);
+        if (window.confirm(String(d.error ?? "A proposta já foi ao cliente há pouco. Mandar outra vez?"))) {
+          await mandarPelaClyon(p, true);
+        }
+        return;
+      }
       if (!res.ok) {
         setErro(d.error ?? "Não foi possível enviar.");
         return;
@@ -1774,9 +1785,30 @@ export default function AdminNegociacoesPanel({
     const destino = linkDeWhatsApp(p.contactPhone, texto);
 
     if (destino) {
-      // Sem `noopener` na chamada: com ele o browser devolve sempre `null`, e
-      // não se sabia se abriu. Corta-se o `opener` logo a seguir.
-      const janela = window.open(destino, "_blank");
+      /*
+       * NA LÍNGUA DO CLIENTE, UMA VEZ SÓ — 15-11-2026 (d47). Ia sempre em
+       * português; ao #623 (inglês) saiu o português por aqui e o inglês pelo
+       * número da CLYON. O separador abre-se no clique, vazio, e vai à
+       * conversa com o texto já traduzido (`abrirWhatsAppNaLingua`).
+       */
+      const janela = window.open("about:blank", "_blank");
+      if (janela) {
+        void (async () => {
+          let final = texto;
+          try {
+            const res = await fetch("/api/admin/whatsapp/na-lingua", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ telefone: p.contactPhone, texto }),
+            });
+            const d = (await res.json().catch(() => ({}))) as { texto?: string };
+            if (res.ok && typeof d.texto === "string" && d.texto.trim()) final = d.texto;
+          } catch {
+            /* sem rede: o texto como estava */
+          }
+          janela.location.href = linkDeWhatsApp(p.contactPhone, final) ?? destino;
+        })();
+      }
       if (janela) {
         try {
           janela.opener = null;
@@ -3622,6 +3654,7 @@ export default function AdminNegociacoesPanel({
             mensagem={mensagemDasPropostas({
               nomeCliente: p.contactName,
               servico: nomeDoServico(p.serviceType),
+              servicoId: p.serviceType,
               cidade: p.city,
               propostas: propostasParaOCliente(p.negociacoes),
               fechado: trabalhoFechado(p.negociacoes),
@@ -7447,7 +7480,12 @@ function LinkEmClaro({
                   href={linkDeWhatsApp(telefone, mensagem) as string}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Abre o SEU WhatsApp com o texto escrito. A mensagem sai do seu número."
+                  onClick={(e) => {
+                    // Na língua do cliente, uma vez só (d47).
+                    e.preventDefault();
+                    void abrirWhatsAppNaLingua(telefone, mensagem, token);
+                  }}
+                  title="Abre o SEU WhatsApp com o texto escrito, na língua do cliente. A mensagem sai do seu número."
                   className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500"
                 >
                   <MessageCircle className="h-3 w-3" aria-hidden="true" />

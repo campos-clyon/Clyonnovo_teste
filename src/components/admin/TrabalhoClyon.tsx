@@ -39,6 +39,7 @@ import {
 } from "@/lib/oferta-clyon";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
+import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import EnviarValoresParaPagamento from "@/components/admin/EnviarValoresParaPagamento";
@@ -1683,7 +1684,12 @@ function CartaoDoTrabalho({
             href={proposta.link}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={onPropostaAberta}
+            onClick={(e) => {
+              // Na língua do cliente, uma vez só (d47): o link leva o texto já traduzido.
+              e.preventDefault();
+              void abrirWhatsAppNaLingua(t.telefone, proposta.texto, token);
+              onPropostaAberta();
+            }}
             className="flex items-center gap-1.5 rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
           >
             <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />

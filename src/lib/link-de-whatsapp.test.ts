@@ -261,8 +261,9 @@ describe("a ordem que faz o separador abrir", () => {
      * ficávamos sem a mão para levar o separador ao WhatsApp. O `opener` é
      * cortado à mão logo a seguir, que dá a mesma garantia.
      */
-    // Desde 03-10-2026 abre-se já na conversa: não há link para esperar.
-    expect(CORPO).toContain('window.open(destino, "_blank")');
+    // Desde a d47 (15-11-2026) abre-se vazio no clique e vai à conversa com o texto na língua do cliente.
+    expect(CORPO).toContain('window.open("about:blank", "_blank")');
+    expect(CORPO).toContain("janela.location.href = linkDeWhatsApp(p.contactPhone, final) ?? destino");
     expect(CORPO).toContain("janela.opener = null");
     expect(CORPO).not.toContain("noopener");
   });

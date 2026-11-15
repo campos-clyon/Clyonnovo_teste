@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Loader2, MessageCircle } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
 import {
   MOTIVO_DOS_DADOS_DO_DONO_MAXIMO,
   PEDE_O_MOTIVO_DOS_DADOS_DO_DONO,
   lerMotivoDosDadosDoDono,
   linkDaAdjudicacao,
+  mensagemDeAdjudicacao,
   type ReferenciaNaAdjudicacao,
   type TrabalhoAdjudicado,
   type AdjudicacaoNoNovoModelo,
@@ -99,9 +101,7 @@ export default function EnviarAdjudicacao({
   const precisaDoServidor = novoModelo || comLink || multibanco || mbway || comDono;
   const fixo = preparada != null;
 
-  const link = (p: Preparada) =>
-    linkDaAdjudicacao(
-      {
+  const dadosDe = (p: Preparada) => ({
         ...adjudicacao,
         metodosDePagamento,
         formas: {
@@ -111,9 +111,10 @@ export default function EnviarAdjudicacao({
           link: p.link,
           novoModelo: p.novoModelo ?? null,
         },
-      },
-      new Date(),
-    );
+      });
+  const link = (p: Preparada) => linkDaAdjudicacao(dadosDe(p), new Date());
+  // O texto, para o botão o pôr na língua do cliente antes de abrir (d47).
+  const textoDe = (p: Preparada) => mensagemDeAdjudicacao(dadosDe(p), new Date());
 
   async function preparar() {
     setAPreparar(true);
@@ -185,7 +186,8 @@ export default function EnviarAdjudicacao({
     }
   }
 
-  const pronto = preparada ? link(preparada) : precisaDoServidor ? null : link({ link: null, referencias: [] });
+  const paraEnviar: Preparada | null = preparada ?? (precisaDoServidor ? null : { link: null, referencias: [] });
+  const pronto = paraEnviar ? link(paraEnviar) : null;
 
   return (
     <div className={aberto ? "flex w-full flex-col gap-2" : "contents"}>
@@ -305,6 +307,12 @@ export default function EnviarAdjudicacao({
               href={pronto}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                // Na língua do cliente, uma vez só (d47).
+                if (!paraEnviar) return;
+                e.preventDefault();
+                void abrirWhatsAppNaLingua(adjudicacao.telefone, textoDe(paraEnviar), token);
+              }}
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 font-semibold text-emerald-200 hover:bg-emerald-500/20"
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />

@@ -4,6 +4,7 @@ import { linkDeWhatsApp } from "./link-de-whatsapp";
 import { ABERTURA_DOS_METODOS, SEM_METODOS_DE_PAGAMENTO, limparMetodosDePagamento } from "./metodos-de-pagamento";
 import { servicoComArtigo } from "./mensagem-das-propostas";
 import { servicoEmPalavras } from "./servico-em-palavras";
+import { extraNoLocal, INCLUI, valorComIva } from "./extra-no-local";
 import { telefoneLegivel } from "./telefone-legivel";
 
 /**
@@ -207,7 +208,8 @@ export function blocoDoPagamentoAoParceiro(
   const quem = parceiro?.trim() || "o parceiro";
   const como = formasEmPalavras(n.formas);
   return [
-    `O total é ${euros(n.total)} com IVA (${euros(n.semIva)} sem IVA), já com a taxa da plataforma.`,
+    // d47: «X € + IVA = Y €», como em todas as mensagens com valores.
+    `O total é ${valorComIva(n.semIva, n.total)}, já com a taxa da plataforma.`,
     `Paga diretamente a ${quem}, no fim do trabalho (salvo se combinarem outra coisa)${como ? `: ${como}` : ""}. ` +
       (link?.trim() ? `Os dados para pagar estão no seu pedido, e só lá:\n${link.trim()}` : "Os dados para pagar estão no seu pedido, e só lá."),
     "Se alguém lhe pedir que pague para outros dados, não pague e fale connosco.",
@@ -251,6 +253,8 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
   return [
     `Olá${nome ? `, ${nome}` : ""}! Obrigado pela confirmação.`,
     fica,
+    // d47: o que o valor cobre, e o extra no local com o preço da regra do serviço.
+    `${INCLUI} ${extraNoLocal(t.servico ?? null)}`,
     quemFaz,
     ...(t.formas?.novoModelo
       ? // O modelo de 15-11 (d17): o texto D, que já diz para guardar o comprovativo.

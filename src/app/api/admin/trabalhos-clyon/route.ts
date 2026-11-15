@@ -516,6 +516,7 @@ export async function PATCH(req: NextRequest) {
     texto?: unknown;
     /** «Atribuir directamente a…» (11-11-2026): o profissional. */
     providerId?: unknown;
+    outraVez?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -579,6 +580,25 @@ export async function PATCH(req: NextRequest) {
         },
         new Date(),
       );
+      /*
+       * UMA VEZ SÓ — 15-11-2026 (d47). Ao #623 a proposta saiu duas vezes seguidas
+       * (o link em português e a CLYON em inglês). Se já foi há pouco — por aqui
+       * ou pelo link —, pergunta-se antes de mandar outra vez.
+       */
+      if (corpo.outraVez !== true) {
+        const { minutosDesdeAPropostaEnviada, MINUTOS_PARA_REENVIAR_A_PROPOSTA } = await import("@/lib/db");
+        const ha = await minutosDesdeAPropostaEnviada(pedidoId).catch(() => null);
+        if (ha != null && ha < MINUTOS_PARA_REENVIAR_A_PROPOSTA) {
+          return NextResponse.json(
+            {
+              error: `A proposta já foi ao cliente há ${ha} min (pelo link ou pela CLYON). Mandar outra vez?`,
+              jaEnviada: true,
+              haMinutos: ha,
+            },
+            { status: 409 },
+          );
+        }
+      }
       const saiu = await enviarTextoManualWhatsApp(telefone, texto);
       if (!saiu) {
         return NextResponse.json(

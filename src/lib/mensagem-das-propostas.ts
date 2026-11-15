@@ -18,7 +18,7 @@ import { totalEmPalavras } from "./conta-em-palavras";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
 import { MINIMO_DE_HORAS } from "./tabela-das-mudancas";
-import { avisoDosItens } from "./itens-a-mais";
+import { extraNoLocal, INCLUI } from "./extra-no-local";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { estimativaDasHoras, horasDaEstimativa, horasEmPalavras } from "./horas-do-trabalho";
 
@@ -414,6 +414,8 @@ export type DadosDaMensagem = {
   horasPrevistas?: number | null;
   /** Uma mudança em que o cliente escolheu os parceiros na lista: o mínimo é o de cada um (d7, 11-11-2026). */
   mudancaDaLista?: boolean;
+  /** O id do serviço («recolha_monos»): a regra do extra no local (d47, 15-11-2026). */
+  servicoId?: string | null;
   /*
    * SEM LINK — 03-10-2026. *«Não coloque a mensagem do link e nem o link,
    * vamos fazer manualmente.»* A mensagem diz as propostas e pede-lhe que
@@ -441,7 +443,8 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
         ? d.mudancaDaLista
           ? SAO_PRECOS_POR_HORA_DO_PARCEIRO
           : SAO_PRECOS_POR_HORA
-        : avisoDosItens(base, "cliente");
+        : // d47 (15-11-2026): curto — o que cobre e o extra com o preço da regra do serviço.
+          `${INCLUI} ${extraNoLocal(d.servicoId ?? null, base)}`;
 
   /*
    * "para a recolha de entulho em Carnaxide" — ou, quando o serviço é novo e o

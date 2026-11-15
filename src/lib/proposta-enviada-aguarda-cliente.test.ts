@@ -23,7 +23,8 @@ describe("a proposta enviada leva o valor fixo para «A aguardar cliente»", () 
     const daClyon = ROTA.slice(ROTA.indexOf('if (accao === "proposta")'), ROTA.indexOf('if (accao === "proposta_aberta")'));
     expect(daClyon).toContain("await marcarPropostaEnviada(pedidoId);");
     expect(ROTA).toContain('if (accao === "proposta_aberta")');
-    expect(CARTAO).toContain("onClick={onPropostaAberta}");
+    // d47: o link abre na língua do cliente, e continua a marcar a proposta como enviada.
+    expect(CARTAO).toMatch(/void abrirWhatsAppNaLingua\(t\.telefone, proposta\.texto, token\);\s*onPropostaAberta\(\);/);
     expect(CARTAO).toContain('mexer({ accao: "proposta_aberta" }');
   });
 

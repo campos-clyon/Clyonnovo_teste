@@ -154,19 +154,23 @@ describe("5 — a tabela das peças só na recolha de móveis", () => {
   it("numa mudança fica a nota do serviço", () => {
     const n = notaDoPrecoParaOCliente("total", "clyon", "mudanca");
     expect(n).not.toContain("tabela das peças");
-    expect(n).toContain("mudança");
+    // d47: a regra da mudança são as horas do parceiro.
+    expect(n).toContain("horas a mais");
+    expect(n).not.toContain("peça");
     expect(avisoDosItens("total", "cliente", "mudanca")).not.toContain("15 €");
   });
 
   it("nos outros serviços também", () => {
     for (const s of ["esvaziamento_casa", "recolha_entulho", "manutencao_casa", null]) {
       expect(notaDoPrecoParaOCliente("total", "clyon", s)).not.toContain("tabela das peças");
+      expect(notaDoPrecoParaOCliente("total", "clyon", s)).not.toContain("peça pequena");
     }
   });
 
   it("na recolha de móveis, a tabela das peças", () => {
     expect(contaPelaTabelaDasPecas("recolha_moveis")).toBe(true);
-    expect(notaDoPrecoParaOCliente("total", "clyon", "recolha_moveis")).toContain("tabela das peças");
+    // d47: «pela tabela (peça pequena 15 €, média 30 €, grande 50 € + IVA)».
+    expect(notaDoPrecoParaOCliente("total", "clyon", "recolha_moveis")).toContain("pela tabela (peça pequena");
   });
 
   it("o preço de um Trabalho CLYON de mudança, no ecrã, sem a tabela das peças", () => {

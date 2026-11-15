@@ -24,6 +24,9 @@ export function totalDoValorUnico(valorSemIva: number): number {
 export const QUEM_FAZ_NO_VALOR_UNICO =
   "Quem faz é um parceiro verificado da sua zona — quando aceitar, dizemos-lhe quem é, o dia e como pagar.";
 
+/** Encurtado, para a mensagem curta do orçamento (d47, 15-11-2026). */
+export const QUEM_FAZ_NO_VALOR_UNICO_CURTO = "Quem faz é um parceiro verificado da sua zona.";
+
 /** Uma coluna DECIMAL da base (texto ou número) como valor único, ou null. */
 export function valorUnicoDaLinha(v: unknown): number | null {
   if (v == null || v === "") return null;

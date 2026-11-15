@@ -1,9 +1,8 @@
 import { lerValorFixo } from "./oferta-clyon";
-import { QUEM_FAZ_NO_VALOR_UNICO, valorUnicoComIva } from "./valor-unico-ao-cliente";
+import { totalDoValorUnico } from "./valor-unico-ao-cliente";
 import { servicoComArtigo } from "./mensagem-das-propostas";
-import { comoTratar } from "./whatsapp-recolha";
-import { notaDoPrecoParaOCliente } from "./itens-a-mais";
-import { unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
+import { linhasDoOrcamento } from "./mensagem-do-orcamento";
+import { type BaseDoPreco } from "./base-do-preco";
 
 /**
  * O VALOR ÚNICO — 15-11-2026 (d39, decisão do dono; caminho B do CEO).
@@ -69,22 +68,29 @@ export type DadosDoValorUnico = {
  * o valor com o IVA ao lado, o que cobre, quem faz e «Responda SIM».
  */
 export function mensagemDoValorUnico(d: DadosDoValorUnico, agora: Date): string {
-  return linhasDoValorUnico(d, agora).join("\n\n");
+  return linhasDoValorUnico(d, agora).join("\n");
 }
 
 /** As mesmas linhas, para o email as pôr em parágrafos. */
 export function linhasDoValorUnico(d: DadosDoValorUnico, agora: Date): string[] {
-  const base = d.base ?? "total";
-  const comArtigo = servicoComArtigo(d.servico);
-  const onde = d.cidade?.trim() ? ` em ${d.cidade.trim()}` : "";
-  const oQue = comArtigo ? `${comArtigo}${onde}` : `o seu pedido${onde}`;
-  return [
-    `${comoTratar(d.nomeCliente, agora)} Aqui é a CLYON.`,
-    `Para ${oQue}: ${valorUnicoComIva(d.valorSemIva)}${unidadeDaBase(base)}.`,
-    notaDoPrecoParaOCliente(base, "clyon", d.servicoId ?? null),
-    QUEM_FAZ_NO_VALOR_UNICO,
-    RESPONDA_SIM,
-  ];
+  /*
+   * CURTA, EM QUATRO PARTES — 15-11-2026 (d47). O valor com o IVA ao lado, o
+   * que cobre e o extra com preço, quem faz (encurtado), e «Responda SIM». Ver
+   * `mensagem-do-orcamento.ts`.
+   */
+  return linhasDoOrcamento(
+    {
+      cliente: d.nomeCliente,
+      servicoComArtigo: servicoComArtigo(d.servico),
+      servicoId: d.servicoId ?? null,
+      localidade: d.cidade,
+      semIva: d.valorSemIva,
+      total: totalDoValorUnico(d.valorSemIva),
+      base: d.base ?? "total",
+      modelo: "valor_unico",
+    },
+    agora,
+  );
 }
 
 /* ── «ESCOLHER POR MIM» ─────────────────────────────────────────────────── */

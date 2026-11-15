@@ -1,13 +1,12 @@
-import { parceiroNaFrase } from "./parceiro-verificado";
-import { comoTratar } from "./whatsapp-recolha";
 import { servicoComArtigo } from "./mensagem-das-propostas";
-import { precoDoCliente, semEComIva, type PrecoDoCliente } from "./preco-do-cliente";
+import { parceiroNaFrase } from "./parceiro-verificado";
+import { precoDoCliente, type PrecoDoCliente } from "./preco-do-cliente";
 import { TAXAS_DA_OFERTA } from "./oferta-clyon";
 import { quandoPorExtenso } from "./aviso-de-data-ao-cliente";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { linkDeWhatsApp } from "./link-de-whatsapp";
-import { lerBase, unidadeDaBase } from "./base-do-preco";
-import { notaDoPrecoParaOCliente } from "./itens-a-mais";
+import { lerBase } from "./base-do-preco";
+import { mensagemDoOrcamento } from "./mensagem-do-orcamento";
 
 /**
  * A PROPOSTA DE UM TRABALHO CLYON, NO WHATSAPP DO CLIENTE — 08-10-2026.
@@ -70,41 +69,33 @@ export function mensagemDaPropostaClyon(
   },
   agora: Date,
 ): string {
+  /*
+   * CURTA, EM QUATRO PARTES — 15-11-2026 (d47): o valor com o IVA ao lado, o
+   * que cobre, o extra com preço, e como se paga. Ver `mensagem-do-orcamento.ts`.
+   * Era seis parágrafos («temos um parceiro da sua zona», «é o valor final a
+   * pagar, já com IVA», «Paga à CLYON, que só paga ao parceiro…»).
+   */
   const base = lerBase(t.base);
-  const comArtigo = servicoComArtigo(servicoEmPalavras(t.servico));
-  const onde = t.localidade?.trim() ? ` em ${t.localidade.trim()}` : "";
-  const oQue = comArtigo ? `${comArtigo}${onde}` : "o seu pedido";
-
-  // O dia só se diz se ainda está para vir: uma proposta «para ontem» não se manda.
   const dia = t.quando ? new Date(t.quando) : null;
   const paraQuando =
-    dia && !Number.isNaN(dia.getTime()) && dia.getTime() > agora.getTime()
-      ? `, para ${quandoPorExtenso(dia, agora)}`
-      : "";
-
-  /*
-   * QUEM FAZ, E PARA ONDE VAI O DINHEIRO — 27-10-2026 (d12, frase-padrão 4).
-   * Dizia «A nossa proposta para…» e «combinamos o resto»: a CLYON a fazer o
-   * trabalho. Quem o faz é um profissional verificado (nomeado, se já está
-   * escolhido); a CLYON recebe e só lhe paga depois de o trabalho estar feito.
-   */
-  const profissional = t.profissional?.trim();
-  const quem = profissional
-    ? `o trabalho é feito por ${parceiroNaFrase(profissional, t.profissionalVerificado === true)}`
-    : "temos um parceiro da sua zona";
-
-  return [
-    `${comoTratar(t.cliente, agora)} Aqui é a CLYON.`,
-    `Para ${oQue}${paraQuando}, ${quem}:`,
-    base === "total"
-      ? `${semEComIva(t.preco)} — é o valor final a pagar, já com IVA.`
-      : `${semEComIva(t.preco)}${unidadeDaBase(base)} — já com IVA.`,
-    notaDoPrecoParaOCliente(base, "clyon", t.servico ?? null),
-    "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.",
-    profissional
-      ? "Se estiver de acordo, é só responder a esta mensagem e confirmamos o dia consigo."
-      : "Se estiver de acordo, é só responder a esta mensagem e dizemos-lhe quem vai e quando.",
-  ].join("\n\n");
+    dia && !Number.isNaN(dia.getTime()) && dia.getTime() > agora.getTime() ? `, para ${quandoPorExtenso(dia, agora)}` : "";
+  return mensagemDoOrcamento(
+    {
+      cliente: t.cliente,
+      servicoComArtigo: servicoComArtigo(servicoEmPalavras(t.servico)),
+      servicoId: t.servico,
+      localidade: t.localidade,
+      semIva: t.preco.semIva,
+      total: t.preco.total,
+      base,
+      modelo: "clyon",
+      paraQuando,
+      comQuemJaEscolhido: Boolean(t.profissional?.trim()),
+      // Quem faz, quando já está escolhido (d12) — «verificado» só com as três confirmações.
+      quemFaz: t.profissional?.trim() ? parceiroNaFrase(t.profissional.trim(), t.profissionalVerificado === true) : null,
+    },
+    agora,
+  );
 }
 
 /**
@@ -127,9 +118,11 @@ export function linkDaPropostaClyon(
     profissional?: string | null;
   },
   agora: Date,
-): { link: string; total: number } | null {
+): { link: string; total: number; texto: string } | null {
   const preco = precoDaPropostaClyon(t);
   if (!preco) return null;
-  const link = linkDeWhatsApp(t.telefone, mensagemDaPropostaClyon({ ...t, preco }, agora));
-  return link ? { link, total: preco.total } : null;
+  const texto = mensagemDaPropostaClyon({ ...t, preco }, agora);
+  const link = linkDeWhatsApp(t.telefone, texto);
+  // O texto vai também, para o botão o pôr na língua do cliente antes de abrir (d47).
+  return link ? { link, total: preco.total, texto } : null;
 }

@@ -53,16 +53,16 @@ describe("d39 B — a mensagem do valor único (WhatsApp e email)", () => {
   );
 
   it("serviço e zona, o valor com o IVA ao lado, quem faz e «Responda SIM»", () => {
-    expect(m).toContain("Ana.");
-    expect(m).toContain("Aqui é a CLYON.");
-    expect(m).toContain("Para a recolha de móveis em Almada: 140,00 € + IVA = 172,20 €.");
-    expect(m).toContain("Quem faz é um parceiro verificado da sua zona — quando aceitar, dizemos-lhe quem é, o dia e como pagar.");
-    expect(m).toContain("Responda SIM para aceitar.");
+    // d47 (15-11-2026): curta, em quatro partes.
+    expect(m).toContain("Ana!");
+    expect(m).toContain("O orçamento para a recolha de móveis em Almada é 140 € + IVA = 172,20 €.");
+    expect(m).toContain("Quem faz é um parceiro verificado da sua zona.");
+    expect(m).toContain("Responda SIM");
   });
 
   it("o que cobre e os itens a mais pela tabela das peças (fonte única)", () => {
-    expect(m).toContain("cobre o que está nas fotografias e na descrição");
-    expect(m).toContain("tabela das peças");
+    expect(m).toContain("Inclui o que está nas fotografias e na descrição.");
+    expect(m).toContain("pela tabela (peça pequena");
     expect(m).toMatch(/15[^0-9][\s\S]*30[^0-9][\s\S]*50[^0-9][\s\S]*IVA/);
   });
 
@@ -74,7 +74,7 @@ describe("d39 B — a mensagem do valor único (WhatsApp e email)", () => {
 
   it("por hora, a unidade agarrada ao número", () => {
     const h = mensagemDoValorUnico({ nomeCliente: null, servico: "mudança", servicoId: "mudanca", cidade: null, valorSemIva: 50, base: "hora" }, AGORA);
-    expect(h).toContain("Para a mudança: 50,00 € + IVA = 61,50 € por hora.");
+    expect(h).toContain("O orçamento para a mudança é 50 € + IVA = 61,50 € por hora.");
   });
 
   it("o email usa as mesmas linhas", () => {

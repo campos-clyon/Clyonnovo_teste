@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { accao?: unknown; pedidoId?: unknown; texto?: unknown; marcarEnviado?: unknown; valor?: unknown; email?: unknown };
+  let corpo: { accao?: unknown; pedidoId?: unknown; texto?: unknown; marcarEnviado?: unknown; valor?: unknown; email?: unknown; outraVez?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -271,6 +271,25 @@ export async function POST(req: NextRequest) {
         { error: "Este número está bloqueado. Desbloqueie-o primeiro, no ecrã do WhatsApp." },
         { status: 409 },
       );
+    }
+    /*
+     * UMA VEZ SÓ — 15-11-2026 (d47). Ao #623 a proposta saiu duas vezes seguidas
+     * (o link em português e a CLYON em inglês). Se já foi há pouco — por aqui
+     * ou pelo link —, pergunta-se antes de mandar outra vez.
+     */
+    if (corpo.outraVez !== true) {
+      const { minutosDesdeAPropostaEnviada, MINUTOS_PARA_REENVIAR_A_PROPOSTA } = await import("@/lib/db");
+      const ha = await minutosDesdeAPropostaEnviada(pedidoId).catch(() => null);
+      if (ha != null && ha < MINUTOS_PARA_REENVIAR_A_PROPOSTA) {
+        return NextResponse.json(
+          {
+            error: `A proposta já foi ao cliente há ${ha} min (pelo link ou pela CLYON). Mandar outra vez?`,
+            jaEnviada: true,
+            haMinutos: ha,
+          },
+          { status: 409 },
+        );
+      }
     }
     const saiu = await enviarTextoManualWhatsApp(telefone, texto);
     if (!saiu) {

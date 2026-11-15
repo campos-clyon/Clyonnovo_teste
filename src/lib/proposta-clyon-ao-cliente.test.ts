@@ -52,34 +52,36 @@ describe("a mensagem", () => {
   const texto = mensagemDaPropostaClyon({ ...T420, preco: precoDaPropostaClyon(T420)! }, AGORA);
 
   it("cumprimenta pelo primeiro nome e diz quem fala", () => {
-    expect(texto.startsWith("Bom dia, João. Aqui é a CLYON.")).toBe(true);
+    // d47 (15-11-2026): curta — «Bom dia, João! O orçamento para…».
+    expect(texto.startsWith("Bom dia, João! O orçamento para")).toBe(true);
     expect(texto).not.toContain("Modelo");
   });
 
   it("diz o quê, onde e quando", () => {
     expect(texto).toContain(
-      "Para a recolha de móveis em Lisboa, para segunda-feira, 12 de outubro, às 10:00, temos um parceiro da sua zona:",
+      "O orçamento para a recolha de móveis em Lisboa, para segunda-feira, 12 de outubro, às 10:00, é 330 € + IVA = 405,90 €.",
     );
   });
 
   it("diz quem faz e para onde vai o dinheiro — nunca «a nossa proposta» (d12)", () => {
     expect(texto).not.toMatch(/nossa proposta|combinamos o resto/i);
-    expect(texto).toContain("Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.");
-    expect(texto).toContain("dizemos-lhe quem vai e quando");
+    expect(texto).toContain("Paga à CLYON depois do trabalho feito.");
+    expect(texto).toContain("dizemos-lhe o dia e quem vai");
     const comQuem = mensagemDaPropostaClyon(
       { ...T420, profissional: "Mudanças Exemplo", preco: precoDaPropostaClyon(T420)! },
       AGORA,
     );
-    expect(comQuem).toContain("o trabalho é feito por Mudanças Exemplo, parceiro da CLYON:");
+    expect(comQuem).toContain("O trabalho é feito por Mudanças Exemplo, parceiro da CLYON. Responda SIM e combinamos o dia consigo.");
   });
 
   it("o valor final é o com IVA, com o sem IVA ao lado — nunca o sem IVA sozinho", () => {
-    expect(texto).toContain("330,00 € + IVA = 405,90 € — é o valor final a pagar, já com IVA.");
+    expect(texto).toContain("330 € + IVA = 405,90 €.");
+    expect(texto).toContain("Inclui o que está nas fotografias e na descrição.");
   });
 
   it("sem link do site, como a mensagem das propostas desde 03-10-2026", () => {
     expect(texto).not.toMatch(/https?:\/\//);
-    expect(texto).toContain("é só responder a esta mensagem");
+    expect(texto).toContain("Responda SIM");
   });
 
   it("um dia que já passou não se põe na proposta", () => {
@@ -87,7 +89,7 @@ describe("a mensagem", () => {
       { ...T420, quando: "2026-10-01T09:00:00.000Z", preco: precoDaPropostaClyon(T420)! },
       AGORA,
     );
-    expect(antiga).toContain("Para a recolha de móveis em Lisboa, temos um parceiro da sua zona:");
+    expect(antiga).toContain("O orçamento para a recolha de móveis em Lisboa é 330 € + IVA = 405,90 €.");
     expect(antiga).not.toContain("1 de outubro");
   });
 });

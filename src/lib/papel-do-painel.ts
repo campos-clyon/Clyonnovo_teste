@@ -369,6 +369,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // ecrãs de trabalhos mostram também o que está noutros sítios.
   { prefixo: "/api/admin/procurar", seccoes: ["pedidos", "negociacoes_clyon", "trabalhos_clyon", "agenda", "pagamentos", "carteiras"] },
   { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
+  // d47: a mensagem na língua do cliente, para os botões que abrem o WhatsApp — não envia nada.
+  { prefixo: "/api/admin/whatsapp/na-lingua", seccoes: ["whatsapp", "negociacoes_clyon", "trabalhos_clyon", "pedidos"] },
   { prefixo: "/api/admin/whatsapp", seccoes: ["whatsapp"] },
 
   // O comprovativo em PDF (24-10-2026): descarregar e enviar ao cliente, dos Pagamentos e da Mesa.

@@ -4358,6 +4358,27 @@ export async function marcarPropostaEnviada(pedidoId: number): Promise<void> {
  * «Enviar orçamento» e «Já enviei» na Mesa. Não se limpa: uma proposta que
  * chegue depois é que diz que o cliente ainda não a viu (`orcamentoEnviadoCobre`).
  */
+/**
+ * HÁ QUANTOS MINUTOS FOI A PROPOSTA AO CLIENTE — 15-11-2026 (d47). Pelo relógio
+ * da base (`NOW()` contra `NOW()`), sem fusos pelo meio. Null se nunca foi.
+ * O «Enviar pela CLYON» pergunta antes de mandar outra vez a quem já a teve há
+ * pouco: ao #623 saiu duas vezes, em português e em inglês.
+ */
+export async function minutosDesdeAPropostaEnviada(pedidoId: number): Promise<number | null> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT TIMESTAMPDIFF(MINUTE, propostaEnviadaEm, NOW()) AS ha FROM simulatorOrders WHERE id = ? AND propostaEnviadaEm IS NOT NULL LIMIT 1",
+    [pedidoId],
+  )) as [Array<{ ha: number | string | null }>, unknown];
+  const ha = rows[0]?.ha;
+  return ha == null ? null : Number(ha);
+}
+
+/** Abaixo disto, mandar a proposta outra vez pede confirmação (d47). */
+export const MINUTOS_PARA_REENVIAR_A_PROPOSTA = 30;
+
 export async function marcarOrcamentoEnviado(pedidoId: number): Promise<void> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();

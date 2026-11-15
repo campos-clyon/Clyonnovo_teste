@@ -281,7 +281,8 @@ describe("a adjudicação da Mesa e o MB WAY da taxa no modelo novo", () => {
       },
       DIA_16,
     );
-    expect(m).toContain("O total é 358,05 € com IVA (350,00 € sem IVA), já com a taxa da plataforma.");
+    // d47 (15-11-2026): «X € + IVA = Y €», como em todas as mensagens com valores.
+    expect(m).toContain("O total é 350 € + IVA = 358,05 €, já com a taxa da plataforma.");
     expect(m).toContain("Paga diretamente a Parceiro de Teste, no fim do trabalho (salvo se combinarem outra coisa): por transferência ou em dinheiro no local.");
     expect(m).toContain("https://clyon.pt/pedido/abc?pagar=1");
     expect(m).toContain("Guarde o comprovativo do pagamento.");

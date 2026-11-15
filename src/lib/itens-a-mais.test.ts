@@ -87,12 +87,12 @@ describe("o preço por carga é a excepção, e é a única", () => {
 describe("o aviso é escrito para quem o lê", () => {
   it("ao cliente diz o que cobre e quanto acresce", () => {
     const t = avisoDosItens("total", "cliente")!;
-    expect(t).toContain("fotografias e na descrição");
-    expect(t).toContain(ITENS_A_MAIS_PARA_O_CLIENTE);
-    expect(t).toContain("pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)");
+    // d47 (15-11-2026): curto e igual em todas as mensagens.
+    expect(t).toContain("Inclui o que está nas fotografias e na descrição.");
+    expect(t).toContain("peça pequena 15 €, média 30 €, grande 50 € + IVA");
     expect(t).not.toContain("32 €");
     // O acréscimo não é uma autorização para cobrar sozinho.
-    expect(t).toContain("combinado consigo antes de o trabalho avançar");
+    expect(t).toContain("sempre combinado consigo antes.");
   });
 
   it("ao profissional diz o mesmo do lado dele", () => {

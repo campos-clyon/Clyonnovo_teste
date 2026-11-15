@@ -1,5 +1,6 @@
 import { notaDaCargaParaOCliente, O_QUE_E_UMA_CARGA, type BaseDoPreco } from "./base-do-preco";
 import { PECAS_EM_TEXTO, PRECO_POR_ITEM } from "./precos-publicos";
+import { extraNoLocal, INCLUI } from "./extra-no-local";
 import { TAXA_IVA } from "./taxas-plataforma";
 
 /**
@@ -118,14 +119,16 @@ export function avisoDosItens(
   servico?: string | null,
 ): string | null {
   if (!haAcrescimoPorItem(base)) return null;
-  // A tabela das peças só na recolha de móveis por peça (d20, 05-11-2026).
-  if (quem === "cliente" && servico !== undefined && !contaPelaTabelaDasPecas(servico)) {
-    return notaDoServicoParaOCliente(servico);
-  }
-  return quem === "cliente"
-    ? `Este valor cobre o que está nas fotografias e na descrição. Se no dia aparecerem mais coisas, ` +
-        `${ITENS_A_MAIS_PARA_O_CLIENTE} — combinado consigo antes de o trabalho avançar.`
-    : `A sua proposta cobre o que está nas fotografias e na descrição. Cada item que apareça a mais no ` +
+  /*
+   * AO CLIENTE, CURTO E IGUAL EM TODO O LADO — 15-11-2026 (d47): «Inclui o que
+   * está nas fotografias e na descrição.» e o extra com o preço da regra do
+   * serviço (a tabela das peças nas recolhas de móveis e de monos, os sacos no
+   * entulho, as horas na mudança, o volume no esvaziamento). Ver
+   * `mensagem-do-orcamento.ts`.
+   */
+  // Sem serviço passado (undefined), a regra de sempre: a tabela das peças; com null, nenhum serviço (d20).
+  if (quem === "cliente") return `${INCLUI} ${extraNoLocal(servico === undefined ? "recolha_moveis" : servico, base)}`;
+  return `A sua proposta cobre o que está nas fotografias e na descrição. Cada item que apareça a mais no ` +
         `local conta pela tabela das peças (${TABELA_DOS_ITENS_A_MAIS}) — combine-o com o cliente antes de carregar.`;
 }
 
@@ -176,8 +179,6 @@ export function contaPelaTabelaDasPecas(servico: string | null | undefined): boo
 
 /** A nota de um preço pelo trabalho todo, num serviço que não se conta por peça. */
 export function notaDoServicoParaOCliente(servico: string | null | undefined): string {
-  if (servico === "mudanca") {
-    return "Este valor cobre a mudança que está na descrição e nas fotografias. Se no dia houver mais a levar, o acréscimo combina-se consigo antes de o trabalho avançar.";
-  }
-  return "Este valor cobre o que está nas fotografias e na descrição. Se no dia houver mais a fazer, o acréscimo combina-se consigo antes de o trabalho avançar.";
+  // d47: a mesma frase de todas as mensagens.
+  return `${INCLUI} ${extraNoLocal(servico ?? null, "total")}`;
 }
