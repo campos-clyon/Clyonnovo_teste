@@ -1,3 +1,4 @@
+import { MAXIMO_DE_FOTOS_DO_PEDIDO } from "@/lib/fotografias-do-pedido";
 import { NextRequest, NextResponse } from "next/server";
 import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
 import { lerBase } from "@/lib/base-do-preco";
@@ -139,7 +140,7 @@ export async function POST(
       : [];
     const fotos = fotosCruas
       .filter((ft) => ft && typeof ft.url === "string" && (ft.url as string).length > 0)
-      .slice(0, 12)
+      .slice(0, MAXIMO_DE_FOTOS_DO_PEDIDO)
       .map((ft, i) => ({
         id: String(i),
         url: ft.url as string,

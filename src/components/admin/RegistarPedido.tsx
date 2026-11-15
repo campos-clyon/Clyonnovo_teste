@@ -2,11 +2,20 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Miniatura } from "@/components/Anexo";
+import VisorDeFotos from "@/components/VisorDeFotos";
+import { especieDoAnexo } from "@/lib/tipo-ficheiro";
+import {
+  MAXIMO_DE_FOTOS_DO_PEDIDO,
+  fotografiasProntas,
+  haFotografiasACarregar,
+  quantasCabem,
+  type FotografiaNoFormulario,
+} from "@/lib/fotografias-do-pedido";
 import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade, type BaseDoPreco } from "@/lib/base-do-preco";
 import { PRECO_POR_HORA } from "@/lib/tabela-das-mudancas";
 import { codigoPostalGuardado, completarComAMorada } from "@/lib/morada-partida";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG } from "@/lib/sacos-de-entulho";
-import { Briefcase, CheckCircle2, Copy, Loader2, Pencil, Plus, Send, Users } from "lucide-react";
+import { Briefcase, CheckCircle2, Copy, Loader2, Pencil, Plus, RotateCw, Send, Users } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import BotoesDaBase from "@/components/admin/BotoesDaBase";
@@ -374,9 +383,36 @@ export default function RegistarPedido({
    * comprime a 1920px e sobe uma de cada vez ao Blob), porque um segundo
    * caminho de upload seria um segundo sítio onde as fotos se perdem.
    */
-  const [fotos, setFotos] = useState<Array<{ url: string; name: string; size: number; type?: string }>>([]);
-  const [aEnviarFotos, setAEnviarFotos] = useState(0);
+  /*
+   * CADA FOTOGRAFIA COM O SEU ESTADO — d37, 15-11-2026.
+   *
+   * Antes havia uma lista das que já tinham subido e um contador das que
+   * vinham a caminho, e o «+» virava rodinha enquanto o contador não chegava a
+   * zero: não se via qual subia, a que falhava desaparecia (só o erro no fundo
+   * do ecrã dizia que existira), e gravar a meio gravava o pedido sem ela.
+   *
+   * Agora cada uma é uma entrada — a carregar, falhou (com «Tentar outra vez»)
+   * ou pronta — e só as prontas seguem no pedido. O `itensRef` é a mesma lista
+   * lida no momento: o «Calcular» espera pela fila e precisa do que ficou
+   * DEPOIS de esperar, não do que havia quando se carregou no botão.
+   */
+  const [itensDasFotos, setItensDasFotosEstado] = useState<FotografiaNoFormulario[]>([]);
+  const itensRef = useRef<FotografiaNoFormulario[]>([]);
+  const setItensDasFotos = (muda: (v: FotografiaNoFormulario[]) => FotografiaNoFormulario[]) => {
+    setItensDasFotosEstado((v) => {
+      const novo = muda(v);
+      itensRef.current = novo;
+      return novo;
+    });
+  };
+  const fotos = fotografiasProntas(itensDasFotos);
+  /* Uma de cada vez, por ordem: escolher mais enquanto outras sobem junta-as ao fim da fila. */
+  const filaDasFotos = useRef<Promise<void>>(Promise.resolve());
+  const [avisoDasFotos, setAvisoDasFotos] = useState("");
+  const [aEsperarFotos, setAEsperarFotos] = useState(false);
+  const [fotoAberta, setFotoAberta] = useState<number | null>(null);
   const seletorDeFotos = useRef<HTMLInputElement | null>(null);
+  const cheioDeFotos = itensDasFotos.length >= MAXIMO_DE_FOTOS_DO_PEDIDO;
 
   const [f, setF] = useState({
     serviceType: "",
@@ -436,7 +472,8 @@ export default function RegistarPedido({
 
   function limpar() {
     setCriadoId(null);
-    setFotos([]);
+    setItensDasFotos(() => []);
+    setAvisoDasFotos("");
     setF((d) => ({
       ...d,
       contactName: "",
@@ -501,15 +538,18 @@ export default function RegistarPedido({
     }
   }
 
-  async function escolherFotos(lista: FileList | null) {
-    if (!lista || lista.length === 0) return;
+  /** Sobe uma fotografia que já está no formulário, e diz-lhe como correu. */
+  async function subirFotografia(chave: string, original: File) {
     const { enviarFicheiro } = await import("@/lib/enviar-ficheiro");
-    setAEnviarFotos((n) => n + lista.length);
-    for (const original of Array.from(lista)) {
-      // Com a sessão do backoffice: os PDF e os vídeos grandes só passam assim (d24).
-      const r = await enviarFicheiro(original, { autorizacao: token ? `Bearer ${token}` : null });
-      if (r.ok) setFotos((v) => [...v, r.ficheiro]);
-      else {
+    // Com a sessão do backoffice: os PDF e os vídeos grandes só passam assim (d24).
+    const r = await enviarFicheiro(original, { autorizacao: token ? `Bearer ${token}` : null });
+    setItensDasFotos((v) =>
+      v.map((x): FotografiaNoFormulario => {
+        if (x.chave !== chave) return x;
+        if (r.ok) {
+          if (x.previa) URL.revokeObjectURL(x.previa);
+          return { chave, estado: "pronta", nome: r.ficheiro.name, ficheiro: r.ficheiro };
+        }
         /*
           O NOME DO FICHEIRO UMA VEZ, e não duas.
           O motivo já vem com o nome lá dentro quando isso ajuda a perceber
@@ -517,11 +557,60 @@ export default function RegistarPedido({
           "reportagem.pdf: reportagem.pdf tem 8 MB...". Junta-se o nome só
           quando o motivo não o traz.
         */
-        setErro(r.motivo.includes(original.name) ? r.motivo : `${original.name}: ${r.motivo}`);
-      }
-      setAEnviarFotos((n) => Math.max(0, n - 1));
-    }
+        return { ...x, estado: "falhou", motivo: r.motivo.includes(original.name) ? r.motivo : `${original.name}: ${r.motivo}` };
+      }),
+    );
+  }
+
+  function porNaFila(chave: string, original: File) {
+    const vez = filaDasFotos.current.then(() => subirFotografia(chave, original));
+    filaDasFotos.current = vez.catch(() => {
+      setItensDasFotos((v) =>
+        v.map((x): FotografiaNoFormulario =>
+          x.chave === chave ? { ...x, estado: "falhou", motivo: `${original.name}: erro de rede` } : x,
+        ),
+      );
+    });
+  }
+
+  function escolherFotos(lista: FileList | null) {
+    if (!lista || lista.length === 0) return;
+    const escolhidas = Array.from(lista);
+    // Já, e não no fim do envio: o «+» fica pronto para a escolha seguinte.
     if (seletorDeFotos.current) seletorDeFotos.current.value = "";
+    const { entram, ficamDeFora } = quantasCabem(itensRef.current.length, escolhidas.length);
+    setAvisoDasFotos(
+      ficamDeFora > 0
+        ? `Cabem ${MAXIMO_DE_FOTOS_DO_PEDIDO} por pedido: ${ficamDeFora === 1 ? "ficou 1 de fora" : `ficaram ${ficamDeFora} de fora`}.`
+        : "",
+    );
+    const novas: FotografiaNoFormulario[] = escolhidas.slice(0, entram).map((original) => ({
+      chave: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      estado: "a-carregar",
+      nome: original.name,
+      original,
+      previa: especieDoAnexo(original.name) === "imagem" ? URL.createObjectURL(original) : undefined,
+    }));
+    if (novas.length === 0) return;
+    setItensDasFotos((v) => [...v, ...novas]);
+    for (const n of novas) porNaFila(n.chave, n.original as File);
+  }
+
+  function tentarOutraVez(chave: string) {
+    const item = itensRef.current.find((x) => x.chave === chave);
+    if (!item?.original) return;
+    setItensDasFotos((v) =>
+      v.map((x): FotografiaNoFormulario => (x.chave === chave ? { ...x, estado: "a-carregar", motivo: undefined } : x)),
+    );
+    porNaFila(chave, item.original);
+  }
+
+  function tirarFotografia(chave: string) {
+    setItensDasFotos((v) => {
+      const sai = v.find((x) => x.chave === chave);
+      if (sai?.previa) URL.revokeObjectURL(sai.previa);
+      return v.filter((x) => x.chave !== chave);
+    });
   }
 
   /** Passo 1 — grava, localiza a morada, calcula o preço e avalia o alcance. */
@@ -531,6 +620,17 @@ export default function RegistarPedido({
     setErro("");
     const aGravarEm = idEmEdicao ?? criadoId;
     try {
+      /*
+        GRAVAR ESPERA PELAS QUE AINDA SOBEM — d37. Sem isto, quem carregava
+        em «Calcular» com uma fotografia a meio gravava o pedido sem ela, e o
+        profissional recebia-o com menos fotos do que se tinha escolhido.
+      */
+      if (haFotografiasACarregar(itensRef.current)) {
+        setAEsperarFotos(true);
+        await filaDasFotos.current;
+        setAEsperarFotos(false);
+      }
+      const fotos = fotografiasProntas(itensRef.current);
       const res = await fetch(
         aGravarEm != null ? `/api/admin/pedidos/${aGravarEm}/editar` : "/api/admin/pedidos/criar",
         {
@@ -551,6 +651,7 @@ export default function RegistarPedido({
     } catch {
       setErro("Erro de rede.");
     } finally {
+      setAEsperarFotos(false);
       setAGravar(false);
     }
   }
@@ -671,15 +772,17 @@ export default function RegistarPedido({
         try {
           const lista = o.filesJson ? JSON.parse(o.filesJson) : [];
           if (Array.isArray(lista)) {
-            setFotos(
+            setItensDasFotos(() =>
               lista
                 .filter((ft: { url?: unknown }) => typeof ft?.url === "string")
-                .map((ft: { url: string; name?: string; size?: number; type?: string }) => ({
-                  url: ft.url,
-                  name: ft.name ?? "foto",
-                  size: ft.size ?? 0,
-                  type: ft.type,
-                })),
+                .map(
+                  (ft: { url: string; name?: string; size?: number; type?: string }): FotografiaNoFormulario => ({
+                    chave: ft.url,
+                    estado: "pronta",
+                    nome: ft.name ?? "foto",
+                    ficheiro: { url: ft.url, name: ft.name ?? "foto", size: ft.size ?? 0, type: ft.type },
+                  }),
+                ),
             );
           }
         } catch {
@@ -1403,44 +1506,116 @@ export default function RegistarPedido({
         </div>
 
         <div className="sm:col-span-2 lg:col-span-3">
-          <p className="text-xs text-slate-400">Fotografias</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            {fotos.map((ft, idx) => (
-              <div key={ft.url} className="relative">
-                {/*
-                  Fotografia, vídeo ou PDF — a miniatura sabe qual é.
-                  Um PDF num `<img>` dava o ícone de imagem partida, e quem o
-                  visse pensava que o anexo se tinha perdido no envio.
-                */}
-                <Miniatura url={ft.url} nome={ft.name} className="h-16 w-16" tamanho="64px" />
-                <button
-                  type="button"
-                  onClick={() => setFotos((v) => v.filter((x) => x.url !== ft.url))}
-                  aria-label={`Tirar a fotografia ${idx + 1}`}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-none bg-red-700 text-[10px] font-bold text-white"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-slate-600 text-2xl text-slate-500 hover:border-cyan-600 hover:text-cyan-400">
-              {aEnviarFotos > 0 ? (
-                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-              ) : (
-                "+"
-              )}
+          <p className="text-xs text-slate-400">
+            Fotografias{" "}
+            <span className="text-slate-500">
+              · {itensDasFotos.length} de {MAXIMO_DE_FOTOS_DO_PEDIDO}
+            </span>
+          </p>
+          <div className="mt-1 flex flex-wrap items-start gap-2">
+            {itensDasFotos.map((ft, idx) => {
+              const ondeNoVisor = ft.ficheiro ? fotos.findIndex((x) => x.url === ft.ficheiro?.url) : -1;
+              return (
+                <div key={ft.chave} className="flex w-16 flex-col items-center gap-1">
+                  <div className="relative h-16 w-16">
+                    {ft.estado === "pronta" && ft.ficheiro ? (
+                      /*
+                        Fotografia, vídeo ou PDF — a miniatura sabe qual é, e
+                        tocar-lhe abre-a em grande (d37). O ✕ é outro botão, no
+                        canto e por cima: um toque na fotografia nunca a tira.
+                      */
+                      <Miniatura
+                        url={ft.ficheiro.url}
+                        nome={ft.ficheiro.name}
+                        className="h-16 w-16"
+                        tamanho="64px"
+                        onAbrir={() => setFotoAberta(ondeNoVisor)}
+                      />
+                    ) : (
+                      <div
+                        className={`relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border ${
+                          ft.estado === "falhou" ? "border-red-700 bg-red-950/40" : "border-slate-700 bg-slate-800/60"
+                        }`}
+                        title={ft.motivo ?? ft.nome}
+                      >
+                        {ft.previa && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={ft.previa} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+                        )}
+                        {ft.estado === "a-carregar" ? (
+                          <Loader2 className="relative h-5 w-5 animate-spin text-white" aria-label={`A carregar ${ft.nome}`} />
+                        ) : (
+                          <span className="relative text-[10px] font-semibold text-red-300">Falhou</span>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => tirarFotografia(ft.chave)}
+                      aria-label={`Tirar a fotografia ${idx + 1}`}
+                      className="absolute -right-2 -top-2 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border-2 border-slate-900 bg-red-700 text-xs font-bold text-white"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {ft.estado === "falhou" && (
+                    <button
+                      type="button"
+                      onClick={() => tentarOutraVez(ft.chave)}
+                      className="flex items-center gap-0.5 text-[10px] font-medium leading-tight text-cyan-300 hover:text-cyan-200"
+                    >
+                      <RotateCw className="h-3 w-3" aria-hidden="true" />
+                      Tentar outra vez
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {/*
+              O «+» FICA SEMPRE — d37. Já não vira rodinha enquanto outras
+              sobem: escolher mais junta-as à fila. Só pára no máximo, e di-lo.
+            */}
+            <label
+              aria-disabled={cheioDeFotos}
+              title={cheioDeFotos ? `Máximo de ${MAXIMO_DE_FOTOS_DO_PEDIDO} por pedido` : "Juntar fotografias"}
+              className={`flex h-16 w-16 items-center justify-center rounded-lg border border-dashed text-2xl ${
+                cheioDeFotos
+                  ? "cursor-not-allowed border-slate-700 text-slate-700"
+                  : "cursor-pointer border-slate-600 text-slate-500 hover:border-cyan-600 hover:text-cyan-400"
+              }`}
+            >
+              +
               <input
                 ref={seletorDeFotos}
                 type="file"
                 accept="image/*,video/*,application/pdf"
                 multiple
+                disabled={cheioDeFotos}
                 className="hidden"
                 onChange={(e) => escolherFotos(e.target.files)}
               />
             </label>
           </div>
+          {itensDasFotos.some((x) => x.estado === "falhou") && (
+            <ul className="mt-1 space-y-0.5 text-[10px] text-red-300">
+              {itensDasFotos
+                .filter((x) => x.estado === "falhou")
+                .map((x) => (
+                  <li key={x.chave}>{x.motivo ?? `${x.nome}: não subiu`} — não segue no pedido.</li>
+                ))}
+            </ul>
+          )}
+          {avisoDasFotos && <p className="mt-1 text-[10px] text-amber-300">{avisoDasFotos}</p>}
+          {fotoAberta != null && fotoAberta >= 0 && fotos.length > 0 && (
+            <VisorDeFotos
+              fotos={fotos.map((x) => x.url)}
+              nomes={fotos.map((x) => x.name)}
+              indiceInicial={Math.min(fotoAberta, fotos.length - 1)}
+              onFechar={() => setFotoAberta(null)}
+            />
+          )}
           <p className="mt-1 text-[10px] text-slate-500">
-            As que o cliente mandar por WhatsApp. Seguem no pedido — sem elas o
+            Até {MAXIMO_DE_FOTOS_DO_PEDIDO} por pedido, várias de uma vez. As que o cliente mandar por WhatsApp. Seguem no pedido — sem elas o
             profissional propõe às cegas.
           </p>
         </div>
@@ -1474,7 +1649,7 @@ export default function RegistarPedido({
           className="mt-4 flex items-center gap-2 rounded-xl bg-acao px-4 py-2.5 text-sm font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
         >
           {aGravar && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          {aGravar ? "A calcular…" : "Calcular preço e alcance"}
+          {aEsperarFotos ? "À espera das fotografias…" : aGravar ? "A calcular…" : "Calcular preço e alcance"}
         </button>
       )}
 

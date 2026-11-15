@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { AlertTriangle, MapPin } from "lucide-react";
 import type { VistaDoAjuste } from "@/lib/ajuste-no-local";
+import { Miniatura } from "@/components/Anexo";
+import VisorDeFotos from "@/components/VisorDeFotos";
 
 /**
  * O TRABALHO NO TERRENO, NA FICHA DA AGENDA — 18-10-2026.
@@ -37,6 +39,7 @@ export default function AjusteNaFicha({
   onMudou: () => void;
 }) {
   const [aEnviar, setAEnviar] = useState(false);
+  const [fotoAberta, setFotoAberta] = useState<number | null>(null);
   const [erro, setErro] = useState("");
   const pendente = ajuste?.pendente ?? null;
   const ultimo = ajuste?.ultimo ?? null;
@@ -85,12 +88,24 @@ export default function AjusteNaFicha({
           <p className="mt-1 text-sm text-amber-100">«{pendente.motivo}»</p>
           {pendente.fotos.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
+              {/* As do ajuste abrem no visor de todo o backoffice (d37), como as do pedido. */}
               {pendente.fotos.map((u, i) => (
-                <a key={u} href={u} target="_blank" rel="noreferrer" className="text-xs text-cyan-300 underline">
-                  Fotografia {i + 1}
-                </a>
+                <Miniatura
+                  key={u}
+                  url={u}
+                  className="h-16 w-16 ring-1 ring-amber-700 transition hover:ring-amber-400"
+                  tamanho="64px"
+                  onAbrir={() => setFotoAberta(i)}
+                />
               ))}
             </div>
+          )}
+          {fotoAberta != null && pendente.fotos.length > 0 && (
+            <VisorDeFotos
+              fotos={pendente.fotos}
+              indiceInicial={Math.min(fotoAberta, pendente.fotos.length - 1)}
+              onFechar={() => setFotoAberta(null)}
+            />
           )}
           <p className="mt-2 text-xs text-amber-300/90">
             À espera do cliente até às {hora(pendente.expiraEm)}. Responda só se o cliente lhe disse o que quer.
