@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
+import {
+  corpoDaMarcacao,
+  perguntaDoTrabalhoMarcado,
+  ROTA_DAS_INDISPONIBILIDADES,
+  TEXTOS_DA_INDISPONIBILIDADE as T,
+  trabalhosEmCimaPorExtenso,
+} from "@/lib/textos-da-indisponibilidade";
 
 /**
  * OS DIAS EM QUE NÃO PODE TRABALHAR — d35, 15-11-2026.
@@ -11,7 +18,7 @@ import { diaEmLisboa } from "@/lib/hora-de-lisboa";
  * os de data vaga chegam, com uma nota. Marcar em cima de um trabalho já
  * marcado pergunta primeiro — o trabalho continua marcado.
  *
- * A rota é a mesma da app Pro: /api/profissionais/indisponibilidades.
+ * A rota, as frases e o pedido são os da app Pro: `textos-da-indisponibilidade.ts`.
  */
 
 type Linha = { id: number; texto: string; nota: string | null };
@@ -30,7 +37,7 @@ export default function Indisponibilidades() {
 
   useEffect(() => {
     let vivo = true;
-    fetch("/api/profissionais/indisponibilidades")
+    fetch(ROTA_DAS_INDISPONIBILIDADES)
       .then((r) => (r.ok ? r.json() : { indisponibilidades: [] }))
       .then((d) => {
         if (vivo) setLista(d.indisponibilidades ?? []);
@@ -47,22 +54,20 @@ export default function Indisponibilidades() {
     setAGravar(true);
     setErro("");
     try {
-      const corpo = soHoras
-        ? { dia, inicio, fim, nota, confirmar }
-        : { dia, ate: ate || dia, nota, confirmar };
-      const res = await fetch("/api/profissionais/indisponibilidades", {
+      const corpo = corpoDaMarcacao({ soHoras, dia, ate, inicio, fim, nota }, confirmar);
+      const res = await fetch(ROTA_DAS_INDISPONIBILIDADES, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(corpo),
       });
       const d = await res.json();
-      if (res.status === 409 && d.precisaConfirmar) {
-        const quais = (d.trabalhos ?? []).map((t: { pedidoId: number }) => `#${t.pedidoId}`).join(", ");
-        if (window.confirm(`${d.pergunta}\n\nTrabalhos: ${quais}`)) return marcar(true);
+      const pergunta = perguntaDoTrabalhoMarcado(res.status, d);
+      if (pergunta) {
+        if (window.confirm(`${pergunta.pergunta}\n\n${trabalhosEmCimaPorExtenso(pergunta.trabalhos)}`)) return marcar(true);
         return;
       }
       if (!res.ok) {
-        setErro(d.error ?? "Não foi possível marcar.");
+        setErro(d.error ?? T.naoMarcou);
         return;
       }
       setLista(d.indisponibilidades ?? []);
@@ -71,7 +76,7 @@ export default function Indisponibilidades() {
       setAte("");
       setNota("");
     } catch {
-      setErro("Erro de rede. Tente outra vez.");
+      setErro(T.erroDeRede);
     } finally {
       setAGravar(false);
     }
@@ -80,15 +85,15 @@ export default function Indisponibilidades() {
   async function desmarcar(id: number) {
     setErro("");
     try {
-      const res = await fetch(`/api/profissionais/indisponibilidades?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`${ROTA_DAS_INDISPONIBILIDADES}?id=${id}`, { method: "DELETE" });
       const d = await res.json();
       if (!res.ok) {
-        setErro(d.error ?? "Não foi possível desmarcar.");
+        setErro(d.error ?? T.naoDesmarcou);
         return;
       }
       setLista(d.indisponibilidades ?? []);
     } catch {
-      setErro("Erro de rede. Tente outra vez.");
+      setErro(T.erroDeRede);
     }
   }
 
@@ -98,7 +103,7 @@ export default function Indisponibilidades() {
   return (
     <section className="mb-4 rounded-2xl border border-[#E2EEF3] bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-tinta">Dias em que não pode trabalhar</h2>
+        <h2 className="text-sm font-semibold text-tinta">{T.titulo}</h2>
         {!aberto && (
           <button
             type="button"
@@ -108,12 +113,12 @@ export default function Indisponibilidades() {
             }}
             className="cursor-pointer rounded-lg border border-[#E2EEF3] bg-white px-3 py-1.5 text-sm font-semibold text-acao"
           >
-            Marcar indisponível
+            {T.marcarIndisponivel}
           </button>
         )}
       </div>
       <p className="mt-1 text-xs text-tinta-fraca">
-        Os pedidos novos para esses dias não lhe chegam. Os que não têm dia certo chegam, com um aviso.
+        {T.explicacao}
       </p>
 
       {lista && lista.length > 0 && (
@@ -129,7 +134,7 @@ export default function Indisponibilidades() {
                 onClick={() => void desmarcar(l.id)}
                 className="cursor-pointer border-none bg-transparent text-xs font-semibold text-acao underline-offset-4 hover:underline"
               >
-                Desmarcar
+                {T.desmarcar}
               </button>
             </li>
           ))}
@@ -140,44 +145,44 @@ export default function Indisponibilidades() {
         <div className="mt-3 space-y-3">
           <div className="flex flex-wrap gap-3 text-sm text-tinta">
             <label className="flex items-center gap-1.5">
-              <input type="radio" checked={!soHoras} onChange={() => setSoHoras(false)} /> Dias inteiros
+              <input type="radio" checked={!soHoras} onChange={() => setSoHoras(false)} /> {T.diasInteiros}
             </label>
             <label className="flex items-center gap-1.5">
-              <input type="radio" checked={soHoras} onChange={() => setSoHoras(true)} /> Umas horas de um dia
+              <input type="radio" checked={soHoras} onChange={() => setSoHoras(true)} /> {T.umasHoras}
             </label>
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col text-xs text-tinta-fraca">
-              {soHoras ? "Dia" : "De"}
+              {soHoras ? T.dia : T.de}
               <input type="date" min={hoje} value={dia} onChange={(e) => setDia(e.target.value)} className={campo} />
             </label>
             {soHoras ? (
               <>
                 <label className="flex flex-col text-xs text-tinta-fraca">
-                  Das
+                  {T.das}
                   <input type="time" value={inicio} onChange={(e) => setInicio(e.target.value)} className={campo} />
                 </label>
                 <label className="flex flex-col text-xs text-tinta-fraca">
-                  Às
+                  {T.as}
                   <input type="time" value={fim} onChange={(e) => setFim(e.target.value)} className={campo} />
                 </label>
               </>
             ) : (
               <label className="flex flex-col text-xs text-tinta-fraca">
-                Até (opcional)
+                {T.ateOpcional}
                 <input type="date" min={dia || hoje} value={ate} onChange={(e) => setAte(e.target.value)} className={campo} />
               </label>
             )}
           </div>
           <label className="flex flex-col text-xs text-tinta-fraca">
-            Nota (só para si e para a equipa)
+            {T.nota}
             <input
               type="text"
               maxLength={200}
               value={nota}
               onChange={(e) => setNota(e.target.value)}
               className={campo}
-              placeholder="Ex.: férias"
+              placeholder={T.exemploDaNota}
             />
           </label>
           <div className="flex flex-wrap gap-2">
@@ -187,14 +192,14 @@ export default function Indisponibilidades() {
               onClick={() => void marcar()}
               className="cursor-pointer rounded-lg border-none bg-acao px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {aGravar ? "A marcar…" : "Marcar"}
+              {aGravar ? T.aMarcar : T.marcar}
             </button>
             <button
               type="button"
               onClick={() => setAberto(false)}
               className="cursor-pointer rounded-lg border border-[#E2EEF3] bg-white px-4 py-2 text-sm text-tinta"
             >
-              Cancelar
+              {T.cancelar}
             </button>
           </div>
         </div>

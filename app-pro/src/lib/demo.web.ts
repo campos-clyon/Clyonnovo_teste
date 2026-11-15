@@ -2,6 +2,7 @@ import type { MeusPedidos, Trabalho } from "./trabalhos";
 import type { Perfil, RespostaDaCarteira } from "./conta";
 import { diaEmLisboa, instanteEmLisboa } from "../../../src/lib/hora-de-lisboa";
 import { DIAS_ATE_LIBERTAR_SOZINHO, mensagemDepoisDeFeito } from "../../../src/lib/trabalho";
+import { indisponibilidadeParaAApi, lerIndisponibilidade, NOTA_DA_DATA_VAGA, type Indisponibilidade } from "../../../src/lib/indisponibilidade";
 import {
   estadoDasHorasParaQuemFez,
   intervaloDasHoras,
@@ -102,6 +103,7 @@ let trabalhos: Trabalho[] = [
     negociacaoId: 901,
     pedidoId: 4101,
     estado: "aberta",
+    indisponibilidadeNoPedido: NOTA_DA_DATA_VAGA,
     fase: "a_negociar",
     serviceType: "recolha_entulho",
     city: "Almada (exemplo)",
@@ -441,6 +443,10 @@ const pedidosDeAjuda: Array<Record<string, unknown>> = [
   },
 ];
 
+/** Os dias indisponíveis do exemplo (d35), com as regras do site. */
+let indisponiveis: Indisponibilidade[] = [];
+let proximaIndisponibilidade = 1;
+
 /** Responde como o site responderia, com os exemplos daqui. */
 export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unknown): Promise<T> {
   await new Promise((r) => setTimeout(r, 300));
@@ -458,6 +464,20 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
   // Mudar a palavra-passe e «Sair de todos os aparelhos» devolvem a sessão nova (25-10-2026).
   if (caminho === "/api/profissionais/palavra-passe" || caminho === "/api/profissionais/sair-de-todos") {
     return { ok: true, token: "demo" } as T;
+  }
+  if (caminho.startsWith("/api/profissionais/indisponibilidades")) {
+    const id = Number(new URL(caminho, "https://exemplo.invalid").searchParams.get("id"));
+    if (metodo === "DELETE") indisponiveis = indisponiveis.filter((i) => i.id !== id);
+    if (metodo === "POST") {
+      const lido = lerIndisponibilidade(c);
+      // O ecrã já não deixa marcar o que a regra recusa; aqui, o recusado simplesmente não entra.
+      if (lido.ok) {
+        indisponiveis = [...indisponiveis, { id: proximaIndisponibilidade++, providerId: 0, ...lido.valor }].sort(
+          (a, b) => a.inicioEm.getTime() - b.inicioEm.getTime(),
+        );
+      }
+    }
+    return { ok: true, indisponibilidades: indisponiveis.map(indisponibilidadeParaAApi) } as T;
   }
   if (caminho === "/api/profissionais/meus-pedidos") {
     return { nome: "Profissional de exemplo", pedidos: trabalhos } satisfies MeusPedidos as T;

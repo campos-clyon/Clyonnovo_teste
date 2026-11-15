@@ -434,6 +434,13 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
           ) : null}
         </View>
 
+        {/* d35: o pedido cai em dias que marcou como indisponíveis — a frase do site, como no painel. */}
+        {t.indisponibilidadeNoPedido ? (
+          <Text style={{ color: c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600" }} numberOfLines={2}>
+            {t.indisponibilidadeNoPedido}
+          </Text>
+        ) : null}
+
         <View style={estilos.pastilhas}>
           {porAbrir ? <Pastilha texto="Novo" tom="marca" c={c} /> : null}
           {recusa ? <Pastilha texto={recusa.texto} tom={recusa.tom === "rosa" ? "mau" : recusa.tom === "laranja" ? "aviso" : "neutro"} c={c} /> : null}

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../componentes/Texto";
 import { Botao, Etiqueta, Mensagem } from "../../componentes/ui";
 import { ODia } from "../../componentes/TrabalhoContratado";
+import { Indisponibilidades } from "../../componentes/Indisponibilidades";
 import { ErroDaApi, pedir } from "../../lib/api";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import {
@@ -194,6 +195,9 @@ export default function AgendaDoProfissional() {
             </Text>
           ) : null}
         </View>
+
+        {/* Os dias em que não pode trabalhar (d35, 15-11-2026) — como no painel, por cima da agenda, mesmo vazia. */}
+        <Indisponibilidades />
 
         {vazia ? (
           <View style={{ gap: ESPACO.m, alignItems: "center", marginTop: ESPACO.xl }}>

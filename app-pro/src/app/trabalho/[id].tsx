@@ -150,6 +150,10 @@ function Detalhe({ t }: { t: Trabalho }) {
         <Caixa>
           <TituloDaCaixa>O pedido #{t.pedidoId}</TituloDaCaixa>
           <Linha rotulo="Quando" valor={quandoE(t)} />
+          {/* d35: o pedido cai em dias que marcou como indisponíveis (como no detalhe do painel). */}
+          {t.indisponibilidadeNoPedido ? (
+            <Text style={{ color: c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600", textAlign: "right" }}>{t.indisponibilidadeNoPedido}</Text>
+          ) : null}
           <Linha rotulo="Onde" valor={t.city} />
           <Linha rotulo="Distância da sua base" valor={distanciaDe(t)} />
           <Linha rotulo="Andar" valor={andarPorExtenso(t.floor)} />

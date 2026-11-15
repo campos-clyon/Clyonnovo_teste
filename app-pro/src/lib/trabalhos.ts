@@ -114,6 +114,8 @@ export type Trabalho = {
   /** Texto JSON de `[{url, name?}]`. */
   filesJson: string | null;
   urgency: string | null;
+  /** «Tem indisponibilidade nesses dias.» num pedido por decidir que cai em dias que marcou (d35, 15-11-2026). */
+  indisponibilidadeNoPedido?: string | null;
   dataAgendada: string | null;
   dataCombinada: string | null;
   /** Quando o pedido foi feito pelo cliente. */
