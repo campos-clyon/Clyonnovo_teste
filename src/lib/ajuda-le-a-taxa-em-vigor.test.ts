@@ -87,7 +87,9 @@ describe("as taxas que chegam da rota", () => {
   it("o painel usa as taxas da rota, e não a lista sem número", () => {
     const A = semNotas(ler("src/app/profissionais/painel/Ajuda.tsx"));
     expect(A).toContain("setTaxas(taxasDaAjuda(dados.taxas));");
-    expect(A).toContain("perguntasDoProfissional(taxas)");
+    // Desde a d27 parte 3 (15-11-2026) o painel passa também o modelo que o servidor diz.
+    expect(A).toMatch(/perguntasDoProfissional\(taxas[,)]/);
+    expect(A).toContain("setNovoModelo(dados.novoModelo === true);");
     expect(A).not.toContain("PERGUNTAS_DO_PROFISSIONAL");
   });
 });
