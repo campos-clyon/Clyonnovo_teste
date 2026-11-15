@@ -280,6 +280,9 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
   { seccao: "agenda", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro, também na agenda" },
+  // A folha final de uma mudança (d38 v2, 15-11-2026): grava o valor final — o botão só se usa com o administrador.
+  { seccao: "carteiras", rota: "/api/admin/negociacoes/horas", porque: "a folha final muda o valor do trabalho — é dinheiro (d38)" },
+  { seccao: "pagamentos", rota: "/api/admin/negociacoes/horas", porque: "a folha final muda o valor do trabalho — é dinheiro (d38)" },
   // 18-10-2026: aprovar um ajuste no local pelo cliente muda o valor — é o mesmo dinheiro.
   { seccao: "agenda", rota: "/api/admin/negociacoes/ajuste", porque: "aprovar o ajuste muda o valor do trabalho" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/recebido", porque: "registar o que o cliente pagou desbloqueia dinheiro" },

@@ -36,6 +36,7 @@ import {
 } from "@/lib/folha-da-mudanca";
 import { tarifaCongeladaDeJson } from "@/lib/conta-da-mudanca";
 import { marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
+import { contextoDaFolhaFinal, folhaFinalParaOEcra, folhaFinalPelaEquipa } from "@/lib/folha-final-no-servidor";
 
 export const runtime = "nodejs";
 
@@ -62,7 +63,13 @@ export const runtime = "nodejs";
  *     sem confirmar: o cliente valida como sempre. Fica no histórico «preenchida
  *     pela equipa (<quem>), a pedido do profissional» (`textosDaFolhaPelaEquipa`);
  *   · «validar_telefone» (d26) — o cliente não usa a app e validou a folha por
- *     telefone: confirma-a em nome dele, com quem o registou no histórico.
+ *     telefone: confirma-a em nome dele, com quem o registou no histórico;
+ *   · «folha_final» (d38 v2, 15-11-2026) — numa mudança, o valor final pela
+ *     equipa, antes ou depois de dado por feito: `pessoas`, `horas`,
+ *     `precoHora`, a deslocação (`deslocacaoTipo` «km» com `km`/`precoKm`,
+ *     ou «euros» com `deslocacaoEuros`), `materiais` [{descricao, valor}] e
+ *     `motivo` (obrigatório se o profissional já foi pago). Com
+ *     `previsualizar: true` só devolve a conta. Ver folha-final.ts.
  */
 
 /** As frases do histórico da folha preenchida pela equipa (d26): a que a equipa lê e a que o cliente lê. */
@@ -160,6 +167,8 @@ export async function GET(req: NextRequest) {
           ),
         };
       })(),
+      // A folha final pela equipa (d38 v2): o que o formulário precisa para abrir.
+      folhaFinal: await contextoDaFolhaFinal(Number(linha.pedidoId), linha as never).then(folhaFinalParaOEcra).catch(() => null),
       acerto: acerto
         ? {
             ...acerto,
@@ -192,6 +201,13 @@ export async function POST(req: NextRequest) {
     pessoas?: unknown;
     km?: unknown;
     motivoDosKm?: unknown;
+    /** «folha_final» (d38 v2). */
+    precoHora?: unknown;
+    deslocacaoTipo?: unknown;
+    precoKm?: unknown;
+    deslocacaoEuros?: unknown;
+    previsualizar?: unknown;
+    motivo?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -202,11 +218,42 @@ export async function POST(req: NextRequest) {
   const negociacaoId = Number(corpo.negociacaoId);
   const linha = await oTrabalho(pedidoId, negociacaoId);
   if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
-  if (corpo.accao !== "confirmar" && corpo.accao !== "corrigir" && corpo.accao !== "preencher" && corpo.accao !== "validar_telefone") {
+  if (corpo.accao !== "confirmar" && corpo.accao !== "corrigir" && corpo.accao !== "preencher" && corpo.accao !== "validar_telefone" && corpo.accao !== "folha_final") {
     return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
   }
   await assumirPedidoSeLivre(pedidoId, colab);
   const porQuem = colab?.nome ?? "a CLYON";
+
+  /*
+   * A FOLHA FINAL PELA EQUIPA — d38 v2. Só administradores (a porta já o
+   * exige): passa a ser o valor final, com histórico (folha-final-no-servidor.ts).
+   */
+  if (corpo.accao === "folha_final") {
+    try {
+      const r = await folhaFinalPelaEquipa({
+        pedidoId,
+        negociacaoId,
+        linha: linha as never,
+        corpo: {
+          pessoas: corpo.pessoas,
+          horas: corpo.horas,
+          precoHora: corpo.precoHora,
+          deslocacaoTipo: corpo.deslocacaoTipo,
+          km: corpo.km,
+          precoKm: corpo.precoKm,
+          deslocacaoEuros: corpo.deslocacaoEuros,
+          materiais: corpo.materiais,
+          previsualizar: corpo.previsualizar,
+          motivo: corpo.motivo,
+        },
+        porQuem,
+      });
+      return NextResponse.json(r.corpo, { status: r.status });
+    } catch (e) {
+      console.error("[admin/negociacoes/horas POST folha_final]", e);
+      return NextResponse.json({ error: "Não foi possível gravar a folha final." }, { status: 500 });
+    }
+  }
 
   /*
    * PREENCHER PELA EQUIPA — d26, 15-11-2026. Só administradores (a porta já o

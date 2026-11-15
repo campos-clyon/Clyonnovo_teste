@@ -1,5 +1,7 @@
 "use client";
 
+import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
+import { isMudancaType } from "@/lib/calendar-helpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AlteracoesDoCliente from "./AlteracoesDoCliente";
 import DoNossoLado from "./DoNossoLado";
@@ -3040,6 +3042,10 @@ export default function AdminNegociacoesPanel({
             {/* A folha de um trabalho por hora (31-10-2026) — ver HorasNaMesa. Desde 15-11 (d26) aparece sempre, com ou sem horas: a equipa preenche-a a pedido do profissional. */}
             {lerBase(p.baseDoPreco) === "hora" && (horasMarcadas(acordada) || !acordada.confirmadoEm) && (
               <HorasNaMesa pedidoId={p.id} negociacaoId={acordada.id} onMudou={() => carregar(true)} />
+            )}
+            {/* A folha final de uma mudança pela equipa (d38 v2): o valor final, antes ou depois de feito. */}
+            {isMudancaType(p.serviceType) && (
+              <FolhaFinalDaMudanca pedidoId={p.id} negociacaoId={acordada.id} onGravado={() => carregar(true)} />
             )}
             {/* A chegada por confirmar (d3, 31-10-2026) — o cliente disse-o ao telefone. Some com CHEGADA_CONFIRMADA_OBRIGATORIA desligado (d2, 03-11-2026). */}
             {!concluido && !acordada.execucaoEnviadaEm && acordada.chegouEm && viagemComConfirmacao(acordada, false) && clientePodeConfirmarChegada(acordada) && (

@@ -108,7 +108,7 @@ function rotuloDoTotal(pago: boolean | null, emMao: boolean): string {
  * preço ao cliente não há conta (`null`) — não se inventa.
  */
 export function contaDoTrabalhoClyon(
-  t: { valorFixo: number; taxa: number | null; precoAoCliente: number | null },
+  t: { valorFixo: number; taxa: number | null; precoAoCliente: number | null; taxaDoProfissional?: number | null },
   pago: boolean | null,
   /** Sem factura (21-10-2026): o cliente paga o valor sem IVA; o profissional recebe o mesmo. */
   semFactura = false,
@@ -138,12 +138,30 @@ export function contaDoTrabalhoClyon(
         nota:
           t.taxa == null
             ? "trabalho antigo: a diferença entre o preço ao cliente e o valor do profissional"
-            : "Trabalho CLYON: sai do valor sem IVA",
+            : comFolhaFinal(t)
+              ? "folha final: só sobre as horas e a deslocação — o material não leva taxa"
+              : "Trabalho CLYON: sai do valor sem IVA",
       },
       { tipo: "igual", rotulo: "A pagar ao profissional", valor: c.profissional, final: true },
     ],
     notas: [],
   };
+}
+
+/** A negociação tem outra taxa do profissional que a do pedido — a efectiva de uma folha final (d38 v2). */
+function comFolhaFinal(t: { taxa: number | null; taxaDoProfissional?: number | null }): boolean {
+  return t.taxa != null && t.taxaDoProfissional != null && Math.abs(t.taxaDoProfissional - t.taxa) > 1e-6;
+}
+
+/**
+ * A taxa do profissional da negociação de um Trabalho CLYON, só quando difere
+ * da do pedido (a efectiva de uma folha final, d38 v2) — senão null, e a
+ * conta segue a do pedido como sempre.
+ */
+export function taxaDoProfissionalSeDifere(taxaDoPedido: number | null, taxaDaNegociacao: unknown): number | null {
+  const n = taxaDaNegociacao == null || taxaDaNegociacao === "" ? null : Number(taxaDaNegociacao);
+  if (taxaDoPedido == null || n == null || !Number.isFinite(n) || n < 0 || n >= 1) return null;
+  return Math.abs(n - taxaDoPedido) > 1e-6 ? n : null;
 }
 
 export type EntradaDaNegociacao = {
@@ -349,6 +367,7 @@ export function contaDaLinha(
         valorFixo: numero(l.valorFixoClyon) ?? acordado,
         taxa: numero(l.taxaClyon),
         precoAoCliente: numero(l.precoClienteClyon),
+        taxaDoProfissional: taxaDoProfissionalSeDifere(numero(l.taxaClyon), l.taxaProfissional),
       },
       pago,
       eSemFactura(l),

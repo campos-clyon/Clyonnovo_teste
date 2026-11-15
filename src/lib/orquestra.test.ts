@@ -611,6 +611,9 @@ const ENTRE_A_EQUIPA = new Set([
   // O IVA e a taxa da dívida marcados um a um (11-11-2026): Pagamentos › A receber dos profissionais, e o histórico da equipa.
   "src/lib/cobrancas-ao-profissional.ts",
   "src/lib/cobrancas-na-base.ts",
+  // A folha final de uma mudança pela equipa (d38 v2): o histórico «valor_corrigido», que o cliente não vê.
+  "src/lib/folha-final.ts",
+  "src/lib/folha-final-no-servidor.ts",
   "src/lib/marcas-da-divida-na-base.ts",
   // Os escolhidos sem resposta (11-11-2026, d6): o selo e a linha da Mesa, os botões da equipa, o histórico e o aviso à equipa.
   "src/lib/escolhidos-sem-resposta-na-mesa.ts",

@@ -88,6 +88,8 @@ import {
 } from "@/lib/pagamento-declarado";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import CorrigirOPagamento, { type CorreccaoDoPagamento } from "@/components/admin/CorrigirOPagamento";
+import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
+import { isMudancaType } from "@/lib/calendar-helpers";
 
 /** Corrigir um pagamento registado à mão: a fatura e o valor, com motivo (04-11-2026, d9). */
 const ROTA_DA_CORRECCAO = "/api/admin/pagamentos/corrigir-pagamento";
@@ -2881,9 +2883,14 @@ function Linha({
           <section>
             <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               <Pencil className="h-3 w-3" aria-hidden="true" />
-              Corrigir o valor
+              {isMudancaType(t.servico) ? "Folha final" : "Corrigir o valor"}
             </p>
-            <CorrigirValor t={t} ocupado={ocupado} onGravar={onCorrigir} />
+            {/* Numa mudança, a folha final (d38 v2): horas, deslocação e material, com a conta antes de gravar. */}
+            {isMudancaType(t.servico) ? (
+              <FolhaFinalDaMudanca pedidoId={t.pedidoId} negociacaoId={t.negociacaoId} />
+            ) : (
+              <CorrigirValor t={t} ocupado={ocupado} onGravar={onCorrigir} />
+            )}
           </section>
 
           <section>

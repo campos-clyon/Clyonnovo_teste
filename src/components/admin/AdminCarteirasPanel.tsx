@@ -30,6 +30,8 @@ import DinheiroDoProfissional from "@/components/admin/DinheiroDoProfissional";
 import { estadoDaParteEmPalavras, type EstadoDaParte } from "@/lib/cobrancas-ao-profissional";
 
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
+import { isMudancaType } from "@/lib/calendar-helpers";
+import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 /**
  * Quem tem dinheiro a receber, e por onde lho mandar.
  *
@@ -1059,6 +1061,10 @@ export default function AdminCarteirasPanel() {
             <p className="mt-1 text-sm text-slate-400">
               #{aCorrigir.t.pedidoId} · {aCorrigir.nome}
             </p>
+            {/* Numa mudança, a folha final (d38 v2) no lugar do valor à mão. */}
+            {isMudancaType(aCorrigir.t.servico) ? (
+              <FolhaFinalDaMudanca pedidoId={aCorrigir.t.pedidoId} negociacaoId={aCorrigir.t.negociacaoId} onGravado={() => void carregar(true)} />
+            ) : (<>
             <p className="mt-3 text-xs text-slate-500">
               Estava acordado {euros(aCorrigir.t.valorAcordado)}. O que ficar aqui
               refaz o que ele recebe, o que o cliente paga e a taxa da plataforma — e fica no
@@ -1101,6 +1107,7 @@ export default function AdminCarteirasPanel() {
               </label>
             )}
 
+            </>)}
             {erro && (
               <p className="mt-3 rounded-lg border border-rose-800 bg-rose-950/40 px-3 py-2 text-sm text-rose-300">
                 {erro}
@@ -1109,6 +1116,7 @@ export default function AdminCarteirasPanel() {
 
             <div className="mt-4 flex gap-2">
               <button
+                hidden={isMudancaType(aCorrigir.t.servico)}
                 onClick={gravarValor}
                 disabled={aGravar}
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-50"

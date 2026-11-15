@@ -1,5 +1,7 @@
 "use client";
 
+import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
+import { isMudancaType } from "@/lib/calendar-helpers";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Ban,
@@ -134,6 +136,11 @@ export type TrabalhoClyon = {
   precoAoCliente: number | null;
   /** A taxa (0,10 / 0,15 / 0,20). Nula nos antigos: o valor era o que o pro recebia. */
   taxa: number | null;
+  /**
+   * Depois de uma folha final (d38 v2): a taxa efectiva do profissional, a da
+   * negociação — o material não leva taxa. Nula sem folha final.
+   */
+  taxaDoProfissional?: number | null;
   /** Porque fica abaixo do escalão (25-10-2026, d18); nulo quando não fica, ou nos de antes. */
   motivoDaTaxa?: string | null;
   cliente: string | null;
@@ -356,8 +363,8 @@ const ESTADO_DA_OFERTA: Record<string, { rotulo: string; cor: string }> = {
 };
 
 /** O que o profissional recebe: o valor menos a taxa — nos antigos, o valor todo. */
-function ganhosDe(t: { valorFixo: number; taxa: number | null }): number {
-  return t.taxa != null ? quantoOProfissionalRecebe(t.valorFixo, taxasDoTrabalhoClyon(t.taxa)) : t.valorFixo;
+function ganhosDe(t: { valorFixo: number; taxa: number | null; taxaDoProfissional?: number | null }): number {
+  return t.taxa != null ? quantoOProfissionalRecebe(t.valorFixo, taxasDoTrabalhoClyon(t.taxaDoProfissional ?? t.taxa)) : t.valorFixo;
 }
 
 const euros = (v: number | null | undefined) =>
@@ -1615,6 +1622,11 @@ function CartaoDoTrabalho({
             if (m) setSemFolha(false);
           }}
         />
+      )}
+
+      {/* A folha final de uma mudança pela equipa (d38 v2): o valor final, antes ou depois de feito. */}
+      {a && isMudancaType(t.servico) && (
+        <FolhaFinalDaMudanca pedidoId={t.pedidoId} negociacaoId={a.negociacaoId} onGravado={onMudou} />
       )}
 
       {/* A prova do trabalho feito: a nota e as fotografias do profissional (19-10-2026, como na Mesa). */}

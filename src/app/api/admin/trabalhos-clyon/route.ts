@@ -47,7 +47,8 @@ import { pedidoArrumado, PEDIDO_ARRUMADO_NAO_SE_ENVIA } from "@/lib/pedido-arrum
 import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
 import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { comOLink, linkParaPagar, mensagemDosValoresParaPagamento, oQueNaoPodeIr } from "@/lib/valores-para-pagamento";
-import { contaDoTrabalhoClyon, emEuros } from "@/lib/conta-do-pagamento";
+import { contaDoTrabalhoClyon, emEuros, taxaDoProfissionalSeDifere } from "@/lib/conta-do-pagamento";
+import { folhasFinaisActivas, type FolhaFinalGravada } from "@/lib/folha-final-na-base";
 import { linkParaQuemFechou } from "@/lib/link-de-quem-fecha-pelo-whatsapp";
 import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
@@ -156,9 +157,23 @@ export async function GET(req: NextRequest) {
       console.error("[admin/trabalhos-clyon GET] confiança", e);
       return new Map<number, ConfiancaDaNegociacao>();
     });
+    /*
+     * A FOLHA FINAL (d38 v2): num trabalho com ela, o que o profissional
+     * recebe sai da taxa efectiva da negociação (o material não leva taxa).
+     */
+    const folhasFinais = await folhasFinaisActivas(
+      ofertas.flatMap((o) => o.negociacoes.filter((n) => n.estado === "acordada").map((n) => Number(n.negociacaoId))),
+    ).catch((e) => {
+      console.error("[admin/trabalhos-clyon GET] folhas finais", e);
+      return new Map<number, FolhaFinalGravada>();
+    });
     return NextResponse.json({
       outros,
       trabalhos: ofertas.map((o) => {
+        const daFolhaFinal = o.negociacoes
+          .filter((n) => n.estado === "acordada")
+          .map((n) => folhasFinais.get(Number(n.negociacaoId)))
+          .find(Boolean);
         const negociacoes = o.negociacoes.map((n) => ({
           guiaPorVerificar: confianca.get(Number(n.negociacaoId))?.guiaPorVerificar ?? false,
           // A transição de 7 dias (d10 v2): escolhe-se, com o aviso âmbar.
@@ -199,6 +214,7 @@ export async function GET(req: NextRequest) {
           valorFixo: o.valorFixo,
           precoAoCliente: o.precoAoCliente,
           taxa: o.taxa,
+          taxaDoProfissional: daFolhaFinal ? taxaDoProfissionalSeDifere(o.taxa, Number(daFolhaFinal.taxaDepois)) : null,
           // Porque fica abaixo do escalão (25-10-2026, d18).
           motivoDaTaxa: o.motivoDaTaxa,
           cliente: o.cliente,

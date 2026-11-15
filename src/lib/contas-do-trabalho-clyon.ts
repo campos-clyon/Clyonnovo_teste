@@ -53,11 +53,17 @@ export function contasDoTrabalhoClyon(t: {
   valorFixo: number;
   taxa: number | null;
   precoAoCliente: number | null;
+  /**
+   * A taxa do profissional gravada na negociação, quando não é a do pedido:
+   * depois de uma folha final (d38 v2) é a EFECTIVA — o material não leva
+   * taxa — e é por ela que a carteira paga. Sem ela, a do pedido.
+   */
+  taxaDoProfissional?: number | null;
 }): ContasDoTrabalhoClyon | null {
   const preco = precoDaPropostaClyon(t);
   if (!preco) return null;
   const profissional =
-    t.taxa != null ? quantoOProfissionalRecebe(t.valorFixo, taxasDoTrabalhoClyon(t.taxa)) : t.valorFixo;
+    t.taxa != null ? quantoOProfissionalRecebe(t.valorFixo, taxasDoTrabalhoClyon(t.taxaDoProfissional ?? t.taxa)) : t.valorFixo;
   return {
     cliente: preco.total,
     semIva: preco.semIva,
