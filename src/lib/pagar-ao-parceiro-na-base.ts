@@ -57,3 +57,4 @@ export async function oQueONovoModeloGravou(
   const r = l?.regimeDoProfissional;
   return { regimeDoProfissional: r === "normal" || r === "isento" ? r : null, pagarAoParceiroPor: l?.pagarAoParceiroPor ?? null };
 }
+

@@ -20,6 +20,8 @@ type Visto = {
   paraPagar?: { iban: string | null; titular: string | null; mbway: string | null } | null;
   /** O parceiro ainda sem IBAN nem MB WAY (d17): a frase em vez dos dados. */
   semDados?: string | null;
+  /** Os dados de pagamento mudaram depois de o contratar (d28): a frase pronta, antes de transferir. */
+  dadosMudaram?: string | null;
   perfilFiscal?: { fatura: string; guia: string | null };
   conta?: { semIva: number; total: number | null; faturaDoParceiro: number; faturaDaTaxa: number } | null;
   comoPagar?: string | null;
@@ -101,6 +103,11 @@ export default function PagarAoParceiro({
         <p className="mt-1 text-slate-600">
           {visto.perfilFiscal.fatura}
           {visto.perfilFiscal.guia ? ` · ${visto.perfilFiscal.guia}` : ""}
+        </p>
+      )}
+      {visto.dadosMudaram && (
+        <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 font-semibold text-red-800">
+          {visto.dadosMudaram}
         </p>
       )}
       {p && (

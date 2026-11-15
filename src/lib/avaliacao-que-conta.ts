@@ -34,12 +34,47 @@
  * existir. O pagamento lê-se sempre na hora: os pagamentos não se apagam, e uma
  * transferência pode ser registada depois da nota.
  *
- * Só SQL, sem importações: o perfil público e o registo da avaliação usam as
- * mesmas expressões.
+ * Só SQL (e duas datas puras): o perfil público e o registo da avaliação usam
+ * as mesmas expressões.
+ *
+ * A TAXA PAGA PELO PRÓPRIO PARCEIRO NÃO PROVA NADA — d28 (CEO e dono,
+ * 15-11-2026). Num trabalho em dinheiro (desde o IVA incluído) e em todo o
+ * trabalho do modelo de 15-11, o pagamento ligado à negociação é o do
+ * PARCEIRO: a taxa da plataforma e o IVA dela. Pagá-la não diz que houve um
+ * cliente verdadeiro — só que alguém pagou à CLYON. Conta só o pagamento do
+ * cliente (`SQL_PAGAMENTO_DO_CLIENTE`); sem ele, a prova é a do contacto
+ * verificado (o ponto 2).
  */
+import { IVA_INCLUIDO_DESDE } from "./iva-incluido";
+import { NOVO_MODELO_DESDE } from "./novo-modelo";
 
 /** Os métodos que provam que o dinheiro passou pela CLYON. */
 export const METODOS_PAGOS_PELA_PLATAFORMA = ["mbway", "multibanco", "transferencia"] as const;
+
+/** Uma data como a base a guarda (UTC, `AAAA-MM-DD hh:mm:ss`). */
+const naBase = (d: Date) => `'${d.toISOString().slice(0, 19).replace("T", " ")}'`;
+
+/**
+ * A LINHA `pg` DE `pagamentos` É DO CLIENTE, e não a taxa paga pelo parceiro da
+ * negociação `n`? É do parceiro:
+ *
+ *   · a referência da dívida (`parte = 'divida'`);
+ *   · combinado em dinheiro, numa negociação aberta desde o IVA incluído — o
+ *     cliente pagou-lhe tudo em mão, e o que entrou na CLYON é a dívida dele;
+ *   · no modelo de 15-11 — uma linha do trabalho criada desde a data, fora dos
+ *     Trabalhos CLYON, numa negociação sem nada pago pelo cliente antes dela e
+ *     que não fechou antes dela (o corte de `eDoNovoModelo`).
+ *
+ * Na dúvida, fica de fora: tirar uma avaliação do público é o lado seguro.
+ */
+export const SQL_PAGAMENTO_DO_CLIENTE = (pg = "pgv", n = "n") =>
+  `(COALESCE(${pg}.parte, 'trabalho') <> 'divida' ` +
+  `AND NOT (${n}.formaDePagamento = 'dinheiro' AND ${n}.createdAt >= ${naBase(IVA_INCLUIDO_DESDE)}) ` +
+  `AND NOT (${n}.ofertaClyon IS NULL AND COALESCE(${pg}.parte, 'trabalho') = 'trabalho' ` +
+  `AND ${pg}.criadoEm >= ${naBase(NOVO_MODELO_DESDE)} ` +
+  `AND (${n}.confirmadoEm IS NULL OR ${n}.confirmadoEm >= ${naBase(NOVO_MODELO_DESDE)}) ` +
+  `AND NOT EXISTS (SELECT 1 FROM pagamentos pga WHERE pga.negociacaoId = ${n}.id AND pga.estado = 'pago' ` +
+  `AND pga.pagoEm < ${naBase(NOVO_MODELO_DESDE)} AND COALESCE(pga.parte, 'trabalho') <> 'divida')))`;
 
 /*
  * A COLAÇÃO DITA SEMPRE. As tabelas nasceram em alturas diferentes (algumas
@@ -56,7 +91,9 @@ const emailLimpo = (expr: string) => comColacao(`LOWER(TRIM(COALESCE(${expr}, ''
 export const SQL_PAGO_PELA_PLATAFORMA = (n = "n") =>
   // Só `pago`: um reembolsado guarda a data do pagamento, mas o dinheiro voltou ao cliente.
   `EXISTS (SELECT 1 FROM pagamentos pgv WHERE pgv.negociacaoId = ${n}.id AND pgv.estado = 'pago' AND pgv.pagoEm IS NOT NULL ` +
-  `AND COALESCE(pgv.deTeste, 0) = 0 AND pgv.metodo IN (${METODOS_PAGOS_PELA_PLATAFORMA.map((m) => `'${m}'`).join(", ")}))`;
+  `AND COALESCE(pgv.deTeste, 0) = 0 AND pgv.metodo IN (${METODOS_PAGOS_PELA_PLATAFORMA.map((m) => `'${m}'`).join(", ")}) ` +
+  // Só o pagamento do cliente — a taxa paga pelo próprio parceiro não conta (d28).
+  `AND ${SQL_PAGAMENTO_DO_CLIENTE("pgv", n)})`;
 
 /**
  * O cliente do pedido `o` tem um contacto verificado, e nenhum dos contactos

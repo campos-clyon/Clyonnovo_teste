@@ -95,6 +95,44 @@ export function haQuantoTempo(dias: number): string {
   return dias === 1 ? "há 1 dia" : `há ${dias} dias`;
 }
 
+/**
+ * MUDARAM DEPOIS DE O CLIENTE CONTRATAR — d28 (CEO e dono, 15-11-2026).
+ *
+ * No modelo de 15-11 o cliente transfere para o IBAN ou o MB WAY do parceiro.
+ * Se eles mudaram depois de o contratar, o cliente vê esta frase antes de
+ * transferir (o bloco «Pagar a …», a app de cliente tal como vem), e a Mesa
+ * mostra um selo. A frase é a do que o cliente lê: «parceiro», curta.
+ */
+export const DADOS_DE_PAGAMENTO_MUDARAM =
+  "Os dados de pagamento deste parceiro mudaram depois de o contratar. Confirme com a CLYON antes de transferir.";
+
+/** O selo da Mesa. */
+export const SELO_DOS_DADOS_MUDADOS = "dados de pagamento mudados";
+
+const comoData = (v: unknown): Date | null => {
+  if (v == null || v === "") return null;
+  const d = v instanceof Date ? v : new Date(String(v));
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/**
+ * Os dados de pagamento mudaram depois de contratar? `mudadoEm` é
+ * `providers.ibanMudadoEm`; `contratadaEm` é `negociacoes.contratadaEm` (v23) —
+ * nas contratadas antes dela, a abertura da negociação (`createdAt`): na
+ * dúvida, avisa-se. Sem data de mudança, não (as contas de antes de 12-11 não
+ * a têm).
+ */
+export function mudaramDepoisDeContratar(
+  mudadoEm: unknown,
+  contratadaEm: unknown,
+  abertaEm?: unknown,
+): boolean {
+  const m = comoData(mudadoEm);
+  const desde = comoData(contratadaEm) ?? comoData(abertaEm);
+  if (!m || !desde) return false;
+  return m.getTime() > desde.getTime();
+}
+
 /* Palavras que não dizem quem é: as partículas dos nomes e a forma da empresa. */
 const PALAVRAS_QUE_NAO_CONTAM = new Set([
   "de", "da", "do", "das", "dos", "e", "d",

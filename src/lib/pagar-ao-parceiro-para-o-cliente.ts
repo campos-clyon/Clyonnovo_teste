@@ -12,6 +12,8 @@ import {
   lerComoPagar,
 } from "./pagar-ao-parceiro";
 import { congelarRegimeDoProfissional, oQueONovoModeloGravou } from "./pagar-ao-parceiro-na-base";
+import { negociacoesComDadosDePagamentoMudados } from "./dados-de-pagamento-mudados-na-base";
+import { DADOS_DE_PAGAMENTO_MUDARAM } from "./dados-de-pagamento-mudados";
 import { faturasDaNegociacao } from "./faturas-do-trabalho-na-base";
 import { asDuasFaturas } from "./faturas-do-trabalho";
 
@@ -55,6 +57,13 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
   const total = c ? c.total : null;
   const paraPagar = dadosParaPagarAoParceiro(perfil ?? {}, { contratado: true, doNovoModelo: true });
   const opcoes = comoPagarDisponiveis(total, paraPagar ?? null);
+  // d28: os dados de pagamento mudaram depois de contratar? Se a leitura falhar, avisa-se (o lado seguro).
+  const dadosMudados = await negociacoesComDadosDePagamentoMudados([t.negociacaoId])
+    .then((s) => s.has(t.negociacaoId))
+    .catch((e) => {
+      console.error("[pagar-ao-parceiro] dados de pagamento mudados:", e instanceof Error ? e.message : e);
+      return true;
+    });
   return {
     pagaAoParceiro: true as const,
     frase: PAGA_DIRETAMENTE_AO_PARCEIRO,
@@ -62,6 +71,12 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
     paraPagar,
     /** Sem IBAN nem MB WAY (d17, texto F): o que o cliente lê em vez dos dados. */
     semDados: paraPagar && !paraPagar.iban && !paraPagar.mbway ? PARCEIRO_SEM_DADOS_PARA_PAGAR : null,
+    /**
+     * O IBAN, o titular ou o MB WAY mudaram DEPOIS de o cliente contratar (d28):
+     * a frase que ele lê antes de transferir — o site e a app de cliente
+     * mostram-na tal como vem. `null` quando não mudaram.
+     */
+    dadosMudaram: dadosMudados ? DADOS_DE_PAGAMENTO_MUDARAM : null,
     perfilFiscal: { ...fiscal, regimeParaAConta: regime },
     /** A frase do total, a mesma do bloco do site — a app de cliente mostra-a tal e qual (d18). */
     totalEmTexto: c ? totalAoParceiroEmTexto({ total, semIva: c.semIva, faturaDoParceiro: c.faturaDoParceiro, faturaDaTaxa: c.faturaDaTaxa }) : null,

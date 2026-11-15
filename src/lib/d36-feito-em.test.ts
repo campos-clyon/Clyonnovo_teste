@@ -82,7 +82,7 @@ describe("d36 — o «feito em» grava-se em todas as rotas que dão o trabalho 
   it("a migração é aditiva — uma coluna, e nenhum UPDATE em massa a preenchê-la", () => {
     const db = ler("src/lib/db.ts");
     expect(db).toContain("`ALTER TABLE negociacoes ADD COLUMN feitoEm DATETIME NULL DEFAULT NULL`");
-    expect(db).toMatch(/const VERSAO_DAS_NEGOCIACOES = 22;/);
+    expect(Number(/const VERSAO_DAS_NEGOCIACOES = (\d+);/.exec(db)?.[1])).toBeGreaterThanOrEqual(22);
     expect(db).not.toMatch(/UPDATE negociacoes SET feitoEm\s*=/);
   });
 

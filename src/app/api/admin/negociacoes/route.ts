@@ -17,6 +17,7 @@ import { registarQueOClientePediu } from "@/lib/escolhidos-sem-resposta-no-servi
 import { pedidoFechado } from "@/lib/pedido-arrumado";
 import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { negociacoesComDadosDePagamentoMudados } from "@/lib/dados-de-pagamento-mudados-na-base";
 
 export const runtime = "nodejs";
 
@@ -70,6 +71,13 @@ export async function GET(req: NextRequest) {
     const doNovoModelo = await modeloDasNegociacoes(pedidos.flatMap((p) => p.negociacoes));
     // d17: e o regime de cada uma, para o texto dizer o total do cartão (`totalAoClienteDaNegociacao`).
     const regimes = await regimesDasNegociacoes([...doNovoModelo]);
+    // d28: o selo «dados de pagamento mudados» — o IBAN ou o MB WAY mudaram depois de o cliente contratar.
+    const dadosMudados = await negociacoesComDadosDePagamentoMudados(
+      pedidos.flatMap((p) => p.negociacoes).filter((n) => n.estado === "acordada" && doNovoModelo.has(Number(n.id))).map((n) => Number(n.id)),
+    ).catch((e) => {
+      console.error("[api/admin/negociacoes GET] dados de pagamento mudados:", e);
+      return new Set<number>();
+    });
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
@@ -83,6 +91,7 @@ export async function GET(req: NextRequest) {
           ...n,
           ...(confianca.get(Number(n.id)) ?? {}),
           ...(doNovoModelo.has(Number(n.id)) ? { noNovoModelo: true } : {}),
+          ...(dadosMudados.has(Number(n.id)) ? { dadosDePagamentoMudados: true } : {}),
           ...(doNovoModelo.has(Number(n.id)) && regimes.has(Number(n.id))
             ? { regimeParaOTotal: regimes.get(Number(n.id)) }
             : {}),

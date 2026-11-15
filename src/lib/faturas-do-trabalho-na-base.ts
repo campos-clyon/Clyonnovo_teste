@@ -1,4 +1,5 @@
 import { getPool } from "./db";
+import { linkDaFatura } from "./faturas-do-trabalho-link";
 import { deQuemValido, type DeQuemEAFatura, type FaturaDoTrabalho } from "./faturas-do-trabalho";
 
 /**
@@ -86,8 +87,42 @@ export async function faturasDaNegociacao(negociacaoId: number): Promise<FaturaD
       negociacaoId: Number(l.negociacaoId),
       pedidoId: Number(l.pedidoId),
       deQuem: l.deQuem as DeQuemEAFatura,
-      url: String(l.url),
+      // O link da rota de leitura, assinado — nunca o endereço do armazenamento (d28).
+      url: linkDaFatura(Number(l.id)),
       nome: l.nome == null ? null : String(l.nome),
       carregadaEm: l.carregadaEm instanceof Date ? l.carregadaEm.toISOString() : l.carregadaEm == null ? null : String(l.carregadaEm),
     }));
+}
+
+/**
+ * UMA FATURA PELO ID, COM O ENDEREÇO DO ARMAZENAMENTO — só para a rota de
+ * leitura (`/api/faturas-do-trabalho/[id]`, d28). Também as inactivas: são
+ * documentos fiscais, e a equipa pode precisar delas. `null` sem ela.
+ */
+export async function faturaParaLer(id: number): Promise<{
+  id: number;
+  negociacaoId: number;
+  pedidoId: number;
+  deQuem: string;
+  url: string;
+  nome: string | null;
+} | null> {
+  if (!Number.isInteger(id) || id <= 0) return null;
+  await ensureFaturasDoTrabalho();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [linhas] = (await pool.execute(
+    "SELECT id, negociacaoId, pedidoId, deQuem, url, nome FROM faturasDoTrabalho WHERE id = ? LIMIT 1",
+    [id],
+  )) as unknown as [Array<Record<string, unknown>>, unknown];
+  const l = linhas[0];
+  if (!l) return null;
+  return {
+    id: Number(l.id),
+    negociacaoId: Number(l.negociacaoId),
+    pedidoId: Number(l.pedidoId),
+    deQuem: String(l.deQuem),
+    url: String(l.url),
+    nome: l.nome == null ? null : String(l.nome),
+  };
 }

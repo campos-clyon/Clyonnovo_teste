@@ -6,6 +6,15 @@ import { registarSemFalhar } from "./db";
 import { MENSAGENS_DA_FATURA, NOME_DA_FATURA, TAMANHO_MAXIMO_DA_FATURA, tipoDaFaturaAceite, type DeQuemEAFatura } from "./faturas-do-trabalho";
 import { guardarFaturaDoTrabalho } from "./faturas-do-trabalho-na-base";
 
+/** A variável do token do armazenamento PRIVADO das faturas (um store do Blob «Private»). */
+export const TOKEN_DO_BLOB_DAS_FATURAS = "FATURAS_BLOB_READ_WRITE_TOKEN";
+
+/** O token do armazenamento privado das faturas, ou `null` quando não está ligado. */
+export function tokenDoBlobDasFaturas(env: Record<string, string | undefined> = process.env): string | null {
+  const v = env[TOKEN_DO_BLOB_DAS_FATURAS]?.trim().replace(/^["']|["']$/g, "") ?? "";
+  return v.startsWith("vercel_blob_rw_") && v.length > 30 ? v : null;
+}
+
 /**
  * RECEBER UMA FATURA DO TRABALHO — d10. As portas (o parceiro no painel e na app;
  * a equipa no backoffice) chegam aqui com o trabalho já decidido e autorizado:
@@ -39,12 +48,24 @@ export async function receberFaturaDoTrabalho(
   const nome = ficheiro.name.replace(/[^\w.\- ]/g, "_").slice(-120) || `fatura.${extensao}`;
 
   try {
-    const blob = await put(`faturas/${t.pedidoId}-${t.negociacaoId}-${t.deQuem}.${extensao}`, ficheiro, {
-      access: "public",
-      contentType: veredicto.tipo,
-      addRandomSuffix: true,
-      ...(tokenBlob.modo === "token" ? { token: tokenBlob.token } : { storeId: tokenBlob.storeId }),
-    });
+    /*
+     * NO ARMAZENAMENTO PRIVADO, quando existe — d28 (15-11-2026). A fatura tem
+     * nome, NIF e morada: lê-se só pela rota autenticada
+     * (`/api/faturas-do-trabalho/[id]`). Sem o armazenamento privado ligado
+     * (`TOKEN_DO_BLOB_DAS_FATURAS`), fica no de sempre, e mesmo assim o
+     * endereço nunca sai do servidor (`faturasDaNegociacao` dá o link da rota).
+     */
+    const privado = tokenDoBlobDasFaturas();
+    if (!privado) console.warn("[fatura-do-trabalho] sem o armazenamento privado das faturas — vai para o de sempre.");
+    const caminho = `faturas/${t.pedidoId}-${t.negociacaoId}-${t.deQuem}.${extensao}`;
+    const blob = privado
+      ? await put(caminho, ficheiro, { access: "private", contentType: veredicto.tipo, addRandomSuffix: true, token: privado })
+      : await put(caminho, ficheiro, {
+          access: "public",
+          contentType: veredicto.tipo,
+          addRandomSuffix: true,
+          ...(tokenBlob.modo === "token" ? { token: tokenBlob.token } : { storeId: tokenBlob.storeId }),
+        });
     await guardarFaturaDoTrabalho({
       negociacaoId: t.negociacaoId,
       pedidoId: t.pedidoId,

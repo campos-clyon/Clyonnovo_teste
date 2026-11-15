@@ -1463,7 +1463,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 22;
+const VERSAO_DAS_NEGOCIACOES = 23;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1773,6 +1773,13 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * hora. Nula nas de antes (não se preenche — ver feito-em.ts). Aditiva.
      */
     `ALTER TABLE negociacoes ADD COLUMN feitoEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v23 (15-11-2026, d28) — QUANDO O CLIENTE CONTRATOU, no modelo de 15-11
+     * (`dados-de-pagamento-mudados.ts`): para o bloco «Pagar a …» avisar se os
+     * dados de pagamento do parceiro mudaram depois. Nula nas de antes (lê-se
+     * então a abertura da negociação). Aditiva.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN contratadaEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -2567,6 +2574,11 @@ export async function gravarNegociacao(
           `UPDATE negociacoes n JOIN providers p ON p.id = n.providerId
               SET n.regimeDoProfissional = CASE WHEN ${confirmado}p.regimeIva IN ('normal', 'isento') THEN p.regimeIva ELSE 'normal' END
             WHERE n.id = ? AND n.regimeDoProfissional IS NULL AND n.ofertaClyon IS NULL`,
+          [id],
+        );
+        // E quando contratou (d28): os dados de pagamento que mudarem depois avisam o cliente.
+        await conn.execute(
+          "UPDATE negociacoes SET contratadaEm = UTC_TIMESTAMP() WHERE id = ? AND contratadaEm IS NULL AND ofertaClyon IS NULL",
           [id],
         );
       }

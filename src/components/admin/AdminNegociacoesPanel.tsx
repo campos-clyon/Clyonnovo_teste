@@ -54,6 +54,7 @@ import { FOLHA_POR_CONFIRMAR } from "@/lib/folha-da-mudanca";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
 import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
+import { DADOS_DE_PAGAMENTO_MUDARAM, SELO_DOS_DADOS_MUDADOS } from "@/lib/dados-de-pagamento-mudados";
 /*
  * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
  *
@@ -235,6 +236,8 @@ type Negociacao = {
   guiaPorVerificar?: boolean;
   /** Guia por verificar, mas aprovado antes de 04-11: fecha-se até ao fim da transição (d10 v2). */
   guiaEmTransicao?: boolean;
+  /** O IBAN, o titular ou o MB WAY do parceiro mudaram depois de o cliente contratar (d28). */
+  dadosDePagamentoMudados?: boolean;
   /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
   coincidencias?: Coincidencia[];
   /** Numa mudança, o parceiro escolhido pelo cliente na lista, a equipa e o prazo para responder (10-11-2026). */
@@ -3685,6 +3688,12 @@ export default function AdminNegociacoesPanel({
                     {n.guiaEmTransicao && (
                       <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200">
                         {AVISO_DA_TRANSICAO}
+                      </span>
+                    )}
+                    {/* d28: os dados de pagamento do parceiro mudaram depois de o cliente contratar. */}
+                    {n.dadosDePagamentoMudados && (
+                      <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title={DADOS_DE_PAGAMENTO_MUDARAM}>
+                        {SELO_DOS_DADOS_MUDADOS}
                       </span>
                     )}
                     {n.coincidencias?.length ? (
