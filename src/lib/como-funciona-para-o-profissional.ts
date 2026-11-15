@@ -157,7 +157,10 @@ const PASSO_DO_DINHEIRO_NO_NOVO_MODELO =
   "local — o preço com IVA. Fica com a sua parte, emite ao cliente a fatura do trabalho e passa à CLYON " +
   "a taxa da plataforma e o IVA dela, por referência, uma por trabalho. Propõe o seu valor, sem IVA, e o " +
   "cliente vê-o com IVA incluído. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
-  `não lhe custa um cêntimo. A fatura da taxa da plataforma é emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`;
+  // d30 (15-11-2026): a frase das faturas do Jurídico, dita ao profissional.
+  "não lhe custa um cêntimo. Cada trabalho tem duas faturas, juntas ao pedido: a do trabalho, emitida por " +
+  "si, com IVA ou com isenção de IVA conforme o seu regime, e a da taxa da plataforma, emitida pela " +
+  `${EMPRESA_PARCEIRA_AO_PUBLICO}, com IVA.`;
 
 export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO;
 

@@ -15,6 +15,7 @@ import { PRECO_FECHADO } from "./promessas-publicas";
  * da CLYON, e o preço já vem com IVA» deixou de ser verdade — a fatura do trabalho
  * é do parceiro, com IVA ou isenta. O texto novo é o do Jurídico, tal e qual.
  */
+// relógio: datas explícitas — a única conta com data (faturaEmPalavras) leva-a; o resto são constantes.
 const ler = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
 
 describe("d30 — as duas faturas de cada trabalho", () => {

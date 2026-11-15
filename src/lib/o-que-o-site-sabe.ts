@@ -50,6 +50,7 @@ import {
   DESMONTAGEM_A_PEDIDO,
   NO_MESMO_DIA,
   PRECO_FECHADO,
+  PRECO_FECHADO_SEM_AS_FATURAS,
   QUEM_FAZ_O_TRABALHO,
   PROMESSA_DO_PRAZO,
 } from "./promessas-publicas";
@@ -160,7 +161,8 @@ function linhasDosPrecos(): string[] {
  * as faturas é dito pela frase do Jurídico (`AS_DUAS_FATURAS_DO_TRABALHO`), e
  * a Vitória não pode ler as duas. A frase pública é do Site e não muda aqui.
  */
-export const PRECO_FECHADO_SEM_A_FATURA = PRECO_FECHADO.replace(/\s*Há fatura em todas as vendas\.\s*$/, "");
+// d30 (Site): a frase das faturas saiu do fim do preço fechado para a sua própria constante.
+export const PRECO_FECHADO_SEM_A_FATURA = PRECO_FECHADO_SEM_AS_FATURAS;
 
 export function oQueOSiteSabe(agora: Date = agoraDoModelo()): string {
   const iva = `${Math.round(TAXA_IVA * 100)} %`;

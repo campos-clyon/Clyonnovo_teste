@@ -111,6 +111,6 @@ export const AO_FIM_DE_SEMANA =
  * DESDE 15-11-2026 (d30) a fatura do trabalho é do parceiro, com IVA ou isenta:
  * diz-se que a proposta é o total a pagar, e as duas faturas.
  */
-export const PRECO_FECHADO =
-  "O preço de cada proposta já é o total a pagar, com a taxa da plataforma, e fica fechado antes de começar. " +
-  DUAS_FATURAS_POR_TRABALHO_CURTA;
+export const PRECO_FECHADO_SEM_AS_FATURAS =
+  "O preço de cada proposta já é o total a pagar, com a taxa da plataforma, e fica fechado antes de começar.";
+export const PRECO_FECHADO = `${PRECO_FECHADO_SEM_AS_FATURAS} ${DUAS_FATURAS_POR_TRABALHO_CURTA}`;
