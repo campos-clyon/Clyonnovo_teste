@@ -52,9 +52,10 @@ describe("com certificado, verifica-se", () => {
 });
 
 describe("e é isto que a base usa", () => {
-  it("as duas ligações de db.ts passam por sslDaBase", () => {
+  it("a ligação de db.ts (o pool, também por withConnection desde a d44) passa por sslDaBase", () => {
     const db = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");
-    expect(db.match(/ssl: sslDaBase\(\)/g)?.length).toBe(2);
+    expect(db.match(/ssl: sslDaBase\(\)/g)?.length).toBe(1);
+    expect(db).not.toContain("await mysql.createConnection(");
     expect(db).not.toContain("rejectUnauthorized");
   });
 });

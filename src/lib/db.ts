@@ -220,24 +220,35 @@ async function correrMigracoes(
 }
 
 /**
- * Cria uma conexão MySQL2 fresca (não reutiliza singleton) para cada request.
- * Usar nos endpoints API admin para evitar erros de "Connection lost" com Railway.
+ * UMA LIGAÇÃO DO POOL, DEVOLVIDA SEMPRE — 15-11-2026 (d44).
+ *
+ * Abria uma ligação NOVA por chamada (`mysql.createConnection`), ao lado do
+ * pool. Com várias funções do Vercel ao mesmo tempo, e o detalhe das comissões
+ * a pedir três leituras em paralelo, a base chegou ao limite (151) e respondeu
+ * «Too many connections» (ER_CON_COUNT_ERROR). Agora pede uma ligação ao pool
+ * (que já tem keep-alive, SSL e o fuso) e devolve-a no `finally`.
+ *
+ * - Correu bem: `release()` — volta ao pool.
+ * - Deu erro: `destroy()` — pode ter ficado a meio de uma transacção ou
+ *   partida; não se devolve ao pool uma ligação nesse estado.
+ *
+ * As transacções continuam a funcionar: tudo o que `fn` faz corre na mesma
+ * ligação. Quem chama não pode guardar `conn` para depois de `fn` acabar.
  */
 export async function withConnection<T>(
   fn: (conn: mysql.Connection) => Promise<T>,
 ): Promise<T> {
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
-  const conn = await mysql.createConnection({
-    uri: process.env.DATABASE_URL,
-    // O mesmo do pool — ver ssl-da-base.ts (01-10-2026).
-    ssl: sslDaBase(),
-    connectTimeout: 20000,
-    timezone: FUSO_DA_BASE,
-  });
+  const pool = await getPool();
+  if (!pool) throw new Error("DATABASE_URL not set");
+  const conn = await pool.getConnection();
+  let correuBem = false;
   try {
-    return await fn(conn);
+    const r = await fn(conn);
+    correuBem = true;
+    return r;
   } finally {
-    await conn.end().catch(() => {});
+    if (correuBem) conn.release();
+    else conn.destroy();
   }
 }
 

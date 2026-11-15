@@ -1426,18 +1426,17 @@ export type ComissoesDoAssistente = {
 };
 
 /**
- * A conta por períodos de uma conta — uma leitura de cada coisa, em paralelo —
+ * A conta por períodos de uma conta — uma leitura de cada coisa, uma de cada vez —
  * e, se se pedir, o resumo de um intervalo sobre as mesmas linhas.
  */
 async function comissoesDe(
   a: { id: number; comissaoPercent: number; comissaoSobre: ComissaoSobre; saida?: SaidaDaConta },
   intervalo?: Periodo,
 ) {
-  const [linhas, pagamentos, porContar] = await Promise.all([
-    trabalhosQueContam(intervalo?.inicio),
-    pagamentosDosAssistentes([a.id]),
-    trabalhosQueAindaNaoContam(),
-  ]);
+  // Uma de cada vez (d44): em paralelo eram três ligações à base por pedido.
+  const linhas = await trabalhosQueContam(intervalo?.inicio);
+  const pagamentos = await pagamentosDosAssistentes([a.id]);
+  const porContar = await trabalhosQueAindaNaoContam();
   const pagas = pagamentos.get(a.id) ?? [];
   const minhas = noAlcanceDe(linhas, a, pedidosPagos(pagas));
   const hoje = diaEmLisboa(new Date());
@@ -1490,11 +1489,10 @@ export async function listarAssistentes(): Promise<{ assistentes: Assistente[] }
     return r;
   });
   const ids = linhas.map((l) => l.id);
-  const [trabalhos, pagamentos, stats] = await Promise.all([
-    ids.length > 0 ? trabalhosQueContam() : Promise.resolve([] as LinhaQueConta[]),
-    pagamentosDosAssistentes(ids),
-    estatisticasDosAssistentes(ids),
-  ]);
+  // Uma de cada vez (d44) — ver comissoesDe.
+  const trabalhos = ids.length > 0 ? await trabalhosQueContam() : ([] as LinhaQueConta[]);
+  const pagamentos = await pagamentosDosAssistentes(ids);
+  const stats = await estatisticasDosAssistentes(ids);
   const hoje = diaEmLisboa(new Date());
 
   return {
@@ -1536,7 +1534,8 @@ export async function resumoDoAssistente(id: number): Promise<{
 } | undefined> {
   const a = await assistentePorId(id);
   if (!a) return undefined;
-  const [c, stats] = await Promise.all([comissoesDe(a), estatisticasDosAssistentes([id])]);
+  const c = await comissoesDe(a);
+  const stats = await estatisticasDosAssistentes([id]);
   return {
     seccoes: a.seccoes,
     comissaoPercent: a.comissaoPercent,

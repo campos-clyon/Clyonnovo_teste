@@ -168,10 +168,11 @@ describe("a conversão, contra uma base falsa", () => {
 describe("e o resto do caminho", () => {
   const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
-  it("as duas formas de ligar à base lêem em UTC", () => {
+  it("a única forma de ligar à base (o pool, também por withConnection desde a d44) lê em UTC", () => {
     const DB = ler("src/lib/db.ts");
     expect(DB).toContain('export const FUSO_DA_BASE = "Z";');
-    expect(DB.match(/timezone: FUSO_DA_BASE,/g)).toHaveLength(2);
+    expect(DB.match(/timezone: FUSO_DA_BASE,/g)).toHaveLength(1);
+    expect(DB).not.toContain("await mysql.createConnection(");
   });
 
   it("a conversão corre no arranque, antes de o servidor responder, e não o deita abaixo", () => {
