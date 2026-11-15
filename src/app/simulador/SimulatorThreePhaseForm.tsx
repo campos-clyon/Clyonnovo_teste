@@ -33,6 +33,8 @@ import MovelItemSelector from "./components/MovelItemSelector";
 import PrecoDeReferencia from "./components/PrecoDeReferencia";
 import PerguntasDoEspaco from "./components/PerguntasDoEspaco";
 import PerguntasDaEmpresa from "./components/PerguntasDaEmpresa";
+import PareceUmEsvaziamento from "./components/PareceUmEsvaziamento";
+import { pareceUmEsvaziamento } from "@/lib/parece-um-esvaziamento";
 import { ESVAZIAMENTO_DE_EMPRESA, comOEspacoDaEmpresa, comOsPedidosDaEmpresa } from "@/lib/esvaziamento-de-empresa";
 import { eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
 import {
@@ -48,7 +50,7 @@ import { passosDaMudancaComEscolha, tresPassosDepoisDeEnviar } from "@/lib/texto
 import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/ParceirosDaMudanca";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
-import { faltaNaFase1 as calcularFaltaNaFase1, FALTA_A_DESCRICAO, linhaDasPecas, comLinhaDasPecas } from "@/lib/falta-na-fase-1";
+import { faltaNaFase1 as calcularFaltaNaFase1, FALTA_A_DESCRICAO, linhaDasPecas, comLinhaDasPecas, pecasDosMoveis } from "@/lib/falta-na-fase-1";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
@@ -1350,6 +1352,18 @@ function Phase1Service({
   formData: FormState;
   updateField: (field: string, value: unknown) => void;
 }) {
+  /*
+   * «PARECE UM ESVAZIAMENTO» — 15-11-2026 (d43). Mais de 8 peças, 3 ou mais
+   * divisões, ou palavras como «casa toda», «herança», «armazém»: pergunta-se
+   * uma vez, e a pessoa decide. «Não» fica até mudar de serviço.
+   */
+  const [semEsvaziamento, setSemEsvaziamento] = useState<string | null>(null);
+  const pecasDaLista = pecasDosMoveis(formData) || parseInt(formData.quantityExact ?? "", 10) || 0;
+  const esvaziamentoSugerido =
+    semEsvaziamento === formData.serviceType
+      ? null
+      : pareceUmEsvaziamento({ servico: formData.serviceType, pecas: pecasDaLista, texto: formData.description });
+
   const services = SERVICOS_PUBLICOS.map((category) => ({
     id: category.id as ServiceType,
     label: category.label,
@@ -1582,6 +1596,21 @@ function Phase1Service({
         dicaDasFotos={eEsvaziamentoDeEspaco(formData.serviceType) ? DICA_DAS_FOTOS_DO_ESPACO : undefined}
         descricaoPrecisa={calcularFaltaNaFase1(formData).includes(FALTA_A_DESCRICAO)}
       />
+
+      {esvaziamentoSugerido && (
+        <PareceUmEsvaziamento
+          para={esvaziamentoSugerido}
+          onSim={() => {
+            // Passa ao esvaziamento com o que já escreveu; o volume pergunta-se de novo.
+            updateField("serviceType", esvaziamentoSugerido);
+            updateField("movelMode", undefined);
+            updateField("movelItemsPequeno", 0);
+            updateField("movelItemsMedio", 0);
+            updateField("movelItemsGrande", 0);
+          }}
+          onNao={() => setSemEsvaziamento(formData.serviceType ?? null)}
+        />
+      )}
     </div>
   );
 }
