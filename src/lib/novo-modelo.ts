@@ -84,8 +84,31 @@ export const IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO = "22 de novembro de 2026
 export type CorteDoModelo = "ja_pago_a_clyon" | "data_de_contratacao";
 export const CORTE_DO_MODELO: CorteDoModelo = "ja_pago_a_clyon";
 
-/** (2) Os Trabalhos CLYON (valor fixo, a CLYON combina com o cliente) ficam no modelo antigo. */
+/**
+ * (2) Os Trabalhos CLYON (valor fixo, a CLYON combina com o cliente) ficam no modelo antigo.
+ *
+ * d33 (CEO e dono, 15-11-2026, proposta A): os criados a partir de
+ * `TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE` passam ao modelo de 15-11; os de antes
+ * seguem no antigo até ao fim. A data e a regra estão em baixo e em
+ * `trabalho-clyon-no-novo-modelo.ts`, mas ESTE INTERRUPTOR CONTINUA LIGADO: as
+ * contas do backoffice (`conta-do-pagamento.ts`), o fecho, a carteira, a vista do
+ * cliente e os avisos ainda decidem o Trabalho CLYON só por `ofertaClyon`, sem a
+ * data. Desligá-lo antes de todos passarem a data poria o cliente a pagar ao
+ * parceiro num ecrã e a CLYON a dever-lhe o valor noutro.
+ */
 export const TRABALHOS_CLYON_NO_MODELO_ANTIGO = true;
+
+/**
+ * d33 — A CRIAÇÃO QUE PASSA UM TRABALHO CLYON AO MODELO DE 15-11: 00:00 de
+ * 16-11-2026 em Lisboa (= UTC em Novembro, hora de Inverno).
+ */
+export const TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE = new Date("2026-11-16T00:00:00Z");
+
+/** Como os Termos a dizem: «a partir de …». Um teste confere que bate com a data. */
+export const TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE_POR_EXTENSO = "16 de novembro de 2026";
+
+/** O último dia dos Trabalhos CLYON do modelo antigo, como os Termos o dizem: «registados até …». */
+export const TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO = "15 de novembro de 2026";
 
 /**
  * (3) O regime de IVA é obrigatório no perfil, com a mesma transição do IBAN: sem
