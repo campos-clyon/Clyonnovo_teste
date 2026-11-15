@@ -350,6 +350,8 @@ export function estadoDoPedidoParaOCliente(p: {
   precoAceite?: boolean;
   /** A CLYON pediu mais detalhes e ele ainda não respondeu (S18, 29-10-2026). */
   precisaDeSi?: boolean;
+  /** O pedido tem o valor único da CLYON (d39): o cliente vê um orçamento, não propostas. */
+  valorUnico?: boolean;
 }): string {
   const status = String(p.status ?? "");
   if (["cancelado", "rejeitado", "arquivado"].includes(status) || Number(p.canceladoPeloCliente) === 1) {
@@ -363,10 +365,15 @@ export function estadoDoPedidoParaOCliente(p: {
     if (p.precoEnviado) return "Preço da CLYON por responder";
     return "A ser revisto pela CLYON";
   }
+  // d39: com o valor único, o que o cliente tem à frente é um orçamento por aceitar.
+  if (p.valorUnico) return ESTADO_DO_VALOR_UNICO;
   if (p.comPropostas > 0) return "Tem propostas";
   if (p.enviado) return "À espera de propostas";
   return "A ser revisto pela CLYON";
 }
+
+/** O estado de um pedido com o valor único da CLYON por aceitar (d39, 15-11-2026). */
+export const ESTADO_DO_VALOR_UNICO = "Orçamento por aceitar";
 
 /** O estado de um pedido em que a CLYON pediu mais detalhes (S18, 29-10-2026). */
 export const ESTADO_PRECISA_DE_SI = "A CLYON precisa de mais detalhes";

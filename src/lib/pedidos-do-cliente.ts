@@ -7,7 +7,7 @@ import {
   marcarVistoPeloCliente,
   negociacoesDoPedido,
 } from "@/lib/db";
-import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
+import { negociacoesParaOCliente, temValorUnico } from "@/lib/negociacoes-para-o-cliente";
 import { negociacaoParaAVista, QUANDO_EM_PALAVRAS, type NegociacaoDoCliente } from "@/lib/negociacao-na-vista";
 import { negociacoesDaVistaDoCliente } from "@/lib/vista-do-pedido";
 import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente";
@@ -210,6 +210,7 @@ export async function resumoDoPedidoParaOCliente(
     enviado: cruas.length > 0,
     precoEnviado,
     precoAceite,
+    valorUnico: temValorUnico(r.valorUnico),
   });
   const novidade = cancelado
     ? null
@@ -748,6 +749,8 @@ export async function pedidoDoConvidadoParaAApp(pedidoId: number, agora: Date = 
       precoAceiteEmTexto: p.precoAceiteEmTexto,
       accoes: p.accoes,
       quemFaz: p.quemFaz,
+      // O valor único (d39): o convidado vê o mesmo orçamento que a conta.
+      valorUnico: p.valorUnico,
       // O convidado não paga: o pagamento já vem a null (R15).
       fimClyon: p.fimClyon,
     },
