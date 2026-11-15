@@ -375,3 +375,118 @@ export const EXEMPLO_DA_MUDANCA: UsoDaMudanca = Object.freeze({
   km: 30,
   materiais: Object.freeze({ caixas: 10 }),
 });
+
+/* ── A FOLHA FINAL PELA EQUIPA — 15-11-2026 (d38 v2) ──────────────────────────
+ *
+ * A conta de uma mudança fechada pela equipa, antes ou depois de feita: o #524
+ * foi feito e pago ao profissional, e o valor corrigiu-se à mão porque não
+ * havia onde pôr as horas, a deslocação e o material. É a mesma conta do
+ * `valorDaMudanca` (a mesma taxa, o mesmo modo, o mesmo IVA), com o que a
+ * equipa sabe e a tarifa não tem:
+ *
+ *   · o preço da hora dado pela equipa, quando o pedido não tem tarifa
+ *     congelada (com tarifa, o da equipa escolhida — ou o que a equipa der);
+ *   · a deslocação em km (ao preço do km) OU em euros, escrita à mão;
+ *   · o material por linhas (descrição e valor), sem taxa e com IVA.
+ *
+ * A taxa conta só sobre horas + deslocação. Tudo em cêntimos. PURA.
+ */
+
+export type DeslocacaoDaFolhaFinal = { tipo: "km"; km: number; precoKmCent?: number | null } | { tipo: "euros"; cent: number };
+
+export type LinhaDeMaterialDaFolhaFinal = { descricao: string; cent: number };
+
+export type EntradaDaFolhaFinal = {
+  /** A congelada no pedido, se houver. */
+  tarifa: TarifaCongelada | null;
+  pessoas: 2 | 3;
+  /** As horas trabalhadas (decimais: 6,5 = 6 h 30 min). */
+  horas: number;
+  /** O preço da hora da equipa, sem IVA — obrigatório sem tarifa; com ela, substitui o da tarifa. */
+  precoHoraCent?: number | null;
+  deslocacao: DeslocacaoDaFolhaFinal;
+  materiais?: LinhaDeMaterialDaFolhaFinal[];
+  /** Sem tarifa, as regras de hoje; com ela, as que congelaram. */
+  regras?: RegrasDaConta;
+};
+
+export type ContaDaFolhaFinal = {
+  ok: true;
+  pessoas: 2 | 3;
+  horas: { pedidas: number; cobradas: number; precoHoraCent: number; cent: number; minimo: number };
+  deslocacao: { tipo: "km" | "euros"; km: number | null; kmCobrados: number | null; precoKmCent: number | null; cent: number };
+  materiais: { linhas: LinhaDeMaterialDaFolhaFinal[]; cent: number };
+  /** Horas + deslocação: o que leva a taxa. */
+  servicoCent: number;
+  taxa: { fracao: number; modo: ModoDaTaxa; cent: number };
+  semIvaCent: number;
+  baseDoIvaCent: number;
+  ivaCent: number;
+  totalCent: number;
+  /** O que fica para o profissional (sem IVA). */
+  profissionalCent: number;
+};
+
+const inteiroNaoNegativo = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
+
+export function contaDaFolhaFinal(e: EntradaDaFolhaFinal): ContaDaFolhaFinal | ErroDaConta {
+  if (e.pessoas !== 2 && e.pessoas !== 3) return { ok: false, erro: "A equipa é de 2 ou de 3 pessoas." };
+  if (!naoNegativo(e.horas) || e.horas === 0) return { ok: false, erro: "Indique as horas do trabalho." };
+  const regras = e.tarifa?.regras ?? e.regras ?? REGRAS_DAS_MUDANCAS;
+
+  const daTarifa = e.tarifa ? (e.pessoas === 3 ? e.tarifa.precoHora3Cent : e.tarifa.precoHora2Cent) : null;
+  const precoHoraCent = e.precoHoraCent ?? daTarifa;
+  if (precoHoraCent == null) {
+    return { ok: false, erro: e.tarifa ? "Sem preço para a equipa de 3 pessoas: indique o preço da hora." : "Indique o preço da hora da equipa." };
+  }
+  if (!inteiroNaoNegativo(precoHoraCent) || precoHoraCent === 0) return { ok: false, erro: "O preço da hora tem de ser positivo." };
+  const minimo = e.tarifa?.minimoHoras ?? 0;
+  const horasCobradas = Math.max(e.horas, minimo);
+  const horasCent = Math.round(horasCobradas * precoHoraCent);
+
+  let deslocacao: ContaDaFolhaFinal["deslocacao"];
+  if (e.deslocacao.tipo === "km") {
+    const km = e.deslocacao.km;
+    if (!naoNegativo(km)) return { ok: false, erro: "Os km têm de ser um número positivo." };
+    const precoKmCent = e.deslocacao.precoKmCent ?? e.tarifa?.precoKmCent ?? null;
+    if (precoKmCent == null || !inteiroNaoNegativo(precoKmCent)) return { ok: false, erro: "Indique o preço do km, ou a deslocação em euros." };
+    const kmCobrados = Math.max(km, e.tarifa?.kmMinimo ?? 0);
+    deslocacao = { tipo: "km", km, kmCobrados, precoKmCent, cent: Math.round(kmCobrados * precoKmCent) };
+  } else {
+    if (!inteiroNaoNegativo(e.deslocacao.cent)) return { ok: false, erro: "A deslocação tem de ser um valor positivo." };
+    deslocacao = { tipo: "euros", km: null, kmCobrados: null, precoKmCent: null, cent: e.deslocacao.cent };
+  }
+
+  const linhas: LinhaDeMaterialDaFolhaFinal[] = [];
+  for (const [n, l] of (e.materiais ?? []).entries()) {
+    const descricao = String(l?.descricao ?? "").trim();
+    if (!inteiroNaoNegativo(l?.cent)) return { ok: false, erro: `O valor do material ${n + 1} não é válido.` };
+    if (l.cent === 0 && !descricao) continue;
+    if (!descricao) return { ok: false, erro: `Diga que material é a linha ${n + 1}.` };
+    linhas.push({ descricao: descricao.slice(0, 120), cent: l.cent });
+  }
+  const materiaisCent = linhas.reduce((s, l) => s + l.cent, 0);
+
+  const servicoCent = horasCent + deslocacao.cent;
+  const taxaCent = Math.round(servicoCent * regras.taxa);
+  const porCima = regras.modo === "por_cima";
+  const semIvaCent = (porCima ? servicoCent + taxaCent : servicoCent) + materiaisCent;
+  const profissionalCent = (porCima ? servicoCent : servicoCent - taxaCent) + materiaisCent;
+  const baseDoIvaCent = regras.materialComIva ? semIvaCent : semIvaCent - materiaisCent;
+  const ivaCent = Math.round(baseDoIvaCent * regras.iva);
+
+  return {
+    ok: true,
+    pessoas: e.pessoas,
+    horas: { pedidas: e.horas, cobradas: horasCobradas, precoHoraCent, cent: horasCent, minimo },
+    deslocacao,
+    materiais: { linhas, cent: materiaisCent },
+    servicoCent,
+    taxa: { fracao: regras.taxa, modo: regras.modo, cent: taxaCent },
+    semIvaCent,
+    baseDoIvaCent,
+    ivaCent,
+    totalCent: semIvaCent + ivaCent,
+    profissionalCent,
+  };
+}
