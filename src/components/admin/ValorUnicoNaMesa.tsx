@@ -28,13 +28,21 @@ import {
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
+/** O valor único aceite pelo cliente (d39): o texto da Mesa, num sítio só. */
+export const VALOR_UNICO_ACEITE_NA_MESA = "Valor único aceite pelo cliente — escolher o parceiro";
+
+const QUANDO = new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
 export default function ValorUnicoNaMesa({
   pedidoId,
   valorUnico,
   propostas,
   temEmail,
   onMudou,
+  aceite = null,
 }: {
+  /** O cliente aceitou o valor único (a Vitória leu o «SIM», ou a equipa marcou-o). */
+  aceite?: { em: string; por: string | null } | null;
   pedidoId: number;
   valorUnico: number | null;
   /** As propostas abertas, como o cliente as veria (sem IVA), com a nota e o «verificado». */
@@ -104,6 +112,31 @@ export default function ValorUnicoNaMesa({
 
   const sugestao = valorUnico != null ? escolherPorMim(propostas, valorUnico) : null;
 
+  /** «O cliente aceitou por telefone»: o mesmo estado que a Vitória grava no WhatsApp. */
+  async function marcarAceite() {
+    if (!token) return;
+    if (!window.confirm(`Marcar que o cliente aceitou o valor único do #${pedidoId} (por telefone)?`)) return;
+    setOcupado("gravar");
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/negociacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accao: "valor_unico_aceite", pedidoId }),
+      });
+      const d = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) {
+        setErro(String(d.error ?? "Não foi possível marcar."));
+        return;
+      }
+      onMudou(`#${pedidoId}: valor único aceite pelo cliente — falta escolher o parceiro.`);
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado("");
+    }
+  }
+
   return (
     <div className="mt-3 rounded-xl border border-violet-500/40 bg-violet-950/20 p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -165,6 +198,23 @@ export default function ValorUnicoNaMesa({
         )
       ) : (
         <>
+          {aceite ? (
+            <p className="mt-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200">
+              {VALOR_UNICO_ACEITE_NA_MESA}
+              <span className="ml-1 font-normal text-emerald-300/80">
+                · {QUANDO.format(new Date(aceite.em))}
+                {aceite.por ? `, ${aceite.por}` : ""}
+              </span>
+            </p>
+          ) : (
+            <button
+              onClick={() => void marcarAceite()}
+              disabled={ocupado !== ""}
+              className="mt-2 rounded-lg border border-emerald-600/60 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-50"
+            >
+              O cliente aceitou por telefone
+            </button>
+          )}
           <p className="mt-1 text-[11px] text-slate-400">
             O «Enviar orçamento» e o «Enviar pela CLYON» mandam este valor, sem nomes. O cliente não vê as propostas até a CLYON escolher.
           </p>

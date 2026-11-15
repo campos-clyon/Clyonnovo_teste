@@ -80,7 +80,7 @@ import { DADOS_DE_PAGAMENTO_MUDARAM, SELO_DOS_DADOS_MUDADOS } from "@/lib/dados-
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import { avisoAcimaDoValorUnico, mensagemDoValorUnico, valorUnicoSugerido } from "@/lib/valor-unico";
-import ValorUnicoNaMesa from "./ValorUnicoNaMesa";
+import ValorUnicoNaMesa, { VALOR_UNICO_ACEITE_NA_MESA } from "./ValorUnicoNaMesa";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
@@ -609,6 +609,8 @@ type Pedido = {
   /** O valor único ao cliente, sem IVA (d39, 15-11-2026). */
   valorUnicoCliente?: number | null;
   valorUnicoEm?: string | null;
+  /** O cliente aceitou o valor único (d39): a Vitória leu o «SIM», ou a equipa marcou-o. */
+  valorUnicoAceite?: { em: string; por: string | null } | null;
   /** Numa mudança com parceiros escolhidos pelo cliente (d6): o resumo da escolha e o que a Mesa mostra. */
   escolhidosJson?: string | null;
   escolhidosNaMesa?: EstadoNaMesa | null;
@@ -2794,6 +2796,12 @@ export default function AdminNegociacoesPanel({
                   Negociação
                 </span>
               )}
+              {/* O selo do valor único aceite (d39): falta escolher o parceiro. */}
+              {p.valorUnicoAceite && !p.negociacoes.some((n) => n.estado === "acordada") && (
+                <span className="rounded-full border border-emerald-500/60 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-200" title={VALOR_UNICO_ACEITE_NA_MESA}>
+                  Valor único aceite
+                </span>
+              )}
               <EtiquetaDaOrigem slug={p.origem} />
               <span className="truncate">
                 {/* A categoria em palavras, à frente da zona (21-10-2026). */}
@@ -3525,6 +3533,7 @@ export default function AdminNegociacoesPanel({
             <ValorUnicoNaMesa
               pedidoId={p.id}
               valorUnico={p.valorUnicoCliente ?? null}
+              aceite={p.valorUnicoAceite ?? null}
               propostas={propostasParaOCliente(p.negociacoes).map((x) => {
                 const n = p.negociacoes.find((y) => y.id === x.negociacaoId);
                 return {

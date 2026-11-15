@@ -22,6 +22,7 @@ import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { negociacoesComDadosDePagamentoMudados } from "@/lib/dados-de-pagamento-mudados-na-base";
 import { lerValorUnico, linhasDoValorUnico, valorUnicoComIva } from "@/lib/valor-unico";
 import { avisarClienteDoValorUnico } from "@/lib/email-proposta";
+import { aceitesDoValorUnico, marcarValorUnicoAceite, type AceiteDoValorUnico } from "@/lib/valor-unico-no-whatsapp-na-base";
 import { lerBase } from "@/lib/base-do-preco";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 
@@ -91,9 +92,14 @@ export async function GET(req: NextRequest) {
       console.error("[api/admin/negociacoes GET] parceiros do valor único:", e);
       return new Map<number, { nota: { media: number; quantas: number } | null; verificado: boolean }>();
     });
+    // d39: o valor único aceite pelo cliente (WhatsApp ou marcado pela equipa) — «escolher o parceiro».
+    const aceites = await aceitesDoValorUnico(pedidos.filter((p) => p.valorUnicoCliente != null).map((p) => Number(p.id))).catch(
+      () => new Map<number, AceiteDoValorUnico>(),
+    );
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
+        valorUnicoAceite: aceites.get(Number(p.id)) ?? null,
         escolhidosNaMesa: estadoNaMesa(
           JSON.parse(JSON.stringify(p.negociacoes)),
           escolhidosDeJson(p.escolhidosJson),
@@ -136,6 +142,26 @@ export async function POST(req: NextRequest) {
   if (corpo.accao === "cliente_pediu_mais_parceiros" && Number.isInteger(Number(corpo.pedidoId)) && Number(corpo.pedidoId) > 0) {
     const r = await registarQueOClientePediu(Number(corpo.pedidoId), colab?.nome ?? "a CLYON");
     return NextResponse.json(r.corpo, { status: r.status });
+  }
+  /*
+   * O VALOR ÚNICO ACEITE, MARCADO PELA EQUIPA — 15-11-2026 (d39): o cliente
+   * aceitou por telefone. O mesmo estado que a Vitória grava quando lê o «SIM».
+   */
+  if (corpo.accao === "valor_unico_aceite" && Number.isInteger(Number(corpo.pedidoId)) && Number(corpo.pedidoId) > 0) {
+    const pedidoId = Number(corpo.pedidoId);
+    const quem = colab?.nome ?? "a CLYON";
+    if (!(await marcarValorUnicoAceite(pedidoId, quem))) {
+      return NextResponse.json(
+        { error: "Este pedido não tem valor único por aceitar (ou já está marcado como aceite)." },
+        { status: 409 },
+      );
+    }
+    await appendOrderHistory(pedidoId, {
+      type: "valor_unico_aceite",
+      by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+      message: `O cliente aceitou o valor único por telefone (registado por ${quem}). Falta escolher o parceiro e aceitar a proposta dele na Mesa.`,
+    });
+    return NextResponse.json({ ok: true });
   }
   /*
    * O VALOR ÚNICO AO CLIENTE — 15-11-2026 (d39). Grava (ou tira, com

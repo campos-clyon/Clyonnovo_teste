@@ -695,6 +695,11 @@ async function tratarOValorUnico(
     by: null,
     message: "O cliente aceitou o valor único pelo WhatsApp. Falta escolher o parceiro e aceitar a proposta dele na Mesa.",
   }).catch((e) => console.error("[whatsapp] o aceite do valor único não ficou no histórico:", e));
+  // O estado próprio do aceite (d39): a Mesa mostra «Valor único aceite pelo cliente — escolher o parceiro».
+  const { marcarValorUnicoAceite } = await import("@/lib/valor-unico-no-whatsapp-na-base");
+  await marcarValorUnicoAceite(decisao.pedidoId, "o cliente, pelo WhatsApp").catch((e) =>
+    console.error("[whatsapp] o aceite do valor único não ficou marcado:", e),
+  );
   await passarAUmaPessoa(telefone, vu.motivoDoValorUnicoAceite(decisao.pedidoId), vu.VALOR_UNICO_ACEITE);
 }
 
