@@ -34,7 +34,7 @@ import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
 import { TAXA_IVA } from "./taxas-plataforma";
 import { partirMorada } from "./morada-partida";
 import { nifDaFactura } from "./pedido-valores";
-import { PRAZO_DE_RESPOSTA } from "./seo-data";
+import { NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA } from "./seo-data";
 import { precoDaMudancaNoWhatsApp, precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import {
   andarDaResposta,
@@ -1347,8 +1347,12 @@ export const COMO_CHEGA_O_PRECO =
 export const LEMBRETE_DO_PRECO =
   "Como lhe disse, o valor chega com as propostas dos parceiros, assim que o pedido ficar registado.";
 
-/** E o IVA, a quem perguntou por ele — como diz a pergunta da factura. */
-export const O_IVA_ESTA_INCLUIDO = `E os preços já vêm com IVA incluído (${Math.round(TAXA_IVA * 100)} %).`;
+/**
+ * E o IVA, a quem perguntou por ele. Desde 15-11-2026 (d30) é a frase do site
+ * (`NA_PROPOSTA_COM_IVA`): com parceiros isentos, «os preços já vêm com IVA
+ * incluído» deixou de ser verdade para todos.
+ */
+export const O_IVA_ESTA_INCLUIDO = NA_PROPOSTA_COM_IVA;
 
 /**
  * A NOTA DO PREÇO para pôr à frente da resposta — ou nada.

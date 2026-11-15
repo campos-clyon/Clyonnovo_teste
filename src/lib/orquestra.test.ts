@@ -791,13 +791,6 @@ const DO_TRABALHO_CLYON = new Set([
   // d16: o ecrã do Trabalho CLYON na app de cliente (fica no modelo antigo).
   "app-cliente/src/componentes/TrabalhoClyon.tsx",
 ]);
-/**
- * d30: I&D — EXCEPÇÃO TEMPORÁRIA. A frase da Vitória «os preços já vêm com IVA
- * incluído» (`O_IVA_ESTA_INCLUIDO`) é trocada pelo I&D (d30, parte da Vitória).
- * Sai daqui quando o I&D publicar; só esta frase, só neste ficheiro.
- */
-const S_A_ESPERA_DO_ID = (f: string, achado: string) =>
-  f === "src/lib/whatsapp-recolha.ts" && /^já vêm com IVA$/i.test(achado);
 const A_REGRA_S_SE_APLICA = (f: string) =>
   (O_CLIENTE_LE(f) || DO_LADO_DO_PROFISSIONAL(f)) &&
   !DESENHADOS_NOS_DOIS_LADOS.has(f) &&
@@ -960,7 +953,7 @@ function achadosDe(f: string): Achado[] {
     // s) O SQL e os registos ficam de fora; as frases antigas só onde o nome o diz.
     if (A_REGRA_S_SE_APLICA(f) && !antigo && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const s = falaDoModeloAntigo(texto, O_CLIENTE_LE(f) ? "cliente" : "todos");
-      if (s && !S_A_ESPERA_DO_ID(f, s)) out.push({ ficheiro: f, linha, regra: "s-modelo-antigo", texto: s });
+      if (s) out.push({ ficheiro: f, linha, regra: "s-modelo-antigo", texto: s });
     }
     // x) Em todo o lado: é a frase antiga, não um tema.
     for (const re of CONFIRMACAO_ANTIGA) marcar("x-confirmacao", re.exec(texto));
