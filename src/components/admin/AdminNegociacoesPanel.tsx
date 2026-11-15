@@ -76,6 +76,7 @@ import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cl
  */
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
+import { valorUnicoSugerido } from "@/lib/valor-unico";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
@@ -3488,6 +3489,8 @@ export default function AdminNegociacoesPanel({
               token={token}
               base={lerBase(p.baseDoPreco)}
               deNegociacao
+              // d39 (15-11-2026): a mediana das propostas abertas, arredondada a 5 € — a equipa pode mudar.
+              valorSugerido={valorUnicoSugerido(propostasParaOCliente(p.negociacoes).map((x) => x.semIva))}
               onOferecido={(msg) => {
                 setAFixar(null);
                 void trabalhoClyonOferecido(msg);
@@ -6096,11 +6099,14 @@ function OferecerComoTrabalhoClyon({
   onFechar,
   deNegociacao = false,
   base,
+  valorSugerido = null,
 }: {
   pedidoId: number;
   token: string | null;
   onOferecido: (msg: string) => void;
   onFechar: () => void;
+  /** d39: a mediana das propostas abertas (com duas, a média), arredondada a 5 €. */
+  valorSugerido?: number | null;
   /** A do pedido — pelo trabalho todo, por carga ou por hora (22-10-2026). */
   base: BaseDoPreco;
   /** Uma negociação que passa a valor fixo (20-10-2026, fase 4). */
@@ -6149,6 +6155,11 @@ function OferecerComoTrabalhoClyon({
             recebe o link do pedido: fala com a CLYON.
             {deNegociacao && " As negociações abertas acabam, e quem as tinha recebe a oferta."}
           </p>
+          {valorSugerido != null && (
+            <p className="mt-1 text-xs text-slate-400">
+              Valor sugerido ao cliente: {valorSugerido} € + IVA — a mediana das propostas abertas, arredondada a 5 €. Pode mudá-lo.
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -6173,6 +6184,7 @@ function OferecerComoTrabalhoClyon({
           referencia={null}
           onOferecido={onOferecido}
           deNegociacao={deNegociacao}
+          valorInicial={valorSugerido != null ? String(valorSugerido) : undefined}
           baseInicial={base}
         />
       )}

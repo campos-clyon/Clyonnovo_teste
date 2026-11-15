@@ -110,7 +110,7 @@ describe("os erros das apps e as zonas na Privacidade", () => {
     expect(TERMOS).toContain("Última atualização: 12 de novembro de 2026.");
     expect(PRIVACIDADE).toContain("Última atualização: 12 de novembro de 2026.");
     const datas = ler("src/lib/datas-das-paginas.ts");
-    expect(datas).toContain('"/termos": "2026-11-12"');
+    expect(datas).toContain('"/termos": "2026-11-15"'); // d39: o valor único nos Termos de 15-11
     expect(datas).toContain('"/privacidade": "2026-11-12"');
   });
 });

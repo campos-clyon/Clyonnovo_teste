@@ -83,7 +83,9 @@ describe("o que saiu, e o que entrou", () => {
      * muda a data lá e aqui.
      */
     expect(CODIGO).toContain("Última atualização: 12 de novembro de 2026.");
-    expect(CODIGO.match(/Última atualização:/g)).toHaveLength(1);
+    // A 15-11-2026 (d39) o valor único no ponto 2: a data dos Termos em vigor; a de 12-11 fica na versão anterior.
+    expect(CODIGO).toContain("Última atualização: 15 de novembro de 2026.");
+    expect(CODIGO.match(/Última atualização:/g)).toHaveLength(2);
     // 30-10-2026: sem fotografias; o prazo conta a partir do «Está feito».
     expect(CODIGO).toMatch(/depois de o parceiro o marcar\s+como feito/);
     expect(CODIGO).not.toContain("Sem fotografias, a CLYON confirma consigo");

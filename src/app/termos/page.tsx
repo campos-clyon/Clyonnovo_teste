@@ -170,6 +170,10 @@ export default async function TermosPage() {
               emitida antes dela e é paga antes de a referência expirar. Essas regras
               mantêm-se escritas nesses pontos.
             </p>
+          ) : null}
+          {/* d39 (15-11-2026): o valor único no ponto 2 — a data acompanha a mudança. */}
+          {novo ? (
+            <p className="mt-2 text-sm text-slate-500">Última atualização: 15 de novembro de 2026.</p>
           ) : (
           <p className="mt-3 text-sm text-slate-500">
             Última atualização: 12 de novembro de 2026.
@@ -254,10 +258,18 @@ export default async function TermosPage() {
             {EMPRESA_PARCEIRA_AO_PUBLICO}, que passa a fatura, é uma entidade
             diferente: não é o parceiro e não presta o serviço.
           </p>
+          {/*
+            O VALOR ÚNICO — 15-11-2026 (d39, decisão do dono; para revisão de um
+            advogado). Quando o orçamento vai ao cliente num valor só, sem
+            nomes, é a CLYON quem escolhe o parceiro, entre os verificados que
+            propuseram. Só nos Termos de 15-11; as regras anteriores ficam como
+            estavam.
+          */}
           <p>
             <strong>
-              O contrato de prestação de serviço é celebrado entre si e o
-              parceiro que escolher. A CLYON não é parte nesse contrato.
+              {novo
+                ? "O contrato de prestação de serviço é celebrado entre si e o parceiro, que é escolhido por si ou, quando o orçamento é enviado em valor único, pela CLYON, entre os parceiros verificados que propuseram. A CLYON não é parte nesse contrato."
+                : "O contrato de prestação de serviço é celebrado entre si e o parceiro que escolher. A CLYON não é parte nesse contrato."}
             </strong>{" "}
             Quem vai a sua casa, quem carrega, quem transporta e quem trata dos
             resíduos é o parceiro. É ele o prestador do serviço, e é a ele
@@ -314,9 +326,18 @@ export default async function TermosPage() {
             (SimulatorThreePhaseForm.tsx, onSemLista; api/simulador/pedido). «Pedir
             à CLYON que procure» envia-o a mais parceiros (DEPOIS_DE_CADA_SAIDA).
           */}
+          {novo && (
+            <p>
+              Quando o orçamento é enviado em valor único, recebe um só valor,
+              sem a lista das propostas nem os nomes de quem as fez. Se o
+              aceitar, a CLYON escolhe o parceiro entre os parceiros verificados
+              que propuseram e diz-lhe, antes do trabalho, quem é, o dia e como
+              pagar.
+            </p>
+          )}
           <p>
             A CLYON não seleciona o parceiro por si, salvo quando o cliente nos
-            pede que o façamos. Numa mudança, com «{DEIXAR_A_CLYON_ESCOLHER}», a
+            pede que o façamos{novo ? " ou quando o orçamento é enviado em valor único" : ""}. Numa mudança, com «{DEIXAR_A_CLYON_ESCOLHER}», a
             equipa da CLYON revê o pedido e escolhe a que parceiros da zona o
             mostra; com «{SAIDAS_DO_CLIENTE.pedirAClyon}», envia-o a mais
             parceiros. Também nesses casos é o cliente quem aceita a proposta. A
