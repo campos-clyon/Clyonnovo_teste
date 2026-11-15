@@ -369,7 +369,8 @@ describe("as peças estão ligadas", () => {
 
   it("a carteira recebe a marca", () => {
     expect(semNotas(ler("src/lib/carteira-do-profissional.ts"))).toContain(
-      'pagoPelaClyon: typeof l.ofertaClyon === "string" && l.ofertaClyon !== "",',
+      // d33: a pergunta única, pela criação do pedido (com o interruptor ligado, todos).
+      "pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm }, agora),",
     );
     expect(semNotas(ler("src/lib/carteira.ts"))).toContain("if (t.pagoPelaClyon) return true;");
   });
@@ -389,7 +390,9 @@ describe("as peças estão ligadas", () => {
   it("as Carteiras do backoffice não inventam o que o cliente pagou, nem o somam ao faturado", () => {
     const ROTA_CARTEIRAS = semNotas(ler("src/app/api/admin/carteiras/route.ts"));
     expect(ROTA_CARTEIRAS).toContain("n.ofertaClyon,");
-    expect(ROTA_CARTEIRAS.match(/if \(!trabalhoClyon\) clyon\.faturado/g)?.length).toBe(3);
+    // d33: só o Trabalho CLYON do modelo antigo fica fora do faturado (`clyonAntigo`).
+    expect(ROTA_CARTEIRAS.match(/if \(!clyonAntigo\) clyon\.faturado/g)?.length).toBe(3);
+    expect(ROTA_CARTEIRAS).toContain("const clyonAntigo = trabalhoClyonDoModeloAntigo(");
     expect(ROTA_CARTEIRAS).not.toMatch(/\n\s*clyon\.faturado = /);
     expect(ler("src/components/admin/AdminCarteirasPanel.tsx")).toContain('"trabalho CLYON · valor fixo"');
   });

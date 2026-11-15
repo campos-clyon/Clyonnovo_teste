@@ -14,7 +14,8 @@ import { pagoAoProfissionalRegistado } from "./pago-em-mao";
 import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
 import type { MarcaDaParte } from "./cobrancas-ao-profissional";
 import { quandoLiberta } from "./trabalho";
-import { eDoNovoModelo, novoModeloEmVigor } from "./novo-modelo";
+import { eDoNovoModelo, novoModeloEmVigor, trabalhoClyonDoModeloAntigo } from "./novo-modelo";
+import { trabalhosClyonDasNegociacoes, type TrabalhoClyonDaBase } from "./trabalho-clyon-na-base";
 import { pagoAClyonAntesDoCorte } from "./taxa-a-passar-a-clyon";
 import { agoraDoModelo } from "./relogio-do-modelo";
 
@@ -232,7 +233,14 @@ export async function trabalhosDaCarteira(
 
   const agora = agoraDoModelo();
   const vale = novoModeloEmVigor(agora);
+  /*
+   * d33: a criação do pedido de cada Trabalho CLYON — os de depois do corte são
+   * do parceiro (o cliente paga-lhe), os de antes a CLYON paga. Com o interruptor
+   * ligado, vazio e sem ir à base: todos os Trabalhos CLYON são do antigo.
+   */
+  const clyon = vale ? await trabalhosClyonDasNegociacoes(linhas.map((l) => l.id)) : new Map<number, TrabalhoClyonDaBase>();
   return linhas.map((l) => {
+    const pedidoCriadoEm = clyon.get(Number(l.id))?.pedidoCriadoEm ?? null;
     /*
      * O MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). Antes da data, nunca. Um
      * pagamento à CLYON antes de 15-11 deixa o trabalho no modelo antigo; um
@@ -251,6 +259,7 @@ export async function trabalhosDaCarteira(
         eDoNovoModelo(
           {
             ofertaClyon: l.ofertaClyon,
+            pedidoCriadoEm,
             clientePagouEm: pagoAntes,
             fechadoEm: quandoLiberta({
               estado: l.estado,
@@ -300,8 +309,9 @@ export async function trabalhosDaCarteira(
     // Sem ela, o trabalho conta como anterior ao corte — e a carteira deixava
     // levantar o que o cliente não pagou. Ver `verificaOPagamento`.
     negociacaoCriadaEm: l.createdAt ?? null,
-    // Quem paga um trabalho CLYON é a CLYON — ver `pagoPelaClyon` em carteira.ts.
-    pagoPelaClyon: typeof l.ofertaClyon === "string" && l.ofertaClyon !== "",
+    // Quem paga um trabalho CLYON do modelo antigo é a CLYON — ver `pagoPelaClyon` em
+    // carteira.ts. Um de depois do corte (d33) é do parceiro: o cliente paga-lhe.
+    pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm }, agora),
     marcasDaDivida: marcas.get(Number(l.id)) ?? [],
     pagoAoProfissionalValor: l.pagoEm != null ? (transferidos.get(Number(l.id)) ?? null) : null,
     reservaCent: reservas.get(Number(l.id)) ?? null,

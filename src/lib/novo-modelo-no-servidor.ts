@@ -47,6 +47,8 @@ export async function segueONovoModelo(
     provaJson?: unknown;
     confirmadoEm?: unknown;
     pagoEm?: unknown;
+    /** d33: a criação do pedido (Trabalho CLYON). Sem ela, lê-se da base (`trabalhosClyonDasNegociacoes`). */
+    pedidoCriadoEm?: Date | string | null;
   },
   agora: Date = agoraDoModelo(),
 ): Promise<boolean> {
@@ -54,9 +56,18 @@ export async function segueONovoModelo(
   const { pagamentosDaNegociacao } = await import("./pagamentos-na-base");
   const { negociacaoNoNovoModelo } = await import("./taxa-a-passar-a-clyon");
   const { quandoLiberta } = await import("./trabalho");
-  const pagamentos = await pagamentosDaNegociacao(Number(n.id));
+  const { trabalhosClyonDasNegociacoes, comOTrabalhoClyonDaBase } = await import("./trabalho-clyon-na-base");
+  const [pagamentos, clyon] = await Promise.all([
+    pagamentosDaNegociacao(Number(n.id)),
+    n.pedidoCriadoEm === undefined ? trabalhosClyonDasNegociacoes([n.id]) : Promise.resolve(new Map()),
+  ]);
+  const c = comOTrabalhoClyonDaBase(n, clyon.get(Number(n.id)));
   return negociacaoNoNovoModelo(
-    { ofertaClyon: n.ofertaClyon, fechadoEm: quandoLiberta(n as Parameters<typeof quandoLiberta>[0]) },
+    {
+      ofertaClyon: c.ofertaClyon,
+      pedidoCriadoEm: c.pedidoCriadoEm ?? null,
+      fechadoEm: quandoLiberta(n as Parameters<typeof quandoLiberta>[0]),
+    },
     pagamentos,
     agora,
   );
@@ -79,6 +90,7 @@ export async function contratadasNoNovoModelo(
     provaJson?: unknown;
     confirmadoEm?: unknown;
     pagoEm?: unknown;
+    pedidoCriadoEm?: Date | string | null;
   }>,
   agora: Date = agoraDoModelo(),
 ): Promise<Set<number>> {
@@ -87,11 +99,17 @@ export async function contratadasNoNovoModelo(
   const { pagamentosDasNegociacoes } = await import("./pagamentos-na-base");
   const { negociacaoNoNovoModelo } = await import("./taxa-a-passar-a-clyon");
   const { quandoLiberta } = await import("./trabalho");
-  const pagamentos = await pagamentosDasNegociacoes(linhas.map((l) => Number(l.id)));
-  for (const n of linhas) {
+  const { trabalhosClyonDasNegociacoes, comOTrabalhoClyonDaBase } = await import("./trabalho-clyon-na-base");
+  const [pagamentos, clyon] = await Promise.all([
+    pagamentosDasNegociacoes(linhas.map((l) => Number(l.id))),
+    trabalhosClyonDasNegociacoes(linhas.filter((l) => l.pedidoCriadoEm === undefined).map((l) => l.id)),
+  ]);
+  for (const linha of linhas) {
+    const n = comOTrabalhoClyonDaBase(linha, clyon.get(Number(linha.id)));
     const sim = negociacaoNoNovoModelo(
       {
         ofertaClyon: n.ofertaClyon,
+        pedidoCriadoEm: n.pedidoCriadoEm ?? null,
         fechadoEm: quandoLiberta({ estado: "acordada", ...n } as unknown as Parameters<typeof quandoLiberta>[0]),
       },
       pagamentos.get(Number(n.id)) ?? [],
@@ -141,17 +159,26 @@ export async function impedimentoDoNovoModelo(
  * data, nenhuma, sem ir à base.
  */
 export async function negociacoesNoNovoModelo(
-  linhas: ReadonlyArray<{ id?: unknown; estado?: unknown; ofertaClyon?: unknown }>,
+  linhas: ReadonlyArray<{ id?: unknown; estado?: unknown; ofertaClyon?: unknown; pedidoCriadoEm?: Date | string | null }>,
   agora: Date = agoraDoModelo(),
 ): Promise<Set<number>> {
   const ids = new Set<number>();
   if (!novoModeloEmVigor(agora)) return ids;
+  // d33: a criação do pedido de cada Trabalho CLYON, numa consulta (vazio com o interruptor ligado).
+  const { trabalhosClyonDasNegociacoes, comOTrabalhoClyonDaBase } = await import("./trabalho-clyon-na-base");
+  const clyon = await trabalhosClyonDasNegociacoes(
+    linhas.filter((l) => l.pedidoCriadoEm === undefined).map((l) => l.id as number | string | null | undefined),
+  );
   await Promise.all(
-    linhas.map(async (n) => {
+    linhas.map(async (linha) => {
+      const n = comOTrabalhoClyonDaBase(linha, clyon.get(Number(linha.id)));
       const sim =
         n.estado === "acordada"
-          ? await segueONovoModelo(n as Parameters<typeof segueONovoModelo>[0], agora).catch(() => true)
-          : eDoNovoModelo({ ofertaClyon: n.ofertaClyon }, agora);
+          ? await segueONovoModelo(
+              { ...(n as Parameters<typeof segueONovoModelo>[0]), pedidoCriadoEm: n.pedidoCriadoEm ?? null },
+              agora,
+            ).catch(() => eDoNovoModelo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm ?? null }, agora))
+          : eDoNovoModelo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm ?? null }, agora);
       if (sim) ids.add(Number(n.id));
     }),
   );

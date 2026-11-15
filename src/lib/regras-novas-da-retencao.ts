@@ -43,6 +43,7 @@ import { modeloDaLinha } from "./sem-factura";
 import { verificaOPagamento } from "./carteira";
 import { DIAS_DE_RETENCAO_DOS_PEDIDOS, DIAS_PARA_OS_ABANDONADOS } from "./retencao";
 import { fotografiasDaProva } from "./trabalho";
+import { trabalhoClyonDoModeloAntigo } from "./novo-modelo";
 
 /** A: quantos dias depois de FECHADO se anonimiza um pedido com trabalho. */
 export const DIAS_ATE_ANONIMIZAR_OS_TRABALHOS = 90;
@@ -424,6 +425,8 @@ export type NegociacaoParaRetencao = {
   ofertaClyon: string | null;
   semFactura?: unknown;
   negociacaoCriadaEm: Data;
+  /** d33: a criação do pedido — decide o modelo de um Trabalho CLYON (`trabalhoClyonDoModeloAntigo`). */
+  pedidoCriadoEm?: Data;
   /** O pagamento dado por pago a esta negociação (`pagamentos.negociacaoPaga`). */
   clientePagouEm: Data;
   comoEntrou: string | null;
@@ -519,7 +522,9 @@ export function negociacaoFechada(n: NegociacaoParaRetencao): boolean {
       const devia = temDividaDoProfissional(n.formaDePagamento, modeloDaLinha(n, n.negociacaoCriadaEm));
       return !devia || tem(n.clientePagouEm);
     }
-    if (n.ofertaClyon) return true;
+    // Um Trabalho CLYON do modelo antigo: a CLYON recebeu e pagou. Um de depois do corte
+    // (d33) segue a regra dos outros do modelo novo — fica aberto enquanto a taxa não entrar.
+    if (trabalhoClyonDoModeloAntigo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm ?? null })) return true;
     if (!verificaOPagamento({ negociacaoCriadaEm: n.negociacaoCriadaEm ?? null })) return true;
     return tem(n.clientePagouEm) || n.pagamentosRecebidos > 0;
   }

@@ -229,7 +229,12 @@ export async function trabalhoQueSePodePagar(
     const { pagamentosDaNegociacao } = await import("./pagamentos-na-base");
     const pagamentos = await pagamentosDaNegociacao(negociacaoId);
     novoModelo = negociacaoNoNovoModelo(
-      { ofertaClyon: (linha as { ofertaClyon?: unknown }).ofertaClyon, fechadoEm: quandoLiberta(linha) },
+      {
+        ofertaClyon: (linha as { ofertaClyon?: unknown }).ofertaClyon,
+        // d33: a criação do pedido decide o modelo de um Trabalho CLYON.
+        pedidoCriadoEm: (pedido as { createdAt?: Date | string | null }).createdAt ?? null,
+        fechadoEm: quandoLiberta(linha),
+      },
       pagamentos,
       agora,
     );

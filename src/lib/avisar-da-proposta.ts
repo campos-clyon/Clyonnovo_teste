@@ -80,7 +80,14 @@ export async function avisarDaProposta(dados: {
        * Uma negociação aberta ainda não tem nada pago: basta a data e a marca de
        * Trabalho CLYON.
        */
-      const doNovoModelo = eDoNovoModelo({ ofertaClyon: negociacao.ofertaClyon }, agoraDoModelo())
+      const doNovoModelo = eDoNovoModelo(
+        {
+          ofertaClyon: negociacao.ofertaClyon,
+          // d33: a criação do pedido decide o modelo de um Trabalho CLYON.
+          pedidoCriadoEm: (pedido as { createdAt?: Date | string | null }).createdAt ?? null,
+        },
+        agoraDoModelo(),
+      )
         ? totalAoClienteDaNegociacao(negociacao, dados.valor)
         : null;
       const preco = doNovoModelo ? doNovoModelo.total : precoParaOCliente(dados.valor, taxas, modelo);

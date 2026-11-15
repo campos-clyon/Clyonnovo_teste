@@ -5,7 +5,7 @@ import { faseParaOCliente, diasAteLibertar } from "./trabalho";
 import { ajustesDe, vistaDoAjuste, type VistaDoAjuste } from "./ajuste-no-local";
 import { instanteDaBase } from "./hora-de-lisboa";
 import type { HorasNaBase } from "./horas-do-trabalho";
-import { novoModeloEmVigor, TRABALHOS_CLYON_NO_MODELO_ANTIGO } from "./novo-modelo";
+import { novoModeloEmVigor, trabalhoClyonDoModeloAntigo, trabalhosClyonTodosNoModeloAntigo } from "./novo-modelo";
 import type { PerguntaDoFecho } from "./fecho-do-modelo-novo";
 import { perfilFiscalDoParceiro, type PerfilFiscal } from "./perfil-fiscal";
 import { totaisDoNovoModelo, totalDoValor, type TotaisDoNovoModelo } from "./total-ao-cliente";
@@ -191,6 +191,8 @@ export type LinhaParaAVista = HorasNaBase & {
   emiteGuiaTransporte?: unknown;
   regimeDoProfissional?: unknown;
   ofertaClyon?: unknown;
+  /** d33: a criação do pedido — decide o modelo de um Trabalho CLYON (`trabalhoClyonDoModeloAntigo`). Não sai para o ecrã. */
+  pedidoCriadoEm?: unknown;
   pagarAoParceiroPor?: unknown;
   /** O estado da conta dele e quando foi aprovado — a transição da guia (d10 v2). Não saem para o ecrã. */
   profissionalEstado?: unknown;
@@ -382,8 +384,17 @@ export function novoModeloComTotais(
   doServidor?: { segue: boolean; totais: TotaisDoNovoModelo } | null,
 ): { vista: NovoModeloNaVista; totais: TotaisDoNovoModelo } | null {
   if (!novoModeloEmVigor(agora)) return null;
-  const clyon = n.ofertaClyon != null && n.ofertaClyon !== "";
-  if (TRABALHOS_CLYON_NO_MODELO_ANTIGO && clyon) return null;
+  /*
+   * d33: um Trabalho CLYON do modelo antigo não tem este bloco. Com o interruptor
+   * ligado, nunca (como sempre). Desligado, a resposta do servidor (que leu a
+   * criação do pedido) ganha — a linha de baixo; sem ela, a data da linha (sem
+   * data, fica no antigo).
+   */
+  const clyonAntigo = trabalhoClyonDoModeloAntigo(
+    { ofertaClyon: n.ofertaClyon, pedidoCriadoEm: (n.pedidoCriadoEm as Date | string | null | undefined) ?? null },
+    agora,
+  );
+  if (clyonAntigo && (!doServidor || trabalhosClyonTodosNoModeloAntigo())) return null;
   if (doServidor && !doServidor.segue) return null;
   const perfilFiscal = perfilFiscalDoParceiro(n);
   const propostas = propostasDe(n.propostasJson);

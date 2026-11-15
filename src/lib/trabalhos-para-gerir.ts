@@ -218,6 +218,8 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
     (linhas as Array<Record<string, unknown>>).map((l) => ({
       id: Number(l.negociacaoId),
       ofertaClyon: l.ofertaClyon,
+      // d33: a criação do pedido decide o modelo de um Trabalho CLYON.
+      pedidoCriadoEm: (l.pedidoCriadoEm as Date | string | null) ?? null,
       estado: l.estado,
       execucaoEnviadaEm: l.execucaoEnviadaEm,
       provaJson: l.provaJson,

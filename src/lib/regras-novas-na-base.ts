@@ -120,9 +120,12 @@ export async function lerPedidosParaRetencao(): Promise<PedidoParaRetencao[]> {
        FROM simulatorOrders o`,
   )) as [Linha[], unknown];
 
+  // d33: a criação do pedido (`pedidoCriadoEm`) decide o modelo de um Trabalho CLYON.
   const [negs] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
-            n.formaDePagamento, n.ofertaClyon, n.semFactura, n.createdAt AS negociacaoCriadaEm
+            n.formaDePagamento, n.ofertaClyon, n.semFactura,
+            (SELECT o.createdAt FROM simulatorOrders o WHERE o.id = n.pedidoId) AS pedidoCriadoEm,
+            n.createdAt AS negociacaoCriadaEm
        FROM negociacoes n`,
   )) as [Linha[], unknown];
 
@@ -181,6 +184,7 @@ export async function lerPedidosParaRetencao(): Promise<PedidoParaRetencao[]> {
       ofertaClyon: typeof n.ofertaClyon === "string" && n.ofertaClyon !== "" ? n.ofertaClyon : null,
       semFactura: n.semFactura,
       negociacaoCriadaEm: (n.negociacaoCriadaEm as Date | string | null) ?? null,
+      pedidoCriadoEm: (n.pedidoCriadoEm as Date | string | null) ?? null,
       clientePagouEm: paga ? ((paga.pagoEm as Date | string | null) ?? "pago") : null,
       comoEntrou: paga?.metodo ?? null,
       referenciasVivas: pags.filter((p) => p.viva === 1).length,

@@ -19,6 +19,7 @@
  * Puro e sem importações de servidor: os ecrãs do cliente e do profissional
  * importam isto.
  */
+import { instanteDaBase } from "./hora-de-lisboa";
 
 /**
  * A ENTRADA EM VIGOR — 00:00 de 15-11-2026 em Lisboa. Em Novembro Lisboa está em
@@ -89,14 +90,36 @@ export const CORTE_DO_MODELO: CorteDoModelo = "ja_pago_a_clyon";
  *
  * d33 (CEO e dono, 15-11-2026, proposta A): os criados a partir de
  * `TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE` passam ao modelo de 15-11; os de antes
- * seguem no antigo até ao fim. A data e a regra estão em baixo e em
- * `trabalho-clyon-no-novo-modelo.ts`, mas ESTE INTERRUPTOR CONTINUA LIGADO: as
- * contas do backoffice (`conta-do-pagamento.ts`), o fecho, a carteira, a vista do
- * cliente e os avisos ainda decidem o Trabalho CLYON só por `ofertaClyon`, sem a
- * data. Desligá-lo antes de todos passarem a data poria o cliente a pagar ao
- * parceiro num ecrã e a CLYON a dever-lhe o valor noutro.
+ * seguem no antigo até ao fim. A regra é uma só — `trabalhoClyonDoModeloAntigo`
+ * (em baixo), pela criação do pedido — e já a perguntam o portão do modelo
+ * (`eDoNovoModelo` e as funções do servidor, que lêem a data da base), os
+ * Pagamentos, as Carteiras, a carteira do profissional, o fecho, o acesso ao
+ * pagamento, a vista da negociação, o aviso da proposta, a Vitória e a retenção.
+ *
+ * ESTE INTERRUPTOR CONTINUA LIGADO enquanto faltar o lado do cliente: a página do
+ * pedido e a app de cliente mostram a um Trabalho CLYON o cartão «a CLYON trata»
+ * (sem o bloco «Pagar a …»), e a app Pro diz-lhe «a CLYON paga-lhe». Desligá-lo
+ * antes disso poria o cliente sem saber a quem pagar.
  */
 export const TRABALHOS_CLYON_NO_MODELO_ANTIGO = true;
+
+/*
+ * O interruptor como os testes o querem ver — d33. Os testes provam os dois
+ * lados do corte com o interruptor desligado sem mudar a linha de cima
+ * (`interruptorDosTrabalhosClyonParaOsTestes(false)`, e `null` no fim). Nada
+ * fora dos testes o chama: em produção vale sempre a constante.
+ */
+let interruptorDosTestes: boolean | null = null;
+
+/** Só para os testes: `false` simula o interruptor desligado; `null` volta à constante. */
+export function interruptorDosTrabalhosClyonParaOsTestes(v: boolean | null): void {
+  interruptorDosTestes = v;
+}
+
+/** Todos os Trabalhos CLYON ficam no antigo (o interruptor ligado)? */
+export function trabalhosClyonTodosNoModeloAntigo(): boolean {
+  return interruptorDosTestes ?? TRABALHOS_CLYON_NO_MODELO_ANTIGO;
+}
 
 /**
  * d33 — A CRIAÇÃO QUE PASSA UM TRABALHO CLYON AO MODELO DE 15-11: 00:00 de
@@ -141,6 +164,11 @@ function comoData(v: unknown): Date | null {
 export type NegociacaoParaOModelo = {
   /** Trabalho CLYON de valor fixo (`negociacoes.ofertaClyon`). */
   ofertaClyon?: unknown;
+  /**
+   * d33 — quando nasceu o PEDIDO (`simulatorOrders.createdAt`). Só conta num
+   * Trabalho CLYON, e só com o interruptor desligado (`trabalhoClyonDoModeloAntigo`).
+   */
+  pedidoCriadoEm?: Date | string | null;
   /** Quando o cliente pagou à CLYON (a caução ou o total). `null` = nada pago. */
   clientePagouEm?: Date | string | null;
   /** Quando ficou contratada (o «acordada»). Para a variante "data_de_contratacao". */
@@ -154,6 +182,46 @@ function eTrabalhoClyon(v: unknown): boolean {
 }
 
 /**
+ * UM TRABALHO CLYON SEGUE O MODELO DE 15-11? — d33 (CEO e dono, 15-11-2026).
+ *
+ * Pela CRIAÇÃO do pedido do Trabalho CLYON (`simulatorOrders.createdAt`): criado
+ * a partir de `TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE` → modelo novo (o cliente
+ * paga ao parceiro; a CLYON fatura a taxa do escalão); criado antes → modelo
+ * antigo, até ao fim. É a data do PEDIDO, e não a de cada negociação: uma
+ * negociação nova num Trabalho CLYON antigo (outro parceiro, o mesmo pedido)
+ * não muda o que o cliente já aceitou.
+ *
+ * A data vem da base: um `Date` ou o texto sem fuso (`instanteDaBase`, lido em
+ * UTC). Sem data, fica no ANTIGO — nunca se passa um trabalho ao modelo novo
+ * por não se saber quando nasceu.
+ */
+export function trabalhoClyonNoNovoModelo(criadoEm: Date | string | null | undefined, agora: Date): boolean {
+  if (!novoModeloEmVigor(agora)) return false;
+  const criado = instanteDaBase(criadoEm ?? null);
+  if (!criado) return false;
+  return criado.getTime() >= TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE.getTime();
+}
+
+/**
+ * É UM TRABALHO CLYON DO MODELO ANTIGO (a CLYON recebe do cliente e paga ao
+ * profissional)? — d33. A PERGUNTA ÚNICA de todos os sítios que antes decidiam
+ * só por `ofertaClyon` (ou pelo `valorFixoClyon` do pedido): as contas do
+ * backoffice, a carteira, o fecho, a vista do cliente, as mensagens e a Vitória.
+ *
+ * Não é Trabalho CLYON → `false`. Com o interruptor ligado, todo o Trabalho
+ * CLYON é do antigo (como sempre foi). Desligado, só os criados antes do corte.
+ */
+export function trabalhoClyonDoModeloAntigo(
+  n: { ofertaClyon?: unknown; valorFixoClyon?: unknown; pedidoCriadoEm?: Date | string | null },
+  agora: Date = new Date(),
+): boolean {
+  const clyon = eTrabalhoClyon(n.ofertaClyon) || (n.valorFixoClyon != null && n.valorFixoClyon !== "");
+  if (!clyon) return false;
+  if (trabalhosClyonTodosNoModeloAntigo()) return true;
+  return !trabalhoClyonNoNovoModelo(n.pedidoCriadoEm, agora);
+}
+
+/**
  * ESTA NEGOCIAÇÃO SEGUE O MODELO NOVO?
  *
  * Antes da data, nunca. Depois, sim — menos: um Trabalho CLYON (pergunta 2);
@@ -163,7 +231,7 @@ function eTrabalhoClyon(v: unknown): boolean {
  */
 export function eDoNovoModelo(n: NegociacaoParaOModelo, agora: Date = new Date()): boolean {
   if (!novoModeloEmVigor(agora)) return false;
-  if (TRABALHOS_CLYON_NO_MODELO_ANTIGO && eTrabalhoClyon(n.ofertaClyon)) return false;
+  if (trabalhoClyonDoModeloAntigo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm }, agora)) return false;
   if (comoData(n.clientePagouEm) != null) return false;
   const fechado = comoData(n.fechadoEm);
   if (fechado && fechado.getTime() < NOVO_MODELO_DESDE.getTime()) return false;

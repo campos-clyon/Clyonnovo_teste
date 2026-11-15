@@ -100,13 +100,20 @@ export function pagoAClyonAntesDoCorte(pagamentos: ReadonlyArray<PagamentoParaOC
  * antes de 15-11 deixa-a no modelo antigo. Os de depois são do parceiro (a taxa).
  */
 export function negociacaoNoNovoModelo(
-  l: { ofertaClyon?: unknown; fechadoEm?: Date | string | null; contratadaEm?: Date | string | null },
+  l: {
+    ofertaClyon?: unknown;
+    fechadoEm?: Date | string | null;
+    contratadaEm?: Date | string | null;
+    /** d33: a criação do pedido de um Trabalho CLYON (`trabalhoClyonDoModeloAntigo`). */
+    pedidoCriadoEm?: Date | string | null;
+  },
   pagamentos: ReadonlyArray<PagamentoParaOCorte>,
   agora: Date,
 ): boolean {
   return eDoNovoModelo(
     {
       ofertaClyon: l.ofertaClyon,
+      pedidoCriadoEm: l.pedidoCriadoEm ?? null,
       clientePagouEm: pagoAClyonAntesDoCorte(pagamentos),
       fechadoEm: l.fechadoEm ?? null,
       contratadaEm: l.contratadaEm ?? null,
