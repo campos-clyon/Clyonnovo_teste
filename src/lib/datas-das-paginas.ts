@@ -59,6 +59,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
   "/precos": "2026-11-15",
   "/empresas": "2026-11-15",
+  // d43: a página nova dos armazéns, escritórios e lojas.
+  "/esvaziamento-de-armazens-e-escritorios": "2026-11-15",
   // 31-10-2026: o sem IVA nunca sozinho — cada preço com o com IVA ao lado (antes,
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
   "/precos/esvaziamento-de-casas": "2026-11-15",

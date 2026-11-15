@@ -59,6 +59,8 @@ const O_QUE_PODE_PEDIR = [
   { href: "/recolha-de-entulho", titulo: NOMES_DOS_SERVICOS.recolha_entulho, preco: maisIva(PRECOS.recolha_entulho.etiqueta) },
   { href: "/recolha-de-monos", titulo: NOMES_DOS_SERVICOS.recolha_monos, preco: maisIva(PRECOS.recolha_monos.etiqueta) },
   { href: "/esvaziamento-de-casas", titulo: "Esvaziamentos", preco: maisIva(PRECOS.esvaziamento_casa.etiqueta) },
+  // A página dos armazéns, escritórios e lojas (d43, 15-11-2026): sem preço publicado.
+  { href: "/esvaziamento-de-armazens-e-escritorios", titulo: NOMES_DOS_SERVICOS.esvaziamento_empresa, preco: "proposta pelo espaço" },
   { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório", preco: maisIva(PRECOS.mudanca.etiqueta) },
   { href: "/recolha-de-moveis", titulo: NOMES_DOS_SERVICOS.recolha_moveis, preco: MOVEIS_POR_PECA },
   {

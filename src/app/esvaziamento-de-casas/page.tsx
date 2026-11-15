@@ -53,7 +53,8 @@ const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 250 €"
 const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {
-  title: "Esvaziamento de Casas e Apartamentos — Heranças",
+  // «Recheio» no título e no H1 desde 15-11-2026 (d43): é como se pesquisa a casa inteira.
+  title: "Esvaziamento de Casas e Recheios — Heranças",
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
@@ -78,7 +79,7 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/esvaziamento-de-casas` },
   openGraph: og({
     // Sem «em Lisboa», como o título: o hub é o das três regiões (29-09-2026).
-    title: "Esvaziamento de Casas e Apartamentos — Heranças",
+    title: "Esvaziamento de Casas e Recheios — Heranças",
     description:
       `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${maisIva(PRECO_CASA)}. Propostas em menos de 6 horas.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
@@ -181,7 +182,8 @@ const whatWeRemove = [
 ];
 
 const forWhom = [
-  { icon: Home, title: "Heranças", desc: "Esvaziamento de imóveis herdados com remoção de recheio completo." },
+  // Heranças reforçadas a 15-11-2026 (d43): o que se separa antes, e o recheio todo depois.
+  { icon: Home, title: "Heranças", desc: "A casa de um familiar: separa o que fica (documentos, fotografias) e o parceiro leva o recheio todo." },
   { icon: Users, title: "Venda de imóvel", desc: "Preparar casa ou apartamento para venda, visitas ou escritura." },
   { icon: Package, title: "Fim de arrendamento", desc: "Libertar o imóvel para devolução ao senhorio ou nova ocupação." },
   { icon: Sparkles, title: "Remodelação", desc: "Esvaziar divisões ou imóvel completo antes de obras." },
@@ -218,7 +220,7 @@ export default function EsvaziamentoDeCasasPage() {
                     inicial, em 5.º, e não esta. A Amadora saía no lugar da
                     Margem Sul, que é uma das três regiões do hub. */}
                 <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-5xl">
-                  Esvaziamento de Casas e Apartamentos em Lisboa, Margem Sul e Setúbal
+                  Esvaziamento de Casas e Recheios — Heranças e Mudanças em Lisboa, Margem Sul e Setúbal
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-slate-600">
                   Esvaziamento completo de casas, apartamentos, moradias, garagens e arrecadações, por
@@ -266,7 +268,7 @@ export default function EsvaziamentoDeCasasPage() {
                     ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: esvaziamentoComOIvaAoLado(t.chave) })),
                     // A garagem, o sótão e a cave (29-10-2026), com o IVA ao lado.
                     ...ESVAZIAMENTO_POR_ESPACO.map((e) => ({ type: e.espaco, price: `desde ${valorSemEComIva(e.faixas.carrinha.de)}` })),
-                    { type: "Loja / escritório", price: "orçamento personalizado" },
+                    { type: "Armazém, escritório ou loja", price: "proposta pelo espaço" },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                       <span className="text-sm text-slate-700">{item.type}</span>
@@ -276,6 +278,12 @@ export default function EsvaziamentoDeCasasPage() {
                 </div>
                 <p className="mt-4 text-xs leading-5 text-slate-500">
                   {NOTA_DE_PRECO.curta} Depende do volume, acessos e andar.
+                </p>
+                {/* A página dos espaços das empresas (d43, 15-11-2026). */}
+                <p className="mt-3 text-sm">
+                  <Link href="/esvaziamento-de-armazens-e-escritorios" className="font-semibold text-emerald-700 hover:underline">
+                    Esvaziamento de armazéns, escritórios e lojas
+                  </Link>
                 </p>
                 {/* A página «quanto custa» (17-10-2026). */}
                 <p className="mt-3 text-sm">

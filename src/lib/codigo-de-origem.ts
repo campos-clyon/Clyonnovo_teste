@@ -54,6 +54,7 @@ const SERVICOS = new Set([
   "esvaziamento-casas",
   "esvaziamento-de-casas",
   "esvaziamento-de-casas-amadora",
+  "esvaziamento-de-armazens-e-escritorios",
   "limpeza-de-quintais",
   "mudancas",
   "mudancas-de-escritorio",

@@ -517,7 +517,8 @@ export default async function ServiceCityPage({ params }: Props) {
     "recolha-entulho": { href: "/recolha-de-entulho", label: "Ver todos os serviços de recolha de entulho" },
     // As 26 páginas de monos não ligavam ao hub delas (14-10-2026, auditoria).
     "recolha-monos": { href: "/recolha-de-monos", label: "Ver todos os serviços de recolha de monos" },
-    "esvaziamento-casas": { href: "/esvaziamento-de-casas", label: "Ver todos os serviços de esvaziamento" },
+    // Com as palavras da principal desde 15-11-2026 (d43): «recheios», heranças e mudanças.
+    "esvaziamento-casas": { href: "/esvaziamento-de-casas", label: "Esvaziamento de casas e recheios: heranças e mudanças" },
   };
   const currentServiceHub = serviceHubMap[service.slug];
 

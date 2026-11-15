@@ -612,6 +612,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "8 min",
     publishDate: "2026-03-16",
+    updatedDate: "2026-11-15",
     heroLabel: "Recheios",
     intro:
       "O esvaziamento de casas junta várias necessidades ao mesmo tempo: avaliar o que fica, o que sai, o que pode ser doado e o que precisa mesmo de despejo. Isto acontece muito em heranças, mudanças longas, imóveis para venda e casas fechadas há anos.",
@@ -627,6 +628,8 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
         paragraphs: [
           "Separar doação, retenção, lixo e despejo antes do dia da recolha reduz erros e acelera a operação. Quando isso não é possível, a triagem no local deve ser pensada com critério para não atrasar a saída.",
           "Para o que ainda serve, veja antes onde [doar móveis usados em Lisboa](/recolha-gratuita-de-moveis-usados).",
+          // A ligação à principal (d43, 15-11-2026).
+          "Para o resto, o [esvaziamento de casas e recheios](/esvaziamento-de-casas) diz o que está incluído e quanto custa, por tipologia.",
         ],
       },
       {

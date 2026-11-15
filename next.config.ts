@@ -249,6 +249,12 @@ const nextConfig: NextConfig = {
         destination: "/retirar-moveis-velhos",
         permanent: true,
       },
+      /*
+       * /esvaziamento-casas EM 301 — 15-11-2026 (d43). Era um 308 dado pela
+       * própria página (permanentRedirect); o Google trata-os igual, mas o
+       * Marketing pediu o 301 e assim vive com os outros redirects.
+       */
+      { source: "/esvaziamento-casas", destination: "/esvaziamento-de-casas", statusCode: 301 },
       {
         source: "/esvaziamento-apartamento",
         destination: "/esvaziamento-de-casas",

@@ -68,6 +68,8 @@ const staticPages = [
   { url: `${SITE_URL}/quero-ser-parceiro`, priority: 0.85, changeFrequency: "monthly" as const },
   // Para empresas, condomínios e senhorios (14-10-2026, auditoria de SEO).
   { url: `${SITE_URL}/empresas`, priority: 0.85, changeFrequency: "monthly" as const },
+  // Armazéns, escritórios e lojas (d43, 15-11-2026).
+  { url: `${SITE_URL}/esvaziamento-de-armazens-e-escritorios`, priority: 0.85, changeFrequency: "monthly" as const },
   // As páginas em inglês (14-10-2026) — os slugs de paginas-em-ingles.ts; um teste confere.
   { url: `${SITE_URL}/en/junk-removal-lisbon`, priority: 0.85, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/en/junk-removal-cascais`, priority: 0.8, changeFrequency: "monthly" as const },

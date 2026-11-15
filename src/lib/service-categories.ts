@@ -112,7 +112,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     label: "Esvaziamento de armazém, escritório ou loja",
     emoji: "🏬",
     description: "Um parceiro esvazia o espaço da empresa e leva tudo para destino licenciado, com fatura com NIF.",
-    href: "/empresas",
+    href: "/esvaziamento-de-armazens-e-escritorios",
   },
   {
     id: "mudanca",
