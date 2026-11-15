@@ -45,6 +45,14 @@ import { avisarClienteDasHoras } from "@/lib/avisos-do-terreno";
 import { marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 
 export type Resposta = { status: number; corpo: Record<string, unknown> };
+
+/**
+ * A FOLHA PREENCHIDA PELA EQUIPA — d26, 15-11-2026. Quem fez o trabalho não
+ * usa a app e pede à equipa que a preencha: a mesma folha, a mesma conta, e no
+ * histórico fica quem a preencheu. Os textos vêm escritos da rota do
+ * backoffice (a equipa lê um, o cliente lê o outro).
+ */
+export type PelaEquipa = { nome: string; textoDaEquipa: string; textoAoCliente: string };
 const falha = (status: number, error: string, campo?: string): Resposta => ({ status, corpo: { ok: false, error, ...(campo ? { campo } : {}) } });
 
 /** O contexto da folha de uma negociação (tarifa, equipa, km, hora acordada). Null fora das mudanças com a lista. */
@@ -78,6 +86,8 @@ export async function enviarAFolha(a: {
   linha: HorasNaBase;
   corpo: CorpoDaFolha;
   agora?: Date;
+  /** A equipa preenche-a a pedido dele (d26): o resto é igual. */
+  pelaEquipa?: PelaEquipa;
 }): Promise<Resposta> {
   const agora = a.agora ?? new Date();
   const lida = lerFolha(a.corpo, a.ctx, agora);
@@ -94,7 +104,13 @@ export async function enviarAFolha(a: {
   }
   const primeiraVez = !horasMarcadas(a.linha);
   const resumo = resumoDaFolha(folha);
-  const edicao = edicaoDaFolha(primeiraVez ? "enviada" : "corrigida", "parceiro", resumo, agora);
+  const eq = a.pelaEquipa;
+  const edicao = eq
+    ? {
+        ...edicaoDaFolha(primeiraVez ? "enviada" : "corrigida", "clyon", `${eq.textoDaEquipa}: ${resumo}`, agora),
+        textoAoCliente: `${eq.textoAoCliente}: ${resumo}`.slice(0, 500),
+      }
+    : edicaoDaFolha(primeiraVez ? "enviada" : "corrigida", "parceiro", resumo, agora);
 
   const gravou = await gravarFolhaDoTrabalho(a.negociacaoId, a.providerId, {
     inicioEm: new Date(folha.inicioEm),
@@ -110,12 +126,14 @@ export async function enviarAFolha(a: {
 
   const quem = (a.nome ?? "").trim() || `Prestador #${a.providerId}`;
   const linhaDaEquipa =
-    `${quem} ${primeiraVez ? "enviou" : "corrigiu"} a folha da mudança (negociação #${a.negociacaoId}): ${resumo}` +
+    (eq
+      ? `Folha da mudança de ${quem} ${eq.textoDaEquipa} (negociação #${a.negociacaoId}): ${resumo}`
+      : `${quem} ${primeiraVez ? "enviou" : "corrigiu"} a folha da mudança (negociação #${a.negociacaoId}): ${resumo}`) +
     (folha.motivoDosKm ? ` Km corrigidos: «${folha.motivoDosKm}».` : "") +
     (subiuAEquipa(folha) ? ` A equipa subiu de ${folha.pessoasEscolhidas} para ${folha.pessoas}.` : "");
   await appendOrderHistory(a.pedidoId, {
     type: "created",
-    by: { id: a.providerId, nome: quem, role: "profissional" },
+    by: eq ? null : { id: a.providerId, nome: quem, role: "profissional" },
     message: linhaDaEquipa,
   }).catch(() => {});
   await registarSemFalhar({
@@ -123,8 +141,8 @@ export async function enviarAFolha(a: {
     pedidoId: a.pedidoId,
     negociacaoId: a.negociacaoId,
     providerId: a.providerId,
-    autorTipo: "profissional",
-    autorNome: quem,
+    autorTipo: eq ? "clyon" : "profissional",
+    autorNome: eq ? eq.nome : quem,
     valorProfissional: folha.conta.semIvaCent / 100,
     resumo: linhaDaEquipa,
     detalhe: { folha: { ...folha, conta: { semIvaCent: folha.conta.semIvaCent, totalCent: folha.conta.totalCent, profissionalCent: folha.conta.profissionalCent } } },

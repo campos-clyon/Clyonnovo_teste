@@ -315,6 +315,35 @@ export function podeDarPorFeitoComAsHoras(porHora: boolean, t: HorasNaBase): boo
   return !porHora || horasMarcadas(t);
 }
 
+/*
+ * A FOLHA ANTES DO FIM, NO BACKOFFICE — d26, 15-11-2026. Num trabalho à hora a
+ * equipa não dá o trabalho por feito sem a folha preenchida (as horas): sem
+ * ela o valor ficava o da hora, e não o do trabalho. Quando quem fez o
+ * trabalho não usa a app, a equipa preenche a folha no quadro «Folha do
+ * trabalho», a pedido dele.
+ */
+export const FALTA_A_FOLHA =
+  "Num trabalho à hora, a folha do trabalho tem de estar preenchida antes de o dar por feito. Use «Preencher a folha» no quadro «Folha do trabalho».";
+
+/** Falta a folha: o trabalho é à hora e ainda não tem horas gravadas. */
+export function faltaAFolha(porHora: boolean, t: HorasNaBase): boolean {
+  return porHora && !horasMarcadas(t);
+}
+
+/**
+ * O FIM PELO TOTAL DE HORAS — «09:00» e 4,5 h → «13:30» (passa a meia-noite se
+ * for preciso: `intervaloDasHoras` lê um fim antes do início como o dia
+ * seguinte). Null se o início ou as horas não se lerem, ou passarem do máximo.
+ */
+export function fimPelasHoras(inicio: unknown, horas: unknown): string | null {
+  const i = lerHora(inicio);
+  const h = numero(horas);
+  if (!i || h == null || h <= 0 || h > MAXIMO_DE_HORAS_SEGUIDAS) return null;
+  const total = i.h * 60 + i.m + Math.round(h * 60);
+  const doDia = total % 1440;
+  return `${dois(Math.floor(doDia / 60))}:${dois(doDia % 60)}`;
+}
+
 /**
  * Pode marcar (ou corrigir) as horas: trabalho por hora, fechado e ainda por
  * confirmar, com a chegada confirmada (`chegadaOk` — `podeMostrarConcluir` da

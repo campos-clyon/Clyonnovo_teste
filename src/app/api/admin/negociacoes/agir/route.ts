@@ -22,6 +22,8 @@ import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { confirmarDandoPorEntregue } from "@/lib/confirmar-sem-prova";
+import { FALTA_A_FOLHA, faltaAFolha } from "@/lib/horas-do-trabalho";
+import { lerBase } from "@/lib/base-do-preco";
 import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { contaDoCliente, taxasDaNegociacao } from "@/lib/taxas-plataforma";
@@ -266,6 +268,15 @@ export async function POST(req: NextRequest) {
       } catch {
         /* JSON estragado — conta como sem origem, e o email decide */
       }
+      /*
+       * NUM TRABALHO À HORA, A FOLHA PRIMEIRO — d26, 15-11-2026. Sem horas
+       * gravadas o valor ficava o da hora: preenche-se a folha (pela equipa, se
+       * ele não usa a app) no quadro «Folha do trabalho».
+       */
+      if (faltaAFolha(lerBase((pedido as { baseDoPreco?: unknown }).baseDoPreco) === "hora", linha as never)) {
+        return NextResponse.json({ error: FALTA_A_FOLHA, faltaAFolha: true }, { status: 409 });
+      }
+
       const alvo = { origem, contactEmail: pedido.contactEmail };
       if (!clyonPodeConfirmar(alvo)) {
         return NextResponse.json({ error: porqueNaoPodeConfirmar(alvo) }, { status: 403 });

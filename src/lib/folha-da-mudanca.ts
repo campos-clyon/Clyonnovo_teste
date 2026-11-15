@@ -589,7 +589,17 @@ export function estadoDaFolhaParaOParceiro(e: EstadoDaFolha | null, motivo?: str
 /* ── O HISTÓRICO ──────────────────────────────────────────────────────────── */
 
 export type AcaoDaFolha = "enviada" | "corrigida" | "confirmada" | "contestada" | "lembrete_2h" | "lembrete_24h" | "mesa";
-export type EdicaoDaFolha = { em: string; por: "parceiro" | "cliente" | "clyon" | "sistema"; acao: AcaoDaFolha; texto: string };
+export type EdicaoDaFolha = {
+  em: string;
+  por: "parceiro" | "cliente" | "clyon" | "sistema";
+  acao: AcaoDaFolha;
+  texto: string;
+  /**
+   * O que o CLIENTE lê desta linha, quando não é o mesmo que a equipa lê (d26,
+   * 15-11-2026): a folha preenchida pela equipa a pedido de quem fez o trabalho.
+   */
+  textoAoCliente?: string;
+};
 
 const ACCOES: ReadonlySet<string> = new Set(["enviada", "corrigida", "confirmada", "contestada", "lembrete_2h", "lembrete_24h", "mesa"]);
 
@@ -627,10 +637,11 @@ const NO_HISTORICO: Record<AcaoDaFolha, string> = {
 };
 
 /** O histórico para se ler: «11/11/2026, 14:30 — Folha enviada ao cliente: …». */
-export function historicoParaVer(h: EdicaoDaFolha[]): Array<{ quando: string; texto: string }> {
+export function historicoParaVer(h: EdicaoDaFolha[], para: "equipa" | "cliente" = "equipa"): Array<{ quando: string; texto: string }> {
   return h.map((e) => {
     const d = instanteDaBase(e.em);
-    return { quando: d ? dataEHoraEmLisboa(d) : "", texto: e.texto ? `${NO_HISTORICO[e.acao]}: ${e.texto}` : NO_HISTORICO[e.acao] };
+    const texto = para === "cliente" && typeof e.textoAoCliente === "string" && e.textoAoCliente ? e.textoAoCliente : e.texto;
+    return { quando: d ? dataEHoraEmLisboa(d) : "", texto: texto ? `${NO_HISTORICO[e.acao]}: ${texto}` : NO_HISTORICO[e.acao] };
   });
 }
 

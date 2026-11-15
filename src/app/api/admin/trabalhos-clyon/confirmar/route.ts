@@ -9,7 +9,8 @@ import {
   registarSemFalhar,
 } from "@/lib/db";
 
-import { CONFIRME_AS_HORAS_PRIMEIRO, horasNaoTravamOFim } from "@/lib/horas-do-trabalho";
+import { CONFIRME_AS_HORAS_PRIMEIRO, FALTA_A_FOLHA, faltaAFolha, horasNaoTravamOFim } from "@/lib/horas-do-trabalho";
+import { lerBase } from "@/lib/base-do-preco";
 import { confirmarDandoPorEntregue } from "@/lib/confirmar-sem-prova";
 
 export const runtime = "nodejs";
@@ -52,7 +53,8 @@ export async function POST(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.providerId, n.estado, n.ofertaClyon, n.valorAcordado, p.name AS profissional,
-              n.horasMarcadasEm, n.horasConfirmadasEm
+              n.horasMarcadasEm, n.horasConfirmadasEm,
+              (SELECT o.baseDoPreco FROM simulatorOrders o WHERE o.id = n.pedidoId) AS baseDoPreco
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
         profissional: string;
         horasMarcadasEm?: Date | null;
         horasConfirmadasEm?: Date | null;
+        baseDoPreco?: string | null;
       }>,
       unknown,
     ];
@@ -87,6 +90,14 @@ export async function POST(req: NextRequest) {
      * confirmar, o fim espera por elas (o SQL do confirmar também o exige):
      * confirmam-se na Mesa, na secção das horas.
      */
+    /*
+     * E SEM FOLHA, NÃO — d26, 15-11-2026. Num trabalho à hora sem horas gravadas
+     * o valor ficava o da hora: preenche-se primeiro a folha (pela equipa, se
+     * ele não usa a app), no quadro «Folha do trabalho».
+     */
+    if (faltaAFolha(lerBase(linha.baseDoPreco) === "hora", linha)) {
+      return NextResponse.json({ error: FALTA_A_FOLHA, faltaAFolha: true }, { status: 409 });
+    }
     if (!horasNaoTravamOFim(linha)) {
       return NextResponse.json({ error: CONFIRME_AS_HORAS_PRIMEIRO, faltamAsHoras: true }, { status: 409 });
     }

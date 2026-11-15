@@ -41,7 +41,7 @@ import { lerMateriaisDaProposta, lerQuantidadesUsadas, materiaisUsados } from "@
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissional } from "@/lib/avisos-do-backoffice";
 import { avisarClienteDasHoras } from "@/lib/avisos-do-terreno";
-import { contextoDaLinha, edicaoDaContestacao, enviarAFolha, extraDaConfirmacao, guardarRascunhoDaFolha } from "@/lib/folha-no-servidor";
+import { contextoDaLinha, edicaoDaContestacao, enviarAFolha, extraDaConfirmacao, guardarRascunhoDaFolha, type PelaEquipa } from "@/lib/folha-no-servidor";
 import { conferirMarcaDaFolha, FOLHA_MUDOU, FOLHA_SEM_MARCA, marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 import { resumoDaFolha } from "@/lib/folha-da-mudanca";
 
@@ -64,10 +64,8 @@ export function resumoDaLinha(l: LinhaComHoras): ResumoDasHoras | null {
 
 /* ── Marcar (quem faz o trabalho) ───────────────────────────────────────── */
 
-export async function marcarHorasPeloProfissional(a: {
-  providerId: number;
-  nome: string | null;
-  corpo: {
+/** O que chega para gravar as horas (ou a folha da mudança). */
+export type CorpoDasHoras = {
     negociacaoId?: unknown;
     dia?: unknown;
     inicio?: unknown;
@@ -80,7 +78,12 @@ export async function marcarHorasPeloProfissional(a: {
     motivoDosKm?: unknown;
     /** `true`: guarda só o rascunho da folha, sem enviar nem avisar o cliente (11-11-2026). */
     rascunho?: unknown;
-  };
+};
+
+export async function marcarHorasPeloProfissional(a: {
+  providerId: number;
+  nome: string | null;
+  corpo: CorpoDasHoras;
   agora?: Date;
 }): Promise<Resposta> {
   const agora = a.agora ?? new Date();
@@ -134,12 +137,39 @@ export async function marcarHorasPeloProfissional(a: {
     return falha(409, "Este trabalho já não está à espera das horas.");
   }
 
+  return gravarAsHoras({ linha, providerId: a.providerId, nome: a.nome, corpo: a.corpo, agora, trabalhoClyon });
+}
+
+/** A linha de uma negociação, como as duas portas a lêem (a do profissional e a do backoffice). */
+type LinhaParaGravar = LinhaComHoras & {
+  id: number | string;
+  pedidoId: number;
+  chegouEm?: Date | string | null;
+  materiaisJson?: string | null;
+};
+
+/**
+ * GRAVA AS HORAS (OU A FOLHA) — a mesma conta e a mesma forma para quem fez o
+ * trabalho (na app ou no painel) e para a equipa que a preenche a pedido dele
+ * (d26, 15-11-2026). Quem chama já conferiu que pode.
+ */
+async function gravarAsHoras(a: {
+  linha: LinhaParaGravar;
+  providerId: number;
+  nome: string | null;
+  corpo: CorpoDasHoras;
+  agora: Date;
+  trabalhoClyon: boolean;
+  pelaEquipa?: PelaEquipa;
+}): Promise<Resposta> {
+  const { linha, agora, trabalhoClyon } = a;
   /*
    * A FOLHA DA MUDANÇA (11-11-2026): numa mudança com a lista de parceiros
    * (tarifa congelada), as horas vêm com as pausas, a equipa, os km e o
    * material, e a conta é a da tarifa dele — folha-no-servidor.ts. Todas as
    * outras seguem exactamente como antes.
    */
+  const negociacaoId = Number(linha.id);
   const daFolha = await folhaDaNegociacao(negociacaoId);
   const ctx = daFolha ? contextoDaLinha(daFolha, linha, agora) : null;
   if (daFolha && ctx) {
@@ -147,6 +177,7 @@ export async function marcarHorasPeloProfissional(a: {
       providerId: a.providerId,
       nome: a.nome,
       negociacaoId,
+      pelaEquipa: a.pelaEquipa,
       pedidoId: linha.pedidoId,
       folhaNaBase: daFolha,
       ctx,
@@ -199,11 +230,14 @@ export async function marcarHorasPeloProfissional(a: {
   };
   const resumo = resumoDaLinha(marcada);
   const quem = (a.nome ?? "").trim() || `Prestador #${a.providerId}`;
-  const linhaDaEquipa = `${quem} ${primeiraVez ? "marcou" : "corrigiu"} as horas (negociação #${negociacaoId}): ${resumo?.textoParaAEquipa ?? ""}`;
+  const eq = a.pelaEquipa;
+  const linhaDaEquipa = eq
+    ? `Folha do trabalho de ${quem} ${eq.textoDaEquipa} (negociação #${negociacaoId}): ${resumo?.textoParaAEquipa ?? ""}`
+    : `${quem} ${primeiraVez ? "marcou" : "corrigiu"} as horas (negociação #${negociacaoId}): ${resumo?.textoParaAEquipa ?? ""}`;
 
   await appendOrderHistory(linha.pedidoId, {
     type: "created",
-    by: { id: a.providerId, nome: quem, role: "profissional" },
+    by: eq ? null : { id: a.providerId, nome: quem, role: "profissional" },
     message: linhaDaEquipa,
   }).catch(() => {});
   await registarSemFalhar({
@@ -211,8 +245,8 @@ export async function marcarHorasPeloProfissional(a: {
     pedidoId: linha.pedidoId,
     negociacaoId,
     providerId: a.providerId,
-    autorTipo: "profissional",
-    autorNome: quem,
+    autorTipo: eq ? "clyon" : "profissional",
+    autorNome: eq ? eq.nome : quem,
     valorProfissional: valorDasHoras,
     resumo: linhaDaEquipa,
     detalhe: {
@@ -237,6 +271,38 @@ export async function marcarHorasPeloProfissional(a: {
     status: 200,
     corpo: { ok: true, primeiraVez, horas: resumo, mensagem: resumo?.textoParaQuemFez ?? null },
   };
+}
+
+/**
+ * A EQUIPA PREENCHE A FOLHA A PEDIDO DE QUEM FEZ O TRABALHO — d26, 15-11-2026.
+ * Para quem não usa a app: num trabalho à hora já atribuído e ainda por dar
+ * por feito, com as horas por confirmar. Não espera pelo «Cheguei» (a equipa
+ * preenche depois do dia). A conta é a de `gravarAsHoras` — a mesma da app —
+ * e a validação do cliente segue como sempre.
+ */
+export async function preencherPelaEquipa(a: {
+  linha: LinhaParaGravar & { estado?: string | null; confirmadoEm?: Date | string | null; providerId?: unknown; profissionalNome?: string | null };
+  porHora: boolean;
+  trabalhoClyon: boolean;
+  pelaEquipa: PelaEquipa;
+  corpo: CorpoDasHoras;
+  agora?: Date;
+}): Promise<Resposta> {
+  if (!a.porHora) return falha(409, "Este trabalho não é por hora: não há folha a preencher.");
+  if (a.linha.estado !== "acordada") return falha(409, "Este trabalho ainda não tem quem o faça.");
+  if (a.linha.confirmadoEm != null) return falha(409, "Este trabalho já está dado por feito.");
+  if (horasConfirmadas(a.linha)) return falha(409, "As horas já estão confirmadas.");
+  const providerId = Number(a.linha.providerId);
+  if (!Number.isInteger(providerId) || providerId <= 0) return falha(409, "Este trabalho não tem quem o faça.");
+  return gravarAsHoras({
+    linha: a.linha,
+    providerId,
+    nome: a.linha.profissionalNome ?? null,
+    corpo: a.corpo,
+    agora: a.agora ?? new Date(),
+    trabalhoClyon: a.trabalhoClyon,
+    pelaEquipa: a.pelaEquipa,
+  });
 }
 
 /* ── Confirmar (o cliente, ou a CLYON) ──────────────────────────────────── */

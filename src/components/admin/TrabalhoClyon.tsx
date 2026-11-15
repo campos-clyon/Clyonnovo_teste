@@ -17,6 +17,8 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import HorasNaMesa from "@/components/admin/HorasNaMesa";
+import { FALTA_A_FOLHA } from "@/lib/horas-do-trabalho";
 import type { EstadoFechado } from "@/lib/pedidos-fechados";
 import RegistarPedido from "@/components/admin/RegistarPedido";
 import { FormularioDaOferta } from "@/components/admin/FormularioDaOferta";
@@ -944,6 +946,23 @@ function CartaoDoTrabalho({
   const a = r.atribuida;
   const dia = quando(a?.dataCombinada ?? t.dataAgendada);
   /*
+   * A FOLHA DE UM TRABALHO À HORA — d26, 15-11-2026. O quadro «Folha do
+   * trabalho» da Mesa aparece aqui também, com ou sem horas; e o «Já está
+   * feito» de um trabalho à hora espera pela folha preenchida.
+   */
+  const porHora = lerBase(t.base) === "hora";
+  const [folhaMarcada, setFolhaMarcada] = useState<boolean | null>(null);
+  const [abrirFolha, setAbrirFolha] = useState(0);
+  const [semFolha, setSemFolha] = useState(false);
+  const confirmarComFolha = (n: NegociacaoDoTrabalho, semProva: boolean) => {
+    if (porHora && folhaMarcada !== true) {
+      setSemFolha(true);
+      return;
+    }
+    setSemFolha(false);
+    onConfirmar(n, semProva);
+  };
+  /*
    * FECHADO ATÉ SE CLICAR — 17-10-2026, *«Vamos deixar por padrão os pedidos
    * fechados e só abrir com as informações detalhadas quando forem
    * clicados.»* Fechado, vê-se a linha de cima: o número, o serviço, o
@@ -1541,7 +1560,7 @@ function CartaoDoTrabalho({
             <div className="flex flex-wrap gap-2">
               {a.execucaoEnviadaEm ? (
                 <button
-                  onClick={() => onConfirmar(a, false)}
+                  onClick={() => confirmarComFolha(a, false)}
                   disabled={ocupado != null}
                   className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-xs font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
                 >
@@ -1554,7 +1573,7 @@ function CartaoDoTrabalho({
                 </button>
               ) : (
                 <button
-                  onClick={() => onConfirmar(a, true)}
+                  onClick={() => confirmarComFolha(a, true)}
                   disabled={ocupado != null}
                   className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
                 >
@@ -1564,6 +1583,33 @@ function CartaoDoTrabalho({
             </div>
           )}
         </div>
+      )}
+
+      {/* Num trabalho à hora sem folha (d26): a mensagem e o botão para a preencher. */}
+      {a && semFolha && folhaMarcada !== true && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <span>{FALTA_A_FOLHA}</span>
+          <button
+            type="button"
+            onClick={() => setAbrirFolha((x) => x + 1)}
+            className="rounded-lg border border-cyan-700 px-3 py-1.5 font-semibold text-cyan-300 hover:bg-cyan-900/40"
+          >
+            Preencher a folha
+          </button>
+        </div>
+      )}
+      {/* A folha do trabalho à hora (d26): a mesma da Mesa, com o «Preencher a folha» para quem não usa a app. */}
+      {a && porHora && (
+        <HorasNaMesa
+          pedidoId={t.pedidoId}
+          negociacaoId={a.negociacaoId}
+          onMudou={onMudou}
+          abrirOFormulario={abrirFolha}
+          onLida={(m) => {
+            setFolhaMarcada(m);
+            if (m) setSemFolha(false);
+          }}
+        />
       )}
 
       {/* A prova do trabalho feito: a nota e as fotografias do profissional (19-10-2026, como na Mesa). */}

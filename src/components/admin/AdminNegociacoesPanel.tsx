@@ -49,7 +49,7 @@ import HorasNaMesa from "@/components/admin/HorasNaMesa";
 import ConfirmarChegadaNaMesa from "@/components/admin/ConfirmarChegadaNaMesa";
 import { clientePodeConfirmarChegada, viagemComConfirmacao } from "@/lib/viagem-ate-ao-cliente";
 import { sufixoDaBase, totalEstimadoNoBackoffice } from "@/lib/valor-por-base";
-import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO } from "@/lib/horas-do-trabalho";
+import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO, FALTA_A_FOLHA, faltaAFolha } from "@/lib/horas-do-trabalho";
 import { FOLHA_POR_CONFIRMAR } from "@/lib/folha-da-mudanca";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
 import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
@@ -3009,8 +3009,8 @@ export default function AdminNegociacoesPanel({
               outra; depois dar por feito. Só antes de confirmado: depois disso
               o dinheiro já tem dono.
             */}
-            {/* As horas de um trabalho por hora (31-10-2026) — ver HorasNaMesa. */}
-            {lerBase(p.baseDoPreco) === "hora" && horasMarcadas(acordada) && (
+            {/* A folha de um trabalho por hora (31-10-2026) — ver HorasNaMesa. Desde 15-11 (d26) aparece sempre, com ou sem horas: a equipa preenche-a a pedido do profissional. */}
+            {lerBase(p.baseDoPreco) === "hora" && (horasMarcadas(acordada) || !acordada.confirmadoEm) && (
               <HorasNaMesa pedidoId={p.id} negociacaoId={acordada.id} onMudou={() => carregar(true)} />
             )}
             {/* A chegada por confirmar (d3, 31-10-2026) — o cliente disse-o ao telefone. Some com CHEGADA_CONFIRMADA_OBRIGATORIA desligado (d2, 03-11-2026). */}
@@ -3031,7 +3031,11 @@ export default function AdminNegociacoesPanel({
                 onMudou={() => carregar(true)}
               />
             )}
-            {!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && horasNaoTravamOFim(acordada) && (
+            {/* Num trabalho à hora, sem a folha não se dá por feito (d26, 15-11-2026). */}
+            {!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && faltaAFolha(lerBase(p.baseDoPreco) === "hora", acordada) && (
+              <p className="mt-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{FALTA_A_FOLHA}</p>
+            )}
+            {!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && horasNaoTravamOFim(acordada) && !faltaAFolha(lerBase(p.baseDoPreco) === "hora", acordada) && (
               <ConfirmarPelaClyon
                 negociacaoId={acordada.id}
                 pedidoId={p.id}
@@ -3158,7 +3162,10 @@ export default function AdminNegociacoesPanel({
               );
             })()}
 
-            {!horasNaoTravamOFim(feito) ? (
+            {faltaAFolha(lerBase(p.baseDoPreco) === "hora", feito) ? (
+              // Num trabalho à hora sem folha (d26, 15-11-2026): preenche-se primeiro, no quadro «Folha do trabalho».
+              <p className="mt-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{FALTA_A_FOLHA}</p>
+            ) : !horasNaoTravamOFim(feito) ? (
               // Num trabalho por hora as horas confirmam-se primeiro (31-10-2026); o servidor recusa o resto.
               <p className="mt-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                 {CONFIRME_AS_HORAS_PRIMEIRO} Use «Confirmar as horas» (ou «Corrigir e confirmar») na secção das horas.

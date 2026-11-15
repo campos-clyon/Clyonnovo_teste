@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { assumirPedidoSeLivre } from "@/lib/assistentes";
-import { gravarHorasDoTrabalho, negociacoesDoPedido } from "@/lib/db";
-import { confirmarAsHoras, resumoDaLinha } from "@/lib/horas-no-servidor";
+import { folhaDaNegociacao, getSimulatorOrderById, gravarHorasDoTrabalho, negociacoesDoPedido } from "@/lib/db";
+import { confirmarAsHoras, preencherPelaEquipa, resumoDaLinha } from "@/lib/horas-no-servidor";
+import { lerBase } from "@/lib/base-do-preco";
+
 import {
   aDevolverEmPalavras,
+  diaDoInicio,
+  fimPelasHoras,
   estadoDasHorasParaQuemFez,
   horasConfirmadas,
   horasContestadas,
@@ -20,7 +24,16 @@ import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { acertoDasHoras } from "@/lib/pagamento-para-o-cliente";
 import { diaEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { corrigirAFolhaPelaClyon } from "@/lib/folha-no-servidor";
-import { estadoDaFolha, folhaDeJson, folhaNoEcra, historicoParaVer, lerHistoricoDaFolha } from "@/lib/folha-da-mudanca";
+import {
+  camposDaFolha,
+  contextoDaFolha,
+  estadoDaFolha,
+  folhaDeJson,
+  folhaNoEcra,
+  historicoParaVer,
+  lerHistoricoDaFolha,
+  regraDaFolha,
+} from "@/lib/folha-da-mudanca";
 import { tarifaCongeladaDeJson } from "@/lib/conta-da-mudanca";
 import { marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 
@@ -41,8 +54,27 @@ export const runtime = "nodejs";
  *     corrigiu entretanto, responde 409 «A folha mudou — veja a nova e confirme.»;
  *   · «corrigir» — a CLYON escreve outras horas (`dia`, `inicio`, `fim`,
  *     `materiais`) e confirma-as no mesmo passo: é assim que se resolve um
- *     «Não concordo» falado com os dois.
+ *     «Não concordo» falado com os dois;
+ *   · «preencher» (d26, 15-11-2026) — quem fez o trabalho não usa a app e pede
+ *     à equipa que preencha a folha: `dia`, `inicio` e `fim` (ou `horas`,
+ *     o total), e numa folha da mudança `pessoas`, `km`, `motivoDosKm`,
+ *     `pausas` e `materiais`. A MESMA conta da app (`preencherPelaEquipa`),
+ *     sem confirmar: o cliente valida como sempre. Fica no histórico «preenchida
+ *     pela equipa (<quem>), a pedido do profissional» (`textosDaFolhaPelaEquipa`);
+ *   · «validar_telefone» (d26) — o cliente não usa a app e validou a folha por
+ *     telefone: confirma-a em nome dele, com quem o registou no histórico.
  */
+
+/** As frases do histórico da folha preenchida pela equipa (d26): a que a equipa lê e a que o cliente lê. */
+function textosDaFolhaPelaEquipa(nome: string): { textoDaEquipa: string; textoAoCliente: string } {
+  return {
+    textoDaEquipa: `preenchida pela equipa (${nome}), a pedido do profissional`,
+    textoAoCliente: `preenchida pela equipa da CLYON (${nome}), a pedido do parceiro`,
+  };
+}
+
+/** Onde fica escrita a validação por telefone (d26). */
+const validadaPorTelefone = (nome: string) => `validada por telefone, registada no backoffice por ${nome}`;
 
 async function oTrabalho(pedidoId: number, negociacaoId: number) {
   if (!Number.isInteger(pedidoId) || pedidoId <= 0 || !Number.isInteger(negociacaoId) || negociacaoId <= 0) return null;
@@ -84,6 +116,50 @@ export async function GET(req: NextRequest) {
           marca: marcaDaFolha(l.folhaJson ?? null),
         };
       })(),
+      // Para preencher a folha pela equipa (d26): o que se mostra no formulário e a conta da app.
+      preencher: await (async () => {
+        const l = linha as unknown as { estado?: string; confirmadoEm?: unknown; chegouEm?: Date | string | null };
+        const pode = l.estado === "acordada" && l.confirmadoEm == null && !horasConfirmadas(linha as never);
+        const agora = new Date();
+        const daFolha = await folhaDaNegociacao(Number(linha.id)).catch(() => null);
+        const contexto = daFolha
+          ? {
+              tarifaCongeladaJson: daFolha.tarifaCongeladaJson,
+              pessoasEscolhidas: daFolha.pessoasEscolhidas,
+              kmDoPercurso: daFolha.kmPercurso,
+              valorPorHoraAcordado: valorPorHoraDe(linha as never),
+              diaPorOmissao: diaDoInicio(l.chegouEm ?? null, agora),
+            }
+          : null;
+        const ctx = contexto ? contextoDaFolha(contexto) : null;
+        const inicioGravado = instanteDaBase((linha as { horasInicioEm?: Date | string | null }).horasInicioEm ?? null);
+        return {
+          pode,
+          valorPorHora: valorPorHoraDe(linha as never),
+          dia: inicioGravado ? diaEmLisboa(inicioGravado) : diaDoInicio(l.chegouEm ?? null, agora),
+          inicio: resumo?.inicio ?? "",
+          fim: resumo?.fim ?? "",
+          folha:
+            contexto && ctx
+              ? {
+                  contexto,
+                  campos: camposDaFolha(folhaDeJson((linha as { folhaJson?: string | null }).folhaJson ?? null), ctx),
+                  regra: regraDaFolha(ctx.tarifa.minimoHoras),
+                }
+              : null,
+          materiais: m && !m.incluidos ? m.itens.map((i) => ({ id: i.id, nome: i.nome, preco: i.preco, unidade: i.unidade })) : [],
+          quantidades: lerQuantidadesUsadas(
+            (() => {
+              try {
+                return JSON.parse(String((linha as { materiaisUsadosJson?: string | null }).materiaisUsadosJson ?? "{}"));
+              } catch {
+                return {};
+              }
+            })(),
+            m,
+          ),
+        };
+      })(),
       acerto: acerto
         ? {
             ...acerto,
@@ -110,6 +186,12 @@ export async function POST(req: NextRequest) {
     materiais?: unknown;
     /** A marca da folha que a equipa tem no ecrã (`folha.marca` do GET). */
     marcaDaFolha?: unknown;
+    /** «preencher» (d26): o total de horas, em vez do fim. */
+    horas?: unknown;
+    pausas?: unknown;
+    pessoas?: unknown;
+    km?: unknown;
+    motivoDosKm?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -120,11 +202,73 @@ export async function POST(req: NextRequest) {
   const negociacaoId = Number(corpo.negociacaoId);
   const linha = await oTrabalho(pedidoId, negociacaoId);
   if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
-  if (corpo.accao !== "confirmar" && corpo.accao !== "corrigir") {
+  if (corpo.accao !== "confirmar" && corpo.accao !== "corrigir" && corpo.accao !== "preencher" && corpo.accao !== "validar_telefone") {
     return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
   }
   await assumirPedidoSeLivre(pedidoId, colab);
   const porQuem = colab?.nome ?? "a CLYON";
+
+  /*
+   * PREENCHER PELA EQUIPA — d26, 15-11-2026. Só administradores (a porta já o
+   * exige). Grava a folha como quem fez o trabalho a gravaria, e não confirma.
+   */
+  if (corpo.accao === "preencher") {
+    try {
+      const pedido = (await getSimulatorOrderById(pedidoId)) as { baseDoPreco?: unknown; valorFixoClyon?: unknown } | undefined;
+      const porHora = lerBase(pedido?.baseDoPreco) === "hora";
+      const trabalhoClyon = (linha as { ofertaClyon?: unknown }).ofertaClyon != null || pedido?.valorFixoClyon != null;
+      const temFim = typeof corpo.fim === "string" && corpo.fim.trim() !== "";
+      const temHoras = corpo.horas != null && String(corpo.horas).trim() !== "";
+      const fim = temFim ? corpo.fim : temHoras ? fimPelasHoras(corpo.inicio, corpo.horas) : undefined;
+      if (!temFim && temHoras && fim == null) {
+        return NextResponse.json({ error: "Indique o início (HH:MM) e o total de horas (por exemplo 4,5)." }, { status: 400 });
+      }
+      const r = await preencherPelaEquipa({
+        linha: linha as never,
+        porHora,
+        trabalhoClyon,
+        pelaEquipa: { nome: porQuem, ...textosDaFolhaPelaEquipa(porQuem) },
+        corpo: {
+          dia: corpo.dia,
+          inicio: corpo.inicio,
+          fim: fim ?? undefined,
+          pausas: corpo.pausas,
+          pessoas: corpo.pessoas,
+          km: corpo.km,
+          motivoDosKm: corpo.motivoDosKm,
+          materiais: corpo.materiais,
+        },
+      });
+      return NextResponse.json(r.corpo, { status: r.status });
+    } catch (e) {
+      console.error("[admin/negociacoes/horas POST preencher]", e);
+      return NextResponse.json({ error: "Não foi possível gravar a folha." }, { status: 500 });
+    }
+  }
+
+  /*
+   * VALIDADA PELO CLIENTE POR TELEFONE — d26. O cliente não usa a app: a
+   * equipa confirma em nome dele a folha que tem no ecrã (a marca, como no
+   * «Confirmar»), e fica no histórico quem o registou.
+   */
+  if (corpo.accao === "validar_telefone") {
+    try {
+      const r = await confirmarAsHoras({
+        negociacaoId,
+        pedidoId,
+        providerId: Number(linha.providerId),
+        por: "cliente",
+        onde: validadaPorTelefone(porQuem),
+        autorNome: porQuem,
+        linha: linha as never,
+        marcaVista: corpo.marcaDaFolha,
+      });
+      return NextResponse.json(r.corpo, { status: r.status });
+    } catch (e) {
+      console.error("[admin/negociacoes/horas POST validar_telefone]", e);
+      return NextResponse.json({ error: "Não foi possível gravar a validação." }, { status: 500 });
+    }
+  }
 
   try {
     let comHoras = linha as Record<string, unknown>;

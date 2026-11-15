@@ -90,7 +90,9 @@ describe("na Mesa, todos os valores levam a unidade", () => {
     expect(horas).toContain("aDevolverTexto");
     expect(horas).toContain('timeZone: "Europe/Lisbon"');
     expect(mesa).toContain("<HorasNaMesa");
-    expect(mesa).toContain("{!horasNaoTravamOFim(feito) ? (");
+    expect(mesa).toContain(") : !horasNaoTravamOFim(feito) ? (");
+    // Sem a folha preenchida, nem isso (d26, 15-11-2026).
+    expect(mesa).toContain(`{faltaAFolha(lerBase(p.baseDoPreco) === "hora", feito) ? (`);
     const clyon = ler("src/app/api/admin/trabalhos-clyon/confirmar/route.ts");
     expect(clyon).toContain("if (!horasNaoTravamOFim(linha))");
   });

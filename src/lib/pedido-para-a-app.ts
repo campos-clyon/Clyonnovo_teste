@@ -226,7 +226,7 @@ export function horasParaOCliente(n: NegociacaoDoCliente, emCima: number | null,
     ? {
         ...folhaNoEcra(enviada, "cliente", tarifaCongeladaDeJson(h.tarifaCongeladaJson ?? null)?.minimoHoras ?? enviada.conta.horas.cobradas),
         estado: estadoDaFolhaAgora,
-        historico: historicoParaVer(lerHistoricoDaFolha(h.folhaHistoricoJson ?? null)),
+        historico: historicoParaVer(lerHistoricoDaFolha(h.folhaHistoricoJson ?? null), "cliente"),
         // A marca desta folha: o «Confirmo a folha» devolve-a em `marcaDaFolha` (o-que-o-cliente-viu.ts).
         marca: marcaDaFolha(h.folhaJson ?? null),
       }
