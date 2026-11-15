@@ -789,9 +789,9 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Podem limpar o apartamento depois do esvaziamento?",
-        // 30-09-2026: prometia «limpeza básica ou profunda» como serviço. A
-        // limpeza não é uma categoria da plataforma (service-categories.ts).
-        a: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o apartamento sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o parceiro diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
+        // 15-11-2026: a limpeza e a lavagem depois de um esvaziamento fazem-se,
+        // se a pessoa as pedir (dono, 14-11) — o mesmo da página do anúncio (d42).
+        a: "Sim, se a pedir. Escreva no pedido que quer a limpeza no fim — e a lavagem do pavimento, se for o caso. Fica escrita na proposta, com o preço, e quem a faz é o parceiro escolhido.",
       },
       {
         q: "Quanto tempo demora a esvaziar um apartamento em Monte Abraão?",

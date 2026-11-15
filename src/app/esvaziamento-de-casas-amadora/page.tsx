@@ -53,9 +53,9 @@ const faqs = [
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
-    // 30-09-2026: prometia «limpeza básica ou completa». A limpeza não é um
-    // serviço da plataforma (service-categories.ts).
-    answer: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o imóvel sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o parceiro diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
+    // 15-11-2026: a limpeza e a lavagem no fim fazem-se, se a pessoa as pedir
+    // (dono, 14-11) — o mesmo da página do anúncio (d42). Quem as faz é o parceiro.
+    answer: "Sim, se a pedir. Escreva no pedido que quer a limpeza no fim — e a lavagem do pavimento, se for o caso. Fica escrita na proposta, com o preço, e quem a faz é o parceiro escolhido.",
   },
   {
     question: "Fazem esvaziamento de garagens e arrecadações na Amadora?",

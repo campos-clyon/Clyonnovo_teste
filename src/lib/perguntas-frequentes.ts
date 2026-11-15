@@ -88,7 +88,7 @@ export const PERGUNTAS_FREQUENTES = [
       },
       {
         q: "O que inclui o serviço de esvaziamento de casa?",
-        a: "O que pedir, e fica escrito na proposta. Normalmente: a retirada dos móveis e objetos indicados, a desmontagem do que for preciso e o transporte para destino adequado. Deixar o espaço varrido pode combinar-se com o parceiro; limpezas a fundo não são um serviço da CLYON.",
+        a: "O que pedir, e fica escrito na proposta. Normalmente: a retirada dos móveis e objetos indicados, a desmontagem do que for preciso e o transporte para destino adequado. A limpeza e a lavagem do pavimento no fim também se fazem, se as pedir — ficam escritas na proposta, com o preço.",
       },
       {
         q: "Fazem esvaziamento de casas de herança ou imóveis de senhorios?",
@@ -137,7 +137,7 @@ export const PERGUNTAS_FREQUENTES = [
       },
       {
         q: "O apartamento fica limpo depois do esvaziamento?",
-        a: "Fica sem os volumes que pediu para retirar. Deixar o espaço varrido pode combinar-se com o parceiro; limpezas a fundo — pavimentos, paredes, casas de banho, cozinha — não são um serviço da CLYON.",
+        a: "Fica sem os volumes que pediu para retirar. Se quiser também a limpeza no fim — e a lavagem do pavimento —, escreva-o no pedido: o parceiro escolhido inclui-a na proposta, com o preço.",
       },
     ],
   },

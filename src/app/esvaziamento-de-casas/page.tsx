@@ -105,7 +105,7 @@ const faqs = [
   },
   {
     question: "Também fazem limpeza após o esvaziamento?",
-    answer: "A limpeza não é um serviço da CLYON: o esvaziamento deixa o imóvel sem recheio. Se quiser que fique também varrido, escreva-o no pedido — o parceiro diz na proposta se o faz. Para limpeza a fundo, conte com uma empresa de limpezas.",
+    answer: "Sim, se a pedir. Escreva no pedido que quer a limpeza no fim — e a lavagem do pavimento, se for o caso. Fica escrita na proposta, com o preço, e quem a faz é o parceiro escolhido.",
   },
   {
     question: "Quanto tempo demora um esvaziamento?",
