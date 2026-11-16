@@ -46,5 +46,12 @@
     "test": "cd .. && corepack pnpm exec vitest run src/lib/app-cliente",
     "fingerprint": "expo-updates fingerprint:generate --platform android"
   },
+  "overrides": {
+    "node-forge": "^1.4.3",
+    "zod": "^4.6.6",
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.2",
+    "uuid": "^11.1.1"
+  },
   "private": true
 }
