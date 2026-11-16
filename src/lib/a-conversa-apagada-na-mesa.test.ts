@@ -79,18 +79,18 @@ describe("1. quem a CLYON já está a atender não ouve a apresentação", () =>
 });
 
 describe("2. o nome que a equipa já disse não se pergunta", () => {
-  it("«Boa tarde, Anselmo!», «senhor Anselmo», «Olá D. Rosa»", () => {
+  it("«Boa tarde, Anselmo!», «senhor Anselmo», «Olá D. Odete»", () => {
     expect(nomeDitoPelaEquipa([OLA])).toBe("Anselmo");
     expect(nomeDitoPelaEquipa([ENDERECO])).toBe("Anselmo");
-    expect(nomeDitoPelaEquipa([{ direccao: "out", texto: "Olá D. Rosa, tudo bem?" }])).toBe("Rosa");
+    expect(nomeDitoPelaEquipa([{ direccao: "out", texto: "Olá D. Odete, tudo bem?" }])).toBe("Odete");
     expect(nomeDitoPelaEquipa([{ direccao: "out", texto: "Boa tarde! Como posso ajudar?" }])).toBeNull();
     expect(nomeDitoPelaEquipa([{ direccao: "in", texto: "Boa tarde, Anselmo aqui" }])).toBeNull();
   });
 
   it("sem nome no fio, vale o de um pedido anterior do número; e o que ele já tem não muda", () => {
-    expect(comONomeJaSabido(recolhaNova(), [], "Anselmo Rocha").dados.contactName).toBe("Anselmo Rocha");
-    const comNome: EstadoDaRecolha = { passo: "servico", dados: { contactName: "Outro Nome" } };
-    expect(comONomeJaSabido(comNome, [OLA], "Anselmo Rocha").dados.contactName).toBe("Outro Nome");
+    expect(comONomeJaSabido(recolhaNova(), [], "Anselmo Ribeiro").dados.contactName).toBe("Anselmo Ribeiro");
+    const comNome: EstadoDaRecolha = { passo: "servico", dados: { contactName: "Leonor Prates" } };
+    expect(comONomeJaSabido(comNome, [OLA], "Anselmo Ribeiro").dados.contactName).toBe("Leonor Prates");
     // A pergunta do nome em cima passa à seguinte.
     const noNome: EstadoDaRecolha = { passo: "nome", dados: { serviceType: "recolha_entulho" } };
     expect(comONomeJaSabido(noNome, [OLA], null).passo).not.toBe("nome");

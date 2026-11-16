@@ -35,7 +35,7 @@ const PEDIDO: PedidoDaBase = {
   id: 9123,
   status: "sem_assistente",
   serviceType: "recolha_entulho",
-  contactName: "Rosário Antunes",
+  contactName: "Rosalina Sobral",
   address: "Rua das Camélias 7",
   city: "Pontinha",
   postalCode: "1675-001",
@@ -115,7 +115,7 @@ describe("2. o que NÃO é uma troca", () => {
 describe("3. a conversa, como deve ser", () => {
   it("a rajada: confirma num passo, com as duas terras — e não passa a ninguém", () => {
     const r = responderNoPedidoAberto(estadoDoPedido(), MENSAGENS.join("\n"), AGORA, contexto());
-    expect(r.resposta).toBe("Percebi, Rosário: em vez da Pontinha, agora é em Benfica. Faço um pedido novo para Benfica?");
+    expect(r.resposta).toBe("Percebi, Rosalina: em vez da Pontinha, agora é em Benfica. Faço um pedido novo para Benfica?");
     expect(r.estado.dados.trocaDeSitio).toEqual({ de: 9123, localidade: "Benfica" });
     expect(r.pedirPessoa).toBeFalsy();
     expect(r.novoPedido).toBeFalsy();
@@ -146,12 +146,12 @@ describe("3. a conversa, como deve ser", () => {
 
   it("as três mensagens em três vezes: pergunta para onde, e depois confirma com a terra", () => {
     const um = responderNoPedidoAberto(estadoDoPedido(), MENSAGENS[0], AGORA, contexto());
-    expect(um.resposta).toBe("Percebi, Rosário: já não é na Pontinha. Faço um pedido novo para a outra morada?");
+    expect(um.resposta).toBe("Percebi, Rosalina: já não é na Pontinha. Faço um pedido novo para a outra morada?");
     const dois = responderNoPedidoAberto(estadoDoPedido(um.estado.dados), MENSAGENS[1], AGORA, contexto());
-    expect(dois.resposta).toBe("Com certeza, Rosário. Diga-me só para que localidade é agora, e faço o pedido novo.");
+    expect(dois.resposta).toBe("Com certeza, Rosalina. Diga-me só para que localidade é agora, e faço o pedido novo.");
     expect(dois.novoPedido).toBeFalsy();
     const tres = responderNoPedidoAberto(estadoDoPedido(dois.estado.dados), MENSAGENS[2], AGORA, contexto());
-    expect(tres.resposta).toBe("Percebi, Rosário: em vez da Pontinha, agora é em Benfica. Faço um pedido novo para Benfica?");
+    expect(tres.resposta).toBe("Percebi, Rosalina: em vez da Pontinha, agora é em Benfica. Faço um pedido novo para Benfica?");
     const sim = responderNoPedidoAberto(estadoDoPedido(tres.estado.dados), "sim", AGORA, contexto());
     expect(sim.trocaDeSitio).toEqual({ de: 9123, localidade: "Benfica" });
   });
@@ -182,13 +182,13 @@ describe("3. a conversa, como deve ser", () => {
 describe("4. o pedido novo, e o antigo", () => {
   it("o novo leva o nome e o serviço do antigo, e a terra nova — e pergunta só o que falta", () => {
     const antigos = estadoDoPedido().dados;
-    const { estado, resposta } = recolhaDoPedidoNovo(antigos, { de: 9123, localidade: "Benfica" }, SITIO, "Rosário");
-    expect(estado.dados).toMatchObject({ serviceType: "recolha_entulho", contactName: "Rosário Antunes", city: "Benfica", trocouDoPedido: 9123 });
+    const { estado, resposta } = recolhaDoPedidoNovo(antigos, { de: 9123, localidade: "Benfica" }, SITIO, "Rosalina");
+    expect(estado.dados).toMatchObject({ serviceType: "recolha_entulho", contactName: "Rosalina Sobral", city: "Benfica", trocouDoPedido: 9123 });
     expect(estado.dados.address).toBeUndefined();
     expect(estado.dados.pedidoAberto).toBeUndefined();
     expect(estado.passo).not.toBe("servico");
     expect(estado.passo).not.toBe("nome");
-    expect(resposta.startsWith("Combinado, Rosário! Faço já um pedido novo para Benfica. O pedido #9123 fica de lado — a equipa da CLYON trata de o fechar.")).toBe(true);
+    expect(resposta.startsWith("Combinado, Rosalina! Faço já um pedido novo para Benfica. O pedido #9123 fica de lado — a equipa da CLYON trata de o fechar.")).toBe(true);
     expect(resposta).not.toMatch(/Com quem tenho o gosto|que serviço/);
   });
 
