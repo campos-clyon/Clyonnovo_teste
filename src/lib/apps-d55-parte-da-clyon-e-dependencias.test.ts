@@ -80,7 +80,7 @@ describe("d55 — o esvaziamento de empresa com nome na app Pro", () => {
 describe("d57 — as dependências das apps sobem por overrides", () => {
   // A app de cliente entra quando o dono disser sim ao update: um package.json novo
   // em app-cliente/ na main pede nota nova, e com ela a Action publicaria sozinha.
-  for (const app of ["app-pro"]) {
+  for (const app of ["app-pro", "app-cliente"]) {
     it(`${app}: node-forge, zod, minimatch, glob e uuid no package.json`, () => {
       const pkg = JSON.parse(readFileSync(join(process.cwd(), app, "package.json"), "utf8"));
       expect(pkg.overrides).toMatchObject({
