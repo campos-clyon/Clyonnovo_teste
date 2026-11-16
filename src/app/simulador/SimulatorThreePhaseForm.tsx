@@ -940,15 +940,17 @@ export default function SimulatorThreePhaseForm() {
                 Abrir o meu pedido
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </a>
-              {!emailParaMaisTarde && (
-                <a
-                  href={`${WHATSAPP_DA_CLYON}?text=${encodeURIComponent(`Pedido #${successOrderId}\n${linkDoPedido}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center rounded-xl bg-[#25D366] py-3 text-sm font-semibold text-whatsapp-tinta"
-                >
-                  Guardar o link no WhatsApp
-                </a>
+              {/*
+                O LINK GUARDA-SE NO TELEMÓVEL DELE, NÃO NUMA CONVERSA — d53, revisão
+                da Segurança (16-11-2026). Um «wa.me?text=» com o token deixava-o
+                em claro na base das conversas, à equipa, à Vitória, ao tradutor e
+                à Meta. Partilhar (o menu do telemóvel) ou copiar, só do lado dele.
+              */}
+              {!emailParaMaisTarde && <GuardarOLink url={linkDoPedido} />}
+              {emailParaMaisTarde && !session?.user && !contaGuardada && (
+                <p className="text-center text-[13px] leading-relaxed text-tinta-fraca">
+                  Quando chegar a 1.ª proposta, enviamos-lhe um link novo por email.
+                </p>
               )}
             </div>
           )}
@@ -2627,6 +2629,46 @@ function Phase3Contact({
           indicou.
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * «GUARDAR O LINK» — d53 (16-11-2026). O menu de partilhar do telemóvel
+ * (`navigator.share`) e, sem ele, copiar para a área de transferência. Nada sai
+ * para um servidor: o link (com o token) fica só com quem o pediu.
+ */
+function GuardarOLink({ url }: { url: string }) {
+  const [copiado, setCopiado] = useState<"sim" | "falhou" | null>(null);
+  const podePartilhar = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  async function guardar() {
+    if (podePartilhar) {
+      try {
+        await navigator.share({ title: "O meu pedido na CLYON", url });
+        return;
+      } catch (e) {
+        // Fechou o menu: não é erro. Outra falha: tenta copiar.
+        if (e instanceof Error && e.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado("sim");
+    } catch {
+      setCopiado("falhou");
+    }
+  }
+
+  return (
+    <div>
+      <button type="button" onClick={guardar} className="site-btn-secondary flex w-full items-center justify-center py-3 text-sm">
+        {podePartilhar ? "Guardar o link" : "Copiar o link"}
+      </button>
+      {copiado === "sim" && <p className="mt-1.5 text-center text-[13px] text-tinta-fraca">Link copiado. Guarde-o nas suas notas.</p>}
+      {copiado === "falhou" && (
+        <p className="mt-1.5 break-all text-center text-[13px] text-tinta-fraca">Não deu para copiar. O link é: {url}</p>
+      )}
     </div>
   );
 }

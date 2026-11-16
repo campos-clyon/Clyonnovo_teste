@@ -829,6 +829,9 @@ export async function POST(req: NextRequest) {
       message: emailDoLink
         ? "Pedido criado. O link de acesso segue para o seu email."
         : "Pedido criado com sucesso.",
+    }, {
+      // O link de acesso vai nesta resposta (d53): nenhum cache a guarda.
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (err: any) {
     // A mensagem crua do MySQL ia para o browser numa rota pública: dizia o

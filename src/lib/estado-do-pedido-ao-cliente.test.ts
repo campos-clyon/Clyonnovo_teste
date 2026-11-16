@@ -76,13 +76,20 @@ describe("o pedido na mão depois de enviar", () => {
     const r = ler("src/app/api/simulador/pedido/route.ts");
     expect(r).toContain("acessoToken: acesso.token,");
     expect(r).not.toMatch(/acessoToken:\s*clienteIndicouValores/);
+    expect(r).toContain('headers: { "Cache-Control": "no-store" },');
   });
 
-  it("o «Pedido enviado» abre o pedido, guarda o link no WhatsApp a quem não deu email, e o Google passa a secundário", () => {
+  it("o «Pedido enviado» abre o pedido, guarda o link sem wa.me a quem não deu email, e o Google passa a secundário", () => {
     const f = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");
     expect(f).toContain("Abrir o meu pedido");
-    expect(f).toMatch(/!emailParaMaisTarde && \(\s*<a\s+href=\{`\$\{WHATSAPP_DA_CLYON\}\?text=\$\{encodeURIComponent\(`Pedido #\$\{successOrderId\}\\n\$\{linkDoPedido\}`\)\}`\}/);
-    expect(f).toContain("Guardar o link no WhatsApp");
+    // Revisão da Segurança: nunca um wa.me com o token — partilhar ou copiar, só do lado dele.
+    expect(f).toContain("{!emailParaMaisTarde && <GuardarOLink url={linkDoPedido} />}");
+    expect(f).toContain("navigator.share({ title: \"O meu pedido na CLYON\", url })");
+    expect(f).toContain("navigator.clipboard.writeText(url)");
+    expect(f).not.toContain("Guardar o link no WhatsApp");
+    expect(f).not.toMatch(/WHATSAPP_DA_CLYON[^\n]*linkDoPedido/);
+    expect(f).not.toMatch(/wa\.me[^\n]*(tokenDoPedido|linkDoPedido)/);
+    expect(f).toContain("Quando chegar a 1.ª proposta, enviamos-lhe um link novo por email.");
     expect(f).toContain('`${linkDoPedido ? "site-btn-secondary" : "site-btn-primary"} mt-4 flex');
     expect(f).toContain("`${window.location.origin}/pedido/${tokenDoPedido}`");
   });
