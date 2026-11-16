@@ -143,7 +143,9 @@ describe("a regra vive num sítio só", () => {
     // estava, e passou a ser o que o cliente vê nos primeiros minutos.
     const PROPOSTAS = ler("src/app/pedido/[token]/PropostasRecebidas.tsx");
     // d8: a mesma frase da app, com o prazo das propostas (promessas-publicas.ts).
-    expect(PROPOSTAS).toContain("{AINDA_SEM_PROPOSTAS}");
+    // d53 (16-11-2026): por omissão; o estado do pedido (a conferir, valor único…) escolhe a dele.
+    expect(PROPOSTAS).toContain("semPropostas = AINDA_SEM_PROPOSTAS,");
+    expect(PROPOSTAS).toContain("{semPropostas}");
     expect(AINDA_SEM_PROPOSTAS).toMatch(/^Ainda sem propostas\./);
     expect(AINDA_SEM_PROPOSTAS).toContain(PROPOSTAS_EM_ATE);
   });

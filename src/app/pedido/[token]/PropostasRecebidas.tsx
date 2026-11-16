@@ -69,7 +69,14 @@ export default function PropostasRecebidas({
   telefoneDoCliente,
   soParaVer = false,
   servico = null,
+  semPropostas = AINDA_SEM_PROPOSTAS,
 }: {
+  /**
+   * O que se diz sem propostas — o estado do pedido (d53, 16-11-2026): a
+   * conferir, enviado, o valor único em preparação. Vem do servidor
+   * (`estado-do-pedido-ao-cliente.ts`); sem ele, a frase de sempre.
+   */
+  semPropostas?: string;
   /** O nome do serviço — a primeira linha do bloco de pagar, com o parceiro (02-11-2026). */
   servico?: string | null;
   /**
@@ -656,7 +663,7 @@ export default function PropostasRecebidas({
       <section className="mt-4 rounded-2xl border border-[#E2EEF3] bg-white p-5 text-center shadow-sm">
         <h2 className="text-sm font-bold uppercase tracking-wide text-tinta-fraca">Propostas</h2>
         <p className="mt-3 text-sm text-slate-500">
-          {AINDA_SEM_PROPOSTAS}
+          {semPropostas}
         </p>
       </section>
     );

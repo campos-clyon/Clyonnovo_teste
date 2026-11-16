@@ -1,4 +1,6 @@
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
+import { FRASE_DO_ESTADO, estadoDoPedidoAoCliente, valorUnicoAceiteValido } from "./estado-do-pedido-ao-cliente";
+import { aceitesDoValorUnico } from "./valor-unico-no-whatsapp-na-base";
 import { valorUnicoDaLinha, valorUnicoParaOCliente } from "./valor-unico-ao-cliente";
 import {
   ensureSimulatorOrdersTable,
@@ -155,6 +157,8 @@ export type PedidoParaOResumo = {
   trabalhoClyon?: unknown;
   /** O valor único (d39): a marca `(o.valorUnicoCliente IS NOT NULL)` ou o valor. */
   valorUnico?: unknown;
+  /** O cliente já aceitou o valor único (d53, 16-11-2026). */
+  valorUnicoAceite?: boolean;
   baseDoPreco?: unknown;
   propostaEnviadaEm?: Date | string | null;
   precoAceiteEm?: Date | string | null;
@@ -211,6 +215,7 @@ export async function resumoDoPedidoParaOCliente(
     precoEnviado,
     precoAceite,
     valorUnico: temValorUnico(r.valorUnico),
+    valorUnicoAceite: r.valorUnicoAceite === true,
   });
   const novidade = cancelado
     ? null
@@ -358,10 +363,19 @@ export async function listaDosPedidosDoCliente(
     }
   }
 
+  // Os «sim» ao valor único que valem (d53): o estado da lista diz «Aceitou o valor…».
+  const aceites = await aceitesDoValorUnico(
+    linhas.filter((r) => temValorUnico((r as PedidoParaOResumo).valorUnico)).map((r) => Number(r.id)),
+  );
+
   const todos = await Promise.all(
     linhas.map(async (r) => {
       const trabalhoClyon = Number(r.trabalhoClyon) === 1 || r.trabalhoClyon === true;
-      const resumo = await resumoDoPedidoParaOCliente(r as PedidoParaOResumo, porPedido.get(Number(r.id)) ?? [], agora);
+      const resumo = await resumoDoPedidoParaOCliente(
+        { ...(r as PedidoParaOResumo), valorUnicoAceite: aceites.has(Number(r.id)) },
+        porPedido.get(Number(r.id)) ?? [],
+        agora,
+      );
       const item: PedidoNaLista = {
         id: Number(r.id),
         servico: nomeDoServico(r.serviceType as string | null),
@@ -530,9 +544,16 @@ export async function pedidoDoClienteParaAApp(
 
   const contratado = contratadoDe(trabalhoClyon, cruas, negociacoes);
   const cancelado = eCancelado(pedido.status, o.canceladoPeloCliente);
+  // d53: o «sim» ao valor único, se vale (posterior ao último envio).
+  const valorUnicoAceite = valorUnicoAceiteValido(
+    (pedido as { valorUnicoAceiteEm?: unknown }).valorUnicoAceiteEm,
+    (pedido as { valorUnicoEm?: unknown }).valorUnicoEm,
+  );
+  // d53: pelas negociações todas (o portão da Mesa), como a página do pedido.
+  const estadoDoPedido = trabalhoClyon || cancelado ? null : estadoDoPedidoAoCliente(pedido, cruas);
   // O estado em palavras, pela mesma conta da lista e da conta do site (S9).
   const resumo = await resumoDoPedidoParaOCliente(
-    { ...(pedido as unknown as PedidoParaOResumo), trabalhoClyon, valorUnico: (pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente ?? null },
+    { ...(pedido as unknown as PedidoParaOResumo), trabalhoClyon, valorUnico: (pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente ?? null, valorUnicoAceite },
     cruas,
     agora,
   );
@@ -677,7 +698,8 @@ export async function pedidoDoClienteParaAApp(
        */
       valorUnico: (() => {
         const v = valorUnicoDaLinha((pedido as { valorUnicoCliente?: unknown }).valorUnicoCliente);
-        return v != null && !contratado && !trabalhoClyon ? valorUnicoParaOCliente(v, base) : null;
+        // Aceite (d53), sai: a app já instalada deixa de mostrar «Aceitar»; o estado diz «Aceitou o valor…».
+        return v != null && !contratado && !trabalhoClyon && !valorUnicoAceite ? valorUnicoParaOCliente(v, base) : null;
       })(),
       // «Aceito este preço» (S7): quando o cliente o aceitou.
       precoAceiteEm: trabalhoClyon ? isoOuNulo(o.precoAceiteEm ?? null) : null,
@@ -704,6 +726,14 @@ export async function pedidoDoClienteParaAApp(
       recusar: { comOutras: RECUSAR.comOutras, semOutras: RECUSAR.semOutras },
       // À espera das primeiras propostas, com o prazo (d8, 31-10-2026): a mesma frase do /pedido/[token].
       aindaSemPropostas: AINDA_SEM_PROPOSTAS,
+      /*
+       * O ESTADO VERDADEIRO (d53, 16-11-2026): o mesmo do /pedido/[token] —
+       * «a_conferir», «enviado», «valor_unico_em_preparacao» ou
+       * «valor_unico_aceite» (null com o parceiro escolhido, ou com o valor
+       * único por aceitar) — e a frase dele, para a app a mostrar sem propostas.
+       */
+      estado: estadoDoPedido,
+      fraseDoEstado: estadoDoPedido ? FRASE_DO_ESTADO[estadoDoPedido] : null,
       // S22: o rodapé do site e o título das propostas.
       rodape: trabalhoClyon ? RODAPE_DO_PEDIDO : rodapeDoPedido(agoraDoModelo()),
       responderam: responderamEmPalavras(negociacoes.filter((n) => n.estado === "aberta" || n.estado === "aguarda_contratacao").length),

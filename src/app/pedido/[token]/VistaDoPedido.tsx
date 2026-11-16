@@ -22,6 +22,7 @@ import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib
 import FimDoTrabalhoClyon from "@/components/FimDoTrabalhoClyon";
 import EscolhidosSemResposta from "@/components/EscolhidosSemResposta";
 import { escolhidosParaOCliente } from "@/lib/escolhidos-sem-resposta-no-servidor";
+import { FRASE_DO_ESTADO, estadoDoPedidoAoCliente } from "@/lib/estado-do-pedido-ao-cliente";
 
 /**
  * O PEDIDO COMO O CLIENTE O VÊ — e num sítio só.
@@ -130,6 +131,13 @@ export default async function VistaDoPedido({
    */
   const escolhidos = pedido.valorFixoClyon == null && pedido.serviceType === "mudanca" ? await escolhidosParaOCliente(pedido) : null;
 
+  /*
+   * O ESTADO VERDADEIRO (d53, 16-11-2026): a conferir, enviado, o valor único
+   * em preparação ou já aceite — pelas negociações TODAS (o portão da Mesa) e
+   * pelo `valorUnicoAceiteEm`, não só pelas que o cliente vê.
+   */
+  const estado = estadoDoPedidoAoCliente(pedido, await negociacoesDoPedido(pedido.id));
+
   const fotos = fotosDoPedido(pedido.filesJson);
   // O que o valor MEDE: o trabalho todo, ou cada carga. Ver `base-do-preco.ts`.
   const base = lerBase((pedido as { baseDoPreco?: string | null }).baseDoPreco);
@@ -201,7 +209,12 @@ export default async function VistaDoPedido({
             <h2 className="text-lg font-semibold text-tinta">{t.titulo}</h2>
             <p className="mt-2 text-xl font-bold text-tinta">{t.valor}</p>
             <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">{t.quemFaz}</p>
-            <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">Para aceitar, responda SIM na conversa com a CLYON.</p>
+            {/* Já aceite (d53): diz-se, e não se lhe pede outra vez que aceite. */}
+            {estado === "valor_unico_aceite" ? (
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-tinta">{FRASE_DO_ESTADO.valor_unico_aceite}</p>
+            ) : (
+              <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">Para aceitar, responda SIM na conversa com a CLYON.</p>
+            )}
           </section>
         );
       })()}
@@ -217,6 +230,7 @@ export default async function VistaDoPedido({
         precisaFatura={Boolean(pedido.precisaFatura)}
         telefoneDoCliente={pedido.contactPhone ?? null}
         soParaVer={soParaVer}
+        semPropostas={estado ? FRASE_DO_ESTADO[estado] : undefined}
       />
       )}
 

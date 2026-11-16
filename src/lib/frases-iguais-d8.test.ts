@@ -80,7 +80,9 @@ describe("(2) «Ainda sem propostas», com o prazo das 6 h, numa constante", () 
   it("diz o prazo e é lida pelo site e mandada à app pela R5", () => {
     expect(AINDA_SEM_PROPOSTAS).toContain(PROPOSTAS_EM_ATE);
     expect(AINDA_SEM_PROPOSTAS).toContain("6 horas");
-    expect(ler(PROPOSTAS)).toContain("{AINDA_SEM_PROPOSTAS}");
+    // d53 (16-11-2026): a frase de sempre por omissão; o estado do pedido escolhe a dele.
+    expect(ler(PROPOSTAS)).toContain("semPropostas = AINDA_SEM_PROPOSTAS,");
+    expect(ler(PROPOSTAS)).toContain("{semPropostas}");
     expect(ler("src/lib/pedidos-do-cliente.ts")).toContain("aindaSemPropostas: AINDA_SEM_PROPOSTAS,");
     expect(ler("app-cliente/src/lib/pedidos.ts")).toContain("r.textos?.aindaSemPropostas");
     expect(ler("app-cliente/src/lib/pedidos.ts")).not.toContain("O pedido foi enviado aos parceiros verificados da zona. Ainda sem propostas.");

@@ -114,3 +114,15 @@ export const AO_FIM_DE_SEMANA =
 export const PRECO_FECHADO_SEM_AS_FATURAS =
   "O preço de cada proposta já é o total a pagar, com a taxa da plataforma, e fica fechado antes de começar.";
 export const PRECO_FECHADO = `${PRECO_FECHADO_SEM_AS_FATURAS} ${DUAS_FATURAS_POR_TRABALHO_CURTA}`;
+
+/*
+ * O ESTADO VERDADEIRO DE UM PEDIDO SEM PROPOSTAS — 16-11-2026 (d53). A página
+ * do pedido dizia sempre «O pedido foi enviado aos parceiros da zona», também
+ * enquanto a CLYON o conferia e nos pedidos de valor único. Quatro frases,
+ * escolhidas pelo estado (`estado-do-pedido-ao-cliente.ts`); o «enviado» é o
+ * AINDA_SEM_PROPOSTAS. As mesmas no /pedido/[token] e na app (pela rota).
+ */
+export const PEDIDO_A_CONFERIR =
+  "A CLYON está a conferir o seu pedido. Quando seguir para os parceiros da sua zona, avisamos por aqui e por WhatsApp.";
+export const VALOR_UNICO_EM_PREPARACAO = "A CLYON está a preparar o valor para o seu pedido.";
+export const VALOR_UNICO_ACEITE = "Aceitou o valor. A CLYON está a escolher o parceiro.";

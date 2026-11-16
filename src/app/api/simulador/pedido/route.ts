@@ -815,7 +815,9 @@ export async function POST(req: NextRequest) {
       // O token vai na resposta para o formulário poder levar o cliente ao
       // pedido sem esperar pelo email. Vai só aqui, ao próprio, no momento em
       // que o criou — nunca numa listagem nem numa leitura posterior.
-      acessoToken: clienteIndicouValores ? acesso.token : undefined,
+      // SEMPRE, desde 16-11-2026 (d53): ia só a quem escreveu «quanto conta
+      // gastar», e quem enviava sem sessão nem email ficava sem link nenhum.
+      acessoToken: acesso.token,
       /*
        * A mensagem deixou de depender do email.
        *

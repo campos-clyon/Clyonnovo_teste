@@ -1,4 +1,5 @@
 import { precoDoCliente, desdobramentoDoIva, type PrecoDoCliente } from "./preco-do-cliente";
+import { VALOR_UNICO_ACEITE } from "./promessas-publicas";
 import { taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
 import { precoEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { modeloDaLinha } from "./sem-factura";
@@ -352,6 +353,8 @@ export function estadoDoPedidoParaOCliente(p: {
   precisaDeSi?: boolean;
   /** O pedido tem o valor único da CLYON (d39): o cliente vê um orçamento, não propostas. */
   valorUnico?: boolean;
+  /** E o cliente já o aceitou (d53, 16-11-2026): `valorUnicoAceiteEm` depois do último envio. */
+  valorUnicoAceite?: boolean;
 }): string {
   const status = String(p.status ?? "");
   if (["cancelado", "rejeitado", "arquivado"].includes(status) || Number(p.canceladoPeloCliente) === 1) {
@@ -366,6 +369,8 @@ export function estadoDoPedidoParaOCliente(p: {
     return "A ser revisto pela CLYON";
   }
   // d39: com o valor único, o que o cliente tem à frente é um orçamento por aceitar.
+  // d53: aceite, já não está «por aceitar» — a mesma frase do site.
+  if (p.valorUnico && p.valorUnicoAceite) return VALOR_UNICO_ACEITE;
   if (p.valorUnico) return ESTADO_DO_VALOR_UNICO;
   if (p.comPropostas > 0) return "Tem propostas";
   if (p.enviado) return "À espera de propostas";

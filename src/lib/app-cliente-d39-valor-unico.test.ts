@@ -61,9 +61,10 @@ describe("d39 na app de cliente — o valor único", () => {
     }
   });
 
+  // d53 (16-11-2026): e deixa de o mandar depois do «sim» (valor-unico-aceite-na-app.test.ts).
   it("a rota manda o valorUnico só enquanto a CLYON não escolheu, e só deixa sair a contratada", () => {
     const rota = semNotas("src/lib/pedidos-do-cliente.ts");
-    expect(rota).toMatch(/valorUnico: \(\(\) => \{ const v = valorUnicoDaLinha\([^)]*\)\.valorUnicoCliente\); return v != null && !contratado && !trabalhoClyon \? valorUnicoParaOCliente\(v, base\) : null;/);
+    expect(rota).toMatch(/valorUnico: \(\(\) => \{ const v = valorUnicoDaLinha\([^)]*\)\.valorUnicoCliente\); return v != null && !contratado && !trabalhoClyon && !valorUnicoAceite \? valorUnicoParaOCliente\(v, base\) : null;/);
     const linhas = [
       { id: 1, estado: "aberta", propostasJson: "[]", ofertaClyon: 0 },
       { id: 2, estado: "acordada", propostasJson: "[]", ofertaClyon: 0 },

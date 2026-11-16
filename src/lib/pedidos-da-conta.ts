@@ -1,4 +1,5 @@
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
+import { valorUnicoAceiteValido } from "@/lib/estado-do-pedido-ao-cliente";
 import { negociacoesParaOCliente } from "@/lib/negociacoes-para-o-cliente";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 import { negociacaoParaAVista, type LinhaParaAVista } from "@/lib/negociacao-na-vista";
@@ -113,7 +114,11 @@ export async function pedidoDaContaParaOEcra<T extends Record<string, unknown>>(
   agora: Date = new Date(),
 ) {
   const resumo = await resumoDoPedidoParaOCliente(
-    pedido as unknown as PedidoParaOResumo,
+    {
+      ...(pedido as unknown as PedidoParaOResumo),
+      // d53: o «sim» ao valor único, quando a linha o traz (sem as colunas, não conta).
+      valorUnicoAceite: valorUnicoAceiteValido(pedido.valorUnicoAceiteEm, pedido.valorUnicoEm),
+    },
     (linhas ?? []) as Parameters<typeof resumoDoPedidoParaOCliente>[1],
     agora,
   );

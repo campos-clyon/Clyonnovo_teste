@@ -172,6 +172,8 @@ export default function SimulatorThreePhaseForm() {
   const [emailDoLink, setEmailDoLink] = useState<string | null>(null);
   /** O email da conta criada pela caixa «Guardar os meus dados», ou `null`. */
   const [contaGuardada, setContaGuardada] = useState<string | null>(null);
+  /** O token do link do pedido, que a rota devolve ao próprio (d53, 16-11-2026) — `null` sem ele. */
+  const [tokenDoPedido, setTokenDoPedido] = useState<string | null>(null);
   /** A razão por que o pedido não ficou gravado, enquanto a pessoa decide o que fazer. */
   const [falhaNoEnvio, setFalhaNoEnvio] = useState<string | null>(null);
   const caixaDaFalha = useRef<HTMLDivElement>(null);
@@ -548,7 +550,7 @@ export default function SimulatorThreePhaseForm() {
 
     // Ou o pedido ficou gravado, com número, ou não ficou — e diz-se porquê.
     const work = (async (): Promise<
-      | { id: number; emailDoLink: string | null; contaGuardada: string | null; parceirosEscolhidos: number; novoModelo: boolean }
+      | { id: number; emailDoLink: string | null; contaGuardada: string | null; parceirosEscolhidos: number; novoModelo: boolean; acessoToken: string | null }
       | { erro: string | null }
     > => {
       // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
@@ -708,6 +710,7 @@ export default function SimulatorThreePhaseForm() {
           contaGuardada?: unknown;
           parceirosEscolhidos?: unknown;
           novoModelo?: unknown;
+          acessoToken?: unknown;
           error?: unknown;
           campo?: unknown;
         };
@@ -719,6 +722,7 @@ export default function SimulatorThreePhaseForm() {
             contaGuardada: typeof saved.contaGuardada === "string" ? saved.contaGuardada : null,
             parceirosEscolhidos: typeof saved.parceirosEscolhidos === "number" ? saved.parceirosEscolhidos : 0,
             novoModelo: saved.novoModelo === true,
+            acessoToken: typeof saved.acessoToken === "string" && /^[A-Za-z0-9_-]{16,}$/.test(saved.acessoToken) ? saved.acessoToken : null,
           };
         }
         // Um parceiro escolhido deixou de estar disponível: volta-se à lista.
@@ -759,6 +763,7 @@ export default function SimulatorThreePhaseForm() {
 
     setEmailDoLink(resultado.emailDoLink);
     setContaGuardada(resultado.contaGuardada);
+    setTokenDoPedido(resultado.acessoToken);
     setFoiAosEscolhidos(resultado.parceirosEscolhidos);
     setNoNovoModelo(resultado.novoModelo);
     setSuccessOrderId(resultado.id);
@@ -778,6 +783,7 @@ export default function SimulatorThreePhaseForm() {
     setRecuperado(null);
     setSuccessOrderId(null);
     setEmailDoLink(null);
+    setTokenDoPedido(null);
     setFalhaNoEnvio(null);
     fotosJaEnviadas.current.clear();
     passosContados.current.clear();
@@ -799,6 +805,10 @@ export default function SimulatorThreePhaseForm() {
       }
     });
   };
+
+  // O link do pedido, para o botão e para o WhatsApp (d53): o endereço deste site.
+  const linkDoPedido =
+    tokenDoPedido && typeof window !== "undefined" ? `${window.location.origin}/pedido/${tokenDoPedido}` : null;
 
   // Success Screen
   if (successOrderId) {
@@ -918,8 +928,36 @@ export default function SimulatorThreePhaseForm() {
             acabou de escrever, o pedido já lá está — não há nada a ligar nem a
             registar. E a quem já entrou não se pede nada: mostra-se a porta.
           */}
+          {/*
+            O PEDIDO NA MÃO — 16-11-2026 (d53). A rota devolve sempre o link ao
+            próprio: o botão principal abre o pedido já, sem esperar por email
+            nem por conta. A quem não deu email, o link guarda-se no WhatsApp
+            (a conversa com a CLYON, com o n.º e o link). A conta fica por baixo.
+          */}
+          {linkDoPedido && (
+            <div className="mb-4 space-y-2.5">
+              <a href={linkDoPedido} className="site-btn-primary flex w-full items-center justify-center py-3.5 text-sm">
+                Abrir o meu pedido
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </a>
+              {!emailParaMaisTarde && (
+                <a
+                  href={`${WHATSAPP_DA_CLYON}?text=${encodeURIComponent(`Pedido #${successOrderId}\n${linkDoPedido}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center rounded-xl bg-[#25D366] py-3 text-sm font-semibold text-whatsapp-tinta"
+                >
+                  Guardar o link no WhatsApp
+                </a>
+              )}
+            </div>
+          )}
+
           {session?.user ? (
-            <a href="/conta" className="site-btn-primary flex w-full items-center justify-center py-3.5 text-sm">
+            <a
+              href="/conta"
+              className={`${linkDoPedido ? "site-btn-secondary" : "site-btn-primary"} flex w-full items-center justify-center py-3.5 text-sm`}
+            >
               Ver o pedido na minha conta
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
             </a>
@@ -944,7 +982,7 @@ export default function SimulatorThreePhaseForm() {
               </p>
               <a
                 href="/entrar"
-                className="site-btn-primary mt-4 flex w-full items-center justify-center py-3.5 text-sm"
+                className={`${linkDoPedido ? "site-btn-secondary" : "site-btn-primary"} mt-4 flex w-full items-center justify-center py-3.5 text-sm`}
               >
                 Entrar com o Google
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
