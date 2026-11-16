@@ -55,6 +55,16 @@ export const DO_MODELO_ANTIGO: ReadonlyArray<{ re: RegExp; aQuem: AQuemSeDiz; no
     aQuem: "todos",
     re: /(?<!\p{L})j[áa] v[eê]m? com (o )?IVA|(?<!\p{L})vem com IVA inclu[íi]do|j[áa] inclui a taxa da plataforma e o IVA(?! dela)/iu,
   },
+  // d51 (16-11-2026): «com IVA incluído» como regra geral deixou de ser verdade — o parceiro
+  // isento fatura sem IVA. A frase diz-se pela constante `NA_PROPOSTA_COM_IVA` (seo-data.ts),
+  // com a condição («ou isento, conforme o regime do parceiro»). Os valores de UMA negociação
+  // concreta dizem o que ela é («Valor com IVA incluído» quando ela o tem): a regra
+  // apanha a frase geral — a proposta, o preço, o valor final, o que o cliente vê.
+  {
+    nome: "com IVA incluído, sem condição",
+    aQuem: "todos",
+    re: /(?<!\p{L})(propostas?|pre[çc]os?|valor final|o cliente v[êe])(?![^.!?]*isen[tçc])[^.!?]*com (o )?IVA inclu[íi]do/iu,
+  },
 ];
 
 /** A caução de um arrendamento (o blog) não é a do site. */

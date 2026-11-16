@@ -85,3 +85,30 @@ describe("d42 — a versão do esvaziamento", () => {
     expect(ESVAZIAMENTO_NA_LANDING.mensagem.startsWith("Olá! Encontrei-vos no Google")).toBe(true);
   });
 });
+
+describe("d51 — o corpo da versão do esvaziamento fala de esvaziamento", () => {
+  it("os textos do corpo não dizem «recolha», e os preços vêm da fonte", async () => {
+    const { ESVAZIAMENTO_NO_CORPO } = await import("./landing-do-esvaziamento");
+    expect(JSON.stringify(ESVAZIAMENTO_NO_CORPO)).not.toMatch(/recolh/i);
+    for (const c of ESVAZIAMENTO_NO_CORPO.precos.cartoes) expect(PRECOS[c.servico]?.minimo, c.servico).toBeGreaterThan(0);
+  });
+
+  it("as perguntas próprias, sem «recolha», com «Paga diretamente ao parceiro que contratou»", () => {
+    const ini = LANDING.indexOf("const FAQ_DO_ESVAZIAMENTO");
+    expect(ini).toBeGreaterThan(-1);
+    const bloco = LANDING.slice(ini, LANDING.indexOf("\n];", ini));
+    expect(bloco).not.toMatch(/recolh/i);
+    expect(bloco).toContain("PAGA_AO_PARCEIRO_QUE_CONTRATOU");
+    expect(LANDING).toContain('variante === "esvaziamento" ? FAQ_DO_ESVAZIAMENTO : FAQ_ITEMS');
+    // As duas perguntas que se reaproveitam também não falam de recolha.
+    const faq = LANDING.slice(LANDING.indexOf("const FAQ_ITEMS"), ini);
+    const respostas = [...faq.matchAll(/q: "([^"]+)",\n\s+(?:\/\/[^\n]*\n\s+)*a: [`"]([^`"]+)[`"]/g)];
+    expect(respostas[4][0]).not.toMatch(/recolh/i);
+    expect(respostas[7][0]).not.toMatch(/recolh/i);
+  });
+
+  it("cada secção do meio para baixo recebe a variante", () => {
+    for (const s of ["HowItWorks", "SendForQuote", "ServicesSection", "PricingGuide", "FAQSection", "FinalCTA", "TopBar"])
+      expect(LANDING, s).toContain(`<${s} variante={variante} />`);
+  });
+});

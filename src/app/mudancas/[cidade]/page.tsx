@@ -45,6 +45,7 @@ import { getCidadeLocal } from "@/lib/cidades-local";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
 import { tituloDaMudanca } from "@/lib/titulos-seo";
+import { O_PRECO_DA_MUDANCA_COMBINA_SE } from "@/lib/modelo-da-mudanca";
 import { AO_FIM_DE_SEMANA, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, paraTerra } from "@/lib/preposicao-da-terra";
 import { localidadesDaPagina } from "@/lib/localidades-dos-concelhos";
@@ -528,7 +529,7 @@ export default async function MudancasCidadePage({ params }: Props) {
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Clock3 className="mx-auto h-6 w-6 text-emerald-500" />
             <p className="mt-2 text-sm font-bold text-slate-800">Propostas em menos de 6h</p>
-            <p className="text-xs text-slate-500">Com o preço fechado antes de começar</p>
+            <p className="text-xs text-slate-500">{O_PRECO_DA_MUDANCA_COMBINA_SE}</p>
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5 text-center">
             <Star className="mx-auto h-6 w-6 text-emerald-500" />

@@ -104,6 +104,20 @@ export function comOPrimeiroQueCabeNoFim(frases: string[], alternativas: string[
   return base;
 }
 
+/*
+ * UMA DESCRIÇÃO POR TERRA NAS CINCO DE «CÂMARA OU DE CASA» — d51, 16-11-2026.
+ * As cinco diziam a mesma frase, palavra por palavra, e o Google trata-as como
+ * repetidas. Cada uma diz quem recolhe na Câmara dali (de `recolha-da-camara.ts`,
+ * das fontes oficiais) e o preço dos parceiros, sem IVA e com o IVA ao lado.
+ */
+export const DESCRICAO_DOS_MONOS_CAMARA_OU_DE_CASA: Record<string, (preco: string) => string> = {
+  cascais: (preco) => `Monos em Cascais: a Cascais Ambiente recolhe-os grátis, no dia marcado. De casa e sem esperar: parceiros, ${preco}.`,
+  oeiras: (preco) => `Monos em Oeiras: a Câmara recolhe grátis, no dia e local combinados. De casa e sem esperar: parceiros, ${preco}.`,
+  odivelas: (preco) => `Monos em Odivelas: os SIMAR recolhem grátis, em até 5 dias úteis. De casa e sem esperar: parceiros, ${preco}.`,
+  sintra: (preco) => `Monos em Sintra: a junta recolhe grátis até 10 peças por mês. De casa e sem esperar: parceiros, ${preco}.`,
+  queluz: (preco) => `Monos em Queluz e Massamá: a junta recolhe grátis até 10 por mês. De casa e sem esperar: parceiros, ${preco}.`,
+};
+
 /**
  * A description de uma página cidade × serviço.
  *
@@ -129,12 +143,9 @@ export function descricaoDaCidade(
    * por extenso — «em menos de 6 horas» — se couber; senão, «Propostas grátis.».
    */
   // 31-10-2026 (d7): as duas vias, a da Câmara e a de casa (ver titulos-seo.ts).
-  if (serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug)) {
-    return (
-      "Pela Câmara é grátis e à porta, no dia marcado. Sem esperar e de dentro de casa: " +
-      `parceiros, ${faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)}.`
-    );
-  }
+  // d51 (16-11-2026): uma descrição por terra (eram cinco iguais).
+  const propria = serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug) ? DESCRICAO_DOS_MONOS_CAMARA_OU_DE_CASA[citySlug] : undefined;
+  if (propria) return propria(faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!));
   if (serviceSlug === "recolha-monos") {
     return comOPrimeiroQueCabeNoFim(
       [

@@ -43,6 +43,7 @@ import {
 import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { comOPrimeiroQueCabe } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
+import { O_PRECO_DA_MUDANCA_COMBINA_SE } from "@/lib/modelo-da-mudanca";
 
 /*
  * O PREÇO À HORA NO GOOGLE (14-10-2026). O título dizia «Sem Stress» e a
@@ -303,7 +304,7 @@ export default async function MudancasPage() {
             // Era "Proteção incluída", a prometer responsabilidade civil. Não há
             // apólice nenhuma. O que existe mesmo — e é verificável — é o valor
             // acordado por escrito antes de ele sair de casa. Ver sem-seguro.test.ts.
-            { icon: Shield, title: "Preço fechado", desc: "O valor fica acordado por escrito antes do trabalho começar, e ninguém o muda sozinho à porta." },
+            { icon: Shield, title: "Preço por hora combinado", desc: `${O_PRECO_DA_MUDANCA_COMBINA_SE}.` },
             { icon: Package, title: "Serviço completo", desc: "Embalagem, desmontagem, transporte, descarga e montagem no destino." },
           ].map((item) => (
             <div key={item.title} className="rounded-[28px] border border-emerald-100 bg-white p-6 shadow-[0_20px_50px_-34px_rgba(5,150,105,0.12)]">
@@ -322,7 +323,7 @@ export default async function MudancasPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-[30px] border border-emerald-100 bg-white p-7 shadow-[0_24px_60px_-34px_rgba(5,150,105,0.1)]">
             <h2 className="mt-3 text-2xl font-bold text-slate-950">O que pode pedir numa mudança</h2>
-            <p className="mt-2 text-sm text-slate-600">Cada proposta diz o que inclui — e o preço fica fechado antes de começar.</p>
+            <p className="mt-2 text-sm text-slate-600">Cada proposta diz o que inclui. {O_PRECO_DA_MUDANCA_COMBINA_SE}.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {includedItems.map((item) => (
                 <div key={item} className="flex items-center gap-2 rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-4 text-sm text-slate-700">

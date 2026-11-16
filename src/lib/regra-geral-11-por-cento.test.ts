@@ -56,7 +56,7 @@ describe("a regra geral: 11 % do valor, o IVA por cima", () => {
     expect(e.recebe).toBe("311,50 €");
     expect(e.quota).toBe("11 %");
     expect(e.notaDoCliente).toBe("O seu valor, com IVA incluído");
-    expect(e.frase).toContain("o cliente vê-o com IVA incluído. A CLYON fica com 11 % desse valor");
+    expect(e.frase).toContain("o cliente vê-o com IVA incluído, ou sem IVA se estiver isento. A CLYON fica com 11 % desse valor");
     expect(e.frase).not.toContain("taxa da plataforma");
     // Com o acréscimo ao cliente (as taxas de antes), a frase de antes.
     expect(comissaoEmPalavras({ cliente: 0.05, profissional: 0.0655 }, "iva_incluido").notaDoCliente).toBe(

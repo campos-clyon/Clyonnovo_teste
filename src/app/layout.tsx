@@ -54,7 +54,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "CLYON - Recolha de Móveis, Entulho, Monos e Esvaziamento de Casas em Lisboa e Setúbal",
+    default: "CLYON - Recolha de Móveis, Monos e Esvaziamentos em Lisboa",
     template: "%s | CLYON",
   },
   /*
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
    * «verificados» e «menos de» ficaram de fora — o profissional e o prazo não.
    */
   description:
-    "Recolha de móveis, monos, entulho, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: parceiros propõem em menos de 6 horas.",
+    "Recolha de móveis e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal: parceiros propõem em menos de 6 horas.",
   keywords: [
     "recolha de móveis lisboa",
     "recolha de monos margem sul",
@@ -163,9 +163,9 @@ const PERFIS_DO_NEGOCIO = ["https://www.google.com/maps?cid=6227316191619861484"
  * escolha faz-se no RootLayout, pela data do modelo.
  */
 const DESCRICAO_DO_NEGOCIO_NO_MODELO_ANTIGO =
-  "Plataforma que liga clientes a parceiros independentes de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe; a CLYON guarda o acordo e o pagamento.";
+  "Plataforma que liga clientes a parceiros independentes de recolha de móveis e monos, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe; a CLYON guarda o acordo e o pagamento.";
 const DESCRICAO_DO_NEGOCIO_NO_NOVO_MODELO =
-  "Plataforma que liga clientes a parceiros independentes de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe, e é a ele que o cliente paga; a CLYON organiza o pedido e guarda o acordo.";
+  "Plataforma que liga clientes a parceiros independentes de recolha de móveis e monos, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, Margem Sul e Setúbal. O trabalho é feito pelo parceiro que o cliente escolhe, e é a ele que o cliente paga; a CLYON organiza o pedido e guarda o acordo.";
 
 const localBusinessSchema = {
   "@context": "https://schema.org",

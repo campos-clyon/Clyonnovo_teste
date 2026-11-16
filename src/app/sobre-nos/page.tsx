@@ -305,7 +305,7 @@ const PASSOS = [
 ];
 
 /* Quatro testemunhos, tal e qual estão em `reviews-data.ts`. */
-const TESTEMUNHOS = ["Patrícia S.", "Inês A.", "Paula", "Christian M."]
+const TESTEMUNHOS = ["Stefanie R.", "José P.", "Paula", "Ana A."]
   .map((nome) => reviews.find((r) => r.name === nome))
   .filter((r): r is (typeof reviews)[number] => Boolean(r));
 

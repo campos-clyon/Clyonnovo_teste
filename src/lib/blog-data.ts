@@ -23,6 +23,7 @@ import { EXTRAS_DA_MUDANCA } from "./tabela-das-mudancas";
 import { MODELO_DA_MUDANCA } from "./modelo-da-mudanca";
 import { SEM_PARCEIROS, type PrecoPublicoDasMudancas } from "./preco-publico-das-mudancas";
 import { mudancaNoBlog } from "./mudanca-no-blog";
+import { NA_PROPOSTA_COM_IVA } from "./seo-data";
 
 /*
  * AS HORAS DE CADA TIPOLOGIA, EM LINHAS — 14-10-2026.
@@ -899,7 +900,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     readingTime: "5 min",
     publishDate: "2026-10-14",
     // 03-11-2026 (d6 v2): a recolha de móveis por peça; 04-11-2026 (d7): a recolha mínima, e o sofá pela tabela das peças.
-    updatedDate: "2026-11-04",
+    updatedDate: "2026-11-16", // d51: o IVA pelo regime do parceiro.
     heroLabel: "Recolha de móveis",
     intro:
       "O sofá é a peça que mais gente quer tirar de casa, e a que mais dúvidas levanta: cabe no elevador? Tem de ser desmontado? A Câmara leva-o de graça? Este guia junta os valores de referência da CLYON para Lisboa, o que os faz variar e as alternativas sem custo.",
@@ -908,7 +909,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
         title: "Quanto custa, em números",
         paragraphs: [
           // Cada valor com o com IVA ao lado (31-10-2026): as peças iam só sem IVA.
-          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${valorSemEComIva(precoDaPeca(SOFA))}: o sofá é uma peça grande. Uma recolha de móveis conta-se ${precoDeReferencia("recolha_moveis")}, e os andares somam-se depois do mínimo. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem e já com IVA incluído.`,
+          `Como referência, retirar um sofá de 2 a 3 lugares em Lisboa fica em ${valorSemEComIva(precoDaPeca(SOFA))}: o sofá é uma peça grande. Uma recolha de móveis conta-se ${precoDeReferencia("recolha_moveis")}, e os andares somam-se depois do mínimo. O preço certo vem nas propostas dos parceiros da zona, fechado antes de começarem. ${NA_PROPOSTA_COM_IVA}`,
           "Para comparar, o sofá e as outras peças que costumam sair com ele:",
         ],
         bullets: PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado),

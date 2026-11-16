@@ -14,7 +14,7 @@ export const IMAGEM_DE_PARTILHA = {
   url: "/og-image.jpg",
   width: 1200,
   height: 630,
-  alt: "CLYON — recolha de móveis, monos e entulho, esvaziamentos e mudanças",
+  alt: "CLYON — recolha de móveis e monos, esvaziamentos e mudanças",
 } as const;
 
 type DadosDePartilha = {

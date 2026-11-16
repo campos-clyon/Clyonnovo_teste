@@ -156,7 +156,7 @@ const PASSO_DO_DINHEIRO_NO_NOVO_MODELO =
   "O cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY ou em dinheiro no " +
   "local — o preço com IVA. Fica com a sua parte, emite ao cliente a fatura do trabalho e passa à CLYON " +
   "a taxa da plataforma e o IVA dela, por referência, uma por trabalho. Propõe o seu valor, sem IVA, e o " +
-  "cliente vê-o com IVA incluído. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
+  "cliente vê o total a pagar: com IVA incluído, ou sem IVA se estiver isento. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
   // d30 (15-11-2026): a frase das faturas do Jurídico, dita ao profissional.
   "não lhe custa um cêntimo. Cada trabalho tem duas faturas, juntas ao pedido: a do trabalho, emitida por " +
   "si, com IVA ou com isenção de IVA conforme o seu regime, e a da taxa da plataforma, emitida pela " +
@@ -218,7 +218,7 @@ export function comissaoEmPalavras(
    */
   const conta = agora && novoModeloEmVigor(agora) ? contaDoValorAcordado(VALOR_DO_EXEMPLO, taxas, "normal") : null;
   const fraseDoNovoModelo = conta
-    ? `Propõe o seu valor, sem IVA; o cliente vê o preço com IVA incluído e paga-lho diretamente. A CLYON fica com ` +
+    ? `Propõe o seu valor, sem IVA; o cliente vê o total a pagar (com IVA incluído, ou sem IVA se estiver isento) e paga-lho diretamente. A CLYON fica com ` +
       `${quota} ${semAcrescimo ? "desse valor" : "do que o cliente paga sem IVA"} — ex.: propõe ${proposta}, o cliente ` +
       `paga-lhe ${euros(conta.totalAoClienteCent / 100)} (IVA incluído), fica com ${euros(conta.liquidoDoProfissionalCent / 100)} + IVA ` +
       `e passa à CLYON ${euros(conta.aPassarAClyonCent / 100)} (${euros(conta.taxaCent / 100)} de taxa da plataforma e ` +
@@ -239,7 +239,7 @@ export function comissaoEmPalavras(
         : "Já com a taxa da plataforma",
     frase: fraseDoNovoModelo ?? (semAcrescimo
       ? comIva
-        ? `Propõe o seu valor, sem IVA; o cliente vê-o com IVA incluído. A CLYON fica com ` +
+        ? `Propõe o seu valor, sem IVA; o cliente vê-o com IVA incluído, ou sem IVA se estiver isento. A CLYON fica com ` +
           `${quota} desse valor — ex.: propõe ${proposta}, o cliente vê ${cliente} (IVA incluído) ` +
           `e recebe ${recebe}.`
         : `Propõe o seu valor; é esse o preço que o cliente vê. A CLYON fica com ${quota} ` +

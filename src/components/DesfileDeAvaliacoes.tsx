@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Pause, Play, Star } from "lucide-react";
-import { reviews } from "@/lib/reviews-data";
+import { TESTEMUNHOS_DA_INICIAL } from "@/lib/testemunhos-da-inicial";
 
 /**
  * O desfile de testemunhos da homepage.
@@ -26,6 +26,9 @@ import { reviews } from "@/lib/reviews-data";
  * Google, as análises de fora — contava cada testemunho a dobrar. Agora a
  * faixa vai até ao último cartão e volta para trás (globals.css), com a lista
  * uma vez só. Os textos, os nomes e quais aparecem ficam como estavam.
+ *
+ * SEM O «MESMO DIA» — d51, 16-11-2026: na inicial não entra o testemunho que o
+ * diga (lê-se como promessa). Ver `testemunhos-da-inicial.ts`.
  */
 export default function DesfileDeAvaliacoes() {
   const [parado, setParado] = useState(false);
@@ -54,7 +57,7 @@ export default function DesfileDeAvaliacoes() {
 
       <div className="overflow-hidden">
         <div className={`reviews-marquee flex w-max gap-4 py-2 ${parado ? "parado" : ""}`}>
-          {reviews.map((review, i) => (
+          {TESTEMUNHOS_DA_INICIAL.map((review, i) => (
             <CartaoDeAvaliacao key={`${review.name}-${i}`} review={review} />
           ))}
         </div>

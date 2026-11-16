@@ -2155,3 +2155,72 @@ describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulado
     expect(readFileSync(join(RAIZ, "src/app/mudancas/[cidade]/page.tsx"), "utf8")).toContain("{precoDaMudancaEmDetalhe(preco)}");
   });
 });
+
+/*
+ * d51 (16-11-2026) — TRÊS REGRAS NOVAS.
+ *  1) O IVA pelo regime do parceiro: «com IVA incluído» como regra geral só com a
+ *     condição — a frase é `NA_PROPOSTA_COM_IVA`; sem ela, a regra s chumba
+ *     (`palavras-do-modelo-antigo.ts`, «com IVA incluído, sem condição»).
+ *  2) As mudanças não têm «preço fechado antes de começar»: combina-se o preço por
+ *     hora, e o valor final é a conta da folha do dia, que o cliente valida.
+ *  3) A inicial não mostra testemunhos com «mesmo dia» (lê-se como promessa).
+ */
+describe("d51) o IVA pelo regime, as mudanças sem «preço fechado» e a inicial sem «mesmo dia»", () => {
+  it("1) a regra apanha o «com IVA incluído» geral e deixa a frase com a condição", () => {
+    expect(falaDoModeloAntigo("Cada proposta mostra o preço já com a taxa da plataforma e com IVA incluído.", "cliente")).not.toBeNull();
+    expect(falaDoModeloAntigo("Cada uma com preço fechado, com IVA incluído, antes de haver trabalho nenhum.", "cliente")).not.toBeNull();
+    expect(falaDoModeloAntigo("Propõe o seu valor, sem IVA, e o cliente vê-o com IVA incluído.", "todos")).not.toBeNull();
+    expect(falaDoModeloAntigo(NA_PROPOSTA_COM_IVA, "cliente")).toBeNull();
+    expect(NA_PROPOSTA_COM_IVA).toMatch(/isento, conforme o regime do parceiro/);
+    // O valor de UMA negociação diz o que ela é, e fica.
+    expect(falaDoModeloAntigo("Valor com IVA incluído. Recebe fatura.", "cliente")).toBeNull();
+    for (const f of [
+      "src/app/page.tsx",
+      "src/app/contactos/page.tsx",
+      "src/lib/como-funciona.ts",
+      "src/lib/blog-data.ts",
+      "src/app/plataforma/pedir/components/ValoresEFaturacao.tsx",
+      "src/lib/textos-do-pedido.ts",
+      "src/app/termos/page.tsx",
+    ]) {
+      expect(readFileSync(join(RAIZ, f), "utf8"), f).toContain("NA_PROPOSTA_COM_IVA");
+      expect(ACHADOS.filter((a) => a.ficheiro === f && a.regra === "s-modelo-antigo"), f).toEqual([]);
+    }
+  });
+
+  it("1) o 2.º passo do «Pedido enviado» no modelo novo diz a condição", async () => {
+    const { tresPassosDepoisDeEnviar } = await import("./textos-do-pedido");
+    expect(tresPassosDepoisDeEnviar(new Date("2026-11-16T12:00:00Z"))[1].texto).toContain(NA_PROPOSTA_COM_IVA);
+  });
+
+  it("2) nenhuma página nem texto das mudanças diz «preço fechado»", async () => {
+    const DAS_MUDANCAS = FONTES.filter(
+      (f) => f.startsWith("src/app/mudancas/") || f.startsWith("src/components/mudancas/") || /^src\/lib\/[^/]*mudanc[^/]*\.ts$/.test(f),
+    ).filter((f) => !f.endsWith(".test.ts"));
+    expect(DAS_MUDANCAS).toContain("src/app/mudancas/[cidade]/page.tsx");
+    expect(DAS_MUDANCAS).toContain("src/app/mudancas/page.tsx");
+    const fechado = /pre[çc]o (fica |j[áa] )?fechad[oa]|fica fechad[oa] antes/i;
+    const achados = DAS_MUDANCAS.flatMap((f) =>
+      lerFicheiro(f).textos.filter((t) => fechado.test(t.texto)).map((t) => `${f}:${t.linha} ${t.texto.slice(0, 80)}`),
+    );
+    expect(achados).toEqual([]);
+    const { O_PRECO_DA_MUDANCA_COMBINA_SE } = await import("./modelo-da-mudanca");
+    expect(O_PRECO_DA_MUDANCA_COMBINA_SE).toBe("Preço por hora combinado antes, e a conta da folha do dia validada por si");
+    expect(readFileSync(join(RAIZ, "src/app/mudancas/[cidade]/page.tsx"), "utf8")).toContain("{O_PRECO_DA_MUDANCA_COMBINA_SE}");
+  });
+
+  it("3) a inicial não mostra testemunhos com «mesmo dia»", async () => {
+    const { TESTEMUNHOS_DA_INICIAL, FALA_DO_MESMO_DIA } = await import("./testemunhos-da-inicial");
+    const mesmoDia = PROMESSAS.find(({ foraDe }) => foraDe === "src/lib/reviews-data.ts")!;
+    expect(TESTEMUNHOS_DA_INICIAL.length).toBeGreaterThan(10);
+    for (const r of TESTEMUNHOS_DA_INICIAL) {
+      expect(mesmoDia.re.test(r.text), r.name).toBe(false);
+      expect(FALA_DO_MESMO_DIA.test(r.text), r.name).toBe(false);
+    }
+    expect(FALA_DO_MESMO_DIA.test("Responderam rápido, vieram no mesmo dia e resolveram tudo.")).toBe(true);
+    const desfile = readFileSync(join(RAIZ, "src/components/DesfileDeAvaliacoes.tsx"), "utf8");
+    expect(desfile).toContain("TESTEMUNHOS_DA_INICIAL.map(");
+    expect(desfile).not.toMatch(/from "@\/lib\/reviews-data"/);
+    expect(readFileSync(join(RAIZ, "src/app/page.tsx"), "utf8")).toContain("<DesfileDeAvaliacoes />");
+  });
+});

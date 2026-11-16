@@ -20,6 +20,9 @@
  * AQUI (AAAA-MM-DD, hora de Lisboa).
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
+  // 16-11-2026 (d51): o IVA pelo regime do parceiro (NA_PROPOSTA_COM_IVA) na inicial, nos contactos,
+  // no «Como funciona» e na ajuda dos parceiros; as mudanças com o preço por hora combinado antes; a
+  // versão do esvaziamento da página do anúncio; saíram os testemunhos que não estão no Google.
   // 15-11-2026 (d39): «o parceiro escolhido» em vez de «o parceiro que escolher» — o parceiro é
   // escolhido pelo cliente ou, num orçamento em valor único, pela CLYON.
   // 15-11-2026 (d30): as duas faturas de cada trabalho e «a proposta já é o total a pagar» em vez de
@@ -36,12 +39,12 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 29-10-2026: «parceiro» em vez de «profissional» em tudo o que o cliente lê
   // (dono). Antes, 28-10-2026 (d1): as avaliações por fonte, a promessa do prazo e os
   // botões do orçamento mudaram o texto destas páginas.
-  "/": "2026-11-15",
+  "/": "2026-11-16",
   // 10-11-2026 (d29): os dados estruturados de /avaliacoes, /trabalhos, /precos e /blog
   // (o que a página diz ao Google sobre si: o caminho, as perguntas, a lista dos artigos).
-  "/avaliacoes": "2026-11-10",
+  "/avaliacoes": "2026-11-16",
   "/faq": "2026-11-15",
-  "/sobre-nos": "2026-11-15",
+  "/sobre-nos": "2026-11-16",
   "/trabalhos": "2026-11-10",
   "/blog": "2026-11-10",
   "/servicos": "2026-11-15",
@@ -54,8 +57,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-de-eletrodomesticos": "2026-11-15",
   "/recolha-de-moveis-urgente": "2026-11-15",
   "/retirar-moveis-velhos": "2026-11-15",
-  "/orcamento-recolha-lisboa": "2026-11-15",
-  "/como-funciona": "2026-11-15",
+  "/orcamento-recolha-lisboa": "2026-11-16",
+  "/como-funciona": "2026-11-16",
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
   "/precos": "2026-11-15",
   "/empresas": "2026-11-15",
@@ -65,7 +68,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
   "/precos/esvaziamento-de-casas": "2026-11-15",
   "/precos/mudancas": "2026-11-15",
-  "/contactos": "2026-11-15",
+  "/contactos": "2026-11-16",
   "/servicos/esvaziamento-apartamento": "2026-11-15",
   "/servicos/manutencao-casa": "2026-11-15",
   "/recolha-de-monos": "2026-11-15",
@@ -78,14 +81,14 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/esvaziamento-de-casas": "2026-11-15",
   "/esvaziamento-de-casas-amadora": "2026-11-15",
   // 11-11-2026: as mudanças ao preço de cada parceiro (o «desde» dos parceiros da lista, ou a referência).
-  "/mudancas": "2026-11-15",
+  "/mudancas": "2026-11-16",
   "/transporte-de-moveis": "2026-11-15",
   "/pequenas-mudancas": "2026-11-15",
   "/mudancas-de-escritorio": "2026-11-15",
   // 31-10-2026 (d6 de 28-10): o primeiro ecrã, o número da semana, a app CLYON Pro.
   // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
   // 11-11-2026 (d7): a taxa das mudanças pela lista de parceiros, dita ao lado do exemplo.
-  "/quero-ser-parceiro": "2026-11-11",
+  "/quero-ser-parceiro": "2026-11-16",
 };
 
 /**

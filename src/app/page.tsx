@@ -4,7 +4,7 @@ import { og } from "@/lib/open-graph";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PRAZO_DE_RESPOSTA, AVALIACOES, MES_DAS_CONTAGENS, NOTA_DE_PRECO, CIDADES_COM_PAGINA, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
+import { PRAZO_DE_RESPOSTA, NA_PROPOSTA_COM_IVA, AVALIACOES, MES_DAS_CONTAGENS, NOTA_DE_PRECO, CIDADES_COM_PAGINA, NOTAS_EM_LINHA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { emTerra } from "@/lib/preposicao-da-terra";
@@ -193,7 +193,7 @@ const HOW_IT_WORKS = [
        * preço dela, dito ao telefone. Hoje o preço é de cada profissional e
        * chega por escrito — 30-09-2026.
        */
-      `Parceiros da sua zona respondem com o preço deles, já com a taxa da plataforma e com IVA incluído, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Compara e aceita a que quiser — ou nenhuma.`,
+      `Parceiros da sua zona respondem com o preço deles, já com a taxa da plataforma, em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. ${NA_PROPOSTA_COM_IVA} Compara e aceita a que quiser — ou nenhuma.`,
   },
   {
     icon: Truck,

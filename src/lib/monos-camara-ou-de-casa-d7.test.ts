@@ -27,6 +27,7 @@ describe("monos: Câmara ou de casa (d7)", () => {
 
   it("título e descrição novos, dentro dos limites, com o preço das fontes e o IVA ao lado", () => {
     const preco = faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!);
+    const vistas = new Set<string>();
     for (const { city, service } of MUDAM) {
       const titulo = tituloDaCidade(service.name, city.name, service.slug, city.slug);
       expect(titulo).toBe(`Recolha de Monos ${emTerra(city.name)}: Câmara ou de Casa`);
@@ -34,18 +35,21 @@ describe("monos: Câmara ou de casa (d7)", () => {
       expect(tituloCompleto(titulo).length).toBeLessThanOrEqual(60);
 
       const descricao = descricaoDaCidade(service.slug, service.name, city.name, city.slug);
-      expect(descricao).toBe(
-        `Pela Câmara é grátis e à porta, no dia marcado. Sem esperar e de dentro de casa: parceiros, ${preco}.`,
-      );
+      // d51 (16-11-2026): uma por terra — com a terra, o preço das fontes e o IVA ao lado.
+      expect(descricao).toMatch(new RegExp(`^Monos em ${city.name}`));
+      expect(descricao).toContain(preco);
+      vistas.add(descricao);
       expect(tamanho(descricao)).toBeLessThanOrEqual(LIMITE_DA_DESCRICAO);
       expect(descricao).toContain("com IVA");
     }
+    // As cinco, cada uma a sua (d51).
+    expect(vistas.size).toBe(MUDAM.length);
   });
 
   it("as outras páginas de monos não dizem «Câmara ou de Casa»", () => {
     for (const { city, service } of FICAM) {
       expect(tituloDaCidade(service.name, city.name, service.slug, city.slug)).not.toContain("Câmara ou de Casa");
-      expect(descricaoDaCidade(service.slug, service.name, city.name, city.slug)).not.toContain("Pela Câmara é grátis");
+      expect(descricaoDaCidade(service.slug, service.name, city.name, city.slug)).not.toMatch(/recolhem? grátis/);
     }
   });
 

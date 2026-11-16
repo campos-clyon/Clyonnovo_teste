@@ -1,4 +1,4 @@
-import { PRAZO_DE_RESPOSTA } from "./seo-data";
+import { NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA } from "./seo-data";
 import { novoModeloEmVigor } from "./novo-modelo";
 
 /**
@@ -38,9 +38,14 @@ const PASSO_DE_ESCOLHER_NO_NOVO_MODELO = {
     "Depois de aceitar, paga diretamente ao parceiro — por transferência, MB WAY ou dinheiro —, " +
     "pelos dados que aparecem no seu pedido. Recusar não custa nada.",
 };
+/** d51 (16-11-2026): o IVA depende do regime do parceiro — diz-se pela constante do site. */
+const PASSO_DAS_PROPOSTAS_NO_NOVO_MODELO = {
+  titulo: TRES_PASSOS_DO_MODELO_ANTIGO[1].titulo,
+  texto: `Cada uma com o preço fechado antes de haver trabalho nenhum. ${NA_PROPOSTA_COM_IVA}`,
+};
 const TRES_PASSOS_NO_NOVO_MODELO: ReadonlyArray<{ titulo: string; texto: string }> = [
   TRES_PASSOS_DO_MODELO_ANTIGO[0],
-  TRES_PASSOS_DO_MODELO_ANTIGO[1],
+  PASSO_DAS_PROPOSTAS_NO_NOVO_MODELO,
   PASSO_DE_ESCOLHER_NO_NOVO_MODELO,
 ];
 
@@ -62,7 +67,7 @@ export const PASSOS_DA_MUDANCA_COM_ESCOLHA: ReadonlyArray<{ titulo: string; text
     titulo: "Cada parceiro responde com a data e o orçamento",
     texto:
       "A estimativa conta as horas habituais numa casa como a sua; o valor final conta as horas feitas, " +
-      "os quilómetros e o material, com IVA incluído.",
+      "os quilómetros e o material — com IVA incluído, ou sem IVA se o parceiro for isento.",
   },
   TRES_PASSOS_DO_MODELO_ANTIGO[2],
 ];

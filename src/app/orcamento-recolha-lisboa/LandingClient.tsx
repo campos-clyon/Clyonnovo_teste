@@ -42,7 +42,7 @@ import {
   PROMESSA_DO_PRAZO,
 } from "@/lib/promessas-publicas";
 import { TELEFONE_DA_CLYON, TELEFONE_DA_CLYON_LEGIVEL, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
-import { ESVAZIAMENTO_NA_LANDING, type VarianteDaLanding } from "@/lib/landing-do-esvaziamento";
+import { ESVAZIAMENTO_NA_LANDING, ESVAZIAMENTO_NO_CORPO, type VarianteDaLanding } from "@/lib/landing-do-esvaziamento";
 
 const PHONE_DISPLAY = TELEFONE_DA_CLYON_LEGIVEL;
 const PHONE_TEL = TELEFONE_DA_CLYON;
@@ -207,6 +207,43 @@ const FAQ_ITEMS = [
   },
 ];
 
+/*
+ * AS PERGUNTAS NA VERSÃO DO ESVAZIAMENTO — d51, 16-11-2026. As mesmas
+ * perguntas, ditas para quem esvazia uma casa, e com quem se paga.
+ */
+const FAQ_DO_ESVAZIAMENTO = [
+  {
+    q: "Como peço orçamento?",
+    a: `Envie fotos de cada divisão pelo WhatsApp, indique a morada ou localidade e diga o andar e se há elevador. A equipa da CLYON regista o pedido e envia-o a parceiros da sua zona: recebe propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+  {
+    q: "O orçamento é gratuito?",
+    a: "Sim. O pedido de orçamento é gratuito e sem compromisso. Só paga se decidir avançar com o esvaziamento.",
+  },
+  {
+    q: "O esvaziamento é pago?",
+    a: `Sim. O valor é o da proposta do parceiro escolhido, conforme a tipologia, o recheio, o andar, o acesso e a desmontagem. ${PAGA_AO_PARCEIRO_QUE_CONTRATOU} ${PRECO_FECHADO}`,
+  },
+  {
+    q: "O parceiro desmonta e carrega tudo?",
+    a: "Sim. Vai uma empresa parceira, com a sua equipa, que desmonta o que for preciso, carrega e transporta o recheio. Não precisa de descer nem preparar nada.",
+  },
+  {
+    q: "Também fazem a limpeza no fim?",
+    a: "Sim, se a pedir: diga-o no pedido, e a limpeza e a lavagem no fim entram na proposta do parceiro.",
+  },
+  FAQ_ITEMS[4],
+  {
+    q: "Precisa da casa vazia com urgência?",
+    a: `Indique a data no pedido. ${PROMESSA_DO_PRAZO} ${ACRESCIMO_POR_URGENCIA}`,
+  },
+  {
+    q: "O que fica de fora?",
+    a: "Amianto, químicos, resíduos perigosos ou contaminados e demolição pesada não entram. Em caso de dúvida, envie foto e a equipa da CLYON confirma.",
+  },
+  FAQ_ITEMS[7],
+];
+
 function WhatsAppIcon({ className }: { className?: string }) {
   return <MessageCircle className={className} aria-hidden="true" />;
 }
@@ -234,18 +271,18 @@ export default function LandingClient({ variante = "recolha" }: { variante?: Var
   return (
     <MensagemDoWhatsApp.Provider value={variante === "esvaziamento" ? ESVAZIAMENTO_NA_LANDING.mensagem : MENSAGEM_DO_ANUNCIO}>
     <div className="bg-white text-slate-900" style={{ zoom: 0.89 }}>
-      <TopBar />
+      <TopBar variante={variante} />
       <Hero heroRef={heroRef} variante={variante} />
       <TrustBar />
-      <HowItWorks />
-      <SendForQuote />
-      <ServicesSection />
-      <PricingGuide />
+      <HowItWorks variante={variante} />
+      <SendForQuote variante={variante} />
+      <ServicesSection variante={variante} />
+      <PricingGuide variante={variante} />
       <WhyChooseSection />
       <ReviewsSection />
       <AreasSection />
-      <FAQSection />
-      <FinalCTA />
+      <FAQSection variante={variante} />
+      <FinalCTA variante={variante} />
       <StickyMobileCTA visible={showStickyBar} />
       <FloatingWhatsAppButton />
       <div className="h-20 md:h-0" aria-hidden="true" />
@@ -255,7 +292,7 @@ export default function LandingClient({ variante = "recolha" }: { variante?: Var
 }
 
 /* ----------------------------- Top Bar ----------------------------- */
-function TopBar() {
+function TopBar({ variante }: { variante: VarianteDaLanding }) {
   const mensagem = useContext(MensagemDoWhatsApp);
   return (
     <header className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 backdrop-blur">
@@ -263,7 +300,7 @@ function TopBar() {
         <div className="flex items-center gap-3">
           <Image
             src="/logo-clyon-landing.png"
-            alt="CLYON - Recolha de móveis, monos e esvaziamentos em Lisboa"
+            alt={variante === "esvaziamento" ? ESVAZIAMENTO_NO_CORPO.logo : "CLYON - Recolha de móveis, monos e esvaziamentos em Lisboa"}
             width={150}
             height={48}
             priority
@@ -639,17 +676,18 @@ function SectionTitle({
 }
 
 /* --------------------------- How It Works --------------------------- */
-function HowItWorks() {
+function HowItWorks({ variante }: { variante: VarianteDaLanding }) {
+  const doEsvaziamento = variante === "esvaziamento";
   const steps = [
     {
       icon: Camera,
       title: "Envie fotos",
-      text: "Mostre o volume e o tipo de material pelo WhatsApp.",
+      text: doEsvaziamento ? ESVAZIAMENTO_NO_CORPO.comoFunciona.fotos : "Mostre o volume e o tipo de material pelo WhatsApp.",
     },
     {
       icon: MapPin,
       title: "Indique a morada",
-      text: "Diga a localidade e o tipo de acesso ao local.",
+      text: doEsvaziamento ? ESVAZIAMENTO_NO_CORPO.comoFunciona.morada : "Diga a localidade e o tipo de acesso ao local.",
     },
     {
       icon: BadgeCheck,
@@ -659,7 +697,7 @@ function HowItWorks() {
     {
       icon: Truck,
       title: "Escolha e combine",
-      text: "O parceiro escolhido vai ao local, carrega e transporta tudo.",
+      text: doEsvaziamento ? ESVAZIAMENTO_NO_CORPO.comoFunciona.escolha : "O parceiro escolhido vai ao local, carrega e transporta tudo.",
     },
   ];
 
@@ -692,9 +730,10 @@ function HowItWorks() {
 }
 
 /* --------------------------- Send For Quote --------------------------- */
-function SendForQuote() {
+function SendForQuote({ variante }: { variante: VarianteDaLanding }) {
   const mensagem = useContext(MensagemDoWhatsApp);
-  const cards = [
+  const icones = [Camera, MapPin, Building2, Clock];
+  const daRecolha = [
     {
       icon: Camera,
       title: "Fotos do material",
@@ -716,6 +755,10 @@ function SendForQuote() {
       text: "Quando precisa que a recolha aconteça.",
     },
   ];
+  const cards =
+    variante === "esvaziamento"
+      ? ESVAZIAMENTO_NO_CORPO.envie.map((c, i) => ({ icon: icones[i], title: c.titulo, text: c.texto }))
+      : daRecolha;
 
   return (
     <section className="bg-slate-50 py-14 sm:py-16">
@@ -760,8 +803,10 @@ function SendForQuote() {
 }
 
 /* --------------------------- Services --------------------------- */
-function ServicesSection() {
-  const services = [
+function ServicesSection({ variante }: { variante: VarianteDaLanding }) {
+  const doEsvaziamento = variante === "esvaziamento";
+  const icones = [Home, Package, Building2];
+  const daRecolha = [
     {
       icon: Sofa,
       title: "Recolha de Móveis",
@@ -787,6 +832,9 @@ function ServicesSection() {
     // 30-09-2026: saiu o cartão «Limpeza Pós-Obra» — não é um serviço da
     // plataforma (não está em service-categories.ts).
   ];
+  const services: Array<{ icon: typeof Sofa; title: string; text: string; examples: readonly string[] }> = doEsvaziamento
+    ? ESVAZIAMENTO_NO_CORPO.servicos.cartoes.map((c, i) => ({ icon: icones[i], title: c.titulo, text: c.texto, examples: c.exemplos }))
+    : daRecolha;
 
   function handleCardCta(service: string) {
     pushDataLayer({ event: "service_card_click", service_name: service });
@@ -796,7 +844,7 @@ function ServicesSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
       <SectionTitle
-        title="Serviços de recolha e esvaziamento"
+        title={doEsvaziamento ? ESVAZIAMENTO_NO_CORPO.servicos.titulo : "Serviços de recolha e esvaziamento"}
         subtitle="Soluções para particulares e empresas em toda a região de Lisboa, Margem Sul e Setúbal."
       />
       <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -844,8 +892,9 @@ function ServicesSection() {
 }
 
 /* --------------------------- Pricing Guide --------------------------- */
-function PricingGuide() {
+function PricingGuide({ variante }: { variante: VarianteDaLanding }) {
   const mensagem = useContext(MensagemDoWhatsApp);
+  const doEsvaziamento = variante === "esvaziamento";
   /*
    * COM OS PREÇOS DE REFERÊNCIA — 20-10-2026.
    *
@@ -854,7 +903,7 @@ function PricingGuide() {
    * um preço e não o encontra volta para trás. Os valores vêm da fonte única
    * (`precos-publicos.ts`), sem IVA e com o IVA ao lado — nunca sozinhos.
    */
-  const cards: { title: string; text: string; icon: typeof Sofa; preco: Valor; unidade?: string }[] = [
+  const daRecolha: { title: string; text: string; icon: typeof Sofa; preco: Valor; unidade?: string }[] = [
     {
       // A recolha mínima e as peças (d7, 04-11-2026): era «15 – 50 € / peça».
       title: "Móveis",
@@ -876,13 +925,29 @@ function PricingGuide() {
       preco: { tipo: "desde", de: PRECOS.esvaziamento_casa.minimo ?? 250 },
     },
   ];
+  // d51: na versão do esvaziamento, os três esvaziamentos da fonte única (o «desde», ou a faixa quando a há).
+  const icones = [Home, Building2, Package];
+  const cards = doEsvaziamento
+    ? ESVAZIAMENTO_NO_CORPO.precos.cartoes.map((c, i) => {
+        const p = PRECOS[c.servico];
+        const preco: Valor =
+          c.servico === "esvaziamento_apartamento" && p.maximo != null
+            ? { tipo: "faixa", de: p.minimo ?? 0, ate: p.maximo }
+            : { tipo: "desde", de: p.minimo ?? 0 };
+        return { title: c.titulo, text: c.texto, icon: icones[i], preco, unidade: undefined as string | undefined };
+      })
+    : daRecolha;
 
   return (
     <section className="bg-slate-50 py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-4">
         <SectionTitle
-          title="Quanto custa a recolha?"
-          subtitle="O valor depende do volume, peso, localização, acesso, distância até à carrinha, necessidade de desmontagem e urgência."
+          title={doEsvaziamento ? ESVAZIAMENTO_NO_CORPO.precos.titulo : "Quanto custa a recolha?"}
+          subtitle={
+            doEsvaziamento
+              ? ESVAZIAMENTO_NO_CORPO.precos.subtitulo
+              : "O valor depende do volume, peso, localização, acesso, distância até à carrinha, necessidade de desmontagem e urgência."
+          }
         />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {cards.map((card) => (
@@ -921,7 +986,7 @@ function PricingGuide() {
           </a>
         </div>
         <p className="mx-auto mt-5 max-w-2xl text-center text-xs text-slate-500">
-          O pedido de orçamento é gratuito; o serviço de recolha é pago.{" "}
+          {doEsvaziamento ? ESVAZIAMENTO_NO_CORPO.precos.nota : "O pedido de orçamento é gratuito; o serviço de recolha é pago."}{" "}
           {PAGA_AO_PARCEIRO_QUE_CONTRATOU} {PRECO_FECHADO}
         </p>
       </div>
@@ -975,7 +1040,7 @@ function WhyChooseSection() {
  * dia». Passam a ser citações palavra por palavra de lá, com o nome e a data
  * que lá estão — sem dizer a plataforma, que reviews-data não regista.
  */
-const CITADAS = ["Ricardo C.", "Paula", "Inês A."];
+const CITADAS = ["Ricardo C.", "Paula", "José P."];
 
 function ReviewsSection() {
   const reviews = CITADAS.map((nome) => AVALIACOES_REAIS.find((r) => r.name === nome))
@@ -1063,8 +1128,9 @@ function AreasSection() {
 }
 
 /* --------------------------- FAQ --------------------------- */
-function FAQSection() {
+function FAQSection({ variante }: { variante: VarianteDaLanding }) {
   const [open, setOpen] = useState<number | null>(0);
+  const perguntas = variante === "esvaziamento" ? FAQ_DO_ESVAZIAMENTO : FAQ_ITEMS;
 
   function toggle(index: number) {
     const next = open === index ? null : index;
@@ -1072,7 +1138,7 @@ function FAQSection() {
     if (next !== null) {
       pushDataLayer({
         event: "faq_open",
-        question: FAQ_ITEMS[index].q,
+        question: perguntas[index].q,
       });
     }
   }
@@ -1081,7 +1147,7 @@ function FAQSection() {
     <section className="mx-auto max-w-3xl px-4 py-14 sm:py-16">
       <SectionTitle title="Perguntas e respostas" />
       <div className="mt-8 space-y-3">
-        {FAQ_ITEMS.map((item, index) => {
+        {perguntas.map((item, index) => {
           const isOpen = open === index;
           return (
             <div
@@ -1119,17 +1185,20 @@ function FAQSection() {
 }
 
 /* --------------------------- Final CTA --------------------------- */
-function FinalCTA() {
+function FinalCTA({ variante }: { variante: VarianteDaLanding }) {
   const mensagem = useContext(MensagemDoWhatsApp);
+  const doEsvaziamento = variante === "esvaziamento";
   return (
     <section className="bg-slate-900 py-16 sm:py-20">
       <div className="mx-auto max-w-3xl px-4 text-center">
         <h2 className="text-balance text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-          Precisa libertar espaço?
+          {doEsvaziamento ? ESVAZIAMENTO_NO_CORPO.fim.titulo : "Precisa libertar espaço?"}
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-slate-300">
-          Envie fotos agora e receba propostas para recolha de móveis, monos
-          ou esvaziamento de casas. {PROMESSA_DO_PRAZO}
+          {doEsvaziamento
+            ? ESVAZIAMENTO_NO_CORPO.fim.texto
+            : "Envie fotos agora e receba propostas para recolha de móveis, monos ou esvaziamento de casas."}{" "}
+          {PROMESSA_DO_PRAZO}
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <a

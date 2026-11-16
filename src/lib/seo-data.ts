@@ -64,13 +64,13 @@ export const REGIONS: RegionData[] = [
     // Dizia «recolha, limpeza e mudanças»: a limpeza é um serviço futuro (25-10-2026).
     intro:
       "Parceiros de recolhas, esvaziamentos, mudanças e manutenção na cidade de Lisboa e nas freguesias à volta.",
-    metaTitle: "Recolha de Entulho, Móveis e Monos em Lisboa",
+    metaTitle: "Recolha de Móveis, Monos e Mudanças em Lisboa",
     // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Lisboa. Parceiros da zona, orçamento gratuito e propostas em menos de 6 horas.",
+      "Recolha de móveis e monos, esvaziamentos e mudanças em Lisboa. Parceiros da zona, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
-      "recolha de entulho lisboa",
       "recolha de móveis lisboa",
+      "esvaziamento de casas lisboa",
       "recolha de monos lisboa",
       "mudanças lisboa",
     ],
@@ -81,12 +81,12 @@ export const REGIONS: RegionData[] = [
     shortLabel: "Margem Sul",
     intro:
       "Parceiros na Margem Sul para entulho, móveis, monos, esvaziamentos e mudanças, de Almada ao Montijo.",
-    metaTitle: "Recolha de Entulho, Móveis e Monos na Margem Sul",
+    metaTitle: "Recolha de Móveis, Monos e Mudanças na Margem Sul",
     metaDescription:
-      "Recolha de entulho, móveis, monos e mudanças na Margem Sul. Atendimento rápido em Almada, Seixal, Barreiro, Moita, Montijo e arredores.",
+      "Recolha de móveis e monos, esvaziamentos e mudanças na Margem Sul. Atendimento rápido em Almada, Seixal, Barreiro, Moita, Montijo e arredores.",
     keywords: [
-      "recolha de entulho margem sul",
       "recolha de móveis margem sul",
+      "esvaziamento de casas margem sul",
       "recolha de monos margem sul",
       "mudanças margem sul",
     ],
@@ -97,13 +97,13 @@ export const REGIONS: RegionData[] = [
     shortLabel: "Setúbal",
     intro:
       "Parceiros em Setúbal, Palmela e Sesimbra para recolhas, esvaziamentos e mudanças.",
-    metaTitle: "Recolha de Entulho, Móveis e Monos em Setúbal",
+    metaTitle: "Recolha de Móveis, Monos e Mudanças em Setúbal",
     // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
     metaDescription:
-      "Recolha de entulho, móveis e monos, esvaziamentos e mudanças em Setúbal. Parceiros da zona, orçamento gratuito e propostas em menos de 6 horas.",
+      "Recolha de móveis e monos, esvaziamentos e mudanças em Setúbal. Parceiros da zona, orçamento gratuito e propostas em menos de 6 horas.",
     keywords: [
-      "recolha de entulho setúbal",
       "recolha de móveis setúbal",
+      "esvaziamento de casas setúbal",
       "recolha de monos setúbal",
       "mudanças setúbal",
     ],

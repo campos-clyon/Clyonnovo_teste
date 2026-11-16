@@ -325,7 +325,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Recebe propostas com valores",
-                  `Em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma e com IVA incluído. Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
+                  `Em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma. ${NA_PROPOSTA_COM_IVA} Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
                 ],
                 [
                   "Escolhe, e só depois se paga",

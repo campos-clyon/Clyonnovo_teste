@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { SITE_URL } from "@/lib/seo-data";
+import { NA_PROPOSTA_COM_IVA, SITE_URL } from "@/lib/seo-data";
 /*
  * OS NÚMEROS DA NEGOCIAÇÃO VÊM DO MOTOR, e não escritos aqui.
  *
@@ -486,7 +486,7 @@ export default async function TermosPage() {
             <p>
               <strong>
                 O preço de cada proposta é o total que o cliente paga, com IVA
-                incluído, e tem duas partes: o trabalho do parceiro e a taxa da
+                incluído ou isento, conforme o regime do parceiro, e tem duas partes: o trabalho do parceiro e a taxa da
                 plataforma.
               </strong>{" "}
               O parceiro propõe o seu valor sem IVA; desse valor, {quota} é a
@@ -566,7 +566,7 @@ export default async function TermosPage() {
             são indicativos e sem IVA.{" "}
             {/* d30 (15-11-2026): no modelo novo o IVA é o do regime do parceiro. */}
             {novo
-              ? "Na proposta, o preço já é o total a pagar: com IVA incluído ou isento, conforme o regime do parceiro."
+              ? NA_PROPOSTA_COM_IVA
               : "Na proposta, o preço já vem com IVA incluído."}
           </p>
           <p>

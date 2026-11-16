@@ -103,36 +103,6 @@ export const reviews: Review[] = [
     text: "Excelentes profissionais!!",
   },
   {
-    name: "Carlos F.",
-    date: "novembro de 2025",
-    text: "Excelente trabalho de toda a equipa, muito profissionais e extremamente simpáticos. Fizeram um ótimo serviço e deixaram tudo limpo.",
-  },
-  {
-    name: "Inês A.",
-    date: "novembro de 2025",
-    text: "Serviço rápido, comunicação clara e ótima relação qualidade-preço. Tudo removido em poucas horas.",
-  },
-  {
-    name: "Maria T.",
-    date: "novembro de 2025",
-    text: "Muito eficientes, pontuais e cuidadosos. Ficámos muito satisfeitos com a recolha e com a limpeza final.",
-  },
-  {
-    name: "Christian M.",
-    date: "novembro de 2025",
-    text: "Responderam rápido, vieram no mesmo dia e resolveram tudo com profissionalismo. Recomendo sem hesitar.",
-  },
-  {
-    name: "Patrícia S.",
-    date: "novembro de 2025",
-    text: "Equipa simpática, processo simples e preço transparente. Foi tudo resolvido sem stress.",
-  },
-  {
-    name: "Ana F.",
-    date: "novembro de 2025",
-    text: "Experiência muito positiva. Organização, rapidez e cuidado com o espaço do início ao fim.",
-  },
-  {
     name: "Ham J.",
     date: "março de 2026",
     text: "Great work! They were a little late due to some issues but the work was spotless. Very happy.",

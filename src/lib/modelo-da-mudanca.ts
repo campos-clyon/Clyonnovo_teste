@@ -21,5 +21,13 @@ export const MODELO_DA_MUDANCA =
   "o preço por hora, a equipa de 2 ou 3 pessoas e o material, e escolhe. O valor final sai das horas, dos km " +
   "e do material que confirma na folha do dia. A mudança é feita pelo parceiro escolhido.";
 
+/**
+ * O QUE SE COMBINA ANTES — d51, 16-11-2026. Numa mudança não há «preço fechado antes de
+ * começar»: combina-se o preço por hora, e o valor final é a conta da folha do dia, que o
+ * cliente valida. Sem ponto final, com maiúscula: serve de linha sozinha e de fim de frase.
+ */
+export const O_PRECO_DA_MUDANCA_COMBINA_SE =
+  "Preço por hora combinado antes, e a conta da folha do dia validada por si";
+
 /** O mesmo, a meio de uma frase: «Paga-se à hora, ao preço por hora do parceiro escolhido». */
 export const MODELO_DA_MUDANCA_CURTO = "ao preço por hora do parceiro escolhido";
