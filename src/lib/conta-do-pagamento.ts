@@ -538,3 +538,15 @@ export function contaDoNovoModelo(
       : [],
   };
 }
+
+/**
+ * O QUE O PROFISSIONAL PASSA À CLYON, LIDO DA CONTA DO MODELO NOVO — d53
+ * (16-11-2026). É o degrau final de `contaDoNovoModelo` (a taxa da plataforma
+ * e o IVA dela, com a reserva quando a há): o mesmo número que a «Conta do
+ * pagamento» mostra. Fora do modelo novo, nulo.
+ */
+export function aPassarAClyonDaConta(conta: ContaDoPagamento | null | undefined): number | null {
+  if (!conta?.novoModelo) return null;
+  const final = conta.degraus.find((d) => d.final);
+  return final ? final.valor : null;
+}

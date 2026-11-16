@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AlteracoesDoCliente from "./AlteracoesDoCliente";
 import DoNossoLado from "./DoNossoLado";
 import FaturasDoTrabalho from "./FaturasDoTrabalho";
+import { AConfirmarNoNovoModelo, ContaDoNovoModeloAoConfirmar } from "./NovoModeloNaMesa";
 import type { ComponentType } from "react";
 import {
   Briefcase,
@@ -3079,6 +3080,8 @@ export default function AdminNegociacoesPanel({
                 acrescimo,
               );
               const soAClyon = Math.round((conta.taxa + conta.acrescimo) * 100) / 100;
+              // O modelo de 15-11 (d53): o cliente paga ao profissional — não há referência do cliente a gerar.
+              if ((acordada as { noNovoModelo?: boolean }).noNovoModelo === true) return null;
               return (
                 <GerarReferencia
                   negociacaoId={acordada.id}
@@ -3137,6 +3140,7 @@ export default function AdminNegociacoesPanel({
                 valorAcordado={Number(acordada.valorAcordado)}
                 taxas={taxasDaNegociacao(acordada)}
                 modelo={modeloDaNegociacao(acordada.criadaEm)}
+                novoModelo={(acordada as { noNovoModelo?: boolean }).noNovoModelo === true}
                 onMudou={() => carregar(true)}
                 semProva
               />
@@ -3220,8 +3224,12 @@ export default function AdminNegociacoesPanel({
                 : feito.execucaoEnviadaEm
                   ? `Prova enviada a ${quando(feito.execucaoEnviadaEm)}. `
                   : ""}
-              {/* Onde está o dinheiro depende da forma DESTE trabalho — 29-09-2026. */}
-              {promessaDaForma(feito.formaDePagamento, modeloDaNegociacao(feito.criadaEm)).backofficeAConfirmar}
+              {/* Onde está o dinheiro depende da forma DESTE trabalho — 29-09-2026; no modelo de 15-11, a frase dele com o valor (d53). */}
+              {(feito as { noNovoModelo?: boolean }).noNovoModelo === true ? (
+                <AConfirmarNoNovoModelo negociacaoId={Number(feito.id)} token={token} />
+              ) : (
+                promessaDaForma(feito.formaDePagamento, modeloDaNegociacao(feito.criadaEm)).backofficeAConfirmar
+              )}
             </p>
 
             {/* A prova, sem ter de a ir procurar: clicar abre a fotografia. */}
@@ -3272,6 +3280,7 @@ export default function AdminNegociacoesPanel({
                 valorAcordado={feito.valorAcordado != null ? Number(feito.valorAcordado) : null}
                 taxas={taxasDaNegociacao(feito)}
                 modelo={modeloDaNegociacao(feito.criadaEm)}
+                novoModelo={(feito as { noNovoModelo?: boolean }).noNovoModelo === true}
                 onMudou={() => carregar(true)}
               />
             ) : (
@@ -4370,7 +4379,8 @@ export default function AdminNegociacoesPanel({
     if (
       !window.confirm(
         `Confirmar que estão feitos ${plano.aConfirmar.length} trabalho${plano.aConfirmar.length === 1 ? "" : "s"} (${quais})?\n\n` +
-          "Fecha o trabalho e liberta o dinheiro de cada profissional; não tem volta. " +
+          "Fecha o trabalho; não tem volta. Nos trabalhos pagos à CLYON, liberta o dinheiro de cada profissional; " +
+          "nos do modelo de 15/11, o profissional recebe a referência da taxa da plataforma e do IVA dela. " +
           "O pagamento fica declarado como escolheu, e confirma-se depois nos Pagamentos." +
           (clyonFeitosMarcados.length > 0
             ? `\n\nE ${clyonFeitosMarcados.length} de valor fixo (${clyonFeitosMarcados.map((t) => `#${t.pedidoId}`).join(", ")}), sem pagamento a declarar.`
@@ -6909,9 +6919,15 @@ function ConfirmarPelaClyon({
   onMudou,
   semProva = false,
   quando = null,
+  novoModelo = false,
 }: {
   negociacaoId: number;
   pedidoId: number;
+  /**
+   * Um trabalho do modelo de 15-11 (o servidor marca-o: `noNovoModelo`) — d53.
+   * A conta é a da «Conta do pagamento» do modelo novo, nunca «o trabalho menos 10 %».
+   */
+  novoModelo?: boolean;
   /** O dia do trabalho — se ainda não chegou, pergunta-se a vermelho (14-10-2026). */
   quando?: string | null;
   valorAcordado: number | null;
@@ -6996,7 +7012,9 @@ function ConfirmarPelaClyon({
           : "Este cliente não tem como confirmar sozinho — chegou por WhatsApp ou telefone. Confirme depois de falar com ele."}
       </p>
 
-      {valorAcordado != null &&
+      {novoModelo ? (
+        <ContaDoNovoModeloAoConfirmar negociacaoId={negociacaoId} token={authToken ?? null} />
+      ) : valorAcordado != null &&
         (() => {
           /*
             QUEM RECEBE O QUÊ.
@@ -7355,6 +7373,7 @@ function TrocaDePropostas({
               }
               taxas={taxasDaNegociacao(negociacao)}
               modelo={modeloDaNegociacao(negociacao.criadaEm)}
+              novoModelo={(negociacao as { noNovoModelo?: boolean }).noNovoModelo === true}
               onMudou={onMudou}
             />
           )}
