@@ -1,5 +1,5 @@
 import { emTerra } from "./preposicao-da-terra";
-import { ENTULHO_ATE_10_SACOS, PRECOS, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, maisIva } from "./precos-publicos";
+import { ENTULHO_ATE_10_SACOS, PRECOS, PRECO_MAXIMO_DA_PECA, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, maisIva } from "./precos-publicos";
 import { comIva, euros } from "./quanto-custa";
 import { SEM_PARCEIROS, precoDaMudancaNoTitulo, type PrecoPublicoDasMudancas } from "./preco-publico-das-mudancas";
 
@@ -63,7 +63,8 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
 // Por peça desde 03-11-2026 (d6): «por peça: pequena 15 €, média 30 €, grande 50 € + IVA» não
 // cabe nos 60 caracteres; vai o piso e o tecto de uma peça, com a unidade e «+ IVA» — e, onde
 // nem isso cabe, o piso («Desde 15 € + IVA»), como era «40 – 120 € + IVA».
-const PRECO_MOVEIS = `${PRECO_POR_ITEM.pequeno}–${PRECO_POR_ITEM.grande} €/Peça + IVA`; // "15–50 €/Peça + IVA"
+// Desde a d60 (16-11-2026) o tecto é a primeira peça grande (65 €): «15–65 €/Peça + IVA».
+const PRECO_MOVEIS = `${PRECO_POR_ITEM.pequeno}–${PRECO_MAXIMO_DA_PECA} €/Peça + IVA`; // "15–65 €/Peça + IVA"
 // O «desde» é a recolha mínima desde 04-11-2026 (d7): «Desde 40 € + IVA» (era a peça pequena, 15 €).
 const MOVEIS_DESDE = `Desde ${RECOLHA_MINIMA_DOS_MOVEIS} € + IVA`;
 const SEM_PRECO = "Propostas Grátis";

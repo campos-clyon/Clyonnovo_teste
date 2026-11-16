@@ -105,34 +105,34 @@ describe("d4 — o saco a 4,00–4,80 € e os andares por trabalho", () => {
 });
 
 describe("d6 v2 — os móveis por peça, com os andares (e a recolha mínima desde a d7)", () => {
-  it("as fontes: pequena 15 €, média 30 €, grande 50 € + IVA; recolha mínima 40 € + IVA (d7)", () => {
+  it("as fontes: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA; recolha mínima 60 € + IVA (d60)", () => {
     expect(PRECO_POR_ITEM).toEqual({ pequeno: 15, medio: 30, grande: 50 });
-    expect(maisIva(ETIQUETA_DOS_MOVEIS)).toBe("por peça: pequena 15 €, média 30 €, grande 50 € + IVA; recolha mínima 40 € + IVA");
+    expect(maisIva(ETIQUETA_DOS_MOVEIS)).toBe("por peça: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA; recolha mínima 60 € + IVA");
     expect(MOVEIS_POR_PECA).toBe(
-      "por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA); recolha mínima 40 € + IVA (49,20 € com IVA)",
+      "por peça: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA (18,45 / 36,90 / 79,95 e 61,50 € com IVA); recolha mínima 60 € + IVA (73,80 € com IVA)",
     );
     expect(precoDeReferencia("recolha_moveis")).toBe(MOVEIS_POR_PECA);
-    expect(PRECOS.recolha_moveis).toMatchObject({ minimo: 40 });
+    expect(PRECOS.recolha_moveis).toMatchObject({ minimo: 60 });
   });
 
-  it("o exemplo do dono: 2 grandes + 1 média, 2.º andar com elevador = 140 € + IVA (172,20 € com IVA)", () => {
+  it("o exemplo do dono, com a primeira grande a 65 € (d60): 2 grandes + 1 média, 2.º andar com elevador = 155 € + IVA (190,65 € com IVA)", () => {
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 0, medio: 1, grande: 2 }, floor: "2º", hasElevator: "small", parkingDistance: "under_20m" });
-    expect(r.linhas).toEqual([{ rotulo: "Estimativa", texto: "140 € + IVA (172,20 € com IVA)." }]);
-    expect(r.porque).toEqual(["2 peças grandes × 50 € = 100 € + IVA", "1 peça média × 30 € = 30 € + IVA", "2.º andar com elevador: +10 € + IVA"]);
-    expect(r.conta).toMatchObject({ servico: "140 €", total: "172,20 €" });
+    expect(r.linhas).toEqual([{ rotulo: "Estimativa", texto: "155 € + IVA (190,65 € com IVA)." }]);
+    expect(r.porque).toEqual(["2 peças grandes: 65 € a primeira + 1 × 50 € = 115 € + IVA", "1 peça média × 30 € = 30 € + IVA", "2.º andar com elevador: +10 € + IVA"]);
+    expect(r.conta).toMatchObject({ servico: "155 €", total: "190,65 €" });
   });
 
   // d7: era 15 € + IVA, sem mínimo.
-  it("1 peça pequena no rés-do-chão = a recolha mínima, 40 € + IVA (d7)", () => {
+  it("1 peça pequena no rés-do-chão = a recolha mínima, 60 € + IVA (d60)", () => {
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1 }, floor: "rés-do-chão", parkingDistance: "door" });
-    expect(texto(r)).toBe("40 € + IVA (49,20 € com IVA).");
-    expect(r.porque).toEqual(["1 peça pequena (15 €): conta a recolha mínima de 40 € + IVA"]);
+    expect(texto(r)).toBe("60 € + IVA (73,80 € com IVA).");
+    expect(r.porque).toEqual(["1 peça pequena (15 €): conta a recolha mínima de 60 € + IVA"]);
   });
 
-  it("3 grandes, 4.º andar sem elevador = 150 + 60 = 210 € + IVA (258,30 € com IVA)", () => {
+  it("3 grandes, 4.º andar sem elevador = 165 + 4 × 24 = 261 € + IVA (321,03 € com IVA) — 8 € por andar e por peça grande (d60)", () => {
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { grande: 3 }, floor: "4º+", hasElevator: "no", parkingDistance: "door" });
-    expect(texto(r)).toBe("210 € + IVA (258,30 € com IVA).");
-    expect(r.porque).toEqual(["3 peças grandes × 50 € = 150 € + IVA", "4.º andar ou acima sem elevador: +60 € + IVA"]);
+    expect(texto(r)).toBe("261 € + IVA (321,03 € com IVA).");
+    expect(r.porque).toEqual(["3 peças grandes: 65 € a primeira + 2 × 50 € = 165 € + IVA", "4.º andar ou acima sem elevador, 3 peças grandes × 8 € por andar: +96 € + IVA"]);
   });
 });
 
@@ -143,12 +143,12 @@ describe("d6 v2 — a frase por peça nos títulos e nas descrições das cidade
     for (const { service, city } of paginas) {
       const t = tituloDaCidade(service.name, city.name, service.slug, city.slug);
       // O «desde» é a recolha mínima desde a d7 (era «Desde 15 € + IVA»), e a descrição di-la.
-      expect([`— 15–50 €/Peça + IVA`, `— Desde 40 € + IVA`].some((fim) => t.endsWith(fim)), t).toBe(true);
+      expect([`— 15–65 €/Peça + IVA`, `— Desde 60 € + IVA`].some((fim) => t.endsWith(fim)), t).toBe(true);
       expect(descricaoDaCidade(service.slug, service.name, city.name, city.slug), city.slug).toContain(
-        "Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 40 € + IVA.",
+        "Por peça, 15 a 65 € + IVA (18,45 a 79,95 € com IVA), mínimo 60 € + IVA.",
       );
     }
-    expect(tituloDaCidade("Recolha de Móveis", "Lisboa", "recolha-moveis", "lisboa")).toBe("Recolha de Móveis em Lisboa — 15–50 €/Peça + IVA");
+    expect(tituloDaCidade("Recolha de Móveis", "Lisboa", "recolha-moveis", "lisboa")).toBe("Recolha de Móveis em Lisboa — 15–65 €/Peça + IVA");
   });
 });
 
@@ -172,7 +172,7 @@ describe("d6 — o «Preço de referência» sai do simulador", () => {
     const moveis = r12({ servico: "recolha_moveis" });
     expect(moveis.linhas).toEqual([{ rotulo: "Estimativa", texto: "Proposta com fotografias." }]);
     expect(moveis.porque).toEqual([
-      "Por volume, o parceiro faz a proposta a partir das fotografias. Por peça: pequena 15 €, média 30 €, grande 50 € + IVA; recolha mínima 40 € + IVA.",
+      "Por volume, o parceiro faz a proposta a partir das fotografias. Por peça: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA; recolha mínima 60 € + IVA.",
     ]);
   });
 
@@ -197,21 +197,21 @@ describe("o motor dá o mesmo número que a R12 (contrato, d6 v2)", () => {
     expect(texto(r)).toContain("210 – 250 €");
   }, 60_000);
 
-  it("os móveis do dono: 140 € + IVA, 172,20 € com IVA — fixo, acima da recolha mínima, sem mínimo de zona", async () => {
+  it("os móveis do dono: 155 € + IVA, 190,65 € com IVA (d60) — fixo, acima da recolha mínima, sem mínimo de zona", async () => {
     const order = { serviceType: "recolha_moveis", movelMode: "item", movelItemsPequeno: 0, movelItemsMedio: 1, movelItemsGrande: 2, floor: "2º", hasElevator: "small", parkingDistance: "under_20m" };
     const e = await motorDoPedido(order);
-    expect(e.estimatedPriceWithoutVat).toBe(140);
-    expect(e.estimatedPriceWithVat).toBe(172.2);
-    expect(e.vatAmount).toBe(32.2);
-    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([140, 140]);
+    expect(e.estimatedPriceWithoutVat).toBe(155);
+    expect(e.estimatedPriceWithVat).toBe(190.65);
+    expect(e.vatAmount).toBe(35.65);
+    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([155, 155]);
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 0, medio: 1, grande: 2 }, floor: "2º", hasElevator: "small", parkingDistance: "under_20m" });
-    expect(texto(r)).toBe("140 € + IVA (172,20 € com IVA).");
+    expect(texto(r)).toBe("155 € + IVA (190,65 € com IVA).");
   }, 60_000);
 
   // d7: era 15 € no motor.
-  it("uma peça pequena no rés-do-chão: a recolha mínima, 40 €, no motor também (d7)", async () => {
+  it("uma peça pequena no rés-do-chão: a recolha mínima, 60 €, no motor também (d60)", async () => {
     const e = await motorDoPedido({ serviceType: "recolha_moveis", movelMode: "item", movelItemsPequeno: 1, floor: "rés-do-chão", parkingDistance: "door" });
-    expect(e.estimatedPriceWithoutVat).toBe(40);
+    expect(e.estimatedPriceWithoutVat).toBe(60);
   }, 60_000);
 
   it("o big bag e o granel: o motor lê o pedido gravado como a R12", async () => {

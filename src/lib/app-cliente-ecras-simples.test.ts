@@ -65,9 +65,9 @@ describe("o preço em três linhas (Serviço / IVA / Total), das contas do site"
     const r = referenciaDoPedido({ servico: "recolha_monos" });
     expect(r.linhas[0].texto).toBe("30 – 100 € + IVA (36,90 – 123 € com IVA).");
     expect(r.conta).toEqual({ servico: "30 – 100 €", iva: "6,90 – 23 €", ivaRotulo: "IVA (23 %)", total: "36,90 – 123 €" });
-    // Os móveis por peça (d6 v2): uma grande, 50 € + IVA, sem mínimo.
+    // Os móveis por peça (d6 v2): uma grande sozinha, 65 € + IVA desde a d60 (a primeira grande).
     const itens = contaDaReferencia({ servico: "recolha_moveis", movelModo: "item", itens: { grande: 1 } });
-    expect(itens?.total).toBe(`${comIva(50).toFixed(2).replace(".", ",")} €`);
+    expect(itens?.total).toBe(`${comIva(65).toFixed(2).replace(".", ",")} €`);
     expect(contaDaReferencia({ servico: "mudanca" })).toBeNull(); // por hora: ficam as linhas
     // O entulho sem quantidade continua sem conta; com ela, tem (d1, 03-11-2026 — simulador-por-categoria.test.ts).
     expect(contaDaReferencia({ servico: "recolha_entulho" })).toBeNull();

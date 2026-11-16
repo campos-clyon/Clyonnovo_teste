@@ -99,7 +99,7 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     const servico = (id: string) => j.servicos.find((s: { id: string }) => s.id === id);
     // Por peça desde 03-11-2026 (d6 v2), com a recolha mínima desde a d7 (04-11-2026).
     expect(servico("recolha_moveis").precoReferencia).toBe(
-      "por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA); recolha mínima 40 € + IVA (49,20 € com IVA)",
+      "por peça: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA (18,45 / 36,90 / 79,95 e 61,50 € com IVA); recolha mínima 60 € + IVA (73,80 € com IVA)",
     );
     expect(servico("outro").precoReferencia).toBeNull();
   });

@@ -17,6 +17,7 @@ import {
   POR_ANDAR_SEM_ELEVADOR,
   POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
   PRECO_POR_HORA,
+  PRECO_POR_HORA_DUAS_PESSOAS,
   HORAS_COM_TRES_PESSOAS,
   TIPOLOGIAS,
   TIPOLOGIA_POR_EXTENSO,
@@ -212,6 +213,9 @@ function euros(cent: number): string {
 
 const REF_SEM_IVA_CENT = Math.round(PRECO_POR_HORA * 100);
 const REF_COM_IVA_CENT = Math.round(PRECO_POR_HORA * (1 + TAXA_IVA) * 100);
+/** A referência com 2 pessoas (d60, 16-11-2026). */
+const REF2_SEM_IVA_CENT = Math.round(PRECO_POR_HORA_DUAS_PESSOAS * 100);
+const REF2_COM_IVA_CENT = Math.round(PRECO_POR_HORA_DUAS_PESSOAS * (1 + TAXA_IVA) * 100);
 
 /** O preço da hora de referência (a tabela de antes), sem e com IVA. */
 export const HORA_DE_REFERENCIA: ValorDaHora = Object.freeze({ semIvaCent: REF_SEM_IVA_CENT, comIvaCent: REF_COM_IVA_CENT });
@@ -270,7 +274,8 @@ export function precoDaMudancaPorExtenso(p: PrecoPublicoDasMudancas): string {
 /** Para títulos, por ordem de preferência — fica o primeiro que couber nos 60 caracteres. */
 export function precoDaMudancaNoTitulo(p: PrecoPublicoDasMudancas): string[] {
   if (p.tipo === "parceiros") return [`Desde ${numero(p.desde.semIvaCent)} €/h + IVA`];
-  return [`Referência ${numero(REF_SEM_IVA_CENT)} €/h + IVA`];
+  // A referência desde a d60: desde 40 €/h com 2 pessoas (55 € com 3).
+  return [`Referência desde ${numero(REF2_SEM_IVA_CENT)} €/h + IVA`];
 }
 
 /** Para uma descrição, depois de «Mudanças em X à hora, »: sem ponto final. */
@@ -278,7 +283,7 @@ export function precoDaMudancaNaDescricao(p: PrecoPublicoDasMudancas): string {
   if (p.tipo === "parceiros") {
     return `desde ${numero(p.desde.semIvaCent)} €/h + IVA (${numero(p.desde.comIvaCent)} € com IVA), equipa de 2 — compare parceiros e escolha`;
   }
-  return `referência ${numero(REF_SEM_IVA_CENT)} €/h + IVA (${numero(REF_COM_IVA_CENT)} € com IVA), equipa de ${PESSOAS_NA_EQUIPA}`;
+  return `referência desde ${numero(REF2_SEM_IVA_CENT)} €/h + IVA (${numero(REF2_COM_IVA_CENT)} € com IVA), equipa de 2`;
 }
 
 /**
@@ -418,7 +423,7 @@ export function dizAHoraOuOMinimoDaReferencia(texto: string): boolean {
  */
 export function minimoDaMudancaParaOModelo(p: PrecoPublicoDasMudancas): string {
   if (p.tipo === "parceiros") return "o mínimo de horas é o da tarifa de cada parceiro";
-  return `o mínimo de horas é o de cada parceiro; na referência (sem parceiros na lista), ${numero(REF_SEM_IVA_CENT * MINIMO_DE_HORAS)} € s/IVA (${numero(REF_COM_IVA_CENT * MINIMO_DE_HORAS)} € c/IVA): ${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h`;
+  return `o mínimo de horas é o de cada parceiro; na referência (sem parceiros na lista), ${numero(REF2_SEM_IVA_CENT * MINIMO_DE_HORAS)} € s/IVA (${numero(REF2_COM_IVA_CENT * MINIMO_DE_HORAS)} € c/IVA) com 2 pessoas e ${numero(REF_SEM_IVA_CENT * MINIMO_DE_HORAS)} € s/IVA (${numero(REF_COM_IVA_CENT * MINIMO_DE_HORAS)} € c/IVA) com ${PESSOAS_NA_EQUIPA}: ${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA_DUAS_PESSOAS} €/h ou × ${PRECO_POR_HORA} €/h`;
 }
 
 /** Os euros que a lista de hoje dá (o «desde» de 2 e de 3 e os exemplos), para quem confere números. */
@@ -458,7 +463,7 @@ export function regrasDaMudancaParaOModelo(p: PrecoPublicoDasMudancas): string {
         : "");
     deslocacao = `Deslocação: os km são os da tarifa de cada parceiro (o preço por km e os km mínimos dele). Na referência: ${DESLOCACAO_DA_MUDANCA_PARA_O_MODELO}.`;
   } else {
-    hora = `Sem parceiros na lista não há preço por hora para prometer: estima só pela REFERÊNCIA publicada — ${PRECO_POR_HORA} €/hora (equipa de ${PESSOAS_NA_EQUIPA}), mínimo de ${MINIMO_DE_HORAS} horas da referência — e di-la sempre como referência («na referência…»), nunca como o preço da CLYON nem de um parceiro.`;
+    hora = `Sem parceiros na lista não há preço por hora para prometer: estima só pela REFERÊNCIA publicada — ${PRECO_POR_HORA_DUAS_PESSOAS} €/hora com 2 pessoas, ${PRECO_POR_HORA} €/hora com ${PESSOAS_NA_EQUIPA}, mínimo de ${MINIMO_DE_HORAS} horas da referência — e di-la sempre como referência («na referência…»), nunca como o preço da CLYON nem de um parceiro.`;
     deslocacao = `Deslocação (referência): ${DESLOCACAO_DA_MUDANCA_PARA_O_MODELO}.`;
   }
   return `MUDANÇA — À HORA, AO PREÇO DE CADA PARCEIRO (valores sem IVA, o que o cliente paga):

@@ -20,6 +20,9 @@
  * AQUI (AAAA-MM-DD, hora de Lisboa).
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
+  // 16-11-2026 (d60): os preços que pagam a saída — a 1.ª peça grande a 65 €, a recolha mínima de 60 €, os
+  // andares por peça grande, o esvaziamento T2–T4 e a moradia, e as mudanças na referência (40 €/h com 2
+  // pessoas, 55 €/h com 3, 15 km incluídos) — nas páginas que os mostram.
   // 16-11-2026 (d51): o IVA pelo regime do parceiro (NA_PROPOSTA_COM_IVA) na inicial, nos contactos,
   // no «Como funciona» e na ajuda dos parceiros; as mudanças com o preço por hora combinado antes; a
   // versão do esvaziamento da página do anúncio; saíram os testemunhos que não estão no Google.
@@ -43,31 +46,31 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 10-11-2026 (d29): os dados estruturados de /avaliacoes, /trabalhos, /precos e /blog
   // (o que a página diz ao Google sobre si: o caminho, as perguntas, a lista dos artigos).
   "/avaliacoes": "2026-11-16",
-  "/faq": "2026-11-15",
+  "/faq": "2026-11-16",
   "/sobre-nos": "2026-11-16",
   "/trabalhos": "2026-11-10",
   "/blog": "2026-11-10",
-  "/servicos": "2026-11-15",
-  "/recolha-de-moveis": "2026-11-15",
-  "/recolha-de-sofas": "2026-11-15",
-  "/recolha-de-camas": "2026-11-15",
-  "/recolha-de-armarios": "2026-11-15",
+  "/servicos": "2026-11-16",
+  "/recolha-de-moveis": "2026-11-16",
+  "/recolha-de-sofas": "2026-11-16",
+  "/recolha-de-camas": "2026-11-16",
+  "/recolha-de-armarios": "2026-11-16",
   // 02-11-2026: liga às secções «recolha gratuita» de Lisboa e de Setúbal.
   "/recolha-gratuita-de-moveis-usados": "2026-11-02",
-  "/recolha-de-eletrodomesticos": "2026-11-15",
+  "/recolha-de-eletrodomesticos": "2026-11-16",
   "/recolha-de-moveis-urgente": "2026-11-15",
-  "/retirar-moveis-velhos": "2026-11-15",
+  "/retirar-moveis-velhos": "2026-11-16",
   "/orcamento-recolha-lisboa": "2026-11-16",
   "/como-funciona": "2026-11-16",
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
-  "/precos": "2026-11-15",
-  "/empresas": "2026-11-15",
+  "/precos": "2026-11-16",
+  "/empresas": "2026-11-16",
   // d43: a página nova dos armazéns, escritórios e lojas.
   "/esvaziamento-de-armazens-e-escritorios": "2026-11-15",
   // 31-10-2026: o sem IVA nunca sozinho — cada preço com o com IVA ao lado (antes,
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
-  "/precos/esvaziamento-de-casas": "2026-11-15",
-  "/precos/mudancas": "2026-11-15",
+  "/precos/esvaziamento-de-casas": "2026-11-16",
+  "/precos/mudancas": "2026-11-16",
   "/contactos": "2026-11-16",
   "/servicos/esvaziamento-apartamento": "2026-11-15",
   "/servicos/manutencao-casa": "2026-11-15",
@@ -77,14 +80,14 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-de-entulho": "2026-11-15",
   "/precos/recolha-de-entulho": "2026-11-15",
   // 04-11-2026 (d7): os móveis com a recolha mínima e o sofá, a cama e o armário como peças grandes.
-  "/precos/recolha-de-monos-e-moveis": "2026-11-15",
-  "/esvaziamento-de-casas": "2026-11-15",
-  "/esvaziamento-de-casas-amadora": "2026-11-15",
+  "/precos/recolha-de-monos-e-moveis": "2026-11-16",
+  "/esvaziamento-de-casas": "2026-11-16",
+  "/esvaziamento-de-casas-amadora": "2026-11-16",
   // 11-11-2026: as mudanças ao preço de cada parceiro (o «desde» dos parceiros da lista, ou a referência).
   "/mudancas": "2026-11-16",
-  "/transporte-de-moveis": "2026-11-15",
-  "/pequenas-mudancas": "2026-11-15",
-  "/mudancas-de-escritorio": "2026-11-15",
+  "/transporte-de-moveis": "2026-11-16",
+  "/pequenas-mudancas": "2026-11-16",
+  "/mudancas-de-escritorio": "2026-11-16",
   // 31-10-2026 (d6 de 28-10): o primeiro ecrã, o número da semana, a app CLYON Pro.
   // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
   // 11-11-2026 (d7): a taxa das mudanças pela lista de parceiros, dita ao lado do exemplo.

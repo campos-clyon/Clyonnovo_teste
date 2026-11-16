@@ -249,7 +249,7 @@ describe("(8) Vila Franca de Xira e Mafra saem das zonas vizinhas", () => {
  */
 describe("(9) o sofá: uma peça grande, com o IVA, e a recolha mínima (d7)", () => {
   it("a frase e onde ela vai", () => {
-    expect(PECA_GRANDE).toBe("50 € + IVA (61,50 € com IVA)");
+    expect(PECA_GRANDE).toBe("65 € + IVA (79,95 € com IVA)");
     expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: {PECA_GRANDE}. A recolha conta-se {MOVEIS_POR_PECA_COM_OS_ANDARES}.");
     expect(ler("src/app/recolha-de-sofas/page.tsx")).toContain("Um sofá conta como uma peça grande: ${PECA_GRANDE}. A recolha conta-se ${MOVEIS_POR_PECA_COM_OS_ANDARES}.");
     expect(ler("src/lib/blog-data.ts")).toContain(": o sofá é uma peça grande. Uma recolha de móveis conta-se");

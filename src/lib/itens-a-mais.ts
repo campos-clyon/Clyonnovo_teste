@@ -1,5 +1,5 @@
 import { notaDaCargaParaOCliente, O_QUE_E_UMA_CARGA, type BaseDoPreco } from "./base-do-preco";
-import { PECAS_EM_TEXTO, PRECO_POR_ITEM } from "./precos-publicos";
+import { PRECO_POR_ITEM } from "./precos-publicos";
 import { extraNoLocal, INCLUI } from "./extra-no-local";
 import { TAXA_IVA } from "./taxas-plataforma";
 
@@ -63,8 +63,15 @@ const PECAS_COM_IVA_EM_TEXTO = `${(["pequeno", "medio", "grande"] as const)
   .map((t) => (Math.round(PRECO_POR_ITEM[t] * (1 + TAXA_IVA) * 100) / 100).toFixed(2).replace(".", ","))
   .join(" / ")} €`;
 
-/** «pequena 15 €, média 30 €, grande 50 € + IVA» — a tabela das peças, para quem faz o trabalho. */
-export const TABELA_DOS_ITENS_A_MAIS = `${PECAS_EM_TEXTO} + IVA`;
+/*
+ * A GRANDE A MAIS É UMA «SEGUINTE» — d60, 16-11-2026. A primeira peça grande de
+ * uma recolha conta 65 € (paga a saída); um item que aparece a mais no local já
+ * vem com a recolha feita, e conta como as seguintes: grande 50 €.
+ */
+const PECAS_A_MAIS_EM_TEXTO = `pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} €`;
+
+/** «pequena 15 €, média 30 €, grande 50 € + IVA» — a tabela dos itens a mais, para quem faz o trabalho. */
+export const TABELA_DOS_ITENS_A_MAIS = `${PECAS_A_MAIS_EM_TEXTO} + IVA`;
 
 /**
  * «cada item a mais conta pela tabela das peças: pequena 15 €, média 30 €,

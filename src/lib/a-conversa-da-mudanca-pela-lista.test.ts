@@ -37,8 +37,9 @@ import { euroDasFontes, eurosNoTexto, oQueOSiteSabe } from "./o-que-o-site-sabe"
 const AGORA = new Date("2026-11-11T10:00:00Z");
 
 const BARATO: TarifaDasMudancas = {
-  precoHora2: 40,
-  precoHora3: 55,
+  // 42/57 desde a d60: a referência passou a 40 €/h (2 pessoas) e 55 €/h (3), e o «desde» não se pode confundir com ela.
+  precoHora2: 42,
+  precoHora3: 57,
   minimoHoras: 2,
   precoKm: 0.8,
   kmMinimo: 10,
@@ -90,20 +91,20 @@ function perguntaOPreco(preco: PrecoPublicoDasMudancas): string {
 describe("a leitura que os testes usam apanha as frases de antes", () => {
   it("a hora e o mínimo da referência, escritos de qualquer das maneiras", () => {
     for (const frase of [
-      "Equipa de 3 a 50 €/h + IVA",
-      "a referência é 50,00 € + IVA por hora (61,50 € com IVA), equipa de 3",
-      "Para estimar usa a referência de 50 €/hora (equipa de 3)",
-      "estima pela referência (50 € s/IVA por hora)",
-      "61,50 €/hora com IVA",
+      "Equipa de 3 a 55 €/h + IVA",
+      "a referência é 55,00 € + IVA por hora (67,65 € com IVA), equipa de 3",
+      "Para estimar usa a referência de 55 €/hora (equipa de 3)",
+      "estima pela referência (55 € s/IVA por hora)",
+      "67,65 €/hora com IVA",
       "mínimo 3 horas",
       "mínimo de 3 horas",
-      "Mudança à hora: 50 € + IVA por hora (mínimo 3 h).",
+      "Mudança à hora: 55 € + IVA por hora (mínimo 3 h).",
     ]) {
       expect(daReferencia(frase), frase).toBe(true);
     }
     for (const frase of [
-      "desde 40,00 € + IVA/h (49,20 € com IVA) com 2 pessoas",
-      "O mais baixo hoje, com 2 pessoas: 40 €/hora; com 3 pessoas: 55 €/hora.",
+      "desde 42,00 € + IVA/h (51,66 € com IVA) com 2 pessoas",
+      "O mais baixo hoje, com 2 pessoas: 42 €/hora; com 3 pessoas: 57 €/hora.",
       "alguns móveis 3 h · T0 / estúdio 3–4 h",
       "o mínimo de horas é o de cada parceiro (na lista de hoje: entre 2 e 4 horas)",
       "peça grande 50 € sem IVA",
@@ -118,8 +119,8 @@ describe("o «desde» da lista traz o mínimo dos parceiros e um exemplo por tip
   it("o «desde» de 2 e de 3 pessoas e o mínimo de horas, do mais baixo ao mais alto", () => {
     expect(COM.tipo).toBe("parceiros");
     if (COM.tipo !== "parceiros") return;
-    expect(COM.desde).toEqual({ semIvaCent: 4000, comIvaCent: 4920 });
-    expect(COM.desde3).toEqual({ semIvaCent: 5500, comIvaCent: 6765 });
+    expect(COM.desde).toEqual({ semIvaCent: 4200, comIvaCent: 5166 });
+    expect(COM.desde3).toEqual({ semIvaCent: 5700, comIvaCent: 7011 });
     expect(COM.minimoHoras).toEqual({ de: 2, ate: 4 });
   });
 
@@ -141,10 +142,10 @@ describe("o «desde» da lista traz o mínimo dos parceiros e um exemplo por tip
       expect(e.maximo, e.tipologia).toEqual({ semIvaCent: cartao!.estimativa.maximo.semIvaCent, comIvaCent: cartao!.estimativa.maximo.comIvaCent });
       expect(e.comProtecao).toBe(true);
     }
-    // À mão, o T2: 6,5–9 h × 40 € + 10 km × 0,80 € + 3 rolos de filme × 8 € + 10 m de cartão × 2 €.
+    // À mão, o T2: 6,5–9 h × 42 € + 10 km × 0,80 € + 3 rolos de filme × 8 € + 10 m de cartão × 2 €.
     const t2 = COM.exemplos!.find((e) => e.tipologia === "T2")!;
     expect(t2.horas).toEqual([6.5, 9]);
-    expect([t2.minimo.semIvaCent, t2.maximo.semIvaCent]).toEqual([31200, 41200]);
+    expect([t2.minimo.semIvaCent, t2.maximo.semIvaCent]).toEqual([32500, 43000]);
   });
 
   it("nunca abaixo do mínimo de horas do parceiro: sozinho, o de 4 horas conta 4 em alguns móveis", () => {
@@ -179,7 +180,7 @@ describe("a conversa: «Quanto custa?» numa mudança", () => {
   it("com parceiros na lista, o «desde» de 2 e de 3, o mínimo do parceiro e os exemplos — sem a referência", () => {
     const resposta = perguntaOPreco(COM);
     expect(resposta).toContain("cada parceiro tem o seu preço por hora e o seu mínimo de horas (hoje, entre 2 e 4 horas)");
-    expect(resposta).toContain("desde 40,00 € + IVA/h (49,20 € com IVA) com 2 pessoas e desde 55,00 € + IVA/h (67,65 € com IVA) com 3");
+    expect(resposta).toContain("desde 42,00 € + IVA/h (51,66 € com IVA) com 2 pessoas e desde 57,00 € + IVA/h (70,11 € com IVA) com 3");
     expect(resposta).toContain("pelo parceiro com o preço mais baixo, já com a proteção e os km");
     if (COM.tipo !== "parceiros") throw new Error("sem parceiros");
     const t2 = COM.exemplos!.find((e) => e.tipologia === "T2")!;
@@ -195,7 +196,7 @@ describe("a conversa: «Quanto custa?» numa mudança", () => {
   it("um parceiro que não faz com 3: só o «desde» de 2, e os exemplos das casas que ele faz", () => {
     const p = precoPublicoDosCandidatos([candidato("Parceiro C", { ...BARATO, precoHora3: null })]);
     const resposta = precoDaMudancaNoWhatsApp(p);
-    expect(resposta).toContain("desde 40,00 € + IVA/h (49,20 € com IVA) com 2 pessoas.");
+    expect(resposta).toContain("desde 42,00 € + IVA/h (51,66 € com IVA) com 2 pessoas.");
     expect(resposta).not.toContain("com 3 pessoas");
   });
 });
@@ -209,7 +210,7 @@ describe("o aviso ao modelo estima pela lista, e só pela referência quando ela
 
   it("com parceiros: o «desde» de 2 e de 3, o mínimo do parceiro, os exemplos — e nem a hora nem o mínimo da referência", async () => {
     const [r, prompt, vitoria, minimo] = await regras(COM);
-    expect(r).toContain("O mais baixo hoje, com 2 pessoas: 40 €/hora; com 3 pessoas: 55 €/hora.");
+    expect(r).toContain("O mais baixo hoje, com 2 pessoas: 42 €/hora; com 3 pessoas: 57 €/hora.");
     expect(r).toContain("O mínimo de horas é o de cada parceiro (na lista de hoje: entre 2 e 4 horas).");
     expect(r).toContain("ESTIMA PELO «DESDE» DA LISTA");
     expect(r).toMatch(/EXEMPLOS DE HOJE[^\n]*T1, 2 pessoas, 5–6,5 h, com a proteção: [^|]+\| T2, 2 pessoas, 6,5–9 h, com a proteção: [^|]+\| T3, 3 pessoas, 7–9 h, com a proteção: /);
@@ -244,6 +245,7 @@ describe("o aviso ao modelo estima pela lista, e só pela referência quando ela
     expect(eurosNoTexto(resposta).filter((n) => !euroDasFontes(n))).toEqual([]);
     expect(eurosDaLista(SEM_PARCEIROS)).toEqual([]);
     lembrarPrecoPublico(SEM_PARCEIROS);
-    expect(euroDasFontes(67.65)).toBe(false);
+    // 51,66 € é o com IVA da hora de 2 pessoas do parceiro inventado: sem a lista, deixa de ser fonte.
+    expect(euroDasFontes(51.66)).toBe(false);
   });
 });

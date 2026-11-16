@@ -6,12 +6,16 @@ import {
   NOME_DO_TAMANHO,
   PECAS_EM_TEXTO,
   PRECOS,
+  PRECO_DA_PRIMEIRA_GRANDE,
+  PRECO_MAXIMO_DA_PECA,
   PRECO_POR_ITEM,
   PRECO_POR_SACO,
   RECOLHA_MINIMA_DOS_MOVEIS,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
+  RECOLHA_POR_ANDAR_E_PECA_GRANDE,
   RECOLHA_POR_ANDAR_SEM_ELEVADOR,
   celulaDaManutencao,
+  valorDasGrandes,
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
   notaDosMateriais,
@@ -141,8 +145,10 @@ export function esvaziamentoComOIvaAoLado(chave: string): string {
 const PECAS_PELA_ORDEM = ["pequeno", "medio", "grande"] as const;
 const NOMES_DAS_PECAS: Readonly<Record<(typeof PECAS_PELA_ORDEM)[number], string>> = { pequeno: "pequena", medio: "média", grande: "grande" };
 
-/** «18,45 / 36,90 / 61,50 €» — o com IVA de cada peça (pequena, média, grande). */
-export const PECAS_COM_IVA = `${PECAS_PELA_ORDEM.map((t) => euros(comIva(PRECO_POR_ITEM[t])).replace(" €", "")).join(" / ")} €`;
+/** «18,45 / 36,90 / 79,95 e 61,50 €» — o com IVA de cada peça (pequena, média, a primeira grande e as seguintes, d60). */
+export const PECAS_COM_IVA =
+  `${[PRECO_POR_ITEM.pequeno, PRECO_POR_ITEM.medio, PRECO_DA_PRIMEIRA_GRANDE].map((v) => euros(comIva(v)).replace(" €", "")).join(" / ")} ` +
+  `e ${euros(comIva(PRECO_POR_ITEM.grande))}`;
 
 /** «40 € + IVA (49,20 € com IVA)» — a recolha mínima dos móveis (d7, 04-11-2026). */
 export const RECOLHA_MINIMA_COM_IVA = valorSemEComIva(RECOLHA_MINIMA_DOS_MOVEIS);
@@ -161,7 +167,7 @@ export const MOVEIS_POR_PECA = `por peça: ${PECAS_EM_TEXTO} + IVA (${PECAS_COM_
  * «por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 40 € + IVA» —
  * onde a frase inteira não cabe (descrições, cartões).
  */
-export const MOVEIS_POR_PECA_CURTO = `por peça, ${euros(PRECO_POR_ITEM.pequeno).replace(" €", "")} a ${euros(PRECO_POR_ITEM.grande)} + IVA (${euros(comIva(PRECO_POR_ITEM.pequeno)).replace(" €", "")} a ${euros(comIva(PRECO_POR_ITEM.grande))} com IVA), mínimo ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA`;
+export const MOVEIS_POR_PECA_CURTO = `por peça, ${euros(PRECO_POR_ITEM.pequeno).replace(" €", "")} a ${euros(PRECO_MAXIMO_DA_PECA)} + IVA (${euros(comIva(PRECO_POR_ITEM.pequeno)).replace(" €", "")} a ${euros(comIva(PRECO_MAXIMO_DA_PECA))} com IVA), mínimo ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA`;
 
 /**
  * «Recolhem desde uma única peça. Cada peça conta pela tabela (pequena 15 €,
@@ -174,11 +180,13 @@ export const DESDE_UMA_PECA =
   `Recolhem desde uma única peça. Cada peça conta pela tabela (${PECAS_EM_TEXTO} + IVA) e cada recolha tem um mínimo de ` +
   `${RECOLHA_MINIMA_COM_IVA}, que já inclui ir a sua casa, carregar e levar ao destino certo.`;
 
-/** «50 € + IVA (61,50 € com IVA)» — uma peça grande (um sofá, um armário, uma cama de casal). */
-export const PECA_GRANDE = `${euros(PRECO_POR_ITEM.grande)} + IVA (${euros(comIva(PRECO_POR_ITEM.grande))} com IVA)`;
+/** «65 € + IVA (79,95 € com IVA)» — uma peça grande sozinha (um sofá, um armário, uma cama de casal): a primeira grande (d60). */
+export const PECA_GRANDE = `${euros(PRECO_DA_PRIMEIRA_GRANDE)} + IVA (${euros(comIva(PRECO_DA_PRIMEIRA_GRANDE))} com IVA)`;
 
 /** «…, mais 5 € + IVA por andar com elevador e 15 € + IVA por andar sem elevador» — os andares dos móveis por peça (d6). */
-export const ANDARES_DOS_MOVEIS = `mais ${euros(RECOLHA_POR_ANDAR_COM_ELEVADOR)} + IVA por andar com elevador e ${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA por andar sem elevador`;
+export const ANDARES_DOS_MOVEIS =
+  `mais ${euros(RECOLHA_POR_ANDAR_COM_ELEVADOR)} + IVA por andar com elevador e, sem elevador, ${euros(RECOLHA_POR_ANDAR_E_PECA_GRANDE)} + IVA por andar e por peça grande ` +
+  `(nunca menos de ${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA por andar); a peça grande que não cabe no elevador conta como escada`;
 
 /**
  * «por peça: … (… com IVA); recolha mínima 40 € + IVA (49,20 € com IVA); e,
@@ -189,7 +197,8 @@ export const MOVEIS_POR_PECA_COM_OS_ANDARES = `${MOVEIS_POR_PECA}; e, depois do 
 
 /** «por peça: pequena 18,45 €, média 36,90 €, grande 61,50 € com IVA; recolha mínima 49,20 € com IVA» — a linha pequena de um cartão. */
 export const MOVEIS_POR_PECA_COM_IVA =
-  `por peça: ${PECAS_PELA_ORDEM.map((t) => `${NOMES_DAS_PECAS[t]} ${euros(comIva(PRECO_POR_ITEM[t]))}`).join(", ")} com IVA; ` +
+  `por peça: ${NOMES_DAS_PECAS.pequeno} ${euros(comIva(PRECO_POR_ITEM.pequeno))}, ${NOMES_DAS_PECAS.medio} ${euros(comIva(PRECO_POR_ITEM.medio))}, ` +
+  `${NOMES_DAS_PECAS.grande} ${euros(comIva(PRECO_DA_PRIMEIRA_GRANDE))} a primeira e ${euros(comIva(PRECO_POR_ITEM.grande))} as seguintes com IVA; ` +
   `recolha mínima ${euros(comIva(RECOLHA_MINIMA_DOS_MOVEIS))} com IVA`;
 
 /**
@@ -321,6 +330,10 @@ const inteiro = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? M
 
 /** «25 €/un + IVA (30,75 € com IVA)» — a etiqueta de cada tamanho. */
 export function precoDoItem(tamanho: TamanhoDoItem): string {
+  // A grande: a primeira a 65 €, as seguintes a 50 € (d60).
+  if (tamanho === "grande") {
+    return `${euros(PRECO_DA_PRIMEIRA_GRANDE)} a 1.ª e ${euros(PRECO_POR_ITEM.grande)} as seguintes + IVA (${euros(comIva(PRECO_DA_PRIMEIRA_GRANDE))} e ${euros(comIva(PRECO_POR_ITEM.grande))} com IVA)`;
+  }
   const v = PRECO_POR_ITEM[tamanho];
   return `${euros(v)}/un + IVA (${euros(comIva(v))} com IVA)`;
 }
@@ -344,7 +357,8 @@ export function contaDosItens(itens: ItensDosMoveis): {
   const medio = inteiro(itens.medio);
   const grande = inteiro(itens.grande);
   const quantos = pequeno + medio + grande;
-  const soma = pequeno * PRECO_POR_ITEM.pequeno + medio * PRECO_POR_ITEM.medio + grande * PRECO_POR_ITEM.grande;
+  // As grandes: a primeira a 65 €, as seguintes a 50 € (d60, 16-11-2026).
+  const soma = pequeno * PRECO_POR_ITEM.pequeno + medio * PRECO_POR_ITEM.medio + valorDasGrandes(grande);
   const pelaRecolhaMinima = quantos > 0 && soma < RECOLHA_MINIMA_DOS_MOVEIS;
   return { quantos, pequeno, medio, grande, soma, total: pelaRecolhaMinima ? RECOLHA_MINIMA_DOS_MOVEIS : soma, pelaRecolhaMinima };
 }
@@ -736,7 +750,8 @@ export type ValorDosMoveis = { itens: ReturnType<typeof contaDosItens>; sup: Sup
 export function valorDosMoveis(itens: ItensDosMoveis, acesso: AcessoDoEntulho | null | undefined): ValorDosMoveis | null {
   const c = contaDosItens(itens);
   if (c.quantos === 0) return null;
-  const sup = suplementoDosAndares(acesso);
+  // Os andares a pé contam as peças grandes (d60): 8 € por andar e por peça grande, nunca menos de 15 €.
+  const sup = suplementoDosAndares(acesso, { pecasGrandes: c.grande });
   return { itens: c, sup, valor: Math.round((c.total + sup.valor) * 100) / 100 };
 }
 
@@ -754,9 +769,16 @@ function porqueDosItens(c: ReturnType<typeof contaDosItens>): string[] {
     const pecas = comPecas.map((t) => `${c[t]} ${c[t] === 1 ? NOMES_DOS_TAMANHOS[t][0] : NOMES_DOS_TAMANHOS[t][1]}`).join(" e ");
     return [`${pecas} (${euros(c.soma)}): conta a recolha mínima de ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA`];
   }
-  return comPecas.map(
-    (t) => `${c[t]} ${c[t] === 1 ? NOMES_DOS_TAMANHOS[t][0] : NOMES_DOS_TAMANHOS[t][1]} × ${euros(PRECO_POR_ITEM[t])} = ${euros(c[t] * PRECO_POR_ITEM[t])} + IVA`,
-  );
+  return comPecas.map((t) => {
+    const nome = c[t] === 1 ? NOMES_DOS_TAMANHOS[t][0] : NOMES_DOS_TAMANHOS[t][1];
+    // As grandes (d60): «1 peça grande × 65 €», «3 peças grandes: 65 € + 2 × 50 € = 165 € + IVA».
+    if (t === "grande") {
+      return c.grande === 1
+        ? `1 ${nome} × ${euros(PRECO_DA_PRIMEIRA_GRANDE)} = ${euros(PRECO_DA_PRIMEIRA_GRANDE)} + IVA`
+        : `${c.grande} ${nome}: ${euros(PRECO_DA_PRIMEIRA_GRANDE)} a primeira + ${c.grande - 1} × ${euros(PRECO_POR_ITEM.grande)} = ${euros(valorDasGrandes(c.grande))} + IVA`;
+    }
+    return `${c[t]} ${nome} × ${euros(PRECO_POR_ITEM[t])} = ${euros(c[t] * PRECO_POR_ITEM[t])} + IVA`;
+  });
 }
 
 /**
@@ -1070,7 +1092,7 @@ export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | 
     p.mudanca = { tipologia, kmPercurso: km, desmontagem: lerDesmontagem(c.desmontagem) === true, origem: ponta(c.origem), destino: ponta(c.destino) };
   } else {
     // O andar, o elevador e o estacionamento (d1): levam a faixa ao topo.
-    const acesso = lerAcesso({ floor: c.floor, hasElevator: c.hasElevator, parkingDistance: c.parkingDistance ?? c.estacionamento });
+    const acesso = lerAcesso({ floor: c.floor, hasElevator: c.hasElevator, parkingDistance: c.parkingDistance ?? c.estacionamento, pecasNoElevador: c.pecasNoElevador });
     if (acesso.floor || acesso.hasElevator || acesso.parkingDistance) p.acesso = acesso;
   }
   if (c.servico === "recolha_entulho") {
@@ -1113,6 +1135,8 @@ export type FormularioDoSimulador = {
   floor?: string;
   hasElevator?: string;
   parkingDistance?: string;
+  /** As peças grandes cabem no elevador? (d60) */
+  pecasNoElevador?: string;
   tipologia?: string;
   /** Esvaziamento: quão cheia está (`RECHEIOS`). */
   recheio?: string;
@@ -1173,6 +1197,7 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
     corpo.floor = f.floor;
     corpo.hasElevator = f.floor === "rés-do-chão" ? undefined : f.hasElevator;
     corpo.parkingDistance = f.parkingDistance;
+    if (f.pecasNoElevador) corpo.pecasNoElevador = f.pecasNoElevador;
   }
   corpo.localidade = f.address?.city;
   return corpo;

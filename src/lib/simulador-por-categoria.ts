@@ -17,6 +17,7 @@ import {
   VOLUMES_DO_ENTULHO,
   tipologiasDoEsvaziamento,
   type OpcaoDaResposta,
+  PECAS_NO_ELEVADOR,
 } from "./respostas-do-simulador";
 
 /**
@@ -95,7 +96,10 @@ const ACIMA_DO_RES_DO_CHAO = ANDARES.filter((a) => a.id !== "rés-do-chão").map
 
 /* ── O acesso ───────────────────────────────────────────────────────────── */
 
-function perguntasDoAcesso(prefixo = "", onde = "", comAndar = true): PerguntaDoSimulador[] {
+/** A pergunta de quem tem peças grandes e elevador (d60, 16-11-2026): a peça que não cabe desce pela escada. */
+export const TITULO_DAS_PECAS_NO_ELEVADOR = "As peças grandes cabem no elevador?";
+
+function perguntasDoAcesso(prefixo = "", onde = "", comAndar = true, comPecasGrandes = false): PerguntaDoSimulador[] {
   const id = (c: string) => (prefixo ? `${prefixo}.${c}` : c);
   const l: PerguntaDoSimulador[] = [];
   if (comAndar) {
@@ -109,6 +113,18 @@ function perguntasDoAcesso(prefixo = "", onde = "", comAndar = true): PerguntaDo
       opcoes: ELEVADORES,
       quando: { [id("floor")]: ACIMA_DO_RES_DO_CHAO },
     });
+    if (comPecasGrandes) {
+      l.push({
+        id: id("pecasNoElevador"),
+        titulo: TITULO_DAS_PECAS_NO_ELEVADOR,
+        tipo: "escolha",
+        obrigatoria: false,
+        ecra: "acesso",
+        opcoes: PECAS_NO_ELEVADOR,
+        quando: { [id("floor")]: ACIMA_DO_RES_DO_CHAO, [id("hasElevator")]: ["yes", "small"] },
+        ajuda: "Uma peça grande que não cabe no elevador desce pela escada, e conta como um andar sem elevador.",
+      });
+    }
   }
   l.push({
     id: id("parkingDistance"),
@@ -349,9 +365,9 @@ export function perguntasDoServico(servico: string): PerguntaDoSimulador[] {
   if (!SERVICOS_PUBLICOS.some((s) => s.id === servico)) return [];
   switch (servico) {
     case "recolha_moveis":
-      return [...moveis(), ...perguntasDoAcesso()];
+      return [...moveis(), ...perguntasDoAcesso("", "", true, true)];
     case "recolha_monos":
-      return [...monos(), ...perguntasDoAcesso()];
+      return [...monos(), ...perguntasDoAcesso("", "", true, true)];
     case "recolha_entulho":
       return [...entulho(), ...perguntasDoAcesso()];
     case "esvaziamento_casa":

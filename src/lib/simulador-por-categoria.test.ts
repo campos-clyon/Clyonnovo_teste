@@ -69,9 +69,10 @@ describe("d1 — as perguntas de cada categoria", () => {
   it("cada serviço do simulador tem as suas perguntas, pela ordem", () => {
     expect(ids("recolha_moveis")).toEqual([
       "movelModo", "itens.pequeno", "itens.medio", "itens.grande", "volume", "quantidadeExacta", "desmontagem",
-      "floor", "hasElevator", "parkingDistance",
+      "floor", "hasElevator", "pecasNoElevador", "parkingDistance",
     ]);
-    expect(ids("recolha_monos")).toEqual(["volume", "quantidadeExacta", "desmontagem", "floor", "hasElevator", "parkingDistance"]);
+    // «As peças grandes cabem no elevador?» nos móveis e nos monos (d60).
+    expect(ids("recolha_monos")).toEqual(["volume", "quantidadeExacta", "desmontagem", "floor", "hasElevator", "pecasNoElevador", "parkingDistance"]);
     expect(ids("recolha_entulho")).toEqual([
       "entulho", "tipoDeSaco", "quantidade", "ensacados", "porEnsacar", "entulhoVolume", "floor", "hasElevator", "parkingDistance",
     ]);
@@ -165,9 +166,9 @@ describe("d1 — as perguntas de cada categoria", () => {
     expect(casa.opcoes!.map((o) => o.id)).toEqual(ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => t.chave));
     expect(casa.opcoes!.map((o) => o.nome)).toEqual(ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => t.tipo));
     const apartamento = perguntasDoServico("esvaziamento_apartamento")[0];
-    expect(apartamento.opcoes!.map((o) => o.id)).toEqual(["T0/T1", "T2", "T3/T4"]);
+    expect(apartamento.opcoes!.map((o) => o.id)).toEqual(["T0/T1", "T2", "T3", "T4"]);
     for (const o of [...casa.opcoes!, ...apartamento.opcoes!]) expect(o.ajuda, o.id).toMatch(/\+ IVA \(.+ com IVA\)$/);
-    expect(casa.opcoes![1].ajuda).toBe("320 – 420 € + IVA (393,60 – 516,60 € com IVA)");
+    expect(casa.opcoes![1].ajuda).toBe("400 – 600 € + IVA (492 – 738 € com IVA)");
     expect(perguntasDoServico("esvaziamento_casa")[1].opcoes!.map((o) => o.id)).toEqual(["pouco", "mobilada", "muito"]);
   });
 
@@ -284,7 +285,7 @@ describe("d1 — o acesso leva a referência ao topo da faixa, e diz porquê", (
     const moveis = daR12({ servico: "recolha_moveis", movelModo: "carga", volume: "carrinha", floor: "3º", hasElevator: "no", parkingDistance: "door" });
     expect(especifica(moveis)).toBe("Proposta com fotografias.");
     expect(moveis.porque).toEqual([
-      "Por volume, o parceiro faz a proposta a partir das fotografias. Por peça: pequena 15 €, média 30 €, grande 50 € + IVA; recolha mínima 40 € + IVA.",
+      "Por volume, o parceiro faz a proposta a partir das fotografias. Por peça: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA; recolha mínima 60 € + IVA.",
       "3.º andar sem elevador: o parceiro tem-no em conta na proposta.",
     ]);
   });
@@ -400,14 +401,14 @@ describe("d4 — os andares no entulho, por trabalho: +5 € com elevador, +15 �
 
 describe("d1 — o esvaziamento pela tipologia, e a manutenção", () => {
   it("um T2: a linha da grelha; pouca coisa, o início; muito cheia, o topo", () => {
-    expect(especifica(daR12({ servico: "esvaziamento_apartamento", tipologia: "T2" }))).toBe("320 – 420 € + IVA (393,60 – 516,60 € com IVA).");
+    expect(especifica(daR12({ servico: "esvaziamento_apartamento", tipologia: "T2" }))).toBe("400 – 600 € + IVA (492 – 738 € com IVA).");
     const pouco = daR12({ servico: "esvaziamento_apartamento", tipologia: "T2", recheio: "pouco" });
-    expect(especifica(pouco)).toBe("desde 320 € + IVA (393,60 € com IVA), o início da faixa (320 – 420 € + IVA (393,60 – 516,60 € com IVA)), por haver pouca coisa.");
+    expect(especifica(pouco)).toBe("desde 400 € + IVA (492 € com IVA), o início da faixa (400 – 600 € + IVA (492 – 738 € com IVA)), por haver pouca coisa.");
     expect(pouco.porque).toEqual(["Apartamento T2: a linha da grelha do esvaziamento.", "Pouca coisa: o início da faixa."]);
     const muito = daR12({ servico: "esvaziamento_casa", tipologia: "T2", recheio: "muito" });
-    expect(especifica(muito)).toBe("420 € + IVA (516,60 € com IVA), o topo da faixa (320 – 420 € + IVA (393,60 – 516,60 € com IVA)), por estar muito cheia.");
+    expect(especifica(muito)).toBe("600 € + IVA (738 € com IVA), o topo da faixa (400 – 600 € + IVA (492 – 738 € com IVA)), por estar muito cheia.");
     const moradia = daR12({ servico: "esvaziamento_casa", tipologia: "moradia" });
-    expect(especifica(moradia)).toBe("desde 450 € + IVA (553,50 € com IVA).");
+    expect(especifica(moradia)).toBe("desde 900 € + IVA (1 107 € com IVA).");
     // A moradia não é apartamento: sem a tipologia certa, não há estimativa (d6).
     expect(daR12({ servico: "esvaziamento_apartamento", tipologia: "moradia" }).linhas).toHaveLength(0);
   });

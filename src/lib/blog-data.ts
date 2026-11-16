@@ -229,7 +229,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     readingTime: "8 min",
     publishDate: "2026-03-16",
     // 04-11-2026 (d7): «recolhe apenas uma peça?» com a recolha mínima.
-    updatedDate: "2026-11-04",
+    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
     heroLabel: "Guia prático",
     intro:
       "A recolha de móveis é dos pedidos mais frequentes na CLYON. Seja por mudança, renovação, venda de casa, fim de arrendamento, herança ou despejo de recheios, o objetivo costuma ser sempre o mesmo: libertar espaço depressa, com segurança e sem complicar acessos, desmontagens ou transporte. Precisa de recolha de móveis em Lisboa ou na Margem Sul? Veja a [recolha de móveis](/recolha-de-moveis) ou [simule um orçamento](/simulador). Para esvaziar uma casa ou apartamento completo, veja o [esvaziamento de casas](/esvaziamento-de-casas).",
@@ -715,7 +715,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "8 min",
     publishDate: "2026-06-01",
-    updatedDate: "2026-11-11",
+    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
     heroLabel: "Mudanças",
     intro:
       "O preço de uma mudança em Lisboa depende de vários fatores: o tamanho do apartamento, a distância entre moradas, o andar (com ou sem elevador), a necessidade de desmontagem e montagem de móveis e se quer incluir embalagem. Este guia ajuda a perceber valores reais e a evitar surpresas.",
@@ -830,7 +830,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
   },
   {
     slug: "pequenas-mudancas-em-lisboa-quando-compensa",
-    updatedDate: "2026-11-11",
+    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
     title: "Pequenas mudanças em Lisboa: quando compensa contratar uma equipa",
     metaTitle: "Pequenas Mudanças em Lisboa: Quando Compensa",
     description:
@@ -900,7 +900,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     readingTime: "5 min",
     publishDate: "2026-10-14",
     // 03-11-2026 (d6 v2): a recolha de móveis por peça; 04-11-2026 (d7): a recolha mínima, e o sofá pela tabela das peças.
-    updatedDate: "2026-11-16", // d51: o IVA pelo regime do parceiro.
+    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
     heroLabel: "Recolha de móveis",
     intro:
       "O sofá é a peça que mais gente quer tirar de casa, e a que mais dúvidas levanta: cabe no elevador? Tem de ser desmontado? A Câmara leva-o de graça? Este guia junta os valores de referência da CLYON para Lisboa, o que os faz variar e as alternativas sem custo.",
@@ -975,7 +975,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "6 min",
     publishDate: "2026-10-14",
-    updatedDate: "2026-10-28",
+    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
     heroLabel: "Esvaziamento",
     intro:
       "Esvaziar a casa de um pai, de uma avó ou de um tio é das tarefas mais pesadas que há — pelo volume e pelo que cada objeto lembra. Não há uma ordem certa, mas há uma que poupa tempo e discussões. Este guia mostra-a, com os valores de referência da CLYON.",
@@ -1219,7 +1219,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
-    updatedDate: "2026-11-11",
+    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
     heroLabel: "Esvaziamento",
     intro:
       "Entre um inquilino que sai e outro que entra, ou antes de uma escritura, o apartamento tem de ficar vazio numa data que não se mexe. Este guia mostra como planear o esvaziamento para chegar a essa data com a casa pronta — e quanto custa, com os valores de referência da CLYON.",
@@ -1299,7 +1299,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
-    updatedDate: "2026-10-31",
+    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
     heroLabel: "Mudanças",
     intro:
       "Muita gente muda de casa entre as duas margens do Tejo — de Lisboa para Almada, para o Seixal ou para o Barreiro, ou no sentido contrário. A travessia muda pouco a conta, mas muda o planeamento. Este guia junta o que pesa numa mudança entre margens, e como se escolhe o parceiro.",

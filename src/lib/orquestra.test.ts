@@ -113,6 +113,7 @@ type Regra =
   | "q-verificado"
   | "r-pecas-e-entulho"
   | "t-grelha-antiga"
+  | "d60-precos-antigos"
   | "u-site"
   | "v-distancia-a-mao"
   | "w-taxa-no-codigo"
@@ -457,6 +458,21 @@ const MINIMO_POR_ITEM_ANTIGO = /(?<![\d.,])48[.,]78(?!\d)/u;
 const ALMADA_POR_ZONA = /\bAlmada\b[^.;!?]{0,40}?(?<![\d.,])2[23]0\s?(?:€|euros?(?!\p{L}))/iu;
 const GRELHA_ANTIGA: RegExp[] = [MINIMO_POR_ITEM_ANTIGO, ALMADA_POR_ZONA];
 const A_REGRA_T_SE_APLICA = A_REGRA_R_SE_APLICA;
+
+/*
+ * d60) OS PREÇOS DE ANTES DA d60 NÃO VOLTAM — 16-11-2026 (o CEO e o dono). A recolha
+ * mínima passou de 40 a 60 €, a primeira peça grande a 65 €, o esvaziamento T2–T4 e a
+ * moradia subiram, e a referência das mudanças passou a 40 €/h com 2 pessoas e 55 €/h
+ * com 3, com 15 km incluídos (eram 50 €/h e 50 km). Em src/ (fora das fontes), nenhum
+ * texto diz «recolha mínima de 40 €», a hora de 50 € (ou 61,50 € com IVA), as faixas
+ * velhas do esvaziamento (320–420, 380–450, «desde 450 €») nem os «50 km» incluídos.
+ * Os números certos chegam das fontes, interpolados («‹›»).
+ */
+const RECOLHA_MINIMA_A_40 = /m[íi]nim[ao](?: de)? 40\s?€(?!\s?[–-])/iu;
+const HORA_A_50 = /(?<![\d.,])(?:50|61,50)(?:,00)?\s?€\s?(?:\+ ?IVA\s?|s\/IVA\s?|com IVA\s?)?(?:\/\s?h(?:ora)?(?![a-zà-ú])|por hora)/iu;
+const ESVAZIAMENTO_ANTIGO = /(?<![\d.,])(?:320\s?[–-]\s?420|380\s?[–-]\s?450)(?!\d)|desde 450\s?€/u;
+const RAIO_DE_50_KM = /(?:até|acima de|mais de|primeiros) 50\s?km/iu;
+const PRECOS_ANTES_DA_D60: RegExp[] = [RECOLHA_MINIMA_A_40, HORA_A_50, ESVAZIAMENTO_ANTIGO, RAIO_DE_50_KM];
 
 /*
  * u) «PLATAFORMA», NÃO «SITE» — d28 (parte do Site), 10-11-2026; a regra é do
@@ -954,6 +970,8 @@ function achadosDe(f: string): Achado[] {
     if (A_REGRA_R_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of PRECOS_DA_D7) marcar("r-pecas-e-entulho", re.exec(texto));
     // t) O SQL fica de fora.
     if (A_REGRA_T_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of GRELHA_ANTIGA) marcar("t-grelha-antiga", re.exec(texto));
+    // d60) Fora das fontes dos preços; o SQL fica de fora.
+    if (A_REGRA_R_SE_APLICA(f) && !E_SQL.test(texto)) for (const re of PRECOS_ANTES_DA_D60) marcar("d60-precos-antigos", re.exec(texto));
     // u) Fora do backoffice; o SQL, os registos e a página da história ficam de fora.
     if (publico && !A_HISTORIA.has(f) && !E_SQL.test(texto) && !texto.startsWith("[")) marcar("u-site", PELO_SITE.exec(texto));
     // v) O SQL fica de fora.
@@ -1224,6 +1242,25 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     for (const f of ["src/app/conta/components/OrderDetailModal.tsx", "src/lib/email-proposta.ts", "src/lib/pricing-helper.ts"]) {
       expect(SEM_IVA_SE_APLICA(f), f).toBe(false);
     }
+  });
+
+  it("a regra d60 apanha os preços de antes: a recolha mínima de 40 €, a hora a 50 €, o esvaziamento velho e os 50 km", () => {
+    const tem = (s: string) => PRECOS_ANTES_DA_D60.some((re) => re.test(s));
+    expect(tem("cada recolha tem um mínimo de 40 € + IVA")).toBe(true);
+    expect(tem("recolha mínima 40 € + IVA (49,20 € com IVA)")).toBe(true);
+    expect(tem("Equipa de 3 a 50 €/h + IVA")).toBe(true);
+    expect(tem("na referência, 50,00 € + IVA por hora")).toBe(true);
+    expect(tem("61,50 €/hora com IVA")).toBe(true);
+    expect(tem("Apartamento T2: 320 – 420 €")).toBe(true);
+    expect(tem("Moradia completa: desde 450 €")).toBe(true);
+    expect(tem("Até 50 km a deslocação está incluída")).toBe(true);
+    // O que se escreve agora: das fontes, interpolado; e o entulho dos 10 sacos (40–48 €) fica.
+    expect(tem("recolha mínima ‹› € + IVA")).toBe(false);
+    expect(tem("com o mínimo de 10 sacos, 40 – 48 € + IVA")).toBe(false);
+    expect(tem("desde 42,50 €/h + IVA, equipa de 2")).toBe(false);
+    expect(tem("peça grande 50 € sem IVA")).toBe(false);
+    expect(tem("150 €/hora")).toBe(false);
+    expect(ACHADOS.filter((a) => a.regra === "d60-precos-antigos")).toEqual([]);
   });
 
   it("a regra r apanha o preço de peça à mão, o «sem mínimo» e o «desde 120 €/m³» (d7, 04-11-2026)", () => {
@@ -1694,8 +1731,9 @@ describe("y) as mudanças ao preço de cada parceiro, na Vitória e no aviso ao 
   const COM = {
     tipo: "parceiros" as const,
     parceiros: 2,
-    desde: { semIvaCent: 4000, comIvaCent: 4920 },
-    desde3: { semIvaCent: 5500, comIvaCent: 6765 },
+    // Longe da referência (40 €/h com 2, 55 €/h com 3, desde a d60), para os dois não se confundirem.
+    desde: { semIvaCent: 4200, comIvaCent: 5166 },
+    desde3: { semIvaCent: 5700, comIvaCent: 7011 },
     minimoHoras: { de: 2, ate: 4 },
   };
 
@@ -1734,7 +1772,7 @@ describe("y) as mudanças ao preço de cada parceiro, na Vitória e no aviso ao 
     ]) {
       expect(daReferencia(frase), frase).toBe(true);
     }
-    expect(daReferencia("O mais baixo hoje, com 2 pessoas: 40 €/hora; com 3 pessoas: 55 €/hora.")).toBe(false);
+    expect(daReferencia("O mais baixo hoje, com 2 pessoas: 42 €/hora; com 3 pessoas: 57 €/hora.")).toBe(false);
     expect(daReferencia("o mínimo de horas é o de cada parceiro (na lista de hoje: entre 2 e 4 horas)")).toBe(false);
     expect("mínimo 3 horas").toMatch(MINIMO_DE_HORAS_A_MAO);
     expect("mínimo de 2,5 h").toMatch(MINIMO_DE_HORAS_A_MAO);
@@ -1810,8 +1848,9 @@ describe("y) as mudanças ao preço de cada parceiro, na Vitória e no aviso ao 
  */
 describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulador (d7, parte do Site)", () => {
   const TARIFA = {
-    precoHora2: 55,
-    precoHora3: 65,
+    // Longe da referência (55 €/h com 3 desde a d60).
+    precoHora2: 52,
+    precoHora3: 62,
     minimoHoras: 2,
     precoKm: 1,
     kmMinimo: 20,

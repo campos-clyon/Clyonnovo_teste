@@ -87,9 +87,9 @@ describe("os números são os das fontes únicas", () => {
   it("móveis: as peças de referência pela tabela e a recolha mínima", () => {
     const p = precos("recolha-moveis");
     for (const peca of PECAS_DE_REFERENCIA) expect(p).toContain(precoDaPecaComOIva(peca));
-    expect(p).toContain("peça grande, 50 € + IVA (61,50 € com IVA)");
+    expect(p).toContain("peça grande, 65 € + IVA (79,95 € com IVA)");
     expect(p).toContain(`desde ${valorSemEComIva(PRECOS.recolha_moveis.minimo!)}`);
-    expect(p).toContain("desde 40 € + IVA (49,20 € com IVA)");
+    expect(p).toContain("desde 60 € + IVA (73,80 € com IVA)");
     expect(referenciasDaCidade("recolha-moveis", "Barreiro").map((r) => r.oQue)).toEqual([
       ...PECAS_DE_REFERENCIA.map((x) => x.peca),
       // Por peça desde 03-11-2026 (d6 v2): da pequena à grande, e por baixo a frase inteira com os andares.
@@ -125,7 +125,7 @@ describe("os números são os das fontes únicas", () => {
 
   it("o com IVA é o sem IVA com o IVA, e não outro número", () => {
     const linha = referenciasDaCidade("recolha-moveis", "Lisboa")[0].preco;
-    expect(linha).toContain(`(${euros(comIva(50))} com IVA)`);
+    expect(linha).toContain(`(${euros(comIva(65))} com IVA)`);
   });
 });
 

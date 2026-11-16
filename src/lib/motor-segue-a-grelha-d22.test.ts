@@ -49,24 +49,24 @@ async function motorDoPedido(order: Record<string, unknown>) {
 describe("d22 (1) — o esvaziamento pela tipologia, igual nas três portas", () => {
   const T2 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T2")!;
 
-  it("a fonte diz 320–420 € sem IVA para o T2", () => {
-    expect([T2.minimo, T2.maximo]).toEqual([320, 420]);
+  it("a fonte diz 400–600 € sem IVA para o T2 (d60; era 320–420 €)", () => {
+    expect([T2.minimo, T2.maximo]).toEqual([400, 600]);
   });
 
-  it("a app (R12) e o site dizem 320 – 420 € + IVA, com o IVA ao lado", () => {
-    const frase = "320 – 420 € + IVA (393,60 – 516,60 € com IVA).";
+  it("a app (R12) e o site dizem 400 – 600 € + IVA, com o IVA ao lado", () => {
+    const frase = "400 – 600 € + IVA (492 – 738 € com IVA).";
     expect(texto(r12({ servico: "esvaziamento_apartamento", tipologia: "T2" }))).toBe(frase);
     expect(texto(referenciaDoSimuladorDoSite({ serviceType: "esvaziamento_apartamento", tipologia: "T2" })!)).toBe(frase);
   });
 
   it("o motor (a Mesa) dá a mesma faixa, com o IVA ao lado, e o número fica nela", async () => {
     const e = await motorDoPedido({ serviceType: "esvaziamento_apartamento", tipologia: "T2" });
-    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([320, 420]);
-    expect([e.estimateMinWithVat, e.estimateMaxWithVat]).toEqual([comIva(320), comIva(420)]);
-    expect([e.estimateMinWithVat, e.estimateMaxWithVat]).toEqual([393.6, 516.6]);
-    expect(e.estimatedPriceWithoutVat).toBe(420);
-    expect(e.estimatedPriceWithVat).toBe(516.6);
-    expect(e.recommendedPriceWithoutVat).toBe(420);
+    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([400, 600]);
+    expect([e.estimateMinWithVat, e.estimateMaxWithVat]).toEqual([comIva(400), comIva(600)]);
+    expect([e.estimateMinWithVat, e.estimateMaxWithVat]).toEqual([492, 738]);
+    expect(e.estimatedPriceWithoutVat).toBe(600);
+    expect(e.estimatedPriceWithVat).toBe(738);
+    expect(e.recommendedPriceWithoutVat).toBe(600);
     expect(e.pelaGrelha).toBe(true);
     // Era 250 € (o mínimo de zona), fora da faixa publicada.
     expect(e.estimatedPriceWithoutVat).not.toBe(250);
@@ -74,21 +74,21 @@ describe("d22 (1) — o esvaziamento pela tipologia, igual nas três portas", ()
 
   it("a tipologia escrita na descrição (WhatsApp, contactos) também conta", async () => {
     const e = await motorDoPedido({ serviceType: "esvaziamento_apartamento", description: "Esvaziar um T2 em Almada" });
-    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([320, 420]);
+    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([400, 600]);
   }, 60_000);
 
   it("pouca coisa é o início da faixa; o andar sem elevador, o topo — como na R12", async () => {
     const pouco = await motorDoPedido({ serviceType: "esvaziamento_apartamento", tipologia: "T2", recheio: "pouco" });
-    expect(pouco.estimatedPriceWithoutVat).toBe(320);
-    expect(texto(r12({ servico: "esvaziamento_apartamento", tipologia: "T2", recheio: "pouco" }))).toMatch(/^desde 320 € \+ IVA/);
+    expect(pouco.estimatedPriceWithoutVat).toBe(400);
+    expect(texto(r12({ servico: "esvaziamento_apartamento", tipologia: "T2", recheio: "pouco" }))).toMatch(/^desde 400 € \+ IVA/);
     const semElevador = await motorDoPedido({ serviceType: "esvaziamento_apartamento", tipologia: "T2", floor: "3º", hasElevator: "no" });
-    expect(semElevador.estimatedPriceWithoutVat).toBe(420);
-    expect(semElevador.estimateMaxWithoutVat).toBe(420);
+    expect(semElevador.estimatedPriceWithoutVat).toBe(600);
+    expect(semElevador.estimateMaxWithoutVat).toBe(600);
   }, 60_000);
 
-  it("a moradia só tem o «desde 450 €»: o motor não inventa um tecto", async () => {
+  it("a moradia só tem o «desde 900 €» (d60): o motor não inventa um tecto", async () => {
     const e = await motorDoPedido({ serviceType: "esvaziamento_casa", tipologia: "moradia" });
-    expect([e.estimatedPriceWithoutVat, e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([450, 450, 450]);
+    expect([e.estimatedPriceWithoutVat, e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([900, 900, 900]);
   }, 60_000);
 });
 
@@ -107,12 +107,12 @@ describe("d22 (2) — os móveis descritos em texto pela tabela das peças, e os
     expect(classifyItem("cama de casal")).toBe("grande");
   });
 
-  it("«2 sofás, 1 cadeira e um micro-ondas» = 2 × 50 + 30 + 15 = 145 € + IVA, o mesmo número da R12", async () => {
+  it("«2 sofás, 1 cadeira e um micro-ondas» = 65 + 50 + 30 + 15 = 160 € + IVA (d60), o mesmo número da R12", async () => {
     const description = "2 sofás, 1 cadeira e um micro-ondas";
     expect(pecasDoTexto({ serviceType: "recolha_moveis", description })).toEqual({ pequeno: 1, medio: 1, grande: 2 });
     const e = await motorDoPedido({ serviceType: "recolha_moveis", description });
-    const soma = 2 * PRECO_POR_ITEM.grande + PRECO_POR_ITEM.medio + PRECO_POR_ITEM.pequeno;
-    expect(soma).toBe(145);
+    const soma = 65 + PRECO_POR_ITEM.grande + PRECO_POR_ITEM.medio + PRECO_POR_ITEM.pequeno;
+    expect(soma).toBe(160);
     expect(e.estimatedPriceWithoutVat).toBe(soma);
     expect(e.estimatedPriceWithVat).toBe(comIva(soma));
     expect(valorDosMoveis({ pequeno: 1, medio: 1, grande: 2 }, null)!.valor).toBe(soma);
@@ -126,7 +126,7 @@ describe("d22 (2) — os móveis descritos em texto pela tabela das peças, e os
     expect(terceiro.estimatedPriceWithoutVat).toBe(RECOLHA_MINIMA_DOS_MOVEIS + 3 * 15);
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1 }, floor: "3º", hasElevator: "no" });
     expect(r.conta).not.toBeNull();
-    expect(texto(r)).toContain("85 € + IVA");
+    expect(texto(r)).toContain("105 € + IVA");
   }, 60_000);
 
   it("os monos sem peças ficam na faixa publicada (30 – 100 €), no meio desde a d59 — nunca o mínimo de 48,78 € por item", async () => {

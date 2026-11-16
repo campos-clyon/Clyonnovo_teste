@@ -27,7 +27,8 @@ const pagina = paginaDePreco("/precos/esvaziamento-de-casas");
 const linhas = linhasDoEsvaziamento();
 const t01 = linhaDoEsvaziamento("T0/T1").valor;
 const t2 = linhaDoEsvaziamento("T2").valor;
-const t34 = linhaDoEsvaziamento("T3/T4").valor;
+const t3 = linhaDoEsvaziamento("T3").valor;
+const t4 = linhaDoEsvaziamento("T4").valor;
 const moradia = linhaDoEsvaziamento("moradia").valor;
 const apartamento: Valor = {
   tipo: "faixa",
@@ -37,7 +38,7 @@ const apartamento: Valor = {
 const IVA = `${Math.round(TAXA_IVA * 100)} %`;
 
 const descricao = descricaoQueCabe([
-  `Esvaziar um T0/T1: ${semIvaEscrito(t01)}; T2: ${semIvaEscrito(t2)}; T3/T4: ${semIvaEscrito(t34)}; moradia ${semIvaEscrito(moradia)}. Tudo + IVA.`,
+  `Esvaziar um T0/T1: ${semIvaEscrito(t01)}; T2: ${semIvaEscrito(t2)}; T3: ${semIvaEscrito(t3)}; T4: ${semIvaEscrito(t4)}; moradia ${semIvaEscrito(moradia)}. Tudo + IVA.`,
   "Com IVA ao lado e o que entra.",
 ]);
 
@@ -59,8 +60,8 @@ export default function PrecoDoEsvaziamentoPage() {
         h1: "Quanto custa esvaziar uma casa?",
         resposta:
           `Esvaziar um apartamento custa ${semIvaEscrito(apartamento)} + IVA (${comIvaEscrito(apartamento)} com IVA), ` +
-          `conforme a tipologia, o volume e o andar: um T0/T1 ${semIvaEscrito(t01)}, um T2 ${semIvaEscrito(t2)} ` +
-          `e um T3/T4 ${semIvaEscrito(t34)}, sempre + IVA. Uma moradia completa, ${semIvaEscrito(moradia)} + IVA. ` +
+          `conforme a tipologia, o volume e o andar: um T0/T1 ${semIvaEscrito(t01)}, um T2 ${semIvaEscrito(t2)}, ` +
+          `um T3 ${semIvaEscrito(t3)} e um T4 ou maior ${semIvaEscrito(t4)}, sempre + IVA. Uma moradia completa, ${semIvaEscrito(moradia)} + IVA. ` +
           "O valor final é a proposta do parceiro, fechada antes de começar e já com o IVA.",
         tabela: { titulo: "Tabela de preços do esvaziamento", linhas },
         caixa: {

@@ -6,14 +6,21 @@
  * `preco-publico-das-mudancas.ts`, que as reexporta.
  */
 
-import { MINIMO_DE_HORAS, PESSOAS_NA_EQUIPA, PRECO_POR_HORA, PRECO_POR_HORA_COM_IVA } from "./tabela-das-mudancas";
+import {
+  MINIMO_DE_HORAS,
+  PESSOAS_NA_EQUIPA,
+  PRECO_POR_HORA,
+  PRECO_POR_HORA_COM_IVA,
+  PRECO_POR_HORA_DUAS_PESSOAS,
+  PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA,
+} from "./tabela-das-mudancas";
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
 /** A referência, a meio de uma frase (sem ponto final) — quando não há parceiros na lista. */
 export const REFERENCIA_DA_MUDANCA =
-  `referência: ${euros(PRECO_POR_HORA)} + IVA por hora (${euros(PRECO_POR_HORA_COM_IVA)} com IVA), ` +
-  `equipa de ${PESSOAS_NA_EQUIPA}, mínimo de ${MINIMO_DE_HORAS} horas`;
+  `referência: ${euros(PRECO_POR_HORA_DUAS_PESSOAS)} + IVA por hora (${euros(PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA)} com IVA) com 2 pessoas, ` +
+  `${euros(PRECO_POR_HORA)} + IVA por hora (${euros(PRECO_POR_HORA_COM_IVA)} com IVA) com ${PESSOAS_NA_EQUIPA}, mínimo de ${MINIMO_DE_HORAS} horas`;
 
 /** O modelo numa frase, para as páginas, a FAQ e o blog. */
 export const MODELO_DA_MUDANCA =

@@ -18,6 +18,7 @@ import {
   PESSOAS_NA_EQUIPA,
   POR_ANDAR_SEM_ELEVADOR,
   PRECO_POR_HORA,
+  PRECO_POR_HORA_DUAS_PESSOAS,
   PRECO_POR_KM_LONGE,
   RAIO_INCLUIDO_KM,
   TIPOLOGIA_POR_EXTENSO,
@@ -190,7 +191,7 @@ function naReferencia(preco: PrecoPublicoDasMudancas): Conteudo {
     h1: "Quanto custa uma mudança?",
     resposta:
       `${precoDaMudancaNaCabeca(preco)} ${NO_SIMULADOR} ` +
-      `Na referência (${euros(PRECO_POR_HORA)} + IVA por hora, ${euros(comIva(PRECO_POR_HORA))} com IVA, equipa de ${PESSOAS_NA_EQUIPA}), ` +
+      `Na referência com ${PESSOAS_NA_EQUIPA} pessoas (${euros(PRECO_POR_HORA)} + IVA por hora, ${euros(comIva(PRECO_POR_HORA))} com IVA; com 2 pessoas, ${euros(PRECO_POR_HORA_DUAS_PESSOAS)} + IVA, ${euros(comIva(PRECO_POR_HORA_DUAS_PESSOAS))} com IVA), ` +
       `com a proteção dos móveis e do chão, um T1 fica em ${faixa("T1")}, um T2 em ${faixa("T2")} e um T3 em ${faixa("T3")}, sempre + IVA ` +
       `(um T3 com IVA: ${faixaComIva("T3")}). Um T3 leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T3)} com 3 pessoas — um dia inteiro.`,
     tabela: { titulo: "Na referência, por tipologia", linhas: linhasDasMudancas() },

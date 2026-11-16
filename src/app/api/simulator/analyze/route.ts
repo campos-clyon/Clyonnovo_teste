@@ -17,7 +17,15 @@ import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
 import { servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
 import { createLeadEvent } from "@/lib/db";
 import { EVENTO_DA_FALHA_DA_IA, motivoDaFalha } from "@/lib/falhas-da-ia";
-import { PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, RECOLHA_POR_ANDAR_COM_ELEVADOR, RECOLHA_POR_ANDAR_SEM_ELEVADOR, eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
+import {
+  PRECO_DA_PRIMEIRA_GRANDE,
+  PRECO_POR_ITEM,
+  RECOLHA_MINIMA_DOS_MOVEIS,
+  RECOLHA_POR_ANDAR_COM_ELEVADOR,
+  RECOLHA_POR_ANDAR_E_PECA_GRANDE,
+  RECOLHA_POR_ANDAR_SEM_ELEVADOR,
+  valorDasGrandes,
+} from "@/lib/precos-publicos";
 import { valorDosMoveis } from "@/lib/preco-de-referencia";
 import { estimativaParaOCliente } from "@/lib/estimativa-para-o-cliente";
 import { requireAdmin } from "@/lib/admin-auth-helper";
@@ -452,12 +460,12 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
       `ATENÇÃO: Este pedido usa preço fixo por tamanho — custo laboral ANULADO.`,
       `Itens Pequenos (mesinha, micro-ondas…): ${p} × ${PRECO_POR_ITEM.pequeno} € = ${p * PRECO_POR_ITEM.pequeno} €`,
       `Itens Médios (fogão, frigorífico bar…): ${m} × ${PRECO_POR_ITEM.medio} € = ${m * PRECO_POR_ITEM.medio} €`,
-      `Itens Grandes (sofá, armário, frigorífico…): ${g} × ${PRECO_POR_ITEM.grande} € = ${g * PRECO_POR_ITEM.grande} €`,
+      `Itens Grandes (sofá, armário, frigorífico…): ${g} — a primeira ${PRECO_DA_PRIMEIRA_GRANDE} €, as seguintes ${PRECO_POR_ITEM.grande} € = ${valorDasGrandes(g)} €`,
       // A recolha mínima (d7, 04-11-2026): a soma das peças nunca fica abaixo dela.
-      `Subtotal Itens: ${p * PRECO_POR_ITEM.pequeno + m * PRECO_POR_ITEM.medio + g * PRECO_POR_ITEM.grande} € sem IVA (nunca abaixo da recolha mínima de ${RECOLHA_MINIMA_DOS_MOVEIS} € sem IVA)`,
+      `Subtotal Itens: ${p * PRECO_POR_ITEM.pequeno + m * PRECO_POR_ITEM.medio + valorDasGrandes(g)} € sem IVA (nunca abaixo da recolha mínima de ${RECOLHA_MINIMA_DOS_MOVEIS} € sem IVA)`,
       // Os andares por trabalho (d6 v2, 03-11-2026): a mesma conta da R12 e do motor (`valorDosMoveis`).
-      `Andares, somados depois do mínimo: +${RECOLHA_POR_ANDAR_COM_ELEVADOR} € por andar com elevador, +${RECOLHA_POR_ANDAR_SEM_ELEVADOR} € por andar sem elevador; o estacionamento a mais de 30 m ou difícil conta como um andar sem elevador. Sem deslocação nem outras taxas.`,
-      `Total das peças com os andares: ${valorDosMoveis({ pequeno: p, medio: m, grande: g }, { floor: order.floor, hasElevator: order.hasElevator, parkingDistance: order.parkingDistance })?.valor ?? 0} € sem IVA — é este o preço.`,
+      `Andares, somados depois do mínimo: +${RECOLHA_POR_ANDAR_COM_ELEVADOR} € por andar com elevador; sem elevador, +${RECOLHA_POR_ANDAR_E_PECA_GRANDE} € por andar e por peça grande, nunca menos de ${RECOLHA_POR_ANDAR_SEM_ELEVADOR} € por andar; a peça grande que não cabe no elevador conta como escada; o estacionamento a mais de 30 m ou difícil conta como um andar sem elevador. Sem deslocação nem outras taxas.`,
+      `Total das peças com os andares: ${valorDosMoveis({ pequeno: p, medio: m, grande: g }, { floor: order.floor, hasElevator: order.hasElevator, parkingDistance: order.parkingDistance, pecasNoElevador: order.pecasNoElevador })?.valor ?? 0} € sem IVA — é este o preço.`,
     );
   }
 

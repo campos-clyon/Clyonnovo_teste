@@ -36,7 +36,9 @@ import {
   NOME_DO_TAMANHO,
   PECAS_DE_REFERENCIA,
   PRECOS,
+  PRECO_DA_PRIMEIRA_GRANDE,
   PRECO_POR_ITEM,
+  RECOLHA_POR_ANDAR_E_PECA_GRANDE,
   PRECO_POR_SACO,
   RECOLHA_MINIMA_DOS_MOVEIS,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
@@ -66,6 +68,7 @@ import {
   POR_ANDAR_SEM_ELEVADOR,
   POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
   PRECO_POR_HORA,
+  PRECO_POR_HORA_DUAS_PESSOAS,
   PRECO_POR_KM_LONGE,
 } from "./tabela-das-mudancas";
 import { eurosDaLista, precoDaMudancaNoWhatsApp, precoPublicoConhecido } from "./preco-publico-das-mudancas";
@@ -247,6 +250,9 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
   juntar(RECOLHA_POR_ANDAR_COM_ELEVADOR);
   juntar(RECOLHA_POR_ANDAR_SEM_ELEVADOR);
   for (const v of Object.values(PRECO_POR_ITEM)) juntar(v);
+  // d60 (16-11-2026): a primeira peça grande e o andar a pé por peça grande.
+  juntar(PRECO_DA_PRIMEIRA_GRANDE);
+  juntar(RECOLHA_POR_ANDAR_E_PECA_GRANDE);
   for (const linha of Object.values(MANUTENCAO_POR_TIPO)) {
     for (const c of Object.values(linha)) {
       if (c.tipo === "faixa") {
@@ -257,6 +263,8 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
   }
   for (const n of [
     PRECO_POR_HORA,
+    PRECO_POR_HORA_DUAS_PESSOAS,
+    PRECO_POR_HORA_DUAS_PESSOAS * MINIMO_DE_HORAS,
     PRECO_POR_KM_LONGE,
     ELEVADOR_EXTERIOR,
     POR_ANDAR_SEM_ELEVADOR,
@@ -281,7 +289,8 @@ function lerNumero(cru: string): number {
 /** Os valores em euros escritos num texto: «40 €», «40 – 120 €», «€ 50», «32 euros». */
 export function eurosNoTexto(texto: string): number[] {
   const out: number[] = [];
-  const NUM = String.raw`\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?`;
+  // Os milhares com espaço («1 300 €», como `euros` os escreve) desde a d60: o T4 chega aos 1 300 €.
+  const NUM = String.raw`\d{1,3}(?:[ \u00a0]\d{3})+(?:,\d{1,2})?|\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?`;
   const depois = new RegExp(
     String.raw`(${NUM})(?:\s*(?:€|euros?)?\s*(?:–|-|a|até)\s*(${NUM}))?\s*(?:€|euros?\b|eur\b)`,
     "gi",

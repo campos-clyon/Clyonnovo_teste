@@ -190,7 +190,7 @@ describe("as faixas do orçamentista são as das fontes", () => {
   // d7 (04-11-2026): os móveis pela tabela das peças, com a recolha mínima de 40 € s/IVA.
   it("os móveis são a tabela das peças, nunca abaixo da recolha mínima, com o IVA ao lado", () => {
     const m = RECOLHA_MINIMA_DOS_MOVEIS;
-    expect(p).toContain("pequena 15 €, média 30 €, grande 50 €");
+    expect(p).toContain("pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes");
     expect(p).toContain(`nunca fica abaixo da recolha mínima de ${euros(m)} s/IVA (${euros(comIva(m))} c/IVA)`);
     expect(p).toContain("os andares somam-se depois do mínimo");
     expect(p).not.toContain("48,78");
@@ -208,7 +208,7 @@ describe("as faixas do orçamentista são as das fontes", () => {
 
   it("os exemplos das faixas saem das mesmas linhas", () => {
     const t2 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T2")!;
-    const t3 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T3/T4")!;
+    const t3 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T3")!;
     expect(p).toContain(`T2 em Lisboa, com elevador e estacionamento à porta → ${comOIva({ tipo: "exacto", valor: t2.minimo })}`);
     expect(p).toContain(`T3 num 4.º andar sem elevador → ${comOIva({ tipo: "exacto", valor: t3.maximo! })}, o fim da faixa`);
     const sofa = PECAS_DE_REFERENCIA.find((x) => /sof[áa]/i.test(x.peca))!;

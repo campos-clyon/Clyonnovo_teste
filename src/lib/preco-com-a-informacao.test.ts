@@ -244,7 +244,7 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
 
   it("os cartões e as grelhas que mostravam o número nu", () => {
     // Só o com IVA, para a linha pequena por baixo de `maisIva(etiqueta)`.
-    expect(comIvaDaEtiqueta("recolha_moveis")).toBe("por peça: pequena 18,45 €, média 36,90 €, grande 61,50 € com IVA; recolha mínima 49,20 € com IVA");
+    expect(comIvaDaEtiqueta("recolha_moveis")).toBe("por peça: pequena 18,45 €, média 36,90 €, grande 79,95 € a primeira e 61,50 € as seguintes com IVA; recolha mínima 73,80 € com IVA");
     expect(comIvaDaEtiqueta("esvaziamento_casa")).toBe("desde 307,50 € com IVA");
     expect(comIvaDaEtiqueta("esvaziamento_garagem")).toBe("desde 147,60 € com IVA");
     // O m³ ao preço dos sacos desde a d7 (04-11-2026): era «desde 147,60 €/m³».
@@ -259,8 +259,8 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
       expect(ler(f), f).toContain("price: esvaziamentoComOIvaAoLado(t.chave)");
       expect(ler(f), f).not.toMatch(/price:\s*etiquetaDoEsvaziamento\(/);
     }
-    expect(esvaziamentoComOIvaAoLado("T2")).toBe(faixaSemEComIva(320, 420));
-    expect(esvaziamentoComOIvaAoLado("moradia")).toBe("desde 450 € + IVA (553,50 € com IVA)");
+    expect(esvaziamentoComOIvaAoLado("T2")).toBe(faixaSemEComIva(400, 600));
+    expect(esvaziamentoComOIvaAoLado("moradia")).toBe("desde 900 € + IVA (1 107 € com IVA)");
     expect(ler("src/app/recolha-de-monos/page.tsx")).not.toContain("{PRECO_MONOS.etiqueta}</span>");
     expect(ler("src/app/servicos/[slug]/page.tsx")).toContain("{comIvaDaEtiqueta(cat.id)}");
   });

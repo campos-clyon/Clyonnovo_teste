@@ -61,9 +61,9 @@ describe("o material em dois níveis", () => {
     expect(TIPOLOGIAS.map((t) => EMBALAMENTO_POR_TIPOLOGIA[t]?.plasticoBolhaRolos ?? null)).toEqual([null, 1, 1, 2, 1, 2]);
   });
 
-  it("na referência, um T3 com a proteção: 442–542 € + IVA (era 250 €)", () => {
+  it("na referência, um T3 com a proteção: 477–587 € + IVA (d60: 55 €/h)", () => {
     const o = orcamentoDaMudanca({ tipologia: "T3", protecao: true });
-    expect([o.totalSemIvaMinimo, o.totalSemIvaMaximo]).toEqual([442, 542]);
+    expect([o.totalSemIvaMinimo, o.totalSemIvaMaximo]).toEqual([477, 587]);
     const comCaixas = orcamentoDaMudanca({ tipologia: "T3", protecao: true, embalamento: true });
     // 70 caixas × 2 € + 1 rolo de plástico bolha × 22 €.
     expect(comCaixas.totalSemIvaMinimo - o.totalSemIvaMinimo).toBe(70 * 2 + 22);

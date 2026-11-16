@@ -130,8 +130,8 @@ describe("a referência que se adapta (R12) e o pedido", () => {
     const moveis = base({ servico: "recolha_moveis", descricao: "Dois roupeiros e uma cómoda" });
     const r = responder(moveis, { movelModo: "item", "itens.grande": "2", "itens.medio": "1", floor: "2º", hasElevator: "small", parkingDistance: "door" });
     const naApp = referenciaValida(viaJson(r12(r)));
-    expect(naApp?.linhas).toEqual([{ rotulo: "Estimativa", texto: "140 € + IVA (172,20 € com IVA)." }]);
-    expect(naApp?.porque).toEqual(["2 peças grandes × 50 € = 100 € + IVA", "1 peça média × 30 € = 30 € + IVA", "2.º andar com elevador: +10 € + IVA"]);
+    expect(naApp?.linhas).toEqual([{ rotulo: "Estimativa", texto: "155 € + IVA (190,65 € com IVA)." }]);
+    expect(naApp?.porque).toEqual(["2 peças grandes: 65 € a primeira + 1 × 50 € = 115 € + IVA", "1 peça média × 30 € = 30 € + IVA", "2.º andar com elevador: +10 € + IVA"]);
   });
 
   it("no Pedir não há «Preço de referência»: o bloco é a «Estimativa», e o resumo diz «Total estimado» com a conta por baixo", () => {

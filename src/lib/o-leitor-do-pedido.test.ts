@@ -121,7 +121,7 @@ describe("1. os campos de cada categoria", () => {
     expect(ids("manutencao_casa")).toEqual(["tipoDeTrabalho", "quantoTrabalho", "materiais", "floor", "hasElevator", "parkingDistance"]);
     expect(ids("recolha_moveis")).toEqual(["movelModo", "itens", "volume", "desmontagem", "floor", "hasElevator", "parkingDistance"]);
     const tipologia = camposDoServico("esvaziamento_casa").find((c) => c.id === "tipologia");
-    expect(tipologia && tipologia.tipo === "opcao" ? tipologia.opcoes : []).toEqual(["T0/T1", "T2", "T3/T4", "moradia"]);
+    expect(tipologia && tipologia.tipo === "opcao" ? tipologia.opcoes : []).toEqual(["T0/T1", "T2", "T3", "T4", "moradia"]);
   });
 
   it("o «não sei» nunca é sugestão", () => {
@@ -298,7 +298,9 @@ describe("4. as descrições inventadas da ordem — a resposta do modelo, verif
     expect(tip("mudanca", "T5")).toBe("T4+");
     expect(tip("mudanca", "T0")).toBe("T0");
     expect(tip("esvaziamento_casa", "T1")).toBe("T0/T1");
-    expect(tip("esvaziamento_casa", "T4")).toBe("T3/T4");
+    // T3 e T4 separados desde a d60.
+    expect(tip("esvaziamento_casa", "T4")).toBe("T4");
+    expect(tip("esvaziamento_casa", "T3")).toBe("T3");
     expect(tip("esvaziamento_casa", "moradia")).toBe("moradia");
     expect(tip("esvaziamento_casa", "castelo")).toBeUndefined();
   });

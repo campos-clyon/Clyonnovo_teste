@@ -29,7 +29,8 @@ describe("as peças de referência", () => {
       "Armário grande": "grande",
       "Mesa com cadeiras": "medio",
     });
-    for (const p of PECAS_DE_REFERENCIA) expect(precoDaPeca(p), p.peca).toBe(PRECO_POR_ITEM[p.tamanho]);
+    // Uma peça sozinha: a grande é a primeira, 65 € (d60).
+    for (const p of PECAS_DE_REFERENCIA) expect(precoDaPeca(p), p.peca).toBe(p.tamanho === "grande" ? 65 : PRECO_POR_ITEM[p.tamanho]);
   });
 
   it("as páginas de cidade e o artigo do sofá dizem as mesmas", () => {
@@ -43,7 +44,7 @@ describe("as peças de referência", () => {
     // E cada peça com o com IVA ao lado desde 31-10-2026 (iam só sem IVA).
     const sofa = artigo("quanto-custa-retirar-um-sofa-em-lisboa");
     expect(sofa.sections[0].bullets).toEqual(PECAS_DE_REFERENCIA.map(pecaComOIvaAoLado));
-    expect(sofa.sections[0].bullets).toContain("Sofá de 2 a 3 lugares: peça grande, 50 € + IVA (61,50 € com IVA)");
+    expect(sofa.sections[0].bullets).toContain("Sofá de 2 a 3 lugares: peça grande, 65 € + IVA (79,95 € com IVA)");
     expect(sofa.sections[0].bullets).toContain("Mesa com cadeiras: peça média, 30 € + IVA (36,90 € com IVA)");
   });
 });
@@ -52,13 +53,13 @@ describe("«Quanto custa retirar um sofá em Lisboa»", () => {
   const a = artigo("quanto-custa-retirar-um-sofa-em-lisboa");
 
   it("diz o preço com o com IVA ao lado, e a Câmara como a página da Câmara", () => {
-    expect(a.description).toContain("50 € + IVA: é uma peça grande");
+    expect(a.description).toContain("65 € + IVA: é uma peça grande");
     const [precos, legenda] = a.sections[0].paragraphs;
     const sofa = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
     expect(precos).toContain(valorSemEComIva(precoDaPeca(sofa)));
     // A recolha de móveis por peça (d6 v2), com a recolha mínima (d7).
     expect(precos).toContain(MOVEIS_POR_PECA);
-    expect(precos).toContain("recolha mínima 40 € + IVA (49,20 € com IVA)");
+    expect(precos).toContain("recolha mínima 60 € + IVA (73,80 € com IVA)");
     expect(precos).not.toContain("sem mínimo");
     expect(precos).not.toMatch(/também sem IVA/);
     expect(legenda).not.toMatch(/sem IVA/);

@@ -33,11 +33,14 @@ import {
   NOTA_DOS_MATERIAIS,
   MINIMO_DE_SACOS,
   PECAS_DE_REFERENCIA,
+  PRECO_DA_PRIMEIRA_GRANDE,
   PRECO_POR_ITEM,
   PRECO_POR_SACO,
   RECOLHA_MINIMA_DOS_MOVEIS,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
+  RECOLHA_POR_ANDAR_E_PECA_GRANDE,
   RECOLHA_POR_ANDAR_SEM_ELEVADOR,
+  valorDasGrandes,
   celulaDaManutencao,
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
@@ -231,7 +234,7 @@ export function moveisPorPeca(input: FastEstimateInput): ValorDosMoveis | null {
   if (!SERVICOS_POR_PECA.includes(input.serviceType ?? "") || input.movelMode !== "item") return null;
   return valorDosMoveis(
     { pequeno: Number(input.movelItemsPequeno) || 0, medio: Number(input.movelItemsMedio) || 0, grande: Number(input.movelItemsGrande) || 0 },
-    { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance },
+    { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance, pecasNoElevador: input.pecasNoElevador },
   );
 }
 
@@ -277,7 +280,7 @@ export function tipologiaDoEsvaziamentoDoPedido(input: FastEstimateInput): strin
   const daGrelha = lerTipologiaDoEsvaziamento(svc, input.tipologia);
   if (daGrelha) return daGrelha;
   const pelaMudanca = (t: Tipologia | null): string | null =>
-    t === "T0" || t === "T1" ? "T0/T1" : t === "T2" ? "T2" : t === "T3" || t === "T4+" ? "T3/T4" : null;
+    t === "T0" || t === "T1" ? "T0/T1" : t === "T2" ? "T2" : t === "T3" ? "T3" : t === "T4+" ? "T4" : null;
   const t = pelaMudanca(tipologiaDoTexto(input.tipologia)) ?? pelaMudanca(tipologiaDoTexto(input.description));
   if (t) return lerTipologiaDoEsvaziamento(svc, t);
   if (/\b(moradia|vivenda)\b/.test(semAcentosDoMotor(input.description ?? ""))) return lerTipologiaDoEsvaziamento(svc, "moradia");
@@ -371,7 +374,7 @@ export function moveisPelaDescricao(input: FastEstimateInput): ValorDosMoveis | 
   if (input.volumeTier && input.volumeTier !== "incerto") return null;
   const itens = pecasDoTexto(input);
   if (!itens) return null;
-  return valorDosMoveis(itens, { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance });
+  return valorDosMoveis(itens, { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance, pecasNoElevador: input.pecasNoElevador });
 }
 
 /** «40 € s/IVA (49,20 € c/IVA)» — o sem IVA nunca sozinho, nem no que o modelo lê. */
@@ -402,10 +405,14 @@ export const PECAS_PARA_O_MODELO = PECAS_DE_REFERENCIA.map(
  */
 export const ITENS_SOLTOS_PARA_O_MODELO = [
   `  Móveis por peça, a tabela do site: ${(["pequeno", "medio", "grande"] as const)
-    .map((t) => `${NOME_DO_TAMANHO[t]} ${comOIvaAoLado(valorExacto(PRECO_POR_ITEM[t]))}`)
+    .map((t) =>
+      t === "grande"
+        ? `${NOME_DO_TAMANHO[t]} ${comOIvaAoLado(valorExacto(PRECO_DA_PRIMEIRA_GRANDE))} a primeira e ${comOIvaAoLado(valorExacto(PRECO_POR_ITEM.grande))} cada uma das seguintes`
+        : `${NOME_DO_TAMANHO[t]} ${comOIvaAoLado(valorExacto(PRECO_POR_ITEM[t]))}`,
+    )
     .join("; ")}. As peças somam-se uma a uma.`,
   `  Recolha mínima dos móveis: ${comOIvaAoLado(valorExacto(RECOLHA_MINIMA_DOS_MOVEIS))} — a soma das peças nunca fica abaixo dela.`,
-  `  Andares, por trabalho e depois do mínimo: +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_COM_ELEVADOR))} por andar com elevador, +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_SEM_ELEVADOR))} sem elevador.`,
+  `  Andares, por trabalho e depois do mínimo: +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_COM_ELEVADOR))} por andar com elevador; sem elevador, +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_E_PECA_GRANDE))} por andar e por peça grande, nunca menos de ${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_SEM_ELEVADOR))} por andar. A peça grande que não cabe no elevador conta como escada.`,
   `  Monos: com as peças contadas, a mesma tabela das peças (um sofá custa o mesmo nos móveis e nos monos); sem elas, ${comOIvaAoLado(faixaDasFontes(PRECOS.recolha_monos, "recolha_monos"))}, o meio da faixa, e o topo com acesso difícil.`,
 ].join("\n");
 
@@ -675,6 +682,8 @@ export interface FastEstimateInput {
   movelItemsPequeno?: number | string;
   movelItemsMedio?: number | string;
   movelItemsGrande?: number | string;
+  /** As peças grandes cabem no elevador? «sim», «nao», «nao_sei» (d60). */
+  pecasNoElevador?: string;
 }
 
 /**
@@ -703,6 +712,7 @@ export const CAMPOS_DO_PEDIDO_PARA_O_MOTOR = [
   "movelItemsPequeno",
   "movelItemsMedio",
   "movelItemsGrande",
+  "pecasNoElevador",
 ] as const satisfies ReadonlyArray<keyof FastEstimateInput>;
 
 /** Só os campos de `CAMPOS_DO_PEDIDO_PARA_O_MOTOR` que o pedido tem. */
@@ -1637,7 +1647,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     precoSemIva = pecas.valor;
     const c = pecas.itens;
     const linha =
-      `${svc === "recolha_monos" ? "Monos pela tabela das peças" : "Móveis por peça"}${pecasPeloSeletor ? "" : " (descritos no pedido)"}: ${c.pequeno} × ${PRECO_POR_ITEM.pequeno} + ${c.medio} × ${PRECO_POR_ITEM.medio} + ${c.grande} × ${PRECO_POR_ITEM.grande} € = ${c.soma} €` +
+      `${svc === "recolha_monos" ? "Monos pela tabela das peças" : "Móveis por peça"}${pecasPeloSeletor ? "" : " (descritos no pedido)"}: ${c.pequeno} × ${PRECO_POR_ITEM.pequeno} + ${c.medio} × ${PRECO_POR_ITEM.medio} + ${c.grande} grande(s) (${PRECO_DA_PRIMEIRA_GRANDE} a 1.ª, ${PRECO_POR_ITEM.grande} as seguintes) = ${c.pequeno * PRECO_POR_ITEM.pequeno + c.medio * PRECO_POR_ITEM.medio + valorDasGrandes(c.grande)} €` +
       (c.pelaRecolhaMinima ? ` → recolha mínima ${RECOLHA_MINIMA_DOS_MOVEIS} €` : "") +
       (pecas.sup.valor > 0 ? ` + ${pecas.sup.valor} € dos andares` : "") +
       ` = ${pecas.valor} € s/IVA`;

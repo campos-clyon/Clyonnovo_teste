@@ -62,11 +62,12 @@ async function motorDoPedido(order: Record<string, unknown>) {
 
 describe("d7 (1) — a recolha mínima dos móveis, 40 € + IVA", () => {
   it("a fonte, e a frase pública com o com IVA ao lado", () => {
-    expect(RECOLHA_MINIMA_DOS_MOVEIS).toBe(40);
-    expect(PRECOS.recolha_moveis.minimo).toBe(40);
-    expect(maisIva(ETIQUETA_DOS_MOVEIS)).toBe("por peça: pequena 15 €, média 30 €, grande 50 € + IVA; recolha mínima 40 € + IVA");
+    // 60 € desde a d60 (16-11-2026); era 40 € desde a d7.
+    expect(RECOLHA_MINIMA_DOS_MOVEIS).toBe(60);
+    expect(PRECOS.recolha_moveis.minimo).toBe(60);
+    expect(maisIva(ETIQUETA_DOS_MOVEIS)).toBe("por peça: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA; recolha mínima 60 € + IVA");
     expect(MOVEIS_POR_PECA).toBe(
-      "por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA); recolha mínima 40 € + IVA (49,20 € com IVA)",
+      "por peça: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA (18,45 / 36,90 / 79,95 e 61,50 € com IVA); recolha mínima 60 € + IVA (73,80 € com IVA)",
     );
     expect(MOVEIS_POR_PECA_COM_OS_ANDARES).toContain("; e, depois do mínimo, mais 5 € + IVA por andar com elevador");
     // «recolha mínima», nunca «deslocação» (a linha da Vendas).
@@ -75,44 +76,47 @@ describe("d7 (1) — a recolha mínima dos móveis, 40 € + IVA", () => {
 
   it("1 peça pequena no rés-do-chão = 40 € + IVA (49,20 € com IVA), e o porquê diz a recolha mínima", () => {
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1 }, floor: "rés-do-chão", parkingDistance: "door" });
-    expect(r.linhas).toEqual([{ rotulo: "Estimativa", texto: "40 € + IVA (49,20 € com IVA)." }]);
-    expect(r.porque).toEqual(["1 peça pequena (15 €): conta a recolha mínima de 40 € + IVA"]);
-    expect(r.conta).toMatchObject({ servico: "40 €", total: "49,20 €" });
+    expect(r.linhas).toEqual([{ rotulo: "Estimativa", texto: "60 € + IVA (73,80 € com IVA)." }]);
+    expect(r.porque).toEqual(["1 peça pequena (15 €): conta a recolha mínima de 60 € + IVA"]);
+    expect(r.conta).toMatchObject({ servico: "60 €", total: "73,80 €" });
   });
 
   it("1 peça média no 3.º andar sem elevador = 40 + 45 = 85 € + IVA: os andares depois do mínimo", () => {
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { medio: 1 }, floor: "3º", hasElevator: "no", parkingDistance: "door" });
-    expect(texto(r)).toBe("85 € + IVA (104,55 € com IVA).");
-    expect(r.porque).toEqual(["1 peça média (30 €): conta a recolha mínima de 40 € + IVA", "3.º andar sem elevador: +45 € + IVA"]);
+    expect(texto(r)).toBe("105 € + IVA (129,15 € com IVA).");
+    expect(r.porque).toEqual(["1 peça média (30 €): conta a recolha mínima de 60 € + IVA", "3.º andar sem elevador: +45 € + IVA"]);
   });
 
   it("2 grandes + 1 média no 2.º andar com elevador = 140 € + IVA (não muda)", () => {
     const r = r12({ servico: "recolha_moveis", movelModo: "item", itens: { medio: 1, grande: 2 }, floor: "2º", hasElevator: "small", parkingDistance: "under_20m" });
-    expect(texto(r)).toBe("140 € + IVA (172,20 € com IVA).");
-    expect(r.porque).toEqual(["2 peças grandes × 50 € = 100 € + IVA", "1 peça média × 30 € = 30 € + IVA", "2.º andar com elevador: +10 € + IVA"]);
+    // Desde a d60: a primeira grande a 65 €, a seguinte a 50 €.
+    expect(texto(r)).toBe("155 € + IVA (190,65 € com IVA).");
+    expect(r.porque).toEqual(["2 peças grandes: 65 € a primeira + 1 × 50 € = 115 € + IVA", "1 peça média × 30 € = 30 € + IVA", "2.º andar com elevador: +10 € + IVA"]);
   });
 
   it("o estacionamento longe também se soma depois do mínimo; 2 pequenas contam a mínima; 1 pequena + 1 média já não", () => {
-    expect(texto(r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1 }, parkingDistance: "over_30m" }))).toBe("55 € + IVA (67,65 € com IVA).");
+    expect(texto(r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1 }, parkingDistance: "over_30m" }))).toBe("75 € + IVA (92,25 € com IVA).");
     expect(r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 2 } }).porque).toEqual([
-      "2 peças pequenas (30 €): conta a recolha mínima de 40 € + IVA",
+      "2 peças pequenas (30 €): conta a recolha mínima de 60 € + IVA",
     ]);
-    expect(texto(r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1, medio: 1 } }))).toBe("45 € + IVA (55,35 € com IVA).");
+    // 1 pequena + 1 média (45 €) ainda conta a recolha mínima de 60 €; 1 pequena + 2 médias (75 €) já não.
+    expect(texto(r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1, medio: 1 } }))).toBe("60 € + IVA (73,80 € com IVA).");
+    expect(texto(r12({ servico: "recolha_moveis", movelModo: "item", itens: { pequeno: 1, medio: 2 } }))).toBe("75 € + IVA (92,25 € com IVA).");
   });
 
   it("o simulador do site dá o mesmo que a R12", () => {
     const site = referenciaDoSimuladorDoSite({ serviceType: "recolha_moveis", movelMode: "item", movelItemsMedio: 1, floor: "3º", hasElevator: "no", parkingDistance: "door" })!;
-    expect(texto(site)).toBe("85 € + IVA (104,55 € com IVA).");
+    expect(texto(site)).toBe("105 € + IVA (129,15 € com IVA).");
   });
 
   it("o motor dá o mesmo número que a R12 nos três exemplos do dono (contrato)", async () => {
     const casos: Array<[Record<string, unknown>, Record<string, unknown>, number]> = [
-      [{ movelItemsPequeno: 1, floor: "rés-do-chão", parkingDistance: "door" }, { itens: { pequeno: 1 }, floor: "rés-do-chão", parkingDistance: "door" }, 40],
-      [{ movelItemsMedio: 1, floor: "3º", hasElevator: "no", parkingDistance: "door" }, { itens: { medio: 1 }, floor: "3º", hasElevator: "no", parkingDistance: "door" }, 85],
+      [{ movelItemsPequeno: 1, floor: "rés-do-chão", parkingDistance: "door" }, { itens: { pequeno: 1 }, floor: "rés-do-chão", parkingDistance: "door" }, 60],
+      [{ movelItemsMedio: 1, floor: "3º", hasElevator: "no", parkingDistance: "door" }, { itens: { medio: 1 }, floor: "3º", hasElevator: "no", parkingDistance: "door" }, 105],
       [
         { movelItemsMedio: 1, movelItemsGrande: 2, floor: "2º", hasElevator: "small", parkingDistance: "under_20m" },
         { itens: { medio: 1, grande: 2 }, floor: "2º", hasElevator: "small", parkingDistance: "under_20m" },
-        140,
+        155,
       ],
     ];
     for (const [doMotor, daR12, valor] of casos) {
@@ -126,10 +130,10 @@ describe("d7 (1) — a recolha mínima dos móveis, 40 € + IVA", () => {
 
   it("a FAQ responde com a recolha mínima: «desde uma única peça» e «a deslocação já está no preço»", () => {
     expect(DESDE_UMA_PECA).toBe(
-      "Recolhem desde uma única peça. Cada peça conta pela tabela (pequena 15 €, média 30 €, grande 50 € + IVA) e cada recolha tem um mínimo de 40 € + IVA (49,20 € com IVA), que já inclui ir a sua casa, carregar e levar ao destino certo.",
+      "Recolhem desde uma única peça. Cada peça conta pela tabela (pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA) e cada recolha tem um mínimo de 60 € + IVA (73,80 € com IVA), que já inclui ir a sua casa, carregar e levar ao destino certo.",
     );
     expect(A_DESLOCACAO_NO_PRECO).toBe(
-      "Nos móveis por peça e no entulho em sacos, a deslocação já está no preço: a recolha mínima é de 40 € + IVA (49,20 € com IVA) nos móveis, e de 10 sacos, 40 – 48 € + IVA (49,20 – 59,04 € com IVA), no entulho. Nos outros serviços, entra na proposta de cada parceiro.",
+      "Nos móveis por peça e no entulho em sacos, a deslocação já está no preço: a recolha mínima é de 60 € + IVA (73,80 € com IVA) nos móveis, e de 10 sacos, 40 – 48 € + IVA (49,20 – 59,04 € com IVA), no entulho. Nos outros serviços, entra na proposta de cada parceiro.",
     );
     const respostas = PERGUNTAS_FREQUENTES.flatMap((c) => c.questions).map((q) => q.a);
     expect(respostas).toContain(DESDE_UMA_PECA);
@@ -137,10 +141,10 @@ describe("d7 (1) — a recolha mínima dos móveis, 40 € + IVA", () => {
     expect(respostas.join(" ")).not.toMatch(/Não há mínimo/);
   });
 
-  it("o «desde» dos títulos e da página dos anúncios passa a 40 € + IVA", () => {
-    expect(tituloDaCidade("Recolha de Móveis", "Monte Abraão", "recolha-moveis", "monte-abraao")).toBe("Recolha de Móveis em Monte Abraão — Desde 40 € + IVA");
+  it("o «desde» dos títulos e da página dos anúncios é a recolha mínima, 60 € + IVA (d60)", () => {
+    expect(tituloDaCidade("Recolha de Móveis", "Monte Abraão", "recolha-moveis", "monte-abraao")).toBe("Recolha de Móveis em Monte Abraão — Desde 60 € + IVA");
     const anuncios = ler("src/app/orcamento-recolha-lisboa/LandingClient.tsx");
-    expect(anuncios).toContain('{ tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 }');
+    expect(anuncios).toContain('{ tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? RECOLHA_MINIMA_DOS_MOVEIS }');
   });
 });
 
@@ -200,21 +204,21 @@ describe("d7 (2) — o entulho a granel ao mesmo preço que os sacos", () => {
 });
 
 describe("d7 (3) — os exemplos por peça e os itens a mais seguem a tabela", () => {
-  it("o sofá, a cama e o armário grande são peças grandes (50 €); a mesa com cadeiras uma média (30 €)", () => {
+  it("o sofá, a cama e o armário grande são peças grandes (65 € sozinhas, d60); a mesa com cadeiras uma média (30 €)", () => {
     expect(PECAS_DE_REFERENCIA.map((p) => `${p.peca}: ${precoDaPecaComOIva(p)}`)).toEqual([
-      "Sofá de 2 a 3 lugares: peça grande, 50 € + IVA (61,50 € com IVA)",
-      "Cama de casal com estrado: peça grande, 50 € + IVA (61,50 € com IVA)",
-      "Armário grande: peça grande, 50 € + IVA (61,50 € com IVA)",
+      "Sofá de 2 a 3 lugares: peça grande, 65 € + IVA (79,95 € com IVA)",
+      "Cama de casal com estrado: peça grande, 65 € + IVA (79,95 € com IVA)",
+      "Armário grande: peça grande, 65 € + IVA (79,95 € com IVA)",
       "Mesa com cadeiras: peça média, 30 € + IVA (36,90 € com IVA)",
     ]);
     const tabela = linhasDosMonosEMoveis().filter((l) => PECAS_DE_REFERENCIA.some((p) => p.peca === l.oQue));
-    expect(tabela.map((l) => l.valor)).toEqual([50, 50, 50, 30].map((valor) => ({ tipo: "exacto", valor })));
+    expect(tabela.map((l) => l.valor)).toEqual([65, 65, 65, 30].map((valor) => ({ tipo: "exacto", valor })));
   });
 
-  it("a Vitória diz o mesmo: o sofá a 50 €, a recolha mínima e o granel ao preço dos sacos", () => {
+  it("a Vitória diz o mesmo: o sofá a 65 €, a recolha mínima e o granel ao preço dos sacos", () => {
     const v = oQueOSiteSabe();
-    expect(v).toContain("Sofá de 2 a 3 lugares: peça grande, 50 € sem IVA (61,50 € com IVA).");
-    expect(v).toContain("recolha mínima 40 € sem IVA (49,20 € com IVA)");
+    expect(v).toContain("Sofá de 2 a 3 lugares: peça grande, 65 € sem IVA (79,95 € com IVA).");
+    expect(v).toContain("recolha mínima 60 € sem IVA (73,80 € com IVA)");
     expect(v).toContain("Entulho, 1 m³ (≈ 40 sacos, ensacado ou a granel): 160 – 192 € sem IVA (196,80 – 236,16 € com IVA).");
     expect(v).not.toMatch(/40 – 70 €|144 €|desde 120 €/);
   });

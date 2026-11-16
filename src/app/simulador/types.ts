@@ -90,6 +90,8 @@ export interface OrderData {
   floor?: string;
   hasElevator?: "yes" | "small" | "no" | "unknown";
   parkingDistance?: "door" | "under_20m" | "over_30m" | "difficult" | "unknown";
+  /** As peças grandes cabem no elevador? Nos móveis e nos monos, onde há elevador (d60, 16-11-2026). */
+  pecasNoElevador?: "sim" | "nao" | "nao_sei";
   needsDismantling?: "no" | "simple" | "medium" | "complex" | "unknown";
   heavyItems?: string[];
   urgency?: "no" | "today" | "tomorrow" | "this_week" | "flexible";

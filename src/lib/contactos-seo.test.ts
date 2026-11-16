@@ -89,7 +89,8 @@ describe("os números", () => {
     // Desde 13-10-2026 a mudança tem preço publicado: 50 € + IVA por hora,
     // mínimo 3 horas — o mesmo do motor. Esta página mostra a etiqueta, seja
     // ela qual for, e não um número próprio.
-    expect(PRECOS.mudanca.minimo).toBe(150);
+    // Desde a d60 a referência começa nos 40 €/h com 2 pessoas: 3 h = 120 €.
+    expect(PRECOS.mudanca.minimo).toBe(120);
     expect(PAGINA_LIMPA).not.toMatch(/mudan[çc]as?[^<]{0,40}desde \d/i);
   });
 

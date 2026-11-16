@@ -10,7 +10,7 @@
  *   · a mudança é contratada À HORA — a base «hora», ao lado de «total» e
  *     «por carga» (`base-do-preco.ts`);
  *   · antes de alguém ver o trabalho, as horas contam-se pela TIPOLOGIA;
- *   · acima de 50 km, os 1,30 €/km contam TODOS os km, ida e volta;
+ *   · acima do raio incluído (15 km desde a d60), os 1,30 €/km contam TODOS os km, ida e volta;
  *   · a tabela PUBLICA-SE no site.
  *
  * Antes disto o motor dava 70 €/h com uma base fixa de 7 horas — 490 € a
@@ -24,13 +24,20 @@
 import { TAXA_IVA, type Taxas } from "./taxas-plataforma";
 import { baseDoPrecoDoCliente } from "./preco-do-cliente";
 
-/** A. Mão de obra e viatura — viatura, motorista e dois ajudantes. */
-export const PRECO_POR_HORA = 50;
+/**
+ * A. Mão de obra e viatura — viatura, motorista e dois ajudantes.
+ *
+ * DESDE 16-11-2026 (d60, o CEO e o dono): a referência passa a 55 €/h com 3
+ * pessoas (era 50 €), e há uma referência nova com 2 pessoas, 40 €/h. Só conta
+ * com a lista de parceiros vazia: com parceiros, o preço é o de cada um.
+ */
+export const PRECO_POR_HORA = 55;
 export const PESSOAS_NA_EQUIPA = 3;
+export const PRECO_POR_HORA_DUAS_PESSOAS = 40;
 export const MINIMO_DE_HORAS = 3;
 
-/** B. Deslocação — incluída até este raio; acima, cada km (ida e volta) paga-se. */
-export const RAIO_INCLUIDO_KM = 50;
+/** B. Deslocação — incluída até este raio (15 km desde a d60; eram 50); acima, cada km (ida e volta) paga-se. */
+export const RAIO_INCLUIDO_KM = 15;
 export const PRECO_POR_KM_LONGE = 1.3;
 
 /** D. Extras. */
@@ -440,6 +447,7 @@ export function orcamentoDaMudanca(p: PedidoDeMudanca): OrcamentoDaMudanca {
  * ────────────────────────────────────────────────────────────────────────── */
 
 export const PRECO_POR_HORA_COM_IVA = arred(PRECO_POR_HORA * (1 + TAXA_IVA));
+export const PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA = arred(PRECO_POR_HORA_DUAS_PESSOAS * (1 + TAXA_IVA));
 
 /** A deslocação numa frase. */
 export const DESLOCACAO_DA_MUDANCA =
@@ -493,7 +501,8 @@ export function tabelaEmLinhas(): Array<{ titulo: string; linhas: LinhaDaTabelaD
     {
       titulo: "Mão de obra e viatura",
       linhas: [
-        ["Carrinha + motorista + 2 ajudantes", `${euros(PRECO_POR_HORA)} / hora`, `${comIvaEscrito(PRECO_POR_HORA)} / hora com IVA`],
+        ["Carrinha + motorista + 2 ajudantes (3 pessoas)", `${euros(PRECO_POR_HORA)} / hora`, `${comIvaEscrito(PRECO_POR_HORA)} / hora com IVA`],
+        ["Carrinha + motorista + 1 ajudante (2 pessoas)", `${euros(PRECO_POR_HORA_DUAS_PESSOAS)} / hora`, `${comIvaEscrito(PRECO_POR_HORA_DUAS_PESSOAS)} / hora com IVA`],
         ["Mínimo", `${MINIMO_DE_HORAS} horas`],
         ["Desmontagem e montagem de móveis", "acrescenta horas de trabalho"],
       ],

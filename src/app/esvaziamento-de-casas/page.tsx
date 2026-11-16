@@ -93,7 +93,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",
-    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa custa ${PRECO_CASA}. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, T2 em ${etiquetaDoEsvaziamento("T2")}, T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa custa ${PRECO_CASA}. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, T2 em ${etiquetaDoEsvaziamento("T2")}, T3 em ${etiquetaDoEsvaziamento("T3")}, T4 ou maior em ${etiquetaDoEsvaziamento("T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança?",

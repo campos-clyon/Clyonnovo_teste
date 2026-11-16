@@ -103,7 +103,7 @@ describe("os textos", () => {
   });
 
   it("sem parceiros: a referência de hoje, dita como referência, e sem preço nos dados estruturados", () => {
-    expect(REFERENCIA_DA_MUDANCA).toBe("referência: 50,00 € + IVA por hora (61,50 € com IVA), equipa de 3, mínimo de 3 horas");
+    expect(REFERENCIA_DA_MUDANCA).toBe("referência: 40,00 € + IVA por hora (49,20 € com IVA) com 2 pessoas, 55,00 € + IVA por hora (67,65 € com IVA) com 3, mínimo de 3 horas");
     expect(precoDaMudancaCurto(SEM_PARCEIROS)).toBe(REFERENCIA_DA_MUDANCA);
     expect(ofertaDaMudanca(SEM_PARCEIROS)).toBeUndefined();
   });

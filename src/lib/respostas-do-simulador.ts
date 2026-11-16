@@ -69,12 +69,29 @@ export const ESTACIONAMENTOS: readonly OpcaoDaResposta[] = [
   { id: "difficult", nome: "Estacionamento difícil" },
 ];
 
-export type AcessoDoPedido = { floor: string | null; hasElevator: string | null; parkingDistance: string | null };
+export type AcessoDoPedido = {
+  floor: string | null;
+  hasElevator: string | null;
+  parkingDistance: string | null;
+  /** As peças grandes cabem no elevador? (d60, 16-11-2026) — só quando a resposta veio. */
+  pecasNoElevador?: PecasNoElevador;
+};
+
+/** «As peças grandes cabem no elevador?» — onde há elevador, nos móveis e nos monos (d60). */
+export type PecasNoElevador = "sim" | "nao" | "nao_sei";
+export const PECAS_NO_ELEVADOR: readonly OpcaoDaResposta[] = [
+  { id: "sim", nome: "Sim" },
+  { id: "nao", nome: "Não" },
+  { id: "nao_sei", nome: "Não sei" },
+];
 
 /** O andar, o elevador e o estacionamento, sem confiar na forma. */
-export function lerAcesso(v: { floor?: unknown; hasElevator?: unknown; parkingDistance?: unknown }): AcessoDoPedido {
+export function lerAcesso(v: { floor?: unknown; hasElevator?: unknown; parkingDistance?: unknown; pecasNoElevador?: unknown }): AcessoDoPedido {
   const andar = typeof v.floor === "number" && Number.isFinite(v.floor) ? String(Math.max(0, Math.floor(v.floor))) : texto(v.floor, 20);
-  return { floor: andar, hasElevator: texto(v.hasElevator, 20), parkingDistance: texto(v.parkingDistance, 20) };
+  const a: AcessoDoPedido = { floor: andar, hasElevator: texto(v.hasElevator, 20), parkingDistance: texto(v.parkingDistance, 20) };
+  const cabem = PECAS_NO_ELEVADOR.find((o) => o.id === v.pecasNoElevador)?.id as PecasNoElevador | undefined;
+  if (cabem) a.pecasNoElevador = cabem;
+  return a;
 }
 
 /** O número do andar — 0 no rés-do-chão, 4 em «4º+» —, ou `null` se não o disse. */
@@ -293,7 +310,8 @@ export const RECHEIOS: ReadonlyArray<{ id: Recheio; nome: string }> = [
 ];
 
 export function lerTipologiaDoEsvaziamento(servico: string, v: unknown): string | null {
-  const t = texto(v, 20);
+  // A chave antiga «T3/T4» (antes da d60, 16-11-2026) lê-se como T3.
+  const t = texto(v, 20) === "T3/T4" ? "T3" : texto(v, 20);
   return t && tipologiasDoEsvaziamento(servico).some((x) => x.id === t) ? t : null;
 }
 

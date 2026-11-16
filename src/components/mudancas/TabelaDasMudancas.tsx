@@ -17,6 +17,8 @@ import {
   intervaloDeHorasCurto,
   PRECO_POR_HORA,
   PRECO_POR_HORA_COM_IVA,
+  PRECO_POR_HORA_DUAS_PESSOAS,
+  PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA,
   TIPOLOGIA_POR_EXTENSO,
   tabelaEmLinhas,
   type Tipologia,
@@ -78,12 +80,13 @@ export default function TabelaDasMudancas({
       ) : (
         <>
           <p className="text-3xl font-bold text-slate-900">
-            <span className="text-lg font-semibold text-slate-600">Referência: </span>
-            {euros(PRECO_POR_HORA)} <span className="text-lg font-semibold text-slate-600">+ IVA por hora</span>
+            <span className="text-lg font-semibold text-slate-600">Referência: desde </span>
+            {euros(PRECO_POR_HORA_DUAS_PESSOAS)} <span className="text-lg font-semibold text-slate-600">+ IVA por hora</span>
           </p>
           <p className="mt-1 text-sm text-slate-600">
-            {euros(PRECO_POR_HORA_COM_IVA)} com IVA · carrinha, motorista e 2 ajudantes · mínimo de{" "}
-            {MINIMO_DE_HORAS} horas. Cada parceiro tem o seu preço por hora: na lista vê o de cada um, e escolhe.
+            {euros(PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA)} com IVA com 2 pessoas · com 3 pessoas (carrinha, motorista e 2 ajudantes),{" "}
+            {euros(PRECO_POR_HORA)} + IVA por hora ({euros(PRECO_POR_HORA_COM_IVA)} com IVA) · mínimo de {MINIMO_DE_HORAS} horas. Cada
+            parceiro tem o seu preço por hora: na lista vê o de cada um, e escolhe.
           </p>
         </>
       )}

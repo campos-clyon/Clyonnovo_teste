@@ -467,7 +467,8 @@ function opcaoDaSugestao(campo: CampoDeOpcao, valor: string): string | null {
     if (!m) return null;
     const n = Number(m[1]);
     const opcoes = campo.opcoes;
-    if (opcoes.includes("T0/T1")) return n <= 1 ? "T0/T1" : n === 2 ? "T2" : "T3/T4";
+    // O esvaziamento: T3 e T4 separados desde a d60 (16-11-2026).
+    if (opcoes.includes("T0/T1")) return n <= 1 ? "T0/T1" : n === 2 ? "T2" : n === 3 ? "T3" : "T4";
     return n >= 4 ? "T4+" : (opcoes.find((o) => o === `T${n}`) ?? null);
   }
   return null;

@@ -32,7 +32,7 @@ import {
 } from "@/lib/analytics";
 import { NOTAS_EM_LINHA } from "@/lib/seo-data";
 import { reviews as AVALIACOES_REAIS } from "@/lib/reviews-data";
-import { PECAS_EM_TEXTO, PRECOS } from "@/lib/precos-publicos";
+import { PECAS_EM_TEXTO, PRECOS, RECOLHA_MINIMA_DOS_MOVEIS } from "@/lib/precos-publicos";
 import { PAGA_AO_PARCEIRO_QUE_CONTRATOU } from "@/lib/pagar-ao-parceiro";
 import { comIvaEscrito, semIvaEscrito, type Valor } from "@/lib/quanto-custa";
 import {
@@ -337,7 +337,7 @@ function Hero({ heroRef, variante }: { heroRef: React.RefObject<HTMLDivElement |
    * aqui, da fonte única, com o IVA ao lado.
    */
   // Por peça desde 03-11-2026 (d6); desde a d7 (04-11-2026) o «desde» é a recolha mínima, 40 € + IVA.
-  const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 };
+  const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? RECOLHA_MINIMA_DOS_MOVEIS };
   /*
    * A VERSÃO DO ESVAZIAMENTO — 15-11-2026 (d42). O que está incluído, do
    * primeiro ao último passo, e o «desde» da casa, da fonte única.
@@ -909,7 +909,7 @@ function PricingGuide({ variante }: { variante: VarianteDaLanding }) {
       title: "Móveis",
       text: `Sofás, camas, armários e colchões, de qualquer divisão. Por peça: ${PECAS_EM_TEXTO} + IVA.`,
       icon: Sofa,
-      preco: { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? 40 },
+      preco: { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? RECOLHA_MINIMA_DOS_MOVEIS },
     },
     {
       title: "Monos",

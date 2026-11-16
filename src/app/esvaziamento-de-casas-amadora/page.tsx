@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar um apartamento na Amadora?",
-    answer: `O valor depende do volume, andar, elevador e estado do imóvel. Um apartamento na Amadora fica em ${PRECO_APARTAMENTO}: um T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, um T2 em ${etiquetaDoEsvaziamento("T2")}, um T3/T4 em ${etiquetaDoEsvaziamento("T3/T4")}. Descreva-o com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, andar, elevador e estado do imóvel. Um apartamento na Amadora fica em ${PRECO_APARTAMENTO}: um T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, um T2 em ${etiquetaDoEsvaziamento("T2")}, um T3 em ${etiquetaDoEsvaziamento("T3")}, um T4 ou maior em ${etiquetaDoEsvaziamento("T4")}. Descreva-o com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança na Amadora?",

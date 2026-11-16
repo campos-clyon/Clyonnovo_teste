@@ -25,8 +25,8 @@ const COM_PARCEIROS: PrecoPublicoDasMudancas = { tipo: "parceiros", parceiros: 2
 describe("o preço das mudanças no título", () => {
   it("com parceiros, o «desde» deles; sem nenhum, a referência — sempre com o IVA", () => {
     expect(precoDaMudancaNoTitulo(COM_PARCEIROS)[0]).toBe("Desde 42,50 €/h + IVA");
-    expect(precoDaMudancaNoTitulo(SEM_PARCEIROS)[0]).toBe(`Referência ${PRECO_POR_HORA} €/h + IVA`);
-    expect(tituloDaMudanca("Moita")).toBe(`Mudanças na Moita — Referência ${PRECO_POR_HORA} €/h + IVA`);
+    expect(precoDaMudancaNoTitulo(SEM_PARCEIROS)[0]).toBe("Referência desde 40 €/h + IVA");
+    expect(tituloDaMudanca("Moita")).toBe("Mudanças na Moita — Referência desde 40 €/h + IVA");
     expect(tituloDaMudanca("Moita", COM_PARCEIROS)).toBe("Mudanças na Moita — Desde 42,50 €/h + IVA");
   });
 
@@ -54,8 +54,7 @@ describe("o preço das mudanças no título", () => {
 describe("o preço das mudanças na descrição", () => {
   it("com parceiros, o «desde» com o com IVA ao lado; sem eles, a referência", () => {
     expect(precoDaMudancaNaDescricao(COM_PARCEIROS)).toBe("desde 42,50 €/h + IVA (52,28 € com IVA), equipa de 2 — compare parceiros e escolha");
-    expect(precoDaMudancaNaDescricao(SEM_PARCEIROS)).toContain(`referência ${PRECO_POR_HORA} €/h + IVA`);
-    expect(precoDaMudancaNaDescricao(SEM_PARCEIROS)).toContain(`equipa de ${PESSOAS_NA_EQUIPA}`);
+    expect(precoDaMudancaNaDescricao(SEM_PARCEIROS)).toContain("referência desde 40 €/h + IVA (49,20 € com IVA), equipa de 2");
     for (const f of ["src/app/mudancas/page.tsx", "src/app/mudancas/[cidade]/page.tsx"]) {
       expect(ler(f), f).toContain("${precoDaMudancaNaDescricao(preco)}.");
     }
@@ -81,9 +80,9 @@ describe("os artigos de mudanças dizem o modelo e a referência", () => {
     expect(a.description).toContain(`${PRECO_POR_HORA} €/h + IVA`);
     const linhas = a.sections.flatMap((s) => s.bullets ?? []);
     // Em intervalo e com a proteção (11-11-2026).
-    expect(linhas).toContain("T2: entre 5 e 7 h com 3 pessoas — 310–410 € + IVA (381,30–504,30 € com IVA) na referência, com a proteção");
-    expect(linhas).toContain("T3: entre 7 e 9 h, só com 3 pessoas — 442–542 € + IVA (543,66–666,66 € com IVA) na referência, com a proteção");
-    expect(a.updatedDate).toBe("2026-11-11");
+    expect(linhas).toContain("T2: entre 5 e 7 h com 3 pessoas — 335–445 € + IVA (412,05–547,35 € com IVA) na referência, com a proteção");
+    expect(linhas).toContain("T3: entre 7 e 9 h, só com 3 pessoas — 477–587 € + IVA (586,71–722,01 € com IVA) na referência, com a proteção");
+    expect(a.updatedDate).toBe("2026-11-16");
   });
 
   it("as pequenas mudanças já não prometem «uma a duas horas» — o mínimo são 3, na referência", () => {

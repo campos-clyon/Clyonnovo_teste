@@ -32,9 +32,9 @@ import { lembrarPrecoPublico, SEM_PARCEIROS } from "./preco-publico-das-mudancas
  */
 
 describe("a tabela", () => {
-  it("50 € + IVA por hora, mínimo 3 horas", () => {
-    expect(PRECO_POR_HORA).toBe(50);
-    expect(PRECO_POR_HORA_COM_IVA).toBe(61.5);
+  it("a referência: 55 € + IVA por hora com 3 pessoas (d60; eram 50 €), mínimo 3 horas", () => {
+    expect(PRECO_POR_HORA).toBe(55);
+    expect(PRECO_POR_HORA_COM_IVA).toBe(67.65);
     expect(MINIMO_DE_HORAS).toBe(3);
   });
 
@@ -57,9 +57,9 @@ describe("a tabela", () => {
     expect(tipologiaDoTexto("duas tv de 32 polegadas")).toBeNull();
   });
 
-  it("a deslocação: incluída até 50 km; acima, todos os km ida e volta a 1,30 €", () => {
-    expect(deslocacao(30)).toBe(0);
-    expect(deslocacao(50)).toBe(0);
+  it("a deslocação: incluída até 15 km (d60; eram 50); acima, todos os km ida e volta a 1,30 €", () => {
+    expect(deslocacao(15)).toBe(0);
+    expect(deslocacao(30)).toBe(78);
     expect(deslocacao(80)).toBe(208);
   });
 
@@ -82,20 +82,20 @@ describe("a tabela", () => {
     // 11-11-2026: entre 5 e 7 h com 3 pessoas.
     expect(c.intervalo).toEqual([5, 7]);
     expect(c.horas).toBe(6);
-    expect(c.maoDeObra).toBe(300);
+    expect(c.maoDeObra).toBe(330);
     expect(c.deslocacao).toBe(208);
     expect(c.custoDosAndares).toBe(135);
     expect(c.materiais).toBe(44);
-    expect(c.totalSemIvaMinimo).toBe(250 + 208 + 135 + 44);
-    expect(c.totalSemIvaMaximo).toBe(350 + 208 + 135 + 44);
-    expect(c.totalSemIva).toBe(687);
-    expect(c.totalComIva).toBe(845.01);
+    expect(c.totalSemIvaMinimo).toBe(275 + 208 + 135 + 44);
+    expect(c.totalSemIvaMaximo).toBe(385 + 208 + 135 + 44);
+    expect(c.totalSemIva).toBe(717);
+    expect(c.totalComIva).toBe(881.91);
   });
 
-  it("o valor de partida é o do profissional: com a taxa de 5 %, dá os 50 € ao cliente", () => {
+  it("o valor de partida é o do profissional: com a taxa de 5 %, dá os 55 € ao cliente", () => {
     const v = valorDePartidaPorHora(TAXAS_DE_ORIGEM);
-    expect(v).toBe(47.62);
-    expect(precoParaOCliente(v, TAXAS_DE_ORIGEM, "sem_iva")).toBe(50);
+    expect(v).toBe(52.38);
+    expect(precoParaOCliente(v, TAXAS_DE_ORIGEM, "sem_iva")).toBe(55);
   });
 });
 
@@ -137,9 +137,9 @@ describe("o motor usa a tabela", () => {
     expect(estimateLaborHours({ serviceType: "mudanca" })).toBe(3);
   });
 
-  it("um T1 sem nada de especial: o meio de 4–5 h a 50 € = 225 € sem IVA", async () => {
+  it("um T1 sem nada de especial: o meio de 4–5 h a 55 € = 247,50 € sem IVA", async () => {
     const e = await calculateFastEstimate({ serviceType: "mudanca", tipologia: "T1" });
-    expect(e.estimatedPriceWithoutVat).toBe(225);
+    expect(e.estimatedPriceWithoutVat).toBe(247.5);
   });
 
   it("a sugestão ao profissional, num pedido à hora, é por hora", () => {
@@ -177,7 +177,7 @@ describe("o assistente do WhatsApp diz o modelo a quem pergunta o preço de uma 
     const nota = notaDoPrecoPara("quanto custa?", "quando", false, "mudanca");
     expect(nota).toContain("cada parceiro tem o seu preço por hora e o seu mínimo de horas");
     // Dita como referência (d7, 11-11-2026): «na referência, são…», e não «a referência é…».
-    expect(nota).toContain("na referência, são 50,00 € + IVA por hora (61,50 € com IVA), equipa de 3, mínimo de 3 horas");
+    expect(nota).toContain("na referência, são 40,00 € + IVA por hora (49,20 € com IVA) com 2 pessoas, 55,00 € + IVA por hora (67,65 € com IVA) com 3, mínimo de 3 horas");
     expect(nota).toContain("clyon.pt/simulador?servico=mudanca");
     lembrarPrecoPublico({ tipo: "parceiros", parceiros: 2, desde: { semIvaCent: 4000, comIvaCent: 4920 } });
     expect(notaDoPrecoPara("quanto custa?", "quando", false, "mudanca")).toContain("desde 40,00 € + IVA/h (49,20 € com IVA) com 2 pessoas.");
@@ -193,8 +193,8 @@ describe("o site publica a tabela", () => {
     expect(ler("src/components/mudancas/PaginaDeTipoDeMudanca.tsx")).toContain("<TabelaDasMudancas compacta preco={preco} />");
     expect(ler("src/app/mudancas/[cidade]/page.tsx")).toContain("{precoDaMudancaCurto(preco)}");
     // Lido de tabela-das-mudancas.ts desde 27-10-2026 (d12); desde 11-11-2026 diz que é a referência.
-    expect(ler("src/lib/precos-publicos.ts")).toContain("mudanca: { etiqueta: `referência ${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS }");
-    expect(PRECOS.mudanca).toEqual({ etiqueta: "referência 50 €/hora + IVA", minimo: 150 });
+    expect(ler("src/lib/precos-publicos.ts")).toContain("mudanca: { etiqueta: `referência desde ${PRECO_POR_HORA_DUAS_PESSOAS} €/hora + IVA`, minimo: PRECO_POR_HORA_DUAS_PESSOAS * MINIMO_DE_HORAS }");
+    expect(PRECOS.mudanca).toEqual({ etiqueta: "referência desde 40 €/hora + IVA", minimo: 120 });
     expect(ler("src/lib/mudancas-cidades.ts")).not.toMatch(/Não há tabela/);
   });
 

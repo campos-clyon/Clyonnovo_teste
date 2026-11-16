@@ -145,8 +145,8 @@ describe("os números são os das tabelas do motor", () => {
         : { tipo: "faixa", de: a * PRECO_POR_HORA + protecao[i], ate: b * PRECO_POR_HORA + protecao[i] },
     );
     expect(linhas.map((l) => l.valor)).toEqual(esperado);
-    // O T3: 7–9 h e 92 € de proteção = 442–542 € + IVA.
-    expect(linhas[4].valor).toEqual({ tipo: "faixa", de: 442, ate: 542 });
+    // O T3: 7–9 h a 55 € (d60) e 92 € de proteção = 477–587 € + IVA.
+    expect(linhas[4].valor).toEqual({ tipo: "faixa", de: 477, ate: 587 });
     expect(linhas[4].exemplo).toBe("Entre 7 e 9 h da equipa de 3, com a proteção · só com 3 pessoas");
   });
 

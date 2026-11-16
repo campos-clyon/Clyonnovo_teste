@@ -30,7 +30,7 @@
  */
 
 import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
-import { PRECO_POR_HORA, MINIMO_DE_HORAS } from "./tabela-das-mudancas";
+import { PRECO_POR_HORA_DUAS_PESSOAS, MINIMO_DE_HORAS } from "./tabela-das-mudancas";
 
 export type PrecoPublico = {
   /** O que aparece no cartão e no texto: "40 – 120 €", "desde 250 €". */
@@ -64,18 +64,37 @@ export const PRECO_POR_ITEM: Readonly<Record<"pequeno" | "medio" | "grande", num
 };
 
 /*
+ * A PRIMEIRA PEÇA GRANDE — 16-11-2026 (decisão d60, o CEO e o dono). A primeira
+ * peça grande de uma recolha conta 65 € sem IVA; as seguintes, 50 €
+ * (`PRECO_POR_ITEM.grande`). As médias e as pequenas não mudam. Um sofá sozinho
+ * fica em 65 € + IVA; dois sofás, 65 + 50 = 115 € + IVA. Sem IVA.
+ */
+export const PRECO_DA_PRIMEIRA_GRANDE = 65;
+
+/** A peça mais cara da tabela (a primeira grande), para as faixas «15 a 65 €». */
+export const PRECO_MAXIMO_DA_PECA = PRECO_DA_PRIMEIRA_GRANDE;
+
+/** As grandes de uma recolha: a primeira a 65 €, as seguintes a 50 € (sem IVA). */
+export function valorDasGrandes(n: number): number {
+  const g = Math.max(0, Math.floor(n));
+  return g === 0 ? 0 : PRECO_DA_PRIMEIRA_GRANDE + (g - 1) * PRECO_POR_ITEM.grande;
+}
+
+/*
  * A RECOLHA MÍNIMA DOS MÓVEIS — 04-11-2026 (decisão d7, o dono): *«recolha
  * mínima de 40 € + IVA»*. A soma das peças nunca fica abaixo dela; os andares e
  * o estacionamento somam-se DEPOIS do mínimo. Diz-se «recolha mínima» (já inclui
  * o parceiro ir a casa, carregar e levar ao destino certo), nunca «deslocação».
- * Exemplos do dono: 1 peça pequena no rés-do-chão = 40 € + IVA; 1 média num 3.º
- * andar sem elevador = 40 + 45 = 85 € + IVA; 2 grandes + 1 média num 2.º com
- * elevador = 140 € + IVA (não muda). Os monos não têm este mínimo. Sem IVA.
+ * DESDE 16-11-2026 (d60): 60 € + IVA — a recolha mínima paga a saída do
+ * parceiro. Os monos com as peças contadas seguem a mesma conta (d59). Sem IVA.
  */
-export const RECOLHA_MINIMA_DOS_MOVEIS = 40;
+export const RECOLHA_MINIMA_DOS_MOVEIS = 60;
 
-/** «pequena 15 €, média 30 €, grande 50 €» — as peças pela ordem, sem IVA. */
-export const PECAS_EM_TEXTO = `pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} €`;
+/** «grande 65 € a primeira e 50 € as seguintes» — as grandes (d60). */
+export const GRANDES_EM_TEXTO = `grande ${PRECO_DA_PRIMEIRA_GRANDE} € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes`;
+
+/** «pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes» — as peças pela ordem, sem IVA. */
+export const PECAS_EM_TEXTO = `pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, ${GRANDES_EM_TEXTO}`;
 
 /**
  * «por peça: pequena 15 €, média 30 €, grande 50 € + IVA; recolha mínima 40 € +
@@ -109,6 +128,9 @@ export const MINIMO_DE_SACOS = 10;
 
 const emCentimos = (v: number) => Math.round(v * 100) / 100;
 
+/** «1 300» — os milhares com espaço, como `euros` (quanto-custa.ts) os escreve. */
+const milhares = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
 /** Estes sacos, um a um, sem IVA — até 10, o mínimo de 10. */
 export function precoDosSacos(sacos: number): { de: number; ate: number } {
   const n = Math.max(MINIMO_DE_SACOS, Math.round(sacos));
@@ -117,6 +139,25 @@ export function precoDosSacos(sacos: number): { de: number; ate: number } {
 
 /** 1 m³ de entulho, ensacado ou a granel: 40 sacos (160–192 € sem IVA). */
 const UM_METRO_CUBICO = precoDosSacos(SACOS_POR_METRO_CUBICO);
+
+/*
+ * DESDE 16-11-2026 (d60): T2 400–600 €, T3 650–950 €, T4 900–1 300 € e a
+ * moradia desde 900 € (o T3 e o T4 separaram-se: eram «T3/T4 380–450 €»). O
+ * T0/T1 fica. A chave antiga «T3/T4» lê-se como T3 (`lerTipologiaDoEsvaziamento`).
+ */
+export const ESVAZIAMENTO_POR_TIPOLOGIA: ReadonlyArray<{ chave: string; tipo: string; minimo: number; maximo?: number }> = [
+  { chave: "T0/T1", tipo: "Apartamento T0/T1", minimo: 260, maximo: 350 },
+  { chave: "T2", tipo: "Apartamento T2", minimo: 400, maximo: 600 },
+  { chave: "T3", tipo: "Apartamento T3", minimo: 650, maximo: 950 },
+  { chave: "T4", tipo: "Apartamento T4 ou maior", minimo: 900, maximo: 1300 },
+  { chave: "moradia", tipo: "Moradia completa", minimo: 900 },
+];
+
+/** Do piso ao tecto dos apartamentos de `ESVAZIAMENTO_POR_TIPOLOGIA` (a moradia não tem tecto). */
+const APARTAMENTOS = (() => {
+  const comTecto = ESVAZIAMENTO_POR_TIPOLOGIA.filter((t) => t.maximo != null);
+  return { minimo: Math.min(...comTecto.map((t) => t.minimo)), maximo: Math.max(...comTecto.map((t) => t.maximo as number)) };
+})();
 
 export const PRECOS: Record<string, PrecoPublico> = {
   /*
@@ -151,7 +192,12 @@ export const PRECOS: Record<string, PrecoPublico> = {
   },
 
   esvaziamento_casa: { etiqueta: "desde 250 €", minimo: 250 },
-  esvaziamento_apartamento: { etiqueta: "260 – 450 €", minimo: 260, maximo: 450 },
+  // Os apartamentos de T0/T1 a T4 (d60, 16-11-2026): do piso do T0/T1 ao tecto do T4.
+  esvaziamento_apartamento: {
+    etiqueta: `${milhares(APARTAMENTOS.minimo)} – ${milhares(APARTAMENTOS.maximo)} €`,
+    minimo: APARTAMENTOS.minimo,
+    maximo: APARTAMENTOS.maximo,
+  },
   // Garagem, sótão e cave (29-10-2026): as faixas estão em `ESVAZIAMENTO_POR_ESPACO`.
   esvaziamento_garagem: { etiqueta: "desde 120 €", minimo: 120, maximo: 420 },
   esvaziamento_sotao: { etiqueta: "desde 150 €", minimo: 150, maximo: 480 },
@@ -177,7 +223,8 @@ export const PRECOS: Record<string, PrecoPublico> = {
    * referência (estes cartões não lêem a base); o «desde» dos parceiros está
    * nas páginas das mudanças (`preco-publico-das-mudancas.ts`).
    */
-  mudanca: { etiqueta: `referência ${PRECO_POR_HORA} €/hora + IVA`, minimo: PRECO_POR_HORA * MINIMO_DE_HORAS },
+  // Desde 16-11-2026 (d60) a referência tem a equipa de 2 (40 €/h) e a de 3 (55 €/h): a etiqueta diz a de 2.
+  mudanca: { etiqueta: `referência desde ${PRECO_POR_HORA_DUAS_PESSOAS} €/hora + IVA`, minimo: PRECO_POR_HORA_DUAS_PESSOAS * MINIMO_DE_HORAS },
 
   montagem_moveis: { etiqueta: "desde 49 €", minimo: 49 },
   jardinagem: { etiqueta: "desde 64 €", minimo: 64 },
@@ -283,6 +330,21 @@ export function notaDosMateriais(trabalho: string): string | null {
 export const RECOLHA_POR_ANDAR_COM_ELEVADOR = 5;
 export const RECOLHA_POR_ANDAR_SEM_ELEVADOR = 15;
 
+/*
+ * SEM ELEVADOR, POR ANDAR E POR PEÇA GRANDE — 16-11-2026 (decisão d60). Nos
+ * móveis e nos monos com as peças contadas, cada andar a pé conta 8 € por peça
+ * grande, nunca menos de 15 € por andar (`RECOLHA_POR_ANDAR_SEM_ELEVADOR`, o
+ * mínimo — e o valor de sempre no entulho, que não tem peças grandes). Uma peça
+ * grande que não cabe no elevador desce pela escada: os andares contam-se como
+ * sem elevador. Com elevador, +5 € por andar por trabalho (igual). Sem IVA.
+ */
+export const RECOLHA_POR_ANDAR_E_PECA_GRANDE = 8;
+
+/** Um andar a pé, com estas peças grandes: 8 € por peça grande, nunca menos de 15 €. */
+export function valorDeUmAndarAPe(pecasGrandes = 0): number {
+  return Math.max(RECOLHA_POR_ANDAR_SEM_ELEVADOR, RECOLHA_POR_ANDAR_E_PECA_GRANDE * Math.max(0, Math.floor(pecasGrandes)));
+}
+
 
 /*
  * O PREÇO DE REFERÊNCIA NUNCA SAI SOZINHO — 14-10-2026.
@@ -303,12 +365,6 @@ export const RECOLHA_POR_ANDAR_SEM_ELEVADOR = 15;
  * Os apartamentos ficam dentro da faixa de `esvaziamento_apartamento`, e a
  * moradia completa começa no tecto dela. Sem IVA.
  */
-export const ESVAZIAMENTO_POR_TIPOLOGIA: ReadonlyArray<{ chave: string; tipo: string; minimo: number; maximo?: number }> = [
-  { chave: "T0/T1", tipo: "Apartamento T0/T1", minimo: 260, maximo: 350 },
-  { chave: "T2", tipo: "Apartamento T2", minimo: 320, maximo: 420 },
-  { chave: "T3/T4", tipo: "Apartamento T3/T4", minimo: 380, maximo: 450 },
-  { chave: "moradia", tipo: "Moradia completa", minimo: 450 },
-];
 
 /*
  * A GARAGEM, O SÓTÃO E A CAVE — 29-10-2026 (preços aprovados pelo dono).
@@ -377,11 +433,11 @@ export function estimativaDoEspaco(
 }
 
 
-/** «320 – 420 €», «desde 450 €» — a etiqueta de uma linha do esvaziamento. */
+/** «400 – 600 €», «desde 900 €», «900 – 1 300 €» — a etiqueta de uma linha do esvaziamento. */
 export function etiquetaDoEsvaziamento(chave: string): string {
   const t = ESVAZIAMENTO_POR_TIPOLOGIA.find((x) => x.chave === chave);
   if (!t) throw new Error(`Tipologia de esvaziamento desconhecida: ${chave}`);
-  return t.maximo != null ? `${t.minimo} – ${t.maximo} €` : `desde ${t.minimo} €`;
+  return t.maximo != null ? `${milhares(t.minimo)} – ${milhares(t.maximo)} €` : `desde ${milhares(t.minimo)} €`;
 }
 
 /*
@@ -463,8 +519,8 @@ export const NOME_DO_TAMANHO: Readonly<Record<keyof typeof PRECO_POR_ITEM, strin
   grande: "peça grande",
 };
 
-/** O preço de uma peça de referência, sem IVA — o do seu tamanho. */
-export const precoDaPeca = (p: PecaDeReferencia): number => PRECO_POR_ITEM[p.tamanho];
+/** O preço de uma peça de referência sozinha, sem IVA — o do seu tamanho (a grande é a primeira, d60). */
+export const precoDaPeca = (p: PecaDeReferencia): number => (p.tamanho === "grande" ? PRECO_DA_PRIMEIRA_GRANDE : PRECO_POR_ITEM[p.tamanho]);
 
 /** «Sofá de 2 a 3 lugares: peça grande, 50 €» (sem IVA — para o texto ao modelo, com «s/IVA» a seguir). */
 export function pecaEmLinha(p: PecaDeReferencia): string {

@@ -11,6 +11,8 @@ import {
   RECOLHA_MINIMA_DOS_MOVEIS,
   RECOLHA_POR_ANDAR_COM_ELEVADOR,
   RECOLHA_POR_ANDAR_SEM_ELEVADOR,
+  RECOLHA_POR_ANDAR_E_PECA_GRANDE,
+  valorDeUmAndarAPe,
   faixaDoVolume,
   precoDaPeca,
   precoDosSacos,
@@ -267,7 +269,13 @@ export function contaDosSacosEmTexto(sacos: number, antes?: string, ligacao = "=
  * simulador do site), a calculadora e o motor. Substitui a regra da d1 v2
  * (+15 € por m³ e por andar sem elevador).
  */
-export type AcessoDoEntulho = { floor?: string | number | null; hasElevator?: string | null; parkingDistance?: string | null };
+export type AcessoDoEntulho = {
+  floor?: string | number | null;
+  hasElevator?: string | null;
+  parkingDistance?: string | null;
+  /** As peças grandes cabem no elevador? «sim», «nao», «nao_sei» (d60, 16-11-2026). */
+  pecasNoElevador?: string | null;
+};
 
 export type SuplementoDosAndares = {
   /** O número do andar (0 no rés-do-chão ou sem andar). */
@@ -286,19 +294,39 @@ export type SuplementoDosAndares = {
   valorAPe: number;
   /** Tudo, sem IVA. */
   valor: number;
+  /** Um andar a pé, sem IVA: 15 €, ou 8 € por peça grande quando dá mais (d60). */
+  porAndarAPe: number;
+  /** As peças grandes da conta (0 no entulho). */
+  pecasGrandes: number;
+  /** As peças grandes não cabem no elevador: os andares contam-se pela escada (d60). */
+  elevadorNaoServe: boolean;
+  /** Há elevador e peças grandes, sem saber se cabem: o parceiro confirma. */
+  naoSabeSeCabem: boolean;
 };
 
-export function suplementoDosAndares(a: AcessoDoEntulho | null | undefined): SuplementoDosAndares {
+/*
+ * E AS PEÇAS GRANDES — 16-11-2026 (decisão d60). Sem elevador, cada andar a pé
+ * conta 8 € por peça grande, nunca menos de 15 € (`valorDeUmAndarAPe`); o
+ * estacionamento longe conta como mais um andar a pé, ao mesmo valor. Uma peça
+ * grande que não cabe no elevador desce pela escada: com «não cabem», os andares
+ * contam-se a pé. No entulho não há peças grandes: fica tudo como era.
+ */
+export function suplementoDosAndares(a: AcessoDoEntulho | null | undefined, o?: { pecasGrandes?: number }): SuplementoDosAndares {
   // O número do andar, com ou sem elevador («4º+» conta 4; o rés-do-chão, 0).
   const andar = andaresAPe(a?.floor, "no");
-  const comElevador = a?.hasElevator === "yes" || a?.hasElevator === "small";
+  const pecasGrandes = Math.max(0, Math.floor(o?.pecasGrandes ?? 0));
+  const temElevador = a?.hasElevator === "yes" || a?.hasElevator === "small";
+  const elevadorNaoServe = temElevador && pecasGrandes > 0 && andar > 0 && a?.pecasNoElevador === "nao";
+  const naoSabeSeCabem = temElevador && pecasGrandes > 0 && andar > 0 && a?.pecasNoElevador === "nao_sei";
+  const comElevador = temElevador && !elevadorNaoServe;
   const andaresComElevador = comElevador ? andar : 0;
-  const aPe = a?.hasElevator === "no" ? andar : 0;
+  const aPe = a?.hasElevator === "no" || elevadorNaoServe ? andar : 0;
   const naoSabeOElevador = a?.hasElevator === "unknown" && andar > 0;
   const estacionamentoLonge = a?.parkingDistance === "over_30m" || a?.parkingDistance === "difficult";
+  const porAndarAPe = valorDeUmAndarAPe(pecasGrandes);
   const valorComElevador = arred(RECOLHA_POR_ANDAR_COM_ELEVADOR * andaresComElevador);
-  const valorAPe = arred(RECOLHA_POR_ANDAR_SEM_ELEVADOR * aPe);
-  const valorDoEstacionamento = estacionamentoLonge ? RECOLHA_POR_ANDAR_SEM_ELEVADOR : 0;
+  const valorAPe = arred(porAndarAPe * aPe);
+  const valorDoEstacionamento = estacionamentoLonge ? porAndarAPe : 0;
   return {
     andar,
     andaresComElevador,
@@ -308,6 +336,10 @@ export function suplementoDosAndares(a: AcessoDoEntulho | null | undefined): Sup
     valorComElevador,
     valorAPe,
     valor: arred(valorComElevador + valorAPe + valorDoEstacionamento),
+    porAndarAPe,
+    pecasGrandes,
+    elevadorNaoServe,
+    naoSabeSeCabem,
   };
 }
 
@@ -324,12 +356,21 @@ export function linhasDosAndares(s: SuplementoDosAndares, a: AcessoDoEntulho | n
   const l: string[] = [];
   const andar = s.andar > 0 ? andarEscrito(a?.floor, s.andar) : null;
   if (andar && s.andaresComElevador > 0) l.push(`${andar} com elevador: +${euros(s.valorComElevador)} + IVA`);
-  if (andar && s.andaresAPe > 0) l.push(`${andar} sem elevador: +${euros(s.valorAPe)} + IVA`);
+  // Por peça grande (d60): «3.º andar sem elevador, 2 peças grandes × 8 € por andar: +48 € + IVA».
+  const porPeca = s.porAndarAPe > RECOLHA_POR_ANDAR_SEM_ELEVADOR ? `, ${s.pecasGrandes} peças grandes × ${euros(RECOLHA_POR_ANDAR_E_PECA_GRANDE)} por andar` : "";
+  if (andar && s.andaresAPe > 0) {
+    l.push(
+      s.elevadorNaoServe
+        ? `${andar}, as peças grandes não cabem no elevador (pela escada)${porPeca}: +${euros(s.valorAPe)} + IVA`
+        : `${andar} sem elevador${porPeca}: +${euros(s.valorAPe)} + IVA`,
+    );
+  }
   if (s.estacionamentoLonge) {
     const nome = a?.parkingDistance === "difficult" ? "Estacionamento difícil" : "Estacionamento a mais de 30 metros";
-    l.push(`${nome}, como mais um andar sem elevador: +${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA`);
+    l.push(`${nome}, como mais um andar sem elevador: +${euros(s.porAndarAPe)} + IVA`);
   }
   if (andar && s.naoSabeOElevador) l.push(`${andar}, sem saber se há elevador: o parceiro confirma na proposta.`);
+  if (andar && s.naoSabeSeCabem) l.push("Sem saber se as peças grandes cabem no elevador: se não couberem, descem pela escada e o parceiro conta-o na proposta.");
   return l;
 }
 

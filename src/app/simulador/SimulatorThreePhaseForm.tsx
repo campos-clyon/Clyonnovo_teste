@@ -50,6 +50,8 @@ import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/Parceiro
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca, valorDoSimuladorDoSite, type FormularioDoSimulador } from "@/lib/preco-de-referencia";
 import { comIva } from "@/lib/quanto-custa";
 import CompactOrderDetails from "./components/CompactOrderDetails";
+import { TITULO_DAS_PECAS_NO_ELEVADOR } from "@/lib/simulador-por-categoria";
+import { PECAS_NO_ELEVADOR } from "@/lib/respostas-do-simulador";
 import { faltaNaFase1 as calcularFaltaNaFase1, FALTA_A_DESCRICAO, linhaDasPecas, comLinhaDasPecas, pecasDosMoveis } from "@/lib/falta-na-fase-1";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
 import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
@@ -2199,6 +2201,31 @@ function Phase2Location({
             {missingElevator && <p className="text-xs text-red-600 mt-1">Elevador obrigatório</p>}
           </div>
         )}
+
+        {/* A peça grande que não cabe no elevador desce pela escada (d60, 16-11-2026): só nos móveis e nos monos. */}
+        {(formData.serviceType === "recolha_moveis" || formData.serviceType === "recolha_monos") &&
+          formData.floor !== "rés-do-chão" &&
+          (formData.hasElevator === "yes" || formData.hasElevator === "small") && (
+            <div className="space-y-2">
+              <label htmlFor="sim-pecas-no-elevador" className="block text-sm font-medium text-gray-900">
+                {TITULO_DAS_PECAS_NO_ELEVADOR}
+              </label>
+              <select
+                id="sim-pecas-no-elevador"
+                value={formData.pecasNoElevador || ""}
+                onChange={(e) => updateField("pecasNoElevador", (e.target.value || undefined) as OrderData["pecasNoElevador"])}
+                className={calcSelectCls}
+              >
+                <option value="">Seleccione...</option>
+                {PECAS_NO_ELEVADOR.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nome}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-600">Se não couber, desce pela escada e conta como um andar sem elevador.</p>
+            </div>
+          )}
       </div>
       )}
 

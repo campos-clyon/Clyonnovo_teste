@@ -1,5 +1,5 @@
 import { caminhoDoServicoNaCidade } from "./caminho-da-cidade";
-import { PRECOS, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, type PrecoPublico } from "./precos-publicos";
+import { PRECOS, PRECO_DA_PRIMEIRA_GRANDE, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, type PrecoPublico } from "./precos-publicos";
 
 /*
  * AS PÁGINAS EM INGLÊS — 14-10-2026 (auditoria de SEO, 90 dias).
@@ -113,7 +113,7 @@ export function precoEmIngles(p: PrecoPublico): string {
 export const PRECOS_EM_INGLES = [
   // Per item since 03-11-2026 (d6): small, medium, large.
   // And the minimum collection since 04-11-2026 (d7).
-  { servico: "Furniture removal (sofa, bed, wardrobe…)", preco: `per item: small €${PRECO_POR_ITEM.pequeno}, medium €${PRECO_POR_ITEM.medio}, large €${PRECO_POR_ITEM.grande} + VAT; minimum collection €${RECOLHA_MINIMA_DOS_MOVEIS} + VAT` },
+  { servico: "Furniture removal (sofa, bed, wardrobe…)", preco: `per item: small €${PRECO_POR_ITEM.pequeno}, medium €${PRECO_POR_ITEM.medio}, large €${PRECO_DA_PRIMEIRA_GRANDE} for the first and €${PRECO_POR_ITEM.grande} each after + VAT; minimum collection €${RECOLHA_MINIMA_DOS_MOVEIS} + VAT` },
   { servico: "Bulky waste and junk", preco: precoEmIngles(PRECOS.recolha_monos) },
   { servico: "Construction rubble, in bags or loose", preco: precoEmIngles(PRECOS.recolha_entulho) },
   { servico: "House clearance", preco: precoEmIngles(PRECOS.esvaziamento_casa) },
