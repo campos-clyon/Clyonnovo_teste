@@ -222,6 +222,8 @@ export async function GET(req: NextRequest) {
               nasceuEm: d.nasceuEm ? d.nasceuEm.toISOString() : null,
               prazoAte: prazoDoValorEmAtraso(d)?.toISOString() ?? null,
               multibanco: comReferencia(d.negociacaoId),
+              // d55: com valor único, a parte da CLYON leva a reserva — a app diz-lho como o painel.
+              comReserva: Boolean(trabalhos.find((t) => t.negociacaoId === d.negociacaoId)?.reservaCent),
             }));
           return {
             emVigor: true,

@@ -324,6 +324,8 @@ export type DadosDaCarteira = {
       nasceuEm: string | null;
       prazoAte: string | null;
       multibanco: { entidade: string | null; referencia: string | null } | null;
+      /** d55: a parte da CLYON leva a reserva do valor único (a app diz «taxa da plataforma e reserva»). */
+      comReserva: boolean;
     }>;
     standBy: { total: number; accao: string; explicacao: string; negociacoes: number[] } | null;
     dadosParaReceber:

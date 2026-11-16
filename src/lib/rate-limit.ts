@@ -90,8 +90,9 @@ export async function checkRateLimit(
     const count = (results[0] as number) ?? 1;
     return { allowed: count <= limit, count, limit };
   } catch {
-    // Em caso de erro do Redis, falhar de forma aberta
-    return { allowed: true, count: 0, limit };
+    // d57: se o Redis falhar, o travão passa ao limite em memória (por instância)
+    // em vez de deixar passar tudo.
+    return limitarEmMemoria(key, limit, windowSecs);
   }
 }
 
