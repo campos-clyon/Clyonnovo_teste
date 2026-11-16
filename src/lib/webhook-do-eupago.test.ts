@@ -168,15 +168,30 @@ describe("ler o aviso", () => {
   });
 
   /*
-   * O `trid` é a chave única na base que faz um aviso repetido não contar
-   * duas vezes. Sem ele não há idempotência, e sem idempotência não se
-   * credita nada — num sítio onde a repetição é garantida por desenho.
+   * A chave da idempotência é a chave única na base que faz um aviso repetido
+   * não contar duas vezes. Sem trid, sem referência e sem identificador nosso
+   * não há chave, e sem chave não se credita nada — num sítio onde a
+   * repetição é garantida por desenho. 16-11-2026 (d50): com referência, a
+   * chave é a da conferência.
    */
-  it("sem trid não se aceita nada — é ele a defesa contra a repetição", () => {
+  it("sem trid, sem referência e sem identificador nosso não se aceita nada", () => {
+    for (const sem of [{ trid: null }, { trid: "" }, { trid: undefined }]) {
+      const r = lerAvisoDoEupago(
+        JSON.parse(avisoCru({ ...sem, reference: undefined, identifier: "outro-produto-9" })),
+      );
+      expect(r.ok).toBe(false);
+      if (!r.ok) {
+        expect(r.retentar).toBe(true);
+        expect(r.porque).toBe("O aviso não traz trid.");
+      }
+    }
+  });
+
+  it("sem trid mas com referência, a chave é a da conferência (ref:entidade:referência)", () => {
     for (const sem of [{ trid: null }, { trid: "" }, { trid: undefined }]) {
       const r = lerAvisoDoEupago(JSON.parse(avisoCru(sem)));
-      expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.retentar).toBe(true);
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.aviso.trid).toBe("ref:12345:123456789");
     }
   });
 

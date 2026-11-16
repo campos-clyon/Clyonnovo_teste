@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { chaveDaReferencia } from "@/lib/webhook-do-eupago";
 import { registarSemFalhar } from "@/lib/db";
 import { configuracaoDoEupago, NOME_DO_METODO } from "@/lib/eupago";
 import { estadoDaReferencia } from "@/lib/pedir-ao-eupago";
@@ -118,7 +119,7 @@ async function conferirUm(
     // Sem `trid` desta consulta, a referência serve de chave: é única por
     // pagamento e é o que temos. O webhook, se vier depois, traz o `trid`
     // verdadeiro e não repete nada — a linha já não está por pagar.
-    trid: `ref:${p.entidade ?? ""}:${p.referencia}`,
+    trid: chaveDaReferencia(p.entidade, p.referencia),
     valorPago: decisao.valor,
     comissao: r.comissao ?? null,
     quando: new Date(),

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { chaveDaReferencia } from "@/lib/webhook-do-eupago";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { registarSemFalhar } from "@/lib/db";
 import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
       // Sem `trid` desta consulta, a referência serve de chave: é única por
       // pagamento. Se o aviso vier depois, traz o `trid` verdadeiro e não
       // repete nada — a linha já não está por pagar.
-      trid: `ref:${p.entidade ?? ""}:${p.referencia}`,
+      trid: chaveDaReferencia(p.entidade, p.referencia),
       valorPago: decisao.valor,
       comissao: r.comissao ?? null,
       quando: new Date(),

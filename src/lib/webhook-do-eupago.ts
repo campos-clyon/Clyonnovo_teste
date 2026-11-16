@@ -220,6 +220,68 @@ function quando(v: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** Os outros nomes com que o `trid` pode vir, por ordem de confiança. */
+const NOMES_DO_TRID = ["trid", "transactionId", "transaction_id", "transactionID", "tid"] as const;
+
+/**
+ * A CHAVE DE UM PAGAMENTO POR REFERÊNCIA — 16-11-2026 (d50).
+ *
+ * A mesma para o webhook sem `trid` e para a conferência (a de hora a hora e
+ * a do botão): é ela que vai para a coluna `trid`, com índice único. Se
+ * cada lado a escrevesse à sua maneira, o mesmo pagamento tinha duas chaves.
+ */
+export function chaveDaReferencia(entidade: string | null | undefined, referencia: string): string {
+  const limpa = (v: string | null | undefined) => String(v ?? "").replace(/\s+/g, "");
+  return `ref:${limpa(entidade)}:${limpa(referencia)}`;
+}
+
+/** A chave do aviso: o `trid`, ou a referência, ou o nosso identificador. `null` sem nenhum. */
+export function chaveDoAviso(
+  t: Record<string, unknown>,
+  raiz: Record<string, unknown>,
+  d: { identificador: string | null; entidade: string | null; referencia: string | null; estado: EstadoDoAviso },
+): string | null {
+  for (const nome of NOMES_DO_TRID) {
+    const v = texto(t[nome]) ?? texto(raiz[nome]);
+    if (v) return v;
+  }
+  // O `id` da transacção, só dentro dela: o `id` da raiz pode ser outra coisa.
+  const id = texto(t.id);
+  if (id) return id;
+  if (d.referencia) return chaveDaReferencia(d.entidade, d.referencia);
+  if (d.identificador && idDoIdentificador(d.identificador) != null) {
+    return `id:${d.identificador}:${d.estado}`;
+  }
+  return null;
+}
+
+/**
+ * A FORMA DO CORPO, SEM O CONTEÚDO — 16-11-2026 (d50).
+ *
+ * Só os nomes dos campos, por dentro (`transaction{amount{currency,value},…}`),
+ * nunca um valor. É o que se guarda de um aviso assinado que não soubemos
+ * ler: diz o que mudou no corpo sem guardar um telemóvel, um nome ou um
+ * valor. Nomes estranhos saem limpos, e o todo cabe em 500 caracteres.
+ */
+export function formaDoCorpo(json: unknown, maximo = 500): string {
+  const nome = (k: string) => k.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 40) || "?";
+  const forma = (v: unknown, fundo: number): string => {
+    if (Array.isArray(v)) return v.length === 0 ? "[]" : `[${forma(v[0], fundo + 1)}]`;
+    if (v && typeof v === "object") {
+      if (fundo >= 4) return "{…}";
+      const chaves = Object.keys(v as Record<string, unknown>).sort();
+      return `{${chaves.map((k) => {
+        const dentro = (v as Record<string, unknown>)[k];
+        const sub = dentro && typeof dentro === "object" ? forma(dentro, fundo + 1) : "";
+        return nome(k) + sub;
+      }).join(",")}}`;
+    }
+    return "";
+  };
+  const f = forma(json, 0) || typeof json;
+  return f.length > maximo ? f.slice(0, maximo - 1) + "…" : f;
+}
+
 /**
  * O corpo do aviso, lido.
  *
@@ -264,18 +326,6 @@ export function lerAvisoDoEupago(json: unknown): LeituraDoAviso {
   }
   const t = bruto as Record<string, unknown>;
 
-  const trid = texto(t.trid);
-  if (!trid) {
-    /*
-     * SEM `trid` NÃO HÁ IDEMPOTÊNCIA, e sem idempotência não se credita nada.
-     *
-     * É ele a chave única na base que faz um aviso repetido não contar duas
-     * vezes. Aceitar um aviso sem `trid` era abrir mão da única defesa contra
-     * a repetição — num sítio onde a repetição é garantida por desenho.
-     */
-    return { ok: false, porque: "O aviso não traz trid.", retentar: true };
-  }
-
   const estado = ESTADOS[(texto(t.status) ?? "").toLowerCase()];
   if (!estado) {
     return {
@@ -286,6 +336,26 @@ export function lerAvisoDoEupago(json: unknown): LeituraDoAviso {
   }
 
   const identificador = texto(t.identifier);
+  const entidade = texto(t.entity);
+  const referencia = texto(t.reference);
+
+  /*
+   * A CHAVE DA IDEMPOTÊNCIA — 16-11-2026 (d50).
+   *
+   * É ela a chave única na base que faz um aviso repetido não contar duas
+   * vezes, e sem chave não se credita nada. Até aqui só servia o `trid`; o
+   * euPago mandou avisos assinados sem ele, e todos levaram 500. Agora, por
+   * ordem: o `trid` (ou o mesmo número com outro nome), a referência — com a
+   * MESMA chave que a conferência de hora a hora já grava, para o mesmo
+   * pagamento nunca contar duas vezes — e, num MB WAY só com o nosso
+   * identificador, o identificador e o estado. Sem nada disto, continua a
+   * recusar com 500: o euPago insiste e a falha fica no painel.
+   */
+  const trid = chaveDoAviso(t, raiz, { identificador, entidade, referencia, estado });
+  if (!trid) {
+    return { ok: false, porque: "O aviso não traz trid.", retentar: true };
+  }
+
   return {
     ok: true,
     aviso: {
@@ -298,8 +368,8 @@ export function lerAvisoDoEupago(json: unknown): LeituraDoAviso {
       moeda: moedaDe(t.amount),
       comissao: dinheiro(t.fees),
       quando: quando(t.date),
-      entidade: texto(t.entity),
-      referencia: texto(t.reference),
+      entidade,
+      referencia,
     },
   };
 }

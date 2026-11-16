@@ -297,6 +297,12 @@ async function garantirTabelas() {
      */
     "ALTER TABLE avisosRecusados ADD COLUMN codigo SMALLINT UNSIGNED NOT NULL DEFAULT 401",
     "ALTER TABLE avisosRecusados MODIFY COLUMN porque VARCHAR(255) NOT NULL",
+    /*
+     * A FORMA DO AVISO QUE NÃO SOUBEMOS LER — 16-11-2026 (d50). Só os nomes
+     * dos campos (`formaDoCorpo`), nunca um valor: diz o que o euPago mudou
+     * no corpo sem guardar dados de ninguém. Nula nas linhas antigas.
+     */
+    "ALTER TABLE avisosRecusados ADD COLUMN forma VARCHAR(500) NULL DEFAULT NULL",
   ]) {
     try {
       await pool.execute(sql);
@@ -1495,15 +1501,31 @@ export async function anotarRecusa(
  * nunca o corpo — para o painel dizer «está a chamar e nós falhamos». Nunca
  * rebenta: o que importa é o 500 chegar ao euPago, para ele voltar.
  */
-export async function anotarFalha(porque: string, d: { tamanho: number }): Promise<void> {
+export async function anotarFalha(
+  porque: string,
+  d: {
+    tamanho: number;
+    /** Só os nomes dos campos do corpo (`formaDoCorpo`), nunca valores — 16-11-2026 (d50). */
+    forma?: string | null;
+  },
+): Promise<void> {
   try {
     await garantirTabelas();
     const pool = await getPool();
     if (!pool) return;
-    await pool.execute(
-      `INSERT INTO avisosRecusados (porque, tinhaAssinatura, tamanho, codigo) VALUES (?, 1, ?, 500)`,
-      [porque.slice(0, 255), Math.max(0, Math.min(d.tamanho, 16777215))],
-    );
+    const tamanho = Math.max(0, Math.min(d.tamanho, 16777215));
+    try {
+      await pool.execute(
+        `INSERT INTO avisosRecusados (porque, tinhaAssinatura, tamanho, codigo, forma) VALUES (?, 1, ?, 500, ?)`,
+        [porque.slice(0, 255), tamanho, d.forma?.slice(0, 500) ?? null],
+      );
+    } catch {
+      // Sem a coluna nova (a migração não correu): fica a falha sem a forma.
+      await pool.execute(
+        `INSERT INTO avisosRecusados (porque, tinhaAssinatura, tamanho, codigo) VALUES (?, 1, ?, 500)`,
+        [porque.slice(0, 255), tamanho],
+      );
+    }
   } catch (e) {
     console.error("[pagamentos] não gravou a falha do webhook:", e);
   }
@@ -1518,8 +1540,11 @@ export type EstadoDoWebhook = {
   ultimaRecusa: { quando: Date; porque: string } | null;
   /** Recusas nas últimas 24 horas — o que interessa é se está a acontecer HOJE. */
   recusas24h: number;
-  /** O último aviso assinado a que respondemos 500, e porquê (02-11-2026). */
-  ultimaFalha: { quando: Date; porque: string } | null;
+  /**
+   * O último aviso assinado a que respondemos 500, e porquê (02-11-2026) —
+   * e, desde 16-11-2026 (d50), a forma do corpo: só os nomes dos campos.
+   */
+  ultimaFalha: { quando: Date; porque: string; forma: string | null } | null;
   /** Avisos assinados a que respondemos 500 nas últimas 24 horas. */
   falhas24h: number;
   /** O último aviso da «Provar a ligação» (identificador de teste), se chegou (03-11-2026). */
@@ -1544,7 +1569,7 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
     pool.execute(
       `SELECT COUNT(*) AS n FROM avisosRecusados WHERE codigo <> 500 AND recebidoEm > (NOW() - INTERVAL 24 HOUR)`,
     ),
-    pool.execute(`SELECT porque, recebidoEm FROM avisosRecusados WHERE codigo = 500 ORDER BY id DESC LIMIT 1`),
+    pool.execute(`SELECT porque, recebidoEm, forma FROM avisosRecusados WHERE codigo = 500 ORDER BY id DESC LIMIT 1`),
     pool.execute(
       `SELECT COUNT(*) AS n FROM avisosRecusados WHERE codigo = 500 AND recebidoEm > (NOW() - INTERVAL 24 HOUR)`,
     ),
@@ -1553,7 +1578,7 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
       [IDENTIFICADOR_DE_TESTE],
     ),
   ])) as any[];
-  const f = (falha as Array<{ porque: string; recebidoEm: Date }>)[0];
+  const f = (falha as Array<{ porque: string; recebidoEm: Date; forma?: string | null }>)[0];
 
   const a = (aceites as Array<{ n: number; ultimo: Date | null }>)[0];
   const r = (recusa as Array<{ porque: string; recebidoEm: Date }>)[0];
@@ -1563,7 +1588,7 @@ export async function estadoDoWebhook(): Promise<EstadoDoWebhook> {
     aceites: Number(a?.n ?? 0),
     ultimaRecusa: r ? { quando: r.recebidoEm, porque: r.porque } : null,
     recusas24h: Number((recentes as Array<{ n: number }>)[0]?.n ?? 0),
-    ultimaFalha: f ? { quando: f.recebidoEm, porque: f.porque } : null,
+    ultimaFalha: f ? { quando: f.recebidoEm, porque: f.porque, forma: f.forma ?? null } : null,
     falhas24h: Number((falhas as Array<{ n: number }>)[0]?.n ?? 0),
     ultimoTesteDaLigacao: (teste as Array<{ ultimo: Date | null }>)[0]?.ultimo ?? null,
   };

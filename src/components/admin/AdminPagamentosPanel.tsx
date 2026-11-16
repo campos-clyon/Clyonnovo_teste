@@ -396,7 +396,7 @@ type EstadoDoWebhook = {
   ultimaRecusa: { quando: string; porque: string } | null;
   recusas24h: number;
   /** Avisos assinados a que respondemos 500 — 02-11-2026. Opcional: deploy antigo. */
-  ultimaFalha?: { quando: string; porque: string } | null;
+  ultimaFalha?: { quando: string; porque: string; forma?: string | null } | null;
   falhas24h?: number;
   /** O último aviso da «Provar a ligação» (03-11-2026). Opcional: deploy antigo. */
   ultimoTesteDaLigacao?: string | null;
@@ -419,6 +419,11 @@ function PortaDosAvisos({ w }: { w: EstadoDoWebhook }) {
           respondeu erro: {falhas} nas últimas 24 h
           {w.ultimaFalha ? ` · a última às ${quando(w.ultimaFalha.quando)} — ${w.ultimaFalha.porque}` : ""}
           . O euPago repete de hora a hora durante 24 h; o conserto é no código da plataforma.
+          {w.ultimaFalha?.forma && (
+            <span className="mt-1 block break-all font-mono text-xs text-rose-200/80">
+              Campos que o aviso trazia: {w.ultimaFalha.forma}
+            </span>
+          )}
         </p>
       )}
       <EstadoDaPorta w={w} quando={quando} />

@@ -5,6 +5,7 @@ import {
   ambienteDaAssinatura,
   assinaturaValida,
   confereComOPedido,
+  formaDoCorpo,
   lerAvisoDoEupago,
   todosOsSegredos,
   type AvisoDoEupago,
@@ -128,7 +129,8 @@ async function receber(req: NextRequest) {
   const leitura = lerAvisoDoEupago(json);
   if (!leitura.ok) {
     console.error("[eupago webhook]", leitura.porque);
-    return leitura.retentar ? falhar(leitura.porque, corpoCru.length) : OK();
+    // A forma do corpo (só os nomes dos campos) vai com a falha — 16-11-2026 (d50).
+    return leitura.retentar ? falhar(leitura.porque, corpoCru.length, formaDoCorpo(json)) : OK();
   }
   const aviso = leitura.aviso;
   // De que ambiente é o aviso: o do segredo que o assinou (27-10-2026, d16).
@@ -180,6 +182,7 @@ async function receber(req: NextRequest) {
     return falhar(
       `Erro ao aplicar o aviso ${aviso.trid}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 255),
       corpoCru.length,
+      formaDoCorpo(json),
     );
   }
 }
@@ -343,8 +346,8 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
  * em `avisosRecusados` com o código 500 e o motivo — nunca o corpo — e o
  * painel diz «está a chamar e nós falhamos».
  */
-async function falhar(porque: string, tamanho: number) {
-  console.error("[eupago webhook] 500:", porque);
-  await anotarFalha(porque, { tamanho });
+async function falhar(porque: string, tamanho: number, forma?: string) {
+  console.error("[eupago webhook] 500:", porque, forma ?? "");
+  await anotarFalha(porque, { tamanho, forma: forma ?? null });
   return VOLTA(porque);
 }

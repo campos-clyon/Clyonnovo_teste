@@ -39,6 +39,7 @@ const base = {
   registo: [] as Array<{ acontecimento: string; resumo?: string }>,
   falharDarPorPago: 0,
   falhas: [] as string[],
+  formas: [] as Array<string | null>,
 };
 
 vi.mock("@/lib/db", () => ({
@@ -53,8 +54,9 @@ vi.mock("@/lib/pagamentos-na-base", async (original) => {
     // A regra do «ficou a meio» é a verdadeira.
     avisoFicouAMeio: real.avisoFicouAMeio,
     anotarRecusa: async () => {},
-    anotarFalha: async (porque: string) => {
+    anotarFalha: async (porque: string, d?: { forma?: string | null }) => {
       base.falhas.push(porque);
+      base.formas.push(d?.forma ?? null);
     },
     guardarAviso: async (a: { trid: string; estado: string }) => {
       const k = `${a.trid}|${a.estado}`;
@@ -175,6 +177,7 @@ beforeEach(() => {
   base.registo.length = 0;
   base.falharDarPorPago = 0;
   base.falhas.length = 0;
+  base.formas.length = 0;
   base.pagamentos.set(7, linha({ id: 7 }));
 });
 
@@ -373,5 +376,83 @@ describe("R5 — o aviso só conta se a referência e o ambiente baterem", () =>
     const corpo = aviso({ trid: "T12", id: 7, valor: 452.03 });
     expect((await chamar(corpo, assinar(corpo, SEGREDO_SANDBOX))).status).toBe(200);
     expect(base.pagamentos.get(7)!.estado).toBe("pago");
+  });
+});
+
+/*
+ * AVISOS SEM TRID — 16-11-2026 (d50). O euPago mandou avisos assinados sem
+ * `trid` e todos levaram 500. Com a referência, a chave é a mesma que a
+ * conferência de hora a hora grava; o mesmo pagamento nunca conta duas vezes.
+ */
+describe("avisos do euPago sem trid (d50)", () => {
+  function semTrid(o: { referencia?: string; identifier?: string } = {}) {
+    return JSON.stringify({
+      channel: { name: "CLYON" },
+      transaction: {
+        entity: "21921",
+        ...(o.referencia === undefined ? { reference: "104295830" } : o.referencia ? { reference: o.referencia } : {}),
+        identifier: o.identifier ?? "clyon-site-7",
+        method: "PC:PT",
+        amount: { value: "452.03000", currency: "EUR" },
+        date: "2026-11-16T12:34:25",
+        status: "Paid",
+      },
+    });
+  }
+
+  it("com referência → 200, pago uma vez com a chave da conferência, e a repetição não paga outra vez", async () => {
+    const corpo = semTrid();
+    const r1 = await chamar(corpo, assinar(corpo));
+    expect(r1.status).toBe(200);
+    expect(base.pagamentos.get(7)!.estado).toBe("pago");
+    expect(base.pagamentos.get(7)!.trid).toBe("ref:21921:104295830");
+    const r2 = await chamar(corpo, assinar(corpo));
+    expect(r2.status).toBe(200);
+    expect(recebidos()).toHaveLength(1);
+    expect(base.falhas).toHaveLength(0);
+  });
+
+  it("a conferência já deu por pago (ref:) e o aviso chega depois, com ou sem trid → não paga a dobrar", async () => {
+    base.pagamentos.set(
+      7,
+      linha({ id: 7, estado: "pago", negociacaoPaga: 70, trid: "ref:21921:104295830", valorPago: 452.03 }),
+    );
+    const sem = semTrid();
+    expect((await chamar(sem, assinar(sem))).status).toBe(200);
+    const com = JSON.stringify({ transaction: { ...JSON.parse(sem).transaction, trid: 555777 } });
+    expect((await chamar(com, assinar(com))).status).toBe(200);
+    expect(recebidos()).toHaveLength(0);
+    expect(base.pagamentos.get(7)!.trid).toBe("ref:21921:104295830");
+    expect(base.avisos.get("555777|pago")?.aplicado).toBe(false);
+  });
+
+  it("o trid verdadeiro chega primeiro e a conferência depois → a linha já não está por pagar", async () => {
+    const com = JSON.stringify({ transaction: { ...JSON.parse(semTrid()).transaction, trid: 555888 } });
+    expect((await chamar(com, assinar(com))).status).toBe(200);
+    expect(base.pagamentos.get(7)!.trid).toBe("555888");
+    // A conferência só pega em pendentes; e darPorPago não pega numa linha paga.
+    const { darPorPago } = await import("@/lib/pagamentos-na-base");
+    const r = await darPorPago(7, 70, { trid: "ref:21921:104295830", valorPago: 452.03, comissao: null, quando: null });
+    expect(r.feito).toBe(false);
+    expect(recebidos()).toHaveLength(1);
+  });
+
+  it("sem trid, sem referência e sem identificador nosso → 500, com a forma do corpo e sem valores", async () => {
+    const corpo = semTrid({ referencia: "", identifier: "outro-produto-9" });
+    const r = await chamar(corpo, assinar(corpo));
+    expect(r.status).toBe(500);
+    expect(base.falhas).toEqual(["O aviso não traz trid."]);
+    const forma = base.formas[0] ?? "";
+    expect(forma).toContain("transaction{");
+    expect(forma).toContain("identifier");
+    for (const valor of ["outro-produto-9", "21921", "452.03", "CLYON"]) expect(forma).not.toContain(valor);
+    expect(base.pagamentos.get(7)!.estado).toBe("pendente");
+  });
+
+  it("MB WAY só com o nosso identificador → chave id:<identificador>:<estado>", async () => {
+    const corpo = semTrid({ referencia: "" });
+    const r = await chamar(corpo, assinar(corpo));
+    expect(r.status).toBe(200);
+    expect(base.pagamentos.get(7)!.trid).toBe("id:clyon-site-7:pago");
   });
 });
