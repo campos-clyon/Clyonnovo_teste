@@ -134,7 +134,6 @@ import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
-import ContaDoPagamento from "@/components/ContaDoPagamento";
 import { contaDaLinha } from "@/lib/conta-do-pagamento";
 import RegistarPedido, { type Alcance } from "./RegistarPedido";
 import { FormularioDaOferta } from "./FormularioDaOferta";
@@ -3020,14 +3019,20 @@ export default function AdminNegociacoesPanel({
                 },
                 acordada.pagoEm || (emDinheiro && acordada.confirmadoEm) ? true : null,
               );
-              return conta ? (
-                <div className="mt-2 sm:max-w-xl">
-                  <ContaDoPagamento conta={conta} />
-                </div>
-              ) : null;
+              /*
+                d49 (16-11-2026): a conta e as faturas decidem-se juntas, pela
+                resposta do servidor — no modelo de 15-11 a conta do modelo novo
+                e as duas faturas; no antigo esta conta e nenhum quadro.
+              */
+              return (
+                <FaturasDoTrabalho
+                  negociacaoId={Number(acordada.id)}
+                  token={token}
+                  contaAntiga={conta}
+                  marcadoNovoNaMesa={(acordada as { noNovoModelo?: boolean }).noNovoModelo === true}
+                />
+              );
             })()}
-            {/* O modelo de 15-11 (d10): as duas faturas. Fora dele não aparece. */}
-            <FaturasDoTrabalho negociacaoId={Number(acordada.id)} token={token} />
 
             {/*
               COBRAR O CLIENTE — 18-09-2026.

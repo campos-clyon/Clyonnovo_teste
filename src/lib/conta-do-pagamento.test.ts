@@ -286,7 +286,9 @@ describe("em todos os ecrãs do dinheiro — 15-10-2026", () => {
     expect(ler("src/components/admin/AdminPagamentosPanel.tsx")).toContain("<ContaDoPagamento conta={t.conta} />");
     expect(ler("src/components/admin/AdminCarteirasPanel.tsx")).toContain("{t.conta && <ContaDoPagamento conta={t.conta} />}");
     expect(ler("src/components/admin/FichaDaAgenda.tsx")).toContain("<ContaDoPagamento conta={t.conta} />");
-    expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("<ContaDoPagamento conta={conta} />");
+    // d49: na Mesa a conta desenha-se pelo componente das faturas, com o modelo do servidor.
+    expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("contaAntiga={conta}");
+    expect(ler("src/components/admin/FaturasDoTrabalho.tsx")).toContain("<ContaDoPagamento conta={bloco.conta} />");
     expect(ler("src/components/admin/TrabalhoClyon.tsx")).toContain("<ContaDoPagamento conta={conta} />");
   });
 });

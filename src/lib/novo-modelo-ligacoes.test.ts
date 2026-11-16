@@ -187,7 +187,7 @@ describe("os ecrãs", () => {
 
   it("o pedido, o painel e o backoffice só desenham o modelo novo quando o servidor o diz", () => {
     expect(ler("src/components/PagarAoParceiro.tsx")).toContain("if (!visto?.pagaAoParceiro) return null;");
-    expect(ler("src/components/admin/FaturasDoTrabalho.tsx")).toContain("if (!token || !dados?.novoModelo) return null;");
+    expect(ler("src/components/admin/FaturasDoTrabalho.tsx")).toContain("blocoDoTrabalhoFechado(dados, contaAntiga, marcadoNovoNaMesa)");
     expect(ler("src/app/profissionais/painel/PainelDoProfissional.tsx")).toContain("carteira?.novoModelo?.standBy &&");
     expect(ler("src/app/pedido/[token]/PropostasRecebidas.tsx")).toContain("<PagarAoParceiro ");
   });

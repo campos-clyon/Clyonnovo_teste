@@ -198,7 +198,8 @@ describe("o ecrã do backoffice diz a conta pela ordem em que se faz", () => {
      * que o resumo a usa, com o que decide o IVA desta negociação.
      */
     expect(limpo).toContain("const conta = contaDaLinha(");
-    expect(limpo).toContain("<ContaDoPagamento conta={conta} />");
+    // d49: a Mesa passa-a ao componente que decide o modelo com as faturas.
+    expect(limpo).toContain("contaAntiga={conta}");
     expect(limpo).toContain("negociacaoCriadaEm: acordada.criadaEm,");
     expect(limpo).toContain("pagamentoParaQue: acordada.pagamentoParaQue,");
     // A tabela de confirmar, linha a linha e pela mesma ordem.
