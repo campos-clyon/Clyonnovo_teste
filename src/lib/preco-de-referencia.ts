@@ -539,6 +539,22 @@ function escritaDaEstimativa(e: Estimativa): string {
   }
 }
 
+/** O número de uma estimativa, sem IVA (d59): o piso da faixa ou do «desde», o topo no topo, o valor. */
+function numeroDaEstimativa(e: Estimativa): number | null {
+  switch (e.tipo) {
+    case "faixa":
+    case "inicio":
+    case "desde":
+      return e.de;
+    case "topo":
+      return e.ate;
+    case "valor":
+      return e.valor;
+    case "proposta":
+      return null;
+  }
+}
+
 /** A mesma estimativa em três linhas (Serviço / IVA / Total). `null` sem número. */
 function contaDaEstimativa(e: Estimativa): PrecoEmTresLinhas | null {
   switch (e.tipo) {
@@ -805,7 +821,7 @@ export function estimativaDoEsvaziamento(
 /* ── O pedido inteiro ──────────────────────────────────────────────────── */
 
 /** A estimativa escrita e em três linhas (`null` quando não cabe numa conta destas, como o «por divisão»). */
-type Especifica = { texto: string; conta: PrecoEmTresLinhas | null };
+type Especifica = { texto: string; conta: PrecoEmTresLinhas | null; valor?: number | null };
 
 /** A faixa publicada de um serviço (30 – 100), ou `null` quando é «desde», por unidade ou não tem. */
 function faixaDoServico(servico: string): { de: number; ate: number } | null {
@@ -828,6 +844,19 @@ const SEM_CONTA_PELAS_RESPOSTAS: readonly string[] = ["recolha_monos", "montagem
  * três linhas é a da estimativa. A nota, sempre. E o porquê.
  */
 export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido {
+  return referenciaEValor(p).referencia;
+}
+
+/**
+ * O número da estimativa, sem IVA (o piso numa faixa ou num «desde», o topo no
+ * topo), ou null sem número — para as contas do browser (o registo do
+ * simulador, d59). Não se mostra, nem sai pela R12.
+ */
+export function valorDaReferencia(p: PedidoParaReferencia): number | null {
+  return referenciaEValor(p).valor;
+}
+
+function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPedido; valor: number | null } {
   const linhas: LinhaDeReferencia[] = [];
   const porque: string[] = [];
 
@@ -835,7 +864,7 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
   const razoes = razoesDoAcesso(p);
   const daEstimativa = (e: Estimativa): Especifica => {
     const final = comAjuste(e, ajuste);
-    return { texto: escritaDaEstimativa(final), conta: contaDaEstimativa(final) };
+    return { texto: escritaDaEstimativa(final), conta: contaDaEstimativa(final), valor: numeroDaEstimativa(final) };
   };
   let especifica: Especifica | null = null;
   /** O acesso difícil moveu a referência para o topo da faixa? (senão, entra na proposta) */
@@ -845,10 +874,12 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
   /** A mudança conta os andares na tabela; a manutenção e «Outro serviço» não têm faixa. */
   const acessoConta = !["mudanca", "manutencao_casa", "outro"].includes(p.servico);
 
-  if (p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) {
+  // Os monos com as peças contadas pela mesma tabela das peças (d59, 16-11-2026): um sofá custa o mesmo nos dois.
+  const monosComPecas = p.servico === "recolha_monos" && !!p.itens && contaDosItens(p.itens).quantos > 0;
+  if ((p.servico === "recolha_moveis" && p.movelModo === "item" && p.itens) || monosComPecas) {
     // Os móveis por peça (d6 v2): peça a peça, nunca abaixo da recolha mínima (d7), mais os andares por trabalho — um valor fixo.
     acessoDito = true;
-    const v = valorDosMoveis(p.itens, p.acesso);
+    const v = valorDosMoveis(p.itens ?? {}, p.acesso);
     if (v) {
       especifica = daEstimativa({ tipo: "valor", valor: v.valor });
       porque.push(...porqueDosItens(v.itens), ...linhasDosAndares(v.sup, p.acesso));
@@ -883,6 +914,7 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
     especifica = {
       texto: estimativaDaMudanca(o, pp, lista, casa),
       conta: desde != null ? tres(desde[0], desde[1], true) : tres(o.totalSemIvaMinimo, o.totalSemIvaMaximo),
+      valor: desde != null ? desde[0] : o.totalSemIvaMinimo,
     };
     porque.push(...porqueDaMudanca(p.mudanca, o));
   } else if (p.servico === "recolha_entulho" && (p.entulho || p.acesso)) {
@@ -932,7 +964,9 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
       const doMinimo = g.estimativa.tipo === "desde" && !g.porDivisao && g.estimativa.de === PRECOS.manutencao_casa.minimo;
       const final = comAjuste(g.estimativa, ajuste);
       const texto = escritaDaEstimativa(final);
-      especifica = g.porDivisao ? { texto: texto.replace(/\.$/, " por divisão."), conta: null } : { texto, conta: contaDaEstimativa(final) };
+      especifica = g.porDivisao
+        ? { texto: texto.replace(/\.$/, " por divisão."), conta: null, valor: numeroDaEstimativa(final) }
+        : { texto, conta: contaDaEstimativa(final), valor: numeroDaEstimativa(final) };
       if (oQue) porque.push(doMinimo ? `${oQue}: a proposta sai da descrição e das fotografias.` : `${oQue}: a linha da grelha da manutenção.`);
     } else if (g) {
       especifica = daEstimativa({ tipo: "proposta" });
@@ -969,7 +1003,7 @@ export function referenciaDoPedido(p: PedidoParaReferencia): ReferenciaDoPedido 
   if (ajuste.porque) porque.push(ajuste.porque);
 
   if (especifica) linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA, texto: especifica.texto });
-  return { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? null, porque };
+  return { referencia: { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? null, porque }, valor: especifica?.valor ?? null };
 }
 
 /**
@@ -1142,6 +1176,12 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
   }
   corpo.localidade = f.address?.city;
   return corpo;
+}
+
+/** O número da estimativa do formulário do site, sem IVA (d59) — a mesma conta. */
+export function valorDoSimuladorDoSite(f: FormularioDoSimulador): number | null {
+  const pedido = lerPedidoParaReferencia(corpoDoSimuladorDoSite(f));
+  return pedido ? valorDaReferencia(pedido) : null;
 }
 
 /** A referência do formulário do site — a mesma conta da R12. */

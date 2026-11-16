@@ -111,7 +111,8 @@ describe("a rota do orçamento", () => {
 
   it("e a rota usa-os, sem mapas próprios", () => {
     const rota = semComentarios(ler("src/app/api/simulator/analyze/route.ts"));
-    expect(rota).toContain("servicoNaPesquisa(order.serviceType)");
+    // A pesquisa na internet por pedido saiu da rota (d59, 16-11-2026).
+    expect(rota).not.toContain("servicoNaPesquisa(");
     expect(rota).toContain("servicoParaOModelo(serviceType)");
     expect(rota).not.toMatch(/const serviceMap\b/);
     expect(rota).not.toMatch(/const names: Record<string, string>/);

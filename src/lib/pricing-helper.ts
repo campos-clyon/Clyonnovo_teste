@@ -219,8 +219,16 @@ export function entulhoPelaGrelha(quantidade: string | null | undefined, acesso?
  * andares por trabalho. A Mesa e o backoffice vêem o mesmo número que a app e o
  * site. `null` sem peças.
  */
+/*
+ * E OS MONOS COM AS PEÇAS CONTADAS — d59, 16-11-2026. Um sofá era 50 € na
+ * recolha de móveis e 100 € (o topo da faixa) na de monos. Com as peças
+ * contadas (o seletor, a lista ou a descrição), os monos contam-se pela mesma
+ * tabela (`valorDosMoveis`); sem elas, a faixa publicada (`monosPelaFaixa`).
+ */
+export const SERVICOS_POR_PECA: readonly string[] = ["recolha_moveis", "recolha_monos"];
+
 export function moveisPorPeca(input: FastEstimateInput): ValorDosMoveis | null {
-  if (input.serviceType !== "recolha_moveis" || input.movelMode !== "item") return null;
+  if (!SERVICOS_POR_PECA.includes(input.serviceType ?? "") || input.movelMode !== "item") return null;
   return valorDosMoveis(
     { pequeno: Number(input.movelItemsPequeno) || 0, medio: Number(input.movelItemsMedio) || 0, grande: Number(input.movelItemsGrande) || 0 },
     { floor: input.floor, hasElevator: input.hasElevator, parkingDistance: input.parkingDistance },
@@ -298,8 +306,10 @@ export function esvaziamentoPelaTipologia(input: FastEstimateInput): FaixaPublic
 }
 
 /**
- * OS MONOS PELA FAIXA PUBLICADA — 10-11-2026 (d22): 30 – 100 € sem IVA
- * (`PRECOS.recolha_monos`), no ponto do motor; o mesmo topo com acesso difícil.
+ * OS MONOS PELA FAIXA PUBLICADA — 10-11-2026 (d22): a faixa de
+ * `PRECOS.recolha_monos`, sem IVA. Desde a d59 (16-11-2026) o ponto guardado é o
+ * MEIO da faixa (era o topo: um mono qualquer valia o mesmo que o pior caso), e
+ * o topo com acesso difícil — a regra da garagem. Só sem as peças contadas.
  * Era a fórmula de custo com um mínimo de 48,78 € por item. A carga completa
  * (8 ou mais itens, ou «enche a caixa de um camião») não tem linha publicada e
  * fica com a conta de sempre.
@@ -308,13 +318,13 @@ export function monosPelaFaixa(input: FastEstimateInput, cargaCompleta: boolean)
   if (input.serviceType !== "recolha_monos" || cargaCompleta) return null;
   const preco = PRECOS.recolha_monos;
   if (preco?.minimo == null || preco.maximo == null) return null;
-  const p = pontoDaEstimativa(
-    acessoDificilDoPedido(input)
-      ? { tipo: "topo", de: preco.minimo, ate: preco.maximo, motivo: "pelo acesso difícil" }
-      : { tipo: "faixa", de: preco.minimo, ate: preco.maximo },
-  );
-  if (!p) return null;
-  return { ...p, linha: `Faixa publicada dos monos: ${preco.minimo} a ${preco.maximo} € s/IVA → ${p.valor} € s/IVA` };
+  const p = pontoDosMonos(preco.minimo, preco.maximo, acessoDificilDoPedido(input));
+  return { ...p, linha: `Faixa publicada dos monos: ${preco.minimo} a ${preco.maximo} € s/IVA → ${p.valor} € s/IVA${p.valor === preco.maximo ? " (o topo, pelo acesso difícil)" : " (o meio da faixa)"}` };
+}
+
+/** O ponto dos monos sem peças (d59): o meio da faixa, ou o topo com acesso difícil. */
+export function pontoDosMonos(de: number, ate: number, acessoDificil: boolean): { de: number; ate: number; valor: number } {
+  return { de, ate, valor: acessoDificil ? ate : Math.round((de + ate) / 2) };
 }
 
 /** As palavras que contam um item mas não dizem o tamanho dele. */
@@ -357,7 +367,7 @@ export function pecasDoTexto(input: FastEstimateInput): ItensDosMoveis | null {
  * carrinha»…) a lista escrita pode ser só uma parte, e fica a conta de sempre.
  */
 export function moveisPelaDescricao(input: FastEstimateInput): ValorDosMoveis | null {
-  if (input.serviceType !== "recolha_moveis" || input.movelMode === "item") return null;
+  if (!SERVICOS_POR_PECA.includes(input.serviceType ?? "") || input.movelMode === "item") return null;
   if (input.volumeTier && input.volumeTier !== "incerto") return null;
   const itens = pecasDoTexto(input);
   if (!itens) return null;
@@ -396,7 +406,7 @@ export const ITENS_SOLTOS_PARA_O_MODELO = [
     .join("; ")}. As peças somam-se uma a uma.`,
   `  Recolha mínima dos móveis: ${comOIvaAoLado(valorExacto(RECOLHA_MINIMA_DOS_MOVEIS))} — a soma das peças nunca fica abaixo dela.`,
   `  Andares, por trabalho e depois do mínimo: +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_COM_ELEVADOR))} por andar com elevador, +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_SEM_ELEVADOR))} sem elevador.`,
-  `  Monos: ${comOIvaAoLado(faixaDasFontes(PRECOS.recolha_monos, "recolha_monos"))}; com acesso difícil, o topo da faixa.`,
+  `  Monos: com as peças contadas, a mesma tabela das peças (um sofá custa o mesmo nos móveis e nos monos); sem elas, ${comOIvaAoLado(faixaDasFontes(PRECOS.recolha_monos, "recolha_monos"))}, o meio da faixa, e o topo com acesso difícil.`,
 ].join("\n");
 
 /** A carga completa e o esvaziamento de casa ou apartamento: as faixas publicadas, uma por linha. */
@@ -455,8 +465,43 @@ export async function getActivePricingMap(): Promise<SimulatorSettingsMap> {
  * Formata as regras de preço (com fórmula de custo real) em texto legível para o Gemini.
  * Lê os valores configuráveis da DB para que o Gemini use sempre os valores actuais.
  */
+/*
+ * O TEMPO E OS AGRAVAMENTOS, PARA O MODELO — d59, 16-11-2026: escritos a partir
+ * de `TEMPO_DO_MOTOR`, `FULL_LOAD_ITEM_THRESHOLD` e `ESTACIONAMENTO_DIFICIL_EXTRA`,
+ * as mesmas constantes que `estimateLaborHours` e `calculateFastEstimate` usam.
+ */
+const minutos = (h: number) => `${Math.round(h * 60)} min`;
+const horas = (h: number) => `${String(h).replace(".", ",")} h`;
+export const tempoParaOModelo = (): string => [
+  `RECOLHA / MONOS / ESVAZIAMENTO — ITENS SOLTOS (1 a ${FULL_LOAD_ITEM_THRESHOLD - 1} itens):`,
+  `  - ${minutos(TEMPO_DO_MOTOR.primeiroItem)} a primeira peça e ${minutos(TEMPO_DO_MOTOR.itemSeguinte)} cada uma das seguintes`,
+  `  - Sem elevador: × ${String(TEMPO_DO_MOTOR.semElevador).replace(".", ",")} no tempo total`,
+  `  - Elevador pequeno: × ${String(TEMPO_DO_MOTOR.elevadorPequeno).replace(".", ",")} no tempo total`,
+  `  - Sem elevador, acima do 2.º andar: +${minutos(TEMPO_DO_MOTOR.porAndarAcimaDoSegundo)} por andar a mais`,
+  `  - Estacionamento difícil: +${minutos(TEMPO_DO_MOTOR.estacionamentoDificil)}`,
+  `  - Desmontagem: +${minutos(TEMPO_DO_MOTOR.desmontagem)} (em tempo, sem taxa em euros)`,
+  "",
+  `RECOLHA / ESVAZIAMENTO — CARGA COMPLETA (${FULL_LOAD_ITEM_THRESHOLD} ou mais itens, ou esvaziamento de casa):`,
+  `  - Base: ${horas(TEMPO_DO_MOTOR.cargaCompleta)}`,
+  `  - Sem elevador: ${horas(TEMPO_DO_MOTOR.cargaCompletaSemElevador)}`,
+  `  - Elevador pequeno: ${horas(TEMPO_DO_MOTOR.cargaCompletaElevadorPequeno)}`,
+  `  - Estacionamento difícil ou desmontagem: +${horas(TEMPO_DO_MOTOR.cargaCompletaAcessoDificil)}`,
+  `  - Nunca menos de ${horas(TEMPO_DO_MOTOR.minimo)} por trabalho`,
+].join("\n");
+
+export const agravamentosParaOModelo = (): string => [
+  "AGRAVAMENTOS (adicionais ao preço final s/IVA):",
+  `  - Estacionamento difícil (taxa fixa): +${ESTACIONAMENTO_DIFICIL_EXTRA} € — só na fórmula de custo; nas grelhas publicadas (peças, monos, entulho, esvaziamento, garagem/sótão/cave) não se soma`,
+  "  - A desmontagem NÃO tem taxa em euros: conta só no tempo (acima).",
+].join("\n");
+
+/** O texto das regras que o modelo lê — exportado para o teste que o compara com o motor (d59). */
+export function textoDasRegrasParaOModelo(settingsMap: SimulatorSettingsMap): string {
+  return formatPricingRulesForGemini(settingsMap);
+}
+
 function formatPricingRulesForGemini(settingsMap: SimulatorSettingsMap): string {
-  const custoKm       = settingsMap.custo_km          ?? 0.50;
+  const custoKm       = settingsMap.custo_km          ?? CUSTO_KM_POR_OMISSAO;
   const custoHoraPess = settingsMap.custo_hora_pessoa  ?? 9;
   const numPessoas    = settingsMap.num_pessoas_equipa ?? 3;
   const overhead      = settingsMap.overhead_por_servico ?? 17.00;
@@ -485,19 +530,7 @@ DISTÂNCIAS:
 
 HORAS ESTIMADAS POR TIPO DE SERVIÇO:
 
-RECOLHA / MONOS / ESVAZIAMENTO (1 a 7 itens = por item):
-  - 30 min por item base
-  - Sem elevador: × 1.5 no tempo total
-  - Elevador pequeno: × 1.15 no tempo total
-  - Andar > 2º sem elevador: +10 min por andar adicional
-  - Estacionamento difícil: +20 min
-  - Acesso difícil / desmontagem: +30 min
-
-RECOLHA / ESVAZIAMENTO (carga completa ≥ 6 itens):
-  - Base: 4h
-  - Sem elevador: 6h (× 1.5)
-  - Elevador pequeno: 4.5h
-  - Acesso difícil: +1h
+${tempoParaOModelo()}
 
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
   Mínimo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona)
@@ -518,7 +551,7 @@ ${regrasDaMudancaParaOModelo(precoPublicoConhecido())}
 
 MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
 
-ITENS SOLTOS (1 a 7 itens — recolha de móveis / monos) — a grelha publicada no site:
+ITENS SOLTOS (1 a ${FULL_LOAD_ITEM_THRESHOLD - 1} itens — recolha de móveis / monos) — a grelha publicada no site:
   NÃO aplicar mínimo de zona.
 ${ITENS_SOLTOS_PARA_O_MODELO}
   EXEMPLOS — as peças de referência publicadas no site:
@@ -530,17 +563,14 @@ ${ESVAZIAMENTO_POR_ESPACO.map((e) => `  - ${e.espaco}: carrinha ${e.faixas.carri
   Acesso difícil (alçapão, escada estreita, mais de 10 degraus, parque com horário, estacionamento longe): o topo da faixa, nunca acima.
   Não são carga completa: só a faixa «camião» leva o mínimo de zona. Sem volume ("não sei"): proposta com fotografias.
 
-CARGA COMPLETA (≥8 itens), ESVAZIAMENTO DE CASA/APARTAMENTO — as faixas publicadas no site:
+CARGA COMPLETA (≥${FULL_LOAD_ITEM_THRESHOLD} itens), ESVAZIAMENTO DE CASA/APARTAMENTO — as faixas publicadas no site:
 ${CARGA_COMPLETA_PARA_O_MODELO}
   Dentro da faixa, o acesso e a distância decidem o lugar: perto, rés-do-chão ou elevador, estacionamento à porta → o início; longe, andares a pé ou acesso difícil → o fim.
 
 ENTULHO: mínimo fixo ${MINIMO_DO_ENTULHO} € s/IVA — sem mínimo de zona
 MUDANÇA: ${minimoDaMudancaParaOModelo(precoPublicoConhecido())} — sem mínimo de zona
 
-AGRAVAMENTOS (adicionais ao preço final s/IVA):
-  - Estacionamento difícil (taxa fixa): +15 € (no entulho não: lá conta como mais um andar, na grelha)
-  - Desmontagem simples: +30 €
-  - Desmontagem complexa: +80 €
+${agravamentosParaOModelo()}
 
 A URGÊNCIA NÃO ENTRA NO PREÇO DO TRABALHO.
   Marcar para hoje ou amanhã tem uma taxa de agendamento da CLYON, cobrada
@@ -572,26 +602,27 @@ function getDefaultPricingRules(): string {
     // Fallback de último recurso — texto literal com defaults
     return `ESTRUTURA DE CUSTOS REAIS CLYON (valores default):
 
-FÓRMULA: custo_combustivel (distancia × 0.50 €/km) + custo_pessoal (horas × 3p × 9 €/h) + overhead (17.00 €) → × 1.50 (50% margem) = preço s/IVA
+FÓRMULA: custo_combustivel (distancia × ${CUSTO_KM_POR_OMISSAO.toFixed(2)} €/km) + custo_pessoal (horas × ${LABOR_PEOPLE}p × ${LABOR_HOURLY_RATE} €/h) + overhead + margem = preço s/IVA
 IVA: 23%
 HORÁRIO: 08h00–18h00 (fora deste horário requer agendamento prévio)
 
-HORAS: Recolha 1-7 itens: 0.5h/item | Carga completa: 4h | Entulho 1-10 sacos: 1h, 11-30: 1.5h, 31-80: 2.5h, 81-150: 4h | Mudança: pela tipologia (ver abaixo)
+${tempoParaOModelo()}
+Entulho (só o tempo) 1-10 sacos: 1h, 11-30: 1.5h, 31-80: 2.5h, 81-150: 4h | Mudança: pela tipologia (ver abaixo)
 
 ${regrasDaMudancaParaOModelo(precoPublicoConhecido())}
 
 MÍNIMOS (REGRA CRÍTICA):
-  ITENS SOLTOS (1-7 itens): SEM mínimo de zona — a grelha publicada no site.
+  ITENS SOLTOS (1-${FULL_LOAD_ITEM_THRESHOLD - 1} itens): SEM mínimo de zona — a grelha publicada no site.
 ${ITENS_SOLTOS_PARA_O_MODELO}
     Exemplos (as peças de referência do site):
 ${PECAS_PARA_O_MODELO}
-  CARGA COMPLETA (≥8 itens) / ESVAZIAMENTO — as faixas publicadas no site:
+  CARGA COMPLETA (≥${FULL_LOAD_ITEM_THRESHOLD} itens) / ESVAZIAMENTO — as faixas publicadas no site:
 ${CARGA_COMPLETA_PARA_O_MODELO}
   ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: ${minimoDaMudancaParaOModelo(precoPublicoConhecido())}
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
 ${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
   RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
-AGRAVAMENTOS: Estacionamento difícil +15€ (no entulho não: conta como mais um andar, na grelha)
+${agravamentosParaOModelo()}
 A URGÊNCIA NÃO ENTRA NO PREÇO DO TRABALHO: a taxa de agendamento é da CLYON, à parte e sem IVA, calculada pelo sistema.`;
   }
 }
@@ -1064,9 +1095,58 @@ function accessExtra(
 //   mínimo = 1 hora
 // ─────────────────────────────────────────────────────────────────────────────
 
+/*
+ * O TEMPO DO MOTOR, NUM SÍTIO SÓ — d59, 16-11-2026. O texto que o modelo lê
+ * dizia «carga completa ≥ 6 itens» (o motor conta 8), «desmontagem +30 € / +80
+ * €» (o motor conta horas, não euros) e «30 min por item» (o motor conta 30 min
+ * a primeira e 18 min cada uma das outras). Agora o motor e o texto lêem estas
+ * constantes, e um teste compara os dois.
+ */
+export const TEMPO_DO_MOTOR = Object.freeze({
+  /** Itens soltos: a primeira peça e cada uma das seguintes, em horas. */
+  primeiroItem: 0.5,
+  itemSeguinte: 0.3,
+  /** Multiplicadores do tempo total dos itens soltos. */
+  semElevador: 1.5,
+  elevadorPequeno: 1.15,
+  /** Sem elevador, acima do 2.º andar: por andar a mais, em horas. */
+  porAndarAcimaDoSegundo: 10 / 60,
+  estacionamentoDificil: 20 / 60,
+  /** A desmontagem nos itens soltos (em horas, não em euros). */
+  desmontagem: 0.5,
+  /** Carga completa: a base e os casos, em horas. */
+  cargaCompleta: 4,
+  cargaCompletaSemElevador: 6,
+  cargaCompletaElevadorPequeno: 4.5,
+  /** Carga completa com estacionamento difícil ou desmontagem. */
+  cargaCompletaAcessoDificil: 1,
+  /** O mínimo de qualquer trabalho. */
+  minimo: 1,
+});
+
+/** O custo por km por omissão (o das Configs manda): o mesmo do motor e do texto ao modelo. */
+export const CUSTO_KM_POR_OMISSAO = 0.5;
+
+/** O estacionamento difícil fora das grelhas: a taxa fixa que o motor soma, sem IVA. */
+export const ESTACIONAMENTO_DIFICIL_EXTRA = 15;
+
+/** A deslocação de uma recolha: km de uma via × 2 (ida e volta) × custo por km, em cêntimos. */
+export function custoDaDeslocacao(kmUmaVia: number, custoKm: number = CUSTO_KM_POR_OMISSAO): number {
+  return Math.round(kmUmaVia * 2 * custoKm * 100) / 100;
+}
+
+/** O custo por km das Configs (ou o de omissão). */
+export async function custoPorKmActivo(): Promise<number> {
+  try {
+    return (await getActivePricingMap()).custo_km ?? CUSTO_KM_POR_OMISSAO;
+  } catch {
+    return CUSTO_KM_POR_OMISSAO;
+  }
+}
+
 const LABOR_PEOPLE = 3 as const;
 const LABOR_HOURLY_RATE = 9 as const;
-const LABOR_MIN_HOURS = 1;
+const LABOR_MIN_HOURS: number = TEMPO_DO_MOTOR.minimo;
 
 /**
  * Estima horas de trabalho segundo as regras reais da CLYON (documento de custos).
@@ -1118,6 +1198,18 @@ export function mensagemDaMudanca(
   );
 }
 
+/**
+ * A MENSAGEM AO CLIENTE FORA DA MUDANÇA — d59, 16-11-2026. Dizia «Inclui
+ * equipa de 3 pessoas, 1h de trabalho» até numa peça contada pela tabela, onde
+ * não há equipa nem horas no preço. Nas grelhas publicadas (as peças, o entulho,
+ * o esvaziamento, os monos, a garagem) diz só o valor; na fórmula de custo,
+ * a equipa e as horas que ela supõe.
+ */
+export function mensagemDaEstimativa(pelaGrelha: boolean, semIva: number, comOIva: number, pessoas: number, horas: number): string {
+  const valor = `Estimativa de referência: à volta de ${semIva.toFixed(2)} € + IVA (${comOIva.toFixed(2)} € c/IVA).`;
+  return pelaGrelha ? `${valor} Pela tabela publicada; o preço é o da proposta do parceiro.` : `${valor} Supõe uma equipa de ${pessoas} pessoas, cerca de ${horas} h de trabalho.`;
+}
+
 export function estimateLaborHours(input: FastEstimateInput): number {
   let hours = LABOR_MIN_HOURS;
   const svc = input.serviceType;
@@ -1161,28 +1253,27 @@ export function estimateLaborHours(input: FastEstimateInput): number {
     const itemCount = resolveItemCount(input);
     const isFull = eCargaCompleta(svc, input.volumeTier, itemCount);
 
+    const T = TEMPO_DO_MOTOR;
     if (isFull) {
-      // Carga completa: base 4h
-      hours = 4;
-      if (noElev)       hours = 6;      // sem elevador: 4h × 1.5
-      else if (smallElev) hours = 4.5;  // elevador pequeno
-      if (input.parkingDistance === "difficult" || input.needsDismantling) hours += 1; // acesso difícil
+      // Carga completa: a base, sem elevador, elevador pequeno; acesso difícil ou desmontagem soma.
+      hours = T.cargaCompleta;
+      if (noElev)       hours = T.cargaCompletaSemElevador;
+      else if (smallElev) hours = T.cargaCompletaElevadorPequeno;
+      if (input.parkingDistance === "difficult" || input.needsDismantling) hours += T.cargaCompletaAcessoDificil;
     } else {
       // Por item (1 a 7 itens): 30 min primeiro item, ~60% por cada
       // adicional (desconto de eficiência — equipa já está no local).
       // 1 item = 0.5h, 2 = 0.8h, 3 = 1.1h, 4 = 1.4h, …
-      hours = Math.max(0.5, 0.5 + (itemCount - 1) * 0.3);
-      // Sem elevador: +50% no tempo total
-      if (noElev) hours = hours * 1.5;
-      // Elevador pequeno: +15% no tempo total
-      else if (smallElev) hours = hours * 1.15;
-      // Andar acima do 2º sem elevador: +10 min por andar adicional
-      if (noElev && floor > 2) hours += (floor - 2) * (10 / 60);
-      // Estacionamento difícil: +20 min
-      if (input.parkingDistance === "difficult") hours += 20 / 60;
-      // Acesso difícil / desmontagem: +30 min
-      if (input.needsDismantling === "medium") hours += 0.5;
-      else if (input.needsDismantling === "complex" || input.needsDismantling === "true" || input.needsDismantling === true) hours += 0.5;
+      hours = Math.max(T.primeiroItem, T.primeiroItem + (itemCount - 1) * T.itemSeguinte);
+      // Sem elevador, ou elevador pequeno: o tempo total multiplica
+      if (noElev) hours = hours * T.semElevador;
+      else if (smallElev) hours = hours * T.elevadorPequeno;
+      // Andar acima do 2º sem elevador: por andar adicional
+      if (noElev && floor > 2) hours += (floor - 2) * T.porAndarAcimaDoSegundo;
+      if (input.parkingDistance === "difficult") hours += T.estacionamentoDificil;
+      // Acesso difícil / desmontagem: em horas, nunca em euros
+      if (input.needsDismantling === "medium") hours += T.desmontagem;
+      else if (input.needsDismantling === "complex" || input.needsDismantling === "true" || input.needsDismantling === true) hours += T.desmontagem;
     }
   }
 
@@ -1416,7 +1507,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   const pricing = await getActivePricingMap();
 
   // ── Parâmetros reais da estrutura de custos (da DB) ─────────────────────────
-  const custoKm       = pricing.custo_km          ?? 0.50;   // €/km
+  const custoKm       = pricing.custo_km          ?? CUSTO_KM_POR_OMISSAO;   // €/km
   const custoHoraPess = pricing.custo_hora_pessoa  ?? 9;     // €/hora/pessoa
   const numPessoas    = pricing.num_pessoas_equipa ?? 3;     // pessoas na equipa
   const overhead      = pricing.overhead_por_servico ?? 17.00; // €/serviço
@@ -1546,7 +1637,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     precoSemIva = pecas.valor;
     const c = pecas.itens;
     const linha =
-      `Móveis por peça${pecasPeloSeletor ? "" : " (descritos no pedido)"}: ${c.pequeno} × ${PRECO_POR_ITEM.pequeno} + ${c.medio} × ${PRECO_POR_ITEM.medio} + ${c.grande} × ${PRECO_POR_ITEM.grande} € = ${c.soma} €` +
+      `${svc === "recolha_monos" ? "Monos pela tabela das peças" : "Móveis por peça"}${pecasPeloSeletor ? "" : " (descritos no pedido)"}: ${c.pequeno} × ${PRECO_POR_ITEM.pequeno} + ${c.medio} × ${PRECO_POR_ITEM.medio} + ${c.grande} × ${PRECO_POR_ITEM.grande} € = ${c.soma} €` +
       (c.pelaRecolhaMinima ? ` → recolha mínima ${RECOLHA_MINIMA_DOS_MOVEIS} €` : "") +
       (pecas.sup.valor > 0 ? ` + ${pecas.sup.valor} € dos andares` : "") +
       ` = ${pecas.valor} € s/IVA`;
@@ -1577,8 +1668,9 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
 
   // ── 6c. O esvaziamento pela tipologia e os monos: a faixa publicada (d22) ──
   // No ponto do motor (`pontoDaEstimativa`); o acesso difícil leva ao topo, como na R12.
+  // Os monos com as peças contadas já foram pela tabela das peças (d59): a faixa é só sem elas.
   const faixaPublicada =
-    esvaziamentoPelaTipologia(input) ?? monosPelaFaixa(input, eCargaCompleta(svc, input.volumeTier, resolveItemCount(input)));
+    esvaziamentoPelaTipologia(input) ?? (pecas ? null : monosPelaFaixa(input, eCargaCompleta(svc, input.volumeTier, resolveItemCount(input))));
   if (faixaPublicada) {
     precoSemIva = faixaPublicada.valor;
     notes.push(`${faixaPublicada.linha} (a grelha publicada substitui a fórmula de custo)`);
@@ -1601,7 +1693,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   let extras = 0;
   // Numa mudança o acesso já está na tabela (andares, elevador exterior). No entulho, o
   // estacionamento longe conta como mais um andar, na grelha (d1 v2, 03-11-2026).
-  if (input.parkingDistance === "difficult" && svc !== "mudanca" && svc !== "recolha_entulho" && !espaco && !pecas && !faixaPublicada) { extras += 15; assumptions.push("Estacionamento difícil (taxa fixa): +15 €"); }
+  if (input.parkingDistance === "difficult" && svc !== "mudanca" && svc !== "recolha_entulho" && !espaco && !pecas && !faixaPublicada) { extras += ESTACIONAMENTO_DIFICIL_EXTRA; assumptions.push(`Estacionamento difícil (taxa fixa): +${ESTACIONAMENTO_DIFICIL_EXTRA} €`); }
 
   // ── 7. Fallback se dados insuficientes ───────────────────────────────────────
   if (missing.length > 0 && precoSemIva <= 0) {
@@ -1748,7 +1840,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     customerMessage:
       svc === "mudanca"
         ? mensagemDaMudanca(mudancaPelaLista, laborHours, finalSemIva, withVat)
-        : `Estimativa de referência: à volta de ${finalSemIva.toFixed(2)} € + IVA (${withVat.toFixed(2)} € c/IVA). Inclui equipa de ${numPessoas} pessoas, ${laborHours}h de trabalho.`,
+        : mensagemDaEstimativa(pelaGrelha, finalSemIva, withVat, numPessoas, laborHours),
     internalNotes: [
       ...notes,
       `Itens identificados: ${itemCount} (${isFull ? "carga completa" : "itens soltos"})`,

@@ -28,6 +28,7 @@ import { HORAS_SEM_VALOR, type SemValorNoInicio } from "@/lib/pedido-sem-valor";
 const DesempenhoDoInicio = dynamic(() => import("@/components/admin/DesempenhoDoInicio"), { ssr: false });
 // O simulador passo a passo (d56, 16-11-2026).
 const FunilDoSimulador = dynamic(() => import("@/components/admin/FunilDoSimulador"), { ssr: false });
+const FalhasDaIa = dynamic(() => import("@/components/admin/FalhasDaIa"), { ssr: false });
 
 /**
  * O INÍCIO — o que precisa de si, hoje.
@@ -427,6 +428,7 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
 
       <DesempenhoDoInicio />
       <FunilDoSimulador />
+      <FalhasDaIa />
     </div>
   );
 }

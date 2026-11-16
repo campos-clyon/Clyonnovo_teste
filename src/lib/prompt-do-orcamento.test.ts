@@ -92,9 +92,9 @@ describe("na mudança, o preço é o da tabela", () => {
     expect(ler("src/lib/pricing-helper.ts")).toMatch(/const pelaGrelha = [^;]*svc === "mudanca"/);
     const i = rota.indexOf("if (daGrelha && fastEstimate.estimatedPriceWithoutVat) {");
     expect(i).toBeGreaterThan(-1);
-    // Depois do Gemini (e do seu fallback), antes da pesquisa externa e da resposta.
+    // Depois do Gemini (e do seu fallback), antes da fonte final e da resposta (a pesquisa externa saiu na d59).
     expect(i).toBeGreaterThan(rota.indexOf("analysis = parseGeminiResponse(responseText);"));
-    expect(i).toBeLessThan(rota.indexOf("// ── 4. Pesquisa externa se necessário"));
+    expect(i).toBeLessThan(rota.indexOf("// ── 5. Determinar fonte e confiança finais"));
     expect(rota.slice(i, i + 900)).toContain("estimatedPriceWithoutVat: fastEstimate.estimatedPriceWithoutVat,");
   });
 

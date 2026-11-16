@@ -45,10 +45,11 @@ describe("o rascunho do simulador", () => {
     expect(S).toContain("Recuperámos o que tinha começado a preencher.");
   });
 
-  it("e o envio não espera pela análise mais de 12 segundos", () => {
+  it("e o envio já não espera pela análise com IA (d59, 16-11-2026)", () => {
     const S = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");
-    expect(S).toContain("setTimeout(() => limiteDaAnalise.abort(), 12_000)");
-    expect(S).toContain("signal: limiteDaAnalise.signal,");
+    expect(S).not.toContain("/api/simulator/analyze");
+    expect(S).not.toContain("limiteDaAnalise");
+    expect(S).toContain("estimativaLocalDoFormulario(formData)");
   });
 });
 

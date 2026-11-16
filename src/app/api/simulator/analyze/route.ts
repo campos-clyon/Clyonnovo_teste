@@ -1,18 +1,22 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { modeloDoGemini, MODELO_ACTUAL } from "@/lib/modelo-do-gemini";
+import { modeloDoGemini } from "@/lib/modelo-do-gemini";
 import type { NextRequest } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { buscarImagemExterna } from "@/lib/url-externo-seguro";
-import type { OrderData, EstimateResult, ExternalMarketEstimate, AnalysisSource } from "../../../simulador/types";
+import type { OrderData, EstimateResult, AnalysisSource } from "../../../simulador/types";
 import {
   getActivePricingRulesForGemini,
   createPricingSnapshot,
   calculateFastEstimate,
   buildReferenceEstimate,
   FULL_LOAD_ITEM_THRESHOLD,
+  custoDaDeslocacao,
+  custoPorKmActivo,
 } from "@/lib/pricing-helper";
 import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
-import { servicoNaPesquisa, servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
+import { servicoParaOModelo } from "@/lib/nome-do-servico-no-orcamento";
+import { createLeadEvent } from "@/lib/db";
+import { EVENTO_DA_FALHA_DA_IA, motivoDaFalha } from "@/lib/falhas-da-ia";
 import { PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS, RECOLHA_POR_ANDAR_COM_ELEVADOR, RECOLHA_POR_ANDAR_SEM_ELEVADOR, eEsvaziamentoDeEspaco } from "@/lib/precos-publicos";
 import { valorDosMoveis } from "@/lib/preco-de-referencia";
 import { estimativaParaOCliente } from "@/lib/estimativa-para-o-cliente";
@@ -34,164 +38,22 @@ async function eDaEquipa(req: NextRequest): Promise<boolean> {
 
 // Gemini abortado após este tempo — cliente nunca fica preso
 const GEMINI_TIMEOUT_MS = 4000;
-// Pesquisa externa — timeout maior (grounding é mais lenta)
-const GROUNDING_TIMEOUT_MS = 8000;
-
-// ── Decidir se precisamos de pesquisa externa ─────────────────────────────────
-function needsExternalSearch(analysis: EstimateResult): boolean {
-  if (analysis.status === "onsite_required") return true;
-  if (analysis.confidence === "low") return true;
-  if (!analysis.estimatedPriceWithoutVat) return true;
-  // missingFields críticos que indicam que o preçário não chegou
-  const critical = ["serviceType", "city", "description", "zona"];
-  const hasCritical = analysis.missingFields?.some((f) =>
-    critical.some((c) => f.toLowerCase().includes(c))
-  );
-  if (hasCritical) return true;
-  // Gemini não conseguiu calcular preço mas status é "estimated" (valor 0 ou nulo)
-  if (
-    analysis.status === "estimated" &&
-    (analysis.estimatedPriceWithoutVat === 0 || analysis.estimatedPriceWithoutVat === null)
-  )
-    return true;
-  return false;
-}
-
-// ── Construir query de pesquisa — SEM dados pessoais ─────────────────────────
-function buildSearchQuery(order: OrderData): string {
-  // Os nomes vivem em nome-do-servico-no-orcamento.ts, com a manutenção da casa (25-10-2026).
-  const service = servicoNaPesquisa(order.serviceType);
-  // Usar apenas cidade/localidade genérica, nunca morada completa, nome, telefone ou email
-  const city = order.address?.city ?? order.city ?? "Lisboa";
-  const safeCity = city.split(",")[0].split(" ").slice(0, 2).join(" "); // "Lisboa" ou "Setúbal"
-
-  let q = `preço ${service} ${safeCity} Portugal`;
-
-  if (order.serviceType === "recolha_entulho" && order.entulhoQuantidade) {
-    q = `preço recolha entulho sacos ${safeCity} Portugal`;
-  } else if (order.serviceType === "mudanca") {
-    q = `preço mudança pequena ${safeCity} Portugal empresa mudanças`;
-  } else if (order.serviceType === "esvaziamento_casa" || order.serviceType === "esvaziamento_apartamento") {
-    q = `preço esvaziamento apartamento ${safeCity} Portugal`;
-  } else if (eEsvaziamentoDeEspaco(order.serviceType)) {
-    q = `preço ${service} ${safeCity} Portugal`;
-  }
-
-  return q;
-}
-
-// ── Pesquisa externa com Gemini + Google Search grounding ────────────────────
-async function getExternalMarketEstimate(
-  order: OrderData,
-  apiKey: string,
-  modelName: string
-): Promise<ExternalMarketEstimate | null> {
-  const searchQuery = buildSearchQuery(order);
-  // O nome legível, e não o código cru («manutencao_casa») — 25-10-2026.
-  const serviceLabel = order.serviceType ? servicoParaOModelo(order.serviceType) : "serviço não especificado";
-
-  const prompt = `És um analista interno da empresa CLYON em Portugal.
-
-TAREFA: Pesquisa referências de mercado para o seguinte serviço, usando apenas termos genéricos sem dados pessoais.
-
-Serviço: ${serviceLabel}
-Query de pesquisa: ${searchQuery}
-
-INSTRUÇÕES IMPORTANTES:
-1. Esta pesquisa é apenas referência interna para a equipa CLYON. Não substitui o preçário oficial CLYON.
-2. Procura referências de preços de mercado para serviços semelhantes em Portugal, preferencialmente Grande Lisboa / Setúbal.
-3. Considera empresas de recolha de móveis, recolha de entulho, mudanças, esvaziamento de casas, transporte de volumosos e manutenção da casa (reparações e remodelações).
-4. Devolve um intervalo estimado e explica a lógica.
-5. Inclui fontes consultadas quando disponíveis.
-6. Não uses dados pessoais do cliente na pesquisa.
-7. Se não houver fonte fiável, usa confidence low.
-
-Retorna APENAS um JSON válido com este formato exato:
-{
-  "minWithoutVat": número ou null,
-  "maxWithoutVat": número ou null,
-  "suggestedWithoutVat": número ou null,
-  "confidence": "high" | "medium" | "low",
-  "reasoning": "string com explicação do raciocínio e fontes",
-  "sources": [
-    { "title": "string", "url": "string", "snippet": "string opcional" }
-  ]
-}
-
-Se não encontrares informação suficiente, devolve null para os valores numéricos e confidence "low".
-Retorna APENAS o JSON sem texto adicional.`;
-
-  try {
-    const client = new GoogleGenerativeAI(apiKey);
-    // O grounding pelo googleSearchRetrieval acompanha o modelo actual — ver
-    // modelo-do-gemini.ts. Estava fixo no gemini-1.5-flash, que a Google retirou.
-    const groundingModel = client.getGenerativeModel({
-      model: MODELO_ACTUAL,
-      tools: [{ googleSearchRetrieval: { dynamicRetrievalConfig: { dynamicThreshold: 0.3 } } }],
-    });
-
-    const groundingResult = await Promise.race([
-      groundingModel.generateContent(prompt),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("GROUNDING_TIMEOUT")), GROUNDING_TIMEOUT_MS)
-      ),
-    ]);
-
-    const resp = (groundingResult as Awaited<ReturnType<typeof groundingModel.generateContent>>).response;
-    const text = resp.text();
-    const groundingMeta = resp.candidates?.[0]?.groundingMetadata;
-
-    // Parse JSON da resposta
-    let jsonStr = text.trim();
-    if (jsonStr.startsWith("```json")) jsonStr = jsonStr.slice(7);
-    if (jsonStr.startsWith("```")) jsonStr = jsonStr.slice(3);
-    if (jsonStr.endsWith("```")) jsonStr = jsonStr.slice(0, -3);
-
-    const parsed = JSON.parse(jsonStr.trim());
-
-    // Extrair fontes do grounding metadata (mais fiável que o que o Gemini inventar)
-    const groundingSources = (groundingMeta?.groundingChunks ?? [])
-      .filter((c: any) => c.web?.uri)
-      .map((c: any) => ({
-        title: c.web.title ?? c.web.uri,
-        url: c.web.uri,
-      }))
-      .slice(0, 5); // máximo 5 fontes
-
-    // Fundir fontes do grounding com as que o Gemini declarou (sem duplicados)
-    const allUrls = new Set(groundingSources.map((s: any) => s.url));
-    const geminiSources = (Array.isArray(parsed.sources) ? parsed.sources : []).filter(
-      (s: any) => s.url && !allUrls.has(s.url)
-    );
-    const sources = [...groundingSources, ...geminiSources].slice(0, 5);
-
-    return {
-      minWithoutVat: typeof parsed.minWithoutVat === "number" ? parsed.minWithoutVat : null,
-      maxWithoutVat: typeof parsed.maxWithoutVat === "number" ? parsed.maxWithoutVat : null,
-      suggestedWithoutVat: typeof parsed.suggestedWithoutVat === "number" ? parsed.suggestedWithoutVat : null,
-      confidence: (["high", "medium", "low"].includes(parsed.confidence) ? parsed.confidence : "low") as "high" | "medium" | "low",
-      reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "Pesquisa externa realizada.",
-      sources,
-      searchedAt: new Date().toISOString(),
-    };
-  } catch (err) {
-    const isTimeout = err instanceof Error && err.message === "GROUNDING_TIMEOUT";
-    console.error("[v0] getExternalMarketEstimate:", isTimeout ? "timeout" : "erro", err);
-    return null;
-  }
-}
+/*
+ * A PESQUISA NA INTERNET POR PEDIDO SAIU — d59, 16-11-2026. Cada análise com
+ * pouca confiança ia ao Google pelo modelo (até 8 s) buscar preços de outras
+ * empresas. A internet volta só como referência mensal, aprovada nas Configs
+ * (d61). A estimativa é a do motor e a das grelhas publicadas.
+ */
 
 // ── Determinar analysisSource final ──────────────────────────────────────────
 function resolveAnalysisSource(
   baseSource: AnalysisSource,
-  externalEstimate: ExternalMarketEstimate | null,
   analysis: EstimateResult
 ): AnalysisSource {
   // Fallback de referência — preservar a fonte original
   if (baseSource === "fallback_reference") return "fallback_reference";
 
-  if (!externalEstimate) {
-    // Sem pesquisa externa
+  {
     if (baseSource === "gemini" || baseSource === "clyon_pricing") {
       // Gemini não conseguiu calcular preço → marca como referência Gemini
       if (!analysis.estimatedPriceWithoutVat || analysis.estimatedPriceWithoutVat <= 0) {
@@ -207,11 +69,12 @@ function resolveAnalysisSource(
     }
     return baseSource;
   }
-  // Com pesquisa externa
-  if (analysis.estimatedPriceWithoutVat && analysis.estimatedPriceWithoutVat > 0) {
-    return "clyon_pricing_plus_web_reference";
-  }
-  return "web_reference_only";
+}
+
+/** Uma falha da análise com o modelo, contada para o Início do backoffice (d59). Nunca segura a resposta. */
+function contarAFalha(motivo: ReturnType<typeof motivoDaFalha>, servico: string | undefined): void {
+  if (!motivo) return;
+  void createLeadEvent({ eventType: EVENTO_DA_FALHA_DA_IA, label: motivo, serviceType: servico ?? null }).catch(() => {});
 }
 
 export async function POST(req: NextRequest) {
@@ -259,6 +122,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
+    contarAFalha("sem_chave", order.serviceType);
     return responder({
       ...fastEstimate,
       analysisSource: "clyon_pricing" as AnalysisSource,
@@ -286,7 +150,7 @@ export async function POST(req: NextRequest) {
     // NUNCA deve recontar a partir do texto livre (era a causa do bug de subcontagem).
     const resolvedItemCount = fastEstimate.itemCount ?? 1;
     const resolvedIsFullLoad = fastEstimate.isFullLoad ?? false;
-    const formattedData = formatOrderDataForPrompt(orderForGemini, resolvedItemCount, resolvedIsFullLoad);
+    const formattedData = formatOrderDataForPrompt(orderForGemini, resolvedItemCount, resolvedIsFullLoad, await custoPorKmActivo());
     // hasPhotos: indica ao Gemini que deve analisar as imagens multimodais em conjunto
     const hasPhotos = (orderForGemini.files ?? []).some(
       (f) => f.type === "image" && (f.base64 || f.previewUrl)
@@ -349,6 +213,7 @@ export async function POST(req: NextRequest) {
     const responseText = (geminiResult as Awaited<ReturnType<typeof model.generateContent>>).response.text();
     analysis = parseGeminiResponse(responseText);
     baseSource = "clyon_pricing";
+    if (analysis.customerMessage === RESPOSTA_ILEGIVEL) contarAFalha("resposta_invalida", order.serviceType);
 
     // Registar na análise se foram usadas fotos (para rastreabilidade interna)
     if (imageParts.length > 0) {
@@ -438,6 +303,7 @@ export async function POST(req: NextRequest) {
       ],
     };
     baseSource = isTimeout ? "timeout_fallback" : "local_fast_estimate";
+    contarAFalha(motivoDaFalha({ analysisSource: baseSource }), order.serviceType);
   }
 
   /*
@@ -483,24 +349,8 @@ export async function POST(req: NextRequest) {
     };
   }
 
-  // ── 4. Pesquisa externa se necessário ────────────────────────────────────
-  let externalMarketEstimate: ExternalMarketEstimate | null = null;
-
-  if (needsExternalSearch(analysis)) {
-    externalMarketEstimate = await getExternalMarketEstimate(order, apiKey, modelName);
-    if (externalMarketEstimate) {
-      analysis = {
-        ...analysis,
-        internalNotes: [
-          ...(analysis.internalNotes ?? []),
-          `Pesquisa de mercado externa realizada (${externalMarketEstimate.sources.length} fonte(s)). Confiança: ${externalMarketEstimate.confidence}.`,
-        ],
-      };
-    }
-  }
-
   // ── 5. Determinar fonte e confiança finais ───────────────���────────────────
-  const analysisSource = resolveAnalysisSource(baseSource, externalMarketEstimate, analysis);
+  const analysisSource = resolveAnalysisSource(baseSource, analysis);
 
   // Confiança: propagar o que o Gemini definiu, ou inferir
   let confidence: "high" | "medium" | "low" = analysis.confidence ?? "medium";
@@ -532,7 +382,7 @@ export async function POST(req: NextRequest) {
     travel = {
       distanceKm: orderKm,
       durationText: order.distanceFromBase?.durationText ?? null,
-      distanceCost: Math.round(orderKm * 2 * 100) / 100,
+      distanceCost: custoDaDeslocacao(orderKm, await custoPorKmActivo()),
       source: order.distanceFromBase?.isEstimate ? "estimate" : "google",
     };
   }
@@ -554,8 +404,6 @@ export async function POST(req: NextRequest) {
     // a cobrar o que um modelo achou — e nem um teste apanharia isso.
     schedulingFee: fastEstimate.schedulingFee,
     schedulingFeeLabel: fastEstimate.schedulingFeeLabel,
-    // Incluir referência externa APENAS quando existir — backoffice lê este campo
-    ...(externalMarketEstimate ? { externalMarketEstimate } : {}),
   };
 
   return responder(result);
@@ -563,7 +411,7 @@ export async function POST(req: NextRequest) {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, isFullLoad: boolean): string {
+function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, isFullLoad: boolean, custoKm: number): string {
   const lines = [
     "=== DADOS DO PEDIDO ===",
     "",
@@ -663,7 +511,8 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
       `Morada do cliente: ${order.address?.formattedAddress || order.address?.city || "(não fornecida)"}`,
       `Distância da base: ${dKm ? `${dKm} km` : "(NÃO CALCULADA — assume acesso local e assinala em missingFields)"}`,
       `Tempo estimado de deslocação: ${order.distanceFromBase?.durationText || "(não calculado)"}`,
-      `Custo de deslocação interno (km × 2 €, ida+volta; nas cargas completas e nos esvaziamentos já está dentro da faixa): ${dKm ? `${(Math.round(dKm * 2 * 100) / 100)} €` : "(a confirmar)"}`,
+      // O custo por km do motor (d59): eram 2 € por km, quatro vezes o que o motor conta.
+      `Custo de deslocação interno (${dKm ? `${dKm} km × 2 (ida e volta) × ${custoKm.toFixed(2).replace(".", ",")} €/km` : "km × 2 (ida e volta) × custo por km"}; nas cargas completas e nos esvaziamentos já está dentro da faixa): ${dKm ? `${custoDaDeslocacao(dKm, custoKm)} €` : "(a confirmar)"}`,
       "",
       "=== CONDIÇÕES DE ACESSO ===",
       `Andar: ${order.floor || "(não fornecido)"}`,
@@ -685,6 +534,9 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
 
   return lines.join("\n");
 }
+
+/** A mensagem que marca uma resposta do modelo que não se leu (contada como falha, d59). */
+const RESPOSTA_ILEGIVEL = "Erro ao analisar";
 
 function parseGeminiResponse(response: string): EstimateResult {
   try {
@@ -708,7 +560,7 @@ function parseGeminiResponse(response: string): EstimateResult {
       };
     }
 
-    // Deslocação — km deve ter sido considerado no preço. distanceCost = km × 2 (regra CLYON).
+    // Deslocação — o custo que o modelo deu, ou o do motor (km × 2 × custo por km, d59).
     let travel: EstimateResult["travel"] = undefined;
     const tk = parsed.travel?.distanceKm;
     if (parsed.travel && (typeof tk === "number" || tk === null)) {
@@ -717,7 +569,7 @@ function parseGeminiResponse(response: string): EstimateResult {
         typeof parsed.travel.distanceCost === "number"
           ? parsed.travel.distanceCost
           : km !== null
-            ? Math.round(km * 2 * 100) / 100
+            ? custoDaDeslocacao(km)
             : null;
       travel = {
         distanceKm: km,
@@ -794,7 +646,7 @@ function parseGeminiResponse(response: string): EstimateResult {
       summary: "Análise incompleta. Por favor, forneça mais informações.",
       assumptions: [],
       missingFields: ["Dados incompletos para análise precisa"],
-      customerMessage: "Erro ao analisar",
+      customerMessage: RESPOSTA_ILEGIVEL,
       internalNotes: [],
     };
   }

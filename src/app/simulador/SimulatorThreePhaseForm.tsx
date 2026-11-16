@@ -10,7 +10,6 @@ import type {
   AddressData,
   DistanceFromBase,
   DistanceStatus,
-  EstimateResult,
   AddressStatus,
   MovingAccess,
   MovingDistance,
@@ -48,7 +47,8 @@ import {
 import { NOVO_MODELO_DESDE } from "@/lib/novo-modelo";
 import { passosDaMudancaComEscolha, tresPassosDepoisDeEnviar } from "@/lib/textos-do-pedido";
 import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/ParceirosDaMudanca";
-import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca } from "@/lib/preco-de-referencia";
+import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca, valorDoSimuladorDoSite, type FormularioDoSimulador } from "@/lib/preco-de-referencia";
+import { comIva } from "@/lib/quanto-custa";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { faltaNaFase1 as calcularFaltaNaFase1, FALTA_A_DESCRICAO, linhaDasPecas, comLinhaDasPecas, pecasDosMoveis } from "@/lib/falta-na-fase-1";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2, ShieldCheck, Clock, Mail, ArrowRight } from "lucide-react";
@@ -139,6 +139,12 @@ interface FormState extends OrderData {
    * pessoa ou a casa. Vai no rawOrderJson do pedido.
    */
   autorizaFotos?: boolean;
+}
+
+/** O número local da estimativa (o do bloco «Estimativa»), sem e com IVA — só para o registo do envio (d59). */
+function estimativaLocalDoFormulario(f: FormularioDoSimulador): { semIva: number | null; comIva: number | null } {
+  const v = valorDoSimuladorDoSite(f);
+  return { semIva: v, comIva: v == null ? null : comIva(v) };
 }
 
 export default function SimulatorThreePhaseForm() {
@@ -553,43 +559,19 @@ export default function SimulatorThreePhaseForm() {
       | { id: number; emailDoLink: string | null; contaGuardada: string | null; parceirosEscolhidos: number; novoModelo: boolean; acessoToken: string | null }
       | { erro: string | null }
     > => {
-      // 1) Estimativa (para o backoffice) — nunca mostrada ao cliente; falha não bloqueia.
-      let apiResult: EstimateResult | null = null;
       /*
-       * NO MÁXIMO 12 SEGUNDOS À ESPERA DA ANÁLISE (14-10-2026, auditoria). O
-       * pedido só se gravava depois dela, e uma análise presa segurava o envio
-       * — com a pessoa a olhar para o ecrã de espera. Passado o limite, segue
-       * sem ela: a rota calcula a estimativa do motor quando falta, e a equipa
-       * vê o pedido na mesma.
+       * 1) O ENVIO JÁ NÃO ESPERA PELA IA — d59, 16-11-2026. Esperava-se até 12 s
+       * pela análise com o modelo e pela pesquisa na internet, e a rota do pedido
+       * deitava o resultado fora (calcula a estimativa no servidor, pela grelha,
+       * desde a d22). A estimativa que conta é a do servidor; aqui só se regista
+       * o número local (a mesma conta do bloco «Estimativa», `referenciaLocal`).
        */
-      const limiteDaAnalise = new AbortController();
-      const relogio = setTimeout(() => limiteDaAnalise.abort(), 12_000);
-      try {
-        const res = await fetch("/api/simulator/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: formData }),
-          signal: limiteDaAnalise.signal,
-        });
-        if (res.ok) {
-          apiResult = (await res.json()) as EstimateResult;
-          trackSimulatorEstimate(
-            formData.serviceType ?? "desconhecido",
-            apiResult.estimatedPriceWithVat ?? apiResult.estimatedPriceWithoutVat ?? 0,
-            formData.address?.city ?? formData.originAddress?.city,
-            {
-              estimateMin: apiResult.estimatedPriceWithoutVat,
-              estimateMax: apiResult.estimatedPriceWithVat,
-              difficultyLevel: apiResult.difficultyLevel,
-              analysisSource: apiResult.analysisSource,
-            },
-          );
-        }
-      } catch {
-        /* estimativa opcional — ignora falhas, e o limite dos 12 s */
-      } finally {
-        clearTimeout(relogio);
-      }
+      const local = estimativaLocalDoFormulario(formData);
+      trackSimulatorEstimate(formData.serviceType ?? "desconhecido", local.comIva ?? local.semIva ?? 0, formData.address?.city ?? formData.originAddress?.city, {
+        estimateMin: local.semIva,
+        estimateMax: local.comIva,
+        analysisSource: "local",
+      });
 
       // Passo seguinte: se há fotografias, é delas que se está à espera.
       setPasso((formData.files ?? []).some((f) => f?.file instanceof File) ? "fotos" : "guardar");
@@ -652,19 +634,6 @@ export default function SimulatorThreePhaseForm() {
 
       // 3) Guardar o pedido (com a estimativa quando disponível).
       try {
-        const estimate: EstimateResult = apiResult ?? {
-          status: "estimated",
-          estimatedPriceWithoutVat: null,
-          vatAmount: null,
-          estimatedPriceWithVat: null,
-          difficultyLevel: 2,
-          summary: "Aguarda análise da equipa",
-          assumptions: [],
-          missingFields: [],
-          customerMessage: "",
-          internalNotes: ["Estimativa não disponível no envio — análise pela equipa"],
-          analysisSource: "timeout_fallback",
-        };
         // Substituir os File objects por metadata + URL (o servidor recebe JSON puro).
         const orderPayload = {
           ...formData,
@@ -700,7 +669,7 @@ export default function SimulatorThreePhaseForm() {
         const saveRes = await fetch("/api/simulador/pedido", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: orderPayload, estimate }),
+          body: JSON.stringify({ order: orderPayload }),
         });
         // Um 413 ou um 504 chegam em HTML: sem o catch, a resposta do servidor
         // passava por falta de rede.

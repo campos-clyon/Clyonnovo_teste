@@ -184,11 +184,14 @@ describe("e o lugar onde o número estava não fica em branco", () => {
 });
 
 describe("o motor continua a calcular para dentro de casa", () => {
-  it("o simulador guarda a estimativa, e diz para quem ela é", () => {
+  it("a estimativa guarda-se no servidor, e o simulador já não a manda (d22, d59)", () => {
     // Não se apagou nada da base: o backoffice usa-a para conferir uma
     // proposta que lhe pareça fora do sítio, e as métricas contam com ela.
+    // Desde a d59 (16-11-2026) o simulador nem espera pela análise com IA.
     const SIMULADOR = ler("src/app/simulador/SimulatorThreePhaseForm.tsx");
-    expect(SIMULADOR).toContain("nunca mostrada ao cliente");
+    expect(SIMULADOR).not.toContain("/api/simulator/analyze");
+    const ROTA = ler("src/app/api/simulador/pedido/route.ts");
+    expect(ROTA).toContain("estimateJson: estimativa ? JSON.stringify(estimativa) : null");
   });
 
   it("e o profissional continua a vê-la — é ele que precisa de um ponto de partida", () => {

@@ -498,6 +498,13 @@ export async function POST(req: NextRequest) {
       // Prioridade: email da conta autenticada → email do formulário
       contactEmail,
       urgency: order.urgency || null,
+      /*
+       * ATENÇÃO AOS NOMES — d59, 16-11-2026. Apesar de se chamarem «mínimo» e
+       * «máximo», estimateMin e estimateMax NÃO são uma faixa: são o MESMO valor
+       * estimado, sem IVA (estimateMin) e com IVA (estimateMax); estimateTotal é
+       * o com IVA outra vez. A faixa do motor (estimateMin/MaxWithoutVat) vive no
+       * estimateJson. Os nomes ficam (sem migração).
+       */
       estimateMin: applyDiscount(estimativa?.estimatedPriceWithoutVat)?.toString() ?? null,
       estimateMax: applyDiscount(estimativa?.estimatedPriceWithVat)?.toString() ?? null,
       estimateTotal: applyDiscount(estimativa?.estimatedPriceWithVat)?.toString() ?? null,

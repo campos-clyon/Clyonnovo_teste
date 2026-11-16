@@ -1,4 +1,4 @@
-import { MINIMO_DO_ENTULHO, GRELHA_DA_MANUTENCAO_PARA_O_MODELO, GRELHA_DO_ENTULHO_PARA_O_MODELO } from "@/lib/pricing-helper";
+import { FULL_LOAD_ITEM_THRESHOLD, MINIMO_DO_ENTULHO, GRELHA_DA_MANUTENCAO_PARA_O_MODELO, GRELHA_DO_ENTULHO_PARA_O_MODELO } from "@/lib/pricing-helper";
 import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
@@ -196,12 +196,13 @@ REGRAS ABSOLUTAS
    Para ENTULHO usa EXCLUSIVAMENTE a grelha da regra 2.c (NÃO a fórmula geral custo×margem).
    Para MUDANÇA usa EXCLUSIVAMENTE a regra 2.d: o preço por hora e o mínimo de horas são os de cada parceiro.
 2. MÍNIMOS — REGRAS DIFERENTES POR TIPO DE SERVIÇO:
-   a) ITENS SOLTOS (1–7 itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
+   a) ITENS SOLTOS (1–${FULL_LOAD_ITEM_THRESHOLD - 1} itens — recolha de móveis/monos): NÃO aplicar mínimo de zona.
       Móveis por peça, a tabela do site (s/IVA): ${PECAS_EM_TEXTO}; a soma das peças nunca fica abaixo da recolha mínima de ${RECOLHA_MINIMA}, e os andares somam-se depois do mínimo.
       EXEMPLO CORRETO: ${MESA_COM_CADEIRAS} — é uma peça da tabela, NÃO um valor de carga completa nem de esvaziamento (esses começam nos ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}); sozinha, conta a recolha mínima de ${RECOLHA_MINIMA}.
       EXEMPLO CORRETO: 1 ${SOFA.peca.toLowerCase()}, rés-do-chão, estacionamento à porta → ${pecaPelaTabela(SOFA)}
       Para múltiplos itens soltos: somam-se as peças da tabela, uma a uma (a eficiência de ter a equipa no local conta só nas horas, não no preço).
-   b) CARGA COMPLETA (≥8 itens) e ESVAZIAMENTO: o preço sai das faixas publicadas no site (sem IVA, com o IVA ao lado):
+      Monos com as peças contadas: a mesma tabela das peças (um sofá custa o mesmo nos móveis e nos monos); sem elas, a faixa publicada dos monos, ${comOIva(faixa({ minimo: exigir(PRECOS.recolha_monos.minimo, "recolha_monos"), maximo: PRECOS.recolha_monos.maximo }))}, no meio (no topo com acesso difícil).
+   b) CARGA COMPLETA (≥${FULL_LOAD_ITEM_THRESHOLD} itens) e ESVAZIAMENTO: o preço sai das faixas publicadas no site (sem IVA, com o IVA ao lado):
 ${FAIXAS_DO_ESVAZIAMENTO}
       Os apartamentos ficam dentro de ${comOIva(APARTAMENTOS)}.
       Dentro da faixa, o acesso e a distância decidem o lugar: perto da base, rés-do-chão ou elevador, estacionamento à porta → início da faixa; longe, andares a pé ou acesso difícil → fim da faixa.

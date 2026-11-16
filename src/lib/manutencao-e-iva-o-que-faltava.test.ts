@@ -80,27 +80,18 @@ describe("1. a /sobre-nos diz a manutenção da casa onde só dizia três servi�
 describe("2. a pesquisa de preços do orçamento", () => {
   const rota = () => semComentarios(ler("src/app/api/simulator/analyze/route.ts"));
 
-  it("recebe o nome legível do serviço, e não o código cru", () => {
+  /*
+   * A PESQUISA NA INTERNET POR PEDIDO SAIU DA ROTA — d59, 16-11-2026: a
+   * estimativa é a do motor e a das grelhas; a internet volta como referência
+   * mensal (d61). Fica o nome legível do serviço para o modelo.
+   */
+  it("já não há pesquisa de preços por pedido; o modelo recebe o nome legível do serviço", () => {
     const codigo = rota();
-    const linha = codigo.split("\n").find((l) => /const serviceLabel\s*=/.test(l));
-    expect(linha).toBeDefined();
-    expect(linha).toContain("servicoParaOModelo(order.serviceType)");
-    expect(linha).not.toMatch(/=\s*order\.serviceType\s*\?\?/);
-    // E o nome que lhe chega da manutenção não tem nada de código.
+    expect(codigo).not.toContain("getExternalMarketEstimate");
+    expect(codigo).not.toContain("googleSearchRetrieval");
+    expect(codigo).not.toContain("INSTRUÇÕES IMPORTANTES:");
+    expect(codigo).toContain("servicoParaOModelo(serviceType)");
     expect(servicoParaOModelo("manutencao_casa")).not.toMatch(/_/);
-  });
-
-  it("a instrução 3 conta com a manutenção da casa", () => {
-    const codigo = rota();
-    const i = codigo.indexOf("INSTRUÇÕES IMPORTANTES:");
-    expect(i).toBeGreaterThan(-1);
-    const terceira = codigo.slice(i).split("\n").find((l) => l.startsWith("3. "));
-    expect(terceira).toBeDefined();
-    expect(terceira).toContain("manutenção da casa");
-    // As de antes continuam lá.
-    for (const s of ["recolha de móveis", "recolha de entulho", "mudanças", "esvaziamento de casas"]) {
-      expect(terceira, s).toContain(s);
-    }
   });
 });
 
