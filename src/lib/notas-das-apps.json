@@ -29,12 +29,16 @@
     {
       "id": "cliente-2026-11-15",
       "nota": "Quando a CLYON lhe envia um orçamento, o pedido mostra o valor com e sem IVA e um botão para aceitar na conversa com a CLYON.\nE ao pagar ao parceiro avisa se os dados de pagamento dele mudaram.",
-      "updates": []
+      "updates": [
+        "01a1dfdb-aba5-75d0-ac10-84f387761520"
+      ]
     },
     {
       "id": "cliente-2026-11-14",
       "nota": "Quando o pagamento for feito diretamente ao parceiro, o pedido mostra a quem e como pagar, o total e as duas faturas, e pergunta-lhe se o trabalho já foi feito.",
-      "updates": []
+      "updates": [
+        "01a1d9e4-a98b-7dea-8e3b-f6266d0debce"
+      ]
     },
     {
       "id": "cliente-2026-11-13",

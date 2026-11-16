@@ -20,8 +20,9 @@ import { COMO_PAGAR_EM_PALAVRAS } from "../../../src/lib/pagar-ao-parceiro";
 import { COMPLETAR_O_PERFIL } from "../../../src/lib/dados-para-receber";
 import { perguntasDoProfissional, type PerguntaFrequente } from "../../../src/lib/ajuda-plataforma";
 import type { Taxas } from "../../../src/lib/taxas-plataforma";
+import { PARTE_DA_CLYON_COM_RESERVA } from "../../../src/lib/reserva";
 
-export { PAGAR_O_VALOR_EM_ATRASO, NOME_DA_FATURA, MENSAGENS_DA_FATURA, COMO_PAGAR_EM_PALAVRAS };
+export { PAGAR_O_VALOR_EM_ATRASO, NOME_DA_FATURA, MENSAGENS_DA_FATURA, COMO_PAGAR_EM_PALAVRAS, PARTE_DA_CLYON_COM_RESERVA };
 
 /** O que falta para receber, como `estadoDosDadosParaReceber` (src/lib/dados-para-receber.ts) o devolve. */
 export type DadosParaReceber =
@@ -42,6 +43,8 @@ export type NovoModeloDaCarteira = {
     nasceuEm: string | null;
     prazoAte: string | null;
     multibanco: { entidade: string | null; referencia: string | null } | null;
+    /** d39/d55: com valor único a parte da CLYON leva a reserva. O site manda-o; sem ele, fica a frase de hoje. */
+    comReserva?: boolean;
   }>;
   standBy: { total: number; accao: string; explicacao: string; negociacoes: number[] } | null;
   dadosParaReceber: DadosParaReceber | null;
@@ -126,9 +129,18 @@ export function passouDoPrazo(prazoAte: string | null, agora: number): boolean {
   return Number.isFinite(fim) && agora > fim;
 }
 
-/** «Taxa da plataforma 25,00 € + IVA 5,75 €» — as duas partes de um valor em atraso. */
-export function partesDoValorEmAtraso(v: { taxa: number; iva: number }, euros: (n: number) => string): string {
-  return v.iva > 0 ? `Taxa da plataforma ${euros(v.taxa)} + IVA ${euros(v.iva)}` : `Taxa da plataforma ${euros(v.taxa)}`;
+/**
+ * «Taxa da plataforma 25,00 € + IVA 5,75 €» — as duas partes de um valor em atraso.
+ * Com reserva (d55, como o painel em Carteira.tsx): «Parte da CLYON (taxa da
+ * plataforma e reserva) 40,00 € + IVA 9,20 €» — sem dizer «valor único».
+ */
+export function partesDoValorEmAtraso(v: { taxa: number; iva: number; comReserva?: boolean }, euros: (n: number) => string): string {
+  const nome = v.comReserva === true ? maiuscula(PARTE_DA_CLYON_COM_RESERVA) : "Taxa da plataforma";
+  return v.iva > 0 ? `${nome} ${euros(v.taxa)} + IVA ${euros(v.iva)}` : `${nome} ${euros(v.taxa)}`;
+}
+
+function maiuscula(t: string): string {
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 /** A linha do perfil fiscal, como o cliente a lê ao escolher: «Fatura com IVA · Emite guia de resíduos». */
@@ -167,7 +179,7 @@ export function faixaDoValorEmAtraso(
     standBy: false,
     titulo: `Valor em atraso · ${euros(total)}`,
     texto:
-      `A taxa da plataforma e o IVA dela ${trabalhos}. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias depois de o trabalho ficar confirmado` +
+      `${nm.valores.some((v) => v.comReserva === true) ? `A ${PARTE_DA_CLYON_COM_RESERVA}` : "A taxa da plataforma"} e o IVA dela ${trabalhos}. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias depois de o trabalho ficar confirmado` +
       (ate ? `: pague até ${ate}.` : ".") +
       " Depois disso, a conta fica em stand-by até pagar.",
     botao: PAGAR_O_VALOR_EM_ATRASO,

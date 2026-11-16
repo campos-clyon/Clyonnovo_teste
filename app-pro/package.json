@@ -37,5 +37,12 @@
     "check": "tsc --noEmit",
     "test": "node --test --experimental-strip-types src/lib/*.test.ts"
   },
+  "overrides": {
+    "node-forge": "^1.4.3",
+    "zod": "^4.6.6",
+    "minimatch": "^11.0.1",
+    "glob": "^14.0.2",
+    "uuid": "^11.1.1"
+  },
   "private": true
 }

@@ -306,6 +306,7 @@ const ICONE: Record<string, keyof typeof Ionicons.glyphMap> = {
   esvaziamento_garagem: "car-sport-outline",
   esvaziamento_sotao: "home-outline",
   esvaziamento_cave: "archive-outline",
+  esvaziamento_empresa: "storefront-outline",
   mudanca: "car-outline",
   montagem_moveis: "hammer-outline",
   jardinagem: "leaf-outline",
