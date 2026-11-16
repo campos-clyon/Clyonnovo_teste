@@ -93,16 +93,48 @@ export function toMySQLDateTime(date: Date = new Date()): string {
   return date.toISOString().slice(0, 19).replace("T", " ");
 }
 
+/*
+ * «TOO MANY CONNECTIONS», OUTRA VEZ — 16-11-2026 (urgência, depois da d44).
+ *
+ * A base tinha 144 de 151 ligações ocupadas e só 2 a trabalhar: o resto eram
+ * ligações paradas. O pool tinha `maxIdle` igual ao `connectionLimit` (o valor
+ * por omissão do mysql2), e assim o mysql2 NUNCA fecha uma ligação parada — o
+ * vigia das paradas só arranca quando `maxIdle < connectionLimit`. Cada
+ * instância da Vercel ficava com até 5 ligações abertas, e uma instância
+ * congelada não as devolve: o MySQL só as larga ao fim do `wait_timeout`
+ * (8 horas, por omissão). Trinta instâncias chegavam para encher a base.
+ *
+ * Agora:
+ * - no máximo 3 ligações por instância, e só 1 parada, fechada ao fim de 10 s;
+ * - cada ligação diz à base que a pode fechar ao fim de 120 s parada
+ *   (`wait_timeout` da sessão) — é o que solta as das instâncias congeladas,
+ *   que já não correm o vigia; 120 s > 10 s, por isso uma instância viva
+ *   fecha sempre as suas primeiro;
+ * - um só pool por processo, guardado em `globalThis` (também no `next dev`,
+ *   onde o recarregar dos módulos criava pools novos sem fechar os velhos).
+ */
+export const LIGACOES_POR_INSTANCIA = 3;
+export const LIGACOES_PARADAS_POR_INSTANCIA = 1;
+export const PARADA_FECHA_AO_FIM_DE_MS = 10_000;
+export const A_BASE_FECHA_PARADAS_AO_FIM_DE_S = 120;
+
+const doProcesso = globalThis as typeof globalThis & {
+  __poolDaClyon?: mysql.Pool;
+};
+
 export async function getPool() {
   if (!process.env.DATABASE_URL) {
     console.warn("[Database] DATABASE_URL not set");
     return null;
   }
+  if (!poolInstance && doProcesso.__poolDaClyon) poolInstance = doProcesso.__poolDaClyon;
   if (!poolInstance) {
     poolInstance = mysql.createPool({
       uri: process.env.DATABASE_URL,
       waitForConnections: true,
-      connectionLimit: 5,
+      connectionLimit: LIGACOES_POR_INSTANCIA,
+      maxIdle: LIGACOES_PARADAS_POR_INSTANCIA,
+      idleTimeout: PARADA_FECHA_AO_FIM_DE_MS,
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,
@@ -113,6 +145,21 @@ export async function getPool() {
       ssl: sslDaBase(),
       timezone: FUSO_DA_BASE,
     });
+    const p = poolInstance as unknown as {
+      on?: (ev: string, fn: (c: { query: (sql: string, cb: (e: unknown) => void) => void }) => void) => void;
+    };
+    if (typeof p.on === "function") {
+      p.on("connection", (c) => {
+        // Corre antes de qualquer consulta desta ligação (os comandos vão em fila).
+        c.query(
+          `SET SESSION wait_timeout = ${A_BASE_FECHA_PARADAS_AO_FIM_DE_S}`,
+          (e) => {
+            if (e) console.warn("[Database] wait_timeout da sessão:", (e as Error)?.message);
+          },
+        );
+      });
+    }
+    doProcesso.__poolDaClyon = poolInstance;
   }
   return poolInstance;
 }
