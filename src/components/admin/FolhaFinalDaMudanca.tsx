@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import EnviarValorFinalAoCliente from "@/components/admin/EnviarValorFinalAoCliente";
+import { oQueSePercebeuDasHoras } from "@/lib/horas-escritas-na-folha";
 
 /**
  * A FOLHA FINAL DA MUDANÇA, PELA EQUIPA — d38 v2, commit b (15-11-2026).
@@ -211,6 +212,9 @@ export default function FolhaFinalDaMudanca({
 
   const muda = (p: Partial<Formulario>) => setForm((f) => (f ? { ...f, ...p } : f));
   const campo = "mt-1 block w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs tabular-nums text-white";
+  // A linha do material (d49): campos próprios, sem larguras em conflito com o «w-full» de cima.
+  const campoDoNome = "mt-1 block w-full min-w-0 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white";
+  const campoDoValor = "block w-full min-w-0 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-right text-xs tabular-nums text-white";
 
   return (
     <div className="mt-2 rounded-lg border border-slate-700 bg-slate-950/60 p-2.5">
@@ -246,8 +250,12 @@ export default function FolhaFinalDaMudanca({
                   </select>
                 </label>
                 <label className="text-[11px] text-slate-400">
-                  Horas (6,5 ou 6:30)
-                  <input value={form.horas} onChange={(e) => muda({ horas: e.target.value })} inputMode="decimal" className={campo} />
+                  Horas (6,5 · 6:30 · 6h30)
+                  <input value={form.horas} onChange={(e) => muda({ horas: e.target.value })} className={campo} />
+                  {(() => {
+                    const p = oQueSePercebeuDasHoras(form.horas);
+                    return p ? <span className={`mt-0.5 block ${p.ok ? "text-emerald-300" : "text-amber-300"}`}>{p.texto}</span> : null;
+                  })()}
                 </label>
                 <label className="text-[11px] text-slate-400">
                   Preço da hora, sem IVA
@@ -306,27 +314,41 @@ export default function FolhaFinalDaMudanca({
               </fieldset>
 
               <div className="text-[11px] text-slate-400">
-                <p>Material (sem taxa, com IVA), sem IVA</p>
+                <p>Material (sem taxa, com IVA)</p>
+                {/*
+                  d49 (dono, 16-11-2026): o nome ocupa a linha e o valor fica estreito
+                  à direita, com «€». Antes o «w-full» do campo ganhava ao «w-24» e o
+                  nome ficava numa caixinha onde não se conseguia escrever.
+                */}
                 {form.materiais.map((m, i) => (
-                  <div key={i} className="mt-1 flex gap-1.5">
-                    <input
-                      value={m.descricao}
-                      onChange={(e) => muda({ materiais: form.materiais.map((x, j) => (j === i ? { ...x, descricao: e.target.value } : x)) })}
-                      placeholder="ex.: 20 caixas"
-                      maxLength={120}
-                      className={`${campo} mt-0 flex-1`}
-                    />
-                    <input
-                      value={m.valor}
-                      onChange={(e) => muda({ materiais: form.materiais.map((x, j) => (j === i ? { ...x, valor: e.target.value } : x)) })}
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      className={`${campo} mt-0 w-24`}
-                    />
+                  <div key={i} className="mt-1 flex items-end gap-1.5">
+                    <label className="min-w-0 flex-1">
+                      <span className="block">Material {i + 1}</span>
+                      <input
+                        value={m.descricao}
+                        onChange={(e) => muda({ materiais: form.materiais.map((x, j) => (j === i ? { ...x, descricao: e.target.value } : x)) })}
+                        placeholder="Material (ex.: cartão, plástico, filme)"
+                        maxLength={120}
+                        className={campoDoNome}
+                      />
+                    </label>
+                    <label className="w-28 shrink-0">
+                      <span className="block">Valor, sem IVA</span>
+                      <span className="mt-1 flex items-center gap-1">
+                        <input
+                          value={m.valor}
+                          onChange={(e) => muda({ materiais: form.materiais.map((x, j) => (j === i ? { ...x, valor: e.target.value } : x)) })}
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          className={campoDoValor}
+                        />
+                        <span className="text-slate-400">€</span>
+                      </span>
+                    </label>
                     <button
                       type="button"
                       onClick={() => muda({ materiais: form.materiais.filter((_, j) => j !== i) })}
-                      className="rounded border border-slate-700 px-1.5 text-slate-400 hover:text-red-300"
+                      className="mb-0.5 rounded border border-slate-700 px-1.5 py-1 text-slate-400 hover:text-red-300"
                       aria-label={`Tirar a linha ${i + 1}`}
                     >
                       <Trash2 className="h-3 w-3" aria-hidden="true" />

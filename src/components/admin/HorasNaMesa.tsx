@@ -5,6 +5,7 @@ import { Clock, Loader2 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import type { ResumoDasHoras } from "@/lib/horas-do-trabalho";
 import { REGRA_DAS_HORAS, fimPelasHoras, intervaloDasHoras, totalDasHoras } from "@/lib/horas-do-trabalho";
+import { oQueSePercebeuDasHoras } from "@/lib/horas-escritas-na-folha";
 import {
   FOLGA_DOS_KM,
   FOLHA_POR_CONFIRMAR,
@@ -328,10 +329,14 @@ export default function HorasNaMesa({
             <input
               value={form.horas}
               onChange={(e) => setForm({ ...form, horas: e.target.value, fim: e.target.value.trim() ? "" : form.fim })}
-              placeholder="4,5"
-              inputMode="decimal"
+              placeholder="4,5 · 4h30"
               className={`${campo} w-20`}
             />
+            {(() => {
+              // d49: «4h30» também, e diz o que percebeu («4 h 30 min»).
+              const lido = oQueSePercebeuDasHoras(form.horas);
+              return lido ? <span className={lido.ok ? "text-emerald-300" : "text-amber-300"}>{lido.texto}</span> : null;
+            })()}
           </label>
           {r.preencher.folha && (
             <>

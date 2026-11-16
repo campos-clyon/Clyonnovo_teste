@@ -8,6 +8,7 @@ import {
 } from "./conta-da-mudanca";
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { contaDoValorAcordado, type RegimeDoProfissional } from "./pagamento-directo";
+import { lerHorasDaFolha } from "./horas-escritas-na-folha";
 
 /**
  * A FOLHA FINAL DE UMA MUDANÇA, PELA EQUIPA — d38 v2, commit b (15-11-2026).
@@ -47,20 +48,8 @@ export function centimosDe(v: unknown): number | null {
 
 /** «6,5», «6.5», «6:30», «6h30», 6.5 → 6,5 horas. Vazio → null. Lixo → NaN. */
 export function horasDe(v: unknown): number | null {
-  if (v === null || v === undefined) return null;
-  if (typeof v === "number") return Number.isFinite(v) ? v : Number.NaN;
-  if (typeof v !== "string") return Number.NaN;
-  const t = v.trim().toLowerCase().replace(/\s/g, "");
-  if (!t) return null;
-  const hm = /^(\d{1,2})(?::|h)(\d{1,2})?(?:m|min)?$/.exec(t);
-  if (hm) {
-    const m = Number(hm[2] ?? 0);
-    if (m >= 60) return Number.NaN;
-    return Number(hm[1]) + m / 60;
-  }
-  const d = t.replace(",", ".");
-  if (!/^\d+(\.\d+)?$/.test(d)) return Number.NaN;
-  return Number(d);
+  // A leitura única das horas escritas (d49): a mesma do «Preencher a folha» da Mesa.
+  return lerHorasDaFolha(v);
 }
 
 /** O corpo do pedido (o formulário do backoffice). */
@@ -87,7 +76,7 @@ export function lerCorpoDaFolhaFinal(c: CorpoDaFolhaFinal): { ok: true; entrada:
 
   const horas = horasDe(c.horas);
   if (horas == null) return { ok: false, erro: "Indique as horas do trabalho." };
-  if (!Number.isFinite(horas) || horas <= 0) return { ok: false, erro: "As horas não são válidas (ex.: 6,5 ou 6:30)." };
+  if (!Number.isFinite(horas) || horas <= 0) return { ok: false, erro: "As horas não são válidas (ex.: 6,5 · 6:30 · 6h30)." };
   if (horas > MAXIMO_DE_HORAS) return { ok: false, erro: `Mais de ${MAXIMO_DE_HORAS} horas? Confirme as horas.` };
 
   const precoHora = centimosDe(c.precoHora);

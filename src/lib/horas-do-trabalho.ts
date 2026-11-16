@@ -39,6 +39,7 @@ import { MINIMO_DE_HORAS, horasEscritas, horasEstimadas, tipologiaDoTexto, type 
 import { tarifaCongeladaDeJson } from "./conta-da-mudanca";
 import { diaEmLisboa, horaEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { precoDoCliente, type PrecoDoCliente } from "./preco-do-cliente";
+import { lerHorasDaFolha } from "./horas-escritas-na-folha";
 import { TAXA_IVA, quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import type { ModeloDoPreco } from "./iva-incluido";
 import {
@@ -337,7 +338,9 @@ export function faltaAFolha(porHora: boolean, t: HorasNaBase): boolean {
  */
 export function fimPelasHoras(inicio: unknown, horas: unknown): string | null {
   const i = lerHora(inicio);
-  const h = numero(horas);
+  // «4,5», «4:30» e «4h30» (d49): a leitura da folha final.
+  const lido = lerHorasDaFolha(horas);
+  const h = lido != null && Number.isFinite(lido) ? lido : null;
   if (!i || h == null || h <= 0 || h > MAXIMO_DE_HORAS_SEGUIDAS) return null;
   const total = i.h * 60 + i.m + Math.round(h * 60);
   const doDia = total % 1440;

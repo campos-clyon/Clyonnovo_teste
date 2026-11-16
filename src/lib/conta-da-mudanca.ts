@@ -462,7 +462,7 @@ export function contaDaFolhaFinal(e: EntradaDaFolhaFinal): ContaDaFolhaFinal | E
     const descricao = String(l?.descricao ?? "").trim();
     if (!inteiroNaoNegativo(l?.cent)) return { ok: false, erro: `O valor do material ${n + 1} não é válido.` };
     if (l.cent === 0 && !descricao) continue;
-    if (!descricao) return { ok: false, erro: `Diga que material é a linha ${n + 1}.` };
+    if (!descricao) return { ok: false, erro: `Escreva o nome do material na linha ${n + 1}.` };
     linhas.push({ descricao: descricao.slice(0, 120), cent: l.cent });
   }
   const materiaisCent = linhas.reduce((s, l) => s + l.cent, 0);
