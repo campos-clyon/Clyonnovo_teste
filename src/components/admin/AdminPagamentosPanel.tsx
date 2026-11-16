@@ -89,6 +89,7 @@ import {
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import CorrigirOPagamento, { type CorreccaoDoPagamento } from "@/components/admin/CorrigirOPagamento";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
+import AnularAReferencia from "@/components/admin/AnularAReferencia";
 import { isMudancaType } from "@/lib/calendar-helpers";
 
 /** Corrigir um pagamento registado à mão: a fatura e o valor, com motivo (04-11-2026, d9). */
@@ -131,6 +132,8 @@ type Pagamento = {
   pedidoId: number;
   pagoEm: string | null;
   criadoEm: string;
+  /** «trabalho», «diferenca» ou «divida» — a dívida do profissional não se anula aqui (d52). */
+  parte?: string | null;
 };
 
 /**
@@ -1908,6 +1911,11 @@ function GestorDoDinheiro({
             {gaveta.entidade && gaveta.referencia ? ` · ${gaveta.entidade} / ${gaveta.referencia}` : ""}
             {quandoDoPagamento(gaveta) ? ` · ${quandoDoPagamento(gaveta)}` : ""}
           </p>
+          {/* Anular uma referência do cliente por pagar — só o administrador geral (16-11-2026, d52). */}
+          <AnularAReferencia
+            pagamento={gaveta}
+            onFeito={onMudou}
+          />
           {trabalhoDaGaveta ? (
             <div className="mt-3">
               {faltaPagarAoProfissional(trabalhoDaGaveta) && (

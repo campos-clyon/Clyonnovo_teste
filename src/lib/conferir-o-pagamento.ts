@@ -13,6 +13,8 @@
  *     o euPago diz não estar paga fecha-se como expirada.
  */
 
+import { eReferenciaAnulada } from "./anular-a-referencia";
+
 /** Um cêntimo de folga: o valor viaja em vírgula flutuante. */
 const CENTIMO = 0.011;
 
@@ -61,6 +63,14 @@ export function pagamentoForaDeVigor(pago: Linha, todos: Linha[]): string | null
    */
   if (pago.estado === "cancelado" && (pago.erro ?? "").startsWith(MOTIVO_DO_PEDIDO_FECHADO)) {
     return "O pedido foi cancelado antes de este pagamento entrar. Não fecha nada — valor a devolver ao cliente.";
+  }
+  /*
+   * UMA REFERÊNCIA ANULADA PELA EQUIPA — 16-11-2026 (d52). Anulada no backoffice
+   * («Anular a referência»), deixou de valer na plataforma; o euPago não sabe
+   * disso. Paga na mesma, não fecha o pedido: fica à vista, para devolver.
+   */
+  if (eReferenciaAnulada(pago)) {
+    return "Esta referência foi anulada no backoffice antes de ser paga. Não fecha nada — valor a devolver ao cliente.";
   }
   const vigor = pagamentoEmVigor(todos);
   if (!vigor || vigor.id === pago.id) return null;

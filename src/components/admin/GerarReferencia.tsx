@@ -5,6 +5,7 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { Check, Copy, CreditCard, Landmark, Loader2, RefreshCw, Smartphone } from "lucide-react";
 import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import { linkDoWhatsApp } from "@/lib/mensagem-da-referencia";
+import AnularAReferencia from "@/components/admin/AnularAReferencia";
 
 /**
  * GERAR A REFERÊNCIA E MANDÁ-LA AO CLIENTE — um pedido de cada vez.
@@ -596,6 +597,18 @@ function GerarReferenciaDoAdministrador({
               gerar outra
             </button>
           </div>
+
+          {/* Anular a referência do cliente por pagar — só o administrador geral (16-11-2026, d52). */}
+          {!doProfissional && (
+            <AnularAReferencia
+              key={mostrar.id}
+              pagamento={mostrar}
+              onFeito={() => {
+                setPagamento(null);
+                void ler();
+              }}
+            />
+          )}
 
           {conferencia && (
             <div className="mt-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2">

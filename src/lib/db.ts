@@ -15425,6 +15425,8 @@ export type Acontecimento =
   | "divida_quitada"
   // Um pagamento registado à mão corrigido pelo administrador: fatura e valor (04-11-2026, d9).
   | "pagamento_corrigido"
+  // Uma referência do cliente por pagar anulada no backoffice pelo administrador (16-11-2026, d52).
+  | "referencia_anulada"
   // O modelo de 15-11-2026 (d10): uma fatura do trabalho junta ao pedido, e como o cliente escolheu pagar ao parceiro.
   | "fatura_do_trabalho"
   | "forma_de_pagar_ao_parceiro"

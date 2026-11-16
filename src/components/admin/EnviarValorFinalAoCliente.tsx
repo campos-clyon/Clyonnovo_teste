@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
+import { AVISO_SEM_NADA_PAGO, semNadaPagoRegistado } from "@/lib/aviso-sem-nada-pago";
 
 /**
  * «ENVIAR O VALOR FINAL AO CLIENTE» — d38 v2, commit d (15-11-2026).
@@ -61,6 +62,8 @@ export default function EnviarValorFinalAoCliente({ pedidoId, negociacaoId }: { 
   const [canal, setCanal] = useState<"whatsapp" | "email" | "ambos">("whatsapp");
   const [ocupado, setOcupado] = useState(false);
   const [resposta, setResposta] = useState<{ ok: boolean; texto: string; mensagem?: string } | null>(null);
+  // Sem nada pago registado, o «Enviar» pede um segundo clique (16-11-2026, d52).
+  const [naMesma, setNaMesma] = useState(false);
 
   async function pedir(previsualizar: boolean, texto?: string) {
     if (!token) return null;
@@ -96,6 +99,7 @@ export default function EnviarValorFinalAoCliente({ pedidoId, negociacaoId }: { 
         historico: (j.historico as Envio[]) ?? [],
       };
       setPrevia(p);
+      setNaMesma(false);
       if (!oQueMudou && p.sugestaoDoQueMudou) setOQueMudou(p.sugestaoDoQueMudou);
       if (!p.destinos.whatsapp && p.destinos.email) setCanal("email");
     } catch {
@@ -133,6 +137,7 @@ export default function EnviarValorFinalAoCliente({ pedidoId, negociacaoId }: { 
   }
 
   const c = previa?.conta ?? null;
+  const semNadaPago = semNadaPagoRegistado(c);
   const podeEnviar =
     Boolean(c) && eAdministrador && !ocupado && (canal === "email" ? previa?.destinos.email : canal === "whatsapp" ? previa?.destinos.whatsapp : previa?.destinos.email && previa?.destinos.whatsapp);
 
@@ -210,15 +215,27 @@ export default function EnviarValorFinalAoCliente({ pedidoId, negociacaoId }: { 
               {previa?.mensagem && (
                 <pre className="whitespace-pre-wrap rounded border border-slate-700 bg-slate-950 p-2 font-sans text-[11px] text-slate-200">{previa.mensagem}</pre>
               )}
+              {semNadaPago && (
+                <p role="alert" className="rounded border border-amber-600/50 bg-amber-950/30 px-2 py-1.5 font-semibold text-amber-200">
+                  {AVISO_SEM_NADA_PAGO}
+                </p>
+              )}
               <button
                 type="button"
-                onClick={() => void enviar()}
+                onClick={() => {
+                  // O primeiro clique, sem nada pago registado, só arma o «Enviar na mesma».
+                  if (semNadaPago && !naMesma) {
+                    setNaMesma(true);
+                    return;
+                  }
+                  void enviar();
+                }}
                 disabled={!podeEnviar}
                 title={eAdministrador ? undefined : "Só administradores"}
                 className="flex items-center gap-1.5 rounded-lg bg-acao px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
               >
                 {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
-                Enviar {eur(c.modo === "referencia" ? c.aPedir : c.total)}
+                {semNadaPago && naMesma ? "Enviar na mesma" : "Enviar"} {eur(c.modo === "referencia" ? c.aPedir : c.total)}
               </button>
             </>
           )}

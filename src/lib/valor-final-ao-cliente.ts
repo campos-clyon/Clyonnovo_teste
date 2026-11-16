@@ -9,6 +9,7 @@ import { temDividaDoProfissional } from "./divida-do-profissional";
 import type { RegimeDoProfissional } from "./pagamento-directo";
 import type { TrabalhoAPagar } from "./acesso-ao-pagamento";
 import type { Pagamento } from "./pagamentos-na-base";
+export { AVISO_SEM_NADA_PAGO, semNadaPagoRegistado } from "./aviso-sem-nada-pago";
 
 /**
  * «ENVIAR O VALOR FINAL AO CLIENTE» — d38 v2, commit d (15-11-2026).
