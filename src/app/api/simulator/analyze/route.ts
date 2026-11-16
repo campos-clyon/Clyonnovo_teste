@@ -615,9 +615,9 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
 
   if (order.serviceType === "mudanca") {
     const elevLabel = (v?: string) =>
-      v === "yes" ? "Sim, funciona" : v === "small" ? "Sim, pequeno" : v === "no" ? "Não tem" : "(não especificado)";
+      v === "yes" ? "Sim, funciona" : v === "small" ? "Sim, pequeno" : v === "no" ? "Não tem" : v === "unknown" ? "Não sabe" : "(não especificado)";
     const parkLabel = (v?: string) =>
-      v === "door" ? "À porta" : v === "under_20m" ? "Até 20m" : v === "over_30m" ? "Mais de 30m" : v === "difficult" ? "Difícil" : "(não especificado)";
+      v === "door" ? "À porta" : v === "under_20m" ? "Até 20m" : v === "over_30m" ? "Mais de 30m" : v === "difficult" ? "Difícil" : v === "unknown" ? "Não sabe" : "(não especificado)";
 
     lines.push(
       "",

@@ -86,7 +86,9 @@ import {
   trackSimulatorContact,
   trackSimulatorEstimate,
   trackSimulatorOrderConfirmed,
+  trackSimulatorStepComplete,
 } from "@/lib/analytics";
+import type { PassoDoFunil } from "@/lib/funil-do-simulador";
 import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { CHAVE_DO_RASCUNHO, rascunhoParaGuardar, rascunhoValido } from "@/lib/rascunho-do-simulador";
@@ -181,6 +183,17 @@ export default function SimulatorThreePhaseForm() {
    * móveis, e é aí que repetir o passo mais lento por causa de outro custa.
    */
   const fotosJaEnviadas = useRef(new Map<File, FicheiroEnviado>());
+  /*
+   * O FUNIL (d56, 16-11-2026): cada passo conta uma vez por simulação — ir e
+   * voltar entre os passos, ou tentar outra vez depois de uma falha, não
+   * conta a dobrar. Recomeça com «Novo pedido».
+   */
+  const passosContados = useRef(new Set<PassoDoFunil>());
+  const contarPasso = (passo: PassoDoFunil) => {
+    if (passosContados.current.has(passo)) return;
+    passosContados.current.add(passo);
+    trackSimulatorStepComplete(passo, formData.serviceType);
+  };
   // Fotos que o cliente escolheu mas que não chegaram a subir
   const [fotosNaoEnviadas, setFotosNaoEnviadas] = useState(0);
   /** O rascunho voltou ao abrir: diz-se, com a saída para começar de novo. */
@@ -516,6 +529,7 @@ export default function SimulatorThreePhaseForm() {
       return;
     }
 
+    contarPasso("enviar");
     setIsAnalyzing(true);
     setError(null);
     setFalhaNoEnvio(null);
@@ -766,6 +780,7 @@ export default function SimulatorThreePhaseForm() {
     setEmailDoLink(null);
     setFalhaNoEnvio(null);
     fotosJaEnviadas.current.clear();
+    passosContados.current.clear();
     setPasso("analise");
     setFotosFeitas(0);
     setPhase(1);
@@ -1256,6 +1271,7 @@ export default function SimulatorThreePhaseForm() {
                       onClick={() => {
                         if (phase === 1) {
                           // Avança de fase 1 (serviço) para fase 2 (local)
+                          contarPasso("passo_2");
                         } else if (phase === 2) {
                           // Marcar tentativa para mostrar erros de validação
                           if (!canProceedToPhase3) {
@@ -1263,6 +1279,7 @@ export default function SimulatorThreePhaseForm() {
                             return;
                           }
                           setPhase2Attempted(false);
+                          contarPasso("passo_3");
                           trackSimulatorContact({
                             service: formData.serviceType ?? undefined,
                           });
@@ -1684,6 +1701,7 @@ function AccessFields({
           <option value="under_20m">Sim, até 20 metros</option>
           <option value="over_30m">Mais de 30 metros</option>
           <option value="difficult">Estacionamento difícil</option>
+          <option value="unknown">Não sei</option>
         </select>
       </div>
 
@@ -2187,6 +2205,7 @@ function Phase2Location({
           <option value="under_20m">Sim, até 20 metros</option>
           <option value="over_30m">Mais de 30 metros</option>
           <option value="difficult">Estacionamento difícil</option>
+          <option value="unknown">Não sei</option>
         </select>
         {missingParking && <p className="text-xs text-red-600 mt-1">Estacionamento obrigatório</p>}
       </div>

@@ -5,6 +5,8 @@
 import { trackLeadEvent } from "@/lib/track-contact";
 import { contarCliqueDeWhatsAppNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { paginaDaEquipa } from "@/lib/pagina-da-equipa";
+import { origemDaVisita } from "@/lib/origem-da-visita";
+import { EVENTO_DO_FUNIL, NUMERO_DO_PASSO, tipoDaOrigem, type PassoDoFunil } from "@/lib/funil-do-simulador";
 
 declare global {
   interface Window {
@@ -97,8 +99,21 @@ export function trackSimulatorContact(data: { name?: string; phone?: string; ema
   });
 }
 
-export function trackSimulatorStepComplete(step: number, stepName: string): void {
-  trackEvent("simulator_step_complete", { step_number: step, step_name: stepName });
+/**
+ * Um passo do simulador acabado (d56, 16-11-2026): do 1 para o 2, do 2 para
+ * o 3, e o Enviar. Vai para o GA4 com o serviço e a origem (pago/orgânico), e
+ * para a base só o passo, o serviço e as UTM — sem dados da pessoa — para o
+ * funil do Início do backoffice (funil-do-simulador.ts).
+ */
+export function trackSimulatorStepComplete(passo: PassoDoFunil, servico?: string | null): void {
+  const service = servico || "sem_servico";
+  trackEvent("simulator_step_complete", {
+    step_number: NUMERO_DO_PASSO[passo],
+    step_name: passo,
+    service,
+    origem: tipoDaOrigem(origemDaVisita()),
+  });
+  trackLeadEvent({ type: EVENTO_DO_FUNIL, action: "Simulador: " + passo, label: passo, service });
 }
 
 export function trackSimulatorEstimate(

@@ -24,6 +24,8 @@ import dynamic from "next/dynamic";
  * gráficos pesam) para o resumo do dia aparecer primeiro.
  */
 const DesempenhoDoInicio = dynamic(() => import("@/components/admin/DesempenhoDoInicio"), { ssr: false });
+// O simulador passo a passo (d56, 16-11-2026).
+const FunilDoSimulador = dynamic(() => import("@/components/admin/FunilDoSimulador"), { ssr: false });
 
 /**
  * O INÍCIO — o que precisa de si, hoje.
@@ -382,6 +384,7 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
       )}
 
       <DesempenhoDoInicio />
+      <FunilDoSimulador />
     </div>
   );
 }
