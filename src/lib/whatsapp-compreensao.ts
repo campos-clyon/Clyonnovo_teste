@@ -318,7 +318,9 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - UMA GARAGEM NÃO É UM R/C. «É uma garagem» não diz o piso: não preenchas "andar". «Garagem no -3», «piso -2», «AndR -3» (com gralha) → "andar": "-3" ou "-2", COM o sinal de menos — nunca "3". «Cave» é "-1".
 - A CORRECÇÃO DEPOIS DO RESUMO: «Isso é uma garagem no -3. Tudo o resto está ok» é uma correcção do andar ("andar": "-3"), e a intenção é "informar" — não "confirmar": ele ainda não viu o resumo certo.
 - A LIMPEZA DEPOIS DE ESVAZIAR FAZ-SE: «limpeza profunda da garagem, incluindo lavagem do pavimento» fica na "descricao" e o serviço continua a ser o esvaziamento ("esvaziamento_garagem").
-- «Consegue se houver lugar, senão fica em segunda fila» à pergunta da carrinha é "estacionamento": "sim" — e «segunda fila» NUNCA é segunda-feira nem "quando".`;
+- «Consegue se houver lugar, senão fica em segunda fila» à pergunta da carrinha é "estacionamento": "sim" — e «segunda fila» NUNCA é segunda-feira nem "quando".
+- O LINK DE UM ANÚNCIO DE CASA (idealista, imovirtual, kasas-portugal, casa.sapo, supercasa, remax, era, century21…) diz a zona e a tipologia NO PRÓPRIO ENDEREÇO: «…/apartamento-t3-com-boas-areas-na-mina-de-agua-amadora/…» é um T3 na Mina de Água, Amadora → "codigoPostal": "Amadora". O endereço não é a morada (não tem rua nem número), e em "resposta" nunca digas que abriste ou viste o anúncio.
+- «Orçamento», «Preço?», «Quanto custa?» sozinhos, a meio das perguntas, NÃO são resposta à pergunta em cima: o cliente quer o preço. Não preenchas campo nenhum com isso, e nunca o leias como morada, nome ou descrição.`;
 
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
 export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:

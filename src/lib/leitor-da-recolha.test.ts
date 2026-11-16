@@ -377,3 +377,24 @@ describe("a garagem no -3 (13-11-2026) — as frases dele", () => {
     expect(pareceQuando("Pode ser na segunda de manhã")).toBe(true);
   });
 });
+
+describe("a conversa do anúncio (16-11-2026, d48) — as frases dele", () => {
+  it("«segundo piso» é o 2.º andar", () => {
+    expect(andarNaFrase("Sem elevador segundo piso sofás terão de ser desmanchados para sair")).toBe("2");
+  });
+
+  it("«Orçamento» sozinho, a meio, é o cliente a pedir o preço — e não a morada", async () => {
+    const { soPedeOPreco } = await import("./orcamento-a-meio");
+    expect(soPedeOPreco("Orçamento")).toBe(true);
+    expect(soPedeOPreco("Orçamento?")).toBe(true);
+    expect(soPedeOPreco("Rua das Gaivotas 12, quanto custa?")).toBe(false);
+  });
+
+  it("o link do anúncio diz a zona e a tipologia; o número dele não é a porta", async () => {
+    const { lerAnuncioDeImovel } = await import("./anuncio-de-imovel");
+    const a = lerAnuncioDeImovel(
+      "(A1) estão neste site https://www.kasas-portugal.com/imovel/apartamento-t3-com-boas-areas-na-mina-de-agua-amadora/99999999",
+    );
+    expect(a).toEqual({ portal: "kasas-portugal", tipologia: "T3", localidade: "Mina de Água", concelho: "Amadora" });
+  });
+});

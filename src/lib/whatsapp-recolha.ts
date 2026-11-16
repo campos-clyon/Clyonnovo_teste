@@ -97,6 +97,7 @@ import { datasDitas, primeiraPreferida, quandoComVariasDatas } from "./datas-dit
 import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
 import { COMO_FUNCIONA, perguntaOQueAconteceAgora } from "./perguntas-frequentes-da-vitoria";
 import { separarASegundaMorada, type SegundaMorada } from "./segunda-morada";
+import type { AnuncioDeImovel } from "./anuncio-de-imovel";
 
 /*
  * AS IMAGENS AGRADECEM-SE, E O QUE MOSTRAM NÃO SE PERGUNTA — 20-10-2026.
@@ -258,6 +259,20 @@ export type DadosDaRecolha = {
    */
   aConfirmarEsvaziamento?: "esvaziamento_casa" | "esvaziamento_empresa";
   esvaziamentoPerguntado?: boolean;
+  /**
+   * O ANÚNCIO DA CASA QUE ELE MANDOU — 16-11-2026 (d48). O que o endereço do
+   * link diz (a tipologia, a terra, o andar), lido uma vez por recolha
+   * (`anuncioLido`). Ver `anuncio-de-imovel.ts`.
+   */
+  anuncio?: AnuncioDeImovel;
+  anuncioLido?: boolean;
+  /**
+   * BASTA A ZONA — 16-11-2026 (d48). Quem pede o orçamento a meio, ou a quem
+   * se ofereceu «ou diga-me só a zona», regista o pedido com a localidade ou
+   * o código postal, sem a rua: a morada certa pede-se depois de aceitar uma
+   * proposta. O pedido localiza-se pela localidade (`geocodificarLocalidade`).
+   */
+  soAZona?: boolean;
   /**
    * PEDIU A LIMPEZA DEPOIS DE ESVAZIAR — 14-11-2026 (o dono, d25 v2: os
    * parceiros fazem-na). Vai na descrição do pedido; `lavagem` quando
@@ -1796,9 +1811,10 @@ function respondido(passo: PassoDaRecolha, d: DadosDaRecolha): boolean {
     case "nome":
       return Boolean(d.contactName);
     case "morada":
-      return Boolean(d.address);
+      // Basta a zona (d48): com a localidade ou o código postal, a rua fica para depois.
+      return Boolean(d.address) || (d.soAZona === true && Boolean(d.city || d.postalCode));
     case "codigoPostal":
-      return Boolean(d.postalCode && d.city);
+      return d.soAZona === true ? Boolean(d.postalCode || d.city) : Boolean(d.postalCode && d.city);
     case "moradaDestino":
       return Boolean(d.moradaDestino);
     case "codigoPostalDestino":
@@ -3343,16 +3359,19 @@ const OFERECER_UMA_PESSOA =
  * arrogância. Quem não percebeu fomos nós: pede-se desculpa, e pede-se por
  * favor (ver `voz-da-vitoria`).
  */
-function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
+export function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
   switch (passo) {
     case "nome":
       return "Peço desculpa, não apanhei bem o seu nome. Como se chama?";
+    // Com outras palavras E uma saída: basta a zona (16-11-2026, d48).
     case "morada":
-      return "Peço desculpa, não apanhei bem a rua e o número da porta. Pode escrevê-los outra vez, por favor? É por aí que o parceiro se orienta.";
+      return d.city || d.postalCode
+        ? `Peço desculpa, não apanhei bem a rua e o número da porta. Se não os tiver à mão, sigo só com a zona (${d.city || d.postalCode}) — a morada certa fica para quando aceitar uma proposta.`
+        : "Peço desculpa, não apanhei bem a rua e o número da porta. Pode escrevê-los outra vez, por favor? Ou, se preferir, diga-me só a zona — a localidade ou o código postal.";
     case "codigoPostal":
       return d.postalCode
         ? "Peço desculpa, não apanhei bem. Qual é a localidade?"
-        : "Peço desculpa, não apanhei bem o código postal. Pode escrevê-lo outra vez, por favor?";
+        : "Peço desculpa, não apanhei bem o código postal. Pode escrevê-lo outra vez, por favor? Ou diga-me só a localidade.";
     case "moradaDestino":
       return "A rua e o número do destino, por favor.";
     case "codigoPostalDestino":
@@ -4005,8 +4024,10 @@ export function responderNaRecolha(
         else if (estado.passo === "descricao") d.description = t.slice(0, 4000);
       }
       if (!respondido(estado.passo, d)) {
+        // Na morada e no código postal, a saída da zona passa a valer (d48).
+        const abre = estado.passo === "morada" || estado.passo === "codigoPostal";
         return {
-          estado: { passo: estado.passo, dados: d },
+          estado: { passo: estado.passo, dados: abre ? { ...d, soAZona: true } : d },
           resposta: outraVez(estado.passo, d) + (n >= 2 ? OFERECER_UMA_PESSOA : ""),
         };
       }
@@ -4144,7 +4165,21 @@ function reperguntar(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
   if (passo === "servico") {
     return "Com todo o gosto! Diga-me o que precisa de levar ou fazer, e em que zona — por exemplo «tenho um sofá e um colchão para tirar, em Cascais».";
   }
-  return `Peço desculpa, não apanhei bem. ${perguntaDo(passo, dados, false)}`;
+  /*
+   * NUNCA «NÃO APANHEI» SEGUIDO DA MESMA PERGUNTA — 16-11-2026 (d48). O João
+   * escreveu «Orçamento» à pergunta da morada e leu «Peço desculpa, não
+   * apanhei bem. Qual é a morada…» — a mesma pergunta; ao segundo
+   * «Orçamento» a frase saía igual, o envio calou-a por repetida
+   * (`jaFoiDito`) e ele ficou sem resposta. Pergunta-se por outras palavras,
+   * com uma saída (`outraVez`).
+   */
+  return outraVez(passo, dados);
+}
+
+/** A reformulação, com o que ela abre: na morada, a zona passa a chegar (d48). */
+function reperguntarComOQueAbre(passo: PassoDaRecolha, dados: DadosDaRecolha): RespostaDaRecolha {
+  const d = passo === "morada" || passo === "codigoPostal" ? { ...dados, soAZona: true } : dados;
+  return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
 }
 
 
@@ -4729,7 +4764,7 @@ export function responderComCompreensao(
     if (contexto.perguntaPorFazer && passo !== "servico") {
       return { estado: { passo, dados: d }, resposta: perguntaDo(passo, d, false, agora) };
     }
-    return { estado: { passo, dados: d }, resposta: reperguntar(passo, d) };
+    return reperguntarComOQueAbre(passo, d);
   }
 
   /*

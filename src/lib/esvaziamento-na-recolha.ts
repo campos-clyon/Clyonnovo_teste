@@ -98,6 +98,9 @@ export function semAPerguntaDoEsvaziamento(estado: EstadoDaRecolha): EstadoDaRec
 
 function respostaAoEsvaziamento(texto: string): "sim" | "nao" | null {
   const t = semAcentos(texto).replace(/[.!,]+$/, "").trim();
+  // A pergunta do anúncio (d48): «só alguns móveis» fica recolha; «a casa toda» é o esvaziamento.
+  if (/\b(so|apenas)\s+(alguns|algumas|uns|umas|parte)\b|^alguns\s+moveis\b|\bnao\s+(e\s+)?(para\s+esvaziar|a\s+casa\s+toda)\b/.test(t)) return "nao";
+  if (/\b(a\s+)?casa\s+(toda|inteira)\b|^(e\s+)?(para\s+)?esvaziar\b|^(e\s+)?tudo\b/.test(t)) return "sim";
   if (/\b(so|apenas)\s+(a\s+)?recolha\b|\bmanter\s+(a\s+)?recolha\b|\bfica\s+(como\s+)?recolha\b|\bso\s+(essas|estas|esses|estes|isso|isto)\b/.test(t)) return "nao";
   if (/\b(espaco\s+todo|tudo\s+incluido|e\s+um\s+esvaziamento|esvaziamento\s+(sim|mesmo)|quero\s+o\s+esvaziamento)\b/.test(t)) return "sim";
   if (/^(sim|s|pode ser|quero|claro|isso|exato|exacto|de acordo|prefiro|prefiro assim|e isso|sim,? por favor|sim,? quero)\b/.test(t)) return "sim";

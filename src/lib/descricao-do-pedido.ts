@@ -1,4 +1,5 @@
 import type { DadosDaRecolha } from "./whatsapp-recolha";
+import { linhaDoAnuncio } from "./anuncio-de-imovel";
 import { DESCRICAO_DAS_FOTOS } from "./leitor-da-recolha";
 import { segundaParagemPorExtenso } from "./segunda-morada";
 
@@ -601,6 +602,9 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
 
   const acessoDito = semContactos(limpo(d.acessoDito), d.contactName);
   if (acessoDito) linhas.push(`Acesso (dito pelo cliente): ${acessoDito}`);
+
+  // O que o link do anúncio da casa diz — a tipologia, o andar, a terra (16-11-2026, d48).
+  if (d.anuncio) linhas.push(linhaDoAnuncio(d.anuncio));
 
   // O que ele disse que não responde a pergunta nenhuma — «o frigorífico fica» (27-10-2026).
   const notas = (Array.isArray(d.notas) ? d.notas : [])

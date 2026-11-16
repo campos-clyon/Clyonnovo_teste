@@ -264,15 +264,20 @@ export async function recolherPedidoPorWhatsApp(
      * escreveu nesta recolha; e o que o esvaziamento de empresa grava. Ver
      * `esvaziamento-na-recolha.ts`.
      */
-    const esv = await import("@/lib/esvaziamento-na-recolha");
     const textosDaRecolha = [...ditosDestaRecolha(fio, texto), texto];
-    const aoEsvaziamento = esv.responderAoEsvaziamento(e, texto, agora, textosDaRecolha);
-    if (aoEsvaziamento) return aoEsvaziamento;
-    e = esv.semAPerguntaDoEsvaziamento(e);
-    const r = esv.comOQueAEmpresaPrecisa(
-      esv.perguntarSeEUmEsvaziamento(await responderAoTexto(e), textosDaRecolha, agora),
-      textosDaRecolha,
-    );
+    /*
+     * O TURNO, À VOLTA DA LEITURA DE SEMPRE — ver `turno-da-recolha.ts`: o
+     * link do anúncio da casa (d48), a resposta ao «parece um esvaziamento»
+     * (d43), o «Orçamento» a meio (d48), a leitura, e depois a pergunta do
+     * anúncio ou do esvaziamento no lugar da seguinte.
+     */
+    const { responderAoTurno } = await import("@/lib/turno-da-recolha");
+    const r = await responderAoTurno(e, texto, agora, {
+      textos: textosDaRecolha,
+      fotos,
+      jaExplicouOPreco: jaExplicouOPreco(fio),
+      lerOTexto: responderAoTexto,
+    });
     /*
      * IMAGENS COM TEXTO: a resposta ao texto, com o «Obrigada pelas
      * imagens!» à frente, e a marca de que ele as mandou — para no fim não se
@@ -424,7 +429,15 @@ export async function recolherPedidoPorWhatsApp(
     return;
   }
 
-  const r = await responder(estado);
+  /*
+   * NUNCA CALADA — 16-11-2026 (d48). Se o que ia sair já saiu há pouco (o
+   * envio engolia-o por repetido) ou não ia sair nada, a conversa passa a uma
+   * pessoa com o motivo, e ele ouve que um colega responde já. Ver
+   * `nunca-calada.ts`.
+   */
+  const { semFicarCalada } = await import("@/lib/nunca-calada");
+  const lidaAgora = await responder(estado);
+  const r = texto.trim() ? semFicarCalada(lidaAgora, fio, agora, { passo: estado.passo, texto }) : lidaAgora;
 
   if (r.pedirPessoa) {
     // Falar primeiro — ver a nota acima: o portão engole o que sair depois. E

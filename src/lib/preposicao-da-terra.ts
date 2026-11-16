@@ -19,6 +19,16 @@ const ARTIGO: Record<string, "o" | "a" | "os" | "as"> = {
   Barreiro: "o",
   Moita: "a",
   Montijo: "o",
+  // As terras que a Vitória lê no link de um anúncio (16-11-2026, d48): «na Mina de Água».
+  "Mina de Água": "a",
+  Damaia: "a",
+  Reboleira: "a",
+  Brandoa: "a",
+  Buraca: "a",
+  "Venda Nova": "a",
+  Falagueira: "a",
+  Venteira: "a",
+  Pontinha: "a",
   // As regiões que as páginas de cidade nomeiam («noutras zonas da Margem Sul»).
   "Margem Sul": "a",
   "Grande Lisboa": "a",

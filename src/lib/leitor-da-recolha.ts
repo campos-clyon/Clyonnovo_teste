@@ -205,7 +205,8 @@ export function andarNaFrase(texto: string): string | null {
     /(?<![\d\w])-?\s*(\d{1,2})\s*-?\s*(?:esq|esqo|esquerdo|dto|dt|dta|dir|direito|frt|fte|frente)\b/,
   );
   if (comLado) return String(Number(comLado[1]));
-  const extenso = t.match(/\b(primeiro|segundo|terceiro|quarto|quinto|sexto|setimo|oitavo|nono|decimo)\s+andar\b/);
+  // «Sem elevador segundo piso» — o João, 16-11-2026 (d48): o piso por extenso também é o andar.
+  const extenso = t.match(/\b(primeiro|segundo|terceiro|quarto|quinto|sexto|setimo|oitavo|nono|decimo)\s+(?:andar|piso)\b/);
   if (extenso) return ANDAR_POR_EXTENSO[extenso[1]];
   /*
    * «PÁTIO AO NÍVEL DO CHÃO» — 26-10-2026. É o rés-do-chão dito por outras
