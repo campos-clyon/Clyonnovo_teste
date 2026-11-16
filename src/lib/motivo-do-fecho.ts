@@ -45,10 +45,15 @@ export function lerQuantoQueriaPagar(v: unknown, motivo: ChaveDoMotivo | null): 
   return Math.round(n * 100) / 100;
 }
 
-/** Esta mudança de estado fecha o pedido (de aberto para cancelado, arquivado ou rejeitado)? */
+/**
+ * Esta mudança de estado pede o motivo? Só quando o estado PASSA a cancelado,
+ * arquivado ou rejeitado — o novo é um destes e é diferente do anterior (CEO,
+ * 16-11-2026). Guardar sem mudar de estado (as páginas «Aprovado ✓» mandam
+ * sempre o estado) nunca pede.
+ */
 export function fechaOPedido(antes: string | null | undefined, depois: unknown): boolean {
   const fecha = (s: unknown) => (ESTADOS_QUE_FECHAM as readonly string[]).includes(String(s ?? ""));
-  return typeof depois === "string" && fecha(depois) && !fecha(antes);
+  return typeof depois === "string" && fecha(depois) && String(antes ?? "") !== depois;
 }
 
 export type MotivoLido =

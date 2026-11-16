@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { parceirosParaOValorUnico, pedidosComNegociacoes } from "@/lib/db";
 import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
-import { lembretesDasPropostas, mensagemDoLembrete, precisaDeLink, type PedidoParaOLembrete } from "@/lib/propostas-sem-resposta";
+import { lembretesDasPropostas, mensagemDoLembrete, type PedidoParaOLembrete } from "@/lib/propostas-sem-resposta";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +41,6 @@ export async function GET(req: NextRequest) {
     const lembretes = lembretesDasPropostas(paraOLembrete, new Date()).map((l) => ({
       ...l,
       mensagem: mensagemDoLembrete(l),
-      precisaDeLink: precisaDeLink(l),
     }));
     return NextResponse.json({ lembretes });
   } catch (e) {

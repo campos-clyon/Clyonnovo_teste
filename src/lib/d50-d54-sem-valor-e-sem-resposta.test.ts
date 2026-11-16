@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { HORAS_SEM_VALOR, semValorHaMaisDe4h, seloDePorEnviar, semValorParaOInicio } from "./pedido-sem-valor";
-import { lembreteDasPropostas, lembretesDasPropostas, mensagemDoLembrete, LUGAR_DO_LINK } from "./propostas-sem-resposta";
+import { lembreteDasPropostas, lembretesDasPropostas, mensagemDoLembrete } from "./propostas-sem-resposta";
 import {
   MOTIVOS_DO_FECHO,
   exigirMotivoDoFecho,
@@ -107,9 +107,9 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
     const l = lembreteDasPropostas(pedido() as never, agora)!;
     expect(l.fase).toBe("24h");
     expect(l.quantas).toBe(2);
-    expect(mensagemDoLembrete(l, "https://clyon.pt/pedido/abc")).toBe(
+    expect(mensagemDoLembrete(l)).toBe(
       "Olá! Já tem 2 propostas de parceiros verificados para o seu pedido #583, desde 350 € + IVA = 430,50 €. " +
-        "Quer que reservemos a mais em conta? Responda SIM, ou escolha no link do pedido: https://clyon.pt/pedido/abc",
+        "Quer que reservemos a mais em conta? Responda SIM, ou escolha no link do pedido que lhe enviámos.",
     );
   });
 
@@ -126,9 +126,9 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
   it("uma proposta só, e por hora", () => {
     const p = pedido({ negociacoes: [neg(1, 50)], baseDoPreco: "hora", id: 589 });
     const l = lembreteDasPropostas(p as never, agora)!;
-    expect(mensagemDoLembrete(l, "L")).toBe(
+    expect(mensagemDoLembrete(l)).toBe(
       "Olá! Já tem uma proposta de um parceiro verificado para o seu pedido #589: 50 € + IVA = 61,50 € por hora. " +
-        "Quer que a reservemos? Responda SIM, ou veja-a no link do pedido: L",
+        "Quer que a reservemos? Responda SIM, ou veja-a no link do pedido que lhe enviámos.",
     );
   });
 
@@ -141,7 +141,7 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
       "Olá! As propostas do pedido #583 continuam válidas. Se já não precisar, diga-nos e fechamos o pedido. " +
         "Se o preço não serve, diga quanto queria pagar e falamos com os parceiros.",
     );
-    expect(m).not.toContain(LUGAR_DO_LINK);
+    expect(m).not.toContain("link");
   });
 
   it("antes das 24 h, nada; conta desde o envio do orçamento quando há", () => {
@@ -162,9 +162,9 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
 
   it("«verificados» só quando todos os que propuseram o são", () => {
     const p = pedido({ negociacoes: [neg(1, 400), neg(2, 350, { verificado: false })] });
-    const m = mensagemDoLembrete(lembreteDasPropostas(p as never, agora)!, "L");
+    const m = mensagemDoLembrete(lembreteDasPropostas(p as never, agora)!);
     expect(m.startsWith("Olá! Já tem 2 propostas de parceiros para o seu pedido #583, desde 350 € + IVA = 430,50 €.")).toBe(true);
-    const um = mensagemDoLembrete(lembreteDasPropostas(pedido({ negociacoes: [neg(1, 50, { verificado: false })] }) as never, agora)!, "L");
+    const um = mensagemDoLembrete(lembreteDasPropostas(pedido({ negociacoes: [neg(1, 50, { verificado: false })] }) as never, agora)!);
     expect(um).toContain("Já tem uma proposta de um parceiro para o seu pedido #583: ");
   });
 
@@ -175,9 +175,12 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
 
   it("a mensagem não se envia sozinha: o Início só copia", () => {
     const c = semComentarios(ler("src/components/admin/PropostasSemResposta.tsx"));
-    expect(c).toContain("navigator.clipboard.writeText(texto)");
+    expect(c).toContain("navigator.clipboard.writeText(l.mensagem)");
     expect(c).not.toMatch(/enviar_pela_clyon|whatsapp\/enviar|wa\.me/);
-    expect(c).toContain("paraCopiar: true");
+    // Copiar nunca chama o reenviar (gera um link novo e mata o antigo), nem a rota do link.
+    expect(c).not.toContain("negociacoes/reenviar");
+    expect(c).not.toContain("paraCopiar");
+    expect(c.slice(c.indexOf("async function copiar"), c.indexOf("if (!lista"))).not.toContain("fetch(");
   });
 });
 
@@ -217,6 +220,10 @@ describe("d54 — o motivo de cancelar ou arquivar", () => {
     expect(fechaOPedido("aprovado", "arquivado")).toBe(true);
     expect(fechaOPedido("pendente", "rejeitado")).toBe(true);
     expect(fechaOPedido("cancelado", "cancelado")).toBe(false);
+    expect(fechaOPedido("arquivado", "arquivado")).toBe(false);
+    expect(fechaOPedido("rejeitado", "rejeitado")).toBe(false);
+    // Passar de um fechado a outro é uma mudança de estado: pede.
+    expect(fechaOPedido("cancelado", "arquivado")).toBe(true);
     expect(fechaOPedido("arquivado", "pendente")).toBe(false);
     expect(fechaOPedido("pendente", "concluido")).toBe(false);
   });
@@ -242,6 +249,16 @@ describe("d54 — o motivo de cancelar ou arquivar", () => {
       { servico: "recolha_moveis", total: 3, porMotivo: { preco: 2, sem_resposta: 1 } },
       { servico: "mudanca", total: 1, porMotivo: { repetido: 1 } },
     ]);
+  });
+
+  it("as páginas «Aprovado ✓» só pedem o motivo quando o estado muda para fechado", () => {
+    for (const f of ["src/components/admin/PedidoDetailModal.tsx", "src/app/admin/pedidos/[id]/AdminPedidoDetalheClient.tsx"]) {
+      const c = semComentarios(ler(f));
+      expect(c, f).toMatch(/motivoSeFechar\(order\.status, editStatus\)/);
+    }
+    // Guardar com o mesmo estado (o «Aprovado ✓» manda sempre o estado) não pergunta.
+    expect(fechaOPedido("cancelado", "cancelado")).toBe(false);
+    expect(fechaOPedido("aprovado", "aprovado")).toBe(false);
   });
 
   it("todas as rotas da equipa que cancelam ou arquivam exigem o motivo (422)", () => {

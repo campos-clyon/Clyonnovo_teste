@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Copy, Loader2 } from "lucide-react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { LUGAR_DO_LINK, type Lembrete } from "@/lib/propostas-sem-resposta";
+import type { Lembrete } from "@/lib/propostas-sem-resposta";
 
 /**
  * PROPOSTAS HÁ MAIS DE 24 H SEM RESPOSTA DO CLIENTE — d54, 16-11-2026.
@@ -12,13 +12,12 @@ import { LUGAR_DO_LINK, type Lembrete } from "@/lib/propostas-sem-resposta";
  * «Copiar mensagem»: a mensagem vai para a área de transferência com os
  * valores já postos, e NADA se envia daqui — quem a copia é quem a manda.
  *
- * A das 24 h leva o link do pedido. O link do cliente não se guarda em claro
- * (só o hash), por isso copiar gera um link novo pela rota de sempre
- * («gerar link para enviar à mão») — e o anterior deixa de funcionar, como
- * diz o histórico do pedido. A das 72 h não leva link.
+ * COPIAR NÃO MEXE NO LINK DO CLIENTE (CEO, 16-11-2026): a mensagem remete para
+ * o link que ele já recebeu. Copiar e não enviar não pode deixá-lo sem acesso;
+ * um link novo pede-se de propósito, no reenviar da Mesa.
  */
 
-type LembreteComMensagem = Lembrete & { mensagem: string; precisaDeLink: boolean };
+type LembreteComMensagem = Lembrete & { mensagem: string };
 
 export default function PropostasSemResposta({ token, onAbrir }: { token: string | null; onAbrir: () => void }) {
   const [lista, setLista] = useState<LembreteComMensagem[] | null>(null);
@@ -43,30 +42,10 @@ export default function PropostasSemResposta({ token, onAbrir }: { token: string
   useAutoRefresh(() => carregar(), { enabled: Boolean(token) });
 
   async function copiar(l: LembreteComMensagem) {
-    if (!token) return;
     setACopiar(l.pedidoId);
     try {
-      let texto = l.mensagem;
-      if (l.precisaDeLink) {
-        const r = await fetch("/api/admin/negociacoes/reenviar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ pedidoId: l.pedidoId, para: "cliente", paraCopiar: true }),
-        });
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok || typeof d.token !== "string") {
-          setEstado((e) => ({ ...e, [l.pedidoId]: d.error ?? "Não foi possível gerar o link do pedido." }));
-          return;
-        }
-        texto = texto.split(LUGAR_DO_LINK).join(`${window.location.origin}/pedido/${d.token}`);
-      }
-      await navigator.clipboard.writeText(texto);
-      setEstado((e) => ({
-        ...e,
-        [l.pedidoId]: l.precisaDeLink
-          ? "Copiada, com um link novo (o anterior deixou de funcionar). Não foi enviada."
-          : "Copiada. Não foi enviada.",
-      }));
+      await navigator.clipboard.writeText(l.mensagem);
+      setEstado((e) => ({ ...e, [l.pedidoId]: "Copiada. Não foi enviada." }));
     } catch {
       setEstado((e) => ({ ...e, [l.pedidoId]: "Não foi possível copiar." }));
     } finally {
@@ -106,7 +85,7 @@ export default function PropostasSemResposta({ token, onAbrir }: { token: string
               <button
                 onClick={() => void copiar(l)}
                 disabled={aCopiar === l.pedidoId}
-                title={l.precisaDeLink ? "Copia a mensagem com um link novo do pedido" : "Copia a mensagem"}
+                title="Copia a mensagem (não mexe no link do cliente)"
                 className="ml-auto flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800/60 disabled:opacity-50"
               >
                 {aCopiar === l.pedidoId ? (

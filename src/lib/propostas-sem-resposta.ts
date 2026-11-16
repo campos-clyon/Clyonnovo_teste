@@ -41,8 +41,14 @@ import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 export const HORAS_DA_PRIMEIRA_LEMBRANCA = 24;
 export const HORAS_DA_ULTIMA_LEMBRANCA = 72;
 
-/** O lugar do link na mensagem das 24 h; quem copia troca-o por um link novo. */
-export const LUGAR_DO_LINK = "{link}";
+/*
+ * SEM LINK NA MENSAGEM — CEO, 16-11-2026. O link do cliente só se guarda em
+ * hash: dar um link aqui obrigava a gerar um novo, e o antigo morria mesmo
+ * que a mensagem nunca fosse enviada. A mensagem remete para o link que o
+ * cliente já tem; um link novo, quando for preciso, pede-se de propósito no
+ * reenviar que já existe.
+ */
+export const NO_LINK_QUE_TEM = "no link do pedido que lhe enviámos";
 
 type NegociacaoDoLembrete = Parameters<typeof propostasParaOCliente>[0][number] & {
   id?: number | string;
@@ -160,8 +166,8 @@ export function lembreteDasPropostas(p: PedidoParaOLembrete, agora: Date): Lembr
   };
 }
 
-/** A mensagem pronta a copiar. A das 24 h leva o link do pedido; a das 72 h não. */
-export function mensagemDoLembrete(l: Lembrete, link: string = LUGAR_DO_LINK): string {
+/** A mensagem pronta a copiar — sem link: remete para o que o cliente já recebeu. */
+export function mensagemDoLembrete(l: Lembrete): string {
   if (l.fase === "72h") {
     return (
       `Olá! As propostas do pedido #${l.pedidoId} continuam válidas. ` +
@@ -173,19 +179,14 @@ export function mensagemDoLembrete(l: Lembrete, link: string = LUGAR_DO_LINK): s
     return (
       `Olá! Já tem uma proposta de um parceiro${l.verificados ? " verificado" : ""} para o seu pedido #${l.pedidoId}: ` +
       `${l.valorDoCliente}${l.unidade}. Quer que a reservemos? ` +
-      `Responda SIM, ou veja-a no link do pedido: ${link}`
+      `Responda SIM, ou veja-a ${NO_LINK_QUE_TEM}.`
     );
   }
   return (
     `Olá! Já tem ${l.quantas} propostas de parceiros${l.verificados ? " verificados" : ""} para o seu pedido #${l.pedidoId}, ` +
     `desde ${l.valorDoCliente}${l.unidade}. Quer que reservemos a mais em conta? ` +
-    `Responda SIM, ou escolha no link do pedido: ${link}`
+    `Responda SIM, ou escolha ${NO_LINK_QUE_TEM}.`
   );
-}
-
-/** A mensagem leva link? (Só a das 24 h — e é a única que pede um link novo ao copiar.) */
-export function precisaDeLink(l: Lembrete): boolean {
-  return l.fase === "24h";
 }
 
 /** A lista do Início, pelo n.º do pedido, do maior para o menor. */
