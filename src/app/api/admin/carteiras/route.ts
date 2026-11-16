@@ -33,7 +33,7 @@ import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { resumoDaQuitacao } from "@/lib/quitacao-na-base";
 import { monteNasCarteiras } from "@/lib/a-quem-foi-o-dinheiro";
 import { dividasDosProfissionais } from "@/lib/cobrancas-na-base";
-import type { DividaNaCarteira } from "@/lib/carteira";
+import { verificaOPagamento, type DividaNaCarteira } from "@/lib/carteira";
 import type { EstadoDaParte } from "@/lib/cobrancas-ao-profissional";
 
 export const runtime = "nodejs";
@@ -79,6 +79,8 @@ type TrabalhoPorPagar = {
   confirmadoEm: string | null;
   /** Prova enviada, à espera de confirmação — ou ainda por fazer. */
   aguardaConfirmacao: boolean;
+  /** Confirmado, mas o dinheiro do cliente ainda não entrou na CLYON — d31 (o #612). */
+  clienteAindaNaoPagou?: boolean;
   /*
    * A CONTA DO TRABALHO, POR EXTENSO — 01-10-2026.
    *
@@ -444,6 +446,16 @@ export async function GET(req: NextRequest) {
         precoClienteClyon: l.precoClienteClyon as string | null,
       });
       const semPrecoAoCliente = doLucro.fonte === "falta_preco_ao_cliente";
+      /*
+       * O DINHEIRO DO CLIENTE JÁ ENTROU NA CLYON? — d31 (CEO e dono, 15-11-2026; o #612).
+       * Um Trabalho CLYON contava como recebido ao confirmar, e ficava «A pagar»
+       * (e na carteira dele «pode pedir a transferência») sem o cliente ter pago.
+       * A mesma pergunta da carteira dele (`oClientePagou`) e dos Pagamentos: o
+       * pagamento do cliente ligado à negociação; antes do corte de 01-10, sim.
+       */
+      const clienteJaPagou =
+        !verificaOPagamento({ negociacaoCriadaEm: (l.negociacaoCriadaEm as Date | string | null) ?? null }) ||
+        recebidos.has(Number(l.negociacaoId));
       const trabalho: TrabalhoPorPagar = {
         trabalhoClyon,
         negociacaoId: Number(l.negociacaoId),
@@ -484,9 +496,7 @@ export async function GET(req: NextRequest) {
         // Antes do IVA incluído, sem declaração, sem factura — como o «cliente pagou» da linha.
         conta: contaDaLinha(
           l,
-          clyonAntigo || lerForma(l.formaDePagamento) === "dinheiro"
-            ? l.confirmadoEm != null
-            : recebidos.has(Number(l.negociacaoId)),
+          lerForma(l.formaDePagamento) === "dinheiro" ? l.confirmadoEm != null : clienteJaPagou,
           true,
         ),
       };
@@ -521,6 +531,7 @@ export async function GET(req: NextRequest) {
         confirmadoEm: l.confirmadoEm,
         pagoEm: l.pagoEm,
         novoModelo: novo,
+        clientePagou: clienteJaPagou,
       });
       if (monte === "em_mao") {
         if (l.confirmadoEm != null) {
@@ -542,7 +553,9 @@ export async function GET(req: NextRequest) {
         if (!clyonAntigo) clyon.faturado = Math.round((clyon.faturado + clientePaga) * 100) / 100;
         continue;
       }
-      if (monte === "por_finalizar") {
+      // d31 (o #612): confirmado, mas o cliente ainda não pagou — ainda não se transfere.
+      if (monte === "a_espera_do_cliente") trabalho.clienteAindaNaoPagou = true;
+      if (monte === "por_finalizar" || monte === "a_espera_do_cliente") {
         clyon.porFinalizar = Math.round((clyon.porFinalizar + comissao) * 100) / 100;
         ficha.porFinalizar.push(trabalho);
         ficha.totalPorFinalizar = Math.round((ficha.totalPorFinalizar + recebe) * 100) / 100;

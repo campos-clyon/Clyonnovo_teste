@@ -12,6 +12,8 @@ import { destinoDoTrabalho, monteNasCarteiras, noSeparador, taxaDoPagoEmMao } fr
 import { noNovoModelo, type TrabalhoParaGerir } from "./trabalhos-para-gerir";
 import type { SeparadorDoDinheiro } from "./filtros-dos-pagamentos";
 import { dividaDoRegistoEmMao } from "./pago-em-mao";
+import { contaDaCarteira, RAZOES } from "./trabalhos-da-carteira";
+import type { TrabalhoNaCarteira } from "./carteira";
 
 /*
  * d31 (CEO e dono, 15-11-2026) — os Pagamentos do backoffice no modelo de
@@ -173,6 +175,64 @@ describe("d31 — as Carteiras (o #612)", () => {
     expect(monteNasCarteiras(t)).toBe("por_pagar");
     expect(monteNasCarteiras({ ...t, novoModelo: true })).toBe("em_mao");
   });
+
+  /*
+   * O #612 era um Trabalho CLYON (modelo antigo): confirmado, e a carteira dele
+   * já dizia «pode pedir a transferência» de 315 € que o cliente ainda não
+   * tinha pago. Um trabalho de cada modelo, com os mesmos números.
+   */
+  const agora = new Date("2026-11-16T12:00:00Z");
+  const naCarteira = (o: Partial<TrabalhoNaCarteira> = {}) =>
+    ({
+      negociacaoId: 612,
+      pedidoId: 612,
+      estado: "acordada",
+      valorAcordado: 350,
+      taxaCliente: 0,
+      taxaProfissional: 0.1,
+      formaDePagamento: "na_plataforma",
+      execucaoEnviadaEm: "2026-11-15T11:00:00Z",
+      confirmadoEm: "2026-11-15T11:40:00Z",
+      pagoEm: null,
+      clientePagouEm: null,
+      negociacaoCriadaEm: "2026-11-10T09:00:00Z",
+      pagoPelaClyon: true,
+      ...o,
+    }) as TrabalhoNaCarteira;
+  const linha = (t: TrabalhoNaCarteira) => contaDaCarteira([t], [], agora).linhas[0];
+
+  it("um Trabalho CLYON confirmado e sem o cliente ter pago nunca fica «pode pedir a transferência»", () => {
+    const c = contaDaCarteira([naCarteira()], [], agora);
+    expect(c.linhas[0]).toMatchObject({ grupo: "retido", razao: RAZOES.clienteNaoPagou, falta: 315 });
+    expect(c.resumo.podePedir).toBe(0);
+    expect(c.resumo.porReceber).toBe(0);
+    expect(c.resumo.clienteAindaNaoPagou).toBe(315);
+  });
+
+  it("o cliente pagou: fica disponível; e o que a CLYON já lhe transferiu continua recebido", () => {
+    expect(linha(naCarteira({ clientePagouEm: "2026-11-15T11:58:00Z" }))).toMatchObject({
+      grupo: "por_receber",
+      razao: RAZOES.podePedir,
+    });
+    expect(linha(naCarteira({ pagoEm: "2026-11-15T12:54:00Z" }))).toMatchObject({ grupo: "recebido", razao: "pago" });
+  });
+
+  it("por fazer, sem o cliente ter pago, já não diz «o cliente já pagou»", () => {
+    expect(linha(naCarteira({ execucaoEnviadaEm: null, confirmadoEm: null })).razao).toBe(RAZOES.clienteNaoPagou);
+  });
+
+  it("o trabalho de plataforma do modelo antigo segue a mesma regra", () => {
+    expect(linha(naCarteira({ pagoPelaClyon: false })).razao).toBe(RAZOES.clienteNaoPagou);
+  });
+
+  it("nas Carteiras do backoffice: confirmado sem o cliente ter pago fica «à espera do cliente», nunca «A pagar»", () => {
+    const t = { formaDePagamento: "na_plataforma", comoEntrou: null, confirmadoEm: "2026-11-15", pagoEm: null };
+    expect(monteNasCarteiras({ ...t, clientePagou: false })).toBe("a_espera_do_cliente");
+    expect(monteNasCarteiras({ ...t, clientePagou: true })).toBe("por_pagar");
+    // Já transferido, ou pago em mão, fica onde estava.
+    expect(monteNasCarteiras({ ...t, pagoEm: "2026-11-15", clientePagou: false })).toBe("pago");
+    expect(monteNasCarteiras({ ...t, novoModelo: true, clientePagou: false })).toBe("em_mao");
+  });
 });
 
 describe("d31 — as rotas perguntam pelo modelo", () => {
@@ -185,6 +245,10 @@ describe("d31 — as rotas perguntam pelo modelo", () => {
     expect(carteiras).toMatch(/await contratadasNoNovoModelo\(/);
     expect(carteiras).toMatch(/novoModelo: novo,/);
     expect(carteiras).toMatch(/contaDoNovoModelo\(/);
+    // O #612: o dinheiro do cliente decide o «A pagar» e a conta, também num Trabalho CLYON.
+    expect(carteiras).toMatch(/clientePagou: clienteJaPagou,/);
+    expect(carteiras).toMatch(/monte === "por_finalizar" \|\| monte === "a_espera_do_cliente"/);
+    expect(carteiras).not.toMatch(/clyonAntigo \|\| lerForma\(l\.formaDePagamento\) === "dinheiro"/);
     const recebido = ler("src/app/api/admin/pagamentos/recebido/route.ts");
     expect(recebido).toMatch(/await segueONovoModelo\(/);
     expect(recebido).toMatch(/taxaAPassarAClyon\(/);

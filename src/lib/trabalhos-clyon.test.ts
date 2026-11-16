@@ -189,8 +189,12 @@ describe("a carteira: quem paga é a CLYON", () => {
     expect(destinoDoValorConcluido(trabalho(), { aPlataformaCobra: false })).toBe("por_cobrar");
   });
 
-  it("um trabalho CLYON confirmado fica disponível — não há pagamento do cliente por esperar", () => {
-    expect(destinoDoValorConcluido(trabalho({ pagoPelaClyon: true }), { aPlataformaCobra: false })).toBe("disponivel");
+  // d31 (o #612): a CLYON paga-lhe com o dinheiro do cliente — confirmado e sem o cliente ter pago, por cobrar.
+  it("um trabalho CLYON confirmado sem o cliente ter pago fica por cobrar; pago pelo cliente, disponível", () => {
+    expect(destinoDoValorConcluido(trabalho({ pagoPelaClyon: true }), { aPlataformaCobra: false })).toBe("por_cobrar");
+    expect(
+      destinoDoValorConcluido(trabalho({ pagoPelaClyon: true, clientePagouEm: "2026-10-03T13:00:00Z" }), { aPlataformaCobra: false }),
+    ).toBe("disponivel");
   });
 });
 
@@ -372,7 +376,8 @@ describe("as peças estão ligadas", () => {
       // d33: a pergunta única, pela criação do pedido (com o interruptor ligado, todos).
       "pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm }, agora),",
     );
-    expect(semNotas(ler("src/lib/carteira.ts"))).toContain("if (t.pagoPelaClyon) return true;");
+    // d31 (o #612): pago quando o cliente pagou, ou quando a CLYON já lhe transferiu.
+    expect(semNotas(ler("src/lib/carteira.ts"))).toContain("if (t.pagoPelaClyon) return t.clientePagouEm != null || t.pagoEm != null;");
   });
 
   it("o ecrã do profissional desvia antes de qualquer outro return, e a oferta não tem hooks", () => {

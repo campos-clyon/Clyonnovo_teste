@@ -62,6 +62,8 @@ type Trabalho = {
   recebe: number;
   confirmadoEm: string | null;
   aguardaConfirmacao: boolean;
+  /** Confirmado, mas o cliente ainda não pagou à CLYON — ainda não se transfere (d31, o #612). */
+  clienteAindaNaoPagou?: boolean;
   /** Quando ele deu o trabalho por feito. */
   feitoEm: string | null;
   /** O que o cliente pagou — com IVA incluído desde o corte (01-10-2026), sem IVA antes. */
@@ -618,7 +620,9 @@ export default function AdminCarteirasPanel() {
                 ? "a transferir — marca o administrador"
                 : t.forma === "dinheiro"
                 ? "em dinheiro — nada a transferir"
-                : t.aguardaConfirmacao
+                : t.clienteAindaNaoPagou
+                  ? "o cliente ainda não pagou"
+                  : t.aguardaConfirmacao
                   ? "falta confirmar"
                   : "por fazer"}
             </span>
@@ -1010,7 +1014,7 @@ export default function AdminCarteirasPanel() {
               */}
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Ainda não se transfere · {c.porFinalizar.length}{" "}
-                {c.porFinalizar.length === 1 ? "trabalho" : "trabalhos"} por fazer ou por confirmar ·{" "}
+                {c.porFinalizar.length === 1 ? "trabalho" : "trabalhos"} por fazer, por confirmar ou à espera do cliente ·{" "}
                 {euros(c.totalPorFinalizar)}
               </span>
               <ChevronDown

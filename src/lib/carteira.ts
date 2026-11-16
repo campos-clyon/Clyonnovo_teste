@@ -141,6 +141,10 @@ export type TrabalhoNaCarteira = Trabalho & {
    * há pagamento nenhum desta negociação para esperar. Para a carteira, «o
    * cliente pagou» é verdade desde o início — confirmado o trabalho, o valor
    * fica disponível. Ver `oferta-clyon.ts`.
+   *
+   * DESDE A d31 (15-11-2026, o #612) já não: o pagamento do cliente liga-se à
+   * negociação (d16) e a CLYON paga-lhe com ele. Só conta como pago quando
+   * entrou, ou quando a CLYON já lhe transferiu (`oClientePagou`).
    */
   pagoPelaClyon?: boolean;
   /**
@@ -408,9 +412,16 @@ export function oClientePagou(
   t: TrabalhoNaCarteira,
   opcoes: ComoLerACarteira = {},
 ): boolean {
-  // Um trabalho CLYON é pago pela CLYON — ver `pagoPelaClyon`.
-  if (t.pagoPelaClyon) return true;
   if (!verificaOPagamento(t, opcoes)) return true;
+  /*
+   * UM TRABALHO CLYON — d31 (CEO e dono, 15-11-2026; o #612). A CLYON paga ao
+   * parceiro, mas com o dinheiro que o cliente lhe pagou: era «pago desde o
+   * início», e a carteira mostrava «pode pedir a transferência» (ou «o cliente
+   * já pagou») de um valor que ainda não tinha entrado. Conta como pago quando
+   * o pagamento do cliente entrou — a mesma pergunta dos Pagamentos — ou
+   * quando a CLYON já lho transferiu (`pagoEm`): aí o dinheiro já é dele.
+   */
+  if (t.pagoPelaClyon) return t.clientePagouEm != null || t.pagoEm != null;
   return t.clientePagouEm != null;
 }
 

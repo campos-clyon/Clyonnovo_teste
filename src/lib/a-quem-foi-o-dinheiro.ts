@@ -312,7 +312,7 @@ export function fraseDaParteDaClyon(x: TaxaDoPagoEmMao, euros: (v: number) => st
  * A mesma pergunta dos Pagamentos (`destinoDoTrabalho`, `foiPagoEmMaoPor`):
  * pago em mão é «em mão», feito ou por fazer, seja Trabalho CLYON ou não.
  */
-export type MonteDaCarteira = "em_mao" | "pago" | "por_finalizar" | "por_pagar";
+export type MonteDaCarteira = "em_mao" | "pago" | "por_finalizar" | "a_espera_do_cliente" | "por_pagar";
 
 export function monteNasCarteiras(t: {
   formaDePagamento?: string | null;
@@ -321,10 +321,17 @@ export function monteNasCarteiras(t: {
   pagoEm?: unknown;
   /** O modelo de 15-11 (d31): o cliente pagou-lhe diretamente — nunca «A pagar». */
   novoModelo?: boolean;
+  /**
+   * O dinheiro do cliente já entrou na CLYON? — d31 (o #612). Ausente, conta
+   * como entrado (a regra de antes). Falso: confirmado e por pagar, mas a CLYON
+   * ainda não tem com que pagar — «à espera do cliente», nunca «A pagar».
+   */
+  clientePagou?: boolean;
 }): MonteDaCarteira {
   if (destinoDoTrabalho(t) === "profissional") return "em_mao";
   if (t.pagoEm != null) return "pago";
   if (t.confirmadoEm == null) return "por_finalizar";
+  if (t.clientePagou === false) return "a_espera_do_cliente";
   return "por_pagar";
 }
 
