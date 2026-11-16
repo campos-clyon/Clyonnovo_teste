@@ -92,6 +92,9 @@ import {
   SIM_OS_PARCEIROS_FAZEM,
 } from "./voz-da-vitoria";
 import { eMarcaDeImagem } from "./rajada-do-whatsapp";
+import { jaFalouComEle } from "./o-que-a-equipa-ja-disse";
+import { emTerra } from "./preposicao-da-terra";
+import { estimativaDoEntulhoDito } from "./preco-do-entulho-na-conversa";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 import { datasDitas, primeiraPreferida, quandoComVariasDatas } from "./datas-ditas";
 import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
@@ -341,6 +344,19 @@ export type DadosDaRecolha = {
    * e a equipa é avisada: o preço muda. Ver `segunda-morada.ts`.
    */
   segundaMorada?: SegundaMorada | null;
+  /**
+   * «É PARA OUTRO LADO» — 16-11-2026 (d51). No pedido aberto, ele disse que já
+   * não é lá: a Vitória perguntou se faz um pedido novo, e a resposta dele
+   * decide. `de` é o pedido antigo; `localidade`, a nova, se a disse. Ver
+   * `troca-de-sitio.ts`.
+   */
+  trocaDeSitio?: { de: number; localidade: string | null } | null;
+  /**
+   * A RECOLHA NOVA QUE NASCEU DE UMA TROCA DE SÍTIO (d51): o pedido antigo,
+   * que não se cancela — quando o novo nascer, fica nele a nota para a equipa
+   * o fechar. E esse pedido já não volta a ser «o pedido dele» nesta conversa.
+   */
+  trocouDoPedido?: number;
 };
 
 export type EstadoDaRecolha = {
@@ -1240,17 +1256,17 @@ export function aberturaDaResposta(
  * Desde 13-10-2026 quem se apresenta é a Vitória («Aqui é a Vitória,
  * assistente online da CLYON»); as conversas de antes disseram «Aqui é a
  * CLYON», e contam na mesma.
+ *
+ * E DESDE 16-11-2026 (d51) conta também quem já lhe escreveu: um colega à mão
+ * («Qual é o endereço, senhor …?»), pelo backoffice, ou a Vitória a meio de
+ * uma conversa — numa conversa apagada na Mesa, a apresentação já não está no
+ * fio, e ela abria com «Boa tarde! Aqui é a Vitória…» a quem a equipa estava a
+ * atender. Os avisos automáticos não contam. Ver `jaFalouComEle`.
  */
 export function jaCumprimentouNesteFio(
-  fio: Array<{ direccao?: string; texto?: string }> | null | undefined,
+  fio: Array<{ direccao?: string; texto?: string; haSegundos?: number | null }> | null | undefined,
 ): boolean {
-  if (!Array.isArray(fio)) return false;
-  return fio.some(
-    (m) =>
-      m?.direccao === "out" &&
-      typeof m.texto === "string" &&
-      /aqui e a (clyon|vitoria)/.test(semAcentos(m.texto)),
-  );
+  return jaFalouComEle(fio);
 }
 
 /**
@@ -1412,6 +1428,8 @@ export function notaDoPrecoPara(
   jaExplicado: boolean,
   /** O serviço, quando já se sabe — numa mudança diz-se a tabela à hora. */
   servico?: string | null,
+  /** A quantidade de entulho que ele já disse — «15 sacos» (d51): diz-se a estimativa da grelha. */
+  entulho?: string | null,
 ): string {
   const pergunta = passo === "servico" ? perguntaDirectaPeloPreco(texto) : perguntaPeloPreco(texto);
   if (!pergunta) return "";
@@ -1423,7 +1441,12 @@ export function notaDoPrecoPara(
    */
   // E desde 11-11-2026 ao preço de cada parceiro: o modelo, o «desde» (ou a referência) e o simulador.
   const daMudanca = servico === "mudanca" ? ` ${precoDaMudancaNoWhatsApp(precoPublicoConhecido())}` : "";
-  return `${nota}${daMudanca}${falaDoIva(texto) ? ` ${O_IVA_ESTA_INCLUIDO}` : ""}\n\n`;
+  /*
+   * NO ENTULHO, COM A QUANTIDADE JÁ DITA — 16-11-2026 (d51, o dono): a
+   * estimativa da grelha, pela fonte única. Ver `preco-do-entulho-na-conversa.ts`.
+   */
+  const doEntulho = servico === "recolha_entulho" ? estimativaDoEntulhoDito(entulho) : null;
+  return `${nota}${daMudanca}${doEntulho ? ` ${doEntulho}` : ""}${falaDoIva(texto) ? ` ${O_IVA_ESTA_INCLUIDO}` : ""}\n\n`;
 }
 
 /** Já se lhe explicou como chega o preço, nesta conversa? Lê-se do fio. */
@@ -3722,7 +3745,7 @@ export function responderNaRecolha(
   // A resposta à pergunta que já não se faz não se aproveita: mostra-se o que
   // falta — quase sempre o resumo, que ele ainda não viu.
   if (passoQueJaNaoSeFaz) {
-    const preco = notaDoPrecoPara(t, estado.passo, contexto.jaExplicouOPreco === true, estado.dados.serviceType);
+    const preco = notaDoPrecoPara(t, estado.passo, contexto.jaExplicouOPreco === true, estado.dados.serviceType, estado.dados.entulhoQuantidade);
     return { estado, resposta: preco + perguntaDo(estado.passo, estado.dados, false, agora) };
   }
 
@@ -3770,6 +3793,7 @@ export function responderNaRecolha(
     estado.passo,
     contexto.jaExplicouOPreco === true,
     estado.dados.serviceType ?? servicoPorPalavras(t),
+    estado.dados.entulhoQuantidade,
   );
 
   /*
@@ -4709,7 +4733,7 @@ export function responderComCompreensao(
    * A PERGUNTA PELO PREÇO tem resposta — ver `COMO_CHEGA_O_PRECO`. Não na
    * primeira mensagem: aí «queria um orçamento» é o pedido.
    */
-  const notaDoPreco = cru ? notaDoPrecoPara(cru, estado.passo, contexto.jaExplicouOPreco === true, d.serviceType) : "";
+  const notaDoPreco = cru ? notaDoPrecoPara(cru, estado.passo, contexto.jaExplicouOPreco === true, d.serviceType, d.entulhoQuantidade) : "";
 
   /*
    * A CORRECÇÃO NO RESUMO — «Isso é uma garagem no -3. Tudo o resto está ok»
@@ -5103,7 +5127,13 @@ export function saltarAPergunta(estado: EstadoDaRecolha): RespostaDaRecolha {
  * que conte o que é para levar.
  */
 function servicoDeNovo(d: DadosDaRecolha, antes: DadosDaRecolha, comLista: boolean): string {
-  const anotado = d.address && !antes.address ? "Obrigada, fica anotada a morada." : "Obrigada, fica anotado.";
+  // Com o nome e a terra, quando se sabem — «Obrigada, Anselmo, fica anotada a morada em Benfica.» (d51)
+  const nome = primeiroNome(d.contactName);
+  const obrigada = `Obrigada${nome ? `, ${nome}` : ""}`;
+  const anotado =
+    d.address && !antes.address
+      ? `${obrigada}, fica anotada a morada${d.city ? ` ${emTerra(d.city)}` : ""}.`
+      : `${obrigada}, fica anotado.`;
   if (comLista) {
     const pergunta = mandouImagens(d)
       ? "Para registar o pedido, diga-me só que serviço é — se for mais fácil, responda com o número:"
@@ -5257,7 +5287,13 @@ export function primeiraPerguntaDoServico(
   imagensNovas: number,
   comLista: boolean,
   agora: Date = new Date(),
+  /** A CLYON já lhe escreveu neste fio (d51): sem se apresentar — ver `jaCumprimentouNesteFio`. */
+  jaFalou = false,
 ): string {
+  if (jaFalou) {
+    const r = servicoDeNovo(d, {}, comLista);
+    return imagensNovas > 0 ? comAgradecimentoDasImagens(r) : r;
+  }
   let r = perguntaDo("servico", d, comLista, agora);
   if (d.address) {
     const i = r.indexOf("\n\n");

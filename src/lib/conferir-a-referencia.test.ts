@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { chaveDaReferencia } from "./webhook-do-eupago";
 
 /**
  * ⚠️ O PAGAMENTO QUE CHEGOU E NINGUÉM VIU.
@@ -105,8 +106,11 @@ describe("a rede automática continua armada", () => {
       expect(codigo, f).toContain("estadoDaReferencia(conf.config");
       // `ref:<entidade>:<referencia>` — única por pagamento, e o `trid` do
       // aviso que vier depois não repete o crédito.
-      expect(codigo, f).toContain("trid: `ref:${p.entidade ?? \"\"}:${p.referencia}`");
+      // Desde a d50 a chave sai de `chaveDaReferencia` — a mesma do aviso do euPago.
+      expect(codigo, f).toContain("trid: chaveDaReferencia(p.entidade, p.referencia)");
     }
+    expect(chaveDaReferencia("12345", "123 456 789")).toBe("ref:12345:123456789");
+    expect(chaveDaReferencia(null, "123456789")).toBe("ref::123456789");
   });
 });
 

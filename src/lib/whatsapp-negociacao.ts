@@ -255,9 +255,31 @@ export async function recolherPedidoPorWhatsApp(
     await contarFotosPendentesWhatsApp(telefone).catch(() => 0),
   );
 
+  /*
+   * O NOME QUE JÁ SE SABE NÃO SE PERGUNTA — 16-11-2026 (d51). O que a equipa
+   * lhe chamou no fio («Boa tarde, Anselmo!»), ou o de um pedido anterior do
+   * número (mesmo fechado: só o nome). Ver `comONomeJaSabido`.
+   */
+  const { comONomeJaSabido, responderAoColega } = await import("@/lib/resposta-ao-colega-na-recolha");
+  const { fotografiasParaDepois, semRepetirAPergunta } = await import("@/lib/nao-insistir");
+  const { nomeDitoPelaEquipa } = await import("@/lib/o-que-a-equipa-ja-disse");
+  const nomeDoNumero = async (d: { contactName?: string }): Promise<string | null> =>
+    d.contactName || nomeDitoPelaEquipa(fio) ? null : await nomeDosPedidosAnteriores(telefone).catch(() => null);
+
   const responder = async (e: Estado) => {
     // Só imagens: não há palavras para o modelo ler — ver `responderAsImagens`.
     if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio), visto });
+    /*
+     * A RESPOSTA À PERGUNTA DO COLEGA — 16-11-2026 (d51). «O material é
+     * entulho? se sim quantos sacos?» → «Sim são 15 sacos»: recolha de
+     * entulho, 15 sacos, como o simulador grava — e não a morada. Ver
+     * `resposta-ao-colega-na-recolha.ts`.
+     */
+    const doColega = responderAoColega(e, texto, fio);
+    if (doColega) return doColega;
+    // «Não consigo enviar agora» às fotografias: «Sem problema, pode enviar mais tarde.» (d51)
+    const depois = fotografiasParaDepois(e, texto, fio);
+    if (depois) return depois;
     /*
      * «PARECE UM ESVAZIAMENTO» — 15-11-2026 (d43). A resposta à pergunta, se
      * estava pendente; depois, a pergunta (uma vez), relendo o que ele
@@ -379,7 +401,7 @@ export async function recolherPedidoPorWhatsApp(
     const { contaDoClientePeloTelefone } = await import("@/lib/db");
     const conta = await contaDoClientePeloTelefone(telefone).catch(() => null);
     if (conta?.nome) novo.dados.contactName = conta.nome;
-    const r = await responder(novo);
+    const r = await responder(comONomeJaSabido(novo, fio, await nomeDoNumero(novo.dados)));
     const avancou = r.estado.passo !== "servico";
     if (avancou && !r.pedirPessoa && !r.desistir) {
       await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
@@ -423,7 +445,7 @@ export async function recolherPedidoPorWhatsApp(
             // (28-10-2026, d35) — já com a apresentação dentro.
             r.respondidaAntes && !r.desistir
             ? r.resposta
-            : primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora),
+            : primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora, jaCumprimentouNesteFio(fio)),
       );
     }
     return;
@@ -436,7 +458,8 @@ export async function recolherPedidoPorWhatsApp(
    * `nunca-calada.ts`.
    */
   const { semFicarCalada } = await import("@/lib/nunca-calada");
-  const lidaAgora = await responder(estado);
+  // A mesma pergunta não sai duas vezes seguidas, nem o nome duas vezes (d51) — ver `nao-insistir.ts`.
+  const lidaAgora = semRepetirAPergunta(await responder(comONomeJaSabido(estado, fio, await nomeDoNumero(estado.dados))), fio);
   const r = texto.trim() ? semFicarCalada(lidaAgora, fio, agora, { passo: estado.passo, texto }) : lidaAgora;
 
   if (r.pedirPessoa) {
@@ -494,6 +517,19 @@ export async function registarARecolha(
           telefoneParaWhatsApp(telefone),
         ])
         .catch(() => {});
+    }
+    /*
+     * NASCEU DE UMA TROCA DE SÍTIO (d51): o pedido antigo fica com a nota
+     * final — o número deste — para a equipa o fechar; e este diz de onde veio.
+     */
+    if (dados.trocouDoPedido != null) {
+      const { notaDaTroca, NOTA_DA_TROCA_A_MEIO } = await import("@/lib/troca-de-sitio");
+      await anotarATrocaDeSitio(dados.trocouDoPedido, notaDaTroca(dados.trocouDoPedido, id), NOTA_DA_TROCA_A_MEIO);
+      await appendOrderHistory(id, {
+        type: "created",
+        by: null,
+        message: `Pedido novo do cliente do #${dados.trocouDoPedido}: disse no WhatsApp que já não é nessa morada.`,
+      }).catch(() => {});
     }
     if (opcoes.sozinho) {
       await appendOrderHistory(id, {
@@ -555,6 +591,30 @@ export async function pedidosDoTelefone(telefone: string): Promise<number[]> {
     [digitos],
   )) as any[];
   return (rows as Array<{ id: number }>).map((r) => Number(r.id));
+}
+
+/**
+ * O NOME DOS PEDIDOS ANTERIORES DO NÚMERO — 16-11-2026 (d51). Mesmo os
+ * fechados ou antigos: só o nome, para não tratar como desconhecido quem já
+ * fez pedidos. O pedido aberto continua com a regra d30 (`pedidosDoTelefone`).
+ */
+export async function nomeDosPedidosAnteriores(telefone: string): Promise<string | null> {
+  const pool = await getPool();
+  if (!pool) return null;
+  const digitos = telefoneParaWhatsApp(telefone).slice(-9);
+  if (digitos.length < 9) return null;
+  const [rows] = (await pool.execute(
+    `SELECT contactName FROM simulatorOrders
+      WHERE RIGHT(REGEXP_REPLACE(COALESCE(contactPhone, ''), '[^0-9]', ''), 9) = ?
+        AND contactName IS NOT NULL AND TRIM(contactName) <> ''
+      ORDER BY createdAt DESC
+      LIMIT 5`,
+    [digitos],
+  )) as any[];
+  const nome = (rows as Array<{ contactName: string }>)
+    .map((r) => String(r.contactName ?? "").trim())
+    .find((n) => n && !/^cliente\s+whatsapp$/i.test(n));
+  return nome ?? null;
 }
 
 type Alvo = {
@@ -1514,6 +1574,25 @@ async function completarOPedidoAberto(
     contratado,
   });
 
+  /*
+   * «É PARA OUTRO LADO», E DISSE QUE SIM — 16-11-2026 (d51). A recolha nova
+   * começa com o nome e o serviço deste pedido, e a terra nova; pergunta-se
+   * só o que falta. Este NÃO se cancela: fica com a nota para a equipa o
+   * fechar, e quando o novo nascer a nota diz o número dele (`registarARecolha`).
+   */
+  if (r.novoPedido && r.trocaDeSitio) {
+    const { recolhaDoPedidoNovo, notaDaTrocaAMeio } = await import("@/lib/troca-de-sitio");
+    const naConversa = pa.pedidoNaConversa(oPedido);
+    const sitio = { id, localidade: naConversa.localidade, morada: doPedido.address ?? null };
+    const nome = naConversa.nome ?? (dados.contactName ? dados.contactName.split(/\s+/)[0] : null);
+    const novo = recolhaDoPedidoNovo(dados, r.trocaDeSitio, sitio, nome);
+    await db.recomecarRecolhaWhatsApp(telefone);
+    await db.guardarRecolhaWhatsApp(telefone, novo.estado.passo, novo.estado.dados as Record<string, unknown>);
+    await anotarATrocaDeSitio(oPedido, notaDaTrocaAMeio(sitio, r.trocaDeSitio.localidade));
+    await enviarTextoWhatsApp(telefone, novo.resposta);
+    return true;
+  }
+
   // Pediu claramente outra coisa: um pedido novo, com a mensagem dele.
   if (r.novoPedido) {
     await db.recomecarRecolhaWhatsApp(telefone);
@@ -1595,6 +1674,14 @@ async function completarOPedidoAberto(
       message: `O cliente indicou no WhatsApp uma 2.ª morada de recolha: ${morada}. O preço muda — rever o pedido e as propostas.`,
     }).catch(() => {});
   }
+  // Perguntou-se «Faço um pedido novo…?» (d51): fica no histórico, para a equipa saber porquê.
+  if (r.trocaPerguntada) {
+    await appendOrderHistory(id, {
+      type: "created",
+      by: null,
+      message: "O cliente disse no WhatsApp que já não é nesta morada; a Vitória perguntou-lhe se faz um pedido novo.",
+    }).catch(() => {});
+  }
   // Uma pergunta que ficou anotada para uma pessoa: a equipa vê-a no pedido (29-10-2026).
   if (r.perguntaParaAEquipa) {
     await appendOrderHistory(id, {
@@ -1629,6 +1716,30 @@ async function completarOPedidoAberto(
 }
 
 /**
+ * A NOTA DA TROCA DE SÍTIO NO PEDIDO ANTIGO — 16-11-2026 (d51). Na nota da
+ * Mesa (`notasInternas`, o papel âmbar colado no cartão) e no histórico: a
+ * equipa vê-a e fecha o pedido. Só escreve a nota — o estado fica como está.
+ * `substitui` é o começo da nota de antes (a de «a meio»), que dá lugar à final.
+ */
+async function anotarATrocaDeSitio(pedido: PedidoDaBaseAqui | number, linha: string, substitui?: string): Promise<void> {
+  try {
+    const id = typeof pedido === "number" ? pedido : Number(pedido.id);
+    const lido =
+      typeof pedido === "number"
+        ? ((await getSimulatorOrderById(id).catch(() => undefined)) as PedidoDaBaseAqui | undefined)
+        : pedido;
+    const antes = ((lido as { notasInternas?: string | null } | undefined)?.notasInternas ?? "").trim();
+    const semAVelha = substitui ? antes.split("\n").filter((l) => !l.trim().startsWith(substitui)).join("\n").trim() : antes;
+    if (!semAVelha.includes(linha)) {
+      await updateSimulatorOrder(id, { notasInternas: semAVelha ? `${semAVelha}\n${linha}` : linha });
+    }
+    await appendOrderHistory(id, { type: "created", by: null, message: linha }).catch(() => {});
+  } catch (e) {
+    console.error("[whatsapp/troca-de-sitio] não anotei o pedido antigo:", e);
+  }
+}
+
+/**
  * ANTES DE COMEÇAR DO ZERO: o pedido aberto dele. Devolve `true` quando a
  * conversa seguiu por aqui — o pedido dele, a pergunta «a qual se refere?»,
  * ou uma pessoa a procurá-lo —, e `false` para a recolha nova de sempre.
@@ -1643,7 +1754,9 @@ async function continuarNumPedidoAberto(
 ): Promise<boolean> {
   const pa = await import("@/lib/pedido-aberto-na-conversa");
   const { jaFezOPedido } = await import("@/lib/leitor-da-recolha");
-  const abertos = await pedidosAbertosDoNumero(telefone, fio);
+  // O pedido de que ele trocou (d51) já não é «o pedido dele» — está à espera de a equipa o fechar.
+  const trocado = aMeio?.trocouDoPedido ?? null;
+  const abertos = (await pedidosAbertosDoNumero(telefone, fio)).filter((p) => Number(p.id) !== trocado);
   if (abertos.length === 0) {
     // Diz que já fez o pedido, e ele não aparece: uma pessoa procura-o — não se recomeça.
     if (texto.trim() && jaFezOPedido(texto)) {
@@ -2946,7 +3059,7 @@ export async function guardarFotoDoClienteNoPedido(
    * novo, fica à espera do pedido certo.
    */
   const conversa = await recolhaWhatsApp(telefone).catch(() => null);
-  const naConversa = (conversa?.dados ?? {}) as { pedidoAberto?: number; pedidosAEscolher?: number[] };
+  const naConversa = (conversa?.dados ?? {}) as { pedidoAberto?: number; pedidosAEscolher?: number[]; trocouDoPedido?: number };
   const recente = conversa != null && Date.now() - new Date(conversa.actualizadoEm).getTime() < 24 * 3600_000;
   let doPedidoAberto: number | null =
     conversa?.pedidoId != null && naConversa.pedidoAberto === conversa.pedidoId ? conversa.pedidoId : null;
@@ -2960,6 +3073,8 @@ export async function guardarFotoDoClienteNoPedido(
     recente &&
     conversa?.pedidoId == null &&
     (aEscolher ||
+      // A recolha nova de quem trocou de sítio (d51): as fotografias esperam pelo pedido novo, e não vão para o antigo.
+      naConversa.trocouDoPedido != null ||
       (conversa != null && conversa.passo !== "servico" && pedidos.length > 0 && (await alvosAccionaveis(pedidos)).length === 0));
   const pedidoId: number | null = doPedidoAberto ?? (aMeio ? null : (pedidos[0] ?? null));
 

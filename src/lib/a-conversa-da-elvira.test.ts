@@ -344,9 +344,13 @@ describe("7. um bom dia por conversa, e não dois", () => {
       true,
     );
     expect(jaCumprimentouNesteFio([{ direccao: "in", texto: "Aqui é a CLYON" }])).toBe(false);
-    expect(jaCumprimentouNesteFio([{ direccao: "out", texto: "Com quem estou a falar?" }])).toBe(
-      false,
-    );
+    /*
+     * Desde 16-11-2026 (d51) quem já lhe escreveu também conta: a equipa ou a
+     * Vitória a meio de uma conversa cuja apresentação ficou para trás. Só um
+     * aviso automático sozinho não conta.
+     */
+    expect(jaCumprimentouNesteFio([{ direccao: "out", texto: "Com quem estou a falar?" }])).toBe(true);
+    expect(jaCumprimentouNesteFio([{ direccao: "out", texto: "Pedido #402 registado! Muito obrigada." }])).toBe(false);
     expect(jaCumprimentouNesteFio(undefined)).toBe(false);
   });
 });

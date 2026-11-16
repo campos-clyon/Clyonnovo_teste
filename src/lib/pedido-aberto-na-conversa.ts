@@ -38,6 +38,17 @@ import { eDaEquipa } from "./rajada-do-whatsapp";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 import { blocoDasFontes, CABECA_DO_BLOCO, textoComUmSoBloco } from "./fontes-da-descricao";
 import { mesmaSegundaMorada, separarASegundaMorada, type SegundaMorada } from "./segunda-morada";
+import {
+  continuaNoPedido,
+  mudouDeSitio,
+  perguntaDaTerraNova,
+  perguntaDaTroca,
+  respostaATroca,
+  terraNova,
+  type SitioDoPedido,
+  type TrocaDeSitio,
+} from "./troca-de-sitio";
+import { emTerra } from "./preposicao-da-terra";
 
 /**
  * O CLIENTE QUE JÁ TEM PEDIDO — a Vitória continua-o, em vez de recomeçar.
@@ -262,6 +273,8 @@ const DA_CONVERSA: Array<keyof DadosDaRecolha> = [
   "quandoComTodas",
   "metrosAtePorta",
   "segundaMorada",
+  // A pergunta «Faço um pedido novo…?» à espera da resposta dele (16-11-2026, d51).
+  "trocaDeSitio",
 ];
 
 /** Os dados desta mensagem: o pedido, e o que a conversa já tinha juntado a ele. */
@@ -299,7 +312,7 @@ export function dadosDaConversaNoPedido(
 /** «recolha de monos em Almada» — o pedido em meia dúzia de palavras. */
 function oPedidoEmPalavras(p: PedidoNaConversa): string {
   const servico = p.servico ? servicoEmPalavras(p.servico) : null;
-  const onde = p.localidade ? `em ${p.localidade}` : null;
+  const onde = p.localidade ? emTerra(p.localidade) : null;
   return [servico, onde].filter(Boolean).join(" ");
 }
 
@@ -442,6 +455,14 @@ export type RespostaNoPedidoAberto = RespostaDaRecolha & {
   segundaMoradaNova?: SegundaMorada;
   /** Uma pergunta que ficou anotada para uma pessoa — vai para o histórico do pedido (29-10-2026). */
   perguntaParaAEquipa?: string;
+  /**
+   * Disse que já não é lá, e confirmou o pedido novo (16-11-2026, d51): com
+   * `novoPedido`, começa-se a recolha nova com o nome e o serviço deste, e a
+   * terra nova; este fica com a nota para a equipa o fechar.
+   */
+  trocaDeSitio?: TrocaDeSitio;
+  /** Perguntou-se agora «Faço um pedido novo…?» — fica no histórico do pedido. */
+  trocaPerguntada?: TrocaDeSitio;
 };
 
 /** As propostas chegam por aqui — a resposta a «Podem enviar proposta…?» (29-10-2026). */
@@ -561,6 +582,57 @@ export function responderNoPedidoAberto(
     if (queixa) return queixa;
     if (pedeUmaPessoa(t) || ctx.compreensao?.intencao === "falar_com_pessoa") {
       return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
+    }
+    /*
+     * «É PARA OUTRO LADO» — 16-11-2026 (d51). Já não é lá: pergunta-se, num
+     * passo, se se faz um pedido novo; e a resposta a essa pergunta decide.
+     * Ver `troca-de-sitio.ts`.
+     */
+    const sitio: SitioDoPedido = { id: p.id, localidade: p.localidade, morada: estado.dados.address ?? null };
+    const aEspera = estado.dados.trocaDeSitio?.de === p.id ? estado.dados.trocaDeSitio : null;
+    if (aEspera) {
+      const semTroca: DadosDaRecolha = { ...estado.dados, trocaDeSitio: null };
+      const resp = respostaATroca(t);
+      const outra = mudouDeSitio(t, sitio);
+      // Uma resposta curta pode ser só a terra: «Benfica», «é para Benfica».
+      const curta = t.split(/\s+/).filter(Boolean).length <= 6;
+      const terra = outra?.localidade ?? (curta ? terraNova(t, sitio) : null);
+      const passo = primeiroPassoEmFalta(semTroca);
+      if (resp === "nao") {
+        const falta = passo !== "confirmar" ? ` ${perguntaDo(passo, semTroca, false)}` : "";
+        return { estado: { passo, dados: semTroca }, resposta: `${abertura}${continuaNoPedido(sitio, nome)}${falta}` };
+      }
+      if (resp === "sim" || querOutroPedido(t, p.servico) || (terra != null && terra === aEspera.localidade)) {
+        const troca: TrocaDeSitio = { de: p.id, localidade: terra ?? aEspera.localidade };
+        return { estado: { passo, dados: semTroca }, resposta: "", novoPedido: true, trocaDeSitio: troca };
+      }
+      if (terra) {
+        const troca: TrocaDeSitio = { de: p.id, localidade: terra };
+        return {
+          estado: { passo: estado.passo, dados: { ...estado.dados, trocaDeSitio: troca } },
+          resposta: `${abertura}${perguntaDaTroca(sitio, terra, nome)}`,
+          trocaPerguntada: troca,
+        };
+      }
+      if (outra) {
+        return { estado, resposta: `${abertura}${perguntaDaTerraNova(nome)}` };
+      }
+      // Falou de outra coisa: a pergunta cai, e segue-se com o pedido de sempre.
+      estado = { passo: estado.passo, dados: semTroca };
+    } else {
+      const troca = mudouDeSitio(t, sitio);
+      if (troca) {
+        const aTroca: TrocaDeSitio = { de: p.id, localidade: troca.localidade };
+        // Disse que já não é lá E pediu outro pedido: está dito, não se pergunta.
+        if (querOutroPedido(t, p.servico)) {
+          return { estado, resposta: "", novoPedido: true, trocaDeSitio: aTroca };
+        }
+        return {
+          estado: { passo: estado.passo, dados: { ...estado.dados, trocaDeSitio: aTroca } },
+          resposta: `${abertura}${perguntaDaTroca(sitio, troca.localidade, nome)}`,
+          trocaPerguntada: aTroca,
+        };
+      }
     }
     if (querOutroPedido(t, p.servico) || /^(recomecar|reiniciar|comecar de novo|do inicio)[.!]*$/.test(semAcentos(t))) {
       return { estado, resposta: "", novoPedido: true };
@@ -698,7 +770,7 @@ export function responderNoPedidoAberto(
    */
   const frequente = t ? respostaDoSiteOuDasLicoes(t) : null;
   if (t && (frequente || perguntaPeloPreco(t) || eUmaPergunta(t))) {
-    const preco = notaDoPrecoPara(t, "confirmar", ctx.jaExplicouOPreco === true, p.servico);
+    const preco = notaDoPrecoPara(t, "confirmar", ctx.jaExplicouOPreco === true, p.servico, d.entulhoQuantidade);
     const outras = respostasAsPerguntas(t, d);
     const principal = frequente ?? (preco ? preco.trim() : null);
     // «Podem enviar proposta…?» — as propostas chegam por aqui; o resto, anotado e dito à equipa (29-10-2026).

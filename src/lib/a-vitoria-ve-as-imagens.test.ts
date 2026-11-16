@@ -179,7 +179,7 @@ describe("a morada que veio antes do serviço não se volta a pedir", () => {
   it("e em duas rajadas: a fotografia primeiro, a morada a seguir", () => {
     const so = responderAsImagens(recolhaNova(), AGORA, { jaCumprimentou: false });
     const r = responderNaRecolha(so.estado, MORADA_DO_PACO, AGORA, true, false, { fotos: 1 });
-    expect(r.resposta).toMatch(/^Obrigada, fica anotada a morada\. Para registar o pedido, diga-me só que serviço é/);
+    expect(r.resposta).toMatch(/^Obrigada, fica anotada a morada(?: (?:em|n[ao]s?) [^.]+)?\. Para registar o pedido, diga-me só que serviço é/);
     expect(r.resposta).not.toContain("o que é para levar");
   });
 
@@ -206,7 +206,7 @@ describe("a morada que veio antes do serviço não se volta a pedir", () => {
       AGORA,
       { texto: MORADA_DO_PACO, jaCumprimentou: true, fotos: 1 },
     );
-    expect(r.resposta).toMatch(/^Obrigada, fica anotada a morada\. Para registar o pedido, diga-me só que serviço é/);
+    expect(r.resposta).toMatch(/^Obrigada, fica anotada a morada(?: (?:em|n[ao]s?) [^.]+)?\. Para registar o pedido, diga-me só que serviço é/);
   });
 
   it("as perguntas novas reconhecem-se no fio", () => {
@@ -297,6 +297,7 @@ describe("a rajada e a ponte trazem as imagens até à Vitória", () => {
       "if (!texto.trim()) return responderAsImagens(e, agora, { jaCumprimentou: jaCumprimentouNesteFio(fio), visto });",
     );
     expect(NEG).toContain("resposta: comAgradecimentoDasImagens(r.resposta)");
-    expect(NEG).toContain("primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora)");
+    // Desde a d51 (16-11-2026) com o `jaCumprimentouNesteFio(fio)`: a quem a CLYON já escreveu, sem apresentação.
+    expect(NEG).toContain("primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora, jaCumprimentouNesteFio(fio))");
   });
 });
