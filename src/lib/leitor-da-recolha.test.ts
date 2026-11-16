@@ -24,6 +24,8 @@ import {
   valeParaAmbos,
   volumeNaFrase,
 } from "./leitor-da-recolha";
+import { soPedeOPreco } from "./orcamento-a-meio";
+import { lerAnuncioDeImovel } from "./anuncio-de-imovel";
 
 describe("a mudança do Leopoldo (10-10-2026) — as frases dele", () => {
   it("o preço perguntado sem rodeios, até na primeira mensagem", () => {
@@ -383,15 +385,13 @@ describe("a conversa do anúncio (16-11-2026, d48) — as frases dele", () => {
     expect(andarNaFrase("Sem elevador segundo piso sofás terão de ser desmanchados para sair")).toBe("2");
   });
 
-  it("«Orçamento» sozinho, a meio, é o cliente a pedir o preço — e não a morada", async () => {
-    const { soPedeOPreco } = await import("./orcamento-a-meio");
+  it("«Orçamento» sozinho, a meio, é o cliente a pedir o preço — e não a morada", () => {
     expect(soPedeOPreco("Orçamento")).toBe(true);
     expect(soPedeOPreco("Orçamento?")).toBe(true);
     expect(soPedeOPreco("Rua das Gaivotas 12, quanto custa?")).toBe(false);
   });
 
-  it("o link do anúncio diz a zona e a tipologia; o número dele não é a porta", async () => {
-    const { lerAnuncioDeImovel } = await import("./anuncio-de-imovel");
+  it("o link do anúncio diz a zona e a tipologia; o número dele não é a porta", () => {
     const a = lerAnuncioDeImovel(
       "(A1) estão neste site https://www.kasas-portugal.com/imovel/apartamento-t3-com-boas-areas-na-mina-de-agua-amadora/99999999",
     );
