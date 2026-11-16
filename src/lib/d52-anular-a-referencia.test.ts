@@ -172,8 +172,12 @@ describe("«Enviar o valor final»: o aviso quando não há nada pago registado"
 
   it("o texto do aviso e o segundo clique «Enviar na mesma»", () => {
     expect(AVISO_SEM_NADA_PAGO).toBe(
-      "Não há nada pago registado neste trabalho. Se o cliente já pagou uma parte, registe-a primeiro (Pagamentos › Registar pagamento) — senão a referência sai com o total.",
+      "Não há nada pago registado neste trabalho. Se o cliente já pagou uma parte, registe-a primeiro (Pagamentos › «Já recebemos») — senão a referência sai com o total.",
     );
+    // O botão que o aviso nomeia existe nos Pagamentos, com esse nome (correcção da d52).
+    const pagamentos = semComentarios(ler("src/components/admin/AdminPagamentosPanel.tsx"));
+    expect(pagamentos).toContain('rotulo="Já recebemos"');
+    expect(pagamentos).not.toMatch(/>\s*Registar pagamento\s*</);
     const ecra = semComentarios(ler("src/components/admin/EnviarValorFinalAoCliente.tsx"));
     expect(ecra).toContain("{AVISO_SEM_NADA_PAGO}");
     expect(ecra).toMatch(/if \(semNadaPago && !naMesma\) \{\s*setNaMesma\(true\);\s*return;\s*\}\s*void enviar\(\);/);
