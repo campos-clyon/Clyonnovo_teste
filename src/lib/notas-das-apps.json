@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-16",
+      "nota": "O cliente paga-lhe diretamente, e escolhe o seu regime de IVA com um toque. A Ajuda é a da sua forma de pagamento e a fatura abre-se no pedido.\nNovo: a parte da CLYON com reserva numa linha e o esvaziamento de empresas.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-15-2",
       "nota": "Na Ajuda, as respostas sobre pagamentos seguem a forma de pagamento em vigor na sua conta.",
       "updates": []
