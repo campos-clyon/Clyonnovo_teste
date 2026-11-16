@@ -49,8 +49,33 @@ describe("a linha do material", () => {
     const f = ler("src/components/admin/FolhaFinalDaMudanca.tsx");
     expect(f).toContain('placeholder="Material (ex.: cartão, plástico, filme)"');
     expect(f).toContain("className={campoDoNome}");
-    expect(f).toContain("className={campoDoValor}");
+    expect(f).toContain("<CampoNumerico");
     expect(f).not.toContain("${campo} mt-0 flex-1");
     expect(f).not.toContain("${campo} mt-0 w-24");
+  });
+});
+
+describe("a folha compacta (d49)", () => {
+  it("os números cabem em 7 algarismos, num campo estreito com a unidade à direita", async () => {
+    const m = await import("../components/admin/CamposCompactos");
+    expect(m.MAXIMO_DO_NUMERO).toBe(7);
+    expect(m.LARGURA_DO_NUMERO).toBe("w-[9ch]");
+    const c = ler("src/components/admin/CamposCompactos.tsx");
+    expect(c).toContain("maxLength={MAXIMO_DO_NUMERO}");
+    expect(c).toContain("className={`${LARGURA_DO_NUMERO} ${BASE}`}");
+    expect(c).not.toMatch(/const BASE =[^;]*w-full/);
+  });
+
+  it("a folha final e o «Preencher a folha» usam o campo estreito e o texto que cresce", () => {
+    const f = ler("src/components/admin/FolhaFinalDaMudanca.tsx");
+    for (const campo of ["form.horas", "form.precoHora", "form.km", "form.precoKm", "form.deslocacaoEuros", "m.valor"]) {
+      expect(f).toContain(`valor={${campo}}`);
+    }
+    expect(f).toContain("<TextoQueCresce");
+    expect(f).not.toMatch(/\$\{campo\} w-/);
+    const h = ler("src/components/admin/HorasNaMesa.tsx");
+    expect(h).toContain("valor={form.horas}");
+    expect(h).toContain("valor={form.km}");
+    expect(h).toContain("<TextoQueCresce valor={form.motivoDosKm}");
   });
 });

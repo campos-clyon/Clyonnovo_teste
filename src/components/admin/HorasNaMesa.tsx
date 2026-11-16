@@ -6,6 +6,7 @@ import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import type { ResumoDasHoras } from "@/lib/horas-do-trabalho";
 import { REGRA_DAS_HORAS, fimPelasHoras, intervaloDasHoras, totalDasHoras } from "@/lib/horas-do-trabalho";
 import { oQueSePercebeuDasHoras } from "@/lib/horas-escritas-na-folha";
+import { CampoNumerico, TextoQueCresce } from "@/components/admin/CamposCompactos";
 import {
   FOLGA_DOS_KM,
   FOLHA_POR_CONFIRMAR,
@@ -326,11 +327,12 @@ export default function HorasNaMesa({
           </label>
           <label className="flex flex-col gap-0.5 text-slate-400">
             ou total de horas
-            <input
-              value={form.horas}
-              onChange={(e) => setForm({ ...form, horas: e.target.value, fim: e.target.value.trim() ? "" : form.fim })}
-              placeholder="4,5 · 4h30"
-              className={`${campo} w-20`}
+            <CampoNumerico
+              valor={form.horas}
+              muda={(v) => setForm({ ...form, horas: v, fim: v.trim() ? "" : form.fim })}
+              unidade="h"
+              placeholder="4h30"
+              decimal={false}
             />
             {(() => {
               // d49: «4h30» também, e diz o que percebeu («4 h 30 min»).
@@ -353,7 +355,7 @@ export default function HorasNaMesa({
               </label>
               <label className="flex flex-col gap-0.5 text-slate-400">
                 Km (ida e volta)
-                <input value={form.km} onChange={(e) => setForm({ ...form, km: e.target.value })} inputMode="decimal" className={`${campo} w-20`} />
+                <CampoNumerico valor={form.km} muda={(v) => setForm({ ...form, km: v })} unidade="km" />
               </label>
             </>
           )}
@@ -363,7 +365,7 @@ export default function HorasNaMesa({
           Math.abs(Number(form.km.replace(",", ".")) - r.preencher.folha.campos.kmDoPercurso) >= FOLGA_DOS_KM && (
             <label className="mt-1.5 flex flex-col gap-0.5 text-slate-400">
               Porque os km são diferentes dos do percurso ({String(r.preencher.folha.campos.kmDoPercurso).replace(".", ",")} km)?
-              <input value={form.motivoDosKm} onChange={(e) => setForm({ ...form, motivoDosKm: e.target.value })} className={campo} />
+              <TextoQueCresce valor={form.motivoDosKm} muda={(v) => setForm({ ...form, motivoDosKm: v })} maxLength={300} />
             </label>
           )}
         {(() => {
@@ -376,12 +378,10 @@ export default function HorasNaMesa({
               {lista.map((m) => (
                 <label key={m.id} className="flex flex-col gap-0.5 text-slate-400">
                   {m.nome} ({m.preco})
-                  <input
-                    value={form.materiais[m.id] ?? ""}
-                    onChange={(e) => setForm({ ...form, materiais: { ...form.materiais, [m.id]: e.target.value } })}
+                  <CampoNumerico
+                    valor={form.materiais[m.id] ?? ""}
+                    muda={(v) => setForm({ ...form, materiais: { ...form.materiais, [m.id]: v } })}
                     placeholder="0"
-                    inputMode="decimal"
-                    className={`${campo} w-20`}
                   />
                 </label>
               ))}

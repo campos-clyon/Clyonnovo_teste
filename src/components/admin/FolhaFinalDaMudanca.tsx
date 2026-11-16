@@ -5,6 +5,7 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import EnviarValorFinalAoCliente from "@/components/admin/EnviarValorFinalAoCliente";
 import { oQueSePercebeuDasHoras } from "@/lib/horas-escritas-na-folha";
+import { CampoNumerico, TextoQueCresce } from "@/components/admin/CamposCompactos";
 
 /**
  * A FOLHA FINAL DA MUDANÇA, PELA EQUIPA — d38 v2, commit b (15-11-2026).
@@ -214,7 +215,6 @@ export default function FolhaFinalDaMudanca({
   const campo = "mt-1 block w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs tabular-nums text-white";
   // A linha do material (d49): campos próprios, sem larguras em conflito com o «w-full» de cima.
   const campoDoNome = "mt-1 block w-full min-w-0 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white";
-  const campoDoValor = "block w-full min-w-0 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-right text-xs tabular-nums text-white";
 
   return (
     <div className="mt-2 rounded-lg border border-slate-700 bg-slate-950/60 p-2.5">
@@ -241,77 +241,77 @@ export default function FolhaFinalDaMudanca({
                 {d.ultima?.criadaEm ? ` · última folha final a ${QUANDO.format(new Date(d.ultima.criadaEm))}${d.ultima.porQuem ? `, por ${d.ultima.porQuem}` : ""}` : ""}
               </p>
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <label className="text-[11px] text-slate-400">
+              {/*
+                COMPACTO — d49 (dono, 16-11-2026): os números em campos estreitos
+                (até 7 algarismos, a unidade à direita), lado a lado; no telemóvel
+                empilham em duas colunas.
+              */}
+              <div className="grid grid-cols-2 items-start gap-x-3 gap-y-2 text-[11px] text-slate-400 sm:flex sm:flex-wrap">
+                <label className="block">
                   Equipa
-                  <select value={form.pessoas} onChange={(e) => muda({ pessoas: Number(e.target.value) === 3 ? 3 : 2 })} className={campo}>
+                  <select value={form.pessoas} onChange={(e) => muda({ pessoas: Number(e.target.value) === 3 ? 3 : 2 })} className="mt-1 block rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white">
                     <option value={2}>2 pessoas</option>
                     <option value={3}>3 pessoas</option>
                   </select>
                 </label>
-                <label className="text-[11px] text-slate-400">
-                  Horas (6,5 · 6:30 · 6h30)
-                  <input value={form.horas} onChange={(e) => muda({ horas: e.target.value })} className={campo} />
+                <label className="block">
+                  Horas
+                  <CampoNumerico valor={form.horas} muda={(v) => muda({ horas: v })} unidade="h" placeholder="6h30" decimal={false} />
                   {(() => {
                     const p = oQueSePercebeuDasHoras(form.horas);
                     return p ? <span className={`mt-0.5 block ${p.ok ? "text-emerald-300" : "text-amber-300"}`}>{p.texto}</span> : null;
                   })()}
                 </label>
-                <label className="text-[11px] text-slate-400">
-                  Preço da hora, sem IVA
-                  <input
-                    value={form.precoHora}
-                    onChange={(e) => muda({ precoHora: e.target.value })}
-                    inputMode="decimal"
-                    placeholder={
-                      d.tarifa
-                        ? `${virgula(form.pessoas === 3 ? d.tarifa.precoHora3 : d.tarifa.precoHora2) || "—"} (tarifa)`
-                        : "obrigatório"
-                    }
-                    className={campo}
+                <label className="block">
+                  Preço/hora s/ IVA
+                  <CampoNumerico
+                    valor={form.precoHora}
+                    muda={(v) => muda({ precoHora: v })}
+                    unidade="€"
+                    placeholder={d.tarifa ? virgula(form.pessoas === 3 ? d.tarifa.precoHora3 : d.tarifa.precoHora2) || "—" : "0,00"}
                   />
                 </label>
+                <fieldset className="col-span-2 sm:col-span-1">
+                  <legend>Deslocação</legend>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <label className="flex items-center gap-1">
+                      <input type="radio" checked={form.deslocacaoTipo === "km"} onChange={() => muda({ deslocacaoTipo: "km" })} /> em km
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input type="radio" checked={form.deslocacaoTipo === "euros"} onChange={() => muda({ deslocacaoTipo: "euros" })} /> em euros
+                    </label>
+                  </div>
+                  {form.deslocacaoTipo === "km" ? (
+                    <div className="flex flex-wrap gap-x-3">
+                      <label className="block">
+                        Km
+                        <CampoNumerico valor={form.km} muda={(v) => muda({ km: v })} unidade="km" placeholder="0" />
+                      </label>
+                      <label className="block">
+                        Preço/km s/ IVA
+                        <CampoNumerico
+                          valor={form.precoKm}
+                          muda={(v) => muda({ precoKm: v })}
+                          unidade="€"
+                          placeholder={d.tarifa ? virgula(d.tarifa.precoKm) : "0,00"}
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="block">
+                      Deslocação s/ IVA
+                      <CampoNumerico valor={form.deslocacaoEuros} muda={(v) => muda({ deslocacaoEuros: v })} unidade="€" placeholder="0,00" />
+                    </label>
+                  )}
+                </fieldset>
               </div>
-              {d.tarifa && (
+              {d.tarifa ? (
                 <p className="text-[11px] text-slate-500">
                   Tarifa congelada: mínimo de {virgula(d.tarifa.minimoHoras)} h, {virgula(d.tarifa.precoKm)} €/km, mínimo de {d.tarifa.kmMinimo} km. Vazio = o da tarifa.
                 </p>
+              ) : (
+                <p className="text-[11px] text-slate-500">Sem tarifa congelada: o preço da hora e o do km são obrigatórios.</p>
               )}
-
-              <fieldset className="text-[11px] text-slate-400">
-                <legend>Deslocação</legend>
-                <div className="mt-1 flex flex-wrap gap-3">
-                  <label className="flex items-center gap-1">
-                    <input type="radio" checked={form.deslocacaoTipo === "km"} onChange={() => muda({ deslocacaoTipo: "km" })} /> em km
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input type="radio" checked={form.deslocacaoTipo === "euros"} onChange={() => muda({ deslocacaoTipo: "euros" })} /> em euros
-                  </label>
-                </div>
-                {form.deslocacaoTipo === "km" ? (
-                  <div className="mt-1 grid grid-cols-2 gap-2">
-                    <label>
-                      Km
-                      <input value={form.km} onChange={(e) => muda({ km: e.target.value })} inputMode="decimal" className={campo} />
-                    </label>
-                    <label>
-                      Preço do km, sem IVA
-                      <input
-                        value={form.precoKm}
-                        onChange={(e) => muda({ precoKm: e.target.value })}
-                        inputMode="decimal"
-                        placeholder={d.tarifa ? `${virgula(d.tarifa.precoKm)} (tarifa)` : "obrigatório"}
-                        className={campo}
-                      />
-                    </label>
-                  </div>
-                ) : (
-                  <label className="mt-1 block">
-                    Deslocação, sem IVA
-                    <input value={form.deslocacaoEuros} onChange={(e) => muda({ deslocacaoEuros: e.target.value })} inputMode="decimal" className={campo} />
-                  </label>
-                )}
-              </fieldset>
 
               <div className="text-[11px] text-slate-400">
                 <p>Material (sem taxa, com IVA)</p>
@@ -332,18 +332,14 @@ export default function FolhaFinalDaMudanca({
                         className={campoDoNome}
                       />
                     </label>
-                    <label className="w-28 shrink-0">
-                      <span className="block">Valor, sem IVA</span>
-                      <span className="mt-1 flex items-center gap-1">
-                        <input
-                          value={m.valor}
-                          onChange={(e) => muda({ materiais: form.materiais.map((x, j) => (j === i ? { ...x, valor: e.target.value } : x)) })}
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          className={campoDoValor}
-                        />
-                        <span className="text-slate-400">€</span>
-                      </span>
+                    <label className="shrink-0">
+                      <span className="block">Valor s/ IVA</span>
+                      <CampoNumerico
+                        valor={m.valor}
+                        muda={(v) => muda({ materiais: form.materiais.map((x, j) => (j === i ? { ...x, valor: v } : x)) })}
+                        unidade="€"
+                        placeholder="0,00"
+                      />
                     </label>
                     <button
                       type="button"
@@ -367,12 +363,11 @@ export default function FolhaFinalDaMudanca({
               {d.jaPago && (
                 <label className="block text-[11px] text-slate-400">
                   Motivo (obrigatório — o profissional já foi pago)
-                  <input
-                    value={form.motivo}
-                    onChange={(e) => muda({ motivo: e.target.value })}
+                  <TextoQueCresce
+                    valor={form.motivo}
+                    muda={(v) => muda({ motivo: v })}
                     maxLength={300}
                     placeholder="ex.: horas e material da folha do dia"
-                    className={campo}
                   />
                 </label>
               )}
