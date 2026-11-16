@@ -8,6 +8,7 @@ import {
   oQueSeDesfaz,
   type NegociacaoParaCancelar,
 } from "@/lib/cancelamento";
+import { motivoDoFechoDoTexto } from "@/lib/motivo-do-fecho";
 
 /**
  * A CAIXA DE CANCELAR — uma só, para os dois ecrãs que cancelam.
@@ -50,7 +51,8 @@ export default function CancelarPedido({
   const motivo = ehOutro ? outro.trim() : (escolhido ?? "");
   // Com um compromisso a desfazer o motivo é obrigatório; sem ele é só
   // arrumação, e um cancelamento sem motivo continua a poder passar.
-  const podeCancelar = desfaz.motivoObrigatorio ? motivo.length > 0 : true;
+  // d54 (16-11-2026): o motivo é sempre obrigatório — com ou sem compromisso a desfazer.
+  const podeCancelar = motivo.length > 0;
 
   async function cancelar() {
     setACancelar(true);
@@ -59,7 +61,7 @@ export default function CancelarPedido({
       const res = await fetch("/api/admin/negociacoes/cancelar", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId, motivo }),
+        body: JSON.stringify({ pedidoId, motivo, motivoDoFecho: motivoDoFechoDoTexto(motivo) }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -114,7 +116,7 @@ export default function CancelarPedido({
               (obrigatório — é o que {desfaz.profissional} vai ler)
             </span>
           ) : (
-            <span className="text-slate-500">(fica escrito)</span>
+            <span className="text-slate-500">(obrigatório — fica escrito)</span>
           )}
         </p>
 

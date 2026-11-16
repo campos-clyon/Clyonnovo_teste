@@ -25,7 +25,7 @@ describe("a barra dos marcados", () => {
     expect(i).toBeGreaterThan(-1);
     const corpo = PAINEL.slice(i, PAINEL.indexOf("\n  /**", i));
     // As negociações; os de valor fixo vão pela rota deles desde 20-10-2026.
-    expect(corpo).toContain("arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)))");
+    expect(corpo).toContain("arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)), motivo)");
     // E limpa a marcação: deixar seis marcados depois de os arrumar é um
     // convite a carregar em apagar a seguir.
     expect(corpo).toContain("setMarcados(new Set())");

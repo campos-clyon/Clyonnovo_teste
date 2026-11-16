@@ -181,7 +181,8 @@ describe("o painel do admin", () => {
   });
 
   it("recusa avançar sem motivo quando ele é preciso", () => {
-    expect(CAIXA).toContain("desfaz.motivoObrigatorio ? motivo.length > 0 : true");
+    // d54 (16-11-2026): o motivo passou a ser sempre obrigatório.
+    expect(CAIXA).toContain("const podeCancelar = motivo.length > 0;");
     expect(CAIXA).toContain("disabled={aCancelar || !podeCancelar}");
   });
 });

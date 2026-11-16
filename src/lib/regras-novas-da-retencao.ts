@@ -369,6 +369,10 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   descricaoOriginal: "nulo",
   linguaDaDescricao: "fica",
   descricaoPorTraduzir: "fica",
+  // O motivo de cancelar ou arquivar (16-11-2026, d54): uma categoria e um valor, nada da pessoa.
+  motivoDoFecho: "fica",
+  motivoDoFechoEm: "fica",
+  quantoQueriaPagar: "fica",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

@@ -669,6 +669,8 @@ const ONDE_O_SELO_VIVE = new Set([
   "src/app/profissionais/[slug]/page.tsx",
   // d39: o valor único só vai a quem o «Escolher por mim» deixa escolher — os verificados (`escolherPorMim`).
   "src/lib/valor-unico-ao-cliente.ts",
+  // d54: a lembrança das propostas só diz «verificados» quando todos os que propuseram o são (`l.verificados`).
+  "src/lib/propostas-sem-resposta.ts",
   "app-cliente/src/componentes/Proposta.tsx",
   "app-cliente/src/lib/pedidos.ts",
 ]);

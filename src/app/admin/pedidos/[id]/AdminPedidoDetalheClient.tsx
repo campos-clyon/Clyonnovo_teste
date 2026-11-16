@@ -14,6 +14,7 @@ import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import AvaliacoesAoClienteDoPedido from "@/components/admin/AvaliacoesAoClienteDoPedido";
 import DescricaoDoPedido from "@/components/admin/DescricaoDoPedido";
+import { motivoSeFechar } from "@/components/admin/escolherMotivoDoFecho";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -393,6 +394,10 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
         priority: editPriority,
         dataAgendada: editDataAgendada || null,
       };
+      // d54 (16-11-2026): cancelar, rejeitar ou arquivar pede o motivo.
+      const motivo = await motivoSeFechar(order.status, editStatus);
+      if (!motivo) throw new Error("Escolha o motivo para fechar o pedido.");
+      Object.assign(body, motivo);
       if (isAdmin) {
         body.precoFinal = editPrecoFinal || null;
         body.precoFinalIva = editPrecoFinalIva || null;
@@ -454,12 +459,15 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
 
   async function handleStatusQuick(newStatus: OrderStatus) {
     if (!order) return;
+    // d54 (16-11-2026): cancelar, rejeitar ou arquivar pede o motivo.
+    const motivo = await motivoSeFechar(order.status, newStatus);
+    if (!motivo) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
         method: "PATCH",
         headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...motivo }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro");

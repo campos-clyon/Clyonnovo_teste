@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
-import { negociacoesDoPedido } from "@/lib/db";
+import { gravarMotivoDoFecho, negociacoesDoPedido } from "@/lib/db";
+import { exigirMotivoDoFecho, fechaOPedido } from "@/lib/motivo-do-fecho";
 import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
@@ -108,6 +109,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     typeof body.status === "string" &&
     ["cancelado", "rejeitado", "arquivado"].includes(body.status) &&
     !["cancelado", "rejeitado", "arquivado"].includes(String(order.status ?? ""));
+  // d54 (16-11-2026): cancelar, rejeitar ou arquivar pede a escolha do motivo.
+  const motivoDoFecho = fechaOPedido(order.status, body.status) ? exigirMotivoDoFecho(body) : null;
+  if (motivoDoFecho && !motivoDoFecho.ok) {
+    return NextResponse.json({ ok: false, error: motivoDoFecho.erro, message: motivoDoFecho.erro, precisaDeMotivo: true }, { status: 422 });
+  }
+  // Não são colunas que se escrevam por aqui: gravam-se à parte, depois.
+  delete body.motivoDoFecho;
+  delete body.quantoQueriaPagar;
   const negociacoesAntes = fecha ? await negociacoesDoPedido(Number(id)).catch(() => []) : [];
 
   try {
@@ -128,6 +137,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       colab,
       onde: "ficha do pedido",
     });
+  }
+
+  if (motivoDoFecho?.ok) {
+    await gravarMotivoDoFecho(
+      Number(id),
+      motivoDoFecho.motivo,
+      motivoDoFecho.quantoQueriaPagar,
+      colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+    ).catch((e) => console.error("[pedidos/[id]] motivo:", e instanceof Error ? e.message : e));
   }
 
   if (fecha) {

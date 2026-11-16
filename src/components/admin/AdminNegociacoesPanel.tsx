@@ -86,6 +86,10 @@ import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import CancelarPedido from "./CancelarPedido";
 import { grupoPorIdade, ROTULO_DO_GRUPO, type GrupoDeIdade, corDaDataDeCriacao } from "@/lib/idade-do-pedido";
+import { seloDePorEnviar } from "@/lib/pedido-sem-valor";
+import { escolherMotivoDoFecho, type MotivoEscolhido } from "@/components/admin/escolherMotivoDoFecho";
+import { motivoDoFechoDoTexto } from "@/lib/motivo-do-fecho";
+import MotivosDaSemana from "@/components/admin/MotivosDaSemana";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { rotuloDoPrazoTerminado, type EstadoNaMesa } from "@/lib/escolhidos-sem-resposta";
 import { EscolhidosNaMesa } from "./EscolhidosNaMesa";
@@ -678,6 +682,8 @@ type PorPromover = {
   valorDesejadoCliente?: string | null;
   urgency: string | null;
   createdAt: string;
+  /** O estado: `precisa_info` = pergunta ao cliente por responder (d50). */
+  status?: string | null;
   /** De onde entrou — WhatsApp, formulário, contactos, simulador… */
   origem?: string | null;
   /** Pelo trabalho todo, por carga ou por hora (22-10-2026). */
@@ -1985,12 +1991,16 @@ export default function AdminNegociacoesPanel({
    */
   async function arquivarPedido(id: number) {
     if (!token) return;
+    // d54: o motivo é obrigatório — sem ele, não se arquiva.
+    const motivo = await escolherMotivoDoFecho({ accao: "arquivar" });
+    if (!motivo) return;
     setOcupado(`a${id}`);
     setErro("");
     try {
       const res = await fetch(`/api/admin/pedidos/${id}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(motivo),
       });
       if (!res.ok) {
         const dados = await res.json().catch(() => ({}));
@@ -2013,8 +2023,11 @@ export default function AdminNegociacoesPanel({
    * arquiva um lote de vinte espera dois segundos; quem ve metade falhar em
    * paralelo nao sabe qual metade.
    */
-  async function arquivarPedidos(ids: number[]) {
-    if (!token || ids.length === 0) return;
+  async function arquivarPedidos(ids: number[], motivoDado?: MotivoEscolhido): Promise<MotivoEscolhido | null> {
+    if (!token || ids.length === 0) return motivoDado ?? null;
+    // d54: o motivo é obrigatório — um só para o lote.
+    const motivo = motivoDado ?? (await escolherMotivoDoFecho({ accao: "arquivar", quantos: ids.length }));
+    if (!motivo) return null;
     setOcupado("lote-arquivar");
     setErro("");
     let falhados = 0;
@@ -2023,6 +2036,7 @@ export default function AdminNegociacoesPanel({
         const res = await fetch(`/api/admin/pedidos/${id}/reject`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(motivo),
         });
         if (!res.ok) falhados += 1;
       } catch {
@@ -2034,6 +2048,7 @@ export default function AdminNegociacoesPanel({
     }
     await carregar(true);
     setOcupado(null);
+    return motivo;
   }
 
   /**
@@ -4008,13 +4023,16 @@ export default function AdminNegociacoesPanel({
       )
     )
       return;
-    await arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)));
-    if (deValorFixo.length > 0) await arquivarOsDeValorFixo(deValorFixo.map((t) => t.pedidoId));
+    // d54: um motivo só para os dois caminhos.
+    const motivo = await escolherMotivoDoFecho({ accao: "arquivar", quantos });
+    if (!motivo) return;
+    await arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)), motivo);
+    if (deValorFixo.length > 0) await arquivarOsDeValorFixo(deValorFixo.map((t) => t.pedidoId), motivo);
     setMarcados(new Set());
   }
 
   /** Os de valor fixo, um de cada vez pela rota deles; o que falhar diz-se. */
-  async function arquivarOsDeValorFixo(ids: number[]) {
+  async function arquivarOsDeValorFixo(ids: number[], motivo: MotivoEscolhido) {
     if (!token) return;
     setOcupado("lote-arquivar");
     const falharam: string[] = [];
@@ -4023,7 +4041,7 @@ export default function AdminNegociacoesPanel({
         const res = await fetch("/api/admin/trabalhos-clyon", {
           method: "PATCH",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ pedidoId, accao: "arquivar" }),
+          body: JSON.stringify({ pedidoId, accao: "arquivar", ...motivo }),
         });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
@@ -4289,6 +4307,9 @@ export default function AdminNegociacoesPanel({
   );
   async function cancelarMarcados(motivo: string): Promise<string | null> {
     if (!token) return "Sem sessão.";
+    // d54: a categoria do motivo (o resumo da semana), tirada do que se escolheu na janela.
+    const escolha = { motivoDoFecho: motivoDoFechoDoTexto(motivo) };
+    if (!escolha.motivoDoFecho) return "Escolha o motivo para cancelar.";
     setOcupado("lote-cancelar");
     setErro("");
     const feitos: number[] = [];
@@ -4310,10 +4331,10 @@ export default function AdminNegociacoesPanel({
       }
     };
     for (const p of canceláveisNegociacao) {
-      await pedir(p.id, "/api/admin/negociacoes/cancelar", "POST", { pedidoId: p.id, motivo });
+      await pedir(p.id, "/api/admin/negociacoes/cancelar", "POST", { pedidoId: p.id, motivo, ...escolha });
     }
     for (const t of canceláveisClyon) {
-      await pedir(t.pedidoId, "/api/admin/trabalhos-clyon", "PATCH", { pedidoId: t.pedidoId, accao: "cancelar", motivo });
+      await pedir(t.pedidoId, "/api/admin/trabalhos-clyon", "PATCH", { pedidoId: t.pedidoId, accao: "cancelar", motivo, ...escolha });
     }
     setOcupado(null);
     setMarcados((m) => new Set([...m].filter((id) => !feitos.includes(id))));
@@ -4534,6 +4555,9 @@ export default function AdminNegociacoesPanel({
           }}
         />
       )}
+
+      {/* PORQUE SE FECHARAM, NA SEMANA — d54, 16-11-2026: cancelados e arquivados por serviço e motivo. */}
+      {mostrar === "tudo" && <MotivosDaSemana token={token} />}
 
       {/*
         A BUSCA, ANTES DOS CARTÕES.
@@ -6485,6 +6509,23 @@ function PedidosPorPromover({
             icone={<MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />}
           />
           <EtiquetaDaOrigem slug={p.origem} />
+          {/*
+            O SELO «POR ENVIAR», COM O SERVIÇO — d50, 16-11-2026. A vermelho às
+            4 h sem valor nem pergunta ao cliente (`pedido-sem-valor.ts`).
+          */}
+          {(() => {
+            const selo = seloDePorEnviar(p, agora);
+            return (
+              <span
+                title={selo.titulo}
+                className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                  selo.vermelho ? "border-red-500/50 bg-red-500/15 text-red-300" : "border-slate-600 bg-slate-800/60 text-slate-300"
+                }`}
+              >
+                {selo.texto}
+              </span>
+            );
+          })()}
         </span>
         <p className="mt-0.5 text-xs text-slate-400">
           <span className="font-semibold text-slate-300">{nomeComMaiuscula(p.serviceType)}</span> · {p.city ?? "—"}

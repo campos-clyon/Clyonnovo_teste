@@ -114,7 +114,8 @@ describe("a mesa", () => {
     // Há por onde sair sem cancelar: fechar a caixa desiste do cancelamento.
     expect(CAIXA).toContain("Voltar atrás");
     expect(CAIXA).toContain("/api/admin/negociacoes/cancelar");
-    // E sem compromisso a desfazer, o motivo continua a ser opcional.
-    expect(CAIXA).toContain("desfaz.motivoObrigatorio ? motivo.length > 0 : true");
+    // Desde a d54 o motivo é obrigatório também sem compromisso a desfazer.
+    // d54 (16-11-2026): o motivo passou a ser sempre obrigatório.
+    expect(CAIXA).toContain("const podeCancelar = motivo.length > 0;");
   });
 });

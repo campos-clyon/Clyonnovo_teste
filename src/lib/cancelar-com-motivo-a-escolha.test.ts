@@ -70,7 +70,8 @@ describe("o peso do que se desfaz não se perdeu", () => {
     ]);
     expect(d.temCompromisso).toBe(true);
     expect(d.motivoObrigatorio).toBe(true);
-    expect(CAIXA).toContain("desfaz.motivoObrigatorio ? motivo.length > 0 : true");
+    // d54 (16-11-2026): o motivo passou a ser sempre obrigatório.
+    expect(CAIXA).toContain("const podeCancelar = motivo.length > 0;");
   });
 
   it("sem ninguém contratado é arrumação, e passa sem motivo", () => {

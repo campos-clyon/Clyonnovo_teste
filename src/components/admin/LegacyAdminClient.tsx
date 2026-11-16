@@ -111,6 +111,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import ImageManagerClient from "@/components/admin/ImageManagerClient";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
+import { escolherMotivoDoFecho, type MotivoEscolhido } from "@/components/admin/escolherMotivoDoFecho";
 import { TELEFONE_DA_CLYON_LEGIVEL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 
 /*
@@ -1379,6 +1380,12 @@ export default function ColaboradorAdminClient({
       apagar:    `APAGAR ${plural} definitivamente? Isto não tem desfazer — os dados do cliente e o histórico desaparecem.`,
     };
     if (!confirm(perguntas[acao])) return;
+    // d54 (16-11-2026): arquivar e rejeitar pedem o motivo — um só para o lote.
+    let motivo: MotivoEscolhido | null = null;
+    if (acao === "arquivar" || acao === "rejeitado") {
+      motivo = await escolherMotivoDoFecho({ accao: acao === "arquivar" ? "arquivar" : "rejeitar", quantos: n });
+      if (!motivo) return;
+    }
     if (acao === "concluido" || acao === "apagar") {
       const escolhidos = pedidos
         .filter((p) => pedidosMarcados.has(p.id))
@@ -1402,13 +1409,14 @@ export default function ColaboradorAdminClient({
           } else if (acao === "arquivar") {
             r = await fetch(`/api/admin/pedidos/${id}/reject`, {
               method: "POST",
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify(motivo),
             });
           } else {
             r = await fetch(`/api/admin/pedidos`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ id, status: acao }),
+              body: JSON.stringify({ id, status: acao, ...(motivo ?? {}) }),
             });
           }
           if (!r.ok) falhas += 1;
@@ -1444,11 +1452,14 @@ export default function ColaboradorAdminClient({
       : `Marcar o pedido${quem} como rejeitado? Sai da lista activa e não volta a aparecer na fila.`;
     if (!confirm(pergunta)) return;
     if (novoEstado === "concluido" && !(await confirmarSeFuturo([{ pedidoId: p.id, quando: p.dataAgendada }], "marcar este pedido como realizado"))) return;
+    // d54 (16-11-2026): rejeitar pede o motivo.
+    const motivo = novoEstado === "rejeitado" ? await escolherMotivoDoFecho({ accao: "rejeitar" }) : null;
+    if (novoEstado === "rejeitado" && !motivo) return;
     try {
       const r = await fetch(`/api/admin/pedidos`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id: p.id, status: novoEstado }),
+        body: JSON.stringify({ id: p.id, status: novoEstado, ...(motivo ?? {}) }),
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
@@ -2600,10 +2611,14 @@ export default function ColaboradorAdminClient({
                                         e.stopPropagation();
                                         if (!token || !p.id) return;
                                         if (!confirm("Arquivar este pedido? Ele voltará à fila geral.")) return;
+                                        // d54: o motivo é obrigatório.
+                                        const motivo = await escolherMotivoDoFecho({ accao: "arquivar" });
+                                        if (!motivo) return;
                                         try {
                                           await fetch(`/api/admin/pedidos/${p.id}/reject`, {
                                             method: "POST",
-                                            headers: { Authorization: `Bearer ${token}` },
+                                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                            body: JSON.stringify(motivo),
                                           });
                                           await carregarPedidos(token, pedidoStatusFilter, pedidoSearchDebounced, true);
                                         } catch { /* silent */ }
@@ -2624,12 +2639,15 @@ export default function ColaboradorAdminClient({
                                           ? "Restaurar este pedido para a fila activa?"
                                           : "Arquivar este pedido? Ele deixará de aparecer na lista principal.";
                                         if (!confirm(confirmMsg)) return;
+                                        // d54: arquivar pede o motivo (restaurar não).
+                                        const motivo = isAlreadyArchived ? {} : await escolherMotivoDoFecho({ accao: "arquivar" });
+                                        if (!motivo) return;
                                         try {
                                           const targetStatus = isAlreadyArchived ? "pendente" : "arquivado";
                                           const r = await fetch(`/api/admin/pedidos/${p.id}`, {
                                             method: "PATCH",
                                             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                                            body: JSON.stringify({ status: targetStatus }),
+                                            body: JSON.stringify({ status: targetStatus, ...motivo }),
                                           });
                                           if (!r.ok) {
                                             const j = await r.json().catch(() => ({}));

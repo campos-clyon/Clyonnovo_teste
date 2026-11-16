@@ -6,7 +6,9 @@ import {
   cancelarPedido,
   appendOrderHistory,
   registarSemFalhar,
+  gravarMotivoDoFecho,
 } from "@/lib/db";
+import { exigirMotivoDoFecho } from "@/lib/motivo-do-fecho";
 import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
 
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { pedidoId?: unknown; motivo?: unknown };
+  let corpo: { pedidoId?: unknown; motivo?: unknown; motivoDoFecho?: unknown; quantoQueriaPagar?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -64,6 +66,12 @@ export async function POST(req: NextRequest) {
 
   if (pedido.status === "cancelado") {
     return NextResponse.json({ error: "Este pedido já está cancelado." }, { status: 409 });
+  }
+
+  // A escolha do motivo é obrigatória (d54, 16-11-2026) — à parte do texto livre, que vai nos avisos.
+  const motivoDoFecho = exigirMotivoDoFecho(corpo);
+  if (!motivoDoFecho.ok) {
+    return NextResponse.json({ error: motivoDoFecho.erro, precisaDeMotivo: true }, { status: 422 });
   }
 
   const existentes = await negociacoesDoPedido(pedidoId);
@@ -91,6 +99,12 @@ export async function POST(req: NextRequest) {
     await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo, porQuem: "clyon" });
 
     const porQuem = colab?.nome ?? "a equipa";
+    await gravarMotivoDoFecho(
+      pedidoId,
+      motivoDoFecho.motivo,
+      motivoDoFecho.quantoQueriaPagar,
+      colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+    ).catch((e) => console.error("[cancelar] motivo:", e instanceof Error ? e.message : e));
     await appendOrderHistory(pedidoId, {
       type: "created",
       by: null,

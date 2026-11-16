@@ -227,6 +227,9 @@ export function assistentePodeAbrirPagina(pathname: string): boolean {
 export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   // Início — 03-10-2026.
   "/api/admin/resumo",
+  // As propostas sem resposta e os motivos da semana (d54, 16-11-2026).
+  "/api/admin/propostas-sem-resposta",
+  "/api/admin/motivos-do-fecho",
   "/api/admin/pedidos",
   "/api/admin/fotos",
   "/api/admin/profissionais",
@@ -322,6 +325,11 @@ type EntradaDaRota = { seccoes: SeccaoDoAssistente[] } & (
 const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // Início: o resumo do dia.
   { prefixo: "/api/admin/resumo", seccoes: ["overview"] },
+  // As propostas sem resposta do cliente (d54, 16-11-2026): a lista do Início, e o link novo do «Copiar mensagem».
+  { prefixo: "/api/admin/propostas-sem-resposta", seccoes: ["overview"] },
+  { prefixo: "/api/admin/negociacoes/reenviar", seccoes: ["negociacoes_clyon", "overview"] },
+  // Os motivos de cancelar e arquivar da semana (d54): o resumo da Mesa, também nos Trabalhos CLYON.
+  { prefixo: "/api/admin/motivos-do-fecho", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
 
   // O valor de um trabalho corrige-se nas negociações, na ficha da agenda, e
   // nas linhas das carteiras e dos pagamentos. Desde 03-10-2026 é escrita só

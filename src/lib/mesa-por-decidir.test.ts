@@ -160,9 +160,9 @@ describe("um lote e um ecrã para os dois (fase 3)", () => {
 
   it("arquivar: cada um pela sua rota — os de valor fixo avisam quem os tinha", () => {
     const f = MESA.slice(MESA.indexOf("async function arquivarMarcados("), MESA.indexOf("async function arquivarOsDeValorFixo("));
-    expect(f).toContain("await arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)));");
-    expect(f).toContain("await arquivarOsDeValorFixo(deValorFixo.map((t) => t.pedidoId));");
-    expect(MESA).toContain('body: JSON.stringify({ pedidoId, accao: "arquivar" }),');
+    expect(f).toContain("await arquivarPedidos([...marcados].filter((id) => !idsClyon.has(id)), motivo);");
+    expect(f).toContain("await arquivarOsDeValorFixo(deValorFixo.map((t) => t.pedidoId), motivo);");
+    expect(MESA).toContain('body: JSON.stringify({ pedidoId, accao: "arquivar", ...motivo }),');
   });
 
   it("reenviar é só das negociações; apagar conta a data dos dois", () => {

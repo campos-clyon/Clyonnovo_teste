@@ -1,3 +1,5 @@
+import { semValorParaOInicio, type PedidoPorEnviar, type SemValorNoInicio } from "./pedido-sem-valor";
+import { textoDoMotivo, type ChaveDoMotivo, type LinhaDosMotivos } from "./motivo-do-fecho";
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
 import type { TarifaDasMudancas } from "@/lib/conta-da-mudanca";
 import { MAXIMO_DE_FOTOGRAFIAS_DA_CARRINHA } from "@/lib/fotografias-da-carrinha";
@@ -2759,6 +2761,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
     valorDoClienteComIva: string | null;
     urgency: string | null;
     createdAt: Date;
+    /** O estado: `precisa_info` = pergunta ao cliente por responder (d50). */
+    status: string | null;
     /** O slug de onde entrou — ver `origemPeloSlug` em `acesso.ts`. */
     origem: string | null;
     /** Pelo trabalho todo, por carga ou por hora (22-10-2026) — passa ao «Valor fixo». */
@@ -2798,6 +2802,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
             -- com busca propria — que nao procurava por nenhuma destas.
             o.contactPhone, o.address, o.postalCode,
             o.estimateTotal, o.valorDesejadoCliente, o.valorDoClienteComIva, o.urgency, o.createdAt, o.baseDoPreco,
+            -- O estado, para o selo das 4 h (d50): com pergunta ao cliente (precisa_info) nao fica vermelho.
+            o.status,
             -- A nota do pedido, a mesma da Mesa (26-10-2026, d29).
             o.notasInternas,
             -- O QUE FALTA NO PEDIDO (26-10-2026, d31): o resto do pedido e, do
@@ -9727,7 +9733,7 @@ let _simulatorOrdersEnsured = false;
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
 // 30 — `valorUnicoCliente` e `valorUnicoEm` (15-11-2026, d39), o valor único ao cliente.
 // 31 — `descricaoOriginal`, `linguaDaDescricao` e `descricaoPorTraduzir` (15-11-2026, d46), a descrição sempre em português.
-const MIGRATION_VERSION = 31;
+const MIGRATION_VERSION = 32;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -9986,6 +9992,12 @@ export async function ensureSimulatorOrdersTable() {
     `ALTER TABLE simulatorOrders ADD COLUMN descricaoOriginal LONGTEXT NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN linguaDaDescricao VARCHAR(5) NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN descricaoPorTraduzir TINYINT(1) NULL DEFAULT NULL`,
+    // v32 — O MOTIVO DE CANCELAR OU ARQUIVAR (16-11-2026, d54). Uma chave de
+    // `MOTIVOS_DO_FECHO` (motivo-do-fecho.ts), quando, e — com «Preço» — quanto
+    // o cliente queria pagar. Aditivo: nulos em todos os pedidos de antes.
+    `ALTER TABLE simulatorOrders ADD COLUMN motivoDoFecho VARCHAR(30) NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN motivoDoFechoEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE simulatorOrders ADD COLUMN quantoQueriaPagar DECIMAL(10,2) NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -17294,6 +17306,11 @@ export type ResumoDoBackoffice = {
   whatsappLigado: boolean | null;
   /** Trabalhos a decorrer — contratados, com dia, ainda por fazer. */
   aDecorrer: number | null;
+  /**
+   * Por enviar há 4 h ou mais sem valor nem pergunta (d50, 16-11-2026) — a
+   * regra de `pedido-sem-valor.ts`, pelo n.º do pedido. `null` se a leitura falhar.
+   */
+  semValor: SemValorNoInicio[] | null;
 };
 
 /** Um número de uma consulta que pode falhar sem levar o painel atrás. */
@@ -17307,6 +17324,24 @@ async function conta(sql: string, args: ExecuteValues[] = []): Promise<number | 
     return Number.isFinite(v) ? v : null;
   } catch (e) {
     console.error("[resumo]", sql.slice(0, 60), e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+/** Os por enviar (o mesmo critério da lista da Mesa), só com o que a regra das 4 h precisa. */
+async function semValorDoInicio(): Promise<SemValorNoInicio[] | null> {
+  try {
+    const pool = await getPool();
+    if (!pool) return null;
+    const [linhas] = (await pool.execute(
+      `SELECT o.id, o.serviceType, o.status, o.createdAt FROM simulatorOrders o
+        WHERE (o.status IS NULL OR o.status NOT IN ('cancelado','concluido','arquivado'))
+          AND NOT EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)
+        ORDER BY o.id DESC LIMIT 300`,
+    )) as any[];
+    return semValorParaOInicio(linhas as PedidoPorEnviar[], new Date());
+  } catch (e) {
+    console.error("[resumo] sem valor:", e instanceof Error ? e.message : e);
     return null;
   }
 }
@@ -17389,6 +17424,7 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     ),
     whatsappLigado().catch(() => null),
   ]);
+  const semValor = await semValorDoInicio();
 
   return {
     porEnviar,
@@ -17403,6 +17439,7 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     filaDoWhatsApp,
     whatsappLigado: ligado,
     aDecorrer,
+    semValor,
   };
 }
 
@@ -19871,4 +19908,43 @@ export async function mudarListaDeParceirosNasMudancas(ligar: boolean, porQuem: 
     [CHAVE_DA_LISTA_DAS_MUDANCAS, ligar ? "1" : "0", porQuem.slice(0, 120)],
   );
   return ligar;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * O MOTIVO DE CANCELAR OU ARQUIVAR — d54, 16-11-2026. Ver `motivo-do-fecho.ts`.
+ * Só colunas do pedido (v32 de `ensureSimulatorOrdersTable`); nada de dados de pessoas.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Grava o motivo (e, com «Preço», quanto o cliente queria pagar) e escreve-o no histórico. */
+export async function gravarMotivoDoFecho(
+  pedidoId: number,
+  motivo: ChaveDoMotivo,
+  quantoQueriaPagar: number | null,
+  by: { id: number; nome: string; role: string } | null = null,
+): Promise<void> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return;
+  await pool.execute(
+    `UPDATE simulatorOrders SET motivoDoFecho = ?, motivoDoFechoEm = UTC_TIMESTAMP(), quantoQueriaPagar = ? WHERE id = ?`,
+    [motivo, quantoQueriaPagar, pedidoId],
+  );
+  await appendOrderHistory(pedidoId, { type: "note", by, message: textoDoMotivo(motivo, quantoQueriaPagar) }).catch(() => {});
+}
+
+/** Os fechados dos últimos 7 dias, por serviço e por motivo. */
+export async function motivosDoFechoDaSemana(): Promise<LinhaDosMotivos[]> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [linhas] = (await pool.execute(
+    `SELECT serviceType, motivoDoFecho AS motivo, COUNT(*) AS n FROM simulatorOrders
+      WHERE motivoDoFecho IS NOT NULL AND motivoDoFechoEm >= UTC_TIMESTAMP() - INTERVAL 7 DAY
+      GROUP BY serviceType, motivoDoFecho`,
+  )) as any[];
+  return (linhas as Array<Record<string, unknown>>).map((l) => ({
+    serviceType: l.serviceType == null ? null : String(l.serviceType),
+    motivo: l.motivo == null ? null : String(l.motivo),
+    n: Number(l.n),
+  }));
 }

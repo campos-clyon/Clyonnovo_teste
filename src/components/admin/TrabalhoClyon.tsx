@@ -59,6 +59,7 @@ import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { MOTIVOS_DE_CANCELAMENTO, avisoDoCancelamento, oQueSeDesfaz } from "@/lib/cancelamento";
+import { motivoDoFechoDoTexto } from "@/lib/motivo-do-fecho";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { corDaDataDeCriacao } from "@/lib/idade-do-pedido";
 import { validarValorDesejado } from "@/lib/pedido-valores";
@@ -699,7 +700,7 @@ export function TrabalhoClyonComAccoes({
       const res = await fetch("/api/admin/trabalhos-clyon", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "cancelar", motivo }),
+        body: JSON.stringify({ pedidoId: t.pedidoId, accao: "cancelar", motivo, motivoDoFecho: motivoDoFechoDoTexto(motivo) }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) return d.error ?? "Não foi possível cancelar.";
@@ -1857,7 +1858,8 @@ function JanelaDeCancelarTrabalho({
   const aviso = avisoDoCancelamento(desfaz);
   const ehOutro = escolhido === "Outro motivo";
   const motivo = ehOutro ? outro.trim() : (escolhido ?? "");
-  const podeCancelar = desfaz.motivoObrigatorio ? motivo.length > 0 : true;
+  // d54 (16-11-2026): o motivo é sempre obrigatório — com ou sem compromisso a desfazer.
+  const podeCancelar = motivo.length > 0;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4">
@@ -1880,7 +1882,7 @@ function JanelaDeCancelarTrabalho({
           {desfaz.motivoObrigatorio ? (
             <span className="text-amber-300">(obrigatório — é o que {desfaz.profissional} vai ler)</span>
           ) : (
-            <span className="text-slate-500">(fica escrito)</span>
+            <span className="text-slate-500">(obrigatório — fica escrito)</span>
           )}
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">

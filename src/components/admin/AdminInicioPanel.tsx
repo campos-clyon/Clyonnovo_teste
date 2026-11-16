@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import dynamic from "next/dynamic";
+import PropostasSemResposta from "@/components/admin/PropostasSemResposta";
+import { HORAS_SEM_VALOR, type SemValorNoInicio } from "@/lib/pedido-sem-valor";
 
 /*
  * O DESEMPENHO — d41, 15-11-2026: pedidos que entram, trabalhos feitos,
@@ -65,6 +67,8 @@ type Resumo = {
   filaDoWhatsApp: number | null;
   whatsappLigado: boolean | null;
   aDecorrer: number | null;
+  /** Por enviar há 4 h ou mais sem valor nem pergunta (d50), pelo n.º do pedido. */
+  semValor?: SemValorNoInicio[] | null;
 };
 
 type Seccao =
@@ -316,6 +320,44 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           </ul>
         )}
       </section>
+
+      {/*
+        SEM VALOR HÁ MAIS DE 4 H — d50, 16-11-2026. Os por enviar a vermelho
+        (sem valor nem pergunta ao cliente), pelo n.º do pedido, com o serviço
+        e a hora de entrada em Lisboa. A regra é a do selo da Mesa
+        (`pedido-sem-valor.ts`).
+      */}
+      {r?.semValor && r.semValor.length > 0 && (
+        <section className="rounded-2xl border border-red-500/30 bg-red-500/[0.06] p-5">
+          <h2 className="text-base font-bold text-white">
+            <span className="text-red-300">{r.semValor.length}</span> sem valor há mais de {HORAS_SEM_VALOR} h
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Por enviar, sem valor nem pergunta ao cliente. Do maior n.º para o menor.
+          </p>
+          <ul className="mt-3 divide-y divide-slate-800">
+            {r.semValor.map((p) => (
+              <li key={p.id}>
+                <button
+                  onClick={() => onAbrir("pedidos")}
+                  className="flex w-full flex-wrap items-baseline gap-x-2 py-1.5 text-left text-sm hover:bg-slate-800/40"
+                >
+                  <span className="font-bold text-white">#{p.id}</span>
+                  <span className="rounded-full border border-red-500/50 bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-300">
+                    por enviar · {p.servico}
+                  </span>
+                  <span className="ml-auto text-xs tabular-nums text-slate-400">
+                    entrou {p.entrouEm} · há {p.horas} h
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* PROPOSTAS SEM RESPOSTA DO CLIENTE — d54, 16-11-2026. */}
+      <PropostasSemResposta token={token} onAbrir={() => onAbrir("negociacoes_clyon")} />
 
       {/*
         O ESTADO DAS COISAS — o que não pede nada, mas convém saber.

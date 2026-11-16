@@ -25,7 +25,9 @@ import {
   updateSimulatorOrder,
   prepararAMudancaDeTipo,
   PORQUE_NAO_MUDA_DE_TIPO,
+  gravarMotivoDoFecho,
 } from "@/lib/db";
+import { exigirMotivoDoFecho } from "@/lib/motivo-do-fecho";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import { confiancaDasNegociacoes, type ConfiancaDaNegociacao } from "@/lib/confianca-na-mesa";
 import { baseValida, lerBase, unidadeDaBase } from "@/lib/base-do-preco";
@@ -517,6 +519,9 @@ export async function PATCH(req: NextRequest) {
     /** «Atribuir directamente a…» (11-11-2026): o profissional. */
     providerId?: unknown;
     outraVez?: unknown;
+    /** d54: a escolha do motivo, obrigatória ao cancelar e ao arquivar. */
+    motivoDoFecho?: unknown;
+    quantoQueriaPagar?: unknown;
   };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -986,6 +991,9 @@ export async function PATCH(req: NextRequest) {
       if (antes.jaFeito) {
         return NextResponse.json({ error: "Este trabalho já foi feito — não se cancela aqui." }, { status: 409 });
       }
+      // d54 (16-11-2026): a escolha do motivo é obrigatória.
+      const motivoDoFecho = exigirMotivoDoFecho(corpo);
+      if (!motivoDoFecho.ok) return NextResponse.json({ error: motivoDoFecho.erro, precisaDeMotivo: true }, { status: 422 });
       // O motivo, como no «Cancelar pedido» da Mesa (19-10-2026): fica no histórico e vai no aviso.
       const motivo = typeof corpo.motivo === "string" ? corpo.motivo.trim().slice(0, 300) : "";
       const pedido = await getSimulatorOrderById(pedidoId);
@@ -1005,6 +1013,7 @@ export async function PATCH(req: NextRequest) {
           : `Estava com ${antes.vivos.map((q) => q.profissional).join(", ")} — ` +
             `${avisados} avisado${avisados === 1 ? "" : "s"} por WhatsApp.`);
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+      await gravarMotivoDoFecho(pedidoId, motivoDoFecho.motivo, motivoDoFecho.quantoQueriaPagar, por).catch(() => {});
       await registarSemFalhar({
         acontecimento: "pedido_cancelado",
         pedidoId,
@@ -1041,6 +1050,9 @@ export async function PATCH(req: NextRequest) {
     // feito fica (`pedido-arrumado.ts`), e por isso ninguém é avisado. O
     // operador não se mexe: a comissão dele não depende de onde está.
     if (accao === "arquivar") {
+      // d54 (16-11-2026): a escolha do motivo é obrigatória.
+      const motivoDoFecho = exigirMotivoDoFecho(corpo);
+      if (!motivoDoFecho.ok) return NextResponse.json({ error: motivoDoFecho.erro, precisaDeMotivo: true }, { status: 422 });
       const pedido = await getSimulatorOrderById(pedidoId);
       if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
       if (pedido.valorFixoClyon == null) {
@@ -1075,6 +1087,7 @@ export async function PATCH(req: NextRequest) {
           : `Estava com ${avisar.map((q) => q.profissional).join(", ")} — ` +
             `${avisados} avisado${avisados === 1 ? "" : "s"} por WhatsApp.`);
       await appendOrderHistory(pedidoId, { type: "archived", by: por, message: resumo });
+      await gravarMotivoDoFecho(pedidoId, motivoDoFecho.motivo, motivoDoFecho.quantoQueriaPagar, por).catch(() => {});
       return NextResponse.json({ ok: true, feito: resumo, avisados });
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { escolherMotivoDoFecho, motivoSeFechar } from "@/components/admin/escolherMotivoDoFecho";
 import ContaDoPedido from "./ContaDoPedido";
 import AcessoPeloLink from "./AcessoPeloLink";
 import { camposExtraDoPedido } from "@/lib/campos-extra-do-pedido";
@@ -918,6 +919,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
        * disparar correspondência sem querer.
        */
       if (editStatus !== order.status) body.status = editStatus;
+      // d54 (16-11-2026): cancelar, rejeitar ou arquivar pede o motivo.
+      if (body.status) {
+        const motivo = await motivoSeFechar(order.status, editStatus);
+        if (!motivo) throw new Error("Escolha o motivo para fechar o pedido.");
+        Object.assign(body, motivo);
+      }
       if (editPriority !== (order.priority ?? "normal")) body.priority = editPriority;
       if (isAdmin) {
         body.precoFinal = editPrecoFinal || null;
@@ -968,12 +975,15 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
   async function handleStatusQuick(newStatus: OrderStatus) {
     if (!order) return;
     if (newStatus === "concluido" && !(await confirmarSeFuturo([{ pedidoId: order.id, quando: order.dataAgendada }], "marcar este pedido como concluído"))) return;
+    // d54 (16-11-2026): cancelar, rejeitar ou arquivar pede o motivo.
+    const motivo = await motivoSeFechar(order.status, newStatus);
+    if (!motivo) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
         method: "PATCH",
         headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...motivo }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data?.error || "Erro ao atualizar status");
@@ -994,6 +1004,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
     if (!order) return;
     const motivo = window.prompt("Motivo da rejeição (fica guardado nas notas internas):");
     if (motivo === null) return; // cancelado pelo utilizador
+    // d54 (16-11-2026): e a escolha do motivo, obrigatória.
+    const escolha = await escolherMotivoDoFecho({ accao: "rejeitar" });
+    if (!escolha) return;
     setSaving(true);
     try {
       const notasAtualizadas = motivo.trim()
@@ -1002,7 +1015,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
         method: "PATCH",
         headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelado", notasInternas: notasAtualizadas || null }),
+        body: JSON.stringify({ status: "cancelado", notasInternas: notasAtualizadas || null, ...escolha }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data?.error || "Erro ao rejeitar pedido");

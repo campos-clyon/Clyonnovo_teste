@@ -9,6 +9,8 @@ import {
   categoriasDosPedidos,
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
+import { exigirMotivoDoFecho, fechaOPedido } from "@/lib/motivo-do-fecho";
+import { gravarMotivoDoFecho } from "@/lib/db";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import {
   emailDoPedidoMuda,
@@ -79,8 +81,19 @@ export async function PATCH(req: NextRequest) {
   if (err) return err;
 
   const body = await req.json();
-  const { id, ...fields } = body;
+  const { id, motivoDoFecho: _motivo, quantoQueriaPagar: _quanto, ...fields } = body;
   if (!id) return NextResponse.json({ error: "Falta o identificador do pedido." }, { status: 400 });
+
+  // d54 (16-11-2026): cancelar, rejeitar ou arquivar pede a escolha do motivo.
+  let motivoDoFecho: ReturnType<typeof exigirMotivoDoFecho> | null = null;
+  if (typeof fields.status === "string") {
+    const antes = await getSimulatorOrderById(Number(id));
+    if (!antes) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
+    if (fechaOPedido(antes.status, fields.status)) {
+      motivoDoFecho = exigirMotivoDoFecho(body);
+      if (!motivoDoFecho.ok) return NextResponse.json({ error: motivoDoFecho.erro, precisaDeMotivo: true }, { status: 422 });
+    }
+  }
 
   // O email do pedido é do administrador, e fica registado (d24, 10-11-2026).
   let emailDoPedido = emailDoPedidoMuda(null, undefined);
@@ -111,6 +124,14 @@ export async function PATCH(req: NextRequest) {
       colab,
       onde: "lista dos pedidos",
     });
+  }
+  if (motivoDoFecho?.ok) {
+    await gravarMotivoDoFecho(
+      Number(id),
+      motivoDoFecho.motivo,
+      motivoDoFecho.quantoQueriaPagar,
+      colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
+    ).catch((e) => console.error("[pedidos PATCH] motivo:", e instanceof Error ? e.message : e));
   }
   const order = await getSimulatorOrderById(Number(id));
   return NextResponse.json({ ok: true, order });

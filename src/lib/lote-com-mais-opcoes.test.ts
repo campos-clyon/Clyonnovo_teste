@@ -23,8 +23,8 @@ describe("«Cancelar» nos marcados", () => {
   it("um motivo para todos, dos da Mesa, e cada um pela sua rota", () => {
     expect(M).toContain("function MotivoParaCancelarVarios({");
     expect(M).toContain('{[...MOTIVOS_DE_CANCELAMENTO, "Outro motivo"].map((m) => (');
-    expect(M).toContain('"/api/admin/negociacoes/cancelar", "POST", { pedidoId: p.id, motivo }');
-    expect(M).toContain('{ pedidoId: t.pedidoId, accao: "cancelar", motivo }');
+    expect(M).toContain('"/api/admin/negociacoes/cancelar", "POST", { pedidoId: p.id, motivo, ...escolha }');
+    expect(M).toContain('{ pedidoId: t.pedidoId, accao: "cancelar", motivo, ...escolha }');
   });
 
   it("fora os concluídos, os já cancelados e os valor fixo já feitos", () => {
