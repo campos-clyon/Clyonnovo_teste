@@ -241,6 +241,8 @@ export async function trabalhosDaCarteira(
   const clyon = vale ? await trabalhosClyonDasNegociacoes(linhas.map((l) => l.id)) : new Map<number, TrabalhoClyonDaBase>();
   return linhas.map((l) => {
     const pedidoCriadoEm = clyon.get(Number(l.id))?.pedidoCriadoEm ?? null;
+    // d58: o cliente pagou o Trabalho CLYON à CLYON (seja qual for a data) — fica no antigo.
+    const clientePagouAClyonEm = clyon.get(Number(l.id))?.clientePagouAClyonEm ?? null;
     /*
      * O MODELO DE 15-11-2026 — d10 (`novo-modelo.ts`). Antes da data, nunca. Um
      * pagamento à CLYON antes de 15-11 deixa o trabalho no modelo antigo; um
@@ -260,6 +262,7 @@ export async function trabalhosDaCarteira(
           {
             ofertaClyon: l.ofertaClyon,
             pedidoCriadoEm,
+            clientePagouAClyonEm,
             clientePagouEm: pagoAntes,
             fechadoEm: quandoLiberta({
               estado: l.estado,
@@ -311,7 +314,7 @@ export async function trabalhosDaCarteira(
     negociacaoCriadaEm: l.createdAt ?? null,
     // Quem paga um trabalho CLYON do modelo antigo é a CLYON — ver `pagoPelaClyon` em
     // carteira.ts. Um de depois do corte (d33) é do parceiro: o cliente paga-lhe.
-    pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm }, agora),
+    pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm }, agora),
     marcasDaDivida: marcas.get(Number(l.id)) ?? [],
     pagoAoProfissionalValor: l.pagoEm != null ? (transferidos.get(Number(l.id)) ?? null) : null,
     reservaCent: reservas.get(Number(l.id)) ?? null,

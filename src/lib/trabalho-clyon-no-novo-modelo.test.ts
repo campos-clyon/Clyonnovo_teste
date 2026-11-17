@@ -115,7 +115,7 @@ describe("(b) nenhuma mensagem ao cliente de um pedido do modelo novo diz «Paga
       },
       DEPOIS,
     );
-    expect(m).toContain("Paga diretamente a Parceiro de Teste");
+    expect(m).toContain("Paga diretamente à empresa Parceiro de Teste");
     expect(m).not.toContain("Paga à CLYON");
     expect(m).not.toContain("pagar=1");
   });

@@ -374,7 +374,7 @@ describe("as peças estão ligadas", () => {
   it("a carteira recebe a marca", () => {
     expect(semNotas(ler("src/lib/carteira-do-profissional.ts"))).toContain(
       // d33: a pergunta única, pela criação do pedido (com o interruptor ligado, todos).
-      "pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm }, agora),",
+      "pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm }, agora),",
     );
     // d31 (o #612): pago quando o cliente pagou, ou quando a CLYON já lhe transferiu.
     expect(semNotas(ler("src/lib/carteira.ts"))).toContain("if (t.pagoPelaClyon) return t.clientePagouEm != null || t.pagoEm != null;");
@@ -397,7 +397,7 @@ describe("as peças estão ligadas", () => {
     expect(ROTA_CARTEIRAS).toContain("n.ofertaClyon,");
     // d33: só o Trabalho CLYON do modelo antigo fica fora do faturado (`clyonAntigo`).
     expect(ROTA_CARTEIRAS.match(/if \(!clyonAntigo\) clyon\.faturado/g)?.length).toBe(3);
-    expect(ROTA_CARTEIRAS).toContain("const clyonAntigo = trabalhoClyonDoModeloAntigo(");
+    expect(ROTA_CARTEIRAS).toMatch(/const clyonAntigo =\s*trabalhoClyonDoModeloAntigo\(/);
     expect(ROTA_CARTEIRAS).not.toMatch(/\n\s*clyon\.faturado = /);
     expect(ler("src/components/admin/AdminCarteirasPanel.tsx")).toContain('"trabalho CLYON · valor fixo"');
   });

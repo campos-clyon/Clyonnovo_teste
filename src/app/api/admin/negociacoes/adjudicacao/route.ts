@@ -7,6 +7,8 @@ import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { linkParaPagar } from "@/lib/valores-para-pagamento";
 import { ADJUDICACAO_SEM_CONTA_NO_NOVO_MODELO } from "@/lib/referencia-no-novo-modelo";
+import { lerBase } from "@/lib/base-do-preco";
+import { totalAoCliente } from "@/lib/total-ao-cliente";
 
 export const runtime = "nodejs";
 
@@ -66,11 +68,21 @@ export async function POST(req: NextRequest) {
   const pool = await getPool();
   if (!pool) return NextResponse.json({ error: "Base indisponível." }, { status: 503 });
   const [linhas] = (await pool.execute(
-    `SELECT n.pedidoId, n.estado, o.contactEmail, o.status
+    `SELECT n.pedidoId, n.estado, n.valorAcordado, o.contactEmail, o.status, o.baseDoPreco
        FROM negociacoes n JOIN simulatorOrders o ON o.id = n.pedidoId
       WHERE n.id = ? LIMIT 1`,
     [negociacaoId],
-  )) as [Array<{ pedidoId: number; estado: string; contactEmail: string | null; status: string | null }>, unknown];
+  )) as [
+    Array<{
+      pedidoId: number;
+      estado: string;
+      valorAcordado: unknown;
+      contactEmail: string | null;
+      status: string | null;
+      baseDoPreco: unknown;
+    }>,
+    unknown,
+  ];
   const n = linhas[0];
   if (!n) return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
   if (n.estado !== "acordada" || n.status === "cancelado") {
@@ -94,6 +106,18 @@ export async function POST(req: NextRequest) {
       total: visto.conta.total,
       semIva: visto.conta.semIva,
       formas: visto.opcoes.map((o) => o.id),
+      /*
+       * d58: por carga, o total acima é de UMA carga; por hora (as horas por
+       * confirmar), é a estimativa — a mensagem diz também o valor de uma hora.
+       */
+      base: lerBase(n.baseDoPreco),
+      porHora:
+        acesso.trabalho.porHora && !acesso.trabalho.porHora.horasConfirmadas
+          ? (() => {
+              const h = totalAoCliente(Number(n.valorAcordado), acesso.trabalho.taxas, visto.perfilFiscal.regimeParaAConta);
+              return h ? { semIva: h.semIva, total: h.total } : null;
+            })()
+          : null,
     };
   }
 

@@ -437,6 +437,8 @@ export type NegociacaoParaRetencao = {
   negociacaoCriadaEm: Data;
   /** d33: a criação do pedido — decide o modelo de um Trabalho CLYON (`trabalhoClyonDoModeloAntigo`). */
   pedidoCriadoEm?: Data;
+  /** d58: o cliente pagou o Trabalho CLYON à CLYON, seja qual for a data (`clientePagouOTrabalhoClyon`). */
+  clientePagouAClyonEm?: Data;
   /** O pagamento dado por pago a esta negociação (`pagamentos.negociacaoPaga`). */
   clientePagouEm: Data;
   comoEntrou: string | null;
@@ -534,7 +536,14 @@ export function negociacaoFechada(n: NegociacaoParaRetencao): boolean {
     }
     // Um Trabalho CLYON do modelo antigo: a CLYON recebeu e pagou. Um de depois do corte
     // (d33) segue a regra dos outros do modelo novo — fica aberto enquanto a taxa não entrar.
-    if (trabalhoClyonDoModeloAntigo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm ?? null })) return true;
+    if (
+      trabalhoClyonDoModeloAntigo({
+        ofertaClyon: n.ofertaClyon,
+        pedidoCriadoEm: n.pedidoCriadoEm ?? null,
+        clientePagouAClyonEm: n.clientePagouAClyonEm ?? null,
+      })
+    )
+      return true;
     if (!verificaOPagamento({ negociacaoCriadaEm: n.negociacaoCriadaEm ?? null })) return true;
     return tem(n.clientePagouEm) || n.pagamentosRecebidos > 0;
   }

@@ -2,6 +2,7 @@ import type { Taxas } from "./taxas-plataforma";
 import type { DividaDoProfissional } from "./divida-do-profissional";
 import { contaDoValorAcordado } from "./pagamento-directo";
 import { NOVO_MODELO_DESDE, eDoNovoModelo } from "./novo-modelo";
+import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 
 /**
  * O QUE O PARCEIRO PASSA À CLYON NUM TRABALHO DO MODELO NOVO — d10, desde
@@ -94,10 +95,76 @@ export function pagoAClyonAntesDoCorte(pagamentos: ReadonlyArray<PagamentoParaOC
   return null;
 }
 
+/** O que o fecho de um trabalho precisa para dizer quando, no mais cedo, se libertou. */
+export type TrabalhoParaOPagamentoDoCliente = {
+  confirmadoEm?: unknown;
+  pagoEm?: unknown;
+  execucaoEnviadaEm?: unknown;
+};
+
+/**
+ * O MAIS CEDO QUE ESTE TRABALHO SE PODIA TER LIBERTADO — d58. A referência com
+ * que o profissional passa à CLYON a taxa (modelo de 15-11) só nasce DEPOIS de o
+ * trabalho se libertar (`gerarReferenciaDaDivida` recusa antes: «O trabalho ainda
+ * não foi confirmado.»), e a libertação é a confirmação, o pagamento ao
+ * profissional, ou o prazo depois de dado por feito (`quandoLiberta`). O mínimo
+ * dos três é um limite que essa referência nunca fura. `null` = ainda por libertar.
+ */
+export function libertacaoMaisCedo(t: TrabalhoParaOPagamentoDoCliente): Date | null {
+  const datas = [comoData(t.confirmadoEm), comoData(t.pagoEm)];
+  const enviada = comoData(t.execucaoEnviadaEm);
+  if (enviada) datas.push(new Date(enviada.getTime() + DIAS_ATE_LIBERTAR_SOZINHO * 86_400_000));
+  const validas = datas.filter((d): d is Date => d != null);
+  if (validas.length === 0) return null;
+  return new Date(Math.min(...validas.map((d) => d.getTime())));
+}
+
+/** Registos à mão do cliente à CLYON (`dinheiro-do-trabalho.ts`). Os «pro_*» são do profissional. */
+const DO_CLIENTE_A_MAO = new Set(["transferencia", "numerario"]);
+/** O euPago: do cliente, ou a referência da taxa do profissional — decide a data (em baixo). */
+const DO_EUPAGO = new Set(["mbway", "multibanco"]);
+
+/**
+ * O CLIENTE PAGOU ESTE TRABALHO CLYON À CLYON? — d58 (CEO e dono, 17-11-2026).
+ * Quando, ou `null`. SEJA QUAL FOR A DATA: com o dinheiro do cliente na CLYON, a
+ * CLYON paga ao profissional (o modelo antigo), mesmo num criado depois de 15-11.
+ *
+ * Conta: uma linha paga (com data) do cliente — por transferência ou numerário
+ * anotados à mão, ou pelo euPago (MB WAY, Multibanco) com a referência criada
+ * ANTES de o trabalho se poder libertar (`libertacaoMaisCedo`). Não conta: a
+ * parte «divida», os pagamentos do profissional à CLYON («pro_*», abatimento,
+ * quitação), o «pago ao profissional», e uma referência do euPago criada depois
+ * da libertação — essa é a da taxa do profissional no modelo de 15-11 (é sempre
+ * depois), e contá-la passava ao antigo um trabalho que o parceiro já recebeu.
+ */
+export function clientePagouOTrabalhoClyon(
+  pagamentos: ReadonlyArray<PagamentoParaOCorte>,
+  t: TrabalhoParaOPagamentoDoCliente,
+): Date | null {
+  const limite = libertacaoMaisCedo(t);
+  let primeiro: Date | null = null;
+  for (const p of pagamentos) {
+    if (p.estado !== "pago" || p.parte === "divida") continue;
+    const pago = comoData(p.pagoEm);
+    if (!pago) continue;
+    const metodo = String(p.metodo ?? "").trim();
+    let doCliente = DO_CLIENTE_A_MAO.has(metodo);
+    if (!doCliente && DO_EUPAGO.has(metodo)) {
+      const criada = comoData(p.criadoEm) ?? pago;
+      doCliente = limite == null || criada.getTime() < limite.getTime();
+    }
+    if (doCliente && (primeiro == null || pago.getTime() < primeiro.getTime())) primeiro = pago;
+  }
+  return primeiro;
+}
+
 /**
  * Esta negociação, já com os pagamentos lidos, segue o modelo novo? A regra é a
  * de `eDoNovoModelo`; aqui só se lêem os pagamentos: um pagamento feito à CLYON
- * antes de 15-11 deixa-a no modelo antigo. Os de depois são do parceiro (a taxa).
+ * antes de 15-11 deixa-a no modelo antigo. Os de depois são do parceiro (a taxa)
+ * — menos num Trabalho CLYON, onde o pagamento do CLIENTE à CLYON o deixa no
+ * antigo seja qual for a data (d58): pelo `trabalho` dado (as datas do fecho,
+ * `clientePagouOTrabalhoClyon`) ou pela data já lida da base (`clientePagouAClyonEm`).
  */
 export function negociacaoNoNovoModelo(
   l: {
@@ -106,6 +173,10 @@ export function negociacaoNoNovoModelo(
     contratadaEm?: Date | string | null;
     /** d33: a criação do pedido de um Trabalho CLYON (`trabalhoClyonDoModeloAntigo`). */
     pedidoCriadoEm?: Date | string | null;
+    /** d58: o pagamento do cliente à CLYON de um Trabalho CLYON, já lido (`trabalhosClyonDasNegociacoes`). */
+    clientePagouAClyonEm?: Date | string | null;
+    /** d58: as datas do fecho, para o ler dos `pagamentos` daqui. */
+    trabalho?: TrabalhoParaOPagamentoDoCliente;
   },
   pagamentos: ReadonlyArray<PagamentoParaOCorte>,
   agora: Date,
@@ -114,6 +185,8 @@ export function negociacaoNoNovoModelo(
     {
       ofertaClyon: l.ofertaClyon,
       pedidoCriadoEm: l.pedidoCriadoEm ?? null,
+      clientePagouAClyonEm:
+        l.clientePagouAClyonEm ?? (l.trabalho ? clientePagouOTrabalhoClyon(pagamentos, l.trabalho) : null),
       clientePagouEm: pagoAClyonAntesDoCorte(pagamentos),
       fechadoEm: l.fechadoEm ?? null,
       contratadaEm: l.contratadaEm ?? null,

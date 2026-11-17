@@ -4,7 +4,8 @@ import { linkDeWhatsApp } from "./link-de-whatsapp";
 import { ABERTURA_DOS_METODOS, SEM_METODOS_DE_PAGAMENTO, limparMetodosDePagamento } from "./metodos-de-pagamento";
 import { servicoComArtigo } from "./mensagem-das-propostas";
 import { servicoEmPalavras } from "./servico-em-palavras";
-import { extraNoLocal, INCLUI, valorComIva } from "./extra-no-local";
+import { eurosCurtos, extraNoLocal, INCLUI, valorComIva } from "./extra-no-local";
+import { lerBase, unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
 import { telefoneLegivel } from "./telefone-legivel";
 
 /**
@@ -91,8 +92,13 @@ export type TrabalhoAdjudicado = {
 
 /** O que o servidor dá à adjudicação no modelo de 15-11 (d17). */
 export type AdjudicacaoNoNovoModelo = {
+  /** O que o cliente paga — por carga numa base «carga»; a estimativa (ou o final) numa base «hora». */
   total: number;
   semIva: number;
+  /** d58: o que o valor mede (`base-do-preco.ts`). Sem ela, o trabalho todo. */
+  base?: BaseDoPreco | null;
+  /** d58: numa base «hora» com as horas por confirmar, o valor de UMA hora ao cliente. */
+  porHora?: { semIva: number; total: number } | null;
   /** As formas que o parceiro pode receber (`comoPagarDisponiveis` com os dados dele). */
   formas: ReadonlyArray<"transferencia" | "mbway" | "dinheiro">;
 };
@@ -202,6 +208,34 @@ function formasEmPalavras(formas: AdjudicacaoNoNovoModelo["formas"]): string {
   return `por ${l.slice(0, -1).join(", ")} ou ${l[l.length - 1]}`;
 }
 
+/** «370 € + IVA por carga (455,11 €)», ou «370 € por carga» sem IVA. */
+function valorPorUnidade(semIva: number, total: number, base: BaseDoPreco): string {
+  const unidade = unidadeDaBase(base);
+  if (Math.abs(total - semIva) < 0.005) return `${eurosCurtos(total)}${unidade}`;
+  return `${eurosCurtos(semIva)} + IVA${unidade} (${eurosCurtos(total)})`;
+}
+
+/**
+ * A PRIMEIRA FRASE DO BLOCO, PELA BASE — d58 (CEO e dono, 17-11-2026). Com base
+ * «por carga» o número é de UMA carga e não do trabalho todo: «O valor é 370 € +
+ * IVA por carga (455,11 €), × o número de cargas». Por hora, com as horas por
+ * confirmar, o valor de uma hora e a estimativa; com as horas confirmadas, o
+ * total final. No resto, como sempre (d47: «X € + IVA = Y €»).
+ */
+export function valorDoBlocoDoNovoModelo(n: Pick<AdjudicacaoNoNovoModelo, "total" | "semIva" | "base" | "porHora">): string {
+  const base = lerBase(n.base);
+  if (base === "carga") {
+    return `O valor é ${valorPorUnidade(n.semIva, n.total, "carga")}, × o número de cargas, já com a taxa da plataforma.`;
+  }
+  if (base === "hora" && n.porHora) {
+    return (
+      `O valor é ${valorPorUnidade(n.porHora.semIva, n.porHora.total, "hora")}, × as horas do trabalho, já com a taxa da plataforma. ` +
+      `A estimativa é ${valorComIva(n.semIva, n.total)}.`
+    );
+  }
+  return `O total é ${valorComIva(n.semIva, n.total)}, já com a taxa da plataforma.`;
+}
+
 /**
  * O BLOCO DO PAGAMENTO NO MODELO DE 15-11 — o texto D das Vendas (d17,
  * 13-11-2026). Sem «Paga à CLYON», sem referências ao cliente, sem os dados do
@@ -212,12 +246,16 @@ export function blocoDoPagamentoAoParceiro(
   parceiro: string | null | undefined,
   link: string | null | undefined,
 ): string {
-  const quem = parceiro?.trim() || "o parceiro";
+  /*
+   * d58: «à empresa X» (a mensagem já a chama assim: «a cargo da empresa …»),
+   * ou «ao parceiro» sem nome. Nunca «a X» nem «a o X»: a preposição vai
+   * com a palavra que se escreve, e não com o nome.
+   */
+  const quem = parceiro?.trim() ? `à empresa ${parceiro.trim()}` : "ao parceiro";
   const como = formasEmPalavras(n.formas);
   return [
-    // d47: «X € + IVA = Y €», como em todas as mensagens com valores.
-    `O total é ${valorComIva(n.semIva, n.total)}, já com a taxa da plataforma.`,
-    `Paga diretamente a ${quem}, no fim do trabalho (salvo se combinarem outra coisa)${como ? `: ${como}` : ""}. ` +
+    valorDoBlocoDoNovoModelo(n),
+    `Paga diretamente ${quem}, no fim do trabalho (salvo se combinarem outra coisa)${como ? `: ${como}` : ""}. ` +
       (link?.trim() ? `Os dados para pagar estão no seu pedido, e só lá:\n${link.trim()}` : "Os dados para pagar estão no seu pedido, e só lá."),
     "Se alguém lhe pedir que pague para outros dados, não pague e fale connosco.",
     "Recebe duas faturas no pedido: a do trabalho, do parceiro, e a da taxa da plataforma. Guarde o comprovativo do pagamento.",

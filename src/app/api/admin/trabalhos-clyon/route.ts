@@ -172,6 +172,20 @@ export async function GET(req: NextRequest) {
       console.error("[admin/trabalhos-clyon GET] folhas finais", e);
       return new Map<number, FolhaFinalGravada>();
     });
+    /*
+     * O CLIENTE JÁ PAGOU À CLYON — d58 (CEO e dono, 17-11-2026; o #623). Um
+     * Trabalho CLYON que o cliente pagou à CLYON fica no modelo antigo, seja qual
+     * for a data: o dinheiro está com a CLYON, e a CLYON paga ao profissional.
+     * Se a leitura falhar, fica a regra pela criação do pedido.
+     */
+    const { trabalhosClyonDasNegociacoes } = await import("@/lib/trabalho-clyon-na-base");
+    const pagosPeloCliente = await trabalhosClyonDasNegociacoes(
+      ofertas.flatMap((o) => o.negociacoes.filter((n) => n.estado === "acordada").map((n) => Number(n.negociacaoId))),
+    );
+    const clientePagouAClyonEm = (o: (typeof ofertas)[number]) =>
+      o.negociacoes
+        .map((n) => pagosPeloCliente.get(Number(n.negociacaoId))?.clientePagouAClyonEm ?? null)
+        .find((d) => d != null) ?? null;
     return NextResponse.json({
       outros,
       trabalhos: ofertas.map((o) => {
@@ -233,7 +247,11 @@ export async function GET(req: NextRequest) {
            * pagamento». Pela criação do pedido; a conta de quem ficou com ele
            * vem do servidor (`/api/admin/negociacoes/fatura`), com os pagamentos lidos.
            */
-          noNovoModelo: trabalhoClyonDoNovoModelo({ valorFixoClyon: o.valorFixo, pedidoCriadoEm: o.criadoEm }, agoraDoModelo()),
+          // d58: o cliente que já pagou à CLYON deixa-o no antigo (`clientePagouAClyonEm`).
+          noNovoModelo: trabalhoClyonDoNovoModelo(
+            { valorFixoClyon: o.valorFixo, pedidoCriadoEm: o.criadoEm, clientePagouAClyonEm: clientePagouAClyonEm(o) },
+            agoraDoModelo(),
+          ),
           notas: o.notasInternas,
           concluidoVistoEm: iso(o.concluidoVistoEm),
           propostaEnviadaEm: iso(o.propostaEnviadaEm),

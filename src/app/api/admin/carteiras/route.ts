@@ -430,10 +430,13 @@ export async function GET(req: NextRequest) {
        * pela CLYON; o de depois do corte é como os outros do modelo novo (o
        * cliente paga ao parceiro). `trabalhoClyon` fica para o ecrã e o lucro.
        */
-      const clyonAntigo = trabalhoClyonDoModeloAntigo(
-        { ofertaClyon: l.ofertaClyon, pedidoCriadoEm: (l.pedidoCriadoEm as Date | string | null) ?? null },
-        agoraDoModelo(),
-      );
+      const clyonAntigo =
+        trabalhoClyonDoModeloAntigo(
+          { ofertaClyon: l.ofertaClyon, pedidoCriadoEm: (l.pedidoCriadoEm as Date | string | null) ?? null },
+          agoraDoModelo(),
+        ) ||
+        // d58: um Trabalho CLYON que o cliente pagou à CLYON (lido em `contratadasNoNovoModelo`) é do antigo.
+        (trabalhoClyon && !doNovoModelo.has(Number(l.negociacaoId)));
       const doLucro = lucroDoTrabalho({
         id: Number(l.pedidoId),
         status: null,

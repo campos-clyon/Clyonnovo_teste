@@ -234,6 +234,8 @@ export async function trabalhoQueSePodePagar(
         // d33: a criação do pedido decide o modelo de um Trabalho CLYON.
         pedidoCriadoEm: (pedido as { createdAt?: Date | string | null }).createdAt ?? null,
         fechadoEm: quandoLiberta(linha),
+        // d58: um Trabalho CLYON que o cliente pagou à CLYON fica no antigo, seja qual for a data.
+        trabalho: linha,
       },
       pagamentos,
       agora,

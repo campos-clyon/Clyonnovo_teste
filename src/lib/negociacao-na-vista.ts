@@ -193,6 +193,8 @@ export type LinhaParaAVista = HorasNaBase & {
   ofertaClyon?: unknown;
   /** d33: a criação do pedido — decide o modelo de um Trabalho CLYON (`trabalhoClyonDoModeloAntigo`). Não sai para o ecrã. */
   pedidoCriadoEm?: unknown;
+  /** d58: o cliente pagou o Trabalho CLYON à CLYON — fica no antigo. Não sai para o ecrã. */
+  clientePagouAClyonEm?: unknown;
   pagarAoParceiroPor?: unknown;
   /** O estado da conta dele e quando foi aprovado — a transição da guia (d10 v2). Não saem para o ecrã. */
   profissionalEstado?: unknown;
@@ -391,9 +393,14 @@ export function novoModeloComTotais(
    * data, fica no antigo).
    */
   const clyonAntigo = trabalhoClyonDoModeloAntigo(
-    { ofertaClyon: n.ofertaClyon, pedidoCriadoEm: (n.pedidoCriadoEm as Date | string | null | undefined) ?? null },
+    {
+      ofertaClyon: n.ofertaClyon,
+      pedidoCriadoEm: (n.pedidoCriadoEm as Date | string | null | undefined) ?? null,
+      clientePagouAClyonEm: (n.clientePagouAClyonEm as Date | string | null | undefined) ?? null,
+    },
     agora,
   );
+  // d58: a resposta do servidor (`negociacoesNoNovoModelo`) já leu o pagamento do cliente à CLYON.
   if (clyonAntigo && (!doServidor || trabalhosClyonTodosNoModeloAntigo())) return null;
   if (doServidor && !doServidor.segue) return null;
   const perfilFiscal = perfilFiscalDoParceiro(n);

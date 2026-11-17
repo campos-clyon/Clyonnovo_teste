@@ -174,6 +174,12 @@ export type NegociacaoParaOModelo = {
   pedidoCriadoEm?: Date | string | null;
   /** Quando o cliente pagou à CLYON (a caução ou o total). `null` = nada pago. */
   clientePagouEm?: Date | string | null;
+  /**
+   * d58 — num Trabalho CLYON, quando o CLIENTE pagou à CLYON, SEJA QUAL FOR A DATA
+   * (`clientePagouOTrabalhoClyon` de `taxa-a-passar-a-clyon.ts`). Com ela, o
+   * Trabalho CLYON fica no antigo (`trabalhoClyonDoModeloAntigo`).
+   */
+  clientePagouAClyonEm?: Date | string | null;
   /** Quando ficou contratada (o «acordada»). Para a variante "data_de_contratacao". */
   contratadaEm?: Date | string | null;
   /** Quando o trabalho fechou (o valor do profissional à CLYON nasce aqui). */
@@ -215,12 +221,25 @@ export function trabalhoClyonNoNovoModelo(criadoEm: Date | string | null | undef
  * CLYON é do antigo (como sempre foi). Desligado, só os criados antes do corte.
  */
 export function trabalhoClyonDoModeloAntigo(
-  n: { ofertaClyon?: unknown; valorFixoClyon?: unknown; pedidoCriadoEm?: Date | string | null },
+  n: {
+    ofertaClyon?: unknown;
+    valorFixoClyon?: unknown;
+    pedidoCriadoEm?: Date | string | null;
+    /**
+     * d58 (CEO e dono, 17-11-2026): o cliente já pagou à CLYON (euPago, ou
+     * transferência/numerário anotados como pagos à CLYON — nunca o que o
+     * profissional pagou). O dinheiro está com a CLYON e é a CLYON que paga ao
+     * profissional: fica no antigo, seja qual for a data. O #623 (criado a 15-11,
+     * pago pelo cliente por MB WAY a 17-11) mostrava a conta do modelo novo.
+     */
+    clientePagouAClyonEm?: Date | string | null;
+  },
   agora: Date = new Date(),
 ): boolean {
   const clyon = eTrabalhoClyon(n.ofertaClyon) || (n.valorFixoClyon != null && n.valorFixoClyon !== "");
   if (!clyon) return false;
   if (trabalhosClyonTodosNoModeloAntigo()) return true;
+  if (comoData(n.clientePagouAClyonEm) != null) return true;
   return !trabalhoClyonNoNovoModelo(n.pedidoCriadoEm, agora);
 }
 
@@ -232,7 +251,13 @@ export function trabalhoClyonDoModeloAntigo(
  * (`negociacaoNoNovoModelo`): um pago à CLYON antes de mudar fica no antigo.
  */
 export function trabalhoClyonDoNovoModelo(
-  n: { ofertaClyon?: unknown; valorFixoClyon?: unknown; pedidoCriadoEm?: Date | string | null },
+  n: {
+    ofertaClyon?: unknown;
+    valorFixoClyon?: unknown;
+    pedidoCriadoEm?: Date | string | null;
+    /** d58: o cliente pagou à CLYON — fica no antigo (`trabalhoClyonDoModeloAntigo`). */
+    clientePagouAClyonEm?: Date | string | null;
+  },
   agora: Date = new Date(),
 ): boolean {
   const clyon = eTrabalhoClyon(n.ofertaClyon) || (n.valorFixoClyon != null && n.valorFixoClyon !== "");
@@ -250,7 +275,13 @@ export function trabalhoClyonDoNovoModelo(
  */
 export function eDoNovoModelo(n: NegociacaoParaOModelo, agora: Date = new Date()): boolean {
   if (!novoModeloEmVigor(agora)) return false;
-  if (trabalhoClyonDoModeloAntigo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm }, agora)) return false;
+  if (
+    trabalhoClyonDoModeloAntigo(
+      { ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm, clientePagouAClyonEm: n.clientePagouAClyonEm },
+      agora,
+    )
+  )
+    return false;
   if (comoData(n.clientePagouEm) != null) return false;
   const fechado = comoData(n.fechadoEm);
   if (fechado && fechado.getTime() < NOVO_MODELO_DESDE.getTime()) return false;

@@ -114,6 +114,20 @@ export default async function VistaDoPedido({
    * grava-se. O backoffice («ver como o cliente», sem token) não conta.
    */
   if (token && !soParaVer) await marcarVistasPeloCliente(negociacoesDoCliente.map((n) => n.id));
+  /*
+   * d58: um Trabalho CLYON que o cliente já pagou à CLYON fica no modelo antigo
+   * (uma fatura só), seja qual for a data (`trabalhoClyonDoModeloAntigo`).
+   */
+  const clientePagouAClyonEm =
+    pedido.valorFixoClyon != null
+      ? ([
+          ...(
+            await (await import("@/lib/trabalho-clyon-na-base")).trabalhosClyonDasNegociacoes(
+              negociacoesDoCliente.map((n) => n.id),
+            )
+          ).values(),
+        ].find((c) => c.clientePagouAClyonEm != null)?.clientePagouAClyonEm ?? null)
+      : null;
 
   /*
    * O FIM DE UM TRABALHO CLYON (d6, 31-10-2026): o dia, o pagamento, «a CLYON
@@ -453,7 +467,11 @@ export default async function VistaDoPedido({
         {/* d54: o Trabalho CLYON do modelo de 15-11 tem as duas faturas, como as negociações. */}
         {pedido.valorFixoClyon != null &&
         !trabalhoClyonDoNovoModelo(
-          { valorFixoClyon: pedido.valorFixoClyon, pedidoCriadoEm: (pedido as { createdAt?: Date | string | null }).createdAt ?? null },
+          {
+            valorFixoClyon: pedido.valorFixoClyon,
+            pedidoCriadoEm: (pedido as { createdAt?: Date | string | null }).createdAt ?? null,
+            clientePagouAClyonEm,
+          },
           agoraDoModelo(),
         )
           ? QUEM_FACTURA_EM_PALAVRAS

@@ -57,15 +57,17 @@ export async function segueONovoModelo(
   const { negociacaoNoNovoModelo } = await import("./taxa-a-passar-a-clyon");
   const { quandoLiberta } = await import("./trabalho");
   const { trabalhosClyonDasNegociacoes, comOTrabalhoClyonDaBase } = await import("./trabalho-clyon-na-base");
+  // d58: a base sempre — é ela que diz se o cliente pagou o Trabalho CLYON à CLYON.
   const [pagamentos, clyon] = await Promise.all([
     pagamentosDaNegociacao(Number(n.id)),
-    n.pedidoCriadoEm === undefined ? trabalhosClyonDasNegociacoes([n.id]) : Promise.resolve(new Map()),
+    trabalhosClyonDasNegociacoes([n.id]),
   ]);
   const c = comOTrabalhoClyonDaBase(n, clyon.get(Number(n.id)));
   return negociacaoNoNovoModelo(
     {
       ofertaClyon: c.ofertaClyon,
       pedidoCriadoEm: c.pedidoCriadoEm ?? null,
+      clientePagouAClyonEm: c.clientePagouAClyonEm ?? null,
       fechadoEm: quandoLiberta(n as Parameters<typeof quandoLiberta>[0]),
     },
     pagamentos,
@@ -102,7 +104,8 @@ export async function contratadasNoNovoModelo(
   const { trabalhosClyonDasNegociacoes, comOTrabalhoClyonDaBase } = await import("./trabalho-clyon-na-base");
   const [pagamentos, clyon] = await Promise.all([
     pagamentosDasNegociacoes(linhas.map((l) => Number(l.id))),
-    trabalhosClyonDasNegociacoes(linhas.filter((l) => l.pedidoCriadoEm === undefined).map((l) => l.id)),
+    // d58: todas — a base diz se o cliente pagou o Trabalho CLYON à CLYON.
+    trabalhosClyonDasNegociacoes(linhas.map((l) => l.id)),
   ]);
   for (const linha of linhas) {
     const n = comOTrabalhoClyonDaBase(linha, clyon.get(Number(linha.id)));
@@ -110,6 +113,7 @@ export async function contratadasNoNovoModelo(
       {
         ofertaClyon: n.ofertaClyon,
         pedidoCriadoEm: n.pedidoCriadoEm ?? null,
+        clientePagouAClyonEm: n.clientePagouAClyonEm ?? null,
         fechadoEm: quandoLiberta({ estado: "acordada", ...n } as unknown as Parameters<typeof quandoLiberta>[0]),
       },
       pagamentos.get(Number(n.id)) ?? [],
@@ -166,19 +170,25 @@ export async function negociacoesNoNovoModelo(
   if (!novoModeloEmVigor(agora)) return ids;
   // d33: a criação do pedido de cada Trabalho CLYON, numa consulta (vazio com o interruptor ligado).
   const { trabalhosClyonDasNegociacoes, comOTrabalhoClyonDaBase } = await import("./trabalho-clyon-na-base");
+  // d58: todas — a base diz também se o cliente pagou o Trabalho CLYON à CLYON.
   const clyon = await trabalhosClyonDasNegociacoes(
-    linhas.filter((l) => l.pedidoCriadoEm === undefined).map((l) => l.id as number | string | null | undefined),
+    linhas.map((l) => l.id as number | string | null | undefined),
   );
   await Promise.all(
     linhas.map(async (linha) => {
       const n = comOTrabalhoClyonDaBase(linha, clyon.get(Number(linha.id)));
+      const pelaLinha = {
+        ofertaClyon: n.ofertaClyon,
+        pedidoCriadoEm: n.pedidoCriadoEm ?? null,
+        clientePagouAClyonEm: n.clientePagouAClyonEm ?? null,
+      };
       const sim =
         n.estado === "acordada"
           ? await segueONovoModelo(
               { ...(n as Parameters<typeof segueONovoModelo>[0]), pedidoCriadoEm: n.pedidoCriadoEm ?? null },
               agora,
-            ).catch(() => eDoNovoModelo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm ?? null }, agora))
-          : eDoNovoModelo({ ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm ?? null }, agora);
+            ).catch(() => eDoNovoModelo(pelaLinha, agora))
+          : eDoNovoModelo(pelaLinha, agora);
       if (sim) ids.add(Number(n.id));
     }),
   );

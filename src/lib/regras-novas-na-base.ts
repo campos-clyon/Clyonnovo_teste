@@ -15,6 +15,7 @@
  * ligado (`regrasNovasValem` em db.ts). O painel chama sempre em ensaio.
  */
 
+import { clientePagouOTrabalhoClyon } from "./taxa-a-passar-a-clyon";
 import {
   apagarFotosDoBlob,
   deleteSimulatorOrder,
@@ -129,11 +130,21 @@ export async function lerPedidosParaRetencao(): Promise<PedidoParaRetencao[]> {
        FROM negociacoes n`,
   )) as [Linha[], unknown];
 
-  type Pagamento = { id: number; negociacaoId: number; negociacaoPaga: number | null; estado: string; metodo: string; pagoEm: unknown; viva: number };
+  type Pagamento = {
+    id: number;
+    negociacaoId: number;
+    negociacaoPaga: number | null;
+    estado: string;
+    metodo: string;
+    pagoEm: Date | string | null;
+    criadoEm: Date | string | null;
+    parte: string | null;
+    viva: number;
+  };
   let pagamentos: Pagamento[] = [];
   if (comPagamentos) {
     const [p] = (await pool.execute(
-      `SELECT id, negociacaoId, negociacaoPaga, estado, metodo, pagoEm,
+      `SELECT id, negociacaoId, negociacaoPaga, estado, metodo, pagoEm, criadoEm, parte,
               (estado = 'pendente' AND (expiraEm IS NULL OR expiraEm > NOW())) AS viva
          FROM pagamentos`,
     )) as [Linha[], unknown];
@@ -143,7 +154,9 @@ export async function lerPedidosParaRetencao(): Promise<PedidoParaRetencao[]> {
       negociacaoPaga: numeroOuNulo(l.negociacaoPaga),
       estado: String(l.estado ?? ""),
       metodo: String(l.metodo ?? ""),
-      pagoEm: l.pagoEm ?? null,
+      pagoEm: (l.pagoEm as Date | string | null) ?? null,
+      criadoEm: (l.criadoEm as Date | string | null) ?? null,
+      parte: typeof l.parte === "string" ? l.parte : null,
       viva: numero(l.viva),
     }));
   }
@@ -185,6 +198,11 @@ export async function lerPedidosParaRetencao(): Promise<PedidoParaRetencao[]> {
       semFactura: n.semFactura,
       negociacaoCriadaEm: (n.negociacaoCriadaEm as Date | string | null) ?? null,
       pedidoCriadoEm: (n.pedidoCriadoEm as Date | string | null) ?? null,
+      // d58: o cliente pagou o Trabalho CLYON à CLYON (seja qual for a data) — fica no antigo.
+      clientePagouAClyonEm: clientePagouOTrabalhoClyon(
+        pags.filter((p) => p.negociacaoId === id),
+        { confirmadoEm: n.confirmadoEm, pagoEm: n.pagoEm, execucaoEnviadaEm: n.execucaoEnviadaEm },
+      ),
       clientePagouEm: paga ? ((paga.pagoEm as Date | string | null) ?? "pago") : null,
       comoEntrou: paga?.metodo ?? null,
       referenciasVivas: pags.filter((p) => p.viva === 1).length,
