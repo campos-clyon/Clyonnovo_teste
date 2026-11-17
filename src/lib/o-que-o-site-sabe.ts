@@ -32,9 +32,11 @@ import {
   ENTULHO_ATE_10_SACOS,
   ENTULHO_POR_VOLUME,
   ESVAZIAMENTO_POR_TIPOLOGIA,
+  GRANDES_EM_TEXTO,
   MANUTENCAO_POR_TIPO,
   NOME_DO_TAMANHO,
   PECAS_DE_REFERENCIA,
+  PECAS_EM_TEXTO,
   PRECOS,
   PRECO_DA_PRIMEIRA_GRANDE,
   PRECO_POR_ITEM,
@@ -45,6 +47,7 @@ import {
   RECOLHA_POR_ANDAR_SEM_ELEVADOR,
   SEM_IVA_NA_FRASE,
   precoDaPeca,
+  valorDeUmAndarAPe,
 } from "./precos-publicos";
 import {
   ACRESCIMO_POR_URGENCIA,
@@ -63,13 +66,14 @@ import { servicosPorExtenso } from "./servicos-da-vitoria";
 import {
   ELEVADOR_EXTERIOR,
   MATERIAIS,
-  MINIMO_DA_MUDANCA,
   MINIMO_DE_HORAS,
+  PESSOAS_NA_EQUIPA,
   POR_ANDAR_SEM_ELEVADOR,
   POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
   PRECO_POR_HORA,
   PRECO_POR_HORA_DUAS_PESSOAS,
   PRECO_POR_KM_LONGE,
+  RAIO_INCLUIDO_KM,
 } from "./tabela-das-mudancas";
 import { eurosDaLista, precoDaMudancaNoWhatsApp, precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import { NOSSA_EQUIPA, PROPRIO_DIA } from "./frases-proibidas";
@@ -85,6 +89,24 @@ function euros(n: number): string {
 export function comIva(n: number): number {
   return Math.round(n * (1 + TAXA_IVA) * 100) / 100;
 }
+
+/** «60 € + IVA (73,80 € com IVA)» — o valor sem IVA nunca sozinho. */
+function maisIva(n: number): string {
+  return `${euros(n)} + IVA (${euros(comIva(n))} com IVA)`;
+}
+
+/*
+ * OS NÚMEROS DA d60 QUE A VITÓRIA DIZ — 17-11-2026 (d62/d63). Lidos das fontes:
+ * o mínimo de uma mudança com 2 e com 3 pessoas (as horas mínimas da
+ * referência), e o exemplo dos andares a pé com peças grandes (o mesmo do site).
+ */
+/** O mínimo de uma mudança na referência, sem IVA: as horas mínimas × a hora da equipa. */
+export const MINIMO_DA_MUDANCA_COM: Readonly<Record<2 | 3, number>> = Object.freeze({
+  2: PRECO_POR_HORA_DUAS_PESSOAS * MINIMO_DE_HORAS,
+  3: PRECO_POR_HORA * MINIMO_DE_HORAS,
+});
+/** O exemplo dos andares: 3 peças grandes num 3.º andar sem elevador. */
+export const EXEMPLO_DOS_ANDARES = { pecasGrandes: 3, andar: 3, valor: valorDeUmAndarAPe(3) * 3 } as const;
 
 /** «4,80» — sempre com os cêntimos. */
 const centimos = (n: number) => n.toFixed(2).replace(".", ",");
@@ -106,7 +128,7 @@ function faixa(minimo: number, maximo?: number): string {
 const SERVICOS_COM_PRECO: ReadonlyArray<readonly [id: string, nota?: string]> = [
   ["recolha_moveis"],
   ["recolha_monos"],
-  ["esvaziamento_casa", "moradia"],
+  ["esvaziamento_casa"],
   ["esvaziamento_apartamento"],
   ["esvaziamento_garagem"],
   ["esvaziamento_sotao"],
@@ -123,12 +145,27 @@ function linhasDosPrecos(): string[] {
     if (!p || p.minimo == null) continue;
     // Os móveis por peça (d6 v2, 03-11-2026): a frase do dono, peça a peça, com o com IVA de cada uma;
     // e a recolha mínima (d7, 04-11-2026), com os andares depois do mínimo.
+    // Desde a d60 (16-11-2026) a primeira peça grande conta à parte — pelas frases da fonte (PECAS_EM_TEXTO).
     if (id === "recolha_moveis") {
-      const pecas = (["pequeno", "medio", "grande"] as const).map((t) => PRECO_POR_ITEM[t]);
+      const ci = (v: number) => `${centimos(comIva(v))} €`;
+      const grandesComIva = GRANDES_EM_TEXTO.replace(`${PRECO_DA_PRIMEIRA_GRANDE} €`, ci(PRECO_DA_PRIMEIRA_GRANDE)).replace(
+        `${PRECO_POR_ITEM.grande} €`,
+        ci(PRECO_POR_ITEM.grande),
+      );
       linhas.push(
-        `  · ${nome}, por peça: pequena ${pecas[0]} €, média ${pecas[1]} €, grande ${pecas[2]} € sem IVA (${pecas.map((v) => centimos(comIva(v))).join(" / ")} € com IVA); ` +
+        `  · ${nome}, por peça: ${PECAS_EM_TEXTO} sem IVA (com IVA: pequena ${ci(PRECO_POR_ITEM.pequeno)}, média ${ci(PRECO_POR_ITEM.medio)}, ${grandesComIva}); ` +
           `recolha mínima ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} sem IVA (${euros(comIva(RECOLHA_MINIMA_DOS_MOVEIS))} com IVA), que já inclui o parceiro ir a casa, carregar e levar ao destino certo; os andares somam-se depois do mínimo.`,
       );
+      continue;
+    }
+    // Os monos com as peças contadas seguem a mesma conta e a mesma recolha mínima (d60).
+    if (id === "recolha_monos") {
+      linhas.push(`  · ${nome}: ${faixa(Math.max(p.minimo, RECOLHA_MINIMA_DOS_MOVEIS))}, com as peças contadas pela mesma tabela dos móveis.`);
+      continue;
+    }
+    // O esvaziamento de casa desde o mais pequeno das tipologias (a moradia tem o seu «desde», nas linhas a seguir).
+    if (id === "esvaziamento_casa") {
+      linhas.push(`  · ${nome}: ${faixa(Math.min(...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => t.minimo)))}, conforme a tipologia (a seguir).`);
       continue;
     }
     linhas.push(`  · ${nome}: ${faixa(p.minimo, p.maximo)}.`);
@@ -196,8 +233,8 @@ PREÇO, IVA E FATURA
 - Itens a mais no dia (orçamento de valor total): ${ITENS_A_MAIS_PARA_O_CLIENTE}, combinado com o cliente antes de avançar.
 - Preços de referência do site, ${SEM_IVA_NA_FRASE} — o preço final é sempre o da proposta do parceiro:
 ${linhasDosPrecos().join("\n")}
-- Mudança à hora: nunca prometas um preço fixo — cada parceiro tem o seu preço por hora e o seu mínimo de horas, e o cliente escolhe na lista do simulador de mudanças. Um valor da referência diz-se sempre como referência («na referência…»), nunca como o preço da CLYON. Na referência (sem parceiros na lista): cada andar sem elevador ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € + IVA por pessoa (${POR_ANDAR_SEM_ELEVADOR} € + IVA a equipa); elevador exterior ${ELEVADOR_EXTERIOR} € + IVA${precoPublicoConhecido().tipo === "parceiros" ? "" : `; mínimo de ${MINIMO_DE_HORAS} horas da referência (${MINIMO_DA_MUDANCA} € + IVA)`}. Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
-    .map((m) => `${m.nome.toLowerCase()} ${euros(m.preco)} + IVA por ${m.unidade}`)
+- Mudança à hora: nunca prometas um preço fixo — cada parceiro tem o seu preço por hora e o seu mínimo de horas, e o cliente escolhe na lista do simulador de mudanças. Um valor da referência diz-se sempre como referência («na referência…»), nunca como o preço da CLYON. Na referência (sem parceiros na lista): cada andar sem elevador ${maisIva(POR_ANDAR_SEM_ELEVADOR_POR_PESSOA)} por pessoa, ou seja ${maisIva(POR_ANDAR_SEM_ELEVADOR)} uma equipa de ${PESSOAS_NA_EQUIPA}; elevador exterior ${maisIva(ELEVADOR_EXTERIOR)}; a deslocação até ${RAIO_INCLUIDO_KM} km está incluída, e acima disso conta ${maisIva(PRECO_POR_KM_LONGE)} por km, ida e volta, mais portagens${precoPublicoConhecido().tipo === "parceiros" ? "" : `; mínimo de ${MINIMO_DE_HORAS} horas da referência: ${maisIva(MINIMO_DA_MUDANCA_COM[2])} com 2 pessoas, ${maisIva(MINIMO_DA_MUDANCA_COM[3])} com 3`}. Materiais de embalamento à parte (ex.: ${MATERIAIS.slice(0, 3)
+    .map((m) => `${m.nome.toLowerCase()} ${maisIva(m.preco)} por ${m.unidade}`)
     .join("; ")}).
 
 COMO SE PAGA
@@ -207,7 +244,13 @@ ENTULHO
 - ${RESPOSTA_SOBRE_CONTENTORES}
 - ${A_GRANEL}
 - A granel conta-se ao mesmo preço dos sacos: 1 m³ são cerca de ${ENTULHO_POR_VOLUME[0].sacos} sacos, ${faixa(ENTULHO_POR_VOLUME[0].de, ENTULHO_POR_VOLUME[0].ate)}.
-- Andares, no entulho e nos móveis por peça (por trabalho): +${euros(RECOLHA_POR_ANDAR_COM_ELEVADOR)} + IVA por andar com elevador, +${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA por andar sem elevador; o estacionamento a mais de 30 metros conta como mais um andar sem elevador.
+
+ANDARES (por trabalho, nas recolhas por peça e no entulho)
+- Com elevador: +${maisIva(RECOLHA_POR_ANDAR_COM_ELEVADOR)} por andar.
+- Sem elevador, no entulho: +${maisIva(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} por andar.
+- Sem elevador, nos móveis e nos monos por peça: ${maisIva(RECOLHA_POR_ANDAR_E_PECA_GRANDE)} por andar e por peça grande, nunca menos de ${maisIva(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} por andar. Ex.: ${EXEMPLO_DOS_ANDARES.pecasGrandes} peças grandes num ${EXEMPLO_DOS_ANDARES.andar}.º andar sem elevador, ${maisIva(EXEMPLO_DOS_ANDARES.valor)}.
+- Uma peça grande que não cabe no elevador desce pela escada: os andares contam-se como sem elevador.
+- O estacionamento a mais de 30 metros conta como mais um andar sem elevador.
 
 O QUE NUNCA SE DIZ
 - Nunca «no ${PROPRIO_DIA}» como promessa; nunca contentores nem big bags (a CLYON não os tem); nunca um preço que não esteja aqui em cima; nunca um preço sem IVA sozinho (o IVA é ${iva}).
@@ -269,7 +312,9 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
     ELEVADOR_EXTERIOR,
     POR_ANDAR_SEM_ELEVADOR,
     POR_ANDAR_SEM_ELEVADOR_POR_PESSOA,
-    MINIMO_DA_MUDANCA,
+    MINIMO_DA_MUDANCA_COM[2],
+    MINIMO_DA_MUDANCA_COM[3],
+    EXEMPLO_DOS_ANDARES.valor,
   ])
     juntar(n);
   for (const m of MATERIAIS) juntar(m.preco);

@@ -53,8 +53,10 @@ describe("o que o site sabe — lido das fontes", () => {
 
   it("cada preço sem IVA vai com o valor com IVA ao lado", () => {
     // Os móveis por peça desde 03-11-2026 (d6 v2), com o com IVA de cada peça; os monos, a faixa.
-    expect(texto).toMatch(/pequena 15 €, média 30 €, grande 50 € sem IVA \(18,45 \/ 36,90 \/ 61,50 € com IVA\)/);
-    expect(texto).toMatch(/30 – 100 € sem IVA \(36,90 – 123 € com IVA\)/);
+    // Desde a d60 (16-11-2026) a primeira peça grande conta à parte (d62/d63).
+    expect(texto).toMatch(/pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes sem IVA \(com IVA: pequena 18,45 €, média 36,90 €, grande 79,95 € a primeira e 61,50 € as seguintes\)/);
+    // Os monos com a recolha mínima da d60 (d62/d63).
+    expect(texto).toMatch(/Recolha de monos: desde 60 € sem IVA \(desde 73,80 € com IVA\)/);
   });
 
   it("os euros das fontes têm os preços do site e o seu valor com IVA", () => {

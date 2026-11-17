@@ -22,6 +22,7 @@ import { inicioDoDiaEmLisboa, segundaDaSemanaEmLisboa, somarDiasAoDia } from "./
 import { semAcentos } from "./leitor-da-recolha";
 import { euroDasFontes, eurosNoTexto } from "./o-que-o-site-sabe";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
+import { precoDeAntesDaD60 } from "./precos-antes-da-d60";
 import { novoModeloEmVigor } from "./novo-modelo";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
 import { agoraDoModelo } from "./relogio-do-modelo";
@@ -132,6 +133,9 @@ function negada(frase: string): boolean {
 export function motivoParaBloquear(texto: string): string | null {
   const t = String(texto ?? "");
   if (!t.trim()) return null;
+  // d62/d63 (17-11-2026): um preço de antes da d60 não volta por uma lição nem por uma resposta livre.
+  const deAntes = precoDeAntesDaD60(t);
+  if (deAntes) return `${deAntes} Uma lição não muda preços.`;
   for (const n of eurosNoTexto(t)) {
     if (!euroDasFontes(n)) {
       return `Tem ${String(n).replace(".", ",")} €, que não bate com os preços do site — uma lição não muda preços.`;

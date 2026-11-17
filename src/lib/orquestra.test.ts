@@ -11,6 +11,7 @@ import { FRASES_PROIBIDAS } from "./frases-proibidas";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
 import { TRABALHOS_CLYON_NO_MODELO_ANTIGO } from "./novo-modelo";
+import { PRECOS_ANTES_DA_D60 } from "./precos-antes-da-d60";
 
 /*
  * O TESTE DA ORQUESTRA — 27-10-2026 (decisão d12).
@@ -468,11 +469,8 @@ const A_REGRA_T_SE_APLICA = A_REGRA_R_SE_APLICA;
  * velhas do esvaziamento (320–420, 380–450, «desde 450 €») nem os «50 km» incluídos.
  * Os números certos chegam das fontes, interpolados («‹›»).
  */
-const RECOLHA_MINIMA_A_40 = /m[íi]nim[ao](?: de)? 40\s?€(?!\s?[–-])/iu;
-const HORA_A_50 = /(?<![\d.,])(?:50|61,50)(?:,00)?\s?€\s?(?:\+ ?IVA\s?|s\/IVA\s?|com IVA\s?)?(?:\/\s?h(?:ora)?(?![a-zà-ú])|por hora)/iu;
-const ESVAZIAMENTO_ANTIGO = /(?<![\d.,])(?:320\s?[–-]\s?420|380\s?[–-]\s?450)(?!\d)|desde 450\s?€/u;
-const RAIO_DE_50_KM = /(?:até|acima de|mais de|primeiros) 50\s?km/iu;
-const PRECOS_ANTES_DA_D60: RegExp[] = [RECOLHA_MINIMA_A_40, HORA_A_50, ESVAZIAMENTO_ANTIGO, RAIO_DE_50_KM];
+// As regras saíram para uma fonte única (d62/d63, 17-11-2026): a guarda das lições da Vitória lê as mesmas.
+// `PRECOS_ANTES_DA_D60` vem de src/lib/precos-antes-da-d60.ts.
 
 /*
  * u) «PLATAFORMA», NÃO «SITE» — d28 (parte do Site), 10-11-2026; a regra é do
