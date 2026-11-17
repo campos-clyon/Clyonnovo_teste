@@ -7,6 +7,8 @@ import AcessoPeloLink from "./AcessoPeloLink";
 import { camposExtraDoPedido } from "@/lib/campos-extra-do-pedido";
 import { foiJuntadoPelaApp } from "@/lib/juntado-pela-app";
 import VisorDeFotos from "@/components/VisorDeFotos";
+import { CartaoDoDocumento, Miniatura } from "@/components/Anexo";
+import { especieDoAnexo } from "@/lib/tipo-ficheiro";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
 import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
 import { firstPositive, legacyPriceText } from "@/lib/quote-price";
@@ -565,9 +567,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
    */
   const fotosDoPedido = useMemo(
     () =>
-      parseFiles(order?.filesJson).filter((u) =>
-        /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(u),
-      ),
+      parseFiles(order?.filesJson).filter((u) => especieDoAnexo(u) === "imagem"),
     [order?.filesJson],
   );
 
@@ -1863,17 +1863,20 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Fotos e ficheiros ({files.length})</p>
                             <div className="flex flex-wrap gap-2">
                               {files.slice(0, 8).map((url, i) => {
-                                const isImg = /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(url);
+                                const isImg = especieDoAnexo(url) === "imagem";
                                 return isImg ? (
                                   <button key={i} type="button" onClick={() => setLightbox(url)} className="h-16 w-16 overflow-hidden rounded-xl border border-slate-100">
                                     <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition" />
                                   </button>
                                 ) : (
-                                  <a key={i} href={url} target="_blank" rel="noreferrer" className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 text-slate-500 hover:text-slate-700 transition">
-                                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
-                                  </a>
+                                  // PDF: o cartão «Abrir PDF»; vídeo: abre no visor.
+                                  <Miniatura
+                                    key={i}
+                                    url={url}
+                                    onAbrir={especieDoAnexo(url) === "video" ? () => setLightbox(url) : undefined}
+                                    className="h-16 w-16"
+                                    tamanho="64px"
+                                  />
                                 );
                               })}
                               {files.length > 8 && (
@@ -2727,8 +2730,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       ) : (
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                           {files.map((url, i) => {
-                            const isImg = /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(url);
-                            const isVid = /\.(mp4|mov|webm|avi)$/i.test(url);
+                            // A espécie pela regra única (tipo-ficheiro.ts) — pdf-no-pedido.
+                            const isImg = especieDoAnexo(url) === "imagem";
+                            const isVid = especieDoAnexo(url) === "video";
                             return (
                               <div key={i} className="group relative overflow-hidden rounded-[16px] border border-slate-100 bg-slate-50/50 aspect-square">
                                 {isImg ? (
@@ -2762,12 +2766,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                 ) : isVid ? (
                                   <video src={url} className="h-full w-full object-cover" controls />
                                 ) : (
-                                  <a href={url} target="_blank" rel="noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center hover:bg-slate-50 transition">
-                                    <svg className="h-8 w-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
-                                    <span className="text-[10px] text-slate-400 truncate w-full">Ficheiro {i + 1}</span>
-                                  </a>
+                                  <CartaoDoDocumento url={url} className="h-full w-full" />
                                 )}
                               </div>
                             );

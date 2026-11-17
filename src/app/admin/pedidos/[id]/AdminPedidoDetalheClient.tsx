@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VisorDeFotos from "@/components/VisorDeFotos";
+import { CartaoDoDocumento } from "@/components/Anexo";
+import { especieDoAnexo } from "@/lib/tipo-ficheiro";
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
@@ -269,9 +271,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
    */
   const fotosDoPedido = useMemo(
     () =>
-      parseFiles(order?.filesJson).filter((u) =>
-        /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(u),
-      ),
+      parseFiles(order?.filesJson).filter((u) => especieDoAnexo(u) === "imagem"),
     [order?.filesJson],
   );
 
@@ -1219,8 +1219,9 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                   {files.map((url, i) => {
-                    const isImg = /\.(jpe?g|png|gif|webp|avif|heic)$/i.test(url);
-                    const isVid = /\.(mp4|mov|webm|avi)$/i.test(url);
+                    // A espécie pela regra única (tipo-ficheiro.ts) — pdf-no-pedido.
+                    const isImg = especieDoAnexo(url) === "imagem";
+                    const isVid = especieDoAnexo(url) === "video";
                     return (
                       <div key={i} className="group relative overflow-hidden rounded-[16px] border border-white/[0.06] bg-white/[0.02] aspect-square">
                         {isImg ? (
@@ -1233,12 +1234,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                         ) : isVid ? (
                           <video src={url} className="h-full w-full object-cover" controls />
                         ) : (
-                          <a href={url} target="_blank" rel="noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center hover:bg-white/[0.04] transition">
-                            <svg className="h-8 w-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                            <span className="text-[10px] text-slate-400 truncate w-full">Ficheiro {i + 1}</span>
-                          </a>
+                          <CartaoDoDocumento url={url} className="h-full w-full" />
                         )}
                         {isImg && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition cursor-pointer" onClick={() => setLightbox(url)}>

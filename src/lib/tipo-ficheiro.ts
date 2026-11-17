@@ -198,3 +198,51 @@ export function recusaDoEnvioSemSessao(tipo: string, tamanho: number): string | 
   }
   return null;
 }
+
+/*
+ * QUANTOS DE CADA, EM PALAVRAS — pdf-no-pedido, 17-11-2026.
+ *
+ * A página do pedido dizia «5 fotografias» quando eram quatro e um PDF. O
+ * contador passa a dizer o que lá está: «4 fotografias e 1 documento».
+ * Decide pela mesma `especieDoAnexo` que decide como cada um se desenha.
+ */
+export function contagemDosAnexos(lista: Array<string | { url: string; name?: string | null }>): string {
+  const n: Record<EspecieDoAnexo, number> = { imagem: 0, video: 0, pdf: 0 };
+  for (const f of lista) {
+    const alvo = typeof f === "string" ? f : f.name || f.url;
+    n[especieDoAnexo(alvo)] += 1;
+  }
+  const partes: string[] = [];
+  if (n.imagem) partes.push(`${n.imagem} ${n.imagem === 1 ? "fotografia" : "fotografias"}`);
+  if (n.video) partes.push(`${n.video} ${n.video === 1 ? "vídeo" : "vídeos"}`);
+  if (n.pdf) partes.push(`${n.pdf} ${n.pdf === 1 ? "documento" : "documentos"}`);
+  if (partes.length <= 1) return partes[0] ?? "";
+  return `${partes.slice(0, -1).join(", ")} e ${partes[partes.length - 1]}`;
+}
+
+/**
+ * O NOME DE UM ANEXO DE QUE SÓ SE TEM O ENDEREÇO.
+ *
+ * Os ecrãs do backoffice guardam só a URL. O fim dela é o nome com que o
+ * ficheiro subiu — «…/1731840000-Inventario-fotos.pdf» —, e é isso que se
+ * mostra no cartão, sem o carimbo de números à frente.
+ */
+export function nomeDoAnexo(url: string, nome?: string): string {
+  if (nome) return nome;
+  const fim = (url.split("?")[0].split("#")[0].split("/").pop() ?? "").trim();
+  let legivel = fim;
+  try {
+    legivel = decodeURIComponent(fim);
+  } catch {
+    /* um % solto no nome: fica como veio */
+  }
+  /*
+   * Os carimbos que o armazenamento põe à frente: «<ms>-<6 letras>-» do envio
+   * pela nossa função, «<uuid>-» da URL assinada, «<ms>-» dos antigos.
+   */
+  const semCarimbo = legivel
+    .replace(/^\d{10,}-[a-z0-9]{6}-/i, "")
+    .replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "")
+    .replace(/^\d{10,}-/, "");
+  return semCarimbo || legivel || "Documento";
+}

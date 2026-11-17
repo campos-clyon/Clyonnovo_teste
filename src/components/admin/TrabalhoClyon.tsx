@@ -57,6 +57,7 @@ import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import VisorDeFotos from "@/components/VisorDeFotos";
+import { Miniatura } from "@/components/Anexo";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { MOTIVOS_DE_CANCELAMENTO, avisoDoCancelamento, oQueSeDesfaz } from "@/lib/cancelamento";
 import { motivoDoFechoDoTexto } from "@/lib/motivo-do-fecho";
@@ -1639,16 +1640,8 @@ function CartaoDoTrabalho({
           {a.prova.fotos.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {a.prova.fotos.map((f, i) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFotoAberta(i)}
-                  className="h-16 w-16 overflow-hidden rounded-lg border border-slate-700 hover:border-cyan-500"
-                  aria-label={`Ver a fotografia ${i + 1}`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={f} alt="" className="h-full w-full object-cover" />
-                </button>
+                // Pela Miniatura: um PDF ou um vídeo na prova não dá um quadrado partido.
+                <Miniatura key={f} url={f} onAbrir={() => setFotoAberta(i)} className="h-16 w-16" tamanho="64px" />
               ))}
             </div>
           )}

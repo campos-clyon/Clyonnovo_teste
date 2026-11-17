@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { getImageProps } from "next/image";
 import { FileText, Play } from "lucide-react";
-import { especieDoAnexo } from "@/lib/tipo-ficheiro";
+import { especieDoAnexo, nomeDoAnexo } from "@/lib/tipo-ficheiro";
 import { podeOptimizar } from "@/lib/fotografia-no-tamanho";
 
 /**
@@ -95,6 +95,46 @@ function Fotografia({
   );
 }
 
+/**
+ * UM PDF NUMA GRELHA DE FOTOGRAFIAS — pdf-no-pedido, 17-11-2026.
+ *
+ * O #630 tinha quatro fotografias e um «Inventario-fotos.pdf». A página do
+ * pedido desenhava os cinco num `<img>`, e o quinto era um quadrado partido:
+ * quem o via pensava que o ficheiro se tinha perdido.
+ *
+ * O PDF não tem capa. Tem o ícone de documento, o nome — que é o que o
+ * distingue de outro PDF — e «Abrir PDF», que o abre noutro separador (o
+ * armazenamento serve-o como transferência; ver `AnexoGrande`). Ocupa o
+ * mesmo quadrado que as fotografias, para a grelha não saltar.
+ */
+export function CartaoDoDocumento({
+  url,
+  nome,
+  className = "h-20 w-20",
+}: {
+  url: string;
+  nome?: string;
+  className?: string;
+}) {
+  const nomeVisivel = nomeDoAnexo(url, nome);
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={nomeVisivel}
+      aria-label={`Abrir PDF: ${nomeVisivel}`}
+      className={`flex ${className} flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-rose-200 bg-rose-50 p-1.5 text-center transition hover:bg-rose-100`}
+    >
+      <FileText className="h-6 w-6 shrink-0 text-rose-600" aria-hidden="true" />
+      <span className="line-clamp-2 w-full break-all text-[10px] font-semibold leading-tight text-rose-800">
+        {nomeVisivel.replace(/\.pdf$/i, "")}
+      </span>
+      <span className="text-[10px] font-bold text-rose-700 underline underline-offset-2">Abrir PDF</span>
+    </a>
+  );
+}
+
 export function Miniatura({
   url,
   nome,
@@ -132,6 +172,14 @@ export function Miniatura({
   prioridade?: boolean;
 }) {
   const especie = especieDoAnexo(nome || url);
+
+  /*
+   * Sem quem o abra, um PDF é um link: o cartão com «Abrir PDF». Com um
+   * `onAbrir`, abre-se no visor, que tem o botão dele.
+   */
+  if (especie === "pdf" && !onAbrir) {
+    return <CartaoDoDocumento url={url} nome={nome} className={className} />;
+  }
 
   const dentro =
     especie === "imagem" ? (

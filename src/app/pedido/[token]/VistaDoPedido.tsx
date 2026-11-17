@@ -7,6 +7,8 @@ import { negociacoesNoEcraDoPedido } from "@/lib/vista-do-pedido";
 import { marcarVistasPeloCliente } from "@/lib/pedidos-do-cliente";
 import { QUANDO_EM_PALAVRAS } from "@/lib/negociacao-na-vista";
 import Nota from "@/components/Nota";
+import { Miniatura } from "@/components/Anexo";
+import { contagemDosAnexos } from "@/lib/tipo-ficheiro";
 import PropostasRecebidas from "./PropostasRecebidas";
 import { valorUnicoDaLinha, valorUnicoParaOCliente } from "@/lib/valor-unico-ao-cliente";
 import { QUEM_FACTURA_EM_PALAVRAS, quemFaturaEmPalavras } from "@/lib/identificacao-legal";
@@ -334,16 +336,21 @@ export default async function VistaDoPedido({
           <div className="mt-5">
             <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-tinta-fraca">
               <Camera className="h-3.5 w-3.5" aria-hidden="true" />
-              {fotos.length} {fotos.length === 1 ? "fotografia" : "fotografias"}
+              {contagemDosAnexos(fotos)}
             </h3>
+            {/*
+              Um PDF juntado ao pedido (o #630 tinha um) num `<img>` era um
+              quadrado partido. A `Miniatura` decide pela espécie: fotografia
+              num `<img>`, vídeo com a capa, PDF num cartão com «Abrir PDF».
+            */}
             <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
               {fotos.map((f, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Miniatura
                   key={i}
-                  src={f.url}
-                  alt={f.name ?? `Fotografia ${i + 1} do pedido`}
-                  className="aspect-square w-full rounded-lg object-cover ring-1 ring-slate-200"
+                  url={f.url}
+                  nome={f.name || undefined}
+                  className="aspect-square w-full ring-1 ring-slate-200"
+                  tamanho="(max-width: 640px) 33vw, 160px"
                 />
               ))}
             </div>
