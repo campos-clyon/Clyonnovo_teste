@@ -9,6 +9,7 @@ import { CITIES, NA_PROPOSTA_COM_IVA, SERVICES } from "./seo-data";
 import { tituloDaCidade } from "./titulos-seo";
 import {
   PRECO_POR_HORA_COM_IVA,
+  PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA,
   tabelaEmLinhas,
 } from "./tabela-das-mudancas";
 import { BLOG_POSTS } from "./blog-data";
@@ -249,7 +250,8 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
     expect(comIvaDaEtiqueta("esvaziamento_garagem")).toBe("desde 147,60 € com IVA");
     // O m³ ao preço dos sacos desde a d7 (04-11-2026): era «desde 147,60 €/m³».
     expect(comIvaDaEtiqueta("recolha_entulho")).toBe("196,80 – 236,16 €/m³ com IVA");
-    expect(comIvaDaEtiqueta("mudanca")).toBe(`referência ${euros(PRECO_POR_HORA_COM_IVA)}/hora com IVA`);
+    // d62/d63 (17-11-2026): o com IVA da mesma etiqueta (40 €/h, equipa de 2); dava o da equipa de 3.
+    expect(comIvaDaEtiqueta("mudanca")).toBe(`referência desde ${euros(PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA)}/hora com IVA`);
     expect(comIvaDaEtiqueta("outro")).toBeNull();
 
     const contactos = ler("src/app/contactos/page.tsx");

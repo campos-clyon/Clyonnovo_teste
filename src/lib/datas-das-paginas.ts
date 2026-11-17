@@ -20,6 +20,7 @@
  * AQUI (AAAA-MM-DD, hora de Lisboa).
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
+  // 17-11-2026 (d62/d63, acertos): o cartão das mudanças em /contactos com o com IVA da mesma etiqueta (49,20 €/h).
   // 17-11-2026 (d63): os monos desde 60 € + IVA (a recolha mínima), o esvaziamento de casa desde 260 € + IVA
   // (o T0/T1) e o mínimo da mudança dito com as pessoas (120 € com 2, 165 € com 3) — nas páginas que os mostram.
   // 16-11-2026 (d60): os preços que pagam a saída — a 1.ª peça grande a 65 €, a recolha mínima de 60 €, os

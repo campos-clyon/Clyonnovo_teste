@@ -18,6 +18,7 @@ import {
   valorDasGrandes,
   eEsvaziamentoDeEspaco,
   estimativaDoEspaco,
+  maisIva,
   notaDosMateriais,
   precoDaPeca,
   type PecaDeReferencia,
@@ -218,12 +219,32 @@ export function comIvaDaEtiqueta(servico: string): string | null {
     // Ao preço de cada parceiro (11-11-2026): o «desde» conhecido, ou a referência.
     const pp = precoPublicoConhecido();
     // Sem parceiros, a referência — e dita como referência também na linha do com IVA (d7).
-    return pp.tipo === "parceiros" ? `desde ${euros(pp.desde.comIvaCent / 100)}/hora com IVA` : `referência ${euros(comIva(PRECO_POR_HORA))}/hora com IVA`;
+    // O com IVA da MESMA etiqueta (d62/d63, 17-11-2026): a etiqueta diz a equipa de 2 (40 €/h),
+    // e por baixo ia o com IVA da equipa de 3 (67,65 €/h, de 55 €/h).
+    return pp.tipo === "parceiros"
+      ? `desde ${euros(pp.desde.comIvaCent / 100)}/hora com IVA`
+      : `referência desde ${euros(comIva(PRECO_POR_HORA_DUAS_PESSOAS))}/hora com IVA`;
   }
   if (servico === "recolha_moveis") return MOVEIS_POR_PECA_COM_IVA;
   const u = p.unidade ? `/${p.unidade}` : "";
   if (p.maximo != null && !/^desde\b/.test(p.etiqueta)) return `${faixaComIva(p.minimo, p.maximo)}${u} com IVA`;
   return `desde ${euros(comIva(p.minimo))}${u} com IVA`;
+}
+
+/**
+ * A LINHA GRANDE DE UM CARTÃO, a que vai por cima de `comIvaDaEtiqueta` — 17-11-2026
+ * (d62/d63). É `maisIva(etiqueta)`, salvo na mudança com parceiros na lista: aí
+ * diz o «desde» da lista, para o sem IVA e o com IVA serem do mesmo preço (a
+ * etiqueta fixa diz a referência, que com a lista sai de cena).
+ */
+export function etiquetaDoCartao(servico: string): string | null {
+  const p = PRECOS[servico];
+  if (!p) return null;
+  if (servico === "mudanca") {
+    const pp = precoPublicoConhecido();
+    if (pp.tipo === "parceiros") return `desde ${euros(pp.desde.semIvaCent / 100)}/hora + IVA`;
+  }
+  return maisIva(p.etiqueta);
 }
 
 /**
@@ -335,6 +356,8 @@ export function precoDeReferencia(servico: string | null | undefined): string | 
   if (!p || p.minimo == null) return null;
   // Garagem, sótão e cave (29-10-2026): «desde», e a faixa só com o volume escolhido.
   if (eEsvaziamentoDeEspaco(servico)) return `desde ${valorSemEComIva(p.minimo)}`;
+  // Os monos (d62/d63, 17-11-2026): o tecto é só da estimativa do motor; o texto público diz o «desde».
+  if (p.tectoSoNaEstimativa) return `desde ${valorSemEComIva(p.minimo)}`;
   if (p.maximo != null) return faixaSemEComIva(p.minimo, p.maximo);
   return `desde ${valorSemEComIva(p.minimo)}`;
 }

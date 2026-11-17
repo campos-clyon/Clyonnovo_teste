@@ -228,7 +228,7 @@ describe("d7 (3) — os exemplos por peça e os itens a mais seguem a tabela", (
     expect(acrescimoPorItens(1, "pequeno")).toBe(15);
     expect(acrescimoPorItens(1, "grande")).toBe(50);
     expect(ITENS_A_MAIS_PARA_O_CLIENTE).toBe(
-      "cada item a mais conta pela tabela das peças: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)",
+      "cada item a mais conta pela tabela das peças: pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA (18,45 / 36,90 / 79,95 e 61,50 € com IVA)",
     );
     expect(avisoDosItens("total", "cliente")).not.toContain("32 €");
     expect(avisoDosItens("total", "profissional")).not.toContain("32 €");

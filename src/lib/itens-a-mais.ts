@@ -1,5 +1,5 @@
 import { notaDaCargaParaOCliente, O_QUE_E_UMA_CARGA, type BaseDoPreco } from "./base-do-preco";
-import { PECAS_EM_TEXTO, PRECO_POR_ITEM } from "./precos-publicos";
+import { PECAS_EM_TEXTO, PRECO_DA_PRIMEIRA_GRANDE, PRECO_POR_ITEM } from "./precos-publicos";
 import { extraNoLocal, INCLUI } from "./extra-no-local";
 import { TAXA_IVA } from "./taxas-plataforma";
 
@@ -58,24 +58,26 @@ export const TAMANHO_SEM_TAMANHO_DITO: TamanhoDoItemAMais = "medio";
 /** O valor de um item a mais sem tamanho dito, sem IVA — a peça média (30 €). */
 export const ACRESCIMO_POR_ITEM_SEM_TAMANHO = PRECO_POR_ITEM[TAMANHO_SEM_TAMANHO_DITO];
 
-/** «18,45 / 36,90 / 61,50 €» — o com IVA de cada peça. */
-const PECAS_COM_IVA_EM_TEXTO = `${(["pequeno", "medio", "grande"] as const)
-  .map((t) => (Math.round(PRECO_POR_ITEM[t] * (1 + TAXA_IVA) * 100) / 100).toFixed(2).replace(".", ","))
-  .join(" / ")} €`;
+/** «18,45 / 36,90 / 79,95 e 61,50 €» — o com IVA de cada peça (a primeira grande e as seguintes, d60). */
+const comIvaEmTexto = (v: number) => (Math.round(v * (1 + TAXA_IVA) * 100) / 100).toFixed(2).replace(".", ",");
+const PECAS_COM_IVA_EM_TEXTO =
+  `${[PRECO_POR_ITEM.pequeno, PRECO_POR_ITEM.medio, PRECO_DA_PRIMEIRA_GRANDE].map(comIvaEmTexto).join(" / ")} e ${comIvaEmTexto(PRECO_POR_ITEM.grande)} €`;
 
 /*
- * A GRANDE A MAIS É UMA «SEGUINTE» — d60, 16-11-2026. A primeira peça grande de
- * uma recolha conta 65 € (paga a saída); um item que aparece a mais no local já
- * vem com a recolha feita, e conta como as seguintes: grande 50 €.
+ * A TABELA DOS ITENS A MAIS É A TABELA DA D60 — 17-11-2026 (d62/d63). Dizia só
+ * «grande 50 €», o preço de antes da d60; passa a dizer a tabela inteira pela
+ * fonte única (`PECAS_EM_TEXTO`): a primeira grande 65 € e as seguintes 50 €,
+ * como o aviso ao profissional (`avisoDosItens`). A conta (`acrescimoPorItens`)
+ * não muda aqui.
  */
-const PECAS_A_MAIS_EM_TEXTO = `pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} €`;
 
-/** «pequena 15 €, média 30 €, grande 50 € + IVA» — a tabela dos itens a mais, para quem faz o trabalho. */
-export const TABELA_DOS_ITENS_A_MAIS = `${PECAS_A_MAIS_EM_TEXTO} + IVA`;
+/** «pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA» — a tabela dos itens a mais, para quem faz o trabalho. */
+export const TABELA_DOS_ITENS_A_MAIS = `${PECAS_EM_TEXTO} + IVA`;
 
 /**
  * «cada item a mais conta pela tabela das peças: pequena 15 €, média 30 €,
- * grande 50 € + IVA (18,45 / 36,90 / 61,50 € com IVA)» — como o cliente o lê.
+ * grande 65 € a primeira e 50 € as seguintes + IVA (18,45 / 36,90 / 79,95 e
+ * 61,50 € com IVA)» — como o cliente o lê.
  */
 export const ITENS_A_MAIS_PARA_O_CLIENTE = `cada item a mais conta pela tabela das peças: ${TABELA_DOS_ITENS_A_MAIS} (${PECAS_COM_IVA_EM_TEXTO} com IVA)`;
 

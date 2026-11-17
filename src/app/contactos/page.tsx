@@ -18,8 +18,7 @@ import {
   NA_PROPOSTA_COM_IVA,
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
-import { comIvaDaEtiqueta } from "@/lib/preco-de-referencia";
+import { comIvaDaEtiqueta, etiquetaDoCartao } from "@/lib/preco-de-referencia";
 import { PROMESSA, promessaGeral } from "@/lib/pagamento-na-plataforma";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
@@ -401,7 +400,7 @@ export default function ContactosPage() {
                     <span className="text-sm font-semibold text-tinta">{rotulo}</span>
                     <span className="flex flex-col items-end text-right">
                       <span className="whitespace-nowrap text-sm font-bold text-acao">
-                        {maisIva(PRECOS[chave]?.etiqueta ?? "")}
+                        {etiquetaDoCartao(chave) ?? ""}
                       </span>
                       <span className="whitespace-nowrap text-xs text-slate-500">{comIvaDaEtiqueta(chave)}</span>
                     </span>
