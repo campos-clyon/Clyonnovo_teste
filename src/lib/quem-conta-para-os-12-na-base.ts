@@ -169,22 +169,16 @@ export async function pessoasDaAppDeCliente(): Promise<PessoaDoTeste[]> {
     appClienteAbertaEm: Date | string | null;
     appClienteVersao: string | null;
   };
-  const [programa, emMassa, abriram, avisos] = await Promise.all([
-    lerSeExistir<Conta & { emailDoPrograma: string; estadoNoPrograma: string }>(
+  /*
+   * Consultas simples, juntadas aqui: um JOIN por email entre tabelas criadas
+   * em alturas diferentes pode chocar nas colações (o 500 do primeiro dia).
+   */
+  const [programaCru, convites, abriram, avisos] = await Promise.all([
+    lerSeExistir<{ email: string; estado: string; userId: number | null }>(
       p,
-      `SELECT p.email AS emailDoPrograma, p.estado AS estadoNoPrograma,
-              u.id, u.name, u.email, u.phone, u.appClienteAbertaEm, u.appClienteVersao
-         FROM programaDaApp p
-         LEFT JOIN users u ON u.deletedAt IS NULL
-              AND (u.id = p.userId OR (p.userId IS NULL AND u.email = p.email))
-        WHERE p.estado IN ('adicionado', 'convidado')`,
+      "SELECT email, estado, userId FROM programaDaApp WHERE estado IN ('adicionado', 'convidado')",
     ),
-    lerSeExistir<Conta>(
-      p,
-      `SELECT u.id, u.name, u.email, u.phone, u.appClienteAbertaEm, u.appClienteVersao
-         FROM convitesAppCliente c JOIN users u ON u.id = c.userId AND u.deletedAt IS NULL
-        WHERE c.enviadoEm IS NOT NULL`,
-    ),
+    lerSeExistir<{ userId: number }>(p, "SELECT userId FROM convitesAppCliente WHERE enviadoEm IS NOT NULL"),
     lerSeExistir<Conta>(
       p,
       `SELECT id, name, email, phone, appClienteAbertaEm, appClienteVersao
@@ -196,6 +190,30 @@ export async function pessoasDaAppDeCliente(): Promise<PessoaDoTeste[]> {
       "SELECT DISTINCT LOWER(TRIM(userEmail)) AS e FROM pushSubscriptions WHERE app = 'cliente'",
     ),
   ]);
+
+  const ids = [
+    ...new Set([...programaCru.map((l) => l.userId), ...convites.map((c) => c.userId)].filter((v) => v != null).map(Number)),
+  ];
+  const emailsSemConta = [...new Set(programaCru.filter((l) => l.userId == null).map((l) => minusculo(l.email)).filter(Boolean))];
+  let contas: Conta[] = [];
+  if (ids.length || emailsSemConta.length) {
+    const [linhas] = (await p.query(
+      `SELECT id, name, email, phone, appClienteAbertaEm, appClienteVersao
+         FROM users WHERE deletedAt IS NULL AND (id IN (?) OR email IN (?))`,
+      [ids.length ? ids : [0], emailsSemConta.length ? emailsSemConta : [""]],
+    )) as [Conta[], unknown];
+    contas = linhas;
+  }
+  const porId = new Map(contas.map((c) => [Number(c.id), c]));
+  const porEmail = new Map(contas.map((c) => [minusculo(c.email), c]));
+  // Inscrito no programa sem conta CLYON: fica pelo email do programa.
+  const SEM_CONTA: Conta = { id: null, name: null, email: null, phone: null, appClienteAbertaEm: null, appClienteVersao: null };
+  const programa = programaCru.map((l) => ({
+    ...((l.userId != null ? porId.get(Number(l.userId)) : porEmail.get(minusculo(l.email))) ?? SEM_CONTA),
+    emailDoPrograma: String(l.email),
+    estadoNoPrograma: String(l.estado),
+  }));
+  const emMassa = convites.map((c) => porId.get(Number(c.userId))).filter((c): c is Conta => c != null);
   const comAvisos = new Set(avisos.map((a) => String(a.e)));
 
   const porChave = new Map<string, PessoaDoTeste>();
