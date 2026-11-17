@@ -80,6 +80,16 @@ export async function aplicarAlteracao(pedido: Pedido, a: AlteracaoLida): Promis
     raw.needsDismantling = a.desmontagem;
     rawMudou = true;
   }
+  /*
+   * AS PEÇAS GRANDES NO ELEVADOR (d64, 17-11-2026): onde o simulador o grava (o
+   * rawOrderJson, lido por `custo-do-trabalho-do-pedido.ts`). Como o andar e o
+   * elevador, grava-se e não se recalcula a estimativa aqui; na Mesa, «Aplicar»
+   * recomeça se o retrato mudar (o campo está no retrato, como o andar).
+   */
+  if (a.pecasNoElevador !== undefined) {
+    raw.pecasNoElevador = a.pecasNoElevador;
+    rawMudou = true;
+  }
   if (rawMudou) dados.rawOrderJson = JSON.stringify(raw);
   if (a.fotografias?.length) {
     let ficheiros: Array<{ url?: string; type?: string } | string> = [];

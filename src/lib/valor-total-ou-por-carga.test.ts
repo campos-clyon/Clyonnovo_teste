@@ -29,7 +29,7 @@ describe("a nota ao lado do preço, para o cliente", () => {
     const n = notaDoPrecoParaOCliente("total");
     expect(n).toContain("fotografias");
     // «32 € mais IVA» — o dono, 22-10-2026: o sem IVA nunca sozinho. Curta desde a d47 (15-11-2026).
-    expect(n).toContain("o extra paga-se à parte pela tabela (peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA)");
+    expect(n).toContain("O que aparecer a mais combina-se consigo antes de carregar, pela tabela (peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes, + IVA)");
     expect(n).not.toContain("32 €");
   });
 
@@ -55,7 +55,7 @@ describe("a proposta de um Trabalho CLYON ao cliente (o #466)", () => {
       agora,
     );
     expect(m).toContain("360 € + IVA = 442,80 €.");
-    expect(m).toContain("o extra paga-se à parte pela tabela (peça pequena");
+    expect(m).toContain("O que aparecer a mais combina-se consigo antes de carregar, pela tabela (peça pequena");
   });
 
   it("pelo trabalho todo, nos outros serviços, a nota do serviço — sem a tabela das peças (d20)", () => {
@@ -64,7 +64,7 @@ describe("a proposta de um Trabalho CLYON ao cliente (o #466)", () => {
       expect(m).toContain("Inclui o que está nas fotografias e na descrição.");
       // O esvaziamento conta o volume, não a peça (d20, d47).
       expect(m).not.toContain("peça pequena");
-      expect(m).toContain("o volume a mais paga-se à parte");
+      expect(m).toContain("o volume a mais combina-se consigo antes de carregar");
     }
   });
 });

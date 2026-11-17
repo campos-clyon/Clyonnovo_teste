@@ -38,8 +38,7 @@ import {
   SITE_URL,
 } from "@/lib/seo-data";
 import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO } from "@/lib/identificacao-legal";
-import { PRECOS, maisIva } from "@/lib/precos-publicos";
-import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
+import { etiquetaComOIvaAoLado, MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 import { DUAS_FATURAS_POR_TRABALHO, DUAS_FATURAS_POR_TRABALHO_CURTA } from "@/lib/pagar-ao-parceiro";
@@ -194,28 +193,28 @@ const SERVICOS = [
     icone: Truck,
     titulo: "Recolha de monos",
     href: "/recolha-de-monos",
-    preco: maisIva(PRECOS.recolha_monos.etiqueta),
+    preco: etiquetaComOIvaAoLado("recolha_monos"),
     texto: "Monos, eletrodomésticos e o que se acumulou na arrecadação, na garagem ou na varanda.",
   },
   {
     icone: HardHat,
     titulo: "Recolha de entulho",
     href: "/recolha-de-entulho",
-    preco: maisIva(PRECOS.recolha_entulho.etiqueta),
+    preco: etiquetaComOIvaAoLado("recolha_entulho"),
     texto: "Entulho de obras e remodelações, em sacos ou a granel, com destino licenciado e sem contentor na rua.",
   },
   {
     icone: Home,
     titulo: "Esvaziamento de casas",
     href: "/esvaziamento-de-casas",
-    preco: maisIva(PRECOS.esvaziamento_casa.etiqueta),
+    preco: etiquetaComOIvaAoLado("esvaziamento_casa"),
     texto: "Casas, apartamentos, heranças e arrecadações: o recheio inteiro, de uma vez, com o que serve separado.",
   },
   {
     icone: Building2,
     titulo: "Mudanças",
     href: "/mudancas",
-    preco: maisIva(PRECOS.mudanca.etiqueta),
+    preco: etiquetaComOIvaAoLado("mudanca"),
     texto: "Mudanças de casa e de escritório, transporte de móveis e pequenas mudanças, pagas à hora.",
   },
   /*
@@ -227,7 +226,7 @@ const SERVICOS = [
     icone: Wrench,
     titulo: c.label,
     href: c.href,
-    preco: maisIva(PRECOS[c.id].etiqueta),
+    preco: etiquetaComOIvaAoLado(c.id),
     texto: c.description,
   })),
 ];
@@ -534,7 +533,7 @@ export default function SobreNosPage() {
             Recolhas, esvaziamentos, mudanças e manutenção — com o preço à vista
           </h2>
           <p className="mt-4 text-base leading-8 text-slate-600">
-            Do móvel solto à casa inteira. Os valores são de referência, sem IVA; a proposta que recebe já vem com ele.
+            Do móvel solto à casa inteira. Os valores são de referência, sem IVA e com o IVA ao lado; a proposta que recebe já vem com ele.
           </p>
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

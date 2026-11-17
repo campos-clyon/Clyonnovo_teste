@@ -417,7 +417,7 @@ describe("o trabalho contratado — fase 3", () => {
   });
 
   it("«Falar com a CLYON» abre o WhatsApp do número do site", () => {
-    expect(whatsAppDaClyon("Pedido #1")).toBe("https://wa.me/351931632622?text=Pedido%20%231");
+    expect(whatsAppDaClyon("Pedido #1")).toBe("https://api.whatsapp.com/send?phone=351931632622&text=Pedido%20%231");
   });
 
   /*

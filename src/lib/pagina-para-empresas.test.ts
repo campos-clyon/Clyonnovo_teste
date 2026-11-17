@@ -21,8 +21,9 @@ describe("a página para empresas", () => {
   });
 
   it("os preços vão com o IVA ao lado", () => {
-    expect(P).toContain("maisIva(PRECOS.recolha_entulho.etiqueta)");
-    expect(P).toContain("Valores de referência, sem IVA. {NA_PROPOSTA_COM_IVA}");
+    // Desde 17-11-2026 (acerto da d63): o com IVA ao lado em cada cartão, não só na nota.
+    expect(P).toContain('etiquetaComOIvaAoLado("recolha_entulho")');
+    expect(P).toContain("Valores de referência, sem IVA e com o IVA ao lado. {NA_PROPOSTA_COM_IVA}");
   });
 
   it("está no sitemap, no rodapé e em /sobre-nos", () => {
@@ -44,18 +45,18 @@ describe("a página para empresas", () => {
   it("fala da manutenção da casa, com o nome de NOMES_DOS_SERVICOS, a página dela e o preço da fonte", async () => {
     expect(P).toContain("const MANUTENCAO = NOMES_DOS_SERVICOS.manutencao_casa;");
     expect(P).toContain('href: "/servicos/manutencao-casa"');
-    expect(P).toContain("maisIva(PRECOS.manutencao_casa.etiqueta)");
+    expect(P).toContain('etiquetaComOIvaAoLado("manutencao_casa")');
     const React = await import("react");
     (globalThis as { React?: unknown }).React = React;
     const { renderToStaticMarkup } = await import("react-dom/server");
     const { NOMES_DOS_SERVICOS } = await import("./service-categories");
-    const { PRECOS, maisIva } = await import("./precos-publicos");
+    const { etiquetaComOIvaAoLado } = await import("./preco-de-referencia");
     const mod = await import("@/app/empresas/page");
     const html = renderToStaticMarkup(React.createElement(mod.default)).replace(/<!-- -->/g, "");
     expect(html).toContain(`${NOMES_DOS_SERVICOS.manutencao_casa} (reparações e remodelações)`);
     expect(html).toContain(`a ${NOMES_DOS_SERVICOS.manutencao_casa.toLowerCase()}, com`);
     expect(html).toContain('href="/servicos/manutencao-casa"');
-    expect(html).toContain(maisIva(PRECOS.manutencao_casa.etiqueta));
+    expect(html).toContain(etiquetaComOIvaAoLado("manutencao_casa") as string);
   }, 120_000);
 });
 

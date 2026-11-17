@@ -109,12 +109,12 @@ describe("o que tem de estar em todas", () => {
 
 describe("o link do WhatsApp", () => {
   it("põe o indicativo de Portugal num número de nove dígitos", () => {
-    expect(linkDoWhatsApp("912345678", "olá")).toBe("https://wa.me/351912345678?text=ol%C3%A1");
+    expect(linkDoWhatsApp("912345678", "olá")).toBe("https://api.whatsapp.com/send?phone=351912345678&text=ol%C3%A1");
   });
 
   it("respeita o indicativo quando já lá está", () => {
-    expect(linkDoWhatsApp("+351 912 345 678", "x")).toContain("wa.me/351912345678");
-    expect(linkDoWhatsApp("+5511999998888", "x")).toContain("wa.me/5511999998888");
+    expect(linkDoWhatsApp("+351 912 345 678", "x")).toContain("phone=351912345678&");
+    expect(linkDoWhatsApp("+5511999998888", "x")).toContain("phone=5511999998888&");
   });
 
   it("sem número não inventa link nenhum", () => {
@@ -126,7 +126,7 @@ describe("o link do WhatsApp", () => {
   it("a mensagem vai escapada — os acentos e as quebras de linha sobrevivem", () => {
     const l = linkDoWhatsApp("912345678", "Entidade: 1\nReferência: 2")!;
     expect(l).toContain("%0A");
-    expect(decodeURIComponent(l.split("?text=")[1])).toContain("Referência: 2");
+    expect(decodeURIComponent(l.split("&text=")[1])).toContain("Referência: 2");
   });
 });
 

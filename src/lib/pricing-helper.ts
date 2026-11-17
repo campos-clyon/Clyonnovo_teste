@@ -28,6 +28,7 @@ import {
   ESVAZIAMENTO_POR_TIPOLOGIA,
   NOME_DO_TAMANHO,
   PRECOS,
+  MONOS_SEM_PECAS_CONTADAS,
   MANUTENCAO_POR_TIPO,
   MINIMO_DA_MANUTENCAO,
   NOTA_DOS_MATERIAIS,
@@ -321,13 +322,18 @@ export function monosPelaFaixa(input: FastEstimateInput, cargaCompleta: boolean)
   if (input.serviceType !== "recolha_monos" || cargaCompleta) return null;
   const preco = PRECOS.recolha_monos;
   if (preco?.minimo == null || preco.maximo == null) return null;
-  const p = pontoDosMonos(preco.minimo, preco.maximo, acessoDificilDoPedido(input));
-  return { ...p, linha: `Faixa publicada dos monos: ${preco.minimo} a ${preco.maximo} € s/IVA → ${p.valor} € s/IVA${p.valor === preco.maximo ? " (o topo, pelo acesso difícil)" : " (o meio da faixa)"}` };
+  const p = pontoDosMonos(preco.minimo, preco.maximo, acessoDificilDoPedido(input), MONOS_SEM_PECAS_CONTADAS);
+  return { ...p, linha: `Faixa dos monos: ${preco.minimo} a ${preco.maximo} € s/IVA → ${p.valor} € s/IVA${p.valor === preco.maximo ? " (o topo, pelo acesso difícil)" : " (os monos sem peças contadas)"}` };
 }
 
-/** O ponto dos monos sem peças (d59): o meio da faixa, ou o topo com acesso difícil. */
-export function pontoDosMonos(de: number, ate: number, acessoDificil: boolean): { de: number; ate: number; valor: number } {
-  return { de, ate, valor: acessoDificil ? ate : Math.round((de + ate) / 2) };
+/**
+ * O ponto dos monos sem peças (d59): o ponto dado (desde o acerto da d63, os 65 € de
+ * `MONOS_SEM_PECAS_CONTADAS`; sem ele, o meio da faixa), nunca abaixo do piso; o topo
+ * com acesso difícil.
+ */
+export function pontoDosMonos(de: number, ate: number, acessoDificil: boolean, ponto?: number): { de: number; ate: number; valor: number } {
+  const normal = Math.min(ate, Math.max(de, ponto ?? Math.round((de + ate) / 2)));
+  return { de, ate, valor: acessoDificil ? ate : normal };
 }
 
 /** As palavras que contam um item mas não dizem o tamanho dele. */
@@ -413,7 +419,7 @@ export const ITENS_SOLTOS_PARA_O_MODELO = [
     .join("; ")}. As peças somam-se uma a uma.`,
   `  Recolha mínima dos móveis: ${comOIvaAoLado(valorExacto(RECOLHA_MINIMA_DOS_MOVEIS))} — a soma das peças nunca fica abaixo dela.`,
   `  Andares, por trabalho e depois do mínimo: +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_COM_ELEVADOR))} por andar com elevador; sem elevador, +${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_E_PECA_GRANDE))} por andar e por peça grande, nunca menos de ${comOIvaAoLado(valorExacto(RECOLHA_POR_ANDAR_SEM_ELEVADOR))} por andar. A peça grande que não cabe no elevador conta como escada.`,
-  `  Monos: com as peças contadas, a mesma tabela das peças (um sofá custa o mesmo nos móveis e nos monos); sem elas, ${comOIvaAoLado(faixaDasFontes(PRECOS.recolha_monos, "recolha_monos"))}, o meio da faixa, e o topo com acesso difícil.`,
+  `  Monos: com as peças contadas, a mesma tabela das peças (um sofá custa o mesmo nos móveis e nos monos); sem elas, ${comOIvaAoLado(faixaDasFontes(PRECOS.recolha_monos, "recolha_monos"))}: ${comOIvaAoLado(valorExacto(MONOS_SEM_PECAS_CONTADAS))}, e o topo com acesso difícil.`,
 ].join("\n");
 
 /** A carga completa e o esvaziamento de casa ou apartamento: as faixas publicadas, uma por linha. */

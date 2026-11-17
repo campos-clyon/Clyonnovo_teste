@@ -156,12 +156,15 @@ describe("d59 (6) — os monos pela tabela das peças, ou no meio da faixa", () 
     );
   });
 
-  it("sem peças, a faixa publicada fica e o ponto do motor é o meio (o topo com acesso difícil)", async () => {
+  it("sem peças, a faixa publicada fica e o ponto do motor são os 65 € de antes da d63 (o topo com acesso difícil)", async () => {
     const { minimo, maximo } = PRECOS.recolha_monos as { minimo: number; maximo: number };
     expect(pontoDosMonos(minimo, maximo, false).valor).toBe(Math.round((minimo + maximo) / 2));
+    expect(pontoDosMonos(minimo, maximo, false, 65).valor).toBe(65);
+    expect(pontoDosMonos(minimo, maximo, false, 10).valor).toBe(minimo);
     expect(pontoDosMonos(minimo, maximo, true).valor).toBe(maximo);
     const e = await calculateFastEstimate({ serviceType: "recolha_monos", description: "uns monos" });
-    expect(e.estimatedPriceWithoutVat).toBe(Math.round((minimo + maximo) / 2));
+    // Acerto da d63 (17-11-2026): a d63 subiu o piso para 60 e o meio passou a 80 sem decisão; fica nos 65 €.
+    expect(e.estimatedPriceWithoutVat).toBe(65);
     expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat]).toEqual([minimo, maximo]);
   }, 60_000);
 });

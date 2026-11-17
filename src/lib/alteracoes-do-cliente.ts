@@ -26,6 +26,8 @@ export const CAMPOS_QUE_SE_ALTERAM = [
   "acesso",
   "acessoDestino",
   "desmontagem",
+  // As peças grandes cabem no elevador? (d64, 17-11-2026) — a pergunta do «Alterar o pedido» da app.
+  "pecasNoElevador",
 ] as const;
 export type CampoQueSeAltera = (typeof CAMPOS_QUE_SE_ALTERAM)[number];
 
@@ -90,7 +92,17 @@ export type AlteracaoLida = {
   acesso?: Acesso;
   acessoDestino?: Acesso;
   desmontagem?: boolean;
+  pecasNoElevador?: PecasNoElevador;
 };
+
+/** «sim» | «nao» | «nao_sei» — como o simulador o grava (`pecasNoElevador` no rawOrderJson). */
+export type PecasNoElevador = "sim" | "nao" | "nao_sei";
+const PECAS_NO_ELEVADOR: readonly string[] = ["sim", "nao", "nao_sei"];
+
+/** O «as peças grandes cabem no elevador?», campo de topo (não vai dentro do acesso). Null = mal formado. */
+export function lerPecasNoElevador(v: unknown): PecasNoElevador | null {
+  return typeof v === "string" && PECAS_NO_ELEVADOR.includes(v) ? (v as PecasNoElevador) : null;
+}
 
 const QUANDO: Record<string, AlteracaoLida["quando"]> = {
   amanha: "tomorrow",
@@ -184,6 +196,11 @@ export function lerAlteracao(corpo: unknown, agora: Date = new Date()): { ok: tr
     if (typeof c.desmontagem !== "boolean") return { ok: false, erro: "Diga se é preciso desmontar." };
     a.desmontagem = c.desmontagem;
   }
+  if (c.pecasNoElevador !== undefined) {
+    const v = lerPecasNoElevador(c.pecasNoElevador);
+    if (!v) return { ok: false, erro: "Diga se as peças grandes cabem no elevador." };
+    a.pecasNoElevador = v;
+  }
   if (Object.keys(a).length === 0) return { ok: false, erro: "Diga o que quer mudar." };
   return { ok: true, alteracao: a };
 }
@@ -207,6 +224,15 @@ export function oQueMudou(a: AlteracaoLida): string {
   acesso(a.acesso, "");
   acesso(a.acessoDestino, " do destino");
   if (a.desmontagem !== undefined) partes.push(a.desmontagem ? "é preciso desmontar" : "não é preciso desmontar");
+  if (a.pecasNoElevador) {
+    partes.push(
+      a.pecasNoElevador === "sim"
+        ? "as peças grandes cabem no elevador"
+        : a.pecasNoElevador === "nao"
+          ? "as peças grandes não cabem no elevador"
+          : "não sabe se as peças grandes cabem no elevador",
+    );
+  }
   return partes.join("; ");
 }
 

@@ -108,8 +108,8 @@ describe("a mensagem", () => {
 describe("o link", () => {
   it("abre a conversa do cliente com a mensagem escrita", () => {
     const link = linkDaAdjudicacao({ ...EXEMPLO, telefone: "930 000 494" }, AGORA);
-    expect(link).toMatch(/^https:\/\/wa\.me\/351930000494\?text=/);
-    expect(decodeURIComponent(link!.split("?text=")[1])).toBe(mensagemDeAdjudicacao(EXEMPLO, AGORA));
+    expect(link).toMatch(/^https:\/\/api\.whatsapp\.com\/send\?phone=351930000494&text=/);
+    expect(decodeURIComponent(link!.split("&text=")[1])).toBe(mensagemDeAdjudicacao(EXEMPLO, AGORA));
   });
 
   it("sem telefone, não há link", () => {

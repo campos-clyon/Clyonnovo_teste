@@ -68,7 +68,7 @@ describe("os de fora que perderam o «+»", () => {
   it("o caso do pedido: um russo de 11 algarismos, sem sinal, abre o WhatsApp", () => {
     expect(numeroParaWhatsApp("79000000000")).toBe("79000000000");
     expect(numeroParaWhatsApp("7 900 000 00 00")).toBe("79000000000");
-    expect(linkDeWhatsApp("79000000000", "olá")).toBe("https://wa.me/79000000000?text=ol%C3%A1");
+    expect(linkDeWhatsApp("79000000000", "olá")).toBe("https://api.whatsapp.com/send?phone=79000000000&text=ol%C3%A1");
   });
 
   it("de 10 a 15 algarismos, sem começar por 0, contam como de fora", () => {
@@ -166,7 +166,7 @@ describe("ninguém monta o número do wa.me à mão", () => {
 describe("o link leva o texto escrito", () => {
   it("monta o endereço com a mensagem codificada", () => {
     const l = linkDeWhatsApp("960000556", "Olá João, 150 € + IVA");
-    expect(l).toContain("https://wa.me/351960000556?text=");
+    expect(l).toContain("https://api.whatsapp.com/send?phone=351960000556&text=");
     expect(l).toContain(encodeURIComponent("Olá João, 150 € + IVA"));
   });
 

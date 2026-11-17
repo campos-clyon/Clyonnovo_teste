@@ -164,6 +164,15 @@ const APARTAMENTOS = (() => {
   return { minimo: Math.min(...comTecto.map((t) => t.minimo)), maximo: Math.max(...comTecto.map((t) => t.maximo as number)) };
 })();
 
+/**
+ * OS MONOS SEM PEÇAS CONTADAS, NO MOTOR — 65 € sem IVA (17-11-2026, acerto da d63).
+ * É o que o motor dava antes da d63 (o meio da faixa antiga, 30 – 100 €): a d63 só
+ * mudava o que se DIZ («desde 60 €», a recolha mínima), não o preço. Ao subir o piso
+ * da faixa para 60, o meio passou a 80 € sem ninguém o decidir. Fica escrito aqui,
+ * e muda só por decisão do dono; nunca abaixo da recolha mínima.
+ */
+export const MONOS_SEM_PECAS_CONTADAS = 65;
+
 /** O piso do T0/T1, o «desde» do esvaziamento de casa (d63). */
 const PISO_DO_T0_T1 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T0/T1")!.minimo;
 

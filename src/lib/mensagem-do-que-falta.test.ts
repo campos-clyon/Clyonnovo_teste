@@ -151,8 +151,8 @@ describe("o email e os links", () => {
       ["fotografias"],
       TARDE,
     );
-    expect(c.whatsapp).toBe(`https://wa.me/351912345678?text=${encodeURIComponent(c.texto)}`);
-    expect(decodeURIComponent(c.whatsapp!.split("?text=")[1])).toBe(c.texto);
+    expect(c.whatsapp).toBe(`https://api.whatsapp.com/send?phone=351912345678&text=${encodeURIComponent(c.texto)}`);
+    expect(decodeURIComponent(c.whatsapp!.split("&text=")[1])).toBe(c.texto);
     expect(c.email).toContain("mailto:cliente@exemplo.pt?subject=");
 
     const semWhatsApp = caminhosDoQueFalta({ ...PEDIDO, contactPhone: "12345", contactEmail: "cliente@exemplo.pt" }, ["fotografias"], TARDE);

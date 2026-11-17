@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PRECO_POR_ITEM } from "./precos-publicos";
+import { PECAS_EM_TEXTO, PRECO_POR_ITEM } from "./precos-publicos";
 import {
   ACRESCIMO_POR_ITEM_SEM_TAMANHO,
   ITENS_A_MAIS_PARA_O_CLIENTE,
@@ -89,16 +89,17 @@ describe("o aviso é escrito para quem o lê", () => {
     const t = avisoDosItens("total", "cliente")!;
     // d47 (15-11-2026): curto e igual em todas as mensagens.
     expect(t).toContain("Inclui o que está nas fotografias e na descrição.");
-    expect(t).toContain("peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA"); // d63: a primeira grande a 65 €, as seguintes a 50 €.
+    expect(t).toContain("peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes, + IVA"); // d63: a primeira grande a 65 €, as seguintes a 50 €.
     expect(t).not.toContain("32 €");
     // O acréscimo não é uma autorização para cobrar sozinho.
-    expect(t).toContain("sempre combinado consigo antes.");
+    expect(t).toContain("combina-se consigo antes de carregar"); // d66: texto do Vendas.
   });
 
   it("ao profissional diz o mesmo do lado dele", () => {
     const t = avisoDosItens("total", "profissional")!;
     expect(t).toContain("A sua proposta cobre");
-    expect(t).toContain(TABELA_DOS_ITENS_A_MAIS);
+    // A tabela da d60 pela fonte (acerto da d62/d63, 17-11-2026): dizia «grande 50 €».
+    expect(t).toContain(`(${PECAS_EM_TEXTO} + IVA)`);
     expect(t).not.toContain("32 €");
     expect(t).toContain("combine-o com o cliente antes de carregar");
   });

@@ -54,9 +54,10 @@ describe("as quatro partes", () => {
     expect(mensagemDoOrcamento(DO_623, NOITE)).toBe(
       [
         "Boa noite, Jason! O orçamento para a recolha de monos em Campo de Ourique é 105 € + IVA = 129,15 €.",
-        `Inclui o que está nas fotografias e na descrição. Se no local houver mais coisas, o extra paga-se à parte pela tabela (peça pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande 65 € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes + IVA), sempre combinado consigo antes.`,
+        // Texto do Vendas desde 17-11-2026 (d66): o que ganha, o extra combinado antes, e sem emoji.
+        `Inclui o que está nas fotografias e na descrição. O parceiro carrega e leva tudo: não tem de mexer em nada. O que aparecer a mais combina-se consigo antes de carregar, pela tabela (peça pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande 65 € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes, + IVA).`,
         "Paga à CLYON depois do trabalho feito.",
-        "Responda SIM e dizemos-lhe o dia e quem vai. 😊",
+        "Responda SIM e reservamos o parceiro; o dia combina-se consigo.",
       ].join("\n"),
     );
   });
@@ -71,7 +72,7 @@ describe("as quatro partes", () => {
 
   it("(c) o extra tem preço em cada serviço que o tem", () => {
     expect(extraNoLocal("recolha_moveis")).toContain(`peça pequena ${PRECO_POR_ITEM.pequeno} €`);
-    expect(extraNoLocal("recolha_monos")).toContain(`grande 65 € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes + IVA`); // d63: a primeira grande a 65 €, as seguintes a 50 €.
+    expect(extraNoLocal("recolha_monos")).toContain(`grande 65 € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes, + IVA`); // d63: a primeira grande a 65 €, as seguintes a 50 €.
     // O esvaziamento e a mudança têm a regra deles, não a tabela das peças.
     expect(extraNoLocal("esvaziamento_casa")).toContain("volume a mais");
     expect(extraNoLocal("esvaziamento_casa")).not.toContain("peça");
@@ -86,7 +87,7 @@ describe("as quatro partes", () => {
     for (const s of ["recolha_moveis", "recolha_monos", "recolha_entulho", "mudanca"]) {
       const e = extraNoLocal(s);
       expect(extraComPreco(e), s).toBe(true);
-      expect(e).toMatch(/sempre combinado consigo antes\.$/);
+      expect(e).toMatch(/combinad[ao]s? consigo antes|combina-se consigo antes/); // d66: sempre combinado antes.
     }
   });
 
@@ -128,7 +129,7 @@ describe("as mensagens que mandam valores usam as quatro partes", () => {
     );
     expect(m).toContain("105 € + IVA = 129,15 €");
     expect(m).toContain(INCLUI);
-    expect(m).toContain("o extra paga-se à parte pela tabela");
+    expect(m).toContain("O que aparecer a mais combina-se consigo antes de carregar, pela tabela");
     expect(m).toContain(PAGA_A_CLYON_NO_MODELO_ANTIGO);
     expect(m.split("\n")).toHaveLength(4);
   });

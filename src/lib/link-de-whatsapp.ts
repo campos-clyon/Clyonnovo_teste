@@ -74,12 +74,19 @@ function deForaSemSinal(d: string): boolean {
   return true;
 }
 
-/** O endereço que abre a conversa com o texto por enviar. */
+/**
+ * O endereço que abre a conversa com o texto por enviar.
+ *
+ * PELO api.whatsapp.com — 17-11-2026 (d66). O `wa.me` reencaminha para lá e,
+ * no caminho, estragava os caracteres acima de U+FFFF: o 😊 do orçamento
+ * chegava ao cliente como «�». Vai directo, e as mensagens prontas deixaram de
+ * ter emoji (o teste chumba um que volte).
+ */
 export function linkDeWhatsApp(
   telefone: string | null | undefined,
   texto: string,
 ): string | null {
   const numero = numeroParaWhatsApp(telefone);
   if (!numero) return null;
-  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+  return `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(texto)}`;
 }

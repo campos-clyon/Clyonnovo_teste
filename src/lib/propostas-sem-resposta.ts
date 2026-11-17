@@ -168,24 +168,28 @@ export function lembreteDasPropostas(p: PedidoParaOLembrete, agora: Date): Lembr
 
 /** A mensagem pronta a copiar — sem link: remete para o que o cliente já recebeu. */
 export function mensagemDoLembrete(l: Lembrete): string {
+  // Textos do Vendas desde 17-11-2026 (d66): mais vendedores, sem emoji; o 72h continua sem link.
   if (l.fase === "72h") {
     return (
-      `Olá! As propostas do pedido #${l.pedidoId} continuam válidas. ` +
-      `Se já não precisar, diga-nos e fechamos o pedido. ` +
-      `Se o preço não serve, diga quanto queria pagar e falamos com os parceiros.`
+      `Olá! ${l.quantas === 1 ? `A proposta do pedido #${l.pedidoId} continua válida.` : `As propostas do pedido #${l.pedidoId} continuam válidas.`} ` +
+      `Se ainda quiser avançar, responda SIM e reservamos ${l.quantas === 1 ? "a proposta" : "a mais em conta"}. ` +
+      `Se o preço não serve, diga quanto queria pagar e passamos isso aos parceiros. ` +
+      `Se já resolveu de outra forma, diga-nos e fechamos o pedido.`
     );
   }
   if (l.quantas === 1) {
     return (
-      `Olá! Já tem uma proposta de um parceiro${l.verificados ? " verificado" : ""} para o seu pedido #${l.pedidoId}: ` +
+      `Olá! O seu pedido #${l.pedidoId} já tem uma proposta de um parceiro${l.verificados ? " verificado" : ""}: ` +
       `${l.valorDoCliente}${l.unidade}. Quer que a reservemos? ` +
-      `Responda SIM, ou veja-a ${NO_LINK_QUE_TEM}.`
+      `Responda SIM, ou veja-a ${NO_LINK_QUE_TEM}. ` +
+      `Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.`
     );
   }
   return (
-    `Olá! Já tem ${l.quantas} propostas de parceiros${l.verificados ? " verificados" : ""} para o seu pedido #${l.pedidoId}, ` +
+    `Olá! O seu pedido #${l.pedidoId} já tem ${l.quantas} propostas de parceiros${l.verificados ? " verificados" : ""}, ` +
     `desde ${l.valorDoCliente}${l.unidade}. Quer que reservemos a mais em conta? ` +
-    `Responda SIM, ou escolha ${NO_LINK_QUE_TEM}.`
+    `Responda SIM, ou escolha ${NO_LINK_QUE_TEM}. ` +
+    `Se nenhuma servir, diga-nos o que precisa e falamos com os parceiros.`
   );
 }
 

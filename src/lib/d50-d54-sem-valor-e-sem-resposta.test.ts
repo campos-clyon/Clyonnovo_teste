@@ -108,8 +108,10 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
     expect(l.fase).toBe("24h");
     expect(l.quantas).toBe(2);
     expect(mensagemDoLembrete(l)).toBe(
-      "Olá! Já tem 2 propostas de parceiros verificados para o seu pedido #583, desde 350 € + IVA = 430,50 €. " +
-        "Quer que reservemos a mais em conta? Responda SIM, ou escolha no link do pedido que lhe enviámos.",
+      // Texto do Vendas desde 17-11-2026 (d66).
+      "Olá! O seu pedido #583 já tem 2 propostas de parceiros verificados, desde 350 € + IVA = 430,50 €. " +
+        "Quer que reservemos a mais em conta? Responda SIM, ou escolha no link do pedido que lhe enviámos. " +
+        "Se nenhuma servir, diga-nos o que precisa e falamos com os parceiros.",
     );
   });
 
@@ -127,8 +129,9 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
     const p = pedido({ negociacoes: [neg(1, 50)], baseDoPreco: "hora", id: 589 });
     const l = lembreteDasPropostas(p as never, agora)!;
     expect(mensagemDoLembrete(l)).toBe(
-      "Olá! Já tem uma proposta de um parceiro verificado para o seu pedido #589: 50 € + IVA = 61,50 € por hora. " +
-        "Quer que a reservemos? Responda SIM, ou veja-a no link do pedido que lhe enviámos.",
+      "Olá! O seu pedido #589 já tem uma proposta de um parceiro verificado: 50 € + IVA = 61,50 € por hora. " +
+        "Quer que a reservemos? Responda SIM, ou veja-a no link do pedido que lhe enviámos. " +
+        "Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.",
     );
   });
 
@@ -138,8 +141,8 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
     expect(l.fase).toBe("72h");
     const m = mensagemDoLembrete(l);
     expect(m).toBe(
-      "Olá! As propostas do pedido #583 continuam válidas. Se já não precisar, diga-nos e fechamos o pedido. " +
-        "Se o preço não serve, diga quanto queria pagar e falamos com os parceiros.",
+      "Olá! A proposta do pedido #583 continua válida. Se ainda quiser avançar, responda SIM e reservamos a proposta. " +
+        "Se o preço não serve, diga quanto queria pagar e passamos isso aos parceiros. Se já resolveu de outra forma, diga-nos e fechamos o pedido.",
     );
     expect(m).not.toContain("link");
   });
@@ -163,9 +166,9 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
   it("«verificados» só quando todos os que propuseram o são", () => {
     const p = pedido({ negociacoes: [neg(1, 400), neg(2, 350, { verificado: false })] });
     const m = mensagemDoLembrete(lembreteDasPropostas(p as never, agora)!);
-    expect(m.startsWith("Olá! Já tem 2 propostas de parceiros para o seu pedido #583, desde 350 € + IVA = 430,50 €.")).toBe(true);
+    expect(m.startsWith("Olá! O seu pedido #583 já tem 2 propostas de parceiros, desde 350 € + IVA = 430,50 €.")).toBe(true);
     const um = mensagemDoLembrete(lembreteDasPropostas(pedido({ negociacoes: [neg(1, 50, { verificado: false })] }) as never, agora)!);
-    expect(um).toContain("Já tem uma proposta de um parceiro para o seu pedido #583: ");
+    expect(um).toContain("O seu pedido #583 já tem uma proposta de um parceiro: ");
   });
 
   it("a lista vai pelo n.º do pedido, do maior para o menor", () => {

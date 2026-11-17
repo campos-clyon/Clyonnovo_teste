@@ -60,6 +60,8 @@ export type RetratoDoPedido = {
    */
   baseDoPreco: string | null;
   desmontagem: string | null;
+  /** As peças grandes cabem no elevador? (d64) — muda o preço das peças grandes, como o andar. */
+  pecasNoElevador: string | null;
 };
 
 const texto = (v: unknown): string | null => {
@@ -132,6 +134,7 @@ export function retratoDoPedido(p: {
     ),
     baseDoPreco: texto(p.baseDoPreco),
     desmontagem: cru.needsDismantling == null ? null : String(cru.needsDismantling),
+    pecasNoElevador: texto(cru.pecasNoElevador),
   };
 }
 
@@ -160,6 +163,7 @@ const EM_PORTUGUES: Record<keyof RetratoDoPedido, string> = {
   entulho: "o entulho",
   baseDoPreco: "a forma do preço",
   desmontagem: "a desmontagem",
+  pecasNoElevador: "as peças grandes no elevador",
 };
 
 /** "o valor de partida, as fotografias e a descrição" — para o histórico. */

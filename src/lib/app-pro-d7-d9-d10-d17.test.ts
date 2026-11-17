@@ -220,9 +220,10 @@ describe("d7 — os itens a mais pela tabela das peças, vinda do site", () => {
     expect(AVISOS).toContain('import { avisoDosItens } from "../../../src/lib/itens-a-mais";');
     expect(AVISOS).toContain('avisoDosItens(base, "profissional")');
     const aviso = avisoDosItens("total", "profissional");
-    expect(aviso).toContain(TABELA_DOS_ITENS_A_MAIS);
+    // A tabela da d60 (a primeira grande a 65 €) desde o acerto da d62/d63 (17-11-2026).
+    expect(TABELA_DOS_ITENS_A_MAIS).toContain(`pequena ${PRECO_POR_ITEM.pequeno} €`);
     expect(aviso).toContain(`pequena ${PRECO_POR_ITEM.pequeno} €`);
-    expect(aviso).toContain(`grande ${PRECO_POR_ITEM.grande} €`);
+    expect(aviso).toContain(`grande 65 € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes`);
   });
 
   it("nenhum ecrã da app escreve à mão o preço de antes por item", () => {

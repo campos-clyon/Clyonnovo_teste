@@ -41,6 +41,7 @@ import {
   MINIMO_DE_HORAS,
   PESSOAS_NA_EQUIPA,
   PRECO_POR_HORA,
+  PRECO_POR_HORA_DUAS_PESSOAS,
   RAIO_INCLUIDO_KM,
   TIPOLOGIA_POR_EXTENSO,
   horasEscritas,
@@ -223,6 +224,26 @@ export function comIvaDaEtiqueta(servico: string): string | null {
   const u = p.unidade ? `/${p.unidade}` : "";
   if (p.maximo != null && !/^desde\b/.test(p.etiqueta)) return `${faixaComIva(p.minimo, p.maximo)}${u} com IVA`;
   return `desde ${euros(comIva(p.minimo))}${u} com IVA`;
+}
+
+/**
+ * A ETIQUETA DE UM CARTÃO COM O IVA AO LADO — 17-11-2026 (acerto da d63): «desde
+ * 60 € + IVA (73,80 € com IVA)», «160 – 192 €/m³ + IVA (196,80 – 236,16 €/m³ com
+ * IVA)». Os números de `PRECOS`, tal e qual a etiqueta os diz (o «desde» fica
+ * «desde»: o tecto dos monos é só da estimativa). Para os cartões de /empresas e
+ * /sobre-nos, onde o sem IVA ia sozinho. `null` quando o serviço não publica preço.
+ */
+export function etiquetaComOIvaAoLado(servico: string): string | null {
+  const p = PRECOS[servico];
+  if (!p || p.minimo == null) return null;
+  if (servico === "recolha_moveis") return MOVEIS_POR_PECA;
+  if (servico === "mudanca") {
+    // A etiqueta diz a referência da equipa de 2 (d60): o com IVA é o dessa.
+    return `referência desde ${euros(PRECO_POR_HORA_DUAS_PESSOAS)}/hora + IVA (${euros(comIva(PRECO_POR_HORA_DUAS_PESSOAS))}/hora com IVA)`;
+  }
+  const u = p.unidade ? `/${p.unidade}` : "";
+  if (p.maximo != null && !/^desde\b/.test(p.etiqueta)) return `${faixa(p.minimo, p.maximo)}${u} + IVA (${faixaComIva(p.minimo, p.maximo)}${u} com IVA)`;
+  return `desde ${euros(p.minimo)}${u} + IVA (${euros(comIva(p.minimo))}${u} com IVA)`;
 }
 
 /*

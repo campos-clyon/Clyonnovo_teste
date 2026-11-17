@@ -1,10 +1,10 @@
 import { saudacao } from "./whatsapp-recolha";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { type BaseDoPreco } from "./base-do-preco";
-import { extraNoLocal, INCLUI, valorComIva } from "./extra-no-local";
+import { extraNoLocal, INCLUI, oQueGanha, valorComIva } from "./extra-no-local";
 import { QUEM_FAZ_NO_VALOR_UNICO_CURTO } from "./valor-unico-ao-cliente";
 
-export { eurosCurtos, extraComPreco, extraNoLocal, INCLUI, TABELA_DAS_PECAS_CURTA, valorComIva } from "./extra-no-local";
+export { eurosCurtos, extraComPreco, extraNoLocal, INCLUI, oQueGanha, TABELA_DAS_PECAS_CURTA, valorComIva } from "./extra-no-local";
 
 /**
  * A MENSAGEM DO ORÇAMENTO, CURTA — 15-11-2026 (decisão d47).
@@ -19,13 +19,17 @@ export { eurosCurtos, extraComPreco, extraNoLocal, INCLUI, TABELA_DAS_PECAS_CURT
  *   (c) o extra, com preço: a tabela das peças, os sacos, as horas, a carga;
  *   (d) como se paga, conforme o modelo do trabalho, e o próximo passo.
  *
- * Exemplo aprovado pelo dono (Trabalho CLYON, recolha de monos):
+ * Exemplo (Trabalho CLYON, recolha de monos; texto do Vendas desde 17-11-2026, d66):
  *
  *   Boa noite, Jason! O orçamento para a recolha de monos em Campo de Ourique é 105 € + IVA = 129,15 €.
- *   Inclui o que está nas fotografias e na descrição. Se no local houver mais coisas, o extra paga-se à
- *   parte pela tabela (peça pequena 15 €, média 30 €, grande 50 € + IVA), sempre combinado consigo antes.
+ *   Inclui o que está nas fotografias e na descrição. O parceiro carrega e leva tudo: não tem de mexer
+ *   em nada. O que aparecer a mais combina-se consigo antes de carregar, pela tabela (peça pequena 15 €,
+ *   média 30 €, grande 65 € a primeira e 50 € as seguintes, + IVA).
  *   Paga à CLYON depois do trabalho feito.
- *   Responda SIM e dizemos-lhe o dia e quem vai. 😊
+ *   Responda SIM e reservamos o parceiro; o dia combina-se consigo.
+ *
+ * SEM EMOJI (d66): o link do WhatsApp estragava os caracteres acima de U+FFFF
+ * («�» no lugar do 😊). O teste chumba um que volte.
  *
  * Os números saem das fontes únicas (`precos-publicos.ts`), por `extra-no-local.ts`.
  * A mensagem nasce em português e sai na língua do cliente, UMA vez (o canal traduz).
@@ -49,9 +53,9 @@ export function comoSePaga(modelo: ModeloDoOrcamento): string {
   return PAGA_A_CLYON_NO_MODELO_ANTIGO;
 }
 
-/** O próximo passo. */
-export const RESPONDA_SIM_CURTO = "Responda SIM e dizemos-lhe o dia e quem vai. 😊";
-export const RESPONDA_SIM_COM_QUEM = "Responda SIM e combinamos o dia consigo. 😊";
+/** O próximo passo (d66: sem emoji). */
+export const RESPONDA_SIM_CURTO = "Responda SIM e reservamos o parceiro; o dia combina-se consigo.";
+export const RESPONDA_SIM_COM_QUEM = "Responda SIM e fica reservado.";
 
 /** «Boa noite, Jason!» — ou «Boa noite!». */
 export function saudacaoCurta(nome: string | null | undefined, agora: Date): string {
@@ -94,7 +98,7 @@ export function linhasDoOrcamento(d: DadosDoOrcamento, agora: Date): string[] {
   const oQue = `${d.servicoComArtigo?.trim() || "o seu pedido"}${zona ? ` em ${zona}` : ""}`;
   return [
     `${saudacaoCurta(d.cliente, agora)} O orçamento para ${oQue}${d.paraQuando ? `${d.paraQuando},` : ""} é ${valorComIva(d.semIva, d.total)}${unidade(d.base)}.`,
-    `${INCLUI} ${extraNoLocal(d.servicoId, d.base ?? "total")}`,
+    [INCLUI, oQueGanha(d.servicoId), extraNoLocal(d.servicoId, d.base ?? "total")].filter(Boolean).join(" "),
     comoSePaga(d.modelo),
     d.quemFaz?.trim()
       ? `O trabalho é feito por ${d.quemFaz.trim()}. ${RESPONDA_SIM_COM_QUEM}`

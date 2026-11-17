@@ -27,44 +27,78 @@ export function valorComIva(semIva: number, total: number): string {
 /** (b) O que o valor cobre. */
 export const INCLUI = "Inclui o que está nas fotografias e na descrição.";
 
-const SEMPRE_COMBINADO = "sempre combinado consigo antes.";
-
 const virgula = (n: number) => n.toFixed(2).replace(".", ",");
 
 /**
  * A tabela das peças: «peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 €
- * as seguintes + IVA». Sai de `PECAS_EM_TEXTO` desde 17-11-2026 (d62): dizia a
+ * as seguintes, + IVA». Sai de `PECAS_EM_TEXTO` desde 17-11-2026 (d62): dizia a
  * grande a 50 €, sem a primeira a 65 € da d60.
  */
-export const TABELA_DAS_PECAS_CURTA = `peça ${PECAS_EM_TEXTO} + IVA`;
+export const TABELA_DAS_PECAS_CURTA = `peça ${PECAS_EM_TEXTO}, + IVA`;
 
-/** (c) O extra no local — com o preço da regra de cada serviço. */
+/**
+ * O QUE O CLIENTE GANHA — 17-11-2026 (d66, textos do Vendas). Uma frase por
+ * serviço, só nas mensagens do orçamento (`linhasDoOrcamento`): o que o
+ * parceiro faz por ele. Vazia nos serviços sem frase. Sem «verificado» aqui:
+ * esse só sai onde o código confirma as três confirmações.
+ */
+export function oQueGanha(servico: string | null | undefined): string {
+  switch (servico) {
+    case "recolha_moveis":
+    case "recolha_monos":
+      return "O parceiro carrega e leva tudo: não tem de mexer em nada.";
+    case "recolha_entulho":
+      return "O parceiro carrega e leva o entulho ao destino certo: não tem de mexer em nada.";
+    case "esvaziamento_casa":
+    case "esvaziamento_apartamento":
+      return "O parceiro tira tudo e a casa fica vazia: não tem de tratar de nada.";
+    case "esvaziamento_garagem":
+      return "O parceiro tira tudo e a garagem fica vazia: não tem de tratar de nada.";
+    case "esvaziamento_sotao":
+      return "O parceiro tira tudo e o sótão fica vazio: não tem de tratar de nada.";
+    case "esvaziamento_cave":
+      return "O parceiro tira tudo e a cave fica vazia: não tem de tratar de nada.";
+    case "esvaziamento_empresa":
+      return "O parceiro tira tudo e o espaço fica vazio: não tem de tratar de nada.";
+    case "mudanca":
+      return "A equipa do parceiro desmonta, carrega e monta no destino: não tem de pegar em nada.";
+    case "manutencao_casa":
+      return "O parceiro vem com as ferramentas e faz o que está descrito.";
+    default:
+      return "";
+  }
+}
+
+/**
+ * (c) O extra no local — com o preço da regra de cada serviço, e sempre
+ * combinado antes (texto do Vendas desde 17-11-2026, d66).
+ */
 export function extraNoLocal(servico: string | null | undefined, base: BaseDoPreco | null | undefined = "total"): string {
   if (base === "hora") {
-    return `Se no local houver mais a fazer, as horas a mais pagam-se ao mesmo preço por hora, ${SEMPRE_COMBINADO}`;
+    return "Se for preciso mais tempo, as horas a mais pagam-se ao mesmo preço por hora, combinadas consigo antes.";
   }
   if (base === "carga") {
-    return `Se for preciso mais uma carga, paga-se ao mesmo preço por carga, ${SEMPRE_COMBINADO}`;
+    return "Se for preciso mais uma carga, paga-se ao mesmo preço por carga, combinada consigo antes.";
   }
   if (servico === "recolha_entulho") {
     return (
-      `Se no local houver mais entulho, o extra paga-se à parte por saco ` +
-      `(${virgula(PRECO_POR_SACO.minimo)} a ${virgula(PRECO_POR_SACO.maximo)} € + IVA cada), ${SEMPRE_COMBINADO}`
+      `Se no dia houver mais entulho, combina-se consigo antes de carregar, por saco ` +
+      `(${virgula(PRECO_POR_SACO.minimo)} a ${virgula(PRECO_POR_SACO.maximo)} € + IVA cada).`
     );
   }
   if (servico === "mudanca") {
     // O preço por hora é o do parceiro da lista (d7), não o da referência.
-    return `Se no local houver mais a levar, as horas a mais pagam-se ao preço por hora do parceiro, ${SEMPRE_COMBINADO}`;
+    return "Se no dia houver mais a levar, as horas a mais pagam-se ao preço por hora do parceiro, combinadas consigo antes.";
   }
   if (servico && servico.startsWith("esvaziamento")) {
     // A regra do esvaziamento é o espaço e o volume, não a peça (d20, e d47).
-    return `Se no local houver mais coisas, o volume a mais paga-se à parte, ${SEMPRE_COMBINADO}`;
+    return "Se no dia houver mais coisas, o volume a mais combina-se consigo antes de carregar.";
   }
   if (!servico || servico === "manutencao_casa" || servico === "outro") {
-    return `Se no local houver mais a fazer, o extra orça-se à parte, ${SEMPRE_COMBINADO}`;
+    return "Se houver mais a fazer, orça-se à parte e combina-se consigo antes.";
   }
   // A recolha de móveis e de monos: pela tabela das peças (d20; os monos desde a d47).
-  return `Se no local houver mais coisas, o extra paga-se à parte pela tabela (${TABELA_DAS_PECAS_CURTA}), ${SEMPRE_COMBINADO}`;
+  return `O que aparecer a mais combina-se consigo antes de carregar, pela tabela (${TABELA_DAS_PECAS_CURTA}).`;
 }
 
 /** O extra tem preço? (A manutenção orça-se e o esvaziamento conta o volume: não têm tabela.) */

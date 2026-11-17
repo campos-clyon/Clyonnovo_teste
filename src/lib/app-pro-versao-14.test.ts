@@ -187,7 +187,7 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     expect(como).not.toContain("com a taxa da plataforma e com IVA");
 
     // Os itens a mais pela tabela das peças desde a d7 (04-11-2026): eram 32 € + IVA.
-    expect(avisoDosItens("total", "profissional")).toContain("conta pela tabela das peças (pequena 15 €, média 30 €, grande 50 € + IVA)");
+    expect(avisoDosItens("total", "profissional")).toContain("conta pela tabela das peças (pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA)");
     expect(avisoDosItens("total", "profissional")).not.toContain("32 €");
   });
 });

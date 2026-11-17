@@ -66,12 +66,12 @@ describe("a mensagem", () => {
   it("diz quem faz e para onde vai o dinheiro — nunca «a nossa proposta» (d12)", () => {
     expect(texto).not.toMatch(/nossa proposta|combinamos o resto/i);
     expect(texto).toContain("Paga à CLYON depois do trabalho feito.");
-    expect(texto).toContain("dizemos-lhe o dia e quem vai");
+    expect(texto).toContain("Responda SIM e reservamos o parceiro; o dia combina-se consigo.");
     const comQuem = mensagemDaPropostaClyon(
       { ...T420, profissional: "Mudanças Exemplo", preco: precoDaPropostaClyon(T420)! },
       AGORA,
     );
-    expect(comQuem).toContain("O trabalho é feito por Mudanças Exemplo, parceiro da CLYON. Responda SIM e combinamos o dia consigo.");
+    expect(comQuem).toContain("O trabalho é feito por Mudanças Exemplo, parceiro da CLYON. Responda SIM e fica reservado.");
   });
 
   it("o valor final é o com IVA, com o sem IVA ao lado — nunca o sem IVA sozinho", () => {
@@ -97,8 +97,8 @@ describe("a mensagem", () => {
 describe("o link", () => {
   it("abre a conversa do cliente com a mensagem escrita, e diz o total ao botão", () => {
     const r = linkDaPropostaClyon(T420, AGORA)!;
-    expect(r.link.startsWith("https://wa.me/351960000460?text=")).toBe(true);
-    expect(decodeURIComponent(r.link.split("?text=")[1])).toContain("405,90 €");
+    expect(r.link.startsWith("https://api.whatsapp.com/send?phone=351960000460&text=")).toBe(true);
+    expect(decodeURIComponent(r.link.split("&text=")[1])).toContain("405,90 €");
     expect(r.total).toBeCloseTo(405.9, 2);
   });
 

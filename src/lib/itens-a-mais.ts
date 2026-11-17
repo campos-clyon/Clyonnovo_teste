@@ -1,5 +1,5 @@
 import { notaDaCargaParaOCliente, O_QUE_E_UMA_CARGA, type BaseDoPreco } from "./base-do-preco";
-import { PRECO_POR_ITEM } from "./precos-publicos";
+import { PECAS_EM_TEXTO, PRECO_POR_ITEM } from "./precos-publicos";
 import { extraNoLocal, INCLUI } from "./extra-no-local";
 import { TAXA_IVA } from "./taxas-plataforma";
 
@@ -135,8 +135,9 @@ export function avisoDosItens(
    */
   // Sem serviço passado (undefined), a regra de sempre: a tabela das peças; com null, nenhum serviço (d20).
   if (quem === "cliente") return `${INCLUI} ${extraNoLocal(servico === undefined ? "recolha_moveis" : servico, base)}`;
+  // Ao profissional, a tabela da d60 pela fonte única (d62/d63, 17-11-2026): dizia «grande 50 €».
   return `A sua proposta cobre o que está nas fotografias e na descrição. Cada item que apareça a mais no ` +
-        `local conta pela tabela das peças (${TABELA_DOS_ITENS_A_MAIS}) — combine-o com o cliente antes de carregar.`;
+        `local conta pela tabela das peças (${PECAS_EM_TEXTO} + IVA) — combine-o com o cliente antes de carregar.`;
 }
 
 /**

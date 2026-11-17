@@ -102,7 +102,7 @@ describe("o painel aberto", () => {
     const html = painel(pedido());
     for (const r of ["fotografias", "número da porta", "elevador"]) expect(html).toContain(`>${r}</li>`);
     const whatsapp = elementoCom(html, "WhatsApp</a>");
-    expect(whatsapp).toContain('href="https://wa.me/351912345678?text=');
+    expect(whatsapp).toContain('href="https://api.whatsapp.com/send?phone=351912345678&amp;text=');
     expect(whatsapp).toContain('target="_blank"');
     expect(whatsapp).toContain('rel="noopener noreferrer"');
     expect(whatsapp).toContain("bg-emerald-600");
@@ -118,7 +118,7 @@ describe("o painel aberto", () => {
 
   it("um número que não abre no WhatsApp: o WhatsApp desliga-se e o email fica destacado", () => {
     const html = painel(pedido({ contactPhone: "12345" }));
-    expect(html).not.toContain("wa.me");
+    expect(html).not.toContain("api.whatsapp.com");
     const whatsapp = elementoCom(html, "· sem WhatsApp");
     expect(whatsapp).toContain("disabled");
     expect(elementoCom(html, "Email</a>")).toContain("bg-sky-600");
@@ -128,12 +128,12 @@ describe("o painel aberto", () => {
     const html = painel(pedido({ contactEmail: null }));
     expect(html).not.toContain("mailto:");
     expect(elementoCom(html, "· sem email")).toContain("disabled");
-    expect(html).toContain("wa.me/351912345678");
+    expect(html).toContain("phone=351912345678&");
   });
 
   it("sem nenhum dos dois: fica o «Copiar mensagem», destacado", () => {
     const html = painel(pedido({ contactPhone: null, contactEmail: null }));
-    expect(html).not.toContain("wa.me");
+    expect(html).not.toContain("api.whatsapp.com");
     expect(html).not.toContain("mailto:");
     expect(elementoCom(html, "Copiar mensagem")).toContain("bg-slate-200");
   });

@@ -5,8 +5,7 @@ import { Building2, FileText, HardHat, Home, KeyRound, Phone, Scale } from "luci
 import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
-import { maisIva, PRECOS } from "@/lib/precos-publicos";
-import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
+import { etiquetaComOIvaAoLado, MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { BUSINESS_EMAIL, BUSINESS_PHONE, NA_PROPOSTA_COM_IVA, SITE_URL, pagamentoDasEmpresas } from "@/lib/seo-data";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
@@ -56,17 +55,17 @@ const PARA_QUEM = [
 const MANUTENCAO = NOMES_DOS_SERVICOS.manutencao_casa;
 
 const O_QUE_PODE_PEDIR = [
-  { href: "/recolha-de-entulho", titulo: NOMES_DOS_SERVICOS.recolha_entulho, preco: maisIva(PRECOS.recolha_entulho.etiqueta) },
-  { href: "/recolha-de-monos", titulo: NOMES_DOS_SERVICOS.recolha_monos, preco: maisIva(PRECOS.recolha_monos.etiqueta) },
-  { href: "/esvaziamento-de-casas", titulo: "Esvaziamentos", preco: maisIva(PRECOS.esvaziamento_casa.etiqueta) },
+  { href: "/recolha-de-entulho", titulo: NOMES_DOS_SERVICOS.recolha_entulho, preco: etiquetaComOIvaAoLado("recolha_entulho") },
+  { href: "/recolha-de-monos", titulo: NOMES_DOS_SERVICOS.recolha_monos, preco: etiquetaComOIvaAoLado("recolha_monos") },
+  { href: "/esvaziamento-de-casas", titulo: "Esvaziamentos", preco: etiquetaComOIvaAoLado("esvaziamento_casa") },
   // A página dos armazéns, escritórios e lojas (d43, 15-11-2026): sem preço publicado.
   { href: "/esvaziamento-de-armazens-e-escritorios", titulo: NOMES_DOS_SERVICOS.esvaziamento_empresa, preco: "proposta pelo espaço" },
-  { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório", preco: maisIva(PRECOS.mudanca.etiqueta) },
+  { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório", preco: etiquetaComOIvaAoLado("mudanca") },
   { href: "/recolha-de-moveis", titulo: NOMES_DOS_SERVICOS.recolha_moveis, preco: MOVEIS_POR_PECA },
   {
     href: "/servicos/manutencao-casa",
     titulo: `${MANUTENCAO} (reparações e remodelações)`,
-    preco: maisIva(PRECOS.manutencao_casa.etiqueta),
+    preco: etiquetaComOIvaAoLado("manutencao_casa"),
   },
 ];
 
@@ -144,7 +143,7 @@ export default function EmpresasPage() {
             ))}
           </ul>
           <p className="mt-3 text-xs text-slate-500">
-            Valores de referência, sem IVA. {NA_PROPOSTA_COM_IVA}
+            Valores de referência, sem IVA e com o IVA ao lado. {NA_PROPOSTA_COM_IVA}
           </p>
         </div>
       </section>
