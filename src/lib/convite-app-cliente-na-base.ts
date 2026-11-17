@@ -89,6 +89,10 @@ export type EstadoDosConvites = {
     enviadoEm: string | null;
     /** Já tem linha no registo (enviado, ou a sair) — nunca se volta a enviar. */
     registado: boolean;
+    /** O email da conta é Gmail — o que a lista da Play reconhece (d59, 17-11-2026). */
+    gmail: boolean;
+    /** Está no programa da app (fora quem saiu): segue por lá, não pelo convite em massa. */
+    noPrograma: boolean;
   }>;
   deFora: Record<MotivoDeFora, number>;
   /** Convites registados (enviados) — também de contas que entretanto saíram da lista. */
@@ -124,6 +128,10 @@ export async function estadoDosConvites(): Promise<EstadoDosConvites> {
     porConta.set(Number(r.userId), r.enviadoEm);
     porEmail.set(String(r.email).toLowerCase(), r.enviadoEm);
   }
+  // d59 (17-11-2026): quem já está no programa segue por lá, e só um Gmail vai para a Play.
+  const { quemEstaNoPrograma } = await import("./seguimento-da-app-na-base");
+  const { eGmail } = await import("./seguimento-da-app");
+  const programa = await quemEstaNoPrograma();
   const iso = (v: Date | string | null | undefined) =>
     v == null ? null : v instanceof Date ? v.toISOString() : String(v);
 
@@ -132,6 +140,8 @@ export async function estadoDosConvites(): Promise<EstadoDosConvites> {
       ...d,
       enviadoEm: iso(porConta.get(d.id) ?? porEmail.get(d.email) ?? null),
       registado: porConta.has(d.id) || porEmail.has(d.email),
+      gmail: eGmail(d.email),
+      noPrograma: programa.contas.has(d.id) || programa.emails.has(d.email),
     })),
     deFora,
     enviados: registos.filter((r) => r.enviadoEm != null).length,

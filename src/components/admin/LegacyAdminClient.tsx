@@ -3340,6 +3340,15 @@ export default function ColaboradorAdminClient({
                       }`}
                     >
                       {rotulo}
+                      {/* d59 (17-11-2026): o selo também no separador — os inscritos por pôr na Play. */}
+                      {id === "programa" && (porFazer.contas ?? 0) > 0 && (
+                        <span
+                          className="ml-1.5 rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-bold text-white"
+                          title="Inscritos por pôr na lista da Play"
+                        >
+                          {porFazer.contas}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>

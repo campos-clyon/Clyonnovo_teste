@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, Loader2, RefreshCw, Send, Smartphone } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, Loader2, RefreshCw, Send, Smartphone } from "lucide-react";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
   ROTULOS_DOS_ESTADOS,
@@ -10,6 +10,8 @@ import {
   podeReceberOConvite,
   type EstadoNoPrograma,
 } from "@/lib/programa-da-app";
+import { csvParaAPlay } from "@/lib/convite-app-cliente";
+import { quandoSaiOLembrete, type ComoAderiu, type ListaParaAPlay } from "@/lib/seguimento-da-app";
 
 /*
  * CONTAS → «PROGRAMA DA APP» — 11-11-2026 (ordem do CEO, pedida e aprovada
@@ -22,7 +24,28 @@ import {
  *   3. «Enviar convite» — o email com o link de adesão (Configs) e a Play Store.
  *
  * Só o administrador: as rotas são `requireAdminGeral`.
+ *
+ * d59 (17-11-2026) — «porque ninguém adere»:
+ *   · aviso dos inscritos parados há mais de 24 h em «inscrito»;
+ *   · «Lista para a Play»: os inscritos + as contas novas sem convite, só com
+ *     Gmail, prontos a copiar ou descarregar (CSV);
+ *   · «Convidados — já aderiram?»: o sinal da app (avisos ligados) ou a marca
+ *     «Já instalou» da equipa; e quando sai o lembrete (desligado por omissão).
  */
+
+type Convidado = {
+  email: string;
+  origem: "programa" | "conta";
+  convidadoEm: string | null;
+  aderiu: ComoAderiu;
+  instalouPor: string | null;
+  lembreteEm: string | null;
+  lembreteCanais: string | null;
+  temTelefone: boolean;
+  gmail: boolean;
+};
+
+type EstadoDoLembrete = { email: boolean; whatsapp: boolean; dias: number };
 
 type Inscricao = {
   id: number;
@@ -53,6 +76,10 @@ function quando(v: string | null): string {
 export default function ProgramaDaAppPanel({ authToken }: { authToken: string }) {
   const [lista, setLista] = useState<Inscricao[]>([]);
   const [temLink, setTemLink] = useState<boolean | null>(null);
+  const [parados, setParados] = useState(0);
+  const [paraAPlay, setParaAPlay] = useState<ListaParaAPlay | null>(null);
+  const [convidados, setConvidados] = useState<Convidado[]>([]);
+  const [lembrete, setLembrete] = useState<EstadoDoLembrete | null>(null);
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
   /** Os ids que se copiaram por último — «Marcar como adicionados» usa-os se nada estiver selecionado. */
   const [copiados, setCopiados] = useState<number[]>([]);
@@ -65,13 +92,25 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
     setErro(null);
     try {
       const r = await fetch("/api/admin/programa-da-app", { headers: { Authorization: `Bearer ${authToken}` } });
-      const d = (await r.json().catch(() => ({}))) as { inscricoes?: Inscricao[]; temLink?: boolean; error?: string };
+      const d = (await r.json().catch(() => ({}))) as {
+        inscricoes?: Inscricao[];
+        temLink?: boolean;
+        parados?: number;
+        paraAPlay?: ListaParaAPlay;
+        convidados?: Convidado[];
+        lembrete?: EstadoDoLembrete;
+        error?: string;
+      };
       if (!r.ok) {
         setErro(d.error ?? "Não foi possível ler o programa.");
         return;
       }
       setLista(d.inscricoes ?? []);
       setTemLink(!!d.temLink);
+      setParados(d.parados ?? 0);
+      setParaAPlay(d.paraAPlay ?? null);
+      setConvidados(d.convidados ?? []);
+      setLembrete(d.lembrete ?? null);
     } catch {
       setErro("Não foi possível ler o programa.");
     }
@@ -194,6 +233,59 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
     }
   };
 
+  /** Os ids dos inscritos que estão na lista para a Play — para «Marcar como adicionados» a seguir. */
+  const idsDosInscritosNaLista = () => {
+    const naLista = new Set(paraAPlay?.emails ?? []);
+    return lista.filter((l) => podeMarcarAdicionado(l.estado) && naLista.has(l.email.trim().toLowerCase())).map((l) => l.id);
+  };
+
+  const copiarListaParaAPlay = async () => {
+    setErro(null);
+    setAviso(null);
+    const emails = paraAPlay?.emails ?? [];
+    if (emails.length === 0) {
+      setAviso("Não há emails por pôr na lista da Play.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(emails.join(", "));
+      setCopiados(idsDosInscritosNaLista());
+      setAviso(
+        `${emails.length} email${emails.length !== 1 ? "s" : ""} copiado${emails.length !== 1 ? "s" : ""}. Cole na lista de testadores do teste fechado na Play Console. Depois de guardar lá: «Marcar como adicionados» (inscritos) e, para as contas novas, Contas → «Convidar para testar a app».`,
+      );
+    } catch {
+      setErro("O navegador não deixou copiar. Selecione o texto da caixa e copie à mão.");
+    }
+  };
+
+  const descarregarListaParaAPlay = () => {
+    const emails = paraAPlay?.emails ?? [];
+    if (emails.length === 0) return;
+    const url = URL.createObjectURL(new Blob([csvParaAPlay(emails)], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "testadores-app-cliente.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    setCopiados(idsDosInscritosNaLista());
+  };
+
+  const marcarInstalou = async (email: string, sim: boolean) => {
+    setOcupado(`instalou:${email}`);
+    setErro(null);
+    setAviso(null);
+    try {
+      await post({ accao: "marcar-instalou", email, sim });
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  const porAderir = convidados.filter((c) => !c.aderiu).length;
+
   const FILTROS: Array<{ id: EstadoNoPrograma | "todos"; rotulo: string }> = [
     { id: "todos", rotulo: `Todos (${lista.length})` },
     { id: "inscrito", rotulo: `Por adicionar (${contagem.inscrito})` },
@@ -230,6 +322,69 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
         <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           Ainda não há link de adesão: o convite não sai sem ele. Escreva-o em Configs → «Link do programa da app».
         </p>
+      )}
+
+      {parados > 0 && (
+        <p className="flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            <strong>
+              {parados} inscrito{parados !== 1 ? "s" : ""} à espera há mais de 24 h
+            </strong>{" "}
+            para entrar na lista da Play. Copie a lista abaixo, cole-a na Play Console e marque-os como adicionados.
+          </span>
+        </p>
+      )}
+
+      {paraAPlay && (
+        <div className="rounded-xl border border-cyan-200 bg-cyan-50/40 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Lista para a Play ({paraAPlay.emails.length})</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {paraAPlay.deInscritos} inscrito{paraAPlay.deInscritos !== 1 ? "s" : ""} por adicionar ·{" "}
+                {paraAPlay.deContas} conta{paraAPlay.deContas !== 1 ? "s" : ""} nova{paraAPlay.deContas !== 1 ? "s" : ""} sem
+                convite (com Gmail). Pronta a colar em Play Console → Testes → Teste fechado → Testadores.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void copiarListaParaAPlay()}
+                disabled={paraAPlay.emails.length === 0}
+                className="flex items-center gap-2 rounded-xl bg-acao px-4 py-2 text-sm font-semibold text-white transition hover:bg-acao-hover disabled:opacity-50"
+              >
+                <Copy className="h-4 w-4" aria-hidden="true" />
+                Copiar a lista
+              </button>
+              <button
+                type="button"
+                onClick={descarregarListaParaAPlay}
+                disabled={paraAPlay.emails.length === 0}
+                className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Descarregar CSV
+              </button>
+            </div>
+          </div>
+          {paraAPlay.emails.length > 0 && (
+            <textarea
+              readOnly
+              value={paraAPlay.emails.join(", ")}
+              onFocus={(e) => e.currentTarget.select()}
+              rows={Math.min(4, Math.ceil(paraAPlay.emails.length / 3))}
+              aria-label="Emails por pôr na lista da Play"
+              className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-800"
+            />
+          )}
+          {paraAPlay.faltaGmail > 0 && (
+            <p className="mt-2 text-xs text-amber-800">
+              {paraAPlay.faltaGmail} conta{paraAPlay.faltaGmail !== 1 ? "s" : ""} nova{paraAPlay.faltaGmail !== 1 ? "s" : ""} com
+              email que não é Gmail ficam de fora: falta o Gmail do telemóvel (a Play só dá acesso a uma conta Google).
+            </p>
+          )}
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -344,6 +499,81 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {convidados.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <h3 className="text-sm font-bold text-slate-900">
+            Convidados — já aderiram? ({convidados.length - porAderir} de {convidados.length})
+          </h3>
+          <p className="text-xs text-slate-500">
+            A Play não diz quem se tornou testador. Conta como aderiu quando a app de cliente ligou os avisos nessa conta, ou
+            quando a equipa marca «Já instalou».{" "}
+            {lembrete?.email
+              ? `Lembrete único ${lembrete.dias} dias depois do convite, por email${lembrete.whatsapp ? " e WhatsApp" : ""}.`
+              : "O lembrete está desligado (à espera dos textos aprovados)."}
+          </p>
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-3 py-2">Email</th>
+                  <th className="px-3 py-2">Convidado em</th>
+                  <th className="px-3 py-2">Aderiu</th>
+                  <th className="px-3 py-2">Lembrete</th>
+                  <th className="px-3 py-2">
+                    <span className="sr-only">Marcar</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {convidados.map((c) => {
+                  const convidadoEm = instanteDaBase(c.convidadoEm);
+                  return (
+                    <tr key={c.email} className="border-t border-slate-100">
+                      <td className="px-3 py-2 font-mono text-xs text-slate-800">
+                        {c.email}
+                        <span className="ml-2 font-sans text-[11px] text-slate-400">
+                          {c.origem === "programa" ? "(programa)" : "(convite às contas)"}
+                          {!c.gmail && " · não é Gmail"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{quando(c.convidadoEm)}</td>
+                      <td className="px-3 py-2 text-xs">
+                        {c.aderiu === "avisos-da-app" && <span className="font-semibold text-emerald-700">Sim (a app ligou os avisos)</span>}
+                        {c.aderiu === "marcado" && (
+                          <span className="font-semibold text-emerald-700">Sim (marcado{c.instalouPor ? ` por ${c.instalouPor}` : ""})</span>
+                        )}
+                        {!c.aderiu && <span className="text-slate-500">Ainda não</span>}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        {c.lembreteEm
+                          ? `enviado · ${quando(c.lembreteEm)}${c.lembreteCanais ? ` (${c.lembreteCanais.replace(",", " + ")})` : ""}`
+                          : c.aderiu || !c.gmail
+                            ? "—"
+                            : lembrete?.email && convidadoEm
+                              ? `a partir de ${dataEHoraEmLisboa(quandoSaiOLembrete(convidadoEm))}`
+                              : "desligado"}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {c.aderiu !== "avisos-da-app" && (
+                          <button
+                            type="button"
+                            onClick={() => void marcarInstalou(c.email, c.aderiu !== "marcado")}
+                            disabled={ocupado !== null}
+                            className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            {c.aderiu === "marcado" ? "Desfazer" : "Já instalou"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

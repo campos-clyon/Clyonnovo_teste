@@ -41,6 +41,8 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "libertar-por-prazo", titulo: "Trabalhos libertados por prazo", horario: "0 4 * * *", intervaloMin: 24 * 60 },
   { nome: "purgar-pedidos", titulo: "Purga dos pedidos antigos", horario: "30 4 * * *", intervaloMin: 24 * 60 },
   { nome: "licoes-da-vitoria", titulo: "Lições da Vitória", horario: "20 5 * * *", intervaloMin: 24 * 60 },
+  // 17-11-2026 (d59): o lembrete único da app de cliente, 3 dias depois do convite — desligado até os textos estarem aprovados.
+  { nome: "lembrete-da-app", titulo: "App de cliente: lembrete a quem foi convidado e não aderiu (desligado por omissão)", horario: "0 10 * * *", intervaloMin: 24 * 60 },
   { nome: "weekly-digest", titulo: "Resumo semanal por email", horario: "0 9 * * 1", intervaloMin: 7 * 24 * 60 },
 ];
 

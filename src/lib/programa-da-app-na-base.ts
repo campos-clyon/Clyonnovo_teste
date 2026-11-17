@@ -320,6 +320,9 @@ type Executor = Pick<import("mysql2/promise").PoolConnection, "execute">;
  * ela, não há nada para apagar.
  */
 export async function apagarInscricaoNaTransaccao(conn: Executor, email: string, contaIds: number[]): Promise<void> {
+  // O seguimento (d59, 17-11-2026) primeiro: lê os emails das inscrições que saem a seguir.
+  const { apagarSeguimentoNaTransaccao } = await import("./seguimento-da-app-na-base");
+  await apagarSeguimentoNaTransaccao(conn, email, contaIds);
   try {
     await conn.execute(
       `DELETE FROM programaDaApp WHERE email = ? OR userId IN (${contaIds.map(() => "?").join(", ") || "NULL"})`,
@@ -334,6 +337,9 @@ export async function apagarInscricaoNaTransaccao(conn: Executor, email: string,
 export async function apagarInscricoesDaConta(userId: number): Promise<void> {
   const pool = await getPool();
   if (!pool) return;
+  // O seguimento (d59, 17-11-2026) primeiro: lê os emails das inscrições que saem a seguir.
+  const { apagarSeguimentoDaConta } = await import("./seguimento-da-app-na-base");
+  await apagarSeguimentoDaConta(userId);
   try {
     await pool.execute("DELETE FROM programaDaApp WHERE userId = ?", [userId]);
   } catch (err) {

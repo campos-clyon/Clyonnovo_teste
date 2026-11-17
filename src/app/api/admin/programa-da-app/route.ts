@@ -11,6 +11,11 @@ import {
   reservarConviteDoPrograma,
 } from "@/lib/programa-da-app-na-base";
 import { enviarConviteDoPrograma } from "@/lib/programa-da-app-envio";
+import { estadoDosConvites } from "@/lib/convite-app-cliente-na-base";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
+import { DIAS_ATE_AO_LEMBRETE, inscritoParado, listaParaAPlay } from "@/lib/seguimento-da-app";
+import { convidadosDoSeguimento, marcarInstalou } from "@/lib/seguimento-da-app-na-base";
+import { estadoDoLembrete } from "@/lib/lembrete-da-app";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +31,11 @@ export const maxDuration = 60;
  * POST convidar { ids? }            → até CONVITES_POR_LOTE `adicionado` recebem o
  *                                     email e passam a `convidado`; sem ids, todos
  *                                     os adicionados (o painel repete até acabar)
+ * POST marcar-instalou { email, sim } → a marca «Já instalou» de um convidado (d59)
+ *
+ * d59 (17-11-2026): o GET leva também a lista pronta para a Play (inscritos +
+ * contas novas com Gmail, `listaParaAPlay`), os inscritos parados há mais de
+ * 24 h, os convidados (aderiram?) e o estado do lembrete.
  */
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -34,8 +44,31 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdminGeral(req);
   if (err) return err;
   try {
-    const [inscricoes, link] = await Promise.all([listaDoPrograma(), linkDeAdesaoGuardado()]);
-    return NextResponse.json({ inscricoes, temLink: link !== null }, { headers: { "Cache-Control": "no-store" } });
+    const [inscricoes, link, convites, convidados] = await Promise.all([
+      listaDoPrograma(),
+      linkDeAdesaoGuardado(),
+      estadoDosConvites(),
+      convidadosDoSeguimento(),
+    ]);
+    const agora = new Date();
+    const parados = inscricoes.filter((l) =>
+      inscritoParado({ estado: l.estado, consentimentoEm: instanteDaBase(l.consentimentoEm) }, agora),
+    ).length;
+    const paraAPlay = listaParaAPlay(
+      inscricoes,
+      convites.destinatarios.filter((d) => !d.registado && !d.noPrograma),
+    );
+    return NextResponse.json(
+      {
+        inscricoes,
+        temLink: link !== null,
+        parados,
+        paraAPlay,
+        convidados,
+        lembrete: { ...estadoDoLembrete(), dias: DIAS_ATE_AO_LEMBRETE },
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     console.error("[admin/programa-da-app GET]", error);
     return NextResponse.json({ error: "Não foi possível ler o programa." }, { status: 500 });
@@ -58,6 +91,12 @@ export async function POST(req: NextRequest) {
     if (corpo.accao === "marcar-adicionados") {
       const mudados = await marcarAdicionados(corpo.ids, porQuem);
       return NextResponse.json({ ok: true, mudados });
+    }
+
+    if (corpo.accao === "marcar-instalou") {
+      const ok = await marcarInstalou(corpo.email, corpo.sim !== false, porQuem);
+      if (!ok) return NextResponse.json({ error: "Esse email não está entre os convidados." }, { status: 400 });
+      return NextResponse.json({ ok: true });
     }
 
     if (corpo.accao === "convidar") {

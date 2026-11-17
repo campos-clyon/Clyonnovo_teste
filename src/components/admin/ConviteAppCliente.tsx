@@ -23,6 +23,11 @@ type Estado = {
   enviadosNoTotal: number;
   deFora: Record<string, number>;
   nomeDaPrimeira: string | null;
+  /** d59 (17-11-2026): só um Gmail vai para a Play. */
+  paraAPlay: number;
+  faltaGmail: number;
+  noPrograma: number;
+  conviteQuePedeOGmailPronto: boolean;
 };
 
 const ROTULOS_DE_FORA: Record<string, string> = {
@@ -245,6 +250,19 @@ export default function ConviteAppCliente({
                     <strong className="text-slate-900">{estado.porEnviar}</strong> por enviar
                   </p>
                   {deFora && <p className="mt-1 text-xs text-slate-400">Ficam de fora: {deFora}.</p>}
+                  <p className="mt-1 text-xs text-slate-500">
+                    <strong className="text-slate-700">{estado.paraAPlay}</strong> com Gmail, prontas para a lista da Play
+                    {estado.noPrograma > 0 && <> · {estado.noPrograma} já no Programa da app (seguem por lá)</>}
+                  </p>
+                  {estado.faltaGmail > 0 && (
+                    <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      <strong>{estado.faltaGmail}</strong> conta{estado.faltaGmail !== 1 ? "s" : ""} com email que não é Gmail:
+                      falta o Gmail do telemóvel. Não vão para a lista da Play.{" "}
+                      {estado.conviteQuePedeOGmailPronto
+                        ? "O convite pede-lhes o Gmail pelo formulário do Programa da app."
+                        : "Ficam fora do envio até o texto que pede o Gmail estar aprovado."}
+                    </p>
+                  )}
                 </div>
 
                 <div className="rounded-xl border border-slate-200 p-4">
@@ -262,9 +280,9 @@ export default function ConviteAppCliente({
                 {erro && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>}
 
                 <div className="flex flex-wrap justify-end gap-2">
-                  <button onClick={descarregarCsv} disabled={ocupado !== null || estado.destinatarios === 0} className={botaoSec}>
+                  <button onClick={descarregarCsv} disabled={ocupado !== null || estado.paraAPlay === 0} className={botaoSec}>
                     <Download className="h-4 w-4" />
-                    Descarregar lista para a Play
+                    Descarregar lista para a Play ({estado.paraAPlay} Gmail)
                   </button>
                   <button
                     onClick={enviarATodos}

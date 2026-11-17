@@ -50,6 +50,10 @@
     {
       "path": "/api/cron/licoes-da-vitoria",
       "schedule": "20 5 * * *"
+    },
+    {
+      "path": "/api/cron/lembrete-da-app",
+      "schedule": "0 10 * * *"
     }
   ]
 }
