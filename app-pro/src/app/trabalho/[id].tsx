@@ -285,7 +285,11 @@ function ValorSugeridoPelaClyon({ t }: { t: Trabalho }) {
       </Text>
       {estimativa ? <Text style={{ color: c.tinta, fontWeight: "600" }}>Total estimado {estimativa}</Text> : null}
       <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
-        {base !== "total" ? `${etiquetaDaBase(base)} · ` : ""}já com a taxa da plataforma descontada · o valor é sem IVA
+        {base !== "total" ? `${etiquetaDaBase(base)} · ` : ""}
+        {/* No modelo de 15-11 (d65, pelo `noNovoModelo` do servidor) o cliente paga-lhe a ele: nada é «descontado». */}
+        {t.noNovoModelo === true
+          ? "fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA"
+          : "já com a taxa da plataforma descontada · o valor é sem IVA"}
       </Text>
     </View>
   );

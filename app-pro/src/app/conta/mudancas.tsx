@@ -19,6 +19,8 @@ import {
   type TarifaDasMudancas,
 } from "../../../../src/lib/conta-da-mudanca";
 import { dataEHoraEmLisboa } from "../../../../src/lib/hora-de-lisboa";
+// Os exemplos da hora pela referência pública (d60/d65): 40 €/h com 2 pessoas, 55 €/h com 3 — nunca um número à mão.
+import { PRECO_POR_HORA, PRECO_POR_HORA_DUAS_PESSOAS } from "../../../../src/lib/tabela-das-mudancas";
 import {
   TEXTOS_DOS_PRECOS_DAS_MUDANCAS as TEXTOS,
   avisoDasTresPessoas,
@@ -278,7 +280,7 @@ export default function EcraDosPrecosDasMudancas() {
           value={campos.precoHora2}
           onChangeText={mudar("precoHora2")}
           keyboardType="decimal-pad"
-          placeholder="ex.: 45"
+          placeholder={`ex.: ${PRECO_POR_HORA_DUAS_PESSOAS}`}
           campo="precoHora2"
         />
         <CampoOpcional
@@ -288,7 +290,7 @@ export default function EcraDosPrecosDasMudancas() {
           aoAlternar={() => alternarDeFora("precoHora3")}
           valor={campos.precoHora3}
           aoMudar={mudar("precoHora3")}
-          placeholder="ex.: 60"
+          placeholder={`ex.: ${PRECO_POR_HORA}`}
           erro={erros.precoHora3}
           campo="precoHora3"
           aviso={avisoDasTresPessoas(deFora.precoHora3 ? null : campos.precoHora3)}

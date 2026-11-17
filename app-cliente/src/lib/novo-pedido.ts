@@ -1170,7 +1170,8 @@ function camposDasPerguntas(r: Rascunho, perguntas: readonly PerguntaDaApp[], d:
   const respostas = respostasDoRascunho(r, perguntas);
   const visiveis = perguntasVisiveis(r, perguntas);
   const ids = new Set(visiveis.map((p) => p.id));
-  for (const id of ["entulho", "tipoDeSaco", "quantidade", "ensacados", "porEnsacar", "entulhoVolume", "tipologia", "recheio", "tipoDeTrabalho", "quantoTrabalho", "materiais", "repeticao", "desmontagem"]) {
+  // «As peças grandes cabem no elevador?» (d60) também vai (d64, 17-11-2026): sem ela, a R12 contava a escada e o servidor não.
+  for (const id of ["entulho", "tipoDeSaco", "quantidade", "ensacados", "porEnsacar", "entulhoVolume", "tipologia", "recheio", "tipoDeTrabalho", "quantoTrabalho", "materiais", "repeticao", "desmontagem", "pecasNoElevador"]) {
     if (!ids.has(id)) continue;
     const p = visiveis.find((x) => x.id === id)!;
     const v = respostas[id];

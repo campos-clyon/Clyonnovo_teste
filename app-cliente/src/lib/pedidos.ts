@@ -805,6 +805,22 @@ export const TEXTOS_DA_ALTERACAO = {
   jaHaUma: "Já tem uma alteração à espera da CLYON.",
 } as const;
 
+/** «As peças grandes cabem no elevador?» — as respostas do simulador (d60), as mesmas ids. */
+export const PECAS_NO_ELEVADOR: ReadonlyArray<{ id: string; nome: string }> = [
+  { id: "sim", nome: "Sim" },
+  { id: "nao", nome: "Não" },
+  { id: "nao_sei", nome: "Não sei" },
+];
+
+/**
+ * A pergunta das peças grandes no «Alterar o pedido» (d64, 17-11-2026): só
+ * quando a API a lista em `alteracoes.campos` (um servidor que ainda não a lê
+ * recusaria a alteração inteira), e só acima do R/C com elevador.
+ */
+export function perguntaAsPecasNoElevador(campos: readonly string[], acesso: { floor?: string; hasElevator?: string }): boolean {
+  return campos.includes("pecasNoElevador") && !!acesso.floor && acesso.floor !== "rés-do-chão" && (acesso.hasElevator === "yes" || acesso.hasElevator === "small");
+}
+
 /**
  * O corpo da R13 — SÓ os campos da lista fechada da Segurança (R14 da D3):
  * o dia, juntar fotografias, acrescentar pormenores (até 1000 caracteres) e o
@@ -820,6 +836,7 @@ export function corpoDaAlteracao(
     acesso?: Record<string, unknown>;
     acessoDestino?: Record<string, unknown>;
     desmontagem?: boolean;
+    pecasNoElevador?: string;
   },
   limites: { primeiroDia: string; ultimoDia: string },
 ): { corpo: Record<string, unknown> } | { erro: string } {
@@ -838,6 +855,7 @@ export function corpoDaAlteracao(
   if (a.acesso) corpo.acesso = a.acesso;
   if (a.acessoDestino) corpo.acessoDestino = a.acessoDestino;
   if (a.desmontagem !== undefined) corpo.desmontagem = a.desmontagem;
+  if (a.pecasNoElevador && PECAS_NO_ELEVADOR.some((o) => o.id === a.pecasNoElevador)) corpo.pecasNoElevador = a.pecasNoElevador;
   if (Object.keys(corpo).length === 0) return { erro: "Diga o que quer mudar." };
   return { corpo };
 }

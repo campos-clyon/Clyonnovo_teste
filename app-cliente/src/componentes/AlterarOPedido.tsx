@@ -7,7 +7,15 @@ import { ErroDaApi, mensagemDe } from "../lib/api";
 import type { Pedir } from "../lib/erros";
 import { enviarFotografia, escolherFotografias, reduzirFotografia } from "../lib/fotografias";
 import { ANDARES, diasParaEscolher, ELEVADOR, ESTACIONAMENTO, primeiroDiaPossivel, TEXTO_DO_QUANDO, type Acesso, type Quando } from "../lib/novo-pedido";
-import { corpoDaAlteracao, DIAS_PARA_ALTERAR, MAXIMO_DOS_PORMENORES, ROTA_DA_ALTERACAO, TEXTOS_DA_ALTERACAO as T } from "../lib/pedidos";
+import {
+  corpoDaAlteracao,
+  DIAS_PARA_ALTERAR,
+  MAXIMO_DOS_PORMENORES,
+  PECAS_NO_ELEVADOR,
+  perguntaAsPecasNoElevador,
+  ROTA_DA_ALTERACAO,
+  TEXTOS_DA_ALTERACAO as T,
+} from "../lib/pedidos";
 import { CORES } from "../tema";
 
 /**
@@ -43,6 +51,7 @@ export function AlterarOPedido({
   const [pormenores, setPormenores] = useState("");
   const [fotos, setFotos] = useState<string[]>([]);
   const [acesso, setAcesso] = useState<Acesso>({});
+  const [pecasNoElevador, setPecasNoElevador] = useState<string | undefined>(undefined);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<string | null>(null);
@@ -82,6 +91,8 @@ export function AlterarOPedido({
         fotografias: opcao === "fotos" ? fotos : undefined,
         pormenores: opcao === "pormenores" ? pormenores : undefined,
         acesso: opcao === "acesso" && acesso.floor ? { ...acesso } : undefined,
+        // As peças grandes (d64): só se a API a deixa e a pergunta está à vista.
+        pecasNoElevador: opcao === "acesso" && perguntaAsPecasNoElevador(campos, acesso) ? pecasNoElevador : undefined,
       },
       { primeiroDia: primeiroDiaPossivel(new Date()), ultimoDia: dias[dias.length - 1]?.dia ?? "" },
     );
@@ -149,6 +160,9 @@ export function AlterarOPedido({
           <Escolhas rotulo="Em que andar está?" opcoes={ANDARES} valor={acesso.floor} aoEscolher={(v) => setAcesso((a) => ({ ...a, floor: v }))} />
           {acesso.floor && acesso.floor !== "rés-do-chão" ? (
             <Escolhas rotulo="Há elevador?" opcoes={ELEVADOR} valor={acesso.hasElevator} aoEscolher={(v) => setAcesso((a) => ({ ...a, hasElevator: v }))} />
+          ) : null}
+          {perguntaAsPecasNoElevador(campos, acesso) ? (
+            <Escolhas rotulo="As peças grandes cabem no elevador?" opcoes={PECAS_NO_ELEVADOR} valor={pecasNoElevador} aoEscolher={setPecasNoElevador} />
           ) : null}
           <Escolhas rotulo="Estacionamento" opcoes={ESTACIONAMENTO} valor={acesso.parkingDistance} aoEscolher={(v) => setAcesso((a) => ({ ...a, parkingDistance: v }))} />
         </View>
