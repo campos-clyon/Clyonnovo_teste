@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     pessoas?: unknown;
     km?: unknown;
     motivoDosKm?: unknown;
+    /** d70: `true` = «O cliente concordou com as pessoas a mais». */
+    acordoDasPessoasAMais?: unknown;
     rascunho?: unknown;
   };
   try {

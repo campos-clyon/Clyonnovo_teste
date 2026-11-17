@@ -16,6 +16,13 @@ import {
 } from "@/lib/folha-da-mudanca";
 import { HORA_DE_FIM, HORA_DE_INICIO, agoraNoCampo } from "@/lib/horas-do-trabalho";
 import type { QuantidadeDoMaterial } from "@/lib/conta-da-mudanca";
+import {
+  CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS,
+  PESSOAS_DA_FOLHA,
+  PRECO_POR_PESSOA_A_MAIS_SEM_IVA,
+  type PessoasDaFolha,
+} from "@/lib/tabela-das-mudancas";
+import { TAXA_IVA } from "@/lib/taxas-plataforma";
 import type { Pedido } from "./tipos";
 
 /**
@@ -35,7 +42,9 @@ export function FolhaDaMudanca({ pedido, onGravou }: { pedido: Pedido; onGravou:
   const [inicio, setInicio] = useState(c.inicio);
   const [fim, setFim] = useState(c.fim);
   const [pausas, setPausas] = useState<Array<{ inicio: string; fim: string }>>(c.pausas);
-  const [pessoas, setPessoas] = useState<2 | 3>(c.pessoas);
+  // d70: de 2 a 8 (acima de 3, com o acordo do cliente marcado).
+  const [pessoas, setPessoas] = useState<PessoasDaFolha>(c.pessoasDaFolha ?? c.pessoas);
+  const [acordo, setAcordo] = useState<boolean>(Boolean(c.acordoDasPessoasAMais));
   const [km, setKm] = useState(c.km);
   const [motivoDosKm, setMotivoDosKm] = useState(c.motivoDosKm);
   const [materiais, setMateriais] = useState<Partial<Record<QuantidadeDoMaterial, string>>>(c.materiais);
@@ -44,14 +53,14 @@ export function FolhaDaMudanca({ pedido, onGravou }: { pedido: Pedido; onGravou:
   const [mensagem, setMensagem] = useState("");
   const editavel = h.podeMarcar;
 
-  const corpo = { dia: c.dia, inicio, fim, pausas, pessoas, km, motivoDosKm, materiais };
+  const corpo = { dia: c.dia, inicio, fim, pausas, pessoas, km, motivoDosKm, materiais, acordoDasPessoasAMais: pessoas > 3 ? acordo : undefined };
   const previsao: { ecra: FolhaNoEcra | null; erro: string | null } = useMemo(() => {
     const ctx = contextoDaFolha(f.contexto);
     if (!ctx || !inicio || !fim) return { ecra: null, erro: null };
     const r = lerFolha(corpo, ctx);
     return r.ok ? { ecra: folhaNoEcra(r.folha, "parceiro", ctx.tarifa.minimoHoras), erro: null } : { ecra: null, erro: r.erro };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inicio, fim, pausas, pessoas, km, motivoDosKm, materiais, f.contexto]);
+  }, [inicio, fim, pausas, pessoas, acordo, km, motivoDosKm, materiais, f.contexto]);
 
   const kmDiferentes = c.kmDoPercurso != null && Math.abs(Number(km.replace(",", ".")) - c.kmDoPercurso) >= 0.5;
   const mostrar = editavel ? previsao.ecra : f.enviada;
@@ -184,7 +193,36 @@ export function FolhaDaMudanca({ pedido, onGravou }: { pedido: Pedido; onGravou:
                   {n} pessoas{n === c.pessoasEscolhidas ? " (a escolhida)" : ""}
                 </button>
               ))}
+              {c.podeTres && (
+                <select
+                  value={pessoas > 3 ? pessoas : ""}
+                  onChange={(e) => e.target.value && setPessoas(Number(e.target.value) as PessoasDaFolha)}
+                  aria-label="Mais de 3 pessoas"
+                  className={`min-h-[44px] flex-1 rounded-xl border-2 bg-white px-2 text-sm font-bold ${
+                    pessoas > 3 ? "border-cyan-600 text-cyan-900" : "border-cyan-200 text-slate-700"
+                  }`}
+                >
+                  <option value="">Mais de 3</option>
+                  {PESSOAS_DA_FOLHA.filter((n) => n > 3 && n <= (c.pessoasMaximas ?? 3)).map((n) => (
+                    <option key={n} value={n}>
+                      {n} pessoas
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+            {pessoas > 3 && (
+              <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <p>
+                  Cada pessoa a mais soma {euros(PRECO_POR_PESSOA_A_MAIS_SEM_IVA)} + IVA ({euros(PRECO_POR_PESSOA_A_MAIS_SEM_IVA * (1 + TAXA_IVA))} com
+                  IVA) à hora da equipa de 3. Só com o acordo do cliente — ele vê-o ao confirmar a folha.
+                </p>
+                <label className="mt-2 flex items-start gap-2 font-semibold">
+                  <input type="checkbox" checked={acordo} onChange={(e) => setAcordo(e.target.checked)} className="mt-1 h-4 w-4" />
+                  {CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS}
+                </label>
+              </div>
+            )}
           </div>
 
           <label className="flex flex-col gap-1">
@@ -265,6 +303,8 @@ export function FolhaDaMudanca({ pedido, onGravou }: { pedido: Pedido; onGravou:
     </section>
   );
 }
+
+const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
 function ResumoDaFolha({ folha }: { folha: FolhaNoEcra }) {
   return (

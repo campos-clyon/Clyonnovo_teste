@@ -19,6 +19,9 @@
  *     max(km, km mínimos) × preço do km;
  *   · pessoas: as escolhidas pelo cliente; descer pode; subir só com o OK do
  *     cliente — e o OK é a confirmação da folha, que o diz por extenso;
+ *     desde a d70 (17-11-2026) a equipa vai até 8: acima de 3, a hora de 3 +
+ *     `PRECO_POR_PESSOA_A_MAIS_SEM_IVA` por pessoa (tabela-das-mudancas.ts), e só
+ *     com «O cliente concordou com as pessoas a mais» marcado (quem e quando);
  *   · material: as quatro unidades da tarifa, só as que o parceiro fornece;
  *   · o valor final é `valorDaMudanca` (conta-da-mudanca.ts): a taxa da
  *     plataforma só nas horas e nos km, de dentro; o material sem taxa e com
@@ -50,6 +53,21 @@ import {
 } from "./horas-do-trabalho";
 import { dataEHoraEmLisboa, instanteDaBase, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { JANELA_DE_RESPOSTA } from "./prazo-de-resposta-do-parceiro";
+import {
+  PESSOAS_DA_FOLHA_MAXIMO,
+  PESSOAS_NA_EQUIPA,
+  PRECO_POR_PESSOA_A_MAIS_SEM_IVA,
+  SEM_ACORDO_DAS_PESSOAS_A_MAIS,
+  acordoDasPessoasAMaisDe,
+  acordoParaGravar,
+  ePessoasDaFolha,
+  pessoasAMais,
+  precoDaHoraParaPessoasCent,
+  type AcordoDasPessoasAMais,
+  type PessoasDaFolha,
+  type QuemRegistaOAcordo,
+} from "./tabela-das-mudancas";
+import { TAXA_IVA } from "./taxas-plataforma";
 
 /* ── Os títulos e os botões, iguais em todos os ecrãs ─────────────────────── */
 export const TITULO_DA_FOLHA = "Folha da mudança";
@@ -134,8 +152,11 @@ export type FolhaDaMudanca = {
   minutosTrabalhados: number;
   /** As horas trabalhadas ao quarto de hora, para cima (antes do mínimo). */
   horasAoQuarto: number;
-  pessoas: 2 | 3;
+  /** 2 a 8 (d70). */
+  pessoas: PessoasDaFolha;
   pessoasEscolhidas: 2 | 3;
+  /** d70: o acordo do cliente com as pessoas acima de 3 (quem e quando). */
+  acordoDasPessoasAMais?: AcordoDasPessoasAMais | null;
   km: number;
   kmDoPercurso: number | null;
   motivoDosKm: string | null;
@@ -165,13 +186,21 @@ export type CorpoDaFolha = {
   km?: unknown;
   motivoDosKm?: unknown;
   materiais?: unknown;
+  /** d70: `true` = «O cliente concordou com as pessoas a mais» (obrigatório acima de 3). */
+  acordoDasPessoasAMais?: unknown;
 };
 
-/** 2 ou 3; o resto é a equipa escolhida. */
-export function lerPessoasDaFolha(v: unknown, escolhidas: 2 | 3): 2 | 3 {
+/** 2 a 8 (d70); o resto é a equipa escolhida. */
+export function lerPessoasDaFolha(v: unknown, escolhidas: 2 | 3): PessoasDaFolha {
   const n = Number(v);
-  return n === 2 || n === 3 ? n : escolhidas;
+  return ePessoasDaFolha(n) ? n : escolhidas;
 }
+
+/** 2 ou 3: o que os ecrãs antigos sabem mostrar (d70). */
+export const ateTres = (p: PessoasDaFolha): 2 | 3 => (p === 2 ? 2 : 3);
+
+/** Quem grava a folha (d70: fica no acordo das pessoas a mais) e o acordo que já lá estava. */
+export type QuemGravaAFolha = { por: QuemRegistaOAcordo; nome: string | null; anterior?: AcordoDasPessoasAMais | null };
 
 /**
  * A HORA DA EQUIPA NA FOLHA (cêntimos, sem IVA): a da tarifa congelada para a
@@ -181,10 +210,15 @@ export function lerPessoasDaFolha(v: unknown, escolhidas: 2 | 3): 2 | 3 {
  */
 export function horaDaFolhaCent(
   t: TarifaCongelada,
-  pessoas: 2 | 3,
+  pessoas: PessoasDaFolha,
   pessoasEscolhidas: 2 | 3,
   valorPorHoraAcordado: number | null,
 ): number | null {
+  // d70: acima de 3, a hora da equipa de 3 (a desta folha) + cada pessoa a mais.
+  if (pessoas > PESSOAS_NA_EQUIPA) {
+    const de3 = horaDaFolhaCent(t, 3, pessoasEscolhidas, valorPorHoraAcordado);
+    return de3 == null ? null : precoDaHoraParaPessoasCent(de3, pessoas);
+  }
   const daTarifa = pessoas === 3 ? t.precoHora3Cent : t.precoHora2Cent;
   if (daTarifa == null) return null;
   const acordadoCent =
@@ -196,8 +230,8 @@ export function horaDaFolhaCent(
 }
 
 /** A tarifa congelada com a hora desta folha no lugar da equipa que foi. */
-function tarifaComAHora(t: TarifaCongelada, pessoas: 2 | 3, horaCent: number): TarifaCongelada {
-  return pessoas === 3 ? { ...t, precoHora3Cent: horaCent } : { ...t, precoHora2Cent: horaCent };
+function tarifaComAHora(t: TarifaCongelada, pessoas: PessoasDaFolha, horaCent: number): TarifaCongelada {
+  return pessoas >= 3 ? { ...t, precoHora3Cent: horaCent } : { ...t, precoHora2Cent: horaCent };
 }
 
 /** Ao quarto de hora, para cima — sem mínimo (o mínimo é da tarifa). */
@@ -255,6 +289,7 @@ export function lerFolha(
   corpo: CorpoDaFolha,
   ctx: ContextoDaFolha,
   agora: Date = new Date(),
+  quem: QuemGravaAFolha = { por: "profissional", nome: null },
 ): { ok: true; folha: FolhaDaMudanca } | Erro {
   const dia = typeof corpo.dia === "string" && /^\d{4}-\d{2}-\d{2}$/.test(corpo.dia) ? corpo.dia : ctx.diaPorOmissao;
   const lido = intervaloDasHoras({ dia, inicio: corpo.inicio, fim: corpo.fim }, agora);
@@ -303,6 +338,9 @@ export function lerFolha(
   const pessoas = lerPessoasDaFolha(corpo.pessoas, ctx.pessoasEscolhidas);
   const horaCent = horaDaFolhaCent(ctx.tarifa, pessoas, ctx.pessoasEscolhidas, ctx.valorPorHoraAcordado);
   if (horaCent == null) return erro("pessoas", "Não tem preço para a equipa de 3 pessoas.");
+  // d70: mais de 3 só com o acordo do cliente marcado — o servidor recusa sem ele.
+  const acordo = acordoParaGravar({ pessoas, marcado: corpo.acordoDasPessoasAMais, anterior: quem.anterior, quem, agora });
+  if (pessoasAMais(pessoas) > 0 && !acordo) return erro("pessoas", SEM_ACORDO_DAS_PESSOAS_A_MAIS);
 
   // Os km.
   const kmLido = numeroDe(corpo.km);
@@ -332,8 +370,11 @@ export function lerFolha(
   }
 
   const horas = horasAoQuarto(minutosTrabalhados);
-  const conta = valorDaMudanca(tarifaComAHora(ctx.tarifa, pessoas, horaCent), { pessoas, horas, km: kmArredondados, materiais });
-  if (!conta.ok) return erro("conta", conta.erro);
+  // A conta de sempre: a hora já é a desta equipa (acima de 3 entra como «a de 3», com a hora maior).
+  const daConta: 2 | 3 = pessoas === 2 ? 2 : 3;
+  const contada = valorDaMudanca(tarifaComAHora(ctx.tarifa, daConta, horaCent), { pessoas: daConta, horas, km: kmArredondados, materiais });
+  if (!contada.ok) return erro("conta", contada.erro);
+  const conta: ContaDaMudanca = { ...contada, pessoas };
 
   return {
     ok: true,
@@ -354,6 +395,7 @@ export function lerFolha(
       horasAoQuarto: horas,
       pessoas,
       pessoasEscolhidas: ctx.pessoasEscolhidas,
+      ...(acordo ? { acordoDasPessoasAMais: acordo } : {}),
       km: kmArredondados,
       kmDoPercurso: ctx.kmDoPercurso,
       motivoDosKm,
@@ -428,11 +470,13 @@ function linhasDaFolha(f: FolhaDaMudanca, para: "cliente" | "parceiro"): LinhaDa
     });
   }
   const minimo = c.horas.cobradas > f.horasAoQuarto;
+  const aMais = pessoasAMais(f.pessoas);
   l.push({
     rotulo: `Horas (equipa de ${f.pessoas})`,
     valor: eurCent(c.horas.cent),
     nota:
       `${horasEmTexto(c.horas.cobradas)} h × ${eurCent(c.horas.precoHoraCent)}/h` +
+      (aMais > 0 ? ` (equipa de 3 a ${eurCent(c.horas.precoHoraCent - aMais * precoPorPessoaCent)}/h + ${aMais} ${aMais === 1 ? "pessoa" : "pessoas"} a mais)` : "") +
       (minimo ? ` — trabalhou ${duracaoEmPalavras(f.minutosTrabalhados)}, conta o mínimo ${de}` : ` — trabalhou ${duracaoEmPalavras(f.minutosTrabalhados)}`),
   });
   const kmMinimo = c.km.cobrados > c.km.feitos;
@@ -454,6 +498,33 @@ function linhasDaFolha(f: FolhaDaMudanca, para: "cliente" | "parceiro"): LinhaDa
     l.push({ rotulo: "Recebe", valor: eurCent(c.profissionalCent), nota: "sem IVA", forte: true });
   }
   return l;
+}
+
+const precoPorPessoaCent = Math.round(PRECO_POR_PESSOA_A_MAIS_SEM_IVA * 100);
+
+/** «17/11/2026» (Lisboa). */
+const diaDito = (iso: string) => {
+  const d = instanteDaBase(iso);
+  return d ? dataEHoraEmLisboa(d).slice(0, 10) : "";
+};
+
+/**
+ * O QUE SE DIZ DAS PESSOAS A MAIS (d70): ao cliente «4 pessoas, 75,00 €/h + IVA
+ * (92,25 € com IVA)», com o acordo dele (quando e por quem foi registado); ao
+ * parceiro o mesmo, a lembrar que o cliente vê. Null com 2 ou 3.
+ */
+export function avisoDasPessoasAMais(f: Pick<FolhaDaMudanca, "pessoas" | "horaCent" | "acordoDasPessoasAMais">, para: "cliente" | "parceiro"): string | null {
+  const aMais = pessoasAMais(f.pessoas);
+  if (aMais === 0) return null;
+  const iva = f.horaCent > 0 ? Math.round(f.horaCent * (1 + TAXA_IVA)) : 0;
+  const hora = `${eurCent(f.horaCent)}/h + IVA (${eurCent(iva)} com IVA)`;
+  const porPessoa = `${eurCent(precoPorPessoaCent)} + IVA (${eurCent(Math.round(precoPorPessoaCent * (1 + TAXA_IVA)))} com IVA)`;
+  const a = f.acordoDasPessoasAMais ?? null;
+  const quem = a ? (a.por === "profissional" ? (para === "cliente" ? "pelo parceiro" : "por si") : "pela CLYON") : "";
+  const registo = a ? ` registado a ${diaDito(a.em)} ${quem}` : "";
+  return para === "cliente"
+    ? `A equipa foi de ${f.pessoas} pessoas, com o seu acordo${registo}: ${hora} — a hora da equipa de 3 mais ${porPessoa} por cada pessoa a mais.`
+    : `Equipa de ${f.pessoas} pessoas, com o acordo do cliente${registo}: ${hora}. O cliente vê-o ao confirmar a folha.`;
 }
 
 /** O IVA da conta, como fração (o da tarifa congelada). */
@@ -480,7 +551,9 @@ export function folhaNoEcra(f: FolhaDaMudanca, para: "cliente" | "parceiro", min
     linhas,
     totalTexto: `${eurCent(c.totalCent)} com IVA (${eurCent(c.semIvaCent)} sem IVA)`,
     recebeTexto: para === "parceiro" ? `Recebe ${eurCent(c.profissionalCent)}, depois da taxa da plataforma.` : null,
-    avisoDaEquipa: subiu
+    avisoDaEquipa: pessoasAMais(f.pessoas) > 0
+      ? avisoDasPessoasAMais(f, para)
+      : subiu
       ? para === "cliente"
         ? `A equipa subiu de ${f.pessoasEscolhidas} para ${f.pessoas} pessoas. Ao confirmar a folha, concorda com a equipa de ${f.pessoas}.`
         : `Subiu a equipa de ${f.pessoasEscolhidas} para ${f.pessoas} pessoas: o cliente tem de concordar ao confirmar a folha.`
@@ -654,9 +727,21 @@ export type CamposDaFolha = {
   inicio: string;
   fim: string;
   pausas: Array<{ inicio: string; fim: string }>;
+  /**
+   * 2 ou 3 — o que a app Pro de hoje sabe mostrar (acima de 3 diz 3). A equipa
+   * verdadeira, de 2 a 8, está em `pessoasDaFolha` (d70).
+   */
   pessoas: 2 | 3;
+  /** d70: a equipa da folha, de 2 a 8. */
+  pessoasDaFolha: PessoasDaFolha;
   pessoasEscolhidas: 2 | 3;
   podeTres: boolean;
+  /** d70: até quantas pessoas a folha vai (com preço para a equipa de 3; acima de 3 com o acordo do cliente). */
+  pessoasMaximas: PessoasDaFolha;
+  /** d70: o acordo do cliente com as pessoas a mais já marcado nesta folha. */
+  acordoDasPessoasAMais: boolean;
+  /** d70: a hora da equipa de 3 desta folha (cêntimos, sem IVA) — a base das pessoas a mais; null sem preço de 3. */
+  horaDaEquipaDe3Cent: number | null;
   km: string;
   kmDoPercurso: number | null;
   motivoDosKm: string;
@@ -687,9 +772,13 @@ export function camposDaFolha(f: FolhaDaMudanca | null, ctx: ContextoDaFolha): C
     inicio: f?.inicio ?? "",
     fim: f?.fim ?? "",
     pausas: (f?.pausas ?? []).map((p) => ({ inicio: p.inicio, fim: p.fim })),
-    pessoas: f?.pessoas ?? ctx.pessoasEscolhidas,
+    pessoas: ateTres(f?.pessoas ?? ctx.pessoasEscolhidas),
+    pessoasDaFolha: f?.pessoas ?? ctx.pessoasEscolhidas,
     pessoasEscolhidas: ctx.pessoasEscolhidas,
     podeTres: ctx.tarifa.precoHora3Cent != null,
+    pessoasMaximas: ctx.tarifa.precoHora3Cent != null ? PESSOAS_DA_FOLHA_MAXIMO : 2,
+    acordoDasPessoasAMais: acordoDasPessoasAMaisDe(f?.acordoDasPessoasAMais) != null,
+    horaDaEquipaDe3Cent: horaDaFolhaCent(ctx.tarifa, 3, ctx.pessoasEscolhidas, ctx.valorPorHoraAcordado),
     km: f ? numeroEmTexto(f.km) : ctx.kmDoPercurso != null ? numeroEmTexto(ctx.kmDoPercurso) : "",
     kmDoPercurso: ctx.kmDoPercurso,
     motivoDosKm: f?.motivoDosKm ?? "",
@@ -751,7 +840,10 @@ export type RascunhoDaFolha = {
   inicio: string | null;
   fim: string | null;
   pausas: Array<{ inicio: string; fim: string | null }>;
+  /** 2 ou 3 (acima de 3 diz 3, para a app Pro de hoje); a verdadeira em `pessoasDaFolha` (d70). */
   pessoas: 2 | 3 | null;
+  /** d70: a equipa do rascunho, de 2 a 8. */
+  pessoasDaFolha?: PessoasDaFolha | null;
   km: number | null;
   materiais: Partial<Record<QuantidadeDoMaterial, number>>;
   /** Quando foi guardado (ISO). */
@@ -782,13 +874,16 @@ export function lerRascunhoDaFolha(corpo: CorpoDaFolha, agora: Date = new Date()
     const q = quantidade(m[x.quantidade], 10_000);
     if (q != null && q > 0) materiais[x.quantidade] = q;
   }
-  const pessoas = Number(corpo.pessoas);
+  // Um rascunho relido traz a equipa verdadeira em `pessoasDaFolha` (d70).
+  const pessoas = Number((corpo as { pessoasDaFolha?: unknown }).pessoasDaFolha ?? corpo.pessoas);
   return {
     dia: typeof corpo.dia === "string" && /^\d{4}-\d{2}-\d{2}$/.test(corpo.dia) ? corpo.dia : null,
     inicio: hhmm(corpo.inicio),
     fim: hhmm(corpo.fim),
     pausas,
-    pessoas: pessoas === 2 || pessoas === 3 ? pessoas : null,
+    pessoas: ePessoasDaFolha(pessoas) ? ateTres(pessoas) : null,
+    // Só acima de 3: com 2 ou 3 o rascunho fica igual ao de sempre.
+    ...(ePessoasDaFolha(pessoas) && pessoas > 3 ? { pessoasDaFolha: pessoas } : {}),
     km: quantidade(corpo.km, 5_000),
     materiais,
     guardadoEm: agora.toISOString(),

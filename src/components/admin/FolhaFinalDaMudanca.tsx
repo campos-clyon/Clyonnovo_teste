@@ -6,6 +6,15 @@ import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import EnviarValorFinalAoCliente from "@/components/admin/EnviarValorFinalAoCliente";
 import { oQueSePercebeuDasHoras } from "@/lib/horas-escritas-na-folha";
 import { CampoNumerico, TextoQueCresce } from "@/components/admin/CamposCompactos";
+import {
+  CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS,
+  PESSOAS_DA_FOLHA,
+  PRECO_POR_PESSOA_A_MAIS_SEM_IVA,
+  pessoasAMais,
+  precoDaHoraParaPessoas,
+  type AcordoDasPessoasAMais,
+  type PessoasDaFolha,
+} from "@/lib/tabela-das-mudancas";
 
 /**
  * A FOLHA FINAL DA MUDANÇA, PELA EQUIPA — d38 v2, commit b (15-11-2026).
@@ -31,7 +40,8 @@ type Previa = {
 };
 
 type Entrada = {
-  pessoas: 2 | 3;
+  pessoas: PessoasDaFolha;
+  acordoDasPessoasAMais?: AcordoDasPessoasAMais | null;
   horas: number;
   precoHoraCent?: number | null;
   deslocacao: { tipo: "km"; km: number; precoKmCent?: number | null } | { tipo: "euros"; cent: number };
@@ -63,7 +73,9 @@ type DoServidor = {
 };
 
 type Formulario = {
-  pessoas: 2 | 3;
+  /** 2 a 8 (d70): acima de 3, o preço da hora escrito é o da equipa de 3 e cada pessoa a mais soma-se. */
+  pessoas: PessoasDaFolha;
+  acordoDasPessoasAMais: boolean;
   horas: string;
   precoHora: string;
   deslocacaoTipo: "km" | "euros";
@@ -93,6 +105,7 @@ function formularioInicial(d: DoServidor): Formulario {
   if (e) {
     return {
       pessoas: e.pessoas,
+      acordoDasPessoasAMais: Boolean(e.acordoDasPessoasAMais),
       horas: virgula(e.horas),
       precoHora: centAVirgula(e.precoHoraCent ?? null),
       deslocacaoTipo: e.deslocacao.tipo,
@@ -106,6 +119,7 @@ function formularioInicial(d: DoServidor): Formulario {
   const pessoas = d.pessoasEscolhidas ?? 2;
   return {
     pessoas,
+    acordoDasPessoasAMais: false,
     horas: "",
     precoHora: "",
     deslocacaoTipo: d.tarifa ? "km" : "euros",
@@ -178,6 +192,7 @@ export default function FolhaFinalDaMudanca({
           accao: "folha_final",
           previsualizar,
           pessoas: form.pessoas,
+          acordoDasPessoasAMais: form.pessoas > 3 ? form.acordoDasPessoasAMais : undefined,
           horas: form.horas,
           precoHora: form.precoHora,
           deslocacaoTipo: form.deslocacaoTipo,
@@ -249,9 +264,12 @@ export default function FolhaFinalDaMudanca({
               <div className="grid grid-cols-2 items-start gap-x-3 gap-y-2 text-[11px] text-slate-400 sm:flex sm:flex-wrap">
                 <label className="block">
                   Equipa
-                  <select value={form.pessoas} onChange={(e) => muda({ pessoas: Number(e.target.value) === 3 ? 3 : 2 })} className="mt-1 block rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white">
-                    <option value={2}>2 pessoas</option>
-                    <option value={3}>3 pessoas</option>
+                  <select value={form.pessoas} onChange={(e) => muda({ pessoas: Number(e.target.value) as PessoasDaFolha })} className="mt-1 block rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white">
+                    {PESSOAS_DA_FOLHA.map((n) => (
+                      <option key={n} value={n}>
+                        {n} pessoas
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="block">
@@ -263,13 +281,24 @@ export default function FolhaFinalDaMudanca({
                   })()}
                 </label>
                 <label className="block">
-                  Preço/hora s/ IVA
+                  {form.pessoas > 3 ? "Preço/hora da equipa de 3 s/ IVA" : "Preço/hora s/ IVA"}
                   <CampoNumerico
                     valor={form.precoHora}
                     muda={(v) => muda({ precoHora: v })}
                     unidade="€"
-                    placeholder={d.tarifa ? virgula(form.pessoas === 3 ? d.tarifa.precoHora3 : d.tarifa.precoHora2) || "—" : "0,00"}
+                    placeholder={d.tarifa ? virgula(form.pessoas >= 3 ? d.tarifa.precoHora3 : d.tarifa.precoHora2) || "—" : "0,00"}
                   />
+                  {(() => {
+                    // d70: a hora que vai para a conta, com as pessoas a mais.
+                    if (form.pessoas <= 3) return null;
+                    const escrito = Number(form.precoHora.replace(",", "."));
+                    const base = form.precoHora.trim() && Number.isFinite(escrito) && escrito > 0 ? escrito : d.tarifa?.precoHora3 ?? null;
+                    return base != null ? (
+                      <span className="mt-0.5 block text-emerald-300">
+                        Com {form.pessoas}: {eur(precoDaHoraParaPessoas(base, form.pessoas))}/h s/ IVA
+                      </span>
+                    ) : null;
+                  })()}
                 </label>
                 <fieldset className="col-span-2 sm:col-span-1">
                   <legend>Deslocação</legend>
@@ -305,6 +334,30 @@ export default function FolhaFinalDaMudanca({
                   )}
                 </fieldset>
               </div>
+              {form.pessoas > 3 && (
+                <div className="rounded border border-amber-700/60 bg-amber-950/30 p-2 text-[11px] text-amber-200">
+                  <p>
+                    {pessoasAMais(form.pessoas)} {pessoasAMais(form.pessoas) === 1 ? "pessoa" : "pessoas"} acima de 3: a hora da equipa de 3 + {eur(PRECO_POR_PESSOA_A_MAIS_SEM_IVA)}/h s/ IVA
+                    por cada uma. Só com o acordo do cliente — sem a marca, o servidor não grava.
+                  </p>
+                  <label className="mt-1 flex items-start gap-1.5 font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={form.acordoDasPessoasAMais}
+                      onChange={(e) => muda({ acordoDasPessoasAMais: e.target.checked })}
+                      className="mt-0.5"
+                    />
+                    {CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS}
+                  </label>
+                  {d.ultima?.entrada?.acordoDasPessoasAMais && (
+                    <p className="mt-1 text-amber-300/80">
+                      Registado a {QUANDO.format(new Date(d.ultima.entrada.acordoDasPessoasAMais.em))}
+                      {d.ultima.entrada.acordoDasPessoasAMais.nome ? `, por ${d.ultima.entrada.acordoDasPessoasAMais.nome}` : ""} (
+                      {d.ultima.entrada.acordoDasPessoasAMais.por}), para {d.ultima.entrada.acordoDasPessoasAMais.pessoas} pessoas.
+                    </p>
+                  )}
+                </div>
+              )}
               {d.tarifa ? (
                 <p className="text-[11px] text-slate-500">
                   Tarifa congelada: mínimo de {virgula(d.tarifa.minimoHoras)} h, {virgula(d.tarifa.precoKm)} €/km, mínimo de {d.tarifa.kmMinimo} km. Vazio = o da tarifa.

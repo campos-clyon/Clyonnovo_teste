@@ -2468,3 +2468,36 @@ describe("d63: nenhum «desde» público abaixo do mínimo do motor", () => {
     expect(Number(etiqueta![1].replace(/ /g, ""))).toBe(1300);
   });
 });
+
+/*
+ * d70 (17-11-2026): as pessoas a mais na folha da mudança. O preço de cada
+ * pessoa acima de 3 vive só em tabela-das-mudancas.ts; ninguém lhe dá outro
+ * valor, nem escreve o «13» à mão nas folhas, e a conta passa pela função da
+ * fonte.
+ */
+describe("d70) o preço das pessoas a mais só da fonte", () => {
+  it("só tabela-das-mudancas.ts dá um valor a PRECO_POR_PESSOA_A_MAIS_SEM_IVA", () => {
+    const quemADefine = FONTES.filter((f) => /\bPRECO_POR_PESSOA_A_MAIS_SEM_IVA\s*(?::[^=]+)?=\s*[\d.]/.test(readFileSync(join(RAIZ, f), "utf8")));
+    expect(quemADefine).toEqual([FONTE_DAS_MUDANCAS]);
+  });
+
+  it("as folhas não escrevem o 13 à mão: lêem a constante ou a função", () => {
+    const FOLHAS = [
+      "src/lib/folha-da-mudanca.ts",
+      "src/lib/folha-final.ts",
+      "src/lib/conta-da-mudanca.ts",
+      "src/components/admin/FolhaFinalDaMudanca.tsx",
+      "src/components/admin/HorasNaMesa.tsx",
+      "src/app/profissionais/painel/FolhaDaMudanca.tsx",
+    ];
+    const treze = /(?<![\d.,])13(?:[.,]00)?\s*(?:€|euros)|\b1300\b|\+\s*13\b/;
+    for (const f of FOLHAS) {
+      const t = readFileSync(join(RAIZ, f), "utf8");
+      expect(treze.test(t), f).toBe(false);
+      if (f !== "src/lib/folha-final.ts") expect(/PRECO_POR_PESSOA_A_MAIS_SEM_IVA|precoDaHoraParaPessoas/.test(t), f).toBe(true);
+    }
+    expect(treze.test("+ 13 €/h")).toBe(true);
+    expect(treze.test("13,00 € + IVA")).toBe(true);
+    expect(treze.test("413 €")).toBe(false);
+  });
+});

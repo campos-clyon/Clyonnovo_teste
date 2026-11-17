@@ -249,7 +249,7 @@ describe("d26 — o histórico diz quem a preencheu", () => {
   it("a rota escreve as frases com o nome de quem está no backoffice, e só administradores gravam", () => {
     const rota = ler("src/app/api/admin/negociacoes/horas/route.ts");
     expect(rota).toContain("textoDaEquipa: `preenchida pela equipa (${nome}), a pedido do profissional`");
-    expect(rota).toContain("pelaEquipa: { nome: porQuem, ...textosDaFolhaPelaEquipa(porQuem) }");
+    expect(rota).toContain("pelaEquipa: { nome: porQuem, papel, ...textosDaFolhaPelaEquipa(porQuem) }");
     expect(rota).toMatch(/export async function POST\(req: NextRequest\) \{\n  const \{ err, colab \} = await requireAdminGeral\(req\);/);
   });
 });

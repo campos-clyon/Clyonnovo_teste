@@ -1,4 +1,13 @@
 import { TAXA_DAS_MUDANCAS, TAXA_IVA } from "./taxas-plataforma";
+import {
+  PESSOAS_NA_EQUIPA,
+  SEM_ACORDO_DAS_PESSOAS_A_MAIS,
+  ePessoasDaFolha,
+  pessoasAMais,
+  precoDaHoraParaPessoasCent,
+  type AcordoDasPessoasAMais,
+  type PessoasDaFolha,
+} from "./tabela-das-mudancas";
 
 /**
  * A CONTA DE UMA MUDANÇA PELO PREÇO DO PROFISSIONAL — 10-11-2026 (fase 1).
@@ -288,7 +297,8 @@ export type LinhaDoMaterial = {
 
 export type ContaDaMudanca = {
   ok: true;
-  pessoas: 2 | 3;
+  /** 2 ou 3 no motor; na folha da mudança, 2 a 8 (d70). */
+  pessoas: PessoasDaFolha;
   horas: { pedidas: number; cobradas: number; precoHoraCent: number; cent: number };
   km: { feitos: number; cobrados: number; precoKmCent: number; cent: number; acimaDoMaximo: boolean };
   materiais: { linhas: LinhaDoMaterial[]; cent: number };
@@ -399,7 +409,10 @@ export type LinhaDeMaterialDaFolhaFinal = { descricao: string; cent: number };
 export type EntradaDaFolhaFinal = {
   /** A congelada no pedido, se houver. */
   tarifa: TarifaCongelada | null;
-  pessoas: 2 | 3;
+  /** 2 a 8 (d70): acima de 3, a hora de 3 + o preço de cada pessoa a mais, só com o acordo do cliente. */
+  pessoas: PessoasDaFolha;
+  /** O acordo do cliente com as pessoas a mais — obrigatório acima de 3. */
+  acordoDasPessoasAMais?: AcordoDasPessoasAMais | null;
   /** As horas trabalhadas (decimais: 6,5 = 6 h 30 min). */
   horas: number;
   /** O preço da hora da equipa, sem IVA — obrigatório sem tarifa; com ela, substitui o da tarifa. */
@@ -412,8 +425,13 @@ export type EntradaDaFolhaFinal = {
 
 export type ContaDaFolhaFinal = {
   ok: true;
-  pessoas: 2 | 3;
-  horas: { pedidas: number; cobradas: number; precoHoraCent: number; cent: number; minimo: number };
+  pessoas: PessoasDaFolha;
+  /**
+   * precoHoraCent é o da equipa que foi; acima de 3 pessoas, `precoDaEquipaDe3Cent`
+   * é a base e `pessoasAMais` quantas se somaram (d70).
+   */
+  horas: { pedidas: number; cobradas: number; precoHoraCent: number; cent: number; minimo: number; precoDaEquipaDe3Cent?: number; pessoasAMais?: number };
+  acordoDasPessoasAMais?: AcordoDasPessoasAMais | null;
   deslocacao: { tipo: "km" | "euros"; km: number | null; kmCobrados: number | null; precoKmCent: number | null; cent: number };
   materiais: { linhas: LinhaDeMaterialDaFolhaFinal[]; cent: number };
   /** Horas + deslocação: o que leva a taxa. */
@@ -430,16 +448,22 @@ export type ContaDaFolhaFinal = {
 const inteiroNaoNegativo = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
 
 export function contaDaFolhaFinal(e: EntradaDaFolhaFinal): ContaDaFolhaFinal | ErroDaConta {
-  if (e.pessoas !== 2 && e.pessoas !== 3) return { ok: false, erro: "A equipa é de 2 ou de 3 pessoas." };
+  if (!ePessoasDaFolha(e.pessoas)) return { ok: false, erro: "A equipa é de 2 a 8 pessoas." };
   if (!naoNegativo(e.horas) || e.horas === 0) return { ok: false, erro: "Indique as horas do trabalho." };
   const regras = e.tarifa?.regras ?? e.regras ?? REGRAS_DAS_MUDANCAS;
+  // d70: acima de 3 pessoas, só com o acordo do cliente — e a hora é a de 3 mais as pessoas a mais.
+  const aMais = pessoasAMais(e.pessoas);
+  const acordo = aMais > 0 ? (e.acordoDasPessoasAMais ?? null) : null;
+  if (aMais > 0 && (!acordo || acordo.pessoas < e.pessoas)) return { ok: false, erro: SEM_ACORDO_DAS_PESSOAS_A_MAIS };
 
-  const daTarifa = e.tarifa ? (e.pessoas === 3 ? e.tarifa.precoHora3Cent : e.tarifa.precoHora2Cent) : null;
-  const precoHoraCent = e.precoHoraCent ?? daTarifa;
-  if (precoHoraCent == null) {
+  const daTarifa = e.tarifa ? (e.pessoas >= PESSOAS_NA_EQUIPA ? e.tarifa.precoHora3Cent : e.tarifa.precoHora2Cent) : null;
+  // O preço escrito na folha é o da equipa de 3 quando vão mais de 3.
+  const base = e.precoHoraCent ?? daTarifa;
+  if (base == null) {
     return { ok: false, erro: e.tarifa ? "Sem preço para a equipa de 3 pessoas: indique o preço da hora." : "Indique o preço da hora da equipa." };
   }
-  if (!inteiroNaoNegativo(precoHoraCent) || precoHoraCent === 0) return { ok: false, erro: "O preço da hora tem de ser positivo." };
+  if (!inteiroNaoNegativo(base) || base === 0) return { ok: false, erro: "O preço da hora tem de ser positivo." };
+  const precoHoraCent = aMais > 0 ? precoDaHoraParaPessoasCent(base, e.pessoas) : base;
   const minimo = e.tarifa?.minimoHoras ?? 0;
   const horasCobradas = Math.max(e.horas, minimo);
   const horasCent = Math.round(horasCobradas * precoHoraCent);
@@ -478,7 +502,8 @@ export function contaDaFolhaFinal(e: EntradaDaFolhaFinal): ContaDaFolhaFinal | E
   return {
     ok: true,
     pessoas: e.pessoas,
-    horas: { pedidas: e.horas, cobradas: horasCobradas, precoHoraCent, cent: horasCent, minimo },
+    horas: { pedidas: e.horas, cobradas: horasCobradas, precoHoraCent, cent: horasCent, minimo, ...(aMais > 0 ? { precoDaEquipaDe3Cent: base, pessoasAMais: aMais } : {}) },
+    ...(acordo ? { acordoDasPessoasAMais: acordo } : {}),
     deslocacao,
     materiais: { linhas, cent: materiaisCent },
     servicoCent,

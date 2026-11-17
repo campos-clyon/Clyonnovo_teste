@@ -36,6 +36,82 @@ export const PESSOAS_NA_EQUIPA = 3;
 export const PRECO_POR_HORA_DUAS_PESSOAS = 40;
 export const MINIMO_DE_HORAS = 3;
 
+/* ── AS PESSOAS A MAIS NA FOLHA — d70 (o CEO e o dono, 17-11-2026) ──────────
+ *
+ * Na folha da mudança (a do parceiro e a folha final da equipa) a equipa vai
+ * de 2 a 8 pessoas. Acima de 3, a hora é a da equipa de 3 (a da folha ou a da
+ * tarifa congelada) MAIS este valor por cada pessoa a mais, sem IVA — e cada
+ * pessoa a mais só entra com o acordo do cliente registado (quem e quando).
+ * O simulador, a app de cliente, as páginas e a lista de parceiros continuam
+ * com 2 ou 3: «só depois na folha com acordo do cliente» (dono).
+ */
+export const PRECO_POR_PESSOA_A_MAIS_SEM_IVA = 13;
+export const PESSOAS_DA_FOLHA_MINIMO = 2;
+export const PESSOAS_DA_FOLHA_MAXIMO = 8;
+export type PessoasDaFolha = 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export const PESSOAS_DA_FOLHA: readonly PessoasDaFolha[] = Object.freeze([2, 3, 4, 5, 6, 7, 8] as PessoasDaFolha[]);
+
+/** 2 a 8, inteiro. */
+export function ePessoasDaFolha(n: unknown): n is PessoasDaFolha {
+  return typeof n === "number" && Number.isInteger(n) && n >= PESSOAS_DA_FOLHA_MINIMO && n <= PESSOAS_DA_FOLHA_MAXIMO;
+}
+
+/** Quantas pessoas acima da equipa de 3 (0 com 2 ou 3). */
+export function pessoasAMais(pessoas: number): number {
+  return Math.max(0, pessoas - PESSOAS_NA_EQUIPA);
+}
+
+/**
+ * O preço da hora para n pessoas (cêntimos, sem IVA) a partir do da equipa de
+ * 3: 6200 com 3 → 7500 com 4 → 12700 com 8 (5 a mais). Com 2 ou 3 devolve o de 3 tal como
+ * vem (o de 2 é outro preço, o da tarifa).
+ */
+export function precoDaHoraParaPessoasCent(precoDaEquipaDe3Cent: number, pessoas: PessoasDaFolha): number {
+  return precoDaEquipaDe3Cent + pessoasAMais(pessoas) * Math.round(PRECO_POR_PESSOA_A_MAIS_SEM_IVA * 100);
+}
+
+/** O mesmo, em euros (sem IVA). */
+export function precoDaHoraParaPessoas(precoDaEquipaDe3: number, pessoas: PessoasDaFolha): number {
+  return precoDaHoraParaPessoasCent(Math.round(precoDaEquipaDe3 * 100), pessoas) / 100;
+}
+
+/**
+ * O ACORDO DO CLIENTE COM AS PESSOAS A MAIS: quando, quem o registou (o papel e
+ * o nome) e para quantas pessoas. Fica gravado na folha.
+ */
+export type QuemRegistaOAcordo = "admin" | "assistente" | "profissional";
+export type AcordoDasPessoasAMais = { em: string; por: QuemRegistaOAcordo; nome: string | null; pessoas: PessoasDaFolha };
+export const CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS = "O cliente concordou com as pessoas a mais";
+export const SEM_ACORDO_DAS_PESSOAS_A_MAIS =
+  "Com mais de 3 pessoas, marque «O cliente concordou com as pessoas a mais» — sem o acordo dele, a folha não se grava.";
+
+/** Lê o acordo gravado (null se não estiver bem formado). */
+export function acordoDasPessoasAMaisDe(v: unknown): AcordoDasPessoasAMais | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.em !== "string" || Number.isNaN(new Date(o.em).getTime())) return null;
+  if (o.por !== "admin" && o.por !== "assistente" && o.por !== "profissional") return null;
+  if (!ePessoasDaFolha(o.pessoas)) return null;
+  return { em: o.em, por: o.por, nome: typeof o.nome === "string" && o.nome.trim() ? o.nome.trim().slice(0, 80) : null, pessoas: o.pessoas };
+}
+
+/**
+ * O acordo desta gravação: o anterior, se já cobria estas pessoas; senão um
+ * novo, agora, por quem grava. Null quando não faz falta (2 ou 3) ou quando a
+ * caixa não está marcada — e então quem chama recusa a folha com mais de 3.
+ */
+export function acordoParaGravar(a: {
+  pessoas: PessoasDaFolha;
+  marcado: unknown;
+  anterior?: AcordoDasPessoasAMais | null;
+  quem: { por: QuemRegistaOAcordo; nome: string | null };
+  agora: Date;
+}): AcordoDasPessoasAMais | null {
+  if (a.pessoas <= PESSOAS_NA_EQUIPA || a.marcado !== true) return null;
+  if (a.anterior && a.anterior.pessoas >= a.pessoas) return a.anterior;
+  return { em: a.agora.toISOString(), por: a.quem.por, nome: a.quem.nome?.trim() ? a.quem.nome.trim().slice(0, 80) : null, pessoas: a.pessoas };
+}
+
 /** B. Deslocação — incluída até este raio (15 km desde a d60; eram 50); acima, cada km (ida e volta) paga-se. */
 export const RAIO_INCLUIDO_KM = 15;
 export const PRECO_POR_KM_LONGE = 1.3;

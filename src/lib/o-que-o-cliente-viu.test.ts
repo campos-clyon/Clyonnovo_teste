@@ -710,7 +710,8 @@ describe("6. o rascunho da folha guarda-se sem avisar o cliente", () => {
   });
 
   it("o rascunho relê-se pela mesma regra, e um JSON estragado é «sem rascunho»", () => {
-    const r = lerRascunhoDaFolha({ dia: "2026-11-11", inicio: "9:05", fim: "25:00", pessoas: 5, km: -3 }, new Date("2026-11-11T09:05:00Z"));
+    // d70: a folha vai de 2 a 8 pessoas — 9 continua a não se perceber.
+    const r = lerRascunhoDaFolha({ dia: "2026-11-11", inicio: "9:05", fim: "25:00", pessoas: 9, km: -3 }, new Date("2026-11-11T09:05:00Z"));
     expect(r).toEqual({ dia: "2026-11-11", inicio: "09:05", fim: null, pausas: [], pessoas: null, km: null, materiais: {}, guardadoEm: "2026-11-11T09:05:00.000Z" });
     expect(rascunhoDeJson(JSON.stringify(r))).toEqual(r);
     expect(rascunhoDeJson("{")).toBeNull();

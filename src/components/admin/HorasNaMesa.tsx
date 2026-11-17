@@ -18,6 +18,12 @@ import {
   type FolhaNoEcra,
 } from "@/lib/folha-da-mudanca";
 import { materiaisUsados } from "@/lib/materiais-da-proposta";
+import {
+  CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS,
+  PESSOAS_DA_FOLHA,
+  PRECO_POR_PESSOA_A_MAIS_SEM_IVA,
+  type PessoasDaFolha,
+} from "@/lib/tabela-das-mudancas";
 
 /**
  * AS HORAS DE UM TRABALHO POR HORA, NA MESA — 31-10-2026.
@@ -73,7 +79,9 @@ type Formulario = {
   inicio: string;
   fim: string;
   horas: string;
-  pessoas: 2 | 3;
+  /** 2 a 8 (d70): acima de 3, com o acordo do cliente. */
+  pessoas: PessoasDaFolha;
+  acordoDasPessoasAMais: boolean;
   km: string;
   motivoDosKm: string;
   materiais: Record<string, string>;
@@ -87,6 +95,7 @@ function corpoDoFormulario(f: Formulario, pausas: Array<{ inicio: string; fim: s
     fim,
     horas: f.fim.trim() ? undefined : f.horas.trim() || undefined,
     pessoas: f.pessoas,
+    acordoDasPessoasAMais: f.pessoas > 3 ? f.acordoDasPessoasAMais : undefined,
     km: f.km,
     motivoDosKm: f.motivoDosKm,
     pausas,
@@ -142,7 +151,8 @@ export default function HorasNaMesa({
       inicio: c?.inicio || p.inicio,
       fim: c?.fim || p.fim,
       horas: "",
-      pessoas: c?.pessoas ?? 2,
+      pessoas: c?.pessoasDaFolha ?? c?.pessoas ?? 2,
+      acordoDasPessoasAMais: Boolean(c?.acordoDasPessoasAMais),
       km: c?.km ?? "",
       motivoDosKm: c?.motivoDosKm ?? "",
       materiais: c
@@ -346,13 +356,31 @@ export default function HorasNaMesa({
                 Equipa
                 <select
                   value={form.pessoas}
-                  onChange={(e) => setForm({ ...form, pessoas: Number(e.target.value) === 3 ? 3 : 2 })}
+                  onChange={(e) => setForm({ ...form, pessoas: Number(e.target.value) as PessoasDaFolha })}
                   className={campo}
                 >
                   <option value={2}>2 pessoas</option>
-                  {r.preencher.folha.campos.podeTres && <option value={3}>3 pessoas</option>}
+                  {r.preencher.folha.campos.podeTres &&
+                    PESSOAS_DA_FOLHA.filter((n) => n >= 3 && n <= (r.preencher!.folha!.campos.pessoasMaximas ?? 3)).map((n) => (
+                      <option key={n} value={n}>
+                        {n} pessoas
+                      </option>
+                    ))}
                 </select>
               </label>
+              {form.pessoas > 3 && (
+                <label className="flex basis-full items-start gap-1.5 text-amber-300">
+                  <input
+                    type="checkbox"
+                    checked={form.acordoDasPessoasAMais}
+                    onChange={(e) => setForm({ ...form, acordoDasPessoasAMais: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    {CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS} (+{eur(PRECO_POR_PESSOA_A_MAIS_SEM_IVA)}/h sem IVA por cada pessoa acima de 3; fica registado quem e quando)
+                  </span>
+                </label>
+              )}
               <label className="flex flex-col gap-0.5 text-slate-400">
                 Km (ida e volta)
                 <CampoNumerico valor={form.km} muda={(v) => setForm({ ...form, km: v })} unidade="km" />

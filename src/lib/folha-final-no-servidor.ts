@@ -9,6 +9,7 @@ import { fazerAFolhaFinal, fraseDaFolhaFinal, type CorpoDaFolhaFinal, type Folha
 import { folhasFinaisDe, gravarFolhaFinal, transferidoAntesDasFolhasFinais, type FolhaFinalGravada } from "./folha-final-na-base";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
 import type { RegimeDoProfissional } from "./pagamento-directo";
+import { acordoDasPessoasAMaisDe, type QuemRegistaOAcordo } from "./tabela-das-mudancas";
 
 /**
  * A FOLHA FINAL NO SERVIDOR — d38 v2, commit b. A rota das horas
@@ -131,10 +132,19 @@ export async function folhaFinalPelaEquipa(a: {
   linha: Linha;
   corpo: CorpoDaFolhaFinal & { previsualizar?: unknown; motivo?: unknown };
   porQuem: string;
+  /** O papel de quem grava (d70: fica no acordo do cliente com as pessoas a mais). */
+  papel?: QuemRegistaOAcordo;
 }): Promise<Resposta> {
   const c = await contextoDaFolhaFinal(a.pedidoId, a.linha);
   if (!c.pode) return { status: 409, corpo: { error: c.porqueNao } };
-  const feito = fazerAFolhaFinal({ corpo: a.corpo, tarifa: c.tarifa, taxa: c.taxa, modelo: c.modelo });
+  const anterior = acordoDasPessoasAMaisDe((c.historico[0]?.entrada as { acordoDasPessoasAMais?: unknown } | null)?.acordoDasPessoasAMais);
+  const feito = fazerAFolhaFinal({
+    corpo: a.corpo,
+    tarifa: c.tarifa,
+    taxa: c.taxa,
+    modelo: c.modelo,
+    registo: { quem: { por: a.papel ?? "admin", nome: a.porQuem }, agora: new Date(), anterior },
+  });
   if (!feito.ok) return { status: 400, corpo: { error: feito.erro } };
   const f = feito.folha;
   const motivo = typeof a.corpo.motivo === "string" && a.corpo.motivo.trim() ? a.corpo.motivo.trim().slice(0, 300) : null;

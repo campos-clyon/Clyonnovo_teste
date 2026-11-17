@@ -206,6 +206,8 @@ export async function POST(req: NextRequest) {
     pessoas?: unknown;
     km?: unknown;
     motivoDosKm?: unknown;
+    /** d70: `true` = «O cliente concordou com as pessoas a mais» (obrigatório acima de 3). */
+    acordoDasPessoasAMais?: unknown;
     /** «folha_final» (d38 v2). */
     precoHora?: unknown;
     deslocacaoTipo?: unknown;
@@ -231,6 +233,7 @@ export async function POST(req: NextRequest) {
   }
   await assumirPedidoSeLivre(pedidoId, colab);
   const porQuem = colab?.nome ?? "a CLYON";
+  const papel = colab?.papel === "assistente" ? ("assistente" as const) : ("admin" as const);
 
   /*
    * O VALOR FINAL AO CLIENTE — d38 v2, commit d. Só administradores (a porta já
@@ -273,10 +276,12 @@ export async function POST(req: NextRequest) {
           precoKm: corpo.precoKm,
           deslocacaoEuros: corpo.deslocacaoEuros,
           materiais: corpo.materiais,
+          acordoDasPessoasAMais: corpo.acordoDasPessoasAMais,
           previsualizar: corpo.previsualizar,
           motivo: corpo.motivo,
         },
         porQuem,
+        papel,
       });
       return NextResponse.json(r.corpo, { status: r.status });
     } catch (e) {
@@ -304,7 +309,7 @@ export async function POST(req: NextRequest) {
         linha: linha as never,
         porHora,
         trabalhoClyon,
-        pelaEquipa: { nome: porQuem, ...textosDaFolhaPelaEquipa(porQuem) },
+        pelaEquipa: { nome: porQuem, papel, ...textosDaFolhaPelaEquipa(porQuem) },
         corpo: {
           dia: corpo.dia,
           inicio: corpo.inicio,
@@ -314,6 +319,7 @@ export async function POST(req: NextRequest) {
           km: corpo.km,
           motivoDosKm: corpo.motivoDosKm,
           materiais: corpo.materiais,
+          acordoDasPessoasAMais: corpo.acordoDasPessoasAMais,
         },
       });
       return NextResponse.json(r.corpo, { status: r.status });
@@ -362,6 +368,7 @@ export async function POST(req: NextRequest) {
         linha: linha as never,
         corpo: corpo as never,
         porQuem,
+        papel,
       });
       if (pelaFolha && pelaFolha.status !== 200) return NextResponse.json(pelaFolha.corpo, { status: pelaFolha.status });
       if (pelaFolha) {

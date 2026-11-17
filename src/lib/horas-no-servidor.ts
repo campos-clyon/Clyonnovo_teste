@@ -76,6 +76,8 @@ export type CorpoDasHoras = {
     pessoas?: unknown;
     km?: unknown;
     motivoDosKm?: unknown;
+    /** d70: `true` = «O cliente concordou com as pessoas a mais» (obrigatório acima de 3). */
+    acordoDasPessoasAMais?: unknown;
     /** `true`: guarda só o rascunho da folha, sem enviar nem avisar o cliente (11-11-2026). */
     rascunho?: unknown;
 };

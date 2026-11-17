@@ -43,6 +43,7 @@ import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarClienteDasHoras } from "@/lib/avisos-do-terreno";
 import { marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
+import { acordoDasPessoasAMaisDe } from "@/lib/tabela-das-mudancas";
 
 export type Resposta = { status: number; corpo: Record<string, unknown> };
 
@@ -52,7 +53,7 @@ export type Resposta = { status: number; corpo: Record<string, unknown> };
  * histórico fica quem a preencheu. Os textos vêm escritos da rota do
  * backoffice (a equipa lê um, o cliente lê o outro).
  */
-export type PelaEquipa = { nome: string; textoDaEquipa: string; textoAoCliente: string };
+export type PelaEquipa = { nome: string; textoDaEquipa: string; textoAoCliente: string; papel?: "admin" | "assistente" };
 const falha = (status: number, error: string, campo?: string): Resposta => ({ status, corpo: { ok: false, error, ...(campo ? { campo } : {}) } });
 
 /** O contexto da folha de uma negociação (tarifa, equipa, km, hora acordada). Null fora das mudanças com a lista. */
@@ -90,7 +91,12 @@ export async function enviarAFolha(a: {
   pelaEquipa?: PelaEquipa;
 }): Promise<Resposta> {
   const agora = a.agora ?? new Date();
-  const lida = lerFolha(a.corpo, a.ctx, agora);
+  // d70: quem marca o acordo do cliente com as pessoas a mais (o parceiro, ou a equipa por ele).
+  const anterior = acordoDasPessoasAMaisDe(folhaDeJson(a.folhaNaBase.folhaJson ?? null)?.acordoDasPessoasAMais);
+  const quemGrava = a.pelaEquipa
+    ? { por: a.pelaEquipa.papel ?? ("admin" as const), nome: a.pelaEquipa.nome, anterior }
+    : { por: "profissional" as const, nome: a.nome, anterior };
+  const lida = lerFolha(a.corpo, a.ctx, agora, quemGrava);
   if (!lida.ok) return falha(400, lida.erro, lida.campo);
   const folha = lida.folha;
   /*
@@ -130,7 +136,10 @@ export async function enviarAFolha(a: {
       ? `Folha da mudança de ${quem} ${eq.textoDaEquipa} (negociação #${a.negociacaoId}): ${resumo}`
       : `${quem} ${primeiraVez ? "enviou" : "corrigiu"} a folha da mudança (negociação #${a.negociacaoId}): ${resumo}`) +
     (folha.motivoDosKm ? ` Km corrigidos: «${folha.motivoDosKm}».` : "") +
-    (subiuAEquipa(folha) ? ` A equipa subiu de ${folha.pessoasEscolhidas} para ${folha.pessoas}.` : "");
+    (subiuAEquipa(folha) ? ` A equipa subiu de ${folha.pessoasEscolhidas} para ${folha.pessoas}.` : "") +
+    (folha.acordoDasPessoasAMais
+      ? ` Acordo do cliente com a equipa de ${folha.pessoas} registado por ${folha.acordoDasPessoasAMais.nome ?? folha.acordoDasPessoasAMais.por} (${folha.acordoDasPessoasAMais.por}).`
+      : "");
   await appendOrderHistory(a.pedidoId, {
     type: "created",
     by: eq ? null : { id: a.providerId, nome: quem, role: "profissional" },
@@ -210,6 +219,8 @@ export async function corrigirAFolhaPelaClyon(a: {
   linha: HorasNaBase & { valorAcordado?: number | string | null; chegouEm?: Date | string | null };
   corpo: CorpoDaFolha;
   porQuem: string;
+  /** d70: o papel de quem corrige (fica no acordo das pessoas a mais). */
+  papel?: "admin" | "assistente";
   agora?: Date;
 }): Promise<Resposta | null> {
   const agora = a.agora ?? new Date();
@@ -218,10 +229,20 @@ export async function corrigirAFolhaPelaClyon(a: {
   if (!daFolha || !ctx) return null;
   const antes = folhaDeJson(daFolha.folhaJson);
   const base: CorpoDaFolha = antes
-    ? { dia: antes.dia, inicio: antes.inicio, fim: antes.fim, pausas: antes.pausas, pessoas: antes.pessoas, km: antes.km, motivoDosKm: antes.motivoDosKm, materiais: antes.materiais }
+    ? {
+        dia: antes.dia,
+        inicio: antes.inicio,
+        fim: antes.fim,
+        pausas: antes.pausas,
+        pessoas: antes.pessoas,
+        km: antes.km,
+        motivoDosKm: antes.motivoDosKm,
+        materiais: antes.materiais,
+        acordoDasPessoasAMais: antes.acordoDasPessoasAMais ? true : undefined,
+      }
     : {};
   const corpo: CorpoDaFolha = { ...base };
-  for (const k of ["dia", "inicio", "fim", "pausas", "pessoas", "km", "motivoDosKm", "materiais"] as const) {
+  for (const k of ["dia", "inicio", "fim", "pausas", "pessoas", "km", "motivoDosKm", "materiais", "acordoDasPessoasAMais"] as const) {
     const v = a.corpo[k];
     if (v === undefined || v === null || v === "") continue;
     // Um objecto vazio (o material de antes) não apaga o material da folha.
@@ -230,7 +251,11 @@ export async function corrigirAFolhaPelaClyon(a: {
   }
   // A CLYON corrige ao falar com os dois: os km diferentes levam o motivo dela.
   if (corpo.motivoDosKm == null || corpo.motivoDosKm === "") corpo.motivoDosKm = `corrigido pela CLYON (${a.porQuem})`;
-  const lida = lerFolha(corpo, ctx, agora);
+  const lida = lerFolha(corpo, ctx, agora, {
+    por: a.papel ?? "admin",
+    nome: a.porQuem,
+    anterior: acordoDasPessoasAMaisDe(antes?.acordoDasPessoasAMais),
+  });
   if (!lida.ok) return falha(400, lida.erro, lida.campo);
   const folha = lida.folha;
   const folhaJson = JSON.stringify(folha);

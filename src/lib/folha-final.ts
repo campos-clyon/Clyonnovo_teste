@@ -9,12 +9,20 @@ import {
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { contaDoValorAcordado, type RegimeDoProfissional } from "./pagamento-directo";
 import { lerHorasDaFolha } from "./horas-escritas-na-folha";
+import {
+  SEM_ACORDO_DAS_PESSOAS_A_MAIS,
+  acordoParaGravar,
+  ePessoasDaFolha,
+  pessoasAMais,
+  type AcordoDasPessoasAMais,
+  type QuemRegistaOAcordo,
+} from "./tabela-das-mudancas";
 
 /**
  * A FOLHA FINAL DE UMA MUDANÇA, PELA EQUIPA — d38 v2, commit b (15-11-2026).
  *
  * No lugar do «Corrigir o valor» nas mudanças: a equipa escreve as horas, a
- * equipa (2 ou 3), o preço da hora, a deslocação (em km ou em euros) e o
+ * equipa (2 a 8 desde a d70; acima de 3 com o acordo do cliente), o preço da hora, a deslocação (em km ou em euros) e o
  * material por linhas, e o valor final sai da conta de sempre
  * (`contaDaFolhaFinal`, em conta-da-mudanca.ts). Serve antes e depois de o
  * trabalho estar dado por feito; cada gravação fica no histórico.
@@ -63,6 +71,16 @@ export type CorpoDaFolhaFinal = {
   precoKm?: unknown;
   deslocacaoEuros?: unknown;
   materiais?: unknown;
+  /** d70: `true` = «O cliente concordou com as pessoas a mais» (obrigatório acima de 3). */
+  acordoDasPessoasAMais?: unknown;
+};
+
+/** Quem grava a folha, para o registo do acordo do cliente (d70). */
+export type RegistoDoAcordo = {
+  quem: { por: QuemRegistaOAcordo; nome: string | null };
+  agora: Date;
+  /** O acordo da folha final anterior, se houver: mantém-se se já cobria estas pessoas. */
+  anterior?: AcordoDasPessoasAMais | null;
 };
 
 export const MAXIMO_DE_HORAS = 48;
@@ -70,9 +88,15 @@ export const MAXIMO_DE_LINHAS_DE_MATERIAL = 12;
 
 export type EntradaLida = Omit<EntradaDaFolhaFinal, "tarifa" | "regras">;
 
-export function lerCorpoDaFolhaFinal(c: CorpoDaFolhaFinal): { ok: true; entrada: EntradaLida } | { ok: false; erro: string } {
+export function lerCorpoDaFolhaFinal(
+  c: CorpoDaFolhaFinal,
+  registo: RegistoDoAcordo = { quem: { por: "admin", nome: null }, agora: new Date() },
+): { ok: true; entrada: EntradaLida } | { ok: false; erro: string } {
   const pessoas = Number(c.pessoas);
-  if (pessoas !== 2 && pessoas !== 3) return { ok: false, erro: "A equipa é de 2 ou de 3 pessoas." };
+  if (!ePessoasDaFolha(pessoas)) return { ok: false, erro: "A equipa é de 2 a 8 pessoas." };
+  // d70: o servidor recusa mais de 3 pessoas sem o acordo do cliente marcado.
+  const acordo = acordoParaGravar({ pessoas, marcado: c.acordoDasPessoasAMais, anterior: registo.anterior, quem: registo.quem, agora: registo.agora });
+  if (pessoasAMais(pessoas) > 0 && !acordo) return { ok: false, erro: SEM_ACORDO_DAS_PESSOAS_A_MAIS };
 
   const horas = horasDe(c.horas);
   if (horas == null) return { ok: false, erro: "Indique as horas do trabalho." };
@@ -110,7 +134,10 @@ export function lerCorpoDaFolhaFinal(c: CorpoDaFolhaFinal): { ok: true; entrada:
     materiais.push({ descricao, cent });
   }
 
-  return { ok: true, entrada: { pessoas: pessoas as 2 | 3, horas, precoHoraCent: precoHora, deslocacao, materiais } };
+  return {
+    ok: true,
+    entrada: { pessoas, horas, precoHoraCent: precoHora, deslocacao, materiais, ...(acordo ? { acordoDasPessoasAMais: acordo } : {}) },
+  };
 }
 
 /* ── A TAXA DO TRABALHO ───────────────────────────────────────────────────── */
@@ -257,8 +284,10 @@ export function fazerAFolhaFinal(a: {
   tarifa: TarifaCongelada | null;
   taxa: Parameters<typeof taxaDaFolhaFinal>[0];
   modelo: { novoModelo: boolean; regime: RegimeDoProfissional };
+  /** d70: quem grava (para o acordo do cliente com as pessoas a mais). */
+  registo?: RegistoDoAcordo;
 }): { ok: true; folha: FolhaFinalFeita } | { ok: false; erro: string } {
-  const lido = lerCorpoDaFolhaFinal(a.corpo);
+  const lido = lerCorpoDaFolhaFinal(a.corpo, a.registo);
   if (!lido.ok) return lido;
   const taxa = taxaDaFolhaFinal(a.taxa);
   if (!taxa.ok) return taxa;
@@ -279,8 +308,11 @@ export function fraseDaFolhaFinal(f: FolhaFinalFeita, a: { porQuem: string; ante
   const horas = `${String(Math.round(c.horas.cobradas * 100) / 100).replace(".", ",")} h a ${eur(c.horas.precoHoraCent / 100)}`;
   const desl = c.deslocacao.tipo === "km" ? `${c.deslocacao.kmCobrados} km (${eur(c.deslocacao.cent / 100)})` : `deslocação ${eur(c.deslocacao.cent / 100)}`;
   const mat = c.materiais.cent > 0 ? `, material ${eur(c.materiais.cent / 100)} (sem taxa)` : "";
+  const aMais = c.horas.pessoasAMais && c.horas.precoDaEquipaDe3Cent != null
+    ? ` (hora de 3 ${eur(c.horas.precoDaEquipaDe3Cent / 100)} + ${c.horas.pessoasAMais} a mais${c.acordoDasPessoasAMais ? `, acordo do cliente registado por ${c.acordoDasPessoasAMais.nome ?? c.acordoDasPessoasAMais.por}` : ""})`
+    : "";
   return (
-    `Folha final da mudança gravada por ${a.porQuem}: equipa de ${c.pessoas}, ${horas}, ${desl}${mat}. ` +
+    `Folha final da mudança gravada por ${a.porQuem}: equipa de ${c.pessoas}${aMais}, ${horas}, ${desl}${mat}. ` +
     `Valor final ${eur(f.previa.semIva)} sem IVA (${eur(f.previa.total)} com IVA)` +
     `${a.antes != null ? `, era ${eur(a.antes)}` : ""}. ` +
     `Taxa ${String(Math.round(f.gravar.taxaBase * 10000) / 100).replace(".", ",")} % sobre horas e deslocação: ${eur(f.previa.clyon)}; ` +

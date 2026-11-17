@@ -179,7 +179,9 @@ export function oQueMudouDaFolha(
 ): string {
   if (!e || !e.horas) return "";
   const virgula = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");
-  const partes = [`${virgula(e.horas)} h de trabalho, com uma equipa de ${e.pessoas === 3 ? 3 : 2} pessoas`];
+  // d70: a equipa vai de 2 a 8; acima de 3, com o acordo do cliente.
+  const pessoas = e.pessoas != null && Number.isInteger(e.pessoas) && e.pessoas >= 2 && e.pessoas <= 8 ? e.pessoas : 2;
+  const partes = [`${virgula(e.horas)} h de trabalho, com uma equipa de ${pessoas} pessoas${pessoas > 3 ? " (com o seu acordo para as pessoas a mais)" : ""}`];
   if (e.deslocacao?.tipo === "km" && e.deslocacao.km > 0) partes.push(`deslocação de ${virgula(e.deslocacao.km)} km`);
   if (e.deslocacao?.tipo === "euros" && e.deslocacao.cent > 0) partes.push("deslocação");
   const material = (e.materiais ?? []).map((m) => m.descricao.trim()).filter(Boolean);
