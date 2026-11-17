@@ -20,7 +20,6 @@ import {
   fraseDaVariacao,
   numeroCurto,
   rotuloDoMes,
-  type BlocoDoDesempenho,
   type Comparacao,
   type Desempenho,
 } from "@/lib/desempenho";
@@ -39,79 +38,95 @@ const COR_ENTRADOS = "#60A5FA"; // --color-azul
 const COR_REALIZADOS = "#34D399"; // --color-esmeralda
 const DIAS_DA_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 
-function Variacao({ c }: { c: Comparacao }) {
-  const cor =
-    c.variacao == null
-      ? "text-slate-500"
-      : Math.round(c.variacao) > 0
-        ? "text-esmeralda-texto"
-        : Math.round(c.variacao) < 0
-          ? "text-coral-texto"
-          : "text-slate-400";
-  return <span className={`text-xs font-semibold ${cor}`}>{fraseDaVariacao(c.variacao)}</span>;
-}
-
-function Numero({ rotulo, c, nota }: { rotulo: string; c: Comparacao; nota: string }) {
+/** A variação só aparece quando há comparação; o anterior fica no `title`. */
+function Variacao({ c, nota }: { c: Comparacao; nota: string }) {
+  if (c.variacao == null) return null;
+  const r = Math.round(c.variacao);
+  const cor = r > 0 ? "text-esmeralda-texto" : r < 0 ? "text-coral-texto" : "text-slate-400";
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-3">
-      <p className="text-xs text-slate-400">{rotulo}</p>
-      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-xl font-bold text-white">
-        {numeroCurto(c.valor)} <Variacao c={c} />
-      </p>
-      <p className="mt-0.5 text-[11px] text-slate-500">
-        {nota}
-        {c.anterior != null && c.variacao != null ? `: ${numeroCurto(c.anterior)}` : ""}
-      </p>
-    </div>
+    <span
+      className={`ml-1.5 text-[11px] font-semibold ${cor}`}
+      title={c.anterior != null ? `${nota}: ${numeroCurto(c.anterior)}` : nota}
+    >
+      {fraseDaVariacao(c.variacao)}
+    </span>
   );
 }
 
-function Bloco({
-  titulo,
-  cor,
-  b,
-  ano,
-  rodape,
-}: {
-  titulo: string;
-  cor: string;
-  b: BlocoDoDesempenho;
-  ano: number;
-  rodape?: React.ReactNode;
-}) {
+function Celula({ c, nota }: { c: Comparacao; nota: string }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
-      <h3 className="flex items-center gap-2 text-sm font-bold text-white">
-        <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: cor }} aria-hidden="true" />
-        {titulo}
-      </h3>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <Numero rotulo="Por dia (últimos 30 dias)" c={b.mediaPorDia} nota="30 dias anteriores" />
-        <Numero
-          rotulo={b.mesesNaMedia >= 12 ? "Por mês (últimos 12 meses)" : `Por mês (${b.mesesNaMedia} meses com dados)`}
-          c={b.mediaPorMes}
-          nota="12 meses anteriores"
-        />
-        <Numero
-          rotulo={`${rotuloDoMes(b.mesHomologo.mes)} (último mês completo)`}
-          c={b.mesHomologo}
-          nota={rotuloDoMes(b.mesHomologo.mesAnterior)}
-        />
-        <Numero rotulo={`${ano} até hoje`} c={b.anoAteHoje} nota={`mesmo período de ${ano - 1}`} />
-      </div>
-      <div className="mt-2 rounded-xl border border-slate-700 bg-slate-950/40 p-3">
-        <p className="text-xs text-slate-400">Previsão até dezembro</p>
-        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-xl font-bold text-white">
-          {numeroCurto(b.previsaoDoAno.valor)} <Variacao c={b.previsaoDoAno} />
-        </p>
-        <p className="mt-0.5 text-[11px] text-slate-500">
-          ao ritmo dos últimos 90 dias ({numeroCurto(b.ritmo90)} por dia) · contra {ano - 1}
-          {b.previsaoDoAno.anterior != null && b.previsaoDoAno.variacao != null
-            ? `: ${numeroCurto(b.previsaoDoAno.anterior)}`
-            : ""}
-        </p>
-      </div>
-      {rodape}
+    <td className="px-2 py-1 text-right tabular-nums">
+      <span className="font-bold text-white">{numeroCurto(c.valor)}</span>
+      <Variacao c={c} nota={nota} />
+    </td>
+  );
+}
+
+/**
+ * OS PEDIDOS QUE ENTRAM E OS TRABALHOS REALIZADOS, LADO A LADO — d56,
+ * 17-11-2026: uma tabela compacta em vez de dez caixas. A comparação de cada
+ * número vai no `title` da variação.
+ */
+function TabelaLadoALado({ d }: { d: Desempenho }) {
+  const e = d.entrados;
+  const r = d.realizados;
+  const linhas: Array<{ rotulo: string; dica?: string; a: Comparacao; b: Comparacao; nota: string }> = [
+    { rotulo: "Por dia (30 d)", a: e.mediaPorDia, b: r.mediaPorDia, nota: "30 dias anteriores" },
+    {
+      rotulo: e.mesesNaMedia >= 12 ? "Por mês (12 m)" : `Por mês (${e.mesesNaMedia} m com dados)`,
+      a: e.mediaPorMes,
+      b: r.mediaPorMes,
+      nota: "12 meses anteriores",
+    },
+    {
+      rotulo: `${rotuloDoMes(e.mesHomologo.mes)} (mês passado)`,
+      a: e.mesHomologo,
+      b: r.mesHomologo,
+      nota: rotuloDoMes(e.mesHomologo.mesAnterior),
+    },
+    { rotulo: `${d.ano} até hoje`, a: e.anoAteHoje, b: r.anoAteHoje, nota: `mesmo período de ${d.ano - 1}` },
+    {
+      rotulo: "Previsão até dezembro",
+      dica: `Ao ritmo dos últimos 90 dias (${numeroCurto(e.ritmo90)} entrados e ${numeroCurto(r.ritmo90)} realizados por dia).`,
+      a: e.previsaoDoAno,
+      b: r.previsaoDoAno,
+      nota: `${d.ano - 1}`,
+    },
+  ];
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[340px] text-left text-xs">
+        <thead className="text-slate-500">
+          <tr>
+            <th className="py-1 pr-2 font-medium" />
+            <th className="px-2 py-1 text-right font-medium">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 rounded-sm" style={{ background: COR_ENTRADOS }} aria-hidden="true" />
+                Pedidos que entram
+              </span>
+            </th>
+            <th className="px-2 py-1 text-right font-medium">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 rounded-sm" style={{ background: COR_REALIZADOS }} aria-hidden="true" />
+                Trabalhos realizados
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-800 text-slate-300">
+          {linhas.map((l) => (
+            <tr key={l.rotulo}>
+              <td className="py-1 pr-2 text-slate-400" title={l.dica}>{l.rotulo}</td>
+              <Celula c={l.a} nota={l.nota} />
+              <Celula c={l.b} nota={l.nota} />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-1 text-[11px] text-slate-500">
+        Cancelados ou arquivados (pelo dia em que entraram): {d.cancelados.ultimos30} em 30 dias · {d.cancelados.ultimos12Meses}{" "}
+        em 12 meses · {d.cancelados.anoAteHoje} em {d.ano}. Realizados pelo dia em que o trabalho foi feito.
+      </p>
     </div>
   );
 }
@@ -164,9 +179,9 @@ export default function DesempenhoDoInicio() {
     : [];
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold text-white">Desempenho</h2>
+        <h2 className="text-sm font-bold text-white">Desempenho</h2>
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Serviço">
           {FILTROS_DO_DESEMPENHO.map((f) => (
             <button
@@ -174,7 +189,7 @@ export default function DesempenhoDoInicio() {
               type="button"
               onClick={() => setFiltro(f.id)}
               aria-pressed={filtro === f.id}
-              className={`rounded-full border px-2.5 py-1 text-xs transition ${
+              className={`rounded-md border px-2 py-0.5 text-[11px] transition ${
                 filtro === f.id
                   ? "border-azul bg-azul/14 text-azul-texto"
                   : "border-slate-700 text-slate-300 hover:bg-slate-800"
@@ -197,35 +212,13 @@ export default function DesempenhoDoInicio() {
       )}
 
       {d && (
-        <div className={`mt-4 space-y-4 ${aCarregar ? "opacity-60" : ""}`}>
-          <div className="grid gap-3 lg:grid-cols-2">
-            <Bloco
-              titulo="Pedidos que entram"
-              cor={COR_ENTRADOS}
-              b={d.entrados}
-              ano={d.ano}
-              rodape={
-                <p className="mt-2 text-xs text-slate-400">
-                  Cancelados ou arquivados (à parte, pelo dia em que entraram): {d.cancelados.ultimos30} nos últimos 30
-                  dias · {d.cancelados.ultimos12Meses} em 12 meses · {d.cancelados.anoAteHoje} em {d.ano}
-                </p>
-              }
-            />
-            <Bloco
-              titulo="Trabalhos realizados"
-              cor={COR_REALIZADOS}
-              b={d.realizados}
-              ano={d.ano}
-              rodape={
-                <p className="mt-2 text-xs text-slate-400">
-                  Pelo dia em que o trabalho foi feito. Sem contas de teste, sem cancelados.
-                </p>
-              }
-            />
-          </div>
-
+        <div className={`mt-2 space-y-3 ${aCarregar ? "opacity-60" : ""}`}>
+          <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
+            <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+              <TabelaLadoALado d={d} />
+            </div>
           {/* (a) Mês a mês */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+          <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
             <h3 className="text-sm font-bold text-white">Mês a mês</h3>
             {ex && (
               <p className="mt-1 text-xs text-slate-400">
@@ -236,7 +229,7 @@ export default function DesempenhoDoInicio() {
                 {" "}O mês com «·» ainda está a decorrer.
               </p>
             )}
-            <div className="mt-3 h-56">
+            <div className="mt-2 h-36">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={meses} barGap={2} barCategoryGap="22%">
                   <CartesianGrid stroke="#1e293b" vertical={false} />
@@ -254,7 +247,7 @@ export default function DesempenhoDoInicio() {
             <div className="mt-3 flex flex-wrap items-baseline gap-x-2">
               <p className="text-xs text-slate-400">Conversão dos 12 meses (realizados ÷ entrados, pelo mês de entrada):</p>
               <p className="text-sm font-bold text-white">{numeroCurto(d.conversao12Meses.valor)} %</p>
-              <Variacao c={d.conversao12Meses} />
+              <Variacao c={d.conversao12Meses} nota="12 meses anteriores" />
             </div>
             <div className="mt-2 overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-xs">
@@ -304,10 +297,13 @@ export default function DesempenhoDoInicio() {
             </p>
           </div>
 
+          </div>
+
+          <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
           {/* (b) Últimos 90 dias */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+          <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
             <h3 className="text-sm font-bold text-white">Últimos 90 dias</h3>
-            <div className="mt-3 h-48">
+            <div className="mt-2 h-36">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={d.dias.map((x) => ({ ...x, rotulo: `${x.dia.slice(8, 10)}/${x.dia.slice(5, 7)}` }))}>
                   <CartesianGrid stroke="#1e293b" vertical={false} />
@@ -329,7 +325,7 @@ export default function DesempenhoDoInicio() {
           </div>
 
           {/* (c) Dias da semana × horas */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+          <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
             <h3 className="text-sm font-bold text-white">Quando entram os pedidos</h3>
             <p className="mt-1 text-xs text-slate-400">
               Últimos 12 meses, hora de Lisboa · {d.totalNoMapa} pedidos. Quanto mais forte, mais pedidos.
@@ -344,12 +340,12 @@ export default function DesempenhoDoInicio() {
                 ))}
                 {d.mapa.map((linha, dia) => (
                   <div key={dia} className="contents">
-                    <span className="pr-1 text-right text-[11px] leading-5 text-slate-400">{DIAS_DA_SEMANA[dia]}</span>
+                    <span className="pr-1 text-right text-[11px] leading-4 text-slate-400">{DIAS_DA_SEMANA[dia]}</span>
                     {linha.map((n, h) => (
                       <span
                         key={h}
                         title={`${DIAS_DA_SEMANA[dia]}, ${h}h–${h + 1}h: ${n} pedido${n === 1 ? "" : "s"}`}
-                        className="h-5 rounded-[3px]"
+                        className="h-4 rounded-[3px]"
                         style={{
                           background: n === 0 ? "#1e293b" : COR_ENTRADOS,
                           opacity: n === 0 ? 1 : 0.2 + 0.8 * (n / maxMapa),
@@ -360,6 +356,8 @@ export default function DesempenhoDoInicio() {
                 ))}
               </div>
             </div>
+          </div>
+
           </div>
 
           <p className="text-[11px] text-slate-500">

@@ -367,3 +367,37 @@ export function numeroCurto(n: number): string {
   const r = Math.round(n * 10) / 10;
   return Number.isInteger(r) ? String(r) : r.toFixed(1).replace(".", ",");
 }
+
+/** Os pedidos de hoje, da semana e do mês, para a «Operação» do Início (d56). */
+export type OperacaoDoInicio = {
+  entradosHoje: number;
+  entradosSemana: number;
+  entradosMes: number;
+  /** Cancelados ou arquivados dos pedidos que entraram este mês. */
+  canceladosDoMes: number;
+};
+
+/**
+ * A OPERAÇÃO DO INÍCIO — d56, 17-11-2026. Todos os serviços, sem contas de
+ * teste, pelo dia em Lisboa em que o pedido entrou; a semana começa à
+ * segunda-feira.
+ */
+export function operacaoDoInicio(linhas: readonly LinhaDoDesempenho[], agora: Date = new Date()): OperacaoDoInicio {
+  const hoje = diaEmLisboa(agora);
+  const recuar = (pecasEmLisboa(agora).diaDaSemana + 6) % 7;
+  const segunda = somarDiasAoDia(hoje, -recuar);
+  const mes = hoje.slice(0, 7);
+  const r: OperacaoDoInicio = { entradosHoje: 0, entradosSemana: 0, entradosMes: 0, canceladosDoMes: 0 };
+  for (const l of linhas) {
+    if (l.deTeste || !l.criadoEm) continue;
+    const d = diaEmLisboa(l.criadoEm);
+    if (d > hoje) continue;
+    if (d === hoje) r.entradosHoje += 1;
+    if (d >= segunda) r.entradosSemana += 1;
+    if (d.slice(0, 7) === mes) {
+      r.entradosMes += 1;
+      if (l.cancelado) r.canceladosDoMes += 1;
+    }
+  }
+  return r;
+}

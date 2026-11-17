@@ -17330,6 +17330,8 @@ export type ResumoDoBackoffice = {
   foraDaGrelhaSemana: number | null;
   /** Pedidos abertos aceites pelo cliente e ainda só com a zona — «aceites sem rua» (d69). */
   aceitesSemRua: number | null;
+  /** Dados por feitos pelo profissional e ainda por confirmar (d56). */
+  feitosPorConfirmar: number | null;
 };
 
 /** Um número de uma consulta que pode falhar sem levar o painel atrás. */
@@ -17458,6 +17460,11 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
   const aceitesSemRua = await import("./rua-depois-do-aceite-na-base")
     .then((m) => m.contarAceitesSemRua())
     .catch(() => null);
+  // FEITOS POR CONFIRMAR (d56): o profissional deu por feito e falta a confirmação.
+  const feitosPorConfirmar = await conta(
+    `SELECT COUNT(*) AS n FROM negociacoes g
+      WHERE g.estado = 'acordada' AND g.execucaoEnviadaEm IS NOT NULL AND g.confirmadoEm IS NULL`,
+  );
 
   return {
     porEnviar,
@@ -17475,6 +17482,7 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     semValor,
     foraDaGrelhaSemana,
     aceitesSemRua,
+    feitosPorConfirmar,
   };
 }
 

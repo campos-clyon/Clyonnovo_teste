@@ -2,24 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import {
-  AlertTriangle,
-  ArrowRight,
-  CalendarClock,
-  CheckCircle2,
-  Inbox,
-  Loader2,
-  MapPin,
-  MessageCircle,
-  RefreshCw,
-  Send,
-  UserCheck,
-  Wallet,
-} from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import dynamic from "next/dynamic";
 import PropostasSemResposta from "@/components/admin/PropostasSemResposta";
+import DinheiroDoInicio from "@/components/admin/DinheiroDoInicio";
 import { HORAS_SEM_VALOR, type SemValorNoInicio } from "@/lib/pedido-sem-valor";
+import type { OperacaoDoInicio } from "@/lib/desempenho";
 
 /*
  * O DESEMPENHO — d41, 15-11-2026: pedidos que entram, trabalhos feitos,
@@ -38,22 +27,20 @@ const FalhasDaIa = dynamic(() => import("@/components/admin/FalhasDaIa"), { ssr:
  * desactualizada. Vamos colocá-la no modo actual, com informações precisas
  * como num painel bem planeado." — 12-09-2026.
  *
- * O que lá estava contava os pedidos do simulador por estados que já não se
- * usam — seis caixas a zero, e um «A carregar…» que nunca acabava — mais os
- * leads do site com quatro travessões. Nada sobre a plataforma que entretanto
- * nasceu: negociações, agenda, o assistente do WhatsApp, carteiras,
- * levantamentos, candidaturas.
+ * COMPACTO, POR HIERARQUIA — d56, 17-11-2026. Quatro andares, por esta ordem:
+ *   1. Precisa de si — os alertas de hoje numa faixa de chips pequenos
+ *      (número + rótulo; a explicação no `title`). Um zero não aparece.
+ *   2. Dinheiro — o lucro de hoje, da semana, do mês e do ano, pela conta das
+ *      Finanças (`DinheiroDoInicio`), o que os profissionais devem e o que
+ *      está por transferir.
+ *   3. Operação — linhas curtas: pedidos entrados, a decorrer, feitos por
+ *      confirmar, cancelados no mês, e o assistente do WhatsApp num ponto
+ *      (só em destaque quando desligado).
+ *   4. Desempenho — os pedidos que entram e os trabalhos realizados lado a
+ *      lado numa tabela.
  *
- * A REGRA DESTE ECRÃ: só entra aqui o que alguém tem de FAZER.
- *
- * Um painel bem planeado não é um painel com muitos números. É um que, se
- * estiver todo a zero, diz que não há nada à espera — e que, quando não está,
- * diz onde carregar. Por isso cada cartão é um link para o ecrã que resolve
- * aquilo, e um zero desaparece em vez de ocupar uma caixa.
- *
- * O que NÃO está no «precisa de si», de propósito: totais de negócio e
- * gráficos. Desde a d41 (15-11-2026) vivem numa secção à parte, «Desempenho»,
- * no fim deste ecrã — o que pede trabalho continua a vir primeiro.
+ * As «conversas suas» (entregues à equipa) vivem na secção do WhatsApp, por
+ * cima da lista: é lá que se trabalham.
  */
 
 type Resumo = {
@@ -75,6 +62,10 @@ type Resumo = {
   foraDaGrelhaSemana?: number | null;
   /** Aceites pelo cliente e ainda só com a zona (d69). */
   aceitesSemRua?: number | null;
+  /** O profissional deu por feito e falta confirmar (d56). */
+  feitosPorConfirmar?: number | null;
+  /** Os pedidos entrados hoje, na semana e no mês (d56). */
+  operacao?: OperacaoDoInicio | null;
 };
 
 type Seccao =
@@ -83,16 +74,17 @@ type Seccao =
   | "agenda"
   | "levantamentos"
   | "profissionais"
-  | "whatsapp";
+  | "whatsapp"
+  | "pagamentos"
+  | "carteiras";
 
-/** Um cartão do «precisa de si»: o número, o que é, e onde se resolve. */
+/** Um chip do «precisa de si»: o número, o rótulo curto, o porquê (no `title`) e onde se resolve. */
 type Cartao = {
   chave: string;
   n: number | null;
   titulo: string;
   porque: string;
   seccao: Seccao;
-  icone: typeof Inbox;
   /** Urgente pinta-se de âmbar; o resto fica sóbrio. */
   urgente?: boolean;
 };
@@ -121,7 +113,7 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
       setR(dados);
       setErro("");
     } catch {
-      setErro("Erro de rede.");
+      if (!silencioso) setErro("Erro de rede.");
     } finally {
       setACarregar(false);
     }
@@ -130,46 +122,26 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
   useEffect(() => {
     if (!ready) return;
     void carregar();
-    /*
-     * O CICLO NÃO ESTÁ AQUI — está no pulso partilhado, mais abaixo.
-     *
-     * Havia um temporizador próprio de dois em dois minutos E o hook: o painel
-     * carregava a dobrar, em momentos diferentes, e era esse o género de coisa
-     * que a unificação de 16-09-2026 veio acabar. Aqui fica só a primeira
-     * leitura.
-     */
+    // O ciclo está no pulso partilhado (useAutoRefresh), não aqui — 16-09-2026.
   }, [ready, carregar]);
 
   /*
-   * NOVIDADES SEM F5 — 16-09-2026.
-   *
-   * "sempre que quero ver as novidades tenho que ficar atualizando tudo, mas
-   * isso não devia acontecer (…) como no WhatsApp, quando alguém envia
-   * mensagem." Catorze dos dezasseis painéis deste backoffice não tinham
-   * ciclo nenhum.
-   *
-   * Silencioso de propósito: não mexe no estado de carregamento, não grita
-   * erros de rede, pára com o separador escondido e volta a buscar assim que
-   * ele reaparece.
+   * NOVIDADES SEM F5 — 16-09-2026. Silencioso de propósito: não mexe no
+   * estado de carregamento, pára com o separador escondido e volta a buscar
+   * assim que ele reaparece.
    */
   useAutoRefresh(() => carregar(true), { enabled: ready && Boolean(token) });
 
   if (aCarregar && !r) {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-400">
+      <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         A ver o que precisa de si…
       </div>
     );
   }
 
-  /*
-   * Anotado ANTES do filtro, e não depois.
-   *
-   * Sem a anotação aqui, o `seccao: "agenda"` de cada literal infere-se como
-   * `string` e deixa de caber na união — o compilador só se queixa no fim, e
-   * a queixa aponta para o sítio errado.
-   */
+  // Anotado ANTES do filtro: sem isto o `seccao` de cada literal infere-se como `string`.
   const todos: Cartao[] = r
     ? [
         {
@@ -178,7 +150,6 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           titulo: "atrasados",
           porque: "O dia passou e ninguém deu o trabalho por feito. Ligue ao profissional.",
           seccao: "agenda",
-          icone: AlertTriangle,
           urgente: true,
         },
         {
@@ -187,24 +158,7 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           titulo: "à espera de si",
           porque: "Propostas em que a CLYON responde pelo cliente, e que ficam aqui até alguém responder.",
           seccao: "negociacoes_clyon",
-          icone: MessageCircle,
           urgente: true,
-        },
-        {
-          chave: "porEnviar",
-          n: r.porEnviar,
-          titulo: "por enviar",
-          porque: "Pedidos na mesa que ainda não foram a profissional nenhum.",
-          seccao: "pedidos",
-          icone: Send,
-        },
-        {
-          chave: "semData",
-          n: r.semData,
-          titulo: "sem dia marcado",
-          porque: "Contratados e sem data. Combine com o cliente.",
-          seccao: "agenda",
-          icone: CalendarClock,
         },
         {
           chave: "levantamentos",
@@ -215,24 +169,21 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
               ? `${euros(r.levantamentosEmEuros)} pedidos por profissionais que já fizeram o trabalho.`
               : "Transferências pedidas por profissionais que já fizeram o trabalho.",
           seccao: "levantamentos",
-          icone: Wallet,
           urgente: true,
         },
         {
-          chave: "candidaturas",
-          n: r.candidaturas,
-          titulo: "candidaturas",
-          porque: "Vieram do formulário do site e ainda não têm conta.",
-          seccao: "profissionais",
-          icone: Inbox,
+          chave: "porEnviar",
+          n: r.porEnviar,
+          titulo: "por enviar",
+          porque: "Pedidos na mesa que ainda não foram a profissional nenhum.",
+          seccao: "pedidos",
         },
         {
-          chave: "porAprovar",
-          n: r.profissionaisPorAprovar,
-          titulo: "por aprovar",
-          porque: "Profissionais com conta aberta que ainda não recebem pedidos.",
-          seccao: "profissionais",
-          icone: UserCheck,
+          chave: "semData",
+          n: r.semData,
+          titulo: "sem dia marcado",
+          porque: "Contratados e sem data. Combine com o cliente.",
+          seccao: "agenda",
         },
         {
           chave: "aceitesSemRua",
@@ -240,107 +191,82 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           titulo: "aceites sem rua",
           porque: "O cliente aceitou e o pedido só tem a zona. A Vitória pede-lhe a rua pelo WhatsApp; sem resposta em 2 h, é connosco. Veja «Falta a rua» no cartão, na Mesa.",
           seccao: "negociacoes_clyon",
-          icone: MapPin,
+        },
+        {
+          chave: "candidaturas",
+          n: r.candidaturas,
+          titulo: "candidaturas",
+          porque: "Vieram do formulário do site e ainda não têm conta.",
+          seccao: "profissionais",
+        },
+        {
+          chave: "porAprovar",
+          n: r.profissionaisPorAprovar,
+          titulo: "por aprovar",
+          porque: "Profissionais com conta aberta que ainda não recebem pedidos.",
+          seccao: "profissionais",
         },
         {
           chave: "foraDaGrelha",
           n: r.foraDaGrelhaSemana ?? null,
-          titulo: "fora da grelha esta semana",
-          porque: "O custo real do trabalho ficou acima do tecto ou abaixo do chão da grelha. Veja os degraus no cartão do pedido, na Mesa.",
+          titulo: "fora da grelha (semana)",
+          porque: "O custo real do trabalho ficou acima do tecto ou abaixo do chão da grelha, desde segunda-feira. Veja os degraus no cartão do pedido, na Mesa.",
           seccao: "negociacoes_clyon",
-          icone: AlertTriangle,
-        },
-        {
-          chave: "entregues",
-          n: r.conversasEntregues,
-          titulo: "conversas suas",
-          porque: "O assistente está calado nestas — é a equipa a responder.",
-          seccao: "whatsapp",
-          icone: MessageCircle,
         },
       ]
     : [];
 
-  // Um zero não ocupa uma caixa: oito caixas a zero não são informação, são
-  // ruído com ar de trabalho — o defeito exacto do ecrã que saiu.
+  // Um zero não ocupa uma caixa: chips a zero não são informação, são ruído com ar de trabalho.
   const cartoes = todos.filter((c) => c.n != null && c.n > 0);
+  const op = r?.operacao ?? null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {erro && (
-        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {erro}
-        </p>
+        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{erro}</p>
       )}
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-white">
+      {/* 1. PRECISA DE SI — chips pequenos, cada um leva ao ecrã que resolve aquilo. */}
+      <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="mr-1 text-sm font-bold text-white">
             {cartoes.length > 0 ? "Precisa de si" : "Nada à espera de si"}
           </h2>
-          <button
-            onClick={() => void carregar()}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800"
-          >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-            Actualizar
-          </button>
-        </div>
-
-        {/*
-          O ECRÃ VAZIO É UMA RESPOSTA, e não um erro.
-
-          Um painel que não tem nada a dizer deve dizer isso com todas as
-          letras. Oito caixas a zero não são informação — são ruído com ar de
-          trabalho.
-        */}
-        {cartoes.length === 0 ? (
-          <p className="mt-3 flex items-center gap-2 text-sm text-emerald-300">
-            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-            Está tudo tratado. Nenhum pedido por enviar, nenhuma proposta à espera de resposta,
-            nenhum trabalho atrasado.
-          </p>
-        ) : (
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {cartoes.map((c) => {
-              const Icone = c.icone;
-              return (
+          {cartoes.length === 0 ? (
+            <p className="flex items-center gap-1.5 text-xs text-emerald-300">
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Está tudo tratado. Nenhum pedido por enviar, nenhuma proposta à espera de resposta, nenhum trabalho atrasado.
+            </p>
+          ) : (
+            <ul className="flex flex-wrap gap-1.5">
+              {cartoes.map((c) => (
                 <li key={c.chave}>
                   <button
                     onClick={() => onAbrir(c.seccao)}
-                    className={`group flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
+                    title={c.porque}
+                    className={`flex items-baseline gap-1 rounded-md border px-2 py-1 text-xs transition ${
                       c.urgente
-                        ? "border-amber-500/30 bg-amber-500/[0.06] hover:bg-amber-500/10"
-                        : "border-slate-700 bg-slate-950/40 hover:bg-slate-800/60"
+                        ? "border-amber-500/40 bg-amber-500/[0.08] text-amber-200 hover:bg-amber-500/15"
+                        : "border-slate-700 bg-slate-950/40 text-slate-200 hover:bg-slate-800/60"
                     }`}
                   >
-                    <Icone
-                      className={`mt-0.5 h-4 w-4 shrink-0 ${c.urgente ? "text-amber-400" : "text-slate-400"}`}
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-baseline gap-1.5">
-                        <span
-                          className={`text-xl font-bold ${c.urgente ? "text-amber-300" : "text-white"}`}
-                        >
-                          {c.n}
-                        </span>
-                        <span className="text-sm font-semibold text-slate-200">{c.titulo}</span>
-                      </span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-slate-400">
-                        {c.porque}
-                      </span>
+                    <span className={`text-sm font-bold tabular-nums ${c.urgente ? "text-amber-300" : "text-white"}`}>
+                      {c.n}
                     </span>
-                    <ArrowRight
-                      className="mt-1 h-3.5 w-3.5 shrink-0 text-slate-600 transition group-hover:text-slate-300"
-                      aria-hidden="true"
-                    />
+                    {c.titulo}
                   </button>
                 </li>
-              );
-            })}
-          </ul>
-        )}
+              ))}
+            </ul>
+          )}
+          <button
+            onClick={() => void carregar()}
+            className="ml-auto flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-400 transition hover:bg-slate-800"
+          >
+            <RefreshCw className="h-3 w-3" aria-hidden="true" />
+            Actualizar
+          </button>
+        </div>
       </section>
 
       {/*
@@ -350,25 +276,22 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
         (`pedido-sem-valor.ts`).
       */}
       {r?.semValor && r.semValor.length > 0 && (
-        <section className="rounded-2xl border border-red-500/30 bg-red-500/[0.06] p-5">
-          <h2 className="text-base font-bold text-white">
+        <section className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-3">
+          <h2 className="text-sm font-bold text-white" title="Por enviar, sem valor nem pergunta ao cliente. Do maior n.º para o menor.">
             <span className="text-red-300">{r.semValor.length}</span> sem valor há mais de {HORAS_SEM_VALOR} h
           </h2>
-          <p className="mt-0.5 text-xs text-slate-400">
-            Por enviar, sem valor nem pergunta ao cliente. Do maior n.º para o menor.
-          </p>
-          <ul className="mt-3 divide-y divide-slate-800">
+          <ul className="mt-1 grid gap-x-4 divide-y divide-slate-800 md:grid-cols-2 md:divide-y-0 xl:grid-cols-3">
             {r.semValor.map((p) => (
               <li key={p.id}>
                 <button
                   onClick={() => onAbrir("pedidos")}
-                  className="flex w-full flex-wrap items-baseline gap-x-2 py-1.5 text-left text-sm hover:bg-slate-800/40"
+                  className="flex w-full flex-wrap items-baseline gap-x-2 py-1 text-left text-xs hover:bg-slate-800/40"
                 >
-                  <span className="font-bold text-white">#{p.id}</span>
-                  <span className="rounded-full border border-red-500/50 bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-300">
+                  <span className="text-sm font-bold text-white">#{p.id}</span>
+                  <span className="rounded border border-red-500/50 bg-red-500/15 px-1.5 text-[11px] font-semibold text-red-300">
                     por enviar · {p.servico}
                   </span>
-                  <span className="ml-auto text-xs tabular-nums text-slate-400">
+                  <span className="ml-auto tabular-nums text-slate-400">
                     entrou {p.entrouEm} · há {p.horas} h
                   </span>
                 </button>
@@ -381,72 +304,63 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
       {/* PROPOSTAS SEM RESPOSTA DO CLIENTE — d54, 16-11-2026. */}
       <PropostasSemResposta token={token} onAbrir={() => onAbrir("negociacoes_clyon")} />
 
-      {/*
-        O ESTADO DAS COISAS — o que não pede nada, mas convém saber.
+      {/* 2. DINHEIRO — d56. */}
+      <DinheiroDoInicio aPagar={r?.levantamentosEmEuros ?? null} onAbrir={(s) => onAbrir(s)} />
 
-        Separado de propósito do «precisa de si»: são números que se lêem de
-        passagem, não tarefas. O WhatsApp desligado é a excepção — esse pede.
-      */}
+      {/* 3. OPERAÇÃO — linhas curtas; o WhatsApp é um ponto, e só grita desligado. */}
       {r && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-          <h2 className="text-sm font-bold text-white">O estado das coisas</h2>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-400">
+            <h2 className="text-sm font-bold text-white">Operação</h2>
+            {op && (
+              <button onClick={() => onAbrir("pedidos")} className="hover:text-slate-200" title="Pedidos entrados, sem contas de teste, em dias de Lisboa (a semana começa à segunda).">
+                Pedidos entrados: <b className="tabular-nums text-white">{op.entradosHoje}</b> hoje ·{" "}
+                <b className="tabular-nums text-white">{op.entradosSemana}</b> semana ·{" "}
+                <b className="tabular-nums text-white">{op.entradosMes}</b> mês
+              </button>
+            )}
+            <button onClick={() => onAbrir("agenda")} className="hover:text-slate-200" title="Contratados e ainda por confirmar (inclui os feitos por confirmar).">
+              A decorrer: <b className="tabular-nums text-white">{r.aDecorrer ?? "—"}</b>
+            </button>
+            {r.feitosPorConfirmar != null && (
+              <button onClick={() => onAbrir("agenda")} className="hover:text-slate-200" title="O profissional deu o trabalho por feito e falta confirmar.">
+                Feitos por confirmar: <b className="tabular-nums text-white">{r.feitosPorConfirmar}</b>
+              </button>
+            )}
+            {op && (
+              <span title="Cancelados ou arquivados dos pedidos que entraram este mês.">
+                Cancelados no mês: <b className="tabular-nums text-white">{op.canceladosDoMes}</b>
+              </span>
+            )}
             <button
               onClick={() => onAbrir("whatsapp")}
-              className={`rounded-xl border p-3 text-left transition ${
+              title={
+                r.filaDoWhatsApp != null && r.filaDoWhatsApp > 0
+                  ? `${r.filaDoWhatsApp} mensagem${r.filaDoWhatsApp === 1 ? "" : "s"} por sair`
+                  : "Assistente do WhatsApp"
+              }
+              className={`flex items-center gap-1.5 ${
                 r.whatsappLigado === false
-                  ? "border-red-500/30 bg-red-500/[0.07] hover:bg-red-500/10"
-                  : "border-slate-700 bg-slate-950/40 hover:bg-slate-800/60"
+                  ? "rounded-md border border-red-500/40 bg-red-500/10 px-2 py-0.5 font-bold text-red-300"
+                  : "hover:text-slate-200"
               }`}
             >
-              <p className="text-xs text-slate-400">Assistente do WhatsApp</p>
-              <p
-                className={`mt-0.5 text-sm font-bold ${
-                  r.whatsappLigado === false
-                    ? "text-red-300"
-                    : r.whatsappLigado
-                      ? "text-emerald-300"
-                      : "text-slate-400"
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  r.whatsappLigado === false ? "bg-red-400" : r.whatsappLigado ? "bg-emerald-400" : "bg-slate-500"
                 }`}
-              >
-                {r.whatsappLigado === false
-                  ? "DESLIGADO — ninguém recebe nada"
-                  : r.whatsappLigado
-                    ? "Ligado"
-                    : "—"}
-              </p>
+                aria-hidden="true"
+              />
+              {r.whatsappLigado === false ? "WhatsApp DESLIGADO — ninguém recebe nada" : "WhatsApp"}
               {r.filaDoWhatsApp != null && r.filaDoWhatsApp > 0 && (
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {r.filaDoWhatsApp} mensagem{r.filaDoWhatsApp === 1 ? "" : "s"} por sair
-                </p>
+                <span className="tabular-nums text-slate-500">· {r.filaDoWhatsApp} por sair</span>
               )}
-            </button>
-
-            <button
-              onClick={() => onAbrir("agenda")}
-              className="rounded-xl border border-slate-700 bg-slate-950/40 p-3 text-left transition hover:bg-slate-800/60"
-            >
-              <p className="text-xs text-slate-400">Trabalhos a decorrer</p>
-              <p className="mt-0.5 text-sm font-bold text-white">{r.aDecorrer ?? "—"}</p>
-              <p className="mt-0.5 text-xs text-slate-500">Contratados e ainda por confirmar.</p>
-            </button>
-
-            <button
-              onClick={() => onAbrir("levantamentos")}
-              className="rounded-xl border border-slate-700 bg-slate-950/40 p-3 text-left transition hover:bg-slate-800/60"
-            >
-              <p className="text-xs text-slate-400">Por transferir</p>
-              <p className="mt-0.5 text-sm font-bold text-white">
-                {r.levantamentosEmEuros != null ? euros(r.levantamentosEmEuros) : "—"}
-              </p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                O que a CLYON deve a profissionais que já pediram.
-              </p>
             </button>
           </div>
         </section>
       )}
 
+      {/* 4. DESEMPENHO */}
       <DesempenhoDoInicio />
       <FunilDoSimulador />
       <FalhasDaIa />

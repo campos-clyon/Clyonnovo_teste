@@ -1,7 +1,7 @@
 import { classificarPagamento, type NaturezaDoPagamento } from "./a-quem-foi-o-dinheiro";
 import type { ContaDoPagamento } from "./conta-do-pagamento";
 import { aosCentimos, contaParaOSaldo, mesDoDia, somarMeses, type Categoria, type Movimento } from "./financas";
-import { gastosDoMes, type Gasto } from "./financas-gastos";
+import { gastosDoMes, gastosNoIntervalo, type Gasto } from "./financas-gastos";
 import { eLinhaDaDividaEmMao } from "./pago-em-mao";
 
 /**
@@ -103,11 +103,13 @@ export function dividirEntrada(l: LinhaParaDividir): EntradaDaPlataforma {
 }
 
 /** Uma comissão paga a um assistente (um período marcado como pago). */
-export type PagamentoAAssistente = { dia: string; valor: number; nome: string; periodo: string };
+export type PagamentoAAssistente = { dia: string; valor: number; nome: string; periodo: string; assistenteId?: number | null };
 
 /** Um período de comissão de uma conta que ganha sobre todos os trabalhos (a sócia). */
 export type PeriodoDaSocia = {
   nome: string;
+  /** A conta da sócia (para tirar os pagamentos dela dos assistentes no Início, d56). */
+  assistenteId?: number | null;
   percentagem: number;
   inicio: string;
   fim: string;
@@ -170,8 +172,13 @@ export type ContasDoMes = {
   pagamentosAosAssistentes: PagamentoAAssistente[];
 };
 
-export function contasDoMes(d: DadosDasContas, mes: string): ContasDoMes {
-  const doMes = d.entradas.filter((e) => mesDoDia(e.dia) === mes);
+/**
+ * O NÚCLEO DAS CONTAS — as entradas e os movimentos que caem nos dias de
+ * `dentro`. É o mesmo para o mês das Finanças e para o intervalo do Início
+ * (d56): só muda a pergunta «este dia conta?» e a forma de contar os gastos.
+ */
+function entradasEMovimentos(d: DadosDasContas, dentro: (dia: string) => boolean) {
+  const doPeriodo = d.entradas.filter((e) => dentro(e.dia));
   const porOnde = Object.fromEntries(CANAIS.map((c) => [c, vazia()])) as Record<Canal, Soma>;
   const pagoPelosProfissionais = vazia();
   const emMao = vazia();
@@ -182,7 +189,7 @@ export function contasDoMes(d: DadosDasContas, mes: string): ContasDoMes {
   let taxas = 0;
   let parteDosProfissionais = 0;
   let eupago = 0;
-  for (const e of doMes) {
+  for (const e of doPeriodo) {
     eupago += e.comissaoEupago;
     if (!e.entraNaClyon) {
       juntar(e.natureza === "em_mao" ? emMao : acertos, e.valor);
@@ -202,7 +209,7 @@ export function contasDoMes(d: DadosDasContas, mes: string): ContasDoMes {
   let despesasLancadas = 0;
   let receitasLancadas = 0;
   for (const m of d.movimentos) {
-    if (!contaParaOSaldo(m) || mesDoDia(m.dia) !== mes || m.tipo === "transferencia") continue;
+    if (!contaParaOSaldo(m) || !dentro(m.dia) || m.tipo === "transferencia") continue;
     if (m.automatico) {
       if (m.automatico.de === "pago_ao_profissional" || m.automatico.de === "levantamento") pagoAosProfissionais += m.valor;
       continue;
@@ -212,6 +219,29 @@ export function contasDoMes(d: DadosDasContas, mes: string): ContasDoMes {
     if (m.tipo === "despesa") despesasLancadas += m.valor;
     else receitasLancadas += m.valor;
   }
+  return {
+    doPeriodo,
+    porOnde,
+    pagoPelosProfissionais,
+    emMao,
+    acertos,
+    semConta,
+    bruto,
+    iva,
+    taxas,
+    parteDosProfissionais,
+    eupago,
+    pagoAosProfissionais,
+    despesasLancadas,
+    receitasLancadas,
+  };
+}
+
+export function contasDoMes(d: DadosDasContas, mes: string): ContasDoMes {
+  const n = entradasEMovimentos(d, (dia) => mesDoDia(dia) === mes);
+  const { porOnde, pagoPelosProfissionais, emMao, acertos, semConta, bruto, iva, taxas, parteDosProfissionais, eupago } = n;
+  const { pagoAosProfissionais, despesasLancadas, receitasLancadas } = n;
+  const doMes = n.doPeriodo;
 
   const g = gastosDoMes(d.gastos, mes);
   const gastosTotal = aosCentimos(g.total + despesasLancadas + eupago);
@@ -242,6 +272,109 @@ export function contasDoMes(d: DadosDasContas, mes: string): ContasDoMes {
     semConta,
     entradas: doMes,
     pagamentosAosAssistentes,
+  };
+}
+
+// ─── O lucro de um intervalo de dias (d56, Início) ───────────────────────────
+
+/** Quantos dias de calendário vão de `de` a `ate`, os dois contados (0 se `ate` vier antes). */
+export function diasEntre(de: string, ate: string): number {
+  const t = (x: string) => Date.parse(`${x}T00:00:00Z`);
+  return Math.max(0, Math.round((t(ate) - t(de)) / 86_400_000) + 1);
+}
+
+/** É desta conta da sócia? Pelo id quando os dois o têm; senão pelo nome. */
+function eDaSocia(a: PagamentoAAssistente, periodos: PeriodoDaSocia[]): boolean {
+  return periodos.some((p) =>
+    p.assistenteId != null && a.assistenteId != null ? p.assistenteId === a.assistenteId : p.nome === a.nome,
+  );
+}
+
+/**
+ * A PARTE DA SÓCIA NUM INTERVALO DE DIAS — d56, 17-11-2026.
+ *
+ * A comissão de cada período (a mesma de `parteDaSociaNoMes`) espalha-se
+ * pelos dias dele: os dias todos, num período fechado; do início até hoje,
+ * no período em curso (é o que já ganhou até hoje). Num mês feito de
+ * períodos inteiros dá o mesmo que `parteDaSociaNoMes`.
+ */
+export function parteDaSociaNoIntervalo(periodos: PeriodoDaSocia[], de: string, ate: string, hoje: string): number {
+  let s = 0;
+  for (const p of periodos) {
+    const fim = p.estado === "em_curso" && hoje < p.fim ? hoje : p.fim;
+    const dias = diasEntre(p.inicio, fim);
+    if (dias <= 0) continue;
+    const sobre = diasEntre(p.inicio > de ? p.inicio : de, fim < ate ? fim : ate);
+    if (sobre > 0) s += (p.comissao * sobre) / dias;
+  }
+  return aosCentimos(s);
+}
+
+export type LucroDoIntervalo = {
+  de: string;
+  ate: string;
+  dias: number;
+  receita: number;
+  gastos: number;
+  /** Os assistentes pagos no intervalo, SEM a sócia (essa conta-se à parte). `null` para quem não é o administrador. */
+  assistentes: number | null;
+  /** receita − gastos − assistentes: o lucro antes da parte da sócia. */
+  lucro: number;
+  /** `null` quando não se sabe (quem vê não é o administrador, ou não há sócia). */
+  socia: number | null;
+  lucroDepoisDaSocia: number | null;
+  mediaPorDia: number;
+  mediaPorDiaDepoisDaSocia: number | null;
+};
+
+export type OpcoesDoIntervalo = {
+  /** O dia de hoje em Lisboa (para o período da sócia em curso). */
+  hoje: string;
+  /**
+   * «por_dia» — um recorrente conta o valor do mês ÷ os dias desse mês, em
+   * cada dia (hoje e a semana, sem o pico do dia da fatura); «mes_inteiro» —
+   * conta o mês inteiro em cada mês que o intervalo toca (o mês e o ano, com
+   * o mesmo número das Finanças).
+   */
+  recorrentes: "por_dia" | "mes_inteiro";
+  socia: PeriodoDaSocia[] | null;
+};
+
+/**
+ * O LUCRO DE UM INTERVALO DE DIAS — d56, 17-11-2026: a conta da d21
+ * (receita = taxas sem IVA + receitas à mão; gastos = recorrentes +
+ * ocasionais + despesas à mão + comissões do euPago; lucro = receita −
+ * gastos − assistentes), pelo mesmo núcleo de `contasDoMes`, num intervalo
+ * `de`–`ate` (dias de Lisboa, os dois contados). Os ocasionais contam no dia
+ * deles. A sócia conta à parte: os pagamentos a ela não entram nos
+ * assistentes, e o «depois da sócia» tira a parte dela do intervalo.
+ */
+export function lucroNoIntervalo(d: DadosDasContas, de: string, ate: string, o: OpcoesDoIntervalo): LucroDoIntervalo {
+  const dentro = (dia: string) => dia >= de && dia <= ate;
+  const n = entradasEMovimentos(d, dentro);
+  const g = gastosNoIntervalo(d.gastos, de, ate, o.recorrentes);
+  const gastos = aosCentimos(g.total + n.despesasLancadas + n.eupago);
+  const receita = aosCentimos(n.taxas + n.receitasLancadas);
+  const periodos = o.socia ?? [];
+  const assistentes = d.assistentes
+    ? aosCentimos(d.assistentes.filter((a) => dentro(a.dia) && !eDaSocia(a, periodos)).reduce((s, a) => s + a.valor, 0))
+    : null;
+  const lucro = aosCentimos(receita - gastos - (assistentes ?? 0));
+  const socia = d.assistentes && periodos.length > 0 ? parteDaSociaNoIntervalo(periodos, de, ate, o.hoje) : null;
+  const lucroDepoisDaSocia = socia == null ? null : aosCentimos(lucro - socia);
+  const dias = Math.max(1, diasEntre(de, ate));
+  return {
+    de,
+    ate,
+    dias,
+    receita,
+    gastos,
+    assistentes,
+    lucro,
+    socia,
+    lucroDepoisDaSocia,
+    mediaPorDia: aosCentimos(lucro / dias),
+    mediaPorDiaDepoisDaSocia: lucroDepoisDaSocia == null ? null : aosCentimos(lucroDepoisDaSocia / dias),
   };
 }
 

@@ -45,7 +45,7 @@ describe("o ecrã antigo saiu", () => {
 });
 
 describe("só entra o que alguém tem de fazer", () => {
-  it("os oito cartões são os oito sítios onde há trabalho parado", () => {
+  it("os chips são os sítios onde há trabalho parado", () => {
     for (const t of [
       "atrasados",
       "à espera de si",
@@ -54,10 +54,14 @@ describe("só entra o que alguém tem de fazer", () => {
       "por transferir",
       "candidaturas",
       "por aprovar",
-      "conversas suas",
     ]) {
       expect(PAINEL).toContain(t);
     }
+  });
+
+  it("d56: as «conversas suas» saíram do Início e vivem na secção do WhatsApp", () => {
+    expect(PAINEL).not.toContain("titulo: \"conversas suas\"");
+    expect(ler("src/components/admin/AdminWhatsAppPanel.tsx")).toContain("conversas suas");
   });
 
   it("um zero não ocupa uma caixa — desaparece", () => {

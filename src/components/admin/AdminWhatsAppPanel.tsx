@@ -1077,6 +1077,12 @@ export default function AdminWhatsAppPanel() {
                 ? `A falar ${CANAL}.`
                 : "As mensagens novas ficam na fila à espera de o voltar a ligar."}
             </p>
+            {/* AS CONVERSAS SUAS — vieram do Início (d56, 17-11-2026): é aqui que se trabalham. */}
+            {estado.interrompidos.length > 0 && (
+              <p className="mt-1 text-sm text-amber-200" title="O assistente está calado nestas — é a equipa a responder.">
+                <b className="tabular-nums">{estado.interrompidos.length}</b> conversas suas
+              </p>
+            )}
 
             {/*
               A PONTE ESTÁ VIVA? A pergunta que custou uma manhã.

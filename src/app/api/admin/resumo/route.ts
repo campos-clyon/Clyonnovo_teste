@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { resumoDoBackoffice } from "@/lib/db";
+import { operacaoDoInicio } from "@/lib/desempenho";
+import { linhasDoDesempenho } from "@/lib/desempenho-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,12 +17,22 @@ export const dynamic = "force-dynamic";
  *
  * Ver `resumoDoBackoffice` em db.ts para o que cada número conta — e porque é
  * que um que falhe devolve null em vez de rebentar com a página.
+ *
+ * A OPERAÇÃO (d56, 17-11-2026): os pedidos entrados hoje, na semana e no mês
+ * saem das linhas do Desempenho (com a cache de 5 minutos dele), pela mesma
+ * regra — sem contas de teste, em dias de Lisboa. Se falhar, `null`.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
   try {
-    return NextResponse.json(await resumoDoBackoffice());
+    const [resumo, operacao] = await Promise.all([
+      resumoDoBackoffice(),
+      linhasDoDesempenho()
+        .then((l) => operacaoDoInicio(l))
+        .catch(() => null),
+    ]);
+    return NextResponse.json({ ...resumo, operacao });
   } catch (e) {
     console.error("[admin/resumo]", e);
     return NextResponse.json({ error: "Não foi possível carregar o resumo." }, { status: 500 });

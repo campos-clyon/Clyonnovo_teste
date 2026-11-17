@@ -106,6 +106,53 @@ export function gastosDoMes(gastos: Gasto[], mes: string): GastosDoMes {
   return { recorrentes, ocasionais, total: aosCentimos(recorrentes + ocasionais), linhas };
 }
 
+/** Quantos dias tem o mês `YYYY-MM`. */
+export function diasDoMes(mes: string): number {
+  const [a, m] = mes.split("-").map(Number);
+  return new Date(Date.UTC(a, m, 0)).getUTCDate();
+}
+
+/**
+ * O QUE OS GASTOS PESAM ENTRE DOIS DIAS — d56, 17-11-2026 (Início).
+ *
+ * Um recorrente é sempre do mês (é o único que a gestora tem). Em «por_dia»
+ * conta o valor do mês ÷ os dias desse mês em cada dia do intervalo — o
+ * «hoje» e a «semana» não ganham um pico no dia da fatura; em «mes_inteiro»
+ * conta o mês inteiro em cada mês que o intervalo toca, como `gastosDoMes`.
+ * Um ocasional conta no dia dele. Para um mês inteiro, os dois modos dão
+ * o que dá `gastosDoMes`.
+ */
+export function gastosNoIntervalo(
+  gastos: Gasto[],
+  de: string,
+  ate: string,
+  modo: "por_dia" | "mes_inteiro",
+): { recorrentes: number; ocasionais: number; total: number } {
+  if (ate < de) return { recorrentes: 0, ocasionais: 0, total: 0 };
+  let recorrentes = 0;
+  let ocasionais = 0;
+  const ultimo = mesDoDia(ate);
+  for (let mes = mesDoDia(de); mes <= ultimo; ) {
+    const n = diasDoMes(mes);
+    const primeiro = `${mes}-01`;
+    const fim = `${mes}-${String(n).padStart(2, "0")}`;
+    const a = de > primeiro ? de : primeiro;
+    const b = ate < fim ? ate : fim;
+    const sobre = Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000) + 1;
+    for (const g of gastos) {
+      if (g.tipo !== "recorrente" || !contaNoMes(g, mes)) continue;
+      recorrentes += modo === "mes_inteiro" ? g.valor : (g.valor * sobre) / n;
+    }
+    const [ano, m] = mes.split("-").map(Number);
+    mes = m === 12 ? `${ano + 1}-01` : `${ano}-${String(m + 1).padStart(2, "0")}`;
+  }
+  for (const g of gastos) {
+    if (g.tipo !== "ocasional" || g.dia == null || g.dia < de || g.dia > ate) continue;
+    if (contaNoMes(g, mesDoDia(g.dia))) ocasionais += g.valor;
+  }
+  return { recorrentes: aosCentimos(recorrentes), ocasionais: aosCentimos(ocasionais), total: aosCentimos(recorrentes + ocasionais) };
+}
+
 /** O total por mês dos recorrentes que contam neste mês. */
 export function totalMensalDosRecorrentes(gastos: Gasto[], mes: string): number {
   return gastosDoMes(gastos, mes).recorrentes;

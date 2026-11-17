@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { listarAssistentes } from "@/lib/assistentes";
-import type { PeriodoDaSocia } from "@/lib/financas-do-mes";
 import { gastosDaClyon } from "@/lib/financas-gastos-na-base";
 import { canaisDosPedidosPagos, entradasDaPlataforma, pagamentosAosAssistentes, tudoDaGestora } from "@/lib/financas-na-base";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
+import { periodosDaSocia } from "@/lib/socia-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,30 +41,5 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[admin/financas GET]", e);
     return NextResponse.json({ error: "Não foi possível ler as finanças." }, { status: 500 });
-  }
-}
-
-/** Os períodos das contas de assistente que ganham sobre todos os trabalhos. Se falhar, nada. */
-async function periodosDaSocia(): Promise<PeriodoDaSocia[] | null> {
-  try {
-    const { assistentes } = await listarAssistentes();
-    return assistentes
-      .filter((a) => a.activo && a.comissaoSobre === "todos")
-      .flatMap((a) =>
-        a.comissoes.periodos.map((p) => ({
-          nome: a.nome,
-          percentagem: p.comissaoPercent,
-          inicio: p.inicio,
-          fim: p.fim,
-          rotulo: p.rotulo,
-          estado: p.estado,
-          lucro: p.lucro,
-          comissao: p.comissaoAssistente,
-          pendentes: p.pendentes.length,
-        })),
-      );
-  } catch (e) {
-    console.error("[admin/financas GET] sócia", e);
-    return null;
   }
 }

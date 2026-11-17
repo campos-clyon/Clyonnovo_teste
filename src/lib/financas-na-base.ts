@@ -601,7 +601,7 @@ export async function canaisDosPedidosPagos(): Promise<Record<string, string> | 
 /** As comissões pagas aos assistentes — um período marcado como pago é um pagamento. */
 export async function pagamentosAosAssistentes(): Promise<PagamentoAAssistente[] | null> {
   const linhas = await lerOuNada(
-    `SELECT cp.valorPago, cp.pagoEm, cp.periodoInicio, cp.periodoFim, c.nome
+    `SELECT cp.valorPago, cp.pagoEm, cp.periodoInicio, cp.periodoFim, cp.assistenteId, c.nome
        FROM comissoesPagas cp
        LEFT JOIN colaboradores c ON c.id = cp.assistenteId`,
     "assistentes",
@@ -617,6 +617,7 @@ export async function pagamentosAosAssistentes(): Promise<PagamentoAAssistente[]
         valor,
         nome: String(l.nome ?? "Assistente"),
         periodo: `${String(l.periodoInicio ?? "")} a ${String(l.periodoFim ?? "")}`,
+        assistenteId: l.assistenteId != null ? Number(l.assistenteId) : null,
       },
     ];
   });
