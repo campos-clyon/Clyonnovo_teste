@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CABECALHOS_DA_VERSAO, registarAppAberta, versaoDoCabecalho } from "@/lib/app-pro-no-telemovel";
 import {
   profissionalPorTokenDeSenha,
   definirPalavraPasseDoProfissional,
@@ -134,6 +135,8 @@ export async function POST(req: NextRequest) {
      * escrever outra vez no ecrã de entrada.
      */
     if (corpo.paraApp === true) {
+      // d60 (17-11-2026): entrar pela app também é abrir a app — conta para «Quem conta para os 12».
+      await registarAppAberta(linha.id, versaoDoCabecalho(CABECALHOS_DA_VERSAO.map((c) => req.headers.get(c)).find((v) => v) ?? null));
       return NextResponse.json({ ok: true, nome: linha.name, token });
     }
 

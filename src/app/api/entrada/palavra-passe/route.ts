@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { hashDaPalavraPasse, palavraPasseConfere } from "@/lib/profissional-auth";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
-import { assinarSessaoDoCliente } from "@/lib/cliente-auth";
+import { assinarSessaoDoCliente, registarAppDoClienteAberta } from "@/lib/cliente-auth";
+import { CABECALHOS_DA_VERSAO, versaoDoCabecalho } from "@/lib/app-pro-no-telemovel";
 import {
   contaDoClientePorEmail,
   criarLinkDaConta,
@@ -83,6 +84,8 @@ export async function POST(req: NextRequest) {
       await registarEntradaDoCliente(conta.id);
       if (paraApp) {
         const { token, expiraEm } = await assinarSessaoDoCliente(email, "palavra-passe");
+        // d60 (17-11-2026): entrar pela app também é abrir a app — conta para «Quem conta para os 12».
+        await registarAppDoClienteAberta(email, versaoDoCabecalho(CABECALHOS_DA_VERSAO.map((c) => req.headers.get(c)).find((v) => v) ?? null));
         return NextResponse.json({
           ok: true,
           token,

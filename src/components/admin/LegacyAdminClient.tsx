@@ -30,6 +30,7 @@ import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import ContasPanel from "@/components/admin/ContasPanel";
 import ProgramaDaAppPanel from "@/components/admin/ProgramaDaAppPanel";
+import QuemContaParaOs12 from "@/components/admin/QuemContaParaOs12";
 import AdminLinkDoProgramaDaAppPanel from "@/components/admin/AdminLinkDoProgramaDaAppPanel";
 import { SECCOES_COM_AVISO } from "@/lib/novidades-do-backoffice";
 import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSeccao";
@@ -3354,7 +3355,13 @@ export default function ColaboradorAdminClient({
                 </div>
               )}
               {papel === "admin" && separadorDasContas === "programa" ? (
-                <ProgramaDaAppPanel authToken={token} />
+                <>
+                  <ProgramaDaAppPanel authToken={token} />
+                  {/* «Quem conta para os 12» da app de cliente — 17-11-2026 (d60). */}
+                  <div className="mt-6">
+                    <QuemContaParaOs12 app="cliente" tema="claro" />
+                  </div>
+                </>
               ) : (
                 <ContasPanel authToken={token} podeApagar={papel === "admin"} podeMudarEmail={papel === "admin"} />
               )}

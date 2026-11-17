@@ -3,7 +3,8 @@ import { consumirLigacaoDeEntradaDaApp } from "@/lib/db";
 import { MENSAGEM, type MotivoDeRecusa } from "@/lib/entrada-por-link";
 import { pareceUmCodigoDoAparelho, verificarLinkDaApp } from "@/lib/entrada-na-app";
 import { registarCliente } from "@/lib/conta-server";
-import { assinarSessaoDoCliente, type EntradaDoCliente } from "@/lib/cliente-auth";
+import { assinarSessaoDoCliente, registarAppDoClienteAberta, type EntradaDoCliente } from "@/lib/cliente-auth";
+import { CABECALHOS_DA_VERSAO, versaoDoCabecalho } from "@/lib/app-pro-no-telemovel";
 import { googleNaAppLigado, verificarIdTokenDoGoogle } from "@/lib/google-id-token";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 
@@ -111,6 +112,8 @@ export async function POST(req: NextRequest) {
     email = email.trim().toLowerCase();
     await registarCliente(email, nome);
     const { token, expiraEm } = await assinarSessaoDoCliente(email, entrada);
+    // d60 (17-11-2026): entrar pela app também é abrir a app — conta para «Quem conta para os 12».
+    await registarAppDoClienteAberta(email, versaoDoCabecalho(CABECALHOS_DA_VERSAO.map((c) => req.headers.get(c)).find((v) => v) ?? null));
     return NextResponse.json({ ok: true, token, expiraEm: expiraEm.toISOString(), email, entrada });
   } catch (err) {
     console.error("[cliente/entrar] falhou:", err instanceof Error ? err.message : err);

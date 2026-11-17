@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CABECALHOS_DA_VERSAO, registarAppAberta, versaoDoCabecalho } from "@/lib/app-pro-no-telemovel";
 import { profissionalParaEntrar, registarAcessoDoProfissional } from "@/lib/db";
 import {
   palavraPasseConfere,
@@ -118,6 +119,8 @@ export async function POST(req: NextRequest) {
      */
     if (corpo.paraApp === true) {
       const token = await assinarSessaoDoProfissional(p.id, p.name, true);
+      // d60 (17-11-2026): entrar pela app também é abrir a app — conta para «Quem conta para os 12».
+      await registarAppAberta(p.id, versaoDoCabecalho(CABECALHOS_DA_VERSAO.map((c) => req.headers.get(c)).find((v) => v) ?? null));
       return NextResponse.json({ ok: true, nome: p.name, token });
     }
 

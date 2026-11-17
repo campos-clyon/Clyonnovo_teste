@@ -9,6 +9,7 @@ import AdminErrosDaAppPanel from "@/components/admin/AdminErrosDaAppPanel";
 import AdminGmailsDoTestePanel from "@/components/admin/AdminGmailsDoTestePanel";
 import CoberturaPorConcelho from "@/components/admin/CoberturaPorConcelho";
 import AvisoATodosOsProfissionais from "@/components/admin/AvisoATodosOsProfissionais";
+import QuemContaParaOs12 from "@/components/admin/QuemContaParaOs12";
 import { useEAdministrador } from "@/hooks/useAdminAuth";
 
 /**
@@ -46,7 +47,12 @@ import { useEAdministrador } from "@/hooks/useAdminAuth";
  * E O AVISO A TODOS OS PROFISSIONAIS — 15-11-2026 (d11): o último separador,
  * só para o administrador. Ver `AvisoATodosOsProfissionais`.
  */
-type Aba = "inscritos" | "candidaturas" | "convites" | "erros" | "gmails" | "cobertura" | "aviso";
+/*
+ * E «QUEM CONTA PARA OS 12» — 17-11-2026 (d60): quem usa a CLYON Pro, quem
+ * parou e quem nunca entrou, para comparar com o número da Play. Só o
+ * administrador, e monta-se só quando se abre.
+ */
+type Aba = "inscritos" | "candidaturas" | "convites" | "erros" | "gmails" | "quem" | "cobertura" | "aviso";
 
 export default function AdminProfissionaisSeccao() {
   const [aba, setAba] = useState<Aba>("inscritos");
@@ -103,6 +109,9 @@ export default function AdminProfissionaisSeccao() {
       dica: "Gmails por pôr no teste da CLYON Pro",
       alerta: gmailsPorPor > 0,
     },
+    ...(eAdministrador
+      ? [{ id: "quem" as Aba, rotulo: "Quem conta para os 12", numero: null, dica: "", alerta: false }]
+      : []),
     { id: "cobertura", rotulo: "Cobertura por concelho", numero: null, dica: "", alerta: false },
     ...(eAdministrador
       ? [{ id: "aviso" as Aba, rotulo: "Aviso a todos os profissionais", numero: null, dica: "", alerta: false }]
@@ -214,6 +223,11 @@ export default function AdminProfissionaisSeccao() {
         <div role="tabpanel" id="painel-gmails" aria-labelledby="separador-gmails" hidden={aba !== "gmails"}>
           <AdminGmailsDoTestePanel onTotal={setGmailsPorPor} />
         </div>
+        {eAdministrador && (
+          <div role="tabpanel" id="painel-quem" aria-labelledby="separador-quem" hidden={aba !== "quem"}>
+            {aba === "quem" && <QuemContaParaOs12 app="pro" tema="escuro" />}
+          </div>
+        )}
         <div role="tabpanel" id="painel-cobertura" aria-labelledby="separador-cobertura" hidden={aba !== "cobertura"}>
           {aba === "cobertura" && <CoberturaPorConcelho />}
         </div>

@@ -282,6 +282,9 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/vitoria-aos-profissionais/interruptor", porque: "ligar as respostas automáticas da Vitória aos profissionais é do administrador, com o sim do dono (d21, 13-11-2026)" },
   // O aviso a todos os profissionais (d11, 15-11-2026): enviar a todos e o interruptor da faixa são do administrador.
   { seccao: "profissionais", rota: "/api/admin/aviso-aos-profissionais", porque: "o aviso a todos os profissionais (envio em massa) é só do administrador (d11, 15-11-2026)" },
+  // «Quem conta para os 12» (d60, 17-11-2026): nomes, emails e telefones de quem está no teste das apps.
+  { seccao: "profissionais", rota: "/api/admin/quem-conta-para-os-12", porque: "quem usa a CLYON Pro, com o telefone, e a lista da Play colada são do administrador (d60, 17-11-2026)" },
+  { seccao: "contas", rota: "/api/admin/quem-conta-para-os-12", porque: "quem usa a app de cliente, com o telefone, e a lista da Play colada são do administrador (d60, 17-11-2026)" },
   { seccao: "configs", rota: "/api/admin/aviso-aos-profissionais", porque: "o interruptor «Mostrar o aviso do novo modelo» é do administrador, com o sim do dono (d11, 15-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-seguimento/interruptor", porque: "ligar a mensagem gentil da Vitória a quem fica calado é do administrador, com o sim do dono (d25, 14-11-2026)" },
   // «Só ver» — 03-10-2026: as rotas que SÓ escrevem dinheiro ficam inteiras com o administrador.
