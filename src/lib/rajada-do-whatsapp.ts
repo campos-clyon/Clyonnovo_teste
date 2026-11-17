@@ -30,6 +30,9 @@
  * ESTE FICHEIRO É PURO. A espera, a base e a tranca estão na rota da ponte.
  */
 
+import { PEDIR_PARA_REENVIAR_A_FOTOGRAFIA } from "./voz-da-vitoria";
+import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
+
 /**
  * Oito segundos depois da ÚLTIMA mensagem.
  *
@@ -68,10 +71,63 @@ export const MARCA_DE_VIDEO = "[vídeo]";
  * a Vitória respondeu «Obrigada pelas imagens!»: o parceiro recebeu o pedido
  * sem a fotografia e o cliente ficou a achar que ela tinha sido vista. Esta
  * marca não é uma imagem — não se agradece, não conta como fotografia (no fim
- * pede-se na mesma) e não corre a rajada: leva no instante o pedido para a
- * reenviar (`PEDIR_PARA_REENVIAR_A_FOTOGRAFIA`, em voz-da-vitoria.ts).
+ * pede-se na mesma) e não corre a rajada: leva o pedido para a reenviar
+ * (`PEDIR_PARA_REENVIAR_A_FOTOGRAFIA`, em voz-da-vitoria.ts) — desde a d57
+ * depois de `ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS`, e sem cortar a rajada.
  */
 export const MARCA_DE_FOTOGRAFIA_FALHADA = "[fotografia não descarregada]";
+
+/**
+ * ESPERA-SE ANTES DE PEDIR PARA A REENVIAR — 17-11-2026 (decisão d57).
+ *
+ * O cliente escreveu o que era para levar e mandou as fotografias; uma não
+ * descarregou, e o pedido para a reenviar saiu NO INSTANTE, entre o texto
+ * dele e a resposta — e cortou a rajada: o texto ficou para trás, e a
+ * Vitória respondeu como se ele não tivesse dito nada. Agora espera-se isto,
+ * e não se pede se entretanto chegou uma fotografia com os bytes (ele já a
+ * reenviou).
+ */
+export const ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS = 20_000;
+
+/**
+ * O PEDIDO DE REENVIO NÃO É UMA RESPOSTA — 17-11-2026 (d57). Não corta a
+ * rajada, como as mensagens da equipa não cortam a pergunta da Vitória: o
+ * texto que veio antes dele continua por responder, e lê-se. Vale em
+ * português e nas traduções fixas (a frase pode ter saído traduzida).
+ */
+export function ePedidoDeReenvio(texto: string): boolean {
+  const t = texto.trim();
+  if (t === PEDIR_PARA_REENVIAR_A_FOTOGRAFIA) return true;
+  return (["en", "fr", "es"] as const).some((l) => traducaoFixa(PEDIR_PARA_REENVIAR_A_FOTOGRAFIA, l)?.trim() === t);
+}
+
+/**
+ * Onde começa a rajada: a seguir à nossa última resposta — e o pedido de
+ * reenvio não conta como resposta (d57).
+ */
+function inicioDaRajada(mensagens: MensagemComId[]): number {
+  let desde = -1;
+  mensagens.forEach((m, i) => {
+    if (m.direccao === "out" && !ePedidoDeReenvio(m.texto)) desde = i;
+  });
+  return desde;
+}
+
+/**
+ * CHEGOU UMA FOTOGRAFIA COM BYTES DEPOIS DA QUE FALHOU? — d57. Então não se
+ * pede para a reenviar: já chegou.
+ */
+export function chegouFotografiaDepois(mensagens: MensagemComId[], idDaFalhada: number): boolean {
+  return mensagens.some((m) => m.direccao === "in" && m.id > idDaFalhada && eMarcaDeImagem(m.texto));
+}
+
+/**
+ * HÁ UMA FALHADA MAIS NOVA? — d57. Três seguidas levam um pedido: pede a mais
+ * nova, depois da espera; as outras calam-se.
+ */
+export function haFalhadaMaisNova(mensagens: MensagemComId[], idDaFalhada: number): boolean {
+  return mensagens.some((m) => m.direccao === "in" && m.id > idDaFalhada && eFotografiaFalhada(m.texto));
+}
 
 /** Uma fotografia que chegou sem os bytes — ver `MARCA_DE_FOTOGRAFIA_FALHADA`. */
 export function eFotografiaFalhada(texto: string): boolean {
@@ -161,10 +217,7 @@ export function jaPediuParaReenviar(mensagens: MensagemComId[], frase: string): 
 
 /** Quantas fotografias falhadas chegaram desde a nossa última resposta (d34). */
 export function fotografiasFalhadasDaRajada(mensagens: MensagemComId[]): number {
-  let desde = -1;
-  mensagens.forEach((m, i) => {
-    if (m.direccao === "out") desde = i;
-  });
+  const desde = inicioDaRajada(mensagens);
   return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && eFotografiaFalhada(m.texto)).length;
 }
 
@@ -207,10 +260,7 @@ export function eAUltimaDaRajada(minhaId: number, mensagens: MensagemComId[]): b
  * Vitória que há o que agradecer nesta resposta.
  */
 export function imagensDaRajada(mensagens: MensagemComId[]): number {
-  let desde = -1;
-  mensagens.forEach((m, i) => {
-    if (m.direccao === "out") desde = i;
-  });
+  const desde = inicioDaRajada(mensagens);
   return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && eMarcaDeImagem(m.texto)).length;
 }
 
@@ -220,10 +270,7 @@ export function imagensDaRajada(mensagens: MensagemComId[]): number {
  * fotografias do mesmo monte dizem três vezes o mesmo).
  */
 export function oQueSeViuNaRajada(mensagens: MensagemComId[]): string[] {
-  let desde = -1;
-  mensagens.forEach((m, i) => {
-    if (m.direccao === "out") desde = i;
-  });
+  const desde = inicioDaRajada(mensagens);
   const vistos: string[] = [];
   for (const m of mensagens.slice(desde + 1)) {
     if (m.direccao !== "in") continue;
@@ -245,10 +292,7 @@ export function oQueSeViuNaRajada(mensagens: MensagemComId[]): string[] {
  * respondeu a tudo enquanto esta esperava pela tranca.
  */
 export function textoDaRajada(mensagens: MensagemComId[]): string {
-  let desde = -1;
-  mensagens.forEach((m, i) => {
-    if (m.direccao === "out") desde = i;
-  });
+  const desde = inicioDaRajada(mensagens);
   return mensagens
     .slice(desde + 1)
     .filter((m) => m.direccao === "in")
@@ -284,7 +328,7 @@ function semAcentosAqui(t: string): string {
 function ultimaDaVitoria(mensagens: MensagemComId[]): string {
   for (let i = mensagens.length - 1; i >= 0; i--) {
     const m = mensagens[i];
-    if (m.direccao === "out" && !eDaEquipa(m.texto)) return m.texto;
+    if (m.direccao === "out" && !eDaEquipa(m.texto) && !ePedidoDeReenvio(m.texto)) return m.texto;
   }
   return "";
 }
@@ -348,9 +392,6 @@ export function ultimaMensagemLida(mensagens: MensagemComId[]): number {
 
 /** Quantos vídeos chegaram desde a nossa última resposta — vão para a nota do pedido (27-10-2026). */
 export function videosDaRajada(mensagens: MensagemComId[]): number {
-  let desde = -1;
-  mensagens.forEach((m, i) => {
-    if (m.direccao === "out") desde = i;
-  });
+  const desde = inicioDaRajada(mensagens);
   return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && m.texto.trim() === MARCA_DE_VIDEO).length;
 }

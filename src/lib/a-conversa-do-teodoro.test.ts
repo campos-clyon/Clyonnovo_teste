@@ -126,7 +126,8 @@ describe.each(CAMINHOS)("a conversa do Teodoro, %s", (_, falar) => {
   it("1. «não é entulho de obras» não é entulho: são embalagens e um colchão — monos", () => {
     const { estado, disse } = falar();
     expect(estado.dados.serviceType).toBe("recolha_monos");
-    expect(disse[0]).toContain("Fica anotado: recolha de monos.");
+    // Desde a d57 diz também o que leu (a peça, a morada, o andar).
+    expect(disse[0]).toContain("Fica anotado: recolha de monos — um colchão");
     expect(disse.join("\n")).not.toMatch(/recolha de entulho|quanto entulho|Entulho:/i);
   });
 
@@ -332,7 +333,7 @@ describe("as peças do caso, uma a uma", () => {
 
   it("a quem perguntou «Vocês recolhem…?» o sim chega, a dizer que quem faz é o parceiro (d28) — sem um segundo sim", () => {
     const r = responderNaRecolha(recolhaNova(), "Vocês recolhem frigoríficos?", AGORA, false);
-    expect(r.resposta).toContain("Sim, é um serviço que os parceiros fazem! Fica anotado: recolha de monos.");
+    expect(r.resposta).toContain("Sim, é um serviço que os parceiros fazem! Fica anotado: recolha de monos — frigoríficos.");
     expect(r.resposta).not.toMatch(/fazemos/i);
     expect(r.resposta).not.toContain("Sim, é material");
     // Mas o que não se recolhe diz-se, mesmo aí.

@@ -326,7 +326,7 @@ describe("a conversa do Romão", () => {
     const c = falaComORomao();
     expect(c.estado.dados.serviceType).toBe("esvaziamento_apartamento");
     expect(c.disse[0]).toContain("Bom dia, Romão!");
-    expect(c.disse[0]).toContain("Fica anotado: esvaziamento de apartamento.");
+    expect(c.disse[0]).toContain("Fica anotado: esvaziamento de apartamento — 4.º andar, sem elevador.");
     expect(c.disse.join("\n")).not.toContain("Não percebi o serviço");
   });
 

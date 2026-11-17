@@ -140,6 +140,41 @@ function imagensQueFalharamNaSemana(agora = Date.now()) {
   return imagensQueFalharam.filter((t) => agora - t <= SEMANA_MS).length;
 }
 
+/**
+ * A FOTOGRAFIA TENTA-SE TRÊS VEZES — 17-11-2026 (decisão d57).
+ *
+ * Uma fotografia que não descarrega à primeira descarrega muitas vezes à
+ * segunda: o WhatsApp Web ainda a está a buscar ao telemóvel. Antes, à
+ * primeira falha ia logo a marca de «não descarregada», e a Vitória pedia ao
+ * cliente para a reenviar — uma fotografia que tinha chegado. Agora espera-se
+ * um pouco (1,5 s e depois 4 s) e só à terceira falha se dá por perdida. E o
+ * registo diz o tipo do ficheiro e a versão da página, para se saber se foi a
+ * página do WhatsApp Web que mudou.
+ */
+const ESPERAS_DA_FOTOGRAFIA_MS = [1500, 4000];
+let versaoDaPaginaCarregada = null;
+async function descarregarComTentativas(msg, telefone) {
+  for (let tentativa = 0; tentativa <= ESPERAS_DA_FOTOGRAFIA_MS.length; tentativa++) {
+    const media = await msg.downloadMedia().catch((e) => {
+      log("foto de", telefone, "— tentativa", tentativa + 1, "falhou:", e?.message ?? e);
+      return null;
+    });
+    if (media?.data) {
+      if (tentativa > 0) log("foto de", telefone, "descarregou à tentativa", tentativa + 1);
+      return media;
+    }
+    if (tentativa < ESPERAS_DA_FOTOGRAFIA_MS.length) {
+      await new Promise((r) => setTimeout(r, ESPERAS_DA_FOTOGRAFIA_MS[tentativa]));
+    }
+  }
+  log(
+    "foto de", telefone, "sem bytes depois de", ESPERAS_DA_FOTOGRAFIA_MS.length + 1, "tentativas —",
+    "tipo:", msg.type, "ficheiro:", msg._data?.mimetype ?? "?",
+    "página do WhatsApp Web:", versaoDaPaginaCarregada ?? "a da biblioteca",
+  );
+  return null;
+}
+
 http
   .createServer((req, res) => {
     const agora = Date.now();
@@ -875,6 +910,7 @@ function destrancarOPerfil() {
 async function arrancar() {
   destrancarOPerfil();
   const versao = await versaoDaPagina();
+  versaoDaPaginaCarregada = versao;
   log("a arrancar com o Chromium em", CHROME, "e a página", versao ?? "que a biblioteca trouxer");
 
   client = new Client({
@@ -1034,7 +1070,7 @@ async function arrancar() {
       }
 
       if (msg.hasMedia && msg.type === "image") {
-        const media = await msg.downloadMedia().catch(() => null);
+        const media = await descarregarComTentativas(msg, telefone);
         if (media?.data) {
           log("← foto de", telefone);
           const r = await site("POST", {

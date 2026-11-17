@@ -124,15 +124,26 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
  * envio passa pelas guardas de sempre (`enviarTextoWhatsApp`: quem pode
  * ouvir, a repetição, a língua). Nunca atira: a marca já está no fio.
  */
-async function pedirParaReenviarAFotografia(telefone: string): Promise<void> {
+/*
+ * E NÃO NO INSTANTE — 17-11-2026 (decisão d57). Espera-se
+ * `ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS`: se entretanto chegou uma
+ * fotografia com os bytes, não se pede; se chegou outra falhada, pede ela.
+ */
+async function pedirParaReenviarAFotografia(telefone: string, idDaFalhada: number | null): Promise<void> {
   try {
-    const { mensagensComIdDoNumeroWhatsApp } = await import("@/lib/db");
-    const { jaPediuParaReenviar } = await import("@/lib/rajada-do-whatsapp");
+    const { mensagensComIdDoNumeroWhatsApp, comTrancaDoNumeroWhatsApp } = await import("@/lib/db");
+    const { jaPediuParaReenviar, ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS, chegouFotografiaDepois, haFalhadaMaisNova } =
+      await import("@/lib/rajada-do-whatsapp");
     const { PEDIR_PARA_REENVIAR_A_FOTOGRAFIA } = await import("@/lib/voz-da-vitoria");
-    const fio = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
-    if (jaPediuParaReenviar(fio, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA)) return;
     const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
-    await enviarTextoWhatsApp(telefone, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA).catch(() => false);
+    await new Promise((r) => setTimeout(r, ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS));
+    // Lido e enviado dentro da tranca do número: duas falhadas não pedem as duas.
+    await comTrancaDoNumeroWhatsApp(telefone, async () => {
+      const fio = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
+      if (idDaFalhada != null && (chegouFotografiaDepois(fio, idDaFalhada) || haFalhadaMaisNova(fio, idDaFalhada))) return;
+      if (jaPediuParaReenviar(fio, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA)) return;
+      await enviarTextoWhatsApp(telefone, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA).catch(() => false);
+    });
   } catch (e) {
     console.error("[ponte] não pedi para reenviar a fotografia:", e instanceof Error ? e.message : e);
   }
@@ -597,12 +608,14 @@ export async function POST(req: NextRequest) {
        * vez por rajada de fotografias falhadas), como ao áudio que não se
        * ouviu. A legenda, essa, segue pela rajada como texto.
        */
-      await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA_FALHADA).catch(() => null);
-      await pedirParaReenviarAFotografia(telefone);
-      if (texto.trim()) {
+      // Desde a d57 (17-11-2026) o pedido espera, e a legenda corre ao mesmo tempo.
+      const daFalhada = await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA_FALHADA).catch(() => null);
+      const legenda = async () => {
+        if (!texto.trim()) return;
         const daLegenda = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
         await responderARajada(telefone, daLegenda, texto);
-      }
+      };
+      await Promise.all([pedirParaReenviarAFotografia(telefone, daFalhada), legenda()]);
     } else if (marcaSemBytes) {
       // A imagem sem os bytes — ver `midia`. A marca vai para o fio, e a
       // rajada responde como a uma fotografia que chegou.

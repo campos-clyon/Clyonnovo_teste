@@ -31,6 +31,8 @@ import { LICOES_DAS_CONVERSAS } from "./whatsapp-compreensao";
  */
 
 const TELEFONE = "351910000000";
+/** O relógio verdadeiro, guardado antes de o de mentira entrar. */
+const setTimeoutVerdadeiro = globalThis.setTimeout;
 
 /* ── A base, o envio e o cérebro, de mentira ───────────────────────────── */
 
@@ -95,6 +97,8 @@ describe("a conversa: uma fotografia que não descarregou", () => {
       import("@/lib/rajada-do-whatsapp"),
       import("@/lib/rajada-em-curso"),
       import("@/lib/voz-da-vitoria"),
+      import("@/lib/db"),
+      import("@/lib/whatsapp-cloud"),
       import("next/server"),
     ]);
   }, 60_000);
@@ -109,49 +113,94 @@ describe("a conversa: uma fotografia que não descarregou", () => {
     vi.useRealTimers();
   });
 
-  it("pede para a reenviar, e nunca agradece imagens que não viu", async () => {
-    const r = await daPonte({ midia: "foto", imagemFalhou: true, texto: "" });
+  /*
+   * Desde a d57 (17-11-2026) o pedido espera ~20 s: o relógio é de mentira, e
+   * anda um segundo de cada vez até as rotas acabarem (as esperas só começam
+   * depois dos imports). `aMeio` corre enquanto as rotas esperam.
+   */
+  async function correr(corpos: Array<Record<string, unknown>>, aMeio?: (segundo: number) => void) {
+    vi.useFakeTimers();
+    let porAcabar = corpos.length;
+    // Umas atrás das outras, como chegam da ponte: com o relógio parado, a poucos ms de distância.
+    const rs: Array<Promise<Response>> = [];
+    for (const c of corpos) {
+      rs.push(
+        daPonte(c).finally(() => {
+          porAcabar -= 1;
+        }),
+      );
+      await new Promise((r) => setTimeoutVerdadeiro(r, 50));
+    }
+    // E 10 ms de relógio verdadeiro entre cada segundo: os imports a meio da rota levam tempo a sério.
+    // Até ao fim, por muitos segundos de mentira que leve: com a suite inteira a correr, os imports demoram.
+    for (let i = 0; i < 2000 && porAcabar > 0; i++) {
+      aMeio?.(i);
+      await vi.advanceTimersByTimeAsync(1_000);
+      await new Promise((r) => setTimeoutVerdadeiro(r, 10));
+    }
+    return Promise.all(rs);
+  }
+
+  it("pede para a reenviar (depois da espera), e nunca agradece imagens que não viu", async () => {
+    const [r] = await correr([{ midia: "foto", imagemFalhou: true, texto: "" }]);
     expect(r.status).toBe(200);
     expect(mundo.fio[0]).toMatchObject({ direccao: "in", texto: MARCA_DE_FOTOGRAFIA_FALHADA });
     expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
     expect(mundo.enviadas.join(" ")).not.toMatch(/obrigad[ao] pel[ao]s? (imagens|fotografias?)/i);
     // Sem palavras não há rajada: o cérebro nem é chamado.
     expect(mundo.cerebro).toEqual([]);
-  });
+  }, 30_000);
+
+  it("não pede no instante: aos 10 s ainda não saiu nada", async () => {
+    let aos10: string[] | null = null;
+    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }], (s) => {
+      if (s === 10) aos10 = [...mundo.enviadas];
+    });
+    expect(aos10).toEqual([]);
+    expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
+  }, 30_000);
+
+  it("se entretanto chegou a fotografia com os bytes, não se pede", async () => {
+    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }], (s) => {
+      if (s === 5) gravar("in", MARCA_DE_FOTOGRAFIA);
+    });
+    expect(mundo.enviadas).toEqual([]);
+  }, 30_000);
 
   it("a ponte antiga (só «midia: foto») dá o mesmo — a «foto» sem bytes é sempre uma que falhou", async () => {
-    await daPonte({ midia: "foto", texto: "" });
+    await correr([{ midia: "foto", texto: "" }]);
     expect(mundo.fio[0].texto).toBe(MARCA_DE_FOTOGRAFIA_FALHADA);
     expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
-  });
+  }, 30_000);
 
   it("três fotografias falhadas seguidas levam UM pedido", async () => {
-    await daPonte({ midia: "foto", imagemFalhou: true, texto: "" });
-    await daPonte({ midia: "foto", imagemFalhou: true, texto: "" });
-    await daPonte({ midia: "foto", imagemFalhou: true, texto: "" });
+    await correr([
+      { midia: "foto", imagemFalhou: true, texto: "" },
+      { midia: "foto", imagemFalhou: true, texto: "" },
+      { midia: "foto", imagemFalhou: true, texto: "" },
+    ]);
     expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
-  });
+  }, 30_000);
 
   it("a legenda segue pela rajada como texto, sem contar a fotografia como vista", async () => {
-    vi.useFakeTimers();
-    let acabou = false;
-    const r = daPonte({ midia: "foto", imagemFalhou: true, texto: "Um sofá e um colchão" }).finally(() => {
-      acabou = true;
-    });
-    // Um segundo de cada vez, até a rota acabar: a espera da rajada só começa depois dos imports.
-    for (let i = 0; i < 120 && !acabou; i++) await vi.advanceTimersByTimeAsync(1_000);
-    await r;
+    await correr([{ midia: "foto", imagemFalhou: true, texto: "Um sofá e um colchão" }]);
     expect(mundo.enviadas[0]).toBe(PEDIR_PARA_REENVIAR_A_FOTOGRAFIA);
     expect(mundo.cerebro).toEqual([{ texto: "Um sofá e um colchão", imagens: 0 }]);
   }, 30_000);
 
+  it("[texto][falhada][pedido de reenvio]: o texto que veio antes é lido (d57)", async () => {
+    await correr([{ texto: "Preciso de retirar um roupeiro de 4 módulos" }, { midia: "foto", imagemFalhou: true, texto: "" }]);
+    expect(mundo.cerebro).toEqual([{ texto: "Preciso de retirar um roupeiro de 4 módulos", imagens: 0 }]);
+    expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
+  }, 30_000);
+
   it("depois de ele escrever, uma nova falhada volta a pedir", async () => {
-    await daPonte({ midia: "foto", imagemFalhou: true, texto: "" });
+    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }]);
     gravar("in", "Já mandei");
     gravar("out", "Obrigada!");
-    await daPonte({ midia: "foto", imagemFalhou: true, texto: "" });
+    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }]);
     expect(mundo.enviadas.filter((t) => t === PEDIR_PARA_REENVIAR_A_FOTOGRAFIA)).toHaveLength(2);
-  });
+  }, 30_000);
 });
 
 describe("as regras, puras", () => {

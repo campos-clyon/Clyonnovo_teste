@@ -320,7 +320,9 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - A LIMPEZA DEPOIS DE ESVAZIAR FAZ-SE: «limpeza profunda da garagem, incluindo lavagem do pavimento» fica na "descricao" e o serviço continua a ser o esvaziamento ("esvaziamento_garagem").
 - «Consegue se houver lugar, senão fica em segunda fila» à pergunta da carrinha é "estacionamento": "sim" — e «segunda fila» NUNCA é segunda-feira nem "quando".
 - O LINK DE UM ANÚNCIO DE CASA (idealista, imovirtual, kasas-portugal, casa.sapo, supercasa, remax, era, century21…) diz a zona e a tipologia NO PRÓPRIO ENDEREÇO: «…/apartamento-t3-com-boas-areas-na-mina-de-agua-amadora/…» é um T3 na Mina de Água, Amadora → "codigoPostal": "Amadora". O endereço não é a morada (não tem rua nem número), e em "resposta" nunca digas que abriste ou viste o anúncio.
-- «Orçamento», «Preço?», «Quanto custa?» sozinhos, a meio das perguntas, NÃO são resposta à pergunta em cima: o cliente quer o preço. Não preenchas campo nenhum com isso, e nunca o leias como morada, nome ou descrição.`;
+- «Orçamento», «Preço?», «Quanto custa?» sozinhos, a meio das perguntas, NÃO são resposta à pergunta em cima: o cliente quer o preço. Não preenchas campo nenhum com isso, e nunca o leias como morada, nome ou descrição.
+- UM MONTA-CARGAS NÃO É UM ELEVADOR QUALQUER: «Tem monta-cargas mas não tenho a certeza que cabe», «monta cargas, não sei se cabe» → "elevador": "sim", e a frase dele (com a dúvida) fica na "descricao" — é ela que diz que é um monta-cargas e que falta confirmar se cabe. Os módulos e as partes («roupeiro de 4 módulos», «desmonta-se», «divide-se em duas partes») ficam na "descricao" — nunca a cortes a meio da morada.
+- CADA DATA COM A SUA PARTE DO DIA: «Amanhã ao final do dia depois das 17h ou quinta da parte da manhã» são DUAS datas — amanhã ao fim do dia (depois das 17h) ou quinta de manhã; «quinta da parte da manhã» é a quinta-feira, nunca um sítio («Quinta da …»). Em "quando" vai a frase inteira.`;
 
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
 export const EXEMPLOS_DAS_CONVERSAS = `Mais exemplos, das conversas verdadeiras:

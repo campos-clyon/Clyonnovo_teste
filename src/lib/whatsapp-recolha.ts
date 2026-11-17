@@ -96,7 +96,7 @@ import { jaFalouComEle } from "./o-que-a-equipa-ja-disse";
 import { emTerra } from "./preposicao-da-terra";
 import { estimativaDoEntulhoDito } from "./preco-do-entulho-na-conversa";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
-import { datasDitas, primeiraPreferida, quandoComVariasDatas } from "./datas-ditas";
+import { datasDitas, parteDoDiaNaFrase, primeiraPreferida, quandoComVariasDatas } from "./datas-ditas";
 import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
 import { COMO_FUNCIONA, perguntaOQueAconteceAgora } from "./perguntas-frequentes-da-vitoria";
 import { separarASegundaMorada, type SegundaMorada } from "./segunda-morada";
@@ -169,6 +169,14 @@ export type DadosDaRecolha = {
   localidadeDestino?: string | null;
   floor?: string | null;
   hasElevator?: string | null;
+  /**
+   * O MONTA-CARGAS — 17-11-2026 (decisão d57). «Tem monta-cargas mas não
+   * tenho a certeza que cabe» foi lido como «elevador: sim». O pedido grava
+   * o elevador com os valores que o motor conhece («yes», ou «small» quando
+   * não sabe se cabe), e isto diz que é um monta-cargas — no resumo e no que
+   * o parceiro lê.
+   */
+  montaCargas?: { cabe: "sim" | "nao_sei" };
   parkingDistance?: string | null;
   /**
    * O ACESSO NO DESTINO DE UMA MUDANÇA — 10-10-2026, o Leopoldo.
@@ -1011,7 +1019,8 @@ export function interpretarQuando(
   const ditas = datasDitas(texto, agora);
   const escolhida = primeiraPreferida(ditas);
   const escrita = ditas.some((x) => x.tipo === "data");
-  if (escolhida && (escrita || !/\b(depois de amanha|amanha|hoje|agora|urgen\w*)\b/.test(t))) {
+  // «Amanhã» também é uma data dita desde a d57 (17-11-2026); lê-se pelos ramos de sempre, abaixo.
+  if (escolhida && escolhida.tipo !== "relativa" && (escrita || !/\b(depois de amanha|amanha|hoje|agora|urgen\w*)\b/.test(t))) {
     const [a, m, dd] = escolhida.dia.split("-").map(Number);
     dia = new Date(Date.UTC(a, m - 1, dd, 9, 0, 0, 0));
   } else if (/depois de amanha/.test(t)) {
@@ -1572,6 +1581,12 @@ function quandoNoResumo(d: DadosDaRecolha): string {
   if (d.quandoComTodas) return d.quandoComTodas;
   if (d.dataDesejada) {
     const comHora = disseAHora(d.quandoTexto);
+    // «Depois das 17h» não é «às 17:00» — 17-11-2026 (d57): a parte do dia, colada à data.
+    const parteDoDia = parteDoDiaNaFrase(semAcentos(d.quandoTexto ?? ""));
+    if (/^(ao fim do dia|de manha|a tarde|a noite).*\(|depois d|a partir d|antes d/.test(semAcentos(parteDoDia))) {
+      const soODia = dataPorExtenso(d.dataDesejada, false);
+      if (soODia) return `${soODia}, ${parteDoDia}`;
+    }
     const dia = dataPorExtenso(d.dataDesejada, comHora);
     if (dia) {
       if (comHora) return dia;
@@ -1638,11 +1653,17 @@ function linhasDoResumo(d: DadosDaRecolha): string[] {
     rotulo: string,
     lado?: string | null,
     metros?: number | null,
+    montaCargas?: DadosDaRecolha["montaCargas"],
   ) => {
     // O lado da porta com o andar — «r/c Esq» (26-10-2026): a morada já não o leva.
     const semLado = floor === "0" ? "r/c" : floor === "-1" ? "cave" : floor?.startsWith("-") ? `piso ${floor}` : (floor ?? "—");
     const andar = lado && floor != null ? `${semLado} ${lado}` : semLado;
-    const elevador = elev === "yes" ? "sim" : elev === "small" ? "sim, pequeno" : elev === "no" ? "não" : "—";
+    // O monta-cargas pelo nome dele, e não «sim» (17-11-2026, d57).
+    const elevador = montaCargas
+      ? montaCargas.cabe === "nao_sei"
+        ? "monta-cargas (não sabe se cabe)"
+        : "monta-cargas"
+      : elev === "yes" ? "sim" : elev === "small" ? "sim, pequeno" : elev === "no" ? "não" : "—";
     // Os metros que ele disse, e não só «não» (28-10-2026, d35).
     const estacionar =
       metros != null ? aCarrinhaFicaA(metros) : estac === "near" ? "sim" : estac === "far" ? "não" : "a confirmar";
@@ -1669,7 +1690,15 @@ function linhasDoResumo(d: DadosDaRecolha): string[] {
     `Nome: ${d.contactName ?? "—"}`,
     `Morada: ${moradaNumaLinha(d.address, d.postalCode, d.city) || "—"}`,
     mudanca ? `Destino: ${moradaNumaLinha(d.moradaDestino, d.codigoPostalDestino, d.localidadeDestino) || "—"}` : null,
-    acessoDe(d.floor, d.hasElevator, d.parkingDistance, mudanca ? "Na origem: andar " : "Andar: ", d.lado, d.metrosAtePorta),
+    acessoDe(
+      d.floor,
+      d.hasElevator,
+      d.parkingDistance,
+      mudanca ? "Na origem: andar " : "Andar: ",
+      d.lado,
+      d.metrosAtePorta,
+      d.hasElevator === "yes" || d.hasElevator === "small" ? d.montaCargas : undefined,
+    ),
     mudanca
       ? acessoDe(d.andarDestino, d.elevadorDestino, d.estacionamentoDestino, "No destino: andar ", null, d.metrosAtePortaDestino)
       : null,
@@ -2330,6 +2359,14 @@ const DESPEDIDA =
  * Só há descrição se alguma frase falar mesmo de coisas ou do trabalho — senão
  * «Gostaria de saber o valor primeiro» passava a ser a descrição de alguém.
  */
+/**
+ * A FRASE DA MORADA SEM A MORADA — 17-11-2026 (decisão d57). «Fica na Rua …
+ * 14, 3.º andar, 1500-123 Lisboa.» perdia a morada (que tem campo próprio) e
+ * deixava «Fica na.» na descrição: cortada a meio, para o parceiro ler.
+ */
+const SOBRA_DA_MORADA =
+  /^(?:(?:e|fica|ficam|fica situad[oa]s?|situad[oa]s?|localizad[oa]s?|moro|mora|moramos|esta|estao|estou|e aqui)\s+)?(?:na|no|nas|nos|em|ao|a)?\s*[.!,;:]*$/;
+
 function descricaoDaMensagem(texto: string, nome: string | undefined, morada?: string | null): string | null {
   const linhas: string[] = [];
   let falaDoTrabalho = false;
@@ -2358,6 +2395,8 @@ function descricaoDaMensagem(texto: string, nome: string | undefined, morada?: s
         if (CODIGO_POSTAL_SOLTO.test(comHifenNoCodigoPostal(f))) return false;
         if (falaDoIva(f)) return false;
         if (moradaNaFrase(f) && !falaDeCoisas(f)) return false;
+        // «Fica na.» — o que sobra da frase da morada, sem a morada (d57, 17-11-2026).
+        if (SOBRA_DA_MORADA.test(semAcentos(f))) return false;
         // As perguntas que a Vitória responde logo não são o trabalho (26-10-2026).
         if (/\?\s*$/.test(f) && (perguntaSeAceitam(f) || perguntaPelaHora(f))) return false;
         return true;
@@ -3007,10 +3046,35 @@ export function preencherPeloQueDisse(
     const negativo = andarNegativoDito(t);
     if (negativo) d.floor = negativo;
   }
+  // O monta-cargas manda sobre o «elevador: sim» que o modelo leu nesta mensagem (d57).
+  const mc = montaCargasNaFrase(t);
+  if (mc && d.floor !== "0" && (d.hasElevator == null || (estaMensagem && !d.montaCargas))) {
+    d.montaCargas = { cabe: mc };
+    d.hasElevator = mc === "nao_sei" ? "small" : "yes";
+    const linha = mc === "nao_sei" ? "Elevador: monta-cargas (não sabe se cabe)" : "Elevador: monta-cargas";
+    if (!(d.acessoDito ?? "").includes("monta-cargas")) {
+      d.acessoDito = (d.acessoDito ? `${d.acessoDito}\n${linha}` : linha).slice(0, 600);
+    }
+  }
   if (d.hasElevator == null && d.floor !== "0") {
     const f = factosSoltos(t);
     if (f.hasElevator) d.hasElevator = f.hasElevator;
   }
+}
+
+/**
+ * O MONTA-CARGAS NUMA FRASE — 17-11-2026 (decisão d57): «sim» quando o disse
+ * sem dúvida, «nao_sei» com «não tenho a certeza que cabe», «não sei se
+ * cabe», «talvez não caiba»; `null` quando não fala dele.
+ */
+export function montaCargasNaFrase(texto: string | null | undefined): "sim" | "nao_sei" | null {
+  const t = semAcentos(texto ?? "");
+  if (!/\bmonta[\s-]?cargas?\b/.test(t)) return null;
+  if (/\bnao (tem|ha) (um )?monta[\s-]?cargas?\b|\bsem monta[\s-]?cargas?\b/.test(t)) return null;
+  const duvida =
+    /\b(nao (tenho (a )?certeza|sei|sabemos|garanto)|sem certeza|duvid\w*|talvez)\b[^.!?\n]{0,30}\b(cabe|cabem|caiba|caibam|passa|passam|da|serve)\b/.test(t) ||
+    /\b(nao sei|nao tenho (a )?certeza) se\b/.test(t);
+  return duvida ? "nao_sei" : "sim";
 }
 
 /**
@@ -3086,7 +3150,8 @@ export function oQueSeCorrigiu(antes: DadosDaRecolha, depois: DadosDaRecolha): s
   if ((antes.floor ?? null) !== (depois.floor ?? null)) r.push(andarParaDizer(depois.floor));
   if ((antes.address ?? null) !== (depois.address ?? null) && depois.address) r.push(`morada ${depois.address}`);
   if ((antes.contactName ?? null) !== (depois.contactName ?? null) && depois.contactName) r.push(`nome ${depois.contactName}`);
-  if ((antes.quandoTexto ?? null) !== (depois.quandoTexto ?? null) && depois.quandoTexto) r.push(`quando: ${depois.quandoTexto}`);
+  // O quando tratado, como no resumo — e não as palavras dele tal e qual (d57, 17-11-2026).
+  if ((antes.quandoTexto ?? null) !== (depois.quandoTexto ?? null) && depois.quandoTexto) r.push(`quando: ${quandoNoResumo(depois)}`);
   if (antes.precisaFatura !== depois.precisaFatura && depois.precisaFatura !== undefined) {
     r.push(depois.precisaFatura ? `fatura: sim (com IVA de ${PERCENTAGEM_DO_IVA})` : "fatura: não");
   }
@@ -4148,7 +4213,8 @@ export function vozAntesDaPergunta(
   if (antes.passo === "servico" && d.serviceType) {
     const etiqueta = (ETIQUETAS[d.serviceType] ?? d.serviceType).toLowerCase();
     const sim = texto && perguntaSeFazemos(texto) ? SIM_OS_PARCEIROS_FAZEM : "Com todo o gosto!";
-    return `${sim} Fica anotado: ${etiqueta}${comALimpeza(d)}.\n\n${disponibilidade}`;
+    const lido = oQueSeLeuNaPrimeira(texto, antes.dados, d);
+    return `${sim} Fica anotado: ${etiqueta}${comALimpeza(d)}${lido ? ` — ${lido}` : ""}.\n\n${disponibilidade}`;
   }
   if (disponibilidade) return disponibilidade;
   if (proximo === "confirmar") return "";
@@ -4171,6 +4237,63 @@ export function vozAntesDaPergunta(
   const carrega =
     d.clienteCarrega && !antes.dados.clienteCarrega ? "Fica anotado que o carregamento até à viatura fica por sua conta. " : "";
   return `${obrigada ? `${obrigada} ` : ""}${carrega}`;
+}
+
+/**
+ * O QUE SE LEU NA PRIMEIRA MENSAGEM — 17-11-2026 (decisão d57).
+ *
+ * O cliente escreveu o roupeiro, os módulos, a morada, o andar e o
+ * monta-cargas de uma vez, e leu «Fica anotado: recolha de móveis.» — como
+ * se só se tivesse lido o serviço. Diz-se o que ficou anotado (a peça, a
+ * morada, o andar e o elevador), para ele ver que foi lido e poder corrigir;
+ * e o que já disse não se volta a perguntar (`respondido`). Só o que chegou
+ * nesta mensagem.
+ */
+const PECAS_QUE_SE_DIZEM =
+  "sof[aá]s?|camas?(?: de casal| de solteiro)?|colch(?:ão|ao|ões|oes)|roupeiros?|guarda[- ]?roupas?|arm[aá]rios?|c[oó]modas?|estantes?|mesas?|cadeiras?|aparadores?|frigor[ií]ficos?|m[aá]quinas? de (?:lavar|secar)(?: roupa| loiça| louça)?|fog(?:ão|ao)|beliches?|secret[aá]rias?|cristaleiras?|sapateiras?|estrados?|poltronas?";
+const NUMERO_POR_EXTENSO = "\\d+|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis";
+// Fronteiras pelas letras (com acentos): o `\b` não vê o «á» de «sofá» como letra.
+const PECA_NA_FRASE = new RegExp(
+  `(?<![\\p{L}\\d])(?:(?:${NUMERO_POR_EXTENSO})\\s+)?(?:${PECAS_QUE_SE_DIZEM})(?![\\p{L}\\d])(?:\\s+(?:de|com)\\s+(?:${NUMERO_POR_EXTENSO})\\s+(?:m[oó]dulos|partes|portas|gavetas|lugares|corpos)(?![\\p{L}\\d]))?`,
+  "giu",
+);
+
+function oQueSeLeuNaPrimeira(texto: string, antes: DadosDaRecolha, d: DadosDaRecolha): string {
+  const partes: string[] = [];
+  const t = (texto ?? "").replace(/\s+/g, " ");
+  const pecas: string[] = [];
+  for (const m of t.matchAll(PECA_NA_FRASE)) {
+    const p = m[0].trim().toLowerCase();
+    if (!pecas.includes(p) && pecas.length < 3) pecas.push(p);
+  }
+  if (pecas.length > 0) {
+    const sa = semAcentos(t);
+    const como = /\bdesmonta(-se|vel|veis)?\b|\bdesmontad[oa]s?\b/.test(sa)
+      ? " (desmonta-se)"
+      : /\bdivide-se\b|\bdivid\w+ em\b/.test(sa)
+        ? " (divide-se)"
+        : "";
+    const modulos = !pecas.some((p) => /m[oó]dulos|partes/.test(p)) ? t.match(/\b(\d+|dois|duas|tr[eê]s|quatro|cinco|seis)\s+(m[oó]dulos|partes)\b/i) : null;
+    partes.push(`${pecas.join(", ")}${modulos ? ` de ${modulos[0].toLowerCase()}` : ""}${como}`);
+  }
+  if (d.address && !antes.address) partes.push(`morada ${moradaNumaLinha(d.address, null, d.city) || d.address}`);
+  const acesso: string[] = [];
+  if (d.floor != null && antes.floor == null) acesso.push(andarParaDizer(d.floor));
+  if (d.hasElevator != null && antes.hasElevator == null && d.floor !== "0") {
+    acesso.push(
+      d.montaCargas
+        ? d.montaCargas.cabe === "nao_sei"
+          ? "com monta-cargas (falta confirmar se cabe)"
+          : "com monta-cargas"
+        : d.hasElevator === "yes"
+          ? "com elevador"
+          : d.hasElevator === "small"
+            ? "com elevador pequeno"
+            : "sem elevador",
+    );
+  }
+  if (acesso.length > 0) partes.push(acesso.join(", "));
+  return partes.join("; ");
 }
 
 /**

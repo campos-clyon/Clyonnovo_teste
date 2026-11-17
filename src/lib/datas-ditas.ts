@@ -31,8 +31,17 @@ export type DataDita = {
   papel: PapelDaData;
   /** Onde começa na frase (para a ordem). */
   posicao: number;
-  /** Escrita com o mês (ou dia/mês), ou só o dia da semana. */
-  tipo: "data" | "semana";
+  /**
+   * Escrita com o mês (ou dia/mês), só o dia da semana, ou «hoje», «amanhã»,
+   * «depois de amanhã» (17-11-2026, d57).
+   */
+  tipo: "data" | "semana" | "relativa";
+  /**
+   * A PARTE DO DIA DESTA DATA — 17-11-2026 (decisão d57): «ao fim do dia
+   * (depois das 17h)», «de manhã». Cada data com a sua: em «amanhã ao final
+   * do dia depois das 17h ou quinta da parte da manhã», a manhã é da quinta.
+   */
+  parteDoDia?: string;
 };
 
 const MESES_POR_NOME: Record<string, number> = {
@@ -80,7 +89,49 @@ const LIMITE_ANTES =
 const LIMITE_DEPOIS =
   /^[\s,)-]*(at the latest|latest|no maximo|o mais tardar|au plus tard|como maximo|a mas tardar)\s*([.;!?,\n]|$)/;
 
-type Mencao = { posicao: number; fim: number; tipo: "data" | "semana"; dia?: number; mes?: number; ano?: number; semana?: number };
+type Mencao = {
+  posicao: number;
+  fim: number;
+  tipo: "data" | "semana" | "relativa";
+  dia?: number;
+  mes?: number;
+  ano?: number;
+  semana?: number;
+  /** Dias a somar a hoje, nas relativas. */
+  salto?: number;
+};
+
+/** «hoje», «amanhã», «depois de amanhã» — d57. Sem acentos, como o resto. */
+const RELATIVA = /\b(depois de amanha|amanha|hoje)\b/g;
+
+/**
+ * A PARTE DO DIA NUM BOCADO DE FRASE — 17-11-2026 (decisão d57). O período
+ * («ao fim do dia», «de manhã», «à tarde», «à noite») e a hora com o que a
+ * prende («depois das 17h», «a partir das 9h», «antes das 12h», «às 10h»);
+ * os dois juntos ficam «ao fim do dia (depois das 17h)». Vazio quando não
+ * diz nada do dia.
+ */
+export function parteDoDiaNaFrase(bocado: string): string {
+  const t = bocado;
+  const periodo = /\b(final|fim) do dia\b|\bao final\b|\b(final|fim) da tarde\b/.test(t)
+    ? "ao fim do dia"
+    : /\bmanha\b/.test(t)
+      ? "de manhã"
+      : /\btarde\b/.test(t)
+        ? "à tarde"
+        : /\bnoite\b/.test(t)
+          ? "à noite"
+          : "";
+  const h = t.match(/\b(depois das|depois da|a partir das|a partir da|antes das|antes da|as|pelas)\s+(\d{1,2})(?:\s*h\s*(\d{2})?|:(\d{2}))?(?:\s*horas)?\b/);
+  let hora = "";
+  if (h && Number(h[2]) <= 23 && (h[3] || h[4] || /h|horas/.test(h[0]) || /^(depois|a partir|antes)/.test(h[1]))) {
+    const prende = { "depois das": "depois das", "depois da": "depois da", "a partir das": "a partir das", "a partir da": "a partir da", "antes das": "antes das", "antes da": "antes da", as: "às", pelas: "pelas" }[h[1]] ?? h[1];
+    const minutos = h[3] ?? h[4];
+    hora = `${prende} ${Number(h[2])}h${minutos && minutos !== "00" ? minutos : ""}`;
+  }
+  if (periodo && hora) return `${periodo} (${hora})`;
+  return periodo || hora;
+}
 
 /** «2ª feira», «4f» — o dia da semana por extenso, como `interpretarQuando`. */
 function comDiasPorExtenso(t: string): string {
@@ -115,6 +166,10 @@ function mencoes(t: string): Mencao[] {
   for (const m of t.matchAll(DIA_DA_SEMANA)) {
     const i = m.index ?? 0;
     juntar({ posicao: i, fim: i + m[0].length, tipo: "semana", semana: DIAS_POR_NOME[m[1]] });
+  }
+  for (const m of t.matchAll(RELATIVA)) {
+    const i = m.index ?? 0;
+    juntar({ posicao: i, fim: i + m[0].length, tipo: "relativa", salto: m[1] === "hoje" ? 0 : m[1] === "amanha" ? 1 : 2 });
   }
   out.sort((a, b) => a.posicao - b.posicao);
 
@@ -154,9 +209,13 @@ export function datasDitas(texto: string | null | undefined, agora: Date = new D
   const vistas = new Set<string>();
   const out: DataDita[] = [];
   let fimDaAnterior = 0;
-  for (const m of mencoes(t)) {
+  const todas = mencoes(t);
+  for (const [n, m] of todas.entries()) {
     let dia: Date;
-    if (m.tipo === "data") {
+    if (m.tipo === "relativa") {
+      dia = new Date(hoje);
+      dia.setUTCDate(dia.getUTCDate() + (m.salto ?? 0));
+    } else if (m.tipo === "data") {
       if (!m.dia || !m.mes || m.mes < 1 || m.mes > 12 || m.dia < 1 || m.dia > 31) continue;
       const ano = m.ano ?? parede.getUTCFullYear();
       dia = new Date(Date.UTC(ano, m.mes - 1, m.dia));
@@ -175,9 +234,21 @@ export function datasDitas(texto: string | null | undefined, agora: Date = new D
     const parte = antes.split(/[.;!?\n]|\b(?:ou|or)\b/).pop() ?? antes;
     const papel: PapelDaData = LIMITE_ANTES.test(parte) || LIMITE_DEPOIS.test(depois) ? "limite" : "preferida";
     fimDaAnterior = m.fim;
+    // A parte do dia é a que vem logo a seguir a esta data (até ao «ou» ou à
+    // data seguinte); senão, a que veio antes dela, na mesma parte da frase (d57).
+    const seguinte = todas[n + 1];
+    const aSeguir = t.slice(m.fim, seguinte ? seguinte.posicao : undefined).split(/[;\n]|\b(?:ou|or)\b/)[0] ?? "";
+    const parteDoDia = parteDoDiaNaFrase(aSeguir) || parteDoDiaNaFrase(parte);
     if (vistas.has(iso)) continue;
     vistas.add(iso);
-    out.push({ dia: iso, diaDaSemana: dia.getUTCDay(), papel, posicao: m.posicao, tipo: m.tipo });
+    out.push({
+      dia: iso,
+      diaDaSemana: dia.getUTCDay(),
+      papel,
+      posicao: m.posicao,
+      tipo: m.tipo,
+      ...(parteDoDia ? { parteDoDia } : {}),
+    });
   }
   return out;
 }
@@ -200,8 +271,10 @@ export function dataCurta(d: DataDita): string {
  * As preferidas pela ordem, com «ou»; o limite a seguir. Vazio sem datas.
  */
 export function quandoComTodasAsDatas(datas: DataDita[]): string {
-  const preferidas = datas.filter((d) => d.papel === "preferida").map(dataCurta);
-  const limites = datas.filter((d) => d.papel === "limite").map(dataCurta);
+  // Cada data com a sua parte do dia — «quarta 18/11 ao fim do dia (depois das 17h)» (d57).
+  const comParte = (d: DataDita) => (d.parteDoDia ? `${dataCurta(d)} ${d.parteDoDia}` : dataCurta(d));
+  const preferidas = datas.filter((d) => d.papel === "preferida").map(comParte);
+  const limites = datas.filter((d) => d.papel === "limite").map(comParte);
   const partes: string[] = [];
   if (preferidas.length > 0) partes.push(preferidas.join(" ou "));
   if (limites.length > 0) partes.push(`no máximo ${limites.join(" ou ")}`);

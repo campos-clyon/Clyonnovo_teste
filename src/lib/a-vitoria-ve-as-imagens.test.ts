@@ -127,7 +127,7 @@ describe("imagens com texto — o Marcelo", () => {
 
   it("apresenta-se, agradece as imagens e diz o serviço que percebeu", () => {
     expect(resposta.indexOf(QUEM_FALA)).toBeGreaterThan(-1);
-    expect(resposta).toContain("Obrigada pelas imagens! Com todo o gosto! Fica anotado: recolha de entulho.");
+    expect(resposta).toContain("Obrigada pelas imagens! Com todo o gosto! Fica anotado: recolha de entulho — 6.º andar.");
     expect(resposta.indexOf(QUEM_FALA)).toBeLessThan(resposta.indexOf("Obrigada pelas imagens"));
   });
 

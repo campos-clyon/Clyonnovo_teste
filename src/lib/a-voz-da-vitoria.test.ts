@@ -139,7 +139,7 @@ describe("como ela fala", () => {
       "Rua das Flores 12, 2845-513 Amora",
       "2º",
     ]);
-    expect(c.disse[0]).toContain("Com todo o gosto! Fica anotado: recolha de móveis.");
+    expect(c.disse[0]).toContain("Com todo o gosto! Fica anotado: recolha de móveis — um sofá.");
     expect(c.disse[1]).toMatch(/^Obrigada, Ana!/);
     expect(c.disse[2]).toMatch(/^Obrigada!/);
     expect(c.disse[3]).toMatch(/^Muito bem\./);

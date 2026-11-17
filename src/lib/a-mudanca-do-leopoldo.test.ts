@@ -117,7 +117,7 @@ describe("a mudança do Leopoldo", () => {
 
   it("a primeira resposta responde ao preço e ao IVA que ele perguntou", () => {
     const { disse } = falaComOLeopoldo();
-    expect(disse[0]).toContain("Fica anotado: mudança.");
+    expect(disse[0]).toContain("Fica anotado: mudança — "); // e o que leu (d57)
     expect(disse[0]).toContain(COMO_CHEGA_O_PRECO);
     expect(disse[0]).toContain(O_IVA_ESTA_INCLUIDO);
     expect(disse[0]).toContain("Com quem tenho o gosto de falar?");

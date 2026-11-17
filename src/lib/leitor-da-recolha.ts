@@ -502,7 +502,8 @@ export function semLugaresNemPassado(t: string): string {
   return t
     // «senão fica em segunda fila» é o estacionamento, e não segunda-feira (13-11-2026, d25).
     .replace(/\b(segunda|terceira)\s+(fila|mao|vez|opcao|via|linha)\b/g, " ")
-    .replace(/\bquinta\s+(do|da|dos|das|sao|santa|santo|nova|velha|de\s+(?!manha|tarde|noite)\w+)\b/g, " ")
+    // «quinta da parte da manhã» é o dia, e não a Quinta da Parte (17-11-2026, d57).
+    .replace(/\bquinta\s+((?:do|da|dos|das)(?!\s+(?:parte|manha|tarde|noite|madrugada)\b)|sao|santa|santo|nova|velha|de\s+(?!manha|tarde|noite)\w+)\b/g, " ")
     .replace(
       new RegExp(
         `\\b(rua|avenida|av\\.?|travessa|largo|praca|praceta|estrada|calcada|alameda|bairro|urbanizacao)\\s+(do\\s+|da\\s+)?\\d{1,2}\\s+de\\s+(${MESES})\\b`,
@@ -559,6 +560,8 @@ export function falaDeCoisas(texto: string): boolean {
     /\b(roupas?|utensilios|pratos|copos|loica|livros|malas|pertences|embal\w*|encaixot\w*|desembal\w*|desmont\w*)\b/.test(t) ||
     /\b(apartamento|casa|moradia|garagem|arrecadacao|sotao|quintal|escritorio|loja)\b.*\b(vagar|esvaziar|despejar|limpar|retirar|tirar)\b|\b(vagar|esvaziar|despejar|limpar|retirar|tirar)\b.*\b(apartamento|casa|moradia|garagem|arrecadacao|sotao|quintal|escritorio|loja)\b/.test(t) ||
     /\bt[0-6]\b/.test(t) ||
+    // «4 módulos», «em duas partes», «divide-se» — como a peça é (17-11-2026, d57).
+    /\b(\d+|dois|duas|tres|quatro|cinco|seis)\s+(modulos?|partes|corpos|portas|gavetas)\b|\bdivide-se\b|\bdivid\w+ em\b|\bmodulos?\b/.test(t) ||
     /\d+[.,]?\d*\s*(m|cm|mt|mts|metros)\b/.test(t)
   );
 }
