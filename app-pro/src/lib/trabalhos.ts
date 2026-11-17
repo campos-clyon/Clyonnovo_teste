@@ -162,6 +162,12 @@ export type Trabalho = {
    * «o cliente ainda não pagou à CLYON». Opcional: um site antigo não o manda.
    */
   noNovoModelo?: boolean;
+  /**
+   * O que passa à CLYON no modelo de 15-11 — a taxa da plataforma e o IVA dela
+   * (`aPassarAClyon` de `GET /api/profissionais/meus-pedidos`, d65). `null` fora
+   * do modelo novo ou sem valor acordado. Opcional: um site antigo não o manda.
+   */
+  aPassarAClyon?: number | null;
   /** O que uma carga vale na carrinha dele, num pedido por carga (`carga-da-carrinha.ts`). */
   cargaNaSuaCarrinha: { titulo: string; texto: string; curto: string } | null;
   /** Para o histórico da negociação: quando o cliente avaliou, e com quantas estrelas. */
@@ -1113,6 +1119,24 @@ export function marcouComoFeito(execucaoEnviadaEm: string | null | undefined): s
  */
 export const TRABALHO_COM_PRECO_FECHADO =
   "Trabalho com preço fechado pela CLYON. O trabalho é seu; a CLYON fala com o cliente e paga-lhe depois de o trabalho estar confirmado.";
+
+/**
+ * O TRABALHO CLYON NO MODELO DE 15-11 — d54 (17-11-2026, CEO e dono). Os
+ * Trabalhos CLYON criados a partir do corte seguem o modelo novo: o cliente
+ * paga-lhe a ele, e ele passa à CLYON a taxa da plataforma e o IVA dela pela
+ * referência que recebe na confirmação — como nas negociações. Quem decide é o
+ * servidor (`noNovoModelo`); sem ele, fica a frase de sempre.
+ */
+export const TRABALHO_CLYON_NO_NOVO_MODELO =
+  "Trabalho com preço fechado pela CLYON. O trabalho é seu: o cliente paga-lhe diretamente e, quando o trabalho ficar confirmado, passa à CLYON a taxa da plataforma e o IVA dela, com a referência que recebe na confirmação.";
+
+/** A frase do Trabalho CLYON pelo modelo que o servidor disse — com o valor a passar à CLYON quando a rota o manda. */
+export function fraseDoTrabalhoClyon(t: Pick<Trabalho, "noNovoModelo" | "aPassarAClyon">): string {
+  if (t.noNovoModelo !== true) return TRABALHO_COM_PRECO_FECHADO;
+  const v = t.aPassarAClyon;
+  if (v == null || !Number.isFinite(v)) return TRABALHO_CLYON_NO_NOVO_MODELO;
+  return TRABALHO_CLYON_NO_NOVO_MODELO.replace("e o IVA dela,", `e o IVA dela (${euros(v)}),`);
+}
 
 /**
  * O que acontece depois do «Sim, está feito» — sem fotografias, o cliente não é avisado.

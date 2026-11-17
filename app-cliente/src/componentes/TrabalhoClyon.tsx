@@ -3,6 +3,8 @@ import { View } from "react-native";
 import { Acompanhar } from "./Acompanhar";
 import { Avaliar } from "./Avaliar";
 import { ResumoDoPagamento } from "./Pagar";
+import { PagarAoParceiro } from "./PagarAoParceiro";
+import type { Pedir } from "../lib/erros";
 import { Preco } from "./Preco";
 import { Text } from "./Texto";
 import { Botao, Cartao, Confirmacao, Ligacao, Paragrafo, Subtitulo } from "./ui";
@@ -25,6 +27,10 @@ import { aceitouOPrecoNaData } from "../../../src/lib/frases-do-pedido";
  * pagar sozinho), «A CLYON confirma consigo quando o trabalho estiver feito»
  * e, depois de confirmado, «Como correu com {nome}?». Com os mesmos ecrãs das
  * negociações (Pagar, Acompanhar, Avaliar), a partir de `pedido.fimClyon`.
+ *
+ * O MODELO DE 15-11 (d54, 17-11-2026): um Trabalho CLYON criado a partir do
+ * corte paga-se ao parceiro — o bloco «Pagar a …» das negociações, e nenhuma
+ * referência da CLYON. Decide o servidor, pelo `pagamento` do `fimClyon`.
  */
 export function TrabalhoClyon({
   pedido,
@@ -32,9 +38,15 @@ export function TrabalhoClyon({
   aoMudar,
   aoPedirOutraVez,
   aoCriarConta,
+  convidado = false,
+  pedirComo,
 }: {
   pedido: Pedido;
   agir: (corpo: Record<string, unknown>) => Promise<string | null>;
+  /** Pelo link, sem conta: o bloco «Pagar a …» só aparece depois de criar conta (como nas negociações). */
+  convidado?: boolean;
+  /** O mesmo `pedir` da vista do pedido, para o bloco «Pagar a …» perguntar à rota quando a R5 não o traz. */
+  pedirComo?: Pedir;
   /** Depois de um pagamento: ler o pedido outra vez. */
   aoMudar?: () => void;
   aoPedirOutraVez?: () => void;
@@ -71,10 +83,24 @@ export function TrabalhoClyon({
         {fim && n ? (
           <>
             <Avaliar pedidoId={pedido.id} n={n} agir={agir} aoPedirOutraVez={aoPedirOutraVez ?? (() => {})} />
-            {n.pagamento ? (
+            {n.pagamento && !n.pagamento.pagaAoParceiro ? (
               <Cartao>
                 <ResumoDoPagamento pedidoId={pedido.id} n={n} aoMudar={aoMudar ?? (() => {})} aoCriarConta={aoCriarConta} telefoneSugerido={pedido.telefone ?? null} />
               </Cartao>
+            ) : null}
+            {/*
+              d54 (17-11-2026): um Trabalho CLYON do modelo de 15-11 paga-se ao parceiro, como as negociações —
+              o mesmo bloco «Pagar a …», sem referência da CLYON. Quem decide é o servidor (`pagamento.pagaAoParceiro`
+              e `pagamento.aoParceiro`, ou a rota quando a R5 não o manda); fora do modelo novo não desenha nada.
+              O convidado vê-o depois de criar conta.
+            */}
+            {!convidado ? (
+              <PagarAoParceiro
+                pedidoId={pedido.id}
+                negociacaoId={fim.negociacaoId}
+                pedirComo={pedirComo}
+                daR5={n.pagamento ? n.pagamento.aoParceiro : undefined}
+              />
             ) : null}
             <Acompanhar pedidoId={pedido.id} n={n} agir={agir} />
           </>
@@ -109,9 +135,14 @@ export function TrabalhoClyon({
     <Cartao destaque>
       <Subtitulo>Preço fechado pela CLYON</Subtitulo>
       <Preco preco={m.valor} />
+      {/*
+        d54 (17-11-2026): sem «a CLYON guarda o pagamento» — num Trabalho CLYON do modelo de 15-11 o cliente paga
+        ao parceiro. Antes de haver parceiro a R5 não diz o modelo; a frase serve aos dois, e o pagamento
+        aparece depois, pelo servidor.
+      */}
       <Paragrafo>
-        O trabalho é feito por um parceiro da CLYON; a CLYON guarda o acordo e o pagamento, e só paga ao
-        parceiro depois de o trabalho estar feito.
+        O trabalho é feito por um parceiro da CLYON. Depois de aceitar, a CLYON escolhe o parceiro e diz-lhe aqui
+        quem é e como pagar.
       </Paragrafo>
       <Botao titulo="Aceito este preço" aoCarregar={() => setAConfirmar(true)} />
       {whatsapp}
