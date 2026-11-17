@@ -15,8 +15,8 @@ import { estadoDoLembrete } from "./lembrete-da-app";
 
 /**
  * O SEGUIMENTO DA APP DE CLIENTE — 17-11-2026 (d59): «porque ninguém adere».
- * Inscritos parados, só Gmail na lista da Play, e o lembrete único DESLIGADO
- * até os textos do Marketing estarem aprovados pelo dono.
+ * Inscritos parados, só Gmail na lista da Play, e o lembrete único — LIGADO
+ * desde 17-11-2026, com os textos do Marketing aprovados pelo dono.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
@@ -71,9 +71,11 @@ describe("a lista para a Play", () => {
     const rota = ler("src/app/api/admin/convite-app-cliente/route.ts");
     expect(rota).toContain("const prontoParaAPlay = (d: Destinatario) => d.gmail && !d.noPrograma;");
     expect(rota).toContain("csvParaAPlay(estado.destinatarios.filter(prontoParaAPlay)");
-    // Sem o texto que pede o Gmail aprovado, uma conta sem Gmail não recebe nada.
+    // Sem o texto que pede o Gmail, uma conta sem Gmail não recebe nada.
     expect(rota).toContain("TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL !== null");
-    // E o convite de sempre continua a ir para os Gmail, depois de reservar.
+    // O «enviar-lote» já só serve os sem Gmail: os Gmail vão pelo convite novo, nunca pelos dois.
+    expect(rota).toContain("!d.registado && faltaOGmail(d) && TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL !== null");
+    // Reservar antes de enviar.
     expect(rota.indexOf("reservarConvite(")).toBeLessThan(rota.indexOf("enviarConviteDaApp({ para: d.email"));
   });
 });
@@ -88,13 +90,56 @@ describe("o lembrete único", () => {
     expect(precisaDoLembrete({ convidadoEm: convidado, aderiu: null, lembreteEm: agora }, agora)).toBe(false);
   });
 
-  it("DESLIGADO por omissão: interruptores a false e os textos novos por colar", () => {
-    expect(TEXTOS.LEMBRETE_DA_APP_LIGADO).toBe(false);
-    expect(TEXTOS.LEMBRETE_DA_APP_POR_WHATSAPP_LIGADO).toBe(false);
-    expect(TEXTOS.TEXTO_DO_LEMBRETE_POR_EMAIL).toBeNull();
-    expect(TEXTOS.TEXTO_DO_LEMBRETE_POR_WHATSAPP).toBeNull();
-    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL).toBeNull();
-    expect(estadoDoLembrete()).toEqual({ email: false, whatsapp: false });
+  it("LIGADO desde 17-11-2026 com os textos aprovados pelo dono, à letra", () => {
+    expect(TEXTOS.LEMBRETE_DA_APP_LIGADO).toBe(true);
+    expect(TEXTOS.LEMBRETE_DA_APP_POR_WHATSAPP_LIGADO).toBe(true);
+    expect(estadoDoLembrete()).toEqual({ email: true, whatsapp: true });
+    expect(TEXTOS.TEXTO_DO_LEMBRETE_POR_EMAIL).toEqual({
+      assunto: "Falta só um toque para a app CLYON",
+      texto: [
+        "Olá, {Nome}. Ainda faltam alguns clientes com Android para a app CLYON chegar a toda a gente.",
+        "Abra {linkDeAdesao} com o Gmail do telemóvel, toque em «Tornar-me testador» e instale a app.",
+        "Se o seu Gmail for outro, responda só com ele. Se não puder, não faz mal: não voltamos a escrever sobre isto.",
+        "Equipa CLYON",
+      ].join("\n\n"),
+    });
+    expect(TEXTOS.TEXTO_DO_LEMBRETE_POR_WHATSAPP).toBe(
+      [
+        "Olá, {Nome}, é a Vitória outra vez. Ainda precisamos de alguns clientes com Android para lançar a app CLYON.",
+        "É só abrir {linkDeAdesao} com o Gmail do telemóvel e instalar a app.",
+        "Se o Gmail for outro, envie-mo por aqui.",
+        "Se não puder, não faz mal, obrigada na mesma!",
+      ].join("\n"),
+    );
+    expect(TEXTOS.TEXTO_DO_CONVITE_POR_WHATSAPP).toBe(
+      [
+        "Olá, {Nome}! Sou a Vitória, assistente online da CLYON.",
+        "Tem telemóvel Android? Estamos a lançar a app CLYON e procuramos 12 clientes para a experimentarem primeiro 😊",
+        "Na app acompanha os seus pedidos, vê as fotografias e paga ao parceiro, tudo no telemóvel.",
+        "1) Abra este link com o Gmail do telemóvel e toque em «Tornar-me testador»: {linkDeAdesao}",
+        "2) Instale a app e fique com ela 14 dias.",
+        "Se o Gmail do telemóvel for outro, envie-mo por aqui, por favor.",
+      ].join("\n"),
+    );
+    // O convite que pede o Gmail é o mesmo convite novo (já traz o parágrafo do Gmail).
+    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL?.texto).toContain(
+      "O email onde recebeu esta mensagem não é o Gmail do seu telemóvel? Responda a este email só com esse Gmail e nós tratamos do resto.",
+    );
+    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL?.texto.startsWith("Olá, {Nome}.\n")).toBe(true);
+    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL?.texto).toContain("({linkDeAdesao})");
+  });
+
+  it("só a quem recebeu o convite NOVO, 3 dias depois DELE (o convite de 01-11 não conta)", () => {
+    const base = ler("src/lib/seguimento-da-app-na-base.ts");
+    expect(base).toContain(".filter((c) => c.gmail && c.conviteNovoEmData !== null)");
+    expect(base).toContain("precisaDoLembrete({ convidadoEm: c.conviteNovoEmData,");
+    expect(base).not.toContain("precisaDoLembrete({ convidadoEm: c.convidadoEmData,");
+  });
+
+  it("o WhatsApp do lembrete entra na fila espaçada, nunca sai de rajada", () => {
+    const f = ler("src/lib/lembrete-da-app.ts");
+    expect(f).toContain('porWhatsAppDaAppNaFila(c.email, "lembrete")');
+    expect(f).not.toContain("enviarAvisoWhatsApp(");
   });
 
   it("só sai com interruptor E texto, e reserva antes de enviar", () => {
@@ -119,6 +164,17 @@ describe("os textos do Marketing, quando chegarem", () => {
       "Abra A e B {outra}",
     );
   });
+  it("{Nome}: com nome fica o nome; sem nome sai com a vírgula", () => {
+    expect(preencherTexto("Olá, {Nome}! Sou a Vitória", { Nome: "Ana" })).toBe("Olá, Ana! Sou a Vitória");
+    expect(preencherTexto("Olá, {Nome}! Sou a Vitória", { Nome: "" })).toBe("Olá! Sou a Vitória");
+    expect(preencherTexto("Olá, {Nome}. Ainda faltam", {})).toBe("Olá. Ainda faltam");
+    expect(preencherTexto("Olá, {Nome}, é a Vitória outra vez.", {})).toBe("Olá, é a Vitória outra vez.");
+  });
+  it("um link no meio de uma frase também fica clicável", () => {
+    const h = htmlDeTextoSimples("Abra https://play.google.com/apps/testing/pt.clyon.cliente com o Gmail.");
+    expect(h).toContain('<a href="https://play.google.com/apps/testing/pt.clyon.cliente"');
+    expect(h).toContain("</a> com o Gmail.");
+  });
   it("o HTML escapa o texto e faz link de um link sozinho", () => {
     const h = htmlDeTextoSimples("Olá <b>\n\nhttps://play.google.com/x\n\nEquipa CLYON");
     expect(h).toContain("Olá &lt;b&gt;");
@@ -132,5 +188,10 @@ describe("apagar a conta apaga o seguimento", () => {
     const base = ler("src/lib/programa-da-app-na-base.ts");
     expect(base).toContain("await apagarSeguimentoNaTransaccao(conn, email, contaIds);");
     expect(base).toContain("await apagarSeguimentoDaConta(userId);");
+    // E o convite novo e os WhatsApp por sair vão com ela.
+    const seg = ler("src/lib/seguimento-da-app-na-base.ts");
+    expect(seg).toContain("await apagarConviteNovoDosEmails(conn, [email]);");
+    expect(seg).toContain("await apagarConviteNovoDaConta(conn, id);");
+    expect(seg).toContain("await apagarConviteNovoDaConta(pool, userId);");
   });
 });

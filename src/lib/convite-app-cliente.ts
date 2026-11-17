@@ -19,7 +19,18 @@ export const CHAVE_DO_LINK_DE_ADESAO = "linkDeAdesaoDaAppDeCliente";
 /** O link do teste da app de cliente, para sugerir no campo. */
 export const LINK_DE_ADESAO_SUGERIDO = "https://play.google.com/apps/testing/pt.clyon.cliente";
 
-export const ASSUNTO_DO_CONVITE = "Convite: experimente primeiro a app CLYON";
+/** O assunto do convite novo (opção A, aprovada pelo dono a 17-11-2026). */
+export const ASSUNTO_DO_CONVITE = "Tem Android? Ajude-nos a lançar a app CLYON (2 minutos)";
+
+/**
+ * O remetente do convite e do lembrete da app de cliente (dono, 17-11-2026):
+ * geral@clyon.pt, para a resposta com o Gmail do telemóvel chegar a uma caixa
+ * que se lê. Os outros emails do site continuam a sair de noreply@.
+ */
+export const REMETENTE_DA_APP_DE_CLIENTE = "CLYON <geral@clyon.pt>";
+
+/** O pré-cabeçalho (o resumo que a caixa de entrada mostra a seguir ao assunto). */
+export const PRE_CABECALHO_DO_CONVITE = "São 2 toques: o link e a instalação. Precisamos de 12 clientes.";
 
 /**
  * Entre um envio e o seguinte. O Resend aceita poucos pedidos por segundo por
@@ -68,23 +79,54 @@ export function saudacao(nome: unknown): string {
   return p ? `Olá, ${p}.` : "Olá,";
 }
 
-/** Os parágrafos do corpo, aprovados à letra (01-11-2026). */
+/**
+ * O CONVITE NOVO — textos do Marketing aprovados À LETRA pelo dono a
+ * 17-11-2026 (d59, parte 2: «Aprovo tudo»). Não se reescrevem aqui sem nova
+ * aprovação.
+ *
+ * A linha «recebe um aviso sempre que o pedido avança» do texto aprovado
+ * ficou de fora: a chave FCM V1 do projecto EAS da app de cliente ainda não
+ * está carregada (17-11-2026), e sem ela os avisos não chegam ao telemóvel.
+ * Volta quando a chave estiver lá.
+ */
 export function paragrafosDoConvite(link: string): {
+  aviso: string;
   abertura: string;
-  passo1: string;
+  introDaLista: string;
+  lista: string[];
+  introDosPassos: string;
+  passo1Antes: string;
+  botao: string;
+  passo1Depois: string;
   passo2: string;
-  fecho: string;
-  saida: string;
+  gmail: string;
+  obrigado: string;
   assinatura: string;
+  saida: string;
+  link: string;
 } {
   return {
+    aviso: "Este convite é só para quem tem telemóvel Android (no iPhone ainda não há app).",
     abertura:
-      "Como já tem conta na CLYON, convidamo-lo a experimentar a nossa app antes de toda a gente. Pode pedir, acompanhar e pagar os seus pedidos no telemóvel, e falar com o parceiro.",
-    passo1: `1. Abra este link no telemóvel Android, com a mesma conta Google: ${link}`,
-    passo2: "2. Carregue em «Tornar-me testador» e instale a app na Play Store.",
-    fecho: "Fique com a app pelo menos 14 dias. A sua opinião ajuda-nos a melhorar.",
-    saida: "Se não quiser participar, basta ignorar este email; não voltamos a escrever sobre isto.",
+      "A app CLYON está quase pronta e precisamos de 12 clientes que a usem 14 dias para a Google Play a abrir a toda a gente. Como já fez um pedido connosco, gostávamos muito que fosse um deles.",
+    introDaLista: "Com a app, no telemóvel:",
+    lista: [
+      "faz um pedido com fotografias e vê as propostas dos parceiros;",
+      "acompanha o trabalho passo a passo, com as fotografias do parceiro;",
+      "vê quanto paga e paga ao parceiro (MB WAY ou transferência), sem andar à procura de mensagens;",
+      "fala connosco pelo WhatsApp ou dentro do próprio pedido.",
+    ],
+    introDosPassos: "São 2 passos, menos de 2 minutos:",
+    passo1Antes: "1. No telemóvel, com o Gmail que usa na Play Store, toque em",
+    botao: "Quero testar a app",
+    passo1Depois: "e carregue em «Tornar-me testador».",
+    passo2: "2. Instale a app CLYON na Play Store e abra-a. Fique com ela 14 dias e abra-a de vez em quando.",
+    gmail:
+      "O email onde recebeu esta mensagem não é o Gmail do seu telemóvel? Responda a este email só com esse Gmail e nós tratamos do resto.",
+    obrigado: "Obrigado por nos ajudar a pôr a CLYON no bolso de mais gente.",
     assinatura: "Equipa CLYON",
+    saida: "Se não tiver Android ou não quiser participar, basta ignorar este email. Só lhe lembramos mais uma vez, daqui a 3 dias.",
+    link,
   };
 }
 
@@ -93,32 +135,43 @@ export function textoDoConvite(params: { nome: unknown; link: string }): string 
   const p = paragrafosDoConvite(params.link);
   return [
     saudacao(params.nome),
+    p.aviso,
     "",
     p.abertura,
     "",
-    p.passo1,
+    p.introDaLista,
+    ...p.lista.map((l) => `- ${l}`),
+    "",
+    p.introDosPassos,
+    `${p.passo1Antes} «${p.botao}» (${p.link}) ${p.passo1Depois}`,
     p.passo2,
     "",
-    p.fecho,
+    p.gmail,
     "",
-    p.saida,
+    p.obrigado,
     "",
     p.assinatura,
+    "",
+    p.saida,
   ].join("\n");
 }
 
-/** O HTML, no estilo dos outros emails da CLYON: o link como botão e também escrito. */
+/** O HTML, no estilo dos outros emails da CLYON: o pré-cabeçalho escondido, o link como botão e também escrito. */
 export function htmlDoConvite(params: { nome: unknown; link: string }): string {
   const p = paragrafosDoConvite(params.link);
   const link = escaparHtml(params.link);
   const ola = escaparHtml(saudacao(params.nome));
   const par = (t: string) =>
     `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#475569;">${t}</p>`;
+  const itens = p.lista
+    .map((l) => `<li style="margin:0 0 6px;">${escaparHtml(l)}</li>`)
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="pt-PT">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escaparHtml(PRE_CABECALHO_DO_CONVITE)}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden;">
@@ -128,14 +181,17 @@ export function htmlDoConvite(params: { nome: unknown; link: string }): string {
         </td></tr>
 
         <tr><td style="padding:28px 24px;">
-          ${par(`<strong style="color:#0B1929;">${ola}</strong>`)}
+          ${par(`<strong style="color:#0B1929;">${ola}</strong><br>${escaparHtml(p.aviso)}`)}
           ${par(escaparHtml(p.abertura))}
-          ${par("1. Abra este link no telemóvel Android, com a mesma conta Google:")}
+          <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#475569;">${escaparHtml(p.introDaLista)}</p>
+          <ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.6;color:#475569;">${itens}</ul>
+          ${par(`<strong style="color:#0B1929;">${escaparHtml(p.introDosPassos)}</strong>`)}
+          ${par(`${escaparHtml(p.passo1Antes)} «${escaparHtml(p.botao)}» ${escaparHtml(p.passo1Depois)}`)}
 
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 12px;">
             <tr><td style="border-radius:12px;background:#00B4CC;">
               <a href="${link}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">
-                Abrir o link de adesão
+                ${escaparHtml(p.botao)}
               </a>
             </td></tr>
           </table>
@@ -144,9 +200,10 @@ export function htmlDoConvite(params: { nome: unknown; link: string }): string {
           </p>
 
           ${par(escaparHtml(p.passo2))}
-          ${par(escaparHtml(p.fecho))}
-          <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#94a3b8;">${escaparHtml(p.saida)}</p>
-          <p style="margin:0;font-size:15px;line-height:1.6;color:#0B1929;font-weight:600;">${escaparHtml(p.assinatura)}</p>
+          ${par(escaparHtml(p.gmail))}
+          ${par(escaparHtml(p.obrigado))}
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#0B1929;font-weight:600;">${escaparHtml(p.assinatura)}</p>
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">${escaparHtml(p.saida)}</p>
         </td></tr>
 
       </table>

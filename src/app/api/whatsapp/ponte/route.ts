@@ -260,6 +260,14 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("[ponte] aviso aos profissionais:", e instanceof Error ? e.message : e);
     }
+    // O convite novo e o lembrete da app de cliente (d59, 17-11-2026): um
+    // WhatsApp por vez, 20–45 s entre cada, 9h–21h de Lisboa.
+    try {
+      const { passagemDosWhatsAppDaApp } = await import("@/lib/convite-novo-da-app-na-base");
+      await passagemDosWhatsAppDaApp();
+    } catch (e) {
+      console.error("[ponte] WhatsApp da app de cliente:", e instanceof Error ? e.message : e);
+    }
   });
   if (!(await whatsappLigado())) return NextResponse.json({ paraEnviar: [] });
   return NextResponse.json({ paraEnviar: await filaWhatsAppParaAPonte() });

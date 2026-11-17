@@ -1,12 +1,12 @@
 import { Resend } from "resend";
 import { legivelNoResumo } from "./email-legivel-no-resumo";
 import { htmlDeTextoSimples } from "./seguimento-da-app";
+import { REMETENTE_DA_APP_DE_CLIENTE } from "./convite-app-cliente";
 
 /**
- * Envia UM email de texto simples (o convite que pede o Gmail e o lembrete,
- * com os textos do Marketing depois de aprovados), pelo mesmo serviço e
- * remetente dos outros emails do site. Não regista nada: quem chama reserva
- * antes e desfaz se falhar.
+ * Envia UM email de texto simples (o lembrete, com o texto aprovado a
+ * 17-11-2026), pelo mesmo serviço dos outros emails do site, de geral@clyon.pt.
+ * Não regista nada: quem chama reserva antes e desfaz se falhar.
  */
 export async function enviarEmailDoSeguimento(p: { para: string; assunto: string; texto: string }): Promise<boolean> {
   const chave = process.env.RESEND_API_KEY_clyonsite ?? process.env.RESEND_API_KEY;
@@ -18,7 +18,7 @@ export async function enviarEmailDoSeguimento(p: { para: string; assunto: string
   try {
     const resend = new Resend(chave);
     const { error } = await resend.emails.send({
-      from: "CLYON <noreply@clyon.pt>",
+      from: REMETENTE_DA_APP_DE_CLIENTE,
       to: p.para,
       subject: p.assunto,
       html: legivelNoResumo(htmlDeTextoSimples(p.texto)),

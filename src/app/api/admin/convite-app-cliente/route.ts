@@ -16,11 +16,15 @@ import {
   reservarConvite,
 } from "@/lib/convite-app-cliente-na-base";
 import { enviarConviteDaApp } from "@/lib/convite-app-cliente-envio";
-import { enviarEmailDoSeguimento } from "@/lib/seguimento-da-app-envio";
-import { preencherTexto } from "@/lib/seguimento-da-app";
-import { LINK_DA_PLAY_STORE } from "@/lib/programa-da-app";
+import {
+  estadoDoConviteNovo,
+  libertarConviteNovo,
+  marcarConviteNovoEnviado,
+  porWhatsAppDaAppNaFila,
+  reservarConviteNovo,
+  whatsappsDaAppPorSair,
+} from "@/lib/convite-novo-da-app-na-base";
 import { TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL } from "@/lib/textos-do-seguimento-da-app";
-import { urlDeAccao } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -41,6 +45,16 @@ export const maxDuration = 60;
  * «falta o Gmail do telemóvel»: fora da lista e, enquanto o texto que pede o
  * Gmail não estiver aprovado (`TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL`), fora do
  * envio. Quem já está no programa da app segue por lá (não recebe dois convites).
+ *
+ * d59, parte 2 (17-11-2026, textos aprovados pelo dono):
+ * POST enviar-convite-novo {} — o CONVITE NOVO (email + WhatsApp a quem tem
+ *   telemóvel) a até ENVIOS_POR_LOTE contas com Gmail que ainda não aderiram,
+ *   também as do convite de 01-11; cada email recebe-o uma vez
+ *   (`conviteNovoDaApp`). O WhatsApp entra na fila própria e sai espaçado
+ *   pela ponte (`convite-novo-da-app-na-base.ts`). O painel repete até acabar.
+ * POST enviar-lote {} — agora só as contas SEM Gmail ainda não convidadas:
+ *   o mesmo convite, que lhes pede o Gmail do telemóvel. As com Gmail vão
+ *   pelo convite novo (nunca pelos dois caminhos).
  */
 
 type Destinatario = Awaited<ReturnType<typeof estadoDosConvites>>["destinatarios"][number];
@@ -49,9 +63,9 @@ type Destinatario = Awaited<ReturnType<typeof estadoDosConvites>>["destinatarios
 const prontoParaAPlay = (d: Destinatario) => d.gmail && !d.noPrograma;
 /** Sem Gmail e fora do programa: falta o Gmail do telemóvel. */
 const faltaOGmail = (d: Destinatario) => !d.gmail && !d.noPrograma;
-/** Pode receber um email agora: o convite de sempre (Gmail) ou o que pede o Gmail (quando houver texto). */
+/** Pelo «enviar-lote»: só quem não tem Gmail, ainda sem convite (o convite que pede o Gmail). */
 const podeReceber = (d: Destinatario) =>
-  !d.registado && (prontoParaAPlay(d) || (faltaOGmail(d) && TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL !== null));
+  !d.registado && faltaOGmail(d) && TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL !== null;
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -73,8 +87,16 @@ export async function GET(req: NextRequest) {
     }
 
     const link = await linkDeAdesaoGuardado();
+    const novo = await estadoDoConviteNovo();
     return NextResponse.json({
       link,
+      // O convite novo (d59, 17-11-2026): só contagens, nunca emails nem telefones.
+      conviteNovo: {
+        emails: novo.emails,
+        whatsapps: novo.whatsapps,
+        jaReceberam: novo.jaReceberam,
+        whatsappsPorSair: await whatsappsDaAppPorSair(),
+      },
       destinatarios: estado.destinatarios.length,
       porEnviar: estado.destinatarios.filter(podeReceber).length,
       paraAPlay: estado.destinatarios.filter(prontoParaAPlay).length,
@@ -134,27 +156,46 @@ export async function POST(req: NextRequest) {
         : NextResponse.json({ error: "O serviço de email recusou o envio." }, { status: 502 });
     }
 
+    if (corpo.accao === "enviar-convite-novo") {
+      const estado = await estadoDoConviteNovo();
+      const lote = estado.elegiveis.slice(0, ENVIOS_POR_LOTE);
+      let enviados = 0;
+      let falhados = 0;
+      let whatsappsNaFila = 0;
+      for (const [i, d] of lote.entries()) {
+        if (i > 0) await espera(INTERVALO_ENTRE_ENVIOS_MS);
+        // Reservar ANTES: se outra chamada já o tem, esta não envia (a chave é o email).
+        if (!(await reservarConviteNovo(d.email, d.id, porQuem))) continue;
+        // Quem nunca foi convidado fica também no registo de 01-11 (é por lá que o seguimento o vê).
+        const registouAgora = !d.registado && (await reservarConvite(d.id, d.email, porQuem));
+        const ok = await enviarConviteDaApp({ para: d.email, nome: d.nome, link });
+        if (!ok) {
+          await libertarConviteNovo(d.email);
+          if (registouAgora) await libertarConvite(d.id);
+          falhados++;
+          continue;
+        }
+        await marcarConviteNovoEnviado(d.email);
+        if (registouAgora) await marcarConviteEnviado(d.id);
+        enviados++;
+        if (d.telemovel && (await porWhatsAppDaAppNaFila(d.email, "convite"))) whatsappsNaFila++;
+      }
+      const restantes = Math.max(0, estado.elegiveis.length - lote.length);
+      return NextResponse.json({ ok: true, enviados, falhados, whatsappsNaFila, restantes });
+    }
+
     if (corpo.accao === "enviar-lote") {
       const estado = await estadoDosConvites();
       const porEnviar = estado.destinatarios.filter(podeReceber);
       const lote = porEnviar.slice(0, ENVIOS_POR_LOTE);
-      const pedeOGmail = TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL;
-      const valores = { linkDeAdesao: link, linkDaPlayStore: LINK_DA_PLAY_STORE, linkDaConta: `${urlDeAccao()}/conta` };
       let enviados = 0;
       let falhados = 0;
       for (const [i, d] of lote.entries()) {
         if (i > 0) await espera(INTERVALO_ENTRE_ENVIOS_MS);
         // Reservar ANTES: se outra chamada já a tem, esta não envia.
         if (!(await reservarConvite(d.id, d.email, porQuem))) continue;
-        const ok = d.gmail
-          ? await enviarConviteDaApp({ para: d.email, nome: d.nome, link })
-          : pedeOGmail
-            ? await enviarEmailDoSeguimento({
-                para: d.email,
-                assunto: pedeOGmail.assunto,
-                texto: preencherTexto(pedeOGmail.texto, valores),
-              })
-            : false;
+        // O mesmo convite novo: já traz o parágrafo que pede o Gmail do telemóvel.
+        const ok = await enviarConviteDaApp({ para: d.email, nome: d.nome, link });
         if (ok) {
           await marcarConviteEnviado(d.id);
           enviados++;

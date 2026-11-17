@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   ASSUNTO_DO_CONVITE,
+  PRE_CABECALHO_DO_CONVITE,
+  REMETENTE_DA_APP_DE_CLIENTE,
   csvParaAPlay,
   escolherDestinatarios,
   htmlDoConvite,
@@ -14,25 +16,58 @@ import {
 
 const LINK = "https://play.google.com/apps/testing/pt.clyon.cliente";
 
-describe("o convite da app de cliente (texto aprovado à letra, 01-11-2026)", () => {
-  it("assunto e corpo como o dono os escreveu", () => {
-    expect(ASSUNTO_DO_CONVITE).toBe("Convite: experimente primeiro a app CLYON");
+describe("o convite novo da app de cliente (texto aprovado à letra, 17-11-2026)", () => {
+  it("assunto, pré-cabeçalho e corpo como o dono os aprovou", () => {
+    expect(ASSUNTO_DO_CONVITE).toBe("Tem Android? Ajude-nos a lançar a app CLYON (2 minutos)");
+    expect(PRE_CABECALHO_DO_CONVITE).toBe("São 2 toques: o link e a instalação. Precisamos de 12 clientes.");
     expect(textoDoConvite({ nome: "ana maria silva", link: LINK })).toBe(
       [
         "Olá, Ana.",
+        "Este convite é só para quem tem telemóvel Android (no iPhone ainda não há app).",
         "",
-        "Como já tem conta na CLYON, convidamo-lo a experimentar a nossa app antes de toda a gente. Pode pedir, acompanhar e pagar os seus pedidos no telemóvel, e falar com o parceiro.",
+        "A app CLYON está quase pronta e precisamos de 12 clientes que a usem 14 dias para a Google Play a abrir a toda a gente. Como já fez um pedido connosco, gostávamos muito que fosse um deles.",
         "",
-        `1. Abra este link no telemóvel Android, com a mesma conta Google: ${LINK}`,
-        "2. Carregue em «Tornar-me testador» e instale a app na Play Store.",
+        "Com a app, no telemóvel:",
+        "- faz um pedido com fotografias e vê as propostas dos parceiros;",
+        "- acompanha o trabalho passo a passo, com as fotografias do parceiro;",
+        "- vê quanto paga e paga ao parceiro (MB WAY ou transferência), sem andar à procura de mensagens;",
+        "- fala connosco pelo WhatsApp ou dentro do próprio pedido.",
         "",
-        "Fique com a app pelo menos 14 dias. A sua opinião ajuda-nos a melhorar.",
+        "São 2 passos, menos de 2 minutos:",
+        `1. No telemóvel, com o Gmail que usa na Play Store, toque em «Quero testar a app» (${LINK}) e carregue em «Tornar-me testador».`,
+        "2. Instale a app CLYON na Play Store e abra-a. Fique com ela 14 dias e abra-a de vez em quando.",
         "",
-        "Se não quiser participar, basta ignorar este email; não voltamos a escrever sobre isto.",
+        "O email onde recebeu esta mensagem não é o Gmail do seu telemóvel? Responda a este email só com esse Gmail e nós tratamos do resto.",
+        "",
+        "Obrigado por nos ajudar a pôr a CLYON no bolso de mais gente.",
         "",
         "Equipa CLYON",
+        "",
+        "Se não tiver Android ou não quiser participar, basta ignorar este email. Só lhe lembramos mais uma vez, daqui a 3 dias.",
       ].join("\n"),
     );
+  });
+
+  it("sem a linha dos avisos no telemóvel: a chave FCM V1 da app de cliente ainda não está na EAS", () => {
+    expect(textoDoConvite({ nome: null, link: LINK })).not.toMatch(/recebe um aviso/);
+    expect(htmlDoConvite({ nome: null, link: LINK })).not.toMatch(/recebe um aviso/);
+  });
+
+  it("o HTML leva o pré-cabeçalho escondido e o botão «Quero testar a app»", () => {
+    const html = htmlDoConvite({ nome: "Ana", link: LINK });
+    expect(html).toContain(PRE_CABECALHO_DO_CONVITE);
+    expect(html).toMatch(/display:none[^>]*>São 2 toques/);
+    expect(html).toMatch(/>\s*Quero testar a app\s*<\/a>/);
+  });
+
+  it("o convite e o lembrete saem de geral@clyon.pt", () => {
+    expect(REMETENTE_DA_APP_DE_CLIENTE).toBe("CLYON <geral@clyon.pt>");
+    const lerF = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+    for (const f of ["src/lib/convite-app-cliente-envio.ts", "src/lib/seguimento-da-app-envio.ts"]) {
+      const src = lerF(f);
+      expect(src).toContain("from: REMETENTE_DA_APP_DE_CLIENTE,");
+      expect(src).not.toContain("noreply@clyon.pt");
+    }
   });
 
   it("sem nome, «Olá,»", () => {

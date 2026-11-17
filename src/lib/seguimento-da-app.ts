@@ -120,9 +120,23 @@ export function quandoSaiOLembrete(convidadoEm: Date): Date {
 
 /* ─── Os textos do Marketing: trocar as marcas e fazer o HTML ───────────── */
 
-/** Troca `{linkDeAdesao}`, `{linkDaPlayStore}`, `{linkDaConta}`; uma marca sem valor fica vazia. */
+/**
+ * Troca `{Nome}`, `{linkDeAdesao}`, `{linkDaPlayStore}`, `{linkDaConta}`; uma
+ * marca de link sem valor fica vazia. Sem nome, «{Nome}» sai com a vírgula
+ * antes: «Olá, {Nome}!» → «Olá!», «Olá, {Nome}, é a Vitória» → «Olá, é a Vitória».
+ */
 export function preencherTexto(texto: string, valores: Record<string, string>): string {
-  return texto.replace(/\{(linkDeAdesao|linkDaPlayStore|linkDaConta)\}/g, (_, k: string) => valores[k] ?? "");
+  const nome = (valores.Nome ?? "").trim();
+  const comNome = nome ? texto.replace(/\{Nome\}/g, nome) : texto.replace(/,? ?\{Nome\}/g, "");
+  return comNome.replace(/\{(linkDeAdesao|linkDaPlayStore|linkDaConta)\}/g, (_, k: string) => valores[k] ?? "");
+}
+
+/** Os links https dentro de um texto já escapado ficam clicáveis. */
+function ligarOsLinks(escapado: string): string {
+  return escapado.replace(
+    /https:\/\/[^\s<>"]+[^\s<>".,;:!?)»]/g,
+    (u) => `<a href="${u}" style="color:#0891b2;word-break:break-all;">${u}</a>`,
+  );
 }
 
 /** O HTML de um texto simples, no estilo dos outros emails da CLYON. */
@@ -137,7 +151,7 @@ export function htmlDeTextoSimples(texto: string): string {
         const href = escaparHtml(p);
         return `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;"><a href="${href}" style="color:#0891b2;word-break:break-all;">${href}</a></p>`;
       }
-      return `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#475569;">${escaparHtml(p).replace(/\n/g, "<br>")}</p>`;
+      return `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#475569;">${ligarOsLinks(escaparHtml(p)).replace(/\n/g, "<br>")}</p>`;
     })
     .join("\n          ");
   return `<!DOCTYPE html>

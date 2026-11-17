@@ -1,15 +1,18 @@
 /**
  * O LEMBRETE DA APP DE CLIENTE — 17-11-2026 (d59).
  *
- * Uma vez só, 3 dias depois do convite, a quem foi convidado e ainda não
+ * Uma vez só, 3 dias depois do convite NOVO, a quem o recebeu e ainda não
  * aderiu (ver «ADERIU» em `seguimento-da-app.ts`): por email e, a quem tem
- * telefone na conta, por WhatsApp. Corre na rotina `/api/cron/lembrete-da-app`.
+ * telemóvel na conta, por WhatsApp (pela fila própria, espaçado). Corre na
+ * rotina `/api/cron/lembrete-da-app`. Quem só tem o convite antigo de 01-11
+ * não recebe lembrete. No máximo: 1 convite novo + 1 lembrete por pessoa.
  *
- * DESLIGADO POR OMISSÃO. Só sai com o interruptor ligado E o texto aprovado
- * em `textos-do-seguimento-da-app.ts` — os textos novos são do Marketing e
- * precisam do sim do dono.
+ * LIGADO desde 17-11-2026 (textos aprovados pelo dono, d59 parte 2). Só sai
+ * com o interruptor ligado E o texto em `textos-do-seguimento-da-app.ts`.
  */
 
+import { telemovelDoAviso } from "./aviso-aos-profissionais";
+import { primeiroNome } from "./convite-app-cliente";
 import { LINK_DA_PLAY_STORE } from "./programa-da-app";
 import { preencherTexto } from "./seguimento-da-app";
 import {
@@ -52,6 +55,7 @@ export async function enviarLembretesDaApp(agora: Date): Promise<{
     "./seguimento-da-app-na-base"
   );
   const { enviarEmailDoSeguimento } = await import("./seguimento-da-app-envio");
+  const { porWhatsAppDaAppNaFila } = await import("./convite-novo-da-app-na-base");
   const { urlDeAccao } = await import("./url-do-site");
   const valores = { linkDeAdesao: link, linkDaPlayStore: LINK_DA_PLAY_STORE, linkDaConta: `${urlDeAccao()}/conta` };
 
@@ -64,19 +68,21 @@ export async function enviarLembretesDaApp(agora: Date): Promise<{
     // Reservar ANTES: uma passagem a correr ao mesmo tempo não envia outra vez.
     if (!(await reservarLembrete(c.email))) continue;
     const canais: string[] = [];
+    const comNome = { ...valores, Nome: primeiroNome(c.nome) ?? "" };
     if (
       await enviarEmailDoSeguimento({
         para: c.email,
         assunto: textoEmail.assunto,
-        texto: preencherTexto(textoEmail.texto, valores),
+        texto: preencherTexto(textoEmail.texto, comNome),
       })
     ) {
       canais.push("email");
     }
-    if (ligado.whatsapp && textoWhats && c.telefone) {
+    // O WhatsApp não sai daqui de rajada: entra na fila própria e sai um de
+    // cada vez, 20–45 s entre cada, das 9h às 21h (convite-novo-da-app-na-base.ts).
+    if (ligado.whatsapp && textoWhats && telemovelDoAviso(c.telefone)) {
       try {
-        const { enviarAvisoWhatsApp } = await import("./whatsapp-cloud");
-        if (await enviarAvisoWhatsApp(c.telefone, preencherTexto(textoWhats, valores))) {
+        if (await porWhatsAppDaAppNaFila(c.email, "lembrete")) {
           canais.push("whatsapp");
           porWhatsApp++;
         }

@@ -1,11 +1,11 @@
 import { Resend } from "resend";
 import { legivelNoResumo } from "./email-legivel-no-resumo";
-import { ASSUNTO_DO_CONVITE, htmlDoConvite, textoDoConvite } from "./convite-app-cliente";
+import { ASSUNTO_DO_CONVITE, REMETENTE_DA_APP_DE_CLIENTE, htmlDoConvite, textoDoConvite } from "./convite-app-cliente";
 
 /**
- * Envia UM convite pelo mesmo serviço e remetente dos links de entrada do site
- * (`email-entrada.ts`). Não regista nada: quem chama reserva antes e marca
- * depois (`convite-app-cliente-na-base.ts`).
+ * Envia UM convite pelo mesmo serviço dos links de entrada do site
+ * (`email-entrada.ts`), mas de geral@clyon.pt (dono, 17-11-2026). Não regista
+ * nada: quem chama reserva antes e marca depois (`convite-app-cliente-na-base.ts`).
  */
 export async function enviarConviteDaApp(params: {
   para: string;
@@ -22,7 +22,7 @@ export async function enviarConviteDaApp(params: {
   try {
     const resend = new Resend(chave);
     const { error } = await resend.emails.send({
-      from: "CLYON <noreply@clyon.pt>",
+      from: REMETENTE_DA_APP_DE_CLIENTE,
       to: params.para,
       subject: ASSUNTO_DO_CONVITE,
       html: legivelNoResumo(htmlDoConvite({ nome: params.nome, link: params.link })),

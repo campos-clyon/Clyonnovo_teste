@@ -90,22 +90,36 @@ export type ConvidadoNoSeguimento = {
   temTelefone: boolean;
   /** O email da conta é Gmail (ou, no programa, o que a pessoa indicou). */
   gmail: boolean;
+  /** Quando saiu o convite NOVO (17-11-2026) — é daqui que o lembrete conta os 3 dias. */
+  conviteNovoEm: string | null;
 };
 
-type Interno = ConvidadoNoSeguimento & { telefone: string | null; convidadoEmData: Date | null; lembreteEmData: Date | null };
+type Interno = ConvidadoNoSeguimento & {
+  telefone: string | null;
+  nome: string | null;
+  convidadoEmData: Date | null;
+  conviteNovoEmData: Date | null;
+  lembreteEmData: Date | null;
+};
 
 async function convidadosInternos(): Promise<Interno[]> {
   const pool = await ensureSeguimento();
-  const [programa, emMassa, avisos, seguimento] = await Promise.all([
-    lerSeExistir<{ email: string; convidadoEm: Date | string | null; emailDaConta: string | null; phone: string | null }>(
+  const [programa, emMassa, avisos, seguimento, convitesNovos] = await Promise.all([
+    lerSeExistir<{
+      email: string;
+      convidadoEm: Date | string | null;
+      emailDaConta: string | null;
+      phone: string | null;
+      nome: string | null;
+    }>(
       pool,
-      `SELECT p.email, p.convidadoEm, u.email AS emailDaConta, u.phone
+      `SELECT p.email, p.convidadoEm, u.email AS emailDaConta, u.phone, u.name AS nome
          FROM programaDaApp p LEFT JOIN users u ON u.id = p.userId AND u.deletedAt IS NULL
         WHERE p.estado = 'convidado'`,
     ),
-    lerSeExistir<{ email: string; enviadoEm: Date | string | null; phone: string | null }>(
+    lerSeExistir<{ email: string; enviadoEm: Date | string | null; phone: string | null; nome: string | null }>(
       pool,
-      `SELECT c.email, c.enviadoEm, u.phone
+      `SELECT c.email, c.enviadoEm, u.phone, u.name AS nome
          FROM convitesAppCliente c LEFT JOIN users u ON u.id = c.userId AND u.deletedAt IS NULL
         WHERE c.enviadoEm IS NOT NULL`,
     ),
@@ -120,10 +134,15 @@ async function convidadosInternos(): Promise<Interno[]> {
       lembreteEm: Date | string | null;
       lembreteCanais: string | null;
     }>(pool, "SELECT email, instalouEm, instalouPor, lembreteEm, lembreteCanais FROM seguimentoDaApp"),
+    lerSeExistir<{ email: string; enviadoEm: Date | string | null }>(
+      pool,
+      "SELECT email, enviadoEm FROM conviteNovoDaApp WHERE enviadoEm IS NOT NULL",
+    ),
   ]);
 
   const comAvisos = new Set(avisos.map((a) => String(a.e)));
   const marcas = new Map(seguimento.map((s) => [String(s.email).toLowerCase(), s]));
+  const novos = new Map(convitesNovos.map((c) => [String(c.email).toLowerCase(), data(c.enviadoEm)]));
   const vistos = new Set<string>();
   const saida: Interno[] = [];
 
@@ -133,6 +152,7 @@ async function convidadosInternos(): Promise<Interno[]> {
     convidadoEm: Date | null,
     emailsDaPessoa: Array<string | null>,
     telefone: string | null,
+    nome: string | null,
   ) => {
     const e = email.trim().toLowerCase();
     if (vistos.has(e)) return;
@@ -142,7 +162,11 @@ async function convidadosInternos(): Promise<Interno[]> {
     const avisosDaApp = emailsDaPessoa.some((x) => x && comAvisos.has(x.trim().toLowerCase()));
     const lembrete = data(m?.lembreteEm ?? null);
     const tel = telefone && telefone.replace(/\D/g, "").length >= 9 ? telefone : null;
+    const novo = novos.get(e) ?? null;
     saida.push({
+      nome,
+      conviteNovoEm: iso(novo),
+      conviteNovoEmData: novo,
       email: e,
       origem,
       convidadoEm: iso(convidadoEm),
@@ -158,8 +182,8 @@ async function convidadosInternos(): Promise<Interno[]> {
     });
   };
 
-  for (const p of programa) juntar(String(p.email), "programa", data(p.convidadoEm), [p.email, p.emailDaConta], p.phone);
-  for (const c of emMassa) juntar(String(c.email), "conta", data(c.enviadoEm), [c.email], c.phone);
+  for (const p of programa) juntar(String(p.email), "programa", data(p.convidadoEm), [p.email, p.emailDaConta], p.phone, p.nome);
+  for (const c of emMassa) juntar(String(c.email), "conta", data(c.enviadoEm), [c.email], c.phone, c.nome);
 
   return saida.sort((a, b) => (b.convidadoEmData?.getTime() ?? 0) - (a.convidadoEmData?.getTime() ?? 0));
 }
@@ -167,21 +191,25 @@ async function convidadosInternos(): Promise<Interno[]> {
 /** Para o painel: sem o telefone (só se tem). */
 export async function convidadosDoSeguimento(): Promise<ConvidadoNoSeguimento[]> {
   return (await convidadosInternos()).map(
-    ({ telefone: _t, convidadoEmData: _c, lembreteEmData: _l, ...resto }) => resto,
+    ({ telefone: _t, nome: _n, convidadoEmData: _c, conviteNovoEmData: _cn, lembreteEmData: _l, ...resto }) => resto,
   );
 }
 
-/** Para o envio do lembrete: os que já passaram os 3 dias e ainda não aderiram. */
+/**
+ * Para o envio do lembrete: SÓ quem recebeu o convite NOVO (17-11-2026), 3
+ * dias depois DELE, sem ter aderido, uma vez só. Quem só tem o convite
+ * antigo de 01-11 não recebe lembrete — recebe primeiro o convite novo.
+ */
 export async function convidadosParaOLembrete(
   agora: Date,
   limite: number,
-): Promise<Array<{ email: string; telefone: string | null }>> {
+): Promise<Array<{ email: string; telefone: string | null; nome: string | null }>> {
   return (await convidadosInternos())
-    // Uma conta sem Gmail recebeu o email que pede o Gmail, não o link da Play: o lembrete de instalar não é para ela.
-    .filter((c) => c.gmail)
-    .filter((c) => precisaDoLembrete({ convidadoEm: c.convidadoEmData, aderiu: c.aderiu, lembreteEm: c.lembreteEmData }, agora))
+    // Uma conta sem Gmail não recebeu o link da Play pelo convite novo: o lembrete de instalar não é para ela.
+    .filter((c) => c.gmail && c.conviteNovoEmData !== null)
+    .filter((c) => precisaDoLembrete({ convidadoEm: c.conviteNovoEmData, aderiu: c.aderiu, lembreteEm: c.lembreteEmData }, agora))
     .slice(0, Math.max(1, Math.floor(limite)))
-    .map((c) => ({ email: c.email, telefone: c.telefone }));
+    .map((c) => ({ email: c.email, telefone: c.telefone, nome: c.nome }));
 }
 
 /* ─── As marcas ─────────────────────────────────────────────────────────── */
@@ -259,6 +287,10 @@ export async function apagarSeguimentoNaTransaccao(conn: Executor, email: string
   } catch (err) {
     if (!semTabela(err)) throw err;
   }
+  // O convite novo (17-11-2026) e os WhatsApp por sair: pelo email e pelas contas.
+  const { apagarConviteNovoDosEmails, apagarConviteNovoDaConta } = await import("./convite-novo-da-app-na-base");
+  await apagarConviteNovoDosEmails(conn, [email]);
+  for (const id of contaIds) await apagarConviteNovoDaConta(conn, id);
 }
 
 /**
@@ -279,4 +311,7 @@ export async function apagarSeguimentoDaConta(userId: number): Promise<void> {
       if ((err as { code?: string })?.code !== "ER_NO_SUCH_TABLE") throw err;
     }
   }
+  // O convite novo (17-11-2026) e os WhatsApp por sair desta conta.
+  const { apagarConviteNovoDaConta } = await import("./convite-novo-da-app-na-base");
+  await apagarConviteNovoDaConta(pool, userId);
 }

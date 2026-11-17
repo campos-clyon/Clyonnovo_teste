@@ -43,6 +43,8 @@ type Convidado = {
   lembreteCanais: string | null;
   temTelefone: boolean;
   gmail: boolean;
+  /** Quando saiu o convite novo (17-11-2026); `null` = ainda não o recebeu. */
+  conviteNovoEm: string | null;
 };
 
 type EstadoDoLembrete = { email: boolean; whatsapp: boolean; dias: number };
@@ -511,7 +513,7 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
             A Play não diz quem se tornou testador. Conta como aderiu quando a app de cliente ligou os avisos nessa conta, ou
             quando a equipa marca «Já instalou».{" "}
             {lembrete?.email
-              ? `Lembrete único ${lembrete.dias} dias depois do convite, por email${lembrete.whatsapp ? " e WhatsApp" : ""}.`
+              ? `Lembrete único ${lembrete.dias} dias depois do convite novo, por email${lembrete.whatsapp ? " e WhatsApp" : ""}; quem só tem o convite antigo recebe primeiro o convite novo.`
               : "O lembrete está desligado (à espera dos textos aprovados)."}
           </p>
           <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -529,7 +531,8 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
               </thead>
               <tbody>
                 {convidados.map((c) => {
-                  const convidadoEm = instanteDaBase(c.convidadoEm);
+                  // O lembrete conta os 3 dias a partir do convite NOVO (17-11-2026).
+                  const convidadoEm = instanteDaBase(c.conviteNovoEm);
                   return (
                     <tr key={c.email} className="border-t border-slate-100">
                       <td className="px-3 py-2 font-mono text-xs text-slate-800">
@@ -552,9 +555,11 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
                           ? `enviado · ${quando(c.lembreteEm)}${c.lembreteCanais ? ` (${c.lembreteCanais.replace(",", " + ")})` : ""}`
                           : c.aderiu || !c.gmail
                             ? "—"
-                            : lembrete?.email && convidadoEm
-                              ? `a partir de ${dataEHoraEmLisboa(quandoSaiOLembrete(convidadoEm))}`
-                              : "desligado"}
+                            : !lembrete?.email
+                              ? "desligado"
+                              : convidadoEm
+                                ? `a partir de ${dataEHoraEmLisboa(quandoSaiOLembrete(convidadoEm))}`
+                                : "depois do convite novo"}
                       </td>
                       <td className="px-3 py-2 text-right">
                         {c.aderiu !== "avisos-da-app" && (

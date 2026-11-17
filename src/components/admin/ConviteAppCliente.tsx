@@ -5,9 +5,12 @@ import { Download, RefreshCw, Send, Smartphone, X } from "lucide-react";
 import {
   ASSUNTO_DO_CONVITE,
   LINK_DE_ADESAO_SUGERIDO,
+  PRE_CABECALHO_DO_CONVITE,
   linkDeAdesaoValido,
   textoDoConvite,
 } from "@/lib/convite-app-cliente";
+import { preencherTexto } from "@/lib/seguimento-da-app";
+import { TEXTO_DO_CONVITE_POR_WHATSAPP } from "@/lib/textos-do-seguimento-da-app";
 
 /*
  * O CONVITE PARA TESTAR A APP DE CLIENTE — 01-11-2026 (ordem do CEO, aprovada
@@ -28,6 +31,8 @@ type Estado = {
   faltaGmail: number;
   noPrograma: number;
   conviteQuePedeOGmailPronto: boolean;
+  /** d59, parte 2 (17-11-2026): o convite novo — só contagens. */
+  conviteNovo: { emails: number; whatsapps: number; jaReceberam: number; whatsappsPorSair: number };
 };
 
 const ROTULOS_DE_FORA: Record<string, string> = {
@@ -119,10 +124,50 @@ export default function ConviteAppCliente({
     }
   };
 
+  const enviarConviteNovo = async () => {
+    if (!estado) return;
+    const { emails, whatsapps } = estado.conviteNovo;
+    const certeza = confirm(
+      `Enviar o convite novo?\n\n` +
+        `Vão sair ${emails} email${emails !== 1 ? "s" : ""} e ${whatsapps} WhatsApp ` +
+        `(a quem tem telemóvel na conta).\n\n` +
+        `Só contas com Gmail que ainda não aderiram, também as do convite de 01/11. ` +
+        `Cada pessoa recebe-o uma vez. Os WhatsApp saem um de cada vez, 20 a 45 s entre cada, das 9h às 21h. ` +
+        `3 dias depois sai um lembrete único a quem não aderir. Não se desfaz.`,
+    );
+    if (!certeza) return;
+    setOcupado("novo"); setErro(null); setAviso(null);
+    let total = 0;
+    let porWhats = 0;
+    try {
+      for (;;) {
+        const r = (await post({ accao: "enviar-convite-novo" })) as {
+          enviados: number; falhados: number; whatsappsNaFila: number; restantes: number;
+        };
+        total += r.enviados;
+        porWhats += r.whatsappsNaFila;
+        setAviso(`A enviar… ${total} email${total !== 1 ? "s" : ""}, ${porWhats} WhatsApp na fila.`);
+        if (r.falhados > 0) {
+          setErro(`${r.falhados} não saíram (o serviço de email recusou). Pode tentar outra vez: só vão os que faltam.`);
+          break;
+        }
+        if (r.enviados === 0 || r.restantes === 0) break;
+      }
+      setAviso(
+        `Feito: ${total} email${total !== 1 ? "s" : ""} enviado${total !== 1 ? "s" : ""} e ${porWhats} WhatsApp na fila (saem espaçados pela ponte).`,
+      );
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setOcupado(null);
+      await carregar();
+    }
+  };
+
   const enviarATodos = async () => {
     if (!estado) return;
     const certeza = confirm(
-      `Enviar o convite a ${estado.porEnviar} conta${estado.porEnviar !== 1 ? "s" : ""} de cliente?\n\n` +
+      `Enviar o convite a ${estado.porEnviar} conta${estado.porEnviar !== 1 ? "s" : ""} sem Gmail (o convite pede-lhes o Gmail do telemóvel)?\n\n` +
         `Sai devagar, uma a uma. Quem já recebeu não volta a receber. Não se desfaz.`,
     );
     if (!certeza) return;
@@ -238,9 +283,32 @@ export default function ConviteAppCliente({
                     Pré-visualização{estado.nomeDaPrimeira ? ` (com o nome da primeira conta)` : ""}
                   </p>
                   <p className="mt-2 text-sm font-semibold text-slate-900">Assunto: {ASSUNTO_DO_CONVITE}</p>
+                  <p className="mt-1 text-xs text-slate-500">Pré-cabeçalho: {PRE_CABECALHO_DO_CONVITE}</p>
                   <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-slate-700">
                     {textoDoConvite({ nome: estado.nomeDaPrimeira, link: linkLimpo ?? linkGuardado ?? LINK_DE_ADESAO_SUGERIDO })}
                   </pre>
+                  <p className="mt-4 text-xs font-semibold text-slate-500">WhatsApp (a quem tem telemóvel na conta)</p>
+                  <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-slate-700">
+                    {preencherTexto(TEXTO_DO_CONVITE_POR_WHATSAPP, {
+                      Nome: estado.nomeDaPrimeira ?? "",
+                      linkDeAdesao: linkLimpo ?? linkGuardado ?? LINK_DE_ADESAO_SUGERIDO,
+                    })}
+                  </pre>
+                </div>
+
+                <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Convite novo</p>
+                  <p className="mt-1">
+                    Por enviar: <strong className="text-slate-900">{estado.conviteNovo.emails}</strong> email
+                    {estado.conviteNovo.emails !== 1 ? "s" : ""} e{" "}
+                    <strong className="text-slate-900">{estado.conviteNovo.whatsapps}</strong> WhatsApp ·{" "}
+                    <strong className="text-slate-900">{estado.conviteNovo.jaReceberam}</strong> já receberam
+                    {estado.conviteNovo.whatsappsPorSair > 0 && <> · {estado.conviteNovo.whatsappsPorSair} WhatsApp na fila</>}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Contas com Gmail que ainda não aderiram (também as do convite de 01/11), fora do Programa da app.
+                    Cada pessoa recebe o convite novo uma vez e, 3 dias depois, no máximo um lembrete.
+                  </p>
                 </div>
 
                 <div className="text-sm text-slate-700">
@@ -259,7 +327,7 @@ export default function ConviteAppCliente({
                       <strong>{estado.faltaGmail}</strong> conta{estado.faltaGmail !== 1 ? "s" : ""} com email que não é Gmail:
                       falta o Gmail do telemóvel. Não vão para a lista da Play.{" "}
                       {estado.conviteQuePedeOGmailPronto
-                        ? "O convite pede-lhes o Gmail pelo formulário do Programa da app."
+                        ? "O convite pede-lhes que respondam ao email com o Gmail do telemóvel («Pedir o Gmail aos sem Gmail»)."
                         : "Ficam fora do envio até o texto que pede o Gmail estar aprovado."}
                     </p>
                   )}
@@ -284,13 +352,23 @@ export default function ConviteAppCliente({
                     <Download className="h-4 w-4" />
                     Descarregar lista para a Play ({estado.paraAPlay} Gmail)
                   </button>
+                  {estado.porEnviar > 0 && (
+                    <button
+                      onClick={enviarATodos}
+                      disabled={!linkGuardado || linkPorGuardar || ocupado !== null}
+                      className={botaoSec}
+                    >
+                      <Send className="h-4 w-4" />
+                      {ocupado === "todos" ? "A enviar…" : `Pedir o Gmail aos sem Gmail (${estado.porEnviar})`}
+                    </button>
+                  )}
                   <button
-                    onClick={enviarATodos}
-                    disabled={!linkGuardado || linkPorGuardar || estado.porEnviar === 0 || ocupado !== null}
+                    onClick={enviarConviteNovo}
+                    disabled={!linkGuardado || linkPorGuardar || estado.conviteNovo.emails === 0 || ocupado !== null}
                     className="inline-flex items-center gap-2 rounded-xl bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
                   >
                     <Send className="h-4 w-4" />
-                    {ocupado === "todos" ? "A enviar…" : `Enviar a todos (${estado.porEnviar})`}
+                    {ocupado === "novo" ? "A enviar…" : `Enviar o convite novo (${estado.conviteNovo.emails})`}
                   </button>
                 </div>
               </div>
