@@ -132,14 +132,15 @@ describe("«por hora» é uma base, ao lado de «total» e «por carga»", () =>
 
 describe("o motor usa a tabela", () => {
   it("as horas de uma mudança vêm da tipologia, e não das 7 fixas", () => {
-    expect(estimateLaborHours({ serviceType: "mudanca", description: "Mudança de um T2" })).toBe(6);
+    // Desde a d71 com 2 pessoas onde a tabela as oferece: um T2 é 6,5–9 h → 7,75 → 8 h.
+    expect(estimateLaborHours({ serviceType: "mudanca", description: "Mudança de um T2" })).toBe(8);
     expect(estimateLaborHours({ serviceType: "mudanca", tipologia: "T4+" })).toBe(10.5);
     expect(estimateLaborHours({ serviceType: "mudanca" })).toBe(3);
   });
 
-  it("um T1 sem nada de especial: o meio de 4–5 h a 55 € = 247,50 € sem IVA", async () => {
+  it("um T1 sem nada de especial: com 2 pessoas (d71), o meio de 5–6,5 h a 40 € = 230 € sem IVA", async () => {
     const e = await calculateFastEstimate({ serviceType: "mudanca", tipologia: "T1" });
-    expect(e.estimatedPriceWithoutVat).toBe(247.5);
+    expect(e.estimatedPriceWithoutVat).toBe(230);
   });
 
   it("a sugestão ao profissional, num pedido à hora, é por hora", () => {

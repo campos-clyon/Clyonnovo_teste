@@ -103,8 +103,76 @@ export async function gravarARua(pedidoId: number, rua: RuaLida, onde: string): 
       by: null,
       message: `A rua chegou ${onde}: ${rua.morada}${rua.andar ? `, andar ${rua.andar}` : ""}. Ficou na morada do pedido (o parceiro vê-a).`,
     }).catch(() => {});
+    await avisarOContratadoDaRua(pedidoId);
   }
   return gravou;
+}
+
+/*
+ * O PARCEIRO CONTRATADO FICA A SABER — 17-11-2026 (d71, o CEO e o dono). A rua
+ * entrava na morada do trabalho em silêncio. Agora, quando o pedido passa de
+ * «falta a rua» a completo (a passagem `ruaEmFalta` 1 → 0, que só acontece uma
+ * vez por pedido), o contratado recebe um aviso na app Pro — pelo servidor, sem
+ * WhatsApp. Só ao contratado (a negociação acordada, com o trabalho por fazer);
+ * antes do aceite não há a quem avisar. Nunca atira: a rua já está gravada.
+ */
+export async function avisarOContratadoDaRua(pedidoId: number): Promise<boolean> {
+  try {
+    const pool = await getPool();
+    if (!pool) return false;
+    const [rows] = (await pool.execute(
+      `SELECT n.id, p.email
+         FROM negociacoes n JOIN providers p ON p.id = n.providerId
+        WHERE n.pedidoId = ? AND n.estado = 'acordada'
+          AND n.execucaoEnviadaEm IS NULL AND n.confirmadoEm IS NULL AND n.pagoEm IS NULL
+        ORDER BY n.id DESC LIMIT 1`,
+      [pedidoId],
+    )) as unknown as [Array<{ id: number; email: string | null }>, unknown];
+    const linha = rows[0];
+    const email = typeof linha?.email === "string" ? linha.email.trim() : "";
+    if (!linha || !email) return false;
+    const { avisarProfissionalDaRuaPorPush } = await import("./avisar-por-push");
+    await avisarProfissionalDaRuaPorPush({ email, pedidoId, negociacaoId: Number(linha.id) });
+    await appendOrderHistory(pedidoId, {
+      type: "rua_avisada",
+      by: null,
+      message: "O parceiro contratado foi avisado na app Pro de que a rua chegou.",
+    }).catch(() => {});
+    return true;
+  } catch (e) {
+    console.error("[avisarOContratadoDaRua]", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+/**
+ * A RUA QUE CHEGOU POR OUTRO CAMINHO — a equipa a editar o pedido no
+ * backoffice. Se a morada nova já tem a rua e o pedido estava «falta a rua»,
+ * fecha a marca (uma vez: só passa de 1 a 0 se ainda era 1) e avisa o
+ * contratado. Devolve se fechou. Nunca atira.
+ */
+export async function fecharARuaQueChegou(pedidoId: number, address: string | null | undefined, onde: string): Promise<boolean> {
+  if (faltaARua(address)) return false;
+  try {
+    await ensureColunasDaRua();
+    const pool = await getPool();
+    if (!pool) return false;
+    const [r] = (await pool.execute(
+      "UPDATE simulatorOrders SET ruaEmFalta = 0, ruaRecebidaEm = NOW(), updatedAt = updatedAt WHERE id = ? AND ruaEmFalta = 1 AND ruaRecebidaEm IS NULL",
+      [pedidoId],
+    )) as unknown as [{ affectedRows?: number }, unknown];
+    if (Number(r?.affectedRows ?? 0) === 0) return false;
+    await appendOrderHistory(pedidoId, {
+      type: "rua_recebida",
+      by: null,
+      message: `A rua chegou ${onde}. Ficou na morada do pedido (o parceiro vê-a).`,
+    }).catch(() => {});
+    await avisarOContratadoDaRua(pedidoId);
+    return true;
+  } catch (e) {
+    console.error("[fecharARuaQueChegou]", e instanceof Error ? e.message : e);
+    return false;
+  }
 }
 
 const dig9 = (t: string) => t.replace(/\D/g, "").slice(-9);

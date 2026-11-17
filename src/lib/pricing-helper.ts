@@ -3,10 +3,12 @@ import type { SimulatorSettingKey, SimulatorSettingsMap } from "./simulator-sett
 import { createSimulatorSettingsMap } from "./simulator-settings";
 import type { LaborCost } from "../app/simulador/types";
 import {
-  MINIMO_DA_MUDANCA,
+  MINIMO_DA_MUDANCA_DUAS_PESSOAS,
   MINIMO_DE_HORAS,
-  PRECO_POR_HORA,
   horasEstimadas,
+  minimoDaMudancaDaEquipa,
+  pessoasDoMotor,
+  precoPorHoraDaEquipa,
   orcamentoDaMudanca,
   tipologiaDoTexto,
   type Tipologia,
@@ -67,6 +69,7 @@ import {
   QUANTO_TRABALHO,
   TIPOS_DE_TRABALHO,
   lerAcesso,
+  lerManutencao,
   lerRecheio,
   lerTipologiaDoEsvaziamento,
   nomeDaOpcao,
@@ -337,6 +340,73 @@ export function pontoDosMonos(de: number, ate: number, acessoDificil: boolean, p
 }
 
 /** As palavras que contam um item mas não dizem o tamanho dele. */
+/* ──────────────────────────────────────────────────────────────────────────
+ * A MANUTENÇÃO DA CASA PELA GRELHA — 17-11-2026 (d71, o CEO e o dono).
+ *
+ * O motor não lia a grelha da manutenção (`MANUTENCAO_POR_TIPO`, a mesma que o
+ * simulador e a R12 usam em `grelhaDaManutencao`): ia à fórmula de custo e ao
+ * mínimo de zona, e dava 240 € a «trocar uma torneira» — quando a grelha diz
+ * 57–100 € + IVA. Agora lê as respostas do simulador (o tipo e o tamanho do
+ * trabalho) e, quando o pedido não as traz (o WhatsApp, o formulário curto),
+ * tira-as da descrição. Sem célula com número (uma proposta com fotografias, ou
+ * nada que se perceba), fica o «desde» publicado do serviço, nunca o mínimo de
+ * zona.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** O tipo de trabalho dito numa frase («trocar uma torneira» → canalização). `null` quando não se percebe. */
+export function tipoDeTrabalhoDoTexto(texto: string | null | undefined): string | null {
+  const t = semAcentosDoMotor(texto ?? "");
+  if (!t.trim()) return null;
+  if (/\bremodela/.test(t)) return "remodelacao";
+  if (/\bpint(ar|ura|or)\b/.test(t)) return "pintura";
+  if (/torneira|canaliz|autoclismo|esgoto|entupi|\bcanos?\b|fuga de agua|sifao|esquentador|lava-?loica|\bralo\b/.test(t)) return "canalizacao";
+  if (/eletric|electric|\btomadas?\b|interruptor|disjuntor|quadro eletrico|candeeiro|lampada|\bluz(es)?\b/.test(t)) return "electricidade";
+  if (/carpint|dobradica|rodape|\bportas?\b|roupeiro|soalho|\bmadeira\b/.test(t)) return "carpintaria";
+  if (/repara|arranjar|consert|prateleira|pendurar|silicone|estore|fechadura/.test(t)) return "pequenas_reparacoes";
+  return null;
+}
+
+/** Quanto trabalho a frase diz: várias pequenas, uma divisão, uma remodelação; senão, uma pequena. */
+export function quantoTrabalhoDoTexto(texto: string | null | undefined, tipo: string | null): string {
+  const t = semAcentosDoMotor(texto ?? "");
+  if (tipo === "remodelacao") return "remodelacao";
+  if (/\b(divisao|sala|quarto|cozinha|casa de banho|wc)\s+(inteir[ao]|toda|completa)\b|\b(toda a|a casa toda|casa inteira)\b/.test(t)) return "uma_divisao";
+  if (/\b(varias|varios|algumas|alguns|umas|uns|tres|quatro|cinco)\b|\b[2-9]\s/.test(t)) return "varias_pequenas";
+  return "uma_pequena";
+}
+
+export function manutencaoPelaGrelha(input: FastEstimateInput): FaixaPublicada | null {
+  if (input.serviceType !== "manutencao_casa") return null;
+  const r = lerManutencao(input as unknown as Record<string, unknown>);
+  const tipo = r.tipoDeTrabalho ?? tipoDeTrabalhoDoTexto(input.description);
+  const quanto = r.quantoTrabalho ?? (tipo ? quantoTrabalhoDoTexto(input.description, tipo) : null);
+  const dito = r.tipoDeTrabalho && r.quantoTrabalho ? "" : " (lido na descrição)";
+  const c = tipo && quanto ? celulaDaManutencao(tipo, quanto) : null;
+  const qual = c ? `${nomeDaOpcao(TIPOS_DE_TRABALHO, c.trabalho) ?? c.trabalho}, ${(nomeDaOpcao(QUANTO_TRABALHO, c.quanto) ?? c.quanto).toLowerCase()}` : null;
+  if (c && c.celula.tipo === "faixa") {
+    const { de, ate } = c.celula;
+    return {
+      de,
+      ate,
+      valor: ate,
+      linha: `Grelha da manutenção (${qual}${dito}): ${de} a ${ate} € s/IVA (${comIva(de)} a ${comIva(ate)} € c/IVA) → ${ate} € s/IVA`,
+    };
+  }
+  if (c && c.celula.tipo === "desde") {
+    const de = c.celula.de;
+    const porDivisao = c.celula.porDivisao ? " por divisão" : "";
+    return { de, ate: de, valor: de, linha: `Grelha da manutenção (${qual}${dito}): desde ${de} € s/IVA (${comIva(de)} € c/IVA)${porDivisao}` };
+  }
+  // Uma proposta com fotografias, ou nada que se perceba: o «desde» publicado do serviço.
+  const m = MINIMO_DA_MANUTENCAO;
+  return {
+    de: m,
+    ate: m,
+    valor: m,
+    linha: `Manutenção${qual ? ` (${qual}${dito})` : ""}: proposta com fotografias — desde ${m} € s/IVA (${comIva(m)} € c/IVA), o «desde» publicado`,
+  };
+}
+
 const PALAVRAS_SEM_TAMANHO = /^(monos?|movel|moveis|eletrodomestico|electrodomestico)/;
 
 /**
@@ -690,6 +760,9 @@ export interface FastEstimateInput {
   movelItemsGrande?: number | string;
   /** As peças grandes cabem no elevador? «sim», «nao», «nao_sei» (d60). */
   pecasNoElevador?: string;
+  /** Manutenção da casa: as respostas do simulador (`TIPOS_DE_TRABALHO`, `QUANTO_TRABALHO`), d71. */
+  tipoDeTrabalho?: string;
+  quantoTrabalho?: string;
 }
 
 /**
@@ -719,6 +792,8 @@ export const CAMPOS_DO_PEDIDO_PARA_O_MOTOR = [
   "movelItemsMedio",
   "movelItemsGrande",
   "pecasNoElevador",
+  "tipoDeTrabalho",
+  "quantoTrabalho",
 ] as const satisfies ReadonlyArray<keyof FastEstimateInput>;
 
 /** Só os campos de `CAMPOS_DO_PEDIDO_PARA_O_MOTOR` que o pedido tem. */
@@ -792,8 +867,8 @@ const SERVICE_REFERENCE_RANGES: Record<string, { min: number; max: number; sugge
   esvaziamento_cave:         { min: 140, max: 450, suggested: 275 },
   // Armazém, escritório ou loja (d43, 15-11-2026): sem preço publicado; a referência interna é a da casa.
   esvaziamento_empresa:      { min: 300, max: 800, suggested: 500 },
-  // O mínimo é o da tabela com a equipa de 3 (3 h × 55 €, d60), e não os 210 € dos 70 €/h de antes (25-10-2026).
-  mudanca:                   { min: MINIMO_DA_MUDANCA, max: 500, suggested: 280 },
+  // O mínimo é o da tabela com a equipa de 2 (3 h × 40 €, d60/d71) — o mais baixo que o motor estima —, e não os 210 € dos 70 €/h de antes (25-10-2026).
+  mudanca:                   { min: MINIMO_DA_MUDANCA_DUAS_PESSOAS, max: 500, suggested: 280 },
   outro:                     { min: 100, max: 250, suggested: 160 },
 };
 
@@ -1199,6 +1274,8 @@ export function mensagemDaMudanca(
   horas: number,
   semIva: number,
   comOIva: number,
+  /** A equipa com que a referência estimou (d71). */
+  pessoas: 2 | 3 = 3,
 ): string {
   const pp = precoPublicoConhecido();
   if (pelaLista && pp.tipo === "parceiros") {
@@ -1210,7 +1287,7 @@ export function mensagemDaMudanca(
   }
   return (
     `Mudança à hora, ao preço de cada parceiro; ${NA_REFERENCIA_DA_MUDANCA}. ` +
-    `Estimativa na referência: cerca de ${horas} h — à volta de ${semIva.toFixed(2)} € + IVA (${comOIva.toFixed(2)} € c/IVA). O total sai das horas feitas no dia.`
+    `Estimativa na referência: cerca de ${horas} h com ${pessoas} pessoas — à volta de ${semIva.toFixed(2)} € + IVA (${comOIva.toFixed(2)} € c/IVA). O total sai das horas feitas no dia.`
   );
 }
 
@@ -1238,7 +1315,9 @@ export function estimateLaborHours(input: FastEstimateInput): number {
      * desmontagem, nunca abaixo do mínimo de 3. Os andares sem elevador e a
      * distância já não somam horas: pagam-se à parte, pela tabela.
      */
-    hours = horasEstimadas(tipologiaDaMudanca(input), desmontagemNaMudanca(input));
+    // Com 2 pessoas quando a tabela as oferece para a casa (d71, 17-11-2026).
+    const t = tipologiaDaMudanca(input);
+    hours = horasEstimadas(t, desmontagemNaMudanca(input), pessoasDoMotor(t));
 
   } else if (svc === "recolha_entulho") {
     // Tabela de sacos — cada saco adicional demora menos (não linear)
@@ -1344,6 +1423,8 @@ function applyZoneMinimum(
   svc: string | undefined,
   itemCount: number = 1,
   isFullLoad: boolean = false,
+  /** Numa mudança, a equipa com que se estimou (d71): o mínimo é o dela. */
+  pessoasDaMudanca: 2 | 3 = 3,
 ): { price: number; note: string | null; minimumThreshold: number } {
   // Entulho: mínimo fixo próprio, sem mínimo de zona
   if (svc === "recolha_entulho") {
@@ -1357,23 +1438,28 @@ function applyZoneMinimum(
     return { price: priceWithoutVat, note: null, minimumThreshold: MINIMO_DO_ENTULHO };
   }
 
-  // Mudança: o mínimo da tabela do dono — 3 horas da equipa de 3 (13-10-2026; 55 €/h desde a d60). O motor
-  // estima sempre com 3 pessoas: o mínimo de 2 pessoas (`MINIMO_DA_MUDANCA_DUAS_PESSOAS`) é o da lista.
+  // Mudança: o mínimo da tabela do dono — 3 horas da equipa com que se estimou (13-10-2026; 40 €/h com 2
+  // e 55 €/h com 3 desde a d60). Desde a d71 (17-11-2026) o motor estima com 2 quando a casa as admite.
   // Desde a d7 (11-11-2026) só na REFERÊNCIA (lista vazia): com parceiros na lista, o
   // mínimo é o do parceiro e já vem na estimativa pela lista (`estimativaPelaLista`).
   if (svc === "mudanca") {
     if (precoPublicoConhecido().tipo === "parceiros") {
       return { price: priceWithoutVat, note: null, minimumThreshold: 0 };
     }
-    const minimo = PRECO_POR_HORA * MINIMO_DE_HORAS;
+    const minimo = minimoDaMudancaDaEquipa(pessoasDaMudanca);
     if (priceWithoutVat < minimo) {
       return {
         price: minimo,
-        note: `Mínimo da referência aplicado (sem parceiros na lista): ${minimo} € s/IVA, ${comIva(minimo)} € c/IVA (${MINIMO_DE_HORAS} h × ${PRECO_POR_HORA} €/h)`,
+        note: `Mínimo da referência aplicado (sem parceiros na lista): ${minimo} € s/IVA, ${comIva(minimo)} € c/IVA (${MINIMO_DE_HORAS} h × ${precoPorHoraDaEquipa(pessoasDaMudanca)} €/h, ${pessoasDaMudanca} pessoas)`,
         minimumThreshold: minimo,
       };
     }
     return { price: priceWithoutVat, note: null, minimumThreshold: minimo };
+  }
+
+  // A manutenção da casa vai pela grelha (d71): o mínimo é o «desde» publicado, nunca o de zona.
+  if (svc === "manutencao_casa") {
+    return { price: Math.max(priceWithoutVat, MINIMO_DA_MANUTENCAO), note: null, minimumThreshold: MINIMO_DA_MANUTENCAO };
   }
 
   // Garagem, sótão e cave fora da faixa «cheio»: sem mínimo de zona (29-10-2026).
@@ -1592,6 +1678,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // ── 5b. Override para mudança: preçário horário comercial ────────────────────
   // O cliente paga taxa horária total (equipa + veículo), mínimo 3 horas.
   // A fórmula geral não se aplica a mudanças.
+  /** Numa mudança na referência, a equipa com que se estima (d71): 2 quando a casa as admite. */
+  const pessoasDaMudanca = pessoasDoMotor(svc === "mudanca" ? tipologiaDaMudanca(input) : null);
   if (svc === "mudanca") {
     /*
      * A TABELA DAS MUDANÇAS — 13-10-2026. À hora (50 € sem IVA, o que o
@@ -1605,6 +1693,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
       kmPercurso: input.movingDistance?.distanceKm ?? null,
       origem: { floor: input.originAccess?.floor ?? input.floor, hasElevator: input.originAccess?.hasElevator ?? input.hasElevator },
       destino: { floor: input.destinationAccess?.floor, hasElevator: input.destinationAccess?.hasElevator },
+      pessoas: pessoasDaMudanca,
     });
     /*
      * PELA LISTA, QUANDO HÁ PARCEIROS — d7, 11-11-2026. O motor estimava pela
@@ -1687,7 +1776,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // No ponto do motor (`pontoDaEstimativa`); o acesso difícil leva ao topo, como na R12.
   // Os monos com as peças contadas já foram pela tabela das peças (d59): a faixa é só sem elas.
   const faixaPublicada =
-    esvaziamentoPelaTipologia(input) ?? (pecas ? null : monosPelaFaixa(input, eCargaCompleta(svc, input.volumeTier, resolveItemCount(input))));
+    esvaziamentoPelaTipologia(input) ?? manutencaoPelaGrelha(input) ?? (pecas ? null : monosPelaFaixa(input, eCargaCompleta(svc, input.volumeTier, resolveItemCount(input))));
   if (faixaPublicada) {
     precoSemIva = faixaPublicada.valor;
     notes.push(`${faixaPublicada.linha} (a grelha publicada substitui a fórmula de custo)`);
@@ -1743,6 +1832,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     input.serviceType,
     itemCount,
     isFull,
+    pessoasDaMudanca,
   );
   if (minNote) assumptions.push(minNote);
   // Na garagem, no sótão e na cave, o preço fica dentro da faixa, mesmo com o mínimo de zona.
@@ -1856,7 +1946,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     missingFields: missing,
     customerMessage:
       svc === "mudanca"
-        ? mensagemDaMudanca(mudancaPelaLista, laborHours, finalSemIva, withVat)
+        ? mensagemDaMudanca(mudancaPelaLista, laborHours, finalSemIva, withVat, pessoasDaMudanca)
         : mensagemDaEstimativa(pelaGrelha, finalSemIva, withVat, numPessoas, laborHours),
     internalNotes: [
       ...notes,

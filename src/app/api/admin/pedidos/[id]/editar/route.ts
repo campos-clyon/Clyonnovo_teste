@@ -19,6 +19,7 @@ import { camposDoServico } from "@/lib/campos-do-servico";
 import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { avisarQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
+import { fecharARuaQueChegou } from "@/lib/rua-depois-do-aceite-na-base";
 import {
   retratoDoPedido,
   oQueMudou,
@@ -318,6 +319,15 @@ export async function POST(
             baseUrl: urlDeAccaoDoPedido(req.headers),
           })
         : null;
+
+    /*
+     * A RUA QUE FALTAVA (d69) CHEGOU PELA EDIÇÃO — d71, 17-11-2026: o pedido
+     * deixa de estar «falta a rua» e o contratado recebe o aviso na app Pro
+     * (uma vez; ver `rua-depois-do-aceite-na-base.ts`).
+     */
+    if (mudou.includes("address") && depoisDeGravar) {
+      await fecharARuaQueChegou(pedidoId, depoisDeGravar.address, "pela equipa, no backoffice");
+    }
 
     // O alcance com a informação NOVA — é a pergunta que se segue a qualquer
     // edição de morada: "e agora, chega a quem?"

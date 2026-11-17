@@ -68,7 +68,8 @@ describe("os quatro momentos estão mesmo ligados", () => {
      */
     const exportadas = AVISOS_NU.match(/export async function (\w+)/g) ?? [];
     // Dez desde 02-11-2026: + «o cliente pagou» ao parceiro (transferência bancária).
-    expect(exportadas).toHaveLength(10);
+    // Onze desde 17-11-2026 (d71, aprovada pelo CEO e pelo dono): + a rua do trabalho chegou, ao contratado.
+    expect(exportadas).toHaveLength(11);
   });
 });
 

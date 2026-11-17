@@ -384,8 +384,31 @@ export function tipologiaDoTexto(texto: string | null | undefined): Tipologia | 
  * horas previstas de um pedido. Sem tipologia conhecida, conta-se o mínimo: o
  * profissional diz quantas prevê quando vir o trabalho.
  */
-export function horasEstimadas(tipologia: Tipologia | null | undefined, desmontagem = false): number {
-  return Math.max(MINIMO_DE_HORAS, meioDoIntervalo(intervaloDeHoras(tipologia ?? "itens", desmontagem, 3)));
+export function horasEstimadas(tipologia: Tipologia | null | undefined, desmontagem = false, pessoas: 2 | 3 = 3): number {
+  return Math.max(MINIMO_DE_HORAS, meioDoIntervalo(intervaloDeHoras(tipologia ?? "itens", desmontagem, pessoas)));
+}
+
+/*
+ * A EQUIPA COM QUE O MOTOR ESTIMA — 17-11-2026 (d71, o CEO e o dono). O motor
+ * estimava sempre com a equipa de 3, e por isso nunca dava menos de 3 h × 55 €,
+ * quando o site diz «mínimo 3 horas: … com 2 pessoas, … com 3». Agora, na
+ * referência (a lista de parceiros vazia), estima com 2 pessoas sempre que a
+ * tabela as oferece para a casa (`HORAS_COM_DUAS_PESSOAS` não é null), e com 3
+ * só quando a casa só se faz com 3 (T3 e T4+). Com parceiros na lista, o preço
+ * continua a ser o da lista (d7), e isto não conta.
+ */
+export function pessoasDoMotor(tipologia: Tipologia | null | undefined): 2 | 3 {
+  return pessoasParaACasa(tipologia, 2);
+}
+
+/** O preço da hora da referência para esta equipa, sem IVA. */
+export function precoPorHoraDaEquipa(pessoas: 2 | 3): number {
+  return pessoas === 2 ? PRECO_POR_HORA_DUAS_PESSOAS : PRECO_POR_HORA;
+}
+
+/** O mínimo da referência para esta equipa (as horas mínimas × o preço da hora), sem IVA. */
+export function minimoDaMudancaDaEquipa(pessoas: 2 | 3): number {
+  return precoPorHoraDaEquipa(pessoas) * MINIMO_DE_HORAS;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -421,13 +444,22 @@ export type PedidoDeMudanca = {
   protecao?: boolean;
   /** Somar também o embalamento completo (`EMBALAMENTO_POR_TIPOLOGIA`), quando o cliente o pede. */
   embalamento?: boolean;
+  /**
+   * A equipa: 3 por omissão (as páginas e a referência de uma casa); 2 quando o
+   * motor estima com 2 (d71). Numa casa que só se faz com 3, conta 3 na mesma.
+   */
+  pessoas?: 2 | 3;
 };
 
 export type OrcamentoDaMudanca = {
   /** O meio do intervalo (o motor e quem precisa de um número só). */
   horas: number;
-  /** O intervalo de horas da equipa de 3: [mínimo, máximo]. */
+  /** O intervalo de horas desta equipa: [mínimo, máximo]. */
   intervalo: IntervaloDeHoras;
+  /** A equipa com que se contou (2 ou 3). */
+  pessoas: 2 | 3;
+  /** O preço da hora dessa equipa, sem IVA. */
+  precoPorHora: number;
   maoDeObra: number;
   deslocacao: number;
   andares: number;
@@ -462,20 +494,24 @@ function valorDosMateriais(q: Record<string, number>): number {
 }
 
 /**
- * A ESTIMATIVA DE UMA MUDANÇA, pela tabela de referência (equipa de 3). É uma
+ * A ESTIMATIVA DE UMA MUDANÇA, pela tabela de referência (equipa de 3 por
+ * omissão; com `pessoas: 2`, a de 2 — o motor desde a d71). É uma
  * estimativa: a mudança paga-se pelas horas feitas no dia. Desde 11-11-2026
  * em intervalo — as horas da tipologia de 3 a 9, de 9 a 12… —, com os totais
  * nos dois extremos e ao meio.
  */
 export function orcamentoDaMudanca(p: PedidoDeMudanca): OrcamentoDaMudanca {
-  const intervalo = intervaloDeHoras(p.tipologia ?? null, p.desmontagem === true, 3);
+  const pessoas = pessoasParaACasa(p.tipologia ?? null, p.pessoas ?? 3);
+  const porHora = precoPorHoraDaEquipa(pessoas);
+  const intervalo = intervaloDeHoras(p.tipologia ?? null, p.desmontagem === true, pessoas);
   const horas = meioDoIntervalo(intervalo);
-  const maoMin = arred(intervalo[0] * PRECO_POR_HORA);
-  const maoMax = arred(intervalo[1] * PRECO_POR_HORA);
+  const maoMin = arred(intervalo[0] * porHora);
+  const maoMax = arred(intervalo[1] * porHora);
   const desl = deslocacao(p.kmPercurso);
   const andares =
     andaresAPe(p.origem?.floor, p.origem?.hasElevator) + andaresAPe(p.destino?.floor, p.destino?.hasElevator);
-  const custoDosAndares = andares * POR_ANDAR_SEM_ELEVADOR;
+  const porAndar = POR_ANDAR_SEM_ELEVADOR_POR_PESSOA * pessoas;
+  const custoDosAndares = andares * porAndar;
   const elevador = p.elevadorExterior ? ELEVADOR_EXTERIOR : 0;
   const t = p.tipologia ?? "itens";
   const daProtecao = p.protecao ? materiaisDeReferencia(PROTECAO_POR_TIPOLOGIA[t]) : {};
@@ -490,9 +526,9 @@ export function orcamentoDaMudanca(p: PedidoDeMudanca): OrcamentoDaMudanca {
   const totalSemIva = arred((totalSemIvaMinimo + totalSemIvaMaximo) / 2);
 
   const linhas = [
-    `${intervaloDeHorasEmTexto(intervalo).replace(/^entre/, "Entre")} × ${euros(PRECO_POR_HORA)} (viatura, motorista e 2 ajudantes) = ${eurosDeA(maoMin, maoMax)}`,
+    `${intervaloDeHorasEmTexto(intervalo).replace(/^entre/, "Entre")} × ${euros(porHora)} (viatura, motorista e ${pessoas === 2 ? "1 ajudante" : "2 ajudantes"}) = ${eurosDeA(maoMin, maoMax)}`,
     desl > 0 ? `Deslocação: ${Number(p.kmPercurso).toFixed(0)} km × 2 × ${euros(PRECO_POR_KM_LONGE)} = ${euros(desl)} (mais portagens)` : null,
-    andares > 0 ? `${andares} ${andares === 1 ? "andar" : "andares"} a pé × ${euros(POR_ANDAR_SEM_ELEVADOR)} = ${euros(custoDosAndares)}` : null,
+    andares > 0 ? `${andares} ${andares === 1 ? "andar" : "andares"} a pé × ${euros(porAndar)} = ${euros(custoDosAndares)}` : null,
     elevador > 0 ? `Elevador exterior: ${euros(elevador)}` : null,
     valorProtecao > 0 ? `Proteção (${materialEmTexto(PROTECAO_POR_TIPOLOGIA[t])}): ${euros(valorProtecao)}` : null,
     valorEmbalamento > 0 ? `Caixas e embalamento (${materialEmTexto(EMBALAMENTO_POR_TIPOLOGIA[t])}): ${euros(valorEmbalamento)}` : null,
@@ -502,7 +538,9 @@ export function orcamentoDaMudanca(p: PedidoDeMudanca): OrcamentoDaMudanca {
   return {
     horas,
     intervalo,
-    maoDeObra: arred(horas * PRECO_POR_HORA),
+    pessoas,
+    precoPorHora: porHora,
+    maoDeObra: arred(horas * porHora),
     deslocacao: desl,
     andares,
     custoDosAndares,

@@ -24,8 +24,10 @@ import {
 import { SACOS_POR_BIG_BAG } from "./sacos-de-entulho";
 import {
   MINIMO_DA_MUDANCA,
+  MINIMO_DA_MUDANCA_DUAS_PESSOAS,
   PRECO_POR_HORA,
   orcamentoDaMudanca,
+  pessoasDoMotor,
 } from "./tabela-das-mudancas";
 import { comIva, comIvaEscrito, euros, semIvaEscrito, type Valor } from "./quanto-custa";
 import { euroDasFontes, eurosNoTexto } from "./o-que-o-site-sabe";
@@ -101,14 +103,16 @@ describe("na mudança, o preço é o da tabela", () => {
   it("e o preço do motor é o de `orcamentoDaMudanca`", async () => {
     for (const tipologia of ["T1", "T2", "T3"] as const) {
       const e = await calculateFastEstimate({ serviceType: "mudanca", tipologia } as never);
-      expect(e.estimatedPriceWithoutVat, tipologia).toBe(orcamentoDaMudanca({ tipologia }).totalSemIva);
+      // Com a equipa com que o motor estima (d71): 2 onde a tabela as oferece, 3 no T3.
+      expect(e.estimatedPriceWithoutVat, tipologia).toBe(orcamentoDaMudanca({ tipologia, pessoas: pessoasDoMotor(tipologia) }).totalSemIva);
     }
   });
 
-  it("a referência de último recurso não desce abaixo do mínimo da tabela, e não é 210 €", () => {
+  it("a referência de último recurso não desce abaixo do mínimo da tabela (o de 2 pessoas, d71), e não é 210 €", () => {
     const r = buildReferenceEstimate({ serviceType: "mudanca" } as never);
-    expect(r.estimateMinWithoutVat).toBeGreaterThanOrEqual(MINIMO_DA_MUDANCA);
-    expect(ler("src/lib/pricing-helper.ts")).toContain("mudanca:                   { min: MINIMO_DA_MUDANCA,");
+    expect(r.estimateMinWithoutVat).toBeGreaterThanOrEqual(MINIMO_DA_MUDANCA_DUAS_PESSOAS);
+    expect(MINIMO_DA_MUDANCA_DUAS_PESSOAS).toBeLessThan(MINIMO_DA_MUDANCA);
+    expect(ler("src/lib/pricing-helper.ts")).toContain("mudanca:                   { min: MINIMO_DA_MUDANCA_DUAS_PESSOAS,");
   });
 });
 

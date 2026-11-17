@@ -40,6 +40,7 @@ import {
  *   Ao profissional · o cliente desistiu da proposta dele — idem (28-10-2026)
  *   Ao profissional · o trabalho foi confirmado  — o valor conta na carteira (27-10-2026)
  *   Ao profissional · a CLYON pagou-lhe          — o dinheiro está a caminho (27-10-2026)
+ *   Ao profissional · a rua do trabalho chegou   — a morada que faltava (d71, 17-11-2026)
  *
  * Os de 28-10-2026 (d5) fecham a negociação no telemóvel: a app promete
  * «Avisamos quando ele responder», e quem perdia não sabia que tinha perdido.
@@ -363,6 +364,36 @@ export async function avisarProfissionalContratadoPorPush(dados: {
     tag: `contratado-${dados.pedidoId}`,
     negociacaoId: dados.negociacaoId ?? undefined,
   }, "pro");
+}
+
+/**
+ * AO PARCEIRO CONTRATADO: a rua chegou — 17-11-2026 (d71, o CEO e o dono).
+ *
+ * Desde a d69 o pedido registado só com a zona fica «falta a rua», e a rua
+ * chega depois do aceite (a resposta do cliente à Vitória, ou a equipa no
+ * backoffice). Entrava na morada do trabalho em silêncio: o parceiro só a via
+ * se voltasse a abrir o trabalho. Agora recebe este aviso, uma vez, na app. A
+ * morada não vai no texto (o ecrã de bloqueio vê-se de fora): ele toca e vê-a
+ * no trabalho. Nunca rebenta.
+ */
+export async function avisarProfissionalDaRuaPorPush(dados: {
+  email: string | null | undefined;
+  pedidoId: number;
+  negociacaoId?: number | null;
+}): Promise<void> {
+  if (!dados.email) return;
+  try {
+    await sendPushToUser(dados.email, {
+      title: "A morada do trabalho chegou",
+      body: `O cliente deu a rua e o número do pedido #${dados.pedidoId}. Toque para ver a morada completa.`,
+      url: ligacao("/profissionais/painel"),
+      tag: `rua-${dados.pedidoId}`,
+      negociacaoId: dados.negociacaoId ?? undefined,
+      tipo: "rua",
+    }, "pro");
+  } catch (e) {
+    console.error("[avisar-por-push] a rua chegou:", e);
+  }
 }
 
 /**
