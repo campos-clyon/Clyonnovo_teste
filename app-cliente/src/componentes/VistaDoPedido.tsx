@@ -366,6 +366,8 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
           agir={agir}
           aoMudar={() => void carregar()}
           aoCriarConta={convidado?.aoCriarConta}
+          convidado={!!convidado}
+          pedirComo={pedir}
           aoPedirOutraVez={
             convidado ? convidado.aoCriarConta : () => router.push({ pathname: "/pedir", params: { servico: p.servico, morada: p.morada ?? "" } })
           }

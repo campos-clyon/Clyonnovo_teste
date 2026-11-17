@@ -54,7 +54,7 @@ import {
   quantoOProfissionalRecebe,
   quemResponde,
   situacaoDoAjuste,
-  TRABALHO_COM_PRECO_FECHADO,
+  fraseDoTrabalhoClyon,
   whatsAppDaClyon,
   type Ajuste,
   type RespostaDaEtapa,
@@ -191,8 +191,9 @@ function OTrabalhoESeu({ t }: { t: Trabalho }) {
   return (
     <Caixa estilo={{ backgroundColor: c.bomSuave, borderColor: c.bomSuave }}>
       <TituloDaCaixa>O trabalho é seu</TituloDaCaixa>
+      {/* d54: no modelo de 15-11 (pelo `noNovoModelo` do servidor) o cliente paga-lhe a ele — nunca «a CLYON paga-lhe». */}
       {t.ofertaClyon ? (
-        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{TRABALHO_COM_PRECO_FECHADO}</Text>
+        <Text style={{ color: c.tinta, fontSize: LETRA.normal, lineHeight: 22 }}>{fraseDoTrabalhoClyon(t)}</Text>
       ) : null}
       {t.recebeSeFechado != null ? (
         <Text style={{ color: c.tinta, fontSize: LETRA.normal }}>

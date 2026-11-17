@@ -114,10 +114,11 @@ describe("o trabalho CLYON com a frase-padrão 5", () => {
   });
 
   it("no cartão do valor fixo e no do trabalho que é dele, e sem «a CLYON trata do cliente»", () => {
-    expect(semNotas("app-pro/src/app/trabalho/[id].tsx")).toContain("{TRABALHO_COM_PRECO_FECHADO}");
+    // d54 (17-11-2026): a frase pelo modelo que o servidor disse (`fraseDoTrabalhoClyon`, testada em apps-d54).
+    expect(semNotas("app-pro/src/app/trabalho/[id].tsx")).toContain("{fraseDoTrabalhoClyon(t)}");
     const C = semNotas("app-pro/src/componentes/TrabalhoContratado.tsx");
     expect(C).toContain("{t.ofertaClyon ? ( <Text");
-    expect(C).toContain("{TRABALHO_COM_PRECO_FECHADO}</Text>");
+    expect(C).toContain("{fraseDoTrabalhoClyon(t)}</Text>");
     expect(C).not.toContain("trata do cliente");
     expect(C).not.toContain("Num trabalho CLYON o cliente");
     expect(C).not.toContain("num trabalho CLYON, quem responde");
