@@ -92,6 +92,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
   // 11-11-2026 (d7): a taxa das mudanças pela lista de parceiros, dita ao lado do exemplo.
   "/quero-ser-parceiro": "2026-11-16",
+  // 17-11-2026 (d68): a Amora no título, na descrição e no H1 (a página para onde /recolha-moveis-amora vai).
+  "/recolha-moveis-seixal": "2026-11-17",
 };
 
 /**

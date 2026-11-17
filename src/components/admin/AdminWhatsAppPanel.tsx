@@ -302,7 +302,7 @@ function OrigemDaConversa({ mensagens }: { mensagens: Mensagem[] }) {
   return (
     <p className="mb-2 text-xs text-slate-400">
       <span className="font-semibold text-slate-300">Origem: </span>
-      {lida ?? "escreveu sem passar por um botão do site (Google Maps, Fixando, anúncio direto ou já tinha o número)"}
+      {lida ?? "escreveu sem passar por um botão do site nem pelo anúncio (Google Maps, Fixando ou já tinha o número)"}
     </p>
   );
 }

@@ -151,9 +151,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const localPages = getAllCityServiceSlugs().map(({ slug: partes, service }) => {
     const slug = partes.join("/");
     const isPriority = priorityPages.includes(slug);
+    // Uma página de cidade com data verdadeira em datas-das-paginas.ts leva-a (d68, 17-11-2026).
+    const data = actualizadoEm(`/${slug}`);
 
     return {
       url: `${SITE_URL}/${slug}`,
+      ...(data ? { lastModified: data } : {}),
       changeFrequency: isPriority ? "weekly" as const : "monthly" as const,
       priority:
         // Páginas prioritárias do Search Console

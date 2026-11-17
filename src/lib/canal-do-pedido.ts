@@ -8,7 +8,7 @@
  * Pedidos antigos não a têm, e então não se diz nada.
  */
 
-import { CANAIS, lerCodigoDeOrigem, type LetraDoCanal } from "./codigo-de-origem";
+import { CANAIS, CODIGO_DO_ANUNCIO, lerCodigoDeOrigem, type LetraDoCanal } from "./codigo-de-origem";
 
 type Origem = {
   utm_source?: string;
@@ -40,6 +40,8 @@ export function canalDaOrigem(o: Origem | null | undefined): string | null {
  */
 export function canalDoCodigo(codigo: unknown): string | null {
   if (typeof codigo !== "string" || !lerCodigoDeOrigem(codigo)) return null;
+  // A mensagem pronta do anúncio (d67, 17-11-2026) diz-se como o site diz o anúncio.
+  if (codigo === CODIGO_DO_ANUNCIO) return "Google Ads";
   return CANAIS[codigo[0] as LetraDoCanal];
 }
 

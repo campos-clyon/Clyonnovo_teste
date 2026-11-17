@@ -40,7 +40,7 @@ import { NOTA_DOS_PRECOS } from "@/lib/preco-de-referencia";
 import { referenciasDaCidade } from "@/lib/referencias-da-cidade";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { descricaoDaCidade } from "@/lib/descricoes-seo";
-import { monosCamaraOuDeCasa, tituloDaCidade } from "@/lib/titulos-seo";
+import { emTerraDaPagina, monosCamaraOuDeCasa, tituloDaCidade } from "@/lib/titulos-seo";
 import { getCidadeLocal, type ServicoSlug } from "@/lib/cidades-local";
 import { CONSULTADAS_EM, primeiraFrase, recolhaDaCamara } from "@/lib/recolha-da-camara";
 import {
@@ -604,7 +604,7 @@ export default async function ServiceCityPage({ params }: Props) {
             <div className="max-w-3xl">
               <h1 className="mt-5 max-w-[15ch] text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
                 {isFurnitureService(service.slug)
-                  ? `Recolha de Móveis ${emTerra(city.name)}`
+                  ? `Recolha de Móveis ${emTerraDaPagina(service.slug, city.slug, city.name)}`
                   : `${service.name} ${emTerra(city.name)}`}
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">{intro}</p>

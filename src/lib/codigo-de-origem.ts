@@ -119,22 +119,48 @@ export function separarCodigoDeOrigem(texto: string): { texto: string; codigo: s
   return { texto: texto.replace(CODIGO, "").trim(), codigo: `${m[1]}${m[2]}` };
 }
 
+/*
+ * A MENSAGEM PRONTA DO ANÚNCIO — 17-11-2026 (d67).
+ *
+ * O botão de WhatsApp do anúncio do Google Ads (o recurso de mensagem) abre
+ * a conversa com uma frase escrita no Ads, que não passa pelo site e por isso
+ * não levava código: a conversa contava como «escrita à mão». A mensagem
+ * pronta passa a acabar em «(A0)» — A de anúncio, 0 de «sem página do site» —
+ * e, para quem ainda abra a frase antiga, a frase de abertura sem código
+ * («Encontrei-vos no Google…») também se lê como Google Ads. Com código, vale
+ * o código: a página do anúncio usa a mesma frase e junta o seu (A1, G1).
+ * Um clique de quem veio do anúncio numa página sem número (0) também dá A0
+ * — é Google Ads na mesma.
+ */
+export const CODIGO_DO_ANUNCIO = "A0";
+export const ORIGEM_DO_ANUNCIO = "Google Ads · mensagem pronta do anúncio (WhatsApp)";
+/** A mensagem pronta que o recurso de mensagem do anúncio deve ter no Google Ads. */
+export const MENSAGEM_PRONTA_DO_ANUNCIO = `Olá! Encontrei-vos no Google e quero um orçamento de recolha. Vou enviar fotos. (${CODIGO_DO_ANUNCIO})`;
+
+/** «Encontrei-vos no Google», com ou sem hífen, em maiúsculas ou minúsculas. */
+export function eAFraseDoAnuncio(texto: string): boolean {
+  return /encontrei[\s-]*vos\s+no\s+google/i.test(texto);
+}
+
 /**
  * A origem de uma conversa: o código da primeira mensagem do cliente que o
- * traga. Sem nenhum, a pessoa escreveu à mão — não veio de um botão do site.
+ * traga, ou a frase do anúncio sem código (A0, d67). Sem nenhum, a pessoa
+ * escreveu à mão — não veio de um botão do site nem do anúncio.
  */
 export function origemDaConversa(mensagens: Array<{ direccao: string; texto: string }>): string | null {
   for (const m of mensagens) {
     if (m.direccao !== "in") continue;
     const { codigo } = separarCodigoDeOrigem(m.texto);
     if (codigo) return codigo;
+    if (eAFraseDoAnuncio(m.texto)) return CODIGO_DO_ANUNCIO;
   }
   return null;
 }
 
-/** «A1» → «Anúncio do Google · Página do anúncio (…)». */
+/** «A1» → «Anúncio do Google · Página do anúncio (…)»; «A0» → «Google Ads · mensagem pronta…». */
 export function lerCodigoDeOrigem(codigo: string): string | null {
   const m = codigo.match(/^([AGFIOD])(\d)$/);
   if (!m) return null;
+  if (codigo === CODIGO_DO_ANUNCIO) return ORIGEM_DO_ANUNCIO;
   return `${CANAIS[m[1] as LetraDoCanal]} · ${PAGINAS[Number(m[2])]}`;
 }

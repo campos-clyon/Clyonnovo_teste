@@ -5,7 +5,7 @@ import { comIva, euros } from "@/lib/quanto-custa";
 import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
 import { MOVEIS_POR_PECA_CURTO, faixaSemEComIva } from "@/lib/preco-de-referencia";
-import { monosCamaraOuDeCasa } from "./titulos-seo";
+import { TERRA_JUNTA_NO_TITULO, emTerraDaPagina, monosCamaraOuDeCasa } from "./titulos-seo";
 
 /**
  * AS DESCRIPTIONS QUE O GOOGLE MOSTRA INTEIRAS — 29-09-2026.
@@ -132,9 +132,12 @@ export function descricaoDaCidade(
   citySlug: string,
 ): string {
   const servico = SERVICO_NA_FRASE[serviceSlug] ?? serviceName;
-  const essencial =
-    `${servico} ${emTerra(cityName)}: propostas de parceiros ` +
-    `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
+  // A terra junta ao lado do concelho (d68): a frase encolhe para o preço caber.
+  const comTerraJunta = Boolean(TERRA_JUNTA_NO_TITULO[`${serviceSlug}-${citySlug}`]);
+  const essencial = comTerraJunta
+    ? `${servico} ${emTerraDaPagina(serviceSlug, citySlug, cityName)}: propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`
+    : `${servico} ${emTerra(cityName)}: propostas de parceiros ` +
+      `em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
 
   /*
    * MONOS E ENTULHO, PELO QUE A PESSOA PROCURA — 27-10-2026 (d9).

@@ -89,6 +89,25 @@ export function monosCamaraOuDeCasa(citySlug: string): boolean {
   return (MONOS_CAMARA_OU_DE_CASA as readonly string[]).includes(citySlug);
 }
 
+/*
+ * A TERRA JUNTA NO TÍTULO — 17-11-2026 (d68).
+ *
+ * /recolha-moveis-amora faz 301 para a do Seixal desde a d13, e a página do
+ * Seixal já tinha a secção da Amora — mas o título, a descrição e o H1 só
+ * diziam «no Seixal», e quem procura «recolha de móveis Amora» não via a terra
+ * no Google. Nestas páginas a terra junta vai ao lado do concelho: «no Seixal
+ * e na Amora». Chave: o caminho da página (sem a barra). Valor: a terra.
+ */
+export const TERRA_JUNTA_NO_TITULO: Readonly<Record<string, string>> = {
+  "recolha-moveis-seixal": "Amora",
+};
+
+/** «no Seixal e na Amora» na página que fala da terra junta; senão «no Seixal». */
+export function emTerraDaPagina(serviceSlug: string, citySlug: string, cityName: string): string {
+  const terra = TERRA_JUNTA_NO_TITULO[`${serviceSlug}-${citySlug}`];
+  return terra ? `${emTerra(cityName)} e ${emTerra(terra)}` : emTerra(cityName);
+}
+
 /**
  * O título de uma página de cidade + serviço.
  *
@@ -112,6 +131,21 @@ export function tituloDaCidade(
      * cidades. 27-10-2026 (d12): Setúbal dizia «…, em 6h»; o prazo diz-se
      * sempre «em menos de 6 horas», e isso vai na descrição.
      */
+    /*
+     * d68: com a terra junta, «no Seixal e na Amora» com o preço não cabe nos
+     * 60; vai «Seixal e Amora» — o preço pesa mais no clique do que o artigo.
+     * O H1 e a descrição dizem-no por inteiro (`emTerraDaPagina`).
+     */
+    const terraJunta = TERRA_JUNTA_NO_TITULO[`${serviceSlug}-${citySlug}`];
+    if (terraJunta) {
+      const curta = `Recolha de Móveis ${cityName} e ${terraJunta}`;
+      for (const extra of [PRECO_MOVEIS, MOVEIS_DESDE]) {
+        for (const b of [`Recolha de Móveis ${emTerraDaPagina(serviceSlug, citySlug, cityName)}`, curta]) {
+          if (cabeNoGoogle(`${b} — ${extra}`)) return `${b} — ${extra}`;
+        }
+      }
+      return `Recolha de Móveis ${emTerraDaPagina(serviceSlug, citySlug, cityName)}`;
+    }
     return comOPrimeiroQueCabe(base, PRECO_MOVEIS, MOVEIS_DESDE, SEM_PRECO);
   }
 

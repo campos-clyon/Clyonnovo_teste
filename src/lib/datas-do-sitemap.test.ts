@@ -40,7 +40,10 @@ describe("o lastmod do sitemap", () => {
     ]);
     const entradas = (await sitemap()).filter((e) => geradas.has(e.url));
     expect(entradas.length).toBeGreaterThan(100);
-    expect(entradas.filter((e) => e.lastModified).map((e) => e.url)).toEqual([]);
+    // Só as que têm uma data verdadeira escrita à mão em datas-das-paginas.ts (d68, 17-11-2026).
+    const comData = entradas.filter((e) => e.lastModified).map((e) => e.url.slice(SITE_URL.length));
+    expect(comData.filter((c) => !ACTUALIZADO_EM[c])).toEqual([]);
+    expect(comData.length).toBeLessThanOrEqual(5);
   }, 30_000);
 
   it("nenhuma data se repete por mais de 40 endereços", async () => {

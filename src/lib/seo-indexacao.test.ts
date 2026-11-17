@@ -115,7 +115,8 @@ describe("lastmod — só muda quando o conteúdo muda", () => {
   });
 
   it("as páginas de cidade partilham a data do conteúdo local", () => {
-    const cidade = entradas.filter((e) => e.url.includes("/recolha-moveis-"));
+    // Menos as que têm data verdadeira à mão em datas-das-paginas.ts (d68, 17-11-2026).
+    const cidade = entradas.filter((e) => e.url.includes("/recolha-moveis-") && !e.url.endsWith("/recolha-moveis-seixal"));
     const datas = new Set(cidade.map((e) => String(e.lastModified)));
     expect(cidade.length).toBeGreaterThan(10);
     expect(datas.size).toBe(1);
