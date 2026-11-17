@@ -28,13 +28,36 @@ export type SimulatorSettingKey =
   | "mudanca_2pessoas_hora"
   | "mudanca_3pessoas_hora"
   | "mudanca_minimo_horas"
-  | "mudanca_km_limite_recolha";
+  | "mudanca_km_limite_recolha"
+  // O motor de custos (d61, 16-11-2026) — custo-do-trabalho.ts. Só o admin as muda.
+  | "consumo_l_100km"
+  | "desgaste_por_km"
+  | "custo_hora_equipa_1"
+  | "custo_hora_equipa_2"
+  | "custo_hora_equipa_3"
+  | "motor_custo_por_saida"
+  | "motor_margem_parceiro"
+  | "motor_velocidade_sem_medida"
+  | "motor_minutos_fixos_no_local"
+  | "motor_minutos_na_deposicao"
+  | "motor_minutos_por_peca_na_deposicao"
+  | "motor_enchimento_util"
+  | "motor_tecto_fator"
+  | "motor_chao_fator"
+  | "moveis_carga_adicional_fator"
+  | "motor_preco_de_uma_carga"
+  | "deposicao_valorsul_eur_t"
+  | "deposicao_amarsul_eur_t"
+  | "deposicao_provisoria_eur_t"
+  | "deposicao_minimo_por_entrega"
+  | "portagem_ponte_25_abril"
+  | "portagem_ponte_vasco_da_gama";
 
 export type SimulatorSettingDefinition = {
   key: SimulatorSettingKey;
   label: string;
   description: string;
-  category: "moveis" | "entulho" | "mudancas" | "acessos" | "geral";
+  category: "moveis" | "entulho" | "mudancas" | "acessos" | "geral" | "motor";
   unit: "eur" | "multiplier";
   value: number;
 };
@@ -246,6 +269,182 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
     category: "geral",
     unit: "multiplier",
     value: 70,
+  },
+  {
+    key: "consumo_l_100km",
+    label: "Consumo da carrinha (l/100 km)",
+    description: "Litros de gasóleo por 100 km de uma carrinha de 3,5 t. Com o preço do gasóleo, dá o combustível de cada km.",
+    category: "motor",
+    unit: "multiplier",
+    value: 10,
+  },
+  {
+    key: "desgaste_por_km",
+    label: "Desgaste por km",
+    description: "Pneus, manutenção, seguro e amortização por km, sem o gasóleo.",
+    category: "motor",
+    unit: "eur",
+    value: 0.29,
+  },
+  {
+    key: "custo_hora_equipa_1",
+    label: "Custo por hora — 1 pessoa",
+    description: "O que custa uma hora de uma equipa de 1 pessoa (o condutor).",
+    category: "motor",
+    unit: "eur",
+    value: 15,
+  },
+  {
+    key: "custo_hora_equipa_2",
+    label: "Custo por hora — 2 pessoas",
+    description: "O que custa uma hora de uma equipa de 2 pessoas.",
+    category: "motor",
+    unit: "eur",
+    value: 27,
+  },
+  {
+    key: "custo_hora_equipa_3",
+    label: "Custo por hora — 3 pessoas",
+    description: "O que custa uma hora de uma equipa de 3 pessoas.",
+    category: "motor",
+    unit: "eur",
+    value: 39,
+  },
+  {
+    key: "motor_custo_por_saida",
+    label: "Custo por saída",
+    description: "Uma vez por trabalho: sair, preparar, voltar a arrumar.",
+    category: "motor",
+    unit: "eur",
+    value: 15,
+  },
+  {
+    key: "motor_margem_parceiro",
+    label: "Margem do parceiro",
+    description: "Sobre o custo, antes da taxa da plataforma. 0,25 = 25 %.",
+    category: "motor",
+    unit: "multiplier",
+    value: 0.25,
+  },
+  {
+    key: "motor_velocidade_sem_medida",
+    label: "Velocidade sem medida (km/h)",
+    description: "Só quando a distância não foi medida pela estrada: km a dividir por esta velocidade.",
+    category: "motor",
+    unit: "multiplier",
+    value: 35,
+  },
+  {
+    key: "motor_minutos_fixos_no_local",
+    label: "Minutos fixos no local",
+    description: "Chegar, estacionar e conferir, uma vez por trabalho.",
+    category: "motor",
+    unit: "multiplier",
+    value: 10,
+  },
+  {
+    key: "motor_minutos_na_deposicao",
+    label: "Minutos na deposição, por carga",
+    description: "Descarga e talão, por cada carga.",
+    category: "motor",
+    unit: "multiplier",
+    value: 15,
+  },
+  {
+    key: "motor_minutos_por_peca_na_deposicao",
+    label: "Minutos na deposição, por peça",
+    description: "A mais por cada peça descarregada.",
+    category: "motor",
+    unit: "multiplier",
+    value: 1,
+  },
+  {
+    key: "motor_enchimento_util",
+    label: "Enchimento útil da carrinha",
+    description: "A fracção da carrinha que se aproveita. 0,85 = 85 %.",
+    category: "motor",
+    unit: "multiplier",
+    value: 0.85,
+  },
+  {
+    key: "motor_tecto_fator",
+    label: "Tecto da grelha (fator)",
+    description: "Numa grelha de valor único, o tecto é o valor vezes isto.",
+    category: "motor",
+    unit: "multiplier",
+    value: 1.3,
+  },
+  {
+    key: "motor_chao_fator",
+    label: "Chão da grelha (fator)",
+    description: "Numa grelha de valor único, o chão é o valor vezes isto.",
+    category: "motor",
+    unit: "multiplier",
+    value: 0.9,
+  },
+  {
+    key: "moveis_carga_adicional_fator",
+    label: "Carga a mais (fator)",
+    description: "Cada carga a mais vale esta fracção da primeira. 0,70 = 70 %.",
+    category: "motor",
+    unit: "multiplier",
+    value: 0.7,
+  },
+  {
+    key: "motor_preco_de_uma_carga",
+    label: "Preço de uma carga cheia",
+    description: "O limite da soma por peça a partir de uma carga cheia. 0 = ainda sem valor: não limita.",
+    category: "motor",
+    unit: "eur",
+    value: 0,
+  },
+  {
+    key: "deposicao_valorsul_eur_t",
+    label: "Deposição Valorsul (€/t)",
+    description: "Lisboa, Amadora, Loures, Odivelas e Vila Franca de Xira.",
+    category: "motor",
+    unit: "eur",
+    value: 85.64,
+  },
+  {
+    key: "deposicao_amarsul_eur_t",
+    label: "Deposição Amarsul (€/t)",
+    description: "Almada, Seixal, Sesimbra, Barreiro, Moita, Montijo, Alcochete, Palmela e Setúbal.",
+    category: "motor",
+    unit: "eur",
+    value: 85,
+  },
+  {
+    key: "deposicao_provisoria_eur_t",
+    label: "Deposição a confirmar (€/t)",
+    description: "Cascais, Oeiras, Sintra e Mafra, provisório até as Finanças confirmarem.",
+    category: "motor",
+    unit: "eur",
+    value: 85,
+  },
+  {
+    key: "deposicao_minimo_por_entrega",
+    label: "Deposição: mínimo por entrega",
+    description: "O valor mínimo de cada descarga. 0 = só o peso.",
+    category: "motor",
+    unit: "eur",
+    value: 0,
+  },
+  {
+    key: "portagem_ponte_25_abril",
+    label: "Portagem Ponte 25 de Abril (classe 2)",
+    description: "Cobrada de sul para norte.",
+    category: "motor",
+    unit: "eur",
+    value: 4.85,
+  },
+  {
+    key: "portagem_ponte_vasco_da_gama",
+    label: "Portagem Ponte Vasco da Gama (classe 2)",
+    description: "Cobrada de sul para norte.",
+    category: "motor",
+    unit: "eur",
+    value: 7.55,
   },
 ];
 

@@ -284,6 +284,11 @@ export async function avaliarAlcance(pedido: {
    * dizer como a distribuição o vai fazer. Em falta, na plataforma.
    */
   formaDePagamento?: unknown;
+  /**
+   * d61 (motor de custos em modo sombra): mede pela memória e pela linha recta,
+   * sem perguntar ao Google. A distribuição nunca o passa.
+   */
+  semConsultarAEstrada?: boolean;
 }): Promise<{
   elegiveis: Array<{ id: number; nome: string; distanciaKm: number | null }>;
   /**
@@ -330,6 +335,7 @@ export async function avaliarAlcance(pedido: {
       origem: p.baseLat != null && p.baseLng != null ? { lat: p.baseLat, lng: p.baseLng } : null,
       destino: trabalho,
     })),
+    pedido.semConsultarAEstrada === true,
   );
 
   const comDistancia = candidatos.map((p, i) => ({

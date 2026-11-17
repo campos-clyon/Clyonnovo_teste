@@ -205,6 +205,20 @@ export async function distanciaRodoviaria(
 }
 
 /**
+ * A distância SEM PAGAR — d61, 16-11-2026: a da memória, se o par já foi medido
+ * pela estrada; senão a linha recta com folga, dita como estimativa. Nunca
+ * pergunta ao Google: é a do motor de custos em modo sombra, que não pode
+ * acrescentar chamadas pagas por cada pedido.
+ */
+export async function distanciaSemConsultar(
+  origem: Ponto | null | undefined,
+  destino: Ponto | null | undefined,
+): Promise<DistanciaMedida | null> {
+  if (!pontoValido(origem) || !pontoValido(destino)) return null;
+  return (await daMemoria(chave(origem, destino))) ?? estimativaEmLinhaRecta(origem, destino);
+}
+
+/**
  * Muitas de uma vez, sem repetir pares iguais.
  *
  * O painel do profissional mostra uma lista inteira: a base é sempre a mesma e
@@ -212,6 +226,10 @@ export async function distanciaRodoviaria(
  */
 export async function distanciasRodoviarias(
   pares: Array<{ origem: Ponto | null | undefined; destino: Ponto | null | undefined }>,
+  /** d61: só a memória e a linha recta, sem chamadas pagas. Por omissão, a estrada. */
+  semConsultar = false,
 ): Promise<Array<DistanciaMedida | null>> {
-  return Promise.all(pares.map((p) => distanciaRodoviaria(p.origem, p.destino)));
+  return Promise.all(
+    pares.map((p) => (semConsultar ? distanciaSemConsultar(p.origem, p.destino) : distanciaRodoviaria(p.origem, p.destino))),
+  );
 }

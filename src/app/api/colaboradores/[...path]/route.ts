@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSimulatorSettings, upsertSimulatorSetting } from "@/lib/db";
 import { defaultSimulatorSettings } from "@/lib/simulator-settings";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
+import { registarAlteracaoDaConfig } from "@/lib/alteracoes-das-configs-na-base";
 
 /**
  * O que resta deste catch-all: os valores do simulador.
@@ -35,7 +36,7 @@ async function handleRequest(req: NextRequest, path: string[]) {
    * `type` vive em `verifyColaboradorToken`) nem perguntava à base se a conta
    * ainda existia, estava activa, ou tinha mudado de palavra-passe.
    */
-  const { err } = await requireAdminGeral(req);
+  const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
   if (route === "admin/settings/simulador" && req.method === "GET") {
@@ -64,6 +65,9 @@ async function handleRequest(req: NextRequest, path: string[]) {
       return NextResponse.json({ error: "Valor inválido." }, { status: 400 });
     }
 
+    // O histórico (d61): quem, quando, o valor antigo e o novo. Nunca impede a mudança.
+    const antes = (await getSimulatorSettings()).find((s) => s.key === definition.key)?.value ?? null;
+
     await upsertSimulatorSetting({
       key: definition.key,
       label: definition.label,
@@ -71,6 +75,15 @@ async function handleRequest(req: NextRequest, path: string[]) {
       unit: definition.unit,
       value: parsedValue.toFixed(2),
       description: definition.description,
+    });
+
+    await registarAlteracaoDaConfig({
+      chave: definition.key,
+      antes: antes == null ? null : String(antes),
+      depois: parsedValue.toFixed(2),
+      quemId: colab?.id ?? null,
+      quemNome: colab?.nome ?? null,
+      perfil: colab?.papel ?? null,
     });
 
     return NextResponse.json({ success: true });

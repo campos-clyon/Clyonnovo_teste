@@ -15,6 +15,7 @@ import { migrarCategoriasParaGrupos } from "@/lib/categorias-em-grupos";
 import { limparZonasAntigas } from "@/lib/zonas-limpas";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
 import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
+import { inicioDoDiaEmLisboa, segundaDaSemanaEmLisboa } from "./hora-de-lisboa";
 import { CHEGADA_CONFIRMADA_OBRIGATORIA } from "@/lib/viagem-ate-ao-cliente";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
@@ -9733,7 +9734,7 @@ let _simulatorOrdersEnsured = false;
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
 // 30 — `valorUnicoCliente` e `valorUnicoEm` (15-11-2026, d39), o valor único ao cliente.
 // 31 — `descricaoOriginal`, `linguaDaDescricao` e `descricaoPorTraduzir` (15-11-2026, d46), a descrição sempre em português.
-const MIGRATION_VERSION = 32;
+const MIGRATION_VERSION = 33;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -9998,6 +9999,11 @@ export async function ensureSimulatorOrdersTable() {
     `ALTER TABLE simulatorOrders ADD COLUMN motivoDoFecho VARCHAR(30) NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN motivoDoFechoEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE simulatorOrders ADD COLUMN quantoQueriaPagar DECIMAL(10,2) NULL DEFAULT NULL`,
+    // v33 — O CUSTO REAL DO TRABALHO (16-11-2026, d61 fase a, modo sombra). O que
+    // custo-do-trabalho.ts calcula depois de o pedido ser gravado: km, portagens,
+    // pessoas × horas, deposição, saída, o preço do motor e a grelha. Só para a
+    // Mesa e para aprender; o cliente não o vê. Nulo nos pedidos de antes.
+    `ALTER TABLE simulatorOrders ADD COLUMN custoJson LONGTEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -10039,6 +10045,15 @@ export async function createSimulatorOrder(data: InsertSimulatorOrder): Promise<
   const sql = `INSERT INTO simulatorOrders (${cols.join(", ")}) VALUES (${placeholders})`;
   const [result] = await pool.execute(sql, vals as ExecuteValues[]) as any[];
   const insertId = result.insertId ?? 0;
+  /*
+   * O CUSTO REAL (d61, modo sombra): calcula-se e grava-se DEPOIS, fora do
+   * caminho de quem pediu — nunca o faz esperar, nunca faz o pedido falhar.
+   */
+  if (insertId) {
+    void import("./custo-do-trabalho-no-servidor")
+      .then((m) => m.agendarOCustoDoTrabalho(insertId))
+      .catch((e) => console.error("[custo do trabalho] não agendei:", e instanceof Error ? e.message : e));
+  }
   if (porTraduzir && insertId) {
     await appendOrderHistory(insertId, {
       type: "created",
@@ -17311,6 +17326,8 @@ export type ResumoDoBackoffice = {
    * regra de `pedido-sem-valor.ts`, pelo n.º do pedido. `null` se a leitura falhar.
    */
   semValor: SemValorNoInicio[] | null;
+  /** Pedidos desde segunda-feira com o custo real fora da grelha (d61, modo sombra). */
+  foraDaGrelhaSemana: number | null;
 };
 
 /** Um número de uma consulta que pode falhar sem levar o painel atrás. */
@@ -17425,6 +17442,16 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     whatsappLigado().catch(() => null),
   ]);
   const semValor = await semValorDoInicio();
+  /*
+   * FORA DA GRELHA ESTA SEMANA (d61, modo sombra): os pedidos desde segunda-feira
+   * (em Lisboa) cujo custo real ficou acima do tecto ou abaixo do chão.
+   */
+  const foraDaGrelhaSemana = await conta(
+    `SELECT COUNT(*) AS n FROM simulatorOrders
+      WHERE createdAt >= ? AND custoJson IS NOT NULL AND JSON_VALID(custoJson)
+        AND JSON_UNQUOTE(JSON_EXTRACT(custoJson, '$.foraDaFaixa')) IN ('acima_do_tecto', 'abaixo_do_chao')`,
+    [inicioDoDiaEmLisboa(segundaDaSemanaEmLisboa(new Date()))],
+  );
 
   return {
     porEnviar,
@@ -17440,6 +17467,7 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     whatsappLigado: ligado,
     aDecorrer,
     semValor,
+    foraDaGrelhaSemana,
   };
 }
 

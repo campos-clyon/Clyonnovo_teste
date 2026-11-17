@@ -94,6 +94,8 @@ import MotivosDaSemana from "@/components/admin/MotivosDaSemana";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { rotuloDoPrazoTerminado, type EstadoNaMesa } from "@/lib/escolhidos-sem-resposta";
 import { EscolhidosNaMesa } from "./EscolhidosNaMesa";
+import { ForaDaGrelhaNaMesa } from "./ForaDaGrelhaNaMesa";
+import type { ForaDaGrelhaNaMesa as EstadoForaDaGrelha } from "@/lib/custo-do-trabalho";
 import {
   atrasadosPrimeiro,
   diasAEsperarConfirmacao,
@@ -619,6 +621,8 @@ type Pedido = {
   /** Numa mudança com parceiros escolhidos pelo cliente (d6): o resumo da escolha e o que a Mesa mostra. */
   escolhidosJson?: string | null;
   escolhidosNaMesa?: EstadoNaMesa | null;
+  /** O custo real fora da grelha (d61, modo sombra): a etiqueta e os degraus. */
+  foraDaGrelha?: EstadoForaDaGrelha | null;
   /**
    * A validade do link do cliente — que serve de MARCA DE VERSÃO.
    *
@@ -3715,6 +3719,8 @@ export default function AdminNegociacoesPanel({
               onRegistar={() => registarQueOClientePediu(p)}
             />
           )}
+          {/* Fora da grelha (d61, modo sombra): o custo real acima do tecto ou abaixo do chão. */}
+          {p.foraDaGrelha && <ForaDaGrelhaNaMesa estado={p.foraDaGrelha} />}
           {p.negociacoes.length === 0 && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="text-xs font-semibold text-amber-200">

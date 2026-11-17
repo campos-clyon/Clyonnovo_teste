@@ -2265,3 +2265,63 @@ describe("d51) o IVA pelo regime, as mudanças sem «preço fechado» e a inicia
     expect(readFileSync(join(RAIZ, "src/app/page.tsx"), "utf8")).toContain("<DesfileDeAvaliacoes />");
   });
 });
+
+/*
+ * d61) O CUSTO REAL DO TRABALHO, UMA SÓ CONTA — 16-11-2026 (fase a, modo sombra).
+ *
+ * O motor de custos vive em custo-do-trabalho.ts: os minutos (`TEMPOS_DO_MOTOR`),
+ * as chaves das Configs da categoria «motor» e a função `custoDoTrabalho`.
+ * Nenhum outro ficheiro as lê para fazer contas: só a definição das chaves
+ * (simulator-settings.ts), o ecrã das Configs que as mostra, e quem prepara a
+ * entrada e grava o resultado. E o `custoJson` (a conta interna, com custos e
+ * margens) só passa pela base, pelo servidor do motor e pela Mesa — nunca por
+ * uma rota ou um ecrã do cliente, da app de cliente ou do parceiro.
+ */
+describe("d61) o custo do trabalho só em custo-do-trabalho.ts", () => {
+  const CHAVES_DO_MOTOR =
+    /\b(consumo_l_100km|desgaste_por_km|custo_hora_equipa_[123]|motor_[a-z_]+|moveis_carga_adicional_fator|deposicao_(valorsul|amarsul|provisoria)_eur_t|deposicao_minimo_por_entrega|portagem_ponte_[a-z_0-9]+)\b/;
+  const ONDE_AS_CHAVES_PODEM_ESTAR = new Set([
+    "src/lib/custo-do-trabalho.ts",
+    "src/lib/simulator-settings.ts",
+    "src/components/admin/LegacyAdminClient.tsx",
+  ]);
+  const ONDE_O_MOTOR_PODE_SER_CHAMADO = new Set([
+    "src/lib/custo-do-trabalho.ts",
+    "src/lib/custo-do-trabalho-do-pedido.ts",
+    "src/lib/custo-do-trabalho-no-servidor.ts",
+  ]);
+  const ONDE_O_CUSTO_JSON_PODE_ESTAR = new Set([
+    "src/lib/db.ts",
+    // A decisão da anonimização (d32): fica — não tem dados de pessoas.
+    "src/lib/regras-novas-da-retencao.ts",
+    "src/lib/custo-do-trabalho.ts",
+    "src/lib/custo-do-trabalho-no-servidor.ts",
+  ]);
+  const semComentarios = (f: string) =>
+    readFileSync(join(RAIZ, f), "utf8")
+      .replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+
+  it("as chaves do motor só na fonte, na definição e no ecrã das Configs", () => {
+    const fora = FONTES.filter((f) => !ONDE_AS_CHAVES_PODEM_ESTAR.has(f) && CHAVES_DO_MOTOR.test(semComentarios(f)));
+    expect(fora).toEqual([]);
+  });
+
+  it("os minutos do motor e a conta só em custo-do-trabalho.ts (e em quem a chama para gravar)", () => {
+    const tempos = FONTES.filter((f) => f !== "src/lib/custo-do-trabalho.ts" && /\bTEMPOS_DO_MOTOR\b/.test(semComentarios(f)));
+    expect(tempos).toEqual([]);
+    const chamam = FONTES.filter((f) => !ONDE_O_MOTOR_PODE_SER_CHAMADO.has(f) && /\bcustoDoTrabalho\s*\(/.test(semComentarios(f)));
+    expect(chamam).toEqual([]);
+  });
+
+  it("o custoJson nunca sai para o cliente nem para o parceiro", () => {
+    const fora = FONTES.filter((f) => !ONDE_O_CUSTO_JSON_PODE_ESTAR.has(f) && /\bcustoJson\b/.test(semComentarios(f)));
+    expect(fora).toEqual([]);
+  });
+
+  it("a regra apanha o que devia apanhar", () => {
+    expect(CHAVES_DO_MOTOR.test("mapa.desgaste_por_km * km")).toBe(true);
+    expect(CHAVES_DO_MOTOR.test("mapa.custo_hora_equipa_2")).toBe(true);
+    expect(CHAVES_DO_MOTOR.test("custo_hora_pessoa")).toBe(false);
+  });
+});

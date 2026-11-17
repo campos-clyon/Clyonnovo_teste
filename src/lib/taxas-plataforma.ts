@@ -408,6 +408,17 @@ export function quantoOProfissionalRecebe(
   return aosCentimos(acordado * (1 - taxas.profissional));
 }
 
+/**
+ * O CONTRÁRIO DE `quantoOProfissionalRecebe` — d61, 16-11-2026: o valor acordado
+ * para que o profissional receba `liquido` depois da taxa. É a conta do motor de
+ * custos (custo-do-trabalho.ts): custo × (1 + margem) ÷ (1 − taxa). A taxa é a
+ * que se passa, nunca um número escrito noutro sítio.
+ */
+export function acordadoParaReceber(liquido: number, taxas: Taxas = TAXAS_DE_ORIGEM): number {
+  const parte = 1 - taxas.profissional;
+  return aosCentimos(parte > 0 ? liquido / parte : liquido);
+}
+
 /** O que fica para a CLYON sobre um trabalho fechado. */
 export function comissaoDaClyon(acordado: number, taxas: Taxas = TAXAS_DE_ORIGEM): number {
   return aosCentimos(servicoMaisTaxa(acordado, taxas) - quantoOProfissionalRecebe(acordado, taxas));

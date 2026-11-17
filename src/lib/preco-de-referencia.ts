@@ -843,7 +843,7 @@ export function estimativaDoEsvaziamento(
 /* ── O pedido inteiro ──────────────────────────────────────────────────── */
 
 /** A estimativa escrita e em três linhas (`null` quando não cabe numa conta destas, como o «por divisão»). */
-type Especifica = { texto: string; conta: PrecoEmTresLinhas | null; valor?: number | null };
+type Especifica = { texto: string; conta: PrecoEmTresLinhas | null; valor?: number | null; estimativa?: Estimativa };
 
 /** A faixa publicada de um serviço (30 – 100), ou `null` quando é «desde», por unidade ou não tem. */
 function faixaDoServico(servico: string): { de: number; ate: number } | null {
@@ -878,7 +878,17 @@ export function valorDaReferencia(p: PedidoParaReferencia): number | null {
   return referenciaEValor(p).valor;
 }
 
-function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPedido; valor: number | null } {
+/**
+ * A ESTIMATIVA DA GRELHA, com a forma (valor, faixa, «desde») — d61, 16-11-2026.
+ * Só para o motor de custos (custo-do-trabalho.ts) saber o chão e o tecto; não
+ * muda nada do que se mostra. `null` quando a conta não é por esta grelha
+ * (mudança, manutenção) ou não há número.
+ */
+export function estimativaDaGrelha(p: PedidoParaReferencia): Estimativa | null {
+  return referenciaEValor(p).estimativa;
+}
+
+function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPedido; valor: number | null; estimativa: Estimativa | null } {
   const linhas: LinhaDeReferencia[] = [];
   const porque: string[] = [];
 
@@ -886,7 +896,7 @@ function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPe
   const razoes = razoesDoAcesso(p);
   const daEstimativa = (e: Estimativa): Especifica => {
     const final = comAjuste(e, ajuste);
-    return { texto: escritaDaEstimativa(final), conta: contaDaEstimativa(final), valor: numeroDaEstimativa(final) };
+    return { texto: escritaDaEstimativa(final), conta: contaDaEstimativa(final), valor: numeroDaEstimativa(final), estimativa: final };
   };
   let especifica: Especifica | null = null;
   /** O acesso difícil moveu a referência para o topo da faixa? (senão, entra na proposta) */
@@ -1025,7 +1035,7 @@ function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPe
   if (ajuste.porque) porque.push(ajuste.porque);
 
   if (especifica) linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA, texto: especifica.texto });
-  return { referencia: { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? null, porque }, valor: especifica?.valor ?? null };
+  return { referencia: { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? null, porque }, valor: especifica?.valor ?? null, estimativa: especifica?.estimativa ?? null };
 }
 
 /**

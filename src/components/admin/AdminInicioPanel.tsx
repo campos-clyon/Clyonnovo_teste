@@ -70,6 +70,8 @@ type Resumo = {
   aDecorrer: number | null;
   /** Por enviar há 4 h ou mais sem valor nem pergunta (d50), pelo n.º do pedido. */
   semValor?: SemValorNoInicio[] | null;
+  /** Pedidos desde segunda-feira com o custo real fora da grelha (d61, modo sombra). */
+  foraDaGrelhaSemana?: number | null;
 };
 
 type Seccao =
@@ -228,6 +230,14 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           porque: "Profissionais com conta aberta que ainda não recebem pedidos.",
           seccao: "profissionais",
           icone: UserCheck,
+        },
+        {
+          chave: "foraDaGrelha",
+          n: r.foraDaGrelhaSemana ?? null,
+          titulo: "fora da grelha esta semana",
+          porque: "O custo real do trabalho ficou acima do tecto ou abaixo do chão da grelha. Veja os degraus no cartão do pedido, na Mesa.",
+          seccao: "negociacoes_clyon",
+          icone: AlertTriangle,
         },
         {
           chave: "entregues",

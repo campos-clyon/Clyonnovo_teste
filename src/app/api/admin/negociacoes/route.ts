@@ -25,6 +25,8 @@ import { avisarClienteDoValorUnico } from "@/lib/email-proposta";
 import { aceitesDoValorUnico, marcarValorUnicoAceite, type AceiteDoValorUnico } from "@/lib/valor-unico-no-whatsapp-na-base";
 import { lerBase } from "@/lib/base-do-preco";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
+import { foraDaGrelhaDosPedidos } from "@/lib/custo-do-trabalho-no-servidor";
+import type { ForaDaGrelhaNaMesa } from "@/lib/custo-do-trabalho";
 
 export const runtime = "nodejs";
 
@@ -96,10 +98,16 @@ export async function GET(req: NextRequest) {
     const aceites = await aceitesDoValorUnico(pedidos.filter((p) => p.valorUnicoCliente != null).map((p) => Number(p.id))).catch(
       () => new Map<number, AceiteDoValorUnico>(),
     );
+    // d61 (modo sombra): a etiqueta «Fora da grelha», com o custo em degraus — só a equipa a vê.
+    const foraDaGrelha = await foraDaGrelhaDosPedidos(pedidos.map((p) => Number(p.id))).catch((e) => {
+      console.error("[api/admin/negociacoes GET] fora da grelha:", e);
+      return new Map<number, ForaDaGrelhaNaMesa>();
+    });
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
         valorUnicoAceite: aceites.get(Number(p.id)) ?? null,
+        foraDaGrelha: foraDaGrelha.get(Number(p.id)) ?? null,
         escolhidosNaMesa: estadoNaMesa(
           JSON.parse(JSON.stringify(p.negociacoes)),
           escolhidosDeJson(p.escolhidosJson),
