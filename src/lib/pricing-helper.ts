@@ -786,7 +786,7 @@ const SERVICE_REFERENCE_RANGES: Record<string, { min: number; max: number; sugge
   esvaziamento_cave:         { min: 140, max: 450, suggested: 275 },
   // Armazém, escritório ou loja (d43, 15-11-2026): sem preço publicado; a referência interna é a da casa.
   esvaziamento_empresa:      { min: 300, max: 800, suggested: 500 },
-  // O mínimo é o da tabela (3 h × 50 €), e não os 210 € dos 70 €/h de antes (25-10-2026).
+  // O mínimo é o da tabela com a equipa de 3 (3 h × 55 €, d60), e não os 210 € dos 70 €/h de antes (25-10-2026).
   mudanca:                   { min: MINIMO_DA_MUDANCA, max: 500, suggested: 280 },
   outro:                     { min: 100, max: 250, suggested: 160 },
 };
@@ -1351,7 +1351,8 @@ function applyZoneMinimum(
     return { price: priceWithoutVat, note: null, minimumThreshold: MINIMO_DO_ENTULHO };
   }
 
-  // Mudança: o mínimo da tabela do dono — 3 horas a 50 € (13-10-2026).
+  // Mudança: o mínimo da tabela do dono — 3 horas da equipa de 3 (13-10-2026; 55 €/h desde a d60). O motor
+  // estima sempre com 3 pessoas: o mínimo de 2 pessoas (`MINIMO_DA_MUDANCA_DUAS_PESSOAS`) é o da lista.
   // Desde a d7 (11-11-2026) só na REFERÊNCIA (lista vazia): com parceiros na lista, o
   // mínimo é o do parceiro e já vem na estimativa pela lista (`estimativaPelaLista`).
   if (svc === "mudanca") {

@@ -89,7 +89,7 @@ describe("o aviso é escrito para quem o lê", () => {
     const t = avisoDosItens("total", "cliente")!;
     // d47 (15-11-2026): curto e igual em todas as mensagens.
     expect(t).toContain("Inclui o que está nas fotografias e na descrição.");
-    expect(t).toContain("peça pequena 15 €, média 30 €, grande 50 € + IVA");
+    expect(t).toContain("peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA"); // d63: a primeira grande a 65 €, as seguintes a 50 €.
     expect(t).not.toContain("32 €");
     // O acréscimo não é uma autorização para cobrar sozinho.
     expect(t).toContain("sempre combinado consigo antes.");

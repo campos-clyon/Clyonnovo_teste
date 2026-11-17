@@ -279,7 +279,7 @@ describe("d1 — a referência do entulho pela quantidade (a calculadora da pág
 describe("d1 — o acesso leva a referência ao topo da faixa, e diz porquê", () => {
   it("3.º andar sem elevador: o topo da faixa dos monos; os móveis por volume entram na proposta (d6)", () => {
     const r = daR12({ servico: "recolha_monos", volume: "carrinha", floor: "3º", hasElevator: "no", parkingDistance: "door" });
-    expect(especifica(r)).toBe("100 € + IVA (123 € com IVA), o topo da faixa (30 – 100 € + IVA (36,90 – 123 € com IVA)), pelo acesso difícil.");
+    expect(especifica(r)).toBe("100 € + IVA (123 € com IVA), o topo da faixa (60 – 100 € + IVA (73,80 – 123 € com IVA)), pelo acesso difícil.");
     expect(r.conta?.total).toBe("123 €");
     expect(r.porque).toEqual(["3.º andar sem elevador: o topo da faixa."]);
     const moveis = daR12({ servico: "recolha_moveis", movelModo: "carga", volume: "carrinha", floor: "3º", hasElevator: "no", parkingDistance: "door" });

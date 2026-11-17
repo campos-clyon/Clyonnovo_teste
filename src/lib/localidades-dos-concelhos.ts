@@ -52,7 +52,8 @@ const SOFA = PECAS_DE_REFERENCIA.find((p) => p.peca.startsWith("Sofá"))!;
 const PRECO_SOFA = precoDaPecaComOIva(SOFA);
 // Por peça desde 03-11-2026 (d6), com a recolha mínima desde a d7.
 const PRECO_MOVEIS = MOVEIS_POR_PECA_CURTO;
-const PRECO_MONOS = faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!);
+// O «desde» dos monos, a recolha mínima (d63, 17-11-2026): era a faixa 30 – 100 €.
+const PRECO_MONOS = desdeComIva(PRECOS.recolha_monos.minimo!);
 // O m³ ao preço dos sacos, ensacado ou a granel (d7): era «desde 120 €» e «desde 432 €».
 const faixaDosMetros = (m3: number) => faixaSemEComIva(faixaDoVolume(m3).de, faixaDoVolume(m3).ate);
 const UM_METRO = faixaDosMetros(1);

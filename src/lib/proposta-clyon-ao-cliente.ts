@@ -58,8 +58,8 @@ export function mensagemDaPropostaClyon(
     /**
      * Pelo trabalho todo, por carga ou por hora — 22-10-2026. A unidade vai
      * agarrada ao número, e por baixo a nota (`notaDoPrecoParaOCliente`): por
-     * carga, que o total depende das cargas; pelo trabalho todo, os 32 € por
-     * item a mais.
+     * carga, que o total depende das cargas; pelo trabalho todo, os itens a
+     * mais pela tabela das peças (eram 32 € por item, 22-10-2026).
      */
     base?: string | null;
     /** A empresa que faz o trabalho, quando já está escolhida. */

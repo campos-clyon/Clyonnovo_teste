@@ -420,7 +420,8 @@ export function linhasDosMonosEMoveis(): LinhaDaTabela[] {
     {
       oQue: "Recolha de monos",
       exemplo: "Peças volumosas soltas, como um colchão, um eletrodoméstico ou cadeiras",
-      valor: { tipo: "faixa", de: exigir(monos.minimo, "recolha_monos"), ate: exigir(monos.maximo, "recolha_monos") },
+      // O «desde» da recolha mínima (d63, 17-11-2026): era a faixa 30 – 100 €.
+      valor: { tipo: "desde", de: exigir(monos.minimo, "recolha_monos") },
     },
     // Os móveis por peça (d6 v2, 03-11-2026): era uma linha «40 – 120 €» pelo trabalho.
     ...PECAS_POR_TAMANHO.map((p): LinhaDaTabela => ({

@@ -132,7 +132,6 @@ export default function PrecoDosMonosEMoveisPage() {
           "@type": "AggregateOffer",
           priceCurrency: "EUR",
           lowPrice: Math.min(PRECOS.recolha_monos.minimo ?? Infinity, PRECOS.recolha_moveis.minimo ?? Infinity),
-          highPrice: Math.max(PRECOS.recolha_monos.maximo ?? 0, PRECOS.recolha_moveis.maximo ?? 0),
         },
         ctaTitulo: "Tem monos ou móveis para tirar?",
         mensagemWhatsApp: "Olá! Tenho monos/móveis para recolher. Podem dar-me um orçamento?",

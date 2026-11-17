@@ -15,7 +15,7 @@ import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 const SITE_URL = "https://clyon.pt";
 
 // Os mesmos dois valores publicados que a página nacional de esvaziamento usa:
-// desde 250 € para casa, 260 – 450 € para apartamento. A grelha da Amadora
+// desde 260 € para casa (d63), 260 – 1 300 € para apartamento. A grelha da Amadora
 // dizia 300 € – 1500 € e era a única a dizê-lo.
 const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
@@ -181,7 +181,8 @@ export default function EsvaziamentoAmadoraPage() {
                   {[
                     // A grelha de /esvaziamento-de-casas, da mesma fonte (25-10-2026), com o IVA ao lado (31-10-2026).
                     ...ESVAZIAMENTO_POR_TIPOLOGIA.map((t) => ({ type: t.tipo, price: esvaziamentoComOIvaAoLado(t.chave) })),
-                    { type: "Garagem ou arrecadação", price: `desde ${valorSemEComIva(PRECOS.esvaziamento_casa.minimo ?? 0)}` },
+                    // A garagem tem o seu preço (`esvaziamento_garagem`); lia o da casa, que a d63 subiu ao T0/T1.
+                    { type: "Garagem ou arrecadação", price: `desde ${valorSemEComIva(PRECOS.esvaziamento_garagem.minimo ?? 0)}` },
                   ].map((item) => (
                     <div key={item.type} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
                       <span className="text-sm text-slate-700">{item.type}</span>

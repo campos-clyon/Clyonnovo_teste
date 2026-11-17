@@ -651,7 +651,7 @@ async function baseDoPedido(pedidoId: number): Promise<BaseDoPreco> {
 
 /**
  * Uma linha a mais no fim da mensagem: por carga, a unidade; pelo trabalho
- * todo, os 32 € por item a mais — 22-10-2026 (`notaDoPrecoParaOCliente`).
+ * todo, os itens a mais pela tabela das peças (eram 32 € a 22-10-2026) (`notaDoPrecoParaOCliente`).
  */
 function comNotaDaCarga(base: BaseDoPreco): string {
   return `\n\n${notaDoPrecoParaOCliente(base)}`;

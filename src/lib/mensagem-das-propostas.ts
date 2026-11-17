@@ -435,7 +435,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
   const quantas = d.propostas.length;
   const base = d.base ?? "total";
   const unidade = unidadeDaBase(base);
-  // Pelo trabalho todo, os 32 € por item a mais — 22-10-2026, *«a mensagem também tem de deixar claro».*
+  // Pelo trabalho todo, os itens a mais pela tabela das peças (eram 32 € a 22-10-2026), *«a mensagem também tem de deixar claro».*
   const avisoDaUnidade =
     base === "carga"
       ? SAO_PRECOS_POR_CARGA

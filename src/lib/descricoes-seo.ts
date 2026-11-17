@@ -4,7 +4,7 @@ import { ENTULHO_ATE_10_SACOS, PRECOS, comMaiuscula } from "@/lib/precos-publico
 import { comIva, euros } from "@/lib/quanto-custa";
 import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
-import { MOVEIS_POR_PECA_CURTO, faixaSemEComIva } from "@/lib/preco-de-referencia";
+import { MOVEIS_POR_PECA_CURTO, desdeSemEComIva, faixaSemEComIva } from "@/lib/preco-de-referencia";
 import { TERRA_JUNTA_NO_TITULO, emTerraDaPagina, monosCamaraOuDeCasa } from "./titulos-seo";
 
 /**
@@ -80,7 +80,8 @@ const PRECO: Record<string, string> = {
   // Por peça desde 03-11-2026 (d6), com a recolha mínima desde a d7 (04-11-2026):
   // «Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 40 € + IVA.»
   "recolha-moveis": `${comMaiuscula(MOVEIS_POR_PECA_CURTO)}.`,
-  "recolha-monos": `${faixa(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} + IVA (${faixaComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!)} com IVA).`,
+  // «Desde 60 € + IVA (73,80 € com IVA).» — a recolha mínima (d63, 17-11-2026); era a faixa 30 – 100 €.
+  "recolha-monos": `${comMaiuscula(desdeSemEComIva(PRECOS.recolha_monos.minimo!))}.`,
   // O m³ ao preço dos sacos, ensacado ou a granel (d7): era «Desde 120 €/m³».
   "recolha-entulho": `${faixa(PRECOS.recolha_entulho.minimo!, PRECOS.recolha_entulho.maximo!)}/m³ + IVA (${faixaComIva(PRECOS.recolha_entulho.minimo!, PRECOS.recolha_entulho.maximo!)}/m³ com IVA).`,
 };
@@ -148,7 +149,7 @@ export function descricaoDaCidade(
   // 31-10-2026 (d7): as duas vias, a da Câmara e a de casa (ver titulos-seo.ts).
   // d51 (16-11-2026): uma descrição por terra (eram cinco iguais).
   const propria = serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug) ? DESCRICAO_DOS_MONOS_CAMARA_OU_DE_CASA[citySlug] : undefined;
-  if (propria) return propria(faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!));
+  if (propria) return propria(desdeSemEComIva(PRECOS.recolha_monos.minimo!));
   if (serviceSlug === "recolha-monos") {
     return comOPrimeiroQueCabeNoFim(
       [

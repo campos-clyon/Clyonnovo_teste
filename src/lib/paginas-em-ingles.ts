@@ -105,7 +105,8 @@ export function enderecoEmIngles(slugPt: string): string | null {
 export function precoEmIngles(p: PrecoPublico): string {
   const unidade = p.unidade ? `/${p.unidade}` : "";
   // With the unit (04-11-2026, d7): rubble is now a range per m³, «€160–192/m³ + VAT».
-  if (p.minimo != null && p.maximo != null) return `€${p.minimo}–${p.maximo}${unidade} + VAT`;
+  // A «desde» label stays «from» even when the motor keeps a ceiling (d63: bulky waste from €60).
+  if (p.minimo != null && p.maximo != null && !/^desde\b/.test(p.etiqueta)) return `€${p.minimo}–${p.maximo}${unidade} + VAT`;
   if (p.minimo != null) return `from €${p.minimo}${unidade} + VAT`;
   return "quote on request";
 }

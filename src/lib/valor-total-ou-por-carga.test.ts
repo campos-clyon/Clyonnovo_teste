@@ -29,7 +29,7 @@ describe("a nota ao lado do preço, para o cliente", () => {
     const n = notaDoPrecoParaOCliente("total");
     expect(n).toContain("fotografias");
     // «32 € mais IVA» — o dono, 22-10-2026: o sem IVA nunca sozinho. Curta desde a d47 (15-11-2026).
-    expect(n).toContain("o extra paga-se à parte pela tabela (peça pequena 15 €, média 30 €, grande 50 € + IVA)");
+    expect(n).toContain("o extra paga-se à parte pela tabela (peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 € as seguintes + IVA)");
     expect(n).not.toContain("32 €");
   });
 

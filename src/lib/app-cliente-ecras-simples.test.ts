@@ -63,8 +63,9 @@ describe("o preço em três linhas (Serviço / IVA / Total), das contas do site"
   it("a referência do Pedir: as mesmas faixas das linhas, e o IVA de cada ponta", () => {
     // Desde a d6 (03-11-2026) a linha é a «Estimativa»; os monos, sem perguntas de preço, são a faixa publicada.
     const r = referenciaDoPedido({ servico: "recolha_monos" });
-    expect(r.linhas[0].texto).toBe("30 – 100 € + IVA (36,90 – 123 € com IVA).");
-    expect(r.conta).toEqual({ servico: "30 – 100 €", iva: "6,90 – 23 €", ivaRotulo: "IVA (23 %)", total: "36,90 – 123 €" });
+    // d63: o «desde 60 €» ao público; a estimativa continua na faixa do motor, 60 – 100 €.
+    expect(r.linhas[0].texto).toBe("60 – 100 € + IVA (73,80 – 123 € com IVA).");
+    expect(r.conta).toEqual({ servico: "60 – 100 €", iva: "13,80 – 23 €", ivaRotulo: "IVA (23 %)", total: "73,80 – 123 €" });
     // Os móveis por peça (d6 v2): uma grande sozinha, 65 € + IVA desde a d60 (a primeira grande).
     const itens = contaDaReferencia({ servico: "recolha_moveis", movelModo: "item", itens: { grande: 1 } });
     expect(itens?.total).toBe(`${comIva(65).toFixed(2).replace(".", ",")} €`);

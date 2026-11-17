@@ -1,6 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { jsonLd } from "@/lib/json-ld";
-import { faixaSemEComIva } from "@/lib/descricoes-seo";
+import { desdeSemEComIva } from "@/lib/preco-de-referencia";
 import GuiasDoServico from "@/components/GuiasDoServico";
 import CidadesDoServico from "@/components/CidadesDoServico";
 import { og } from "@/lib/open-graph";
@@ -24,7 +24,7 @@ import {
   SITE_URL,
   NOTA_DE_PRECO,
 } from "@/lib/seo-data";
-import { PRECOS, SEM_IVA_NA_FRASE, maisIva } from "@/lib/precos-publicos";
+import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import { NO_MESMO_DIA, O_DIA_DO_TRABALHO, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Recolha de monos em Lisboa, Margem Sul e Setúbal, sem esperar pela câmara: ${faixaSemEComIva(PRECO_MONOS.minimo!, PRECO_MONOS.maximo!)}. Propostas em menos de 6 horas.`,
+    `Recolha de monos em Lisboa, Margem Sul e Setúbal, sem esperar pela câmara: ${desdeSemEComIva(PRECO_MONOS.minimo!)}. Propostas em menos de 6 horas.`,
   keywords: [
     "recolha de monos",
     "recolha de monos Lisboa",
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
   openGraph: og({
     title: "Recolha de Monos — Parceiros em Lisboa e Setúbal",
     description:
-      `Recolha de monos e volumes grandes em Lisboa e Setúbal. Alternativa rápida à recolha municipal. Preços de ${maisIva(PRECO_MONOS.etiqueta)}. Propostas em menos de 6 horas.`,
+      `Monos e volumes grandes em Lisboa e Setúbal, sem esperar pela recolha municipal: ${desdeSemEComIva(PRECO_MONOS.minimo!)}. Propostas em menos de 6 horas.`,
     url: `${SITE_URL}/recolha-de-monos`,
   }),
 };
@@ -95,7 +95,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a recolha de monos?",
-    answer: `A recolha de monos custa ${PRECO_MONOS.etiqueta}, consoante a quantidade e o tipo de materiais — para pequenas quantidades, a partir de ${PRECO_MONOS.minimo} €. São valores orientativos e ${SEM_IVA_NA_FRASE}: envie fotos para um orçamento preciso e rápido.`,
+    answer: `A recolha de monos custa ${desdeSemEComIva(PRECO_MONOS.minimo!)} — a recolha mínima —, e sobe com a quantidade, o tipo de materiais e o acesso. São valores orientativos: envie fotos para um orçamento preciso e rápido.`,
   },
   {
     question: "Recolhem monos em apartamentos sem elevador?",
@@ -147,7 +147,7 @@ const serviceSchema = {
   provider: PRESTADOR,
   areaServed: keyCities.map((city) => ({ "@type": "City", name: city.name })),
   /*
-   * O que se declara ao Google é a mesma faixa que a página mostra.
+   * O que se declara ao Google é o mesmo «desde» que a página mostra (d63: sem tecto).
    *
    * Declarava 60 — um número que não está na tabela nem na página. Um preço
    * declarado que a página não mostra é a divergência que o Google penaliza.
@@ -156,7 +156,6 @@ const serviceSchema = {
     "@type": "AggregateOffer",
     priceCurrency: "EUR",
     lowPrice: PRECO_MONOS.minimo!,
-    highPrice: PRECO_MONOS.maximo,
   },
 };
 
@@ -206,9 +205,9 @@ export default function RecolhaMonosPage() {
               </div>
               <p className="mt-4 text-sm text-slate-500">
                 {/* O número com o IVA ao lado (31-10-2026): ia nu, por cima de «Valores orientativos, sem IVA». */}
-                Preços de{" "}
+                Preços{" "}
                 <span className="font-semibold text-violet-600">
-                  {faixaSemEComIva(PRECO_MONOS.minimo!, PRECO_MONOS.maximo!)}
+                  {desdeSemEComIva(PRECO_MONOS.minimo!)}
                 </span>{" "}
                 conforme a quantidade
               </p>

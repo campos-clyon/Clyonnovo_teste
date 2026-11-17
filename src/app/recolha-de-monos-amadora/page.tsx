@@ -4,7 +4,8 @@ import { og } from "@/lib/open-graph";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MapPin, Package, Phone, Trash2, Truck } from "lucide-react";
 import CTABlock from "@/components/CTABlock";
-import { PRECOS, SEM_IVA_NA_FRASE } from "@/lib/precos-publicos";
+import { PRECOS } from "@/lib/precos-publicos";
+import { desdeSemEComIva } from "@/lib/preco-de-referencia";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
@@ -46,7 +47,7 @@ const faqs = [
   },
   {
     question: "Quanto custa a recolha de monos na Amadora?",
-    answer: `O valor depende do volume e dos acessos: ${PRECOS.recolha_monos.etiqueta}, ${SEM_IVA_NA_FRASE}. Para volumes maiores, envie fotos para orçamento rápido.`,
+    answer: `O valor depende do volume e dos acessos: ${desdeSemEComIva(PRECOS.recolha_monos.minimo!)}, a recolha mínima. Para volumes maiores, envie fotos para orçamento rápido.`,
   },
   {
     question: "Recolhem móveis pesados e volumosos?",

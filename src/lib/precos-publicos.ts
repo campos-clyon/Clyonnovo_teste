@@ -33,7 +33,7 @@ import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import { PRECO_POR_HORA_DUAS_PESSOAS, MINIMO_DE_HORAS } from "./tabela-das-mudancas";
 
 export type PrecoPublico = {
-  /** O que aparece no cartão e no texto: "40 – 120 €", "desde 250 €". */
+  /** O que aparece no cartão e no texto: "40 – 120 €", "desde 260 €". */
   etiqueta: string;
   /**
    * O piso, em euros e sem IVA — para os dados estruturados e para comparar
@@ -44,6 +44,11 @@ export type PrecoPublico = {
   maximo?: number;
   /** A unidade, quando o preço não é do trabalho todo. */
   unidade?: string;
+  /**
+   * O tecto só conta na estimativa de um pedido (o motor e a R12): ao público diz-se o
+   * «desde» da etiqueta (d63, os monos).
+   */
+  tectoSoNaEstimativa?: boolean;
 };
 
 /*
@@ -159,6 +164,9 @@ const APARTAMENTOS = (() => {
   return { minimo: Math.min(...comTecto.map((t) => t.minimo)), maximo: Math.max(...comTecto.map((t) => t.maximo as number)) };
 })();
 
+/** O piso do T0/T1, o «desde» do esvaziamento de casa (d63). */
+const PISO_DO_T0_T1 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T0/T1")!.minimo;
+
 export const PRECOS: Record<string, PrecoPublico> = {
   /*
    * POR PEÇA DESDE 03-11-2026 (d6): era «40 – 120 €» pelo trabalho; a conta de
@@ -167,7 +175,13 @@ export const PRECOS: Record<string, PrecoPublico> = {
    * as peças e o mínimo. Sem tecto: cada peça tem o seu valor.
    */
   recolha_moveis: { etiqueta: ETIQUETA_DOS_MOVEIS, minimo: RECOLHA_MINIMA_DOS_MOVEIS },
-  recolha_monos: { etiqueta: "30 – 100 €", minimo: 30, maximo: 100 },
+  /*
+   * DESDE 17-11-2026 (d63): «desde 60 € + IVA», a recolha mínima — era «30 – 100 €»,
+   * e o motor nunca cobra menos do que a recolha mínima (d59/d60). O tecto fica só
+   * para o motor (o ponto dos monos sem peças contadas, `monosPelaFaixa`); o que se
+   * mostra ao público é o «desde».
+   */
+  recolha_monos: { etiqueta: `desde ${RECOLHA_MINIMA_DOS_MOVEIS} €`, minimo: RECOLHA_MINIMA_DOS_MOVEIS, maximo: 100, tectoSoNaEstimativa: true },
 
   /*
    * Por metro cúbico, e a unidade vai ESCRITA.
@@ -191,7 +205,11 @@ export const PRECOS: Record<string, PrecoPublico> = {
     unidade: "m³",
   },
 
-  esvaziamento_casa: { etiqueta: "desde 250 €", minimo: 250 },
+  /*
+   * DESDE 17-11-2026 (d63): o piso do T0/T1 (`ESVAZIAMENTO_POR_TIPOLOGIA`) — era
+   * «desde 250 €», abaixo do T0/T1 da d60, e lia-se como «moradia desde 250 €».
+   */
+  esvaziamento_casa: { etiqueta: `desde ${PISO_DO_T0_T1} €`, minimo: PISO_DO_T0_T1 },
   // Os apartamentos de T0/T1 a T4 (d60, 16-11-2026): do piso do T0/T1 ao tecto do T4.
   esvaziamento_apartamento: {
     etiqueta: `${milhares(APARTAMENTOS.minimo)} – ${milhares(APARTAMENTOS.maximo)} €`,

@@ -9,7 +9,7 @@ import { descricaoDaCidade } from "./descricoes-seo";
 describe("a descrição das páginas de cidade", () => {
   it("diz o preço com IVA ao lado do sem IVA", () => {
     expect(descricaoDaCidade("recolha-monos", "Recolha de Monos", "Lisboa", "lisboa")).toContain(
-      "30 – 100 € + IVA (36,90 – 123 € com IVA).",
+      "Desde 60 € + IVA (73,80 € com IVA).",
     );
     expect(descricaoDaCidade("recolha-moveis", "Recolha de Móveis", "Lisboa", "lisboa")).toContain(
       // Por peça desde 03-11-2026 (d6 v2), com a recolha mínima desde a d7 (04-11-2026).

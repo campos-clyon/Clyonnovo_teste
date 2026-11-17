@@ -13,7 +13,7 @@ import {
 import {
   HORAS_COM_TRES_PESSOAS,
   MATERIAIS,
-  MINIMO_DA_MUDANCA,
+  MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO,
   MINIMO_DE_HORAS,
   PESSOAS_NA_EQUIPA,
   POR_ANDAR_SEM_ELEVADOR,
@@ -238,7 +238,7 @@ function naReferencia(preco: PrecoPublicoDasMudancas): Conteudo {
       O_PRECO_E_FECHADO,
       {
         question: "Há um preço mínimo?",
-        answer: `Sim: o mínimo de horas de cada parceiro, que se vê na lista. Na referência, ${MINIMO_DE_HORAS} horas da equipa, ${euros(MINIMO_DA_MUDANCA)} + IVA (${euros(comIva(MINIMO_DA_MUDANCA))} com IVA).`,
+        answer: `Sim: o mínimo de horas de cada parceiro, que se vê na lista. Na referência, ${MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO}.`,
       },
       {
         question: "Os preços já têm IVA?",

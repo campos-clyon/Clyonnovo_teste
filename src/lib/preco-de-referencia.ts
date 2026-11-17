@@ -116,6 +116,9 @@ export const faixaSemEComIva = (de: number, ate: number) => `${faixa(de, ate)} +
 /** «80 € + IVA (98,40 € com IVA)» */
 export const valorSemEComIva = (v: number) => `${euros(v)} + IVA (${euros(comIva(v))} com IVA)`;
 
+/** «desde 60 € + IVA (73,80 € com IVA)» — o «desde» de um serviço (d63, 17-11-2026). */
+export const desdeSemEComIva = (v: number) => `desde ${valorSemEComIva(v)}`;
+
 /*
  * O SEM IVA NUNCA SOZINHO, TAMBÉM NAS LISTAS — 31-10-2026 (ordem do CEO).
  *
@@ -848,7 +851,9 @@ type Especifica = { texto: string; conta: PrecoEmTresLinhas | null; valor?: numb
 /** A faixa publicada de um serviço (30 – 100), ou `null` quando é «desde», por unidade ou não tem. */
 function faixaDoServico(servico: string): { de: number; ate: number } | null {
   const preco = PRECOS[servico];
-  if (!preco || preco.minimo == null || preco.maximo == null || preco.unidade || /^desde\b/.test(preco.etiqueta)) return null;
+  if (!preco || preco.minimo == null || preco.maximo == null || preco.unidade) return null;
+  // Um «desde» não tem faixa — salvo quando o tecto é só da estimativa (os monos, d63).
+  if (/^desde\b/.test(preco.etiqueta) && !preco.tectoSoNaEstimativa) return null;
   return { de: preco.minimo, ate: preco.maximo };
 }
 
@@ -1023,7 +1028,7 @@ function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPe
   if (!especifica && SEM_CONTA_PELAS_RESPOSTAS.includes(p.servico)) {
     const preco = PRECOS[p.servico];
     if (preco?.minimo != null) {
-      especifica = daEstimativa(preco.maximo != null && !/^desde\b/.test(preco.etiqueta) ? { tipo: "faixa", de: preco.minimo, ate: preco.maximo } : { tipo: "desde", de: preco.minimo });
+      especifica = daEstimativa(preco.maximo != null && (!/^desde\b/.test(preco.etiqueta) || preco.tectoSoNaEstimativa) ? { tipo: "faixa", de: preco.minimo, ate: preco.maximo } : { tipo: "desde", de: preco.minimo });
     }
   }
   if (acessoConta && !acessoDito) for (const r of razoes) porque.push(`${r}: ${acessoNoTopo ? "o topo da faixa" : ENTRA_NA_PROPOSTA}.`);

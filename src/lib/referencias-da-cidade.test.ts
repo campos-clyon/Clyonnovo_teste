@@ -99,7 +99,8 @@ describe("os números são os das fontes únicas", () => {
 
   it("monos: a faixa dos monos, e a dos móveis", () => {
     const p = precos("recolha-monos");
-    expect(p[0]).toBe(faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!));
+    // d63: o «desde» da recolha mínima (era a faixa 30 – 100 €).
+    expect(p[0]).toBe(`desde ${valorSemEComIva(PRECOS.recolha_monos.minimo!)}`);
     expect(p).toContain(`desde ${valorSemEComIva(PRECOS.recolha_moveis.minimo!)}`);
     expect(referenciasDaCidade("recolha-monos", "Seixal")[0].oQue).toBe("Recolha de monos no Seixal");
   });

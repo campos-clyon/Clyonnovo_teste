@@ -470,6 +470,28 @@ export const DESLOCACAO_DA_MUDANCA_PARA_O_MODELO =
 export const MINIMO_DA_MUDANCA = PRECO_POR_HORA * MINIMO_DE_HORAS;
 
 /*
+ * O MÍNIMO DIZ-SE SEMPRE COM AS PESSOAS — 17-11-2026 (d63, o CEO e o dono). Um
+ * «mínimo 120 €» sozinho lia-se como o de qualquer mudança, e o motor, com a
+ * equipa de 3, nunca cobra menos de `MINIMO_DA_MUDANCA`. As duas equipas, sempre
+ * juntas: «mínimo 3 horas: 120 € + IVA com 2 pessoas, 165 € + IVA com 3».
+ */
+/** O mínimo com 2 pessoas (motorista e 1 ajudante), sem IVA. */
+export const MINIMO_DA_MUDANCA_DUAS_PESSOAS = PRECO_POR_HORA_DUAS_PESSOAS * MINIMO_DE_HORAS;
+
+/** «120 €», «147,60 €» — sem os cêntimos quando são zero. */
+const eurosDoMinimo = (v: number) => (Number.isInteger(arred(v)) ? `${arred(v)} €` : euros(arred(v)));
+
+/** «mínimo 3 horas: 120 € + IVA com 2 pessoas, 165 € + IVA com 3» — onde não se mostra o com IVA. */
+export const MINIMO_DA_MUDANCA_EM_TEXTO =
+  `mínimo ${MINIMO_DE_HORAS} horas: ${eurosDoMinimo(MINIMO_DA_MUDANCA_DUAS_PESSOAS)} + IVA com 2 pessoas, ` +
+  `${eurosDoMinimo(MINIMO_DA_MUDANCA)} + IVA com ${PESSOAS_NA_EQUIPA}`;
+
+/** «mínimo 3 horas: 120 € + IVA (147,60 € com IVA) com 2 pessoas, 165 € + IVA (202,95 € com IVA) com 3» — onde se mostra preço. */
+export const MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO =
+  `mínimo ${MINIMO_DE_HORAS} horas: ${eurosDoMinimo(MINIMO_DA_MUDANCA_DUAS_PESSOAS)} + IVA (${eurosDoMinimo(MINIMO_DA_MUDANCA_DUAS_PESSOAS * (1 + TAXA_IVA))} com IVA) com 2 pessoas, ` +
+  `${eurosDoMinimo(MINIMO_DA_MUDANCA)} + IVA (${eurosDoMinimo(MINIMO_DA_MUDANCA * (1 + TAXA_IVA))} com IVA) com ${PESSOAS_NA_EQUIPA}`;
+
+/*
  * OS TEXTOS DO PREÇO DA HORA SAÍRAM DAQUI — 11-11-2026. Desde 10–11-11 as
  * mudanças são ao preço de cada parceiro: o «desde», a referência, os títulos,
  * os dados estruturados e o aviso ao modelo estão em

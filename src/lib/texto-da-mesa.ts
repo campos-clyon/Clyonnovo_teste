@@ -81,7 +81,7 @@ export function textoDaMesa(
 
   return (
     `Pedido #${pedidoId} — o que já recebeu:\n${escritas.join("\n")}${aindaAVer}\n\n` +
-    // Por carga, a unidade; pelo trabalho todo, os 32 € por item a mais (22-10-2026).
+    // Por carga, a unidade; pelo trabalho todo, os itens a mais pela tabela das peças (eram 32 € a 22-10-2026).
     `${notaDoPrecoParaOCliente(base)}\n\n` +
     `Use os botões da proposta para fechar ou recusar, ou responda com um valor (ex.: 300) para contrapropor.`
   );

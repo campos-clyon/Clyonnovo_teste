@@ -45,11 +45,11 @@ const SITE_URL = "https://clyon.pt";
  * Os dois valores publicados para esvaziamento, e nada fora deles.
  *
  * A grelha desta página abria nos 300 € e ia aos 1500 €; a grelha oficial diz
- * desde 250 € para casa e 260 – 450 € para apartamento. As linhas de
+ * desde 260 € para casa (d63) e 260 – 1 300 € para apartamento (d60). As linhas de
  * apartamento vivem agora dentro dessa faixa e a moradia começa onde ela
  * acaba — nenhum número desta página contradiz o preçário.
  */
-const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 250 €"
+const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 260 €"
 const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {

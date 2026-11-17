@@ -88,6 +88,7 @@ describe("os artigos de mudanças dizem o modelo e a referência", () => {
   it("as pequenas mudanças já não prometem «uma a duas horas» — o mínimo são 3, na referência", () => {
     const texto = JSON.stringify(artigo("pequenas-mudancas-em-lisboa-quando-compensa"));
     expect(texto).not.toContain("uma a duas horas");
-    expect(texto).toContain("mínimo de 3 horas");
+    // d63: o mínimo diz-se com as pessoas — «mínimo 3 horas: 120 € + IVA (…) com 2 pessoas, 165 € + IVA (…) com 3».
+    expect(texto).toContain("mínimo 3 horas: 120 € + IVA (147,60 € com IVA) com 2 pessoas, 165 € + IVA (202,95 € com IVA) com 3");
   });
 });

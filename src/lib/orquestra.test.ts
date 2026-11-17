@@ -2323,3 +2323,148 @@ describe("d61) o custo do trabalho só em custo-do-trabalho.ts", () => {
     expect(CHAVES_DO_MOTOR.test("custo_hora_pessoa")).toBe(false);
   });
 });
+
+/*
+ * d63) NENHUM «DESDE» PÚBLICO ABAIXO DO MÍNIMO DO MOTOR — 17-11-2026 (o CEO e o
+ * dono). Depois da d60 o site ainda dizia «monos 30 – 100 €» e «esvaziamento desde
+ * 250 €», números que o motor já não cobrava: a recolha mínima são 60 € e o T0/T1
+ * começa nos 260 €. Um «desde» que o motor nunca dá é uma promessa que não se
+ * cumpre. Aqui o motor corre de verdade (`calculateFastEstimate`, como a rota do
+ * pedido o chama) com o pedido MAIS PEQUENO de cada serviço, e o «desde» publicado
+ * (o `minimo` de `PRECOS`, cada linha das grelhas) não pode ficar abaixo do que ele
+ * dá. Cada serviço de `PRECOS` está numa de duas listas — com o pedido mais pequeno,
+ * ou fora do motor com o motivo —, e um serviço novo sem lista chumba.
+ */
+describe("d63: nenhum «desde» público abaixo do mínimo do motor", () => {
+  type Pedido = Record<string, unknown>;
+  const NO_RES_DO_CHAO: Pedido = { floor: "rés-do-chão", parkingDistance: "door" };
+
+  /** O pedido mais pequeno de cada serviço, como o simulador o grava. */
+  const MAIS_PEQUENO: Record<string, Pedido[]> = {
+    recolha_moveis: [{ movelMode: "item", movelItemsPequeno: 1 }],
+    // Com a peça contada e sem ela (a faixa do motor).
+    recolha_monos: [{ movelItemsPequeno: 1 }, { description: "um colchão" }, {}],
+    recolha_entulho: [{ entulho: "chao", entulhoVolume: "ate1" }],
+    esvaziamento_casa: [{ tipologia: "T0/T1" }],
+    esvaziamento_apartamento: [{ tipologia: "T0/T1" }],
+    esvaziamento_garagem: [{ volumeTier: "carrinha", acessoDoEspaco: "rua" }],
+    esvaziamento_sotao: [{ volumeTier: "carrinha", acessoDoEspaco: "rua" }],
+    esvaziamento_cave: [{ volumeTier: "carrinha", acessoDoEspaco: "rua" }],
+  };
+
+  /** Fora desta comparação, e porquê. */
+  const FORA_DO_MOTOR: Record<string, string> = {
+    // A mudança compara-se à parte, equipa a equipa (abaixo): o «desde» do cartão é o de 2 pessoas.
+    mudanca: "equipa a equipa, no teste seguinte",
+    // O motor ainda não lê a grelha da manutenção (`MANUTENCAO_POR_TIPO`): dá a conta geral. A R12 e o
+    // simulador dão a grelha (o «desde» é o mínimo dela), e o preço é o da proposta do parceiro.
+    manutencao_casa: "o motor não tem a grelha da manutenção (a R12 tem)",
+    montagem_moveis: "fora do simulador e do Google desde 25-10-2026",
+    jardinagem: "fora do simulador e do Google desde 25-10-2026",
+  };
+
+  async function oMotor(servico: string, pedido: Pedido) {
+    const { calculateFastEstimate, camposDoPedidoParaOMotor } = await import("./pricing-helper");
+    const { camposDaCategoriaParaGravar } = await import("./pedido-por-categoria");
+    const o: Pedido = { serviceType: servico, ...NO_RES_DO_CHAO, ...pedido };
+    const gravado = { ...o, ...camposDaCategoriaParaGravar(o) };
+    const e = await calculateFastEstimate({
+      serviceType: servico,
+      description: (gravado.description as string | undefined) ?? "",
+      floor: gravado.floor as string | undefined,
+      hasElevator: gravado.hasElevator as string | undefined,
+      parkingDistance: gravado.parkingDistance as string | undefined,
+      tipologia: gravado.tipologia as string | undefined,
+      distanceFromBase: { distanceKm: 5 },
+      ...camposDoPedidoParaOMotor(gravado),
+    } as never);
+    const valores = [e.estimatedPriceWithoutVat, e.estimateMinWithoutVat].filter((v): v is number => typeof v === "number" && v > 0);
+    return Math.min(...valores);
+  }
+
+  async function minimoDoMotor(servico: string, pedidos: Pedido[]) {
+    let m = Infinity;
+    for (const p of pedidos) m = Math.min(m, await oMotor(servico, p));
+    return m;
+  }
+
+  it("cada serviço de PRECOS tem o pedido mais pequeno, ou o motivo de ficar de fora", async () => {
+    const { PRECOS } = await import("./precos-publicos");
+    const semLista = Object.keys(PRECOS).filter((s) => !(s in MAIS_PEQUENO) && !(s in FORA_DO_MOTOR));
+    expect(semLista).toEqual([]);
+    expect(Object.keys(MAIS_PEQUENO).filter((s) => s in FORA_DO_MOTOR)).toEqual([]);
+  });
+
+  it("o número de cada etiqueta «desde N €» é o mínimo que ela declara", async () => {
+    const { PRECOS } = await import("./precos-publicos");
+    const errados = Object.entries(PRECOS).flatMap(([s, p]) => {
+      const m = /^desde (\d[\d ]*)\s?€/.exec(p.etiqueta);
+      return m && Number(m[1].replace(/ /g, "")) !== p.minimo ? [`${s}: «${p.etiqueta}» com minimo ${p.minimo}`] : [];
+    });
+    expect(errados).toEqual([]);
+  });
+
+  it("o «desde» de cada serviço não fica abaixo do que o motor dá ao pedido mais pequeno", async () => {
+    const { PRECOS } = await import("./precos-publicos");
+    const abaixo: string[] = [];
+    for (const [servico, pedidos] of Object.entries(MAIS_PEQUENO)) {
+      const publico = PRECOS[servico]?.minimo;
+      expect(publico, servico).toBeTypeOf("number");
+      const motor = await minimoDoMotor(servico, pedidos);
+      expect(Number.isFinite(motor), servico).toBe(true);
+      if ((publico as number) < motor) abaixo.push(`${servico}: «desde ${publico} €» e o motor nunca dá menos de ${motor} €`);
+    }
+    expect(abaixo).toEqual([]);
+  }, 120_000);
+
+  it("nem cada linha das grelhas: as tipologias do esvaziamento, a garagem, o sótão e a cave, os 10 sacos", async () => {
+    const { ESVAZIAMENTO_POR_TIPOLOGIA, ESVAZIAMENTO_POR_ESPACO, ENTULHO_ATE_10_SACOS } = await import("./precos-publicos");
+    const abaixo: string[] = [];
+    for (const t of ESVAZIAMENTO_POR_TIPOLOGIA) {
+      const motor = await minimoDoMotor("esvaziamento_casa", [{ tipologia: t.chave }]);
+      if (t.minimo < motor) abaixo.push(`${t.tipo}: desde ${t.minimo} € e o motor ${motor} €`);
+    }
+    for (const e of ESVAZIAMENTO_POR_ESPACO) {
+      const motor = await minimoDoMotor(e.servico, [{ volumeTier: "carrinha", acessoDoEspaco: "rua" }]);
+      if (e.faixas.carrinha.de < motor) abaixo.push(`${e.espaco}: desde ${e.faixas.carrinha.de} € e o motor ${motor} €`);
+    }
+    const sacos = await minimoDoMotor("recolha_entulho", [{ entulho: "ensacado", tipoDeSaco: "pequeno", quantidade: 1 }]);
+    if (ENTULHO_ATE_10_SACOS.minimo < sacos) abaixo.push(`10 sacos: desde ${ENTULHO_ATE_10_SACOS.minimo} € e o motor ${sacos} €`);
+    expect(abaixo).toEqual([]);
+  }, 120_000);
+
+  it("a mudança, equipa a equipa: o mínimo de 3 pessoas não fica abaixo do motor, e o de 2 é o da tabela de 2", async () => {
+    const t = await import("./tabela-das-mudancas");
+    const { PRECOS } = await import("./precos-publicos");
+    const { SEM_PARCEIROS, lembrarPrecoPublico } = await import("./preco-publico-das-mudancas");
+    lembrarPrecoPublico(SEM_PARCEIROS);
+    // O motor, na referência (lista vazia), estima sempre com a equipa de 3.
+    const motor = await minimoDoMotor("mudanca", [{ tipologia: "itens" }, { description: "só um sofá" }]);
+    expect(t.MINIMO_DA_MUDANCA).toBeGreaterThanOrEqual(motor);
+    // O «desde» do cartão é o de 2 pessoas, e diz-se sempre com as pessoas.
+    expect(PRECOS.mudanca.minimo).toBe(t.MINIMO_DA_MUDANCA_DUAS_PESSOAS);
+    expect(t.MINIMO_DA_MUDANCA_DUAS_PESSOAS).toBe(t.PRECO_POR_HORA_DUAS_PESSOAS * t.MINIMO_DE_HORAS);
+    expect(t.MINIMO_DA_MUDANCA_EM_TEXTO).toBe(
+      `mínimo ${t.MINIMO_DE_HORAS} horas: ${t.MINIMO_DA_MUDANCA_DUAS_PESSOAS} € + IVA com 2 pessoas, ${t.MINIMO_DA_MUDANCA} € + IVA com ${t.PESSOAS_NA_EQUIPA}`,
+    );
+    expect(t.MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO).toMatch(/com IVA\) com 2 pessoas, .+ \+ IVA \(.+ com IVA\) com 3$/);
+  }, 120_000);
+
+  it("nenhum mínimo da mudança dito com uma equipa só: as páginas, o blog e a tabela dizem as duas", () => {
+    const comAsDuas = ["src/lib/mudanca-no-blog.ts", "src/lib/pagina-do-preco-das-mudancas.ts", "src/components/mudancas/TabelaDasMudancas.tsx"];
+    for (const f of comAsDuas) expect(readFileSync(join(RAIZ, f), "utf8"), f).toContain("MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO");
+    // O mínimo de 3 sozinho, interpolado num texto («${MINIMO_DA_MUDANCA} € + IVA»), não volta.
+    const sozinho = /\$\{(euros\()?MINIMO_DA_MUDANCA\)?\} ?€? \+ IVA/;
+    const fora = FONTES.filter((f) => f !== FONTE_DAS_MUDANCAS && !f.endsWith("o-que-o-site-sabe.ts") && sozinho.test(readFileSync(join(RAIZ, f), "utf8")));
+    expect(fora).toEqual([]);
+  });
+
+  it("a regra apanha o que devia apanhar (prova com uma grelha a fingir)", () => {
+    const sozinho = /\$\{(euros\()?MINIMO_DA_MUDANCA\)?\} ?€? \+ IVA/;
+    expect(sozinho.test("na referência, ${MINIMO_DA_MUDANCA} € + IVA")).toBe(true);
+    expect(sozinho.test("na referência, ${euros(MINIMO_DA_MUDANCA)} + IVA")).toBe(true);
+    expect(sozinho.test("na referência, ${MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO}")).toBe(false);
+    const etiqueta = /^desde (\d[\d ]*)\s?€/.exec("desde 1 300 €");
+    expect(Number(etiqueta![1].replace(/ /g, ""))).toBe(1300);
+  });
+});

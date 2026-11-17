@@ -318,7 +318,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
    */
   const base = lerBase(p.baseDoPreco);
   const comUnidade = (v: number) => precoComBase(euros(v), base);
-  // E pelo trabalho todo, os 32 € por item a mais (22-10-2026).
+  // E pelo trabalho todo, os itens a mais pela tabela das peças (`avisoDosItens`; eram 32 € a 22-10-2026).
   const eANota = ` ${notaDoPrecoParaOCliente(base)}`;
   const novidades: Novidade[] = [];
 

@@ -10,7 +10,7 @@ import { PEDIR_MUDANCA } from "@/lib/tipos-de-mudanca";
 import {
   HORAS_COM_DUAS_PESSOAS,
   HORAS_COM_TRES_PESSOAS,
-  MINIMO_DE_HORAS,
+  MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO,
   NOTA_DO_T4_OU_MAIOR,
   TIPOLOGIAS,
   desmontagemPorTipologiaEmTexto,
@@ -85,7 +85,7 @@ export default function TabelaDasMudancas({
           </p>
           <p className="mt-1 text-sm text-slate-600">
             {euros(PRECO_POR_HORA_DUAS_PESSOAS_COM_IVA)} com IVA com 2 pessoas · com 3 pessoas (carrinha, motorista e 2 ajudantes),{" "}
-            {euros(PRECO_POR_HORA)} + IVA por hora ({euros(PRECO_POR_HORA_COM_IVA)} com IVA) · mínimo de {MINIMO_DE_HORAS} horas. Cada
+            {euros(PRECO_POR_HORA)} + IVA por hora ({euros(PRECO_POR_HORA_COM_IVA)} com IVA) · {MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO}. Cada
             parceiro tem o seu preço por hora: na lista vê o de cada um, e escolhe.
           </p>
         </>

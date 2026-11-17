@@ -6,6 +6,7 @@ import {
   ENTULHO_EM_FRASE,
   pecaComOIvaAoLado,
   precoDeReferencia,
+  desdeSemEComIva,
   valorSemEComIva,
 } from "./preco-de-referencia";
 import { PRECO_DO_SACO_EM_TEXTO } from "./quanto-custa";
@@ -830,7 +831,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
   },
   {
     slug: "pequenas-mudancas-em-lisboa-quando-compensa",
-    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
+    updatedDate: "2026-11-17", // d63: monos desde 60 €, esvaziamento desde 260 €, o mínimo da mudança com as pessoas.
     title: "Pequenas mudanças em Lisboa: quando compensa contratar uma equipa",
     metaTitle: "Pequenas Mudanças em Lisboa: Quando Compensa",
     description:
@@ -975,7 +976,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "6 min",
     publishDate: "2026-10-14",
-    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
+    updatedDate: "2026-11-17", // d63: monos desde 60 €, esvaziamento desde 260 €, o mínimo da mudança com as pessoas.
     heroLabel: "Esvaziamento",
     intro:
       "Esvaziar a casa de um pai, de uma avó ou de um tio é das tarefas mais pesadas que há — pelo volume e pelo que cada objeto lembra. Não há uma ordem certa, mas há uma que poupa tempo e discussões. Este guia mostra-a, com os valores de referência da CLYON.",
@@ -1041,7 +1042,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     slug: "recolha-de-monos-camara-ou-profissional",
     title: "Recolha de monos: pela câmara ou por um parceiro? Quando compensa cada um",
     metaTitle: "Recolha de Monos: Câmara ou Parceiro?",
-    description: `A maior parte das câmaras recolhe monos de graça, com regras. Quando compensa um parceiro, e quanto custa: ${maisIva(PRECOS.recolha_monos.etiqueta)}.`,
+    description: `A maior parte das câmaras recolhe monos de graça, com regras. Quando compensa um parceiro, e quanto custa: ${desdeSemEComIva(PRECOS.recolha_monos.minimo ?? 0)}.`,
     category: "Recolha de monos",
     keywords: [
       "recolha de monos câmara",
@@ -1052,6 +1053,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "6 min",
     publishDate: "2026-10-15",
+    updatedDate: "2026-11-17", // d63: monos desde 60 €, esvaziamento desde 260 €, o mínimo da mudança com as pessoas.
     heroLabel: "Recolha de monos",
     intro:
       "Na maior parte dos concelhos da área de Lisboa e de Setúbal, a câmara recolhe os monos sem custo. Mas cada uma tem as suas regras — marcação, dias, limites —, e há casos em que a recolha da câmara não chega. Este guia junta o que as câmaras publicam e diz quando compensa pedir a um parceiro.",
@@ -1091,7 +1093,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         title: "Quanto custa",
         paragraphs: [
-          `Como referência, a recolha de monos por um parceiro fica em ${PRECOS.recolha_monos.etiqueta}, ${SEM_IVA_NA_FRASE}. O que faz variar é o volume, o andar e o elevador, e se há móveis para desmontar. O preço certo vem nas propostas, fechado antes de o trabalho começar.`,
+          `Como referência, a recolha de monos por um parceiro começa nos ${valorSemEComIva(PRECOS.recolha_monos.minimo ?? 0)}, a recolha mínima. O que faz variar é o volume, o andar e o elevador, e se há móveis para desmontar. O preço certo vem nas propostas, fechado antes de o trabalho começar.`,
         ],
       },
       {
@@ -1219,7 +1221,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
     ],
     readingTime: "5 min",
     publishDate: "2026-10-15",
-    updatedDate: "2026-11-16", // d60: os preços que pagam a saída.
+    updatedDate: "2026-11-17", // d63: monos desde 60 €, esvaziamento desde 260 €, o mínimo da mudança com as pessoas.
     heroLabel: "Esvaziamento",
     intro:
       "Entre um inquilino que sai e outro que entra, ou antes de uma escritura, o apartamento tem de ficar vazio numa data que não se mexe. Este guia mostra como planear o esvaziamento para chegar a essa data com a casa pronta — e quanto custa, com os valores de referência da CLYON.",
@@ -1247,7 +1249,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         title: "Quanto custa",
         paragraphs: [
-          // Dizia «…começa desde 250 €, também sem IVA.» (31-10-2026): o com IVA vai ao lado.
+          // Dizia «…começa desde 250 €, também sem IVA.» (31-10-2026): o com IVA vai ao lado; desde a d63 (17-11-2026), o piso do T0/T1.
           `Como referência, esvaziar um apartamento fica em ${precoDeReferencia("esvaziamento_apartamento")}. Uma casa com mais recheio começa nos ${valorSemEComIva(PRECOS.esvaziamento_casa.minimo ?? 0)}. O preço da proposta já é o total a pagar, com IVA ou isento conforme o regime do parceiro.`,
           "O que mais faz variar é o volume, o andar e o elevador, a arrecadação ou a garagem, e os móveis para desmontar. Vender e doar antes baixa o volume — e o preço.",
         ],

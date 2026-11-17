@@ -91,7 +91,8 @@ describe("os números são os das tabelas do motor", () => {
   // as peças de referência pela tabela desde a d7 (04-11-2026).
   it("monos e móveis: a faixa dos monos, as três peças dos móveis, a recolha mínima e as peças de referência", () => {
     const [monos, pequena, media, grande, minima, ...pecas] = linhasDosMonosEMoveis();
-    expect(monos.valor).toEqual({ tipo: "faixa", de: PRECOS.recolha_monos.minimo, ate: PRECOS.recolha_monos.maximo });
+    // d63: o «desde» da recolha mínima (era a faixa 30 – 100 €).
+    expect(monos.valor).toEqual({ tipo: "desde", de: PRECOS.recolha_monos.minimo });
     expect([pequena, media, grande].map((l) => [l.valor, l.unidade])).toEqual([
       [{ tipo: "exacto", valor: 15 }, "peça"],
       [{ tipo: "exacto", valor: 30 }, "peça"],

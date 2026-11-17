@@ -915,14 +915,15 @@ function PricingGuide({ variante }: { variante: VarianteDaLanding }) {
       title: "Monos",
       text: "Tralha, garagens e arrecadações.",
       icon: Package,
-      preco: { tipo: "faixa", de: PRECOS.recolha_monos.minimo ?? 30, ate: PRECOS.recolha_monos.maximo ?? 100 },
+      // O «desde» da recolha mínima (d63): era a faixa 30 – 100 €.
+      preco: { tipo: "desde", de: PRECOS.recolha_monos.minimo ?? RECOLHA_MINIMA_DOS_MOVEIS },
     },
     // O cartão do entulho saiu a 15-11-2026 (d30/d12): o entulho está fora da divulgação.
     {
       title: "Esvaziamento",
       text: "Conforme o número de divisões e o volume.",
       icon: Home,
-      preco: { tipo: "desde", de: PRECOS.esvaziamento_casa.minimo ?? 250 },
+      preco: { tipo: "desde", de: PRECOS.esvaziamento_casa.minimo! },
     },
   ];
   // d51: na versão do esvaziamento, os três esvaziamentos da fonte única (o «desde», ou a faixa quando a há).

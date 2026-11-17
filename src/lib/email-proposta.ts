@@ -178,7 +178,7 @@ export async function avisarClienteDaProposta(p: {
         }.${p.fatura ? ` ${e(p.fatura)}, passada pelo parceiro.` : ""} Pode aceitar, propor outro valor, ou esperar por mais propostas.
       </p>
       ${
-        // Por carga, a unidade; pelo trabalho todo, os 32 € por item a mais (22-10-2026).
+        // Por carga, a unidade; pelo trabalho todo, os itens a mais pela tabela das peças (eram 32 € a 22-10-2026).
         notaDoPrecoParaOCliente(p.base ?? "total")
           ? `<p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#92400e;">${e(notaDoPrecoParaOCliente(p.base ?? "total"))}</p>`
           : ""

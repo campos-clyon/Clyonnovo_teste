@@ -54,7 +54,7 @@ describe("as quatro partes", () => {
     expect(mensagemDoOrcamento(DO_623, NOITE)).toBe(
       [
         "Boa noite, Jason! O orçamento para a recolha de monos em Campo de Ourique é 105 € + IVA = 129,15 €.",
-        `Inclui o que está nas fotografias e na descrição. Se no local houver mais coisas, o extra paga-se à parte pela tabela (peça pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} € + IVA), sempre combinado consigo antes.`,
+        `Inclui o que está nas fotografias e na descrição. Se no local houver mais coisas, o extra paga-se à parte pela tabela (peça pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande 65 € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes + IVA), sempre combinado consigo antes.`,
         "Paga à CLYON depois do trabalho feito.",
         "Responda SIM e dizemos-lhe o dia e quem vai. 😊",
       ].join("\n"),
@@ -71,7 +71,7 @@ describe("as quatro partes", () => {
 
   it("(c) o extra tem preço em cada serviço que o tem", () => {
     expect(extraNoLocal("recolha_moveis")).toContain(`peça pequena ${PRECO_POR_ITEM.pequeno} €`);
-    expect(extraNoLocal("recolha_monos")).toContain(`grande ${PRECO_POR_ITEM.grande} € + IVA`);
+    expect(extraNoLocal("recolha_monos")).toContain(`grande 65 € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes + IVA`); // d63: a primeira grande a 65 €, as seguintes a 50 €.
     // O esvaziamento e a mudança têm a regra deles, não a tabela das peças.
     expect(extraNoLocal("esvaziamento_casa")).toContain("volume a mais");
     expect(extraNoLocal("esvaziamento_casa")).not.toContain("peça");

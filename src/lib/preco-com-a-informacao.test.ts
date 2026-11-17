@@ -245,7 +245,7 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
   it("os cartões e as grelhas que mostravam o número nu", () => {
     // Só o com IVA, para a linha pequena por baixo de `maisIva(etiqueta)`.
     expect(comIvaDaEtiqueta("recolha_moveis")).toBe("por peça: pequena 18,45 €, média 36,90 €, grande 79,95 € a primeira e 61,50 € as seguintes com IVA; recolha mínima 73,80 € com IVA");
-    expect(comIvaDaEtiqueta("esvaziamento_casa")).toBe("desde 307,50 € com IVA");
+    expect(comIvaDaEtiqueta("esvaziamento_casa")).toBe("desde 319,80 € com IVA"); // d63: o piso do T0/T1.
     expect(comIvaDaEtiqueta("esvaziamento_garagem")).toBe("desde 147,60 € com IVA");
     // O m³ ao preço dos sacos desde a d7 (04-11-2026): era «desde 147,60 €/m³».
     expect(comIvaDaEtiqueta("recolha_entulho")).toBe("196,80 – 236,16 €/m³ com IVA");

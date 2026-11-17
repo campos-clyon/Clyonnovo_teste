@@ -88,7 +88,8 @@ describe("as ligações vão dar a páginas que existem", () => {
 describe("os números saem de onde o site os tira", () => {
   it("monos: o preço com a nota do IVA, e as dezasseis câmaras ligadas", () => {
     const a = artigo("recolha-de-monos-camara-ou-profissional");
-    expect(textoDe(a)).toContain(`${PRECOS.recolha_monos.etiqueta}, ${SEM_IVA_NA_FRASE}`);
+    // d63: o «desde» é a recolha mínima, com o IVA ao lado.
+    expect(textoDe(a)).toContain(`começa nos ${valorSemEComIva(PRECOS.recolha_monos.minimo!)}, a recolha mínima`);
     const concelhos = ligacoesDe(a).map((l) => l.texto);
     for (const c of Object.values(RECOLHA_DA_CAMARA)) expect(concelhos).toContain(c.concelho);
   });

@@ -129,11 +129,11 @@ describe("d22 (2) — os móveis descritos em texto pela tabela das peças, e os
     expect(texto(r)).toContain("105 € + IVA");
   }, 60_000);
 
-  it("os monos sem peças ficam na faixa publicada (30 – 100 €), no meio desde a d59 — nunca o mínimo de 48,78 € por item", async () => {
-    expect([PRECOS.recolha_monos.minimo, PRECOS.recolha_monos.maximo]).toEqual([30, 100]);
+  it("os monos sem peças ficam na faixa do motor (60 – 100 € desde a d63), no meio desde a d59 — nunca o mínimo de 48,78 € por item", async () => {
+    expect([PRECOS.recolha_monos.minimo, PRECOS.recolha_monos.maximo]).toEqual([60, 100]);
     const e = await motorDoPedido({ serviceType: "recolha_monos", description: "um mono" });
-    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat, e.estimatedPriceWithoutVat]).toEqual([30, 100, 65]);
-    expect(texto(r12({ servico: "recolha_monos" }))).toBe("30 – 100 € + IVA (36,90 – 123 € com IVA).");
+    expect([e.estimateMinWithoutVat, e.estimateMaxWithoutVat, e.estimatedPriceWithoutVat]).toEqual([60, 100, 80]);
+    expect(texto(r12({ servico: "recolha_monos" }))).toBe("60 – 100 € + IVA (73,80 – 123 € com IVA).");
   }, 60_000);
 });
 

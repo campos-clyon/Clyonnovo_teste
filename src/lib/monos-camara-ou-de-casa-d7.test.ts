@@ -5,7 +5,7 @@ import { getAllCityServiceSlugs } from "./seo-data";
 import { MONOS_CAMARA_OU_DE_CASA, cabeNoGoogle, tituloCompleto, tituloDaCidade } from "./titulos-seo";
 import { LIMITE_DA_DESCRICAO, descricaoDaCidade, tamanho } from "./descricoes-seo";
 import { PRECOS } from "./precos-publicos";
-import { faixaSemEComIva } from "./preco-de-referencia";
+import { desdeSemEComIva } from "./preco-de-referencia";
 import { emTerra } from "./preposicao-da-terra";
 
 /**
@@ -26,7 +26,8 @@ describe("monos: Câmara ou de casa (d7)", () => {
   });
 
   it("título e descrição novos, dentro dos limites, com o preço das fontes e o IVA ao lado", () => {
-    const preco = faixaSemEComIva(PRECOS.recolha_monos.minimo!, PRECOS.recolha_monos.maximo!);
+    // d63: o «desde» da recolha mínima (era a faixa 30 – 100 €).
+    const preco = desdeSemEComIva(PRECOS.recolha_monos.minimo!);
     const vistas = new Set<string>();
     for (const { city, service } of MUDAM) {
       const titulo = tituloDaCidade(service.name, city.name, service.slug, city.slug);

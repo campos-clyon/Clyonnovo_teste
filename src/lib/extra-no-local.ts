@@ -1,4 +1,4 @@
-import { PRECO_POR_ITEM, PRECO_POR_SACO } from "./precos-publicos";
+import { PECAS_EM_TEXTO, PRECO_POR_SACO } from "./precos-publicos";
 import { type BaseDoPreco } from "./base-do-preco";
 
 /**
@@ -31,8 +31,12 @@ const SEMPRE_COMBINADO = "sempre combinado consigo antes.";
 
 const virgula = (n: number) => n.toFixed(2).replace(".", ",");
 
-/** A tabela das peças, como o dono a escreveu: «peça pequena 15 €, média 30 €, grande 50 € + IVA». */
-export const TABELA_DAS_PECAS_CURTA = `peça pequena ${PRECO_POR_ITEM.pequeno} €, média ${PRECO_POR_ITEM.medio} €, grande ${PRECO_POR_ITEM.grande} € + IVA`;
+/**
+ * A tabela das peças: «peça pequena 15 €, média 30 €, grande 65 € a primeira e 50 €
+ * as seguintes + IVA». Sai de `PECAS_EM_TEXTO` desde 17-11-2026 (d62): dizia a
+ * grande a 50 €, sem a primeira a 65 € da d60.
+ */
+export const TABELA_DAS_PECAS_CURTA = `peça ${PECAS_EM_TEXTO} + IVA`;
 
 /** (c) O extra no local — com o preço da regra de cada serviço. */
 export function extraNoLocal(servico: string | null | undefined, base: BaseDoPreco | null | undefined = "total"): string {
