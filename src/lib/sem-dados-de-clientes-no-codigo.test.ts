@@ -93,6 +93,7 @@ const NAO_SAO_NOMES = lista(`
   App Whats Cliente Empresa Lda Assistente Profissional Pessoa Outra Obrigado Olá Nova Recolha
   Recolhas Mudança Mudanças Transportes Quinta Conde Monte Abraão Minified React
   Caparica Margem Sul Grande Lisboa Sem Proposta Big Bags Camiões
+  Ponte Gama
 `);
 
 /**
