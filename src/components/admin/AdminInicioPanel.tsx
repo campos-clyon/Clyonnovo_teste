@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Inbox,
   Loader2,
+  MapPin,
   MessageCircle,
   RefreshCw,
   Send,
@@ -72,6 +73,8 @@ type Resumo = {
   semValor?: SemValorNoInicio[] | null;
   /** Pedidos desde segunda-feira com o custo real fora da grelha (d61, modo sombra). */
   foraDaGrelhaSemana?: number | null;
+  /** Aceites pelo cliente e ainda só com a zona (d69). */
+  aceitesSemRua?: number | null;
 };
 
 type Seccao =
@@ -230,6 +233,14 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
           porque: "Profissionais com conta aberta que ainda não recebem pedidos.",
           seccao: "profissionais",
           icone: UserCheck,
+        },
+        {
+          chave: "aceitesSemRua",
+          n: r.aceitesSemRua ?? null,
+          titulo: "aceites sem rua",
+          porque: "O cliente aceitou e o pedido só tem a zona. A Vitória pede-lhe a rua pelo WhatsApp; sem resposta em 2 h, é connosco. Veja «Falta a rua» no cartão, na Mesa.",
+          seccao: "negociacoes_clyon",
+          icone: MapPin,
         },
         {
           chave: "foraDaGrelha",

@@ -143,8 +143,29 @@ export async function GET(req: NextRequest) {
         detalhe: { linhas: avisosDaEquipa.linhas.slice(0, 40), falhas: avisosDaEquipa.falhas.slice(0, 10) },
       });
     }
+    /*
+     * A RUA DEPOIS DO ACEITE — 17-11-2026 (d69). Os pedidos só com a zona
+     * aceites por outro caminho (o link, a app, a Mesa) levam a pergunta da
+     * rua, uma vez; os que ficaram sem resposta há 2 h passam à equipa. Ver
+     * `rua-depois-do-aceite.ts`. Uma falha aqui não estraga a passagem.
+     */
+    const { correrARuaDepoisDoAceite } = await import("@/lib/rua-depois-do-aceite-na-base");
+    const daRua = await correrARuaDepoisDoAceite().catch((e) => {
+      console.error("[cron/assistente] rua depois do aceite:", e);
+      return { linhas: [] as string[] };
+    });
+    if (daRua.linhas.length > 0) {
+      await registarSemFalhar({
+        acontecimento: "assistente_alerta",
+        autorTipo: "assistente",
+        autorNome: "rua depois do aceite",
+        resumo: `${daRua.linhas.length} pedido(s) sem a rua tratados: ${daRua.linhas.slice(0, 10).join("; ")}.`,
+        detalhe: { linhas: daRua.linhas.slice(0, 40) },
+      });
+    }
     return NextResponse.json({
       ok: true,
+      ruaDepoisDoAceite: daRua.linhas.length,
       ...r,
       recolhasParadas: paradas,
       paradasFalharam,

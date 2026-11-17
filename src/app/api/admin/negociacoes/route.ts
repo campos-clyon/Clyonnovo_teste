@@ -27,6 +27,7 @@ import { lerBase } from "@/lib/base-do-preco";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 import { foraDaGrelhaDosPedidos } from "@/lib/custo-do-trabalho-no-servidor";
 import type { ForaDaGrelhaNaMesa } from "@/lib/custo-do-trabalho";
+import { ruaEmFaltaDosPedidos } from "@/lib/rua-depois-do-aceite-na-base";
 
 export const runtime = "nodejs";
 
@@ -103,11 +104,17 @@ export async function GET(req: NextRequest) {
       console.error("[api/admin/negociacoes GET] fora da grelha:", e);
       return new Map<number, ForaDaGrelhaNaMesa>();
     });
+    // d69: «falta a rua» — o pedido só com a zona, e se a Vitória já a pediu ao cliente.
+    const semRua = await ruaEmFaltaDosPedidos(pedidos.map((p) => Number(p.id))).catch((e) => {
+      console.error("[api/admin/negociacoes GET] falta a rua:", e);
+      return new Map<number, { aceite: boolean; pedidaEm: string | null; passadaEm: string | null }>();
+    });
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
         valorUnicoAceite: aceites.get(Number(p.id)) ?? null,
         foraDaGrelha: foraDaGrelha.get(Number(p.id)) ?? null,
+        faltaARua: semRua.get(Number(p.id)) ?? null,
         escolhidosNaMesa: estadoNaMesa(
           JSON.parse(JSON.stringify(p.negociacoes)),
           escolhidosDeJson(p.escolhidosJson),

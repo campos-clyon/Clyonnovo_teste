@@ -755,6 +755,33 @@ async function passarAUmaPessoa(
 }
 
 /**
+ * QUEM QUER SER PARCEIRO, MOTORISTA OU AJUDANTE — 17-11-2026 (d69). Recebe
+ * logo o caminho da candidatura (com a zona, se a disse) e a conversa fecha-se
+ * como «candidato a parceiro»: sai da fila dos clientes por responder. Uma
+ * vez: se já o recebeu e volta a escrever, a conversa passa a uma pessoa.
+ * Devolve true quando tratou a mensagem. Ver `candidato-a-parceiro.ts`.
+ */
+async function aoCandidato(telefone: string, texto: string): Promise<boolean> {
+  if (!texto.trim()) return false; // só imagens
+  const cand = await import("@/lib/candidato-a-parceiro");
+  const { mensagensDoNumeroWhatsApp, arquivarConversaWhatsApp } = await import("@/lib/db");
+  const fio = await mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []);
+  if (cand.jaRecebeuACandidatura(fio)) {
+    const { soAgradece } = await import("@/lib/mesa-das-conversas");
+    if (soAgradece(texto)) return true;
+    await passarAUmaPessoa(telefone, "Candidato a parceiro voltou a escrever — responder");
+    return true;
+  }
+  if (!cand.querSerParceiro(texto)) return false;
+  const zona = cand.zonaDoCandidato(fio.filter((m) => m.direccao === "in").map((m) => m.texto).concat(texto));
+  await enviarTextoWhatsApp(telefone, cand.respostaAoCandidato(zona));
+  await arquivarConversaWhatsApp(telefone, true, { motivo: cand.MOTIVO_DO_CANDIDATO, porQuem: "vitoria" }).catch((e) =>
+    console.error("[whatsapp] o candidato não saiu da fila:", e),
+  );
+  return true;
+}
+
+/**
  * O VALOR ÚNICO, DECIDIDO — 15-11-2026 (d39). Aceite: agradece, fica no
  * histórico do pedido e a conversa passa à equipa para escolher o parceiro
  * (é a equipa quem aceita a proposta dele, na Mesa). O resto: a equipa.
@@ -783,7 +810,16 @@ async function tratarOValorUnico(
   await marcarValorUnicoAceite(decisao.pedidoId, "o cliente, pelo WhatsApp").catch((e) =>
     console.error("[whatsapp] o aceite do valor único não ficou marcado:", e),
   );
-  await passarAUmaPessoa(telefone, vu.motivoDoValorUnicoAceite(decisao.pedidoId), vu.VALOR_UNICO_ACEITE);
+  /*
+   * E A RUA, SE O PEDIDO FICOU SÓ COM A ZONA — 17-11-2026 (d69): o
+   * agradecimento, a pergunta da rua (uma vez), e só depois a conversa passa à
+   * equipa. A resposta grava-se na mesma, com a conversa entregue (a ponte).
+   */
+  await enviarTextoWhatsApp(telefone, vu.VALOR_UNICO_ACEITE);
+  const { pedirARuaDepoisDoAceite } = await import("@/lib/rua-depois-do-aceite-na-base");
+  await pedirARuaDepoisDoAceite(decisao.pedidoId);
+  const { interromperNumeroWhatsApp } = await import("@/lib/db");
+  await interromperNumeroWhatsApp(telefone, vu.motivoDoValorUnicoAceite(decisao.pedidoId)).catch(() => {});
 }
 
 /**
@@ -1048,11 +1084,25 @@ async function fecharPeloCliente(
     substituirTokenDoPedido,
   });
   const doLink = link ? `\n\n${fraseDoLinkDoFecho(alvo.formaDePagamento, link, novo)}` : "";
+  /*
+   * SÓ COM A ZONA, O PARCEIRO AINDA NÃO TEM A MORADA — 17-11-2026 (d69): não
+   * se lhe diz que tem, e a Vitória pede a rua a seguir (uma vez).
+   */
+  const { faltaARua } = await import("@/lib/rua-depois-do-aceite");
+  const semRua = await getSimulatorOrderById(alvo.pedidoId)
+    .then((p) => faltaARua(typeof p?.address === "string" ? p.address : null))
+    .catch(() => false);
+  const oFecho =
+    `${fechado}${comNotaDaCarga(alvo.base)}\n\n` +
+    `O parceiro recebeu a morada e o seu contacto.${sobreODia}${doLink}`;
   await enviarTextoWhatsApp(
     telefone,
-    `${fechado}${comNotaDaCarga(alvo.base)}\n\n` +
-      `O parceiro recebeu a morada e o seu contacto.${sobreODia}${doLink}`,
+    semRua ? oFecho.replace("O parceiro recebeu a morada e o seu contacto.", "O parceiro recebeu a zona e o seu contacto.") : oFecho,
   );
+  if (semRua) {
+    const { pedirARuaDepoisDoAceite } = await import("@/lib/rua-depois-do-aceite-na-base");
+    await pedirARuaDepoisDoAceite(alvo.pedidoId);
+  }
 }
 
 /** Recusar pelo cliente — o corpo do botão «Recusar» e da palavra NÃO. */
@@ -2093,6 +2143,21 @@ export async function tratarMensagemDoCliente(
   const soImagens = conteudo.tipo === "texto" && !conteudo.texto.trim();
 
   /*
+   * A RUA QUE A VITÓRIA PEDIU DEPOIS DO ACEITE — 17-11-2026 (d69). Se este
+   * número tem um pedido com a rua pedida e por receber, e a mensagem é uma
+   * morada, entra no pedido (o parceiro vê-a pelo campo de morada) e
+   * agradece-se. O resto da conversa segue como sempre.
+   */
+  if (conteudo.tipo === "texto" && !soImagens) {
+    const { lerARespostaDaRua } = await import("@/lib/rua-depois-do-aceite-na-base");
+    const daRua = await lerARespostaDaRua(telefone, conteudo.texto);
+    if (daRua) {
+      await enviarTextoWhatsApp(telefone, daRua.agradecimento);
+      return;
+    }
+  }
+
+  /*
    * QUEM JÁ ESTÁ A SAIR NÃO RECEBE UM FORMULÁRIO — recebe uma pessoa.
    *
    * «Tentei ligar várias vezes, se estiverem ocupados vou ter de avançar com
@@ -2317,9 +2382,11 @@ export async function tratarMensagemDoCliente(
       }
     }
 
+    // Quem quer ser parceiro, motorista ou ajudante (d69): o caminho da candidatura — `aoCandidato`.
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;
     if (conteudo.tipo === "texto") {
+      if (await aoCandidato(telefone, conteudo.texto)) return;
       await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
     }
     return;

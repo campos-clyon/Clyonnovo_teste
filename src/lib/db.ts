@@ -17328,6 +17328,8 @@ export type ResumoDoBackoffice = {
   semValor: SemValorNoInicio[] | null;
   /** Pedidos desde segunda-feira com o custo real fora da grelha (d61, modo sombra). */
   foraDaGrelhaSemana: number | null;
+  /** Pedidos abertos aceites pelo cliente e ainda só com a zona — «aceites sem rua» (d69). */
+  aceitesSemRua: number | null;
 };
 
 /** Um número de uma consulta que pode falhar sem levar o painel atrás. */
@@ -17452,6 +17454,10 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
         AND JSON_UNQUOTE(JSON_EXTRACT(custoJson, '$.foraDaFaixa')) IN ('acima_do_tecto', 'abaixo_do_chao')`,
     [inicioDoDiaEmLisboa(segundaDaSemanaEmLisboa(new Date()))],
   );
+  // ACEITES SEM RUA (d69): o cliente aceitou e o pedido continua só com a zona.
+  const aceitesSemRua = await import("./rua-depois-do-aceite-na-base")
+    .then((m) => m.contarAceitesSemRua())
+    .catch(() => null);
 
   return {
     porEnviar,
@@ -17468,6 +17474,7 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
     aDecorrer,
     semValor,
     foraDaGrelhaSemana,
+    aceitesSemRua,
   };
 }
 

@@ -217,6 +217,18 @@ export async function registarPedidoDaRecolha(
       "." +
       (arranque != null ? (porHora ? " Valor de partida: " + arranque + " € por hora." : " Estimativa: " + arranque + " €.") : " Sem estimativa."),
   });
+  /*
+   * SÓ COM A ZONA, FICA «FALTA A RUA» — 17-11-2026 (d69). A rua pede-se ao
+   * cliente quando ele aceitar (`rua-depois-do-aceite.ts`).
+   */
+  const { marcarSeFaltarARua } = await import("./rua-depois-do-aceite-na-base");
+  if (await marcarSeFaltarARua(id, address)) {
+    await appendOrderHistory(id, {
+      type: "created",
+      by: null,
+      message: "Registado só com a zona: falta a rua. A Vitória pede-a ao cliente quando ele aceitar.",
+    }).catch(() => {});
+  }
   if (emPortugues.original != null) {
     await appendOrderHistory(id, {
       type: "created",

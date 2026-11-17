@@ -39,6 +39,8 @@ import {
 import { COMO_FUNCIONA } from "./perguntas-frequentes-da-vitoria";
 import { SERVICE_CATEGORIES } from "./service-categories";
 import { CHEGADA_CONFIRMADA, PECA_A_CONFIRMACAO_DA_CHEGADA } from "./chegada-pelo-whatsapp";
+import { perguntaDaRua, ruaAnotada } from "./rua-depois-do-aceite";
+import { respostaAoCandidato } from "./candidato-a-parceiro";
 
 /**
  * AS TRADUÇÕES FIXAS COBREM O QUE A VITÓRIA DIZ — 28-10-2026 (decisão d35).
@@ -108,6 +110,12 @@ function todasAsMensagens(): string[] {
     // A chegada pelo WhatsApp (d3, 31-10-2026).
     PECA_A_CONFIRMACAO_DA_CHEGADA,
     CHEGADA_CONFIRMADA,
+    // A rua depois do aceite e o candidato a parceiro (d69, 17-11-2026).
+    perguntaDaRua(512, false),
+    perguntaDaRua(512, true),
+    ruaAnotada(512, "Rua dos Choupos Brancos 17, 3º Esq"),
+    respostaAoCandidato("seixal"),
+    respostaAoCandidato(null),
   );
   return m.filter(Boolean);
 }

@@ -95,6 +95,7 @@ import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { rotuloDoPrazoTerminado, type EstadoNaMesa } from "@/lib/escolhidos-sem-resposta";
 import { EscolhidosNaMesa } from "./EscolhidosNaMesa";
 import { ForaDaGrelhaNaMesa } from "./ForaDaGrelhaNaMesa";
+import { linhaDaRuaNaMesa } from "@/lib/rua-na-mesa";
 import type { ForaDaGrelhaNaMesa as EstadoForaDaGrelha } from "@/lib/custo-do-trabalho";
 import {
   atrasadosPrimeiro,
@@ -623,6 +624,8 @@ type Pedido = {
   escolhidosNaMesa?: EstadoNaMesa | null;
   /** O custo real fora da grelha (d61, modo sombra): a etiqueta e os degraus. */
   foraDaGrelha?: EstadoForaDaGrelha | null;
+  /** Registado só com a zona (d69): «falta a rua», e se o cliente já aceitou e a Vitória já a pediu. */
+  faltaARua?: { aceite: boolean; pedidaEm: string | null; passadaEm: string | null } | null;
   /**
    * A validade do link do cliente — que serve de MARCA DE VERSÃO.
    *
@@ -3721,6 +3724,16 @@ export default function AdminNegociacoesPanel({
           )}
           {/* Fora da grelha (d61, modo sombra): o custo real acima do tecto ou abaixo do chão. */}
           {p.foraDaGrelha && <ForaDaGrelhaNaMesa estado={p.foraDaGrelha} />}
+          {/* Falta a rua (d69): o pedido só com a zona; a Vitória pede-a ao cliente quando ele aceita. */}
+          {p.faltaARua && (
+            <div
+              className={`rounded-lg border p-3 ${p.faltaARua.aceite ? "border-amber-500/40 bg-amber-500/10" : "border-slate-600 bg-slate-800/40"}`}
+            >
+              <p className={`text-xs font-semibold ${p.faltaARua.aceite ? "text-amber-200" : "text-slate-300"}`}>
+                {linhaDaRuaNaMesa(p.faltaARua)}
+              </p>
+            </div>
+          )}
           {p.negociacoes.length === 0 && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="text-xs font-semibold text-amber-200">

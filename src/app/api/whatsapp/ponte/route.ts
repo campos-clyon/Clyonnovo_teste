@@ -468,6 +468,14 @@ export async function POST(req: NextRequest) {
     }
     if (texto.trim()) {
       await registarMensagemWhatsApp(telefone, "in", texto).catch(() => {});
+      /*
+       * E A RUA QUE A VITÓRIA PEDIU ANTES DE ENTREGAR A CONVERSA — 17-11-2026
+       * (d69, o valor único aceite: agradece, pede a rua, passa à equipa). Se
+       * isto é a resposta, entra no pedido EM SILÊNCIO: não responde, não
+       * pergunta — quem tem a conversa vê-a no fio e no pedido.
+       */
+      const { lerARespostaDaRua } = await import("@/lib/rua-depois-do-aceite-na-base");
+      await lerARespostaDaRua(telefone, texto).catch(() => null);
     }
 
     /*
