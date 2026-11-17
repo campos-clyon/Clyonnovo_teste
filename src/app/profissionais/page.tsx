@@ -7,6 +7,7 @@ import { comoRecebe, comissaoEmPalavras } from "@/lib/como-funciona-para-o-profi
 import { promessaGeral } from "@/lib/pagamento-na-plataforma";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { modeloDeHoje } from "@/lib/iva-incluido";
+import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
 export const metadata: Metadata = {
@@ -56,9 +57,23 @@ const O_QUE_RECEBE = [
   },
 ];
 
+/**
+ * O LÍQUIDO NO MODELO DE 15-11 — d65. O cliente paga-lhe a ele: o valor não
+ * chega «já com a taxa descontada» — fica com ele, e a taxa passa-a à CLYON.
+ */
+const O_LIQUIDO_NO_NOVO_MODELO =
+  "O valor aparece líquido: o cliente paga-lhe, fica consigo esse valor e a taxa da plataforma passa-a à CLYON. Sem contas para fazer e sem surpresas no fim.";
+const NOTA_DO_RECEBE_NO_NOVO_MODELO = "Fica consigo; a taxa da plataforma passa-a à CLYON";
+
 /** Pela data (d10): desde 15-11-2026 o cliente paga ao parceiro. */
 const oQueRecebe = (agora: Date) =>
-  O_QUE_RECEBE.map((v) => (v.description === PROMESSA.recrutamentoCorpo ? { ...v, description: promessaGeral(agora).recrutamentoCorpo } : v));
+  O_QUE_RECEBE.map((v) =>
+    v.description === PROMESSA.recrutamentoCorpo
+      ? { ...v, description: promessaGeral(agora).recrutamentoCorpo }
+      : v.icon === HandCoins && novoModeloEmVigor(agora)
+        ? { ...v, description: O_LIQUIDO_NO_NOVO_MODELO }
+        : v,
+  );
 
 export default async function ProfissionaisPage() {
   /*
@@ -155,7 +170,9 @@ export default async function ProfissionaisPage() {
                   Recebe
                 </div>
                 <div className="mt-1.5 text-3xl font-bold text-emerald-600">{exemplo.recebe}</div>
-                <p className="mt-1 text-xs text-slate-500">Já com a taxa da plataforma descontada</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {novoModeloEmVigor(agoraDoModelo()) ? NOTA_DO_RECEBE_NO_NOVO_MODELO : "Já com a taxa da plataforma descontada"}
+                </p>
               </div>
             </div>
             {/*

@@ -341,7 +341,10 @@ describe("todas as leituras da base trazem a data de abertura", () => {
 
   it("o cartão do trabalho pergunta como a carteira pergunta", () => {
     const rota = ler("src/app/api/profissionais/meus-pedidos/route.ts");
-    expect(rota).toContain("verificaOPagamento({ negociacaoCriadaEm: l.createdAt })");
+    // d65: a pergunta vive em `clientePagouNoCartao` (carteira.ts), a mesma de `oClientePagou`.
+    expect(rota).toContain("clientePagou: clientePagouNoCartao({");
+    expect(rota).toContain("negociacaoCriadaEm: l.createdAt,");
+    expect(ler("src/lib/carteira.ts")).toContain("if (!verificaOPagamento({ negociacaoCriadaEm }, opcoes)) return null;");
     expect(rota).toContain("await pagamentosAVerificar(linhas)");
     expect(rota).not.toContain("A_PLATAFORMA_COBRA");
     expect(rota).not.toContain("A_CARTEIRA_VERIFICA_TODOS_OS_TRABALHOS");

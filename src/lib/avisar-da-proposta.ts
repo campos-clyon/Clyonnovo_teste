@@ -194,6 +194,14 @@ export async function avisarDaProposta(dados: {
       taxas,
       token: novo.token,
       baseUrl: dados.baseUrl,
+      // d65: no modelo de 15-11 o valor fica com ele, e a taxa passa-a à CLYON — a mesma regra do lado do cliente.
+      noNovoModelo: eDoNovoModelo(
+        {
+          ofertaClyon: negociacao.ofertaClyon,
+          pedidoCriadoEm: (pedido as { createdAt?: Date | string | null }).createdAt ?? null,
+        },
+        agoraDoModelo(),
+      ),
     });
 
     /*

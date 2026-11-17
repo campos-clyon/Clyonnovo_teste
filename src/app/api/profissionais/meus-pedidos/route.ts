@@ -53,7 +53,8 @@ import { distanciasRodoviarias } from "@/lib/distancia-rodoviaria";
 import { faseDoTrabalho, diasAteLibertar } from "@/lib/trabalho";
 import { semContactoDepoisDoFim } from "@/lib/contacto-so-enquanto-ha-trabalho";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
-import { foiPagoEmMao, verificaOPagamento } from "@/lib/carteira";
+import { clientePagouNoCartao } from "@/lib/carteira";
+import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
 import { transferenciasAEspera } from "@/lib/pagamentos-na-base";
 import { negociacoesNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
@@ -410,14 +411,23 @@ export async function GET(req: NextRequest) {
          * A MESMA pergunta da carteira (`verificaOPagamento`), para o cartão
          * nunca dizer «pago» de um valor que a carteira mostra por cobrar.
          */
-        clientePagou:
-          // Num trabalho CLYON a pergunta não existe: quem lhe paga é a CLYON.
-          // No modelo de 15-11 (d17) também não: o cliente paga-lhe a ele.
-          !doNovoModelo.has(Number(l.id)) &&
-          !modoDaOferta(l.ofertaClyon) &&
-          verificaOPagamento({ negociacaoCriadaEm: l.createdAt }) && !foiPagoEmMao(l)
-            ? pagos.has(l.id)
-            : null,
+        /*
+         * d65 (17-11-2026): num Trabalho CLYON a pergunta também existe desde a
+         * d31 — a CLYON paga-lhe com o que o cliente pagou. Dava `null` (e o
+         * cartão dizia «disponível na sua carteira») enquanto a carteira e o
+         * backoffice diziam «à espera do cliente». A regra é a da carteira
+         * (`clientePagouNoCartao` → `oClientePagou`). No modelo de 15-11 (d17)
+         * continua a não existir: o cliente paga-lhe a ele.
+         */
+        clientePagou: clientePagouNoCartao({
+          negociacaoCriadaEm: l.createdAt,
+          formaDePagamento: l.formaDePagamento as string | null | undefined,
+          comoEntrou: (l as { comoEntrou?: string | null }).comoEntrou ?? null,
+          noNovoModelo: doNovoModelo.has(Number(l.id)),
+          trabalhoClyon: modoDaOferta(l.ofertaClyon) != null,
+          clientePagouEm: pagos.get(l.id) ?? null,
+          pagoEm: l.pagoEm ?? null,
+        }),
         /*
          * O PAGAMENTO VEM A CAMINHO, POR TRANSFERÊNCIA — 02-11-2026 (dono). Só
          * com `clientePagou` falso: o parceiro vê que vem a caminho e que não
@@ -430,6 +440,15 @@ export async function GET(req: NextRequest) {
          * cliente paga-lhe, e ele passa à CLYON a taxa da plataforma e o IVA dela.
          */
         noNovoModelo: doNovoModelo.has(Number(l.id)),
+        /*
+         * O QUE PASSA À CLYON, NO MODELO DE 15-11 — d65. A taxa da plataforma e
+         * o IVA dela, pela mesma conta do aviso da confirmação
+         * (`avisar-confirmacao.ts`): é o que o sino lhe pede ao confirmar.
+         */
+        aPassarAClyon:
+          doNovoModelo.has(Number(l.id)) && acordado != null
+            ? (taxaAPassarAClyon(acordado, taxasDela, "normal", reservas.get(Number(l.id)) ?? 0)?.total ?? null)
+            : null,
         reservaCent: reservas.get(Number(l.id)) ?? null,
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,

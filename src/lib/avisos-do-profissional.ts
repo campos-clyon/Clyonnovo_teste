@@ -39,7 +39,20 @@ export type TrabalhoParaOsAvisos = {
   pedidoId: number;
   fase: string;
   recebeSeFechado?: number | null;
+  /**
+   * O MODELO DE 15-11 — d65. O cliente paga-lhe a ele: o que fica na carteira
+   * é a taxa da plataforma a passar à CLYON, não dinheiro para levantar.
+   */
+  noNovoModelo?: boolean;
+  /** No modelo de 15-11: a taxa e o IVA dela, a passar à CLYON (do servidor). */
+  aPassarAClyon?: number | null;
+  /** O cliente já pagou à CLYON? A mesma resposta da carteira; nulo = a pergunta não existe. */
+  clientePagou?: boolean | null;
 };
+
+function emEuros(v: number): string {
+  return `${v.toFixed(2).replace(".", ",")} €`;
+}
 
 /** O sino guarda os últimos 30: o que passa disso já não é notícia, é histórico. */
 export const LIMITE_DOS_AVISOS = 30;
@@ -96,20 +109,37 @@ export function oQueMudou(
       });
     } else if (pd.fase === "confirmado") {
       const liquido = pd.recebeSeFechado;
-      avisos.push({
-        ...base,
-        id: `confirmado-${pd.negociacaoId}`,
-        texto:
-          `Trabalho #${pd.pedidoId} confirmado` +
-          (liquido != null
-            ? ` — ${liquido.toFixed(2).replace(".", ",")} € já estão disponíveis na carteira.`
-            : " — o valor já está disponível na carteira."),
-      });
+      const aPassar = pd.aPassarAClyon;
+      /*
+       * O MODELO DE 15-11 — d65. O cliente pagou-lhe a ele: nada está
+       * «disponível na carteira». Quando há taxa a passar, pede-se — as
+       * mesmas palavras do aviso da confirmação (`avisoDoConfirmado`).
+       */
+      const texto = pd.noNovoModelo === true
+        ? aPassar != null && Number.isFinite(aPassar)
+          ? aPassar > 0
+            ? `Trabalho #${pd.pedidoId} confirmado — passe à CLYON a taxa da plataforma e o IVA dela: ${emEuros(aPassar)}, com a referência na carteira.`
+            : `Trabalho #${pd.pedidoId} confirmado.`
+          : `Trabalho #${pd.pedidoId} confirmado — veja na carteira a taxa da plataforma a passar à CLYON.`
+        : pd.clientePagou === false
+          // A carteira diz «à espera do cliente» (d31): o sino diz o mesmo.
+          ? `Trabalho #${pd.pedidoId} confirmado` +
+            (liquido != null
+              ? ` — os ${emEuros(liquido)} ficam na carteira quando o cliente pagar.`
+              : " — o valor fica na carteira quando o cliente pagar.")
+          : `Trabalho #${pd.pedidoId} confirmado` +
+            (liquido != null
+              ? ` — ${liquido.toFixed(2).replace(".", ",")} € já estão disponíveis na carteira.`
+              : " — o valor já está disponível na carteira.");
+      avisos.push({ ...base, id: `confirmado-${pd.negociacaoId}`, texto });
     } else if (pd.fase === "pago") {
       avisos.push({
         ...base,
         id: `pago-${pd.negociacaoId}`,
-        texto: `Transferência do trabalho #${pd.pedidoId} processada.`,
+        // No modelo de 15-11 (d65) a CLYON não lhe transfere nada: o trabalho fechou.
+        texto: pd.noNovoModelo === true
+          ? `Trabalho #${pd.pedidoId} fechado.`
+          : `Transferência do trabalho #${pd.pedidoId} processada.`,
       });
     }
   }

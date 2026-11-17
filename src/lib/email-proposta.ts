@@ -211,6 +211,12 @@ export async function avisarProfissionalDaProposta(p: {
   /** O token da negociação dele. */
   token: string;
   baseUrl?: string;
+  /**
+   * A negociação segue o modelo de 15-11 (d65): o cliente paga-lhe a ele, e o
+   * valor não vem «já com a taxa descontada» — fica com ele, e a taxa passa-a
+   * à CLYON. Ausente = o texto de sempre (os Trabalhos CLYON do modelo antigo).
+   */
+  noNovoModelo?: boolean;
 }): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const url = comChave(`${base}/profissionais/pedidos/${p.token}`);
@@ -226,8 +232,12 @@ export async function avisarProfissionalDaProposta(p: {
         ${nome ? `${e(nome)}, o` : "O"} cliente respondeu
       </h1>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
-        Está a propor <strong>${precoComBase(euros(p.valor), p.base ?? "total")}</strong> — recebe
-        <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>, já com a taxa da plataforma descontada.
+        Está a propor <strong>${precoComBase(euros(p.valor), p.base ?? "total")}</strong> ${
+          p.noNovoModelo
+            ? `— fica consigo <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>; a taxa da plataforma passa-a à CLYON.`
+            : `— recebe
+        <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>, já com a taxa da plataforma descontada.`
+        }
       </p>
       ${botao(url, "Responder")}
       <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">

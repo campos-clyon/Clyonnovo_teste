@@ -2312,8 +2312,14 @@ function DetalheDoTrabalho({
           depende dela, e estava logo por baixo de um numero a 24 px que lhe
           roubava a atencao. O slate-500 da 4,76:1.
         */}
+        {/*
+          d65: no modelo de 15-11 o cliente paga-lhe a ele — o valor não vem
+          «já com a taxa descontada»: fica com ele, e a taxa passa-a à CLYON.
+        */}
         <p className="mt-1 text-right text-xs text-slate-500">
-          já com a taxa da plataforma descontada · o valor é sem IVA
+          {pedido.noNovoModelo === true
+            ? "fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA"
+            : "já com a taxa da plataforma descontada · o valor é sem IVA"}
         </p>
         {/*
           O AVISO DA CARGA, e só quando há um.

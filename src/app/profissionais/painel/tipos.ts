@@ -30,6 +30,8 @@ export type Pedido = {
   noNovoModelo?: boolean;
   /** A reserva do valor único (d39), em cêntimos: entra no que passa à CLYON. */
   reservaCent?: number | null;
+  /** No modelo de 15-11 (d65): a taxa da plataforma e o IVA dela, que passa à CLYON. Nulo fora dele. */
+  aPassarAClyon?: number | null;
   diasAteLibertar: number | null;
   provaJson: string | null;
   /** O JSON das propostas, tal como vem da base. */

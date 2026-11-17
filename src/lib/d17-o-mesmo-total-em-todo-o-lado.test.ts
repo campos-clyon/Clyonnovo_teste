@@ -308,7 +308,8 @@ describe("a adjudicação da Mesa e o MB WAY da taxa no modelo novo", () => {
 describe("a app Pro e o painel deixam de dizer «O cliente ainda não pagou à CLYON» no modelo novo", () => {
   it("a rota dos trabalhos põe clientePagou a null e manda noNovoModelo", () => {
     const rota = readFileSync(join(process.cwd(), "src/app/api/profissionais/meus-pedidos/route.ts"), "utf8");
-    expect(rota).toMatch(/clientePagou:[\s\S]{0,200}!doNovoModelo\.has\(Number\(l\.id\)\) &&/);
+    // d65: pela regra da carteira (`clientePagouNoCartao`), que dá null no modelo novo.
+    expect(rota).toMatch(/clientePagou: clientePagouNoCartao\(\{[\s\S]{0,300}noNovoModelo: doNovoModelo\.has\(Number\(l\.id\)\),/);
     expect(rota).toContain("noNovoModelo: doNovoModelo.has(Number(l.id)),");
   });
 

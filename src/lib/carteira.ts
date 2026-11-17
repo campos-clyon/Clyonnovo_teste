@@ -426,6 +426,48 @@ export function oClientePagou(
 }
 
 /**
+ * O CLIENTE JÁ PAGOU? — A RESPOSTA DO CARTÃO DO TRABALHO (painel e app Pro),
+ * d65 (17-11-2026). A lista dos trabalhos dava `null` a todos os Trabalhos
+ * CLYON, e `null` lê-se «disponível na sua carteira» — enquanto a carteira e
+ * o backoffice, pela regra da d31, diziam «à espera do cliente». Agora é a
+ * MESMA pergunta da carteira (`oClientePagou`), com o `pagoPelaClyon` dela.
+ *
+ * `null` quando a pergunta não existe: a carteira não verifica este trabalho
+ * (anterior ao corte), foi pago em mão, ou segue o modelo de 15-11 (o cliente
+ * paga-lhe a ele).
+ */
+export function clientePagouNoCartao(
+  t: {
+    negociacaoCriadaEm: Date | string | null | undefined;
+    formaDePagamento?: string | null;
+    comoEntrou?: string | null;
+    noNovoModelo?: boolean;
+    /** Um Trabalho CLYON: a CLYON paga-lhe com o que o cliente lhe pagou (d31). */
+    trabalhoClyon: boolean;
+    /** Quando o pagamento do cliente entrou (a tabela dos pagamentos); nulo = não entrou. */
+    clientePagouEm: Date | string | null | undefined;
+    pagoEm?: Date | string | null;
+  },
+  opcoes: ComoLerACarteira = {},
+): boolean | null {
+  if (t.noNovoModelo === true) return null;
+  const negociacaoCriadaEm = t.negociacaoCriadaEm ?? null;
+  if (!verificaOPagamento({ negociacaoCriadaEm }, opcoes)) return null;
+  if (foiPagoEmMao({ formaDePagamento: t.formaDePagamento ?? null, comoEntrou: t.comoEntrou ?? null, noNovoModelo: false })) {
+    return null;
+  }
+  return oClientePagou(
+    {
+      negociacaoCriadaEm,
+      pagoPelaClyon: t.trabalhoClyon,
+      clientePagouEm: t.clientePagouEm ?? null,
+      pagoEm: t.pagoEm ?? null,
+    } as TrabalhoNaCarteira,
+    opcoes,
+  );
+}
+
+/**
  * PARA ONDE VAI O VALOR DE UM TRABALHO QUE ACABOU DE SER DADO POR CONCLUÍDO.
  *
  * Existe para o email do «trabalho confirmado» — 29-09-2026. Dizia sempre
