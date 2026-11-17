@@ -561,6 +561,8 @@ const DO_LADO_DO_PROFISSIONAL = (f: string) =>
   /^src\/app\/api\/(profissionais|negociacao)\//.test(f) ||
   /^src\/components\/portal\//.test(f) ||
   /^src\/app\/quero-ser-parceiro\//.test(f) ||
+  // A adesão à CLYON Pro em passos (17-11-2026, d61).
+  /^src\/app\/app-pro\//.test(f) ||
   /^app-pro\//.test(f) ||
   // A app de cliente entrou na regra a 31-10-2026 (d8): é do lado do cliente.
   new Set([

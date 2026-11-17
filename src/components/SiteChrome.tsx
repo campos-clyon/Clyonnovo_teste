@@ -12,7 +12,11 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 // O /admin tem cabeçalho próprio (BACKOFFICE CLYON, com os separadores e a
 // conta) — sobrepor-lhe o header público roubava altura e duplicava navegação
 // que o operador não usa.
-const BARE_ROUTES = ["/orcamento-recolha-lisboa", "/admin"];
+//
+// A adesão às apps em passos (/app-pro e /app-cliente, 17-11-2026, d61) também:
+// um ecrã de cada vez, como numa app — sem o menu nem a conta de cliente no
+// topo, que foi onde uma empresa convidada para a CLYON Pro se enganou.
+const BARE_ROUTES = ["/orcamento-recolha-lisboa", "/admin", "/app-pro", "/app-cliente"];
 
 /**
  * Rotas internas (dashboard) que usam apenas o Header — sem Footer nem barra

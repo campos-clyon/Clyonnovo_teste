@@ -70,8 +70,21 @@ export function abrirNaAppNoAndroid(caminho: string, paginaAtual: string): strin
   );
 }
 
+/** O link de adesão ao teste fechado da CLYON Pro («Tornar-me testador»), 23-10-2026. */
+export const LINK_DO_TESTE_DA_APP_PRO = `https://play.google.com/apps/testing/${ID_DA_APP_PRO}`;
+
 /** O identificador da app de cliente (d8, 28-10-2026). */
 export const ID_DA_APP_CLIENTE = "pt.clyon.cliente";
+
+/**
+ * O link de adesão da app de cliente quando o backoffice ainda não tem um
+ * guardado (Configs → «Link do programa da app»; `linkDeAdesaoGuardado`). É o
+ * formato que a Play dá a um teste fechado (17-11-2026, /app-cliente).
+ */
+export const LINK_DO_TESTE_DA_APP_CLIENTE = `https://play.google.com/apps/testing/${ID_DA_APP_CLIENTE}`;
+
+/** A página da app de cliente na Google Play. */
+export const APP_CLIENTE_NA_PLAY = `https://play.google.com/store/apps/details?id=${ID_DA_APP_CLIENTE}`;
 
 /**
  * OS CAMINHOS QUE A APP DE CLIENTE ABRE — R9 v2, 28-10-2026 (S2).

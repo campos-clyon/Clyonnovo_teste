@@ -120,7 +120,10 @@ export default function Header({ transparenteNoTopo = false }: { transparenteNoT
    * Aqui não se esconde a sessão — ela continua a existir e a valer. Esconde-se
    * o menu que a faz parecer a identidade activa nesta página.
    */
-  const naAreaDoProfissional = pathname?.startsWith("/profissionais") ?? false;
+  // A candidatura também (17-11-2026, d61): quem lá chega é profissional, e a
+  // conta de cliente no topo levou uma empresa a criar a conta errada.
+  const naAreaDoProfissional =
+    (pathname?.startsWith("/profissionais") || pathname === "/quero-ser-parceiro") ?? false;
 
   const whatsappNumber = BUSINESS_PHONE.replace(/[^\d]/g, "");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Olá! Gostava de pedir um orçamento à CLYON.")}`;

@@ -89,10 +89,11 @@ describe("o convite do painel", () => {
     expect(validarGmail("a@gmail.com.pt").ok).toBe(false);
   });
 
-  it("tem «O Gmail do meu telemóvel é outro» e grava pela rota, com a conta da sessão", () => {
+  it("leva aos 4 passos da /app-pro, onde o Gmail grava pela rota, com a conta da sessão (d61)", () => {
     const C = ler("src/app/profissionais/painel/ConviteDaAppPro.tsx");
-    expect(C).toContain("O Gmail do meu telemóvel é outro");
-    expect(C).toContain('fetch("/api/profissionais/gmail-do-teste"');
+    expect(C).toContain('href="/app-pro"');
+    const A = ler("src/components/AdesaoDaApp.tsx");
+    expect(A).toContain('fetch("/api/profissionais/gmail-do-teste"');
     const R = ler("src/app/api/profissionais/gmail-do-teste/route.ts");
     expect(R).toContain("sessaoActivaDoProfissional(tokenDoProfissional(req))");
     expect(R).toContain("validarGmail(corpo.gmail)");

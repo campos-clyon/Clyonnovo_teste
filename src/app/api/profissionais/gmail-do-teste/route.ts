@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
-import { guardarGmailDoTeste, validarGmail } from "@/lib/app-pro-no-telemovel";
+import { gmailDoTesteDe, guardarGmailDoTeste, validarGmail } from "@/lib/app-pro-no-telemovel";
 
 export const runtime = "nodejs";
 
@@ -13,6 +13,25 @@ export const runtime = "nodejs";
  * testadores da Play Console (backoffice → Profissionais → Gmails do teste).
  * A conta vem da sessão, nunca do corpo.
  */
+/**
+ * O que a adesão em passos (/app-pro, 17-11-2026) precisa de saber: se há
+ * sessão de profissional, o Gmail que já deixou e o email da conta (para
+ * pré-preencher, se for Gmail). Sem sessão: 401, e a página diz-lhe para
+ * entrar primeiro.
+ */
+export async function GET(req: NextRequest) {
+  const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
+  if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  try {
+    const d = await gmailDoTesteDe(sessao.providerId);
+    if (!d) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
+    return NextResponse.json({ ok: true, ...d }, { headers: { "Cache-Control": "no-store" } });
+  } catch (err) {
+    console.error("[profissionais/gmail-do-teste GET]", err);
+    return NextResponse.json({ error: "Não consegui ler." }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   const sessao = await sessaoActivaDoProfissional(tokenDoProfissional(req));
   if (!sessao) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

@@ -1,5 +1,6 @@
 import { getPool, ensureProvidersSchema } from "./db";
 import { dataEHoraEmLisboa, instanteDaBase } from "./hora-de-lisboa";
+import { eGmail, emailLimpo } from "./gmail-do-telemovel";
 
 /*
  * QUEM TEM A APP CLYON PRO — 27-10-2026.
@@ -21,14 +22,29 @@ export function versaoDoCabecalho(cru: string | null | undefined): string {
 /** Os cabeçalhos onde a app pode mandar a versão. */
 export const CABECALHOS_DA_VERSAO = ["x-app-versao", "x-app-version"] as const;
 
-/** Um Gmail, e só um Gmail: é o que a lista de testadores da Play Console aceita. */
+/** Um Gmail, e só um Gmail: é o que a lista de testadores da Play Console aceita
+ * (o @googlemail.com também, desde 17-11-2026 — é o mesmo Gmail; `eGmail`). */
 export function validarGmail(cru: unknown): { ok: true; gmail: string } | { ok: false; erro: string } {
-  const g = typeof cru === "string" ? cru.trim().toLowerCase() : "";
+  const g = emailLimpo(cru);
   if (!g) return { ok: false, erro: "Escreva o Gmail do seu telemóvel." };
-  if (g.length > 120 || !/^[a-z0-9.+_-]+@gmail\.com$/.test(g)) {
+  if (!eGmail(g)) {
     return { ok: false, erro: "Tem de ser um endereço @gmail.com." };
   }
   return { ok: true, gmail: g };
+}
+
+/** O Gmail que ele já deixou para o teste e o email da conta (a adesão em passos, /app-pro). */
+export async function gmailDoTesteDe(
+  providerId: number,
+): Promise<{ gmail: string | null; emailDaConta: string | null } | null> {
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [linhas] = (await pool.execute("SELECT email, gmailDoTeste FROM providers WHERE id = ? LIMIT 1", [
+    providerId,
+  ])) as [Array<{ email: string | null; gmailDoTeste: string | null }>, unknown];
+  const l = linhas[0];
+  return { gmail: l?.gmailDoTeste || null, emailDaConta: l?.email || null };
 }
 
 /** «App: sim, aberta a 27/10/2026 · 14:05 · 1.0.3», ou «sem app». */

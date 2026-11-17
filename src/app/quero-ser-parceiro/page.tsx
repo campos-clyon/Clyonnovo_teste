@@ -235,6 +235,13 @@ export default async function QueroSerParceiroPage() {
               {APP_PRO_SO_EM_TESTE && (
                 <p className="text-xs text-slate-400">Por agora, a página da loja só abre a quem já está no teste.</p>
               )}
+              {/* Os quatro passos da adesão, um ecrã de cada vez (17-11-2026, d61). */}
+              <Link
+                href="/app-pro"
+                className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-white px-4 text-sm font-bold text-[#0F172A] transition hover:bg-slate-100"
+              >
+                Já é profissional da CLYON? Instale a app em 4 passos
+              </Link>
             </div>
           </div>
         </div>
