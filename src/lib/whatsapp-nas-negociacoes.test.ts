@@ -32,7 +32,8 @@ describe("na Mesa, as negociações", () => {
   });
 
   it("a adjudicação, depois de contratado e antes de confirmado", () => {
-    expect(M).toContain("if (!acordada || acordada.confirmadoEm || cancelado) return null;");
+    // d55: pela regra das fases (`botoes-das-fases.ts`) — também depois de dado por feito.
+    expect(M).toContain("if (!acordada || !fase.adjudicacao) return null;");
     expect(M).toContain("empresa: acordada.profissionalNome,");
     // O botão com as formas de pagamento (27-10-2026, d14) — ver EnviarAdjudicacao.tsx.
     expect(M).toContain("<EnviarAdjudicacao");

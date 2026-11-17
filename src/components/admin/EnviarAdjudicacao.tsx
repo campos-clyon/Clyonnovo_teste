@@ -52,6 +52,8 @@ type Props = {
   classeDoBotao: string;
   /** A negociação segue o modelo de 15-11 (`noNovoModelo` da Mesa, d17). */
   novoModelo?: boolean;
+  /** O texto do botão pela fase (d55): nos Feitos, «Enviar dados para pagamento». */
+  rotulo?: string;
 };
 
 type Resposta = {
@@ -80,6 +82,7 @@ export default function EnviarAdjudicacao({
   metodosLidos,
   classeDoBotao,
   novoModelo = false,
+  rotulo = "Enviar adjudicação ao cliente",
 }: Props) {
   const { token } = useAdminAuth();
   const [aberto, setAberto] = useState(false);
@@ -198,7 +201,7 @@ export default function EnviarAdjudicacao({
         className={classeDoBotao}
       >
         <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-        Enviar adjudicação ao cliente
+        {rotulo}
       </button>
 
       {aberto && (

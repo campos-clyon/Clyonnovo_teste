@@ -124,15 +124,17 @@ describe("o botão, no cartão do trabalho", () => {
     // Desde 27-10-2026 (d14) os dados vêm num objecto à parte, para o botão das formas de pagamento.
     const i = CARTAO.indexOf("const dadosDaAdjudicacao =");
     const bloco = CARTAO.slice(i, CARTAO.indexOf(": null;", i));
-    expect(bloco).toContain('r.fase === "atribuida" && a && !a.confirmadoEm');
+    // d55: pela regra das fases — nos Contratados, e nos Feitos do modelo novo («dados para pagamento»).
+    expect(bloco).toContain("botoes.adjudicacao && a && !a.confirmadoEm");
     expect(bloco).toContain("quando: a.dataCombinada ?? t.dataAgendada");
     expect(bloco).toContain("empresa: a.profissional");
     expect(bloco).toContain("responsavel: a.responsavel ?? null");
     expect(bloco).toContain("telefoneDaEmpresa: a.telefone ?? null");
   });
 
-  it("ao lado de «Alterar valor ou taxa», com a escolha das formas de pagamento (d14)", () => {
-    const i = CARTAO.indexOf("Alterar valor ou taxa\n");
+  it("ao lado dos dados para pagamento, com a escolha das formas de pagamento (d14, d55)", () => {
+    // d55: saiu do «Alterar valor ou taxa» (que acaba nos Contratados) para estar também nos Feitos.
+    const i = CARTAO.indexOf("{valoresParaPagamento && <EnviarValoresParaPagamento");
     expect(i).toBeGreaterThan(-1);
     const depois = CARTAO.slice(i, i + 900);
     expect(depois).toMatch(/\{adjudicacao && \(\s*<EnviarAdjudicacao/);

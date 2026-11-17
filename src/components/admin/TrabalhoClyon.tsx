@@ -46,6 +46,9 @@ import EnviarValoresParaPagamento from "@/components/admin/EnviarValoresParaPaga
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { contaDoTrabalhoClyon, contaDoTrabalhoClyonNoNovoModelo } from "@/lib/conta-do-pagamento";
 import FaturasDoTrabalho from "@/components/admin/FaturasDoTrabalho";
+import MensagemDaFase from "@/components/admin/MensagemDaFase";
+import { mensagemDeAgradecimento, mensagemDeCancelamento, mensagemDeTrabalhoConcluido } from "@/lib/mensagens-das-fases";
+import { botoesDaFaseDoTrabalhoClyon } from "@/lib/botoes-das-fases";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
@@ -1024,13 +1027,16 @@ function CartaoDoTrabalho({
   const ganhos = ganhosDe(t);
   /** O modelo de 15-11 (d54): o cliente paga ao parceiro — sem «Paga à CLYON», sem referências ao cliente. */
   const novoModelo = t.noNovoModelo === true;
+  /** Cada fase só com os seus botões — d55 (`botoes-das-fases.ts`). */
+  const botoes = botoesDaFaseDoTrabalhoClyon(r.fase, novoModelo);
   /*
    * A PROPOSTA NO WHATSAPP DO CLIENTE — 08-10-2026. Sem preço ao cliente (um
    * antigo sem ele) ou sem telemóvel que abra no WhatsApp, não há botão; e
    * num cancelado não há proposta nenhuma a fazer.
    */
+  // d55: só antes de haver quem o faça (o #623 mostrava-a já feito).
   const proposta =
-    r.fase === "cancelada"
+    !botoes.proposta
       ? null
       : linkDaPropostaClyon(
           { ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null, novoModelo: novoModelo },
@@ -1049,8 +1055,9 @@ function CartaoDoTrabalho({
    * dono, referência Multibanco ou MB WAY do euPago. Ver `EnviarAdjudicacao`.
    * Sem telemóvel que abra no WhatsApp, não há botão.
    */
+  // d55: nos Contratados; e nos Feitos do modelo novo, como «Enviar dados para pagamento».
   const dadosDaAdjudicacao =
-    r.fase === "atribuida" && a && !a.confirmadoEm
+    botoes.adjudicacao && a && !a.confirmadoEm
       ? {
           cliente: t.cliente,
           telefone: t.telefone,
@@ -1089,7 +1096,7 @@ function CartaoDoTrabalho({
    */
   // No modelo novo (d54) não há: o cliente paga ao parceiro, pelo «Enviar adjudicação».
   const valoresParaPagamento =
-    !novoModelo && a && conta && t.telefone && !a.clientePagouEm && !a.pagoEm
+    !novoModelo && botoes.valoresParaPagamento && a && conta && t.telefone && !a.clientePagouEm && !a.pagoEm
       ? {
           pedidoId: t.pedidoId,
           cliente: t.cliente,
@@ -1721,6 +1728,36 @@ function CartaoDoTrabalho({
           ainda por pagar. Ver `EnviarValoresParaPagamento`.
         */}
         {valoresParaPagamento && <EnviarValoresParaPagamento valores={valoresParaPagamento} onMudou={onMudou} />}
+        {/* A adjudicação — nos Contratados; nos Feitos do modelo novo, os dados para pagar ao parceiro (d55). */}
+        {adjudicacao && (
+          <EnviarAdjudicacao
+            negociacaoId={adjudicacao.negociacaoId}
+            adjudicacao={adjudicacao.dados}
+            metodosDePagamento={metodosDePagamento}
+            metodosLidos={metodosLidos}
+            classeDoBotao="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
+            novoModelo={novoModelo}
+            rotulo={r.fase === "por_confirmar" ? "Enviar dados para pagamento" : undefined}
+          />
+        )}
+        {/* As mensagens de cada fase (d55): só abrem o WhatsApp, quem envia é a equipa. */}
+        {botoes.trabalhoConcluido && (
+          <MensagemDaFase
+            telefone={t.telefone}
+            rotulo="Mensagem «trabalho concluído»"
+            texto={mensagemDeTrabalhoConcluido({ pedidoId: t.pedidoId, cliente: t.cliente, parceiro: a?.profissional ?? null })}
+          />
+        )}
+        {botoes.agradecimento && (
+          <MensagemDaFase
+            telefone={t.telefone}
+            rotulo="Agradecer e pedir avaliação"
+            texto={mensagemDeAgradecimento({ pedidoId: t.pedidoId, cliente: t.cliente, parceiro: a?.profissional ?? null })}
+          />
+        )}
+        {botoes.cancelamento && (
+          <MensagemDaFase telefone={t.telefone} rotulo="Mensagem de cancelamento" texto={mensagemDeCancelamento()} />
+        )}
         {/* A proposta já seguiu por outro lado — passa para «A aguardar cliente» (21-10-2026). */}
         {proposta && !t.propostaEnviadaEm && (
           <button
@@ -1791,17 +1828,6 @@ function CartaoDoTrabalho({
               <Coins className="h-3.5 w-3.5" aria-hidden="true" />
               Alterar valor ou taxa
             </button>
-            {/* Ao lado, como o dono pediu — ver `adjudicacao`. */}
-            {adjudicacao && (
-              <EnviarAdjudicacao
-                negociacaoId={adjudicacao.negociacaoId}
-                adjudicacao={adjudicacao.dados}
-                metodosDePagamento={metodosDePagamento}
-                metodosLidos={metodosLidos}
-                classeDoBotao="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
-                novoModelo={novoModelo}
-              />
-            )}
             {/*
               PASSAR A NEGOCIAÇÃO — 20-10-2026 (fase 4). Só enquanto ninguém o
               aceitou: a oferta sai, e vai aos profissionais para proporem.

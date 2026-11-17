@@ -137,7 +137,7 @@ describe("(b) nenhuma mensagem ao cliente de um pedido do modelo novo diz «Paga
     expect(rota).toMatch(/novoModelo: trabalhoClyonDoNovoModelo\(/);
     // E o cartão nem mostra o botão.
     const cartao = ler("src/components/admin/TrabalhoClyon.tsx");
-    expect(cartao).toContain("!novoModelo && a && conta && t.telefone");
+    expect(cartao).toContain("!novoModelo && botoes.valoresParaPagamento && a && conta && t.telefone");
     expect(cartao).toContain("novoModelo={novoModelo}");
   });
 });

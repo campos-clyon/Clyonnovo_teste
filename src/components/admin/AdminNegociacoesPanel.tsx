@@ -7,6 +7,9 @@ import AlteracoesDoCliente from "./AlteracoesDoCliente";
 import DoNossoLado from "./DoNossoLado";
 import FaturasDoTrabalho from "./FaturasDoTrabalho";
 import { AConfirmarNoNovoModelo, ContaDoNovoModeloAoConfirmar } from "./NovoModeloNaMesa";
+import MensagemDaFase from "./MensagemDaFase";
+import { mensagemDeAgradecimento, mensagemDeCancelamento, mensagemDeTrabalhoConcluido } from "@/lib/mensagens-das-fases";
+import { botoesDaFaseDaMesa } from "@/lib/botoes-das-fases";
 import type { ComponentType } from "react";
 import {
   Briefcase,
@@ -3436,7 +3439,14 @@ export default function AdminNegociacoesPanel({
             (`mensagem-de-adjudicacao.ts`), com quem ficou com o trabalho.
           */}
           {(() => {
-            if (!acordada || acordada.confirmadoEm || cancelado) return null;
+            /*
+             * d55: nos Contratados é a adjudicação; dado por feito (e ainda por
+             * confirmar), os dados para pagamento — no modelo novo, a pagar ao
+             * parceiro. Antes saía só pelo `confirmadoEm`, e com o «feito» ficava
+             * por baixo do bloco amarelo sem se perceber para que era.
+             */
+            const fase = botoesDaFaseDaMesa({ cancelado, concluido, acordada: acordada ?? null });
+            if (!acordada || !fase.adjudicacao) return null;
             // As formas de pagamento escolhem-se no botão (27-10-2026, d14) — ver `EnviarAdjudicacao`.
             const dados = {
               cliente: p.contactName,
@@ -3457,8 +3467,27 @@ export default function AdminNegociacoesPanel({
                 classeDoBotao="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/60 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20"
                 // O modelo de 15-11 (d17): a marca da rota da Mesa; o servidor volta a decidir ao preparar.
                 novoModelo={(acordada as { noNovoModelo?: boolean }).noNovoModelo === true}
+                rotulo={fase.dadosParaPagamento ? "Enviar dados para pagamento" : undefined}
               />
             ) : null;
+          })()}
+          {/* As mensagens de cada fase (d55): só abrem o WhatsApp — quem envia é a equipa. */}
+          {(() => {
+            const fase = botoesDaFaseDaMesa({ cancelado, concluido, acordada: acordada ?? null });
+            const dados = { pedidoId: p.id, cliente: p.contactName, parceiro: acordada?.profissionalNome ?? null };
+            return (
+              <>
+                {fase.trabalhoConcluido && (
+                  <MensagemDaFase telefone={p.contactPhone} rotulo="Mensagem «trabalho concluído»" texto={mensagemDeTrabalhoConcluido(dados)} />
+                )}
+                {fase.agradecimento && (
+                  <MensagemDaFase telefone={p.contactPhone} rotulo="Agradecer e pedir avaliação" texto={mensagemDeAgradecimento(dados)} />
+                )}
+                {fase.cancelamento && (
+                  <MensagemDaFase telefone={p.contactPhone} rotulo="Mensagem de cancelamento" texto={mensagemDeCancelamento()} />
+                )}
+              </>
+            );
           })()}
           {/*
             «JÁ ENVIEI» — 21-10-2026: o orçamento seguiu por telefone ou noutro
