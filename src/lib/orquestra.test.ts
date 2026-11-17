@@ -10,7 +10,6 @@ import { NO_MESMO_DIA, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "./promessas-p
 import { FRASES_PROIBIDAS } from "./frases-proibidas";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
-import { TRABALHOS_CLYON_NO_MODELO_ANTIGO } from "./novo-modelo";
 import { PRECOS_ANTES_DA_D60 } from "./precos-antes-da-d60";
 
 /*
@@ -86,7 +85,7 @@ import { PRECOS_ANTES_DA_D60 } from "./precos-antes-da-d60";
  * «ANTIGO» no nome ou dentro de `<RegrasAnteriores>`, e o código escolhe-as pela
  * data (`novoModeloEmVigor`). Os Termos e a Privacidade lêem-se desenhados nos
  * dois lados da data (`termos-15-11.test.ts`); os Trabalhos CLYON ficam no
- * modelo antigo enquanto `TRABALHOS_CLYON_NO_MODELO_ANTIGO` estiver ligado.
+ * modelo antigo só os registados até 14-11 (d54): as mensagens escolhem pela data.
  *
  * A LISTA DE EXCEPÇÕES diz o que ainda falta, com o motivo. Só pode encolher:
  * uma excepção que já não é precisa chumba (apaga-se), e a lista não pode
@@ -482,7 +481,8 @@ const A_REGRA_T_SE_APLICA = A_REGRA_R_SE_APLICA;
  * («pela app de cliente» ou «pelo site») — aí é o canal, não a CLYON.
  */
 const PELO_SITE = /(?<!\p{L})(pelo|no nosso|do nosso|o nosso) site(?!\p{L})/iu;
-const A_HISTORIA = new Set(["src/app/sobre-nos/page.tsx", "src/lib/juntar-a-conta.ts"]);
+// d55 (17-11-2026): o texto do cancelamento é o do dono, palavra por palavra — «pelo site clyon.pt ou por aqui» é o canal.
+const A_HISTORIA = new Set(["src/app/sobre-nos/page.tsx", "src/lib/juntar-a-conta.ts", "src/lib/mensagens-das-fases.ts"]);
 
 /*
  * v) A DISTÂNCIA DAS MUDANÇAS SÓ DA TABELA — d28 (parte do Site).
@@ -806,17 +806,19 @@ interface Achado {
  */
 const NOME_DO_MODELO_ANTIGO = /antig/i;
 const DESENHADOS_NOS_DOIS_LADOS = new Set(["src/app/termos/page.tsx", "src/app/privacidade/page.tsx"]);
-const DO_TRABALHO_CLYON = new Set([
-  "src/lib/proposta-clyon-ao-cliente.ts",
-  "src/lib/mensagem-de-adjudicacao.ts",
-  "src/lib/valores-para-pagamento.ts",
-  // d16: o ecrã do Trabalho CLYON na app de cliente (fica no modelo antigo).
+/*
+ * d54 (17-11-2026): o interruptor desligou-se e as mensagens do site escolhem
+ * pela data (as frases antigas vivem em declarações com «ANTIGO» no nome). Fica
+ * só o ecrã do Trabalho CLYON da app de cliente, à espera do departamento de
+ * Apps (o modelo de 15-11 na app) — sai daqui quando a app o tiver.
+ */
+const DO_TRABALHO_CLYON_A_ESPERA_DAS_APPS = new Set([
   "app-cliente/src/componentes/TrabalhoClyon.tsx",
 ]);
 const A_REGRA_S_SE_APLICA = (f: string) =>
   (O_CLIENTE_LE(f) || DO_LADO_DO_PROFISSIONAL(f)) &&
   !DESENHADOS_NOS_DOIS_LADOS.has(f) &&
-  !(TRABALHOS_CLYON_NO_MODELO_ANTIGO && DO_TRABALHO_CLYON.has(f));
+  !DO_TRABALHO_CLYON_A_ESPERA_DAS_APPS.has(f);
 const ePorRegrasAnteriores = (n: ts.Node, sf: ts.SourceFile) =>
   (ts.isJsxElement(n) && n.openingElement.tagName.getText(sf) === "RegrasAnteriores") ||
   ((ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) && n.tagName.getText(sf) === "RegrasAnteriores");

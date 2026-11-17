@@ -65,13 +65,16 @@ afterEach(() => {
 });
 
 const desligado = () => interruptorDosTrabalhosClyonParaOsTestes(false);
+/** d54: em produção está desligado; os testes do «ligado» provam o lado antigo do interruptor. */
+const ligado = () => interruptorDosTrabalhosClyonParaOsTestes(true);
 
 describe("a pergunta única — trabalhoClyonDoModeloAntigo", () => {
-  it("em produção o interruptor continua ligado", () => {
-    expect(TRABALHOS_CLYON_NO_MODELO_ANTIGO).toBe(true);
+  it("em produção o interruptor está desligado desde a d54 (17-11-2026)", () => {
+    expect(TRABALHOS_CLYON_NO_MODELO_ANTIGO).toBe(false);
   });
 
   it("ligado: todo o Trabalho CLYON é do antigo, seja de quando for", () => {
+    ligado();
     expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(true);
     expect(trabalhoClyonDoModeloAntigo({ valorFixoClyon: "350.00", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(true);
     expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(false);
@@ -82,8 +85,8 @@ describe("a pergunta única — trabalhoClyonDoModeloAntigo", () => {
     expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, DEPOIS)).toBe(true);
     expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(false);
     // O texto sem fuso da base lê-se em UTC.
-    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-15 23:59:59" }, DEPOIS)).toBe(true);
-    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-16 00:00:00" }, DEPOIS)).toBe(false);
+    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-14 23:59:59" }, DEPOIS)).toBe(true);
+    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-15 00:00:00" }, DEPOIS)).toBe(false);
     expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, DEPOIS)).toBe(false);
     expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(true);
   });
@@ -127,6 +130,7 @@ describe("a vista da negociação — novoModeloComTotais", () => {
   });
 
   it("ligado: um Trabalho CLYON não tem o bloco do modelo novo — nem com o servidor a dizer o contrário", () => {
+    ligado();
     expect(novoModeloComTotais(linha(NO_CORTE) as never, 350, DEPOIS)).toBeNull();
     const totais = { porValor: new Map() } as never;
     expect(novoModeloComTotais(linha(NO_CORTE) as never, 350, DEPOIS, { segue: true, totais })).toBeNull();
@@ -166,6 +170,7 @@ describe("a retenção — negociacaoFechada", () => {
   });
 
   it("ligado: um Trabalho CLYON confirmado fecha (a CLYON recebeu e pagou)", () => {
+    ligado();
     expect(negociacaoFechada(n(NO_CORTE))).toBe(true);
   });
 
@@ -184,6 +189,7 @@ describe("a retenção — negociacaoFechada", () => {
 
 describe("o servidor — negociacoesNoNovoModelo, segueONovoModelo, contratadasNoNovoModelo", () => {
   it("ligado: nenhum Trabalho CLYON passa, e não se vai à base pela data", async () => {
+    ligado();
     const s = await negociacoesNoNovoModelo([{ id: 7, estado: "aberta", ofertaClyon: "distribuida" }], DEPOIS);
     expect(s.has(7)).toBe(false);
     expect(daBase.perguntados).toEqual([]);
@@ -226,6 +232,7 @@ describe("a carteira do profissional — pagoPelaClyon e noNovoModelo", () => {
   });
 
   it("ligado: a CLYON paga todos os Trabalhos CLYON", async () => {
+    ligado();
     const [t] = await trabalhosDaCarteira([linha(8)]);
     expect(t.pagoPelaClyon).toBe(true);
     expect(t.noNovoModelo).toBe(false);
@@ -245,6 +252,7 @@ describe("a carteira do profissional — pagoPelaClyon e noNovoModelo", () => {
 
 describe("a leitura da base — trabalhosClyonDasNegociacoes", () => {
   it("com o interruptor ligado devolve vazio sem ir à base", async () => {
+    ligado();
     const real = await vi.importActual<typeof import("./trabalho-clyon-na-base")>("./trabalho-clyon-na-base");
     expect((await real.trabalhosClyonDasNegociacoes([1, 2])).size).toBe(0);
     expect(trabalhosClyonDasNegociacoes).toBeDefined();

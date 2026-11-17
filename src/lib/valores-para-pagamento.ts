@@ -61,6 +61,13 @@ function diaPorExtenso(quando: string | Date | null): string | null {
 
 const maiuscula = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
+/**
+ * A quem se paga — só no modelo antigo: no de 15-11 não há «valores para
+ * pagamento» (d54; a rota recusa-o, e o cartão não mostra o botão). Regra s
+ * da orquestra: o nome diz «antigo».
+ */
+export const PAGA_A_CLYON_NOS_VALORES_DO_MODELO_ANTIGO = "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.";
+
 /** A mensagem pronta, em voz de plataforma, com «parceiro». */
 export function mensagemDosValoresParaPagamento(v: ValoresParaPagamento, agora: Date): string {
   const base = lerBase(v.base);
@@ -93,7 +100,7 @@ export function mensagemDosValoresParaPagamento(v: ValoresParaPagamento, agora: 
     valores.join("\n"),
     ePorUnidade(base) ? notaDoPrecoParaOCliente(base, "clyon") : null,
     `Pode pagar por MB WAY, por Multibanco ou por transferência, no seu pedido:\n${v.link?.trim() || LINK_POR_GERAR}`,
-    "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.",
+    PAGA_A_CLYON_NOS_VALORES_DO_MODELO_ANTIGO,
     "Obrigado pela preferência,\nEquipa CLYON",
   ]
     .filter(Boolean)

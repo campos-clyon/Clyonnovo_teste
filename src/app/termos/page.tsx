@@ -71,6 +71,7 @@ import {
   DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO,
   IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
   PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO,
+  TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO,
   VERSAO_DOS_TERMOS_POR_EXTENSO,
   novoModeloEmVigor,
 } from "@/lib/novo-modelo";
@@ -165,7 +166,7 @@ export default async function TermosPage() {
               valem as regras de pagamento e de faturação dos pontos 6, 7, 7-A e 10.
               Os trabalhos já pagos à CLYON antes dessa data, os que nessa data já
               estavam concluídos e os trabalhos de valor fixo combinados com a CLYON
-              continuam com as regras anteriores, até ao fim. Conta também como pago
+              registados até {TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO} continuam com as regras anteriores, até ao fim. Conta também como pago
               antes dessa data o trabalho cuja referência Multibanco da CLYON foi
               emitida antes dela e é paga antes de a referência expirar. Essas regras
               mantêm-se escritas nesses pontos.
@@ -938,8 +939,8 @@ export default async function TermosPage() {
                 </strong>{" "}
                 Os que o cliente já tinha pago à CLYON — incluindo os pagos depois
                 por uma referência Multibanco emitida antes dessa data —, os que já
-                estavam concluídos e os de valor fixo combinados com a CLYON seguem
-                as regras anteriores, na caixa abaixo: recebe através da CLYON. Os
+                estavam concluídos e os de valor fixo combinados com a CLYON registados
+                até {TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO} seguem as regras anteriores, na caixa abaixo: recebe através da CLYON. Os
                 outros passam a estas regras: o cliente paga-lhe diretamente e passa
                 à CLYON a taxa da plataforma e o IVA dela. Na página de cada
                 trabalho vê por que regras ele segue.
@@ -1201,7 +1202,8 @@ export default async function TermosPage() {
               estavam pagos à CLYON nem concluídos nessa data. Os trabalhos já
               pagos à CLYON antes dela — incluindo os pagos depois por uma
               referência Multibanco emitida antes dela —, os já concluídos e os de
-              valor fixo combinados com a CLYON continuam, até ao fim, com as
+              valor fixo combinados com a CLYON registados até {TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO}{" "}
+              continuam, até ao fim, com as
               regras com que foram acordados.
             </p>
           )}

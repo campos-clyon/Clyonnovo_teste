@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { porqueNaoHaReferenciaNoNovoModelo } from "@/lib/referencia-no-novo-modelo";
 import { dividaDoProfissional } from "@/lib/divida-do-profissional";
 import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 import { marcasDasNegociacoes } from "@/lib/marcas-da-divida-na-base";
@@ -221,6 +222,14 @@ export async function POST(req: NextRequest) {
   const comFactura = t.modelo === "iva_incluido" || corpo.comFactura === true;
   const pedido = quantoSePedeNesteTrabalho(t, comFactura);
   const quemPaga = pedido.quemPaga;
+  /*
+   * NENHUMA REFERÊNCIA AO CLIENTE NO MODELO DE 15-11 — d54. Nem da adjudicação
+   * (em cima), nem dos «valores para pagamento», nem de quem a pediria para o
+   * cliente: num trabalho do modelo novo — negociação ou Trabalho CLYON criado
+   * a partir de 15-11 — só se pede a taxa, ao profissional.
+   */
+  const semReferencia = porqueNaoHaReferenciaNoNovoModelo(t, corpo.origem, quemPaga);
+  if (semReferencia) return NextResponse.json({ error: semReferencia }, { status: 409 });
   const doProfissional = quemPaga === "profissional";
   /*
    * SÓ O QUE FALTA DA DÍVIDA — 11-11-2026 (dono). Com o IVA (ou a taxa) já

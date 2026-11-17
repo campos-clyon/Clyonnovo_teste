@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Star } from "lucide-react";
 import PagarTrabalho from "@/components/PagarTrabalho";
+import PagarAoParceiro from "@/components/PagarAoParceiro";
 import PrecoDaClyon from "@/components/PrecoDaClyon";
 import type { FimDoTrabalhoClyon as Fim } from "@/lib/fim-do-trabalho-clyon";
 import type { PrecoClyonNoEcra } from "@/lib/preco-clyon-para-o-cliente";
@@ -104,6 +105,13 @@ export default function FimDoTrabalhoClyon({
       )}
 
       <div ref={pagamento} id="pagar" className="scroll-mt-4">
+        {/*
+          O MODELO DE 15-11 (d54, 17-11-2026): um Trabalho CLYON criado a partir de
+          15-11 paga-se ao parceiro, como as negociações — o bloco «Pagar a …»
+          pergunta ao servidor e, fora do modelo novo, não desenha nada. O de pagar
+          à CLYON, em baixo, fecha-se sozinho no modelo novo (o servidor recusa-o).
+        */}
+        <PagarAoParceiro pedidoId={pedidoId} negociacaoId={fim.negociacaoId} token={token} soParaVer={soParaVer} />
         {fim.podePagar && (
           <PagarTrabalho
             pedidoId={pedidoId}

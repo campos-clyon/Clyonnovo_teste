@@ -66,6 +66,11 @@ export function mensagemDaPropostaClyon(
     profissional?: string | null;
     /** NIF, identidade e contacto confirmados — só então se diz «verificado» (01-11-2026). */
     profissionalVerificado?: boolean;
+    /**
+     * O Trabalho CLYON segue o modelo de 15-11 (d54, `trabalhoClyonDoNovoModelo`):
+     * o cliente paga ao parceiro — «Paga ao parceiro no dia.», nunca «Paga à CLYON».
+     */
+    novoModelo?: boolean;
   },
   agora: Date,
 ): string {
@@ -88,7 +93,7 @@ export function mensagemDaPropostaClyon(
       semIva: t.preco.semIva,
       total: t.preco.total,
       base,
-      modelo: "clyon",
+      modelo: t.novoModelo === true ? "parceiro" : "clyon",
       paraQuando,
       comQuemJaEscolhido: Boolean(t.profissional?.trim()),
       // Quem faz, quando já está escolhido (d12) — «verificado» só com as três confirmações.
@@ -116,6 +121,8 @@ export function linkDaPropostaClyon(
     precoAoCliente: number | null;
     base?: string | null;
     profissional?: string | null;
+    /** O modelo de 15-11 (d54): «Paga ao parceiro». */
+    novoModelo?: boolean;
   },
   agora: Date,
 ): { link: string; total: number; texto: string } | null {

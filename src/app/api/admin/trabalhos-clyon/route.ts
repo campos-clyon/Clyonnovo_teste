@@ -48,6 +48,9 @@ import { avisarCancelamentoDoTrabalhoClyon, avisarValorNovoDoTrabalhoClyon } fro
 import { pedidoArrumado, PEDIDO_ARRUMADO_NAO_SE_ENVIA } from "@/lib/pedido-arrumado";
 import { pedidosFechadosDaPlataforma } from "@/lib/pedidos-fechados";
 import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
+import { trabalhoClyonDoNovoModelo } from "@/lib/novo-modelo";
+import { agoraDoModelo } from "@/lib/relogio-do-modelo";
+import { VALORES_PARA_PAGAMENTO_NO_NOVO_MODELO } from "@/lib/referencia-no-novo-modelo";
 import { comOLink, linkParaPagar, mensagemDosValoresParaPagamento, oQueNaoPodeIr } from "@/lib/valores-para-pagamento";
 import { contaDoTrabalhoClyon, emEuros, taxaDoProfissionalSeDifere } from "@/lib/conta-do-pagamento";
 import { folhasFinaisActivas, type FolhaFinalGravada } from "@/lib/folha-final-na-base";
@@ -223,6 +226,14 @@ export async function GET(req: NextRequest) {
           telefone: o.telefone,
           estadoDoPedido: o.estadoDoPedido,
           criadoEm: iso(o.criadoEm),
+          /*
+           * O MODELO DE 15-11 — d54 (17-11-2026). Criado a partir do corte, o
+           * cliente paga ao parceiro: o cartão mostra a conta do modelo novo, a
+           * proposta diz «Paga ao parceiro» e não há «Enviar valores para
+           * pagamento». Pela criação do pedido; a conta de quem ficou com ele
+           * vem do servidor (`/api/admin/negociacoes/fatura`), com os pagamentos lidos.
+           */
+          noNovoModelo: trabalhoClyonDoNovoModelo({ valorFixoClyon: o.valorFixo, pedidoCriadoEm: o.criadoEm }, agoraDoModelo()),
           notas: o.notasInternas,
           concluidoVistoEm: iso(o.concluidoVistoEm),
           propostaEnviadaEm: iso(o.propostaEnviadaEm),
@@ -582,6 +593,11 @@ export async function PATCH(req: NextRequest) {
           quando: quandoFoi && !Number.isNaN(quandoFoi.getTime()) ? quandoFoi.toISOString() : null,
           preco,
           base: (pedido.baseDoPreco as string) ?? null,
+          // d54: o modelo de 15-11 diz «Paga ao parceiro».
+          novoModelo: trabalhoClyonDoNovoModelo(
+            { valorFixoClyon: pedido.valorFixoClyon, pedidoCriadoEm: (pedido.createdAt as Date | string | null) ?? null },
+            agoraDoModelo(),
+          ),
         },
         new Date(),
       );
@@ -654,6 +670,19 @@ export async function PATCH(req: NextRequest) {
       }
       if (neg.clientePagouEm || neg.pagoAoProfissionalEm) {
         return NextResponse.json({ error: "O cliente já pagou este trabalho." }, { status: 409 });
+      }
+      /*
+       * NO MODELO DE 15-11 NÃO HÁ «PAGA À CLYON» — d54. O cliente paga ao
+       * parceiro: os dados para pagar estão no pedido, e vão pelo «Enviar
+       * adjudicação» (o texto do pagamento ao parceiro). Quem decide é o
+       * servidor, com os pagamentos lidos (`trabalhoVistoPeloBackoffice`).
+       */
+      {
+        const { trabalhoVistoPeloBackoffice } = await import("@/lib/acesso-ao-pagamento");
+        const visto = await trabalhoVistoPeloBackoffice(neg.negociacaoId);
+        if (visto.ok && visto.trabalho.novoModelo) {
+          return NextResponse.json({ error: VALORES_PARA_PAGAMENTO_NO_NOVO_MODELO }, { status: 409 });
+        }
       }
       const numero = (v: unknown) => (v == null || v === "" ? null : Number(v));
       const conta = contaDoTrabalhoClyon(

@@ -46,7 +46,8 @@ describe("a data e os interruptores (d10)", () => {
 
   it("as três perguntas, com a resposta do CEO", () => {
     expect(CORTE_DO_MODELO).toBe("ja_pago_a_clyon");
-    expect(TRABALHOS_CLYON_NO_MODELO_ANTIGO).toBe(true);
+    // d54 (17-11-2026): os Trabalhos CLYON criados a partir de 15-11 seguem o modelo novo.
+    expect(TRABALHOS_CLYON_NO_MODELO_ANTIGO).toBe(false);
     expect(REGIME_DE_IVA_OBRIGATORIO).toBe(true);
   });
 

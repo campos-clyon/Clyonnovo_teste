@@ -124,7 +124,7 @@ describe("o botão, no cartão do trabalho", () => {
   });
 
   it("usa o dia marcado com o pro, ou o pedido — e num cancelado não aparece", () => {
-    expect(PAGINA).toContain("{ ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null }");
+    expect(PAGINA).toContain("{ ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null, novoModelo: novoModelo }");
     expect(PAGINA).toMatch(/r\.fase === "cancelada"\s*\?\s*null/);
   });
 });

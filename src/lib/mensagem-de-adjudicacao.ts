@@ -141,6 +141,13 @@ function blocoDaReferencia(r: ReferenciaNaAdjudicacao): string {
 }
 
 /**
+ * A quem se paga no modelo antigo (e nos Trabalhos CLYON registados até 14-11,
+ * d54): à CLYON. Regra s da orquestra: o nome diz «antigo», e no modelo de 15-11
+ * a mensagem leva o bloco do pagamento ao parceiro (`blocoDoPagamentoAoParceiro`).
+ */
+export const PAGA_A_CLYON_NA_ADJUDICACAO_DO_MODELO_ANTIGO = "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.";
+
+/**
  * O BLOCO DO PAGAMENTO, com as formas escolhidas — 27-10-2026 (d14). Sem
  * nenhuma, diz que os dados seguem a seguir.
  */
@@ -165,7 +172,7 @@ export function blocoDasFormasDePagamento(
   if (link && partes.length === 1) {
     return [
       `Pode pagar por MB WAY, por Multibanco ou por transferência, no seu pedido:\n${link}`,
-      "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito.",
+      PAGA_A_CLYON_NA_ADJUDICACAO_DO_MODELO_ANTIGO,
     ].join("\n\n");
   }
   const abertura = partes.length > 1 ? ABERTURA_DOS_METODOS : "Para o pagamento:";
@@ -176,7 +183,7 @@ export function blocoDasFormasDePagamento(
   // Como no «Enviar valores para pagamento» (d19): a quem se paga, e quando o parceiro recebe.
   const aQuem =
     link || formas.referencias.length > 0
-      ? "Paga à CLYON, que só paga ao parceiro depois de o trabalho estar feito."
+      ? PAGA_A_CLYON_NA_ADJUDICACAO_DO_MODELO_ANTIGO
       : null;
   return [abertura, ...partes, euPago, aQuem].filter(Boolean).join("\n\n");
 }

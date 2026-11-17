@@ -21,6 +21,7 @@ import { alteracoesParaAApp, faseDaAlteracao } from "@/lib/alteracoes-do-cliente
 import { precoClyonParaOCliente } from "@/lib/preco-clyon-para-o-cliente";
 import { negociacoesDoPedido } from "@/lib/db";
 import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib/fim-do-trabalho-clyon";
+import { trabalhoClyonDoNovoModelo } from "@/lib/novo-modelo";
 import FimDoTrabalhoClyon from "@/components/FimDoTrabalhoClyon";
 import EscolhidosSemResposta from "@/components/EscolhidosSemResposta";
 import { escolhidosParaOCliente } from "@/lib/escolhidos-sem-resposta-no-servidor";
@@ -449,7 +450,14 @@ export default async function VistaDoPedido({
         A CLYON liga clientes a parceiros independentes. Quem executa o trabalho é o
         parceiro escolhido.{" "}
         {/* d16: num Trabalho CLYON a fatura é uma só, como antes; nos outros, pela data do modelo. */}
-        {pedido.valorFixoClyon != null ? QUEM_FACTURA_EM_PALAVRAS : quemFaturaEmPalavras(agoraDoModelo())}
+        {/* d54: o Trabalho CLYON do modelo de 15-11 tem as duas faturas, como as negociações. */}
+        {pedido.valorFixoClyon != null &&
+        !trabalhoClyonDoNovoModelo(
+          { valorFixoClyon: pedido.valorFixoClyon, pedidoCriadoEm: (pedido as { createdAt?: Date | string | null }).createdAt ?? null },
+          agoraDoModelo(),
+        )
+          ? QUEM_FACTURA_EM_PALAVRAS
+          : quemFaturaEmPalavras(agoraDoModelo())}
       </p>
     </main>
   );

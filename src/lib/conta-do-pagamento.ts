@@ -540,6 +540,27 @@ export function contaDoNovoModelo(
 }
 
 /**
+ * UM TRABALHO CLYON NO MODELO DE 15-11 — d54 (17-11-2026). O valor fixo é o
+ * preço ao cliente sem IVA e a taxa (10, 15 ou 20 %) sai dele (`taxasDoTrabalhoClyon`):
+ * o cliente paga ao profissional o valor com IVA, e o profissional passa à CLYON
+ * a taxa e o IVA dela — a mesma `contaDoNovoModelo` das negociações, nunca a
+ * conta antiga («IVA vai para a empresa parceira», «A pagar ao profissional»).
+ *
+ * Para o cartão antes de haver quem o faça (o regime ainda não se sabe: com
+ * IVA). Com um profissional contratado, a conta vem do servidor
+ * (`/api/admin/negociacoes/fatura`), pelo regime e pelos pagamentos dele.
+ * Os antigos sem taxa não passam por aqui (nasceram antes de 15-11): nulo.
+ */
+export function contaDoTrabalhoClyonNoNovoModelo(
+  t: { valorFixo: number; taxa: number | null; taxaDoProfissional?: number | null },
+  regime: RegimeDoProfissional = "normal",
+  taxaPaga = false,
+): ContaDoPagamento | null {
+  if (t.taxa == null || !Number.isFinite(t.valorFixo) || t.valorFixo <= 0) return null;
+  return contaDoNovoModelo(t.valorFixo, { cliente: 0, profissional: t.taxaDoProfissional ?? t.taxa }, regime, taxaPaga);
+}
+
+/**
  * O QUE O PROFISSIONAL PASSA À CLYON, LIDO DA CONTA DO MODELO NOVO — d53
  * (16-11-2026). É o degrau final de `contaDoNovoModelo` (a taxa da plataforma
  * e o IVA dela, com a reserva quando a há): o mesmo número que a «Conta do

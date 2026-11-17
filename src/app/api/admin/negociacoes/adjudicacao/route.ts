@@ -6,6 +6,7 @@ import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
 import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { linkParaPagar } from "@/lib/valores-para-pagamento";
+import { ADJUDICACAO_SEM_CONTA_NO_NOVO_MODELO } from "@/lib/referencia-no-novo-modelo";
 
 export const runtime = "nodejs";
 
@@ -78,6 +79,24 @@ export async function POST(req: NextRequest) {
   const pedidoId = Number(n.pedidoId);
   const por = colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null;
 
+  /*
+   * NO MODELO NOVO, A CONTA ANTES DO LINK — d54. Sem o total do bloco «Pagar a
+   * …» a mensagem cairia no texto antigo («Paga à CLYON»): recusa-se, com o
+   * porquê, antes de gerar um link novo (que mataria o anterior).
+   */
+  let novoModelo: AdjudicacaoNoNovoModelo | null = null;
+  if (noNovoModelo && acesso.ok) {
+    const visto = await oQueOClienteVeDoParceiro(acesso.trabalho);
+    if (visto.conta?.total == null) {
+      return NextResponse.json({ error: ADJUDICACAO_SEM_CONTA_NO_NOVO_MODELO }, { status: 409 });
+    }
+    novoModelo = {
+      total: visto.conta.total,
+      semIva: visto.conta.semIva,
+      formas: visto.opcoes.map((o) => o.id),
+    };
+  }
+
   let link: string | null = null;
   if (comLink) {
     const gerado = await linkParaQuemFechou(pedidoId, {
@@ -87,13 +106,16 @@ export async function POST(req: NextRequest) {
       site: urlDeAccaoDoPedido(req.headers),
     });
     if (!gerado) return NextResponse.json({ error: "Não foi possível gerar o link do pedido." }, { status: 500 });
-    link = linkParaPagar(gerado);
+    // O `?pagar=1` abre no bloco de pagar À CLYON: no modelo novo vai o link do pedido, sem ele (d54).
+    link = noNovoModelo ? gerado : linkParaPagar(gerado);
     await appendOrderHistory(pedidoId, {
       type: "note",
       by: por,
-      message: gerado.endsWith("/conta")
-        ? "Adjudicação preparada com o pagamento pela plataforma (a conta do cliente)."
-        : "Adjudicação preparada com o link do pedido, para o cliente pagar pela plataforma. O link anterior deixou de funcionar.",
+      message: noNovoModelo
+        ? "Adjudicação preparada com o link do pedido, onde estão os dados para pagar ao parceiro (modelo de 15-11). O link anterior deixou de funcionar."
+        : gerado.endsWith("/conta")
+          ? "Adjudicação preparada com o pagamento pela plataforma (a conta do cliente)."
+          : "Adjudicação preparada com o link do pedido, para o cliente pagar pela plataforma. O link anterior deixou de funcionar.",
     });
   }
   if (motivo?.ok) {
@@ -102,17 +124,6 @@ export async function POST(req: NextRequest) {
       by: por,
       message: `Adjudicação com os dados de pagamento do dono (Configs), e não pela plataforma. Motivo: «${motivo.motivo}».`,
     });
-  }
-  let novoModelo: AdjudicacaoNoNovoModelo | null = null;
-  if (noNovoModelo && acesso.ok) {
-    const visto = await oQueOClienteVeDoParceiro(acesso.trabalho);
-    if (visto.conta?.total != null) {
-      novoModelo = {
-        total: visto.conta.total,
-        semIva: visto.conta.semIva,
-        formas: visto.opcoes.map((o) => o.id),
-      };
-    }
   }
   return NextResponse.json({ ok: true, link, novoModelo });
 }

@@ -44,7 +44,8 @@ import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import EnviarValoresParaPagamento from "@/components/admin/EnviarValoresParaPagamento";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
-import { contaDoTrabalhoClyon } from "@/lib/conta-do-pagamento";
+import { contaDoTrabalhoClyon, contaDoTrabalhoClyonNoNovoModelo } from "@/lib/conta-do-pagamento";
+import FaturasDoTrabalho from "@/components/admin/FaturasDoTrabalho";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
@@ -150,6 +151,11 @@ export type TrabalhoClyon = {
   telefone: string | null;
   estadoDoPedido: string | null;
   criadoEm: string | null;
+  /**
+   * O modelo de 15-11 (d54, 17-11-2026): criado a partir do corte, o cliente
+   * paga ao parceiro. O servidor decide-o (`trabalhoClyonDoNovoModelo`).
+   */
+  noNovoModelo?: boolean;
   /** A nota do pedido — o «Anotar» da Mesa (19-10-2026). */
   notas: string | null;
   /** Quando se abriu, já concluído: sem data, está «por ver». */
@@ -1016,6 +1022,8 @@ function CartaoDoTrabalho({
    */
   const aindaSeMuda = (["escolher", "a_espera", "sem_ninguem", "atribuida"] as FaseDaOferta[]).includes(r.fase);
   const ganhos = ganhosDe(t);
+  /** O modelo de 15-11 (d54): o cliente paga ao parceiro — sem «Paga à CLYON», sem referências ao cliente. */
+  const novoModelo = t.noNovoModelo === true;
   /*
    * A PROPOSTA NO WHATSAPP DO CLIENTE — 08-10-2026. Sem preço ao cliente (um
    * antigo sem ele) ou sem telemóvel que abra no WhatsApp, não há botão; e
@@ -1025,7 +1033,7 @@ function CartaoDoTrabalho({
     r.fase === "cancelada"
       ? null
       : linkDaPropostaClyon(
-          { ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null },
+          { ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null, novoModelo: novoModelo },
           new Date(),
         );
   /*
@@ -1064,15 +1072,24 @@ function CartaoDoTrabalho({
    * dinheiro do cliente conta como recebido — é o que a carteira já assume
    * de um Trabalho CLYON (`oClientePagou`).
    */
-  const conta =
+  const contaAntiga =
     r.fase === "cancelada" ? null : contaDoTrabalhoClyon(t, r.fase === "confirmada" || r.fase === "paga", Boolean(a?.semFactura));
+  /*
+   * NO MODELO DE 15-11 (d54) a conta é a do modelo novo: o cliente paga ao
+   * profissional, e o profissional passa à CLYON a taxa e o IVA dela. Com quem
+   * o faça, a do servidor (`FaturasDoTrabalho`: o regime e os pagamentos dele,
+   * e a antiga se ele disser que ficou no antigo); antes, a estimativa.
+   */
+  const conta = novoModelo ? null : contaAntiga;
+  const contaNova = r.fase === "cancelada" || !novoModelo || a ? null : contaDoTrabalhoClyonNoNovoModelo(t);
   /*
    * «ENVIAR VALORES PARA PAGAMENTO» — 05-11-2026 (d19). Há quem faça o
    * trabalho, há valor final (a conta), há telemóvel, e o cliente ainda não
    * pagou: nem pagamento entrado, nem o profissional já pago.
    */
+  // No modelo novo (d54) não há: o cliente paga ao parceiro, pelo «Enviar adjudicação».
   const valoresParaPagamento =
-    a && conta && t.telefone && !a.clientePagouEm && !a.pagoEm
+    !novoModelo && a && conta && t.telefone && !a.clientePagouEm && !a.pagoEm
       ? {
           pedidoId: t.pedidoId,
           cliente: t.cliente,
@@ -1352,6 +1369,14 @@ function CartaoDoTrabalho({
           >
             Cancelar
           </button>
+        </div>
+      ) : novoModelo && a && r.fase !== "cancelada" ? (
+        <div className="mt-3 sm:max-w-xl">
+          <FaturasDoTrabalho negociacaoId={a.negociacaoId} token={token ?? null} contaAntiga={contaAntiga} marcadoNovoNaMesa />
+        </div>
+      ) : contaNova ? (
+        <div className="mt-3 sm:max-w-xl">
+          <ContaDoPagamento conta={contaNova} />
         </div>
       ) : conta ? (
         <div className="mt-3 sm:max-w-xl">
@@ -1725,10 +1750,15 @@ function CartaoDoTrabalho({
           (num de valor fixo é quando o dinheiro dele conta como recebido); o do
           profissional depois de se lhe pagar. Ver `comprovativo-pdf.ts`.
         */}
+        {/* No modelo novo (d54) o cliente não pagou à CLYON nem a CLYON paga ao profissional: as faturas estão no pedido. */}
+        {!novoModelo && (
+          <>
         {a?.confirmadoEm && <BotaoDoComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} para="cliente" />}
         {/* E envia-o ao cliente, pelo WhatsApp da CLYON (24-10-2026). */}
         {a?.confirmadoEm && t.telefone && <BotaoEnviarComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} />}
         {a?.pagoEm && <BotaoDoComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} para="profissional" />}
+          </>
+        )}
         <button
           onClick={onFicha}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
@@ -1769,6 +1799,7 @@ function CartaoDoTrabalho({
                 metodosDePagamento={metodosDePagamento}
                 metodosLidos={metodosLidos}
                 classeDoBotao="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
+                novoModelo={novoModelo}
               />
             )}
             {/*

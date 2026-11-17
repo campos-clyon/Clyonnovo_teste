@@ -88,7 +88,7 @@ export const CORTE_DO_MODELO: CorteDoModelo = "ja_pago_a_clyon";
 /**
  * (2) Os Trabalhos CLYON (valor fixo, a CLYON combina com o cliente) ficam no modelo antigo.
  *
- * d33 (CEO e dono, 15-11-2026, proposta A): os criados a partir de
+ * d33 (CEO e dono, 15-11-2026, proposta A) e d54 (17-11-2026): os criados a partir de
  * `TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE` passam ao modelo de 15-11; os de antes
  * seguem no antigo até ao fim. A regra é uma só — `trabalhoClyonDoModeloAntigo`
  * (em baixo), pela criação do pedido — e já a perguntam o portão do modelo
@@ -96,12 +96,14 @@ export const CORTE_DO_MODELO: CorteDoModelo = "ja_pago_a_clyon";
  * Pagamentos, as Carteiras, a carteira do profissional, o fecho, o acesso ao
  * pagamento, a vista da negociação, o aviso da proposta, a Vitória e a retenção.
  *
- * ESTE INTERRUPTOR CONTINUA LIGADO enquanto faltar o lado do cliente: a página do
- * pedido e a app de cliente mostram a um Trabalho CLYON o cartão «a CLYON trata»
- * (sem o bloco «Pagar a …»), e a app Pro diz-lhe «a CLYON paga-lhe». Desligá-lo
- * antes disso poria o cliente sem saber a quem pagar.
+ * DESLIGADO desde 17-11-2026 (d54, CEO e dono): os Trabalhos CLYON criados a
+ * partir de 15-11-2026 seguem o modelo novo — o cliente paga ao parceiro, e o
+ * parceiro passa à CLYON a taxa (a referência nasce na confirmação). A página do
+ * pedido mostra-lhes o bloco «Pagar a …» (`PagarAoParceiro`, que pergunta ao
+ * servidor), as mensagens dizem «Paga ao parceiro», e o backoffice não gera
+ * referências ao cliente. Os criados antes continuam no antigo, até ao fim.
  */
-export const TRABALHOS_CLYON_NO_MODELO_ANTIGO = true;
+export const TRABALHOS_CLYON_NO_MODELO_ANTIGO = false;
 
 /*
  * O interruptor como os testes o querem ver — d33. Os testes provam os dois
@@ -122,16 +124,17 @@ export function trabalhosClyonTodosNoModeloAntigo(): boolean {
 }
 
 /**
- * d33 — A CRIAÇÃO QUE PASSA UM TRABALHO CLYON AO MODELO DE 15-11: 00:00 de
- * 16-11-2026 em Lisboa (= UTC em Novembro, hora de Inverno).
+ * A CRIAÇÃO QUE PASSA UM TRABALHO CLYON AO MODELO DE 15-11 — d54 (17-11-2026):
+ * 00:00 de 15-11-2026 em Lisboa (= UTC em Novembro, hora de Inverno), o mesmo
+ * instante do modelo. Era 16-11 (d33).
  */
-export const TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE = new Date("2026-11-16T00:00:00Z");
+export const TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE = NOVO_MODELO_DESDE;
 
 /** Como os Termos a dizem: «a partir de …». Um teste confere que bate com a data. */
-export const TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE_POR_EXTENSO = "16 de novembro de 2026";
+export const TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE_POR_EXTENSO = "15 de novembro de 2026";
 
 /** O último dia dos Trabalhos CLYON do modelo antigo, como os Termos o dizem: «registados até …». */
-export const TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO = "15 de novembro de 2026";
+export const TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO = "14 de novembro de 2026";
 
 /**
  * (3) O regime de IVA é obrigatório no perfil, com a mesma transição do IBAN: sem
@@ -219,6 +222,22 @@ export function trabalhoClyonDoModeloAntigo(
   if (!clyon) return false;
   if (trabalhosClyonTodosNoModeloAntigo()) return true;
   return !trabalhoClyonNoNovoModelo(n.pedidoCriadoEm, agora);
+}
+
+/**
+ * UM TRABALHO CLYON QUE SEGUE O MODELO DE 15-11, PELO PEDIDO — d54. Para o que
+ * ainda não tem pagamentos para ler (a proposta ao cliente, a lista dos Trabalhos
+ * CLYON): Trabalho CLYON, o modelo em vigor e criado a partir do corte. Onde há
+ * uma negociação contratada, quem decide é o servidor com os pagamentos lidos
+ * (`negociacaoNoNovoModelo`): um pago à CLYON antes de mudar fica no antigo.
+ */
+export function trabalhoClyonDoNovoModelo(
+  n: { ofertaClyon?: unknown; valorFixoClyon?: unknown; pedidoCriadoEm?: Date | string | null },
+  agora: Date = new Date(),
+): boolean {
+  const clyon = eTrabalhoClyon(n.ofertaClyon) || (n.valorFixoClyon != null && n.valorFixoClyon !== "");
+  if (!clyon || !novoModeloEmVigor(agora)) return false;
+  return !trabalhoClyonDoModeloAntigo(n, agora);
 }
 
 /**

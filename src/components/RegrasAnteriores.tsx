@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { NOVO_MODELO_DESDE_POR_EXTENSO } from "@/lib/novo-modelo";
+import { NOVO_MODELO_DESDE_POR_EXTENSO, TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO } from "@/lib/novo-modelo";
 
 /**
  * AS REGRAS ANTERIORES A 15-11-2026 — d10 (`novo-modelo.ts`).
@@ -7,7 +7,7 @@ import { NOVO_MODELO_DESDE_POR_EXTENSO } from "@/lib/novo-modelo";
  * Nos Termos e na Privacidade o texto do modelo antigo não se apaga: continua a
  * valer para os trabalhos que o cliente já pagou à CLYON antes da data (o corte
  * `CORTE_DO_MODELO = "ja_pago_a_clyon"`), para os que já estavam concluídos e
- * para os Trabalhos CLYON (`TRABALHOS_CLYON_NO_MODELO_ANTIGO`).
+ * para os Trabalhos CLYON registados até 14-11-2026 (d54, `TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE`).
  *
  * Antes da data (`emCaixa` falso) desenha o texto tal e qual, sem nada à volta:
  * a página fica igual à de hoje. A partir da data, mete-o numa caixa com o
@@ -17,7 +17,7 @@ import { NOVO_MODELO_DESDE_POR_EXTENSO } from "@/lib/novo-modelo";
 export const TITULO_DAS_REGRAS_ANTIGAS =
   `Regras anteriores a ${NOVO_MODELO_DESDE_POR_EXTENSO} — valem só para os trabalhos já pagos à CLYON antes ` +
   "dessa data (incluindo os pagos depois por uma referência Multibanco emitida antes dela), para os que nessa " +
-  "data já estavam concluídos e para os trabalhos de valor fixo combinados com a CLYON.";
+  `data já estavam concluídos e para os trabalhos de valor fixo combinados com a CLYON registados até ${TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO}.`;
 
 export function RegrasAnteriores({ emCaixa, children }: { emCaixa: boolean; children: ReactNode }) {
   if (!emCaixa) return <>{children}</>;
