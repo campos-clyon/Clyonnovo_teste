@@ -14,9 +14,9 @@ import {
   PRECOS,
   SEM_IVA_NA_FRASE,
   etiquetaDoEsvaziamento,
-  maisIva,
+  comMaiuscula,
 } from "@/lib/precos-publicos";
-import { esvaziamentoComOIvaAoLado, faixaSemEComIva, valorSemEComIva } from "@/lib/preco-de-referencia";
+import { desdeSemEComIva, esvaziamentoComOIvaAoLado, faixaSemEComIva, valorSemEComIva } from "@/lib/preco-de-referencia";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRESTADOR } from "@/lib/dados-estruturados";
 import {
@@ -49,7 +49,8 @@ const SITE_URL = "https://clyon.pt";
  * apartamento vivem agora dentro dessa faixa e a moradia começa onde ela
  * acaba — nenhum número desta página contradiz o preçário.
  */
-const PRECO_CASA = PRECOS.esvaziamento_casa.etiqueta; // "desde 260 €"
+/** «desde 260 € + IVA (319,80 € com IVA)» — o «desde» com o IVA ao lado (d63). */
+const DESDE_CASA = desdeSemEComIva(PRECOS.esvaziamento_casa.minimo!);
 const PRECO_APARTAMENTO = PRECOS.esvaziamento_apartamento.etiqueta; // "260 – 450 €"
 
 export const metadata: Metadata = {
@@ -58,7 +59,8 @@ export const metadata: Metadata = {
   // Até 155 caracteres, o essencial primeiro e sem frases cortadas: o
   // Google mostra uns 155 e corta o resto a meio (29-09-2026).
   description:
-    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: parceiros retiram móveis, eletrodomésticos e recheio. Preços ${maisIva(PRECO_CASA)}.`,
+    // d63: o «desde» com o IVA ao lado.
+    `Esvaziar casa ou apartamento em Lisboa, Margem Sul e Setúbal: parceiros retiram móveis e recheio. ${comMaiuscula(DESDE_CASA)}.`,
   keywords: [
     "esvaziar casas",
     "esvaziar casa",
@@ -81,7 +83,7 @@ export const metadata: Metadata = {
     // Sem «em Lisboa», como o título: o hub é o das três regiões (29-09-2026).
     title: "Esvaziamento de Casas e Recheios — Heranças",
     description:
-      `Esvaziamento completo de casas, apartamentos e heranças em Lisboa, Margem Sul e Setúbal. Preços ${maisIva(PRECO_CASA)}. Propostas em menos de 6 horas.`,
+      `Esvaziamento de casas, apartamentos e heranças em Lisboa e Setúbal: ${DESDE_CASA}. Propostas em menos de 6 horas.`,
     url: `${SITE_URL}/esvaziamento-de-casas`,
   }),
 };
@@ -93,7 +95,7 @@ const faqs = [
   },
   {
     question: "Quanto custa esvaziar uma casa em Lisboa?",
-    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa custa ${PRECO_CASA}. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, T2 em ${etiquetaDoEsvaziamento("T2")}, T3 em ${etiquetaDoEsvaziamento("T3")}, T4 ou maior em ${etiquetaDoEsvaziamento("T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
+    answer: `O valor depende do volume, acessos, andar e elevador. Um esvaziamento de casa custa ${DESDE_CASA}. Num apartamento fica em ${PRECO_APARTAMENTO}: T0/T1 em ${etiquetaDoEsvaziamento("T0/T1")}, T2 em ${etiquetaDoEsvaziamento("T2")}, T3 em ${etiquetaDoEsvaziamento("T3")}, T4 ou maior em ${etiquetaDoEsvaziamento("T4")}. Numa moradia completa, ${etiquetaDoEsvaziamento("moradia")}. Descreva o imóvel com fotos e recebe propostas ${PROPOSTAS_EM_ATE}. ${NOTA_DE_PRECO.curta}`,
   },
   {
     question: "Fazem esvaziamento de casas de herança?",
