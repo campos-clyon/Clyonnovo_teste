@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-17-3",
+      "nota": "Nos trabalhos com preço fechado pela CLYON registados desde 16/11, o cliente paga-lhe diretamente.\nQuando o trabalho fica confirmado, passa à CLYON a taxa da plataforma e o IVA dela pela referência.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-17-2",
       "nota": "Na folha da mudança a equipa vai de 2 a 8 pessoas; acima de 3, só com o acordo do cliente marcado.\nNo valor sugerido, o valor fica consigo e passa a taxa à CLYON; a hora: 40 €/h (2 pessoas) e 55 €/h (3).",
       "updates": []
@@ -43,6 +48,11 @@
     }
   ],
   "cliente": [
+    {
+      "id": "cliente-2026-11-17-2",
+      "nota": "Nos trabalhos com preço fechado pela CLYON pedidos desde 16/11, paga diretamente ao parceiro que faz o trabalho.\nO pedido mostra como lhe pagar, com o IBAN e o MB WAY dele.",
+      "updates": []
+    },
     {
       "id": "cliente-2026-11-17",
       "nota": "Quando há elevador, o pedido pergunta se as peças grandes cabem nele, e o valor que vê é o que fica no pedido.\nA mesma pergunta aparece ao alterar o acesso do pedido.",

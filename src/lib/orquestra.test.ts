@@ -808,17 +808,13 @@ const NOME_DO_MODELO_ANTIGO = /antig/i;
 const DESENHADOS_NOS_DOIS_LADOS = new Set(["src/app/termos/page.tsx", "src/app/privacidade/page.tsx"]);
 /*
  * d54 (17-11-2026): o interruptor desligou-se e as mensagens do site escolhem
- * pela data (as frases antigas vivem em declarações com «ANTIGO» no nome). Fica
- * só o ecrã do Trabalho CLYON da app de cliente, à espera do departamento de
- * Apps (o modelo de 15-11 na app) — sai daqui quando a app o tiver.
+ * pela data (as frases antigas vivem em declarações com «ANTIGO» no nome). O
+ * ecrã do Trabalho CLYON da app de cliente também já tem o modelo de 15-11
+ * (d54, apps): a regra vale para todos.
  */
-const DO_TRABALHO_CLYON_A_ESPERA_DAS_APPS = new Set([
-  "app-cliente/src/componentes/TrabalhoClyon.tsx",
-]);
 const A_REGRA_S_SE_APLICA = (f: string) =>
   (O_CLIENTE_LE(f) || DO_LADO_DO_PROFISSIONAL(f)) &&
-  !DESENHADOS_NOS_DOIS_LADOS.has(f) &&
-  !DO_TRABALHO_CLYON_A_ESPERA_DAS_APPS.has(f);
+  !DESENHADOS_NOS_DOIS_LADOS.has(f);
 const ePorRegrasAnteriores = (n: ts.Node, sf: ts.SourceFile) =>
   (ts.isJsxElement(n) && n.openingElement.tagName.getText(sf) === "RegrasAnteriores") ||
   ((ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) && n.tagName.getText(sf) === "RegrasAnteriores");
