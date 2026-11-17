@@ -300,6 +300,8 @@ describe("app Pro: a folha a meio sobrevive a fechar a app", () => {
       fim: "",
       pausas: [{ inicio: "12:30", fim: "" }],
       pessoas: 3,
+      // d70: o acordo das pessoas a mais só conta acima de 3.
+      acordo: false,
       km: "23,5",
       materiais: { caixas: "12", cartaoMetros: "2,5", plasticoBolhaRolos: "1" },
     });

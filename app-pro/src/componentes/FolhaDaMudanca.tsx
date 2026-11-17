@@ -20,7 +20,18 @@ import {
 import { HORA_DE_FIM, HORA_DE_INICIO, agoraNoCampo } from "../../../src/lib/horas-do-trabalho";
 import type { QuantidadeDoMaterial } from "../../../src/lib/conta-da-mudanca";
 import type { Trabalho } from "../lib/trabalhos";
-import { camposDeAbrir, folhaAMeioVale, rascunhoMaisRecente } from "../lib/folha-a-meio";
+import {
+  acordoJaMarcado,
+  camposDeAbrir,
+  equipaNoCorpo,
+  folhaAMeioVale,
+  horaDasPessoasAMais,
+  opcoesDaEquipa,
+  pedeOAcordo,
+  precoPorPessoaAMaisEmTexto,
+  rascunhoMaisRecente,
+} from "../lib/folha-a-meio";
+import { CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS, type PessoasDaFolha } from "../../../src/lib/tabela-das-mudancas";
 import { apagarFolhaAMeio, guardarFolhaAMeio, lerFolhaAMeio } from "../lib/folha-guardada";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
@@ -39,6 +50,13 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  * (`rascunho: true` na mesma rota — não envia a folha nem avisa o cliente).
  * Ao reabrir repõe-se o mais novo dos dois; sem início escrito, vem a hora do
  * «Cheguei» (hora de Lisboa). Enviar a folha apaga o rascunho.
+ *
+ * A EQUIPA DE 2 A 8 — d70, 17-11-2026, como no painel. Vai até
+ * `campos.pessoasMaximas`; acima de 3 aparece a caixa
+ * `CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS` com a hora que dá
+ * (`precoDaHoraParaPessoas`), e o pedido leva `pessoasDaFolha` e
+ * `acordoDasPessoasAMais: true` só marcada. Sem o acordo o site recusa (400) e
+ * a frase dele aparece aqui.
  */
 const ROTA_DAS_HORAS = "/api/profissionais/trabalho/horas";
 /** Quanto se espera, depois da última tecla, para mandar o rascunho ao site. */
@@ -57,7 +75,8 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
   const [inicio, setInicio] = useState(aoAbrir.inicio);
   const [fim, setFim] = useState(aoAbrir.fim);
   const [pausas, setPausas] = useState<Array<{ inicio: string; fim: string }>>(aoAbrir.pausas);
-  const [pessoas, setPessoas] = useState<2 | 3>(aoAbrir.pessoas);
+  const [pessoas, setPessoas] = useState<PessoasDaFolha>(aoAbrir.pessoas);
+  const [acordo, setAcordo] = useState<boolean>(aoAbrir.acordo);
   const [km, setKm] = useState(aoAbrir.km);
   const [motivoDosKm, setMotivoDosKm] = useState(campos.motivoDosKm);
   const [materiais, setMateriais] = useState<Partial<Record<QuantidadeDoMaterial, string>>>(aoAbrir.materiais);
@@ -76,6 +95,7 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
     setFim(a.fim);
     setPausas(a.pausas);
     setPessoas(a.pessoas);
+    setAcordo(a.acordo);
     setKm(a.km);
     setMateriais(a.materiais);
   }
@@ -104,7 +124,7 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
   // A cada mudança dele: no telemóvel já, e no site pouco depois da última tecla. Só horas e quantidades.
   useEffect(() => {
     if (!editavel || !mexeu.current) return;
-    const rascunho = { dia: campos.dia, inicio: inicio.trim(), fim: fim.trim(), pausas, pessoas, km, materiais };
+    const rascunho = { dia: campos.dia, inicio: inicio.trim(), fim: fim.trim(), pausas, ...equipaNoCorpo(pessoas, acordo), km, materiais };
     void guardarFolhaAMeio(t.negociacaoId, rascunho);
     if (espera.current) clearTimeout(espera.current);
     espera.current = setTimeout(() => {
@@ -113,7 +133,7 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
       pedir(ROTA_DAS_HORAS, { metodo: "POST", corpo: { negociacaoId: t.negociacaoId, rascunho: true, ...rascunho } }).catch(() => undefined);
     }, ESPERA_DO_RASCUNHO_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inicio, fim, pausas, pessoas, km, materiais]);
+  }, [inicio, fim, pausas, pessoas, acordo, km, materiais]);
   useEffect(
     () => () => {
       if (espera.current) clearTimeout(espera.current);
@@ -131,18 +151,25 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
   const mudarInicio = porEle(setInicio);
   const mudarFim = porEle(setFim);
   const mudarPausas = porEle(setPausas);
-  const mudarPessoas = porEle(setPessoas);
+  // Mudar a equipa pede o acordo outra vez (salvo se voltar à equipa que já o tinha).
+  const mudarPessoas = porEle((n: PessoasDaFolha) => {
+    setPessoas(n);
+    setAcordo(acordoJaMarcado(campos, n));
+  });
+  const mudarAcordo = porEle(setAcordo);
   const mudarKm = porEle(setKm);
   const mudarMateriais = porEle(setMateriais);
 
-  const corpo = { dia: campos.dia, inicio: inicio.trim(), fim: fim.trim(), pausas, pessoas, km, motivoDosKm, materiais };
+  const corpo = { dia: campos.dia, inicio: inicio.trim(), fim: fim.trim(), pausas, ...equipaNoCorpo(pessoas, acordo), km, motivoDosKm, materiais };
   const previsao = useMemo((): { ecra: FolhaNoEcra | null; erro: string | null } => {
     const ctx = contextoDaFolha(f.contexto);
     if (!ctx || !inicio.trim() || !fim.trim()) return { ecra: null, erro: null };
     const r = lerFolha(corpo, ctx);
     return r.ok ? { ecra: folhaNoEcra(r.folha, "parceiro", ctx.tarifa.minimoHoras), erro: null } : { ecra: null, erro: r.erro };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inicio, fim, pausas, pessoas, km, motivoDosKm, materiais, f.contexto]);
+  }, [inicio, fim, pausas, pessoas, acordo, km, motivoDosKm, materiais, f.contexto]);
+  const horaAMais = horaDasPessoasAMais(campos, pessoas);
+  const maisDeTres = opcoesDaEquipa(campos).filter(pedeOAcordo);
   const kmDiferentes = campos.kmDoPercurso != null && Math.abs(Number(km.replace(",", ".")) - campos.kmDoPercurso) >= 0.5;
   const mostrar = editavel ? previsao.ecra : f.enviada;
 
@@ -258,6 +285,48 @@ export function FolhaDaMudanca({ t }: { t: Trabalho }) {
               );
             })}
           </View>
+          {maisDeTres.length > 0 ? (
+            <View style={{ gap: ESPACO.xs }}>
+              <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>Mais de 3 pessoas</Text>
+              <View style={estilos.chips}>
+                {maisDeTres.map((n) => {
+                  const escolhido = pessoas === n;
+                  return (
+                    <Pressable
+                      key={n}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${n} pessoas`}
+                      accessibilityState={{ selected: escolhido }}
+                      onPress={() => mudarPessoas(n)}
+                      style={[estilos.chip, { borderColor: escolhido ? c.marca : c.linha }]}
+                    >
+                      <Text style={{ color: escolhido ? c.marca : c.tinta, fontWeight: "700" }}>{n}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+          {pedeOAcordo(pessoas) ? (
+            <View style={[estilos.acordo, { borderColor: c.aviso }]}>
+              <Text style={{ color: c.tinta }}>
+                Cada pessoa a mais soma {precoPorPessoaAMaisEmTexto()} à hora da equipa de 3
+                {horaAMais ? `: com ${pessoas} pessoas, ${horaAMais}` : ""}. Só com o acordo do cliente — ele vê-o ao confirmar a folha.
+              </Text>
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityLabel={CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS}
+                accessibilityState={{ checked: acordo }}
+                onPress={() => mudarAcordo(!acordo)}
+                style={estilos.linha}
+              >
+                <View style={[estilos.visto, { borderColor: acordo ? c.marca : c.linha, backgroundColor: acordo ? c.marca : "transparent" }]}>
+                  {acordo ? <Text style={{ color: c.fundo, fontWeight: "800" }}>✓</Text> : null}
+                </View>
+                <Text style={{ flex: 1, color: c.tinta, fontWeight: "700" }}>{CAIXA_DO_ACORDO_DAS_PESSOAS_A_MAIS}</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>
             Km{campos.kmDoPercurso != null ? ` (o percurso dá ${String(campos.kmDoPercurso).replace(".", ",")} km)` : ""}
@@ -350,6 +419,10 @@ const estilos = StyleSheet.create({
   pequeno: { borderWidth: 1, borderRadius: RAIO.m, paddingHorizontal: ESPACO.s, justifyContent: "center", minHeight: 50 },
   opcao: { flex: 1, borderWidth: 2, borderRadius: RAIO.m, minHeight: 48, alignItems: "center", justifyContent: "center" },
   linha: { flexDirection: "row", alignItems: "center", gap: ESPACO.s },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: ESPACO.s },
+  chip: { borderWidth: 2, borderRadius: RAIO.m, minHeight: 48, minWidth: 52, alignItems: "center", justifyContent: "center" },
+  acordo: { borderWidth: 1, borderRadius: RAIO.m, padding: ESPACO.m, gap: ESPACO.s },
+  visto: { width: 26, height: 26, borderWidth: 2, borderRadius: 6, alignItems: "center", justifyContent: "center" },
   lado: { flexDirection: "row", alignItems: "flex-start", gap: ESPACO.s },
   resumo: { borderRadius: RAIO.m, padding: ESPACO.m, gap: ESPACO.xs },
 });

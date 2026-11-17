@@ -18,6 +18,15 @@ import {
 } from "../../../src/lib/folha-da-mudanca";
 import { horaNoCampo } from "../../../src/lib/horas-do-trabalho";
 import type { QuantidadeDoMaterial } from "../../../src/lib/conta-da-mudanca";
+import {
+  PESSOAS_DA_FOLHA,
+  PESSOAS_NA_EQUIPA,
+  PRECO_POR_PESSOA_A_MAIS_SEM_IVA,
+  ePessoasDaFolha,
+  precoDaHoraParaPessoas,
+  type PessoasDaFolha,
+} from "../../../src/lib/tabela-das-mudancas";
+import { TAXA_IVA } from "../../../src/lib/taxas-plataforma";
 
 // ── A folha da mudança a meio ───────────────────────────────────────────────
 //
@@ -71,10 +80,80 @@ export type CamposAMeio = {
   inicio: string;
   fim: string;
   pausas: Array<{ inicio: string; fim: string }>;
-  pessoas: 2 | 3;
+  /** 2 a 8 (d70). */
+  pessoas: PessoasDaFolha;
+  /** d70: «O cliente concordou com as pessoas a mais» — já marcado na folha enviada, para esta equipa. */
+  acordo: boolean;
   km: string;
   materiais: Partial<Record<QuantidadeDoMaterial, string>>;
 };
+
+// ── A equipa da folha, de 2 a 8 (d70, 17-11-2026) ──────────────────────────
+//
+// O site aceita na folha de 2 a `pessoasMaximas` pessoas; acima de 3, a hora é
+// a da equipa de 3 mais `PRECO_POR_PESSOA_A_MAIS_SEM_IVA` por pessoa, e só com o
+// acordo do cliente marcado (sem ele, o site responde 400). Um site antigo, que
+// ainda não mande os campos da d70, fica com 2 ou 3 como antes.
+
+/** A equipa verdadeira da folha que o site manda (2 a 8). */
+export function equipaDaFolha(campos: CamposDaFolha): PessoasDaFolha {
+  return ePessoasDaFolha(campos.pessoasDaFolha) ? campos.pessoasDaFolha : campos.pessoas;
+}
+
+/** Até quantas pessoas a folha vai: o que o site diz, ou 3/2 (com ou sem preço de 3) num site antigo. */
+export function equipaMaxima(campos: CamposDaFolha): PessoasDaFolha {
+  if (!campos.podeTres) return 2;
+  return ePessoasDaFolha(campos.pessoasMaximas) ? campos.pessoasMaximas : PESSOAS_NA_EQUIPA;
+}
+
+/** Esta equipa pode escolher-se nesta folha? */
+export function equipaPossivel(campos: CamposDaFolha, n: number): n is PessoasDaFolha {
+  return ePessoasDaFolha(n) && n <= equipaMaxima(campos) && (n < 3 || campos.podeTres);
+}
+
+/** As escolhas da equipa no ecrã: de 2 até ao máximo desta folha. */
+export function opcoesDaEquipa(campos: CamposDaFolha): PessoasDaFolha[] {
+  return PESSOAS_DA_FOLHA.filter((n) => equipaPossivel(campos, n));
+}
+
+/** Acima de 3 pede-se a caixa do acordo do cliente. */
+export const pedeOAcordo = (pessoas: number): boolean => pessoas > PESSOAS_NA_EQUIPA;
+
+/**
+ * O acordo já está marcado para esta equipa? Só quando a folha enviada tinha
+ * o acordo e é a mesma equipa — mudar o número pede o acordo outra vez.
+ */
+export function acordoJaMarcado(campos: CamposDaFolha, pessoas: PessoasDaFolha): boolean {
+  return pedeOAcordo(pessoas) && campos.acordoDasPessoasAMais === true && equipaDaFolha(campos) === pessoas;
+}
+
+const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+
+/**
+ * A HORA COM AS PESSOAS A MAIS, em palavras: «75,00 €/h + IVA (92,25 € com
+ * IVA)». Null com 2 ou 3, ou sem a hora da equipa de 3 desta folha.
+ */
+export function horaDasPessoasAMais(campos: CamposDaFolha, pessoas: PessoasDaFolha): string | null {
+  if (!pedeOAcordo(pessoas) || campos.horaDaEquipaDe3Cent == null) return null;
+  const sem = precoDaHoraParaPessoas(campos.horaDaEquipaDe3Cent / 100, pessoas);
+  return `${euros(sem)}/h + IVA (${euros(Math.round(sem * (1 + TAXA_IVA) * 100) / 100)} com IVA)`;
+}
+
+/** O que cada pessoa a mais soma, em palavras: «13,00 € + IVA (15,99 € com IVA)». */
+export const precoPorPessoaAMaisEmTexto = (): string =>
+  `${euros(PRECO_POR_PESSOA_A_MAIS_SEM_IVA)} + IVA (${euros(Math.round(PRECO_POR_PESSOA_A_MAIS_SEM_IVA * (1 + TAXA_IVA) * 100) / 100)} com IVA)`;
+
+/**
+ * A EQUIPA NO PEDIDO À ROTA DAS HORAS: `pessoas` e `pessoasDaFolha` com a
+ * equipa verdadeira (o site lê `pessoas` na folha e `pessoasDaFolha` no
+ * rascunho) e, acima de 3, `acordoDasPessoasAMais` — `true` só marcada.
+ */
+export function equipaNoCorpo(
+  pessoas: PessoasDaFolha,
+  acordo: boolean,
+): { pessoas: PessoasDaFolha; pessoasDaFolha: PessoasDaFolha; acordoDasPessoasAMais?: true } {
+  return { pessoas, pessoasDaFolha: pessoas, ...(pedeOAcordo(pessoas) && acordo ? { acordoDasPessoasAMais: true as const } : {}) };
+}
 
 const numeroNoCampo = (n: number): string => String(n).replace(".", ",");
 
@@ -92,12 +171,16 @@ export function camposDeAbrir(campos: CamposDaFolha, chegouEm: string | null | u
       if (q != null && q > 0) materiais[m.quantidade] = numeroNoCampo(q);
     }
   }
-  const pessoas = rascunho?.pessoas ?? campos.pessoas;
+  // d70: o rascunho traz a equipa verdadeira em `pessoasDaFolha` (acima de 3); a folha enviada também.
+  const pedida = rascunho?.pessoasDaFolha ?? rascunho?.pessoas ?? equipaDaFolha(campos);
+  const daFolha = equipaDaFolha(campos);
+  const pessoas: PessoasDaFolha = equipaPossivel(campos, pedida) ? pedida : equipaPossivel(campos, daFolha) ? daFolha : 2;
   return {
     inicio: (rascunho?.inicio ?? campos.inicio) || horaNoCampo(chegouEm ?? null),
     fim: rascunho?.fim ?? campos.fim,
     pausas: rascunho ? rascunho.pausas.map((p) => ({ inicio: p.inicio, fim: p.fim ?? "" })) : campos.pausas,
-    pessoas: pessoas === 3 && !campos.podeTres ? campos.pessoas : pessoas,
+    pessoas,
+    acordo: acordoJaMarcado(campos, pessoas),
     km: rascunho?.km != null ? numeroNoCampo(rascunho.km) : campos.km,
     materiais: rascunho ? materiais : campos.materiais,
   };
