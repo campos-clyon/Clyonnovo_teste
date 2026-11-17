@@ -201,10 +201,12 @@ describe("app Pro (d70): reabrir uma folha de 4 a 8", () => {
 });
 
 describe("app Pro (d70): a nota da próxima atualização", () => {
-  it("a primeira nota da Pro fala da equipa de 2 a 8 e do acordo do cliente", () => {
+  // d54 (17-11-2026): a d70 sai na mesma atualização, com a nota pro-2026-11-17-3 por cima — procura-se pelo id.
+  it("a nota da d70 fala da equipa de 2 a 8 e do acordo do cliente", () => {
     const notas = JSON.parse(ler("src/lib/notas-das-apps.json")) as { pro: Array<{ id: string; nota: string }> };
-    expect(notas.pro[0].id).toBe("pro-2026-11-17-2");
-    expect(notas.pro[0].nota).toMatch(/de 2 a 8 pessoas/);
-    expect(notas.pro[0].nota).toMatch(/acordo do cliente/);
+    const d70 = notas.pro.find((n) => n.id === "pro-2026-11-17-2");
+    expect(d70).toBeDefined();
+    expect(d70!.nota).toMatch(/de 2 a 8 pessoas/);
+    expect(d70!.nota).toMatch(/acordo do cliente/);
   });
 });
