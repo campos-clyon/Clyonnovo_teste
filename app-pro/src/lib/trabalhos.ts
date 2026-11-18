@@ -17,6 +17,7 @@ import type { DiaDoTrabalho } from "../../../src/lib/varios-dias";
 import type { DiaReal } from "../../../src/lib/registo-real";
 import { avisoDaBase, lerBase } from "../../../src/lib/base-do-preco";
 import type { PercursoParaOParceiro } from "../../../src/lib/mapa-do-percurso";
+import type { ComoRecebe } from "../../../src/lib/como-recebe-no-novo-modelo";
 import {
   accoesDisponiveis,
   MAX_PROPOSTAS_POR_LADO,
@@ -171,6 +172,26 @@ export type Trabalho = {
    * do modelo novo ou sem valor acordado. Opcional: um site antigo não o manda.
    */
   aPassarAClyon?: number | null;
+  /**
+   * A frase do valor no modelo de 15-11 — d4 (18-11-2026): «fica consigo; a
+   * taxa da plataforma e o IVA dela passam à CLYON · o valor é sem IVA»
+   * (`fraseDoValorNoNovoModelo` de `GET /api/profissionais/meus-pedidos`).
+   * `null` fora do modelo novo. Opcional: um site antigo não o manda.
+   */
+  fraseDoValorNoNovoModelo?: string | null;
+  /**
+   * O «Como recebe» do trabalho contratado do modelo de 15-11 — d4: como o
+   * cliente escolheu pagar-lhe, a frase do valor, quanto passa à CLYON e até
+   * quando (`comoRecebe` da rota, `como-recebe-no-novo-modelo.ts`). `null` fora
+   * do modelo novo ou antes de contratado.
+   */
+  comoRecebe?: ComoRecebe | null;
+  /**
+   * O pedido fechou pela validade do orçamento — d2 (18-11-2026): «Fechado: o
+   * cliente não respondeu ao orçamento.», não «cancelado» (`pedidoFechadoSemResposta`
+   * da rota). Opcional: um site antigo não o manda.
+   */
+  pedidoFechadoSemResposta?: boolean;
   /** O que uma carga vale na carrinha dele, num pedido por carga (`carga-da-carrinha.ts`). */
   cargaNaSuaCarrinha: { titulo: string; texto: string; curto: string } | null;
   /** Para o histórico da negociação: quando o cliente avaliou, e com quantas estrelas. */

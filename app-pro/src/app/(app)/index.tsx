@@ -11,6 +11,7 @@ import { OQueHaDeNovo } from "../../componentes/Novidades";
 import { AvisosDoNovoModelo } from "../../componentes/AvisosDoNovoModelo";
 import { AceitarOsTermos } from "../../componentes/AceitarOsTermos";
 import { dataEHora } from "../../../../src/lib/historico-negociacao";
+import { ETIQUETA_DO_FECHO_SEM_RESPOSTA } from "../../../../src/lib/textos-dos-avisos-ao-profissional";
 import { useSessao } from "../../estado/Sessao";
 import { useTrabalhos } from "../../estado/Trabalhos";
 import { useConta } from "../../estado/Conta";
@@ -371,7 +372,10 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
   const foto = fotoFalhou ? undefined : imagensDe(t.filesJson)[0];
   const valor = valorDoCartao(t);
   // Nos Recusados, o porquê no lugar do estado — o `RECUSA` do painel (A14).
-  const recusa = separador === "recusados" ? (RECUSA[chaveDoGrupo(t)] ?? null) : null;
+  // d2: fechado pela validade do orçamento — «fechado: o cliente não respondeu ao orçamento», como o painel.
+  const doGrupo = separador === "recusados" ? (RECUSA[chaveDoGrupo(t)] ?? null) : null;
+  const recusa =
+    doGrupo === RECUSA.cancelado && t.pedidoFechadoSemResposta === true ? { ...doGrupo, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA } : doGrupo;
   const estado = recusa ? null : estadoCurto(t);
   const tempo = tempoDoCartao(t);
   const onde = [t.city, distanciaDe(t)].filter(Boolean).join(" · ");

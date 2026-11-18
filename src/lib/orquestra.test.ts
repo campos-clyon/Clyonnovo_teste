@@ -177,22 +177,16 @@ interface Excepcao {
  *    (28-10-2026) e a da app com o EAS Update de 29-10-2026: os dois dizem
  *    VALOR_QUE_MUDA_NO_LOCAL (ajuste-no-local.ts). A lista ficou vazia.
  */
-const EXCEPCOES: Excepcao[] = [
-  {
-    ficheiro: "app-pro/src/app/trabalho/[id].tsx",
-    regra: "d4-passa-sem-iva",
-    motivo:
-      "apps: temporária (d4, 18-11-2026) — a app CLYON Pro ainda escreve à mão «a taxa da plataforma passa-a à CLYON»; " +
-      "passa a ler `fraseDoValorNoNovoModelo` de /api/profissionais/meus-pedidos no próximo EAS Update das Apps, e esta sai.",
-  },
-];
+const EXCEPCOES: Excepcao[] = [];
 
 /**
  * Desce sempre que a lista desce. Nunca sobe. Está em 0 desde 29-10-2026; as 3
  * temporárias da d16 (13-11-2026) saíram no mesmo dia com a parte do I&D — os
  * avisos aos modelos lêem «o que a CLYON faz» de `frase-unica.ts`, pela data.
+ * A temporária da d4 (18-11-2026, a app CLYON Pro) saiu no mesmo dia: a app lê
+ * `fraseDoValorNoNovoModelo` da rota, com a frase única do site como recurso.
  */
-const TAMANHO_MAXIMO = 1; // d4: a temporária da app CLYON Pro; volta a 0 quando sair.
+const TAMANHO_MAXIMO = 0;
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):

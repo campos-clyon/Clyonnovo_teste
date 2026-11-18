@@ -6,6 +6,7 @@ import { Text } from "./Texto";
 import { Botao, Mensagem } from "./ui";
 import { ErroDaApi, pedir, SITE } from "../lib/api";
 import { mostrarOsTermos, ROTA_DOS_TERMOS, termosLidos, type EstadoDosTermos } from "../lib/novo-modelo";
+import { useConta } from "../estado/Conta";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /**
@@ -24,8 +25,21 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
  */
 let adiadoNestaAbertura: string | null = null;
 
+/*
+ * ABRIR OS TERMOS DE OUTRO SÍTIO — d1 (18-11-2026): a linha «Termos» do cartão
+ * «Pronto para receber pedidos» abre este mesmo ecrã (como o ABRIR_OS_TERMOS do
+ * painel), mesmo depois de «Agora não». Quem diz se aparece continua a ser o
+ * servidor (`precisaDeAceitar`).
+ */
+const quemAbre = new Set<() => void>();
+export function abrirOsTermos(): void {
+  adiadoNestaAbertura = null;
+  quemAbre.forEach((abrir) => abrir());
+}
+
 export function AceitarOsTermos() {
   const c = useCores();
+  const { recarregarCarteira } = useConta();
   const [estado, setEstado] = useState<EstadoDosTermos | null>(null);
   const [marcada, setMarcada] = useState(false);
   const [aGravar, setAGravar] = useState(false);
@@ -33,16 +47,21 @@ export function AceitarOsTermos() {
 
   useEffect(() => {
     let vivo = true;
-    pedir<unknown>(ROTA_DOS_TERMOS)
-      .then((r) => {
-        const t = termosLidos(r);
-        if (vivo && mostrarOsTermos(t, adiadoNestaAbertura)) setEstado(t);
-      })
-      .catch(() => {
-        // Sem rede, ou um site sem a rota: não se mostra nada; volta a perguntar na próxima abertura.
-      });
+    const ler = () => {
+      pedir<unknown>(ROTA_DOS_TERMOS)
+        .then((r) => {
+          const t = termosLidos(r);
+          if (vivo && mostrarOsTermos(t, adiadoNestaAbertura)) setEstado(t);
+        })
+        .catch(() => {
+          // Sem rede, ou um site sem a rota: não se mostra nada; volta a perguntar na próxima abertura.
+        });
+    };
+    ler();
+    quemAbre.add(ler);
     return () => {
       vivo = false;
+      quemAbre.delete(ler);
     };
   }, []);
 
@@ -61,6 +80,8 @@ export function AceitarOsTermos() {
     try {
       await pedir(ROTA_DOS_TERMOS, { metodo: "POST", corpo: { versao: estado.versao, aceito: true } });
       setEstado(null);
+      // d1: a linha «Termos» do cartão «Pronto para receber pedidos» passa a feita.
+      void recarregarCarteira();
     } catch (e) {
       setErro(e instanceof ErroDaApi ? e.message : "Não foi possível guardar. Tente novamente.");
     } finally {

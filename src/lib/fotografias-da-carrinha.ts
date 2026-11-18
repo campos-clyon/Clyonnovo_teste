@@ -64,7 +64,7 @@ export const MENSAGEM_FOTOGRAFIA_ESTRANHA =
  * o que está assinalado» sem nada assinalado; esta frase diz-lhe o que fazer.
  */
 export const MENSAGEM_SEM_FOTOGRAFIA_NA_APP =
-  "Falta a fotografia da carrinha, e nesta versão da app ainda não dá para a juntar. Candidate-se em clyon.pt/quero-ser-parceiro: leva dois minutos.";
+  "Falta a fotografia da carrinha, e nesta versão da app ainda não dá para a juntar. Candidate-se em clyon.pt/quero-ser-parceiro.";
 
 const EXTENSOES_DE_IMAGEM = /\.(?:jpe?g|png|webp|heic|heif)$/i;
 

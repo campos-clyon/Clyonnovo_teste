@@ -21,6 +21,8 @@ import { COMPLETAR_O_PERFIL } from "../../../src/lib/dados-para-receber";
 import { perguntasDoProfissional, type PerguntaFrequente } from "../../../src/lib/ajuda-plataforma";
 import type { Taxas } from "../../../src/lib/taxas-plataforma";
 import { PARTE_DA_CLYON_COM_RESERVA } from "../../../src/lib/reserva";
+import { diaEMesEmLisboa, type EstadoDoValorAPassar } from "../../../src/lib/como-recebe-no-novo-modelo";
+import type { ProntoParaReceber } from "../../../src/lib/pronto-para-receber";
 
 export { PAGAR_O_VALOR_EM_ATRASO, NOME_DA_FATURA, MENSAGENS_DA_FATURA, COMO_PAGAR_EM_PALAVRAS, PARTE_DA_CLYON_COM_RESERVA };
 
@@ -45,9 +47,18 @@ export type NovoModeloDaCarteira = {
     multibanco: { entidade: string | null; referencia: string | null } | null;
     /** d39/d55: com valor único a parte da CLYON leva a reserva. O site manda-o; sem ele, fica a frase de hoje. */
     comReserva?: boolean;
+    /** d4: «a_passar» dentro do prazo, «em_atraso» só depois dele. O site manda-o; sem ele, compara-se o prazo. */
+    estado?: EstadoDoValorAPassar;
+    /** d4: «A passar à CLYON · X € até dd/mm» ou «Em atraso · …», em hora de Lisboa (do site). */
+    linha?: string;
   }>;
   standBy: { total: number; accao: string; explicacao: string; negociacoes: number[] } | null;
   dadosParaReceber: DadosParaReceber | null;
+  /**
+   * d1 (18-11-2026): o cartão «Pronto para receber pedidos», linha a linha, já
+   * decidido no servidor (`pronto-para-receber.ts`). Opcional: um site antigo não o manda.
+   */
+  prontoParaReceber?: ProntoParaReceber | null;
 };
 
 /** O bloco `novoModelo` de `GET /api/profissionais/perfil` — `null` antes de 15-11. */
@@ -155,16 +166,27 @@ export const AJUDA_DA_FATURA_NA_APP =
 // ── d18 (13-11-2026): a faixa do Início, o regime por um toque e os Termos ──
 
 /**
- * A FAIXA DO VALOR EM ATRASO NO INÍCIO — d18. Fora do stand-by, quem tem um
- * valor por passar à CLYON vê-o logo à entrada, com o prazo dos 4 dias (o prazo
- * mais próximo vem do site, `prazoAte`) e o botão «Pagar o valor em atraso»,
- * que leva à carteira. Em stand-by diz-se a frase do site (`standBy.explicacao`).
- * `null` sem nada a pagar, e sempre antes de 15-11 (o site não manda `novoModelo`).
+ * A FAIXA DO VALOR A PASSAR À CLYON NO INÍCIO — d18, revista na d4 (18-11-2026).
+ * Fora do stand-by, quem tem um valor por passar à CLYON vê-o logo à entrada,
+ * com o prazo dos 4 dias (o prazo mais próximo vem do site, `prazoAte`) e um
+ * botão que leva à carteira. Dentro do prazo diz-se «A passar à CLYON · X € até
+ * dd/mm»; «Valor em atraso» só depois dele (o `estado` de cada valor vem do
+ * site; um site antigo sem ele, compara-se o prazo). Em stand-by diz-se a frase
+ * do site (`standBy.explicacao`). `null` sem nada a pagar, e sempre antes de
+ * 15-11 (o site não manda `novoModelo`).
  */
+export const PAGAR_A_CLYON = "Pagar à CLYON";
+
+/** Este valor já está em atraso? O site diz (`estado`); sem ele, o prazo. */
+export function valorEmAtraso(v: Pick<NovoModeloDaCarteira["valores"][number], "estado" | "prazoAte">, agora: number): boolean {
+  return v.estado ? v.estado === "em_atraso" : passouDoPrazo(v.prazoAte, agora);
+}
+
 export function faixaDoValorEmAtraso(
   nm: NovoModeloDaCarteira | null | undefined,
   euros: (n: number) => string,
   dia: (iso: string | null) => string | null,
+  agora: number = Date.now(),
 ): { standBy: boolean; titulo: string; texto: string; botao: string } | null {
   if (!nm) return null;
   if (nm.standBy) {
@@ -175,14 +197,21 @@ export function faixaDoValorEmAtraso(
   const prazos = nm.valores.map((v) => v.prazoAte).filter((p): p is string => !!p).sort();
   const ate = prazos.length > 0 ? dia(prazos[0]) : null;
   const trabalhos = nm.valores.length === 1 ? "de 1 trabalho" : `de ${nm.valores.length} trabalhos`;
+  const atraso = nm.valores.some((v) => valorEmAtraso(v, agora));
+  const unico = nm.valores.length === 1 ? nm.valores[0] : null;
+  const titulo = atraso
+    ? `Valor em atraso · ${euros(total)}`
+    : unico?.linha
+      ? unico.linha
+      : `A passar à CLYON · ${euros(total)}${prazos.length > 0 ? ` até ${diaEMesEmLisboa(new Date(prazos[0]))}` : ""}`;
   return {
     standBy: false,
-    titulo: `Valor em atraso · ${euros(total)}`,
+    titulo,
     texto:
       `${nm.valores.some((v) => v.comReserva === true) ? `A ${PARTE_DA_CLYON_COM_RESERVA}` : "A taxa da plataforma"} e o IVA dela ${trabalhos}. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias depois de o trabalho ficar confirmado` +
       (ate ? `: pague até ${ate}.` : ".") +
       " Depois disso, a conta fica em stand-by até pagar.",
-    botao: PAGAR_O_VALOR_EM_ATRASO,
+    botao: atraso ? PAGAR_O_VALOR_EM_ATRASO : PAGAR_A_CLYON,
   };
 }
 

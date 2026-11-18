@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-18-2",
+      "nota": "No trabalho contratado vê como o cliente lhe paga e o que passa à CLYON (a taxa e o IVA dela), até quando.\nNo Início, «Pronto para receber pedidos» mostra o que falta, linha a linha.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-18",
       "nota": "Num trabalho em vários dias vê os dias, regista as cargas de cada um e dá-o por feito no último.\nDepois do aceite, a frase do valor diz o que o cliente aceitou; e o registo real das horas aparece no trabalho.",
       "updates": [

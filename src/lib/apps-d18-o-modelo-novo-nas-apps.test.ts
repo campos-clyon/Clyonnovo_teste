@@ -78,17 +78,29 @@ describe("app Pro — a faixa do valor em atraso, com os 4 dias e «Pagar o valo
     expect(faixaDoValorEmAtraso(carteira(), euros, dia)).toBeNull();
   });
 
-  it("com valores: o total, o prazo mais próximo e o botão", () => {
+  it("com valores dentro do prazo: «A passar à CLYON», o prazo mais próximo e o botão (d4: «em atraso» só depois)", () => {
     const f = faixaDoValorEmAtraso(
-      carteira({ valores: [valor(1, 30.75, "2026-11-21T23:59:00Z"), valor(2, 12.3, "2026-11-19T23:59:00Z")] }),
+      carteira({ valores: [valor(1, 30.75, "2026-11-21T23:59:00Z"), valor(2, 12.3, "2026-11-19T22:59:00Z")] }),
       euros,
       dia,
+      Date.parse("2026-11-18T12:00:00Z"),
     );
     expect(f?.standBy).toBe(false);
-    expect(f?.titulo).toBe("Valor em atraso · 43,05 €");
+    expect(f?.titulo).toBe("A passar à CLYON · 43,05 € até 19/11");
     expect(f?.texto).toContain("de 2 trabalhos");
     expect(f?.texto).toContain("Tem 4 dias");
     expect(f?.texto).toContain("pague até 19/11");
+    expect(f?.botao).toBe("Pagar à CLYON");
+  });
+
+  it("passado o prazo (d4): «Valor em atraso» e «Pagar o valor em atraso»", () => {
+    const f = faixaDoValorEmAtraso(
+      carteira({ valores: [valor(1, 30.75, "2026-11-21T23:59:00Z"), valor(2, 12.3, "2026-11-19T22:59:00Z")] }),
+      euros,
+      dia,
+      Date.parse("2026-11-20T12:00:00Z"),
+    );
+    expect(f?.titulo).toBe("Valor em atraso · 43,05 €");
     expect(f?.botao).toBe("Pagar o valor em atraso");
   });
 

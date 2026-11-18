@@ -71,6 +71,7 @@ import {
 } from "../lib/trabalhos";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 import { FaturaDoTrabalho } from "./FaturaDoTrabalho";
+import { ComoRecebe } from "./ComoRecebe";
 
 /**
  * O TRABALHO QUE JÁ É DELE — fase 3 da CLYON Pro, 18-10-2026.
@@ -99,6 +100,8 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       <>
         {obrigado ? <Mensagem tom="bom" texto={obrigado} /> : null}
         <Terminado t={t} />
+        {/* d4: como o cliente lhe paga, o que passa à CLYON e até quando (do servidor). */}
+        <ComoRecebe t={t} />
         <HorasDoTrabalho t={t} />
         {/* d64: os dias e as cargas de cada um (já sem registar). */}
         <DiasDoTrabalho t={t} />
@@ -128,6 +131,8 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
   return (
     <>
       <OTrabalhoESeu t={t} />
+      {/* d4: como o cliente lhe paga, o que passa à CLYON e até quando (do servidor). */}
+      <ComoRecebe t={t} />
       <AjusteNoLocal t={t} modo="estado" />
       {!viajando && semDia ? <ODia t={t} /> : null}
       <Viagem t={t} />

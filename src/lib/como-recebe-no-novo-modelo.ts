@@ -17,7 +17,13 @@
  * Puro: o painel, a app (pela rota) e os testes lêem isto.
  */
 import { diaEmLisboa } from "./hora-de-lisboa";
-import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO } from "./novo-modelo";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, FICA_CONSIGO_E_PASSA_A_CLYON, FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO } from "./novo-modelo";
+
+/**
+ * A frase única do valor, para a app CLYON Pro: as apps não importam
+ * `novo-modelo.ts` (é lá que vive a data do modelo, que elas não podem ter).
+ */
+export { FICA_CONSIGO_E_PASSA_A_CLYON };
 import { COMO_PAGAR_EM_PALAVRAS, lerComoPagar, type ComoPagarAoParceiro } from "./pagar-ao-parceiro";
 
 const DIA = 86_400_000;

@@ -6,6 +6,7 @@ import { useConta } from "../estado/Conta";
 import { diaCurto } from "../lib/conta";
 import { euros } from "../lib/trabalhos";
 import { avisoDosDadosParaReceber, COMPLETAR_O_PERFIL, faixaDoValorEmAtraso } from "../lib/novo-modelo";
+import { ProntoParaReceber } from "./ProntoParaReceber";
 import { ESPACO, LETRA, useCores } from "../tema";
 
 /**
@@ -18,6 +19,9 @@ import { ESPACO, LETRA, useCores } from "../tema";
  *     pedidos; diz-se porquê, com o mesmo botão.
  *   · OS DADOS PARA RECEBER (IBAN, titular, MB WAY, regime de IVA): a faixa dos
  *     7 dias (até 22-11) ou o impedimento, com «Completar o perfil».
+ *   · d1 (18-11-2026): com o cartão «Pronto para receber pedidos» do servidor
+ *     (`prontoParaReceber`), o cartão linha a linha toma o lugar dessa faixa,
+ *     como no painel. Sem ele (um site antigo), a faixa de antes.
  *
  * Só com o `novoModelo` da carteira, que o site manda a partir de 15-11: antes
  * da data este componente não desenha nada.
@@ -28,8 +32,10 @@ export function AvisosDoNovoModelo() {
   const nm = carteira?.novoModelo;
   if (!nm) return null;
   const valor = faixaDoValorEmAtraso(nm, euros, diaCurto);
-  const dados = avisoDosDadosParaReceber(nm.dadosParaReceber);
-  if (!valor && !dados) return null;
+  const cartao = nm.prontoParaReceber ?? null;
+  const dados = cartao ? null : avisoDosDadosParaReceber(nm.dadosParaReceber);
+  const comCartao = !!cartao && !cartao.pronto;
+  if (!valor && !dados && !comCartao) return null;
   return (
     <View style={{ gap: ESPACO.s, marginBottom: ESPACO.s }}>
       {valor ? (
@@ -39,6 +45,7 @@ export function AvisosDoNovoModelo() {
           <Botao titulo={valor.botao} aoCarregar={() => router.push("/carteira")} />
         </View>
       ) : null}
+      {comCartao ? <ProntoParaReceber cartao={cartao} /> : null}
       {dados ? (
         <View style={{ gap: ESPACO.s }}>
           <Mensagem tom={dados.impede ? "mau" : "aviso"} texto={dados.frase} />

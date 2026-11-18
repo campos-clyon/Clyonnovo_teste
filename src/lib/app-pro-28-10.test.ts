@@ -102,7 +102,10 @@ describe("d4 — o fim do trabalho, como no painel", () => {
 describe("d5 — «Negociação terminada» diz porquê, como o aviso", () => {
   it("o título e a razão vêm de textos-dos-avisos-ao-profissional.ts", () => {
     expect(DETALHE).toContain("<TituloDaCaixa>{NEGOCIACAO_TERMINADA}</TituloDaCaixa>");
-    expect(DETALHE).toContain("porqueTerminou({ estado: t.estado, pedidoCancelado: t.pedidoCancelado })");
+    // d2 (18-11-2026): também o fecho pela validade do orçamento (pedidoFechadoSemResposta da rota).
+    expect(DETALHE.replace(/\s+/g, " ")).toContain(
+      "porqueTerminou({ estado: t.estado, pedidoCancelado: t.pedidoCancelado, pedidoFechadoSemResposta: t.pedidoFechadoSemResposta, })",
+    );
     expect(DETALHE).toContain("{PORQUE_A_NEGOCIACAO_TERMINOU[porque]}");
     expect(DETALHE).not.toContain("Este trabalho já não está em aberto.");
   });

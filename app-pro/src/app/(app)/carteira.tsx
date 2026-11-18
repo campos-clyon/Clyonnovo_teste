@@ -32,8 +32,9 @@ import {
 import {
   negociacoesDoValorEmAtraso,
   partesDoValorEmAtraso,
-  passouDoPrazo,
+  valorEmAtraso,
   EXPLICACAO_DO_VALOR_EM_ATRASO,
+  PAGAR_A_CLYON,
   PAGAR_O_VALOR_EM_ATRASO,
   type NovoModeloDaCarteira,
 } from "../../lib/novo-modelo";
@@ -237,16 +238,18 @@ function Conteudo({
 function ValorEmAtraso({ nm, aoMudar }: { nm: NovoModeloDaCarteira; aoMudar: () => Promise<void> }) {
   const c = useCores();
   const agora = Date.now();
+  // d4: «Pagar o valor em atraso» só com um valor que já passou do prazo (ou em stand-by); antes, «Pagar à CLYON».
+  const atraso = !!nm.standBy || nm.valores.some((v) => valorEmAtraso(v, agora));
   return (
     <Caixa estilo={{ borderColor: nm.standBy ? c.mau : c.aviso }}>
-      <TituloDaCaixa>{PAGAR_O_VALOR_EM_ATRASO}</TituloDaCaixa>
+      <TituloDaCaixa>{atraso ? PAGAR_O_VALOR_EM_ATRASO : PAGAR_A_CLYON}</TituloDaCaixa>
       {nm.standBy ? (
         <Text style={{ color: c.mau, fontSize: LETRA.pequena + 1, lineHeight: 20, fontWeight: "600" }}>{nm.standBy.explicacao}</Text>
       ) : (
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{EXPLICACAO_DO_VALOR_EM_ATRASO}</Text>
       )}
       {nm.valores.map((v) => (
-        <UmValorEmAtraso key={v.negociacaoId} v={v} passou={passouDoPrazo(v.prazoAte, agora)} aoMudar={aoMudar} />
+        <UmValorEmAtraso key={v.negociacaoId} v={v} passou={valorEmAtraso(v, agora)} aoMudar={aoMudar} />
       ))}
     </Caixa>
   );
@@ -290,7 +293,10 @@ function UmValorEmAtraso({
         <Text style={{ color: passou ? c.mau : c.aviso, fontWeight: "800", fontSize: LETRA.media }}>{euros(v.total)}</Text>
       </View>
       <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{partesDoValorEmAtraso(v, euros)}</Text>
-      {prazo ? (
+      {/* d4: a linha do site — «A passar à CLYON · X € até dd/mm» no prazo, «Em atraso · …» só depois. Sem ela, a de antes. */}
+      {v.linha ? (
+        <Text style={{ color: passou ? c.mau : c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600", lineHeight: 20 }}>{v.linha}</Text>
+      ) : prazo ? (
         <Text style={{ color: passou ? c.mau : c.aviso, fontSize: LETRA.pequena + 1, fontWeight: "600", lineHeight: 20 }}>
           {passou ? `Passou o prazo (${prazo}).` : `Pague até ${prazo}.`}
         </Text>

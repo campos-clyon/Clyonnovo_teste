@@ -58,6 +58,7 @@ import { ConfirmarAHora } from "../../componentes/ConfirmarAHora";
 import { primeiraRespostaDe } from "../../lib/confirmar-a-hora";
 import { AvisosDoNovoModelo } from "../../componentes/AvisosDoNovoModelo";
 import { impedimentoDoErro } from "../../lib/novo-modelo";
+import { FICA_CONSIGO_E_PASSA_A_CLYON } from "../../../../src/lib/como-recebe-no-novo-modelo";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
 export default function DetalheDoTrabalho() {
@@ -286,9 +287,12 @@ function ValorSugeridoPelaClyon({ t }: { t: Trabalho }) {
       {estimativa ? <Text style={{ color: c.tinta, fontWeight: "600" }}>Total estimado {estimativa}</Text> : null}
       <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
         {base !== "total" ? `${etiquetaDaBase(base)} · ` : ""}
-        {/* No modelo de 15-11 (d65, pelo `noNovoModelo` do servidor) o cliente paga-lhe a ele: nada é «descontado». */}
+        {/*
+          No modelo de 15-11 (d65, pelo `noNovoModelo` do servidor) o cliente paga-lhe a ele: nada é «descontado».
+          d4: a frase vem da rota (`fraseDoValorNoNovoModelo`); um site sem ela, a mesma frase única do site.
+        */}
         {t.noNovoModelo === true
-          ? "fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA"
+          ? (t.fraseDoValorNoNovoModelo ?? `${FICA_CONSIGO_E_PASSA_A_CLYON} · o valor é sem IVA`)
           : "já com a taxa da plataforma descontada · o valor é sem IVA"}
       </Text>
     </View>
@@ -435,21 +439,32 @@ function Accoes({ t }: { t: Trabalho }) {
   // (O trabalho que já é dele — `acordada` — tem o seu ecrã: `TrabalhoContratado`.)
   if (t.estado === "desistida" || t.estado === "morta") {
     // Num trabalho CLYON, as frases do painel (`OfertaDaClyon`): quem ficou, ou que foi cancelado.
+    // d2 (18-11-2026): o pedido fechou pela validade do orçamento — não é um cancelamento.
+    const semResposta =
+      porqueTerminou({ estado: t.estado, pedidoCancelado: t.pedidoCancelado, pedidoFechadoSemResposta: t.pedidoFechadoSemResposta }) ===
+      "sem_resposta";
     if (t.ofertaClyon) {
       return (
         <Caixa>
           <TituloDaCaixa>
             {t.estado === "morta"
-              ? t.pedidoCancelado
-                ? "Este trabalho foi cancelado pela CLYON"
-                : "A CLYON escolheu outro profissional"
+              ? semResposta
+                ? PORQUE_A_NEGOCIACAO_TERMINOU.sem_resposta
+                : t.pedidoCancelado
+                  ? "Este trabalho foi cancelado pela CLYON"
+                  : "A CLYON escolheu outro profissional"
               : "Recusou este trabalho"}
           </TituloDaCaixa>
         </Caixa>
       );
     }
-    // A razão é a do painel e do aviso no telemóvel: ficou com outro, desistência, cancelado (d5, 28-10-2026).
-    const porque = porqueTerminou({ estado: t.estado, pedidoCancelado: t.pedidoCancelado });
+    // A razão é a do painel e do aviso no telemóvel: ficou com outro, desistência, cancelado (d5, 28-10-2026),
+    // e, desde a d2, fechado porque o cliente não respondeu ao orçamento.
+    const porque = porqueTerminou({
+      estado: t.estado,
+      pedidoCancelado: t.pedidoCancelado,
+      pedidoFechadoSemResposta: t.pedidoFechadoSemResposta,
+    });
     return (
       <Caixa>
         <TituloDaCaixa>{NEGOCIACAO_TERMINADA}</TituloDaCaixa>
