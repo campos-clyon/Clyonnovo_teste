@@ -41,6 +41,14 @@ export type ResultadoDaRotina = {
 
 export async function arquivarTrabalhosClyonSemResposta(agora: Date = new Date()): Promise<ResultadoDaRotina> {
   const r: ResultadoDaRotina = { arquivados: [], avisados: 0, falhados: 0, clienteRespondeu: [] };
+  /*
+   * COM A VALIDADE DOS ORÇAMENTOS LIGADA, É ELA QUEM FECHA — 18-11-2026 (d62).
+   * As 72 horas arquivavam no D+3, antes do último aviso e do fecho do D+4 às
+   * 18h que a regra nova promete ao cliente. Ligado o interruptor, esta rotina
+   * não arquiva nenhum; desligado, tudo como antes.
+   */
+  const { interruptorDaValidade } = await import("./validade-do-orcamento-na-base");
+  if ((await interruptorDaValidade()).ligado) return r;
   const candidatos = await trabalhosClyonComOPrecoNoCliente();
 
   for (const p of candidatos) {

@@ -280,6 +280,7 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/retencao/interruptor", porque: "ligar as regras novas da retenção (anonimizar e apagar) é do administrador" },
   { seccao: "configs", rota: "/api/admin/fecho-do-modelo/interruptor", porque: "ligar o email «O trabalho já foi feito?» ao cliente é do administrador, com o sim do dono (d15, 13-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-aos-profissionais/interruptor", porque: "ligar as respostas automáticas da Vitória aos profissionais é do administrador, com o sim do dono (d21, 13-11-2026)" },
+  { seccao: "configs", rota: "/api/admin/interruptor-da-validade", porque: "ligar a validade dos orçamentos (lembretes e fecho automáticos) é do administrador, com o sim do dono (d62, 18-11-2026)" },
   // O aviso a todos os profissionais (d11, 15-11-2026): enviar a todos e o interruptor da faixa são do administrador.
   { seccao: "profissionais", rota: "/api/admin/aviso-aos-profissionais", porque: "o aviso a todos os profissionais (envio em massa) é só do administrador (d11, 15-11-2026)" },
   // «Quem conta para os 12» (d60, 17-11-2026): nomes, emails e telefones de quem está no teste das apps.

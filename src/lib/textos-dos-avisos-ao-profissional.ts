@@ -2,6 +2,11 @@ import { precoComBase, type BaseDoPreco } from "./base-do-preco";
 import { tUrgency } from "./translations";
 import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
 
+/** O orçamento tinha validade e o cliente não respondeu (d62, 18-11-2026) — o texto aprovado. */
+export function textoDoFechoAoParceiro(pedidoId: number): string {
+  return `O cliente não respondeu; o pedido #${pedidoId} foi fechado e saiu do seu feed.`;
+}
+
 /**
  * O QUE OS AVISOS AO PROFISSIONAL DIZEM — 28-10-2026 (d5).
  *
@@ -114,7 +119,11 @@ export function avisoDaContraproposta(p: {
  * Porque é que a negociação acabou para ele. «sem_resposta» (28-10-2026, d12):
  * um Trabalho CLYON que aceitou e que o cliente deixou sem resposta 72 horas.
  */
-export type PorqueTerminou = "outro" | "desistiu" | "sem_resposta" | "cancelado";
+/*
+ * «fechado_sem_resposta» (18-11-2026, d62): o orçamento tinha validade, o
+ * cliente não respondeu aos lembretes, e o pedido fechou.
+ */
+export type PorqueTerminou = "outro" | "desistiu" | "sem_resposta" | "cancelado" | "fechado_sem_resposta";
 
 /**
  * FICOU SEM O TRABALHO — a quem perdeu para outro, ou viu o cliente desistir.
@@ -128,6 +137,9 @@ export function avisoSemOTrabalho(p: { pedidoId: number; porque: PorqueTerminou;
       title: `Pedido #${p.pedidoId} cancelado`,
       body: `O pedido #${p.pedidoId} foi cancelado.${motivo ? ` Motivo: ${motivo}` : ""}`,
     };
+  }
+  if (p.porque === "fechado_sem_resposta") {
+    return { title: `Pedido #${p.pedidoId} fechado`, body: textoDoFechoAoParceiro(p.pedidoId) };
   }
   if (p.porque === "sem_resposta") {
     return { title: `Trabalho CLYON #${p.pedidoId}`, body: TRABALHO_SEM_EFEITO };

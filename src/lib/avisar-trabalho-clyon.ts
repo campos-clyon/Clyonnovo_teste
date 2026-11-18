@@ -100,6 +100,8 @@ export async function avisarSemEfeitoDoTrabalhoClyon(a: {
   servico: string | null;
   localidade: string | null;
   quem: ProfissionalAAvisar[];
+  /** Outro texto, o mesmo para todos — o fecho da validade do orçamento (d62, 18-11-2026). */
+  texto?: string;
 }): Promise<number> {
   if (a.quem.length === 0) return 0;
   try {
@@ -109,11 +111,13 @@ export async function avisarSemEfeitoDoTrabalhoClyon(a: {
       if (!q.avisaPorWhatsApp) continue;
       const telefone = telemovelParaWhatsApp(q.telefone);
       if (!telefone) continue;
-      const texto = avisoDeSemEfeitoAoProfissional(
-        q.profissional,
-        { pedidoId: a.pedidoId, servico: a.servico, localidade: a.localidade },
-        new Date(),
-      );
+      const texto =
+        a.texto ??
+        avisoDeSemEfeitoAoProfissional(
+          q.profissional,
+          { pedidoId: a.pedidoId, servico: a.servico, localidade: a.localidade },
+          new Date(),
+        );
       if (avisados > 0) await new Promise((r) => setTimeout(r, 1500));
       if (await enviarAvisoWhatsApp(telefone, texto).catch(() => false)) avisados += 1;
     }

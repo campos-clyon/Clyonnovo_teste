@@ -255,7 +255,17 @@ export type PedidoAnonimizado = {
  * Pagamentos, as Finanças e as comissões lêem não são tocadas. Devolve `null`
  * se o pedido já não existir ou já tiver sido anonimizado.
  */
-export async function anonimizarPedido(pedidoId: number): Promise<PedidoAnonimizado | null> {
+/*
+ * E A PEDIDO DO CLIENTE — 18-11-2026 (d62). «Já não preciso», em resposta ao
+ * lembrete do orçamento: o mesmo caminho, sem o primeiro nome (`semNome`) e com
+ * a linha do registo a dizer porquê.
+ */
+export type ComoSeAnonimizaAPedido = { semNome?: boolean; autorNome?: string; resumo?: string };
+
+export async function anonimizarPedido(
+  pedidoId: number,
+  aPedido: ComoSeAnonimizaAPedido = {},
+): Promise<PedidoAnonimizado | null> {
   await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
   await ensureRegistoTable();
@@ -293,6 +303,7 @@ export async function anonimizarPedido(pedidoId: number): Promise<PedidoAnonimiz
     };
 
     const novos = valoresDoPedidoAnonimizado(pedido);
+    if (aPedido.semNome) novos.contactName = null;
     const colunas = Object.keys(novos);
     await conn.execute(
       `UPDATE simulatorOrders
@@ -318,13 +329,14 @@ export async function anonimizarPedido(pedidoId: number): Promise<PedidoAnonimiz
       acontecimento: "pedido_anonimizado",
       pedidoId,
       autorTipo: "sistema",
-      autorNome: "retenção",
+      autorNome: aPedido.autorNome ?? "retenção",
       estadoDepois: "anonimizado",
       servicoTipo: (pedido.serviceType as string | null) ?? null,
       zona: (pedido.city as string | null) ?? null,
       resumo:
+        aPedido.resumo ??
         `Pedido anonimizado, ${DIAS_ATE_ANONIMIZAR_OS_TRABALHOS} dias depois de fechado (d32): ficam o serviço, ` +
-        `a localidade, o primeiro nome, as datas e os valores; saíram os contactos, a morada, a descrição e ${fotos.length} ficheiro(s).`,
+          `a localidade, o primeiro nome, as datas e os valores; saíram os contactos, a morada, a descrição e ${fotos.length} ficheiro(s).`,
       detalhe: { fotografias: fotos.length },
     });
     await conn.commit();

@@ -268,6 +268,14 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("[ponte] WhatsApp da app de cliente:", e instanceof Error ? e.message : e);
     }
+    // A validade dos orçamentos (d62, 18-11-2026): os lembretes e o fecho que a
+    // rotina pôs na fila, um por vez, 20–45 s entre cada, 9h–21h de Lisboa.
+    try {
+      const { passagemDaValidade } = await import("@/lib/validade-do-orcamento-na-base");
+      await passagemDaValidade();
+    } catch (e) {
+      console.error("[ponte] validade dos orçamentos:", e instanceof Error ? e.message : e);
+    }
   });
   if (!(await whatsappLigado())) return NextResponse.json({ paraEnviar: [] });
   return NextResponse.json({ paraEnviar: await filaWhatsAppParaAPonte() });

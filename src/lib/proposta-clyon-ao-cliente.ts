@@ -7,6 +7,7 @@ import { servicoEmPalavras } from "./servico-em-palavras";
 import { linkDeWhatsApp } from "./link-de-whatsapp";
 import { lerBase } from "./base-do-preco";
 import { mensagemDoOrcamento } from "./mensagem-do-orcamento";
+import { comValidade } from "./validade-do-orcamento";
 
 /**
  * A PROPOSTA DE UM TRABALHO CLYON, NO WHATSAPP DO CLIENTE — 08-10-2026.
@@ -71,6 +72,8 @@ export function mensagemDaPropostaClyon(
      * o cliente paga ao parceiro — «Paga ao parceiro no dia.», nunca «Paga à CLYON».
      */
     novoModelo?: boolean;
+    /** «Esta proposta é válida até …» no fim (d62, 18-11-2026) — o que vai mesmo ao cliente. */
+    comValidade?: boolean;
   },
   agora: Date,
 ): string {
@@ -84,7 +87,7 @@ export function mensagemDaPropostaClyon(
   const dia = t.quando ? new Date(t.quando) : null;
   const paraQuando =
     dia && !Number.isNaN(dia.getTime()) && dia.getTime() > agora.getTime() ? `, para ${quandoPorExtenso(dia, agora)}` : "";
-  return mensagemDoOrcamento(
+  const texto = mensagemDoOrcamento(
     {
       cliente: t.cliente,
       servicoComArtigo: servicoComArtigo(servicoEmPalavras(t.servico)),
@@ -101,6 +104,8 @@ export function mensagemDaPropostaClyon(
     },
     agora,
   );
+  // d62: o orçamento vale 3 dias (validade-do-orcamento.ts).
+  return t.comValidade === true ? comValidade(texto, agora) : texto;
 }
 
 /**
@@ -123,6 +128,8 @@ export function linkDaPropostaClyon(
     profissional?: string | null;
     /** O modelo de 15-11 (d54): «Paga ao parceiro». */
     novoModelo?: boolean;
+    /** Com «Esta proposta é válida até …» (d62). */
+    comValidade?: boolean;
   },
   agora: Date,
 ): { link: string; total: number; texto: string } | null {

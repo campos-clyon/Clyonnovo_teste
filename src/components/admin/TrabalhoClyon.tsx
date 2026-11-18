@@ -1039,7 +1039,8 @@ function CartaoDoTrabalho({
     !botoes.proposta
       ? null
       : linkDaPropostaClyon(
-          { ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null, novoModelo: novoModelo },
+          // d62: com «Esta proposta é válida até …».
+          { ...t, quando: a?.dataCombinada ?? t.dataAgendada, profissional: a?.profissional ?? null, novoModelo: novoModelo, comValidade: true },
           new Date(),
         );
   /*

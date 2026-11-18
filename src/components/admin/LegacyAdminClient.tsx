@@ -42,6 +42,7 @@ import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFecho";
 import InterruptorDaVitoriaAosProfissionais from "@/components/admin/InterruptorDaVitoriaAosProfissionais";
+import InterruptorDaValidadeDosOrcamentos from "@/components/admin/InterruptorDaValidadeDosOrcamentos";
 import InterruptorDoAvisoDoNovoModelo from "@/components/admin/InterruptorDoAvisoDoNovoModelo";
 import InterruptorDoSeguimentoDaVitoria from "@/components/admin/InterruptorDoSeguimentoDaVitoria";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
@@ -3625,6 +3626,9 @@ export default function ColaboradorAdminClient({
 
               {/* A Vitória aos profissionais (d21): desligada por omissão, só o administrador; liga-se com o sim do dono. */}
               <InterruptorDaVitoriaAosProfissionais />
+
+              {/* A validade dos orçamentos (d62): lembretes e fecho de «A aguardar cliente»; desligada por omissão, só o administrador. */}
+              <InterruptorDaValidadeDosOrcamentos />
 
               {/* A faixa e a página «Saber mais» do aviso do novo modelo (d11): desligadas por omissão, só o administrador. */}
               <InterruptorDoAvisoDoNovoModelo />

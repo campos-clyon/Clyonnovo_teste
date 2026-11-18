@@ -823,6 +823,97 @@ async function tratarOValorUnico(
 }
 
 /**
+ * O «1», O «2» E O «3» AO LEMBRETE DO ORÇAMENTO — 18-11-2026 (d62).
+ *
+ *   · «1» (ou «sim», «avançar»): numa negociação, fecha a proposta do lembrete
+ *     pelo mesmo caminho do SIM (`fecharPeloCliente`); num Trabalho CLYON, o
+ *     cliente aceita o preço e o parceiro do lembrete fica com o trabalho (a
+ *     adjudicação segue pela equipa); num valor único, o aceite de sempre
+ *     (`tratarOValorUnico`, a equipa escolhe o parceiro);
+ *   · «2»: a conversa passa a uma pessoa;
+ *   · «3» (ou «já não preciso»): cancela, avisa os parceiros, manda o texto de
+ *     cancelamento aprovado e anonimiza o pedido;
+ *   · o resto, ou dois pedidos à espera: a contagem pára e passa a uma pessoa.
+ */
+async function responderAoLembreteDoOrcamento(
+  telefone: string,
+  texto: string,
+  ciclos: import("@/lib/validade-do-orcamento-na-base").CicloComLembrete[],
+): Promise<void> {
+  const regras = await import("@/lib/validade-do-orcamento");
+  const base = await import("@/lib/validade-do-orcamento-na-base");
+  const leitura = regras.lerRespostaAoLembrete(texto);
+
+  if (ciclos.length > 1) {
+    for (const c of ciclos) await base.pararOCiclo(c.pedidoId, "o cliente respondeu (tem mais do que um pedido à espera)").catch(() => {});
+    await passarAUmaPessoa(
+      telefone,
+      `Respondeu ao lembrete do orçamento com ${ciclos.length} pedidos à espera (#${ciclos.map((c) => c.pedidoId).join(", #")}) — confirmar qual`,
+    );
+    return;
+  }
+  const c = ciclos[0];
+
+  if (leitura === null || leitura === "duvidas") {
+    await base.pararOCiclo(c.pedidoId, leitura === "duvidas" ? "«2» — dúvidas ou outra data" : "o cliente escreveu").catch(() => {});
+    await passarAUmaPessoa(
+      telefone,
+      leitura === "duvidas"
+        ? `Pedido #${c.pedidoId}: tem dúvidas ou quer outra data («2» ao lembrete do orçamento)`
+        : `Respondeu ao lembrete do orçamento do pedido #${c.pedidoId} — responder`,
+    );
+    return;
+  }
+
+  if (leitura === "cancelar") {
+    const r = await base.cancelarPeloLembrete(c.pedidoId, telefone).catch((err) => {
+      console.error("[whatsapp] o cancelamento pelo lembrete falhou:", err instanceof Error ? err.message : err);
+      return { ok: false, porque: "erro" };
+    });
+    if (!r.ok) await passarAUmaPessoa(telefone, `Pedido #${c.pedidoId}: disse que já não precisa — cancelar à mão`);
+    return;
+  }
+
+  // «1» — avançar.
+  if (c.valorUnico) {
+    await base.marcarCicloTerminado(c.pedidoId, "o cliente avançou («1»)");
+    await tratarOValorUnico(telefone, { tipo: "aceite", pedidoId: c.pedidoId });
+    return;
+  }
+  if (c.eClyon) {
+    if (c.negociacaoId == null) {
+      await base.pararOCiclo(c.pedidoId, "«1» sem parceiro no lembrete").catch(() => {});
+      await passarAUmaPessoa(telefone, `Trabalho CLYON #${c.pedidoId}: o cliente quer avançar — escolher o parceiro`);
+      return;
+    }
+    const r = await base.aceitarTrabalhoClyonPeloLembrete(c.pedidoId, c.negociacaoId).catch((err) => {
+      console.error("[whatsapp] o aceite pelo lembrete falhou:", err instanceof Error ? err.message : err);
+      return { ok: false as const, porque: "erro" };
+    });
+    if (!r.ok) {
+      await base.pararOCiclo(c.pedidoId, "«1» que não se gravou").catch(() => {});
+      await passarAUmaPessoa(telefone, `Trabalho CLYON #${c.pedidoId}: o cliente quer avançar, mas ${r.porque} — confirmar`);
+      return;
+    }
+    await enviarTextoWhatsApp(telefone, regras.textoDoAvancarNumTrabalhoClyon(c.pedidoId, r.parceiro));
+    const { interromperNumeroWhatsApp } = await import("@/lib/db");
+    await interromperNumeroWhatsApp(
+      telefone,
+      `Trabalho CLYON #${c.pedidoId}: o cliente avançou pelo lembrete — enviar a adjudicação`,
+    ).catch(() => {});
+    return;
+  }
+  const alvo = (await alvosAccionaveis([c.pedidoId])).find((a) => a.negociacaoId === c.negociacaoId);
+  if (!alvo) {
+    await base.pararOCiclo(c.pedidoId, "«1» com a proposta do lembrete já fora da mesa").catch(() => {});
+    await passarAUmaPessoa(telefone, `Pedido #${c.pedidoId}: o cliente quer avançar, mas a proposta do lembrete já não está de pé — confirmar`);
+    return;
+  }
+  await base.marcarCicloTerminado(c.pedidoId, "o cliente avançou («1»)");
+  await fecharPeloCliente(telefone, alvo);
+}
+
+/**
  * Fechar pelo cliente: as duas metades do aperto de mão — aceitar o valor
  * pendente (se o houver) e contratar. É o mesmo caminho do botão «Fechar» e
  * da palavra SIM: um só corpo, para nunca haver dois comportamentos.
@@ -2228,6 +2319,26 @@ export async function tratarMensagemDoCliente(
         }
         await enviarTextoWhatsApp(telefone, chegada.CHEGADA_CONFIRMADA);
         await avisarProfissionalDaChegadaConfirmada(quem);
+        return;
+      }
+    }
+
+    /*
+     * A RESPOSTA AO LEMBRETE DO ORÇAMENTO — 18-11-2026 (d62). Com o lembrete
+     * (ou o último aviso) enviado e o ciclo a correr: «1» avança com a proposta
+     * do lembrete, «2» passa à equipa, «3» cancela e apaga os dados dele do
+     * pedido; outra coisa qualquer pára a contagem e passa à equipa. Com o
+     * interruptor desligado não há ciclos, e segue tudo como sempre. Ver
+     * `validade-do-orcamento.ts`.
+     */
+    if (!soImagens) {
+      const { ciclosComLembreteDoTelefone } = await import("@/lib/validade-do-orcamento-na-base");
+      const ciclos = await ciclosComLembreteDoTelefone(telefone).catch((err) => {
+        console.error("[whatsapp] a validade do orçamento não se leu:", err instanceof Error ? err.message : err);
+        return [];
+      });
+      if (ciclos.length > 0) {
+        await responderAoLembreteDoOrcamento(telefone, conteudo.texto, ciclos);
         return;
       }
     }

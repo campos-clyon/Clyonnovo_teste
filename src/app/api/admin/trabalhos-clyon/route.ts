@@ -616,6 +616,8 @@ export async function PATCH(req: NextRequest) {
             { valorFixoClyon: pedido.valorFixoClyon, pedidoCriadoEm: (pedido.createdAt as Date | string | null) ?? null },
             agoraDoModelo(),
           ),
+          // d62 (18-11-2026): o orçamento vale 3 dias.
+          comValidade: true,
         },
         new Date(),
       );

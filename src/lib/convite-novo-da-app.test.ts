@@ -34,14 +34,14 @@ describe("quem recebe o convite novo", () => {
       new Map([
         [1, "912 345 678"],
         [4, "+351 21 000 0000"],
-        [6, "00351961234567"],
+        [6, "00351960000123"],
       ]),
       new Set(["d@gmail.com"]),
       new Set(["e@gmail.com"]),
     );
     expect(lista.map((e) => e.id)).toEqual([1, 6]);
     // Só telemóveis portugueses: um fixo nunca leva WhatsApp.
-    expect(lista.map((e) => e.telemovel)).toEqual(["351912345678", "351961234567"]);
+    expect(lista.map((e) => e.telemovel)).toEqual(["351912345678", "351960000123"]);
     expect(contagemDoConviteNovo(lista)).toEqual({ emails: 2, whatsapps: 2 });
   });
 

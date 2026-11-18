@@ -84,6 +84,8 @@ import { DADOS_DE_PAGAMENTO_MUDARAM, SELO_DOS_DADOS_MUDADOS } from "@/lib/dados-
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import { avisoAcimaDoValorUnico, mensagemDoValorUnico, valorUnicoSugerido } from "@/lib/valor-unico";
+import { comValidade } from "@/lib/validade-do-orcamento";
+import PassoDaValidade, { type ValidadeNaMesa } from "@/components/admin/PassoDaValidade";
 import ValorUnicoNaMesa, { VALOR_UNICO_ACEITE_NA_MESA } from "./ValorUnicoNaMesa";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
@@ -528,6 +530,8 @@ function valorNaMesa(v: number | string | null | undefined, p: Pick<Pedido, "bas
  */
 function orcamentoEnviadoCobre(p: Pedido): boolean {
   if (!p.propostaEnviadaEm) return false;
+  // d62 (18-11-2026): com a validade ligada, o cliente respondeu — a contagem parou e é connosco.
+  if (p.validadeParada) return false;
   const enviado = new Date(p.propostaEnviadaEm).getTime();
   if (Number.isNaN(enviado)) return false;
   const datas = p.negociacoes.flatMap((n) =>
@@ -617,6 +621,8 @@ type Pedido = {
   concluidoVistoEm: string | null;
   /** Quando o orçamento foi ao cliente (21-10-2026) — ver `orcamentoEnviadoCobre`. */
   propostaEnviadaEm?: string | null;
+  /** d62: a validade dos orçamentos ligada e o cliente respondeu — posto pela Mesa ao ler (`validadeNaMesa`). */
+  validadeParada?: boolean;
   /** O valor único ao cliente, sem IVA (d39, 15-11-2026). */
   valorUnicoCliente?: number | null;
   valorUnicoEm?: string | null;
@@ -1308,6 +1314,8 @@ export default function AdminNegociacoesPanel({
   const [abrirClyon, setAbrirClyon] = useState<number | null>(null);
   /** A negociação a passar a valor fixo — o formulário aberto no cartão (fase 4). */
   const [aFixar, setAFixar] = useState<number | null>(null);
+  /** O passo da validade de cada orçamento no cliente (d62), pelo número do pedido. */
+  const [validade, setValidade] = useState<Record<number, ValidadeNaMesa>>({});
 
   const carregar = useCallback(async (silencioso = false, tudo = false) => {
     if (!token) return;
@@ -1328,7 +1336,30 @@ export default function AdminNegociacoesPanel({
         setErro(dados.error ?? "Erro ao carregar.");
         return;
       }
-      setPedidos(dados.pedidos ?? []);
+      /*
+       * A VALIDADE DOS ORÇAMENTOS — 18-11-2026 (d62): o passo de cada um em «A
+       * aguardar cliente», e os que pararam (o cliente respondeu, com o
+       * interruptor ligado) voltam a «Precisa de si». Em silêncio: sem ela, a
+       * Mesa serve como antes.
+       */
+      let daValidade: Record<number, ValidadeNaMesa> = {};
+      let validadeLigada = false;
+      try {
+        const rv = await fetch("/api/admin/validade-dos-orcamentos", { headers: { Authorization: `Bearer ${token}` } });
+        if (rv.ok) {
+          const v = (await rv.json()) as { ligado?: boolean; pedidos?: ValidadeNaMesa[] };
+          validadeLigada = v.ligado === true;
+          daValidade = Object.fromEntries((v.pedidos ?? []).map((x) => [x.pedidoId, x]));
+        }
+      } catch {
+        /* sem a validade, a Mesa de sempre */
+      }
+      setValidade(daValidade);
+      setPedidos(
+        ((dados.pedidos ?? []) as Pedido[]).map((p) =>
+          validadeLigada && daValidade[p.id]?.parado ? { ...p, validadeParada: true } : p,
+        ),
+      );
       if (tudo) setTemTudo(true);
       setLidoEm(Date.now());
       setErro("");
@@ -1700,8 +1731,13 @@ export default function AdminNegociacoesPanel({
      * pela CLYON» mandam um valor só, sem nomes nem lista. Já fechado, a
      * mensagem de sempre («Está combinado com…»).
      */
+    /*
+     * O ORÇAMENTO TEM VALIDADE — 18-11-2026 (d62): «Esta proposta é válida até
+     * {dia da semana, dd/mm}», 3 dias depois do envio (Lisboa). Só quando há
+     * proposta a escolher; o «Está combinado com…» não a leva.
+     */
     if (p.valorUnicoCliente != null && !trabalhoFechado(p.negociacoes)) {
-      return mensagemDoValorUnico(
+      return comValidade(mensagemDoValorUnico(
         {
           nomeCliente: p.contactName,
           servico: nomeDoServico(p.serviceType),
@@ -1711,9 +1747,10 @@ export default function AdminNegociacoesPanel({
           base: lerBase(p.baseDoPreco),
         },
         new Date(),
-      );
+      ), new Date());
     }
-    return mensagemDasPropostas({
+    const comPropostas = !trabalhoFechado(p.negociacoes) && propostas.length > 0;
+    const texto = mensagemDasPropostas({
       nomeCliente: p.contactName,
       servico: nomeDoServico(p.serviceType),
       servicoId: p.serviceType,
@@ -1727,6 +1764,7 @@ export default function AdminNegociacoesPanel({
       // Numa mudança da lista, o mínimo é o de cada parceiro (d7, 11-11-2026).
       mudancaDaLista: p.negociacoes.some((n) => Number(n.escolhidoPeloCliente) === 1),
     });
+    return comPropostas ? comValidade(texto, new Date()) : texto;
   }
 
   /**
@@ -2905,6 +2943,17 @@ export default function AdminNegociacoesPanel({
               <p className="mt-0.5 text-[11px] text-laranja-texto">
                 Orçamento enviado {quandoEntrou(p.propostaEnviadaEm as string)} — à espera da resposta do cliente
               </p>
+            )}
+            {/* A validade do orçamento (d62): o passo, e o «Lembrar agora». */}
+            {(orcamentoEnviadoCobre(p) || p.validadeParada) && (
+              <PassoDaValidade
+                estado={validade[p.id]}
+                onFeito={(texto) => {
+                  setAviso(texto);
+                  void carregar(true, temTudo);
+                }}
+                onErro={setErro}
+              />
             )}
             {typeof alcances[p.id] === "string" && alcances[p.id] !== "a-ler" && (
               <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcances[p.id]}</p>
@@ -5507,6 +5556,19 @@ export default function AdminNegociacoesPanel({
                                     marcado={marcados.has(t.pedidoId)}
                                     onMarcar={() => marcar(t.pedidoId)}
                                   />
+                                  {/* A validade do orçamento (d62): o passo, e o «Lembrar agora». */}
+                                  {b.chave === "aguardaCliente" && (
+                                    <li className="list-none px-3 pb-1">
+                                      <PassoDaValidade
+                                        estado={validade[t.pedidoId]}
+                                        onFeito={(texto) => {
+                                          setAviso(texto);
+                                          void carregar(true, temTudo);
+                                        }}
+                                        onErro={setErro}
+                                      />
+                                    </li>
+                                  )}
                                 </ul>
                               ),
                             })),

@@ -38,6 +38,8 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "escolhidos-sem-resposta", titulo: "Mudanças: escolhidos sem resposta, aviso ao cliente", horario: "5 * * * *", intervaloMin: 60 },
   // 13-11-2026 (d15): «O trabalho já foi feito?» por email, 48 h depois da data sem «Está feito» — só com o interruptor das Configs ligado.
   { nome: "fecho-do-modelo-novo", titulo: "Modelo novo: «O trabalho já foi feito?» por email (interruptor nas Configs)", horario: "35 * * * *", intervaloMin: 60 },
+  // 18-11-2026 (d62): o orçamento vale 3 dias — lembrete no D+1, último aviso no D+3, fecho no D+4 às 18h (9h–21h; interruptor nas Configs).
+  { nome: "validade-dos-orcamentos", titulo: "Validade dos orçamentos: lembretes e fecho de «A aguardar cliente» (interruptor nas Configs)", horario: "0 * * * *", intervaloMin: 60 },
   { nome: "libertar-por-prazo", titulo: "Trabalhos libertados por prazo", horario: "0 4 * * *", intervaloMin: 24 * 60 },
   { nome: "purgar-pedidos", titulo: "Purga dos pedidos antigos", horario: "30 4 * * *", intervaloMin: 24 * 60 },
   { nome: "licoes-da-vitoria", titulo: "Lições da Vitória", horario: "20 5 * * *", intervaloMin: 24 * 60 },
