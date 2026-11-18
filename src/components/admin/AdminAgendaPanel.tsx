@@ -1,5 +1,7 @@
 "use client";
 
+
+import { diaNDeM } from "@/lib/varios-dias";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
@@ -84,6 +86,12 @@ import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
  * e a ficha abria sem ela sem ninguém dar por isso.
  */
 type Trabalho = TrabalhoDaAgenda;
+
+/* d64: o id de um bloco que não é o dia 1 — negativo, para não chocar com as negociações. */
+const idDoDia = (negociacaoId: number, k: number) => -(negociacaoId * 100 + k);
+function deQueDia(id: number): { negociacaoId: number; k: number } {
+  return id < 0 ? { negociacaoId: Math.floor(-id / 100), k: -id % 100 } : { negociacaoId: id, k: 0 };
+}
 
 /**
  * Um trabalho com o dia que acabou de ser marcado e ainda não voltou da base.
@@ -344,7 +352,9 @@ export default function AdminAgendaPanel() {
    * «escolha quem o faz» (`choques-de-agenda.ts`), com os trabalhos desta
    * agenda: os dias por gravar e as durações esticadas contam já.
    */
-  function choqueNoArrasto(id: number, parede: Date): string | null {
+  function choqueNoArrasto(idDoBloco: number, parede: Date): string | null {
+    // d64: um bloco de outro dia conta como o trabalho dele.
+    const id = deQueDia(idDoBloco).negociacaoId;
     const t = trabalhos.find((x) => x.negociacaoId === id);
     const novo = doRelogioDeLisboa(parede);
     if (!t || !novo) return null;
@@ -364,11 +374,46 @@ export default function AdminAgendaPanel() {
     return choques.length > 0 ? `${t.profissionalNome || "O profissional"} ${textoDosChoques(choques)}` : null;
   }
 
-  async function moverPorArrasto(id: number, parede: Date) {
+  async function moverPorArrasto(idDoBloco: number, parede: Date) {
     if (!token) return;
     /* A grelha larga em hora de Lisboa; a rota grava o instante verdadeiro. */
     const novo = doRelogioDeLisboa(parede);
     if (!novo) return;
+    /*
+     * d64: LARGAR NUM DIA PERGUNTA — «mudar o dia» ou «acrescentar este dia».
+     * Num trabalho em vários dias, mudar o dia de um bloco muda esse dia da
+     * lista; acrescentar junta o dia largado à lista. Vai pela rota dos vários dias.
+     */
+    const { negociacaoId: id, k } = deQueDia(idDoBloco);
+    const alvo = trabalhos.find((x) => x.negociacaoId === id);
+    if (!alvo) return;
+    const listaAntes = alvo.diasDoTrabalho && alvo.diasDoTrabalho.length > 0 ? alvo.diasDoTrabalho : alvo.quando ? [{ dia: "", inicio: alvo.quando }] : [];
+    const acrescentar = window.confirm(
+      `#${alvo.pedidoId}: o que quer fazer com ${diaPorExtenso(parede).toLowerCase()}, às ${horaCurta(parede)}?\n\nOK = acrescentar este dia (o trabalho fica em vários dias)\nCancelar = mudar o dia`,
+    );
+    if (acrescentar || listaAntes.length > 1) {
+      const lista = acrescentar
+        ? [...listaAntes.map((d) => ({ inicio: d.inicio, cargasPrevistas: d.cargasPrevistas ?? null })), { inicio: novo.toISOString() }]
+        : listaAntes.map((d, i) => ({ inicio: i === k ? novo.toISOString() : d.inicio, cargasPrevistas: d.cargasPrevistas ?? null }));
+      setAvisoDoArrasto({ tipo: "a_gravar", texto: `A gravar #${alvo.pedidoId}…` });
+      try {
+        const r = await fetch(`/api/admin/pedidos/${alvo.pedidoId}/varios-dias`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ dias: lista }),
+        });
+        const d = (await r.json()) as { error?: string };
+        setAvisoDoArrasto(
+          r.ok
+            ? { tipo: "ok", texto: `#${alvo.pedidoId}: ${acrescentar ? "dia acrescentado" : "dia mudado"}.` }
+            : { tipo: "erro", texto: `#${alvo.pedidoId} não mudou: ${d.error ?? "erro"}` },
+        );
+      } catch {
+        setAvisoDoArrasto({ tipo: "erro", texto: `#${alvo.pedidoId} não mudou: erro de rede.` });
+      }
+      void carregar(true);
+      return;
+    }
     // Já tem outro trabalho a essa hora: pergunta-se antes de gravar (21-10-2026).
     const choque = choqueNoArrasto(id, parede);
     if (choque && !window.confirm(`${choque}.\n\nMudar para esta hora mesmo assim?`)) return;
@@ -401,8 +446,9 @@ export default function AdminAgendaPanel() {
    */
   const [duracoes, setDuracoes] = useState<Record<number, number>>({});
 
-  async function esticarPorArrasto(id: number, minutos: number) {
+  async function esticarPorArrasto(idDoBloco: number, minutos: number) {
     if (!token) return;
+    const id = deQueDia(idDoBloco).negociacaoId;
     setDuracoes((d) => ({ ...d, [id]: minutos }));
     const quem = trabalhos.find((x) => x.negociacaoId === id);
     const qual = quem ? `#${quem.pedidoId}` : "o trabalho";
@@ -545,17 +591,28 @@ export default function AdminAgendaPanel() {
   /* O que vai para a grelha: o mesmo filtro da lista, e só o que tem dia. */
   const doBloco = trabalhosVisiveis.filter((t) => !soOBloco || t.estado === soOBloco);
   const semDiaNaGrelha = doBloco.filter((t) => !t.quando);
+  /*
+   * d64: UM BLOCO POR DIA. Num trabalho em vários dias, cada dia é um bloco
+   * com «dia 2 de 3»; o dia 1 tem o id da negociação (arrasta e estica como
+   * sempre) e os outros um id negativo (`idDoDia`). Num dia só, como sempre.
+   */
   const eventos: EventoDaAgenda[] = doBloco
     .filter((t) => t.quando)
-    .map((t) => {
+    .flatMap((t) => {
+      const dias = t.diasDoTrabalho && t.diasDoTrabalho.length > 1 ? t.diasDoTrabalho : null;
+      if (!dias) return [{ t, k: 0, m: 1, quando: movidos[t.negociacaoId] ?? (t.quando as string) }];
+      return dias.map((d, k) => ({ t, k, m: dias.length, quando: k === 0 ? (movidos[t.negociacaoId] ?? d.inicio) : d.inicio }));
+    })
+    .map(({ t, k, m, quando }) => {
       // No relógio de Lisboa: a grelha lê `getHours()`, e do Brasil eram 4 h a menos.
-      const inicio = noRelogioDeLisboa(new Date(movidos[t.negociacaoId] ?? (t.quando as string)));
+      const inicio = noRelogioDeLisboa(new Date(movidos[t.negociacaoId] && k === 0 ? (movidos[t.negociacaoId] as string) : (quando as string)));
+      const doDia = diaNDeM(k + 1, m);
       const servico = SERVICO[t.servico ?? ""] ?? t.servico ?? "Serviço";
       const quem = t.profissionalNome || `Profissional #${t.providerId}`;
       return {
-        id: t.negociacaoId,
+        id: k === 0 ? t.negociacaoId : idDoDia(t.negociacaoId, k),
         inicio,
-        titulo: servico,
+        titulo: doDia ? `${servico} · ${doDia}` : servico,
         linha2: quem,
         linha3: [t.clienteNome, t.cidade].filter(Boolean).join(" · ") || null,
         valor: t.valorAcordado != null ? euros(t.valorAcordado) : null,
@@ -570,6 +627,7 @@ export default function AdminAgendaPanel() {
           quem,
           t.clienteNome,
           t.cidade,
+          doDia || null,
           t.estado === "atrasado" ? "atrasado" : t.estado === "feito" ? "feito" : null,
         ]
           .filter(Boolean)
@@ -854,7 +912,7 @@ export default function AdminAgendaPanel() {
               eventos={eventos}
               agora={relogio}
               tema="escuro"
-              onAbrir={(id) => setAVer(id)}
+              onAbrir={(id) => setAVer(deQueDia(id).negociacaoId)}
               onMover={(id, novo) => void moverPorArrasto(id, novo)}
               choqueAoArrastar={choqueNoArrasto}
               onDuracao={(id, minutos) => void esticarPorArrasto(id, minutos)}

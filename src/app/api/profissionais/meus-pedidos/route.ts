@@ -21,6 +21,7 @@ import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { fraseDaBaseAoProfissional } from "@/lib/frase-da-base";
+import { cargasFeitasNoTotal, diasDoTrabalho, diasPorExtenso, podeDarPorFeitoNoDia } from "@/lib/varios-dias";
 import {
   diaDoInicio,
   estadoDasHorasParaQuemFez,
@@ -621,6 +622,22 @@ export async function GET(req: NextRequest) {
          * antes de carregar.» (`frase-da-base.ts`). Null no valor total, ou antes
          * do aceite (aí é o `avisoDaBase` de sempre). O valor é o do cartão.
          */
+        /*
+         * d64 (18-11-2026): OS DIAS TODOS — um trabalho em vários dias. `[]` ou um
+         * dia num trabalho de um dia. Cada um: `dia` (AAAA-MM-DD, Lisboa),
+         * `inicio` (ISO), `cargasPrevistas`, `cargasFeitas`. O «Está feito» só no
+         * último (`podeDarPorFeitoHoje`); as cargas por `POST /api/profissionais/trabalho/cargas-do-dia`.
+         */
+        ...(() => {
+          const x = l as unknown as { dataCombinada?: Date | string | null; dataAgendada?: Date | string | null; diasDoTrabalhoJson?: string | null };
+          const dias = diasDoTrabalho({ dataCombinada: x.dataCombinada ?? null, dataAgendada: x.dataAgendada ?? null, diasDoTrabalhoJson: x.diasDoTrabalhoJson ?? null });
+          return {
+            diasDoTrabalho: dias,
+            diasDoTrabalhoTexto: dias.length > 1 ? diasPorExtenso(dias) : null,
+            podeDarPorFeitoHoje: podeDarPorFeitoNoDia(dias, agora),
+            cargasFeitasNoTotal: cargasFeitasNoTotal(dias),
+          };
+        })(),
         fraseDaBaseAoProfissional:
           l.estado === "acordada"
             ? fraseDaBaseAoProfissional(

@@ -73,6 +73,11 @@ export type Pedido = {
   baseDoPreco?: string | null;
   /** d63: depois do aceite, a frase da base para ele (`frase-da-base.ts`); null no valor total. */
   fraseDaBaseAoProfissional?: string | null;
+  /** d64: os dias do trabalho (vários, ou um), o texto e se já se pode dar por feito. */
+  diasDoTrabalho?: import("@/lib/varios-dias").DiaDoTrabalho[];
+  diasDoTrabalhoTexto?: string | null;
+  podeDarPorFeitoHoje?: boolean;
+  cargasFeitasNoTotal?: number | null;
   /*
    * O QUE UMA CARGA VALE NA CARRINHA DELE, quando o pedido e por carga.
    *

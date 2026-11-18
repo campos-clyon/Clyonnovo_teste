@@ -2,8 +2,9 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissionalDoDiaPorPush } from "@/lib/avisar-por-push";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { getPool, appendOrderHistory, perfilDoProfissional, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
+import { getPool, appendOrderHistory, ensureSimulatorOrdersTable, perfilDoProfissional, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
 import { naAgenda } from "@/lib/agenda-dos-trabalhos";
+import { diasDoTrabalho } from "@/lib/varios-dias";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { faseDoTrabalho } from "@/lib/trabalho";
 import {
@@ -37,6 +38,8 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
 
+  // d64: a coluna dos vários dias tem de existir antes do SELECT.
+  await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
 
@@ -53,7 +56,7 @@ export async function GET(req: NextRequest) {
               n.feitoEm,
               -- O terreno e o ajuste no local, pela app do profissional (18-10-2026).
               n.aCaminhoEm, n.chegouEm, n.ajustesJson,
-              o.dataAgendada, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
+              o.dataAgendada, o.diasDoTrabalhoJson, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
               o.contactName, o.contactPhone, o.contactEmail,
               p.id AS providerId, p.name AS profissionalNome, p.phone AS profissionalTelefone,
               p.regimeIva
@@ -84,6 +87,8 @@ export async function GET(req: NextRequest) {
           feitoEm: l.feitoEm as Date | null,
           // Pago ao profissional NÃO entra: pagar adiantado não é ter feito (08-10-2026).
           pedidoConcluido: l.estadoDoPedido === "concluido",
+          // d64: os vários dias — o «atrasado» só depois do último.
+          diasDoTrabalhoJson: (l.diasDoTrabalhoJson as string | null) ?? null,
         },
         agora,
       );
@@ -163,6 +168,14 @@ export async function GET(req: NextRequest) {
         origem: a.origem,
         diasDeAtraso: a.diasDeAtraso,
         horaJaPassou: a.horaJaPassou,
+        /* d64: os dias todos (o 1.º é o que manda), para a grelha mostrar cada um. */
+        diasDoTrabalho: diasDoTrabalho({
+          dataCombinada: l.dataCombinada as Date | null,
+          dataAgendada: l.dataAgendada as Date | null,
+          diasDoTrabalhoJson: (l.diasDoTrabalhoJson as string | null) ?? null,
+        }),
+        diaDoTrabalho: a.diaDoTrabalho ?? null,
+        deDias: a.deDias ?? null,
       };
     });
 

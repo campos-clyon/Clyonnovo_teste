@@ -1,4 +1,5 @@
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
+import { diasDeJson, diasPorExtenso } from "@/lib/varios-dias";
 import { FRASE_DO_ESTADO, estadoDoPedidoAoCliente, valorUnicoAceiteValido } from "./estado-do-pedido-ao-cliente";
 import { aceitesDoValorUnico } from "./valor-unico-no-whatsapp-na-base";
 import { valorUnicoDaLinha, valorUnicoParaOCliente } from "./valor-unico-ao-cliente";
@@ -656,6 +657,14 @@ export async function pedidoDoClienteParaAApp(
       // S22: os vídeos à parte (a app abre-os no navegador), o dia preferido, o acesso e a repetição.
       videos: videosDoPedido(pedido.filesJson),
       dataPreferidaTexto: dataPreferidaTexto((pedido as { dataAgendada?: Date | string | null }).dataAgendada ?? null),
+      /*
+       * d64 (18-11-2026): um trabalho em vários dias — «de segunda, 16, a quarta,
+       * 18 de novembro», ou null num dia só. A app de cliente mostra-o como está.
+       */
+      diasDoTrabalhoTexto: (() => {
+        const dias = diasDeJson((pedido as { diasDoTrabalhoJson?: string | null }).diasDoTrabalhoJson ?? null);
+        return dias.length > 1 ? diasPorExtenso(dias) : null;
+      })(),
       acesso: acessoDoPedido(pedido as unknown as Parameters<typeof acessoDoPedido>[0]),
       repeticao: repeticaoEmPalavras((pedido as { recurrenceFrequency?: unknown }).recurrenceFrequency),
       /*

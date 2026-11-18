@@ -5529,6 +5529,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
+            -- d64: os varios dias do trabalho (nulo com um dia so).
+            o.diasDoTrabalhoJson,
             -- O numero e pelo trabalho todo ou por cada carga. Sem isto, ele
             -- propunha sobre uma unidade e o cliente lia outra.
             o.baseDoPreco,
@@ -9734,7 +9736,7 @@ let _simulatorOrdersEnsured = false;
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
 // 30 — `valorUnicoCliente` e `valorUnicoEm` (15-11-2026, d39), o valor único ao cliente.
 // 31 — `descricaoOriginal`, `linguaDaDescricao` e `descricaoPorTraduzir` (15-11-2026, d46), a descrição sempre em português.
-const MIGRATION_VERSION = 33;
+const MIGRATION_VERSION = 34;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -10004,6 +10006,10 @@ export async function ensureSimulatorOrdersTable() {
     // pessoas × horas, deposição, saída, o preço do motor e a grelha. Só para a
     // Mesa e para aprender; o cliente não o vê. Nulo nos pedidos de antes.
     `ALTER TABLE simulatorOrders ADD COLUMN custoJson LONGTEXT NULL DEFAULT NULL`,
+    // v34 — UM TRABALHO EM VÁRIOS DIAS (18-11-2026, d64). A lista dos dias (início
+    // em Lisboa, cargas previstas e feitas por dia); nula com um dia só, que é o
+    // `dataAgendada` de sempre. Ver varios-dias.ts.
+    `ALTER TABLE simulatorOrders ADD COLUMN diasDoTrabalhoJson TEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -12311,6 +12317,8 @@ export type TrabalhoParaLembrar = {
   morada: string | null;
   cliente: string | null;
   telefoneDoCliente: string | null;
+  /** d64: os vários dias do trabalho — o lembrete chega em cada um. */
+  diasDoTrabalhoJson?: string | null;
 };
 
 /**
@@ -12324,11 +12332,12 @@ export type TrabalhoParaLembrar = {
 export async function trabalhosParaLembrar(dia: string, limite = 30): Promise<TrabalhoParaLembrar[]> {
   try {
     await ensureLembretesDeAgendaTable();
+    await ensureSimulatorOrdersTable();
     const pool = await getPool();
     if (!pool) return [];
     const [rows] = (await pool.execute(
       `SELECT n.id AS negociacaoId, n.pedidoId, n.providerId, n.dataCombinada,
-              o.dataAgendada, o.serviceType, o.city, o.address, o.contactName, o.contactPhone,
+              o.dataAgendada, o.diasDoTrabalhoJson, o.serviceType, o.city, o.address, o.contactName, o.contactPhone,
               p.name AS profissional, p.phone AS telefoneDoProfissional
          FROM negociacoes n
          JOIN providers p ON p.id = n.providerId
@@ -12337,13 +12346,15 @@ export async function trabalhosParaLembrar(dia: string, limite = 30): Promise<Tr
           AND n.execucaoEnviadaEm IS NULL AND n.confirmadoEm IS NULL AND n.pagoEm IS NULL
           AND p.isActive = 1 AND p.whatsappAvisos = 1
           AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'concluido', 'arquivado'))
-          AND COALESCE(n.dataCombinada, o.dataAgendada)
+          AND (COALESCE(n.dataCombinada, o.dataAgendada)
               BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND DATE_ADD(NOW(), INTERVAL 2 DAY)
+            -- d64: num trabalho em vários dias, também nos dias seguintes ao primeiro.
+            OR o.diasDoTrabalhoJson LIKE ?)
           AND NOT EXISTS (
             SELECT 1 FROM lembretesDeAgenda l WHERE l.negociacaoId = n.id AND l.dia = ?
           )
         LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
-      [dia],
+      [`%"dia":"${dia}"%`, dia],
     )) as [Array<Record<string, unknown>>, unknown];
     return rows.map((r) => ({
       negociacaoId: Number(r.negociacaoId),
@@ -12353,6 +12364,7 @@ export async function trabalhosParaLembrar(dia: string, limite = 30): Promise<Tr
       telefoneDoProfissional: (r.telefoneDoProfissional as string) ?? null,
       dataCombinada: (r.dataCombinada as Date) ?? null,
       dataAgendada: (r.dataAgendada as Date) ?? null,
+      diasDoTrabalhoJson: (r.diasDoTrabalhoJson as string) ?? null,
       servico: (r.serviceType as string) ?? null,
       localidade: (r.city as string) ?? null,
       morada: (r.address as string) ?? null,
@@ -17422,7 +17434,11 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
          JOIN simulatorOrders o ON o.id = g.pedidoId
         WHERE g.estado = 'acordada' AND g.execucaoEnviadaEm IS NULL
           AND COALESCE(g.dataCombinada, o.dataAgendada) IS NOT NULL
-          AND COALESCE(g.dataCombinada, o.dataAgendada) < NOW()`,
+          AND COALESCE(g.dataCombinada, o.dataAgendada) < NOW()
+          -- d64: num trabalho em vários dias, só depois do ÚLTIMO dia.
+          AND (o.diasDoTrabalhoJson IS NULL
+            OR JSON_UNQUOTE(JSON_EXTRACT(o.diasDoTrabalhoJson, CONCAT('$[', JSON_LENGTH(o.diasDoTrabalhoJson) - 1, '].dia')))
+               < DATE_FORMAT(NOW(), '%Y-%m-%d'))`,
     ),
     // Contratado e sem dia: um atraso que ainda não começou a contar.
     conta(

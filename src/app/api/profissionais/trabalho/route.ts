@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { diasDoTrabalho, diasPorExtenso, podeDarPorFeitoNoDia } from "@/lib/varios-dias";
 import { podeMostrarConcluir } from "@/lib/viagem-ate-ao-cliente";
 import {
   registarExecucao,
@@ -103,6 +104,20 @@ export async function POST(req: NextRequest) {
         { error: "Este trabalho não está à espera de prova." },
         { status: 409 },
       );
+    }
+    /*
+     * d64 (18-11-2026): NUM TRABALHO EM VÁRIOS DIAS, «ESTÁ FEITO» SÓ NO ÚLTIMO.
+     * Antes disso ele regista as cargas de cada dia (`cargas-do-dia`).
+     */
+    {
+      const t = trabalho as unknown as { dataCombinada?: Date | string | null; dataAgendada?: Date | string | null; diasDoTrabalhoJson?: string | null };
+      const dias = diasDoTrabalho({ dataCombinada: t.dataCombinada ?? null, dataAgendada: t.dataAgendada ?? null, diasDoTrabalhoJson: t.diasDoTrabalhoJson ?? null });
+      if (!podeDarPorFeitoNoDia(dias, new Date())) {
+        return NextResponse.json(
+          { error: `Este trabalho é em ${dias.length} dias: dá-se por feito no último (${diasPorExtenso([dias[dias.length - 1].dia])}). Até lá, registe as cargas de cada dia.`, soNoUltimoDia: true },
+          { status: 409 },
+        );
+      }
     }
     /*
      * O CONCLUIR SÓ DEPOIS DAS DUAS CONFIRMAÇÕES — 30-10-2026. Numa viagem

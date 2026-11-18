@@ -42,6 +42,8 @@ import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
+import VariosDias from "@/components/admin/VariosDias";
+import type { DiaDoTrabalho } from "@/lib/varios-dias";
 import EnviarValoresParaPagamento from "@/components/admin/EnviarValoresParaPagamento";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { contaDoTrabalhoClyon, contaDoTrabalhoClyonNoNovoModelo } from "@/lib/conta-do-pagamento";
@@ -975,6 +977,8 @@ function CartaoDoTrabalho({
    * feito» de um trabalho à hora espera pela folha preenchida.
    */
   const porHora = lerBase(t.base) === "hora";
+  // d64: os vários dias do trabalho (lidos pelo «Vários dias»), para a adjudicação dizer os dias todos.
+  const [diasLidos, setDiasLidos] = useState<DiaDoTrabalho[]>([]);
   const [folhaMarcada, setFolhaMarcada] = useState<boolean | null>(null);
   const [abrirFolha, setAbrirFolha] = useState(0);
   const [semFolha, setSemFolha] = useState(false);
@@ -1070,6 +1074,7 @@ function CartaoDoTrabalho({
           // d63: a base e o valor ao cliente (por carga, o de uma carga), para a frase da base.
           base: lerBase(t.base),
           valor: valorDaAdjudicacao,
+          dias: diasLidos,
           quando: a.dataCombinada ?? t.dataAgendada,
           empresa: a.profissional,
           responsavel: a.responsavel ?? null,
@@ -1708,6 +1713,13 @@ function CartaoDoTrabalho({
       {/* Trocar quem o faz, antes de estar confirmado — o «Trocar empresa» da Mesa. */}
       {a && !a.confirmadoEm && !a.pagoEm && (
         <TrocarProfissional pedidoId={t.pedidoId} actualProviderId={a.providerId} actualNome={a.profissional} onMudou={onMudou} />
+      )}
+
+      {/* d64: um trabalho em vários dias — o primeiro passa a ser o dia do pedido. */}
+      {r.fase !== "cancelada" && (
+        <div className="mt-3">
+          <VariosDias pedidoId={t.pedidoId} primeiroDia={a?.dataCombinada ?? t.dataAgendada} onLido={setDiasLidos} onGravado={() => onMudou()} />
+        </div>
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">

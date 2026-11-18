@@ -174,6 +174,8 @@ import TelefoneComWhatsApp from "./TelefoneComWhatsApp";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
+import VariosDias from "@/components/admin/VariosDias";
+import type { DiaDoTrabalho } from "@/lib/varios-dias";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas } from "@/lib/outro-servico";
 import { O_CLIENTE_RESPONDEU } from "@/lib/prazo-do-cliente-clyon";
@@ -1054,6 +1056,8 @@ export default function AdminNegociacoesPanel({
   // Os métodos de pagamento da adjudicação, das Configs (27-10-2026).
   const { metodos: metodosDePagamento, lido: metodosLidos } = useMetodosDePagamento();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  // d64: os vários dias de cada pedido contratado (lidos pelo «Vários dias»), para a adjudicação.
+  const [diasDosPedidos, setDiasDosPedidos] = useState<Record<number, DiaDoTrabalho[]>>({});
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState("");
@@ -3356,6 +3360,18 @@ export default function AdminNegociacoesPanel({
           </div>
         )}
 
+        {/* d64: um trabalho contratado em vários dias — o primeiro passa a ser o dia do pedido. */}
+        {acordada && !cancelado && (
+          <div className="mt-3">
+            <VariosDias
+              pedidoId={p.id}
+              primeiroDia={acordada.dataCombinada ?? p.dataAgendada ?? null}
+              onLido={(d) => setDiasDosPedidos((m) => (JSON.stringify(m[p.id] ?? []) === JSON.stringify(d) ? m : { ...m, [p.id]: d }))}
+              onGravado={() => void carregar()}
+            />
+          </div>
+        )}
+
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
           <button
             onClick={() => setAEditarPlataforma(p.id)}
@@ -3518,6 +3534,7 @@ export default function AdminNegociacoesPanel({
               localidade: p.city,
               base: lerBase(p.baseDoPreco),
               // Por hora, sem número: com as horas confirmadas o acordado já é o total.
+              dias: diasDosPedidos[p.id] ?? null,
               valor: contaDaAdjudicacao && lerBase(p.baseDoPreco) !== "hora" ? { semIva: contaDaAdjudicacao.semIva, total: contaDaAdjudicacao.total } : null,
               empresa: acordada.profissionalNome,
               responsavel: acordada.profissionalResponsavel ?? null,

@@ -375,6 +375,8 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   quantoQueriaPagar: "fica",
   // O custo real (d61): km, horas, euros e ids de profissionais — sem dados de pessoas.
   custoJson: "fica",
+  // d64: os dias do trabalho e as cargas de cada um — sem dados de pessoas.
+  diasDoTrabalhoJson: "fica",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

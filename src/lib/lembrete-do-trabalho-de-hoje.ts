@@ -85,10 +85,14 @@ export function horaDoTrabalho(quando: Date): string | null {
  * lembrete às 10h: nessa altura já não é lembrar, é acusar.
  */
 export function deveLembrar(
-  t: { dataCombinada?: Date | string | null; dataAgendada?: Date | string | null },
+  t: { dataCombinada?: Date | string | null; dataAgendada?: Date | string | null; diasDoTrabalhoJson?: string | null },
   agora: Date,
 ): { lembrar: boolean; quando: Date | null } {
-  const a = naAgenda({ dataCombinada: t.dataCombinada, dataAgendada: t.dataAgendada }, agora);
+  // d64: num trabalho em vários dias, o lembrete chega em cada um deles.
+  const a = naAgenda(
+    { dataCombinada: t.dataCombinada, dataAgendada: t.dataAgendada, diasDoTrabalhoJson: t.diasDoTrabalhoJson ?? null },
+    agora,
+  );
   if (a.estado !== "hoje" || !a.quando) return { lembrar: false, quando: null };
   const { hora } = partesEmLisboa(agora);
   if (hora < HORA_DO_LEMBRETE || hora >= ULTIMA_HORA_DO_LEMBRETE) return { lembrar: false, quando: a.quando };

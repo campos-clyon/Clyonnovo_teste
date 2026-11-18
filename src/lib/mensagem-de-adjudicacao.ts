@@ -7,6 +7,7 @@ import { servicoEmPalavras } from "./servico-em-palavras";
 import { valorComIva } from "./extra-no-local";
 import { lerBase, type BaseDoPreco } from "./base-do-preco";
 import { fraseDaBase } from "./frase-da-base";
+import { diasPorExtenso, type DiaDoTrabalho } from "./varios-dias";
 import { telefoneLegivel } from "./telefone-legivel";
 
 /**
@@ -68,6 +69,8 @@ export type TrabalhoAdjudicado = {
   base?: BaseDoPreco | null;
   valor?: { semIva: number; total: number } | null;
   minimoHoras?: number | null;
+  /** d64: os dias do trabalho (`varios-dias.ts`); com mais de um, a mensagem diz-os todos. */
+  dias?: DiaDoTrabalho[] | null;
   /** O nome da empresa que faz o trabalho — o profissional escolhido. */
   empresa?: string | null;
   /** Quem responde por ela, como o cliente o vai ouvir: o primeiro nome. */
@@ -285,9 +288,18 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
   const futuro = dia != null && !Number.isNaN(dia.getTime()) && dia.getTime() > agora.getTime();
   // «A mudança fica marcada», «o esvaziamento fica marcado» — pelo artigo.
   const a = oTrabalho.startsWith("A ") ? "a" : "o";
-  const fica = futuro
-    ? `${oTrabalho} fica marcad${a} para ${quandoPorExtenso(dia, agora)}.`
-    : `${oTrabalho} fica confirmad${a}.`;
+  /*
+   * d64 (18-11-2026): num trabalho em vários dias, os dias todos — «fica marcado
+   * de segunda, 16, a quarta, 18 de novembro» — enquanto o último ainda vem.
+   */
+  const varios = t.dias && t.dias.length > 1 ? t.dias : null;
+  const ultimoAindaVem = varios != null && new Date(varios[varios.length - 1].inicio).getTime() > agora.getTime();
+  const osDias = varios ? diasPorExtenso(varios) : "";
+  const fica = varios && ultimoAindaVem
+    ? `${oTrabalho} fica marcad${a} ${osDias.startsWith("de ") ? osDias : `para ${osDias}`}.`
+    : futuro
+      ? `${oTrabalho} fica marcad${a} para ${quandoPorExtenso(dia, agora)}.`
+      : `${oTrabalho} fica confirmad${a}.`;
 
   const empresa = t.empresa?.trim() || null;
   const responsavel = t.responsavel?.trim() || null;

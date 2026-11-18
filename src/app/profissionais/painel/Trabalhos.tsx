@@ -1,5 +1,7 @@
 "use client";
 
+
+import DiasDoTrabalho from "./DiasDoTrabalho";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 // Vive à parte porque a Agenda usa o mesmo. Ver o cabeçalho do ficheiro:
 // ninguém sai da agenda para ir arrumar a agenda.
@@ -2402,6 +2404,16 @@ function DetalheDoTrabalho({
         <HorasDoTrabalho pedido={pedido} onGravou={onRecarregar} />
       )}
 
+      {/* d64: um trabalho em vários dias — os dias, e as cargas de cada um. */}
+      {fechado && pedido.negociacaoId && pedido.diasDoTrabalho && pedido.diasDoTrabalho.length > 1 && (
+        <DiasDoTrabalho
+          negociacaoId={pedido.negociacaoId}
+          dias={pedido.diasDoTrabalho}
+          podeRegistar={pedido.fase === "a_executar"}
+          onGravou={onRecarregar}
+        />
+      )}
+
       {fechado && pedido.fase === "a_executar" && !obrigado && (
         <section className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
           <h2 className="text-base font-bold text-cyan-900">Quando estiver feito</h2>
@@ -2433,6 +2445,12 @@ function DetalheDoTrabalho({
           {erro && <p className="mt-2 text-sm text-red-600">{erro}</p>}
 
           {/* Num trabalho por hora, o «Está feito» só com as horas gravadas (31-10-2026). */}
+          {/* d64: em vários dias, «Está feito» só no último (a rota recusa antes). */}
+          {pedido.podeDarPorFeitoHoje === false && (
+            <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+              Este trabalho é em vários dias: dá-se por feito no último dia. Até lá, registe as cargas de cada dia.
+            </p>
+          )}
           {pedido.porHora && !pedido.porHora.podeDarPorFeito ? (
             <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
               {MARQUE_AS_HORAS_PRIMEIRO}
@@ -2440,7 +2458,7 @@ function DetalheDoTrabalho({
           ) : (
           <button
             onClick={marcarFeito}
-            disabled={aEnviar}
+            disabled={aEnviar || pedido.podeDarPorFeitoHoje === false}
             className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-acao text-base font-bold text-white transition active:bg-acao-hover disabled:opacity-40"
           >
             {aEnviar && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}

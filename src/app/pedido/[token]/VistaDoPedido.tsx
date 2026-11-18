@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Camera, MapPin, Clock, FileText, Truck } from "lucide-react";
 import { lerBase, avisoDaBaseParaOCliente } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
+import { diasDeJson, diasPorExtenso } from "@/lib/varios-dias";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { negociacoesNoEcraDoPedido } from "@/lib/vista-do-pedido";
 import { marcarVistasPeloCliente } from "@/lib/pedidos-do-cliente";
@@ -333,6 +334,18 @@ export default async function VistaDoPedido({
               <dd className="text-slate-700">{QUANDO_EM_PALAVRAS[pedido.urgency] ?? pedido.urgency}</dd>
             </div>
           )}
+          {/* d64: um trabalho em vários dias — os dias todos, um só pedido e um só pagamento. */}
+          {(() => {
+            const dias = diasDeJson((pedido as { diasDoTrabalhoJson?: string | null }).diasDoTrabalhoJson ?? null);
+            if (dias.length <= 1) return null;
+            return (
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />
+                <dt className="sr-only">Dias do trabalho</dt>
+                <dd className="text-slate-700">Em {dias.length} dias: {diasPorExtenso(dias)}</dd>
+              </div>
+            );
+          })()}
           {Boolean(pedido.precisaFatura) && (
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 shrink-0 text-tinta-fraca" aria-hidden="true" />

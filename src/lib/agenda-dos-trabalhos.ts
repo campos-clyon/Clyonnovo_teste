@@ -20,6 +20,8 @@
  * se perderia se a segunda escrevesse por cima da primeira.
  */
 
+import { diasDoTrabalho } from "./varios-dias";
+
 const TZ = "Europe/Lisbon";
 
 export type EstadoNaAgenda =
@@ -54,6 +56,12 @@ export type TrabalhoNaAgenda = {
    * confirmação da negociação. Também é feito.
    */
   pedidoConcluido?: boolean;
+  /**
+   * VÁRIOS DIAS — d64 (18-11-2026): a lista dos dias do pedido
+   * (`simulatorOrders.diasDoTrabalhoJson`). O dia 1 é a data que manda; o
+   * «atrasado» só conta depois do ÚLTIMO dia. Sem lista, um dia só, como sempre.
+   */
+  diasDoTrabalhoJson?: string | null;
 };
 
 export type NaAgenda = {
@@ -75,6 +83,9 @@ export type NaAgenda = {
    * ver quando pergunta «isto está a andar?».
    */
   horaJaPassou: boolean;
+  /** d64: num trabalho de vários dias, o dia de `quando` (1, 2, 3…) e quantos são. */
+  diaDoTrabalho?: number;
+  deDias?: number;
 };
 
 /**
@@ -218,6 +229,31 @@ export function naAgenda(t: TrabalhoNaAgenda, agora: Date = new Date()): NaAgend
 
   if (!quando) {
     return { estado: "sem_data", quando: null, origem, diasDeAtraso: 0, horaJaPassou: false };
+  }
+
+  /*
+   * VÁRIOS DIAS — d64. O dia de hoje, se for um dos dias; senão o próximo; e
+   * só depois do último dia (com as 3 horas de margem no próprio dia) é
+   * atrasado. Num dia só, a conta de sempre, mais abaixo.
+   */
+  const osDias = diasDoTrabalho({ dataCombinada: combinada, dataAgendada: doCliente, diasDoTrabalhoJson: t.diasDoTrabalhoJson });
+  if (osDias.length > 1) {
+    const m = osDias.length;
+    const hoje = diaCivil(agora);
+    const i = osDias.findIndex((d) => d.dia >= hoje);
+    const extra = (k: number) => ({ diaDoTrabalho: k + 1, deDias: m });
+    if (i < 0) {
+      const ultimo = new Date(osDias[m - 1].inicio);
+      return { estado: "atrasado", quando: ultimo, origem, diasDeAtraso: -diasEntre(agora, ultimo), horaJaPassou: true, ...extra(m - 1) };
+    }
+    const deste = new Date(osDias[i].inicio);
+    if (osDias[i].dia === hoje) {
+      if (i === m - 1 && temHoraMarcada(deste) && agora.getTime() - deste.getTime() >= HORAS_ATE_ATRASAR * 3_600_000) {
+        return { estado: "atrasado", quando: deste, origem, diasDeAtraso: 0, horaJaPassou: true, ...extra(i) };
+      }
+      return { estado: "hoje", quando: deste, origem, diasDeAtraso: 0, horaJaPassou: deste.getTime() < agora.getTime(), ...extra(i) };
+    }
+    return { estado: "por_vir", quando: deste, origem, diasDeAtraso: 0, horaJaPassou: false, ...extra(i) };
   }
 
   const dias = diasEntre(agora, quando);
