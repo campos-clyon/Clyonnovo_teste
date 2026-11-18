@@ -54,7 +54,7 @@ const elementoCom = (html: string, texto: string) => {
   return html.slice(abre, html.indexOf(">", abre) + 1);
 };
 
-describe("na linha do «Por decidir»", () => {
+describe("na linha do «Orçamentos novos»", () => {
   it("o botão fica ao lado do «Editar», antes do valor fixo, e o painel abre por baixo da nota", () => {
     expect(inicio).toBeGreaterThan(0);
     const editar = LINHA.indexOf("onClick={() => onEditar(p.id)}");

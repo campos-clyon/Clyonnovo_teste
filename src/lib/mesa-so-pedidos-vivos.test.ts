@@ -8,6 +8,7 @@ import {
   type TrabalhoClyonParaOLado,
 } from "./do-nosso-lado";
 import { ESTADOS_DE_PEDIDO_FECHADO, pedidoArrumado, pedidoFechado } from "./pedido-arrumado";
+import { blocoDoClyonNaMesa } from "./trabalho-clyon-na-mesa";
 
 /**
  * «MESA-SO-PEDIDOS-VIVOS» — 18-11-2026, aprovada pelo CEO e pelo dono.
@@ -57,7 +58,7 @@ describe("uma só lista dos estados fechados", () => {
     const DB = ler("src/lib/db.ts");
     const i = DB.indexOf("export async function pedidosPorTelefoneWhatsApp");
     expect(DB.slice(i, DB.indexOf("O RETRATO DO TELEMÓVEL", i))).toContain("const FECHADOS: readonly string[] = ESTADOS_DE_PEDIDO_FECHADO;");
-    // O «Por decidir» também deixa de fora o rejeitado.
+    // O «Orçamentos novos» também deixa de fora o rejeitado.
     const j = DB.indexOf("export async function pedidosPorPromover");
     expect(DB.slice(j, DB.indexOf("LIMIT ?", j))).toContain("o.status NOT IN ${ESTADOS_DE_PEDIDO_FECHADO_SQL}");
   });
@@ -129,7 +130,11 @@ describe("2. e 3. a lista da Mesa sem os arrumados", () => {
   });
 
   it("um Trabalho CLYON de um pedido arrumado vai aos cancelados, antes de qualquer outra regra", () => {
-    expect(MESA).toMatch(/const chave: ChaveDoBloco \| null = pedidoArrumado\(t\.estadoDoPedido\)\s+\? "cancelados"/);
+    // Desde 18-11-2026 pela regra única (trabalho-clyon-na-mesa.ts), com `arrumado` = `pedidoArrumado`.
+    expect(MESA).toContain("arrumado: pedidoArrumado(t.estadoDoPedido),");
+    expect(
+      blocoDoClyonNaMesa({ arrumado: true, bloco: "precisa", fase: "escolher", clienteRespondeu: true, propostaEnviadaEm: ha(5) }),
+    ).toBe("cancelados");
   });
 
   it("o bloco dos cancelados não se desenha na Mesa — só a procurar, para encontrar e reabrir", () => {

@@ -34,7 +34,7 @@ import {
   O_CLIENTE_RESPONDEU,
   clienteRespondeu,
   ficaSemEfeito,
-  vaiAoPorDecidir,
+  oClienteRespondeuNaMesa,
 } from "./prazo-do-cliente-clyon";
 import { arquivarTrabalhosClyonSemResposta } from "./arquivar-sem-resposta";
 import { avisoSemOTrabalho } from "./textos-dos-avisos-ao-profissional";
@@ -205,10 +205,10 @@ describe("o cliente respondeu (d2)", () => {
     expect(O_CLIENTE_RESPONDEU).toBe("O cliente respondeu — escolher parceiro");
   });
 
-  it("aceite às 70 horas: às 73 não fica sem efeito, a rotina não o arquiva nem avisa ninguém, e vai ao «Por decidir»", async () => {
+  it("aceite às 70 horas: às 73 não fica sem efeito, a rotina não o arquiva nem avisa ninguém, e fica em «Precisa de si» com a etiqueta", async () => {
     const t = trabalho({ propostaEnviadaEm: PRECO, precoAceiteEm: aposHoras(70) });
     expect(ficaSemEfeito(t, AGORA)).toBe(false);
-    expect(vaiAoPorDecidir(t)).toBe(true);
+    expect(oClienteRespondeuNaMesa(t)).toBe(true);
 
     vi.mocked(db.trabalhosClyonComOPrecoNoCliente).mockResolvedValue([linha(521, { precoAceiteEm: aposHoras(70) })]);
     comQuemAceitou();
@@ -251,25 +251,26 @@ describe("o cliente respondeu (d2)", () => {
     expect(avisarSemEfeitoDoTrabalhoClyon).not.toHaveBeenCalled();
   });
 
-  it("com o parceiro já escolhido, ou fora da mesa, não vai ao «Por decidir»", () => {
+  it("com o parceiro já escolhido, ou fora da mesa, não leva a etiqueta", () => {
     const aceite = { propostaEnviadaEm: PRECO, precoAceiteEm: aposHoras(10) };
-    expect(vaiAoPorDecidir(trabalho({ ...aceite, negociacoes: [{ estado: "acordada" }] }))).toBe(false);
-    expect(vaiAoPorDecidir(trabalho({ ...aceite, estadoDoPedido: "arquivado" }))).toBe(false);
-    expect(vaiAoPorDecidir(trabalho({ ...aceite, valorFixoClyon: null }))).toBe(false);
-    expect(vaiAoPorDecidir(trabalho({ propostaEnviadaEm: PRECO }))).toBe(false);
+    expect(oClienteRespondeuNaMesa(trabalho({ ...aceite, negociacoes: [{ estado: "acordada" }] }))).toBe(false);
+    expect(oClienteRespondeuNaMesa(trabalho({ ...aceite, estadoDoPedido: "arquivado" }))).toBe(false);
+    expect(oClienteRespondeuNaMesa(trabalho({ ...aceite, valorFixoClyon: null }))).toBe(false);
+    expect(oClienteRespondeuNaMesa(trabalho({ propostaEnviadaEm: PRECO }))).toBe(false);
   });
 
-  it("a base lê as respostas e os já avisados; a Mesa põe-nos no «Por decidir» com o selo", () => {
+  it("a base lê as respostas e os já avisados; a Mesa põe-nos em «Precisa de si» com o selo", () => {
     const DB = ler("src/lib/db.ts");
     expect(DB).toContain("respostasDoClienteNoWhatsApp(linhas.map(");
     expect(DB).toContain("semEfeitoJaAvisado(ids)");
     expect(DB).toMatch(/FROM whatsappMensagens\s+WHERE direccao = 'in'/);
     expect(DB).toMatch(/FROM registoPermanente\s+WHERE acontecimento = 'negociacao_encerrada' AND autorNome = 'prazo do cliente'/);
     expect(ler("src/lib/arquivar-sem-resposta.ts")).toContain('autorNome: "prazo do cliente"');
-    expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("clienteRespondeu: vaiAoPorDecidir({");
+    expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("clienteRespondeu: oClienteRespondeuNaMesa({");
     const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
-    expect(MESA).toMatch(/b && t\.clienteRespondeu\s*\?\s*mostrar !== "clyon"\s*\?\s*"porEnviar"/);
+    expect(MESA).toContain("blocoDoClyonNaMesa(paraAMesa(t))");
+    expect(MESA).not.toContain(`clyonDoBloco("porEnviar")`);
     expect(MESA).toContain("{O_CLIENTE_RESPONDEU}");
-    expect(MESA).toContain('porPromoverNaMesa.length + voltamAoPorDecidir.length + clyonDoBloco("porEnviar").length');
+    expect(MESA).toContain("porPromoverNaMesa.length + voltamAoPorDecidir.length");
   });
 });

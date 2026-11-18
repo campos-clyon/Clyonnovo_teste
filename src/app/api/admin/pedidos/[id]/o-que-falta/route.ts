@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  *
  * O «PEDIR O QUE FALTA» FICA NO HISTÓRICO DO PEDIDO — 26-10-2026 (d31).
  *
- * O botão do «Por decidir» abre o WhatsApp ou o email do cliente com a
+ * O botão do «Orçamentos novos» abre o WhatsApp ou o email do cliente com a
  * mensagem pronta (`mensagem-do-que-falta.ts`). Esta rota NÃO ENVIA NADA:
  * quem envia é a pessoa da equipa, no WhatsApp ou no programa de email dela.
  * Aqui só se escreve no histórico quem pediu, por onde e o quê — a lista,

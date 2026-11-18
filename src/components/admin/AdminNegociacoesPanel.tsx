@@ -158,7 +158,6 @@ import {
   blocoDoTrabalho,
   porqueSaltar,
   quemEstaNoTrabalho,
-  type Bloco as BlocoDoTrabalhoClyon,
   type TrabalhoClyon,
 } from "./TrabalhoClyon";
 import PedidoDetailModal from "./PedidoDetailModal";
@@ -182,6 +181,7 @@ import type { DiaDoTrabalho } from "@/lib/varios-dias";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas } from "@/lib/outro-servico";
 import { O_CLIENTE_RESPONDEU } from "@/lib/prazo-do-cliente-clyon";
+import { blocoDoClyonNaMesa, mostraOClienteRespondeu, type TrabalhoClyonParaAMesa } from "@/lib/trabalho-clyon-na-mesa";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -794,15 +794,19 @@ const TITULO_DO_FILTRO = "text-[10px] font-semibold uppercase leading-snug track
  * cliente (21-10-2026, «Enviar proposta ao cliente» ou «Enviar pela CLYON»):
  * até ele responder, nada há a fazer cá dentro.
  */
-const BLOCO_NA_MESA: Record<BlocoDoTrabalhoClyon, Exclude<ChaveDoBloco, "porEnviar" | "aguardaCliente">> = {
-  feito: "porConfirmar",
-  precisa: "n1",
-  espera: "n2",
-  atribuidos: "n3",
-  concluidos: "concluidos",
-  cancelados: "cancelados",
-  arquivados: "cancelados",
-};
+// Desde 18-11-2026 (correcção da d55) a regra vive em `trabalho-clyon-na-mesa.ts`:
+// um Trabalho CLYON já foi a alguém, e nunca cai nos «Orçamentos novos».
+/** O que a regra dos blocos precisa de um Trabalho CLYON. */
+function paraAMesa(t: TrabalhoClyon): TrabalhoClyonParaAMesa {
+  return {
+    arrumado: pedidoArrumado(t.estadoDoPedido),
+    bloco: blocoDoTrabalho(t),
+    fase: t.resumo.fase,
+    propostaEnviadaEm: t.propostaEnviadaEm,
+    precoAceiteEm: t.precoAceiteEm,
+    clienteRespondeu: t.clienteRespondeu,
+  };
+}
 
 const BLOCOS: Array<{
   chave: ChaveDoBloco;
@@ -939,7 +943,7 @@ const BLOCOS: Array<{
      * valor fixo ou negociação. Era o «Por enviar», com a mesma regra (ainda
      * sem negociações). A chave fica, e com ela os testes e as cores.
      */
-    titulo: "Por decidir",
+    titulo: "Orçamentos novos",
     dica:
       "Tudo o que entra — site, WhatsApp ou registado aqui — e ainda não foi a ninguém; um profissional não o vê. Decida o tipo: valor fixo (os profissionais só aceitam ou recusam; a taxa vai pelo escalão) ou negociação (vai aos profissionais para proporem, a partir da conta da CLYON ou do valor que escrever na caixa). Em baixo, o «Outro serviço» que já foi aos profissionais e ficou um dia sem propostas.",
     Icone: Send,
@@ -1443,7 +1447,7 @@ export default function AdminNegociacoesPanel({
     setPedidos((lista) =>
       lista.map((p) => (p.id === id ? { ...p, notasInternas: limpo || null } : p)),
     );
-    // E no «Por decidir», que desenha a mesma nota (26-10-2026, d29).
+    // E no «Orçamentos novos», que desenha a mesma nota (26-10-2026, d29).
     setPorPromover((lista) =>
       lista.map((p) => (p.id === id ? { ...p, notasInternas: limpo || null } : p)),
     );
@@ -2292,7 +2296,7 @@ export default function AdminNegociacoesPanel({
    */
   const porPromoverNaMesa = useMemo(
     () =>
-      // O «Por decidir» ainda não tem tipo: com um escolhido, sai.
+      // O «Orçamentos novos» ainda não tem tipo: com um escolhido, sai.
       aFiltrarProfissional || tipo !== "todos"
         ? []
         : (aProcurar
@@ -2331,28 +2335,15 @@ export default function AdminNegociacoesPanel({
   const clyonPorBloco = useMemo(() => {
     const m: Partial<Record<ChaveDoBloco, TrabalhoClyon[]>> = {};
     for (const t of [...clyonNaMesa].sort((a, b) => b.pedidoId - a.pedidoId)) {
-      const b = blocoDoTrabalho(t);
-      // A proposta já foi ao cliente: a vez é dele, e não de cá (21-10-2026).
-      // Aceite o preço na app (28-10-2026, S7), a vez volta a ser de cá.
-      // O CLIENTE RESPONDEU (31-10-2026, d2): «Aceito este preço», uma mensagem
-      // no WhatsApp ou a conversa passada a uma pessoa — vai ao «Por decidir»,
-      // com o selo, quando ele está à vista; no modo da CLYON, a «Precisa de si».
-      // Um pedido arrumado (cancelado, arquivado, rejeitado) vai sempre aos cancelados — 18-11-2026.
-      const chave: ChaveDoBloco | null = pedidoArrumado(t.estadoDoPedido)
-        ? "cancelados"
-        : b && t.clienteRespondeu
-          ? mostrar !== "clyon"
-            ? "porEnviar"
-            : "n1"
-          : b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm && !t.precoAceiteEm
-            ? "aguardaCliente"
-            : b
-              ? BLOCO_NA_MESA[b]
-              : null;
+      // Um cartão, um bloco (18-11-2026, correcção da d55): oferecido sem aceites
+      // → «À espera de propostas»; aceites por escolher → «Precisa de si»; a
+      // proposta no cliente → «A aguardar cliente»; o cliente respondeu mesmo →
+      // «Precisa de si», com a etiqueta. Nunca nos «Orçamentos novos».
+      const chave: ChaveDoBloco | null = blocoDoClyonNaMesa(paraAMesa(t));
       if (chave) (m[chave] ??= []).push(t);
     }
     return m;
-  }, [clyonNaMesa, mostrar]);
+  }, [clyonNaMesa]);
   const clyonDoBloco = (chave: ChaveDoBloco): TrabalhoClyon[] => clyonPorBloco[chave] ?? [];
   /** Os números dos de valor fixo — o lote trata-os pela rota deles. */
   const idsClyon = useMemo(() => new Set(trabalhosClyon.map((t) => t.pedidoId)), [trabalhosClyon]);
@@ -2579,10 +2570,10 @@ export default function AdminNegociacoesPanel({
   /*
    * O «OUTRO SERVIÇO» SEM PROPOSTAS VOLTA AO «POR DECIDIR» — 31-10-2026 (d6
    * de 30-10). Foi aos profissionais e passou um dia sem ninguém propor: sai
-   * de «À espera de propostas» e fica no «Por decidir», por baixo dos que
+   * de «À espera de propostas» e fica no «Orçamentos novos», por baixo dos que
    * ainda não foram a ninguém, com o cartão dele (Redistribuir, a Ficha,
    * Passar a valor fixo). A regra é `outroSemPropostas`; o relógio é o da
-   * última leitura. Só quando o «Por decidir» está à vista — no modo da
+   * última leitura. Só quando o «Orçamentos novos» está à vista — no modo da
    * CLYON, com um tipo ou com um profissional escolhido, fica onde estava.
    */
   const voltamAoPorDecidir: Pedido[] = [];
@@ -2636,7 +2627,7 @@ export default function AdminNegociacoesPanel({
   }
   function quantosNoBloco(chave: ChaveDoBloco): number {
     return chave === "porEnviar"
-      ? porPromoverNaMesa.length + voltamAoPorDecidir.length + clyonDoBloco("porEnviar").length
+      ? porPromoverNaMesa.length + voltamAoPorDecidir.length
       : pedidosDoBloco(chave).length + clyonDoBloco(chave).length;
   }
   /*
@@ -2848,7 +2839,7 @@ export default function AdminNegociacoesPanel({
                 Por ver
               </span>
             )}
-            {/* O mesmo «Anotar» das linhas do «Por decidir» — `NotaDoPedido.tsx` (26-10-2026). */}
+            {/* O mesmo «Anotar» das linhas do «Orçamentos novos» — `NotaDoPedido.tsx` (26-10-2026). */}
             <BotaoAnotar pedidoId={p.id} nota={p.notasInternas} notas={notas} />
           </div>
           <div className="min-w-0">
@@ -3052,7 +3043,7 @@ export default function AdminNegociacoesPanel({
           o que ela é.
 
           Desde 26-10-2026 (d29) é o componente `NotaDoPedido`, que as linhas
-          do «Por decidir» também desenham, com o mesmo `notas`.
+          do «Orçamentos novos» também desenham, com o mesmo `notas`.
         */}
         <NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} />
 
@@ -5214,7 +5205,7 @@ export default function AdminNegociacoesPanel({
         <RegistarPedido
           onCriado={() => carregar(true)}
           onEditar={(id) => setAEditarPlataforma(id)}
-          // O registo acaba na escolha do «Por decidir» — 20-10-2026.
+          // O registo acaba na escolha do «Orçamentos novos» — 20-10-2026.
           escolherValorFixo={
             podeOferecerTrabalhoClyon
               ? (r) => (
@@ -5451,39 +5442,6 @@ export default function AdminNegociacoesPanel({
                       </div>
                     </div>
                   )}
-                  {/*
-                    O CLIENTE RESPONDEU — 31-10-2026 (d2). Um Trabalho CLYON com
-                    o preço no cliente em que ele disse que sim, escreveu no
-                    WhatsApp ou passou a uma pessoa: falta escolher o parceiro.
-                    A rotina das 72 horas já não o arquiva.
-                  */}
-                  {!fechado && clyonDoBloco("porEnviar").length > 0 && (
-                    <div className="mt-3 pl-1">
-                      <div className="space-y-1.5">
-                        {clyonDoBloco("porEnviar").map((t) => (
-                          <div key={`respondeu-${t.pedidoId}`}>
-                            <span className="mb-1 inline-block rounded-md border border-magenta/50 bg-magenta/20 px-2 py-0.5 text-xs font-semibold text-magenta-texto">
-                              #{t.pedidoId} · {O_CLIENTE_RESPONDEU}
-                            </span>
-                            <ul className="list-none">
-                              <TrabalhoClyonComAccoes
-                                t={t}
-                                comTipo
-                                corDoBloco={b.corDoCartao}
-                                abrirAoInicio={abrirClyon === t.pedidoId || (aProcurar && encontrados === 1)}
-                                onMudou={() => void carregar(true, temTudo)}
-                                onAviso={setAviso}
-                                onErro={setErro}
-                                onRestaurado={irAoTrabalhoClyon}
-                                marcado={marcados.has(t.pedidoId)}
-                                onMarcar={() => marcar(t.pedidoId)}
-                              />
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   {/* Só o pai diz "Nada aqui.": o filho, sem pedidos, não desenha
                       nada — senão apareciam duas mensagens de vazio empilhadas. */}
                   {!fechado && quantos === 0 && (
@@ -5596,6 +5554,14 @@ export default function AdminNegociacoesPanel({
                               id: t.pedidoId,
                               el: (
                                 <ul key={`clyon-${t.pedidoId}`} className="list-none">
+                                  {/* O cliente respondeu mesmo (aceitou ou escreveu-nos): falta escolher o parceiro. */}
+                                  {b.chave === "n1" && mostraOClienteRespondeu(paraAMesa(t)) && (
+                                    <li className="list-none">
+                                      <span className="mb-1 inline-block rounded-md border border-magenta/50 bg-magenta/20 px-2 py-0.5 text-xs font-semibold text-magenta-texto">
+                                        #{t.pedidoId} · {O_CLIENTE_RESPONDEU}
+                                      </span>
+                                    </li>
+                                  )}
                                   <TrabalhoClyonComAccoes
                                     t={t}
                                     comTipo

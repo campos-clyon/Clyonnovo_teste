@@ -174,7 +174,7 @@ export type TrabalhoClyon = {
   /**
    * O cliente respondeu ao preço e ainda ninguém foi escolhido (31-10-2026,
    * d2): o «Aceito este preço», uma mensagem no WhatsApp depois do envio, ou a
-   * conversa passada a uma pessoa. Vai ao «Por decidir» da Mesa, com o selo.
+   * conversa passada a uma pessoa. Vai ao «Orçamentos novos» da Mesa, com o selo.
    */
   clienteRespondeu?: boolean;
   /** De onde entrou o pedido. */

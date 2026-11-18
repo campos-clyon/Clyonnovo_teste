@@ -137,7 +137,7 @@ describe("o «Do nosso lado» há mais de 2 h", () => {
   });
 });
 
-describe("o «Por decidir» há mais de 1 h", () => {
+describe("o «Orçamentos novos» há mais de 1 h", () => {
   it("avisa uma vez o que não foi a ninguém há mais de uma hora", async () => {
     const agora = new Date("2026-11-10T15:00:00Z");
     const l = loja({

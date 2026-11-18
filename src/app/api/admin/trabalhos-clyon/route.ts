@@ -59,7 +59,7 @@ import { enviarTextoManualWhatsApp } from "@/lib/whatsapp-cloud";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { choquesDoProfissional } from "@/lib/choques-de-agenda";
-import { vaiAoPorDecidir } from "@/lib/prazo-do-cliente-clyon";
+import { oClienteRespondeuNaMesa } from "@/lib/prazo-do-cliente-clyon";
 import { atribuirDirectamente } from "@/lib/atribuir-directamente";
 import { avisarProfissional } from "@/lib/avisos-do-backoffice";
 
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
     /*
      * O CLIENTE RESPONDEU AO PREÇO — 31-10-2026 (d2): o «Aceito este preço»,
      * uma mensagem dele no WhatsApp depois do envio, ou a conversa passada a
-     * uma pessoa. Esses vão ao «Por decidir» da Mesa, com o selo. Se a leitura
+     * uma pessoa. Esses vão ao «Orçamentos novos» da Mesa, com o selo. Se a leitura
      * do WhatsApp falhar, conta só o «Aceito este preço».
      */
     const comOPreco = ofertas.filter((o) => o.propostaEnviadaEm);
@@ -256,7 +256,8 @@ export async function GET(req: NextRequest) {
           concluidoVistoEm: iso(o.concluidoVistoEm),
           propostaEnviadaEm: iso(o.propostaEnviadaEm),
           precoAceiteEm: iso(o.precoAceiteEm),
-          clienteRespondeu: vaiAoPorDecidir({
+          // Só o que o cliente fez — a conversa passada a uma pessoa não conta (18-11-2026).
+          clienteRespondeu: oClienteRespondeuNaMesa({
             valorFixoClyon: o.valorFixo,
             estadoDoPedido: o.estadoDoPedido,
             propostaEnviadaEm: o.propostaEnviadaEm,
@@ -1077,7 +1078,7 @@ export async function PATCH(req: NextRequest) {
     //
     // Ninguém aceitou o valor fixo: a oferta sai e o pedido deixa de ser um
     // Trabalho CLYON. O envio como negociação é o de sempre (o «Negociação» do
-    // «Por decidir», pela rota de promover), que o ecrã chama a seguir.
+    // «Orçamentos novos», pela rota de promover), que o ecrã chama a seguir.
     if (accao === "para_negociacao") {
       const m = await prepararAMudancaDeTipo(pedidoId, "negociacao");
       if (!m.ok) {

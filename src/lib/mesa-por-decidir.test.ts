@@ -46,11 +46,11 @@ describe("a permissão da Mesa é uma só", () => {
   });
 });
 
-describe("o «Por decidir»", () => {
+describe("o «Orçamentos novos»", () => {
   it("é o antigo «Por enviar», e diz que tudo entra ali", () => {
     const i = MESA.indexOf('chave: "porEnviar",');
     const bloco = MESA.slice(i, MESA.indexOf("visivelEm", i));
-    expect(bloco).toContain('titulo: "Por decidir",');
+    expect(bloco).toContain('titulo: "Orçamentos novos",');
     expect(bloco).toContain("site, WhatsApp ou registado aqui");
   });
 
@@ -107,7 +107,9 @@ describe("os de valor fixo ficam na Mesa (fase 2)", () => {
   });
 
   it("cada bloco deles cai num bloco da Mesa; os arquivados ficam com os cancelados", () => {
-    const m = MESA.slice(MESA.indexOf("const BLOCO_NA_MESA"), MESA.indexOf("const BLOCOS"));
+    // Desde 18-11-2026 a regra vive em trabalho-clyon-na-mesa.ts (correcção da d55).
+    const L = ler("src/lib/trabalho-clyon-na-mesa.ts");
+    const m = L.slice(L.indexOf("export const BLOCO_DO_CLYON_NA_MESA"), L.indexOf("export type TrabalhoClyonParaAMesa"));
     expect(m).toContain('feito: "porConfirmar",');
     expect(m).toContain('precisa: "n1",');
     expect(m).toContain('espera: "n2",');
@@ -126,7 +128,7 @@ describe("os de valor fixo ficam na Mesa (fase 2)", () => {
     expect(negociacao).toBeGreaterThan(-1);
   });
 
-  it("o filtro do tipo: todos, só valor fixo, só negociação — e o «Por decidir» só em «Todos»", () => {
+  it("o filtro do tipo: todos, só valor fixo, só negociação — e o «Orçamentos novos» só em «Todos»", () => {
     expect(MESA).toContain('const [tipo, setTipo] = useState<"todos" | "fixo" | "negociacao">("todos");');
     expect(MESA).toContain('(tipo === "fixo" ? [] : pedidos)');
     expect(MESA).toContain('aFiltrarProfissional || tipo !== "todos"');

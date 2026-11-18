@@ -13,7 +13,7 @@ import {
  * O ESTADO DE UM PEDIDO, DITO AO CLIENTE — 16-11-2026 (d53).
  *
  * Pela mesma regra do portão da Mesa: um pedido SEM NEGOCIAÇÕES ainda não foi
- * a ninguém (é o «Por decidir», `pedidosPorPromover`) — a CLYON está a
+ * a ninguém (é o «Orçamentos novos», `pedidosPorPromover`) — a CLYON está a
  * conferi-lo. Com negociações, seguiu para os parceiros. Depois:
  *
  *   · com o valor único enviado e o «sim» dele gravado (`valorUnicoAceiteEm`

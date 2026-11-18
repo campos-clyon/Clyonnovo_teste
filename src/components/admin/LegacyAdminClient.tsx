@@ -3469,7 +3469,7 @@ export default function ColaboradorAdminClient({
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-3 rounded-[22px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4">
               <p className="text-[11px] text-slate-500">
-                O que entrou e está por decidir, os trabalhos de valor fixo e as negociações — as em que a
+                Os orçamentos novos, os trabalhos de valor fixo e as negociações — as em que a
                 CLYON responde pelo cliente e as que o cliente conduz pelo link do email.
               </p>
               {/* O valor fixo é a outra metade da permissão da Mesa (20-10-2026). */}

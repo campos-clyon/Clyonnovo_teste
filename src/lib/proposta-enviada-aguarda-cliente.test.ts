@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { blocoDoClyonNaMesa } from "./trabalho-clyon-na-mesa";
 
 /*
  * «Os pedidos que já enviamos os orçamentos, tanto em "Enviar proposta ao
@@ -50,9 +51,10 @@ describe("a proposta enviada leva o valor fixo para «A aguardar cliente»", () 
 
   it("na Mesa, «escolher» com proposta enviada vai para «A aguardar cliente»", () => {
     // …e volta para cá quando o cliente aceita o preço na app (28-10-2026, S7).
-    expect(MESA).toContain(
-      'b === "precisa" && t.resumo.fase === "escolher" && t.propostaEnviadaEm && !t.precoAceiteEm',
-    );
-    expect(MESA).toContain('? "aguardaCliente"');
+    // Desde 18-11-2026 pela regra única (trabalho-clyon-na-mesa.ts).
+    expect(MESA).toContain("blocoDoClyonNaMesa(paraAMesa(t))");
+    const t = { arrumado: false, bloco: "precisa" as const, fase: "escolher", propostaEnviadaEm: "2026-11-17T10:00:00Z" };
+    expect(blocoDoClyonNaMesa(t)).toBe("aguardaCliente");
+    expect(blocoDoClyonNaMesa({ ...t, precoAceiteEm: "2026-11-17T12:00:00Z" })).toBe("n1");
   });
 });

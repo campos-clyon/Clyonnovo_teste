@@ -11,7 +11,7 @@ import { StickyNote } from "lucide-react";
  * anotação, seria mais fácil." — 19-09-2026.
  *
  * Vivia dentro do cartão da Mesa. A 26-10-2026 (d29) saiu para aqui, para
- * servir também as linhas do «Por decidir» — *«Coloque as notas aqui»*, o
+ * servir também as linhas do «Orçamentos novos» — *«Coloque as notas aqui»*, o
  * dono. Os dois sítios desenham ESTE componente com o MESMO estado (uma nota
  * aberta de cada vez, e a batida de 30 s parada enquanto se escreve) e
  * guardam pela MESMA função da Mesa (`guardarNota`), que vai pela rota do

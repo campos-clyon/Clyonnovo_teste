@@ -12,10 +12,10 @@ import NotaDoPedido, { BotaoAnotar, type NotasDaMesa } from "@/components/admin/
 
 /**
  * A NOTA NO «POR DECIDIR» — 26-10-2026 (d29). *«Coloque as notas aqui»* — o
- * dono, sobre as linhas do «Por decidir» da Mesa.
+ * dono, sobre as linhas do «Orçamentos novos» da Mesa.
  *
  * Os cartões das negociações já tinham a nota interna do pedido e o
- * «Anotar» debaixo do número; as linhas do «Por decidir» não. Agora têm, com
+ * «Anotar» debaixo do número; as linhas do «Orçamentos novos» não. Agora têm, com
  * o MESMO componente (`NotaDoPedido.tsx`), o MESMO estado e o MESMO
  * `guardarNota` da Mesa — a nota escrita num sítio aparece igual no outro.
  *
@@ -39,7 +39,7 @@ const notas = (mudar: Partial<NotasDaMesa> = {}): NotasDaMesa => ({
   ...mudar,
 });
 
-/** O que a linha do «Por decidir» desenha para a nota, com as props que lá estão. */
+/** O que a linha do «Orçamentos novos» desenha para a nota, com as props que lá estão. */
 const desenharLinha = (nota: string | null, n: NotasDaMesa = notas()) =>
   renderToStaticMarkup(
     createElement(
@@ -50,7 +50,7 @@ const desenharLinha = (nota: string | null, n: NotasDaMesa = notas()) =>
     ),
   ).replace(/<!-- -->/g, "");
 
-describe("a linha do «Por decidir» mostra a nota e o «Anotar»", () => {
+describe("a linha do «Orçamentos novos» mostra a nota e o «Anotar»", () => {
   it("com o mesmo componente e o mesmo estado dos cartões da Mesa", () => {
     expect(inicio).toBeGreaterThan(0);
     expect(LINHA).toContain('<BotaoAnotar pedidoId={p.id} nota={p.notasInternas} notas={notas} className="mt-1 w-fit" />');
@@ -59,7 +59,7 @@ describe("a linha do «Por decidir» mostra a nota e o «Anotar»", () => {
     const foraDaLinha = MESA.slice(0, inicio);
     expect(foraDaLinha).toContain("<NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} />");
     expect(foraDaLinha).toContain("<BotaoAnotar pedidoId={p.id} nota={p.notasInternas} notas={notas} />");
-    // E o `notas` que chega ao «Por decidir» é o do painel da Mesa.
+    // E o `notas` que chega ao «Orçamentos novos» é o do painel da Mesa.
     const chamada = MESA.indexOf("<PedidosPorPromover");
     expect(chamada).toBeGreaterThan(0);
     expect(MESA.slice(chamada, MESA.indexOf("/>", chamada))).toContain("notas={notas}");
@@ -152,7 +152,7 @@ describe("o clique no «Anotar» não abre a edição do pedido nem marca a caix
 });
 
 describe("a mesma rota e as mesmas regras", () => {
-  it("o «Por decidir» recebe a nota da base", () => {
+  it("o «Orçamentos novos» recebe a nota da base", () => {
     const i = DB.indexOf("export async function pedidosPorPromover");
     const consulta = DB.slice(i, DB.indexOf("export async function promoverPedidoAPlataforma", i));
     expect(consulta).toContain("o.notasInternas,");

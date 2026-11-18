@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
     );
     /*
      * OS AVISOS À EQUIPA — 10-11-2026 (d23). O que está parado no «Do nosso
-     * lado» há mais de 2 h, no «Por decidir» há mais de 1 h, e as conversas
+     * lado» há mais de 2 h, no «Orçamentos novos» há mais de 1 h, e as conversas
      * que a Vitória entregou fora de horas: um aviso no telemóvel da equipa,
      * uma vez por espera, só das 08h às 21h. Ver `avisos-a-equipa.ts`. Uma
      * falha aqui não estraga a passagem.

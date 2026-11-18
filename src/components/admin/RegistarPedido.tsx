@@ -261,7 +261,7 @@ export default function RegistarPedido({
    * será um trabalho com valor fixo ou de negociação.»* Com isto, o passo 2
    * pergunta «Como segue?»: «Valor fixo» abre aqui a oferta que quem chama
    * desenhar; «Negociação» é o envio de sempre; «Decidir depois» deixa-o no
-   * «Por decidir» da Mesa.
+   * «Orçamentos novos» da Mesa.
    */
   escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco }) => ReactNode;
 }) {
@@ -2025,7 +2025,7 @@ function Resumo({
         <>
         {escolherValorFixo && (
           <p className="mt-4 text-xs font-semibold text-slate-200">
-            Como segue? <span className="font-normal text-slate-400">Valor fixo ou negociação — ou fica no «Por decidir» da Mesa.</span>
+            Como segue? <span className="font-normal text-slate-400">Valor fixo ou negociação — ou fica no «Orçamentos novos» da Mesa.</span>
           </p>
         )}
         <div className={`${escolherValorFixo ? "mt-2" : "mt-4"} flex flex-wrap items-center gap-2`}>

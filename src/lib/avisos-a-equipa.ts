@@ -13,7 +13,7 @@ import { TITULO_DO_AVISO_SEM_RESPOSTA } from "./escolhidos-sem-resposta";
  *
  *   1. uma linha do «Do nosso lado» há mais de 2 h — a MESMA conta do cartão
  *      da Mesa (`doNossoLado`), e não uma conta nova;
- *   2. um pedido no «Por decidir» há mais de 1 h (ainda não foi a ninguém);
+ *   2. um pedido no «Orçamentos novos» há mais de 1 h (ainda não foi a ninguém);
  *   3. a Vitória entregou a conversa a uma pessoa.
  *
  * SÓ PARA DENTRO. Nenhuma mensagem nova a clientes nem a profissionais.
@@ -49,7 +49,7 @@ export const PRAZO_DO_NOSSO_LADO_S = 2 * 3600;
  * depois de o cliente ter sido avisado, ou quando ele pede à CLYON que procure.
  */
 export const PRAZO_SEM_RESPOSTA_S = 0;
-/** Mais de 1 h no «Por decidir». */
+/** Mais de 1 h no «Orçamentos novos». */
 export const PRAZO_DO_POR_DECIDIR_S = 3600;
 
 /**
@@ -84,7 +84,7 @@ export type AvisoAEquipa = {
   url: string;
 };
 
-/** O pedido no «Por decidir» — ainda sem negociações, não fechado. */
+/** O pedido no «Orçamentos novos» — ainda sem negociações, não fechado. */
 export type PedidoPorDecidir = { id: number; criadoEm: Date | null };
 
 /** Está na hora de avisar a equipa? 08h–21h em Lisboa, seja qual for o fuso do servidor. */
@@ -139,7 +139,7 @@ export function avisosDoNossoLado(linhas: readonly LinhaDoNossoLado[], agora: Da
   return out;
 }
 
-/** Os avisos do «Por decidir»: os pedidos que ainda não foram a ninguém há mais de 1 h. */
+/** Os avisos do «Orçamentos novos»: os pedidos que ainda não foram a ninguém há mais de 1 h. */
 export function avisosDoPorDecidir(pedidos: readonly PedidoPorDecidir[], agora: Date): AvisoAEquipa[] {
   const out: AvisoAEquipa[] = [];
   for (const p of pedidos) {
@@ -153,7 +153,7 @@ export function avisosDoPorDecidir(pedidos: readonly PedidoPorDecidir[], agora: 
       telefone: null,
       desde: p.criadoEm,
       seccao: "mesa",
-      titulo: `Por decidir ${haQuanto(esperaS)}`,
+      titulo: `Orçamento novo ${haQuanto(esperaS)}`,
       corpo: `Pedido #${p.id}: ainda não foi a ninguém — decida se é valor fixo ou negociação.`,
       url: ligacaoDoPedido("mesa", p.id),
     });
@@ -224,7 +224,7 @@ export type ResultadoDosAvisos = {
 /**
  * Uma passagem. Fora de horas não lê nem envia nada — o que estiver parado às
  * 08h é contado nessa passagem. Em horário: as entregas guardadas primeiro,
- * depois o «Do nosso lado» e o «Por decidir». Nunca lança.
+ * depois o «Do nosso lado» e o «Orçamentos novos». Nunca lança.
  */
 export async function correrOsAvisosDaEquipa(
   deps: DependenciasDosAvisos,
@@ -269,7 +269,7 @@ export async function correrOsAvisosDaEquipa(
   await deps
     .lerPorDecidir()
     .then((p) => avisos.push(...avisosDoPorDecidir(p, agora)))
-    .catch((e) => r.falhas.push(`por decidir: ${e instanceof Error ? e.message : String(e)}`));
+    .catch((e) => r.falhas.push(`orçamentos novos: ${e instanceof Error ? e.message : String(e)}`));
   r.acimaDosPrazos = avisos.length;
 
   for (const a of avisos) {
@@ -281,7 +281,7 @@ export async function correrOsAvisosDaEquipa(
       }
       await deps.marcarEnviado(a.chave, "enviado");
       r.enviados++;
-      r.linhas.push(`${a.tipo === "por_decidir" ? "Por decidir" : "Do nosso lado"}: ${a.pedidoId != null ? `#${a.pedidoId}` : "conversa sem pedido"}.`);
+      r.linhas.push(`${a.tipo === "por_decidir" ? "Orçamentos novos" : "Do nosso lado"}: ${a.pedidoId != null ? `#${a.pedidoId}` : "conversa sem pedido"}.`);
     } catch (e) {
       r.falhas.push(`${a.chave}: ${e instanceof Error ? e.message : String(e)}`);
     }

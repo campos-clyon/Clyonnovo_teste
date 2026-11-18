@@ -41,7 +41,7 @@ describe("a data do pedido", () => {
 describe("o cartão é baixo", () => {
   it("o «Anotar» mora debaixo do número, e não numa linha só dele no fundo", () => {
     // Desde 26-10-2026 (d29) o «Anotar» e a nota são de `NotaDoPedido.tsx`,
-    // partilhado com o «Por decidir»; o lugar no cartão continua o mesmo.
+    // partilhado com o «Orçamentos novos»; o lugar no cartão continua o mesmo.
     const numero = MESA.indexOf("#{p.id}</span>");
     expect(numero).toBeGreaterThan(-1);
     const anotar = MESA.indexOf("<BotaoAnotar ", numero);

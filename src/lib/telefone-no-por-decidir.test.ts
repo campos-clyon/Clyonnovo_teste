@@ -33,7 +33,7 @@ const desenhar = (telefone: string | null) =>
     }),
   ).replace(/<!-- -->/g, "");
 
-describe("a linha do «Por decidir»", () => {
+describe("a linha do «Orçamentos novos»", () => {
   it("mostra o telemóvel do cliente ao lado do nome, antes da origem, com o ícone de conversa", () => {
     expect(inicio).toBeGreaterThan(0);
     const nome = LINHA.indexOf('#{p.id} · {p.contactName || "Cliente sem nome"}');

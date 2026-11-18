@@ -8,7 +8,7 @@ import { disablePush, enablePush, isPushSupported, type DestinoDaSubscricao } fr
  * «AVISOS NO TELEMÓVEL» DA EQUIPA — d23, 10-11-2026.
  *
  * Liga, neste navegador, os avisos do que está parado: o «Do nosso lado» há
- * mais de 2 h, o «Por decidir» há mais de 1 h e as conversas que a Vitória
+ * mais de 2 h, o «Orçamentos novos» há mais de 1 h e as conversas que a Vitória
  * passou a uma pessoa — das 08h às 21h (ver `avisos-a-equipa.ts`). Cada conta
  * liga os seus; quem recebe o quê decide-se pelas secções da conta.
  *

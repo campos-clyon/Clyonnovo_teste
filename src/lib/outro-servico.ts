@@ -16,7 +16,7 @@
  *      activo, dentro do raio. Quem já tinha «outro» gravado continua a
  *      recebê-lo.
  *   2. Se foi aos profissionais e passou um dia sem nenhuma proposta, volta à
- *      Mesa, ao «Por decidir» (`outroSemPropostas`): a equipa redistribui,
+ *      Mesa, ao «Orçamentos novos» (`outroSemPropostas`): a equipa redistribui,
  *      escolhe à mão ou passa-o a valor fixo.
  *
  * O grupo NÃO muda em `grupoDoServico`: isso converteria o «outro» gravado de
@@ -30,7 +30,7 @@ export const OUTRO_SERVICO = "outro";
 /** O grupo que também recebe o «Outro serviço». */
 export const GRUPO_QUE_RECEBE_O_OUTRO = "manutencao_da_casa";
 
-/** Quanto tempo um «outro» espera por uma proposta antes de voltar ao «Por decidir». */
+/** Quanto tempo um «outro» espera por uma proposta antes de voltar ao «Orçamentos novos». */
 export const HORAS_ATE_VOLTAR_AO_POR_DECIDIR = 24;
 
 /** O que a regra precisa de cada negociação — o molde da Mesa serve. */

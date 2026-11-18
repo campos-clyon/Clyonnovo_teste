@@ -26,7 +26,7 @@ describe("o número e o nome do cliente em destaque, a categoria em baixo", () =
     expect(M).not.toContain('{p.city ?? "—"} · {p.serviceType ?? "—"}');
   });
 
-  it("no «Por decidir»", () => {
+  it("no «Orçamentos novos»", () => {
     expect(M).toContain('#{p.id} · {p.contactName || "Cliente sem nome"}');
     expect(M).not.toContain('#{p.id} · {p.serviceType ?? "—"}');
   });

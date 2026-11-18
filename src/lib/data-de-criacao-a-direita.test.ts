@@ -33,7 +33,7 @@ describe("a cor", () => {
 });
 
 describe("onde aparece — só nos Pedidos", () => {
-  it("na Mesa: nas negociações, à direita; no «Por decidir», no fim da linha", () => {
+  it("na Mesa: nas negociações, à direita; no «Orçamentos novos», no fim da linha", () => {
     const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
     // text-xs desde 23-10-2026 — a Mesa mais apertada; continua a negrito e à direita.
     expect(MESA).toContain("text-xs font-bold tabular-nums ${corDaDataDeCriacao(p.createdAt, new Date())}");

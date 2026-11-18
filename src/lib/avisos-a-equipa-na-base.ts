@@ -290,7 +290,7 @@ async function lerDoNossoLado(agora: Date): Promise<LinhaDoNossoLado[]> {
   return grupos.flatMap((g) => g.linhas);
 }
 
-/** O «Por decidir»: os pedidos sem negociações e por fechar — a lista da Mesa (`pedidosPorPromover`). */
+/** O «Orçamentos novos»: os pedidos sem negociações e por fechar — a lista da Mesa (`pedidosPorPromover`). */
 async function lerPorDecidir(): Promise<PedidoPorDecidir[]> {
   const db = await import("./db");
   const pedidos = await db.pedidosPorPromover(100);

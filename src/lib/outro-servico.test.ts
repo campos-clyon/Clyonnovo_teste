@@ -9,7 +9,7 @@ import { regraDoEnvio } from "./regra-do-envio";
  *
  * Chega também a quem tem «Manutenção da casa» (o motor está guardado em
  * categorias-uma-so-lista.test.ts) e, se ficar um dia sem nenhuma proposta,
- * volta à Mesa, ao «Por decidir».
+ * volta à Mesa, ao «Orçamentos novos».
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
@@ -23,7 +23,7 @@ const neg = (n: Partial<NegociacaoParaContar> = {}): NegociacaoParaContar => ({
 });
 const PROPOSTA = JSON.stringify([{ por: "profissional", valor: 80, criadaEm: horasAntes(20), estado: "pendente" }]);
 
-describe("o «Outro serviço» sem propostas volta ao «Por decidir»", () => {
+describe("o «Outro serviço» sem propostas volta ao «Orçamentos novos»", () => {
   it("foi aos profissionais, passou um dia, e ninguém propôs", () => {
     expect(HORAS_ATE_VOLTAR_AO_POR_DECIDIR).toBe(24);
     expect(outroSemPropostas({ serviceType: "outro", negociacoes: [neg(), neg()] }, AGORA)).toBe(true);
@@ -52,7 +52,7 @@ describe("o «Outro serviço» sem propostas volta ao «Por decidir»", () => {
   it("quem disse que não conta como enviado e sem proposta; as mortas não contam", () => {
     expect(outroSemPropostas({ serviceType: "outro", negociacoes: [neg({ estado: "desistida", propostasJson: PROPOSTA })] }, AGORA)).toBe(true);
     expect(outroSemPropostas({ serviceType: "outro", negociacoes: [neg({ estado: "morta" })] }, AGORA)).toBe(false);
-    // Nunca foi a ninguém: está no «Por decidir» pela outra porta (sem negociações).
+    // Nunca foi a ninguém: está no «Orçamentos novos» pela outra porta (sem negociações).
     expect(outroSemPropostas({ serviceType: "outro", negociacoes: [] }, AGORA)).toBe(false);
   });
 
@@ -67,10 +67,10 @@ describe("o «Outro serviço» sem propostas volta ao «Por decidir»", () => {
   });
 });
 
-describe("a Mesa põe-nos no «Por decidir», com o cartão de negociação", () => {
+describe("a Mesa põe-nos no «Orçamentos novos», com o cartão de negociação", () => {
   const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 
-  it("saem de «À espera de propostas» pela regra, e só com o «Por decidir» à vista", () => {
+  it("saem de «À espera de propostas» pela regra, e só com o «Orçamentos novos» à vista", () => {
     expect(MESA).toContain('import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas } from "@/lib/outro-servico";');
     expect(MESA).toContain(
       'mostrar !== "clyon" && tipo === "todos" && !aFiltrarProfissional && lidoEm != null ? new Date(lidoEm) : null;',

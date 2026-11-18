@@ -30,7 +30,7 @@ const DB = semComentarios(ler("src/lib/db.ts"));
 const MESA = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
 /*
  * Desde 26-10-2026 (d29) a nota desenha-se no componente partilhado com o
- * «Por decidir» — ver nota-no-por-decidir.test.ts. As regras são as mesmas.
+ * «Orçamentos novos» — ver nota-no-por-decidir.test.ts. As regras são as mesmas.
  */
 const NOTA = semComentarios(ler("src/components/admin/NotaDoPedido.tsx"));
 

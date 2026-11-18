@@ -34,7 +34,7 @@ import {
  * escreve-a `mensagem-do-que-falta.ts`.
  */
 
-/** O pedido, no que o botão precisa dele — o que a linha do «Por decidir» já tem. */
+/** O pedido, no que o botão precisa dele — o que a linha do «Orçamentos novos» já tem. */
 export type PedidoParaPedir = {
   id: number;
   serviceType: string | null;

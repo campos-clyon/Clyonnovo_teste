@@ -7,7 +7,7 @@ import { arrumarAsFaltas, type ChaveDaFalta } from "./mensagem-do-que-falta";
 /**
  * O QUE FALTA PARA O PEDIDO FICAR COMPLETO — 26-10-2026 (d31).
  *
- * *«O registo tem de ficar 100 % completo.»* — o dono. No «Por decidir» da
+ * *«O registo tem de ficar 100 % completo.»* — o dono. No «Orçamentos novos» da
  * Mesa, o botão «Pedir o que falta» abre o WhatsApp ou o email do cliente com
  * uma mensagem que pede exactamente isto (`mensagem-do-que-falta.ts`).
  *

@@ -52,7 +52,7 @@ export type TrabalhoClyonAEspera = {
 
 /**
  * O SELO DE UM TRABALHO CLYON EM QUE O CLIENTE RESPONDEU — 31-10-2026 (d2).
- * Na Mesa, no «Por decidir».
+ * Na Mesa, no «Orçamentos novos».
  */
 export const O_CLIENTE_RESPONDEU = "O cliente respondeu — escolher parceiro";
 
@@ -85,16 +85,37 @@ export function clienteRespondeu(t: TrabalhoClyonAEspera): boolean {
 }
 
 /**
- * VAI AO «POR DECIDIR» DA MESA, COM O SELO `O_CLIENTE_RESPONDEU`? Pura. —
- * 31-10-2026 (d2). Um Trabalho CLYON ainda na mesa, com o preço no cliente,
- * em que o cliente respondeu e a CLYON ainda não deu o trabalho a ninguém.
+ * O CLIENTE ESCREVEU MESMO DEPOIS DO PREÇO? Pura. — 18-11-2026 (correcção da
+ * d55). Para a etiqueta da Mesa só contam os sinais DELE: o «Aceito este
+ * preço», ou uma mensagem dele no WhatsApp depois do envio.
+ *
+ * A «conversa passada a uma pessoa» não conta: a ponte passa a conversa a uma
+ * pessoa sempre que a equipa escreve à mão nesse número — e a proposta que se
+ * manda pelo WhatsApp do telemóvel é isso mesmo. O envio do preço marcava o
+ * «O cliente respondeu» no próprio envio (#624, #634, #644, #645). A rotina das
+ * 72 horas continua a lê-la como resposta (`clienteRespondeu`): na dúvida, não
+ * arquiva.
  */
-export function vaiAoPorDecidir(t: TrabalhoClyonAEspera): boolean {
+export function clienteEscreveuDepoisDoPreco(t: TrabalhoClyonAEspera): boolean {
+  if (comoData(t.precoAceiteEm)) return true;
+  const enviada = comoData(t.propostaEnviadaEm);
+  const escreveu = comoData(t.ultimaMensagemDoClienteEm);
+  return !!enviada && !!escreveu && escreveu.getTime() > enviada.getTime();
+}
+
+/**
+ * A ETIQUETA `O_CLIENTE_RESPONDEU` NA MESA? Pura. — 31-10-2026 (d2); desde
+ * 18-11-2026 só com o cliente a escrever mesmo, e o cartão fica em «Precisa de
+ * si» (`trabalho-clyon-na-mesa.ts`), nunca nos «Orçamentos novos». Um Trabalho
+ * CLYON ainda na mesa, com o preço no cliente, em que o cliente respondeu e a
+ * CLYON ainda não deu o trabalho a ninguém.
+ */
+export function oClienteRespondeuNaMesa(t: TrabalhoClyonAEspera): boolean {
   if (t.valorFixoClyon == null) return false;
   if (t.estadoDoPedido && JA_SAIU.has(t.estadoDoPedido)) return false;
   if (!comoData(t.propostaEnviadaEm)) return false;
   if ((t.negociacoes ?? []).some((n) => n.estado === "acordada")) return false;
-  return clienteRespondeu(t);
+  return clienteEscreveuDepoisDoPreco(t);
 }
 
 /**
@@ -109,7 +130,7 @@ export function vaiAoPorDecidir(t: TrabalhoClyonAEspera): boolean {
  *     quem responder, e a rotina não toca no pedido.
  *
  * E desde 31-10-2026 (d2): nunca quando o cliente respondeu
- * (`clienteRespondeu` — vai ao «Por decidir»), nem num pedido que esta
+ * (`clienteRespondeu` — vai ao «Orçamentos novos»), nem num pedido que esta
  * rotina já arquivou uma vez e a equipa restaurou: quem aceitou já ouviu o
  * «sem efeito», e um segundo seria mentira — a equipa decide à mão.
  */

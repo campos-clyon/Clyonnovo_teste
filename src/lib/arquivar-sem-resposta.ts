@@ -24,7 +24,7 @@ import { dataEHora } from "./historico-negociacao";
  *
  * Desde 31-10-2026 (d2): um pedido em que o cliente respondeu — «Aceito este
  * preço», uma mensagem no WhatsApp depois do preço, ou a conversa passada a
- * uma pessoa — não se arquiva (vai ao «Por decidir» da Mesa, com o selo); e
+ * uma pessoa — não se arquiva (vai ao «Orçamentos novos» da Mesa, com o selo); e
  * um que esta rotina já arquivou e a equipa restaurou não volta a levar o
  * «sem efeito». Ver `ficaSemEfeito`.
  *
@@ -35,7 +35,7 @@ export type ResultadoDaRotina = {
   arquivados: number[];
   avisados: number;
   falhados: number;
-  /** Com o preço no cliente e resposta dele: a rotina não lhes toca, ficam no «Por decidir». */
+  /** Com o preço no cliente e resposta dele: a rotina não lhes toca, ficam no «Orçamentos novos». */
   clienteRespondeu?: number[];
 };
 
