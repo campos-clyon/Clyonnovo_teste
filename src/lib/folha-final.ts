@@ -9,6 +9,7 @@ import {
 import { quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { contaDoValorAcordado, type RegimeDoProfissional } from "./pagamento-directo";
 import { lerHorasDaFolha } from "./horas-escritas-na-folha";
+import { horasFeitas, lerRegistoReal, type DiaReal } from "./registo-real";
 import {
   SEM_ACORDO_DAS_PESSOAS_A_MAIS,
   acordoParaGravar,
@@ -73,6 +74,12 @@ export type CorpoDaFolhaFinal = {
   materiais?: unknown;
   /** d70: `true` = «O cliente concordou com as pessoas a mais» (obrigatório acima de 3). */
   acordoDasPessoasAMais?: unknown;
+  /**
+   * d67 (18-11-2026): o registo real — por dia, `{ dia, inicio, fim, pausa }`
+   * (hora de Lisboa). Com ele, as horas são fim − início − pausa (somadas); sem
+   * ele, as «horas» escritas, como nas folhas antigas.
+   */
+  registoReal?: unknown;
 };
 
 /** Quem grava a folha, para o registo do acordo do cliente (d70). */
@@ -86,7 +93,7 @@ export type RegistoDoAcordo = {
 export const MAXIMO_DE_HORAS = 48;
 export const MAXIMO_DE_LINHAS_DE_MATERIAL = 12;
 
-export type EntradaLida = Omit<EntradaDaFolhaFinal, "tarifa" | "regras">;
+export type EntradaLida = Omit<EntradaDaFolhaFinal, "tarifa" | "regras"> & { registoReal?: DiaReal[] };
 
 export function lerCorpoDaFolhaFinal(
   c: CorpoDaFolhaFinal,
@@ -98,8 +105,15 @@ export function lerCorpoDaFolhaFinal(
   const acordo = acordoParaGravar({ pessoas, marcado: c.acordoDasPessoasAMais, anterior: registo.anterior, quem: registo.quem, agora: registo.agora });
   if (pessoasAMais(pessoas) > 0 && !acordo) return { ok: false, erro: SEM_ACORDO_DAS_PESSOAS_A_MAIS };
 
-  const horas = horasDe(c.horas);
-  if (horas == null) return { ok: false, erro: "Indique as horas do trabalho." };
+  // d67: com o registo real, as horas calculam-se; sem ele, as escritas (folhas antigas).
+  let registoReal: DiaReal[] | null = null;
+  if (Array.isArray(c.registoReal) && c.registoReal.length > 0) {
+    const r = lerRegistoReal(c.registoReal);
+    if (!r.ok) return { ok: false, erro: r.erro };
+    registoReal = r.dias;
+  }
+  const horas = registoReal ? horasFeitas(registoReal) : horasDe(c.horas);
+  if (horas == null) return { ok: false, erro: "Indique o início, o fim e a pausa (ou as horas) do trabalho." };
   if (!Number.isFinite(horas) || horas <= 0) return { ok: false, erro: "As horas não são válidas (ex.: 6,5 · 6:30 · 6h30)." };
   if (horas > MAXIMO_DE_HORAS) return { ok: false, erro: `Mais de ${MAXIMO_DE_HORAS} horas? Confirme as horas.` };
 
@@ -136,7 +150,16 @@ export function lerCorpoDaFolhaFinal(
 
   return {
     ok: true,
-    entrada: { pessoas, horas, precoHoraCent: precoHora, deslocacao, materiais, ...(acordo ? { acordoDasPessoasAMais: acordo } : {}) },
+    entrada: {
+      pessoas,
+      horas,
+      precoHoraCent: precoHora,
+      deslocacao,
+      materiais,
+      ...(acordo ? { acordoDasPessoasAMais: acordo } : {}),
+      // d67: o histórico da folha guarda o início, o fim e a pausa de cada dia.
+      ...(registoReal ? { registoReal } : {}),
+    },
   };
 }
 

@@ -275,6 +275,8 @@ export async function POST(req: NextRequest) {
         corpo: {
           pessoas: corpo.pessoas,
           horas: corpo.horas,
+          // d67: o início, o fim e a pausa de cada dia (as horas calculam-se).
+          registoReal: (corpo as { registoReal?: unknown }).registoReal,
           precoHora: corpo.precoHora,
           deslocacaoTipo: corpo.deslocacaoTipo,
           km: corpo.km,

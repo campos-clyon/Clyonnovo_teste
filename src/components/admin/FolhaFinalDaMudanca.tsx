@@ -1,5 +1,7 @@
 "use client";
 
+import { diaEmLisboa, horaEmLisboa } from "@/lib/hora-de-lisboa";
+import { horasDoDia, horasEmPalavrasCurtas, lerDiaReal, type DiaReal } from "@/lib/registo-real";
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
@@ -46,6 +48,8 @@ type Entrada = {
   precoHoraCent?: number | null;
   deslocacao: { tipo: "km"; km: number; precoKmCent?: number | null } | { tipo: "euros"; cent: number };
   materiais?: { descricao: string; cent: number }[];
+  /** d67: o registo real da folha (início, fim e pausa por dia). */
+  registoReal?: DiaReal[];
 };
 
 type DoServidor = {
@@ -77,6 +81,8 @@ type Formulario = {
   pessoas: PessoasDaFolha;
   acordoDasPessoasAMais: boolean;
   horas: string;
+  /** d67: por dia, o início, o fim e a pausa (hora de Lisboa). */
+  dias: { dia: string; inicio: string; fim: string; pausa: string }[];
   precoHora: string;
   deslocacaoTipo: "km" | "euros";
   km: string;
@@ -107,6 +113,8 @@ function formularioInicial(d: DoServidor): Formulario {
       pessoas: e.pessoas,
       acordoDasPessoasAMais: Boolean(e.acordoDasPessoasAMais),
       horas: virgula(e.horas),
+      // Folhas antigas (só horas): ficam as horas, e os dias por escrever.
+      dias: (e.registoReal ?? []).map((x) => ({ dia: x.dia, inicio: horaEmLisboa(new Date(x.inicio)), fim: horaEmLisboa(new Date(x.fim)), pausa: x.pausaMin ? String(x.pausaMin) : "" })),
       precoHora: centAVirgula(e.precoHoraCent ?? null),
       deslocacaoTipo: e.deslocacao.tipo,
       km: e.deslocacao.tipo === "km" ? virgula(e.deslocacao.km) : "",
@@ -121,6 +129,7 @@ function formularioInicial(d: DoServidor): Formulario {
     pessoas,
     acordoDasPessoasAMais: false,
     horas: "",
+    dias: [{ dia: diaEmLisboa(new Date()), inicio: "", fim: "", pausa: "" }],
     precoHora: "",
     deslocacaoTipo: d.tarifa ? "km" : "euros",
     km: virgula(d.kmDoPercurso),
@@ -194,6 +203,8 @@ export default function FolhaFinalDaMudanca({
           pessoas: form.pessoas,
           acordoDasPessoasAMais: form.pessoas > 3 ? form.acordoDasPessoasAMais : undefined,
           horas: form.horas,
+          // d67: com os dias escritos, as horas calculam-se no servidor (fim − início − pausa).
+          registoReal: form.dias.some((x) => x.inicio.trim() || x.fim.trim()) ? form.dias.filter((x) => x.inicio.trim() || x.fim.trim()) : undefined,
           precoHora: form.precoHora,
           deslocacaoTipo: form.deslocacaoTipo,
           km: form.km,
@@ -272,14 +283,42 @@ export default function FolhaFinalDaMudanca({
                     ))}
                   </select>
                 </label>
-                <label className="block">
-                  Horas
-                  <CampoNumerico valor={form.horas} muda={(v) => muda({ horas: v })} unidade="h" placeholder="6h30" decimal={false} />
-                  {(() => {
-                    const p = oQueSePercebeuDasHoras(form.horas);
-                    return p ? <span className={`mt-0.5 block ${p.ok ? "text-emerald-300" : "text-amber-300"}`}>{p.texto}</span> : null;
-                  })()}
-                </label>
+                {/* d67: em vez de «Horas», o início, o fim e a pausa de cada dia — as horas calculam-se. */}
+                <div className="block sm:col-span-2">
+                  Início, fim e pausa (hora de Lisboa)
+                  {form.dias.map((x, i) => {
+                    const lido = lerDiaReal(x);
+                    const mudaDia = (m: Partial<typeof x>) => muda({ dias: form.dias.map((y, k) => (k === i ? { ...y, ...m } : y)) });
+                    return (
+                      <div key={i} className="mt-1 flex flex-wrap items-center gap-1">
+                        <input type="date" value={x.dia} onChange={(e) => mudaDia({ dia: e.target.value })} className="rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white" aria-label={`Dia ${i + 1}`} />
+                        <input placeholder="13:00" value={x.inicio} onChange={(e) => mudaDia({ inicio: e.target.value })} className="w-16 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white" aria-label={`Início do dia ${i + 1}`} />
+                        <input placeholder="19:00" value={x.fim} onChange={(e) => mudaDia({ fim: e.target.value })} className="w-16 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white" aria-label={`Fim do dia ${i + 1}`} />
+                        <input placeholder="pausa 1 h" value={x.pausa} onChange={(e) => mudaDia({ pausa: e.target.value })} className="w-20 rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white" aria-label={`Pausa do dia ${i + 1}`} />
+                        <span className={lido.ok ? "text-emerald-300" : "text-slate-500"}>{lido.ok ? `→ ${horasEmPalavrasCurtas(horasDoDia(lido.dia))}` : ""}</span>
+                        {form.dias.length > 1 && (
+                          <button type="button" onClick={() => muda({ dias: form.dias.filter((_, k) => k !== i) })} className="underline">
+                            tirar
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button type="button" onClick={() => muda({ dias: [...form.dias, { dia: "", inicio: "", fim: "", pausa: "" }] })} className="mt-1 underline">
+                    acrescentar um dia
+                  </button>
+                  {/* Folhas antigas: só as horas, quando não há início e fim. */}
+                  {!form.dias.some((x) => x.inicio.trim() || x.fim.trim()) && (
+                    <label className="mt-1 block">
+                      Ou só as horas (folha antiga)
+                      <CampoNumerico valor={form.horas} muda={(v) => muda({ horas: v })} unidade="h" placeholder="6h30" decimal={false} />
+                      {(() => {
+                        const p = oQueSePercebeuDasHoras(form.horas);
+                        return p ? <span className={`mt-0.5 block ${p.ok ? "text-emerald-300" : "text-amber-300"}`}>{p.texto}</span> : null;
+                      })()}
+                    </label>
+                  )}
+                </div>
                 <label className="block">
                   {form.pessoas > 3 ? "Preço/hora da equipa de 3 s/ IVA" : "Preço/hora s/ IVA"}
                   <CampoNumerico

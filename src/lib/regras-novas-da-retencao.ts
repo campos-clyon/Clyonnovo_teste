@@ -377,6 +377,8 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   custoJson: "fica",
   // d64: os dias do trabalho e as cargas de cada um — sem dados de pessoas.
   diasDoTrabalhoJson: "fica",
+  // d67: o início, o fim e a pausa de cada dia — sem dados de pessoas.
+  registoRealJson: "fica",
 };
 
 /** O que a revisão do preço guarda em texto e pode ficar: a data. */

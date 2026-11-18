@@ -1,5 +1,6 @@
 "use client";
 
+import RegistoReal from "@/components/admin/RegistoReal";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 import { isMudancaType } from "@/lib/calendar-helpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -3369,6 +3370,10 @@ export default function AdminNegociacoesPanel({
               onLido={(d) => setDiasDosPedidos((m) => (JSON.stringify(m[p.id] ?? []) === JSON.stringify(d) ? m : { ...m, [p.id]: d }))}
               onGravado={() => void carregar()}
             />
+            {/* d67: o registo real, ao lado do plano. */}
+            <div className="mt-2">
+              <RegistoReal pedidoId={p.id} diasDoPlano={(diasDosPedidos[p.id] ?? []).map((d) => d.dia)} onGravado={() => void carregar()} />
+            </div>
           </div>
         )}
 

@@ -1,5 +1,6 @@
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
 import { diasDeJson, diasPorExtenso } from "@/lib/varios-dias";
+import { registoRealDeJson, registoRealEmPalavras } from "@/lib/registo-real";
 import { FRASE_DO_ESTADO, estadoDoPedidoAoCliente, valorUnicoAceiteValido } from "./estado-do-pedido-ao-cliente";
 import { aceitesDoValorUnico } from "./valor-unico-no-whatsapp-na-base";
 import { valorUnicoDaLinha, valorUnicoParaOCliente } from "./valor-unico-ao-cliente";
@@ -665,6 +666,8 @@ export async function pedidoDoClienteParaAApp(
         const dias = diasDeJson((pedido as { diasDoTrabalhoJson?: string | null }).diasDoTrabalhoJson ?? null);
         return dias.length > 1 ? diasPorExtenso(dias) : null;
       })(),
+      // d67: o que aconteceu — «feito a 17/11, das 13h às 19h, 1 h de pausa → 5 h», ou null.
+      registoRealTexto: registoRealEmPalavras(registoRealDeJson((pedido as { registoRealJson?: string | null }).registoRealJson ?? null)) || null,
       acesso: acessoDoPedido(pedido as unknown as Parameters<typeof acessoDoPedido>[0]),
       repeticao: repeticaoEmPalavras((pedido as { recurrenceFrequency?: unknown }).recurrenceFrequency),
       /*

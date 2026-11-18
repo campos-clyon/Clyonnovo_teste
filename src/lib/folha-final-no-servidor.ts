@@ -198,6 +198,11 @@ export async function folhaFinalPelaEquipa(a: {
     };
   }
 
+  // d67: o registo real da folha passa a ser o do pedido — uma fonte só.
+  if (f.entrada.registoReal?.length) {
+    const { gravarRegistoReal } = await import("./registo-real-na-base");
+    await gravarRegistoReal(a.pedidoId, f.entrada.registoReal, a.porQuem).catch(() => {});
+  }
   const frase = fraseDaFolhaFinal(f, { porQuem: a.porQuem, antes: c.antes.valorAcordado, jaPago: c.jaPago, motivo });
   await appendOrderHistory(a.pedidoId, { type: "valor_corrigido", by: null, message: frase }).catch(() => {});
   await registarSemFalhar({

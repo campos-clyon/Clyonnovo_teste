@@ -22,6 +22,7 @@ import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { fraseDaBaseAoProfissional } from "@/lib/frase-da-base";
 import { cargasFeitasNoTotal, diasDoTrabalho, diasPorExtenso, podeDarPorFeitoNoDia } from "@/lib/varios-dias";
+import { horasFeitas, registoRealDeJson, registoRealEmPalavras } from "@/lib/registo-real";
 import {
   diaDoInicio,
   estadoDasHorasParaQuemFez,
@@ -645,11 +646,16 @@ export async function GET(req: NextRequest) {
         ...(() => {
           const x = l as unknown as { dataCombinada?: Date | string | null; dataAgendada?: Date | string | null; diasDoTrabalhoJson?: string | null };
           const dias = diasDoTrabalho({ dataCombinada: x.dataCombinada ?? null, dataAgendada: x.dataAgendada ?? null, diasDoTrabalhoJson: x.diasDoTrabalhoJson ?? null });
+          const real = registoRealDeJson((l as unknown as { registoRealJson?: string | null }).registoRealJson ?? null);
           return {
             diasDoTrabalho: dias,
             diasDoTrabalhoTexto: dias.length > 1 ? diasPorExtenso(dias) : null,
             podeDarPorFeitoHoje: podeDarPorFeitoNoDia(dias, agora),
             cargasFeitasNoTotal: cargasFeitasNoTotal(dias),
+            /* d67: o registo real (início, fim e pausa de cada dia, ISO) e a frase; [] e null sem registo. */
+            registoReal: real,
+            registoRealTexto: real.length ? registoRealEmPalavras(real) : null,
+            horasFeitas: real.length ? horasFeitas(real) : null,
           };
         })(),
         fraseDaBaseAoProfissional:

@@ -1,3 +1,4 @@
+import { registoRealEmPalavras, type DiaReal } from "./registo-real";
 import { quantoOClientePaga } from "./eupago";
 import { contaDoCliente } from "./taxas-plataforma";
 import { acertoDasHoras } from "./pagamento-para-o-cliente";
@@ -173,6 +174,8 @@ export function oQueMudouDaFolha(
         horas?: number;
         deslocacao?: { tipo: "km"; km: number } | { tipo: "euros"; cent: number };
         materiais?: { descricao: string; cent: number }[];
+        /** d67: o início, o fim e a pausa de cada dia. */
+        registoReal?: DiaReal[];
       }
     | null
     | undefined,
@@ -181,7 +184,9 @@ export function oQueMudouDaFolha(
   const virgula = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");
   // d70: a equipa vai de 2 a 8; acima de 3, com o acordo do cliente.
   const pessoas = e.pessoas != null && Number.isInteger(e.pessoas) && e.pessoas >= 2 && e.pessoas <= 8 ? e.pessoas : 2;
-  const partes = [`${virgula(e.horas)} h de trabalho, com uma equipa de ${pessoas} pessoas${pessoas > 3 ? " (com o seu acordo para as pessoas a mais)" : ""}`];
+  // d67: com o registo real, «feito a 17/11, das 13h às 19h, 1 h de pausa → 5 h».
+  const horasDitas = e.registoReal?.length ? registoRealEmPalavras(e.registoReal) : `${virgula(e.horas)} h de trabalho`;
+  const partes = [`${horasDitas}, com uma equipa de ${pessoas} pessoas${pessoas > 3 ? " (com o seu acordo para as pessoas a mais)" : ""}`];
   if (e.deslocacao?.tipo === "km" && e.deslocacao.km > 0) partes.push(`deslocação de ${virgula(e.deslocacao.km)} km`);
   if (e.deslocacao?.tipo === "euros" && e.deslocacao.cent > 0) partes.push("deslocação");
   const material = (e.materiais ?? []).map((m) => m.descricao.trim()).filter(Boolean);

@@ -1,6 +1,8 @@
 "use client";
 
 
+import RegistoReal from "@/components/admin/RegistoReal";
+import type { DiaReal } from "@/lib/registo-real";
 import VariosDias from "@/components/admin/VariosDias";
 import type { DiaDoTrabalho } from "@/lib/varios-dias";
 import { useMexeNoDinheiro } from "@/hooks/useAdminAuth";
@@ -95,6 +97,9 @@ export type TrabalhoDaAgenda = {
   horaJaPassou: boolean;
   /** d64: os dias do trabalho (um só, ou vários), e o dia de `quando`. */
   diasDoTrabalho?: DiaDoTrabalho[];
+  /** d67: o registo real e a frase dele. */
+  registoReal?: DiaReal[];
+  registoRealTexto?: string | null;
   diaDoTrabalho?: number | null;
   deDias?: number | null;
   jaConfirmado: boolean;
@@ -498,6 +503,8 @@ export default function FichaDaAgenda({
 
           {/* d64: um trabalho em vários dias — a lista, e o primeiro passa a ser o dia do pedido. */}
           <VariosDias pedidoId={t.pedidoId} primeiroDia={t.dataCombinada ?? t.dataDoCliente} onGravado={() => onMudou()} />
+          {/* d67: o que aconteceu — início, fim e pausa de cada dia; as horas calculam-se. */}
+          <RegistoReal pedidoId={t.pedidoId} diasDoPlano={(t.diasDoTrabalho ?? []).map((d) => d.dia)} onGravado={() => onMudou()} />
 
           {/* O terreno e o ajuste no local, pela app do profissional (18-10-2026). */}
           <AjusteNaFicha

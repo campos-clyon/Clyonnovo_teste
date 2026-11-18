@@ -5540,6 +5540,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
             -- d64: os varios dias do trabalho (nulo com um dia so).
             o.diasDoTrabalhoJson,
+            -- d67: o registo real (inicio, fim e pausa de cada dia).
+            o.registoRealJson,
             -- O numero e pelo trabalho todo ou por cada carga. Sem isto, ele
             -- propunha sobre uma unidade e o cliente lia outra.
             o.baseDoPreco,
@@ -9745,7 +9747,7 @@ let _simulatorOrdersEnsured = false;
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
 // 30 — `valorUnicoCliente` e `valorUnicoEm` (15-11-2026, d39), o valor único ao cliente.
 // 31 — `descricaoOriginal`, `linguaDaDescricao` e `descricaoPorTraduzir` (15-11-2026, d46), a descrição sempre em português.
-const MIGRATION_VERSION = 34;
+const MIGRATION_VERSION = 35;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -10019,6 +10021,9 @@ export async function ensureSimulatorOrdersTable() {
     // em Lisboa, cargas previstas e feitas por dia); nula com um dia só, que é o
     // `dataAgendada` de sempre. Ver varios-dias.ts.
     `ALTER TABLE simulatorOrders ADD COLUMN diasDoTrabalhoJson TEXT NULL DEFAULT NULL`,
+    // v35 — O REGISTO REAL (18-11-2026, d67): por dia, o início e o fim reais e a
+    // pausa total; o plano fica em dataAgendada / diasDoTrabalhoJson. Ver registo-real.ts.
+    `ALTER TABLE simulatorOrders ADD COLUMN registoRealJson TEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente

@@ -1,5 +1,6 @@
 "use client";
 
+import RegistoReal from "@/components/admin/RegistoReal";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 import { isMudancaType } from "@/lib/calendar-helpers";
 import { useEffect, useState, type ReactNode } from "react";
@@ -1719,6 +1720,12 @@ function CartaoDoTrabalho({
       {r.fase !== "cancelada" && (
         <div className="mt-3">
           <VariosDias pedidoId={t.pedidoId} primeiroDia={a?.dataCombinada ?? t.dataAgendada} onLido={setDiasLidos} onGravado={() => onMudou()} />
+          {/* d67: o registo real, ao lado do plano. */}
+          {a && (
+            <div className="mt-2">
+              <RegistoReal pedidoId={t.pedidoId} diasDoPlano={diasLidos.map((d) => d.dia)} onGravado={() => onMudou()} />
+            </div>
+          )}
         </div>
       )}
 

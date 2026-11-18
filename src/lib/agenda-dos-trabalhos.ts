@@ -21,6 +21,7 @@
  */
 
 import { diasDoTrabalho } from "./varios-dias";
+import { registoRealDeJson } from "./registo-real";
 
 const TZ = "Europe/Lisbon";
 
@@ -62,6 +63,12 @@ export type TrabalhoNaAgenda = {
    * «atrasado» só conta depois do ÚLTIMO dia. Sem lista, um dia só, como sempre.
    */
   diasDoTrabalhoJson?: string | null;
+  /**
+   * O REGISTO REAL — d67 (18-11-2026): o início, o fim e a pausa de cada dia
+   * (`simulatorOrders.registoRealJson`). Feito, a Agenda mostra o bloco real;
+   * com início registado, nunca «atrasado».
+   */
+  registoRealJson?: string | null;
 };
 
 export type NaAgenda = {
@@ -222,6 +229,9 @@ export function naAgenda(t: TrabalhoNaAgenda, agora: Date = new Date()): NaAgend
      * numa marcada, a marcada continua em `dataCombinada`, para se ver a
      * diferença). Sem ele (os de antes), fica na data de sempre.
      */
+    // d67: com o registo real, o bloco é o que aconteceu (o início real do 1.º dia).
+    const real = registoRealDeJson(t.registoRealJson ?? null);
+    if (real.length) return { estado: "feito", quando: new Date(real[0].inicio), origem: "feito", diasDeAtraso: 0, horaJaPassou: false };
     const feitoEm = paraData(t.feitoEm);
     if (feitoEm) return { estado: "feito", quando: feitoEm, origem: "feito", diasDeAtraso: 0, horaJaPassou: false };
     return { estado: "feito", quando, origem, diasDeAtraso: 0, horaJaPassou: false };
@@ -229,6 +239,18 @@ export function naAgenda(t: TrabalhoNaAgenda, agora: Date = new Date()): NaAgend
 
   if (!quando) {
     return { estado: "sem_data", quando: null, origem, diasDeAtraso: 0, horaJaPassou: false };
+  }
+
+  /*
+   * d67: COM INÍCIO REGISTADO, NÃO É «ATRASADO» — está a decorrer (ou acabou e
+   * falta dá-lo por feito). Fica em «hoje», no início real do último dia registado.
+   */
+  {
+    const real = registoRealDeJson(t.registoRealJson ?? null);
+    if (real.length) {
+      const ultimoReal = new Date(real[real.length - 1].inicio);
+      return { estado: "hoje", quando: ultimoReal, origem, diasDeAtraso: 0, horaJaPassou: true };
+    }
   }
 
   /*

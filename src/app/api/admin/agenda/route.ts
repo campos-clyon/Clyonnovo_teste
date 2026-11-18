@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, ensureSimulatorOrdersTable, perfilDoProfissional, registarMudancaDeData, registarSemFalhar } from "@/lib/db";
 import { naAgenda } from "@/lib/agenda-dos-trabalhos";
 import { diasDoTrabalho } from "@/lib/varios-dias";
+import { blocoReal, registoRealDeJson, registoRealEmPalavras } from "@/lib/registo-real";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { faseDoTrabalho } from "@/lib/trabalho";
 import {
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
               n.feitoEm,
               -- O terreno e o ajuste no local, pela app do profissional (18-10-2026).
               n.aCaminhoEm, n.chegouEm, n.ajustesJson,
-              o.dataAgendada, o.diasDoTrabalhoJson, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
+              o.dataAgendada, o.diasDoTrabalhoJson, o.registoRealJson, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
               o.contactName, o.contactPhone, o.contactEmail,
               p.id AS providerId, p.name AS profissionalNome, p.phone AS profissionalTelefone,
               p.regimeIva
@@ -89,9 +90,13 @@ export async function GET(req: NextRequest) {
           pedidoConcluido: l.estadoDoPedido === "concluido",
           // d64: os vários dias — o «atrasado» só depois do último.
           diasDoTrabalhoJson: (l.diasDoTrabalhoJson as string | null) ?? null,
+          // d67: o registo real — feito, o bloco real; com início, nunca atrasado.
+          registoRealJson: (l.registoRealJson as string | null) ?? null,
         },
         agora,
       );
+      const real = registoRealDeJson((l.registoRealJson as string | null) ?? null);
+      const feitoComReal = a.estado === "feito" && real.length > 0;
       return {
         negociacaoId: Number(l.negociacaoId),
         pedidoId: Number(l.pedidoId),
@@ -159,7 +164,7 @@ export async function GET(req: NextRequest) {
          */
         dataCombinada: l.dataCombinada ? new Date(l.dataCombinada as string).toISOString() : null,
         /* Quanto tempo leva — null é «as duas horas do costume» (03-10-2026). */
-        duracaoMinutos: l.duracaoMinutos != null ? Number(l.duracaoMinutos) : null,
+        duracaoMinutos: feitoComReal ? blocoReal(real[0]).duracaoMin : l.duracaoMinutos != null ? Number(l.duracaoMinutos) : null,
         dataDoCliente: l.dataAgendada ? new Date(l.dataAgendada as string).toISOString() : null,
         /* Quando ficou feito (d36) — o dia e a hora do que aconteceu. */
         feitoEm: l.feitoEm ? new Date(l.feitoEm as string).toISOString() : null,
@@ -169,7 +174,10 @@ export async function GET(req: NextRequest) {
         diasDeAtraso: a.diasDeAtraso,
         horaJaPassou: a.horaJaPassou,
         /* d64: os dias todos (o 1.º é o que manda), para a grelha mostrar cada um. */
-        diasDoTrabalho: diasDoTrabalho({
+        /* d67: o registo real (plano ≠ realidade), e a frase dele. Feito, os blocos são os dias reais. */
+        registoReal: real,
+        registoRealTexto: real.length ? registoRealEmPalavras(real) : null,
+        diasDoTrabalho: feitoComReal ? real.map((d) => ({ dia: d.dia, inicio: d.inicio })) : diasDoTrabalho({
           dataCombinada: l.dataCombinada as Date | null,
           dataAgendada: l.dataAgendada as Date | null,
           diasDoTrabalhoJson: (l.diasDoTrabalhoJson as string | null) ?? null,
