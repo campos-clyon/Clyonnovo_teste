@@ -63,6 +63,21 @@ export const IBAN_E_MBWAY_OBRIGATORIOS_ATE = new Date("2026-11-22T23:59:59Z");
 /** Como os Termos o dizem. */
 export const IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO = "22 de novembro de 2026";
 
+/**
+ * O QUE FICA E O QUE PASSA — d4 (CEO e dono, 18-11-2026). Uma só frase para o
+ * valor que o parceiro vê no modelo de 15-11: a /profissionais, o email da
+ * contraproposta, o painel e o que a app CLYON Pro lê pela rota diziam só
+ * «a taxa», e o que passa à CLYON é a taxa da plataforma E o IVA dela. O teste
+ * da orquestra chumba «passa(m) à CLYON» sem «IVA» no que o parceiro lê.
+ */
+export const FICA_CONSIGO = "fica consigo";
+export const A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON = "a taxa da plataforma e o IVA dela passam à CLYON";
+export const FICA_CONSIGO_E_PASSA_A_CLYON = `${FICA_CONSIGO}; ${A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON}`;
+
+/** A mesma frase, a começar uma linha. */
+export const FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO =
+  FICA_CONSIGO_E_PASSA_A_CLYON.charAt(0).toUpperCase() + FICA_CONSIGO_E_PASSA_A_CLYON.slice(1);
+
 /*
  * ── OS DOIS PRAZOS — d1 (CEO e dono, 18-11-2026) ─────────────────────────────
  *

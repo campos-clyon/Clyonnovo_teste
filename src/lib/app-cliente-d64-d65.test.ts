@@ -108,10 +108,15 @@ describe("d65 — a app Pro pelo modelo do trabalho e pela referência das mudan
     expect(detalhe).toContain("t.noNovoModelo === true");
     // As mesmas frases do painel, palavra por palavra (o número grande está logo por cima).
     const painel = ler("src/app/profissionais/painel/Trabalhos.tsx");
-    for (const frase of ["fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA", "já com a taxa da plataforma descontada · o valor é sem IVA"]) {
-      expect(detalhe).toContain(`"${frase}"`);
-      expect(painel).toContain(`"${frase}"`);
-    }
+    expect(painel).toContain(`"já com a taxa da plataforma descontada · o valor é sem IVA"`);
+    /*
+     * d4 (18-11-2026): no modelo de 15-11 o painel diz a frase única que a rota
+     * serve (`fraseDoValorNoNovoModelo`, «fica consigo; a taxa da plataforma e o
+     * IVA dela passam à CLYON»). A app ainda tem a de antes escrita à mão até ao
+     * próximo EAS Update das Apps — a excepção temporária da orquestra.
+     */
+    expect(painel).toContain("pedido.fraseDoValorNoNovoModelo ??");
+    expect(detalhe).toMatch(/fraseDoValorNoNovoModelo|"fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA"/);
     expect(detalhe).toContain('"já com a taxa da plataforma descontada · o valor é sem IVA"');
   });
 

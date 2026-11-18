@@ -59,7 +59,10 @@ import { semContactoDepoisDoFim } from "@/lib/contacto-so-enquanto-ha-trabalho";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { clientePagouNoCartao } from "@/lib/carteira";
 import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
-import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
+import { pagamentosAVerificar, trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
+import { dividasDe } from "@/lib/carteira";
+import { comoRecebeNoNovoModelo } from "@/lib/como-recebe-no-novo-modelo";
+import { FICA_CONSIGO_E_PASSA_A_CLYON } from "@/lib/novo-modelo";
 import { transferenciasAEspera } from "@/lib/pagamentos-na-base";
 import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
@@ -167,6 +170,27 @@ export async function GET(req: NextRequest) {
     const reservas = await reservasDe([...doNovoModelo]).catch(() => new Map<number, number>());
 
     const agora = new Date();
+
+    /*
+     * O QUE PASSA À CLYON, TRABALHO A TRABALHO — d4 (CEO e dono, 18-11-2026).
+     * A mesma conta da carteira (`dividasDe`): quanto falta, se já está pago e
+     * quando nasceu, para o «Como recebe» dizer «A passar à CLYON · X € até
+     * dd/mm» — e «em atraso» só depois do prazo. Só com trabalhos do modelo de
+     * 15-11, e nunca derruba a lista.
+     */
+    const valoresAPassar = await semDerrubar(
+      async () => {
+        if (doNovoModelo.size === 0) return new Map<number, { total: number; paga: boolean; nasceuEm: Date | null }>();
+        const daCarteira = await trabalhosDaCarteira(linhas.filter((l) => doNovoModelo.has(Number(l.id))) as never);
+        return new Map(
+          dividasDe(daCarteira, agora)
+            .filter((d) => d.novoModelo === true)
+            .map((d) => [d.negociacaoId, { total: d.total, paga: d.paga, nasceuEm: d.nasceuEm }] as const),
+        );
+      },
+      new Map<number, { total: number; paga: boolean; nasceuEm: Date | null }>(),
+      "meus-pedidos",
+    );
 
     /*
      * AS MUDANÇAS EM QUE O CLIENTE O ESCOLHEU — 11-11-2026 (fase 2). Uma leitura
@@ -464,6 +488,29 @@ export async function GET(req: NextRequest) {
             ? (taxaAPassarAClyon(acordado, taxasDela, "normal", reservas.get(Number(l.id)) ?? 0)?.total ?? null)
             : null,
         reservaCent: reservas.get(Number(l.id)) ?? null,
+        /*
+         * A FRASE DO VALOR E O «COMO RECEBE» — d4 (18-11-2026). A app CLYON Pro
+         * diz a frase que vem daqui («fica consigo; a taxa da plataforma e o
+         * IVA dela passam à CLYON»), e o trabalho contratado mostra como o
+         * cliente escolheu pagar-lhe, quanto passa à CLYON e até quando.
+         * Nulos fora do modelo de 15-11.
+         */
+        fraseDoValorNoNovoModelo: doNovoModelo.has(Number(l.id)) ? `${FICA_CONSIGO_E_PASSA_A_CLYON} · o valor é sem IVA` : null,
+        comoRecebe:
+          doNovoModelo.has(Number(l.id)) && l.estado === "acordada"
+            ? (() => {
+                const v = valoresAPassar.get(Number(l.id));
+                const aPassar =
+                  v?.total ??
+                  (acordado != null
+                    ? (taxaAPassarAClyon(acordado, taxasDela, "normal", reservas.get(Number(l.id)) ?? 0)?.total ?? null)
+                    : null);
+                return comoRecebeNoNovoModelo(
+                  { forma: l.pagarAoParceiroPor ?? null, aPassarAClyon: aPassar, fecho: v?.nasceuEm ?? null, paga: v?.paga ?? false },
+                  agora,
+                );
+              })()
+            : null,
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,
         actualizadoEm: l.updatedAt,

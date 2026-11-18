@@ -1,3 +1,4 @@
+import type { ComoRecebe } from "@/lib/como-recebe-no-novo-modelo";
 import type { FolhaParaOParceiro } from "@/lib/folha-da-mudanca";
 import type { ProntoParaReceber as ProntoParaReceberDoServidor } from "@/lib/pronto-para-receber";
 import type { PercursoParaOParceiro } from "@/lib/mapa-do-percurso";
@@ -33,6 +34,10 @@ export type Pedido = {
   reservaCent?: number | null;
   /** No modelo de 15-11 (d65): a taxa da plataforma e o IVA dela, que passa à CLYON. Nulo fora dele. */
   aPassarAClyon?: number | null;
+  /** d4: a frase do valor no modelo de 15-11 (fica consigo; a taxa e o IVA dela passam à CLYON), do servidor. */
+  fraseDoValorNoNovoModelo?: string | null;
+  /** d4: o «Como recebe» do trabalho contratado do modelo de 15-11 (`como-recebe-no-novo-modelo.ts`). */
+  comoRecebe?: ComoRecebe | null;
   diasAteLibertar: number | null;
   provaJson: string | null;
   /** O JSON das propostas, tal como vem da base. */
@@ -338,6 +343,10 @@ export type DadosDaCarteira = {
       multibanco: { entidade: string | null; referencia: string | null } | null;
       /** d55: a parte da CLYON leva a reserva do valor único (a app diz «taxa da plataforma e reserva»). */
       comReserva: boolean;
+      /** d4: «a_passar» dentro do prazo, «em_atraso» só depois dele (`como-recebe-no-novo-modelo.ts`). */
+      estado?: "depois_de_confirmar" | "a_passar" | "em_atraso" | "passado";
+      /** d4: «A passar à CLYON · X € até dd/mm» ou «Em atraso · …», em hora de Lisboa. */
+      linha?: string;
     }>;
     standBy: { total: number; accao: string; explicacao: string; negociacoes: number[] } | null;
     dadosParaReceber:

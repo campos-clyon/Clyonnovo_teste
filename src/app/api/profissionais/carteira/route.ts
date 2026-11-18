@@ -21,6 +21,7 @@ import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
 import { prontoParaReceber } from "@/lib/pronto-para-receber";
 import { aceitacaoDoProfissional } from "@/lib/aceitacao-dos-termos-na-base";
 import { explicacaoDoStandBy, PAGAR_O_VALOR_EM_ATRASO, prazoDoValorEmAtraso } from "@/lib/valor-em-atraso";
+import { linhaDoValorAPassar } from "@/lib/como-recebe-no-novo-modelo";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { faseDoTrabalho } from "@/lib/trabalho";
@@ -234,6 +235,10 @@ export async function GET(req: NextRequest) {
               multibanco: comReferencia(d.negociacaoId),
               // d55: com valor único, a parte da CLYON leva a reserva — a app diz-lho como o painel.
               comReserva: Boolean(trabalhos.find((t) => t.negociacaoId === d.negociacaoId)?.reservaCent),
+              // d4: «A passar à CLYON · X € até dd/mm» no prazo; «Em atraso» só depois dele. A app lê a mesma linha.
+              ...(({ estado, linha }) => ({ estado, linha }))(
+                linhaDoValorAPassar({ total: d.total, prazoAte: prazoDoValorEmAtraso(d), paga: false }, agoraDoNovoModelo),
+              ),
             }));
           return {
             emVigor: true,

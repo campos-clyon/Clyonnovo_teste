@@ -6,9 +6,9 @@ import type { ModeloDoPreco } from "./iva-incluido";
 import { quotaDaClyon } from "./quota-da-clyon";
 import { FORMA_EM_PALAVRAS } from "./forma-de-pagamento";
 import { PROMESSA } from "./pagamento-na-plataforma";
-import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, novoModeloEmVigor } from "./novo-modelo";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO, novoModeloEmVigor } from "./novo-modelo";
 import { contaDoValorAcordado } from "./pagamento-directo";
-import { OS_DADOS_PARA_RECEBER_EM_PALAVRAS } from "./dados-para-receber";
+import { O_MEIO_DE_RECEBER_EM_PALAVRAS } from "./dados-para-receber";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 import type { SeccaoComFalta } from "./perfil-por-completar";
 
@@ -154,8 +154,8 @@ const PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO: PassoDoProfissional[] = [
  */
 const PASSO_DO_DINHEIRO_NO_NOVO_MODELO =
   "O cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY ou em dinheiro no " +
-  "local — o preço com IVA. Fica com a sua parte, emite ao cliente a fatura do trabalho e passa à CLYON " +
-  "a taxa da plataforma e o IVA dela, por referência, uma por trabalho. Propõe o seu valor, sem IVA, e o " +
+  "local — o preço com IVA. Fica com a sua parte, emite ao cliente a fatura do trabalho " +
+  "e passa à CLYON a taxa da plataforma e o IVA dela, por referência, uma por trabalho. Propõe o seu valor, sem IVA, e o " +
   "cliente vê o total a pagar: com IVA incluído, ou sem IVA se estiver isento. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
   // d30 (15-11-2026): a frase das faturas do Jurídico, dita ao profissional.
   "não lhe custa um cêntimo. Cada trabalho tem duas faturas, juntas ao pedido: a do trabalho, emitida por " +
@@ -221,8 +221,7 @@ export function comissaoEmPalavras(
     ? `Propõe o seu valor, sem IVA; o cliente vê o total a pagar (com IVA incluído, ou sem IVA se estiver isento) e paga-lho diretamente. A CLYON fica com ` +
       `${quota} ${semAcrescimo ? "desse valor" : "do que o cliente paga sem IVA"} — ex.: propõe ${proposta}, o cliente ` +
       `paga-lhe ${euros(conta.totalAoClienteCent / 100)} (IVA incluído), fica com ${euros(conta.liquidoDoProfissionalCent / 100)} + IVA ` +
-      `e passa à CLYON ${euros(conta.aPassarAClyonCent / 100)} (${euros(conta.taxaCent / 100)} de taxa da plataforma e ` +
-      `${euros(conta.ivaDaTaxaCent / 100)} de IVA dela).`
+      `e passa à CLYON ${euros(conta.aPassarAClyonCent / 100)} (${euros(conta.taxaCent / 100)} de taxa da plataforma e ${euros(conta.ivaDaTaxaCent / 100)} de IVA dela).`
     : null;
   return {
     proposta,
@@ -289,7 +288,7 @@ const COMO_RECEBE_NO_NOVO_MODELO: Array<{ forma: string; texto: string }> = [
       "Recebe o preço com IVA e emite ao cliente a fatura do trabalho.",
   },
   {
-    forma: "Passa à CLYON a taxa",
+    forma: "Passa à CLYON a taxa e o IVA dela",
     texto:
       "Quando o trabalho fecha, a taxa da plataforma e o IVA dela ficam na sua carteira como valor em atraso, " +
       `com a referência Multibanco ou MB WAY para os pagar. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias; depois, a ` +
@@ -334,14 +333,17 @@ export const O_QUE_A_CLYON_NAO_FAZ: string[] = [
 
 /**
  * DEPOIS DE APROVADO, O QUE FALTA — d16 (13-11-2026). O ecrã de sucesso da
- * candidatura e o email de aprovação dizem o mesmo. Desde 15-11 o IBAN, o titular,
- * o MB WAY e o regime de IVA são obrigatórios para propor (`dados-para-receber.ts`):
- * quem é aprovado a partir daí precisa deles no primeiro dia.
+ * candidatura e o email de aprovação dizem o mesmo.
+ *
+ * Revisto na d4 (18-11-2026) pelos dois prazos da d1 (`dados-para-receber.ts`):
+ * para propor basta UM meio de receber (o IBAN com o titular, ou o MB WAY), e
+ * quem é aprovado a partir de 15-11 precisa dele no primeiro dia; o regime de IVA
+ * é só aviso até `REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO`, e impede depois.
  */
 const DEPOIS_DE_APROVADO_NO_MODELO_ANTIGO = "O NIF, a morada fiscal e o IBAN preenche-os lá dentro, com calma.";
 export const DEPOIS_DE_APROVADO_NO_NOVO_MODELO =
-  `Para enviar propostas, preencha lá dentro ${OS_DADOS_PARA_RECEBER_EM_PALAVRAS}: são obrigatórios. ` +
-  "É para o IBAN e para o MB WAY que o cliente lhe paga, e o regime diz-lhe que fatura recebe.";
+  `Para enviar propostas, indique lá dentro ${O_MEIO_DE_RECEBER_EM_PALAVRAS} (basta um): é para lá que o cliente lhe paga. ` +
+  `Confirme também o regime de IVA até ${REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO}: é o que diz ao cliente que fatura recebe, e depois dessa data, sem ele, não pode propor.`;
 
 /** O que falta depois de aprovado, pela data do modelo. */
 export function depoisDeAprovado(agora: Date = new Date()): string {

@@ -86,6 +86,8 @@ import { dataEHora, diaEMes } from "@/lib/historico-negociacao";
 import { MARQUE_AS_HORAS_PRIMEIRO, totalEstimadoCurto } from "@/lib/horas-do-trabalho";
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { FolhaDaMudanca } from "./FolhaDaMudanca";
+import { ComoRecebeDoTrabalho } from "./ComoRecebeDoTrabalho";
+import { FICA_CONSIGO_E_PASSA_A_CLYON } from "@/lib/novo-modelo";
 import { MapaDoPercurso } from "./MapaDoPercurso";
 import { ConfirmarAHora } from "./ConfirmarAHora";
 import FaturaDoTrabalho from "./FaturaDoTrabalho";
@@ -2318,11 +2320,11 @@ function DetalheDoTrabalho({
         */}
         {/*
           d65: no modelo de 15-11 o cliente paga-lhe a ele — o valor não vem
-          «já com a taxa descontada»: fica com ele, e a taxa passa-a à CLYON.
+          «já com a taxa descontada»: fica com ele, e a taxa e o IVA dela passam à CLYON (d4).
         */}
         <p className="mt-1 text-right text-xs text-slate-500">
           {pedido.noNovoModelo === true
-            ? "fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA"
+            ? (pedido.fraseDoValorNoNovoModelo ?? `${FICA_CONSIGO_E_PASSA_A_CLYON} · o valor é sem IVA`)
             : "já com a taxa da plataforma descontada · o valor é sem IVA"}
         </p>
         {/*
@@ -2393,6 +2395,9 @@ function DetalheDoTrabalho({
           {obrigado}
         </p>
       )}
+
+      {/* COMO RECEBE — d4: a forma que o cliente escolheu, o que passa à CLYON e até quando (do servidor). */}
+      {fechado && pedido.comoRecebe ? <ComoRecebeDoTrabalho c={pedido.comoRecebe} /> : null}
 
       {/* A FATURA DO TRABALHO — d10: só num trabalho contratado do modelo de 15-11 (o servidor decide). */}
       {fechado && pedido.negociacaoId ? <FaturaDoTrabalho negociacaoId={pedido.negociacaoId} /> : null}

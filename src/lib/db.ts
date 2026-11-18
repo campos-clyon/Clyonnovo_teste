@@ -5445,6 +5445,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     /** A tipologia e a desmontagem do pedido, em JSON pequeno — para as horas previstas. */
     rawDasHoras: string | null;
     semFactura?: number | null;
+    /** Como o cliente escolheu pagar ao parceiro no modelo de 15-11 (d4, 18-11-2026) — `pagar-ao-parceiro.ts`. */
+    pagarAoParceiroPor?: string | null;
     /** «total», «carga» ou «hora» — o `o.baseDoPreco` do SELECT. */
     baseDoPreco: string | null;
     ajustesJson: string | null;
@@ -5535,6 +5537,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
             n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,
             n.materiaisJson, n.materiaisUsadosJson, n.semFactura,
+            -- d4: como o cliente paga ao parceiro (modelo de 15-11), para o «Como recebe».
+            n.pagarAoParceiroPor,
             CASE WHEN JSON_VALID(o.rawOrderJson) THEN CAST(JSON_OBJECT(
               'tipologia', JSON_EXTRACT(o.rawOrderJson, '$.tipologia'),
               'needsDismantling', JSON_EXTRACT(o.rawOrderJson, '$.needsDismantling')

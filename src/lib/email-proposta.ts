@@ -10,7 +10,7 @@ import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
 import type { DestinoDoValor } from "./carteira";
 import { BUSINESS_EMAIL } from "./seo-data";
 import { desdobramentoDoIva } from "./preco-do-cliente";
-import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO } from "./novo-modelo";
+import { A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON, DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, FICA_CONSIGO } from "./novo-modelo";
 
 
 /**
@@ -234,7 +234,7 @@ export async function avisarProfissionalDaProposta(p: {
       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
         Está a propor <strong>${precoComBase(euros(p.valor), p.base ?? "total")}</strong> ${
           p.noNovoModelo
-            ? `— fica consigo <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>; a taxa da plataforma passa-a à CLYON.`
+            ? `— ${FICA_CONSIGO} <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>; ${A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON}.`
             : `— recebe
         <strong>${precoComBase(euros(liquido), p.base ?? "total")}</strong>, já com a taxa da plataforma descontada.`
         }

@@ -2,11 +2,13 @@ import {
   DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO,
   IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
   PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO,
+  REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO,
   VERSAO_DOS_TERMOS,
   VERSAO_DOS_TERMOS_POR_EXTENSO,
   novoModeloEmVigor,
 } from "./novo-modelo";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
+import { O_MEIO_DE_RECEBER_EM_PALAVRAS } from "./dados-para-receber";
 
 /**
  * A ACEITAÇÃO DOS TERMOS PELO PROFISSIONAL — d20 (CEO e dono, 13-11-2026).
@@ -60,8 +62,10 @@ export const TEXTOS_DA_ACEITACAO = {
     "Desde esse dia, o cliente paga-lhe diretamente — por transferência, MB WAY ou dinheiro no local — e passa " +
     "à CLYON a taxa da plataforma e o IVA dela, por referência do euPago, até " +
     `${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias depois de o trabalho ficar confirmado; passado esse prazo sem pagar, ` +
-    "a conta fica em stand-by até pagar. Para receber trabalhos precisa do IBAN, do titular e do número MB WAY no " +
-    `perfil (os aprovados antes dessa data têm até ${IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO}). Cada trabalho tem ` +
+    // d4 (18-11-2026): os dois prazos da d1 — basta um meio de receber; o regime de IVA em aviso até 30-11.
+    `a conta fica em stand-by até pagar. Para receber trabalhos precisa no perfil de ${O_MEIO_DE_RECEBER_EM_PALAVRAS} ` +
+    `(basta um; os aprovados antes dessa data têm até ${IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO}), e de confirmar o regime ` +
+    `de IVA até ${REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO}. Cada trabalho tem ` +
     `duas faturas: a da taxa, emitida pela ${EMPRESA_PARCEIRA_AO_PUBLICO}, e a do trabalho, emitida por si.`,
   ligacao: `Ler os Termos completos (versão de ${VERSAO_DOS_TERMOS_POR_EXTENSO})`,
   url: "/termos",

@@ -27,6 +27,8 @@ import { QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO } from "./identifi
 import { BUSINESS_EMAIL } from "./seo-data";
 
 import { NOMES_DOS_SERVICOS } from "./service-categories";
+import { A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON, FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO } from "./novo-modelo";
+import { PRAZO_DEPOIS_DE_CONFIRMAR } from "./como-recebe-no-novo-modelo";
 const ETIQUETAS_DE_SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
 
 function euros(v: number | null): string {
@@ -142,7 +144,12 @@ export type AvisoDeContratacao = {
    * O MODELO DE 15-11-2026 (d10): o cliente paga-lhe o total com IVA, e ele passa à
    * CLYON a taxa da plataforma e o IVA dela. Nulo fora do modelo novo.
    */
-  novoModelo?: { recebidoDoCliente: number; aPassarAClyon: number } | null;
+  novoModelo?: {
+    recebidoDoCliente: number;
+    aPassarAClyon: number;
+    /** d4: o regime de IVA do parceiro — «com IVA» só a quem tem regime normal. Sem ele, não se diz. */
+    regime?: "normal" | "isento" | null;
+  } | null;
   baseUrl?: string;
 };
 
@@ -163,15 +170,18 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;margin-bottom:20px;">
       <tr><td style="padding:16px 18px;">
-        <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#047857;">Recebe</p>
+        <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#047857;">${p.novoModelo ? "Fica consigo" : "Recebe"}</p>
         <p style="margin:0;font-size:28px;font-weight:700;color:#047857;">${euros(p.recebeLiquido)}</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#059669;">${promessa.proLegendaDoValor}</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#059669;">${
+          // d4: no modelo de 15-11 a frase única, e o valor sem IVA ao lado.
+          p.novoModelo ? `${FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO} · o valor é sem IVA` : promessa.proLegendaDoValor
+        }</p>
         ${
           p.novoModelo
             ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#065f46;">
-                 O cliente paga-lhe <strong>${euros(p.novoModelo.recebidoDoCliente)}</strong>, com IVA.
-                 Quando o trabalho fechar, passa à CLYON <strong>${euros(p.novoModelo.aPassarAClyon)}</strong>
-                 (a taxa da plataforma e o IVA dela) pela referência da sua carteira.
+                 O cliente paga-lhe <strong>${euros(p.novoModelo.recebidoDoCliente)}</strong>${p.novoModelo.regime === "normal" ? ", com IVA" : ""}.
+                 Quando o trabalho fechar, ${A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON} — <strong>${euros(p.novoModelo.aPassarAClyon)}</strong> —
+                 pela referência da sua carteira, ${PRAZO_DEPOIS_DE_CONFIRMAR}.
                </p>`
             : p.dividaEmDinheiro
             ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#065f46;">

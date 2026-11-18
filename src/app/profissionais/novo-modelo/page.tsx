@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "O que muda a 15 de novembro",
-  description: "O pagamento dos trabalhos a partir de 15/11: o cliente paga ao profissional, e o profissional passa a taxa da plataforma à CLYON.",
+  description: "O pagamento dos trabalhos a partir de 15/11: o cliente paga ao profissional, e o profissional passa à CLYON a taxa da plataforma e o IVA dela.",
   robots: { index: false, follow: false },
 };
 

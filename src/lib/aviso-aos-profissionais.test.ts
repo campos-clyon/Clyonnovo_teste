@@ -121,7 +121,7 @@ describe("os textos", () => {
     for (let n = 1; n <= 7; n++) expect(r.textoWhatsApp).toContain(`*${n}. `);
     for (let n = 1; n <= 7; n++) expect(r.textoEmail).toContain(`### ${n}. `);
     for (let n = 1; n <= 6; n++) expect(r.textoEmail).toContain(`**${n}. `);
-    expect(r.textoEmail).toContain("Passa 36,90 € à CLYON.");
+    expect(r.textoEmail).toContain("Passa à CLYON 36,90 €: a taxa e o IVA dela.");
     expect(r.textoEmail).toContain("931 632 622");
     // O WhatsApp aprovado não leva ligação: o «Saber mais» não depende do interruptor para enviar.
     expect(ligaAoSaberMais(r)).toBe(false);

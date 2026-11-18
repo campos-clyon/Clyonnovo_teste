@@ -11,6 +11,7 @@ import { FRASES_PROIBIDAS } from "./frases-proibidas";
 import { respostaFrequente } from "./perguntas-frequentes-da-vitoria";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
 import { PRECOS_ANTES_DA_D60 } from "./precos-antes-da-d60";
+import { FICA_CONSIGO_E_PASSA_A_CLYON } from "./novo-modelo";
 
 /*
  * O TESTE DA ORQUESTRA — 27-10-2026 (decisão d12).
@@ -119,7 +120,29 @@ type Regra =
   | "w-taxa-no-codigo"
   | "x-confirmacao"
   | "z-parceiro-escolhido"
-  | "s-modelo-antigo";
+  | "s-modelo-antigo"
+  | "d4-passa-sem-iva";
+
+/*
+ * d4) O QUE PASSA À CLYON LEVA O IVA — d4 (CEO e dono, 18-11-2026). No modelo de
+ * 15-11 o parceiro passa à CLYON a taxa da plataforma E o IVA dela: uma frase
+ * que diga «passa(m) à CLYON» sem «IVA» conta-lhe metade. A frase única vive em
+ * `novo-modelo.ts` (`FICA_CONSIGO_E_PASSA_A_CLYON`). Lê-se frase a frase, fora
+ * do backoffice; os Termos são do Jurídico e do dono. Um rótulo que é só
+ * «Passa à CLYON» (a folha da mudança, d3) diz o que passa na nota ao lado, e fica.
+ */
+const ROTULO_DO_QUE_PASSA = /^pass(?:a|am) à CLYON$/i;
+const PASSA_A_CLYON = /\bpass(?:a|am|a-a|a-as|a-os)\b[^.;!?«]*?\sà CLYON\b/i;
+const ONDE_OS_TERMOS_VIVEM = new Set(["src/app/termos/page.tsx"]);
+export function passaAClyonSemIva(texto: string): string | null {
+  if (ROTULO_DO_QUE_PASSA.test(texto.trim())) return null;
+  for (const frase of texto.split(/(?<=[.;!?])\s+/)) {
+    const m = PASSA_A_CLYON.exec(frase);
+    // «sem IVA», «com IVA» e «+ IVA» falam do valor, não do que passa à CLYON.
+    if (m && !/\bIVA\b/.test(frase.replace(/(sem|com|\+) IVA\b/gi, ""))) return m[0];
+  }
+  return null;
+}
 
 /*
  * z) «O PARCEIRO ESCOLHIDO», E NÃO «O PARCEIRO QUE ESCOLHER» — d39 (15-11-2026).
@@ -154,14 +177,22 @@ interface Excepcao {
  *    (28-10-2026) e a da app com o EAS Update de 29-10-2026: os dois dizem
  *    VALOR_QUE_MUDA_NO_LOCAL (ajuste-no-local.ts). A lista ficou vazia.
  */
-const EXCEPCOES: Excepcao[] = [];
+const EXCEPCOES: Excepcao[] = [
+  {
+    ficheiro: "app-pro/src/app/trabalho/[id].tsx",
+    regra: "d4-passa-sem-iva",
+    motivo:
+      "apps: temporária (d4, 18-11-2026) — a app CLYON Pro ainda escreve à mão «a taxa da plataforma passa-a à CLYON»; " +
+      "passa a ler `fraseDoValorNoNovoModelo` de /api/profissionais/meus-pedidos no próximo EAS Update das Apps, e esta sai.",
+  },
+];
 
 /**
  * Desce sempre que a lista desce. Nunca sobe. Está em 0 desde 29-10-2026; as 3
  * temporárias da d16 (13-11-2026) saíram no mesmo dia com a parte do I&D — os
  * avisos aos modelos lêem «o que a CLYON faz» de `frase-unica.ts`, pela data.
  */
-const TAMANHO_MAXIMO = 0;
+const TAMANHO_MAXIMO = 1; // d4: a temporária da app CLYON Pro; volta a 0 quando sair.
 
 /*
  * AS DECISÕES DE LÍNGUA DO DONO — 27-10-2026 (na conversa com o CEO):
@@ -986,6 +1017,11 @@ function achadosDe(f: string): Achado[] {
     for (const re of CONFIRMACAO_ANTIGA) marcar("x-confirmacao", re.exec(texto));
     // z) d39: «o parceiro escolhido» no que o cliente lê.
     if (O_CLIENTE_LE(f) && !ONDE_A_VERSAO_ANTERIOR_VIVE.has(f) && !E_SQL.test(texto)) marcar("z-parceiro-escolhido", PARCEIRO_QUE_ESCOLHER.exec(texto));
+    // d4) «passa(m) à CLYON» sem «IVA», fora do backoffice e dos Termos; o SQL e os registos ficam de fora.
+    if (!DO_BACKOFFICE(f) && !ONDE_OS_TERMOS_VIVEM.has(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
+      const p = passaAClyonSemIva(texto);
+      if (p) out.push({ ficheiro: f, linha, regra: "d4-passa-sem-iva", texto: p });
+    }
     // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.
     if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const p = profissionalAoCliente(texto);
@@ -1172,6 +1208,18 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(parceiroQueEscolher("Quem vai a sua casa é o parceiro independente que escolher;")).toBe("o parceiro independente que escolher");
     expect(parceiroQueEscolher("Quem faz o trabalho é o parceiro escolhido.")).toBeNull();
     expect(parceiroQueEscolher("o pedido segue para os que escolher")).toBeNull();
+  });
+
+  it("a regra d4 apanha «passa(m) à CLYON» sem o IVA, e deixa a frase única (d4, 18-11-2026)", () => {
+    expect(passaAClyonSemIva("Fica consigo; a taxa da plataforma passa-a à CLYON")).toBe("passa-a à CLYON");
+    expect(passaAClyonSemIva("O profissional passa a taxa da plataforma à CLYON.")).toBe("passa a taxa da plataforma à CLYON");
+    expect(passaAClyonSemIva("Fica consigo o valor. As taxas passam à CLYON.")).toBe("passam à CLYON");
+    expect(passaAClyonSemIva(FICA_CONSIGO_E_PASSA_A_CLYON)).toBeNull();
+    expect(passaAClyonSemIva("Fica consigo X; passa à CLYON Y (a taxa e o IVA dela).")).toBeNull();
+    expect(passaAClyonSemIva("Veja na carteira a taxa da plataforma a passar à CLYON.")).toBeNull();
+    expect(passaAClyonSemIva("Passa à CLYON")).toBeNull();
+    expect(passaAClyonSemIva("fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA")).toBe("passa-a à CLYON");
+    expect(passaAClyonSemIva("passa a «Por receber» quando o cliente pagar à CLYON")).toBeNull();
   });
 
   it("a regra n lê os emails ao cliente, a FAQ e as descrições do Google (d2, 31-10-2026)", () => {

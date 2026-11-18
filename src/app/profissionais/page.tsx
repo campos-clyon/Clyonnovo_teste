@@ -7,7 +7,12 @@ import { comoRecebe, comissaoEmPalavras } from "@/lib/como-funciona-para-o-profi
 import { promessaGeral } from "@/lib/pagamento-na-plataforma";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { modeloDeHoje } from "@/lib/iva-incluido";
-import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import {
+  A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON,
+  FICA_CONSIGO,
+  FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO,
+  novoModeloEmVigor,
+} from "@/lib/novo-modelo";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
 
 export const metadata: Metadata = {
@@ -59,11 +64,12 @@ const O_QUE_RECEBE = [
 
 /**
  * O LÍQUIDO NO MODELO DE 15-11 — d65. O cliente paga-lhe a ele: o valor não
- * chega «já com a taxa descontada» — fica com ele, e a taxa passa-a à CLYON.
+ * chega «já com a taxa descontada» — fica com ele, e a taxa e o IVA dela passam
+ * à CLYON. d4 (18-11-2026): a frase única de `novo-modelo.ts`.
  */
 const O_LIQUIDO_NO_NOVO_MODELO =
-  "O valor aparece líquido: o cliente paga-lhe, fica consigo esse valor e a taxa da plataforma passa-a à CLYON. Sem contas para fazer e sem surpresas no fim.";
-const NOTA_DO_RECEBE_NO_NOVO_MODELO = "Fica consigo; a taxa da plataforma passa-a à CLYON";
+  `O valor aparece líquido: o cliente paga-lhe, ${FICA_CONSIGO} esse valor e ${A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON}. Sem contas para fazer e sem surpresas no fim.`;
+const NOTA_DO_RECEBE_NO_NOVO_MODELO = FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO;
 
 /** Pela data (d10): desde 15-11-2026 o cliente paga ao parceiro. */
 const oQueRecebe = (agora: Date) =>

@@ -458,7 +458,7 @@ function Divida({
 }: {
   d: DividaDaCarteira;
   onMudou: () => void;
-  valorEmAtraso?: { prazoAte: string | null } | null;
+  valorEmAtraso?: { prazoAte: string | null; estado?: string; linha?: string } | null;
 }) {
   const [aPedir, setAPedir] = useState<"multibanco" | "mbway" | null>(null);
   const [erro, setErro] = useState("");
@@ -502,13 +502,16 @@ function Divida({
           {/* Sem fatura não há IVA (um pago em mão, 04-11-2026, d9): só a taxa é da CLYON. */}
           {valorEmAtraso ? (
             <>
-              <p className="mt-0.5 text-xs font-semibold text-amber-900">{PAGAR_O_VALOR_EM_ATRASO}</p>
+              {/* d4: «A passar à CLYON · X € até dd/mm» no prazo; «Em atraso» só depois dele (do servidor). */}
+              <p className={`mt-0.5 text-xs font-semibold ${valorEmAtraso.estado === "em_atraso" ? "text-red-700" : "text-amber-900"}`}>
+                {valorEmAtraso.linha ?? PAGAR_O_VALOR_EM_ATRASO}
+              </p>
               <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
                 {d.comReserva
                   ? `A ${PARTE_DA_CLYON_COM_RESERVA} e o IVA dela deste trabalho, que o cliente lhe pagou com o preço.`
                   : "A taxa da plataforma e o IVA dela deste trabalho, que o cliente lhe pagou com o preço."}
               </p>
-              {diaDe(valorEmAtraso.prazoAte) && (
+              {diaDe(valorEmAtraso.prazoAte) && valorEmAtraso.estado !== "em_atraso" && (
                 <p className="mt-1 text-xs font-medium text-amber-800">
                   Pague até {diaDe(valorEmAtraso.prazoAte)}. Depois disso a conta fica em stand-by: vê os pedidos, mas não aceita nem envia propostas até pagar.
                 </p>

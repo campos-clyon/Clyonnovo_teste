@@ -104,21 +104,23 @@ describe("2 — o sino no modelo de 15-11", () => {
 describe("3 — «já com a taxa descontada» só no modelo antigo", () => {
   it("/profissionais: o líquido e a nota do «Recebe» no modelo novo", () => {
     const f = ler("src/app/profissionais/page.tsx");
-    expect(f).toContain("fica consigo esse valor e a taxa da plataforma passa-a à CLYON");
+    // d4 (18-11-2026): a frase única de novo-modelo.ts, com o IVA da taxa.
+    expect(f).toContain("${FICA_CONSIGO} esse valor e ${A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON}");
+    expect(f).toContain("const NOTA_DO_RECEBE_NO_NOVO_MODELO = FICA_CONSIGO_E_PASSA_A_CLYON_NO_INICIO;");
     expect(f).toContain("novoModeloEmVigor(agoraDoModelo()) ? NOTA_DO_RECEBE_NO_NOVO_MODELO :");
     expect(f).toContain("v.icon === HandCoins && novoModeloEmVigor(agora)");
   });
 
   it("o email da contraproposta: «fica consigo X; a taxa passa-a à CLYON» no modelo novo", () => {
     const f = ler("src/lib/email-proposta.ts");
-    expect(f).toMatch(/p\.noNovoModelo\s*\n\s*\? `— fica consigo <strong>[^`]*<\/strong>; a taxa da plataforma passa-a à CLYON\.`/);
+    expect(f).toMatch(/p\.noNovoModelo\s*\n\s*\? `— \$\{FICA_CONSIGO\} <strong>[^`]*<\/strong>; \$\{A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON\}\.`/);
     expect(ler("src/lib/avisar-da-proposta.ts")).toMatch(/baseUrl: dados\.baseUrl,\s*\n\s*\/\/ d65[^\n]*\n\s*noNovoModelo: eDoNovoModelo\(/);
   });
 
   it("o cartão do painel", () => {
     const f = ler("src/app/profissionais/painel/Trabalhos.tsx");
     expect(f).toMatch(
-      /pedido\.noNovoModelo === true\s*\n\s*\? "fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA"\s*\n\s*: "já com a taxa da plataforma descontada · o valor é sem IVA"/,
+      /pedido\.noNovoModelo === true\s*\n\s*\? \(pedido\.fraseDoValorNoNovoModelo \?\? `\$\{FICA_CONSIGO_E_PASSA_A_CLYON\} · o valor é sem IVA`\)\s*\n\s*: "já com a taxa da plataforma descontada · o valor é sem IVA"/,
     );
   });
 });

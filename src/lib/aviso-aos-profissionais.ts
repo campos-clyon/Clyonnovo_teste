@@ -331,7 +331,7 @@ function exemploDaTaxa(): string {
   const taxa = trabalho * TAXA_DAS_MUDANCAS;
   const iva = Math.round(taxa * TAXA_IVA * 100) / 100;
   const pct = Math.round(TAXA_DAS_MUDANCAS * 100);
-  return `Exemplo de uma negociação de ${trabalho} € sem IVA, com a taxa de ${pct} %: a taxa são ${euros(taxa)} e o IVA dela ${euros(iva)}. Passa ${euros(taxa + iva)} à CLYON.`;
+  return `Exemplo de uma negociação de ${trabalho} € sem IVA, com a taxa de ${pct} %: a taxa são ${euros(taxa)} e o IVA dela ${euros(iva)}. Passa à CLYON ${euros(taxa + iva)}: a taxa e o IVA dela.`;
 }
 
 export const ASSUNTO_DO_AVISO = "CLYON: o que muda a partir de 15 de novembro";

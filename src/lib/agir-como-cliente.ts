@@ -651,14 +651,16 @@ export async function avisarQueFoiContratadoSemFalhar(c: {
         if (!(await segueONovoModelo({ id: negociacaoId }))) return null;
         const { taxaAPassarAClyon } = await import("./taxa-a-passar-a-clyon");
         const { perfilFiscalDoParceiro } = await import("./perfil-fiscal");
+        const regime = perfilFiscalDoParceiro(alvo as object).regimeParaAConta;
         const t = taxaAPassarAClyon(
           c.valorAcordado,
           taxasDaNegociacao(linha),
-          perfilFiscalDoParceiro(alvo as object).regimeParaAConta,
+          regime,
           // d39: a reserva do valor único (a linha vem com n.*).
           (await import("./reserva")).reservaDaLinha(linha as { reservaCent?: unknown }),
         );
-        return t ? { recebidoDoCliente: t.recebidoDoCliente, aPassarAClyon: t.total } : null;
+        // d4: o regime vai no email — «com IVA» só a quem tem regime normal.
+        return t ? { recebidoDoCliente: t.recebidoDoCliente, aPassarAClyon: t.total, regime } : null;
       })(),
       dividaEmDinheiro:
         c.valorAcordado != null &&
