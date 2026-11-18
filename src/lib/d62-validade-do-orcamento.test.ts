@@ -124,9 +124,9 @@ describe("não repetir", () => {
   });
 
   it("uma mensagem do cliente depois do início pára a contagem", () => {
-    expect(clienteRespondeuNoCiclo(ENVIO, em("2026-11-18T12:00:00Z"), null)).toBe(true);
-    expect(clienteRespondeuNoCiclo(ENVIO, em("2026-11-17T09:00:00Z"), null)).toBe(false);
-    expect(clienteRespondeuNoCiclo(ENVIO, null, em("2026-11-19T12:00:00Z"))).toBe(true);
+    expect(clienteRespondeuNoCiclo(ENVIO, em("2026-11-18T12:00:00Z"))).toBe(true);
+    expect(clienteRespondeuNoCiclo(ENVIO, em("2026-11-17T09:00:00Z"))).toBe(false);
+    expect(clienteRespondeuNoCiclo(ENVIO, null)).toBe(false);
   });
 });
 

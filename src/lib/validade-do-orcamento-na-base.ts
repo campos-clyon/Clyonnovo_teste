@@ -449,8 +449,8 @@ export async function rotinaDaValidade(agora: Date = new Date()): Promise<Result
       const c = await cicloEmDia(pool, p, ciclos.get(p.id), agora);
       r.aEspera += 1;
       const resp = respostas.get(tel);
-      if (!c.paradoEm && clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm, resp?.passadaEm)) {
-        await pararOCiclo(p.id, "o cliente respondeu (ou a conversa está com uma pessoa)");
+      if (!c.paradoEm && clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm)) {
+        await pararOCiclo(p.id, "o cliente respondeu");
         r.parados += 1;
         continue;
       }
@@ -551,8 +551,8 @@ async function darOPasso(
   if (!c) return { ok: false, porque: "sem ciclo" };
   const { respostasDoClienteNoWhatsApp } = await import("./db");
   const resp = (await respostasDoClienteNoWhatsApp([p.contactPhone])).get(noveDigitos(p.contactPhone));
-  if (clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm, resp?.passadaEm)) {
-    await pararOCiclo(pedidoId, "o cliente respondeu (ou a conversa está com uma pessoa)");
+  if (clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm)) {
+    await pararOCiclo(pedidoId, "o cliente respondeu");
     return { ok: false, porque: "o cliente respondeu — a contagem parou" };
   }
   if (proximoPasso(c, agora, { manual: opcoes.manual }) !== passo) return { ok: false, porque: "não é a vez deste passo" };
@@ -574,10 +574,18 @@ async function darOPasso(
 
   if (passo === "lembrete1" || passo === "ultimo_aviso") {
     const texto = passo === "lembrete1" ? textoDoLembrete(dados) : textoDoUltimoAviso(dados);
-    const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
-    if (!(await enviarTextoWhatsApp(telefone, texto))) {
-      return { ok: false, porque: "o WhatsApp não saiu (conversa com uma pessoa, número bloqueado ou sem canal)" };
+    /*
+     * Como o «Enviar pela CLYON»: sai mesmo com a conversa entregue a uma pessoa
+     * (é assim que muitos orçamentos saem, do telemóvel da equipa), nunca para
+     * um número bloqueado ou com o WhatsApp desligado (`enviarAvisoWhatsApp`), e
+     * a conversa volta à Vitória para ela ler o «1», o «2» ou o «3».
+     */
+    const { enviarAvisoWhatsApp } = await import("./whatsapp-cloud");
+    if (!(await enviarAvisoWhatsApp(telefone, texto))) {
+      return { ok: false, porque: "o WhatsApp não saiu (número bloqueado, WhatsApp desligado ou sem canal)" };
     }
+    const { retomarNumeroWhatsApp } = await import("./db");
+    await retomarNumeroWhatsApp(telefone).catch(() => {});
     const coluna = passo === "lembrete1" ? "lembrete1Em" : "ultimoAvisoEm";
     await pool.execute(`UPDATE validadeDosOrcamentos SET ${coluna} = NOW(), negociacaoId = ?, ultimaFalha = NULL WHERE pedidoId = ?`, [
       tem.proposta.negociacaoId,
@@ -654,8 +662,7 @@ async function fecharPorFaltaDeResposta(pedidoId: number, p: PedidoAEspera, tele
     }).catch(() => 0);
   }
 
-  const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
-  const saiu = await enviarTextoWhatsApp(telefone, textoDoFechoAoCliente(pedidoId)).catch(() => false);
+  const saiu = await (await import("./whatsapp-cloud")).enviarAvisoWhatsApp(telefone, textoDoFechoAoCliente(pedidoId)).catch(() => false);
 
   const resumo =
     `Fechado sozinho por falta de resposta (validade do orçamento): o orçamento foi ao cliente, com lembrete e último aviso, sem resposta. ` +
@@ -729,8 +736,8 @@ export async function validadeNaMesa(agora: Date = new Date()): Promise<{ ligado
         ? antes!
         : { desde: p.propostaEnviadaEm, lembrete1Em: null, ultimoAvisoEm: null, fechadoEm: null, paradoEm: null };
       const resp = respostas.get(noveDigitos(p.contactPhone));
-      const respondeu = clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm, resp?.passadaEm);
-      const vista = respondeu && !c.paradoEm ? { ...c, paradoEm: resp?.ultimaMensagemEm ?? resp?.passadaEm ?? agora } : c;
+      const respondeu = clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm);
+      const vista = respondeu && !c.paradoEm ? { ...c, paradoEm: resp?.ultimaMensagemEm ?? agora } : c;
       return {
         pedidoId: p.id,
         linha: linhaDaMesa(vista, ligado),

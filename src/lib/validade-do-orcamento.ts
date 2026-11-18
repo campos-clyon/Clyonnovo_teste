@@ -172,16 +172,15 @@ export function jaFalouHoje(ciclosDoTelefone: CicloDoOrcamento[], agora: Date, o
 /* ── O cliente respondeu ─────────────────────────────────────────────────── */
 
 /**
- * Uma mensagem dele, ou a conversa passada a uma pessoa, DEPOIS do início do
- * ciclo: a contagem pára. Pura.
+ * Uma mensagem DELE depois do início do ciclo: a contagem pára. Pura.
+ *
+ * Só a do cliente: a conversa «passada a uma pessoa» não conta — a ponte
+ * entrega a conversa sempre que alguém da equipa escreve do telemóvel, e é
+ * assim que muitos orçamentos saem; contá-la parava quase todos no próprio
+ * envio (visto na Mesa a 18-11-2026, com 6 de 9 parados à nascença).
  */
-export function clienteRespondeuNoCiclo(
-  desde: Date,
-  ultimaMensagemDoClienteEm: Date | null | undefined,
-  passadaAUmaPessoaEm: Date | null | undefined,
-): boolean {
-  const depois = (d: Date | null | undefined) => d instanceof Date && d.getTime() > desde.getTime();
-  return depois(ultimaMensagemDoClienteEm) || depois(passadaAUmaPessoaEm);
+export function clienteRespondeuNoCiclo(desde: Date, ultimaMensagemDoClienteEm: Date | null | undefined): boolean {
+  return ultimaMensagemDoClienteEm instanceof Date && ultimaMensagemDoClienteEm.getTime() > desde.getTime();
 }
 
 /* ── A melhor proposta ───────────────────────────────────────────────────── */
