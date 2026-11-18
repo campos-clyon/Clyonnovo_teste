@@ -3,7 +3,9 @@
     {
       "id": "pro-2026-11-18",
       "nota": "Num trabalho em vários dias vê os dias, regista as cargas de cada um e dá-o por feito no último.\nDepois do aceite, a frase do valor diz o que o cliente aceitou; e o registo real das horas aparece no trabalho.",
-      "updates": []
+      "updates": [
+        "01a1eefe-bd8f-7ed1-847e-7b090b29b828"
+      ]
     },
     {
       "id": "pro-2026-11-17-3",
