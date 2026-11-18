@@ -1,9 +1,9 @@
 import { View } from "react-native";
 import { Text } from "./Texto";
 import { Mensagem } from "./ui";
-import { avisoDaBase, lerBase } from "../../../src/lib/base-do-preco";
+import { lerBase } from "../../../src/lib/base-do-preco";
 import { avisoDosItens } from "../../../src/lib/itens-a-mais";
-import type { Trabalho } from "../lib/trabalhos";
+import { avisoDaBaseDoTrabalho, type Trabalho } from "../lib/trabalhos";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 
 /**
@@ -21,7 +21,8 @@ import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 export function AvisosDoValor({ t }: { t: Trabalho }) {
   const c = useCores();
   const base = lerBase(t.baseDoPreco);
-  const daBase = avisoDaBase(base);
+  // d63: contratado, a frase da base para ele (vem da API); antes, o aviso de sempre.
+  const daBase = avisoDaBaseDoTrabalho(t);
   const dosItens = avisoDosItens(base, "profissional");
   const carga = t.cargaNaSuaCarrinha;
   if (!daBase && !carga && !dosItens) return null;

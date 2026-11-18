@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-18",
+      "nota": "Num trabalho em vários dias vê os dias, regista as cargas de cada um e dá-o por feito no último.\nDepois do aceite, a frase do valor diz o que o cliente aceitou; e o registo real das horas aparece no trabalho.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-17-3",
       "nota": "Nos trabalhos com preço fechado pela CLYON registados desde 16/11, o cliente paga-lhe diretamente.\nQuando o trabalho fica confirmado, passa à CLYON a taxa da plataforma e o IVA dela pela referência.",
       "updates": [
@@ -50,6 +55,11 @@
     }
   ],
   "cliente": [
+    {
+      "id": "cliente-2026-11-18",
+      "nota": "Num trabalho em vários dias, o pedido mostra os dias todos.\nQuando o trabalho fica registado, vê quando foi feito: o início, o fim e a pausa.",
+      "updates": []
+    },
     {
       "id": "cliente-2026-11-17-2",
       "nota": "Nos trabalhos com preço fechado pela CLYON pedidos desde 16/11, paga diretamente ao parceiro que faz o trabalho.\nO pedido mostra como lhe pagar, com o IBAN e o MB WAY dele.",

@@ -80,6 +80,9 @@ type Resposta = Omit<RespostaDoPedido, "pedido" | "negociacoes" | "textos"> & {
   textos: RespostaDoPedido["textos"] & ExtrasDosTextosV3;
 };
 
+/** A primeira letra em maiúscula — como a página do pedido mostra o registo real (d67). */
+const comMaiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 function LinhaDoPedido({ rotulo, texto }: { rotulo: string; texto: string }) {
   return (
     <View style={{ gap: 2, paddingVertical: 8, borderTopWidth: 1, borderTopColor: CORES.linha }}>
@@ -514,6 +517,10 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         {p.morada || p.cidade ? <LinhaDoPedido rotulo={p.morada ? "Morada" : "Zona"} texto={(p.morada ?? p.cidade) as string} /> : null}
         {acesso ? <LinhaDoPedido rotulo="Acesso" texto={acesso} /> : null}
         {p.dataPreferidaTexto || p.quando ? <LinhaDoPedido rotulo="Quando" texto={(p.dataPreferidaTexto ?? p.quando) as string} /> : null}
+        {/* d64: um trabalho em vários dias — os dias como a API os escreve (um só pedido, um só pagamento). */}
+        {p.diasDoTrabalhoTexto ? <LinhaDoPedido rotulo="Dias do trabalho" texto={p.diasDoTrabalhoTexto} /> : null}
+        {/* d67: o que aconteceu, quando há registo — a frase da API, com maiúscula como na página do pedido. */}
+        {p.registoRealTexto ? <LinhaDoPedido rotulo="Trabalho feito" texto={comMaiuscula(p.registoRealTexto)} /> : null}
         {p.repeticao ? <LinhaDoPedido rotulo="Repetir" texto={p.repeticao} /> : null}
         {p.precisaFatura ? <LinhaDoPedido rotulo="Fatura" texto="Quer o NIF na fatura" /> : null}
         {p.precisaGuiaTransporte ? <LinhaDoPedido rotulo="Guia de transporte" texto="Precisa de guia de transporte" /> : null}

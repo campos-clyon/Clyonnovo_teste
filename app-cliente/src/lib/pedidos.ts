@@ -572,6 +572,10 @@ export const eMinha = (m: Pick<MensagemDoPedido, "de">) => String(m.de).toLowerC
 
 export type ExtrasDoPedidoV3 = {
   dataPreferidaTexto?: string | null;
+  /** d64 (18-11-2026): um trabalho em vários dias — «de segunda, 16, a quarta, 18 de novembro»; null num dia só. Mostra-se como vem. */
+  diasDoTrabalhoTexto?: string | null;
+  /** d67 (18-11-2026): o que aconteceu — «feito a 17/11, das 13h às 19h, 1 h de pausa → 5 h»; null sem registo. */
+  registoRealTexto?: string | null;
   /** O acesso em palavras: um lado, ou origem e destino numa mudança. */
   acesso?: string | { origem?: string | null; destino?: string | null } | null;
   repeticao?: string | null;

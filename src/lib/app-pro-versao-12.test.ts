@@ -78,7 +78,9 @@ describe("os avisos do valor", () => {
     const AVISOS = ler("app-pro/src/componentes/AvisosDoValor.tsx");
     expect(PAINEL).toContain("avisoDaBase(lerBase(pedido.baseDoPreco))");
     expect(PAINEL).toContain('avisoDosItens(lerBase(pedido.baseDoPreco), "profissional")');
-    expect(AVISOS).toContain("avisoDaBase(base)");
+    // d63 (18-11-2026): pela regra do painel — contratado, a frase da base da API; senão o avisoDaBase.
+    expect(AVISOS).toContain("avisoDaBaseDoTrabalho(t)");
+    expect(ler("app-pro/src/lib/trabalhos.ts")).toContain("avisoDaBase(lerBase(t.baseDoPreco))");
     expect(AVISOS).toContain('avisoDosItens(base, "profissional")');
     expect(AVISOS).toContain("carga.titulo");
     expect(DETALHE).toContain("<AvisosDoValor t={t} />");

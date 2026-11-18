@@ -28,8 +28,16 @@ import { TELEFONE_DA_CLYON } from "../../../src/lib/telefone-da-clyon";
 import { O_PAGAMENTO_VEM_A_CAMINHO_POR_TRANSFERENCIA } from "../../../src/lib/palavras-do-pagamento";
 import { AvisosDoValor } from "./AvisosDoValor";
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
+import { DiasDoTrabalho } from "./DiasDoTrabalho";
 import { MARQUE_AS_HORAS_PRIMEIRO } from "../../../src/lib/horas-do-trabalho";
-import { estimativaAoLado, horasPorMarcar, sufixoDoValor } from "../lib/trabalhos";
+import {
+  aindaNaoEOUltimoDia,
+  estimativaAoLado,
+  horasPorMarcar,
+  registoRealParaMostrar,
+  SO_NO_ULTIMO_DIA,
+  sufixoDoValor,
+} from "../lib/trabalhos";
 import { AvaliarOCliente } from "./AvaliarOCliente";
 import { MapaDaMorada } from "./MapaDaMorada";
 import { MapaDoPercurso } from "./MapaDoPercurso";
@@ -92,6 +100,8 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
         {obrigado ? <Mensagem tom="bom" texto={obrigado} /> : null}
         <Terminado t={t} />
         <HorasDoTrabalho t={t} />
+        {/* d64: os dias e as cargas de cada um (já sem registar). */}
+        <DiasDoTrabalho t={t} />
         {descricao}
         {/* O nome, o telefone e a morada do cliente são para FAZER o trabalho:
             confirmado ou pago, saem — a mesma regra do painel (16-09-2026). */}
@@ -123,6 +133,10 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       <Viagem t={t} />
       {/* Por hora (31-10-2026): as horas primeiro, depois o «Está feito». */}
       {concluirVisivel(t) ? <HorasDoTrabalho t={t} /> : null}
+      {/* d64: um trabalho em vários dias — os dias e as cargas de cada um. */}
+      <DiasDoTrabalho t={t} />
+      {/* d67: o registo real (só leitura), quando a equipa já o tem. */}
+      {registoRealParaMostrar(t) ? <Mensagem tom="bom" texto={registoRealParaMostrar(t) as string} /> : null}
       {obrigado ? (
         <Mensagem tom="bom" texto={obrigado} />
       ) : concluirVisivel(t) && horasPorMarcar(t) ? (
@@ -903,13 +917,15 @@ function EstaFeito({ t, aoMarcar }: { t: Trabalho; aoMarcar: (mensagem: string) 
         accessibilityLabel="Nota sobre o trabalho feito"
         style={[estilos.campo, estilos.campoAlto, { borderColor: c.linha, color: c.tinta, backgroundColor: c.fundo }]}
       />
+      {/* d64: em vários dias, «Está feito» só no último (a rota recusa antes, 409 soNoUltimoDia). */}
+      {aindaNaoEOUltimoDia(t) ? <Mensagem tom="aviso" texto={SO_NO_ULTIMO_DIA} /> : null}
       {pendente ? (
         <Mensagem tom="aviso" texto="Tem um pedido de ajuste à espera. Espere pela resposta, ou retire o pedido, antes de dar o trabalho por feito." />
       ) : null}
       {!confirmar ? (
         <Botao
           titulo="Está feito"
-          desactivado={pendente}
+          desactivado={pendente || aindaNaoEOUltimoDia(t)}
           aoCarregar={() => setConfirmar(true)}
         />
       ) : (
@@ -975,6 +991,10 @@ function Terminado({ t }: { t: Trabalho }) {
       {/* Quando o deu por feito, à hora de Lisboa — como no painel (27-10-2026, d5). */}
       {marcouComoFeito(t.execucaoEnviadaEm) ? (
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1 }}>{marcouComoFeito(t.execucaoEnviadaEm)}</Text>
+      ) : null}
+      {/* d67: o que aconteceu (início, fim e pausa), só leitura — a frase vem do site. */}
+      {registoRealParaMostrar(t) ? (
+        <Text style={{ color: c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{registoRealParaMostrar(t)}</Text>
       ) : null}
       {/* Com a linha do dinheiro, o valor já lá está: «Recebe» por baixo repetia-o (e no pago já não é futuro). */}
       {t.recebeSeFechado != null && !dinheiro ? (

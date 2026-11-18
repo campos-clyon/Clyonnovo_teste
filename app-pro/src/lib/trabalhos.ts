@@ -13,6 +13,9 @@
  */
 import type { MudancaEscolhida } from "../../../src/lib/mudanca-escolhida-pelo-cliente";
 import type { FolhaParaOParceiro } from "../../../src/lib/folha-da-mudanca";
+import type { DiaDoTrabalho } from "../../../src/lib/varios-dias";
+import type { DiaReal } from "../../../src/lib/registo-real";
+import { avisoDaBase, lerBase } from "../../../src/lib/base-do-preco";
 import type { PercursoParaOParceiro } from "../../../src/lib/mapa-do-percurso";
 import {
   accoesDisponiveis,
@@ -216,6 +219,27 @@ export type Trabalho = {
   porHora?: HorasNaApp | null;
   materiais?: MateriaisDaProposta | null;
   materiaisTexto?: string | null;
+  // ── d63, d64 e d67 (18-11-2026) — opcionais: um site antigo não os manda ──
+  /**
+   * d63: DEPOIS DO ACEITE, a frase da base para ele — «O cliente aceitou 360 €/carga.
+   * Confirme o número de cargas com o cliente no local, antes de carregar.»
+   * (`frase-da-base.ts`). Null no valor total ou antes do aceite (aí é o `avisoDaBase`).
+   */
+  fraseDaBaseAoProfissional?: string | null;
+  /** d64: os dias do trabalho (um, ou vários), em hora de Lisboa (`varios-dias.ts`). */
+  diasDoTrabalho?: DiaDoTrabalho[];
+  /** d64: «de segunda, 16, a quarta, 18 de novembro» — null num dia só. */
+  diasDoTrabalhoTexto?: string | null;
+  /** d64: false → o «Está feito» ainda não (só no último dia; a rota dá 409 `soNoUltimoDia`). */
+  podeDarPorFeitoHoje?: boolean;
+  /** d64: o total das cargas registadas nos dias, ou null sem nenhuma. */
+  cargasFeitasNoTotal?: number | null;
+  /** d67: o registo real (início, fim e pausa de cada dia, ISO) — só leitura; [] sem registo. */
+  registoReal?: DiaReal[];
+  /** d67: «feito a 17/11, das 13h às 19h, 1 h de pausa → 5 h», ou null. */
+  registoRealTexto?: string | null;
+  /** d67: as horas feitas (fim − início − pausa), ou null sem registo. */
+  horasFeitas?: number | null;
 };
 
 /** O bloco das horas, como `meus-pedidos` o manda (ver horas-do-trabalho.ts). */
@@ -1340,4 +1364,44 @@ export function linkDoCalendario(t: Trabalho): string | null {
     ctz: "Europe/Lisbon",
   });
   return `https://calendar.google.com/calendar/render?${q.toString()}`;
+}
+
+/* ── d63, d64 e d67 (18-11-2026): a base depois do aceite, os vários dias, o registo real ── */
+
+/**
+ * O AVISO DA BASE — o do painel (`Trabalhos.tsx`, d63): com o trabalho contratado e
+ * a frase da base para ele (`fraseDaBaseAoProfissional`), essa; senão o `avisoDaBase`
+ * de sempre. Com as horas já confirmadas o valor é o total, e não se diz nada.
+ */
+export function avisoDaBaseDoTrabalho(
+  t: Pick<Trabalho, "estado" | "baseDoPreco"> & { fraseDaBaseAoProfissional?: string | null; porHora?: HorasNaApp | null },
+): string | null {
+  const fechado = t.estado === "acordada";
+  if (fechado && t.porHora?.confirmadas) return null;
+  return fechado && t.fraseDaBaseAoProfissional ? t.fraseDaBaseAoProfissional : avisoDaBase(lerBase(t.baseDoPreco));
+}
+
+/** A frase do painel quando ainda não é o último dia (`Trabalhos.tsx`, d64). */
+export const SO_NO_ULTIMO_DIA = "Este trabalho é em vários dias: dá-se por feito no último dia. Até lá, registe as cargas de cada dia.";
+
+/** O texto por baixo do título dos dias — o do painel (`DiasDoTrabalho.tsx`). */
+export const REGISTE_AS_CARGAS = "Registe as cargas de cada dia. Dá o trabalho por feito só no último dia; o total conta-se no fim.";
+
+/** Em vários dias e antes do último? Quem decide é o site; um site antigo que não o manda deixa como sempre. */
+export function aindaNaoEOUltimoDia(t: { podeDarPorFeitoHoje?: boolean }): boolean {
+  return t.podeDarPorFeitoHoje === false;
+}
+
+/** Os dias, quando são vários — num trabalho de um dia não há bloco. */
+export function diasParaMostrar(t: { diasDoTrabalho?: DiaDoTrabalho[] }): DiaDoTrabalho[] {
+  return t.diasDoTrabalho && t.diasDoTrabalho.length > 1 ? t.diasDoTrabalho : [];
+}
+
+/** «2,5» — as cargas com vírgula, como no painel. */
+export const cargasEscritas = (n: number) => String(n).replace(".", ",");
+
+/** O registo real com maiúscula — como a página do pedido o mostra; null sem registo. */
+export function registoRealParaMostrar(t: { registoRealTexto?: string | null }): string | null {
+  const x = t.registoRealTexto?.trim();
+  return x ? x.charAt(0).toUpperCase() + x.slice(1) : null;
 }
