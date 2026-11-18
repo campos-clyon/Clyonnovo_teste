@@ -2,9 +2,16 @@ import { precoComBase, type BaseDoPreco } from "./base-do-preco";
 import { tUrgency } from "./translations";
 import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
 
-/** O orçamento tinha validade e o cliente não respondeu (d62, 18-11-2026) — o texto aprovado. */
+/**
+ * O orçamento tinha validade e o cliente não respondeu (d62, 18-11-2026). d2
+ * (18-11-2026): a mesma frase no telemóvel (push e WhatsApp) e no ecrã do
+ * trabalho — «fechado: o cliente não respondeu ao orçamento» —, que nunca diz
+ * «cancelado».
+ */
+export const FECHADO_SEM_RESPOSTA = "o cliente não respondeu ao orçamento";
+
 export function textoDoFechoAoParceiro(pedidoId: number): string {
-  return `O cliente não respondeu; o pedido #${pedidoId} foi fechado e saiu do seu feed.`;
+  return `Pedido #${pedidoId} fechado: ${FECHADO_SEM_RESPOSTA}. Saiu do seu feed.`;
 }
 
 /**
@@ -167,11 +174,16 @@ export function avisoSemOTrabalho(p: { pedidoId: number; porque: PorqueTerminou;
  */
 export const NEGOCIACAO_TERMINADA = "Negociação terminada";
 
-export const PORQUE_A_NEGOCIACAO_TERMINOU: Record<"outro" | "desistida" | "cancelado", string> = {
+export const PORQUE_A_NEGOCIACAO_TERMINOU: Record<"outro" | "desistida" | "cancelado" | "sem_resposta", string> = {
   outro: "Ficou com outro profissional.",
   desistida: "Um dos lados desistiu da negociação.",
   cancelado: "O pedido foi cancelado.",
+  // d2: o fecho pela validade do orçamento não é um cancelamento.
+  sem_resposta: `Fechado: ${FECHADO_SEM_RESPOSTA}.`,
 };
+
+/** A etiqueta curta do cartão (painel): «fechado: o cliente não respondeu ao orçamento». */
+export const ETIQUETA_DO_FECHO_SEM_RESPOSTA = `fechado: ${FECHADO_SEM_RESPOSTA}`;
 
 /**
  * A razão, pelo estado da negociação e do pedido — a mesma regra de
@@ -181,8 +193,26 @@ export const PORQUE_A_NEGOCIACAO_TERMINOU: Record<"outro" | "desistida" | "cance
 export function porqueTerminou(p: {
   estado: string;
   pedidoCancelado?: boolean | null;
+  /** d2: o pedido fechou pela validade do orçamento (a rota diz-o: `pedidoFechadoSemResposta`). */
+  pedidoFechadoSemResposta?: boolean | null;
 }): keyof typeof PORQUE_A_NEGOCIACAO_TERMINOU | null {
   if (p.estado === "desistida") return "desistida";
-  if (p.estado === "morta") return p.pedidoCancelado ? "cancelado" : "outro";
+  if (p.estado === "morta") {
+    if (p.pedidoCancelado && p.pedidoFechadoSemResposta) return "sem_resposta";
+    return p.pedidoCancelado ? "cancelado" : "outro";
+  }
   return null;
+}
+
+/**
+ * O PEDIDO FECHOU PELA VALIDADE DO ORÇAMENTO (d2): arquivado, com o orçamento
+ * enviado e o motivo «sem resposta» (`fecharPorFaltaDeResposta`). Um pedido
+ * cancelado (pelo cliente ou pela equipa) nunca é isto. Pura.
+ */
+export function fechadoSemResposta(p: {
+  estadoDoPedido: string | null | undefined;
+  motivoDoFecho: string | null | undefined;
+  propostaEnviada: boolean;
+}): boolean {
+  return (p.estadoDoPedido ?? "") === "arquivado" && p.motivoDoFecho === "sem_resposta" && p.propostaEnviada;
 }

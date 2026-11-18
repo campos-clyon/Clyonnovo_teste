@@ -5493,6 +5493,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     valorFixoClyon: string | null;
     /** O estado do pedido: arquivado ou cancelado, é um trabalho perdido. Ver `pedido-arrumado.ts`. */
     estadoDoPedido: string | null;
+    /** d2: o motivo do fecho e se o orçamento foi — para o fecho pela validade não se ler como «cancelado». */
+    motivoDoFechoDoPedido: string | null;
+    propostaEnviadaDoPedido: number | null;
   }>
 > {
   await ensureNegociacoesTable();
@@ -5536,6 +5539,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             ) AS CHAR) ELSE NULL END AS rawDasHoras,
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
+            o.motivoDoFecho AS motivoDoFechoDoPedido, (o.propostaEnviadaEm IS NOT NULL) AS propostaEnviadaDoPedido,
             o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
             -- d64: os varios dias do trabalho (nulo com um dia so).

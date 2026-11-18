@@ -371,3 +371,74 @@ export function rotuloDoLembrarAgora(c: CicloDoOrcamento, agora: Date): string |
   if (p === "ultimo_aviso") return "Lembrar agora (último aviso)";
   return null;
 }
+
+/* ── O «3» pede confirmação — d2 (CEO e dono, 18-11-2026) ────────────────── */
+
+/**
+ * O «3» (ou «já não preciso») ao lembrete já não cancela logo: a Vitória
+ * pergunta «Confirma que quer cancelar o pedido #N? Responda CANCELAR.», e só
+ * o CANCELAR cancela. Um «3» que responde a outra pergunta, um «3» de outro
+ * telefone ou de outro pedido nunca cancela nada.
+ */
+export function textoDaConfirmacaoDoCancelamento(pedidoId: number): string {
+  return `Confirma que quer cancelar o pedido #${pedidoId}? Responda CANCELAR.`;
+}
+
+/** Quanto tempo a pergunta do CANCELAR vale. Depois disso, um CANCELAR já não cancela (vai à equipa). */
+export const HORAS_PARA_CONFIRMAR_O_CANCELAMENTO = 48;
+
+/**
+ * Os dados do pedido cancelado pelo lembrete não saem no momento: a purga
+ * anonimiza-o 7 dias depois, e até lá a equipa ainda pode desfazer (reabrir o
+ * pedido tira-o da purga).
+ */
+export const DIAS_ATE_ANONIMIZAR_O_CANCELADO = 7;
+
+/**
+ * É O CANCELAR? Só a palavra (em português, ou como o tradutor a pôs —
+ * «cancel», «annuler»), com o pedido e o número se ele os escrever. Um «3», um
+ * «sim» ou um «já não preciso» não são o CANCELAR. Pura.
+ */
+export function eConfirmacaoDoCancelamento(texto: string | null | undefined): boolean {
+  // Uma pergunta («cancelar?») não é o CANCELAR.
+  if (/\?/.test(texto ?? "")) return false;
+  const t = normalizar(texto ?? "")
+    .replace(/[#°º]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return /^(?:cancelar|cancel|annuler)(?: (?:o |the |la )?(?:pedido|request|demande))?(?: (?:n |no )?\d+)?$/.test(t);
+}
+
+/** O telefone para comparar: dígitos, sem «00», com o 351 nos telemóveis portugueses de 9 dígitos. Pura. */
+export function telefoneEstrito(v: string | null | undefined): string {
+  let d = String(v ?? "").replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  if (/^9\d{8}$/.test(d)) d = `351${d}`;
+  return d.length >= 9 ? d : "";
+}
+
+/** O MESMO TELEFONE, número inteiro (não os últimos 9 dígitos). Pura. */
+export function mesmoTelefoneEstrito(a: string | null | undefined, b: string | null | undefined): boolean {
+  const x = telefoneEstrito(a);
+  return x !== "" && x === telefoneEstrito(b);
+}
+
+/**
+ * A ÚLTIMA MENSAGEM QUE SAIU PARA ESTE TELEFONE é a deste pedido? O «1», o «2»
+ * e o «3» só respondem ao lembrete (ou ao último aviso) se for ele a última
+ * coisa que lhe dissemos; o CANCELAR, se for a pergunta do CANCELAR. Outra
+ * pergunta pelo meio (da Vitória ou da equipa), ou o lembrete de outro pedido,
+ * e não é resposta a este. O registo das saídas fica em português. Pura.
+ */
+export function aUltimaSaidaE(texto: string | null | undefined, pedidoId: number): "lembrete" | "confirmacao" | null {
+  if (!Number.isInteger(pedidoId) || pedidoId <= 0) return null;
+  const t = (texto ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (!new RegExp(`#${pedidoId}(?!\\d)`).test(t)) return null;
+  if (t.includes("confirma que quer cancelar o pedido") && t.includes("responda cancelar")) return "confirmacao";
+  if (t.includes(normalizarFrase(AS_TRES_OPCOES).slice(0, 23))) return "lembrete";
+  return null;
+}
+
+function normalizarFrase(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}

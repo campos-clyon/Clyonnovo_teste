@@ -18,6 +18,7 @@ import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataf
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
+import { fechadoSemResposta } from "@/lib/textos-dos-avisos-ao-profissional";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { fraseDaBaseAoProfissional } from "@/lib/frase-da-base";
@@ -845,6 +846,12 @@ export async function GET(req: NextRequest) {
         valorFixo: l.valorFixoClyon != null ? Number(l.valorFixoClyon) : null,
         // Para os Recusados dizerem porquê: «cancelado» e não «ficou com outro» (08-10-2026).
         pedidoCancelado: pedidoArrumado(l.estadoDoPedido),
+        // d2: fechou pela validade do orçamento — «fechado: o cliente não respondeu ao orçamento», não «cancelado».
+        pedidoFechadoSemResposta: fechadoSemResposta({
+          estadoDoPedido: l.estadoDoPedido,
+          motivoDoFecho: l.motivoDoFechoDoPedido,
+          propostaEnviada: Number(l.propostaEnviadaDoPedido) === 1,
+        }),
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDela) : null,

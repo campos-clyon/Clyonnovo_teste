@@ -209,6 +209,7 @@ describe("(c) quem fica sem o trabalho é avisado, sem preços dos outros", () =
       outro: "Ficou com outro profissional.",
       desistida: "Um dos lados desistiu da negociação.",
       cancelado: "O pedido foi cancelado.",
+      sem_resposta: "Fechado: o cliente não respondeu ao orçamento.",
     });
     expect(porqueTerminou({ estado: "morta" })).toBe("outro");
     expect(porqueTerminou({ estado: "morta", pedidoCancelado: true })).toBe("cancelado");

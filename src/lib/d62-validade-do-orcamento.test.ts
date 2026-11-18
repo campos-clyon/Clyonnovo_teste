@@ -19,7 +19,19 @@ import {
   textoDoUltimoAviso,
   valorDoLembrete,
   clienteRespondeuNoCiclo,
+  aUltimaSaidaE,
+  DIAS_ATE_ANONIMIZAR_O_CANCELADO,
+  eConfirmacaoDoCancelamento,
+  mesmoTelefoneEstrito,
+  textoDaConfirmacaoDoCancelamento,
 } from "./validade-do-orcamento";
+import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
+import {
+  ETIQUETA_DO_FECHO_SEM_RESPOSTA,
+  fechadoSemResposta,
+  PORQUE_A_NEGOCIACAO_TERMINOU,
+  porqueTerminou,
+} from "./textos-dos-avisos-ao-profissional";
 import { mensagemDaPropostaClyon, precoDaPropostaClyon } from "./proposta-clyon-ao-cliente";
 import { ROTINAS } from "./rotinas";
 import { avisoSemOTrabalho } from "./textos-dos-avisos-ao-profissional";
@@ -176,7 +188,7 @@ describe("os textos", () => {
 
   it("o fecho, ao cliente e aos parceiros, palavra por palavra", () => {
     expect(textoDoFechoAoCliente(701)).toBe("Fechámos o pedido #701. Se ainda precisar, responda aqui e reabrimos.");
-    expect(textoDoFechoAoParceiro(701)).toBe("O cliente não respondeu; o pedido #701 foi fechado e saiu do seu feed.");
+    expect(textoDoFechoAoParceiro(701)).toBe("Pedido #701 fechado: o cliente não respondeu ao orçamento. Saiu do seu feed.");
     expect(avisoSemOTrabalho({ pedidoId: 701, porque: "fechado_sem_resposta" }).body).toBe(textoDoFechoAoParceiro(701));
   });
 
@@ -241,19 +253,43 @@ describe("as três respostas", () => {
   });
 });
 
-describe("a anonimização do «já não preciso»", () => {
-  it("reaproveita a da retenção, sem o nome, depois de cancelar, avisar e mandar o texto aprovado — sem apagar a linha", () => {
-    const corpo = BASE.slice(BASE.indexOf("export async function cancelarPeloLembrete("));
+describe("a anonimização do «já não preciso» (d2: pela purga, 7 dias depois)", () => {
+  const entre = (a: string, b: string) => BASE.slice(BASE.indexOf(a), BASE.indexOf(b, BASE.indexOf(a) + 1));
+  it("o CANCELAR cancela, avisa e manda o texto aprovado — e NÃO anonimiza no momento: marca para a purga", () => {
+    const corpo = entre("export async function confirmarCancelamentoPeloLembrete(", "export async function cancelarPeloLembrete(");
     const cancelar = corpo.indexOf("await cancelarPedido(pedidoId)");
     const texto = corpo.indexOf("mensagemDeCancelamento()");
-    const anonimizar = corpo.indexOf("await anonimizarPedido(pedidoId, {");
     expect(cancelar).toBeGreaterThan(-1);
     expect(texto).toBeGreaterThan(cancelar);
-    expect(anonimizar).toBeGreaterThan(texto);
-    expect(corpo).toContain("semNome: true");
+    expect(corpo).not.toContain("anonimizarPedido");
+    expect(corpo).toContain("anonimizarAPartirDe = NOW() + INTERVAL ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} DAY");
     expect(corpo).toContain('gravarMotivoDoFecho(pedidoId, "ja_nao_precisa"');
+    expect(corpo.indexOf("if (!eConfirmacaoDoCancelamento(texto))")).toBeLessThan(cancelar);
     expect(BASE).not.toMatch(/DELETE FROM simulatorOrders/);
+  });
+
+  it("o «3» (cancelarPeloLembrete) nunca chama anonimizarPedido nem cancela à primeira", () => {
+    const corpo = entre("export async function cancelarPeloLembrete(", "export async function desfazerAPurgaDoCancelamento(");
+    expect(corpo).not.toContain("anonimizarPedido");
+    expect(corpo).not.toContain("cancelarPedido(");
+    expect(corpo).toContain("if (!aEspera) return pedirConfirmacaoDoCancelamento(pedidoId, telefone);");
+    expect(corpo).toContain('if (textoDoCliente == null) return { ok: false');
+    const pedir = entre("export async function pedirConfirmacaoDoCancelamento(", "export async function confirmarCancelamentoPeloLembrete(");
+    expect(pedir).not.toContain("cancelarPedido(");
+    expect(pedir).toContain("textoDaConfirmacaoDoCancelamento(pedidoId)");
+    expect(pedir).toContain("if (Number(marca.affectedRows) !== 1)");
+  });
+
+  it("a purga da noite anonimiza os que passaram dos 7 dias, ainda cancelados — com o PURGA_ARMADA, e reaberto sai", () => {
+    const corpo = BASE.slice(BASE.indexOf("export async function anonimizarOsCanceladosPeloLembrete("));
+    expect(corpo).toContain("v.anonimizarAPartirDe <= NOW()");
+    expect(corpo).toContain('String(r.status ?? "") === "cancelado"');
+    expect(corpo).toContain("if (!opcoes.aSerio) continue;");
+    expect(corpo).toContain("semNome: true");
+    const PURGA = ler("src/app/api/cron/purgar-pedidos/route.ts");
+    expect(PURGA).toContain("anonimizarOsCanceladosPeloLembrete({ aSerio: armada })");
     expect(ler("src/lib/regras-novas-na-base.ts")).toContain("if (aPedido.semNome) novos.contactName = null;");
+    expect(DIAS_ATE_ANONIMIZAR_O_CANCELADO).toBe(7);
   });
 
   it("o fecho arquiva (nunca apaga), com o motivo «sem resposta»", () => {
@@ -302,5 +338,129 @@ describe("o interruptor — desligado por omissão", () => {
     expect(ROTINAS.find((r) => r.nome === "validade-dos-orcamentos")?.horario).toBe("0 * * * *");
     expect(VERCEL.crons.find((c) => c.path === "/api/cron/validade-dos-orcamentos")?.schedule).toBe("0 * * * *");
     expect(CRON).toContain('carimbarPassagem("validade-dos-orcamentos"');
+  });
+});
+
+/*
+ * d2 (CEO e dono, 18-11-2026) — antes do 1.º fecho de 21/11, com a validade
+ * LIGADA: o «3» pede confirmação, só o CANCELAR cancela; nada se anonimiza no
+ * momento; a resposta é do pedido certo do telefone certo; o passo reserva-se
+ * antes de o WhatsApp sair; e o fecho diz o mesmo no push e no ecrã.
+ */
+describe("d2 — o «3» pede confirmação e só o CANCELAR cancela", () => {
+  it("a pergunta, palavra por palavra, com tradução fixa (en, fr, es)", () => {
+    expect(textoDaConfirmacaoDoCancelamento(612)).toBe("Confirma que quer cancelar o pedido #612? Responda CANCELAR.");
+    for (const l of ["en", "fr", "es"] as const) {
+      const t = traducaoFixa(textoDaConfirmacaoDoCancelamento(612), l);
+      expect(t, l).not.toBeNull();
+      expect(t).toContain("612");
+      expect(t).toContain("CANCELAR");
+    }
+  });
+
+  it("só o CANCELAR é o CANCELAR — um «3», um «sim» ou um «já não preciso» não", () => {
+    for (const s of ["CANCELAR", "cancelar", "Cancelar.", "CANCELAR!", "cancelar o pedido", "cancelar #612", "Cancel", "annuler"]) {
+      expect(eConfirmacaoDoCancelamento(s), s).toBe(true);
+    }
+    for (const s of ["3", "sim", "já não preciso", "não cancelar", "cancelar?", "quero cancelar mas", "1", "", null]) {
+      expect(eConfirmacaoDoCancelamento(s as string), String(s)).toBe(false);
+    }
+  });
+
+  it("um «3» de teste: a Vitória chama cancelarPeloLembrete, que sem pergunta feita só pergunta", () => {
+    // A conversa (whatsapp-negociacao.ts) continua a chamar cancelarPeloLembrete no «3»…
+    expect(VITORIA).toContain("base.cancelarPeloLembrete(c.pedidoId, telefone)");
+    // …e o «3» nunca chega a cancelarPedido: o único cancelarPedido está atrás do CANCELAR.
+    expect(BASE.split("await cancelarPedido(").length - 1).toBe(1);
+    const confirmar = BASE.slice(BASE.indexOf("export async function confirmarCancelamentoPeloLembrete("));
+    expect(confirmar.indexOf("await cancelarPedido(")).toBeGreaterThan(confirmar.indexOf("if (!eConfirmacaoDoCancelamento(texto))"));
+    expect(confirmar.indexOf("await cancelarPedido(")).toBeGreaterThan(confirmar.indexOf("if (Number(reserva.affectedRows) !== 1)"));
+    // A pergunta só vale com cancelarPedidoEm marcado e dentro das 48 h.
+    expect(BASE).toContain("cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR");
+  });
+
+  it("as colunas novas nascem aditivas, e um orçamento reenviado limpa-as", () => {
+    expect(BASE).toContain("ALTER TABLE validadeDosOrcamentos ADD COLUMN cancelarPedidoEm DATETIME NULL DEFAULT NULL");
+    expect(BASE).toContain("ALTER TABLE validadeDosOrcamentos ADD COLUMN canceladoEm DATETIME NULL DEFAULT NULL");
+    expect(BASE).toContain("ALTER TABLE validadeDosOrcamentos ADD COLUMN anonimizarAPartirDe DATETIME NULL DEFAULT NULL");
+    expect(BASE).toContain('if ((err as { code?: string })?.code !== "ER_DUP_FIELDNAME") throw err;');
+    expect(BASE).toContain("cancelarPedidoEm = NULL, canceladoEm = NULL, anonimizarAPartirDe = NULL");
+  });
+});
+
+describe("d2 — a resposta é do pedido certo, do telefone certo", () => {
+  it("o telefone compara-se inteiro, não pelos últimos 9 dígitos", () => {
+    expect(mesmoTelefoneEstrito("912345678", "351912345678")).toBe(true);
+    expect(mesmoTelefoneEstrito("+351 912 345 678", "00351912345678")).toBe(true);
+    expect(mesmoTelefoneEstrito("447912345678", "351912345678")).toBe(false);
+    expect(mesmoTelefoneEstrito("", "")).toBe(false);
+  });
+
+  it("o «3» só responde se a última mensagem que lhe saiu é o lembrete DESTE pedido (ou a pergunta do CANCELAR dele)", () => {
+    const lembrete = textoDoLembrete({ pedidoId: 612, nome: "Ana", servico: "recolha de monos", semIva: 100, total: 123, parceiro: null });
+    expect(aUltimaSaidaE(lembrete, 612)).toBe("lembrete");
+    expect(aUltimaSaidaE(textoDoUltimoAviso({ pedidoId: 612, nome: null, servico: "recolha", semIva: 100, total: 123, parceiro: null }), 612)).toBe("lembrete");
+    expect(aUltimaSaidaE(textoDaConfirmacaoDoCancelamento(612), 612)).toBe("confirmacao");
+    // Outro pedido do mesmo telefone, ou #61 dentro de #612: não.
+    expect(aUltimaSaidaE(lembrete, 613)).toBeNull();
+    expect(aUltimaSaidaE(lembrete, 61)).toBeNull();
+    // Outra pergunta pelo meio (da Vitória ou da equipa): não.
+    expect(aUltimaSaidaE("Qual é o andar? Responda 1, 2 ou 3.", 612)).toBeNull();
+    expect(aUltimaSaidaE("[à mão] Pedido #612: prefere de manhã? 1 sim, 3 não", 612)).toBeNull();
+    expect(aUltimaSaidaE(null, 612)).toBeNull();
+  });
+
+  it("ciclosComLembreteDoTelefone filtra pelo número inteiro e pela última saída", () => {
+    const corpo = BASE.slice(BASE.indexOf("export async function ciclosComLembreteDoTelefone("));
+    expect(corpo).toContain('mesmoTelefoneEstrito(String(r.contactPhone ?? ""), telefone)');
+    expect(corpo).toContain("const responde = aUltimaSaidaE(ultima, Number(r.pedidoId));");
+    expect(corpo).toContain('if (!(responde === "lembrete" || (aEsperaDeCancelar && responde === "confirmacao"))) continue;');
+    expect(BASE).toContain("direccao = 'out'");
+  });
+});
+
+describe("d2 — o passo reserva-se antes de o WhatsApp sair; nunca duas automáticas no mesmo dia", () => {
+  const passo = BASE.slice(BASE.indexOf("async function darOPasso("), BASE.indexOf("async function fecharPorFaltaDeResposta("));
+  it("UPDATE … WHERE lembrete1Em IS NULL, affectedRows = 1, e repõe se o envio falhar", () => {
+    expect(passo).toContain("WHERE pedidoId = ? AND lembrete1Em IS NULL AND fechadoEm IS NULL AND paradoEm IS NULL");
+    expect(passo).toContain("WHERE pedidoId = ? AND ultimoAvisoEm IS NULL AND lembrete1Em IS NOT NULL");
+    const reserva = passo.indexOf("if (Number(reserva.affectedRows) !== 1)");
+    const envio = passo.indexOf("await enviarAvisoWhatsApp(telefone, texto, { semLinguaErrada: true })");
+    const repor = passo.indexOf("SET ${coluna} = NULL WHERE pedidoId = ?");
+    expect(reserva).toBeGreaterThan(-1);
+    expect(envio).toBeGreaterThan(reserva);
+    expect(repor).toBeGreaterThan(envio);
+  });
+
+  it("o «Lembrar agora» e a passagem contam os ciclos de todos os pedidos do mesmo telefone", () => {
+    expect(passo).toContain("const doTelefone = await ciclosDoTelefone(pool, telefone);");
+    expect(passo).toContain("jaFalouHoje(doTelefone.length ? doTelefone : [c], agora)");
+    const lembrar = BASE.slice(BASE.indexOf("export async function lembrarAgora("), BASE.indexOf("/* ── A Mesa"));
+    expect(lembrar).toContain("jaFalouHoje([c, ...doTelefone.filter((x) => x.pedidoId !== pedidoId)], agora)");
+    // Um lembrete de outro pedido do mesmo telefone hoje bloqueia o deste.
+    const hoje = em("2026-11-18T10:00:00Z");
+    expect(jaFalouHoje([{ desde: ENVIO }, { desde: ENVIO, lembrete1Em: em("2026-11-18T09:00:00Z") }], hoje)).toBe(true);
+  });
+});
+
+describe("d2 — o fecho pela validade diz o mesmo no push e no ecrã da Pro", () => {
+  it("«fechado: o cliente não respondeu ao orçamento», e nunca «cancelado»", () => {
+    expect(avisoSemOTrabalho({ pedidoId: 701, porque: "fechado_sem_resposta" }).body).toContain("fechado: o cliente não respondeu ao orçamento");
+    expect(PORQUE_A_NEGOCIACAO_TERMINOU.sem_resposta).toBe("Fechado: o cliente não respondeu ao orçamento.");
+    expect(ETIQUETA_DO_FECHO_SEM_RESPOSTA).toBe("fechado: o cliente não respondeu ao orçamento");
+    expect(porqueTerminou({ estado: "morta", pedidoCancelado: true, pedidoFechadoSemResposta: true })).toBe("sem_resposta");
+    expect(porqueTerminou({ estado: "morta", pedidoCancelado: true, pedidoFechadoSemResposta: false })).toBe("cancelado");
+    expect(porqueTerminou({ estado: "morta", pedidoFechadoSemResposta: true })).toBe("outro");
+  });
+
+  it("a rota diz se fechou pela validade: arquivado, motivo «sem resposta», orçamento enviado", () => {
+    expect(fechadoSemResposta({ estadoDoPedido: "arquivado", motivoDoFecho: "sem_resposta", propostaEnviada: true })).toBe(true);
+    expect(fechadoSemResposta({ estadoDoPedido: "cancelado", motivoDoFecho: "ja_nao_precisa", propostaEnviada: true })).toBe(false);
+    expect(fechadoSemResposta({ estadoDoPedido: "arquivado", motivoDoFecho: "sem_resposta", propostaEnviada: false })).toBe(false);
+    expect(fechadoSemResposta({ estadoDoPedido: "arquivado", motivoDoFecho: null, propostaEnviada: true })).toBe(false);
+    const rota = ler("src/app/api/profissionais/meus-pedidos/route.ts");
+    expect(rota).toContain("pedidoFechadoSemResposta: fechadoSemResposta({");
+    expect(ler("src/lib/db.ts")).toContain("o.motivoDoFecho AS motivoDoFechoDoPedido");
+    expect(ler("src/app/profissionais/painel/Trabalhos.tsx")).toContain("p.pedidoFechadoSemResposta ? { ...recusa, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA }");
   });
 });

@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { ETIQUETA_DO_FECHO_SEM_RESPOSTA } from "@/lib/textos-dos-avisos-ao-profissional";
 import { numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
 import { CabecalhoDeEcra, euros } from "@/components/portal/Portal";
 import Nota from "@/components/Nota";
@@ -815,7 +816,8 @@ export default function Trabalhos({
           const fase = p.estado === "acordada" ? FASE[p.fase] : null;
           // Nos Recusados, o porquê — com a mesma forma da fase.
           const recusa = separador === "recusados" ? (RECUSA[chaveDoGrupo(p)] ?? null) : null;
-          const etiqueta = fase ?? recusa;
+          // d2: fechado pela validade do orçamento, a etiqueta diz-o (não «pedido cancelado»).
+          const etiqueta = fase ?? (recusa === RECUSA.cancelado && p.pedidoFechadoSemResposta ? { ...recusa, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA } : recusa);
           // O título do grupo, antes do primeiro cartão de cada um.
           const grupo =
             grupos && (i === 0 || chaveDoGrupo(naLista[i - 1]) !== chaveDoGrupo(p))

@@ -212,6 +212,8 @@ export type Pedido = {
    * profissional. Ver `pedido-arrumado.ts`.
    */
   pedidoCancelado?: boolean;
+  /** d2: arquivado pela validade do orçamento (o cliente não respondeu) — não é um cancelamento. */
+  pedidoFechadoSemResposta?: boolean;
   /** O valor do Trabalho CLYON — desde 08-10-2026, o preço ao cliente sem IVA; o que ele recebe é isto menos a taxa. */
   valorFixo?: number | null;
   /**

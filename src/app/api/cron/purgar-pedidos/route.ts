@@ -256,7 +256,26 @@ export async function GET(req: NextRequest) {
       0,
       passosQueFalharam,
     );
+    /*
+     * OS CANCELADOS PELO LEMBRETE DO ORÇAMENTO — 18-11-2026 (d2): o «3» e o
+     * CANCELAR já não anonimizam no momento; o pedido fica marcado e os dados
+     * saem aqui, 7 dias depois (reaberto pela equipa, sai da purga). Com o
+     * mesmo `PURGA_ARMADA` (a seco só conta).
+     */
+    const canceladosPeloLembrete = await passoSecundario(
+      "cancelados pelo lembrete",
+      async () => {
+        const { anonimizarOsCanceladosPeloLembrete } = await import("@/lib/validade-do-orcamento-na-base");
+        return anonimizarOsCanceladosPeloLembrete({ aSerio: armada });
+      },
+      0,
+      passosQueFalharam,
+    );
     const errosDaAppEmPalavras =
+      (canceladosPeloLembrete > 0
+        ? (armada ? ". Dos cancelados pelo lembrete do orçamento, " : ". Dos cancelados pelo lembrete do orçamento, seriam ") +
+          `${canceladosPeloLembrete} anonimizado(s) (7 dias depois do CANCELAR)`
+        : "") +
       (errosDaApp > 0
         ? (armada ? ". Dos erros da app, " : ". Dos erros da app, seriam ") +
           `${errosDaApp} apagado(s) (mais de ${DIAS_DOS_ERROS_DA_APP} dias)`

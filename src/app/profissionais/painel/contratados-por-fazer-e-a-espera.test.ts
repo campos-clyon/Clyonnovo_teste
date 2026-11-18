@@ -120,7 +120,8 @@ describe("os Recusados — «faça o mesmo separador nos Recusados»", () => {
     expect(RECUSA).toContain('borda: "border-orange-300 ring-1 ring-orange-100"');
     expect(RECUSA).toContain('borda: "border-slate-400 ring-1 ring-slate-200"');
     expect(T).toContain('const recusa = separador === "recusados" ? (RECUSA[chaveDoGrupo(p)] ?? null) : null;');
-    expect(T).toContain("const etiqueta = fase ?? recusa;");
+    // d2: o fecho pela validade do orçamento troca só o texto da etiqueta cinzenta.
+    expect(T).toContain("const etiqueta = fase ?? (recusa === RECUSA.cancelado && p.pedidoFechadoSemResposta ? { ...recusa, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA } : recusa);");
     expect(T).toContain("? recusa.borda");
   });
 

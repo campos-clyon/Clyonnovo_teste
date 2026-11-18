@@ -52,7 +52,7 @@ describe("a rota da purga usa-os", () => {
   const rota = readFileSync(join(process.cwd(), "src/app/api/cron/purgar-pedidos/route.ts"), "utf8").replace(/\r\n/g, "\n");
 
   // Seis desde 28-10-2026 (d9): os erros da app aos 30 dias.
-  it("os nove passos secundários correm por passoSecundario, e nenhum por .catch que devolve zero", () => {
+  it("os dez passos secundários correm por passoSecundario, e nenhum por .catch que devolve zero", () => {
     for (const nome of [
       "recolhas do WhatsApp",
       "fotografias pendentes do WhatsApp",
@@ -66,10 +66,12 @@ describe("a rota da purga usa-os", () => {
       "presença no backoffice",
       // O programa de acesso antecipado da app (11-11-2026).
       "programa da app",
+      // Os cancelados pelo lembrete do orçamento (d2, 18-11-2026).
+      "cancelados pelo lembrete",
     ]) {
       expect(rota).toContain(`"${nome}",`);
     }
-    expect(rota.match(/await passoSecundario\(/g)?.length).toBe(9);
+    expect(rota.match(/await passoSecundario\(/g)?.length).toBe(10);
     expect(rota).not.toMatch(/\.catch\(\(e\) => \{\s*console\.error\("\[cron\/purgar-pedidos\][^"]*"[^}]*return 0;/);
   });
 

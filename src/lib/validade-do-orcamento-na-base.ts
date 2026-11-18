@@ -17,7 +17,9 @@
  *    `whatsapp-negociacao.ts`), e o «Lembrar agora» da Mesa.
  *
  * Com o interruptor desligado, nada sai e nada fecha. Nunca DELETE de pedidos:
- * fechar é arquivar; «já não preciso» cancela e anonimiza (`anonimizarPedido`).
+ * fechar é arquivar; «já não preciso» pergunta primeiro («Responda CANCELAR»),
+ * só o CANCELAR cancela, e os dados saem 7 dias depois, pela purga
+ * (`anonimizarOsCanceladosPeloLembrete`), com tempo para a equipa desfazer (d2).
  */
 
 import {
@@ -31,8 +33,14 @@ import {
   registarSemFalhar,
 } from "./db";
 import {
+  aUltimaSaidaE,
   clienteRespondeuNoCiclo,
+  DIAS_ATE_ANONIMIZAR_O_CANCELADO,
+  eConfirmacaoDoCancelamento,
+  HORAS_PARA_CONFIRMAR_O_CANCELAMENTO,
   jaFalouHoje,
+  mesmoTelefoneEstrito,
+  textoDaConfirmacaoDoCancelamento,
   linhaDaMesa,
   melhorProposta,
   naJanelaDaValidade,
@@ -86,11 +94,32 @@ export const SQL_DAS_TABELAS_DA_VALIDADE = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
+/**
+ * d2 (18-11-2026) — aditivas, nulas nas linhas de antes:
+ *   · cancelarPedidoEm: o «3» chegou e a pergunta «Responda CANCELAR» saiu — o
+ *     passo «à espera do CANCELAR» (vale HORAS_PARA_CONFIRMAR_O_CANCELAMENTO);
+ *   · canceladoEm: o CANCELAR cancelou o pedido;
+ *   · anonimizarAPartirDe: a purga anonimiza o pedido a partir daqui (7 dias
+ *     depois do cancelamento); reabrir o pedido, ou `desfazerAPurgaDoCancelamento`, tira-o.
+ */
+export const COLUNAS_DO_CANCELAMENTO_PELO_LEMBRETE = [
+  `ALTER TABLE validadeDosOrcamentos ADD COLUMN cancelarPedidoEm DATETIME NULL DEFAULT NULL`,
+  `ALTER TABLE validadeDosOrcamentos ADD COLUMN canceladoEm DATETIME NULL DEFAULT NULL`,
+  `ALTER TABLE validadeDosOrcamentos ADD COLUMN anonimizarAPartirDe DATETIME NULL DEFAULT NULL`,
+];
+
 async function garantirTabelas(): Promise<Pool> {
   const pool = await getPool();
   if (!pool) throw new Error("[validade-do-orcamento] base de dados indisponível");
   if (!tabelasProntas) {
     for (const sql of SQL_DAS_TABELAS_DA_VALIDADE) await pool.execute(sql);
+    for (const sql of COLUNAS_DO_CANCELAMENTO_PELO_LEMBRETE) {
+      try {
+        await pool.execute(sql);
+      } catch (err) {
+        if ((err as { code?: string })?.code !== "ER_DUP_FIELDNAME") throw err;
+      }
+    }
     await pool.execute("INSERT IGNORE INTO validadeDosOrcamentosVez (id, proximoEm) VALUES (1, '2000-01-01 00:00:00')");
     tabelasProntas = true;
   }
@@ -375,7 +404,8 @@ async function cicloEmDia(pool: Pool, p: PedidoAEspera, antes: LinhaDoCiclo | un
     `INSERT INTO validadeDosOrcamentos (pedidoId, versao, desde, reaberto) VALUES (?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE versao = VALUES(versao), desde = VALUES(desde), reaberto = VALUES(reaberto),
        lembrete1Em = NULL, ultimoAvisoEm = NULL, fechadoEm = NULL, paradoEm = NULL, paradoPorque = NULL,
-       porEnviar = NULL, porEnviarDesde = NULL, negociacaoId = NULL, ultimaFalha = NULL`,
+       porEnviar = NULL, porEnviarDesde = NULL, negociacaoId = NULL, ultimaFalha = NULL,
+       cancelarPedidoEm = NULL, canceladoEm = NULL, anonimizarAPartirDe = NULL`,
     [p.id, p.propostaEnviadaEm, desde, reaberto ? 1 : 0],
   );
   return {
@@ -406,6 +436,40 @@ const noveDigitos = (v: unknown) => {
   const d = String(v ?? "").replace(/\D/g, "");
   return d.length >= 9 ? d.slice(-9) : "";
 };
+
+/**
+ * OS CICLOS DE TODOS OS PEDIDOS DESTE TELEFONE (número inteiro) — para o
+ * «nunca duas mensagens automáticas no mesmo dia» valer também no «Lembrar
+ * agora» e na própria passagem, e não só na rotina (d2).
+ */
+async function ciclosDoTelefone(pool: Pool, telefone: string): Promise<LinhaDoCiclo[]> {
+  const tel = noveDigitos(telefone);
+  if (!tel) return [];
+  const [rows] = (await pool.execute(
+    `SELECT v.*, o.contactPhone AS telefoneDoPedido
+       FROM validadeDosOrcamentos v
+       JOIN simulatorOrders o ON o.id = v.pedidoId
+      WHERE RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
+      LIMIT 50`,
+    [tel],
+  )) as [Array<Record<string, unknown>>, unknown];
+  return rows.filter((r) => mesmoTelefoneEstrito(String(r.telefoneDoPedido ?? ""), telefone)).map(lerLinha);
+}
+
+/** O texto da última mensagem que saiu para este telefone (número inteiro), como ficou no registo — ou null. */
+async function ultimaSaidaParaOTelefone(pool: Pool, telefone: string): Promise<string | null> {
+  const tel = noveDigitos(telefone);
+  if (!tel) return null;
+  const [rows] = (await pool.execute(
+    `SELECT telefone, texto FROM whatsappMensagens
+      WHERE RIGHT(telefone, 9) = ? AND direccao = 'out'
+      ORDER BY id DESC
+      LIMIT 10`,
+    [tel],
+  )) as [Array<{ telefone: string; texto: string }>, unknown];
+  const r = rows.find((x) => mesmoTelefoneEstrito(String(x.telefone ?? ""), telefone));
+  return r ? String(r.texto ?? "") : null;
+}
 
 /* ── A rotina: de hora a hora, decide e põe na fila ──────────────────────── */
 
@@ -558,6 +622,11 @@ async function darOPasso(
   if (proximoPasso(c, agora, { manual: opcoes.manual }) !== passo) return { ok: false, porque: "não é a vez deste passo" };
 
   const telefone = String(p.contactPhone ?? "");
+  // d2: nunca duas mensagens automáticas no mesmo dia — contam os ciclos de TODOS os pedidos deste telefone.
+  const doTelefone = await ciclosDoTelefone(pool, telefone);
+  if (jaFalouHoje(doTelefone.length ? doTelefone : [c], agora)) {
+    return { ok: false, porque: "já saiu hoje uma mensagem automática a este cliente (deste ou de outro pedido)" };
+  }
   const { servicoEmPalavras } = await import("./servico-em-palavras");
   const { lerBase } = await import("./base-do-preco");
   const base = lerBase(p.baseDoPreco);
@@ -580,9 +649,28 @@ async function darOPasso(
      * um número bloqueado ou com o WhatsApp desligado (`enviarAvisoWhatsApp`), e
      * a conversa volta à Vitória para ela ler o «1», o «2» ou o «3».
      */
+    /*
+     * d2 — RESERVAR O PASSO ANTES DE O WHATSAPP SAIR. Uma só passagem (ou um
+     * só «Lembrar agora») ganha: o UPDATE só muda a linha com o passo ainda por
+     * dar, e quem não a mudou (affectedRows ≠ 1) não envia. Se o envio falhar, a
+     * reserva desfaz-se e o passo volta a estar por dar.
+     */
+    const coluna = passo === "lembrete1" ? "lembrete1Em" : "ultimoAvisoEm";
+    const [reserva] = (await pool.execute(
+      passo === "lembrete1"
+        ? `UPDATE validadeDosOrcamentos SET lembrete1Em = NOW(), negociacaoId = ?, ultimaFalha = NULL
+            WHERE pedidoId = ? AND lembrete1Em IS NULL AND fechadoEm IS NULL AND paradoEm IS NULL`
+        : `UPDATE validadeDosOrcamentos SET ultimoAvisoEm = NOW(), negociacaoId = ?, ultimaFalha = NULL
+            WHERE pedidoId = ? AND ultimoAvisoEm IS NULL AND lembrete1Em IS NOT NULL AND fechadoEm IS NULL AND paradoEm IS NULL`,
+      [tem.proposta.negociacaoId, pedidoId],
+    )) as [{ affectedRows: number }, unknown];
+    if (Number(reserva.affectedRows) !== 1) return { ok: false, porque: "este passo já foi dado (ou está a ser dado) por outra passagem" };
+
     const { enviarAvisoWhatsApp } = await import("./whatsapp-cloud");
     // d63: na língua da conversa do cliente, ou nada (sem tradução, a conversa passa à equipa).
-    if (!(await enviarAvisoWhatsApp(telefone, texto, { semLinguaErrada: true }))) {
+    const saiu = await enviarAvisoWhatsApp(telefone, texto, { semLinguaErrada: true }).catch(() => false);
+    if (!saiu) {
+      await pool.execute(`UPDATE validadeDosOrcamentos SET ${coluna} = NULL WHERE pedidoId = ?`, [pedidoId]);
       return {
         ok: false,
         porque: "o WhatsApp não saiu (número bloqueado, WhatsApp desligado, sem canal, ou sem tradução para a língua do cliente — passou à equipa)",
@@ -590,11 +678,6 @@ async function darOPasso(
     }
     const { retomarNumeroWhatsApp } = await import("./db");
     await retomarNumeroWhatsApp(telefone).catch(() => {});
-    const coluna = passo === "lembrete1" ? "lembrete1Em" : "ultimoAvisoEm";
-    await pool.execute(`UPDATE validadeDosOrcamentos SET ${coluna} = NOW(), negociacaoId = ?, ultimaFalha = NULL WHERE pedidoId = ?`, [
-      tem.proposta.negociacaoId,
-      pedidoId,
-    ]);
     const feito = `${passo === "lembrete1" ? "Lembrete do orçamento" : "Último aviso do orçamento"} enviado ao cliente pelo WhatsApp${quem}.`;
     await appendOrderHistory(pedidoId, { type: "note", by: null, message: feito }).catch(() => {});
     return { ok: true, feito };
@@ -698,6 +781,11 @@ export async function lembrarAgora(pedidoId: number, porQuem: string, agora: Dat
   if (passo !== "lembrete1" && passo !== "ultimo_aviso") {
     return { ok: false, porque: "Não há lembrete por enviar hoje (já saiu um hoje, ou já saíram os dois)." };
   }
+  // d2: nunca duas mensagens automáticas no mesmo dia — também as dos outros pedidos deste telefone.
+  const doTelefone = await ciclosDoTelefone(pool, String(p.contactPhone ?? ""));
+  if (jaFalouHoje([c, ...doTelefone.filter((x) => x.pedidoId !== pedidoId)], agora)) {
+    return { ok: false, porque: "Já saiu hoje uma mensagem automática a este cliente (deste ou de outro pedido dele): o lembrete fica para amanhã." };
+  }
   // Tira-o da fila, se lá estava: sai agora, uma vez.
   await pool.execute("UPDATE validadeDosOrcamentos SET porEnviar = NULL, porEnviarDesde = NULL WHERE pedidoId = ?", [pedidoId]);
   return darOPasso(pedidoId, passo, agora, { manual: true, porQuem });
@@ -761,12 +849,25 @@ export type CicloComLembrete = {
   eClyon: boolean;
   valorUnico: boolean;
   parceiro: string | null;
+  /**
+   * d2: o «3» já chegou e a pergunta «Responda CANCELAR» saiu — o passo «à
+   * espera do CANCELAR». A mensagem seguinte responde a ela: o CANCELAR
+   * (`eConfirmacaoDoCancelamento`) cancela pelo `cancelarPeloLembrete(…, texto)`.
+   */
+  aEsperaDeCancelar: boolean;
 };
 
 /**
  * Os pedidos deste telefone com um lembrete (ou o último aviso) já enviado e o
  * ciclo ainda a correr — é a esses que o «1», o «2» e o «3» respondem. Com o
  * interruptor desligado, nenhum (a conversa segue como sempre).
+ *
+ * d2 — ESTRITO: o pedido certo do telefone certo. O número inteiro (não os
+ * últimos 9 dígitos), e a última mensagem que lhe saiu tem de ser o lembrete
+ * (ou o último aviso) DESTE pedido — ou a pergunta do CANCELAR dele, que vale
+ * HORAS_PARA_CONFIRMAR_O_CANCELAMENTO. Uma pergunta pelo meio (da Vitória ou da
+ * equipa), ou o lembrete de outro pedido, e o «3» não responde a este: segue a
+ * conversa de sempre. Sem conseguir ler a última saída, nenhum.
  */
 export async function ciclosComLembreteDoTelefone(telefone: string): Promise<CicloComLembrete[]> {
   const tel = noveDigitos(telefone);
@@ -774,20 +875,34 @@ export async function ciclosComLembreteDoTelefone(telefone: string): Promise<Cic
   if (!(await interruptorDaValidade()).ligado) return [];
   const pool = await garantirTabelas();
   const [rows] = (await pool.execute(
-    `SELECT v.pedidoId, v.negociacaoId, o.valorFixoClyon, o.valorUnicoCliente
+    `SELECT v.pedidoId, v.negociacaoId, o.valorFixoClyon, o.valorUnicoCliente, o.contactPhone,
+            (v.cancelarPedidoEm IS NOT NULL AND v.cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR) AS aEsperaDeCancelar
        FROM validadeDosOrcamentos v
        JOIN simulatorOrders o ON o.id = v.pedidoId
       WHERE (v.lembrete1Em IS NOT NULL OR v.ultimoAvisoEm IS NOT NULL)
-        AND v.fechadoEm IS NULL AND v.paradoEm IS NULL
+        AND v.fechadoEm IS NULL AND v.canceladoEm IS NULL
+        AND (v.paradoEm IS NULL
+             OR (v.cancelarPedidoEm IS NOT NULL AND v.cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR))
         AND o.propostaEnviadaEm IS NOT NULL
+        AND o.anonimizadoEm IS NULL
         AND (o.status IS NULL OR o.status NOT IN ('arquivado', 'cancelado', 'concluido', 'rejeitado'))
         AND RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
       ORDER BY v.pedidoId DESC
       LIMIT 5`,
     [tel],
   )) as [Array<Record<string, unknown>>, unknown];
+  const doTelefone = rows.filter((r) => mesmoTelefoneEstrito(String(r.contactPhone ?? ""), telefone));
+  if (doTelefone.length === 0) return [];
+  const ultima = await ultimaSaidaParaOTelefone(pool, telefone).catch((err) => {
+    console.error("[validade-do-orcamento] não li a última saída:", err instanceof Error ? err.message : err);
+    return null;
+  });
   const saida: CicloComLembrete[] = [];
-  for (const r of rows) {
+  for (const r of doTelefone) {
+    const aEsperaDeCancelar = Number(r.aEsperaDeCancelar) === 1;
+    const responde = aUltimaSaidaE(ultima, Number(r.pedidoId));
+    // A resposta é a ESTE pedido: a última saída é o lembrete dele, ou (à espera do CANCELAR) a pergunta dele.
+    if (!(responde === "lembrete" || (aEsperaDeCancelar && responde === "confirmacao"))) continue;
     let parceiro: string | null = null;
     if (r.negociacaoId != null) {
       const negs = await negociacoesDoPedido(Number(r.pedidoId)).catch(() => []);
@@ -799,6 +914,7 @@ export async function ciclosComLembreteDoTelefone(telefone: string): Promise<Cic
       eClyon: r.valorFixoClyon != null,
       valorUnico: r.valorFixoClyon == null && r.valorUnicoCliente != null,
       parceiro,
+      aEsperaDeCancelar,
     });
   }
   return saida;
@@ -852,32 +968,115 @@ export async function aceitarTrabalhoClyonPeloLembrete(
   return { ok: true, parceiro: aviso.profissional || null };
 }
 
-/** O ciclo acabou bem (o cliente avançou): pára, para nada mais sair. */
+/** O ciclo acabou bem (o cliente avançou): pára, para nada mais sair — e a pergunta do CANCELAR, se a houve, deixa de valer. */
 export async function marcarCicloTerminado(pedidoId: number, porque: string): Promise<void> {
   await pararOCiclo(pedidoId, porque).catch(() => {});
+  try {
+    const pool = await garantirTabelas();
+    await pool.execute("UPDATE validadeDosOrcamentos SET cancelarPedidoEm = NULL WHERE pedidoId = ? AND canceladoEm IS NULL", [pedidoId]);
+  } catch {
+    /* a pergunta caduca sozinha (HORAS_PARA_CONFIRMAR_O_CANCELAMENTO) */
+  }
+}
+
+/* ── O «3» e o CANCELAR — d2 (CEO e dono, 18-11-2026) ────────────────────── */
+
+export type ResultadoDoCancelamentoPeloLembrete =
+  | { ok: true; estado: "pediu_confirmacao" | "a_espera_de_cancelar" | "cancelado"; porque?: string }
+  | { ok: false; porque: string };
+
+/**
+ * O «3» (ou «já não preciso») ao lembrete: NÃO cancela. Marca o passo «à
+ * espera do CANCELAR» (`cancelarPedidoEm`, reservado com affectedRows = 1, para
+ * dois «3» seguidos não mandarem duas perguntas), pára a contagem (nada mais
+ * sai nem fecha) e pergunta «Confirma que quer cancelar o pedido #N? Responda
+ * CANCELAR.». Se a pergunta não sair, a marca desfaz-se e devolve ok: false (a
+ * conversa passa à equipa).
+ */
+export async function pedirConfirmacaoDoCancelamento(pedidoId: number, telefone: string): Promise<ResultadoDoCancelamentoPeloLembrete> {
+  const pool = await garantirTabelas();
+  const [marca] = (await pool.execute(
+    `UPDATE validadeDosOrcamentos
+        SET cancelarPedidoEm = NOW(), porEnviar = NULL, porEnviarDesde = NULL,
+            paradoEm = COALESCE(paradoEm, NOW()), paradoPorque = COALESCE(paradoPorque, ?)
+      WHERE pedidoId = ? AND fechadoEm IS NULL AND canceladoEm IS NULL
+        AND (cancelarPedidoEm IS NULL OR cancelarPedidoEm <= NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR)`,
+    ["«3» — à espera do CANCELAR", pedidoId],
+  )) as [{ affectedRows: number }, unknown];
+  if (Number(marca.affectedRows) !== 1) {
+    const [r] = (await pool.execute(
+      `SELECT 1 AS sim FROM validadeDosOrcamentos
+        WHERE pedidoId = ? AND canceladoEm IS NULL AND fechadoEm IS NULL
+          AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR LIMIT 1`,
+      [pedidoId],
+    )) as [Array<{ sim: number }>, unknown];
+    return r.length > 0
+      ? { ok: true, estado: "a_espera_de_cancelar", porque: "a pergunta já tinha saído" }
+      : { ok: false, porque: "o ciclo deste pedido já fechou (ou foi cancelado)" };
+  }
+
+  const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
+  const saiu = await enviarTextoWhatsApp(telefone, textoDaConfirmacaoDoCancelamento(pedidoId)).catch(() => false);
+  if (!saiu) {
+    await pool.execute("UPDATE validadeDosOrcamentos SET cancelarPedidoEm = NULL WHERE pedidoId = ? AND canceladoEm IS NULL", [pedidoId]);
+    return { ok: false, porque: "a pergunta do CANCELAR não saiu" };
+  }
+  await appendOrderHistory(pedidoId, {
+    type: "note",
+    by: null,
+    message: "O cliente respondeu «3» ao lembrete do orçamento: perguntámos se confirma o cancelamento (responde CANCELAR). Nada foi cancelado.",
+  }).catch(() => {});
+  return { ok: true, estado: "pediu_confirmacao" };
 }
 
 /**
- * «3» / «JÁ NÃO PRECISO»: cancela o pedido, avisa os parceiros, manda ao cliente
- * o texto de cancelamento aprovado (mensagens-das-fases.ts) e ANONIMIZA o
- * pedido (`anonimizarPedido`, o da retenção, sem o primeiro nome): saem o nome,
- * o telefone, o email, a morada exacta, a descrição e as fotografias; ficam o
- * serviço, a localidade e a zona do código postal, os valores e as datas. A
- * linha fica.
+ * O CANCELAR: só com a pergunta feita (e ainda a valer) e o texto a ser o
+ * CANCELAR (`eConfirmacaoDoCancelamento`). Cancela o pedido, avisa os
+ * parceiros e manda ao cliente o texto de cancelamento aprovado
+ * (mensagens-das-fases.ts) — e NÃO anonimiza no momento: marca o pedido para a
+ * purga a DIAS_ATE_ANONIMIZAR_O_CANCELADO dias (`anonimizarAPartirDe`); até lá
+ * a equipa pode desfazer (reabrir o pedido, ou `desfazerAPurgaDoCancelamento`).
  */
-export async function cancelarPeloLembrete(pedidoId: number, telefone: string): Promise<{ ok: boolean; porque?: string }> {
+export async function confirmarCancelamentoPeloLembrete(
+  pedidoId: number,
+  telefone: string,
+  texto: string,
+): Promise<ResultadoDoCancelamentoPeloLembrete> {
+  if (!eConfirmacaoDoCancelamento(texto)) return { ok: false, porque: "a resposta não é o CANCELAR" };
+  const pool = await garantirTabelas();
+  // Reservar: só um CANCELAR cancela, e só com a pergunta ainda a valer.
+  const [reserva] = (await pool.execute(
+    `UPDATE validadeDosOrcamentos SET canceladoEm = NOW(), porEnviar = NULL, porEnviarDesde = NULL
+      WHERE pedidoId = ? AND canceladoEm IS NULL AND fechadoEm IS NULL
+        AND cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR`,
+    [pedidoId],
+  )) as [{ affectedRows: number }, unknown];
+  if (Number(reserva.affectedRows) !== 1) return { ok: false, porque: "não há pergunta do CANCELAR a valer para este pedido" };
+
   const { getSimulatorOrderById, cancelarPedido, gravarMotivoDoFecho, quemTemOTrabalhoClyon } = await import("./db");
+  const desfazer = () =>
+    pool.execute("UPDATE validadeDosOrcamentos SET canceladoEm = NULL WHERE pedidoId = ?", [pedidoId]).catch(() => {});
   const pedido = await getSimulatorOrderById(pedidoId);
-  if (!pedido) return { ok: false, porque: "pedido não encontrado" };
+  if (!pedido) {
+    await desfazer();
+    return { ok: false, porque: "pedido não encontrado" };
+  }
   const eClyon = (pedido as { valorFixoClyon?: unknown }).valorFixoClyon != null;
   const MOTIVO = "O cliente já não precisa";
   const existentes = await negociacoesDoPedido(pedidoId);
   const doTrabalhoClyon = eClyon ? (await quemTemOTrabalhoClyon(pedidoId)).vivos : [];
-  await pararOCiclo(pedidoId, "o cliente já não precisa («3»)").catch(() => {});
 
   const r = await cancelarPedido(pedidoId);
-  if (!r) return { ok: false, porque: "pedido não encontrado" };
+  if (!r) {
+    await desfazer();
+    return { ok: false, porque: "pedido não encontrado" };
+  }
   await gravarMotivoDoFecho(pedidoId, "ja_nao_precisa", null, null).catch(() => {});
+  // Para a purga, daqui a 7 dias — nada sai agora.
+  await pool.execute(
+    `UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NOW() + INTERVAL ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} DAY WHERE pedidoId = ?`,
+    [pedidoId],
+  );
   if (eClyon) {
     const { avisarCancelamentoDoTrabalhoClyon } = await import("./avisar-trabalho-clyon");
     await avisarCancelamentoDoTrabalhoClyon({
@@ -895,23 +1094,99 @@ export async function cancelarPeloLembrete(pedidoId: number, telefone: string): 
   const { mensagemDeCancelamento } = await import("./mensagens-das-fases");
   await enviarTextoWhatsApp(telefone, mensagemDeCancelamento()).catch(() => false);
 
-  const resumo = `O cliente respondeu ao lembrete do orçamento que já não precisa: pedido cancelado, ${r.encerradas} negociação(ões) encerrada(s), e os dados dele apagados do pedido.`;
+  const resumo =
+    `O cliente confirmou com CANCELAR, depois do «3» ao lembrete do orçamento: pedido cancelado, ${r.encerradas} negociação(ões) encerrada(s). ` +
+    `Os dados dele saem do pedido daqui a ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias, pela purga; reabrir o pedido até lá desfaz.`;
   await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo }).catch(() => {});
   await registarSemFalhar({ acontecimento: "pedido_cancelado", pedidoId, autorTipo: "cliente", autorNome: "WhatsApp (lembrete do orçamento)", resumo });
+  return { ok: true, estado: "cancelado" };
+}
 
-  // Por último: com o pedido já cancelado e os avisos dados, os dados dele saem.
-  try {
+/**
+ * O QUE A VITÓRIA CHAMA NO «3» (whatsapp-negociacao.ts) — d2: nunca cancela à
+ * primeira.
+ *
+ *   · sem a pergunta feita: pergunta (`pedirConfirmacaoDoCancelamento`);
+ *   · à espera do CANCELAR, com o texto do cliente: o CANCELAR cancela
+ *     (`confirmarCancelamentoPeloLembrete`); outro texto (um «3» outra vez, um
+ *     «já não preciso») não cancela e não pergunta outra vez;
+ *   · à espera do CANCELAR, sem o texto (a conversa ainda não o passa): não
+ *     cancela — devolve ok: false, e a conversa passa à equipa.
+ */
+export async function cancelarPeloLembrete(
+  pedidoId: number,
+  telefone: string,
+  textoDoCliente?: string | null,
+): Promise<ResultadoDoCancelamentoPeloLembrete> {
+  const pool = await garantirTabelas();
+  const [rows] = (await pool.execute(
+    `SELECT (cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR) AS aEspera
+       FROM validadeDosOrcamentos WHERE pedidoId = ? AND canceladoEm IS NULL LIMIT 1`,
+    [pedidoId],
+  )) as [Array<{ aEspera: number }>, unknown];
+  if (!rows[0]) return { ok: false, porque: "sem ciclo da validade a correr para este pedido" };
+  const aEspera = Number(rows[0].aEspera) === 1;
+  if (!aEspera) return pedirConfirmacaoDoCancelamento(pedidoId, telefone);
+  if (textoDoCliente == null) return { ok: false, porque: "à espera do CANCELAR, sem o texto do cliente — confirmar à mão" };
+  if (eConfirmacaoDoCancelamento(textoDoCliente)) return confirmarCancelamentoPeloLembrete(pedidoId, telefone, textoDoCliente);
+  return { ok: true, estado: "a_espera_de_cancelar", porque: "a resposta não é o CANCELAR" };
+}
+
+/** A equipa desfaz: o pedido sai da purga dos cancelados pelo lembrete (os dados ficam). */
+export async function desfazerAPurgaDoCancelamento(pedidoId: number, porQuem: string): Promise<boolean> {
+  const pool = await garantirTabelas();
+  const [u] = (await pool.execute(
+    "UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NULL WHERE pedidoId = ? AND anonimizarAPartirDe IS NOT NULL",
+    [pedidoId],
+  )) as [{ affectedRows: number }, unknown];
+  if (Number(u.affectedRows) !== 1) return false;
+  await appendOrderHistory(pedidoId, {
+    type: "note",
+    by: null,
+    message: `Tirado da purga dos cancelados pelo lembrete por ${porQuem}: os dados do pedido ficam.`,
+  }).catch(() => {});
+  return true;
+}
+
+/**
+ * A PURGA DOS CANCELADOS PELO LEMBRETE (chamada pela purga da noite, com o
+ * mesmo PURGA_ARMADA): os que passaram dos 7 dias, ainda cancelados e por
+ * anonimizar, anonimizam-se (`anonimizarPedido`, o da retenção, sem o primeiro
+ * nome: saem o nome, os contactos, a morada exacta, a descrição e as
+ * fotografias; ficam o serviço, a localidade, a zona do código postal, os
+ * valores e as datas; a linha fica). Um pedido que a equipa reabriu sai da
+ * purga. A seco (`aSerio: false`) só conta.
+ */
+export async function anonimizarOsCanceladosPeloLembrete(opcoes: { aSerio: boolean }): Promise<number> {
+  const pool = await garantirTabelas();
+  const [rows] = (await pool.execute(
+    `SELECT v.pedidoId, o.status, (o.anonimizadoEm IS NOT NULL) AS anonimizado
+       FROM validadeDosOrcamentos v
+       JOIN simulatorOrders o ON o.id = v.pedidoId
+      WHERE v.anonimizarAPartirDe IS NOT NULL AND v.anonimizarAPartirDe <= NOW()
+      ORDER BY v.pedidoId ASC
+      LIMIT 40`,
+  )) as [Array<{ pedidoId: number; status: string | null; anonimizado: number }>, unknown];
+  let feitos = 0;
+  for (const r of rows) {
+    const pedidoId = Number(r.pedidoId);
+    const aindaCancelado = String(r.status ?? "") === "cancelado" && Number(r.anonimizado) !== 1;
+    if (!aindaCancelado) {
+      // Reaberto pela equipa (ou já anonimizado por outro caminho): sai da purga.
+      if (opcoes.aSerio) await pool.execute("UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NULL WHERE pedidoId = ?", [pedidoId]);
+      continue;
+    }
+    feitos += 1;
+    if (!opcoes.aSerio) continue;
     const { anonimizarPedido } = await import("./regras-novas-na-base");
     await anonimizarPedido(pedidoId, {
       semNome: true,
       autorNome: "validade do orçamento",
       resumo:
-        "Pedido anonimizado a pedido do cliente («já não preciso», d62): ficam o serviço, a localidade, a zona do código postal, " +
+        `Pedido anonimizado ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias depois de o cliente o cancelar («3» e CANCELAR ao lembrete, d62/d2): ficam o serviço, a localidade, a zona do código postal, ` +
         "as datas e os valores; saíram o nome, os contactos, a morada, a descrição e as fotografias.",
     });
-  } catch (e) {
-    console.error("[validade-do-orcamento] a anonimização falhou:", e instanceof Error ? e.message : e);
-    return { ok: true, porque: "cancelado, mas a anonimização falhou" };
+    await pool.execute("UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NULL WHERE pedidoId = ?", [pedidoId]);
   }
-  return { ok: true };
+  return feitos;
 }

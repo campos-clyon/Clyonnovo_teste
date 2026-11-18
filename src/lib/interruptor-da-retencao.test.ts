@@ -53,6 +53,11 @@ vi.mock("@/lib/programa-da-app-na-base", () => ({
   purgarProgramaDaApp: vi.fn(async () => 0),
 }));
 
+// Os cancelados pelo lembrete do orçamento, 7 dias depois do CANCELAR (d2, 18-11-2026).
+vi.mock("@/lib/validade-do-orcamento-na-base", () => ({
+  anonimizarOsCanceladosPeloLembrete: vi.fn(async () => 0),
+}));
+
 vi.mock("@/lib/regras-novas-na-base", () => ({
   purgarComAsRegrasNovas: vi.fn(async (o: { aSerio: boolean }) => ({ ...ZERO, aSerio: o.aSerio })),
   regrasNovasDaNoite: vi.fn(async (o: { aSerio: boolean }) => ({ aSerio: o.aSerio, e: { lista: ["simulador/x.jpg"] } })),
