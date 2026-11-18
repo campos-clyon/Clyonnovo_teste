@@ -28,6 +28,9 @@ type Estado = { versao: string; precisaDeAceitar: boolean; textos: Textos };
 
 const ADIADO = "clyon_termos_adiados";
 
+/** O evento com que o cartão «Pronto para receber pedidos» pede este ecrã (d1). */
+export const ABRIR_OS_TERMOS = "clyon:abrir-os-termos";
+
 export default function AceitarOsTermos() {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [marcada, setMarcada] = useState(false);
@@ -36,20 +39,30 @@ export default function AceitarOsTermos() {
 
   useEffect(() => {
     let vivo = true;
-    fetch("/api/profissionais/termos")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: Estado | null) => {
-        if (!vivo || !d || !d.precisaDeAceitar) return;
-        try {
-          if (sessionStorage.getItem(ADIADO) === d.versao) return;
-        } catch {
-          /* Sem armazenamento, mostra-se. */
-        }
-        setEstado(d);
-      })
-      .catch(() => {});
+    function carregar(pedidoPeloCartao: boolean) {
+      fetch("/api/profissionais/termos")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: Estado | null) => {
+          if (!vivo || !d || !d.precisaDeAceitar) return;
+          if (!pedidoPeloCartao) {
+            try {
+              if (sessionStorage.getItem(ADIADO) === d.versao) return;
+            } catch {
+              /* Sem armazenamento, mostra-se. */
+            }
+          }
+          setEstado(d);
+        })
+        .catch(() => {});
+    }
+    carregar(false);
+    // d1 (18-11-2026): a linha «Termos» do cartão «Pronto para receber pedidos»
+    // volta a abrir este ecrã, mesmo depois de um «Agora não».
+    const abrirPeloCartao = () => carregar(true);
+    window.addEventListener(ABRIR_OS_TERMOS, abrirPeloCartao);
     return () => {
       vivo = false;
+      window.removeEventListener(ABRIR_OS_TERMOS, abrirPeloCartao);
     };
   }, []);
 

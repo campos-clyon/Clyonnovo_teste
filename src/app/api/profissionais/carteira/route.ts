@@ -18,6 +18,8 @@ import { bloqueioEmDinheiro, explicacaoDoBloqueio, standByDoNovoModelo, venceEm 
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
+import { prontoParaReceber } from "@/lib/pronto-para-receber";
+import { aceitacaoDoProfissional } from "@/lib/aceitacao-dos-termos-na-base";
 import { explicacaoDoStandBy, PAGAR_O_VALOR_EM_ATRASO, prazoDoValorEmAtraso } from "@/lib/valor-em-atraso";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
@@ -204,6 +206,14 @@ export async function GET(req: NextRequest) {
      * da data: a app e o painel não mostram nada de novo.
      */
     const agoraDoNovoModelo = agoraDoModelo();
+    // d1 (18-11-2026): a versão dos Termos que aceitou, para o cartão «Pronto para
+    // receber pedidos». Se a leitura falhar, a linha dos Termos não se mostra.
+    const versaoDosTermosAceite: string | null | undefined = novoModeloEmVigor(agoraDoNovoModelo)
+      ? await aceitacaoDoProfissional(sessao.providerId).then(
+          (a) => a?.versao ?? null,
+          () => undefined,
+        )
+      : undefined;
     const novoModelo = novoModeloEmVigor(agoraDoNovoModelo)
       ? (() => {
           const s = standByDoNovoModelo(trabalhos, agoraDoNovoModelo);
@@ -244,6 +254,8 @@ export async function GET(req: NextRequest) {
                 }
               : null,
             dadosParaReceber: perfil ? estadoDosDadosParaReceber(perfil, agoraDoNovoModelo) : null,
+            // d1: o cartão do Início, linha a linha — o painel e a app CLYON Pro desenham esta lista.
+            prontoParaReceber: perfil ? prontoParaReceber({ ...perfil, versaoDosTermosAceite }, agoraDoNovoModelo) : null,
           };
         })()
       : null;

@@ -40,7 +40,8 @@ import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
 import ConviteDaAppPro from "./ConviteDaAppPro";
 import AvisoDoNovoModelo from "./AvisoDoNovoModelo";
-import AceitarOsTermos from "./AceitarOsTermos";
+import AceitarOsTermos, { ABRIR_OS_TERMOS } from "./AceitarOsTermos";
+import ProntoParaReceber from "./ProntoParaReceber";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
 import PrecosDasMudancas from "./PrecosDasMudancas";
 import FichaNoGoogle from "./FichaNoGoogle";
@@ -801,7 +802,20 @@ function PainelNoBrowser() {
           {carteira.novoModelo.standBy.explicacao}
         </button>
       )}
-      {carteira?.novoModelo?.dadosParaReceber &&
+      {/*
+        d1 (18-11-2026): «Pronto para receber pedidos» — um só cartão, linha a
+        linha (Termos, IBAN e titular, MB WAY, regime de IVA, guia a quem faz
+        entulho), com a lista que vem do servidor. Sem ela, a faixa de antes.
+      */}
+      {carteira?.novoModelo?.prontoParaReceber ? (
+        <ProntoParaReceber
+          cartao={carteira.novoModelo.prontoParaReceber}
+          onAbrir={(caminho) => {
+            if (caminho === "termos") window.dispatchEvent(new Event(ABRIR_OS_TERMOS));
+            else abrir(caminho);
+          }}
+        />
+      ) : carteira?.novoModelo?.dadosParaReceber &&
         (carteira.novoModelo.dadosParaReceber.estado === "aviso" ||
           carteira.novoModelo.dadosParaReceber.estado === "impede") && (
           <button

@@ -192,8 +192,10 @@ describe("IBAN, MB WAY e regime obrigatórios, com os 7 dias", () => {
     expect(dadosImpedemAceitar(antigoSemDados, DIA_23)).toBe(true);
     expect(dadosImpedemAceitar(novoSemDados, DIA_15)).toBe(true);
     expect(estadoDosDadosParaReceber({ ...completo, ...antigoSemDados }, DIA_23).estado).toBe("completos");
-    // O regime por confirmar também conta (pergunta 3).
-    expect(dadosImpedemAceitar({ ...completo, regimeIvaConfirmadoEm: null, ...novoSemDados }, DIA_15)).toBe(true);
+    // O regime por confirmar também conta (pergunta 3) — desde a d1 (18-11) só
+    // impede a partir de 01-12; até 30-11 é aviso (d1-dois-prazos-para-receber.test.ts).
+    expect(dadosImpedemAceitar({ ...completo, regimeIvaConfirmadoEm: null, ...novoSemDados }, DIA_15)).toBe(false);
+    expect(dadosImpedemAceitar({ ...completo, regimeIvaConfirmadoEm: null, ...novoSemDados }, new Date("2026-12-01T00:00:01Z"))).toBe(true);
   });
 
   it("o IBAN e o MB WAY só ao cliente contratado, e só no modelo novo", () => {

@@ -19,7 +19,7 @@
  * Puro e sem importações de servidor: os ecrãs do cliente e do profissional
  * importam isto.
  */
-import { instanteDaBase } from "./hora-de-lisboa";
+import { inicioDoDiaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 
 /**
  * A ENTRADA EM VIGOR — 00:00 de 15-11-2026 em Lisboa. Em Novembro Lisboa está em
@@ -62,6 +62,36 @@ export const IBAN_E_MBWAY_OBRIGATORIOS_ATE = new Date("2026-11-22T23:59:59Z");
 
 /** Como os Termos o dizem. */
 export const IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO = "22 de novembro de 2026";
+
+/*
+ * ── OS DOIS PRAZOS — d1 (CEO e dono, 18-11-2026) ─────────────────────────────
+ *
+ * Até aqui faltar qualquer um dos quatro (IBAN, titular, MB WAY, regime de IVA)
+ * impedia a 23-11. Passam a ser dois prazos, cada um com a sua regra:
+ *
+ *   · O MEIO DE RECEBER — basta UM: o IBAN com o titular, OU o número MB WAY.
+ *     Aos aprovados antes de 15-11, só aviso até `IBAN_E_MBWAY_OBRIGATORIOS_ATE`
+ *     (22-11, 23:59:59 em Lisboa); a partir de 23-11, sem nenhum dos dois, não
+ *     aceita nem envia propostas. Os aprovados depois de 15-11, desde o início.
+ *   · O REGIME DE IVA — só aviso, para todos, até `REGIME_DE_IVA_EM_AVISO_ATE`
+ *     (30-11, 23:59:59 em Lisboa); a partir de 01-12, sem ele confirmado, não
+ *     aceita nem envia propostas.
+ *
+ * As datas fazem-se em hora de Lisboa (`inicioDoDiaEmLisboa`), nunca no fuso de
+ * quem corre o código.
+ */
+
+/** 00:00 de 23-11-2026 em Lisboa: a partir daqui, sem nenhum meio de receber, impede. */
+export const MEIO_DE_RECEBER_OBRIGATORIO_DESDE = inicioDoDiaEmLisboa("2026-11-23");
+
+/** 00:00 de 01-12-2026 em Lisboa: a partir daqui, sem o regime de IVA confirmado, impede. */
+export const REGIME_DE_IVA_OBRIGATORIO_DESDE = inicioDoDiaEmLisboa("2026-12-01");
+
+/** O último instante do aviso do regime: 23:59:59 de 30-11-2026 em Lisboa. */
+export const REGIME_DE_IVA_EM_AVISO_ATE = new Date(REGIME_DE_IVA_OBRIGATORIO_DESDE.getTime() - 1000);
+
+/** Como o aviso o diz. Um teste confere que bate com a data de cima. */
+export const REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO = "30 de novembro de 2026";
 
 /*
  * ── AS TRÊS PERGUNTAS AINDA SEM RESPOSTA DO DONO — interruptores ─────────────
@@ -137,9 +167,10 @@ export const TRABALHOS_CLYON_NO_NOVO_MODELO_DESDE_POR_EXTENSO = "15 de novembro 
 export const TRABALHOS_CLYON_NO_MODELO_ANTIGO_ATE_POR_EXTENSO = "14 de novembro de 2026";
 
 /**
- * (3) O regime de IVA é obrigatório no perfil, com a mesma transição do IBAN: sem
- * ele confirmado, até 22-11 o cliente vê «a confirmar» e a conta faz-se como com
- * IVA; depois, não aceita nem envia propostas.
+ * (3) O regime de IVA é obrigatório no perfil. Desde a d1 (18-11-2026) tem o seu
+ * prazo: sem ele confirmado, até 30-11 (`REGIME_DE_IVA_EM_AVISO_ATE`) avisa-se,
+ * o cliente vê «a confirmar» e a conta faz-se como com IVA; a partir de 01-12,
+ * não aceita nem envia propostas.
  */
 export const REGIME_DE_IVA_OBRIGATORIO = true;
 

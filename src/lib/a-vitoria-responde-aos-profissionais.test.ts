@@ -175,6 +175,11 @@ describe("as respostas — o texto do CEO, na voz da equipa", () => {
     expect(respostaAoProfissional("stand_by")).toContain("mais de 4 dias");
     expect(respostaAoProfissional("stand_by")).toContain("«Pagar o valor em atraso»");
     expect(respostaAoProfissional("iban_e_mbway")).toContain("São 4: IBAN, nome do titular da conta, MB WAY e o regime de IVA confirmado");
+    // d1 (18-11-2026): basta um meio de receber; o regime tem até 30-11.
+    expect(respostaAoProfissional("iban_e_mbway")).toContain("basta um: o IBAN com o titular, ou o MB WAY");
+    expect(respostaAoProfissional("iban_e_mbway")).toContain("sem nenhum dos dois");
+    expect(respostaAoProfissional("iban_e_mbway")).toContain("até 30/11");
+    expect(respostaAoProfissional("iban_e_mbway")).not.toContain("sem os 4");
     expect(respostaAoProfissional("iban_e_mbway")).toContain("até 22/11; a partir de 23/11");
     expect(respostaAoProfissional("regime_de_iva")).toContain("A minha conta › Faturação");
     expect(respostaAoProfissional("pagou_em_dinheiro")).toContain("A taxa da plataforma é sempre a do pedido");

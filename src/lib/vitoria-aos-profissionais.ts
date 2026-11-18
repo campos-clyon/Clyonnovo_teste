@@ -1,6 +1,7 @@
 import {
   DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO,
   IBAN_E_MBWAY_OBRIGATORIOS_ATE,
+  REGIME_DE_IVA_EM_AVISO_ATE,
   NOVO_MODELO_DESDE,
   novoModeloEmVigor,
 } from "./novo-modelo";
@@ -240,7 +241,9 @@ export function respostaAoProfissional(
           ? "Por segurança, não registo nem mudo dados bancários por mensagem: grave-os na sua conta, no painel ou na app CLYON Pro. "
           : "") +
         "Porque são os dados que o cliente vê para lhe pagar. São 4: IBAN, nome do titular da conta, MB WAY e o regime de IVA confirmado. " +
-        `Quem já está aprovado tem até ${ate}; a partir de ${depois}, sem os 4, não pode aceitar nem enviar ofertas. ` +
+        // d1 (18-11-2026): os dois prazos — basta um meio de receber; o regime até 30-11.
+        `Para receber, basta um: o IBAN com o titular, ou o MB WAY. Quem já está aprovado tem até ${ate}; a partir de ${depois}, sem nenhum dos dois, não pode aceitar nem enviar ofertas. ` +
+        `O regime de IVA confirme-o até ${diaEMes(REGIME_DE_IVA_EM_AVISO_ATE)}; depois disso, sem ele, também não. ` +
         "Mudar estes dados pede a sua palavra-passe."
       );
     case "regime_de_iva":

@@ -1,4 +1,5 @@
 import type { FolhaParaOParceiro } from "@/lib/folha-da-mudanca";
+import type { ProntoParaReceber as ProntoParaReceberDoServidor } from "@/lib/pronto-para-receber";
 import type { PercursoParaOParceiro } from "@/lib/mapa-do-percurso";
 import type { Proposta } from "@/lib/negociacao";
 import type { MudancaEscolhida } from "@/lib/mudanca-escolhida-pelo-cliente";
@@ -342,6 +343,8 @@ export type DadosDaCarteira = {
       | { estado: "aviso"; falta: string[]; ate: string; frase: string }
       | { estado: "impede"; falta: string[]; frase: string }
       | null;
+    /** d1 (18-11-2026): o cartão «Pronto para receber pedidos», pronto do servidor. */
+    prontoParaReceber?: ProntoParaReceberDoServidor | null;
   } | null;
   dividas?: DividaDaCarteira[];
   movimentos: Movimento[];

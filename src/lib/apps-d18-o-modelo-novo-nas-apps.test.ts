@@ -119,7 +119,7 @@ describe("app Pro e painel — a faixa dos dados para receber é a do CEO (d11 v
     expect(e.estado).toBe("aviso");
     expect(e.estado === "aviso" && e.frase).toBe(FAIXA_DOS_DADOS_PARA_RECEBER);
     expect(FAIXA_DOS_DADOS_PARA_RECEBER).toBe(
-      "A partir de 15 de novembro de 2026 recebe diretamente do cliente. Até 22 de novembro de 2026, complete no perfil o IBAN, o titular, o MB WAY e o regime de IVA (escolha e grave).",
+      "A partir de 15 de novembro de 2026 recebe diretamente do cliente. Até 22 de novembro de 2026, indique no perfil o IBAN com o titular da conta, ou o número MB WAY (basta um). Confirme também o regime de IVA até 30 de novembro de 2026 (escolha e grave).",
     );
     expect(DA_APP).toBe(COMPLETAR_O_PERFIL);
     expect(COMPLETAR_O_PERFIL).toBe("Completar o perfil");
