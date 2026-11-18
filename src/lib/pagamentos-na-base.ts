@@ -303,6 +303,12 @@ async function garantirTabelas() {
      * no corpo sem guardar dados de ninguém. Nula nas linhas antigas.
      */
     "ALTER TABLE avisosRecusados ADD COLUMN forma VARCHAR(500) NULL DEFAULT NULL",
+    /*
+     * A CONTA ONDE ENTROU A TRANSFERÊNCIA — d66 (18-11-2026). O rótulo da
+     * lista das Configs (nome e últimos 4 dígitos, nunca o IBAN). Nula nas
+     * antigas e em tudo o que não é transferência.
+     */
+    "ALTER TABLE pagamentos ADD COLUMN contaDeDestino VARCHAR(60) NULL DEFAULT NULL",
   ]) {
     try {
       await pool.execute(sql);

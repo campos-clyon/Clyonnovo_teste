@@ -20,6 +20,11 @@ import { fraseDoPagoEmDinheiro } from "@/lib/pagamento-da-divida";
 import { gerarReferenciaDaDivida } from "@/lib/cobrar-divida-do-profissional";
 import { segueONovoModelo } from "@/lib/novo-modelo-no-servidor";
 import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
+import { conferirRegistoAMao } from "@/lib/origem-do-pagamento";
+import { contasDeDestino } from "@/lib/contas-de-destino-na-base";
+import { ficheiroDoComprovativo } from "@/lib/comprovativo-no-servidor";
+import { anotarContaDeDestino, guardarComprovativo, subirComprovativo } from "@/lib/rasto-do-pagamento-na-base";
+import { MENSAGENS_DO_COMPROVATIVO } from "@/lib/comprovativo-do-pagamento";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,11 +59,28 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
-  let corpo: { negociacaoId?: unknown; metodo?: unknown };
+  /*
+   * D66 (18-11-2026): DE ONDE VEIO, E A PROVA. Por transferência ou numerário
+   * o pedido vem num formulário com o comprovativo (`file`, foto ou PDF) e,
+   * numa transferência, a conta onde entrou (`contaDeDestino`, da lista das
+   * Configs). Sem eles, nada se grava. O «pago ao profissional» continua a
+   * poder vir em JSON (o comprovativo junta-se depois, se houver).
+   */
+  let corpo: { negociacaoId?: unknown; metodo?: unknown; contaDeDestino?: unknown };
+  let comprovativo: Awaited<ReturnType<typeof ficheiroDoComprovativo>> = null;
   try {
-    corpo = (await req.json()) as typeof corpo;
+    if ((req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+      const fd = await req.formData();
+      corpo = { negociacaoId: fd.get("negociacaoId"), metodo: fd.get("metodo"), contaDeDestino: fd.get("contaDeDestino") };
+      comprovativo = await ficheiroDoComprovativo(fd);
+    } else {
+      corpo = (await req.json()) as typeof corpo;
+    }
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+  if (comprovativo && !comprovativo.ok) {
+    return NextResponse.json({ error: comprovativo.erro }, { status: comprovativo.status });
   }
 
   const negociacaoId = Number(corpo.negociacaoId);
@@ -77,6 +99,16 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+
+  // A conta (numa transferência) e o comprovativo (transferência e numerário), antes de tudo.
+  const conferido = conferirRegistoAMao({
+    metodo,
+    contaId: corpo.contaDeDestino,
+    contas: await contasDeDestino(),
+    temComprovativo: Boolean(comprovativo?.ok),
+    comprovativoObrigatorio: true,
+  });
+  if (!conferido.ok) return NextResponse.json({ error: conferido.erro }, { status: 400 });
 
   // Lê `pagamentoParaQue`, coluna de 29-09-2026.
   await ensureNegociacoesTable();
@@ -158,6 +190,24 @@ export async function POST(req: NextRequest) {
         );
     const conf = configuracaoDoEupago(process.env);
 
+    /*
+     * O FICHEIRO SOBE ANTES DO REGISTO (d66): se o armazenamento falhar, o
+     * pagamento não fica registado sem a prova que o botão exige.
+     */
+    let urlDoComprovativo: string | null = null;
+    if (comprovativo?.ok) {
+      try {
+        urlDoComprovativo = await subirComprovativo(
+          comprovativo.ficheiro,
+          comprovativo.conferido,
+          `comprovativos/${Number(l.pedidoId)}-${negociacaoId}-recebido`,
+        );
+      } catch (e) {
+        console.error("[admin/pagamentos/recebido] comprovativo:", e instanceof Error ? e.message : e);
+        return NextResponse.json({ error: MENSAGENS_DO_COMPROVATIVO.falhou }, { status: 503 });
+      }
+    }
+
     const r = await registarRecebimentoAMao({
       negociacaoId,
       pedidoId: Number(l.pedidoId),
@@ -173,6 +223,24 @@ export async function POST(req: NextRequest) {
     }
 
     const porQuem = colab?.nome ?? "a CLYON";
+
+    // A conta onde entrou e o comprovativo, na linha que acabou de nascer (d66).
+    if (r.pagamentoId) {
+      await anotarContaDeDestino("pagamentos", [r.pagamentoId], conferido.contaDeDestino);
+      if (urlDoComprovativo && comprovativo?.ok) {
+        await guardarComprovativo({
+          alvo: "pagamento",
+          alvoIds: [r.pagamentoId],
+          negociacaoId,
+          pedidoId: Number(l.pedidoId),
+          url: urlDoComprovativo,
+          nome: comprovativo.conferido.nome,
+          tipo: comprovativo.conferido.tipo,
+          tamanho: comprovativo.ficheiro.size,
+          por: porQuem,
+        });
+      }
+    }
     const comoSeChama = nomeDoRecebimento(metodo);
     const emEuros = `${valor.toFixed(2).replace(".", ",")} €`;
 
@@ -196,7 +264,8 @@ export async function POST(req: NextRequest) {
             ? `${porQuem} registou que ${String(l.profissional ?? "o profissional")} pagou à CLYON ${emEuros} ` +
               `de IVA e taxa da plataforma (${novoModelo ? "o cliente pagou-lhe diretamente" : "trabalho pago em dinheiro"}) — ${comoSeChama}. `
             : `${porQuem} registou que o cliente pagou ${emEuros} — ${comoSeChama}. `) +
-          "Não passou pelo euPago: é um registo à mão.",
+          "Não passou pelo euPago: é um registo à mão." +
+          (urlDoComprovativo ? " Com comprovativo." : ""),
     });
 
     await registarSemFalhar({
@@ -212,6 +281,8 @@ export async function POST(req: NextRequest) {
         pagamentoId: r.pagamentoId,
         metodo,
         valor,
+        // A conta fica na linha do pagamento (`contaDeDestino`), que só a equipa lê.
+        comComprovativo: Boolean(urlDoComprovativo),
         ...(emMao ? { deveAClyon: emMao.total, iva: emMao.iva, taxa: emMao.comissao } : {}),
       },
     });

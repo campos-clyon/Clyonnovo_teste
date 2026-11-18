@@ -12,6 +12,8 @@ import {
 } from "@/lib/pagamentos-na-base";
 import { trabalhosParaGerir } from "@/lib/trabalhos-para-gerir";
 import { estadoVistoPeloCliente } from "@/lib/pagamento-para-o-cliente";
+import { contasDosPagamentos, registosDasNegociacoes } from "@/lib/rasto-do-pagamento-na-base";
+import { origemDoPagamento, type RegistoDoDinheiro } from "@/lib/origem-do-pagamento";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +54,20 @@ export async function GET(req: NextRequest) {
       transferenciasPendentes(50).catch(() => []),
     ]);
 
+    /*
+     * DE ONDE VEIO CADA PAGAMENTO, E A PROVA — d66 (18-11-2026). Os registos
+     * de cada trabalho (origem, conta, comprovativos) e a origem de cada um
+     * dos últimos pagamentos. Se a leitura falhar, o ecrã abre na mesma, sem
+     * eles (diz-se no registo do servidor).
+     */
+    const [registos, contas] = await Promise.all([
+      registosDasNegociacoes(trabalhos.map((t) => t.negociacaoId)).catch((e) => {
+        console.error("[admin/pagamentos] registos:", e);
+        return new Map<number, RegistoDoDinheiro[]>();
+      }),
+      contasDosPagamentos(ultimos.map((p) => p.id)).catch(() => new Map<number, string>()),
+    ]);
+
     return NextResponse.json({
       /*
        * O ESTADO DA LIGAÇÃO, dito como está — e sem nunca devolver a chave.
@@ -83,7 +99,11 @@ export async function GET(req: NextRequest) {
        * (se o dinheiro entrar, o aviso ainda encontra a linha), mas a equipa
        * vê o mesmo que o cliente.
        */
-      ultimos: ultimos.map((p) => ({ ...p, estado: estadoVistoPeloCliente(p) })),
+      ultimos: ultimos.map((p) => ({
+        ...p,
+        estado: estadoVistoPeloCliente(p),
+        origem: origemDoPagamento({ ...p, contaDeDestino: contas.get(p.id) ?? null }),
+      })),
       avisos,
       /*
        * O QUE ANDA A ACONTECER À PORTA DOS AVISOS — ver `estadoDoWebhook`.
@@ -104,7 +124,7 @@ export async function GET(req: NextRequest) {
        * moveu) e isto (o que o euPago aceitou). Nenhum respondia por trabalho,
        * que é como a pergunta é feita.
        */
-      trabalhos,
+      trabalhos: trabalhos.map((t) => ({ ...t, registos: registos.get(t.negociacaoId) ?? [] })),
       /*
        * A FILA «FATURAS POR EMITIR» — 27-10-2026 (d16). Cada pagamento
        * confirmado com fatura, até alguém dizer que a fatura saiu.

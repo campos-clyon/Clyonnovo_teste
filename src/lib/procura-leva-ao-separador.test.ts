@@ -19,7 +19,8 @@ describe("os Pagamentos, ao procurar", () => {
     expect(PAINEL).toContain("if (!aFiltrar || actual.linhas.length > 0 || comResultados.length === 0) return;");
     expect(PAINEL).toContain("setSeparador(comResultados[0].id);");
     // As dependências são os filtros, e não a lista: recarregar não faz saltar.
-    expect(PAINEL).toContain("}, [q, profissional, periodo, entreDe, entreAte]);");
+    // d66: a origem do pagamento também é um filtro que leva ao separador com resultados.
+    expect(PAINEL).toContain("}, [q, profissional, periodo, entreDe, entreAte, filtroDaOrigem]);");
   });
 
   it("e, vazio aqui mas não noutro, dizem onde está, com o botão para lá", () => {

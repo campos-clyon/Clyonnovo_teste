@@ -47,6 +47,7 @@ import InterruptorDoAvisoDoNovoModelo from "@/components/admin/InterruptorDoAvis
 import InterruptorDoSeguimentoDaVitoria from "@/components/admin/InterruptorDoSeguimentoDaVitoria";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
+import AdminContasDeDestinoPanel from "@/components/admin/AdminContasDeDestinoPanel";
 import AdminListaDasMudancasPanel from "@/components/admin/AdminListaDasMudancasPanel";
 import AdminContaDaTransferenciaPanel from "@/components/admin/AdminContaDaTransferenciaPanel";
 import AdminSessoesPanel from "@/components/admin/AdminSessoesPanel";
@@ -3580,6 +3581,9 @@ export default function ColaboradorAdminClient({
 
               {/* A conta da transferência bancária (≥ 700 € com IVA) — 02-11-2026. Só o administrador. */}
               {papel === "admin" && <AdminContaDaTransferenciaPanel />}
+
+              {/* As contas onde entram as transferências registadas à mão — d66, 18-11-2026. */}
+              <AdminContasDeDestinoPanel />
 
               {/* O link do programa de acesso antecipado da app — 11-11-2026. Só o administrador. */}
               {papel === "admin" && <AdminLinkDoProgramaDaAppPanel />}

@@ -20,6 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { RastoDoTrabalho } from "@/components/admin/RastoDoPagamento";
 import HorasNaMesa from "@/components/admin/HorasNaMesa";
 import { FALTA_A_FOLHA } from "@/lib/horas-do-trabalho";
 import type { EstadoFechado } from "@/lib/pedidos-fechados";
@@ -1822,6 +1823,12 @@ function CartaoDoTrabalho({
         {a?.pagoEm && <BotaoDoComprovativo negociacaoId={a.negociacaoId} pedidoId={t.pedidoId} para="profissional" />}
           </>
         )}
+        {/*
+          DE ONDE VEIO O DINHEIRO, E A PROVA — d66 (18-11-2026). Cada pagamento
+          deste trabalho com a origem (euPago e a referência, a conta da
+          transferência…) e o comprovativo. Aqui só se vê: junta-se nos Pagamentos.
+        */}
+        {a && (a.clientePagouEm || a.pagoEm || novoModelo) && <RastoDoTrabalho negociacaoId={a.negociacaoId} />}
         <button
           onClick={onFicha}
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"

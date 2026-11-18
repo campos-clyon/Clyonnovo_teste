@@ -15480,6 +15480,8 @@ export type Acontecimento =
   | "pagamento_corrigido"
   // Uma referência do cliente por pagar anulada no backoffice pelo administrador (16-11-2026, d52).
   | "referencia_anulada"
+  // O comprovativo (foto ou PDF) junto a um pagamento registado à mão (d66, 18-11-2026).
+  | "comprovativo_do_pagamento"
   // O modelo de 15-11-2026 (d10): uma fatura do trabalho junta ao pedido, e como o cliente escolheu pagar ao parceiro.
   | "fatura_do_trabalho"
   | "forma_de_pagar_ao_parceiro"

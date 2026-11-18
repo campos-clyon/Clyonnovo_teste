@@ -263,6 +263,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
    * continua do administrador, como o DELETE em todo o lado.
    */
   "/api/admin/financas",
+  // As contas onde entram as transferências (d66, 18-11-2026): lêem-se nas Configs, nos Pagamentos e nas Carteiras.
+  "/api/admin/contas-de-destino",
   // O comprovativo em PDF — 24-10-2026.
   "/api/admin/comprovativo",
   // Leads e Contas — 03-10-2026.
@@ -394,6 +396,14 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // de /api/admin/pagamentos não têm entrada — ficam fechadas.
   { padrao: /^\/api\/admin\/pagamentos$/, seccoes: ["pagamentos"] },
   /*
+   * O RASTO DE CADA PAGAMENTO — d66 (18-11-2026). Juntar o comprovativo (foto
+   * ou PDF) a um pagamento registado: quem tem os Pagamentos. Ver de onde veio
+   * e abrir o comprovativo: também a Mesa (o cartão do pedido) e as Carteiras
+   * (as Finanças).
+   */
+  { prefixo: "/api/admin/pagamentos/comprovativos", seccoes: ["pagamentos"] },
+  { prefixo: "/api/admin/pagamentos/rasto", seccoes: ["pagamentos", "negociacoes_clyon", "trabalhos_clyon", "carteiras"] },
+  /*
    * GERAR E CONFERIR A REFERÊNCIA euPago — 27-10-2026 (d14), decisão do dono:
    * quem tem a Mesa (Trabalhos CLYON ou negociações) gera a referência no
    * «Enviar adjudicação» e pergunta se já foi paga. O valor é sempre o do
@@ -421,6 +431,7 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   // Os métodos de pagamento (27-10-2026): escrevem-se nas Configs, vão na adjudicação da Mesa.
   { prefixo: "/api/admin/metodos-de-pagamento", seccoes: ["configs", "negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/retencao", seccoes: ["configs"] },
+  { prefixo: "/api/admin/contas-de-destino", seccoes: ["configs", "pagamentos", "carteiras"] },
   { prefixo: "/api/admin/lista-das-mudancas", seccoes: ["configs"] },
   { prefixo: "/api/admin/arquivo", seccoes: ["configs"] },
   { prefixo: "/api/media/gallery", seccoes: ["configs"] },
@@ -503,6 +514,8 @@ const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
   "/api/admin/taxas",
   "/api/admin/metodos-de-pagamento",
   "/api/admin/lista-das-mudancas",
+  // As contas onde entram as transferências (d66): mudar é do administrador.
+  "/api/admin/contas-de-destino",
 ];
 
 /**
@@ -511,10 +524,17 @@ const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
  */
 const ESCRITAS_ABERTAS_A_MESA = ["/api/admin/pagamentos/criar", "/api/admin/pagamentos/conferir"];
 
+/**
+ * JUNTAR O COMPROVATIVO — d66 (18-11-2026), CEO e dono: o administrador ou o
+ * assistente com a secção Pagamentos. Não mexe em dinheiro: junta a prova
+ * (foto ou PDF) a um pagamento que já está registado.
+ */
+const ESCRITAS_ABERTAS_A_SECCAO = ["/api/admin/pagamentos/comprovativos"];
+
 /** Esta rota só deixa o assistente ler? */
 export function escritaSoDoAdministrador(pathname: string): boolean {
   const limpo = pathname.replace(/\/+$/, "") || "/";
-  if (ESCRITAS_ABERTAS_A_MESA.includes(limpo)) return false;
+  if (ESCRITAS_ABERTAS_A_MESA.includes(limpo) || ESCRITAS_ABERTAS_A_SECCAO.includes(limpo)) return false;
   return ESCRITAS_SO_DO_ADMINISTRADOR.some((r) =>
     typeof r === "string" ? comecaPor(limpo, r) : r.test(limpo),
   );

@@ -6,6 +6,7 @@ import { configuracaoDoEupago } from "./eupago";
 import { METODO_PAGO_AO_PROFISSIONAL } from "./pago-em-mao";
 import { garantirTabelaDasCobrancas, origemLida } from "./marcas-da-divida-na-base";
 import { ensureFolhasFinais } from "./folha-final-na-base";
+import { anotarContaDeDestino, garantirTabelaDosComprovativos } from "./rasto-do-pagamento-na-base";
 import {
   fraseDaMarcacao,
   fraseDoDesfazer,
@@ -104,7 +105,7 @@ export async function dividasDosProfissionais(
 /* ─────────────────────────────── Escrever ─────────────────────────────── */
 
 type Resultado =
-  | { ok: true; frase: string; fechou: boolean; pagamentoId: number | null }
+  | { ok: true; frase: string; fechou: boolean; pagamentoId: number | null; marcas?: number[] }
   | { ok: false; porque: string; status: number };
 
 /** A base, ou a ligação de uma transacção em curso. */
@@ -249,6 +250,8 @@ export async function marcarPartes(d: {
   quem: string;
   origem?: OrigemDaMarca;
   agora?: Date;
+  /** A conta onde entrou a transferência (d66), o rótulo da lista das Configs. */
+  contaDeDestino?: string | null;
 }): Promise<Resultado> {
   const pool = await getPool();
   if (!pool) return { ok: false, porque: "Base de dados indisponível.", status: 503 };
@@ -261,6 +264,8 @@ export async function marcarPartes(d: {
   if (!providerId) return { ok: false, porque: "Trabalho não encontrado.", status: 404 };
   const pedidoId = neg[0]?.pedidoId != null ? Number(neg[0].pedidoId) : null;
 
+  // A coluna da conta antes da transacção: um ALTER lá dentro fechava-a (d66).
+  if (d.contaDeDestino) await garantirTabelaDosComprovativos();
   const agora = d.agora ?? new Date();
   const origem = d.origem ?? "marcacao";
   type Marcado =
@@ -342,6 +347,9 @@ export async function marcarPartes(d: {
       [d.negociacaoId, divida.aParte ? "divida" : "trabalho"],
     );
   }
+  // A conta onde entrou (d66), nas marcas e na linha que fecha a dívida — na mesma transacção.
+  await anotarContaDeDestino("cobrancasAoProfissional", feitas, d.contaDeDestino ?? null, conn);
+  if (pagamentoId) await anotarContaDeDestino("pagamentos", [pagamentoId], d.contaDeDestino ?? null, conn);
   return { ok: true, aMarcar, faltam, feitas, valor, pagamentoId };
   });
   if (!r.ok) return r;
@@ -382,7 +390,7 @@ export async function marcarPartes(d: {
       message: `${comNota} Registado por ${d.quem}.`,
     }).catch(() => {});
   }
-  return { ok: true, frase, fechou: faltam.length === 0, pagamentoId };
+  return { ok: true, frase, fechou: faltam.length === 0, pagamentoId, marcas: feitas };
 }
 
 /**

@@ -1,5 +1,6 @@
 import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 import { eLinhaDaDividaEmMao, foiPagoEmMaoPor } from "./pago-em-mao";
+import type { ChaveDaOrigem, ComprovativoVisto } from "./origem-do-pagamento";
 
 /**
  * A GESTORA DE CONTAS DA CLYON — 14-10-2026.
@@ -141,7 +142,37 @@ export type Movimento = {
   anexo: { url: string; nome: string } | null;
   automatico: OrigemAutomatica | null;
   criadoPor: string | null;
+  /**
+   * DE ONDE VEIO, E A PROVA — d66 (18-11-2026). Nos movimentos da plataforma
+   * que são um pagamento (recebido, parte da dívida, pago ao profissional): a
+   * origem (euPago com a referência, transferência com a conta…), os
+   * comprovativos e se falta um. Ausente nos lançados à mão.
+   */
+  origem?: OrigemNaGestora | null;
 };
+
+export type OrigemNaGestora = {
+  chave: ChaveDaOrigem;
+  rotulo: string;
+  detalhe: string | null;
+  comprovativos: ComprovativoVisto[];
+  semComprovativo: boolean;
+};
+
+/**
+ * Põe a origem nos movimentos da plataforma, pela chave do registo
+ * (`pagamento:<id>`, `cobranca:<id>`, `pago_ao_profissional:<negociação>`).
+ */
+export function comAOrigem(movimentos: Movimento[], origens: ReadonlyMap<string, OrigemNaGestora>): Movimento[] {
+  if (origens.size === 0) return movimentos;
+  return movimentos.map((m) => {
+    const x = /^auto:(recebimento|parte-da-divida|pago):(\d+)$/.exec(m.id);
+    if (!x) return m;
+    const alvo = x[1] === "recebimento" ? "pagamento" : x[1] === "parte-da-divida" ? "cobranca" : "pago_ao_profissional";
+    const o = origens.get(`${alvo}:${x[2]}`);
+    return o ? { ...m, origem: o } : m;
+  });
+}
 
 // ─── O que nasce com a gestora ───────────────────────────────────────────────
 

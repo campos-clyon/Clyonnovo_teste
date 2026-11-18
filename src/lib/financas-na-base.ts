@@ -1,5 +1,6 @@
 import { getPool } from "./db";
 import { partesPagasSemLinha } from "./marcas-da-divida-na-base";
+import { origensParaAGestora } from "./rasto-do-pagamento-na-base";
 import { contaDaLinha } from "./conta-do-pagamento";
 import { dividirEntrada, type EntradaDaPlataforma, type PagamentoAAssistente } from "./financas-do-mes";
 import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
@@ -12,7 +13,9 @@ import {
   CORES,
   ICONES,
   TIPOS_DE_CONTA,
+  comAOrigem,
   movimentosDaPlataforma,
+  type OrigemNaGestora,
   type Categoria,
   type CategoriaDoSistema,
   type Conta,
@@ -346,7 +349,12 @@ export async function tudoDaGestora(): Promise<{ contas: Conta[]; categorias: Ca
     contaCaixa,
     categoria: (s) => doSistema.get(s) ?? 0,
   });
-  return { contas, categorias, movimentos: [...aMao, ...automaticos] };
+  // De onde veio cada pagamento, e a prova (d66). Sem ela, as Finanças abrem na mesma.
+  const origens = await origensParaAGestora().catch((e) => {
+    console.error("[financas] origens dos pagamentos:", e);
+    return new Map<string, OrigemNaGestora>();
+  });
+  return { contas, categorias, movimentos: [...aMao, ...comAOrigem(automaticos, origens)] };
 }
 
 // ─── Movimentos à mão ────────────────────────────────────────────────────────

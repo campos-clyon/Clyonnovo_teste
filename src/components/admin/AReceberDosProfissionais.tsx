@@ -11,6 +11,23 @@ import {
   type EstadoDaParte,
   type ParteDaDivida,
 } from "@/lib/cobrancas-ao-profissional";
+import {
+  FILTRO_DA_ORIGEM_VAZIO,
+  contarSemComprovativo,
+  passaNoFiltroDaOrigem,
+  type FiltroDaOrigem,
+  type RegistoDoDinheiro,
+} from "@/lib/origem-do-pagamento";
+import { FiltroDaOrigemCampos, ListaDosRegistos } from "./RastoDoPagamento";
+import {
+  CamposDaProva,
+  GRANDE_DEMAIS_PARA_ENVIAR,
+  JuntarComprovativo,
+  prepararComprovativo,
+  provaCompleta,
+  useContasDeDestino,
+} from "./ProvaDoPagamento";
+import type { ContaDeDestino } from "@/lib/contas-de-destino";
 
 /**
  * PAGAMENTOS › «A RECEBER DOS PROFISSIONAIS» — 11-11-2026 (dono).
@@ -34,6 +51,8 @@ export type TrabalhoAReceber = {
   partes: EstadoDaParte[];
   /** d38 v2: o nome da dívida quando não é a de sempre («acerto da folha final do pedido #N»). */
   rotulo?: string | null;
+  /** d66: de onde veio cada parte paga (a conta, o euPago…) e os comprovativos. */
+  registos?: RegistoDoDinheiro[];
   /** d10: no modelo de 15-11, o valor em atraso (a taxa e o IVA dela), o estado e a referência. */
   valorEmAtraso?: {
     estado: "pago" | "no_prazo" | "stand_by" | "sem_data";
@@ -126,6 +145,10 @@ export default function AReceberDosProfissionais({
 }) {
   const eAdministrador = useEAdministrador();
   const [filtro, setFiltro] = useState<Filtro>("por_pagar");
+  // A origem do pagamento e «só sem comprovativo» (d66), por cima do estado.
+  const [filtroDaOrigem, setFiltroDaOrigem] = useState<FiltroDaOrigem>(FILTRO_DA_ORIGEM_VAZIO);
+  // Só as contas das Configs quando há um formulário aberto: lê-se uma vez, aqui.
+  const contas = useContasDeDestino();
 
   if (erro && !dados) return <p className="mt-3 text-sm text-rose-300">{erro}</p>;
   if (!dados) {
@@ -143,8 +166,12 @@ export default function AReceberDosProfissionais({
     pago: dados.totais.pagos,
   };
   const visiveis = dados.profissionais
-    .map((p) => ({ ...p, trabalhos: p.trabalhos.filter((t) => passa(filtro, t.estado)) }))
+    .map((p) => ({
+      ...p,
+      trabalhos: p.trabalhos.filter((t) => passa(filtro, t.estado) && passaNoFiltroDaOrigem(t.registos, filtroDaOrigem)),
+    }))
     .filter((p) => p.trabalhos.length > 0);
+  const semComprovativo = contarSemComprovativo(dados.profissionais.flatMap((p) => p.trabalhos.map((t) => t.registos)));
 
   return (
     <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/40 p-4">
@@ -170,6 +197,9 @@ export default function AReceberDosProfissionais({
             {f.rotulo} · {contagem[f.id]}
           </button>
         ))}
+      </div>
+      <div className="mt-2">
+        <FiltroDaOrigemCampos valor={filtroDaOrigem} onMudar={setFiltroDaOrigem} quantosSemComprovativo={semComprovativo} />
       </div>
 
       {visiveis.length === 0 ? (
@@ -197,6 +227,7 @@ export default function AReceberDosProfissionais({
                     token={token}
                     eAdministrador={eAdministrador}
                     onMudou={onMudou}
+                    contas={contas}
                   />
                 ))}
               </ul>
@@ -213,12 +244,17 @@ function LinhaDoTrabalho({
   token,
   eAdministrador,
   onMudou,
+  contas,
 }: {
   t: TrabalhoAReceber;
   token: string | null;
   eAdministrador: boolean;
   onMudou: () => void | Promise<void>;
+  contas: ContaDeDestino[];
 }) {
+  // A conta onde entrou (numa transferência) e o comprovativo, se houver — d66.
+  const [conta, setConta] = useState("");
+  const [ficheiro, setFicheiro] = useState<File | null>(null);
   const [aMarcar, setAMarcar] = useState<ParteDaDivida[] | null>(null);
   const [aDesfazer, setADesfazer] = useState<ParteDaDivida | null>(null);
   const [metodo, setMetodo] = useState<string>(METODOS_DO_PROFISSIONAL[0].id);
@@ -234,20 +270,42 @@ function LinhaDoTrabalho({
     setOcupado(true);
     setErro("");
     try {
-      const res = await fetch("/api/admin/pagamentos/a-receber-dos-profissionais", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ negociacaoId: t.negociacaoId, ...corpo }),
-      });
-      const j = await res.json();
+      // Ao marcar vai um formulário: a conta e, se houver, o comprovativo (d66).
+      let res: Response;
+      if (corpo.accao === "marcar") {
+        const fd = new FormData();
+        fd.set("negociacaoId", String(t.negociacaoId));
+        fd.set("accao", "marcar");
+        for (const p of (corpo.partes as string[]) ?? []) fd.append("partes", p);
+        fd.set("metodo", String(corpo.metodo ?? ""));
+        fd.set("dia", String(corpo.dia ?? ""));
+        fd.set("nota", String(corpo.nota ?? ""));
+        if (conta) fd.set("contaDeDestino", conta);
+        if (ficheiro) fd.set("file", await prepararComprovativo(ficheiro));
+        res = await fetch("/api/admin/pagamentos/a-receber-dos-profissionais", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+      } else {
+        res = await fetch("/api/admin/pagamentos/a-receber-dos-profissionais", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ negociacaoId: t.negociacaoId, ...corpo }),
+        });
+      }
+      const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErro(j.error ?? "Não foi possível gravar.");
+        setErro(j.error ?? (res.status === 413 ? GRANDE_DEMAIS_PARA_ENVIAR : "Não foi possível gravar."));
         return;
       }
+      if (j.aviso) setErro(j.aviso);
       setAMarcar(null);
       setADesfazer(null);
       setNota("");
       setMotivo("");
+      setConta("");
+      setFicheiro(null);
       await onMudou();
     } catch {
       setErro("Erro de rede.");
@@ -308,6 +366,16 @@ function LinhaDoTrabalho({
         ))}
       </ul>
 
+      {/* De onde veio cada parte paga, e a prova (d66). Quem tem os Pagamentos junta o comprovativo. */}
+      {(t.registos ?? []).length > 0 && (
+        <div className="mt-1.5">
+          <ListaDosRegistos
+            registos={t.registos}
+            juntar={(r) => <JuntarComprovativo alvo={r.alvo} alvoId={r.alvoId} onJunto={() => void onMudou()} />}
+          />
+        </div>
+      )}
+
       {eAdministrador && pendentes.length > 0 && !aMarcar && (
         <div className="mt-2 flex flex-wrap gap-2">
           {pendentes.some((x) => x.parte === "iva") && (
@@ -363,9 +431,18 @@ function LinhaDoTrabalho({
               className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-white"
             />
           </div>
+          <CamposDaProva
+            metodo={metodo}
+            contas={contas}
+            conta={conta}
+            onConta={setConta}
+            ficheiro={ficheiro}
+            onFicheiro={setFicheiro}
+            obrigatorio={false}
+          />
           <div className="mt-2 flex gap-2">
             <button
-              disabled={ocupado}
+              disabled={ocupado || !provaCompleta(metodo, conta, ficheiro, false)}
               onClick={() => void enviar({ accao: "marcar", partes: aMarcar, metodo, dia, nota })}
               className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
             >

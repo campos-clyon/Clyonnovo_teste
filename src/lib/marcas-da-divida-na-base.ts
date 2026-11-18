@@ -37,6 +37,12 @@ export async function garantirTabelaDasCobrancas(): Promise<void> {
       KEY idx_pagamento (pagamentoId)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // A conta onde entrou a transferência (d66, 18-11-2026). Só acrescenta.
+  try {
+    await pool.execute("ALTER TABLE cobrancasAoProfissional ADD COLUMN contaDeDestino VARCHAR(60) NULL DEFAULT NULL");
+  } catch {
+    // Já lá estava.
+  }
   tabelaPronta = true;
 }
 

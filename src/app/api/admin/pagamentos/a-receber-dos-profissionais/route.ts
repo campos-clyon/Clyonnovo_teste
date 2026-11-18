@@ -8,6 +8,10 @@ import { diaEmLisboa, inicioDoDiaEmLisboa } from "@/lib/hora-de-lisboa";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { estadoDoValorEmAtraso } from "@/lib/estado-do-valor-em-atraso";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
+import { conferirRegistoAMao } from "@/lib/origem-do-pagamento";
+import { contasDeDestino } from "@/lib/contas-de-destino-na-base";
+import { ficheiroDoComprovativo, juntarComprovativo } from "@/lib/comprovativo-no-servidor";
+import { registosDasNegociacoes } from "@/lib/rasto-do-pagamento-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,6 +68,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // De onde veio cada parte paga, e o comprovativo (d66).
+    const registos = await registosDasNegociacoes(
+      [...porProfissional.values()].flat().map((d) => d.negociacaoId),
+    ).catch((e) => {
+      console.error("[a-receber-dos-profissionais] registos:", e);
+      return new Map<number, never[]>();
+    });
+
     const profissionais = ids
       .map((pid) => {
         const ds = porProfissional.get(pid) ?? [];
@@ -80,6 +92,8 @@ export async function GET(req: NextRequest) {
             partes: d.partes,
             // d38 v2: «acerto da folha final do pedido #N» (nulo na dívida de sempre).
             rotulo: d.rotulo ?? null,
+            // d66: os registos do dinheiro deste trabalho, com a origem e o comprovativo.
+            registos: registos.get(d.negociacaoId) ?? [],
             // d10: o valor em atraso do modelo de 15-11 (nulo nos trabalhos de antes).
             valorEmAtraso: d.novoModelo
               ? {
@@ -130,11 +144,35 @@ export async function POST(req: NextRequest) {
     dia?: unknown;
     nota?: unknown;
     motivo?: unknown;
+    contaDeDestino?: unknown;
   };
+  /*
+   * D66 (18-11-2026): a conta onde entrou (numa transferência) e, se houver, o
+   * comprovativo (`file`, foto ou PDF) — então o pedido vem num formulário,
+   * com as partes em `partes` repetido.
+   */
+  let comprovativo: Awaited<ReturnType<typeof ficheiroDoComprovativo>> = null;
   try {
-    corpo = (await req.json()) as typeof corpo;
+    if ((req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+      const fd = await req.formData();
+      corpo = {
+        accao: fd.get("accao") ?? undefined,
+        negociacaoId: fd.get("negociacaoId"),
+        partes: fd.getAll("partes").map(String),
+        metodo: fd.get("metodo"),
+        dia: fd.get("dia") ?? undefined,
+        nota: fd.get("nota") ?? undefined,
+        contaDeDestino: fd.get("contaDeDestino") ?? undefined,
+      };
+      comprovativo = await ficheiroDoComprovativo(fd);
+    } else {
+      corpo = (await req.json()) as typeof corpo;
+    }
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
+  }
+  if (comprovativo && !comprovativo.ok) {
+    return NextResponse.json({ error: comprovativo.erro }, { status: comprovativo.status });
   }
   const negociacaoId = Number(corpo.negociacaoId);
   if (!Number.isInteger(negociacaoId) || negociacaoId <= 0) {
@@ -173,6 +211,16 @@ export async function POST(req: NextRequest) {
     if (dia > hoje) return NextResponse.json({ error: "O dia do pagamento não pode ser no futuro." }, { status: 400 });
     const quando = dia === hoje ? agora : new Date(inicioDoDiaEmLisboa(dia).getTime() + 12 * 3_600_000);
 
+    // A conta onde entrou (obrigatória numa transferência) — d66.
+    const conferido = conferirRegistoAMao({
+      metodo: corpo.metodo,
+      contaId: corpo.contaDeDestino,
+      contas: await contasDeDestino(),
+      temComprovativo: Boolean(comprovativo?.ok),
+      comprovativoObrigatorio: false,
+    });
+    if (!conferido.ok) return NextResponse.json({ error: conferido.erro }, { status: 400 });
+
     const nota = typeof corpo.nota === "string" ? corpo.nota.trim().slice(0, 255) : "";
     const r = await marcarPartes({
       negociacaoId,
@@ -182,8 +230,32 @@ export async function POST(req: NextRequest) {
       nota: nota || null,
       quem,
       agora,
+      contaDeDestino: conferido.contaDeDestino,
     });
-    return r.ok ? NextResponse.json(r) : NextResponse.json({ error: r.porque }, { status: r.status });
+    if (!r.ok) return NextResponse.json({ error: r.porque }, { status: r.status });
+
+    // O comprovativo, nas marcas e na linha que fechou a dívida. Falhar aqui não desfaz a marca: junta-se depois.
+    let comprovativoGuardado = false;
+    if (comprovativo?.ok) {
+      try {
+        const [neg] = (await (await getPool())!.execute(`SELECT pedidoId FROM negociacoes WHERE id = ? LIMIT 1`, [
+          negociacaoId,
+        ])) as [Array<{ pedidoId: number | null }>, unknown];
+        const pedidoId = neg[0]?.pedidoId != null ? Number(neg[0].pedidoId) : null;
+        const base = { ficheiro: comprovativo.ficheiro, conferido: comprovativo.conferido, negociacaoId, pedidoId, por: quem };
+        if (r.marcas?.length) await juntarComprovativo({ ...base, alvo: "cobranca", alvoIds: r.marcas });
+        if (r.pagamentoId) await juntarComprovativo({ ...base, alvo: "pagamento", alvoIds: [r.pagamentoId] });
+        comprovativoGuardado = true;
+      } catch (e) {
+        console.error("[a-receber-dos-profissionais] comprovativo:", e instanceof Error ? e.message : e);
+      }
+    }
+    return NextResponse.json({
+      ...r,
+      ...(comprovativo?.ok && !comprovativoGuardado
+        ? { aviso: "Marcado, mas o comprovativo não ficou guardado — junte-o outra vez no registo." }
+        : {}),
+    });
   } catch (e) {
     console.error("[admin/pagamentos/a-receber-dos-profissionais] POST", e);
     return NextResponse.json({ error: "Não foi possível gravar." }, { status: 500 });

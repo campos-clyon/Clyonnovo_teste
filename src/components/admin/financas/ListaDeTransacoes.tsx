@@ -15,6 +15,8 @@ import {
   type TipoDeMovimento,
 } from "@/lib/financas";
 import { BolaDaCategoria, CLASSES_DA_COR } from "./aparencia";
+import { FILTRO_DA_ORIGEM_VAZIO, type FiltroDaOrigem } from "@/lib/origem-do-pagamento";
+import { BotaoDoFicheiro, EtiquetaSemComprovativo, FiltroDaOrigemCampos } from "@/components/admin/RastoDoPagamento";
 
 export type FiltroDoTipo = "todas" | TipoDeMovimento;
 
@@ -55,6 +57,8 @@ export default function ListaDeTransacoes({
   const [contaId, setContaId] = useState<number | null>(null);
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
   const [procura, setProcura] = useState("");
+  // De onde veio cada pagamento da plataforma, e «só sem comprovativo» (d66).
+  const [filtroDaOrigem, setFiltroDaOrigem] = useState<FiltroDaOrigem>(FILTRO_DA_ORIGEM_VAZIO);
 
   const porConta = useMemo(() => new Map(contas.map((c) => [c.id, c])), [contas]);
   const porCategoria = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias]);
@@ -65,6 +69,8 @@ export default function ListaDeTransacoes({
     if (filtro !== "todas" && m.tipo !== filtro) return false;
     if (contaId != null && m.contaId !== contaId && m.contaDestinoId !== contaId) return false;
     if (categoriaId != null && m.categoriaId !== categoriaId) return false;
+    if (filtroDaOrigem.origem !== "todas" && m.origem?.chave !== filtroDaOrigem.origem) return false;
+    if (filtroDaOrigem.soSemComprovativo && !m.origem?.semComprovativo) return false;
     if (procurado) {
       const onde = [m.descricao, m.notas, porCategoria.get(m.categoriaId ?? -1)?.nome].join(" ").toLowerCase();
       if (!onde.includes(procurado)) return false;
@@ -130,6 +136,12 @@ export default function ListaDeTransacoes({
         </label>
       </div>
 
+      <FiltroDaOrigemCampos
+        valor={filtroDaOrigem}
+        onMudar={setFiltroDaOrigem}
+        quantosSemComprovativo={movimentos.filter((m) => mesDoDia(m.dia) === mes && m.origem?.semComprovativo).length}
+      />
+
       <p className="text-xs text-slate-400">
         Neste mês, com estes filtros: <span className="text-esmeralda-texto">{emEuros(resumo.receitas)} de receitas</span>
         {" · "}
@@ -143,7 +155,11 @@ export default function ListaDeTransacoes({
 
       {dias.length === 0 ? (
         <p className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-10 text-center text-sm text-slate-400">
-          Nada neste mês{filtro !== "todas" || contaId != null || categoriaId != null || procurado ? " com estes filtros" : ""}.
+          Nada neste mês
+          {filtro !== "todas" || contaId != null || categoriaId != null || procurado || filtroDaOrigem.origem !== "todas" || filtroDaOrigem.soSemComprovativo
+            ? " com estes filtros"
+            : ""}
+          .
         </p>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
@@ -255,6 +271,17 @@ function Linha({
             ) : (
               m.notas
             )}
+          </p>
+        )}
+        {/* De onde veio, e a prova (d66): o euPago com a referência, a conta da transferência, o comprovativo. */}
+        {m.origem && (
+          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+            <span className="text-slate-300">{m.origem.rotulo}</span>
+            {m.origem.detalhe && <span>{m.origem.detalhe}</span>}
+            {m.origem.comprovativos.map((c) => (
+              <BotaoDoFicheiro key={c.id} c={c} />
+            ))}
+            {m.origem.semComprovativo && <EtiquetaSemComprovativo />}
           </p>
         )}
         {/*

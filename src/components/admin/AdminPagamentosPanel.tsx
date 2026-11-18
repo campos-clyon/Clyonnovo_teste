@@ -91,6 +91,22 @@ import CorrigirOPagamento, { type CorreccaoDoPagamento } from "@/components/admi
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 import AnularAReferencia from "@/components/admin/AnularAReferencia";
 import { isMudancaType } from "@/lib/calendar-helpers";
+import {
+  FILTRO_DA_ORIGEM_VAZIO,
+  contarSemComprovativo,
+  exigeComprovativoAoRegistar,
+  exigeContaDeDestino,
+  passaNoFiltroDaOrigem,
+  type FiltroDaOrigem,
+  type OrigemDoPagamento,
+  type RegistoDoDinheiro,
+} from "@/lib/origem-do-pagamento";
+import {
+  EtiquetaSemComprovativo,
+  FiltroDaOrigemCampos,
+  ListaDosRegistos,
+} from "@/components/admin/RastoDoPagamento";
+import { FormularioDaProva, GRANDE_DEMAIS_PARA_ENVIAR, JuntarComprovativo } from "@/components/admin/ProvaDoPagamento";
 
 /** Corrigir um pagamento registado à mão: a fatura e o valor, com motivo (04-11-2026, d9). */
 const ROTA_DA_CORRECCAO = "/api/admin/pagamentos/corrigir-pagamento";
@@ -134,6 +150,8 @@ type Pagamento = {
   criadoEm: string;
   /** «trabalho», «diferenca» ou «divida» — a dívida do profissional não se anula aqui (d52). */
   parte?: string | null;
+  /** De onde veio: o euPago com a referência e o id, a transferência com a conta… — d66. */
+  origem?: OrigemDoPagamento;
 };
 
 /**
@@ -279,6 +297,8 @@ function FaturasPorEmitir({
 type Trabalho = {
   negociacaoId: number;
   pedidoId: number;
+  /** De onde veio cada pagamento deste trabalho, e os comprovativos — d66 (18-11-2026). */
+  registos?: RegistoDoDinheiro[];
   /** Conta marcada como de teste nos Profissionais — exclui-se sem restrição. */
   contaDeTeste?: boolean;
   /** Já vinha da rota e ninguém o lia: é o que separa por profissional sem confundir dois com o mesmo nome. */
@@ -1008,11 +1028,20 @@ function GestorDoDinheiro({
   const agora = new Date();
   const intervalo = intervaloDoPeriodo(periodo, agora, { de: entreDe, ate: entreAte });
   const q = busca.trim().toLowerCase();
-  const aFiltrar = Boolean(q || profissional || intervalo);
+  /*
+   * A ORIGEM DO PAGAMENTO — d66 (18-11-2026). Vale para todos os separadores,
+   * como a busca: euPago, transferência (com a conta), numerário…, e «só sem
+   * comprovativo» para completar os registos à mão antigos.
+   */
+  const [filtroDaOrigem, setFiltroDaOrigem] = useState<FiltroDaOrigem>(FILTRO_DA_ORIGEM_VAZIO);
+  const aFiltrarAOrigem = filtroDaOrigem.origem !== "todas" || filtroDaOrigem.soSemComprovativo;
+  const aFiltrar = Boolean(q || profissional || intervalo || aFiltrarAOrigem);
+  const quantosSemComprovativo = contarSemComprovativo(trabalhos.map((t) => t.registos));
 
-  /* A busca e o profissional valem para os quatro separadores por igual. */
+  /* A busca, o profissional e a origem valem para os quatro separadores por igual. */
   const filtrados = trabalhos.filter(
     (t) =>
+      passaNoFiltroDaOrigem(t.registos, filtroDaOrigem) &&
       (!profissional || String(t.providerId) === profissional) &&
       (!q ||
         [t.cliente, t.telefoneDoCliente, t.profissional, t.cidade, `#${t.pedidoId}`]
@@ -1043,7 +1072,7 @@ function GestorDoDinheiro({
     if (!aFiltrar || actual.linhas.length > 0 || comResultados.length === 0) return;
     setSeparador(comResultados[0].id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, profissional, periodo, entreDe, entreAte]);
+  }, [q, profissional, periodo, entreDe, entreAte, filtroDaOrigem]);
 
   /*
    * Um trabalho sem data não cabe em período nenhum, e sai quando há período.
@@ -1072,6 +1101,7 @@ function GestorDoDinheiro({
     setPeriodo("todos");
     setEntreDe("");
     setEntreAte("");
+    setFiltroDaOrigem(FILTRO_DA_ORIGEM_VAZIO);
     setQuantos(POR_PAGINA);
   }
 
@@ -1185,14 +1215,35 @@ function GestorDoDinheiro({
     setOcupado(t.negociacaoId);
     setErro("");
     try {
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ negociacaoId: t.negociacaoId, ...corpo }),
-      });
+      /*
+       * COM A PROVA (d66): o comprovativo e a conta onde entrou vão num
+       * formulário; o resto, em JSON como sempre.
+       */
+      const comProva = corpo.ficheiro instanceof File || typeof corpo.contaDeDestino === "string";
+      let pedido: RequestInit;
+      if (comProva) {
+        const fd = new FormData();
+        fd.set("negociacaoId", String(t.negociacaoId));
+        for (const [k, v] of Object.entries(corpo)) {
+          if (k === "ficheiro") {
+            if (v instanceof File) fd.set("file", v);
+          } else if (v != null) fd.set(k, String(v));
+        }
+        pedido = { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd };
+      } else {
+        pedido = {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ negociacaoId: t.negociacaoId, ...corpo }),
+        };
+      }
+      const r = await fetch(url, pedido);
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
-        setErro([d.error, d.detalhe].filter(Boolean).join(" — ") || "Não foi possível.");
+        setErro(
+          [d.error, d.detalhe].filter(Boolean).join(" — ") ||
+            (r.status === 413 ? GRANDE_DEMAIS_PARA_ENVIAR : "Não foi possível."),
+        );
         return;
       }
       // Excluir tira-o da lista; o resto fica aberto e à vista, para a outra pergunta.
@@ -1310,6 +1361,17 @@ function GestorDoDinheiro({
           ))}
         </div>
       </div>
+      {/* De onde veio o pagamento e a prova (d66): vale para todos os separadores. */}
+      <div className="mt-2">
+        <FiltroDaOrigemCampos
+          valor={filtroDaOrigem}
+          onMudar={(f) => {
+            setFiltroDaOrigem(f);
+            setQuantos(POR_PAGINA);
+          }}
+          quantosSemComprovativo={quantosSemComprovativo}
+        />
+      </div>
       {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
       <NoutrosSitios procura={busca} jaAqui={filtrados.map((t) => t.pedidoId)} seccao="pagamentos" />
 
@@ -1387,7 +1449,8 @@ function GestorDoDinheiro({
                   setErro("");
                   setAbertoNoGrupo((a) => (a === t.negociacaoId ? null : t.negociacaoId));
                 }}
-                onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo }, "grupo")}
+                onEntrou={(metodo, prova) => void agir(t, "/api/admin/pagamentos/recebido", corpoDoRecebido(metodo, prova), "grupo")}
+                onMudouOsRegistos={onMudou}
                 onPaguei={() => void agir(t, "/api/admin/pagamentos/pago-ao-profissional", {}, "grupo")}
                 onCorrigir={(valor, motivo) =>
                   void agir(t, "/api/admin/negociacoes/valor", { valor, motivo: motivo || undefined }, "grupo")
@@ -1589,9 +1652,12 @@ function GestorDoDinheiro({
                   <span className="flex flex-wrap items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-950/20 px-2 py-1">
                     <span className="text-[11px] text-amber-200/90">Como entrou?</span>
                     {A_MAO.map((m) => {
-                      const n = marcadosAqui.filter((t) =>
-                        aplicaSe(t, { tipo: "recebido", metodo: m.id as "transferencia" | "numerario" | "ao_profissional" }),
-                      ).length;
+                      // Transferência e numerário registam-se um a um, com o comprovativo (d66).
+                      const n = pedeAProva(m.id)
+                        ? 0
+                        : marcadosAqui.filter((t) =>
+                            aplicaSe(t, { tipo: "recebido", metodo: m.id as "transferencia" | "numerario" | "ao_profissional" }),
+                          ).length;
                       return (
                         <button
                           key={m.id}
@@ -1602,10 +1668,10 @@ function GestorDoDinheiro({
                             })
                           }
                           disabled={loteACorrer !== null || n === 0}
-                          title={m.ajuda}
+                          title={pedeAProva(m.id) ? "Um a um, no trabalho: pede o comprovativo" : m.ajuda}
                           className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-40"
                         >
-                          {m.rotulo} · {n}
+                          {m.rotulo} · {pedeAProva(m.id) ? "um a um" : n}
                         </button>
                       );
                     })}
@@ -1817,7 +1883,8 @@ function GestorDoDinheiro({
                           setErro("");
                           setAberto((a) => (a === t.negociacaoId ? null : t.negociacaoId));
                         }}
-                        onEntrou={(metodo) => void agir(t, "/api/admin/pagamentos/recebido", { metodo })}
+                        onEntrou={(metodo, prova) => void agir(t, "/api/admin/pagamentos/recebido", corpoDoRecebido(metodo, prova))}
+                        onMudouOsRegistos={onMudou}
                         onPaguei={() =>
                           void agir(t, "/api/admin/pagamentos/pago-ao-profissional", {})
                         }
@@ -1932,9 +1999,10 @@ function GestorDoDinheiro({
                 naGaveta
                 erro={erro}
                 onAbrir={() => {}}
-                onEntrou={(metodo) =>
-                  void agir(trabalhoDaGaveta, "/api/admin/pagamentos/recebido", { metodo }, "gaveta")
+                onEntrou={(metodo, prova) =>
+                  void agir(trabalhoDaGaveta, "/api/admin/pagamentos/recebido", corpoDoRecebido(metodo, prova), "gaveta")
                 }
+                onMudouOsRegistos={onMudou}
                 onPaguei={() =>
                   void agir(trabalhoDaGaveta, "/api/admin/pagamentos/pago-ao-profissional", {}, "gaveta")
                 }
@@ -2256,6 +2324,16 @@ const RESUMO_PARADO = {
 };
 
 /** As três formas de dizer o que aconteceu quando não foi pelo euPago. */
+type ProvaDoRecebido = { ficheiro: File | null; contaDeDestino: string };
+
+/** O corpo do «Já recebemos»: com a prova, vai num formulário (ver `agir`) — d66. */
+function corpoDoRecebido(metodo: string, prova?: ProvaDoRecebido): Record<string, unknown> {
+  return prova ? { metodo, ficheiro: prova.ficheiro, contaDeDestino: prova.contaDeDestino } : { metodo };
+}
+
+/** Este método pede a prova antes de gravar? (a conta numa transferência; o ficheiro em transferência e numerário) */
+const pedeAProva = (metodo: string) => exigeComprovativoAoRegistar(metodo) || exigeContaDeDestino(metodo);
+
 const A_MAO: Array<{ id: string; rotulo: string; ajuda: string }> = [
   { id: "transferencia", rotulo: "Transferência", ajuda: "Entrou na conta da CLYON" },
   { id: "numerario", rotulo: "Numerário", ajuda: "Entregue à CLYON em dinheiro" },
@@ -2273,6 +2351,7 @@ function Linha({
   erro,
   onAbrir,
   onEntrou,
+  onMudouOsRegistos,
   onPaguei,
   onCorrigir,
   onExcluir,
@@ -2295,7 +2374,10 @@ function Linha({
   naGaveta?: boolean;
   /** Para ler o histórico do pedido ao abrir (26-10-2026, d25). */
   token?: string | null;
-  onEntrou: (metodo: string) => void;
+  /** Com a prova (d66): o comprovativo e a conta onde entrou, quando o método os pede. */
+  onEntrou: (metodo: string, prova?: ProvaDoRecebido) => void;
+  /** Um comprovativo junto a um registo (d66): relê a lista. */
+  onMudouOsRegistos?: () => void;
   onPaguei: () => void;
   onCorrigir: (valor: number, motivo: string) => void;
   onExcluir: (motivo: string) => void;
@@ -2322,6 +2404,13 @@ function Linha({
    */
   const soLeitura = tudoFechado(t) && !t.contaDeTeste;
   const [comoEntrou, setComoEntrou] = useState(false);
+  /*
+   * O MÉTODO ESCOLHIDO À ESPERA DA PROVA — d66 (18-11-2026). Transferência e
+   * numerário não gravam sem o comprovativo; a transferência, sem a conta.
+   */
+  const [aProvar, setAProvar] = useState<string | null>(null);
+  const escolher = (metodo: string) => (pedeAProva(metodo) ? setAProvar(metodo) : onEntrou(metodo));
+  const algumSemComprovativo = (t.registos ?? []).some((r) => r.semComprovativo);
   // «Sem factura» pede o motivo antes de gravar (25-10-2026, d19).
   const [aEscreverMotivo, setAEscreverMotivo] = useState(false);
   const [motivoSemFactura, setMotivoSemFactura] = useState("");
@@ -2393,6 +2482,11 @@ function Linha({
             <span className="text-xs text-slate-400">· {nomeDoServico(t.servico)}</span>
           )}
           <span className="text-xs text-slate-500">· trabalho {euros(t.valorAcordado)}</span>
+          {/* De onde veio (d66): a origem de cada pagamento registado, e se falta a prova. */}
+          {(t.registos ?? []).length > 0 && (
+            <span className="text-xs text-slate-400">· {[...new Set((t.registos ?? []).map((r) => r.origem.rotulo))].join(", ")}</span>
+          )}
+          {algumSemComprovativo && <EtiquetaSemComprovativo />}
         </div>
         {/* Só o sinal de que abre — o clique é na linha toda. */}
         {!naGaveta && (
@@ -2687,11 +2781,42 @@ function Linha({
             </section>
           )}
 
+          {/*
+            DE ONDE VEIO CADA PAGAMENTO, E A PROVA — d66 (18-11-2026). O euPago
+            com a referência e o id dele; uma transferência com a conta onde
+            entrou; os registos à mão com o comprovativo (ou a etiqueta «sem
+            comprovativo», e o botão para o juntar).
+          */}
+          {(t.registos ?? []).length > 0 && (
+            <section>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">De onde veio o dinheiro</p>
+              <div className="mt-1">
+                <ListaDosRegistos
+                  registos={t.registos}
+                  juntar={(r) => <JuntarComprovativo alvo={r.alvo} alvoId={r.alvoId} onJunto={onMudouOsRegistos} />}
+                />
+              </div>
+            </section>
+          )}
+
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               O cliente pagou-nos?
             </p>
-            {emMao && t.dividaDoProfissional != null ? (
+            {aProvar && (
+              <FormularioDaProva
+                metodo={aProvar}
+                rotulo={`${aProvar === "transferencia" ? "Transferência" : "Numerário"}: a prova, antes de gravar.`}
+                ocupado={ocupado}
+                onGravar={(prova) => {
+                  const m = aProvar;
+                  setAProvar(null);
+                  onEntrou(m, prova);
+                }}
+                onCancelar={() => setAProvar(null)}
+              />
+            )}
+            {aProvar ? null : emMao && t.dividaDoProfissional != null ? (
               /*
                 EM DINHEIRO COM IVA INCLUÍDO — 01-10-2026. O cliente pagou o
                 preço inteiro ao profissional; quem nos paga é ele, o IVA e a
@@ -2737,7 +2862,7 @@ function Linha({
                     {A_MAO.filter((m) => m.id !== "ao_profissional").map((m) => (
                       <button
                         key={m.id}
-                        onClick={() => onEntrou(m.id)}
+                        onClick={() => escolher(m.id)}
                         disabled={ocupado}
                         title={m.ajuda}
                         className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-50"
@@ -2788,7 +2913,7 @@ function Linha({
                             "Veja PRIMEIRO na conta. Isto desbloqueia o dinheiro do profissional.",
                         )
                       )
-                        onEntrou(metodo);
+                        escolher(metodo);
                     }}
                     disabled={ocupado}
                     className="rounded-lg bg-emerald-700 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
@@ -2837,7 +2962,7 @@ function Linha({
                   {A_MAO.map((m) => (
                     <button
                       key={m.id}
-                      onClick={() => onEntrou(m.id)}
+                      onClick={() => escolher(m.id)}
                       disabled={ocupado}
                       title={m.ajuda}
                       className="rounded border border-slate-600 px-2 py-1 text-[11px] font-medium text-slate-200 hover:border-amber-500 hover:text-amber-200 disabled:opacity-50"
@@ -3420,8 +3545,15 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
                   <p>
                     <span className={CORES[p.estado] ?? "text-slate-400"}>{p.estado}</span> · pedido #
                     {p.pedidoId} · {comoEntrouNaLista(p.metodo)} · {euros(p.valorPago ?? p.valor)}
-                    {p.entidade && p.referencia ? ` · ${p.entidade} / ${p.referencia}` : ""}
+                    {p.origem?.detalhe
+                      ? ` · ${p.origem.detalhe}`
+                      : p.entidade && p.referencia
+                        ? ` · ${p.entidade} / ${p.referencia}`
+                        : ""}
                     {DIA(p.pagoEm ?? p.criadoEm) ? ` · ${DIA(p.pagoEm ?? p.criadoEm)}` : ""}
+                    {t && (t.registos ?? []).some((r) => r.alvo === "pagamento" && r.alvoId === p.id && r.semComprovativo) && (
+                      <span className="ml-1.5"><EtiquetaSemComprovativo /></span>
+                    )}
                     {t && faltaPagarAoProfissional(t) && (
                       <span className="ml-1.5 whitespace-nowrap font-semibold text-cyan-200">· falta pagar ao profissional</span>
                     )}
