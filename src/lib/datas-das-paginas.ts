@@ -83,7 +83,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-de-entulho": "2026-11-15",
   "/precos/recolha-de-entulho": "2026-11-15",
   // 04-11-2026 (d7): os móveis com a recolha mínima e o sofá, a cama e o armário como peças grandes.
-  "/precos/recolha-de-monos-e-moveis": "2026-11-17",
+  // 18-11-2026 (d5): a descrição com o máximo da tabela, 15 a 65 € + IVA, e o com IVA ao lado.
+  "/precos/recolha-de-monos-e-moveis": "2026-11-18",
   "/esvaziamento-de-casas": "2026-11-17",
   "/esvaziamento-de-casas-amadora": "2026-11-17",
   // 11-11-2026: as mudanças ao preço de cada parceiro (o «desde» dos parceiros da lista, ou a referência).
@@ -94,7 +95,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 31-10-2026 (d6 de 28-10): o primeiro ecrã, o número da semana, a app CLYON Pro.
   // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
   // 11-11-2026 (d7): a taxa das mudanças pela lista de parceiros, dita ao lado do exemplo.
-  "/quero-ser-parceiro": "2026-11-16",
+  // 18-11-2026 (d5): o menu «Soluções» sem a limpeza (serviço futuro).
+  "/quero-ser-parceiro": "2026-11-18",
   // 17-11-2026 (d68): a Amora no título, na descrição e no H1 (a página para onde /recolha-moveis-amora vai).
   "/recolha-moveis-seixal": "2026-11-17",
 };

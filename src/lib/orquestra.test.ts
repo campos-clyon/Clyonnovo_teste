@@ -2501,3 +2501,64 @@ describe("d70) o preço das pessoas a mais só da fonte", () => {
     expect(treze.test("413 €")).toBe(false);
   });
 });
+
+/*
+ * d5) O MÁXIMO DAS PEÇAS É A PRIMEIRA GRANDE — 18-11-2026 (o CEO e o dono).
+ *
+ * Desde a d60 a primeira peça grande conta 65 € + IVA e só as seguintes 50 €.
+ * A descrição de /precos/recolha-de-monos-e-moveis dizia «15 a 50 € + IVA»
+ * (o máximo lido de `PRECO_POR_ITEM.grande`) e a linha «Só algumas peças» do
+ * esvaziamento «15 – 50 € / peça». A faixa das peças acaba em
+ * `PRECO_MAXIMO_DA_PECA`; ninguém fecha uma faixa que começa nas pequenas com o
+ * 50 € das grandes seguintes, nem o escreve à mão («15 a 50 €», «15–50 €»).
+ * As linhas de comentário não contam (a regra é ancorada ao início da linha).
+ */
+const FAIXA_ATE_A_GRANDE_SEGUINTE: RegExp[] = [
+  /de:\s*PRECO_POR_ITEM\.pequeno\s*,\s*ate:\s*PRECO_POR_ITEM\.grande\b/,
+  /PRECO_POR_ITEM\.pequeno\)?(?:\.replace\([^)]*\))?\}\s*(?:a|até|–|-)\s*\$\{(?:\w+\()*PRECO_POR_ITEM\.grande\b/,
+  /(?<![\d.,])15\s?(?:€\s?)?(?:a|até|–|-)\s?50(?:[.,]00)?\s?€/,
+];
+const SEM_COMENTARIOS = (t: string) =>
+  t
+    .split(/\r?\n/)
+    .filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l))
+    .join("\n");
+
+describe("d5) o máximo das peças é a primeira grande (65 €), não o 50 € das seguintes", () => {
+  it("nenhuma faixa das peças acaba no 50 €, no código nem escrita à mão", () => {
+    const achados: string[] = [];
+    for (const f of FONTES) {
+      if (FONTES_DE_PRECOS.has(f)) continue;
+      const t = SEM_COMENTARIOS(readFileSync(join(RAIZ, f), "utf8"));
+      for (const re of FAIXA_ATE_A_GRANDE_SEGUINTE) {
+        const m = re.exec(t);
+        if (m) achados.push(`${f}: ${m[0]}`);
+      }
+    }
+    expect(achados).toEqual([]);
+  });
+
+  it("a descrição dos monos e móveis lê a frase curta da fonte (15 a 65 € + IVA, com o IVA ao lado)", () => {
+    const t = readFileSync(join(RAIZ, "src/app/precos/recolha-de-monos-e-moveis/page.tsx"), "utf8");
+    expect(t).toMatch(/descricaoQueCabe\(\[\s*`[^`]*\$\{MOVEIS_POR_PECA_CURTO\}/);
+    const curto = readFileSync(join(RAIZ, "src/lib/preco-de-referencia.ts"), "utf8");
+    expect(curto).toMatch(/MOVEIS_POR_PECA_CURTO = `[^`]*PRECO_MAXIMO_DA_PECA[^`]*comIva\(PRECO_MAXIMO_DA_PECA\)/);
+  });
+
+  it("o menu «Soluções» não fala de serviços futuros (a limpeza)", () => {
+    const t = SEM_COMENTARIOS(readFileSync(join(RAIZ, "src/components/Header.tsx"), "utf8"));
+    expect(t).not.toMatch(/limpeza/i);
+  });
+
+  it("a regra apanha o que devia apanhar", () => {
+    const apanha = (s: string) => FAIXA_ATE_A_GRANDE_SEGUINTE.some((re) => re.test(s));
+    expect(apanha("móveis por peça, ${PRECO_POR_ITEM.pequeno} a ${euros(PRECO_POR_ITEM.grande)} + IVA")).toBe(true);
+    expect(apanha('valor: { tipo: "faixa", de: PRECO_POR_ITEM.pequeno, ate: PRECO_POR_ITEM.grande }')).toBe(true);
+    expect(apanha("por peça, 15 a 50 € + IVA")).toBe(true);
+    expect(apanha("15 – 50 € / peça")).toBe(true);
+    expect(apanha("por peça, 15 a 65 € + IVA")).toBe(false);
+    expect(apanha("115 a 150 €")).toBe(false);
+    expect(apanha("${PRECO_DA_PRIMEIRA_GRANDE} € a primeira e ${PRECO_POR_ITEM.grande} € as seguintes")).toBe(false);
+    expect(SEM_COMENTARIOS("// era «15 – 50 € / peça»\nconst x = 1;")).not.toMatch(/50/);
+  });
+});

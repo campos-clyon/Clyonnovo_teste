@@ -3,11 +3,10 @@ import type { Metadata } from "next";
 import PaginaDePreco from "@/components/precos/PaginaDePreco";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { og } from "@/lib/open-graph";
-import { PECAS_DE_REFERENCIA, PRECOS, PRECO_POR_ITEM, RECOLHA_MINIMA_DOS_MOVEIS } from "@/lib/precos-publicos";
-import { MOVEIS_POR_PECA_COM_OS_ANDARES, O_QUE_INCLUI_A_RECOLHA_MINIMA, precoDaPecaComOIva } from "@/lib/preco-de-referencia";
+import { PECAS_DE_REFERENCIA, PRECOS } from "@/lib/precos-publicos";
+import { MOVEIS_POR_PECA_COM_OS_ANDARES, MOVEIS_POR_PECA_CURTO, O_QUE_INCLUI_A_RECOLHA_MINIMA, precoDaPecaComOIva } from "@/lib/preco-de-referencia";
 import { ACRESCIMO_POR_URGENCIA, DESMONTAGEM_A_PEDIDO, PRECO_FECHADO } from "@/lib/promessas-publicas";
 import {
-  euros,
   linhaDoEsvaziamento,
   linhasDosMonosEMoveis,
   paginaDePreco,
@@ -26,6 +25,10 @@ import { TAXA_IVA } from "@/lib/taxas-plataforma";
  *
  * 04-11-2026 (decisão d7): os móveis por peça com a recolha mínima de 40 € +
  * IVA, e o sofá, a cama e o armário grande como peças grandes, pela tabela.
+ *
+ * 18-11-2026 (decisão d5): a descrição diz o máximo da tabela, a primeira peça
+ * grande (65 €), com o valor com IVA ao lado — a frase curta da fonte
+ * (`MOVEIS_POR_PECA_CURTO`); dizia o 50 € das grandes seguintes.
  */
 const pagina = paginaDePreco("/precos/recolha-de-monos-e-moveis");
 const linhas = linhasDosMonosEMoveis();
@@ -45,7 +48,7 @@ const t01 = linhaDoEsvaziamento("T0/T1").valor;
 const moradia = linhaDoEsvaziamento("moradia").valor;
 
 const descricao = descricaoQueCabe([
-  `Recolha de monos ${semIvaEscrito(monos.valor)} + IVA; móveis por peça, ${PRECO_POR_ITEM.pequeno} a ${euros(PRECO_POR_ITEM.grande)} + IVA, recolha mínima ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA.`,
+  `Recolha de monos ${semIvaEscrito(monos.valor)} + IVA; móveis ${MOVEIS_POR_PECA_CURTO}.`,
   "Com IVA ao lado, e o que a câmara recolhe de graça.",
 ]);
 

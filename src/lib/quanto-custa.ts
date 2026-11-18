@@ -6,6 +6,7 @@ import {
   PECAS_DE_REFERENCIA,
   MINIMO_DE_SACOS,
   PRECOS,
+  PRECO_MAXIMO_DA_PECA,
   PRECO_POR_ITEM,
   PRECO_POR_SACO,
   RECOLHA_MINIMA_DOS_MOVEIS,
@@ -484,7 +485,8 @@ export function linhasDoEsvaziamento(): LinhaDaTabela[] {
       exemplo:
         "Quando não é a casa inteira, conta como recolha de móveis, peça a peça, com a recolha mínima de " +
         `${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA (${euros(comIva(RECOLHA_MINIMA_DOS_MOVEIS))} com IVA)`,
-      valor: { tipo: "faixa", de: PRECO_POR_ITEM.pequeno, ate: PRECO_POR_ITEM.grande },
+      // O máximo é a primeira grande (65 €, d60), não o 50 € das seguintes (d5, 18-11-2026).
+      valor: { tipo: "faixa", de: PRECO_POR_ITEM.pequeno, ate: PRECO_MAXIMO_DA_PECA },
       unidade: "peça",
     },
     {
