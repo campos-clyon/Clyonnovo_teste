@@ -325,7 +325,7 @@ export function soAgradece(texto: string): boolean {
 /** O texto da mensagem para a linha: sem marcas, e as imagens como imagens. */
 function resumoDaMensagem(texto: string): string {
   if (eMarcaDeImagem(texto)) return "📷 imagem";
-  if (eFotografiaFalhada(texto)) return "📷 imagem que não abriu (pedida outra vez)";
+  if (eFotografiaFalhada(texto)) return "📷 imagem que não abriu — ver no telemóvel";
   const t = semMarcaDeMao(texto).replace(/\s+/g, " ").trim();
   return t.length > 90 ? `${t.slice(0, 89)}…` : t;
 }

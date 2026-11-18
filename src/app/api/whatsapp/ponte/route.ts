@@ -118,34 +118,21 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
 }
 
 /**
- * PEDE PARA REENVIAR A FOTOGRAFIA QUE NÃO CHEGOU — 15-11-2026 (decisão d34).
- *
- * Uma só vez por rajada de fotografias falhadas (`jaPediuParaReenviar`); e o
- * envio passa pelas guardas de sempre (`enviarTextoWhatsApp`: quem pode
- * ouvir, a repetição, a língua). Nunca atira: a marca já está no fio.
+ * A FOTOGRAFIA QUE NÃO ABRIU FICA PARA A EQUIPA — 18-11-2026 (continuação da
+ * d57). Até aqui pedia-se ao cliente para a reenviar (d34, d57); a 18-11 a
+ * ponte deixou de descarregar TODAS as fotografias, e cada cliente ouviu o
+ * pedido e reenviou a mesma fotografia, que voltou a falhar. A Vitória nunca
+ * mais pede ao cliente para reenviar uma fotografia: a conversa fica guardada
+ * com a nota `NOTA_DA_FOTOGRAFIA_NO_TELEMOVEL` (separador «Guardadas» da
+ * Mesa) e a equipa vê-a no telemóvel. Nunca atira: a marca já está no fio.
  */
-/*
- * E NÃO NO INSTANTE — 17-11-2026 (decisão d57). Espera-se
- * `ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS`: se entretanto chegou uma
- * fotografia com os bytes, não se pede; se chegou outra falhada, pede ela.
- */
-async function pedirParaReenviarAFotografia(telefone: string, idDaFalhada: number | null): Promise<void> {
+async function deixarAFotografiaParaAEquipa(telefone: string): Promise<void> {
   try {
-    const { mensagensComIdDoNumeroWhatsApp, comTrancaDoNumeroWhatsApp } = await import("@/lib/db");
-    const { jaPediuParaReenviar, ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS, chegouFotografiaDepois, haFalhadaMaisNova } =
-      await import("@/lib/rajada-do-whatsapp");
-    const { PEDIR_PARA_REENVIAR_A_FOTOGRAFIA } = await import("@/lib/voz-da-vitoria");
-    const { enviarTextoWhatsApp } = await import("@/lib/whatsapp-cloud");
-    await new Promise((r) => setTimeout(r, ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS));
-    // Lido e enviado dentro da tranca do número: duas falhadas não pedem as duas.
-    await comTrancaDoNumeroWhatsApp(telefone, async () => {
-      const fio = await mensagensComIdDoNumeroWhatsApp(telefone, 40).catch(() => []);
-      if (idDaFalhada != null && (chegouFotografiaDepois(fio, idDaFalhada) || haFalhadaMaisNova(fio, idDaFalhada))) return;
-      if (jaPediuParaReenviar(fio, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA)) return;
-      await enviarTextoWhatsApp(telefone, PEDIR_PARA_REENVIAR_A_FOTOGRAFIA).catch(() => false);
-    });
+    const { anotarFotografiaNoTelemovelWhatsApp } = await import("@/lib/db");
+    const { NOTA_DA_FOTOGRAFIA_NO_TELEMOVEL } = await import("@/lib/rajada-do-whatsapp");
+    await anotarFotografiaNoTelemovelWhatsApp(telefone, NOTA_DA_FOTOGRAFIA_NO_TELEMOVEL);
   } catch (e) {
-    console.error("[ponte] não pedi para reenviar a fotografia:", e instanceof Error ? e.message : e);
+    console.error("[ponte] não anotei a fotografia para a equipa:", e instanceof Error ? e.message : e);
   }
 }
 
@@ -298,8 +285,9 @@ export async function POST(req: NextRequest) {
      *
      * ERA. Desde 15-11-2026 (decisão d34) a «foto» sem bytes é uma fotografia
      * que NÃO se viu: agradecê-la deixava o parceiro sem ela e o cliente a
-     * achar que tinha sido vista. Fica `MARCA_DE_FOTOGRAFIA_FALHADA` no fio e
-     * pede-se para a reenviar. A ponte nova di-lo também em `imagemFalhou`.
+     * achar que tinha sido vista. Fica `MARCA_DE_FOTOGRAFIA_FALHADA` no fio e,
+     * desde 18-11-2026, a conversa fica anotada para a equipa a ver no
+     * telemóvel — nada se pede ao cliente. A ponte di-lo também em `imagemFalhou`.
      */
     midia?: unknown;
     /** A fotografia não descarregou na ponte (d34, 15-11-2026). */
@@ -620,18 +608,18 @@ export async function POST(req: NextRequest) {
     } else if (marcaSemBytes === MARCA_DE_FOTOGRAFIA_FALHADA) {
       /*
        * A FOTOGRAFIA QUE NÃO DESCARREGOU — 15-11-2026 (decisão d34). Não se
-       * agradece o que não se viu: pede-se no instante para a reenviar (uma
-       * vez por rajada de fotografias falhadas), como ao áudio que não se
-       * ouviu. A legenda, essa, segue pela rajada como texto.
+       * agradece o que não se viu. Desde 18-11-2026 também não se pede para a
+       * reenviar: fica a marca no fio, a conversa anotada para a equipa a ver
+       * no telemóvel (`deixarAFotografiaParaAEquipa`), e ao cliente não sai
+       * nada por causa dela. A legenda, essa, segue pela rajada como texto.
        */
-      // Desde a d57 (17-11-2026) o pedido espera, e a legenda corre ao mesmo tempo.
-      const daFalhada = await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA_FALHADA).catch(() => null);
+      await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA_FALHADA).catch(() => null);
       const legenda = async () => {
         if (!texto.trim()) return;
         const daLegenda = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
         await responderARajada(telefone, daLegenda, texto);
       };
-      await Promise.all([pedirParaReenviarAFotografia(telefone, daFalhada), legenda()]);
+      await Promise.all([deixarAFotografiaParaAEquipa(telefone), legenda()]);
     } else if (marcaSemBytes) {
       // A imagem sem os bytes — ver `midia`. A marca vai para o fio, e a
       // rajada responde como a uma fotografia que chegou.

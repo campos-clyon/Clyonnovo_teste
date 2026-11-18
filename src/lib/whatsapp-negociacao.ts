@@ -477,7 +477,14 @@ export async function recolherPedidoPorWhatsApp(
     return;
   }
   if (r.registar) {
-    await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos });
+    /*
+     * E A FOTOGRAFIA QUE NÃO ABRIU TAMBÉM FOI MANDADA — 18-11-2026. Está no
+     * telemóvel (a equipa vê-a): no fim não se lhe pede «Se tiver
+     * fotografias…, envie-as agora». Não conta nas fotografias do pedido.
+     */
+    const { eFotografiaFalhada } = await import("@/lib/rajada-do-whatsapp");
+    const fotosNoTelemovel = fio.filter((m) => m.direccao === "in" && eFotografiaFalhada(m.texto ?? "")).length;
+    await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos, fotosNoTelemovel });
     return;
   }
 
@@ -497,7 +504,7 @@ export async function recolherPedidoPorWhatsApp(
 export async function registarARecolha(
   telefone: string,
   dados: DadosDaRecolhaNoRegisto,
-  opcoes: { fotosNaConversa?: number; sozinho?: boolean } = {},
+  opcoes: { fotosNaConversa?: number; fotosNoTelemovel?: number; sozinho?: boolean } = {},
 ): Promise<number | null> {
   const { registarPedidoDaRecolha } = await import("@/lib/registar-pedido-por-whatsapp");
   const { mensagemDePedidoRegistado, disseQueMandouFotografias } = await import("@/lib/whatsapp-recolha");
@@ -546,7 +553,11 @@ export async function registarARecolha(
      * mandou também não (a Odete, 17-10-2026 — ver
      * `disseQueMandouFotografias`).
      */
-    const comFotos = fotosNoPedido > 0 || (opcoes.fotosNaConversa ?? 0) > 0 || disseQueMandouFotografias(dados);
+    const comFotos =
+      fotosNoPedido > 0 ||
+      (opcoes.fotosNaConversa ?? 0) > 0 ||
+      (opcoes.fotosNoTelemovel ?? 0) > 0 ||
+      disseQueMandouFotografias(dados);
     await enviarTextoWhatsApp(
       telefone,
       mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true),

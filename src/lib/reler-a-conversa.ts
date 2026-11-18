@@ -453,7 +453,7 @@ const SO_FOTOGRAFIA = /^\[(fotografia|vídeo)\]$/;
 const FOTOGRAFIA_VISTA = /^\[fotografia\]\s+([\s\S]+)$/;
 const MARCA_DE_AUDIO = /^\[áudio\]\s*/;
 /** A fotografia que não descarregou — `MARCA_DE_FOTOGRAFIA_FALHADA` (d34). */
-const FOTOGRAFIA_FALHADA = /^\[fotografia não descarregada\]$/;
+const FOTOGRAFIA_FALHADA = /^\[fotografia (não descarregada|— ver no telemóvel)\]$/;
 
 /**
  * A recolha que a conversa dá, lida pelas regras de hoje.

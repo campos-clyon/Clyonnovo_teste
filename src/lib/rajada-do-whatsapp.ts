@@ -75,7 +75,20 @@ export const MARCA_DE_VIDEO = "[vídeo]";
  * (`PEDIR_PARA_REENVIAR_A_FOTOGRAFIA`, em voz-da-vitoria.ts) — desde a d57
  * depois de `ESPERA_ANTES_DE_PEDIR_A_FOTOGRAFIA_MS`, e sem cortar a rajada.
  */
-export const MARCA_DE_FOTOGRAFIA_FALHADA = "[fotografia não descarregada]";
+/*
+ * E A EQUIPA VÊ-A NO TELEMÓVEL — 18-11-2026 (continuação da d57). O pedido
+ * para a reenviar saía em todas as conversas com fotografia: a ponte deixou
+ * de as descarregar, e o cliente reenviava a mesma fotografia, que voltava a
+ * falhar. A Vitória já não pede nada ao cliente: a marca diz à equipa que a
+ * fotografia está no telemóvel, e a conversa fica guardada com essa nota
+ * (`NOTA_DA_FOTOGRAFIA_NO_TELEMOVEL`). A marca antiga lê-se na mesma.
+ */
+export const MARCA_DE_FOTOGRAFIA_FALHADA = "[fotografia — ver no telemóvel]";
+/** A marca de 15-11 a 18-11-2026 — ainda está nos fios desses dias. */
+export const MARCA_DE_FOTOGRAFIA_FALHADA_ANTIGA = "[fotografia não descarregada]";
+
+/** A nota da conversa guardada para a equipa ver as fotografias no telemóvel (18-11-2026). */
+export const NOTA_DA_FOTOGRAFIA_NO_TELEMOVEL = "📷 Fotografia por ver no telemóvel — não abriu no site";
 
 /**
  * ESPERA-SE ANTES DE PEDIR PARA A REENVIAR — 17-11-2026 (decisão d57).
@@ -131,7 +144,8 @@ export function haFalhadaMaisNova(mensagens: MensagemComId[], idDaFalhada: numbe
 
 /** Uma fotografia que chegou sem os bytes — ver `MARCA_DE_FOTOGRAFIA_FALHADA`. */
 export function eFotografiaFalhada(texto: string): boolean {
-  return texto.trim() === MARCA_DE_FOTOGRAFIA_FALHADA;
+  const t = texto.trim();
+  return t === MARCA_DE_FOTOGRAFIA_FALHADA || t === MARCA_DE_FOTOGRAFIA_FALHADA_ANTIGA;
 }
 
 /**

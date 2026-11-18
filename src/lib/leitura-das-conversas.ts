@@ -65,7 +65,7 @@ function linhaParaALeitura(m: { direccao: string; texto: string }): string | nul
       return visto ? `CLIENTE: [mandou uma fotografia: ${visto}]` : "CLIENTE: [mandou uma imagem]";
     }
     if (t === MARCA_DE_AUDIO) return "CLIENTE: [mandou um áudio que não se ouviu]";
-    if (eFotografiaFalhada(t)) return "CLIENTE: [mandou uma fotografia que não chegou a abrir; pediu-se para a reenviar]";
+    if (eFotografiaFalhada(t)) return "CLIENTE: [mandou uma fotografia que não abriu no site; a equipa vê-a no telemóvel]";
     if (t.startsWith(MARCA_DE_AUDIO)) return `CLIENTE: [áudio] ${t.slice(MARCA_DE_AUDIO.length).trim()}`;
     return `CLIENTE: ${t}`;
   }

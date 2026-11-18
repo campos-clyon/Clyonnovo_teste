@@ -10,6 +10,8 @@ import {
   jaPediuParaReenviar,
   MARCA_DE_FOTOGRAFIA,
   MARCA_DE_FOTOGRAFIA_FALHADA,
+  MARCA_DE_FOTOGRAFIA_FALHADA_ANTIGA,
+  NOTA_DA_FOTOGRAFIA_NO_TELEMOVEL,
   textoDaRajada,
 } from "./rajada-do-whatsapp";
 import { PEDIR_PARA_REENVIAR_A_FOTOGRAFIA } from "./voz-da-vitoria";
@@ -24,8 +26,12 @@ import { LICOES_DAS_CONVERSAS } from "./whatsapp-compreensao";
  * Às 08h23 uma fotografia do WhatsApp não descarregou na ponte, e a Vitória
  * respondeu «Obrigada pelas imagens!»: o parceiro recebeu o pedido sem a
  * fotografia e o cliente ficou a achar que ela tinha sido vista. Agora a
- * fotografia falhada fica marcada, não se agradece, e a Vitória pede com
- * delicadeza para a reenviar — uma vez, por muitas que falhem seguidas.
+ * fotografia falhada fica marcada e não se agradece.
+ *
+ * E JÁ NÃO SE PEDE PARA A REENVIAR — 18-11-2026 (continuação da d57). A ponte
+ * deixou de descarregar todas as fotografias, e cada cliente ouvia o pedido e
+ * reenviava a mesma, que falhava outra vez. Agora ao cliente não sai nada: a
+ * conversa fica guardada com a nota para a equipa a ver no telemóvel.
  *
  * Os números e as frases deste teste são inventados.
  */
@@ -41,6 +47,7 @@ const mundo = {
   fio: [] as Linha[],
   enviadas: [] as string[],
   cerebro: [] as Array<{ texto: string; imagens?: number }>,
+  notas: [] as Array<{ telefone: string; nota: string }>,
 };
 function gravar(direccao: string, texto: string): number {
   const id = mundo.fio.length + 1;
@@ -59,6 +66,9 @@ vi.mock("@/lib/db", () => ({
   registarMensagemWhatsApp: async (_t: string, direccao: string, texto: string) => gravar(direccao, texto),
   mensagensComIdDoNumeroWhatsApp: async () => mundo.fio.map((m) => ({ ...m })),
   comTrancaDoNumeroWhatsApp: async (_t: string, f: () => Promise<unknown>) => f(),
+  anotarFotografiaNoTelemovelWhatsApp: async (telefone: string, nota: string) => {
+    mundo.notas.push({ telefone, nota });
+  },
 }));
 vi.mock("@/lib/whatsapp-cloud", () => ({
   ponteConfigurada: () => true,
@@ -108,6 +118,7 @@ describe("a conversa: uma fotografia que não descarregou", () => {
     mundo.fio = [];
     mundo.enviadas = [];
     mundo.cerebro = [];
+    mundo.notas = [];
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -141,66 +152,67 @@ describe("a conversa: uma fotografia que não descarregou", () => {
     return Promise.all(rs);
   }
 
-  it("pede para a reenviar (depois da espera), e nunca agradece imagens que não viu", async () => {
+  it("não pede nada ao cliente: fica a marca e a nota para a equipa ver no telemóvel", async () => {
     const [r] = await correr([{ midia: "foto", imagemFalhou: true, texto: "" }]);
     expect(r.status).toBe(200);
     expect(mundo.fio[0]).toMatchObject({ direccao: "in", texto: MARCA_DE_FOTOGRAFIA_FALHADA });
-    expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
-    expect(mundo.enviadas.join(" ")).not.toMatch(/obrigad[ao] pel[ao]s? (imagens|fotografias?)/i);
+    expect(mundo.enviadas).toEqual([]);
+    expect(mundo.notas).toEqual([{ telefone: TELEFONE, nota: NOTA_DA_FOTOGRAFIA_NO_TELEMOVEL }]);
     // Sem palavras não há rajada: o cérebro nem é chamado.
     expect(mundo.cerebro).toEqual([]);
-  }, 30_000);
-
-  it("não pede no instante: aos 10 s ainda não saiu nada", async () => {
-    let aos10: string[] | null = null;
-    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }], (s) => {
-      if (s === 10) aos10 = [...mundo.enviadas];
-    });
-    expect(aos10).toEqual([]);
-    expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
-  }, 30_000);
-
-  it("se entretanto chegou a fotografia com os bytes, não se pede", async () => {
-    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }], (s) => {
-      if (s === 5) gravar("in", MARCA_DE_FOTOGRAFIA);
-    });
-    expect(mundo.enviadas).toEqual([]);
   }, 30_000);
 
   it("a ponte antiga (só «midia: foto») dá o mesmo — a «foto» sem bytes é sempre uma que falhou", async () => {
     await correr([{ midia: "foto", texto: "" }]);
     expect(mundo.fio[0].texto).toBe(MARCA_DE_FOTOGRAFIA_FALHADA);
-    expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
+    expect(mundo.enviadas).toEqual([]);
+    expect(mundo.notas).toHaveLength(1);
   }, 30_000);
 
-  it("três fotografias falhadas seguidas levam UM pedido", async () => {
+  it("três fotografias falhadas seguidas: nada ao cliente", async () => {
     await correr([
       { midia: "foto", imagemFalhou: true, texto: "" },
       { midia: "foto", imagemFalhou: true, texto: "" },
       { midia: "foto", imagemFalhou: true, texto: "" },
     ]);
-    expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
+    expect(mundo.enviadas).toEqual([]);
+    expect(mundo.enviadas.join(" ")).not.toMatch(/reenvi|outra vez/i);
   }, 30_000);
 
   it("a legenda segue pela rajada como texto, sem contar a fotografia como vista", async () => {
     await correr([{ midia: "foto", imagemFalhou: true, texto: "Um sofá e um colchão" }]);
-    expect(mundo.enviadas[0]).toBe(PEDIR_PARA_REENVIAR_A_FOTOGRAFIA);
+    expect(mundo.enviadas).toEqual([]);
     expect(mundo.cerebro).toEqual([{ texto: "Um sofá e um colchão", imagens: 0 }]);
   }, 30_000);
 
-  it("[texto][falhada][pedido de reenvio]: o texto que veio antes é lido (d57)", async () => {
+  it("[texto][falhada]: o texto que veio antes é lido, e não se pede a fotografia", async () => {
     await correr([{ texto: "Preciso de retirar um roupeiro de 4 módulos" }, { midia: "foto", imagemFalhou: true, texto: "" }]);
     expect(mundo.cerebro).toEqual([{ texto: "Preciso de retirar um roupeiro de 4 módulos", imagens: 0 }]);
-    expect(mundo.enviadas).toEqual([PEDIR_PARA_REENVIAR_A_FOTOGRAFIA]);
+    expect(mundo.enviadas).not.toContain(PEDIR_PARA_REENVIAR_A_FOTOGRAFIA);
   }, 30_000);
 
-  it("depois de ele escrever, uma nova falhada volta a pedir", async () => {
-    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }]);
-    gravar("in", "Já mandei");
-    gravar("out", "Obrigada!");
-    await correr([{ midia: "foto", imagemFalhou: true, texto: "" }]);
-    expect(mundo.enviadas.filter((t) => t === PEDIR_PARA_REENVIAR_A_FOTOGRAFIA)).toHaveLength(2);
+  /*
+   * A FOTOGRAFIA COM LEGENDA EM INGLÊS — 18-11-2026. Uma fotografia de um
+   * anúncio (código G0) com o pedido na legenda; a fotografia não abriu e não
+   * saiu nada — nem a resposta. O pedido de reenvio esperava ~20 s dentro da
+   * mesma função que respondia à legenda (Promise.all), e com o tradutor a
+   * conta passava os 60 s da Vercel: morriam as duas. Agora a legenda é a
+   * única coisa que corre, e chega ao cérebro tal como veio (texto inventado).
+   */
+  it("a legenda em inglês de uma fotografia que não abriu chega ao cérebro, e lê-se em inglês", async () => {
+    const LEGENDA = "Hi! I need junk removal in Lisbon. Could you send me a quote? (G0) 200x81x5cm3";
+    await correr([{ midia: "foto", imagemFalhou: true, texto: LEGENDA }]);
+    expect(mundo.cerebro).toEqual([{ texto: LEGENDA, imagens: 0 }]);
+    expect(mundo.enviadas).toEqual([]);
+    expect(mundo.notas).toHaveLength(1);
+    const { linguaAGuardar } = await import("./lingua-do-cliente");
+    expect(linguaAGuardar(LEGENDA)).toBe("en");
   }, 30_000);
+
+  it("a rota já não envia a frase do reenvio", () => {
+    const ROTA = readFileSync(join(process.cwd(), "src/app/api/whatsapp/ponte/route.ts"), "utf8");
+    expect(ROTA).not.toContain("PEDIR_PARA_REENVIAR_A_FOTOGRAFIA");
+  });
 });
 
 describe("as regras, puras", () => {
@@ -208,6 +220,9 @@ describe("as regras, puras", () => {
 
   it("a fotografia falhada não é uma imagem: não se agradece nem conta para não a pedir no fim", () => {
     expect(eFotografiaFalhada(FALHADA)).toBe(true);
+    // A marca de 15–18/11 ainda está nos fios desses dias.
+    expect(eFotografiaFalhada(MARCA_DE_FOTOGRAFIA_FALHADA_ANTIGA)).toBe(true);
+    expect(eMarcaDeImagem(MARCA_DE_FOTOGRAFIA_FALHADA_ANTIGA)).toBe(false);
     expect(eMarcaDeImagem(FALHADA)).toBe(false);
     const fio = [
       { id: 1, direccao: "in", texto: FALHADA },
@@ -224,7 +239,7 @@ describe("as regras, puras", () => {
       { id: 2, direccao: "in", texto: FALHADA },
     ];
     expect(textoDaRajada(fio)).toBe("Rua das Flores 1");
-    // A falhada já teve o seu pedido no instante: a rua responde por si.
+    // A falhada não espera por resposta: a rua responde por si.
     expect(eAUltimaDaRajada(1, fio)).toBe(true);
   });
 
@@ -263,9 +278,11 @@ describe("as regras, puras", () => {
     for (const l of ["en", "fr", "es"] as const) expect(traducaoFixa(P, l)).toBeTruthy();
   });
 
-  it("o aviso ao modelo sabe que a fotografia falhada não se viu", () => {
+  it("o aviso ao modelo sabe que a fotografia falhada não se viu, e que não se pede outra vez", () => {
+    expect(LICOES_DAS_CONVERSAS).toContain(`"${MARCA_DE_FOTOGRAFIA_FALHADA}"`);
     expect(LICOES_DAS_CONVERSAS).toContain('"[fotografia não descarregada]"');
     expect(LICOES_DAS_CONVERSAS).toMatch(/nunca agradeças imagens que não se viram/);
+    expect(LICOES_DAS_CONVERSAS).toMatch(/NUNCA lhe peças para reenviar a fotografia/);
   });
 });
 
@@ -277,6 +294,25 @@ describe("a ponte marca a fotografia que falhou e conta-as", () => {
     const bloco = PONTE.slice(i, PONTE.indexOf("return;", i));
     expect(bloco).toContain("contarImagemQueFalhou();");
     expect(bloco).toContain('site("POST", { telefone, midia: "foto", imagemFalhou: true, texto: legenda })');
+  });
+
+  /*
+   * 18-11-2026: a whatsapp-web.js 1.34.7 descarrega sem o mimetype e a página
+   * nova recusa (InvalidMediaFileType). A ponte descarrega pela página COM o
+   * mimetype, antes de tentar a da biblioteca — nas fotografias e nos áudios.
+   */
+  it("descarrega pela página com o mimetype, antes da biblioteca", () => {
+    const i = PONTE.indexOf("async function descarregarPelaPagina(");
+    const corpo = PONTE.slice(i, PONTE.indexOf("\n}\n", i));
+    expect(corpo).toContain("downloadAndMaybeDecrypt({");
+    expect(corpo).toContain("mimetype: m.mimetype,");
+    const t = PONTE.indexOf("async function descarregarComTentativas(");
+    const tentativas = PONTE.slice(t, PONTE.indexOf("\n}\n", t));
+    expect(tentativas.indexOf("descarregarPelaPagina(msg)")).toBeGreaterThan(-1);
+    expect(tentativas.indexOf("descarregarPelaPagina(msg)")).toBeLessThan(tentativas.indexOf("msg.downloadMedia()"));
+    const a = PONTE.indexOf('msg.type === "ptt"');
+    const audio = PONTE.slice(a, a + 600);
+    expect(audio.indexOf("descarregarPelaPagina(msg)")).toBeLessThan(audio.indexOf("msg.downloadMedia()"));
   });
 
   it("a porta mostra as falhadas da semana", () => {

@@ -153,8 +153,77 @@ function imagensQueFalharamNaSemana(agora = Date.now()) {
  */
 const ESPERAS_DA_FOTOGRAFIA_MS = [1500, 4000];
 let versaoDaPaginaCarregada = null;
+
+/**
+ * A FOTOGRAFIA DESCARREGADA À NOSSA MANEIRA — 18-11-2026.
+ *
+ * A 18-11 TODAS as fotografias falhavam, com um erro de uma letra («r») nos
+ * registos. A causa é da biblioteca: o `Message.downloadMedia()` da
+ * whatsapp-web.js 1.34.7 chama o `downloadAndMaybeDecrypt` da página SEM o
+ * `mimetype`; a página nova do WhatsApp Web toma-o por
+ * «application/octet-stream» e recusa-o para uma imagem
+ * («InvalidMediaFileType»). Só se via quando a fotografia não estava já em
+ * cache — ou seja, quase sempre (whatsapp-web.js, issue 201908; ainda sem
+ * versão que o corrija).
+ *
+ * Aqui faz-se a mesma conta que a biblioteca, COM o `mimetype`, sem mexer
+ * no node_modules. Devolve {data, mimetype} ou {erro} — o erro por extenso
+ * (nome e mensagem), para o registo dizer mais do que uma letra. A
+ * biblioteca fica como segunda tentativa (`descarregarComTentativas`).
+ */
+async function descarregarPelaPagina(msg) {
+  const pagina = client?.pupPage;
+  const id = msg?.id?._serialized;
+  if (!pagina || !id) return { erro: "sem página ou sem id" };
+  return pagina
+    .evaluate(async (msgId) => {
+      const porExtenso = (e) => [e?.name, e?.message, e?.status].filter(Boolean).join(" ") || String(e);
+      try {
+        const Colecoes = window.require("WAWebCollections");
+        const m = Colecoes.Msg.get(msgId) || (await Colecoes.Msg.getMessagesById([msgId]))?.messages?.[0];
+        if (!m) return { erro: "mensagem não encontrada na página" };
+        if (!m.directPath || !m.mediaKey) {
+          // Ainda sem os dados do ficheiro: pede-se à página que os vá buscar.
+          await m.downloadMedia?.({ downloadEvenIfExpensive: true, rmrReason: 1 }).catch(() => {});
+        }
+        if (!m.directPath) return { erro: `sem directPath (estado ${m.mediaData?.mediaStage ?? "?"})` };
+        const qpl = {
+          addAnnotations() {
+            return this;
+          },
+          addPoint() {
+            return this;
+          },
+        };
+        const bytes = await window.require("WAWebDownloadManager").downloadManager.downloadAndMaybeDecrypt({
+          directPath: m.directPath,
+          encFilehash: m.encFilehash,
+          filehash: m.filehash,
+          mediaKey: m.mediaKey,
+          mediaKeyTimestamp: m.mediaKeyTimestamp,
+          type: m.type,
+          mimetype: m.mimetype,
+          signal: new AbortController().signal,
+          downloadQpl: qpl,
+        });
+        const data = await window.WWebJS.arrayBufferToBase64Async(bytes);
+        return data ? { data, mimetype: m.mimetype } : { erro: "vazio" };
+      } catch (e) {
+        return { erro: porExtenso(e) };
+      }
+    }, id)
+    .catch((e) => ({ erro: e?.message ?? String(e) }));
+}
+
 async function descarregarComTentativas(msg, telefone) {
   for (let tentativa = 0; tentativa <= ESPERAS_DA_FOTOGRAFIA_MS.length; tentativa++) {
+    // Primeiro a nossa (com o mimetype), depois a da biblioteca — ver `descarregarPelaPagina`.
+    const nossa = await descarregarPelaPagina(msg);
+    if (nossa?.data) {
+      if (tentativa > 0) log("foto de", telefone, "descarregou à tentativa", tentativa + 1);
+      return nossa;
+    }
+    log("foto de", telefone, "— tentativa", tentativa + 1, "pela página falhou:", nossa?.erro ?? "?");
     const media = await msg.downloadMedia().catch((e) => {
       log("foto de", telefone, "— tentativa", tentativa + 1, "falhou:", e?.message ?? e);
       return null;
@@ -1142,7 +1211,10 @@ async function arrancar() {
        * escrever, em vez de ficar calado.
        */
       if (msg.hasMedia && (msg.type === "ptt" || msg.type === "audio")) {
-        const media = await msg.downloadMedia().catch(() => null);
+        // Pela página primeiro, com o mimetype (18-11-2026) — ver `descarregarPelaPagina`.
+        const nossa = await descarregarPelaPagina(msg);
+        if (!nossa?.data) log("áudio de", telefone, "— pela página falhou:", nossa?.erro ?? "?");
+        const media = nossa?.data ? nossa : await msg.downloadMedia().catch(() => null);
         const cabe = Boolean(media?.data) && media.data.length <= AUDIO_MAXIMO_BASE64;
         if (cabe) log("← áudio de", telefone);
         else log("áudio de", telefone, "não descarregou, ou é grande de mais — o site pede para escrever");

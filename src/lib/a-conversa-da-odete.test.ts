@@ -128,9 +128,9 @@ describe("a conversa da Odete: as fotografias que ela mandou", () => {
     const negociacao = semComentarios(readFileSync(join(process.cwd(), "src/lib/whatsapp-negociacao.ts"), "utf8"));
     // Desde 23-10-2026 o registo vive em `registarARecolha` — com o SIM, ou sozinho.
     expect(negociacao).toMatch(
-      /const comFotos = fotosNoPedido > 0 \|\| \(opcoes\.fotosNaConversa \?\? 0\) > 0 \|\| disseQueMandouFotografias\(dados\);\s*await enviarTextoWhatsApp\(\s*telefone,\s*mensagemDePedidoRegistado\(id, comFotos,/,
+      /const comFotos =\s*fotosNoPedido > 0 \|\|\s*\(opcoes\.fotosNaConversa \?\? 0\) > 0 \|\|\s*\(opcoes\.fotosNoTelemovel \?\? 0\) > 0 \|\|\s*disseQueMandouFotografias\(dados\);\s*await enviarTextoWhatsApp\(\s*telefone,\s*mensagemDePedidoRegistado\(id, comFotos,/,
     );
-    expect(negociacao).toContain("await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos });");
+    expect(negociacao).toContain("await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos, fotosNoTelemovel });");
   });
 
   it("o resumo fala com ela, e não dela", () => {

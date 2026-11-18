@@ -78,6 +78,13 @@ export function eUmaPergunta(texto: string): boolean {
  * recebia o pedido sem ela, e o cliente achava que tinha sido vista. Pede-se
  * com delicadeza para a reenviar, e nunca se agradece o que não se viu. Sem
  * emoji: o dela é só o do cumprimento e o do agradecimento final.
+ *
+ * JÁ NÃO SE ENVIA — 18-11-2026 (continuação da d57). A ponte deixou de
+ * descarregar as fotografias e a frase saía em todas as conversas; o cliente
+ * reenviava a mesma fotografia, que falhava outra vez. A Vitória nunca mais
+ * pede para reenviar uma fotografia: a conversa fica anotada para a equipa a
+ * ver no telemóvel (rota da ponte). A frase fica só para se reconhecer nos
+ * fios antigos (`ePedidoDeReenvio`) e nas traduções fixas.
  */
 export const PEDIR_PARA_REENVIAR_A_FOTOGRAFIA =
   "Peço desculpa, a sua fotografia não me chegou: não a consegui abrir. Pode enviá-la outra vez, por favor?";

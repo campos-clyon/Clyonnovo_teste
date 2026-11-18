@@ -13589,6 +13589,33 @@ export async function guardarConversaWhatsApp(telefone: string, guardar: boolean
   await pool.execute("DELETE FROM whatsappGuardadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos]);
 }
 
+/**
+ * A FOTOGRAFIA QUE NÃO ABRIU, PARA A EQUIPA — 18-11-2026. Guarda a conversa
+ * com a nota (separador «Guardadas» da Mesa) sem apagar a nota que a equipa
+ * lá tivesse: junta-a no fim, uma vez só. Ver `deixarAFotografiaParaAEquipa`
+ * na rota da ponte.
+ */
+export async function anotarFotografiaNoTelemovelWhatsApp(telefone: string, nota: string): Promise<void> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) throw new Error("Número demasiado curto");
+  await ensureWhatsappGuardadasTable();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [rows] = (await pool.execute(
+    "SELECT telefone, nota FROM whatsappGuardadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9) LIMIT 1",
+    [digitos],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const existente = rows[0];
+  if (!existente) {
+    await pool.execute("INSERT INTO whatsappGuardadas (telefone, nota) VALUES (?, ?)", [digitos, nota.slice(0, 500)]);
+    return;
+  }
+  const antes = existente.nota == null ? "" : String(existente.nota);
+  if (antes.includes(nota)) return;
+  const junta = (antes ? `${antes} · ${nota}` : nota).slice(0, 500);
+  await pool.execute("UPDATE whatsappGuardadas SET nota = ? WHERE telefone = ?", [junta, String(existente.telefone)]);
+}
+
 export async function listarConversasGuardadasWhatsApp(): Promise<
   Array<{ telefone: string; nota: string | null; criadoEm: string }>
 > {

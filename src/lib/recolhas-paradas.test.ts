@@ -91,7 +91,7 @@ describe("trinta minutos sem resposta ao resumo: o pedido regista-se sozinho", (
 
   it("o registo é o mesmo do SIM, e fica no histórico que foi sozinho", () => {
     const NEG = readFileSync(join(process.cwd(), "src/lib/whatsapp-negociacao.ts"), "utf8");
-    expect(NEG).toContain("await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos });");
+    expect(NEG).toContain("await registarARecolha(telefone, r.estado.dados, { fotosNaConversa: fotos, fotosNoTelemovel });");
     expect(NEG).toContain("Registado sozinho pela Vitória: o cliente não respondeu ao resumo em 30 minutos.");
     const PARADAS = readFileSync(join(process.cwd(), "src/lib/recolhas-paradas.ts"), "utf8");
     expect(PARADAS).toContain("await registarARecolha(telefone, estado.dados, { sozinho: true });");
