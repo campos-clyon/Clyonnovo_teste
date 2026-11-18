@@ -31,7 +31,6 @@ import { IDS_DA_LISTA, SERVICOS_DA_VITORIA } from "./servicos-da-vitoria";
 import { primeiroNome } from "./mensagem-whatsapp";
 import { deslocamentoDeLisboa, instanteEmLisboa } from "./hora-de-lisboa";
 import type { CamposCrus, Intencao } from "./whatsapp-compreensao";
-import { TAXA_IVA } from "./taxas-plataforma";
 import { partirMorada } from "./morada-partida";
 import { nifDaFactura } from "./pedido-valores";
 import { NA_PROPOSTA_COM_IVA, PRAZO_DE_RESPOSTA } from "./seo-data";
@@ -134,9 +133,19 @@ const SERVICO_PELAS_IMAGENS =
  * mesmo valor?». O dono: «quero que essa resposta venha com a % do IVA que
  * será aplicado — "Deseja fatura? (aplica-se IVA de 23%)"». Escrito como ele
  * o escreveu, «fatura»; o resumo diz o mesmo.
+ *
+ * A REGRA DE HOJE — 18-11-2026 (decisão d69). Desde 15-11 cada trabalho tem
+ * duas faturas (a do trabalho, do parceiro, com IVA ou isento conforme o
+ * regime dele; a da taxa, da empresa parceira da CLYON), e o preço da
+ * proposta é o total a pagar. O IVA já não depende do «sim» do cliente: «com
+ * fatura aplica-se IVA» dava a entender que sem fatura se pagava menos, e
+ * não é verdade. O site pergunta o mesmo assim — «Quero o meu NIF na fatura.
+ * O preço é o mesmo, com ou sem NIF.» (o simulador e o «pedir», d30) —, e o
+ * `precisaFatura` é isso mesmo: o pedido vai só a parceiros que a emitem com
+ * o NIF dele. Por omissão (quem diz «é indiferente»): não, como no site.
  */
-const PERCENTAGEM_DO_IVA = `${Math.round(TAXA_IVA * 100)}%`;
-const DESEJA_FACTURA = `Deseja fatura? (aplica-se IVA de ${PERCENTAGEM_DO_IVA})`;
+export const PERGUNTA_DA_FATURA = "O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?";
+const DESEJA_FACTURA = PERGUNTA_DA_FATURA;
 
 export type PassoDaRecolha =
   | "servico"
@@ -838,8 +847,17 @@ export function simOuNaoNaFactura(texto: string): "sim" | "nao" | null {
   if (/\b(quero|prefiro|queria|preferia|dou|darei|disponibiliz\w*|envio|mando)\b.*\bnif\b|\bnif\b.*\b(depois|mais tarde|se avanc\w*|quando avanc\w*|nao agora|agora nao|nao o vou dar agora)\b/.test(t)) {
     return "sim";
   }
-  if (/\b(com factura|com fatura|preciso de factura|preciso de fatura|quero factura|quero fatura|passe factura|passe fatura)\b/.test(t)) {
+  if (/\b(com factura|com fatura|preciso de factura|preciso de fatura|quero factura|quero fatura|passe factura|passe fatura|com (o )?(meu )?nif)\b/.test(t)) {
     return "sim";
+  }
+  /*
+   * «É INDIFERENTE» — 18-11-2026 (decisão d69). «É indiferente, quero saber o
+   * valor final sem alterações posteriores»: a Vitória perguntou outra vez, e
+   * depois deu a pergunta por saltada. Quem não se importa fica com a opção
+   * por omissão, a do site (a caixa do NIF vem desmarcada): sem NIF.
+   */
+  if (/\b(e |eh )?(indiferente|tanto (me )?faz|tanto da|como (quiser|preferir|achar melhor)|qualquer uma|nao me importa|nao (e|eh) importante|nao interessa|nao faz diferenca)\b/.test(t)) {
+    return "nao";
   }
   return null;
 }
@@ -1683,8 +1701,8 @@ function linhasDoResumo(d: DadosDaRecolha): string[] {
     d.precisaFatura === undefined
       ? "—"
       : d.precisaFatura
-        ? `${d.nifFactura ? `sim, NIF ${d.nifFactura}` : "sim"} (com IVA de ${PERCENTAGEM_DO_IVA})`
-        : "não";
+        ? d.nifFactura ? `com NIF ${d.nifFactura}` : "com NIF"
+        : "sem NIF";
   const linhas = [
     `Serviço: ${ETIQUETAS[d.serviceType ?? ""] ?? d.serviceType ?? "—"}`,
     `Nome: ${d.contactName ?? "—"}`,
@@ -2017,7 +2035,10 @@ export function estaNaRua(texto: string): boolean {
 }
 
 /** O que se pode saber do acesso sem se ter perguntado. */
-export type FactosSoltos = Pick<DadosDaRecolha, "floor" | "hasElevator" | "parkingDistance">;
+export type FactosSoltos = Pick<DadosDaRecolha, "floor" | "hasElevator" | "parkingDistance"> & {
+  /** «poucos degraus até à estrada» — d69. */
+  degraus?: string | null;
+};
 
 /**
  * O QUE ELE CONTOU SEM SE LHE PERGUNTAR — 06-10-2026.
@@ -2057,15 +2078,20 @@ export function factosSoltos(texto: string): FactosSoltos {
   ) {
     f.parkingDistance = "far";
   } else if (
-    /\b((tem|ha) (estacionamento|lugar para estacionar|onde estacionar)|estacionamento (no local|a porta|a frente|em frente)|da para (estacionar|encostar)|(pode|consegue) (estacionar|encostar)|estacionar a porta)\b/.test(t)
+    /\b((tem|ha) (estacionamento|lugar para estacionar|onde estacionar)|estacionamento (no local|a porta|a frente|em frente)|da para (estacionar|encostar)|(pode|consegue) (estacionar|encostar)|estacionar a porta)\b/.test(t) ||
+    // «Tem poucas escadas até à estrada», «a carrinha estaciona na rua» (d69).
+    acessoAteARua(texto)
   ) {
     f.parkingDistance = "near";
   }
+  const degraus = notaDosDegraus(texto);
+  if (degraus) f.degraus = degraus;
   return f;
 }
 
 /** Junta os factos soltos ao que ainda está vazio — e só a isso. */
 function juntarFactos(d: DadosDaRecolha, f: FactosSoltos): void {
+  anotarOsDegraus(d, f.degraus);
   if (f.floor != null && d.floor == null) d.floor = f.floor;
   if (f.hasElevator != null && d.hasElevator == null) d.hasElevator = f.hasElevator;
   if (f.parkingDistance !== undefined && d.parkingDistance === undefined) {
@@ -2702,6 +2728,132 @@ function aplicarSimOuNao(passo: PassoDaRecolha, r: "sim" | "nao", d: DadosDaReco
  * ordem de responder como uma máquina era o assistente a não ouvir. Fica «a
  * confirmar», e o profissional vê-o.
  */
+/*
+ * O ACESSO ATÉ À RUA — 18-11-2026 (decisão d69). Numa moradia em Alfragide:
+ *
+ *   VITÓRIA: E a carrinha consegue encostar à porta, ou fica um bocadinho longe?
+ *   CLIENTE: Tem poucas escadas até à estrada
+ *   VITÓRIA: Sem problema, essa pode ficar para depois. E a carrinha consegue
+ *            encostar à porta, ou fica um bocadinho longe?        ← REPETIU
+ *   CLIENTE: Como disse tem poucas escadas da porta até à estrada onde a
+ *            carrinha estaciona
+ *
+ * Ele respondeu as duas vezes: a carrinha fica na estrada, e da porta até lá
+ * há uns degraus. É «perto» (no simulador, «até 20 m»), e os degraus vão para
+ * o profissional ler — «poucos degraus até à estrada».
+ */
+const DEGRAUS_ATE_A_RUA = /\b(?:escadas?|escadinhas?|degraus?|lances?)\b[^.?!\n]{0,40}?\b(?:ate|para)\s+(?:a\s+)?(estrada|rua)\b/;
+const SUBIR_OU_DESCER_DEGRAUS =
+  /\b(?:subir|descer)\s+(?:uns|umas|alguns|algumas|poucos|poucas|\d{1,3})\s+(?:degraus|escadas|lances)\b/;
+const A_CARRINHA_ESTACIONA =
+  /\b(?:(?:carrinha|viatura|camiao|camioneta|carro)\s+(?:estaciona|para|fica|encosta|pode\s+(?:estacionar|parar|ficar))|estaciona(?:-se)?|da\s+para\s+(?:estacionar|parar))\s+(?:mesmo\s+|logo\s+)?(?:a\s+porta|na\s+(?:estrada|rua)|em\s+frente|junto\s+(?:a|da|ao|do)|ao\s+lado|perto|na\s+entrada)\b/;
+const ESTACIONAMENTO_PERTO =
+  /\b(?:ha|tem|existe)\s+(?:estacionamento|lugar(?:es)?(?:\s+para\s+estacionar)?)\s+(?:mesmo\s+)?(?:perto|proximo|ao\s+lado|junto|em\s+frente|a\s+porta)\b/;
+
+/** Diz que a carrinha fica à porta ou na rua, com ou sem uns degraus até lá? */
+export function acessoAteARua(texto: string): boolean {
+  const t = semAcentos(texto);
+  // «A carrinha não estaciona à porta», «não há estacionamento perto».
+  if (
+    /\bnao\s+(?:\w+\s+){0,2}(?:estaciona|encosta|(?:consegue|pode|da\s+para)\s+(?:estacionar|parar|encostar)|(?:ha|tem|existe)\s+(?:estacionamento|lugar))\b/.test(t)
+  ) {
+    return false;
+  }
+  return DEGRAUS_ATE_A_RUA.test(t) || SUBIR_OU_DESCER_DEGRAUS.test(t) || A_CARRINHA_ESTACIONA.test(t) || ESTACIONAMENTO_PERTO.test(t);
+}
+
+/** «poucos degraus até à estrada», «12 degraus até à rua» — ou null, se não falou de degraus. */
+export function notaDosDegraus(texto: string): string | null {
+  const t = semAcentos(texto);
+  const ate = t.match(DEGRAUS_ATE_A_RUA);
+  if (!ate && !SUBIR_OU_DESCER_DEGRAUS.test(t)) return null;
+  const onde = ate ? ate[1] : "rua";
+  const n = t.match(/\b(\d{1,3})\s*(?:degraus|escadas|lances)\b/);
+  const quantos = n ? `${n[1]} degraus` : /\b(?:poucas|poucos|umas|uns|algumas|alguns)\b/.test(t) ? "poucos degraus" : "degraus";
+  return `${quantos} até à ${onde}`;
+}
+
+/** Junta «Acesso: poucos degraus até à estrada» ao que o profissional lê, uma vez. */
+function anotarOsDegraus(d: DadosDaRecolha, nota: string | null | undefined): void {
+  if (nota) anotarLinhaDoAcesso(d, "Acesso", nota);
+}
+
+/** Uma linha «Rótulo: o que ele disse» no acesso que o profissional lê, sem a repetir. */
+function anotarLinhaDoAcesso(d: DadosDaRecolha, rotulo: string, dito: string): void {
+  const t = dito.replace(/\s*\n+\s*/g, " ").trim();
+  if (!t || (d.acessoDito ?? "").includes(t)) return;
+  const linha = `${rotulo}: ${t}`;
+  d.acessoDito = (d.acessoDito ? `${d.acessoDito}\n${linha}` : linha).slice(0, 600);
+}
+
+/**
+ * A RESPOSTA COMO VEIO — 18-11-2026 (decisão d69). *«A Vitória NUNCA repete
+ * uma pergunta a que o cliente já respondeu na conversa, mesmo que a resposta
+ * não encaixe numa opção: se não percebe, guarda a resposta tal como veio e
+ * segue em frente.»* O que se percebe dela vai para o campo; o resto fica
+ * escrito (no acesso, que o profissional lê, ou nas notas do pedido); e o
+ * passo dá-se por respondido (`saltados`), para não voltar. Ver
+ * `semRepetirAPergunta` em `nao-insistir.ts`.
+ */
+export function guardarARespostaComoVeio(dados: DadosDaRecolha, passo: PassoDaRecolha, texto: string): DadosDaRecolha {
+  const d: DadosDaRecolha = { ...dados };
+  const t = texto.replace(/\s*\n+\s*/g, " ").trim().slice(0, 300);
+  const marcar = () => {
+    if (passo !== "servico" && passo !== "confirmar") d.saltados = [...new Set([...(d.saltados ?? []), passo])];
+  };
+  if (!t) {
+    marcar();
+    return d;
+  }
+  const factos = factosSoltos(t);
+  switch (passo) {
+    case "estacionamento": {
+      const e = estacionamentoDaResposta(t, factos);
+      // O que não se percebeu fica «por saber» — e é uma resposta (o resumo diz «a confirmar»).
+      if (d.parkingDistance === undefined) d.parkingDistance = e === undefined ? null : e;
+      anotarOsDegraus(d, factos.degraus);
+      anotarLinhaDoAcesso(d, "Estacionamento", t);
+      break;
+    }
+    case "estacionamentoDestino": {
+      const e = estacionamentoDaResposta(t, factos);
+      if (d.estacionamentoDestino === undefined) d.estacionamentoDestino = e === undefined ? null : e;
+      anotarLinhaDoAcesso(d, "Estacionamento no destino", t);
+      break;
+    }
+    case "andar":
+    case "elevador":
+    case "andarDestino":
+    case "elevadorDestino": {
+      juntarFactos(d, factos);
+      if (passo === "andar" && eUmaMoradia(t) && d.hasElevator == null) d.hasElevator = "no";
+      const rotulo = { andar: "Andar", elevador: "Elevador", andarDestino: "Andar no destino", elevadorDestino: "Elevador no destino" }[passo];
+      anotarLinhaDoAcesso(d, rotulo, t);
+      break;
+    }
+    case "fatura": {
+      const r = simOuNaoNaFactura(t);
+      if (r && d.precisaFatura === undefined) d.precisaFatura = r === "sim";
+      else juntarNota(d, `Fatura: ${t}`);
+      break;
+    }
+    case "quando":
+      if (!d.quandoTexto) d.quandoTexto = t.slice(0, 200);
+      break;
+    case "descricao":
+      d.description = juntarADescricao(d.description, t);
+      break;
+    case "entulhoQuantidade":
+      if (!d.entulhoQuantidade) d.entulhoQuantidade = t.slice(0, 60);
+      break;
+    default:
+      // Um «sim» ou um «ok» sozinho não diz nada a quem lê o pedido.
+      if (t.split(/\s+/).length >= 2) juntarNota(d, t);
+  }
+  marcar();
+  return d;
+}
+
 function estacionamentoIncerto(texto: string): boolean {
   return /\b(depende|talvez|nao sei|as vezes|nem sempre|ou nao|chata|complicad\w*|apertad\w*|nao garanto|conforme)\b/.test(
     semAcentos(texto),
@@ -2812,6 +2964,8 @@ function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "fa
    */
   const metros = metrosNaFrase(t);
   if (metros != null) return metros <= 25 ? "near" : "far";
+  // «Tem poucas escadas até à estrada», «a carrinha estaciona na rua» (d69).
+  if (acessoAteARua(t)) return "near";
   const r = simOuNao(t);
   if (r) return r === "sim" ? "near" : "far";
   // «Tem estacionamento no local», «é difícil estacionar».
@@ -2943,7 +3097,8 @@ export function juntarAoPedidoOQueDisse(
   const meta = fugiuAoNome(t) || jaFezOPedido(t);
   const contaAlgo =
     !meta &&
-    (falaDeCoisas(t) || falaDoAcesso(t) || falaDeDoarOuVender(t) || clienteCarrega(t) || volumeNaFrase(t) != null);
+    // O acesso até à rua (os degraus, onde a carrinha fica) vai para o acesso, e não para a descrição (d69).
+    (falaDeCoisas(t) || (falaDoAcesso(t) && !acessoAteARua(t)) || falaDeDoarOuVender(t) || clienteCarrega(t) || volumeNaFrase(t) != null);
   // `aproveitarOResto` só escreve a descrição vazia; aqui o que ele conta junta-se sempre.
   if (contaAlgo && d.description === descricaoAntes) {
     d.description = juntarADescricao(d.description, lerMensagemLivre(t).descricao ?? t);
@@ -3153,7 +3308,7 @@ export function oQueSeCorrigiu(antes: DadosDaRecolha, depois: DadosDaRecolha): s
   // O quando tratado, como no resumo — e não as palavras dele tal e qual (d57, 17-11-2026).
   if ((antes.quandoTexto ?? null) !== (depois.quandoTexto ?? null) && depois.quandoTexto) r.push(`quando: ${quandoNoResumo(depois)}`);
   if (antes.precisaFatura !== depois.precisaFatura && depois.precisaFatura !== undefined) {
-    r.push(depois.precisaFatura ? `fatura: sim (com IVA de ${PERCENTAGEM_DO_IVA})` : "fatura: não");
+    r.push(depois.precisaFatura ? "fatura com NIF" : "fatura sem NIF");
   }
   if ((antes.hasElevator ?? null) !== (depois.hasElevator ?? null) && antes.hasElevator != null && depois.hasElevator != null) {
     r.push(depois.hasElevator === "no" ? "sem elevador" : "com elevador");
@@ -3483,7 +3638,7 @@ export function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
     case "descricao":
       return "Diga-me, por palavras suas, o que é para levar ou fazer.";
     case "fatura":
-      return `Peço desculpa, não percebi bem: deseja fatura? (aplica-se IVA de ${PERCENTAGEM_DO_IVA})`;
+      return "Peço desculpa, não percebi bem: quer o seu NIF na fatura? O preço é o mesmo, com ou sem NIF.";
     case "nif":
       return "Peço desculpa, não consegui ler o NIF. São 9 algarismos — ou, se preferir, dá-mo depois.";
     case "servico":
@@ -3617,6 +3772,7 @@ function lerAResposta(
       const metros = metrosNaFrase(t);
       if (metros != null) d.metrosAtePorta = metros;
       anotarOAcesso(d, "Estacionamento", t);
+      anotarOsDegraus(d, notaDosDegraus(t));
       // «A porta de ambos» — o Leopoldo, numa mudança: vale para as duas pontas.
       if (d.serviceType === "mudanca" && valeParaAmbos(t) && d.estacionamentoDestino === undefined) {
         d.estacionamentoDestino = e;
@@ -4077,8 +4233,8 @@ export function responderNaRecolha(
         const faturaDita =
           antesDestaMensagem.precisaFatura !== d.precisaFatura && d.precisaFatura !== undefined
             ? d.precisaFatura
-              ? `Obrigada, fica anotado: com fatura (IVA de ${PERCENTAGEM_DO_IVA}). `
-              : "Obrigada, fica anotado: sem fatura. "
+              ? "Obrigada, fica anotado: fatura com o seu NIF. "
+              : "Obrigada, fica anotado: fatura sem NIF. "
             : null;
         const anotado = nomeDito && p ? `Obrigada, ${p}! ` : faturaDita ?? (aprendeu ? "Obrigada, fica anotado. " : "");
         // Na morada, o que falta diz-se: a rua e o número.
@@ -4443,7 +4599,11 @@ export function fundirCampos(
   }
   if (k.estacionamento) {
     const r = simOuNao(k.estacionamento);
-    if (r) d.parkingDistance = r === "sim" ? "near" : "far";
+    // «poucas escadas até à estrada» — perto, e os degraus anotados (d69).
+    if (acessoAteARua(k.estacionamento)) {
+      d.parkingDistance = "near";
+      anotarOsDegraus(d, notaDosDegraus(k.estacionamento));
+    } else if (r) d.parkingDistance = r === "sim" ? "near" : "far";
     else {
       const f = factosSoltos(k.estacionamento).parkingDistance;
       if (f !== undefined) d.parkingDistance = f;
@@ -4591,7 +4751,8 @@ export function leituraDirecta(
       const e = estacionamentoDaResposta(t, factosSoltos(t));
       if (e !== "near" && e !== "far") return null;
       const metros = metrosNaFrase(t);
-      const dito = metros != null ? `a ${metros} metros` : e === "near" ? "sim" : "não";
+      // «Tem poucas escadas até à estrada» vai como ele o disse: os degraus ficam anotados (d69).
+      const dito = metros != null ? `a ${metros} metros` : acessoAteARua(t) ? t : e === "near" ? "sim" : "não";
       return valeParaAmbos(t) ? { estacionamento: dito, estacionamentoDestino: dito } : { estacionamento: dito };
     }
     default:
@@ -5041,7 +5202,7 @@ export function perguntaDeSeguimento(passo: PassoDaRecolha, d: DadosDaRecolha): 
       return "Conte-me o que há para levar ou fazer — por palavras suas, ou numa fotografia.";
     case "fatura":
       // A pergunta da fatura fica como o dono a escreveu, sempre.
-      return `Só me falta saber: ${DESEJA_FACTURA.charAt(0).toLowerCase()}${DESEJA_FACTURA.slice(1)}`;
+      return "Só me falta saber: quer o seu NIF na fatura? O preço é o mesmo, com ou sem NIF.";
     case "nif":
       return "Qual é o NIF para a fatura? São 9 algarismos — ou, se preferir, dá-mo depois.";
     default:
@@ -5207,8 +5368,8 @@ export function naoPercebeu(texto: string): boolean {
 export function explicarDeNovo(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
   if (passo === "fatura") {
     return (
-      `Peço desculpa, não fui clara! Pergunto se quer fatura: com fatura, ao valor aplica-se IVA de ${PERCENTAGEM_DO_IVA}; ` +
-      "sem fatura, não. Deseja fatura?"
+      "Peço desculpa, não fui clara! Cada trabalho tem a sua fatura, e o preço é o mesmo com ou sem NIF. " +
+      "Pergunto só: quer o seu NIF na fatura?"
     );
   }
   return `Peço desculpa, não fui clara! ${perguntaParaContinuar(passo, dados)}`;

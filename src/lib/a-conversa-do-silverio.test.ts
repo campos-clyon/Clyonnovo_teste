@@ -98,7 +98,7 @@ describe("a garagem no -3, repetida — o que ele disse não se pergunta", () =>
     expect(feitas.length).toBeGreaterThan(3);
     expect(new Set(feitas).size).toBe(feitas.length);
     expect(feitas).not.toContain("fatura");
-    for (const t of trocas) expect(t.vitoria).not.toMatch(/deseja fatura/i);
+    for (const t of trocas) expect(t.vitoria).not.toMatch(/deseja fatura|NIF na fatura/i);
   });
 
   it("a limpeza com a lavagem fica no pedido, e diz-se-lhe uma vez que fica registada", () => {
@@ -118,14 +118,14 @@ describe("a garagem no -3, repetida — o que ele disse não se pergunta", () =>
 
   it("«Pode ser sem fatura!» no resumo fica «Fatura: não» — corrige, e não se toma por um sim", () => {
     // O primeiro resumo traz o «já com IVA» da primeira mensagem.
-    expect(trocas[6].vitoria).toContain("Fatura: sim");
+    expect(trocas[6].vitoria).toContain("Fatura: com NIF");
     const t = trocas[7];
     expect(t.registar).toBe(false);
-    expect(t.vitoria.startsWith("Corrigido: fatura: não.")).toBe(true);
+    expect(t.vitoria.startsWith("Corrigido: fatura sem NIF.")).toBe(true);
     expect(t.estado.dados.precisaFatura).toBe(false);
     for (const depois of trocas.slice(7).filter((x) => x.vitoria.includes("Confirme, por favor"))) {
-      expect(depois.vitoria).toContain("Fatura: não");
-      expect(depois.vitoria).not.toContain("Fatura: sim");
+      expect(depois.vitoria).toContain("Fatura: sem NIF");
+      expect(depois.vitoria).not.toContain("Fatura: com NIF");
     }
     for (const r of trocas.filter((x) => x.vitoria.includes("Confirme, por favor"))) {
       expect(r.vitoria).toContain("Andar: piso -3");
@@ -136,7 +136,7 @@ describe("a garagem no -3, repetida — o que ele disse não se pergunta", () =>
   it("«Pode ser sem fatura!» a meio, à pergunta do piso, fica dito — e o piso volta por outras palavras", () => {
     const t = conversar([PRIMEIRA, NOME, MORADA, "Pode ser sem fatura!"])[3];
     expect(t.estado.dados.precisaFatura).toBe(false);
-    expect(t.vitoria).toContain("fica anotado: sem fatura");
+    expect(t.vitoria).toContain("fica anotado: fatura sem NIF");
     expect(t.vitoria).not.toMatch(/não percebi|não apanhei/i);
     expect(passoDaPergunta(t.vitoria)).toBe("andar");
   });
@@ -190,8 +190,8 @@ describe("a correcção no resumo errado de 13-11 — confirma-se com o resumo",
   it("«Pode ser sem fatura!» no resumo corrige — não regista", () => {
     const r = responderNaRecolha(noResumo, "Pode ser sem fatura!", AGORA, true, false);
     expect(r.registar).not.toBe(true);
-    expect(r.resposta.startsWith("Corrigido: fatura: não.")).toBe(true);
-    expect(r.resposta).toContain("Fatura: não");
+    expect(r.resposta.startsWith("Corrigido: fatura sem NIF.")).toBe(true);
+    expect(r.resposta).toContain("Fatura: sem NIF");
   });
 
   it("pelo modelo também: o «3» sem sinal e a intenção de confirmar não passam por cima das palavras dele", () => {
@@ -210,7 +210,7 @@ describe("a correcção no resumo errado de 13-11 — confirma-se com o resumo",
     });
     expect(f.registar).not.toBe(true);
     expect(f.estado.dados.precisaFatura).toBe(false);
-    expect(f.resposta).toContain("Fatura: não");
+    expect(f.resposta).toContain("Fatura: sem NIF");
     const g = responderComCompreensao(
       { passo: "confirmar", dados: { ...errado, floor: "-3", hasElevator: "yes" } },
       { intencao: "informar", campos: { andar: "3" } },
@@ -229,9 +229,9 @@ describe("a correcção no resumo errado de 13-11 — confirma-se com o resumo",
       jaCumprimentou: true,
       ditosAntes: [PRIMEIRA, NOME, MORADA],
     });
-    expect(r.resposta).not.toMatch(/deseja fatura/i);
+    expect(r.resposta).not.toMatch(/deseja fatura|NIF na fatura/i);
     expect(r.resposta).toContain("Confirme, por favor");
-    expect(r.resposta).toContain("Fatura: sim");
+    expect(r.resposta).toContain("Fatura: com NIF");
     expect(r.estado.dados.limpeza).toEqual({ lavagem: true });
   });
 });

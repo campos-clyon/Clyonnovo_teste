@@ -205,7 +205,7 @@ describe("a conversa do Maximiano", () => {
     dizer("2ª feira");
     dizer("O sofa, a caixa que acompanha a chaise e dois bancos."); // à pergunta da factura
     responderAte([
-      [/Quer a factura|Deseja fa(c)?tura/, "Sim, pode colocar nif. Mas quero orçamento"],
+      [/Quer a factura|Deseja fa(c)?tura|NIF na fatura/, "Sim, pode colocar nif. Mas quero orçamento"],
       [/NIF/, "Mando depois"],
     ]);
     return c;
@@ -264,7 +264,7 @@ describe("a conversa do Maximiano", () => {
     expect(daFactura).toBeDefined();
     expect(daFactura).toContain(COMO_CHEGA_O_PRECO);
     expect(c.disse.join("\n")).not.toContain("Qual é o NIF");
-    expect(resumo(c.estado.dados)).toContain("Fatura: sim (com IVA de 23%)");
+    expect(resumo(c.estado.dados)).toContain("Fatura: com NIF");
   });
 
   it("no resumo, «Primeiro quero saber o valor» leva a explicação, e não uma ordem", () => {

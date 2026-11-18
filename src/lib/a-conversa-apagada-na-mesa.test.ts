@@ -17,7 +17,7 @@ import { comONomeJaSabido, responderAoColega } from "./resposta-ao-colega-na-rec
 import { estimativaDoEntulhoDito } from "./preco-do-entulho-na-conversa";
 import { faixaSemEComIva } from "./preco-de-referencia";
 import { MINIMO_DE_SACOS, precoDosSacos } from "./precos-publicos";
-import { adiaAsFotografias, fotografiasParaDepois, PODE_ENVIAR_MAIS_TARDE, semRepetirAPergunta } from "./nao-insistir";
+import { adiaAsFotografias, FICA_ANOTADO, fotografiasParaDepois, PODE_ENVIAR_MAIS_TARDE, semRepetirAPergunta } from "./nao-insistir";
 
 /**
  * A CONVERSA APAGADA NA MESA — 16-11-2026 (d51, acrescentos do dono).
@@ -161,7 +161,9 @@ describe("5. não insistir", () => {
       resposta: "Peço desculpa, não apanhei bem. Com quem tenho o gosto de falar?",
     };
     const r = semRepetirAPergunta(ia, fio);
-    expect(r.resposta.startsWith(SALTO_DA_PERGUNTA)).toBe(true);
+    // Ele respondeu («sim»): desde a d69 (18-11-2026) a resposta fica como veio, e segue-se — sem «fica para depois».
+    expect(r.resposta.startsWith(FICA_ANOTADO)).toBe(true);
+    expect(r.resposta).not.toContain(SALTO_DA_PERGUNTA);
     expect(r.estado.passo).not.toBe("nome");
     expect(r.estado.dados.saltados).toContain("nome");
     // Uma pergunta nova passa como está.

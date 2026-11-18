@@ -26,6 +26,33 @@ import {
 } from "./leitor-da-recolha";
 import { soPedeOPreco } from "./orcamento-a-meio";
 import { lerAnuncioDeImovel } from "./anuncio-de-imovel";
+import { acessoAteARua, notaDosDegraus, simOuNaoNaFactura } from "./whatsapp-recolha";
+import { pedeValorFechado } from "./valor-fechado-na-recolha";
+
+describe("a conversa da moradia (18-11-2026, d69) — as frases dela", () => {
+  it("os degraus até à estrada e onde a carrinha estaciona são o acesso, perto", () => {
+    for (const f of [
+      "Tem poucas escadas até à estrada",
+      "Como disse tem poucas escadas da porta até à estrada onde a carrinha estaciona",
+      "a carrinha estaciona na estrada",
+      "Estaciona à porta",
+      "Tem de subir uns degraus",
+      "Há estacionamento perto",
+      "É uma moradia com escadas até à rua",
+    ]) {
+      expect(acessoAteARua(f), f).toBe(true);
+      expect(falaDoAcesso(f), f).toBe(true);
+    }
+    expect(notaDosDegraus("Tem poucas escadas até à estrada")).toBe("poucos degraus até à estrada");
+    expect(acessoAteARua("Não há estacionamento perto")).toBe(false);
+  });
+
+  it("«é indiferente» à fatura é a opção do site (sem NIF); e o valor fechado lê-se", () => {
+    expect(simOuNaoNaFactura("É indiferente, quero saber o valor final sem alterações posteriores")).toBe("nao");
+    expect(pedeValorFechado("É indiferente, quero saber o valor final sem alterações posteriores")).toBe(true);
+    expect(pedeValorFechado("Quanto fica o valor final?")).toBe(false);
+  });
+});
 
 describe("a mudança do Leopoldo (10-10-2026) — as frases dele", () => {
   it("o preço perguntado sem rodeios, até na primeira mensagem", () => {

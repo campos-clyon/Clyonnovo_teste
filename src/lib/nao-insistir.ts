@@ -1,11 +1,15 @@
-import { semAcentos } from "./leitor-da-recolha";
+import { falaDeCoisas, falaDoAcesso, perguntaPeloPreco, semAcentos } from "./leitor-da-recolha";
+import { eUmaPergunta } from "./voz-da-vitoria";
 import { passoDaPergunta } from "./reler-a-conversa";
-import { eDaEquipa } from "./rajada-do-whatsapp";
+import { eDaEquipa, eMarcaDeImagem, eUmaPerguntaNossa, semMarcaDeMao } from "./rajada-do-whatsapp";
 import {
+  guardarARespostaComoVeio,
+  passosEmFalta,
   perguntaParaContinuar,
   primeiroPassoEmFalta,
   saltarAPergunta,
   type EstadoDaRecolha,
+  type PassoDaRecolha,
   type RespostaDaRecolha,
 } from "./whatsapp-recolha";
 
@@ -85,10 +89,26 @@ export function fotografiasParaDepois(
 export function semRepetirAPergunta(
   r: RespostaDaRecolha,
   fio: ReadonlyArray<MensagemDoFio> | null | undefined,
+  /** A mensagem dele de agora, se o fio ainda a não tiver. */
+  texto?: string,
 ): RespostaDaRecolha {
   if (r.registar || r.desistir || r.pedirPessoa || !r.resposta.trim()) return r;
   const agora = passoDaPergunta(r.resposta);
   if (!agora || agora === "confirmar" || agora === "servico" || agora !== r.estado.passo) return r;
+  /*
+   * JÁ RESPONDIDA NA CONVERSA — 18-11-2026 (decisão d69). Perguntada antes
+   * (por ela, ou pela equipa à mão) e respondida a seguir: não se pergunta
+   * outra vez. A resposta fica como veio e segue-se — e sem «essa pode ficar
+   * para depois», que é para quem não respondeu. Só se pergunta de novo, por
+   * outras palavras e uma vez, quando o que ele disse foi claramente outra
+   * coisa (uma pergunta dele).
+   */
+  const { vezes, respostas } = respostasAPergunta(agora, comAMensagemDeAgora(fio, texto));
+  if (respostas.length > 0) {
+    if (vezes >= 2 || agora === "nome" || !respostas.every(eOutraCoisa)) return seguirComARespostaComoVeio(r, agora, respostas.join("\n"));
+    // Foi outra coisa (uma pergunta dele): a pergunta repete-se, desta vez.
+    return r;
+  }
   const ditas = daVitoria(fio);
   const ultima = ditas.length > 0 ? passoDaPergunta(ditas[ditas.length - 1]) : null;
   const nomeJaPerguntado = agora === "nome" && ditas.some((t) => passoDaPergunta(t) === "nome");
@@ -96,4 +116,109 @@ export function semRepetirAPergunta(
   const salto = saltarAPergunta(r.estado);
   // O que ela ia dizer antes da pergunta (o «obrigada», uma resposta) fica; a pergunta repetida sai.
   return { ...r, estado: salto.estado, resposta: salto.resposta };
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * A PERGUNTA JÁ RESPONDIDA — 18-11-2026 (decisão d69).
+ *
+ *   EQUIPA (à mão): Perfeito. E a carrinha consegue encostar à porta, ou fica
+ *                   um bocadinho longe?
+ *   CLIENTE:        Tem poucas escadas até à estrada
+ *   VITÓRIA:        Sem problema, essa pode ficar para depois. E a carrinha
+ *                   consegue encostar à porta, ou fica um bocadinho longe?
+ *
+ * — uma moradia em Alfragide. A recolha estava gravada no andar (a resposta
+ * «É uma moradia» tinha chegado no meio das fotografias); a equipa fez a
+ * pergunta da carrinha à mão; a Vitória leu a resposta contra o andar,
+ * repetiu o andar, e ao «não insistir» saltou-o — para a carrinha, que já
+ * estava respondida. Agora: a pergunta que está em cima é a que se responde
+ * (`naPerguntaEmCima`), e nenhuma pergunta respondida na conversa se repete
+ * (`semRepetirAPergunta`).
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** «Obrigada, fica anotado.» — à frente da pergunta seguinte, quando ele já tinha respondido. */
+export const FICA_ANOTADO = "Obrigada, fica anotado.";
+
+/** Uma marca (fotografia, vídeo, áudio, chamada) não é uma resposta com palavras. */
+function eSoUmaMarca(texto: string): boolean {
+  return eMarcaDeImagem(texto) || /^\s*\[[^\]]{1,60}\]\s*$/.test(texto);
+}
+
+/** O fio com a mensagem de agora no fim, se ainda lá não estiver. */
+function comAMensagemDeAgora(fio: ReadonlyArray<MensagemDoFio> | null | undefined, texto?: string): MensagemDoFio[] {
+  const lista = Array.isArray(fio) ? [...fio] : [];
+  const t = texto?.trim();
+  if (!t) return lista;
+  const ultimaDele = [...lista].reverse().find((m) => m?.direccao === "in");
+  const jaLaEsta = lista.length > 0 && lista[lista.length - 1]?.direccao === "in" && (ultimaDele?.texto ?? "").trim() !== "" && t.includes((ultimaDele?.texto ?? "").trim());
+  return jaLaEsta ? lista : [...lista, { direccao: "in", texto: t }];
+}
+
+/** A pergunta que esta mensagem nossa faz (da Vitória ou da equipa à mão) — só se for mesmo uma pergunta. */
+function passoPerguntado(m: MensagemDoFio | undefined): PassoDaRecolha | null {
+  if (m?.direccao !== "out" || typeof m.texto !== "string") return null;
+  const t = semMarcaDeMao(m.texto);
+  if (!eUmaPerguntaNossa(t)) return null;
+  return passoDaPergunta(t);
+}
+
+/**
+ * QUANTAS VEZES SE PERGUNTOU ESTE PASSO, E O QUE ELE RESPONDEU da última vez
+ * que respondeu — as mensagens dele entre essa pergunta e a mensagem nossa
+ * seguinte, sem as fotografias. Pura.
+ */
+export function respostasAPergunta(
+  passo: PassoDaRecolha,
+  fio: ReadonlyArray<MensagemDoFio> | null | undefined,
+): { vezes: number; respostas: string[] } {
+  const lista = Array.isArray(fio) ? fio : [];
+  let vezes = 0;
+  let respostas: string[] = [];
+  for (let i = 0; i < lista.length; i++) {
+    if (passoPerguntado(lista[i]) !== passo) continue;
+    vezes += 1;
+    const depois: string[] = [];
+    for (let j = i + 1; j < lista.length && lista[j]?.direccao !== "out"; j++) {
+      const t = lista[j]?.texto;
+      if (lista[j]?.direccao === "in" && typeof t === "string" && t.trim() && !eSoUmaMarca(t)) depois.push(t.trim());
+    }
+    if (depois.length > 0) respostas = depois;
+  }
+  return { vezes, respostas };
+}
+
+/**
+ * Claramente outra coisa: uma pergunta dele (que tem resposta própria), o
+ * preço, ou as coisas para levar — que ficam onde são, e não são a resposta.
+ * O acesso (degraus, escadas, a carrinha) nunca é outra coisa.
+ */
+function eOutraCoisa(texto: string): boolean {
+  const t = texto.trim();
+  if (falaDoAcesso(t)) return false;
+  return eUmaPergunta(t) || perguntaPeloPreco(t) || falaDeCoisas(t);
+}
+
+/** A resposta fica como veio, e pergunta-se a seguinte — com «fica anotado», não com «fica para depois». */
+function seguirComARespostaComoVeio(r: RespostaDaRecolha, passo: PassoDaRecolha, dito: string): RespostaDaRecolha {
+  const dados = guardarARespostaComoVeio(r.estado.dados, passo, dito);
+  const seguinte = primeiroPassoEmFalta(dados);
+  return { ...r, estado: { passo: seguinte, dados }, resposta: `${FICA_ANOTADO} ${perguntaParaContinuar(seguinte, dados)}` };
+}
+
+/**
+ * A PERGUNTA QUE ESTÁ EM CIMA É A QUE SE RESPONDE — quando a última mensagem
+ * nossa é uma pergunta da equipa, escrita à mão, de um passo que ainda falta
+ * e não é o que está gravado, a mensagem dele lê-se contra essa. Pura.
+ */
+export function naPerguntaEmCima(
+  e: EstadoDaRecolha,
+  fio: ReadonlyArray<MensagemDoFio> | null | undefined,
+): EstadoDaRecolha {
+  const lista = Array.isArray(fio) ? fio : [];
+  const ultimaNossa = [...lista].reverse().find((m) => m?.direccao === "out");
+  if (!ultimaNossa || typeof ultimaNossa.texto !== "string" || !eDaEquipa(ultimaNossa.texto)) return e;
+  const p = passoPerguntado(ultimaNossa);
+  if (!p || p === e.passo || p === "servico" || p === "confirmar" || e.passo === "servico" || e.passo === "confirmar") return e;
+  if (!passosEmFalta(e.dados).includes(p)) return e;
+  return { ...e, passo: p };
 }

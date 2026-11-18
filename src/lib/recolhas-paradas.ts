@@ -147,7 +147,7 @@ export async function correrAsRecolhasParadas(): Promise<PassagemDasRecolhas> {
       if (!(await db.podeOWhatsAppFalarCom(telefone))) continue;
       const guardada = await db.recolhaWhatsApp(telefone);
       if (!guardada || guardada.pedidoId != null) continue;
-      const fio = await db.mensagensDoNumeroWhatsApp(telefone, 5);
+      const fio = await db.mensagensDoNumeroWhatsApp(telefone, 20);
       const ultima = fio.length > 0 ? fio[fio.length - 1] : null;
       const estado = {
         passo: guardada.passo as PassoDaRecolha,
@@ -168,7 +168,9 @@ export async function correrAsRecolhasParadas(): Promise<PassagemDasRecolhas> {
         r.seguidas += 1;
         r.linhas.push(`${telefone}: mensagem gentil na pergunta «${estado.passo}»`);
       } else if (decisao === "saltar") {
-        const salto = saltarAPergunta(estado);
+        // A seguinte, se já foi perguntada (também à mão) e respondida, não se repete (d69).
+        const { semRepetirAPergunta } = await import("./nao-insistir");
+        const salto = semRepetirAPergunta(saltarAPergunta(estado), fio);
         await db.guardarRecolhaWhatsApp(telefone, salto.estado.passo, salto.estado.dados);
         await enviarTextoWhatsApp(telefone, salto.resposta);
         r.saltadas += 1;

@@ -322,6 +322,9 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - O LINK DE UM ANÚNCIO DE CASA (idealista, imovirtual, kasas-portugal, casa.sapo, supercasa, remax, era, century21…) diz a zona e a tipologia NO PRÓPRIO ENDEREÇO: «…/apartamento-t3-com-boas-areas-na-mina-de-agua-amadora/…» é um T3 na Mina de Água, Amadora → "codigoPostal": "Amadora". O endereço não é a morada (não tem rua nem número), e em "resposta" nunca digas que abriste ou viste o anúncio.
 - «Orçamento», «Preço?», «Quanto custa?» sozinhos, a meio das perguntas, NÃO são resposta à pergunta em cima: o cliente quer o preço. Não preenchas campo nenhum com isso, e nunca o leias como morada, nome ou descrição.
 - UM MONTA-CARGAS NÃO É UM ELEVADOR QUALQUER: «Tem monta-cargas mas não tenho a certeza que cabe», «monta cargas, não sei se cabe» → "elevador": "sim", e a frase dele (com a dúvida) fica na "descricao" — é ela que diz que é um monta-cargas e que falta confirmar se cabe. Os módulos e as partes («roupeiro de 4 módulos», «desmonta-se», «divide-se em duas partes») ficam na "descricao" — nunca a cortes a meio da morada.
+- O ACESSO ATÉ À RUA RESPONDE À CARRINHA: «Tem poucas escadas até à estrada», «poucas escadas da porta até à estrada onde a carrinha estaciona», «a carrinha estaciona na rua», «estaciona à porta», «tem de subir uns degraus», «há estacionamento perto», «é uma moradia com escadas até à rua» → "estacionamento" com a frase dele (a carrinha fica perto; os degraus vão para o profissional ler). Nunca é a "descricao", e a pergunta da carrinha não se volta a fazer.
+- A PERGUNTA EM CIMA PODE SER DA EQUIPA: uma linha do fio que começa por "[à mão]" é uma pessoa da CLYON a escrever. Se a última pergunta foi feita à mão, a mensagem dele responde a ESSA pergunta.
+- A FATURA PELA REGRA DE HOJE: a pergunta é «quer o seu NIF na fatura?» (o preço é o mesmo, com ou sem NIF). «É indiferente», «tanto faz», «como preferir» → "fatura": "não" (a opção do site). «Quero saber o valor final sem alterações posteriores», «quero um preço fechado» é o cliente a pedir o valor total: não é um campo, a CLYON anota-o sozinha.
 - CADA DATA COM A SUA PARTE DO DIA: «Amanhã ao final do dia depois das 17h ou quinta da parte da manhã» são DUAS datas — amanhã ao fim do dia (depois das 17h) ou quinta de manhã; «quinta da parte da manhã» é a quinta-feira, nunca um sítio («Quinta da …»). Em "quando" vai a frase inteira.`;
 
 /** Os exemplos verdadeiros, com a pergunta que estava feita quando chegaram. */
@@ -364,6 +367,12 @@ A pergunta era «Com quem tenho o gosto de falar?» e ela escreveu: "Está a fal
 {"intencao":"informar","campos":{}}
 
 A pergunta era «E em que piso fica a garagem?» e ele escreveu: "Pode ser sem fatura!"
+{"intencao":"informar","campos":{"fatura":"não"}}
+
+A pergunta era «[à mão] Perfeito. E a carrinha consegue encostar à porta, ou fica um bocadinho longe?» e ele escreveu: "Tem poucas escadas até à estrada"
+{"intencao":"informar","campos":{"estacionamento":"Tem poucas escadas até à estrada"}}
+
+A pergunta era «O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?» e ele escreveu: "É indiferente, quero saber o valor final sem alterações posteriores"
 {"intencao":"informar","campos":{"fatura":"não"}}
 
 A pergunta era «Está tudo certo?», o resumo dizia «Andar: r/c», e ele escreveu: "Isso é uma garagem no -3. Tudo o resto está ok"

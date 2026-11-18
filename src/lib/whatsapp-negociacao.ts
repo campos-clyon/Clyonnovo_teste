@@ -459,7 +459,19 @@ export async function recolherPedidoPorWhatsApp(
    */
   const { semFicarCalada } = await import("@/lib/nunca-calada");
   // A mesma pergunta não sai duas vezes seguidas, nem o nome duas vezes (d51) — ver `nao-insistir.ts`.
-  const lidaAgora = semRepetirAPergunta(await responder(comONomeJaSabido(estado, fio, await nomeDoNumero(estado.dados))), fio);
+  /*
+   * A PERGUNTA EM CIMA E A QUE JÁ FOI RESPONDIDA — 18-11-2026 (d69). Se a
+   * equipa fez à mão a pergunta de outro passo, a mensagem lê-se contra essa;
+   * e nenhuma pergunta respondida na conversa se repete. Quem pede o valor
+   * fechado fica com a nota no pedido e ouve a frase da base total. Ver
+   * `nao-insistir.ts` e `valor-fechado-na-recolha.ts`.
+   */
+  const { naPerguntaEmCima } = await import("@/lib/nao-insistir");
+  const { comOValorFechado } = await import("@/lib/valor-fechado-na-recolha");
+  const lidaAgora = comOValorFechado(
+    semRepetirAPergunta(await responder(comONomeJaSabido(naPerguntaEmCima(estado, fio), fio, await nomeDoNumero(estado.dados))), fio, texto),
+    texto,
+  );
   const r = texto.trim() ? semFicarCalada(lidaAgora, fio, agora, { passo: estado.passo, texto }) : lidaAgora;
 
   if (r.pedirPessoa) {

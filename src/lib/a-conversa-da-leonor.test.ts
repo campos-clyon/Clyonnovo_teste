@@ -196,7 +196,7 @@ describe.each(CAMINHOS)("a conversa da Leonor, %s", (_, comModelo) => {
     expect(daData.estado.dados.precisaFatura).toBeUndefined();
     expect(daData.estado.dados.notas).toEqual(["Só preciso do orçamento"]);
     expect(disse[6]).toContain(COMO_CHEGA_O_PRECO);
-    expect(disse[6].endsWith("Deseja fatura? (aplica-se IVA de 23%)")).toBe(true);
+    expect(disse[6].endsWith("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?")).toBe(true);
     expect(disse[6]).not.toMatch(/Peço desculpa/);
   });
 
@@ -208,7 +208,7 @@ describe.each(CAMINHOS)("a conversa da Leonor, %s", (_, comModelo) => {
     expect(r).toContain(`Morada: ${RUA}, ${CODIGO}, Algés`);
     expect(r).toContain("Andar: 2 · elevador: não · estacionar à porta: sim");
     expect(r).toContain("Quando: O quanto antes");
-    expect(r).toContain("Fatura: não");
+    expect(r).toContain("Fatura: sem NIF");
   });
 });
 
@@ -218,9 +218,9 @@ describe("a corrida: a pergunta que já não serve cala-se, e a seguinte lê as 
 
   it("com outra mensagem dele depois da última lida, a pergunta não sai; o resto sai sempre", () => {
     const depois = fio([10, "out", "Para quando precisa?"], [11, "in", "O quanto antes"], [12, "in", "Só preciso do orçamento"]);
-    expect(calarAPerguntaPorChegarOutra("Deseja fatura? (aplica-se IVA de 23%)", 11, depois)).toBe(true);
+    expect(calarAPerguntaPorChegarOutra("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?", 11, depois)).toBe(true);
     // Sem nada novo, sai.
-    expect(calarAPerguntaPorChegarOutra("Deseja fatura? (aplica-se IVA de 23%)", 12, depois)).toBe(false);
+    expect(calarAPerguntaPorChegarOutra("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?", 12, depois)).toBe(false);
     // O que não é pergunta não se perde: o registo, a passagem a uma pessoa.
     expect(calarAPerguntaPorChegarOutra("Pedido #853 registado! Muito obrigada.", 11, depois)).toBe(false);
     // O áudio que não se ouviu não corre a rajada: não pode calar ninguém.
@@ -261,7 +261,7 @@ describe("a corrida: a pergunta que já não serve cala-se, e a seguinte lê as 
     expect(r.estado.passo).toBe("fatura");
     expect(r.estado.dados.precisaFatura).toBeUndefined();
     expect(r.resposta).not.toMatch(/Peço desculpa|não apanhei|não percebi/);
-    expect(r.resposta.endsWith("Deseja fatura? (aplica-se IVA de 23%)")).toBe(true);
+    expect(r.resposta.endsWith("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?")).toBe(true);
   });
 
   it.each(CAMINHOS)("a descrição e a vaga em duas execuções: a carrinha não volta, segue a data (%s)", (_, comModelo) => {
@@ -290,7 +290,7 @@ describe("a corrida: a pergunta que já não serve cala-se, e a seguinte lê as 
     expect(r.estado.passo).toBe("estacionamento");
     expect(r.resposta).toBe(`Obrigada, fica anotado. ${deOutraForma("estacionamento", r.estado.dados)}`);
     expect(r.resposta).not.toContain("E a carrinha consegue encostar à porta");
-    expect(deOutraForma("fatura", {})).toBe("Deseja fatura? (aplica-se IVA de 23%)");
+    expect(deOutraForma("fatura", {})).toBe("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?");
     // A outra forma também se lê como a pergunta do mesmo passo (o fio, a Mesa, «Reler e continuar»).
     for (const passo of ["codigoPostal", "andar", "elevador", "estacionamento", "quando", "descricao", "entulhoQuantidade"] as const) {
       expect(passoDaPergunta(deOutraForma(passo, { postalCode: CODIGO })), passo).toBe(passo);
@@ -517,6 +517,7 @@ describe("está ligado na conversa viva", () => {
 
   it("a pergunta da factura fica exactamente como está", () => {
     const RECOLHA = ler("src/lib/whatsapp-recolha.ts");
-    expect(RECOLHA).toContain("const DESEJA_FACTURA = `Deseja fatura? (aplica-se IVA de ${PERCENTAGEM_DO_IVA})`;");
+    // Desde a d69 (18-11-2026), a pergunta da regra de hoje — a do site.
+    expect(RECOLHA).toContain('export const PERGUNTA_DA_FATURA = "O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?";');
   });
 });

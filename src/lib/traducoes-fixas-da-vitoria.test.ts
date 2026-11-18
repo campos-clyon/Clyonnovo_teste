@@ -179,11 +179,11 @@ describe("as traduções fixas cobrem o que a Vitória diz", () => {
     expect(en).toContain("Floor: 3, lift: yes, parking at the door: the van stays about 50 m away");
     expect(en).toContain("When: Friday, 30 October, in the morning");
     expect(en).toContain("Description: uma cama com colchão");
-    expect(en).toContain("Invoice: yes (with 23% VAT)");
+    expect(en).toContain("Invoice: with NIF");
     expect(en).toContain("reply YES");
     const r2 = traducaoFixa(resumos()[1], "en") ?? "";
     expect(r2).toContain("Floor: ground floor Esq, lift: yes, parking at the door: yes");
-    expect(r2).toContain("Invoice: no");
+    expect(r2).toContain("Invoice: without NIF");
     expect(traducaoFixa(resumos()[4], "en")).toContain("When: Friday, 30 October at 10:00");
     expect(traducaoFixa(resumos()[5], "en")).toContain("When: this week");
   });

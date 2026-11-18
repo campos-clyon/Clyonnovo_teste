@@ -77,7 +77,7 @@ function falaComOLeopoldo() {
     // Não lho perguntaram na conversa verdadeira: um andar qualquer.
     [/no destino, em que andar/, "2º andar"],
     [/Qual é o NIF|ler o NIF/, "Depois"],
-    [/Quer a factura|Deseja fa(c)?tura/, "Sim"],
+    [/Quer a factura|Deseja fa(c)?tura|NIF na fatura/, "Sim"],
   ];
   dizer(PRIMEIRA);
   for (let volta = 0; volta < 15 && estado.passo !== "confirmar"; volta++) {

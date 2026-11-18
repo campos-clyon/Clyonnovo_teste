@@ -121,7 +121,7 @@ describe("sem o Gemini — respostas fora de ordem", () => {
     );
     expect(r.estado.dados.nifFactura).toBe("123456789");
     expect(r.estado.passo).toBe("confirmar");
-    expect(resumo(r.estado.dados)).toContain("Fatura: sim, NIF 123456789 (com IVA de 23%)");
+    expect(resumo(r.estado.dados)).toContain("Fatura: com NIF 123456789");
   });
 
   it("no resumo, «sim, mas o andar é o 2º» corrige antes de registar", () => {

@@ -89,16 +89,16 @@ describe("a conversa da Odete: a fatura com o IVA que se aplica", () => {
   it("a pergunta diz o IVA, como o dono a escreveu", () => {
     const { disse } = falaComAOdete();
     const pergunta = disse.find((m) => /fatura/i.test(m) && !/Confirme/.test(m));
-    expect(pergunta).toMatch(/Perfeito, fica anotado\. Deseja fatura\? \(aplica-se IVA de 23%\)$/);
-    expect(perguntaDo("fatura", {})).toBe("Deseja fatura? (aplica-se IVA de 23%)");
+    expect(pergunta).toMatch(/Perfeito, fica anotado\. O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura\?$/);
+    expect(perguntaDo("fatura", {})).toBe("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?");
   });
 
   it("«Pode ser» é um sim — e o resumo devolve-lhe o IVA ao lado do sim", () => {
     const { estado, disse } = falaComAOdete();
     expect(estado.passo).toBe("confirmar");
     expect(estado.dados.precisaFatura).toBe(true);
-    expect(disse[disse.length - 1]).toContain("Fatura: sim (com IVA de 23%)");
-    expect(resumo({ ...estado.dados, precisaFatura: false })).toContain("Fatura: não");
+    expect(disse[disse.length - 1]).toContain("Fatura: com NIF");
+    expect(resumo({ ...estado.dados, precisaFatura: false })).toContain("Fatura: sem NIF");
     expect(resumo({ ...estado.dados, precisaFatura: false })).not.toContain("IVA");
   });
 

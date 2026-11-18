@@ -102,8 +102,9 @@ describe("a conversa da Luciana", () => {
     // O IVA entrou a 17-10-2026, a pedido do dono (ver a conversa da Odete).
     const { estados, disse } = falaComALuciana();
     expect(estados[5].passo).toBe("fatura");
-    expect(disse[5]).toMatch(/Deseja fatura\? \(aplica-se IVA de 23%\)$/);
-    expect(disse[5]).not.toMatch(/NIF|Miragem/);
+    expect(disse[5]).toMatch(/quer o seu NIF na fatura\?$/);
+    // Desde a d69 (18-11-2026) a pergunta diz «NIF na fatura», como o site; o número não se pede.
+    expect(disse[5]).not.toMatch(/Qual é o NIF|Miragem/);
   });
 
   it("«só se avançarmos» é um sim à factura, e segue para o resumo sem pedir o número", () => {
@@ -111,7 +112,7 @@ describe("a conversa da Luciana", () => {
     expect(estado.dados.precisaFatura).toBe(true);
     expect(estado.dados.nifFactura).toBeUndefined();
     expect(estado.passo).toBe("confirmar");
-    expect(disse[6]).toContain("Fatura: sim (com IVA de 23%)");
+    expect(disse[6]).toContain("Fatura: com NIF");
     for (const m of disse) expect(m).not.toMatch(/Qual é o NIF/);
   });
 
@@ -146,7 +147,7 @@ describe("o NIF fica para quando o cliente avançar", () => {
   });
 
   it("quem o deu por si fica com ele no resumo e no pedido", () => {
-    expect(resumo({ ...PRONTO, precisaFatura: true, nifFactura: "123456789" })).toContain("Fatura: sim, NIF 123456789 (com IVA de 23%)");
+    expect(resumo({ ...PRONTO, precisaFatura: true, nifFactura: "123456789" })).toContain("Fatura: com NIF 123456789");
   });
 
   it("o NIF para depois lê-se como um sim; o «sem NIF» como um não", () => {

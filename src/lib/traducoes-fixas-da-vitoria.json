@@ -150,6 +150,16 @@
     ["Não era nada disto que queríamos que sentisse.", "This is not at all how we wanted you to feel.", "Ce n'est pas du tout ce que nous voulions que vous ressentiez.", "No era nada de esto lo que queríamos que sintiera."],
     ["Vou passar já a conversa a uma pessoa da CLYON, que trata de tudo consigo pessoalmente, com todo o cuidado.", "I'm passing the conversation right now to a person from CLYON, who will take care of everything with you personally, with every care.", "Je transmets tout de suite la conversation à une personne de CLYON, qui s'occupera de tout avec vous personnellement, avec le plus grand soin.", "Paso ya la conversación a una persona de CLYON, que se ocupará de todo con usted personalmente, con todo el cuidado."],
     ["Peço desculpa, não apanhei bem.", "Sorry, I didn't quite catch that.", "Pardon, je n'ai pas bien compris.", "Disculpe, no lo he entendido bien."],
+    ["O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?","The price is the same with or without a tax number (NIF): would you like your NIF on the invoice?","Le prix est le même avec ou sans numéro fiscal (NIF) : souhaitez-vous votre NIF sur la facture ?","El precio es el mismo con o sin NIF: ¿quiere su NIF en la factura?"],
+    ["Peço desculpa, não percebi bem: quer o seu NIF na fatura?","Sorry, I didn't quite understand: would you like your tax number (NIF) on the invoice?","Pardon, je n'ai pas bien compris : souhaitez-vous votre numéro fiscal (NIF) sur la facture ?","Disculpe, no lo he entendido bien: ¿quiere su NIF en la factura?"],
+    ["O preço é o mesmo, com ou sem NIF.","The price is the same, with or without a NIF.","Le prix est le même, avec ou sans NIF.","El precio es el mismo, con o sin NIF."],
+    ["Só me falta saber: quer o seu NIF na fatura?","I just need to know: would you like your tax number (NIF) on the invoice?","Il me manque juste une chose : souhaitez-vous votre numéro fiscal (NIF) sur la facture ?","Solo me falta saber: ¿quiere su NIF en la factura?"],
+    ["Cada trabalho tem a sua fatura, e o preço é o mesmo com ou sem NIF.","Each job has its invoice, and the price is the same with or without a tax number (NIF).","Chaque travail a sa facture, et le prix est le même avec ou sans numéro fiscal (NIF).","Cada trabajo tiene su factura, y el precio es el mismo con o sin NIF."],
+    ["Pergunto só: quer o seu NIF na fatura?","I'm only asking: would you like your NIF on the invoice?","Je vous demande seulement : souhaitez-vous votre NIF sur la facture ?","Solo le pregunto: ¿quiere su NIF en la factura?"],
+    ["Obrigada, fica anotado: fatura com o seu NIF.","Thank you, that's noted: invoice with your tax number (NIF).","Merci, c'est noté : facture avec votre numéro fiscal (NIF).","Gracias, queda anotado: factura con su NIF."],
+    ["Obrigada, fica anotado: fatura sem NIF.","Thank you, that's noted: invoice without a tax number (NIF).","Merci, c'est noté : facture sans numéro fiscal (NIF).","Gracias, queda anotado: factura sin NIF."],
+    ["Fica anotado que quer o valor total.","It's noted that you want the total price.","C'est noté que vous voulez le prix total.","Queda anotado que quiere el precio total."],
+    ["O valor que lhe enviamos é o total do trabalho.","The price we send you is the total for the job.","Le prix que nous vous envoyons est le total du travail.","El precio que le enviamos es el total del trabajo."],
     ["Peço desculpa, não fui clara!", "Sorry, I wasn't clear!", "Pardon, je n'ai pas été claire !", "¡Disculpe, no he sido clara!"],
     ["Sem problema, essa pode ficar para depois.", "No problem, that one can wait.", "Pas de problème, celle-ci peut attendre.", "Sin problema, esa puede quedar para después."],
     ["Sem problema.", "No problem.", "Pas de problème.", "Sin problema."],
@@ -272,6 +282,8 @@
     ["—", "-", "-", "-"],
     ["r/c", "ground floor", "rez-de-chaussée", "planta baja"],
     ["cave", "basement", "sous-sol", "sótano"],
+    ["com NIF","with NIF","avec NIF","con NIF"],
+    ["sem NIF","without NIF","sans NIF","sin NIF"],
     ["sim (com IVA de 23%)", "yes (with 23% VAT)", "oui (avec TVA de 23 %)", "sí (con IVA del 23%)"],
     ["as fotografias que enviou", "the photos you sent", "les photos que vous avez envoyées", "las fotografías que envió"],
     ["hoje", "today", "aujourd'hui", "hoy"],
@@ -281,6 +293,7 @@
     ["sem pressa", "no rush", "sans urgence", "sin prisa"]
   ],
   "moldesDeValor": [
+    ["^com NIF (\\d{9})$","with NIF $1","avec NIF $1","con NIF $1"],
     ["^sim, NIF (\\d{9}) \\(com IVA de 23%\\)$", "yes, NIF $1 (with 23% VAT)", "oui, NIF $1 (avec TVA de 23 %)", "sí, NIF $1 (con IVA del 23%)"],
     ["^a carrinha fica a cerca de (\\d+) m$", "the van stays about $1 m away", "la camionnette reste à environ $1 m", "la furgoneta queda a unos $1 m"]
   ],

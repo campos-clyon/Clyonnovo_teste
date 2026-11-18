@@ -95,16 +95,17 @@ describe("a conversa do Tomé", () => {
      */
     const { disse, estados } = falaComOTome();
     expect(estados[6].passo).toBe("fatura");
-    expect(disse[6]).toMatch(/Deseja fatura\? \(aplica-se IVA de 23%\)$/);
-    expect(disse.join("\n")).not.toMatch(/Miragem|NIF/);
-    expect(perguntaDo("fatura", {})).toBe("Deseja fatura? (aplica-se IVA de 23%)");
+    expect(disse[6]).toMatch(/quer o seu NIF na fatura\?$/);
+    // Desde a d69 a pergunta diz «NIF na fatura», como o site; o número não se pede.
+    expect(disse.join("\n")).not.toMatch(/Miragem|Qual é o NIF/);
+    expect(perguntaDo("fatura", {})).toBe("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?");
   });
 
   it("«Não quero vender só doar» não é um não à factura — fica no pedido, e a pergunta segue", () => {
     const { estados, disse } = falaComOTome();
     expect(estados[7].dados.precisaFatura).toBeUndefined();
     expect(estados[7].dados.description).toContain("Não quero vender só doar");
-    expect(disse[7]).toMatch(/fica anotado[\s\S]*Deseja fatura\?/);
+    expect(disse[7]).toMatch(/fica anotado[\s\S]*NIF na fatura\?/);
   });
 
   it("e pelo caminho do Gemini também", () => {
@@ -129,9 +130,9 @@ describe("a conversa do Tomé", () => {
   it("o resumo diz a factura como se perguntou", () => {
     const { estados } = falaComOTome();
     const r = resumo({ ...estados[7].dados, precisaFatura: true });
-    expect(r).toContain("Fatura: sim (com IVA de 23%)");
-    expect(r).not.toMatch(/NIF|Miragem/);
-    expect(resumo({ ...estados[7].dados, precisaFatura: false })).toContain("Fatura: não");
+    expect(r).toContain("Fatura: com NIF");
+    expect(r).not.toMatch(/Miragem|NIF \d/);
+    expect(resumo({ ...estados[7].dados, precisaFatura: false })).toContain("Fatura: sem NIF");
   });
 
   it("a pergunta nova reconhece-se no fio", () => {

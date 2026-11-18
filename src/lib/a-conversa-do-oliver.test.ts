@@ -322,6 +322,6 @@ describe("os pormenores da conversa", () => {
 
   it("o resumo inteiro, para um resumo à mão", () => {
     const d = conversa(false).estado.dados;
-    expect(resumo(d)).toContain("Fatura: sim (com IVA de 23%)");
+    expect(resumo(d)).toContain("Fatura: com NIF");
   });
 });
