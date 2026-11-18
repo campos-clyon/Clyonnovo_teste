@@ -597,7 +597,7 @@ function Cartao({
   const categorias = categoriasDe(p.categorias);
   const guiaPorVerificar = p.emiteGuiaTransporte === 1 && !p.guiaVerificadaEm;
   const semCoordenadas = !p.baseLat || !p.baseLng;
-  // Dois pares de olhos (04-11-2026, d10.2): porque é que quem está aqui não pode aprovar — ou null.
+  // Porque é que quem está aqui não pode aprovar — ou null (04-11-2026, d10.2; sem os «dois pares de olhos» desde 18-11, d68).
   const linha = p as unknown as Record<string, unknown>;
   const naoPodeAprovar = porqueNaoPodeAprovar(linha, quem);
   const aprovadoPorVerificar = porVerificar(linha);
@@ -873,8 +873,9 @@ function Cartao({
       {/* Acções de estado — todas as transições, não só duas */}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
         {/*
-          APROVAR COM AS TRÊS CONFIRMAÇÕES E DOIS PARES DE OLHOS — 04-11-2026
-          (d10.2). O botão diz porquê antes do clique; a rota recusa na mesma.
+          APROVAR COM AS TRÊS CONFIRMAÇÕES — 04-11-2026 (d10.2). O botão diz
+          porquê antes do clique; a rota recusa na mesma. Desde 18-11-2026
+          (d68) quem confirmou pode aprovar (há um só administrador).
         */}
         {p.estado !== "aprovado" && (
           <button

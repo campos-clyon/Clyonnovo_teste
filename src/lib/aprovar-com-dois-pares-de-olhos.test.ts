@@ -2,24 +2,24 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  QUEM_APROVOU_NAO_CONFIRMA,
-  QUEM_CONFIRMA_NAO_APROVA,
+  APROVADO_E_CONFIRMADO_PELA_MESMA_PESSOA,
   SO_O_ADMINISTRADOR_APROVA,
   confirmacoesEmFalta,
+  confirmouAlgumaDasTres,
   estaVerificado,
   mesmaPessoa,
   porVerificar,
   porqueNaoPodeAprovar,
-  porqueNaoPodeConfirmar,
 } from "./parceiro-verificado";
 import { pedeOAdministrador } from "./edicao-profissional";
 
 /**
- * APROVAR COM AS TRÊS CONFIRMAÇÕES E DOIS PARES DE OLHOS — 04-11-2026 (d10.2).
+ * APROVAR COM AS TRÊS CONFIRMAÇÕES — 04-11-2026 (d10.2).
  *
- * Aprovar exige o NIF, a identidade e o contacto já confirmados; quem confirma
- * não aprova (a assistente confirma, o administrador aprova e verifica a guia);
- * fica registado quem fez cada passo. Os aprovados de antes não perdem a
+ * Aprovar exige o NIF, a identidade e o contacto já confirmados; só o
+ * administrador aprova e verifica a guia; fica registado quem fez cada passo.
+ * Desde 18-11-2026 (d68, «na empresa só tem 1 admin») sem os «dois pares de
+ * olhos»: quem confirmou pode aprovar, e o registo da aprovação diz-o. Os aprovados de antes não perdem a
  * aprovação: ficam «por verificar», e o selo continua a ser só das três.
  */
 
@@ -49,10 +49,26 @@ describe("quem pode aprovar", () => {
     expect(porqueNaoPodeAprovar({ estado: "pendente" }, ADMIN)).toContain("NIF, Identidade, Contacto");
   });
 
-  it("e não por quem fez alguma das três — dois pares de olhos", () => {
+  it("e também por quem fez as confirmações (d68: há um só administrador) — e sabe-se que foi", () => {
     const umaPeloAdmin = { ...tresPorAna, identidadeConfirmadaPor: " rui " };
-    expect(porqueNaoPodeAprovar(umaPeloAdmin, ADMIN)).toBe(QUEM_CONFIRMA_NAO_APROVA);
+    expect(porqueNaoPodeAprovar(umaPeloAdmin, ADMIN)).toBeNull();
     expect(porqueNaoPodeAprovar(tresPorAna, ADMIN)).toBeNull();
+    expect(confirmouAlgumaDasTres(umaPeloAdmin, ADMIN.nome)).toBe(true);
+    expect(confirmouAlgumaDasTres(tresPorAna, ADMIN.nome)).toBe(false);
+    // As três continuam obrigatórias, mesmo para quem as fez.
+    expect(porqueNaoPodeAprovar({ ...umaPeloAdmin, nifConfirmadoEm: null }, ADMIN)).toContain("NIF");
+  });
+
+  it("a frase dos «dois pares de olhos» saiu do ecrã e da rota", () => {
+    for (const f of [
+      "src/lib/parceiro-verificado.ts",
+      "src/components/admin/AdminProfissionaisPanel.tsx",
+      "src/app/api/admin/profissionais/[id]/route.ts",
+    ]) {
+      expect(ler(f), f).not.toContain("Peça a outra pessoa");
+      expect(ler(f), f).not.toContain("QUEM_CONFIRMA_NAO_APROVA");
+      expect(ler(f), f).not.toContain("QUEM_APROVOU_NAO_CONFIRMA");
+    }
   });
 
   it("a mesma pessoa conta-se pelo nome, sem maiúsculas nem espaços a mais; vazio nunca é a mesma", () => {
@@ -60,15 +76,6 @@ describe("quem pode aprovar", () => {
     expect(mesmaPessoa("Ana", "Rita")).toBe(false);
     expect(mesmaPessoa("", "")).toBe(false);
     expect(mesmaPessoa(null, null)).toBe(false);
-  });
-
-  it("quem aprovou não marca as confirmações", () => {
-    expect(porqueNaoPodeConfirmar({ estado: "aprovado", aprovadoPor: "Rui" }, { nome: "Rui" })).toBe(
-      QUEM_APROVOU_NAO_CONFIRMA,
-    );
-    expect(porqueNaoPodeConfirmar({ estado: "aprovado", aprovadoPor: "Rui" }, { nome: "Ana" })).toBeNull();
-    // Os aprovados de antes não têm quem aprovou: a assistente confirma-os.
-    expect(porqueNaoPodeConfirmar({ estado: "aprovado", aprovadoPor: null }, { nome: "Ana" })).toBeNull();
   });
 
   it("aprovar e verificar a guia são decisões do administrador; o resto não", () => {
@@ -109,7 +116,18 @@ describe("a rota cumpre-o antes de escrever, e regista quem foi", () => {
     }
     expect(rota).toContain('soDoAdministrador && colab.papel !== "admin"');
     expect(rota).toContain("porqueNaoPodeAprovar(actual, { nome: colab.nome, papel: colab.papel })");
-    expect(rota).toContain("porqueNaoPodeConfirmar(actual, { nome: colab.nome })");
+    expect(rota).not.toContain("porqueNaoPodeConfirmar");
+  });
+
+  it("aprovar pela mesma pessoa que confirmou fica no registo da aprovação (d68)", () => {
+    expect(APROVADO_E_CONFIRMADO_PELA_MESMA_PESSOA).toBe("aprovado e confirmado pela mesma pessoa");
+    expect(rota).toContain("mesmaPessoaConfirmouEAprova = confirmouAlgumaDasTres(actual, colab.nome)");
+    const marca = 'acontecimento: "profissional_aprovado"';
+    const i = rota.indexOf(marca);
+    expect(i).toBeGreaterThan(rota.indexOf("await definirEstadoDoProfissional("));
+    const bloco = rota.slice(i, i + 600);
+    expect(bloco).toContain("providerId,");
+    expect(bloco).toContain("APROVADO_E_CONFIRMADO_PELA_MESMA_PESSOA");
   });
 
   it("aprovar grava quem aprovou e quando", () => {

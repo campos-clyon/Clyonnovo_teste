@@ -6,8 +6,9 @@ import {
   COLUNAS_DA_CONFIRMACAO,
   SO_O_ADMINISTRADOR_APROVA,
   SO_O_ADMINISTRADOR_VERIFICA_A_GUIA,
+  APROVADO_E_CONFIRMADO_PELA_MESMA_PESSOA,
+  confirmouAlgumaDasTres,
   porqueNaoPodeAprovar,
-  porqueNaoPodeConfirmar,
 } from "@/lib/parceiro-verificado";
 import {
   verificarGuiaDeTransporte,
@@ -64,10 +65,11 @@ export const runtime = "nodejs";
  * mas NÃO PODE SER CONTRATADO nem escolhido para eles até a guia ser
  * verificada (04-11-2026, d10.1 — `guia-antes-de-contratar.ts`).
  *
- * DOIS PARES DE OLHOS — 04-11-2026 (d10.2). Aprovar e verificar a guia são só
- * do administrador; aprovar exige as três confirmações (NIF, identidade,
- * contacto) já feitas, e por outra pessoa — a assistente confirma, o
- * administrador aprova. Fica registado quem fez cada passo. Ver
+ * APROVAR COM AS TRÊS CONFIRMAÇÕES — 04-11-2026 (d10.2). Aprovar e verificar a
+ * guia são só do administrador; aprovar exige as três confirmações (NIF,
+ * identidade, contacto) já feitas. Fica registado quem fez cada passo. Desde
+ * 18-11-2026 (d68) podem ser da mesma pessoa que aprova (há um só
+ * administrador) — e então o registo da aprovação diz-o. Ver
  * `parceiro-verificado.ts` e `pedeOAdministrador` em `edicao-profissional.ts`.
  */
 export async function PATCH(
@@ -91,14 +93,17 @@ export async function PATCH(
   }
 
   /*
-   * DOIS PARES DE OLHOS — 04-11-2026 (d10.2). Tudo isto se decide ANTES de
-   * qualquer escrita, pela base como está agora:
+   * APROVAR COM AS TRÊS CONFIRMAÇÕES — 04-11-2026 (d10.2). Tudo isto se decide
+   * ANTES de qualquer escrita, pela base como está agora:
    *
    *   · aprovar e verificar a guia são só do administrador;
-   *   · aprovar pede as três confirmações já feitas, nenhuma por quem aprova —
-   *     e vem sozinho: com dados ou confirmações no mesmo pedido, as
-   *     confirmações podiam cair ou nascer pela mão de quem aprova;
-   *   · quem aprovou não marca confirmações.
+   *   · aprovar pede as três confirmações já feitas — e vem sozinho: com dados
+   *     ou confirmações no mesmo pedido, as confirmações podiam cair ou nascer
+   *     no mesmo clique.
+   *
+   * Desde 18-11-2026 (d68) quem confirmou pode aprovar e quem aprovou pode
+   * confirmar (há um só administrador); quando é a mesma pessoa, o registo da
+   * aprovação diz «aprovado e confirmado pela mesma pessoa».
    */
   const soDoAdministrador = pedeOAdministrador(corpo);
   if (soDoAdministrador && colab.papel !== "admin") {
@@ -107,12 +112,9 @@ export async function PATCH(
       { status: 403 },
     );
   }
-  const marcaConfirmacoes =
-    !!corpo.confirmacoes &&
-    typeof corpo.confirmacoes === "object" &&
-    Object.values(corpo.confirmacoes as Record<string, unknown>).some((v) => v === true);
-  if (soDoAdministrador === "aprovar" || marcaConfirmacoes) {
-    if (soDoAdministrador === "aprovar" && (CAMPOS_DE_DADOS.some((k) => k in corpo) || corpo.confirmacoes !== undefined)) {
+  let mesmaPessoaConfirmouEAprova = false;
+  if (soDoAdministrador === "aprovar") {
+    if (CAMPOS_DE_DADOS.some((k) => k in corpo) || corpo.confirmacoes !== undefined) {
       return NextResponse.json(
         { error: "Aprovar é um passo à parte: grave primeiro os dados e as confirmações." },
         { status: 400 },
@@ -129,14 +131,12 @@ export async function PATCH(
     )) as [Array<Record<string, unknown>>, unknown];
     const actual = linhas[0];
     if (!actual) return NextResponse.json({ error: `O profissional #${providerId} não foi encontrado.` }, { status: 404 });
-    const recusa =
-      soDoAdministrador === "aprovar"
-        ? porqueNaoPodeAprovar(actual, { nome: colab.nome, papel: colab.papel })
-        : porqueNaoPodeConfirmar(actual, { nome: colab.nome });
+    const recusa = porqueNaoPodeAprovar(actual, { nome: colab.nome, papel: colab.papel });
     if (recusa) {
-      console.warn(`[admin/profissionais] #${providerId}: ${soDoAdministrador === "aprovar" ? "aprovar" : "confirmar"} recusado a ${colab.nome}`);
+      console.warn(`[admin/profissionais] #${providerId}: aprovar recusado a ${colab.nome}`);
       return NextResponse.json({ error: recusa }, { status: 409 });
     }
+    mesmaPessoaConfirmouEAprova = confirmouAlgumaDasTres(actual, colab.nome);
   }
 
   /*
@@ -239,7 +239,28 @@ export async function PATCH(
       // Quem aprovou fica registado (04-11-2026, d10.2).
       await definirEstadoDoProfissional(providerId, corpo.estado, colab.nome);
       feito.push(`estado: ${corpo.estado}`);
-      if (corpo.estado === "aprovado") console.info(`[admin/profissionais] #${providerId} aprovado por ${colab.nome}`);
+      if (corpo.estado === "aprovado") {
+        console.info(`[admin/profissionais] #${providerId} aprovado por ${colab.nome}`);
+        /*
+         * O registo da aprovação, no histórico do profissional (registo
+         * permanente, por providerId) — d68, 18-11-2026. Quando quem aprova
+         * fez alguma das três confirmações, fica dito, para auditoria.
+         */
+        await registarSemFalhar({
+          acontecimento: "profissional_aprovado",
+          providerId,
+          autorTipo: "clyon",
+          autorNome: colab.nome,
+          resumo: mesmaPessoaConfirmouEAprova
+            ? `Profissional #${providerId} ${APROVADO_E_CONFIRMADO_PELA_MESMA_PESSOA} (${colab.nome}).`
+            : `Profissional #${providerId} aprovado por ${colab.nome}.`,
+          detalhe: {
+            porId: colab.id ?? null,
+            papel: colab.papel,
+            mesmaPessoaConfirmouEAprova,
+          },
+        });
+      }
 
       // Aprovar é o momento em que ele passa a ter conta. Antes disso não faz
       // sentido dar-lhe palavra-passe: não recebe pedidos, e o painel estaria

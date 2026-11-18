@@ -54,7 +54,7 @@ export function parceiroNaFrase(nome: string, verificado: boolean): string {
 }
 
 /*
- * ── APROVAR COM AS TRÊS CONFIRMAÇÕES E DOIS PARES DE OLHOS ─────────────────
+ * ── APROVAR COM AS TRÊS CONFIRMAÇÕES ───────────────────────────────────────
  * 04-11-2026 (d10.2, decisão do CEO e do dono: «Confiança antes de crescer»).
  *
  * Até aqui uma só pessoa com a secção Profissionais confirmava, aprovava e
@@ -62,8 +62,8 @@ export function parceiroNaFrase(nome: string, verificado: boolean): string {
  * pedidos (só não tinha o selo). Agora:
  *
  *   · APROVAR exige as três confirmações JÁ FEITAS — NIF, identidade, contacto;
- *   · quem CONFIRMA não APROVA: a assistente confirma; o ADMINISTRADOR aprova
- *     (e verifica a guia), e não pode ter feito nenhuma das três;
+ *   · a assistente confirma; o ADMINISTRADOR aprova (e verifica a guia) — e,
+ *     desde 18-11-2026 (d68), pode ter sido ele a fazer as confirmações;
  *   · fica registado quem fez cada passo — as confirmações já guardavam quem e
  *     quando; a aprovação passa a guardar `aprovadoEm` e `aprovadoPor`.
  *
@@ -73,15 +73,21 @@ export function parceiroNaFrase(nome: string, verificado: boolean): string {
  * aprovar de novo, e segue a regra.
  *
  * As frases e as perguntas vivem aqui para o ecrã e a rota dizerem o mesmo.
+ *
+ * SEM OS «DOIS PARES DE OLHOS» — 18-11-2026 (d68, pedida pelo dono: «na
+ * empresa só tem 1 admin»). Quem confirmou pode aprovar, e quem aprovou pode
+ * confirmar: com um só administrador, a regra deixava-o sem poder aprovar o
+ * que ele próprio confirmou. As três confirmações continuam OBRIGATÓRIAS antes
+ * de aprovar, e só o administrador aprova. Quando quem aprova é quem confirmou
+ * alguma das três, a aprovação fica no registo permanente com
+ * «aprovado e confirmado pela mesma pessoa», para auditoria.
  */
 
 export const SO_O_ADMINISTRADOR_APROVA =
   "Só o administrador aprova um parceiro. A assistente confirma o NIF, a identidade e o contacto; o administrador aprova.";
 export const SO_O_ADMINISTRADOR_VERIFICA_A_GUIA = "Só o administrador verifica a guia de resíduos.";
-export const QUEM_CONFIRMA_NAO_APROVA =
-  "Quem confirmou o NIF, a identidade ou o contacto não pode aprovar: são dois pares de olhos. Peça a outra pessoa.";
-export const QUEM_APROVOU_NAO_CONFIRMA =
-  "Foi quem aprovou este parceiro: as confirmações são de outra pessoa (dois pares de olhos).";
+/** O que fica no registo da aprovação quando quem aprova também confirmou (d68). */
+export const APROVADO_E_CONFIRMADO_PELA_MESMA_PESSOA = "aprovado e confirmado pela mesma pessoa";
 
 /** A mesma pessoa? Pelo nome com que entrou no backoffice, sem maiúsculas nem espaços a mais. */
 export function mesmaPessoa(a: unknown, b: unknown): boolean {
@@ -109,18 +115,15 @@ export function porqueNaoPodeAprovar(
   if (falta.length > 0) {
     return `Para aprovar, faltam as confirmações: ${falta.join(", ")}. Quem as faz é a assistente, no «Editar perfil».`;
   }
-  if (CONFIRMACOES.some((c) => mesmaPessoa(l?.[COLUNAS_DA_CONFIRMACAO[c].por], quem.nome))) {
-    return QUEM_CONFIRMA_NAO_APROVA;
-  }
   return null;
 }
 
-/** Porque é que ESTA pessoa não pode marcar uma confirmação — ou null se pode. */
-export function porqueNaoPodeConfirmar(
+/** Quem aprova fez alguma das três confirmações? (d68: deixa-se, mas fica escrito.) */
+export function confirmouAlgumaDasTres(
   l: Record<string, unknown> | null | undefined,
-  quem: { nome: string | null | undefined },
-): string | null {
-  return l?.estado === "aprovado" && mesmaPessoa(l?.aprovadoPor, quem.nome) ? QUEM_APROVOU_NAO_CONFIRMA : null;
+  nome: string | null | undefined,
+): boolean {
+  return CONFIRMACOES.some((c) => mesmaPessoa(l?.[COLUNAS_DA_CONFIRMACAO[c].por], nome));
 }
 
 /** Aprovado (recebe pedidos) e ainda sem as três: «por verificar» na lista do backoffice. */

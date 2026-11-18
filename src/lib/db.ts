@@ -15525,6 +15525,12 @@ export type Acontecimento =
   | "conta_dados_mudados"
   /* O administrador mudou o email de entrada de um parceiro (d24). */
   | "profissional_email_mudado"
+  /*
+   * O administrador aprovou um parceiro (d68, 18-11-2026). O resumo diz
+   * «aprovado e confirmado pela mesma pessoa» quando foi ele a fazer alguma das
+   * três confirmações.
+   */
+  | "profissional_aprovado"
   /* O administrador mudou o email de um pedido, e com ele a conta onde aparece (d24). */
   | "pedido_email_mudado"
   /* O trabalho fechado passou para outro profissional. Ver `passarOTrabalhoAOutroProfissional`. */
