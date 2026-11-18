@@ -245,9 +245,9 @@ describe("as três respostas", () => {
     expect(corpo).toContain("await fecharPeloCliente(telefone, alvo);");
     expect(corpo).toContain('await tratarOValorUnico(telefone, { tipo: "aceite", pedidoId: c.pedidoId });');
     expect(corpo).toContain("aceitarTrabalhoClyonPeloLembrete(");
-    // «2» e o resto: a uma pessoa; «3»: cancelar e anonimizar.
+    // «2» e o resto: a uma pessoa; «3»: pergunta, com o texto do cliente (d2); o CANCELAR cancela.
     expect(corpo).toContain("await passarAUmaPessoa(");
-    expect(corpo).toContain("base.cancelarPeloLembrete(c.pedidoId, telefone)");
+    expect(corpo).toContain("base.cancelarPeloLembrete(c.pedidoId, telefone, texto)");
     // Num Trabalho CLYON, a escolha é a de sempre (a transacção que encerra as outras ofertas).
     expect(BASE).toContain("await atribuirOfertaClyon(negociacaoId)");
   });
@@ -368,8 +368,8 @@ describe("d2 — o «3» pede confirmação e só o CANCELAR cancela", () => {
   });
 
   it("um «3» de teste: a Vitória chama cancelarPeloLembrete, que sem pergunta feita só pergunta", () => {
-    // A conversa (whatsapp-negociacao.ts) continua a chamar cancelarPeloLembrete no «3»…
-    expect(VITORIA).toContain("base.cancelarPeloLembrete(c.pedidoId, telefone)");
+    // A conversa (whatsapp-negociacao.ts) chama cancelarPeloLembrete no «3», com o texto do cliente…
+    expect(VITORIA).toContain("base.cancelarPeloLembrete(c.pedidoId, telefone, texto)");
     // …e o «3» nunca chega a cancelarPedido: o único cancelarPedido está atrás do CANCELAR.
     expect(BASE.split("await cancelarPedido(").length - 1).toBe(1);
     const confirmar = BASE.slice(BASE.indexOf("export async function confirmarCancelamentoPeloLembrete("));

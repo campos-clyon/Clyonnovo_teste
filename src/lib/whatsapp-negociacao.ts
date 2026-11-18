@@ -831,17 +831,40 @@ async function tratarOValorUnico(
  *     adjudicação segue pela equipa); num valor único, o aceite de sempre
  *     (`tratarOValorUnico`, a equipa escolhe o parceiro);
  *   · «2»: a conversa passa a uma pessoa;
- *   · «3» (ou «já não preciso»): cancela, avisa os parceiros, manda o texto de
- *     cancelamento aprovado e anonimiza o pedido;
+ *   · «3» (ou «já não preciso»): NÃO cancela (d2, 18-11-2026) — pergunta
+ *     «Confirma que quer cancelar o pedido #N? Responda CANCELAR.»
+ *     (`cancelarPeloLembrete`, com o texto do cliente);
+ *   · à espera do CANCELAR (`c.aEsperaDeCancelar`), o CANCELAR — também
+ *     «cancel» ou «annuler», como o tradutor o põe — cancela
+ *     (`confirmarCancelamentoPeloLembrete`): avisa os parceiros, manda o texto
+ *     de cancelamento aprovado e marca o pedido para a purga 7 dias depois
+ *     (nada se anonimiza no momento). Outro «3» ou «já não preciso» à espera:
+ *     não cancela nem repete a pergunta. Um «1» ou um «2» seguem os caminhos
+ *     de sempre;
+ *   · o cancelamento que não se faz (ok: false) passa a uma pessoa;
  *   · o resto, ou dois pedidos à espera: a contagem pára e passa a uma pessoa.
+ *
+ * Exportada só para o teste da conversa (d2-cancelar-pelo-lembrete.test.ts).
  */
-async function responderAoLembreteDoOrcamento(
+export async function responderAoLembreteDoOrcamento(
   telefone: string,
   texto: string,
   ciclos: import("@/lib/validade-do-orcamento-na-base").CicloComLembrete[],
 ): Promise<void> {
   const regras = await import("@/lib/validade-do-orcamento");
   const base = await import("@/lib/validade-do-orcamento-na-base");
+
+  // O CANCELAR à pergunta do CANCELAR: antes de ler a resposta como «1», «2» ou «3».
+  if (ciclos.length === 1 && ciclos[0].aEsperaDeCancelar && regras.eConfirmacaoDoCancelamento(texto)) {
+    const c = ciclos[0];
+    const r = await base.confirmarCancelamentoPeloLembrete(c.pedidoId, telefone, texto).catch((err) => {
+      console.error("[whatsapp] o CANCELAR pelo lembrete falhou:", err instanceof Error ? err.message : err);
+      return { ok: false as const, porque: "erro" };
+    });
+    if (!r.ok) await passarAUmaPessoa(telefone, `Pedido #${c.pedidoId}: respondeu CANCELAR, mas ${r.porque} — cancelar à mão`);
+    return;
+  }
+
   const leitura = regras.lerRespostaAoLembrete(texto);
 
   if (ciclos.length > 1) {
@@ -866,9 +889,10 @@ async function responderAoLembreteDoOrcamento(
   }
 
   if (leitura === "cancelar") {
-    const r = await base.cancelarPeloLembrete(c.pedidoId, telefone).catch((err) => {
+    // Sem a pergunta feita, pergunta; à espera do CANCELAR, outro «3» não faz nada (o CANCELAR tratou-se acima).
+    const r = await base.cancelarPeloLembrete(c.pedidoId, telefone, texto).catch((err) => {
       console.error("[whatsapp] o cancelamento pelo lembrete falhou:", err instanceof Error ? err.message : err);
-      return { ok: false, porque: "erro" };
+      return { ok: false as const, porque: "erro" };
     });
     if (!r.ok) await passarAUmaPessoa(telefone, `Pedido #${c.pedidoId}: disse que já não precisa — cancelar à mão`);
     return;
@@ -2326,8 +2350,9 @@ export async function tratarMensagemDoCliente(
     /*
      * A RESPOSTA AO LEMBRETE DO ORÇAMENTO — 18-11-2026 (d62). Com o lembrete
      * (ou o último aviso) enviado e o ciclo a correr: «1» avança com a proposta
-     * do lembrete, «2» passa à equipa, «3» cancela e apaga os dados dele do
-     * pedido; outra coisa qualquer pára a contagem e passa à equipa. Com o
+     * do lembrete, «2» passa à equipa, «3» pergunta se confirma e só o
+     * CANCELAR cancela (d2; os dados saem 7 dias depois, pela purga); outra
+     * coisa qualquer pára a contagem e passa à equipa. Com o
      * interruptor desligado não há ciclos, e segue tudo como sempre. Ver
      * `validade-do-orcamento.ts`.
      */
