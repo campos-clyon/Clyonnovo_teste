@@ -18,7 +18,7 @@ import { totalEmPalavras } from "./conta-em-palavras";
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
 import { MINIMO_DE_HORAS } from "./tabela-das-mudancas";
-import { extraNoLocal, INCLUI } from "./extra-no-local";
+import { AS_CARGAS_CONFIRMAM_SE_NO_LOCAL, AS_HORAS_CONTAM_SE_NO_DIA, extraNoLocal, INCLUI } from "./extra-no-local";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { estimativaDasHoras, horasDaEstimativa, horasEmPalavras } from "./horas-do-trabalho";
 
@@ -34,11 +34,12 @@ import { estimativaDasHoras, horasDaEstimativa, horasEmPalavras } from "./horas-
  * que a equipa manda à mão a partir das Negociações, era a única calada.
  */
 export const SAO_PRECOS_POR_CARGA =
-  "Atenção: são preços POR CARGA — o total depende de quantas cargas forem precisas.";
+  // d63: com a regra única da base (`frase-da-base.ts`).
+  `Atenção: são preços POR CARGA. ${AS_CARGAS_CONFIRMAM_SE_NO_LOCAL}`;
 
 /** E à hora — as mudanças, desde 13-10-2026 (`tabela-das-mudancas.ts`). */
 export const SAO_PRECOS_POR_HORA =
-  `Atenção: são preços POR HORA, com um mínimo de ${MINIMO_DE_HORAS} horas — o total depende das horas de trabalho no dia.`;
+  `Atenção: são preços POR HORA, com um mínimo de ${MINIMO_DE_HORAS} horas. ${AS_HORAS_CONTAM_SE_NO_DIA}`;
 
 /**
  * E NUMA MUDANÇA DA LISTA — d7, 11-11-2026: o mínimo é o da tarifa de cada
@@ -444,7 +445,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
           ? SAO_PRECOS_POR_HORA_DO_PARCEIRO
           : SAO_PRECOS_POR_HORA
         : // d47 (15-11-2026): curto — o que cobre e o extra com o preço da regra do serviço.
-          `${INCLUI} ${extraNoLocal(d.servicoId ?? null, base)}`;
+          `${INCLUI} ${extraNoLocal(d.servicoId ?? null, "total")}`;
 
   /*
    * "para a recolha de entulho em Carnaxide" — ou, quando o serviço é novo e o

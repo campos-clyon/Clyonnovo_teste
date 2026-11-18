@@ -1056,6 +1056,9 @@ function CartaoDoTrabalho({
    * dono, referência Multibanco ou MB WAY do euPago. Ver `EnviarAdjudicacao`.
    * Sem telemóvel que abra no WhatsApp, não há botão.
    */
+  // d63: o valor ao cliente para a frase da base — por carga, o de uma carga; por hora, sem número.
+  const contaDaAdjudicacao = a && lerBase(t.base) !== "hora" ? contaDoTrabalhoClyon(t, null, Boolean(a.semFactura)) : null;
+  const valorDaAdjudicacao = contaDaAdjudicacao ? { semIva: contaDaAdjudicacao.semIva, total: contaDaAdjudicacao.total } : null;
   // d55: nos Contratados; e nos Feitos do modelo novo, como «Enviar dados para pagamento».
   const dadosDaAdjudicacao =
     botoes.adjudicacao && a && !a.confirmadoEm
@@ -1064,6 +1067,9 @@ function CartaoDoTrabalho({
           telefone: t.telefone,
           servico: t.servico,
           localidade: t.localidade,
+          // d63: a base e o valor ao cliente (por carga, o de uma carga), para a frase da base.
+          base: lerBase(t.base),
+          valor: valorDaAdjudicacao,
           quando: a.dataCombinada ?? t.dataAgendada,
           empresa: a.profissional,
           responsavel: a.responsavel ?? null,

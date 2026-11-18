@@ -510,7 +510,16 @@ export async function enviarTextoManualWhatsApp(para: string, texto: string): Pr
  * E a MESMA guarda contra repetições do resto: o mesmo texto no mesmo número
  * em poucos minutos não sai duas vezes.
  */
-export async function enviarAvisoWhatsApp(para: string, texto: string): Promise<boolean> {
+export async function enviarAvisoWhatsApp(
+  para: string,
+  texto: string,
+  /**
+   * d63 (18-11-2026): os lembretes da validade falam pela Vitória — na língua do
+   * cliente ou nada (o tradutor, depois as traduções fixas; sem nenhuma, passa à
+   * equipa). O #603, uma cliente inglesa, levou o lembrete em português.
+   */
+  opcoes: { semLinguaErrada?: boolean } = {},
+): Promise<boolean> {
   try {
     const { podeAvisarONumeroWhatsApp } = await import("@/lib/db");
     if (!(await podeAvisarONumeroWhatsApp(telefoneParaWhatsApp(para)))) return false;
@@ -528,7 +537,7 @@ export async function enviarAvisoWhatsApp(para: string, texto: string): Promise<
   } catch {
     // A guarda é uma cortesia; sem ela, o aviso sai na mesma.
   }
-  return enviarTextoPorCanal(para, texto);
+  return enviarTextoPorCanal(para, texto, { semLinguaErrada: opcoes.semLinguaErrada === true });
 }
 
 /**

@@ -65,6 +65,7 @@ describe("a mensagem das propostas num pedido por carga", () => {
   it("as Negociações passam a base do pedido à mensagem — nos dois sítios", () => {
     const PAINEL = readFileSync(join(process.cwd(), "src/components/admin/AdminNegociacoesPanel.tsx"), "utf8");
     // d39: e a mensagem do valor único (`mensagemDoValorUnico`), a terceira.
-    expect(PAINEL.split("base: lerBase(p.baseDoPreco),").length - 1).toBe(3);
+    // d63: e a adjudicação (a frase da base), a quarta.
+    expect(PAINEL.split("base: lerBase(p.baseDoPreco),").length - 1).toBe(4);
   });
 });

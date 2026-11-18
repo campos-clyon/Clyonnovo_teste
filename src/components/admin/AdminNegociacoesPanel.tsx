@@ -3497,12 +3497,28 @@ export default function AdminNegociacoesPanel({
             const fase = botoesDaFaseDaMesa({ cancelado, concluido, acordada: acordada ?? null });
             if (!acordada || !fase.adjudicacao) return null;
             // As formas de pagamento escolhem-se no botão (27-10-2026, d14) — ver `EnviarAdjudicacao`.
+            // d63: a base e o valor ao cliente, para a frase da base (por carga: o de uma carga).
+            const contaDaAdjudicacao = contaDaLinha(
+              {
+                valorAcordado: acordada.valorAcordado,
+                taxaCliente: acordada.taxaCliente,
+                taxaProfissional: acordada.taxaProfissional,
+                formaDePagamento: acordada.formaDePagamento,
+                negociacaoCriadaEm: acordada.criadaEm,
+                pagamentoParaQue: acordada.pagamentoParaQue,
+                semFactura: acordada.semFactura,
+              },
+              null,
+            );
             const dados = {
               cliente: p.contactName,
               telefone: p.contactPhone,
               quando: acordada.dataCombinada ?? p.dataAgendada ?? null,
               servico: p.serviceType,
               localidade: p.city,
+              base: lerBase(p.baseDoPreco),
+              // Por hora, sem número: com as horas confirmadas o acordado já é o total.
+              valor: contaDaAdjudicacao && lerBase(p.baseDoPreco) !== "hora" ? { semIva: contaDaAdjudicacao.semIva, total: contaDaAdjudicacao.total } : null,
               empresa: acordada.profissionalNome,
               responsavel: acordada.profissionalResponsavel ?? null,
               telefoneDaEmpresa: acordada.profissionalTelefone ?? null,

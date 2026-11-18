@@ -28,6 +28,7 @@
 
 import { diaEmLisboa, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { textoDoFechoAoParceiro } from "./textos-dos-avisos-ao-profissional";
+import { regraDaBase } from "./frase-da-base";
 
 /** O nome do interruptor, como aparece nas Configs. */
 export const NOME_DO_INTERRUPTOR_DA_VALIDADE = "Validade dos orçamentos";
@@ -254,7 +255,9 @@ function olaENome(nome: string | null | undefined): string {
 
 function oOrcamento(d: DadosDoLembrete): string {
   const com = d.parceiro?.trim() ? `, com o parceiro ${d.parceiro.trim()}` : "";
-  return `O orçamento do seu pedido #${d.pedidoId} (${d.servico}) é de ${valorDoLembrete(d.semIva, d.total, d.unidade)}${com}.`;
+  const frase = `O orçamento do seu pedido #${d.pedidoId} (${d.servico}) é de ${valorDoLembrete(d.semIva, d.total, d.unidade)}${com}.`;
+  // d63: por carga ou por hora, a regra única da base (`frase-da-base.ts`), com o exemplo das cargas.
+  return d.unidade ? `${frase} ${regraDaBase(d.unidade, null, { semIva: d.semIva, total: d.total })}` : frase;
 }
 
 /** D+1 — o lembrete. */
@@ -314,17 +317,22 @@ export function lerRespostaAoLembrete(texto: string | null | undefined): Respost
   if (numero === "1") return "avancar";
   if (numero === "2") return "duvidas";
   if (numero === "3") return "cancelar";
-  if (/\?/.test(texto ?? "") || /\bmas\b/.test(t)) return null;
+  if (/\?/.test(texto ?? "") || /\b(mas|but|however)\b/.test(t)) return null;
+  /*
+   * d63 (18-11-2026), o #603 (cliente inglesa): «sorted now» e «found someone»
+   * valem «3», como «já resolvi» ou «arranjei outra empresa». Começa a frase,
+   * com o que for a seguir («all sorted, thanks», «já resolvi, obrigada»).
+   */
   if (
-    /^(ja nao preciso|nao preciso|ja nao e (preciso|necessario)|ja nao quero|nao quero mais|pode cancelar|quero cancelar|cancelar|cancele|cancela|cancelem|desisto|ja resolvi|ja esta resolvido)\b/.test(
+    /^(?:hi |hello |ola |obrigad[oa] |thanks |thank you )?(?:(?:it'?s |its |is |were |we'?re |we are |i'?m |i am |all |already |everything'?s |everything is )*sorted(?: now| out)?|(?:it'?s |its )?all (?:done|good)|already (?:done|sorted|found|booked|taken care)|(?:i'?ve |we'?ve |i have |we have |i |we )?(?:already )?found (?:someone|somebody|another|other|a company|someone else)|(?:i |we )?(?:dont |do not |don'?t )?(?:no longer|not anymore) need(?:ed)?|(?:i |we )?(?:dont|do not|don'?t) need(?: (?:it|this|you|them|the service))?(?: anymore| any more)?|no longer (?:needed|required|necessary)|not (?:needed|required|necessary)(?: anymore| any more)?|no thanks?|no thank you|nope|cancel(?: it| please)?|please cancel|ja nao preciso|nao preciso|ja nao e (?:preciso|necessario)|ja nao quero|nao quero mais|nao obrigad[oa]|pode cancelar|quero cancelar|cancelar|cancele|cancela|cancelem|desisto|ja (?:resolvi|resolvemos|tratei|tratamos|arranjei|arranjamos|contratei|contratamos)|ja (?:esta|ficou|foi) (?:resolvido|tratado|feito)|arranjei (?:outra|outro|alguem)|arranjamos (?:outra|outro|alguem)|ja tenho (?:outra|outro|quem))\b/.test(
       t,
     )
   ) {
     return "cancelar";
   }
-  if (/^(tenho (uma )?duvida|tenho duvidas|duvida|outra data|quero outra data|prefiro outra data)\b/.test(t)) return "duvidas";
+  if (/^(tenho (uma )?duvida|tenho duvidas|duvida|outra data|quero outra data|prefiro outra data|i have a question|another date|other date)\b/.test(t)) return "duvidas";
   if (
-    /^(sim|avancar|quero avancar|pode avancar|podem avancar|vamos avancar|aceito|aceitamos|pode ser|ok avancar|ok pode avancar)( (sim|obrigad[oa]|por favor|pode ser|avancar|quero|aceito|pode avancar))*$/.test(
+    /^(sim|avancar|quero avancar|pode avancar|podem avancar|vamos avancar|aceito|aceitamos|pode ser|ok|okay|ok avancar|ok pode avancar|yes|yeah|yep|go ahead|yes go ahead|ok go ahead|lets go ahead|let'?s go ahead|lets do it|let'?s do it)( (sim|ok|obrigad[oa]|por favor|pode ser|avancar|quero|aceito|pode avancar|yes|please|go ahead|thanks|thank you))*$/.test(
       t,
     )
   ) {

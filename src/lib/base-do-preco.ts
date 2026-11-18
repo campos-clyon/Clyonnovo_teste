@@ -26,6 +26,8 @@
  */
 export type BaseDoPreco = "total" | "carga" | "hora";
 
+import { fraseDaBase, type ValorDaBase } from "./frase-da-base";
+
 /**
  * Sem ninguém dizer nada, é pelo trabalho todo.
  *
@@ -87,11 +89,9 @@ export function avisoDaBase(b: BaseDoPreco): string | null {
  * é mais curto e mais claro do que uma perífrase; onde não há, mentia. A
  * decisão que as duas transmitem é a mesma, e é isso que interessa.
  */
-export function avisoDaBaseParaOCliente(b: BaseDoPreco): string | null {
-  if (b === "hora") return "O preço deste pedido é POR HORA, com um mínimo de 3 horas. O total depende das horas de trabalho.";
-  return b === "carga"
-    ? "O preço deste pedido é POR CARGA. Combine quantas cargas são antes de fechar."
-    : null;
+export function avisoDaBaseParaOCliente(b: BaseDoPreco, minimoHoras?: number | null): string | null {
+  // d63 (18-11-2026): a frase única da base (`frase-da-base.ts`), sem o número (o valor está nas propostas).
+  return b === "total" ? null : fraseDaBase(b, null, { minimoHoras });
 }
 
 /**
@@ -109,13 +109,12 @@ export function avisoDaBaseParaOCliente(b: BaseDoPreco): string | null {
  * antes de começar» do orçamento à distância — dizê-lo duas vezes seguidas
  * era a mensagem a falar sozinha.
  */
-export function notaDaCargaParaOCliente(b: BaseDoPreco): string | null {
-  if (b === "hora") {
-    return "É um preço POR HORA, com um mínimo de 3 horas: o total depende das horas de trabalho no dia.";
-  }
-  return b === "carga"
-    ? `É um preço POR CARGA (${O_QUE_E_UMA_CARGA}): o total depende de quantas cargas forem — combine o número com o parceiro.`
-    : null;
+export function notaDaCargaParaOCliente(b: BaseDoPreco, v: ValorDaBase = {}): string | null {
+  /*
+   * d63 (18-11-2026): a frase única da base (`frase-da-base.ts`). Com o valor
+   * dito, a frase inteira com o exemplo; sem ele, «O valor é por carga.» e a regra.
+   */
+  return b === "total" ? null : fraseDaBase(b, null, v);
 }
 
 /**

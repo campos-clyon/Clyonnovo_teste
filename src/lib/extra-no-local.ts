@@ -24,6 +24,13 @@ export function valorComIva(semIva: number, total: number): string {
   return `${eurosCurtos(semIva)} + IVA = ${eurosCurtos(total)}`;
 }
 
+/** d63: o que o cliente lê sobre as cargas — igual em todo o lado (`frase-da-base.ts`). */
+export const AS_CARGAS_CONFIRMAM_SE_NO_LOCAL =
+  "O número de cargas é confirmado consigo no local, pela equipa, antes de começar.";
+
+/** d63: o que o cliente lê sobre as horas — igual em todo o lado (`frase-da-base.ts`). */
+export const AS_HORAS_CONTAM_SE_NO_DIA = "As horas contam-se no dia e o total fica na folha que valida no fim.";
+
 /** (b) O que o valor cobre. */
 export const INCLUI = "Inclui o que está nas fotografias e na descrição.";
 
@@ -74,12 +81,9 @@ export function oQueGanha(servico: string | null | undefined): string {
  * combinado antes (texto do Vendas desde 17-11-2026, d66).
  */
 export function extraNoLocal(servico: string | null | undefined, base: BaseDoPreco | null | undefined = "total"): string {
-  if (base === "hora") {
-    return "Se for preciso mais tempo, as horas a mais pagam-se ao mesmo preço por hora, combinadas consigo antes.";
-  }
-  if (base === "carga") {
-    return "Se for preciso mais uma carga, paga-se ao mesmo preço por carga, combinada consigo antes.";
-  }
+  // d63 (18-11-2026): por carga ou por hora, a regra da base (`frase-da-base.ts`) — nunca «o volume a mais».
+  if (base === "hora") return AS_HORAS_CONTAM_SE_NO_DIA;
+  if (base === "carga") return AS_CARGAS_CONFIRMAM_SE_NO_LOCAL;
   if (servico === "recolha_entulho") {
     return (
       `Se no dia houver mais entulho, combina-se consigo antes de carregar, por saco ` +
@@ -104,5 +108,5 @@ export function extraNoLocal(servico: string | null | undefined, base: BaseDoPre
 /** O extra tem preço? (A manutenção orça-se e o esvaziamento conta o volume: não têm tabela.) */
 export function extraComPreco(texto: string): boolean {
   // Um número, ou o preço já dito (o mesmo por hora/carga, ou o preço por hora do parceiro).
-  return /\d/.test(texto) || /mesmo preço|preço por hora/.test(texto);
+  return /\d/.test(texto) || /mesmo preço|preço por hora|número de cargas|as horas contam-se/.test(texto);
 }

@@ -4,8 +4,9 @@ import { linkDeWhatsApp } from "./link-de-whatsapp";
 import { ABERTURA_DOS_METODOS, SEM_METODOS_DE_PAGAMENTO, limparMetodosDePagamento } from "./metodos-de-pagamento";
 import { servicoComArtigo } from "./mensagem-das-propostas";
 import { servicoEmPalavras } from "./servico-em-palavras";
-import { eurosCurtos, extraNoLocal, INCLUI, valorComIva } from "./extra-no-local";
-import { lerBase, unidadeDaBase, type BaseDoPreco } from "./base-do-preco";
+import { valorComIva } from "./extra-no-local";
+import { lerBase, type BaseDoPreco } from "./base-do-preco";
+import { fraseDaBase } from "./frase-da-base";
 import { telefoneLegivel } from "./telefone-legivel";
 
 /**
@@ -60,6 +61,13 @@ export type TrabalhoAdjudicado = {
   quando: string | null;
   servico?: string | null;
   localidade?: string | null;
+  /**
+   * d63 (18-11-2026): o que o valor mede, e o valor ao cliente (por carga ou por
+   * hora: o de UMA carga ou de UMA hora). Sem eles, o trabalho todo e sem número.
+   */
+  base?: BaseDoPreco | null;
+  valor?: { semIva: number; total: number } | null;
+  minimoHoras?: number | null;
   /** O nome da empresa que faz o trabalho — o profissional escolhido. */
   empresa?: string | null;
   /** Quem responde por ela, como o cliente o vai ouvir: o primeiro nome. */
@@ -208,13 +216,6 @@ function formasEmPalavras(formas: AdjudicacaoNoNovoModelo["formas"]): string {
   return `por ${l.slice(0, -1).join(", ")} ou ${l[l.length - 1]}`;
 }
 
-/** «370 € + IVA por carga (455,11 €)», ou «370 € por carga» sem IVA. */
-function valorPorUnidade(semIva: number, total: number, base: BaseDoPreco): string {
-  const unidade = unidadeDaBase(base);
-  if (Math.abs(total - semIva) < 0.005) return `${eurosCurtos(total)}${unidade}`;
-  return `${eurosCurtos(semIva)} + IVA${unidade} (${eurosCurtos(total)})`;
-}
-
 /**
  * A PRIMEIRA FRASE DO BLOCO, PELA BASE — d58 (CEO e dono, 17-11-2026). Com base
  * «por carga» o número é de UMA carga e não do trabalho todo: «O valor é 370 € +
@@ -222,15 +223,18 @@ function valorPorUnidade(semIva: number, total: number, base: BaseDoPreco): stri
  * confirmar, o valor de uma hora e a estimativa; com as horas confirmadas, o
  * total final. No resto, como sempre (d47: «X € + IVA = Y €»).
  */
-export function valorDoBlocoDoNovoModelo(n: Pick<AdjudicacaoNoNovoModelo, "total" | "semIva" | "base" | "porHora">): string {
+export function valorDoBlocoDoNovoModelo(
+  n: Pick<AdjudicacaoNoNovoModelo, "total" | "semIva" | "base" | "porHora"> & { minimoHoras?: number | null },
+): string {
   const base = lerBase(n.base);
+  // d63 (18-11-2026): a frase única da base (`frase-da-base.ts`), e a taxa da plataforma a seguir.
   if (base === "carga") {
-    return `O valor é ${valorPorUnidade(n.semIva, n.total, "carga")}, × o número de cargas, já com a taxa da plataforma.`;
+    return `${fraseDaBase("carga", null, { semIva: n.semIva, total: n.total })} Já com a taxa da plataforma.`;
   }
   if (base === "hora" && n.porHora) {
     return (
-      `O valor é ${valorPorUnidade(n.porHora.semIva, n.porHora.total, "hora")}, × as horas do trabalho, já com a taxa da plataforma. ` +
-      `A estimativa é ${valorComIva(n.semIva, n.total)}.`
+      `${fraseDaBase("hora", null, { semIva: n.porHora.semIva, total: n.porHora.total, minimoHoras: n.minimoHoras })} ` +
+      `Já com a taxa da plataforma. A estimativa é ${valorComIva(n.semIva, n.total)}.`
     );
   }
   return `O total é ${valorComIva(n.semIva, n.total)}, já com a taxa da plataforma.`;
@@ -260,6 +264,11 @@ export function blocoDoPagamentoAoParceiro(
     "Se alguém lhe pedir que pague para outros dados, não pague e fale connosco.",
     "Recebe duas faturas no pedido: a do trabalho, do parceiro, e a da taxa da plataforma. Guarde o comprovativo do pagamento.",
   ].join("\n");
+}
+
+/** d63: a base da adjudicação — a do pedido, ou a do bloco do modelo de 15-11; sem nenhuma, o trabalho todo. */
+export function baseDaAdjudicacao(t: Pick<TrabalhoAdjudicado, "base" | "formas">): BaseDoPreco {
+  return lerBase(t.base ?? t.formas?.novoModelo?.base ?? null);
 }
 
 const maiuscula = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
@@ -298,8 +307,20 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
   return [
     `Olá${nome ? `, ${nome}` : ""}! Obrigado pela confirmação.`,
     fica,
-    // d47: o que o valor cobre, e o extra no local com o preço da regra do serviço.
-    `${INCLUI} ${extraNoLocal(t.servico ?? null)}`,
+    /*
+     * d47: o que o valor cobre, e o extra no local com o preço da regra do
+     * serviço — d63 (18-11-2026): PELA BASE (`frase-da-base.ts`). O #556, por
+     * carga no modelo antigo, levava «o volume a mais combina-se consigo». No
+     * modelo de 15-11 com base por carga ou por hora a frase já vai no bloco
+     * do pagamento: não se diz duas vezes.
+     */
+    t.formas?.novoModelo && baseDaAdjudicacao(t) !== "total"
+      ? null
+      : fraseDaBase(baseDaAdjudicacao(t), t.servico ?? null, {
+          semIva: t.valor?.semIva ?? null,
+          total: t.valor?.total ?? null,
+          minimoHoras: t.minimoHoras ?? null,
+        }),
     quemFaz,
     ...(t.formas?.novoModelo
       ? // O modelo de 15-11 (d17): o texto D, que já diz para guardar o comprovativo.
@@ -310,7 +331,9 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
           "Depois de pagar, envie-nos o comprovativo por aqui, por favor.",
         ]),
     "Obrigado pela preferência,\nEquipa CLYON",
-  ].join("\n\n");
+  ]
+    .filter((l): l is string => Boolean(l))
+    .join("\n\n");
 }
 
 /** O link que abre a conversa do cliente com a mensagem escrita — ou `null` sem telefone. */

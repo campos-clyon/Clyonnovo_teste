@@ -3,6 +3,7 @@ import { primeiroNome } from "./mensagem-whatsapp";
 import { type BaseDoPreco } from "./base-do-preco";
 import { extraNoLocal, INCLUI, oQueGanha, valorComIva } from "./extra-no-local";
 import { QUEM_FAZ_NO_VALOR_UNICO_CURTO } from "./valor-unico-ao-cliente";
+import { minimoDasHoras, regraDaBase } from "./frase-da-base";
 
 export { eurosCurtos, extraComPreco, extraNoLocal, INCLUI, oQueGanha, TABELA_DAS_PECAS_CURTA, valorComIva } from "./extra-no-local";
 
@@ -73,6 +74,8 @@ export type DadosDoOrcamento = {
   semIva: number;
   total: number;
   base?: BaseDoPreco | null;
+  /** d63: o mínimo de horas (o do parceiro numa mudança da lista); sem ele, o da tabela. */
+  minimoHoras?: number | null;
   modelo: ModeloDoOrcamento;
   /** «, para sábado, 21 de novembro» — já escrito, ou nada. */
   paraQuando?: string;
@@ -98,7 +101,13 @@ export function linhasDoOrcamento(d: DadosDoOrcamento, agora: Date): string[] {
   const oQue = `${d.servicoComArtigo?.trim() || "o seu pedido"}${zona ? ` em ${zona}` : ""}`;
   return [
     `${saudacaoCurta(d.cliente, agora)} O orçamento para ${oQue}${d.paraQuando ? `${d.paraQuando},` : ""} é ${valorComIva(d.semIva, d.total)}${unidade(d.base)}.`,
-    [INCLUI, oQueGanha(d.servicoId), extraNoLocal(d.servicoId, d.base ?? "total")].filter(Boolean).join(" "),
+    // d63: por carga ou por hora, a regra da base (com o exemplo das cargas) — nunca «o volume a mais».
+    (d.base === "carga" || d.base === "hora"
+      ? [oQueGanha(d.servicoId), d.base === "hora" ? minimoDasHoras(d.minimoHoras) : "", regraDaBase(d.base, d.servicoId, { semIva: d.semIva, total: d.total, minimoHoras: d.minimoHoras })]
+      : [INCLUI, oQueGanha(d.servicoId), extraNoLocal(d.servicoId, "total")]
+    )
+      .filter(Boolean)
+      .join(" "),
     comoSePaga(d.modelo),
     d.quemFaz?.trim()
       ? `O trabalho é feito por ${d.quemFaz.trim()}. ${RESPONDA_SIM_COM_QUEM}`

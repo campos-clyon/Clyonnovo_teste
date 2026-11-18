@@ -71,6 +71,8 @@ export type Pedido = {
    * «150 €» sem unidade tanto é o trabalho todo como cada viagem ao aterro.
    */
   baseDoPreco?: string | null;
+  /** d63: depois do aceite, a frase da base para ele (`frase-da-base.ts`); null no valor total. */
+  fraseDaBaseAoProfissional?: string | null;
   /*
    * O QUE UMA CARGA VALE NA CARRINHA DELE, quando o pedido e por carga.
    *

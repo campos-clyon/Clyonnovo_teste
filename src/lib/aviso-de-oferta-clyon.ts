@@ -8,7 +8,7 @@ import {
 } from "./aviso-de-pedido-ao-profissional";
 import type { ModoDaOferta } from "./oferta-clyon";
 import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
-import { lerBase, notaDaCargaParaOCliente, precoComBase } from "./base-do-preco";
+import { avisoDaBase, lerBase, precoComBase } from "./base-do-preco";
 import { diaEHoraCurtosEmLisboa } from "./hora-de-lisboa";
 
 /*
@@ -62,7 +62,8 @@ export function avisoDeOfertaAoProfissional(
   const base = lerBase(o.base);
   const valor =
     `No valor de ${precoComBase(eurosPorExtenso(o.valor), base)} — ganhos estimados de ${precoComBase(eurosPorExtenso(o.ganhos), base)}. ` +
-    (base === "total" ? "" : `${(notaDaCargaParaOCliente(base) ?? "").replace(" — combine o número com o profissional", "")} `) +
+    // d63: ao profissional, o aviso dele (a nota do cliente diz «confirmado consigo no local»).
+    (base === "total" ? "" : `${avisoDaBase(base) ?? ""} `) +
     `Não há propostas — só aceitar ou recusar.\n` +
     (o.modo === "directa"
       ? "Foi escolhido pela CLYON para este trabalho: se aceitar, é seu."

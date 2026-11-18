@@ -1,7 +1,7 @@
 import { comoTratar } from "./whatsapp-recolha";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { lerBase, ePorUnidade, unidadeDaBase } from "./base-do-preco";
-import { notaDoPrecoParaOCliente } from "./itens-a-mais";
+import { regraDaBase } from "./frase-da-base";
 import { emEuros, type ContaDoPagamento } from "./conta-do-pagamento";
 import { TAXA_IVA } from "./taxas-plataforma";
 import { TELEFONE_DA_CLYON_DIGITOS } from "./telefone-da-clyon";
@@ -98,7 +98,8 @@ export function mensagemDosValoresParaPagamento(v: ValoresParaPagamento, agora: 
     "Seguem os valores finais do seu pedido, para pagamento:",
     linhaDoPedido,
     valores.join("\n"),
-    ePorUnidade(base) ? notaDoPrecoParaOCliente(base, "clyon") : null,
+    // d63: a regra única da base (`frase-da-base.ts`) — o valor já está dito acima.
+    ePorUnidade(base) ? regraDaBase(base, v.servico ?? null, { semIva: v.conta.semIva, total: v.conta.total }) : null,
     `Pode pagar por MB WAY, por Multibanco ou por transferência, no seu pedido:\n${v.link?.trim() || LINK_POR_GERAR}`,
     PAGA_A_CLYON_NOS_VALORES_DO_MODELO_ANTIGO,
     "Obrigado pela preferência,\nEquipa CLYON",

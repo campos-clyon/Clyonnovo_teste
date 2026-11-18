@@ -1,4 +1,5 @@
-import { notaDaCargaParaOCliente, O_QUE_E_UMA_CARGA, type BaseDoPreco } from "./base-do-preco";
+import { notaDaCargaParaOCliente, type BaseDoPreco } from "./base-do-preco";
+import type { ValorDaBase } from "./frase-da-base";
 import { PECAS_EM_TEXTO, PRECO_DA_PRIMEIRA_GRANDE, PRECO_POR_ITEM } from "./precos-publicos";
 import { extraNoLocal, INCLUI } from "./extra-no-local";
 import { TAXA_IVA } from "./taxas-plataforma";
@@ -165,11 +166,16 @@ export function notaDoPrecoParaOCliente(
   comQuem: "profissional" | "clyon" = "profissional",
   /** O serviço do pedido (o id). Dito, a tabela das peças só sai na recolha de móveis (d20). */
   servico?: string | null,
+  /** d63: o valor (por carga ou por hora), para a frase dizer o número e o exemplo. */
+  valor: ValorDaBase = {},
 ): string {
-  if (base === "carga" && comQuem === "clyon") {
-    return `É um preço POR CARGA (${O_QUE_E_UMA_CARGA}): o total depende de quantas cargas forem — confirmamos o número consigo antes de começar.`;
-  }
-  return notaDaCargaParaOCliente(base) ?? (avisoDosItens(base, "cliente", servico) as string);
+  /*
+   * d63 (18-11-2026): por carga ou por hora, a frase única da base
+   * (`frase-da-base.ts`) — a mesma com a CLYON e com o parceiro: as cargas
+   * confirmam-se no local, pela equipa, antes de começar. Com o valor, o exemplo.
+   */
+  void comQuem;
+  return notaDaCargaParaOCliente(base, valor) ?? (avisoDosItens(base, "cliente", servico) as string);
 }
 
 /*

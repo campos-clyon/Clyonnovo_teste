@@ -20,6 +20,7 @@ import { modoDaOferta } from "@/lib/oferta-clyon";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
+import { fraseDaBaseAoProfissional } from "@/lib/frase-da-base";
 import {
   diaDoInicio,
   estadoDasHorasParaQuemFez,
@@ -614,6 +615,22 @@ export async function GET(req: NextRequest) {
         // propunha sobre uma unidade e o cliente lia outra -- e a conta so
         // batia mal no fim, com o trabalho ja feito.
         baseDoPreco: (l as unknown as { baseDoPreco?: string | null }).baseDoPreco ?? null,
+        /*
+         * d63 (18-11-2026): DEPOIS DO ACEITE, a frase da base para ele — «O cliente
+         * aceitou 360 €/carga. Confirme o número de cargas com o cliente no local,
+         * antes de carregar.» (`frase-da-base.ts`). Null no valor total, ou antes
+         * do aceite (aí é o `avisoDaBase` de sempre). O valor é o do cartão.
+         */
+        fraseDaBaseAoProfissional:
+          l.estado === "acordada"
+            ? fraseDaBaseAoProfissional(
+                lerBase((l as unknown as { baseDoPreco?: string | null }).baseDoPreco),
+                // À hora, sem número: com as horas confirmadas o acordado já é o total.
+                acordado != null && lerBase((l as unknown as { baseDoPreco?: string | null }).baseDoPreco) === "carga"
+                  ? quantoOProfissionalRecebe(acordado, taxasDela)
+                  : null,
+              )
+            : null,
         /*
          * O QUE UMA CARGA VALE NA CARRINHA DELE -- e quantas viagens leva.
          *

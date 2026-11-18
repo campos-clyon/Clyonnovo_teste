@@ -449,8 +449,10 @@ describe("depois do registo, a Vitória continua", () => {
     expect(r.resposta).toContain(O_QUE_E_A_CARGA);
     // Uma constante, nos dois lados: a nota «por carga» da proposta e a resposta dela.
     expect(O_QUE_E_A_CARGA.toLowerCase()).toContain(O_QUE_E_UMA_CARGA);
-    expect(notaDaCargaParaOCliente("carga")).toContain(O_QUE_E_UMA_CARGA);
-    expect(notaDoPrecoParaOCliente("carga", "clyon")).toContain(O_QUE_E_UMA_CARGA);
+    // d63 (18-11-2026): a nota da proposta passou à frase única da base — «O valor é por carga.» e as
+    // cargas confirmadas no local, com o exemplo quando há o valor; a resposta à pergunta fica com a constante.
+    expect(notaDaCargaParaOCliente("carga")).toContain("O número de cargas é confirmado consigo no local");
+    expect(notaDoPrecoParaOCliente("carga", "clyon")).toContain("O número de cargas é confirmado consigo no local");
   });
 
   it("as perguntas frequentes respondem-se com as frases do site", () => {

@@ -2332,9 +2332,11 @@ function DetalheDoTrabalho({
             {pedido.materiaisTexto}
           </p>
         )}
-        {avisoDaBase(lerBase(pedido.baseDoPreco)) && !(fechado && pedido.porHora?.confirmadas) && (
+        {/* d63: depois do aceite, a frase da base para ele (`frase-da-base.ts`, vem da API). */}
+        {(fechado && pedido.fraseDaBaseAoProfissional ? pedido.fraseDaBaseAoProfissional : avisoDaBase(lerBase(pedido.baseDoPreco))) &&
+          !(fechado && pedido.porHora?.confirmadas) && (
           <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-900">
-            {avisoDaBase(lerBase(pedido.baseDoPreco))}
+            {fechado && pedido.fraseDaBaseAoProfissional ? pedido.fraseDaBaseAoProfissional : avisoDaBase(lerBase(pedido.baseDoPreco))}
           </p>
         )}
         {/*

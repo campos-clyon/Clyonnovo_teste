@@ -157,7 +157,8 @@ describe("(4) a mensagem de adjudicação do modelo novo", () => {
 
   it("por carga, o valor é de uma carga, × o número de cargas", () => {
     expect(valorDoBlocoDoNovoModelo({ total: 123, semIva: 100, base: "carga" })).toBe(
-      "O valor é 100 € + IVA por carga (123 €), × o número de cargas, já com a taxa da plataforma.",
+      // d63: a frase única da base, com o exemplo das cargas.
+      "O valor é 100 € + IVA (123 €) por carga. O número de cargas é confirmado consigo no local, pela equipa, antes de começar. Por exemplo: 1 carga = 123 €; 2 cargas = 246 €. Já com a taxa da plataforma.",
     );
     const m = mensagemDeAdjudicacao({ ...base, formas: formas({ total: 123, semIva: 100, base: "carga", formas: ["transferencia"] }) }, AGORA);
     expect(m).not.toContain("O total é");
@@ -166,7 +167,9 @@ describe("(4) a mensagem de adjudicação do modelo novo", () => {
   it("por hora: o valor de uma hora e a estimativa; com as horas confirmadas, o total", () => {
     expect(
       valorDoBlocoDoNovoModelo({ total: 246, semIva: 200, base: "hora", porHora: { semIva: 50, total: 61.5 } }),
-    ).toBe("O valor é 50 € + IVA por hora (61,50 €), × as horas do trabalho, já com a taxa da plataforma. A estimativa é 200 € + IVA = 246 €.");
+    ).toBe(
+      "O valor é 50 €/h + IVA (61,50 €/h), com mínimo de 3 horas. As horas contam-se no dia e o total fica na folha que valida no fim. Já com a taxa da plataforma. A estimativa é 200 € + IVA = 246 €.",
+    );
     expect(valorDoBlocoDoNovoModelo({ total: 246, semIva: 200, base: "hora", porHora: null })).toBe(
       "O total é 200 € + IVA = 246 €, já com a taxa da plataforma.",
     );

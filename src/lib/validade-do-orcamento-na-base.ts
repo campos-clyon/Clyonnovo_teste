@@ -581,8 +581,12 @@ async function darOPasso(
      * a conversa volta à Vitória para ela ler o «1», o «2» ou o «3».
      */
     const { enviarAvisoWhatsApp } = await import("./whatsapp-cloud");
-    if (!(await enviarAvisoWhatsApp(telefone, texto))) {
-      return { ok: false, porque: "o WhatsApp não saiu (número bloqueado, WhatsApp desligado ou sem canal)" };
+    // d63: na língua da conversa do cliente, ou nada (sem tradução, a conversa passa à equipa).
+    if (!(await enviarAvisoWhatsApp(telefone, texto, { semLinguaErrada: true }))) {
+      return {
+        ok: false,
+        porque: "o WhatsApp não saiu (número bloqueado, WhatsApp desligado, sem canal, ou sem tradução para a língua do cliente — passou à equipa)",
+      };
     }
     const { retomarNumeroWhatsApp } = await import("./db");
     await retomarNumeroWhatsApp(telefone).catch(() => {});
@@ -662,7 +666,7 @@ async function fecharPorFaltaDeResposta(pedidoId: number, p: PedidoAEspera, tele
     }).catch(() => 0);
   }
 
-  const saiu = await (await import("./whatsapp-cloud")).enviarAvisoWhatsApp(telefone, textoDoFechoAoCliente(pedidoId)).catch(() => false);
+  const saiu = await (await import("./whatsapp-cloud")).enviarAvisoWhatsApp(telefone, textoDoFechoAoCliente(pedidoId), { semLinguaErrada: true }).catch(() => false);
 
   const resumo =
     `Fechado sozinho por falta de resposta (validade do orçamento): o orçamento foi ao cliente, com lembrete e último aviso, sem resposta. ` +

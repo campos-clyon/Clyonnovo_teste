@@ -82,8 +82,9 @@ describe("as quatro partes", () => {
     // O preço por hora é o do parceiro da lista (d7) — não o da referência.
     expect(extraNoLocal("mudanca")).toContain("preço por hora do parceiro");
     expect(extraNoLocal("mudanca")).not.toContain(`${PRECO_POR_HORA} €`);
-    expect(extraNoLocal("mudanca", "hora")).toContain("mesmo preço por hora");
-    expect(extraNoLocal("recolha_moveis", "carga")).toContain("mesmo preço por carga");
+    // d63: por hora e por carga, a regra única da base (`frase-da-base.ts`).
+    expect(extraNoLocal("mudanca", "hora")).toBe("As horas contam-se no dia e o total fica na folha que valida no fim.");
+    expect(extraNoLocal("recolha_moveis", "carga")).toBe("O número de cargas é confirmado consigo no local, pela equipa, antes de começar.");
     for (const s of ["recolha_moveis", "recolha_monos", "recolha_entulho", "mudanca"]) {
       const e = extraNoLocal(s);
       expect(extraComPreco(e), s).toBe(true);
@@ -147,9 +148,10 @@ describe("as mensagens que mandam valores usam as quatro partes", () => {
 
   it("a adjudicação e a lista das propostas dizem o que cobre e o extra", () => {
     const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
-    expect(ler("src/lib/mensagem-de-adjudicacao.ts")).toContain("`${INCLUI} ${extraNoLocal(t.servico ?? null)}`");
+    // d63: pela base (`frase-da-base.ts`).
+    expect(ler("src/lib/mensagem-de-adjudicacao.ts")).toContain("fraseDaBase(baseDaAdjudicacao(t), t.servico ?? null, {");
     expect(ler("src/lib/mensagem-de-adjudicacao.ts")).toContain("valorComIva(n.semIva, n.total)");
-    expect(ler("src/lib/mensagem-das-propostas.ts")).toContain("`${INCLUI} ${extraNoLocal(d.servicoId ?? null, base)}`");
+    expect(ler("src/lib/mensagem-das-propostas.ts")).toContain("`${INCLUI} ${extraNoLocal(d.servicoId ?? null, \"total\")}`");
   });
 });
 
