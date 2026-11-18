@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAbertosLembrados } from "@/components/admin/useAbertosLembrados";
 import { MOTIVOS_DO_FECHO, type MotivosPorServico } from "@/lib/motivo-do-fecho";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
 
@@ -11,9 +12,14 @@ import { servicoEmPalavras } from "@/lib/servico-em-palavras";
  * contagem de cada motivo (`motivo-do-fecho.ts`). Só leitura; sem nada para
  * contar, não ocupa lugar. Os fechados antes de 16-11 não têm motivo e não
  * entram.
+ *
+ * Fechado por omissão (18-11-2026, «mesa-so-pedidos-vivos»): o título e o
+ * número; abre-se por opção, e a escolha fica lembrada neste navegador.
  */
 export default function MotivosDaSemana({ token }: { token: string | null }) {
   const [porServico, setPorServico] = useState<MotivosPorServico[] | null>(null);
+  const { aberto, alternar } = useAbertosLembrados("clyon.mesa.motivos-da-semana");
+  const abertoAgora = aberto("motivos");
 
   useEffect(() => {
     if (!token) return;
@@ -33,10 +39,19 @@ export default function MotivosDaSemana({ token }: { token: string | null }) {
   const total = porServico.reduce((n, s) => n + s.total, 0);
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-      <h3 className="text-sm font-bold text-white">
-        Fechados nos últimos 7 dias: {total} {total === 1 ? "pedido" : "pedidos"}
-      </h3>
+    <section className="mb-3 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2">
+      <button
+        type="button"
+        onClick={() => alternar("motivos")}
+        aria-expanded={abertoAgora}
+        className="flex w-full items-baseline justify-between gap-3 text-left"
+      >
+        <h3 className="text-[13px] font-semibold text-slate-100">
+          Fechados nos últimos 7 dias <span className="text-slate-400">· {total}</span>
+        </h3>
+        <span className="text-[11px] text-slate-500">{abertoAgora ? "Fechar" : "Abrir"}</span>
+      </button>
+      {abertoAgora && (
       <ul className="mt-2 space-y-1.5">
         {porServico.map((s) => (
           <li key={s.servico ?? "-"} className="text-xs text-slate-300">
@@ -52,6 +67,7 @@ export default function MotivosDaSemana({ token }: { token: string | null }) {
           </li>
         ))}
       </ul>
+      )}
     </section>
   );
 }

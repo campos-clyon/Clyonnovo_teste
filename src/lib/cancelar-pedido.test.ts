@@ -84,10 +84,11 @@ describe("a rota do admin", () => {
 
 describe("a mesa", () => {
   it("um cancelado não é activo nem concluído — tem prateleira própria", () => {
-    expect(PAINEL).toContain('ordenados.filter((p) => p.status === "cancelado")');
+    // Desde 18-11-2026 («mesa-so-pedidos-vivos») com o arquivado e o rejeitado: `pedidoArrumado`.
+    expect(PAINEL).toContain("ordenados.filter((p) => pedidoArrumado(p.status))");
     // As outras duas listas passam a excluí-lo explicitamente.
-    expect(PAINEL).toContain('p.status !== "cancelado" && pedidoConcluido(p)');
-    expect(PAINEL).toContain('p.status !== "cancelado" && !pedidoConcluido(p)');
+    expect(PAINEL).toContain("!pedidoArrumado(p.status) && pedidoConcluido(p)");
+    expect(PAINEL).toContain("!pedidoArrumado(p.status) && !pedidoConcluido(p)");
   });
 
   it("a linha diz que foi cancelado, antes de tudo o resto", () => {

@@ -34,6 +34,7 @@ import { oQueReabrir } from "@/lib/cancelamento";
 import {
   aindaPorFazerSql,
   estadoParaOProfissionalSql,
+  ESTADOS_DE_PEDIDO_FECHADO,
   ESTADOS_DE_PEDIDO_FECHADO_SQL,
   ESTADOS_QUE_TIRAM_DOS_PROS_SQL,
   pedidoArrumado,
@@ -2855,7 +2856,8 @@ export async function pedidosPorPromover(limite = 20): Promise<
          * O #205 foi criado, ficou sem email, e desapareceu desta lista.
          * Existia na base, não existia em ecrã nenhum onde se pudesse enviar.
          */
-        AND (o.status IS NULL OR o.status NOT IN ('cancelado', 'concluido', 'arquivado'))
+        -- A mesma lista de todo o backoffice: faltava o «rejeitado» (18-11-2026).
+        AND (o.status IS NULL OR o.status NOT IN ${ESTADOS_DE_PEDIDO_FECHADO_SQL})
       ORDER BY o.createdAt DESC
       LIMIT ?`,
     [String(limite)],
@@ -13756,7 +13758,8 @@ export async function pedidosPorTelefoneWhatsApp(): Promise<
       ORDER BY id DESC
       LIMIT 5000`,
   )) as [Array<Record<string, unknown>>, unknown];
-  const FECHADOS = ["cancelado", "concluido", "arquivado"];
+  // A mesma lista de todo o backoffice (`pedido-arrumado.ts`): faltava o «rejeitado» (18-11-2026).
+  const FECHADOS: readonly string[] = ESTADOS_DE_PEDIDO_FECHADO;
   for (const r of rows) {
     const chave = String(r.chave ?? "");
     if (chave.length < 9) continue;

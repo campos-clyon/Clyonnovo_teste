@@ -1,6 +1,7 @@
 import { instanteDaBase } from "./hora-de-lisboa";
 import { NOVO_MODELO_DESDE, novoModeloEmVigor } from "./novo-modelo";
 import type { LinhaDoNossoLado } from "./do-nosso-lado";
+import { pedidoFechado } from "./pedido-arrumado";
 
 /**
  * O TRABALHO DO MODELO NOVO FECHA SEM DEPENDER SÓ DO PARCEIRO — d15 (CEO e
@@ -83,7 +84,6 @@ export type TrabalhoParaOFecho = {
 
 export type FaseDoFecho = "nada" | "mesa" | "pergunta";
 
-const PEDIDO_ARRUMADO = new Set(["cancelado", "arquivado", "concluido", "rejeitado"]);
 const HORA_MS = 3600 * 1000;
 
 /** A data do trabalho: a combinada, ou a que o cliente pediu. */
@@ -107,7 +107,7 @@ export function faseDoFecho(t: TrabalhoParaOFecho, agora: Date): FaseDoFecho {
   if (!t.noNovoModelo) return "nada";
   if (t.estado !== "acordada") return "nada";
   if (t.execucaoEnviadaEm != null || t.confirmadoEm != null) return "nada";
-  if (PEDIDO_ARRUMADO.has(String(t.estadoDoPedido ?? ""))) return "nada";
+  if (pedidoFechado(t.estadoDoPedido)) return "nada";
   const horas = horasDesdeAData(t, agora);
   if (horas == null) return "nada";
   if (horas >= HORAS_ATE_A_PERGUNTA) return "pergunta";

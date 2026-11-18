@@ -1,3 +1,4 @@
+import { ESTADOS_DE_PEDIDO_FECHADO } from "./pedido-arrumado";
 import { eDaEquipa, eFotografiaFalhada, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
 
 /**
@@ -187,7 +188,8 @@ export type UltimaPalavra = {
   onde: OndeSeSoube;
 };
 
-const PEDIDO_FECHADO = ["concluido", "cancelado", "arquivado", "rejeitado"];
+/** A mesma lista de todo o backoffice (`pedido-arrumado.ts`), 18-11-2026. */
+const PEDIDO_FECHADO: readonly string[] = ESTADOS_DE_PEDIDO_FECHADO;
 
 /** Os estados do pedido em palavras de painel — os mesmos do resumo semanal (`email-digest.ts`). */
 const ESTADO_DO_PEDIDO: Record<string, string> = {

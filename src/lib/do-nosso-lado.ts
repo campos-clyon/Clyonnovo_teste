@@ -14,6 +14,7 @@ import {
   TITULO_DO_GRUPO_SEM_RESPOSTA,
 } from "./escolhidos-sem-resposta";
 import { linhasDoFecho, TITULO_DO_GRUPO_DO_FECHO, type TrabalhoParaOFecho } from "./fecho-do-modelo-novo";
+import { pedidoFechado } from "./pedido-arrumado";
 
 /**
  * «DO NOSSO LADO» — o que está à espera da CLYON, no topo da Mesa. d14,
@@ -124,7 +125,14 @@ export type TrabalhoClyonParaOLado = {
 
 /* ── Ajudas ─────────────────────────────────────────────────────────────── */
 
-const FECHADO = new Set(["cancelado", "arquivado", "concluido", "rejeitado"]);
+/*
+ * UMA SÓ LISTA DOS ESTADOS FECHADOS — 18-11-2026 («mesa-so-pedidos-vivos»).
+ * Cancelado, arquivado, rejeitado ou concluído: `ESTADOS_DE_PEDIDO_FECHADO`
+ * (`pedido-arrumado.ts`), a mesma de todos os blocos deste cartão, da mesa das
+ * conversas e do fecho do modelo novo. Um pedido apagado já não está na base:
+ * não chega a nenhuma das listas.
+ */
+const fechado = (estado: string | null | undefined) => pedidoFechado(estado);
 const VIVA = (estado: string) => estado !== "morta" && estado !== "desistida";
 
 function segundosDesde(v: unknown, agora: Date): number | null {
@@ -154,10 +162,17 @@ export function haQuantoEspera(segundos: number): string {
  * O «Por responder» da mesa das conversas (o cliente falou por último, e não
  * só para agradecer), há mais de 2 h. As bloqueadas e as resolvidas já lá não
  * estão. Com pedido, a linha leva o número; sem pedido, o telefone.
+ *
+ * SÓ PEDIDOS VIVOS — 18-11-2026 («mesa-so-pedidos-vivos»): o #510 arquivado
+ * aparecia aqui como «o cliente escreveu e ninguém respondeu». A conversa de
+ * um pedido fechado (`pedido.fechado`, pela mesma lista) sai do cartão: a
+ * mensagem nova continua no WhatsApp › Por responder, que não muda. As
+ * conversas sem pedido ficam.
  */
 export function conversasDoNossoLado(linhas: ConversaParaOLado[]): LinhaDoNossoLado[] {
   return linhas
     .filter((l) => l.estado === "por_responder" && l.haSegundos != null && l.haSegundos >= DUAS_HORAS_S)
+    .filter((l) => !l.pedido?.fechado)
     .map((l) => ({
       tipo: "conversa" as const,
       pedidoId: l.pedido?.id ?? null,
@@ -176,7 +191,7 @@ export function conversasDoNossoLado(linhas: ConversaParaOLado[]): LinhaDoNossoL
 export function precosClyonDoNossoLado(trabalhos: TrabalhoClyonParaOLado[], agora: Date): LinhaDoNossoLado[] {
   const out: LinhaDoNossoLado[] = [];
   for (const t of trabalhos) {
-    if (FECHADO.has(t.estadoDoPedido ?? "")) continue;
+    if (fechado(t.estadoDoPedido)) continue;
     if (t.resumo.fase !== "escolher" || t.propostaEnviadaEm) continue;
     const aceites = t.negociacoes.filter((n) => n.estado === "aguarda_contratacao");
     const esperas = aceites.map((n) => segundosDesde(n.actualizadaEm, agora)).filter((s): s is number => s != null);
@@ -204,7 +219,7 @@ export function precosClyonDoNossoLado(trabalhos: TrabalhoClyonParaOLado[], agor
 export function propostasDoNossoLado(pedidos: PedidoParaOLado[], agora: Date): LinhaDoNossoLado[] {
   const out: LinhaDoNossoLado[] = [];
   for (const p of pedidos) {
-    if (FECHADO.has(p.status ?? "")) continue;
+    if (fechado(p.status)) continue;
     if (p.negociacoes.some((n) => n.confirmadoEm != null)) continue;
     if (quemNegoceia(p) !== "clyon") continue;
     const vivas = p.negociacoes.filter((n) => VIVA(n.estado) && n.estado !== "acordada");
@@ -266,7 +281,7 @@ export function datasPassadasDoNossoLado(
     n: { dataCombinada?: string | null; execucaoEnviadaEm?: string | null; confirmadoEm?: string | null },
     dataAgendada: string | null | undefined,
   ) => {
-    if (vistos.has(pedidoId) || FECHADO.has(estadoDoPedido ?? "")) return;
+    if (vistos.has(pedidoId) || fechado(estadoDoPedido)) return;
     const a = naAgenda(
       {
         dataCombinada: instanteDaBase(n.dataCombinada ?? null),
@@ -313,7 +328,7 @@ export function datasPassadasDoNossoLado(
 export function semRespostaDoNossoLado(pedidos: PedidoParaOLado[], agora: Date): LinhaDoNossoLado[] {
   const out: LinhaDoNossoLado[] = [];
   for (const p of pedidos) {
-    if (FECHADO.has(p.status ?? "")) continue;
+    if (fechado(p.status)) continue;
     if (!p.negociacoes.some((n) => n.escolhidoPeloCliente === true || Number(n.escolhidoPeloCliente) === 1)) continue;
     const e = escolhidosDeJson(p.escolhidosJson ?? null);
     // Já foi a mais parceiros, a pedido do cliente: deixou de estar do nosso lado.

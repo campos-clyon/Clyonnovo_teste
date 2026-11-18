@@ -5,6 +5,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import AvisosDaEquipa from "@/components/admin/AvisosDaEquipa";
 import { ProcuraGlobalContext } from "@/components/admin/NoutrosSitios";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import { useAbertosLembrados } from "@/components/admin/useAbertosLembrados";
 import {
   doNossoLado,
   haQuantoEspera,
@@ -49,7 +50,13 @@ export default function DoNossoLado({
   const [conversas, setConversas] = useState<ConversaParaOLado[] | null>(null);
   const [conversasFalharam, setConversasFalharam] = useState(false);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
-  const [fechado, setFechado] = useState(false);
+  /*
+   * O CARTÃO E CADA GRUPO ABREM-SE POR OPÇÃO — 18-11-2026 («mesa-so-pedidos-vivos»):
+   * nascem fechados, com o título e o número; o que se abre fica lembrado neste
+   * navegador. Um grupo a zero não aparece.
+   */
+  const { aberto: estaAberto, alternar } = useAbertosLembrados("clyon.mesa.do-nosso-lado");
+  const fechado = !estaAberto("cartao");
   const lidasEm = useRef(0);
   const [agora, setAgora] = useState(() => new Date());
   /*
@@ -129,7 +136,7 @@ export default function DoNossoLado({
     <section aria-label="Do nosso lado" className="mb-3 rounded-xl border border-slate-700 bg-slate-950/50 px-3 py-2">
       <button
         type="button"
-        onClick={() => setFechado((f) => !f)}
+        onClick={() => alternar("cartao")}
         aria-expanded={!fechado}
         className="flex w-full items-baseline justify-between gap-3 text-left"
       >
@@ -137,7 +144,7 @@ export default function DoNossoLado({
           Do nosso lado{" "}
           <span className={total > 0 ? "text-ciano-texto" : "text-slate-500"}>· {total}</span>
         </span>
-        <span className="text-[11px] text-slate-500">{fechado ? "Mostrar" : "Esconder"}</span>
+        <span className="text-[11px] text-slate-500">{fechado ? "Abrir" : "Fechar"}</span>
       </button>
       {!fechado && (
         <div className="mt-1">
@@ -152,11 +159,23 @@ export default function DoNossoLado({
             visiveis.map((g) => {
               const aberto = abertos.has(g.tipo);
               const linhas = aberto ? g.linhas : g.linhas.slice(0, LINHAS_A_VISTA);
+              const grupoAberto = estaAberto(g.tipo);
               return (
                 <div key={g.tipo} className="mt-2">
-                  <p className="text-[11px] font-semibold text-slate-300">
-                    {g.titulo} <span className="text-slate-500">· {g.linhas.length}</span>
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => alternar(g.tipo)}
+                    aria-expanded={grupoAberto}
+                    className="flex w-full items-baseline justify-between gap-3 rounded-md px-1 py-0.5 text-left hover:bg-slate-900"
+                  >
+                    <span className="text-[11px] font-semibold text-slate-300">
+                      {g.titulo}{" "}
+                      <span className={g.linhas.length > 0 ? "text-ciano-texto" : "text-slate-500"}>· {g.linhas.length}</span>
+                    </span>
+                    <span className="text-[11px] text-slate-500">{grupoAberto ? "Fechar" : "Abrir"}</span>
+                  </button>
+                  {grupoAberto && (
+                  <>
                   {g.tipo === "conversa" && conversasFalharam && (
                     <p className="text-[11px] text-amber-300">As conversas não se leram agora; volta a tentar daqui a 2 minutos.</p>
                   )}
@@ -193,6 +212,8 @@ export default function DoNossoLado({
                     >
                       {aberto ? "Ver menos" : `Ver mais ${g.linhas.length - LINHAS_A_VISTA}`}
                     </button>
+                  )}
+                  </>
                   )}
                 </div>
               );

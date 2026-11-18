@@ -6,6 +6,8 @@ import { isMudancaType } from "@/lib/calendar-helpers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AlteracoesDoCliente from "./AlteracoesDoCliente";
 import DoNossoLado from "./DoNossoLado";
+import { useAbertosLembrados } from "./useAbertosLembrados";
+import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import FaturasDoTrabalho from "./FaturasDoTrabalho";
 import { AConfirmarNoNovoModelo, ContaDoNovoModeloAoConfirmar } from "./NovoModeloNaMesa";
 import MensagemDaFase from "./MensagemDaFase";
@@ -1003,9 +1005,9 @@ const BLOCOS: Array<{
    */
   {
     chave: "cancelados",
-    titulo: "Cancelados",
+    titulo: "Cancelados e arquivados",
     dica:
-      "O cliente desistiu antes de haver trabalho. Ficam aqui com o histórico inteiro — abrir mostra o motivo e as propostas que chegaram a existir.",
+      "Só aparecem a procurar: já não pedem nada. Abrir mostra o motivo e as propostas que chegaram a existir, e deixa reabrir; o histórico está também em «Todos os pedidos».",
     Icone: XCircle,
     cor: "text-ardosia-texto border-ardosia",
     corDoNumero: "text-ardosia-texto",
@@ -1202,18 +1204,14 @@ export default function AdminNegociacoesPanel({
   const [notaAberta, setNotaAberta] = useState<number | null>(null);
   const [rascunhoDaNota, setRascunhoDaNota] = useState("");
   const [aGuardarNota, setAGuardarNota] = useState(false);
-  /* Que blocos estão fechados. «Concluídos» e «Cancelados» nascem fechados. */
-  const [fechados, setFechados] = useState<Set<ChaveDoBloco>>(
-    () => new Set(BLOCOS.filter((b) => b.fechadoPorOmissao).map((b) => b.chave)),
-  );
-  function alternarFechado(chave: ChaveDoBloco) {
-    setFechados((f) => {
-      const novo = new Set(f);
-      if (novo.has(chave)) novo.delete(chave);
-      else novo.add(chave);
-      return novo;
-    });
-  }
+  /*
+   * QUE BLOCOS ESTÃO ABERTOS — 18-11-2026 («mesa-so-pedidos-vivos»). Todos
+   * nascem FECHADOS, com o título e o número: abrem-se por opção, e o que se
+   * abriu fica lembrado neste navegador (`useAbertosLembrados`). Era só
+   * «Concluídos» e «Cancelados» (`fechadoPorOmissao`) — agora é a regra de todos.
+   */
+  const { aberto: blocoAberto, alternar: alternarFechado } = useAbertosLembrados("clyon.mesa.blocos");
+  const fechados = { has: (chave: ChaveDoBloco) => !blocoAberto(chave) };
   /*
    * A única porta para mudar o filtro. Limpa os marcados porque os cartões
    * dos blocos filtrados saem do DOM, e a barra não pode ficar a oferecer
@@ -2339,8 +2337,10 @@ export default function AdminNegociacoesPanel({
       // O CLIENTE RESPONDEU (31-10-2026, d2): «Aceito este preço», uma mensagem
       // no WhatsApp ou a conversa passada a uma pessoa — vai ao «Por decidir»,
       // com o selo, quando ele está à vista; no modo da CLYON, a «Precisa de si».
-      const chave: ChaveDoBloco | null =
-        b && t.clienteRespondeu
+      // Um pedido arrumado (cancelado, arquivado, rejeitado) vai sempre aos cancelados — 18-11-2026.
+      const chave: ChaveDoBloco | null = pedidoArrumado(t.estadoDoPedido)
+        ? "cancelados"
+        : b && t.clienteRespondeu
           ? mostrar !== "clyon"
             ? "porEnviar"
             : "n1"
@@ -2390,10 +2390,20 @@ export default function AdminNegociacoesPanel({
    * ABERTO desde a conclusão fica em destaque: dinheiro que entrou merece
    * ser visto, não descoberto por acaso.
    */
-  const cancelados = ordenados.filter((p) => p.status === "cancelado");
-  const concluidos = ordenados.filter((p) => p.status !== "cancelado" && pedidoConcluido(p));
+  /*
+   * SÓ PEDIDOS VIVOS NA MESA — 18-11-2026 («mesa-so-pedidos-vivos»). *«Na
+   * Mesa só devem estar as coisas que ainda pedem a nossa atenção. Os pedidos
+   * cancelados, arquivados ou apagados não devem aparecer lá.»* Só o
+   * «cancelado» saía dos blocos vivos: um arquivado ou rejeitado caía em «À
+   * espera de propostas». Agora os três (`pedidoArrumado`) vão para o bloco
+   * dos cancelados, que só se desenha A PROCURAR — é lá que se encontra e se
+   * reabre um pedido arrumado; o histórico continua em «Todos os pedidos». Um
+   * apagado já não vem da base.
+   */
+  const cancelados = ordenados.filter((p) => pedidoArrumado(p.status));
+  const concluidos = ordenados.filter((p) => !pedidoArrumado(p.status) && pedidoConcluido(p));
   const activos = ordenados.filter(
-    (p) => p.status !== "cancelado" && !pedidoConcluido(p),
+    (p) => !pedidoArrumado(p.status) && !pedidoConcluido(p),
   );
   const concluidosPorVer =
     concluidos.filter((p) => !p.concluidoVistoEm).length +
@@ -2629,7 +2639,12 @@ export default function AdminNegociacoesPanel({
       ? porPromoverNaMesa.length + voltamAoPorDecidir.length + clyonDoBloco("porEnviar").length
       : pedidosDoBloco(chave).length + clyonDoBloco(chave).length;
   }
-  const blocosDoModo = BLOCOS.filter((b) => b.visivelEm(mostrar));
+  /*
+   * Os cancelados saem da Mesa (18-11-2026, «mesa-so-pedidos-vivos»): o bloco
+   * só se desenha a procurar, para encontrar e reabrir um pedido arrumado. Não
+   * conta no «Geral» nem tem cartão em cima.
+   */
+  const blocosDoModo = BLOCOS.filter((b) => b.visivelEm(mostrar) && (b.chave !== "cancelados" || aProcurar));
   /*
    * A procurar, mostram-se todos os blocos: o filtro dos cartões esconderia o
    * pedido que se está a procurar, e quem escreve um telefone não sabe em que
