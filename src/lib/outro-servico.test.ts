@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas, type NegociacaoParaContar } from "./outro-servico";
+import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, OUTRO_SERVICO_SEM_PROPOSTAS, outroSemPropostas, type NegociacaoParaContar } from "./outro-servico";
 import { regraDoEnvio } from "./regra-do-envio";
 
 /**
@@ -67,24 +67,30 @@ describe("o «Outro serviço» sem propostas volta ao «Orçamentos novos»", ()
   });
 });
 
-describe("a Mesa põe-nos no «Orçamentos novos», com o cartão de negociação", () => {
+describe("a Mesa põe-nos em «Precisa de si», com a nota e o cartão de negociação (dono, 18-11-2026)", () => {
   const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 
-  it("saem de «À espera de propostas» pela regra, e só com o «Orçamentos novos» à vista", () => {
-    expect(MESA).toContain('import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas } from "@/lib/outro-servico";');
-    expect(MESA).toContain(
-      'mostrar !== "clyon" && tipo === "todos" && !aFiltrarProfissional && lidoEm != null ? new Date(lidoEm) : null;',
-    );
-    expect(MESA).toContain('if (nivel === "n2" && relogioDoPorDecidir && outroSemPropostas(e.pedido, relogioDoPorDecidir)) {');
-    expect(MESA).toContain("voltamAoPorDecidir.push(e.pedido);");
+  it("saem de «À espera de propostas» pela regra — e já não vão aos «Orçamentos novos»", () => {
+    expect(MESA).toContain('import { OUTRO_SERVICO_SEM_PROPOSTAS, outroSemPropostas } from "@/lib/outro-servico";');
+    expect(MESA).toContain("const relogioDoOutro = lidoEm != null ? new Date(lidoEm) : null;");
+    expect(MESA).toContain('if (nivel === "n2" && relogioDoOutro && outroSemPropostas(e.pedido, relogioDoOutro)) {');
+    expect(MESA).toContain("outrosSemPropostas.push(e.pedido);");
+    expect(MESA).not.toContain("voltamAoPorDecidir");
   });
 
-  it("o número do bloco conta-os, e o bloco desenha-os com o cartão de sempre", () => {
-    expect(MESA).toContain("? porPromoverNaMesa.length + voltamAoPorDecidir.length");
-    expect(MESA).toContain("{voltamAoPorDecidir.map((p) => cartaoDoPedido(p, b.corDoCartao))}");
+  it("o «Precisa de si» conta-os e desenha-os por cima, com a nota de decidir", () => {
+    expect(OUTRO_SERVICO_SEM_PROPOSTAS).toBe(
+      "Outro serviço há mais de 24 h sem propostas — decida: reenviar, passar a valor fixo ou falar com o cliente.",
+    );
+    expect(MESA).toContain('(chave === "n1" ? outrosSemPropostas.length : 0)');
+    expect(MESA).toContain('{b.chave === "n1" && outrosSemPropostas.length > 0 && (');
+    expect(MESA).toContain("{outrosSemPropostas.map((p) => cartaoDoPedido(p, b.corDoCartao))}");
+    expect(MESA).toContain("{OUTRO_SERVICO_SEM_PROPOSTAS}");
+    // Os «Orçamentos novos» contam só o que ainda não foi a ninguém.
+    expect(MESA).toMatch(/\? porPromoverNaMesa\.length\s*\n\s*:/);
     const i = MESA.indexOf('chave: "porEnviar",');
     const bloco = MESA.slice(i, MESA.indexOf("visivelEm", i));
-    expect(bloco).toContain("«Outro serviço» que já foi aos profissionais e ficou um dia sem propostas");
+    expect(bloco).not.toContain("Outro serviço");
   });
 });
 

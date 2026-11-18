@@ -271,6 +271,6 @@ describe("o cliente respondeu (d2)", () => {
     expect(MESA).toContain("blocoDoClyonNaMesa(paraAMesa(t))");
     expect(MESA).not.toContain(`clyonDoBloco("porEnviar")`);
     expect(MESA).toContain("{O_CLIENTE_RESPONDEU}");
-    expect(MESA).toContain("porPromoverNaMesa.length + voltamAoPorDecidir.length");
+    expect(MESA).toMatch(/\? porPromoverNaMesa\.length\s*\n\s*:/);
   });
 });

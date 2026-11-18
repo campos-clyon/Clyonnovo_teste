@@ -179,7 +179,7 @@ import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import VariosDias from "@/components/admin/VariosDias";
 import type { DiaDoTrabalho } from "@/lib/varios-dias";
 import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
-import { HORAS_ATE_VOLTAR_AO_POR_DECIDIR, outroSemPropostas } from "@/lib/outro-servico";
+import { OUTRO_SERVICO_SEM_PROPOSTAS, outroSemPropostas } from "@/lib/outro-servico";
 import { O_CLIENTE_RESPONDEU } from "@/lib/prazo-do-cliente-clyon";
 import { blocoDoClyonNaMesa, mostraOClienteRespondeu, type TrabalhoClyonParaAMesa } from "@/lib/trabalho-clyon-na-mesa";
 
@@ -878,7 +878,7 @@ const BLOCOS: Array<{
     chave: "n1",
     titulo: "Precisa de si",
     dica:
-      "Nada avança sem si. A proposta fica de pé até alguém responder — responda, ou feche o negócio, em nome do cliente, dentro do pedido.",
+      "Nada avança sem si. A proposta fica de pé até alguém responder — responda, ou feche o negócio, em nome do cliente, dentro do pedido. Em cima, o «Outro serviço» que já foi aos profissionais e ficou um dia sem propostas.",
     Icone: Clock,
     cor: "text-ciano-texto border-ciano",
     corDoNumero: "text-ciano-texto",
@@ -945,7 +945,7 @@ const BLOCOS: Array<{
      */
     titulo: "Orçamentos novos",
     dica:
-      "Tudo o que entra — site, WhatsApp ou registado aqui — e ainda não foi a ninguém; um profissional não o vê. Decida o tipo: valor fixo (os profissionais só aceitam ou recusam; a taxa vai pelo escalão) ou negociação (vai aos profissionais para proporem, a partir da conta da CLYON ou do valor que escrever na caixa). Em baixo, o «Outro serviço» que já foi aos profissionais e ficou um dia sem propostas.",
+      "Tudo o que entra — site, WhatsApp ou registado aqui — e ainda não foi a ninguém; um profissional não o vê. Decida o tipo: valor fixo (os profissionais só aceitam ou recusam; a taxa vai pelo escalão) ou negociação (vai aos profissionais para proporem, a partir da conta da CLYON ou do valor que escrever na caixa).",
     Icone: Send,
     cor: "text-magenta-texto border-magenta",
     corDoNumero: "text-magenta-texto",
@@ -2568,24 +2568,23 @@ export default function AdminNegociacoesPanel({
     n3: [],
   };
   /*
-   * O «OUTRO SERVIÇO» SEM PROPOSTAS VOLTA AO «POR DECIDIR» — 31-10-2026 (d6
-   * de 30-10). Foi aos profissionais e passou um dia sem ninguém propor: sai
-   * de «À espera de propostas» e fica no «Orçamentos novos», por baixo dos que
-   * ainda não foram a ninguém, com o cartão dele (Redistribuir, a Ficha,
-   * Passar a valor fixo). A regra é `outroSemPropostas`; o relógio é o da
-   * última leitura. Só quando o «Orçamentos novos» está à vista — no modo da
-   * CLYON, com um tipo ou com um profissional escolhido, fica onde estava.
+   * O «OUTRO SERVIÇO» SEM PROPOSTAS SOBE A «PRECISA DE SI» — 31-10-2026 (d6
+   * de 30-10); desde 18-11-2026 (dono) já não volta aos «Orçamentos novos»,
+   * que ficam só com o que ainda não foi a ninguém. Foi aos profissionais e
+   * passou um dia sem ninguém propor: sai de «À espera de propostas» e fica em
+   * cima no «Precisa de si», com a nota e o cartão dele (Redistribuir, a
+   * Ficha, Passar a valor fixo). A regra é `outroSemPropostas`; o relógio é o
+   * da última leitura.
    */
-  const voltamAoPorDecidir: Pedido[] = [];
-  const relogioDoPorDecidir =
-    mostrar !== "clyon" && tipo === "todos" && !aFiltrarProfissional && lidoEm != null ? new Date(lidoEm) : null;
+  const outrosSemPropostas: Pedido[] = [];
+  const relogioDoOutro = lidoEm != null ? new Date(lidoEm) : null;
   for (const e of activosOrdenados) {
     // A ordem interna — mais recente primeiro — vem preservada do memo; as
     // entradas de separador continuam a ser produzidas e deixam de ser desenhadas.
     if (!e.separador && e.pedido) {
       const nivel = nivelDe(e.pedido);
-      if (nivel === "n2" && relogioDoPorDecidir && outroSemPropostas(e.pedido, relogioDoPorDecidir)) {
-        voltamAoPorDecidir.push(e.pedido);
+      if (nivel === "n2" && relogioDoOutro && outroSemPropostas(e.pedido, relogioDoOutro)) {
+        outrosSemPropostas.push(e.pedido);
       } else porNivel[nivel].push(e.pedido);
     }
   }
@@ -2627,8 +2626,8 @@ export default function AdminNegociacoesPanel({
   }
   function quantosNoBloco(chave: ChaveDoBloco): number {
     return chave === "porEnviar"
-      ? porPromoverNaMesa.length + voltamAoPorDecidir.length
-      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length;
+      ? porPromoverNaMesa.length
+      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length : 0);
   }
   /*
    * Os cancelados saem da Mesa (18-11-2026, «mesa-so-pedidos-vivos»): o bloco
@@ -5425,23 +5424,6 @@ export default function AdminNegociacoesPanel({
                     onTrabalhoClyon={podeOferecerTrabalhoClyon ? trabalhoClyonOferecido : undefined}
                     notas={notas}
                   />
-                  {/*
-                    O «OUTRO SERVIÇO» QUE FOI E VOLTOU — 31-10-2026 (d6 de 30-10).
-                    Já foi aos profissionais e ninguém propôs num dia: decide-se
-                    aqui, com o cartão de negociação dele.
-                  */}
-                  {!fechado && voltamAoPorDecidir.length > 0 && (
-                    <div className="mt-3 pl-1">
-                      <p className="mb-2 text-xs leading-relaxed text-magenta-texto">
-                        «Outro serviço» que já foi aos profissionais e está há mais de{" "}
-                        {HORAS_ATE_VOLTAR_AO_POR_DECIDIR} horas sem nenhuma proposta. Redistribua, escolha
-                        quem o recebe na Ficha, ou passe-o a valor fixo.
-                      </p>
-                      <div className="space-y-1.5">
-                        {voltamAoPorDecidir.map((p) => cartaoDoPedido(p, b.corDoCartao))}
-                      </div>
-                    </div>
-                  )}
                   {/* Só o pai diz "Nada aqui.": o filho, sem pedidos, não desenha
                       nada — senão apareciam duas mensagens de vazio empilhadas. */}
                   {!fechado && quantos === 0 && (
@@ -5540,6 +5522,21 @@ export default function AdminNegociacoesPanel({
                                 <span className="ml-2 font-normal text-slate-200">{porqueSaltar(t)}</span>
                               </button>
                             ))}
+                          </div>
+                        )}
+                        {/*
+                          O «OUTRO SERVIÇO» QUE FOI E NINGUÉM PROPÔS — d6 de 30-10; em
+                          «Precisa de si» desde 18-11-2026 (dono): decide-se aqui, com o
+                          cartão de negociação dele.
+                        */}
+                        {b.chave === "n1" && outrosSemPropostas.length > 0 && (
+                          <div className="mb-3">
+                            <p className="mb-2 text-xs leading-relaxed text-magenta-texto">
+                              {OUTRO_SERVICO_SEM_PROPOSTAS}
+                            </p>
+                            <div className="space-y-1.5">
+                              {outrosSemPropostas.map((p) => cartaoDoPedido(p, b.corDoCartao))}
+                            </div>
                           </div>
                         )}
                         {pedidosDoBloco(b.chave).length > 0 && cabecalhoDaMesa}

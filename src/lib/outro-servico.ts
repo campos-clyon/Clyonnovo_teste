@@ -15,8 +15,8 @@
  *      (`profissional-elegivel.ts`), com as regras de sempre — aprovado,
  *      activo, dentro do raio. Quem já tinha «outro» gravado continua a
  *      recebê-lo.
- *   2. Se foi aos profissionais e passou um dia sem nenhuma proposta, volta à
- *      Mesa, ao «Orçamentos novos» (`outroSemPropostas`): a equipa redistribui,
+ *   2. Se foi aos profissionais e passou um dia sem nenhuma proposta, sobe na
+ *      Mesa a «Precisa de si» (`outroSemPropostas`; até 18-11-2026 voltava aos «Orçamentos novos»): a equipa redistribui,
  *      escolhe à mão ou passa-o a valor fixo.
  *
  * O grupo NÃO muda em `grupoDoServico`: isso converteria o «outro» gravado de
@@ -30,8 +30,11 @@ export const OUTRO_SERVICO = "outro";
 /** O grupo que também recebe o «Outro serviço». */
 export const GRUPO_QUE_RECEBE_O_OUTRO = "manutencao_da_casa";
 
-/** Quanto tempo um «outro» espera por uma proposta antes de voltar ao «Orçamentos novos». */
+/** Quanto tempo um «outro» espera por uma proposta antes de subir a «Precisa de si» (18-11-2026; era aos «Orçamentos novos»). */
 export const HORAS_ATE_VOLTAR_AO_POR_DECIDIR = 24;
+
+/** A nota em «Precisa de si» por cima desses pedidos — dono, 18-11-2026. */
+export const OUTRO_SERVICO_SEM_PROPOSTAS = `Outro serviço há mais de ${HORAS_ATE_VOLTAR_AO_POR_DECIDIR} h sem propostas — decida: reenviar, passar a valor fixo ou falar com o cliente.`;
 
 /** O que a regra precisa de cada negociação — o molde da Mesa serve. */
 export type NegociacaoParaContar = {
