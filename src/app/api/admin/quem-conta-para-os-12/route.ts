@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
-import { eAppDoTeste, montarQuadro } from "@/lib/quem-conta-para-os-12";
+import { eAppDoTeste, emailsDaListaColada, montarQuadro } from "@/lib/quem-conta-para-os-12";
 import {
   guardarListaDaPlay,
   listaDaPlayGuardada,
   pessoasDaAppDeCliente,
   pessoasDaAppPro,
 } from "@/lib/quem-conta-para-os-12-na-base";
+import { avisarQuemEntrouNaListaDaPlay } from "@/lib/lista-da-play-avisos-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,11 @@ export const dynamic = "force-dynamic";
  *
  * GET  ?app=pro|cliente            → o quadro (cada pessoa e o estado) e a última lista colada
  * POST { app, lista }              → guarda a lista da Play colada (vazia = apaga) e devolve o quadro
+ *
+ * Na CLYON Pro, ao guardar uma lista, quem passou a estar nela (pelo Gmail do
+ * teste ou pelo da conta) e ainda não abriu a app recebe UM aviso «Já pode
+ * entrar no teste» (18-11-2026, d6) — ver lista-da-play-avisos-na-base.ts.
+ * Só aqui, ao colar: nunca num deploy.
  */
 
 const MAXIMO_DO_TEXTO = 200_000;
@@ -63,7 +69,8 @@ export async function POST(req: NextRequest) {
   }
   try {
     await guardarListaDaPlay(corpo.app, lista, String(colab?.nome ?? "admin"));
-    return NextResponse.json(await quadro(corpo.app));
+    const avisos = corpo.app === "pro" ? await avisarQuemEntrouNaListaDaPlay(emailsDaListaColada(lista)) : null;
+    return NextResponse.json({ ...(await quadro(corpo.app)), avisos });
   } catch (e) {
     console.error("[admin/quem-conta-para-os-12 POST]", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Não consegui guardar a lista." }, { status: 500 });

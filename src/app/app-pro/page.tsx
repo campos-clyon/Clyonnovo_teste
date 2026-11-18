@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import AdesaoDaApp, { type TextosDaAdesao } from "@/components/AdesaoDaApp";
 import { APP_PRO_NA_PLAY, LINK_DO_TESTE_DA_APP_PRO } from "@/lib/links-da-app";
+import { TEXTO_DE_ESPERA_DO_TESTE } from "@/lib/lista-da-play-e-o-profissional";
 
 /**
  * /app-pro — A ADESÃO À CLYON PRO EM QUATRO PASSOS (17-11-2026, d61).
@@ -13,6 +14,11 @@ import { APP_PRO_NA_PLAY, LINK_DO_TESTE_DA_APP_PRO } from "@/lib/links-da-app";
  *
  * Fora do Google: é um passo de quem já foi convidado, não uma página de
  * entrada.
+ *
+ * 18-11-2026 (d6): o passo 3 confere o Gmail com a última lista da Play colada
+ * no backoffice. Enquanto não está nela, espera (e avisamos quando estiver);
+ * já não se manda carregar e «tentar mais tarde». O passo 2 tem o
+ * «Candidate-se» para quem ainda não tem conta.
  */
 
 export const metadata: Metadata = {
@@ -40,7 +46,7 @@ const TEXTOS: TextosDaAdesao = {
       titulo: "Toque em «Tornar-me testador»",
       frases: [
         "Abra o link no telemóvel, com esse Gmail, e toque em «Tornar-me testador».",
-        "Se a página disser que não tem acesso, o Gmail ainda não está na lista: tente outra vez mais tarde.",
+        "Se a página disser que não tem acesso, o Gmail ainda não está na lista: entre com a sua conta, deixe-nos o Gmail e avisamos quando estiver.",
       ],
     },
     {
@@ -58,9 +64,23 @@ const TEXTOS: TextosDaAdesao = {
       "Este email não é Gmail. A Google Play só reconhece a conta Google do telemóvel (Definições › Google): sem ela, o teste não abre.",
     semSessao: "Para guardarmos o Gmail, entre primeiro com a sua conta de profissional.",
     entrar: { rotulo: "Entrar e voltar a este passo", href: "/profissionais/entrar?destino=%2Fapp-pro%3Fpasso%3D2" },
+    semConta: { texto: "Ainda não tem conta de profissional?", rotulo: "Candidate-se", href: "/quero-ser-parceiro#candidatura" },
     guardado: "Gmail guardado. Vamos pô-lo na lista do teste.",
   },
-  teste: { botao: "Abrir o link do teste" },
+  teste: {
+    botao: "Abrir o link do teste",
+    espera: {
+      titulo: "O seu Gmail está a caminho da lista",
+      frases: [
+        TEXTO_DE_ESPERA_DO_TESTE,
+        "Pode fechar esta página: o aviso chega por email e, se tiver os avisos ligados, ao telemóvel.",
+      ],
+    },
+    pode: {
+      titulo: "Toque em «Tornar-me testador»",
+      frases: ["O seu Gmail já está na lista. Abra o link no telemóvel, com esse Gmail, e toque em «Tornar-me testador»."],
+    },
+  },
   loja: {
     botao: "Abrir na Play Store",
     depois: { texto: "Ainda não tem conta de profissional?", rotulo: "Candidate-se", href: "/quero-ser-parceiro#candidatura" },

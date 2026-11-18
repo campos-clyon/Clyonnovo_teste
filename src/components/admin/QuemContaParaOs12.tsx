@@ -104,6 +104,7 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
   const [colar, setColar] = useState(false);
   const [texto, setTexto] = useState("");
   const [filtro, setFiltro] = useState<EstadoDeUso | "todos">("todos");
+  const [avisos, setAvisos] = useState("");
 
   const carregar = useCallback(async () => {
     if (!token) return;
@@ -137,9 +138,18 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ app, lista }),
       });
-      const d = (await res.json().catch(() => ({}))) as Quadro & { error?: string };
+      const d = (await res.json().catch(() => ({}))) as Quadro & {
+        error?: string;
+        avisos?: { avisados: number; falharam: number } | null;
+      };
       if (!res.ok) throw new Error(d.error ?? "Não consegui guardar a lista.");
       setQuadro(d);
+      // O aviso «Já pode entrar no teste» (d6, 18-11-2026): só a quem passou a estar na lista, uma vez.
+      setAvisos(
+        d.avisos && (d.avisos.avisados || d.avisos.falharam)
+          ? `Avisados agora (email/app): ${d.avisos.avisados}${d.avisos.falharam ? ` · sem caminho para avisar: ${d.avisos.falharam}` : ""}.`
+          : "",
+      );
       setErro("");
       setColar(false);
       setTexto("");
@@ -183,6 +193,7 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
       </div>
 
       {erro && <p className={`mt-3 text-sm ${t.erro}`}>{erro}</p>}
+      {avisos && <p className={`mt-3 text-sm ${t.forte}`}>{avisos}</p>}
 
       {quadro && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -211,7 +222,8 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
         <div className="mt-4 space-y-2">
           <label className={`block ${t.texto}`} htmlFor={`lista-da-play-${app}`}>
             Cole os emails da lista de testadores (Play Console › Testes › Teste fechado › Testadores), separados
-            por vírgulas ou linhas. Fica guardada a última lista colada.
+            por vírgulas ou linhas. Fica guardada a última lista colada.{app === "pro" &&
+              " Quem passar a estar na lista e ainda não abriu a app recebe, uma vez, o aviso «Já pode entrar no teste»."}
           </label>
           <textarea
             id={`lista-da-play-${app}`}

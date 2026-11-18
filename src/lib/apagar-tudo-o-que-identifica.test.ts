@@ -153,6 +153,8 @@ const NAO_IDENTIFICAM = new Set([
   // Quando mudaram o IBAN, o titular ou o MB WAY (12-11-2026, d1): uma data,
   // e o IBAN, o titular e o MB WAY já se limpam.
   "ibanMudadoEm",
+  // Quando recebeu o aviso «Já pode entrar no teste» (18-11-2026, d6): uma data.
+  "avisoDaListaDaPlayEm",
 ]);
 
 /** As colunas que `ensureProvidersSchema` acrescenta a `providers`. */

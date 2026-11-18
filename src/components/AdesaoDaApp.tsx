@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { eGmail, emailLimpo } from "@/lib/gmail-do-telemovel";
 import { TEXTOS_DO_CONVITE_NO_SITE } from "@/lib/programa-da-app";
+import { estadoDoPassoDoTeste } from "@/lib/lista-da-play-e-o-profissional";
 
 /**
  * A ADESÃO À APP EM PASSOS — 17-11-2026 (d61, decidida pelo CEO com delegação
@@ -26,6 +27,13 @@ import { TEXTOS_DO_CONVITE_NO_SITE } from "@/lib/programa-da-app";
  * (a rota do «O Gmail do meu telemóvel é outro» do painel), o do cliente na
  * inscrição do programa de acesso antecipado (/api/conta/programa-da-app, com
  * o consentimento à letra). Sem tabela nova.
+ *
+ * O PASSO 3 ESPERA PELA LISTA — 18-11-2026 (d6, o CEO e o dono). Na CLYON Pro
+ * a rota do Gmail diz se ele já está na última lista da Play colada no
+ * backoffice (`naListaDaPlay`). Enquanto não está, o passo 3 não manda
+ * carregar em «Tornar-me testador» (a Play diria que não há acesso): diz que
+ * já recebemos o Gmail e que avisamos (`teste.espera`). Quando está, o link
+ * do teste (`teste.pode`). Sem sessão ou sem Gmail, os passos como sempre.
  */
 
 export type PassoDaAdesao = { titulo: string; frases: string[] };
@@ -44,11 +52,19 @@ export type TextosDaAdesao = {
     /** Sem sessão: porque não se pode guardar, e onde entrar. */
     semSessao: string;
     entrar: { rotulo: string; href: string };
+    /** Sem sessão: quem ainda não tem conta (o «Candidate-se» do profissional). */
+    semConta?: { texto: string; rotulo: string; href: string };
     guardado: string;
     /** Só no cliente: a caixa do consentimento (RGPD). */
     consentimento?: string;
   };
-  teste: { botao: string };
+  teste: {
+    botao: string;
+    /** O Gmail ainda não está na lista da Play: o passo 3 em espera, sem o link (só a CLYON Pro). */
+    espera?: PassoDaAdesao;
+    /** O Gmail já está na lista: o passo 3 com o link. */
+    pode?: PassoDaAdesao;
+  };
   loja: { botao: string; depois?: { texto: string; rotulo: string; href: string } };
   saberMais: string[];
 };
@@ -85,6 +101,9 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
   const [erro, setErro] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
   const [guardado, setGuardado] = useState<string | null>(null);
+  // O Gmail que ficou gravado (o de antes ou o de agora) e se já está na lista da Play (só a CLYON Pro).
+  const [gmailGravado, setGmailGravado] = useState(false);
+  const [naLista, setNaLista] = useState<boolean | null>(null);
   const titulo = useRef<HTMLHeadingElement>(null);
   const mudou = useRef(false);
 
@@ -106,6 +125,7 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
           gmail?: string | null;
           email?: string | null;
           emailDaConta?: string | null;
+          naListaDaPlay?: boolean | null;
         };
         if (!r.ok || !d.ok) {
           setSessao(false);
@@ -115,6 +135,10 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
         const jaDeixou = tipo === "pro" ? d.gmail : d.email;
         const daConta = d.emailDaConta && eGmail(d.emailDaConta) ? d.emailDaConta : "";
         setEmail(jaDeixou || daConta || "");
+        if (tipo === "pro") {
+          setGmailGravado(Boolean(d.gmail));
+          setNaLista(typeof d.naListaDaPlay === "boolean" ? d.naListaDaPlay : null);
+        }
       } catch {
         if (vivo) setSessao(false);
       }
@@ -193,7 +217,7 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
               credentials: "include",
               body: JSON.stringify({ email: e, consentimento: true, origem: "conta" }),
             });
-      const d = (await r.json().catch(() => ({}))) as { error?: string };
+      const d = (await r.json().catch(() => ({}))) as { error?: string; naListaDaPlay?: boolean | null };
       if (r.status === 401) {
         setSessao(false);
         return;
@@ -203,6 +227,10 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
         return;
       }
       setGuardado(e);
+      if (tipo === "pro") {
+        setGmailGravado(true);
+        setNaLista(typeof d.naListaDaPlay === "boolean" ? d.naListaDaPlay : null);
+      }
       irPara(2);
     } catch {
       setErro("Sem ligação. Verifique a internet e tente outra vez.");
@@ -230,6 +258,14 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
       {textos.outraApp.texto}{" "}
       <a href={textos.outraApp.href} className={LIGACAO}>
         {textos.outraApp.rotulo}
+      </a>
+    </p>
+  );
+  const semConta = textos.gmail.semConta && (
+    <p className="text-sm leading-relaxed text-slate-600">
+      {textos.gmail.semConta.texto}{" "}
+      <a href={textos.gmail.semConta.href} className={LIGACAO}>
+        {textos.gmail.semConta.rotulo}
       </a>
     </p>
   );
@@ -279,6 +315,7 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
                     {textos.gmail.entrar.rotulo}
                   </a>
                 )}
+                {i === 1 && semConta}
                 {i === 2 && botaoDoTeste}
                 {i === 3 && botaoDaLoja}
                 {i === 3 && depoisDaLoja}
@@ -292,7 +329,15 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
   }
 
   /* ─── Um ecrã de cada vez ─── */
-  const atual = p[passo];
+  const doTeste =
+    tipo === "pro" ? estadoDoPassoDoTeste({ sessao, temGmail: gmailGravado, naLista }) : "sem-dados";
+  const emEspera = passo === 2 && doTeste === "espera" && Boolean(textos.teste.espera);
+  const atual =
+    passo === 2 && doTeste === "espera" && textos.teste.espera
+      ? textos.teste.espera
+      : passo === 2 && doTeste === "pode" && textos.teste.pode
+        ? textos.teste.pode
+        : p[passo];
   const naoGmail = avisado && !eGmail(email);
 
   return (
@@ -350,6 +395,7 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
                 </a>
               </div>
             )}
+            {sessao === false && semConta}
             {sessao === true && (
               <>
                 <label className="block text-sm font-semibold text-slate-800" htmlFor="gmail-da-adesao">
@@ -418,7 +464,7 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
             {sessao === false ? "Continuar sem guardar" : naoGmail ? "Continuar mesmo assim" : "Continuar"}
           </button>
         )}
-        {passo === 2 && (
+        {passo === 2 && !emEspera && (
           <>
             {botaoDoTeste}
             <button

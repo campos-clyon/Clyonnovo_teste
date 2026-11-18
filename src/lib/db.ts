@@ -1213,6 +1213,15 @@ export async function ensureProvidersSchema(): Promise<void> {
         sql: "ALTER TABLE providers ADD COLUMN gmailDoTesteEm DATETIME NULL DEFAULT NULL",
       },
       /*
+       * O AVISO «JÁ PODE ENTRAR NO TESTE» — 18-11-2026 (d6). Quando o Gmail
+       * dele aparece numa lista da Play colada no backoffice, sai um aviso, e
+       * só um: esta data. Nasce vazia; só se escreve ao colar uma lista.
+       */
+      {
+        name: "avisoDaListaDaPlayEm",
+        sql: "ALTER TABLE providers ADD COLUMN avisoDaListaDaPlayEm DATETIME NULL DEFAULT NULL",
+      },
+      /*
        * AS TRÊS CONFIRMAÇÕES DO «VERIFICADO» — 01-11-2026 (dono: «Selo só nos
        * que tiverem os 3»). NIF, identidade e contacto, cada um com a data e
        * quem confirmou. Nascem vazias: ninguém fica verificado sem a equipa o
