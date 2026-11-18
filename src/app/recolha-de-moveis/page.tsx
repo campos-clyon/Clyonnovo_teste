@@ -44,6 +44,7 @@ import {
 } from "@/lib/promessas-publicas";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /*
  * O preço desta página vem de src/lib/precos-publicos.ts.
@@ -614,6 +615,8 @@ export default function RecolhaDeMoveisPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(serviceSchema) }}
       />
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="recolha" />
     </div>
   );
 }

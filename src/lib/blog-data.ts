@@ -1357,6 +1357,107 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       },
     ],
   },
+  /*
+   * O GUIA PARA QUEM TEM CARRINHA — 18-11-2026 (d8). O único do blog para
+   * parceiros: responde à pesquisa informativa («como arranjar clientes para
+   * mudanças», «trabalho com carrinha») e passa-a à /quero-ser-parceiro, que é
+   * quem tem de ganhar «trabalho com carrinha». Sem entulho (d18), sem números
+   * de taxas (a candidatura lê-os das taxas em vigor) e sem a CLYON a pagar ao
+   * parceiro: desde 15-11 o cliente paga-lhe, e ele passa a taxa da plataforma.
+   */
+  {
+    slug: "como-receber-pedidos-de-recolhas-e-mudancas-em-lisboa",
+    title: "Como receber pedidos de recolhas e mudanças em Lisboa",
+    metaTitle: "Receber pedidos de recolhas e mudanças em Lisboa",
+    description:
+      "Tem carrinha em Lisboa? Como receber pedidos de recolhas e mudanças sem pagar por contactos, o que conta num bom orçamento e como se candidatar.",
+    category: "Para parceiros",
+    keywords: [
+      "trabalho com carrinha",
+      "trabalho com carrinha lisboa",
+      "clientes para mudanças",
+      "pedidos de recolhas",
+      "trabalhar em mudanças lisboa",
+      "parceiro clyon",
+    ],
+    readingTime: "5 min",
+    publishDate: "2026-11-18",
+    heroLabel: "Para quem tem carrinha",
+    intro:
+      "Quem tem uma carrinha e faz recolhas de móveis ou mudanças na zona de Lisboa sabe que o difícil raramente é o trabalho: é ter pedidos certos, na zona certa, sem gastar o dia ao telefone nem pagar por contactos que não dão em nada. Este guia explica de onde vêm esses pedidos, o que faz um orçamento aguentar-se à porta e como funciona receber pedidos pela CLYON, uma plataforma que liga quem precisa de uma recolha ou de uma mudança aos parceiros da zona. Se já sabe o que quer, pode [candidatar-se aqui](/quero-ser-parceiro#candidatura).",
+    sections: [
+      {
+        title: "De onde vêm os pedidos de recolhas e mudanças",
+        paragraphs: [
+          "Os clientes chegam por três caminhos: o passa-palavra, os anúncios nos sites de classificados e as plataformas que juntam pedidos. O passa-palavra é o melhor cliente que há, mas demora anos a encher uma agenda. Nos classificados, compete pelo preço mais baixo com dezenas de anúncios iguais. Nas plataformas, a diferença está em como pagam os pedidos: em algumas compra créditos para ver um contacto, quer o cliente o escolha quer não.",
+          "Antes de entrar numa plataforma, faça três perguntas: paga para responder? Vê o trabalho antes de dar o preço? E quem fica com o valor combinado por escrito?",
+        ],
+      },
+      {
+        title: "O que faz um orçamento aguentar-se à porta",
+        paragraphs: [
+          "Um orçamento dado ao telefone é um palpite. A diferença entre um sofá de dois lugares num rés-do-chão e um de canto num quarto andar sem elevador é meia manhã de trabalho. O que deve saber antes de dar o preço:",
+        ],
+        bullets: [
+          "fotografias do que sai (ou de cada divisão, num esvaziamento);",
+          "a zona e a distância a partir da sua base;",
+          "o andar, se há elevador e como é a escada;",
+          "se há móveis para desmontar;",
+          "numa mudança, as duas moradas com andar e acesso, e a tipologia da casa.",
+        ],
+      },
+      {
+        title: "Como funciona pela CLYON",
+        paragraphs: [
+          "O cliente descreve o trabalho no site, com fotografias, e o pedido chega aos parceiros que fazem aquele serviço e têm aquela zona dentro do raio que indicaram. Quem quer, responde com o seu valor. O cliente escolhe e o valor fica escrito na plataforma: ninguém o muda sozinho à porta. Até ser escolhido, vê a zona; a morada exata e o telefone do cliente chegam quando é contratado.",
+          "Quem faz o trabalho é o parceiro: desmonta, carrega e transporta. A CLYON não manda equipas. Junta os pedidos, guarda o que se combinou e dá-lhe as ferramentas para responder, no painel ou na app CLYON Pro, para Android. Com o trabalho à vista, o preço que dá é o preço que cobra, e é isso que faz o cliente voltar e recomendá-lo.",
+          "Se quer ver como é antes de se candidatar, leia [como funciona para os parceiros](/quero-ser-parceiro#como-funciona).",
+        ],
+      },
+      {
+        title: "Quanto custa responder, e como recebe",
+        paragraphs: [
+          "Responder a pedidos não custa nada: não há mensalidade, nem créditos, nem contactos à venda. Um orçamento que não dá em nada não lhe custa um cêntimo.",
+          "Quando fecha um trabalho, o cliente paga-lhe diretamente: por transferência, por MB WAY ou em dinheiro no local. Emite ao cliente a fatura do trabalho e passa à CLYON a taxa da plataforma e o IVA dela, por referência, um pagamento por trabalho. A taxa da plataforma só existe quando há trabalho fechado. Os valores em vigor estão na [página de candidatura](/quero-ser-parceiro#como-funciona), antes de se candidatar.",
+        ],
+      },
+      {
+        title: "Em que zonas e serviços há pedidos",
+        paragraphs: [
+          "A CLYON recebe pedidos de Lisboa a Setúbal: recolhas de móveis e monos, esvaziamentos de casas, mudanças e pequenas reparações. Em Lisboa, Loures e na Linha de Sintra (Amadora, Queluz, Cacém, Rio de Mouro, Mem Martins, Sintra) é onde mais queremos ter parceiros a responder.",
+          "Nas mudanças, cada parceiro tem a sua tarifa à hora, com duas ou com três pessoas, e o cliente vê-a antes de escolher.",
+        ],
+      },
+      {
+        title: "Como se candidatar",
+        paragraphs: [
+          "A candidatura pede o nome ou a empresa, o telemóvel, o email, de onde trabalha, o que faz e uma fotografia da carrinha. Não há inscrição automática: uma pessoa lê cada candidatura antes de haver conta, e é por isso que podemos dizer ao cliente que quem lhe aparece foi aprovado. Depois de aprovado, indica no painel como quer receber e o seu regime de IVA; o painel diz-lhe o que falta para começar a propor.",
+          "[Candidatar-me como parceiro](/quero-ser-parceiro#candidatura)",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "Tenho de pagar para receber pedidos?",
+        answer:
+          "Não. Responder é grátis, sem mensalidade nem créditos. A taxa da plataforma só existe quando fecha um trabalho.",
+      },
+      {
+        question: "Preciso de ter empresa?",
+        answer:
+          "Não é preciso ter uma sociedade. Precisa de poder passar fatura do trabalho ao cliente, com IVA ou com isenção conforme o seu regime, e de indicar esse regime no painel.",
+      },
+      {
+        question: "Posso escolher os pedidos?",
+        answer:
+          "Só lhe chegam pedidos dos serviços que faz e dentro do raio que indicar. Responde aos que lhe servem.",
+      },
+      {
+        question: "Quem combina a data com o cliente?",
+        answer: "É o parceiro, depois de ser escolhido. A data é a que os dois acordam.",
+      },
+    ],
+  },
   ];
 }
 

@@ -25,6 +25,7 @@ import {
 } from "@/lib/promessas-publicas";
 import { TELEFONE_DA_CLYON_NACIONAL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /*
  * 30-09-2026: o título dizia «— Hoje», a FAQ «resposta em menos de 1 hora» e
@@ -352,6 +353,8 @@ export default function RecolhaMoveisUrgentePage() {
             </div>
           </div>
         </section>
+        {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+        <TrabalheConnosco tipo="recolha" />
       </main>
     </>
   );

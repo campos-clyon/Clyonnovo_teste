@@ -10,6 +10,7 @@ import { PRESTADOR } from "@/lib/dados-estruturados";
 import { DESMONTAGEM_A_PEDIDO, PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 const SITE_URL = "https://clyon.pt";
 
@@ -361,6 +362,8 @@ export default function MonosAmadoraPage() {
             />
           </div>
         </section>
+        {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+        <TrabalheConnosco tipo="recolha" cidade={{ slug: "amadora", nome: "Amadora" }} />
       </main>
     </>
   );

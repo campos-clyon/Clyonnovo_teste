@@ -36,6 +36,7 @@ import { MOVEIS_POR_PECA_COM_OS_ANDARES, PECA_GRANDE } from "@/lib/preco-de-refe
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /*
  * A recolha de sofás é recolha de móveis: mesma faixa, mesma fonte.
@@ -403,6 +404,8 @@ export default function RecolhaDeSofasPage() {
           </div>
         </div>
       </section>
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="recolha" />
     </div>
   );
 }

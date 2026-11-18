@@ -35,6 +35,7 @@ import { MOVEIS_POR_PECA_COM_OS_ANDARES } from "@/lib/preco-de-referencia";
 import { PRESTADOR, validadeDoPreco } from "@/lib/dados-estruturados";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /*
  * A recolha de eletrodomésticos é recolha de móveis: mesma faixa, mesma fonte.
@@ -409,6 +410,8 @@ export default function RecolhaDeEletrodomesticosPage() {
           </div>
         </div>
       </section>
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="recolha" />
     </div>
   );
 }

@@ -59,7 +59,8 @@ const EMPRESA = [
   { href: "/regioes", texto: "Regiões" },
   { href: "/empresas", texto: "Para empresas" },
   // A candidatura dos parceiros não tinha ligação no rodapé (31-10-2026, d6 de 28-10).
-  { href: "/quero-ser-parceiro", texto: "Quero ser parceiro" },
+  // Com «carrinha» no texto desde 18-11-2026 (d8): a palavra de quem procura trabalho.
+  { href: "/quero-ser-parceiro", texto: "Trabalhe connosco: tem carrinha?" },
   { href: "/en/junk-removal-lisbon", texto: "In English" },
   { href: "/faq", texto: "FAQ" },
   { href: "/blog", texto: "Blog" },

@@ -9,6 +9,7 @@ import { BUSINESS_NAME, SITE_URL } from "@/lib/seo-data";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
 import { ANCORA_DA_RECOLHA_GRATUITA } from "@/lib/recolha-gratuita-na-cidade";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /*
  * A PÁGINA PARA QUEM QUER DOAR — reescrita a 30-09-2026.
@@ -387,6 +388,8 @@ export default function DoarMoveisUsadosPage() {
           <FurnitureSeoLinks currentPage="/recolha-gratuita-de-moveis-usados" variant="grid" />
         </div>
       </section>
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="recolha" />
     </div>
   );
 }

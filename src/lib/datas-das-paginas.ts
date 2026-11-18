@@ -52,7 +52,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/faq": "2026-11-17",
   "/sobre-nos": "2026-11-17",
   "/trabalhos": "2026-11-10",
-  "/blog": "2026-11-10",
+  // 18-11-2026 (d8): o guia novo para quem tem carrinha entra na lista dos artigos.
+  "/blog": "2026-11-18",
   "/servicos": "2026-11-17",
   "/recolha-de-moveis": "2026-11-16",
   "/recolha-de-sofas": "2026-11-16",
@@ -96,6 +97,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 04-11-2026: as fotografias da carrinha no formulário (d17) e sem entulho na frase de abertura (d18).
   // 11-11-2026 (d7): a taxa das mudanças pela lista de parceiros, dita ao lado do exemplo.
   // 18-11-2026 (d5): o menu «Soluções» sem a limpeza (serviço futuro).
+  // 18-11-2026 (d8): o título e a descrição («Trabalho com carrinha…»), o bloco de Lisboa, Loures e
+  // a Linha de Sintra com as ligações por zona, e a linha das mudanças escolhidas (3 horas).
   "/quero-ser-parceiro": "2026-11-18",
   // 17-11-2026 (d68): a Amora no título, na descrição e no H1 (a página para onde /recolha-moveis-amora vai).
   "/recolha-moveis-seixal": "2026-11-17",

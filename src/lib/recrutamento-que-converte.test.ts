@@ -56,7 +56,9 @@ describe("o primeiro ecrã", () => {
   it("tem o botão para a candidatura, antes de tudo o resto", () => {
     const botao = PAGINA.indexOf('href="#candidatura"');
     expect(botao).toBeGreaterThan(-1);
-    expect(semNotas(PAGINA)).toContain("Candidatar-me (1 minuto)");
+    expect(semNotas(PAGINA)).toContain("Candidatar-me </a>");
+    // Sem tempo de candidatura prometido (18-11-2026, d8).
+    expect(semNotas(PAGINA)).not.toMatch(/\bminutos?\b/);
     // Antes dos cartões, do «Como funciona» e do formulário.
     expect(botao).toBeLessThan(PAGINA.indexOf("{PORQUE.map("));
     expect(botao).toBeLessThan(PAGINA.indexOf('id="como-funciona"'));
@@ -118,7 +120,7 @@ describe("o rodapé liga à candidatura", () => {
   it("em todas as páginas, na coluna da empresa", () => {
     const RODAPE = ler("src/components/Footer.tsx");
     const empresa = RODAPE.slice(RODAPE.indexOf("const EMPRESA = ["), RODAPE.indexOf("];", RODAPE.indexOf("const EMPRESA = [")));
-    expect(empresa).toContain('{ href: "/quero-ser-parceiro", texto: "Quero ser parceiro" }');
+    expect(empresa).toContain('{ href: "/quero-ser-parceiro", texto: "Trabalhe connosco: tem carrinha?" }');
   });
 });
 

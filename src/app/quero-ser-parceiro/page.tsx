@@ -21,6 +21,7 @@ import {
   DESCRICAO_DO_RECRUTAMENTO,
   FOTOGRAFIA_DE_UM_PARCEIRO,
   TITULO_DO_RECRUTAMENTO,
+  ZONAS_DO_RECRUTAMENTO,
 } from "@/lib/pagina-de-recrutamento";
 
 export const metadata: Metadata = {
@@ -125,7 +126,8 @@ export default async function QueroSerParceiroPage() {
               href="#candidatura"
               className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-acao px-8 text-base font-bold text-white shadow-lg shadow-cyan-500/20 transition hover:bg-acao-hover sm:w-auto"
             >
-              Candidatar-me (1 minuto)
+              {/* Sem tempo no botão (18-11-2026, d8): não se promete quanto leva. */}
+              Candidatar-me
             </a>
             <a
               href="#como-funciona"
@@ -175,6 +177,31 @@ export default async function QueroSerParceiroPage() {
                 <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{p.texto}</p>
               </div>
             ))}
+          </div>
+
+          {/*
+            LISBOA, LOURES E A LINHA DE SINTRA — 18-11-2026 (d8). Onde mais
+            queremos parceiros. Um título, um parágrafo, as terras em texto
+            corrido e as ligações por zona (texto, não botões): sem ícone por
+            cima, sem pílulas, sem cartões. As ligações são <a> e não <Link>,
+            para a página voltar a ler o ?zona= (ProcuraNaZona e o formulário).
+          */}
+          <div className="mt-8 rounded-2xl bg-[#F4F8FB] p-5 sm:p-6">
+            <h2 className="text-lg font-bold text-[#0B1929] sm:text-xl">{ZONAS_DO_RECRUTAMENTO.titulo}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{ZONAS_DO_RECRUTAMENTO.texto}</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{ZONAS_DO_RECRUTAMENTO.terras}</p>
+            <ul className="mt-3 space-y-1">
+              {ZONAS_DO_RECRUTAMENTO.ligacoes.map((l) => (
+                <li key={l.href}>
+                  <a
+                    href={l.href}
+                    className="inline-flex min-h-[44px] items-center text-sm font-semibold text-cyan-700 underline-offset-2 hover:underline"
+                  >
+                    {l.texto}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/*
@@ -315,7 +342,7 @@ export default async function QueroSerParceiroPage() {
             do candidato e de quem a CLYON procura.
           */}
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Leva um minuto. Não há inscrição automática: é uma pessoa que lê cada
+            Não há inscrição automática: é uma pessoa que lê cada
             candidatura antes de haver conta — é isso que nos permite dizer ao cliente
             que quem lhe aparece foi aprovado. Se avançar, recebe por email o link
             para escolher a palavra-passe e entrar.

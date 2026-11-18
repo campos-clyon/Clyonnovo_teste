@@ -17,6 +17,7 @@ import { notFound } from "next/navigation";
 
 import FurnitureSeoLinks from "@/components/FurnitureSeoLinks";
 import ProfissionaisComPagina from "@/components/ProfissionaisComPagina";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 import TrabalhosConcluidosNaTerra from "@/components/TrabalhosConcluidosNaTerra";
 import {
   getCityServiceContent,
@@ -1310,6 +1311,12 @@ export default async function ServiceCityPage({ params }: Props) {
         fundo="bg-[#F4F8FB]"
         limite={6}
       />
+
+      {/* «Tem carrinha?» — a candidatura dos parceiros, só nas recolhas de móveis e de monos:
+          nunca no entulho (d18), nem nos esvaziamentos (18-11-2026, d8). */}
+      {service.slug === "recolha-moveis" || service.slug === "recolha-monos" ? (
+        <TrabalheConnosco tipo="recolha" cidade={{ slug: city.slug, nome: city.name }} />
+      ) : null}
 
       <script
         type="application/ld+json"

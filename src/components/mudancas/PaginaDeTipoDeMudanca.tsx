@@ -10,6 +10,7 @@ import { CIDADES_MUDANCAS } from "@/lib/mudancas-cidades";
 import { BUSINESS_PHONE, SITE_URL } from "@/lib/seo-data";
 import { ofertaDaMudanca, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { PEDIR_MUDANCA, TIPOS_DE_MUDANCA } from "@/lib/tipos-de-mudanca";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /**
  * UMA PÁGINA POR TIPO DE MUDANÇA — 09-10-2026.
@@ -236,6 +237,8 @@ export default function PaginaDeTipoDeMudanca({ c, preco }: { c: ConteudoDoTipoD
           />
         </div>
       </section>
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="mudancas" />
     </div>
   );
 }

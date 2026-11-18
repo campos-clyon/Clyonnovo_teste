@@ -44,6 +44,7 @@ import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { comOPrimeiroQueCabe } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import { O_PRECO_DA_MUDANCA_COMBINA_SE } from "@/lib/modelo-da-mudanca";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /*
  * O PREÇO À HORA NO GOOGLE (14-10-2026). O título dizia «Sem Stress» e a
@@ -596,6 +597,8 @@ export default async function MudancasPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(serviceSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="mudancas" />
     </div>
   );
 }

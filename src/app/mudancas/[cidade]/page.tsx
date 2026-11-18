@@ -49,6 +49,7 @@ import { O_PRECO_DA_MUDANCA_COMBINA_SE } from "@/lib/modelo-da-mudanca";
 import { AO_FIM_DE_SEMANA, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { deTerra, emTerra, paraTerra } from "@/lib/preposicao-da-terra";
 import { localidadesDaPagina } from "@/lib/localidades-dos-concelhos";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 interface Props {
   params: Promise<{ cidade: string }>;
@@ -538,6 +539,8 @@ export default async function MudancasCidadePage({ params }: Props) {
           </div>
         </div>
       </section>
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="mudancas" cidade={{ slug: c.slug, nome: c.nome }} />
     </div>
   );
 }

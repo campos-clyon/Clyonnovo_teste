@@ -326,7 +326,10 @@ export const O_QUE_A_CLYON_NAO_FAZ: string[] = [
   "Não faz o trabalho nem manda equipas: quem desmonta, carrega e transporta é o profissional.",
   "Não muda o valor que combinou. Se o trabalho mudar à porta, corrige-se na plataforma, com registo.",
   "Não cobra mensalidade, não vende contactos e não desconta nada por responder a um pedido.",
-  "Não escolhe por si: aceita os pedidos que quiser e ignora os outros, sem penalização.",
+  // 18-11-2026 (d8): dizia «e ignora os outros, sem penalização». Desde a d6
+  // de 11-11, nas mudanças pela lista, o escolhido tem 3 h para responder
+  // (das 8h às 21h de Lisboa, `escolhidos-sem-resposta`): diz-se o prazo.
+  "Não escolhe por si: aceita os pedidos que quiser. Se um cliente o escolher numa mudança, responda em 3 horas (das 8h às 21h).",
 ];
 
 /**

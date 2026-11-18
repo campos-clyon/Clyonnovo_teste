@@ -28,6 +28,7 @@ import { PRECOS } from "@/lib/precos-publicos";
 import { PRESTADOR, caminhoDaPagina } from "@/lib/dados-estruturados";
 import { NO_MESMO_DIA, O_DIA_DO_TRABALHO, O_DIA_DO_TRABALHO_NO_INICIO, PROPOSTAS_EM_ATE, PROMESSA_DO_PRAZO } from "@/lib/promessas-publicas";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import TrabalheConnosco from "@/components/TrabalheConnosco";
 
 /*
  * Esta página tinha quatro preços diferentes para o mesmo serviço.
@@ -323,6 +324,8 @@ export default function RecolhaMonosPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(serviceSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
+      {/* «Tem carrinha?» — a candidatura dos parceiros, antes do rodapé (18-11-2026, d8). */}
+      <TrabalheConnosco tipo="recolha" />
     </div>
   );
 }
