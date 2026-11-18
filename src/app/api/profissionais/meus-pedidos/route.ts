@@ -59,7 +59,7 @@ import { clientePagouNoCartao } from "@/lib/carteira";
 import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 import { pagamentosAVerificar } from "@/lib/carteira-do-profissional";
 import { transferenciasAEspera } from "@/lib/pagamentos-na-base";
-import { negociacoesNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
+import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { indisponibilidadesDoProfissional } from "@/lib/indisponibilidades-na-base";
 import { notaDeIndisponibilidade } from "@/lib/indisponibilidade";
@@ -175,6 +175,16 @@ export async function GET(req: NextRequest) {
       new Map<number, MudancaEscolhidaNaBase>(),
       "meus-pedidos",
     );
+    /*
+     * O REGIME DE IVA DELE NAS MUDANÇAS DO MODELO DE 15-11 — d3 (18-11-2026):
+     * o congelado na negociação (ou o do perfil, antes de contratar). A folha,
+     * o «Confirmo» e a estimativa fazem a conta com ele, como o valor final.
+     */
+    const regimes = await regimesDasNegociacoes([...escolhidas.keys()].filter((id) => doNovoModelo.has(id))).catch(
+      () => new Map<number, "normal" | "isento">(),
+    );
+    const modeloDaMudanca = (id: number) =>
+      doNovoModelo.has(id) ? { novoModelo: true, regime: regimes.get(id) ?? ("normal" as const) } : null;
 
     /*
      * A SUGESTÃO DA CLYON, CALCULADA PARA ELE.
@@ -539,12 +549,16 @@ export async function GET(req: NextRequest) {
               folha: (() => {
                 const e = escolhidas.get(Number(l.id));
                 if (!e) return null;
+                const modelo = modeloDaMudanca(Number(l.id));
                 const contexto = {
                   tarifaCongeladaJson: e.tarifaCongeladaJson,
                   pessoasEscolhidas: e.pessoasEscolhidas,
                   kmDoPercurso: e.km,
                   valorPorHoraAcordado: valorHora,
                   diaPorOmissao: diaDoInicio(l.chegouEm ?? null, agora),
+                  // d3: o painel e a app Pro refazem a conta com o modelo e o regime.
+                  novoModelo: modelo != null,
+                  regime: modelo?.regime ?? null,
                 };
                 const ctx = contextoDaFolha(contexto);
                 if (!ctx) return null;
@@ -553,7 +567,7 @@ export async function GET(req: NextRequest) {
                 return {
                   contexto,
                   campos: camposDaFolha(enviada, ctx),
-                  enviada: enviada ? folhaNoEcra(enviada, "parceiro", ctx.tarifa.minimoHoras) : null,
+                  enviada: enviada ? folhaNoEcra(enviada, "parceiro", ctx.tarifa.minimoHoras, modelo) : null,
                   estado,
                   estadoTexto: estadoDaFolhaParaOParceiro(estado, l.horasContestacao ?? null),
                   historico: historicoParaVer(lerHistoricoDaFolha(e.folhaHistoricoJson)),
@@ -811,6 +825,7 @@ export async function GET(req: NextRequest) {
               jaRespondeu: l.estado !== "aberta" || jaRespondeuNaNegociacao(l.propostasJson),
               estado: l.estado,
               propostasJson: l.propostasJson,
+              modelo: modeloDaMudanca(Number(l.id)),
             },
             agora,
           );

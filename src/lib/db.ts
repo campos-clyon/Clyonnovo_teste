@@ -19585,6 +19585,7 @@ export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudanca
   const [rows] = (await pool.execute(
     `SELECT p.id, p.name, p.email, p.phone, p.whatsappAvisos, p.isActive, p.estado, p.categorias, p.raioKm,
             p.emiteFatura, p.emiteGuiaTransporte, p.guiaVerificadaEm, p.baseLat, p.baseLng,
+            p.regimeIva, p.regimeIvaConfirmadoEm,
             COALESCE(p.contaDeTeste, 0) AS contaDeTeste,
             ${SQL_DO_VERIFICADO} AS parceiroVerificado,
             CASE WHEN p.googlePlaceConfirmadoEm IS NOT NULL THEN p.googlePlaceId END AS googlePlaceConfirmado,
@@ -19654,6 +19655,9 @@ export async function candidatosDaListaDasMudancas(): Promise<CandidatoDaMudanca
       },
       notaMedia: nota ? nota.media : null,
       avaliacoes: nota ? nota.quantas : 0,
+      // d3 (18-11-2026): o regime de IVA do perfil — o cartão faz a conta do modelo de 15-11 com ele.
+      regimeIva: (r.regimeIva as string | null) ?? null,
+      regimeIvaConfirmadoEm: (r.regimeIvaConfirmadoEm as Date | null) ?? null,
       googlePlaceId: typeof r.googlePlaceConfirmado === "string" && r.googlePlaceConfirmado ? r.googlePlaceConfirmado : null,
     };
   });

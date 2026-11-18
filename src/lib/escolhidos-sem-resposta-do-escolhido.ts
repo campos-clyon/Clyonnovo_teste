@@ -1,6 +1,8 @@
 import { diaEmLisboa } from "./hora-de-lisboa";
 import { formatarEuros } from "./formatar-euros";
 import { diaEMes as diaMes, horaEMinutos as hm, propostasDoProfissional } from "./escolhidos-sem-resposta-regra";
+import { ISENTO_DE_IVA } from "./mudanca-no-novo-modelo";
+import type { RegimeDoProfissional } from "./pagamento-directo";
 
 /**
  * OS ESCOLHIDOS SEM RESPOSTA — O QUE O ESCOLHIDO LÊ (d6, 11-11-2026).
@@ -29,26 +31,35 @@ export const TEXTOS_DO_ESCOLHIDO = Object.freeze({
   prazoTerminado: "Prazo terminado",
 });
 
-/** D1. «Confirmo: faço por 40,00 €/h + IVA» */
-export const botaoConfirmo = (horaCent: number) => `Confirmo: faço por ${eur(horaCent)}/h + IVA`;
+/**
+ * D1. «Confirmo: faço por 40,00 €/h + IVA» — e, com um parceiro isento de IVA
+ * (d3, 18-11-2026), «Confirmo: faço por 40,00 €/h (isento de IVA)».
+ */
+export const botaoConfirmo = (horaCent: number, regime: RegimeDoProfissional = "normal") =>
+  regime === "isento" ? `Confirmo: faço por ${eur(horaCent)}/h (${ISENTO_DE_IVA})` : `Confirmo: faço por ${eur(horaCent)}/h + IVA`;
 
 /** D3. A regra por baixo do campo de «Propor um valor mais baixo». */
-export const regraDoValorMaisBaixo = (horaCent: number) =>
-  `Escreva um valor por hora abaixo da sua hora (${eur(horaCent)} sem IVA). Para ficar na sua hora, volte atrás e confirme.`;
+export const regraDoValorMaisBaixo = (horaCent: number, regime: RegimeDoProfissional = "normal") =>
+  `Escreva um valor por hora abaixo da sua hora (${eur(horaCent)} ${regime === "isento" ? ISENTO_DE_IVA : "sem IVA"}). Para ficar na sua hora, volte atrás e confirme.`;
 
 const comIva = (cent: number, iva: number) => cent + Math.round(cent * iva);
 
+/** «40,00 €/h + IVA (49,20 €/h com IVA)», ou «40,00 €/h (isento de IVA)» (d3). */
+function horaDita(cent: number, iva: number, regime: RegimeDoProfissional): string {
+  return regime === "isento" ? `${eur(cent)}/h (${ISENTO_DE_IVA})` : `${eur(cent)}/h + IVA (${eur(comIva(cent, iva))}/h com IVA)`;
+}
+
 /** D2. Depois de confirmar (a variante tardia quando confirmou depois do prazo). */
-export function textoDepoisDeConfirmar(horaCent: number, iva: number, depoisDoPrazo: boolean): string {
-  const valores = `${eur(horaCent)}/h + IVA (${eur(comIva(horaCent, iva))}/h com IVA)`;
+export function textoDepoisDeConfirmar(horaCent: number, iva: number, depoisDoPrazo: boolean, regime: RegimeDoProfissional = "normal"): string {
+  const valores = horaDita(horaCent, iva, regime);
   return depoisDoPrazo
     ? `Confirmou depois do prazo: ${valores}. O cliente já tinha sido avisado de que não havia resposta; recebe agora a sua confirmação.`
     : `Confirmou: ${valores}. O cliente está a escolher — avisamos assim que decidir.`;
 }
 
 /** D3. Depois de enviar um valor mais baixo. */
-export const textoDaPropostaMaisBaixa = (valorCent: number, iva: number) =>
-  `A sua proposta de ${eur(valorCent)}/h + IVA (${eur(comIva(valorCent, iva))}/h com IVA) está com o cliente. Avisamos quando ele responder.`;
+export const textoDaPropostaMaisBaixa = (valorCent: number, iva: number, regime: RegimeDoProfissional = "normal") =>
+  `A sua proposta de ${horaDita(valorCent, iva, regime)} está com o cliente. Avisamos quando ele responder.`;
 
 /** D4. O prazo, depois de terminado e sem resposta dele. */
 export function textoDoPrazoTerminado(prazo: Date, agora: Date = new Date()): string {

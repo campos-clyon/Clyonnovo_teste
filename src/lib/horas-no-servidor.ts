@@ -41,7 +41,15 @@ import { lerMateriaisDaProposta, lerQuantidadesUsadas, materiaisUsados } from "@
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissional } from "@/lib/avisos-do-backoffice";
 import { avisarClienteDasHoras } from "@/lib/avisos-do-terreno";
-import { contextoDaLinha, edicaoDaContestacao, enviarAFolha, extraDaConfirmacao, guardarRascunhoDaFolha, type PelaEquipa } from "@/lib/folha-no-servidor";
+import {
+  contextoDaLinha,
+  edicaoDaContestacao,
+  enviarAFolha,
+  extraDaConfirmacao,
+  guardarRascunhoDaFolha,
+  modeloDaFolhaNoServidor,
+  type PelaEquipa,
+} from "@/lib/folha-no-servidor";
 import { conferirMarcaDaFolha, FOLHA_MUDOU, FOLHA_SEM_MARCA, marcaDaFolha } from "@/lib/o-que-o-cliente-viu";
 import { resumoDaFolha } from "@/lib/folha-da-mudanca";
 
@@ -173,7 +181,9 @@ async function gravarAsHoras(a: {
    */
   const negociacaoId = Number(linha.id);
   const daFolha = await folhaDaNegociacao(negociacaoId);
-  const ctx = daFolha ? contextoDaLinha(daFolha, linha, agora) : null;
+  const semModelo = daFolha ? contextoDaLinha(daFolha, linha, agora) : null;
+  // d3 (18-11-2026): a folha faz a conta do modelo de 15-11 com o regime congelado, como o valor final.
+  const ctx = daFolha && semModelo ? contextoDaLinha(daFolha, linha, agora, await modeloDaFolhaNoServidor(linha as never)) : null;
   if (daFolha && ctx) {
     return enviarAFolha({
       providerId: a.providerId,

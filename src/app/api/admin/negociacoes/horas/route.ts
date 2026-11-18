@@ -23,7 +23,7 @@ import { trabalhoVistoPeloBackoffice } from "@/lib/acesso-ao-pagamento";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { acertoDasHoras } from "@/lib/pagamento-para-o-cliente";
 import { diaEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
-import { corrigirAFolhaPelaClyon } from "@/lib/folha-no-servidor";
+import { contextoDoModelo, corrigirAFolhaPelaClyon, modeloDaFolhaNoServidor } from "@/lib/folha-no-servidor";
 import {
   camposDaFolha,
   contextoDaFolha,
@@ -104,6 +104,8 @@ export async function GET(req: NextRequest) {
     let acerto: ReturnType<typeof acertoDasHoras> = null;
     const acesso = await trabalhoVistoPeloBackoffice(Number(linha.id));
     if (acesso.ok) acerto = acertoDasHoras(acesso.trabalho, await pagamentosDaNegociacao(Number(linha.id)));
+    // d3 (18-11-2026): o modelo de 15-11 e o regime congelado — a folha mostra-se e refaz-se com eles.
+    const modeloDaFolha = await modeloDaFolhaNoServidor(linha as never);
     const m = lerMateriaisDaProposta((linha as { materiaisJson?: string | null }).materiaisJson ?? null);
     return NextResponse.json({
       marcadas: horasMarcadas(linha as never),
@@ -121,7 +123,8 @@ export async function GET(req: NextRequest) {
         if (!fo) return null;
         const t = tarifaCongeladaDeJson(l.tarifaCongeladaJson ?? null);
         return {
-          ...folhaNoEcra(fo, "parceiro", t?.minimoHoras ?? 3),
+          // d3: a conta do modelo de 15-11 com o regime congelado, como o valor final.
+          ...folhaNoEcra(fo, "parceiro", t?.minimoHoras ?? 3, modeloDaFolha),
           estado: estadoDaFolha(linha as never),
           historico: historicoParaVer(lerHistoricoDaFolha(l.folhaHistoricoJson ?? null)),
           // A marca desta folha: o «Confirmar» devolve-a em `marcaDaFolha` (o-que-o-cliente-viu.ts).
@@ -141,6 +144,8 @@ export async function GET(req: NextRequest) {
               kmDoPercurso: daFolha.kmPercurso,
               valorPorHoraAcordado: valorPorHoraDe(linha as never),
               diaPorOmissao: diaDoInicio(l.chegouEm ?? null, agora),
+              // d3: a Mesa refaz a conta com o modelo e o regime.
+              ...contextoDoModelo(modeloDaFolha),
             }
           : null;
         const ctx = contexto ? contextoDaFolha(contexto) : null;

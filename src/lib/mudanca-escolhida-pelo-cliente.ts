@@ -1,6 +1,7 @@
 import { tarifaCongeladaDeJson, valorDaMudanca, type TarifaCongelada } from "./conta-da-mudanca";
 import { diaEmLisboa, horaEmLisboa, pecasEmLisboa } from "./hora-de-lisboa";
 import { formatarEuros } from "./formatar-euros";
+import { aoClienteNoModelo, ISENTO_DE_IVA, type ModeloDaMudanca } from "./mudanca-no-novo-modelo";
 import {
   ACCAO_DE_CONFIRMAR_A_HORA,
   botaoConfirmo,
@@ -90,6 +91,12 @@ export type DadosDaMudancaEscolhida = {
   /** O estado e as propostas da negociação, para a frase de depois de responder (d6). */
   estado?: string | null;
   propostasJson?: string | null;
+  /**
+   * d3 (18-11-2026): o modelo de 15-11 e o regime de IVA dele nesta negociação.
+   * Com um parceiro isento, «X/h (isento de IVA)» e a estimativa sem o IVA do
+   * trabalho (só o da taxa), como o valor final. Sem ele, a conta antiga.
+   */
+  modelo?: ModeloDaMudanca | null;
 };
 
 const eur = (cent: number) => formatarEuros(cent / 100);
@@ -148,6 +155,8 @@ export function mudancaEscolhida(d: DadosDaMudancaEscolhida, agora: Date = new D
   const horaCent = horaCongeladaCent(t, pessoas) ?? t.precoHora2Cent;
   const recebeCent = recebePorHoraCent(t, horaCent);
   const horaComIva = horaCent + Math.round(horaCent * t.regras.iva);
+  const modelo = d.modelo?.novoModelo ? d.modelo : null;
+  const regime = modelo?.regime ?? "normal";
 
   const horas = numeroOuNull(d.horas);
   const km = numeroOuNull(d.km);
@@ -155,12 +164,14 @@ export function mudancaEscolhida(d: DadosDaMudancaEscolhida, agora: Date = new D
   if (horas != null && km != null) {
     const conta = valorDaMudanca(t, { pessoas, horas, km });
     if (conta.ok) {
+      // d3: no modelo de 15-11, o com IVA é o da conta do pagamento directo (o do valor final).
+      const comIvaCent = aoClienteNoModelo(conta, modelo).comIvaCent;
       estimativa = {
         horas: conta.horas.cobradas,
         km: conta.km.cobrados,
         texto:
           `Cerca de ${horasEmTexto(conta.horas.cobradas)} h com ${pessoas} pessoas e ${horasEmTexto(Math.round(conta.km.cobrados))} km: ` +
-          `${eur(conta.semIvaCent)} sem IVA (${eur(conta.totalCent)} com IVA), sem o material.`,
+          `${eur(conta.semIvaCent)} sem IVA (${eur(comIvaCent)} com IVA), sem o material.`,
         recebeTexto: `Fica-lhe cerca de ${eur(conta.profissionalCent)}, depois da taxa da plataforma.`,
       };
     }
@@ -168,14 +179,15 @@ export function mudancaEscolhida(d: DadosDaMudancaEscolhida, agora: Date = new D
 
   const prazo = !d.jaRespondeu && d.prazoRespostaEm ? textoDoPrazo(d.prazoRespostaEm, agora) : null;
   const aberta = (d.estado ?? "aberta") === "aberta";
-  const respostaTexto = aberta ? textoDaResposta(d.propostasJson, horaCent, t.regras.iva, d.prazoRespostaEm) : null;
+  const respostaTexto = aberta ? textoDaResposta(d.propostasJson, horaCent, t.regras.iva, d.prazoRespostaEm, regime) : null;
 
   return {
     titulo: TITULO_DA_MUDANCA_ESCOLHIDA,
     pessoas,
     equipaTexto: `Equipa de ${pessoas} pessoas`,
     hora: horaCent / 100,
-    horaTexto: `A sua hora: ${eur(horaCent)}/h sem IVA (${eur(horaComIva)}/h com IVA)`,
+    horaTexto:
+      regime === "isento" ? `A sua hora: ${eur(horaCent)}/h (${ISENTO_DE_IVA})` : `A sua hora: ${eur(horaCent)}/h sem IVA (${eur(horaComIva)}/h com IVA)`,
     recebeHora: recebeCent / 100,
     recebeTexto: `Recebe ${eur(recebeCent)}/h depois da taxa da plataforma`,
     estimativa,
@@ -187,11 +199,11 @@ export function mudancaEscolhida(d: DadosDaMudancaEscolhida, agora: Date = new D
       !d.jaRespondeu && aberta
         ? {
             accao: ACCAO_DE_CONFIRMAR_A_HORA,
-            confirmar: botaoConfirmo(horaCent),
+            confirmar: botaoConfirmo(horaCent, regime),
             proporMaisBaixo: TEXTOS_DO_ESCOLHIDO.proporMaisBaixo,
             naoEstouInteressado: TEXTOS_DO_ESCOLHIDO.naoEstouInteressado,
             rotuloDoValor: TEXTOS_DO_ESCOLHIDO.rotuloDoValor,
-            regraDoValorMaisBaixo: regraDoValorMaisBaixo(horaCent),
+            regraDoValorMaisBaixo: regraDoValorMaisBaixo(horaCent, regime),
             enviarProposta: TEXTOS_DO_ESCOLHIDO.enviarProposta,
             voltar: TEXTOS_DO_ESCOLHIDO.voltar,
           }
@@ -207,7 +219,13 @@ export function mudancaEscolhida(d: DadosDaMudancaEscolhida, agora: Date = new D
  * um valor mais baixo. Null a partir da segunda proposta, ou quando a última
  * palavra já é do cliente — aí vale o ecrã da negociação.
  */
-function textoDaResposta(propostasJson: string | null | undefined, horaCent: number, iva: number, prazo: Date | null): string | null {
+function textoDaResposta(
+  propostasJson: string | null | undefined,
+  horaCent: number,
+  iva: number,
+  prazo: Date | null,
+  regime: "normal" | "isento" = "normal",
+): string | null {
   if (!propostasJson) return null;
   let lista: Array<{ por?: string; valor?: number; estado?: string; criadaEm?: string }>;
   try {
@@ -220,9 +238,9 @@ function textoDaResposta(propostasJson: string | null | undefined, horaCent: num
   const ultima = lista[lista.length - 1];
   if (dele.length !== 1 || ultima !== dele[0] || ultima.estado !== "pendente" || !Number.isFinite(Number(ultima.valor))) return null;
   const valorCent = Math.round(Number(ultima.valor) * 100);
-  if (valorCent !== horaCent) return textoDaPropostaMaisBaixa(valorCent, iva);
+  if (valorCent !== horaCent) return textoDaPropostaMaisBaixa(valorCent, iva, regime);
   const quando = ultima.criadaEm ? new Date(ultima.criadaEm).getTime() : NaN;
-  return textoDepoisDeConfirmar(horaCent, iva, !!prazo && Number.isFinite(quando) && quando > prazo.getTime());
+  return textoDepoisDeConfirmar(horaCent, iva, !!prazo && Number.isFinite(quando) && quando > prazo.getTime(), regime);
 }
 
 /**

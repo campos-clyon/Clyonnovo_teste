@@ -1,3 +1,4 @@
+// relógio: datas explícitas — d3: as chamadas que tocam no modelo de 15-11 passam a data.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

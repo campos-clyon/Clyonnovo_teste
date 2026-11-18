@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { guardaDaHoraCongelada, horaCongeladaCent, pessoasDaEscolha, SEM_CONFERIR_A_HORA } from "@/lib/mudanca-escolhida-pelo-cliente";
 import { tarifaCongeladaDeJson } from "@/lib/conta-da-mudanca";
+import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import {
   ACCAO_DE_CONFIRMAR_A_HORA,
   erroDaConfirmacao,
@@ -331,13 +332,26 @@ export async function POST(req: NextRequest) {
           message: linhaDaRespostaTardia(sessao.nome ?? "O profissional", agora),
         }).catch(() => {});
       }
-      if (horaConfirmada) textoDoEscolhido = textoDepoisDeConfirmar(horaConfirmada.cent, horaConfirmada.iva, depoisDoPrazo);
+      /*
+       * O REGIME DE IVA DELE — d3 (18-11-2026): no modelo de 15-11, com um
+       * parceiro isento a frase diz «X/h (isento de IVA)», como o «Confirmo».
+       * Se a leitura falhar, a frase de sempre (com IVA).
+       */
+      const regime = await (async () => {
+        try {
+          if (!(await negociacoesNoNovoModelo([linha])).has(negociacaoId)) return "normal" as const;
+          return (await regimesDasNegociacoes([negociacaoId])).get(negociacaoId) ?? ("normal" as const);
+        } catch {
+          return "normal" as const;
+        }
+      })();
+      if (horaConfirmada) textoDoEscolhido = textoDepoisDeConfirmar(horaConfirmada.cent, horaConfirmada.iva, depoisDoPrazo, regime);
       else if (doEscolhido && corpo.accao === "propor") {
         const tarifa = tarifaCongeladaDeJson(
           (await tarifaCongeladaDaNegociacao(negociacaoId, sessao.providerId).catch(() => null))?.tarifaCongeladaJson ?? null,
         );
         const ultima = nova.propostas[nova.propostas.length - 1];
-        if (tarifa && ultima) textoDoEscolhido = textoDaPropostaMaisBaixa(Math.round(ultima.valor * 100), tarifa.regras.iva);
+        if (tarifa && ultima) textoDoEscolhido = textoDaPropostaMaisBaixa(Math.round(ultima.valor * 100), tarifa.regras.iva, regime);
       }
     }
 

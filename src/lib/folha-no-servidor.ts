@@ -36,8 +36,11 @@ import {
   type ContextoDaFolha,
   type CorpoDaFolha,
   type FolhaDaMudanca,
+  type ModeloDaFolha,
   type PassoDaFolha,
 } from "@/lib/folha-da-mudanca";
+import { regimesDasNegociacoes, segueONovoModelo } from "@/lib/novo-modelo-no-servidor";
+import type { RegimeDoProfissional } from "@/lib/pagamento-directo";
 import { diaDoInicio, horasMarcadas, valorPorHoraDe, type HorasNaBase } from "@/lib/horas-do-trabalho";
 import { taxasDaNegociacao } from "@/lib/taxas-plataforma";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
@@ -61,6 +64,8 @@ export function contextoDaLinha(
   f: Pick<FolhaDaNegociacaoNaBase, "tarifaCongeladaJson" | "pessoasEscolhidas" | "kmPercurso">,
   linha: HorasNaBase & { valorAcordado?: number | string | null; chegouEm?: Date | string | null },
   agora: Date = new Date(),
+  /** d3: o modelo de 15-11 e o regime congelado (`modeloDaFolhaNoServidor`). */
+  modelo: ModeloDaFolha | null = null,
 ): ContextoDaFolha | null {
   return contextoDaFolha({
     tarifaCongeladaJson: f.tarifaCongeladaJson,
@@ -68,7 +73,32 @@ export function contextoDaLinha(
     kmDoPercurso: f.kmPercurso,
     valorPorHoraAcordado: valorPorHoraDe(linha),
     diaPorOmissao: diaDoInicio(linha.chegouEm ?? null, agora),
+    ...contextoDoModelo(modelo),
   });
+}
+
+/** O modelo como viaja no `contexto` da folha (para o painel, a Mesa e a app Pro refazerem a conta). */
+export function contextoDoModelo(modelo: ModeloDaFolha | null): { novoModelo: boolean; regime: RegimeDoProfissional | null } {
+  return modelo?.novoModelo ? { novoModelo: true, regime: modelo.regime } : { novoModelo: false, regime: null };
+}
+
+/**
+ * O MODELO DA FOLHA DE UMA NEGOCIAÇÃO — d3 (18-11-2026). A mesma pergunta das
+ * outras contas do trabalho: segue o modelo de 15-11 (`segueONovoModelo`, com
+ * os pagamentos lidos) e, se segue, o regime de IVA do parceiro congelado nela
+ * (`regimesDasNegociacoes` → `regimeDaNegociacao`). Null no modelo antigo; se a
+ * leitura falhar, null também (fica a conta de antes) e o erro no registo.
+ */
+export async function modeloDaFolhaNoServidor(linha: Parameters<typeof segueONovoModelo>[0]): Promise<ModeloDaFolha | null> {
+  try {
+    if (!(await segueONovoModelo(linha))) return null;
+    const id = Number(linha.id);
+    const regime = (await regimesDasNegociacoes([id])).get(id) ?? "normal";
+    return { novoModelo: true, regime };
+  } catch (e) {
+    console.error("[folha da mudança] modelo:", linha.id, e instanceof Error ? e.message : e);
+    return null;
+  }
 }
 
 /**
@@ -225,8 +255,10 @@ export async function corrigirAFolhaPelaClyon(a: {
 }): Promise<Resposta | null> {
   const agora = a.agora ?? new Date();
   const daFolha = await folhaDaNegociacao(a.negociacaoId);
-  const ctx = daFolha ? contextoDaLinha(daFolha, a.linha, agora) : null;
-  if (!daFolha || !ctx) return null;
+  const semModelo = daFolha ? contextoDaLinha(daFolha, a.linha, agora) : null;
+  if (!daFolha || !semModelo) return null;
+  // d3: a correcção pela CLYON faz a conta do modelo da negociação, como a do parceiro.
+  const ctx = contextoDaLinha(daFolha, a.linha, agora, await modeloDaFolhaNoServidor({ ...a.linha, id: a.negociacaoId }))!;
   const antes = folhaDeJson(daFolha.folhaJson);
   const base: CorpoDaFolha = antes
     ? {

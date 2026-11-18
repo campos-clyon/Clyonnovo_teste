@@ -1,3 +1,4 @@
+// relógio: datas explícitas — d3: as chamadas que tocam no modelo de 15-11 passam a data.
 import { describe, it, expect } from "vitest";
 import {
   AVALIACOES_PARA_A_NOTA,

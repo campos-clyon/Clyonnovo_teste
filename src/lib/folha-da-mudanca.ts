@@ -68,6 +68,17 @@ import {
   type QuemRegistaOAcordo,
 } from "./tabela-das-mudancas";
 import { TAXA_IVA } from "./taxas-plataforma";
+import {
+  ISENTO_DE_IVA,
+  contaDaMudancaNoNovoModelo,
+  lerModeloDaMudanca,
+  taxaEfectivaDaMudanca,
+  type ModeloDaMudanca,
+} from "./mudanca-no-novo-modelo";
+import type { ContaDoPagamentoDirecto, RegimeDoProfissional } from "./pagamento-directo";
+
+/** O modelo da folha (d3, 18-11-2026): o de 15-11 com o regime do parceiro congelado, ou null (o antigo). */
+export type ModeloDaFolha = ModeloDaMudanca;
 
 /* ── Os títulos e os botões, iguais em todos os ecrãs ─────────────────────── */
 export const TITULO_DA_FOLHA = "Folha da mudança";
@@ -164,6 +175,12 @@ export type FolhaDaMudanca = {
   /** A hora da equipa usada na conta (cêntimos, sem IVA). */
   horaCent: number;
   conta: ContaDaMudanca;
+  /**
+   * d3 (18-11-2026): o modelo de 15-11 e o regime do parceiro, quando a folha
+   * foi feita nele. Os ecrãs que só têm a folha fazem a conta por aqui; sem
+   * ele, a conta antiga (as folhas de antes).
+   */
+  modelo?: ModeloDaFolha | null;
 };
 
 export type ContextoDaFolha = {
@@ -175,6 +192,8 @@ export type ContextoDaFolha = {
   valorPorHoraAcordado: number | null;
   /** O dia a usar quando o corpo não o traz (o da chegada). */
   diaPorOmissao: string;
+  /** d3: o modelo de 15-11 e o regime congelado na negociação; null no modelo antigo. */
+  modelo?: ModeloDaFolha | null;
 };
 
 export type CorpoDaFolha = {
@@ -402,6 +421,7 @@ export function lerFolha(
       materiais,
       horaCent,
       conta,
+      ...(ctx.modelo?.novoModelo ? { modelo: { novoModelo: true, regime: ctx.modelo.regime } } : {}),
     },
   };
 }
@@ -436,8 +456,31 @@ export const subiuAEquipa = (f: Pick<FolhaDaMudanca, "pessoas" | "pessoasEscolhi
  */
 export function dinheiroDaFolha(f: Pick<FolhaDaMudanca, "conta">): { valorSemIva: number; taxaProfissional: number; recebe: number } {
   const c = f.conta;
-  const taxa = c.semIvaCent > 0 ? Math.round((c.taxa.cent / c.semIvaCent) * 1e8) / 1e8 : 0;
+  // A mesma taxa efectiva que a conta do modelo de 15-11 usa (mudanca-no-novo-modelo.ts).
+  const taxa = taxaEfectivaDaMudanca(c.semIvaCent, c.profissionalCent);
   return { valorSemIva: c.semIvaCent / 100, taxaProfissional: taxa, recebe: c.profissionalCent / 100 };
+}
+
+/**
+ * O MODELO COM QUE A FOLHA SE MOSTRA (d3): o dado por quem chama (o servidor,
+ * que leu os pagamentos e o regime congelado) ou, sem ele, o da própria folha.
+ */
+function modeloDe(f: Pick<FolhaDaMudanca, "modelo">, modelo: ModeloDaFolha | null | undefined): ModeloDaFolha | null {
+  const m = modelo === undefined ? (f.modelo ?? null) : modelo;
+  return m?.novoModelo ? m : null;
+}
+
+/**
+ * A CONTA DA FOLHA NO MODELO DE 15-11 (d3, 18-11-2026) — a do valor final:
+ * `contaDoValorAcordado` sobre o total sem IVA e a taxa efectiva que a
+ * confirmação grava, com o regime do parceiro. Null no modelo antigo.
+ */
+export function contaDaFolhaNoNovoModelo(
+  f: Pick<FolhaDaMudanca, "conta" | "modelo">,
+  modelo?: ModeloDaFolha | null,
+): ContaDoPagamentoDirecto | null {
+  const m = modeloDe(f, modelo);
+  return m ? contaDaMudancaNoNovoModelo(f.conta, m.regime) : null;
 }
 
 /* ── O QUE SE DIZ ─────────────────────────────────────────────────────────── */
@@ -456,7 +499,7 @@ export type FolhaNoEcra = {
   regra: string;
 };
 
-function linhasDaFolha(f: FolhaDaMudanca, para: "cliente" | "parceiro"): LinhaDaFolha[] {
+function linhasDaFolha(f: FolhaDaMudanca, para: "cliente" | "parceiro", novo: ContaDoPagamentoDirecto | null): LinhaDaFolha[] {
   const c = f.conta;
   const de = para === "cliente" ? "do parceiro" : "seu";
   const l: LinhaDaFolha[] = [];
@@ -491,6 +534,42 @@ function linhasDaFolha(f: FolhaDaMudanca, para: "cliente" | "parceiro"): LinhaDa
     l.push({ rotulo: m.nome, valor: eurCent(m.cent), nota: `${quantidadeEmPalavras(q, m.quantidade)} × ${eurCent(m.precoCent)}` });
   }
   l.push({ rotulo: "Total sem IVA", valor: eurCent(c.semIvaCent), forte: true });
+  if (novo) {
+    /*
+     * O MODELO DE 15-11 (d3): duas faturas, o IVA por fatura. O cliente paga ao
+     * parceiro a fatura do trabalho (com IVA se ele estiver no regime normal,
+     * sem IVA se estiver isento) e a da taxa da plataforma (sempre com IVA).
+     */
+    const pct = `${Math.round(TAXA_IVA * 100)} %`;
+    if (novo.regime === "isento") {
+      l.push({
+        rotulo: `IVA da taxa da plataforma (${pct})`,
+        valor: eurCent(novo.ivaDaTaxaCent),
+        nota: para === "cliente" ? "o parceiro é isento de IVA: só a taxa da plataforma leva IVA" : "é isento de IVA: só a taxa da plataforma leva IVA",
+      });
+    } else {
+      l.push({ rotulo: `IVA (${pct})`, valor: eurCent(novo.ivaDoProfissionalCent + novo.ivaDaTaxaCent) });
+    }
+    l.push({ rotulo: "Total com IVA", valor: eurCent(novo.totalAoClienteCent), forte: true });
+    if (para === "parceiro") {
+      l.push({ rotulo: "Taxa da plataforma", valor: `−${eurCent(novo.taxaCent)}`, nota: `${Math.round(c.taxa.fracao * 100)} % das horas e dos km; o material não leva taxa` });
+      l.push({
+        rotulo: "Fica consigo",
+        valor: eurCent(novo.ficaAoProfissionalCent),
+        nota:
+          novo.regime === "isento"
+            ? `a sua fatura, ${ISENTO_DE_IVA}`
+            : `a sua fatura: ${eurCent(novo.baseDoProfissionalCent)} + IVA ${eurCent(novo.ivaDoProfissionalCent)} (o IVA é para o Estado)`,
+        forte: true,
+      });
+      l.push({
+        rotulo: "Passa à CLYON",
+        valor: eurCent(novo.aPassarAClyonCent),
+        nota: `a taxa da plataforma (${eurCent(novo.taxaCent)}) e o IVA dela (${eurCent(novo.ivaDaTaxaCent)})`,
+      });
+    }
+    return l;
+  }
   l.push({ rotulo: `IVA (${Math.round(ivaDa(c) * 100)} %)`, valor: eurCent(c.ivaCent) });
   l.push({ rotulo: "Total com IVA", valor: eurCent(c.totalCent), forte: true });
   if (para === "parceiro") {
@@ -513,12 +592,20 @@ const diaDito = (iso: string) => {
  * (92,25 € com IVA)», com o acordo dele (quando e por quem foi registado); ao
  * parceiro o mesmo, a lembrar que o cliente vê. Null com 2 ou 3.
  */
-export function avisoDasPessoasAMais(f: Pick<FolhaDaMudanca, "pessoas" | "horaCent" | "acordoDasPessoasAMais">, para: "cliente" | "parceiro"): string | null {
+export function avisoDasPessoasAMais(
+  f: Pick<FolhaDaMudanca, "pessoas" | "horaCent" | "acordoDasPessoasAMais">,
+  para: "cliente" | "parceiro",
+  /** d3: com um parceiro isento, «X/h (isento de IVA)». */
+  regime: RegimeDoProfissional = "normal",
+): string | null {
   const aMais = pessoasAMais(f.pessoas);
   if (aMais === 0) return null;
   const iva = f.horaCent > 0 ? Math.round(f.horaCent * (1 + TAXA_IVA)) : 0;
-  const hora = `${eurCent(f.horaCent)}/h + IVA (${eurCent(iva)} com IVA)`;
-  const porPessoa = `${eurCent(precoPorPessoaCent)} + IVA (${eurCent(Math.round(precoPorPessoaCent * (1 + TAXA_IVA)))} com IVA)`;
+  const isento = regime === "isento";
+  const hora = isento ? `${eurCent(f.horaCent)}/h (${ISENTO_DE_IVA})` : `${eurCent(f.horaCent)}/h + IVA (${eurCent(iva)} com IVA)`;
+  const porPessoa = isento
+    ? `${eurCent(precoPorPessoaCent)} (${ISENTO_DE_IVA})`
+    : `${eurCent(precoPorPessoaCent)} + IVA (${eurCent(Math.round(precoPorPessoaCent * (1 + TAXA_IVA)))} com IVA)`;
   const a = f.acordoDasPessoasAMais ?? null;
   const quem = a ? (a.por === "profissional" ? (para === "cliente" ? "pelo parceiro" : "por si") : "pela CLYON") : "";
   const registo = a ? ` registado a ${diaDito(a.em)} ${quem}` : "";
@@ -533,32 +620,46 @@ function ivaDa(c: ContaDaMudanca): number {
 }
 
 /** «Das 09:00 às 17:30, 8 h com 2 pessoas, 70 km e material → 485,85 € com IVA (395,00 € sem IVA).» */
-export function resumoDaFolha(f: FolhaDaMudanca): string {
+export function resumoDaFolha(f: FolhaDaMudanca, modelo?: ModeloDaFolha | null): string {
   const c = f.conta;
   const mat = c.materiais.linhas.length > 0 ? " e material" : "";
+  // d3: no modelo de 15-11, o total da conta do pagamento directo (o do valor final).
+  const total = contaDaFolhaNoNovoModelo(f, modelo)?.totalAoClienteCent ?? c.totalCent;
   return (
     `Das ${f.inicio} às ${f.fim}, ${horasEmTexto(c.horas.cobradas)} h com ${f.pessoas} pessoas, ` +
-    `${numeroEmTexto(c.km.cobrados)} km${mat} → ${eurCent(c.totalCent)} com IVA (${eurCent(c.semIvaCent)} sem IVA).`
+    `${numeroEmTexto(c.km.cobrados)} km${mat} → ${eurCent(total)} com IVA (${eurCent(c.semIvaCent)} sem IVA).`
   );
 }
 
-export function folhaNoEcra(f: FolhaDaMudanca, para: "cliente" | "parceiro", minimoHoras: number): FolhaNoEcra {
+/**
+ * A FOLHA NO ECRÃ. `modelo` (d3): o que o servidor sabe da negociação (o
+ * modelo de 15-11 e o regime congelado); sem ele, o da folha. No modelo de
+ * 15-11 os números são os do valor final; ao parceiro diz-se «Fica consigo X;
+ * passa à CLYON Y (a taxa e o IVA dela)».
+ */
+export function folhaNoEcra(f: FolhaDaMudanca, para: "cliente" | "parceiro", minimoHoras: number, modelo?: ModeloDaFolha | null): FolhaNoEcra {
   const c = f.conta;
-  const linhas = linhasDaFolha(f, para);
+  const novo = contaDaFolhaNoNovoModelo(f, modelo);
+  const linhas = linhasDaFolha(f, para, novo);
   const subiu = subiuAEquipa(f);
   return {
     titulo: TITULO_DA_FOLHA,
     linhas,
-    totalTexto: `${eurCent(c.totalCent)} com IVA (${eurCent(c.semIvaCent)} sem IVA)`,
-    recebeTexto: para === "parceiro" ? `Recebe ${eurCent(c.profissionalCent)}, depois da taxa da plataforma.` : null,
+    totalTexto: `${eurCent(novo ? novo.totalAoClienteCent : c.totalCent)} com IVA (${eurCent(c.semIvaCent)} sem IVA)`,
+    recebeTexto:
+      para !== "parceiro"
+        ? null
+        : novo
+          ? `Fica consigo ${eurCent(novo.ficaAoProfissionalCent)}; passa à CLYON ${eurCent(novo.aPassarAClyonCent)} (a taxa e o IVA dela).`
+          : `Recebe ${eurCent(c.profissionalCent)}, depois da taxa da plataforma.`,
     avisoDaEquipa: pessoasAMais(f.pessoas) > 0
-      ? avisoDasPessoasAMais(f, para)
+      ? avisoDasPessoasAMais(f, para, novo?.regime ?? "normal")
       : subiu
       ? para === "cliente"
         ? `A equipa subiu de ${f.pessoasEscolhidas} para ${f.pessoas} pessoas. Ao confirmar a folha, concorda com a equipa de ${f.pessoas}.`
         : `Subiu a equipa de ${f.pessoasEscolhidas} para ${f.pessoas} pessoas: o cliente tem de concordar ao confirmar a folha.`
       : null,
-    resumo: resumoDaFolha(f),
+    resumo: resumoDaFolha(f, modelo),
     regra: regraDaFolha(minimoHoras),
   };
 }
@@ -795,6 +896,13 @@ export function contextoDaFolha(d: {
   kmDoPercurso: unknown;
   valorPorHoraAcordado: unknown;
   diaPorOmissao: string;
+  /**
+   * d3 (18-11-2026): `true` quando a negociação segue o modelo de 15-11 (o
+   * servidor leu os pagamentos), e o regime de IVA do parceiro congelado nela
+   * («normal» ou «isento»). Sem eles, a conta antiga.
+   */
+  novoModelo?: unknown;
+  regime?: unknown;
 }): ContextoDaFolha | null {
   const tarifa = tarifaCongeladaDeJson(d.tarifaCongeladaJson ?? null);
   if (!tarifa) return null;
@@ -806,6 +914,7 @@ export function contextoDaFolha(d: {
     kmDoPercurso: km != null && Number.isFinite(km) && km >= 0 ? Math.round(km * 10) / 10 : null,
     valorPorHoraAcordado: hora != null && Number.isFinite(hora) && hora > 0 ? hora : null,
     diaPorOmissao: d.diaPorOmissao,
+    modelo: lerModeloDaMudanca(d.novoModelo, d.regime),
   };
 }
 

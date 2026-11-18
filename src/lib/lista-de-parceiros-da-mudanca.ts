@@ -33,6 +33,9 @@ import type { FormaDePagamento } from "./forma-de-pagamento";
 import { SELO_DO_CARTAO } from "./parceiro-verificado";
 import { formatarEuros } from "./formatar-euros";
 import { REFERENCIA_DA_MUDANCA } from "./modelo-da-mudanca";
+import { aoClienteNoModelo, ISENTO_DE_IVA, type ModeloDaMudanca } from "./mudanca-no-novo-modelo";
+import { novoModeloEmVigor } from "./novo-modelo";
+import { perfilFiscalDoParceiro } from "./perfil-fiscal";
 
 /**
  * A LISTA DOS PARCEIROS DE UMA MUDANÇA — 10-11-2026 (fase 2).
@@ -187,7 +190,34 @@ export type CandidatoDaMudanca = ProfissionalParaAvaliar & {
   /** A média das avaliações que contam (avaliacao-que-conta.ts), e quantas são. */
   notaMedia: number | null;
   avaliacoes: number;
+  /** d3 (18-11-2026): o regime de IVA do perfil e quando o confirmou (`perfil-fiscal.ts`). */
+  regimeIva?: unknown;
+  regimeIvaConfirmadoEm?: unknown;
 };
+
+/**
+ * O MODELO COM QUE O CARTÃO SE CONTA — d3 (18-11-2026). Um pedido novo de
+ * mudança pela lista segue o modelo de 15-11 desde a data: o preço com IVA é o
+ * da conta do pagamento directo, com o regime do parceiro (o confirmado no
+ * perfil; a confirmar, como com IVA). É o regime que fica congelado quando o
+ * cliente o contrata — e o número que a folha e o valor final vão dizer.
+ */
+export function modeloDoCartao(c: Pick<CandidatoDaMudanca, "regimeIva" | "regimeIvaConfirmadoEm" | "emiteGuiaTransporte" | "guiaVerificadaEm">, agora: Date): ModeloDaMudanca | null {
+  if (!novoModeloEmVigor(agora)) return null;
+  return { novoModelo: true, regime: perfilFiscalDoParceiro(c).regimeParaAConta };
+}
+
+/**
+ * «61,50 €/h com IVA (50,00 €/h sem IVA)»; com um parceiro isento (d3),
+ * «51,15 €/h com IVA (50,00 €/h sem IVA · parceiro isento de IVA)» — o IVA que
+ * fica é só o da taxa da plataforma.
+ */
+function valorDoCartaoEmTexto(v: { semIvaCent: number; comIvaCent: number }, modelo: ModeloDaMudanca | null, sufixo = ""): string {
+  if (modelo?.regime === "isento") {
+    return `${eur(v.comIvaCent)}${sufixo} com IVA (${eur(v.semIvaCent)}${sufixo} sem IVA · parceiro ${ISENTO_DE_IVA})`;
+  }
+  return valorEmTexto(v, sufixo);
+}
 
 export type ContextoDaMudanca = {
   tipologia: Tipologia | null;
@@ -340,9 +370,10 @@ function estimativaEmIntervalo(
   min: ContaDaMudanca,
   max: ContaDaMudanca,
   texto: (faixa: string) => string,
+  modelo: ModeloDaMudanca | null = null,
 ): EstimativaAoCliente {
-  const a = contaParaTexto(min);
-  const b = contaParaTexto(max);
+  const a = contaParaTexto(min, modelo);
+  const b = contaParaTexto(max, modelo);
   return {
     semIvaCent: Math.round((a.semIvaCent + b.semIvaCent) / 2),
     comIvaCent: Math.round((a.comIvaCent + b.comIvaCent) / 2),
@@ -352,8 +383,9 @@ function estimativaEmIntervalo(
   };
 }
 
-function contaParaTexto(c: ContaDaMudanca): { semIvaCent: number; comIvaCent: number } {
-  return { semIvaCent: c.semIvaCent, comIvaCent: c.totalCent };
+function contaParaTexto(c: ContaDaMudanca, modelo: ModeloDaMudanca | null = null): { semIvaCent: number; comIvaCent: number } {
+  // d3: no modelo de 15-11, o com IVA da conta do pagamento directo (o da folha e do valor final).
+  return aoClienteNoModelo(c, modelo);
 }
 
 /** As quantidades de um nível que este parceiro fornece, e os nomes do que não fornece. */
@@ -421,7 +453,10 @@ export function cartaoDoParceiro(
   agora: Date = new Date(),
 ): CartaoDoParceiro | null {
   const t: TarifaCongelada = congelarTarifa(c.tarifa, undefined, agora);
-  const regras = t.regras;
+  const modelo = modeloDoCartao(c, agora);
+  const isento = modelo?.regime === "isento";
+  // d3: o material é da fatura do parceiro — isento, sem IVA.
+  const regras: RegrasDaConta = isento ? { ...t.regras, materialComIva: false } : t.regras;
   const pessoas = pessoasParaACasa(ctx.tipologia, ctx.pessoas);
   const [hMin, hMax] = horasDoParceiro(horasDaMudanca(ctx.tipologia, ctx.desmontagem, pessoas), t.minimoHoras);
   const tipologia = ctx.tipologia ?? "itens";
@@ -444,15 +479,18 @@ export function cartaoDoParceiro(
 
   const hora = (cent: number | null): ValorAoCliente | null => {
     if (cent == null) return null;
-    const v = aoCliente(cent, regras, true);
-    return { ...v, texto: valorEmTexto(v, "/h") };
+    const antes = aoCliente(cent, regras, true);
+    // O que fica ao parceiro de uma hora: de dentro, a hora menos a taxa; por cima, a hora.
+    const profissionalCent = regras.modo === "de_dentro" ? cent - Math.round(cent * regras.taxa) : cent;
+    const v = aoClienteNoModelo({ semIvaCent: antes.semIvaCent, profissionalCent, totalCent: antes.comIvaCent }, modelo);
+    return { ...v, texto: valorDoCartaoEmTexto(v, modelo, "/h") };
   };
 
   const materiais = MATERIAIS.flatMap((m) => {
     const cent = t.materiaisCent[m.chave];
     if (cent == null) return [];
     const v = aoCliente(cent, { ...regras, iva: regras.materialComIva ? regras.iva : 0 }, false);
-    return [{ chave: m.chave, nome: m.nome, unidade: m.unidade, ...v, texto: `${valorEmTexto(v)} por ${m.unidade}` }];
+    return [{ chave: m.chave, nome: m.nome, unidade: m.unidade, ...v, texto: `${valorDoCartaoEmTexto(v, modelo)} por ${m.unidade}` }];
   });
 
   const tipoNoTexto = tipologia === "itens" ? TIPOLOGIA_POR_EXTENSO.itens : `um ${TIPOLOGIA_POR_EXTENSO[tipologia]}`;
@@ -477,9 +515,9 @@ export function cartaoDoParceiro(
         );
 
   const comProtecao = Object.keys(prot.fornece).length > 0;
-  const estimativa = estimativaEmIntervalo(protMin, protMax, (f) => `Estimativa: ${f}${comProtecao ? ", com a proteção" : ", sem o material"}`);
+  const estimativa = estimativaEmIntervalo(protMin, protMax, (f) => `Estimativa: ${f}${comProtecao ? ", com a proteção" : ", sem o material"}`, modelo);
   const estimativaComEmbalamento =
-    embMin && embMax && embMin.ok && embMax.ok ? estimativaEmIntervalo(embMin, embMax, (f) => `Com caixas e embalamento: ${f}`) : null;
+    embMin && embMax && embMin.ok && embMax.ok ? estimativaEmIntervalo(embMin, embMax, (f) => `Com caixas e embalamento: ${f}`, modelo) : null;
   const estimativaComKit = estimativaComEmbalamento
     ? { ...estimativaComEmbalamento, texto: `${faixaEmTexto(estimativaComEmbalamento.minimo, estimativaComEmbalamento.maximo)}, se também precisar de caixas e embalamento` }
     : { ...estimativa, texto: `${faixaEmTexto(estimativa.minimo, estimativa.maximo)}${comProtecao ? ", com a proteção" : ""}` };
