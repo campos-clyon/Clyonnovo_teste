@@ -298,8 +298,8 @@ export function textoDoTrabalhoConfirmado(p: {
         "O cliente confirmou o trabalho. O que ele lhe pagou é seu: emita-lhe a fatura do trabalho e " +
         "junte-a ao pedido. A taxa da plataforma e o IVA dela são da CLYON: " +
         `<strong>${euros(d.total)}</strong> (${euros(d.comissao)} de taxa e ${euros(d.iva)} de IVA dela), ` +
-        `como valor em atraso, com ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias para pagar. ${comoPagar} ` +
-        "Se os dias passarem, a conta fica em stand-by até pagar.",
+        `a passar à CLYON em ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. ${comoPagar} ` +
+        "Só ficam em atraso se os dias passarem; aí, a conta fica em stand-by até pagar.",
       botao: "Abrir a carteira",
     };
   }

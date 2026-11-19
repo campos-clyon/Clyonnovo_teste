@@ -99,7 +99,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 18-11-2026 (d5): o menu «Soluções» sem a limpeza (serviço futuro).
   // 18-11-2026 (d8): o título e a descrição («Trabalho com carrinha…»), o bloco de Lisboa, Loures e
   // a Linha de Sintra com as ligações por zona, e a linha das mudanças escolhidas (3 horas).
-  "/quero-ser-parceiro": "2026-11-18",
+  "/quero-ser-parceiro": "2026-11-19",
   // 17-11-2026 (d68): a Amora no título, na descrição e no H1 (a página para onde /recolha-moveis-amora vai).
   "/recolha-moveis-seixal": "2026-11-17",
 };

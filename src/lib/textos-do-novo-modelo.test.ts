@@ -64,7 +64,9 @@ describe("a partir de 15-11, o modelo novo", () => {
     for (const passo of passosDoProfissional(DEPOIS)) limpo(passo.texto, "todos");
     const ajuda = perguntasDoProfissional({ cliente: 0, profissional: 0.1 }, DEPOIS);
     for (const q of ajuda) limpo(q.resposta, "todos");
-    expect(ajuda.map((q) => q.resposta).join(" ")).toContain("valor em atraso");
+    // d6 (19-11-2026): no prazo é «A passar à CLYON»; «em atraso» só depois dele.
+    expect(ajuda.map((q) => q.resposta).join(" ")).toContain("«A passar à CLYON»");
+    expect(ajuda.map((q) => q.resposta).join(" ")).not.toContain("como valor em atraso");
     expect(ajuda.some((q) => q.pergunta === "O cliente pagou-me: e agora?")).toBe(true);
   });
 

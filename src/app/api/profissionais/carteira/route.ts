@@ -21,7 +21,7 @@ import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
 import { prontoParaReceber } from "@/lib/pronto-para-receber";
 import { aceitacaoDoProfissional } from "@/lib/aceitacao-dos-termos-na-base";
 import { explicacaoDoStandBy, PAGAR_O_VALOR_EM_ATRASO, prazoDoValorEmAtraso } from "@/lib/valor-em-atraso";
-import { linhaDoValorAPassar } from "@/lib/como-recebe-no-novo-modelo";
+import { faixaDoValorAPassar, linhaDoValorAPassar } from "@/lib/como-recebe-no-novo-modelo";
 import { pagamentosDaNegociacao } from "@/lib/pagamentos-na-base";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { faseDoTrabalho } from "@/lib/trabalho";
@@ -244,6 +244,9 @@ export async function GET(req: NextRequest) {
             emVigor: true,
             valorEmAtraso: s.porPagar,
             valores,
+            // d6 (19-11-2026): a faixa do Início já escrita — o painel e a app CLYON Pro desenham-na tal como vem.
+            // Em stand-by não há faixa (manda o `standBy`).
+            faixa: s.emStandBy ? null : faixaDoValorAPassar(valores, agoraDoNovoModelo),
             standBy: s.emStandBy
               ? {
                   total: s.total,

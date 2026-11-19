@@ -243,9 +243,10 @@ function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFreq
       resposta:
         `Nas negociações, a taxa da plataforma é ${aTaxaDasNegociacoes(taxas)}; nos trabalhos de valor fixo ` +
         `da CLYON, a taxa é a de cada trabalho. ${taxas ? TAXA_DAS_MUDANCAS_EM_FRASE : TAXA_DAS_MUDANCAS_SEM_NUMERO} ` +
-        "O cliente paga-lhe diretamente o preço com IVA, que já inclui a taxa da plataforma e o IVA dela. Quando o " +
-        "trabalho fecha, essa parte fica na sua carteira, em «A pagar à CLYON», como valor em atraso, com a " +
-        `referência para a pagar. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias; depois, a conta fica em stand-by ` +
+        "O cliente paga-lhe diretamente o preço total (com IVA, se o cobrar), que já inclui a taxa da plataforma e o " +
+        "IVA dela. Quando o trabalho fecha, essa parte aparece na sua carteira, em «A pagar à CLYON», como «A passar " +
+        `à CLYON» até ao dia do prazo, com a referência para a pagar. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias; ` +
+        "só fica em atraso se o prazo passar, e aí a conta fica em stand-by " +
         "— continua a ver os pedidos, mas não aceita nem envia propostas até o pagar. O pagamento confirmado " +
         "tira-a do stand-by sozinho.",
     },
@@ -259,12 +260,12 @@ function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFreq
     "Recebi em dinheiro: e agora?": {
       pergunta: "O cliente pagou-me: e agora?",
       resposta: [
-        "1. O cliente paga-lhe o preço da proposta, com IVA — por transferência para o seu IBAN, por MB WAY ou em " +
+        "1. O cliente paga-lhe o preço total da proposta, com IVA se o cobrar — por transferência para o seu IBAN, por MB WAY ou em " +
           "dinheiro no local, como escolheu no pedido.",
         "2. Fica consigo a sua parte. A taxa da plataforma e o IVA dela são da CLYON: quando o trabalho fecha, " +
-          "aparecem na Carteira, em «A pagar à CLYON», como valor em atraso, com «Pagar por MB WAY» ou «Gerar " +
-          "referência Multibanco».",
-        `3. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. Se passarem, a conta fica em stand-by até pagar; o ` +
+          "aparecem na Carteira, em «A pagar à CLYON», como «A passar à CLYON» até ao dia do prazo, com «Pagar por " +
+          "MB WAY» ou «Gerar referência Multibanco».",
+        `3. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. Só fica em atraso se passarem; aí, a conta fica em stand-by até pagar; o ` +
           "pagamento confirmado desbloqueia-a sozinho.",
         "4. A fatura do trabalho é sua: emita-a ao cliente e junte-a ao pedido. A da taxa da plataforma é passada " +
           `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,

@@ -1,4 +1,4 @@
-import type { ComoRecebe } from "@/lib/como-recebe-no-novo-modelo";
+import type { ComoRecebe, FaixaDoValorAPassar } from "@/lib/como-recebe-no-novo-modelo";
 import type { FolhaParaOParceiro } from "@/lib/folha-da-mudanca";
 import type { ProntoParaReceber as ProntoParaReceberDoServidor } from "@/lib/pronto-para-receber";
 import type { PercursoParaOParceiro } from "@/lib/mapa-do-percurso";
@@ -349,6 +349,12 @@ export type DadosDaCarteira = {
       linha?: string;
     }>;
     standBy: { total: number; accao: string; explicacao: string; negociacoes: number[] } | null;
+    /**
+     * d6 (19-11-2026): a faixa do Início, já escrita pelo servidor
+     * (`faixaDoValorAPassar`, como-recebe-no-novo-modelo.ts). `null` sem nada a
+     * passar ou em stand-by. Ausente num site antigo.
+     */
+    faixa?: FaixaDoValorAPassar | null;
     dadosParaReceber:
       | { estado: "completos" | "ainda_nao_vale" }
       | { estado: "aviso"; falta: string[]; ate: string; frase: string }

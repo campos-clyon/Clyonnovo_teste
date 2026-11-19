@@ -154,7 +154,7 @@ const PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO: PassoDoProfissional[] = [
  */
 const PASSO_DO_DINHEIRO_NO_NOVO_MODELO =
   "O cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY ou em dinheiro no " +
-  "local — o preço com IVA. Fica com a sua parte, emite ao cliente a fatura do trabalho " +
+  "local — o preço total, com IVA se o cobrar. Fica com a sua parte, emite ao cliente a fatura do trabalho " +
   "e passa à CLYON a taxa da plataforma e o IVA dela, por referência, uma por trabalho. Propõe o seu valor, sem IVA, e o " +
   "cliente vê o total a pagar: com IVA incluído, ou sem IVA se estiver isento. Responder a pedidos não custa nada, e um orçamento que não dá em nada " +
   // d30 (15-11-2026): a frase das faturas do Jurídico, dita ao profissional.
@@ -285,14 +285,14 @@ const COMO_RECEBE_NO_NOVO_MODELO: Array<{ forma: string; texto: string }> = [
     forma: "O cliente paga-lhe",
     texto:
       "Por transferência para o seu IBAN, por MB WAY ou em dinheiro no local, como o cliente escolher. " +
-      "Recebe o preço com IVA e emite ao cliente a fatura do trabalho.",
+      "Recebe o preço total, com IVA se o cobrar, e emite ao cliente a fatura do trabalho.",
   },
   {
     forma: "Passa à CLYON a taxa e o IVA dela",
     texto:
-      "Quando o trabalho fecha, a taxa da plataforma e o IVA dela ficam na sua carteira como valor em atraso, " +
-      `com a referência Multibanco ou MB WAY para os pagar. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias; depois, a ` +
-      "conta fica em stand-by até pagar.",
+      "Quando o trabalho fecha, a taxa da plataforma e o IVA dela aparecem na sua carteira em «A passar à CLYON», " +
+      `com o valor, o dia até quando (${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias) e a referência Multibanco ou MB WAY ` +
+      "para os pagar. Só ficam em atraso se o prazo passar; aí, a conta fica em stand-by até pagar.",
   },
 ];
 

@@ -803,6 +803,24 @@ function PainelNoBrowser() {
         </button>
       )}
       {/*
+        d6 (19-11-2026): o que tem a passar à CLYON, à entrada — a faixa vem já
+        escrita do servidor, a mesma da app CLYON Pro. Um toque leva à carteira.
+      */}
+      {carteira?.novoModelo?.faixa && (
+        <button
+          onClick={() => abrir("carteira")}
+          className={`mb-4 block w-full rounded-2xl border px-4 py-3 text-left text-sm leading-relaxed ${
+            carteira.novoModelo.faixa.estado === "em_atraso"
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-amber-200 bg-amber-50 text-amber-900"
+          }`}
+        >
+          <span className="block font-semibold">{carteira.novoModelo.faixa.titulo}</span>
+          {carteira.novoModelo.faixa.texto}
+          <span className="mt-1 block font-semibold underline">{carteira.novoModelo.faixa.botao}</span>
+        </button>
+      )}
+      {/*
         d1 (18-11-2026): «Pronto para receber pedidos» — um só cartão, linha a
         linha (Termos, IBAN e titular, MB WAY, regime de IVA, guia a quem faz
         entulho), com a lista que vem do servidor. Sem ela, a faixa de antes.

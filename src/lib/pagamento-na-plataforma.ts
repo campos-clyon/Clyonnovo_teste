@@ -6,7 +6,7 @@ import {
 } from "./forma-de-pagamento";
 import type { ModeloDoPreco } from "./iva-incluido";
 import { ROTULOS_DA_CARTEIRA } from "./rotulos-da-carteira";
-import { NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "./novo-modelo";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "./novo-modelo";
 import { AS_DUAS_FATURAS, PAGA_DIRETAMENTE_AO_PARCEIRO, SO_PARA_OS_DADOS_DO_PEDIDO } from "./pagar-ao-parceiro";
 
 /*
@@ -281,9 +281,10 @@ export const PROMESSA_DO_NOVO_MODELO: Promessa = {
     "que dá o trabalho por concluído dos dois lados.",
   proCorpo:
     "Nos trabalhos novos, o cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY " +
-    "ou em dinheiro no local — o preço com IVA, que já inclui a taxa da plataforma e o IVA dela. Quando o " +
-    `trabalho fecha, essa parte fica em «${ROTULOS_DA_CARTEIRA.aPagarAClyon.rotulo}» como valor em atraso, ` +
-    "com a referência Multibanco ou MB WAY para a pagar. Nos trabalhos que o cliente já tinha pago antes de " +
+    "ou em dinheiro no local — o preço total (com IVA, se o cobrar), que já inclui a taxa da plataforma e o " +
+    `IVA dela. Quando o trabalho fecha, essa parte fica em «${ROTULOS_DA_CARTEIRA.aPagarAClyon.rotulo}», a passar ` +
+    `à CLYON até ao dia do prazo (${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias), com a referência Multibanco ou MB WAY ` +
+    "para a pagar; só fica em atraso se o prazo passar. Nos trabalhos que o cliente já tinha pago antes de " +
     `${NOVO_MODELO_DESDE_POR_EXTENSO}, recebe como antes: passam a «${ROTULOS_DA_CARTEIRA.porReceber.rotulo}» ` +
     "depois de o cliente confirmar, e aí pede a transferência.",
   faqComoSePaga:
@@ -291,7 +292,7 @@ export const PROMESSA_DO_NOVO_MODELO: Promessa = {
     `para lá ir. ${PAGA_DIRETAMENTE_AO_PARCEIRO}`,
   proComoRecebe:
     "O cliente paga-lhe diretamente — por transferência para o seu IBAN, por MB WAY ou em dinheiro no " +
-    "local — o preço com IVA. Fica com a sua parte; a taxa da plataforma e o IVA dela passa-os depois à " +
+    "local — o preço total, com IVA se o cobrar. Fica com a sua parte; a taxa da plataforma e o IVA dela passa-os depois à " +
     "CLYON, por referência Multibanco ou MB WAY, uma por trabalho.",
   recrutamentoCorpo:
     "O preço fica acordado antes de sair de casa, escrito na plataforma, e nem o cliente " +

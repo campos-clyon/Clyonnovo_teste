@@ -24,6 +24,8 @@ type Visto = {
   dadosMudaram?: string | null;
   perfilFiscal?: { fatura: string; guia: string | null };
   conta?: { semIva: number; total: number | null; faturaDoParceiro: number; faturaDaTaxa: number } | null;
+  /** d6 (19-11-2026): a frase do total, escrita no servidor pelo regime do parceiro — a mesma da app de cliente. */
+  totalEmTexto?: string | null;
   comoPagar?: string | null;
   opcoes?: Array<{ id: string; curta: string; cliente: string }>;
   faturas?: {
@@ -32,8 +34,6 @@ type Visto = {
     doTrabalho: { url: string; nome: string | null } | null;
   };
 };
-
-const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
 
 export default function PagarAoParceiro({
   pedidoId,
@@ -93,12 +93,7 @@ export default function PagarAoParceiro({
     <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
       <h3 className="text-base font-semibold text-slate-900">Pagar a {visto.parceiro}</h3>
       {visto.frase && <p className="mt-1">{visto.frase}</p>}
-      {visto.conta?.total != null && (
-        <p className="mt-3">
-          Total: <strong>{euros(visto.conta.total)}</strong> com IVA ({euros(visto.conta.semIva)} sem IVA) — fatura do
-          trabalho {euros(visto.conta.faturaDoParceiro)} e fatura da taxa da plataforma {euros(visto.conta.faturaDaTaxa)}.
-        </p>
-      )}
+      {visto.totalEmTexto && <p className="mt-3 font-semibold text-slate-900">{visto.totalEmTexto}</p>}
       {visto.perfilFiscal && (
         <p className="mt-1 text-slate-600">
           {visto.perfilFiscal.fatura}

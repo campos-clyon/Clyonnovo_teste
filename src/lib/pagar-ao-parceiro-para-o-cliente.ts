@@ -24,9 +24,21 @@ const emEuros = (n: number) => `${(Math.round(n * 100) / 100).toFixed(2).replace
  * bloco do site (`src/components/PagarAoParceiro.tsx`): o total com IVA, o sem IVA
  * ao lado (nunca sozinho) e as duas faturas. A app de cliente não escreve preços
  * nem IVA: recebe esta frase pronta. `null` sem total.
+ *
+ * d6 (19-11-2026): ao parceiro isento (art. 53.º) não se diz «com IVA» do total —
+ * a fatura do trabalho não leva IVA; só a da taxa da plataforma o leva.
  */
-export function totalAoParceiroEmTexto(c: { total: number | null; semIva: number; faturaDoParceiro: number; faturaDaTaxa: number }): string | null {
+export function totalAoParceiroEmTexto(
+  c: { total: number | null; semIva: number; faturaDoParceiro: number; faturaDaTaxa: number },
+  regime?: string | null,
+): string | null {
   if (c.total == null) return null;
+  if (regime === "isento") {
+    return (
+      `Total: ${emEuros(c.total)} — fatura do trabalho ${emEuros(c.faturaDoParceiro)} (o parceiro é isento de IVA) ` +
+      `e fatura da taxa da plataforma ${emEuros(c.faturaDaTaxa)}, com IVA.`
+    );
+  }
   return (
     `Total: ${emEuros(c.total)} com IVA (${emEuros(c.semIva)} sem IVA) — fatura do trabalho ` +
     `${emEuros(c.faturaDoParceiro)} e fatura da taxa da plataforma ${emEuros(c.faturaDaTaxa)}.`
@@ -80,7 +92,7 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
     dadosMudaram: dadosMudados ? DADOS_DE_PAGAMENTO_MUDARAM : null,
     perfilFiscal: { ...fiscal, regimeParaAConta: regime },
     /** A frase do total, a mesma do bloco do site — a app de cliente mostra-a tal e qual (d18). */
-    totalEmTexto: c ? totalAoParceiroEmTexto({ total, semIva: c.semIva, faturaDoParceiro: c.faturaDoParceiro, faturaDaTaxa: c.faturaDaTaxa }) : null,
+    totalEmTexto: c ? totalAoParceiroEmTexto({ total, semIva: c.semIva, faturaDoParceiro: c.faturaDoParceiro, faturaDaTaxa: c.faturaDaTaxa }, regime) : null,
     conta: c
       ? {
           semIva: c.semIva,

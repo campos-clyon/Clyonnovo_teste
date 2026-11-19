@@ -121,7 +121,8 @@ type Regra =
   | "x-confirmacao"
   | "z-parceiro-escolhido"
   | "s-modelo-antigo"
-  | "d4-passa-sem-iva";
+  | "d4-passa-sem-iva"
+  | "d6-valor-a-passar";
 
 /*
  * d4) O QUE PASSA À CLYON LEVA O IVA — d4 (CEO e dono, 18-11-2026). No modelo de
@@ -134,6 +135,18 @@ type Regra =
 const ROTULO_DO_QUE_PASSA = /^pass(?:a|am) à CLYON$/i;
 const PASSA_A_CLYON = /\bpass(?:a|am|a-a|a-as|a-os)\b[^.;!?«]*?\sà CLYON\b/i;
 const ONDE_OS_TERMOS_VIVEM = new Set(["src/app/termos/page.tsx"]);
+/*
+ * d6) «A PASSAR À CLYON» DENTRO DO PRAZO — d6 (CEO e dono, 19-11-2026). A d4
+ * (18-11) decidiu: dentro dos 4 dias o que o parceiro passa à CLYON diz-se
+ * «A passar à CLYON · X € até dd/mm», e «em atraso» só depois do prazo. Os
+ * textos que lhe diziam que, ao fechar, a taxa ficava «como valor em atraso»
+ * contavam-lhe o contrário. Fora do backoffice e dos Termos (do Jurídico).
+ */
+const COMO_VALOR_EM_ATRASO = /(?<!\p{L})como valor em atraso(?!\p{L})/iu;
+export function comoValorEmAtraso(texto: string): string | null {
+  return COMO_VALOR_EM_ATRASO.exec(texto)?.[0] ?? null;
+}
+
 export function passaAClyonSemIva(texto: string): string | null {
   if (ROTULO_DO_QUE_PASSA.test(texto.trim())) return null;
   for (const frase of texto.split(/(?<=[.;!?])\s+/)) {
@@ -1016,6 +1029,11 @@ function achadosDe(f: string): Achado[] {
       const p = passaAClyonSemIva(texto);
       if (p) out.push({ ficheiro: f, linha, regra: "d4-passa-sem-iva", texto: p });
     }
+    // d6) «como valor em atraso» ao fechar, fora do backoffice e dos Termos.
+    if (!DO_BACKOFFICE(f) && !ONDE_OS_TERMOS_VIVEM.has(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
+      const c = comoValorEmAtraso(texto);
+      if (c) out.push({ ficheiro: f, linha, regra: "d6-valor-a-passar", texto: c });
+    }
     // n) Os registos («[distribuir] …») e o SQL não são para o cliente ler.
     if (O_CLIENTE_LE(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const p = profissionalAoCliente(texto);
@@ -1214,6 +1232,13 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(passaAClyonSemIva("Passa à CLYON")).toBeNull();
     expect(passaAClyonSemIva("fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA")).toBe("passa-a à CLYON");
     expect(passaAClyonSemIva("passa a «Por receber» quando o cliente pagar à CLYON")).toBeNull();
+  });
+
+  it("a regra d6 apanha «como valor em atraso», e deixa «A passar à CLYON» e o atraso depois do prazo (d6, 19-11-2026)", () => {
+    expect(comoValorEmAtraso("a taxa fica na sua carteira como valor em atraso, com a referência")).toBe("como valor em atraso");
+    expect(comoValorEmAtraso("ficam em «A pagar à CLYON» Como valor em atraso.")).toBe("Como valor em atraso");
+    expect(comoValorEmAtraso("aparecem em «A passar à CLYON» até ao dia do prazo; só ficam em atraso se o prazo passar")).toBeNull();
+    expect(comoValorEmAtraso("Pagar o valor em atraso")).toBeNull();
   });
 
   it("a regra n lê os emails ao cliente, a FAQ e as descrições do Google (d2, 31-10-2026)", () => {

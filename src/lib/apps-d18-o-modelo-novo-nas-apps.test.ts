@@ -312,10 +312,22 @@ describe("app de cliente — d18: «Pagar ao parceiro» pela R5", () => {
     );
     expect(totalAoParceiroEmTexto({ ...conta, total: null })).toBeNull();
     expect(ler("src/lib/pagar-ao-parceiro-para-o-cliente.ts")).toContain("totalEmTexto: c ? totalAoParceiroEmTexto(");
-    // A mesma frase do bloco do site.
-    const site = ler("src/components/PagarAoParceiro.tsx");
-    expect(site).toContain("com IVA ({euros(visto.conta.semIva)} sem IVA) — fatura do");
-    expect(site).toContain("fatura da taxa da plataforma {euros(visto.conta.faturaDaTaxa)}.");
+    // d6 (19-11-2026): o bloco do site mostra a mesma frase, a do servidor — já não a escreve à mão.
+    const site = semComentarios(ler("src/components/PagarAoParceiro.tsx"));
+    expect(site).toContain("{visto.totalEmTexto}");
+    expect(site).not.toContain("visto.conta.total");
+    expect(ler("src/lib/pagar-ao-parceiro-para-o-cliente.ts")).toContain("faturaDaTaxa: c.faturaDaTaxa }, regime)");
+  });
+
+  it("ao parceiro isento, o total não diz «com IVA» do trabalho — só a taxa o leva (d6, 19-11-2026)", () => {
+    const isento = { semIva: 291, total: 297.71, faturaDoParceiro: 264.26, faturaDaTaxa: 33.45 };
+    const t = totalAoParceiroEmTexto(isento, "isento");
+    expect(t).toBe(
+      "Total: 297,71 € — fatura do trabalho 264,26 € (o parceiro é isento de IVA) e fatura da taxa da plataforma 33,45 €, com IVA.",
+    );
+    expect(t).not.toMatch(/sem IVA/);
+    expect(totalAoParceiroEmTexto(conta, "normal")).toBe(totalAoParceiroEmTexto(conta));
+    expect(totalAoParceiroEmTexto({ ...isento, total: null }, "isento")).toBeNull();
   });
 
   it("o bloco da R5 só conta com pagaAoParceiro; sem ele (site antigo) pergunta-se à rota", () => {

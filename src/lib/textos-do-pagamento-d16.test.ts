@@ -109,7 +109,9 @@ describe("no dia 16, o modelo novo", () => {
     limpo(t.corpo, "todos");
     expect(t.corpo).not.toMatch(/dinheiro no local/);
     expect(t.corpo).toContain("43,05 €");
-    expect(t.corpo).toContain("valor em atraso");
+    // d6 (19-11-2026): no prazo é «a passar à CLYON»; «em atraso» só depois dele.
+    expect(t.corpo).toContain("a passar à CLYON em 4 dias");
+    expect(t.corpo).not.toContain("como valor em atraso");
     const a = avisoDoConfirmado({ pedidoId: 900, caso: "em_mao_com_divida", liquido: 315, aPagarAClyon: 43.05, noNovoModelo: true });
     expect(a.body).not.toMatch(/dinheiro/);
     expect(a.body).toContain("43,05 €");

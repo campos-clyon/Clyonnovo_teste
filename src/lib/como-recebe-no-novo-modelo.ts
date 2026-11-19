@@ -24,6 +24,8 @@ import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, FICA_CONSIGO_E_PASSA_A_CLYON, FICA_C
  * `novo-modelo.ts` (é lá que vive a data do modelo, que elas não podem ter).
  */
 export { FICA_CONSIGO_E_PASSA_A_CLYON };
+import { PAGAR_O_VALOR_EM_ATRASO } from "./valor-em-atraso";
+import { PARTE_DA_CLYON_COM_RESERVA } from "./reserva";
 import { COMO_PAGAR_EM_PALAVRAS, lerComoPagar, type ComoPagarAoParceiro } from "./pagar-ao-parceiro";
 
 const DIA = 86_400_000;
@@ -122,5 +124,113 @@ export function comoRecebeNoNovoModelo(
     estado: linha?.estado ?? null,
     linhaDoValor: linha?.linha ?? null,
     prazoAte: linha?.prazoAte ?? null,
+  };
+}
+
+/*
+ * A FAIXA DO INÍCIO — d6 (CEO e dono, 19-11-2026). O que o parceiro tem a passar
+ * à CLYON, à entrada, igual no painel e na app CLYON Pro: a rota da carteira
+ * manda-a já escrita (`novoModelo.faixa`) e os dois desenham-na tal como vem.
+ *
+ *   · 1 trabalho: o título é a linha do servidor (`linhaDoValorAPassar`).
+ *   · vários: «X € de N trabalhos · o primeiro prazo é dd/mm» — cada trabalho
+ *     tem o seu prazo, por isso não se diz «pague tudo até» o primeiro.
+ *   · «em atraso» só quando algum já passou do prazo, e então diz-se quanto é
+ *     o que está em atraso, à parte do que ainda está no prazo.
+ *
+ * O dia num só formato (dd/mm, em Lisboa). Em stand-by não há faixa: aí manda o
+ * `standBy` (a explicação e a acção). `null` sem nada a passar.
+ */
+export const PAGAR_A_CLYON = "Pagar a parte da CLYON";
+
+export type FaixaDoValorAPassar = {
+  /** «em_atraso» se algum dos valores passou do prazo; senão o estado do primeiro. */
+  estado: EstadoDoValorAPassar;
+  titulo: string;
+  texto: string;
+  /** «Pagar à CLYON» no prazo; «Pagar o valor em atraso» com algum em atraso. Leva à carteira. */
+  botao: string;
+  /** A soma do que falta passar, em euros. */
+  total: number;
+  /** A parte que já está em atraso, em euros (0 se nenhuma). */
+  emAtraso: number;
+  trabalhos: number;
+  /** O prazo mais próximo (ISO), se algum já corre. */
+  primeiroPrazo: string | null;
+};
+
+type ValorDaFaixa = {
+  total: number;
+  prazoAte: string | null;
+  estado?: EstadoDoValorAPassar;
+  linha?: string;
+  comReserva?: boolean;
+};
+
+
+export function faixaDoValorAPassar(valores: ValorDaFaixa[], agora: Date): FaixaDoValorAPassar | null {
+  const porPassar = valores.filter((v) => v.total > 0 && v.estado !== "passado");
+  if (porPassar.length === 0) return null;
+  const cent = (n: number) => Math.round(n * 100);
+  const total = porPassar.reduce((s, v) => s + cent(v.total), 0) / 100;
+  const estadoDe = (v: ValorDaFaixa): EstadoDoValorAPassar =>
+    v.estado ??
+    linhaDoValorAPassar({ total: v.total, prazoAte: v.prazoAte ? new Date(v.prazoAte) : null, paga: false }, agora).estado;
+  const atrasados = porPassar.filter((v) => estadoDe(v) === "em_atraso");
+  const emAtraso = atrasados.reduce((s, v) => s + cent(v.total), 0) / 100;
+  const prazos = porPassar
+    .map((v) => v.prazoAte)
+    .filter((p): p is string => !!p && !Number.isNaN(new Date(p).getTime()))
+    .sort();
+  const primeiroPrazo = prazos[0] ?? null;
+  const n = porPassar.length;
+  const oQue = porPassar.some((v) => v.comReserva === true)
+    ? `A ${PARTE_DA_CLYON_COM_RESERVA} e o IVA dela`
+    : "A taxa da plataforma e o IVA dela";
+  const depois = "Depois do prazo, não pode aceitar nem enviar propostas até pagar.";
+
+  if (n === 1) {
+    const v = porPassar[0];
+    const linha =
+      v.linha ??
+      linhaDoValorAPassar({ total: v.total, prazoAte: v.prazoAte ? new Date(v.prazoAte) : null, paga: false }, agora).linha;
+    const estado = estadoDe(v);
+    const texto =
+      estado === "em_atraso"
+        ? `${oQue} de 1 trabalho, já fora do prazo. ${depois}`
+        : primeiroPrazo
+          ? `${oQue} de 1 trabalho: pague até ${diaEMesEmLisboa(new Date(primeiroPrazo))}. ${depois}`
+          : `${oQue} de 1 trabalho, ${PRAZO_DEPOIS_DE_CONFIRMAR}. ${depois}`;
+    return {
+      estado,
+      titulo: linha,
+      texto,
+      botao: estado === "em_atraso" ? PAGAR_O_VALOR_EM_ATRASO : PAGAR_A_CLYON,
+      total,
+      emAtraso,
+      trabalhos: 1,
+      primeiroPrazo,
+    };
+  }
+
+  const titulo =
+    `${eurosDoValor(total)} de ${n} trabalhos` +
+    (primeiroPrazo ? ` · o primeiro prazo é ${diaEMesEmLisboa(new Date(primeiroPrazo))}` : "");
+  const cadaUm = `${oQue} de ${n} trabalhos. Cada trabalho tem o seu prazo: ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias depois de ficar confirmado.`;
+  const parteEmAtraso =
+    atrasados.length > 0
+      ? ` Em atraso: ${eurosDoValor(emAtraso)} (${atrasados.length === 1 ? "1 trabalho" : `${atrasados.length} trabalhos`}); o resto ainda está no prazo.`
+      : "";
+  const estado: EstadoDoValorAPassar =
+    atrasados.length > 0 ? "em_atraso" : primeiroPrazo ? "a_passar" : "depois_de_confirmar";
+  return {
+    estado,
+    titulo,
+    texto: `${cadaUm}${parteEmAtraso} ${depois}`,
+    botao: atrasados.length > 0 ? PAGAR_O_VALOR_EM_ATRASO : PAGAR_A_CLYON,
+    total,
+    emAtraso,
+    trabalhos: n,
+    primeiroPrazo,
   };
 }
