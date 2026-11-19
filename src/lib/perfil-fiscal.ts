@@ -40,7 +40,8 @@ export type PerfilFiscal = {
 export const FRASES_DA_FATURA: Record<TipoDeFatura, string> = {
   com_iva: "Fatura com IVA",
   isento: "Fatura com isenção de IVA (art. 53.º)",
-  a_confirmar: "Tipo de fatura a confirmar",
+  // d2 (19-11-2026): se se confirmar isento, o total desce (`regime-acertado.ts`) — nunca sobe.
+  a_confirmar: "Tipo de fatura a confirmar: se o parceiro for isento, o valor desce",
 };
 
 export const FRASE_DA_GUIA = "Emite guia de resíduos";

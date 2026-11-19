@@ -26,6 +26,7 @@ import {
   titularBateComONome,
 } from "@/lib/dados-de-pagamento-mudados";
 import { enviarEmailDosDadosDePagamento } from "@/lib/email-dados-de-pagamento-do-profissional";
+import { acertarRegimeDasContratadas } from "@/lib/regime-acertado-na-base";
 import { precosDasMudancasNaConta } from "@/lib/precos-das-mudancas-do-profissional";
 import { RUBRICAS_DOS_CUSTOS_FIXOS } from "@/lib/custos-fixos-do-profissional";
 import { TIPOS_DE_VEICULO, tipoDeVeiculoValido } from "@/lib/convite-profissional";
@@ -798,6 +799,18 @@ export async function PUT(req: NextRequest) {
       if (!enviado) {
         console.error("[profissionais/perfil PUT] o email da mudança dos dados de pagamento não saiu", sessao.providerId);
       }
+    }
+
+    /*
+     * O REGIME CONFIRMADO ACERTA AS CONTRATADAS — d2, 19-11-2026. As negociações
+     * dele contratadas e sem pagamento recalculam-se com o regime confirmado, e
+     * fica o menor total (`regime-acertado.ts`): o cliente só vê descer.
+     */
+    if (confirmarRegime) {
+      await acertarRegimeDasContratadas(sessao.providerId, {
+        tipo: "profissional",
+        nome: `parceiro #${sessao.providerId}`,
+      });
     }
 
     return NextResponse.json({ ok: true, guiaPorVerificar: guiaMudou, dadosDePagamentoMudados: pagamentoMudado });

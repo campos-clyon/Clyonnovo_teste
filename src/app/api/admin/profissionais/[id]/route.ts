@@ -41,6 +41,7 @@ import { geocodificarLocalidade } from "@/lib/geocodificar";
 import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
+import { acertarRegimeDasContratadas } from "@/lib/regime-acertado-na-base";
 
 // O número saiu daqui para `convite-profissional.ts`: a aprovação de uma
 // candidatura pelo site emite o mesmo link, e dois «7» em dois ficheiros é como
@@ -432,6 +433,11 @@ export async function PATCH(
       }
       await actualizarProfissional(providerId, validacao.alteracoes);
       feito.push("perfil actualizado");
+      // d2 (19-11-2026): o regime da ficha acerta as contratadas sem pagamento — só desce (`regime-acertado.ts`).
+      if (validacao.alteracoes.regimeIva !== undefined) {
+        const acertos = await acertarRegimeDasContratadas(providerId, { tipo: "clyon", nome: colab.nome });
+        if (acertos.length > 0) feito.push(`total de ${acertos.length} trabalho(s) acertado pelo regime`);
+      }
       if (afectaDistribuicao(validacao.alteracoes)) avisoDeDistribuicao = true;
     }
 

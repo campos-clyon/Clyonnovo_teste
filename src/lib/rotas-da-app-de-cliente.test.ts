@@ -291,7 +291,7 @@ describe("R5 — GET /api/cliente/pedidos/[id]", () => {
       expect(r.status).toBe(200);
       const n = (await r.json()).negociacoes[0];
       expect(n.preco.principal).toBe("452,03 € com IVA");
-      expect(n.preco.detalhe).toBe("367,50 € + 84,53 € de IVA (23 %) · Tipo de fatura a confirmar");
+      expect(n.preco.detalhe).toBe("367,50 € + 84,53 € de IVA (23 %) · Tipo de fatura a confirmar: se o parceiro for isento, o valor desce");
     } finally {
       relogioReal();
     }

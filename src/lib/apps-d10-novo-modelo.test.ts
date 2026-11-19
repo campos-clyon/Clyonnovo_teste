@@ -93,7 +93,7 @@ describe("app Pro — os dados para receber, pela mesma regra do site", () => {
     const pf = perfilFiscalDoParceiro({ regimeIva: "isento", regimeIvaConfirmadoEm: "2026-11-12", emiteGuiaTransporte: 1, guiaVerificadaEm: "2026-11-01" });
     expect(linhaDoPerfilFiscal(pf)).toBe("Fatura com isenção de IVA (art. 53.º) · Emite guia de resíduos");
     expect(linhaDaFaturaDoParceiro({ perfilFiscal: pf, total: null, pagarAoParceiroPor: null })).toBe(linhaDoPerfilFiscal(pf));
-    expect(linhaDoPerfilFiscal(perfilFiscalDoParceiro({ regimeIva: "normal" }))).toBe("Tipo de fatura a confirmar");
+    expect(linhaDoPerfilFiscal(perfilFiscalDoParceiro({ regimeIva: "normal" }))).toBe("Tipo de fatura a confirmar: se o parceiro for isento, o valor desce");
   });
 });
 

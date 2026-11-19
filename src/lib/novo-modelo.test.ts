@@ -168,7 +168,7 @@ describe("o perfil fiscal que o cliente vê ao escolher", () => {
     expect(perfilFiscalDoParceiro({ regimeIva: "normal", regimeIvaConfirmadoEm: em }).fatura).toBe("Fatura com IVA");
     expect(perfilFiscalDoParceiro({ regimeIva: "isento", regimeIvaConfirmadoEm: em }).tipoDeFatura).toBe("isento");
     const semConfirmar = perfilFiscalDoParceiro({ regimeIva: "isento", regimeIvaConfirmadoEm: null });
-    expect(semConfirmar.fatura).toBe("Tipo de fatura a confirmar");
+    expect(semConfirmar.fatura).toBe("Tipo de fatura a confirmar: se o parceiro for isento, o valor desce");
     expect(semConfirmar.regimeParaAConta).toBe("normal");
     expect(perfilFiscalDoParceiro({ emiteGuiaTransporte: 1, guiaVerificadaEm: em }).guia).toBe("Emite guia de resíduos");
     expect(perfilFiscalDoParceiro({ emiteGuiaTransporte: 1, guiaVerificadaEm: null }).guia).toBeNull();

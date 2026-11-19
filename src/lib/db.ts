@@ -15555,6 +15555,8 @@ export type Acontecimento =
   | "conta_dados_mudados"
   /* O administrador mudou o email de entrada de um parceiro (d24). */
   | "profissional_email_mudado"
+  /* O regime de IVA confirmado desceu o total de uma contratada sem pagamento (d2, 19-11-2026). */
+  | "regime_acertado"
   /*
    * O administrador aprovou um parceiro (d68, 18-11-2026). O resumo diz
    * «aprovado e confirmado pela mesma pessoa» quando foi ele a fazer alguma das
