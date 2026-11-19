@@ -1135,11 +1135,19 @@ export async function cancelarPeloLembrete(
 /** A equipa desfaz: o pedido sai da purga dos cancelados pelo lembrete (os dados ficam). */
 export async function desfazerAPurgaDoCancelamento(pedidoId: number, porQuem: string): Promise<boolean> {
   const pool = await garantirTabelas();
-  const [u] = (await pool.execute(
-    "UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NULL WHERE pedidoId = ? AND anonimizarAPartirDe IS NOT NULL",
-    [pedidoId],
-  )) as [{ affectedRows: number }, unknown];
-  if (Number(u.affectedRows) !== 1) return false;
+  let tirou = 0;
+  for (const f of FONTES_DA_PURGA_DOS_CANCELADOS) {
+    try {
+      const [u] = (await pool.execute(
+        `UPDATE ${f.tabela} SET anonimizarAPartirDe = NULL WHERE pedidoId = ? AND anonimizarAPartirDe IS NOT NULL`,
+        [pedidoId],
+      )) as [{ affectedRows: number }, unknown];
+      tirou += Number(u.affectedRows);
+    } catch (err) {
+      if (!tabelaOuColunaPorCriar(err)) throw err;
+    }
+  }
+  if (tirou === 0) return false;
   await appendOrderHistory(pedidoId, {
     type: "note",
     by: null,
@@ -1149,44 +1157,71 @@ export async function desfazerAPurgaDoCancelamento(pedidoId: number, porQuem: st
 }
 
 /**
+ * DE ONDE VÊM OS CANCELADOS PELO LEMBRETE — a mesma purga para os dois:
+ *   · o «3» e o CANCELAR ao lembrete do orçamento (d62/d2, `validadeDosOrcamentos`);
+ *   · o «2» ao lembrete do que falta (d71 v2, 19-11-2026, `lembretesDoQueFalta`,
+ *     em `lembrete-do-que-falta-na-base.ts`). Os arquivados ao dia 7 sem resposta
+ *     não entram: não têm `anonimizarAPartirDe` (seguem a purga normal).
+ */
+export const FONTES_DA_PURGA_DOS_CANCELADOS = [
+  { tabela: "validadeDosOrcamentos", autor: "validade do orçamento", como: "«3» e CANCELAR ao lembrete do orçamento, d62/d2" },
+  { tabela: "lembretesDoQueFalta", autor: "lembretes do que falta", como: "«2» ao lembrete do que falta, d71" },
+] as const;
+
+/** A tabela do lembrete do que falta ainda não existe (nenhum ciclo ainda): não há nada a purgar lá. */
+function tabelaOuColunaPorCriar(err: unknown): boolean {
+  const code = (err as { code?: string })?.code;
+  return code === "ER_NO_SUCH_TABLE" || code === "ER_BAD_FIELD_ERROR";
+}
+
+/**
  * A PURGA DOS CANCELADOS PELO LEMBRETE (chamada pela purga da noite, com o
  * mesmo PURGA_ARMADA): os que passaram dos 7 dias, ainda cancelados e por
  * anonimizar, anonimizam-se (`anonimizarPedido`, o da retenção, sem o primeiro
  * nome: saem o nome, os contactos, a morada exacta, a descrição e as
  * fotografias; ficam o serviço, a localidade, a zona do código postal, os
  * valores e as datas; a linha fica). Um pedido que a equipa reabriu sai da
- * purga. A seco (`aSerio: false`) só conta.
+ * purga. A seco (`aSerio: false`) só conta. Vale para as duas fontes
+ * (`FONTES_DA_PURGA_DOS_CANCELADOS`).
  */
 export async function anonimizarOsCanceladosPeloLembrete(opcoes: { aSerio: boolean }): Promise<number> {
   const pool = await garantirTabelas();
-  const [rows] = (await pool.execute(
-    `SELECT v.pedidoId, o.status, (o.anonimizadoEm IS NOT NULL) AS anonimizado
-       FROM validadeDosOrcamentos v
-       JOIN simulatorOrders o ON o.id = v.pedidoId
-      WHERE v.anonimizarAPartirDe IS NOT NULL AND v.anonimizarAPartirDe <= NOW()
-      ORDER BY v.pedidoId ASC
-      LIMIT 40`,
-  )) as [Array<{ pedidoId: number; status: string | null; anonimizado: number }>, unknown];
   let feitos = 0;
-  for (const r of rows) {
-    const pedidoId = Number(r.pedidoId);
-    const aindaCancelado = String(r.status ?? "") === "cancelado" && Number(r.anonimizado) !== 1;
-    if (!aindaCancelado) {
-      // Reaberto pela equipa (ou já anonimizado por outro caminho): sai da purga.
-      if (opcoes.aSerio) await pool.execute("UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NULL WHERE pedidoId = ?", [pedidoId]);
-      continue;
+  for (const f of FONTES_DA_PURGA_DOS_CANCELADOS) {
+    let rows: Array<{ pedidoId: number; status: string | null; anonimizado: number }> = [];
+    try {
+      [rows] = (await pool.execute(
+        `SELECT v.pedidoId, o.status, (o.anonimizadoEm IS NOT NULL) AS anonimizado
+           FROM ${f.tabela} v
+           JOIN simulatorOrders o ON o.id = v.pedidoId
+          WHERE v.anonimizarAPartirDe IS NOT NULL AND v.anonimizarAPartirDe <= NOW()
+          ORDER BY v.pedidoId ASC
+          LIMIT 40`,
+      )) as [Array<{ pedidoId: number; status: string | null; anonimizado: number }>, unknown];
+    } catch (err) {
+      if (tabelaOuColunaPorCriar(err)) continue;
+      throw err;
     }
-    feitos += 1;
-    if (!opcoes.aSerio) continue;
-    const { anonimizarPedido } = await import("./regras-novas-na-base");
-    await anonimizarPedido(pedidoId, {
-      semNome: true,
-      autorNome: "validade do orçamento",
-      resumo:
-        `Pedido anonimizado ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias depois de o cliente o cancelar («3» e CANCELAR ao lembrete, d62/d2): ficam o serviço, a localidade, a zona do código postal, ` +
-        "as datas e os valores; saíram o nome, os contactos, a morada, a descrição e as fotografias.",
-    });
-    await pool.execute("UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NULL WHERE pedidoId = ?", [pedidoId]);
+    for (const r of rows) {
+      const pedidoId = Number(r.pedidoId);
+      const aindaCancelado = String(r.status ?? "") === "cancelado" && Number(r.anonimizado) !== 1;
+      if (!aindaCancelado) {
+        // Reaberto pela equipa (ou já anonimizado por outro caminho): sai da purga.
+        if (opcoes.aSerio) await pool.execute(`UPDATE ${f.tabela} SET anonimizarAPartirDe = NULL WHERE pedidoId = ?`, [pedidoId]);
+        continue;
+      }
+      feitos += 1;
+      if (!opcoes.aSerio) continue;
+      const { anonimizarPedido } = await import("./regras-novas-na-base");
+      await anonimizarPedido(pedidoId, {
+        semNome: true,
+        autorNome: f.autor,
+        resumo:
+          `Pedido anonimizado ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias depois de o cliente o cancelar (${f.como}): ficam o serviço, a localidade, a zona do código postal, ` +
+          "as datas e os valores; saíram o nome, os contactos, a morada, a descrição e as fotografias.",
+      });
+      await pool.execute(`UPDATE ${f.tabela} SET anonimizarAPartirDe = NULL WHERE pedidoId = ?`, [pedidoId]);
+    }
   }
   return feitos;
 }

@@ -21,6 +21,14 @@ const base = vi.hoisted(() => ({
   pedido: null as Record<string, unknown> | null,
   ultimaSaida: "" as string,
   reservaCancelamento: 1,
+  purga: { validadeDosOrcamentos: [] as Array<Record<string, unknown>>, lembretesDoQueFalta: [] as Array<Record<string, unknown>> },
+  anonimizados: [] as Array<{ id: number; autorNome: string }>,
+}));
+
+vi.mock("./regras-novas-na-base", () => ({
+  anonimizarPedido: vi.fn(async (id: number, o: { autorNome: string }) => {
+    base.anonimizados.push({ id, autorNome: o.autorNome });
+  }),
 }));
 
 vi.mock("./db", async (original) => {
@@ -33,6 +41,8 @@ vi.mock("./db", async (original) => {
       if (/FROM lembretesDoQueFalta l\s+JOIN simulatorOrders/.test(sql)) {
         return [base.ciclo && base.pedido ? [{ pedidoId: base.ciclo.pedidoId, contactPhone: base.pedido.contactPhone }] : [], []];
       }
+      const purga = /FROM (validadeDosOrcamentos|lembretesDoQueFalta) v\s+JOIN simulatorOrders/.exec(sql);
+      if (purga) return [base.purga[purga[1] as "validadeDosOrcamentos" | "lembretesDoQueFalta"], []];
       if (/FROM whatsappMensagens/.test(sql)) return [[{ telefone: "351912345678", texto: base.ultimaSaida }], []];
       if (/SET canceladoEm = UTC_TIMESTAMP\(\)/.test(sql)) return [{ affectedRows: base.reservaCancelamento }, []];
       if (/^\s*(UPDATE|INSERT)/.test(sql)) return [{ affectedRows: 1 }, []];
@@ -152,7 +162,7 @@ describe("quem entra e quem fica de fora", () => {
     expect(porqueFicaDeFora(candidato({ contactEmail: "teste@exemplo.pt" }), AGORA)).toBe("de_teste");
     expect(porqueFicaDeFora(candidato(), AGORA, new Set(["joana@exemplo.pt"]))).toBe("de_teste");
     // «Testemunho» não é teste.
-    expect(porqueFicaDeFora(candidato({ contactName: "Ana Testemunho" }), AGORA)).toBeNull();
+    expect(porqueFicaDeFora(candidato({ contactName: "Testemunhos" }), AGORA)).toBeNull();
   });
 
   it("sem telemóvel vai por email; sem nenhum dos dois, fica de fora", () => {
@@ -425,6 +435,9 @@ describe("com o interruptor ligado: o «2» cancela só com um lembrete em abert
     expect(r).toEqual({ tipo: "cancelado", pedidoId: 812 });
     expect(base.cancelados).toEqual([812]);
     expect(base.enviados).toEqual([MENSAGEM_DE_CANCELAMENTO]);
+    // d71 v2: marcado para a purga dos cancelados pelo lembrete, daqui a 7 dias (nada sai agora).
+    expect(base.sqls.some((q) => /UPDATE lembretesDoQueFalta SET anonimizarAPartirDe = NOW\(\) \+ INTERVAL 7 DAY/.test(q))).toBe(true);
+    expect(base.anonimizados).toEqual([]);
   });
 
   it("uma resposta ambígua, com dados ou com fotografias não cancela: pára os lembretes e segue a conversa", async () => {
@@ -488,5 +501,38 @@ describe("a rotina, a fila e a conversa estão ligadas", () => {
     const naBase = ler("src/lib/lembrete-do-que-falta-na-base.ts");
     expect(naBase).toContain("DESLIGADO NA DÚVIDA");
     expect(naBase).not.toMatch(/DELETE FROM simulatorOrders/);
+  });
+});
+
+describe("d71 v2: o cancelado pelo «2» é anonimizado ao fim de 7 dias, pela mesma purga da d62/d2", { timeout: 60_000 }, () => {
+  beforeEach(() => {
+    base.sqls = [];
+    base.anonimizados = [];
+    base.purga = { validadeDosOrcamentos: [], lembretesDoQueFalta: [] };
+  });
+
+  it("a mesma função anonimiza os das duas fontes, ainda cancelados; o reaberto sai da purga", async () => {
+    base.purga.validadeDosOrcamentos = [{ pedidoId: 700, status: "cancelado", anonimizado: 0 }];
+    base.purga.lembretesDoQueFalta = [
+      { pedidoId: 812, status: "cancelado", anonimizado: 0 },
+      { pedidoId: 813, status: "pendente", anonimizado: 0 },
+    ];
+    const { anonimizarOsCanceladosPeloLembrete } = await import("./validade-do-orcamento-na-base");
+    expect(await anonimizarOsCanceladosPeloLembrete({ aSerio: false })).toBe(2);
+    expect(base.anonimizados).toEqual([]);
+    expect(await anonimizarOsCanceladosPeloLembrete({ aSerio: true })).toBe(2);
+    expect(base.anonimizados).toEqual([
+      { id: 700, autorNome: "validade do orçamento" },
+      { id: 812, autorNome: "lembretes do que falta" },
+    ]);
+    expect(base.sqls.some((q) => /UPDATE lembretesDoQueFalta SET anonimizarAPartirDe = NULL/.test(q))).toBe(true);
+  });
+
+  it("o arquivado ao dia 7 sem resposta não entra na purga (segue a purga normal), e não há outra função", () => {
+    const naBase = ler("src/lib/lembrete-do-que-falta-na-base.ts");
+    const arquivar = naBase.slice(naBase.indexOf("async function arquivarSemResposta("), naBase.indexOf("/* ── O «2» na conversa"));
+    expect(arquivar).not.toContain("anonimizarAPartirDe");
+    expect(naBase).not.toContain("anonimizarPedido");
+    expect(ler("src/app/api/cron/purgar-pedidos/route.ts")).toContain("anonimizarOsCanceladosPeloLembrete({ aSerio: armada })");
   });
 });

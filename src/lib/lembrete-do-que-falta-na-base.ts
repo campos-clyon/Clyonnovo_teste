@@ -87,11 +87,24 @@ export const SQL_DAS_TABELAS_DO_QUE_FALTA = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
+/**
+ * d71 v2 (19-11-2026) — aditiva, nula nas linhas de antes: a purga anonimiza o
+ * pedido cancelado pelo «2» a partir daqui (7 dias depois), pela mesma função
+ * dos cancelados da validade (`anonimizarOsCanceladosPeloLembrete`). Os
+ * arquivados ao dia 7 não a têm: seguem a purga normal.
+ */
+export const COLUNA_DA_PURGA_DO_QUE_FALTA = `ALTER TABLE lembretesDoQueFalta ADD COLUMN anonimizarAPartirDe DATETIME NULL DEFAULT NULL`;
+
 async function garantirTabelas(): Promise<Pool> {
   const pool = await getPool();
   if (!pool) throw new Error("[lembrete-do-que-falta] base de dados indisponível");
   if (!tabelasProntas) {
     for (const sql of SQL_DAS_TABELAS_DO_QUE_FALTA) await pool.execute(sql);
+    try {
+      await pool.execute(COLUNA_DA_PURGA_DO_QUE_FALTA);
+    } catch (err) {
+      if ((err as { code?: string })?.code !== "ER_DUP_FIELDNAME") throw err;
+    }
     await pool.execute("INSERT IGNORE INTO lembretesDoQueFaltaVez (id, proximoEm) VALUES (1, '2000-01-01 00:00:00')");
     tabelasProntas = true;
   }
@@ -691,13 +704,21 @@ export async function cancelarPeloLembreteDoQueFalta(
     return { ok: false, porque: "o pedido já não existe" };
   }
   await gravarMotivoDoFecho(pedidoId, "ja_nao_precisa", null, null).catch(() => {});
+  // d71 v2: os dados saem daqui a 7 dias, pela purga dos cancelados pelo lembrete (a mesma da d62/d2) — nada sai agora.
+  const { DIAS_ATE_ANONIMIZAR_O_CANCELADO } = await import("./validade-do-orcamento");
+  await pool.execute(
+    `UPDATE lembretesDoQueFalta SET anonimizarAPartirDe = NOW() + INTERVAL ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} DAY WHERE pedidoId = ?`,
+    [pedidoId],
+  );
   const { avisarDoCancelamento } = await import("./avisar-cancelamento");
   await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo: "O cliente já não precisa", porQuem: "cliente" }).catch(() => {});
   const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
   const { mensagemDeCancelamento } = await import("./mensagens-das-fases");
   await enviarTextoWhatsApp(telefone, mensagemDeCancelamento()).catch(() => false);
 
-  const resumo = "O cliente respondeu «2» ao lembrete do que falta (d71): pedido cancelado, com o texto de cancelamento ao cliente.";
+  const resumo =
+    "O cliente respondeu «2» ao lembrete do que falta (d71): pedido cancelado, com o texto de cancelamento ao cliente. " +
+    `Os dados dele saem do pedido daqui a ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias, pela purga; reabrir o pedido até lá desfaz.`;
   await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo }).catch(() => {});
   await registarSemFalhar({ acontecimento: "pedido_cancelado", pedidoId, autorTipo: "cliente", autorNome: "WhatsApp (lembrete do que falta)", resumo });
   return { ok: true };
