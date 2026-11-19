@@ -142,7 +142,7 @@ function blocoDaReferencia(r: ReferenciaNaAdjudicacao): string {
   if (r.metodo === "multibanco") {
     const ate = r.expiraEm ? diaEmLisboa(r.expiraEm) : null;
     return [
-      "Por Multibanco (homebanking ou caixa Multibanco), pelo valor exacto:",
+      "Por Multibanco (homebanking ou caixa Multibanco), pelo valor exato:",
       `Entidade: ${r.entidade ?? "—"}`,
       `Referência: ${r.referencia ?? "—"}`,
       `Valor: ${euros(r.valor)}`,

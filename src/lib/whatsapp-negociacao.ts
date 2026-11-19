@@ -2566,7 +2566,7 @@ export async function tratarMensagemDoCliente(
           telefone,
           "Profissional escreveu — responder",
           `Obrigada${nome ? `, ${nome}` : ""}. Passo a sua mensagem a uma pessoa da CLYON, ` +
-            "que lhe responde por aqui. Para propor num pedido novo, use o link do aviso.",
+            "que lhe responde por aqui. Para propor num pedido novo, use a ligação do aviso.",
         );
         return;
       }

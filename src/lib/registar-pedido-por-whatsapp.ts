@@ -117,7 +117,7 @@ export async function registarPedidoDaRecolha(
         ...(calculada.internalNotes ?? []),
         "Pedido recolhido pelo assistente do WhatsApp.",
         origemKm === "codigo_postal"
-          ? "Distância estimada pelo código postal: " + km + " km — confirmar com a morada exacta."
+          ? "Distância estimada pelo código postal: " + km + " km — confirmar com a morada exata."
           : origemKm === "cidade"
             ? "Morada sem código postal: assumidos " + km + " km pela localidade."
             : "Sem morada utilizável: assumidos " + km + " km. Confirmar antes de fechar.",

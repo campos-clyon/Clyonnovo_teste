@@ -316,10 +316,10 @@ export const LICOES_DAS_CONVERSAS = `O QUE AS CONVERSAS VERDADEIRAS NOS ENSINARA
 - «So how does it work now?», «como funciona?», «e agora?» depois do resumo NÃO são um "sim": a intenção é "informar".
 - A FATURA COMO ELE A DISSE: «Pode ser sem fatura!», «pode ser sem», «não preciso de fatura», «dispenso a fatura» → "fatura": "não" — nunca "sim", por muito que a frase comece por «pode ser». «Gostaria de saber o valor total, já com IVA» → "fatura": "sim" (a pergunta da fatura já não se faz); se depois disser «sem fatura», vale o que disse depois. «O preço é com IVA?» é só uma pergunta: não preenchas "fatura".
 - UMA GARAGEM NÃO É UM R/C. «É uma garagem» não diz o piso: não preenchas "andar". «Garagem no -3», «piso -2», «AndR -3» (com gralha) → "andar": "-3" ou "-2", COM o sinal de menos — nunca "3". «Cave» é "-1".
-- A CORRECÇÃO DEPOIS DO RESUMO: «Isso é uma garagem no -3. Tudo o resto está ok» é uma correcção do andar ("andar": "-3"), e a intenção é "informar" — não "confirmar": ele ainda não viu o resumo certo.
+- A CORREÇÃO DEPOIS DO RESUMO: «Isso é uma garagem no -3. Tudo o resto está ok» é uma correção do andar ("andar": "-3"), e a intenção é "informar" — não "confirmar": ele ainda não viu o resumo certo.
 - A LIMPEZA DEPOIS DE ESVAZIAR FAZ-SE: «limpeza profunda da garagem, incluindo lavagem do pavimento» fica na "descricao" e o serviço continua a ser o esvaziamento ("esvaziamento_garagem").
 - «Consegue se houver lugar, senão fica em segunda fila» à pergunta da carrinha é "estacionamento": "sim" — e «segunda fila» NUNCA é segunda-feira nem "quando".
-- O LINK DE UM ANÚNCIO DE CASA (idealista, imovirtual, kasas-portugal, casa.sapo, supercasa, remax, era, century21…) diz a zona e a tipologia NO PRÓPRIO ENDEREÇO: «…/apartamento-t3-com-boas-areas-na-mina-de-agua-amadora/…» é um T3 na Mina de Água, Amadora → "codigoPostal": "Amadora". O endereço não é a morada (não tem rua nem número), e em "resposta" nunca digas que abriste ou viste o anúncio.
+- A LIGAÇÃO DE UM ANÚNCIO DE CASA (idealista, imovirtual, kasas-portugal, casa.sapo, supercasa, remax, era, century21…) diz a zona e a tipologia NO PRÓPRIO ENDEREÇO: «…/apartamento-t3-com-boas-areas-na-mina-de-agua-amadora/…» é um T3 na Mina de Água, Amadora → "codigoPostal": "Amadora". O endereço não é a morada (não tem rua nem número), e em "resposta" nunca digas que abriste ou viste o anúncio.
 - «Orçamento», «Preço?», «Quanto custa?» sozinhos, a meio das perguntas, NÃO são resposta à pergunta em cima: o cliente quer o preço. Não preenchas campo nenhum com isso, e nunca o leias como morada, nome ou descrição.
 - UM MONTA-CARGAS NÃO É UM ELEVADOR QUALQUER: «Tem monta-cargas mas não tenho a certeza que cabe», «monta cargas, não sei se cabe» → "elevador": "sim", e a frase dele (com a dúvida) fica na "descricao" — é ela que diz que é um monta-cargas e que falta confirmar se cabe. Os módulos e as partes («roupeiro de 4 módulos», «desmonta-se», «divide-se em duas partes») ficam na "descricao" — nunca a cortes a meio da morada.
 - O ACESSO ATÉ À RUA RESPONDE À CARRINHA: «Tem poucas escadas até à estrada», «poucas escadas da porta até à estrada onde a carrinha estaciona», «a carrinha estaciona na rua», «estaciona à porta», «tem de subir uns degraus», «há estacionamento perto», «é uma moradia com escadas até à rua» → "estacionamento" com a frase dele (a carrinha fica perto; os degraus vão para o profissional ler). Nunca é a "descricao", e a pergunta da carrinha não se volta a fazer.
@@ -907,7 +907,7 @@ Devolves SÓ um objecto JSON, sem texto à volta e sem blocos de código:
 
 { "accao": "fechar" | "recusar" | "contrapropor" | "marcar" | "falar_com_pessoa" | "agradecer" | "ponto_de_situacao" | "nada", "valor": number|null, "profissional": string|null }
 
-As acções:
+As ações:
 - "fechar" — aceita uma proposta como ela está ("pode ser", "está bem, fechamos", "aceito o do Manuel", "vamos a isso", "sim").
 - "recusar" — não quer nenhuma ("não, obrigado", "fica para outra altura", "achei caro demais").
 - "contrapropor" — quer pagar outro valor ("consegue por 250?", "dou-lhe 200", "e se fosse 180").

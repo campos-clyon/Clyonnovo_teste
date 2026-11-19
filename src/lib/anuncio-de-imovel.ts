@@ -172,7 +172,7 @@ function oImovel(a: AnuncioDeImovel): string {
 export function fraseDoAnuncio(a: AnuncioDeImovel): string {
   const zona = zonaDoAnuncio(a);
   const andar = a.andar && a.andar !== "0" && !a.moradia ? `, num ${a.andar}.º andar` : a.andar === "0" ? ", num rés-do-chão" : "";
-  if (!a.tipologia && !a.moradia && !zona) return "Pelo link, é o anúncio de uma casa.";
+  if (!a.tipologia && !a.moradia && !zona) return "Pela ligação, é o anúncio de uma casa.";
   return `Pelo anúncio, é ${oImovel(a)}${andar}${zona ? ` ${zona}` : ""}.`;
 }
 
@@ -186,5 +186,5 @@ export function linhaDoAnuncio(a: AnuncioDeImovel): string {
     a.andar ? (a.andar === "0" ? "r/c" : `${a.andar}.º andar`) : null,
     [a.localidade, a.concelho].filter(Boolean).join(", ") || null,
   ].filter(Boolean);
-  return `Imóvel (pelo link do anúncio que o cliente enviou): ${partes.length > 0 ? partes.join("; ") : "sem pormenores no link"}.`;
+  return `Imóvel (pela ligação do anúncio que o cliente enviou): ${partes.length > 0 ? partes.join("; ") : "sem pormenores na ligação"}.`;
 }

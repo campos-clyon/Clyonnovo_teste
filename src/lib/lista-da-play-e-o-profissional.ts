@@ -72,7 +72,7 @@ export function avisoDaListaDaPlay(p: { nome: string | null; link: string }): {
     texto: [
       primeiro ? `Olá ${primeiro},` : "Olá,",
       "",
-      "O seu Gmail já está na lista do teste da CLYON Pro. Abra este link no telemóvel, com esse Gmail, e toque em «Tornar-me testador»:",
+      "O seu Gmail já está na lista do teste da CLYON Pro. Abra esta ligação no telemóvel, com esse Gmail, e toque em «Tornar-me testador»:",
       p.link,
       "",
       "Depois instale a app pela Play Store e entre com o mesmo email e a mesma palavra-passe do painel.",

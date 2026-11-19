@@ -134,7 +134,7 @@ export function avisoAoCliente(
         : { title: "O dia mudou", body: `O dia do trabalho do pedido #${id} foi desmarcado. A CLYON combina outro consigo.` };
     }
     case "editado":
-      return { title: "O seu pedido foi actualizado", body: `A CLYON actualizou o pedido #${id}. Toque para ver.` };
+      return { title: "O seu pedido foi atualizado", body: `A CLYON atualizou o pedido #${id}. Toque para ver.` };
     case "tipo":
       return { title: "Preço fechado pela CLYON", body: `O pedido #${id} passou a ter preço fechado pela CLYON. O valor chega aqui.` };
     case "enviado":

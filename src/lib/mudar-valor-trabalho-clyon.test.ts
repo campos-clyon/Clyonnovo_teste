@@ -266,7 +266,7 @@ describe("o que o profissional lê", () => {
 
   it("o #505: o valor mudou e o trabalho continua a ser dele — sem nada para aceitar", () => {
     const t = avisoDeValorNovoAoProfissional("João", { ...o, motivo: "valor_mantido", eraDele: true }, AGORA);
-    expect(t).toContain("foi actualizado: agora é no valor de 350,00 € — ganhos estimados de 280,00 €");
+    expect(t).toContain("foi atualizado: agora é no valor de 350,00 € — ganhos estimados de 280,00 €");
     expect(t).toContain("O trabalho continua a ser seu, como combinado — não precisa de fazer nada.");
     expect(t).not.toContain("aceitar");
     expect(t).toContain(o.link);

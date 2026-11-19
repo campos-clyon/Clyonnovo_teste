@@ -53,7 +53,7 @@ const INSTRUCAO =
   "Transcreve este áudio de WhatsApp, palavra por palavra, na língua em que foi falado " +
   "(quase sempre português de Portugal ou do Brasil). Devolve SÓ o texto dito: sem aspas, " +
   "sem comentários, sem descrever sons nem quem fala. Se não houver fala que se perceba, " +
-  "devolve exactamente: (vazio)";
+  "devolve exatamente: (vazio)";
 
 /**
  * O áudio em texto, ou null.

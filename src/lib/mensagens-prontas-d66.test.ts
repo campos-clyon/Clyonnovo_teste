@@ -162,7 +162,7 @@ describe("d66: os textos do Vendas", () => {
 
   it("os lembretes das 24 e das 72 horas", () => {
     expect(mensagemDoLembrete(LEMBRETE)).toBe(
-      "Olá! O seu pedido #812 já tem uma proposta de um parceiro verificado: 105 € + IVA = 129,15 €. Quer que a reservemos? Responda SIM, ou veja-a no link do pedido que lhe enviámos. Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.",
+      "Olá! O seu pedido #812 já tem uma proposta de um parceiro verificado: 105 € + IVA = 129,15 €. Quer que a reservemos? Responda SIM, ou veja-a na ligação do pedido que lhe enviámos. Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.",
     );
     const varias = mensagemDoLembrete({ ...LEMBRETE, quantas: 3 });
     expect(varias).toContain("já tem 3 propostas de parceiros verificados, desde 105 € + IVA = 129,15 €. Quer que reservemos a mais em conta?");

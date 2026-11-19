@@ -11,7 +11,7 @@ import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
 export const FECHADO_SEM_RESPOSTA = "o cliente não respondeu ao orçamento";
 
 export function textoDoFechoAoParceiro(pedidoId: number): string {
-  return `Pedido #${pedidoId} fechado: ${FECHADO_SEM_RESPOSTA}. Saiu do seu feed.`;
+  return `Pedido #${pedidoId} fechado: ${FECHADO_SEM_RESPOSTA}. Saiu da sua lista de pedidos.`;
 }
 
 /**

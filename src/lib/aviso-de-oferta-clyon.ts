@@ -142,7 +142,7 @@ export function avisoDeValorNovoAoProfissional(
   if (o.motivo === "valor_mantido") {
     return [
       `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON.`,
-      `O valor do trabalho CLYON de ${trabalho} foi actualizado: agora é ${numeros}.`,
+      `O valor do trabalho CLYON de ${trabalho} foi atualizado: agora é ${numeros}.`,
       "O trabalho continua a ser seu, como combinado — não precisa de fazer nada.",
       `Ver no painel: ${o.link}`,
     ].join("\n\n");

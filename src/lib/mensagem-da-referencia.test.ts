@@ -45,7 +45,7 @@ describe("a mensagem do Multibanco", () => {
    * chamada a perguntar o que se passou.
    */
   it("avisa que o valor tem de ser exacto", () => {
-    expect(texto).toContain("valor exacto");
+    expect(texto).toContain("valor exato");
   });
 
   it("diz até quando vale", () => {

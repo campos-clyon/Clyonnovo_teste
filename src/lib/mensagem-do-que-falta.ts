@@ -166,7 +166,7 @@ export function linhaDaFalta(chave: ChaveDaFalta, servico?: string | null): stri
       if (RECOLHA.has(s)) return "Fotografias do que é para levar, para os parceiros avaliarem o volume.";
       return "Algumas fotografias, para os parceiros perceberem o trabalho.";
     case "descricao":
-      if (mudanca) return "O que é para mudar: os móveis maiores, os electrodomésticos e se há caixas.";
+      if (mudanca) return "O que é para mudar: os móveis maiores, os eletrodomésticos e se há caixas.";
       if (s === "manutencao_casa") return "O que é para reparar ou fazer, com o máximo de pormenor que conseguir.";
       if (s === "recolha_entulho") return "De que é o entulho: restos de obra, azulejos ou terra, por exemplo.";
       if (ESVAZIAMENTO.has(s)) return "O que há para esvaziar: as divisões e mais ou menos quanta coisa.";

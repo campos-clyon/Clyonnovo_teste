@@ -116,7 +116,7 @@ describe("o lembrete único", () => {
         "Olá, {Nome}! Sou a Vitória, assistente online da CLYON.",
         "Tem telemóvel Android? Estamos a lançar a app CLYON e procuramos 12 clientes para a experimentarem primeiro 😊",
         "Na app acompanha os seus pedidos, vê as fotografias e paga ao parceiro, tudo no telemóvel.",
-        "1) Abra este link com o Gmail do telemóvel e toque em «Tornar-me testador»: {linkDeAdesao}",
+        "1) Abra esta ligação com o Gmail do telemóvel e toque em «Tornar-me testador»: {linkDeAdesao}",
         "2) Instale a app e fique com ela 14 dias.",
         "Se o Gmail do telemóvel for outro, envie-mo por aqui, por favor.",
       ].join("\n"),

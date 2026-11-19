@@ -110,7 +110,7 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
     expect(mensagemDoLembrete(l)).toBe(
       // Texto do Vendas desde 17-11-2026 (d66).
       "Olá! O seu pedido #583 já tem 2 propostas de parceiros verificados, desde 350 € + IVA = 430,50 €. " +
-        "Quer que reservemos a mais em conta? Responda SIM, ou escolha no link do pedido que lhe enviámos. " +
+        "Quer que reservemos a mais em conta? Responda SIM, ou escolha na ligação do pedido que lhe enviámos. " +
         "Se nenhuma servir, diga-nos o que precisa e falamos com os parceiros.",
     );
   });
@@ -130,7 +130,7 @@ describe("d54 — a mensagem das propostas sem resposta", () => {
     const l = lembreteDasPropostas(p as never, agora)!;
     expect(mensagemDoLembrete(l)).toBe(
       "Olá! O seu pedido #589 já tem uma proposta de um parceiro verificado: 50 € + IVA = 61,50 € por hora. " +
-        "Quer que a reservemos? Responda SIM, ou veja-a no link do pedido que lhe enviámos. " +
+        "Quer que a reservemos? Responda SIM, ou veja-a na ligação do pedido que lhe enviámos. " +
         "Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.",
     );
   });

@@ -137,7 +137,7 @@ A tua tarefa é calcular o PREÇO COMERCIAL FINAL que a CLYON vai cobrar ao clie
 usando obrigatoriamente a estrutura de custos reais abaixo.
 
 ═══════════════════════════════════════════════════════════
-ESTRUTURA DE CUSTOS E REGRAS (valores actuais do backoffice)
+ESTRUTURA DE CUSTOS E REGRAS (valores atuais do backoffice)
 ═══════════════════════════════════════════════════════════
 
 ${pricingRules}
@@ -210,7 +210,7 @@ ${FAIXAS_DO_ESVAZIAMENTO}
       EXEMPLO: Esvaziamento de um T2 em Lisboa, com elevador e estacionamento à porta → ${comOIva({ tipo: "exacto", valor: T2.minimo })}, o início da faixa.
       EXEMPLO: Carga completa no Seixal (uma garagem cheia), o cálculo dá menos do que a faixa → ${comOIva({ tipo: "exacto", valor: CARGA_SEM_A_CASA })}.
       EXEMPLO: Esvaziamento de um T3 num 4.º andar sem elevador → ${comOIva({ tipo: "exacto", valor: exigir(T3.maximo, "T3") })}, o fim da faixa.
-   c) ENTULHO — a grelha publicada no site (afecta diretamente o preço final; os sacos contam-se um a um, e o entulho solto pelos sacos que faz, ao mesmo preço):
+   c) ENTULHO — a grelha publicada no site (afeta diretamente o preço final; os sacos contam-se um a um, e o entulho solto pelos sacos que faz, ao mesmo preço):
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
       Mínimo fixo de entulho: ${MINIMO_DO_ENTULHO} € s/IVA (sem mínimo de zona).
       EXEMPLO: 10 sacos ensacados, acesso normal → ${ENTULHO_ATE_10_SACOS.minimo} a ${ENTULHO_ATE_10_SACOS.maximo} € s/IVA.

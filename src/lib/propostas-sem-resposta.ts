@@ -48,7 +48,7 @@ export const HORAS_DA_ULTIMA_LEMBRANCA = 72;
  * cliente já tem; um link novo, quando for preciso, pede-se de propósito no
  * reenviar que já existe.
  */
-export const NO_LINK_QUE_TEM = "no link do pedido que lhe enviámos";
+export const NO_LINK_QUE_TEM = "na ligação do pedido que lhe enviámos";
 
 type NegociacaoDoLembrete = Parameters<typeof propostasParaOCliente>[0][number] & {
   id?: number | string;

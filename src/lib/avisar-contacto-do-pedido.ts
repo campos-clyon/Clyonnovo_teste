@@ -84,7 +84,7 @@ export async function avisarAccaoPeloLink(
     if (travao.erro) return;
     await avisarContactoDoPedido(
       pedido,
-      `No pedido #${pedido.id}, pelo link, ${oQue}. Não reconhece esta alteração? Responda a esta mensagem.`,
+      `No pedido #${pedido.id}, pela ligação, ${oQue}. Não reconhece esta alteração? Responda a esta mensagem.`,
     );
   } catch (err) {
     console.error("[avisar-contacto] acção pelo link:", err instanceof Error ? err.message : err);

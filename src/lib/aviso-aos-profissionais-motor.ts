@@ -100,7 +100,7 @@ export async function avancarOAviso(
       if (!(await repo.reservar(d.id))) continue;
       const c = await repo.contacto(d.providerId);
       if (!c || !c.elegivel) {
-        await repo.marcar(d, "falhou", "deixou de ser destinatário (não aprovado, inactivo ou de teste)");
+        await repo.marcar(d, "falhou", "deixou de ser destinatário (não aprovado, inativo ou de teste)");
         r.falhas++;
         continue;
       }
@@ -140,7 +140,7 @@ export async function avancarOAviso(
         if (await repo.reservar(d.id)) {
           const c = await repo.contacto(d.providerId);
           if (!c || !c.elegivel) {
-            await repo.marcar(d, "falhou", "deixou de ser destinatário (não aprovado, inactivo ou de teste)");
+            await repo.marcar(d, "falhou", "deixou de ser destinatário (não aprovado, inativo ou de teste)");
             r.falhas++;
           } else if (!c.telemovel) {
             await repo.marcar(d, "falhou", "sem telemóvel válido para WhatsApp");

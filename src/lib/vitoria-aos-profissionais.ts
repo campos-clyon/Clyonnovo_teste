@@ -179,7 +179,7 @@ export function qualPerguntaDeDinheiro(texto: string): PerguntaDeDinheiro | null
 /** O valor exacto da referência de cada trabalho, como a carteira o tem. */
 function valoresDaReferencia(v: ValoresDaCarteira): string {
   if (v.porPagar.length === 0) {
-    return "com o valor exacto: a taxa da plataforma + o IVA da taxa. Neste momento não tem nenhum valor por pagar.";
+    return "com o valor exato: a taxa da plataforma + o IVA da taxa. Neste momento não tem nenhum valor por pagar.";
   }
   const cada = v.porPagar
     .map((p) => {
@@ -187,7 +187,7 @@ function valoresDaReferencia(v: ValoresDaCarteira): string {
       return p.pedidoId != null ? `no trabalho #${p.pedidoId}, ${conta}` : conta;
     })
     .join("; ");
-  return `com o valor exacto: ${cada}.`;
+  return `com o valor exato: ${cada}.`;
 }
 
 /**
@@ -214,11 +214,11 @@ export function respostaAoProfissional(
       return (
         `Na carteira (app CLYON Pro ou painel) aparece uma referência por trabalho, ${valoresDaReferencia(valores)} ` +
         "Pode pagar por Multibanco (entidade e referência) ou por MB WAY. " +
-        "Quando o pagamento é confirmado, a carteira actualiza sozinha; não precisa de nos mandar o comprovativo."
+        "Quando o pagamento é confirmado, a carteira atualiza sozinha; não precisa de nos mandar o comprovativo."
       );
     case "referencia_nao_da":
       return (
-        "Veja se o valor está exactamente igual ao da carteira e se a referência ainda está dentro do prazo. " +
+        "Veja se o valor está exatamente igual ao da carteira e se a referência ainda está dentro do prazo. " +
         "Se não der, escolha MB WAY na mesma carteira: chega-lhe um pedido no telemóvel para aprovar. " +
         "Se nenhuma das duas der, diga-nos o n.º do trabalho e geramos outra."
       );
@@ -230,7 +230,7 @@ export function respostaAoProfissional(
             ? " Neste momento não tem nenhum valor em atraso."
             : "";
       return (
-        `Se um valor da taxa ficar por pagar mais de ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias, fica em atraso e a conta entra em stand-by. ` +
+        `Se um valor da taxa ficar por pagar mais de ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias, fica em atraso e a conta é suspensa. ` +
         `Continua a ver os pedidos, mas para aceitar ou enviar uma oferta tem primeiro de «${PAGAR_O_VALOR_EM_ATRASO}». ` +
         `Assim que o pagamento é confirmado, a conta desbloqueia sozinha.${agora}`
       );

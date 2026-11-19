@@ -83,7 +83,7 @@ describe("o link do anúncio — o que o endereço diz", () => {
     const a = lerAnuncioDeImovel(PRIMEIRA);
     expect(a).toMatchObject({ portal: "kasas-portugal", tipologia: "T3", localidade: "Mina de Água", concelho: "Amadora" });
     expect(fraseDoAnuncio(a!)).toBe("Pelo anúncio, é um T3 na Mina de Água (Amadora).");
-    expect(linhaDoAnuncio(a!)).toBe("Imóvel (pelo link do anúncio que o cliente enviou): T3; Mina de Água, Amadora.");
+    expect(linhaDoAnuncio(a!)).toBe("Imóvel (pela ligação do anúncio que o cliente enviou): T3; Mina de Água, Amadora.");
   });
 
   it("os outros portais, a moradia e o andar", () => {
@@ -101,7 +101,7 @@ describe("o link do anúncio — o que o endereço diz", () => {
     // Sem nada no endereço: reconhece-se o anúncio, e não se inventa.
     const so = lerAnuncioDeImovel("https://www.idealista.pt/imovel/12345678/");
     expect(so).toEqual({ portal: "idealista" });
-    expect(fraseDoAnuncio(so!)).toBe("Pelo link, é o anúncio de uma casa.");
+    expect(fraseDoAnuncio(so!)).toBe("Pela ligação, é o anúncio de uma casa.");
     // No OLX vende-se de tudo: só os imóveis contam.
     expect(lerAnuncioDeImovel("https://www.olx.pt/d/anuncio/sofa-3-lugares-IDabc.html")).toBeNull();
     expect(lerAnuncioDeImovel("https://www.clyon.pt/recolha-de-monos")).toBeNull();
@@ -195,7 +195,7 @@ describe("a conversa do anúncio, pelas regras — nenhum turno fica sem respost
     e = (await turno(e, "Orçamento", fio, ditos)).estado;
     expect(e.dados.soAZona).toBe(true);
     expect(e.dados.address ?? "").toBe("");
-    expect(descricaoParaOPedido(e.dados)).toContain("Imóvel (pelo link do anúncio que o cliente enviou): T3; Mina de Água, Amadora.");
+    expect(descricaoParaOPedido(e.dados)).toContain("Imóvel (pela ligação do anúncio que o cliente enviou): T3; Mina de Água, Amadora.");
   });
 
   it("«a casa toda» passa a esvaziamento de casa; «só alguns móveis» fica recolha", async () => {

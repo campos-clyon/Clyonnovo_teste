@@ -102,7 +102,7 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
        * Uma referência de valor fixo não aceita outro montante, e o
        * homebanking recusa sem dizer porquê.
        */
-      "Pague no homebanking ou numa caixa Multibanco, pelo valor exacto.",
+      "Pague no homebanking ou numa caixa Multibanco, pelo valor exato.",
     );
   } else {
     linhas.push(

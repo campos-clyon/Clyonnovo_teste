@@ -37,14 +37,14 @@ export const INSTRUCAO_DA_IMAGEM =
   "em português de Portugal, o que se vê que é para levar ou fazer: o tipo de coisas e mais ou menos " +
   "quantas, e o sítio se se perceber (sótão, garagem, sala, rua, quintal). Chama as coisas pelo nome: " +
   "«entulho» (sacos de obra, tijolos, caliça, terra), «móveis» (sofá, mesa, armário, cama…), " +
-  "«electrodomésticos», «colchão», «caixas», «sacos», «ramos e restos de jardim». " +
+  "«eletrodomésticos», «colchão», «caixas», «sacos», «ramos e restos de jardim». " +
   (fazManutencaoDaCasa()
     ? "Se for um arranjo na casa, diz o que é para reparar, pintar ou remodelar, e onde " +
       "(«torneira a pingar na cozinha», «parede para pintar na sala», «casa de banho para remodelar»). "
     : "") +
   "Começa logo pelas coisas, sem «Na imagem» nem «Vejo». Sem preços, sem cumprimentos, sem falar de pessoas. " +
   "Se a fotografia não mostrar nada para levar ou fazer (uma captura de ecrã, um documento, uma pessoa, " +
-  "uma paisagem), devolve exactamente: (nada)";
+  "uma paisagem), devolve exatamente: (nada)";
 
 /** A frase do modelo, limpa — ou `null` quando não há nada para levar. Pura. */
 export function limparOQueSeVe(bruto: string | null | undefined): string | null {

@@ -188,7 +188,7 @@ describe("os textos", () => {
 
   it("o fecho, ao cliente e aos parceiros, palavra por palavra", () => {
     expect(textoDoFechoAoCliente(701)).toBe("Fechámos o pedido #701. Se ainda precisar, responda aqui e reabrimos.");
-    expect(textoDoFechoAoParceiro(701)).toBe("Pedido #701 fechado: o cliente não respondeu ao orçamento. Saiu do seu feed.");
+    expect(textoDoFechoAoParceiro(701)).toBe("Pedido #701 fechado: o cliente não respondeu ao orçamento. Saiu da sua lista de pedidos.");
     expect(avisoSemOTrabalho({ pedidoId: 701, porque: "fechado_sem_resposta" }).body).toBe(textoDoFechoAoParceiro(701));
   });
 
