@@ -116,9 +116,9 @@ describe("o ecrã de entrada", () => {
 
   it("o Google e o link continuam lá; a palavra-passe é a forma por omissão", () => {
     expect(ENTRADA).toContain("Continuar com o Google");
-    expect(ENTRADA).toContain("Enviar link de entrada");
+    expect(ENTRADA).toContain("Enviar ligação de entrada");
     expect(ENTRADA).toContain('useState<ModoDaEntrada>("palavra-passe")');
-    for (const t of ["Esqueci-me da palavra-passe", "Criar conta", "Prefiro receber um link por email", "Entrar com a palavra-passe"]) {
+    for (const t of ["Esqueci-me da palavra-passe", "Criar conta", "Prefiro receber uma ligação por email", "Entrar com a palavra-passe"]) {
       expect(ENTRADA).toContain(t);
     }
     expect(ENTRADA).toContain("secureTextEntry={!ver}");

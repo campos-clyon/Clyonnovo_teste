@@ -238,7 +238,7 @@ function Conteudo({
 function ValorEmAtraso({ nm, aoMudar }: { nm: NovoModeloDaCarteira; aoMudar: () => Promise<void> }) {
   const c = useCores();
   const agora = Date.now();
-  // d4: «Pagar o valor em atraso» só com um valor que já passou do prazo (ou em stand-by); antes, «Pagar à CLYON».
+  // d4: «Pagar o valor em atraso» só com um valor que já passou do prazo (ou em stand-by); antes, «Pagar a parte da CLYON».
   const atraso = !!nm.standBy || nm.valores.some((v) => valorEmAtraso(v, agora));
   return (
     <Caixa estilo={{ borderColor: nm.standBy ? c.mau : c.aviso }}>
@@ -309,7 +309,7 @@ function UmValorEmAtraso({
         </View>
       ) : null}
       {ref ? (
-        <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>Pague no homebanking ou numa caixa Multibanco, pelo valor exacto.</Text>
+        <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>Pague no homebanking ou numa caixa Multibanco, pelo valor exato.</Text>
       ) : null}
       {erro ? <Mensagem texto={erro} /> : null}
       {aviso ? <Mensagem tom="bom" texto={aviso} /> : null}
@@ -617,7 +617,7 @@ function Divida({ d, aoMudar }: { d: DividaDaCarteira; aoMudar: () => Promise<vo
       )}
       {ref && diaCurto(ref.expiraEm) ? (
         <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
-          Válida até {diaCurto(ref.expiraEm)}. Pague no homebanking ou numa caixa Multibanco, pelo valor exacto.
+          Válida até {diaCurto(ref.expiraEm)}. Pague no homebanking ou numa caixa Multibanco, pelo valor exato.
         </Text>
       ) : null}
       {erro ? <Mensagem texto={erro} /> : null}

@@ -185,7 +185,7 @@ function PedidosActivos() {
           key={s.pedidoId}
           servico={s.servico ?? "Pedido"}
           segunda={[`Pedido #${s.pedidoId}`, s.cidade].filter(Boolean).join(" · ")}
-          estado="Aberto pelo link"
+          estado="Aberto pela ligação"
           novidade={null}
           aoAbrir={() => router.push(`/convidado/${s.pedidoId}`)}
         />

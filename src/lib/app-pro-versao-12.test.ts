@@ -159,7 +159,7 @@ describe("repor a palavra-passe, desmarcar o dia e desligar os avisos", () => {
     const REPOR = ler("app-pro/src/app/repor.tsx");
     expect(REPOR).toContain('"/api/profissionais/esqueci-palavra-passe"');
     expect(REPOR).toContain("semSessao: true");
-    expect(REPOR).toContain('titulo="Enviar link"'); // a app CLYON Pro é das Apps (d8 do Site não lhe mexe)
+    expect(REPOR).toContain('titulo="Enviar ligação"'); // d8 (19-11-2026): a parte das Apps, igual ao painel
     expect(ler("src/app/profissionais/entrar/EntrarForm.tsx")).toContain("Enviar ligação");
     const ENTRAR = ler("app-pro/src/app/entrar.tsx");
     expect(ENTRAR).toContain('pathname: "/repor"');

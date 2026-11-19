@@ -142,7 +142,7 @@ export default function DefinirSenha() {
           {jaUsado ? (
             <Pressable accessibilityRole="link" onPress={() => router.replace(ligado ? "/" : "/entrar")} style={estilos.ajuda}>
               <Text style={{ color: c.marca, fontSize: LETRA.pequena + 1, fontWeight: "600", textAlign: "center" }}>
-                {ligado ? "Voltar aos trabalhos" : "Entrar, ou pedir um link novo"}
+                {ligado ? "Voltar aos trabalhos" : "Entrar, ou pedir uma ligação nova"}
               </Text>
             </Pressable>
           ) : null}

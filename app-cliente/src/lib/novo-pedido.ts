@@ -958,7 +958,7 @@ function linhasDosDetalhes(r: Rascunho, c: Catalogo): string[] {
   if (pedeVolume(d, r) && r.volume) {
     const v = nomeDe(VOLUMES, r.volume);
     if (v) linhas.push(`Quantidade estimada: ${v}.`);
-    if (inteiro(r.quantidadeExacta) > 0) linhas.push(`Quantidade exacta: ${inteiro(r.quantidadeExacta)}.`);
+    if (inteiro(r.quantidadeExacta) > 0) linhas.push(`Quantidade exata: ${inteiro(r.quantidadeExacta)}.`);
   }
   // Com as perguntas da categoria (d1), a linha do entulho escreve-a o site (`pedido-por-categoria.ts`).
   if (d === "entulho" && r.entulho && !perguntasDe(r, c)) {

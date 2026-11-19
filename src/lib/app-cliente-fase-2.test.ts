@@ -370,7 +370,7 @@ describe("A2 — um link de outra instalação é recusado (contrato da R1 v2 e 
   });
 
   it("«Não sou eu» não entra: deita fora o código, e o aviso é o da especificação", () => {
-    expect(NAO_ENTROU).toBe("Não entrou. Este link só serve no telemóvel onde foi pedido. Se não o pediu, pode ignorá-lo.");
+    expect(NAO_ENTROU).toBe("Não entrou. Esta ligação só serve no telemóvel onde foi pedida. Se não a pediu, pode ignorá-la.");
     const e1a = ler("src/app/entrar/confirmar.tsx");
     const naoSouEu = e1a.slice(e1a.indexOf("async function naoSouEu()"), e1a.indexOf("function ficarNaConta()"));
     expect(naoSouEu).not.toContain("entrarComOLink");
@@ -425,7 +425,7 @@ describe("A4 — E2, os seus pedidos (R4)", () => {
     for (const t of [
       "<Titulo>Pedidos</Titulo>",
       "Ainda não tem pedidos.",
-      "Fez o pedido pelo WhatsApp? Abra o link do pedido neste telemóvel para o juntar aqui.",
+      "Fez o pedido pelo WhatsApp? Abra a ligação do pedido neste telemóvel para o juntar aqui.",
       "Sem ligação — a mostrar o que tinha guardado.",
     ]) {
       expect(e2).toContain(t);

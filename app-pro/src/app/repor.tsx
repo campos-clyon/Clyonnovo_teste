@@ -35,7 +35,7 @@ export default function Repor() {
         corpo: { email: email.trim() },
         semSessao: true,
       });
-      setPedido(r.mensagem ?? "Se este email tiver conta, o link chega dentro de instantes.");
+      setPedido(r.mensagem ?? "Se este email tiver conta, a ligação chega dentro de instantes.");
     } catch (e) {
       setErro(e instanceof ErroDaApi ? e.message : "Não foi possível pedir o link. Tente outra vez.");
     } finally {
@@ -49,13 +49,13 @@ export default function Repor() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[estilos.texto, { color: c.suave }]}>
-          Escreva o email com que se inscreveu. Mandamos-lhe um link para escolher uma palavra-passe nova.
+          Escreva o email com que se inscreveu. Mandamos-lhe uma ligação para escolher uma palavra-passe nova.
         </Text>
         {pedido ? (
           <View style={{ gap: ESPACO.s }}>
             <Mensagem tom="bom" texto={pedido} />
             <Text style={[estilos.dica, { color: c.suave }]}>
-              Abra o link neste telemóvel: a app abre sozinha e fica logo com a sessão iniciada. Não chegou ao fim de uns
+              Abra a ligação neste telemóvel: a app abre sozinha e fica logo com a sessão iniciada. Não chegou ao fim de uns
               minutos? Veja na pasta de spam ou de promoções. Se já não tiver acesso a este email, fale connosco pelos
               contactos.
             </Text>
@@ -75,7 +75,7 @@ export default function Repor() {
               autoFocus
             />
             {erro ? <Mensagem texto={erro} /> : null}
-            <Botao titulo="Enviar link" ocupado={aPedir} desactivado={!email.includes("@")} aoCarregar={() => void pedirLink()} />
+            <Botao titulo="Enviar ligação" ocupado={aPedir} desactivado={!email.includes("@")} aoCarregar={() => void pedirLink()} />
           </View>
         )}
       </RolagemComTeclado>

@@ -584,7 +584,7 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
   if (caminho === "/api/profissionais/esqueci-palavra-passe") {
     return {
       ok: true,
-      mensagem: "Se este email tiver conta de profissional na CLYON, o link chega dentro de instantes. Serve uma vez e dura 24 horas.",
+      mensagem: "Se este email tiver conta de profissional na CLYON, a ligação chega dentro de instantes. Serve uma vez e dura 24 horas.",
     } as T;
   }
   if (caminho === "/api/profissionais/trabalho/etapa") {

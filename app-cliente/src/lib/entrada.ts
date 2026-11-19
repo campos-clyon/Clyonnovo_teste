@@ -30,7 +30,7 @@ export const FORMA_DA_PROVA = /^[0-9a-f]{64}$/;
 
 /** «Não sou eu»: não entra, e o código deste telemóvel deita-se fora. */
 export const NAO_ENTROU =
-  "Não entrou. Este link só serve no telemóvel onde foi pedido. Se não o pediu, pode ignorá-lo.";
+  "Não entrou. Esta ligação só serve no telemóvel onde foi pedida. Se não a pediu, pode ignorá-la.";
 
 const LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
@@ -187,7 +187,7 @@ export const MOTIVO_POR_CONFIRMAR = "por-confirmar";
 export const CONFIRME_PRIMEIRO = "Confirme primeiro o seu email (enviámos de novo).";
 /** A frase do «Esqueci-me» quando o site não manda a sua. */
 export const LINK_DE_REPOR_ENVIADO =
-  "Se houver uma conta com este email, enviámos um link para escolher uma palavra-passe nova. Abra-o no navegador.";
+  "Se houver uma conta com este email, enviámos uma ligação para escolher uma palavra-passe nova. Abra-a no navegador.";
 
 const FORMA_DO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const limparEmail = (email: string) => (email ?? "").trim().toLowerCase();

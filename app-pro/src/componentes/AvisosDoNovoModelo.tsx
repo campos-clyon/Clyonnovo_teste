@@ -19,6 +19,9 @@ import { ESPACO, LETRA, useCores } from "../tema";
  *     pedidos; diz-se porquê, com o mesmo botão.
  *   · OS DADOS PARA RECEBER (IBAN, titular, MB WAY, regime de IVA): a faixa dos
  *     7 dias (até 22-11) ou o impedimento, com «Completar o perfil».
+ *   · d6 (19-11-2026): a faixa do que passa à CLYON vem já escrita do site
+ *     (`novoModelo.faixa`, a mesma do painel) e desenha-se tal como vem; um
+ *     site antigo sem ela, a conta de antes (`faixaDoValorEmAtraso`).
  *   · d1 (18-11-2026): com o cartão «Pronto para receber pedidos» do servidor
  *     (`prontoParaReceber`), o cartão linha a linha toma o lugar dessa faixa,
  *     como no painel. Sem ele (um site antigo), a faixa de antes.
@@ -39,9 +42,9 @@ export function AvisosDoNovoModelo() {
   return (
     <View style={{ gap: ESPACO.s, marginBottom: ESPACO.s }}>
       {valor ? (
-        <View style={{ gap: ESPACO.s, borderRadius: 12, padding: ESPACO.m, backgroundColor: valor.standBy ? c.mauSuave : c.avisoSuave }}>
-          <Text style={{ color: valor.standBy ? c.mau : c.tinta, fontWeight: "800", fontSize: LETRA.normal }}>{valor.titulo}</Text>
-          <Text style={{ color: valor.standBy ? c.mau : c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{valor.texto}</Text>
+        <View style={{ gap: ESPACO.s, borderRadius: 12, padding: ESPACO.m, backgroundColor: valor.standBy || valor.emAtraso ? c.mauSuave : c.avisoSuave }}>
+          <Text style={{ color: valor.standBy || valor.emAtraso ? c.mau : c.tinta, fontWeight: "800", fontSize: LETRA.normal }}>{valor.titulo}</Text>
+          <Text style={{ color: valor.standBy || valor.emAtraso ? c.mau : c.tinta, fontSize: LETRA.pequena + 1, lineHeight: 20 }}>{valor.texto}</Text>
           <Botao titulo={valor.botao} aoCarregar={() => router.push("/carteira")} />
         </View>
       ) : null}

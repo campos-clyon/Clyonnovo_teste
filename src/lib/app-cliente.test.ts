@@ -144,9 +144,9 @@ describe("E1 — entrar", () => {
 
   it("os textos da especificação, palavra por palavra", () => {
     expect(ECRA_DE_ENTRAR).toContain("Entrar na CLYON");
-    expect(ENTRAR).toContain("Enviar link de entrada");
+    expect(ENTRAR).toContain("Enviar ligação de entrada");
     expect(ENTRAR).toContain(
-      "Se o email estiver certo, o link de entrada chega dentro de instantes. Abra-o neste telemóvel — dura 15 minutos e serve uma vez.",
+      "Se o email estiver certo, a ligação de entrada chega dentro de instantes. Abra-a neste telemóvel — dura 15 minutos e serve uma vez.",
     );
     expect(ENTRAR).toContain("Usar outro email");
     expect(ENTRAR).toContain("Se nunca entrou, a conta cria-se ao entrar. Use o mesmo email com que fez os seus pedidos, para os ver aqui.");

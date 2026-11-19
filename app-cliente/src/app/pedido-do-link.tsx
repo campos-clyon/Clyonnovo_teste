@@ -221,8 +221,8 @@ export default function PedidoDoLink() {
     return (
       <Ecra>
         <View style={{ height: 24 }} />
-        <Titulo>Este link expirou</Titulo>
-        <Paragrafo>Os links de acesso duram 30 dias, por segurança. Peça um novo à CLYON pelo WhatsApp.</Paragrafo>
+        <Titulo>Esta ligação expirou</Titulo>
+        <Paragrafo>As ligações de acesso duram 30 dias, por segurança. Peça uma nova à CLYON pelo WhatsApp.</Paragrafo>
         <Botao titulo="Falar com a CLYON por WhatsApp" aoCarregar={() => whatsappDaClyon(WHATSAPP_LINK_EXPIROU)} />
         <Botao titulo="Voltar" tipo="secundario" aoCarregar={sair} />
       </Ecra>
@@ -233,8 +233,8 @@ export default function PedidoDoLink() {
     return (
       <Ecra>
         <View style={{ height: 24 }} />
-        <Titulo>Este link já não abre nenhum pedido</Titulo>
-        <Paragrafo>O pedido pode ter passado o prazo, ou o link pode ter vindo partido.</Paragrafo>
+        <Titulo>Esta ligação já não abre nenhum pedido</Titulo>
+        <Paragrafo>O pedido pode ter passado o prazo, ou a ligação pode ter vindo partida.</Paragrafo>
         <Botao titulo="Falar com a CLYON por WhatsApp" aoCarregar={() => whatsappDaClyon(WHATSAPP_LINK_NAO_ABRE)} />
         <Botao titulo="Voltar" tipo="secundario" aoCarregar={sair} />
       </Ecra>

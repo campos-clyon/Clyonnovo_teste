@@ -64,7 +64,7 @@ export default function PedidoDoConvidado() {
     return (
       <Ecra>
         <Titulo>Este pedido já não está neste telemóvel</Titulo>
-        <Paragrafo>O acesso pelo link terminou. Abra outra vez o link que a CLYON lhe enviou, ou entre na sua conta.</Paragrafo>
+        <Paragrafo>O acesso pela ligação terminou. Abra outra vez a ligação que a CLYON lhe enviou, ou entre na sua conta.</Paragrafo>
         <Botao titulo="Voltar" tipo="secundario" aoCarregar={() => router.replace("/pedidos")} />
       </Ecra>
     );

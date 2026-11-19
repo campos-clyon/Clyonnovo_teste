@@ -174,7 +174,7 @@ function ComConta() {
             <Paragrafo>Ainda não tem pedidos.</Paragrafo>
             <Botao titulo="Pedir orçamento" aoCarregar={() => router.push("/pedir")} />
             <Paragrafo pequeno suave>
-              Fez o pedido pelo WhatsApp? Abra o link do pedido neste telemóvel para o juntar aqui.
+              Fez o pedido pelo WhatsApp? Abra a ligação do pedido neste telemóvel para o juntar aqui.
             </Paragrafo>
           </View>
         )
@@ -197,7 +197,7 @@ function SemConta() {
       {sessoes.map((s) => (
         <CartaoDoPedido
           key={s.pedidoId}
-          p={{ id: s.pedidoId, servico: s.servico ?? "Pedido", cidade: s.cidade, criadoEm: null, criadoEmTexto: null, estadoTexto: "Aberto pelo link", novidade: null, trabalhoClyon: false }}
+          p={{ id: s.pedidoId, servico: s.servico ?? "Pedido", cidade: s.cidade, criadoEm: null, criadoEmTexto: null, estadoTexto: "Aberto pela ligação", novidade: null, trabalhoClyon: false }}
           aoAbrir={() => router.push(`/convidado/${s.pedidoId}`)}
         />
       ))}

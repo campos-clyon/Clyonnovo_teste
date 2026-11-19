@@ -181,8 +181,8 @@ describe("app Pro — a carteira (valor em atraso, stand-by) pelo GET do servido
     expect(dia(v.prazoAte)).toBe("2026-11-19");
     expect(pro.passouDoPrazo(v.prazoAte, Date.parse(MODELO_NOVO))).toBe(false);
     const faixa = pro.faixaDoValorEmAtraso(nm, euros, dia);
-    // d4: dentro do prazo, «A passar à CLYON · X € até dd/mm» (a linha do servidor) e «Pagar à CLYON».
-    expect(faixa).toMatchObject({ standBy: false, botao: "Pagar à CLYON" });
+    // d4: dentro do prazo, «A passar à CLYON · X € até dd/mm» (a linha do servidor) e «Pagar a parte da CLYON».
+    expect(faixa).toMatchObject({ standBy: false, botao: "Pagar a parte da CLYON" });
     expect(faixa?.titulo).toBe(v.linha);
     expect(faixa?.titulo).toContain("43,05 €");
     // Sai da lista antiga das dívidas; e as notas da carteira são as do painel no modelo novo.

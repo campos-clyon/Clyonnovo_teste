@@ -552,8 +552,8 @@ export type RespostaDoPedidoDoLink =
 
 /* ─── Mensagens do WhatsApp (as frases da página do pedido no site) ───────── */
 
-export const WHATSAPP_LINK_EXPIROU = "Olá! O link do meu pedido expirou. Podem enviar outro?";
-export const WHATSAPP_LINK_NAO_ABRE = "Olá! O link do meu pedido já não abre. Podem verificar?";
+export const WHATSAPP_LINK_EXPIROU = "Olá! A ligação do meu pedido expirou. Podem enviar outra?";
+export const WHATSAPP_LINK_NAO_ABRE = "Olá! A ligação do meu pedido já não abre. Podem verificar?";
 /** A mesma frase do site (d8, 31-10-2026): `frases-do-pedido.ts`. */
 export const whatsappHaUmProblema = mensagemDoProblema;
 

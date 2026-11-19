@@ -73,7 +73,7 @@ function OsMeusPedidos({ comConta }: { comConta: boolean }) {
       <Linha
         icone="document-text-outline"
         titulo={comConta ? "Os meus pedidos" : "Pedidos abertos neste telemóvel"}
-        texto={novidades > 0 ? (novidades === 1 ? "1 pedido com novidade" : `${novidades} pedidos com novidade`) : comConta ? "Todos, em aberto, concluídos e cancelados" : "Os que abriu pelo link da CLYON"}
+        texto={novidades > 0 ? (novidades === 1 ? "1 pedido com novidade" : `${novidades} pedidos com novidade`) : comConta ? "Todos, em aberto, concluídos e cancelados" : "Os que abriu pela ligação da CLYON"}
         aoCarregar={() => router.push("/pedidos")}
         ultima={!comConta}
       />
@@ -273,7 +273,7 @@ function ComConta() {
           <Text style={{ color: CORES.suave, fontSize: 13 }} numberOfLines={1}>
             {email ? mascararEmail(email) : ""}
           </Text>
-          <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{entrada === "google" ? "Entrou com o Google" : entrada === "palavra-passe" ? "Entrou com o email e a palavra-passe" : "Entrou com o link por email"}</Text>
+          <Text style={{ color: CORES.suave, fontSize: 12.5 }}>{entrada === "google" ? "Entrou com o Google" : entrada === "palavra-passe" ? "Entrou com o email e a palavra-passe" : "Entrou com a ligação por email"}</Text>
         </View>
       </View>
 

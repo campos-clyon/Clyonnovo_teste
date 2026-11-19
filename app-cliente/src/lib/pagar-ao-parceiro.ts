@@ -32,6 +32,13 @@ export type VistoDoPagarAoParceiro = {
   /** Sem IBAN nem MB WAY (d17): o que o cliente lê em vez dos dados. */
   semDados?: string | null;
   /**
+   * d5 (19-11-2026): os dados de pagamento do parceiro estão retidos até a
+   * CLYON os confirmar. Com `true` o servidor manda `paraPagar` a null, a frase
+   * em `semDados` e só «dinheiro» em `opcoes`; a app não desenha o IBAN nem o
+   * MB WAY, mesmo que venham (`dadosParaPagar`).
+   */
+  dadosPorConfirmar?: boolean;
+  /**
    * Os dados de pagamento do parceiro mudaram depois de contratar (d28): a frase
    * já escrita pelo servidor, que a app mostra tal e qual. Sem ela (ou um site
    * antigo), nada. A app não decide se mudaram: só o servidor o sabe.
@@ -89,4 +96,11 @@ export function vistoDaR5(v: unknown): VistoDoPagarAoParceiro | null {
 export function avisoDosDadosMudados(v: VistoDoPagarAoParceiro | null | undefined): string | null {
   const t = v?.dadosMudaram;
   return typeof t === "string" && t.trim() ? t : null;
+}
+
+/** O IBAN e o MB WAY a mostrar: nenhum com os dados por confirmar (d5), e nenhum sem dados. */
+export function dadosParaPagar(v: VistoDoPagarAoParceiro | null | undefined): { iban: string | null; titular: string | null; mbway: string | null } | null {
+  if (!v || v.dadosPorConfirmar === true) return null;
+  const p = v.paraPagar;
+  return p && (p.iban || p.mbway) ? p : null;
 }

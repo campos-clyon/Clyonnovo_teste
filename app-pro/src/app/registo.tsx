@@ -145,7 +145,7 @@ export default function Registo() {
           <Text style={[estilos.tituloFeito, { color: c.tinta }]}>Recebemos a sua candidatura</Text>
           <Text style={[estilos.texto, { color: c.tinta }]}>
             Vamos olhar para ela e falamos consigo. Se avançar, recebe no email{" "}
-            <Text style={{ fontWeight: "700" }}>{email.trim()}</Text> o link para escolher a sua palavra-passe. Abra-o
+            <Text style={{ fontWeight: "700" }}>{email.trim()}</Text> a ligação para escolher a sua palavra-passe. Abra-a
             neste telemóvel: a app abre sozinha e fica logo com a sessão iniciada.{" "}
             {depoisDeAprovadoDoModelo(noNovoModelo)}
           </Text>
@@ -167,8 +167,8 @@ export default function Registo() {
       >
         <FormularioComErros formulario={formulario}>
           <Text style={[estilos.texto, { color: c.suave }]}>
-            Diga-nos quem é e o que faz. Alguém da CLYON lê a candidatura e responde-lhe; se avançar, recebe por email o
-            link para escolher a palavra-passe.
+            Diga-nos quem é e o que faz. Alguém da CLYON lê a candidatura e responde-lhe; se avançar, recebe por email a
+            ligação para escolher a palavra-passe.
           </Text>
 
           <Caixa>

@@ -42,7 +42,7 @@ export function PalavraPasseDaConta() {
   }
 
   async function gravar() {
-    if (tem && !actual) return setErro({ texto: "Escreva a palavra-passe actual.", campo: "actual" });
+    if (tem && !actual) return setErro({ texto: "Escreva a palavra-passe atual.", campo: "actual" });
     if (nova.length < MINIMO_DA_PALAVRA_PASSE) {
       return setErro({ texto: `A palavra-passe nova precisa de pelo menos ${MINIMO_DA_PALAVRA_PASSE} caracteres.`, campo: "nova" });
     }
@@ -85,7 +85,7 @@ export function PalavraPasseDaConta() {
           <View style={{ gap: 12 }}>
             {tem ? (
               <Campo
-                rotulo="Palavra-passe actual"
+                rotulo="Palavra-passe atual"
                 valor={actual}
                 aoMudar={setActual}
                 secureTextEntry={!ver}

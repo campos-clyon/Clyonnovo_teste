@@ -192,7 +192,7 @@ export default function Trabalhos() {
               <View style={{ marginBottom: ESPACO.s }}>
                 <Mensagem
                   tom="aviso"
-                  texto={`Sem ligação. Esta é a lista de ${dataEHora(lidaEm)}; volta a actualizar quando houver rede.`}
+                  texto={`Sem ligação. Esta é a lista de ${dataEHora(lidaEm)}; volta a atualizar quando houver rede.`}
                 />
               </View>
             ) : erro ? (

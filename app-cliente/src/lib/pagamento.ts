@@ -143,8 +143,9 @@ export function quantidadeCurta(descricao: string | null | undefined): string | 
   };
   const itens = valor(/^Itens:\s*/i);
   if (itens && somaDosNumeros(itens) > 0) return plural(somaDosNumeros(itens), "item", "itens");
-  const exacta = valor(/^Quantidade exacta:\s*/i);
-  if (exacta && somaDosNumeros(exacta) > 0) return plural(somaDosNumeros(exacta), "item", "itens");
+  // d8 (19-11-2026): escreve-se «exata»; os pedidos de antes têm «exacta» — lêem-se as duas.
+  const exata = valor(/^Quantidade exac?ta:\s*/i);
+  if (exata && somaDosNumeros(exata) > 0) return plural(somaDosNumeros(exata), "item", "itens");
   const sacos = valor(/^Sacos:\s*/i);
   if (sacos && somaDosNumeros(sacos) > 0) return plural(somaDosNumeros(sacos), "saco", "sacos");
   const volume = valor(/^(Quantidade estimada|Volume):\s*/i);

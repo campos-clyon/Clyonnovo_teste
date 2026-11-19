@@ -153,7 +153,9 @@ const COMO_VALOR_EM_ATRASO = /(?<!\p{L})como valor em atraso(?!\p{L})/iu;
  * «lista de pedidos» (não «feed»). Só o texto (a árvore do TypeScript, nunca os
  * comentários nem os nomes): uma variável `activo` ou `standBy` fica.
  * Fora: os Termos e a Privacidade (vão com a d4, depois do advogado), a voz da
- * Vitória e os avisos ao profissional (do I&D), o que só o modelo lê, e as apps.
+ * Vitória e os avisos ao profissional (do I&D) e o que só o modelo lê.
+ * As duas apps (app-pro/src e app-cliente/src) entraram na regra no mesmo dia,
+ * com a parte das Apps da d8: o texto à vista delas também.
  */
 const GRAFIA_ANTERIOR_AO_ACORDO: RegExp[] = [
   /(?<!\p{L})activ(?:idade|idades|o|a|os|as|ar|ada|ado|adas|ados|ação|ações|amente)(?!\p{L})/iu,
@@ -183,7 +185,10 @@ const DO_I_E_D = (f: string) =>
   f === "src/lib/aviso-aos-profissionais.ts";
 // O SQL que cria as tabelas: «activo», «activa» são colunas da base, não texto.
 const E_DDL = /\b(CREATE TABLE|TINYINT|VARCHAR|DATETIME|UNIQUE KEY|PRIMARY KEY)\b|\bKEY idx_/;
-const A_REGRA_D8_SE_APLICA = (f: string) => f.startsWith("src/") && !ONDE_A_GRAFIA_ESPERA_PELA_D4.has(f) && !DO_I_E_D(f);
+const A_REGRA_D8_SE_APLICA = (f: string) =>
+  (f.startsWith("src/") || f.startsWith("app-pro/src/") || f.startsWith("app-cliente/src/")) &&
+  !ONDE_A_GRAFIA_ESPERA_PELA_D4.has(f) &&
+  !DO_I_E_D(f);
 
 export function comoValorEmAtraso(texto: string): string | null {
   return COMO_VALOR_EM_ATRASO.exec(texto)?.[0] ?? null;

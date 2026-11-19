@@ -57,7 +57,7 @@ export default function EcraDosServicos() {
 /** Os nomes curtos do aviso «Falta: …», pela ordem do ecrã (d9, 12-11-2026). */
 const ROTULOS_DOS_SERVICOS: Record<string, string> = {
   categorias: "o que faz",
-  raioKm: "raio de acção",
+  raioKm: "raio de ação",
   custoKm: "custo por km",
   custoHoraPessoa: "custo por hora e pessoa",
   pessoasNaEquipa: "pessoas na equipa",
@@ -167,7 +167,7 @@ function Formulario({ perfil, aoGravar }: { perfil: Perfil; aoGravar: () => Prom
       </CaixaComErro>
 
       <CaixaComErro campo="raioKm">
-        <TituloDaCaixa>Raio de acção</TituloDaCaixa>
+        <TituloDaCaixa>Raio de ação</TituloDaCaixa>
         <Text style={{ color: c.suave, fontSize: LETRA.pequena + 1, lineHeight: 19 }}>
           Recebe os pedidos até esta distância da sua base, por estrada.
         </Text>

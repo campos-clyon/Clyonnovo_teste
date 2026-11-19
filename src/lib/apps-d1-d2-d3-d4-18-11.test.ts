@@ -111,7 +111,7 @@ describe("d4 — «em atraso» só depois do prazo, na faixa do Início e na car
   const antes = Date.parse("2026-11-18T12:00:00Z");
   const depois = Date.parse("2026-11-22T12:00:00Z");
 
-  it("dentro do prazo: a linha do servidor e «Pagar à CLYON»", () => {
+  it("dentro do prazo: a linha do servidor e «Pagar a parte da CLYON»", () => {
     const linha = linhaDoValorAPassar({ total: 12.3, prazoAte: new Date("2026-11-21T10:00:00Z"), paga: false }, new Date(antes));
     const f = faixaDoValorEmAtraso(carteira([valor({ estado: linha.estado, linha: linha.linha })]), euros, dia, antes);
     expect(f?.titulo).toBe("A passar à CLYON · 12,30 € até 21/11");

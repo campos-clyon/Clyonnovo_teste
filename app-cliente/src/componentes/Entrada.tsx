@@ -180,7 +180,7 @@ export function Entrada({
     try {
       setFeito(await pedirNovaPalavraPasse({ pedir, email }));
     } catch (e) {
-      setErro(mensagemDe(e, "Não foi possível enviar o link agora."));
+      setErro(mensagemDe(e, "Não foi possível enviar a ligação agora."));
     } finally {
       setATratar(false);
     }
@@ -276,7 +276,7 @@ export function Entrada({
       setEnviado(true);
       setFalta(ESPERA_PARA_REENVIAR_S);
     } catch (e) {
-      setErro(mensagemDe(e, "Não foi possível enviar o link agora."));
+      setErro(mensagemDe(e, "Não foi possível enviar a ligação agora."));
     } finally {
       setEnviando(false);
     }
@@ -304,7 +304,7 @@ export function Entrada({
           <Ligacao titulo="Esqueci-me da palavra-passe" centrada aoCarregar={() => mudarDeModo("esqueci")} />
           <View style={{ height: 1, backgroundColor: CORES.linha }} />
           <Botao titulo="Criar conta" tipo="secundario" aoCarregar={() => mudarDeModo("criar")} />
-          <Ligacao titulo="Prefiro receber um link por email" centrada aoCarregar={() => mudarDeModo("link")} />
+          <Ligacao titulo="Prefiro receber uma ligação por email" centrada aoCarregar={() => mudarDeModo("link")} />
         </View>
       ) : modo === "criar" ? (
         feito ? (
@@ -328,9 +328,9 @@ export function Entrada({
             <Aviso tom="bom" texto={feito} />
           ) : (
             <>
-              <Paragrafo suave>Escreva o email da sua conta. Enviamos um link para escolher uma palavra-passe nova, que abre no navegador.</Paragrafo>
+              <Paragrafo suave>Escreva o email da sua conta. Enviamos uma ligação para escolher uma palavra-passe nova, que abre no navegador.</Paragrafo>
               {campoDoEmail(() => void esqueci())}
-              <Botao titulo="Enviar o link" ocupado={aTratar} aoCarregar={() => void esqueci()} />
+              <Botao titulo="Enviar a ligação" ocupado={aTratar} aoCarregar={() => void esqueci()} />
               {avisos}
             </>
           )}
@@ -340,7 +340,7 @@ export function Entrada({
         <View style={{ gap: 12 }}>
           <Aviso
             tom="bom"
-            texto="Se o email estiver certo, o link de entrada chega dentro de instantes. Abra-o neste telemóvel — dura 15 minutos e serve uma vez."
+            texto="Se o email estiver certo, a ligação de entrada chega dentro de instantes. Abra-a neste telemóvel — dura 15 minutos e serve uma vez."
           />
           <Botao
             titulo={falta > 0 ? `Reenviar (${falta} s)` : "Reenviar"}
@@ -373,7 +373,7 @@ export function Entrada({
             returnKeyType="send"
             onSubmitEditing={() => void enviarLink()}
           />
-          <Botao titulo="Enviar link de entrada" tipo={mostrarGoogle ? "secundario" : "principal"} ocupado={enviando} aoCarregar={() => void enviarLink()} />
+          <Botao titulo="Enviar ligação de entrada" tipo={mostrarGoogle ? "secundario" : "principal"} ocupado={enviando} aoCarregar={() => void enviarLink()} />
         </View>
       )}
 

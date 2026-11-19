@@ -58,7 +58,7 @@ function Mudar() {
   return (
     <Caixa>
       <CampoDeTexto
-        rotulo="Palavra-passe actual"
+        rotulo="Palavra-passe atual"
         value={actual}
         onChangeText={setActual}
         secureTextEntry={!ver}

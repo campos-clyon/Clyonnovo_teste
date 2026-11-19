@@ -101,7 +101,7 @@ export default function ConfirmarEntrada() {
     router.replace(ligado ? "/" : "/entrar");
   }
 
-  if (estado.passo === "a-verificar") return <Carregando texto="A verificar o link…" />;
+  if (estado.passo === "a-verificar") return <Carregando texto="A verificar a ligação…" />;
   if (estado.passo === "a-entrar") return <Carregando texto="A entrar…" />;
 
   if (estado.passo === "erro") {
@@ -110,7 +110,7 @@ export default function ConfirmarEntrada() {
         <View style={{ height: 24 }} />
         <Titulo>Entrar na CLYON</Titulo>
         <Aviso texto={estado.mensagem} tom="mau" />
-        {estado.botao === "novo-link" ? <Botao titulo="Pedir um link novo" aoCarregar={pedirLinkNovo} /> : null}
+        {estado.botao === "novo-link" ? <Botao titulo="Pedir uma ligação nova" aoCarregar={pedirLinkNovo} /> : null}
         {estado.botao === "tentar-outra-vez" ? <Botao titulo="Tentar outra vez" aoCarregar={() => void verificar()} /> : null}
         {estado.botao === "nenhum" ? <Botao titulo="Voltar" tipo="secundario" aoCarregar={pedirLinkNovo} /> : null}
       </Ecra>

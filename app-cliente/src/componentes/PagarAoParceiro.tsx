@@ -8,6 +8,7 @@ import { mensagemDe, pedir } from "../lib/api";
 import type { Pedir } from "../lib/erros";
 import {
   avisoDosDadosMudados,
+  dadosParaPagar,
   rotaDePagarAoParceiro,
   ROTA_DE_PAGAR_AO_PARCEIRO,
   SO_PARA_ESTES_DADOS,
@@ -93,7 +94,8 @@ export function PagarAoParceiro({
   }
 
   if (!visto?.pagaAoParceiro) return null;
-  const p = visto.paraPagar;
+  // d5: com os dados por confirmar não há IBAN nem MB WAY à vista — fica a frase do servidor (`semDados`).
+  const p = dadosParaPagar(visto);
   const mudaram = avisoDosDadosMudados(visto);
   return (
     <Cartao>

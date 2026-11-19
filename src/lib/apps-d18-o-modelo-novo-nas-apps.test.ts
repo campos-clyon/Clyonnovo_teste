@@ -90,7 +90,7 @@ describe("app Pro — a faixa do valor em atraso, com os 4 dias e «Pagar o valo
     expect(f?.texto).toContain("de 2 trabalhos");
     expect(f?.texto).toContain("Tem 4 dias");
     expect(f?.texto).toContain("pague até 19/11");
-    expect(f?.botao).toBe("Pagar à CLYON");
+    expect(f?.botao).toBe("Pagar a parte da CLYON");
   });
 
   it("passado o prazo (d4): «Valor em atraso» e «Pagar o valor em atraso»", () => {
@@ -110,7 +110,7 @@ describe("app Pro — a faixa do valor em atraso, com os 4 dias e «Pagar o valo
       euros,
       dia,
     );
-    expect(f).toEqual({ standBy: true, titulo: "Conta em stand-by · 30,75 €", texto: "EXPLICACAO DO SITE", botao: "Pagar o valor em atraso" });
+    expect(f).toEqual({ standBy: true, emAtraso: true, titulo: "Conta suspensa · 30,75 €", texto: "EXPLICACAO DO SITE", botao: "Pagar o valor em atraso" });
   });
 
   it("o Início e o pedido mostram a faixa com os botões; só com o novoModelo da carteira", () => {

@@ -21,7 +21,12 @@ import { COMPLETAR_O_PERFIL } from "../../../src/lib/dados-para-receber";
 import { perguntasDoProfissional, type PerguntaFrequente } from "../../../src/lib/ajuda-plataforma";
 import type { Taxas } from "../../../src/lib/taxas-plataforma";
 import { PARTE_DA_CLYON_COM_RESERVA } from "../../../src/lib/reserva";
-import { diaEMesEmLisboa, type EstadoDoValorAPassar } from "../../../src/lib/como-recebe-no-novo-modelo";
+import {
+  diaEMesEmLisboa,
+  PAGAR_A_CLYON,
+  type EstadoDoValorAPassar,
+  type FaixaDoValorAPassar,
+} from "../../../src/lib/como-recebe-no-novo-modelo";
 import type { ProntoParaReceber } from "../../../src/lib/pronto-para-receber";
 
 export { PAGAR_O_VALOR_EM_ATRASO, NOME_DA_FATURA, MENSAGENS_DA_FATURA, COMO_PAGAR_EM_PALAVRAS, PARTE_DA_CLYON_COM_RESERVA };
@@ -59,6 +64,12 @@ export type NovoModeloDaCarteira = {
    * decidido no servidor (`pronto-para-receber.ts`). Opcional: um site antigo não o manda.
    */
   prontoParaReceber?: ProntoParaReceber | null;
+  /**
+   * d6 (19-11-2026): a faixa do Início já escrita no servidor (`faixaDoValorAPassar`),
+   * a mesma do painel. `null` sem nada a passar ou em stand-by (aí manda `standBy`).
+   * Opcional: um site antigo não a manda, e então a app faz a conta de antes.
+   */
+  faixa?: FaixaDoValorAPassar | null;
 };
 
 /** O bloco `novoModelo` de `GET /api/profissionais/perfil` — `null` antes de 15-11. */
@@ -175,7 +186,7 @@ export const AJUDA_DA_FATURA_NA_APP =
  * do site (`standBy.explicacao`). `null` sem nada a pagar, e sempre antes de
  * 15-11 (o site não manda `novoModelo`).
  */
-export const PAGAR_A_CLYON = "Pagar à CLYON";
+export { PAGAR_A_CLYON };
 
 /** Este valor já está em atraso? O site diz (`estado`); sem ele, o prazo. */
 export function valorEmAtraso(v: Pick<NovoModeloDaCarteira["valores"][number], "estado" | "prazoAte">, agora: number): boolean {
@@ -187,10 +198,16 @@ export function faixaDoValorEmAtraso(
   euros: (n: number) => string,
   dia: (iso: string | null) => string | null,
   agora: number = Date.now(),
-): { standBy: boolean; titulo: string; texto: string; botao: string } | null {
+): { standBy: boolean; emAtraso: boolean; titulo: string; texto: string; botao: string } | null {
   if (!nm) return null;
   if (nm.standBy) {
-    return { standBy: true, titulo: `Conta em stand-by · ${euros(nm.standBy.total)}`, texto: nm.standBy.explicacao, botao: PAGAR_O_VALOR_EM_ATRASO };
+    return { standBy: true, emAtraso: true, titulo: `Conta suspensa · ${euros(nm.standBy.total)}`, texto: nm.standBy.explicacao, botao: PAGAR_O_VALOR_EM_ATRASO };
+  }
+  // d6 (19-11-2026): o site manda a faixa já escrita — desenha-se tal como vem, sem somar aqui.
+  if ("faixa" in nm && nm.faixa !== undefined) {
+    const f = nm.faixa;
+    if (!f) return null;
+    return { standBy: false, emAtraso: f.estado === "em_atraso", titulo: f.titulo, texto: f.texto, botao: f.botao };
   }
   if (nm.valores.length === 0) return null;
   const total = Math.round(nm.valores.reduce((s, v) => s + v.total, 0) * 100) / 100;
@@ -206,11 +223,12 @@ export function faixaDoValorEmAtraso(
       : `A passar à CLYON · ${euros(total)}${prazos.length > 0 ? ` até ${diaEMesEmLisboa(new Date(prazos[0]))}` : ""}`;
   return {
     standBy: false,
+    emAtraso: atraso,
     titulo,
     texto:
       `${nm.valores.some((v) => v.comReserva === true) ? `A ${PARTE_DA_CLYON_COM_RESERVA}` : "A taxa da plataforma"} e o IVA dela ${trabalhos}. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias depois de o trabalho ficar confirmado` +
       (ate ? `: pague até ${ate}.` : ".") +
-      " Depois disso, a conta fica em stand-by até pagar.",
+      " Depois disso, a conta fica suspensa até pagar.",
     botao: atraso ? PAGAR_O_VALOR_EM_ATRASO : PAGAR_A_CLYON,
   };
 }
