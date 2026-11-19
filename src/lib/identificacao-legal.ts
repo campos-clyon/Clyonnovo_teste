@@ -104,7 +104,7 @@ export const IDENTIFICACAO = {
    * limitada. Esconder isso não protege ninguém — e a lei obriga a
    * identificar-se com verdade.
    */
-  formaJuridica: "Empresário em nome individual (actividade aberta)",
+  formaJuridica: "Empresário em nome individual (atividade aberta)",
 
   /**
    * Registo de operador de resíduos, na Agência Portuguesa do Ambiente.

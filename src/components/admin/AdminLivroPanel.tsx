@@ -150,7 +150,7 @@ export default function AdminLivroPanel() {
           ) : (
             <>
               <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />O livro dá
-              exactamente o mesmo que a carteira de hoje
+              exatamente o mesmo que a carteira de hoje
             </>
           )}
         </p>

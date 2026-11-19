@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
           type: "created",
           by: null,
           message:
-            "Link de acesso do cliente gerado para envio à mão (WhatsApp ou SMS). " +
+            "Ligação de acesso do cliente gerada para envio à mão (WhatsApp ou SMS). " +
             "O anterior deixou de funcionar.",
         });
         /*
@@ -139,8 +139,8 @@ export async function POST(req: NextRequest) {
         type: "created",
         by: null,
         message: enviado
-          ? "Link de acesso do cliente reenviado. O anterior deixou de funcionar."
-          : "Link de acesso do cliente regenerado, mas o email NÃO saiu.",
+          ? "Ligação de acesso do cliente reenviada. A anterior deixou de funcionar."
+          : "Ligação de acesso do cliente regenerada, mas o email NÃO saiu.",
       });
 
       return NextResponse.json({
@@ -258,8 +258,8 @@ export async function POST(req: NextRequest) {
       type: "created",
       by: null,
       message: enviado
-        ? `Link reenviado ao profissional #${alvo.providerId}${porWhatsApp ? " (email e WhatsApp)" : ""}. O anterior deixou de funcionar.`
-        : `Link do profissional #${alvo.providerId} regenerado, mas o email NÃO saiu.`,
+        ? `Ligação reenviada ao profissional #${alvo.providerId}${porWhatsApp ? " (email e WhatsApp)" : ""}. A anterior deixou de funcionar.`
+        : `Ligação do profissional #${alvo.providerId} regenerada, mas o email NÃO saiu.`,
     });
 
     return NextResponse.json({ ok: true, enviado, porWhatsApp, token: enviado ? undefined : acesso.token });

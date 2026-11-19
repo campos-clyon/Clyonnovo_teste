@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
   // "convidar" continua a ser aceite: é o nome que o painel usava antes desta
   // mudança, e um ecrã por recarregar não deve dar erro.
   if (accao !== "aprovar" && accao !== "convidar") {
-    return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
   }
 
   // Já cá dentro: não se cria uma segunda conta com o mesmo email.
@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
       providerId,
       convitesFechados,
       feito:
-        (enviado ? "conta criada e link da palavra-passe enviado" : "conta criada, email NÃO saiu") +
+        (enviado ? "conta criada e ligação da palavra-passe enviada" : "conta criada, email NÃO saiu") +
         (convitesFechados > 0 ? ` — ${convitesFechados} convite(s) por usar arrumado(s)` : ""),
       // Sem email, o link vai para a mão de quem está no painel — é o que
       // permite mandá-lo por WhatsApp em vez de perder a candidatura.

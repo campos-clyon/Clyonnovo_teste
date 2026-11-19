@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
    */
   const sempreOMesmo = NextResponse.json({
     ok: true,
-    mensagem: "Se este email tiver conta na CLYON, o link de entrada chega dentro de instantes.",
+    mensagem: "Se este email tiver conta na CLYON, a ligação de entrada chega dentro de instantes.",
   });
 
   if (!emailValido(email)) return sempreOMesmo;

@@ -61,7 +61,7 @@ export default function ConfirmarEmail() {
         setErro(dados.error || "Não foi possível confirmar. Tente outra vez.");
         setEstado("erro");
       } catch {
-        setErro("Sem ligação. Verifique a internet e abra o link outra vez.");
+        setErro("Sem ligação. Verifique a internet e abra a ligação outra vez.");
         setEstado("erro");
       }
     })();

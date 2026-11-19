@@ -23,25 +23,25 @@ const TEXTOS: Record<EmailDaConta, { assunto: string; titulo: string; corpo: str
   confirmar: {
     assunto: "Confirme o seu email na CLYON",
     titulo: "Confirme o seu email",
-    corpo: `Para terminar o registo na CLYON, carregue no botão. O link dura ${HORAS_DA_CONFIRMACAO} horas e serve uma vez. Depois entra com o seu email e a palavra-passe que escolheu.`,
+    corpo: `Para terminar o registo na CLYON, carregue no botão. A ligação dura ${HORAS_DA_CONFIRMACAO} horas e serve uma vez. Depois entra com o seu email e a palavra-passe que escolheu.`,
     botao: "Confirmar o email",
   },
   definir: {
     assunto: "Escolha a sua palavra-passe na CLYON",
     titulo: "Este email já tem conta na CLYON",
-    corpo: `A sua conta já existe (entrou antes com o Google ou com um link por email). Para passar a entrar também com uma palavra-passe, carregue no botão e escolha-a. O link dura ${HORAS_DA_CONFIRMACAO} horas e serve uma vez.`,
+    corpo: `A sua conta já existe (entrou antes com o Google ou com uma ligação por email). Para passar a entrar também com uma palavra-passe, carregue no botão e escolha-a. A ligação dura ${HORAS_DA_CONFIRMACAO} horas e serve uma vez.`,
     botao: "Escolher a palavra-passe",
   },
   "ja-tem": {
     assunto: "A sua conta na CLYON",
     titulo: "Este email já tem conta na CLYON",
-    corpo: `Alguém tentou criar uma conta com este email, mas ela já existe e tem palavra-passe. Pode entrar normalmente. Se não se lembra da palavra-passe, carregue no botão para escolher outra. O link dura ${HORAS_DO_REPOR} hora e serve uma vez.`,
+    corpo: `Alguém tentou criar uma conta com este email, mas ela já existe e tem palavra-passe. Pode entrar normalmente. Se não se lembra da palavra-passe, carregue no botão para escolher outra. A ligação dura ${HORAS_DO_REPOR} hora e serve uma vez.`,
     botao: "Escolher outra palavra-passe",
   },
   repor: {
     assunto: "Escolher uma palavra-passe nova na CLYON",
     titulo: "Palavra-passe nova",
-    corpo: `Recebemos um pedido para escolher uma palavra-passe nova para esta conta. Carregue no botão para a escolher. O link dura ${HORAS_DO_REPOR} hora e serve uma vez. A palavra-passe actual continua a valer até usar o link.`,
+    corpo: `Recebemos um pedido para escolher uma palavra-passe nova para esta conta. Carregue no botão para a escolher. A ligação dura ${HORAS_DO_REPOR} hora e serve uma vez. A palavra-passe atual continua a valer até usar o link.`,
     botao: "Escolher a palavra-passe nova",
   },
 };
@@ -94,7 +94,7 @@ export async function enviarEmailDaConta(params: {
 
         <tr><td style="background:#f8fafc;padding:16px 24px;">
           <p style="margin:0;font-size:12px;color:#94a3b8;">
-            Não partilhe este email. O link é pessoal e só serve uma vez.
+            Não partilhe este email. A ligação é pessoal e só serve uma vez.
           </p>
         </td></tr>
 

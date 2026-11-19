@@ -32,7 +32,7 @@ const MUITAS_TENTATIVAS = "Muitas tentativas seguidas. Espere um minuto e tente 
 const PEDIDO_INVALIDO = "Pedido inválido.";
 const GOOGLE_RECUSADO = "Não foi possível entrar com o Google.";
 const GOOGLE_AINDA_NAO =
-  "A entrada com o Google na app ainda não está disponível. Entre com o link por email.";
+  "A entrada com o Google na app ainda não está disponível. Entre com a ligação por email.";
 
 /** A app pergunta se mostra o botão do Google. */
 export async function GET() {

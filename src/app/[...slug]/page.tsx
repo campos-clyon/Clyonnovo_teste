@@ -1307,7 +1307,7 @@ export default async function ServiceCityPage({ params }: Props) {
       <ProfissionaisComPagina
         cidade={city.name}
         titulo={`Parceiros que trabalham ${emTerra(city.name)}`}
-        descricao={`Quem faz o trabalho são eles. A CLYON recebe o seu pedido e liga-o a parceiros independentes com actividade ${emTerra(city.name)} — veja a nota de cada um antes de escolher.`}
+        descricao={`Quem faz o trabalho são eles. A CLYON recebe o seu pedido e liga-o a parceiros independentes com atividade ${emTerra(city.name)} — veja a nota de cada um antes de escolher.`}
         fundo="bg-[#F4F8FB]"
         limite={6}
       />

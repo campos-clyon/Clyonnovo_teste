@@ -299,7 +299,7 @@ export function textoDoTrabalhoConfirmado(p: {
         "junte-a ao pedido. A taxa da plataforma e o IVA dela são da CLYON: " +
         `<strong>${euros(d.total)}</strong> (${euros(d.comissao)} de taxa e ${euros(d.iva)} de IVA dela), ` +
         `a passar à CLYON em ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. ${comoPagar} ` +
-        "Só ficam em atraso se os dias passarem; aí, a conta fica em stand-by até pagar.",
+        "Só ficam em atraso se os dias passarem; aí, a conta fica suspensa até pagar.",
       botao: "Abrir a carteira",
     };
   }

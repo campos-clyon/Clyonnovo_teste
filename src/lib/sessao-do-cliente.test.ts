@@ -209,7 +209,7 @@ describe("separação estrita: um token não abre a porta de outro", () => {
     expect(await emailDoCliente(pedido("/x"))).toBe(EMAIL);
   });
 
-  it("7. o mesmo link duas vezes: a segunda dá 401 com a mensagem do «já usado»", async () => {
+  it("7. a mesma ligação duas vezes: a segunda dá 401 com a mensagem do «já usado»", async () => {
     linkDaApp();
     const r1 = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }));
     expect(r1.status).toBe(200);
@@ -266,7 +266,7 @@ describe("separação estrita: um token não abre a porta de outro", () => {
 });
 
 describe("R1 — entrar", () => {
-  it("pelo link: cria a conta e devolve uma sessão de cliente de 30 dias", async () => {
+  it("pela ligação: cria a conta e devolve uma sessão de cliente de 30 dias", async () => {
     linkDaApp("Cliente.Teste@Exemplo.pt");
     const r = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }));
     const j = await r.json();
@@ -277,7 +277,7 @@ describe("R1 — entrar", () => {
     expect(new Date(j.expiraEm).getTime()).toBeGreaterThan(Date.now() + 29 * 24 * 3600_000);
   });
 
-  it("as duas provas, ou nenhuma: 400; um link com outra forma: 401 sem ir à base", async () => {
+  it("as duas provas, ou nenhuma: 400; uma ligação com outra forma: 401 sem ir à base", async () => {
     expect((await entrar(pedido("/api/cliente/entrar", { corpo: {} }))).status).toBe(400);
     expect((await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, google: "x" } }))).status).toBe(400);
     const r = await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: "curto", codigoDoAparelho: CODIGO } }));
@@ -286,19 +286,19 @@ describe("R1 — entrar", () => {
     expect(db.consumirLigacaoDeEntradaDaApp).not.toHaveBeenCalled();
   });
 
-  it("sem o cliente OAuth Android, o Google diz que ainda não está disponível — e o link continua", async () => {
+  it("sem o cliente OAuth Android, o Google diz que ainda não está disponível — e a ligação continua", async () => {
     delete process.env.GOOGLE_CLIENT_ID_APP_CLIENTE;
     expect(await (await entrarComGoogle()).json()).toMatchObject({ google: false, link: true });
     const r = await entrar(pedido("/api/cliente/entrar", { corpo: { google: await idTokenDoGoogle() } }));
     expect(r.status).toBe(503);
-    expect((await r.json()).error).toMatch(/link por email/);
+    expect((await r.json()).error).toMatch(/ligação por email/);
     linkDaApp();
     expect(
       (await entrar(pedido("/api/cliente/entrar", { corpo: { linkToken: LINK, codigoDoAparelho: CODIGO } }))).status,
     ).toBe(200);
   });
 
-  it("a rota não lê sessão nenhuma: com o Bearer de um profissional, quem entra é o cliente do link", async () => {
+  it("a rota não lê sessão nenhuma: com o Bearer de um profissional, quem entra é o cliente da ligação", async () => {
     const pro = await assinarSessaoDoProfissional(7, "Profissional Teste", true);
     linkDaApp();
     const j = await (

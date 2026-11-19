@@ -44,7 +44,7 @@ export function camposExtraDoPedido(
   };
 
   if (r.origemPedido === "app_cliente") por("Origem", "App de cliente");
-  por("Quantidade exacta", numero(r.quantityExact) ?? texto(r.quantityExact, 60));
+  por("Quantidade exata", numero(r.quantityExact) ?? texto(r.quantityExact, 60));
   por("Sacos já cheios", numero(r.entulhoQuantidadeEnsacados));
   por("Sacos por encher", numero(r.entulhoQuantidadePorEnsacar));
   if (r.entulhoQuantidadeIncerta === true) por("Quantidade do entulho", "O cliente não tem a certeza");

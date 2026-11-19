@@ -49,16 +49,16 @@ describe("a marca de versão", () => {
   });
 });
 
-describe("um link substituído deixa de se poder copiar", () => {
+describe("uma ligação substituído deixa de se poder copiar", () => {
   it("a caixa some e o aviso aparece quando as datas divergem", () => {
     expect(PAINEL).toContain("String(p.linkExpiraEm) !== versaoDoLink[chaveCliente]");
-    expect(PAINEL).toContain("Este link já não serve — foi substituído entretanto.");
+    expect(PAINEL).toContain("Esta ligação já não serve — foi substituída entretanto.");
   });
 
   it("e diz o que fazer a seguir, que é a parte útil", () => {
     // Um aviso que não diz o remédio deixa a pessoa exactamente onde estava.
-    expect(PAINEL).toContain("Link para o cliente");
-    expect(PAINEL).toContain("mande o novo");
+    expect(PAINEL).toContain("Ligação para o cliente");
+    expect(PAINEL).toContain("mande a nova");
   });
 
   it("sem versão guardada, a caixa continua a aparecer", () => {
@@ -74,7 +74,7 @@ describe("um link substituído deixa de se poder copiar", () => {
 });
 
 describe("o que roda o token, e porquê", () => {
-  it("um aviso de proposta a quem NÃO tem conta gera link novo", () => {
+  it("um aviso de proposta a quem NÃO tem conta gera ligação nova", () => {
     // É legítimo: sem token não há como lhe mostrar a proposta. Mas mata o
     // anterior, e era por isso que o ecrã tinha de saber datá-lo.
     const AVISAR = ler("src/lib/avisar-da-proposta.ts");

@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
-  if (corpo?.accao !== "cortar") return NextResponse.json({ error: "Acção inválida." }, { status: 400 });
+  if (corpo?.accao !== "cortar") return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
   const pedido = await getSimulatorOrderById(id);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await appendOrderHistory(id, {
     type: "created",
     by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
-    message: `Acesso pelo link cortado pela CLYON (${colab?.nome ?? "equipa"}): ${revogadas} ${revogadas === 1 ? "telemóvel desligado" : "telemóveis desligados"} e link novo gerado.`,
+    message: `Acesso pela ligação cortado pela CLYON (${colab?.nome ?? "equipa"}): ${revogadas} ${revogadas === 1 ? "telemóvel desligado" : "telemóveis desligados"} e ligação nova gerada.`,
   });
   return NextResponse.json({ ok: true, revogadas, link: linkDoPedido(urlDeAccaoDoPedido(req.headers), acesso.token) });
 }

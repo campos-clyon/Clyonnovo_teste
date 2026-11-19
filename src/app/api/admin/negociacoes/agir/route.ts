@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Negociação inválida." }, { status: 400 });
   }
   if (!ACCOES.includes(corpo.accao as AccaoDeAdmin)) {
-    return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
   }
   // Um assistente que negoceia num pedido sem responsável fica com ele.
   await assumirPedidoSeLivre(pedidoId, colab);
@@ -625,6 +625,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[admin/negociacoes/agir]", error);
-    return NextResponse.json({ error: "Não foi possível registar a acção." }, { status: 500 });
+    return NextResponse.json({ error: "Não foi possível registar a ação." }, { status: 500 });
   }
 }

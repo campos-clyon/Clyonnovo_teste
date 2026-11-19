@@ -73,7 +73,7 @@ export async function POST(
     });
   } catch (updateErr) {
     return NextResponse.json(
-      { ok: false, message: `Erro ao actualizar pedido: ${updateErr instanceof Error ? updateErr.message : String(updateErr)}` },
+      { ok: false, message: `Erro ao atualizar pedido: ${updateErr instanceof Error ? updateErr.message : String(updateErr)}` },
       { status: 500 }
     );
   }

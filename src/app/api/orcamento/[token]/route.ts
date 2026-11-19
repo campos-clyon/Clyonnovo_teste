@@ -106,5 +106,5 @@ export async function POST(
     return NextResponse.json({ ok: true, action: "cancelado" });
   }
 
-  return NextResponse.json({ error: "Acção inválida. Use 'confirmar' ou 'cancelar'." }, { status: 400 });
+  return NextResponse.json({ error: "Ação inválida. Use 'confirmar' ou 'cancelar'." }, { status: 400 });
 }

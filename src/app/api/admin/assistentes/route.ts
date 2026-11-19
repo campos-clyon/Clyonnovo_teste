@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
         const seccoes = normalizarSeccoes(corpo.seccoes);
         const mudou = await definirSeccoesDoAssistente(id, seccoes);
         if (!mudou) return NextResponse.json({ error: "Assistente não encontrado." }, { status: 404 });
-        return NextResponse.json({ ok: true, feito: "Acessos actualizados — valem na próxima chamada." });
+        return NextResponse.json({ ok: true, feito: "Acessos atualizados — valem na próxima chamada." });
       }
 
       if (corpo.comissaoPercent !== undefined) {

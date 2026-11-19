@@ -582,7 +582,7 @@ export default function SimulatorThreePhaseForm() {
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                Enviámos para o seu email um <strong>link que abre este pedido</strong>.
+                Enviámos para o seu email uma <strong>ligação que abre este pedido</strong>.
                 Não precisa de conta para o usar.
               </p>
             </div>
@@ -1534,7 +1534,7 @@ function Phase3Contact({
           <span className="text-lg">ℹ️</span>
           <div className="flex-1">
             <p className="text-sm text-amber-900">
-              Não precisa de conta — o link que vai receber abre o pedido. Mas com{" "}
+              Não precisa de conta — a ligação que vai receber abre o pedido. Mas com{" "}
               <a
                 href="/entrar"
                 target="_blank"
@@ -1555,7 +1555,7 @@ function Phase3Contact({
           <span className="text-lg">✓</span>
           <div>
             <p className="text-sm text-emerald-900">
-              <strong>Sessão activa</strong> — poderá acompanhar este pedido em{" "}
+              <strong>Sessão ativa</strong> — poderá acompanhar este pedido em{" "}
               <a href="/conta" className="font-semibold text-cyan-600 hover:text-cyan-700 underline">
                 clyon.pt/conta
               </a>{" "}
@@ -1602,7 +1602,7 @@ function Phase3Contact({
           className="w-full px-4 py-2 border-2 border-gray-400 bg-white rounded-xl focus:ring-2 focus:ring-cyan-600 focus:border-cyan-600 shadow-sm"
         />
         <p className="text-xs text-slate-500">
-          É para aqui que enviamos o link de acesso ao pedido.
+          É para aqui que enviamos a ligação de acesso ao pedido.
         </p>
       </div>
 
@@ -1643,7 +1643,7 @@ function Phase3Contact({
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
-          <strong>O que acontece a seguir:</strong> recebe um link por email que abre
+          <strong>O que acontece a seguir:</strong> recebe uma ligação por email que abre
           este pedido. Os parceiros da sua zona vêem-no e respondem com valores —
           aceita o que quiser, ou propõe outro. Só paga se contratar alguém.
         </p>

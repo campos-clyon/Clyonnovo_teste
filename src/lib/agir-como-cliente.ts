@@ -101,7 +101,7 @@ const NO_HISTORICO: Record<PortaDoCliente, string> = {
   conta: "contratado pelo cliente, na conta",
   app: "contratado pelo cliente, na app",
   // O link do pedido aberto na app, sem conta (S16, 29-10-2026).
-  convidado: "contratado pelo cliente, pelo link na app",
+  convidado: "contratado pelo cliente, pela ligação na app",
 };
 
 export type CorpoDoCliente = {
@@ -134,10 +134,10 @@ export const VALOR_UNICO_PELA_CLYON =
 
 /** Por onde confirmou — só para o histórico do pedido. */
 const NA_PORTA: Record<PortaDoCliente, string> = {
-  link: "pelo link do pedido",
+  link: "pela ligação do pedido",
   conta: "na conta",
   app: "na app",
-  convidado: "pelo link na app",
+  convidado: "pela ligação na app",
 };
 
 function falha(status: number, error: string, mais: Record<string, unknown> = {}): RespostaDaRota {
@@ -433,7 +433,7 @@ export async function agirComoCliente(a: {
         resultado = desistir(estadoActual, "cliente", agora);
         break;
       default:
-        return falha(400, "Acção desconhecida.");
+        return falha(400, "Ação desconhecida.");
     }
 
     if (!resultado.ok) return falha(409, resultado.erro);

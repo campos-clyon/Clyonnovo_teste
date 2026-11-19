@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const accao = corpo?.accao;
   if (accao !== "aprovar" && accao !== "recusar" && accao !== "desligar") {
-    return NextResponse.json({ error: "Acção inválida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
   }
   const pedido = await getSimulatorOrderById(id);
   if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });

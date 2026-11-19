@@ -323,7 +323,7 @@ export async function pedirConfirmacaoAoCliente(p: PedidoDeConfirmacao): Promise
     </p>
 
     <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-      Este link substitui o anterior, por segurança. Guarde-o: é por aqui que volta ao
+      Esta ligação substitui a anterior, por segurança. Guarde-a: é por aqui que volta ao
       seu pedido.
     </p>`;
 
@@ -370,7 +370,7 @@ export async function avisarDaPerguntaDoFecho(p: {
       </td></tr>
     </table>
     <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
-      Se ainda não foi feito, abra o link e diga-nos — ou responda a este email.
+      Se ainda não foi feito, abra a ligação e diga-nos — ou responda a este email.
     </p>`;
   return enviar(p.para, `${ASSUNTO_DO_EMAIL_DO_FECHO} — pedido #${p.pedidoId}`, moldura(PERGUNTA_DO_FECHO, corpo, true), "email-fecho");
 }

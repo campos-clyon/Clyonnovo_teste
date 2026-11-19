@@ -204,7 +204,7 @@ export default function GastosDaClyon({
           <div>
             <h3 className="text-sm font-semibold text-slate-200">Gastos da CLYON</h3>
             <p className="mt-1 text-xs text-slate-400">
-              Recorrentes activos: <strong className="tabular-nums text-white">{emEuros(totalRecorrentes)}</strong> por mês
+              Recorrentes ativos: <strong className="tabular-nums text-white">{emEuros(totalRecorrentes)}</strong> por mês
               {" · "}em {mesEmMinusculas(mes)} contam <strong className="tabular-nums text-white">{emEuros(noMes)}</strong>
             </p>
           </div>

@@ -181,7 +181,7 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
       <div>
         <h3 className="text-lg font-semibold text-white">Presença e agendas</h3>
         <p className="mt-1 max-w-3xl text-sm text-slate-400">
-          Informação interna, sem efeito nenhum: os períodos em que cada assistente esteve activa no backoffice (com um
+          Informação interna, sem efeito nenhum: os períodos em que cada assistente esteve ativa no backoffice (com um
           clique, uma tecla ou um scroll nos últimos {dados.minutosSemInteraccao} minutos) e o que marcou na agenda dela.
           Uma ausência é um intervalo de {dados.minutosSemInteraccao} minutos ou mais entre dois períodos. Hora de Lisboa.
           A assistente vê a agenda dela, mas não estas horas.
@@ -251,7 +251,7 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
                 <p className="text-base font-semibold text-white">{escolhida.nome}</p>
                 {escolhida.activaAgora && (
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-esmeralda-texto">
-                    <span className="h-2 w-2 rounded-full bg-esmeralda" aria-hidden="true" /> activa agora
+                    <span className="h-2 w-2 rounded-full bg-esmeralda" aria-hidden="true" /> ativa agora
                   </span>
                 )}
                 {!escolhida.activo && <span className="text-xs text-slate-500">conta desactivada</span>}
@@ -462,7 +462,7 @@ function LinhaDoDia({
           {diaDaSemana}, {String(diaN).padStart(2, "0")}/{String(mesN).padStart(2, "0")}/{ano}
         </p>
         <p className="text-sm tabular-nums text-slate-300">
-          Activa {duracaoEscrita(doDia?.segundos ?? 0)}
+          Ativa {duracaoEscrita(doDia?.segundos ?? 0)}
           {ausencias.length > 0 ? ` · ${ausencias.length} ${ausencias.length === 1 ? "ausência" : "ausências"}` : ""}
         </p>
       </div>
@@ -505,7 +505,7 @@ function LinhaDoDia({
         </div>
         <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
           <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-3 rounded-sm bg-esmeralda/80" /> activa
+            <span className="h-2 w-3 rounded-sm bg-esmeralda/80" /> ativa
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="h-2 w-3 rounded-sm bg-violeta/50" /> na agenda
@@ -523,7 +523,7 @@ function LinhaDoDia({
       </div>
 
       {blocos.length === 0 && intervalos.length === 0 ? (
-        <p className="text-sm text-slate-400">Sem actividade nem marcações neste dia.</p>
+        <p className="text-sm text-slate-400">Sem atividade nem marcações neste dia.</p>
       ) : (
         <ul className="space-y-1 text-sm">
           {[
@@ -532,7 +532,7 @@ function LinhaDoDia({
                 <span className="tabular-nums">
                   {horaEmLisboa(new Date(b.de))}–{horaEmLisboa(new Date(b.ate))}
                 </span>
-                <span className="tabular-nums text-esmeralda-texto">activa {duracaoEscrita(b.segundos)}</span>
+                <span className="tabular-nums text-esmeralda-texto">ativa {duracaoEscrita(b.segundos)}</span>
               </li>
             ) })),
             ...ausencias.map((a) => ({ de: a.de, el: (

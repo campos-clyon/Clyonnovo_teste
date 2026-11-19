@@ -68,7 +68,7 @@ export const SINAL_REPETIDO_MS = 30_000;
 
 /** O que a assistente lê na conta dela — o dever de informar (RGPD). */
 export const FRASE_DA_TRANSPARENCIA =
-  "O backoffice regista os períodos em que está activa, só como informação interna.";
+  "O backoffice regista os períodos em que está ativa, só como informação interna.";
 
 // ─── O sinal ─────────────────────────────────────────────────────────────────
 

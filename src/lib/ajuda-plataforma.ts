@@ -246,9 +246,9 @@ function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFreq
         "O cliente paga-lhe diretamente o preço total (com IVA, se o cobrar), que já inclui a taxa da plataforma e o " +
         "IVA dela. Quando o trabalho fecha, essa parte aparece na sua carteira, em «A pagar à CLYON», como «A passar " +
         `à CLYON» até ao dia do prazo, com a referência para a pagar. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias; ` +
-        "só fica em atraso se o prazo passar, e aí a conta fica em stand-by " +
+        "só fica em atraso se o prazo passar, e aí a conta fica suspensa " +
         "— continua a ver os pedidos, mas não aceita nem envia propostas até o pagar. O pagamento confirmado " +
-        "tira-a do stand-by sozinho.",
+        "reativa-a sozinho.",
     },
     "Quando é que recebo o dinheiro?": {
       pergunta: "Quando é que recebo o dinheiro?",
@@ -265,7 +265,7 @@ function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFreq
         "2. Fica consigo a sua parte. A taxa da plataforma e o IVA dela são da CLYON: quando o trabalho fecha, " +
           "aparecem na Carteira, em «A pagar à CLYON», como «A passar à CLYON» até ao dia do prazo, com «Pagar por " +
           "MB WAY» ou «Gerar referência Multibanco».",
-        `3. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. Só fica em atraso se passarem; aí, a conta fica em stand-by até pagar; o ` +
+        `3. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. Só fica em atraso se passarem; aí, a conta fica suspensa até pagar; o ` +
           "pagamento confirmado desbloqueia-a sozinho.",
         "4. A fatura do trabalho é sua: emita-a ao cliente e junte-a ao pedido. A da taxa da plataforma é passada " +
           `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,

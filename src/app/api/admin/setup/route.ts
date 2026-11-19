@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       migrations: [
         "Schema colaboradores",
         "Tabela simulatorOrders (postalCode, city, parkingDistance, priority, ...)",
-        "Tabela simulatorSettings (defaults actualizados: custo_km=0.50, overhead=17.00)",
+        "Tabela simulatorSettings (defaults atualizados: custo_km=0.50, overhead=17.00)",
         "Tabela galleryMedia",
         "Admin WANDERSON",
       ],

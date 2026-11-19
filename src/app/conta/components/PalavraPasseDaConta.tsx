@@ -109,8 +109,8 @@ export default function PalavraPasseDaConta() {
               type="password"
               autoComplete="current-password"
               required
-              placeholder="Palavra-passe actual"
-              aria-label="Palavra-passe actual"
+              placeholder="Palavra-passe atual"
+              aria-label="Palavra-passe atual"
               value={actual}
               onChange={(e) => setActual(e.target.value)}
               className={campo}

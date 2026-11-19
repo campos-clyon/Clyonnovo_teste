@@ -84,7 +84,7 @@ const PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO: PassoDoProfissional[] = [
     titulo: "Só vê a morada depois de ser contratado",
     texto:
       "Até lá vê a zona, que é o que precisa para saber se lhe serve e quanto custa lá " +
-      "chegar. Quando o cliente o contrata, recebe a morada exacta e o telefone dele. Não é " +
+      "chegar. Quando o cliente o contrata, recebe a morada exata e o telefone dele. Não é " +
       "desconfiança: é o que impede que os pedidos sejam usados como lista de moradas — e " +
       "vale para si como vale para todos os outros.",
   },
@@ -292,7 +292,7 @@ const COMO_RECEBE_NO_NOVO_MODELO: Array<{ forma: string; texto: string }> = [
     texto:
       "Quando o trabalho fecha, a taxa da plataforma e o IVA dela aparecem na sua carteira em «A passar à CLYON», " +
       `com o valor, o dia até quando (${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias) e a referência Multibanco ou MB WAY ` +
-      "para os pagar. Só ficam em atraso se o prazo passar; aí, a conta fica em stand-by até pagar.",
+      "para os pagar. Só ficam em atraso se o prazo passar; aí, a conta fica suspensa até pagar.",
   },
 ];
 

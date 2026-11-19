@@ -243,7 +243,7 @@ export default function FormularioDeCandidatura({
         */}
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-700">
           Vamos olhar para ela e falamos consigo. Se avançar, recebe no email{" "}
-          <strong>{email}</strong> o link para escolher a sua palavra-passe e entrar.
+          <strong>{email}</strong> a ligação para escolher a sua palavra-passe e entrar.
           {depoisDeAprovado}
         </p>
         <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-slate-500">

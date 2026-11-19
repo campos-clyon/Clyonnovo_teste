@@ -238,7 +238,7 @@ export default function AdminProfissionaisPanel({
       });
       const dados = await res.json();
       if (!res.ok) {
-        const mensagem = dados.error ?? "Não foi possível actualizar.";
+        const mensagem = dados.error ?? "Não foi possível atualizar.";
         setErro(mensagem);
         return { ok: false, erro: mensagem };
       }
@@ -261,7 +261,7 @@ export default function AdminProfissionaisPanel({
         // O link em claro só vai para o administrador (é a chave da conta).
         // Ao assistente diz-se o que falhou e a quem pedir.
         setAviso(
-          "Aprovado, mas o email com o link para criar a palavra-passe não saiu. Peça ao administrador para voltar a aprovar — é ele quem recebe o link para enviar à mão.",
+          "Aprovado, mas o email com a ligação para criar a palavra-passe não saiu. Peça ao administrador para voltar a aprovar — é ele quem recebe a ligação para enviar à mão.",
         );
       }
       if (dados.avisoDeDistribuicao) {
@@ -441,7 +441,7 @@ export default function AdminProfissionaisPanel({
           className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-800/60"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          Actualizar
+          Atualizar
         </button>
       </header>
 
@@ -483,7 +483,7 @@ export default function AdminProfissionaisPanel({
       {grupos && grupos.migrados > 0 && (
         <p className="mb-3 text-xs text-slate-400">
           Categorias em grupos desde 29/10: {grupos.migrados} perfis convertidos; {grupos.ganham} passam a
-          receber mais serviços ({grupos.ganhamAprovados} aprovados e activos).
+          receber mais serviços ({grupos.ganhamAprovados} aprovados e ativos).
         </p>
       )}
 
@@ -509,10 +509,10 @@ export default function AdminProfissionaisPanel({
       {linkDaSenha && (
         <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
           <p className="text-sm font-semibold text-amber-200">
-            O email não saiu. Mande este link ao profissional.
+            O email não saiu. Mande esta ligação ao profissional.
           </p>
           <p className="mt-1 text-xs text-amber-200/75">
-            É a única forma de ele criar a palavra-passe — só guardamos o hash, e este link
+            É a única forma de ele criar a palavra-passe — só guardamos o hash, e esta ligação
             desaparece quando fechar esta página.
           </p>
           <div className="mt-2 flex items-center gap-2">
@@ -1094,7 +1094,7 @@ function Editor({
     } else if (r.dados.linkDeReporEnviado) {
       setLink({
         ok: true,
-        texto: `Enviado para ${String(r.dados.linkDeReporPara)}. Serve uma vez e dura ${HORAS_DO_LINK_DE_REPOR} horas — a palavra-passe actual continua a valer até ele o usar.`,
+        texto: `Enviado para ${String(r.dados.linkDeReporPara)}. Serve uma vez e dura ${HORAS_DO_LINK_DE_REPOR} horas — a palavra-passe atual continua a valer até ele o usar.`,
       });
     } else {
       setLink({
@@ -1154,8 +1154,8 @@ function Editor({
               Palavra-passe
             </p>
             <p className="mt-0.5 text-xs text-slate-400">
-              {p.temPalavraPasse ? "Já tem palavra-passe." : "Ainda não criou palavra-passe."} O
-              link vai só por email, para{" "}
+              {p.temPalavraPasse ? "Já tem palavra-passe." : "Ainda não criou palavra-passe."} A
+              ligação vai só por email, para{" "}
               <span className="font-medium text-slate-200">{p.email ?? "—"}</span>, serve uma vez
               e dura {HORAS_DO_LINK_DE_REPOR} horas.
             </p>
@@ -1167,17 +1167,17 @@ function Editor({
             className="flex shrink-0 items-center gap-1.5 rounded-lg border border-cyan-700 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-950/40 disabled:opacity-40"
           >
             <Send className="h-3.5 w-3.5" aria-hidden="true" />
-            {p.temPalavraPasse ? "Enviar link para repor" : "Enviar link para criar"}
+            {p.temPalavraPasse ? "Enviar ligação para repor" : "Enviar ligação para criar"}
           </button>
         </div>
         {!podeEntrar && (
           <p className="mt-2 text-xs text-amber-300">
-            A conta está «{p.estado}»: o link não abriria. Reactive-a primeiro.
+            A conta está «{p.estado}»: a ligação não abriria. Reactive-a primeiro.
           </p>
         )}
         {emailMudou && (
           <p className="mt-2 text-xs text-amber-300">
-            Guarde primeiro o email novo — o link vai para o que está gravado.
+            Guarde primeiro o email novo — a ligação vai para o que está gravado.
           </p>
         )}
         {link && (
@@ -1258,7 +1258,7 @@ function Editor({
         </div>
         {emailMudou && (
           <p className="mt-1.5 text-xs text-amber-300">
-            Passa a entrar com este email. Um link de palavra-passe que esteja por usar deixa de
+            Passa a entrar com este email. Uma ligação de palavra-passe que esteja por usar deixa de
             valer.
           </p>
         )}

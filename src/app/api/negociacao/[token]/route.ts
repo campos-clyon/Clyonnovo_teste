@@ -98,7 +98,7 @@ export async function POST(
       pedido?.acessoTokenExpiraEm ?? null,
     );
     if (!pedido || !r.valido) {
-      return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Ligação inválida ou expirada." }, { status: 403 });
     }
     // E por pedido, além de por endereço (Segurança, 28-10-2026): o link é a conta de quem não tem conta.
     const porPedido = await limitarPorConta("negociacao-pedido", `pedido:${pedido.id}`, 30, 300);
@@ -122,7 +122,7 @@ export async function POST(
     doProfissional.acessoTokenExpiraEm,
   );
   if (!r.valido) {
-    return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
+    return NextResponse.json({ ok: false, error: "Ligação inválida ou expirada." }, { status: 403 });
   }
   /*
    * O link sozinho já não chega — 02-10-2026, decisão do dono («tudo com
@@ -259,7 +259,7 @@ export async function POST(
       resultado = desistir(estadoActual, "profissional", agora);
       break;
     default:
-      return NextResponse.json({ ok: false, error: "Acção desconhecida." }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Ação desconhecida." }, { status: 400 });
   }
 
   if (!resultado.ok) {

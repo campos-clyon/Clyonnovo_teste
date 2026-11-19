@@ -112,7 +112,7 @@ export default function ResumoDasFinancas({
     <div className="space-y-6">
       {dados.semEntradas && (
         <p className="rounded-lg border border-ambar/40 bg-ambar/10 px-3 py-2 text-sm text-ambar-texto">
-          Não foi possível ler os pagamentos da plataforma agora: o bruto, o IVA e a receita estão a zero. Actualize daqui a pouco.
+          Não foi possível ler os pagamentos da plataforma agora: o bruto, o IVA e a receita estão a zero. Atualize daqui a pouco.
         </p>
       )}
 
@@ -565,7 +565,7 @@ function Previsao({
       <p className="mt-1 text-xs text-slate-400">
         Os meses que já passaram com os valores reais; o mês de hoje, real até hoje.
         {temPrevisao &&
-          ` Os que faltam são previsão: a receita média dos últimos três meses (${emEuros(p.receitaMedia)}), os gastos recorrentes activos (hoje ${emEuros(recorrentes)} por mês) e os ocasionais com data marcada${dados.assistentes ? `, e a média do que se pagou aos assistentes (${emEuros(p.assistentesMedia)})` : ""}.`}
+          ` Os que faltam são previsão: a receita média dos últimos três meses (${emEuros(p.receitaMedia)}), os gastos recorrentes ativos (hoje ${emEuros(recorrentes)} por mês) e os ocasionais com data marcada${dados.assistentes ? `, e a média do que se pagou aos assistentes (${emEuros(p.assistentesMedia)})` : ""}.`}
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[34rem] text-sm">

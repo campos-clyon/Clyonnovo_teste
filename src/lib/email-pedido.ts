@@ -115,14 +115,14 @@ function montarHtml(p: LinkDoPedidoParams): string {
 
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;margin:0 0 24px;">
             <p style="margin:0;font-size:14px;line-height:1.6;color:#166534;">
-              <strong>Não precisa de criar conta.</strong> Este link abre o pedido
+              <strong>Não precisa de criar conta.</strong> Esta ligação abre o pedido
               diretamente. Se preferir ter todos os pedidos no mesmo sítio, pode
               entrar com a conta Google a qualquer momento.
             </p>
           </div>
 
           <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
-            Guarde este email — o link é pessoal e é a sua forma de voltar ao pedido.
+            Guarde este email — a ligação é pessoal e é a sua forma de voltar ao pedido.
             Não o reencaminhe: quem o tiver consegue ver e responder às propostas.
             Expira ao fim de 30 dias.
           </p>
@@ -155,11 +155,11 @@ export async function enviarLinkDoPedido(p: LinkDoPedidoParams): Promise<boolean
   // recurso ao nome curto fica para não quebrar quem só tenha esse.
   const chave = process.env.RESEND_API_KEY_clyonsite ?? process.env.RESEND_API_KEY;
   if (!chave) {
-    console.warn("[email-pedido] RESEND_API_KEY_clyonsite em falta — link não enviado.");
+    console.warn("[email-pedido] RESEND_API_KEY_clyonsite em falta — ligação não enviada.");
     return false;
   }
   if (!p.para || !p.para.includes("@")) {
-    console.warn("[email-pedido] pedido", p.pedidoId, "sem email válido — link não enviado.");
+    console.warn("[email-pedido] pedido", p.pedidoId, "sem email válido — ligação não enviada.");
     return false;
   }
 

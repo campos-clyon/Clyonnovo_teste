@@ -528,7 +528,7 @@ export default function RegistarPedido({
       const aviso =
         (d.traduzida ? " O que estava noutra língua foi traduzido para português." : "") +
         (d.porTraduzir ? " Atenção: há texto noutra língua que o tradutor não traduziu — traduza-o à mão antes de gravar." : "") +
-        (recomeca ? " Ao gravar, o pedido recomeça e as propostas actuais acabam." : "");
+        (recomeca ? " Ao gravar, o pedido recomeça e as propostas atuais acabam." : "");
       if (d.por === "modelo") {
         setTextoAntesDeArrumar(f.description);
         muda("description", d.texto);
@@ -905,7 +905,7 @@ export default function RegistarPedido({
               : editarId != null && valorFixo != null
               ? "Trabalho CLYON. Gravar o pedido não o volta a enviar: a oferta continua com quem a recebeu, que passa a ler o que aqui ficar. O valor e a taxa gravam-se no botão deles."
               : editarId != null
-              ? "Os campos que os profissionais leem. Gravar recomeça o pedido do zero: as propostas actuais acabam e ele volta a sair a quem for elegível hoje."
+              ? "Os campos que os profissionais leem. Gravar recomeça o pedido do zero: as propostas atuais acabam e ele volta a sair a quem for elegível hoje."
               : recolhaWhatsApp
               ? "Com o que o assistente recolheu na conversa. Confira o nome, a morada e a descrição antes de gravar: ao gravar, o cliente recebe a confirmação por WhatsApp e um SIM dele já não cria outro pedido."
               : "Para o que chega por fora do site. Primeiro calcula-se; depois decide se vai aos profissionais ou fica só no backoffice."}
@@ -1756,7 +1756,7 @@ function Resumo({
       */}
       <p className="flex items-center gap-2 text-sm font-bold text-emerald-300">
         <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-        {emEdicao ? `Pedido #${r.id} actualizado` : `Pedido #${r.id} criado e gravado`}
+        {emEdicao ? `Pedido #${r.id} atualizado` : `Pedido #${r.id} criado e gravado`}
       </p>
       <p className="mt-0.5 text-xs text-emerald-400/70">
         {emEdicao
@@ -1811,7 +1811,7 @@ function Resumo({
                   ? "negociação anterior acabou"
                   : "negociações anteriores acabaram"}{" "}
                 — as propostas já feitas deixaram de contar. Chegou a{" "}
-                {r.recomeco.receberam} de {r.recomeco.candidatos} profissionais activos
+                {r.recomeco.receberam} de {r.recomeco.candidatos} profissionais ativos
                 {r.recomeco.avisados < r.recomeco.receberam
                   ? `, mas ${r.recomeco.receberam - r.recomeco.avisados} não recebeu o email de aviso`
                   : ""}
@@ -1920,7 +1920,7 @@ function Resumo({
       {(r.chaveRecusada || (!r.geocodificado && r.motivoSemCoordenadas === "chave_recusada")) && (
         <p className="mt-3 rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs leading-relaxed text-red-300">
           A chave do Google Maps existe mas o Google RECUSOU-A. Quase sempre é
-          a Geocoding API por activar no projecto, ou a chave restrita a outra
+          a Geocoding API por ativar no projecto, ou a chave restrita a outra
           API. Verifique no Google Cloud Console — não é um problema desta
           morada.
         </p>
@@ -1950,8 +1950,8 @@ function Resumo({
           {alcance == null
             ? "Alcance não avaliado"
             : quantos > 0
-              ? `Chegaria a ${quantos} de ${alcance.candidatos} profissionais activos`
-              : `Não chegaria a nenhum dos ${alcance.candidatos} profissionais activos`}
+              ? `Chegaria a ${quantos} de ${alcance.candidatos} profissionais ativos`
+              : `Não chegaria a nenhum dos ${alcance.candidatos} profissionais ativos`}
         </p>
 
         {quantos > 0 && (

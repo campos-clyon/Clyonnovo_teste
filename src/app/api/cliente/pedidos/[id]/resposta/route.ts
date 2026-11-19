@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!pedido || (email && (pedido.contactEmail ?? "").trim().toLowerCase() !== email)) {
       return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });
     }
-    const quem = convidado ? `Cliente (pelo link, na app; telemóvel ${convidado.prova8})` : pedido.contactName?.trim() || email!;
+    const quem = convidado ? `Cliente (pela ligação, na app; telemóvel ${convidado.prova8})` : pedido.contactName?.trim() || email!;
     const r = await responderAClyon(pedidoId, { nome: quem }, corpo ?? {});
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
     return NextResponse.json({ ok: true });

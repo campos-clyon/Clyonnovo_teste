@@ -513,7 +513,7 @@ function Divida({
               </p>
               {diaDe(valorEmAtraso.prazoAte) && valorEmAtraso.estado !== "em_atraso" && (
                 <p className="mt-1 text-xs font-medium text-amber-800">
-                  Pague até {diaDe(valorEmAtraso.prazoAte)}. Depois disso a conta fica em stand-by: vê os pedidos, mas não aceita nem envia propostas até pagar.
+                  Pague até {diaDe(valorEmAtraso.prazoAte)}. Depois disso a conta fica suspensa: vê os pedidos, mas não aceita nem envia propostas até pagar.
                 </p>
               )}
             </>
@@ -555,7 +555,7 @@ function Divida({
           {diaDe(ref.expiraEm) && (
             <p className="col-span-3 text-[11px] text-slate-500">
               Válida até {diaDe(ref.expiraEm)}. Pague no homebanking ou numa caixa Multibanco, pelo
-              valor exacto.
+              valor exato.
             </p>
           )}
         </dl>

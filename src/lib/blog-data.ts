@@ -637,7 +637,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         title: "Quando o esvaziamento tem valor comercial",
         paragraphs: [
-          "Há muitos casos em que o imóvel precisa de ser preparado para venda, aluguer ou remodelação. Nesses cenários, o esvaziamento não é só remoção: é uma etapa crítica para libertar o activo e avançar com a próxima decisão.",
+          "Há muitos casos em que o imóvel precisa de ser preparado para venda, aluguer ou remodelação. Nesses cenários, o esvaziamento não é só remoção: é uma etapa crítica para libertar o ativo e avançar com a próxima decisão.",
         ],
       },
     ],

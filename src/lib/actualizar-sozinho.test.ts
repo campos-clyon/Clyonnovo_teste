@@ -43,7 +43,7 @@ describe("uma cadência só, nas três pontas", () => {
     }
   });
 
-  it("o backoffice actualiza em SILÊNCIO — a lista não pode piscar", () => {
+  it("o backoffice atualiza em SILÊNCIO — a lista não pode piscar", () => {
     /*
      * carregar(true) não acende estados de "a carregar": sem isto a lista
      * saltava a cada batida e um valor a ser escrito perdia-se.
@@ -76,7 +76,7 @@ describe("os botões", () => {
     expect(PRO).toContain("<ArrowLeft");
   });
 
-  it("e a saída funciona mesmo sem histórico — telemóvel, link do email", () => {
+  it("e a saída funciona mesmo sem histórico — telemóvel, ligação do email", () => {
     /*
      * A propriedade continua a mesma; a forma de a cumprir é que mudou, e para
      * melhor: deixou de DEPENDER de histórico em vez de o consultar.
@@ -91,9 +91,9 @@ describe("os botões", () => {
     expect(PRO).toContain("if (trabalhoAberto)");
   });
 
-  it("a mesa troca o «Actualizar» por dizer quando leu", () => {
-    expect(MESA).not.toContain("Actualizar\n        </button>");
-    expect(MESA).toContain("actualizado agora");
+  it("a mesa troca o «Atualizar» por dizer quando leu", () => {
+    expect(MESA).not.toContain("Atualizar\n        </button>");
+    expect(MESA).toContain("atualizado agora");
     expect(MESA).toContain('aria-live="polite"');
   });
 

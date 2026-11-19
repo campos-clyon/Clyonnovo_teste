@@ -27,7 +27,7 @@ export default async function PaginaDoFecho({ params }: { params: Promise<{ toke
       <div className="w-full rounded-2xl border border-[#E2EEF3] bg-white p-6 text-center">
         {!n ? (
           <>
-            <h1 className="text-lg font-bold text-tinta">Este link já não abre</h1>
+            <h1 className="text-lg font-bold text-tinta">Esta ligação já não abre</h1>
             <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">
               Pode ter expirado ou vindo partido do email. Se precisa de nos dizer alguma coisa sobre o trabalho,
               fale connosco.

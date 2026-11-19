@@ -69,7 +69,7 @@ export default function EnviarValoresParaPagamento({
       <button
         type="button"
         onClick={abrir}
-        title="Mostra a mensagem com os valores finais e o link do pedido, para enviar pelo WhatsApp da CLYON"
+        title="Mostra a mensagem com os valores finais e a ligação do pedido, para enviar pelo WhatsApp da CLYON"
         className="flex items-center gap-1.5 self-start rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10"
       >
         <Send className="h-3.5 w-3.5" aria-hidden="true" />
@@ -87,7 +87,7 @@ export default function EnviarValoresParaPagamento({
             className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-950 p-2 font-sans text-xs leading-relaxed text-slate-100"
           />
           <p className="mt-1.5 text-slate-400">
-            O link do pedido nasce ao enviar, no lugar de «{LINK_POR_GERAR}» — e o link antigo deixa de abrir. O total a
+            A ligação do pedido nasce ao enviar, no lugar de «{LINK_POR_GERAR}» — e a ligação antiga deixa de abrir. O total a
             pagar tem de ficar na mensagem.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -134,7 +134,7 @@ export default function EnviarValoresParaPagamento({
               className="ml-2 inline-flex items-center gap-1 rounded border border-slate-600 px-1.5 py-0.5 text-slate-200"
             >
               <Copy className="h-3 w-3" aria-hidden="true" />
-              {copiado ? "Copiada" : "Copiar a mensagem, com o link"}
+              {copiado ? "Copiada" : "Copiar a mensagem, com a ligação"}
             </button>
           )}
         </div>

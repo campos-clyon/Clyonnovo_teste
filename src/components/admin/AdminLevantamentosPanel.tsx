@@ -420,7 +420,7 @@ export default function AdminLevantamentosPanel() {
             className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
           >
             <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-            Actualizar
+            Atualizar
           </button>
         </div>
       </div>

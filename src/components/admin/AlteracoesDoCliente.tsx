@@ -16,8 +16,8 @@ type Alteracao = {
 const POR_ONDE: Record<string, string> = {
   app: "pela app",
   conta: "pela conta do site",
-  link: "pelo link, no site",
-  convidado: "pelo link, na app",
+  link: "pela ligação, no site",
+  convidado: "pela ligação, na app",
 };
 
 /**

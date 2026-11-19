@@ -172,12 +172,12 @@ function Presenca({ dias }: { dias: number | null }) {
         aria-hidden="true"
       />
       {dias === 0
-        ? "Activo hoje"
+        ? "Ativo hoje"
         : dias <= 2
-          ? "Activo nos últimos dias"
+          ? "Ativo nos últimos dias"
           : dias <= 7
-            ? "Activo esta semana"
-            : "Activo este mês"}
+            ? "Ativo esta semana"
+            : "Ativo este mês"}
     </span>
   );
 }

@@ -43,7 +43,7 @@ const TEXTOS: TextosDaAdesao = {
     {
       titulo: "Toque em «Tornar-me testador»",
       frases: [
-        "Abra o link no telemóvel, com esse Gmail, e toque em «Tornar-me testador».",
+        "Abra a ligação no telemóvel, com esse Gmail, e toque em «Tornar-me testador».",
         "Se a página disser que não tem acesso, o Gmail ainda não está na lista: tente outra vez mais tarde.",
       ],
     },
@@ -51,7 +51,7 @@ const TEXTOS: TextosDaAdesao = {
       titulo: "Instale e entre na sua conta",
       frases: [
         "Instale a app CLYON pela Play Store.",
-        "Entre com o email da sua conta CLYON: com a palavra-passe, com o Google ou com um link por email.",
+        "Entre com o email da sua conta CLYON: com a palavra-passe, com o Google ou com uma ligação por email.",
       ],
     },
   ],
@@ -69,7 +69,7 @@ const TEXTOS: TextosDaAdesao = {
     guardado: "Gmail guardado. Vamos pô-lo na lista do acesso antecipado.",
     consentimento: TEXTOS_DO_CONVITE_NO_SITE.consentimento,
   },
-  teste: { botao: "Abrir o link de adesão" },
+  teste: { botao: "Abrir a ligação de adesão" },
   loja: { botao: "Abrir na Play Store" },
   saberMais: [
     "É um programa de acesso antecipado: experimenta a app antes de todos. Pode sair quando quiser, na sua conta, em Segurança.",

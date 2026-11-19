@@ -85,7 +85,7 @@ export default function PropostasSemResposta({ token, onAbrir }: { token: string
               <button
                 onClick={() => void copiar(l)}
                 disabled={aCopiar === l.pedidoId}
-                title="Copia a mensagem (não mexe no link do cliente)"
+                title="Copia a mensagem (não mexe na ligação do cliente)"
                 className="ml-auto flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800/60 disabled:opacity-50"
               >
                 {aCopiar === l.pedidoId ? (

@@ -177,7 +177,7 @@ describe("o ecrã das negociações da CLYON", () => {
     expect(CLIENTE).toContain("VistaDoPedido");
   });
 
-  it("e abre-a SEM gerar link nenhum", () => {
+  it("e abre-a SEM gerar ligação nenhum", () => {
     /*
      * "Gostaria que ao clicar em ver como cliente abrisse o pedido como ele
      * aparece para o cliente, mas sem gerar links novos." — 12-09-2026.
@@ -214,7 +214,7 @@ describe("o ecrã das negociações da CLYON", () => {
     expect(PROPOSTAS).toContain('accoes.includes("propor") && !soParaVer');
   });
 
-  it("avisa antes de matar um link que o cliente pode ter", () => {
+  it("avisa antes de matar uma ligação que o cliente pode ter", () => {
     /*
      * O aviso mudou de sítio e ficou mais forte.
      *
@@ -225,7 +225,7 @@ describe("o ecrã das negociações da CLYON", () => {
      *
      * Agora só há um sítio que gera, e avisa; e «ver» deixou de gerar.
      */
-    expect(PAINEL).toContain("esse deixa de funcionar");
+    expect(PAINEL).toContain("essa deixa de funcionar");
     expect(PAINEL).toContain("async function linkParaOCliente(");
   });
 
@@ -281,7 +281,7 @@ describe("a distribuição do pedido", () => {
   const DIST = ler("src/lib/distribuicao-do-pedido.ts");
   const MODAL_PEDIDO = ler("src/components/admin/PedidoDetailModal.tsx");
 
-  it("avalia TODOS os profissionais, não só os activos", () => {
+  it("avalia TODOS os profissionais, não só os ativos", () => {
     /*
      * `profissionaisActivos` filtra os suspensos à entrada — e "conta
      * suspensa" é precisamente um dos motivos que se quer ver. Vão todos

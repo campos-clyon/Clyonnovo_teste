@@ -37,7 +37,7 @@ export default function AbrirNaApp() {
       <Smartphone className="mx-auto h-9 w-9 text-[#00B4CC]" aria-hidden="true" />
       <h1 className="mt-3 text-lg font-bold text-tinta">Abra na app CLYON</h1>
       <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        Este link de entrada é para a app CLYON, no telemóvel onde o pediu. Dura {MINUTOS_DE_VALIDADE} minutos e serve uma vez.
+        Esta ligação de entrada é para a app CLYON, no telemóvel onde o pediu. Dura {MINUTOS_DE_VALIDADE} minutos e serve uma vez.
       </p>
       {android && token && (
         <a
@@ -50,7 +50,7 @@ export default function AbrirNaApp() {
       <p className="mt-5 text-sm text-slate-600">
         Quer entrar no site?{" "}
         <Link href="/entrar" className="font-semibold text-acao underline underline-offset-4">
-          Peça o link aqui.
+          Peça a ligação aqui.
         </Link>
       </p>
     </div>

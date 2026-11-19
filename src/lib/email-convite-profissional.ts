@@ -55,7 +55,7 @@ export async function enviarConviteAoProfissional(p: ConviteParaEnviar): Promise
             ${e(primeiro)}, aqui está o seu registo
           </h1>
           <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">
-            Como combinámos${p.deQuem ? ` com ${e(p.deQuem)}` : ""}, deixamos-lhe o link para
+            Como combinámos${p.deQuem ? ` com ${e(p.deQuem)}` : ""}, deixamos-lhe a ligação para
             se registar na CLYON. Leva poucos minutos: os serviços que faz, a morada da base,
             até onde se desloca e os dados de faturação.
           </p>
@@ -70,13 +70,13 @@ export async function enviarConviteAoProfissional(p: ConviteParaEnviar): Promise
 
           <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
             Depois de enviar, confirmamos os dados e avisamo-lo por email quando a conta
-            estiver activa. A partir daí começa a receber pedidos da sua zona, com
+            estiver ativa. A partir daí começa a receber pedidos da sua zona, com
             fotografias e com o valor que o cliente quer pagar — e vê sempre quanto
             recebe antes de aceitar seja o que for.
           </p>
 
           <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-            O link é pessoal e dura ${p.diasDeValidade} dias. Se expirar, diga-nos e
+            A ligação é pessoal e dura ${p.diasDeValidade} dias. Se expirar, diga-nos e
             enviamos outro.
           </p>
         </td></tr>
@@ -84,7 +84,7 @@ export async function enviarConviteAoProfissional(p: ConviteParaEnviar): Promise
         <tr><td style="background:#f8fafc;padding:18px 32px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
             Recebeu este email porque falou connosco sobre trabalhar com a CLYON. Se não
-            foi o caso, ignore-o — sem o link ninguém se inscreve.
+            foi o caso, ignore-o — sem a ligação ninguém se inscreve.
           </p>
         </td></tr>
       </table>

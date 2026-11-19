@@ -40,7 +40,7 @@ export const FOLHA_MUDOU = "A folha mudou — veja a nova e confirme.";
 export const FOLHA_SEM_MARCA = "Veja a folha outra vez antes de confirmar.";
 export const PRECO_MUDOU =
   "O preço de um dos parceiros que escolheu mudou entretanto. Veja a lista outra vez e confirme a sua escolha.";
-export const LISTA_POR_VER = "A lista dos parceiros foi actualizada. Veja-a outra vez e confirme a sua escolha.";
+export const LISTA_POR_VER = "A lista dos parceiros foi atualizada. Veja-a outra vez e confirme a sua escolha.";
 
 /* ── A marca da folha ─────────────────────────────────────────────────────── */
 

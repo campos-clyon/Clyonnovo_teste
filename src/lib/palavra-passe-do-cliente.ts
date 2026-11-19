@@ -35,13 +35,13 @@ export type TipoDoLink =
 export const TIPOS_DO_LINK: readonly TipoDoLink[] = ["registo", "definir", "repor"];
 
 /** As respostas que são sempre as mesmas, exista ou não a conta. */
-export const FRASE_DO_REGISTO = `Se o email estiver certo, recebe dentro de instantes um link para terminar o registo. Serve uma vez e dura ${HORAS_DA_CONFIRMACAO} horas.`;
-export const FRASE_DO_ESQUECI = `Se este email tiver conta na CLYON, recebe dentro de instantes um link para escolher uma palavra-passe nova. Serve uma vez e dura ${HORAS_DO_REPOR} hora.`;
+export const FRASE_DO_REGISTO = `Se o email estiver certo, recebe dentro de instantes uma ligação para terminar o registo. Serve uma vez e dura ${HORAS_DA_CONFIRMACAO} horas.`;
+export const FRASE_DO_ESQUECI = `Se este email tiver conta na CLYON, recebe dentro de instantes uma ligação para escolher uma palavra-passe nova. Serve uma vez e dura ${HORAS_DO_REPOR} hora.`;
 
 /** O erro de entrada, sempre o mesmo: não diz se o email tem conta. */
 export const ERRO_DE_ENTRADA = "Email ou palavra-passe errados.";
 export const ERRO_POR_CONFIRMAR =
-  "Ainda não confirmou o seu email. Enviámos-lhe outra vez o link de confirmação: abra-o e entre a seguir.";
+  "Ainda não confirmou o seu email. Enviámos-lhe outra vez a ligação de confirmação: abra-a e entre a seguir.";
 export const ERRO_MUITAS_TENTATIVAS = "Muitas tentativas seguidas. Espere alguns minutos e tente outra vez.";
 
 /** Os códigos que a app e o site lêem em `codigo`. */
@@ -55,10 +55,10 @@ export type CodigoDeErroDaEntrada =
 export type MotivoDoLink = "malformado" | "desconhecido" | "expirado" | "usado" | "sem-conta";
 
 export const MENSAGEM_DO_LINK: Record<MotivoDoLink, string> = {
-  malformado: "Este link não é válido. Peça outro na página de entrada.",
-  desconhecido: "Este link não é válido. Peça outro na página de entrada.",
-  expirado: "Este link expirou. Peça outro na página de entrada.",
-  usado: "Este link já foi usado. Se já confirmou, entre com o email e a palavra-passe.",
+  malformado: "Esta ligação não é válida. Peça outra na página de entrada.",
+  desconhecido: "Esta ligação não é válida. Peça outra na página de entrada.",
+  expirado: "Esta ligação expirou. Peça outro na página de entrada.",
+  usado: "Esta ligação já foi usada. Se já confirmou, entre com o email e a palavra-passe.",
   "sem-conta": "Esta conta já não existe. Pode criar outra na página de entrada.",
 };
 

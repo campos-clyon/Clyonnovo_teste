@@ -495,7 +495,7 @@ export default function Perfil({
             <Campo
               etiqueta="Morada da base"
               falta={porque("base-no-mapa")}
-              ajuda="É daqui que contamos a distância a cada trabalho, e o seu raio de acção."
+              ajuda="É daqui que contamos a distância a cada trabalho, e o seu raio de ação."
             >
               <MoradaDaBase
                 className={CAIXA}
@@ -676,7 +676,7 @@ export default function Perfil({
             */}
             <div>
               <div className="flex items-baseline justify-between">
-                <span className="text-sm font-medium text-slate-700">Raio de acção</span>
+                <span className="text-sm font-medium text-slate-700">Raio de ação</span>
                 <span className="text-lg font-bold text-cyan-700">{dados.raioKm} km</span>
               </div>
               <input
@@ -687,7 +687,7 @@ export default function Perfil({
                 onChange={(e) => mudar("raioKm", Number(e.target.value))}
                 /* `h-11`: a calha nativa tem 16 px, e e ela que decide que trabalhos lhe chegam. */
                 className="mt-2 h-11 w-full cursor-pointer accent-cyan-600"
-                aria-label="Raio de acção em quilómetros"
+                aria-label="Raio de ação em quilómetros"
               />
               <div className="flex justify-between text-xs text-slate-400">
                 <span>{RAIO_MINIMO_KM} km</span>
@@ -1060,7 +1060,7 @@ export default function Perfil({
             <Campo
               etiqueta="Morada fiscal"
               falta={porque("morada-fiscal")}
-              ajuda="A da declaração de actividade. Muitas vezes não é onde trabalha."
+              ajuda="A da declaração de atividade. Muitas vezes não é onde trabalha."
             >
               <input
                 className={CAIXA}
@@ -1366,7 +1366,7 @@ export default function Perfil({
         {/* ── Palavra-passe ────────────────────────────────────────────────── */}
         {seccao === "seguranca" && (
           <div className="space-y-4">
-            <Campo etiqueta="Palavra-passe actual">
+            <Campo etiqueta="Palavra-passe atual">
               <div className="relative">
                 <input
                   className={`${CAIXA} pr-12`}

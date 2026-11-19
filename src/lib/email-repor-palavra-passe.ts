@@ -40,7 +40,7 @@ export function montarHtmlDeRepor(p: ReporParams): string {
   const porque =
     p.pedidoPor === "proprio"
       ? "Recebemos um pedido para repor a palavra-passe da sua conta de profissional na CLYON."
-      : "A equipa da CLYON enviou-lhe este link, como combinado, para voltar a entrar na sua conta de profissional.";
+      : "A equipa da CLYON enviou-lhe esta ligação, como combinado, para voltar a entrar na sua conta de profissional.";
 
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -76,11 +76,11 @@ export function montarHtmlDeRepor(p: ReporParams): string {
           </table>
 
           <p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#5A6B78;">
-            Este link serve uma vez e expira em ${p.horasDeValidade} horas. Não o
+            Esta ligação serve uma vez e expira em ${p.horasDeValidade} horas. Não o
             reencaminhe — quem o abrir fica com o acesso à sua conta.
           </p>
           <p style="margin:0;font-size:13px;line-height:1.6;color:#5A6B78;">
-            Não pediu isto? Ignore este email. A sua palavra-passe actual continua a
+            Não pediu isto? Ignore este email. A sua palavra-passe atual continua a
             funcionar até alguém usar o link.
           </p>
         </td></tr>

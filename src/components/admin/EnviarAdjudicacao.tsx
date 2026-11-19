@@ -209,17 +209,17 @@ export default function EnviarAdjudicacao({
           <p className="font-semibold text-slate-100">Formas de pagamento na mensagem</p>
           {novoModelo && (
             <p className="mt-2 text-slate-300">
-              Modelo de 15-11: o cliente paga diretamente ao parceiro. A mensagem leva o total e o link do pedido, onde
+              Modelo de 15-11: o cliente paga diretamente ao parceiro. A mensagem leva o total e a ligação do pedido, onde
               estão os dados para pagar. Sem referências ao cliente.
             </p>
           )}
           {!novoModelo && (<>
           <label className="mt-2 flex items-center gap-2">
             <input type="checkbox" checked={comLink} disabled={fixo} onChange={(e) => setComLink(e.target.checked)} />
-            Link do pedido: o cliente paga pela plataforma (MB WAY, Multibanco ou transferência)
+            Ligação do pedido: o cliente paga pela plataforma (MB WAY, Multibanco ou transferência)
           </label>
           {comLink && !fixo && (
-            <p className="ml-6 text-slate-400">Gera-se um link novo ao preparar; o anterior deixa de funcionar.</p>
+            <p className="ml-6 text-slate-400">Gera-se uma ligação nova ao preparar; o anterior deixa de funcionar.</p>
           )}
           <label className="mt-1.5 flex items-center gap-2">
             <input

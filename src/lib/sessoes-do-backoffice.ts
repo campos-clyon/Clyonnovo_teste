@@ -273,7 +273,7 @@ export function arrumarSessoes(
 
 /** «activa agora», «há 1 min», «há 3 h», «há 2 dias». */
 export function haQuantoTempo(minutos: number, activaAgora: boolean): string {
-  if (activaAgora) return "activa agora";
+  if (activaAgora) return "ativa agora";
   if (minutos < 1) return "há menos de 1 min";
   if (minutos < 60) return `há ${minutos} min`;
   const horas = Math.floor(minutos / 60);

@@ -29,7 +29,7 @@ export default function AcessoPeloLink({ pedidoId, authHeader }: { pedidoId: num
   }, [pedidoId, cabecalho]);
 
   async function cortar() {
-    if (!window.confirm("Cortar o acesso pelo link?\n\nOs telemóveis que o abriram deixam de ver o pedido, e o link antigo deixa de abrir também no site. Fica um link novo para enviar ao cliente.")) return;
+    if (!window.confirm("Cortar o acesso pela ligação?\n\nOs telemóveis que o abriram deixam de ver o pedido, e a ligação antiga deixa de abrir também no site. Fica uma ligação nova para enviar ao cliente.")) return;
     setACortar(true);
     setErro(null);
     try {
@@ -53,19 +53,19 @@ export default function AcessoPeloLink({ pedidoId, authHeader }: { pedidoId: num
     <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700 space-y-2">
       <p>
         {telemoveis.length === 0
-          ? "O link do pedido não está aberto na app em nenhum telemóvel."
-          : `Aberto pelo link em ${telemoveis.length} ${telemoveis.length === 1 ? "telemóvel" : "telemóveis"}: ${telemoveis
+          ? "A ligação do pedido não está aberta na app em nenhum telemóvel."
+          : `Aberto pela ligação em ${telemoveis.length} ${telemoveis.length === 1 ? "telemóvel" : "telemóveis"}: ${telemoveis
               .map((t) => `${t.prova}… (${t.abertoEmTexto ?? "—"})`)
               .join(", ")}.`}
       </p>
-      <p className="text-slate-500">Se suspeitar que o link foi reencaminhado, corte o acesso aqui (reenviar o link não desliga os telemóveis).</p>
+      <p className="text-slate-500">Se suspeitar que a ligação foi reencaminhada, corte o acesso aqui (reenviar a ligação não desliga os telemóveis).</p>
       <button type="button" disabled={aCortar} onClick={() => void cortar()}
         className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold text-slate-800 disabled:opacity-50">
-        Cortar o acesso pelo link
+        Cortar o acesso pela ligação
       </button>
       {linkNovo && (
         <p className="break-all">
-          Link novo: <span className="font-mono">{linkNovo}</span>
+          Ligação nova: <span className="font-mono">{linkNovo}</span>
         </p>
       )}
       {erro && <p className="text-red-600">{erro}</p>}

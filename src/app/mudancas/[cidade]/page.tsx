@@ -78,7 +78,7 @@ function perguntasGerais(nome: string, preco: PrecoPublicoDasMudancas): Array<{ 
   return [
     {
       pergunta: `Como funciona o pedido de mudança ${emTerra(nome)}?`,
-      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a parceiros com actividade ${emTerra(nome)}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
+      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a parceiros com atividade ${emTerra(nome)}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
     },
     {
       pergunta: "Quem faz a mudança?",
@@ -513,7 +513,7 @@ export default async function MudancasCidadePage({ params }: Props) {
         cidade={c.nome}
         categoria="mudanca"
         titulo={`Parceiros de mudanças ${emTerra(c.nome)}`}
-        descricao={`Quem faz a mudança são eles. A CLYON recebe o seu pedido e liga-o a parceiros independentes com actividade ${emTerra(c.nome)} — veja a nota de cada um antes de escolher.`}
+        descricao={`Quem faz a mudança são eles. A CLYON recebe o seu pedido e liga-o a parceiros independentes com atividade ${emTerra(c.nome)} — veja a nota de cada um antes de escolher.`}
         limite={6}
       />
 

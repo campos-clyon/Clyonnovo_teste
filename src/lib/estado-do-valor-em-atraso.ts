@@ -34,11 +34,11 @@ export function estadoDoValorEmAtraso(
 ): EstadoDoValorEmAtraso {
   if (v.paga || v.porPagar <= 0) return { estado: "pago", frase: "Pago" };
   const fim = prazoDoValorEmAtraso({ nasceuEm: v.nasceuEm });
-  if (!fim) return { estado: "sem_data", frase: "A passar à CLYON, sem data de fecho — não conta para o stand-by" };
+  if (!fim) return { estado: "sem_data", frase: "A passar à CLYON, sem data de fecho — não conta para a suspensão da conta" };
   if (agora.getTime() > fim.getTime()) {
     return {
       estado: "stand_by",
-      frase: `Em atraso desde ${diaEMesEmLisboa(fim)} · stand-by: passou o prazo de pagamento`,
+      frase: `Em atraso desde ${diaEMesEmLisboa(fim)} · conta suspensa: passou o prazo de pagamento`,
       desde: fim.toISOString(),
     };
   }

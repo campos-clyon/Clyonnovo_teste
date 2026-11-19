@@ -91,7 +91,7 @@ export function montarHtml(p: AprovacaoParams): string {
           </table>
 ${oQueFalta}
           <p style="margin:0;font-size:13px;line-height:1.6;color:#94a3b8;">
-            Este link serve uma vez e expira em ${p.diasDeValidade} dias. Não o
+            Esta ligação serve uma vez e expira em ${p.diasDeValidade} dias. Não o
             reencaminhe — quem o abrir fica com o acesso à sua conta. Se expirar, peça
             outro na página de entrada.
           </p>

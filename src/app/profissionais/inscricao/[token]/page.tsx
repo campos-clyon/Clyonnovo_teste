@@ -46,7 +46,7 @@ export default async function PaginaDoConvite({
   if (problema) {
     const texto = {
       invalido: {
-        titulo: "Este link não serve",
+        titulo: "Esta ligação não serve",
         corpo: "O endereço está incompleto ou foi alterado pelo caminho. Fale connosco e enviamos outro.",
       },
       usado: {
@@ -59,7 +59,7 @@ export default async function PaginaDoConvite({
       },
       expirado: {
         titulo: "Este convite expirou",
-        corpo: "Os links duram poucos dias, por segurança. Diga-nos e enviamos outro para o mesmo email.",
+        corpo: "As ligações duram poucos dias, por segurança. Diga-nos e enviamos outro para o mesmo email.",
       },
     }[problema];
 
@@ -92,7 +92,7 @@ export default async function PaginaDoConvite({
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Diga-nos o que faz e onde trabalha. Confirmamos os dados e avisamo-lo por email
-          quando a conta estiver activa.
+          quando a conta estiver ativa.
         </p>
       </header>
 

@@ -75,5 +75,5 @@ export function clyonPodeConfirmarOTrabalho(p: PedidoParaDecidir, n: Trabalho | 
 /** Porque é que não pode — para o ecrã dizer alguma coisa em vez de nada. */
 export function porqueNaoPodeConfirmar(p: PedidoParaDecidir): string | null {
   if (clyonPodeConfirmar(p)) return null;
-  return "Este cliente tem email e confirma pelo link que recebeu. Só ele pode libertar o pagamento.";
+  return "Este cliente tem email e confirma pela ligação que recebeu. Só ele pode libertar o pagamento.";
 }

@@ -596,7 +596,7 @@ describe("6. o botão «Arrumar a descrição» só preenche o campo — quem gr
     // Não grava: nem a rota de editar, nem a de criar, nem o «calcular».
     expect(corpo).not.toMatch(/\/editar|pedidos\/criar|calcular\(|enviar\(/);
     // E diz que gravar recomeça o pedido e acaba com as propostas.
-    expect(corpo).toContain("Ao gravar, o pedido recomeça e as propostas actuais acabam.");
+    expect(corpo).toContain("Ao gravar, o pedido recomeça e as propostas atuais acabam.");
     expect(FORM).toContain("Repor o texto anterior");
   });
 

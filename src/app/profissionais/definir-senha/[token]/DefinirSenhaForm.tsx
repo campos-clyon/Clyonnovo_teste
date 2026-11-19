@@ -168,7 +168,7 @@ export default function DefinirSenhaForm({ token, pedirTermos = false }: { token
                   href="/profissionais/entrar"
                   className="mt-2 inline-block font-semibold text-cyan-700 underline underline-offset-4"
                 >
-                  Entrar, ou pedir um link novo
+                  Entrar, ou pedir uma ligação nova
                 </a>
               )}
             </div>

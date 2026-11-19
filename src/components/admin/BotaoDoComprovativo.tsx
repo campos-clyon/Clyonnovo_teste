@@ -120,7 +120,7 @@ export function BotaoEnviarComprovativo({ negociacaoId, pedidoId }: { negociacao
           void enviar();
         }}
         disabled={aEnviar}
-        title="Manda ao cliente, pelo WhatsApp da CLYON, o link do comprovativo em PDF"
+        title="Manda ao cliente, pelo WhatsApp da CLYON, a ligação do comprovativo em PDF"
         className="flex items-center gap-1.5 rounded-lg border border-emerald-600/50 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
       >
         {aEnviar ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Send className="h-3.5 w-3.5" aria-hidden="true" />}

@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(await mudarInterruptorDoAviso(corpo.ligar, quem));
       }
       default:
-        return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+        return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
     }
   } catch (e) {
     if (e instanceof AvisoRecusado) return NextResponse.json({ error: e.message }, { status: 409 });

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       const actual = typeof corpo.actual === "string" ? corpo.actual : "";
       if (!actual || !(await palavraPasseConfere(actual, conta.passwordHash))) {
         return NextResponse.json(
-          { ok: false, campo: "actual", error: "A palavra-passe actual não está certa." },
+          { ok: false, campo: "actual", error: "A palavra-passe atual não está certa." },
           { status: 403 },
         );
       }

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   // mensagem escrita à mão noutro `return` é como esta defesa se perde.
   const sempreOMesmo = NextResponse.json({
     ok: true,
-    mensagem: `Se este email tiver conta de profissional na CLYON, o link chega dentro de instantes. Serve uma vez e dura ${HORAS_DO_LINK_DE_REPOR} horas.`,
+    mensagem: `Se este email tiver conta de profissional na CLYON, a ligação chega dentro de instantes. Serve uma vez e dura ${HORAS_DO_LINK_DE_REPOR} horas.`,
   });
 
   if (!emailValido(email)) return sempreOMesmo;

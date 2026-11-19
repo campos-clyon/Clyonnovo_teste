@@ -348,7 +348,7 @@ export async function POST(req: NextRequest) {
             "). ") +
         (soPara ? `Enviado só a ${soPara.length} profissional(is) escolhido(s) à mão. ` : "") +
         resumoDaDistribuicao(r) +
-        (emailSaiu ? "" : " O email do link ao cliente NÃO saiu."),
+        (emailSaiu ? "" : " O email da ligação ao cliente NÃO saiu."),
     });
 
     /*

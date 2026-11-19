@@ -444,7 +444,7 @@ export default function AdminAssistentesPanel() {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-slate-400">
           {assistentes.length} conta{assistentes.length === 1 ? "" : "s"}
-          {assistentes.length > 0 ? ` · ${activos} activa${activos === 1 ? "" : "s"}` : ""}
+          {assistentes.length > 0 ? ` · ${activos} ativa${activos === 1 ? "" : "s"}` : ""}
           {assistentes.length > 0
             ? ` · comissões por pagar ${euros(totalPorPagar)} · pagas ${euros(totalPago)}`
             : ""}
@@ -454,7 +454,7 @@ export default function AdminAssistentesPanel() {
           className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          Actualizar
+          Atualizar
         </button>
       </div>
 

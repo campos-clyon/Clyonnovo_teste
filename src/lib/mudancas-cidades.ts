@@ -278,7 +278,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças de escritório em Oeiras?",
         resposta:
-          "Sim, especialmente na zona do Taguspark e Lagoas Park. Se precisar fora do horário laboral ou ao fim de semana, para não interromper a actividade, diga-o no pedido — as propostas dizem quem o pode fazer.",
+          "Sim, especialmente na zona do Taguspark e Lagoas Park. Se precisar fora do horário laboral ou ao fim de semana, para não interromper a atividade, diga-o no pedido — as propostas dizem quem o pode fazer.",
       },
       {
         pergunta: "Quanto custa mudança Oeiras → Lisboa?",
@@ -598,7 +598,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Fazem mudanças dentro do concelho do Seixal?",
         resposta:
-          "Sim — entre Fernão Ferro, Paio Pires, Arrentela, Amora ou Corroios, ou para fora do concelho. O pedido chega a parceiros com actividade na zona, e as propostas chegam em menos de 6 horas.",
+          "Sim — entre Fernão Ferro, Paio Pires, Arrentela, Amora ou Corroios, ou para fora do concelho. O pedido chega a parceiros com atividade na zona, e as propostas chegam em menos de 6 horas.",
       },
       {
         pergunta: "Uma moradia com quintal muda alguma coisa?",
@@ -759,7 +759,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "E se a casa for na Estrada de Benfica?",
         resposta:
-          "Com trânsito constante e poucos lugares de paragem, a carrinha pode ter de ficar numa rua interior. Diga a morada exacta no pedido e combine a hora com o parceiro.",
+          "Com trânsito constante e poucos lugares de paragem, a carrinha pode ter de ficar numa rua interior. Diga a morada exata no pedido e combine a hora com o parceiro.",
       },
       {
         pergunta: "Quanto custa uma mudança em Benfica?",

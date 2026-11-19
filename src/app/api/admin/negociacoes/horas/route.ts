@@ -234,7 +234,7 @@ export async function POST(req: NextRequest) {
   const linha = await oTrabalho(pedidoId, negociacaoId);
   if (!linha) return NextResponse.json({ error: "Trabalho não encontrado." }, { status: 404 });
   if (corpo.accao !== "confirmar" && corpo.accao !== "corrigir" && corpo.accao !== "preencher" && corpo.accao !== "validar_telefone" && corpo.accao !== "folha_final" && corpo.accao !== "valor_final_ao_cliente") {
-    return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
   }
   await assumirPedidoSeLivre(pedidoId, colab);
   const porQuem = colab?.nome ?? "a CLYON";

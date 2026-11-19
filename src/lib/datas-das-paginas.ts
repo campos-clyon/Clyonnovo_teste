@@ -50,7 +50,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // (o que a página diz ao Google sobre si: o caminho, as perguntas, a lista dos artigos).
   "/avaliacoes": "2026-11-16",
   "/faq": "2026-11-17",
-  "/sobre-nos": "2026-11-17",
+  "/sobre-nos": "2026-11-19",
   "/trabalhos": "2026-11-10",
   // 18-11-2026 (d8): o guia novo para quem tem carrinha entra na lista dos artigos.
   "/blog": "2026-11-18",
@@ -60,7 +60,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-de-camas": "2026-11-16",
   "/recolha-de-armarios": "2026-11-16",
   // 02-11-2026: liga às secções «recolha gratuita» de Lisboa e de Setúbal.
-  "/recolha-gratuita-de-moveis-usados": "2026-11-02",
+  "/recolha-gratuita-de-moveis-usados": "2026-11-19",
   "/recolha-de-eletrodomesticos": "2026-11-16",
   "/recolha-de-moveis-urgente": "2026-11-15",
   "/retirar-moveis-velhos": "2026-11-16",
@@ -75,7 +75,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
   "/precos/esvaziamento-de-casas": "2026-11-17",
   "/precos/mudancas": "2026-11-17",
-  "/contactos": "2026-11-17",
+  "/contactos": "2026-11-19",
   "/servicos/esvaziamento-apartamento": "2026-11-15",
   "/servicos/manutencao-casa": "2026-11-15",
   "/recolha-de-monos": "2026-11-17",

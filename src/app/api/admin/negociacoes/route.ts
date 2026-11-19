@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
     !["concluido_visto", "orcamento_enviado", "enviar_pela_clyon"].includes(String(corpo.accao)) ||
     !Number.isInteger(Number(corpo.pedidoId))
   ) {
-    return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
   }
   /*
    * O ORÇAMENTO FOI AO CLIENTE — 21-10-2026. «Enviar orçamento» abriu o
@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
       if (ha != null && ha < MINUTOS_PARA_REENVIAR_A_PROPOSTA) {
         return NextResponse.json(
           {
-            error: `A proposta já foi ao cliente há ${ha} min (pelo link ou pela CLYON). Mandar outra vez?`,
+            error: `A proposta já foi ao cliente há ${ha} min (pela ligação ou pela CLYON). Mandar outra vez?`,
             jaEnviada: true,
             haMinutos: ha,
           },

@@ -284,7 +284,7 @@ export async function POST(req: NextRequest) {
         resultado = desistir(estadoActual, "profissional", agora);
         break;
       default:
-        return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+        return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
     }
 
     if (!resultado.ok) {

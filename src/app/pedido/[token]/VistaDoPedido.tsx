@@ -294,7 +294,7 @@ export default async function VistaDoPedido({
           link nenhum para guardar, e a nota ocupava o lugar do que ele veio ver. */}
       {!soParaVer && (
       <Nota
-        titulo="Guarde este link — é como volta ao pedido"
+        titulo="Guarde esta ligação — é como volta ao pedido"
         icone="ligacao"
         tom="info"
         chave="guardar-link"

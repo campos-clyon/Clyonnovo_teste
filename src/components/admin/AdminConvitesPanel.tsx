@@ -262,7 +262,7 @@ export default function AdminConvitesPanel({
       {linkEmClaro && (
         <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
           <p className="text-xs font-semibold text-amber-200">
-            O email não saiu. Envie este link à pessoa por outro meio.
+            O email não saiu. Envie esta ligação à pessoa por outro meio.
           </p>
           <div className="mt-1.5 flex items-center gap-2">
             <code className="flex-1 overflow-x-auto whitespace-nowrap rounded bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-300">
@@ -373,7 +373,7 @@ export default function AdminConvitesPanel({
           className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          Actualizar
+          Atualizar
         </button>
       </div>
 

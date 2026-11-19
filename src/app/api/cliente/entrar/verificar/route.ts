@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[cliente/entrar/verificar] falhou:", err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { ok: false, error: "Não foi possível verificar o link agora. Tente outra vez." },
+      { ok: false, error: "Não foi possível verificar a ligação agora. Tente outra vez." },
       { status: 500 },
     );
   }

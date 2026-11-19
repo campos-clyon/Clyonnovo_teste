@@ -254,7 +254,7 @@ export async function POST(req: NextRequest) {
             origemKm === "medida"
               ? `Distância medida: ${km} km.`
               : origemKm === "codigo_postal"
-                ? `Distância estimada pelo código postal: ${km} km — confirmar com a morada exacta.`
+                ? `Distância estimada pelo código postal: ${km} km — confirmar com a morada exata.`
                 : origemKm === "cidade"
                   ? `Morada sem número nem código postal: assumidos ${km} km pela localidade. Confirmar antes de fechar o preço.`
                   : `Sem morada utilizável: assumidos ${km} km. Confirmar antes de fechar o preço.`,
@@ -692,7 +692,7 @@ export async function POST(req: NextRequest) {
           await appendOrderHistory(id, {
             type: "created",
             by: null,
-            message: "O email com o link de acesso NÃO foi enviado. Reenviar ao cliente.",
+            message: "O email com a ligação de acesso NÃO foi enviada. Reenviar ao cliente.",
           });
         }
       }
@@ -834,7 +834,7 @@ export async function POST(req: NextRequest) {
        * certeza neste instante: o pedido está gravado, e tem número.
        */
       message: emailDoLink
-        ? "Pedido criado. O link de acesso segue para o seu email."
+        ? "Pedido criado. A ligação de acesso segue para o seu email."
         : "Pedido criado com sucesso.",
     }, {
       // O link de acesso vai nesta resposta (d53): nenhum cache a guarda.

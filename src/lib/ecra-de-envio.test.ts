@@ -69,7 +69,7 @@ describe("o ecrã de sucesso", () => {
   });
 });
 
-describe("o link do pedido que já não abre", () => {
+describe("a ligação do pedido que já não abre", () => {
   it("deixou de dar o 404 genérico do site", () => {
     /*
      * Dava "A página que procura não existe ou foi movida" — a quem tem o
@@ -97,7 +97,7 @@ describe("o link do pedido que já não abre", () => {
     );
   });
 
-  it("continua a distinguir o link expirado, que já provou ser válido", () => {
-    expect(PEDIDO).toContain("Este link expirou");
+  it("continua a distinguir a ligação expirada, que já provou ser válido", () => {
+    expect(PEDIDO).toContain("Esta ligação expirou");
   });
 });

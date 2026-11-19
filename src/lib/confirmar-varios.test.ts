@@ -31,10 +31,10 @@ describe("quem entra", () => {
     expect(ROTA_DE_CONFIRMAR).toBe("/api/admin/negociacoes/agir");
   });
 
-  it("o cliente com email confirma pelo link — fica de fora, com o porquê", () => {
+  it("o cliente com email confirma pela ligação — fica de fora, com o porquê", () => {
     const plano = planoDeConfirmacao([p(407, { podeConfirmar: false })], { paraQue: "sem_factura", como: "numerario" });
     expect(plano.aConfirmar).toEqual([]);
-    expect(plano.deFora).toEqual([{ pedidoId: 407, porque: "o cliente tem email e confirma pelo link" }]);
+    expect(plano.deFora).toEqual([{ pedidoId: 407, porque: "o cliente tem email e confirma pela ligação" }]);
   });
 
   it("um marcado sem trabalho feito por confirmar não é tocado", () => {

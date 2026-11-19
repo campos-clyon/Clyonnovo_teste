@@ -30,7 +30,7 @@ export const ASSUNTO_DO_CONVITE = "Tem Android? Ajude-nos a lançar a app CLYON 
 export const REMETENTE_DA_APP_DE_CLIENTE = "CLYON <geral@clyon.pt>";
 
 /** O pré-cabeçalho (o resumo que a caixa de entrada mostra a seguir ao assunto). */
-export const PRE_CABECALHO_DO_CONVITE = "São 2 toques: o link e a instalação. Precisamos de 12 clientes.";
+export const PRE_CABECALHO_DO_CONVITE = "São 2 toques: a ligação e a instalação. Precisamos de 12 clientes.";
 
 /**
  * Entre um envio e o seguinte. O Resend aceita poucos pedidos por segundo por

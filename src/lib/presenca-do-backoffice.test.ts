@@ -340,7 +340,7 @@ describe("só o administrador lê as horas", () => {
   });
 
   it("a assistente é informada na conta dela", () => {
-    expect(FRASE_DA_TRANSPARENCIA).toBe("O backoffice regista os períodos em que está activa, só como informação interna.");
+    expect(FRASE_DA_TRANSPARENCIA).toBe("O backoffice regista os períodos em que está ativa, só como informação interna.");
     const painel = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(painel).toMatch(/papel === "assistente" && \(\s*<p[^>]*>\{FRASE_DA_TRANSPARENCIA\}<\/p>/);
   });
@@ -402,7 +402,7 @@ describe("a assistente só mexe na agenda dela", () => {
     expect(leitura?.params).toEqual([7]);
   }, PRAZO);
 
-  it("a rota tira a conta do token em todas as acções, e não é para o administrador", () => {
+  it("a rota tira a conta do token em todas as ações, e não é para o administrador", () => {
     const rota = semComentarios(ler("src/app/api/admin/sessao/agenda/route.ts"));
     for (const chamada of ["agendaDe(colab.id)", "apagarMarcacao(colab.id, id)", "criarMarcacao(colab.id,", "alterarMarcacao(colab.id, id,"]) {
       expect(rota, chamada).toContain(chamada);

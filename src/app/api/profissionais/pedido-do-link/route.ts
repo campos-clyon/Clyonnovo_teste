@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
   const token = typeof corpo.token === "string" ? corpo.token.trim() : "";
   if (!/^[\w-]{10,200}$/.test(token)) {
-    return NextResponse.json({ error: "Link inválido." }, { status: 404 });
+    return NextResponse.json({ error: "Ligação inválida." }, { status: 404 });
   }
 
   try {
@@ -45,11 +45,11 @@ export async function POST(req: NextRequest) {
       negociacao?.acessoTokenExpiraEm ?? null,
     );
     if (!negociacao || (!acesso.valido && acesso.motivo !== "expirado")) {
-      return NextResponse.json({ error: "Link inválido." }, { status: 404 });
+      return NextResponse.json({ error: "Ligação inválida." }, { status: 404 });
     }
     if (!acesso.valido) {
       return NextResponse.json(
-        { error: "Este link expirou. Os pedidos não ficam abertos para sempre." },
+        { error: "Esta ligação expirou. Os pedidos não ficam abertos para sempre." },
         { status: 410 },
       );
     }

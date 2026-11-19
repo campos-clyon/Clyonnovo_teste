@@ -80,7 +80,7 @@ export default function EntrarPorLink() {
           href="/entrar"
           className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-[#00B4CC] text-sm font-bold text-white transition hover:bg-acao-hover"
         >
-          Pedir um link novo
+          Pedir uma ligação nova
         </Link>
       </div>
     );

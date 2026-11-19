@@ -432,7 +432,7 @@ async function escrever(sql: string, valores: Array<string | number | null>, rep
   if (!pool) throw new Error("DB not available");
   try {
     const [r] = (await pool.execute(sql, valores)) as [{ insertId?: number; affectedRows?: number }, unknown];
-    if (Number(r.affectedRows ?? 0) === 0) return { ok: false, erro: "Já não existe — actualize a página." };
+    if (Number(r.affectedRows ?? 0) === 0) return { ok: false, erro: "Já não existe — atualize a página." };
     return { ok: true, id: r.insertId ? Number(r.insertId) : undefined };
   } catch (e) {
     if ((e as { code?: string })?.code === CHAVE_REPETIDA) return { ok: false, erro: repetido };
@@ -468,7 +468,7 @@ export async function apagarConta(id: number): Promise<Resultado> {
     Array<{ papel: string | null }>,
     unknown,
   ];
-  if (!c[0]) return { ok: false, erro: "Já não existe — actualize a página." };
+  if (!c[0]) return { ok: false, erro: "Já não existe — atualize a página." };
   if (c[0].papel) return { ok: false, erro: "É a conta onde entra o dinheiro da plataforma: muda-se o nome, não se apaga." };
   const [n] = (await pool.execute(
     "SELECT COUNT(*) AS n FROM financasMovimentos WHERE contaId = ? OR contaDestinoId = ?",
@@ -506,7 +506,7 @@ export async function apagarCategoria(id: number): Promise<Resultado> {
     Array<{ sistema: string | null }>,
     unknown,
   ];
-  if (!c[0]) return { ok: false, erro: "Já não existe — actualize a página." };
+  if (!c[0]) return { ok: false, erro: "Já não existe — atualize a página." };
   if (c[0].sistema) return { ok: false, erro: "É uma categoria do dinheiro da plataforma: não se apaga." };
   const [n] = (await pool.execute("SELECT COUNT(*) AS n FROM financasMovimentos WHERE categoriaId = ?", [id])) as [
     Array<{ n: number }>,

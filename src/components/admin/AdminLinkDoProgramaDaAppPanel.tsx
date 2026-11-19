@@ -80,15 +80,15 @@ export default function AdminLinkDoProgramaDaAppPanel() {
 
   return (
     <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Link do programa da app</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ligação do programa da app</p>
       <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
-        O link de adesão ao teste fechado da app de cliente na Google Play (Play Console → Testes → Teste fechado →
-        Testadores → «Copiar link»). Vai no email do convite do programa de acesso antecipado (Contas → «Programa da
-        app»). Sem link, o convite não sai.
+        A ligação de adesão ao teste fechado da app de cliente na Google Play (Play Console → Testes → Teste fechado →
+        Testadores → «Copiar ligação»). Vai no email do convite do programa de acesso antecipado (Contas → «Programa da
+        app»). Sem ligação, o convite não sai.
       </p>
       {lido && !guardado && (
         <p className="mb-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-          Ainda não há link guardado.
+          Ainda não há ligação guardada.
         </p>
       )}
       <input
@@ -100,7 +100,7 @@ export default function AdminLinkDoProgramaDaAppPanel() {
         spellCheck={false}
         className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 focus:border-cyan-500 focus:outline-none disabled:opacity-50"
       />
-      {mal && <p className="mt-1 text-xs text-rose-300">Tem de ser um link https da Google Play.</p>}
+      {mal && <p className="mt-1 text-xs text-rose-300">Tem de ser uma ligação https da Google Play.</p>}
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <button
           type="button"

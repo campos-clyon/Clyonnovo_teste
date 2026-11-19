@@ -918,7 +918,7 @@ const BLOCOS: Array<{
     chave: "aguardaCliente",
     titulo: "A aguardar cliente",
     dica:
-      "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu o link, ou a CLYON já lhe enviou o orçamento. Se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
+      "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu a ligação, ou a CLYON já lhe enviou o orçamento. Se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
     Icone: UserRound,
     cor: "text-laranja-texto border-laranja",
     corDoNumero: "text-laranja-texto",
@@ -1523,9 +1523,9 @@ export default function AdminNegociacoesPanel({
   const quandoFoiLido = (() => {
     if (!lidoEm) return "";
     const seg = Math.round((agoraParaOReloginho - lidoEm) / 1000);
-    if (seg < 45) return "actualizado agora";
+    if (seg < 45) return "atualizado agora";
     const min = Math.round(seg / 60);
-    return `actualizado há ${min} min`;
+    return `atualizado há ${min} min`;
   })();
 
   useEffect(() => {
@@ -1643,14 +1643,14 @@ export default function AdminNegociacoesPanel({
     const chave = `c${p.id}`;
     if (
       !window.confirm(
-        `Gerar o link do pedido #${p.id} para mandar ao cliente?
+        `Gerar a ligação do pedido #${p.id} para mandar ao cliente?
 
 ` +
-          `Se já lhe mandou um link antes, esse deixa de funcionar — o novo passa ` +
+          `Se já lhe mandou uma ligação antes, essa deixa de funcionar — a nova passa ` +
           `a ser o único que abre este pedido.
 
 ` +
-          `O email não é enviado: o link fica aqui para copiar.`,
+          `O email não é enviado: a ligação fica aqui para copiar.`,
       )
     )
       return;
@@ -1989,7 +1989,7 @@ export default function AdminNegociacoesPanel({
           .map(([m, n]) => `${m.replace(/_/g, " ")}: ${n}`)
           .join(", ");
         setErro(
-          `Promovido, mas não chegou a nenhum de ${dados.candidatos} profissionais activos.` +
+          `Promovido, mas não chegou a nenhum de ${dados.candidatos} profissionais ativos.` +
             (motivos ? ` Motivos — ${motivos}.` : ""),
         );
       } else if (dados.avisados < dados.receberam) {
@@ -2236,7 +2236,7 @@ export default function AdminNegociacoesPanel({
           jaTinham > 0
             ? `Nenhum profissional NOVO para avisar — ${jaTinham} já tinha(m) este pedido e não ` +
               `foi(ram) tocado(s).` + (motivos ? ` Dos restantes: ${motivos}.` : "")
-            : `Continua sem chegar a ninguém de ${dados.candidatos} profissionais activos.` +
+            : `Continua sem chegar a ninguém de ${dados.candidatos} profissionais ativos.` +
               (motivos ? ` Motivos — ${motivos}.` : ""),
         );
       } else if (dados.avisados < dados.receberam) {
@@ -2554,7 +2554,7 @@ export default function AdminNegociacoesPanel({
     bloco(
       "aguardaCliente",
       "A aguardar cliente",
-      "a bola está com o cliente — ele responde pelo link",
+      "a bola está com o cliente — ele responde pela ligação",
       "text-laranja-texto",
       aguardaCliente,
     );
@@ -3632,7 +3632,7 @@ export default function AdminNegociacoesPanel({
           <button
             onClick={() => linkParaOCliente(p)}
             disabled={ocupado === `c${p.id}`}
-            title="Gera o link do pedido para lhe mandar por WhatsApp ou SMS. O anterior deixa de funcionar."
+            title="Gera a ligação do pedido para lhe mandar por WhatsApp ou SMS. O anterior deixa de funcionar."
             className="flex items-center gap-1.5 rounded-lg border border-cyan-700/60 bg-cyan-500/10 px-2.5 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
           >
             {ocupado === `c${p.id}` ? (
@@ -3642,7 +3642,7 @@ export default function AdminNegociacoesPanel({
             ) : (
               <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {copiado === `c${p.id}` ? "Copiado" : "Link para o cliente"}
+            {copiado === `c${p.id}` ? "Copiada" : "Ligação para o cliente"}
           </button>
           {/*
             VER SEM GASTAR O LINK DO CLIENTE.
@@ -3661,7 +3661,7 @@ export default function AdminNegociacoesPanel({
             href={`/admin/pedido/${p.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            title="Abre o pedido como o cliente o vê. Não gera link nenhum e não altera nada."
+            title="Abre o pedido como o cliente o vê. Não gera ligação nenhuma e não altera nada."
             className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800/60"
           >
             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
@@ -3825,11 +3825,11 @@ export default function AdminNegociacoesPanel({
           String(p.linkExpiraEm) !== versaoDoLink[chaveCliente] && (
             <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5">
               <p className="text-xs font-semibold text-amber-200">
-                Este link já não serve — foi substituído entretanto.
+                Esta ligação já não serve — foi substituída entretanto.
               </p>
               <p className="mt-0.5 text-xs text-amber-300/80">
-                Um profissional respondeu e o aviso ao cliente gerou um link novo, que matou
-                este. Carregue em &ldquo;Link para o cliente&rdquo; e mande o novo.
+                Um profissional respondeu e o aviso ao cliente gerou uma ligação nova, que matou
+                este. Carregue em &ldquo;Ligação para o cliente&rdquo; e mande a nova.
               </p>
             </div>
           )}
@@ -3862,7 +3862,7 @@ export default function AdminNegociacoesPanel({
             aviso={
               p.contactEmail?.trim()
                 ? "O email não saiu. Use este link."
-                : "Este cliente não tem email — mande-lhe o link por WhatsApp ou SMS. Abre o pedido dele sem palavra-passe."
+                : "Este cliente não tem email — mande-lhe a ligação por WhatsApp ou SMS. Abre o pedido dele sem palavra-passe."
             }
           />
         )}
@@ -4095,7 +4095,7 @@ export default function AdminNegociacoesPanel({
                     <button
                       onClick={() => redistribuir(p.id, false, n.id)}
                       disabled={ocupado === `r${p.id}`}
-                      title={`Põe o pedido outra vez na fila de ${n.profissionalNome}, com um link novo.`}
+                      title={`Põe o pedido outra vez na fila de ${n.profissionalNome}, com uma ligação nova.`}
                       className="flex items-center gap-1.5 rounded-lg border border-cyan-700/60 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
                     >
                       {ocupado === `r${p.id}` ? (
@@ -4286,7 +4286,7 @@ export default function AdminNegociacoesPanel({
 
 ` +
           `Só entram os que ainda não o têm — quem já o recebeu não é avisado ` +
-          `outra vez e mantém o link que tem.`,
+          `outra vez e mantém a ligação que tem.`,
       )
     )
       return;
@@ -4577,7 +4577,7 @@ export default function AdminNegociacoesPanel({
             ? `\n\nE ${clyonFeitosMarcados.length} de valor fixo (${clyonFeitosMarcados.map((t) => `#${t.pedidoId}`).join(", ")}), sem pagamento a declarar.`
             : "") +
           (plano.deFora.length + plano.semNada > 0
-            ? `\n\n${plano.deFora.length + plano.semNada} dos marcados ficam de fora (sem trabalho por confirmar, ou o cliente confirma pelo link).`
+            ? `\n\n${plano.deFora.length + plano.semNada} dos marcados ficam de fora (sem trabalho por confirmar, ou o cliente confirma pela ligação).`
             : ""),
       )
     )
@@ -5046,7 +5046,7 @@ export default function AdminNegociacoesPanel({
               aria-expanded={aConfirmarVarios}
               title={
                 !marcadosAConfirmar().some((p) => p.negociacao && p.podeConfirmar) && clyonFeitosMarcados.length === 0
-                  ? "Nenhum dos marcados tem trabalho feito que a CLYON possa confirmar (os clientes com email confirmam pelo link)."
+                  ? "Nenhum dos marcados tem trabalho feito que a CLYON possa confirmar (os clientes com email confirmam pela ligação)."
                   : "Dá os trabalhos feitos por confirmados; nas negociações, todos com a mesma resposta sobre o pagamento."
               }
               className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-40"
@@ -6381,7 +6381,7 @@ function EscolherProfissionais({
         <div className="mt-2 max-h-72 space-y-1 overflow-auto pr-1">
           {visiveis.length === 0 && (
             <p className="text-xs text-slate-500">
-              {q ? "Ninguém com esse nome." : "Não há profissionais activos."}
+              {q ? "Ninguém com esse nome." : "Não há profissionais ativos."}
             </p>
           )}
           {visiveis.map((p) => (
@@ -6509,7 +6509,7 @@ function OferecerComoTrabalhoClyon({
           </p>
           <p className="mt-1 text-xs text-slate-400">
             Os profissionais só aceitam ou recusam, e a CLYON escolhe quem o faz. O cliente não
-            recebe o link do pedido: fala com a CLYON.
+            recebe a ligação do pedido: fala com a CLYON.
             {deNegociacao && " As negociações abertas acabam, e quem as tinha recebe a oferta."}
           </p>
           {valorSugerido != null && (

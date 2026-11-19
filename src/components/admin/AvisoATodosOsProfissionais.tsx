@@ -183,7 +183,7 @@ export default function AvisoATodosOsProfissionais() {
       <div className={caixa}>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Quem recebe</p>
         <p className="mt-1 text-sm text-slate-300">
-          Profissionais aprovados e activos, sem contas de teste nem a conta da casa. Cada um recebe este aviso uma só
+          Profissionais aprovados e ativos, sem contas de teste nem a conta da casa. Cada um recebe este aviso uma só
           vez em cada canal.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

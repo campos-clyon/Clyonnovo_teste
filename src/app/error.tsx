@@ -100,7 +100,7 @@ export default function Erro({
   if (aRecarregar) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center px-4">
-        <p className="text-sm text-slate-500">A actualizar a página…</p>
+        <p className="text-sm text-slate-500">A atualizar a página…</p>
       </main>
     );
   }

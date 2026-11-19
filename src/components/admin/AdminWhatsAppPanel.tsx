@@ -835,7 +835,7 @@ export default function AdminWhatsAppPanel() {
       setAvisoRecebido(
         naFila > 0
           ? "Registada. O assistente respondeu — está na fila em baixo, para enviar."
-          : "Registada. O assistente não tinha nada a dizer a este número (sem pedido activo, entregue a si ou bloqueado) — responda à mão se for preciso.",
+          : "Registada. O assistente não tinha nada a dizer a este número (sem pedido ativo, entregue a si ou bloqueado) — responda à mão se for preciso.",
       );
       setTextoRecebido("");
       if (conversaAberta === numeroRecebido) await abrirConversa(conversaAberta);
@@ -1297,7 +1297,7 @@ export default function AdminWhatsAppPanel() {
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800"
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-              Actualizar
+              Atualizar
             </button>
           </div>
         </div>
@@ -1317,7 +1317,7 @@ export default function AdminWhatsAppPanel() {
         {estado.mesaFalhou && (
           <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
             A lista das conversas não carregou ({estado.mesaFalhou}). Não quer dizer que esteja tudo respondido —
-            carregue em «Actualizar».
+            carregue em «Atualizar».
           </p>
         )}
 

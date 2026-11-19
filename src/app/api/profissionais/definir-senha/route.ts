@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (typeof corpo.token !== "string") {
-    return NextResponse.json({ error: "Link inválido." }, { status: 400 });
+    return NextResponse.json({ error: "Ligação inválida." }, { status: 400 });
   }
 
   const erro = validarPalavraPasse(corpo.palavraPasse);
@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
       {
         error:
           r.valido === false && r.motivo === "expirado"
-            ? "Este link expirou. Peça outro na página de entrada."
-            : "Link inválido.",
+            ? "Esta ligação expirou. Peça outro na página de entrada."
+            : "Ligação inválida.",
       },
       { status: 403 },
     );
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
    */
   if (linha.estado !== "aprovado" && linha.estado !== "pendente") {
     return NextResponse.json(
-      { error: "Esta conta não está activa. Fale connosco." },
+      { error: "Esta conta não está ativa. Fale connosco." },
       { status: 403 },
     );
   }

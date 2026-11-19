@@ -151,7 +151,7 @@ export default function AdminProfissionaisSeccao() {
               ) : (
                 <Link2 className="h-4 w-4" aria-hidden="true" />
               )}
-              {copiado ? "Link copiado" : "Copiar link de entrada"}
+              {copiado ? "Ligação copiada" : "Copiar ligação de entrada"}
             </button>
           )}
           <button

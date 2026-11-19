@@ -3744,7 +3744,7 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
                   pela plataforma. O que está fechado é só a caixa do cliente.
                 */}
                 <span>
-                  O cliente não paga sozinho pelo link: em produção, isso só abre com
+                  O cliente não paga sozinho pela ligação: em produção, isso só abre com
                   O_CLIENTE_PAGA_SOZINHO ligado. As referências geram-se aqui, pedido a pedido.
                 </span>
               </p>

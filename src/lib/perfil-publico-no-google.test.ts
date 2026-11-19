@@ -175,12 +175,12 @@ describe("o sinal de quem está por perto", () => {
     expect(PAGINA_NUA).toContain("<Presenca dias={p.diasDesdeOUltimoAcesso} />");
   });
 
-  it("vai em dias, e nunca a data exacta da última visita", () => {
+  it("vai em dias, e nunca a data exata da última visita", () => {
     // A data exacta em que alguém abriu o painel é informação sobre a vida
     // dele. O que o cliente precisa de saber é só se está por perto.
     expect(LIB).toContain("86_400_000");
-    expect(PAGINA_NUA).toContain('"Activo hoje"');
-    expect(PAGINA_NUA).toContain('"Activo esta semana"');
+    expect(PAGINA_NUA).toContain('"Ativo hoje"');
+    expect(PAGINA_NUA).toContain('"Ativo esta semana"');
   });
 
   it("quem desapareceu há mais de um mês não mostra nada", () => {

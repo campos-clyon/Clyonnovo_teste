@@ -20,7 +20,7 @@ describe("S14", () => {
     });
     expect(c.map((x) => `${x.rotulo}: ${x.valor}`)).toEqual([
       "Origem: App de cliente",
-      "Quantidade exacta: 12",
+      "Quantidade exata: 12",
       "Sacos já cheios: 8",
       "Sacos por encher: 4",
       "Desmontagem: Sim, é preciso desmontar",

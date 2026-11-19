@@ -85,7 +85,7 @@ export function lerContasDeDestino(entrada: unknown): ContasLidas {
       return { ok: false, erro: "O nome não leva o IBAN nem o número da conta — só os últimos 4 dígitos, no campo deles." };
     }
     const u = String(o.ultimos4 ?? "").replace(/\s/g, "");
-    if (u && !/^\d{4}$/.test(u)) return { ok: false, erro: "Os últimos dígitos são exactamente 4 algarismos (ou nada)." };
+    if (u && !/^\d{4}$/.test(u)) return { ok: false, erro: "Os últimos dígitos são exatamente 4 algarismos (ou nada)." };
     let id = typeof o.id === "string" && /^[a-z0-9-]{1,30}$/.test(o.id) ? o.id : idDoNome(nome);
     let n = 2;
     const raiz = id;

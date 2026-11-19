@@ -193,10 +193,10 @@ export function paragrafosDoConviteDoPrograma(p: { email: string }) {
     abertura:
       "O seu acesso antecipado à app da CLYON para Android está pronto. Na app pede, acompanha e paga os seus pedidos no telemóvel, e fala com o parceiro.",
     passos: "São dois passos:",
-    passo1: `1. No telemóvel Android, abra o link de adesão com a conta Google ${p.email} e carregue em «Tornar-me testador».`,
+    passo1: `1. No telemóvel Android, abra a ligação de adesão com a conta Google ${p.email} e carregue em «Tornar-me testador».`,
     passo2: "2. Instale a app CLYON pela Play Store.",
     saida:
-      "Pode sair do programa quando quiser: na página do link de adesão ou na sua conta CLYON, em Segurança.",
+      "Pode sair do programa quando quiser: na página da ligação de adesão ou na sua conta CLYON, em Segurança.",
     assinatura: "Equipa CLYON",
   };
 }
@@ -251,7 +251,7 @@ export function htmlDoConviteDoPrograma(p: { email: string; linkDeAdesao: string
           ${par(escaparHtml(t.abertura))}
           ${par(`<strong style="color:#0B1929;">${escaparHtml(t.passos)}</strong>`)}
           ${par(escaparHtml(t.passo1))}
-          ${botao(adesao, "Abrir o link de adesão", true)}
+          ${botao(adesao, "Abrir a ligação de adesão", true)}
           ${par(escaparHtml(t.passo2))}
           ${botao(loja, "Abrir na Play Store", false)}
           <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#94a3b8;">${escaparHtml(t.saida)}</p>

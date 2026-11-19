@@ -33,8 +33,8 @@ export type PorOnde = "app" | "conta" | "link" | "convidado";
 const POR_ONDE_NO_HISTORICO: Record<PorOnde, string> = {
   app: "pela app",
   conta: "pela conta do site",
-  link: "pelo link, no site",
-  convidado: "pelo link, na app",
+  link: "pela ligação, no site",
+  convidado: "pela ligação, na app",
 };
 
 type Pedido = NonNullable<Awaited<ReturnType<typeof getSimulatorOrderById>>>;

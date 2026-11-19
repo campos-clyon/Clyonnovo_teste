@@ -60,7 +60,7 @@ export default function ReporPalavraPasse() {
           setEstado("erro");
         }
       } catch {
-        setErroDoLink("Sem ligação. Verifique a internet e abra o link outra vez.");
+        setErroDoLink("Sem ligação. Verifique a internet e abra a ligação outra vez.");
         setEstado("erro");
       }
     })();
@@ -110,7 +110,7 @@ export default function ReporPalavraPasse() {
     return (
       <div className={`${cartao} text-center`}>
         <Loader2 className="mx-auto h-9 w-9 animate-spin text-[#00B4CC]" aria-hidden="true" />
-        <p className="mt-3 text-sm font-semibold text-tinta">A abrir o link…</p>
+        <p className="mt-3 text-sm font-semibold text-tinta">A abrir a ligação…</p>
       </div>
     );
   }
@@ -119,7 +119,7 @@ export default function ReporPalavraPasse() {
     return (
       <div className={`${cartao} text-center`}>
         <ShieldAlert className="mx-auto h-9 w-9 text-tinta-fraca" aria-hidden="true" />
-        <h1 className="mt-3 text-lg font-bold text-tinta">Este link já não serve</h1>
+        <h1 className="mt-3 text-lg font-bold text-tinta">Esta ligação já não serve</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{erroDoLink}</p>
         <Link
           href="/entrar"

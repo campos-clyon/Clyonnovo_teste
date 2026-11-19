@@ -45,7 +45,7 @@ const TEXTOS: TextosDaAdesao = {
     {
       titulo: "Toque em «Tornar-me testador»",
       frases: [
-        "Abra o link no telemóvel, com esse Gmail, e toque em «Tornar-me testador».",
+        "Abra a ligação no telemóvel, com esse Gmail, e toque em «Tornar-me testador».",
         "Se a página disser que não tem acesso, o Gmail ainda não está na lista: entre com a sua conta, deixe-nos o Gmail e avisamos quando estiver.",
       ],
     },
@@ -68,7 +68,7 @@ const TEXTOS: TextosDaAdesao = {
     guardado: "Gmail guardado. Vamos pô-lo na lista do teste.",
   },
   teste: {
-    botao: "Abrir o link do teste",
+    botao: "Abrir a ligação do teste",
     espera: {
       titulo: "O seu Gmail está a caminho da lista",
       frases: [
@@ -78,7 +78,7 @@ const TEXTOS: TextosDaAdesao = {
     },
     pode: {
       titulo: "Toque em «Tornar-me testador»",
-      frases: ["O seu Gmail já está na lista. Abra o link no telemóvel, com esse Gmail, e toque em «Tornar-me testador»."],
+      frases: ["O seu Gmail já está na lista. Abra a ligação no telemóvel, com esse Gmail, e toque em «Tornar-me testador»."],
     },
   },
   loja: {

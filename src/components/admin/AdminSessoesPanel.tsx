@@ -160,7 +160,7 @@ export default function AdminSessoesPanel() {
                           {n.esteNavegador && <span className="ml-2 text-xs text-cyan-200">(este navegador)</span>}
                         </p>
                         <p className="text-xs text-slate-400">
-                          Entrou {diaMesEHoraEmLisboa(new Date(n.inicioEm))} · última actividade{" "}
+                          Entrou {diaMesEHoraEmLisboa(new Date(n.inicioEm))} · última atividade{" "}
                           {diaMesEHoraEmLisboa(new Date(n.ultimaEm))} ·{" "}
                           <span className={n.activaAgora ? "text-emerald-300" : ""}>
                             {haQuantoTempo(n.minutosDesde, n.activaAgora)}

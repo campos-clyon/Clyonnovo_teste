@@ -85,10 +85,10 @@ export default async function PaginaDoPedido({
       <main className="mx-auto flex min-h-[60vh] max-w-md items-center px-4">
         <div className="w-full rounded-2xl border border-[#E2EEF3] bg-white p-6 text-center">
           <FileText className="mx-auto h-8 w-8 text-tinta-fraca" aria-hidden="true" />
-          <h1 className="mt-3 text-lg font-bold text-tinta">Este link já não abre nenhum pedido</h1>
+          <h1 className="mt-3 text-lg font-bold text-tinta">Esta ligação já não abre nenhum pedido</h1>
           <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">
             Os pedidos são apagados 60 dias depois de criados, e este pode ter
-            passado esse prazo ou ter sido removido a pedido. O link também pode
+            passado esse prazo ou ter sido removido a pedido. A ligação também pode
             ter vindo partido do email.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-tinta-fraca">
@@ -99,7 +99,7 @@ export default async function PaginaDoPedido({
           <div className="mt-5 flex flex-col gap-2.5">
             <a
               href={`https://wa.me/${numeroWhatsapp}?text=${encodeURIComponent(
-                "Olá! O link do meu pedido já não abre. Podem verificar?",
+                "Olá! A ligação do meu pedido já não abre. Podem verificar?",
               )}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -130,16 +130,16 @@ export default async function PaginaDoPedido({
       <main className="mx-auto flex min-h-[60vh] max-w-md items-center px-4">
         <div className="w-full rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
           <Clock className="mx-auto h-8 w-8 text-amber-600" aria-hidden="true" />
-          <h1 className="mt-3 text-lg font-bold text-amber-900">Este link expirou</h1>
+          <h1 className="mt-3 text-lg font-bold text-amber-900">Esta ligação expirou</h1>
           <p className="mt-2 text-sm leading-relaxed text-amber-800">
-            Os links de acesso duram 30 dias, por segurança. Fale connosco e enviamos
+            As ligações de acesso duram 30 dias, por segurança. Fale connosco e enviamos
             um novo para o mesmo email.
           </p>
           <Link
             href="/contactos"
             className="mt-4 inline-flex rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white"
           >
-            Pedir novo link
+            Pedir nova ligação
           </Link>
         </div>
       </main>

@@ -87,7 +87,7 @@ export default function EntrarForm() {
         setErro(dados.error ?? "Não foi possível pedir o link.");
         return;
       }
-      setPedido(dados.mensagem ?? "Se este email tiver conta, o link chega dentro de instantes.");
+      setPedido(dados.mensagem ?? "Se este email tiver conta, a ligação chega dentro de instantes.");
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -112,7 +112,7 @@ export default function EntrarForm() {
             </span>
             <h1 className="mt-4 text-2xl font-bold text-[#0B1929]">Repor a palavra-passe</h1>
             <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">
-              Escreva o email com que se inscreveu. Mandamos-lhe um link para escolher uma
+              Escreva o email com que se inscreveu. Mandamos-lhe uma ligação para escolher uma
               palavra-passe nova.
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function EntrarForm() {
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-acao py-3.5 text-base font-bold text-white transition hover:bg-acao-hover disabled:opacity-40"
               >
                 {aPedir && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                Enviar link
+                Enviar ligação
               </button>
             </form>
           )}
@@ -275,13 +275,13 @@ export default function EntrarForm() {
               {erro}
               {semPalavraPasse && (
                 <p className="mt-2 text-xs text-red-700">
-                  Ainda não criou palavra-passe, ou esqueceu-se dela? O email de aprovação tem o link para a criar. Se já não o tiver,{" "}
+                  Ainda não criou palavra-passe, ou esqueceu-se dela? O email de aprovação tem a ligação para a criar. Se já não o tiver,{" "}
                   <button
                     type="button"
                     onClick={() => irPara("repor")}
                     className="font-semibold underline"
                   >
-                    peça um link novo
+                    peça uma ligação nova
                   </button>
                   .
                 </p>

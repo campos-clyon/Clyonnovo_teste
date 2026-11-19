@@ -199,7 +199,7 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
 
   const convidar = async () => {
     if (!temLink) {
-      setErro("Falta o link de adesão da Play. Escreva-o em Configs → «Link do programa da app» e volte aqui.");
+      setErro("Falta a ligação de adesão da Play. Escreva-a em Configs → «Ligação do programa da app» e volte aqui.");
       return;
     }
     const sel = escolhidos.filter((l) => podeReceberOConvite(l.estado)).map((l) => l.id);
@@ -322,7 +322,7 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
 
       {temLink === false && (
         <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Ainda não há link de adesão: o convite não sai sem ele. Escreva-o em Configs → «Link do programa da app».
+          Ainda não há ligação de adesão: o convite não sai sem ela. Escreva-a em Configs → «Ligação do programa da app».
         </p>
       )}
 
@@ -416,7 +416,7 @@ export default function ProgramaDaAppPanel({ authToken }: { authToken: string })
           type="button"
           onClick={() => void convidar()}
           disabled={ocupado !== null || contagem.adicionado === 0}
-          title={temLink === false ? "Falta o link de adesão nas Configs" : undefined}
+          title={temLink === false ? "Falta a ligação de adesão nas Configs" : undefined}
           className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
         >
           {ocupado === "convidar" ? (

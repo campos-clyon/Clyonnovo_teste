@@ -34,12 +34,12 @@ export async function enviarEmailDeEntrada(params: {
   const app = params.paraApp === true;
   const titulo = app ? "Entrar na app CLYON" : "Entrar na sua conta";
   const corpo = app
-    ? `Abra este email no telemóvel onde pediu a entrada e toque no botão. O link dura ${MINUTOS_DE_VALIDADE} minutos e serve uma vez.`
-    : `Carregue no botão para entrar. O link dura ${MINUTOS_DE_VALIDADE} minutos e serve uma vez só.`;
+    ? `Abra este email no telemóvel onde pediu a entrada e toque no botão. A ligação dura ${MINUTOS_DE_VALIDADE} minutos e serve uma vez.`
+    : `Carregue no botão para entrar. A ligação dura ${MINUTOS_DE_VALIDADE} minutos e serve uma vez só.`;
   const botao = app ? "Entrar na app CLYON" : "Entrar na CLYON";
   const rodape = app
-    ? "Não partilhe este email. O link só serve no telemóvel onde foi pedido."
-    : "Não partilhe este email. Quem tiver este link entra na conta.";
+    ? "Não partilhe este email. A ligação só serve no telemóvel onde foi pedido."
+    : "Não partilhe este email. Quem tiver esta ligação entra na conta.";
 
   const html = `<!DOCTYPE html>
 <html lang="pt-PT">

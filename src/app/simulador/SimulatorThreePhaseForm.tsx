@@ -920,7 +920,7 @@ export default function SimulatorThreePhaseForm() {
               {!emailParaMaisTarde && <GuardarOLink url={linkDoPedido} />}
               {emailParaMaisTarde && !session?.user && !contaGuardada && (
                 <p className="text-center text-[13px] leading-relaxed text-tinta-fraca">
-                  Quando chegar a 1.ª proposta, enviamos-lhe um link novo por email.
+                  Quando chegar a 1.ª proposta, enviamos-lhe uma ligação nova por email.
                 </p>
               )}
             </div>
@@ -940,7 +940,7 @@ export default function SimulatorThreePhaseForm() {
                 <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-[13px] leading-relaxed text-emerald-900">
                   Os seus dados ficaram guardados numa conta CLYON com{" "}
                   <span className="font-semibold">{contaGuardada}</span>. Para entrar, use o botão em baixo: com o
-                  Google, ou com um link que lhe mandamos para este email.
+                  Google, ou com uma ligação que lhe mandamos para este email.
                 </p>
               )}
               <p className="text-sm font-semibold text-tinta">Acompanhe as propostas num só sítio</p>
@@ -977,12 +977,12 @@ export default function SimulatorThreePhaseForm() {
               {emailDoLink ? (
                 <>
                   Sem conta também funciona: vai a caminho um email para{" "}
-                  <span className="font-semibold text-tinta">{emailDoLink}</span> com o link deste
+                  <span className="font-semibold text-tinta">{emailDoLink}</span> com a ligação deste
                   pedido.
                 </>
               ) : emailParaMaisTarde ? (
                 <>
-                  O link deste pedido segue por email para{" "}
+                  A ligação deste pedido segue por email para{" "}
                   <span className="font-semibold text-tinta">{emailParaMaisTarde}</span> quando o
                   pedido for enviado aos parceiros.
                 </>
@@ -2432,7 +2432,7 @@ function Phase3Contact({
           <span className="text-lg">✓</span>
           <div>
             <p className="text-sm text-emerald-900">
-              <strong>Sessão activa</strong> — poderá acompanhar este pedido em{" "}
+              <strong>Sessão ativa</strong> — poderá acompanhar este pedido em{" "}
               <a href="/conta" className="font-semibold text-acao hover:text-acao-hover underline">
                 clyon.pt/conta
               </a>{" "}
@@ -2621,7 +2621,7 @@ function Phase3Contact({
         <p className="text-sm text-blue-900">
           <strong>Depois de enviar:</strong> a CLYON confere o pedido e envia-o aos parceiros
           da sua zona. As propostas chegam em menos de {PRAZO_DE_RESPOSTA.porExtenso} — por email, com
-          o link do pedido, ou, se não deixar email, por WhatsApp ou telefone, no número que
+          a ligação do pedido, ou, se não deixar email, por WhatsApp ou telefone, no número que
           indicou.
         </p>
       </div>
@@ -2659,11 +2659,11 @@ function GuardarOLink({ url }: { url: string }) {
   return (
     <div>
       <button type="button" onClick={guardar} className="site-btn-secondary flex w-full items-center justify-center py-3 text-sm">
-        {podePartilhar ? "Guardar o link" : "Copiar o link"}
+        {podePartilhar ? "Guardar a ligação" : "Copiar a ligação"}
       </button>
-      {copiado === "sim" && <p className="mt-1.5 text-center text-[13px] text-tinta-fraca">Link copiado. Guarde-o nas suas notas.</p>}
+      {copiado === "sim" && <p className="mt-1.5 text-center text-[13px] text-tinta-fraca">Ligação copiada. Guarde-a nas suas notas.</p>}
       {copiado === "falhou" && (
-        <p className="mt-1.5 break-all text-center text-[13px] text-tinta-fraca">Não deu para copiar. O link é: {url}</p>
+        <p className="mt-1.5 break-all text-center text-[13px] text-tinta-fraca">Não deu para copiar. A ligação é: {url}</p>
       )}
     </div>
   );

@@ -633,7 +633,7 @@ export async function PATCH(req: NextRequest) {
         if (ha != null && ha < MINUTOS_PARA_REENVIAR_A_PROPOSTA) {
           return NextResponse.json(
             {
-              error: `A proposta já foi ao cliente há ${ha} min (pelo link ou pela CLYON). Mandar outra vez?`,
+              error: `A proposta já foi ao cliente há ${ha} min (pela ligação ou pela CLYON). Mandar outra vez?`,
               jaEnviada: true,
               haMinutos: ha,
             },
@@ -754,7 +754,7 @@ export async function PATCH(req: NextRequest) {
         substituirTokenDoPedido,
         site: urlDeAccaoDoPedido(req.headers),
       });
-      if (!link) return NextResponse.json({ error: "Não foi possível gerar o link do pedido." }, { status: 500 });
+      if (!link) return NextResponse.json({ error: "Não foi possível gerar a ligação do pedido." }, { status: 500 });
       const final = comOLink(texto, linkParaPagar(link));
       const saiu = await enviarTextoManualWhatsApp(telefone, final);
       if (!saiu) {
@@ -772,7 +772,7 @@ export async function PATCH(req: NextRequest) {
         conta.iva === 0
           ? `${emEuros(conta.total)}, sem fatura`
           : `${emEuros(conta.total)} com IVA (${emEuros(conta.semIva)} + IVA ${emEuros(conta.iva)})`;
-      const resumo = `Valores para pagamento enviados ao cliente pelo WhatsApp da CLYON: ${valores}, com o link do pedido — por ${quem}.`;
+      const resumo = `Valores para pagamento enviados ao cliente pelo WhatsApp da CLYON: ${valores}, com a ligação do pedido — por ${quem}.`;
       await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
       return NextResponse.json({ ok: true, feito: resumo });
     }

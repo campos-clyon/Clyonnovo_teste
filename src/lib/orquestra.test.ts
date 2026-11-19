@@ -122,7 +122,8 @@ type Regra =
   | "z-parceiro-escolhido"
   | "s-modelo-antigo"
   | "d4-passa-sem-iva"
-  | "d6-valor-a-passar";
+  | "d6-valor-a-passar"
+  | "d8-acordo";
 
 /*
  * d4) O QUE PASSA À CLYON LEVA O IVA — d4 (CEO e dono, 18-11-2026). No modelo de
@@ -143,6 +144,47 @@ const ONDE_OS_TERMOS_VIVEM = new Set(["src/app/termos/page.tsx"]);
  * contavam-lhe o contrário. Fora do backoffice e dos Termos (do Jurídico).
  */
 const COMO_VALOR_EM_ATRASO = /(?<!\p{L})como valor em atraso(?!\p{L})/iu;
+/*
+ * d8) A GRAFIA DO ACORDO DE 1990 NO QUE SE LÊ — d8 (CEO e dono, 19-11-2026). O
+ * site já escrevia «fatura», «diretamente», «exata»; na mesma página aparecia
+ * «exacta». Uma só grafia no texto à vista do site e do backoffice: atividade,
+ * ativo, atual, ação, aceção, exato, eletricidade, eletrónico — e, no lugar dos
+ * anglicismos, «conta suspensa» (não «stand-by»), «ligação» (não «link») e
+ * «lista de pedidos» (não «feed»). Só o texto (a árvore do TypeScript, nunca os
+ * comentários nem os nomes): uma variável `activo` ou `standBy` fica.
+ * Fora: os Termos e a Privacidade (vão com a d4, depois do advogado), a voz da
+ * Vitória e os avisos ao profissional (do I&D), o que só o modelo lê, e as apps.
+ */
+const GRAFIA_ANTERIOR_AO_ACORDO: RegExp[] = [
+  /(?<!\p{L})activ(?:idade|idades|o|a|os|as|ar|ada|ado|adas|ados|ação|ações|amente)(?!\p{L})/iu,
+  /(?<!\p{L})actua(?:l|is|lmente|lizar|lizado|lizada|lizados|lizadas|liza|lizam|lize|lização|lizações)(?!\p{L})/iu,
+  /(?<!\p{L})acç(?:ão|ões)(?!\p{L})/iu,
+  /(?<!\p{L})acep(?:ção|ções)(?!\p{L})/iu,
+  /(?<!\p{L})exact(?:o|a|os|as|amente)(?!\p{L})/iu,
+  /(?<!\p{L})electr(?:icidade|icista|icistas|ónico|ónica|ónicos|ónicas|ico|ica|icos|icas|odoméstico|odomésticos)(?!\p{L})/iu,
+  /(?<!\p{L})stand-?by(?!\p{L})/iu,
+  /(?<![\p{L}/._-])links?(?![\p{L}/._-])/iu,
+  /(?<![\p{L}/._-])feeds?(?![\p{L}/._-])/iu,
+];
+export function grafiaAnteriorAoAcordo(texto: string): string | null {
+  for (const re of GRAFIA_ANTERIOR_AO_ACORDO) {
+    const m = re.exec(texto);
+    if (m) return m[0];
+  }
+  return null;
+}
+// O resumo que o parceiro aceita (aceitacao-dos-termos.ts) é dos Termos: muda com a versão nova, na d4.
+const ONDE_A_GRAFIA_ESPERA_PELA_D4 = new Set(["src/app/termos/page.tsx", "src/app/privacidade/page.tsx", "src/lib/aceitacao-dos-termos.ts"]);
+const DO_I_E_D = (f: string) =>
+  DA_VITORIA(f) ||
+  /vitoria/.test(f) ||
+  DO_ORCAMENTISTA.has(f) ||
+  f === "src/lib/textos-dos-avisos-ao-profissional.ts" ||
+  f === "src/lib/aviso-aos-profissionais.ts";
+// O SQL que cria as tabelas: «activo», «activa» são colunas da base, não texto.
+const E_DDL = /\b(CREATE TABLE|TINYINT|VARCHAR|DATETIME|UNIQUE KEY|PRIMARY KEY)\b|\bKEY idx_/;
+const A_REGRA_D8_SE_APLICA = (f: string) => f.startsWith("src/") && !ONDE_A_GRAFIA_ESPERA_PELA_D4.has(f) && !DO_I_E_D(f);
+
 export function comoValorEmAtraso(texto: string): string | null {
   return COMO_VALOR_EM_ATRASO.exec(texto)?.[0] ?? null;
 }
@@ -1029,6 +1071,11 @@ function achadosDe(f: string): Achado[] {
       const p = passaAClyonSemIva(texto);
       if (p) out.push({ ficheiro: f, linha, regra: "d4-passa-sem-iva", texto: p });
     }
+    // d8) a grafia do Acordo no texto (uma frase, não um nome); o SQL e os registos ficam de fora.
+    if (A_REGRA_D8_SE_APLICA(f) && /\s/.test(texto) && !E_SQL.test(texto) && !E_DDL.test(texto) && !texto.startsWith("[")) {
+      const g = grafiaAnteriorAoAcordo(texto);
+      if (g) out.push({ ficheiro: f, linha, regra: "d8-acordo", texto: g });
+    }
     // d6) «como valor em atraso» ao fechar, fora do backoffice e dos Termos.
     if (!DO_BACKOFFICE(f) && !ONDE_OS_TERMOS_VIVEM.has(f) && !E_SQL.test(texto) && !texto.startsWith("[")) {
       const c = comoValorEmAtraso(texto);
@@ -1232,6 +1279,35 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(passaAClyonSemIva("Passa à CLYON")).toBeNull();
     expect(passaAClyonSemIva("fica consigo; a taxa da plataforma passa-a à CLYON · o valor é sem IVA")).toBe("passa-a à CLYON");
     expect(passaAClyonSemIva("passa a «Por receber» quando o cliente pagar à CLYON")).toBeNull();
+  });
+
+  it("a regra d8 apanha a grafia de antes do Acordo e os anglicismos, e deixa a nova e os nomes (d8, 19-11-2026)", () => {
+    expect(grafiaAnteriorAoAcordo("Indique a morada exacta")).toBe("exacta");
+    expect(grafiaAnteriorAoAcordo("Palavra-passe actual")).toBe("actual");
+    expect(grafiaAnteriorAoAcordo("o raio de acção")).toBe("acção");
+    expect(grafiaAnteriorAoAcordo("Actualizar a lista")).toBe("Actualizar");
+    expect(grafiaAnteriorAoAcordo("a sua actividade")).toBe("actividade");
+    expect(grafiaAnteriorAoAcordo("na acepção de")).toBe("acepção");
+    expect(grafiaAnteriorAoAcordo("a electricidade da casa")).toBe("electricidade");
+    expect(grafiaAnteriorAoAcordo("a conta fica em stand-by")).toBe("stand-by");
+    expect(grafiaAnteriorAoAcordo("Abra o link do email")).toBe("link");
+    expect(grafiaAnteriorAoAcordo("Saiu do seu feed")).toBe("feed");
+    for (const bom of [
+      "Indique a morada exata", "Palavra-passe atual", "o raio de ação", "Atualizar a lista", "a sua atividade",
+      "na aceção de", "a eletricidade da casa", "a conta fica suspensa", "Abra a ligação do email",
+      "Saiu da sua lista de pedidos", "veja em /entrar/link", "o perfil está ativo",
+    ])
+      expect(grafiaAnteriorAoAcordo(bom)).toBeNull();
+  });
+
+  it("o cabeçalho do backoffice diz o dia como se escreve: «quinta-feira, 19 de novembro de 2026» (d8)", () => {
+    const t = readFileSync(join(RAIZ, "src/components/admin/LegacyAdminClient.tsx"), "utf8");
+    const hoje = /const hojeLabel = useMemo\(\s*\(\) =>\s*new Intl\.DateTimeFormat\("pt-PT", \{([^}]*)\}\)/.exec(t);
+    expect(hoje?.[1]).toMatch(/day: "numeric"/);
+    expect(hoje?.[1]).toMatch(/timeZone: "Europe\/Lisbon"/);
+    expect(t).not.toMatch(/capitalize[^"]*">\s*\{hojeLabel\}/);
+    const f = new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    expect(f.format(new Date("2026-11-19T12:00:00Z"))).toBe("quinta-feira, 19 de novembro de 2026");
   });
 
   it("a regra d6 apanha «como valor em atraso», e deixa «A passar à CLYON» e o atraso depois do prazo (d6, 19-11-2026)", () => {

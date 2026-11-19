@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const pedido = /^[A-Za-z0-9_-]{20,200}$/.test(t) ? await getSimulatorOrderByAcessoTokenHash(hashDeToken(t)) : undefined;
     const r = verificarTokenDeAcesso(t, pedido?.acessoTokenHash ?? null, pedido?.acessoTokenExpiraEm ?? null);
     if (!pedido || !r.valido || pedido.id !== pedidoId) {
-      return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "Ligação inválida ou expirada." }, { status: 403 });
     }
     porOnde = "link";
     quem = `pedido:${pedidoId}`;

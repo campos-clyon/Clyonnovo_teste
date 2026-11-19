@@ -115,7 +115,7 @@ describe("a sugestão com outro tempo e outra equipa", () => {
     ],
   };
 
-  it("dá exactamente a conta do painel", () => {
+  it("dá exatamente a conta do painel", () => {
     const app = sugestaoComOutraEquipa(completa as Sugestao, 3.5, 3);
     expect(app).toEqual(sugestaoComOutroTempo(completa, { horas: 3.5, pessoas: 3 }));
     expect(app!.precoSugerido).toBeGreaterThan(completa.precoSugerido);
@@ -159,8 +159,8 @@ describe("repor a palavra-passe, desmarcar o dia e desligar os avisos", () => {
     const REPOR = ler("app-pro/src/app/repor.tsx");
     expect(REPOR).toContain('"/api/profissionais/esqueci-palavra-passe"');
     expect(REPOR).toContain("semSessao: true");
-    expect(REPOR).toContain('titulo="Enviar link"');
-    expect(ler("src/app/profissionais/entrar/EntrarForm.tsx")).toContain("Enviar link");
+    expect(REPOR).toContain('titulo="Enviar link"'); // a app CLYON Pro é das Apps (d8 do Site não lhe mexe)
+    expect(ler("src/app/profissionais/entrar/EntrarForm.tsx")).toContain("Enviar ligação");
     const ENTRAR = ler("app-pro/src/app/entrar.tsx");
     expect(ENTRAR).toContain('pathname: "/repor"');
     expect(ENTRAR).not.toContain("Abra o painel no site");
@@ -183,7 +183,7 @@ describe("repor a palavra-passe, desmarcar o dia e desligar os avisos", () => {
   });
 });
 
-describe("o link de um pedido abre esse pedido", () => {
+describe("a ligação de um pedido abre esse pedido", () => {
   it("a app pergunta ao site qual é o trabalho, e mostra o porquê quando não dá", () => {
     const ABRIR = ler("app-pro/src/app/abrir/[token].tsx");
     expect(ABRIR).toContain('"/api/profissionais/pedido-do-link"');

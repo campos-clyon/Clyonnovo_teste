@@ -264,7 +264,7 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
             className="ml-auto flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-400 transition hover:bg-slate-800"
           >
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
-            Actualizar
+            Atualizar
           </button>
         </div>
       </section>

@@ -164,8 +164,8 @@ export function PremiumLoginCard({ errorMsg }: Props) {
     const url = modo === "esqueci" ? "/api/entrada/esqueci" : "/api/entrada/link";
     const porOmissao =
       modo === "esqueci"
-        ? "Se este email tiver conta na CLYON, recebe dentro de instantes um link para escolher uma palavra-passe nova."
-        : "Se este email tiver conta na CLYON, o link de entrada chega dentro de instantes. Dura 15 minutos e serve uma vez.";
+        ? "Se este email tiver conta na CLYON, recebe dentro de instantes uma ligação para escolher uma palavra-passe nova."
+        : "Se este email tiver conta na CLYON, a ligação de entrada chega dentro de instantes. Dura 15 minutos e serve uma vez.";
     try {
       const { res, dados } = await enviarJson(url, { email });
       if (res.status === 429) setErro("Demasiados pedidos. Aguarde alguns minutos e tente de novo.");
@@ -254,7 +254,7 @@ export function PremiumLoginCard({ errorMsg }: Props) {
             Esqueci-me da palavra-passe
           </button>
           <button type="button" onClick={() => mudarDeModo("link")} className="text-slate-500 hover:text-slate-700 hover:underline">
-            Receber um link por email
+            Receber uma ligação por email
           </button>
         </div>
       </form>
@@ -291,14 +291,14 @@ export function PremiumLoginCard({ errorMsg }: Props) {
       <form onSubmit={pedirPorEmail} className="space-y-2">
         <p className="text-center text-xs leading-relaxed text-slate-600">
           {modo === "esqueci"
-            ? "Escreva o seu email. Enviamos um link para escolher uma palavra-passe nova."
-            : "Escreva o seu email. Enviamos um link que entra por si, sem palavra-passe."}
+            ? "Escreva o seu email. Enviamos uma ligação para escolher uma palavra-passe nova."
+            : "Escreva o seu email. Enviamos uma ligação que entra por si, sem palavra-passe."}
         </p>
         {caixaDeEmail("email-do-link")}
         {caixaDoErro}
         <button type="submit" disabled={aEnviar} className={botaoPrincipal}>
           <Mail className="h-4 w-4" aria-hidden="true" />
-          {aEnviar ? "A enviar…" : modo === "esqueci" ? "Enviar o link" : "Receber link por email"}
+          {aEnviar ? "A enviar…" : modo === "esqueci" ? "Enviar a ligação" : "Receber ligação por email"}
         </button>
         <button
           type="button"

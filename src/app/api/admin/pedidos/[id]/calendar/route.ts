@@ -268,7 +268,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           const pid = m?.[1] ?? null;
           return NextResponse.json(
             {
-              error: "A Google Calendar API não está activada neste projecto Google Cloud.",
+              error: "A Google Calendar API não está ativada neste projecto Google Cloud.",
               errorCode: "calendar_api_disabled",
               enableUrl: pid
                 ? `https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=${pid}`
@@ -304,7 +304,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ? `https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=${projectId}`
           : "https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview";
         return NextResponse.json(
-          { error: "A Google Calendar API não está activada neste projecto Google Cloud.", errorCode: "calendar_api_disabled", enableUrl, projectId },
+          { error: "A Google Calendar API não está ativada neste projecto Google Cloud.", errorCode: "calendar_api_disabled", enableUrl, projectId },
           { status: 403 }
         );
       }

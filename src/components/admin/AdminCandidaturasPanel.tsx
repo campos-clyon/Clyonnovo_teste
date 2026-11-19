@@ -287,7 +287,7 @@ export default function AdminCandidaturasPanel({
       </div>
       <p className="mt-1 text-xs leading-relaxed text-slate-400">
         Vieram do formulário em /quero-ser-parceiro. Aprovar cria já a conta com o que ele
-        escreveu e manda-lhe o link para definir a palavra-passe — sem segundo formulário.
+        escreveu e manda-lhe a ligação para definir a palavra-passe — sem segundo formulário.
         Abre-lhe o painel; não o põe a receber pedidos: isso é a aprovação em Profissionais,
         depois de ele preencher o NIF, a morada fiscal e o IBAN.
       </p>
@@ -305,7 +305,7 @@ export default function AdminCandidaturasPanel({
       {linkEmClaro && (
         <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
           <p className="text-xs font-semibold text-amber-200">
-            O email não saiu. Envie este link à pessoa por outro meio.
+            O email não saiu. Envie esta ligação à pessoa por outro meio.
           </p>
           <div className="mt-1.5 flex items-center gap-2">
             <code className="flex-1 overflow-x-auto whitespace-nowrap rounded bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-300">
@@ -359,7 +359,7 @@ export default function AdminCandidaturasPanel({
                     </label>
                     <label className="block">
                       <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Email — é para aqui que vai o link
+                        Email — é para aqui que vai a ligação
                       </span>
                       <input
                         value={rascunho.email}
@@ -591,7 +591,7 @@ export default function AdminCandidaturasPanel({
                       onClick={() => {
                         if (
                           window.confirm(
-                            `Criar a conta de ${c.nome} e enviar-lhe o link da palavra-passe?\n\n` +
+                            `Criar a conta de ${c.nome} e enviar-lhe a ligação da palavra-passe?\n\n` +
                               "Fica em pendente: abre o painel, não recebe pedidos.",
                           )
                         ) {

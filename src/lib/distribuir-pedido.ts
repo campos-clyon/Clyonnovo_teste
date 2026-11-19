@@ -204,14 +204,14 @@ export function resumoDaDistribuicao(r: ResultadoDaDistribuicao): string {
       );
     }
     return (
-      `NÃO chegou a nenhum profissional (${r.candidatos} activos)` +
+      `NÃO chegou a nenhum profissional (${r.candidatos} ativos)` +
       (porque ? `. Porquê: ${porque}.` : ".")
     );
   }
 
   const fora = r.candidatos - r.receberam - quantosJaTinham;
   const base =
-    `Chegou a ${r.receberam} profissional(is) de ${r.candidatos} activos` +
+    `Chegou a ${r.receberam} profissional(is) de ${r.candidatos} ativos` +
     (fora > 0 && porque ? ` — os outros ${fora} ficam de fora: ${porque}` : "");
 
   if (r.avisados >= r.receberam) return `${base}. Todos avisados por email.${jaTinham}`;

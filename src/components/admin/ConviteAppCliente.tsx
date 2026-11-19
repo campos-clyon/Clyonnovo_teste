@@ -104,7 +104,7 @@ export default function ConviteAppCliente({
     try {
       await post({ accao: "guardar-link", link });
       await carregar();
-      setAviso("Link guardado.");
+      setAviso("Ligação guardada.");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro");
     } finally {
@@ -259,7 +259,7 @@ export default function ConviteAppCliente({
             {estado && (
               <div className="mt-5 space-y-5">
                 <label className="block text-xs font-semibold text-slate-500">
-                  Link de adesão da Play (obrigatório)
+                  Ligação de adesão da Play (obrigatória)
                   <div className="flex gap-2">
                     <input value={link} onChange={(e) => setLink(e.target.value)} className={caixa} placeholder={LINK_DE_ADESAO_SUGERIDO} />
                     <button
@@ -271,10 +271,10 @@ export default function ConviteAppCliente({
                     </button>
                   </div>
                   {!linkLimpo && link && (
-                    <span className="mt-1 block font-normal text-red-600">Tem de ser um link https://play.google.com/…</span>
+                    <span className="mt-1 block font-normal text-red-600">Tem de ser uma ligação https://play.google.com/…</span>
                   )}
                   {!linkGuardado && (
-                    <span className="mt-1 block font-normal text-amber-700">Ainda não há link guardado: guarde-o antes de enviar.</span>
+                    <span className="mt-1 block font-normal text-amber-700">Ainda não há ligação guardada: guarde-a antes de enviar.</span>
                   )}
                 </label>
 

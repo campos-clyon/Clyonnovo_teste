@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, ligado: false });
     }
     if (corpo.accao === "estado") return NextResponse.json({ ok: true, ligado: meu });
-    return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
   } catch (e) {
     console.error("[admin/sessao/avisos]", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Não foi possível guardar os avisos." }, { status: 500 });

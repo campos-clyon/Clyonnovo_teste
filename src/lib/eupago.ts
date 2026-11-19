@@ -293,7 +293,7 @@ export function podeCobrar(
     pode: false,
     porque:
       "Em produção e com O_CLIENTE_PAGA_SOZINHO a falso: o cliente não paga sozinho " +
-      "pelo link — as referências geram-se no backoffice.",
+      "pela ligação — as referências geram-se no backoffice.",
   };
 }
 

@@ -244,7 +244,7 @@ export function responderAOferta(n: Negociacao, accao: unknown, agora: Date): Re
   if (accao === "propor") return { ok: false, erro: SO_ACEITAR_OU_RECUSAR };
   if (accao === "aceitar") return aceitar(n, "profissional", agora);
   if (accao === "desistir" || accao === "recusar") return desistir(n, "profissional", agora);
-  return { ok: false, erro: "Acção desconhecida." };
+  return { ok: false, erro: "Ação desconhecida." };
 }
 
 /** Enviada só a ele, a escolha já está feita: aceitar dá-lhe o trabalho. */

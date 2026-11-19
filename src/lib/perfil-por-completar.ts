@@ -133,7 +133,7 @@ export function oQueFaltaNoPerfil(p: PerfilParaCompletar): Falta[] {
     faltas.push({
       chave: "raio",
       seccao: "servicos",
-      rotulo: "Raio de acção",
+      rotulo: "Raio de ação",
       porque:
         "Sem ele não lhe chega pedido nenhum: a regra que decide quem recebe trata «sem raio» como «longe demais».",
       peso: "essencial",

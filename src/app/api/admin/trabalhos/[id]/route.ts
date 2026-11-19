@@ -46,7 +46,7 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[api/admin/trabalhos/[id] PATCH]", error);
-    return NextResponse.json({ error: "Erro ao actualizar trabalho" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao atualizar trabalho" }, { status: 500 });
   }
 }
 

@@ -594,7 +594,7 @@ function formatPricingRulesForGemini(settingsMap: SimulatorSettingsMap): string 
   const custoHoraEquipa = custoHoraPess * numPessoas;
   const kmLimiteRecolha   = settingsMap.mudanca_km_limite_recolha ?? 70;
 
-  return `ESTRUTURA DE CUSTOS REAIS CLYON (valores actuais do backoffice):
+  return `ESTRUTURA DE CUSTOS REAIS CLYON (valores atuais do backoffice):
 
 FÓRMULA UNIVERSAL OBRIGATÓRIA:
   custo_combustivel  = distancia_ida_volta_km × ${custoKm.toFixed(2)} €/km

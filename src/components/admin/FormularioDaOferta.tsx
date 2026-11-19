@@ -309,7 +309,7 @@ export function FormularioDaOferta({
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> A carregar os profissionais…
             </p>
           ) : todos.length === 0 ? (
-            <p className="p-2 text-xs text-slate-400">Não há profissionais activos.</p>
+            <p className="p-2 text-xs text-slate-400">Não há profissionais ativos.</p>
           ) : (
             <ul className="space-y-0.5">
               {todos.map((p) => {

@@ -18,7 +18,7 @@ export const REFERENCIA_AO_CLIENTE_NO_NOVO_MODELO =
   "No modelo de 15-11 o cliente paga ao parceiro: não se gera referência ao cliente. A única referência deste trabalho é a da taxa da plataforma e do IVA dela, que o parceiro passa à CLYON.";
 
 export const VALORES_PARA_PAGAMENTO_NO_NOVO_MODELO =
-  "No modelo de 15-11 o cliente paga ao parceiro: use «Enviar adjudicação», que leva o total e o link do pedido com os dados do parceiro.";
+  "No modelo de 15-11 o cliente paga ao parceiro: use «Enviar adjudicação», que leva o total e a ligação do pedido com os dados do parceiro.";
 
 export const ADJUDICACAO_SEM_CONTA_NO_NOVO_MODELO =
   "No modelo de 15-11 a adjudicação leva o total a pagar ao parceiro, e este trabalho ainda não o tem. Confira o valor e o perfil do parceiro e tente outra vez.";

@@ -100,7 +100,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     } else if (accao === "retirar") {
       mudou = await retirarFichaDoGoogle(providerId);
     } else {
-      return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+      return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
     }
     console.info(`[admin/ficha-google] #${providerId}: ${String(accao)} por ${colab.nome}`);
     return NextResponse.json({ ok: true, mudou, ...(await resposta(providerId)) });

@@ -222,8 +222,8 @@ export default async function ProfissionaisPage() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Deixe a candidatura em dois minutos. É uma pessoa que a lê e, se avançar,
-            recebe por email o link para escolher a palavra-passe e entrar. Os dados de
-            faturação preenche-os já lá dentro, e avisamo-lo quando a conta ficar activa.
+            recebe por email a ligação para escolher a palavra-passe e entrar. Os dados de
+            faturação preenche-os já lá dentro, e avisamo-lo quando a conta ficar ativa.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
             É de propósito: assim cada profissional na plataforma é alguém com quem já

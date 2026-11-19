@@ -27,7 +27,7 @@ function juntar(nomes: readonly string[]): string {
 }
 
 export function regraDoEnvio(d: DadosDaRegra): string {
-  if (d.contaAprovada === false) return "Não recebe pedidos: a conta não está aprovada e activa.";
+  if (d.contaAprovada === false) return "Não recebe pedidos: a conta não está aprovada e ativa.";
   if (d.categorias.length === 0) return "Não recebe pedidos: não tem nenhuma categoria escolhida.";
   if (!d.temPontoDaBase) {
     return "Não recebe pedidos: a base não tem ponto no mapa, e sem ele o raio não se mede.";

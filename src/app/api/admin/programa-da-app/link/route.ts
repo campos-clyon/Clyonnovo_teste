@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest) {
   }
   const link = linkDeAdesaoValido(corpo.link);
   if (!link) {
-    return NextResponse.json({ error: "O link tem de ser da Google Play (https://play.google.com/…)." }, { status: 400 });
+    return NextResponse.json({ error: "A ligação tem de ser da Google Play (https://play.google.com/…)." }, { status: 400 });
   }
   try {
     await guardarLinkDeAdesao(link, colab?.nome ?? "a CLYON");

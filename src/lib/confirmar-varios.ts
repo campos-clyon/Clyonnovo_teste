@@ -64,7 +64,7 @@ export function planoDeConfirmacao(
       continue;
     }
     if (!p.podeConfirmar) {
-      plano.deFora.push({ pedidoId: p.pedidoId, porque: "o cliente tem email e confirma pelo link" });
+      plano.deFora.push({ pedidoId: p.pedidoId, porque: "o cliente tem email e confirma pela ligação" });
       continue;
     }
     const ivaIncluido = modeloDaNegociacao(p.negociacao.criadaEm) === "iva_incluido";

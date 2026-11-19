@@ -567,7 +567,7 @@ function contaParaUmaBase(e: EntradaDoCusto, base: BaseDoCalculo, p: ParametrosD
     recheioM3 * PESOS_DO_MOTOR.recheioPorM3;
   const eurPorT = p.deposicao[destino.chave];
   const deposicao = kgQuePaga > 0 ? cent(cargas * Math.max(p.deposicao.minimoPorEntrega, (kgQuePaga / cargas / 1000) * eurPorT)) : 0;
-  if (pecas.some((x) => x.reee)) explicacao.push("Electrodomésticos (REEE) ao ponto de retoma: 0 € na deposição.");
+  if (pecas.some((x) => x.reee)) explicacao.push("Eletrodomésticos (REEE) ao ponto de retoma: 0 € na deposição.");
   if (sacos.some((x) => x.tipo === "entulho")) explicacao.push("Entulho: 0 € de deposição no motor até haver o preço por tonelada.");
   if (destino.aConfirmar) explicacao.push(`Deposição em ${destino.nome}: tarifa provisória.`);
 

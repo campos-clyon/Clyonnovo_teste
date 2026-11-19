@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      message: "Defaults de simulatorSettings actualizados com sucesso.",
+      message: "Defaults de simulatorSettings atualizados com sucesso.",
       values: relevant,
     });
   } catch (err) {

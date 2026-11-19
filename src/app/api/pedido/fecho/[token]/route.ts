@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   if (!resposta) return NextResponse.json({ ok: false, error: "Diga se o trabalho já foi feito." }, { status: 400 });
 
   const n = await negociacaoDoLinkDoFecho(token).catch(() => null);
-  if (!n) return NextResponse.json({ ok: false, error: "Link inválido ou expirado." }, { status: 403 });
+  if (!n) return NextResponse.json({ ok: false, error: "Ligação inválida ou expirada." }, { status: 403 });
   const porPedido = await limitarPorConta("pedido-fecho", `pedido:${n.pedidoId}`, 10, 300);
   if (porPedido.erro) return porPedido.erro;
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       negociacaoId: n.negociacaoId,
       pedidoId: n.pedidoId,
       resposta,
-      onde: "pelo link do email",
+      onde: "pela ligação do email",
     });
     return NextResponse.json(r.corpo, { status: r.status });
   } catch (e) {

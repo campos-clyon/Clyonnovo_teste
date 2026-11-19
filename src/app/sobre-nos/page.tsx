@@ -772,7 +772,7 @@ export default function SobreNosPage() {
             </p>
             <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
               <div className="rounded-2xl bg-fundo-alt px-4 py-3">
-                <dt className="font-semibold text-tinta">Actividade principal</dt>
+                <dt className="font-semibold text-tinta">Atividade principal</dt>
                 <dd className="mt-0.5 text-slate-600">CAE {IDENTIFICACAO.caePrincipal}</dd>
               </div>
               <div className="rounded-2xl bg-fundo-alt px-4 py-3">

@@ -856,7 +856,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       const isRef = src === "gemini_reference" || src === "fallback_reference";
       const missing: string[] = data.missingFields?.filter(Boolean) ?? [];
       if (isRef && missing.length > 0) {
-        setSaveMsg(`Estimativa de referência gerada. Actualize: ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " e outros" : ""}.`);
+        setSaveMsg(`Estimativa de referência gerada. Atualize: ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " e outros" : ""}.`);
       } else if (isRef) {
         setSaveMsg("Estimativa de referência gerada — confirme antes de enviar ao cliente.");
       } else if (recommended) {
@@ -3259,7 +3259,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       <div className="rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2.5 space-y-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Como resolver</p>
                         <p className="text-xs text-amber-700 leading-relaxed">
-                          A <strong>Google Calendar API</strong> precisa de ser activada no Google Cloud Console.
+                          A <strong>Google Calendar API</strong> precisa de ser ativada no Google Cloud Console.
                         </p>
                         <a
                           href={cmApiDisabledUrl}
@@ -3270,9 +3270,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
-                          Activar Google Calendar API
+                          Ativar Google Calendar API
                         </a>
-                        <p className="text-[10px] text-slate-500">Depois de activar, aguarde 1-2 minutos e tente novamente.</p>
+                        <p className="text-[10px] text-slate-500">Depois de ativar, aguarde 1-2 minutos e tente novamente.</p>
                       </div>
                     )}
 
@@ -3678,7 +3678,7 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
       </div>
 
       <p className="text-xs leading-relaxed text-slate-400">
-        A elegibilidade é avaliada AGORA, com o perfil actual de cada um — quem
+        A elegibilidade é avaliada AGORA, com o perfil atual de cada um — quem
         mudou de zonas ou foi suspenso depois do envio aparece com o estado de
         hoje. O histórico do pedido guarda o que aconteceu na altura.
       </p>

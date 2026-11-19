@@ -86,7 +86,7 @@ export function respostaAoCandidato(zona: IdDoConcelho | null): string {
 }
 
 /** O porquê do fecho na Mesa das conversas — sai da fila dos clientes. */
-export const MOTIVO_DO_CANDIDATO = "Candidato a parceiro — a Vitória mandou o link da candidatura";
+export const MOTIVO_DO_CANDIDATO = "Candidato a parceiro — a Vitória mandou a ligação da candidatura";
 
 /** Já se lhe mandou o caminho da candidatura neste fio (a Vitória não o repete). */
 export function jaRecebeuACandidatura(

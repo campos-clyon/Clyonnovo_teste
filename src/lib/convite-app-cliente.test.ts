@@ -19,7 +19,7 @@ const LINK = "https://play.google.com/apps/testing/pt.clyon.cliente";
 describe("o convite novo da app de cliente (texto aprovado à letra, 17-11-2026)", () => {
   it("assunto, pré-cabeçalho e corpo como o dono os aprovou", () => {
     expect(ASSUNTO_DO_CONVITE).toBe("Tem Android? Ajude-nos a lançar a app CLYON (2 minutos)");
-    expect(PRE_CABECALHO_DO_CONVITE).toBe("São 2 toques: o link e a instalação. Precisamos de 12 clientes.");
+    expect(PRE_CABECALHO_DO_CONVITE).toBe("São 2 toques: a ligação e a instalação. Precisamos de 12 clientes.");
     expect(textoDoConvite({ nome: "ana maria silva", link: LINK })).toBe(
       [
         "Olá, Ana.",
@@ -79,7 +79,7 @@ describe("o convite novo da app de cliente (texto aprovado à letra, 17-11-2026)
     expect(primeiroNome("joão")).toBe("João");
   });
 
-  it("o HTML leva o link como botão e escrito, e escapa o nome", () => {
+  it("o HTML leva a ligação como botão e escrito, e escapa o nome", () => {
     const html = htmlDoConvite({ nome: "<b>Rui</b>", link: LINK });
     expect(html.split(`href="${LINK}"`).length - 1).toBe(2);
     expect(html).toContain(`>${LINK}</a>`);
@@ -87,7 +87,7 @@ describe("o convite novo da app de cliente (texto aprovado à letra, 17-11-2026)
     expect(html).toContain("Equipa CLYON");
   });
 
-  it("o link de adesão tem de ser da Google Play em https", () => {
+  it("a ligação de adesão tem de ser da Google Play em https", () => {
     expect(linkDeAdesaoValido(LINK)).toBe(LINK);
     expect(linkDeAdesaoValido(`  ${LINK}  `)).toBe(LINK);
     expect(linkDeAdesaoValido("http://play.google.com/apps/testing/x")).toBeNull();
@@ -107,7 +107,7 @@ describe("quem recebe o convite", () => {
     ...o,
   });
 
-  it("só clientes activos, sem profissionais, sem teste, um por email", () => {
+  it("só clientes ativos, sem profissionais, sem teste, um por email", () => {
     const { destinatarios, deFora } = escolherDestinatarios(
       [
         conta(1),

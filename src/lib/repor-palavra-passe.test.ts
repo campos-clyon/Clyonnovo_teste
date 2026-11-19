@@ -34,7 +34,7 @@ describe("na página de entrada: «Esqueci-me da palavra-passe»", () => {
     expect(ENTRAR).toContain('fetch("/api/profissionais/esqueci-palavra-passe"');
     // Quem nunca criou a palavra-passe também pede um link, em vez de ir
     // procurar os contactos.
-    expect(ENTRAR).toContain("peça um link novo");
+    expect(ENTRAR).toContain("peça uma ligação nova");
   });
 
   it("fica no mesmo ecrã: é a única porta de /profissionais aberta sem a chave", () => {
@@ -62,7 +62,7 @@ describe("na página de entrada: «Esqueci-me da palavra-passe»", () => {
   });
 });
 
-describe("no backoffice: «Enviar link para repor»", () => {
+describe("no backoffice: «Enviar ligação para repor»", () => {
   const inicio = ADMIN.indexOf("corpo.reporPalavraPasse === true");
   const fim = ADMIN.indexOf("let conviteEnviado", inicio);
   const BLOCO = ADMIN.slice(inicio, fim);
@@ -74,7 +74,7 @@ describe("no backoffice: «Enviar link para repor»", () => {
     expect(BLOCO).toContain('pedidoPor: "clyon"');
   });
 
-  it("SÓ POR EMAIL: o link nunca vem na resposta", () => {
+  it("SÓ POR EMAIL: a ligação nunca vem na resposta", () => {
     // O emissor devolve se o email saiu — e não o token.
     expect(REPOR).toContain("): Promise<boolean> {");
     expect(BLOCO).not.toContain("definir-senha");
@@ -84,12 +84,12 @@ describe("no backoffice: «Enviar link para repor»", () => {
     expect(PAINEL).not.toContain("linkDeReporUrl");
   });
 
-  it("não manda o link a uma conta que não pode entrar", () => {
+  it("não manda a ligação a uma conta que não pode entrar", () => {
     expect(BLOCO).toContain("contaPodeEntrarNoPainel(p)");
   });
 });
 
-describe("o link", () => {
+describe("a ligação", () => {
   it("dura horas, não dias — menos do que o do convite", () => {
     expect(HORAS_DO_LINK_DE_REPOR).toBeGreaterThan(0);
     expect(HORAS_DO_LINK_DE_REPOR).toBeLessThanOrEqual(24);
@@ -112,7 +112,7 @@ describe("o link", () => {
     expect(html).toContain("Jorge, escolha uma palavra-passe nova");
   });
 
-  it("o email diz quem o pediu, e que a palavra-passe actual continua a valer", () => {
+  it("o email diz quem o pediu, e que a palavra-passe atual continua a valer", () => {
     const base = {
       para: "a@b.pt",
       nome: "Jorge",

@@ -20,7 +20,7 @@ export default function SessaoTerminou() {
       <div className="w-full rounded-2xl border border-[#E2EEF3] bg-white p-6 text-center">
         <h1 className="text-lg font-bold text-tinta">A sua sessão terminou — entre outra vez</h1>
         <p className="mt-2 text-sm leading-relaxed text-tinta-fraca">
-          Para ver os seus pedidos, entre com o Google ou com o link que enviamos para o seu email.
+          Para ver os seus pedidos, entre com o Google ou com a ligação que enviamos para o seu email.
         </p>
         <button
           type="button"

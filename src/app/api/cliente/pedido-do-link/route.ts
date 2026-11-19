@@ -33,10 +33,10 @@ export const runtime = "nodejs";
  * Travões por endereço, por conta e por pedido (R20). Nada de tokens nos registos.
  */
 
-const NAO_ABRE = "Este link já não abre nenhum pedido.";
-const EXPIROU = "Este link expirou. Os links de acesso duram 30 dias.";
+const NAO_ABRE = "Esta ligação já não abre nenhum pedido.";
+const EXPIROU = "Esta ligação expirou. As ligações de acesso duram 30 dias.";
 const JA_LIGADO = "Este pedido já está ligado a uma conta.";
-const MUITOS_APARELHOS = "Este link já foi aberto noutros telemóveis. Para o abrir aqui, peça ajuda à CLYON pelo WhatsApp.";
+const MUITOS_APARELHOS = "Esta ligação já foi aberta noutros telemóveis. Para a abrir aqui, peça ajuda à CLYON pelo WhatsApp.";
 const PEDIDO_INVALIDO = "Pedido inválido.";
 
 type Pedido = NonNullable<Awaited<ReturnType<typeof getSimulatorOrderById>>>;
@@ -158,6 +158,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, estado: r.estado, id: pedido.id, error: r.mensagem }, { status });
   } catch (err) {
     console.error("[cliente/pedido-do-link]", err instanceof Error ? err.message : err);
-    return NextResponse.json({ ok: false, error: "Não foi possível abrir o link agora." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Não foi possível abrir a ligação agora." }, { status: 500 });
   }
 }

@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Falta o link de adesão da Play. Escreva-o em Configs → «Link do programa da app» e volte a enviar.",
+              "Falta a ligação de adesão da Play. Escreva-a em Configs → «Ligação do programa da app» e volte a enviar.",
           },
           { status: 400 },
         );
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, enviados, falhados, restantes });
     }
 
-    return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
   } catch (error) {
     console.error("[admin/programa-da-app POST]", error);
     return NextResponse.json({ error: "Não foi possível concluir." }, { status: 500 });

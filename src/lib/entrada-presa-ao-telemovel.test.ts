@@ -118,7 +118,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
-describe("S1 — o link da app entra uma vez, e só no telemóvel que o pediu", () => {
+describe("S1 — a ligação da app entra uma vez, e só no telemóvel que o pediu", () => {
   it("com o código certo entra uma vez; a segunda dá «já usado»", async () => {
     const t = await linkPedido({ app: true });
     const r = await entrar(chamar("/api/cliente/entrar", { linkToken: t, codigoDoAparelho: CODIGO }));
@@ -131,7 +131,7 @@ describe("S1 — o link da app entra uma vez, e só no telemóvel que o pediu", 
     expect(await outra.json()).toMatchObject({ error: MENSAGEM.usado, motivo: "usado" });
   });
 
-  it("código errado → 401 outroAparelho, e o mesmo link continua a entrar com o código certo", async () => {
+  it("código errado → 401 outroAparelho, e a mesma ligação continua a entrar com o código certo", async () => {
     const t = await linkPedido({ app: true });
     const errado = await entrar(chamar("/api/cliente/entrar", { linkToken: t, codigoDoAparelho: OUTRO_CODIGO }));
     expect(errado.status).toBe(401);
@@ -151,7 +151,7 @@ describe("S1 — o link da app entra uma vez, e só no telemóvel que o pediu", 
     expect(ligacoes.get(hashDaLigacao(t))!.usadoEm).toBeNull();
   });
 
-  it("um link pedido no site → 401 doSite na R1, sem o gastar (continua a servir no site)", async () => {
+  it("uma ligação pedido no site → 401 doSite na R1, sem o gastar (continua a servir no site)", async () => {
     const t = await linkPedido();
     const r = await entrar(chamar("/api/cliente/entrar", { linkToken: t, codigoDoAparelho: CODIGO }));
     expect(r.status).toBe(401);
@@ -160,19 +160,19 @@ describe("S1 — o link da app entra uma vez, e só no telemóvel que o pediu", 
     expect(await entrarNoSite(t)).toMatchObject({ email: EMAIL });
   });
 
-  it("o link da app aberto no /entrar/link do site é recusado, com «daApp», e não se gasta", async () => {
+  it("a ligação da app aberto no /entrar/link do site é recusado, com «daApp», e não se gasta", async () => {
     const t = await linkPedido({ app: true });
     await expect(entrarNoSite(t)).rejects.toThrow("daApp");
     expect(ligacoes.get(hashDaLigacao(t))!.usadoEm).toBeNull();
-    expect(MENSAGEM.daApp).toBe("Este link é para a app CLYON. Abra-o no telemóvel onde o pediu.");
+    expect(MENSAGEM.daApp).toBe("Esta ligação é para a app CLYON. Abra-a no telemóvel onde a pediu.");
     // O ecrã do site mostra essa frase quando o provedor a manda.
     const ecra = readFileSync(join(process.cwd(), "src/app/entrar/link/EntrarPorLink.tsx"), "utf8");
     expect(ecra).toContain('if (r?.error === "daApp")');
   });
 });
 
-describe("S1 — R1a: de quem é o link, sem o gastar", () => {
-  it("com o código certo diz o email (inteiro e mascarado) e não gasta o link", async () => {
+describe("S1 — R1a: de quem é a ligação, sem o gastar", () => {
+  it("com o código certo diz o email (inteiro e mascarado) e não gasta a ligação", async () => {
     const t = await linkPedido({ app: true });
     const r = await verificar(chamar("/api/cliente/entrar/verificar", { linkToken: t, codigoDoAparelho: CODIGO }));
     expect(r.status).toBe(200);
@@ -182,7 +182,7 @@ describe("S1 — R1a: de quem é o link, sem o gastar", () => {
     expect((await entrar(chamar("/api/cliente/entrar", { linkToken: t, codigoDoAparelho: CODIGO }))).status).toBe(200);
   });
 
-  it("sem o código certo não devolve o email; com um link do site, doSite", async () => {
+  it("sem o código certo não devolve o email; com uma ligação do site, doSite", async () => {
     const t = await linkPedido({ app: true });
     const r = await verificar(chamar("/api/cliente/entrar/verificar", { linkToken: t, codigoDoAparelho: OUTRO_CODIGO }));
     expect(r.status).toBe(401);
@@ -194,7 +194,7 @@ describe("S1 — R1a: de quem é o link, sem o gastar", () => {
     expect((await s.json()).motivo).toBe("doSite");
   });
 
-  it("no máximo 10 verificações por link", async () => {
+  it("no máximo 10 verificações por ligação", async () => {
     const t = await linkPedido({ app: true });
     for (let i = 0; i < 10; i++) {
       expect((await verificar(chamar("/api/cliente/entrar/verificar", { linkToken: t, codigoDoAparelho: CODIGO }))).status).toBe(200);
@@ -203,7 +203,7 @@ describe("S1 — R1a: de quem é o link, sem o gastar", () => {
   });
 });
 
-describe("S1 — pedir o link: a mesma resposta, com e sem app", () => {
+describe("S1 — pedir a ligação: a mesma resposta, com e sem app", () => {
   it("igual carácter a carácter, exista ou não a conta", async () => {
     const semApp = await (await pedirLink(chamar("/api/entrada/link", { email: EMAIL }))).text();
     const comApp = await (
@@ -229,7 +229,7 @@ describe("S1 — pedir o link: a mesma resposta, com e sem app", () => {
     expect(emails).toHaveLength(0);
   });
 
-  it("a prova fica com o link; o link do site fica sem ela", async () => {
+  it("a prova fica com a ligação; a ligação do site fica sem ela", async () => {
     const app = await linkPedido({ app: true });
     expect(ligacoes.get(hashDaLigacao(app))!.provaDoAparelho).toBe(provaDoCodigo(CODIGO));
     const site = await linkPedido();
@@ -248,14 +248,14 @@ describe("S1 — as peças", () => {
     expect(provaDoCodigo("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
 
-  it("o SQL: gastar o link da app tem a prova na mesma escrita; o site só gasta links sem prova", () => {
+  it("o SQL: gastar a ligação da app tem a prova na mesma escrita; o site só gasta ligações sem prova", () => {
     const DB = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");
     expect(DB).toMatch(/WHERE tokenHash = \? AND usadoEm IS NULL AND expiraEm > NOW\(\) AND provaDoAparelho = \?/);
     expect(DB).toMatch(/WHERE tokenHash = \? AND usadoEm IS NULL AND expiraEm > NOW\(\) AND provaDoAparelho IS NULL/);
     expect(DB).toContain("ALTER TABLE ligacoesDeEntrada ADD COLUMN provaDoAparelho CHAR(64) NULL DEFAULT NULL");
   });
 
-  it("a página /entrar/app não gasta o link: não chama o provedor nem a R1, e tira o token do endereço", () => {
+  it("a página /entrar/app não gasta a ligação: não chama o provedor nem a R1, e tira o token do endereço", () => {
     const P = readFileSync(join(process.cwd(), "src/app/entrar/app/AbrirNaApp.tsx"), "utf8");
     expect(P).not.toContain("signIn(");
     expect(P).not.toContain("/api/cliente/entrar");

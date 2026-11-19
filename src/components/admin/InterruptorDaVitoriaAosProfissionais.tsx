@@ -75,7 +75,7 @@ export default function InterruptorDaVitoriaAosProfissionais() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{NOME_DO_INTERRUPTOR}</p>
       <p className="mt-1 text-sm leading-6 text-slate-300">
         Desde 15-11, a Vitória responde sozinha a quem tem ficha de profissional: as 9 perguntas de dinheiro do
-        modelo novo (a quem paga, a taxa, a referência, o stand-by, o IBAN, o regime de IVA…), com os valores da
+        modelo novo (a quem paga, a taxa, a referência, a conta suspensa, o IBAN, o regime de IVA…), com os valores da
         carteira dele, e fora de horas diz quando a equipa lhe responde. Nunca dá nem muda dados bancários; o resto
         passa a uma pessoa, como hoje.
       </p>

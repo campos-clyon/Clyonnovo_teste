@@ -129,17 +129,17 @@ export async function POST(req: NextRequest) {
       substituirTokenDoPedido,
       site: urlDeAccaoDoPedido(req.headers),
     });
-    if (!gerado) return NextResponse.json({ error: "Não foi possível gerar o link do pedido." }, { status: 500 });
+    if (!gerado) return NextResponse.json({ error: "Não foi possível gerar a ligação do pedido." }, { status: 500 });
     // O `?pagar=1` abre no bloco de pagar À CLYON: no modelo novo vai o link do pedido, sem ele (d54).
     link = noNovoModelo ? gerado : linkParaPagar(gerado);
     await appendOrderHistory(pedidoId, {
       type: "note",
       by: por,
       message: noNovoModelo
-        ? "Adjudicação preparada com o link do pedido, onde estão os dados para pagar ao parceiro (modelo de 15-11). O link anterior deixou de funcionar."
+        ? "Adjudicação preparada com a ligação do pedido, onde estão os dados para pagar ao parceiro (modelo de 15-11). A ligação anterior deixou de funcionar."
         : gerado.endsWith("/conta")
           ? "Adjudicação preparada com o pagamento pela plataforma (a conta do cliente)."
-          : "Adjudicação preparada com o link do pedido, para o cliente pagar pela plataforma. O link anterior deixou de funcionar.",
+          : "Adjudicação preparada com a ligação do pedido, para o cliente pagar pela plataforma. A ligação anterior deixou de funcionar.",
     });
   }
   if (motivo?.ok) {

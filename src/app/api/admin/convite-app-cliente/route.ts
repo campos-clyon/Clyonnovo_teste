@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       const link = linkDeAdesaoValido(corpo.link);
       if (!link) {
         return NextResponse.json(
-          { error: "O link tem de ser da Google Play (https://play.google.com/…)." },
+          { error: "A ligação tem de ser da Google Play (https://play.google.com/…)." },
           { status: 400 },
         );
       }
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
 
     const link = await linkDeAdesaoGuardado();
     if (!link) {
-      return NextResponse.json({ error: "Guarde primeiro o link de adesão da Play." }, { status: 400 });
+      return NextResponse.json({ error: "Guarde primeiro a ligação de adesão da Play." }, { status: 400 });
     }
 
     if (corpo.accao === "so-para-mim") {
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, enviados, falhados, restantes });
     }
 
-    return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+    return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
   } catch (error) {
     console.error("[admin/convite-app-cliente POST]", error);
     return NextResponse.json({ error: "Não foi possível concluir." }, { status: 500 });

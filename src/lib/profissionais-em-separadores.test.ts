@@ -25,12 +25,12 @@ const SECCAO = semNotas(ler("src/components/admin/AdminProfissionaisSeccao.tsx")
 const CONVITES = semNotas(ler("src/components/admin/AdminConvitesPanel.tsx"));
 const CASCA = semNotas(ler("src/components/admin/LegacyAdminClient.tsx"));
 
-describe("as acções são botões", () => {
-  it("o link de entrada copia-se com um botão, e deixou de ser uma caixa de texto", () => {
-    expect(SECCAO).toContain("Copiar link de entrada");
+describe("as ações são botões", () => {
+  it("a ligação de entrada copia-se com um botão, e deixou de ser uma caixa de texto", () => {
+    expect(SECCAO).toContain("Copiar ligação de entrada");
     expect(SECCAO).toContain("navigator.clipboard?.writeText(link)");
     /* A caixa com o endereço por extenso saiu do painel dos convites. */
-    expect(CONVITES).not.toContain("Link de entrada dos profissionais");
+    expect(CONVITES).not.toContain("Ligação de entrada dos profissionais");
     expect(CONVITES).toContain("onLinkDeEntrada?.(linkDeEntrada)");
   });
 

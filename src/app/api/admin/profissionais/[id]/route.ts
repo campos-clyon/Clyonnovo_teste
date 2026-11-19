@@ -255,7 +255,7 @@ export async function PATCH(
         // O antes, lido antes do UPDATE — depois já não há por onde o saber (d5).
         const antes = mexeNoPagamento ? await perfilDoProfissional(providerId) : undefined;
         await actualizarPerfilDoProfissional(providerId, colunas);
-        feito.push("dados actualizados");
+        feito.push("dados atualizados");
         const mudados = mexeNoPagamento ? camposDePagamentoMudados(antes, colunas as Record<string, unknown>) : [];
         if (mudados.length > 0) {
           /*
@@ -438,7 +438,7 @@ export async function PATCH(
         );
       }
       await definirBaseDoProfissional(providerId, base.lat, base.lng);
-      feito.push("coordenadas actualizadas");
+      feito.push("coordenadas atualizadas");
       avisoDeDistribuicao = true;
     }
 
@@ -478,7 +478,7 @@ export async function PATCH(
         base?.lng ?? null,
         providerId,
       ]);
-      feito.push(base ? "morada da base actualizada" : "morada gravada, mas sem ponto no mapa");
+      feito.push(base ? "morada da base atualizada" : "morada gravada, mas sem ponto no mapa");
       avisoDeDistribuicao = true;
     }
 
@@ -501,7 +501,7 @@ export async function PATCH(
         );
       }
       await actualizarProfissional(providerId, validacao.alteracoes);
-      feito.push("perfil actualizado");
+      feito.push("perfil atualizado");
       // d5: o regime de IVA ou o «emite fatura» mudados ficam no registo permanente.
       if (fiscaisMudados.length > 0) {
         await registarSemFalhar({
@@ -557,7 +557,7 @@ export async function PATCH(
       // prometer-lhe uma porta que não abre.
       if (!contaPodeEntrarNoPainel(p)) {
         return NextResponse.json(
-          { error: `A conta está «${p.estado}» e o link não abriria. Reactive-a primeiro.` },
+          { error: `A conta está «${p.estado}» e a ligação não abriria. Reactive-a primeiro.` },
           { status: 409 },
         );
       }
@@ -569,7 +569,7 @@ export async function PATCH(
         pedidoPor: "clyon",
       });
       linkDeReporPara = p.email;
-      feito.push(linkDeReporEnviado ? "link de repor enviado" : "link de repor NÃO enviado");
+      feito.push(linkDeReporEnviado ? "ligação de repor enviada" : "ligação de repor NÃO enviada");
     }
 
     // ── O convite para criar palavra-passe ───────────────────────────────────
@@ -649,7 +649,7 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     console.error("[api/admin/profissionais PATCH]", error);
-    return NextResponse.json({ error: "Erro ao actualizar profissional" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao atualizar profissional" }, { status: 500 });
   }
 }
 

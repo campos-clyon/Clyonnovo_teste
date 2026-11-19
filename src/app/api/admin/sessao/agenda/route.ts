@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (accao !== "criar" && accao !== "alterar") {
-      return NextResponse.json({ error: "Acção desconhecida." }, { status: 400 });
+      return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });
     }
     const lida = lerMarcacao(corpo, diaEmLisboa(new Date()));
     if (!lida.ok) return NextResponse.json({ error: lida.erro }, { status: 400 });

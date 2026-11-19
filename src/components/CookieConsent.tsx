@@ -189,7 +189,7 @@ export default function CookieConsent({ posicao = "barraDoSite" }: { posicao?: P
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
                     <PreferenceCard
                       title="Necessários"
-                      description="Sempre activos para funcionamento básico."
+                      description="Sempre ativos para funcionamento básico."
                       enabled
                       locked
                       onToggle={() => undefined}

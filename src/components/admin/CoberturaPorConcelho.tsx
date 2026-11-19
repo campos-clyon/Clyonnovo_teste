@@ -80,7 +80,7 @@ export default function CoberturaPorConcelho() {
           ) : (
             <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          Actualizar
+          Atualizar
         </button>
       </header>
 
@@ -108,7 +108,7 @@ export default function CoberturaPorConcelho() {
                     className="px-3 py-2 text-right font-semibold"
                     title="Dos de base perto, os que fizeram pelo menos uma proposta ou um trabalho"
                   >
-                    Activos 14 d / 30 d
+                    Ativos 14 d / 30 d
                   </th>
                   <th className="px-3 py-2 text-right font-semibold" title="Pedidos dos últimos 30 dias com a morada no concelho">
                     Pedidos 30 d

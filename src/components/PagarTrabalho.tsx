@@ -426,7 +426,7 @@ export default function PagarTrabalho({
               {aberto.expiraEm
                 ? ` A referência é válida até ${new Date(aberto.expiraEm).toLocaleDateString("pt-PT", { timeZone: "Europe/Lisbon" })}.`
                 : ""}{" "}
-              Assim que o pagamento entrar, esta página actualiza-se sozinha.
+              Assim que o pagamento entrar, esta página atualiza-se sozinha.
             </p>
           </>
         )}

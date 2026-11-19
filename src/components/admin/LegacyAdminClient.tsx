@@ -1409,8 +1409,8 @@ export default function ColaboradorAdminClient({
     const plural = n === 1 ? "1 pedido" : `${n} pedidos`;
 
     const perguntas: Record<typeof acao, string> = {
-      concluido: `Marcar ${plural} como realizados? Saem da lista activa e entram na folha de trabalhos concluídos.`,
-      rejeitado: `Marcar ${plural} como rejeitados? Saem da lista activa e não voltam a aparecer na fila.`,
+      concluido: `Marcar ${plural} como realizados? Saem da lista ativa e entram na folha de trabalhos concluídos.`,
+      rejeitado: `Marcar ${plural} como rejeitados? Saem da lista ativa e não voltam a aparecer na fila.`,
       arquivar:  `Arquivar ${plural}? Deixam de aparecer na lista principal, mas podem ser vistos em "Arquivados".`,
       apagar:    `APAGAR ${plural} definitivamente? Isto não tem desfazer — os dados do cliente e o histórico desaparecem.`,
     };
@@ -1483,8 +1483,8 @@ export default function ColaboradorAdminClient({
     if (!token || !p.id) return;
     const quem = p.contactName ? ` de ${p.contactName}` : "";
     const pergunta = novoEstado === "concluido"
-      ? `Marcar o pedido${quem} como realizado? Sai da lista activa e entra na folha de trabalhos concluídos.`
-      : `Marcar o pedido${quem} como rejeitado? Sai da lista activa e não volta a aparecer na fila.`;
+      ? `Marcar o pedido${quem} como realizado? Sai da lista ativa e entra na folha de trabalhos concluídos.`
+      : `Marcar o pedido${quem} como rejeitado? Sai da lista ativa e não volta a aparecer na fila.`;
     if (!confirm(pergunta)) return;
     if (novoEstado === "concluido" && !(await confirmarSeFuturo([{ pedidoId: p.id, quando: p.dataAgendada }], "marcar este pedido como realizado"))) return;
     // d54 (16-11-2026): rejeitar pede o motivo.
@@ -1733,7 +1733,7 @@ export default function ColaboradorAdminClient({
       new Intl.DateTimeFormat("pt-PT", {
         timeZone: "Europe/Lisbon",
         weekday: "long",
-        day: "2-digit",
+        day: "numeric",
         month: "long",
         year: "numeric",
       }).format(new Date()),
@@ -2065,7 +2065,7 @@ export default function ColaboradorAdminClient({
                 ? `Pedidos · ${ROTULO_DO_SEPARADOR[activeSection]}`
                 : sectionLabels[activeSection]}
             </h2>
-            <p className="hidden truncate text-xs capitalize leading-none text-slate-500 sm:block">
+            <p className="hidden truncate text-xs leading-none text-slate-500 sm:block">
               {hojeLabel}
             </p>
           </header>
@@ -2258,7 +2258,7 @@ export default function ColaboradorAdminClient({
                   aria-label="Filtrar pelo estado"
                   className="h-7 rounded-[10px] border border-[#ccccff] bg-white/80 px-2 text-[11px] font-medium text-slate-700 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 >
-                  <option value="todos">Todos os estados (activos)</option>
+                  <option value="todos">Todos os estados (ativos)</option>
                   <option value="pendente">Novos</option>
                   <option value="atribuido">Atribuídos</option>
                   <option value="em_analise">Em análise</option>
@@ -2286,11 +2286,11 @@ export default function ColaboradorAdminClient({
                         ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
-                    title={pedidoStatusFilter === "arquivado" ? "Voltar aos pedidos activos" : "Ver pedidos arquivados"}
+                    title={pedidoStatusFilter === "arquivado" ? "Voltar aos pedidos ativos" : "Ver pedidos arquivados"}
                   >
                     <Archive className="h-3.5 w-3.5" />
                     {pedidoStatusFilter === "arquivado"
-                      ? "Ver activos"
+                      ? "Ver ativos"
                       : `Arquivados${(pedidosCounts["arquivado"] ?? 0) > 0 ? ` (${pedidosCounts["arquivado"]})` : ""}`}
                   </button>
                   <button
@@ -2301,11 +2301,11 @@ export default function ColaboradorAdminClient({
                         ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
-                    title={pedidoStatusFilter === "concluido" ? "Voltar aos pedidos activos" : "Ver pedidos realizados"}
+                    title={pedidoStatusFilter === "concluido" ? "Voltar aos pedidos ativos" : "Ver pedidos realizados"}
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {pedidoStatusFilter === "concluido"
-                      ? "Ver activos"
+                      ? "Ver ativos"
                       : `Realizados${(pedidosCounts["concluido"] ?? 0) > 0 ? ` (${pedidosCounts["concluido"]})` : ""}`}
                   </button>
                   <button
@@ -2315,7 +2315,7 @@ export default function ColaboradorAdminClient({
                     className="flex h-7 items-center gap-1.5 rounded-[10px] border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 ${pedidosLoading ? "animate-spin" : ""}`} />
-                    {pedidosLoading ? "A actualizar…" : "Actualizar"}
+                    {pedidosLoading ? "A atualizar…" : "Actualizar"}
                   </button>
                 </div>
               </div>
@@ -2671,7 +2671,7 @@ export default function ColaboradorAdminClient({
                                         if (!token || !p.id) return;
                                         const isAlreadyArchived = p.status === "arquivado";
                                         const confirmMsg = isAlreadyArchived
-                                          ? "Restaurar este pedido para a fila activa?"
+                                          ? "Restaurar este pedido para a fila ativa?"
                                           : "Arquivar este pedido? Ele deixará de aparecer na lista principal.";
                                         if (!confirm(confirmMsg)) return;
                                         // d54: arquivar pede o motivo (restaurar não).
@@ -3174,7 +3174,7 @@ export default function ColaboradorAdminClient({
                         <tr className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wide text-slate-400">
                           <th className="px-4 py-3 font-semibold">Data/hora</th>
                           <th className="px-4 py-3 font-semibold">Tipo</th>
-                          <th className="px-4 py-3 font-semibold">Acção</th>
+                          <th className="px-4 py-3 font-semibold">Ação</th>
                           <th className="px-4 py-3 font-semibold">Detalhe</th>
                           <th className="px-4 py-3 font-semibold">Página</th>
                           <th className="px-4 py-3 font-semibold">Serviço</th>
@@ -3389,7 +3389,7 @@ export default function ColaboradorAdminClient({
                 </h2>
                 <p className="mt-1 text-sm text-slate-400">
                   Os pedidos criados pelo formulário novo e as propostas de cada
-                  profissional. Reenviar emite um link novo e invalida o anterior.
+                  profissional. Reenviar emite uma ligação nova e invalida o anterior.
                 </p>
               </div>
               <AdminNegociacoesPanel mostrar="clientes" />
@@ -3471,7 +3471,7 @@ export default function ColaboradorAdminClient({
             <section className="space-y-3 rounded-[22px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4">
               <p className="text-[11px] text-slate-500">
                 Os orçamentos novos, os trabalhos de valor fixo e as negociações — as em que a
-                CLYON responde pelo cliente e as que o cliente conduz pelo link do email.
+                CLYON responde pelo cliente e as que o cliente conduz pela ligação do email.
               </p>
               {/* O valor fixo é a outra metade da permissão da Mesa (20-10-2026). */}
               <AdminNegociacoesPanel
@@ -3669,7 +3669,7 @@ export default function ColaboradorAdminClient({
                 <p className="mt-1 mb-3 text-sm leading-6 text-slate-300">
                   A caminho de a CLYON segurar o dinheiro entre o cliente e o profissional. Aqui
                   compara-se a carteira de hoje com a que sai do livro de movimentos — e só se
-                  avança quando derem exactamente o mesmo número.
+                  avança quando derem exatamente o mesmo número.
                 </p>
                 <AdminLivroPanel />
               </div>

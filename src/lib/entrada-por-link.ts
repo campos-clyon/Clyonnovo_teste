@@ -124,11 +124,11 @@ export function porqueRecusa(
 
 export const MENSAGEM: Record<MotivoDeRecusa, string> = {
   ausente: "Falta o link. Peça um novo email de entrada.",
-  malformado: "Este link não é válido. Peça um novo email de entrada.",
-  desconhecido: "Este link não é válido. Peça um novo email de entrada.",
-  expirado: `O link expirou — dura ${MINUTOS_DE_VALIDADE} minutos. Peça um novo.`,
-  usado: "Este link já foi usado. Por segurança, cada link só serve uma vez.",
-  daApp: "Este link é para a app CLYON. Abra-o no telemóvel onde o pediu.",
-  doSite: "Este link é para entrar no site. Peça o link de entrada aqui na app.",
-  outroAparelho: "Este link foi pedido noutro telemóvel. Peça um novo aqui.",
+  malformado: "Esta ligação não é válida. Peça um novo email de entrada.",
+  desconhecido: "Esta ligação não é válida. Peça um novo email de entrada.",
+  expirado: `A ligação expirou — dura ${MINUTOS_DE_VALIDADE} minutos. Peça um novo.`,
+  usado: "Esta ligação já foi usada. Por segurança, cada ligação só serve uma vez.",
+  daApp: "Esta ligação é para a app CLYON. Abra-a no telemóvel onde a pediu.",
+  doSite: "Esta ligação é para entrar no site. Peça a ligação de entrada aqui na app.",
+  outroAparelho: "Esta ligação foi pedido noutro telemóvel. Peça um novo aqui.",
 };

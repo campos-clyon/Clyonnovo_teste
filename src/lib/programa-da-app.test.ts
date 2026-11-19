@@ -134,11 +134,11 @@ describe("os estados andam pela ordem", () => {
     expect(corpo).toContain("desfazerConviteDoPrograma(");
   });
 
-  it("sem link de adesão nas Configs, o convite não sai e diz o que falta", () => {
+  it("sem ligação de adesão nas Configs, o convite não sai e diz o que falta", () => {
     const i = ROTA_ADMIN.indexOf('corpo.accao === "convidar"');
     const corpo = ROTA_ADMIN.slice(i);
     expect(corpo.indexOf("if (!link)")).toBeLessThan(corpo.indexOf("enviarConviteDoPrograma("));
-    expect(corpo).toContain("Link do programa da app");
+    expect(corpo).toContain("Ligação do programa da app");
   });
 
   it("as rotas do backoffice são só do administrador", () => {
@@ -147,7 +147,7 @@ describe("os estados andam pela ordem", () => {
     expect(ler("src/app/api/admin/programa-da-app/link/route.ts")).toContain("requireAdminGeral(req)");
   });
 
-  it("o link é o mesmo do convite de 01-11 (um link, um sítio)", () => {
+  it("a ligação é o mesmo do convite de 01-11 (uma ligação, um sítio)", () => {
     expect(ROTA_ADMIN).toContain("linkDeAdesaoGuardado()");
     expect(ler("src/app/api/admin/programa-da-app/link/route.ts")).toContain("guardarLinkDeAdesao(");
   });
@@ -231,7 +231,7 @@ describe("os textos", () => {
     expect(fraseDoEstadoNaConta(null, null)).toBe(TEXTOS_DO_CONVITE_NO_SITE.corpo);
   });
 
-  it("o email: os dois passos, o email da conta Google, os dois links, e que pode sair — sem «beta»", () => {
+  it("o email: os dois passos, o email da conta Google, as duas ligações, e que pode sair — sem «beta»", () => {
     for (const t of [html, texto]) {
       expect(t).not.toMatch(/beta/i);
       expect(t).toContain("ana@gmail.com");
@@ -243,7 +243,7 @@ describe("os textos", () => {
     expect(texto).toMatch(/2\. Instale a app/);
   });
 
-  it("o link vem escapado no HTML", () => {
+  it("a ligação vem escapado no HTML", () => {
     const h = htmlDoConviteDoPrograma({ email: "a@b.pt", linkDeAdesao: 'https://play.google.com/x"><b>' });
     expect(h).not.toContain('"><b>');
   });

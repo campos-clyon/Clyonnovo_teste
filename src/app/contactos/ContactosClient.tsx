@@ -235,7 +235,7 @@ export default function ContactosClient() {
                   chegam em menos de {PRAZO_DE_RESPOSTA.porExtenso}
                   {enviado?.emailDoLink ? (
                     <>
-                      , pelo link que segue por email para{" "}
+                      , pela ligação que segue por email para{" "}
                       <strong className="text-slate-700">{enviado.emailDoLink}</strong>.
                     </>
                   ) : (

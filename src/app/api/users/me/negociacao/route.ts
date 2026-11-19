@@ -97,7 +97,7 @@ async function agirComoConvidado(req: NextRequest) {
     const resposta = await agirComoCliente({
       pedido,
       corpo,
-      autorNome: `pelo link, na app (telemóvel ${convidado.prova8})`,
+      autorNome: `pela ligação, na app (telemóvel ${convidado.prova8})`,
       porta: "convidado",
       baseUrl: urlDeAccaoDoPedido(req.headers),
     });

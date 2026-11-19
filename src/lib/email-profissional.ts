@@ -113,7 +113,7 @@ function primeiraFrase(p: AvisoDePedido): string {
     return [
       `Trabalho oferecido pela CLYON: ${servico}${p.zona ? ` em ${p.zona}` : ""}, pedido #${p.pedidoId}.`,
       `No valor de ${euros(p.valorDoTrabalho ?? p.valorFixo ?? null)} — ganhos estimados de ${fixo}.`,
-      "Abra o link para aceitar ou recusar.",
+      "Abra a ligação para aceitar ou recusar.",
     ].join(" ");
   }
   const quer = euros(p.valorDesejadoCliente);
@@ -122,7 +122,7 @@ function primeiraFrase(p: AvisoDePedido): string {
     `${servico}${p.zona ? ` em ${p.zona}` : ""}, pedido #${p.pedidoId}.`,
     quer && recebe ? `Sugestão CLYON ${quer}, receberia ${recebe} já sem a taxa.` : null,
     p.distanciaKm != null ? `A ~${p.distanciaKm} km da sua base.` : null,
-    "Abra o link para ver a conta feita para si e propor o seu valor.",
+    "Abra a ligação para ver a conta feita para si e propor o seu valor.",
   ].filter(Boolean);
   return partes.join(" ");
 }
@@ -160,12 +160,12 @@ function montarTexto(p: AvisoDePedido): string {
     "",
     ...(fixo
       ? [
-          "A morada exacta e o contacto aparecem depois de o trabalho ser seu. Não há",
+          "A morada exata e o contacto aparecem depois de o trabalho ser seu. Não há",
           "propostas: só aceitar ou recusar.",
           ...(p.modoDaOferta === "distribuida" ? [SE_O_CLIENTE_NAO_RESPONDER] : []),
         ]
       : [
-          "A morada exacta aparece depois de o cliente o contratar. No link vê a conta",
+          "A morada exata aparece depois de o cliente o contratar. Na ligação vê a conta",
           "feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe",
           "fica — e propõe o seu valor. Só valores, sem mensagens.",
         ]),
@@ -258,9 +258,9 @@ function montarHtml(p: AvisoDePedido): string {
           <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
             ${
               fixo
-                ? "A morada exacta e o contacto aparecem depois de o trabalho ser seu. O valor é fixo: não há propostas, só aceitar ou recusar." +
+                ? "A morada exata e o contacto aparecem depois de o trabalho ser seu. O valor é fixo: não há propostas, só aceitar ou recusar." +
                   (p.modoDaOferta === "distribuida" ? ` ${SE_O_CLIENTE_NAO_RESPONDER}` : "")
-                : "A morada exacta aparece depois de o cliente o contratar. No link vê a conta feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe fica — e propõe o seu valor. Só valores, sem mensagens."
+                : "A morada exata aparece depois de o cliente o contratar. Na ligação vê a conta feita para si, com os seus quilómetros — custos, preço sugerido e o que lhe fica — e propõe o seu valor. Só valores, sem mensagens."
             }
           </p>
         </td></tr>

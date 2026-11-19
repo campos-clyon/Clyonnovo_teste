@@ -261,7 +261,7 @@ export default function DoarMoveisUsadosPage() {
             </p>
             <p className="mt-4 text-sm leading-6 text-slate-500">
               Só está aqui o que confirmámos no site oficial de cada entidade, a {DATA_DA_VERIFICACAO}.
-              As condições mudam: confirme no link de cada uma antes de marcar.
+              As condições mudam: confirme na ligação de cada uma antes de marcar.
             </p>
           </div>
         </div>

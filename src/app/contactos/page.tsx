@@ -320,7 +320,7 @@ export default function ContactosPage() {
                 ],
                 [
                   "Chega aos parceiros da sua zona",
-                  "Só aos que fazem esse serviço e cujo raio alcança a sua morada. A sua morada exacta e o seu telefone não são visíveis para eles nesta fase — só a localidade.",
+                  "Só aos que fazem esse serviço e cujo raio alcança a sua morada. A sua morada exata e o seu telefone não são visíveis para eles nesta fase — só a localidade.",
                 ],
                 [
                   "Recebe propostas com valores",

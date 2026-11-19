@@ -87,7 +87,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Quanto custa montar um roupeiro?",
-      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem custa ${precoDeReferencia("montagem_moveis")}, e o valor exacto vem na proposta.`,
+      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem custa ${precoDeReferencia("montagem_moveis")}, e o valor exato vem na proposta.`,
     },
   ],
   /*
@@ -105,7 +105,7 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
     },
     {
       q: "Fazem obras?",
-      a: "Reparações e remodelações, sim: pintura, canalização, electricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.",
+      a: "Reparações e remodelações, sim: pintura, canalização, eletricidade, carpintaria, pavimentos, casas de banho e cozinhas, feitas por parceiros da sua zona. Envie fotografias e recebe propostas. Obras de construção, com estrutura ou licenças, ainda não.",
     },
     {
       q: "Posso juntar vários arranjos no mesmo pedido?",

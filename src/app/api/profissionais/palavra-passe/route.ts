@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       typeof corpo.actual === "string" &&
       (await palavraPasseConfere(corpo.actual, guardada));
     if (!confere) {
-      return NextResponse.json({ error: "A palavra-passe actual não confere." }, { status: 403 });
+      return NextResponse.json({ error: "A palavra-passe atual não confere." }, { status: 403 });
     }
 
     await definirPalavraPasseDoProfissional(
