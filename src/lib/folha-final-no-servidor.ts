@@ -208,7 +208,7 @@ export async function folhaFinalPelaEquipa(a: {
     const { gravarRegistoReal } = await import("./registo-real-na-base");
     await gravarRegistoReal(a.pedidoId, f.entrada.registoReal, a.porQuem).catch(() => {});
   }
-  const frase = fraseDaFolhaFinal(f, { porQuem: a.porQuem, antes: c.antes.valorAcordado, jaPago: c.jaPago, motivo });
+  const frase = fraseDaFolhaFinal(f, { porQuem: a.porQuem, antes: c.antes.valorAcordado, jaPago: c.jaPago, motivo, semFactura: c.semFactura });
   await appendOrderHistory(a.pedidoId, { type: "valor_corrigido", by: null, message: frase }).catch(() => {});
   await registarSemFalhar({
     acontecimento: "valor_corrigido",

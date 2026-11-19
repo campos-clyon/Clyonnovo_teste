@@ -166,6 +166,8 @@ function GerarReferenciaDoAdministrador({
   const [doServidor, setDoServidor] = useState<{
     quemPaga: "cliente" | "profissional";
     ivaIncluido: boolean;
+    /** d70 v2: o trabalho está marcado «Sem fatura» — a referência é sem IVA. */
+    semFactura: boolean;
     valorAPedir: number;
     valorAPedirComFactura: number;
     telefoneSugerido: string | null;
@@ -209,6 +211,7 @@ function GerarReferenciaDoAdministrador({
           setDoServidor({
             quemPaga: d.quemPaga,
             ivaIncluido: d.ivaIncluido === true,
+            semFactura: d.semFactura === true,
             valorAPedir: Number(d.valorAPedir),
             valorAPedirComFactura: Number(d.valorAPedirComFactura),
             telefoneSugerido: typeof d.telefoneSugerido === "string" ? d.telefoneSugerido : null,
@@ -304,7 +307,7 @@ function GerarReferenciaDoAdministrador({
         body: JSON.stringify({
           negociacaoId,
           metodo,
-          comFactura,
+          comFactura: comFactura && doServidor?.semFactura !== true,
           telemovel: metodo === "mbway" ? telemovel : undefined,
         }),
       });
@@ -356,9 +359,12 @@ function GerarReferenciaDoAdministrador({
   const doProfissional = doServidor?.quemPaga === "profissional";
   // Sem escolha de factura: com IVA incluído há sempre, e a dívida do
   // profissional não é uma venda ao cliente.
-  const semEscolhaDeFactura = doProfissional || doServidor?.ivaIncluido === true;
+  const semEscolhaDeFactura = doProfissional || doServidor?.ivaIncluido === true || doServidor?.semFactura === true;
+  // d70 v2: marcado «Sem fatura», o valor é sempre o sem IVA (o servidor faz o mesmo).
   const valor = doServidor
-    ? comFactura || semEscolhaDeFactura
+    ? doServidor.semFactura
+      ? doServidor.valorAPedir
+      : comFactura || semEscolhaDeFactura
       ? doServidor.valorAPedirComFactura
       : doServidor.valorAPedir
     : comFactura
@@ -417,6 +423,12 @@ function GerarReferenciaDoAdministrador({
             <p className="mt-2 text-[11px] leading-relaxed text-amber-200">
               Trabalho pago em dinheiro, com IVA incluído: o cliente pagou o preço inteiro ao
               profissional, e é ele que deve à CLYON o IVA e a taxa da plataforma — {euros(valor)}.
+            </p>
+          )}
+          {doServidor?.semFactura && !doProfissional && (
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-300">
+              Trabalho marcado «Sem fatura»: a referência é de {euros(valor)} (sem fatura), sem IVA. Para a pedir com fatura,
+              tire primeiro a marca no cartão.
             </p>
           )}
           {!semEscolhaDeFactura && (

@@ -47,6 +47,17 @@ export function taxasSemFactura(t: Taxas): Taxas {
   return { cliente: 0, profissional: Math.round((t.cliente + t.profissional) * 10_000) / 10_000 };
 }
 
+/**
+ * A REFERÊNCIA LEVA FATURA? — d70 v2 (19-11-2026). Marcado «Sem fatura» no
+ * trabalho, nunca: o «com fatura» que venha do ecrã não conta, e pede-se o sem
+ * IVA (o mesmo do valor final). Sem a marca, como antes: com IVA incluído há
+ * sempre fatura; antes dele, a escolha do ecrã.
+ */
+export function comFacturaDaReferencia(t: { modelo: ModeloDoPreco; semFactura?: boolean }, doEcra: unknown): boolean {
+  if (t.semFactura === true) return false;
+  return t.modelo === "iva_incluido" || doEcra === true;
+}
+
 /** O modelo do preço, contando com a marca: sem factura, sem IVA. */
 export function modeloDaLinha(
   l: { semFactura?: unknown } | null | undefined,

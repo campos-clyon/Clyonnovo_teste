@@ -21,6 +21,7 @@ import {
 import { mensagemDaReferencia } from "@/lib/mensagem-da-referencia";
 import { pedirPagamento } from "@/lib/pedir-ao-eupago";
 import { porqueNaoPodeGerarMais } from "@/lib/limite-de-referencias";
+import { comFacturaDaReferencia } from "@/lib/sem-factura";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import {
   abrirPagamento,
@@ -144,8 +145,10 @@ export async function GET(req: NextRequest) {
         return {
           quemPaga: p.quemPaga,
           ivaIncluido: t.modelo === "iva_incluido",
+          // d70 v2: a marca do trabalho — o ecrã não oferece o «com fatura».
+          semFactura: t.semFactura === true,
           valorAPedir: falta(t, false),
-          valorAPedirComFactura: falta(t, true),
+          valorAPedirComFactura: falta(t, comFacturaDaReferencia(t, true)),
           telefoneSugerido:
             p.quemPaga === "profissional" ? t.telefoneDoProfissional : t.telefoneDoCliente,
         };
@@ -219,7 +222,8 @@ export async function POST(req: NextRequest) {
    * deu-lhe o preço inteiro, com IVA, e ele deve à CLYON o IVA e a comissão.
    * Há factura em todas as vendas — o `comFactura` grava-se ligado.
    */
-  const comFactura = t.modelo === "iva_incluido" || corpo.comFactura === true;
+  // d70 v2: marcado «Sem fatura» no trabalho, a referência é sem IVA — o «com fatura» do corpo não conta.
+  const comFactura = comFacturaDaReferencia(t, corpo.comFactura);
   const pedido = quantoSePedeNesteTrabalho(t, comFactura);
   const quemPaga = pedido.quemPaga;
   /*

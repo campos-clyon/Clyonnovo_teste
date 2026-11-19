@@ -326,7 +326,7 @@ export function fazerAFolhaFinal(a: {
 const eur = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
 /** A frase do histórico do pedido. */
-export function fraseDaFolhaFinal(f: FolhaFinalFeita, a: { porQuem: string; antes: number | null; jaPago: boolean; motivo: string | null }): string {
+export function fraseDaFolhaFinal(f: FolhaFinalFeita, a: { porQuem: string; antes: number | null; jaPago: boolean; motivo: string | null; semFactura?: boolean }): string {
   const c = f.conta;
   const horas = `${String(Math.round(c.horas.cobradas * 100) / 100).replace(".", ",")} h a ${eur(c.horas.precoHoraCent / 100)}`;
   const desl = c.deslocacao.tipo === "km" ? `${c.deslocacao.kmCobrados} km (${eur(c.deslocacao.cent / 100)})` : `deslocação ${eur(c.deslocacao.cent / 100)}`;
@@ -336,7 +336,8 @@ export function fraseDaFolhaFinal(f: FolhaFinalFeita, a: { porQuem: string; ante
     : "";
   return (
     `Folha final da mudança gravada por ${a.porQuem}: equipa de ${c.pessoas}${aMais}, ${horas}, ${desl}${mat}. ` +
-    `Valor final ${eur(f.previa.semIva)} sem IVA (${eur(f.previa.total)} com IVA)` +
+    // d70 v2: num trabalho marcado «Sem fatura» o cliente paga o sem IVA, e a frase di-lo.
+    (a.semFactura ? `Valor final ${eur(f.previa.semIva)} (sem fatura)` : `Valor final ${eur(f.previa.semIva)} sem IVA (${eur(f.previa.total)} com IVA)`) +
     `${a.antes != null ? `, era ${eur(a.antes)}` : ""}. ` +
     `Taxa ${String(Math.round(f.gravar.taxaBase * 10000) / 100).replace(".", ",")} % sobre horas e deslocação: ${eur(f.previa.clyon)}; ` +
     `o profissional recebe ${eur(f.previa.profissional)}.` +
