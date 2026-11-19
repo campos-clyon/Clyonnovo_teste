@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   DADOS_DE_PAGAMENTO_A_CONFIRMAR,
   confirmacaoAindaVale,
+  dadoDePagamentoEncurtado,
   dadosQueOClienteRecebe,
   porqueOsDadosEstaoPorConfirmar,
 } from "./dados-de-pagamento-por-confirmar";
@@ -71,8 +72,17 @@ describe("d5 — os dados de pagamento por confirmar não chegam ao cliente", ()
   it("no backoffice, mudar IBAN/titular/MB WAY fica no registo (encurtado) e manda o email ao parceiro", () => {
     const rota = ler("src/app/api/admin/profissionais/[id]/route.ts");
     expect(rota).toContain('acontecimento: "profissional_pagamento_mudado"');
-    expect(rota).toContain("ibanEncurtado(");
+    expect(rota).toContain("dadoDePagamentoEncurtado");
+    expect(rota).not.toMatch(/split\(\/s\+\//);
     expect(rota).toContain("enviarEmailDosDadosDePagamento(");
+  });
+
+  it("o registo encurta: iniciais do titular (também com «s» no nome), IBAN e MB WAY nunca inteiros", () => {
+    expect(dadoDePagamentoEncurtado("ibanTitular", "Sasha Silvestre dos Santos")).toBe("S. S. d. S.");
+    expect(dadoDePagamentoEncurtado("ibanTitular", "  Rosa   Assis ")).toBe("R. A.");
+    expect(dadoDePagamentoEncurtado("iban", "PT50000201231234567890154")).toBe("PT50 ···· 0154");
+    expect(dadoDePagamentoEncurtado("mbway", "912345678")).toBe("···678");
+    expect(dadoDePagamentoEncurtado("iban", "")).toBeNull();
   });
 
   it("regimeIva e emiteFatura só pelo administrador, com registo", () => {

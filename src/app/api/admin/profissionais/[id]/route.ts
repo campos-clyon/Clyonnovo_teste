@@ -47,7 +47,7 @@ import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { acertarRegimeDasContratadas } from "@/lib/regime-acertado-na-base";
 import { camposDePagamentoMudados } from "@/lib/dados-de-pagamento-mudados";
 import { enviarEmailDosDadosDePagamento } from "@/lib/email-dados-de-pagamento-do-profissional";
-import { ibanEncurtado } from "@/lib/iban";
+import { dadoDePagamentoEncurtado } from "@/lib/dados-de-pagamento-por-confirmar";
 
 // O número saiu daqui para `convite-profissional.ts`: a aprovação de uma
 // candidatura pelo site emite o mesmo link, e dois «7» em dois ficheiros é como
@@ -263,13 +263,7 @@ export async function PATCH(
            * permanente, com quem e o antes e o depois ENCURTADOS (nunca o IBAN
            * inteiro), e o mesmo email de quando é ele a mudar.
            */
-          const curto = (c: string, v: unknown): string | null => {
-            const t = typeof v === "string" ? v.trim() : "";
-            if (!t) return null;
-            if (c === "iban") return ibanEncurtado(t) || "····";
-            if (c === "mbway") return `···${t.slice(-3)}`;
-            return t.split(/s+/).map((p) => `${p[0] ?? ""}.`).join(" ");
-          };
+          const curto = dadoDePagamentoEncurtado;
           const depois = colunas as Record<string, unknown>;
           await registarSemFalhar({
             acontecimento: "profissional_pagamento_mudado",

@@ -1,4 +1,21 @@
 import { mudaramDepoisDeContratar, titularBateComONome } from "./dados-de-pagamento-mudados";
+import { ibanEncurtado } from "./iban";
+
+/**
+ * O DADO DE PAGAMENTO ENCURTADO, PARA O REGISTO — d5, 19-11-2026. Nunca o IBAN
+ * inteiro: o IBAN com os 4 primeiros e os 4 últimos, o MB WAY com os 3
+ * últimos, o titular só com as iniciais. `null` quando não há valor.
+ */
+export function dadoDePagamentoEncurtado(campo: string, v: unknown): string | null {
+  const t = typeof v === "string" ? v.trim() : "";
+  if (!t) return null;
+  if (campo === "iban") return ibanEncurtado(t) || "····";
+  if (campo === "mbway") return `···${t.slice(-3)}`;
+  return t
+    .split(/\s+/)
+    .map((p) => `${p[0] ?? ""}.`)
+    .join(" ");
+}
 
 /**
  * OS DADOS DE PAGAMENTO DO PARCEIRO POR CONFIRMAR — d5, 19-11-2026.
