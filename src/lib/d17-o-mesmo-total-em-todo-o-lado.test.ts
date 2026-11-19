@@ -53,6 +53,7 @@ function negociacao(extra: Record<string, unknown> = {}): Record<string, unknown
 }
 let linhaNaBase: Record<string, unknown> = {};
 
+vi.mock("@/lib/dados-de-pagamento-por-confirmar-na-base", () => ({ negociacoesComDadosPorConfirmar: vi.fn(async () => new Map()) }));
 vi.mock("@/lib/db", async (original) => ({
   ...(await original<typeof import("@/lib/db")>()),
   getPool: vi.fn(async () => ({

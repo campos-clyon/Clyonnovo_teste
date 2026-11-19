@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { validarDados, CAMPOS_DE_DADOS, CAMPOS_SO_DO_ADMINISTRADOR } from "./edicao-profissional";
+import { validarDados, CAMPOS_DE_DADOS, CAMPOS_SO_DO_ADMINISTRADOR, CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR } from "./edicao-profissional";
 import { lerMbway } from "./mbway";
 
 /*
@@ -77,11 +77,12 @@ describe("validarDados", () => {
 });
 
 describe("o que só o administrador muda", () => {
-  it("o email e o pagamento — e são todos campos de dados", () => {
-    for (const c of ["email", "iban", "ibanTitular", "mbway"]) {
+  it("o email, o pagamento e (d5) o regime de IVA e o «emite fatura» — os outros são campos de dados", () => {
+    for (const c of ["email", "iban", "ibanTitular", "mbway", "regimeIva", "emiteFatura"]) {
       expect(CAMPOS_SO_DO_ADMINISTRADOR as readonly string[]).toContain(c);
     }
     for (const c of CAMPOS_SO_DO_ADMINISTRADOR) {
+      if ((CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR as readonly string[]).includes(c)) continue;
       expect(CAMPOS_DE_DADOS as readonly string[]).toContain(c);
     }
   });
@@ -89,7 +90,7 @@ describe("o que só o administrador muda", () => {
   it("a rota recusa-os a um assistente, antes de escrever o que quer que seja", () => {
     const ROTA = semNotas(ler("src/app/api/admin/profissionais/[id]/route.ts"));
     expect(ROTA).toContain(
-      'CAMPOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin"',
+      'DADOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin"',
     );
     const valida = ROTA.indexOf("validarDados(corpo)");
     expect(valida).toBeGreaterThan(-1);

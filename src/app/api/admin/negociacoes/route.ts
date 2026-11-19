@@ -20,6 +20,7 @@ import { pedidoFechado } from "@/lib/pedido-arrumado";
 import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { negociacoesComDadosDePagamentoMudados } from "@/lib/dados-de-pagamento-mudados-na-base";
+import { negociacoesComDadosPorConfirmar } from "@/lib/dados-de-pagamento-por-confirmar-na-base";
 import { lerValorUnico, linhasDoValorUnico, valorUnicoComIva } from "@/lib/valor-unico";
 import { avisarClienteDoValorUnico } from "@/lib/email-proposta";
 import { aceitesDoValorUnico, marcarValorUnicoAceite, type AceiteDoValorUnico } from "@/lib/valor-unico-no-whatsapp-na-base";
@@ -88,6 +89,13 @@ export async function GET(req: NextRequest) {
       console.error("[api/admin/negociacoes GET] dados de pagamento mudados:", e);
       return new Set<number>();
     });
+    // d5: os dados de pagamento retidos até a CLYON os confirmar com o parceiro (mudados, ou titular que não bate).
+    const porConfirmar = await negociacoesComDadosPorConfirmar(
+      pedidos.flatMap((p) => p.negociacoes).filter((n) => n.estado === "acordada" && doNovoModelo.has(Number(n.id))).map((n) => Number(n.id)),
+    ).catch((e) => {
+      console.error("[api/admin/negociacoes GET] dados por confirmar:", e);
+      return new Map<number, "mudaram" | "titular">();
+    });
     // d39: a nota e o «verificado» de quem propôs, para o «Escolher por mim» do valor único.
     const dosParceiros = await parceirosParaOValorUnico(
       pedidos.filter((p) => p.valorUnicoCliente != null).flatMap((p) => p.negociacoes.map((n) => Number(n.providerId))),
@@ -126,6 +134,7 @@ export async function GET(req: NextRequest) {
           ...(confianca.get(Number(n.id)) ?? {}),
           ...(doNovoModelo.has(Number(n.id)) ? { noNovoModelo: true } : {}),
           ...(dadosMudados.has(Number(n.id)) ? { dadosDePagamentoMudados: true } : {}),
+          ...(porConfirmar.has(Number(n.id)) ? { dadosDePagamentoPorConfirmar: porConfirmar.get(Number(n.id)) } : {}),
           ...(dosParceiros.has(Number(n.providerId)) ? { doValorUnico: dosParceiros.get(Number(n.providerId)) } : {}),
           ...(doNovoModelo.has(Number(n.id)) && regimes.has(Number(n.id))
             ? { regimeParaOTotal: regimes.get(Number(n.id)) }

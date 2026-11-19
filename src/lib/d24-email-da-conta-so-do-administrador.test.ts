@@ -143,7 +143,7 @@ describe("e nos parceiros", () => {
   const ROTA = ler("src/app/api/admin/profissionais/[id]/route.ts");
 
   it("o email continua só do administrador", () => {
-    expect(ROTA).toContain('CAMPOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin"');
+    expect(ROTA).toContain('DADOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin"');
   });
 
   it("um email novo fecha as sessões e fica no registo permanente", () => {

@@ -24,6 +24,7 @@ import {
   fecharSessoesDoProfissional,
   registarSemFalhar,
   EmailDeOutraConta,
+  perfilDoProfissional,
 } from "@/lib/db";
 import {
   validarEdicao,
@@ -31,7 +32,9 @@ import {
   afectaDistribuicao,
   validarDados,
   CAMPOS_DE_DADOS,
-  CAMPOS_SO_DO_ADMINISTRADOR,
+  DADOS_SO_DO_ADMINISTRADOR,
+  CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR,
+  camposFiscaisMudados,
   pedeOAdministrador,
   type DadosValidados,
 } from "@/lib/edicao-profissional";
@@ -42,6 +45,9 @@ import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
 import { enviarEmailDeAprovacao } from "@/lib/email-aprovacao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { acertarRegimeDasContratadas } from "@/lib/regime-acertado-na-base";
+import { camposDePagamentoMudados } from "@/lib/dados-de-pagamento-mudados";
+import { enviarEmailDosDadosDePagamento } from "@/lib/email-dados-de-pagamento-do-profissional";
+import { ibanEncurtado } from "@/lib/iban";
 
 // O número saiu daqui para `convite-profissional.ts`: a aprovação de uma
 // candidatura pelo site emite o mesmo link, e dois «7» em dois ficheiros é como
@@ -152,9 +158,32 @@ export async function PATCH(
    * na conta (é para lá que vai o link de repor a palavra-passe), pelos outros
    * sai o dinheiro dele.
    */
+  /*
+   * O REGIME DE IVA E O «EMITE FATURA» SÓ PELO ADMINISTRADOR — d5, 19-11-2026.
+   * A ficha manda-os em cada gravação: conta só o que muda de facto, lido da
+   * base antes de qualquer escrita. A mudança fica no registo, lá em baixo.
+   */
+  let fiscaisMudados: ReturnType<typeof camposFiscaisMudados> = [];
+  let fiscalAntes: { regimeIva?: unknown; emiteFatura?: unknown } | undefined;
+  if (CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR.some((k) => k in corpo)) {
+    const pool = await getPool();
+    if (!pool) return NextResponse.json({ error: "Base indisponível" }, { status: 503 });
+    const [linhas] = (await pool.execute("SELECT regimeIva, emiteFatura FROM providers WHERE id = ? LIMIT 1", [
+      providerId,
+    ])) as [Array<{ regimeIva: unknown; emiteFatura: unknown }>, unknown];
+    fiscalAntes = linhas[0];
+    fiscaisMudados = camposFiscaisMudados(fiscalAntes, corpo);
+    if (fiscaisMudados.length > 0 && colab.papel !== "admin") {
+      return NextResponse.json(
+        { error: "Só o administrador muda o regime de IVA e o «Emite fatura»." },
+        { status: 403 },
+      );
+    }
+  }
+
   let dadosValidados: DadosValidados | null = null;
   if (CAMPOS_DE_DADOS.some((k) => k in corpo)) {
-    if (CAMPOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin") {
+    if (DADOS_SO_DO_ADMINISTRADOR.some((k) => k in corpo) && colab.papel !== "admin") {
       return NextResponse.json(
         { error: "Só o administrador muda o email e os dados de pagamento." },
         { status: 403 },
@@ -222,11 +251,51 @@ export async function PATCH(
       }
       const colunas = dadosValidados.colunas;
       if (Object.keys(colunas).length > 0) {
+        const mexeNoPagamento = "iban" in colunas || "mbway" in colunas || "ibanTitular" in colunas;
+        // O antes, lido antes do UPDATE — depois já não há por onde o saber (d5).
+        const antes = mexeNoPagamento ? await perfilDoProfissional(providerId) : undefined;
         await actualizarPerfilDoProfissional(providerId, colunas);
         feito.push("dados actualizados");
-        if ("iban" in colunas || "mbway" in colunas || "ibanTitular" in colunas) {
-          // Para onde vai o dinheiro dele: fica escrito quem o mudou.
-          console.info(`[admin/profissionais] pagamento de #${providerId} mudado por ${colab.nome}`);
+        const mudados = mexeNoPagamento ? camposDePagamentoMudados(antes, colunas as Record<string, unknown>) : [];
+        if (mudados.length > 0) {
+          /*
+           * PARA ONDE VAI O DINHEIRO DELE — d5, 19-11-2026: no registo
+           * permanente, com quem e o antes e o depois ENCURTADOS (nunca o IBAN
+           * inteiro), e o mesmo email de quando é ele a mudar.
+           */
+          const curto = (c: string, v: unknown): string | null => {
+            const t = typeof v === "string" ? v.trim() : "";
+            if (!t) return null;
+            if (c === "iban") return ibanEncurtado(t) || "····";
+            if (c === "mbway") return `···${t.slice(-3)}`;
+            return t.split(/s+/).map((p) => `${p[0] ?? ""}.`).join(" ");
+          };
+          const depois = colunas as Record<string, unknown>;
+          await registarSemFalhar({
+            acontecimento: "profissional_pagamento_mudado",
+            providerId,
+            autorTipo: "clyon",
+            autorNome: colab.nome,
+            resumo: `Dados de pagamento do profissional #${providerId} mudados por ${colab.nome}: ${mudados.join(", ")}.`,
+            detalhe: {
+              porId: colab.id ?? null,
+              papel: colab.papel,
+              mudancas: Object.fromEntries(
+                mudados.map((c) => [c, { antes: curto(c, antes?.[c]), depois: curto(c, depois[c]) }]),
+              ),
+            },
+          });
+          const ibanNovo = typeof depois.iban === "string" ? depois.iban : null;
+          const mbwayNovo = typeof depois.mbway === "string" ? depois.mbway : null;
+          const enviado = await enviarEmailDosDadosDePagamento({
+            para: typeof antes?.email === "string" ? antes.email : "",
+            nome: String(antes?.name ?? ""),
+            campos: mudados,
+            ibanFinal: ibanNovo ? ibanNovo.slice(-4) : null,
+            mbwayFinal: mbwayNovo ? mbwayNovo.slice(-3) : null,
+            em: new Date(),
+          }).catch(() => false);
+          if (!enviado) console.error(`[admin/profissionais] #${providerId}: o email da mudança dos dados de pagamento não saiu`);
         }
       }
     }
@@ -433,6 +502,23 @@ export async function PATCH(
       }
       await actualizarProfissional(providerId, validacao.alteracoes);
       feito.push("perfil actualizado");
+      // d5: o regime de IVA ou o «emite fatura» mudados ficam no registo permanente.
+      if (fiscaisMudados.length > 0) {
+        await registarSemFalhar({
+          acontecimento: "profissional_fiscal_mudado",
+          providerId,
+          autorTipo: "clyon",
+          autorNome: colab.nome,
+          resumo: `Regime de IVA / «Emite fatura» do profissional #${providerId} mudados por ${colab.nome}: ${fiscaisMudados.join(", ")}.`,
+          detalhe: {
+            porId: colab.id ?? null,
+            papel: colab.papel,
+            mudancas: Object.fromEntries(
+              fiscaisMudados.map((c) => [c, { antes: fiscalAntes?.[c] ?? null, depois: corpo[c] ?? null }]),
+            ),
+          },
+        });
+      }
       // d2 (19-11-2026): o regime da ficha acerta as contratadas sem pagamento — só desce (`regime-acertado.ts`).
       if (validacao.alteracoes.regimeIva !== undefined) {
         const acertos = await acertarRegimeDasContratadas(providerId, { tipo: "clyon", nome: colab.nome });

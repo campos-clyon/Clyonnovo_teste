@@ -64,6 +64,7 @@ import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materi
 import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 import { DADOS_DE_PAGAMENTO_MUDARAM, SELO_DOS_DADOS_MUDADOS } from "@/lib/dados-de-pagamento-mudados";
+import { CONFIRMEI_COM_O_PARCEIRO, DADOS_DE_PAGAMENTO_A_CONFIRMAR, SELO_DO_TITULAR_QUE_NAO_BATE } from "@/lib/dados-de-pagamento-por-confirmar";
 /*
  * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
  *
@@ -261,6 +262,8 @@ type Negociacao = {
   guiaEmTransicao?: boolean;
   /** O IBAN, o titular ou o MB WAY do parceiro mudaram depois de o cliente contratar (d28). */
   dadosDePagamentoMudados?: boolean;
+  /** d5: os dados de pagamento estão retidos ao cliente até a CLYON os confirmar com o parceiro. */
+  dadosDePagamentoPorConfirmar?: "mudaram" | "titular";
   /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
   coincidencias?: Coincidencia[];
   /** Numa mudança, o parceiro escolhido pelo cliente na lista, a equipa e o prazo para responder (10-11-2026). */
@@ -1027,6 +1030,7 @@ export default function AdminNegociacoesPanel({
   mostrar = "tudo",
   podeApagar = true,
   podeOferecerTrabalhoClyon = false,
+  eAdministrador = false,
   busca: buscaDeFora,
   onBusca,
 }: {
@@ -1049,6 +1053,8 @@ export default function AdminNegociacoesPanel({
    * não aparece, em vez de responder sempre «não».
    */
   podeOferecerTrabalhoClyon?: boolean;
+  /** d5: o «Confirmei com o parceiro» dos dados de pagamento é só do administrador. */
+  eAdministrador?: boolean;
   /*
    * O ecrã pode mostrar só metade do painel.
    *
@@ -1327,6 +1333,26 @@ export default function AdminNegociacoesPanel({
   const [aFixar, setAFixar] = useState<number | null>(null);
   /** O passo da validade de cada orçamento no cliente (d62), pelo número do pedido. */
   const [validade, setValidade] = useState<Record<number, ValidadeNaMesa>>({});
+
+  /** d5: «Confirmei com o parceiro» — o cliente passa a ver os dados de pagamento. */
+  const confirmarDadosDePagamento = async (negociacaoId: number) => {
+    if (!token) return;
+    if (!window.confirm("Falou com o parceiro e ele confirmou estes dados de pagamento? O cliente passa a vê-los.")) return;
+    setOcupado(`dados-${negociacaoId}`);
+    setErro("");
+    try {
+      const r = await fetch("/api/admin/negociacoes/dados-de-pagamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ negociacaoId }),
+      });
+      const j = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) setErro(j.error ?? "Não foi possível confirmar.");
+      else await carregar(true);
+    } finally {
+      setOcupado(null);
+    }
+  };
 
   const carregar = useCallback(async (silencioso = false, tudo = false) => {
     if (!token) return;
@@ -3971,6 +3997,23 @@ export default function AdminNegociacoesPanel({
                       <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title={DADOS_DE_PAGAMENTO_MUDARAM}>
                         {SELO_DOS_DADOS_MUDADOS}
                       </span>
+                    )}
+                    {/* d5: o titular do IBAN não bate com o nome do parceiro nem da empresa. */}
+                    {n.dadosDePagamentoPorConfirmar === "titular" && !n.dadosDePagamentoMudados && (
+                      <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title={DADOS_DE_PAGAMENTO_A_CONFIRMAR}>
+                        {SELO_DO_TITULAR_QUE_NAO_BATE}
+                      </span>
+                    )}
+                    {/* d5: o cliente não vê o IBAN nem o MB WAY até isto — só o administrador, depois de falar com o parceiro. */}
+                    {eAdministrador && n.dadosDePagamentoPorConfirmar && (
+                      <button
+                        type="button"
+                        disabled={ocupado === `dados-${n.id}`}
+                        onClick={() => confirmarDadosDePagamento(Number(n.id))}
+                        className="rounded-full border border-red-400/60 px-2 py-0.5 text-xs font-bold text-red-100 hover:bg-red-500/20 disabled:opacity-40"
+                      >
+                        {CONFIRMEI_COM_O_PARCEIRO}
+                      </button>
                     )}
                     {n.coincidencias?.length ? (
                       <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title={avisoDasCoincidencias(n.coincidencias) ?? undefined}>

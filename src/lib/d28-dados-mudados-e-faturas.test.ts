@@ -30,7 +30,8 @@ describe("d28 (b) — os dados de pagamento mudaram depois de contratar", () => 
 
   it("o bloco «Pagar a …» devolve a frase em `dadosMudaram`, e o site e a Mesa mostram-na", () => {
     const bloco = ler("src/lib/pagar-ao-parceiro-para-o-cliente.ts");
-    expect(bloco).toContain("dadosMudaram: dadosMudados ? DADOS_DE_PAGAMENTO_MUDARAM : null");
+    // d5 (19-11-2026): com os dados retidos, a frase dá lugar à de `semDados` (sem IBAN nem MB WAY).
+    expect(bloco).toContain("dadosMudaram: dadosMudados && !porConfirmar ? DADOS_DE_PAGAMENTO_MUDARAM : null");
     expect(ler("src/components/PagarAoParceiro.tsx")).toContain("{visto.dadosMudaram}");
     expect(ler("src/app/api/admin/negociacoes/route.ts")).toContain("dadosDePagamentoMudados: true");
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("{SELO_DOS_DADOS_MUDADOS}");

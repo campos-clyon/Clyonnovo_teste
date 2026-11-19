@@ -3480,6 +3480,7 @@ export default function ColaboradorAdminClient({
                 onBusca={handlePedidoSearch}
                 podeApagar={papel === "admin"}
                 podeOferecerTrabalhoClyon={podeVer("trabalhos_clyon")}
+                eAdministrador={papel === "admin"}
               />
             </section>
           )}

@@ -11,6 +11,7 @@ import { NextRequest } from "next/server";
  * o relógio do servidor muda tudo.
  */
 
+vi.mock("@/lib/dados-de-pagamento-por-confirmar-na-base", () => ({ negociacoesComDadosPorConfirmar: vi.fn(async () => new Map()) }));
 vi.mock("@/lib/sessao-activa-do-profissional", () => ({ sessaoActivaDoProfissional: vi.fn() }));
 vi.mock("@/lib/profissional-auth", () => ({
   tokenDoProfissional: () => "x",

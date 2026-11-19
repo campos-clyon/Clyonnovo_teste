@@ -222,7 +222,37 @@ export const CAMPOS_DE_DADOS = [
  * seu IBAN antes de um pagamento — é a mesma regra do link da palavra-passe,
  * que também só vai para o administrador.
  */
-export const CAMPOS_SO_DO_ADMINISTRADOR = ["email", "iban", "ibanTitular", "mbway"] as const;
+/**
+ * O REGIME DE IVA E O «EMITE FATURA» — d5, 19-11-2026. Decidem quanto IVA o
+ * cliente paga ao parceiro e o que o parceiro passa à CLYON: é dinheiro, e o
+ * resto do dinheiro já é só do administrador. Não são campos de dados (vêm em
+ * cada gravação da ficha): a rota recusa-os a um assistente só quando MUDAM de
+ * facto, contra a base, e deixa a mudança no registo permanente.
+ */
+export const CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR = ["regimeIva", "emiteFatura"] as const;
+
+export const CAMPOS_SO_DO_ADMINISTRADOR = ["email", "iban", "ibanTitular", "mbway", ...CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR] as const;
+
+/** Os campos de dados que só o administrador muda (o email e o pagamento). */
+export const DADOS_SO_DO_ADMINISTRADOR = CAMPOS_SO_DO_ADMINISTRADOR.filter((k) =>
+  (CAMPOS_DE_DADOS as readonly string[]).includes(k),
+);
+
+/**
+ * Os campos fiscais que o corpo muda DE FACTO, contra a base. A ficha manda os
+ * dois em cada gravação; mandar o mesmo valor não é mudar.
+ */
+export function camposFiscaisMudados(
+  guardado: { regimeIva?: unknown; emiteFatura?: unknown } | null | undefined,
+  corpo: Record<string, unknown>,
+): Array<(typeof CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR)[number]> {
+  const mudados: Array<(typeof CAMPOS_FISCAIS_SO_DO_ADMINISTRADOR)[number]> = [];
+  if ("regimeIva" in corpo && String(corpo.regimeIva ?? "") !== String(guardado?.regimeIva ?? "")) mudados.push("regimeIva");
+  if ("emiteFatura" in corpo && (corpo.emiteFatura === true) !== (Number(guardado?.emiteFatura ?? 0) === 1 || guardado?.emiteFatura === true)) {
+    mudados.push("emiteFatura");
+  }
+  return mudados;
+}
 
 /**
  * AS DECISÕES QUE SÓ O ADMINISTRADOR TOMA — 04-11-2026 (d10.2, dois pares de

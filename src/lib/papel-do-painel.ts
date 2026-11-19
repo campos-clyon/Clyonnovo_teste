@@ -511,6 +511,8 @@ const ESCRITAS_SO_DO_ADMINISTRADOR: Array<string | RegExp> = [
   "/api/admin/pagamentos",
   "/api/admin/levantamentos",
   "/api/admin/negociacoes/valor",
+  // «Confirmei com o parceiro» (d5): os dados de pagamento que o cliente passa a ver.
+  "/api/admin/negociacoes/dados-de-pagamento",
   "/api/admin/taxas",
   "/api/admin/metodos-de-pagamento",
   "/api/admin/lista-das-mudancas",

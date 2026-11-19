@@ -1534,7 +1534,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 23;
+const VERSAO_DAS_NEGOCIACOES = 24;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1851,6 +1851,13 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * então a abertura da negociação). Aditiva.
      */
     `ALTER TABLE negociacoes ADD COLUMN contratadaEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v24 (19-11-2026, d5) — OS DADOS DE PAGAMENTO CONFIRMADOS COM O PARCEIRO
+     * (`dados-de-pagamento-por-confirmar.ts`): quando e quem carregou em
+     * «Confirmei com o parceiro» na Mesa. Nulas = por confirmar. Aditivas.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN dadosPagamentoConfirmadosEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN dadosPagamentoConfirmadosPor VARCHAR(120) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -15559,6 +15566,12 @@ export type Acontecimento =
   | "conta_dados_mudados"
   /* O administrador mudou o email de entrada de um parceiro (d24). */
   | "profissional_email_mudado"
+  /* O administrador mudou o IBAN, o titular ou o MB WAY de um parceiro no backoffice (d5, 19-11-2026). */
+  | "profissional_pagamento_mudado"
+  /* O administrador mudou o regime de IVA ou o «emite fatura» de um parceiro (d5). */
+  | "profissional_fiscal_mudado"
+  /* «Confirmei com o parceiro»: os dados de pagamento passam a chegar ao cliente (d5). */
+  | "dados_de_pagamento_confirmados"
   /* O regime de IVA confirmado desceu o total de uma contratada sem pagamento (d2, 19-11-2026). */
   | "regime_acertado"
   /*

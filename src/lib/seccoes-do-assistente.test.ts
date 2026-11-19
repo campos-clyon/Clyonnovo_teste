@@ -295,6 +295,9 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "contas", rota: "/api/admin/quem-conta-para-os-12", porque: "quem usa a app de cliente, com o telefone, e a lista da Play colada são do administrador (d60, 17-11-2026)" },
   { seccao: "configs", rota: "/api/admin/aviso-aos-profissionais", porque: "o interruptor «Mostrar o aviso do novo modelo» é do administrador, com o sim do dono (d11, 15-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-seguimento/interruptor", porque: "ligar a mensagem gentil da Vitória a quem fica calado é do administrador, com o sim do dono (d25, 14-11-2026)" },
+  // «Confirmei com o parceiro» (d5, 19-11-2026): os dados de pagamento que o cliente passa a ver.
+  { seccao: "negociacoes_clyon", rota: "/api/admin/negociacoes/dados-de-pagamento", porque: "libertar o IBAN e o MB WAY ao cliente é do administrador (d5)" },
+  { seccao: "trabalhos_clyon", rota: "/api/admin/negociacoes/dados-de-pagamento", porque: "libertar o IBAN e o MB WAY ao cliente é do administrador (d5)" },
   // «Só ver» — 03-10-2026: as rotas que SÓ escrevem dinheiro ficam inteiras com o administrador.
   { seccao: "carteiras", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },
   { seccao: "pagamentos", rota: "/api/admin/negociacoes/valor", porque: "corrigir o valor é dinheiro" },

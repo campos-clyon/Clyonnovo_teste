@@ -16,6 +16,8 @@ import { negociacoesComDadosDePagamentoMudados } from "./dados-de-pagamento-muda
 import { DADOS_DE_PAGAMENTO_MUDARAM } from "./dados-de-pagamento-mudados";
 import { faturasDaNegociacao } from "./faturas-do-trabalho-na-base";
 import { asDuasFaturas } from "./faturas-do-trabalho";
+import { negociacoesComDadosPorConfirmar } from "./dados-de-pagamento-por-confirmar-na-base";
+import { DADOS_DE_PAGAMENTO_A_CONFIRMAR, dadosQueOClienteRecebe } from "./dados-de-pagamento-por-confirmar";
 
 const emEuros = (n: number) => `${(Math.round(n * 100) / 100).toFixed(2).replace(".", ",")} €`;
 
@@ -68,7 +70,23 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
   const c = totalAoCliente(t.acordado, t.taxas, regime, t.reservaCent ?? 0);
   const faturas = asDuasFaturas(await faturasDaNegociacao(t.negociacaoId));
   const total = c ? c.total : null;
-  const paraPagar = dadosParaPagarAoParceiro(perfil ?? {}, { contratado: true, doNovoModelo: true });
+  /*
+   * d5 (19-11-2026): os dados mudaram depois de contratar, ou o titular do IBAN
+   * não bate com o nome do parceiro nem da empresa — o cliente não recebe o IBAN
+   * nem o MB WAY até o administrador confirmar com o parceiro («Confirmei com o
+   * parceiro», na Mesa). Fica o dinheiro no local. Se a leitura falhar, retém-se
+   * (o lado seguro).
+   */
+  const porConfirmar = await negociacoesComDadosPorConfirmar([t.negociacaoId])
+    .then((m) => m.has(t.negociacaoId))
+    .catch((e) => {
+      console.error("[pagar-ao-parceiro] dados por confirmar:", e instanceof Error ? e.message : e);
+      return true;
+    });
+  const paraPagar = dadosQueOClienteRecebe(
+    dadosParaPagarAoParceiro(perfil ?? {}, { contratado: true, doNovoModelo: true }),
+    porConfirmar,
+  );
   const opcoes = comoPagarDisponiveis(total, paraPagar ?? null);
   // d28: os dados de pagamento mudaram depois de contratar? Se a leitura falhar, avisa-se (o lado seguro).
   const dadosMudados = await negociacoesComDadosDePagamentoMudados([t.negociacaoId])
@@ -83,13 +101,19 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
     parceiro: t.profissionalNome,
     paraPagar,
     /** Sem IBAN nem MB WAY (d17, texto F): o que o cliente lê em vez dos dados. */
-    semDados: paraPagar && !paraPagar.iban && !paraPagar.mbway ? PARCEIRO_SEM_DADOS_PARA_PAGAR : null,
+    semDados: porConfirmar
+      ? DADOS_DE_PAGAMENTO_A_CONFIRMAR
+      : paraPagar && !paraPagar.iban && !paraPagar.mbway
+        ? PARCEIRO_SEM_DADOS_PARA_PAGAR
+        : null,
+    /** d5: os dados de pagamento estão retidos até a CLYON os confirmar com o parceiro. */
+    dadosPorConfirmar: porConfirmar,
     /**
      * O IBAN, o titular ou o MB WAY mudaram DEPOIS de o cliente contratar (d28):
      * a frase que ele lê antes de transferir — o site e a app de cliente
      * mostram-na tal como vem. `null` quando não mudaram.
      */
-    dadosMudaram: dadosMudados ? DADOS_DE_PAGAMENTO_MUDARAM : null,
+    dadosMudaram: dadosMudados && !porConfirmar ? DADOS_DE_PAGAMENTO_MUDARAM : null,
     perfilFiscal: { ...fiscal, regimeParaAConta: regime },
     /** A frase do total, a mesma do bloco do site — a app de cliente mostra-a tal e qual (d18). */
     totalEmTexto: c ? totalAoParceiroEmTexto({ total, semIva: c.semIva, faturaDoParceiro: c.faturaDoParceiro, faturaDaTaxa: c.faturaDaTaxa }, regime) : null,
