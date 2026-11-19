@@ -15518,6 +15518,8 @@ export type Acontecimento =
   | "pagamento_corrigido"
   // Uma referência do cliente por pagar anulada no backoffice pelo administrador (16-11-2026, d52).
   | "referencia_anulada"
+  // Um aviso do euPago por aplicar dispensado pelo administrador, com motivo (19-11-2026, d72).
+  | "aviso_dispensado"
   // O comprovativo (foto ou PDF) junto a um pagamento registado à mão (d66, 18-11-2026).
   | "comprovativo_do_pagamento"
   // Uma transferência vista no extrato do banco (d1, 19-11-2026): quem e quando.

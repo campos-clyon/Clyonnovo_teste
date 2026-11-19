@@ -687,6 +687,47 @@ export async function anotarAviso(
   );
 }
 
+/** Um aviso do euPago pelo número da linha — para o «Dispensar» (19-11-2026, d72). */
+export async function avisoPorId(id: number): Promise<AvisoPorAplicar & { aplicado: boolean } | null> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [linhas] = (await pool.execute(
+    `SELECT id, trid, estado, pagamentoId, valor, metodo, nota, recebidoEm, aplicado
+       FROM avisosDoEupago WHERE id = ? LIMIT 1`,
+    [id],
+  )) as any[];
+  const l = (linhas as Record<string, unknown>[])[0];
+  if (!l) return null;
+  return {
+    id: Number(l.id),
+    trid: String(l.trid),
+    estado: String(l.estado),
+    pagamentoId: l.pagamentoId == null ? null : Number(l.pagamentoId),
+    valor: numero(l.valor),
+    metodo: (l.metodo as string) ?? null,
+    nota: (l.nota as string) ?? null,
+    recebidoEm: l.recebidoEm as Date,
+    aplicado: Number(l.aplicado) === 1,
+  };
+}
+
+/**
+ * «DISPENSAR» UM AVISO POR APLICAR — 19-11-2026 (d72). Fica `aplicado = 1` com
+ * a nota de quem e porquê; a linha nunca se apaga. Só pega num aviso ainda por
+ * aplicar: dois cliques, ou um aviso aplicado entretanto, não reescrevem nada.
+ */
+export async function dispensarAviso(id: number, nota: string): Promise<boolean> {
+  await garantirTabelas();
+  const pool = await getPool();
+  if (!pool) throw new Error("DB not available");
+  const [r] = (await pool.execute(
+    `UPDATE avisosDoEupago SET aplicado = 1, nota = ? WHERE id = ? AND aplicado = 0`,
+    [nota.slice(0, 255), id],
+  )) as any[];
+  return Number((r as { affectedRows?: number })?.affectedRows ?? 0) > 0;
+}
+
 /** O código de erro do MySQL para uma chave única violada. */
 const CHAVE_REPETIDA = "ER_DUP_ENTRY";
 

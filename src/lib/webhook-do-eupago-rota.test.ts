@@ -290,6 +290,43 @@ describe("o que já era verdade, agora provado na rota", () => {
     expect((await chamar(exp, assinar(exp))).status).toBe(200);
     expect(base.pagamentos.get(7)!.estado).toBe("pago");
   });
+
+  /*
+   * d72 (19-11-2026): um aviso sem dinheiro num pagamento que já não estava
+   * pendente fica dado por resolvido e sai do alarme; um «pago» não.
+   */
+  it("d72 — «expirado» num pagamento que já não estava pendente fica resolvido, com nota", async () => {
+    base.pagamentos.set(7, linha({ id: 7, estado: "expirado" }));
+    const exp = aviso({ trid: "T72E", id: 7, valor: 452.03, status: "Expired" });
+    expect((await chamar(exp, assinar(exp))).status).toBe(200);
+    const a = base.avisos.get("T72E|expirado")!;
+    expect(a.aplicado).toBe(true);
+    expect(a.nota).toMatch(/^Sem efeito: .*não moveu dinheiro/);
+    expect(base.pagamentos.get(7)!.estado).toBe("expirado");
+  });
+
+  it("d72 — «cancelado» num pagamento já cancelado também fica resolvido", async () => {
+    base.pagamentos.set(7, linha({ id: 7, estado: "cancelado" }));
+    const c = aviso({ trid: "T72C", id: 7, valor: 452.03, status: "Canceled" });
+    expect((await chamar(c, assinar(c))).status).toBe(200);
+    expect(base.avisos.get("T72C|cancelado")!.aplicado).toBe(true);
+  });
+
+  it("d72 — «expirado» num pagamento pendente fecha-o e fica aplicado sem nota", async () => {
+    const exp = aviso({ trid: "T72P", id: 7, valor: 452.03, status: "Expired" });
+    expect((await chamar(exp, assinar(exp))).status).toBe(200);
+    expect(base.pagamentos.get(7)!.estado).toBe("expirado");
+    expect(base.avisos.get("T72P|expirado")).toEqual({ aplicado: true, nota: null });
+  });
+
+  it("d72 — um «pago» num pagamento que já não estava pendente CONTINUA por aplicar", async () => {
+    base.pagamentos.set(7, linha({ id: 7, estado: "expirado" }));
+    const pago = aviso({ trid: "T72G", id: 7, valor: 452.03 });
+    expect((await chamar(pago, assinar(pago))).status).toBe(200);
+    const a = base.avisos.get("T72G|pago")!;
+    expect(a.aplicado).toBe(false);
+    expect(a.nota).toBeTruthy();
+  });
 });
 
 describe("R1 — o aviso que falhou a meio volta a aplicar-se quando o euPago repete", () => {

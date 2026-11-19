@@ -3277,6 +3277,119 @@ function ExcluirTrabalho({
   );
 }
 
+/**
+ * UMA LINHA DE «POR APLICAR», COM O «DISPENSAR» — 19-11-2026 (d72). Só o
+ * administrador vê o botão (a rota também só o deixa a ele). O motivo é
+ * obrigatório e fica na nota do aviso, no histórico do pedido e no registo; o
+ * aviso não se apaga.
+ */
+function LinhaDoAviso({
+  a,
+  token,
+  podeDispensar,
+  onDispensado,
+}: {
+  a: Aviso;
+  token: string | null;
+  podeDispensar: boolean;
+  onDispensado: () => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const [erro, setErro] = useState("");
+  const pronto = motivo.trim().length >= 3 && motivo.trim().length <= 200;
+
+  async function dispensar() {
+    if (!pronto || !token) return;
+    setOcupado(true);
+    setErro("");
+    try {
+      const r = await fetch("/api/admin/pagamentos/dispensar-aviso", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ avisoId: a.id, motivo: motivo.trim() }),
+      });
+      const d = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) {
+        setErro(d.error || "Não foi possível dispensar.");
+        return;
+      }
+      setAberto(false);
+      setMotivo("");
+      onDispensado();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  return (
+    <div>
+      <p>
+        <strong className="text-white">{a.estado}</strong> · trid {a.trid} · {euros(a.valor)}
+        {a.pagamentoId ? ` · pagamento #${a.pagamentoId}` : ""}
+        {a.nota ? ` — ${a.nota}` : ""}
+        {podeDispensar && !aberto && (
+          <>
+            {" "}
+            <button
+              type="button"
+              onClick={() => setAberto(true)}
+              className="ml-1 rounded border border-slate-600 px-1.5 py-0.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800"
+            >
+              Dispensar
+            </button>
+          </>
+        )}
+      </p>
+      {podeDispensar && aberto && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void dispensar();
+          }}
+          className="mt-1 space-y-1.5 rounded-lg border border-slate-700 bg-slate-950/60 p-2"
+        >
+          <label className="block text-[11px] text-slate-400">
+            Motivo (obrigatório, até 200 caracteres — fica no aviso e no registo; o aviso não se apaga)
+            <input
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              maxLength={200}
+              placeholder="ex.: referência de teste que expirou sem pagamento"
+              className="mt-1 block w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-white placeholder:text-slate-600"
+            />
+          </label>
+          {erro && <p className="text-[11px] text-red-300">{erro}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              disabled={ocupado || !pronto}
+              className="flex items-center gap-1.5 rounded-lg bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-900 hover:bg-white disabled:opacity-40"
+            >
+              {ocupado && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+              Dispensar este aviso
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAberto(false);
+                setMotivo("");
+                setErro("");
+              }}
+              className="text-[11px] text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
+            >
+              Não dispensar
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 const CORES: Record<string, string> = {
   pago: "text-emerald-300",
   pendente: "text-amber-300",
@@ -3438,12 +3551,13 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
           </p>
           <div className="space-y-1 text-xs text-slate-300">
             {estado.avisos.map((a) => (
-              <p key={a.id}>
-                <strong className="text-white">{a.estado}</strong> · trid {a.trid} ·{" "}
-                {euros(a.valor)}
-                {a.pagamentoId ? ` · pagamento #${a.pagamentoId}` : ""}
-                {a.nota ? ` — ${a.nota}` : ""}
-              </p>
+              <LinhaDoAviso
+                key={a.id}
+                a={a}
+                token={token}
+                podeDispensar={eAdministrador}
+                onDispensado={() => void carregar(true)}
+              />
             ))}
           </div>
         </div>

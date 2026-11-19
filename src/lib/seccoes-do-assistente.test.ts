@@ -256,6 +256,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   // Anular uma referência do cliente por pagar (16-11-2026, d52): com motivo, só o administrador geral.
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/anular-referencia", porque: "anular uma referência é dinheiro — do administrador (d52)" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/anular-referencia", porque: "anular uma referência é dinheiro — do administrador (d52)" },
+  // Dispensar um aviso do euPago por aplicar (19-11-2026, d72): com motivo, só o administrador geral.
+  { seccao: "pagamentos", rota: "/api/admin/pagamentos/dispensar-aviso", porque: "dispensar um aviso do euPago é dinheiro — do administrador (d72)" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/testar", porque: "testar a chave do euPago é configuração do administrador" },
   // A fila «Faturas por emitir» (27-10-2026, d16): o assistente vê; marcar a fatura emitida é do administrador.
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/fatura-emitida", porque: "marcar a fatura emitida é do administrador (d16)" },

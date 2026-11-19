@@ -133,8 +133,9 @@ describe("2 — o grupo «Recebido do cliente — falta pagar ao profissional»"
     const rotas = [...PAINEL.matchAll(/"\/api\/admin\/pagamentos\/([a-z-]+)"/g)].map((m) => m[1]);
     // «fatura-emitida» (27-10-2026, d16) anota a fatura; não paga nada a ninguém.
     // «corrigir-pagamento» (04-11-2026, d9) corrige a fatura e o valor registados, com motivo; não paga nada a ninguém.
+    // «dispensar-aviso» (19-11-2026, d72) dá por resolvido um aviso do euPago, com motivo; não paga nada a ninguém.
     expect(new Set(rotas)).toEqual(
-      new Set(["recebido", "pago-ao-profissional", "excluir", "factura", "testar", "fatura-emitida", "corrigir-pagamento"]),
+      new Set(["recebido", "pago-ao-profissional", "excluir", "factura", "testar", "fatura-emitida", "corrigir-pagamento", "dispensar-aviso"]),
     );
   });
 

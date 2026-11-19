@@ -26,6 +26,7 @@ import {
   type Pagamento,
 } from "@/lib/pagamentos-na-base";
 import { daMesmaConta } from "@/lib/parte-do-pagamento";
+import { anotacaoDoFechoSemPagar } from "@/lib/dispensar-aviso-do-eupago";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -328,12 +329,13 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
     trid: aviso.trid,
     motivo: `O euPago disse: ${aviso.estado}.`,
   });
-  await anotarAviso(aviso.trid, aviso.estado, {
-    aplicado: r.feito,
-    // Um «expirado» que chegue depois do «pago» não desfaz nada, e não é um
-    // erro: é a ordem de chegada. Fica dito, sem alarme.
-    nota: r.feito ? null : r.porque,
-  });
+  /*
+   * Um «expirado» que chegue depois do «pago» não desfaz nada, e não é um
+   * erro: é a ordem de chegada. Não moveu dinheiro, por isso fica dado por
+   * resolvido, com a nota a dizê-lo, e não conta no alarme (19-11-2026, d72).
+   * Um «pago» num pagamento já fechado continua por aplicar (acima).
+   */
+  await anotarAviso(aviso.trid, aviso.estado, anotacaoDoFechoSemPagar(aviso.estado, r));
   return OK();
 }
 
