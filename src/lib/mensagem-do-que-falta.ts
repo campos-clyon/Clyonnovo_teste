@@ -231,7 +231,7 @@ export function cumprimentoPelaHora(quando: Date): string {
 }
 
 /** «recolha de monos em Almada» — o pedido em meia dúzia de palavras, ou nada. */
-function oPedidoEmPalavras(p: PedidoDaMensagem): string {
+export function oPedidoEmPalavras(p: PedidoDaMensagem): string {
   const servico = limpo(p.serviceType) ? servicoEmPalavras(limpo(p.serviceType)) : "";
   const localidade = limpo(p.city).replace(/\s*,?\s*portugal\s*$/i, "");
   // «serviço» sozinho (o «Outro serviço») não diz nada ao cliente.

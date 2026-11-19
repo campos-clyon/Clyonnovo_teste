@@ -58,6 +58,10 @@
     {
       "path": "/api/cron/validade-dos-orcamentos",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/lembretes-do-que-falta",
+      "schedule": "0 9,10 * * *"
     }
   ]
 }

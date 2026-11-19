@@ -45,6 +45,8 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "licoes-da-vitoria", titulo: "Lições da Vitória", horario: "20 5 * * *", intervaloMin: 24 * 60 },
   // 17-11-2026 (d59): o lembrete único da app de cliente, 3 dias depois do convite — desligado até os textos estarem aprovados.
   { nome: "lembrete-da-app", titulo: "App de cliente: lembrete a quem foi convidado e não aderiu (desligado por omissão)", horario: "0 10 * * *", intervaloMin: 24 * 60 },
+  // 19-11-2026 (d71): os pedidos dos «Orçamentos novos» a que falta informação — lembretes no dia 1, 3 e 5, arquivo no dia 7 (10h de Lisboa; interruptor nas Configs).
+  { nome: "lembretes-do-que-falta", titulo: "Lembretes do que falta: os «Orçamentos novos» incompletos, às 10h de Lisboa (interruptor nas Configs)", horario: "0 9,10 * * *", intervaloMin: 24 * 60 },
   { nome: "weekly-digest", titulo: "Resumo semanal por email", horario: "0 9 * * 1", intervaloMin: 7 * 24 * 60 },
 ];
 

@@ -80,7 +80,18 @@ export async function GET(req: NextRequest) {
         faltas: oQueFaltaNoPedido({ ...p, description, filesJson, dataAgendada, rawOrderJson: rawDoQueFalta }),
       }),
     );
-    return NextResponse.json({ pedidos });
+    /*
+     * OS LEMBRETES DO QUE FALTA — 19-11-2026 (d71). O estado no cartão
+     * («Lembrete 1/3 enviado a …») e os acabados nos últimos 7 dias, que já
+     * saíram do bloco («Cancelado pelo cliente (respondeu 2)», «Arquivado sem
+     * resposta»). Nunca rebenta a lista: sem isto, os cartões servem.
+     */
+    const { lembretesNaMesa } = await import("@/lib/lembrete-do-que-falta-na-base");
+    const lembretes = await lembretesNaMesa(pedidos.map((p) => Number(p.id)));
+    return NextResponse.json({
+      pedidos: pedidos.map((p) => ({ ...p, lembreteDoQueFalta: lembretes.linhas.get(Number(p.id)) ?? null })),
+      lembretesAcabados: lembretes.acabados,
+    });
   } catch (error) {
     console.error("[admin/negociacoes/promover GET]", error);
     return NextResponse.json({ error: "Erro ao listar" }, { status: 500 });

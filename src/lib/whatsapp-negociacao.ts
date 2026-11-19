@@ -2392,6 +2392,37 @@ export async function tratarMensagemDoCliente(
     }
 
     /*
+     * A RESPOSTA AO LEMBRETE DO QUE FALTA — 19-11-2026 (d71). Com um lembrete
+     * destes em aberto para este número e pedido (a última mensagem que lhe
+     * saiu é o lembrete dele): o «2» (ou «cancelar», «já não preciso») cancela
+     * o pedido e manda o texto de cancelamento aprovado; o resto (fotografias,
+     * dados, uma resposta ambígua) pára os lembretes e segue a conversa de
+     * sempre, onde a Vitória recolhe o que falta. Um «2» que não se consegue
+     * cancelar passa a uma pessoa. Com o interruptor desligado, nada muda.
+     */
+    {
+      const lembrete = await import("@/lib/lembrete-do-que-falta-na-base");
+      const pedidoDoLembrete = await lembrete.lembreteEmAbertoDoTelefone(telefone).catch((err) => {
+        console.error("[whatsapp] o lembrete do que falta não se leu:", err instanceof Error ? err.message : err);
+        return null;
+      });
+      if (pedidoDoLembrete != null) {
+        const comImagens = soImagens || (conteudo.imagens ?? 0) > 0;
+        const r = await lembrete
+          .responderAoLembreteDoQueFalta(pedidoDoLembrete, telefone, conteudo.texto, comImagens)
+          .catch((err) => {
+            console.error("[whatsapp] a resposta ao lembrete do que falta falhou:", err instanceof Error ? err.message : err);
+            return { tipo: "nao_cancelou" as const, pedidoId: pedidoDoLembrete, porque: "erro" };
+          });
+        if (r.tipo === "cancelado") return;
+        if (r.tipo === "nao_cancelou") {
+          await passarAUmaPessoa(telefone, `Pedido #${r.pedidoId}: respondeu «2» ao lembrete do que falta, mas ${r.porque} — cancelar à mão`);
+          return;
+        }
+      }
+    }
+
+    /*
      * RESPONDEU AO AVISO DA DATA — 01-10-2026.
      *
      * «O seu trabalho mudou de dia (…) Se não lhe der jeito, responda a esta

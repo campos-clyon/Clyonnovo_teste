@@ -717,6 +717,8 @@ type PorPromover = {
    * (`oQueFaltaNoPedido`) — 26-10-2026 (d31). Vazio = completo.
    */
   faltas?: ChaveDaFalta[];
+  /** O estado dos lembretes do que falta (d71, 19-11-2026): «Lembrete 1/3 enviado a …». */
+  lembreteDoQueFalta?: string | null;
 };
 
 /*
@@ -1113,6 +1115,8 @@ export default function AdminNegociacoesPanel({
   const [abertas, setAbertas] = useState<Set<number>>(new Set());
   const jaAbertas = useRef<Set<number>>(new Set());
   const [porPromover, setPorPromover] = useState<PorPromover[]>([]);
+  /** Os lembretes do que falta acabados nos últimos 7 dias (d71): cancelados pelo cliente ou arquivados sem resposta. */
+  const [lembretesAcabados, setLembretesAcabados] = useState<Array<{ pedidoId: number; linha: string }>>([]);
   /** Qual dos pedidos esta aberto em detalhe, para editar. */
   const [aEditar, setAEditar] = useState<number | null>(null);
   /*
@@ -1377,7 +1381,11 @@ export default function AdminNegociacoesPanel({
         const r2 = await fetch("/api/admin/negociacoes/promover", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (r2.ok) setPorPromover((await r2.json()).pedidos ?? []);
+        if (r2.ok) {
+          const d2 = await r2.json();
+          setPorPromover(d2.pedidos ?? []);
+          setLembretesAcabados(Array.isArray(d2.lembretesAcabados) ? d2.lembretesAcabados : []);
+        }
       } catch {
         /* sem lista, o resto continua a servir */
       }
@@ -5424,6 +5432,17 @@ export default function AdminNegociacoesPanel({
                     onTrabalhoClyon={podeOferecerTrabalhoClyon ? trabalhoClyonOferecido : undefined}
                     notas={notas}
                   />
+                  {/*
+                    OS LEMBRETES DO QUE FALTA ACABADOS — d71, 19-11-2026. Já saíram do
+                    bloco (cancelados pelo cliente, arquivados sem resposta); ficam
+                    aqui 7 dias, para se ver o que a rotina fez.
+                  */}
+                  {!fechado && lembretesAcabados.length > 0 && (
+                    <p className="mt-2 pl-1 text-[11px] leading-5 text-slate-500">
+                      Lembretes do que falta, últimos 7 dias:{" "}
+                      {lembretesAcabados.map((a) => `#${a.pedidoId} ${a.linha}`).join(" · ")}
+                    </p>
+                  )}
                   {/* Só o pai diz "Nada aqui.": o filho, sem pedidos, não desenha
                       nada — senão apareciam duas mensagens de vazio empilhadas. */}
                   {!fechado && quantos === 0 && (
@@ -6841,6 +6860,9 @@ function PedidosPorPromover({
         linha já tem `gap-3`: a margem encolhe para ficar colada como lá.
       */}
       <NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} margem="-mt-1" />
+
+      {/* Os lembretes do que falta (d71): o estado do ciclo deste pedido. */}
+      {p.lembreteDoQueFalta && <p className="text-[11px] leading-5 text-slate-400">{p.lembreteDoQueFalta}</p>}
 
       {aPedir === p.id && p.faltas && (
         <PainelDoQueFalta pedido={p} faltas={p.faltas} token={token} onFechar={() => setAPedir(null)} />
