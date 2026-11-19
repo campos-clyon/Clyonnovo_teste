@@ -38,6 +38,7 @@ export const ACONTECIMENTOS_DO_DINHEIRO = [
   "pagamento_corrigido",
   "referencia_anulada",
   "comprovativo_do_pagamento",
+  "pagamento_conferido_no_extrato",
   "levantamento_pago",
 ] as const;
 
@@ -59,6 +60,7 @@ const NOME_DO_ACONTECIMENTO: Record<string, string> = {
   pagamento_corrigido: "Pagamento registado corrigido",
   referencia_anulada: "Referência de pagamento anulada",
   comprovativo_do_pagamento: "Comprovativo do pagamento junto",
+  pagamento_conferido_no_extrato: "Transferência conferida no extrato",
   levantamento_pago: "Pago ao profissional",
 };
 

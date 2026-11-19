@@ -15520,6 +15520,8 @@ export type Acontecimento =
   | "referencia_anulada"
   // O comprovativo (foto ou PDF) junto a um pagamento registado à mão (d66, 18-11-2026).
   | "comprovativo_do_pagamento"
+  // Uma transferência vista no extrato do banco (d1, 19-11-2026): quem e quando.
+  | "pagamento_conferido_no_extrato"
   // O modelo de 15-11-2026 (d10): uma fatura do trabalho junta ao pedido, e como o cliente escolheu pagar ao parceiro.
   | "fatura_do_trabalho"
   | "forma_de_pagar_ao_parceiro"

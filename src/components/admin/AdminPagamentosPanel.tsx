@@ -93,6 +93,7 @@ import AnularAReferencia from "@/components/admin/AnularAReferencia";
 import { isMudancaType } from "@/lib/calendar-helpers";
 import {
   FILTRO_DA_ORIGEM_VAZIO,
+  contarPorConferir,
   contarSemComprovativo,
   exigeComprovativoAoRegistar,
   exigeContaDeDestino,
@@ -103,6 +104,7 @@ import {
 } from "@/lib/origem-do-pagamento";
 import {
   EtiquetaSemComprovativo,
+  BotaoConferidoNoExtrato,
   FiltroDaOrigemCampos,
   ListaDosRegistos,
 } from "@/components/admin/RastoDoPagamento";
@@ -1034,9 +1036,11 @@ function GestorDoDinheiro({
    * comprovativo» para completar os registos à mão antigos.
    */
   const [filtroDaOrigem, setFiltroDaOrigem] = useState<FiltroDaOrigem>(FILTRO_DA_ORIGEM_VAZIO);
-  const aFiltrarAOrigem = filtroDaOrigem.origem !== "todas" || filtroDaOrigem.soSemComprovativo;
+  const aFiltrarAOrigem = filtroDaOrigem.origem !== "todas" || filtroDaOrigem.soSemComprovativo || filtroDaOrigem.soPorConferir === true;
   const aFiltrar = Boolean(q || profissional || intervalo || aFiltrarAOrigem);
   const quantosSemComprovativo = contarSemComprovativo(trabalhos.map((t) => t.registos));
+  // As transferências por conferir no extrato do banco (d1, 19-11-2026).
+  const quantosPorConferir = contarPorConferir(trabalhos.map((t) => t.registos));
 
   /* A busca, o profissional e a origem valem para os quatro separadores por igual. */
   const filtrados = trabalhos.filter(
@@ -1370,6 +1374,7 @@ function GestorDoDinheiro({
             setQuantos(POR_PAGINA);
           }}
           quantosSemComprovativo={quantosSemComprovativo}
+          quantosPorConferir={quantosPorConferir}
         />
       </div>
       {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
@@ -2794,6 +2799,7 @@ function Linha({
                 <ListaDosRegistos
                   registos={t.registos}
                   juntar={(r) => <JuntarComprovativo alvo={r.alvo} alvoId={r.alvoId} onJunto={onMudouOsRegistos} />}
+                  conferir={mexeNoDinheiro ? (r) => <BotaoConferidoNoExtrato r={r} onFeito={() => onMudouOsRegistos?.()} /> : undefined}
                 />
               </div>
             </section>

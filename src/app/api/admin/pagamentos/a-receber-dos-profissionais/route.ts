@@ -211,13 +211,17 @@ export async function POST(req: NextRequest) {
     if (dia > hoje) return NextResponse.json({ error: "O dia do pagamento não pode ser no futuro." }, { status: 400 });
     const quando = dia === hoje ? agora : new Date(inicioDoDiaEmLisboa(dia).getTime() + 12 * 3_600_000);
 
-    // A conta onde entrou (obrigatória numa transferência) — d66.
+    /*
+     * A conta onde entrou (obrigatória numa transferência) — d66 — e, desde a d1
+     * (CEO e dono, 19-11-2026), o comprovativo por transferência ou numerário,
+     * como no «Já recebemos»: nenhuma passagem nova fica marcada sem a prova.
+     */
     const conferido = conferirRegistoAMao({
       metodo: corpo.metodo,
       contaId: corpo.contaDeDestino,
       contas: await contasDeDestino(),
       temComprovativo: Boolean(comprovativo?.ok),
-      comprovativoObrigatorio: false,
+      comprovativoObrigatorio: true,
     });
     if (!conferido.ok) return NextResponse.json({ error: conferido.erro }, { status: 400 });
 

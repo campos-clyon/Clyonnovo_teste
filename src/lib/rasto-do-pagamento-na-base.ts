@@ -5,7 +5,9 @@ import { tokenDoBlobDasFaturas } from "./faturas-do-trabalho-no-servidor";
 import { foiPagoEmMaoPor } from "./pago-em-mao";
 import {
   origemDoPagamento,
+  porConferirNoExtrato,
   semComprovativo,
+  type AlvoDoExtrato,
   type AlvoDoComprovativo,
   type ComprovativoVisto,
   type RegistoDoDinheiro,
@@ -58,6 +60,11 @@ export async function garantirTabelaDosComprovativos(): Promise<void> {
   for (const sql of [
     "ALTER TABLE pagamentos ADD COLUMN contaDeDestino VARCHAR(60) NULL DEFAULT NULL",
     "ALTER TABLE cobrancasAoProfissional ADD COLUMN contaDeDestino VARCHAR(60) NULL DEFAULT NULL",
+    // «Conferido no extrato» (d1, 19-11-2026): só a acrescentar, nulas em todas as linhas que já existem.
+    "ALTER TABLE pagamentos ADD COLUMN conferidoNoExtratoEm DATETIME NULL DEFAULT NULL",
+    "ALTER TABLE pagamentos ADD COLUMN conferidoNoExtratoPor VARCHAR(120) NULL DEFAULT NULL",
+    "ALTER TABLE cobrancasAoProfissional ADD COLUMN conferidoNoExtratoEm DATETIME NULL DEFAULT NULL",
+    "ALTER TABLE cobrancasAoProfissional ADD COLUMN conferidoNoExtratoPor VARCHAR(120) NULL DEFAULT NULL",
   ]) {
     try {
       await pool.execute(sql);
@@ -182,6 +189,62 @@ export async function alvoDoComprovativo(
 
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 
+/** A marca «conferido no extrato» de uma linha lida (d1), ou nula. */
+function conferido(l: Record<string, unknown>): { em: string | null; por: string | null } | null {
+  if (l.conferidoNoExtratoEm == null) return null;
+  return { em: iso(l.conferidoNoExtratoEm), por: (l.conferidoNoExtratoPor as string | null) ?? null };
+}
+
+/**
+ * MARCAR «CONFERIDO NO EXTRATO» — d1 (CEO e dono, 19-11-2026). Só numa
+ * transferência que entrou na CLYON (uma linha paga de `pagamentos`, ou uma
+ * parte activa da cobrança ao profissional), e só uma vez: a marca não se
+ * reescreve (`conferidoNoExtratoEm IS NULL` no UPDATE). Não mexe em valores,
+ * estados nem comprovativos — só escreve quem e quando.
+ */
+export async function marcarConferidoNoExtrato(d: {
+  alvo: AlvoDoExtrato;
+  alvoId: number;
+  por: string;
+  agora: Date;
+}): Promise<
+  | { ok: true; negociacaoId: number | null; pedidoId: number | null; valor: number | null }
+  | { ok: false; erro: string; status: number }
+> {
+  if (!Number.isInteger(d.alvoId) || d.alvoId <= 0) return { ok: false, erro: "Registo não indicado.", status: 400 };
+  await garantirTabelaDosComprovativos();
+  const pool = await getPool();
+  if (!pool) return { ok: false, erro: "Base indisponível.", status: 503 };
+  const [l] = (await pool.execute(
+    d.alvo === "pagamento"
+      ? `SELECT negociacaoId, pedidoId, metodo, estado AS situacao, COALESCE(valorPago, valor) AS valor, conferidoNoExtratoEm
+           FROM pagamentos WHERE id = ? LIMIT 1`
+      : `SELECT negociacaoId, pedidoId, metodo, IF(activa = 1, 'pago', 'inactiva') AS situacao, valor, conferidoNoExtratoEm
+           FROM cobrancasAoProfissional WHERE id = ? LIMIT 1`,
+    [d.alvoId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  const x = l[0];
+  if (!x) return { ok: false, erro: "Registo não encontrado.", status: 404 };
+  if (x.situacao !== "pago") return { ok: false, erro: "Só se confere no extrato um pagamento registado.", status: 409 };
+  if (origemDoPagamento({ metodo: String(x.metodo ?? "") }).chave !== "transferencia") {
+    return { ok: false, erro: "Só as transferências se conferem no extrato.", status: 409 };
+  }
+  if (x.conferidoNoExtratoEm != null) return { ok: false, erro: "Já estava conferido no extrato.", status: 409 };
+  const [r] = (await pool.execute(
+    d.alvo === "pagamento"
+      ? `UPDATE pagamentos SET conferidoNoExtratoEm = ?, conferidoNoExtratoPor = ? WHERE id = ? AND conferidoNoExtratoEm IS NULL`
+      : `UPDATE cobrancasAoProfissional SET conferidoNoExtratoEm = ?, conferidoNoExtratoPor = ? WHERE id = ? AND conferidoNoExtratoEm IS NULL`,
+    [d.agora, d.por.slice(0, 120), d.alvoId],
+  )) as [{ affectedRows?: number }, unknown];
+  if (!r?.affectedRows) return { ok: false, erro: "Já estava conferido no extrato.", status: 409 };
+  return {
+    ok: true,
+    negociacaoId: x.negociacaoId != null ? Number(x.negociacaoId) : null,
+    pedidoId: x.pedidoId != null ? Number(x.pedidoId) : null,
+    valor: x.valor != null ? Number(x.valor) : null,
+  };
+}
+
 async function lerSemFalhar(sql: string, params: unknown[]): Promise<Array<Record<string, unknown>>> {
   const pool = await getPool();
   if (!pool) return [];
@@ -242,12 +305,13 @@ export async function registosDasNegociacoes(negociacaoIds: ReadonlyArray<number
 
   const [pags, cobs, negs] = await Promise.all([
     lerSemFalhar(
-      `SELECT id, negociacaoId, metodo, parte, valor, valorPago, pagoEm, referencia, entidade, trid, transacaoId, contaDeDestino
+      `SELECT id, negociacaoId, metodo, parte, valor, valorPago, pagoEm, referencia, entidade, trid, transacaoId, contaDeDestino,
+              conferidoNoExtratoEm, conferidoNoExtratoPor
          FROM pagamentos WHERE estado = 'pago' AND negociacaoId IN (?) ORDER BY id`,
       [ids],
     ),
     lerSemFalhar(
-      `SELECT id, negociacaoId, parte, valor, pagoEm, metodo, contaDeDestino
+      `SELECT id, negociacaoId, parte, valor, pagoEm, metodo, contaDeDestino, conferidoNoExtratoEm, conferidoNoExtratoPor
          FROM cobrancasAoProfissional WHERE activa = 1 AND pagamentoId IS NULL AND negociacaoId IN (?) ORDER BY id`,
       [ids],
     ),
@@ -266,7 +330,7 @@ export async function registosDasNegociacoes(negociacaoIds: ReadonlyArray<number
   ];
   const provas = await comprovativosDosAlvos(pares);
   const juntar = (negociacaoId: number, r: Omit<RegistoDoDinheiro, "semComprovativo">) => {
-    const registo = { ...r, semComprovativo: semComprovativo(r) };
+    const registo = { ...r, semComprovativo: semComprovativo(r), porConferir: porConferirNoExtrato(r) };
     if (!mapa.has(negociacaoId)) mapa.set(negociacaoId, []);
     mapa.get(negociacaoId)!.push(registo);
   };
@@ -288,6 +352,7 @@ export async function registosDasNegociacoes(negociacaoIds: ReadonlyArray<number
         contaDeDestino: (p.contaDeDestino as string) ?? null,
       }),
       comprovativos: provas.get(`pagamento:${p.id}`) ?? [],
+      conferidoNoExtrato: conferido(p),
     });
   }
   for (const c of cobs) {
@@ -299,6 +364,7 @@ export async function registosDasNegociacoes(negociacaoIds: ReadonlyArray<number
       em: iso(c.pagoEm),
       origem: origemDoPagamento({ metodo: String(c.metodo ?? ""), contaDeDestino: (c.contaDeDestino as string) ?? null }),
       comprovativos: provas.get(`cobranca:${c.id}`) ?? [],
+      conferidoNoExtrato: conferido(c),
     });
   }
   for (const n of negs) {

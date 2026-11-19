@@ -18,7 +18,7 @@ import {
   type FiltroDaOrigem,
   type RegistoDoDinheiro,
 } from "@/lib/origem-do-pagamento";
-import { FiltroDaOrigemCampos, ListaDosRegistos } from "./RastoDoPagamento";
+import { BotaoConferidoNoExtrato, FiltroDaOrigemCampos, ListaDosRegistos } from "./RastoDoPagamento";
 import {
   CamposDaProva,
   GRANDE_DEMAIS_PARA_ENVIAR,
@@ -372,6 +372,7 @@ function LinhaDoTrabalho({
           <ListaDosRegistos
             registos={t.registos}
             juntar={(r) => <JuntarComprovativo alvo={r.alvo} alvoId={r.alvoId} onJunto={() => void onMudou()} />}
+            conferir={eAdministrador ? (r) => <BotaoConferidoNoExtrato r={r} onFeito={() => void onMudou()} /> : undefined}
           />
         </div>
       )}
@@ -438,11 +439,11 @@ function LinhaDoTrabalho({
             onConta={setConta}
             ficheiro={ficheiro}
             onFicheiro={setFicheiro}
-            obrigatorio={false}
+            obrigatorio
           />
           <div className="mt-2 flex gap-2">
             <button
-              disabled={ocupado || !provaCompleta(metodo, conta, ficheiro, false)}
+              disabled={ocupado || !provaCompleta(metodo, conta, ficheiro, true)}
               onClick={() => void enviar({ accao: "marcar", partes: aMarcar, metodo, dia, nota })}
               className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-50"
             >

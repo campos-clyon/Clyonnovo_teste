@@ -183,16 +183,48 @@ export type RegistoDoDinheiro = {
   comprovativos: ComprovativoVisto[];
   /** Feito à mão, de dinheiro que mexeu, e ainda sem ficheiro. */
   semComprovativo: boolean;
+  /** d1 (19-11-2026): quem e quando viu esta transferência no extrato do banco. */
+  conferidoNoExtrato?: { em: string | null; por: string | null } | null;
+  /** d1: uma transferência que entrou na CLYON e ainda não se viu no extrato. */
+  porConferir?: boolean;
 };
+
+/**
+ * «CONFERIDO NO EXTRATO» — d1 (CEO e dono, 19-11-2026). Um comprovativo faz-se
+ * em minutos; só o extrato do banco prova que o dinheiro entrou. Cada
+ * TRANSFERÊNCIA que entrou na CLYON (uma linha de `pagamentos` ou uma parte da
+ * cobrança ao profissional) ganha a marca de quem a viu no extrato, e quando; as
+ * Finanças põem-na uma vez por semana. O euPago prova-se sozinho; o «Já
+ * pagámos» ao profissional é dinheiro a sair e fica de fora.
+ */
+export function eConferivelNoExtrato(r: Pick<RegistoDoDinheiro, "alvo" | "origem">): boolean {
+  return (r.alvo === "pagamento" || r.alvo === "cobranca") && r.origem.chave === "transferencia";
+}
+
+export function porConferirNoExtrato(r: Pick<RegistoDoDinheiro, "alvo" | "origem" | "conferidoNoExtrato">): boolean {
+  return eConferivelNoExtrato(r) && !r.conferidoNoExtrato;
+}
+
+/** Os registos onde se põe a marca «conferido no extrato». */
+export type AlvoDoExtrato = "pagamento" | "cobranca";
+
+export function eAlvoDoExtrato(v: unknown): v is AlvoDoExtrato {
+  return v === "pagamento" || v === "cobranca";
+}
 
 export function semComprovativo(r: Pick<RegistoDoDinheiro, "origem" | "comprovativos">): boolean {
   return r.origem.precisaDeComprovativo && r.comprovativos.length === 0;
 }
 
 /** O filtro do ecrã: uma origem (ou todas) e, se quiser, só os que falta o comprovativo. */
-export type FiltroDaOrigem = { origem: ChaveDaOrigem | "todas"; soSemComprovativo: boolean };
+export type FiltroDaOrigem = {
+  origem: ChaveDaOrigem | "todas";
+  soSemComprovativo: boolean;
+  /** d1: só as transferências que ainda não se viram no extrato. */
+  soPorConferir?: boolean;
+};
 
-export const FILTRO_DA_ORIGEM_VAZIO: FiltroDaOrigem = { origem: "todas", soSemComprovativo: false };
+export const FILTRO_DA_ORIGEM_VAZIO: FiltroDaOrigem = { origem: "todas", soSemComprovativo: false, soPorConferir: false };
 
 /**
  * Um trabalho passa no filtro se ALGUM registo dele passa: tem essa origem e,
@@ -200,10 +232,20 @@ export const FILTRO_DA_ORIGEM_VAZIO: FiltroDaOrigem = { origem: "todas", soSemCo
  * — também os que ainda não têm registo nenhum.
  */
 export function passaNoFiltroDaOrigem(registos: ReadonlyArray<RegistoDoDinheiro> | undefined, f: FiltroDaOrigem): boolean {
-  if (f.origem === "todas" && !f.soSemComprovativo) return true;
+  if (f.origem === "todas" && !f.soSemComprovativo && !f.soPorConferir) return true;
   return (registos ?? []).some(
-    (r) => (f.origem === "todas" || r.origem.chave === f.origem) && (!f.soSemComprovativo || r.semComprovativo),
+    (r) =>
+      (f.origem === "todas" || r.origem.chave === f.origem) &&
+      (!f.soSemComprovativo || r.semComprovativo) &&
+      (!f.soPorConferir || r.porConferir === true),
   );
+}
+
+/** Quantas transferências estão por conferir no extrato — o número ao lado do filtro (d1). */
+export function contarPorConferir(listas: ReadonlyArray<ReadonlyArray<RegistoDoDinheiro> | undefined>): number {
+  let n = 0;
+  for (const l of listas) for (const r of l ?? []) if (r.porConferir === true) n++;
+  return n;
 }
 
 // ─── Antes de gravar um registo à mão ───────────────────────────────────────
