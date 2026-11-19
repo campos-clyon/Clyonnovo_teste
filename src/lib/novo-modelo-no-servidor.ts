@@ -49,6 +49,8 @@ export async function segueONovoModelo(
     pagoEm?: unknown;
     /** d33: a criação do pedido (Trabalho CLYON). Sem ela, lê-se da base (`trabalhosClyonDasNegociacoes`). */
     pedidoCriadoEm?: Date | string | null;
+    /** d3: a forma combinada, para o «pago ao profissional» registado (`negociacaoNoNovoModelo`). */
+    formaDePagamento?: unknown;
   },
   agora: Date = agoraDoModelo(),
 ): Promise<boolean> {
@@ -69,6 +71,7 @@ export async function segueONovoModelo(
       pedidoCriadoEm: c.pedidoCriadoEm ?? null,
       clientePagouAClyonEm: c.clientePagouAClyonEm ?? null,
       fechadoEm: quandoLiberta(n as Parameters<typeof quandoLiberta>[0]),
+      formaDePagamento: n.formaDePagamento,
     },
     pagamentos,
     agora,
@@ -93,6 +96,8 @@ export async function contratadasNoNovoModelo(
     confirmadoEm?: unknown;
     pagoEm?: unknown;
     pedidoCriadoEm?: Date | string | null;
+    /** d3: a forma combinada, para o «pago ao profissional» registado. */
+    formaDePagamento?: unknown;
   }>,
   agora: Date = agoraDoModelo(),
 ): Promise<Set<number>> {
@@ -115,6 +120,7 @@ export async function contratadasNoNovoModelo(
         pedidoCriadoEm: n.pedidoCriadoEm ?? null,
         clientePagouAClyonEm: n.clientePagouAClyonEm ?? null,
         fechadoEm: quandoLiberta({ estado: "acordada", ...n } as unknown as Parameters<typeof quandoLiberta>[0]),
+        formaDePagamento: n.formaDePagamento,
       },
       pagamentos.get(Number(n.id)) ?? [],
       agora,

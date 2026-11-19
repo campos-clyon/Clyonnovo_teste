@@ -54,7 +54,8 @@ jobs:
           }
 
           echo "──────── pnpm check ────────"
-          saida=$(pnpm check 2>&1); rc=$?
+          # O tsc do projecto inteiro passa dos 2 GB do Node por omissão (d3, 19-11-2026).
+          saida=$(NODE_OPTIONS=--max-old-space-size=4096 pnpm check 2>&1); rc=$?
           printf '%s\n' "$saida"
           if [ $rc -ne 0 ]; then falhou=1; anotar "tipos" "$saida"; fi
 

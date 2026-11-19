@@ -6,6 +6,9 @@ import { dividirEntrada, type EntradaDaPlataforma, type PagamentoAAssistente } f
 import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 import { canalCurtoDoPedido } from "./canal-do-pedido";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
+import { classificarPagamento } from "./a-quem-foi-o-dinheiro";
+import { NOVO_MODELO_DESDE } from "./novo-modelo";
+import { taxaAPassarAClyon } from "./taxa-a-passar-a-clyon";
 import {
   CATEGORIAS_DE_ORIGEM,
   CATEGORIAS_DO_SISTEMA,
@@ -541,6 +544,8 @@ export async function entradasDaPlataforma(): Promise<EntradaDaPlataforma[] | nu
     `SELECT pg.id, pg.pedidoId, pg.metodo, pg.valor, pg.valorPago, pg.comissaoEupago, pg.pagoEm, pg.trid, pg.parte,
             n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.semFactura, n.ofertaClyon,
             n.pagamentoParaQue, n.createdAt AS negociacaoCriadaEm,
+            pg.negociacaoId, n.estado AS negociacaoEstado, n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm,
+            n.pagoEm AS negociacaoPagaEm,
             o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon
        FROM pagamentos pg
        LEFT JOIN negociacoes n ON n.id = pg.negociacaoId
@@ -551,12 +556,15 @@ export async function entradasDaPlataforma(): Promise<EntradaDaPlataforma[] | nu
     "entradas",
   );
   if (!linhas) return null;
+  const passagens = await passagensDoNovoModelo(linhas);
+  if (!passagens) return null;
   const fora: EntradaDaPlataforma[] = [];
   for (const l of linhas) {
     const d = instanteDaBase((l.pagoEm as Date | string | null) ?? null);
     if (!d) continue;
     const valor = Number(l.valorPago ?? l.valor ?? 0);
     if (!(valor > 0)) continue;
+    const negociacaoId = Number(l.negociacaoId);
     fora.push(
       dividirEntrada({
         id: Number(l.id),
@@ -569,10 +577,67 @@ export async function entradasDaPlataforma(): Promise<EntradaDaPlataforma[] | nu
         parte: (l.parte as string) ?? null,
         comissaoEupago: l.comissaoEupago != null ? Number(l.comissaoEupago) : null,
         conta: contaDaLinha(l, true, false),
+        passagemDoNovoModelo: d.getTime() >= NOVO_MODELO_DESDE.getTime() ? (passagens.get(negociacaoId) ?? null) : null,
       }),
     );
   }
   return fora;
+}
+
+/**
+ * AS PASSAGENS DO MODELO DE 15-11 — d3 (CEO e dono, 19-11-2026). Para cada
+ * negociação com dinheiro entrado na CLYON desde o corte que segue o modelo novo
+ * (a regra de sempre: `contratadasNoNovoModelo`, com os pagamentos lidos), a
+ * fatura da taxa que o parceiro passa — a taxa e o IVA dela (`taxaAPassarAClyon`,
+ * a mesma da carteira e da referência). É por ela que `dividirEntrada` separa o
+ * IVA: nunca pelo IVA do trabalho, que é do parceiro. Lê-se de novo a cada
+ * abertura: nada se grava, e as entradas já feitas contam certo sem as mexer.
+ * Se a leitura do modelo falhar, `null` — as contas dizem que não leram, em vez
+ * de adivinhar o modelo em silêncio.
+ */
+async function passagensDoNovoModelo(
+  linhas: Array<Record<string, unknown>>,
+): Promise<Map<number, { iva: number; comissao: number }> | null> {
+  const mapa = new Map<number, { iva: number; comissao: number }>();
+  const porNegociacao = new Map<number, Record<string, unknown>>();
+  for (const l of linhas) {
+    const id = Number(l.negociacaoId);
+    if (!Number.isInteger(id) || id <= 0 || porNegociacao.has(id)) continue;
+    const pago = instanteDaBase((l.pagoEm as Date | string | null) ?? null);
+    if (!pago || pago.getTime() < NOVO_MODELO_DESDE.getTime()) continue;
+    if (!classificarPagamento(String(l.metodo ?? "")).entraNaClyon) continue;
+    porNegociacao.set(id, l);
+  }
+  if (porNegociacao.size === 0) return mapa;
+  try {
+    const { contratadasNoNovoModelo } = await import("./novo-modelo-no-servidor");
+    const { reservasDe } = await import("./reserva-na-base");
+    const daLista = [...porNegociacao.entries()].map(([id, l]) => ({
+      id,
+      ofertaClyon: l.ofertaClyon,
+      estado: l.negociacaoEstado,
+      execucaoEnviadaEm: l.execucaoEnviadaEm,
+      provaJson: l.provaJson,
+      confirmadoEm: l.confirmadoEm,
+      pagoEm: l.negociacaoPagaEm,
+      formaDePagamento: l.formaDePagamento,
+    }));
+    const [novos, reservas] = await Promise.all([
+      contratadasNoNovoModelo(daLista),
+      reservasDe([...porNegociacao.keys()]),
+    ]);
+    for (const id of novos) {
+      const l = porNegociacao.get(id);
+      const acordado = Number(l?.valorAcordado);
+      if (!l || !Number.isFinite(acordado)) continue;
+      const t = taxaAPassarAClyon(acordado, taxasDaNegociacao(l), "normal", reservas.get(id) ?? 0);
+      if (t) mapa.set(id, { iva: t.iva, comissao: t.comissao });
+    }
+    return mapa;
+  } catch (e) {
+    console.error("[financas] modelo das passagens:", e);
+    return null;
+  }
 }
 
 /**

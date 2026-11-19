@@ -3,6 +3,7 @@ import type { DividaDoProfissional } from "./divida-do-profissional";
 import { contaDoValorAcordado } from "./pagamento-directo";
 import { NOVO_MODELO_DESDE, eDoNovoModelo } from "./novo-modelo";
 import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
+import { pagoAoProfissionalRegistado } from "./pago-em-mao";
 
 /**
  * O QUE O PARCEIRO PASSA À CLYON NUM TRABALHO DO MODELO NOVO — d10, desde
@@ -177,10 +178,24 @@ export function negociacaoNoNovoModelo(
     clientePagouAClyonEm?: Date | string | null;
     /** d58: as datas do fecho, para o ler dos `pagamentos` daqui. */
     trabalho?: TrabalhoParaOPagamentoDoCliente;
+    /** d3 (19-11-2026): a forma combinada (`negociacoes.formaDePagamento`), para o «pago ao profissional» registado. */
+    formaDePagamento?: unknown;
   },
   pagamentos: ReadonlyArray<PagamentoParaOCorte>,
   agora: Date,
 ): boolean {
+  /*
+   * O «PAGO AO PROFISSIONAL» REGISTADO À MÃO — d3 (CEO e dono, 19-11-2026), a
+   * regra de transição. Desde a d31 (15-11) esse registo recusa-se num trabalho do
+   * modelo novo (`/api/admin/pagamentos/recebido`); um que o tem foi, portanto,
+   * fechado no antigo, e o que o profissional deve nasceu como a dívida do pago em
+   * mão (`dividaDoRegistoEmMao`). Fica no antigo em TODO o lado — a carteira e a
+   * dívida já o diziam; a Mesa, os Pagamentos, as Carteiras e os textos dizem-no
+   * agora também (havia trabalhos «no modelo novo» na Mesa e no antigo na dívida).
+   */
+  if (pagamentos.some((p) => p.estado === "pago" && pagoAoProfissionalRegistado(l.formaDePagamento, p.metodo))) {
+    return false;
+  }
   return eDoNovoModelo(
     {
       ofertaClyon: l.ofertaClyon,

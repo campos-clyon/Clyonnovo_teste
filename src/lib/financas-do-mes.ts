@@ -62,6 +62,14 @@ export type LinhaParaDividir = {
   parte: string | null;
   comissaoEupago: number | null;
   conta: Pick<ContaDoPagamento, "total" | "iva" | "clyon" | "profissional"> | null;
+  /**
+   * O MODELO DE 15-11-2026 — d3 (CEO e dono, 19-11-2026). Num trabalho do modelo
+   * novo o cliente paga ao parceiro, e o que entra na CLYON é só a fatura da taxa
+   * que o parceiro lhe passa: a taxa e o IVA DELA (`taxaAPassarAClyon`, a mesma
+   * conta da carteira e da referência). Nunca uma parte do IVA do trabalho, que é
+   * do parceiro. Ausente (ou nulo) nos trabalhos do modelo antigo.
+   */
+  passagemDoNovoModelo?: { iva: number; comissao: number } | null;
 };
 
 /**
@@ -73,9 +81,14 @@ export type LinhaParaDividir = {
 export function dividirEntrada(l: LinhaParaDividir): EntradaDaPlataforma {
   const { natureza, entraNaClyon } = classificarPagamento(l.metodo);
   const valor = aosCentimos(l.valor);
+  const passagem = l.passagemDoNovoModelo ?? null;
   const daParteDaClyon =
     entraNaClyon &&
-    (l.formaDoTrabalho === "dinheiro" || l.metodo.startsWith("pro_") || eLinhaDaDividaEmMao(l.trid) || l.parte === "divida");
+    (passagem != null ||
+      l.formaDoTrabalho === "dinheiro" ||
+      l.metodo.startsWith("pro_") ||
+      eLinhaDaDividaEmMao(l.trid) ||
+      l.parte === "divida");
   const base = {
     id: l.id,
     pedidoId: l.pedidoId,
@@ -90,6 +103,13 @@ export function dividirEntrada(l: LinhaParaDividir): EntradaDaPlataforma {
   const nada = { iva: 0, receita: 0, profissional: 0 };
   if (!entraNaClyon) return { ...base, ...nada, semConta: false };
   const c = l.conta;
+  if (daParteDaClyon && passagem) {
+    // A fatura da taxa: o IVA é o da taxa, na proporção da fatura (um pagamento parcial divide-se igual).
+    const fatura = passagem.iva + passagem.comissao;
+    if (!(fatura > 0)) return { ...base, ...nada, semConta: true };
+    const iva = aosCentimos((valor * passagem.iva) / fatura);
+    return { ...base, iva, receita: aosCentimos(valor - iva), profissional: 0, semConta: false };
+  }
   if (daParteDaClyon) {
     const parte = c ? c.iva + c.clyon : 0;
     if (!c || !(parte > 0)) return { ...base, ...nada, semConta: true };

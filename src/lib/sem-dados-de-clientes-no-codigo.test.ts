@@ -84,7 +84,7 @@ const NOMES_INVENTADOS = lista(`
   Marcelo Maximiano Nádia Odete Ofélia Oliver Olímpio Patricia Raquel Rita Romão Rosalina Rui Silvério
   Sofia Telmo Teodoro Tomé Valter Vasco
   Arvoredo Castanhal Castanheira Costa Fontoura Gomes Lameirão Lopes Moreirinha Pinhal Prates
-  Ramalhete Ribamar Ribeiro Silva Sobral Sobreirinho Teixo Valdeira
+  Ramalhete Ribamar Ribeiro Silva Sobral Sobreirinho Teixo Testemunho Valdeira
   Exemplo Teste Modelo Inventado Inventada
 `);
 
