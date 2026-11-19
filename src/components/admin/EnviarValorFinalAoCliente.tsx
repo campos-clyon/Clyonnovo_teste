@@ -42,6 +42,9 @@ type Previa = {
 };
 
 const eur = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
+/** d70: com IVA e o sem IVA ao lado; sem fatura (sem IVA nenhum), di-lo — como `totalEmPalavras`. */
+const totalComOuSemFatura = (total: number, semIva: number) =>
+  total > semIva ? `${eur(total)} com IVA (${eur(semIva)} sem IVA)` : `${eur(total)} (sem fatura)`;
 const QUANDO = new Intl.DateTimeFormat("pt-PT", {
   timeZone: "Europe/Lisbon",
   day: "2-digit",
@@ -117,7 +120,7 @@ export default function EnviarValorFinalAoCliente({ pedidoId, negociacaoId }: { 
       c.modo === "referencia"
         ? "Gera uma referência Multibanco e um MB WAY novos; as referências antigas deste trabalho deixam de valer."
         : "Leva os dados para pagar ao parceiro e as duas faturas.";
-    if (!window.confirm(`Enviar o valor final do #${pedidoId} ao cliente ${onde}?\n\n${eur(c.total)} com IVA (${eur(c.semIva)} sem IVA).\n${como}`)) return;
+    if (!window.confirm(`Enviar o valor final do #${pedidoId} ao cliente ${onde}?\n\n${totalComOuSemFatura(c.total, c.semIva)}.\n${como}`)) return;
     setOcupado(true);
     setResposta(null);
     try {
@@ -162,7 +165,8 @@ export default function EnviarValorFinalAoCliente({ pedidoId, negociacaoId }: { 
           {c && (
             <div className="rounded border border-slate-700 bg-slate-900/70 p-2">
               <p>
-                Valor final <strong className="text-white">{eur(c.total)}</strong> com IVA · {eur(c.semIva)} sem IVA
+                Valor final <strong className="text-white">{eur(c.total)}</strong>
+                {c.iva > 0 ? <> com IVA · {eur(c.semIva)} sem IVA</> : " (sem fatura)"}
               </p>
               {c.modo === "referencia" && c.parte === "diferenca" && (
                 <p>
@@ -256,7 +260,7 @@ export default function EnviarValorFinalAoCliente({ pedidoId, negociacaoId }: { 
                 {previa.historico.map((h) => (
                   <li key={h.id}>
                     {h.enviadoEm ? QUANDO.format(new Date(h.enviadoEm)) : "—"}
-                    {h.porQuem ? `, ${h.porQuem}` : ""}: {eur(h.total)} com IVA ({eur(h.semIva)} sem IVA)
+                    {h.porQuem ? `, ${h.porQuem}` : ""}: {totalComOuSemFatura(h.total, h.semIva)}
                     {h.aPedir !== h.total ? `, pedidos ${eur(h.aPedir)}` : ""} — {canais(h.canaisQueSairam)}
                   </li>
                 ))}

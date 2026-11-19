@@ -58,6 +58,8 @@ type DoServidor = {
   trabalhoClyon: boolean;
   jaPago: boolean;
   novoModelo: boolean;
+  /** d70: marcado «Sem fatura» no trabalho — o cliente paga o sem IVA. */
+  semFactura?: boolean;
   antes: { valorAcordado: number | null; profissional: number | null };
   tarifa: { precoHora2: number; precoHora3: number | null; minimoHoras: number; precoKm: number; kmMinimo: number } | null;
   pessoasEscolhidas: 2 | 3 | null;
@@ -467,8 +469,16 @@ export default function FolhaFinalDaMudanca({
               {previaActual && (
                 <div className="rounded border border-slate-700 bg-slate-900/70 p-2 text-[11px] text-slate-300">
                   <p>
-                    Total ao cliente <strong className="text-white">{eur(previaActual.total)}</strong> com IVA ·{" "}
-                    {eur(previaActual.semIva)} sem IVA ({eur(previaActual.iva)} de IVA)
+                    {d?.semFactura ? (
+                      <>
+                        Total ao cliente <strong className="text-white">{eur(previaActual.semIva)}</strong> (sem fatura)
+                      </>
+                    ) : (
+                      <>
+                        Total ao cliente <strong className="text-white">{eur(previaActual.total)}</strong> com IVA ·{" "}
+                        {eur(previaActual.semIva)} sem IVA ({eur(previaActual.iva)} de IVA)
+                      </>
+                    )}
                   </p>
                   <p>
                     O profissional recebe <strong className="text-white">{eur(previaActual.profissional)}</strong> · fica para a CLYON{" "}
@@ -512,7 +522,7 @@ export default function FolhaFinalDaMudanca({
                   type="button"
                   onClick={() => {
                     if (!previaActual) return;
-                    if (window.confirm(`Gravar a folha final do #${pedidoId}?\n\n${eur(previaActual.total)} com IVA (${eur(previaActual.semIva)} sem IVA) passa a ser o valor final. O profissional recebe ${eur(previaActual.profissional)}.`)) {
+                    if (window.confirm(`Gravar a folha final do #${pedidoId}?\n\n${d?.semFactura ? `${eur(previaActual.semIva)} (sem fatura)` : `${eur(previaActual.total)} com IVA (${eur(previaActual.semIva)} sem IVA)`} passa a ser o valor final. O profissional recebe ${eur(previaActual.profissional)}.`)) {
                       void enviar(false);
                     }
                   }}

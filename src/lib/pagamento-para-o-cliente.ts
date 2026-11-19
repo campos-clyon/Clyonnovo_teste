@@ -129,7 +129,7 @@ const valorPagoDe = (l: Pagamento) => (l.valorPago != null && l.valorPago > 0 ? 
  * não estão confirmadas, ou o trabalho ainda não foi pago.
  */
 export function acertoDasHoras(
-  trabalho: Pick<TrabalhoAPagar, "porHora" | "acordado" | "taxas" | "modelo">,
+  trabalho: Pick<TrabalhoAPagar, "porHora" | "acordado" | "taxas" | "modelo" | "semFactura">,
   linhas: Pagamento[],
 ): { aPagar: number; aDevolver: number; pagoAteAgora: number; final: number; comFactura: boolean } | null {
   if (!trabalho.porHora?.horasConfirmadas) return null;
@@ -139,8 +139,10 @@ export function acertoDasHoras(
   if (!doTrabalho) return null;
   const pagos = linhas.filter((l) => l.estado === "pago");
   const pagoAteAgora = Math.round(pagos.reduce((soma, l) => soma + valorPagoDe(l), 0) * 100) / 100;
-  const final = quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, doTrabalho.comFactura);
-  return { ...acertoDoFim(pagoAteAgora, final), pagoAteAgora, final, comFactura: doTrabalho.comFactura };
+  // d70: marcado «Sem fatura» no trabalho, o final é sem IVA — seja qual for a escolha da referência paga.
+  const comFactura = trabalho.semFactura === true ? false : doTrabalho.comFactura;
+  const final = quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.semFactura === true ? "sem_iva" : trabalho.modelo, comFactura);
+  return { ...acertoDoFim(pagoAteAgora, final), pagoAteAgora, final, comFactura };
 }
 
 export async function estadoDoPagamentoParaOCliente(

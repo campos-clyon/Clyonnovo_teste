@@ -8,6 +8,7 @@ import { excedeONumerario, lerForma, MAXIMO_EM_NUMERARIO } from "./forma-de-paga
 import { fazerAFolhaFinal, fraseDaFolhaFinal, type CorpoDaFolhaFinal, type FolhaFinalFeita } from "./folha-final";
 import { folhasFinaisDe, gravarFolhaFinal, transferidoAntesDasFolhasFinais, type FolhaFinalGravada } from "./folha-final-na-base";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "./taxas-plataforma";
+import { eSemFactura } from "./sem-factura";
 import type { RegimeDoProfissional } from "./pagamento-directo";
 import { acordoDasPessoasAMaisDe, type QuemRegistaOAcordo } from "./tabela-das-mudancas";
 
@@ -32,6 +33,8 @@ export type ContextoDaFolhaFinal = {
   antes: { valorAcordado: number | null; taxaProfissional: number | null; profissional: number | null };
   taxa: Parameters<typeof fazerAFolhaFinal>[0]["taxa"];
   modelo: { novoModelo: boolean; regime: RegimeDoProfissional };
+  /** d70: marcado «Sem fatura» no trabalho (fora do modelo de 15-11) — o total ao cliente é o sem IVA. */
+  semFactura: boolean;
   jaPago: boolean;
   emDinheiro: boolean;
   historico: FolhaFinalGravada[];
@@ -77,6 +80,7 @@ export async function contextoDaFolhaFinal(pedidoId: number, linha: Linha): Prom
       taxaProfissional,
     },
     modelo: { novoModelo: Boolean(acesso && acesso.ok && acesso.trabalho.novoModelo), regime },
+    semFactura: eSemFactura({ semFactura: linha.semFactura }) && !(acesso && acesso.ok && acesso.trabalho.novoModelo),
     jaPago: linha.pagoEm != null,
     emDinheiro: lerForma(linha.formaDePagamento) === "dinheiro",
     historico,
@@ -93,6 +97,7 @@ export function folhaFinalParaOEcra(c: ContextoDaFolhaFinal) {
     trabalhoClyon: c.trabalhoClyon,
     jaPago: c.jaPago,
     novoModelo: c.modelo.novoModelo,
+    semFactura: c.semFactura,
     antes: c.antes,
     tarifa: t
       ? {

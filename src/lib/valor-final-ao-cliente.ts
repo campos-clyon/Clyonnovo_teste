@@ -72,7 +72,7 @@ export type ContaDoValorFinal =
 
 type TrabalhoParaOValorFinal = Pick<
   TrabalhoAPagar,
-  "acordado" | "taxas" | "modelo" | "acrescimo" | "formaDePagamento" | "novoModelo" | "porHora" | "reservaCent"
+  "acordado" | "taxas" | "modelo" | "acrescimo" | "formaDePagamento" | "novoModelo" | "porHora" | "reservaCent" | "semFactura"
 >;
 
 const aosCentimos = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -139,16 +139,19 @@ export function contaDoValorFinal(
     };
   }
 
-  // Sem pagamento: com fatura no modelo do IVA incluído; antes dele, a escolha da última referência (fatura por omissão).
+  // Sem pagamento: primeiro a escolha do próprio trabalho (d70: marcado «Sem fatura», sem IVA);
+  // sem ela, com fatura no modelo do IVA incluído e, antes dele, a da última referência (fatura por omissão).
   const ultima = [...doCliente].sort((a, b) => b.id - a.id)[0];
-  const comFactura = t.modelo === "iva_incluido" ? true : (ultima?.comFactura ?? true);
+  const comFactura =
+    t.semFactura === true ? false : t.modelo === "iva_incluido" ? true : (ultima?.comFactura ?? true);
   const tot = totais(t, comFactura);
   if (!(tot.total > 0)) return { ok: false, porque: "Este trabalho ainda não tem um valor final." };
   return { ok: true, conta: { modo: "referencia", ...tot, comFactura, aPedir: tot.total, parte: "trabalho", pagoAteAgora: 0 } };
 }
 
 function totais(t: TrabalhoParaOValorFinal, comFactura: boolean): { total: number; semIva: number; iva: number } {
-  const total = quantoOClientePaga(t.acordado, t.taxas, t.modelo, comFactura, t.acrescimo);
+  // Sem fatura é sem IVA, seja qual for o modelo (d70): com o IVA incluído, `quantoOClientePaga` daria o total com imposto.
+  const total = quantoOClientePaga(t.acordado, t.taxas, comFactura ? t.modelo : "sem_iva", comFactura, t.acrescimo);
   if (!comFactura) return { total, semIva: total, iva: 0 };
   const semIva =
     t.modelo === "iva_incluido"

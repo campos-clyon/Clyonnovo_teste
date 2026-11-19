@@ -8,7 +8,7 @@ import { hashDeToken, verificarTokenDeAcesso } from "./pedido-acesso";
 import { regimeDeIva, taxasDaNegociacao, type RegimeIva, type Taxas } from "./taxas-plataforma";
 import { lerForma, type FormaDePagamento } from "./forma-de-pagamento";
 import type { ModeloDoPreco } from "./iva-incluido";
-import { modeloDaLinha } from "./sem-factura";
+import { eSemFactura, modeloDaLinha } from "./sem-factura";
 import { estaLibertado, quandoLiberta } from "./trabalho";
 import { lerBase } from "./base-do-preco";
 import { horasConfirmadas, horasPrevistasDaLinha, valorParaPagar } from "./horas-do-trabalho";
@@ -54,6 +54,12 @@ export type TrabalhoAPagar = {
    * pede; em dinheiro, quem deve à CLYON passa a ser o profissional.
    */
   modelo: ModeloDoPreco;
+  /**
+   * MARCADO «SEM FATURA» NO PRÓPRIO TRABALHO — d70 (19-11-2026). A mesma marca
+   * que o cartão usa (`negociacoes.semFactura`, ver `sem-factura.ts`): o
+   * cliente paga o valor sem IVA. Ausente nos trabalhos montados à mão (testes).
+   */
+  semFactura?: boolean;
   /**
    * O trabalho está feito — confirmado, ou libertado pelo prazo. É a partir
    * daqui que, em dinheiro com IVA incluído, o profissional deve à CLYON.
@@ -255,6 +261,8 @@ export async function trabalhoQueSePodePagar(
       formaDePagamento: lerForma((linha as { formaDePagamento?: unknown }).formaDePagamento),
       // Sem factura (21-10-2026): sem IVA — ver `sem-factura.ts`.
       modelo: modeloDaLinha(linha, linha.createdAt),
+      // d70: a escolha «Sem fatura» do próprio trabalho — o valor final e o acerto das horas leem-na.
+      semFactura: eSemFactura(linha),
       libertado: estaLibertado(linha, agora),
       novoModelo,
       porHora: porHora
