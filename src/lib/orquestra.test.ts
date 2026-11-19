@@ -2607,3 +2607,27 @@ describe("d5) o máximo das peças é a primeira grande (65 €), não o 50 € 
     expect(SEM_COMENTARIOS("// era «15 – 50 € / peça»\nconst x = 1;")).not.toMatch(/50/);
   });
 });
+
+/*
+ * d7) «É PAGO?» DIZ COM QUEM SE PAGA — d7 (CEO e dono, 19-11-2026). Na mesma
+ * página de destino, a FAQ do esvaziamento dizia que se paga ao parceiro e a da
+ * recolha (a página do Google Ads) não. Toda a pergunta «… é pago?» de uma FAQ
+ * responde com a frase única `PAGA_AO_PARCEIRO_QUE_CONTRATOU`.
+ */
+const PERGUNTA_E_PAGO = /q:\s*"([^"]* é pag[oa]\?)",\s*a:\s*(`[^`]*`|"[^"]*")/g;
+describe("d7) as FAQ «… é pago?» dizem com quem se paga", () => {
+  const perguntas: Array<{ f: string; q: string; a: string }> = [];
+  for (const f of FONTES) {
+    const t = readFileSync(join(RAIZ, f), "utf8");
+    for (const m of t.matchAll(PERGUNTA_E_PAGO)) perguntas.push({ f, q: m[1], a: m[2] });
+  }
+
+  it("encontra as duas da página de destino", () => {
+    const daLanding = perguntas.filter((p) => p.f === "src/app/orcamento-recolha-lisboa/LandingClient.tsx").map((p) => p.q);
+    expect(daLanding).toEqual(expect.arrayContaining(["O serviço de recolha é pago?", "O esvaziamento é pago?"]));
+  });
+
+  it("todas respondem com PAGA_AO_PARCEIRO_QUE_CONTRATOU", () => {
+    expect(perguntas.filter((p) => !p.a.includes("${PAGA_AO_PARCEIRO_QUE_CONTRATOU}")).map((p) => `${p.f}: ${p.q}`)).toEqual([]);
+  });
+});

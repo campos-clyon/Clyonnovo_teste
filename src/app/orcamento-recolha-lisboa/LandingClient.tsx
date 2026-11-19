@@ -180,7 +180,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "O serviço de recolha é pago?",
-    a: `Sim. A recolha é um serviço pago. O valor é o da proposta do parceiro escolhido, conforme o volume, o peso, a localização, o acesso e o tipo de material. ${PRECO_FECHADO}`,
+    a: `Sim. A recolha é um serviço pago. O valor é o da proposta do parceiro escolhido, conforme o volume, o peso, a localização, o acesso e o tipo de material. ${PAGA_AO_PARCEIRO_QUE_CONTRATOU} ${PRECO_FECHADO}`,
   },
   {
     q: "O parceiro carrega os materiais?",
