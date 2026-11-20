@@ -6,9 +6,6 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  Eye,
-  EyeOff,
-  KeyRound,
   Loader2,
   Percent,
   RefreshCw,
@@ -16,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import TrabalhosDoAssistente from "./TrabalhosDoAssistente";
+import CodigosParaEntrar, { CodigoMostradoUmaVez } from "./CodigosParaEntrar";
 import { INICIO_DAS_COMISSOES, diaEscrito } from "@/lib/periodos-de-comissao";
 import { rotuloDaSaida } from "@/lib/saida-da-assistente";
 
@@ -35,8 +33,8 @@ const SECCOES_A_ESCOLHER: readonly SeccaoDoAssistente[] = SECCOES_DO_ASSISTENTE.
 /**
  * As contas de assistente, geridas pelo administrador.
  *
- * Um assistente entra em clyon.pt/admin/login com o nome e a palavra-passe
- * daqui e cai num painel só dele, com as secções que lhe forem dadas aqui.
+ * Um assistente entra em clyon.pt/admin/login com o código para entrar que
+ * lhe for dado aqui (d75, 20-11-2026) e cai num painel só dele, com as secções que lhe forem dadas aqui.
  * Desde 03-10-2026 pode dar-se qualquer secção do menu menos «Assistentes»,
  * e uma conta nova nasce sem nenhuma marcada — quem cria escolhe. Não vê o
  * resto e não apaga nada.
@@ -51,8 +49,8 @@ const SECCOES_A_ESCOLHER: readonly SeccaoDoAssistente[] = SECCOES_DO_ASSISTENTE.
  * pago; o detalhe (`TrabalhosDoAssistente`) lista os períodos e marca-os
  * como pagos.
  *
- * Cria-se a conta aqui e entrega-se a palavra-passe à pessoa por fora — o
- * sistema nunca a volta a mostrar, porque nunca a guarda: guarda o hash.
+ * Cria-se a conta aqui e entrega-se o código à pessoa por fora — o sistema
+ * nunca o volta a mostrar, porque nunca o guarda: guarda o hash.
  * Desactivar fecha a porta no acto: a sessão dela deixa de valer na chamada
  * seguinte.
  */
@@ -159,7 +157,7 @@ function EscolhaDeSeccoes({
 }
 
 export default function AdminAssistentesPanel() {
-  const { token, ready } = useAdminAuth();
+  const { token, ready, user } = useAdminAuth();
   const [assistentes, setAssistentes] = useState<Assistente[]>([]);
   const [comissaoPorOmissao, setComissaoPorOmissao] = useState<number>(40);
   const [aCarregar, setACarregar] = useState(true);
@@ -169,8 +167,10 @@ export default function AdminAssistentesPanel() {
 
   // Formulário de criação
   const [nome, setNome] = useState("");
-  const [palavraPasse, setPalavraPasse] = useState("");
-  const [senhaVisivel, setSenhaVisivel] = useState(false);
+  // O código da conta nova: escrito à mão, ou em branco para o servidor gerar (d75).
+  const [codigoNovo, setCodigoNovo] = useState("");
+  const [versaoDasContas, setVersaoDasContas] = useState(0);
+  const [codigoDaNova, setCodigoDaNova] = useState<{ nome: string; codigo: string } | null>(null);
   // Desmarcadas ao criar — 03-10-2026. Com o menu inteiro na lista, vir tudo
   // marcado era dar carteiras e configurações a quem só ia tratar de pedidos.
   const [seccoesNovas, setSeccoesNovas] = useState<SeccaoDoAssistente[]>([]);
@@ -234,7 +234,11 @@ export default function AdminAssistentesPanel() {
     setComissaoNova(String(comissaoPorOmissao));
   }, [comissaoPorOmissao]);
 
-  async function agir(corpo: Record<string, unknown>, quem: number | "novo") {
+  async function agir(
+    corpo: Record<string, unknown>,
+    quem: number | "novo",
+    aoFazer?: (dados: Record<string, unknown>) => void,
+  ) {
     setOcupado(quem);
     setErro("");
     setFeito("");
@@ -250,6 +254,8 @@ export default function AdminAssistentesPanel() {
         return false;
       }
       setFeito(dados.feito ?? "Feito.");
+      aoFazer?.(dados);
+      setVersaoDasContas((v) => v + 1);
       await carregar();
       return true;
     } catch {
@@ -261,25 +267,29 @@ export default function AdminAssistentesPanel() {
   }
 
   async function criar() {
+    const nomeDaNova = nome;
+    const escrito = codigoNovo.trim();
     const certo = await agir(
-      { nome, palavraPasse, seccoes: seccoesNovas, comissaoPercent: comissaoNova },
+      {
+        nome,
+        seccoes: seccoesNovas,
+        comissaoPercent: comissaoNova,
+        ...(escrito ? { codigo: codigoNovo } : { gerarCodigo: true }),
+      },
       "novo",
+      (dados) => {
+        if (typeof dados.codigoGerado === "string") {
+          setCodigoDaNova({ nome: nomeDaNova, codigo: dados.codigoGerado });
+        }
+      },
     );
     if (certo) {
       setNome("");
-      setPalavraPasse("");
-      setSenhaVisivel(false);
+      setCodigoNovo("");
       setSeccoesNovas([]);
       setComissaoNova(String(comissaoPorOmissao));
       setNovaAberta(false);
     }
-  }
-
-  function reporSenha(a: Assistente) {
-    const nova = window.prompt(
-      `Nova palavra-passe para ${a.nome} (mínimo 8 caracteres, com letra e número):`,
-    );
-    if (nova) agir({ id: a.id, palavraPasse: nova }, a.id);
   }
 
   function alternarEstado(a: Assistente) {
@@ -335,6 +345,17 @@ export default function AdminAssistentesPanel() {
         </p>
       </section>
 
+      {/* ── Os códigos para entrar (d75) ────────────────────────────────── */}
+      <CodigosParaEntrar token={token} meuId={user?.id ?? null} versao={versaoDasContas} />
+
+      {codigoDaNova && (
+        <CodigoMostradoUmaVez
+          nome={codigoDaNova.nome}
+          codigo={codigoDaNova.codigo}
+          aoFechar={() => setCodigoDaNova(null)}
+        />
+      )}
+
       {/* ── Criar — fechado até se carregar no botão (17-10-2026) ──────────── */}
       {!novaAberta ? (
         <button
@@ -374,24 +395,17 @@ export default function AdminAssistentesPanel() {
             autoCorrect="off"
             autoComplete="off"
           />
-          <div className="relative">
-            <input
-              className={`${CAIXA} pr-10`}
-              type={senhaVisivel ? "text" : "password"}
-              placeholder="palavra-passe (8+, letra e número)"
-              value={palavraPasse}
-              onChange={(e) => setPalavraPasse(e.target.value)}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              onClick={() => setSenhaVisivel((v) => !v)}
-              aria-label={senhaVisivel ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-            >
-              {senhaVisivel ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
-            </button>
-          </div>
+          <input
+            className={`${CAIXA} font-mono`}
+            type="text"
+            placeholder="Código para entrar (em branco: gera-se um)"
+            value={codigoNovo}
+            onChange={(e) => setCodigoNovo(e.target.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label="Código para entrar da conta nova"
+          />
         </div>
 
         <div className="mt-4">
@@ -425,7 +439,6 @@ export default function AdminAssistentesPanel() {
           disabled={
             ocupado === "novo" ||
             nome.trim().length < 3 ||
-            palavraPasse.length < 8 ||
             seccoesNovas.length === 0
           }
           className="mt-4 flex items-center gap-2 rounded-lg bg-acao px-4 py-2 text-sm font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
@@ -434,8 +447,8 @@ export default function AdminAssistentesPanel() {
           Criar assistente
         </button>
         <p className="mt-2 text-xs text-slate-500">
-          Entrega a palavra-passe à pessoa por fora — não voltamos a mostrá-la. Ela entra em{" "}
-          <code className="font-mono">clyon.pt/admin/login</code> com este nome.
+          Entregue o código à pessoa por fora — não voltamos a mostrá-lo. Ela entra em{" "}
+          <code className="font-mono">clyon.pt/admin/login</code> só com o código.
         </p>
       </section>
       )}
@@ -759,14 +772,6 @@ export default function AdminAssistentesPanel() {
 
                   {/* Conta */}
                   <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => reporSenha(a)}
-                      disabled={ocupado === a.id}
-                      className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"
-                    >
-                      <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-                      Repor senha
-                    </button>
                     <button
                       onClick={() => alternarEstado(a)}
                       disabled={ocupado === a.id}

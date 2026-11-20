@@ -30,6 +30,15 @@ import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { normalizarSeccoes } from "@/lib/papel-do-painel";
 import { ROTULO_DA_EXCEPCAO, diaDeSaidaValido } from "@/lib/saida-da-assistente";
 import { diaEscrito, intervaloValido, type Periodo } from "@/lib/periodos-de-comissao";
+import { erroDoCodigo, gerarCodigo, normalizarCodigo, segredoDoIndice } from "@/lib/codigo-de-entrada";
+import {
+  anularCodigoDaConta,
+  contasParaOsCodigos,
+  definirCodigoDaConta,
+  registoDosCodigos,
+} from "@/lib/codigo-de-entrada-na-base";
+import { assinarSessaoDoPainel, porCookieDaSessao } from "@/lib/emitir-sessao-do-painel";
+import { randomBytes } from "node:crypto";
 
 export const runtime = "nodejs";
 
@@ -63,6 +72,21 @@ export async function GET(req: NextRequest) {
    * Pedido à parte, e só quando se abre: a lista pode ter centenas de linhas
    * por assistente, e o ecrã das contas carrega-se de vinte em vinte segundos.
    */
+  /*
+   * OS CÓDIGOS PARA ENTRAR (d75): as contas do painel — administradores e
+   * assistentes — com «tem código» ou não, e o registo das trocas. Nunca o
+   * código, nem o índice, nem o hash.
+   */
+  if (req.nextUrl.searchParams.get("codigos") != null) {
+    try {
+      const [contas, registo] = await Promise.all([contasParaOsCodigos(), registoDosCodigos(30)]);
+      return NextResponse.json({ contas, registo, segredoPosto: segredoDoIndice() !== null });
+    } catch (error) {
+      console.error("[admin/assistentes GET codigos]", error instanceof Error ? error.message : error);
+      return NextResponse.json({ error: "Erro ao ler os códigos." }, { status: 500 });
+    }
+  }
+
   const detalhe = req.nextUrl.searchParams.get("trabalhos");
   if (detalhe != null) {
     const id = Number(detalhe);
@@ -116,6 +140,60 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    /*
+     * ── O CÓDIGO PARA ENTRAR de uma conta (d75, 20-11-2026) ──
+     *
+     * Só o administrador (esta rota é requireAdminGeral), para qualquer conta
+     * do painel — a dele incluída. «gerar: true» cria um código forte
+     * aleatório e devolve-o UMA vez, nesta resposta, para copiar; um código
+     * escrito à mão não volta na resposta. A regra valida-se aqui, sempre.
+     * Trocar fecha as sessões dessa pessoa; se for a de quem troca, recebe
+     * logo uma sessão nova para não ser posto fora a meio.
+     */
+    if (corpo.codigoDeEntrada != null && typeof corpo.codigoDeEntrada === "object") {
+      const pedido = corpo.codigoDeEntrada as Record<string, unknown>;
+      const contaId = Number(pedido.id);
+      if (!Number.isInteger(contaId) || contaId <= 0) {
+        return NextResponse.json({ error: "Conta inválida." }, { status: 400 });
+      }
+      const segredo = segredoDoIndice();
+      if (!segredo) {
+        return NextResponse.json(
+          { error: "Falta a variável CODIGO_DE_ENTRADA_PEPPER na Vercel — sem ela não se gravam códigos." },
+          { status: 503 },
+        );
+      }
+      const gerar = pedido.gerar === true;
+      const codigo = gerar ? gerarCodigo() : normalizarCodigo(pedido.codigo);
+      const erroDaRegra = erroDoCodigo(codigo);
+      if (erroDaRegra) return NextResponse.json({ error: erroDaRegra }, { status: 400 });
+
+      const r = await definirCodigoDaConta({
+        contaId,
+        codigo,
+        segredo,
+        por: colab ? { id: colab.id, nome: colab.nome } : null,
+      });
+      if (!r.ok) return NextResponse.json({ error: r.erro }, { status: r.estado });
+
+      const propria = Boolean(colab) && colab!.id === contaId;
+      const sessaoNova = propria
+        ? await assinarSessaoDoPainel({ id: colab!.id, nome: colab!.nome, papel: "admin" })
+        : null;
+      const resposta = NextResponse.json({
+        ok: true,
+        feito:
+          r.accao === "criado"
+            ? `Código de ${r.nome} criado. As sessões que tinha abertas fecharam-se.`
+            : `Código de ${r.nome} trocado. As sessões que tinha abertas fecharam-se.`,
+        // Só quando foi gerado aqui — é a única vez que se vê.
+        ...(gerar ? { codigoGerado: codigo } : {}),
+        ...(sessaoNova ? { sessaoNova } : {}),
+      });
+      if (sessaoNova) porCookieDaSessao(resposta, sessaoNova);
+      return resposta;
+    }
+
     /*
      * ── O LUCRO ESCRITO À MÃO de um trabalho sem negociação (08-10-2026) ──
      *
@@ -237,6 +315,8 @@ export async function POST(req: NextRequest) {
       if (typeof corpo.activo === "boolean") {
         const mudou = await definirEstadoDoAssistente(id, corpo.activo);
         if (!mudou) return NextResponse.json({ error: "Assistente não encontrado." }, { status: 404 });
+        // Desactivar invalida o código dela (d75). Reactivar não o devolve.
+        if (!corpo.activo) await anularCodigoDaConta(id, colab ? { id: colab.id, nome: colab.nome } : null);
         return NextResponse.json({
           ok: true,
           feito: corpo.activo ? "Conta reactivada." : "Conta desactivada — deixa de entrar já.",
@@ -353,8 +433,22 @@ export async function POST(req: NextRequest) {
     const erroDoNome = erroDoNomeDeAssistente(nome);
     if (erroDoNome) return NextResponse.json({ error: erroDoNome }, { status: 400 });
 
-    const erroDaSenha = erroDaPalavraPasseDeAssistente(corpo.palavraPasse);
-    if (erroDaSenha) return NextResponse.json({ error: erroDaSenha }, { status: 400 });
+    /*
+     * A conta nova nasce com CÓDIGO para entrar (d75): gerado aqui ou escrito
+     * à mão. A palavra-passe da coluna `senha` é aleatória e ninguém a sabe —
+     * a coluna é obrigatória, e com código a palavra-passe já não entra.
+     */
+    const segredo = segredoDoIndice();
+    if (!segredo) {
+      return NextResponse.json(
+        { error: "Falta a variável CODIGO_DE_ENTRADA_PEPPER na Vercel — sem ela não se criam contas com código." },
+        { status: 503 },
+      );
+    }
+    const gerarONovo = corpo.gerarCodigo === true;
+    const codigoNovo = gerarONovo ? gerarCodigo() : normalizarCodigo(corpo.codigo);
+    const erroDoCodigoNovo = erroDoCodigo(codigoNovo);
+    if (erroDoCodigoNovo) return NextResponse.json({ error: erroDoCodigoNovo }, { status: 400 });
 
     const comissaoPercent =
       corpo.comissaoPercent === undefined
@@ -378,13 +472,38 @@ export async function POST(req: NextRequest) {
     const seccoes = normalizarSeccoes(corpo.seccoes);
     const id = await criarAssistente({
       nome,
-      senhaHash: await hashDaPalavraPasseDeAssistente(corpo.palavraPasse as string),
+      senhaHash: await hashDaPalavraPasseDeAssistente(randomBytes(24).toString("base64url")),
       seccoes,
       comissaoPercent,
     });
 
+    const comCodigo = await definirCodigoDaConta({
+      contaId: id,
+      codigo: codigoNovo,
+      segredo,
+      por: colab ? { id: colab.id, nome: colab.nome } : null,
+    });
+    if (!comCodigo.ok) {
+      /*
+       * A conta ficou criada mas sem código: desactiva-se, para não fazer
+       * reaparecer a ligação «Entrar com utilizador» com uma palavra-passe
+       * que ninguém sabe.
+       */
+      await definirEstadoDoAssistente(id, false);
+      return NextResponse.json(
+        { error: `Conta ${nome} criada mas desactivada: ${comCodigo.erro} Reactive-a e dê-lhe outro código.` },
+        { status: comCodigo.estado },
+      );
+    }
+
     console.info("[admin/assistentes] assistente criado", { id, por: colab?.id, seccoes });
-    return NextResponse.json({ ok: true, id, nome, feito: `Conta ${nome} criada.` });
+    return NextResponse.json({
+      ok: true,
+      id,
+      nome,
+      feito: `Conta ${nome} criada, com código para entrar.`,
+      ...(gerarONovo ? { codigoGerado: codigoNovo } : {}),
+    });
   } catch (error) {
     // O índice único do nome a fazer o trabalho dele, se duas criações se
     // cruzarem entre o SELECT e o INSERT.

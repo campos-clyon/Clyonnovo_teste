@@ -97,7 +97,8 @@ export function motivoParaRecusarSessao(
     if (!contaActiva(conta)) return "Esta conta foi desactivada.";
   }
   if (tokenAnteriorATrocaDeSenha(conta.senhaAlteradaEm, iat)) {
-    return "A palavra-passe foi alterada. Inicie sessão novamente.";
+    // Também quando o administrador troca o código para entrar (d75).
+    return "O acesso desta conta mudou. Inicie sessão novamente.";
   }
   return null;
 }

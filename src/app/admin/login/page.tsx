@@ -21,26 +21,59 @@ export default function AdminLoginPage() {
     // e «/\outro.com» também: o browser lê a barra invertida como barra.
     setProximo(destinoInterno(params.get("proximo"), window.location.origin, "/admin"));
   }, []);
-  const [senha, setSenha] = useState("");
-  const [senhaVisivel, setSenhaVisivel] = useState(false);
+  const [palavra, setPalavra] = useState("");
+  const [visivel, setVisivel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  /*
+   * O CÓDIGO PARA ENTRAR — d75, 20-11-2026. Um só campo. A entrada por
+   * utilizador fica atrás de uma ligação discreta, e só enquanto houver contas
+   * activas sem código: o servidor diz quando (GET /api/colaboradores/codigo).
+   * Quando todas tiverem, a ligação desaparece sozinha.
+   */
+  const [codigo, setCodigo] = useState("");
+  const [porUtilizador, setPorUtilizador] = useState(false);
+  const [ligacaoVisivel, setLigacaoVisivel] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    fetch("/api/colaboradores/codigo", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelado) setLigacaoVisivel(d?.porUtilizador === true);
+      })
+      // Sem resposta, mostra-se: é melhor do que trancar alguém fora.
+      .catch(() => {
+        if (!cancelado) setLigacaoVisivel(true);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/colaboradores/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, senha }),
-      });
+      const res = porUtilizador
+        ? await fetch("/api/colaboradores/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nome, senha: palavra }),
+          })
+        : await fetch("/api/colaboradores/codigo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ codigo }),
+          });
       const data = await res.json();
       if (!res.ok || !data.token) {
-        setError(data.error || "Credenciais inválidas.");
+        setError(data.error || (porUtilizador ? "Credenciais inválidas." : "Código inválido."));
         return;
       }
+      setCodigo("");
       // Dois papéis entram: o administrador, que cai onde ia, e o assistente,
       // que tem um painel só dele. Quem não for nem um nem outro não tem para
       // onde ir, e é melhor dizê-lo aqui do que deixar entrar e falhar em cada
@@ -95,66 +128,100 @@ export default function AdminLoginPage() {
           <h1 className="text-xl font-bold text-white mb-1">Entrar no painel</h1>
           <p className="text-sm text-slate-400 mb-7">Acesso exclusivo para equipa CLYON.</p>
 
-          {passwordChanged && (
+          {passwordChanged && porUtilizador && (
             <div className="mb-5 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
               Palavra-passe atualizada. Entre novamente com a nova palavra-passe.
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Nome de utilizador
-              </label>
-              <input
-                type="text"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                required
-                autoComplete="username"
-                placeholder="O seu nome"
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="senha"
-                className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"
-              >
-                Palavra-passe
-              </label>
-              {/*
-                Mostrar a palavra-passe é uma ajuda a sério e não um luxo: com o
-                campo mascarado, um erro de digitação é indistinguível de uma
-                palavra-passe errada, e a pessoa fica a tentar sem saber qual dos
-                dois é. Começa oculta, e quem a mostra fá-lo de propósito.
-              */}
-              <div className="relative">
-                <input
-                  id="senha"
-                  type={senhaVisivel ? "text" : "password"}
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => setSenhaVisivel((v) => !v)}
-                  aria-label={senhaVisivel ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
-                  aria-pressed={senhaVisivel}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-400/30"
+            {!porUtilizador ? (
+              <div>
+                <label
+                  htmlFor="codigo"
+                  className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"
                 >
-                  {senhaVisivel ? (
-                    <EyeOff className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <Eye className="h-4 w-4" aria-hidden="true" />
-                  )}
-                </button>
+                  Código para entrar
+                </label>
+                <div className="relative">
+                  <input
+                    id="codigo"
+                    type={visivel ? "text" : "password"}
+                    value={codigo}
+                    onChange={(e) => setCodigo(e.target.value)}
+                    required
+                    autoFocus
+                    autoComplete="current-password"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setVisivel((v) => !v)}
+                    aria-label={visivel ? "Ocultar código" : "Mostrar código"}
+                    aria-pressed={visivel}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-400/30"
+                  >
+                    {visivel ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Nome de utilizador
+                  </label>
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    required
+                    autoComplete="username"
+                    placeholder="O seu nome"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="palavra"
+                    className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2"
+                  >
+                    Palavra-passe
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="palavra"
+                      type={visivel ? "text" : "password"}
+                      value={palavra}
+                      onChange={(e) => setPalavra(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setVisivel((v) => !v)}
+                      aria-label={visivel ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
+                      aria-pressed={visivel}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-400/30"
+                    >
+                      {visivel ? (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-300">
@@ -183,6 +250,20 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
+
+          {(ligacaoVisivel || porUtilizador) && (
+            <button
+              type="button"
+              onClick={() => {
+                setPorUtilizador((v) => !v);
+                setError("");
+                setVisivel(false);
+              }}
+              className="mt-5 w-full text-center text-xs text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+            >
+              {porUtilizador ? "Entrar com código" : "Ainda não tem código? Entrar com utilizador"}
+            </button>
+          )}
         </div>
       </div>
     </div>

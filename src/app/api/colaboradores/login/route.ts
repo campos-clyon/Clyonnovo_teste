@@ -10,6 +10,7 @@ import { limitarPorConta } from "@/lib/limite-rota-publica";
 import { contaActiva } from "@/lib/conta-do-painel";
 import { localDosCabecalhos, navegadorESistema } from "@/lib/sessoes-do-backoffice";
 import { registarEntrada } from "@/lib/sessoes-do-backoffice-na-base";
+import { contaTemCodigo } from "@/lib/codigo-de-entrada-na-base";
 
 const BCRYPT_HASH_REGEX = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
@@ -125,6 +126,29 @@ export async function POST(req: NextRequest) {
     }
 
     if (!senhaValida) {
+      return NextResponse.json({ error: CREDENCIAIS_INVALIDAS }, { status: 401 });
+    }
+
+    /*
+     * A CONTA COM CÓDIGO JÁ NÃO ENTRA POR AQUI — d75, 20-11-2026.
+     *
+     * Esta porta fica só para a transição: enquanto uma conta não tem código,
+     * entra com utilizador e palavra-passe. Assim que o administrador lhe dá
+     * um, a palavra-passe deixa de servir — e a resposta é a mesma de uma
+     * palavra-passe errada, para não dizer nada a quem a tenha apanhado. Se a
+     * base não souber responder, fecha-se.
+     */
+    let temCodigo: boolean;
+    try {
+      temCodigo = await contaTemCodigo(colaborador.id);
+    } catch (e) {
+      console.error("[Colaborador Login] não consegui ver o código da conta:", e instanceof Error ? e.message : e);
+      return NextResponse.json(
+        { error: "Não foi possível entrar agora. Tente daqui a instantes." },
+        { status: 503 },
+      );
+    }
+    if (temCodigo) {
       return NextResponse.json({ error: CREDENCIAIS_INVALIDAS }, { status: 401 });
     }
 
