@@ -67,10 +67,12 @@ export function quandoPerderASessao(fn: (() => void) | null) {
 /**
  * A SESSÃO NOVA — 25-10-2026 (decisão d14).
  *
- * Mudar a palavra-passe ou «Sair de todos os aparelhos» fecha no site as
- * sessões de antes (`providers.sessoesDesde`) — também a deste telemóvel — e
- * o site devolve logo um token novo (`{ ok, token }`). Guarda-se no lugar do
- * antigo; sem isso, quem mudava a palavra-passe na app era posto fora.
+ * Mudar a palavra-passe fecha no site as sessões de antes
+ * (`providers.sessoesDesde`) — também a deste telemóvel — e o site devolve
+ * logo um token novo (`{ ok, token }`). Guarda-se no lugar do antigo; sem
+ * isso, quem mudava a palavra-passe na app era posto fora. (O «Sair» da Conta
+ * também chama `/api/profissionais/sair-de-todos` desde a d74, 20-11-2026,
+ * mas com `pedir`: está-se a sair, e o token novo não se guarda.)
  *
  * Enquanto a troca está a meio, um pedido que já tinha saído com o token
  * antigo (a lista renova-se de minuto a minuto) pode voltar com 401: esse não

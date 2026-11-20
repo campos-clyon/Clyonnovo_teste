@@ -9,7 +9,7 @@ import { Text } from "../../componentes/Texto";
 import { Botao, Caixa, Escolhas, Etiqueta, ItemDoMenu, Mensagem, TituloDaCaixa } from "../../componentes/ui";
 import { useConta } from "../../estado/Conta";
 import { useSessao } from "../../estado/Sessao";
-import { ErroDaApi, pedir, pedirComSessaoNova } from "../../lib/api";
+import { ErroDaApi, pedir } from "../../lib/api";
 import {
   avisosDesligadosPorEle,
   desligarAvisosPorEscolha,
@@ -77,27 +77,25 @@ export default function Conta() {
   const { nome, sair } = useSessao();
   const { perfil, recarregarPerfil } = useConta();
   const [aSair, setASair] = useState(false);
-  const [aSairDeTodos, setASairDeTodos] = useState(false);
-  const [deTodos, setDeTodos] = useState<{ tom: "bom" | "mau"; texto: string } | null>(null);
   const mudancas = estadoDasMudancasNoMenu(perfil);
 
   /*
-   * «SAIR DE TODOS OS APARELHOS» — 25-10-2026 (d14). O site fecha as sessões
-   * dos outros telemóveis e navegadores e devolve um token novo a este, que
-   * fica no lugar do antigo: quem carrega no botão continua dentro.
+   * «SAIR» — 20-11-2026 (d74). Sair fecha a sessão em todos os aparelhos da
+   * conta, também no painel: primeiro a rota do site (o corte
+   * `providers.sessoesDesde` passa a agora e todos os tokens de antes deixam
+   * de entrar, o deste telemóvel incluído); depois, sempre, mesmo sem rede, o
+   * `sair()` local. O token novo que a rota devolve fica por guardar: está-se
+   * a sair. Substitui o «Sair de todos os aparelhos» da d14.
    */
-  async function sairDeTodos() {
-    if (aSairDeTodos) return;
-    setASairDeTodos(true);
-    setDeTodos(null);
+  async function sairDaConta() {
+    if (aSair) return;
+    setASair(true);
     try {
-      await pedirComSessaoNova<{ ok?: boolean; token?: string }>("/api/profissionais/sair-de-todos");
-      setDeTodos({ tom: "bom", texto: "Os outros telemóveis tiveram de voltar a entrar." });
-    } catch (e) {
-      setDeTodos({ tom: "mau", texto: e instanceof ErroDaApi ? e.message : "Não foi possível fechar as outras sessões." });
-    } finally {
-      setASairDeTodos(false);
+      await pedir<{ ok?: boolean; token?: string }>("/api/profissionais/sair-de-todos", { metodo: "POST" });
+    } catch {
+      // Sem rede ou com o site em baixo, sai-se na mesma deste telemóvel.
     }
+    await sair();
   }
 
   useFocusEffect(
@@ -180,24 +178,13 @@ export default function Conta() {
         <ItemDoMenu icone="book-outline" titulo="Como funciona" aoCarregar={() => abrir("/conta/como-funciona")} />
         <ItemDoMenu icone="help-circle-outline" titulo="Ajuda" aoCarregar={() => abrir("/conta/ajuda")} />
         <ItemDoMenu
-          icone="phone-portrait-outline"
-          titulo={aSairDeTodos ? "A fechar as outras sessões…" : "Sair de todos os aparelhos"}
-          perigo
-          aoCarregar={() => void sairDeTodos()}
-        />
-        <ItemDoMenu
           icone="log-out-outline"
           titulo={aSair ? "A sair…" : "Sair"}
           perigo
           ultimo
-          aoCarregar={async () => {
-            if (aSair) return;
-            setASair(true);
-            await sair();
-          }}
+          aoCarregar={() => void sairDaConta()}
         />
       </Caixa>
-      {deTodos ? <Mensagem tom={deTodos.tom} texto={deTodos.texto} /> : null}
 
       <Text style={{ color: c.suave, fontSize: LETRA.pequena, lineHeight: 18 }}>
         A CLYON liga clientes a profissionais independentes. Quem executa o trabalho é o profissional. {QUEM_FACTURA_EM_PALAVRAS}

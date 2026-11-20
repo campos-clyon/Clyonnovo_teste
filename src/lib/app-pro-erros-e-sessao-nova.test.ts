@@ -219,14 +219,28 @@ describe("d14 — a sessão nova fica no lugar da antiga", () => {
     expect(SENHA).not.toContain('pedir("/api/profissionais/palavra-passe"');
   });
 
-  it("na Conta, «Sair de todos os aparelhos» chama a rota nova e diz o que aconteceu", () => {
+  /*
+   * d74 (20-11-2026): o «Sair de todos os aparelhos» saiu da Conta. O «Sair»
+   * chama primeiro o sair-de-todos (fecha as sessões de todos os aparelhos e
+   * do painel) e depois, sempre, o sair() local — o token novo não se guarda.
+   */
+  it("na Conta, «Sair» fecha as sessões de todos os aparelhos e sai sempre deste telemóvel", () => {
     const CONTA = semNotas("app-pro/src/app/(app)/conta.tsx");
-    expect(CONTA).toContain('titulo={aSairDeTodos ? "A fechar as outras sessões…" : "Sair de todos os aparelhos"}');
-    expect(CONTA).toContain('await pedirComSessaoNova<{ ok?: boolean; token?: string }>("/api/profissionais/sair-de-todos");');
-    expect(CONTA).toContain('"Os outros telemóveis tiveram de voltar a entrar."');
-    expect(CONTA).toContain("{deTodos ? <Mensagem tom={deTodos.tom} texto={deTodos.texto} /> : null}");
-    // O botão fica antes do «Sair» deste telemóvel.
-    expect(CONTA.indexOf('"Sair de todos os aparelhos"')).toBeLessThan(CONTA.indexOf('titulo={aSair ? "A sair…" : "Sair"}'));
+    expect(CONTA).not.toContain("Sair de todos os aparelhos");
+    expect(CONTA).not.toContain("aSairDeTodos");
+    expect(CONTA).not.toContain("deTodos");
+    expect(CONTA).not.toContain("pedirComSessaoNova");
+    expect(CONTA).toContain('titulo={aSair ? "A sair…" : "Sair"}');
+    expect(CONTA).toContain("aoCarregar={() => void sairDaConta()}");
+    const i = CONTA.indexOf("async function sairDaConta() {");
+    expect(i).toBeGreaterThan(-1);
+    const SAIR = CONTA.slice(i, CONTA.indexOf("useFocusEffect(", i));
+    const rota = SAIR.indexOf('await pedir<{ ok?: boolean; token?: string }>("/api/profissionais/sair-de-todos", { metodo: "POST" });');
+    expect(rota).toBeGreaterThan(-1);
+    // A falha da rota (rede, site em baixo) é apanhada, e o sair() vem depois do try, fora dele: corre sempre.
+    expect(SAIR).toMatch(/try \{ await pedir<.*?\{ metodo: "POST" \}\);\s*\} catch \{\s*\} await sair\(\); \}/);
+    expect(SAIR.indexOf("await sair();")).toBeGreaterThan(rota);
+    expect(SAIR).not.toContain("guardarToken");
   });
 
   it("sair deste telemóvel apaga-o da lista dos avisos, antes de esquecer a sessão", () => {
