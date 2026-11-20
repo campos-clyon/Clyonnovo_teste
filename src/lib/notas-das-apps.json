@@ -1,6 +1,13 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-20",
+      "nota": "Ao sair da app, a sua sessão fecha-se em todos os telemóveis e no painel.\nNo Início, o que falta pagar à CLYON é o mesmo que o painel mostra, com «Pagar a parte da CLYON».",
+      "updates": [
+        "01a1faa1-7357-79b7-9d8f-56b8769c1564"
+      ]
+    },
+    {
       "id": "pro-2026-11-18-2",
       "nota": "No trabalho contratado vê como o cliente lhe paga e o que passa à CLYON (a taxa e o IVA dela), até quando.\nNo Início, «Pronto para receber pedidos» mostra o que falta, linha a linha.",
       "updates": []
@@ -62,6 +69,11 @@
     }
   ],
   "cliente": [
+    {
+      "id": "cliente-2026-11-20",
+      "nota": "O IBAN e o MB WAY do parceiro só aparecem no pedido depois de a CLYON os confirmar.\nE revimos os textos da app, agora na grafia do Acordo Ortográfico.",
+      "updates": []
+    },
     {
       "id": "cliente-2026-11-18",
       "nota": "Num trabalho em vários dias, o pedido mostra os dias todos.\nQuando o trabalho fica registado, vê quando foi feito: o início, o fim e a pausa.",
