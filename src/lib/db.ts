@@ -1,4 +1,5 @@
 import { semValorParaOInicio, type PedidoPorEnviar, type SemValorNoInicio } from "./pedido-sem-valor";
+import { digitosDoTermo } from "./procurar-pedido";
 import { textoDoMotivo, type ChaveDoMotivo, type LinhaDosMotivos } from "./motivo-do-fecho";
 import { SQL_DO_VERIFICADO } from "@/lib/parceiro-verificado";
 import type { TarifaDasMudancas } from "@/lib/conta-da-mudanca";
@@ -10142,15 +10143,28 @@ export async function getAllSimulatorOrders(filters?: {
      * todo o lado (`procurar-em-todo-o-lado.ts`) traz aqui com «#450», e esta
      * lista só procurava no nome, no telefone, na morada e na descrição.
      */
+    /*
+     * UM TELEFONE, UM NIF — d79 (20-11-2026), a barra única do backoffice.
+     * «+351 912 345 678», «912.345.678» e «912345678» são o mesmo telemóvel:
+     * comparam-se os dígitos, sem o indicativo. O NIF da fatura também.
+     */
+    const digitos = digitosDoTermo(filters.search);
     const numero = /^#?\s*(\d{1,9})$/.exec(filters.search.trim());
-    if (numero) {
+    const SO_DIGITOS = "REPLACE(REPLACE(REPLACE(REPLACE(contactPhone, ' ', ''), '.', ''), '-', ''), '+', '')";
+    if (digitos) {
+      conditions.push(`(id = ? OR ${SO_DIGITOS} LIKE ? OR nifFactura LIKE ?)`);
+      params.push(Number(digitos), `%${digitos}%`, `%${digitos}%`);
+    } else if (numero) {
       conditions.push("(id = ? OR contactName LIKE ? OR contactPhone LIKE ? OR address LIKE ? OR description LIKE ?)");
       const s = `%${numero[1]}%`;
       params.push(Number(numero[1]), s, s, s, s);
     } else {
-      conditions.push("(contactName LIKE ? OR contactPhone LIKE ? OR address LIKE ? OR description LIKE ?)");
+      // Também o email, a localidade e o código postal (d79).
+      conditions.push(
+        "(contactName LIKE ? OR contactPhone LIKE ? OR address LIKE ? OR description LIKE ? OR contactEmail LIKE ? OR city LIKE ? OR postalCode LIKE ?)",
+      );
       const s = `%${filters.search}%`;
-      params.push(s, s, s, s);
+      params.push(s, s, s, s, s, s, s);
     }
   }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";

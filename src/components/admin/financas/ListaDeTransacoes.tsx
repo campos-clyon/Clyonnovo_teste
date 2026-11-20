@@ -1,7 +1,10 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComOsCampos } from "@/lib/procurar-pedido";
+
 import { useMemo, useState } from "react";
-import { ArrowLeftRight, CheckCircle2, Clock, EyeOff, Paperclip, Pencil, Search, Zap } from "lucide-react";
+import { ArrowLeftRight, CheckCircle2, Clock, EyeOff, Paperclip, Pencil, Zap } from "lucide-react";
 import {
   diaPorExtenso,
   diasDoMes,
@@ -56,7 +59,8 @@ export default function ListaDeTransacoes({
 }) {
   const [contaId, setContaId] = useState<number | null>(null);
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
-  const [procura, setProcura] = useState("");
+  // A procura é a da barra do topo (d79, 20-11-2026).
+  const { termo: procura } = useProcuraDoBackoffice();
   // De onde veio cada pagamento da plataforma, e «só sem comprovativo» (d66).
   const [filtroDaOrigem, setFiltroDaOrigem] = useState<FiltroDaOrigem>(FILTRO_DA_ORIGEM_VAZIO);
 
@@ -71,9 +75,8 @@ export default function ListaDeTransacoes({
     if (categoriaId != null && m.categoriaId !== categoriaId) return false;
     if (filtroDaOrigem.origem !== "todas" && m.origem?.chave !== filtroDaOrigem.origem) return false;
     if (filtroDaOrigem.soSemComprovativo && !m.origem?.semComprovativo) return false;
-    if (procurado) {
-      const onde = [m.descricao, m.notas, porCategoria.get(m.categoriaId ?? -1)?.nome].join(" ").toLowerCase();
-      if (!onde.includes(procurado)) return false;
+    if (procurado && !combinaComOsCampos({ textos: [m.descricao, m.notas, porCategoria.get(m.categoriaId ?? -1)?.nome] }, procura)) {
+      return false;
     }
     return true;
   });
@@ -125,15 +128,6 @@ export default function ListaDeTransacoes({
             </option>
           ))}
         </select>
-        <label className="flex min-w-[12rem] flex-1 items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-2">
-          <Search className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
-          <input
-            value={procura}
-            onChange={(e) => setProcura(e.target.value)}
-            placeholder="Procurar descrição ou nota"
-            className="w-full bg-transparent text-xs text-slate-200 outline-none placeholder:text-slate-500"
-          />
-        </label>
       </div>
 
       <FiltroDaOrigemCampos

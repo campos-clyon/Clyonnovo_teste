@@ -73,7 +73,8 @@ describe("o ecrã", () => {
    * filtrar um, seriam duas respostas diferentes à mesma pergunta.
    */
   it("deixa procurar — de uma caixa só, no topo, que procura em toda a mesa", () => {
-    expect(PAINEL).toContain("Procurar por número, nome, telefone, morada ou região");
+    // Desde d79 a caixa é a barra do topo do backoffice; a Mesa recebe-a.
+    expect(PAINEL).toContain("const busca = procuraDeFora ? buscaDeFora : daBarra.termo;");
     expect(PAINEL).not.toContain("Procurar por nome, cidade, serviço ou número");
     expect(PAINEL).not.toContain('aria-label="Procurar nos pedidos por promover"');
   });

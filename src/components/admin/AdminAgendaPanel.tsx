@@ -17,14 +17,13 @@ import {
   MapPin,
   Phone,
   RefreshCw,
-  Search,
   Sun,
   User,
   MessageCircle,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import NoutrosSitios from "@/components/admin/NoutrosSitios";
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
 import { combinaComABusca } from "@/lib/procurar-pedido";
 import FichaDaAgenda, {
   gravarDiaNoBackoffice,
@@ -233,7 +232,8 @@ export default function AdminAgendaPanel() {
    * não há mesa inteira para ir buscar. Os cartões passam a contar o que os
    * dois deixam passar.
    */
-  const [busca, setBusca] = useState("");
+  // A procura é a da barra do topo (d79, 20-11-2026).
+  const { termo: busca, mudar: setBusca } = useProcuraDoBackoffice();
   const [profissional, setProfissional] = useState("");
   const [aEditarPedido, setAEditarPedido] = useState<number | null>(null);
 
@@ -698,29 +698,6 @@ export default function AdminAgendaPanel() {
       {/* A busca e o profissional, antes dos cartões — como nas Negociações. */}
       <div className="mt-5">
         <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="relative flex-1">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-              aria-hidden="true"
-            />
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              type="search"
-              placeholder="Procurar por número, nome, telefone, morada ou região…"
-              aria-label="Procurar na agenda"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
-            />
-            {aProcurar && (
-              <button
-                type="button"
-                onClick={() => setBusca("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
-              >
-                Limpar
-              </button>
-            )}
-          </div>
           <select
             value={profissional}
             onChange={(e) => setProfissional(e.target.value)}
@@ -758,8 +735,6 @@ export default function AdminAgendaPanel() {
             </button>
           </p>
         )}
-        {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
-        <NoutrosSitios procura={busca} jaAqui={trabalhosVisiveis.map((t) => t.pedidoId)} seccao="agenda" />
       </div>
 
       {/* Os cartões dos totais — cada um é um filtro, e o dos atrasados puxa o olho. */}

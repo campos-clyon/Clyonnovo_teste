@@ -157,9 +157,9 @@ describe("o painel usa esta regra, e não outra", () => {
     expect(PAINEL).toContain("conversasVisiveis(linhas, separador, procura)");
   });
 
-  it("há mesmo uma caixa de procura", () => {
-    expect(PAINEL).toContain("setProcura");
-    expect(PAINEL).toContain("Procurar por número");
+  it("a procura é a da barra do topo do backoffice (d79)", () => {
+    expect(PAINEL).toContain("const { termo: procura } = useProcuraDoBackoffice();");
+    expect(PAINEL).not.toContain('aria-label="Procurar uma conversa"');
   });
 
   it("o ecrã diz que está a procurar em tudo — senão a lista mente", () => {

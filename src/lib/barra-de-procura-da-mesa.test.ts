@@ -18,9 +18,11 @@ const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 const DB = ler("src/lib/db.ts");
 
 describe("a caixa existe e diz o que procura", () => {
-  it("o texto da caixa nomeia os quatro caminhos que ele pediu", () => {
-    expect(PAINEL).toContain("Procurar por número, nome, telefone, morada ou região");
-    expect(PAINEL).toContain('aria-label="Procurar em toda a mesa"');
+  it("a caixa da Mesa é a barra do topo do backoffice (d79), que nomeia os caminhos", () => {
+    const TOPO = ler("src/components/admin/LegacyAdminClient.tsx");
+    expect(TOPO).toContain('placeholder="Procurar pedido, nome, telefone, email, morada, NIF ou referência…"');
+    expect(PAINEL).not.toContain('aria-label="Procurar em toda a mesa"');
+    expect(PAINEL).toContain("const busca = procuraDeFora ? buscaDeFora : daBarra.termo;");
   });
 
   it("filtra as duas listas da mesa, e não só uma", () => {

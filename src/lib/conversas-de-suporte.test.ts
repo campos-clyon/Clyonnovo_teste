@@ -403,7 +403,7 @@ describe("o ecrã", () => {
 
   it("dá para procurar dentro do que foi dito, e não só nos nomes", () => {
     // Quem perdeu uma conversa lembra-se do que lá foi dito.
-    expect(PAINEL).toContain("c.mensagens.some((m) => m.texto.toLowerCase().includes(q))");
+    expect(PAINEL).toContain("textos: [c.quem, c.contacto, c.assunto, ...c.mensagens.map((m) => m.texto)],");
   });
 
   it("abre o pedido tal como o cliente o vê, sem gerar link novo", () => {

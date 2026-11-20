@@ -54,28 +54,25 @@ describe("o ecrã", () => {
     expect(PAINEL).toContain("onAbrir={(s) => setActiveSection(s as AdminSection)}");
   });
 
-  it("uma procura só: em cima, e os três separadores lêem-na", () => {
-    const topo = PAINEL.slice(PAINEL.indexOf("{ECRA_DOS_PEDIDOS.includes(activeSection) && ("));
-    expect(topo.slice(0, 2500)).toContain("onChange={(e) => handlePedidoSearch(e.target.value)}");
+  it("uma procura só: a barra do topo (d79), e os separadores lêem-na", () => {
+    const cabecalho = PAINEL.slice(PAINEL.indexOf("<header"), PAINEL.indexOf("</header>"));
+    expect(cabecalho).toContain("onChange={(e) => handlePedidoSearch(e.target.value)}");
     expect(PAINEL).not.toContain("<AdminTrabalhosClyonPanel");
-    expect(PAINEL).toMatch(/<AdminNegociacoesPanel[^>]*busca=\{pedidoSearch\}[^>]*onBusca=\{handlePedidoSearch\}/);
+    expect(PAINEL).toMatch(/<AdminNegociacoesPanel[^>]*busca=\{pedidoSearchDebounced\}[^>]*onBusca=\{procurarJa\}/);
     // A lista de todos os pedidos já não tem caixa própria.
     expect(PAINEL).not.toContain('placeholder="Pesquisar por nome, telefone, morada, serviço..."');
   });
 
-  it("a mesa e os Trabalhos CLYON escondem a caixa deles quando a procura vem de fora", () => {
-    for (const [nome, f] of [
-      ["mesa", MESA],
-    ] as const) {
-      expect(f, nome).toContain("const procuraDeFora = buscaDeFora !== undefined;");
-      expect(f, nome).toContain("const busca = procuraDeFora ? buscaDeFora : buscaPropria;");
-      expect(f, nome).toContain("{!procuraDeFora && (");
-    }
+  it("a Mesa não tem caixa própria: lê a procura do painel, ou a da barra do topo (d79)", () => {
+    expect(MESA).toContain("const procuraDeFora = buscaDeFora !== undefined;");
+    expect(MESA).toContain("const busca = procuraDeFora ? buscaDeFora : daBarra.termo;");
+    expect(MESA).not.toContain("{!procuraDeFora && (");
   });
 
   it("chegar por um link, ou por «Abrir em…», leva a procura para o separador certo", () => {
-    expect(PAINEL).toContain("if (procurarParam && ECRA_DOS_PEDIDOS.includes(sectionParam)) {");
-    expect(PAINEL).toContain("if (ECRA_DOS_PEDIDOS.includes(seccao as AdminSection)) {");
+    // Desde d79 vale para todas as secções: `?q=` (e o `?procurar=` dos links antigos).
+    expect(PAINEL).toContain('const procurarParam = searchParams.get("q") ?? searchParams.get("procurar");');
+    expect(PAINEL).toContain("// A procura é uma só desde d79: muda-se de secção e ela vai junto, já feita.");
   });
 
   it("abrir um separador é vê-lo: o selo apaga-se pela secção aberta", () => {

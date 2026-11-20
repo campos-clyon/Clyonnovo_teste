@@ -1,7 +1,10 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComOsCampos } from "@/lib/procurar-pedido";
+
 import { useState, useEffect, useCallback } from "react";
-import { Users, Search, Mail, Phone, MapPin, Shield, Trash2, RefreshCw, Pencil, MessageCircle } from "lucide-react";
+import { Users, Mail, Phone, MapPin, Shield, Trash2, RefreshCw, Pencil, MessageCircle } from "lucide-react";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import ConviteAppCliente from "@/components/admin/ConviteAppCliente";
 
@@ -51,7 +54,8 @@ export default function ContasPanel({ authToken, podeApagar = true, podeMudarEma
   const [aExcluir, setAExcluir] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  // A procura é a da barra do topo (d79, 20-11-2026).
+  const { termo: search } = useProcuraDoBackoffice();
   const [filterRole, setFilterRole] = useState<"all" | "user" | "admin">("all");
 
   const fetchUsers = useCallback(async () => {
@@ -140,14 +144,9 @@ export default function ContasPanel({ authToken, podeApagar = true, podeMudarEma
 
   const filtered = activeUsers.filter((u) => {
     if (filterRole !== "all" && u.role !== filterRole) return false;
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return (
-      (u.name ?? "").toLowerCase().includes(s) ||
-      u.email.toLowerCase().includes(s) ||
-      (u.phone ?? "").includes(s) ||
-      (u.addressCity ?? "").toLowerCase().includes(s)
-    );
+    if (!search.trim()) return true;
+    // A regra das listas (d79): as palavras somam-se, o telefone com ou sem +351.
+    return combinaComOsCampos({ textos: [u.name, u.email, u.addressCity], digitos: [u.phone] }, search);
   });
 
   const formatDate = (d: string | null) => {
@@ -235,16 +234,6 @@ export default function ContasPanel({ authToken, podeApagar = true, podeMudarEma
 
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Pesquisar por nome, email, telefone ou cidade..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
-          />
-        </div>
         <div className="flex gap-2">
           {(["all", "user", "admin"] as const).map((r) => (
             <button

@@ -1,5 +1,8 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComOsCampos } from "@/lib/procurar-pedido";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
@@ -53,6 +56,11 @@ function hora(iso: string | null): string {
 export default function AdminSuporteClientesPanel({ aoMudarPorLer }: { aoMudarPorLer?: (n: number) => void }) {
   const { token, ready } = useAdminAuth();
   const [lista, setLista] = useState<Linha[]>([]);
+  // A barra do topo (d79, 20-11-2026): o nome, o email ou a última mensagem.
+  const { termo: busca } = useProcuraDoBackoffice();
+  const visiveis = lista.filter((c) =>
+    combinaComOsCampos({ textos: [c.clienteNome, c.clienteEmail, c.ultimaMensagem, c.atendidaPor] }, busca),
+  );
   const [erro, setErro] = useState("");
   const [aCarregar, setACarregar] = useState(true);
   const [aberta, setAberta] = useState<number | null>(null);
@@ -216,7 +224,8 @@ export default function AdminSuporteClientesPanel({ aoMudarPorLer }: { aoMudarPo
     <div className="space-y-2">
       {erro && <p className="text-sm text-red-300">{erro}</p>}
       {lista.length === 0 && <p className="text-sm text-slate-400">Nenhum cliente escreveu ainda no Suporte CLYON.</p>}
-      {lista.map((c) => (
+      {lista.length > 0 && visiveis.length === 0 && <p className="text-sm text-slate-400">Nenhuma conversa com «{busca.trim()}».</p>}
+      {visiveis.map((c) => (
         <button
           key={c.id}
           onClick={() => void abrir(c.id)}

@@ -62,6 +62,6 @@ describe("o ecrã diz onde", () => {
   it("o topo de «Pedidos» mostra-os, pedido a pedido, e um clique leva lá", () => {
     expect(PAINEL).toContain("Novidades desde a última vez que abriu:");
     expect(PAINEL).toContain("((s === activeSection ? ondeAoAbrir[x] : onde[x]) ?? []).map((id) => ({ s, x, id })),");
-    expect(PAINEL).toContain("handlePedidoSearch(`#${id}`);");
+    expect(PAINEL).toContain("procurarJa(`#${id}`);");
   });
 });

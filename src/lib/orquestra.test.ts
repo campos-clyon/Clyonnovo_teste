@@ -298,7 +298,9 @@ const FONTES = PASTAS.flatMap(ficheiros).filter(
 
 /** O backoffice fala com a equipa, não com o cliente: a voz e as promessas não se lhe aplicam. */
 const DO_BACKOFFICE = (f: string) =>
-  /^src\/app\/admin\//.test(f) || /^src\/app\/api\/admin\//.test(f) || /^src\/components\/admin\//.test(f);
+  /^src\/app\/admin\//.test(f) || /^src\/app\/api\/admin\//.test(f) || /^src\/components\/admin\//.test(f) ||
+  // A barra única do backoffice (d79): as linhas que só a equipa lê, no ecrã do backoffice.
+  /^src\/lib\/procura-do-backoffice(-na-base)?\.ts$/.test(f);
 
 /*
  * As fontes de cada regra — onde a coisa se escreve UMA vez, de propósito.
@@ -1308,12 +1310,9 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
       expect(grafiaAnteriorAoAcordo(bom)).toBeNull();
   });
 
-  it("o cabeçalho do backoffice diz o dia como se escreve: «quinta-feira, 19 de novembro de 2026» (d8)", () => {
+  it("o cabeçalho do backoffice já não tem a data (d79: a barra única ficou no lugar dela); o formato do dia fica provado", () => {
     const t = readFileSync(join(RAIZ, "src/components/admin/LegacyAdminClient.tsx"), "utf8");
-    const hoje = /const hojeLabel = useMemo\(\s*\(\) =>\s*new Intl\.DateTimeFormat\("pt-PT", \{([^}]*)\}\)/.exec(t);
-    expect(hoje?.[1]).toMatch(/day: "numeric"/);
-    expect(hoje?.[1]).toMatch(/timeZone: "Europe\/Lisbon"/);
-    expect(t).not.toMatch(/capitalize[^"]*">\s*\{hojeLabel\}/);
+    expect(t).not.toContain("hojeLabel");
     const f = new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", weekday: "long", day: "numeric", month: "long", year: "numeric" });
     expect(f.format(new Date("2026-11-19T12:00:00Z"))).toBe("quinta-feira, 19 de novembro de 2026");
   });

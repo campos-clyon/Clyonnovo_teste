@@ -32,7 +32,6 @@ import {
   Pencil,
   RefreshCw,
   RotateCcw,
-  Search,
   Send,
   Trash2,
   UserRound,
@@ -138,7 +137,7 @@ import {
   type PedidoAConfirmar,
 } from "@/lib/confirmar-varios";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import NoutrosSitios from "@/components/admin/NoutrosSitios";
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
 import { SERVICE_CATEGORIES } from "@/lib/service-categories";
@@ -1182,19 +1181,15 @@ export default function AdminNegociacoesPanel({
    */
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
   const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
-  const [buscaPropria, setBuscaPropria] = useState("");
-  const procuraDeFora = buscaDeFora !== undefined;
-  const busca = procuraDeFora ? buscaDeFora : buscaPropria;
-  const setBusca = (v: string) => (procuraDeFora ? onBusca?.(v) : setBuscaPropria(v));
   /*
-   * DE OUTRO ECRÃ, JÁ COM A PROCURA — 17-10-2026. A caixa «Noutros sítios»
-   * (`NoutrosSitios`) traz aqui com `?procurar=#450`, como já se fazia nos
-   * Trabalhos CLYON.
+   * A PROCURA É A DA BARRA DO TOPO — d79 (20-11-2026). A Mesa recebe-a do
+   * painel (`busca`); noutro sítio (o ecrã antigo das negociações), lê-a do
+   * `ProcuraGlobalContext`. A caixa que havia aqui saiu: uma barra só.
    */
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("procurar");
-    if (q) setBusca(q);
-  }, []);
+  const daBarra = useProcuraDoBackoffice();
+  const procuraDeFora = buscaDeFora !== undefined;
+  const busca = procuraDeFora ? buscaDeFora : daBarra.termo;
+  const setBusca = (v: string) => (procuraDeFora ? onBusca?.(v) : daBarra.mudar(v));
   /*
    * O FILTRO POR PROFISSIONAL: "" é toda a gente, e um número é o id do
    * profissional. Um pedido passa se esse profissional tiver uma negociação
@@ -4774,31 +4769,6 @@ export default function AdminNegociacoesPanel({
       {avisoDeData}
       <div className="mb-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        {!procuraDeFora && (
-        <div className="relative flex-1">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-            aria-hidden="true"
-          />
-          <input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            type="search"
-            placeholder="Procurar por número, nome, telefone, morada ou região…"
-            aria-label="Procurar em toda a mesa"
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2 pl-9 pr-20 text-[13px] text-white outline-none transition focus:border-cyan-500"
-          />
-          {aProcurar && (
-            <button
-              type="button"
-              onClick={() => setBusca("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
-            >
-              Limpar
-            </button>
-          )}
-        </div>
-        )}
           {/*
             O FILTRO POR PROFISSIONAL, ao lado da busca e com o mesmo peso: os
             dois dizem que pedidos entram na mesa, e os cartões contam o resto.
@@ -4871,16 +4841,6 @@ export default function AdminNegociacoesPanel({
             )}
           </p>
         )}
-        {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
-        <NoutrosSitios
-          procura={busca}
-          jaAqui={[
-            ...pedidosNaMesa.map((p) => p.id),
-            ...porPromoverNaMesa.map((p) => p.id),
-            ...clyonNaMesa.map((t) => t.pedidoId),
-          ]}
-          seccao="negociacoes_clyon"
-        />
       </div>
 
       {/*

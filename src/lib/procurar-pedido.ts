@@ -36,7 +36,52 @@ export type PedidoProcuravel = {
   serviceType?: string | null;
   /** Os nomes dos profissionais que estão na mesa deste pedido. */
   profissionais?: Array<string | null | undefined>;
+  /** O NIF da fatura (d79, 20-11-2026): procura-se pelos dígitos. */
+  nif?: string | null;
 };
+
+/*
+ * O TELEFONE COMO AS PESSOAS O ESCREVEM — d79 (20-11-2026).
+ *
+ * «+351 912 345 678», «351912345678», «00351 912 345 678», «912.345.678» e
+ * «912345678» são o mesmo telemóvel. Antes, «+351 912 345 678» eram quatro
+ * palavras, e «351» tinha de estar no telefone guardado — não estava, e a
+ * procura não dava nada. Agora os números escritos aos bocados juntam-se numa
+ * palavra só e perdem o indicativo do país.
+ */
+
+/** Os nove dígitos nacionais, sem o indicativo 351 / 00351. */
+export function telefoneNacional(texto: string): string {
+  const d = String(texto ?? "").replace(/\D/g, "");
+  if (d.startsWith("00351") && d.length >= 14) return d.slice(5);
+  if (d.startsWith("351") && d.length === 12) return d.slice(3);
+  return d;
+}
+
+/**
+ * Junta os números escritos aos bocados numa palavra só, quando têm nove
+ * dígitos ou mais (um telefone, um NIF, uma referência Multibanco). Os mais
+ * curtos ficam como estão: «Rua 5 de Outubro 12» não é um número, e «2765-321»
+ * já é uma palavra. Um «#311» também não se toca.
+ */
+export function juntarNumeros(termo: string): string {
+  return String(termo ?? "").replace(/(?<![#\d])\+?\(?\d[\d\s().-]*\d/g, (m) => {
+    const d = m.replace(/\D/g, "");
+    return d.length >= 9 ? telefoneNacional(d) : m;
+  });
+}
+
+/**
+ * O termo parece um telefone, um NIF ou uma referência (só algarismos e a
+ * pontuação de os escrever, nove dígitos ou mais)? Devolve os dígitos — sem o
+ * indicativo —, ou null.
+ */
+export function digitosDoTermo(termo: string): string | null {
+  const t = String(termo ?? "").trim();
+  if (!/^[+\d\s().-]+$/.test(t)) return null;
+  const d = t.replace(/\D/g, "");
+  return d.length >= 9 ? telefoneNacional(d) : null;
+}
 
 /** Sem acentos e em minúsculas: «Évora» e «evora» são a mesma cidade. */
 function planificar(s: string): string {
@@ -79,14 +124,15 @@ function textoDe(p: PedidoProcuravel): string {
  * pode trazer o #310, o #311 e o #312 a reboque.
  */
 function digitosDe(p: PedidoProcuravel): string {
-  return [p.contactPhone, p.postalCode].filter(Boolean).map((v) => soDigitos(String(v))).join(" ");
+  return [p.contactPhone, p.postalCode, p.nif].filter(Boolean).map((v) => soDigitos(String(v))).join(" ");
 }
 
-function palavraCombina(palavra: string, p: PedidoProcuravel, texto: string, digitos: string): boolean {
+function palavraCombina(palavra: string, p: { id?: number | null; ids?: number[] }, texto: string, digitos: string): boolean {
+  const ids = [p.id, ...(p.ids ?? [])].filter((n): n is number => n != null && Number(n) > 0).map(String);
   // «#311» é sempre o número do pedido, e nada mais.
   if (palavra.startsWith("#")) {
     const n = palavra.slice(1);
-    return n.length > 0 && String(p.id) === n;
+    return n.length > 0 && ids.includes(n);
   }
 
   /*
@@ -105,7 +151,7 @@ function palavraCombina(palavra: string, p: PedidoProcuravel, texto: string, dig
    * morada — «25» em «Rua 25 de Abril» é morada e não é número de nada.
    */
   if (eNumero) {
-    if (String(p.id) === digitosDaPalavra) return true;
+    if (ids.includes(digitosDaPalavra)) return true;
     if (digitos.includes(digitosDaPalavra)) return true;
     return texto.includes(palavra);
   }
@@ -120,15 +166,46 @@ function palavraCombina(palavra: string, p: PedidoProcuravel, texto: string, dig
  * procurar.
  */
 export function combinaComABusca(p: PedidoProcuravel, termo: string): boolean {
-  const palavras = planificar(termo)
-    .split(/\s+/)
-    .map((w) => (w.startsWith("#") ? "#" + soDigitos(w) : w))
-    .filter((w) => w.length > 0 && w !== "#");
+  const palavras = palavrasDoTermo(termo);
   if (palavras.length === 0) return true;
 
   const texto = textoDe(p);
   const digitos = digitosDe(p);
-  return palavras.every((w) => palavraCombina(w, p, texto, digitos));
+  return palavras.every((w) => palavraCombina(w, { id: p.id }, texto, digitos));
+}
+
+/** As palavras de um termo, com os números escritos aos bocados já juntos (d79). */
+function palavrasDoTermo(termo: string): string[] {
+  return planificar(juntarNumeros(termo))
+    .split(/\s+/)
+    .map((w) => (w.startsWith("#") ? "#" + soDigitos(w) : w))
+    .filter((w) => w.length > 0 && w !== "#");
+}
+
+/**
+ * A MESMA PROCURA PARA QUALQUER LINHA — d79 (20-11-2026), a barra única do
+ * backoffice. Cada secção diz o que a sua linha tem escrito (`textos`), por
+ * onde se pode chamar (`digitos`: telefones, NIF, IBAN, referências) e a que
+ * pedidos pertence (`ids`); a regra é a dos pedidos: as palavras somam-se,
+ * «#311» é o pedido 311 e só esse, um telefone vale com ou sem +351.
+ */
+export function combinaComOsCampos(
+  linha: {
+    ids?: Array<number | null | undefined>;
+    textos: Array<string | number | null | undefined>;
+    digitos?: Array<string | number | null | undefined>;
+  },
+  termo: string,
+): boolean {
+  const palavras = palavrasDoTermo(termo);
+  if (palavras.length === 0) return true;
+  const ids = (linha.ids ?? []).filter((n): n is number => n != null && Number(n) > 0).map(Number);
+  const texto = planificar(linha.textos.filter((v) => v != null && v !== "").join(" "));
+  const digitos = (linha.digitos ?? [])
+    .filter((v) => v != null && v !== "")
+    .map((v) => soDigitos(String(v)))
+    .join(" ");
+  return palavras.every((w) => palavraCombina(w, { ids }, texto, digitos));
 }
 
 /** A lista filtrada, na mesma ordem. */

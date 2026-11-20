@@ -236,10 +236,11 @@ describe("o cartão na Mesa", () => {
   const CARTAO = ler("src/components/admin/DoNossoLado.tsx");
   const ROTA = ler("src/app/api/admin/whatsapp/route.ts");
 
-  it("fica no topo da Mesa, antes da procura e dos blocos, com a mesa inteira que está carregada", () => {
+  it("fica no topo da Mesa, antes dos filtros e dos blocos, com a mesa inteira que está carregada", () => {
     const i = MESA.indexOf("<DoNossoLado");
     expect(i).toBeGreaterThan(-1);
-    expect(i).toBeLessThan(MESA.indexOf('aria-label="Procurar em toda a mesa"'));
+    // A procura é a barra do topo do backoffice desde d79; os filtros da Mesa vêm depois.
+    expect(i).toBeLessThan(MESA.indexOf('aria-label="Filtrar por profissional"'));
     const bloco = MESA.slice(i, MESA.indexOf("/>", MESA.indexOf("}}", i)) + 2);
     expect(bloco).toContain("pedidos={pedidos}");
     expect(bloco).toContain("trabalhosClyon={trabalhosClyon}");

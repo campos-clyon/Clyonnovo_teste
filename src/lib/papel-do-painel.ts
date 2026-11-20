@@ -381,7 +381,13 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/trabalhos-clyon", seccoes: ["trabalhos_clyon"] },
   // Procurar um pedido em todo o lado (17-10-2026): as caixas de procura dos
   // ecrãs de trabalhos mostram também o que está noutros sítios.
-  { prefixo: "/api/admin/procurar", seccoes: ["pedidos", "negociacoes_clyon", "trabalhos_clyon", "agenda", "pagamentos", "carteiras"] },
+  // d79 (20-11-2026): a barra única do backoffice — todas as secções com grupo na
+  // procura (`procura-do-backoffice.ts`); a rota só devolve os grupos de cada um. Leads fora.
+  {
+    prefixo: "/api/admin/procurar",
+    // A barra está em todos os ecrãs; quem não tem nenhum grupo recebe uma resposta vazia.
+    seccoes: ["overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon", "agenda", "pagamentos", "carteiras", "whatsapp", "profissionais", "levantamentos", "contas", "suporte", "configs"],
+  },
   { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
   // d47: a mensagem na língua do cliente, para os botões que abrem o WhatsApp — não envia nada.
   { prefixo: "/api/admin/whatsapp/na-lingua", seccoes: ["whatsapp", "negociacoes_clyon", "trabalhos_clyon", "pedidos"] },

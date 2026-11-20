@@ -14,10 +14,9 @@ import {
   Pencil,
   ChevronDown,
   Clock,
-  Search,
 } from "lucide-react";
 import { useAdminAuth, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
-import NoutrosSitios from "@/components/admin/NoutrosSitios";
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { descritivoDaTransferencia } from "@/lib/descritivo-da-transferencia";
 import { combinaComABusca } from "@/lib/procurar-pedido";
@@ -398,7 +397,8 @@ export default function AdminCarteirasPanel() {
    * por um trabalho — número, cliente, telefone, morada, serviço — fica o
    * cartão só com os que batem, e as contas dele passam a ser as desses.
    */
-  const [busca, setBusca] = useState("");
+  // A procura é a da barra do topo (d79, 20-11-2026).
+  const { termo: busca, mudar: setBusca } = useProcuraDoBackoffice();
   const [soDe, setSoDe] = useState("");
   const [mostrar, setMostrar] = useState<Mostrar>("tudo");
   const aProcurar = busca.trim().length > 0;
@@ -1290,29 +1290,6 @@ export default function AdminCarteirasPanel() {
       {carteiras.length > 0 && (
         <div className="mt-6">
           <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                aria-hidden="true"
-              />
-              <input
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                type="search"
-                placeholder="Procurar por profissional, número do pedido, cliente, telefone ou morada…"
-                aria-label="Procurar nas carteiras"
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-24 text-sm text-white outline-none transition focus:border-cyan-500"
-              />
-              {aProcurar && (
-                <button
-                  type="button"
-                  onClick={() => setBusca("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
-                >
-                  Limpar
-                </button>
-              )}
-            </div>
             <select
               value={soDe}
               onChange={(e) => setSoDe(e.target.value)}
@@ -1331,12 +1308,6 @@ export default function AdminCarteirasPanel() {
                 ))}
             </select>
           </div>
-          {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
-          <NoutrosSitios
-            procura={busca}
-            jaAqui={visiveis.flatMap((c) => [...c.porPagar, ...c.porFinalizar].map((t) => t.pedidoId))}
-            seccao="carteiras"
-          />
           <div className="mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="Mostrar">
             {FILTROS.map((fl) => {
               const activo = mostrar === fl.id;

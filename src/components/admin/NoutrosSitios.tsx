@@ -1,155 +1,182 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Loader2, Search } from "lucide-react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import {
-  ROTULO_DA_ORIGEM,
-  ROTULO_DA_SECCAO_DO_PEDIDO,
-  termoQueProcura,
-  type ResultadoDaProcura,
-} from "@/lib/procurar-em-todo-o-lado";
-import { servicoEmPalavras } from "@/lib/servico-em-palavras";
+  GRUPOS_DA_PROCURA,
+  haOQueProcurar,
+  seccaoQueAbre,
+  type GrupoDaProcura,
+  type GruposDaProcura,
+} from "@/lib/procura-do-backoffice";
 
 /**
- * O QUE A PROCURA ENCONTRA NOUTROS SÍTIOS — 17-10-2026.
- *
- * *«As barras de pesquisa de toda a backoffice devem mostrar qualquer
- * trabalho, independente de onde foi gerado.»* — o dono. Por baixo da caixa
- * de cada ecrã de trabalhos: os pedidos que a mesma procura encontra fora da
- * lista deste ecrã, com a origem (Trabalho CLYON, Negociação, Pedido do site)
- * e um botão que abre o ecrã onde ele se trata, já procurado pelo número.
+ * «EM TODO O BACKOFFICE» — d79 (20-11-2026). Era o «Noutros sítios do
+ * backoffice» (17-10-2026), por baixo da caixa de procura de cada ecrã de
+ * trabalhos. Com a barra única no topo do backoffice passou a ser um bloco só,
+ * por baixo da secção aberta, com tudo o que a procura encontra: o pedido, o
+ * cliente, o profissional, os pagamentos e as referências, a conversa do
+ * WhatsApp, a agenda e as faturas/comprovativos. Cada linha abre o sítio certo,
+ * já procurado. O servidor só devolve os grupos das secções desta conta.
  */
 
-/** O painel diz como se vai a outra secção, e que secções esta conta vê. */
+/** O painel diz como se vai a outra secção, que secções esta conta vê, e o que está na barra. */
 export type ProcuraGlobal = {
   ir: (seccao: string, procura: string, estado?: string | null) => void;
   podeVer: (seccao: string) => boolean;
+  /** O que está na barra do topo, já assente (≈ 250 ms depois da última tecla). */
+  termo: string;
+  /** Muda a barra do topo — o «Ver todos» ou o «Limpar filtros» de uma secção. */
+  mudar: (q: string) => void;
 };
 
 export const ProcuraGlobalContext = createContext<ProcuraGlobal | null>(null);
 
-const ESPERA_MS = 350;
+/**
+ * A procura de uma secção é a da barra do topo (d79). Fora do painel (uma
+ * página que monte o ecrã sozinho) fica uma procura local, vazia.
+ */
+export function useProcuraDoBackoffice(): { termo: string; mudar: (q: string) => void } {
+  const global = useContext(ProcuraGlobalContext);
+  const [local, setLocal] = useState("");
+  return global ? { termo: global.termo, mudar: global.mudar } : { termo: local, mudar: setLocal };
+}
 
-export default function NoutrosSitios({
-  procura,
-  jaAqui,
-  seccao,
-  tema = "escuro",
-}: {
-  /** O que está escrito na caixa deste ecrã. */
-  procura: string;
-  /** Os pedidos que este ecrã já mostra — não se repetem aqui. */
-  jaAqui: number[];
-  /** A secção deste ecrã, para não oferecer «abrir» onde já se está. */
-  seccao: string;
-  /** «claro» na gestão dos pedidos do Início, que tem fundo claro. */
-  tema?: "escuro" | "claro";
-}) {
-  const claro = tema === "claro";
+const TITULO_DO_GRUPO: Record<GrupoDaProcura, string> = {
+  pedidos: "Pedidos",
+  clientes: "Clientes",
+  profissionais: "Profissionais",
+  pagamentos: "Pagamentos e referências",
+  whatsapp: "Conversas do WhatsApp",
+  agenda: "Agenda",
+  documentos: "Faturas e comprovativos",
+};
+
+const NOME_DA_SECCAO: Record<string, string> = {
+  negociacoes_clyon: "Mesa",
+  pedidos: "Todos os pedidos",
+  pagamentos: "Pagamentos",
+  carteiras: "Finanças",
+  agenda: "Agenda",
+  whatsapp: "WhatsApp",
+  contas: "Contas",
+  profissionais: "Profissionais",
+};
+
+export default function EmTodoOBackoffice({ seccao }: { seccao: string }) {
   const { token } = useAdminAuth();
   const eAdministrador = useEAdministrador();
   const global = useContext(ProcuraGlobalContext);
-  const [resultados, setResultados] = useState<ResultadoDaProcura[]>([]);
+  const termo = (global?.termo ?? "").trim();
+  // Uma conta sem nenhum grupo (só Levantamentos, por exemplo) nem pergunta ao servidor.
+  const temGrupos = global != null && GRUPOS_DA_PROCURA.some((g) => g.seccoes.some((s) => global.podeVer(s)));
+  const [grupos, setGrupos] = useState<GruposDaProcura>({});
   const [aProcurar, setAProcurar] = useState(false);
-  const termo = procura.trim();
+  // O mesmo termo não se pede duas vezes ao mudar de secção.
+  const jaPedidos = useRef(new Map<string, GruposDaProcura>());
 
   useEffect(() => {
-    if (!token || !termoQueProcura(termo)) {
-      setResultados([]);
+    if (!token || !temGrupos || !haOQueProcurar(termo)) {
+      setGrupos({});
       return;
     }
-    let cancelado = false;
-    const espera = setTimeout(async () => {
-      setAProcurar(true);
+    const guardado = jaPedidos.current.get(termo);
+    if (guardado) {
+      setGrupos(guardado);
+      return;
+    }
+    const controlo = new AbortController();
+    setAProcurar(true);
+    (async () => {
       try {
         const r = await fetch(`/api/admin/procurar?q=${encodeURIComponent(termo)}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
+          signal: controlo.signal,
         });
         const d = r.ok ? await r.json() : null;
-        if (!cancelado) setResultados((d?.resultados ?? []) as ResultadoDaProcura[]);
+        const g = (d?.grupos ?? {}) as GruposDaProcura;
+        if (r.ok) {
+          if (jaPedidos.current.size > 30) jaPedidos.current.clear();
+          jaPedidos.current.set(termo, g);
+        }
+        if (!controlo.signal.aborted) setGrupos(g);
       } catch {
-        if (!cancelado) setResultados([]);
+        if (!controlo.signal.aborted) setGrupos({});
       } finally {
-        if (!cancelado) setAProcurar(false);
+        if (!controlo.signal.aborted) setAProcurar(false);
       }
-    }, ESPERA_MS);
-    return () => {
-      cancelado = true;
-      clearTimeout(espera);
-    };
-  }, [termo, token]);
+    })();
+    return () => controlo.abort();
+  }, [termo, token, temGrupos]);
 
-  const aqui = useMemo(() => new Set(jaAqui), [jaAqui]);
-  const fora = resultados.filter((r) => !aqui.has(r.pedidoId));
-
-  if (!termoQueProcura(termo)) return null;
-  if (fora.length === 0) {
-    return aProcurar ? (
-      <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
-        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> A procurar no resto do backoffice…
-      </p>
-    ) : null;
-  }
+  if (!temGrupos || !haOQueProcurar(termo)) return null;
+  const comLinhas = GRUPOS_DA_PROCURA.filter((g) => (grupos[g.id]?.length ?? 0) > 0);
+  const total = comLinhas.reduce((n, g) => n + (grupos[g.id]?.length ?? 0), 0);
 
   return (
-    <div
-      className={`mt-2 rounded-xl border p-3 ${claro ? "border-[#ccccff] bg-white/80" : "border-slate-700/70 bg-slate-950/50"}`}
+    <section
+      aria-label="Em todo o backoffice"
       aria-live="polite"
+      className="rounded-[22px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4"
     >
-      <p className={`flex items-center gap-1.5 text-xs font-semibold ${claro ? "text-slate-700" : "text-slate-300"}`}>
-        <Search className="h-3.5 w-3.5 text-cyan-400" aria-hidden="true" />
-        Noutros sítios do backoffice · {fora.length}
-      </p>
-      <ul className={`mt-2 divide-y ${claro ? "divide-slate-200" : "divide-slate-800/80"}`}>
-        {fora.map((r) => {
-          // Na lista de todos os pedidos, um pedido de lá que o filtro escondeu também se mostra (19-10-2026).
-          const mostrarNaLista = r.seccao === "pedidos" && seccao === "pedidos";
-          const podeAbrir = global != null && (r.seccao !== seccao || mostrarNaLista) && global.podeVer(r.seccao);
-          return (
-            <li key={r.pedidoId} className="flex flex-wrap items-center justify-between gap-2 py-2">
-              <div className="min-w-0 text-xs">
-                <p className={`font-semibold ${claro ? "text-slate-900" : "text-white"}`}>
-                  #{r.pedidoId} · {servicoEmPalavras(r.servico)}
-                  {r.cidade ? <span className="font-normal text-slate-400"> · {r.cidade}</span> : null}
-                </p>
-                <p className="mt-0.5 text-slate-400">
-                  {[r.cliente, r.telefone, r.profissional ? `com ${r.profissional}` : null].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="rounded-full border border-slate-600 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
-                  {ROTULO_DA_ORIGEM[r.origem]}
-                </span>
-                {r.estado && (
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">{r.estado.replace(/_/g, " ")}</span>
-                )}
-                {podeAbrir ? (
-                  <button
-                    type="button"
-                    onClick={() => global!.ir(r.seccao, `#${r.pedidoId}`, r.estado)}
-                    className="flex items-center gap-1 rounded-lg border border-cyan-500/40 px-2 py-1 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-500/10"
-                  >
-                    {mostrarNaLista
-                      ? "Mostrar na lista"
-                      : `Abrir em ${ROTULO_DA_SECCAO_DO_PEDIDO[r.seccao]}`}{" "}
-                    <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                  </button>
-                ) : eAdministrador ? (
-                  <a
-                    href={`/admin/pedidos/${r.pedidoId}`}
-                    className="rounded-lg border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-300 hover:bg-slate-800"
-                  >
-                    Ver o pedido
-                  </a>
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+        Em todo o backoffice
+        <span className="text-xs font-normal text-slate-400">
+          {aProcurar && total === 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> a procurar…
+            </span>
+          ) : (
+            `«${termo}» · ${total === 0 ? "nada encontrado" : `${total} resultado${total === 1 ? "" : "s"}`}`
+          )}
+        </span>
+      </h3>
+      {comLinhas.length > 0 && (
+        <div className="mt-2 space-y-3">
+          {comLinhas.map((g) => (
+            <div key={g.id}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{TITULO_DO_GRUPO[g.id]}</p>
+              <ul className="mt-1 divide-y divide-slate-800/80">
+                {(grupos[g.id] ?? []).map((l) => {
+                  const destino = global ? seccaoQueAbre(l.abrir, global.podeVer) : null;
+                  const aqui = destino === seccao;
+                  return (
+                    <li key={l.chave} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                      <div className="min-w-0 flex-1 text-xs">
+                        <p className="break-words font-semibold text-white">{l.titulo}</p>
+                        {l.detalhe && <p className="mt-0.5 break-words text-slate-400">{l.detalhe}</p>}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {l.etiqueta && <span className="text-[10px] text-slate-500">{l.etiqueta}</span>}
+                        {destino && l.abrir ? (
+                          <button
+                            type="button"
+                            onClick={() => global!.ir(destino, l.abrir!.procura, l.abrir!.estado ?? null)}
+                            className="flex items-center gap-1 rounded-lg border border-cyan-500/40 px-2 py-1 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-500/10"
+                          >
+                            {aqui ? "Mostrar aqui" : `Abrir em ${NOME_DA_SECCAO[destino] ?? destino}`}
+                            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                          </button>
+                        ) : eAdministrador && l.pedidoId ? (
+                          <a
+                            href={`/admin/pedidos/${l.pedidoId}`}
+                            className="rounded-lg border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-300 hover:bg-slate-800"
+                          >
+                            Ver o pedido
+                          </a>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

@@ -59,6 +59,8 @@ export type LinhaParaProcurar = {
   address: string | null;
   city: string | null;
   postalCode?: string | null;
+  /** O NIF da fatura (d79). */
+  nif?: string | null;
   serviceType: string | null;
   valorFixoClyon: number | string | null;
   negociacoes: number | string | null;
@@ -93,6 +95,7 @@ export function procurarNasLinhas(linhas: LinhaParaProcurar[], termo: string, ma
           address: l.address,
           city: l.city,
           postalCode: l.postalCode ?? null,
+          nif: l.nif ?? null,
           serviceType: l.serviceType,
           profissionais: l.profissional ? [l.profissional] : [],
         },

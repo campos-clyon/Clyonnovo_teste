@@ -85,9 +85,9 @@ describe("a procura", () => {
 });
 
 describe("as peças", () => {
-  it("a rota só lê, e só a quem tem uma das secções com caixa de procura", () => {
+  it("a rota só lê, e não abre aos Leads", () => {
     const rota = ler("src/app/api/admin/procurar/route.ts");
-    expect(rota).toContain("const { err } = await requireAdmin(req);");
+    expect(rota).toContain("const { err, colab } = await requireAdmin(req);");
     expect(rota).not.toMatch(/export async function (POST|PATCH|DELETE|PUT)/);
     for (const s of ["pedidos", "negociacoes_clyon", "trabalhos_clyon", "agenda", "pagamentos", "carteiras"] as const) {
       expect(assistenteComSeccoesPodeChamar([s], "/api/admin/procurar", "GET"), s).toBe(true);
@@ -97,38 +97,30 @@ describe("as peças", () => {
 
   it("a parte que vai para o browser não leva a base", () => {
     expect(ler("src/lib/procurar-em-todo-o-lado.ts")).not.toContain('from "@/lib/db"');
-    expect(ler("src/lib/procurar-em-todo-o-lado-na-base.ts")).toContain("procurarNasLinhas(linhas, termo)");
+    expect(ler("src/lib/procura-do-backoffice.ts")).not.toContain('from "@/lib/db"');
+    // A leitura da base usa a mesma procura das listas (d79: em procura-do-backoffice-na-base.ts).
+    expect(ler("src/lib/procura-do-backoffice-na-base.ts")).toContain("procurarNasLinhas(linhas, termo)");
   });
 
-  it("a caixa está por baixo da procura de cada ecrã de trabalhos", () => {
-    const onde: Array<[string, string]> = [
-      ["src/components/admin/LegacyAdminClient.tsx", 'seccao="pedidos" tema="claro"'],
-      ["src/components/admin/AdminNegociacoesPanel.tsx", 'seccao="negociacoes_clyon"'],
-      ["src/components/admin/AdminAgendaPanel.tsx", 'seccao="agenda"'],
-      ["src/components/admin/AdminPagamentosPanel.tsx", 'seccao="pagamentos"'],
-      ["src/components/admin/AdminCarteirasPanel.tsx", 'seccao="carteiras"'],
-    ];
-    for (const [f, marca] of onde) {
-      const codigo = ler(f);
-      expect(codigo, f).toContain("<NoutrosSitios");
-      expect(codigo, f).toContain(marca);
-    }
-  });
-
-  it("o botão leva ao ecrã certo, já com a procura feita", () => {
+  it("o bloco «Em todo o backoffice» está uma vez, por baixo da secção (d79), e já não nos ecrãs", () => {
     const painel = ler("src/components/admin/LegacyAdminClient.tsx");
     expect(painel).toContain("<ProcuraGlobalContext.Provider value={procuraGlobal}>");
-    expect(painel).toContain('url.searchParams.set("procurar", procura);');
-    expect(painel).toContain('const procurarParam = searchParams.get("procurar");');
-    // Os ecrãs de destino leem o `?procurar=` ao abrir.
-    for (const f of ["src/components/admin/AdminNegociacoesPanel.tsx"]) {
-      expect(ler(f), f).toContain('new URLSearchParams(window.location.search).get("procurar")');
+    expect(painel.split("<EmTodoOBackoffice").length - 1).toBe(1);
+    for (const f of [
+      "src/components/admin/AdminNegociacoesPanel.tsx",
+      "src/components/admin/AdminAgendaPanel.tsx",
+      "src/components/admin/AdminPagamentosPanel.tsx",
+      "src/components/admin/AdminCarteirasPanel.tsx",
+    ]) {
+      expect(ler(f), f).not.toContain("<NoutrosSitios");
     }
   });
 
-  it("a lista do Início também acha um pedido pelo número", () => {
+  it("a lista de todos os pedidos também acha um pedido pelo número", () => {
     const db = ler("src/lib/db.ts");
     expect(db).toContain("const numero = /^#?\\s*(\\d{1,9})$/.exec(filters.search.trim());");
     expect(db).toContain('"(id = ? OR contactName LIKE ? OR contactPhone LIKE ? OR address LIKE ? OR description LIKE ?)"');
+    // E pelo telefone com ou sem +351, e pelo NIF (d79).
+    expect(db).toContain("const digitos = digitosDoTermo(filters.search);");
   });
 });

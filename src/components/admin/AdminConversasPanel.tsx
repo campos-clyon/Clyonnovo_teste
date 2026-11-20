@@ -1,8 +1,11 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComOsCampos } from "@/lib/procurar-pedido";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { ArrowLeft, ExternalLink, Loader2, RotateCcw, Search, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, RotateCcw, Send, Trash2 } from "lucide-react";
 import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
 import { hojeOuOntem, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
@@ -122,7 +125,8 @@ export default function AdminConversasPanel() {
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState("");
   const [aberta, setAberta] = useState<string | null>(null);
-  const [procura, setProcura] = useState("");
+  // A procura é a da barra do topo (d79, 20-11-2026).
+  const { termo: procura } = useProcuraDoBackoffice();
   const [texto, setTexto] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
   /*
@@ -297,17 +301,19 @@ export default function AdminConversasPanel() {
   );
 
   const lista = useMemo(() => {
-    const q = procura.trim().toLowerCase();
-    if (!q) return conversas;
-    return conversas.filter(
-      (c) =>
-        c.quem.toLowerCase().includes(q) ||
-        (c.contacto ?? "").toLowerCase().includes(q) ||
-        (c.assunto ?? "").toLowerCase().includes(q) ||
-        String(c.pedidoId ?? "").includes(q) ||
-        // Procurar DENTRO das mensagens, e não só nos cabeçalhos: quem perdeu
-        // uma conversa lembra-se do que lá foi dito, não de quem a escreveu.
-        c.mensagens.some((m) => m.texto.toLowerCase().includes(q)),
+    if (!procura.trim()) return conversas;
+    // A regra das listas (d79): «#311» é o pedido 311, o telefone com ou sem +351.
+    return conversas.filter((c) =>
+      combinaComOsCampos(
+        {
+          ids: [c.pedidoId],
+          // Procurar DENTRO das mensagens, e não só nos cabeçalhos: quem perdeu
+          // uma conversa lembra-se do que lá foi dito, não de quem a escreveu.
+          textos: [c.quem, c.contacto, c.assunto, ...c.mensagens.map((m) => m.texto)],
+          digitos: [c.contacto],
+        },
+        procura,
+      ),
     );
   }, [conversas, procura]);
 
@@ -377,7 +383,6 @@ export default function AdminConversasPanel() {
           <button
             onClick={() => {
               setAberta(null);
-              setProcura("");
               setPapeleira((v) => !v);
             }}
             className={`flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition ${
@@ -393,18 +398,6 @@ export default function AdminConversasPanel() {
             )}
             {papeleira ? "Voltar à caixa" : "Apagadas"}
           </button>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
-              aria-hidden="true"
-            />
-            <input
-              value={procura}
-              onChange={(e) => setProcura(e.target.value)}
-              placeholder="Procurar nome, pedido ou texto"
-              className="h-9 w-56 rounded-lg border border-slate-600 bg-slate-950 pl-8 pr-3 text-xs text-white outline-none focus:border-cyan-500"
-            />
-          </div>
           {/*
             O BOTÃO «ACTUALIZAR» SAIU DAQUI — 16-09-2026.
             "Remova o botão actualizar e garanta que essas informações sejam

@@ -1,5 +1,7 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+
 import AvisosDaEquipa from "@/components/admin/AvisosDaEquipa";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
@@ -22,7 +24,6 @@ import {
   Power,
   RefreshCw,
   RotateCcw,
-  Search,
   Trash2,
   Undo2,
   Wrench,
@@ -419,16 +420,12 @@ export default function AdminWhatsAppPanel() {
    * ele está — é essa a pergunta. A regra vive em `procurar-conversas.ts`,
    * fora do painel, porque é a única coisa deste ecrã que se pode provar.
    */
-  const [procura, setProcura] = useState("");
   /*
-   * DE OUTRO ECRÃ, JÁ COM A PROCURA — 03-11-2026 (d14). O «Do nosso lado» da
-   * Mesa abre aqui uma conversa sem pedido pelo telefone (`?procurar=`), como
-   * a Mesa e os Trabalhos CLYON já faziam.
+   * A PROCURA É A DA BARRA DO TOPO — d79 (20-11-2026). O «Do nosso lado» da
+   * Mesa e o «Em todo o backoffice» abrem aqui uma conversa pelo telefone, que
+   * vem escrito na barra.
    */
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("procurar");
-    if (q) setProcura(q);
-  }, []);
+  const { termo: procura } = useProcuraDoBackoffice();
   const [aAdicionar, setAAdicionar] = useState(false);
   const [numeroNovo, setNumeroNovo] = useState("");
   const [notaNova, setNotaNova] = useState("");
@@ -1246,28 +1243,6 @@ export default function AdminWhatsAppPanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-bold text-white">Conversas</h3>
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
-                aria-hidden="true"
-              />
-              <input
-                value={procura}
-                onChange={(e) => setProcura(e.target.value)}
-                placeholder="Procurar por número ou nome"
-                aria-label="Procurar uma conversa"
-                className="w-56 rounded-lg border border-slate-700 bg-slate-950 py-1.5 pl-8 pr-8 text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-              />
-              {procura !== "" && (
-                <button
-                  onClick={() => setProcura("")}
-                  aria-label="Limpar a procura"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-300"
-                >
-                  <X className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-              )}
-            </div>
             <button
               onClick={() => setAAdicionar((v) => !v)}
               className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800"

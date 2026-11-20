@@ -1,5 +1,8 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComOsCampos } from "@/lib/procurar-pedido";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
@@ -178,7 +181,8 @@ export default function AdminProfissionaisPanel({
   const [filtro, setFiltro] = useState<
     "todos" | EstadoDoProfissional | "por_verificar" | "sem_confirmacoes" | "dados_para_receber"
   >("todos");
-  const [busca, setBusca] = useState("");
+  // A procura é a da barra do topo (d79, 20-11-2026).
+  const { termo: busca } = useProcuraDoBackoffice();
   const [aEditar, setAEditar] = useState<number | null>(null);
   const [verSuspensos, setVerSuspensos] = useState(false);
   const [grupos, setGrupos] = useState<{ migrados: number; ganham: number; ganhamAprovados: number } | null>(null);
@@ -364,11 +368,8 @@ export default function AdminProfissionaisPanel({
         return false;
       }
       if (!termo) return true;
-      const alvo = [p.name, p.email, p.city, ...lista(p.categorias)]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return alvo.includes(termo);
+      // A regra das listas (d79): também pelo telefone (com ou sem +351) e pelo NIF.
+      return combinaComOsCampos({ textos: [p.name, p.email, p.city, ...lista(p.categorias)], digitos: [p.phone, p.nif] }, busca);
     });
   }, [profissionais, filtro, busca]);
 
@@ -487,13 +488,6 @@ export default function AdminProfissionaisPanel({
         </p>
       )}
 
-      <input
-        type="search"
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        placeholder="Procurar por nome, email, cidade ou categoria…"
-        className="mb-4 w-full rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
-      />
 
       {erro && (
         <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">

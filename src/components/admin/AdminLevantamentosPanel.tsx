@@ -1,5 +1,8 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComOsCampos } from "@/lib/procurar-pedido";
+
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { AlertTriangle, Check, Copy, Loader2, RefreshCw, X } from "lucide-react";
@@ -134,6 +137,8 @@ export default function AdminLevantamentosPanel() {
   // são do administrador (o servidor recusa-os na mesma).
   const mexeNoDinheiro = useMexeNoDinheiro();
   const [linhas, setLinhas] = useState<Levantamento[]>([]);
+  // A barra do topo (d79, 20-11-2026): o profissional, o titular, o IBAN, a nota ou o #pedido abatido.
+  const { termo: busca } = useProcuraDoBackoffice();
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [erro, setErro] = useState("");
@@ -272,7 +277,18 @@ export default function AdminLevantamentosPanel() {
   const intervalo = intervaloDoPeriodo(periodo, agora, { de: entreDe, ate: entreAte });
   const aFiltrar = Boolean(profissional || intervalo);
 
-  const doProfissional = linhas.filter((l) => !profissional || String(l.providerId) === profissional);
+  const doProfissional = linhas.filter(
+    (l) =>
+      (!profissional || String(l.providerId) === profissional) &&
+      combinaComOsCampos(
+        {
+          ids: (l.abatido ?? []).map((a) => a.pedidoId),
+          textos: [l.profissionalNome, l.titular, l.nota, l.processadoPor, l.iban],
+          digitos: [l.iban],
+        },
+        busca,
+      ),
+  );
   const contas = SEPARADORES.map((s) => {
     const ls = doProfissional.filter(
       (l) => l.estado === s.id && dentroDoIntervalo(dataDe(l, s.id), intervalo),

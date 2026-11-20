@@ -37,7 +37,7 @@ import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSecca
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
-import NoutrosSitios, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
+import EmTodoOBackoffice, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
 import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFecho";
@@ -318,6 +318,9 @@ function ecraDaSeccao(s: AdminSection): AdminSection {
   // Os Trabalhos CLYON estão na Mesa desde 20-10-2026.
   return s === "trabalhos_clyon" ? "negociacoes_clyon" : s;
 }
+
+/** Quanto a barra do topo espera depois da última tecla (d79): um pedido ao servidor por palavra, não por letra. */
+const ESPERA_DA_PROCURA_MS = 250;
 
 /*
  * «PEDIDOS»: TRÊS SECÇÕES NUM ECRÃ — 19-10-2026.
@@ -912,10 +915,24 @@ export default function ColaboradorAdminClient({
   const [pedidosMarcados, setPedidosMarcados] = useState<Set<number>>(new Set());
   const [aExecutarLote, setAExecutarLote] = useState<string | null>(null);
   const pedidoSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /*
+   * A BARRA ÚNICA DO BACKOFFICE — d79 (20-11-2026). *«Uma só barra de pesquisa
+   * universal, no topo de todas as secções.»* — o dono. É esta procura (a que
+   * era só de «Pedidos») que a barra do topo escreve; cada secção filtra o que
+   * mostra pelo `termo` do `ProcuraGlobalContext`, e por baixo fica o bloco
+   * «Em todo o backoffice». Assenta ~250 ms depois da última tecla, para não
+   * haver um pedido ao servidor por letra.
+   */
   const handlePedidoSearch = (value: string) => {
     setPedidoSearch(value);
     if (pedidoSearchRef.current) clearTimeout(pedidoSearchRef.current);
-    pedidoSearchRef.current = setTimeout(() => setPedidoSearchDebounced(value), 350);
+    pedidoSearchRef.current = setTimeout(() => setPedidoSearchDebounced(value), ESPERA_DA_PROCURA_MS);
+  };
+  /** Procurar já, sem esperar — ao chegar por um link ou ao abrir uma linha. */
+  const procurarJa = (value: string) => {
+    if (pedidoSearchRef.current) clearTimeout(pedidoSearchRef.current);
+    setPedidoSearch(value);
+    setPedidoSearchDebounced(value);
   };
 
   /*
@@ -928,22 +945,19 @@ export default function ColaboradorAdminClient({
    */
   const irParaOPedido = (pedida: string, procura: string, estado?: string | null) => {
     const seccao = ecraDaSeccao(pedida as AdminSection);
-    // Em «Pedidos» a procura é uma só: muda-se de separador e ela vai junto (19-10-2026).
-    if (ECRA_DOS_PEDIDOS.includes(seccao as AdminSection)) {
-      handlePedidoSearch(procura);
-      if (seccao === "pedidos") {
-        setPedidoStatusFilter(estado === "concluido" || estado === "arquivado" || estado === "cancelado" ? estado : "todos");
-      }
-      setActiveSection(seccao as AdminSection);
-      return;
+    // A procura é uma só desde d79: muda-se de secção e ela vai junto, já feita.
+    procurarJa(procura);
+    if (seccao === "pedidos") {
+      setPedidoStatusFilter(estado === "concluido" || estado === "arquivado" || estado === "cancelado" ? estado : "todos");
     }
-    const url = new URL(window.location.href);
-    url.searchParams.set("section", seccao);
-    url.searchParams.set("procurar", procura);
-    window.history.replaceState(window.history.state, "", url.toString());
     setActiveSection(seccao as AdminSection);
   };
-  const procuraGlobal: ProcuraGlobal = { ir: irParaOPedido, podeVer: (s) => podeVer(s) };
+  const procuraGlobal: ProcuraGlobal = {
+    ir: irParaOPedido,
+    podeVer: (s) => podeVer(s),
+    termo: pedidoSearchDebounced,
+    mudar: procurarJa,
+  };
   // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -997,12 +1011,12 @@ export default function ColaboradorAdminClient({
       papelPodeVerSeccao(papel, sectionParam)
     ) {
       setActiveSection(ecraDaSeccao(sectionParam));
-      // Chegar aos pedidos já com a procura feita (17-10-2026, `NoutrosSitios`).
-      const procurarParam = searchParams.get("procurar");
-      if (procurarParam && ECRA_DOS_PEDIDOS.includes(sectionParam)) {
-        handlePedidoSearch(procurarParam);
-        setPedidoStatusFilter("todos");
-      }
+    }
+    // Chegar já com a procura feita — `?q=` desde d79 (e o `?procurar=` dos links antigos).
+    const procurarParam = searchParams.get("q") ?? searchParams.get("procurar");
+    if (procurarParam) {
+      procurarJa(procurarParam);
+      if (sectionParam === "pedidos") setPedidoStatusFilter("todos");
     }
     urlSyncReady.current = true;
 
@@ -1074,12 +1088,24 @@ export default function ColaboradorAdminClient({
     };
   }, [papel, token, router]);
 
-  // Sincronizar URL com a secção activa
+  /*
+   * O URL DIZ A SECÇÃO E A PROCURA — d79 (20-11-2026): `?section=…&q=…`. Mudar
+   * de secção é um passo novo no histórico (o «voltar atrás» volta à secção e à
+   * procura de antes); escrever na barra só reescreve o passo em que se está.
+   * Pelo histórico do browser, e não pelo router: não há uma ida ao servidor
+   * por cada procura.
+   */
   useEffect(() => {
     if (!token || !urlSyncReady.current) return;
     const p = new URLSearchParams({ section: activeSection });
-    router.replace(`${paginaBase}?${p.toString()}`, { scroll: false });
-  }, [activeSection, token, router, paginaBase]);
+    const q = pedidoSearchDebounced.trim();
+    if (q) p.set("q", q);
+    const novo = `${paginaBase}?${p.toString()}`;
+    if (window.location.pathname + window.location.search === novo) return;
+    const seccaoNoUrl = new URLSearchParams(window.location.search).get("section");
+    if (seccaoNoUrl != null && seccaoNoUrl !== activeSection) window.history.pushState(window.history.state, "", novo);
+    else window.history.replaceState(window.history.state, "", novo);
+  }, [activeSection, pedidoSearchDebounced, token, paginaBase]);
 
   // Repor estado ao navegar com os botões Anterior/Seguinte do browser
   useEffect(() => {
@@ -1087,6 +1113,8 @@ export default function ColaboradorAdminClient({
       const sp = new URLSearchParams(window.location.search);
       const sec = sp.get("section") as AdminSection | null;
       if (sec && adminNavItems.some((i) => i.id === sec) && podeVer(sec)) setActiveSection(ecraDaSeccao(sec));
+      // A procura volta com a secção (d79).
+      procurarJa(sp.get("q") ?? "");
     }
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -1728,17 +1756,6 @@ export default function ColaboradorAdminClient({
       : grupos;
   }, [simulatorSettings]);
 
-  const hojeLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat("pt-PT", {
-        timeZone: "Europe/Lisbon",
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(new Date()),
-    [],
-  );
 
 
 
@@ -2059,15 +2076,45 @@ export default function ColaboradorAdminClient({
             >
               <Menu className="h-4 w-4" />
             </button>
-            <h2 className="truncate text-[15px] font-semibold leading-none text-white">
-              {/* Nos três de «Pedidos», o nome do ecrã e o do separador (19-10-2026). */}
+            {/*
+              A BARRA ÚNICA — d79 (20-11-2026). O nome da secção pequeno à
+              esquerda, a barra a ocupar o resto; a data saiu. Nos Leads não há
+              barra: ficam fora da procura (dono), com a caixa deles.
+            */}
+            <h2 className="max-w-[6.5rem] flex-shrink-0 truncate text-[11px] font-semibold uppercase leading-none tracking-wide text-slate-400 sm:max-w-[12rem]">
+              {/* Nos dois de «Pedidos», o nome do ecrã e o do separador (19-10-2026). */}
               {ECRA_DOS_PEDIDOS.includes(activeSection)
                 ? `Pedidos · ${ROTULO_DO_SEPARADOR[activeSection]}`
                 : sectionLabels[activeSection]}
             </h2>
-            <p className="hidden truncate text-xs leading-none text-slate-500 sm:block">
-              {hojeLabel}
-            </p>
+            {activeSection !== "leads" && (
+              <div role="search" className="relative min-w-0 flex-1 lg:max-w-2xl">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                  aria-hidden="true"
+                />
+                <input
+                  value={pedidoSearch}
+                  onChange={(e) => handlePedidoSearch(e.target.value)}
+                  type="search"
+                  enterKeyHint="search"
+                  placeholder="Procurar pedido, nome, telefone, email, morada, NIF ou referência…"
+                  aria-label="Procurar em todo o backoffice"
+                  className="h-9 w-full rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-9 text-[13px] text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-500 [&::-webkit-search-cancel-button]:hidden"
+                />
+                {pedidoSearch !== "" && (
+                  <button
+                    type="button"
+                    onClick={() => procurarJa("")}
+                    aria-label="Limpar a procura"
+                    title="Limpar a procura"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            )}
           </header>
 
           <ProcuraGlobalContext.Provider value={procuraGlobal}>
@@ -2112,29 +2159,6 @@ export default function ColaboradorAdminClient({
               >
                 Pedidos
               </h2>
-              <div className="relative order-last min-w-[16rem] flex-1 basis-full md:basis-auto">
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                  aria-hidden="true"
-                />
-                <input
-                  value={pedidoSearch}
-                  onChange={(e) => handlePedidoSearch(e.target.value)}
-                  type="search"
-                  placeholder="Procurar por número, nome, telefone, morada ou região…"
-                  aria-label="Procurar nos pedidos"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2 pl-9 pr-20 text-[13px] text-white outline-none transition focus:border-cyan-500"
-                />
-                {pedidoSearch.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => handlePedidoSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
-                  >
-                    Limpar
-                  </button>
-                )}
-              </div>
               <div role="tablist" aria-label="Pedidos" className="flex flex-wrap gap-1.5">
                 {separadoresDosPedidos.map((s) => {
                   const aqui = activeSection === s;
@@ -2182,7 +2206,7 @@ export default function ColaboradorAdminClient({
                           key={`${x}-${id}`}
                           type="button"
                           onClick={() => {
-                            handlePedidoSearch(`#${id}`);
+                            procurarJa(`#${id}`);
                             setActiveSection(s);
                           }}
                           className="rounded-lg border border-rose-400/40 bg-slate-950/60 px-2.5 py-1 text-xs font-semibold text-white hover:border-rose-300"
@@ -2319,8 +2343,6 @@ export default function ColaboradorAdminClient({
                   </button>
                 </div>
               </div>
-              {/* O que a procura encontra fora desta lista (17-10-2026). */}
-              <NoutrosSitios procura={pedidoSearch} jaAqui={pedidos.map((p) => p.id)} seccao="pedidos" tema="claro" />
 
               {/* Lista de pedidos */}
               {pedidosError && (
@@ -3476,8 +3498,8 @@ export default function ColaboradorAdminClient({
               {/* O valor fixo é a outra metade da permissão da Mesa (20-10-2026). */}
               <AdminNegociacoesPanel
                 mostrar="tudo"
-                busca={pedidoSearch}
-                onBusca={handlePedidoSearch}
+                busca={pedidoSearchDebounced}
+                onBusca={procurarJa}
                 podeApagar={papel === "admin"}
                 podeOferecerTrabalhoClyon={podeVer("trabalhos_clyon")}
                 eAdministrador={papel === "admin"}
@@ -4111,6 +4133,11 @@ export default function ColaboradorAdminClient({
               )}
             </section>
           )}
+          {/*
+            «EM TODO O BACKOFFICE» — d79 (20-11-2026): por baixo da secção, o que
+            a barra do topo encontra no resto do backoffice. Nos Leads não (dono).
+          */}
+          {activeSection !== "leads" && <EmTodoOBackoffice seccao={activeSection} />}
           </>
           )}
         </main>

@@ -20,7 +20,8 @@ describe("as Carteiras", () => {
   });
 
   it("a procura é a das Negociações: o profissional mostra o cartão inteiro, um trabalho só os que batem", () => {
-    expect(C).toContain('placeholder="Procurar por profissional, número do pedido, cliente, telefone ou morada…"');
+    // A caixa é a barra do topo do backoffice desde d79.
+    expect(C).toContain("const { termo: busca, mudar: setBusca } = useProcuraDoBackoffice();");
     expect(C).toContain("if (!aProcurar || fichaBate(c)) return [c];");
     expect(C).toContain("const porPagar = c.porPagar.filter(trabalhoBate);");
     // E as contas do cartão passam a ser as desses trabalhos — e ele di-lo.

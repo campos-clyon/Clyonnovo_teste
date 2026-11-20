@@ -18,7 +18,8 @@ import { useAdminAuth, useEAdministrador, useMexeNoDinheiro } from "@/hooks/useA
 import PagosEmMaoAfectados from "./PagosEmMaoAfectados";
 import PagosDosDoisLados from "./PagosDosDoisLados";
 import AReceberDosProfissionais, { useAReceberDosProfissionais } from "./AReceberDosProfissionais";
-import NoutrosSitios from "@/components/admin/NoutrosSitios";
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComABusca } from "@/lib/procurar-pedido";
 import {
   AGRUPAMENTOS,
   NOME_DA_DATA,
@@ -705,7 +706,8 @@ function GestorDoDinheiro({
    */
   mexeNoDinheiro: boolean;
 }) {
-  const [busca, setBusca] = useState("");
+  // A procura é a da barra do topo (d79, 20-11-2026).
+  const { termo: busca, mudar: setBusca } = useProcuraDoBackoffice();
   /*
    * «AINDA POR FAZER» começa fechado, e a escolha fica neste navegador
    * (02-11-2026, dono). Só uma conveniência de quem vê: sem acesso ao
@@ -765,6 +767,8 @@ function GestorDoDinheiro({
   const [quantosNoGrupo, setQuantosNoGrupo] = useState(POR_PAGINA);
   const [erro, setErro] = useState("");
   const [quantos, setQuantos] = useState(POR_PAGINA);
+  // Uma procura nova volta à primeira página (d79: a procura é a da barra do topo).
+  useEffect(() => setQuantos(POR_PAGINA), [busca]);
   // A tela vermelha dos trabalhos que ainda não estão na data — 14-10-2026.
   const { confirmarSeFuturo, aviso: avisoDeData } = useAvisoDeDataFutura();
 
@@ -1048,10 +1052,12 @@ function GestorDoDinheiro({
     (t) =>
       passaNoFiltroDaOrigem(t.registos, filtroDaOrigem) &&
       (!profissional || String(t.providerId) === profissional) &&
+      // A regra das listas (d79): «#311» é só o 311, o telefone com ou sem +351.
       (!q ||
-        [t.cliente, t.telefoneDoCliente, t.profissional, t.cidade, `#${t.pedidoId}`]
-          .filter(Boolean)
-          .some((c) => String(c).toLowerCase().includes(q))),
+        combinaComABusca(
+          { id: t.pedidoId, contactName: t.cliente, contactPhone: t.telefoneDoCliente, city: t.cidade, profissionais: [t.profissional] },
+          busca,
+        )),
   );
 
   /* O período, esse, conta pela data de cada separador — ver `dataDeReferencia`. */
@@ -1304,17 +1310,6 @@ function GestorDoDinheiro({
         Os três primeiros escondem linhas; o último só as arruma.
       */}
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
-        <input
-          value={busca}
-          onChange={(e) => {
-            setBusca(e.target.value);
-            setQuantos(POR_PAGINA);
-          }}
-          type="search"
-          aria-label="Procurar"
-          placeholder="cliente, telemóvel, cidade ou #pedido"
-          className={`${CAMPO_DO_FILTRO} placeholder:text-slate-600`}
-        />
         <select
           value={profissional}
           onChange={(e) => {
@@ -1378,8 +1373,6 @@ function GestorDoDinheiro({
           quantosPorConferir={quantosPorConferir}
         />
       </div>
-      {/* O que a procura encontra fora desta lista (17-10-2026, `NoutrosSitios`). */}
-      <NoutrosSitios procura={busca} jaAqui={filtrados.map((t) => t.pedidoId)} seccao="pagamentos" />
 
       {periodo === "entre" && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">

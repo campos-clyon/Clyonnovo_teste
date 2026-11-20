@@ -1,5 +1,8 @@
 "use client";
 
+import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
+import { combinaComOsCampos } from "@/lib/procurar-pedido";
+
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import {
@@ -159,6 +162,8 @@ function EscolhaDeSeccoes({
 export default function AdminAssistentesPanel() {
   const { token, ready, user } = useAdminAuth();
   const [assistentes, setAssistentes] = useState<Assistente[]>([]);
+  // A barra do topo (d79, 20-11-2026): pelo nome.
+  const { termo: busca } = useProcuraDoBackoffice();
   const [comissaoPorOmissao, setComissaoPorOmissao] = useState<number>(40);
   const [aCarregar, setACarregar] = useState(true);
   const [ocupado, setOcupado] = useState<number | "novo" | null>(null);
@@ -472,7 +477,10 @@ export default function AdminAssistentesPanel() {
       </div>
 
       <div className="space-y-2">
-        {assistentes.map((a) => {
+        {busca.trim() !== "" && !assistentes.some((a) => combinaComOsCampos({ ids: [a.id], textos: [a.nome] }, busca)) && (
+          <p className="text-sm text-slate-400">Nenhum assistente com «{busca.trim()}».</p>
+        )}
+        {assistentes.filter((a) => combinaComOsCampos({ ids: [a.id], textos: [a.nome] }, busca)).map((a) => {
           const e = a.estatisticas;
           const c = a.comissoes.totais;
           const estaAberto = aberto === a.id;
