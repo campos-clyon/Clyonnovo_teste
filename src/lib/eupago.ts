@@ -909,6 +909,8 @@ export function quantoSePedeNesteTrabalho(
     novoModelo?: boolean;
     /** A reserva do valor único (d39): entra na parte da CLYON. */
     reservaCent?: number;
+    /** O acordo final com o cliente (d78): o cliente paga este valor, sem IVA. */
+    acordoFinal?: number | null;
   },
   comFactura: boolean,
 ): { valor: number; quemPaga: QuemPaga } {
@@ -921,6 +923,7 @@ export function quantoSePedeNesteTrabalho(
   if (t.formaDePagamento === "dinheiro") {
     return { valor: quantoACLYONCobra(t.acordado, t.taxas, comFactura, t.acrescimo), quemPaga: "cliente" };
   }
+  if (t.acordoFinal != null && t.acordoFinal > 0) return { valor: t.acordoFinal, quemPaga: "cliente" };
   return {
     valor: quantoOClientePaga(t.acordado, t.taxas, t.modelo, comFactura, t.acrescimo),
     quemPaga: "cliente",

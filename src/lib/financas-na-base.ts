@@ -545,7 +545,7 @@ export async function entradasDaPlataforma(): Promise<EntradaDaPlataforma[] | nu
             n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.formaDePagamento, n.semFactura, n.ofertaClyon,
             n.pagamentoParaQue, n.createdAt AS negociacaoCriadaEm,
             pg.negociacaoId, n.estado AS negociacaoEstado, n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm,
-            n.pagoEm AS negociacaoPagaEm,
+            n.pagoEm AS negociacaoPagaEm, n.acordoFinalCliente, n.acordoFinalMotivo,
             o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon
        FROM pagamentos pg
        LEFT JOIN negociacoes n ON n.id = pg.negociacaoId

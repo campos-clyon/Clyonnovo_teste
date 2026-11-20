@@ -16,6 +16,7 @@ import { sePagaPelaNegociacao } from "./trabalho-clyon-paga-se";
 import { novoModeloEmVigor } from "./novo-modelo";
 import { agoraDoModelo } from "./relogio-do-modelo";
 import { negociacaoNoNovoModelo } from "./taxa-a-passar-a-clyon";
+import { lerAcordoFinal } from "./acordo-final";
 
 /**
  * QUEM É QUE PODE PAGAR ESTE TRABALHO.
@@ -60,6 +61,12 @@ export type TrabalhoAPagar = {
    * cliente paga o valor sem IVA. Ausente nos trabalhos montados à mão (testes).
    */
   semFactura?: boolean;
+  /**
+   * O ACORDO FINAL COM O CLIENTE — d78 (`acordo-final.ts`). O valor sem IVA que
+   * o cliente paga, abaixo do que se pagou ao profissional; o valor final e a
+   * referência pedem este, sem fatura. Nulo/ausente = a conta de sempre.
+   */
+  acordoFinal?: number | null;
   /**
    * O trabalho está feito — confirmado, ou libertado pelo prazo. É a partir
    * daqui que, em dinheiro com IVA incluído, o profissional deve à CLYON.
@@ -215,6 +222,11 @@ export async function trabalhoQueSePodePagar(
   if (credencial.backoffice !== true && p.valorFixoClyon != null && !sePagaPelaNegociacao(p, linha)) {
     return { ok: false, estado: 409, erro: "Este trabalho paga-se pela referência que a CLYON lhe envia." };
   }
+  // Com um acordo final (d78), o cliente paga a referência que a CLYON lhe envia — nunca outra conta pelo link.
+  const acordoFinal = lerAcordoFinal(linha as { acordoFinalCliente?: unknown });
+  if (credencial.backoffice !== true && acordoFinal != null) {
+    return { ok: false, estado: 409, erro: "Este trabalho paga-se pela referência que a CLYON lhe envia." };
+  }
 
   const porHora = lerBase((pedido as { baseDoPreco?: unknown }).baseDoPreco) === "hora";
   const acordado = porHora
@@ -263,6 +275,7 @@ export async function trabalhoQueSePodePagar(
       modelo: modeloDaLinha(linha, linha.createdAt),
       // d70: a escolha «Sem fatura» do próprio trabalho — o valor final e o acerto das horas leem-na.
       semFactura: eSemFactura(linha),
+      acordoFinal,
       libertado: estaLibertado(linha, agora),
       novoModelo,
       porHora: porHora

@@ -49,7 +49,7 @@ export default function ContaDoPagamento({
       ) : null}
       <dl className="space-y-1">
         {conta.degraus.map((d, i) => {
-          const sinal = d.tipo === "menos" ? "−" : d.tipo === "igual" ? "=" : "";
+          const sinal = d.tipo === "menos" ? "−" : d.tipo === "mais" ? "+" : d.tipo === "igual" ? "=" : "";
           const forte = d.tipo !== "menos";
           const corDoValor = d.final ? c.final : d.tipo === "menos" ? c.menos : c.valor;
           return (
@@ -72,7 +72,7 @@ export default function ContaDoPagamento({
                 {d.nota ? <span className={`block pl-[1.125rem] text-[11px] leading-4 ${c.nota}`}>{d.nota}</span> : null}
               </dt>
               <dd className={`shrink-0 tabular-nums ${forte ? "font-bold" : ""} ${corDoValor}`}>
-                {d.tipo === "menos" ? "− " : ""}
+                {d.tipo === "menos" ? "− " : d.tipo === "mais" ? "+ " : ""}
                 {emEuros(d.valor)}
               </dd>
             </div>

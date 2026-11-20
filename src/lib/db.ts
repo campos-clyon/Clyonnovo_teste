@@ -1534,7 +1534,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 24;
+const VERSAO_DAS_NEGOCIACOES = 25;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1858,6 +1858,14 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN dadosPagamentoConfirmadosEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN dadosPagamentoConfirmadosPor VARCHAR(120) NULL DEFAULT NULL`,
+    /*
+     * v25 (20-11-2026, d78) — O ACORDO FINAL COM O CLIENTE (`acordo-final.ts`):
+     * o valor, sem IVA, que o cliente paga quando fica abaixo do que já se pagou
+     * ao profissional (a CLYON suporta a diferença), e o motivo. Nulas = sem
+     * acordo, a conta de sempre. Aditivas: nada se apaga.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN acordoFinalCliente DECIMAL(10,2) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN acordoFinalMotivo VARCHAR(300) NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);

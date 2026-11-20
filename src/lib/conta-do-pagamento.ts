@@ -11,6 +11,7 @@ import { dividaDoProfissional } from "./divida-do-profissional";
 import { lerForma } from "./forma-de-pagamento";
 import { eSemFactura, modeloDaLinha, paraQueDaLinha } from "./sem-factura";
 import { contaDoValorAcordado, type RegimeDoProfissional } from "./pagamento-directo";
+import { comAcordoFinal, lerAcordoFinal } from "./acordo-final";
 
 /**
  * A CONTA DE UM PAGAMENTO, DEGRAU A DEGRAU — 15-10-2026.
@@ -35,8 +36,12 @@ import { contaDoValorAcordado, type RegimeDoProfissional } from "./pagamento-dir
  */
 
 export type Degrau = {
-  /** «inicio» é o total; «menos» tira-se; «igual» é o resultado até ali. */
-  tipo: "inicio" | "menos" | "igual";
+  /**
+   * «inicio» é o total; «menos» tira-se; «igual» é o resultado até ali; «mais»
+   * soma-se — só no acordo final abaixo do pago ao profissional (d78), o que a
+   * CLYON suporta do seu lado.
+   */
+  tipo: "inicio" | "menos" | "igual" | "mais";
   rotulo: string;
   valor: number;
   /** 0,23 → «23 %». Só nos que são uma percentagem de alguma coisa. */
@@ -333,6 +338,9 @@ export type LinhaDaNegociacao = {
   valorFixoClyon?: unknown;
   taxaClyon?: unknown;
   precoClienteClyon?: unknown;
+  /** O acordo final com o cliente (d78, `acordo-final.ts`) e o motivo. */
+  acordoFinalCliente?: unknown;
+  acordoFinalMotivo?: unknown;
 };
 
 const numero = (v: unknown): number | null => {
@@ -358,6 +366,18 @@ export function contaDaLinha(
   l: LinhaDaNegociacao,
   pago: boolean | null,
   semFacturaPorOmissao = false,
+): ContaDoPagamento | null {
+  const conta = contaDaLinhaSemAcordo(l, pago, semFacturaPorOmissao);
+  // O acordo final com o cliente (d78): o cliente paga o acordo, o profissional o mesmo, a CLYON suporta o resto.
+  const acordo = lerAcordoFinal(l);
+  if (!conta || acordo == null) return conta;
+  return comAcordoFinal(conta, acordo, typeof l.acordoFinalMotivo === "string" ? l.acordoFinalMotivo : null);
+}
+
+function contaDaLinhaSemAcordo(
+  l: LinhaDaNegociacao,
+  pago: boolean | null,
+  semFacturaPorOmissao: boolean,
 ): ContaDoPagamento | null {
   const acordado = numero(l.valorAcordado);
   if (acordado == null) return null;
@@ -403,6 +423,7 @@ export function contaFecha(conta: ContaDoPagamento): boolean {
   for (const d of conta.degraus) {
     if (d.tipo === "inicio") corrente = d.valor;
     else if (d.tipo === "menos") corrente = aosCentimos(corrente - d.valor);
+    else if (d.tipo === "mais") corrente = aosCentimos(corrente + d.valor);
     else if (Math.abs(corrente - d.valor) > 0.005) return false;
   }
   const ultimo = conta.degraus[conta.degraus.length - 1];

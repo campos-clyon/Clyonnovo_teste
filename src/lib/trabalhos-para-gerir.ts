@@ -1,4 +1,5 @@
 import { marcasDasNegociacoes } from "./marcas-da-divida-na-base";
+import { lerAcordoFinal } from "@/lib/acordo-final";
 import { reservasDe } from "@/lib/reserva-na-base";
 import { reservaDaLinha } from "@/lib/reserva";
 import type { MarcaDaParte } from "./cobrancas-ao-profissional";
@@ -166,6 +167,8 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             n.confirmadoEm, n.pagoEm, n.dataCombinada, n.execucaoEnviadaEm, n.feitoEm,
             n.pagamentoParaQue, n.pagamentoComo, n.pagamentoDeclaradoEm, n.pagamentoDeclaradoPor,
             n.createdAt AS negociacaoCriadaEm, n.semFactura, n.motivoSemFactura,
+            -- O acordo final com o cliente, abaixo do pago ao profissional (d78).
+            n.acordoFinalCliente, n.acordoFinalMotivo,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
             n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.motivoTaxaClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
@@ -307,7 +310,7 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       // Num Trabalho CLYON o cliente paga o preço dele com IVA — num antigo, o
       // valor era o do profissional, e a conta das taxas dava outro número.
       clientePaga:
-        trabalhoClyon && conta ? conta.total : valorDoPagamento(contaDoCliente(acordado, taxas), paraQueDaLinha(l), modelo),
+        lerAcordoFinal(l) != null && conta ? conta.total : trabalhoClyon && conta ? conta.total : valorDoPagamento(contaDoCliente(acordado, taxas), paraQueDaLinha(l), modelo),
       ivaIncluido: modelo === "iva_incluido",
       // Com ou sem factura (21-10-2026): muda-se antes de o pagamento do cliente entrar.
       semFactura: eSemFactura(l),
