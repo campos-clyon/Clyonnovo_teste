@@ -72,7 +72,9 @@
     {
       "id": "cliente-2026-11-20",
       "nota": "O IBAN e o MB WAY do parceiro só aparecem no pedido depois de a CLYON os confirmar.\nE revimos os textos da app, agora na grafia do Acordo Ortográfico.",
-      "updates": []
+      "updates": [
+        "01a1faaf-e984-7ea7-b6c3-687c9eefdd45"
+      ]
     },
     {
       "id": "cliente-2026-11-18",
