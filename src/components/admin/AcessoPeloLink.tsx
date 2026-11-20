@@ -50,7 +50,7 @@ export default function AcessoPeloLink({ pedidoId, authHeader }: { pedidoId: num
   }
 
   return (
-    <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700 space-y-2">
+    <div className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] p-2.5 text-xs font-normal text-slate-300 space-y-2">
       <p>
         {telemoveis.length === 0
           ? "A ligação do pedido não está aberta na app em nenhum telemóvel."
@@ -60,7 +60,7 @@ export default function AcessoPeloLink({ pedidoId, authHeader }: { pedidoId: num
       </p>
       <p className="text-slate-500">Se suspeitar que a ligação foi reencaminhada, corte o acesso aqui (reenviar a ligação não desliga os telemóveis).</p>
       <button type="button" disabled={aCortar} onClick={() => void cortar()}
-        className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold text-slate-800 disabled:opacity-50">
+        className="rounded-lg border border-white/15 px-3 py-1.5 font-semibold text-slate-100 hover:bg-white/[0.06] disabled:opacity-50">
         Cortar o acesso pela ligação
       </button>
       {linkNovo && (
@@ -68,7 +68,7 @@ export default function AcessoPeloLink({ pedidoId, authHeader }: { pedidoId: num
           Ligação nova: <span className="font-mono">{linkNovo}</span>
         </p>
       )}
-      {erro && <p className="text-red-600">{erro}</p>}
+      {erro && <p className="text-coral-texto">{erro}</p>}
     </div>
   );
 }

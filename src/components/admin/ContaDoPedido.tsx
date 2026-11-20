@@ -48,7 +48,7 @@ export default function ContaDoPedido({
   }
 
   return (
-    <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2">
+    <div className="mt-2 rounded-lg border border-ambar/30 bg-ambar/14 p-2.5 text-xs font-normal text-ambar-texto space-y-2">
       {pedidaPor ? (
         <>
           <p>
@@ -57,19 +57,19 @@ export default function ContaDoPedido({
           </p>
           <div className="flex gap-2">
             <button type="button" disabled={aEnviar} onClick={() => void agir("aprovar")}
-              className="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">Confirmar</button>
+              className="rounded-lg bg-ambar px-3 py-1.5 font-semibold text-slate-950 disabled:opacity-50">Confirmar</button>
             <button type="button" disabled={aEnviar} onClick={() => void agir("recusar")}
-              className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 font-semibold text-amber-900 disabled:opacity-50">Recusar</button>
+              className="rounded-lg border border-ambar/40 bg-transparent px-3 py-1.5 font-semibold text-ambar-texto disabled:opacity-50">Recusar</button>
           </div>
         </>
       ) : (
         <div className="flex items-center justify-between gap-2">
           <p>Este pedido foi ligado a uma conta pela app.</p>
           <button type="button" disabled={aEnviar} onClick={() => void agir("desligar")}
-            className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 font-semibold text-amber-900 disabled:opacity-50">Desligar da conta</button>
+            className="shrink-0 rounded-lg border border-ambar/40 bg-transparent px-3 py-1.5 font-semibold text-ambar-texto disabled:opacity-50">Desligar da conta</button>
         </div>
       )}
-      {erro && <p className="text-red-700">{erro}</p>}
+      {erro && <p className="text-coral-texto">{erro}</p>}
     </div>
   );
 }

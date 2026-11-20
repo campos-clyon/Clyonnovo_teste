@@ -17,6 +17,7 @@ import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import AvaliacoesAoClienteDoPedido from "@/components/admin/AvaliacoesAoClienteDoPedido";
 import DescricaoDoPedido from "@/components/admin/DescricaoDoPedido";
 import { motivoSeFechar } from "@/components/admin/escolherMotivoDoFecho";
+import { contaDaEstimativa, eurosPt } from "@/lib/conta-da-estimativa";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -164,10 +165,11 @@ function fmt(iso: string) {
     hour: "2-digit", minute: "2-digit",
   });
 }
+// Em pt-PT desde a d77 (21-11-2026): «135,30 €», nunca «135.30 €».
 function fmtEur(v?: string | null) {
   if (!v) return null;
   const n = parseFloat(v);
-  return isNaN(n) ? null : `${n.toFixed(2)} €`;
+  return isNaN(n) ? null : eurosPt(n);
 }
 function parseEstimate(json?: string | null): GeminiEstimate | null {
   try { return json ? JSON.parse(json) : null; } catch { return null; }
@@ -521,13 +523,19 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
    * mesmo: o simulador grava em estimateMax e estimateTotal o preço COM IVA, e
    * o backoffice grava em estimateMax o máximo sem IVA. Por isso os três sem
    * IVA lêem-se da estimativa guardada (estimateJson), que os traz pelo nome.
-   * O mínimo cai na coluna quando falta: essa é sem IVA em todos os caminhos.
+   *
+   * d77 (21-11-2026): o estimateMin do simulador é o valor estimado sem IVA,
+   * não o mínimo da faixa (d59) — já não serve de recurso ao mínimo. O
+   * recomendado e o total com IVA vêm de `contaDaEstimativa`, a mesma conta da
+   * ficha do pedido; e o sem IVA não fica sozinho (o «Total c/IVA» ao lado).
    */
   const emTexto = (n: number | null | undefined) => (n != null ? String(n) : null);
+  const contaDaIa = contaDaEstimativa(order, { comPrecoFinal: false });
   const semIvaDaEstimativa = {
-    minimo: emTexto(est?.estimateMinWithoutVat) ?? order.estimateMin ?? null,
+    minimo: emTexto(est?.estimateMinWithoutVat),
     maximo: emTexto(est?.estimateMaxWithoutVat),
-    recomendado: emTexto(est?.estimatedPriceWithoutVat),
+    recomendado: emTexto(contaDaIa?.semIva),
+    comIva: emTexto(contaDaIa?.comIva),
   };
   const history = parseHistory(order.historyJson);
   const files = parseFiles(order.filesJson);
@@ -758,11 +766,12 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
               {/* Estimativa IA: Mínimo / Máximo / Recomendado + Preço final */}
               <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4">
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Estimativa IA</p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                   {[
                     { label: "Mínimo s/IVA", value: fmtEur(semIvaDaEstimativa.minimo) },
                     { label: "Máximo s/IVA", value: fmtEur(semIvaDaEstimativa.maximo) },
                     { label: "Recomendado s/IVA", value: fmtEur(semIvaDaEstimativa.recomendado), highlight: true },
+                    { label: "Estimativa c/IVA", value: fmtEur(semIvaDaEstimativa.comIva) },
                     { label: "Preço final s/IVA", value: fmtEur(order.precoFinal) },
                     { label: "Preço final c/IVA", value: fmtEur(order.precoFinalIva) },
                   ].map((item) => (
@@ -1040,7 +1049,7 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
                   </div>
                   <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Total c/IVA</p>
-                    <p className="mt-1.5 text-lg font-bold text-slate-200">{est?.estimatedPriceWithVat != null ? fmtEur(String(est.estimatedPriceWithVat)) : "—"}</p>
+                    <p className="mt-1.5 text-lg font-bold text-slate-200">{fmtEur(semIvaDaEstimativa.comIva) ?? "—"}</p>
                   </div>
                 </div>
               </div>

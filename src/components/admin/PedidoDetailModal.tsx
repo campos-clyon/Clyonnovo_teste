@@ -10,8 +10,7 @@ import VisorDeFotos from "@/components/VisorDeFotos";
 import { CartaoDoDocumento, Miniatura } from "@/components/Anexo";
 import { especieDoAnexo } from "@/lib/tipo-ficheiro";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
-import { tElevator, tParking, tUrgency, tService, tEntulho } from "@/lib/translations";
-import { firstPositive, legacyPriceText } from "@/lib/quote-price";
+import { tElevator, tParking, tUrgency, tEntulho } from "@/lib/translations";
 import { ELEVATOR_VALUES, PARKING_VALUES, isUnknownAccessValue, origemDoPedido } from "@/lib/acesso";
 import { canalDoPedido, origemDoCodigoDoPedido } from "@/lib/canal-do-pedido";
 import { mensagemWhatsApp } from "@/lib/mensagem-whatsapp";
@@ -23,6 +22,7 @@ import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import { SACOS_POR_BIG_BAG, sacosDeBigBags } from "@/lib/sacos-de-entulho";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import DescricaoDoPedido from "@/components/admin/DescricaoDoPedido";
+import { contaDaEstimativa, desdobramentoDaConta, eurosPt, valorPt } from "@/lib/conta-da-estimativa";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,21 +160,22 @@ type GeminiEstimate = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// d77 (21-11-2026): os estados na paleta do backoffice escuro (@theme do globals.css).
 const STATUS_CFG: Record<OrderStatus, { label: string; dot: string; badge: string }> = {
-  sem_assistente:         { label: "Por atribuir",        dot: "bg-yellow-500",  badge: "bg-yellow-50 border-yellow-200 text-yellow-700" },
-  pendente:               { label: "Pendente",            dot: "bg-amber-500",   badge: "bg-amber-50 border-amber-200 text-amber-700" },
-  atribuido:              { label: "Atribuído",           dot: "bg-sky-500",     badge: "bg-sky-50 border-sky-200 text-sky-700" },
-  em_analise:             { label: "Em análise",          dot: "bg-violet-500",  badge: "bg-violet-50 border-violet-200 text-violet-700" },
-  precisa_info:           { label: "Precisa info",        dot: "bg-orange-500",  badge: "bg-orange-50 border-orange-200 text-orange-700" },
-  estimativa_pronta:      { label: "Estimativa pronta",   dot: "bg-teal-500",    badge: "bg-teal-50 border-teal-200 text-teal-700" },
-  presencial_recomendado: { label: "Presencial rec.",     dot: "bg-indigo-500",  badge: "bg-indigo-50 border-indigo-200 text-indigo-700" },
-  aprovado:               { label: "Aprovado",            dot: "bg-cyan-500",    badge: "bg-cyan-50 border-cyan-200 text-cyan-700" },
-  enviado_cliente:        { label: "Enviado",             dot: "bg-blue-500",    badge: "bg-blue-50 border-blue-200 text-blue-700" },
-  confirmado:             { label: "Confirmado",          dot: "bg-green-500",   badge: "bg-green-50 border-green-200 text-green-700" },
-  em_execucao:            { label: "Em execução",         dot: "bg-lime-500",    badge: "bg-lime-50 border-lime-200 text-lime-700" },
-  concluido:              { label: "Concluído",           dot: "bg-emerald-500", badge: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-  cancelado:              { label: "Cancelado",           dot: "bg-slate-400",   badge: "bg-slate-100 border-slate-200 text-slate-500" },
-  rejeitado:              { label: "Rejeitado",           dot: "bg-red-500",     badge: "bg-red-50 border-red-200 text-red-700" },
+  sem_assistente:         { label: "Por atribuir",        dot: "bg-ambar",     badge: "bg-ambar/14 border-ambar/30 text-ambar-texto" },
+  pendente:               { label: "Pendente",            dot: "bg-ambar",     badge: "bg-ambar/14 border-ambar/30 text-ambar-texto" },
+  atribuido:              { label: "Atribuído",           dot: "bg-azul",      badge: "bg-azul/14 border-azul/30 text-azul-texto" },
+  em_analise:             { label: "Em análise",          dot: "bg-violeta",   badge: "bg-violeta/14 border-violeta/30 text-violeta-texto" },
+  precisa_info:           { label: "Precisa info",        dot: "bg-laranja",   badge: "bg-laranja/14 border-laranja/30 text-laranja-texto" },
+  estimativa_pronta:      { label: "Estimativa pronta",   dot: "bg-ciano",     badge: "bg-ciano/14 border-ciano/30 text-ciano-texto" },
+  presencial_recomendado: { label: "Presencial rec.",     dot: "bg-magenta",   badge: "bg-magenta/14 border-magenta/30 text-magenta-texto" },
+  aprovado:               { label: "Aprovado",            dot: "bg-esmeralda", badge: "bg-esmeralda/14 border-esmeralda/30 text-esmeralda-texto" },
+  enviado_cliente:        { label: "Enviado",             dot: "bg-azul",      badge: "bg-azul/14 border-azul/30 text-azul-texto" },
+  confirmado:             { label: "Confirmado",          dot: "bg-esmeralda", badge: "bg-esmeralda/14 border-esmeralda/30 text-esmeralda-texto" },
+  em_execucao:            { label: "Em execução",         dot: "bg-lima",      badge: "bg-lima/14 border-lima/30 text-lima-texto" },
+  concluido:              { label: "Concluído",           dot: "bg-esmeralda", badge: "bg-esmeralda/14 border-esmeralda/30 text-esmeralda-texto" },
+  cancelado:              { label: "Cancelado",           dot: "bg-ardosia",   badge: "bg-ardosia/14 border-ardosia/30 text-ardosia-texto" },
+  rejeitado:              { label: "Rejeitado",           dot: "bg-coral",     badge: "bg-coral/14 border-coral/30 text-coral-texto" },
 };
 
 const ALL_STATUSES: OrderStatus[] = [
@@ -201,7 +202,7 @@ const DIFFICULTY_LABEL: Record<number, string> = {
   1: "Muito fácil", 2: "Fácil", 3: "Moderado", 4: "Difícil", 5: "Muito difícil",
 };
 const DIFFICULTY_COLOR: Record<number, string> = {
-  1: "text-emerald-400", 2: "text-green-400", 3: "text-amber-400", 4: "text-orange-400", 5: "text-red-400",
+  1: "text-esmeralda-texto", 2: "text-lima-texto", 3: "text-ambar-texto", 4: "text-laranja-texto", 5: "text-coral-texto",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -221,10 +222,11 @@ function fmt(iso: string) {
 }
 // `if (!v)` deixava passar "0"/"0.00" (strings truthy) e os cartões mostravam
 // "0,00 €". Zero não é preço — tratar como ausente para as cadeias `??` caírem.
-function fmtEur(v?: string | null) {
-  if (!v) return null;
-  const n = parseFloat(v);
-  return isNaN(n) || n <= 0 ? null : `${n.toFixed(2)} €`;
+// Em pt-PT desde a d77: «135,30 €», nunca «135.30 €».
+function fmtEur(v?: string | number | null) {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : parseFloat(v);
+  return isNaN(n) || n <= 0 ? null : eurosPt(n);
 }
 function parseEstimate(json?: string | null): GeminiEstimate | null {
   try { return json ? JSON.parse(json) : null; } catch { return null; }
@@ -313,14 +315,35 @@ function ReadonlyField({ label, value }: { label: string; value?: string | null 
   return (
     <div className="space-y-1">
       <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</p>
-      <p className="text-sm font-medium text-slate-800">{value || "—"}</p>
+      <p className="text-sm font-medium text-slate-100">{value || "—"}</p>
     </div>
   );
 }
 
-const inputCls = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition";
-const selectCls = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition appearance-none cursor-pointer";
-const optionCls = "bg-white text-slate-900";
+/**
+ * Um cartão pequeno da grelha do «Geral» (d77): o rótulo e o valor, sem caixa
+ * grande nem espaço vazio. `largo` ocupa duas colunas.
+ */
+function Cartao({ rotulo, largo, children }: { rotulo: string; largo?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={`min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 ${largo ? "col-span-2" : ""}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{rotulo}</p>
+      <div className="mt-1 text-sm font-semibold text-slate-100">{children}</div>
+    </div>
+  );
+}
+
+// Os campos no fundo escuro; `[color-scheme:dark]` põe escuros também o calendário e o relógio do navegador.
+const inputCls = "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 [color-scheme:dark] focus:border-ciano/60 focus:outline-none focus:ring-2 focus:ring-ciano/20 transition";
+const selectCls = "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-100 [color-scheme:dark] focus:border-ciano/60 focus:outline-none focus:ring-2 focus:ring-ciano/20 transition appearance-none cursor-pointer";
+const optionCls = "bg-[#0d1726] text-slate-100";
+
+/*
+ * A barra de cima (d77): os botões TODOS do mesmo tamanho — a mesma altura, e a
+ * mesma largura (a da grelha no telemóvel, fixa a partir do sm).
+ */
+const BOTAO_DA_BARRA =
+  "inline-flex h-9 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-2 text-xs font-semibold transition disabled:opacity-60 sm:w-[8.75rem] sm:px-3";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -811,16 +834,20 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
       // Extrair valores numéricos para preencher campos da DB automaticamente
       const recommended = typeof data.estimatedPriceWithoutVat === "number" ? data.estimatedPriceWithoutVat : null;
-      const minVal = typeof data.estimateMinWithoutVat === "number" ? data.estimateMinWithoutVat : recommended;
-      const maxVal = typeof data.estimateMaxWithoutVat === "number" ? data.estimateMaxWithoutVat : recommended;
       const withVat = typeof data.estimatedPriceWithVat === "number" ? data.estimatedPriceWithVat : (recommended ? Math.round(recommended * 1.23 * 100) / 100 : null);
 
-      // Guardar estimateJson + campos DECIMAL na mesma operação
+      /*
+       * Guardar estimateJson + campos DECIMAL na mesma operação, com o que cada
+       * coluna guarda no simulador (d59; d77, 21-11-2026): estimateMin = o valor
+       * SEM IVA, estimateMax e estimateTotal = COM IVA. Gravava aqui a faixa e o
+       * sem IVA no estimateTotal — e quem lê o estimateTotal como com IVA (a
+       * ficha, a promoção à Mesa) dividia um sem IVA por 1,23. A faixa do motor
+       * fica no estimateJson (estimateMin/MaxWithoutVat).
+       */
       const patchBody: Record<string, unknown> = {
         estimateJson: JSON.stringify(data),
-        ...(minVal !== null ? { estimateMin: String(minVal) } : {}),
-        ...(maxVal !== null ? { estimateMax: String(maxVal) } : {}),
-        ...(recommended !== null ? { estimateTotal: String(recommended) } : {}),
+        ...(recommended !== null ? { estimateMin: String(recommended) } : {}),
+        ...(withVat !== null ? { estimateMax: String(withVat), estimateTotal: String(withVat) } : {}),
         // Pré-preencher precoFinal/precoFinalIva como sugestão (admin pode editar)
         ...(recommended !== null ? { precoFinal: String(recommended) } : {}),
         ...(withVat !== null ? { precoFinalIva: String(withVat) } : {}),
@@ -860,7 +887,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       } else if (isRef) {
         setSaveMsg("Estimativa de referência gerada — confirme antes de enviar ao cliente.");
       } else if (recommended) {
-        setSaveMsg(`Estimativa calculada: ${recommended} € s/IVA (${withVat} € c/IVA). Pode editar antes de guardar.`);
+        setSaveMsg(`Estimativa calculada: ${eurosPt(recommended)} + IVA = ${eurosPt(withVat)}. Pode editar antes de guardar.`);
       } else {
         setSaveMsg("Estimativa calculada com sucesso pelo Gemini.");
       }
@@ -1224,16 +1251,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
     }
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────���
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    // Ecrã inteiro, como o resto do backoffice.
-    //
-    // Estava limitado a 1800px de largura e 97% da altura, com margem à
-    // volta e cantos arredondados. Num monitor grande sobrava moldura e
-    // faltava espaço à informação — e o pedido é o ecrã onde se trabalha
-    // mais tempo, não uma caixa de confirmação.
-    <div className="fixed inset-0 z-50 bg-[#e8e8ff]">
+    // Ecrã inteiro, como o resto do backoffice — e, desde a d77 (21-11-2026),
+    // no mesmo fundo escuro e na paleta do @theme, como a página
+    // /admin/pedidos/[id].
+    <div className="fixed inset-0 z-50 bg-[#070e17] text-slate-200">
       {avisoDeData}
       <div
         className="relative flex h-full w-full flex-col overflow-hidden"
@@ -1242,24 +1266,24 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
         {/* ── Loading ── */}
         {loading && (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 py-24">
-            <svg className="h-8 w-8 animate-spin text-cyan-400" fill="none" viewBox="0 0 24 24">
+            <svg className="h-8 w-8 animate-spin text-ciano" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <p className="text-sm text-slate-500">A carregar pedido...</p>
+            <p className="text-sm text-slate-400">A carregar pedido...</p>
           </div>
         )}
 
         {/* ── Error ── */}
         {!loading && error && !order && (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-red-400/20 bg-red-400/10">
-              <svg className="h-7 w-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-coral/30 bg-coral/14">
+              <svg className="h-7 w-7 text-coral-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <p className="text-base font-semibold text-slate-900">{error}</p>
-            <button onClick={onClose} className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">Fechar</button>
+            <p className="text-base font-semibold text-white">{error}</p>
+            <button onClick={onClose} className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] transition">Fechar</button>
           </div>
         )}
 
@@ -1291,11 +1315,17 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               pedidoCriadoEm: order.createdAt ?? null,
             }),
           );
+          const iconeWhatsApp = (
+            <svg className="hidden h-3.5 w-3.5 sm:block" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.845L.057 23.455a.5.5 0 00.614.6l5.757-1.508A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.933 0-3.746-.523-5.302-1.434l-.38-.222-3.938 1.031 1.046-3.82-.247-.393A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+            </svg>
+          );
 
           return (
-            <div className="flex flex-col" style={{ height: "94vh", maxHeight: "94vh" }}>
-              {/* ── Header (compacto — 1 linha) ── */}
-              <div className="flex-shrink-0 border-b border-slate-100 px-4 py-2.5 sm:px-5">
+            <div className="flex h-full min-h-0 flex-col">
+              {/* ── Cabeçalho ── */}
+              <div className="flex-shrink-0 border-b border-white/[0.06] px-4 py-3 sm:px-5">
                 {/*
                   EMPILHADO em telemóvel, uma linha só a partir de lg.
 
@@ -1307,9 +1337,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                   que cabe.
                 */}
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
-                  <div className="min-w-0 flex items-center gap-3 flex-wrap">
+                  <div className="flex min-w-0 items-start justify-between gap-3 lg:w-[17rem] lg:flex-shrink-0">
                     <div className="min-w-0">
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-400 leading-tight">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 leading-tight">
                         {/* Dizia "Simulador" a todos os pedidos. Um contacto
                             de quatro campos parecia um pedido do simulador com
                             tudo em falta — e a equipa procurava dados que
@@ -1324,153 +1354,166 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           Origem: {origemDoCodigoDoPedido(order.rawOrderJson)}
                         </p>
                       )}
-                      <h2 className="text-base font-bold text-slate-900 truncate leading-tight">
+                      <h2 className="mt-0.5 truncate text-lg font-bold leading-tight text-white">
                         {shouldMask ? _maskName(order.contactName) : (order.contactName ?? "Cliente sem nome")}
                       </h2>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <StatusBadge status={order.status} />
+                        {order.priority && order.priority !== "normal" && (
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                            order.priority === "urgente" ? "text-coral-texto" :
+                            order.priority === "alta" ? "text-ambar-texto" : "text-slate-500"
+                          }`}>{order.priority}</span>
+                        )}
+                        {order.assignedToName ? (
+                          <span className="truncate text-[11px] font-semibold text-azul-texto">{order.assignedToName}</span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-ambar-texto">Fila geral</span>
+                        )}
+                        <span className="text-[11px] text-slate-400">Entrou a {fmt(order.createdAt)}</span>
+                      </div>
                     </div>
-                    <StatusBadge status={order.status} />
-                    {order.priority && order.priority !== "normal" && (
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                        order.priority === "urgente" ? "text-red-600" :
-                        order.priority === "alta" ? "text-amber-600" : "text-slate-500"
-                      }`}>{order.priority}</span>
-                    )}
-                    {order.assignedToName ? (
-                      <span className="text-[11px] text-slate-500 truncate">
-                        <span className="font-semibold text-sky-600">{order.assignedToName}</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-[10px] font-semibold text-yellow-700">
-                        Fila geral
-                      </span>
-                    )}
-                    <span className="text-[10px] text-slate-400">{fmt(order.createdAt)}</span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 lg:flex-shrink-0">
-                    {/* Aceitar — marca o pedido como tomado por quem está a
-                        trabalhar nele. Antes só aparecia ao assistente com o
-                        pedido na fila geral; sem essa função, é a administração
-                        que o toma. */}
-                    {!order.assignedToId && (
-                      <button
-                        onClick={handleAccept}
-                        disabled={accepting}
-                        className="flex items-center gap-1.5 rounded-xl bg-cyan-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {accepting ? "A aceitar..." : "Aceitar pedido"}
-                      </button>
-                    )}
-                    {/* Guardar */}
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="flex items-center gap-1.5 rounded-xl bg-cyan-400 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition"
-                    >
-                      {saving ? (
-                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                      ) : (
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                      Guardar
-                    </button>
-                    {/* Aprovar */}
-                    <button
-                      onClick={() => handleStatusQuick("aprovado")}
-                      disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Aprovar
-                    </button>
-                    {/* Pedir info */}
-                    <button
-                      onClick={() => { setPedirInfoText(""); setShowPedirInfo(true); }}
-                      disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-xl border border-orange-400/30 bg-orange-400/10 px-3 py-1.5 text-xs font-semibold text-orange-300 hover:bg-orange-400/20 disabled:opacity-60 transition"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Pedir info
-                    </button>
-                    {/* Arquivar */}
-                    <button
-                      onClick={handleReject}
-                      disabled={saving}
-                      className="hidden sm:flex items-center gap-1.5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-400/20 disabled:opacity-60 transition"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M6 8l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M10 12h4" />
-                      </svg>
-                      Arquivar
-                    </button>
-                    {/* WhatsApp */}
-                    {shouldMask ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowAcceptPrompt(true)}
-                        className="hidden md:flex items-center gap-1.5 rounded-xl border border-green-400/30 bg-green-400/10 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/20 transition"
-                      >
-                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.845L.057 23.455a.5.5 0 00.614.6l5.757-1.508A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.933 0-3.746-.523-5.302-1.434l-.38-.222-3.938 1.031 1.046-3.82-.247-.393A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-                        </svg>
-                        WhatsApp
-                      </button>
-                    ) : (
-                      <a
-                        href={`https://wa.me/${waPhone}?text=${waMsg}`}
-                        target="_blank" rel="noreferrer"
-                        className="hidden md:flex items-center gap-1.5 rounded-xl border border-green-400/30 bg-green-400/10 px-3 py-1.5 text-xs font-semibold text-green-300 hover:bg-green-400/20 transition"
-                      >
-                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.528 5.845L.057 23.455a.5.5 0 00.614.6l5.757-1.508A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.933 0-3.746-.523-5.302-1.434l-.38-.222-3.938 1.031 1.046-3.82-.247-.393A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-                        </svg>
-                        WhatsApp
-                      </a>
-                    )}
-                    {/* Agendar serviço — pedido aprovado/confirmado/em_execucao */}
-                    {(["aprovado", "confirmado", "em_execucao"].includes(order.status) || !!order.scheduledDate) && (
-                        /* Both states (scheduled or not) open the confirm modal.
-                           "Abrir no Google Calendar" is shown after scheduling inside the modal itself. */
-                        <button
-                          onClick={openCalendarModal}
-                          className="hidden lg:flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-400/10 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-400/20 transition"
-                          title={order.calendarEventId ? `Atualizar agenda (agendado para ${order.scheduledDate} ${order.scheduledStartTime}–${order.scheduledEndTime})` : "Agendar no Google Calendar"}
-                        >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {order.calendarEventId ? "Atualizar agenda" : "Agendar no Google Calendar"}
-                        </button>
-                      )
-                    }
-                    {/* Excluir — apenas admin geral, e só onde este ecrã é a porta do apagar */}
-                    {isAdmin && permitirApagar && <button
-                      onClick={() => setShowDelete(true)}
-                      className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Apagar
-                    </button>}
                     {/* Fechar */}
                     <button
                       onClick={onClose}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition"
+                      title="Fechar"
+                      aria-label="Fechar"
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] hover:text-white transition lg:hidden"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/*
+                    A barra das acções (d77): as mesmas de sempre, com as
+                    mesmas guardas, todas do mesmo tamanho — e todas à vista
+                    também no telemóvel (Aprovar, Pedir info, Arquivar e o
+                    WhatsApp escondiam-se abaixo do sm/md).
+                  */}
+                  <div className="flex items-center gap-1.5 lg:min-w-0 lg:flex-1 lg:justify-end">
+                    <div className="grid flex-1 grid-cols-3 gap-1.5 sm:flex sm:flex-1 sm:flex-wrap sm:items-center lg:justify-end">
+                      {/* Aceitar — marca o pedido como tomado por quem está a
+                          trabalhar nele. Antes só aparecia ao assistente com o
+                          pedido na fila geral; sem essa função, é a administração
+                          que o toma. */}
+                      {!order.assignedToId && (
+                        <button
+                          onClick={handleAccept}
+                          disabled={accepting}
+                          className={`${BOTAO_DA_BARRA} border-ciano/40 bg-ciano/14 text-ciano-texto hover:bg-ciano/25`}
+                        >
+                          <svg className="hidden h-3.5 w-3.5 sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {accepting ? "A aceitar..." : "Aceitar pedido"}
+                        </button>
+                      )}
+                      {/* Guardar */}
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className={`${BOTAO_DA_BARRA} border-transparent bg-acao text-white hover:bg-acao-hover`}
+                      >
+                        {saving ? (
+                          <svg className="hidden h-3.5 w-3.5 animate-spin sm:block" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                        ) : (
+                          <svg className="hidden h-3.5 w-3.5 sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        Guardar
+                      </button>
+                      {/* Aprovar */}
+                      <button
+                        onClick={() => handleStatusQuick("aprovado")}
+                        disabled={saving}
+                        className={`${BOTAO_DA_BARRA} border-esmeralda/30 bg-esmeralda/14 text-esmeralda-texto hover:bg-esmeralda/25`}
+                      >
+                        <svg className="hidden h-3.5 w-3.5 sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Aprovar
+                      </button>
+                      {/* Pedir info */}
+                      <button
+                        onClick={() => { setPedirInfoText(""); setShowPedirInfo(true); }}
+                        disabled={saving}
+                        className={`${BOTAO_DA_BARRA} border-laranja/30 bg-laranja/14 text-laranja-texto hover:bg-laranja/25`}
+                      >
+                        <svg className="hidden h-3.5 w-3.5 sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Pedir info
+                      </button>
+                      {/* Arquivar */}
+                      <button
+                        onClick={handleReject}
+                        disabled={saving}
+                        className={`${BOTAO_DA_BARRA} border-ardosia/30 bg-ardosia/14 text-ardosia-texto hover:bg-ardosia/25`}
+                      >
+                        <svg className="hidden h-3.5 w-3.5 sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M6 8l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M10 12h4" />
+                        </svg>
+                        Arquivar
+                      </button>
+                      {/* WhatsApp */}
+                      {shouldMask ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowAcceptPrompt(true)}
+                          className={`${BOTAO_DA_BARRA} border-whatsapp/30 bg-whatsapp/14 text-whatsapp hover:bg-whatsapp/25`}
+                        >
+                          {iconeWhatsApp}
+                          WhatsApp
+                        </button>
+                      ) : (
+                        <a
+                          href={`https://wa.me/${waPhone}?text=${waMsg}`}
+                          target="_blank" rel="noreferrer"
+                          className={`${BOTAO_DA_BARRA} border-whatsapp/30 bg-whatsapp/14 text-whatsapp hover:bg-whatsapp/25`}
+                        >
+                          {iconeWhatsApp}
+                          WhatsApp
+                        </a>
+                      )}
+                      {/* Agendar serviço — pedido aprovado/confirmado/em_execucao */}
+                      {(["aprovado", "confirmado", "em_execucao"].includes(order.status) || !!order.scheduledDate) && (
+                          /* Both states (scheduled or not) open the confirm modal.
+                             "Abrir no Google Calendar" is shown after scheduling inside the modal itself. */
+                          <button
+                            onClick={openCalendarModal}
+                            className={`${BOTAO_DA_BARRA} border-violeta/30 bg-violeta/14 text-violeta-texto hover:bg-violeta/25`}
+                            title={order.calendarEventId ? `Atualizar agenda (agendado para ${order.scheduledDate} ${order.scheduledStartTime}–${order.scheduledEndTime})` : "Agendar no Google Calendar"}
+                          >
+                            <svg className="hidden h-3.5 w-3.5 sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {order.calendarEventId ? "Reagendar" : "Agendar"}
+                          </button>
+                        )
+                      }
+                      {/* Excluir — apenas admin geral, e só onde este ecrã é a porta do apagar */}
+                      {isAdmin && permitirApagar && <button
+                        onClick={() => setShowDelete(true)}
+                        className={`${BOTAO_DA_BARRA} border-coral/30 bg-coral/14 text-coral-texto hover:bg-coral/25`}
+                      >
+                        <svg className="hidden h-3.5 w-3.5 sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Apagar
+                      </button>}
+                    </div>
+                    {/* Fechar (no ecrã largo, ao fim da barra) */}
+                    <button
+                      onClick={onClose}
+                      title="Fechar"
+                      aria-label="Fechar"
+                      className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08] hover:text-white transition lg:flex"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1482,19 +1525,19 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
               {/* Mensagens de estado (accept / save / error) — strip fina abaixo do header */}
               {(acceptMsg || saveMsg || (error && !showDelete)) && (
-                <div className="flex-shrink-0 border-b border-slate-100 px-5 py-1.5 flex flex-wrap items-center gap-2">
+                <div className="flex-shrink-0 border-b border-white/[0.06] px-5 py-1.5 flex flex-wrap items-center gap-2">
                   {acceptMsg && (
-                    <span className="rounded-md border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-[11px] font-semibold text-cyan-700">
+                    <span className="rounded-md border border-ciano/30 bg-ciano/14 px-2 py-0.5 text-[11px] font-semibold text-ciano-texto">
                       {acceptMsg}
                     </span>
                   )}
                   {saveMsg && (
-                    <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <span className="rounded-md border border-esmeralda/30 bg-esmeralda/14 px-2 py-0.5 text-[11px] font-semibold text-esmeralda-texto">
                       {saveMsg}
                     </span>
                   )}
                   {error && !showDelete && (
-                    <span className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                    <span className="rounded-md border border-coral/30 bg-coral/14 px-2 py-0.5 text-[11px] font-semibold text-coral-texto">
                       {error}
                     </span>
                   )}
@@ -1509,8 +1552,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                   (e) => e.type === "client_reply" && new Date(e.createdAt).getTime() > lastReadAt
                 ).length;
                 return (
-                  <div className="flex-shrink-0 overflow-x-auto border-b border-slate-100 px-6">
-                    <div className="flex gap-0.5 py-2">
+                  <div className="flex-shrink-0 overflow-x-auto border-b border-white/[0.06] px-4 sm:px-5">
+                    <div className="flex gap-1 py-2">
                       {TABS.map((tab) => {
                         const isDisabled = shouldMask && tab.id === "cliente_morada";
                         const showBadge = tab.id === "historico" && unreadClientReplies > 0;
@@ -1536,12 +1579,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             }}
                             disabled={isDisabled}
                             title={isDisabled ? "Aceite o pedido para ver os dados completos do cliente" : undefined}
-                            className={`relative flex-shrink-0 rounded-[12px] px-4 py-1.5 text-xs font-semibold transition ${
+                            className={`relative flex-shrink-0 rounded-xl border px-3.5 py-1.5 text-xs font-semibold transition ${
                               activeTab === tab.id
-                                ? "bg-cyan-400 text-slate-950"
+                                ? "border-ciano/40 bg-ciano/14 text-ciano-texto"
                                 : isDisabled
-                                ? "text-slate-300 cursor-not-allowed opacity-60"
-                                : "text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+                                ? "border-transparent text-slate-600 cursor-not-allowed opacity-60"
+                                : "border-transparent text-slate-400 hover:bg-white/[0.06] hover:text-slate-100"
                             }`}
                           >
                             {isDisabled && (
@@ -1551,7 +1594,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             )}
                             {tab.label}
                             {showBadge && (
-                              <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                              <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-[#070e17]">
                                 {unreadClientReplies > 9 ? "9+" : unreadClientReplies}
                               </span>
                             )}
@@ -1564,9 +1607,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               })()}
 
               {/* ── Tab Content ── */}
-              <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
 
-                {/* ── Aba 1: Geral ─────────────────────���───────────────────── */}
+                {/* ── Aba 1: Geral ──────────────────────────────────────────── */}
                 {activeTab === "geral" && (() => {
                   const raw = parseRawOrder(order.rawOrderJson);
                   const isMov = isMudanca(order.serviceType);
@@ -1574,463 +1617,355 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                   const destAddr = raw.destinationAddress?.formattedAddress ?? raw.destinationAddress?.address;
                   const movDist = raw.movingDistance?.distanceText ?? (order.distanceKm ? `${order.distanceKm} km` : null);
                   const estVal = parseEstimate(order.estimateJson);
-                  // Base s/IVA: primeiro valor POSITIVO; se os totais vierem a
-                  // 0, cai para o extremo inferior do intervalo em vez de
-                  // calcular IVA sobre zero e mostrar três cartões a 0,00 €.
-                  const baseNoVat = firstPositive(
-                    order.precoFinal, order.estimateTotal, order.estimateMin,
-                  );
-                  const vatAmount = estVal?.vatAmount ?? (baseNoVat != null ? baseNoVat * 0.23 : null);
-                  const totalWithVat = estVal?.estimatedPriceWithVat ?? (baseNoVat != null ? baseNoVat * 1.23 : null);
-                  const priceText = legacyPriceText(order);
+                  /*
+                   * A CONTA DA ESTIMATIVA — d77, 21-11-2026. O #653 dizia
+                   * «Estimativa s/IVA 135,30 € · IVA 25,30 € · total 135.30 €»:
+                   * o estimateTotal é COM IVA (110,00 + 25,30) e era lido como
+                   * sem IVA. A conta vem toda de `contaDaEstimativa`, que lê
+                   * cada coluna pelo que ela guarda (conta-da-estimativa.ts).
+                   */
+                  const contaGeral = contaDaEstimativa(order);
+                  const historicoCurto = [
+                    { label: "Pedido criado", date: order.createdAt, color: "bg-ardosia" },
+                    ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "alguém da equipa"}`, date: order.assignedAt, color: "bg-azul" }] : []),
+                    ...(order.status === "aprovado" ? [{ label: "Orçamento aprovado", date: order.updatedAt, color: "bg-esmeralda" }] : []),
+                    ...(order.status === "confirmado" ? [{ label: "Confirmado", date: order.updatedAt, color: "bg-esmeralda" }] : []),
+                    ...(order.status === "em_execucao" ? [{ label: "Em execução", date: order.updatedAt, color: "bg-lima" }] : []),
+                    ...(order.status === "concluido" ? [{ label: "Concluído", date: order.updatedAt, color: "bg-esmeralda" }] : []),
+                  ].slice(0, 5);
 
                   return (
-                  <div className="space-y-5">
+                  <div className="space-y-3">
 
-                    {/* Top info cards */}
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                      {[
-                        { icon: "🔧", label: "Tipo de serviço", value: getServiceLabel(order.serviceType), accent: "text-cyan-400" },
-                        { icon: "📋", label: "Pedido nº", value: `#${order.id}`, accent: "text-slate-800" },
-                        { icon: "📅", label: "Data de entrada", value: fmt(order.createdAt), accent: "text-slate-800" },
-                        { icon: "👤", label: "Cliente", value: shouldMask ? _maskName(order.contactName) : (order.contactName ?? "—"), accent: "text-slate-900" },
-                        { icon: "📊", label: "Estado", value: STATUS_CFG[order.status]?.label ?? order.status, accent: "text-cyan-700" },
-                      ].map((c) => (
-                        <div key={c.label} className="rounded-[16px] border border-slate-100 bg-slate-50/50 p-3.5">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-sm">{c.icon}</span>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-600">{c.label}</p>
-                          </div>
-                          <p className={`text-sm font-bold ${c.accent} truncate`}>{c.value}</p>
-                        </div>
-                      ))}
+                    {/* 1. O que se decide: a estimativa, o serviço, a urgência e o NIF na fatura. */}
+                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+                      <Cartao rotulo={contaGeral?.fonte === "preco_final" ? "Preço" : "Estimativa"} largo>
+                        {contaGeral ? (
+                          <>
+                            <p className="text-xl font-bold text-esmeralda-texto">
+                              {eurosPt(contaGeral.comIva)} <span className="text-xs font-semibold text-slate-400">com IVA</span>
+                            </p>
+                            <p className="mt-0.5 text-[11px] font-medium text-slate-400">{desdobramentoDaConta(contaGeral)}</p>
+                          </>
+                        ) : (
+                          <p className="text-slate-500">Sem valor</p>
+                        )}
+                      </Cartao>
+                      <Cartao rotulo="Serviço">{getServiceLabel(order.serviceType)}</Cartao>
+                      <Cartao rotulo="Urgência">{tUrgency(order.urgency) ?? "Normal"}</Cartao>
+                      <Cartao rotulo="NIF na fatura">
+                        {order.precisaFatura == null ? (
+                          <span className="font-medium text-slate-500">Não respondeu</span>
+                        ) : (
+                          <span className={order.precisaFatura ? "text-ciano-texto" : "text-slate-100"}>
+                            {order.precisaFatura
+                              ? order.nifFactura
+                                ? `Sim — NIF ${order.nifFactura}`
+                                : "Sim — pedir o NIF"
+                              : "Não (consumidor final)"}
+                          </span>
+                        )}
+                      </Cartao>
+                      <Cartao rotulo="Conta gastar">
+                        {order.valorDesejadoCliente == null ||
+                        order.valorDesejadoCliente === "" ? (
+                          <span className="font-medium text-slate-500">Não disse</span>
+                        ) : order.valorDoClienteComIva != null && order.valorDoClienteComIva !== "" ? (
+                          <>
+                            {valorPt(order.valorDoClienteComIva)} € com IVA
+                            <span className="block text-[11px] font-normal text-slate-400">
+                              (para o profissional: {valorPt(order.valorDesejadoCliente)} € sem IVA)
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {eurosPt(order.valorDesejadoCliente)}
+                            <span className="block text-[11px] font-normal text-slate-400">
+                              (não entra no cálculo)
+                            </span>
+                          </>
+                        )}
+                      </Cartao>
                     </div>
 
-                    {/* Estimate cards */}
-                    {/* Guard por valor POSITIVO (ou intervalo): "0.00" é uma
-                        string truthy e mostrava os três cartões a zero */}
-                    {priceText && (
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="rounded-[16px] border border-emerald-400/20 bg-emerald-400/[0.06] p-4">
-                          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
-                            {fmtEur(order.precoFinal) ? "Preço s/IVA" : "Estimativa s/IVA"}
-                          </p>
-                          <p className="mt-1.5 text-xl font-bold text-emerald-700">
-                            {priceText}
-                          </p>
+                    {/* A descrição, logo a seguir: é sobre ela que se decide. */}
+                    {(order.description || order.descricaoOriginal) && (
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Descrição</p>
+                        <DescricaoDoPedido
+                          pedidoId={order.id}
+                          token={token}
+                          descricao={order.description}
+                          original={order.descricaoOriginal}
+                          lingua={order.linguaDaDescricao}
+                          porTraduzir={order.descricaoPorTraduzir}
+                          noutraLingua={order.descricaoNoutraLingua}
+                          onTraduzida={() => void fetchOrder()}
+                          escuro
+                        />
+                      </div>
+                    )}
+
+                    {/* Preço e notas internas */}
+                    {isAdmin && (
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Preço e notas internas</p>
+                        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+                          <Field label="Preço final sem IVA (€)">
+                            <input type="number" step="0.01" min="0" value={editPrecoFinal} onChange={(e) => setEditPrecoFinal(e.target.value)} className={inputCls} placeholder="0,00" />
+                          </Field>
+                          <Field label="Preço final com IVA (€)">
+                            <input type="number" step="0.01" min="0" value={editPrecoFinalIva} onChange={(e) => setEditPrecoFinalIva(e.target.value)} className={inputCls} placeholder="0,00" />
+                          </Field>
+                          <div className="col-span-2">
+                            <Field label="Razão interna / notas">
+                              <textarea rows={1} value={editNotasInternas} onChange={(e) => setEditNotasInternas(e.target.value)} className={`${inputCls} min-h-[42px]`} placeholder="Notas internas (não visíveis pelo cliente)..." />
+                            </Field>
+                          </div>
                         </div>
-                        <div className="rounded-[16px] border border-cyan-400/20 bg-cyan-400/[0.06] p-4">
-                          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-cyan-500">IVA 23%</p>
-                          <p className="mt-1.5 text-xl font-bold text-cyan-700">
-                            {vatAmount != null && !isNaN(vatAmount) ? `${vatAmount.toFixed(2)} €` : "—"}
-                          </p>
-                        </div>
-                        <div className="rounded-[16px] border border-orange-400/20 bg-orange-400/[0.06] p-4">
-                          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-orange-500">
-                            {order.precoFinalIva ? "Preço total" : "Estimativa total"}
-                          </p>
-                          <p className="mt-1.5 text-xl font-bold text-orange-300">
-                            {fmtEur(order.precoFinalIva) ?? (totalWithVat != null && !isNaN(totalWithVat) ? `${totalWithVat.toFixed(2)} €` : "—")}
-                          </p>
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          <button onClick={handleRecalcularEstimativa} disabled={recalculating || saving}
+                            className="flex items-center gap-2 rounded-xl border border-ciano/30 bg-ciano/14 px-3.5 py-2 text-xs font-semibold text-ciano-texto hover:bg-ciano/25 disabled:opacity-60 transition">
+                            {recalculating ? "A recalcular..." : "Recalcular estimativa"}
+                          </button>
+                          <button onClick={() => handleStatusQuick("aprovado")} disabled={saving}
+                            className="flex items-center gap-2 rounded-xl border border-esmeralda/30 bg-esmeralda/14 px-3.5 py-2 text-xs font-semibold text-esmeralda-texto hover:bg-esmeralda/25 disabled:opacity-60 transition">
+                            Aprovar orçamento
+                          </button>
+                          <button onClick={handleSave} disabled={saving}
+                            className="flex items-center gap-2 rounded-xl bg-acao px-3.5 py-2 text-xs font-bold text-white hover:bg-acao-hover disabled:opacity-60 transition">
+                            {saving ? "A guardar..." : "Guardar alterações"}
+                          </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Two-column layout */}
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-
-                      {/* Left column (3/5) */}
-                      <div className="space-y-5 lg:col-span-3">
-
-                        {/* Dados do serviço */}
-                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-5">
-                          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Dados do serviço</p>
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Tipo</p>
-                              <p className="mt-1 text-sm font-semibold text-slate-800">{getServiceLabel(order.serviceType)}</p>
-                            </div>
-                            <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Urgência</p>
-                              <p className="mt-1 text-sm font-semibold text-slate-800">{tUrgency(order.urgency) ?? "Normal"}</p>
-                            </div>
-                            <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">NIF na fatura</p>
-                              {order.precisaFatura == null ? (
-                                <p className="mt-1 text-sm text-slate-400">Não respondeu</p>
-                              ) : (
-                                <p
-                                  className={`mt-1 text-sm font-semibold ${
-                                    order.precisaFatura ? "text-[#00B4CC]" : "text-slate-800"
-                                  }`}
-                                >
-                                  {order.precisaFatura
-                                    ? order.nifFactura
-                                      ? `Sim — NIF ${order.nifFactura}`
-                                      : "Sim — pedir o NIF"
-                                    : "Não (consumidor final)"}
-                                </p>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">
-                                Conta gastar
-                              </p>
-                              {order.valorDesejadoCliente == null ||
-                              order.valorDesejadoCliente === "" ? (
-                                <p className="mt-1 text-sm text-slate-400">Não disse</p>
-                              ) : (
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
-                                  {order.valorDoClienteComIva != null && order.valorDoClienteComIva !== "" ? (
-                                    <>
-                                      {Number(order.valorDoClienteComIva).toFixed(2)} € com IVA
-                                      <span className="ml-1 font-normal text-slate-500">
-                                        (para o profissional: {Number(order.valorDesejadoCliente).toFixed(2)} € sem IVA)
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {Number(order.valorDesejadoCliente).toFixed(2)} €
-                                      <span className="ml-1 font-normal text-slate-500">
-                                        (não entra no cálculo)
-                                      </span>
-                                    </>
-                                  )}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {(order.description || order.descricaoOriginal) && (
-                            <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Descrição</p>
-                              <DescricaoDoPedido
-                                pedidoId={order.id}
-                                token={token}
-                                descricao={order.description}
-                                original={order.descricaoOriginal}
-                                lingua={order.linguaDaDescricao}
-                                porTraduzir={order.descricaoPorTraduzir}
-                                noutraLingua={order.descricaoNoutraLingua}
-                                onTraduzida={() => void fetchOrder()}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Análise Gemini */}
-                        {estVal && (
-                          <div className="rounded-[18px] border border-violet-400/20 bg-violet-400/[0.03] p-5 space-y-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-violet-400 uppercase tracking-wider">Análise Gemini</span>
-                              {estVal.confidence && (
-                                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                                  estVal.confidence === "high" ? "border-emerald-400/30 text-emerald-400" :
-                                  estVal.confidence === "medium" ? "border-amber-400/30 text-amber-400" :
-                                  "border-red-400/30 text-red-400"
-                                }`}>
-                                  {estVal.confidence === "high" ? "Alta" : estVal.confidence === "medium" ? "Média" : "Baixa"}
-                                </span>
-                              )}
-                              {estVal.confidence && (
-                                <div className="ml-2 flex items-center gap-1 flex-1">
-                                  <div className="h-1.5 flex-1 max-w-[100px] rounded-full bg-white/[0.06] overflow-hidden">
-                                    <div className={`h-full rounded-full ${
-                                      estVal.confidence === "high" ? "bg-emerald-400 w-full" :
-                                      estVal.confidence === "medium" ? "bg-amber-400 w-2/3" :
-                                      "bg-red-400 w-1/3"
-                                    }`} />
-                                  </div>
-                                </div>
-                              )}
-                              <span className="ml-auto rounded-full border border-violet-400/30 px-2 py-0.5 text-[10px] font-semibold text-violet-400">IA</span>
-                            </div>
-
-                            {estVal.summary && (
-                              <div>
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-400 mb-1">Resumo</p>
-                                <p className="text-xs leading-relaxed text-slate-700">{estVal.summary}</p>
-                              </div>
-                            )}
-
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                              {estVal.assumptions && estVal.assumptions.length > 0 && (
-                                <div>
-                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-emerald-400 mb-1.5">Pressupostos</p>
-                                  <ul className="space-y-1">
-                                    {estVal.assumptions.map((a, i) => (
-                                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-400">
-                                        <span className="mt-1 text-emerald-400 text-[10px]">✓</span>{a}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                              {estVal.missingFields && estVal.missingFields.length > 0 && (
-                                <div>
-                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-amber-400 mb-1.5">Pontos de atenção</p>
-                                  <ul className="space-y-1">
-                                    {estVal.missingFields.map((f, i) => (
-                                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-amber-400">
-                                        <span className="mt-0.5 text-[10px]">◆</span>{f.replace(/_/g, " ")}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                              {estVal.difficultyLevel && (
-                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Dificuldade</p>
-                                  <div className="flex gap-0.5 mb-1">
-                                    {[1,2,3,4,5].map((n) => (
-                                      <div key={n} className={`h-1 w-3.5 rounded-full ${n <= (estVal.difficultyLevel ?? 0) ? "bg-violet-400" : "bg-white/10"}`} />
-                                    ))}
-                                  </div>
-                                  <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[estVal.difficultyLevel] ?? "text-slate-700"}`}>
-                                    {DIFFICULTY_LABEL[estVal.difficultyLevel] ?? estVal.difficultyLevel}
-                                  </span>
-                                </div>
-                              )}
-                              {estVal.teamSize && (
-                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Equipa</p>
-                                  <p className="text-[11px] font-semibold text-slate-700">{estVal.teamSize}</p>
-                                </div>
-                              )}
-                              {estVal.estimatedHoursText && (
-                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Tempo</p>
-                                  <p className="text-[11px] font-semibold text-slate-700">{estVal.estimatedHoursText}</p>
-                                </div>
-                              )}
-                              {estVal.recommendation && (
-                                <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                  <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Ação</p>
-                                  <p className={`text-[11px] font-semibold ${
-                                    estVal.recommendation === "pode_aprovar" ? "text-emerald-400" :
-                                    estVal.recommendation === "visita_presencial" ? "text-red-400" :
-                                    "text-amber-400"
-                                  }`}>
-                                    {estVal.recommendation === "pode_aprovar" ? "Pode aprovar" :
-                                     estVal.recommendation === "pedir_fotos" ? "Pedir fotos" :
-                                     estVal.recommendation === "pedir_info" ? "Pedir info" :
-                                     estVal.recommendation === "visita_presencial" ? "Visita presencial" :
-                                     estVal.recommendation}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                    {/* 2. O contacto e a morada. */}
+                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+                      <Cartao rotulo="Contacto" largo>
+                        {order.contactPhone && (
+                          <p>{shouldMask ? _maskPhone(order.contactPhone) : order.contactPhone}</p>
                         )}
-
-                        {/* Preço e notas internas */}
-                        {isAdmin && (
-                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-5 space-y-4">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Preço e notas internas</p>
-                            <div className="grid grid-cols-2 gap-3">
-                              <Field label="Preço final sem IVA (€)">
-                                <input type="number" step="0.01" min="0" value={editPrecoFinal} onChange={(e) => setEditPrecoFinal(e.target.value)} className={inputCls} placeholder="0.00" />
-                              </Field>
-                              <Field label="Preço final com IVA (€)">
-                                <input type="number" step="0.01" min="0" value={editPrecoFinalIva} onChange={(e) => setEditPrecoFinalIva(e.target.value)} className={inputCls} placeholder="0.00" />
-                              </Field>
-                            </div>
-                            <Field label="Razão interna / notas">
-                              <textarea rows={3} value={editNotasInternas} onChange={(e) => setEditNotasInternas(e.target.value)} className={inputCls} placeholder="Notas internas (não visíveis pelo cliente)..." />
-                            </Field>
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              <button onClick={handleRecalcularEstimativa} disabled={recalculating || saving}
-                                className="flex items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold text-cyan-700 hover:bg-cyan-400/20 disabled:opacity-60 transition">
-                                {recalculating ? "A recalcular..." : "Recalcular estimativa"}
-                              </button>
-                              <button onClick={() => handleStatusQuick("aprovado")} disabled={saving}
-                                className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition">
-                                Aprovar orçamento
-                              </button>
-                              <button onClick={handleSave} disabled={saving}
-                                className="flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition">
-                                {saving ? "A guardar..." : "Guardar alterações"}
-                              </button>
-                            </div>
-                          </div>
+                        {order.contactEmail && (
+                          <p className="truncate text-xs font-medium text-slate-300">{shouldMask ? _maskEmail(order.contactEmail) : order.contactEmail}</p>
                         )}
-
-                        {/* Fotos e ficheiros */}
-                        {files.length > 0 && (
-                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-5">
-                            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Fotos e ficheiros ({files.length})</p>
-                            <div className="flex flex-wrap gap-2">
-                              {files.slice(0, 8).map((url, i) => {
-                                const isImg = especieDoAnexo(url) === "imagem";
-                                return isImg ? (
-                                  <button key={i} type="button" onClick={() => setLightbox(url)} className="h-16 w-16 overflow-hidden rounded-xl border border-slate-100">
-                                    <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition" />
-                                  </button>
-                                ) : (
-                                  // PDF: o cartão «Abrir PDF»; vídeo: abre no visor.
-                                  <Miniatura
-                                    key={i}
-                                    url={url}
-                                    onAbrir={especieDoAnexo(url) === "video" ? () => setLightbox(url) : undefined}
-                                    className="h-16 w-16"
-                                    tamanho="64px"
-                                  />
-                                );
-                              })}
-                              {files.length > 8 && (
-                                <button type="button" onClick={() => setActiveTab("servico_fotos")} className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 text-xs text-slate-400 hover:bg-slate-100 transition">
-                                  +{files.length - 8}
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                        {!order.contactPhone && !order.contactEmail && <p className="font-medium text-slate-500">—</p>}
+                      </Cartao>
+                      <Cartao rotulo="Morada" largo>
+                        {isMov ? (
+                          <>
+                            <p className="text-xs"><span className="text-ciano-texto">Origem:</span> {originAddr ?? "—"}</p>
+                            <p className="mt-0.5 text-xs"><span className="text-violeta-texto">Destino:</span> {destAddr ?? "—"}</p>
+                          </>
+                        ) : (
+                          <p className="text-xs">{order.address ?? "—"}</p>
                         )}
-                      </div>
-
-                      {/* Right sidebar (2/5) */}
-                      <div className="space-y-4 lg:col-span-2">
-
-                        {/* Resumo rápido */}
-                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2.5">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Resumo rápido</p>
-                          {[
-                            { label: "Responsável", value: order.assignedToName ?? "Por atribuir" },
-                            { label: "Prioridade", value: order.priority === "urgente" ? "Urgente" : order.priority === "alta" ? "Alta" : order.priority === "baixa" ? "Baixa" : "Normal" },
-                            { label: "Urgência", value: tUrgency(order.urgency) ?? "Normal" },
-                            ...(estVal?.difficultyLevel ? [{ label: "Complexidade", value: DIFFICULTY_LABEL[estVal.difficultyLevel] ?? String(estVal.difficultyLevel) }] : []),
-                            ...(order.distanceKm ? [{ label: "Distância", value: `${order.distanceKm} km` }] : []),
-                          ].map((item) => (
-                            <div key={item.label} className="flex items-center justify-between py-1 border-b border-white/[0.04] last:border-0">
-                              <span className="text-[10px] text-slate-500">{item.label}</span>
-                              <span className="text-xs font-semibold text-slate-800">{item.value}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Contacto */}
-                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Contacto</p>
-                          {order.contactPhone && (
-                            <div className="flex items-center gap-2">
-                              <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                              </svg>
-                              <span className="text-sm font-semibold text-slate-800">{shouldMask ? _maskPhone(order.contactPhone) : order.contactPhone}</span>
-                            </div>
-                          )}
-                          {order.contactEmail && (
-                            <div className="flex items-center gap-2">
-                              <svg className="h-3.5 w-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                              </svg>
-                              <span className="text-xs text-slate-700 truncate">{shouldMask ? _maskEmail(order.contactEmail) : order.contactEmail}</span>
-                            </div>
-                          )}
-                          <ContaDoPedido
-                            pedidoId={order.id}
-                            pedidaPor={
-                              order.juntarAContaPedidoPor
-                                ? shouldMask ? _maskEmail(order.juntarAContaPedidoPor) : order.juntarAContaPedidoPor
-                                : null
-                            }
-                            ligadoPelaApp={Boolean(order.contactEmail) && (Boolean(order.contaJuntadaEm) || foiJuntadoPelaApp(order.historyJson))}
-                            authHeader={authHeader}
-                            aoMudar={(o) => { if (o) { setOrder(o as PedidoOrder); onUpdated?.(o as PedidoOrder); } }}
-                          />
-                          {/* Os telemóveis que abriram o link e «Cortar o acesso pelo link» (S16). */}
-                          {!shouldMask && <AcessoPeloLink pedidoId={order.id} authHeader={authHeader} />}
-                          {order.contactPhone && !shouldMask && (
-                            <a href={`https://wa.me/${waPhone}?text=${waMsg}`} target="_blank" rel="noreferrer"
-                              className="mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500/15 border border-green-400/20 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition w-full">
-                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
-                              WhatsApp
-                            </a>
-                          )}
-                          {order.contactPhone && shouldMask && (
-                            <button onClick={() => setShowAcceptPrompt(true)}
-                              className="mt-1 flex items-center justify-center gap-1.5 rounded-xl bg-green-500/15 border border-green-400/20 px-3 py-2 text-xs font-semibold text-green-300 hover:bg-green-500/25 transition w-full">
-                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
-                              WhatsApp
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Morada */}
-                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Morada</p>
-                          {isMov ? (
-                            <>
-                              <div>
-                                <p className="text-[9px] text-cyan-500 font-semibold uppercase tracking-wider">Origem</p>
-                                <p className="text-xs text-slate-800 mt-0.5">{originAddr ?? "—"}</p>
-                              </div>
-                              <div>
-                                <p className="text-[9px] text-violet-400 font-semibold uppercase tracking-wider">Destino</p>
-                                <p className="text-xs text-slate-800 mt-0.5">{destAddr ?? "—"}</p>
-                              </div>
-                            </>
-                          ) : (
-                            <p className="text-xs text-slate-800">{order.address ?? "—"}</p>
-                          )}
-                          {(order.city || order.postalCode) && (
-                            <p className="text-[11px] text-slate-400">{[order.city, order.postalCode].filter(Boolean).join(" · ")}</p>
-                          )}
-                          {order.address && (
-                            <a href={linkGoogleMaps({ street: order.address, postalCode: order.postalCode, city: order.city, formattedAddress: order.address }) ?? "#"} target="_blank" rel="noreferrer"
-                              className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400 hover:text-cyan-700 transition">
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                              Ver no mapa
-                            </a>
-                          )}
-                        </div>
-
-                        {/* Distância / Zona */}
-                        {(order.distanceKm || movDist) && (
-                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-2">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Distância / Zona</p>
-                            <p className="text-lg font-bold text-cyan-700">
-                              {isMov ? movDist : `${order.distanceKm} km`}
-                            </p>
-                            {order.distanceText && <p className="text-[11px] text-slate-400">{order.distanceText}</p>}
-                            {order.city && (
-                              <span className="inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-700">
-                                {order.city}
-                              </span>
-                            )}
-                          </div>
+                        {(order.city || order.postalCode) && (
+                          <p className="mt-0.5 text-[11px] font-medium text-slate-400">{[order.city, order.postalCode].filter(Boolean).join(" · ")}</p>
                         )}
-
-                        {/* Mini histórico */}
-                        <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4">
-                          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Histórico do pedido</p>
-                          <div className="relative space-y-0 pl-3">
-                            <div className="absolute left-3 top-1 bottom-1 w-px bg-white/[0.06]" />
-                            {[
-                              { label: "Pedido criado", date: order.createdAt, color: "bg-slate-400" },
-                              ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "alguém da equipa"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
-                              ...(order.status === "aprovado" ? [{ label: "Orçamento aprovado", date: order.updatedAt, color: "bg-emerald-400" }] : []),
-                              ...(order.status === "confirmado" ? [{ label: "Confirmado", date: order.updatedAt, color: "bg-green-400" }] : []),
-                              ...(order.status === "em_execucao" ? [{ label: "Em execução", date: order.updatedAt, color: "bg-lime-400" }] : []),
-                              ...(order.status === "concluido" ? [{ label: "Concluído", date: order.updatedAt, color: "bg-emerald-400" }] : []),
-                            ].slice(0, 5).map((item, i) => (
-                              <div key={i} className="relative pb-3 pl-5">
-                                <span className={`absolute left-[-3px] top-1 h-2 w-2 rounded-full ${item.color} ring-3 ring-white`} />
-                                <p className="text-[11px] font-semibold text-slate-700">{item.label}</p>
-                                <p className="text-[10px] text-slate-600">{fmt(item.date)}</p>
-                              </div>
-                            ))}
-                          </div>
-                          {history.length > 0 && (
-                            <button onClick={() => setActiveTab("historico")} className="mt-2 text-[11px] font-semibold text-cyan-400 hover:text-cyan-700 transition">
-                              Ver histórico completo →
-                            </button>
-                          )}
-                        </div>
-
-                      </div>
+                        {order.address && (
+                          <a href={linkGoogleMaps({ street: order.address, postalCode: order.postalCode, city: order.city, formattedAddress: order.address }) ?? "#"} target="_blank" rel="noreferrer"
+                            className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-ciano-texto hover:underline">
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            Ver no mapa
+                          </a>
+                        )}
+                      </Cartao>
+                      {/* Distância / Zona */}
+                      <Cartao rotulo="Distância / Zona">
+                        {order.distanceKm || movDist ? (
+                          <>
+                            <p className="text-ciano-texto">{isMov ? movDist : `${order.distanceKm} km`}</p>
+                            {order.distanceText && <p className="text-[11px] font-medium text-slate-400">{order.distanceText}</p>}
+                          </>
+                        ) : (
+                          <p className="font-medium text-slate-500">—</p>
+                        )}
+                        {order.city && <p className="text-[11px] font-medium text-slate-400">{order.city}</p>}
+                      </Cartao>
+                      {/* O resumo rápido: responsável e prioridade. */}
+                      <Cartao rotulo="Responsável">
+                        <p>{order.assignedToName ?? "Por atribuir"}</p>
+                        <p className="text-[11px] font-medium text-slate-400">
+                          Prioridade {order.priority === "urgente" ? "urgente" : order.priority === "alta" ? "alta" : order.priority === "baixa" ? "baixa" : "normal"}
+                        </p>
+                      </Cartao>
                     </div>
+
+                    {/* A conta e a ligação do pedido (S16, R13), por baixo, ao comprido: dentro do
+                        cartão do contacto esticavam a fila e deixavam os outros cartões vazios. */}
+                    <div className="space-y-2 [&>div]:mt-0">
+                      <ContaDoPedido
+                        pedidoId={order.id}
+                        pedidaPor={
+                          order.juntarAContaPedidoPor
+                            ? shouldMask ? _maskEmail(order.juntarAContaPedidoPor) : order.juntarAContaPedidoPor
+                            : null
+                        }
+                        ligadoPelaApp={Boolean(order.contactEmail) && (Boolean(order.contaJuntadaEm) || foiJuntadoPelaApp(order.historyJson))}
+                        authHeader={authHeader}
+                        aoMudar={(o) => { if (o) { setOrder(o as PedidoOrder); onUpdated?.(o as PedidoOrder); } }}
+                      />
+                      {/* Os telemóveis que abriram o link e «Cortar o acesso pelo link» (S16). */}
+                      {!shouldMask && <AcessoPeloLink pedidoId={order.id} authHeader={authHeader} />}
+                    </div>
+
+                    {/* Fotos e ficheiros */}
+                    {files.length > 0 && (
+                      <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Fotos e ficheiros ({files.length})</p>
+                        <div className="flex flex-wrap gap-2">
+                          {files.slice(0, 8).map((url, i) => {
+                            const isImg = especieDoAnexo(url) === "imagem";
+                            return isImg ? (
+                              <button key={i} type="button" onClick={() => setLightbox(url)} className="h-16 w-16 overflow-hidden rounded-lg border border-white/10">
+                                <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition" />
+                              </button>
+                            ) : (
+                              // PDF: o cartão «Abrir PDF»; vídeo: abre no visor.
+                              <Miniatura
+                                key={i}
+                                url={url}
+                                onAbrir={especieDoAnexo(url) === "video" ? () => setLightbox(url) : undefined}
+                                className="h-16 w-16"
+                                tamanho="64px"
+                              />
+                            );
+                          })}
+                          {files.length > 8 && (
+                            <button type="button" onClick={() => setActiveTab("servico_fotos")} className="flex h-16 w-16 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-xs text-slate-400 hover:bg-white/[0.08] transition">
+                              +{files.length - 8}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* O histórico, numa linha. */}
+                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Histórico do pedido</p>
+                        {history.length > 0 && (
+                          <button onClick={() => setActiveTab("historico")} className="text-[11px] font-semibold text-ciano-texto hover:underline">
+                            Ver histórico completo →
+                          </button>
+                        )}
+                      </div>
+                      <ol className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5">
+                        {historicoCurto.map((item, i) => (
+                          <li key={i} className="flex items-center gap-2">
+                            <span className={`h-2 w-2 flex-shrink-0 rounded-full ${item.color}`} />
+                            <span className="text-[11px] font-semibold text-slate-200">{item.label}</span>
+                            <span className="text-[10px] text-slate-500">{fmt(item.date)}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    {/* 3. A análise da IA (Gemini), recolhida: abre ao tocar. */}
+                    {estVal && (
+                      <details className="group rounded-xl border border-violeta/25 bg-violeta/[0.06] p-3">
+                        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-xs font-semibold text-violeta-texto [&::-webkit-details-marker]:hidden">
+                          <svg className="h-3.5 w-3.5 transition group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Análise Gemini
+                          {estVal.confidence && (
+                            <span className="font-medium text-slate-400">
+                              · confiança {estVal.confidence === "high" ? "alta" : estVal.confidence === "medium" ? "média" : "baixa"}
+                            </span>
+                          )}
+                          {estVal.difficultyLevel && (
+                            <span className="font-medium text-slate-400">
+                              · {DIFFICULTY_LABEL[estVal.difficultyLevel] ?? estVal.difficultyLevel}
+                            </span>
+                          )}
+                        </summary>
+
+                        <div className="mt-3 space-y-3">
+                          {estVal.summary && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-violeta-texto mb-1">Resumo</p>
+                              <p className="text-xs leading-relaxed text-slate-300">{estVal.summary}</p>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            {estVal.difficultyLevel && (
+                              <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Dificuldade</p>
+                                <div className="flex gap-0.5 mb-1">
+                                  {[1,2,3,4,5].map((n) => (
+                                    <div key={n} className={`h-1 w-3.5 rounded-full ${n <= (estVal.difficultyLevel ?? 0) ? "bg-violeta" : "bg-white/10"}`} />
+                                  ))}
+                                </div>
+                                <span className={`text-[11px] font-semibold ${DIFFICULTY_COLOR[estVal.difficultyLevel] ?? "text-slate-200"}`}>
+                                  {DIFFICULTY_LABEL[estVal.difficultyLevel] ?? estVal.difficultyLevel}
+                                </span>
+                              </div>
+                            )}
+                            {estVal.teamSize && (
+                              <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Equipa</p>
+                                <p className="text-[11px] font-semibold text-slate-200">{estVal.teamSize}</p>
+                              </div>
+                            )}
+                            {estVal.estimatedHoursText && (
+                              <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Tempo</p>
+                                <p className="text-[11px] font-semibold text-slate-200">{estVal.estimatedHoursText}</p>
+                              </div>
+                            )}
+                            {estVal.recommendation && (
+                              <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Ação</p>
+                                <p className={`text-[11px] font-semibold ${
+                                  estVal.recommendation === "pode_aprovar" ? "text-esmeralda-texto" :
+                                  estVal.recommendation === "visita_presencial" ? "text-coral-texto" :
+                                  "text-ambar-texto"
+                                }`}>
+                                  {estVal.recommendation === "pode_aprovar" ? "Pode aprovar" :
+                                   estVal.recommendation === "pedir_fotos" ? "Pedir fotos" :
+                                   estVal.recommendation === "pedir_info" ? "Pedir info" :
+                                   estVal.recommendation === "visita_presencial" ? "Visita presencial" :
+                                   estVal.recommendation}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {estVal.assumptions && estVal.assumptions.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-esmeralda-texto mb-1.5">Pressupostos</p>
+                                <ul className="space-y-1">
+                                  {estVal.assumptions.map((a, i) => (
+                                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-400">
+                                      <span className="mt-1 text-esmeralda text-[10px]">✓</span>{a}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {estVal.missingFields && estVal.missingFields.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-ambar-texto mb-1.5">Pontos de atenção</p>
+                                <ul className="space-y-1">
+                                  {estVal.missingFields.map((f, i) => (
+                                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-ambar-texto">
+                                      <span className="mt-0.5 text-[10px]">◆</span>{f.replace(/_/g, " ")}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                          <button type="button" onClick={() => setActiveTab("servico_fotos")} className="text-[11px] font-semibold text-violeta-texto hover:underline">
+                            A análise completa (deslocação, custo mínimo, mensagem sugerida) está em «Serviço e Fotos» →
+                          </button>
+                        </div>
+                      </details>
+                    )}
                   </div>
                   );
                 })()}
@@ -2050,7 +1985,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                   <div className="space-y-8">
                     {/* Dados do cliente */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-slate-900">Dados do cliente</h3>
+                      <h3 className="text-base font-bold text-white">Dados do cliente</h3>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <Field label="Nome completo">
                           <input type="text" value={editContactName} onChange={(e) => setEditContactName(e.target.value)} className={inputCls} placeholder="Nome do cliente" />
@@ -2082,7 +2017,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       const extras = camposExtraDoPedido(parseRawOrder(order.rawOrderJson) as Record<string, unknown>, order.pormenoresDoCliente);
                       if (extras.length === 0) return null;
                       return (
-                        <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 p-5">
+                        <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.03] p-5">
                           <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Mais do pedido</p>
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {extras.map((c) => (
@@ -2096,9 +2031,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     {/* Morada e acesso */}
                     {isMov ? (
                       <div className="space-y-6">
-                        <h3 className="text-base font-bold text-slate-900">Morada de mudança — Origem e Destino</h3>
+                        <h3 className="text-base font-bold text-white">Morada de mudança — Origem e Destino</h3>
                         <div className="rounded-[20px] border border-cyan-400/20 bg-cyan-400/[0.03] p-5">
-                          <p className="mb-4 text-xs font-bold uppercase tracking-wider text-cyan-400">Origem</p>
+                          <p className="mb-4 text-xs font-bold uppercase tracking-wider text-ciano-texto">Origem</p>
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <ReadonlyField label="Morada de origem" value={originAddr.formattedAddress ?? originAddr.address ?? order.address} />
                             <ReadonlyField label="Localidade" value={originAddr.city ?? order.city} />
@@ -2115,7 +2050,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           </div>
                         </div>
                         <div className="rounded-[20px] border border-violet-400/20 bg-violet-400/[0.03] p-5">
-                          <p className="mb-4 text-xs font-bold uppercase tracking-wider text-violet-400">Destino</p>
+                          <p className="mb-4 text-xs font-bold uppercase tracking-wider text-violeta-texto">Destino</p>
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <ReadonlyField label="Morada de destino" value={destAddr.formattedAddress ?? destAddr.address} />
                             <ReadonlyField label="Localidade" value={destAddr.city} />
@@ -2132,7 +2067,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           </div>
                         </div>
                         {(movDist.distanceText || movDist.distanceKm || order.distanceKm || baseDist.distanceText) && (
-                          <div className="rounded-[20px] border border-slate-100 bg-slate-50/50 p-5">
+                          <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.03] p-5">
                             <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Percurso</p>
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                               <ReadonlyField label="Origem → Destino" value={movDist.distanceText ?? (order.distanceKm ? `${order.distanceKm} km` : null)} />
@@ -2145,12 +2080,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <h3 className="text-base font-bold text-slate-900">Morada e acesso</h3>
+                        <h3 className="text-base font-bold text-white">Morada e acesso</h3>
                         {/* Um contacto de quatro campos não perdeu dados: nunca
                             os pediu. Sem isto, a equipa procura o que não
                             existe em vez de levantar o telefone. */}
                         {origemDoPedido(order.rawOrderJson).slug === "formulario_contactos" && (
-                          <p className="rounded-[16px] border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-relaxed text-sky-900">
+                          <p className="rounded-[16px] border border-azul/30 bg-azul/14 px-4 py-3 text-xs leading-relaxed text-azul-texto">
                             Este pedido veio da <span className="font-semibold">página de contactos</span>, que só
                             pede nome, telemóvel, email, morada e tipo de serviço. Andar, elevador e
                             estacionamento não chegaram porque não foram perguntados — confirma-os com o cliente.
@@ -2190,7 +2125,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                   href={url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-400/20"
+                                  className="flex items-center justify-center gap-2 rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-ciano-texto transition hover:bg-cyan-400/20"
                                 >
                                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                   Abrir no Google Maps
@@ -2210,19 +2145,19 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               return (
                                 <div className="space-y-1.5 px-1 py-1">
                                   {tem ? (
-                                    <p className="text-xs font-semibold text-emerald-600">
+                                    <p className="text-xs font-semibold text-esmeralda-texto">
                                       Localizada ({lat!.toFixed(4)}, {lng!.toFixed(4)})
                                       {raw.coordenadasAproximadas ? " · pelo centro da freguesia" : ""}
                                       {" — o raio dos profissionais conta."}
                                     </p>
                                   ) : (
-                                    <p className="text-xs font-semibold text-amber-600">
+                                    <p className="text-xs font-semibold text-ambar-texto">
                                       SEM coordenadas — o raio dos profissionais não se mede,
                                       e o pedido não chega a ninguém até ser localizado.
                                     </p>
                                   )}
                                   {localizacao && !localizacao.ok && (
-                                    <p className="text-xs text-red-600">
+                                    <p className="text-xs text-coral-texto">
                                       {localizacao.motivo === "REQUEST_DENIED"
                                         ? "O Google recusou a chave — active a Geocoding API no Google Cloud."
                                         : localizacao.motivo === "SEM_CHAVE"
@@ -2235,7 +2170,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                       type="button"
                                       onClick={localizarMorada}
                                       disabled={aLocalizar}
-                                      className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-400/20 disabled:opacity-50"
+                                      className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-ciano-texto transition hover:bg-cyan-400/20 disabled:opacity-50"
                                     >
                                       {aLocalizar ? "A localizar…" : "Localizar agora"}
                                     </button>
@@ -2276,7 +2211,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     )}
 
                     <div className="flex justify-end">
-                      <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-2xl bg-cyan-400 px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition">
+                      <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-2xl bg-acao px-5 py-2.5 text-sm font-bold text-white hover:bg-acao-hover disabled:opacity-60 transition">
                         {saving ? "A guardar..." : "Guardar alterações"}
                       </button>
                     </div>
@@ -2289,7 +2224,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                   <div className="space-y-8">
                     {/* Serviço */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-slate-900">Dados do serviço</h3>
+                      <h3 className="text-base font-bold text-white">Dados do serviço</h3>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <Field label="Tipo de serviço">
                           <select value={editServiceType} onChange={(e) => setEditServiceType(e.target.value)} className={selectCls}>
@@ -2299,7 +2234,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             ))}
                           </select>
                           {editServiceType && !SERVICE_TYPES.some((s) => s.value === editServiceType) && (
-                            <p className="mt-1 text-[10px] text-amber-400">
+                            <p className="mt-1 text-[10px] text-ambar-texto">
                               Valor original: &quot;{order.serviceType}&quot; — não reconhecido
                             </p>
                           )}
@@ -2327,27 +2262,27 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         const bb = parseInt(bigBags.replace(/[^\d]/g, ""), 10) || 0;
                         const sacosEquiv = sacosDeBigBags(bb);
                         return (
-                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4 space-y-4">
+                          <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.03] p-4 space-y-4">
                             {(qtd || state) && (
                               <div className="flex flex-wrap items-center gap-6">
                                 {qtd && (
                                   <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Quantidade de sacos</p>
-                                    <p className="mt-1 text-sm font-bold text-slate-800">{qtd}</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Quantidade de sacos</p>
+                                    <p className="mt-1 text-sm font-bold text-slate-100">{qtd}</p>
                                   </div>
                                 )}
                                 {state && (
                                   <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Estado</p>
-                                    <p className="mt-1 text-sm font-semibold text-slate-700">{tEntulho(state)}</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Estado</p>
+                                    <p className="mt-1 text-sm font-semibold text-slate-200">{tEntulho(state)}</p>
                                   </div>
                                 )}
                               </div>
                             )}
 
                             {/* Conversor big bags → sacos — uso interno, nunca visível ao cliente */}
-                            <div className={`${qtd || state ? "border-t border-slate-100 pt-4" : ""}`}>
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-400">Big bags → sacos (uso interno)</p>
+                            <div className={`${qtd || state ? "border-t border-white/[0.06] pt-4" : ""}`}>
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-ambar-texto">Big bags → sacos (uso interno)</p>
                               <p className="mt-0.5 text-[11px] text-slate-500">1 big bag = {SACOS_POR_BIG_BAG} sacos. Usa o equivalente para calcular o preço.</p>
                               <div className="mt-2 flex items-center gap-3">
                                 <input
@@ -2356,9 +2291,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                   value={bigBags}
                                   onChange={(e) => setBigBags(e.target.value)}
                                   placeholder="Nº de big bags"
-                                  className="w-36 rounded-lg border border-slate-200 bg-white/[0.03] px-3 py-2 text-sm text-slate-800 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
+                                  className="w-36 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/30"
                                 />
-                                <span className="text-sm font-semibold text-slate-700">
+                                <span className="text-sm font-semibold text-slate-200">
                                   {bb > 0 ? `= ${sacosEquiv} sacos` : "= — sacos"}
                                 </span>
                               </div>
@@ -2367,95 +2302,90 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         );
                       })()}
 
-                      {/* Estimativa da IA — cartões de valores */}
-                      <div>
-                        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">Estimativa da IA</p>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Mínimo s/IVA</p>
-                            <p className="mt-1.5 text-lg font-bold text-cyan-400">
-                              {fmtEur(order.estimateMin) ?? (est?.estimateMinWithoutVat ? `${est.estimateMinWithoutVat.toFixed(2)} €` : "—")}
-                            </p>
+                      {/* Estimativa da IA — cartões de valores.
+                          d77: a faixa lê-se do estimateJson (as colunas estimateMin/Max
+                          não são faixa, d59) e o recomendado e o total com IVA de
+                          `contaDaEstimativa` — o estimateTotal é COM IVA, e aqui era
+                          mostrado como sem IVA e ainda multiplicado por 1,23. */}
+                      {(() => {
+                        const contaDaIa = contaDaEstimativa(order, { comPrecoFinal: false });
+                        return (
+                          <div>
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">Estimativa da IA</p>
+                            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Mínimo s/IVA</p>
+                                <p className="mt-1 text-base font-bold text-ciano-texto">{fmtEur(est?.estimateMinWithoutVat) ?? "—"}</p>
+                              </div>
+                              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Máximo s/IVA</p>
+                                <p className="mt-1 text-base font-bold text-ciano-texto">{fmtEur(est?.estimateMaxWithoutVat) ?? "—"}</p>
+                              </div>
+                              <div className="rounded-xl border border-ciano/25 bg-ciano/[0.08] p-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-ciano-texto">Recomendado s/IVA</p>
+                                <p className="mt-1 text-base font-bold text-ciano-texto">{contaDaIa ? eurosPt(contaDaIa.semIva) : "—"}</p>
+                              </div>
+                              <div className="rounded-xl border border-esmeralda/25 bg-esmeralda/[0.08] p-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-esmeralda-texto">Total com IVA (23 %)</p>
+                                <p className="mt-1 text-base font-bold text-esmeralda-texto">{contaDaIa ? eurosPt(contaDaIa.comIva) : "—"}</p>
+                                {contaDaIa && <p className="text-[10px] text-slate-400">IVA {eurosPt(contaDaIa.iva)}</p>}
+                              </div>
+                            </div>
                           </div>
-                          <div className="rounded-[18px] border border-slate-100 bg-slate-50/50 p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Máximo s/IVA</p>
-                            <p className="mt-1.5 text-lg font-bold text-cyan-400">
-                              {fmtEur(order.estimateMax) ?? (est?.estimateMaxWithoutVat ? `${est.estimateMaxWithoutVat.toFixed(2)} €` : "—")}
-                            </p>
-                          </div>
-                          <div className="rounded-[18px] border border-cyan-400/10 bg-cyan-400/5 p-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cyan-600">Recomendado s/IVA</p>
-                            <p className="mt-1.5 text-lg font-bold text-cyan-700">
-                              {fmtEur(order.estimateTotal) ?? (est?.estimatedPriceWithoutVat ? `${est.estimatedPriceWithoutVat.toFixed(2)} €` : "—")}
-                            </p>
-                          </div>
-                        </div>
-                        {/* Valor com IVA em destaque */}
-                        {(est?.estimatedPriceWithVat || order.estimateTotal) && (
-                          <div className="mt-2 flex items-center justify-end gap-2">
-                            <span className="text-[10px] text-slate-600">com IVA (23%):</span>
-                            <span className="text-base font-bold text-cyan-400">
-                              {est?.estimatedPriceWithVat
-                                ? `${est.estimatedPriceWithVat.toFixed(2)} €`
-                                : order.estimateTotal
-                                  ? `${(parseFloat(order.estimateTotal) * 1.23).toFixed(2)} €`
-                                  : "—"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                        );
+                      })()}
 
                       {/* Análise Gemini detalhada */}
                       {est && (
                         <div className="rounded-[20px] border border-violet-400/20 bg-violet-400/[0.03] p-4 space-y-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-violet-400 uppercase tracking-wider">Análise Gemini</span>
+                            <span className="text-xs font-bold text-violeta-texto uppercase tracking-wider">Análise Gemini</span>
                             {est.confidence && (
                               <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                                est.confidence === "high" ? "border-emerald-400/30 text-emerald-400" :
-                                est.confidence === "medium" ? "border-amber-400/30 text-amber-400" :
-                                "border-red-400/30 text-red-400"
+                                est.confidence === "high" ? "border-emerald-400/30 text-esmeralda-texto" :
+                                est.confidence === "medium" ? "border-amber-400/30 text-ambar-texto" :
+                                "border-red-400/30 text-coral-texto"
                               }`}>
                                 {est.confidence === "high" ? "Alta confiança" : est.confidence === "medium" ? "Confiança média" : "Baixa confiança"}
                               </span>
                             )}
-                            <span className="ml-auto rounded-full border border-violet-400/30 px-2 py-0.5 text-[10px] font-semibold text-violet-400">IA</span>
+                            <span className="ml-auto rounded-full border border-violet-400/30 px-2 py-0.5 text-[10px] font-semibold text-violeta-texto">IA</span>
                           </div>
 
                           {/* Equipa / Horas / Dificuldade / Recomendação */}
                           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             {est.difficultyLevel && (
-                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Dificuldade</p>
+                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Dificuldade</p>
                                 <div className="flex gap-0.5 mb-1">
                                   {[1,2,3,4,5].map((n) => (
                                     <div key={n} className={`h-1 w-3.5 rounded-full ${n <= (est.difficultyLevel ?? 0) ? "bg-violet-400" : "bg-white/10"}`} />
                                   ))}
                                 </div>
-                                <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[est.difficultyLevel] ?? "text-slate-700"}`}>
+                                <span className={`text-[10px] font-semibold ${DIFFICULTY_COLOR[est.difficultyLevel] ?? "text-slate-200"}`}>
                                   {DIFFICULTY_LABEL[est.difficultyLevel] ?? est.difficultyLevel}
                                 </span>
                               </div>
                             )}
                             {est.teamSize && (
-                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Equipa</p>
-                                <p className="text-[11px] font-semibold text-slate-700">{est.teamSize}</p>
+                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Equipa</p>
+                                <p className="text-[11px] font-semibold text-slate-200">{est.teamSize}</p>
                               </div>
                             )}
                             {est.estimatedHoursText && (
-                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Tempo</p>
-                                <p className="text-[11px] font-semibold text-slate-700">{est.estimatedHoursText}</p>
+                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Tempo</p>
+                                <p className="text-[11px] font-semibold text-slate-200">{est.estimatedHoursText}</p>
                               </div>
                             )}
                             {est.recommendation && (
-                              <div className="rounded-[12px] border border-slate-100 bg-slate-50/50 p-2.5">
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1">Ação</p>
+                              <div className="rounded-[12px] border border-white/[0.06] bg-white/[0.03] p-2.5">
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Ação</p>
                                 <p className={`text-[11px] font-semibold ${
-                                  est.recommendation === "pode_aprovar" ? "text-emerald-400" :
-                                  est.recommendation === "visita_presencial" ? "text-red-400" :
-                                  "text-amber-400"
+                                  est.recommendation === "pode_aprovar" ? "text-esmeralda-texto" :
+                                  est.recommendation === "visita_presencial" ? "text-coral-texto" :
+                                  "text-ambar-texto"
                                 }`}>
                                   {est.recommendation === "pode_aprovar" ? "Pode aprovar" :
                                    est.recommendation === "pedir_fotos" ? "Pedir fotos" :
@@ -2475,29 +2405,29 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             const tHours = est.labor?.estimatedHours ?? null;
                             return (
                               <div className="rounded-[14px] border border-cyan-400/15 bg-cyan-400/[0.04] p-3">
-                                <p className="text-[9px] font-semibold uppercase tracking-wider text-cyan-500 mb-2">Deslocação e horas consideradas</p>
+                                <p className="text-[9px] font-semibold uppercase tracking-wider text-ciano-texto mb-2">Deslocação e horas consideradas</p>
                                 <div className="grid grid-cols-3 gap-2">
                                   <div>
-                                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Distância da base</p>
-                                    <p className="mt-1 text-[12px] font-bold text-cyan-700">
+                                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Distância da base</p>
+                                    <p className="mt-1 text-[12px] font-bold text-ciano-texto">
                                       {tKm != null ? `${String(tKm).replace(".", ",")} km${tDur ? ` · ${tDur}` : ""}` : "A confirmar"}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Custo deslocação</p>
-                                    <p className="mt-1 text-[12px] font-bold text-cyan-700">
-                                      {tCost != null ? `${tCost.toFixed(2)} €` : "—"}
+                                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Custo deslocação</p>
+                                    <p className="mt-1 text-[12px] font-bold text-ciano-texto">
+                                      {tCost != null ? eurosPt(tCost) : "—"}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Horas estimadas</p>
-                                    <p className="mt-1 text-[12px] font-bold text-cyan-700">
+                                    <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Horas estimadas</p>
+                                    <p className="mt-1 text-[12px] font-bold text-ciano-texto">
                                       {tHours != null ? `${tHours}h` : (est.estimatedHoursText ?? "—")}
                                     </p>
                                   </div>
                                 </div>
                                 {tKm == null && (
-                                  <p className="mt-2 text-[10px] text-amber-400">Distância a confirmar manualmente — insira os km abaixo e recalcule.</p>
+                                  <p className="mt-2 text-[10px] text-ambar-texto">Distância a confirmar manualmente — insira os km abaixo e recalcule.</p>
                                 )}
                               </div>
                             );
@@ -2523,21 +2453,21 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               ? ((finalPrice - breakEven) / breakEven) * 100
                               : null;
                             return (
-                              <div className="rounded-[16px] border-2 border-violet-400/40 bg-gradient-to-br from-violet-50 to-white p-4">
+                              <div className="rounded-[16px] border-2 border-violet-400/40 bg-gradient-to-br from-violeta/[0.10] to-transparent p-4">
                                 {est.summary && (
                                   <>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-600 mb-1.5">Resumo</p>
-                                    <p className="text-sm font-medium leading-relaxed text-slate-800 mb-4">{est.summary}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violeta-texto mb-1.5">Resumo</p>
+                                    <p className="text-sm font-medium leading-relaxed text-slate-100 mb-4">{est.summary}</p>
                                   </>
                                 )}
                                 {breakEven != null && (
-                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 border-t border-violet-200/60 pt-3">
+                                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 border-t border-violeta/20 pt-3">
                                     <div>
-                                      <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 mb-1">
+                                      <p className="text-[10px] font-bold uppercase tracking-wider text-coral-texto mb-1">
                                         Custo mínimo (break-even)
                                       </p>
-                                      <p className="text-xl font-bold text-rose-700">
-                                        {breakEven.toFixed(2)} €
+                                      <p className="text-xl font-bold text-coral-texto">
+                                        {eurosPt(breakEven)}
                                       </p>
                                       <p className="mt-0.5 text-[10px] text-slate-500">
                                         Abaixo deste valor = prejuízo
@@ -2545,11 +2475,15 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                     </div>
                                     {finalPrice != null && (
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                                           Preço sugerido s/IVA
                                         </p>
-                                        <p className="text-xl font-bold text-violet-700">
-                                          {finalPrice.toFixed(2)} €
+                                        <p className="text-xl font-bold text-violeta-texto">
+                                          {eurosPt(finalPrice)}
+                                        </p>
+                                        {/* O sem IVA nunca sozinho (d77). */}
+                                        <p className="mt-0.5 text-[10px] text-slate-400">
+                                          {eurosPt(est.estimatedPriceWithVat ?? Math.round(finalPrice * 123) / 100)} com IVA
                                         </p>
                                         {marginPercent != null && (
                                           <p className="mt-0.5 text-[10px] text-slate-500">
@@ -2560,11 +2494,11 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                     )}
                                     {profit != null && profit > 0 && (
                                       <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-esmeralda-texto mb-1">
                                           Lucro estimado
                                         </p>
-                                        <p className="text-xl font-bold text-emerald-700">
-                                          {profit.toFixed(2)} €
+                                        <p className="text-xl font-bold text-esmeralda-texto">
+                                          {eurosPt(profit)}
                                         </p>
                                         <p className="mt-0.5 text-[10px] text-slate-500">
                                           s/IVA · antes de comissão
@@ -2578,8 +2512,8 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           })()}
                           {est.customerMessage && (
                             <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-cyan-500 mb-1">Mensagem sugerida ao cliente</p>
-                              <p className="text-xs leading-relaxed text-slate-700 italic">{est.customerMessage}</p>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-ciano-texto mb-1">Mensagem sugerida ao cliente</p>
+                              <p className="text-xs leading-relaxed text-slate-200 italic">{est.customerMessage}</p>
                             </div>
                           )}
                           {est.assumptions && est.assumptions.length > 0 && (
@@ -2596,10 +2530,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           )}
                           {est.missingFields && est.missingFields.length > 0 && (
                             <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-amber-500 mb-1.5">Campos em falta</p>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-ambar-texto mb-1.5">Campos em falta</p>
                               <ul className="space-y-0.5">
                                 {est.missingFields.map((f, i) => (
-                                  <li key={i} className="flex items-start gap-1.5 text-[11px] text-amber-400">
+                                  <li key={i} className="flex items-start gap-1.5 text-[11px] text-ambar-texto">
                                     <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-400" />{f.replace(/_/g, " ")}
                                   </li>
                                 ))}
@@ -2608,7 +2542,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           )}
                           {est.internalNotes && est.internalNotes.length > 0 && (
                             <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Notas internas da IA</p>
+                              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Notas internas da IA</p>
                               <ul className="space-y-0.5">
                                 {est.internalNotes.map((n, i) => (
                                   <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-500">
@@ -2631,18 +2565,18 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             />
                             <button
                               type="button" onClick={handleCalcularDistancia} disabled={distanceCalculating}
-                              className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-700 hover:bg-cyan-400/20 disabled:opacity-60 transition"
+                              className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-ciano-texto hover:bg-cyan-400/20 disabled:opacity-60 transition"
                             >
                               {distanceCalculating ? "A calcular..." : "Calcular pela morada"}
                             </button>
                             <button
                               type="button" onClick={handleGuardarDistanciaManual} disabled={distanceCalculating}
-                              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 transition"
+                              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] disabled:opacity-60 transition"
                             >
                               Guardar km manual
                             </button>
                           </div>
-                          {distanceMsg && <p className="mt-1.5 text-[11px] text-cyan-400">{distanceMsg}</p>}
+                          {distanceMsg && <p className="mt-1.5 text-[11px] text-ciano-texto">{distanceMsg}</p>}
                           <p className="mt-1 text-[10px] text-slate-500">Base: Av. Q.ta das Laranjeiras, Fernão Ferro. A distância entra no cálculo do preço ao recalcular a estimativa.</p>
                         </Field>
                       )}
@@ -2664,15 +2598,15 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                       <div className="flex flex-wrap justify-end gap-2">
                         <button onClick={handleRecalcularEstimativa} disabled={recalculating || saving}
-                          className="flex items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-400/20 disabled:opacity-60 transition">
+                          className="flex items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violeta-texto hover:bg-violet-400/20 disabled:opacity-60 transition">
                           {recalculating ? "A recalcular..." : "Recalcular estimativa"}
                         </button>
                         <button onClick={() => handleStatusQuick("aprovado")} disabled={saving}
-                          className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-400/20 disabled:opacity-60 transition">
+                          className="flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-2.5 text-sm font-semibold text-esmeralda-texto hover:bg-emerald-400/20 disabled:opacity-60 transition">
                           Aprovar orçamento
                         </button>
                         <button onClick={handleSave} disabled={saving}
-                          className="flex items-center gap-2 rounded-2xl bg-cyan-400 px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition">
+                          className="flex items-center gap-2 rounded-2xl bg-acao px-5 py-2.5 text-sm font-bold text-white hover:bg-acao-hover disabled:opacity-60 transition">
                           {saving ? "A guardar..." : "Guardar alterações"}
                         </button>
                       </div>
@@ -2681,13 +2615,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     {/* Fotos */}
                     <div className="space-y-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="text-base font-bold text-slate-900">Fotos e ficheiros</h3>
+                        <h3 className="text-base font-bold text-white">Fotos e ficheiros</h3>
                         {files.length > 0 && (
                           <button
                             type="button"
                             onClick={() => descarregarTodas(files, order.id)}
                             disabled={aDescarregar != null}
-                            className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-50"
+                            className="flex items-center gap-1.5 rounded-xl border border-white/10 px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:border-white/20 hover:text-slate-100 disabled:opacity-50"
                           >
                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4" />
@@ -2705,15 +2639,15 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         const motivo = (raw as Record<string, unknown>)?.motivoFotosNaoEnviadas;
                         if (!perdidas) return null;
                         return (
-                          <div className="rounded-[16px] border border-amber-300 bg-amber-50 p-4">
-                            <p className="text-sm font-semibold text-amber-900">
+                          <div className="rounded-[16px] border border-ambar/40 bg-ambar/14 p-4">
+                            <p className="text-sm font-semibold text-ambar-texto">
                               O cliente enviou {perdidas} foto{perdidas === 1 ? "" : "s"} que não chegaram.
                             </p>
-                            <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                            <p className="mt-1 text-xs leading-relaxed text-ambar-texto">
                               Ele foi avisado no ecrã final e convidado a reenviá-las por WhatsApp — vale a pena confirmar.
                             </p>
                             {typeof motivo === "string" && motivo && (
-                              <p className="mt-2 rounded-[10px] bg-amber-100 px-3 py-2 font-mono text-[11px] leading-relaxed text-amber-900">
+                              <p className="mt-2 rounded-[10px] bg-ambar/20 px-3 py-2 font-mono text-[11px] leading-relaxed text-ambar-texto">
                                 {motivo}
                               </p>
                             )}
@@ -2722,7 +2656,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       })()}
                       {files.length === 0 ? (
                         <div className="flex flex-col items-center justify-center rounded-[20px] border border-dashed border-white/10 py-16 text-center">
-                          <svg className="mb-3 h-10 w-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="mb-3 h-10 w-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           <p className="text-sm text-slate-500">Nenhuma foto enviada pelo cliente.</p>
@@ -2734,7 +2668,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                             const isImg = especieDoAnexo(url) === "imagem";
                             const isVid = especieDoAnexo(url) === "video";
                             return (
-                              <div key={i} className="group relative overflow-hidden rounded-[16px] border border-slate-100 bg-slate-50/50 aspect-square">
+                              <div key={i} className="group relative overflow-hidden rounded-[16px] border border-white/[0.06] bg-white/[0.03] aspect-square">
                                 {isImg ? (
                                   <>
                                     <img src={url} alt={`Ficheiro ${i + 1}`} className="h-full w-full object-cover transition group-hover:scale-105 cursor-pointer" onClick={() => setLightbox(url)} />
@@ -2746,7 +2680,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                       }}
                                       disabled={aDescarregar === url}
                                       title="Descarregar esta foto"
-                                      className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-slate-700 opacity-0 shadow transition hover:bg-white group-hover:opacity-100 disabled:opacity-60"
+                                      className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-[#0d1726]/90 text-slate-200 opacity-0 shadow transition hover:bg-[#0d1726] group-hover:opacity-100 disabled:opacity-60"
                                     >
                                       {aDescarregar === url ? (
                                         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
@@ -2757,7 +2691,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                                       )}
                                     </button>
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition cursor-pointer" onClick={() => setLightbox(url)}>
-                                      <svg className="h-6 w-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                       </svg>
@@ -2781,7 +2715,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                 {/* Atribuição */}
                 {activeTab === "atribuicao" && (
                   <div className="space-y-6">
-                    <h3 className="text-base font-bold text-slate-900">Estado do pedido</h3>
+                    <h3 className="text-base font-bold text-white">Estado do pedido</h3>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Status do pedido">
                         <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as OrderStatus)} className={selectCls}>
@@ -2813,7 +2747,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                       <textarea rows={4} value={editNotasInternas} onChange={(e) => setEditNotasInternas(e.target.value)} className={inputCls} placeholder="Notas para a equipa..." />
                     </Field>
                     <div className="flex justify-end">
-                      <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-2xl bg-cyan-400 px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-60 transition">
+                      <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-2xl bg-acao px-5 py-2.5 text-sm font-bold text-white hover:bg-acao-hover disabled:opacity-60 transition">
                         {saving ? "A guardar..." : "Guardar alterações"}
                       </button>
                     </div>
@@ -2822,7 +2756,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     {isAdmin && (
                       <div className="rounded-[20px] border border-violet-400/20 bg-violet-400/[0.03] p-5 space-y-4">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-bold text-violet-700 flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-violeta-texto flex items-center gap-2">
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
@@ -2830,12 +2764,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           </h4>
                           {/* Current calendar status badge */}
                           {order.calendarStatus === "scheduled" && (
-                            <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700">
+                            <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-violeta-texto">
                               Agendado
                             </span>
                           )}
                           {order.calendarStatus === "updated" && (
-                            <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-300">
+                            <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-azul-texto">
                               Atualizado
                             </span>
                           )}
@@ -2849,10 +2783,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         {/* Agenda de destino — quando configurada */}
                         {order.calendarTargetName && (
                           <div className="flex items-center gap-2 rounded-[12px] border border-violet-400/15 bg-violet-400/[0.04] px-3 py-2">
-                            <svg className="h-3.5 w-3.5 flex-shrink-0 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-3.5 w-3.5 flex-shrink-0 text-violeta-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-[11px] text-slate-500">Agenda: <span className="font-semibold text-violet-700">{order.calendarTargetName}</span></span>
+                            <span className="text-[11px] text-slate-500">Agenda: <span className="font-semibold text-violeta-texto">{order.calendarTargetName}</span></span>
                           </div>
                         )}
 
@@ -2862,14 +2796,14 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           const datePt = `${d}/${m}/${y}`;
                           return (
                             <div className="flex items-center gap-2 rounded-[14px] border border-violet-400/20 bg-violet-400/[0.06] px-4 py-2.5 text-sm">
-                              <svg className="h-4 w-4 shrink-0 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="h-4 w-4 shrink-0 text-violeta-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              <span className="text-violet-200">
+                              <span className="text-violeta-texto">
                                 Agendado para{" "}
-                                <span className="font-bold text-slate-900">{datePt}</span>
+                                <span className="font-bold text-white">{datePt}</span>
                                 {order.scheduledStartTime && order.scheduledEndTime && (
-                                  <>, <span className="font-bold text-slate-900">{order.scheduledStartTime}–{order.scheduledEndTime}</span></>
+                                  <>, <span className="font-bold text-white">{order.scheduledStartTime}–{order.scheduledEndTime}</span></>
                                 )}
                               </span>
                             </div>
@@ -2915,10 +2849,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                         {/* Messages */}
                         {schedError && (
-                          <p className="text-xs font-semibold text-red-400">{schedError}</p>
+                          <p className="text-xs font-semibold text-coral-texto">{schedError}</p>
                         )}
                         {schedMsg && (
-                          <p className="text-xs font-semibold text-violet-700">{schedMsg}</p>
+                          <p className="text-xs font-semibold text-violeta-texto">{schedMsg}</p>
                         )}
 
                         {/* Action buttons */}
@@ -2926,7 +2860,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           <button
                             onClick={handleSchedule}
                             disabled={scheduling || !schedDate || !schedStart || !schedEnd}
-                            className="flex items-center gap-1.5 rounded-2xl bg-violet-500 px-4 py-2 text-sm font-bold text-slate-900 hover:bg-violet-400 disabled:opacity-50 transition"
+                            className="flex items-center gap-1.5 rounded-2xl bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-400 disabled:opacity-50 transition"
                           >
                             {scheduling ? (
                               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -2946,7 +2880,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                               href={order.calendarEventUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-400/10 px-3 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-400/20 transition"
+                              className="flex items-center gap-1.5 rounded-xl border border-violet-400/30 bg-violet-400/10 px-3 py-1.5 text-xs font-semibold text-violeta-texto hover:bg-violet-400/20 transition"
                             >
                               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -2967,10 +2901,10 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {activeTab === "historico" && (
                   <div className="space-y-4">
-                    <h3 className="text-base font-bold text-slate-900">Histórico do pedido</h3>
+                    <h3 className="text-base font-bold text-white">Histórico do pedido</h3>
                     {history.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <svg className="mb-3 h-10 w-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="mb-3 h-10 w-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <p className="text-sm text-slate-500">Nenhum registo de histórico ainda.</p>
@@ -2983,26 +2917,26 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           const isInfoReq = entry.type === "info_requested";
                           return (
                             <div key={i} className="relative pb-5 pl-6">
-                              <span className={`absolute left-[-3px] top-1.5 h-2 w-2 rounded-full ring-4 ring-white ${
-                                isReply ? "bg-blue-500" : isInfoReq ? "bg-orange-400" : "bg-cyan-400"
+                              <span className={`absolute left-[-3px] top-1.5 h-2 w-2 rounded-full ring-4 ring-[#070e17] ${
+                                isReply ? "bg-blue-500" : isInfoReq ? "bg-orange-400" : "bg-acao"
                               }`} />
                               {isReply ? (
-                                <div className="inline-block rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
-                                  <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                                <div className="inline-block rounded-lg border border-azul/30 bg-azul/14 px-3 py-2">
+                                  <p className="text-[10px] font-bold uppercase tracking-wide text-azul-texto">
                                     Resposta do cliente
                                   </p>
-                                  <p className="mt-1 text-sm font-medium text-slate-800 whitespace-pre-line">{entry.message}</p>
+                                  <p className="mt-1 text-sm font-medium text-slate-100 whitespace-pre-line">{entry.message}</p>
                                   <div className="mt-1 flex items-center gap-2">
-                                    {entry.by && <span className="text-[10px] font-medium text-blue-600">{entry.by.nome}</span>}
+                                    {entry.by && <span className="text-[10px] font-medium text-azul-texto">{entry.by.nome}</span>}
                                     <span className="text-[10px] text-slate-500">{fmt(entry.createdAt)}</span>
                                   </div>
                                 </div>
                               ) : (
                                 <>
-                                  <p className="text-xs font-semibold text-slate-800">{entry.message}</p>
+                                  <p className="text-xs font-semibold text-slate-100">{entry.message}</p>
                                   <div className="mt-0.5 flex items-center gap-2">
                                     {entry.by && <span className="text-[10px] font-medium text-slate-500">{entry.by.nome}</span>}
-                                    <span className="text-[10px] text-slate-600">{fmt(entry.createdAt)}</span>
+                                    <span className="text-[10px] text-slate-400">{fmt(entry.createdAt)}</span>
                                   </div>
                                 </>
                               )}
@@ -3011,9 +2945,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         })}
                       </div>
                     )}
-                    <div className="relative space-y-0 border-t border-slate-100 pl-4 pt-4">
-                      <div className="absolute left-4 top-7 bottom-3 w-px bg-slate-50" />
-                      <p className="mb-3 pl-6 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">Linha do tempo automática</p>
+                    <div className="relative space-y-0 border-t border-white/[0.06] pl-4 pt-4">
+                      <div className="absolute left-4 top-7 bottom-3 w-px bg-white/[0.04]" />
+                      <p className="mb-3 pl-6 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Linha do tempo automática</p>
                       {[
                         { label: "Pedido criado", date: order.createdAt, color: "bg-slate-400" },
                         ...(order.assignedAt ? [{ label: `Atribuído a ${order.assignedToName ?? "alguém da equipa"}`, date: order.assignedAt, color: "bg-sky-400" }] : []),
@@ -3021,9 +2955,9 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         ...(order.status === "confirmado" ? [{ label: "Pedido confirmado", date: order.updatedAt, color: "bg-green-400" }] : []),
                       ].map((item, i) => (
                         <div key={i} className="relative pb-4 pl-6">
-                          <span className={`absolute left-[-3px] top-1.5 h-2 w-2 rounded-full ${item.color} ring-4 ring-white`} />
-                          <p className="text-xs font-semibold text-slate-700">{item.label}</p>
-                          <p className="text-[10px] text-slate-600">{fmt(item.date)}</p>
+                          <span className={`absolute left-[-3px] top-1.5 h-2 w-2 rounded-full ${item.color} ring-4 ring-[#070e17]`} />
+                          <p className="text-xs font-semibold text-slate-200">{item.label}</p>
+                          <p className="text-[10px] text-slate-400">{fmt(item.date)}</p>
                         </div>
                       ))}
                     </div>
@@ -3061,27 +2995,27 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       {/* ── Calendar confirm modal ───────────────────────────────────────── */}
       {calendarModalOpen && order && (() => {
         const isMov = isMudanca(order.serviceType);
-        const calCls = "w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-violet-400/40 focus:outline-none focus:ring-1 focus:ring-violet-400/20 transition";
+        const calCls = "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-400/40 focus:outline-none focus:ring-1 focus:ring-violet-400/20 transition";
         const lbCls = "block text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 mb-1.5";
         return (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
           >
             <div
-              className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_40px_100px_rgba(0,0,0,0.15)]"
+              className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-[24px] border border-white/10 bg-[#0d1726] shadow-[0_40px_100px_rgba(0,0,0,0.15)]"
               style={{ maxHeight: "92vh" }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex-shrink-0 border-b border-slate-100 px-6 py-5">
+              <div className="flex-shrink-0 border-b border-white/[0.06] px-6 py-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">Agendar serviço no Google Calendar</h2>
+                    <h2 className="text-base font-bold text-white">Agendar serviço no Google Calendar</h2>
                     <p className="mt-1 text-xs text-slate-500">Confirme os dados antes de enviar para a agenda.</p>
                   </div>
                   <button
                     onClick={() => setCalendarModalOpen(false)}
-                    className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400 hover:text-slate-900 transition"
+                    className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white transition"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3095,7 +3029,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {/* Dados do evento */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Dados do evento</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violeta-texto">Dados do evento</p>
                   <div>
                     <label className={lbCls}>Título do evento</label>
                     <input type="text" value={cmTitle} onChange={(e) => setCmTitle(e.target.value)} className={calCls} placeholder="Ex.: Maria Silva - Mudança" />
@@ -3126,21 +3060,21 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     const hasTarget = !!targetName;
                     return (
                       <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${hasTarget ? "border-violet-400/20 bg-violet-400/[0.05]" : "border-amber-400/20 bg-amber-400/[0.04]"}`}>
-                        <svg className={`h-4 w-4 flex-shrink-0 ${hasTarget ? "text-violet-400" : "text-amber-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`h-4 w-4 flex-shrink-0 ${hasTarget ? "text-violeta-texto" : "text-ambar-texto"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Agenda de destino</p>
                           {hasTarget ? (
-                            <p className="mt-0.5 truncate text-sm font-semibold text-violet-200">{targetName}</p>
+                            <p className="mt-0.5 truncate text-sm font-semibold text-violeta-texto">{targetName}</p>
                           ) : (
-                            <p className="mt-0.5 text-xs text-amber-400">
+                            <p className="mt-0.5 text-xs text-ambar-texto">
                               Nenhuma agenda configurada. O Google Calendar pedirá para escolher ao guardar.
                             </p>
                           )}
                         </div>
                         {hasTarget && (
-                          <span className="flex-shrink-0 rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+                          <span className="flex-shrink-0 rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold text-violeta-texto">
                             Configurado
                           </span>
                         )}
@@ -3151,7 +3085,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {/* Cliente */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Cliente</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violeta-texto">Cliente</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={lbCls}>Nome do cliente</label>
@@ -3170,7 +3104,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {/* Servico */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Serviço</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violeta-texto">Serviço</p>
                   <div>
                     <label className={lbCls}>Tipo de serviço</label>
                     <input type="text" value={cmServiceType} onChange={(e) => setCmServiceType(e.target.value)} className={calCls} />
@@ -3183,7 +3117,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {/* Localizacao */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Localização</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violeta-texto">Localização</p>
                   {isMov ? (
                     <>
                       <div>
@@ -3209,7 +3143,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
 
                 {/* Observacoes */}
                 <section className="space-y-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Observações</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violeta-texto">Observações</p>
                   <div>
                     <label className={lbCls}>Observações para a agenda (opcional)</label>
                     <textarea rows={2} value={cmNotes} onChange={(e) => setCmNotes(e.target.value)} className={calCls} placeholder="Ex.: Levar embalagens extra, acesso pelo lado esquerdo..." />
@@ -3219,7 +3153,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                 {/* Descricao que vai para a agenda */}
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-400">Descrição que irá para a agenda</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violeta-texto">Descrição que irá para a agenda</p>
                     {cmDescriptionLoading && (
                       <span className="flex items-center gap-1.5 text-[10px] text-slate-500">
                         <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -3241,31 +3175,31 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     placeholder={cmDescriptionLoading ? "A gerar descrição..." : "A descrição será gerada automaticamente ao abrir o modal. Pode editar antes de agendar."}
                     disabled={cmDescriptionLoading}
                   />
-                  <p className="text-[10px] text-slate-600">Se deixar em branco, a rota gera automaticamente a descrição com os dados do pedido.</p>
+                  <p className="text-[10px] text-slate-400">Se deixar em branco, a rota gera automaticamente a descrição com os dados do pedido.</p>
                 </section>
 
                 {/* Messages */}
                 {cmError && (
                   <div className="rounded-xl border border-red-500/25 bg-red-500/[0.07] px-4 py-3 space-y-3">
                     <div className="flex items-start gap-2">
-                      <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-coral-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <p className="text-xs font-semibold leading-relaxed text-red-400">{cmError}</p>
+                      <p className="text-xs font-semibold leading-relaxed text-coral-texto">{cmError}</p>
                     </div>
 
                     {/* API not enabled */}
                     {cmApiDisabledUrl && (
                       <div className="rounded-lg border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2.5 space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Como resolver</p>
-                        <p className="text-xs text-amber-700 leading-relaxed">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-ambar-texto">Como resolver</p>
+                        <p className="text-xs text-ambar-texto leading-relaxed">
                           A <strong>Google Calendar API</strong> precisa de ser ativada no Google Cloud Console.
                         </p>
                         <a
                           href={cmApiDisabledUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-400/20"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-ambar-texto transition hover:bg-amber-400/20"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -3279,18 +3213,18 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                     {/* Calendar not shared with Service Account */}
                     {cmErrorCode === "calendar_not_found" && !cmApiDisabledUrl && (
                       <div className="rounded-lg border border-sky-400/20 bg-sky-400/[0.05] px-3 py-3 space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-sky-400">Como resolver — 3 passos</p>
-                        <ol className="space-y-2 text-xs text-slate-700 leading-relaxed list-none">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-azul-texto">Como resolver — 3 passos</p>
+                        <ol className="space-y-2 text-xs text-slate-200 leading-relaxed list-none">
                           <li className="flex items-start gap-2">
-                            <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-[9px] font-bold text-sky-400">1</span>
+                            <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-[9px] font-bold text-azul-texto">1</span>
                             Abra o <strong>Google Calendar</strong> com a conta <strong>geral@clyon.pt</strong>
                           </li>
                           <li className="flex items-start gap-2">
-                            <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-[9px] font-bold text-sky-400">2</span>
+                            <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-[9px] font-bold text-azul-texto">2</span>
                             Clique nos <strong>3 pontos</strong> ao lado de <em>Organização CLYON</em> &rarr; <strong>Definições e partilha</strong>
                           </li>
                           <li className="flex items-start gap-2">
-                            <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-[9px] font-bold text-sky-400">3</span>
+                            <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-[9px] font-bold text-azul-texto">3</span>
                             Em <strong>Partilhado com pessoas específicas</strong> adicione o email da Service Account com permissão <em>Fazer alterações nos eventos</em>
                           </li>
                         </ol>
@@ -3298,7 +3232,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           href="https://calendar.google.com/calendar/r/settings"
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-300 transition hover:bg-sky-400/20"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-azul-texto transition hover:bg-sky-400/20"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -3312,17 +3246,17 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                 {cmMsg && (
                   <div className="rounded-xl border border-violet-400/20 bg-violet-400/10 px-4 py-3 space-y-2">
                     <div className="flex items-center gap-2">
-                      <svg className="h-4 w-4 flex-shrink-0 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4 flex-shrink-0 text-violeta-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      <p className="text-xs font-semibold text-violet-700">{cmMsg}</p>
+                      <p className="text-xs font-semibold text-violeta-texto">{cmMsg}</p>
                     </div>
                     {cmTargetName && (
                       <div className="flex items-center gap-2 rounded-lg border border-violet-400/15 bg-violet-400/[0.06] px-3 py-2">
-                        <svg className="h-3.5 w-3.5 flex-shrink-0 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-3.5 w-3.5 flex-shrink-0 text-violeta-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-xs text-slate-400">Agenda: <span className="font-semibold text-violet-200">{cmTargetName}</span></span>
+                        <span className="text-xs text-slate-400">Agenda: <span className="font-semibold text-violeta-texto">{cmTargetName}</span></span>
                       </div>
                     )}
                     {order.calendarEventUrl && (
@@ -3330,7 +3264,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                         href={order.calendarEventUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-400 hover:text-violet-200 hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-violeta-texto hover:text-white hover:underline"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -3343,17 +3277,17 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               </div>
 
               {/* Footer */}
-              <div className="flex-shrink-0 border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-3">
+              <div className="flex-shrink-0 border-t border-white/[0.06] px-6 py-4 flex items-center justify-end gap-3">
                 <button
                   onClick={() => setCalendarModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] transition"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleScheduleModal}
                   disabled={cmScheduling || !cmDate || !cmStart || !cmEnd}
-                  className="flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-bold text-slate-900 hover:bg-violet-400 disabled:opacity-50 transition"
+                  className="flex items-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-violet-400 disabled:opacity-50 transition"
                 >
                   {cmScheduling ? (
                     <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -3376,13 +3310,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       {/* ── Accept prompt (assistente) ── */}
       {showAcceptPrompt && order && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
+          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#0d1726] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10">
-              <svg className="h-6 w-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 text-ciano-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-slate-900">Aceitar pedido #{order.id}?</h2>
+            <h2 className="text-lg font-bold text-white">Aceitar pedido #{order.id}?</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-500">
               Ao aceitar, terá acesso ao contacto completo do cliente e será cobrado o valor por pedido aceite.
             </p>
@@ -3390,7 +3324,7 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               <button
                 type="button"
                 onClick={() => setShowAcceptPrompt(false)}
-                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] transition"
               >Cancelar</button>
               <button
                 type="button"
@@ -3427,13 +3361,13 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       {/* ── Pedir info dialog ── */}
       {showPedirInfo && order && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
+          <div className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#0d1726] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-400/20 bg-orange-400/10">
-              <svg className="h-6 w-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 text-laranja-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-slate-900">Pedir informação ao cliente</h2>
+            <h2 className="text-lg font-bold text-white">Pedir informação ao cliente</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-500">
               Escreva a informação em falta. Esta mensagem será enviada para a conta do cliente e o status do pedido passa a &quot;Precisa info&quot;.
             </p>
@@ -3442,14 +3376,14 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               value={pedirInfoText}
               onChange={(e) => setPedirInfoText(e.target.value)}
               placeholder="Ex.: Pode confirmar quantos volumes tem ao todo? Precisamos de fotos das peças maiores para a estimativa final."
-              className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+              className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
               autoFocus
             />
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
                 onClick={() => { setShowPedirInfo(false); setPedirInfoText(""); }}
-                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] transition"
               >Cancelar</button>
               <button
                 type="button"
@@ -3492,19 +3426,19 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
       {/* ── Delete confirmation ── */}
       {showDelete && order && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
+          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#0d1726] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)]">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-red-400/20 bg-red-400/10">
-              <svg className="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 text-coral-texto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-slate-900">Apagar pedido #{order.id}?</h2>
+            <h2 className="text-lg font-bold text-white">Apagar pedido #{order.id}?</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
               Esta ação irá remover o pedido definitivamente da base de dados e{" "}
-              <span className="font-semibold text-red-300">não poderá ser desfeita</span>.
+              <span className="font-semibold text-coral-texto">não poderá ser desfeita</span>.
             </p>
             <p className="mt-4 text-sm text-slate-400">
-              Para confirmar, escreva <span className="font-mono font-bold text-red-400">APAGAR</span>:
+              Para confirmar, escreva <span className="font-mono font-bold text-coral-texto">APAGAR</span>:
             </p>
             <input
               type="text"
@@ -3515,19 +3449,19 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
               autoFocus
             />
             {error && (
-              <p className="mt-3 rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2.5 text-sm text-red-300">{error}</p>
+              <p className="mt-3 rounded-2xl border border-red-400/30 bg-red-400/10 px-4 py-2.5 text-sm text-coral-texto">{error}</p>
             )}
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
                 onClick={() => { setShowDelete(false); setDeleteConfirm(""); setError(""); }}
-                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] transition"
               >Cancelar</button>
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting || deleteConfirm !== "APAGAR"}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-2.5 text-sm font-bold text-slate-900 hover:bg-red-400 disabled:opacity-40 transition"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-400 disabled:opacity-40 transition"
               >
                 {deleting ? (
                   <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -3589,12 +3523,12 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
   }, [pedidoId, token, versao]);
 
   if (erro) {
-    return <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</p>;
+    return <p className="rounded-xl bg-coral/14 px-4 py-3 text-sm text-coral-texto">{erro}</p>;
   }
   if (!dados) {
     return (
       <div className="flex justify-center py-10">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-transparent" aria-label="A carregar" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/15 border-t-transparent" aria-label="A carregar" />
       </div>
     );
   }
@@ -3605,7 +3539,7 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
     <div className="space-y-6">
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-bold text-slate-900">
+          <h3 className="text-base font-bold text-white">
             Receberam o pedido ({dados.receberam.length})
           </h3>
           {/*
@@ -3636,16 +3570,16 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
             {dados.receberam.map((r) => (
               <li
                 key={r.providerId}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#0d1726] px-3 py-2 text-sm"
               >
-                <span className="font-medium text-slate-800">
+                <span className="font-medium text-slate-100">
                   {r.nome}
                   <span className="font-normal text-slate-400">{km(r.distanciaKm)}</span>
                 </span>
                 <span className="text-xs text-slate-500">
                   {r.negociacao?.estado ?? "—"}
                   {r.negociacao?.valorAcordado != null &&
-                    ` · ${r.negociacao.valorAcordado.toFixed(2).replace(".", ",")} €`}
+                    ` · ${eurosPt(r.negociacao.valorAcordado)}`}
                 </span>
               </li>
             ))}
@@ -3654,7 +3588,7 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
       </div>
 
       <div>
-        <h3 className="text-base font-bold text-slate-900">
+        <h3 className="text-base font-bold text-white">
           Não receberam ({dados.naoReceberam.length})
         </h3>
         {dados.naoReceberam.length === 0 ? (
@@ -3664,13 +3598,13 @@ function DistribuicaoTab({ pedidoId, token }: { pedidoId: number; token: string 
             {dados.naoReceberam.map((r) => (
               <li
                 key={r.providerId}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ambar/30 bg-ambar/[0.08] px-3 py-2 text-sm"
               >
-                <span className="font-medium text-slate-800">
+                <span className="font-medium text-slate-100">
                   {r.nome}
                   <span className="font-normal text-slate-400">{km(r.distanciaKm)}</span>
                 </span>
-                <span className="text-xs text-amber-800">{r.motivos.join("; ")}</span>
+                <span className="text-xs text-ambar-texto">{r.motivos.join("; ")}</span>
               </li>
             ))}
           </ul>
