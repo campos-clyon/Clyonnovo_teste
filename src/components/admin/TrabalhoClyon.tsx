@@ -54,6 +54,8 @@ import MensagemDaFase from "@/components/admin/MensagemDaFase";
 import { mensagemDeAgradecimento, mensagemDeCancelamento, mensagemDeTrabalhoConcluido } from "@/lib/mensagens-das-fases";
 import { botoesDaFaseDoTrabalhoClyon } from "@/lib/botoes-das-fases";
 import ContaDoPagamento from "@/components/ContaDoPagamento";
+import { trabalhoConcluido, type MarcosDoTrabalho } from "@/lib/pedido-concluido";
+import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
 import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
@@ -302,8 +304,23 @@ const BLOCOS: Array<{
 ];
 
 /** O bloco de um Trabalho CLYON: o pedido arquivado manda; senão, a fase. */
-export function blocoDoTrabalho(t: { estadoDoPedido: string | null; resumo: { fase: FaseDaOferta } }): Bloco | null {
+export function blocoDoTrabalho(t: {
+  estadoDoPedido: string | null;
+  resumo: { fase: FaseDaOferta; atribuida?: (MarcosDoTrabalho & { execucaoEnviadaEm?: string | null }) | null };
+}): Bloco | null {
   if (t.estadoDoPedido === "arquivado") return "arquivados";
+  /*
+   * UMA SÓ DEFINIÇÃO DE CONCLUÍDO — d76 (20-11-2026). Os «Concluídos» são os
+   * de `trabalhoConcluido` (pedido-concluido.ts), a mesma regra do fecho
+   * automático que põe o pedido «concluido» para as comissões e os Pedidos.
+   * Pago ao profissional sem o cliente ter pago nem confirmado (adiantado) já
+   * não é concluído: fica onde o trabalho está.
+   */
+  const a = t.resumo.atribuida ?? null;
+  if (!pedidoArrumado(t.estadoDoPedido) && trabalhoConcluido({ status: t.estadoDoPedido, negociacoes: a ? [a] : [] })) {
+    return "concluidos";
+  }
+  if (t.resumo.fase === "paga" || t.resumo.fase === "confirmada") return a?.execucaoEnviadaEm ? "feito" : "atribuidos";
   return BLOCOS.find((b) => b.fases.includes(t.resumo.fase))?.id ?? null;
 }
 
@@ -1617,7 +1634,13 @@ function CartaoDoTrabalho({
             ) : null}
             {a.pagoEm ? <span className="text-emerald-300"> · pago {quando(a.pagoEm)}</span> : null}
           </p>
-          {!a.confirmadoEm && (
+          {/* d76: concluído (pago dos dois lados, ou o pedido realizado) já não pede confirmação. */}
+          {trabalhoConcluido({ status: t.estadoDoPedido, negociacoes: [a] }) && !a.confirmadoEm && (
+            <span className="text-xs font-semibold text-emerald-300">
+              {a.pagoEm && a.clientePagouEm ? "Concluído — cliente e profissional pagos" : "Pedido realizado"}
+            </span>
+          )}
+          {!a.confirmadoEm && !trabalhoConcluido({ status: t.estadoDoPedido, negociacoes: [a] }) && (
             <div className="flex flex-wrap gap-2">
               {a.execucaoEnviadaEm ? (
                 <button

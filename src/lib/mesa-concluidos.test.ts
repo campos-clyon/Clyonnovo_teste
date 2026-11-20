@@ -21,7 +21,9 @@ const ROTA = ler("src/app/api/admin/negociacoes/route.ts");
 
 describe("a categoria Concluídos", () => {
   it("os concluídos saem das listas de trabalho e ganham prateleira própria", () => {
-    expect(MESA).toContain('p.status === "concluido"');
+    // d76 (20-11-2026): a regra vive em pedido-concluido.ts, partilhada com os Trabalhos CLYON.
+    expect(MESA).toContain("return trabalhoConcluido(p);");
+    expect(ler("src/lib/pedido-concluido.ts")).toContain('p.status === "concluido"');
     expect(MESA).toContain('activos.filter((p) => quemNegoceia(p) === "clyon")');
     expect(MESA).toContain("Trabalhos confirmados e fechados");
   });

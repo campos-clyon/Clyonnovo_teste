@@ -8,6 +8,7 @@ import AlteracoesDoCliente from "./AlteracoesDoCliente";
 import DoNossoLado from "./DoNossoLado";
 import { useAbertosLembrados } from "./useAbertosLembrados";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
+import { trabalhoConcluido } from "@/lib/pedido-concluido";
 import FaturasDoTrabalho from "./FaturasDoTrabalho";
 import { AConfirmarNoNovoModelo, ContaDoNovoModeloAoConfirmar } from "./NovoModeloNaMesa";
 import MensagemDaFase from "./MensagemDaFase";
@@ -420,7 +421,8 @@ function propostaExpiradaDele(n: Negociacao): Proposta | null {
  * coluna de arrumação do backoffice não a contradiz.
  */
 function pedidoConcluido(p: Pedido): boolean {
-  return p.status === "concluido" || p.negociacoes.some((n) => n.confirmadoEm != null);
+  // d76 (20-11-2026): a mesma regra dos Trabalhos CLYON e do fecho automático.
+  return trabalhoConcluido(p);
 }
 
 /**

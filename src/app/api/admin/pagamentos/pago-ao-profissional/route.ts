@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fecharSePagoDosDoisLados } from "@/lib/fecho-automatico";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import { foiPagoEmMaoPor } from "@/lib/pago-em-mao";
@@ -133,6 +134,9 @@ export async function POST(req: NextRequest) {
      * confirmar (`faseParaOCliente`), e não lhe chega aviso nenhum daqui — o
      * pagamento ao profissional não é notícia do cliente.
      */
+    // d76 (20-11-2026): se este era o segundo dos dois pagamentos, o pedido fica realizado. Nunca lança.
+    await fecharSePagoDosDoisLados({ negociacaoId });
+
     return NextResponse.json({ ok: true, pago: recebe, adiantado: adiantado.length > 0 });
   } catch (e) {
     console.error("[admin/pagamentos/pago-ao-profissional]", e);

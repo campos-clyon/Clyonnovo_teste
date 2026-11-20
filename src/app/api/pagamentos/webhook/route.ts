@@ -12,6 +12,7 @@ import {
 } from "@/lib/webhook-do-eupago";
 import { pagamentoForaDeVigor } from "@/lib/conferir-o-pagamento";
 import { avisarQueOPagamentoEntrou } from "@/lib/avisar-pagamento-recebido";
+import { fecharSePagoDosDoisLados } from "@/lib/fecho-automatico";
 import {
   anotarAviso,
   anotarFalha,
@@ -282,6 +283,8 @@ async function aplicar(aviso: AvisoDoEupago, p: Pagamento, ambienteDoAviso: Ambi
           comissao: aviso.comissao,
         },
       });
+      // d76 (20-11-2026): se este era o segundo dos dois pagamentos, o pedido fica realizado. Nunca lança.
+      await fecharSePagoDosDoisLados({ negociacaoId: p.negociacaoId });
       return OK();
     }
 

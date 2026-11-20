@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fecharSePagoDosDoisLados } from "@/lib/fecho-automatico";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
 import { appendOrderHistory, negociacoesDoProfissional, registar } from "@/lib/db";
 import { trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
@@ -150,6 +151,8 @@ export async function POST(req: NextRequest) {
         { status: 409 },
       );
     }
+    // d76 (20-11-2026): se este era o segundo dos dois pagamentos, o pedido fica realizado. Nunca lança.
+    for (const f of fechadas) await fecharSePagoDosDoisLados({ negociacaoId: f.negociacaoId });
     const total = Math.round(fechadas.reduce((s, f) => s + f.valor, 0) * 100) / 100;
     return NextResponse.json({ ok: true, total, fechadas, ficaram });
   } catch (e) {

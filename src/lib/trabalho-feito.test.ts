@@ -59,8 +59,11 @@ describe("concluído é concluído", () => {
     const i = PAINEL.indexOf("function pedidoConcluido(");
     expect(i).toBeGreaterThan(-1);
     const corpo = PAINEL.slice(i, fimDaFuncao(i));
-    expect(corpo).toContain('p.status === "concluido"');
-    expect(corpo).toContain("n.confirmadoEm != null");
+    // d76 (20-11-2026): a regra é uma só, em pedido-concluido.ts, partilhada com os Trabalhos CLYON.
+    expect(corpo).toContain("return trabalhoConcluido(p);");
+    const regra = readFileSync(join(process.cwd(), "src/lib/pedido-concluido.ts"), "utf8");
+    expect(regra).toContain('p.status === "concluido"');
+    expect(regra).toContain("ha(n.confirmadoEm)");
   });
 
   it("as duas listas e o cartão usam a mesma regra", () => {

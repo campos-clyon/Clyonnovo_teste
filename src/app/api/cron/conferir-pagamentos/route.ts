@@ -22,6 +22,7 @@ import {
 import { avisarQueOPagamentoEntrou } from "@/lib/avisar-pagamento-recebido";
 import { bearerConfere } from "@/lib/segredo-igual";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
+import { fecharOsQueChegaramADia, fecharSePagoDosDoisLados } from "@/lib/fecho-automatico";
 
 export const runtime = "nodejs";
 /** Uma chamada ao euPago por pagamento. Trinta referências não são instantâneas. */
@@ -147,6 +148,8 @@ async function conferirUm(
       detalhe: { pagamentoId: p.id, referencia: p.referencia, valor: decisao.valor },
     });
     console.warn("[cron/conferir-pagamentos] apanhado sem webhook:", p.id);
+    // d76: o segundo dos dois pagamentos fecha o pedido. Nunca lança.
+    await fecharSePagoDosDoisLados({ negociacaoId: p.negociacaoId });
   } else if (feito.duplicado) {
     s.falhas.push(`#${p.id}: ${feito.porque}`);
   }
@@ -213,6 +216,12 @@ export async function GET(req: NextRequest) {
           s.perguntados += 1;
           await conferirUm(conf, p, s);
         }
+        /*
+         * d76 (20-11-2026): os pagos dos dois lados com a data por chegar fecham
+         * aqui, depois do dia — sem cron novo. Nunca lança.
+         */
+        const fechados = await fecharOsQueChegaramADia();
+        if (fechados > 0) console.warn("[cron/conferir-pagamentos] realizados depois do dia:", fechados);
         if (s.falhas.length > 0) console.error("[cron/conferir-pagamentos]", s.falhas.join(" | "));
         if (s.porConfirmar.length > 0) {
           console.warn("[cron/conferir-pagamentos] por confirmar:", s.porConfirmar.join(" | "));

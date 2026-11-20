@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fecharSePagoDosDoisLados } from "@/lib/fecho-automatico";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { getPool } from "@/lib/db";
 import { dividasDosProfissionais, desfazerParte, marcarPartes } from "@/lib/cobrancas-na-base";
@@ -237,6 +238,8 @@ export async function POST(req: NextRequest) {
       contaDeDestino: conferido.contaDeDestino,
     });
     if (!r.ok) return NextResponse.json({ error: r.porque }, { status: r.status });
+    // d76 (20-11-2026): se este era o segundo dos dois pagamentos, o pedido fica realizado. Nunca lança.
+    await fecharSePagoDosDoisLados({ negociacaoId });
 
     // O comprovativo, nas marcas e na linha que fechou a dívida. Falhar aqui não desfaz a marca: junta-se depois.
     let comprovativoGuardado = false;

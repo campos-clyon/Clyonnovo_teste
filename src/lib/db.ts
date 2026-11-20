@@ -15396,6 +15396,8 @@ export type Acontecimento =
   | "pedido_cancelado"
   /* O cancelamento foi desfeito — era engano. Ver `reabrirPedidoCancelado`. */
   | "pedido_reaberto"
+  /* Realizado — pelo fecho automático (pago dos dois lados) ou pela lista dele (d76, 20-11-2026). */
+  | "pedido_concluido"
   | "pedido_apagado"
   | "pedido_expurgado"
   /*

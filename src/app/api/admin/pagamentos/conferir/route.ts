@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fecharSePagoDosDoisLados } from "@/lib/fecho-automatico";
 import { chaveDaReferencia } from "@/lib/webhook-do-eupago";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { registarSemFalhar } from "@/lib/db";
@@ -156,6 +157,9 @@ export async function POST(req: NextRequest) {
         `O aviso não tinha chegado — apanhado à mão.`,
       detalhe: { pagamentoId: p.id, referencia: p.referencia, valor: decisao.valor },
     });
+
+    // d76 (20-11-2026): se este era o segundo dos dois pagamentos, o pedido fica realizado. Nunca lança.
+    await fecharSePagoDosDoisLados({ negociacaoId: p.negociacaoId });
 
     return NextResponse.json({ ok: true, pago: true, aplicado: true, bruto });
   } catch (e) {

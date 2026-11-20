@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fecharSePagoDosDoisLados } from "@/lib/fecho-automatico";
 import { requireAdmin, requireAdminGeral } from "@/lib/admin-auth-helper";
 import { levantamentoPorId, levantamentosParaAdmin, marcarLevantamento, perfilDoProfissional } from "@/lib/db";
 import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
@@ -132,6 +133,8 @@ export async function POST(req: NextRequest) {
           levantamentoId: id,
           autor: quem,
         });
+        // d76 (20-11-2026): se este era o segundo dos dois pagamentos, o pedido fica realizado. Nunca lança.
+        for (const a of abatimento.abatidas) await fecharSePagoDosDoisLados({ negociacaoId: a.negociacaoId });
         // «Já pagámos» no telemóvel do profissional (27-10-2026). Nunca lança.
         try {
           const perfil = await perfilDoProfissional(Number(l.providerId));

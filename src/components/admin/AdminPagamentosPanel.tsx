@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAdminAuth, useEAdministrador, useMexeNoDinheiro } from "@/hooks/useAdminAuth";
 import PagosEmMaoAfectados from "./PagosEmMaoAfectados";
+import PagosDosDoisLados from "./PagosDosDoisLados";
 import AReceberDosProfissionais, { useAReceberDosProfissionais } from "./AReceberDosProfissionais";
 import NoutrosSitios from "@/components/admin/NoutrosSitios";
 import {
@@ -3594,6 +3595,9 @@ export default function AdminPagamentosPanel({ novosRecebidos = 0 }: { novosRece
       )}
 
       {eAdministrador && <PagosEmMaoAfectados token={token} />}
+
+      {/* d76 (20-11-2026): os pagos dos dois lados que ficaram por realizar — só o admin. */}
+      {eAdministrador && <PagosDosDoisLados token={token} />}
 
       <FaturasPorEmitir
         faturas={estado.faturasPorEmitir ?? []}

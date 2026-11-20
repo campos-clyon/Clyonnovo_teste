@@ -168,7 +168,18 @@ describe("só o backoffice importa o nome dela", () => {
      * passa pela conta em degraus, que traz o nome para o backoffice. Uma rota
      * pública nova que chegue lá chumba aqui, e decide-se então.
      */
-    const SO_SERVIDOR_E_CONFERIDA = new Set(["src/app/comprovativo/[token]/route.ts"]);
+    /*
+     * d76 (20-11-2026): o webhook do euPago e a conferência de hora a hora
+     * fecham o pedido pago dos dois lados (`fecho-automatico.ts`), e a regra lê
+     * a conta de sempre (`trabalhosParaGerir`), que traz o nome. São rotas do
+     * servidor: respondem ao euPago e ao cron da Vercel só com «ok» e contagens,
+     * nunca com texto da conta.
+     */
+    const SO_SERVIDOR_E_CONFERIDA = new Set([
+      "src/app/comprovativo/[token]/route.ts",
+      "src/app/api/pagamentos/webhook/route.ts",
+      "src/app/api/cron/conferir-pagamentos/route.ts",
+    ]);
     const entradasPublicas = [...chegam].filter(
       (f) =>
         !eDoBackoffice(f) &&
