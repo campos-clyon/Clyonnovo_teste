@@ -15592,6 +15592,9 @@ export type Acontecimento =
   // Os lembretes do que falta (d71, 19-11-2026): o interruptor das Configs e o arquivo sem resposta.
   | "lembretes_do_que_falta_interruptor"
   | "lembrete_do_que_falta"
+  // O seguimento do cliente (d83, 21-11-2026): o «Falei com o cliente», o arquivo sem resposta e o interruptor das Configs.
+  | "seguimento_do_cliente"
+  | "seguimento_do_cliente_interruptor"
   // A mensagem gentil da Vitória a quem fica calado (d25 v2, 14-11-2026): o interruptor das Configs.
   | "vitoria_seguimento_interruptor"
   // O aviso a todos os profissionais (d11, 15-11-2026): versões, envio, parar, o interruptor e cada destinatário.

@@ -244,6 +244,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/alteracoes-do-cliente",
   // A validade dos orçamentos nos cartões de «A aguardar cliente» e o «Lembrar agora» (d62, 18-11-2026).
   "/api/admin/validade-dos-orcamentos",
+  // O «Falei com o cliente» e o seguimento automático, nos cartões do «Precisa de si» (d83, 21-11-2026).
+  "/api/admin/seguimento-do-cliente",
   // Trabalhos CLYON — 03-10-2026.
   "/api/admin/trabalhos-clyon",
   // Procurar um pedido em todo o lado, por baixo das caixas de procura — 17-10-2026.
@@ -357,6 +359,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/alteracoes-do-cliente", seccoes: ["negociacoes_clyon", "trabalhos_clyon", "pedidos"] },
   // A validade dos orçamentos (d62, 18-11-2026): a linha do passo e o «Lembrar agora», na Mesa e nos Trabalhos CLYON.
   { prefixo: "/api/admin/validade-dos-orcamentos", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
+  // O seguimento do cliente (d83, 21-11-2026): o «Falei com o cliente» na Mesa e nos Trabalhos CLYON.
+  { prefixo: "/api/admin/seguimento-do-cliente", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
 
   // `RegistarPedido` cria, lê e edita o pedido — também nos Trabalhos CLYON e no
   // WhatsApp, onde se cria o pedido de uma conversa (07-10-2026).

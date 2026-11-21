@@ -62,6 +62,10 @@
     {
       "path": "/api/cron/lembretes-do-que-falta",
       "schedule": "0 9,10 * * *"
+    },
+    {
+      "path": "/api/cron/seguimento-do-cliente",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

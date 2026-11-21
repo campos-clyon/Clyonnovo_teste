@@ -518,6 +518,13 @@ export async function darOPasso(pedidoId: number, passo: PassoDoQueFalta, agora:
     return { ok: false, porque: parar };
   }
   if (proximoPassoDoQueFalta(c, agora) !== passo) return { ok: false, porque: "não é a vez deste passo" };
+  // d83 (21-11-2026): nunca no dia em que já saiu o seguimento do cliente a este número.
+  if (c.canal === "whatsapp" && p?.contactPhone) {
+    const { jaSaiuHojeAoCliente } = await import("./seguimento-do-cliente");
+    const { datasDoSeguimentoDoTelefone } = await import("./seguimento-do-cliente-na-base");
+    const doSeguimento = await datasDoSeguimentoDoTelefone(p.contactPhone).catch(() => [] as Date[]);
+    if (jaSaiuHojeAoCliente(doSeguimento, agora)) return { ok: false, porque: "já saiu hoje o seguimento do cliente a este número (d83)" };
+  }
   const pedido = { id: p!.id, serviceType: p!.serviceType, city: p!.city };
   const texto = textoDoPasso(passo, pedido, p!.faltas as ChaveDaFalta[], agora);
   if (!texto) return { ok: false, porque: "sem texto (o pedido ficou completo)" };

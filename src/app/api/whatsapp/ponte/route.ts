@@ -271,6 +271,14 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("[ponte] lembretes do que falta:", e instanceof Error ? e.message : e);
     }
+    // O seguimento do cliente (d83, 21-11-2026): as mensagens que a equipa marcou na
+    // Mesa e o fecho ao 4.º dia, um por vez, 20–45 s entre cada, 9h–21h de Lisboa.
+    try {
+      const { passagemDoSeguimento } = await import("@/lib/seguimento-do-cliente-na-base");
+      await passagemDoSeguimento();
+    } catch (e) {
+      console.error("[ponte] seguimento do cliente:", e instanceof Error ? e.message : e);
+    }
   });
   if (!(await whatsappLigado())) return NextResponse.json({ paraEnviar: [] });
   return NextResponse.json({ paraEnviar: await filaWhatsAppParaAPonte() });

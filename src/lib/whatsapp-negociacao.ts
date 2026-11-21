@@ -1019,6 +1019,67 @@ export async function responderAoLembreteDoOrcamento(
 }
 
 /**
+ * O «1», O «2», O «3» E O CANCELAR AO SEGUIMENTO DO CLIENTE — 21-11-2026 (d83).
+ *
+ *   · à espera do CANCELAR, o CANCELAR cancela
+ *     (`confirmarCancelamentoPeloSeguimento`); se não se fizer, passa a uma pessoa;
+ *   · «3» (ou «já não preciso»): NÃO cancela — pergunta «Confirma que quer
+ *     cancelar o pedido #N? Responda CANCELAR.» (d2); outro «3» à espera não
+ *     repete a pergunta;
+ *   · «1»: quer avançar — o seguimento não tem uma proposta escolhida, por isso
+ *     passa a uma pessoa, para escolher o parceiro com ele;
+ *   · «2»: outra data — passa a uma pessoa;
+ *   · o resto: passa a uma pessoa.
+ *
+ * Em todos, o ciclo pára e o pedido volta a contar no «Precisa de si».
+ * Exportada só para o teste da conversa (d83-seguimento-do-cliente.test.ts).
+ */
+export async function responderAoSeguimentoDoCliente(
+  telefone: string,
+  texto: string,
+  c: import("@/lib/seguimento-do-cliente-na-base").SeguimentoQueResponde,
+): Promise<void> {
+  const regras = await import("@/lib/validade-do-orcamento");
+  const base = await import("@/lib/seguimento-do-cliente-na-base");
+  const agora = new Date();
+
+  if (c.aEsperaDeCancelar && regras.eConfirmacaoDoCancelamento(texto)) {
+    const r = await base.confirmarCancelamentoPeloSeguimento(c.pedidoId, telefone, texto).catch((err) => {
+      console.error("[whatsapp] o CANCELAR pelo seguimento falhou:", err instanceof Error ? err.message : err);
+      return { ok: false as const, porque: "erro" };
+    });
+    if (!r.ok) await passarAUmaPessoa(telefone, `Pedido #${c.pedidoId}: respondeu CANCELAR ao seguimento, mas ${r.porque} — cancelar à mão`);
+    return;
+  }
+
+  const leitura = regras.lerRespostaAoLembrete(texto);
+  if (leitura === "cancelar") {
+    if (c.aEsperaDeCancelar) return;
+    const r = await base.pedirConfirmacaoDoCancelamentoDoSeguimento(c.pedidoId, telefone).catch((err) => {
+      console.error("[whatsapp] a pergunta do CANCELAR do seguimento falhou:", err instanceof Error ? err.message : err);
+      return { ok: false as const, porque: "erro" };
+    });
+    if (!r.ok) {
+      await base.pararSeguimento(c.pedidoId, "«3» ao seguimento — a pergunta do CANCELAR não saiu", agora).catch(() => false);
+      await passarAUmaPessoa(telefone, `Pedido #${c.pedidoId}: disse que já não precisa (seguimento) — cancelar à mão`);
+    }
+    return;
+  }
+
+  const porque =
+    leitura === "avancar" ? "«1» — quer avançar: escolher o parceiro" : leitura === "duvidas" ? "«2» — quer outra data" : "o cliente respondeu";
+  await base.pararSeguimento(c.pedidoId, porque, agora).catch(() => false);
+  await passarAUmaPessoa(
+    telefone,
+    leitura === "avancar"
+      ? `Pedido #${c.pedidoId}: respondeu «1» ao seguimento — quer avançar, escolher o parceiro com ele`
+      : leitura === "duvidas"
+        ? `Pedido #${c.pedidoId}: quer outra data («2» ao seguimento)`
+        : `Respondeu ao seguimento do pedido #${c.pedidoId} — responder`,
+  );
+}
+
+/**
  * Fechar pelo cliente: as duas metades do aperto de mão — aceitar o valor
  * pendente (se o houver) e contratar. É o mesmo caminho do botão «Fechar» e
  * da palavra SIM: um só corpo, para nunca haver dois comportamentos.
@@ -2509,6 +2570,29 @@ export async function tratarMensagemDoCliente(
       if (ciclos.length > 0) {
         await responderAoLembreteDoOrcamento(telefone, conteudo.texto, ciclos);
         return;
+      }
+    }
+
+    /*
+     * O SEGUIMENTO DO CLIENTE — 21-11-2026 (d83). A equipa falou com ele e
+     * marcou quando voltar a contactar; a Vitória escreveu-lhe. Qualquer
+     * mensagem dele pára o ciclo (o pedido volta a contar no «Precisa de si»);
+     * se a última coisa que lhe dissemos foi o seguimento de um pedido (ou a
+     * pergunta do CANCELAR dele), o «1», o «2», o «3» e o CANCELAR respondem a
+     * esse pedido. Ver `seguimento-do-cliente.ts`.
+     */
+    {
+      const seguimento = await import("@/lib/seguimento-do-cliente-na-base");
+      const lido = await seguimento.seguimentosDoTelefone(telefone).catch((err) => {
+        console.error("[whatsapp] o seguimento do cliente não se leu:", err instanceof Error ? err.message : err);
+        return null;
+      });
+      if (lido?.responde && !soImagens) {
+        await responderAoSeguimentoDoCliente(telefone, conteudo.texto, lido.responde);
+        return;
+      }
+      for (const id of lido?.aCorrer ?? []) {
+        await seguimento.pararSeguimento(id, "o cliente respondeu", new Date()).catch(() => false);
       }
     }
 

@@ -43,6 +43,7 @@ import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFecho";
 import InterruptorDaVitoriaAosProfissionais from "@/components/admin/InterruptorDaVitoriaAosProfissionais";
 import InterruptorDaValidadeDosOrcamentos from "@/components/admin/InterruptorDaValidadeDosOrcamentos";
+import InterruptorDoSeguimentoDoCliente from "@/components/admin/InterruptorDoSeguimentoDoCliente";
 import LembretesDoQueFalta from "@/components/admin/LembretesDoQueFalta";
 import InterruptorDoAvisoDoNovoModelo from "@/components/admin/InterruptorDoAvisoDoNovoModelo";
 import InterruptorDoSeguimentoDaVitoria from "@/components/admin/InterruptorDoSeguimentoDaVitoria";
@@ -3642,6 +3643,9 @@ export default function ColaboradorAdminClient({
 
               {/* A validade dos orçamentos (d62): lembretes e fecho de «A aguardar cliente»; desligada por omissão, só o administrador. */}
               <InterruptorDaValidadeDosOrcamentos />
+
+              {/* O seguimento do cliente (d83): o «Falei com o cliente» da Mesa; ligado por omissão, desligar é a emergência. */}
+              <InterruptorDoSeguimentoDoCliente />
 
               {/* Os lembretes do que falta (d71): os «Orçamentos novos» incompletos, às 10h; desligados por omissão, só o administrador, com o ensaio e os textos. */}
               <LembretesDoQueFalta />

@@ -14,7 +14,7 @@ import { AConfirmarNoNovoModelo, ContaDoNovoModeloAoConfirmar } from "./NovoMode
 import MensagemDaFase from "./MensagemDaFase";
 import { mensagemDeAgradecimento, mensagemDeCancelamento, mensagemDeTrabalhoConcluido } from "@/lib/mensagens-das-fases";
 import { botoesDaFaseDaMesa } from "@/lib/botoes-das-fases";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import {
   Briefcase,
   Building2,
@@ -90,6 +90,7 @@ import { combinaComABusca } from "@/lib/procurar-pedido";
 import { avisoAcimaDoValorUnico, mensagemDoValorUnico, valorUnicoSugerido } from "@/lib/valor-unico";
 import { comValidade } from "@/lib/validade-do-orcamento";
 import PassoDaValidade, { type ValidadeNaMesa } from "@/components/admin/PassoDaValidade";
+import SeguimentoDoCliente, { type SeguimentoNaMesa } from "@/components/admin/SeguimentoDoCliente";
 import ValorUnicoNaMesa, { VALOR_UNICO_ACEITE_NA_MESA } from "./ValorUnicoNaMesa";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
@@ -1330,6 +1331,8 @@ export default function AdminNegociacoesPanel({
   const [aFixar, setAFixar] = useState<number | null>(null);
   /** O passo da validade de cada orçamento no cliente (d62), pelo número do pedido. */
   const [validade, setValidade] = useState<Record<number, ValidadeNaMesa>>({});
+  /** O seguimento do cliente (d83): o «Falei com o cliente» e o passo, por pedido. */
+  const [seguimentos, setSeguimentos] = useState<Record<number, SeguimentoNaMesa>>({});
 
   /** d5: «Confirmei com o parceiro» — o cliente passa a ver os dados de pagamento. */
   const confirmarDadosDePagamento = async (negociacaoId: number) => {
@@ -1389,6 +1392,20 @@ export default function AdminNegociacoesPanel({
         /* sem a validade, a Mesa de sempre */
       }
       setValidade(daValidade);
+      /*
+       * O SEGUIMENTO DO CLIENTE — 21-11-2026 (d83): o «Falei com o cliente» e o
+       * passo de cada pedido; os em curso saem da conta do «Precisa de si». Em
+       * silêncio: sem ele, a Mesa serve como antes.
+       */
+      try {
+        const rs = await fetch("/api/admin/seguimento-do-cliente", { headers: { Authorization: `Bearer ${token}` } });
+        if (rs.ok) {
+          const v = (await rs.json()) as { pedidos?: SeguimentoNaMesa[] };
+          setSeguimentos(Object.fromEntries((v.pedidos ?? []).map((x) => [x.pedidoId, x])));
+        }
+      } catch {
+        /* sem o seguimento, a Mesa de sempre */
+      }
       setPedidos(
         ((dados.pedidos ?? []) as Pedido[]).map((p) =>
           validadeLigada && daValidade[p.id]?.parado ? { ...p, validadeParada: true } : p,
@@ -2620,6 +2637,47 @@ export default function AdminNegociacoesPanel({
     }
   }
   /*
+   * O SEGUIMENTO DO CLIENTE — 21-11-2026 (d83). Os pedidos do «Precisa de si»
+   * (as negociações, os «outro serviço» sem propostas e os Trabalhos CLYON)
+   * têm o «Falei com o cliente». Os que têm o seguimento a correr não contam
+   * como «à espera de nós» até o cliente responder ou o ciclo fechar: ficam no
+   * bloco, numa linha «Em seguimento · N», para não desaparecerem.
+   */
+  const idsDoPrecisaDeSi = new Set<number>([
+    ...porNivel.n1.map((p) => p.id),
+    ...outrosSemPropostas.map((p) => p.id),
+    ...clyonDoBloco("n1").map((t) => t.pedidoId),
+  ]);
+  const emSeguimento = (id: number) => seguimentos[id]?.emCurso === true;
+  const emSeguimentoNoN1 = [...idsDoPrecisaDeSi].filter(emSeguimento);
+  /** No «Precisa de si», os em seguimento vão para o fim do bloco, por baixo da linha «Em seguimento · N». */
+  const comOsEmSeguimentoNoFim = (chave: string, itens: Array<{ id: number; el: ReactNode }>): ReactNode[] => {
+    if (chave !== "n1" || emSeguimentoNoN1.length === 0) return itens.map((x) => x.el);
+    return [
+      ...itens.filter((x) => !emSeguimento(x.id)).map((x) => x.el),
+      <p key="em-seguimento" className="pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        Em seguimento · {emSeguimentoNoN1.length}
+        <span className="ml-2 font-normal normal-case tracking-normal text-slate-500">
+          a Vitória fala com o cliente — voltam a contar quando ele responder ou o ciclo fechar
+        </span>
+      </p>,
+      ...itens.filter((x) => emSeguimento(x.id)).map((x) => x.el),
+    ];
+  };
+  const comOSeguimento = (id: number, onde: "pedido" | "clyon") => (
+    <SeguimentoDoCliente
+      key={`seguimento-${onde}-${id}`}
+      pedidoId={id}
+      estado={seguimentos[id]}
+      comBotao={idsDoPrecisaDeSi.has(id)}
+      onFeito={(texto) => {
+        setAviso(texto);
+        void carregar(true, temTudo);
+      }}
+      onErro={setErro}
+    />
+  );
+  /*
    * OS FEITOS HÁ DOIS DIAS OU MAIS — 27-10-2026. É o que faz o selo do bloco
    * passar a alerta: dinheiro de um profissional preso há dias.
    */
@@ -2658,7 +2716,9 @@ export default function AdminNegociacoesPanel({
   function quantosNoBloco(chave: ChaveDoBloco): number {
     return chave === "porEnviar"
       ? porPromoverNaMesa.length
-      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length : 0);
+      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length : 0) -
+          // d83: os que estão em seguimento não contam como «à espera de nós».
+          (chave === "n1" ? emSeguimentoNoN1.length : 0);
   }
   /*
    * Os cancelados saem da Mesa (18-11-2026, «mesa-so-pedidos-vivos»): o bloco
@@ -2996,6 +3056,8 @@ export default function AdminNegociacoesPanel({
                 onErro={setErro}
               />
             )}
+            {/* O seguimento do cliente (d83): o «Falei com o cliente» no «Precisa de si», e o passo. */}
+            {(idsDoPrecisaDeSi.has(p.id) || seguimentos[p.id]) && comOSeguimento(p.id, "pedido")}
             {typeof alcances[p.id] === "string" && alcances[p.id] !== "a-ler" && (
               <p className="mt-1 text-xs leading-relaxed text-amber-300/90">{alcances[p.id]}</p>
             )}
@@ -5260,7 +5322,8 @@ export default function AdminNegociacoesPanel({
            * Um bloco vazio não aparece — a não ser que tenha sido escolhido
            * em cima, e aí diz que está vazio em vez de desaparecer.
            */
-          if (quantos === 0 && soOBloco !== b.chave) return null;
+          // Com todos em seguimento (d83), o bloco fica: a linha «Em seguimento · N» mostra-os.
+          if (quantos === 0 && soOBloco !== b.chave && !(b.chave === "n1" && emSeguimentoNoN1.length > 0)) return null;
           /*
            * Escolher um cartão é um pedido para VER: o bloco abre sem mexer
            * em `fechados`. Ao voltar a todos, Concluídos volta a estar como
@@ -5569,7 +5632,7 @@ export default function AdminNegociacoesPanel({
                             As negociações e os de valor fixo juntos, do mais recente
                             para trás (20-10-2026) — cada um com o seu cartão.
                           */}
-                          {[
+                          {comOsEmSeguimentoNoFim(b.chave, [
                             ...pedidosDoBloco(b.chave).map((p) => ({ id: p.id, el: cartaoDoPedido(p, b.corDoCartao) })),
                             ...clyonDoBloco(b.chave).map((t) => ({
                               id: t.pedidoId,
@@ -5596,6 +5659,10 @@ export default function AdminNegociacoesPanel({
                                     marcado={marcados.has(t.pedidoId)}
                                     onMarcar={() => marcar(t.pedidoId)}
                                   />
+                                  {/* O seguimento do cliente (d83): o «Falei com o cliente» no «Precisa de si», e o passo. */}
+                                  {(b.chave === "n1" || seguimentos[t.pedidoId]) && (
+                                    <li className="list-none px-3 pb-1">{comOSeguimento(t.pedidoId, "clyon")}</li>
+                                  )}
                                   {/* A validade do orçamento (d62): o passo, e o «Lembrar agora». */}
                                   {b.chave === "aguardaCliente" && (
                                     <li className="list-none px-3 pb-1">
@@ -5612,9 +5679,7 @@ export default function AdminNegociacoesPanel({
                                 </ul>
                               ),
                             })),
-                          ]
-                            .sort((x, y) => y.id - x.id)
-                            .map((x) => x.el)}
+                          ].sort((x, y) => y.id - x.id))}
                         </div>
                       </>
                     )}

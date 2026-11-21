@@ -471,6 +471,20 @@ async function ultimaSaidaParaOTelefone(pool: Pool, telefone: string): Promise<s
   return r ? String(r.texto ?? "") : null;
 }
 
+/**
+ * d83 (21-11-2026): as mensagens do seguimento do cliente a este telefone
+ * contam também para o «nunca duas no mesmo dia». Sem as conseguir ler,
+ * segue como antes.
+ */
+async function doSeguimentoDoCliente(telefone: string): Promise<Date[]> {
+  try {
+    const { datasDoSeguimentoDoTelefone } = await import("./seguimento-do-cliente-na-base");
+    return await datasDoSeguimentoDoTelefone(telefone);
+  } catch {
+    return [];
+  }
+}
+
 /* ── A rotina: de hora a hora, decide e põe na fila ──────────────────────── */
 
 export type ResultadoDaRotinaDaValidade = {
@@ -531,6 +545,7 @@ export async function rotinaDaValidade(agora: Date = new Date()): Promise<Result
   for (const lista of porTelefone.values()) {
     if (lista.some((v) => v.c.porEnviar)) continue;
     if (jaFalouHoje(lista.map((v) => v.c), agora)) continue;
+    if (jaFalouHoje([], agora, await doSeguimentoDoCliente(String(lista[0].p.contactPhone ?? "")))) continue;
     for (const v of lista) {
       const passo = proximoPasso(v.c, agora);
       if (!passo) continue;
@@ -626,6 +641,9 @@ async function darOPasso(
   const doTelefone = await ciclosDoTelefone(pool, telefone);
   if (jaFalouHoje(doTelefone.length ? doTelefone : [c], agora)) {
     return { ok: false, porque: "já saiu hoje uma mensagem automática a este cliente (deste ou de outro pedido)" };
+  }
+  if (jaFalouHoje([], agora, await doSeguimentoDoCliente(telefone))) {
+    return { ok: false, porque: "já saiu hoje uma mensagem do seguimento do cliente a este número (d83)" };
   }
   const { servicoEmPalavras } = await import("./servico-em-palavras");
   const { lerBase } = await import("./base-do-preco");
@@ -785,6 +803,9 @@ export async function lembrarAgora(pedidoId: number, porQuem: string, agora: Dat
   const doTelefone = await ciclosDoTelefone(pool, String(p.contactPhone ?? ""));
   if (jaFalouHoje([c, ...doTelefone.filter((x) => x.pedidoId !== pedidoId)], agora)) {
     return { ok: false, porque: "Já saiu hoje uma mensagem automática a este cliente (deste ou de outro pedido dele): o lembrete fica para amanhã." };
+  }
+  if (jaFalouHoje([], agora, await doSeguimentoDoCliente(String(p.contactPhone ?? "")))) {
+    return { ok: false, porque: "Já saiu hoje uma mensagem do seguimento do cliente a este número: o lembrete fica para amanhã." };
   }
   // Tira-o da fila, se lá estava: sai agora, uma vez.
   await pool.execute("UPDATE validadeDosOrcamentos SET porEnviar = NULL, porEnviarDesde = NULL WHERE pedidoId = ?", [pedidoId]);
@@ -1161,11 +1182,15 @@ export async function desfazerAPurgaDoCancelamento(pedidoId: number, porQuem: st
  *   · o «3» e o CANCELAR ao lembrete do orçamento (d62/d2, `validadeDosOrcamentos`);
  *   · o «2» ao lembrete do que falta (d71 v2, 19-11-2026, `lembretesDoQueFalta`,
  *     em `lembrete-do-que-falta-na-base.ts`). Os arquivados ao dia 7 sem resposta
- *     não entram: não têm `anonimizarAPartirDe` (seguem a purga normal).
+ *     não entram: não têm `anonimizarAPartirDe` (seguem a purga normal);
+ *   · o «Quer cancelar» e o CANCELAR do seguimento do cliente (d83, 21-11-2026,
+ *     `seguimentoDoCliente`, em `seguimento-do-cliente-na-base.ts`).
  */
 export const FONTES_DA_PURGA_DOS_CANCELADOS = [
   { tabela: "validadeDosOrcamentos", autor: "validade do orçamento", como: "«3» e CANCELAR ao lembrete do orçamento, d62/d2" },
   { tabela: "lembretesDoQueFalta", autor: "lembretes do que falta", como: "«2» ao lembrete do que falta, d71" },
+  // O seguimento do cliente (d83, 21-11-2026): o «Quer cancelar» da Mesa, ou o CANCELAR depois do «3» ao seguimento.
+  { tabela: "seguimentoDoCliente", autor: "seguimento do cliente", como: "«Quer cancelar» ou CANCELAR ao seguimento do cliente, d83" },
 ] as const;
 
 /** A tabela do lembrete do que falta ainda não existe (nenhum ciclo ainda): não há nada a purgar lá. */
