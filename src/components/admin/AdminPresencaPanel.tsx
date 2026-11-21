@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2 } from "lucide-react";
+import Ajuda from "@/components/admin/Ajuda";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { GrelhaDeAgenda, type EventoDaAgenda } from "@/components/GrelhaDeAgenda";
@@ -88,8 +89,19 @@ function intensidade(segundos: number): string {
  * mais) e o que ela marcou na agenda — «avisou» ou «sem aviso». Por baixo, as
  * agendas de todas no calendário da Agenda, e as últimas marcações (o selo da
  * secção). Informação interna, sem efeito nenhum. Hora de Lisboa.
+ *
+ * d81, 21-11-2026: nasce RECOLHIDO — só o resumo (hoje, semana, mês) de quem
+ * está ativa —, e o calendário abre ao tocar. As contas desactivadas não
+ * aparecem aqui; a presença de uma delas vê-se no «Gerir» dela (`soDe`).
  */
-export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?: number }) {
+export default function AdminPresencaPanel({
+  novasAoAbrir = 0,
+  soDe,
+}: {
+  novasAoAbrir?: number;
+  /** Só esta conta (o «Gerir» de uma conta desactivada). Sem ele: só as ativas. */
+  soDe?: number;
+}) {
   const { token } = useAdminAuth();
   const [mes, setMes] = useState(() => diaEmLisboa(new Date()).slice(0, 7));
   const [dados, setDados] = useState<Resposta | null>(null);
@@ -97,6 +109,7 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
   const [quem, setQuem] = useState<number | null>(null);
   const [dia, setDia] = useState(() => diaEmLisboa(new Date()));
   const [marcacaoAberta, setMarcacaoAberta] = useState<number | null>(null);
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
 
   const carregar = useCallback(
     async (_silencioso = false) => {
@@ -125,20 +138,30 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
   }, [carregar]);
   useAutoRefresh(() => carregar(true), { enabled: Boolean(token) });
 
-  const assistentes = dados?.assistentes ?? [];
-  const escolhida = assistentes.find((a) => a.id === quem) ?? assistentes.find((a) => a.activo) ?? assistentes[0];
+  // Quem se mostra: só as ativas — ou só a conta do «Gerir» (d81).
+  const assistentes = useMemo(
+    () => (dados?.assistentes ?? []).filter((a) => (soDe != null ? a.id === soDe : a.activo)),
+    [dados?.assistentes, soDe],
+  );
+  const visiveis = useMemo(() => new Set(assistentes.map((a) => a.id)), [assistentes]);
+  const agendas = useMemo(() => (dados?.agendas ?? []).filter((m) => visiveis.has(m.colaboradorId)), [dados?.agendas, visiveis]);
+  // O selo conta as mais recentes de todas: guarda-se a posição original de cada uma.
+  const ultimas = (dados?.ultimas ?? [])
+    .map((m, i) => ({ m, nova: i < novasAoAbrir }))
+    .filter((x) => visiveis.has(x.m.colaboradorId));
+  const escolhida = assistentes.find((a) => a.id === quem) ?? assistentes[0];
   const nomes = useMemo(() => new Map(assistentes.map((a) => [a.id, a.nome])), [assistentes]);
 
   // O dia escolhido tem de ser do mês à vista.
   const diaAVer = dia.slice(0, 7) === mes ? dia : `${mes}-01`;
   const doDia = escolhida?.dias.find((d) => d.dia === diaAVer) ?? null;
-  const marcacoesDoDia = (dados?.agendas ?? []).filter(
+  const marcacoesDoDia = agendas.filter(
     (m) => m.colaboradorId === escolhida?.id && diasDaMarcacao(m).includes(diaAVer),
   );
 
   const eventos: EventoDaAgenda[] = useMemo(() => {
     const lista: EventoDaAgenda[] = [];
-    for (const m of dados?.agendas ?? []) {
+    for (const m of agendas) {
       diasDaMarcacao(m).forEach((d, i) => {
         const nome = nomes.get(m.colaboradorId) ?? "Assistente";
         // A hora vai na etiqueta do mês; o título diz o quê e quem.
@@ -158,9 +181,9 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
       });
     }
     return lista;
-  }, [dados?.agendas, nomes]);
+  }, [agendas, nomes]);
 
-  const aberta = (dados?.agendas ?? []).find((m) => m.id === marcacaoAberta) ?? null;
+  const aberta = agendas.find((m) => m.id === marcacaoAberta) ?? null;
 
   if (!dados) {
     return (
@@ -175,18 +198,90 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
   }
 
   const tituloDoMes = tituloDoPeriodo("mes", naGrelha(`${mes}-15`, "12:00"));
+  const novas = ultimas.filter((x) => x.nova).length;
 
-  return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-lg font-semibold text-white">Presença e agendas</h3>
-        <p className="mt-1 max-w-3xl text-sm text-slate-400">
+  function fecharCalendario() {
+    // O resumo fechado é sempre o de hoje: volta-se ao mês corrente.
+    const hoje = diaEmLisboa(new Date());
+    setMes(hoje.slice(0, 7));
+    setDia(hoje);
+    setCalendarioAberto(false);
+  }
+
+  const cabecalho = (
+    <div className="relative flex flex-wrap items-center gap-2">
+      <h3 className="text-base font-semibold text-white">Presença e agendas</h3>
+      <Ajuda sobre="Presença e agendas">
+        <p>
           Informação interna, sem efeito nenhum: os períodos em que cada assistente esteve ativa no backoffice (com um
           clique, uma tecla ou um scroll nos últimos {dados.minutosSemInteraccao} minutos) e o que marcou na agenda dela.
+        </p>
+        <p className="mt-1.5">
           Uma ausência é um intervalo de {dados.minutosSemInteraccao} minutos ou mais entre dois períodos. Hora de Lisboa.
           A assistente vê a agenda dela, mas não estas horas.
         </p>
+      </Ajuda>
+      {novas > 0 && !calendarioAberto && (
+        <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          {novas} {novas === 1 ? "marcação nova" : "marcações novas"}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => (calendarioAberto ? fecharCalendario() : setCalendarioAberto(true))}
+        aria-expanded={calendarioAberto}
+        className="ml-auto flex items-center gap-1 rounded-lg border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+      >
+        {calendarioAberto ? (
+          <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
+        {calendarioAberto ? "Fechar o calendário" : "Ver o calendário"}
+      </button>
+    </div>
+  );
+
+  /* Recolhido (d81): uma linha por conta, com as três durações. */
+  if (!calendarioAberto) {
+    return (
+      <div className="space-y-2">
+        {cabecalho}
+        {aviso && <p className="text-xs text-coral-texto">{aviso}</p>}
+        {assistentes.length === 0 ? (
+          <p className="text-sm text-slate-400">{soDe != null ? "Sem presença registada." : "Nenhuma conta ativa."}</p>
+        ) : (
+          <ul className="divide-y divide-slate-800 rounded-xl border border-slate-700/60 bg-slate-950/40">
+            {assistentes.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 text-sm">
+                <span className="flex min-w-[8rem] items-center gap-1.5 font-semibold text-white">
+                  {a.nome}
+                  {a.activaAgora && (
+                    <span className="h-2 w-2 rounded-full bg-esmeralda" aria-label="ativa agora" title="ativa agora" />
+                  )}
+                </span>
+                <span className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-400">
+                  <span>
+                    Hoje <strong className="font-semibold tabular-nums text-white">{duracaoEscrita(a.totais.hoje)}</strong>
+                  </span>
+                  <span>
+                    Semana <strong className="font-semibold tabular-nums text-white">{duracaoEscrita(a.totais.semana)}</strong>
+                  </span>
+                  <span>
+                    Mês <strong className="font-semibold tabular-nums text-white">{duracaoEscrita(a.totais.mes)}</strong>
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {cabecalho}
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -221,7 +316,7 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
       </div>
 
       {assistentes.length === 0 ? (
-        <p className="text-sm text-slate-400">Ainda não há contas de assistente.</p>
+        <p className="text-sm text-slate-400">{soDe != null ? "Sem presença registada." : "Nenhuma conta ativa."}</p>
       ) : (
         <>
           {assistentes.length > 1 && (
@@ -275,7 +370,7 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
               <MesDiaADia
                 mes={mes}
                 pessoa={escolhida}
-                agendas={(dados.agendas ?? []).filter((m) => m.colaboradorId === escolhida.id)}
+                agendas={agendas.filter((m) => m.colaboradorId === escolhida.id)}
                 diaAVer={diaAVer}
                 onDia={setDia}
               />
@@ -287,7 +382,7 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
       )}
 
       <div className="space-y-3">
-        <h3 className="text-base font-semibold text-white">As agendas de todas</h3>
+        <h3 className="text-base font-semibold text-white">{soDe != null ? "A agenda" : "As agendas de todas"}</h3>
         <GrelhaDeAgenda
           vista="mes"
           ancora={naGrelha(`${mes}-15`, "12:00")}
@@ -319,17 +414,17 @@ export default function AdminPresencaPanel({ novasAoAbrir = 0 }: { novasAoAbrir?
         )}
       </div>
 
-      {dados.ultimas.length > 0 && (
+      {ultimas.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-base font-semibold text-white">Últimas marcações</h3>
           <ul className="space-y-1.5">
-            {dados.ultimas.map((m, i) => (
+            {ultimas.map(({ m, nova }) => (
               <li
                 key={m.id}
                 className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-slate-700/60 bg-slate-950/40 px-3 py-2 text-sm"
               >
                 <span className="min-w-0 text-slate-200">
-                  {i < novasAoAbrir && (
+                  {nova && (
                     <span className="mr-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                       nova
                     </span>

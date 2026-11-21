@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, KeyRound, Loader2, PenLine, Sparkles } from "lucide-react";
+import { Check, Copy, Loader2, PenLine, Sparkles } from "lucide-react";
 
 /**
  * OS CÓDIGOS PARA ENTRAR — d75, 20-11-2026.
@@ -14,9 +14,15 @@ import { Check, Copy, KeyRound, Loader2, PenLine, Sparkles } from "lucide-react"
  * hash). Também se pode escrever um à mão; o servidor confere a regra e que
  * não há outro igual. Trocar o código de alguém fecha as sessões dessa
  * pessoa; trocar o próprio dá logo uma sessão nova, para não sair a meio.
+ *
+ * d81, 21-11-2026: o bloco à parte «Códigos para entrar» saiu. O estado e os
+ * dois botões passam para o cartão de cada pessoa na secção Assistentes
+ * (`EstadoDoCodigo`), o registo das trocas para o «Gerir» de cada uma
+ * (`RegistoDasTrocas`), e o texto da regra para um «?» (`TextoDosCodigos`).
+ * O comportamento é o mesmo: `useCodigosParaEntrar` é o que o bloco fazia.
  */
 
-type Conta = {
+export type ContaDoPainel = {
   id: number;
   nome: string;
   papel: "admin" | "assistente";
@@ -25,7 +31,7 @@ type Conta = {
   codigoMudadoEm: string | null;
 };
 
-type LinhaDoRegisto = { contaNome: string; porNome: string | null; accao: string; em: string };
+export type LinhaDoRegisto = { contaNome: string; porNome: string | null; accao: string; em: string };
 
 const CAIXA =
   "w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500";
@@ -95,17 +101,31 @@ export function CodigoMostradoUmaVez({
   );
 }
 
-export default function CodigosParaEntrar({
-  token,
-  meuId,
-  versao = 0,
-}: {
-  token: string | null;
-  meuId: number | null;
-  /** Muda quando o painel das contas mexeu nalguma (criou, desactivou): relê. */
-  versao?: number;
-}) {
-  const [contas, setContas] = useState<Conta[]>([]);
+/** O texto da regra, para o «?» ao lado de «Código para entrar». */
+export function TextoDosCodigos() {
+  return (
+    <>
+      <p>
+        Cada pessoa entra em <code className="font-mono">clyon.pt/admin/login</code> só com o seu código. Mínimo 12
+        caracteres, com maiúscula, minúscula, número e símbolo.
+      </p>
+      <p className="mt-1.5">
+        «Gerar código» mostra-o uma vez, para copiar; também se pode escrever um à mão. Trocar um código fecha as
+        sessões dessa pessoa. Enquanto houver uma conta ativa sem código, o ecrã de entrada mostra «Entrar com
+        utilizador».
+      </p>
+    </>
+  );
+}
+
+export type CodigosParaEntrar = ReturnType<typeof useCodigosParaEntrar>;
+
+/**
+ * As contas do painel com o estado do código, o registo das trocas e a acção
+ * de gerar ou escrever um — o que o bloco «Códigos para entrar» fazia.
+ */
+export function useCodigosParaEntrar(token: string | null, versao = 0) {
+  const [contas, setContas] = useState<ContaDoPainel[]>([]);
   const [registo, setRegisto] = useState<LinhaDoRegisto[]>([]);
   const [segredoPosto, setSegredoPosto] = useState(true);
   const [erro, setErro] = useState("");
@@ -139,7 +159,7 @@ export default function CodigosParaEntrar({
     void carregar();
   }, [carregar, versao]);
 
-  async function definir(conta: Conta, corpo: { gerar: true } | { codigo: string }) {
+  async function definir(conta: ContaDoPainel, corpo: { gerar: true } | { codigo: string }) {
     if (
       conta.temCodigo &&
       !window.confirm(`Trocar o código de ${conta.nome}? O antigo deixa de servir e as sessões abertas fecham-se.`)
@@ -185,142 +205,114 @@ export default function CodigosParaEntrar({
     }
   }
 
-  const activas = contas.filter((c) => c.activo);
-  const semCodigo = activas.filter((c) => !c.temCodigo).length;
+  function fecharMostrado() {
+    const propria = mostrado?.propria ?? false;
+    setMostrado(null);
+    // A sessão nova já está guardada; recarregar põe-na em todos os cartões.
+    if (propria) window.location.reload();
+  }
 
+  return {
+    contas,
+    registo,
+    segredoPosto,
+    erro,
+    feito,
+    ocupado,
+    aEscrever,
+    setAEscrever,
+    rascunho,
+    setRascunho,
+    mostrado,
+    fecharMostrado,
+    definir,
+  };
+}
+
+/** No cartão de uma pessoa: «Tem código desde …» ou «Sem código», e os dois botões da d75. */
+export function EstadoDoCodigo({ conta, codigos }: { conta: ContaDoPainel; codigos: CodigosParaEntrar }) {
+  const { ocupado, segredoPosto, aEscrever, setAEscrever, rascunho, setRascunho, definir } = codigos;
   return (
-    <section className="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-        <KeyRound className="h-4 w-4 text-cyan-400" aria-hidden="true" />
-        Códigos para entrar
-      </h3>
-      <p className="mt-1 text-xs text-slate-500">
-        Cada pessoa entra em <code className="font-mono">clyon.pt/admin/login</code> só com o seu código. Mínimo 12
-        caracteres, com maiúscula, minúscula, número e símbolo. Trocar um código fecha as sessões dessa pessoa.
-        {semCodigo > 0
-          ? ` Ainda ${semCodigo === 1 ? "há 1 conta" : `há ${semCodigo} contas`} sem código: enquanto houver, o ecrã de entrada mostra «Entrar com utilizador».`
-          : activas.length > 0
-            ? " Todas as contas ativas têm código."
-            : ""}
+    <div className="min-w-0">
+      <p className={`text-xs ${conta.temCodigo ? "text-emerald-300" : "text-amber-300"}`}>
+        {conta.temCodigo ? `Tem código desde ${quando(conta.codigoMudadoEm)}` : "Sem código"}
       </p>
-
-      {!segredoPosto && (
-        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-          Falta a variável CODIGO_DE_ENTRADA_PEPPER na Vercel. Sem ela não se gravam códigos nem se entra com eles.
-        </p>
-      )}
-      {erro && (
-        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">{erro}</p>
-      )}
-      {feito && !mostrado && (
-        <p className="mt-3 flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
-          <Check className="h-3.5 w-3.5" aria-hidden="true" />
-          {feito}
-        </p>
-      )}
-
-      <div className="mt-3">
-        {mostrado && (
-          <CodigoMostradoUmaVez
-            nome={mostrado.nome}
-            codigo={mostrado.codigo}
-            aoFechar={() => {
-              const propria = mostrado.propria;
-              setMostrado(null);
-              // A sessão nova já está guardada; recarregar põe-na em todos os cartões.
-              if (propria) window.location.reload();
-            }}
-          />
-        )}
-      </div>
-
-      <ul className="mt-2 divide-y divide-slate-800">
-        {contas.map((c) => (
-          <li key={c.id} className="py-2.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`font-semibold ${c.activo ? "text-white" : "text-slate-500"}`}>{c.nome}</span>
-              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
-                {c.papel === "admin" ? "administrador" : "assistente"}
-                {meuId === c.id ? " · a sua conta" : ""}
-                {!c.activo ? " · desactivada" : ""}
-              </span>
-              <span className={`text-xs ${c.temCodigo ? "text-emerald-300" : "text-amber-300"}`}>
-                {c.temCodigo ? `Tem código desde ${quando(c.codigoMudadoEm)}` : "Sem código"}
-              </span>
-              {c.activo && (
-                <div className="ml-auto flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => definir(c, { gerar: true })}
-                    disabled={ocupado === c.id || !segredoPosto}
-                    className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
-                  >
-                    {ocupado === c.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                    )}
-                    Gerar código
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAEscrever(aEscrever === c.id ? null : c.id);
-                      setRascunho("");
-                    }}
-                    disabled={ocupado === c.id || !segredoPosto}
-                    className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"
-                  >
-                    <PenLine className="h-3.5 w-3.5" aria-hidden="true" />
-                    Escrever código
-                  </button>
-                </div>
-              )}
-            </div>
-            {aEscrever === c.id && (
-              <form
-                className="mt-2 flex flex-wrap items-center gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void definir(c, { codigo: rascunho });
-                }}
-              >
-                <input
-                  className={`${CAIXA} max-w-sm font-mono`}
-                  type="text"
-                  value={rascunho}
-                  onChange={(e) => setRascunho(e.target.value)}
-                  placeholder="Novo código (12+ caracteres)"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  aria-label={`Novo código para ${c.nome}`}
-                />
-                <button
-                  type="submit"
-                  disabled={ocupado === c.id || rascunho.trim().length === 0}
-                  className="rounded-lg bg-acao px-3 py-2 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
-                >
-                  Guardar código
-                </button>
-              </form>
+      {conta.activo && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => definir(conta, { gerar: true })}
+            disabled={ocupado === conta.id || !segredoPosto}
+            className="flex items-center gap-1.5 rounded-lg bg-acao px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+          >
+            {ocupado === conta.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             )}
+            Gerar código
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAEscrever(aEscrever === conta.id ? null : conta.id);
+              setRascunho("");
+            }}
+            disabled={ocupado === conta.id || !segredoPosto}
+            aria-expanded={aEscrever === conta.id}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+          >
+            <PenLine className="h-3.5 w-3.5" aria-hidden="true" />
+            Escrever código
+          </button>
+        </div>
+      )}
+      {aEscrever === conta.id && (
+        <form
+          className="mt-2 flex flex-wrap items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void definir(conta, { codigo: rascunho });
+          }}
+        >
+          <input
+            className={`${CAIXA} max-w-xs font-mono`}
+            type="text"
+            value={rascunho}
+            onChange={(e) => setRascunho(e.target.value)}
+            placeholder="Novo código (12+ caracteres)"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label={`Novo código para ${conta.nome}`}
+          />
+          <button
+            type="submit"
+            disabled={ocupado === conta.id || rascunho.trim().length === 0}
+            className="rounded-lg bg-acao px-3 py-2 text-xs font-semibold text-white hover:bg-acao-hover disabled:opacity-40"
+          >
+            Guardar código
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/** As trocas do código de uma pessoa — dentro do «Gerir» dela (ou recolhidas no cartão do administrador). */
+export function RegistoDasTrocas({ nome, registo }: { nome: string; registo: LinhaDoRegisto[] }) {
+  const dela = registo.filter((r) => r.contaNome === nome);
+  if (dela.length === 0) return null;
+  return (
+    <details className="text-xs">
+      <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Registo das trocas ({dela.length})</summary>
+      <ul className="mt-1.5 space-y-1 text-slate-400">
+        {dela.map((r, i) => (
+          <li key={i}>
+            {quando(r.em)} · {r.porNome ?? "Sistema"} {ACCAO[r.accao] ?? r.accao} {r.contaNome}
           </li>
         ))}
       </ul>
-
-      {registo.length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-xs text-slate-400">Registo das trocas</summary>
-          <ul className="mt-2 space-y-1 text-xs text-slate-400">
-            {registo.map((r, i) => (
-              <li key={i}>
-                {quando(r.em)} · {r.porNome ?? "Sistema"} {ACCAO[r.accao] ?? r.accao} {r.contaNome}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </section>
+    </details>
   );
 }

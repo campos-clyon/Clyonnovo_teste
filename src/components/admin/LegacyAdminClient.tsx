@@ -3525,27 +3525,12 @@ export default function ColaboradorAdminClient({
           )}
 
           {activeSection === "equipa" && papel === "admin" && (
-            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
-                  Equipa
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">Assistentes</h2>
-                {/* 03-10-2026: o administrador escolhe as secções de cada conta,
-                    entre todas as do menu menos esta. */}
-                <p className="mt-1 text-sm text-slate-400">
-                  Contas com um painel próprio, com as secções que escolher para cada uma —
-                  qualquer secção do menu, menos esta. Uma conta nova não traz nenhuma
-                  marcada. Os assistentes não gerem assistentes e não apagam: arquivam.
-                  Criam-se aqui, repõe-se a palavra-passe aqui, e desactivar fecha a porta
-                  no acto.
-                </p>
-              </div>
-              <AdminAssistentesPanel />
-              {/* A presença no backoffice e as agendas delas — só do administrador (31-10-2026). */}
-              <div className="border-t border-slate-700/60 pt-5">
-                <AdminPresencaPanel novasAoAbrir={novasAoAbrir.equipa ?? 0} />
-              </div>
+            <section className="rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-5">
+              {/* d81, 21-11-2026: o título, o «?» com a explicação e o botão da conta
+                  nova vivem no painel; a presença no backoffice e as agendas delas
+                  (só do administrador, 31-10-2026) entram entre as contas ativas
+                  e as desactivadas. */}
+              <AdminAssistentesPanel presenca={<AdminPresencaPanel novasAoAbrir={novasAoAbrir.equipa ?? 0} />} />
             </section>
           )}
 

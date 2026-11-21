@@ -5,6 +5,11 @@ import { join } from "node:path";
 /**
  * «Coloque o Nova conta de assistente dentro de um botão, para só abrir
  * quando quiser.» — o dono, 17-10-2026.
+ *
+ * d81, 21-11-2026: o botão passou para o topo, à direita do título
+ * «Assistentes», e abre (ou fecha) o formulário por baixo. O que se guarda é
+ * o mesmo: nasce fechado, o formulário só existe aberto, fecha-se à mão e
+ * fecha-se sozinho depois de criar a conta.
  */
 const PAINEL = readFileSync(join(process.cwd(), "src/components/admin/AdminAssistentesPanel.tsx"), "utf8").replace(
   /\r\n/g,
@@ -12,19 +17,25 @@ const PAINEL = readFileSync(join(process.cwd(), "src/components/admin/AdminAssis
 );
 
 describe("a nova conta de assistente", () => {
-  it("abre fechada: só o botão", () => {
+  it("abre fechada: só o botão, no topo, ao lado do título", () => {
     expect(PAINEL).toContain("const [novaAberta, setNovaAberta] = useState(false);");
-    const botao = PAINEL.indexOf("{!novaAberta ? (");
+    const titulo = PAINEL.indexOf('<h2 className="text-2xl font-semibold text-white">Assistentes</h2>');
+    const botao = PAINEL.indexOf("onClick={() => setNovaAberta((v) => !v)}");
+    const ramo = PAINEL.indexOf("{novaAberta && (");
     const formulario = PAINEL.indexOf('placeholder="NOME (sem espaços)"');
-    expect(botao).toBeGreaterThan(-1);
-    // O formulário só existe no ramo aberto, depois do botão.
-    expect(formulario).toBeGreaterThan(PAINEL.indexOf(") : (", botao));
-    expect(PAINEL.slice(botao, PAINEL.indexOf(") : (", botao))).toContain("onClick={() => setNovaAberta(true)}");
+    expect(titulo).toBeGreaterThan(-1);
+    expect(botao).toBeGreaterThan(titulo);
+    // O botão vem antes do formulário, e o formulário só existe no ramo aberto.
+    expect(ramo).toBeGreaterThan(botao);
+    expect(formulario).toBeGreaterThan(ramo);
+    expect(PAINEL.slice(botao, botao + 200)).toContain("aria-expanded={novaAberta}");
+    expect(PAINEL.slice(botao, ramo)).toContain("Nova conta de assistente");
   });
 
   it("fecha-se à mão, e sozinha depois de criar a conta", () => {
     expect(PAINEL).toContain("onClick={() => setNovaAberta(false)}");
-    const criar = PAINEL.slice(PAINEL.indexOf("async function criar()"), PAINEL.indexOf("function reporSenha"));
+    const criar = PAINEL.slice(PAINEL.indexOf("async function criar()"), PAINEL.indexOf("function alternarEstado"));
+    expect(criar.length).toBeGreaterThan(0);
     expect(criar).toContain("setNovaAberta(false);");
   });
 });
