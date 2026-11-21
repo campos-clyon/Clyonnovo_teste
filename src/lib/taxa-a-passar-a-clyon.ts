@@ -101,6 +101,12 @@ export type TrabalhoParaOPagamentoDoCliente = {
   confirmadoEm?: unknown;
   pagoEm?: unknown;
   execucaoEnviadaEm?: unknown;
+  /**
+   * d82 (CEO e dono, 21-11-2026): o administrador passou este Trabalho CLYON ao
+   * caminho em que o cliente paga à CLYON (`negociacoes.clientePagaAClyonEm`,
+   * `cliente-paga-a-clyon.ts`). Conta como o pagamento do cliente à CLYON.
+   */
+  clientePagaAClyonEm?: unknown;
 };
 
 /**
@@ -137,6 +143,11 @@ const DO_EUPAGO = new Set(["mbway", "multibanco"]);
  * quitação), o «pago ao profissional», e uma referência do euPago criada depois
  * da libertação — essa é a da taxa do profissional no modelo de 15-11 (é sempre
  * depois), e contá-la passava ao antigo um trabalho que o parceiro já recebeu.
+ *
+ * d82 (CEO e dono, 21-11-2026): conta também a passagem do administrador ao
+ * caminho em que o cliente paga à CLYON (`clientePagaAClyonEm`) — o parceiro
+ * pediu ao cliente que pagasse à CLYON. Desde esse instante segue o modelo
+ * antigo, como se o cliente já tivesse pago: a mesma regra, o mesmo caminho.
  */
 export function clientePagouOTrabalhoClyon(
   pagamentos: ReadonlyArray<PagamentoParaOCorte>,
@@ -156,6 +167,8 @@ export function clientePagouOTrabalhoClyon(
     }
     if (doCliente && (primeiro == null || pago.getTime() < primeiro.getTime())) primeiro = pago;
   }
+  const passado = comoData(t.clientePagaAClyonEm);
+  if (passado && (primeiro == null || passado.getTime() < primeiro.getTime())) primeiro = passado;
   return primeiro;
 }
 

@@ -220,6 +220,10 @@ export async function GET(req: NextRequest) {
           comentario: n.comentario,
           avaliadoEm: iso(n.avaliadoEm),
           semFactura: n.semFactura,
+          // d82: o administrador passou-o ao caminho em que o cliente paga à CLYON.
+          clientePagaAClyon: n.clientePagaAClyon
+            ? { em: iso(n.clientePagaAClyon.em), por: n.clientePagaAClyon.por, motivo: n.clientePagaAClyon.motivo }
+            : null,
           choques: POR_FECHAR.has(n.estado)
             ? choquesDoProfissional({ pedidoId: o.pedidoId, inicio: o.dataAgendada }, n.providerId, marcacoes)
             : [],

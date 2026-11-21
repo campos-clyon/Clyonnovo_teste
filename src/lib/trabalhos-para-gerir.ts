@@ -26,6 +26,7 @@ import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
 import { contratadasNoNovoModelo } from "@/lib/novo-modelo-no-servidor";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { dividaDoRegistoEmMao, pagoAoProfissionalRegistado } from "@/lib/pago-em-mao";
+import { instanteDaBase } from "@/lib/hora-de-lisboa";
 
 /*
  * OS TRABALHOS DOS PAGAMENTOS — cada negociação fechada, com as duas pontas
@@ -141,6 +142,13 @@ export type TrabalhoParaGerir = {
    * cliente» nem «por pagar ao profissional». Ausente no modelo antigo.
    */
   novoModelo?: true;
+  /**
+   * d82 (21-11-2026): um Trabalho CLYON (o botão «O cliente paga à CLYON» só
+   * existe nestes) e a passagem do administrador ao caminho em que o cliente
+   * paga à CLYON — quando, por quem e porquê. Nula = o caminho de sempre.
+   */
+  trabalhoClyon?: boolean;
+  clientePagaAClyon?: { em: string | null; por: string | null; motivo: string | null } | null;
 };
 
 /**
@@ -169,6 +177,8 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
             n.createdAt AS negociacaoCriadaEm, n.semFactura, n.motivoSemFactura,
             -- O acordo final com o cliente, abaixo do pago ao profissional (d78).
             n.acordoFinalCliente, n.acordoFinalMotivo,
+            -- O cliente paga à CLYON, por decisão do administrador (d82).
+            n.clientePagaAClyonEm, n.clientePagaAClyonPor, n.clientePagaAClyonMotivo,
             -- Um Trabalho CLYON faz a conta pelo valor e pela taxa do pedido (15-10-2026).
             n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.motivoTaxaClyon,
             o.contactName, o.contactPhone, o.city, o.serviceType, o.dataAgendada,
@@ -317,6 +327,14 @@ export async function trabalhosParaGerir(soA?: number): Promise<TrabalhoParaGeri
       // E, se foi sem, porquê (25-10-2026, d19).
       pagouSemFactura: pagouSemFactura(l, l.negociacaoCriadaEm as Date | string | null),
       motivoSemFactura: ((l.motivoSemFactura as string) ?? "").trim() || null,
+      trabalhoClyon,
+      clientePagaAClyon: l.clientePagaAClyonEm
+        ? {
+            em: instanteDaBase(l.clientePagaAClyonEm as Date | string | null)?.toISOString() ?? null,
+            por: (l.clientePagaAClyonPor as string) ?? null,
+            motivo: (l.clientePagaAClyonMotivo as string) ?? null,
+          }
+        : null,
       // Quando só mexe no IVA o profissional recebe o mesmo: muda-se também depois de lhe pagar.
       podeMudarFactura:
         lerForma(l.formaDePagamento) !== "dinheiro" &&

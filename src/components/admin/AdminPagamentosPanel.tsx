@@ -91,6 +91,7 @@ import {
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import CorrigirOPagamento, { type CorreccaoDoPagamento } from "@/components/admin/CorrigirOPagamento";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
+import ClientePagaAClyon from "@/components/admin/ClientePagaAClyon";
 import AnularAReferencia from "@/components/admin/AnularAReferencia";
 import { isMudancaType } from "@/lib/calendar-helpers";
 import {
@@ -358,6 +359,9 @@ type Trabalho = {
    * que há a receber é a taxa dele (`dividaDoProfissional`).
    */
   novoModelo?: boolean;
+  /** d82: um Trabalho CLYON, e a passagem do administrador ao caminho em que o cliente paga à CLYON. */
+  trabalhoClyon?: boolean;
+  clientePagaAClyon?: { em: string | null; por: string | null; motivo: string | null } | null;
   /** Corrigir o pagamento registado à mão — 04-11-2026 (d9). Nulo onde não se corrige. */
   correccao?: {
     valorRegistado: number | null;
@@ -3017,6 +3021,21 @@ function Linha({
               </>
             )}
           </section>
+
+          {/* O cliente paga à CLYON (d82): só o administrador, num Trabalho CLYON do modelo de 15-11 — ou já passado. */}
+          {mexeNoDinheiro && t.trabalhoClyon && (t.novoModelo || t.clientePagaAClyon) && (
+            <section>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Quem recebe do cliente</p>
+              <ClientePagaAClyon
+                pedidoId={t.pedidoId}
+                negociacaoId={t.negociacaoId}
+                servico={t.servico}
+                novoModelo={t.novoModelo === true}
+                passagem={t.clientePagaAClyon ?? null}
+                onMudou={onMudouOsRegistos}
+              />
+            </section>
+          )}
 
           <section>
             <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">

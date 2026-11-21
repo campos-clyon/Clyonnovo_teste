@@ -124,7 +124,7 @@ export async function lerPedidosParaRetencao(): Promise<PedidoParaRetencao[]> {
   // d33: a criação do pedido (`pedidoCriadoEm`) decide o modelo de um Trabalho CLYON.
   const [negs] = (await pool.execute(
     `SELECT n.id, n.pedidoId, n.estado, n.valorAcordado, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
-            n.formaDePagamento, n.ofertaClyon, n.semFactura,
+            n.formaDePagamento, n.ofertaClyon, n.semFactura, n.clientePagaAClyonEm,
             (SELECT o.createdAt FROM simulatorOrders o WHERE o.id = n.pedidoId) AS pedidoCriadoEm,
             n.createdAt AS negociacaoCriadaEm
        FROM negociacoes n`,
@@ -201,7 +201,8 @@ export async function lerPedidosParaRetencao(): Promise<PedidoParaRetencao[]> {
       // d58: o cliente pagou o Trabalho CLYON à CLYON (seja qual for a data) — fica no antigo.
       clientePagouAClyonEm: clientePagouOTrabalhoClyon(
         pags.filter((p) => p.negociacaoId === id),
-        { confirmadoEm: n.confirmadoEm, pagoEm: n.pagoEm, execucaoEnviadaEm: n.execucaoEnviadaEm },
+        // d82: com a passagem do administrador ao caminho em que o cliente paga à CLYON.
+        { confirmadoEm: n.confirmadoEm, pagoEm: n.pagoEm, execucaoEnviadaEm: n.execucaoEnviadaEm, clientePagaAClyonEm: n.clientePagaAClyonEm },
       ),
       clientePagouEm: paga ? ((paga.pagoEm as Date | string | null) ?? "pago") : null,
       comoEntrou: paga?.metodo ?? null,

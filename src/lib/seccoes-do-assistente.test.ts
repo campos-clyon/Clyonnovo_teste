@@ -256,6 +256,10 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   // Anular uma referência do cliente por pagar (16-11-2026, d52): com motivo, só o administrador geral.
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/anular-referencia", porque: "anular uma referência é dinheiro — do administrador (d52)" },
   { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/anular-referencia", porque: "anular uma referência é dinheiro — do administrador (d52)" },
+  // O cliente paga à CLYON (21-11-2026, d82): com motivo, só o administrador geral — nos Pagamentos e no cartão da Mesa / Trabalhos CLYON.
+  { seccao: "pagamentos", rota: "/api/admin/pagamentos/cliente-paga-a-clyon", porque: "mudar quem recebe do cliente é dinheiro — do administrador (d82)" },
+  { seccao: "negociacoes_clyon", rota: "/api/admin/pagamentos/cliente-paga-a-clyon", porque: "mudar quem recebe do cliente é dinheiro — do administrador (d82)" },
+  { seccao: "trabalhos_clyon", rota: "/api/admin/pagamentos/cliente-paga-a-clyon", porque: "mudar quem recebe do cliente é dinheiro — do administrador (d82)" },
   // Dispensar um aviso do euPago por aplicar (19-11-2026, d72): com motivo, só o administrador geral.
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/dispensar-aviso", porque: "dispensar um aviso do euPago é dinheiro — do administrador (d72)" },
   { seccao: "pagamentos", rota: "/api/admin/pagamentos/testar", porque: "testar a chave do euPago é configuração do administrador" },

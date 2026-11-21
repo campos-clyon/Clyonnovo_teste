@@ -19,7 +19,8 @@ export type TrabalhoClyonDaBase = {
   /**
    * d58 — quando o CLIENTE pagou este Trabalho CLYON à CLYON (seja qual for a
    * data), ou `null`: `clientePagouOTrabalhoClyon` sobre os `pagamentos` da
-   * negociação e as datas do fecho. Com ela, fica no antigo.
+   * negociação e as datas do fecho — e, desde a d82, a passagem do
+   * administrador ao caminho em que o cliente paga à CLYON. Com ela, fica no antigo.
    */
   clientePagouAClyonEm: Date | null;
 };
@@ -32,12 +33,14 @@ export async function trabalhosClyonDasNegociacoes(
   const validos = [...new Set(ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))];
   if (validos.length === 0) return mapa;
   try {
-    const { getPool } = await import("./db");
+    const { getPool, ensureNegociacoesTable } = await import("./db");
+    // d82: a coluna da passagem do administrador (v26) tem de existir antes de a ler.
+    await ensureNegociacoesTable();
     const pool = await getPool();
     if (!pool) return mapa;
     const [rows] = (await pool.execute(
       `SELECT n.id, n.ofertaClyon, o.valorFixoClyon, o.createdAt AS pedidoCriadoEm,
-              n.confirmadoEm, n.pagoEm, n.execucaoEnviadaEm
+              n.confirmadoEm, n.pagoEm, n.execucaoEnviadaEm, n.clientePagaAClyonEm
          FROM negociacoes n
          JOIN simulatorOrders o ON o.id = n.pedidoId
         WHERE n.id IN (${validos.map(() => "?").join(",")})
@@ -64,6 +67,8 @@ export async function trabalhosClyonDasNegociacoes(
           confirmadoEm: r.confirmadoEm,
           pagoEm: r.pagoEm,
           execucaoEnviadaEm: r.execucaoEnviadaEm,
+          // d82: a passagem do administrador ao caminho em que o cliente paga à CLYON.
+          clientePagaAClyonEm: r.clientePagaAClyonEm,
         }),
       });
     }

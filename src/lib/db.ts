@@ -1535,7 +1535,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 25;
+const VERSAO_DAS_NEGOCIACOES = 26;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1867,6 +1867,17 @@ export async function ensureNegociacoesTable(): Promise<void> {
      */
     `ALTER TABLE negociacoes ADD COLUMN acordoFinalCliente DECIMAL(10,2) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN acordoFinalMotivo VARCHAR(300) NULL DEFAULT NULL`,
+    /*
+     * v26 (21-11-2026, d82) — O CLIENTE PAGA À CLYON (`cliente-paga-a-clyon.ts`):
+     * num Trabalho CLYON do modelo de 15-11, o administrador passa-o ao caminho
+     * em que o cliente paga à CLYON e a CLYON paga ao profissional. Quando, por
+     * quem e porquê; e o histórico das passagens e dos desfazer, com o antes e o
+     * depois (nada se apaga). Nulas = o caminho de sempre. Aditivas.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN clientePagaAClyonEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN clientePagaAClyonPor VARCHAR(120) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN clientePagaAClyonMotivo VARCHAR(300) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN clientePagaAClyonHistoricoJson TEXT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -4263,6 +4274,8 @@ export type OfertaClyonNaBase = {
     semFactura: boolean;
     /** Quando entrou o pagamento do cliente (05-11-2026, d19); nulo enquanto não. */
     clientePagouEm: Date | null;
+    /** d82: passado pelo administrador ao caminho em que o cliente paga à CLYON. */
+    clientePagaAClyon: { em: Date | null; por: string | null; motivo: string | null } | null;
   }>;
 };
 
@@ -4602,6 +4615,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
             p.responsavel, n.estado, n.ofertaClyon,
             n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
             n.provaJson, n.estrelas, n.comentario, n.avaliadoEm, n.semFactura,
+            n.clientePagaAClyonEm, n.clientePagaAClyonPor, n.clientePagaAClyonMotivo,
             n.updatedAt AS actualizadaEm
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
@@ -4658,6 +4672,14 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
       comentario: (n.comentario as string) ?? null,
       avaliadoEm: data(n.avaliadoEm),
       semFactura: Number(n.semFactura) === 1,
+      // d82: o administrador passou-o ao caminho em que o cliente paga à CLYON.
+      clientePagaAClyon: n.clientePagaAClyonEm
+        ? {
+            em: data(n.clientePagaAClyonEm),
+            por: (n.clientePagaAClyonPor as string) ?? null,
+            motivo: (n.clientePagaAClyonMotivo as string) ?? null,
+          }
+        : null,
     });
   }
 

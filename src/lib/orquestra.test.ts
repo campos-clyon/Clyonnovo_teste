@@ -746,6 +746,10 @@ const ENTRE_A_EQUIPA = new Set([
   // O acordo final abaixo do pago ao profissional (d78, 20-11-2026): Pagamentos e histórico da equipa.
   "src/lib/acordo-final.ts",
   "src/lib/acordo-final-na-base.ts",
+  // O cliente paga à CLYON (d82, 21-11-2026): Pagamentos, Mesa e histórico da equipa.
+  "src/lib/cliente-paga-a-clyon.ts",
+  "src/lib/cliente-paga-a-clyon-na-base.ts",
+  "src/components/admin/ClientePagaAClyon.tsx",
   // De onde veio cada pagamento e o comprovativo (d66, 18-11-2026): Pagamentos, Mesa e Finanças — só a equipa.
   "src/lib/origem-do-pagamento.ts",
   "src/lib/rasto-do-pagamento-na-base.ts",

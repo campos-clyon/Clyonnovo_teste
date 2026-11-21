@@ -2,6 +2,7 @@
 
 import RegistoReal from "@/components/admin/RegistoReal";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
+import ClientePagaAClyon from "@/components/admin/ClientePagaAClyon";
 import { isMudancaType } from "@/lib/calendar-helpers";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -128,6 +129,8 @@ type NegociacaoDoTrabalho = {
   avaliadoEm: string | null;
   /** Sem factura (21-10-2026): o cliente paga sem IVA. */
   semFactura?: boolean;
+  /** d82: o administrador passou-o ao caminho em que o cliente paga à CLYON. */
+  clientePagaAClyon?: { em: string | null; por: string | null; motivo: string | null } | null;
   /** Outros trabalhos dele a essa hora (21-10-2026) — ver `choques-de-agenda.ts`. */
   choques?: Choque[];
   /** Trabalho de resíduos e a guia dele por verificar: não se escolhe (04-11-2026, d10.1). */
@@ -1699,6 +1702,18 @@ function CartaoDoTrabalho({
       {/* A folha final de uma mudança pela equipa (d38 v2): o valor final, antes ou depois de feito. */}
       {a && isMudancaType(t.servico) && (
         <FolhaFinalDaMudanca pedidoId={t.pedidoId} negociacaoId={a.negociacaoId} onGravado={onMudou} />
+      )}
+
+      {/* O cliente paga à CLYON (d82): só o administrador, num Trabalho CLYON do modelo de 15-11 — ou já passado. */}
+      {a && r.fase !== "cancelada" && (novoModelo || a.clientePagaAClyon) && (
+        <ClientePagaAClyon
+          pedidoId={t.pedidoId}
+          negociacaoId={a.negociacaoId}
+          servico={t.servico}
+          novoModelo={novoModelo}
+          passagem={a.clientePagaAClyon ?? null}
+          onMudou={onMudou}
+        />
       )}
 
       {/* A prova do trabalho feito: a nota e as fotografias do profissional (19-10-2026, como na Mesa). */}
