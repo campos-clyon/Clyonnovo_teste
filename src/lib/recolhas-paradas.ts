@@ -148,6 +148,10 @@ export async function correrAsRecolhasParadas(): Promise<PassagemDasRecolhas> {
       const guardada = await db.recolhaWhatsApp(telefone);
       if (!guardada || guardada.pedidoId != null) continue;
       const fio = await db.mensagensDoNumeroWhatsApp(telefone, 20);
+      // Não pisar a equipa (d73): com uma pessoa a escrever há menos de 12 horas, nem a mensagem gentil, nem o salto, nem o registo sozinho.
+      const { aEquipaFalouHaPouco } = await import("./pedido-em-curso");
+      const { aEquipaNaConversa } = await import("./pedido-em-curso-na-base");
+      if (aEquipaFalouHaPouco(fio, await aEquipaNaConversa(telefone).catch(() => ({})))) continue;
       const ultima = fio.length > 0 ? fio[fio.length - 1] : null;
       const estado = {
         passo: guardada.passo as PassoDaRecolha,

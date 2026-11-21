@@ -41,6 +41,7 @@ import { SERVICE_CATEGORIES } from "./service-categories";
 import { CHEGADA_CONFIRMADA, PECA_A_CONFIRMACAO_DA_CHEGADA } from "./chegada-pelo-whatsapp";
 import { perguntaDaRua, ruaAnotada } from "./rua-depois-do-aceite";
 import { respostaAoCandidato } from "./candidato-a-parceiro";
+import { avisoDePedidoNovo, PASSEI_A_EQUIPA, respostaDasFotografias, respostaDoEstado } from "./pedido-em-curso";
 
 /**
  * AS TRADUÇÕES FIXAS COBREM O QUE A VITÓRIA DIZ — 28-10-2026 (decisão d35).
@@ -116,6 +117,13 @@ function todasAsMensagens(): string[] {
     ruaAnotada(512, "Rua dos Choupos Brancos 17, 3º Esq"),
     respostaAoCandidato("seixal"),
     respostaAoCandidato(null),
+    // O pedido em curso (d73, 21-11-2026).
+    PASSEI_A_EQUIPA,
+    avisoDePedidoNovo(512),
+    avisoDePedidoNovo(null),
+    respostaDoEstado({ id: 512, status: "pendente", servico: null, fotos: 2, haDias: 0, negociacoes: [], valorFinalPorPagar: false, pago: false, clyon: false }) as string,
+    respostaDoEstado({ ...{ id: 512, status: "pendente", servico: null, fotos: 2, haDias: 0, negociacoes: [], valorFinalPorPagar: false, pago: false, clyon: false }, status: "enviado" }) as string,
+    respostaDasFotografias({ id: 512, status: "pendente", servico: null, fotos: 2, haDias: 0, negociacoes: [], valorFinalPorPagar: false, pago: false, clyon: false }) as string,
   );
   return m.filter(Boolean);
 }

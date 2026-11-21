@@ -425,3 +425,48 @@ describe("a conversa do anúncio (16-11-2026, d48) — as frases dele", () => {
     expect(a).toEqual({ portal: "kasas-portugal", tipologia: "T3", localidade: "Mina de Água", concelho: "Amadora" });
   });
 });
+
+/*
+ * O PEDIDO EM CURSO (21-11-2026, d73) — as frases dos casos A, B e C, e as
+ * vizinhas que NÃO são sobre o pedido. Ver `pedido-em-curso.ts`.
+ */
+describe("o pedido em curso (21-11-2026, d73) — as frases deles", () => {
+  it("caso A: «As fotografias já enviei» são as fotografias do pedido; «Quando é apresentado o orçamento» é o estado", async () => {
+    const { assuntoDoPedido } = await import("./pedido-em-curso");
+    expect(assuntoDoPedido("As fotografias já enviei")).toBe("fotografias");
+    expect(assuntoDoPedido("Já mandei as fotos")).toBe("fotografias");
+    expect(assuntoDoPedido("Quando é apresentado o orçamento")).toBe("estado");
+    expect(assuntoDoPedido("Já há propostas?")).toBe("estado");
+    expect(assuntoDoPedido("Como está o meu pedido?")).toBe("estado");
+    expect(assuntoDoPedido("Ainda não recebi nada")).toBe("estado");
+  });
+
+  it("caso B: a reclamação do valor é reclamação — e não um «não» a uma proposta", async () => {
+    const { assuntoDoPedido, reclamaDoValor } = await import("./pedido-em-curso");
+    for (const f of [
+      "Este valor está muito caro, não foi isso que combinámos",
+      "Não concordo com o valor",
+      "Cobraram a mais do que o combinado",
+      "O valor está errado",
+      "Isto é um exagero de preço, é um roubo",
+    ]) {
+      expect(reclamaDoValor(f), f).toBe(true);
+      expect(assuntoDoPedido(f), f).toBe("reclamacao");
+    }
+  });
+
+  it("caso C: um orçamento novo pedido por palavras não é sobre o pedido antigo", async () => {
+    const { assuntoDoPedido, reclamaDoValor } = await import("./pedido-em-curso");
+    expect(assuntoDoPedido("Boa tarde, queria um orçamento para retirar um sofá e um colchão")).toBeNull();
+    expect(reclamaDoValor("Boa tarde, queria um orçamento para retirar um sofá e um colchão")).toBe(false);
+  });
+
+  it("as vizinhas que não são reclamação nem estado", async () => {
+    const { assuntoDoPedido, reclamaDoValor } = await import("./pedido-em-curso");
+    expect(reclamaDoValor("É caro?")).toBe(false);
+    expect(reclamaDoValor("Tenho um sofá para levar")).toBe(false);
+    expect(assuntoDoPedido("Olá")).toBeNull();
+    expect(assuntoDoPedido("Posso enviar fotografias?")).toBeNull();
+    expect(assuntoDoPedido("Quero fazer um orçamento")).toBeNull();
+  });
+});

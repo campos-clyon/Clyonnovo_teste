@@ -231,8 +231,17 @@ export async function POST(req: NextRequest) {
     // À mão, sem API: a resposta não sai daqui — devolve-se o link que abre
     // o WhatsApp do número da CLYON com o texto pronto, e regista-se no fio
     // porque quem carregou vai enviá-la.
+    /*
+     * QUEM RESPONDE PELO BACKOFFICE FICA COM A CONVERSA — 21-11-2026 (d73, o
+     * caso C). Responder aqui não entregava a conversa a ninguém, e a Vitória
+     * respondia por cima da equipa à mensagem seguinte. Grava-se o «Já
+     * respondi»: nas 12 horas seguintes ela não responde sozinha (ver
+     * `aEquipaFalouHaPouco`), salvo um «Devolver ao site».
+     */
+    const { marcarRespondidaWhatsApp } = await import("@/lib/db");
     if (canalWhatsApp() === "manual") {
       await registarMensagemWhatsApp(telefone, "out", texto);
+      await marcarRespondidaWhatsApp(telefone, true).catch(() => {});
       return NextResponse.json({
         ok: true,
         manual: true,
@@ -251,6 +260,7 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+    await marcarRespondidaWhatsApp(telefone, true).catch(() => {});
     return NextResponse.json({ ok: true });
   }
 
@@ -299,6 +309,9 @@ export async function POST(req: NextRequest) {
     }
 
     await retomarNumeroWhatsApp(telefone);
+    // Foi uma pessoa a dar a conversa ao assistente: vale como «Devolver ao site» (d73).
+    const { marcarDevolvidaWhatsApp } = await import("@/lib/pedido-em-curso-na-base");
+    await marcarDevolvidaWhatsApp(telefone).catch(() => {});
 
     /*
      * O assistente só responde se o interruptor geral estiver ligado. A
@@ -921,9 +934,13 @@ async function naConversa(
       // Foi uma pessoa, no backoffice: sem aviso à equipa (d23).
       await interromperNumeroWhatsApp(telefone, nota ?? "Pelo backoffice", "pessoa");
       return null;
-    case "retomar":
+    case "retomar": {
       await retomarNumeroWhatsApp(telefone);
+      // «Devolver ao site» por uma pessoa: a Vitória responde já, mesmo com a equipa a ter escrito há pouco (d73).
+      const { marcarDevolvidaWhatsApp } = await import("@/lib/pedido-em-curso-na-base");
+      await marcarDevolvidaWhatsApp(telefone).catch(() => {});
       return null;
+    }
     // Excluir: a conversa, os pedidos sem trabalho, e tudo o que a Vitória
     // sabia deste número — ver `esquecerNumeroWhatsApp` (23-10-2026).
     case "excluir": {

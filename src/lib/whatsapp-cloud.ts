@@ -450,6 +450,36 @@ export async function enviarTextoWhatsApp(para: string, texto: string): Promise<
     /* sem saber, fala — é o comportamento de antes */
   }
 
+  /*
+   * NUNCA REPETIR — 21-11-2026 (decisão d73, o caso A). A responder ao
+   * cliente (a rajada dele em curso), a mensagem igual ou quase igual à última
+   * que lhe saiu da Vitória não sai outra vez: ele ouviu-a, respondeu, e
+   * ouvi-la de novo é o que o fez dizer «Já expliquei». A conversa passa à
+   * equipa, com a frase curta (uma vez). Uma cortesia repetida («De nada…»)
+   * só não se repete. Fora de uma rajada vale a guarda de baixo, que engole a
+   * cópia exacta.
+   */
+  try {
+    const { rajadaEmCurso, mesmoNumero } = await import("@/lib/rajada-em-curso");
+    const rajada = rajadaEmCurso();
+    if (rajada && mesmoNumero(rajada.telefone, para)) {
+      const d73 = await import("@/lib/pedido-em-curso");
+      const { saidasDoNumeroWhatsApp, interromperNumeroWhatsApp } = await import("@/lib/db");
+      const ultimas = await saidasDoNumeroWhatsApp(para, 5);
+      if (d73.repeteAUltima(paraTeclado(texto), ultimas)) {
+        console.warn(`[whatsapp] não repeti a última mensagem para …${para.slice(-3)} (d73)`);
+        if (d73.eSoCortesia(texto)) return true;
+        if (!d73.repeteAUltima(paraTeclado(d73.PASSEI_A_EQUIPA), ultimas)) {
+          await enviarTextoPorCanal(para, d73.PASSEI_A_EQUIPA, { semLinguaErrada: true });
+        }
+        await interromperNumeroWhatsApp(telefoneParaWhatsApp(para), d73.MOTIVO_DE_NAO_REPETIR).catch(() => {});
+        return true;
+      }
+    }
+  } catch {
+    /* sem memória, fala — é o comportamento de antes */
+  }
+
   try {
     const { jaFoiDito, MINUTOS_SEM_REPETIR_A_MESMA } = await import("@/lib/nao-repetir");
     const { saidasDoNumeroWhatsApp } = await import("@/lib/db");

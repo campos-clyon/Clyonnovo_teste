@@ -99,7 +99,12 @@ export async function recolherPedidoPorWhatsApp(
   /** O que se viu nelas — a descrição, e o serviço se ainda não se sabe (21-10-2026). */
   visto: string[] = [],
   /** Sem ir buscar os pedidos abertos dele — quando pediu claramente um pedido novo (26-10-2026). */
-  opcoes: { semPedidosAbertos?: boolean; videos?: number } = {},
+  opcoes: {
+    semPedidosAbertos?: boolean;
+    videos?: number;
+    /** Pediu claramente um pedido novo, e já tinha este (d73, 21-11-2026): diz-se-lhe que é novo. */
+    pedidoNovoDe?: number;
+  } = {},
 ): Promise<void> {
   /* O preço público das mudanças (11-11-2026): lido antes de responder, para a Vitória dizer o «desde» dos parceiros (ou a referência). */
   await import("./ler-preco-publico-das-mudancas").then((m) => m.precoPublicoDasMudancas()).catch(() => undefined);
@@ -240,6 +245,23 @@ export async function recolherPedidoPorWhatsApp(
   } else if (!opcoes.semPedidosAbertos && (!estado || procurarOPedidoAMeio(texto, fio))) {
     if (await continuarNumPedidoAberto(telefone, texto, imagensNovas, visto, fio, estado?.dados ?? null)) return;
   }
+
+  /*
+   * NUNCA RECOMEÇAR — 21-11-2026 (decisão d73, o caso A). Depois de um pedido
+   * registado nesta conversa («Pedido #N registado»), a pergunta de abertura
+   * («Diga-me o que precisa de levar ou fazer…») não volta a sair: se era
+   * isso que ia sair, a conversa passa à equipa com a frase curta. Só quem
+   * pede claramente um pedido novo a ouve — e ouve que é um pedido novo
+   * (`avisoDePedidoNovo`), à parte do que já tem.
+   */
+  const d73 = await import("@/lib/pedido-em-curso");
+  const registadoAqui = opcoes.semPedidosAbertos ? null : d73.pedidoRegistadoNaConversa(fio);
+  const novoAParteDe = opcoes.pedidoNovoDe ?? (registadoAqui != null && d73.pedeServicoNovo(texto, null) ? registadoAqui : null);
+  const naoRecomecar = async (resposta: string): Promise<boolean> => {
+    if (registadoAqui == null || novoAParteDe != null || !d73.eAPerguntaDeAbertura(resposta)) return false;
+    await passarAUmaPessoa(telefone, d73.motivoDeNaoRecomecar(registadoAqui), d73.PASSEI_A_EQUIPA);
+    return true;
+  };
 
   /*
    * AS FOTOGRAFIAS QUE ELE JÁ MANDOU — 10-10-2026.
@@ -405,7 +427,9 @@ export async function recolherPedidoPorWhatsApp(
     const avancou = r.estado.passo !== "servico";
     if (avancou && !r.pedirPessoa && !r.desistir) {
       await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
-      await enviarTextoWhatsApp(telefone, r.resposta);
+      // Quem já tinha um pedido nesta conversa ouve que este é novo, à parte (d73).
+      const novoDe = novoAParteDe ?? registadoAqui;
+      await enviarTextoWhatsApp(telefone, novoDe != null ? d73.comOAvisoDePedidoNovo(r.resposta, novoDe) : r.resposta);
     } else if (r.pedirPessoa) {
       /*
        * FALAR PRIMEIRO, INTERROMPER DEPOIS.
@@ -437,15 +461,19 @@ export async function recolherPedidoPorWhatsApp(
        * a pergunta do serviço, como se não tivesse dito nada (25-10-2026). A
        * resposta já traz a apresentação e o agradecimento das imagens.
        */
-      await enviarTextoWhatsApp(
-        telefone,
+      const primeira =
         r.foraDoPlano && !r.desistir
           ? r.resposta
           : // E quem pediu a língua ou perguntou como funciona ouve a resposta
             // (28-10-2026, d35) — já com a apresentação dentro.
             r.respondidaAntes && !r.desistir
             ? r.resposta
-            : primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora, jaCumprimentouNesteFio(fio)),
+            : primeiraPerguntaDoServico(sabido, imagensNovas, !compreensaoDisponivel(), agora, jaCumprimentouNesteFio(fio));
+      // Nunca recomeçar (d73): depois de um pedido registado, a abertura não sai — passa à equipa.
+      if (await naoRecomecar(primeira)) return;
+      await enviarTextoWhatsApp(
+        telefone,
+        novoAParteDe != null && !r.foraDoPlano ? d73.comOAvisoDePedidoNovo(primeira, novoAParteDe) : primeira,
       );
     }
     return;
@@ -500,6 +528,11 @@ export async function recolherPedidoPorWhatsApp(
     return;
   }
 
+  // Nunca recomeçar (d73): a pergunta de abertura depois de um pedido registado passa à equipa.
+  if (await naoRecomecar(r.resposta)) {
+    await guardarRecolhaWhatsApp(telefone, estado.passo, r.estado.dados).catch(() => {});
+    return;
+  }
   await guardarRecolhaWhatsApp(telefone, r.estado.passo, r.estado.dados);
   await enviarTextoWhatsApp(telefone, r.resposta);
 }
@@ -775,6 +808,31 @@ async function passarAUmaPessoa(
   const { interromperNumeroWhatsApp } = await import("@/lib/db");
   await enviarTextoWhatsApp(telefone, mensagem);
   await interromperNumeroWhatsApp(telefone, porque).catch(() => {});
+}
+
+/**
+ * A DECISÃO SOBRE O PEDIDO EM CURSO, CUMPRIDA — 21-11-2026 (decisão d73). A
+ * resposta pelo estado do pedido, o ecrã das propostas, ou a equipa com a
+ * frase curta. Devolve `true` quando tratou a mensagem; «seguir» e «pedido
+ * novo» ficam para quem chama.
+ */
+async function cumprirADecisaoNoPedidoEmCurso(
+  telefone: string,
+  decisao: import("@/lib/pedido-em-curso").DecisaoNoPedidoEmCurso,
+): Promise<boolean> {
+  switch (decisao.tipo) {
+    case "responder":
+      await enviarTextoWhatsApp(telefone, decisao.texto);
+      return true;
+    case "ecra":
+      await mandarOEcra(telefone, decisao.pedidoId);
+      return true;
+    case "equipa":
+      await passarAUmaPessoa(telefone, decisao.motivo, decisao.texto);
+      return true;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -2281,6 +2339,50 @@ export async function tratarMensagemDoCliente(
   const soImagens = conteudo.tipo === "texto" && !conteudo.texto.trim();
 
   /*
+   * NÃO PISAR A EQUIPA — 21-11-2026 (decisão d73, o caso C). Uma pessoa da
+   * equipa escreveu nesta conversa nas últimas 12 horas — à mão no telemóvel
+   * («[à mão]» no fio), pelo backoffice ou com o «Já respondi» — e ninguém a
+   * devolveu ao site depois disso: a Vitória não responde sozinha. A mensagem
+   * já ficou registada (a ponte grava-a antes de chegar aqui) e aparece na
+   * Mesa das conversas por responder. Só a rua pedida depois do aceite entra
+   * no pedido, em silêncio, como num número entregue. Os botões (o cliente a
+   * carregar em «Fechar») seguem: são uma ordem dele, não uma conversa.
+   */
+  if (conteudo.tipo === "texto") {
+    const { aEquipaFalouHaPouco } = await import("@/lib/pedido-em-curso");
+    const { aEquipaNaConversa } = await import("@/lib/pedido-em-curso-na-base");
+    const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+    const fioDaEquipa = await mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []);
+    const daEquipa = await aEquipaNaConversa(telefone).catch(() => ({ respondidaHaSegundos: null, devolvidaHaSegundos: null }));
+    if (aEquipaFalouHaPouco(fioDaEquipa, daEquipa)) {
+      if (!soImagens) {
+        const { lerARespostaDaRua } = await import("@/lib/rua-depois-do-aceite-na-base");
+        await lerARespostaDaRua(telefone, conteudo.texto).catch(() => null);
+      }
+      console.info(`[whatsapp] …${telefone.slice(-3)}: a equipa respondeu há pouco — a Vitória não responde (d73)`);
+      return;
+    }
+  }
+
+  /*
+   * OS PEDIDOS EM CURSO DO NÚMERO — 21-11-2026 (decisão d73). Os abertos e os
+   * fechados há pouco (30 dias), com as negociações, o valor final e o
+   * pagamento: lidos uma vez, quando é preciso, antes de tratar a mensagem
+   * como um pedido novo. Ver `pedido-em-curso.ts`.
+   */
+  let lidosEmCurso: import("@/lib/pedido-em-curso").PedidoEmCurso[] | null = null;
+  const emCurso = async (): Promise<import("@/lib/pedido-em-curso").PedidoEmCurso[]> => {
+    if (lidosEmCurso == null) {
+      const { pedidosEmCursoDoTelefone } = await import("@/lib/pedido-em-curso-na-base");
+      lidosEmCurso = await pedidosEmCursoDoTelefone(telefone).catch((err) => {
+        console.error("[whatsapp] os pedidos em curso não se leram:", err instanceof Error ? err.message : err);
+        return [];
+      });
+    }
+    return lidosEmCurso ?? [];
+  };
+
+  /*
    * A RUA QUE A VITÓRIA PEDIU DEPOIS DO ACEITE — 17-11-2026 (d69). Se este
    * número tem um pedido com a rua pedida e por receber, e a mensagem é uma
    * morada, entra no pedido (o parceiro vê-a pelo campo de morada) e
@@ -2325,6 +2427,25 @@ export async function tratarMensagemDoCliente(
     if (estaAPerderAPaciencia(conteudo.texto)) {
       await passarAUmaPessoa(telefone, MOTIVO_NO_PAINEL, RESPOSTA_A_QUEM_ESPEROU);
       return;
+    }
+
+    /*
+     * A RECLAMAÇÃO DO VALOR DE QUEM JÁ TEM PEDIDO — 21-11-2026 (decisão d73, o
+     * caso B). «Isto está muito caro», «não foi o que combinámos», «não
+     * concordo com o valor»: com um pedido em curso (aberto, ou feito e
+     * fechado há pouco, também com o valor final por pagar), passa à equipa
+     * com a frase curta — nunca a recolha de um pedido novo, nem um «não» lido
+     * como a recusa de uma proposta.
+     */
+    if (!soImagens) {
+      const { reclamaDoValor, pedidoPrincipal, PASSEI_A_EQUIPA } = await import("@/lib/pedido-em-curso");
+      if (reclamaDoValor(conteudo.texto)) {
+        const principal = pedidoPrincipal(await emCurso());
+        if (principal) {
+          await passarAUmaPessoa(telefone, `Pedido #${principal.id}: o cliente reclama do valor — responder`, PASSEI_A_EQUIPA);
+          return;
+        }
+      }
     }
 
     /*
@@ -2572,12 +2693,29 @@ export async function tratarMensagemDoCliente(
       }
     }
 
+    /*
+     * SEM PEDIDO ABERTO NÃO QUER DIZER CLIENTE NOVO — 21-11-2026 (decisão d73,
+     * o caso B). Um trabalho feito, com o valor final por pagar, ou um pedido
+     * fechado há pouco: o que ele escreve sobre esse pedido (o estado, as
+     * fotografias, o pagamento, a data, o valor) responde-se pelo pedido ou
+     * passa à equipa; um pedido novo só quando o pede claramente, e diz-se-lhe
+     * que é novo. Ver `decidirNoPedidoEmCurso`.
+     */
+    let novoDe: number | undefined;
+    if (conteudo.tipo === "texto") {
+      const { decidirNoPedidoEmCurso } = await import("@/lib/pedido-em-curso");
+      const decisao = decidirNoPedidoEmCurso({ texto: conteudo.texto, imagens: conteudo.imagens, pedidos: await emCurso(), abertos: false });
+      if (await cumprirADecisaoNoPedidoEmCurso(telefone, decisao)) return;
+      if (decisao.tipo === "pedido_novo") novoDe = decisao.de;
+    }
+
     // Quem quer ser parceiro, motorista ou ajudante (d69): o caminho da candidatura — `aoCandidato`.
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;
     if (conteudo.tipo === "texto") {
       if (await aoCandidato(telefone, conteudo.texto)) return;
-      await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
+      if (!novoDe) await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
+      else await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto, { pedidoNovoDe: novoDe });
     }
     return;
   }
@@ -2692,6 +2830,19 @@ export async function tratarMensagemDoCliente(
         return;
       }
     }
+  }
+
+  /*
+   * «QUANDO É APRESENTADO O ORÇAMENTO?», «AS FOTOGRAFIAS JÁ ENVIEI» — 21-11-2026
+   * (decisão d73, o caso A). Com o pedido registado, a pergunta pelo estado
+   * responde-se pelo estado real do pedido (registado e a ser conferido,
+   * enviado aos parceiros, ou o ecrã das propostas); as fotografias que ele
+   * diz ter mandado, pelo que o pedido tem. O resto segue o caminho de sempre.
+   */
+  if (conteudo.tipo === "texto") {
+    const { decidirNoPedidoEmCurso } = await import("@/lib/pedido-em-curso");
+    const decisao = decidirNoPedidoEmCurso({ texto: conteudo.texto, pedidos: await emCurso(), abertos: true });
+    if (decisao.tipo !== "pedido_novo" && (await cumprirADecisaoNoPedidoEmCurso(telefone, decisao))) return;
   }
 
   /*
@@ -3211,9 +3362,13 @@ export async function tratarMensagemDoCliente(
      * modelo marca isso como `ponto_de_situacao`, e aí ela é a resposta certa.
      */
     if (percebida === "ponto_de_situacao") {
+      // O estado real do pedido, quando se sabe dizer (d73, 21-11-2026); senão, a frase de sempre.
+      const { pedidoPrincipal, respostaDoEstado } = await import("@/lib/pedido-em-curso");
+      const principal = pedidoPrincipal(await emCurso());
       await enviarTextoWhatsApp(
         telefone,
-        "Está tudo a andar deste lado. Assim que houver novidades, sou eu a escrever-lhe.",
+        (principal ? respostaDoEstado(principal) : null) ??
+          "Está tudo a andar deste lado. Assim que houver novidades, sou eu a escrever-lhe.",
       );
       return;
     }
