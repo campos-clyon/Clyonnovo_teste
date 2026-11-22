@@ -20,6 +20,7 @@ import {
   dentroDoTecto,
   MODELO_DA_VITORIA_AGENTE,
   TECTO_DIARIO_POR_OMISSAO_USD,
+  tectoDasConfigs,
   tectoValido,
   usoDe,
 } from "./vitoria-agente/custo";
@@ -121,6 +122,32 @@ describe("o custo e o tecto diário", () => {
     expect(tectoValido(-1)).toBeNull();
     expect(tectoValido(1000)).toBeNull();
     expect(tectoValido("dez")).toBeNull();
+  });
+
+  it("sem nada escrito nas Configs vale o tecto de omissão (10 USD); um 0 escrito de propósito desliga", () => {
+    // sem linha na base: rows[0]?.valor é undefined
+    expect(tectoDasConfigs(undefined)).toBe(10);
+    expect(tectoDasConfigs(null)).toBe(10);
+    expect(tectoDasConfigs("")).toBe(10);
+    expect(tectoDasConfigs("   ")).toBe(10);
+    expect(tectoDasConfigs("0")).toBe(0);
+    expect(tectoDasConfigs(0)).toBe(0);
+    expect(tectoDasConfigs("12,5")).toBe(12.5);
+    expect(tectoDasConfigs("abc")).toBe(10);
+    expect(tectoDasConfigs("1000")).toBe(10);
+    expect(tectoValido(undefined)).toBeNull();
+    expect(tectoValido(null)).toBeNull();
+    expect(tectoValido("")).toBeNull();
+    expect(tectoValido("  ")).toBeNull();
+    expect(tectoValido("0")).toBe(0);
+    // e com o de omissão o agente pode chamar o modelo
+    expect(dentroDoTecto(0, tectoDasConfigs(undefined))).toBe(true);
+  });
+
+  it("o tecto lido da base passa pelo de omissão (não por tectoValido sozinho)", () => {
+    const fonte = ler("src/lib/vitoria-agente/na-base.ts");
+    const corpo = fonte.slice(fonte.indexOf("export async function tectoDiarioUsd"), fonte.indexOf("export async function mudarTectoDiario"));
+    expect(corpo).toContain("tectoDasConfigs(rows[0]?.valor)");
   });
 
   it("o custo mensal projectado é a média por conversa vezes as conversas do mês", () => {

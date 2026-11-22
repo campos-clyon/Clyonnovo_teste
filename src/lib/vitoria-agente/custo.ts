@@ -77,11 +77,23 @@ export function custoEmUsd(u: UsoSomado): number {
   return Math.round(usd * 1_000_000) / 1_000_000;
 }
 
-/** Um tecto escrito nas Configs: um número de dólares entre 0 e o máximo. Inválido = null. */
+/**
+ * Um tecto escrito nas Configs: um número de dólares entre 0 e o máximo.
+ * Inválido = null — e NADA escrito (sem linha, null, «» ou só espaços) também
+ * é null: `Number("")` é 0, e um 0 que ninguém escreveu travava o agente para
+ * sempre. Um «0» escrito de propósito continua a valer (= desligado).
+ */
 export function tectoValido(v: unknown): number | null {
-  const t = typeof v === "number" ? v : Number(String(v ?? "").replace(",", ".").trim());
+  if (v == null) return null;
+  if (typeof v !== "number" && String(v).trim() === "") return null;
+  const t = typeof v === "number" ? v : Number(String(v).replace(",", ".").trim());
   if (!Number.isFinite(t) || t < 0 || t > TECTO_DIARIO_MAXIMO_USD) return null;
   return Math.round(t * 100) / 100;
+}
+
+/** O tecto que vale, a partir do que está nas Configs: sem nada escrito ou inválido, o de omissão. */
+export function tectoDasConfigs(valorEscrito: unknown): number {
+  return tectoValido(valorEscrito) ?? TECTO_DIARIO_POR_OMISSAO_USD;
 }
 
 /** Ainda se pode gastar hoje? Pura: o gasto do dia contra o tecto. */

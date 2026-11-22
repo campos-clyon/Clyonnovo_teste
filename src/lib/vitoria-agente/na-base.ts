@@ -21,7 +21,7 @@ import { ensureRegistoTable, getPool, registarNaTransaccao } from "../db";
 import { diaEmLisboa, instanteDaBase, primeiroDoMesEmLisboa } from "../hora-de-lisboa";
 import { conversaAnonimizada, ultimosDigitos, type QuemEscreve } from "./anonimizar";
 import { clienteDoClaude, chaveDoClaude, correrOAgente, type ClienteDoClaude, type LinhaDoRegistoDoAgente, type ResultadoDoAgente } from "./cliente";
-import { MODELO_DA_VITORIA_AGENTE, TECTO_DIARIO_POR_OMISSAO_USD, tectoValido, type EsforcoDoAgente } from "./custo";
+import { MODELO_DA_VITORIA_AGENTE, TECTO_DIARIO_POR_OMISSAO_USD, tectoDasConfigs, tectoValido, type EsforcoDoAgente } from "./custo";
 import type { DependenciasDasFerramentas, LinhaLida, PedidoParaOAgente } from "./ferramentas";
 
 export const NOME_DO_INTERRUPTOR_DO_ENSAIO = "Vitória agente — ensaio";
@@ -173,7 +173,7 @@ export async function tectoDiarioUsd(): Promise<number> {
       Array<{ valor: string }>,
       unknown,
     ];
-    return tectoValido(rows[0]?.valor) ?? TECTO_DIARIO_POR_OMISSAO_USD;
+    return tectoDasConfigs(rows[0]?.valor);
   } catch {
     return TECTO_DIARIO_POR_OMISSAO_USD;
   }

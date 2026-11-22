@@ -147,7 +147,11 @@ export default function InterruptorDaVitoriaAgente() {
           <p>
             Modelo: <span className="font-semibold text-slate-100">{estado.modelo}</span> · Tecto diário:{" "}
             <span className="font-semibold text-slate-100">{usd(estado.tectoUsd)}</span>
-            {estado.passouOTecto && <span className="ml-2 font-semibold text-red-300">tecto atingido hoje — volta às regras</span>}
+            {estado.tectoUsd === 0 ? (
+              <span className="ml-2 font-semibold text-red-300">tecto posto a 0 nas Configs — o agente não chama o modelo</span>
+            ) : (
+              estado.passouOTecto && <span className="ml-2 font-semibold text-red-300">tecto atingido hoje — volta às regras</span>
+            )}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <input
