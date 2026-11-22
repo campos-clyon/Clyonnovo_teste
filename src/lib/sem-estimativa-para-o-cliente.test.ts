@@ -124,7 +124,8 @@ describe("mas os valores que alguém decidiu continuam lá", () => {
      * deixar o número voltar sem alguém escrever porquê.
      */
     for (const rota of [
-      "src/app/api/admin/negociacoes/promover/route.ts",
+      // O envio da Mesa (d87: passou da rota de promover para enviar-aos-profissionais.ts).
+      "src/lib/enviar-aos-profissionais.ts",
       "src/app/api/admin/negociacoes/reenviar/route.ts",
     ]) {
       expect(semComentarios(ler(rota))).toContain("valorDesejadoCliente: null,");

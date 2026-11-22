@@ -272,6 +272,12 @@ const comMaiuscula = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) 
 /** A frase do fim, com o pedido completo. */
 export const PEDIDO_FICA_COMPLETO =
   "Com isto, o pedido fica completo: a equipa confere-o e segue para os parceiros da sua zona. As propostas chegam-lhe por aqui.";
+/**
+ * A frase do fim, com o pedido completo E JÁ ENVIADO aos parceiros pelo envio
+ * automático (d87, 22-11-2026). Só se diz quando o envio foi mesmo feito; se o
+ * pedido ficou nos «por enviar» (ou na fila das 8h00), diz-se a de cima.
+ */
+export const PEDIDO_JA_SEGUIU = "O seu pedido já seguiu para os parceiros da sua zona. As propostas chegam-lhe por aqui.";
 /** A frase do fim, quando ainda falta alguma coisa. */
 export const PODE_ENVIAR_O_QUE_FALTA =
   "Pode enviar por aqui quando puder. Com isso, o pedido fica completo e segue para os parceiros da sua zona.";
@@ -290,6 +296,8 @@ export type ParaAResposta = {
   faltam: readonly ChaveDaFalta[];
   /** A Vitória ainda não se apresentou nesta conversa (o modelo foi da equipa). */
   apresentar: boolean;
+  /** O envio automático aos parceiros foi feito (d87): diz-se que já seguiu. */
+  jaSeguiu?: boolean;
 };
 
 /** O dia, como o resumo o escreve, a partir dos dados lidos — ou null. */
@@ -325,7 +333,7 @@ export function respostaAoQueFalta(p: ParaAResposta): string {
   if (faltam.length > 0) {
     linhas.push("Ainda falta:", ...faltam.map((c) => `- ${comMaiuscula(rotuloDaFalta(c, p.servico))}`), PODE_ENVIAR_O_QUE_FALTA);
   } else {
-    linhas.push(PEDIDO_FICA_COMPLETO);
+    linhas.push(p.jaSeguiu ? PEDIDO_JA_SEGUIU : PEDIDO_FICA_COMPLETO);
   }
   return linhas.join("\n");
 }

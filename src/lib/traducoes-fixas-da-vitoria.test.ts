@@ -80,6 +80,8 @@ function todasAsMensagens(): string[] {
     mensagemDePedidoRegistado(512, false, "Oliver"),
     mensagemDePedidoRegistado(512, true, null),
     mensagemDePedidoRegistado(512, false, "Oliver", true),
+    // Já seguiu para os parceiros pelo envio automático (d87, 22-11-2026).
+    mensagemDePedidoRegistado(512, true, "Oliver", false, true),
     fechoDoPedidoAberto(512),
     COMO_CHEGA_O_PRECO,
     LEMBRETE_DO_PRECO,

@@ -127,7 +127,8 @@ describe("S19 — o resto da B3 (29-10-2026)", () => {
   const casos: Array<[string, string, RegExp]> = [
     ["BO4 editar", "src/app/api/admin/pedidos/[id]/editar/route.ts", /await avisarCliente\(pedidoId, "editado"\)/],
     ["BO6 passar a Trabalho CLYON", "src/app/api/admin/trabalhos-clyon/route.ts", /if \(corpo\.deNegociacao === true\) await avisarCliente\(pedidoId, "tipo"\)/],
-    ["BO8 enviar aos profissionais", "src/app/api/admin/negociacoes/promover/route.ts", /await avisarCliente\(pedidoId, "enviado"\)/],
+    // O envio da Mesa passou para enviar-aos-profissionais.ts (d87, 22-11-2026): a rota chama-o.
+    ["BO8 enviar aos profissionais", "src/lib/enviar-aos-profissionais.ts", /await avisarCliente\(pedidoId, "enviado"\)/],
     ["BO9 arquivar", "src/app/api/admin/pedidos/[id]/reject/route.ts", /await avisarDoCancelamento\(\{ pedidoId: orderId, negociacoes: antesDeArquivar/],
     ["BO10 rejeitar no modal", "src/app/api/admin/pedidos/[id]/route.ts", /semAvisoAoCliente: true/],
     ["BO11 propor em nome do cliente", "src/app/api/admin/negociacoes/agir/route.ts", /avisarCliente\(pedidoId, "proposta_pela_clyon"/],

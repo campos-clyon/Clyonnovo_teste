@@ -66,6 +66,10 @@
     {
       "path": "/api/cron/seguimento-do-cliente",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/envio-aos-parceiros",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

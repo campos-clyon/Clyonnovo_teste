@@ -700,6 +700,8 @@ const ENTRE_A_EQUIPA = new Set([
   "src/lib/dinheiro-do-trabalho.ts",
   "src/lib/historico-do-pedido.ts",
   "src/lib/distribuir-pedido.ts",
+  // O «Enviar aos profissionais» da Mesa (d87, 22-11-2026): era a rota do backoffice, e o envio automático usa-o — histórico «created» e erros da Mesa.
+  "src/lib/enviar-aos-profissionais.ts",
   "src/lib/oferta-clyon.ts",
   "src/lib/pagamento-declarado.ts",
   "src/lib/cancelamento.ts",

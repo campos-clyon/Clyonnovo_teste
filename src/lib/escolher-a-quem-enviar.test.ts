@@ -11,7 +11,8 @@ const semComentarios = (s: string) =>
   s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const LIB = semComentarios(ler("src/lib/distribuir-pedido.ts"));
-const ROTA = semComentarios(ler("src/app/api/admin/negociacoes/promover/route.ts"));
+// A rota da Mesa e a função que ela chama (d87, 22-11-2026: o envio passou para enviar-aos-profissionais.ts).
+const ROTA = semComentarios(ler("src/app/api/admin/negociacoes/promover/route.ts") + "\n" + ler("src/lib/enviar-aos-profissionais.ts"));
 const ALCANCE = semComentarios(ler("src/app/api/admin/negociacoes/alcance/route.ts"));
 const PAINEL = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
 

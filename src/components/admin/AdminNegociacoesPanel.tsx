@@ -724,6 +724,8 @@ type PorPromover = {
   faltas?: ChaveDaFalta[];
   /** O estado dos lembretes do que falta (d71, 19-11-2026): «Lembrete 1/3 enviado a …». */
   lembreteDoQueFalta?: string | null;
+  /** O envio automático aos parceiros (d87, 22-11-2026): porque não seguiu sozinho, a fila das 8h00, «enviaria a …». */
+  envioAutomatico?: string | null;
 };
 
 /*
@@ -6950,6 +6952,9 @@ function PedidosPorPromover({
 
       {/* Os lembretes do que falta (d71): o estado do ciclo deste pedido. */}
       {p.lembreteDoQueFalta && <p className="text-[11px] leading-5 text-slate-400">{p.lembreteDoQueFalta}</p>}
+
+      {/* O envio automático aos parceiros (d87): o motivo de não ter seguido sozinho, ou a fila das 8h00. */}
+      {p.envioAutomatico && <p className="text-[11px] leading-5 text-amber-200/80">{p.envioAutomatico}</p>}
 
       {aPedir === p.id && p.faltas && (
         <PainelDoQueFalta pedido={p} faltas={p.faltas} token={token} onFechar={() => setAPedir(null)} />

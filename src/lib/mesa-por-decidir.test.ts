@@ -194,7 +194,8 @@ describe("mudar o tipo a meio (fase 4)", () => {
   const DB = ler("src/lib/db.ts");
   const MUDA = DB.slice(DB.indexOf("export async function prepararAMudancaDeTipo("), DB.indexOf("export const PORQUE_NAO_MUDA_DE_TIPO"));
   const ROTA = ler("src/app/api/admin/trabalhos-clyon/route.ts");
-  const PROMOVER = ler("src/app/api/admin/negociacoes/promover/route.ts");
+  // A rota da Mesa e a função que ela chama (d87: o envio passou para enviar-aos-profissionais.ts).
+  const PROMOVER = ler("src/app/api/admin/negociacoes/promover/route.ts") + "\n" + ler("src/lib/enviar-aos-profissionais.ts");
 
   it("só enquanto ninguém aceitou nem tem o trabalho, e nunca num fechado", () => {
     expect(MUDA).toContain('negs.some((n) => n.estado === "acordada" || n.estado === "aguarda_contratacao")');

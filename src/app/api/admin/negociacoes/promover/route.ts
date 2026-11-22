@@ -1,30 +1,9 @@
-import { lerBase } from "@/lib/base-do-preco";
-import { avisarCliente, avisarProfissional, avisarProfissionaisDoPedido } from "@/lib/avisos-do-backoffice";
-import { lerForma } from "@/lib/forma-de-pagamento";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
-import { assumirPedidoSeLivre } from "@/lib/assistentes";
-import {
-  getSimulatorOrderById,
-  pedidosPorPromover,
-  promoverPedidoAPlataforma,
-  appendOrderHistory,
-} from "@/lib/db";
-import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
-import { negociacoesDoPedido } from "@/lib/db";
-import { gerarTokenDeAcesso } from "@/lib/pedido-acesso";
-import { enviarLinkDoPedido } from "@/lib/email-pedido";
+import { pedidosPorPromover } from "@/lib/db";
+import { enviarAosProfissionais } from "@/lib/enviar-aos-profissionais";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
-import { validarValorDesejado } from "@/lib/pedido-valores";
-import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
-import { pedidoArrumado, PEDIDO_ARRUMADO_NAO_SE_ENVIA } from "@/lib/pedido-arrumado";
 import { oQueFaltaNoPedido } from "@/lib/o-que-falta-no-pedido";
-import { getActivePricingMap } from "@/lib/pricing-helper";
-import {
-  parametrosDoMapa,
-  pedidoParaSugestaoDaLinha,
-  sugerirParaOProfissional,
-} from "@/lib/sugestao-para-o-profissional";
 
 export const runtime = "nodejs";
 
@@ -88,8 +67,19 @@ export async function GET(req: NextRequest) {
      */
     const { lembretesNaMesa } = await import("@/lib/lembrete-do-que-falta-na-base");
     const lembretes = await lembretesNaMesa(pedidos.map((p) => Number(p.id)));
+    /*
+     * O ENVIO AUTOMÁTICO AOS PARCEIROS — 22-11-2026 (d87). Porque é que um
+     * pedido completo pela Vitória não seguiu sozinho (ou que está na fila das
+     * 8h00, ou que «enviaria a …» com o interruptor desligado). Nunca rebenta a lista.
+     */
+    const { linhasDoEnvioAutomaticoNaMesa } = await import("@/lib/envio-automatico-aos-parceiros-na-base");
+    const envios = await linhasDoEnvioAutomaticoNaMesa(pedidos.map((p) => Number(p.id)));
     return NextResponse.json({
-      pedidos: pedidos.map((p) => ({ ...p, lembreteDoQueFalta: lembretes.linhas.get(Number(p.id)) ?? null })),
+      pedidos: pedidos.map((p) => ({
+        ...p,
+        lembreteDoQueFalta: lembretes.linhas.get(Number(p.id)) ?? null,
+        envioAutomatico: envios.get(Number(p.id)) ?? null,
+      })),
       lembretesAcabados: lembretes.acabados,
     });
   } catch (error) {
@@ -113,8 +103,6 @@ export async function POST(req: NextRequest) {
   if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
-  // Um assistente que envia um pedido sem responsável aos profissionais fica com ele.
-
   /*
    * ESCOLHIDOS À MÃO — 29-09-2026.
    *
@@ -134,240 +122,18 @@ export async function POST(req: NextRequest) {
     }
     soPara = ids;
   }
-  const pedido = await getSimulatorOrderById(pedidoId);
-  if (!pedido) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
   /*
-   * UM PEDIDO CANCELADO FICA CANCELADO — 10-11-2026 (d27). A lista do «Por
-   * enviar» já não os mostra, mas a rota não lia o estado: um ecrã aberto
-   * antes do cancelamento (ou um segundo separador) ainda o enviava aos
-   * parceiros, com email ao cliente. Recusa-se antes de qualquer escrita —
-   * por isso o «assumir» passou para depois desta leitura.
+   * O ENVIO, NUMA FUNÇÃO SÓ — 22-11-2026 (d87). O que estava aqui passou tal e
+   * qual para `enviarAosProfissionais` (enviar-aos-profissionais.ts): é a
+   * mesma função que o envio automático dos pedidos completos pela Vitória usa.
    */
-  if (pedidoArrumado(pedido.status)) {
-    return NextResponse.json({ error: PEDIDO_ARRUMADO_NAO_SE_ENVIA }, { status: 409 });
-  }
-  await assumirPedidoSeLivre(pedidoId, colab);
-  /*
-   * Está na plataforma quem CHEGOU a alguém, não quem tem um número.
-   *
-   * Esta guarda olhava para `valorDesejadoCliente != null`. A lista ao lado
-   * usa outro critério — não ter negociações — e as duas discordavam:
-   *
-   *   1. o admin carrega em "Enviar aos profissionais";
-   *   2. o valor fica gravado, mas a distribuição não chega a ninguém;
-   *   3. o pedido continua na lista, porque continua sem negociações;
-   *   4. carregar outra vez responde "Este pedido já está na plataforma".
-   *
-   * O pedido ficava preso: visível, por enviar, e impossível de enviar. Foi o
-   * que aconteceu ao #202. O critério passa a ser o mesmo dos dois lados.
-   */
-  /*
-   * SÓ AS VIVAS — 20-10-2026. Um Trabalho CLYON que passou a negociação
-   * (`prepararAMudancaDeTipo`) fica com as ofertas mortas, e vem para aqui
-   * como os outros: a distribuição reabre-as como negociação.
-   */
-  const jaTemNegociacoes = (await negociacoesDoPedido(pedidoId)).some((n) =>
-    ["aberta", "aguarda_contratacao", "acordada"].includes(n.estado),
-  );
-  if (jaTemNegociacoes) {
-    return NextResponse.json(
-      { error: "Este pedido já foi enviado aos profissionais." },
-      { status: 409 },
-    );
-  }
-
-  /*
-   * UM TRABALHO CLYON QUE NÃO CHEGOU A NINGUÉM — 06-10-2026.
-   *
-   * Oferecido a valor fixo sem ninguém a quem chegar, o pedido continua sem
-   * negociações e por isso no «Por enviar» — mas já marcado como Trabalho
-   * CLYON. Enviá-lo daqui punha-o a negociar com o valor fixo gravado: saía da
-   * mesa das Negociações, que não mostra os Trabalhos CLYON, e entrava nos
-   * Trabalhos CLYON com negociações que não são ofertas. Oferece-se outra vez,
-   * escolhendo a quem.
-   */
-  if ((pedido as { valorFixoClyon?: unknown }).valorFixoClyon != null) {
-    return NextResponse.json(
-      {
-        error:
-          "Este pedido já é um Trabalho CLYON de valor fixo. Ofereça-o outra vez em «Trabalho CLYON», escolhendo a quem.",
-      },
-      { status: 409 },
-    );
-  }
-
-  /*
-   * A conta da CLYON, com os quilómetros da base da CLYON (`distanceKm`).
-   *
-   * Sem distância a conta sai sem combustível — e aí vale mais a estimativa
-   * gravada, tirando-lhe o IVA que ela traz dentro, do que uma conta que não
-   * contou a viagem.
-   *
-   * QUEM ESTÁ NA MESA PODE PASSAR À FRENTE DELA, e isso voltou a pedido do
-   * dono (10-09-2026). Houve um tempo em que o valor escrito era ignorado, e
-   * a razão era boa: um número inventado à mão valia para todos os
-   * profissionais, viessem de Amora ou de Setúbal. Mas há um caso que a conta
-   * não conhece — o que já foi combinado ao telefone. Nesse, quem atendeu
-   * sabe mais do que a fórmula.
-   *
-   * A regra fica simples de dizer: caixa vazia, manda a conta da CLYON;
-   * caixa preenchida, manda o que lá está. E o que cada profissional vê
-   * continua a ser a conta feita com os custos e os quilómetros DELE — este
-   * valor é só o ponto de partida da mesa.
-   */
-  const escrito =
-    corpo.valor !== undefined && corpo.valor !== null && corpo.valor !== ""
-      ? validarValorDesejado(corpo.valor)
-      : null;
-  if (escrito && !escrito.ok) {
-    return NextResponse.json({ error: escrito.erros[0].mensagem }, { status: 400 });
-  }
-  const mapa = await getActivePricingMap();
-  const distanciaDaClyon = Number(pedido.distanceKm);
-  const conta = sugerirParaOProfissional(
-    pedidoParaSugestaoDaLinha(pedido as unknown as Record<string, unknown>),
-    Number.isFinite(distanciaDaClyon) && distanciaDaClyon > 0 ? distanciaDaClyon : null,
-    parametrosDoMapa(mapa),
-  );
-  const estimativaGravada = Number(pedido.estimateTotal ?? pedido.estimateMax);
-  const estimativaSemIva =
-    Number.isFinite(estimativaGravada) && estimativaGravada > 0
-      ? Math.round((estimativaGravada / 1.23) * 100) / 100
-      : null;
-  const daConta = conta.semDistancia && estimativaSemIva != null ? estimativaSemIva : conta.precoSugerido;
-  const bruto = escrito?.ok ? escrito.valores.valorDesejadoCliente : daConta;
-
-  const validacao = validarValorDesejado(bruto);
-  if (!validacao.ok) {
-    return NextResponse.json(
-      { error: `Sem valor de partida: ${validacao.erros[0].mensagem}` },
-      { status: 400 },
-    );
-  }
-  const valor = validacao.valores.valorDesejadoCliente;
-
-  // As coordenadas do trabalho vivem no JSON do formulário, não em colunas.
-  /*
-   * As coordenadas, indo buscá-las se ainda não existirem.
-   *
-   * Era uma leitura crua do rawOrderJson: se lá não estivessem, seguia com
-   * nulos e a regra caía na lista de zonas de cada profissional. O #205 —
-   * uma recolha na Avenida Mouzinho de Albuquerque, em Lisboa — foi enviado
-   * três vezes e as três não chegaram a ninguém, comparado contra "palmela,
-   * montijo, seixal, amora, setubal", quando a 35 km havia um profissional
-   * com raio de 125 km.
-   *
-   * Geocodificar só na criação não chegava: há mais de cem pedidos na base
-   * criados antes disso, e esses não voltam a ser criados. Agora a busca
-   * acontece aqui, e o resultado fica gravado — da segunda vez já não há
-   * chamada nenhuma ao Google.
-   */
-  const geo = await coordenadasDoPedido(pedido);
-  const lat = geo.lat;
-  const lng = geo.lng;
-  let fotos = 0;
-  try {
-    const cru = JSON.parse(pedido.rawOrderJson ?? "{}");
-    fotos = Array.isArray(cru?.files) ? cru.files.length : 0;
-  } catch {
-    /* sem fotos */
-  }
-
-  try {
-    const acesso = gerarTokenDeAcesso();
-    const promovido = await promoverPedidoAPlataforma(
-      pedidoId,
-      valor,
-      acesso.hash,
-      acesso.expiraEm,
-    );
-    if (!promovido) {
-      return NextResponse.json(
-        { error: "Este pedido já tinha sido promovido." },
-        { status: 409 },
-      );
-    }
-
-
-    const baseUrl = urlDeAccaoDoPedido(req.headers);
-
-    // O link primeiro: sem ele o cliente recebe propostas e não tem onde
-    // responder, e a negociação morre ao fim das 48 horas sem ninguém saber
-    // porquê. Se o email falhar, o token fica na resposta para envio à mão.
-    const emailSaiu = await enviarLinkDoPedido({
-      para: pedido.contactEmail ?? "",
-      nomeDoCliente: pedido.contactName ?? null,
-      pedidoId,
-      serviceType: pedido.serviceType ?? null,
-      token: acesso.token,
-      /*
-       * AQUI NÃO VAI NÚMERO NENHUM.
-       *
-       * O email diz «Disse que quer pagar a partir de X». Neste caminho o X
-       * nunca é dele: ou é o que o assistente escreveu, ou é a conta da
-       * CLYON. Punha na boca do cliente um número nosso, em todos os emails
-       * de promoção — que é justamente o caminho por onde a negociação
-       * começa a sério.
-       */
-      valorDesejadoCliente: null,
-      baseUrl,
-    });
-    // S19 (BO8): na app, o pedido foi aos profissionais.
-    await avisarCliente(pedidoId, "enviado");
-
-    const r = await distribuirPedido({
-      id: pedidoId,
-      serviceType: pedido.serviceType ?? null,
-      description: pedido.description ?? null,
-      city: pedido.city ?? null,
-      urgency: pedido.urgency ?? null,
-      quantidadeDeFotos: fotos,
-      valorDesejadoCliente: valor,
-      precisaFatura: Boolean(pedido.precisaFatura),
-      precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
-      baseDoPreco: lerBase(pedido.baseDoPreco),
-      formaDePagamento: lerForma(pedido.formaDePagamento),
-      lat,
-      lng,
-      baseUrl,
-    }, { soPara });
-
-    await appendOrderHistory(pedidoId, {
-      type: "created",
-      by: null,
-      message:
-        // Fica escrito DE ONDE veio o número: quem ler isto daqui a um mês
-        // tem de saber se foi a fórmula ou se foi alguém que escreveu.
-        `Promovido a pedido de plataforma por ${valor} € ` +
-        (escrito?.ok
-          ? `(escrito na mesa; a conta CLYON dava ${daConta} €). `
-          : "(conta CLYON: " +
-            (conta.semDistancia
-              ? "estimativa sem IVA, sem distância da base"
-              : `${conta.kmDeCarro} km ida e volta, ${conta.horas} h, margem ${Math.round(conta.margem * 100)} %`) +
-            "). ") +
-        (soPara ? `Enviado só a ${soPara.length} profissional(is) escolhido(s) à mão. ` : "") +
-        resumoDaDistribuicao(r) +
-        (emailSaiu ? "" : " O email da ligação ao cliente NÃO saiu."),
-    });
-
-    /*
-     * Zero profissionais não é sucesso.
-     *
-     * O ecrã mostrava "enviado" e a lista mantinha o pedido lá — sem dizer
-     * porquê. Quem estava do outro lado concluía que o botão não fazia nada.
-     * Os motivos já eram contados pela regra; faltava alguém mostrá-los.
-     */
-    return NextResponse.json({
-      ok: true,
-      chegouAAlguem: r.receberam > 0,
-      valor,
-      emailSaiu,
-      ...r,
-      link: emailSaiu ? null : `${baseUrl}/pedido/${acesso.token}`,
-    });
-  } catch (error) {
-    console.error("[admin/negociacoes/promover POST]", error);
-    return NextResponse.json({ error: "Não foi possível promover" }, { status: 500 });
-  }
+  const r = await enviarAosProfissionais(pedidoId, {
+    valor: corpo.valor,
+    soPara,
+    baseUrl: urlDeAccaoDoPedido(req.headers),
+    colab,
+  });
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  const { ok: _ok, ...resto } = r;
+  return NextResponse.json({ ok: true, ...resto });
 }

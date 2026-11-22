@@ -75,7 +75,8 @@ describe("e fica só nos Trabalhos CLYON", () => {
 
   it("um Trabalho CLYON que não chegou a ninguém não se envia a negociar", () => {
     // Fica no «Por enviar» (não tem negociações), mas já tem o valor fixo.
-    const PROMOVER = semNotas(ler("src/app/api/admin/negociacoes/promover/route.ts"));
+    // O envio da Mesa (d87: passou para enviar-aos-profissionais.ts, que a rota chama).
+    const PROMOVER = semNotas(ler("src/lib/enviar-aos-profissionais.ts"));
     const guarda = PROMOVER.indexOf("(pedido as { valorFixoClyon?: unknown }).valorFixoClyon != null");
     expect(guarda).toBeGreaterThan(-1);
     expect(guarda).toBeLessThan(PROMOVER.indexOf("distribuirPedido("));

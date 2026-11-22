@@ -20,7 +20,8 @@ import { join } from "node:path";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const ROTA_CLIENTE = ler("src/app/api/simulador/pedido/route.ts");
-const ROTA_PROMOVER = ler("src/app/api/admin/negociacoes/promover/route.ts");
+// A rota da Mesa e a função que ela chama (d87, 22-11-2026: o envio passou para enviar-aos-profissionais.ts).
+const ROTA_PROMOVER = ler("src/app/api/admin/negociacoes/promover/route.ts") + "\n" + ler("src/lib/enviar-aos-profissionais.ts");
 const ROTA_REDISTRIBUIR = ler("src/app/api/admin/negociacoes/redistribuir/route.ts");
 
 describe("o portão da análise", () => {

@@ -592,6 +592,25 @@ export async function registarARecolha(
       }).catch(() => {});
     }
     /*
+     * REGISTADO JÁ COMPLETO, SEGUE SOZINHO PARA OS PARCEIROS — 22-11-2026
+     * (decisão d87). Antes da mensagem, para ela dizer a verdade. Pela MESMA
+     * função da Mesa, com todas as condições (ver
+     * `envio-automatico-aos-parceiros-na-base.ts`); a descrição por traduzir
+     * e o registado sem o SIM dele ficam nos «por enviar».
+     */
+    let jaSeguiu = false;
+    try {
+      const { seguirSozinhoParaOsParceiros } = await import("@/lib/envio-automatico-aos-parceiros-na-base");
+      const envio = await seguirSozinhoParaOsParceiros(id, {
+        origem: "registado",
+        porTraduzir: porTraduzir === true,
+        registadoSozinho: opcoes.sozinho === true,
+      });
+      jaSeguiu = envio.estado === "enviado";
+    } catch (e) {
+      console.error("[whatsapp/recolha] o envio automático do pedido registado falhou:", e);
+    }
+    /*
      * «SE TIVER FOTOGRAFIAS, ENVIE-AS» A QUEM JÁ AS ENVIOU — 09-10-2026.
      * O Maximiano mandou duas na primeira mensagem e ouviu isto no fim:
      * dizia-se sempre, porque aqui ia sempre `false`. E a quem disse que as
@@ -605,7 +624,7 @@ export async function registarARecolha(
       disseQueMandouFotografias(dados);
     await enviarTextoWhatsApp(
       telefone,
-      mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true),
+      mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true, jaSeguiu),
     );
     /*
      * A DESCRIÇÃO FICOU POR TRADUZIR (d46): o tradutor falhou e ela está na
@@ -2054,8 +2073,15 @@ async function completarOPedidoAberto(
     const { oPedidoFicouCompleto } = await import("@/lib/resposta-ao-que-falta-na-base");
     const fim = await oPedidoFicouCompleto(id).catch(() => null);
     if (fim?.saiu) {
-      const { PEDIDO_FICA_COMPLETO } = await import("@/lib/resposta-ao-que-falta");
-      resposta = `${resposta}\n${PEDIDO_FICA_COMPLETO}`;
+      /*
+       * E SEGUE SOZINHO PARA OS PARCEIROS — d87 (22-11-2026): pela mesma
+       * função da Mesa, com todas as condições; a frase diz a verdade sobre o
+       * que aconteceu (já seguiu, ou a equipa confere-o e segue).
+       */
+      const { PEDIDO_FICA_COMPLETO, PEDIDO_JA_SEGUIU } = await import("@/lib/resposta-ao-que-falta");
+      const { seguirSozinhoParaOsParceiros } = await import("@/lib/envio-automatico-aos-parceiros-na-base");
+      const envio = await seguirSozinhoParaOsParceiros(id, { origem: "pedir_o_que_falta" }).catch(() => null);
+      resposta = `${resposta}\n${envio?.estado === "enviado" ? PEDIDO_JA_SEGUIU : PEDIDO_FICA_COMPLETO}`;
     }
   }
   if (resposta) await enviarTextoWhatsApp(telefone, resposta);
@@ -2113,10 +2139,12 @@ async function gravarARespostaAoModelo(
   }
   // A descrição, a partir das fontes: o que ela contou do trabalho e as notas (o estacionamento, a flexibilidade).
   let fontesMudaram = false;
+  let porTraduzir = false;
   try {
     const novos = { ...pa.oQueEDaConversa(doPedido, depois), fotosRecebidas: depois.fotosRecebidas };
     const escrita = await nb.juntarAConversaNaDescricao(id, novos);
     fontesMudaram = escrita?.fontesMudaram === true;
+    porTraduzir = escrita?.porTraduzir === true;
   } catch (e) {
     console.error("[whatsapp/o-que-falta] não actualizei a descrição:", e);
   }
@@ -2165,6 +2193,21 @@ async function gravarARespostaAoModelo(
     };
   });
 
+  /*
+   * O PEDIDO COMPLETO SEGUE SOZINHO PARA OS PARCEIROS — 22-11-2026 (decisão
+   * d87). Antes de responder, para a mensagem dizer a verdade: com o envio
+   * feito, «O seu pedido já seguiu…»; se ficou nos «por enviar» (alguma
+   * condição falhou) ou na fila das 8h00, «a equipa confere-o e segue…». Pela
+   * MESMA função da Mesa — ver `envio-automatico-aos-parceiros-na-base.ts`.
+   */
+  let jaSeguiu = false;
+  const { arrumarAsFaltas } = await import("@/lib/mensagem-do-que-falta");
+  if (arrumarAsFaltas(fim.faltas).length === 0) {
+    const { seguirSozinhoParaOsParceiros } = await import("@/lib/envio-automatico-aos-parceiros-na-base");
+    const envio = await seguirSozinhoParaOsParceiros(id, { origem: "pedir_o_que_falta", porTraduzir }).catch(() => null);
+    jaSeguiu = envio?.estado === "enviado";
+  }
+
   const { PERGUNTA_ANOTADA } = await import("@/lib/voz-da-vitoria");
   const principal = rq.respostaAoQueFalta({
     pedidoId: id,
@@ -2174,6 +2217,7 @@ async function gravarARespostaAoModelo(
     quando: lido.anotado.includes("data") ? rq.oQuandoParaAResposta(depois) : null,
     faltam: fim.faltas,
     apresentar: !rq.aVitoriaJaSeApresentou(x.fio),
+    jaSeguiu,
   });
   const resposta = [principal, ...respostas, ...(paraAEquipa ? [PERGUNTA_ANOTADA] : [])].join("\n");
 
