@@ -227,8 +227,9 @@ describe.each([
   it("a descrição do pedido diz as datas todas e a distância", () => {
     const d = conversa(comModelo).estado.dados;
     const desc = descricaoOrganizada(d) ?? "";
-    expect(desc).toContain("Quando: sexta 30/10 ou sábado 31/10; no máximo domingo 1/11 (ditas pelo cliente).");
-    expect(desc).toContain("Estacionamento: a carrinha fica a cerca de 50 m da porta.");
+    // O campo da data fica com a primeira e o estacionamento tem campo: na descrição, só as outras datas (d84).
+    expect(desc).toContain("Também pode sábado 31/10; no máximo domingo 1/11.");
+    expect(desc).not.toMatch(/^(Quando|Estacionamento):/m);
   });
 
   it("tudo o que a Vitória disse a partir do «Do you speak English?» tem tradução fixa em inglês", () => {

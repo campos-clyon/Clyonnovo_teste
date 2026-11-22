@@ -43,7 +43,31 @@ export async function registarPedidoDaRecolha(
   const { contarFotosPendentesWhatsApp } = await import("./db");
   const pendentes = await contarFotosPendentesWhatsApp(telefone).catch(() => 0);
   // O esvaziamento de empresa (d43): o espaço e o «fora de horas», como no simulador do site.
-  const daEmpresa = oPedidoDaEmpresa(d, descricaoParaOPedido(d, { fotos: Math.max(pendentes, d.fotosRecebidas ?? 0) }));
+  let dataAgendada: Date | null = null;
+  if (d.dataDesejada) {
+    const dt = new Date(d.dataDesejada);
+    if (!Number.isNaN(dt.getTime()) && dt.getTime() > Date.now() - 3600_000) dataAgendada = dt;
+  }
+  const floor = (d.lado ? andarComLado(d) : null) ?? d.floor ?? null;
+  /*
+   * O que vai para os campos do pedido não se repete na descrição (d84): o
+   * profissional vê o andar, o elevador, o estacionamento e o dia à parte.
+   */
+  const daEmpresa = oPedidoDaEmpresa(
+    d,
+    descricaoParaOPedido(d, {
+      fotos: Math.max(pendentes, d.fotosRecebidas ?? 0),
+      campos: {
+        floor,
+        hasElevator: d.hasElevator ?? null,
+        parkingDistance: d.parkingDistance ?? null,
+        dataAgendada,
+        andarDestino: d.andarDestino ?? null,
+        elevadorDestino: d.elevadorDestino ?? null,
+        estacionamentoDestino: d.estacionamentoDestino ?? null,
+      },
+    }),
+  );
   /*
    * SEMPRE EM PORTUGUÊS — 15-11-2026 (d46). O #623 ficou com «A lot of
    * cardboard boxes…»: o cliente escreveu em inglês e a descrição foi assim
@@ -55,11 +79,6 @@ export async function registarPedidoDaRecolha(
   const emPortugues = await descricaoEmPortugues(daEmpresa.descricao);
   const description = emPortugues.descricao;
 
-  let dataAgendada: Date | null = null;
-  if (d.dataDesejada) {
-    const dt = new Date(d.dataDesejada);
-    if (!Number.isNaN(dt.getTime()) && dt.getTime() > Date.now() - 3600_000) dataAgendada = dt;
-  }
   const urgency = d.urgency ?? "flexible";
 
   const geo = await geocodificarMoradaDetalhado(address, postalCode ?? "", city ?? "");
@@ -168,7 +187,7 @@ export async function registarPedidoDaRecolha(
     city,
     postalCode,
     // Com o lado da porta, que a morada já não leva (26-10-2026).
-    floor: (d.lado ? andarComLado(d) : null) ?? d.floor ?? null,
+    floor,
     hasElevator: d.hasElevator ?? null,
     parkingDistance: d.parkingDistance ?? null,
     urgency,

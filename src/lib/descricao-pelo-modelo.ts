@@ -6,7 +6,20 @@ import {
   type FontesDaDescricao,
 } from "./fontes-da-descricao";
 import { segundaParagemPorExtenso, zonaDoCodigoPostal, type SegundaMorada } from "./segunda-morada";
-import { instanteDaBase } from "./hora-de-lisboa";
+import type { CamposQueOProfissionalVe } from "./descricao-do-pedido";
+import { instanteDaBase, instanteEmLisboa } from "./hora-de-lisboa";
+import {
+  andarPorExtenso,
+  campoComValor,
+  diaDaConversa,
+  elevadorPorExtenso,
+  estacionamentoDaConversa,
+  estacionamentoPorExtenso,
+  oQueOQuandoAcrescenta,
+  soRepeteOsCampos,
+  sugestoesDosCampos,
+  type SugestaoDoCampo,
+} from "./campos-na-descricao";
 
 /**
  * A DESCRIÇÃO ESCRITA PELO MODELO — 29-10-2026 (ordem do CEO, aprovada pelo
@@ -17,22 +30,25 @@ import { instanteDaBase } from "./hora-de-lisboa";
  * os campos do pedido, e a descrição sai num formato fixo, curto, para o
  * profissional:
  *
- *   Serviço: Recolha de móveis
  *   Para levar: 2 roupeiros, 1 cama, 3 sofás, 1 fogão, 1 máquina de lavar roupa.
  *   Confirmar se também vai: 1 colchão.
- *   Morada: Lisboa (1100), 3.º andar, com elevador.
  *   2.ª paragem: Lisboa (1400), 6.º andar C, elevador por confirmar.
- *   Quando: sábado, 31 de outubro, de manhã.
- *   Estacionamento: por confirmar.
- *   Fotografias: 4, enviadas pelo cliente.
+ *   Notas: Também pode ao fim de semana.
  *   Por confirmar: o estacionamento; o elevador da 2.ª paragem.
+ *
+ * SEM O QUE OS CAMPOS JÁ DIZEM (d84, 22-11-2026): o serviço, a morada (a
+ * localidade, o andar, o elevador), o dia, o estacionamento, o destino de uma
+ * mudança e as fotografias aparecem à parte ao profissional — na app Pro, no
+ * painel e na página do pedido. A descrição dizia-os outra vez, e chegou a
+ * dizer «à porta» com o campo em «não perguntei». Ver `campos-na-descricao.ts`.
+ * A 2.ª paragem fica: não tem campo que o profissional veja.
  *
  * O MODELO SÓ FAZ A PARTE DIFÍCIL. Devolve JSON com o que é para levar (as
  * frases da equipa e do cliente juntas, com as quantidades, sem «móveis»
  * vagos quando se sabe quais), o que só se vê nas fotografias, o «quando»
- * dito por palavras, as notas e o que falta confirmar. As linhas que vêm de
- * campos — a morada, a 2.ª paragem, o andar, o elevador, as fotografias —
- * escrevem-se aqui, pelas colunas do pedido: o modelo nunca vê a rua, a
+ * dito por palavras, as notas e o que falta confirmar. O que vem de campos —
+ * a 2.ª paragem, e o que falta na morada — escreve-se aqui, pelas colunas do
+ * pedido: o modelo nunca vê a rua, a
  * porta, o nome, o telefone nem o email do cliente.
  *
  * E NADA PASSA SEM SER LIDO (`validarAResposta`): sem preços nem valores, sem
@@ -57,13 +73,32 @@ export type PedidoParaADescricao = {
   /** As fotografias que o pedido tem. */
   fotos: number;
   /** O destino de uma mudança, como o pedido o guarda. */
-  destino?: { localidade: string | null; codigoPostal: string | null; andar: string | null; elevador: string | null } | null;
+  destino?: {
+    localidade: string | null;
+    codigoPostal: string | null;
+    andar: string | null;
+    elevador: string | null;
+    estacionamento?: string | null;
+  } | null;
   /** SÓ PARA VERIFICAR a resposta — nunca vão ao modelo. */
   contactName?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
   address?: string | null;
 };
+
+/** Os campos do pedido que o profissional vê à parte, para a descrição das regras não os repetir (d84). */
+export function camposQueOProfissionalVe(p: PedidoParaADescricao): CamposQueOProfissionalVe {
+  return {
+    floor: p.floor,
+    hasElevator: p.hasElevator,
+    parkingDistance: p.parkingDistance,
+    dataAgendada: p.dataAgendada,
+    andarDestino: p.destino?.andar ?? null,
+    elevadorDestino: p.destino?.elevador ?? null,
+    estacionamentoDestino: p.destino?.estacionamento ?? null,
+  };
+}
 
 /** O que o modelo devolve. */
 export type RespostaDoModelo = {
@@ -93,6 +128,9 @@ export const INSTRUCAO_DA_DESCRICAO = [
   '  "estacionamento": o que foi dito sobre estacionar ou a distância da carrinha à porta, ou "".',
   '  "notas": pormenores úteis ao profissional que não cabem acima (o que NÃO é para levar, acessos difíceis, desmontagens, ' +
     "quem carrega), em frases curtas escritas por ti — nunca copies a frase do cliente tal e qual. O que o cliente disse que não é para levar fica SEMPRE aqui.",
+  // d84 (22-11-2026): «Serviço localizado numa cave sem elevador.» — a nota repetia os campos.
+  "As notas NUNCA repetem o que os campos do pedido já dizem e o profissional vê à parte: o serviço, a morada ou a localidade, " +
+    "o andar, a cave ou o rés-do-chão, o elevador, o dia e a hora, o estacionamento, as fotografias. Uma nota só com isso não se escreve.",
   '  "porConfirmar": o que falta saber para fazer o preço, em poucas palavras («as medidas do roupeiro»).',
   "REGRAS: só o que está nas fontes — não inventes coisas, quantidades, dias nem acessos. Sem preços, sem valores, sem euros. " +
     "Sem nomes, telefones, emails nem moradas (nem ruas, nem números de porta, nem códigos postais). " +
@@ -151,40 +189,12 @@ export function semDadosPessoais(texto: string, pedido: Pick<PedidoParaADescrica
  * OS CAMPOS DO PEDIDO EM PALAVRAS
  * ────────────────────────────────────────────────────────────────────────── */
 
-/** «3.º andar», «rés-do-chão», «cave», «2.º andar Esq». */
-export function andarPorExtenso(floor: string | null | undefined): string | null {
-  const f = String(floor ?? "").trim();
-  if (!f) return null;
-  const m = /^(-?\d{1,2})\s*[º°ª]?\s*(.*)$/.exec(f);
-  if (m) {
-    const n = m[1];
-    const base = n === "0" ? "rés-do-chão" : n === "-1" ? "cave" : `${Number(n)}.º andar`;
-    return m[2] ? `${base} ${m[2].trim()}` : base;
-  }
-  if (/^r\/?c\b/i.test(f)) return `rés-do-chão${f.replace(/^r\/?c/i, "")}`.trim();
-  return f;
-}
-
 function ePisoTerreo(floor: string | null | undefined): boolean {
   return /^(0|r\/?c|res)/i.test(String(floor ?? "").trim());
 }
 
-/** O elevador como as várias partes do site o gravam. */
-export function elevadorPorExtenso(v: string | null | undefined): string | null {
-  const e = plano(String(v ?? "").trim());
-  if (["yes", "sim", "true", "1"].includes(e)) return "com elevador";
-  if (e === "small" || /pequen/.test(e)) return "com elevador pequeno";
-  if (["no", "nao", "false", "0"].includes(e)) return "sem elevador";
-  return null;
-}
-
-/** O estacionamento como as várias partes do site o gravam (ver `estacionamentoDoPedido`). */
-export function estacionamentoPorExtenso(v: string | null | undefined): string | null {
-  const e = String(v ?? "").trim();
-  if (["door", "under_20m", "near", "easy"].includes(e)) return "à porta";
-  if (["over_30m", "difficult", "far"].includes(e)) return "longe da porta";
-  return null;
-}
+/* O andar, o elevador e o estacionamento em palavras vivem em `campos-na-descricao.ts` (d84). */
+export { andarPorExtenso, elevadorPorExtenso, estacionamentoPorExtenso };
 
 /** «sábado, 31 de outubro» — em Lisboa, sempre. */
 export function diaEmLisboa(data: Date | string | null | undefined): string | null {
@@ -506,14 +516,59 @@ function rotuloDasCoisas(servico: string | null | undefined): string {
   return "Para levar";
 }
 
+/** O que fazer com o que a conversa diz e o campo não tem. */
+export type OpcoesDaComposicao = {
+  /**
+   * «sugestao» — o «Arrumar a descrição» do backoffice: não se escreve no
+   * texto; vira uma sugestão para preencher o campo (`sugestoesDaDescricao`).
+   * «notas» (a de omissão) — quando ninguém está a ver o formulário (a
+   * Vitória reescreve-a sozinha): fica no texto, dito pelo cliente, para não
+   * se perder. Nunca com o campo preenchido: aí manda o campo.
+   */
+  modo?: "sugestao" | "notas";
+  agora?: Date;
+};
+
+/** O que a conversa diz do dia e do estacionamento — do modelo e do que a Vitória apurou. */
+function oQueAConversaDiz(r: RespostaDoModelo | null, fontes: FontesDaDescricao) {
+  const campos = camposQueContam(fontes);
+  const todas = typeof campos.quandoComTodas === "string" ? campos.quandoComTodas.trim() : "";
+  const quandoDito = typeof campos.quandoTexto === "string" ? campos.quandoTexto.trim() : "";
+  return {
+    estacionamento: r?.estacionamento.trim() ?? "",
+    metrosAtePorta: typeof campos.metrosAtePorta === "number" ? campos.metrosAtePorta : null,
+    parkingDistance: typeof campos.parkingDistance === "string" ? campos.parkingDistance : null,
+    quando: r?.quando.trim() || todas || quandoDito,
+    dataDesejada: typeof campos.dataDesejada === "string" ? campos.dataDesejada : null,
+  };
+}
+
+/** Um «por confirmar» do modelo sobre um campo que já tem valor sai: manda o campo. */
+function jaEstaNoCampo(item: string, pedido: PedidoParaADescricao): boolean {
+  const p = plano(item);
+  if (/paragem|destino/.test(p)) return false;
+  if (/estacion/.test(p)) return campoComValor(pedido.parkingDistance);
+  if (/elevador/.test(p)) return campoComValor(pedido.hasElevator) || ePisoTerreo(pedido.floor);
+  if (/\bandar\b|\bpiso\b/.test(p)) return campoComValor(pedido.floor);
+  if (/\bdia\b|\bdata\b|\bhora\b/.test(p)) return campoComValor(pedido.dataAgendada);
+  return false;
+}
+
 /**
- * A DESCRIÇÃO NO FORMATO FIXO — as linhas dos campos escrevem-se aqui; as
- * do modelo vêm verificadas. Pura.
+ * A DESCRIÇÃO NO FORMATO FIXO — o que os campos dizem fica nos campos (d84);
+ * as linhas do modelo vêm verificadas. Pura.
  */
-export function comporADescricao(r: RespostaDoModelo, fontes: FontesDaDescricao, pedido: PedidoParaADescricao): string {
+export function comporADescricao(
+  r: RespostaDoModelo,
+  fontes: FontesDaDescricao,
+  pedido: PedidoParaADescricao,
+  opcoes: OpcoesDaComposicao = {},
+): string {
+  const modo = opcoes.modo ?? "notas";
+  const agora = opcoes.agora ?? new Date();
   const campos = camposQueContam(fontes);
   const falta: string[] = [];
-  const linhas: string[] = [`Serviço: ${nomeDoServico(pedido.serviceType)}`];
+  const linhas: string[] = [];
 
   if (r.paraLevar.length) linhas.push(comPonto(`${rotuloDasCoisas(pedido.serviceType)}: ${juntarSemRepetir([r.paraLevar]).join(", ")}`));
   else falta.push("o que é para levar");
@@ -524,19 +579,17 @@ export function comporADescricao(r: RespostaDoModelo, fontes: FontesDaDescricao,
   if (pedido.serviceType === "recolha_entulho" && entulho) linhas.push(comPonto(`Entulho: ${entulho}`));
   else if (volume) linhas.push(comPonto(`Volume: ${volume} (dito pelo cliente)`));
 
+  // A morada e o destino têm campos que o profissional vê: aqui só o que falta.
   if (pedido.serviceType === "mudanca") {
-    linhas.push(comPonto(`Origem: ${moradaPorExtenso(pedido.city, pedido.postalCode, pedido.floor, pedido.hasElevator, falta, " da origem")}`));
+    moradaPorExtenso(pedido.city, pedido.postalCode, pedido.floor, pedido.hasElevator, falta, " da origem");
     const d = pedido.destino;
-    if (d && (d.localidade || d.codigoPostal || d.andar)) {
-      linhas.push(comPonto(`Destino: ${moradaPorExtenso(d.localidade, d.codigoPostal, d.andar, d.elevador, falta, " do destino")}`));
-    } else {
-      linhas.push("Destino: por confirmar.");
-      falta.push("o destino");
-    }
+    if (d && (d.localidade || d.codigoPostal || d.andar)) moradaPorExtenso(d.localidade, d.codigoPostal, d.andar, d.elevador, falta, " do destino");
+    else falta.push("o destino");
   } else {
-    linhas.push(comPonto(`Morada: ${moradaPorExtenso(pedido.city, pedido.postalCode, pedido.floor, pedido.hasElevator, falta, "")}`));
+    moradaPorExtenso(pedido.city, pedido.postalCode, pedido.floor, pedido.hasElevator, falta, "");
   }
 
+  // A 2.ª paragem não tem campo que o profissional veja: fica no texto.
   const segunda = campos.segundaMorada as SegundaMorada | undefined;
   if (segunda) {
     linhas.push(comPonto(`2.ª paragem: ${segundaParagemPorExtenso(segunda)}`));
@@ -545,39 +598,63 @@ export function comporADescricao(r: RespostaDoModelo, fontes: FontesDaDescricao,
     else if (segunda.andar !== "0" && !segunda.elevador) falta.push("o elevador da 2.ª paragem");
   }
 
-  const todas = typeof campos.quandoComTodas === "string" ? campos.quandoComTodas.trim() : "";
-  const quandoDito = typeof campos.quandoTexto === "string" ? campos.quandoTexto.trim() : "";
-  const dia = diaEmLisboa(pedido.dataAgendada);
-  const quando = r.quando.trim() || todas || (dia && quandoDito ? `${dia} (${quandoDito})` : dia || quandoDito);
-  if (quando) linhas.push(comPonto(`Quando: ${semPonto(quando)}`));
-  else {
-    linhas.push("Quando: por confirmar.");
+  const conversa = oQueAConversaDiz(r, fontes);
+  const notasDoDia: string[] = [];
+  if (campoComValor(pedido.dataAgendada)) {
+    // O campo diz o dia; aqui só o que o dia dito acrescenta («ou ao fim de semana»).
+    const mais = oQueOQuandoAcrescenta(conversa.quando, pedido.dataAgendada);
+    if (mais) notasDoDia.push(mais);
+  } else if (conversa.quando || conversa.dataDesejada) {
+    if (modo === "notas") {
+      const dia = conversa.quando || diaEmLisboa(conversa.dataDesejada);
+      if (dia) linhas.push(comPonto(`Quando (dito pelo cliente): ${semPonto(dia)}`));
+    } else {
+      const sugerido = diaDaConversa(conversa, agora);
+      const mais = sugerido ? oQueOQuandoAcrescenta(conversa.quando, instanteEmLisboa(sugerido.valor)) : null;
+      if (mais) notasDoDia.push(mais);
+    }
+  } else {
     falta.push("o dia");
   }
 
-  const metros = typeof campos.metrosAtePorta === "number" && campos.metrosAtePorta > 0 ? `a carrinha fica a cerca de ${campos.metrosAtePorta} m da porta` : null;
-  const estacionamento = metros ?? estacionamentoPorExtenso(pedido.parkingDistance) ?? (r.estacionamento.trim() || null);
-  if (estacionamento) linhas.push(comPonto(`Estacionamento: ${semPonto(estacionamento)}`));
-  else {
-    linhas.push("Estacionamento: por confirmar.");
-    falta.push("o estacionamento");
+  const est = estacionamentoDaConversa(conversa.estacionamento, conversa.metrosAtePorta, conversa.parkingDistance);
+  if (!campoComValor(pedido.parkingDistance)) {
+    if (!est) falta.push("o estacionamento");
+    else if (modo === "notas") linhas.push(comPonto(`Estacionamento (dito pelo cliente): ${semPonto(est.texto)}`));
   }
 
-  linhas.push(pedido.fotos > 0 ? `Fotografias: ${pedido.fotos}, enviadas pelo cliente.` : "Fotografias: ainda não há.");
-
-  const notas = juntarSemRepetir([campos.clienteCarrega === true ? ["O cliente carrega para a viatura"] : [], r.notas]);
+  // As notas que só repetem os campos saem (d84) — «Serviço localizado numa cave sem elevador.»
+  const doModelo = r.notas.filter((n) => !soRepeteOsCampos(n, pedido.city));
+  const notas = juntarSemRepetir([campos.clienteCarrega === true ? ["O cliente carrega para a viatura"] : [], doModelo, notasDoDia]);
   if (notas.length) linhas.push(`Notas: ${notas.map(comPonto).join(" ")}`);
 
-  const porConfirmar = juntarSemRepetir([falta, r.porConfirmar]).slice(0, 8);
+  const porConfirmar = juntarSemRepetir([falta, r.porConfirmar.filter((i) => !jaEstaNoCampo(i, pedido))]).slice(0, 8);
   if (porConfirmar.length) linhas.push(comPonto(`Por confirmar: ${porConfirmar.join("; ")}`));
   return linhas.join("\n");
+}
+
+/**
+ * O QUE O «ARRUMAR» SUGERE AO FORMULÁRIO (d84) — o que a conversa diz do
+ * estacionamento e do dia e o campo não tem (com o valor para o «Preencher»),
+ * ou diz ao contrário do campo (só o aviso). `r` é nulo quando o modelo não
+ * respondeu: fica o que a Vitória apurou. Pura.
+ */
+export function sugestoesDaDescricao(
+  r: RespostaDoModelo | null,
+  fontes: FontesDaDescricao,
+  pedido: Pick<PedidoParaADescricao, "parkingDistance" | "dataAgendada">,
+  agora: Date = new Date(),
+): SugestaoDoCampo[] {
+  return sugestoesDosCampos(oQueAConversaDiz(r, fontes), pedido, agora);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
  * A CHAMADA
  * ────────────────────────────────────────────────────────────────────────── */
 
-export type DescricaoEscrita = { ok: true; texto: string; modelo: string } | { ok: false; motivo: string };
+export type DescricaoEscrita =
+  | { ok: true; texto: string; modelo: string; sugestoes: SugestaoDoCampo[] }
+  | { ok: false; motivo: string };
 
 /** O termómetro deste uso — ver `saude-da-ia.ts`. Nunca atira. */
 async function anotar(motivo: string | null): Promise<void> {
@@ -595,7 +672,11 @@ async function anotar(motivo: string | null): Promise<void> {
  * mesma escada e o mesmo castigo de quem fica sem quota
  * (`gemini-em-descanso.ts`). A falha fica no termómetro do painel.
  */
-export async function escreverADescricao(fontes: FontesDaDescricao, pedido: PedidoParaADescricao): Promise<DescricaoEscrita> {
+export async function escreverADescricao(
+  fontes: FontesDaDescricao,
+  pedido: PedidoParaADescricao,
+  opcoes: OpcoesDaComposicao = {},
+): Promise<DescricaoEscrita> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     await anotar("sem GEMINI_API_KEY — ficou a descrição das regras");
@@ -656,7 +737,12 @@ export async function escreverADescricao(fontes: FontesDaDescricao, pedido: Pedi
         }
         console.log(`[descricao] ${nome}: escrita em ${Date.now() - comecou} ms`);
         await anotar(null);
-        return { ok: true, texto: comporADescricao(lida, fontes, pedido), modelo: nome };
+        return {
+          ok: true,
+          texto: comporADescricao(lida, fontes, pedido, opcoes),
+          modelo: nome,
+          sugestoes: sugestoesDaDescricao(lida, fontes, pedido, opcoes.agora),
+        };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         motivo = `${nome}: ${msg}`;

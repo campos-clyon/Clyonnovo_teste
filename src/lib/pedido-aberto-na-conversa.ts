@@ -34,6 +34,7 @@ import { primeiroNome } from "./mensagem-whatsapp";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { andarComLado } from "./pedido-da-recolha";
 import { descricaoOrganizada } from "./descricao-do-pedido";
+import { estacionamentoDaConversa } from "./campos-na-descricao";
 import { eDaEquipa } from "./rajada-do-whatsapp";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 import { blocoDasFontes, CABECA_DO_BLOCO, textoComUmSoBloco } from "./fontes-da-descricao";
@@ -874,6 +875,10 @@ export function camposParaOPedido(
   // Como no formulário do backoffice: «easy» e «difficult» (ver `camposDaRecolha`).
   if (vazio(p.parkingDistance) && (depois.parkingDistance === "near" || depois.parkingDistance === "far")) {
     out.parkingDistance = depois.parkingDistance === "near" ? "easy" : "difficult";
+  } else if (vazio(p.parkingDistance)) {
+    // Os metros que ele disse também enchem o campo (d84): a descrição já não diz o estacionamento.
+    const pelosMetros = estacionamentoDaConversa(null, depois.metrosAtePorta, null)?.valor;
+    if (pelosMetros) out.parkingDistance = pelosMetros;
   }
   return out;
 }

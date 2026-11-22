@@ -25,6 +25,7 @@ import { faltaOMotivoDaTaxa, mensagemDeValorComAtribuido } from "@/lib/oferta-cl
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
 import { RES_DO_CHAO, eResDoChao } from "@/lib/res-do-chao";
+import type { SugestaoDoCampo } from "@/lib/campos-na-descricao";
 // Só o tipo — o módulo é do servidor (fala com a base e com o WhatsApp).
 import type { AvisoAQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
 import type { CamposDaRecolha } from "@/lib/pedido-da-recolha";
@@ -499,11 +500,19 @@ export default function RegistarPedido({
   const [aArrumar, setAArrumar] = useState(false);
   const [notaDaArrumacao, setNotaDaArrumacao] = useState<{ ok: boolean; texto: string } | null>(null);
   const [textoAntesDeArrumar, setTextoAntesDeArrumar] = useState<string | null>(null);
+  /*
+   * O QUE A CONVERSA DIZ E O CAMPO NÃO TEM — d84, 22-11-2026. O «Arrumar» já
+   * não escreve no texto o estacionamento nem o dia (estão nos campos, que o
+   * profissional vê à parte): devolve-os aqui. «Preencher» só muda o campo;
+   * grava-se com o «Gravar» de sempre. Uma contradição é só o aviso.
+   */
+  const [sugestoesDaArrumacao, setSugestoesDaArrumacao] = useState<SugestaoDoCampo[]>([]);
 
   async function arrumarADescricao() {
     if (!token || aArrumar) return;
     setAArrumar(true);
     setNotaDaArrumacao(null);
+    setSugestoesDaArrumacao([]);
     try {
       const res = await fetch("/api/admin/pedidos/arrumar-descricao", {
         method: "POST",
@@ -518,11 +527,13 @@ export default function RegistarPedido({
         error?: string;
         traduzida?: boolean;
         porTraduzir?: boolean;
+        sugestoes?: SugestaoDoCampo[];
       };
       if (!res.ok || typeof d.texto !== "string") {
         setNotaDaArrumacao({ ok: false, texto: d.error ?? "Não foi possível arrumar a descrição." });
         return;
       }
+      setSugestoesDaArrumacao(Array.isArray(d.sugestoes) ? d.sugestoes : []);
       const recomeca = idEmEdicao != null && valorFixo == null;
       // A tradução (d46): diz-se se veio traduzida, ou se ficou noutra língua.
       const aviso =
@@ -1504,6 +1515,7 @@ export default function RegistarPedido({
                 muda("description", textoAntesDeArrumar);
                 setTextoAntesDeArrumar(null);
                 setNotaDaArrumacao(null);
+                setSugestoesDaArrumacao([]);
               }}
               className="text-[11px] font-semibold text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
             >
@@ -1514,6 +1526,32 @@ export default function RegistarPedido({
             <span className={`w-full text-[11px] leading-relaxed ${notaDaArrumacao.ok ? "text-cyan-300" : "text-amber-300"}`}>
               {notaDaArrumacao.texto}
             </span>
+          )}
+          {sugestoesDaArrumacao.length > 0 && !aArrumar && (
+            <ul className="w-full space-y-1 text-[11px] leading-relaxed" aria-label="O que a conversa diz">
+              {sugestoesDaArrumacao.map((s, i) => (
+                <li key={`${s.campo}-${i}`} className={s.tipo === "contradiz" ? "text-amber-300" : "text-slate-300"}>
+                  {s.texto}
+                  {s.tipo === "preencher" && s.valor && (
+                    <>
+                      {" — "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          muda(s.campo, s.valor ?? "");
+                          // Com dia marcado, a urgência sai do dia (como no campo da data).
+                          if (s.campo === "dataDesejada") muda("urgency", "flexivel");
+                          setSugestoesDaArrumacao((l) => l.filter((x) => x !== s));
+                        }}
+                        className="font-semibold text-cyan-300 underline-offset-2 hover:underline"
+                      >
+                        Preencher
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -2136,6 +2174,7 @@ function AvisoAQuemTemOTrabalhoNoEcra({ a }: { a: AvisoAQuemTemOTrabalho }) {
 function OpcoesDeEstacionamento() {
   return (
     <>
+      {/* As mesmas de `ESTACIONAMENTO_NO_FORMULARIO`, de que falam as sugestões do «Arrumar» (d84) — o teste confere. */}
       <option value="door">Sim, mesmo à porta</option>
       <option value="under_20m">Sim, até 20 metros</option>
       <option value="easy">Sim, junto à porta</option>

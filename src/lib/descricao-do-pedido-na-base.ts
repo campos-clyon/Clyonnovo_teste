@@ -12,7 +12,7 @@ import {
   textoNormal,
   type FontesDaDescricao,
 } from "./fontes-da-descricao";
-import { escreverADescricao, type PedidoParaADescricao } from "./descricao-pelo-modelo";
+import { camposQueOProfissionalVe, escreverADescricao, type PedidoParaADescricao } from "./descricao-pelo-modelo";
 import { descricaoEmPortugues, paraABase, type DescricaoEmPortugues } from "./descricao-em-portugues";
 
 /**
@@ -113,6 +113,7 @@ export function pedidoParaADescricao(p: PedidoComDescricao): PedidoParaADescrica
             codigoPostal: s(destino?.postalCode),
             andar: s(acesso?.floor),
             elevador: s(acesso?.hasElevator),
+            estacionamento: s(acesso?.parkingDistance),
           }
         : null,
     contactName: p.contactName ?? null,
@@ -153,7 +154,7 @@ export async function juntarAConversaNaDescricao(
   const fontesMudaram = JSON.stringify(fontes) !== JSON.stringify(doPedido);
   if (!fontesMudaram) return { antes, descricao: antes, mudou: false, fontesMudaram: false };
   // Sempre em português (d46): o que o cliente disse noutra língua traduz-se antes de gravar.
-  const t = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType));
+  const t = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType, camposQueOProfissionalVe(pedidoParaADescricao(p))));
   const descricao = t.descricao;
   const mudou = descricao !== antes;
   await gravarDescricaoEFontes(
@@ -235,7 +236,7 @@ export async function reescreverADescricao(pedidoId: number, agora: Date = new D
       if (gravou) await avisarPorTraduzir(pedidoId, t);
       return gravou ? { ok: true } : { ok: false, motivo: "a descrição mudou entretanto" };
     }
-    const tr = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType));
+    const tr = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType, camposQueOProfissionalVe(pedidoParaADescricao(p))));
     const regras = tr.descricao;
     const gravou = await gravarDescricaoEFontes(
       pedidoId,

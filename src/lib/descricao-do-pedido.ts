@@ -2,6 +2,7 @@ import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { linhaDoAnuncio } from "./anuncio-de-imovel";
 import { DESCRICAO_DAS_FOTOS } from "./leitor-da-recolha";
 import { segundaParagemPorExtenso } from "./segunda-morada";
+import { campoComValor, estacionamentoDaConversa, oQueOQuandoAcrescenta, soRepeteOsCampos } from "./campos-na-descricao";
 
 /**
  * A DESCRIÇÃO QUE O PROFISSIONAL LÊ — escrita pela Vitória. 26-10-2026.
@@ -475,15 +476,6 @@ function elevadorPorExtenso(e: string | null | undefined): string | null {
   return null;
 }
 
-function estacionamentoPorExtenso(e: string | null | undefined, metros?: number | null): string | null {
-  // Os metros que o cliente disse — «a carrinha fica a cerca de 50 m» (28-10-2026, d35).
-  if (typeof metros === "number" && metros > 0) return `a cerca de ${metros} m da porta`;
-  if (e === "near") return "à porta";
-  if (e === "far") return "longe da porta";
-  if (e === null) return "a confirmar";
-  return null;
-}
-
 /** «3.º andar Esq, com elevador» — ou só o que se sabe. */
 function acesso(floor: string | null | undefined, lado: string | null | undefined, elevador: string | null | undefined): string | null {
   const andar = andarPorExtenso(floor, lado);
@@ -516,9 +508,32 @@ function diaPorExtenso(iso: string | null | undefined, quandoTexto: string | nul
 /** Um ponto no fim, se não tiver pontuação. */
 const comPonto = (s: string) => (/[.!?…)]$/.test(s) ? s : `${s}.`);
 
+/** Os campos do pedido que o profissional vê à parte (d84) — o que já lá está não se repete no texto. */
+export type CamposQueOProfissionalVe = {
+  floor?: string | null;
+  hasElevator?: string | null;
+  parkingDistance?: string | null;
+  dataAgendada?: Date | string | null;
+  andarDestino?: string | null;
+  elevadorDestino?: string | null;
+  estacionamentoDestino?: string | null;
+};
+
 export type OpcoesDaDescricao = {
   /** Quantas fotografias o cliente mandou — contadas por quem chama. */
   fotos?: number;
+  /**
+   * Os campos do pedido (d84). Sem eles, são os da conversa: é o pedido que a
+   * Vitória regista, que grava nos campos o que a conversa apurou.
+   */
+  campos?: CamposQueOProfissionalVe;
+  /**
+   * O que a conversa diz e o campo não tem: «notas» (a de omissão) escreve-o,
+   * dito pelo cliente; «sugestao» (o «Arrumar» do backoffice) não o escreve —
+   * vira uma sugestão no formulário (`sugestoesDosCampos`).
+   */
+  modo?: "sugestao" | "notas";
+  agora?: Date;
 };
 
 /**
@@ -534,10 +549,28 @@ function rotuloDasCoisas(servico: string | null | undefined): string {
 /**
  * A DESCRIÇÃO DO PEDIDO, arrumada para o profissional — ou `null` quando não
  * há nada a dizer. Ver o comentário do ficheiro.
+ *
+ * SEM O QUE OS CAMPOS DIZEM (d84, 22-11-2026): o andar, o elevador, o
+ * estacionamento, o dia e as fotografias aparecem à parte ao profissional (na
+ * app Pro, no painel, na página do pedido) e não se repetem aqui. O que a
+ * conversa diz e o campo não tem fica dito pelo cliente (ou vira sugestão, no
+ * «Arrumar»); o que o dia dito tem a mais do que o campo vai para as notas.
  */
 export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao = {}): string | null {
   const textos = textosDoCliente(d.description);
   const linhas: string[] = [];
+  const modo = opcoes.modo ?? "notas";
+  const agora = opcoes.agora ?? new Date();
+  const noPedido: CamposQueOProfissionalVe = opcoes.campos ?? {
+    floor: d.floor,
+    hasElevator: d.hasElevator,
+    parkingDistance: d.parkingDistance,
+    dataAgendada: d.dataDesejada,
+    andarDestino: d.andarDestino,
+    elevadorDestino: d.elevadorDestino,
+    estacionamentoDestino: d.estacionamentoDestino,
+  };
+  const tem = campoComValor;
 
   const coisas = itensDitos(...textos);
   if (coisas.length > 0) linhas.push(`${rotuloDasCoisas(d.serviceType)}: ${coisas.join(", ")}.`);
@@ -548,23 +581,28 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
   if (d.serviceType === "recolha_entulho" && entulho) linhas.push(comPonto(`Entulho: ${entulho}`));
   else if (volume) linhas.push(comPonto(`Volume (dito pelo cliente): ${volume}`));
 
+  // O andar, o elevador e o estacionamento: só o que a conversa diz e o campo não tem.
+  const andarDito = tem(noPedido.floor) ? null : d.floor;
+  const elevadorDito = tem(noPedido.hasElevator) || limpo(noPedido.floor) === "0" ? null : d.hasElevator;
+  const aqui = acesso(andarDito, andarDito ? d.lado : null, elevadorDito);
+  const est = estacionamentoDaConversa(null, d.metrosAtePorta, d.parkingDistance);
+  const estDito = !tem(noPedido.parkingDistance) && est && modo === "notas" ? est.texto : null;
   if (d.serviceType === "mudanca") {
-    const origem = acesso(d.floor, d.lado, d.hasElevator);
-    const estOrigem = estacionamentoPorExtenso(d.parkingDistance, d.metrosAtePorta);
-    if (origem || estOrigem) {
-      linhas.push(comPonto(`Origem: ${[origem, estOrigem ? `estacionamento ${estOrigem}` : null].filter(Boolean).join("; ")}`));
-    }
-    const destino = acesso(d.andarDestino, null, d.elevadorDestino);
-    const estDestino = estacionamentoPorExtenso(d.estacionamentoDestino, d.metrosAtePortaDestino);
-    if (destino || estDestino) {
-      linhas.push(comPonto(`Destino: ${[destino, estDestino ? `estacionamento ${estDestino}` : null].filter(Boolean).join("; ")}`));
+    if (aqui) linhas.push(comPonto(`Origem (dito pelo cliente): ${aqui}`));
+    if (estDito) linhas.push(comPonto(`Estacionamento (dito pelo cliente): ${estDito}`));
+    const destino = acesso(
+      tem(noPedido.andarDestino) ? null : d.andarDestino,
+      null,
+      tem(noPedido.elevadorDestino) || limpo(noPedido.andarDestino) === "0" ? null : d.elevadorDestino,
+    );
+    if (destino) linhas.push(comPonto(`Destino (dito pelo cliente): ${destino}`));
+    const estDestino = estacionamentoDaConversa(null, d.metrosAtePortaDestino, d.estacionamentoDestino);
+    if (!tem(noPedido.estacionamentoDestino) && estDestino) {
+      linhas.push(comPonto(`Estacionamento no destino (dito pelo cliente): ${estDestino.texto}`));
     }
   } else {
-    const a = acesso(d.floor, d.lado, d.hasElevator);
-    if (a) linhas.push(comPonto(`Acesso: ${a}`));
-    const est = estacionamentoPorExtenso(d.parkingDistance, d.metrosAtePorta);
-    const metros = typeof d.metrosAtePorta === "number" && d.metrosAtePorta > 0;
-    if (est) linhas.push(comPonto(`Estacionamento: ${metros ? `a carrinha fica ${est}` : est}`));
+    if (aqui) linhas.push(comPonto(`${andarDito ? "Andar" : "Elevador"} (dito pelo cliente): ${aqui}`));
+    if (estDito) linhas.push(comPonto(`Estacionamento (dito pelo cliente): ${estDito}`));
   }
 
   // A 2.ª morada de recolha (29-10-2026): a localidade, a zona, o andar e o elevador — sem a rua.
@@ -573,44 +611,55 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
   if (d.clienteCarrega) linhas.push(O_CLIENTE_CARREGA);
 
   /*
-   * O DIA. Com uma data só, escreve-se por extenso; com duas à escolha («sábado
-   * 31/10 ou domingo 01/11», o Leopoldo) ou sem data nenhuma, ficam as palavras
-   * dele — a primeira data sozinha seria metade do que ele disse.
+   * O DIA. Com o campo da data preenchido, só o que o dia dito acrescenta
+   * («ou ao fim de semana») — nas notas. Sem ele: com uma data só, escreve-se
+   * por extenso; com duas à escolha («sábado 31/10 ou domingo 01/11», o
+   * Leopoldo) ou sem data nenhuma, ficam as palavras dele. TODAS AS DATAS,
+   * PELA ORDEM — 28-10-2026 (decisão d35).
    */
   const quando = limpo(d.quandoTexto);
-  const comAlternativa = /\bou\b/i.test(quando);
-  const dia = comAlternativa ? null : diaPorExtenso(d.dataDesejada, quando);
-  /*
-   * TODAS AS DATAS, PELA ORDEM — 28-10-2026 (decisão d35): «sexta 30/10 ou
-   * sábado 31/10; no máximo domingo 1/11». O campo de data do pedido fica com
-   * a primeira preferida; aqui dizem-se todas.
-   */
   const todas = limpo(d.quandoComTodas);
-  if (todas) linhas.push(`Quando: ${todas} (ditas pelo cliente).`);
-  else if (dia) linhas.push(comPonto(`Quando: ${dia}`));
-  else if (quando) linhas.push(`Quando (dito pelo cliente): ${quando}`);
+  const doDia: string[] = [];
+  if (tem(noPedido.dataAgendada)) {
+    const mais = oQueOQuandoAcrescenta(todas || quando, noPedido.dataAgendada);
+    if (mais) doDia.push(mais);
+  } else if (modo === "notas") {
+    const comAlternativa = /\bou\b/i.test(quando);
+    const dia = comAlternativa ? null : diaPorExtenso(d.dataDesejada, quando);
+    if (todas) linhas.push(`Quando: ${todas} (ditas pelo cliente).`);
+    else if (dia) linhas.push(comPonto(`Quando: ${dia}`));
+    else if (quando) linhas.push(`Quando (dito pelo cliente): ${quando}`);
+  }
 
+  // As fotografias contam-se à parte; aqui só quando ele diz que as mandou e ainda não chegaram.
   const fotos = Math.max(0, Math.floor(opcoes.fotos ?? d.fotosRecebidas ?? 0));
-  if (fotos > 0) linhas.push(`Fotografias enviadas pelo cliente: ${fotos}.`);
-  else if (d.fotosDitas || limpo(d.description).includes(DESCRICAO_DAS_FOTOS)) {
+  if (fotos === 0 && (d.fotosDitas || limpo(d.description).includes(DESCRICAO_DAS_FOTOS))) {
     linhas.push("Fotografias: o cliente diz que as enviou.");
   }
   linhas.push(...oQueSeViu(d.description));
 
-  const pormenores = pormenoresDoCliente(textos, d.contactName);
+  // O que só repete os campos sai (d84): «Fica numa cave sem elevador.»
+  const soOsCampos = (f: string) => soRepeteOsCampos(f, d.city);
+  const pormenores = pormenoresDoCliente(textos, d.contactName).filter((p) => !soOsCampos(p));
   if (pormenores.length > 0) linhas.push(`Pormenores (ditos pelo cliente): ${pormenores.join(" ")}`);
 
   const acessoDito = semContactos(limpo(d.acessoDito), d.contactName);
-  if (acessoDito) linhas.push(`Acesso (dito pelo cliente): ${acessoDito}`);
+  if (acessoDito && !soOsCampos(acessoDito)) linhas.push(`Acesso (dito pelo cliente): ${acessoDito}`);
 
   // O que o link do anúncio da casa diz — a tipologia, o andar, a terra (16-11-2026, d48).
   if (d.anuncio) linhas.push(linhaDoAnuncio(d.anuncio));
 
   // O que ele disse que não responde a pergunta nenhuma — «o frigorífico fica» (27-10-2026).
-  const notas = (Array.isArray(d.notas) ? d.notas : [])
-    .map((n) => semContactos(limpo(n), d.contactName))
-    .filter(Boolean)
-    .map((n) => comPonto(n));
+  const vistas = new Set<string>();
+  const notas = [...(Array.isArray(d.notas) ? d.notas : []).map((n) => semContactos(limpo(n), d.contactName)), ...doDia]
+    .filter((n) => n && !soOsCampos(n))
+    .map((n) => comPonto(n))
+    .filter((n) => {
+      const chave = plano(n).replace(/[^a-z0-9]+/g, " ").trim();
+      if (vistas.has(chave)) return false;
+      vistas.add(chave);
+      return true;
+    });
   if (notas.length > 0) linhas.push(`Notas (ditas pelo cliente): ${notas.join(" ")}`);
 
   return linhas.length > 0 ? linhas.join("\n") : null;

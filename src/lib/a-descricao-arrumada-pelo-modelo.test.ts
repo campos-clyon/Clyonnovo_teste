@@ -388,19 +388,15 @@ describe("4. o texto gerado: sem preços, sem contactos, sem moradas — e nada 
     expect(entrada).toContain("2.ª paragem de recolha: Lisboa (1400), 6.º andar C");
   });
 
-  it("a resposta boa passa, e sai no formato fixo do profissional", () => {
+  it("a resposta boa passa, e sai no formato fixo do profissional — sem o que os campos já dizem (d84)", () => {
     const f = fontesDoCaso();
     expect(validarAResposta(BOA, f, PEDIDO)).toEqual({ ok: true });
     const texto = comporADescricao(BOA, f, PEDIDO);
+    // O serviço, a morada, o dia, o estacionamento e as fotografias estão nos campos que o profissional vê à parte.
     expect(texto.split("\n")).toEqual([
-      "Serviço: Recolha de móveis",
       "Para levar: 2 roupeiros, 1 cama, 3 sofás, 1 fogão, 1 máquina de lavar roupa.",
       "Confirmar se também vai: 1 colchão.",
-      "Morada: Lisboa (1100), 3.º andar, com elevador.",
       "2.ª paragem: Lisboa (1400), 6.º andar C, elevador por confirmar.",
-      "Quando: sábado, 31 de outubro, de manhã.",
-      "Estacionamento: por confirmar.",
-      "Fotografias: 4, enviadas pelo cliente.",
       "Por confirmar: o elevador da 2.ª paragem; o estacionamento; as medidas dos roupeiros.",
     ]);
     expect(texto).not.toMatch(/€|euro|pre[cç]o|Joana|912|@|Flores|L[íi]rios|\d{4}-\d{3}/i);
@@ -507,7 +503,9 @@ describe("5. o modelo a falhar: fica a descrição das regras, e a falha fica à
     respostas = [{ texto: JSON.stringify(BOA) }];
     const r = await escreverADescricao(fontesDoCaso(), PEDIDO);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.texto.startsWith("Serviço: Recolha de móveis\nPara levar: 2 roupeiros")).toBe(true);
+    if (r.ok) expect(r.texto.startsWith("Para levar: 2 roupeiros")).toBe(true);
+    // E as sugestões para o formulário (d84): aqui, nada que a conversa diga e o campo não tenha.
+    if (r.ok) expect(r.sugestoes).toEqual([]);
     expect(chamados).toEqual([MODELO_ACTUAL]);
     expect(anotadas).toEqual([{ uso: "descricao", motivo: null }]);
   }, COM_TEMPO);
@@ -572,7 +570,8 @@ describe("5. o modelo a falhar: fica a descrição das regras, e a falha fica à
     const corpo = BASE.slice(i, BASE.indexOf("\n}", i));
     expect(corpo).toContain("const r = await escreverADescricao(fontes, pedidoParaADescricao(p));");
     // Desde a d46 (15-11-2026) passa pela tradução: sempre em português.
-    expect(corpo).toContain("const tr = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType));");
+    // Desde a d84 com os campos do pedido, para as regras não os repetirem.
+    expect(corpo).toContain("const tr = await descricaoEmPortugues(descricaoPelasRegras(fontes, p.serviceType, camposQueOProfissionalVe(pedidoParaADescricao(p))));");
     expect(corpo).toContain("const regras = tr.descricao;");
     expect(corpo).toContain("A descrição ficou arrumada pelas regras: o modelo não a escreveu");
     // Só grava se a descrição ainda for a que se leu: quem escreveu entretanto, ganha.
@@ -602,8 +601,9 @@ describe("6. o botão «Arrumar a descrição» só preenche o campo — quem gr
 
   it("a rota é só para a equipa, usa o mesmo gerador, e não grava nada", () => {
     expect(ROTA).toContain("await requireAdmin(req)");
-    expect(ROTA).toContain("escreverADescricao(fontes, pedidoParaADescricao(doFormulario))");
-    expect(ROTA).toContain("descricaoPelasRegras(fontes, doFormulario.serviceType)");
+    expect(ROTA).toContain("const pedido = pedidoParaADescricao(doFormulario);");
+    expect(ROTA).toContain('escreverADescricao(fontes, pedido, { modo: "sugestao", agora })');
+    expect(ROTA).toContain('descricaoPelasRegras(fontes, doFormulario.serviceType, camposQueOProfissionalVe(pedido), { modo: "sugestao", agora })');
     expect(ROTA).not.toMatch(/updateSimulatorOrder|gravarDescricaoEFontes|appendOrderHistory|guardarOTextoDaEquipa/);
   });
 

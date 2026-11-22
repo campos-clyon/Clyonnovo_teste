@@ -45,12 +45,11 @@ describe("o rascunho do assistente nos campos do formulário", () => {
       parkingDistance: "easy",
       urgency: "this_week",
       // A descrição arrumada pela Vitória para o profissional (26-10-2026,
-      // decisão d30): as coisas e quantas — sem inventar números —, o acesso,
-      // o estacionamento; e, sem data, o que ele disse sobre o dia.
+      // decisão d30): as coisas e quantas — sem inventar números; e, sem data,
+      // o que ele disse sobre o dia. O andar, o elevador e o estacionamento
+      // estão nos campos, que o profissional vê à parte (d84, 22-11-2026).
       description:
         "Para levar: armários de madeira, 1 bancada, lavatório, lava-loiça.\n" +
-        "Acesso: 3.º andar, sem elevador.\n" +
-        "Estacionamento: à porta.\n" +
         "Quando (dito pelo cliente): qual o mais rapido que conseguem?",
       precisaFatura: true,
     });
@@ -63,8 +62,15 @@ describe("o rascunho do assistente nos campos do formulário", () => {
       description: "um sofá",
     });
     expect(c.dataDesejada).toBe("2026-10-09T09:00");
-    // Com uma data só, o dia por extenso — e não as palavras dele outra vez (26-10-2026).
-    expect(c.description).toBe("Para levar: 1 sofá.\nQuando: sexta-feira, 9 de outubro, de manhã.");
+    // O dia está no campo, que o profissional vê à parte (d84): não se repete na descrição.
+    expect(c.description).toBe("Para levar: 1 sofá.");
+    // E o que o dia dito acrescenta ao campo vai para as notas.
+    const comMais = camposDaRecolha("912345678", {
+      dataDesejada: "2026-10-09T08:00:00.000Z",
+      quandoTexto: "sexta de manhã ou sábado",
+      description: "um sofá",
+    });
+    expect(comMais.description).toBe("Para levar: 1 sofá.\nNotas (ditas pelo cliente): Também pode sábado.");
   });
 
   it("o r/c e a cave escrevem-se como se dizem; o longe vira «difficult»", () => {

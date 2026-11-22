@@ -1,5 +1,5 @@
 import type { DadosDaRecolha } from "./whatsapp-recolha";
-import { descricaoOrganizada } from "./descricao-do-pedido";
+import { descricaoOrganizada, type CamposQueOProfissionalVe, type OpcoesDaDescricao } from "./descricao-do-pedido";
 import { DESCRICAO_DAS_FOTOS } from "./leitor-da-recolha";
 
 /**
@@ -164,7 +164,7 @@ const eBloco = (p: string) => p.startsWith(CABECA_DO_BLOCO);
  * dentro de um bloco foi a equipa que a escreveu — e é da equipa.
  */
 const LINHA_DA_VITORIA =
-  /^(Para levar|Para transportar|O que referiu|Volume \(dito pelo cliente\)|Entulho|Origem|Destino|Acesso|Estacionamento|Quando|Quando \(dito pelo cliente\)|Fotografias enviadas pelo cliente|Fotografias|Nas imagens|Pormenores \(ditos pelo cliente\)|Acesso \(dito pelo cliente\)|Notas \(ditas pelo cliente\)|2\.ª paragem):|^O cliente carrega para a viatura\.$/;
+  /^(Para levar|Para transportar|O que referiu|Volume \(dito pelo cliente\)|Entulho|Origem|Destino|Acesso|Estacionamento|Quando|Quando \(dito pelo cliente\)|Fotografias enviadas pelo cliente|Fotografias|Nas imagens|Pormenores \(ditos pelo cliente\)|Acesso \(dito pelo cliente\)|Notas \(ditas pelo cliente\)|2\.ª paragem|Origem \(dito pelo cliente\)|Destino \(dito pelo cliente\)|Andar \(dito pelo cliente\)|Elevador \(dito pelo cliente\)|Estacionamento \(dito pelo cliente\)|Estacionamento no destino \(dito pelo cliente\)):|^O cliente carrega para a viatura\.$/;
 
 /**
  * O TEXTO DA EQUIPA E OS BLOCOS DA VITÓRIA, separados. Os blocos podem estar
@@ -220,7 +220,7 @@ function fontesDeUmBloco(corpo: string, f: FontesDaDescricao, em: string, renova
     else if (/^entulho/.test(rot)) definirCampo(f, "entulhoQuantidade", resto.replace(/\.$/, ""), em, renovar);
     else if (/^acesso dito/.test(rot)) definirCampo(f, "acessoDito", resto, em, renovar);
     else if (/^notas/.test(rot)) definirCampo(f, "notas", [resto], em, renovar);
-    else if (/^(acesso|estacionamento|origem|destino|fotografias|2 paragem)/.test(rot)) continue;
+    else if (/^(acesso|estacionamento|origem|destino|andar|elevador|fotografias|2 paragem)/.test(rot)) continue;
     else juntarDito(f.cliente, linha, em, renovar);
   }
   if (corpo.includes("O cliente carrega para a viatura.")) definirCampo(f, "clienteCarrega", true, em, renovar);
@@ -380,8 +380,12 @@ export function dadosDoCliente(fontes: FontesDaDescricao, servico: string | null
  * ────────────────────────────────────────────────────────────────────────── */
 
 /** O bloco com o que a conversa trouxe — sem linhas repetidas. */
-export function blocoDasFontes(dados: DadosDaRecolha, fotos?: number): string | null {
-  const corpo = descricaoOrganizada(dados, fotos != null ? { fotos } : {});
+export function blocoDasFontes(
+  dados: DadosDaRecolha,
+  fotos?: number,
+  opcoes: Omit<OpcoesDaDescricao, "fotos"> = {},
+): string | null {
+  const corpo = descricaoOrganizada(dados, fotos != null ? { ...opcoes, fotos } : opcoes);
   if (!corpo) return null;
   const vistas = new Set<string>();
   const linhas = corpo.split("\n").filter((l) => {
@@ -408,12 +412,20 @@ export function textoComUmSoBloco(texto: string | null | undefined, corpoDoBloco
 /**
  * A DESCRIÇÃO PELAS REGRAS — a de hoje, sem blocos repetidos: o texto da
  * equipa e, por baixo, o que o cliente disse, arrumado (`descricaoOrganizada`).
+ *
+ * Com os campos do pedido (d84), o que eles já dizem ao profissional — o
+ * andar, o elevador, o estacionamento, o dia — não se repete no bloco.
  */
-export function descricaoPelasRegras(fontes: FontesDaDescricao, servico: string | null | undefined): string {
+export function descricaoPelasRegras(
+  fontes: FontesDaDescricao,
+  servico: string | null | undefined,
+  campos?: CamposQueOProfissionalVe,
+  opcoes: Pick<OpcoesDaDescricao, "modo" | "agora"> = {},
+): string {
   const dados = dadosDoCliente(fontes, servico);
   const fotos = typeof dados.fotosRecebidas === "number" ? dados.fotosRecebidas : undefined;
   const temAlgo = frasesDoCliente(fontes).length > 0 || oQueSeVe(fontes).length > 0 || Object.keys(camposQueContam(fontes)).length > 0;
-  return textoComUmSoBloco(fontes.equipa, temAlgo ? blocoDasFontes(dados, fotos) : null);
+  return textoComUmSoBloco(fontes.equipa, temAlgo ? blocoDasFontes(dados, fotos, { ...opcoes, ...(campos ? { campos } : {}) }) : null);
 }
 
 /** As fontes depois de a descrição ser escrita. */

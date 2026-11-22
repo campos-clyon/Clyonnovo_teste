@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import { descricaoPelasRegras, textoNormal } from "@/lib/fontes-da-descricao";
-import { escreverADescricao } from "@/lib/descricao-pelo-modelo";
+import { camposQueOProfissionalVe, escreverADescricao, sugestoesDaDescricao } from "@/lib/descricao-pelo-modelo";
 import {
   fontesDoPedido,
   pedidoParaADescricao,
@@ -26,6 +26,12 @@ export const maxDuration = 60;
  * grava — e gravar recomeça o pedido e acaba com as propostas actuais, por
  * isso a decisão é dela. Se o modelo falhar, devolve a descrição das regras e
  * diz porquê.
+ *
+ * O QUE OS CAMPOS DIZEM NÃO VAI PARA O TEXTO (d84, 22-11-2026): o andar, o
+ * elevador, o dia, o estacionamento, as fotografias. O que a conversa diz e o
+ * campo não tem vem em `sugestoes` — o formulário mostra-as por baixo, com um
+ * «Preencher» que só muda o campo (grava-se com o «Gravar» de sempre); o que
+ * a conversa diz ao contrário do campo vem como aviso, sem mudar nada.
  */
 export async function POST(req: NextRequest) {
   const { err } = await requireAdmin(req);
@@ -75,7 +81,11 @@ export async function POST(req: NextRequest) {
     ),
     rawOrderJson: JSON.stringify({
       destinationAddress: { city: texto(corpo.localidadeDestino, 120), postalCode: texto(corpo.codigoPostalDestino, 20) },
-      destinationAccess: { floor: texto(corpo.andarDestino, 40), hasElevator: texto(corpo.elevadorDestino, 40) },
+      destinationAccess: {
+        floor: texto(corpo.andarDestino, 40),
+        hasElevator: texto(corpo.elevadorDestino, 40),
+        parkingDistance: texto(corpo.estacionamentoDestino, 40),
+      },
     }),
     contactName: texto(corpo.contactName, 120),
     contactPhone: texto(corpo.contactPhone, 30),
@@ -92,18 +102,29 @@ export async function POST(req: NextRequest) {
      * — e diz-se, para quem lê antes de gravar. Se o tradutor falhar, fica o
      * texto como está e a nota diz que falta traduzir.
      */
-    const r = await escreverADescricao(fontes, pedidoParaADescricao(doFormulario));
+    const pedido = pedidoParaADescricao(doFormulario);
+    const r = await escreverADescricao(fontes, pedido, { modo: "sugestao", agora });
     if (r.ok) {
       const t = await descricaoEmPortugues(r.texto);
-      return NextResponse.json({ ok: true, texto: t.descricao, por: "modelo", traduzida: t.original != null && !t.porTraduzir, porTraduzir: t.porTraduzir });
+      return NextResponse.json({
+        ok: true,
+        texto: t.descricao,
+        por: "modelo",
+        sugestoes: r.sugestoes,
+        traduzida: t.original != null && !t.porTraduzir,
+        porTraduzir: t.porTraduzir,
+      });
     }
-    const t = await descricaoEmPortugues(descricaoPelasRegras(fontes, doFormulario.serviceType));
+    const t = await descricaoEmPortugues(
+      descricaoPelasRegras(fontes, doFormulario.serviceType, camposQueOProfissionalVe(pedido), { modo: "sugestao", agora }),
+    );
     const regras = t.descricao;
     return NextResponse.json({
       ok: true,
       texto: regras,
       por: "regras",
       igual: textoNormal(regras) === textoNormal(doFormulario.description),
+      sugestoes: sugestoesDaDescricao(null, fontes, pedido, agora),
       motivo: r.motivo.slice(0, 200),
       traduzida: t.original != null && !t.porTraduzir,
       porTraduzir: t.porTraduzir,

@@ -69,6 +69,7 @@ import {
 } from "./sinais-do-cartao";
 import { concorrenciaDoPedido } from "@/lib/concorrencia";
 import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
+import { andarPorExtenso } from "@/lib/campos-na-descricao";
 import { lerBase, etiquetaDaBase, avisoDaBase, ePorUnidade } from "@/lib/base-do-preco";
 import { avisoDosItens } from "@/lib/itens-a-mais";
 import {
@@ -1812,7 +1813,7 @@ function DetalheDoTrabalho({
               {pedido.floor && (
                 <>
                   <dt className="text-slate-500">Andar</dt>
-                  <dd className="font-medium text-tinta">{pedido.floor}</dd>
+                  <dd className="font-medium text-tinta">{andarPorExtenso(pedido.floor) ?? pedido.floor}</dd>
                 </>
               )}
               {emPortugues(ELEVADOR, pedido.hasElevator) && (
@@ -1844,14 +1845,15 @@ function DetalheDoTrabalho({
           diferença. Estava tudo guardado desde o primeiro dia; nunca tinha
           chegado aqui.
         */}
-        {pedido.moradaDestino && (
+        {/* Também só com a localidade ou o andar do destino (d84): a descrição já não os repete. */}
+        {(pedido.moradaDestino || pedido.localidadeDestino || pedido.andarDestino) && (
           <div className="mt-3 rounded-xl bg-[#F4F8FB] p-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Para onde vai
             </p>
             <p className="mt-1 text-sm font-semibold text-tinta">
               {/* A morada exacta é do trabalho fechado; até lá, a localidade. */}
-              {fechado ? pedido.moradaDestino : pedido.localidadeDestino || pedido.moradaDestino}
+              {fechado ? pedido.moradaDestino || pedido.localidadeDestino : pedido.localidadeDestino || pedido.moradaDestino}
             </p>
             <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
               {pedido.percursoKm != null && (
@@ -1865,7 +1867,7 @@ function DetalheDoTrabalho({
               {pedido.andarDestino && (
                 <>
                   <dt className="text-slate-500">Andar</dt>
-                  <dd className="font-medium text-tinta">{pedido.andarDestino}</dd>
+                  <dd className="font-medium text-tinta">{andarPorExtenso(pedido.andarDestino) ?? pedido.andarDestino}</dd>
                 </>
               )}
               {emPortugues(ELEVADOR, pedido.elevadorDestino) && (

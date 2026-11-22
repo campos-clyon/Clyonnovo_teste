@@ -92,14 +92,18 @@ describe("a descrição inteira, arrumada para o profissional", () => {
     dataDesejada: "2026-10-31T09:00:00.000Z",
   };
 
-  it("cada facto numa linha curta: o que levar, o acesso, o estacionamento, quando, as fotografias", () => {
+  it("cada facto numa linha curta — e o andar, o estacionamento, o dia e as fotografias ficam nos campos (d84)", () => {
+    // O pedido que a Vitória regista grava nos campos o que a conversa apurou: o profissional vê-os à parte.
     expect(descricaoOrganizada(DADOS, { fotos: 2 })).toBe(
+      ["Para levar: 1 sofá.", "Pormenores (ditos pelo cliente): O sofá está na garagem."].join("\n"),
+    );
+    // Com os campos do pedido vazios, o que a conversa disse fica — dito pelo cliente.
+    expect(descricaoOrganizada(DADOS, { fotos: 2, campos: {} })).toBe(
       [
         "Para levar: 1 sofá.",
-        "Acesso: 3.º andar Esq, com elevador pequeno.",
-        "Estacionamento: à porta.",
+        "Andar (dito pelo cliente): 3.º andar Esq, com elevador pequeno.",
+        "Estacionamento (dito pelo cliente): perto da porta.",
         "Quando: sábado, 31 de outubro, de manhã.",
-        "Fotografias enviadas pelo cliente: 2.",
         "Pormenores (ditos pelo cliente): O sofá está na garagem.",
       ].join("\n"),
     );
@@ -138,9 +142,24 @@ describe("a descrição inteira, arrumada para o profissional", () => {
       elevadorDestino: "yes",
       estacionamentoDestino: null,
     })!;
-    expect(d).toContain("Para transportar: 2 cadeiras, 2 televisões.");
-    expect(d).toContain("Origem: cave, com elevador; estacionamento à porta.");
-    expect(d).toContain("Destino: 2.º andar, com elevador; estacionamento a confirmar.");
+    expect(d).toBe("Para transportar: 2 cadeiras, 2 televisões.");
+    // As duas pontas têm campos que o profissional vê (d84); sem eles, ficam ditas pelo cliente.
+    const semCampos = descricaoOrganizada(
+      {
+        serviceType: "mudanca",
+        description: "2 cadeiras e duas televisões",
+        floor: "-1",
+        hasElevator: "yes",
+        parkingDistance: "near",
+        andarDestino: "2",
+        elevadorDestino: "yes",
+        estacionamentoDestino: null,
+      },
+      { campos: {} },
+    )!;
+    expect(semCampos).toContain("Origem (dito pelo cliente): cave, com elevador.");
+    expect(semCampos).toContain("Estacionamento (dito pelo cliente): perto da porta.");
+    expect(semCampos).toContain("Destino (dito pelo cliente): 2.º andar, com elevador.");
   });
 
   it("a marca das fotografias não é descrição", () => {
@@ -156,7 +175,8 @@ describe("o formulário «Criar pedido desta conversa» usa a mesma descrição"
       floor: "0",
       parkingDistance: "far",
     };
-    expect(descricaoParaOPedido(d)).toBe("Para levar: 1 sofá.\nAcesso: rés-do-chão.\nEstacionamento: longe da porta.");
+    // O rés-do-chão e o «longe da porta» vão para os campos do formulário (d84), e não se repetem.
+    expect(descricaoParaOPedido(d)).toBe("Para levar: 1 sofá.");
     expect(camposDaRecolha("912345678", d).description).toBe(descricaoParaOPedido(d));
   });
 });

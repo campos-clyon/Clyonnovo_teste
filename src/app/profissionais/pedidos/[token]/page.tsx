@@ -32,6 +32,9 @@ import { segueONovoModelo } from "@/lib/novo-modelo-no-servidor";
 import HistoricoDaNegociacao from "@/components/HistoricoDaNegociacao";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { estadoParaOProfissional } from "@/lib/pedido-arrumado";
+import { andarPorExtenso } from "@/lib/campos-na-descricao";
+import { quandoEOTrabalho } from "@/lib/quando-e-o-trabalho";
+import { ELEVADOR, ESTACIONAMENTO, emPortugues } from "@/app/profissionais/painel/tipos";
 
 export const metadata: Metadata = {
   title: "Pedido — CLYON profissionais",
@@ -57,6 +60,26 @@ function propostasDe(json: string | null): Proposta[] {
     return Array.isArray(l) ? (l as Proposta[]) : [];
   } catch {
     return [];
+  }
+}
+
+/** O destino de uma mudança — a localidade e o acesso, nunca a morada (essa é de depois de contratado). */
+function destinoDaMudanca(
+  linha: Record<string, unknown>,
+): { localidade: string | null; andar: string | null; elevador: string | null; estacionamento: string | null } | null {
+  if (linha.serviceType !== "mudanca") return null;
+  try {
+    const raw = typeof linha.rawOrderJson === "string" ? JSON.parse(linha.rawOrderJson) : null;
+    const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const d = {
+      localidade: s(raw?.destinationAddress?.city),
+      andar: s(raw?.destinationAccess?.floor),
+      elevador: s(raw?.destinationAccess?.hasElevator),
+      estacionamento: s(raw?.destinationAccess?.parkingDistance),
+    };
+    return Object.values(d).some(Boolean) ? d : null;
+  } catch {
+    return null;
   }
 }
 
@@ -167,6 +190,8 @@ export default async function PaginaDoPedidoProfissional({
     (vista.serviceType as string) ??
     "Serviço";
   const fotos = fotosDe(vista.filesJson);
+  const bruto = linha as unknown as Record<string, unknown>;
+  const destino = destinoDaMudanca(bruto);
   const minimo =
     vista.valorDesejadoCliente != null ? Number(vista.valorDesejadoCliente) : null;
 
@@ -194,23 +219,22 @@ export default async function PaginaDoPedidoProfissional({
     if ("erro" in lidos) throw lidos.erro;
     const profissional = lidos.custos;
     carrinhaDele = profissional?.tipoVeiculo ?? null;
-    const bruto = linha as unknown as Record<string, unknown>;
-    let destino: { lat: number; lng: number } | null = null;
+    let destinoGps: { lat: number; lng: number } | null = null;
     try {
       const raw = typeof bruto.rawOrderJson === "string" ? JSON.parse(bruto.rawOrderJson) : null;
       const lat = Number(raw?.address?.lat);
       const lng = Number(raw?.address?.lng);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) destino = { lat, lng };
+      if (Number.isFinite(lat) && Number.isFinite(lng)) destinoGps = { lat, lng };
     } catch {
-      destino = null;
+      destinoGps = null;
     }
     const origem =
       profissional?.baseLat != null && profissional?.baseLng != null
         ? { lat: profissional.baseLat, lng: profissional.baseLng }
         : null;
     let distanciaKm: number | null = null;
-    if (origem && destino) {
-      const [medida] = await distanciasRodoviarias([{ origem, destino }]);
+    if (origem && destinoGps) {
+      const [medida] = await distanciasRodoviarias([{ origem, destino: destinoGps }]);
       distanciaKm = medida?.km ?? null;
     }
     sugestao = sugerirParaOProfissional(
@@ -264,9 +288,44 @@ export default async function PaginaDoPedidoProfissional({
           {Boolean(vista.precisaGuiaTransporte) && (
             <li>· O cliente precisa de guia de transporte</li>
           )}
-          {vista.floor != null && <li>· Andar: {String(vista.floor)}</li>}
-          {vista.hasElevator != null && <li>· Elevador: {String(vista.hasElevator)}</li>}
         </ul>
+
+        {/*
+          O DIA E O ACESSO, À PARTE DA DESCRIÇÃO — 22-11-2026 (d84). A descrição
+          deixou de repetir o andar, o elevador, o estacionamento e o dia: estão
+          nos campos do pedido, e é aqui que ele os lê antes de propor. Antes
+          saíam em bruto («Elevador: no»), e o estacionamento e o dia não saíam.
+        */}
+        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+          {(() => {
+            const quando = quandoEOTrabalho({
+              dataAgendada: (bruto.dataAgendada as string | Date | null) ?? null,
+              urgency: (vista.urgency as string | null) ?? null,
+            });
+            const linhas: Array<[string, string | null]> = [
+              ["Quando", quando.dia ? `${quando.dia}${quando.hora ? `, às ${quando.hora}` : ""}` : null],
+              ["Andar", andarPorExtenso(vista.floor as string | null)],
+              ["Elevador", emPortugues(ELEVADOR, vista.hasElevator as string | null)],
+              ["Estacionar", emPortugues(ESTACIONAMENTO, vista.parkingDistance as string | null)],
+            ];
+            if (destino) {
+              linhas.push(
+                ["Para onde vai", destino.localidade],
+                ["Andar no destino", andarPorExtenso(destino.andar)],
+                ["Elevador no destino", emPortugues(ELEVADOR, destino.elevador)],
+                ["Estacionar no destino", emPortugues(ESTACIONAMENTO, destino.estacionamento)],
+              );
+            }
+            return linhas
+              .filter((l): l is [string, string] => Boolean(l[1]))
+              .map(([rotulo, valor]) => (
+                <div key={rotulo} className="contents">
+                  <dt className="text-slate-500">{rotulo}</dt>
+                  <dd className="font-medium text-[#0B1929]">{valor}</dd>
+                </div>
+              ));
+          })()}
+        </dl>
 
         {fotos.length > 0 && (
           <div className="mt-5">

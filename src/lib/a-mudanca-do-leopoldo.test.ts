@@ -201,8 +201,9 @@ describe("a mudança do Leopoldo", () => {
     expect(c.floor).toBe("cave");
     // O acesso e as duas datas à escolha vão na descrição.
     expect(c.description).toContain("Acesso (dito pelo cliente): saída para rua a porta");
-    // As duas, pela ordem e arrumadas (28-10-2026, decisão d35); o campo de data fica com a primeira.
-    expect(c.description).toContain("Quando: sábado 31/10 ou domingo 1/11 (ditas pelo cliente).");
+    // O campo de data fica com a primeira (28-10-2026, decisão d35); a outra vai para as notas (d84).
+    expect(c.description).toContain("Também pode domingo 1/11.");
+    expect(c.description).not.toContain("Quando:");
     expect(d.dataDesejada?.slice(0, 10)).toBe("2026-10-31");
     expect(descricaoParaOPedido(d)).toBe(c.description);
   });

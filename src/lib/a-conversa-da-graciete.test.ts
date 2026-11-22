@@ -183,7 +183,8 @@ describe("3. o que se escreve no pedido: só o que faltava, e uma descrição ar
     const r = responderNoPedidoAberto(estadoDoPedido(), "Trata-se da recolha de um sofá. Deste sofá.", AGORA, contexto());
     const depois = { ...r.estado.dados, fotosRecebidas: 1 };
     const bloco = blocoDoWhatsApp(oQueEDaConversa(antes, depois), depois.fotosRecebidas)!;
-    expect(bloco).toBe("Acrescentado pelo cliente no WhatsApp:\nPara levar: 1 sofá.\nFotografias enviadas pelo cliente: 1.");
+    // As fotografias contam-se à parte, e o profissional vê-as (d84): não se repetem no bloco.
+    expect(bloco).toBe("Acrescentado pelo cliente no WhatsApp:\nPara levar: 1 sofá.");
     expect(bloco).not.toMatch(/Trata-se|Deste sofá|Graciete|\d{9}/);
     // O que o pedido já tinha (o andar, o elevador) não se repete no bloco.
     expect(bloco).not.toMatch(/Acesso|Estacionamento/);

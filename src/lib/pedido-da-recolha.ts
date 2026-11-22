@@ -1,6 +1,7 @@
 import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { campoEmLisboa } from "./hora-de-lisboa";
 import { descricaoOrganizada, O_CLIENTE_CARREGA, type OpcoesDaDescricao } from "./descricao-do-pedido";
+import { estacionamentoDaConversa } from "./campos-na-descricao";
 
 /**
  * O QUE O ASSISTENTE RECOLHEU, NOS CAMPOS DO «REGISTAR PEDIDO» — 07-10-2026.
@@ -131,6 +132,10 @@ export function camposDaRecolha(
   if (d.hasElevator && ELEVADOR.has(d.hasElevator)) campos.hasElevator = d.hasElevator;
   if (d.parkingDistance && ESTACIONAMENTO[d.parkingDistance]) {
     campos.parkingDistance = ESTACIONAMENTO[d.parkingDistance];
+  } else {
+    // Os metros que ele disse vão para o campo (d84): a descrição já não diz o estacionamento.
+    const pelosMetros = estacionamentoDaConversa(null, d.metrosAtePorta, null)?.valor;
+    if (pelosMetros) campos.parkingDistance = pelosMetros;
   }
   // O destino de uma mudança — «não perguntei» em tudo, até 10-10-2026.
   const andarDestino = limpo(d.andarDestino);
@@ -143,7 +148,21 @@ export function camposDaRecolha(
   const quando = campoEmLisboa(d.dataDesejada ?? null);
   if (quando) campos.dataDesejada = quando;
 
-  const descricao = descricaoParaOPedido({ ...d, dataDesejada: quando ? d.dataDesejada : null });
+  // O que fica nos campos do formulário não se repete na descrição (d84).
+  const descricao = descricaoParaOPedido(
+    { ...d, dataDesejada: quando ? d.dataDesejada : null },
+    {
+      campos: {
+        floor: campos.floor,
+        hasElevator: campos.hasElevator,
+        parkingDistance: campos.parkingDistance,
+        dataAgendada: quando ? d.dataDesejada : null,
+        andarDestino: campos.andarDestino,
+        elevadorDestino: campos.elevadorDestino,
+        estacionamentoDestino: campos.estacionamentoDestino,
+      },
+    },
+  );
   if (descricao) campos.description = descricao;
 
   if (d.precisaFatura === true) campos.precisaFatura = true;
