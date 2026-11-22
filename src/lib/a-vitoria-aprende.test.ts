@@ -109,8 +109,11 @@ describe("a guarda: uma lição nunca muda um preço, uma taxa ou uma promessa",
     expect(motivoParaBloquear("O preço já vem com o IVA de 23 %.")).toBeNull();
   });
 
-  it("nem IA, nem a CLYON a fazer o trabalho", () => {
-    expect(motivoParaBloquear("Sou uma assistente virtual.")).toMatch(/assistente online/);
+  it("nunca a fazer-se passar por uma pessoa (d85), nem a CLYON a fazer o trabalho", () => {
+    expect(motivoParaBloquear("Sou uma assistente virtual.")).toMatch(/assistente automática/);
+    expect(motivoParaBloquear("Sou a Vitória, a assistente automática da CLYON — não sou uma pessoa.")).toBeNull();
+    expect(motivoParaBloquear("Sou uma pessoa, pode confiar.")).toMatch(/passar por uma pessoa/);
+    expect(motivoParaBloquear("Não sou um robô, sou a Vitória.")).toMatch(/Nega ser automática/);
     expect(motivoParaBloquear("A nossa equipa vai lá buscar tudo.")).toMatch(/profissional escolhido/);
   });
 

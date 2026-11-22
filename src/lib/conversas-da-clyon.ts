@@ -116,7 +116,7 @@ export function rotuloDoAutor(autor: AutorDaMensagem, paraQuem: QuemPede["papel"
     case "equipa":
       return "Equipa CLYON";
     case "vitoria":
-      return "Vitória, assistente online";
+      return "Vitória, assistente automática";
     case "sistema":
       return "CLYON";
     case "cliente":

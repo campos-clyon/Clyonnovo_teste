@@ -233,7 +233,7 @@ describe("as traduções são revistas e seguem a voz da Vitória", () => {
     }
   });
 
-  it("assistente online — nunca «IA», «virtual», «bot» ou «robot», em língua nenhuma", () => {
+  it("assistente automática (d85) — nunca «IA», «virtual», «bot» ou «robot», em língua nenhuma", () => {
     for (const l of todas) {
       for (const s of l.slice(1)) {
         // «AI»/«IA» em maiúsculas (o «ai-je» francês não conta); o resto em qualquer caixa.

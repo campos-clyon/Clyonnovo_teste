@@ -65,7 +65,9 @@ describe("quem pede uma pessoa recebe uma pessoa", () => {
    */
   it("não cai no ponto de situação", () => {
     expect(CEREBRO).toContain('if (percebida === "falar_com_pessoa") {');
-    expect(CEREBRO).toContain('passarAUmaPessoa(telefone, "Pediu para falar com uma pessoa")');
+    // Desde a d85 (22-11-2026) leva também a verdade a quem pergunta «é um robô?» — a mesma passagem.
+    expect(CEREBRO).toContain('passarAUmaPessoa(telefone, "Pediu para falar com uma pessoa", verdade)');
+    expect(CEREBRO).toContain("perguntaSeEUmaPessoa(conteudo.texto)");
   });
 });
 

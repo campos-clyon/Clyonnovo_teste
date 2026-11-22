@@ -83,12 +83,14 @@ import {
   perguntaSeAceitam,
   perguntaSeFazemos,
   precisaDeOutraCoisa,
+  perguntaSeEUmaPessoa,
   QUEM_FALA,
   reclamaDoAtendimento,
   respostaADisponibilidade,
   respostaAHora,
   respostaAoMaterial,
   SIM_OS_PARCEIROS_FAZEM,
+  SOU_A_ASSISTENTE_AUTOMATICA,
 } from "./voz-da-vitoria";
 import { eMarcaDeImagem } from "./rajada-do-whatsapp";
 import { jaFalouComEle } from "./o-que-a-equipa-ja-disse";
@@ -1281,8 +1283,8 @@ export function aberturaDaResposta(
  * `paraTeclado`, que lhes mexe.
  *
  * Desde 13-10-2026 quem se apresenta é a Vitória («Aqui é a Vitória,
- * assistente online da CLYON»); as conversas de antes disseram «Aqui é a
- * CLYON», e contam na mesma.
+ * assistente online da CLYON» e, desde a d85, «a assistente automática»); as
+ * conversas de antes disseram «Aqui é a CLYON», e contam na mesma.
  *
  * E DESDE 16-11-2026 (d51) conta também quem já lhe escreveu: um colega à mão
  * («Qual é o endereço, senhor …?»), pelo backoffice, ou a Vitória a meio de
@@ -1525,18 +1527,38 @@ export function entregarQuemDesiste(estado: EstadoDaRecolha): RespostaDaRecolha 
  * PEDE UMA PESSOA — «falar com alguém», «é um robô?». «Pessoa» sozinha não
  * chega: «sofá para uma pessoa» é uma descrição. Também o lê a conversa de
  * quem já tem pedido (26-10-2026).
+ *
+ * E DESDE 22-11-2026 (d85): a apresentação oferece «Se preferir falar com uma
+ * pessoa da equipa, é só dizer» — contam também «prefiro uma pessoa», «uma
+ * pessoa da equipa», e quem pergunta se fala com uma pessoa
+ * (`perguntaSeEUmaPessoa`), que ouve a verdade antes de passar.
  */
 export function pedeUmaPessoa(texto: string): boolean {
+  if (perguntaSeEUmaPessoa(texto)) return true;
   const chave = semAcentos(texto.trim()).replace(/[.!,]+$/, "");
+  if (/\bprefiro\s+falar\s+com\s+(uma\s+pessoa|alguem)\b|\bprefiro\s+uma\s+pessoa(\s+da\s+equipa)?\s*$|\buma\s+pessoa\s+da\s+equipa\b/.test(chave)) return true;
   // E em inglês (28-10-2026, d35): a tradução fixa diz «write "talk to someone"».
   return /(falar com (alguem|uma pessoa|um humano)|quero uma pessoa|\bhumano\b|atendente|operador|nao (e|es|sou) um bot|nao quero (um |falar com um )?bot|\brobot\b|\b(e|es|sera)\s+(um\s+)?(robo|bot)\s*\?|\b(talk|speak) (to|with) (someone|somebody|a person|a human|a real person|an agent)\b|\breal person\b|parler a quelqu'?un|hablar con alguien)/.test(
     chave,
   );
 }
 
+/** A passagem, dita a quem pede uma pessoa (e a quem pergunta se fala com uma). */
+const VOU_PASSAR_A_UMA_PESSOA = "Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.";
+
 /** Quem pede uma pessoa — e tem-na, com gosto. */
-export const PASSO_A_ALGUEM_DA_EQUIPA =
-  "Com todo o gosto! Vou passar a conversa a uma pessoa da CLYON, que lhe responde por aqui assim que puder.";
+export const PASSO_A_ALGUEM_DA_EQUIPA = `Com todo o gosto! ${VOU_PASSAR_A_UMA_PESSOA}`;
+
+/**
+ * O QUE SE DIZ A QUEM PEDE UMA PESSOA — 22-11-2026 (d85). A quem pergunta
+ * «é um robô?» / «estou a falar com uma pessoa?», primeiro a verdade (é a
+ * assistente automática), e depois a passagem; aos outros, a de sempre.
+ */
+export function respostaAQuemPedeUmaPessoa(texto: string | null | undefined): string {
+  return texto && perguntaSeEUmaPessoa(texto)
+    ? `${SOU_A_ASSISTENTE_AUTOMATICA} ${VOU_PASSAR_A_UMA_PESSOA}`
+    : PASSO_A_ALGUEM_DA_EQUIPA;
+}
 
 /** Quem cancela sem nada recolhido. A porta fica aberta. */
 export const FICA_SEM_EFEITO =
@@ -1557,7 +1579,7 @@ export function entregarQuemSeQueixa(estado: EstadoDaRecolha, texto: string): Re
   if (!reclamaDoAtendimento(texto)) return null;
   return {
     estado,
-    resposta: desculpasPeloAtendimento(primeiroNome(estado.dados.contactName)),
+    resposta: desculpasPeloAtendimento(primeiroNome(estado.dados.contactName), perguntaSeEUmaPessoa(texto)),
     pedirPessoa: true,
     motivoDaEntrega: "Cliente insatisfeito com o atendimento — responder já",
   };
@@ -3950,7 +3972,7 @@ export function responderNaRecolha(
     return { estado, resposta: FICA_SEM_EFEITO, desistir: true };
   }
   if (pedeUmaPessoa(t)) {
-    return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
+    return { estado, resposta: respostaAQuemPedeUmaPessoa(t), pedirPessoa: true };
   }
 
   /*
@@ -4921,7 +4943,7 @@ export function responderComCompreensao(
   if (cru && naoPercebeu(cru)) return { estado, resposta: explicarDeNovo(estado.passo, estado.dados) };
 
   if (intencao === "falar_com_pessoa") {
-    return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
+    return { estado, resposta: respostaAQuemPedeUmaPessoa(cru), pedirPessoa: true };
   }
   /*
    * QUEM DESISTE A MEIO PASSA A UMA PESSOA — ver `entregarQuemDesiste`.

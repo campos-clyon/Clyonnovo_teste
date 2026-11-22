@@ -224,7 +224,7 @@ describe("a conversa do Maximiano", () => {
     expect(d.description).toContain("chaise longue");
     expect(d.description).toContain("2,35m");
     expect(c.estado.passo).toBe("nome");
-    expect(c.disse[0]).toContain("Boa tarde! Aqui é a Vitória, assistente online da CLYON");
+    expect(c.disse[0]).toContain("Boa tarde! Aqui é a Vitória, a assistente automática da CLYON");
   });
 
   it("não se lhe pergunta outra vez a morada, o andar nem o que é para levar", () => {

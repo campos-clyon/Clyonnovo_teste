@@ -58,7 +58,7 @@ describe("responder a quem cumprimentou", () => {
   it("diz quem está do outro lado", () => {
     // Ela escreveu para um número que não conhece. Saber com quem fala é a
     // primeira coisa que uma pessoa quer, e custa quatro palavras.
-    expect(r.resposta).toContain("Aqui é a Vitória, assistente online da CLYON");
+    expect(r.resposta).toContain("Aqui é a Vitória, a assistente automática da CLYON");
   });
 
   it("e a pergunta vem a seguir, não em vez do cumprimento", () => {

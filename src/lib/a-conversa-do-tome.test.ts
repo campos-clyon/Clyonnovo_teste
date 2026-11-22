@@ -55,7 +55,7 @@ function falaComOTome() {
 describe("a conversa do Tomé", () => {
   it("a Vitória diz logo ao que vem: anotar o pedido e enviá-lo aos profissionais, que dão o preço deles", () => {
     const { disse } = falaComOTome();
-    expect(disse[0]).toContain("Aqui é a Vitória, assistente online da CLYON");
+    expect(disse[0]).toContain("Aqui é a Vitória, a assistente automática da CLYON");
     expect(disse[0]).toContain(O_QUE_ELA_FAZ);
     expect(O_QUE_ELA_FAZ).toMatch(/anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles/);
   });

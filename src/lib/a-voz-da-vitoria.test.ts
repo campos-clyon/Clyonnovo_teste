@@ -53,7 +53,7 @@ describe("a conversa do Abílio, como devia ter sido", () => {
 
   it("à pergunta «fazem?», responde que sim, e que quem faz é o parceiro (d28) — e janelas são monos, não móveis", () => {
     expect(c.respostas[0].estado.dados.serviceType).toBe("recolha_monos");
-    expect(c.disse[0]).toContain("Aqui é a Vitória, assistente online da CLYON");
+    expect(c.disse[0]).toContain("Aqui é a Vitória, a assistente automática da CLYON");
     expect(c.disse[0]).toContain(SIM_OS_PARCEIROS_FAZEM);
     expect(SIM_OS_PARCEIROS_FAZEM).toBe("Sim, é um serviço que os parceiros fazem!");
     expect(c.disse[0]).not.toMatch(/fazemos/i);
@@ -109,9 +109,9 @@ describe("como ela fala", () => {
   it("apresenta-se pelo nome, uma vez, com um sorriso", () => {
     // E diz logo ao que vem — o dono, 13-10-2026.
     expect(apresentacao("Bom dia", "Ana")).toBe(
-      "Bom dia, Ana! Aqui é a Vitória, assistente online da CLYON 😊\nVou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles.",
+      "Bom dia, Ana! Aqui é a Vitória, a assistente automática da CLYON 😊\nVou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles. Se preferir falar com uma pessoa da equipa, é só dizer.",
     );
-    expect(apresentacao("Boa noite", null)).toMatch(/^Boa noite! Aqui é a Vitória, assistente online da CLYON 😊\n/);
+    expect(apresentacao("Boa noite", null)).toMatch(/^Boa noite! Aqui é a Vitória, a assistente automática da CLYON 😊\n/);
   });
 
   it("nunca diz que é uma IA, um robô ou uma assistente virtual", () => {

@@ -10,7 +10,7 @@
  *  3. «profissional» — ao cliente diz-se «parceiro»;
  *  4. palavras do Brasil (é português de Portugal);
  *  5. as promessas e frases proibidas de sempre (`motivoParaBloquear`: no
- *     próprio dia, contentores, big bags, IA ou virtual, a CLYON a fazer o
+ *     próprio dia, contentores, big bags, fazer-se passar por uma pessoa, a CLYON a fazer o
  *     trabalho, percentagens que não são o IVA).
  *
  * Um texto bloqueado não sai: volta-se às regras de sempre.

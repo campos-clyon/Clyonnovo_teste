@@ -113,7 +113,8 @@ describe("o lembrete único", () => {
     );
     expect(TEXTOS.TEXTO_DO_CONVITE_POR_WHATSAPP).toBe(
       [
-        "Olá, {Nome}! Sou a Vitória, assistente online da CLYON.",
+        // «a assistente automática» desde a d85 (22-11-2026): a Vitória diz que é automática em todo o lado.
+        "Olá, {Nome}! Sou a Vitória, a assistente automática da CLYON.",
         "Tem telemóvel Android? Estamos a lançar a app CLYON e procuramos 12 clientes para a experimentarem primeiro 😊",
         "Na app acompanha os seus pedidos, vê as fotografias e paga ao parceiro, tudo no telemóvel.",
         "1) Abra esta ligação com o Gmail do telemóvel e toque em «Tornar-me testador»: {linkDeAdesao}",

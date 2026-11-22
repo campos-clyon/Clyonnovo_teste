@@ -74,7 +74,7 @@ describe("1. quem a CLYON já está a atender não ouve a apresentação", () =>
     expect(resposta).toMatch(/o que é para levar/);
     expect(resposta).not.toMatch(/Aqui é a Vitória|Boa tarde!|Em que posso ajudar/);
     // A quem nunca falou com ninguém, a apresentação continua.
-    expect(primeiraPerguntaDoServico({}, 0, false, AGORA)).toMatch(/Vitória, assistente online da CLYON/);
+    expect(primeiraPerguntaDoServico({}, 0, false, AGORA)).toMatch(/Vitória, a assistente automática da CLYON/);
   });
 });
 

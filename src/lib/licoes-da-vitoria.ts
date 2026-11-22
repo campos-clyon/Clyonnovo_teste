@@ -128,7 +128,8 @@ function negada(frase: string): boolean {
  * É a guarda das lições e da resposta livre do modelo: nenhuma muda um preço
  * (euros que não batem com as fontes do site), uma taxa (percentagens que não
  * são o IVA) ou uma promessa (o «próprio dia», os contentores, os big bags),
- * nem diz que a Vitória é uma IA, nem põe a CLYON a fazer o trabalho.
+ * nem a faz passar por uma pessoa (é a assistente automática — d85,
+ * 22-11-2026), nem põe a CLYON a fazer o trabalho.
  */
 export function motivoParaBloquear(texto: string): string | null {
   const t = String(texto ?? "");
@@ -154,8 +155,24 @@ export function motivoParaBloquear(texto: string): string | null {
     if (/\bbig\s?-?bags?\b/.test(s) && !negada(f)) return "Fala de big bags — a CLYON não os tem.";
   }
   const s = semAcentos(t);
-  if (/\b(inteligencia\s+artificial|assistente\s+virtual|sou\s+(um|uma)\s+(robo|bot|ia)\b)/.test(s)) {
-    return "A Vitória é «assistente online» — nunca IA nem virtual.";
+  /*
+   * A VERDADE SOBRE QUEM ESCREVE — 22-11-2026 (decisão d85). Dizia «nunca IA
+   * nem virtual»; desde a d85 a Vitória diz que é a assistente automática da
+   * CLYON (o AI Act e a política do fornecedor do modelo). Bloqueia-se o
+   * contrário: fazer-se passar por uma pessoa («sou uma pessoa», «não sou um
+   * robô», «escrevo à mão»). «Não sou uma pessoa» é a verdade, e sai.
+   */
+  for (const f of frases(t)) {
+    const sf = semAcentos(f);
+    const pessoa = /(?:^|[^a-z])(nao\s+)?(?:eu\s+)?sou\s+(?:uma\s+|um\s+)?(pessoa|humana|humano)\b/.exec(sf);
+    if (pessoa && !pessoa[1]) return "Faz-se passar por uma pessoa — a Vitória é a assistente automática da CLYON.";
+    if (/\bnao\s+sou\s+(?:um\s+|uma\s+)?(robo|robot|bot|maquina|programa|ia|assistente\s+automatica|inteligencia\s+artificial)\b/.test(sf)) {
+      return "Nega ser automática — a Vitória é a assistente automática da CLYON.";
+    }
+    if (/\b(escrevo|respondo|estou\s+a\s+escrever)\s+a\s+mao\b/.test(sf)) return "Diz que escreve à mão — a Vitória é a assistente automática da CLYON.";
+  }
+  if (/\b(assistente\s+virtual|assistente\s+online)\b/.test(s)) {
+    return "A Vitória é a «assistente automática» da CLYON (desde a d85).";
   }
   if (/\b(a\s+nossa\s+equipa\s+(vai|leva|faz|carrega|desmonta|recolhe)|vamos\s+buscar|nos\s+(levamos|fazemos\s+o\s+trabalho|recolhemos))\b/.test(s)) {
     return "Fala como empresa que faz o trabalho — quem faz é o profissional escolhido.";

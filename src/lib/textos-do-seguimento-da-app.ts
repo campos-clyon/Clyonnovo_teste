@@ -54,7 +54,7 @@ export const TEXTO_DO_LEMBRETE_POR_WHATSAPP: string | null = [
 
 /** 4. O CONVITE NOVO POR WHATSAPP, com o email, a quem tem telemóvel na conta. */
 export const TEXTO_DO_CONVITE_POR_WHATSAPP: string = [
-  "Olá, {Nome}! Sou a Vitória, assistente online da CLYON.",
+  "Olá, {Nome}! Sou a Vitória, a assistente automática da CLYON.",
   "Tem telemóvel Android? Estamos a lançar a app CLYON e procuramos 12 clientes para a experimentarem primeiro 😊",
   "Na app acompanha os seus pedidos, vê as fotografias e paga ao parceiro, tudo no telemóvel.",
   "1) Abra esta ligação com o Gmail do telemóvel e toque em «Tornar-me testador»: {linkDeAdesao}",

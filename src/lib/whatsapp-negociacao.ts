@@ -47,7 +47,7 @@ import { jaFoiDito } from "@/lib/nao-repetir";
 import { lerARespostaDirecta, jaSeLeSemModelo } from "@/lib/ler-a-resposta";
 import { lerAData, diaPorPalavras, quandoSera } from "@/lib/ler-a-data";
 import { notaDoPrecoParaOCliente } from "./itens-a-mais";
-import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA } from "./voz-da-vitoria";
+import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA, perguntaSeEUmaPessoa, SOU_A_ASSISTENTE_AUTOMATICA } from "./voz-da-vitoria";
 import {
   deQueEFeitoOTotal,
   precoDaVitoria,
@@ -2996,7 +2996,9 @@ export async function tratarMensagemDoCliente(
    * preços.
    */
   if (percebida === "falar_com_pessoa") {
-    await passarAUmaPessoa(telefone, "Pediu para falar com uma pessoa");
+    // «É um robô?» — a verdade antes de passar (d85, 22-11-2026).
+    const verdade = perguntaSeEUmaPessoa(conteudo.texto) ? `${SOU_A_ASSISTENTE_AUTOMATICA} ${MENSAGEM_DE_PASSAR_A_UMA_PESSOA}` : undefined;
+    await passarAUmaPessoa(telefone, "Pediu para falar com uma pessoa", verdade);
     return;
   }
 

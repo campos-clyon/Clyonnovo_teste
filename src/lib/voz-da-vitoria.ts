@@ -1,5 +1,5 @@
 /**
- * A VOZ DA VITÓRIA — a assistente online da CLYON. 13-10-2026.
+ * A VOZ DA VITÓRIA — a assistente automática da CLYON. 13-10-2026.
  *
  * *«Tivemos a nossa primeira reclamação por causa do assistente: ele está a
  * ser muito duro e robotizado. Se pudesse dar-lhe uma característica, daria a
@@ -18,9 +18,16 @@
  *   CLIENTE: Pode deixar vou arrumar outra empresa. Passar bem!
  *   CLYON:   Para quando precisa? Se não houver pressa, diga-me também.
  *
- * As decisões dele: chama-se VITÓRIA; apresenta-se como «assistente online»
- * — nem IA nem virtual; e pode usar um emoji, com conta (no cumprimento e no
- * agradecimento final, e mais nenhum).
+ * As decisões dele: chama-se VITÓRIA; apresentava-se como «assistente
+ * online» — nem IA nem virtual; e pode usar um emoji, com conta (no
+ * cumprimento e no agradecimento final, e mais nenhum).
+ *
+ * «ASSISTENTE AUTOMÁTICA» — 22-11-2026 (decisão d85). Um assistente para
+ * consumidores tem de dizer que é automático (art. 50.º, n.º 1, do AI Act, e
+ * a política de utilização do fornecedor do modelo): a Vitória apresenta-se
+ * como «a assistente automática da CLYON», oferece logo uma pessoa da equipa,
+ * e a quem pergunta se é uma pessoa diz a verdade. Nunca finge ser uma pessoa.
+ * A voz delicada fica.
  *
  * O que isto quer dizer, em regras que o código cumpre:
  *   · responde ao que lhe perguntam ANTES de fazer a pergunta dela;
@@ -35,8 +42,40 @@ import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 
 export const NOME_DA_ASSISTENTE = "Vitória";
 
-/** «Aqui é a Vitória, assistente online da CLYON» — como ela se apresenta. */
-export const QUEM_FALA = `Aqui é a ${NOME_DA_ASSISTENTE}, assistente online da CLYON`;
+/** «Aqui é a Vitória, a assistente automática da CLYON» — como ela se apresenta (d85, 22-11-2026). */
+export const QUEM_FALA = `Aqui é a ${NOME_DA_ASSISTENTE}, a assistente automática da CLYON`;
+
+/**
+ * A PESSOA, OFERECIDA LOGO — 22-11-2026 (d85). Na apresentação, a seguir ao que
+ * ela faz. Sem «passo-o»: não se sabe se fala um senhor ou uma senhora. Quem
+ * responde «quero falar com uma pessoa» passa à equipa (`pedeUmaPessoa`).
+ */
+export const SE_PREFERIR_UMA_PESSOA = "Se preferir falar com uma pessoa da equipa, é só dizer.";
+
+/**
+ * A VERDADE, A QUEM PERGUNTA — «é um robô?», «estou a falar com uma pessoa?»,
+ * «is this a bot?» (d85, 22-11-2026). Sem rodeios e sem fingir: é a assistente
+ * automática, e a conversa passa a uma pessoa da equipa.
+ */
+export const SOU_A_ASSISTENTE_AUTOMATICA = `Sou a ${NOME_DA_ASSISTENTE}, a assistente automática da CLYON — não sou uma pessoa.`;
+
+/**
+ * PERGUNTA SE FALA COM UMA PESSOA? — «é um robô?», «és uma pessoa?», «isto é
+ * automático?», «are you a bot?», «c'est un robot ?», «¿eres un bot?». Só a
+ * pergunta: «parece um robô» é uma queixa (`reclamaDoAtendimento`), e «um robô
+ * de cozinha» é uma descrição.
+ */
+export function perguntaSeEUmaPessoa(texto: string): boolean {
+  const t = semAcentos(String(texto ?? "")).trim();
+  if (!t.includes("?")) return false;
+  return [
+    /\b(e|es|sera|sao|voce e|a senhora e|o senhor e|isto e|isso e|estou a falar com|estou a escrever a|falo com)\s+(um\s+|uma\s+)?(robo|robot|bot|chatbot|maquina|pessoa|humano|humana|ia|inteligencia artificial|automatic[oa]|assistente automatica|assistente virtual)(\s+(real|a serio|de verdade))?\s*\?/,
+    /\b(respostas?|mensagens?)\s+(sao\s+|e\s+)?automatic[ao]s?\s*\?/,
+    /\b(are you|is this|am i (talking|speaking|chatting|writing) (to|with))\s+(a\s+|an\s+)?(bot|robot|chatbot|human|person|real person|ai|machine|automated)\b/,
+    /\b(es-tu|etes-vous|vous etes|tu es|c'est)\s+(un\s+|une\s+)?(robot|bot|humain|humaine|personne|ia|machine)\b/,
+    /\b(eres|es usted|es)\s+(un\s+|una\s+)?(robot|bot|humano|humana|persona|ia|maquina)\b/,
+  ].some((r) => r.test(t));
+}
 
 /** O único emoji do cumprimento. */
 const SORRISO = "😊";
@@ -55,12 +94,13 @@ export const O_QUE_ELA_FAZ =
   "Vou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles.";
 
 /**
- * «Boa tarde, Ana! Aqui é a Vitória, assistente online da CLYON 😊
- *  Vou anotar o seu pedido e enviá-lo aos profissionais…»
+ * «Boa tarde, Ana! Aqui é a Vitória, a assistente automática da CLYON 😊
+ *  Vou anotar o seu pedido e enviá-lo aos parceiros… Se preferir falar com uma
+ *  pessoa da equipa, é só dizer.»
  */
 export function apresentacao(saudacao: string, primeiroNome: string | null | undefined): string {
   const quem = primeiroNome ? `${saudacao}, ${primeiroNome}!` : `${saudacao}!`;
-  return `${quem} ${QUEM_FALA} ${SORRISO}\n${O_QUE_ELA_FAZ}`;
+  return `${quem} ${QUEM_FALA} ${SORRISO}\n${O_QUE_ELA_FAZ} ${SE_PREFERIR_UMA_PESSOA}`;
 }
 
 /**
@@ -325,10 +365,12 @@ export function reclamaDoAtendimento(texto: string): boolean {
 }
 
 /** O que ela diz a quem se queixou — e a conversa passa a uma colega. */
-export function desculpasPeloAtendimento(primeiroNome: string | null | undefined): string {
+export function desculpasPeloAtendimento(primeiroNome: string | null | undefined, perguntouSeEUmaPessoa = false): string {
   const a = primeiroNome ? `, ${primeiroNome}` : "";
+  // «Estou a falar com um robô?» — a verdade antes de passar (d85, 22-11-2026).
+  const verdade = perguntouSeEUmaPessoa ? `${SOU_A_ASSISTENTE_AUTOMATICA} ` : "";
   return (
-    `Peço imensa desculpa${a}. Não era nada disto que queríamos que sentisse. ` +
+    `Peço imensa desculpa${a}. ${verdade}Não era nada disto que queríamos que sentisse. ` +
     "Vou passar já a conversa a uma pessoa da CLYON, que trata de tudo consigo pessoalmente, com todo o cuidado."
   );
 }

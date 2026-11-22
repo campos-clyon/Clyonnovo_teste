@@ -6,8 +6,8 @@ import {
   juntarAoPedidoOQueDisse,
   notaDoPrecoPara,
   OBRIGADA_PELAS_IMAGENS,
-  PASSO_A_ALGUEM_DA_EQUIPA,
   pedeUmaPessoa,
+  respostaAQuemPedeUmaPessoa,
   perguntaDo,
   primeiroPassoEmFalta,
   respostasAsPerguntas,
@@ -318,8 +318,8 @@ function oPedidoEmPalavras(p: PedidoNaConversa): string {
 }
 
 /**
- * O CUMPRIMENTO PELO PEDIDO — «Olá, Graciete! Aqui é a Vitória, assistente
- * online da CLYON 😊 Tenho aqui o seu pedido #812 — recolha de monos em
+ * O CUMPRIMENTO PELO PEDIDO — «Olá, Graciete! Aqui é a Vitória, a assistente
+ * automática da CLYON 😊 Tenho aqui o seu pedido #812 — recolha de monos em
  * Almada.» Sem a apresentação quando ela já se apresentou neste fio.
  */
 export function saudacaoDoPedido(p: PedidoNaConversa, nome: string | null, jaSeApresentou: boolean): string {
@@ -582,7 +582,7 @@ export function responderNoPedidoAberto(
     const queixa = entregarQuemSeQueixa(estado, t);
     if (queixa) return queixa;
     if (pedeUmaPessoa(t) || ctx.compreensao?.intencao === "falar_com_pessoa") {
-      return { estado, resposta: PASSO_A_ALGUEM_DA_EQUIPA, pedirPessoa: true };
+      return { estado, resposta: respostaAQuemPedeUmaPessoa(t), pedirPessoa: true };
     }
     /*
      * «É PARA OUTRO LADO» — 16-11-2026 (d51). Já não é lá: pergunta-se, num

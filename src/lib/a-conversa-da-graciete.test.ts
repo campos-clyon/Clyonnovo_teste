@@ -165,9 +165,9 @@ describe("2. a conversa, como devia ter sido", () => {
     expect(fechado.resposta).not.toContain("propostas");
   });
 
-  it("sem colega no fio, cumprimenta pelo pedido — uma vez, com um emoji só, e «assistente online»", () => {
+  it("sem colega no fio, cumprimenta pelo pedido — uma vez, com um emoji só, e «a assistente automática» (d85)", () => {
     const r = responderNoPedidoAberto(estadoDoPedido(), "Boa tarde", AGORA, contexto({ primeira: true, colegaJaFalou: false }));
-    expect(r.resposta.startsWith("Olá, Graciete! Aqui é a Vitória, assistente online da CLYON 😊\nTenho aqui o seu pedido #812 — recolha de monos em Almada.")).toBe(true);
+    expect(r.resposta.startsWith("Olá, Graciete! Aqui é a Vitória, a assistente automática da CLYON 😊\nTenho aqui o seu pedido #812 — recolha de monos em Almada.")).toBe(true);
     expect([...r.resposta.matchAll(/\p{Extended_Pictographic}/gu)].length).toBe(1);
     expect(r.resposta).not.toMatch(/\bIA\b|virtual|intelig[eê]ncia artificial/i);
     // E já apresentada, não se volta a apresentar.

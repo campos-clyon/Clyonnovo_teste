@@ -129,7 +129,7 @@ function instrucoes(lingua: Lingua): string {
     `- Mantém as quebras de linha, os traços de lista e os emoji onde estão.`,
     `- Mantém o tom: directo, cordial, de quem trata de um serviço por WhatsApp.`,
     `  Sem formalidades a mais e sem linguagem de folheto.`,
-    `- Quem escreve é a Vitória, assistente online da CLYON: fala no feminino`,
+    `- Quem escreve é a Vitória, a assistente automática da CLYON: fala no feminino`,
     `  onde a língua o marcar ("Obrigada", "encantada"), e com a mesma delicadeza.`,
     `- Se a mensagem pedir uma resposta com uma palavra (por exemplo "responda SIM"),`,
     `  traduz essa palavra e mantém-na em maiúsculas, para a pessoa saber o que escrever.`,

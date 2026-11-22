@@ -83,7 +83,14 @@ describe("a guarda dos €", () => {
   it("as promessas de sempre (motivoParaBloquear) também", () => {
     expect(motivoParaBloquearOAgente("O parceiro vai lá no próprio dia.", [])).toMatch(/próprio dia/);
     expect(motivoParaBloquearOAgente("Deixamos um contentor à porta.", [])).toMatch(/contentores/);
-    expect(motivoParaBloquearOAgente("Sou uma assistente virtual.", [])).toMatch(/assistente online/);
+    expect(motivoParaBloquearOAgente("Sou uma assistente virtual.", [])).toMatch(/assistente automática/);
+    // A divulgação (d85, 22-11-2026): a verdade sai; fingir ser uma pessoa não.
+    expect(motivoParaBloquearOAgente("Aqui é a Vitória, a assistente automática da CLYON. Se preferir falar com uma pessoa da equipa, é só dizer.", [])).toBeNull();
+    expect(motivoParaBloquearOAgente("Sou a Vitória, a assistente automática da CLYON — não sou uma pessoa.", [])).toBeNull();
+    expect(motivoParaBloquearOAgente("Sou uma pessoa da equipa, pode confiar.", [])).toMatch(/passar por uma pessoa/);
+    expect(motivoParaBloquearOAgente("Eu sou humana, claro!", [])).toMatch(/passar por uma pessoa/);
+    expect(motivoParaBloquearOAgente("Não sou um robô.", [])).toMatch(/Nega ser automática/);
+    expect(motivoParaBloquearOAgente("Respondo à mão, como sempre.", [])).toMatch(/à mão/);
     expect(motivoParaBloquearOAgente("A nossa equipa vai buscar os móveis.", [])).toMatch(/empresa que faz o trabalho/);
     expect(motivoParaBloquearOAgente("A taxa é de 11 %.", [])).toMatch(/não é o IVA/);
     expect(motivoParaBloquearOAgente("", [])).toBe("Sem texto.");

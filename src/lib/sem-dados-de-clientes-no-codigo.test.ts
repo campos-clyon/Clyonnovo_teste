@@ -81,9 +81,9 @@ const lista = (s: string) => new Set(s.split(/\s+/).filter(Boolean).map(semAcent
 const NOMES_INVENTADOS = lista(`
   Aaron Abel Abílio Alda Ana Anselmo Augusta Aurélio Berta Bruno Célia Célio Dalila Débora Elvira
   Ernesto Fátima Graciete Joana Jorge João Júlia Leonor Leopoldo Leónia Lívia Luciana Maria
-  Marcelo Maximiano Nádia Odete Ofélia Oliver Olímpio Patricia Raquel Rita Romão Rosalina Rui Silvério
+  Marcelo Matilde Maximiano Nádia Odete Ofélia Oliver Olímpio Patricia Raquel Rita Romão Rosalina Rui Silvério
   Sofia Telmo Teodoro Tomé Valter Vasco
-  Arvoredo Castanhal Castanheira Costa Fontoura Gomes Lameirão Lopes Moreirinha Pinhal Prates
+  Arvoredo Castanhal Castanheira Costa Fonseca Fontoura Gomes Lameirão Lopes Moreirinha Pinhal Prates
   Ramalhete Ribamar Ribeiro Silva Sobral Sobreirinho Teixo Testemunho Valdeira
   Exemplo Teste Modelo Inventado Inventada
 `);
