@@ -210,7 +210,36 @@
     ["Ainda quer avançar?", "Do you still want to go ahead?", "Souhaitez-vous toujours continuer ?", "¿Todavía quiere avanzar?"],
     ["Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.", "Reply 1 to choose the partner, 2 if you need another date, or 3 to cancel.", "Répondez 1 pour choisir le partenaire, 2 si vous avez besoin d'une autre date, ou 3 pour annuler.", "Responda 1 para elegir el colaborador, 2 si necesita otra fecha, o 3 para cancelar."],
     ["Se não tivermos resposta, o pedido fecha amanhã.", "If we have no reply, the request will close tomorrow.", "Sans réponse de votre part, la demande sera clôturée demain.", "Si no tenemos respuesta, el pedido se cerrará mañana."],
-    ["Se ainda precisar, pode voltar a pedir quando quiser: basta responder aqui.", "If you still need it, you can ask again whenever you like: just reply here.", "Si vous en avez encore besoin, vous pouvez refaire une demande quand vous voulez : il suffit de répondre ici.", "Si aún lo necesita, puede volver a pedirlo cuando quiera: basta con responder aquí."]
+    ["Se ainda precisar, pode voltar a pedir quando quiser: basta responder aqui.", "If you still need it, you can ask again whenever you like: just reply here.", "Si vous en avez encore besoin, vous pouvez refaire une demande quand vous voulez : il suffit de répondre ici.", "Si aún lo necesita, puede volver a pedirlo cuando quiera: basta con responder aquí."],
+    ["Ainda falta:","Still missing:","Il manque encore :","Todavía falta:"],
+    ["Pode enviar por aqui quando puder. Com isso, o pedido fica completo e segue para os parceiros da sua zona.","You can send it here whenever you can. With that, the request is complete and goes to the partners in your area.","Vous pouvez l'envoyer ici quand vous le pourrez. Avec cela, la demande est complète et part chez les partenaires de votre zone.","Puede enviarlo por aquí cuando pueda. Con eso, el pedido queda completo y pasa a los colaboradores de su zona."],
+    ["Com isto, o pedido fica completo: a equipa confere-o e segue para os parceiros da sua zona. As propostas chegam-lhe por aqui.","With this, the request is complete: the team checks it and it goes to the partners in your area. The quotes will reach you here.","Avec cela, la demande est complète : l'équipe la vérifie et elle part chez les partenaires de votre zone. Les propositions vous arrivent ici.","Con esto, el pedido queda completo: el equipo lo revisa y pasa a los colaboradores de su zona. Las propuestas le llegan por aquí."],
+    ["Outros pormenores, nas notas do pedido","Other details, in the request notes","Autres détails, dans les notes de la demande","Otros detalles, en las notas del pedido"],
+    ["Serviço","Service","Service","Servicio"],
+    ["Fotografias","Photos","Photos","Fotografías"],
+    ["O que é para levar","What needs to be taken away","Ce qu'il faut enlever","Lo que hay que llevar"],
+    ["O que é para mudar","What needs to be moved","Ce qu'il faut déménager","Lo que hay que trasladar"],
+    ["O que é para reparar","What needs to be repaired","Ce qu'il faut réparer","Lo que hay que reparar"],
+    ["O que é para esvaziar","What needs to be cleared","Ce qu'il faut débarrasser","Lo que hay que vaciar"],
+    ["O que é para fazer","What needs to be done","Ce qu'il faut faire","Lo que hay que hacer"],
+    ["De que é o entulho","What the rubble is","De quoi sont faits les gravats","De qué son los escombros"],
+    ["Quantidade de entulho","Amount of rubble","Quantité de gravats","Cantidad de escombros"],
+    ["Tipologia da casa","Size of the home (T1, T2...)","Taille du logement (T1, T2...)","Tipología de la vivienda (T1, T2...)"],
+    ["Morada","Address","Adresse","Dirección"],
+    ["Número da porta","Door number","Numéro de la porte","Número del portal"],
+    ["Código postal","Postcode","Code postal","Código postal"],
+    ["Localidade","Town","Localité","Localidad"],
+    ["Andar","Floor","Étage","Piso"],
+    ["Elevador","Lift","Ascenseur","Ascensor"],
+    ["Estacionamento","Parking","Stationnement","Aparcamiento"],
+    ["Morada de destino","Destination address","Adresse de destination","Dirección de destino"],
+    ["Código postal do destino","Destination postcode","Code postal de destination","Código postal del destino"],
+    ["Localidade do destino","Destination town","Localité de destination","Localidad del destino"],
+    ["Andar no destino","Floor at the destination","Étage à destination","Piso en el destino"],
+    ["Elevador no destino","Lift at the destination","Ascenseur à destination","Ascensor en el destino"],
+    ["Estacionamento no destino","Parking at the destination","Stationnement à destination","Aparcamiento en el destino"],
+    ["Data pretendida","Preferred date","Date souhaitée","Fecha deseada"],
+    ["Nome","Name","Nom","Nombre"]
   ],
   "moldes": [
     ["^O pedido #(\\d+) já está registado e a equipa está a conferi-lo; depois segue para os parceiros da sua zona, e as propostas chegam-lhe por aqui\\.$","Request #$1 is already registered and the team is checking it; then it goes to the partners in your area, and the quotes will reach you here.","La demande n° $1 est déjà enregistrée et l'équipe la vérifie ; ensuite, elle part chez les partenaires de votre zone, et les propositions vous arrivent ici.","El pedido #$1 ya está registrado y el equipo lo está revisando; después pasa a los colaboradores de su zona, y las propuestas le llegan por aquí."],
@@ -257,7 +286,8 @@
     ["^Ficou de nos dizer outra data para o seu pedido #(\\d+) \\(([^)]+)\\)\\.$", "You were going to tell us another date for your request #$1 ({s2}).", "Vous deviez nous indiquer une autre date pour votre demande n° $1 ({s2}).", "Quedó en decirnos otra fecha para su pedido n.º $1 ({s2})."],
     ["^Volto ao seu pedido #(\\d+) \\(([^)]+)\\): ainda quer avançar\\?$", "Following up on your request #$1 ({s2}): do you still want to go ahead?", "Je reviens vers vous pour votre demande n° $1 ({s2}) : souhaitez-vous toujours continuer ?", "Vuelvo a su pedido n.º $1 ({s2}): ¿todavía quiere avanzar?"],
     ["^Esta é a última mensagem sobre o seu pedido #(\\d+) \\(([^)]+)\\)\\.$", "This is the last message about your request #$1 ({s2}).", "Ceci est le dernier message concernant votre demande n° $1 ({s2}).", "Este es el último mensaje sobre su pedido n.º $1 ({s2})."],
-    ["^Fechámos o pedido #(\\d+), porque não tivemos resposta\\.$", "We have closed request #$1, as we had no reply.", "Nous avons clôturé la demande n° $1, faute de réponse.", "Hemos cerrado el pedido n.º $1, porque no tuvimos respuesta."]
+    ["^Fechámos o pedido #(\\d+), porque não tivemos resposta\\.$", "We have closed request #$1, as we had no reply.", "Nous avons clôturé la demande n° $1, faute de réponse.", "Hemos cerrado el pedido n.º $1, porque no tuvimos respuesta."],
+    ["^Ficou anotado no seu pedido #(\\d+):$","Noted on your request #$1:","C'est noté sur votre demande n° $1 :","Queda anotado en su pedido #$1:"]
   ],
   "servicos": [
     ["Recolha de móveis", "Furniture removal", "Enlèvement de meubles", "Recogida de muebles"],
@@ -349,6 +379,9 @@
     ["à tarde", "in the afternoon", "l'après-midi", "por la tarde"],
     ["ao fim do dia", "at the end of the day", "en fin de journée", "al final del día"],
     ["ou", "or", "ou", "o"],
-    ["no máximo", "at the latest", "au plus tard", "como máximo"]
+    ["no máximo", "at the latest", "au plus tard", "como máximo"],
+    ["a partir das","from","à partir de","a partir de las"],
+    ["depois das","after","après","después de las"],
+    ["antes das","before","avant","antes de las"]
   ]
 }

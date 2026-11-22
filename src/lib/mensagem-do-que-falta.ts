@@ -241,6 +241,17 @@ export function oPedidoEmPalavras(p: PedidoDaMensagem): string {
 }
 
 /**
+ * OS MARCADORES ESTÁVEIS DO MODELO — 22-11-2026 (decisão d86). A mensagem sai
+ * pela mão da equipa (o WhatsApp dela), e chega ao fio da conversa como uma
+ * mensagem escrita à mão. É por estas duas frases, e pelo número do pedido,
+ * que o site a reconhece como o envio do modelo, e não como uma conversa da
+ * equipa (`resposta-ao-que-falta.ts`): mudá-las aqui muda o reconhecimento,
+ * e o teste da d86 chumba se deixarem de bater.
+ */
+export const EQUIPA_DA_CLYON_NO_MODELO = "Aqui é a equipa da CLYON.";
+export const PODE_RESPONDER_COM_O_QUE_FALTA = "Pode responder a esta mensagem com o que falta.";
+
+/**
  * A MENSAGEM, para o WhatsApp e para o corpo do email. Pede só o que falta,
  * uma linha por falta. Sem faltas, devolve "" — um pedido completo não se
  * pede a ninguém.
@@ -259,10 +270,10 @@ export function mensagemDoQueFalta(
       ? "Para lhe enviarmos o orçamento mais adequado, precisamos de uma informação que está em falta:"
       : "Para lhe enviarmos o orçamento mais adequado, precisamos de algumas informações que estão em falta:";
   return [
-    `${cumprimentoPelaHora(quando)}! Aqui é a equipa da CLYON.`,
+    `${cumprimentoPelaHora(quando)}! ${EQUIPA_DA_CLYON_NO_MODELO}`,
     `Estamos a contactar por causa do seu pedido ${doPedido}. ${precisamos}`,
     lista.map((c) => `- ${linhaDaFalta(c, pedido.serviceType)}`).join("\n"),
-    "Pode responder a esta mensagem com o que falta.",
+    PODE_RESPONDER_COM_O_QUE_FALTA,
     "Obrigado,\nEquipa CLYON",
   ].join("\n\n");
 }

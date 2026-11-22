@@ -1616,7 +1616,7 @@ function disseAHora(texto: string | null | undefined): boolean {
  * hora (a agenda arruma por horas); no resumo que ele lê, só aparece a que
  * ele deu — ou a parte do dia, se foi isso que disse.
  */
-function quandoNoResumo(d: DadosDaRecolha): string {
+export function quandoNoResumo(d: DadosDaRecolha): string {
   // Mais do que uma data: todas, pela ordem — nunca só a última (28-10-2026, d35).
   if (d.quandoComTodas) return d.quandoComTodas;
   if (d.dataDesejada) {

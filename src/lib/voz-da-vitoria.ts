@@ -78,7 +78,7 @@ export function perguntaSeEUmaPessoa(texto: string): boolean {
 }
 
 /** O único emoji do cumprimento. */
-const SORRISO = "😊";
+export const SORRISO = "😊";
 
 /**
  * O QUE ELA FAZ, dito logo ao princípio — 13-10-2026. «A assistente deve

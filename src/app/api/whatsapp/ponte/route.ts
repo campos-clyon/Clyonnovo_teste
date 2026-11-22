@@ -450,8 +450,20 @@ export async function POST(req: NextRequest) {
       const { registarMensagemWhatsApp } = await import("@/lib/db");
       await registarMensagemWhatsApp(telefone, "out", `${MARCA_DE_MAO} ${daMao}`).catch(() => {});
     }
-    // Foi uma pessoa: quem respondeu já tem a conversa — sem aviso à equipa (d23).
-    await interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp", "pessoa");
+    /*
+     * O ENVIO DE MODELO NÃO ENTREGA A CONVERSA — 22-11-2026 (decisão d86). O
+     * «Pedir o que falta» sai pelo WhatsApp da equipa, com o texto do sistema:
+     * é um pedido de dados ao cliente, e a resposta dele é da Vitória (que a
+     * grava no pedido). Fica no fio com a marca, como as outras; só não cala
+     * a Vitória. Ver `envio-de-modelo.ts`.
+     */
+    const { eEnvioDeModelo } = await import("@/lib/envio-de-modelo");
+    if (eEnvioDeModelo(daMao)) {
+      console.info(`[ponte] …${telefone.slice(-3)}: envio de modelo da equipa — a conversa fica com a Vitória (d86)`);
+    } else {
+      // Foi uma pessoa: quem respondeu já tem a conversa — sem aviso à equipa (d23).
+      await interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp", "pessoa");
+    }
     return NextResponse.json({ ok: true });
   }
 

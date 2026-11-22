@@ -1813,6 +1813,8 @@ async function completarOPedidoAberto(
     herdados?: DadosDaRecolhaAqui | null;
     /** Quantas das imagens são vídeos — ficam numa nota, e não contam como fotografias (27-10-2026). */
     videos?: number;
+    /** A mensagem é a resposta ao envio de modelo do «Pedir o que falta» (d86, 22-11-2026). */
+    respostaAoModelo?: boolean;
   } = {},
 ): Promise<boolean> {
   const db = await import("@/lib/db");
@@ -1880,6 +1882,31 @@ async function completarOPedidoAberto(
     jaDisseQueNaoCompra: wr.jaDisseQueNaoCompra(fio),
     contratado,
   });
+
+  /*
+   * A RESPOSTA AO «PEDIR O QUE FALTA» — 22-11-2026 (decisão d86). Uma queixa,
+   * uma desistência, quem pede uma pessoa, outro pedido, outro sítio ou uma
+   * 2.ª morada seguem o caminho de sempre, logo abaixo. O resto lê-se parte a
+   * parte e grava-se no pedido, e a Vitória responde com o que ficou anotado,
+   * o que falta e o passo seguinte. Sem nada que se grave nem pergunta («ok»),
+   * segue também o caminho de sempre. Ver `resposta-ao-que-falta.ts`.
+   */
+  if (
+    opcoes.respostaAoModelo &&
+    !r.pedirPessoa &&
+    !r.novoPedido &&
+    !r.trocaDeSitio &&
+    !r.trocaPerguntada &&
+    !r.segundaMoradaNova
+  ) {
+    const gravou = await gravarARespostaAoModelo(telefone, oPedido, doPedido, dados, texto, {
+      recebidas,
+      fio,
+      contratado,
+      guardada: opcoes.guardada ?? null,
+    });
+    if (gravou) return true;
+  }
 
   /*
    * «É PARA OUTRO LADO», E DISSE QUE SIM — 16-11-2026 (d51). A recolha nova
@@ -2017,9 +2044,184 @@ async function completarOPedidoAberto(
     await reescrever();
     return false;
   }
-  if (r.resposta) await enviarTextoWhatsApp(telefone, r.resposta);
+  /*
+   * O PEDIDO À ESPERA DO «PEDIR O QUE FALTA» QUE FICOU COMPLETO — d86
+   * (22-11-2026): a fotografia que faltava chegou depois. Sai de «precisa
+   * info» e volta aos «por enviar», e diz-se o passo seguinte.
+   */
+  let resposta = r.resposta;
+  if (resposta && String((oPedido as { status?: string | null }).status ?? "") === "precisa_info") {
+    const { oPedidoFicouCompleto } = await import("@/lib/resposta-ao-que-falta-na-base");
+    const fim = await oPedidoFicouCompleto(id).catch(() => null);
+    if (fim?.saiu) {
+      const { PEDIDO_FICA_COMPLETO } = await import("@/lib/resposta-ao-que-falta");
+      resposta = `${resposta}\n${PEDIDO_FICA_COMPLETO}`;
+    }
+  }
+  if (resposta) await enviarTextoWhatsApp(telefone, resposta);
   await reescrever();
   return true;
+}
+
+/**
+ * A RESPOSTA AO «PEDIR O QUE FALTA», GRAVADA NO PEDIDO — 22-11-2026 (decisão
+ * d86). O que o cliente respondeu, lido parte a parte
+ * (`lerARespostaAoQueFalta`), entra nos campos que estavam vazios
+ * (`camposParaOPedido` e o dia, `oDiaParaOPedido`) e nas fontes da descrição
+ * (`juntarAConversaNaDescricao`), como em todo o resto da conversa; conta-se
+ * outra vez o que falta e, completo, o pedido sai de «precisa info»
+ * (`oPedidoFicouCompleto`). Depois, UMA mensagem da Vitória
+ * (`respostaAoQueFalta`). Devolve `false` quando não havia nada a gravar nem
+ * pergunta a responder: quem chama segue o caminho de sempre.
+ */
+async function gravarARespostaAoModelo(
+  telefone: string,
+  oPedido: PedidoDaBaseAqui,
+  doPedido: DadosDaRecolhaAqui,
+  dados: DadosDaRecolhaAqui,
+  texto: string,
+  x: {
+    recebidas: number;
+    fio: Array<{ direccao: string; texto: string }>;
+    contratado: boolean;
+    guardada: { passo: string; dados: Record<string, unknown>; pedidoId: number | null } | null;
+  },
+): Promise<boolean> {
+  const db = await import("@/lib/db");
+  const pa = await import("@/lib/pedido-aberto-na-conversa");
+  const wr = await import("@/lib/whatsapp-recolha");
+  const rq = await import("@/lib/resposta-ao-que-falta");
+  const nb = await import("@/lib/descricao-do-pedido-na-base");
+  const id = Number(oPedido.id);
+  const agora = new Date();
+
+  const lido = rq.lerARespostaAoQueFalta(dados, texto, agora, { imagens: x.recebidas });
+  if (lido.anotado.length === 0 && lido.perguntas.length === 0) return false;
+  const depois = lido.dados;
+
+  // Os campos que estavam vazios — nunca por cima do que lá está.
+  const campos = {
+    ...pa.camposParaOPedido(oPedido, depois),
+    ...rq.oDiaParaOPedido(oPedido as { dataAgendada?: Date | string | null; urgency?: string | null }, depois, agora),
+  };
+  if (Object.keys(campos).length > 0) {
+    try {
+      await updateSimulatorOrder(id, campos as unknown as Parameters<typeof updateSimulatorOrder>[1]);
+    } catch (e) {
+      console.error("[whatsapp/o-que-falta] não actualizei os campos do pedido:", e);
+    }
+  }
+  // A descrição, a partir das fontes: o que ela contou do trabalho e as notas (o estacionamento, a flexibilidade).
+  let fontesMudaram = false;
+  try {
+    const novos = { ...pa.oQueEDaConversa(doPedido, depois), fotosRecebidas: depois.fotosRecebidas };
+    const escrita = await nb.juntarAConversaNaDescricao(id, novos);
+    fontesMudaram = escrita?.fontesMudaram === true;
+  } catch (e) {
+    console.error("[whatsapp/o-que-falta] não actualizei a descrição:", e);
+  }
+  const nomes: Record<string, string> = {
+    descricao: "descrição",
+    fotografias: "fotografias",
+    estacionamento: "estacionamento",
+    andar: "andar",
+    elevador: "elevador",
+    data: "dia",
+    notas: "notas",
+  };
+  if (lido.anotado.length > 0) {
+    await appendOrderHistory(id, {
+      type: "created",
+      by: null,
+      message: `A Vitória juntou ao pedido o que o cliente respondeu ao «Pedir o que falta» no WhatsApp: ${lido.anotado.map((a) => nomes[a] ?? a).join(", ")}.`,
+    }).catch(() => {});
+  }
+
+  // As perguntas: o que o site responde, responde-se; o resto fica para a equipa, como sempre.
+  const respostas: string[] = [];
+  let paraAEquipa = false;
+  for (const q of lido.perguntas) {
+    const a = pa.respostaAPerguntaNoPedido(q, { compreensao: null, contratado: x.contratado });
+    if (a.paraAEquipa) {
+      paraAEquipa = true;
+      await appendOrderHistory(id, {
+        type: "created",
+        by: null,
+        message: `Pergunta do cliente no WhatsApp, por responder: «${q.replace(/\s+/g, " ").slice(0, 200)}»`,
+      }).catch(() => {});
+    } else if (!respostas.includes(a.resposta)) {
+      respostas.push(a.resposta);
+    }
+  }
+
+  // O que ainda falta, com o pedido como ficou; completo, sai de «precisa info».
+  const { oPedidoFicouCompleto } = await import("@/lib/resposta-ao-que-falta-na-base");
+  const { oQueFaltaNoPedido } = await import("@/lib/o-que-falta-no-pedido");
+  const fim = await oPedidoFicouCompleto(id).catch((e) => {
+    console.error("[whatsapp/o-que-falta] não contei o que falta:", e);
+    return {
+      faltas: oQueFaltaNoPedido({ ...(oPedido as object), ...campos } as unknown as Parameters<typeof oQueFaltaNoPedido>[0]),
+      saiu: false,
+    };
+  });
+
+  const { PERGUNTA_ANOTADA } = await import("@/lib/voz-da-vitoria");
+  const principal = rq.respostaAoQueFalta({
+    pedidoId: id,
+    nome: pa.pedidoNaConversa(oPedido).nome,
+    servico: oPedido.serviceType,
+    anotado: lido.anotado,
+    quando: lido.anotado.includes("data") ? rq.oQuandoParaAResposta(depois) : null,
+    faltam: fim.faltas,
+    apresentar: !rq.aVitoriaJaSeApresentou(x.fio),
+  });
+  const resposta = [principal, ...respostas, ...(paraAEquipa ? [PERGUNTA_ANOTADA] : [])].join("\n");
+
+  // A conversa fica ligada a este pedido: o que vier a seguir (a fotografia que falta) junta-se a ele.
+  const aGuardar: DadosDaRecolhaAqui = { ...depois, pedidoAberto: id, blocoNoPedido: undefined };
+  await db.guardarRecolhaWhatsApp(telefone, wr.primeiroPassoEmFalta(depois), aGuardar as Record<string, unknown>).catch(() => {});
+  if (x.guardada?.pedidoId !== id) await db.ligarRecolhaWhatsAppAoPedido(telefone, id).catch(() => {});
+
+  await enviarTextoWhatsApp(telefone, resposta);
+  if (fontesMudaram) await nb.depoisDaResposta(() => nb.reescreverADescricao(id));
+  console.info(`[whatsapp] …${telefone.slice(-3)}: resposta ao «Pedir o que falta» do pedido #${id} gravada (d86)`);
+  return true;
+}
+
+/**
+ * A RESPOSTA AO ENVIO DE MODELO — 22-11-2026 (decisão d86). A última mensagem
+ * que saiu para este número é o «Pedir o que falta» (ou um lembrete do que
+ * falta, d71) de um pedido DELE, aberto, e ele respondeu: a resposta é da
+ * Vitória, que a grava no pedido (`completarOPedidoAberto` com
+ * `respostaAoModelo`). Devolve `false` quando não é o caso.
+ */
+async function responderAoEnvioDeModelo(
+  telefone: string,
+  texto: string,
+  imagens: number,
+  visto: string[],
+  videos: number | undefined,
+): Promise<boolean> {
+  const db = await import("@/lib/db");
+  const { respostaAoEnvioDeModelo } = await import("@/lib/resposta-ao-que-falta");
+  const fio = await db.mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []);
+  const alvo = respostaAoEnvioDeModelo(fio);
+  if (!alvo) return false;
+  // Só um pedido deste número: o número escrito numa mensagem não abre o pedido de outro.
+  if (!(await pedidosDoTelefone(telefone)).includes(alvo.pedidoId)) return false;
+  const pedido = (await getSimulatorOrderById(alvo.pedidoId).catch(() => undefined)) as PedidoDaBaseAqui | undefined;
+  const { pedidoParaAVitoria } = await import("@/lib/pedido-aberto-na-conversa");
+  if (!pedido || !pedidoParaAVitoria(pedido)) return false;
+  const guardada = await db.recolhaWhatsApp(telefone).catch(() => null);
+  return completarOPedidoAberto(telefone, pedido, texto, {
+    imagensNovas: imagens,
+    visto,
+    fio,
+    primeira: true,
+    guardada: guardada && (guardada.dados as DadosDaRecolhaAqui).pedidoAberto === alvo.pedidoId ? guardada : null,
+    videos,
+    respostaAoModelo: true,
+  });
 }
 
 /**
@@ -2625,6 +2827,19 @@ export async function tratarMensagemDoCliente(
           return;
         }
       }
+    }
+
+    /*
+     * A RESPOSTA AO «PEDIR O QUE FALTA» — 22-11-2026 (decisão d86). A última
+     * mensagem que lhe saiu foi o envio de modelo que pede o que falta num
+     * pedido dele (o «Pedir o que falta» da equipa, ou um lembrete da d71):
+     * a Vitória grava no pedido o que ele respondeu e diz-lhe o que ficou
+     * anotado, o que falta e o passo seguinte. As queixas, as desistências e
+     * quem pede uma pessoa vão à equipa como sempre (também já lidos acima).
+     * Uma mensagem da equipa escrita à mão depois do modelo cala-a (d73).
+     */
+    if (await responderAoEnvioDeModelo(telefone, conteudo.texto, conteudo.imagens ?? 0, conteudo.visto ?? [], conteudo.videos)) {
+      return;
     }
 
     /*
@@ -3574,7 +3789,19 @@ export async function guardarFotoDoClienteNoPedido(
       // A recolha nova de quem trocou de sítio (d51): as fotografias esperam pelo pedido novo, e não vão para o antigo.
       naConversa.trocouDoPedido != null ||
       (conversa != null && conversa.passo !== "servico" && pedidos.length > 0 && (await alvosAccionaveis(pedidos)).length === 0));
-  const pedidoId: number | null = doPedidoAberto ?? (aMeio ? null : (pedidos[0] ?? null));
+  /*
+   * A FOTOGRAFIA QUE RESPONDE AO «PEDIR O QUE FALTA» — 22-11-2026 (d86). Vai
+   * para o pedido do modelo (se for deste número), e quem agradece é a
+   * Vitória, na resposta dela — uma mensagem só.
+   */
+  let doModelo: number | null = null;
+  if (doPedidoAberto == null && !aMeio) {
+    const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+    const { respostaAoEnvioDeModelo } = await import("@/lib/resposta-ao-que-falta");
+    const alvo = respostaAoEnvioDeModelo(await mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []));
+    if (alvo && pedidos.includes(alvo.pedidoId)) doModelo = alvo.pedidoId;
+  }
+  const pedidoId: number | null = doPedidoAberto ?? doModelo ?? (aMeio ? null : (pedidos[0] ?? null));
 
   try {
     // 10 MB chegam para qualquer fotografia; acima disso é outra coisa.
@@ -3632,8 +3859,8 @@ export async function guardarFotoDoClienteNoPedido(
       by: null,
       message: "Cliente enviou uma fotografia por WhatsApp — anexada ao pedido.",
     });
-    // Na conversa que completa o pedido, agradece a Vitória — uma vez por rajada.
-    if (doPedidoAberto == null) {
+    // Na conversa que completa o pedido (ou responde ao modelo, d86), agradece a Vitória — uma vez por rajada.
+    if (doPedidoAberto == null && doModelo == null) {
       await enviarTextoWhatsApp(
         telefone,
         `Recebi a fotografia — ficou anexada ao pedido #${pedidoId}.`,

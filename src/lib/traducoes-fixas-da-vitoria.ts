@@ -121,7 +121,7 @@ function quando(texto: string, lingua: Alvo): string {
   if (v) return v;
   const DIA = DIAS.map((d) => d[0]).join("|");
   const forma = new RegExp(
-    `^(${DIA})(, \\d{1,2} de [a-zç]+| \\d{1,2}/\\d{1,2})( às \\d{2}:\\d{2})?(, de manhã|, à tarde|, ao fim do dia)?((; no máximo | ou )(${DIA})(, \\d{1,2} de [a-zç]+| \\d{1,2}/\\d{1,2}))*$`,
+    `^(${DIA})(, \\d{1,2} de [a-zç]+| \\d{1,2}/\\d{1,2})( às \\d{2}:\\d{2})?(, de manhã|, à tarde|, ao fim do dia)?(, (?:a partir das|depois das|antes das) \\d{1,2}h(?:\\d{2})?)?((; no máximo | ou )(${DIA})(, \\d{1,2} de [a-zç]+| \\d{1,2}/\\d{1,2}))*$`,
     "i",
   );
   const formaDoLimite = new RegExp(`^no máximo (${DIA})( \\d{1,2}/\\d{1,2})$`, "i");
@@ -197,6 +197,12 @@ function linha(texto: string, lingua: Alvo): string | null {
   if (item) {
     const s = servico(item[2], lingua);
     return s ? `${item[1]}. ${s}` : null;
+  }
+  // Uma linha de lista («- Estacionamento», «- Quando: …») — o que ficou anotado e o que falta (d86, 22-11-2026).
+  const bala = /^- (.+)$/.exec(n);
+  if (bala) {
+    const t = linha(bala[1], lingua);
+    return t == null || t === "" ? null : `- ${t}`;
   }
   const partes = n.split(/(?<=[.!?])\s+(?=\S)/);
   if (partes.length < 2) return null;

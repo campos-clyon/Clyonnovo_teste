@@ -38,6 +38,7 @@
 import { semAcentos } from "./leitor-da-recolha";
 import { querOutroPedido } from "./pedido-aberto-na-conversa";
 import { eDaEquipa, semMarcaDeMao } from "./rajada-do-whatsapp";
+import { eEnvioDeModelo } from "./envio-de-modelo";
 import { servicoPorPalavras } from "./whatsapp-recolha";
 
 /* ── 4. Não pisar a equipa ───────────────────────────────────────────────── */
@@ -62,6 +63,8 @@ export function haQuantoFalouAEquipa(
   const idades: number[] = [];
   for (const m of Array.isArray(fio) ? fio : []) {
     if (m?.direccao !== "out" || typeof m.texto !== "string" || !eDaEquipa(m.texto)) continue;
+    // O envio de modelo que pede dados ao cliente (o «Pedir o que falta») não é a equipa a conversar (d86).
+    if (eEnvioDeModelo(m.texto)) continue;
     if (typeof m.haSegundos === "number" && Number.isFinite(m.haSegundos)) idades.push(Math.max(0, m.haSegundos));
   }
   if (typeof respondidaHaSegundos === "number" && Number.isFinite(respondidaHaSegundos)) {
