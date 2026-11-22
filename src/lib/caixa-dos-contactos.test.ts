@@ -294,24 +294,24 @@ describe("a lista, os números do topo e os avisos", () => {
   const agora = em("2026-11-23T15:00:00Z");
   const lista = juntarContactos(
     [
-      entradaDoWhatsApp(conversa({ telefone: "351912345670", haSegundos: 30 * 60 }), agora),
-      entradaDoWhatsApp(conversa({ telefone: "351912345671", haSegundos: 5 * H }), agora),
-      entradaDoWhatsApp(conversa({ telefone: "351912345672", haSegundos: 5 * 86400 }), agora),
-      entradaDoFormulario(formulario({ id: 1, telefone: "912345673", email: "", haSegundos: 4 * H }), agora),
-      entradaDoWhatsApp(conversa({ telefone: "351912345674", estado: "a_espera", quemFalou: "vitoria" }), agora),
+      entradaDoWhatsApp(conversa({ telefone: "351910000670", haSegundos: 30 * 60 }), agora),
+      entradaDoWhatsApp(conversa({ telefone: "351910000671", haSegundos: 5 * H }), agora),
+      entradaDoWhatsApp(conversa({ telefone: "351910000672", haSegundos: 5 * 86400 }), agora),
+      entradaDoFormulario(formulario({ id: 1, telefone: "910000673", email: "", haSegundos: 4 * H }), agora),
+      entradaDoWhatsApp(conversa({ telefone: "351910000674", estado: "a_espera", quemFalou: "vitoria" }), agora),
     ],
     agora,
   );
 
   it("abre em «Por responder»: quem espera há mais tempo primeiro, as de há mais de 3 dias no fim", () => {
     expect(contactosAVer(lista, "por_responder").map((c) => c.chave)).toEqual([
-      "t:912345671",
-      "t:912345673",
-      "t:912345670",
-      "t:912345672",
+      "t:910000671",
+      "t:910000673",
+      "t:910000670",
+      "t:910000672",
     ]);
     expect(contactosAVer(lista, "todos")).toHaveLength(5);
-    expect(contactosAVer(lista, "por_responder", "formulario").map((c) => c.chave)).toEqual(["t:912345673"]);
+    expect(contactosAVer(lista, "por_responder", "formulario").map((c) => c.chave)).toEqual(["t:910000673"]);
   });
 
   it("«por responder há mais de 2 h» e «há mais de 3 dias»", () => {
@@ -325,7 +325,7 @@ describe("a lista, os números do topo e os avisos", () => {
 
   it("os avisos só levam o que o «Do nosso lado» não leva: o formulário, não as conversas", () => {
     const para = contactosParaOAviso(lista, agora);
-    expect(para.map((c) => c.chave)).toEqual(["t:912345673"]);
+    expect(para.map((c) => c.chave)).toEqual(["t:910000673"]);
     const [aviso] = avisosDosContactos(para);
     expect(aviso.seccao).toBe("contactos");
     expect(aviso.url).toBe("/admin?section=contactos");
@@ -335,7 +335,7 @@ describe("a lista, os números do topo e os avisos", () => {
   it("o ponto de encaixe do acolhimento: quem ainda não teve resposta nenhuma", () => {
     const precisam = quemPrecisaDePrimeiraResposta(lista, agora);
     expect(precisam.map((p) => p.ref).sort()).toEqual(
-      ["lead:1", "wa:351912345670", "wa:351912345671", "wa:351912345672"].sort(),
+      ["lead:1", "wa:351910000670", "wa:351910000671", "wa:351910000672"].sort(),
     );
   });
 });

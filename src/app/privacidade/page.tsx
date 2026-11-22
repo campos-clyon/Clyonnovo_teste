@@ -69,7 +69,7 @@ export default function PrivacidadePage() {
           {novo ? (
             <p className="mt-3 text-sm text-slate-500">
               Versão de {VERSAO_DOS_TERMOS_POR_EXTENSO}. Em vigor desde{" "}
-              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}.
+              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}. Última atualização: 22 de novembro de 2026.
             </p>
           ) : (
           <p className="mt-3 text-sm text-slate-500">
@@ -228,6 +228,13 @@ export default function PrivacidadePage() {
                     caracteres) e o dia, ligados ao seu email e a esse pedido. Estes dados não nos
                     chegam de si, mas do parceiro.
                   </li>
+                  {/* 22-11-2026 (d85) — a assistente do WhatsApp (Jurídico; CEO e dono). */}
+                  <li>
+                    <strong>Conversas com a assistente do WhatsApp:</strong> o que nos escreve no
+                    WhatsApp, as respostas da assistente e o registo do que ela fez em cada conversa —
+                    por exemplo, que dado anotou no pedido ou que passou a conversa a uma pessoa da
+                    equipa.
+                  </li>
                 </ul>
               </>
             }
@@ -248,6 +255,23 @@ export default function PrivacidadePage() {
                   </li>
                   <li>Gerir as propostas, as contrapropostas e o registo do que foi combinado.</li>
                   <li>Comunicar consigo por email, telefone ou WhatsApp sobre o pedido.</li>
+                  {/*
+                    22-11-2026 (d85) — a Vitória com o Claude (Anthropic). O ensaio
+                    à parte: a conversa vai sem dados de pessoas (anonimizar.ts) e a
+                    resposta dela não é enviada (vitoria-agente/na-base.ts).
+                  */}
+                  <li>
+                    Responder às mensagens que nos escreve no WhatsApp através da Vitória, a nossa
+                    assistente automática: perceber o que pede, responder às dúvidas, anotar no
+                    pedido o que nos diz e passar a conversa a uma pessoa da equipa quando é preciso.
+                    Para isso usamos um modelo de inteligência artificial da Anthropic (Claude). As
+                    fotografias, os áudios e as traduções continuam a ser tratados pelo Google
+                    (Gemini).
+                    <br />
+                    Antes de a pôr a responder, testamo-la à parte: a conversa segue para o modelo
+                    sem nome, telefone, email, morada nem código postal, e o que ela responderia não
+                    lhe é enviado — serve só para a equipa o comparar com a resposta real.
+                  </li>
                   <li>
                     Passar ao parceiro que contratar a morada e o contacto, para
                     ele poder lá chegar e falar consigo.
@@ -344,7 +368,9 @@ export default function PrivacidadePage() {
                       </>
                     ) : (
                       " o serviço de recolha ou esvaziamento."
-                    )}
+                    )}{" "}
+                    É também nesta base que a assistente do WhatsApp responde às suas mensagens e
+                    anota o seu pedido.
                   </li>
                   <li>
                     <strong>Obrigação legal</strong> — para faturação, contabilidade e requisitos
@@ -356,7 +382,9 @@ export default function PrivacidadePage() {
                   </li>
                   <li>
                     <strong>Interesse legítimo</strong> — para segurança do site, prevenção de
-                    fraude e melhoria contínua do serviço, e para lhe mostrar as avaliações que os
+                    fraude e melhoria contínua do serviço, para testar a assistente do WhatsApp com
+                    conversas sem os dados que o identificam, antes de ela responder a clientes, e
+                    para lhe mostrar as avaliações que os
                     parceiros lhe dão, para que saiba como correu cada trabalho do lado de quem o
                     fez. Pode opor-se a este tratamento escrevendo-nos.
                   </li>
@@ -387,9 +415,20 @@ export default function PrivacidadePage() {
                       parceiro, para lhe pagar. Mais ninguém os vê.
                     </li>
                   )}
+                  {/*
+                    22-11-2026 (d85): dizia «ambos na União Europeia». Desde
+                    07-10-2026 as funções correm em Singapura (vercel.json,
+                    "regions": ["sin1"]), ao pé da base no Railway, também em
+                    Singapura (regiao-das-funcoes.test.ts), e a ponte do WhatsApp.
+                  */}
                   <li>
                     <strong>Alojamento e base de dados</strong> — Vercel (alojamento do site) e
-                    Railway (base de dados), ambos na União Europeia.
+                    Railway (base de dados e serviço do WhatsApp). As funções do site (na Vercel), a
+                    base de dados e o serviço do WhatsApp (no Railway) correm em Singapura, fora da
+                    União Europeia. A transferência faz-se ao abrigo das cláusulas contratuais-tipo
+                    aprovadas pela Comissão Europeia, que fazem parte dos acordos de tratamento de
+                    dados da Vercel e do Railway. Pode pedir-nos uma cópia destas garantias pelo
+                    email {BUSINESS_EMAIL}.
                   </li>
                   <li>
                     <strong>Envio de email</strong> — Resend, para lhe enviar o link do pedido e os
@@ -459,7 +498,30 @@ export default function PrivacidadePage() {
                     <strong>Análise dos pedidos</strong> — Google (Gemini), para ler as fotografias
                     e a descrição de um pedido e para perceber as mensagens escritas no WhatsApp.
                     Recebe as fotografias e os dados do pedido — descrição, morada, andar e
-                    acessos — e o texto dessas mensagens.
+                    acessos — e o texto dessas mensagens. O Google pode tratar estes dados nos
+                    Estados Unidos, ao abrigo das cláusulas contratuais-tipo aprovadas pela Comissão
+                    Europeia, que fazem parte dos termos de tratamento de dados do Google.
+                  </li>
+                  {/*
+                    22-11-2026 (d85) — a Vitória com o Claude. Conferido no código:
+                    o pedido ao modelo (vitoria-agente/cliente.ts) leva o aviso fixo,
+                    a conversa anonimizada (anonimizar.ts: telefones, emails, IBAN,
+                    códigos postais, o nome e a rua do pedido) e os resultados das
+                    ferramentas (ferramentas.ts: o pedido sem nome, telefone, email
+                    nem morada; as propostas como o cliente as vê). O telefone só
+                    serve para escolher os pedidos deste número; nunca vai ao modelo.
+                  */}
+                  <li>
+                    <strong>Assistente do WhatsApp</strong> — Anthropic (Anthropic Ireland, Limited,
+                    e o grupo Anthropic nos Estados Unidos), para perceber e responder às mensagens
+                    que nos escreve no WhatsApp. Recebe o texto da conversa — com o que nele
+                    escrever — e os dados do pedido de que precisa para responder: serviço,
+                    localidade, andar e acessos, datas, e as propostas dos parceiros (nome do
+                    parceiro, valor e condições). Não recebe o seu número de telefone nem o seu
+                    email. A Anthropic trata estes dados só por nossa conta (é nossa
+                    subcontratante), não os usa para treinar os modelos dela e apaga-os no prazo de
+                    30 dias, salvo se a lei a obrigar a guardá-los ou se uma conversa for assinalada
+                    por violar as regras de utilização dela (neste caso, até 2 anos).
                   </li>
                   <li>
                     <strong>Medição e publicidade</strong> — Google Analytics, Google Ads e Vercel
@@ -476,7 +538,17 @@ export default function PrivacidadePage() {
                     cumprimento de obrigações legais.
                   </li>
                 </ul>
-                Não vendemos dados a terceiros nem partilhamos com fins de marketing externo.
+                <p className="mt-3">
+                  <strong>Transferência para fora da União Europeia.</strong> A Anthropic trata estes
+                  dados nos Estados Unidos e, para gerar as respostas, pode usar infraestrutura
+                  noutros países. A transferência faz-se ao abrigo das cláusulas contratuais-tipo
+                  aprovadas pela Comissão Europeia (Decisão de Execução (UE) 2021/914), que fazem
+                  parte do acordo de tratamento de dados da Anthropic. Pode pedir-nos uma cópia
+                  destas garantias pelo email {BUSINESS_EMAIL}.
+                </p>
+                <p className="mt-3">
+                  Não vendemos dados a terceiros nem partilhamos com fins de marketing externo.
+                </p>
               </>
             }
           />
@@ -543,6 +615,11 @@ export default function PrivacidadePage() {
                     <strong>Mensagens de WhatsApp:</strong> {DIAS_DE_RETENCAO_DOS_PEDIDOS} dias. As
                     conversas com o assistente do WhatsApp que não chegaram a pedido:{" "}
                     {DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP} dias.
+                  </li>
+                  {/* 22-11-2026 (d85): vitoriaAccoes e vitoriaEnsaios, na purga da noite (vitoria-agente/purga-do-registo.ts). */}
+                  <li>
+                    <strong>Registo do que a assistente do WhatsApp fez e os testes dela:</strong>{" "}
+                    {DIAS_DE_RETENCAO_DOS_PEDIDOS} dias.
                   </li>
                   {/*
                     01-11-2026 (dono): as avaliações ao cliente não têm prazo na
@@ -621,6 +698,11 @@ export default function PrivacidadePage() {
                   <li>
                     <strong>Retirar o consentimento</strong> a qualquer momento, quando o tratamento
                     se baseia nele.
+                  </li>
+                  <li>
+                    <strong>Falar com uma pessoa</strong> — na conversa com a assistente do WhatsApp,
+                    pode pedir a qualquer momento para falar com uma pessoa da equipa e contestar o
+                    que ela tiver anotado no seu pedido.
                   </li>
                   <li>
                     <strong>Reclamar</strong> junto da <a
@@ -832,10 +914,12 @@ export default function PrivacidadePage() {
                 Além dos que estão na secção 5, estes dados passam por: <strong>Expo</strong> e{" "}
                 <strong>Google (Firebase Cloud Messaging)</strong>, para entregar os avisos no
                 telemóvel; <strong>Vercel</strong>, onde ficam guardadas as fotografias;{" "}
-                <strong>Google Maps</strong>, para encontrar a morada da base; e{" "}
+                <strong>Google Maps</strong>, para encontrar a morada da base;{" "}
                 <strong>euPago</strong>, para gerar as referências{" "}
                 {novo ? "da taxa da plataforma" : "das dívidas"} e, no MB WAY, o número
-                para onde vai o pedido de pagamento.
+                para onde vai o pedido de pagamento; e <strong>Anthropic</strong>, quando um
+                cliente pergunta pelas propostas no WhatsApp: a assistente lê o seu nome de
+                parceiro, o valor e as condições da proposta.
                 {novo
                   ? " O IBAN, o titular e o número MB WAY passam também ao cliente que o contratar (secção 5)."
                   : null}{" "}

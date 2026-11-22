@@ -125,23 +125,23 @@ describe("o custo e o tecto diário", () => {
 /* ── A anonimização ──────────────────────────────────────────────────────── */
 
 describe("a anonimização (o ensaio e o script de medição)", () => {
-  const quem = [{ contactName: "Matilde Fonseca", address: "Rua das Amendoeiras 12, 3.º Esq" }];
+  const quem = [{ contactName: "Leonor Fontoura", address: "Rua das Amendoeiras 12, 3.º Esq" }];
 
   it("sem telefone, email, NIF, IBAN, código postal, nome nem rua", () => {
     const t = textoAnonimizado(
-      "Sou a Matilde Fonseca, o meu número é 912 345 678 e o email matilde@exemplo.pt. NIF 123456789, IBAN PT50 0002 0123 1234 5678 9015 4. Moro na Rua das Amendoeiras 12, 2800-123 Almada.",
+      "Sou a Leonor Fontoura, o meu número é 912 345 678 e o email leonor@exemplo.pt. NIF 123456789, IBAN PT50 0002 0123 1234 5678 9015 4. Moro na Rua das Amendoeiras 12, 2800-123 Almada.",
       quem,
     );
-    for (const fora of ["Matilde", "Fonseca", "912", "345 678", "@", "123456789", "PT50", "2800-123", "Amendoeiras"]) expect(t, fora).not.toContain(fora);
+    for (const fora of ["Leonor", "Fontoura", "912", "345 678", "@", "123456789", "PT50", "2800-123", "Amendoeiras"]) expect(t, fora).not.toContain(fora);
     expect(t).toContain("[contacto]");
     expect(t).toContain("[código postal]");
     expect(t).toContain("Almada");
   });
 
   it("a conversa inteira, linha a linha, e o telefone só pelos últimos dígitos", () => {
-    const c = conversaAnonimizada([{ direccao: "in", texto: "Ligue-me para o 961234567" }], quem);
-    expect(c[0].texto).not.toMatch(/961234567/);
-    expect(ultimosDigitos("351961234567")).toBe("…567");
+    const c = conversaAnonimizada([{ direccao: "in", texto: "Ligue-me para o 960000567" }], quem);
+    expect(c[0].texto).not.toMatch(/960000567/);
+    expect(ultimosDigitos("351960000567")).toBe("…567");
   });
 });
 
@@ -151,14 +151,14 @@ const PEDIDO: PedidoParaOAgente = {
   id: 812,
   serviceType: "recolha_monos",
   status: "pendente",
-  contactName: "Matilde Fonseca",
+  contactName: "Leonor Fontoura",
   address: "Rua das Amendoeiras 12",
   city: "Almada",
   postalCode: "2800-123",
   floor: "3",
   hasElevator: null,
   parkingDistance: null,
-  description: "Um sofá e um colchão. Ligar à Matilde.",
+  description: "Um sofá e um colchão. Ligar à Leonor.",
   filesJson: "[]",
 };
 
@@ -206,7 +206,7 @@ describe("as ferramentas", () => {
     expect(JSON.stringify(outro.resultado)).toMatch(/não é deste cliente/);
     const meu = await correrFerramenta("ler_pedido", { pedido: 812 }, base(), e);
     const t = JSON.stringify(meu.resultado);
-    for (const fora of ["Matilde", "Fonseca", "Amendoeiras", "2800-123"]) expect(t, fora).not.toContain(fora);
+    for (const fora of ["Leonor", "Fontoura", "Amendoeiras", "2800-123"]) expect(t, fora).not.toContain(fora);
     expect(meu.resultado).toMatchObject({ pedido: 812, localidade: "Almada", temNome: true, temMorada: true, fotografias: 0 });
   });
 

@@ -58,6 +58,11 @@ vi.mock("@/lib/validade-do-orcamento-na-base", () => ({
   anonimizarOsCanceladosPeloLembrete: vi.fn(async () => 0),
 }));
 
+// O registo da Vitória agente e os testes dela, aos 60 dias (d85, 22-11-2026).
+vi.mock("@/lib/vitoria-agente/purga-do-registo", () => ({
+  purgarRegistoDaVitoriaAgente: vi.fn(async () => 0),
+}));
+
 vi.mock("@/lib/regras-novas-na-base", () => ({
   purgarComAsRegrasNovas: vi.fn(async (o: { aSerio: boolean }) => ({ ...ZERO, aSerio: o.aSerio })),
   regrasNovasDaNoite: vi.fn(async (o: { aSerio: boolean }) => ({ aSerio: o.aSerio, e: { lista: ["simulador/x.jpg"] } })),
@@ -173,4 +178,17 @@ describe("o interruptor fica desligado na dúvida", () => {
     }
     // Importar o db.ts verdadeiro a meio da suite inteira leva tempo (é um ficheiro grande).
   }, 120_000);
+});
+
+describe("o registo da Vitória agente e os testes dela (d85, 22-11-2026)", () => {
+  it("entram na purga da noite com o prazo dos pedidos e o mesmo PURGA_ARMADA", async () => {
+    const { purgarRegistoDaVitoriaAgente } = await import("@/lib/vitoria-agente/purga-do-registo");
+    process.env.PURGA_ARMADA = "sim";
+    await pedir();
+    expect(purgarRegistoDaVitoriaAgente).toHaveBeenCalledWith(60, { aSerio: true });
+    vi.mocked(purgarRegistoDaVitoriaAgente).mockClear();
+    delete process.env.PURGA_ARMADA;
+    await pedir();
+    expect(purgarRegistoDaVitoriaAgente).toHaveBeenCalledWith(60, { aSerio: false });
+  });
 });

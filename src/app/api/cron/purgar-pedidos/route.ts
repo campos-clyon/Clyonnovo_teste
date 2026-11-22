@@ -272,6 +272,22 @@ export async function GET(req: NextRequest) {
       0,
       passosQueFalharam,
     );
+    /*
+     * O REGISTO DA VITÓRIA AGENTE E OS TESTES DELA — 22-11-2026 (d85): as
+     * linhas de `vitoriaAccoes` e `vitoriaEnsaios` (o telefone e o texto
+     * das mensagens) com mais de DIAS_DE_RETENCAO_DOS_PEDIDOS dias, como as
+     * mensagens do WhatsApp. À parte dos pedidos, com o mesmo `PURGA_ARMADA`
+     * (a seco só conta).
+     */
+    const registoDaVitoriaAgente = await passoSecundario(
+      "registo da Vitória agente",
+      async () => {
+        const { purgarRegistoDaVitoriaAgente } = await import("@/lib/vitoria-agente/purga-do-registo");
+        return purgarRegistoDaVitoriaAgente(DIAS_DE_RETENCAO_DOS_PEDIDOS, { aSerio: armada });
+      },
+      0,
+      passosQueFalharam,
+    );
     const errosDaAppEmPalavras =
       (canceladosPeloLembrete > 0
         ? (armada ? ". Dos cancelados pelo lembrete (do orçamento ou do que falta), " : ". Dos cancelados pelo lembrete (do orçamento ou do que falta), seriam ") +
@@ -292,6 +308,10 @@ export async function GET(req: NextRequest) {
       (programaApagado > 0
         ? (armada ? ". Do programa da app, " : ". Do programa da app, seriam ") +
           `${programaApagado} inscrição(ões) apagada(s) (saíram há mais de ${DIAS_DO_PROGRAMA_DEPOIS_DE_SAIR} dias, ou sem conta)`
+        : "") +
+      (registoDaVitoriaAgente > 0
+        ? (armada ? ". Do registo da Vitória agente e dos testes dela, " : ". Do registo da Vitória agente e dos testes dela, seriam ") +
+          `${registoDaVitoriaAgente} linha(s) apagada(s) (mais de ${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias)`
         : "");
 
     /*
@@ -364,6 +384,7 @@ export async function GET(req: NextRequest) {
       errosDaApp === 0 &&
       conversasApagadas === 0 &&
       presencaApagada === 0 &&
+      registoDaVitoriaAgente === 0 &&
       arquivo.anonimizadas === 0;
     await registarSemFalhar({
       acontecimento: "pedido_expurgado",
@@ -426,6 +447,7 @@ export async function GET(req: NextRequest) {
         errosDaAppApagados: errosDaApp,
         conversasApagadas,
         presencaApagada,
+        registoDaVitoriaAgenteApagado: registoDaVitoriaAgente,
         /*
          * As contagens das regras novas, inteiras — o resumo só leva a frase.
          * Sem a lista dos nomes dos ficheiros sem referência: o registo é
