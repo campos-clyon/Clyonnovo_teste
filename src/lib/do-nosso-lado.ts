@@ -15,6 +15,7 @@ import {
 } from "./escolhidos-sem-resposta";
 import { linhasDoFecho, TITULO_DO_GRUPO_DO_FECHO, type TrabalhoParaOFecho } from "./fecho-do-modelo-novo";
 import { pedidoFechado } from "./pedido-arrumado";
+import { esperaEDoCliente, mapaDoSeguimento, type PedidoEmSeguimento } from "./seguimento-do-cliente";
 
 /**
  * «DO NOSSO LADO» — o que está à espera da CLYON, no topo da Mesa. d14,
@@ -369,6 +370,39 @@ export function semRespostaDoNossoLado(pedidos: PedidoParaOLado[], agora: Date):
   return out;
 }
 
+/* ── O seguimento do cliente (d83 v2) ───────────────────────────────────── */
+
+/**
+ * OS GRUPOS DE ONDE SAI UM PEDIDO EM SEGUIMENTO — d83 v2 (CEO e dono,
+ * 22-11-2026). A equipa falou com o cliente («Falei com o cliente», d83) e a
+ * Vitória volta a falar com ele à hora marcada: a espera é dele, não nossa.
+ * Saem a conversa dele — enquanto não escrever depois da marcação —, o preço
+ * por enviar, as propostas por enviar e os escolhidos sem resposta, como saem
+ * da conta do «Precisa de si». Ficam a data passada e o fecho: são trabalhos
+ * já contratados, à espera do «Está feito» do parceiro (e um parceiro escolhido
+ * pára o seguimento). Se o cliente escrever, ou o ciclo parar, voltam a contar.
+ */
+export const GRUPOS_QUE_O_SEGUIMENTO_TIRA: readonly TipoDoNossoLado[] = ["conversa", "preco_clyon", "propostas", "sem_resposta"];
+
+/**
+ * Tira de uma lista as linhas dos pedidos em seguimento activo. Pura. Numa
+ * conversa, a última palavra do cliente foi há `esperaS`: se foi depois da
+ * marcação, ele respondeu e a linha fica.
+ */
+export function semOsEmSeguimento(
+  linhas: LinhaDoNossoLado[],
+  emSeguimento: readonly PedidoEmSeguimento[] | null | undefined,
+  agora: Date,
+): LinhaDoNossoLado[] {
+  const mapa = mapaDoSeguimento(emSeguimento);
+  if (mapa.size === 0) return linhas;
+  return linhas.filter((l) => {
+    if (!GRUPOS_QUE_O_SEGUIMENTO_TIRA.includes(l.tipo)) return true;
+    const ultimaDoCliente = l.tipo === "conversa" ? new Date(agora.getTime() - l.esperaS * 1000) : null;
+    return !esperaEDoCliente(mapa, l.pedidoId, ultimaDoCliente);
+  });
+}
+
 /* ── Tudo junto ─────────────────────────────────────────────────────────── */
 
 /**
@@ -389,6 +423,12 @@ export function doNossoLado(fontes: {
    * pela regra do modelo novo.
    */
   semFecho?: readonly TrabalhoParaOFecho[] | null;
+  /**
+   * d83 v2 (22-11-2026): os pedidos com o seguimento do cliente a correr
+   * (`pedidosEmSeguimentoActivo`, a mesma conta do `emCurso` da Mesa). Saem
+   * dos grupos de `GRUPOS_QUE_O_SEGUIMENTO_TIRA`. Sem a lista, conta-se como antes.
+   */
+  emSeguimento?: readonly PedidoEmSeguimento[] | null;
   agora: Date;
 }): GrupoDoNossoLado[] {
   const porEspera = (l: LinhaDoNossoLado[]) =>
@@ -411,5 +451,9 @@ export function doNossoLado(fontes: {
     ["sem_resposta", semRespostaDoNossoLado(fontes.pedidos, fontes.agora)],
     ["sem_fecho", semFecho],
   ];
-  return grupos.map(([tipo, linhas]) => ({ tipo, titulo: TITULOS_DO_NOSSO_LADO[tipo], linhas: porEspera(linhas) }));
+  return grupos.map(([tipo, linhas]) => ({
+    tipo,
+    titulo: TITULOS_DO_NOSSO_LADO[tipo],
+    linhas: porEspera(semOsEmSeguimento(linhas, fontes.emSeguimento, fontes.agora)),
+  }));
 }

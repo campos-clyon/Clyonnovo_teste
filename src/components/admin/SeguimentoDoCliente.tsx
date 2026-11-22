@@ -26,6 +26,8 @@ import {
  */
 export type SeguimentoNaMesa = {
   pedidoId: number;
+  /** Quando a equipa marcou o «Falei com o cliente» (ISO; d83 v2). */
+  marcadoEm?: string;
   emCurso: boolean;
   podeParar: boolean;
   linha: string;

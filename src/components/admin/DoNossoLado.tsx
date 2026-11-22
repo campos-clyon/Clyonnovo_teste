@@ -16,6 +16,7 @@ import {
 } from "@/lib/do-nosso-lado";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import type { TrabalhoParaOFecho } from "@/lib/fecho-do-modelo-novo";
+import type { PedidoEmSeguimento } from "@/lib/seguimento-do-cliente";
 
 /**
  * «DO NOSSO LADO» — o cartão do topo da Mesa (d14, 03-11-2026). Só leitura:
@@ -37,11 +38,14 @@ export default function DoNossoLado({
   token,
   pedidos,
   trabalhosClyon,
+  emSeguimento,
   onAbrirPedido,
 }: {
   token: string | null;
   pedidos: PedidoParaOLado[];
   trabalhosClyon: TrabalhoClyonParaOLado[];
+  /** Os pedidos com o seguimento do cliente a correr (d83 v2): a espera é dele, não contam aqui. */
+  emSeguimento?: readonly PedidoEmSeguimento[] | null;
   /** Abre o pedido na Mesa (procura-o pelo número). */
   onAbrirPedido: (pedidoId: number) => void;
 }) {
@@ -123,7 +127,7 @@ export default function DoNossoLado({
     return lerConversas();
   });
 
-  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, semFecho, agora });
+  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, semFecho, emSeguimento, agora });
   const total = grupos.reduce((s, g) => s + g.linhas.length, 0);
   const visiveis = grupos.filter((g) => g.linhas.length > 0 || (g.tipo === "conversa" && podeVerConversas && conversasFalharam));
 

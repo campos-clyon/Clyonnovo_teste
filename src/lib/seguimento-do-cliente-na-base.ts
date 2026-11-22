@@ -62,6 +62,7 @@ import {
   type CicloDoSeguimento,
   type ContactoDoSeguimento,
   type PassoDoSeguimento,
+  type PedidoEmSeguimento,
   type RespostaDoContacto,
 } from "./seguimento-do-cliente";
 import {
@@ -939,6 +940,8 @@ async function arquivarSemResposta(pool: Pool, p: PedidoLido, c: LinhaDoSeguimen
 
 export type SeguimentoNaMesa = {
   pedidoId: number;
+  /** Quando a equipa marcou o «Falei com o cliente» (ISO) — uma mensagem do cliente depois disto pára o ciclo (d83 v2). */
+  marcadoEm: string;
   /** A correr e a enviar (com o interruptor ligado): sai da conta do «Precisa de si». */
   emCurso: boolean;
   /** Há ciclo por parar (o botão «Parar o seguimento»). */
@@ -981,6 +984,7 @@ export async function seguimentoNaMesa(): Promise<{ ligado: boolean; pedidos: Se
           : c;
       return {
         pedidoId: c.pedidoId,
+        marcadoEm: c.marcadoEm.toISOString(),
         emCurso: ligado && seguimentoEmCurso(vista),
         podeParar: seguimentoEmCurso(vista),
         linha: linhaDoSeguimentoNaMesa(vista, ligado),
@@ -989,6 +993,19 @@ export async function seguimentoNaMesa(): Promise<{ ligado: boolean; pedidos: Se
       };
     }),
   };
+}
+
+/**
+ * OS PEDIDOS EM SEGUIMENTO ACTIVO — d83 v2, 22-11-2026. A mesma conta do
+ * `emCurso` da Mesa (`seguimentoNaMesa`: a correr, com canal, o interruptor
+ * ligado e o cliente sem ter escrito depois da marcação), para quem conta o
+ * que espera por nós fora do ecrã da Mesa: os avisos à equipa do «Do nosso
+ * lado» e o «à espera de si» do Início. Uma falha deixa contar como antes —
+ * quem chama apanha-a e passa uma lista vazia.
+ */
+export async function pedidosEmSeguimentoActivo(): Promise<PedidoEmSeguimento[]> {
+  const { pedidos } = await seguimentoNaMesa();
+  return pedidos.filter((p) => p.emCurso).map((p) => ({ pedidoId: p.pedidoId, marcadoEm: p.marcadoEm }));
 }
 
 /* ── As respostas do cliente (a Vitória, em whatsapp-negociacao.ts) ──────── */

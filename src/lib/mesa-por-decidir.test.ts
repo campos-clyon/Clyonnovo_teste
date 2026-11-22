@@ -136,7 +136,9 @@ describe("os de valor fixo ficam na Mesa (fase 2)", () => {
   });
 
   it("os que precisam de si também têm o «Salte para um», e os concluídos por ver contam", () => {
-    expect(MESA).toContain('{clyonDoBloco("n1").map((t) => (');
+    // d83 v2 (22-11-2026): os do «Precisa de si», menos os que estão em seguimento do cliente.
+    expect(MESA).toContain('const atalhosClyonDoN1 = clyonDoBloco("n1").filter((t) => !emSeguimento(t.pedidoId));');
+    expect(MESA).toContain("{atalhosClyonDoN1.map((t) => (");
     expect(MESA).toContain("onClick={() => irAoTrabalhoClyon(t.pedidoId)}");
     expect(MESA).toContain('clyonDoBloco("concluidos").filter((t) => !t.concluidoVistoEm).length');
   });

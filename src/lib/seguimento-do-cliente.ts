@@ -31,7 +31,7 @@
  * da Mesa. A base, a rotina e a fila estão em `seguimento-do-cliente-na-base.ts`.
  */
 
-import { diaEmLisboa, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
+import { diaEmLisboa, instanteDaBase, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { lerRespostaAoLembrete, type RespostaAoLembrete } from "./validade-do-orcamento";
 
 /** O nome do interruptor de emergência, como aparece nas Configs. */
@@ -161,6 +161,44 @@ export function cicloAcabado(c: CicloDoSeguimento): boolean {
 /** Está a correr e vai mesmo enviar — é o que tira o pedido da conta do «Precisa de si». */
 export function seguimentoEmCurso(c: CicloDoSeguimento | null | undefined): boolean {
   return Boolean(c && c.canal && !cicloAcabado(c));
+}
+
+/* ── A espera é do cliente (d83 v2, 22-11-2026) ──────────────────────────── */
+
+/**
+ * UM PEDIDO COM O SEGUIMENTO A CORRER, como sai do servidor
+ * (`pedidosEmSeguimentoActivo`, a mesma conta do `emCurso` da Mesa): o número
+ * e quando a equipa marcou o «Falei com o cliente».
+ */
+export type PedidoEmSeguimento = { pedidoId: number; marcadoEm: string | Date };
+
+/** Os pedidos em seguimento, pelo número, com o instante da marcação. Pura. */
+export function mapaDoSeguimento(lista: readonly PedidoEmSeguimento[] | null | undefined): Map<number, Date> {
+  const m = new Map<number, Date>();
+  for (const s of lista ?? []) {
+    const id = Number(s?.pedidoId);
+    const em = instanteDaBase(s?.marcadoEm ?? null);
+    if (Number.isInteger(id) && id > 0 && em) m.set(id, em);
+  }
+  return m;
+}
+
+/**
+ * A ESPERA É DO CLIENTE, E NÃO NOSSA? Pura. Enquanto o seguimento corre, o
+ * pedido não conta como «à espera de nós» — no «Precisa de si», no «Do nosso
+ * lado», nos atalhos e no «à espera de si» do Início. Com a última mensagem do
+ * cliente: só se ele não escreveu DEPOIS da marcação (se escreveu, o ciclo
+ * pára e volta a contar como sempre, mesmo antes de a rotina o gravar).
+ */
+export function esperaEDoCliente(
+  mapa: ReadonlyMap<number, Date>,
+  pedidoId: number | null | undefined,
+  ultimaDoClienteEm?: Date | null,
+): boolean {
+  if (pedidoId == null) return false;
+  const marcadoEm = mapa.get(pedidoId);
+  if (!marcadoEm) return false;
+  return !clienteRespondeuAoSeguimento(marcadoEm, ultimaDoClienteEm ?? null);
 }
 
 /** A hora do ciclo, em Lisboa («10:00»). */

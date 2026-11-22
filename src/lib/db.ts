@@ -17519,6 +17519,16 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
   await ensureNegociacoesTable().catch(() => {});
 
   const activo = "(o.status IS NULL OR o.status NOT IN ('cancelado','concluido','arquivado'))";
+  /*
+   * O SEGUIMENTO DO CLIENTE — d83 v2 (22-11-2026). Os pedidos com o ciclo a
+   * correr não estão à espera de nós: a Vitória fala com o cliente à hora
+   * marcada. A mesma conta do `emCurso` da Mesa (`pedidosEmSeguimentoActivo`);
+   * sem a leitura, o «à espera de si» conta como antes.
+   */
+  const emSeguimento = import("./seguimento-do-cliente-na-base")
+    .then((m) => m.pedidosEmSeguimentoActivo())
+    .then((l) => l.map((x) => x.pedidoId).filter((id) => Number.isInteger(id) && id > 0))
+    .catch(() => [] as number[]);
 
   const [
     porEnviar,
@@ -17547,10 +17557,12 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
      * do lado do cliente, e pô-las aqui era pedir à equipa que respondesse por
      * quem pode falar por si.
      */
-    conta(
+    emSeguimento.then((foraDaConta) =>
+      conta(
       `SELECT COUNT(*) AS n FROM negociacoes g
          JOIN simulatorOrders o ON o.id = g.pedidoId
         WHERE ${activo}
+          ${foraDaConta.length > 0 ? `AND o.id NOT IN (${foraDaConta.map(() => "?").join(",")})` : ""}
           AND g.estado IN ('aberta','aguarda_contratacao')
           AND JSON_SEARCH(g.propostasJson, 'one', 'pendente', NULL, '$[*].estado') IS NOT NULL
           AND (
@@ -17560,6 +17572,8 @@ export async function resumoDoBackoffice(): Promise<ResumoDoBackoffice> {
             ) = 'backoffice'
             OR o.contactEmail IS NULL OR TRIM(o.contactEmail) = ''
           )`,
+      foraDaConta,
+      ),
     ),
     // O dia passou e ninguém deu o trabalho por feito.
     conta(

@@ -280,11 +280,22 @@ async function lerDoNossoLado(agora: Date): Promise<LinhaDoNossoLado[]> {
     console.error("[avisos-a-equipa] o fecho do modelo novo não se leu:", e instanceof Error ? e.message : e);
     return [];
   });
+  /*
+   * O SEGUIMENTO DO CLIENTE (d83 v2, 22-11-2026): os pedidos com o ciclo a
+   * correr não avisam como «à espera de nós» — a mesma conta do cartão da Mesa.
+   * Sem a leitura, avisa-se como antes.
+   */
+  const { pedidosEmSeguimentoActivo } = await import("./seguimento-do-cliente-na-base");
+  const emSeguimento = await pedidosEmSeguimentoActivo().catch((e) => {
+    console.error("[avisos-a-equipa] o seguimento do cliente não se leu:", e instanceof Error ? e.message : e);
+    return [];
+  });
   const grupos = doNossoLado({
     conversas,
     pedidos: JSON.parse(JSON.stringify(pedidos)),
     trabalhosClyon,
     semFecho,
+    emSeguimento,
     agora,
   });
   return grupos.flatMap((g) => g.linhas);

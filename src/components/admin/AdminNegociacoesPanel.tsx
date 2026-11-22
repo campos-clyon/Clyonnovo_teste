@@ -2650,6 +2650,14 @@ export default function AdminNegociacoesPanel({
   ]);
   const emSeguimento = (id: number) => seguimentos[id]?.emCurso === true;
   const emSeguimentoNoN1 = [...idsDoPrecisaDeSi].filter(emSeguimento);
+  /*
+   * d83 v2 (22-11-2026): os mesmos pedidos, para o «Do nosso lado» do topo —
+   * as conversas deles, os preços e as propostas por enviar e os escolhidos sem
+   * resposta deixam de contar como «à espera de nós» (`semOsEmSeguimento`).
+   */
+  const pedidosEmSeguimento = Object.values(seguimentos)
+    .filter((s) => s.emCurso)
+    .map((s) => ({ pedidoId: s.pedidoId, marcadoEm: s.marcadoEm ?? "" }));
   /** No «Precisa de si», os em seguimento vão para o fim do bloco, por baixo da linha «Em seguimento · N». */
   const comOsEmSeguimentoNoFim = (chave: string, itens: Array<{ id: number; el: ReactNode }>): ReactNode[] => {
     if (chave !== "n1" || emSeguimentoNoN1.length === 0) return itens.map((x) => x.el);
@@ -2704,6 +2712,14 @@ export default function AdminNegociacoesPanel({
    * Assim não há divergência possível: são o mesmo array.
    */
   const aEsperar = mostrar === "clientes" ? [] : porNivel.n1;
+  /*
+   * OS ATALHOS SEM OS EM SEGUIMENTO — d83 v2 (22-11-2026). «Salte para um»
+   * é o que espera por nós; um pedido com o seguimento a correr está na linha
+   * «Em seguimento · N» do bloco e não na conta dele, e por isso também não
+   * aqui. Quando o cliente responde, ou o ciclo pára, volta a ser atalho.
+   */
+  const atalhosDoN1 = aEsperar.filter((p) => !emSeguimento(p.id));
+  const atalhosClyonDoN1 = clyonDoBloco("n1").filter((t) => !emSeguimento(t.pedidoId));
   /*
    * Concluídos e Cancelados não filtram por `mostrar` — mostram os de todos
    * os modos, como já faziam. A arrumação não é de quem negoceia.
@@ -4804,6 +4820,7 @@ export default function AdminNegociacoesPanel({
           token={token}
           pedidos={pedidos}
           trabalhosClyon={trabalhosClyon}
+          emSeguimento={pedidosEmSeguimento}
           onAbrirPedido={(id) => {
             setBusca(`#${id}`);
             if (idsClyon.has(id)) irAoTrabalhoClyon(id);
@@ -5553,7 +5570,7 @@ export default function AdminNegociacoesPanel({
                             confirmar. Os primeiros foram para «A aguardar cliente» e
                             os segundos já estavam nos «Feitos». Agora os chips são
                             o próprio bloco — ver `aEsperar`. */}
-                        {b.chave === "n1" && (aEsperar.length > 0 || clyonDoBloco("n1").length > 0) && (
+                        {b.chave === "n1" && (atalhosDoN1.length > 0 || atalhosClyonDoN1.length > 0) && (
                           <div className="mb-3 flex flex-wrap items-center gap-2">
                             <Clock className="h-4 w-4 text-ciano-texto" aria-hidden="true" />
                             {/*
@@ -5566,7 +5583,7 @@ export default function AdminNegociacoesPanel({
                             <span className="text-xs text-ciano-texto">
                               Salte para um e a negociação abre já:
                             </span>
-                            {aEsperar.map((p) => {
+                            {atalhosDoN1.map((p) => {
                               const pendentes = p.negociacoes.filter(precisaDeSi);
                               const proposta = pendentes
                                 .flatMap((n) => propostasDe(n.propostasJson))
@@ -5598,7 +5615,7 @@ export default function AdminNegociacoesPanel({
                                 </a>
                               );
                             })}
-                            {clyonDoBloco("n1").map((t) => (
+                            {atalhosClyonDoN1.map((t) => (
                               <button
                                 key={`clyon-${t.pedidoId}`}
                                 type="button"
