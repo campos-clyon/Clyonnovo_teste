@@ -77,6 +77,8 @@ export function recebeOAviso(c: ContaDaEquipa, seccao: SeccaoDoAviso): boolean {
   if (Number(c.isAdmin ?? 0) === 1) return true;
   if (c.funcao !== "assistente") return false;
   const tem = seccoesGuardadas(c.seccoesJson);
+  // A caixa «Contactos» (d85): só quem tem a secção — os formulários e o Suporte não são da Mesa.
+  if (seccao === "contactos") return tem.includes("contactos");
   return seccao === "whatsapp" ? tem.includes("whatsapp") : tem.some((s) => SECCOES_DA_MESA.includes(s));
 }
 
@@ -312,6 +314,15 @@ function dependencias(agora: Date): DependenciasDosAvisos {
   return {
     lerDoNossoLado: () => lerDoNossoLado(agora),
     lerPorDecidir,
+    /*
+     * A CAIXA «CONTACTOS» — d85 fase 1 (22-11-2026): os formulários e a Suporte
+     * da app por responder há mais de 2 h no horário. As conversas do WhatsApp
+     * ficam no «Do nosso lado», acima. Grava também o número do dia.
+     */
+    lerContactos: async () => {
+      const { caixaDosContactos, contactosParaOAvisoNaBase } = await import("./caixa-dos-contactos-na-base");
+      return contactosParaOAvisoNaBase(await caixaDosContactos({ agora, gravarODia: true }), agora);
+    },
     reservar,
     entregasPorEnviar,
     aindaEntregue: async (telefone) => (await import("./db")).numeroInterrompidoWhatsApp(telefone),

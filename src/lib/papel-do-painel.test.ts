@@ -35,7 +35,8 @@ describe("secções", () => {
     expect([...SECCOES_DO_ASSISTENTE]).toEqual([
       "overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon",
       "profissionais", "agenda", "whatsapp", "carteiras", "pagamentos",
-      "levantamentos", "leads", "contas", "suporte", "configs",
+      // A caixa «Contactos» (d85, 22-11-2026), à cabeça de «Quem contacta».
+      "levantamentos", "contactos", "leads", "contas", "suporte", "configs",
     ]);
   });
 

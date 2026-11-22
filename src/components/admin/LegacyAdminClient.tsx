@@ -36,6 +36,7 @@ import { SECCOES_COM_AVISO } from "@/lib/novidades-do-backoffice";
 import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSeccao";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
 import AdminWhatsAppPanel from "@/components/admin/AdminWhatsAppPanel";
+import AdminContactosPanel from "@/components/admin/AdminContactosPanel";
 import AdminLevantamentosPanel from "@/components/admin/AdminLevantamentosPanel";
 import EmTodoOBackoffice, { ProcuraGlobalContext, type ProcuraGlobal } from "@/components/admin/NoutrosSitios";
 import GestoraDeContas from "@/components/admin/financas/GestoraDeContas";
@@ -86,6 +87,7 @@ import {
   ImagePlus,
   LayoutDashboard,
   LifeBuoy,
+  Inbox,
   ListChecks,
   LogOut,
   Mail,
@@ -163,6 +165,8 @@ type AdminSection =
   // Os trabalhos que a CLYON já vendeu, a valor fixo — 02-10-2026.
   | "trabalhos_clyon"
   | "whatsapp"
+  // A caixa «Contactos» — todos os canais numa lista (d85, 22-11-2026).
+  | "contactos"
   // As contas de assistente — só o administrador a vê.
   | "equipa";
 
@@ -267,6 +271,7 @@ const adminNavItems: Array<{
   { id: "negociacoes_clyon", icon: Building2 },
   { id: "trabalhos_clyon", icon: Briefcase },
   { id: "whatsapp", icon: MessageCircle },
+  { id: "contactos", icon: Inbox },
   { id: "equipa", icon: Users },
 ];
 
@@ -295,7 +300,8 @@ const NAV_GRUPOS: Array<{ titulo: string; itens: AdminSection[] }> = [
   // pela falta do pedido do Valter: com email, caía no outro ecrã, e "gerir em
   // dois sítios é gerir mal".
   { titulo: "Plataforma", itens: ["profissionais", "agenda", "whatsapp", "carteiras", "pagamentos", "levantamentos"] },
-  { titulo: "Quem contacta", itens: ["leads", "contas", "suporte"] },
+  // «Contactos» à cabeça (d85, 22-11-2026): é onde se vê quem espera por nós, de todos os canais.
+  { titulo: "Quem contacta", itens: ["contactos", "leads", "contas", "suporte"] },
   { titulo: "Gerir", itens: ["equipa", "configs"] },
 ];
 
@@ -376,6 +382,7 @@ const sectionLabels: Record<AdminSection, string> = {
   negociacoes_clyon: "Negociações",
   trabalhos_clyon: "Trabalhos CLYON",
   whatsapp: "WhatsApp",
+  contactos: "Contactos",
   equipa: "Assistentes",
 };
 
@@ -1989,7 +1996,9 @@ export default function ColaboradorAdminClient({
                               title={[
                                 novasDesdeQueOlhou > 0 ? `${novasDesdeQueOlhou} desde a última vez que abriu` : null,
                                 aFazer > 0
-                                  ? `${aFazer} ${aFazer === 1 ? "trabalho recebido do cliente" : "trabalhos recebidos do cliente"} com o profissional por pagar`
+                                  ? item.id === "contactos"
+                                    ? `${aFazer} ${aFazer === 1 ? "pessoa" : "pessoas"} por responder`
+                                    : `${aFazer} ${aFazer === 1 ? "trabalho recebido do cliente" : "trabalhos recebidos do cliente"} com o profissional por pagar`
                                   : null,
                               ]
                                 .filter(Boolean)
@@ -3505,6 +3514,14 @@ export default function ColaboradorAdminClient({
                 podeOferecerTrabalhoClyon={podeVer("trabalhos_clyon")}
                 eAdministrador={papel === "admin"}
               />
+            </section>
+          )}
+
+          {activeSection === "contactos" && (
+            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-5">
+              {/* d85 fase 1 (22-11-2026): todos os contactos numa lista — o WhatsApp, os
+                  formulários e o Suporte da app —, por quem espera há mais tempo. */}
+              <AdminContactosPanel />
             </section>
           )}
 

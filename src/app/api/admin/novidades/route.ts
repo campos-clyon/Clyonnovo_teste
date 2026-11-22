@@ -57,6 +57,19 @@ export async function GET(req: NextRequest) {
       contarPorFazer(),
     ]);
     /*
+     * A CAIXA «CONTACTOS» — d85 fase 1 (22-11-2026). Uma fila, como a dos
+     * Pagamentos: as pessoas por responder, de todos os canais, ficam no selo
+     * até alguém lhes responder — abrir não a apaga. A leitura dos últimos 2
+     * minutos serve (`contactosPorResponderParaOSelo`). Uma falha não apaga o resto.
+     */
+    try {
+      const { contactosPorResponderParaOSelo } = await import("@/lib/caixa-dos-contactos-na-base");
+      const porResponder = await contactosPorResponderParaOSelo();
+      if (porResponder > 0) porFazer.contactos = porResponder;
+    } catch (e) {
+      console.error("[novidades] contactos:", e instanceof Error ? e.message : e);
+    }
+    /*
      * AS ROTINAS VERMELHAS — 27-10-2026 (d7). No selo das Configs, e só para
      * o administrador: o painel «Rotinas» é dele.
      */

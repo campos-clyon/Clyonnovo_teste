@@ -69,6 +69,8 @@ export const SECCOES_DO_ASSISTENTE = [
   "carteiras",
   "pagamentos",
   "levantamentos",
+  // A caixa «Contactos» (d85, 22-11-2026): todos os canais numa lista, à cabeça de «Quem contacta».
+  "contactos",
   "leads",
   "contas",
   "suporte",
@@ -133,6 +135,7 @@ export const ROTULO_DA_SECCAO: Record<SeccaoDoAssistente, string> = {
   carteiras: "Finanças",
   pagamentos: "Pagamentos",
   levantamentos: "Levantamentos",
+  contactos: "Contactos",
   leads: "Leads",
   contas: "Contas",
   suporte: "Suporte",
@@ -269,6 +272,8 @@ export const PREFIXOS_DE_API_DO_ASSISTENTE = [
   "/api/admin/contas-de-destino",
   // O comprovativo em PDF — 24-10-2026.
   "/api/admin/comprovativo",
+  // A caixa «Contactos» — d85 (22-11-2026). Ler e marcar «Respondido»; nunca apaga.
+  "/api/admin/contactos",
   // Leads e Contas — 03-10-2026.
   "/api/admin/leads",
   "/api/admin/lead-events",
@@ -390,7 +395,7 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   {
     prefixo: "/api/admin/procurar",
     // A barra está em todos os ecrãs; quem não tem nenhum grupo recebe uma resposta vazia.
-    seccoes: ["overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon", "agenda", "pagamentos", "carteiras", "whatsapp", "profissionais", "levantamentos", "contas", "suporte", "configs"],
+    seccoes: ["overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon", "agenda", "pagamentos", "carteiras", "whatsapp", "profissionais", "levantamentos", "contactos", "contas", "suporte", "configs"],
   },
   { prefixo: "/api/admin/agenda", seccoes: ["agenda"] },
   // d47: a mensagem na língua do cliente, para os botões que abrem o WhatsApp — não envia nada.
@@ -430,6 +435,7 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/pagamentos/a-receber-dos-profissionais", seccoes: ["pagamentos"] },
   { prefixo: "/api/admin/levantamentos", seccoes: ["levantamentos"] },
 
+  { prefixo: "/api/admin/contactos", seccoes: ["contactos"] },
   { prefixo: "/api/admin/leads", seccoes: ["leads"] },
   { prefixo: "/api/admin/lead-events", seccoes: ["leads"] },
   { prefixo: "/api/admin/users", seccoes: ["contas"] },

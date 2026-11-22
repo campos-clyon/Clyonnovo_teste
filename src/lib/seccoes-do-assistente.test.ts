@@ -367,12 +367,12 @@ describe("o que se oferece é o menu, menos «Assistentes»", () => {
     expect([...SECCOES_DO_ASSISTENTE]).toEqual(comOsPedidos.filter((id) => id !== "equipa"));
   });
 
-  it("são estas catorze, com estes ids", () => {
+  it("são estas quinze, com estes ids — «Contactos» desde 22-11-2026 (d85)", () => {
     // A «App CLYON» (app_clyon) saiu a 18-10-2026, com a app antiga.
     expect([...SECCOES_DO_ASSISTENTE]).toEqual([
       "overview", "pedidos", "negociacoes_clyon", "trabalhos_clyon",
       "profissionais", "agenda", "whatsapp", "carteiras", "pagamentos",
-      "levantamentos", "leads", "contas", "suporte", "configs",
+      "levantamentos", "contactos", "leads", "contas", "suporte", "configs",
     ]);
   });
 

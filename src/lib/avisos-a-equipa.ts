@@ -3,6 +3,7 @@ import { haQuanto } from "./mesa-das-conversas";
 import type { LinhaDoNossoLado } from "./do-nosso-lado";
 import { telefoneLegivel } from "./telefone-legivel";
 import { TITULO_DO_AVISO_SEM_RESPOSTA } from "./escolhidos-sem-resposta";
+import { rotuloDoCanal, type ContactoParaOAviso } from "./caixa-dos-contactos";
 
 /**
  * OS AVISOS À EQUIPA — o que está parado chega ao telemóvel. d23, 10-11-2026.
@@ -64,9 +65,9 @@ export const FOLGA_DA_MESMA_ESPERA_MS = 10 * 60 * 1000;
 export const ENTREGA_VALE_MS = 16 * 3600 * 1000;
 
 /** Que parte da equipa o recebe: a Mesa ou o WhatsApp (o administrador recebe tudo). */
-export type SeccaoDoAviso = "mesa" | "whatsapp";
+export type SeccaoDoAviso = "mesa" | "whatsapp" | "contactos";
 
-export type TipoDoAviso = "nosso_lado" | "por_decidir" | "entregue";
+export type TipoDoAviso = "nosso_lado" | "por_decidir" | "entregue" | "contacto";
 
 export type AvisoAEquipa = {
   /** Única por pedido e por estado — ver `chaveDoAviso`. */
@@ -162,6 +163,32 @@ export function avisosDoPorDecidir(pedidos: readonly PedidoPorDecidir[], agora: 
 }
 
 /**
+ * OS CONTACTOS SEM RESPOSTA — d85 fase 1 (22-11-2026). Os formulários do site
+ * e a Suporte da app por responder há mais de 2 h dentro do horário (seg–sáb
+ * 08h–20h), pela conta da caixa «Contactos» (`contactosParaOAviso`). As
+ * conversas do WhatsApp não entram: já avisam pelo «Do nosso lado». Um por
+ * pessoa e por espera; o corpo não leva o email — vai para o ecrã de bloqueio.
+ */
+export function avisosDosContactos(linhas: readonly ContactoParaOAviso[]): AvisoAEquipa[] {
+  return linhas.map((c) => {
+    const telefone = c.chave.startsWith("t:") ? c.chave.slice(2) : null;
+    const canais = c.canais.map(rotuloDoCanal).join(" e ");
+    const quem = c.pedidoId != null ? `Pedido #${c.pedidoId}` : telefone ? telefoneLegivel(telefone) : "Um contacto por email";
+    return {
+      chave: `contacto:${c.chave}`.slice(0, 120),
+      tipo: "contacto" as const,
+      pedidoId: c.pedidoId,
+      telefone,
+      desde: c.desde,
+      seccao: "contactos" as const,
+      titulo: `Contacto sem resposta ${haQuanto(c.esperaUtilS)} (no horário)`,
+      corpo: `${quem}: ${canais} por responder. Responda e marque «Respondido» nos Contactos.`,
+      url: "/admin?section=contactos",
+    };
+  });
+}
+
+/**
  * O aviso de uma conversa entregue a uma pessoa. Com o n.º do pedido, se o
  * houver; sem ele, o contacto. A chave leva o instante: cada entrega é uma.
  */
@@ -195,6 +222,8 @@ export type DependenciasDosAvisos = {
   /** As linhas do «Do nosso lado», pela conta da Mesa. Pode lançar: conta como «não lido». */
   lerDoNossoLado: () => Promise<LinhaDoNossoLado[]>;
   lerPorDecidir: () => Promise<PedidoPorDecidir[]>;
+  /** Os contactos da caixa «Contactos» fora do «Do nosso lado» acima do prazo (d85). Sem ela, não se lêem. */
+  lerContactos?: () => Promise<ContactoParaOAviso[]>;
   /**
    * Guarda o aviso e devolve `true` se há que o enviar: uma espera nova, ou a
    * mesma espera ainda por enviar. `false` se já chegou a alguém.
@@ -270,6 +299,12 @@ export async function correrOsAvisosDaEquipa(
     .lerPorDecidir()
     .then((p) => avisos.push(...avisosDoPorDecidir(p, agora)))
     .catch((e) => r.falhas.push(`orçamentos novos: ${e instanceof Error ? e.message : String(e)}`));
+  if (deps.lerContactos) {
+    await deps
+      .lerContactos()
+      .then((c) => avisos.push(...avisosDosContactos(c)))
+      .catch((e) => r.falhas.push(`contactos: ${e instanceof Error ? e.message : String(e)}`));
+  }
   r.acimaDosPrazos = avisos.length;
 
   for (const a of avisos) {
@@ -281,7 +316,11 @@ export async function correrOsAvisosDaEquipa(
       }
       await deps.marcarEnviado(a.chave, "enviado");
       r.enviados++;
-      r.linhas.push(`${a.tipo === "por_decidir" ? "Orçamentos novos" : "Do nosso lado"}: ${a.pedidoId != null ? `#${a.pedidoId}` : "conversa sem pedido"}.`);
+      r.linhas.push(
+        `${a.tipo === "por_decidir" ? "Orçamentos novos" : a.tipo === "contacto" ? "Contactos" : "Do nosso lado"}: ${
+          a.pedidoId != null ? `#${a.pedidoId}` : a.tipo === "contacto" ? "contacto sem pedido" : "conversa sem pedido"
+        }.`,
+      );
     } catch (e) {
       r.falhas.push(`${a.chave}: ${e instanceof Error ? e.message : String(e)}`);
     }
