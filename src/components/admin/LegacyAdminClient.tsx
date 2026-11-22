@@ -48,6 +48,7 @@ import InterruptorDoSeguimentoDoCliente from "@/components/admin/InterruptorDoSe
 import LembretesDoQueFalta from "@/components/admin/LembretesDoQueFalta";
 import InterruptorDoAvisoDoNovoModelo from "@/components/admin/InterruptorDoAvisoDoNovoModelo";
 import InterruptorDoSeguimentoDaVitoria from "@/components/admin/InterruptorDoSeguimentoDaVitoria";
+import InterruptorDaVitoriaAgente from "@/components/admin/InterruptorDaVitoriaAgente";
 import AdminRotinasPanel from "@/components/admin/AdminRotinasPanel";
 import AdminMetodosDePagamentoPanel from "@/components/admin/AdminMetodosDePagamentoPanel";
 import AdminContasDeDestinoPanel from "@/components/admin/AdminContasDeDestinoPanel";
@@ -3672,6 +3673,9 @@ export default function ColaboradorAdminClient({
 
               {/* A mensagem gentil da Vitória a quem fica calado (d25 v2): desligada por omissão, só o administrador. */}
               <InterruptorDoSeguimentoDaVitoria />
+
+              {/* A Vitória agente em ensaio (d85, fase 0): desligada por omissão, só o administrador; nunca envia, com o tecto diário e o termómetro. */}
+              <InterruptorDaVitoriaAgente />
 
               {/*
                 O LIVRO DE MOVIMENTOS — Fase 1 dos pagamentos.

@@ -2199,7 +2199,7 @@ async function conversaPresaARecolha(telefone: string, pedidos: number[], soImag
 }
 
 /** O "ecrã" — o estado das negociações dele, reescrito em texto. */
-async function ecraDoPedido(pedidoId: number): Promise<string> {
+export async function ecraDoPedido(pedidoId: number): Promise<string> {
   const pedido = await getSimulatorOrderById(pedidoId);
   const linhas = await negociacoesDoPedido(pedidoId);
   const vivas = linhas.filter((n) => n.estado !== "morta" && n.estado !== "desistida");

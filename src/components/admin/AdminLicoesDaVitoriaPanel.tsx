@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Ban, Check, Loader2, Pencil, RefreshCw, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
+import EnsaioDaVitoria from "@/components/admin/EnsaioDaVitoria";
 import {
   ESTADO_POR_EXTENSO,
   ORIGEM_POR_EXTENSO,
@@ -376,6 +377,8 @@ export default function AdminLicoesDaVitoriaPanel({ onPorRever }: { onPorRever?:
           ))}
         </ul>
       )}
+      {/* O ensaio da Vitória agente (d85, fase 0): a resposta real ao lado da do agente, para a equipa avaliar. */}
+      <EnsaioDaVitoria />
     </div>
   );
 }

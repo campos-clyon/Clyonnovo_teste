@@ -95,15 +95,26 @@ export const SQL_DAS_TABELAS_DO_QUE_FALTA = [
  */
 export const COLUNA_DA_PURGA_DO_QUE_FALTA = `ALTER TABLE lembretesDoQueFalta ADD COLUMN anonimizarAPartirDe DATETIME NULL DEFAULT NULL`;
 
+/**
+ * d85 (fase 0) — aditiva, nula, e por agora sem uso: a coluna da pergunta do
+ * CANCELAR, para o caminho comum de cancelar pelo lembrete. Hoje a d71 cancela
+ * com o «2» sem a pergunta (dono, 19-11-2026); se o CEO e o dono decidirem
+ * pedir o CANCELAR também aqui, muda-se só a confirmação da fonte dela
+ * (`cancelar-pelo-lembrete.ts`).
+ */
+export const COLUNA_DA_PERGUNTA_DO_QUE_FALTA = `ALTER TABLE lembretesDoQueFalta ADD COLUMN cancelarPedidoEm DATETIME NULL DEFAULT NULL`;
+
 async function garantirTabelas(): Promise<Pool> {
   const pool = await getPool();
   if (!pool) throw new Error("[lembrete-do-que-falta] base de dados indisponível");
   if (!tabelasProntas) {
     for (const sql of SQL_DAS_TABELAS_DO_QUE_FALTA) await pool.execute(sql);
-    try {
-      await pool.execute(COLUNA_DA_PURGA_DO_QUE_FALTA);
-    } catch (err) {
-      if ((err as { code?: string })?.code !== "ER_DUP_FIELDNAME") throw err;
+    for (const coluna of [COLUNA_DA_PURGA_DO_QUE_FALTA, COLUNA_DA_PERGUNTA_DO_QUE_FALTA]) {
+      try {
+        await pool.execute(coluna);
+      } catch (err) {
+        if ((err as { code?: string })?.code !== "ER_DUP_FIELDNAME") throw err;
+      }
     }
     await pool.execute("INSERT IGNORE INTO lembretesDoQueFaltaVez (id, proximoEm) VALUES (1, '2000-01-01 00:00:00')");
     tabelasProntas = true;
@@ -518,12 +529,11 @@ export async function darOPasso(pedidoId: number, passo: PassoDoQueFalta, agora:
     return { ok: false, porque: parar };
   }
   if (proximoPassoDoQueFalta(c, agora) !== passo) return { ok: false, porque: "não é a vez deste passo" };
-  // d83 (21-11-2026): nunca no dia em que já saiu o seguimento do cliente a este número.
+  // d85 (fase 0): nunca no dia em que já saiu outra mensagem automática a este número — de qualquer rotina, pela contagem comum.
   if (c.canal === "whatsapp" && p?.contactPhone) {
-    const { jaSaiuHojeAoCliente } = await import("./seguimento-do-cliente");
-    const { datasDoSeguimentoDoTelefone } = await import("./seguimento-do-cliente-na-base");
-    const doSeguimento = await datasDoSeguimentoDoTelefone(p.contactPhone).catch(() => [] as Date[]);
-    if (jaSaiuHojeAoCliente(doSeguimento, agora)) return { ok: false, porque: "já saiu hoje o seguimento do cliente a este número (d83)" };
+    const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
+    const outra = await jaSaiuHojeUmaMensagemAutomatica({ telefone: p.contactPhone }, agora, { pool }).catch(() => false);
+    if (outra) return { ok: false, porque: "já saiu hoje uma mensagem automática a este número (de outra rotina)" };
   }
   const pedido = { id: p!.id, serviceType: p!.serviceType, city: p!.city };
   const texto = textoDoPasso(passo, pedido, p!.faltas as ChaveDaFalta[], agora);
@@ -678,57 +688,19 @@ export async function cancelarPeloLembreteDoQueFalta(
   telefone: string,
 ): Promise<{ ok: true } | { ok: false; porque: string }> {
   const pool = await garantirTabelas();
-  const [reserva] = (await pool.execute(
-    `UPDATE lembretesDoQueFalta SET canceladoEm = UTC_TIMESTAMP(), porEnviar = NULL, porEnviarDesde = NULL
-      WHERE pedidoId = ? AND lembrete1Em IS NOT NULL AND canceladoEm IS NULL AND arquivadoEm IS NULL AND paradoEm IS NULL`,
-    [pedidoId],
-  )) as [{ affectedRows: number }, unknown];
-  if (Number(reserva.affectedRows) !== 1) return { ok: false, porque: "não há lembrete em aberto para este pedido" };
-  const desfazer = async (porque: string) => {
-    await pool.execute("UPDATE lembretesDoQueFalta SET canceladoEm = NULL WHERE pedidoId = ?", [pedidoId]).catch(() => {});
-    await pararOCiclo(pool, pedidoId, porque).catch(() => {});
-  };
-
-  const [p] = await lerPedidos(pool, [pedidoId]);
-  if (!p) {
-    await desfazer("o pedido já não existe");
-    return { ok: false, porque: "o pedido já não existe" };
-  }
-  if (pedidoFechado(p.status)) {
-    await desfazer("o pedido já estava fechado");
-    return { ok: false, porque: "o pedido já estava fechado" };
-  }
-  if (p.jaFoiEnviado) {
-    await desfazer("o pedido já foi aos parceiros");
-    return { ok: false, porque: "o pedido já foi aos parceiros" };
-  }
-
-  const { cancelarPedido, gravarMotivoDoFecho, negociacoesDoPedido } = await import("./db");
-  const existentes = await negociacoesDoPedido(pedidoId).catch(() => []);
-  const r = await cancelarPedido(pedidoId);
-  if (!r) {
-    await desfazer("o pedido já não existe");
-    return { ok: false, porque: "o pedido já não existe" };
-  }
-  await gravarMotivoDoFecho(pedidoId, "ja_nao_precisa", null, null).catch(() => {});
-  // d71 v2: os dados saem daqui a 7 dias, pela purga dos cancelados pelo lembrete (a mesma da d62/d2) — nada sai agora.
-  const { DIAS_ATE_ANONIMIZAR_O_CANCELADO } = await import("./validade-do-orcamento");
-  await pool.execute(
-    `UPDATE lembretesDoQueFalta SET anonimizarAPartirDe = NOW() + INTERVAL ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} DAY WHERE pedidoId = ?`,
-    [pedidoId],
-  );
-  const { avisarDoCancelamento } = await import("./avisar-cancelamento");
-  await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo: "O cliente já não precisa", porQuem: "cliente" }).catch(() => {});
-  const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
-  const { mensagemDeCancelamento } = await import("./mensagens-das-fases");
-  await enviarTextoWhatsApp(telefone, mensagemDeCancelamento()).catch(() => false);
-
-  const resumo =
-    "O cliente respondeu «2» ao lembrete do que falta (d71): pedido cancelado, com o texto de cancelamento ao cliente. " +
-    `Os dados dele saem do pedido daqui a ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias, pela purga; reabrir o pedido até lá desfaz.`;
-  await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo }).catch(() => {});
-  await registarSemFalhar({ acontecimento: "pedido_cancelado", pedidoId, autorTipo: "cliente", autorNome: "WhatsApp (lembrete do que falta)", resumo });
-  return { ok: true };
+  // d85 (fase 0): o caminho comum de cancelar pelo lembrete, com a confirmação «logo» desta fonte (o «2» cancela, dono 19-11-2026).
+  const { FONTES_DO_CANCELAMENTO, responderAoCancelamento } = await import("./cancelar-pelo-lembrete");
+  const r = await responderAoCancelamento(FONTES_DO_CANCELAMENTO.queFalta, pool, pedidoId, telefone, null, {
+    verificar: async () => {
+      const [p] = await lerPedidos(pool, [pedidoId]);
+      if (!p) return { porque: "o pedido já não existe" };
+      if (pedidoFechado(p.status)) return { porque: "o pedido já estava fechado" };
+      if (p.jaFoiEnviado) return { porque: "o pedido já foi aos parceiros" };
+      return { eClyon: false, servico: p.serviceType ?? null, localidade: p.city ?? null };
+    },
+    aoDesfazer: (porque) => pararOCiclo(pool, pedidoId, porque),
+  });
+  return r.ok ? { ok: true } : r;
 }
 
 /* ── A Mesa ──────────────────────────────────────────────────────────────── */

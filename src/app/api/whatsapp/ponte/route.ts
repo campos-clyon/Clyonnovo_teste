@@ -92,6 +92,7 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     }
   }
 
+  let respondida = false;
   await comTrancaDoNumeroWhatsApp(telefone, async () => {
     // Relido DENTRO da tranca: quem a teve antes pode ter respondido a parte
     // disto, e o que já teve resposta não se responde outra vez.
@@ -114,7 +115,21 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
     await dentroDaRajada({ telefone, ultimaLida: ultimaMensagemLida(agora) }, () =>
       tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto, videos }),
     );
+    respondida = true;
   });
+  /*
+   * O ENSAIO EM SOMBRA DA VITÓRIA AGENTE — d85, fase 0 (22-11-2026). Depois
+   * de as regras de hoje responderem, e fora da tranca: com o interruptor
+   * «Vitória agente — ensaio» ligado (DESLIGADO por omissão), o agente lê a
+   * mesma conversa, sem dados de pessoas, e grava o que teria dito e feito.
+   * NUNCA envia. Desligado, sem chave ou com o tecto passado, não chama nada.
+   */
+  if (respondida) {
+    after(async () => {
+      const { ensaioEmSombra } = await import("@/lib/vitoria-agente/na-base");
+      await ensaioEmSombra(telefone).catch(() => undefined);
+    });
+  }
 }
 
 /**

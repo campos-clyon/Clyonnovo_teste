@@ -38,6 +38,7 @@ import {
 import { instanteDaBase } from "./hora-de-lisboa";
 import { eDeTeste, emailValido, telemovelPortugues } from "./lembrete-do-que-falta";
 import { pedidoFechado } from "./pedido-arrumado";
+import { jaSaiuHojeUmaMensagemAutomatica } from "./uma-mensagem-automatica-por-dia";
 import {
   assuntoDoSeguimento,
   clienteRespondeuAoSeguimento,
@@ -45,7 +46,6 @@ import {
   contactosDeJson,
   eMensagemDoSeguimento,
   eRespostaDoContacto,
-  jaSaiuHojeAoCliente,
   linhaDoContacto,
   linhaDoSeguimentoNaMesa,
   naJanelaDoSeguimento,
@@ -71,7 +71,6 @@ import {
   eConfirmacaoDoCancelamento,
   HORAS_PARA_CONFIRMAR_O_CANCELAMENTO,
   mesmoTelefoneEstrito,
-  textoDaConfirmacaoDoCancelamento,
 } from "./validade-do-orcamento";
 
 /* ── O interruptor de emergência (Configs) — LIGADO por omissão ──────────── */
@@ -348,88 +347,11 @@ export function canalParaOPedido(
 
 /* ── Uma por dia: todas as mensagens automáticas a este cliente ──────────── */
 
-const naoHaTabela = (err: unknown) => {
-  const code = (err as { code?: string })?.code;
-  return code === "ER_NO_SUCH_TABLE" || code === "ER_BAD_FIELD_ERROR";
-};
-
-/**
- * AS MENSAGENS AUTOMÁTICAS DESTE CONTACTO (de qualquer pedido dele): a
- * validade dos orçamentos (d62), os lembretes do que falta (d71) e este
- * seguimento. O telefone pelo número inteiro; o email tal e qual. Uma tabela
- * que ainda não existe não tem nada; outra falha lança (quem chama não envia).
+/*
+ * d85 (fase 0): a contagem é a comum a todas as rotinas
+ * (`uma-mensagem-automatica-por-dia.ts`) — a validade (d62), os lembretes do
+ * que falta (d71), este seguimento e as que vierem.
  */
-async function mensagensAutomaticasDoContacto(pool: Pool, telefone: string | null, email: string | null): Promise<Date[]> {
-  const tel = noveDigitos(telefone);
-  const mail = emailValido(email);
-  if (!tel && !mail) return [];
-  const fontes: Array<{ tabela: string; colunas: string[] }> = [
-    { tabela: "validadeDosOrcamentos", colunas: ["lembrete1Em", "ultimoAvisoEm", "fechadoEm"] },
-    { tabela: "lembretesDoQueFalta", colunas: ["lembrete1Em", "lembrete2Em", "lembrete3Em", "arquivadoEm"] },
-    { tabela: "seguimentoDoCliente", colunas: ["mensagem1Em", "mensagem2Em", "mensagem3Em", "arquivadoEm"] },
-  ];
-  const datas: Date[] = [];
-  for (const f of fontes) {
-    const onde: string[] = [];
-    const params: string[] = [];
-    if (tel) {
-      onde.push("RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?");
-      params.push(tel);
-    }
-    if (mail) {
-      onde.push("LOWER(TRIM(o.contactEmail)) = ?");
-      params.push(mail);
-    }
-    let rows: Array<Record<string, unknown>> = [];
-    try {
-      [rows] = (await pool.execute(
-        `SELECT ${f.colunas.map((c) => `v.${c}`).join(", ")}, o.contactPhone, o.contactEmail
-           FROM ${f.tabela} v
-           JOIN simulatorOrders o ON o.id = v.pedidoId
-          WHERE ${onde.join(" OR ")}
-          ORDER BY v.pedidoId DESC
-          LIMIT 50`,
-        params,
-      )) as [Array<Record<string, unknown>>, unknown];
-    } catch (err) {
-      if (naoHaTabela(err)) continue;
-      throw err;
-    }
-    for (const r of rows) {
-      const doTelefone = telefone ? mesmoTelefoneEstrito(String(r.contactPhone ?? ""), telefone) : false;
-      const doEmail = mail ? emailValido(r.contactEmail as string | null) === mail : false;
-      if (!doTelefone && !doEmail) continue;
-      for (const c of f.colunas) {
-        const d = instanteDaBase(r[c] as string | Date | null);
-        if (d) datas.push(d);
-      }
-    }
-  }
-  return datas;
-}
-
-/**
- * AS MENSAGENS DESTE SEGUIMENTO a um telefone — para a validade (d62) e os
- * lembretes do que falta (d71) também não falarem no dia em que este falou.
- */
-export async function datasDoSeguimentoDoTelefone(telefone: string): Promise<Date[]> {
-  const tel = noveDigitos(telefone);
-  if (!tel) return [];
-  const pool = await garantirTabelas();
-  const [rows] = (await pool.execute(
-    `SELECT v.mensagem1Em, v.mensagem2Em, v.mensagem3Em, v.arquivadoEm, o.contactPhone
-       FROM seguimentoDoCliente v
-       JOIN simulatorOrders o ON o.id = v.pedidoId
-      WHERE RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
-      LIMIT 50`,
-    [tel],
-  )) as [Array<Record<string, unknown>>, unknown];
-  return rows
-    .filter((r) => mesmoTelefoneEstrito(String(r.contactPhone ?? ""), telefone))
-    .flatMap((r) => [r.mensagem1Em, r.mensagem2Em, r.mensagem3Em, r.arquivadoEm])
-    .map((v) => instanteDaBase(v as string | Date | null))
-    .filter((d): d is Date => d != null);
-}
 
 /* ── O «Falei com o cliente» (a Mesa) ────────────────────────────────────── */
 
@@ -684,8 +606,8 @@ export async function rotinaDoSeguimento(agora: Date = new Date()): Promise<Resu
     if (!v) continue;
     const passo = proximoPassoDoSeguimento(v.c, agora)!;
     try {
-      const datas = await mensagensAutomaticasDoContacto(pool, v.p.contactPhone, v.c.canal === "email" ? v.p.contactEmail : null);
-      if (jaSaiuHojeAoCliente(datas, agora)) continue;
+      const contacto = { telefone: v.p.contactPhone, email: v.c.canal === "email" ? v.p.contactEmail : null };
+      if (await jaSaiuHojeUmaMensagemAutomatica(contacto, agora, { pool })) continue;
     } catch (e) {
       r.falhados += 1;
       console.error("[seguimento-do-cliente] não li as mensagens de hoje — não envio:", e instanceof Error ? e.message : e);
@@ -816,8 +738,7 @@ export async function darOPasso(pedidoId: number, passo: PassoDoSeguimento, agor
     return { ok: false, porque: "conta de teste ou sem contacto" };
   }
   if (proximoPassoDoSeguimento(c, agora) !== passo) return { ok: false, porque: "não é a vez deste passo" };
-  const hoje = await mensagensAutomaticasDoContacto(pool, p.contactPhone, c.canal === "email" ? p.contactEmail : null);
-  if (jaSaiuHojeAoCliente(hoje, agora)) {
+  if (await jaSaiuHojeUmaMensagemAutomatica({ telefone: p.contactPhone, email: c.canal === "email" ? p.contactEmail : null }, agora, { pool })) {
     return { ok: false, porque: "já saiu hoje uma mensagem automática a este cliente (deste ou de outro pedido)" };
   }
 
@@ -1075,40 +996,21 @@ export type ResultadoDoCancelamentoPeloSeguimento =
 
 /**
  * O «3» AO SEGUIMENTO: NÃO cancela (d2). O ciclo pára (o cliente respondeu),
- * marca-se «à espera do CANCELAR» (reservado com affectedRows = 1) e
- * pergunta-se «Confirma que quer cancelar o pedido #N? Responda CANCELAR.».
- * Se a pergunta não sair, a marca desfaz-se.
+ * marca-se «à espera do CANCELAR» e pergunta-se «Confirma que quer cancelar o
+ * pedido #N? Responda CANCELAR.» — pelo caminho comum (d85,
+ * `cancelar-pelo-lembrete.ts`).
  */
 export async function pedirConfirmacaoDoCancelamentoDoSeguimento(pedidoId: number, telefone: string): Promise<ResultadoDoCancelamentoPeloSeguimento> {
   const pool = await garantirTabelas();
-  const [marca] = (await pool.execute(
-    `UPDATE seguimentoDoCliente
-        SET cancelarPedidoEm = UTC_TIMESTAMP(), porEnviar = NULL, porEnviarDesde = NULL,
-            paradoEm = COALESCE(paradoEm, UTC_TIMESTAMP()), respondeuEm = COALESCE(respondeuEm, UTC_TIMESTAMP()),
-            paradoPorque = COALESCE(paradoPorque, ?)
-      WHERE pedidoId = ? AND arquivadoEm IS NULL AND canceladoEm IS NULL
-        AND (cancelarPedidoEm IS NULL OR cancelarPedidoEm <= UTC_TIMESTAMP() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR)`,
-    ["«3» — à espera do CANCELAR", pedidoId],
-  )) as [{ affectedRows: number }, unknown];
-  if (Number(marca.affectedRows) !== 1) return { ok: true, estado: "a_espera_de_cancelar" };
-  const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
-  const saiu = await enviarTextoWhatsApp(telefone, textoDaConfirmacaoDoCancelamento(pedidoId)).catch(() => false);
-  if (!saiu) {
-    await pool.execute("UPDATE seguimentoDoCliente SET cancelarPedidoEm = NULL WHERE pedidoId = ? AND canceladoEm IS NULL", [pedidoId]);
-    return { ok: false, porque: "a pergunta do CANCELAR não saiu" };
-  }
-  await appendOrderHistory(pedidoId, {
-    type: "note",
-    by: null,
-    message: "O cliente respondeu «3» ao seguimento (d83): perguntámos se confirma o cancelamento (responde CANCELAR). Nada foi cancelado.",
-  }).catch(() => {});
-  return { ok: true, estado: "pediu_confirmacao" };
+  const { FONTES_DO_CANCELAMENTO, perguntarSeCancela } = await import("./cancelar-pelo-lembrete");
+  const r = await perguntarSeCancela(FONTES_DO_CANCELAMENTO.seguimento, pool, pedidoId, telefone);
+  return r.ok ? { ok: true, estado: r.estado } : r;
 }
 
 /**
- * O CANCELAR, com a pergunta feita e a valer (48 h): cancela pelo caminho de
- * sempre (`cancelarOPedido`), manda ao cliente o texto de cancelamento
- * aprovado e marca os dados para a purga 7 dias depois.
+ * O CANCELAR, com a pergunta feita e a valer (48 h): cancela pelo caminho
+ * comum, manda ao cliente o texto de cancelamento aprovado e marca os dados
+ * para a purga 7 dias depois. Um pedido já fechado não se cancela por aqui.
  */
 export async function confirmarCancelamentoPeloSeguimento(
   pedidoId: number,
@@ -1117,31 +1019,13 @@ export async function confirmarCancelamentoPeloSeguimento(
 ): Promise<ResultadoDoCancelamentoPeloSeguimento> {
   if (!eConfirmacaoDoCancelamento(texto)) return { ok: false, porque: "a resposta não é o CANCELAR" };
   const pool = await garantirTabelas();
-  const [reserva] = (await pool.execute(
-    `UPDATE seguimentoDoCliente SET canceladoEm = UTC_TIMESTAMP(), porEnviar = NULL, porEnviarDesde = NULL
-      WHERE pedidoId = ? AND canceladoEm IS NULL AND arquivadoEm IS NULL
-        AND cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > UTC_TIMESTAMP() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR`,
-    [pedidoId],
-  )) as [{ affectedRows: number }, unknown];
-  if (Number(reserva.affectedRows) !== 1) return { ok: false, porque: "não há pergunta do CANCELAR a valer para este pedido" };
-  const desfazer = () => pool.execute("UPDATE seguimentoDoCliente SET canceladoEm = NULL WHERE pedidoId = ?", [pedidoId]).catch(() => {});
-  const p = (await lerPedidos(pool, [pedidoId])).get(pedidoId);
-  if (!p || pedidoFechado(p.status) || p.anonimizado) {
-    await desfazer();
-    return { ok: false, porque: "o pedido já estava fechado" };
-  }
-  const r = await cancelarOPedido(pool, p, { porQuem: "cliente", autor: "WhatsApp (seguimento do cliente)", colab: null });
-  if (!r.ok) {
-    await desfazer();
-    return { ok: false, porque: r.porque };
-  }
-  const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
-  const { mensagemDeCancelamento } = await import("./mensagens-das-fases");
-  await enviarTextoWhatsApp(telefone, mensagemDeCancelamento()).catch(() => false);
-  const resumo =
-    `O cliente confirmou com CANCELAR, depois do «3» ao seguimento (d83): pedido cancelado, ${r.encerradas} negociação(ões) encerrada(s). ` +
-    `Os dados dele saem do pedido daqui a ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias, pela purga; reabrir o pedido até lá desfaz.`;
-  await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo }).catch(() => {});
-  await registarSemFalhar({ acontecimento: "pedido_cancelado", pedidoId, autorTipo: "cliente", autorNome: "WhatsApp (seguimento do cliente)", resumo });
-  return { ok: true, estado: "cancelado" };
+  const { FONTES_DO_CANCELAMENTO, cancelarPeloLembreteComum } = await import("./cancelar-pelo-lembrete");
+  const r = await cancelarPeloLembreteComum(FONTES_DO_CANCELAMENTO.seguimento, pool, pedidoId, telefone, {
+    verificar: async () => {
+      const p = (await lerPedidos(pool, [pedidoId])).get(pedidoId);
+      if (!p || pedidoFechado(p.status) || p.anonimizado) return { porque: "o pedido já estava fechado" };
+      return { eClyon: p.eClyon, servico: p.serviceType, localidade: p.city };
+    },
+  });
+  return r.ok ? { ok: true, estado: "cancelado" } : r;
 }

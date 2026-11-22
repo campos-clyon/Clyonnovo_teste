@@ -26,6 +26,7 @@ import {
   textoDaConfirmacaoDoCancelamento,
 } from "./validade-do-orcamento";
 import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
+import { FONTES_DO_CANCELAMENTO } from "./cancelar-pelo-lembrete";
 import {
   ETIQUETA_DO_FECHO_SEM_RESPOSTA,
   fechadoSemResposta,
@@ -51,6 +52,7 @@ const ARQUIVAR = ler("src/lib/arquivar-sem-resposta.ts");
 const PONTE = ler("src/app/api/whatsapp/ponte/route.ts");
 const ROTA_TC = ler("src/app/api/admin/trabalhos-clyon/route.ts");
 const CRON = ler("src/app/api/cron/validade-dos-orcamentos/route.ts");
+const COMUM = ler("src/lib/cancelar-pelo-lembrete.ts");
 const VERCEL = JSON.parse(ler("vercel.json")) as { crons: Array<{ path: string; schedule: string }> };
 
 /** 17-11-2026 (terça), 10h de Lisboa — no Inverno, Lisboa = UTC. */
@@ -256,7 +258,14 @@ describe("as três respostas", () => {
 describe("a anonimização do «já não preciso» (d2: pela purga, 7 dias depois)", () => {
   const entre = (a: string, b: string) => BASE.slice(BASE.indexOf(a), BASE.indexOf(b, BASE.indexOf(a) + 1));
   it("o CANCELAR cancela, avisa e manda o texto aprovado — e NÃO anonimiza no momento: marca para a purga", () => {
-    const corpo = entre("export async function confirmarCancelamentoPeloLembrete(", "export async function cancelarPeloLembrete(");
+    // d85 (fase 0): a validade chama o caminho comum, e só depois de conferir que é o CANCELAR.
+    const daValidade = entre("export async function confirmarCancelamentoPeloLembrete(", "export async function cancelarPeloLembrete(");
+    expect(daValidade.indexOf("if (!eConfirmacaoDoCancelamento(texto))")).toBeGreaterThan(-1);
+    expect(daValidade.indexOf("cancelarPeloLembreteComum(FONTES_DO_CANCELAMENTO.validade")).toBeGreaterThan(
+      daValidade.indexOf("if (!eConfirmacaoDoCancelamento(texto))"),
+    );
+    expect(daValidade).not.toContain("cancelarPedido(");
+    const corpo = COMUM.slice(COMUM.indexOf("export async function cancelarPeloLembreteComum("), COMUM.indexOf("export async function responderAoCancelamento("));
     const cancelar = corpo.indexOf("await cancelarPedido(pedidoId)");
     const texto = corpo.indexOf("mensagemDeCancelamento()");
     expect(cancelar).toBeGreaterThan(-1);
@@ -264,17 +273,26 @@ describe("a anonimização do «já não preciso» (d2: pela purga, 7 dias depoi
     expect(corpo).not.toContain("anonimizarPedido");
     expect(corpo).toContain("anonimizarAPartirDe = NOW() + INTERVAL ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} DAY");
     expect(corpo).toContain('gravarMotivoDoFecho(pedidoId, "ja_nao_precisa"');
-    expect(corpo.indexOf("if (!eConfirmacaoDoCancelamento(texto))")).toBeLessThan(cancelar);
+    expect(corpo.indexOf("if (Number(reserva.affectedRows) !== 1)")).toBeLessThan(cancelar);
     expect(BASE).not.toMatch(/DELETE FROM simulatorOrders/);
+    expect(COMUM).not.toMatch(/DELETE FROM/);
   });
 
   it("o «3» (cancelarPeloLembrete) nunca chama anonimizarPedido nem cancela à primeira", () => {
-    const corpo = entre("export async function cancelarPeloLembrete(", "export async function desfazerAPurgaDoCancelamento(");
+    const daValidade = entre("export async function cancelarPeloLembrete(", "export async function desfazerAPurgaDoCancelamento(");
+    expect(daValidade).toContain("responderAoCancelamento(FONTES_DO_CANCELAMENTO.validade");
+    expect(daValidade).not.toContain("cancelarPedido(");
+    // d85 (fase 0): o caminho comum — sem a pergunta feita, pergunta; sem o texto, não cancela.
+    const corpo = COMUM.slice(COMUM.indexOf("export async function responderAoCancelamento("));
     expect(corpo).not.toContain("anonimizarPedido");
     expect(corpo).not.toContain("cancelarPedido(");
-    expect(corpo).toContain("if (!aEspera) return pedirConfirmacaoDoCancelamento(pedidoId, telefone);");
+    expect(corpo).toContain("if (!estado.aEspera) return perguntarSeCancela(f, pool, pedidoId, telefone);");
     expect(corpo).toContain('if (textoDoCliente == null) return { ok: false');
-    const pedir = entre("export async function pedirConfirmacaoDoCancelamento(", "export async function confirmarCancelamentoPeloLembrete(");
+    // Com «pergunta», o cancelamento só depois de conferir o CANCELAR (o primeiro é o da «logo», da d71).
+    expect(corpo.indexOf("if (!eConfirmacaoDoCancelamento(textoDoCliente))")).toBeLessThan(corpo.lastIndexOf("cancelarPeloLembreteComum("));
+    expect(corpo.indexOf('if (f.confirmacao === "logo")')).toBeLessThan(corpo.indexOf("cancelarPeloLembreteComum("));
+    expect(FONTES_DO_CANCELAMENTO.validade.confirmacao).toBe("pergunta");
+    const pedir = COMUM.slice(COMUM.indexOf("export async function perguntarSeCancela("), COMUM.indexOf("export async function estadoDaPergunta("));
     expect(pedir).not.toContain("cancelarPedido(");
     expect(pedir).toContain("textoDaConfirmacaoDoCancelamento(pedidoId)");
     expect(pedir).toContain("if (Number(marca.affectedRows) !== 1)");
@@ -370,13 +388,14 @@ describe("d2 — o «3» pede confirmação e só o CANCELAR cancela", () => {
   it("um «3» de teste: a Vitória chama cancelarPeloLembrete, que sem pergunta feita só pergunta", () => {
     // A conversa (whatsapp-negociacao.ts) chama cancelarPeloLembrete no «3», com o texto do cliente…
     expect(VITORIA).toContain("base.cancelarPeloLembrete(c.pedidoId, telefone, texto)");
-    // …e o «3» nunca chega a cancelarPedido: o único cancelarPedido está atrás do CANCELAR.
-    expect(BASE.split("await cancelarPedido(").length - 1).toBe(1);
-    const confirmar = BASE.slice(BASE.indexOf("export async function confirmarCancelamentoPeloLembrete("));
-    expect(confirmar.indexOf("await cancelarPedido(")).toBeGreaterThan(confirmar.indexOf("if (!eConfirmacaoDoCancelamento(texto))"));
+    // …e o «3» nunca chega a cancelarPedido: d85 — o único cancelarPedido do lembrete está no caminho comum, atrás da reserva.
+    expect(BASE.split("await cancelarPedido(").length - 1).toBe(0);
+    expect(COMUM.split("await cancelarPedido(").length - 1).toBe(1);
+    const confirmar = COMUM.slice(COMUM.indexOf("export async function cancelarPeloLembreteComum("));
     expect(confirmar.indexOf("await cancelarPedido(")).toBeGreaterThan(confirmar.indexOf("if (Number(reserva.affectedRows) !== 1)"));
-    // A pergunta só vale com cancelarPedidoEm marcado e dentro das 48 h.
-    expect(BASE).toContain("cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR");
+    // A pergunta só vale com cancelarPedidoEm marcado e dentro das 48 h (a validade com o NOW() de sempre).
+    expect(COMUM).toContain("AND cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > ${agora} - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR");
+    expect(FONTES_DO_CANCELAMENTO.validade.agoraSql).toBe("NOW()");
   });
 
   it("as colunas novas nascem aditivas, e um orçamento reenviado limpa-as", () => {

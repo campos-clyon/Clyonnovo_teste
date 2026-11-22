@@ -40,7 +40,6 @@ import {
   HORAS_PARA_CONFIRMAR_O_CANCELAMENTO,
   jaFalouHoje,
   mesmoTelefoneEstrito,
-  textoDaConfirmacaoDoCancelamento,
   linhaDaMesa,
   melhorProposta,
   naJanelaDaValidade,
@@ -472,16 +471,17 @@ async function ultimaSaidaParaOTelefone(pool: Pool, telefone: string): Promise<s
 }
 
 /**
- * d83 (21-11-2026): as mensagens do seguimento do cliente a este telefone
- * contam também para o «nunca duas no mesmo dia». Sem as conseguir ler,
- * segue como antes.
+ * d85 (fase 0): as mensagens automáticas de TODAS as rotinas a este telefone
+ * (a validade, os lembretes do que falta, o seguimento do cliente e as que
+ * vierem), pela contagem comum (`uma-mensagem-automatica-por-dia.ts`). Sem
+ * as conseguir ler, segue como antes (contam os ciclos desta rotina).
  */
-async function doSeguimentoDoCliente(telefone: string): Promise<Date[]> {
+async function outrasMensagensDeHoje(telefone: string, agora: Date): Promise<boolean> {
   try {
-    const { datasDoSeguimentoDoTelefone } = await import("./seguimento-do-cliente-na-base");
-    return await datasDoSeguimentoDoTelefone(telefone);
+    const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
+    return await jaSaiuHojeUmaMensagemAutomatica({ telefone }, agora);
   } catch {
-    return [];
+    return false;
   }
 }
 
@@ -545,7 +545,7 @@ export async function rotinaDaValidade(agora: Date = new Date()): Promise<Result
   for (const lista of porTelefone.values()) {
     if (lista.some((v) => v.c.porEnviar)) continue;
     if (jaFalouHoje(lista.map((v) => v.c), agora)) continue;
-    if (jaFalouHoje([], agora, await doSeguimentoDoCliente(String(lista[0].p.contactPhone ?? "")))) continue;
+    if (await outrasMensagensDeHoje(String(lista[0].p.contactPhone ?? ""), agora)) continue;
     for (const v of lista) {
       const passo = proximoPasso(v.c, agora);
       if (!passo) continue;
@@ -642,8 +642,8 @@ async function darOPasso(
   if (jaFalouHoje(doTelefone.length ? doTelefone : [c], agora)) {
     return { ok: false, porque: "já saiu hoje uma mensagem automática a este cliente (deste ou de outro pedido)" };
   }
-  if (jaFalouHoje([], agora, await doSeguimentoDoCliente(telefone))) {
-    return { ok: false, porque: "já saiu hoje uma mensagem do seguimento do cliente a este número (d83)" };
+  if (await outrasMensagensDeHoje(telefone, agora)) {
+    return { ok: false, porque: "já saiu hoje uma mensagem automática a este número (de outra rotina)" };
   }
   const { servicoEmPalavras } = await import("./servico-em-palavras");
   const { lerBase } = await import("./base-do-preco");
@@ -804,8 +804,8 @@ export async function lembrarAgora(pedidoId: number, porQuem: string, agora: Dat
   if (jaFalouHoje([c, ...doTelefone.filter((x) => x.pedidoId !== pedidoId)], agora)) {
     return { ok: false, porque: "Já saiu hoje uma mensagem automática a este cliente (deste ou de outro pedido dele): o lembrete fica para amanhã." };
   }
-  if (jaFalouHoje([], agora, await doSeguimentoDoCliente(String(p.contactPhone ?? "")))) {
-    return { ok: false, porque: "Já saiu hoje uma mensagem do seguimento do cliente a este número: o lembrete fica para amanhã." };
+  if (await outrasMensagensDeHoje(String(p.contactPhone ?? ""), agora)) {
+    return { ok: false, porque: "Já saiu hoje outra mensagem automática a este número: o lembrete fica para amanhã." };
   }
   // Tira-o da fila, se lá estava: sai agora, uma vez.
   await pool.execute("UPDATE validadeDosOrcamentos SET porEnviar = NULL, porEnviarDesde = NULL WHERE pedidoId = ?", [pedidoId]);
@@ -1006,57 +1006,39 @@ export type ResultadoDoCancelamentoPeloLembrete =
   | { ok: true; estado: "pediu_confirmacao" | "a_espera_de_cancelar" | "cancelado"; porque?: string }
   | { ok: false; porque: string };
 
+/*
+ * d85 (fase 0): as três funções de sempre ficam, com os mesmos nomes, mas o
+ * caminho é UM só, comum à d62, à d71 e à d83 (`cancelar-pelo-lembrete.ts`).
+ */
+
 /**
- * O «3» (ou «já não preciso») ao lembrete: NÃO cancela. Marca o passo «à
- * espera do CANCELAR» (`cancelarPedidoEm`, reservado com affectedRows = 1, para
- * dois «3» seguidos não mandarem duas perguntas), pára a contagem (nada mais
- * sai nem fecha) e pergunta «Confirma que quer cancelar o pedido #N? Responda
- * CANCELAR.». Se a pergunta não sair, a marca desfaz-se e devolve ok: false (a
- * conversa passa à equipa).
+ * O «3» (ou «já não preciso») ao lembrete: NÃO cancela. Pergunta «Confirma
+ * que quer cancelar o pedido #N? Responda CANCELAR.» (`perguntarSeCancela`).
  */
 export async function pedirConfirmacaoDoCancelamento(pedidoId: number, telefone: string): Promise<ResultadoDoCancelamentoPeloLembrete> {
   const pool = await garantirTabelas();
-  const [marca] = (await pool.execute(
-    `UPDATE validadeDosOrcamentos
-        SET cancelarPedidoEm = NOW(), porEnviar = NULL, porEnviarDesde = NULL,
-            paradoEm = COALESCE(paradoEm, NOW()), paradoPorque = COALESCE(paradoPorque, ?)
-      WHERE pedidoId = ? AND fechadoEm IS NULL AND canceladoEm IS NULL
-        AND (cancelarPedidoEm IS NULL OR cancelarPedidoEm <= NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR)`,
-    ["«3» — à espera do CANCELAR", pedidoId],
-  )) as [{ affectedRows: number }, unknown];
-  if (Number(marca.affectedRows) !== 1) {
-    const [r] = (await pool.execute(
-      `SELECT 1 AS sim FROM validadeDosOrcamentos
-        WHERE pedidoId = ? AND canceladoEm IS NULL AND fechadoEm IS NULL
-          AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR LIMIT 1`,
-      [pedidoId],
-    )) as [Array<{ sim: number }>, unknown];
-    return r.length > 0
-      ? { ok: true, estado: "a_espera_de_cancelar", porque: "a pergunta já tinha saído" }
-      : { ok: false, porque: "o ciclo deste pedido já fechou (ou foi cancelado)" };
-  }
+  const { FONTES_DO_CANCELAMENTO, perguntarSeCancela } = await import("./cancelar-pelo-lembrete");
+  return perguntarSeCancela(FONTES_DO_CANCELAMENTO.validade, pool, pedidoId, telefone);
+}
 
-  const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
-  const saiu = await enviarTextoWhatsApp(telefone, textoDaConfirmacaoDoCancelamento(pedidoId)).catch(() => false);
-  if (!saiu) {
-    await pool.execute("UPDATE validadeDosOrcamentos SET cancelarPedidoEm = NULL WHERE pedidoId = ? AND canceladoEm IS NULL", [pedidoId]);
-    return { ok: false, porque: "a pergunta do CANCELAR não saiu" };
-  }
-  await appendOrderHistory(pedidoId, {
-    type: "note",
-    by: null,
-    message: "O cliente respondeu «3» ao lembrete do orçamento: perguntámos se confirma o cancelamento (responde CANCELAR). Nada foi cancelado.",
-  }).catch(() => {});
-  return { ok: true, estado: "pediu_confirmacao" };
+/** O pedido antes de cancelar pela validade: existe, e é (ou não) um Trabalho CLYON. */
+async function verificarParaAValidade(pedidoId: number) {
+  const { getSimulatorOrderById } = await import("./db");
+  const pedido = await getSimulatorOrderById(pedidoId);
+  if (!pedido) return { porque: "pedido não encontrado" };
+  return {
+    eClyon: (pedido as { valorFixoClyon?: unknown }).valorFixoClyon != null,
+    servico: pedido.serviceType ?? null,
+    localidade: pedido.city ?? null,
+  };
 }
 
 /**
  * O CANCELAR: só com a pergunta feita (e ainda a valer) e o texto a ser o
- * CANCELAR (`eConfirmacaoDoCancelamento`). Cancela o pedido, avisa os
- * parceiros e manda ao cliente o texto de cancelamento aprovado
- * (mensagens-das-fases.ts) — e NÃO anonimiza no momento: marca o pedido para a
- * purga a DIAS_ATE_ANONIMIZAR_O_CANCELADO dias (`anonimizarAPartirDe`); até lá
- * a equipa pode desfazer (reabrir o pedido, ou `desfazerAPurgaDoCancelamento`).
+ * CANCELAR (`eConfirmacaoDoCancelamento`). Cancela pelo caminho comum
+ * (`cancelarPeloLembreteComum`): avisa os parceiros, manda o texto de
+ * cancelamento aprovado e NÃO anonimiza no momento — marca o pedido para a
+ * purga a DIAS_ATE_ANONIMIZAR_O_CANCELADO dias; até lá a equipa pode desfazer.
  */
 export async function confirmarCancelamentoPeloLembrete(
   pedidoId: number,
@@ -1065,74 +1047,17 @@ export async function confirmarCancelamentoPeloLembrete(
 ): Promise<ResultadoDoCancelamentoPeloLembrete> {
   if (!eConfirmacaoDoCancelamento(texto)) return { ok: false, porque: "a resposta não é o CANCELAR" };
   const pool = await garantirTabelas();
-  // Reservar: só um CANCELAR cancela, e só com a pergunta ainda a valer.
-  const [reserva] = (await pool.execute(
-    `UPDATE validadeDosOrcamentos SET canceladoEm = NOW(), porEnviar = NULL, porEnviarDesde = NULL
-      WHERE pedidoId = ? AND canceladoEm IS NULL AND fechadoEm IS NULL
-        AND cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR`,
-    [pedidoId],
-  )) as [{ affectedRows: number }, unknown];
-  if (Number(reserva.affectedRows) !== 1) return { ok: false, porque: "não há pergunta do CANCELAR a valer para este pedido" };
-
-  const { getSimulatorOrderById, cancelarPedido, gravarMotivoDoFecho, quemTemOTrabalhoClyon } = await import("./db");
-  const desfazer = () =>
-    pool.execute("UPDATE validadeDosOrcamentos SET canceladoEm = NULL WHERE pedidoId = ?", [pedidoId]).catch(() => {});
-  const pedido = await getSimulatorOrderById(pedidoId);
-  if (!pedido) {
-    await desfazer();
-    return { ok: false, porque: "pedido não encontrado" };
-  }
-  const eClyon = (pedido as { valorFixoClyon?: unknown }).valorFixoClyon != null;
-  const MOTIVO = "O cliente já não precisa";
-  const existentes = await negociacoesDoPedido(pedidoId);
-  const doTrabalhoClyon = eClyon ? (await quemTemOTrabalhoClyon(pedidoId)).vivos : [];
-
-  const r = await cancelarPedido(pedidoId);
-  if (!r) {
-    await desfazer();
-    return { ok: false, porque: "pedido não encontrado" };
-  }
-  await gravarMotivoDoFecho(pedidoId, "ja_nao_precisa", null, null).catch(() => {});
-  // Para a purga, daqui a 7 dias — nada sai agora.
-  await pool.execute(
-    `UPDATE validadeDosOrcamentos SET anonimizarAPartirDe = NOW() + INTERVAL ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} DAY WHERE pedidoId = ?`,
-    [pedidoId],
-  );
-  if (eClyon) {
-    const { avisarCancelamentoDoTrabalhoClyon } = await import("./avisar-trabalho-clyon");
-    await avisarCancelamentoDoTrabalhoClyon({
-      pedidoId,
-      servico: pedido.serviceType ?? null,
-      localidade: pedido.city ?? null,
-      motivo: MOTIVO,
-      quem: doTrabalhoClyon,
-    }).catch(() => 0);
-  } else {
-    const { avisarDoCancelamento } = await import("./avisar-cancelamento");
-    await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo: MOTIVO, porQuem: "cliente" });
-  }
-  const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
-  const { mensagemDeCancelamento } = await import("./mensagens-das-fases");
-  await enviarTextoWhatsApp(telefone, mensagemDeCancelamento()).catch(() => false);
-
-  const resumo =
-    `O cliente confirmou com CANCELAR, depois do «3» ao lembrete do orçamento: pedido cancelado, ${r.encerradas} negociação(ões) encerrada(s). ` +
-    `Os dados dele saem do pedido daqui a ${DIAS_ATE_ANONIMIZAR_O_CANCELADO} dias, pela purga; reabrir o pedido até lá desfaz.`;
-  await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo }).catch(() => {});
-  await registarSemFalhar({ acontecimento: "pedido_cancelado", pedidoId, autorTipo: "cliente", autorNome: "WhatsApp (lembrete do orçamento)", resumo });
-  return { ok: true, estado: "cancelado" };
+  const { FONTES_DO_CANCELAMENTO, cancelarPeloLembreteComum } = await import("./cancelar-pelo-lembrete");
+  const r = await cancelarPeloLembreteComum(FONTES_DO_CANCELAMENTO.validade, pool, pedidoId, telefone, {
+    verificar: () => verificarParaAValidade(pedidoId),
+  });
+  return r.ok ? { ok: true, estado: "cancelado" } : r;
 }
 
 /**
  * O QUE A VITÓRIA CHAMA NO «3» (whatsapp-negociacao.ts) — d2: nunca cancela à
- * primeira.
- *
- *   · sem a pergunta feita: pergunta (`pedirConfirmacaoDoCancelamento`);
- *   · à espera do CANCELAR, com o texto do cliente: o CANCELAR cancela
- *     (`confirmarCancelamentoPeloLembrete`); outro texto (um «3» outra vez, um
- *     «já não preciso») não cancela e não pergunta outra vez;
- *   · à espera do CANCELAR, sem o texto (a conversa ainda não o passa): não
- *     cancela — devolve ok: false, e a conversa passa à equipa.
+ * primeira. Sem a pergunta feita, pergunta; à espera, só o CANCELAR cancela;
+ * sem o texto, passa à equipa (`responderAoCancelamento`).
  */
 export async function cancelarPeloLembrete(
   pedidoId: number,
@@ -1140,17 +1065,10 @@ export async function cancelarPeloLembrete(
   textoDoCliente?: string | null,
 ): Promise<ResultadoDoCancelamentoPeloLembrete> {
   const pool = await garantirTabelas();
-  const [rows] = (await pool.execute(
-    `SELECT (cancelarPedidoEm IS NOT NULL AND cancelarPedidoEm > NOW() - INTERVAL ${HORAS_PARA_CONFIRMAR_O_CANCELAMENTO} HOUR) AS aEspera
-       FROM validadeDosOrcamentos WHERE pedidoId = ? AND canceladoEm IS NULL LIMIT 1`,
-    [pedidoId],
-  )) as [Array<{ aEspera: number }>, unknown];
-  if (!rows[0]) return { ok: false, porque: "sem ciclo da validade a correr para este pedido" };
-  const aEspera = Number(rows[0].aEspera) === 1;
-  if (!aEspera) return pedirConfirmacaoDoCancelamento(pedidoId, telefone);
-  if (textoDoCliente == null) return { ok: false, porque: "à espera do CANCELAR, sem o texto do cliente — confirmar à mão" };
-  if (eConfirmacaoDoCancelamento(textoDoCliente)) return confirmarCancelamentoPeloLembrete(pedidoId, telefone, textoDoCliente);
-  return { ok: true, estado: "a_espera_de_cancelar", porque: "a resposta não é o CANCELAR" };
+  const { FONTES_DO_CANCELAMENTO, responderAoCancelamento } = await import("./cancelar-pelo-lembrete");
+  return responderAoCancelamento(FONTES_DO_CANCELAMENTO.validade, pool, pedidoId, telefone, textoDoCliente, {
+    verificar: () => verificarParaAValidade(pedidoId),
+  });
 }
 
 /** A equipa desfaz: o pedido sai da purga dos cancelados pelo lembrete (os dados ficam). */

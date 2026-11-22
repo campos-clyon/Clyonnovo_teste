@@ -212,15 +212,18 @@ describe("nunca mais de uma mensagem automática por dia ao mesmo cliente", () =
     expect(jaSaiuHojeAoCliente([em("2026-07-10T23:30:00Z")], em("2026-07-11T10:00:00Z"))).toBe(true);
   });
 
-  it("a validade (d62) e os lembretes do que falta (d71) também contam as mensagens do seguimento", () => {
+  it("a validade (d62), os lembretes do que falta (d71) e o seguimento contam todos pela contagem comum (d85)", () => {
     const d62 = ler("src/lib/validade-do-orcamento-na-base.ts");
-    expect(d62).toContain("jaFalouHoje([], agora, await doSeguimentoDoCliente(telefone))");
-    expect(d62).toContain('jaFalouHoje([], agora, await doSeguimentoDoCliente(String(p.contactPhone ?? "")))');
-    expect(d62).toContain('jaFalouHoje([], agora, await doSeguimentoDoCliente(String(lista[0].p.contactPhone ?? "")))');
+    expect(d62).toContain("if (await outrasMensagensDeHoje(telefone, agora)) {");
+    expect(d62).toContain('if (await outrasMensagensDeHoje(String(p.contactPhone ?? ""), agora)) {');
+    expect(d62).toContain('if (await outrasMensagensDeHoje(String(lista[0].p.contactPhone ?? ""), agora)) continue;');
+    expect(d62).toContain("jaSaiuHojeUmaMensagemAutomatica({ telefone }, agora)");
     const d71 = ler("src/lib/lembrete-do-que-falta-na-base.ts");
-    expect(d71).toContain("datasDoSeguimentoDoTelefone(p.contactPhone)");
+    expect(d71).toContain("jaSaiuHojeUmaMensagemAutomatica({ telefone: p.contactPhone }, agora, { pool })");
     const base = ler("src/lib/seguimento-do-cliente-na-base.ts");
-    for (const t of ["validadeDosOrcamentos", "lembretesDoQueFalta", "seguimentoDoCliente"]) expect(base).toContain(`tabela: "${t}"`);
+    expect(base.split("await jaSaiuHojeUmaMensagemAutomatica(").length - 1).toBe(2);
+    const comum = ler("src/lib/uma-mensagem-automatica-por-dia.ts");
+    for (const t of ["validadeDosOrcamentos", "lembretesDoQueFalta", "seguimentoDoCliente"]) expect(comum).toContain(`tabela: "${t}"`);
   });
 });
 
