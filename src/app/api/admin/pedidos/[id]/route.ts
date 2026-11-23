@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
+import { motivoAoProfissional, motivoLimpo } from "@/lib/fim-do-pedido";
 import { gravarMotivoDoFecho, negociacoesDoPedido } from "@/lib/db";
 import { exigirMotivoDoFecho, fechaOPedido } from "@/lib/motivo-do-fecho";
 import { getSimulatorOrderById, updateSimulatorOrder, markOrderAsViewed, deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
@@ -120,7 +121,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const negociacoesAntes = fecha ? await negociacoesDoPedido(Number(id)).catch(() => []) : [];
 
   try {
-    await updateSimulatorOrder(Number(id), body as Parameters<typeof updateSimulatorOrder>[1]);
+    await updateSimulatorOrder(Number(id), body as Parameters<typeof updateSimulatorOrder>[1], {
+      motivo: motivoAoProfissional(null, motivoDoFecho?.ok ? motivoDoFecho.motivo : null),
+    });
   } catch (err: any) {
     console.error("[v0] PATCH /api/admin/pedidos/[id] updateSimulatorOrder error:", err?.message);
     return NextResponse.json(
@@ -169,10 +172,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const order = await getSimulatorOrderById(Number(id));
   if (!order) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
 
+  // d94: o motivo para os profissionais que o tinham — opcional, no corpo.
+  const corpo = (await req.json().catch(() => null)) as { motivo?: unknown } | null;
+  const motivoAoProfissional = motivoLimpo(typeof corpo?.motivo === "string" ? corpo.motivo : null);
   try {
     await deleteSimulatorOrder(Number(id), {
-      motivo: "apagado no backoffice",
+      motivo: motivoAoProfissional?.slice(0, 120) || "apagado no backoffice",
       autorNome: colab!.nome ?? null,
+      motivoAoProfissional,
     });
   } catch (e) {
     if (e instanceof TrabalhoEmCurso) {

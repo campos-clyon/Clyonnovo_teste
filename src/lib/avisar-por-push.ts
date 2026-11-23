@@ -334,6 +334,16 @@ export async function avisarProfissionalSemOTrabalhoPorPush(dados: {
 }): Promise<void> {
   if (!dados.email) return;
   try {
+    /*
+     * O MESMO FIM NÃO TOCA DUAS VEZES — d94 (23-11-2026). O cancelamento e o
+     * arquivo já avisaram pela função única do fim do pedido («Pedido #N
+     * cancelado — motivo»); as rotinas que ainda chamam isto a seguir
+     * (validade, seguimento, sem resposta) não repetem.
+     */
+    if (dados.porque === "cancelado" || dados.porque === "fechado_sem_resposta" || dados.porque === "sem_resposta") {
+      const { fimJaAvisado } = await import("./fim-do-pedido-na-base");
+      if (await fimJaAvisado(dados.pedidoId, dados.negociacaoId)) return;
+    }
     const aviso = avisoSemOTrabalho({ pedidoId: dados.pedidoId, porque: dados.porque, motivo: dados.motivo });
     await sendPushToUser(dados.email, {
       title: aviso.title,

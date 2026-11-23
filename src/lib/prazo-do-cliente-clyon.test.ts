@@ -148,7 +148,7 @@ describe("a rotina arquiva e avisa", () => {
 
     expect(r.arquivados).toEqual([510]);
     expect(db.updateSimulatorOrder).toHaveBeenCalledTimes(1);
-    expect(db.updateSimulatorOrder).toHaveBeenCalledWith(510, { status: "arquivado" });
+    expect(db.updateSimulatorOrder).toHaveBeenCalledWith(510, { status: "arquivado" }, { motivo: "o cliente não respondeu ao orçamento" });
     // Os dois que aceitaram, e não o que só a tinha recebido.
     expect(vi.mocked(avisarProfissionalSemOTrabalhoPorPush).mock.calls.map((c) => c[0].negociacaoId)).toEqual([1, 2]);
     expect(vi.mocked(avisarProfissionalSemOTrabalhoPorPush).mock.calls[0][0].porque).toBe("sem_resposta");
@@ -236,7 +236,7 @@ describe("o cliente respondeu (d2)", () => {
     expect(r.clienteRespondeu).toEqual([513, 514]);
     expect(r.arquivados).toEqual([515]);
     expect(db.updateSimulatorOrder).toHaveBeenCalledTimes(1);
-    expect(db.updateSimulatorOrder).toHaveBeenCalledWith(515, { status: "arquivado" });
+    expect(db.updateSimulatorOrder).toHaveBeenCalledWith(515, { status: "arquivado" }, { motivo: "o cliente não respondeu ao orçamento" });
   });
 
   it("restaurado depois de a rotina o arquivar: não leva um segundo «sem efeito» aos mesmos profissionais", async () => {

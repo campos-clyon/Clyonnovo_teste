@@ -183,6 +183,7 @@ import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { OUTRO_SERVICO_SEM_PROPOSTAS, outroSemPropostas } from "@/lib/outro-servico";
 import { O_CLIENTE_RESPONDEU } from "@/lib/prazo-do-cliente-clyon";
 import { blocoDoClyonNaMesa, mostraOClienteRespondeu, type TrabalhoClyonParaAMesa } from "@/lib/trabalho-clyon-na-mesa";
+import { pedirMotivoAoApagar } from "./motivo-ao-apagar";
 
 type Proposta = {
   por: "cliente" | "profissional";
@@ -2134,6 +2135,9 @@ export default function AdminNegociacoesPanel({
    */
   async function apagarPedidos(ids: number[]) {
     if (!token || ids.length === 0 || !podeApagar) return;
+    // d94: o motivo (opcional) vai na notificação aos profissionais que o tinham.
+    const motivo = pedirMotivoAoApagar();
+    if (motivo === null) return;
     setAApagar(true);
     setErro("");
     setRecusados([]);
@@ -2141,7 +2145,7 @@ export default function AdminNegociacoesPanel({
       const res = await fetch("/api/admin/negociacoes/apagar", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ ids, ...(motivo ? { motivo } : {}) }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -4715,6 +4719,9 @@ export default function AdminNegociacoesPanel({
     ) {
       return;
     }
+    // d94: o motivo (opcional) vai na notificação aos profissionais que os tinham.
+    const motivoAoApagar = pedirMotivoAoApagar();
+    if (motivoAoApagar === null) return;
     setAApagar(true);
     setErro("");
     setRecusados([]);
@@ -4722,7 +4729,7 @@ export default function AdminNegociacoesPanel({
       const res = await fetch("/api/admin/negociacoes/apagar", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: [...marcados] }),
+        body: JSON.stringify({ ids: [...marcados], ...(motivoAoApagar ? { motivo: motivoAoApagar } : {}) }),
       });
       const dados = await res.json();
       if (!res.ok) {

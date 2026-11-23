@@ -227,7 +227,7 @@ export async function agirComoCliente(a: {
         );
       }
 
-      const r = await cancelarPedido(pedidoId);
+      const r = await cancelarPedido(pedidoId, { motivo: motivo || "o cliente cancelou" });
       if (!r) return falha(404, "Pedido não encontrado.");
       // Os profissionais com proposta ou contratados ficam a saber, com o motivo (S19, BO24).
       await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo, porQuem: "cliente" });

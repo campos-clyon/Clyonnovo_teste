@@ -11,6 +11,7 @@ import {
 import { exigirMotivoDoFecho } from "@/lib/motivo-do-fecho";
 import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
+import { motivoAoProfissional } from "@/lib/fim-do-pedido";
 
 export const runtime = "nodejs";
 
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const r = await cancelarPedido(pedidoId);
+    const r = await cancelarPedido(pedidoId, { motivo: motivoAoProfissional(motivo, motivoDoFecho.motivo) });
     if (!r) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 });
     // O cliente e os profissionais ficam a saber, com o motivo (S19, BO23, 29-10-2026).
     await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo, porQuem: "clyon" });

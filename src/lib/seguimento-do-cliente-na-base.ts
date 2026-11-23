@@ -463,7 +463,7 @@ async function cancelarOPedido(
   const { cancelarPedido, gravarMotivoDoFecho, quemTemOTrabalhoClyon } = await import("./db");
   const existentes = await negociacoesDoPedido(p.id);
   const doTrabalhoClyon = p.eClyon ? (await quemTemOTrabalhoClyon(p.id)).vivos : [];
-  const r = await cancelarPedido(p.id);
+  const r = await cancelarPedido(p.id, { motivo: MOTIVO_DO_CANCELAMENTO });
   if (!r) return { ok: false, porque: "pedido não encontrado" };
   await gravarMotivoDoFecho(p.id, "ja_nao_precisa", null, quem.colab).catch(() => {});
   await pool.execute(
@@ -803,7 +803,7 @@ async function arquivarSemResposta(pool: Pool, p: PedidoLido, c: LinhaDoSeguimen
 
   const { updateSimulatorOrder, gravarMotivoDoFecho, perfilDoProfissional, quemTemOTrabalhoClyon } = await import("./db");
   const { avisarProfissionalSemOTrabalhoPorPush } = await import("./avisar-por-push");
-  const { textoDoFechoAoParceiro } = await import("./textos-dos-avisos-ao-profissional");
+  const { textoDoFechoAoParceiro, FECHADO_SEM_RESPOSTA } = await import("./textos-dos-avisos-ao-profissional");
 
   // Quem tem proposta — lido ANTES de arquivar, que encerra as negociações.
   const negs = await negociacoesDoPedido(p.id);
@@ -821,7 +821,7 @@ async function arquivarSemResposta(pool: Pool, p: PedidoLido, c: LinhaDoSeguimen
   const ids = new Set(comProposta.map((n) => Number(n.id)));
   const doTrabalhoClyon = p.eClyon ? (await quemTemOTrabalhoClyon(p.id)).vivos.filter((q) => ids.has(q.negociacaoId)) : [];
 
-  await updateSimulatorOrder(p.id, { status: "arquivado" });
+  await updateSimulatorOrder(p.id, { status: "arquivado" }, { motivo: FECHADO_SEM_RESPOSTA });
   await gravarMotivoDoFecho(p.id, "sem_resposta", null, null).catch(() => {});
 
   let avisados = 0;

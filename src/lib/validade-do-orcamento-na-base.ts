@@ -709,7 +709,7 @@ async function fecharPorFaltaDeResposta(pedidoId: number, p: PedidoAEspera, tele
   const pool = await garantirTabelas();
   const { updateSimulatorOrder, gravarMotivoDoFecho, perfilDoProfissional, quemTemOTrabalhoClyon } = await import("./db");
   const { avisarProfissionalSemOTrabalhoPorPush } = await import("./avisar-por-push");
-  const { textoDoFechoAoParceiro } = await import("./textos-dos-avisos-ao-profissional");
+  const { textoDoFechoAoParceiro, FECHADO_SEM_RESPOSTA } = await import("./textos-dos-avisos-ao-profissional");
 
   // Quem tem proposta — lido ANTES de arquivar, que encerra as negociações.
   const negs = await negociacoesDoPedido(pedidoId);
@@ -735,7 +735,7 @@ async function fecharPorFaltaDeResposta(pedidoId: number, p: PedidoAEspera, tele
   )) as [{ affectedRows: number }, unknown];
   if (Number(m.affectedRows) !== 1) return { ok: false, porque: "já fechado" };
 
-  await updateSimulatorOrder(pedidoId, { status: "arquivado" });
+  await updateSimulatorOrder(pedidoId, { status: "arquivado" }, { motivo: FECHADO_SEM_RESPOSTA });
   await gravarMotivoDoFecho(pedidoId, "sem_resposta", null, null).catch(() => {});
 
   let avisados = 0;

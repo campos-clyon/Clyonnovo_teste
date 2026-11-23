@@ -58,15 +58,16 @@ const NEGOCIACOES = [
 describe("S19 — os cancelamentos avisam", () => {
   it("pela Mesa (BO23): os profissionais com proposta ou contratados, com o motivo; o contratado também por WhatsApp; e o cliente", async () => {
     await avisarDoCancelamento({ pedidoId: 801, negociacoes: NEGOCIACOES, motivo: "O cliente mudou de casa.", porQuem: "clyon" });
-    expect(pushes.map((p) => p.email).sort()).toEqual(["pro11@exemplo.pt", "pro12@exemplo.pt"]);
-    expect(pushes.every((p) => p.porque === "cancelado" && p.motivo === "O cliente mudou de casa.")).toBe(true);
+    // d94: o aviso no telemóvel a cada profissional sai da função única do fim do pedido
+    // (`fimDoPedido`, testada em d94-fim-do-pedido.test.ts) — aqui não se repete.
+    expect(pushes).toEqual([]);
     expect(whatsapps).toEqual([{ para: "912 345 678", texto: "O pedido #801 foi cancelado. Motivo: O cliente mudou de casa." }]);
     expect(doCliente).toEqual([{ id: 801, tipo: "cancelado", motivo: "O cliente mudou de casa." }]);
   });
 
   it("pelo cliente (BO24): os profissionais sabem, e o cliente não recebe aviso do que ele próprio fez", async () => {
     await avisarDoCancelamento({ pedidoId: 802, negociacoes: NEGOCIACOES, motivo: null, porQuem: "cliente" });
-    expect(pushes).toHaveLength(2);
+    expect(pushes).toEqual([]); // d94: vai por `fimDoPedido`
     expect(doCliente).toEqual([]);
   });
 

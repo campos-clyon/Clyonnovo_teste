@@ -40,6 +40,7 @@ import {
   ESTADOS_QUE_TIRAM_DOS_PROS_SQL,
   pedidoArrumado,
 } from "@/lib/pedido-arrumado";
+import { porQueNaoSeApaga } from "@/lib/fim-do-pedido";
 import { IVA_INCLUIDO_DESDE, modeloDeHoje } from "@/lib/iva-incluido";
 import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { lerMudancaDeTaxa, type UltimaMudancaDeTaxa } from "@/lib/ultima-mudanca-de-taxa";
@@ -1966,6 +1967,8 @@ export type NegociacaoNaBase = {
  */
 export async function cancelarPedido(
   pedidoId: number,
+  /** d94: o motivo que vai na notificação a cada profissional («Pedido #N cancelado — motivo»). */
+  opcoes: { motivo?: string | null } = {},
 ): Promise<{ encerradas: number } | null> {
   await ensureSimulatorOrdersTable();
   await ensureNegociacoesTable();
@@ -1985,21 +1988,31 @@ export async function cancelarPedido(
   // COM MEMÓRIA, desde 30-09-2026: cada uma guarda o estado em que estava, e
   // o pedido guarda o dele. Um cancelamento por engano passa a ter volta —
   // ver `reabrirPedidoCancelado`.
-  const encerradas = await matarNegociacoesDoPedido(pedidoId, { lembrarOEstado: true });
-
-  try {
-    await pool.execute(
-      "UPDATE simulatorOrders SET statusAntesDeCancelar = status WHERE id = ? AND status <> 'cancelado'",
-      [pedidoId],
-    );
-  } catch (e) {
-    // Mesmo princípio: sem a memória, cancela-se na mesma.
-    console.error("[cancelarPedido] sem memória do estado do pedido:", e);
-  }
-  await pool.execute(
-    "UPDATE simulatorOrders SET status = 'cancelado', updatedAt = NOW() WHERE id = ?",
-    [pedidoId],
-  );
+  //
+  // PELA FUNÇÃO ÚNICA DO FIM DO PEDIDO — d94 (23-11-2026): fecha-as («tudo»,
+  // com a memória), grava o estado do pedido e só depois deixa a cada
+  // profissional envolvido a notificação «Pedido #N cancelado — motivo».
+  const { fimDoPedido } = await import("./fim-do-pedido-na-base");
+  const { encerradas } = await fimDoPedido(pedidoId, {
+    fim: "cancelado",
+    como: "tudo",
+    motivo: opcoes.motivo ?? null,
+    depoisDeFechar: async () => {
+      try {
+        await pool.execute(
+          "UPDATE simulatorOrders SET statusAntesDeCancelar = status WHERE id = ? AND status <> 'cancelado'",
+          [pedidoId],
+        );
+      } catch (e) {
+        // Mesmo princípio: sem a memória, cancela-se na mesma.
+        console.error("[cancelarPedido] sem memória do estado do pedido:", e);
+      }
+      await pool.execute(
+        "UPDATE simulatorOrders SET status = 'cancelado', updatedAt = NOW() WHERE id = ?",
+        [pedidoId],
+      );
+    },
+  });
   await fecharPagamentosAbertosDoPedido(pedidoId, "cancelado");
   return { encerradas };
 }
@@ -2164,6 +2177,8 @@ export async function reabrirPedidoCancelado(pedidoId: number): Promise<
       WHERE id = ? AND status = 'cancelado'`,
     [statusDeVolta, pedidoId],
   );
+  // d94: o pedido voltou — um cancelamento a seguir volta a avisar.
+  await (await import("./fim-do-pedido-na-base")).esquecerFimDoPedido(pedidoId);
 
   const nomes = new Map(mortas.map((n) => [Number(n.id), String(n.profissionalNome ?? "")]));
   return {
@@ -2225,6 +2240,8 @@ export async function restaurarPedidoArrumado(pedidoId: number): Promise<
   )) as [{ affectedRows?: number }, unknown];
   if (Number(r?.affectedRows ?? 0) === 0) return { ok: false, porque: "nao_esta_arrumado" };
   await reabrirNegociacoesDeUmPedidoArrumado(pedidoId);
+  // d94: o pedido voltou — um arquivo a seguir volta a avisar.
+  await (await import("./fim-do-pedido-na-base")).esquecerFimDoPedido(pedidoId);
   return { ok: true, estadoAntes, statusDeVolta, reconstruido: false };
 }
 
@@ -10376,7 +10393,9 @@ export async function updateSimulatorOrder(
     precisaFatura: number;
     filesJson: string | null;
     formaDePagamento: string | null;
-  }>
+  }>,
+  /** d94: o motivo que vai na notificação aos profissionais, quando o pedido passa a cancelado/arquivado. */
+  opcoesDoFim: { motivo?: string | null } = {},
 ) {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();
@@ -10436,12 +10455,27 @@ export async function updateSimulatorOrder(
    * aqui não desfaz a mudança: o painel do profissional já lê o pedido
    * arrumado como perdido (`negociacoesDoProfissional`).
    */
+  /*
+   * PELA FUNÇÃO ÚNICA DO FIM DO PEDIDO — d94 (23-11-2026): fecha as que estavam
+   * por fazer (como antes) e deixa a cada profissional envolvido a notificação
+   * («Pedido #N arquivado — motivo», «Pedido #N cancelado — motivo»). Ao sair
+   * do arquivo, as notificações esquecem-se: um fim a seguir volta a avisar.
+   */
   if (data.status !== undefined && prevForNotify && data.status !== prevForNotify.status) {
     const antes = pedidoArrumado(prevForNotify.status);
     const depois = pedidoArrumado(data.status);
     try {
-      if (depois && !antes) await fecharNegociacoesDeUmPedidoArrumado(id);
-      else if (antes && !depois) await reabrirNegociacoesDeUmPedidoArrumado(id);
+      const fimNaBase = await import("./fim-do-pedido-na-base");
+      if (depois && !antes) {
+        await fimNaBase.fimDoPedido(id, {
+          fim: data.status === "cancelado" ? "cancelado" : "arquivado",
+          como: "por_fazer",
+          motivo: opcoesDoFim.motivo ?? null,
+        });
+      } else if (antes && !depois) {
+        await reabrirNegociacoesDeUmPedidoArrumado(id);
+        await fimNaBase.esquecerFimDoPedido(id);
+      }
     } catch (e) {
       console.error("[updateSimulatorOrder] negociações do pedido arrumado:", e);
     }
@@ -10548,6 +10582,24 @@ export class TrabalhoEmCurso extends Error {
         `e o valor da carteira.`,
     );
     this.name = "TrabalhoEmCurso";
+  }
+}
+
+/**
+ * UM PEDIDO COM DINHEIRO NÃO SE APAGA — d94 (dono, 23-11-2026). Pago, com
+ * referências, faturas, dívidas, movimentos na carteira ou numa comissão: o
+ * «Apagar» recusa e diz porquê (cancelar ou arquivar em vez disso). É uma
+ * `TrabalhoEmCurso` para as rotas que já tratam a recusa (409, com a frase) a
+ * tratarem também esta, sem mudar nenhuma.
+ */
+export class PedidoComDinheiro extends TrabalhoEmCurso {
+  constructor(
+    pedidoId: number,
+    readonly razoes: string[],
+  ) {
+    super(pedidoId, []);
+    this.message = porQueNaoSeApaga(pedidoId, razoes);
+    this.name = "PedidoComDinheiro";
   }
 }
 
@@ -10849,6 +10901,12 @@ export async function deleteSimulatorOrder(
      * mesma coisa: um foi a decisão de alguém, o outro foi o prazo.
      */
     acontecimento?: "pedido_apagado" | "pedido_expurgado";
+    /**
+     * d94: o motivo que a equipa escreveu ao apagar — vai na notificação a cada
+     * profissional que tinha o pedido («Pedido #N apagado — motivo»). Sem ele,
+     * a notificação sai sem motivo; o `motivo` acima é o do registo interno.
+     */
+    motivoAoProfissional?: string | null;
   },
 ) {
   await ensureSimulatorOrdersTable();
@@ -10911,6 +10969,21 @@ export async function deleteSimulatorOrder(
     } catch {
       /* idem */
     }
+  }
+
+  /*
+   * COM DINHEIRO, NÃO — d94 (dono, 23-11-2026). O «Apagar» do backoffice lê
+   * primeiro o dinheiro do pedido (`dinheiroDoPedido`): pago, referências,
+   * faturas, dívidas, carteira, comissões. Havendo algum, recusa com a razão.
+   * A purga não passa por aqui (apaga o que terminou há 60 dias, pela regra
+   * dela) e o «Excluir trabalho» já verificou que nenhum dinheiro se moveu.
+   */
+  const daPurgaOuExcluir =
+    (contexto.acontecimento ?? "pedido_apagado") === "pedido_expurgado" || contexto.mesmoComTrabalhoEmCurso === true;
+  if (!daPurgaOuExcluir && pedido) {
+    const { oQuePrendeOPedidoNaBase } = await import("./fim-do-pedido-na-base");
+    const razoes = await oQuePrendeOPedidoNaBase(id);
+    if (razoes.length > 0) throw new PedidoComDinheiro(id, razoes);
   }
 
   const emCurso = negociacoes.filter(
@@ -11108,6 +11181,25 @@ export async function deleteSimulatorOrder(
     throw err;
   } finally {
     conn.release();
+  }
+
+  /*
+   * O FIM DO PEDIDO CHEGA A QUEM O TINHA — d94 (23-11-2026). Pela função única:
+   * cada profissional que o via ou negociava fica com UMA notificação
+   * («Pedido #N apagado — motivo»), sem ligação (o pedido já não existe). Da
+   * purga, nenhuma: um pedido terminado há 60 dias não é notícia. Nunca lança.
+   */
+  if (pedido) {
+    await import("./fim-do-pedido-na-base")
+      .then(({ fimDoPedido }) =>
+        fimDoPedido(id, {
+          fim: "apagado",
+          motivo: contexto.motivoAoProfissional ?? null,
+          negociacoesAntes: negociacoes as never,
+          avisar: (contexto.acontecimento ?? "pedido_apagado") !== "pedido_expurgado",
+        }),
+      )
+      .catch((e) => console.error("[deleteSimulatorOrder] notificações do apagado:", e instanceof Error ? e.message : e));
   }
 
   // Só com a linha já apagada, e com a ligação já devolvida ao pool. Uma que
@@ -15122,10 +15214,11 @@ export async function cancelarOrcamentoPeloCliente(token: string): Promise<{ ok:
     "UPDATE simulatorOrders SET canceladoPeloCliente = 1, canceladoPeloClienteEm = NOW(), status = 'cancelado', updatedAt = NOW() WHERE orcamentoToken = ?",
     [token]
   );
-  // Os profissionais deixam de o ter em mão (08-10-2026, `pedido-arrumado.ts`).
-  await fecharNegociacoesDeUmPedidoArrumado(order.id).catch((e) =>
-    console.error("[cancelarOrcamentoPeloCliente] negociações:", e),
-  );
+  // Os profissionais deixam de o ter em mão (08-10-2026, `pedido-arrumado.ts`) —
+  // pela função única do fim do pedido, que também os avisa (d94, 23-11-2026).
+  await import("./fim-do-pedido-na-base")
+    .then(({ fimDoPedido }) => fimDoPedido(order.id, { fim: "cancelado", como: "por_fazer", motivo: "o cliente cancelou" }))
+    .catch((e) => console.error("[cancelarOrcamentoPeloCliente] negociações:", e));
   await appendOrderHistory(order.id, {
     type: "client_cancelled",
     by: null,

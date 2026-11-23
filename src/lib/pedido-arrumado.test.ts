@@ -81,18 +81,21 @@ describe("ao arrumar o pedido", () => {
     const arquivar = semNotas(ler("src/app/api/admin/pedidos/[id]/reject/route.ts"));
     expect(arquivar).toContain("await updateSimulatorOrder(orderId, {");
     expect(arquivar).toContain('status: "arquivado",');
+    // d94: com o motivo que vai na notificação aos profissionais.
     expect(semNotas(ler("src/app/api/admin/pedidos/[id]/route.ts"))).toContain(
-      "await updateSimulatorOrder(Number(id), body as Parameters<typeof updateSimulatorOrder>[1]);",
+      "await updateSimulatorOrder(Number(id), body as Parameters<typeof updateSimulatorOrder>[1], {",
     );
   });
 
   it("e updateSimulatorOrder encerra as negociações ao arrumar, e repõe-nas ao sair do arquivo", () => {
     const corpo = semNotas(corpoDe(DB, "export async function updateSimulatorOrder("));
     const gravar = corpo.indexOf("await pool.execute(`UPDATE simulatorOrders SET ${sets} WHERE id = ?`, vals);");
-    const fechar = corpo.indexOf("if (depois && !antes) await fecharNegociacoesDeUmPedidoArrumado(id);");
+    // d94: pela função única do fim do pedido («por_fazer»: o mesmo fecho de sempre), depois de gravar.
+    const fechar = corpo.search(/if \(depois && !antes\) \{\s*await fimNaBase\.fimDoPedido\(id, \{[\s\S]{0,120}como: "por_fazer"/);
     expect(gravar).toBeGreaterThan(-1);
     expect(fechar).toBeGreaterThan(gravar);
-    expect(corpo).toContain("else if (antes && !depois) await reabrirNegociacoesDeUmPedidoArrumado(id);");
+    expect(ler("src/lib/fim-do-pedido-na-base.ts")).toContain("encerradas = await fecharNegociacoesDeUmPedidoArrumado(pedidoId);");
+    expect(corpo).toMatch(/else if \(antes && !depois\) \{\s*await reabrirNegociacoesDeUmPedidoArrumado\(id\);/);
     expect(corpo).toContain("const antes = pedidoArrumado(prevForNotify.status);");
     expect(corpo).toContain("const depois = pedidoArrumado(data.status);");
   });
@@ -108,7 +111,8 @@ describe("ao arrumar o pedido", () => {
 
   it("o cliente que cancela pela página do orçamento também os encerra", () => {
     const corpo = corpoDe(DB, "export async function cancelarOrcamentoPeloCliente(");
-    expect(corpo).toContain("await fecharNegociacoesDeUmPedidoArrumado(order.id)");
+    // d94: pela função única do fim do pedido, que também os avisa.
+    expect(corpo).toContain('fimDoPedido(order.id, { fim: "cancelado", como: "por_fazer"');
   });
 });
 

@@ -422,7 +422,8 @@ describe("as guardas no código", () => {
   it("arquivar nunca apaga: nenhum DELETE, e o arquivo é o estado «arquivado»", () => {
     expect(semComentarios).not.toMatch(/\bDELETE\b/i);
     expect(semComentarios).not.toMatch(/deleteSimulatorOrder|apagarPedido/);
-    expect(BASE).toContain('await updateSimulatorOrder(p.id, { status: "arquivado" });');
+    // d94: com o motivo que vai na notificação a cada parceiro.
+    expect(BASE).toContain('await updateSimulatorOrder(p.id, { status: "arquivado" }, { motivo: FECHADO_SEM_RESPOSTA });');
     expect(BASE).toContain('await gravarMotivoDoFecho(p.id, "sem_resposta", null, null)');
     expect(BASE).toContain("textoDoFechoAoParceiro(p.id)");
     expect(BASE).toContain('porque: "fechado_sem_resposta"');

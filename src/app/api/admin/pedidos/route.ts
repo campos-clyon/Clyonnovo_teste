@@ -10,6 +10,7 @@ import {
 } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { exigirMotivoDoFecho, fechaOPedido } from "@/lib/motivo-do-fecho";
+import { motivoAoProfissional, motivoLimpo } from "@/lib/fim-do-pedido";
 import { gravarMotivoDoFecho } from "@/lib/db";
 import { instanteEmLisboa } from "@/lib/hora-de-lisboa";
 import {
@@ -115,7 +116,9 @@ export async function PATCH(req: NextRequest) {
     updateData.dataAgendada = d;
   }
 
-  await updateSimulatorOrder(Number(id), updateData as Parameters<typeof updateSimulatorOrder>[1]);
+  await updateSimulatorOrder(Number(id), updateData as Parameters<typeof updateSimulatorOrder>[1], {
+    motivo: motivoAoProfissional(null, motivoDoFecho?.ok ? motivoDoFecho.motivo : null),
+  });
   if (emailDoPedido.muda) {
     await registarEmailDoPedidoMudado({
       pedidoId: Number(id),
@@ -146,10 +149,14 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Falta o identificador do pedido." }, { status: 400 });
 
+  // d94: o motivo para os profissionais vem no corpo (nunca no endereço) — opcional.
+  const corpo = (await req.json().catch(() => null)) as { motivo?: unknown } | null;
+  const motivoAoProfissional = motivoLimpo(typeof corpo?.motivo === "string" ? corpo.motivo : null);
   try {
     await deleteSimulatorOrder(Number(id), {
-      motivo: searchParams.get("motivo")?.slice(0, 120) || "apagado no backoffice",
+      motivo: motivoAoProfissional?.slice(0, 120) || searchParams.get("motivo")?.slice(0, 120) || "apagado no backoffice",
       autorNome: colab?.nome ?? null,
+      motivoAoProfissional,
     });
   } catch (e) {
     // 409 e nao 500: nada correu mal: a base recusou-se, e tem razao. O texto

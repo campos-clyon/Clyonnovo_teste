@@ -301,7 +301,7 @@ describe("as peças ligadas", () => {
 
   it("cancelar lê quem o tem ANTES de o matar, recusa um trabalho feito, e avisa-os", () => {
     const iQuem = patch.indexOf("quemTemOTrabalhoClyon(pedidoId)");
-    const iCancela = patch.indexOf("cancelarPedido(pedidoId)");
+    const iCancela = patch.indexOf("cancelarPedido(pedidoId"); // d94: com o motivo
     expect(iQuem).toBeGreaterThan(-1);
     expect(iQuem).toBeLessThan(iCancela);
     expect(patch.slice(iQuem, iCancela)).toContain("if (antes.jaFeito)");

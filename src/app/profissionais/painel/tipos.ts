@@ -219,6 +219,15 @@ export type Pedido = {
   pedidoCancelado?: boolean;
   /** d2: arquivado pela validade do orçamento (o cliente não respondeu) — não é um cancelamento. */
   pedidoFechadoSemResposta?: boolean;
+  /**
+   * O FIM DO PEDIDO — d94 (23-11-2026), decidido no servidor
+   * (`fimParaOProfissional`): «cancelado» vai para os Cancelados, «arquivado»
+   * para os Arquivados, `null` decide a negociação. Opcional: um site antigo
+   * não o manda.
+   */
+  fimDoPedido?: "cancelado" | "arquivado" | null;
+  /** O motivo do cancelamento ou do arquivo, quando o há (d94). */
+  motivoDoFim?: string | null;
   /** O valor do Trabalho CLYON — desde 08-10-2026, o preço ao cliente sem IVA; o que ele recebe é isto menos a taxa. */
   valorFixo?: number | null;
   /**

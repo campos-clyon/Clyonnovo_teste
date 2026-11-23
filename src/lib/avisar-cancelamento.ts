@@ -1,5 +1,4 @@
 import { perfilDoProfissional } from "./db";
-import { avisarQuemFicouSemOTrabalho } from "./avisar-quem-perdeu";
 import { avisarOClienteDoPedido } from "./avisos-ao-cliente";
 import { avisoSemOTrabalho } from "./textos-dos-avisos-ao-profissional";
 
@@ -17,6 +16,12 @@ import { avisoSemOTrabalho } from "./textos-dos-avisos-ao-profissional";
  *
  * As negociações lêem-se ANTES de cancelar (depois estão todas «morta»).
  * Nunca lança: o cancelamento já está gravado.
+ *
+ * DESDE A d94 (23-11-2026) o aviso no telemóvel e a notificação no sino saem
+ * da função única do fim do pedido (`fimDoPedido`, que `cancelarPedido` e
+ * `updateSimulatorOrder` chamam), uma vez por profissional. Aqui fica o que é
+ * só deste gesto: o WhatsApp ao contratado (o canal de sempre) e o aviso ao
+ * cliente.
  */
 const COM_O_PROFISSIONAL = new Set(["aberta", "aguarda_contratacao", "acordada"]);
 
@@ -30,12 +35,6 @@ export async function avisarDoCancelamento(c: {
 }): Promise<void> {
   try {
     const afectadas = (c.negociacoes ?? []).filter((n) => COM_O_PROFISSIONAL.has(String(n.estado)));
-    await avisarQuemFicouSemOTrabalho({
-      pedidoId: c.pedidoId,
-      quem: afectadas.map((n) => ({ negociacaoId: Number(n.id), providerId: Number(n.providerId) })),
-      porque: "cancelado",
-      motivo: c.motivo,
-    });
     for (const n of afectadas.filter((x) => String(x.estado) === "acordada")) {
       try {
         const perfil = await perfilDoProfissional(Number(n.providerId));

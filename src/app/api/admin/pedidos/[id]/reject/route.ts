@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { avisarDoCancelamento } from "@/lib/avisar-cancelamento";
 import { gravarMotivoDoFecho, negociacoesDoPedido } from "@/lib/db";
 import { exigirMotivoDoFecho } from "@/lib/motivo-do-fecho";
+import { motivoAoProfissional } from "@/lib/fim-do-pedido";
 import {
   getSimulatorOrderById,
   updateSimulatorOrder,
@@ -47,7 +48,7 @@ export async function POST(
       assignedToName: null,
       assignedAt: null,
       status: "arquivado",
-    });
+    }, { motivo: motivoAoProfissional((corpo as { motivo?: unknown } | null)?.motivo, motivo.motivo) });
   } catch (err) {
     return NextResponse.json(
       { error: `Erro ao rejeitar: ${err instanceof Error ? err.message : String(err)}` },

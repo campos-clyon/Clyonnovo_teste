@@ -413,7 +413,8 @@ export default function Agenda({
 
   // O que se marca, se arrasta e se arquiva: o contratado e por fazer. O
   // em-negociação ainda não é de ninguém.
-  const contratados = pedidos.filter((p) => p.fase === "a_executar" && !p.arquivadoEm);
+  // d94: um pedido cancelado ou arquivado sai também da agenda.
+  const contratados = pedidos.filter((p) => p.fase === "a_executar" && !p.arquivadoEm && !p.fimDoPedido);
 
   /*
    * E O QUE JÁ FOI FEITO, NO DIA EM QUE FOI — 08-10-2026.

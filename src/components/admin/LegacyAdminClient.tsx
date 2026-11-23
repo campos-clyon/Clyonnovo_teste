@@ -123,6 +123,7 @@ import ImageManagerClient from "@/components/admin/ImageManagerClient";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { escolherMotivoDoFecho, type MotivoEscolhido } from "@/components/admin/escolherMotivoDoFecho";
 import { TELEFONE_DA_CLYON_LEGIVEL, TEL_DA_CLYON, WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { pedirMotivoAoApagar } from "./motivo-ao-apagar";
 
 /*
  * O número de um lead para o wa.me.
@@ -1460,6 +1461,13 @@ export default function ColaboradorAdminClient({
       motivo = await escolherMotivoDoFecho({ accao: acao === "arquivar" ? "arquivar" : "rejeitar", quantos: n });
       if (!motivo) return;
     }
+    // d94: ao apagar, o motivo (opcional) vai na notificação aos profissionais que os tinham.
+    let motivoAoApagar = "";
+    if (acao === "apagar") {
+      const m = pedirMotivoAoApagar();
+      if (m === null) return;
+      motivoAoApagar = m;
+    }
     if (acao === "concluido" || acao === "apagar") {
       const escolhidos = pedidos
         .filter((p) => pedidosMarcados.has(p.id))
@@ -1478,7 +1486,8 @@ export default function ColaboradorAdminClient({
           if (acao === "apagar") {
             r = await fetch(`/api/admin/pedidos?id=${id}`, {
               method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify(motivoAoApagar ? { motivo: motivoAoApagar } : {}),
             });
           } else if (acao === "arquivar") {
             r = await fetch(`/api/admin/pedidos/${id}/reject`, {

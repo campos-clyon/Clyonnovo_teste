@@ -28,7 +28,9 @@ describe("cancelar na base", () => {
     const corpo = DB.slice(i, DB.indexOf("\nexport ", i + 10));
     // Sem o parêntese de fecho: desde 30-09-2026 a chamada pede também que se
     // guarde o estado de cada uma, para o cancelamento poder ser desfeito.
-    expect(corpo).toContain("matarNegociacoesDoPedido(pedidoId");
+    // d94: pela função única do fim do pedido, que as mata todas («tudo»).
+    expect(corpo).toMatch(/fimDoPedido\(pedidoId, \{\s*fim: "cancelado",\s*como: "tudo"/);
+    expect(ler("src/lib/fim-do-pedido-na-base.ts")).toContain("matarNegociacoesDoPedido(pedidoId");
     expect(corpo).toContain("SET status = 'cancelado'");
     // O pedido fica. Cancelar não é apagar: daqui a um mês a pergunta "o que
     // aconteceu ao #225?" tem de ter resposta.
@@ -62,7 +64,7 @@ describe("a rota do admin", () => {
 
   it("o que se desfaz é apurado antes de se desfazer", () => {
     expect(ROTA.indexOf("oQueSeDesfaz(existentes)")).toBeLessThan(
-      ROTA.indexOf("await cancelarPedido(pedidoId)"),
+      ROTA.indexOf("await cancelarPedido(pedidoId"),
     );
   });
 

@@ -228,7 +228,7 @@ export async function cancelarPeloLembreteComum(
   const existentes = await negociacoesDoPedido(pedidoId).catch(() => []);
   const doTrabalhoClyon = eClyon ? (await (await import("./db")).quemTemOTrabalhoClyon(pedidoId)).vivos : [];
 
-  const r = await cancelarPedido(pedidoId);
+  const r = await cancelarPedido(pedidoId, { motivo: MOTIVO });
   if (!r) {
     await desfazer("pedido não encontrado");
     return { ok: false, porque: "pedido não encontrado" };

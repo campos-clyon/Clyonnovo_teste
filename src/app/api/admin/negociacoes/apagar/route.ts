@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { deleteSimulatorOrder, TrabalhoEmCurso } from "@/lib/db";
+import { motivoLimpo } from "@/lib/fim-do-pedido";
 
 export const runtime = "nodejs";
 
@@ -64,13 +65,15 @@ export async function POST(req: NextRequest) {
     typeof corpo.motivo === "string" && corpo.motivo.trim()
       ? corpo.motivo.trim().slice(0, 120)
       : "apagado no backoffice";
+  // d94: o que a equipa escreveu vai na notificação a cada profissional que o tinha. Sem texto, sem motivo.
+  const motivoAoProfissional = motivoLimpo(typeof corpo.motivo === "string" ? corpo.motivo : null);
 
   const apagados: number[] = [];
   const recusados: Array<{ id: number; motivo: string }> = [];
 
   for (const id of ids) {
     try {
-      await deleteSimulatorOrder(id, { motivo, autorNome: colab?.nome ?? null });
+      await deleteSimulatorOrder(id, { motivo, autorNome: colab?.nome ?? null, motivoAoProfissional });
       apagados.push(id);
     } catch (e) {
       if (e instanceof TrabalhoEmCurso) {

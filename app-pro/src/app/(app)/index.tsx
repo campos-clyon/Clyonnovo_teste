@@ -25,6 +25,7 @@ import {
   paraOsSinaisDe,
   chaveDoGrupo,
   RECUSA,
+  etiquetaDoFim,
   tempoDoCartao,
   type LinhaDaLista,
   type TomDoGrupo,
@@ -278,7 +279,8 @@ function Sino({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
               onPress={() => {
                 marcarAvisoLido(a.id);
                 onFechar();
-                router.push(`/trabalho/${a.negociacaoId}`);
+                // d94: um pedido apagado não abre nada (`negociacaoId` 0).
+                if (a.negociacaoId > 0) router.push(`/trabalho/${a.negociacaoId}`);
               }}
               style={({ pressed }) => [estilos.aviso, { opacity: pressed ? 0.7 : 1 }]}
             >
@@ -375,7 +377,8 @@ function Cartao({ trabalho: t, porAbrir, separador }: { trabalho: Trabalho; porA
   // d2: fechado pela validade do orçamento — «fechado: o cliente não respondeu ao orçamento», como o painel.
   const doGrupo = separador === "recusados" ? (RECUSA[chaveDoGrupo(t)] ?? null) : null;
   const recusa =
-    doGrupo === RECUSA.cancelado && t.pedidoFechadoSemResposta === true ? { ...doGrupo, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA } : doGrupo;
+    etiquetaDoFim(t, separador) ??
+    (doGrupo === RECUSA.cancelado && t.pedidoFechadoSemResposta === true ? { ...doGrupo, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA } : doGrupo);
   const estado = recusa ? null : estadoCurto(t);
   const tempo = tempoDoCartao(t);
   const onde = [t.city, distanciaDe(t)].filter(Boolean).join(" · ");

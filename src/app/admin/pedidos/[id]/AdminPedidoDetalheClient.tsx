@@ -18,6 +18,7 @@ import AvaliacoesAoClienteDoPedido from "@/components/admin/AvaliacoesAoClienteD
 import DescricaoDoPedido from "@/components/admin/DescricaoDoPedido";
 import { motivoSeFechar } from "@/components/admin/escolherMotivoDoFecho";
 import { contaDaEstimativa, eurosPt } from "@/lib/conta-da-estimativa";
+import { pedirMotivoAoApagar } from "@/components/admin/motivo-ao-apagar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -425,11 +426,15 @@ export default function AdminPedidoDetalheClient({ id }: { id: number }) {
   async function handleDelete() {
     if (!order) return;
     if (!(await confirmarSeFuturo([{ pedidoId: order.id, quando: order.dataAgendada }], "apagar este pedido"))) return;
+    // d94: o motivo (opcional) vai na notificação aos profissionais que o tinham.
+    const motivo = pedirMotivoAoApagar();
+    if (motivo === null) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/admin/pedidos/${order.id}`, {
         method: "DELETE",
-        headers: authHeader,
+        headers: { ...authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(motivo ? { motivo } : {}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao apagar");

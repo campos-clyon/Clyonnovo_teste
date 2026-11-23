@@ -268,7 +268,7 @@ describe("a anonimização do «já não preciso» (d2: pela purga, 7 dias depoi
     );
     expect(daValidade).not.toContain("cancelarPedido(");
     const corpo = COMUM.slice(COMUM.indexOf("export async function cancelarPeloLembreteComum("), COMUM.indexOf("export async function responderAoCancelamento("));
-    const cancelar = corpo.indexOf("await cancelarPedido(pedidoId)");
+    const cancelar = corpo.indexOf("await cancelarPedido(pedidoId"); // d94: com o motivo para a notificação
     const texto = corpo.indexOf("mensagemDeCancelamento()");
     expect(cancelar).toBeGreaterThan(-1);
     expect(texto).toBeGreaterThan(cancelar);
@@ -314,7 +314,8 @@ describe("a anonimização do «já não preciso» (d2: pela purga, 7 dias depoi
 
   it("o fecho arquiva (nunca apaga), com o motivo «sem resposta»", () => {
     const corpo = BASE.slice(BASE.indexOf("async function fecharPorFaltaDeResposta("));
-    expect(corpo).toContain('await updateSimulatorOrder(pedidoId, { status: "arquivado" });');
+    // d94: com o motivo que vai na notificação a cada parceiro.
+    expect(corpo).toContain('await updateSimulatorOrder(pedidoId, { status: "arquivado" }, { motivo: FECHADO_SEM_RESPOSTA });');
     expect(corpo).toContain('gravarMotivoDoFecho(pedidoId, "sem_resposta"');
     expect(corpo).toContain('porque: "fechado_sem_resposta"');
   });

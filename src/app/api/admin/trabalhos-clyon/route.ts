@@ -62,6 +62,7 @@ import { choquesDoProfissional } from "@/lib/choques-de-agenda";
 import { oClienteRespondeuNaMesa } from "@/lib/prazo-do-cliente-clyon";
 import { atribuirDirectamente } from "@/lib/atribuir-directamente";
 import { avisarProfissional } from "@/lib/avisos-do-backoffice";
+import { motivoAoProfissional } from "@/lib/fim-do-pedido";
 
 export const runtime = "nodejs";
 
@@ -1057,7 +1058,7 @@ export async function PATCH(req: NextRequest) {
       // O motivo, como no «Cancelar pedido» da Mesa (19-10-2026): fica no histórico e vai no aviso.
       const motivo = typeof corpo.motivo === "string" ? corpo.motivo.trim().slice(0, 300) : "";
       const pedido = await getSimulatorOrderById(pedidoId);
-      const r = await cancelarPedido(pedidoId);
+      const r = await cancelarPedido(pedidoId, { motivo: motivoAoProfissional(motivo, motivoDoFecho.motivo) });
       if (!r) return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
       const avisados = await avisarCancelamentoDoTrabalhoClyon({
         pedidoId,
@@ -1133,7 +1134,7 @@ export async function PATCH(req: NextRequest) {
       const antes = await quemTemOTrabalhoClyon(pedidoId);
       // Num cancelado já ninguém o tem; num feito, fica com quem o fez.
       const avisar = pedidoArrumado(pedido.status) || antes.jaFeito ? [] : antes.vivos;
-      await updateSimulatorOrder(pedidoId, { status: "arquivado" });
+      await updateSimulatorOrder(pedidoId, { status: "arquivado" }, { motivo: motivoAoProfissional(corpo.motivo, motivoDoFecho.motivo) });
       const avisados = await avisarCancelamentoDoTrabalhoClyon({
         pedidoId,
         servico: pedido.serviceType ?? null,

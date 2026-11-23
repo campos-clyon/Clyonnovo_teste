@@ -125,7 +125,9 @@ describe("o cancelamento passa a ter memória", () => {
     );
     const i = DB.indexOf("export async function cancelarPedido(");
     const corpo = DB.slice(i, DB.indexOf("export async function reabrirPedidoCancelado(", i));
-    expect(corpo).toContain("matarNegociacoesDoPedido(pedidoId, { lembrarOEstado: true })");
+    // d94: pela função única do fim do pedido — «tudo» quer dizer matar com a memória.
+    expect(corpo).toMatch(/fimDoPedido\(pedidoId, \{\s*fim: "cancelado",\s*como: "tudo"/);
+    expect(ler("src/lib/fim-do-pedido-na-base.ts")).toContain("matarNegociacoesDoPedido(pedidoId, { lembrarOEstado: true })");
     expect(corpo).toContain("SET statusAntesDeCancelar = status WHERE id = ? AND status <> 'cancelado'");
   });
 

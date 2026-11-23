@@ -18,7 +18,9 @@ import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataf
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
-import { fechadoSemResposta } from "@/lib/textos-dos-avisos-ao-profissional";
+import { fechadoSemResposta, FECHADO_SEM_RESPOSTA } from "@/lib/textos-dos-avisos-ao-profissional";
+import { fimParaOProfissional } from "@/lib/fim-do-pedido";
+import { avisosDoFimDoProfissional, motivosDoFimDoProfissional } from "@/lib/fim-do-pedido-na-base";
 import { cargaParaEste, fraseDaCarga } from "@/lib/carga-da-carrinha";
 import { lerBase } from "@/lib/base-do-preco";
 import { fraseDaBaseAoProfissional } from "@/lib/frase-da-base";
@@ -395,6 +397,20 @@ export async function GET(req: NextRequest) {
       console.error("[profissionais/meus-pedidos] distancias", e);
       medidas = linhas.map(() => null);
     }
+
+    /*
+     * O FIM DE CADA PEDIDO — d94 (dono, 23-11-2026). O motivo do cancelamento
+     * ou do arquivo, para o cartão dos Cancelados e dos Arquivados, e as
+     * notificações dos últimos 60 dias (cancelados, arquivados e apagados) para
+     * o sino. Nunca derrubam a lista: sem elas, o ecrã fica como antes.
+     */
+    const [motivosDoFim, avisos] = await Promise.all([
+      motivosDoFimDoProfissional(
+        sessao.providerId,
+        linhas.filter((l) => pedidoArrumado(l.estadoDoPedido)).map((l) => Number(l.pedidoId)),
+      ),
+      avisosDoFimDoProfissional(sessao.providerId),
+    ]);
 
     const pedidos = linhas.map((l, i) => {
       // A morada e o contacto só entram na vista depois de ele ser contratado —
@@ -899,6 +915,21 @@ export async function GET(req: NextRequest) {
           motivoDoFecho: l.motivoDoFechoDoPedido,
           propostaEnviada: Number(l.propostaEnviadaDoPedido) === 1,
         }),
+        /*
+         * d94: o separador pelo estado do PEDIDO — «cancelado» vai para os
+         * Cancelados (sempre), «arquivado» para os Arquivados (salvo trabalho
+         * já feito), `null` decide a negociação. E o motivo, quando o há.
+         */
+        fimDoPedido: fimParaOProfissional(l.estadoDoPedido, l),
+        motivoDoFim:
+          motivosDoFim.get(Number(l.pedidoId)) ??
+          (fechadoSemResposta({
+            estadoDoPedido: l.estadoDoPedido,
+            motivoDoFecho: l.motivoDoFechoDoPedido,
+            propostaEnviada: Number(l.propostaEnviadaDoPedido) === 1,
+          })
+            ? FECHADO_SEM_RESPOSTA
+            : null),
         // Sempre o líquido. Nunca o bruto — ver taxas-plataforma.ts.
         querPagar: minimo,
         recebeSeAceitar: minimo != null ? quantoOProfissionalRecebe(minimo, taxasDela) : null,
@@ -952,7 +983,7 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    return NextResponse.json({ nome: sessao.nome, pedidos });
+    return NextResponse.json({ nome: sessao.nome, pedidos, avisos });
   } catch (error) {
     /*
      * A MENSAGEM DIZ O QUE FALHOU, e nao so que falhou.

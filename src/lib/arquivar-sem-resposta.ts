@@ -11,6 +11,7 @@ import { clienteRespondeu, ficaSemEfeito, HORAS_PARA_O_CLIENTE_RESPONDER } from 
 import { avisarProfissionalSemOTrabalhoPorPush } from "./avisar-por-push";
 import { avisarSemEfeitoDoTrabalhoClyon } from "./avisar-trabalho-clyon";
 import { dataEHora } from "./historico-negociacao";
+import { FECHADO_SEM_RESPOSTA } from "./textos-dos-avisos-ao-profissional";
 
 /**
  * A ROTINA DOS TRABALHOS CLYON SEM RESPOSTA DO CLIENTE — 28-10-2026 (d12).
@@ -75,7 +76,7 @@ export async function arquivarTrabalhosClyonSemResposta(agora: Date = new Date()
       const ids = new Set(aceitaram.map((n) => Number(n.id)));
       const comTelefone = (await quemTemOTrabalhoClyon(p.id)).vivos.filter((v) => ids.has(v.negociacaoId));
 
-      await updateSimulatorOrder(p.id, { status: "arquivado" });
+      await updateSimulatorOrder(p.id, { status: "arquivado" }, { motivo: FECHADO_SEM_RESPOSTA });
       r.arquivados.push(p.id);
 
       let avisados = 0;

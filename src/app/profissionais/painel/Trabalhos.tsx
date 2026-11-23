@@ -201,6 +201,20 @@ const RECUSA: Record<string, { texto: string; cls: string; borda: string }> = {
  * Em que grupo da lista cai o cartão: a fase, num trabalho que é dele; o
  * porquê, num perdido. A mesma chave dá o título do grupo e a etiqueta.
  */
+/**
+ * NOS CANCELADOS E NOS ARQUIVADOS, O PORQUÊ — d94: «cancelado — motivo»,
+ * «arquivado — motivo», com a forma cinzenta do «pedido cancelado».
+ */
+function etiquetaDoFimDoPedido(p: Pedido, separador: Separador): { texto: string; cls: string; borda: string } | null {
+  if (separador === "cancelados" && p.fimDoPedido === "cancelado") {
+    return { ...RECUSA.cancelado, texto: p.motivoDoFim ? `cancelado — ${p.motivoDoFim}` : "pedido cancelado" };
+  }
+  if (separador === "arquivados" && p.fimDoPedido === "arquivado") {
+    return { ...RECUSA.cancelado, texto: p.motivoDoFim ? `arquivado — ${p.motivoDoFim}` : "pedido arquivado" };
+  }
+  return null;
+}
+
 function chaveDoGrupo(p: Pedido): string {
   if (p.estado === "acordada") return p.fase;
   if (p.estado === "desistida") return "desistida";
@@ -320,9 +334,14 @@ function servicoDe(p: Pedido): string {
  *
  * O arquivo ganha ao resto de propósito: um trabalho arquivado é uma decisão
  * dele, e não pode reaparecer nas outras listas só porque mudou de estado.
+ *
+ * O FIM DO PEDIDO MANDA PRIMEIRO — d94 (23-11-2026). Um pedido cancelado vai
+ * para os «Cancelados» e um arquivado para os «Arquivados» (`fimDoPedido`,
+ * do servidor), saiam de onde saírem: o feed, a negociação, o contratado.
  */
 function separadorDe(p: Pedido): Separador {
-  if (p.arquivadoEm) return "arquivados";
+  if (p.fimDoPedido === "cancelado") return "cancelados";
+  if (p.arquivadoEm || p.fimDoPedido === "arquivado") return "arquivados";
   if (p.estado === "acordada") {
     return p.confirmadoEm || p.pagoEm ? "terminados" : "contratados";
   }
@@ -357,6 +376,7 @@ const SEPARADORES: Array<{ id: Separador; rotulo: string }> = [
   { id: "contratados", rotulo: "Contratados" },
   { id: "terminados", rotulo: "Terminados" },
   { id: "recusados", rotulo: "Recusados" },
+  { id: "cancelados", rotulo: "Cancelados" },
   { id: "arquivados", rotulo: "Arquivados" },
 ];
 
@@ -366,6 +386,7 @@ const VAZIO: Record<Separador, string> = {
   contratados: "Nenhum trabalho seu por fazer neste momento.",
   terminados: "Ainda não terminou nenhum trabalho. Assim que o cliente confirmar, aparece aqui.",
   recusados: "Nada recusado nem perdido. É bom sinal.",
+  cancelados: "Nenhum pedido cancelado. Quando um cliente ou a CLYON cancelar um pedido seu, aparece aqui, com o motivo.",
   arquivados: "Nada arquivado. Use o botão de arquivar para arrumar o que já não precisa de ver.",
 };
 
@@ -820,7 +841,8 @@ export default function Trabalhos({
           // Nos Recusados, o porquê — com a mesma forma da fase.
           const recusa = separador === "recusados" ? (RECUSA[chaveDoGrupo(p)] ?? null) : null;
           // d2: fechado pela validade do orçamento, a etiqueta diz-o (não «pedido cancelado»).
-          const etiqueta = fase ?? (recusa === RECUSA.cancelado && p.pedidoFechadoSemResposta ? { ...recusa, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA } : recusa);
+          const etiquetaDoFim = etiquetaDoFimDoPedido(p, separador);
+          const etiqueta = etiquetaDoFim ?? fase ?? (recusa === RECUSA.cancelado && p.pedidoFechadoSemResposta ? { ...recusa, texto: ETIQUETA_DO_FECHO_SEM_RESPOSTA } : recusa);
           // O título do grupo, antes do primeiro cartão de cada um.
           const grupo =
             grupos && (i === 0 || chaveDoGrupo(naLista[i - 1]) !== chaveDoGrupo(p))

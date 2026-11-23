@@ -30,6 +30,7 @@ export type Separador =
   | "contratados"
   | "terminados"
   | "recusados"
+  | "cancelados"
   | "arquivados";
 
 /**

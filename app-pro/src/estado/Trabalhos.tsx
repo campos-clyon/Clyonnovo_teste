@@ -13,6 +13,7 @@ import {
   type AvisoDoProfissional,
   type AvisosGuardados,
 } from "../../../src/lib/avisos-do-profissional";
+import { avisosDoSinoDoFim } from "../../../src/lib/fim-do-pedido";
 import { apagarAvisosGuardados, guardarAvisos, lerAvisosDoTelemovel } from "../lib/avisos-guardados";
 import { apagarListaGuardada, guardarLista, lerListaGuardada } from "../lib/lista-guardada";
 import { apagarFolhasAMeio, ficarSoComAsFolhasVivas } from "../lib/folha-guardada";
@@ -110,7 +111,8 @@ export function TrabalhosProvider({ children, activo }: { children: ReactNode; a
       }
       const mudou = oQueMudou(anterior, lista);
       fasesAnteriores.current = fasesDosTrabalhos(lista);
-      pousarAvisos(juntarAvisos(base, mudou.avisos));
+      // d94: e as notificações do fim de um pedido (cancelado, arquivado, apagado), que vêm do site.
+      pousarAvisos(juntarAvisos(base, [...mudou.avisos, ...avisosDoSinoDoFim(r.avisos)]));
       if (mudou.pedidosNovos.length > 0) setPedidosNovos((n) => n + mudou.pedidosNovos.length);
       setTrabalhos(lista);
       setErro(null);

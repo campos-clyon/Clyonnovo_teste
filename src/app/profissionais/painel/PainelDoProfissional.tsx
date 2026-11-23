@@ -57,6 +57,7 @@ import {
   type TemaDoPainel,
 } from "@/lib/tema-do-painel";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "@/lib/identificacao-legal";
+import { avisosDoSinoDoFim, type AvisoDoFimNoServidor } from "@/lib/fim-do-pedido";
 import {
   fasesDosTrabalhos,
   juntarAvisos,
@@ -395,7 +396,10 @@ function PainelNoBrowser() {
         }
         const mudou = oQueMudou(anterior, novos);
         fotografiaAnterior.current = fasesDosTrabalhos(novos);
-        pousarAvisos(juntarAvisos(base, mudou.avisos));
+        // d94: e as notificações do fim de um pedido (cancelado, arquivado, apagado), que vêm do servidor.
+        pousarAvisos(
+          juntarAvisos(base, [...mudou.avisos, ...avisosDoSinoDoFim((dp.avisos ?? []) as AvisoDoFimNoServidor[])]),
+        );
         if (mudou.pedidosNovos.length > 0) setPedidosNovos((n) => n + mudou.pedidosNovos.length);
         // O contorno fica para o contratado e o confirmado; os novos têm «Novo».
         const paraRealcar = mudou.avisos.filter((a) => !a.id.startsWith("pago-")).map((a) => a.negociacaoId);

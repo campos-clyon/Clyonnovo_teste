@@ -57,7 +57,8 @@ export type EventoDaApp = {
 
 /** Os por fazer da agenda: contratados, ainda por fazer, não arquivados. */
 export function porFazerNaAgenda(lista: Trabalho[]): Trabalho[] {
-  return lista.filter((t) => t.estado === "acordada" && t.fase === "a_executar" && !t.arquivadoEm);
+  // d94: um pedido cancelado ou arquivado sai também da agenda.
+  return lista.filter((t) => t.estado === "acordada" && t.fase === "a_executar" && !t.arquivadoEm && !t.fimDoPedido);
 }
 
 /** Os feitos que a agenda mostra: à espera da confirmação, confirmados e pagos. */

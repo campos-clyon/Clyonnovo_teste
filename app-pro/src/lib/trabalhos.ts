@@ -12,6 +12,7 @@
  * ver `src/lib/app-pro.test.ts` na raiz do repositório.
  */
 import type { MudancaEscolhida } from "../../../src/lib/mudanca-escolhida-pelo-cliente";
+import type { AvisoDoFimNoServidor } from "../../../src/lib/fim-do-pedido";
 import type { FolhaParaOParceiro } from "../../../src/lib/folha-da-mudanca";
 import type { DiaDoTrabalho } from "../../../src/lib/varios-dias";
 import type { DiaReal } from "../../../src/lib/registo-real";
@@ -204,6 +205,15 @@ export type Trabalho = {
   contactoTelefone: string | null;
   abertoEm: string | null;
   arquivadoEm: string | null;
+  /**
+   * O FIM DO PEDIDO — d94 (23-11-2026), decidido no servidor
+   * (`fimParaOProfissional`): «cancelado» vai para os Cancelados, «arquivado»
+   * para os Arquivados, `null` decide a negociação. Opcional: um site antigo
+   * não o manda.
+   */
+  fimDoPedido?: "cancelado" | "arquivado" | null;
+  /** O motivo do cancelamento ou do arquivo, quando o há (d94). */
+  motivoDoFim?: string | null;
   actualizadoEm: string;
   confirmadoEm: string | null;
   /**
@@ -313,7 +323,12 @@ export function estimativaAoLado(
   return totalEstimadoCurto(valorPorHora, t.horasPrevistas);
 }
 
-export type MeusPedidos = { nome: string; pedidos: Trabalho[] };
+export type MeusPedidos = {
+  nome: string;
+  pedidos: Trabalho[];
+  /** As notificações do fim de um pedido (cancelado, arquivado, apagado) — d94. Opcional: um site antigo não as manda. */
+  avisos?: AvisoDoFimNoServidor[];
+};
 
 // ── Textos ──────────────────────────────────────────────────────────────────
 // Iguais aos do painel (`src/app/profissionais/painel/tipos.ts`). O teste do
@@ -553,7 +568,7 @@ export function explicacaoDoArquivar(t: Pick<Trabalho, "estado" | "arquivadoEm">
 
 // ── Separadores (as mesmas regras do `separadorDe` do painel) ───────────────
 
-export type Separador = "novos" | "negociacao" | "contratados" | "terminados" | "recusados" | "arquivados";
+export type Separador = "novos" | "negociacao" | "contratados" | "terminados" | "recusados" | "cancelados" | "arquivados";
 
 /**
  * Os nomes são os do painel (`SEPARADORES` em `Trabalhos.tsx`) — 29-10-2026,
@@ -575,6 +590,11 @@ export const SEPARADORES: Array<{ id: Separador; rotulo: string; vazio: string }
   },
   { id: "recusados", rotulo: "Recusados", vazio: "Nada recusado nem perdido. É bom sinal." },
   {
+    id: "cancelados",
+    rotulo: "Cancelados",
+    vazio: "Nenhum pedido cancelado. Quando um cliente ou a CLYON cancelar um pedido seu, aparece aqui, com o motivo.",
+  },
+  {
     id: "arquivados",
     rotulo: "Arquivados",
     vazio: "Nada arquivado. Use o botão de arquivar para arrumar o que já não precisa de ver.",
@@ -582,7 +602,9 @@ export const SEPARADORES: Array<{ id: Separador; rotulo: string; vazio: string }
 ];
 
 export function separadorDe(t: Trabalho): Separador {
-  if (t.arquivadoEm) return "arquivados";
+  // d94: o fim do pedido manda primeiro — cancelado nos Cancelados, arquivado nos Arquivados (do servidor).
+  if (t.fimDoPedido === "cancelado") return "cancelados";
+  if (t.arquivadoEm || t.fimDoPedido === "arquivado") return "arquivados";
   if (t.estado === "acordada") return t.confirmadoEm || t.pagoEm ? "terminados" : "contratados";
   if (t.estado === "desistida" || t.estado === "morta") return "recusados";
   const jaRespondeu = propostasDe(t.propostas).some((p) => p.por === "profissional");
@@ -622,7 +644,7 @@ export function todosPorAbrir(lista: Trabalho[]): Set<number> {
 }
 
 export function contarPorSeparador(lista: Trabalho[]): Record<Separador, number> {
-  const contas = { novos: 0, negociacao: 0, contratados: 0, terminados: 0, recusados: 0, arquivados: 0 };
+  const contas = { novos: 0, negociacao: 0, contratados: 0, terminados: 0, recusados: 0, cancelados: 0, arquivados: 0 };
   for (const t of lista) contas[separadorDe(t)]++;
   return contas;
 }
@@ -703,6 +725,23 @@ export const RECUSA: Record<string, { texto: string; tom: TomDoGrupo }> = {
   desistida: { texto: "desistência", tom: "laranja" },
   cancelado: { texto: "pedido cancelado", tom: "neutro" },
 };
+
+/**
+ * NOS CANCELADOS E NOS ARQUIVADOS, O PORQUÊ — d94 (o `etiquetaDoFimDoPedido`
+ * do painel): «cancelado — motivo», «arquivado — motivo», no tom cinzento.
+ */
+export function etiquetaDoFim(
+  t: Pick<Trabalho, "fimDoPedido" | "motivoDoFim">,
+  separador: Separador,
+): { texto: string; tom: TomDoGrupo } | null {
+  if (separador === "cancelados" && t.fimDoPedido === "cancelado") {
+    return { texto: t.motivoDoFim ? `cancelado — ${t.motivoDoFim}` : "pedido cancelado", tom: "neutro" };
+  }
+  if (separador === "arquivados" && t.fimDoPedido === "arquivado") {
+    return { texto: t.motivoDoFim ? `arquivado — ${t.motivoDoFim}` : "pedido arquivado", tom: "neutro" };
+  }
+  return null;
+}
 
 export type LinhaDaLista =
   | { tipo: "grupo"; grupo: GrupoDaLista; quantos: number; legenda: string }

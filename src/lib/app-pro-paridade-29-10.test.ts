@@ -223,10 +223,10 @@ describe("A13 — o detalhe do pedido, como no painel", () => {
 // ── A14 — a lista ───────────────────────────────────────────────────────────
 
 describe("A14 — a lista, com os nomes, os grupos e as horas do painel", () => {
-  it("os separadores têm os nomes do painel, e são os seis sempre", () => {
+  it("os separadores têm os nomes do painel, e são os sete sempre (d94: «Cancelados»)", () => {
     const bloco = /const SEPARADORES: Array<\{ id: Separador; rotulo: string \}> = \[([\s\S]*?)\];/.exec(LISTA_DO_PAINEL)?.[1] ?? "";
     const doPainel = [...bloco.matchAll(/\{ id: "(\w+)", rotulo: "([^"]+)" \}/g)].map((m) => [m[1], m[2]]);
-    expect(doPainel).toHaveLength(6);
+    expect(doPainel).toHaveLength(7);
     expect(SEPARADORES.map((s) => [s.id, s.rotulo])).toEqual(doPainel);
     const ecra = ler("app-pro/src/app/(app)/index.tsx");
     expect(ecra).toContain("const separadores = SEPARADORES;");
