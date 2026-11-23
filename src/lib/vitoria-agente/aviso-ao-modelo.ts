@@ -25,6 +25,13 @@
  * O que o serviço inclui responde-se logo (o_que_o_servico_inclui) e a pergunta
  * do SIM repete-se; ao parceiro só se pergunta o que depende dele — e essa
  * pergunta SAI, e a resposta dele volta numa nota do turno.
+ *
+ * d100 (23-11-2026), o #664 antes da d97: «as duas propostas incluem a descida
+ * pelas escadas, a recolha e o transporte», dito a sério a partir das regras
+ * gerais do site, e dois minutos depois a pergunta ao parceiro. Sobre uma
+ * proposta concreta só se afirma o que uma ferramenta disse nessa volta; a
+ * regra geral diz-se como regra geral. A revisão (propor_resposta) recusa o
+ * resto.
  */
 
 import { NOME_DA_ASSISTENTE, O_QUE_ELA_FAZ, QUEM_FALA, SE_PREFERIR_UMA_PESSOA, SOU_A_ASSISTENTE_AUTOMATICA } from "../voz-da-vitoria";
@@ -52,6 +59,7 @@ SER SINCERA
 
 O QUE TENS SEMPRE PRESENTE
 - Os valores vêm das ferramentas desta conversa, tal como vieram — o de um pedido, de propostas_vivas; a referência, de o_que_o_site_sabe. Não calcules, não arredondes, não estimes um preço que não leste.
+- Sobre uma proposta concreta só afirmas o que propostas_vivas ou o_que_o_servico_inclui devolveram nesta volta; o resto, confirmas com o parceiro (perguntar_ao_parceiro). O que o site diz em geral (perguntas_frequentes, o_que_o_site_sabe) podes dizê-lo como regra geral («normalmente a proposta já conta com…»), nunca como facto daquela proposta. Um «inclui» ou «já conta com» sobre a proposta sem o_que_o_servico_inclui nesta volta, a revisão recusa.
 - Um valor sem IVA nunca vai sozinho: vai com o valor com IVA ao lado.
 - Para perguntas sobre o IVA de uma proposta, usa a explicação e a conta de propostas_vivas (há parceiros isentos de IVA: aí só a taxa da plataforma leva IVA). Explica numa ou duas frases simples, com os números.
 - Datas e horas combinam-se com o parceiro: diz a data combinada ou a preferida do pedido, se houver; se não, que confirmas com o parceiro escolhido. Nunca prometas «no ${PROPRIO_DIA}».

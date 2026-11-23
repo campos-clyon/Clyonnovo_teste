@@ -41,7 +41,7 @@ import {
   type PropostaComOValorDoParceiro,
 } from "./propostas-do-agente";
 import { pendenteEmPalavras, type Pendente } from "./pendentes";
-import { condicaoJaIncluida, oQueOServicoInclui } from "./o-que-o-servico-inclui";
+import { condicaoJaIncluida, motivoParaAfirmarOQueInclui, oQueOServicoInclui } from "./o-que-o-servico-inclui";
 
 /** O pedido como a base o tem (as colunas que as ferramentas lêem). */
 export type PedidoParaOAgente = PedidoParaOQueFalta & {
@@ -273,6 +273,12 @@ export type EstadoDaConversa = {
   pendente: Pendente | null;
   /** d92: a frase que a resposta tem de levar tal e qual (a pergunta do SIM ou do CANCELAR). */
   fraseObrigatoria: string | null;
+  /**
+   * d100: o que o_que_o_servico_inclui devolveu NESTA volta (o «inclui»), ou
+   * null se não foi chamada. Sem ela, a revisão não deixa afirmar o que uma
+   * proposta inclui; com ela, perguntar_ao_parceiro não pergunta isso.
+   */
+  incluidoNestaVolta: string[] | null;
 };
 
 export function estadoNovo(): EstadoDaConversa {
@@ -287,6 +293,7 @@ export function estadoNovo(): EstadoDaConversa {
     deixarAsRegras: null,
     pendente: null,
     fraseObrigatoria: null,
+    incluidoNestaVolta: null,
   };
 }
 
@@ -451,9 +458,11 @@ export async function correrFerramenta(
       case "o_que_o_servico_inclui": {
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
+        const inclui = oQueOServicoInclui(p.serviceType ?? null, p.baseDoPreco ?? null);
+        estado.incluidoNestaVolta = [...(estado.incluidoNestaVolta ?? []), ...inclui.inclui];
         return guardar(estado, {
           pedido: p.id,
-          ...oQueOServicoInclui(p.serviceType ?? null, p.baseDoPreco ?? null),
+          ...inclui,
           nota: "O que está em «inclui» responde-se já, sem perguntar ao parceiro. Se a CLYON tinha proposto o fecho («… Responda SIM.»), responde e chama aceitar_proposta outra vez, para a pergunta do SIM ir na resposta.",
         });
       }
@@ -501,7 +510,10 @@ export async function correrFerramenta(
         const mensagem = texto(e.mensagem, 800);
         estado.passouAEquipa = motivo;
         // A mensagem dele passa pela mesma revisão; se não passar, sai a frase de sempre.
-        const bloqueio = mensagem ? motivoParaBloquearOAgente(mensagem, eurosDosResultados(estado.resultados)) : "sem mensagem";
+        const bloqueio = mensagem
+          ? (motivoParaBloquearOAgente(mensagem, eurosDosResultados(estado.resultados)) ??
+            motivoParaAfirmarOQueInclui(mensagem, estado.incluidoNestaVolta !== null))
+          : "sem mensagem";
         estado.mensagemDeEquipa = bloqueio ? null : mensagem;
         // Passar à equipa desfaz o que estava a ser proposto.
         estado.pendente = null;
@@ -512,6 +524,8 @@ export async function correrFerramenta(
       case "propor_resposta": {
         const t = texto(e.texto, 2000);
         let motivo = motivoParaBloquearOAgente(t, eurosDosResultados(estado.resultados));
+        // d100: o que uma proposta inclui só se afirma com o_que_o_servico_inclui nesta volta (o #664).
+        if (!motivo) motivo = motivoParaAfirmarOQueInclui(t, estado.incluidoNestaVolta !== null);
         if (!motivo && estado.fraseObrigatoria && !espacos(t).includes(espacos(estado.fraseObrigatoria))) {
           motivo = `Tem de levar, tal e qual, a frase: «${estado.fraseObrigatoria}»`;
         }
@@ -557,7 +571,8 @@ export async function correrFerramenta(
         const condicao = texto(e.condicao, 200);
         if (!condicao) return erro("Falta a condição do cliente.");
         // d97 (o caso #664): o que o serviço já inclui não se pergunta ao parceiro — responde-se.
-        const jaIncluida = condicaoJaIncluida(condicao, p.serviceType ?? null);
+        // d100: nem o que o_que_o_servico_inclui já devolveu nesta volta.
+        const jaIncluida = condicaoJaIncluida(condicao, p.serviceType ?? null, estado.incluidoNestaVolta ?? []);
         if (jaIncluida) {
           return guardar(estado, {
             perguntaPreparada: false,

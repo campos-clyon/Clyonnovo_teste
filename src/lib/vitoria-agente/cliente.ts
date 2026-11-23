@@ -34,6 +34,7 @@ import {
 import { correrFerramenta, estadoNovo, FERRAMENTAS_DA_VITORIA, type DependenciasDasFerramentas } from "./ferramentas";
 import type { Pendente } from "./pendentes";
 import { motivoParaBloquearOAgente, eurosDosResultados } from "./guarda";
+import { motivoParaAfirmarOQueInclui } from "./o-que-o-servico-inclui";
 
 /** Quantas idas ao modelo numa volta, no máximo (cada ida pode trazer várias ferramentas). */
 export const IDAS_NO_MAXIMO = 6;
@@ -244,6 +245,7 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
   if (textoSolto) {
     const motivo =
       motivoParaBloquearOAgente(textoSolto, eurosDosResultados(estado.resultados)) ??
+      motivoParaAfirmarOQueInclui(textoSolto, estado.incluidoNestaVolta !== null) ??
       (estado.fraseObrigatoria && !textoSolto.replace(/\s+/g, " ").includes(estado.fraseObrigatoria.replace(/\s+/g, " ").trim())
         ? `falta a frase obrigatória: «${estado.fraseObrigatoria}»`
         : null);
