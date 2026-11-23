@@ -2,6 +2,7 @@ import { perfilDoProfissional } from "./db";
 import { estadoDosDadosParaReceber } from "./dados-para-receber";
 import { standByDoProfissional } from "./bloqueio-do-profissional";
 import { eDoNovoModelo, novoModeloEmVigor } from "./novo-modelo";
+import { aceitouOsTermosAtuais } from "./aceitacao-dos-termos-na-base";
 import { regimeDaNegociacao, totaisDoNovoModelo, type TotaisDoNovoModelo } from "./total-ao-cliente";
 import type { RegimeDoProfissional } from "./pagamento-directo";
 import { agoraDoModelo } from "./relogio-do-modelo";
@@ -138,7 +139,10 @@ export async function impedimentoDoNovoModelo(
 
   const perfil = await perfilDoProfissional(providerId);
   if (perfil) {
-    const dados = estadoDosDadosParaReceber(perfil, agora);
+    const dados = estadoDosDadosParaReceber(
+      { ...perfil, aceitouOsTermosAtuais: await aceitouOsTermosAtuais(providerId) },
+      agora,
+    );
     if (dados.estado === "impede") {
       return { status: 403, corpo: { error: dados.frase, faltamDadosParaReceber: true, falta: dados.falta } };
     }

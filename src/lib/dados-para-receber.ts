@@ -3,11 +3,12 @@ import {
   IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
   NOVO_MODELO_DESDE,
   NOVO_MODELO_DESDE_POR_EXTENSO,
-  REGIME_DE_IVA_EM_AVISO_ATE,
   REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO,
   REGIME_DE_IVA_OBRIGATORIO,
   novoModeloEmVigor,
+  regimeDeIvaImpedeDesde,
 } from "./novo-modelo";
+import { dataPorExtensoEmLisboa } from "./hora-de-lisboa";
 import { regimeConfirmado } from "./perfil-fiscal";
 
 /**
@@ -45,6 +46,12 @@ export type ProfissionalComDadosParaReceber = {
   /** `providers.estado` e `providers.aprovadoEm` — para a transição. */
   estado?: unknown;
   aprovadoEm?: unknown;
+  /**
+   * d6 (23-11-2026): aceitou a versão em vigor dos Termos? Dela depende a data a
+   * partir da qual o regime de IVA em falta impede (`regimeDeIvaImpedeDesde`).
+   * Sem a leitura (`undefined`) conta como «não aceitou»: nunca se bloqueia por engano.
+   */
+  aceitouOsTermosAtuais?: boolean;
 };
 
 export type DadoParaReceber = "iban" | "titular" | "mbway" | "regime";
@@ -144,16 +151,28 @@ export const FAIXA_DOS_DADOS_PARA_RECEBER =
 export const COMPLETAR_O_PERFIL = "Completar o perfil";
 
 /** A frase do aviso, pelas partes que faltam. */
-function fraseDoAviso(o: { meioEmAviso: boolean; regimeEmAviso: boolean }): string {
-  if (o.meioEmAviso && o.regimeEmAviso) return FAIXA_DOS_DADOS_PARA_RECEBER;
+function fraseDoAviso(o: { meioEmAviso: boolean; regimeEmAviso: boolean; regimeAte?: string | null }): string {
+  // d6: o prazo do regime é por parceiro; sem data (o aviso ainda não saiu), a frase não inventa uma.
+  const semData = o.regimeAte === null;
+  if (o.meioEmAviso && o.regimeEmAviso && !semData && o.regimeAte === REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO) return FAIXA_DOS_DADOS_PARA_RECEBER;
+  if (o.meioEmAviso && o.regimeEmAviso) {
+    return (
+      `A partir de ${NOVO_MODELO_DESDE_POR_EXTENSO} recebe diretamente do cliente. Até ${IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO}, ` +
+      `indique no perfil ${O_MEIO_DE_RECEBER_EM_PALAVRAS} (basta um). ` +
+      (semData ? "Confirme também o regime de IVA (escolha e grave)." : `Confirme também o regime de IVA até ${o.regimeAte} (escolha e grave).`)
+    );
+  }
   if (o.meioEmAviso) {
     return (
       `A partir de ${NOVO_MODELO_DESDE_POR_EXTENSO} recebe diretamente do cliente. Até ${IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO}, ` +
       `indique no perfil ${O_MEIO_DE_RECEBER_EM_PALAVRAS} (basta um).`
     );
   }
+  if (semData) {
+    return "Confirme no perfil o regime de IVA (escolha e grave): é o que diz ao cliente que fatura vai receber. Avisamo-lo antes de passar a ser obrigatório.";
+  }
   return (
-    `Confirme no perfil o regime de IVA até ${REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO} (escolha e grave): ` +
+    `Confirme no perfil o regime de IVA até ${o.regimeAte} (escolha e grave): ` +
     "é o que diz ao cliente que fatura vai receber. Depois dessa data, sem ele, não pode aceitar pedidos nem enviar propostas."
   );
 }
@@ -182,7 +201,9 @@ export function estadoDosDadosParaReceber(
   // o IBAN e o titular, ou com o MB WAY, o outro não avisa nem impede.
   const faltaDoMeio: DadoParaReceber[] = semMeio ? dadosEmFalta(p).filter((d) => d !== "regime") : [];
   const meioEmTransicao = aprovadoAntesDoNovoModelo(p) && agora.getTime() <= IBAN_E_MBWAY_OBRIGATORIOS_ATE.getTime();
-  const regimeEmAviso = agora.getTime() <= REGIME_DE_IVA_EM_AVISO_ATE.getTime();
+  const regimeImpedeDesde = regimeDeIvaImpedeDesde(p.aceitouOsTermosAtuais === true);
+  const regimeEmAviso = regimeImpedeDesde === null || agora.getTime() < regimeImpedeDesde.getTime();
+  const regimeAteTexto = regimeImpedeDesde ? dataPorExtensoEmLisboa(new Date(regimeImpedeDesde.getTime() - 1000)) : null;
 
   const meioImpede = semMeio && !meioEmTransicao;
   const regimeImpede = semRegime && !regimeEmAviso;
@@ -192,8 +213,13 @@ export function estadoDosDadosParaReceber(
   }
 
   const falta: DadoParaReceber[] = [...faltaDoMeio, ...(semRegime ? (["regime"] as const) : [])];
-  const ate = semMeio ? IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO : REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO;
-  return { estado: "aviso", falta, ate, frase: fraseDoAviso({ meioEmAviso: semMeio, regimeEmAviso: semRegime }) };
+  const ate = semMeio ? IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO : (regimeAteTexto ?? "");
+  return {
+    estado: "aviso",
+    falta,
+    ate,
+    frase: fraseDoAviso({ meioEmAviso: semMeio, regimeEmAviso: semRegime, regimeAte: regimeAteTexto }),
+  };
 }
 
 /** Aceitar e propor têm de parar aqui? */

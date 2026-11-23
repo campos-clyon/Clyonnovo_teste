@@ -243,7 +243,7 @@ export function respostaAoProfissional(
         "Porque são os dados que o cliente vê para lhe pagar. São 4: IBAN, nome do titular da conta, MB WAY e o regime de IVA confirmado. " +
         // d1 (18-11-2026): os dois prazos — basta um meio de receber; o regime até 30-11.
         `Para receber, basta um: o IBAN com o titular, ou o MB WAY. Quem já está aprovado tem até ${ate}; a partir de ${depois}, sem nenhum dos dois, não pode aceitar nem enviar ofertas. ` +
-        `O regime de IVA confirme-o até ${diaEMes(REGIME_DE_IVA_EM_AVISO_ATE)}; depois disso, sem ele, também não. ` +
+        `O regime de IVA confirme-o até ${diaEMes(REGIME_DE_IVA_EM_AVISO_ATE)} se já aceitou os Termos (a quem ainda não os aceitou, avisamos com 15 dias); depois disso, sem ele, também não. ` +
         "Mudar estes dados pede a sua palavra-passe."
       );
     case "regime_de_iva":

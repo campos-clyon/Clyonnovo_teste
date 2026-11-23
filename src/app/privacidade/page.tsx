@@ -69,7 +69,7 @@ export default function PrivacidadePage() {
           {novo ? (
             <p className="mt-3 text-sm text-slate-500">
               Versão de {VERSAO_DOS_TERMOS_POR_EXTENSO}. Em vigor desde{" "}
-              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}. Última atualização: 22 de novembro de 2026.
+              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}. Última atualização: 23 de novembro de 2026.
             </p>
           ) : (
           <p className="mt-3 text-sm text-slate-500">
@@ -427,8 +427,9 @@ export default function PrivacidadePage() {
                     base de dados e o serviço do WhatsApp (no Railway) correm em Singapura, fora da
                     União Europeia. A transferência faz-se ao abrigo das cláusulas contratuais-tipo
                     aprovadas pela Comissão Europeia, que fazem parte dos acordos de tratamento de
-                    dados da Vercel e do Railway. Pode pedir-nos uma cópia destas garantias pelo
-                    email {BUSINESS_EMAIL}.
+                    dados da Vercel e do Railway. O limitador de pedidos (que conta as tentativas por
+                    endereço, para travar abusos) corre nos Estados Unidos. Pode pedir-nos uma cópia
+                    destas garantias pelo email {BUSINESS_EMAIL}.
                   </li>
                   <li>
                     <strong>Envio de email</strong> — Resend, para lhe enviar o link do pedido e os

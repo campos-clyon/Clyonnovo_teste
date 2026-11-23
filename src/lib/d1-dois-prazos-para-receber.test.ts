@@ -48,7 +48,8 @@ describe("d1 — as datas são de Lisboa", () => {
 
 describe("d1 — basta um meio de receber", () => {
   it("um aprovado só sem o regime propõe a 23-11 (aviso), e não propõe a 01-12", () => {
-    const p = { ...iban, ...mbway, ...semRegime, ...aprovadoAntes };
+    // d6 (23-11): o bloqueio a 01-12 vale para quem já aceitou os Termos.
+    const p = { ...iban, ...mbway, ...semRegime, ...aprovadoAntes, aceitouOsTermosAtuais: true };
     expect(dadosImpedemAceitar(p, DIA_23)).toBe(false);
     const e = estadoDosDadosParaReceber(p, DIA_23);
     expect(e.estado).toBe("aviso");
@@ -64,7 +65,7 @@ describe("d1 — basta um meio de receber", () => {
 
   it("o regime é aviso até 30-11 também para os aprovados depois de 15-11", () => {
     expect(dadosImpedemAceitar({ ...mbway, ...semRegime, ...aprovadoDepois }, DIA_18)).toBe(false);
-    expect(dadosImpedemAceitar({ ...mbway, ...semRegime, ...aprovadoDepois }, DIA_1_12)).toBe(true);
+    expect(dadosImpedemAceitar({ ...mbway, ...semRegime, ...aprovadoDepois, aceitouOsTermosAtuais: true }, DIA_1_12)).toBe(true);
   });
 
   it("sem IBAN nem MB WAY não propõe a 23-11; até 22-11 o aprovado antes só tem aviso", () => {
@@ -149,7 +150,7 @@ describe("d1 — o cartão «Pronto para receber pedidos»", () => {
   });
 
   it("a 01-12 sem o regime, a linha do regime impede", () => {
-    const c = prontoParaReceber({ ...mbway, ...semRegime, ...aprovadoAntes }, DIA_1_12)!;
+    const c = prontoParaReceber({ ...mbway, ...semRegime, ...aprovadoAntes, aceitouOsTermosAtuais: true }, DIA_1_12)!;
     expect(c.podePropor).toBe(false);
     expect(c.linhas.find((l) => l.id === "regime")?.impede).toBe(true);
   });
@@ -160,7 +161,7 @@ describe("d1 — a rota e o painel", () => {
 
   it("a carteira serve o cartão (o painel e a app CLYON Pro lêem a mesma lista)", () => {
     const rota = ler("src/app/api/profissionais/carteira/route.ts");
-    expect(rota).toContain("prontoParaReceber: perfil ? prontoParaReceber({ ...perfil, versaoDosTermosAceite }, agoraDoNovoModelo) : null");
+    expect(rota).toContain("prontoParaReceber: perfil ? prontoParaReceber({ ...perfil, versaoDosTermosAceite, aceitouOsTermosAtuais: versaoDosTermosAceite === VERSAO_DOS_TERMOS_ATUAL }, agoraDoNovoModelo) : null");
   });
 
   it("o Início do painel desenha o cartão do servidor, sem pílula por cima do título", () => {

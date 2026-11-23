@@ -37,6 +37,7 @@ import {
 } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { aceitouOsTermosAtuais } from "@/lib/aceitacao-dos-termos-na-base";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
 import { perfilFiscalDoParceiro, regimeParaOEcra } from "@/lib/perfil-fiscal";
@@ -151,7 +152,10 @@ export async function GET(req: NextRequest) {
     const agoraDoNovoModelo = agoraDoModelo();
     const novoModelo = novoModeloEmVigor(agoraDoNovoModelo)
       ? {
-          dadosParaReceber: estadoDosDadosParaReceber(p, agoraDoNovoModelo),
+          dadosParaReceber: estadoDosDadosParaReceber(
+            { ...p, aceitouOsTermosAtuais: await aceitouOsTermosAtuais(sessao.providerId) },
+            agoraDoNovoModelo,
+          ),
           perfilFiscal: perfilFiscalDoParceiro(p),
           regimeIvaConfirmado: p.regimeIvaConfirmadoEm != null,
         }

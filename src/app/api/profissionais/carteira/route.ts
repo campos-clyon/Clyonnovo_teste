@@ -16,7 +16,7 @@ import {
   type TrabalhoNaCarteira,
 } from "@/lib/carteira";
 import { bloqueioEmDinheiro, explicacaoDoBloqueio, standByDoNovoModelo, venceEm } from "@/lib/bloqueio-por-divida";
-import { novoModeloEmVigor } from "@/lib/novo-modelo";
+import { novoModeloEmVigor, VERSAO_DOS_TERMOS_ATUAL } from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { estadoDosDadosParaReceber } from "@/lib/dados-para-receber";
 import { prontoParaReceber } from "@/lib/pronto-para-receber";
@@ -271,9 +271,11 @@ export async function GET(req: NextRequest) {
                   negociacoes: s.valores.map((v) => v.negociacaoId),
                 }
               : null,
-            dadosParaReceber: perfil ? estadoDosDadosParaReceber(perfil, agoraDoNovoModelo) : null,
+            dadosParaReceber: perfil
+              ? estadoDosDadosParaReceber({ ...perfil, aceitouOsTermosAtuais: versaoDosTermosAceite === VERSAO_DOS_TERMOS_ATUAL }, agoraDoNovoModelo)
+              : null,
             // d1: o cartão do Início, linha a linha — o painel e a app CLYON Pro desenham esta lista.
-            prontoParaReceber: perfil ? prontoParaReceber({ ...perfil, versaoDosTermosAceite }, agoraDoNovoModelo) : null,
+            prontoParaReceber: perfil ? prontoParaReceber({ ...perfil, versaoDosTermosAceite, aceitouOsTermosAtuais: versaoDosTermosAceite === VERSAO_DOS_TERMOS_ATUAL }, agoraDoNovoModelo) : null,
           };
         })()
       : null;

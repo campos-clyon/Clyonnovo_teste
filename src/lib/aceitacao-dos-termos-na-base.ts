@@ -1,5 +1,6 @@
 import { getPool, toMySQLDateTime } from "./db";
 import { VERSAO_DOS_TERMOS, type OrigemDaAceitacao } from "./aceitacao-dos-termos";
+import { VERSAO_DOS_TERMOS_ATUAL } from "./novo-modelo";
 
 /**
  * A TABELA DAS ACEITAÇÕES DOS TERMOS — d20 (13-11-2026). Ver `aceitacao-dos-termos.ts`.
@@ -49,6 +50,19 @@ export async function aceitacaoDoProfissional(
   if (!l) return null;
   const em = l.em instanceof Date ? l.em : new Date(String(l.em).replace(" ", "T") + "Z");
   return { versao: String(l.versao), em, origem: String(l.origem) };
+}
+
+/**
+ * d6 (23-11-2026): aceitou a versão em vigor dos Termos? Dela depende a data a
+ * partir da qual o regime de IVA em falta impede. Se a leitura falhar, `false`:
+ * nunca se bloqueia por engano.
+ */
+export async function aceitouOsTermosAtuais(providerId: number): Promise<boolean> {
+  try {
+    return (await aceitacaoDoProfissional(providerId, VERSAO_DOS_TERMOS_ATUAL)) !== null;
+  } catch {
+    return false;
+  }
 }
 
 /**

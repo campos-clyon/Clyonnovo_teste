@@ -1,6 +1,6 @@
 import {
   IBAN_E_MBWAY_OBRIGATORIOS_ATE_POR_EXTENSO,
-  REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO,
+  regimeDeIvaImpedeDesde,
   VERSAO_DOS_TERMOS,
   VERSAO_DOS_TERMOS_POR_EXTENSO,
   novoModeloEmVigor,
@@ -13,6 +13,7 @@ import {
   type ProfissionalComDadosParaReceber,
 } from "./dados-para-receber";
 import { guiaVerificada } from "./guia-antes-de-contratar";
+import { dataPorExtensoEmLisboa } from "./hora-de-lisboa";
 
 /**
  * «PRONTO PARA RECEBER PEDIDOS» — d1 (CEO e dono, 18-11-2026).
@@ -180,6 +181,9 @@ export function prontoParaReceber(p: EntradaDoProntoParaReceber, agora: Date = n
   const regimeEmFalta =
     (dados.estado === "aviso" || dados.estado === "impede") && dados.falta.includes("regime");
   const regimeImpede = impedem.has("regime");
+  // d6: o prazo é por parceiro (aceitou os Termos ou não); sem data, o aviso ainda não saiu.
+  const regimeDesde = regimeDeIvaImpedeDesde(p.aceitouOsTermosAtuais === true);
+  const regimeAte = regimeDesde ? dataPorExtensoEmLisboa(new Date(regimeDesde.getTime() - 1000)) : null;
   linha({
     id: "regime",
     rotulo: "Regime de IVA",
@@ -188,7 +192,9 @@ export function prontoParaReceber(p: EntradaDoProntoParaReceber, agora: Date = n
       ? "Confirmado: o cliente sabe que fatura vai receber."
       : regimeImpede
         ? "Sem o regime de IVA confirmado não pode aceitar pedidos nem enviar propostas."
-        : `Escolha e grave até ${REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO}. Depois dessa data, sem ele, não pode aceitar pedidos nem enviar propostas.`,
+        : regimeAte
+          ? `Escolha e grave até ${regimeAte}. Depois dessa data, sem ele, não pode aceitar pedidos nem enviar propostas.`
+          : "Escolha e grave. Avisamo-lo antes de passar a ser obrigatório.",
     impede: regimeImpede,
     botao: regimeEmFalta ? "Confirmar o regime" : null,
     caminho: "faturacao",

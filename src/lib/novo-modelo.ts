@@ -35,8 +35,16 @@ export const NOVO_MODELO_DESDE_POR_EXTENSO = "15 de novembro de 2026";
  * 13-11-2026). Nasce da data única do modelo: a página mostra-a no topo, a caixa
  * de aceitação di-la, e é ela que se grava quando o parceiro aceita. Um teste
  * confere que as três são a mesma.
+ *
+ * d6 (CEO e dono, 23-11-2026): é uma constante PRÓPRIA, separada de
+ * `NOVO_MODELO_DESDE` (que manda nas regras de 15-11). Quando o texto novo dos
+ * Termos for publicado, muda-se aqui, com a data real da publicação, e todos
+ * os parceiros voltam a aceitar; `NOVO_MODELO_DESDE` não se toca.
  */
-export const VERSAO_DOS_TERMOS = NOVO_MODELO_DESDE.toISOString().slice(0, 10);
+export const VERSAO_DOS_TERMOS_ATUAL = "2026-11-15";
+
+/** O nome de sempre: é a versão em vigor (d6, 23-11-2026: já não nasce de `NOVO_MODELO_DESDE`). */
+export const VERSAO_DOS_TERMOS = VERSAO_DOS_TERMOS_ATUAL;
 
 /** Como a página e a caixa a dizem. */
 export const VERSAO_DOS_TERMOS_POR_EXTENSO = NOVO_MODELO_DESDE_POR_EXTENSO;
@@ -102,8 +110,42 @@ export const MEIO_DE_RECEBER_OBRIGATORIO_DESDE = inicioDoDiaEmLisboa("2026-11-23
 /** 00:00 de 01-12-2026 em Lisboa: a partir daqui, sem o regime de IVA confirmado, impede. */
 export const REGIME_DE_IVA_OBRIGATORIO_DESDE = inicioDoDiaEmLisboa("2026-12-01");
 
-/** O último instante do aviso do regime: 23:59:59 de 30-11-2026 em Lisboa. */
+/** O último instante do aviso do regime para quem JÁ aceitou os Termos: 23:59:59 de 30-11-2026 em Lisboa. */
 export const REGIME_DE_IVA_EM_AVISO_ATE = new Date(REGIME_DE_IVA_OBRIGATORIO_DESDE.getTime() - 1000);
+
+/**
+ * O PRAZO DO REGIME DE IVA É POR PARCEIRO — d6 (CEO e dono, 23-11-2026).
+ *
+ * O P2B (Regulamento 2019/1150) pede 15 dias de aviso a quem não aceitou a
+ * alteração. Por isso o bloqueio vale, para cada parceiro:
+ *
+ *   · já aceitou a versão em vigor dos Termos → a partir de 01-12
+ *     (`REGIME_DE_IVA_OBRIGATORIO_DESDE`);
+ *   · não aceitou → a partir do aviso real + 15 dias (e nunca antes de 01-12).
+ *     Enquanto o aviso não saiu (`AVISO_DO_REGIME_DE_IVA_ENVIADO_EM` a `null`),
+ *     não há data e NÃO se bloqueia: só se mostra o aviso e continua a propor.
+ *
+ * Até lá o preço continua a descer sozinho a quem é isento (d2 de 19-11).
+ */
+export const DIAS_DE_AVISO_DO_REGIME_DE_IVA = 15;
+
+/**
+ * O INSTANTE em que o aviso real foi enviado aos parceiros. `null` até sair.
+ * No dia do envio escreve-se aqui o instante exacto (ISO, com o fuso), p. ex.
+ * `new Date("2026-11-24T10:00:00Z")`.
+ */
+export const AVISO_DO_REGIME_DE_IVA_ENVIADO_EM: Date | null = null;
+
+/** A partir de quando o regime de IVA em falta impede este parceiro, ou `null` (ainda não impede nunca). */
+export function regimeDeIvaImpedeDesde(
+  aceitouOsTermosAtuais: boolean,
+  avisoEnviadoEm: Date | null = AVISO_DO_REGIME_DE_IVA_ENVIADO_EM,
+): Date | null {
+  if (aceitouOsTermosAtuais) return REGIME_DE_IVA_OBRIGATORIO_DESDE;
+  if (!avisoEnviadoEm) return null;
+  const depoisDosDias = avisoEnviadoEm.getTime() + DIAS_DE_AVISO_DO_REGIME_DE_IVA * 24 * 3600 * 1000;
+  return new Date(Math.max(REGIME_DE_IVA_OBRIGATORIO_DESDE.getTime(), depoisDosDias));
+}
 
 /** Como o aviso o diz. Um teste confere que bate com a data de cima. */
 export const REGIME_DE_IVA_EM_AVISO_ATE_POR_EXTENSO = "30 de novembro de 2026";

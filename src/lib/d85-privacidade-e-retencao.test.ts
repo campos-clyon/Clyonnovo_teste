@@ -209,6 +209,8 @@ describe("a Política de Privacidade (d85)", () => {
     expect(t).not.toContain("ambos na União Europeia");
     expect(t).toContain("correm em Singapura, fora da União Europeia");
     expect(t).toContain("acordos de tratamento de dados da Vercel e do Railway");
+    // d6 (23-11-2026): o limitador de pedidos, nos Estados Unidos, também se diz.
+    expect(t).toContain("O limitador de pedidos (que conta as tentativas por endereço, para travar abusos) corre nos Estados Unidos.");
     // O Google (Gemini) também diz a transferência.
     expect(t).toMatch(/O Google pode tratar estes dados nos Estados Unidos, ao abrigo das cláusulas contratuais-tipo/);
   });
@@ -216,7 +218,7 @@ describe("a Política de Privacidade (d85)", () => {
   it("os outros pontos do Jurídico, a data, e as secções como estavam", { timeout: 120_000 }, async () => {
     const html = await pagina();
     const t = texto(html);
-    expect(t).toContain("Última atualização: 22 de novembro de 2026.");
+    expect(t).toContain("Última atualização: 23 de novembro de 2026.");
     expect(t).toContain("Conversas com a assistente do WhatsApp:");
     expect(t).toContain("através da Vitória, a nossa assistente automática");
     expect(t).toContain("sem nome, telefone, email, morada nem código postal");

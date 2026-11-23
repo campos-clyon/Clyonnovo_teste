@@ -339,3 +339,14 @@ export function instanteEmLisboa(cru: string): Date | null {
   instante = new Date(comoSeFosseUtc - deslocamentoDeLisboa(instante));
   return Number.isNaN(instante.getTime()) ? null : instante;
 }
+
+const MESES_POR_EXTENSO = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/** «30 de novembro de 2026» — o dia em Lisboa, por extenso (d6, 23-11-2026). */
+export function dataPorExtensoEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  return `${p.dia} de ${MESES_POR_EXTENSO[p.mes - 1]} de ${p.ano}`;
+}
