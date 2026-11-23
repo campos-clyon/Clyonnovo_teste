@@ -11,6 +11,7 @@ import {
   contaDoCliente,
   taxasDaNegociacao,
 } from "@/lib/taxas-plataforma";
+import { PAGAR_ANTES_DO_CLIENTE, podePagarAoProfissional } from "@/lib/pagar-antes-do-cliente";
 import { precoDoCliente } from "@/lib/preco-do-cliente";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { negociacoesPagas, negociacoesPagasComDetalhe } from "@/lib/pagamentos-na-base";
@@ -666,7 +667,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
-  let corpo: { negociacaoId?: unknown; nota?: unknown };
+  let corpo: { negociacaoId?: unknown; nota?: unknown; motivo?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -692,12 +693,17 @@ export async function POST(req: NextRequest) {
               p.name AS profissionalNome, p.email AS emailDoProfissional,
               -- Como o cliente pagou (04-11-2026, d9): registado «pago ao profissional»
               -- também é em mão, e a CLYON não transfere nada.
-              pg.metodo AS comoEntrou
+              pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm,
+              n.ofertaClyon, o.valorFixoClyon
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
          LEFT JOIN pagamentos pg ON pg.negociacaoPaga = n.id
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
     )) as [Array<{
+        clientePagouEm: Date | string | null;
+        ofertaClyon: string | null;
+        valorFixoClyon: string | null;
         pedidoId: number;
         valorAcordado: string | null;
         taxaCliente: string | null;
@@ -718,6 +724,12 @@ export async function POST(req: NextRequest) {
         { error: "Este trabalho é pago em mão ao profissional — a CLYON não lhe transfere nada." },
         { status: 409 },
       );
+    }
+
+    // d5 (22/11): num Trabalho CLYON o profissional recebe depois do cliente; antes, só com motivo escrito.
+    const pode = podePagarAoProfissional(linha, corpo.motivo);
+    if (!pode.ok) {
+      return NextResponse.json({ error: PAGAR_ANTES_DO_CLIENTE, pedeMotivo: true }, { status: 409 });
     }
 
     const [res] = (await pool.execute(
@@ -747,7 +759,8 @@ export async function POST(req: NextRequest) {
       message:
         `Pagamento a ${linha.profissionalNome} marcado como feito por ${porQuem} — ${quanto}` +
         (nota ? ` (${nota})` : "") +
-        ". Transferência feita fora da plataforma.",
+        ". Transferência feita fora da plataforma." +
+        (pode.adiantadoPor ? ` Pago antes de o cliente pagar, com o motivo: ${pode.adiantadoPor}.` : ""),
     });
 
     await registarSemFalhar({

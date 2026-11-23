@@ -356,9 +356,10 @@ export default function AdminCarteirasPanel() {
    */
   useAutoRefresh(() => carregar(true), { enabled: Boolean(token) });
 
-  async function marcarPago(t: Trabalho, nome: string) {
+  async function marcarPago(t: Trabalho, nome: string, motivo?: string, jaConfirmou = false) {
     if (!token) return;
     if (
+      !jaConfirmou &&
       !window.confirm(
         `Marcar como pago a ${nome}?\n\n` +
           `${euros(t.recebe)} pelo pedido #${t.pedidoId}.\n\n` +
@@ -374,10 +375,21 @@ export default function AdminCarteirasPanel() {
       const res = await fetch("/api/admin/carteiras", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ negociacaoId: t.negociacaoId }),
+        body: JSON.stringify({ negociacaoId: t.negociacaoId, ...(motivo ? { motivo } : {}) }),
       });
       const dados = await res.json();
       if (!res.ok) {
+        // d5 (22/11): um Trabalho CLYON ainda não pago pelo cliente só se paga com um motivo escrito.
+        if (dados.pedeMotivo && !motivo) {
+          const m = window.prompt(`${dados.error}\n\nMotivo:`);
+          if (m && m.trim().length >= 3) {
+            setOcupado(null);
+            await marcarPago(t, nome, m.trim(), true);
+          } else {
+            setErro(dados.error);
+          }
+          return;
+        }
         setErro(dados.error ?? "Não foi possível marcar como pago.");
         return;
       }

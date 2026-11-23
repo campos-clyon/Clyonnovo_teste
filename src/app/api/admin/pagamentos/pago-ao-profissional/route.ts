@@ -5,6 +5,7 @@ import { getPool, appendOrderHistory, registarSemFalhar } from "@/lib/db";
 import { foiPagoEmMaoPor } from "@/lib/pago-em-mao";
 import { avisarProfissionalPagoPorPush } from "@/lib/avisar-por-push";
 import { quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { PAGAR_ANTES_DO_CLIENTE, podePagarAoProfissional } from "@/lib/pagar-antes-do-cliente";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
 
-  let corpo: { negociacaoId?: unknown };
+  let corpo: { negociacaoId?: unknown; motivo?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -54,11 +55,12 @@ export async function POST(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-              n.formaDePagamento, n.confirmadoEm,
+              n.formaDePagamento, n.confirmadoEm, n.ofertaClyon, o.valorFixoClyon,
               pr.name AS profissional, pr.email AS emailDoProfissional,
               pg.pagoEm AS clientePagouEm, pg.metodo AS comoEntrou
          FROM negociacoes n
          JOIN providers pr ON pr.id = n.providerId
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
          LEFT JOIN pagamentos pg ON pg.negociacaoPaga = n.id
         WHERE n.id = ? LIMIT 1`,
       [negociacaoId],
@@ -74,6 +76,12 @@ export async function POST(req: NextRequest) {
         { error: "Este trabalho é pago em mão ao profissional — a CLYON não lhe transfere nada." },
         { status: 409 },
       );
+    }
+
+    // d5 (22/11): num Trabalho CLYON o profissional recebe depois do cliente; antes, só com motivo escrito.
+    const pode = podePagarAoProfissional(l, corpo.motivo);
+    if (!pode.ok) {
+      return NextResponse.json({ error: PAGAR_ANTES_DO_CLIENTE, pedeMotivo: true }, { status: 409 });
     }
 
     const [res] = (await pool.execute(
@@ -100,7 +108,9 @@ export async function POST(req: NextRequest) {
       l.clientePagouEm == null ? "o cliente ainda não pagou" : null,
       l.confirmadoEm == null ? "o cliente ainda não confirmou o trabalho" : null,
     ].filter(Boolean);
-    const nota = adiantado.length > 0 ? ` ADIANTADO: ${adiantado.join(" e ")}.` : "";
+    const nota =
+      (adiantado.length > 0 ? ` ADIANTADO: ${adiantado.join(" e ")}.` : "") +
+      (pode.adiantadoPor ? ` Pago antes de o cliente pagar, com o motivo: ${pode.adiantadoPor}.` : "");
 
     const mensagem =
       `Pagamento a ${String(l.profissional)} marcado como feito por ${porQuem} — ${quanto}. ` +
@@ -116,6 +126,7 @@ export async function POST(req: NextRequest) {
       autorNome: porQuem,
       valor: recebe,
       resumo: mensagem,
+      ...(pode.adiantadoPor ? { detalhe: { decisao: "d5", adiantadoPor: pode.adiantadoPor } } : {}),
     });
 
     // «Já pagámos» no telemóvel do profissional (27-10-2026), depois de gravado. Nunca lança.

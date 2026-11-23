@@ -1254,6 +1254,17 @@ function GestorDoDinheiro({
       }
       const r = await fetch(url, pedido);
       const d = await r.json().catch(() => ({}));
+      if (!r.ok && d.pedeMotivo && url.endsWith("/pago-ao-profissional") && !corpo.motivo) {
+        // d5 (22/11): um Trabalho CLYON ainda não pago pelo cliente só se paga com um motivo escrito.
+        const m = window.prompt(`${d.error}\n\nMotivo:`);
+        if (m && m.trim().length >= 3) {
+          setOcupado(null);
+          await agir(t, url, { ...corpo, motivo: m.trim() }, onde);
+        } else {
+          setErro(d.error);
+        }
+        return;
+      }
       if (!r.ok) {
         setErro(
           [d.error, d.detalhe].filter(Boolean).join(" — ") ||

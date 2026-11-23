@@ -31,6 +31,7 @@ import {
   type SaidaDaConta,
 } from "@/lib/saida-da-assistente";
 import { comissaoDaClyon, quantoOProfissionalRecebe, taxasDaNegociacao } from "@/lib/taxas-plataforma";
+import { lerAcordoFinal } from "@/lib/acordo-final";
 
 /**
  * As contas de assistente, na tabela `colaboradores`.
@@ -460,6 +461,8 @@ export type LinhaCruaDoTrabalho = {
   taxaCliente?: number | string | null;
   taxaProfissional?: number | string | null;
   acrescimoPagamento?: number | string | null;
+  /** O acordo final com o cliente (d78): o que ele paga, sem IVA. O lucro passa a ser esse valor menos o que o profissional recebeu — pode ser negativo (d5 de 22/11). */
+  acordoFinalCliente?: number | string | null;
   precoFinal?: number | string | null;
   estimateTotal?: number | string | null;
   /** Não nulo = Trabalho CLYON. */
@@ -535,9 +538,11 @@ export function lucroDoTrabalho(l: LinhaCruaDoTrabalho): {
 } {
   const acordado = numeroOuNulo(l.valorAcordado);
   const valorFixo = numeroOuNulo(l.valorFixoClyon);
+  // Com um acordo final (d78) o cliente paga esse valor, e é ele que conta — mesmo abaixo do que o profissional recebeu.
+  const acordoFinal = lerAcordoFinal(l);
 
   if (valorFixo != null) {
-    const preco = numeroOuNulo(l.precoClienteClyon);
+    const preco = acordoFinal ?? numeroOuNulo(l.precoClienteClyon);
     const valorDoPro = acordado ?? valorFixo;
     const taxas =
       acordado != null
@@ -548,6 +553,15 @@ export function lucroDoTrabalho(l: LinhaCruaDoTrabalho): {
       valor: preco,
       lucro: centimos(preco - quantoOProfissionalRecebe(valorDoPro, taxas)),
       fonte: "preco_ao_cliente",
+    };
+  }
+
+  if (acordado != null && acordoFinal != null) {
+    // d5 (22/11): a perda conta — o lucro do período desconta o que a CLYON suportou (o #591 conta −100 €, não 0).
+    return {
+      valor: acordoFinal,
+      lucro: centimos(acordoFinal - quantoOProfissionalRecebe(acordado, taxasDaNegociacao(l))),
+      fonte: "acordado",
     };
   }
 
@@ -1014,7 +1028,7 @@ export async function trabalhosQueContam(desde: string = INICIO_DAS_COMISSOES): 
       `SELECT o.id, o.status, o.contactName, o.serviceType, o.city, o.assignedToId, o.assignedToName,
               o.assignedAt, o.updatedAt, o.precoFinal, o.estimateTotal,
               o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual, o.concluidoEmManual,
-              n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento,
+              n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento, n.acordoFinalCliente,
               pn.name AS profissional, n.feitoEm,
               COALESCE(o.concluidoEm, c.confirmadoEm, o.updatedAt) AS concluidoEm
          FROM simulatorOrders o
@@ -1133,7 +1147,7 @@ export async function trabalhosQueAindaNaoContam(desde: string = INICIO_DAS_COMI
               o.dataAgendada, n.dataCombinada, n.execucaoEnviadaEm, n.feitoEm, n.confirmadoEm,
               o.precoFinal, o.estimateTotal,
               o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.lucroManual,
-              n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento,
+              n.valorAcordado, n.taxaCliente, n.taxaProfissional, n.acrescimoPagamento, n.acordoFinalCliente,
               pn.name AS profissional, COALESCE(pn.contaDeTeste, 0) AS deTeste
          FROM simulatorOrders o
          JOIN (
