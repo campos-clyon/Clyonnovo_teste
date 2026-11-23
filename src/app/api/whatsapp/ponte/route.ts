@@ -139,6 +139,17 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
   // O ensaio só quando responderam as regras (o que o agente disse a sério já ficou no painel).
   if (respondida && quemRespondeu === "regras") {
     after(async () => {
+      /*
+       * d99, FASE 1 — A RECOLHA EM ENSAIO. Com «Vitória agente — recolha
+       * (ensaio)» ligado (DESLIGADO por omissão), num número sem pedido o
+       * agente conduz a recolha ao lado da Vitória de sempre: grava no
+       * rascunho-sombra o que teria gravado. Nunca envia, nunca toca no
+       * rascunho real, nunca cria pedidos. Se correu, o ensaio geral não se
+       * repete (para um número sem pedido só diria «deixado à Vitória»).
+       */
+      const { recolhaEmEnsaioNaBase } = await import("@/lib/vitoria-agente/recolha-em-ensaio-na-base");
+      const recolha = await recolhaEmEnsaioNaBase(telefone).catch(() => null);
+      if (recolha?.feito) return;
       const { ensaioEmSombra } = await import("@/lib/vitoria-agente/na-base");
       await ensaioEmSombra(telefone).catch(() => undefined);
     });

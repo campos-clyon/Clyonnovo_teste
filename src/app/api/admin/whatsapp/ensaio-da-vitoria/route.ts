@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth-helper";
 import { accoesDoEnsaio, avaliarEnsaio, ensaiosNoPainel, interruptorDoEnsaio } from "@/lib/vitoria-agente/na-base";
+import { resumoDaRecolhaEmEnsaio } from "@/lib/vitoria-agente/recolha-em-ensaio-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,8 +13,13 @@ export const dynamic = "force-dynamic";
  * resposta real ao lado da do agente, o que ele teria feito, o custo; com
  * `?ensaio=<id>`, as acções desse ensaio, passo a passo. Só lê.
  *
- * POST { id, avaliacao: "melhor" | "pior" | null }: a equipa diz se a
- * resposta do agente estava melhor ou pior do que a real. Não muda nada na
+ * d99 (23-11-2026): `recolha` — a recolha em ensaio (ligada ou não, o tecto,
+ * o gasto de hoje) e os cinco critérios para a fase 2, sobre os últimos 30
+ * dias (campos do resumo iguais, fugas, avaliadas melhor/igual, custo por
+ * pedido, prazo). Só com `?recolha=1`, só esses números.
+ *
+ * POST { id, avaliacao: "melhor" | "igual" | "pior" | null }: a equipa diz se
+ * a resposta do agente estava melhor, igual ou pior do que a real. Não muda nada na
  * conversa nem no pedido.
  */
 export async function GET(req: NextRequest) {
@@ -22,11 +28,16 @@ export async function GET(req: NextRequest) {
   const ensaio = Number(req.nextUrl.searchParams.get("ensaio"));
   try {
     if (Number.isInteger(ensaio) && ensaio > 0) return NextResponse.json({ accoes: await accoesDoEnsaio(ensaio) });
-    const [lista, interruptor] = await Promise.all([ensaiosNoPainel(50), interruptorDoEnsaio()]);
-    return NextResponse.json({ ...lista, ligado: interruptor.ligado });
+    if (req.nextUrl.searchParams.get("recolha") === "1") return NextResponse.json({ recolha: await resumoDaRecolhaEmEnsaio(30) });
+    const [lista, interruptor, recolha] = await Promise.all([
+      ensaiosNoPainel(50),
+      interruptorDoEnsaio(),
+      resumoDaRecolhaEmEnsaio(30).catch(() => null),
+    ]);
+    return NextResponse.json({ ...lista, ligado: interruptor.ligado, recolha });
   } catch (e) {
     console.error("[admin/whatsapp/ensaio-da-vitoria]", e);
-    return NextResponse.json({ ensaios: [], melhor: 0, pior: 0, avaliados: 0, porAvaliar: 0, ligado: false });
+    return NextResponse.json({ ensaios: [], melhor: 0, igual: 0, pior: 0, avaliados: 0, porAvaliar: 0, ligado: false, recolha: null });
   }
 }
 
@@ -40,9 +51,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
   const id = Number(corpo.id);
-  const avaliacao = corpo.avaliacao === "melhor" || corpo.avaliacao === "pior" ? corpo.avaliacao : corpo.avaliacao === null ? null : undefined;
+  const avaliacao =
+    corpo.avaliacao === "melhor" || corpo.avaliacao === "igual" || corpo.avaliacao === "pior" ? corpo.avaliacao : corpo.avaliacao === null ? null : undefined;
   if (!Number.isInteger(id) || id <= 0 || avaliacao === undefined) {
-    return NextResponse.json({ error: "Diga qual o ensaio e se estava melhor ou pior." }, { status: 400 });
+    return NextResponse.json({ error: "Diga qual o ensaio e se estava melhor, igual ou pior." }, { status: 400 });
   }
   try {
     const ok = await avaliarEnsaio(id, avaliacao, colab?.nome?.trim() || "equipa");

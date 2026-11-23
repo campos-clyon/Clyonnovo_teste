@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminGeral } from "@/lib/admin-auth-helper";
-import { INTERRUPTORES_DA_VITORIA_AGENTE, mudarInterruptor, mudarTectoDiario, termometro, type QualInterruptor } from "@/lib/vitoria-agente/na-base";
+import {
+  INTERRUPTORES_DA_VITORIA_AGENTE,
+  mudarInterruptor,
+  mudarTectoDaRecolha,
+  mudarTectoDiario,
+  termometro,
+  type QualInterruptor,
+} from "@/lib/vitoria-agente/na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +24,10 @@ export const dynamic = "force-dynamic";
  * todos DESLIGADOS por omissão; para LIGAR escreve-se «LIGAR». Ou muda o
  * tecto diário em dólares. Só o administrador. A mudança fica no registo
  * permanente.
+ *
+ * d99 (23-11-2026): o interruptor «recolha» (a recolha de quem não tem
+ * pedido, EM ENSAIO — DESLIGADO por omissão, liga-se com LIGAR) e o tecto
+ * próprio dela, `tectoRecolha` (3 USD por omissão; nunca vale acima do geral).
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdminGeral(req);
@@ -27,7 +38,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdminGeral(req);
   if (err) return err;
-  let corpo: { ligar?: unknown; confirmacao?: unknown; tecto?: unknown; interruptor?: unknown };
+  let corpo: { ligar?: unknown; confirmacao?: unknown; tecto?: unknown; tectoRecolha?: unknown; interruptor?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -37,6 +48,10 @@ export async function POST(req: NextRequest) {
   try {
     if (corpo.tecto !== undefined) {
       await mudarTectoDiario(corpo.tecto, porQuem);
+      return NextResponse.json(await termometro());
+    }
+    if (corpo.tectoRecolha !== undefined) {
+      await mudarTectoDaRecolha(corpo.tectoRecolha, porQuem);
       return NextResponse.json(await termometro());
     }
     if (typeof corpo.ligar !== "boolean") {

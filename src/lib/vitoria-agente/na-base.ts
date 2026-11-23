@@ -21,7 +21,15 @@ import { ensureRegistoTable, getPool, registarNaTransaccao } from "../db";
 import { diaEmLisboa, instanteDaBase, primeiroDoMesEmLisboa } from "../hora-de-lisboa";
 import { conversaAnonimizada, ultimosDigitos, type QuemEscreve } from "./anonimizar";
 import { clienteDoClaude, chaveDoClaude, correrOAgente, type ClienteDoClaude, type LinhaDoRegistoDoAgente, type ResultadoDoAgente } from "./cliente";
-import { MODELO_DA_VITORIA_AGENTE, TECTO_DIARIO_POR_OMISSAO_USD, tectoDasConfigs, tectoValido, type EsforcoDoAgente } from "./custo";
+import {
+  MODELO_DA_VITORIA_AGENTE,
+  TECTO_DA_RECOLHA_POR_OMISSAO_USD,
+  TECTO_DIARIO_POR_OMISSAO_USD,
+  tectoDasConfigs,
+  tectoQueValeNaRecolha,
+  tectoValido,
+  type EsforcoDoAgente,
+} from "./custo";
 import type { DependenciasDasFerramentas, LinhaLida, PedidoParaOAgente } from "./ferramentas";
 import { respostaAoPendente } from "./pendentes";
 import { emEuros, motivoParaNaoFecharNoSim } from "./propostas-do-agente";
@@ -33,7 +41,11 @@ export const NOME_DO_INTERRUPTOR_DA_CONVERSA_LIVRE = "Vitória agente — conver
 export const CHAVE_DA_CONVERSA_LIVRE = "vitoria_agente_conversa";
 export const NOME_DO_INTERRUPTOR_DO_ACEITAR = "Vitória agente — aceitar";
 export const CHAVE_DO_ACEITAR = "vitoria_agente_aceitar";
+/** d99 (23-11-2026), fase 1: o agente conduz a recolha de quem não tem pedido, EM ENSAIO (nada sai, nada se grava no rascunho real). */
+export const NOME_DO_INTERRUPTOR_DA_RECOLHA = "Vitória agente — recolha (ensaio)";
+export const CHAVE_DA_RECOLHA_EM_ENSAIO = "vitoria_agente_recolha";
 const CHAVE_DO_TECTO = "tecto_diario_usd";
+const CHAVE_DO_TECTO_DA_RECOLHA = "tecto_recolha_usd";
 
 export const SQL_DAS_TABELAS_DA_VITORIA_AGENTE = [
   `CREATE TABLE IF NOT EXISTS retencaoInterruptores (
@@ -93,6 +105,43 @@ export const SQL_DAS_TABELAS_DA_VITORIA_AGENTE = [
       mudadoEm  DATETIME NULL DEFAULT NULL,
       porQuem   VARCHAR(120) NULL DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  /*
+   * d99 — O RASCUNHO-SOMBRA: o que o agente teria gravado na recolha de um
+   * número sem pedido (o rascunho real, whatsappRecolhas, nunca se toca no
+   * ensaio). Leva o nome e a morada, como o real: a purga tira-o aos 7 dias.
+   */
+  `CREATE TABLE IF NOT EXISTS vitoriaRascunhoSombra (
+      telefone           VARCHAR(20) NOT NULL PRIMARY KEY,
+      dadosJson          TEXT NULL,
+      resumoPropostoEm   VARCHAR(30) NULL DEFAULT NULL,
+      registadoEm        VARCHAR(30) NULL DEFAULT NULL,
+      criadoEm           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      actualizadoEm      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      KEY idx_vitoria_sombra_actualizado (actualizadoEm)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  /*
+   * d99 — A COMPARAÇÃO DE CADA ENSAIO DA RECOLHA (sem dados de pessoas): os
+   * campos do resumo iguais aos da Vitória de sempre, as fugas, o tempo e o
+   * custo. Liga-se a vitoriaEnsaios (as respostas lado a lado e a avaliação).
+   */
+  `CREATE TABLE IF NOT EXISTS vitoriaRecolhaEnsaios (
+      id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      ensaioId           BIGINT UNSIGNED NULL DEFAULT NULL,
+      telefone           VARCHAR(20) NOT NULL,
+      camposIguais       INT UNSIGNED NOT NULL DEFAULT 0,
+      camposComparados   INT UNSIGNED NOT NULL DEFAULT 0,
+      ambosNoResumo      TINYINT(1) NOT NULL DEFAULT 0,
+      camposJson         TEXT NULL,
+      fugasEvitadas      INT UNSIGNED NOT NULL DEFAULT 0,
+      fugasNoModelo      INT UNSIGNED NOT NULL DEFAULT 0,
+      chamouOModelo      TINYINT(1) NOT NULL DEFAULT 0,
+      duracaoMs          INT UNSIGNED NOT NULL DEFAULT 0,
+      custoUsd           DECIMAL(10,6) NOT NULL DEFAULT 0,
+      resumoProposto     TINYINT(1) NOT NULL DEFAULT 0,
+      criadoEm           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_vitoria_recolha_criado (criadoEm),
+      KEY idx_vitoria_recolha_ensaio (ensaioId)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 let tabelasProntas = false;
@@ -131,12 +180,17 @@ export type InterruptorDoEnsaio = { ligado: boolean; mudadoEm: string | null; po
  *  - «Vitória agente — aceitar» (d92): o SIM e o CANCELAR às perguntas do
  *    agente fecham e cancelam a sério, pelos caminhos de sempre. Só tem efeito
  *    com a «conversa livre» ligada (sem ela, as perguntas do agente não saem).
+ *  - «Vitória agente — recolha (ensaio)» (d99, fase 1): em quem ainda não tem
+ *    pedido, o agente conduz a recolha ao lado da Vitória de sempre e grava o
+ *    que teria dito e gravado no rascunho-sombra. Nunca envia, nunca toca no
+ *    rascunho real nem cria pedidos. Tecto próprio (3 USD/dia) dentro do geral.
  * Todos DESLIGADOS por omissão e na dúvida.
  */
 export const INTERRUPTORES_DA_VITORIA_AGENTE = {
   ensaio: { chave: CHAVE_DO_ENSAIO, nome: NOME_DO_INTERRUPTOR_DO_ENSAIO, decisao: "d85" },
   conversa: { chave: CHAVE_DA_CONVERSA_LIVRE, nome: NOME_DO_INTERRUPTOR_DA_CONVERSA_LIVRE, decisao: "d92" },
   aceitar: { chave: CHAVE_DO_ACEITAR, nome: NOME_DO_INTERRUPTOR_DO_ACEITAR, decisao: "d92" },
+  recolha: { chave: CHAVE_DA_RECOLHA_EM_ENSAIO, nome: NOME_DO_INTERRUPTOR_DA_RECOLHA, decisao: "d99" },
 } as const;
 export type QualInterruptor = keyof typeof INTERRUPTORES_DA_VITORIA_AGENTE;
 
@@ -226,6 +280,50 @@ export async function mudarTectoDiario(valor: unknown, porQuem: string): Promise
     [CHAVE_DO_TECTO, String(t), porQuem.slice(0, 120)],
   );
   return t;
+}
+
+/** d99: o tecto próprio da recolha em ensaio, como está nas Configs (sem linha ou inválido, 3 USD). */
+export async function tectoDaRecolhaUsd(): Promise<number> {
+  try {
+    const pool = await garantirTabelas();
+    const [rows] = (await pool.execute("SELECT valor FROM vitoriaAgenteDefinicoes WHERE chave = ? LIMIT 1", [CHAVE_DO_TECTO_DA_RECOLHA])) as [
+      Array<{ valor: string }>,
+      unknown,
+    ];
+    return tectoValido(rows[0]?.valor) ?? TECTO_DA_RECOLHA_POR_OMISSAO_USD;
+  } catch {
+    return TECTO_DA_RECOLHA_POR_OMISSAO_USD;
+  }
+}
+
+/** d99: muda o tecto da recolha (o geral fica como está). */
+export async function mudarTectoDaRecolha(valor: unknown, porQuem: string): Promise<number> {
+  const t = tectoValido(valor);
+  if (t == null) throw new Error("tecto inválido");
+  const pool = await garantirTabelas();
+  await pool.execute(
+    `INSERT INTO vitoriaAgenteDefinicoes (chave, valor, mudadoEm, porQuem) VALUES (?, ?, UTC_TIMESTAMP(), ?)
+     ON DUPLICATE KEY UPDATE valor = VALUES(valor), mudadoEm = VALUES(mudadoEm), porQuem = VALUES(porQuem)`,
+    [CHAVE_DO_TECTO_DA_RECOLHA, String(t), porQuem.slice(0, 120)],
+  );
+  return t;
+}
+
+/** d99: o que a recolha em ensaio gastou hoje (Lisboa), pelo custo de cada ensaio dela. */
+export async function gastoDaRecolhaHojeUsd(agora: Date = new Date()): Promise<number> {
+  const pool = await garantirTabelas();
+  const [rows] = (await pool.execute(
+    `SELECT criadoEm, custoUsd FROM vitoriaRecolhaEnsaios
+      WHERE criadoEm >= UTC_TIMESTAMP() - INTERVAL 2 DAY ORDER BY id DESC LIMIT 20000`,
+  )) as [Array<{ criadoEm: Date | string | null; custoUsd: number | string }>, unknown];
+  const hoje = diaEmLisboa(agora);
+  const soma = rows
+    .filter((r) => {
+      const em = instanteDaBase(r.criadoEm);
+      return em != null && diaEmLisboa(em) === hoje;
+    })
+    .reduce((s, r) => s + (Number(r.custoUsd) || 0), 0);
+  return Math.round(soma * 10000) / 10000;
 }
 
 type LinhaDaChamada = {
@@ -328,6 +426,10 @@ export type Termometro = {
   /** d92: a conversa livre (a resposta do agente sai) e o aceitar (o SIM / o CANCELAR ao agente agem). */
   conversa: InterruptorDoEnsaio;
   aceitar: InterruptorDoEnsaio;
+  /** d99: a recolha em ensaio, o tecto dela (o que vale: nunca acima do geral) e o gasto de hoje. */
+  recolha: InterruptorDoEnsaio;
+  tectoRecolhaUsd: number;
+  gastoRecolhaHojeUsd: number;
   chave: { existe: boolean; porque: string | null };
   modelo: string;
   tectoUsd: number;
@@ -339,10 +441,17 @@ export type Termometro = {
 
 /** O estado do agente para o painel. Sem a base, diz o que sabe (a chave e o interruptor). */
 export async function termometro(agora: Date = new Date()): Promise<Termometro> {
-  const [ensaio, conversa, aceitar] = await Promise.all([interruptorDoEnsaio(), lerInterruptor("conversa"), lerInterruptor("aceitar")]);
+  const [ensaio, conversa, aceitar, recolha] = await Promise.all([
+    interruptorDoEnsaio(),
+    lerInterruptor("conversa"),
+    lerInterruptor("aceitar"),
+    lerInterruptor("recolha"),
+  ]);
   const existe = chaveDoClaude() != null;
   const chave = { existe, porque: existe ? null : "Falta a variável ANTHROPIC_API_KEY na Vercel: o agente está inactivo." };
   const tectoUsd = await tectoDiarioUsd();
+  const tectoRecolhaUsd = tectoQueValeNaRecolha(await tectoDaRecolhaUsd(), tectoUsd);
+  const gastoRecolhaHojeUsd = await gastoDaRecolhaHojeUsd(agora).catch(() => 0);
   let linhas: LinhaDaChamada[] = [];
   try {
     linhas = await chamadasRecentes(await garantirTabelas());
@@ -354,6 +463,9 @@ export async function termometro(agora: Date = new Date()): Promise<Termometro> 
     ensaio,
     conversa,
     aceitar,
+    recolha,
+    tectoRecolhaUsd,
+    gastoRecolhaHojeUsd,
     chave,
     modelo: MODELO_DA_VITORIA_AGENTE,
     tectoUsd,
@@ -568,12 +680,15 @@ export type EnsaioNoPainel = {
   motivo: string | null;
   custoUsd: number;
   tokensCacheLidos: number;
-  avaliacao: "melhor" | "pior" | null;
+  /** d99: «igual» também (o critério da recolha é «melhor ou igual»). */
+  avaliacao: "melhor" | "igual" | "pior" | null;
   avaliadoPor: string | null;
 };
 
 /** Os últimos ensaios (só os últimos dígitos do telefone), e quantos melhor/pior. */
-export async function ensaiosNoPainel(limite = 50): Promise<{ ensaios: EnsaioNoPainel[]; melhor: number; pior: number; avaliados: number; porAvaliar: number }> {
+export async function ensaiosNoPainel(
+  limite = 50,
+): Promise<{ ensaios: EnsaioNoPainel[]; melhor: number; igual: number; pior: number; avaliados: number; porAvaliar: number }> {
   const pool = await garantirTabelas();
   const n = Math.max(1, Math.min(200, Math.floor(limite)));
   const [rows] = (await pool.execute(
@@ -609,30 +724,32 @@ export async function ensaiosNoPainel(limite = 50): Promise<{ ensaios: EnsaioNoP
       motivo,
       custoUsd: Number(r.custoUsd) || 0,
       tokensCacheLidos: Number(r.tokensCacheLidos) || 0,
-      avaliacao: av === "melhor" || av === "pior" ? av : null,
+      avaliacao: av === "melhor" || av === "igual" || av === "pior" ? av : null,
       avaliadoPor: (r.avaliadoPor as string | null) ?? null,
     } satisfies EnsaioNoPainel;
   });
   const [cont] = (await pool.execute(
-    `SELECT SUM(avaliacao = 'melhor') AS melhor, SUM(avaliacao = 'pior') AS pior,
-            SUM(avaliacao IS NULL AND estado = 'ok') AS porAvaliar
+    `SELECT SUM(avaliacao = 'melhor') AS melhor, SUM(avaliacao = 'igual') AS igual, SUM(avaliacao = 'pior') AS pior,
+            SUM(avaliacao IS NULL AND estado IN ('ok', 'recolha_ok')) AS porAvaliar
        FROM vitoriaEnsaios`,
   )) as [Array<Record<string, unknown>>, unknown];
   const melhor = Number(cont[0]?.melhor) || 0;
   const pior = Number(cont[0]?.pior) || 0;
+  const igual = Number(cont[0]?.igual) || 0;
   return {
     ensaios,
     melhor,
+    igual,
     pior,
-    avaliados: melhor + pior,
+    avaliados: melhor + igual + pior,
     porAvaliar: Number(cont[0]?.porAvaliar) || 0,
   };
 }
 
-/** «Esta estava melhor / pior» — a equipa avalia a resposta do agente contra a real. */
+/** «Esta estava melhor / igual / pior» — a equipa avalia a resposta do agente contra a real. */
 export async function avaliarEnsaio(id: number, avaliacao: unknown, porQuem: string): Promise<boolean> {
   if (!Number.isInteger(id) || id <= 0) return false;
-  if (avaliacao !== "melhor" && avaliacao !== "pior" && avaliacao !== null) return false;
+  if (avaliacao !== "melhor" && avaliacao !== "igual" && avaliacao !== "pior" && avaliacao !== null) return false;
   const pool = await garantirTabelas();
   const [r] = (await pool.execute(
     "UPDATE vitoriaEnsaios SET avaliacao = ?, avaliadoPor = ?, avaliadoEm = UTC_TIMESTAMP() WHERE id = ?",

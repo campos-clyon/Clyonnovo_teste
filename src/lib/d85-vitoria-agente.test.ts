@@ -603,6 +603,7 @@ describe("os euros só contam se vêm das fontes da CLYON, nunca do que o client
     const painel = ler("src/components/admin/EnsaioDaVitoria.tsx");
     expect(painel).toMatch(/Avaliados: \{dados\.avaliados\}/);
     expect(painel).toMatch(/vitoria: "deixado à Vitória"/);
-    expect(ler("src/lib/vitoria-agente/na-base.ts")).toMatch(/avaliados: melhor \+ pior/);
+    // d99: e o «igual» também conta como avaliado.
+    expect(ler("src/lib/vitoria-agente/na-base.ts")).toMatch(/avaliados: melhor \+ igual \+ pior/);
   });
 });

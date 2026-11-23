@@ -17,7 +17,8 @@ export function eASerio(estado: string): boolean {
 }
 
 export function oQueTeriaFeito(estado: string, motivo: string | null, teriaFeito: readonly string[]): { frase: string; agiria: boolean } {
-  const base = estado.replace(/^vivo_/, "");
+  // d99: a recolha em ensaio («recolha_ok», «recolha_equipa»…) lê-se como as outras.
+  const base = estado.replace(/^vivo_/, "").replace(/^recolha_/, "");
   const feito = teriaFeito.filter((l) => l.trim());
   const doEstado =
     base === "equipa"

@@ -17,9 +17,14 @@ import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
  * «conversa livre» (a resposta do agente passa a ser a que sai para o
  * cliente; as regras ficam de rede de segurança) e «aceitar» (o SIM e o
  * CANCELAR às perguntas do agente fecham e cancelam a sério).
+ *
+ * d99 (23-11-2026), fase 1: «recolha (ensaio)» — em quem ainda não tem
+ * pedido, o agente conduz a recolha ao lado da Vitória de sempre e grava no
+ * rascunho-sombra o que teria gravado. Nunca envia. Tecto próprio (3 USD/dia)
+ * dentro do geral.
  */
 type EstadoDoInterruptor = { ligado: boolean; mudadoEm: string | null; porQuem: string | null };
-type Qual = "ensaio" | "conversa" | "aceitar";
+type Qual = "ensaio" | "conversa" | "aceitar" | "recolha";
 const OS_INTERRUPTORES: Array<{ qual: Qual; nome: string; texto: string; ligadoDiz: string }> = [
   {
     qual: "ensaio",
@@ -42,6 +47,13 @@ const OS_INTERRUPTORES: Array<{ qual: Qual; nome: string; texto: string; ligadoD
       "Só conta com a conversa livre ligada. Ligado, quando o cliente escolhe uma proposta o agente pergunta «… Responda SIM.» e o SIM (lido pelo código, em 30 min, com a proposta relida) fecha pelo caminho do botão «Contratar» (com o interruptor «fechar», a guia e o retrato para desfazer); o CANCELAR à pergunta dele cancela pelo caminho único. A escolha com condição passa à equipa com a pergunta ao parceiro pronta. Desligado, estas ações passam sempre à equipa.",
     ligadoDiz: "LIGADO (o SIM e o CANCELAR ao agente agem)",
   },
+  {
+    qual: "recolha",
+    nome: "Vitória agente — recolha (ensaio)",
+    texto:
+      "Ligado, a quem ainda não tem pedido o agente conduz a recolha dos dados ao lado da Vitória de sempre: o nome, a morada e o NIF lê-os o código e tapa-os antes de irem ao modelo; o resto ele grava num rascunho-sombra, pelos validadores da recolha, até ao resumo. Nada sai para o cliente, o rascunho real não se toca e nenhum pedido nasce. Compara-se no «Ensaio da Vitória» (WhatsApp › Lições). Tecto próprio por dia, dentro do geral.",
+    ligadoDiz: "LIGADO (ensaio da recolha, nada sai)",
+  },
 ];
 type Totais = {
   chamadas: number;
@@ -56,6 +68,9 @@ type Termometro = {
   ensaio: EstadoDoInterruptor;
   conversa?: EstadoDoInterruptor;
   aceitar?: EstadoDoInterruptor;
+  recolha?: EstadoDoInterruptor;
+  tectoRecolhaUsd?: number;
+  gastoRecolhaHojeUsd?: number;
   chave: { existe: boolean; porque: string | null };
   modelo: string;
   tectoUsd: number;
@@ -76,8 +91,9 @@ export default function InterruptorDaVitoriaAgente() {
   const { token, ready } = useAdminAuth();
   const eAdministrador = useEAdministrador();
   const [estado, setEstado] = useState<Termometro | null>(null);
-  const [palavras, setPalavras] = useState<Record<Qual, string>>({ ensaio: "", conversa: "", aceitar: "" });
+  const [palavras, setPalavras] = useState<Record<Qual, string>>({ ensaio: "", conversa: "", aceitar: "", recolha: "" });
   const [tecto, setTecto] = useState("");
+  const [tectoRecolha, setTectoRecolha] = useState("");
   const [erro, setErro] = useState("");
   const [aMudar, setAMudar] = useState(false);
 
@@ -111,8 +127,9 @@ export default function InterruptorDaVitoriaAgente() {
         return;
       }
       setEstado(d as Termometro);
-      setPalavras({ ensaio: "", conversa: "", aceitar: "" });
+      setPalavras({ ensaio: "", conversa: "", aceitar: "", recolha: "" });
       setTecto("");
+      setTectoRecolha("");
     } catch {
       setErro("Erro de rede.");
     } finally {
@@ -207,6 +224,35 @@ export default function InterruptorDaVitoriaAgente() {
               Guardar o tecto
             </button>
           </div>
+          {estado.tectoRecolhaUsd != null && (
+            <>
+              <p>
+                Recolha em ensaio: tecto <span className="font-semibold text-slate-100">{usd(estado.tectoRecolhaUsd)}</span> por dia (dentro do
+                geral) · gasto hoje <span className="font-semibold text-slate-100">{usd(estado.gastoRecolhaHojeUsd ?? 0)}</span>
+                {(estado.gastoRecolhaHojeUsd ?? 0) >= estado.tectoRecolhaUsd && (
+                  <span className="ml-2 font-semibold text-red-300">tecto da recolha atingido hoje — o ensaio pára até amanhã</span>
+                )}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={tectoRecolha}
+                  onChange={(e) => setTectoRecolha(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="Tecto da recolha (USD/dia)"
+                  aria-label="Novo tecto diário da recolha em ensaio, em dólares"
+                  className="w-48 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-xs text-slate-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => enviar({ tectoRecolha })}
+                  disabled={aMudar || !tectoRecolha.trim()}
+                  className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 disabled:opacity-40"
+                >
+                  Guardar o tecto da recolha
+                </button>
+              </div>
+            </>
+          )}
           <table className="w-full max-w-xl text-left">
             <thead className="text-slate-400">
               <tr>

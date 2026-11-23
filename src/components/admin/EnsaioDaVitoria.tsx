@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Equal, Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 /**
@@ -19,6 +19,11 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
  * ao parceiro se consegue: …», «teria passado à equipa: …»), com o filtro «só
  * as que agiriam». Com a «conversa livre» ligada, as linhas «saiu a sério»
  * são respostas que o cliente recebeu.
+ *
+ * d99 (23-11-2026), fase 1: a RECOLHA EM ENSAIO (quem ainda não tem pedido)
+ * entra aqui também — as linhas «recolha», o «Igual» na avaliação, e os cinco
+ * critérios para a fase 2 (campos do resumo iguais, fugas, avaliadas
+ * melhor/igual, custo por pedido, prazo).
  */
 type Ensaio = {
   id: number;
@@ -36,10 +41,35 @@ type Ensaio = {
   motivo: string | null;
   custoUsd: number;
   tokensCacheLidos: number;
-  avaliacao: "melhor" | "pior" | null;
+  avaliacao: "melhor" | "igual" | "pior" | null;
   avaliadoPor: string | null;
 };
-type Resposta = { ensaios: Ensaio[]; melhor: number; pior: number; avaliados: number; porAvaliar: number; ligado: boolean };
+type Criterio = { valor: number | null; meta: string; cumpre: boolean | null; base: number };
+type Recolha = {
+  ligado: boolean;
+  tectoUsd: number;
+  gastoHojeUsd: number;
+  metricas: {
+    ensaios: number;
+    camposIguais: Criterio;
+    fugasNoModelo: Criterio;
+    fugasEvitadas: number;
+    avaliadasMelhorOuIgual: Criterio;
+    custoPorPedidoUsd: Criterio;
+    passaramOPrazo: Criterio;
+    prontaParaAFase2: boolean | null;
+  };
+};
+type Resposta = {
+  ensaios: Ensaio[];
+  melhor: number;
+  igual?: number;
+  pior: number;
+  avaliados: number;
+  porAvaliar: number;
+  ligado: boolean;
+  recolha?: Recolha | null;
+};
 type Accao = { em: string; ferramenta: string; entrada: string | null; resultado: string | null; texto: string | null; custoUsd: number; erro: string | null };
 
 const ROTA = "/api/admin/whatsapp/ensaio-da-vitoria";
@@ -61,7 +91,26 @@ const ESTADO: Record<string, string> = {
   vivo_regras: "responderam as regras",
   vivo_a_correr: "a correr (a sério)",
   vivo_parceiro: "a sério — o parceiro respondeu (ou não, a tempo)",
+  recolha_ok: "recolha — respondeu",
+  recolha_equipa: "recolha — passaria à equipa",
+  recolha_bloqueado: "recolha — bloqueada pela revisão",
+  recolha_erro: "recolha — erro",
+  recolha_recusou: "recolha — recusou",
+  recolha_tecto: "recolha — tecto do dia",
+  recolha_inactivo: "recolha — sem chave",
+  recolha_a_correr: "recolha — a correr",
+  recolha_codigo: "recolha — o código leu o SIM",
+  recolha_fuga: "recolha — dado pessoal travado",
 };
+
+const emPct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 1000) / 10} %`);
+const LINHAS_DOS_CRITERIOS: Array<{ chave: "camposIguais" | "fugasNoModelo" | "avaliadasMelhorOuIgual" | "custoPorPedidoUsd" | "passaramOPrazo"; nome: string; valor: (c: Criterio) => string }> = [
+  { chave: "camposIguais", nome: "Campos do resumo iguais aos da Vitória", valor: (c) => emPct(c.valor) },
+  { chave: "fugasNoModelo", nome: "Nomes ou moradas no que foi ao modelo", valor: (c) => (c.valor == null ? "—" : String(c.valor)) },
+  { chave: "avaliadasMelhorOuIgual", nome: "Avaliadas melhor ou igual", valor: (c) => emPct(c.valor) },
+  { chave: "custoPorPedidoUsd", nome: "Custo por pedido (por número)", valor: (c) => (c.valor == null ? "—" : `${c.valor.toFixed(4)} USD`) },
+  { chave: "passaramOPrazo", nome: "Passaram o prazo", valor: (c) => emPct(c.valor) },
+];
 
 const quando = (iso: string) =>
   iso ? new Date(iso).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon", dateStyle: "short", timeStyle: "short" }) : "";
@@ -104,7 +153,7 @@ export default function EnsaioDaVitoria() {
     }
   }
 
-  async function avaliar(id: number, avaliacao: "melhor" | "pior" | null) {
+  async function avaliar(id: number, avaliacao: "melhor" | "igual" | "pior" | null) {
     if (!token) return;
     setOcupado(id);
     try {
@@ -129,8 +178,52 @@ export default function EnsaioDaVitoria() {
         {dados.ligado
           ? "O agente corre ao lado da Vitória e grava o que teria respondido. Nada daqui chegou ao cliente."
           : "O ensaio está desligado (Configs › «Vitória agente — ensaio»)."}{" "}
-        Avaliados: {dados.avaliados} · Melhor: {dados.melhor} · Pior: {dados.pior} · Por avaliar: {dados.porAvaliar}
+        Avaliados: {dados.avaliados} · Melhor: {dados.melhor} · Igual: {dados.igual ?? 0} · Pior: {dados.pior} · Por avaliar: {dados.porAvaliar}
       </p>
+      {dados.recolha && (
+        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm">
+          <p className="font-semibold text-slate-100">Recolha em ensaio (quem ainda não tem pedido)</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            {dados.recolha.ligado
+              ? "Ligada: o agente conduz a recolha ao lado da Vitória e grava no rascunho-sombra. Nada sai, o rascunho real não se toca."
+              : "Desligada (Configs › «Vitória agente — recolha (ensaio)»)."}{" "}
+            Tecto {dados.recolha.tectoUsd.toFixed(2)} USD/dia · hoje {dados.recolha.gastoHojeUsd.toFixed(4)} USD · {dados.recolha.metricas.ensaios} ensaio(s) nos
+            últimos 30 dias · {dados.recolha.metricas.fugasEvitadas} travado(s) por um dado pessoal
+          </p>
+          <table className="mt-2 w-full max-w-xl text-left text-xs">
+            <thead className="text-slate-400">
+              <tr>
+                <th className="py-1 font-medium">Critério</th>
+                <th className="py-1 font-medium">Agora</th>
+                <th className="py-1 font-medium">Meta</th>
+                <th className="py-1 font-medium" />
+              </tr>
+            </thead>
+            <tbody>
+              {LINHAS_DOS_CRITERIOS.map((l) => {
+                const c = dados.recolha!.metricas[l.chave];
+                return (
+                  <tr key={l.chave} className="border-t border-slate-800">
+                    <td className="py-1 text-slate-300">{l.nome}</td>
+                    <td className="py-1 text-slate-100">{l.valor(c)}</td>
+                    <td className="py-1 text-slate-400">{c.meta}</td>
+                    <td className={`py-1 font-semibold ${c.cumpre == null ? "text-slate-500" : c.cumpre ? "text-emerald-300" : "text-red-300"}`}>
+                      {c.cumpre == null ? "sem dados" : c.cumpre ? "cumpre" : "não cumpre"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-slate-400">
+            {dados.recolha.metricas.prontaParaAFase2 == null
+              ? "Ainda sem dados para todos os critérios."
+              : dados.recolha.metricas.prontaParaAFase2
+                ? "Todos os critérios cumpridos — a fase 2 precisa do sim do dono."
+                : "Ainda não cumpre todos os critérios."}
+          </p>
+        </div>
+      )}
       <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
         <input type="checkbox" checked={soAsQueAgiriam} onChange={(ev) => setSoAsQueAgiriam(ev.target.checked)} />
         Só as que agiriam (fechar, cancelar, perguntar ao parceiro, passar à equipa, gravar)
@@ -173,6 +266,17 @@ export default function EnsaioDaVitoria() {
                 >
                   <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
                   Esta estava melhor
+                </button>
+                <button
+                  type="button"
+                  disabled={ocupado === e.id}
+                  onClick={() => void avaliar(e.id, e.avaliacao === "igual" ? null : "igual")}
+                  className={`flex min-h-[32px] items-center gap-1.5 rounded-lg px-3 text-xs font-semibold disabled:opacity-40 ${
+                    e.avaliacao === "igual" ? "bg-sky-500/20 text-sky-200" : "border border-slate-700 text-slate-200"
+                  }`}
+                >
+                  <Equal className="h-3.5 w-3.5" aria-hidden="true" />
+                  Igual
                 </button>
                 <button
                   type="button"

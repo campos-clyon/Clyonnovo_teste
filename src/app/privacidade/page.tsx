@@ -260,11 +260,14 @@ export default function PrivacidadePage() {
                     22-11-2026 (d85) — a Vitória com o Claude (Anthropic). O ensaio
                     à parte: a conversa vai sem dados de pessoas (anonimizar.ts) e a
                     resposta dela não é enviada (vitoria-agente/na-base.ts).
+                    23-11-2026 (d99, ok do Jurídico): a recolha dos dados do pedido
+                    desde a primeira mensagem (vitoria-agente/recolha-em-ensaio.ts).
                   */}
                   <li>
                     Responder às mensagens que nos escreve no WhatsApp através da Vitória, a nossa
-                    assistente automática: perceber o que pede, responder às dúvidas, anotar no
-                    pedido o que nos diz e passar a conversa a uma pessoa da equipa quando é preciso.
+                    assistente automática: perceber o que pede, responder às dúvidas, recolher, desde
+                    a primeira mensagem, os dados necessários para criar o seu pedido e anotar nele o
+                    que nos diz, e passar a conversa a uma pessoa da equipa quando é preciso.
                     Para isso usamos um modelo de inteligência artificial da Anthropic (Claude). As
                     fotografias, os áudios e as traduções continuam a ser tratados pelo Google
                     (Gemini).

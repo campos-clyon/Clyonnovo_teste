@@ -1672,7 +1672,7 @@ function descricaoESoOServico(d: DadosDaRecolha): boolean {
   return limpo(d.description) === limpo(ETIQUETAS[d.serviceType] ?? d.serviceType);
 }
 
-function linhasDoResumo(d: DadosDaRecolha): string[] {
+export function linhasDoResumo(d: DadosDaRecolha): string[] {
   /*
    * O ACESSO NUMA LINHA, E SEM O QUE NÃO INTERESSA — 10-10-2026.
    *
@@ -3009,7 +3009,7 @@ function estacionamentoDaResposta(t: string, factos: FactosSoltos): "near" | "fa
 }
 
 /** O NIF escrito na mesma frase, com ou sem espaços. */
-function nifNaFrase(texto: string): string | null {
+export function nifNaFrase(texto: string): string | null {
   const m = texto.match(/(?<!\d)\d(?:[\s.]?\d){8}(?![\d])/);
   return m ? nifDaFactura(m[0]) : null;
 }
@@ -3019,7 +3019,7 @@ function nifNaFrase(texto: string): string | null {
  * de outra resposta («Sim, o NIF é …»): aí um número de telefone também tem
  * nove algarismos. À pergunta do NIF vale a regra do site — nove algarismos.
  */
-function nifComControloCerto(nif: string): boolean {
+export function nifComControloCerto(nif: string): boolean {
   const a = nif.split("").map(Number);
   let soma = 0;
   for (let i = 0; i < 8; i++) soma += a[i] * (9 - i);

@@ -36,6 +36,16 @@ export const PRECO_POR_MILHAO_USD = Object.freeze({
 export const TECTO_DIARIO_POR_OMISSAO_USD = 10;
 /** Nunca mais do que isto por dia, nem com um engano nas Configs. */
 export const TECTO_DIARIO_MAXIMO_USD = 100;
+/**
+ * d99 (23-11-2026): o tecto próprio da recolha em ensaio, DENTRO do geral —
+ * vale o mais baixo dos dois (`tectoQueValeNaRecolha`). Muda-se nas Configs.
+ */
+export const TECTO_DA_RECOLHA_POR_OMISSAO_USD = 3;
+
+/** O tecto da recolha nunca passa o geral. Puro. */
+export function tectoQueValeNaRecolha(tectoDaRecolhaUsd: number, tectoGeralUsd: number): number {
+  return Math.min(tectoDaRecolhaUsd, tectoGeralUsd);
+}
 
 /** O uso de uma chamada, como a API o devolve (os campos que contam para a conta). */
 export type UsoDaChamada = {

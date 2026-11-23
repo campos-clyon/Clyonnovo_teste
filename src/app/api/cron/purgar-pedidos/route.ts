@@ -283,7 +283,12 @@ export async function GET(req: NextRequest) {
       "registo da Vitória agente",
       async () => {
         const { purgarRegistoDaVitoriaAgente } = await import("@/lib/vitoria-agente/purga-do-registo");
-        return purgarRegistoDaVitoriaAgente(DIAS_DE_RETENCAO_DOS_PEDIDOS, { aSerio: armada });
+        // d99: e a recolha em ensaio — o rascunho-sombra aos 7 dias (como o real), a comparação com o registo.
+        const { purgarARecolhaEmEnsaio } = await import("@/lib/vitoria-agente/recolha-em-ensaio-na-base");
+        return (
+          (await purgarRegistoDaVitoriaAgente(DIAS_DE_RETENCAO_DOS_PEDIDOS, { aSerio: armada })) +
+          (await purgarARecolhaEmEnsaio(DIAS_DE_RETENCAO_DOS_PEDIDOS, { aSerio: armada }))
+        );
       },
       0,
       passosQueFalharam,

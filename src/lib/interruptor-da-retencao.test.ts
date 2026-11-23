@@ -62,6 +62,10 @@ vi.mock("@/lib/validade-do-orcamento-na-base", () => ({
 vi.mock("@/lib/vitoria-agente/purga-do-registo", () => ({
   purgarRegistoDaVitoriaAgente: vi.fn(async () => 0),
 }));
+// d99: a purga da recolha em ensaio (o rascunho-sombra) corre no mesmo passo.
+vi.mock("@/lib/vitoria-agente/recolha-em-ensaio-na-base", () => ({
+  purgarARecolhaEmEnsaio: vi.fn(async () => 0),
+}));
 
 vi.mock("@/lib/regras-novas-na-base", () => ({
   purgarComAsRegrasNovas: vi.fn(async (o: { aSerio: boolean }) => ({ ...ZERO, aSerio: o.aSerio })),

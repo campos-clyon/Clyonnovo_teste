@@ -31,7 +31,14 @@ import {
   type EsforcoDoAgente,
   type UsoSomado,
 } from "./custo";
-import { correrFerramenta, estadoNovo, FERRAMENTAS_DA_VITORIA, type DependenciasDasFerramentas } from "./ferramentas";
+import {
+  correrFerramenta,
+  estadoNovo,
+  FERRAMENTAS_DA_VITORIA,
+  type DependenciasDasFerramentas,
+  type EstadoDaConversa,
+  type ResultadoDaFerramenta,
+} from "./ferramentas";
 import type { Pendente } from "./pendentes";
 import { motivoParaBloquearOAgente, eurosDosResultados } from "./guarda";
 import { motivoParaAfirmarOQueInclui } from "./o-que-o-servico-inclui";
@@ -105,6 +112,18 @@ export type DependenciasDoAgente = {
   /** O gasto de hoje (Lisboa) e o tecto, em dólares. */
   gastoETecto: () => Promise<{ gastoUsd: number; tectoUsd: number }>;
   registar: (l: LinhaDoRegistoDoAgente) => Promise<void>;
+  /**
+   * d99 (23-11-2026), fase 1 — A RECOLHA PELO AGENTE, EM ENSAIO: um número sem
+   * pedido. Outro aviso, outras ferramentas (o rascunho-sombra) e a mensagem
+   * do turno feita por quem chama, já com os dados pessoais trocados por
+   * marcas. Sem isto, um número sem pedido fica à Vitória de sempre.
+   */
+  recolha?: {
+    aviso: string;
+    ferramentas: Anthropic.Beta.BetaTool[];
+    mensagem: string;
+    correr: (nome: string, entrada: unknown, estado: EstadoDaConversa) => Promise<ResultadoDaFerramenta>;
+  };
 };
 
 const vazio = (estado: ResultadoDoAgente["estado"], motivo: string): ResultadoDoAgente => ({
@@ -137,7 +156,7 @@ export function erroEmPalavras(err: unknown): string {
  */
 export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDoAgente): Promise<ResultadoDoAgente> {
   // Um número sem pedido não é conversa para o agente: fica à Vitória de sempre (sem chamar o modelo).
-  if (pedido.pedidos.length === 0) return vazio("vitoria", "o número não tem pedido: deixado à Vitória");
+  if (pedido.pedidos.length === 0 && !deps.recolha) return vazio("vitoria", "o número não tem pedido: deixado à Vitória");
   if (!deps.cliente) return vazio("inactivo", "falta a chave ANTHROPIC_API_KEY na Vercel");
   let tecto: { gastoUsd: number; tectoUsd: number };
   try {
@@ -151,7 +170,7 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
 
   const estado = estadoNovo();
   const mensagens: Anthropic.Beta.BetaMessageParam[] = [
-    { role: "user", content: mensagemDoTurno(pedido.agora, pedido.conversa, pedido.pedidos, pedido.nota) },
+    { role: "user", content: deps.recolha ? deps.recolha.mensagem : mensagemDoTurno(pedido.agora, pedido.conversa, pedido.pedidos, pedido.nota) },
   ];
   let uso = USO_VAZIO;
   let modelo: string | null = null;
@@ -188,9 +207,9 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
         thinking: { type: "adaptive" },
         output_config: { effort: pedido.esforco ?? ESFORCO_POR_OMISSAO },
         // O aviso é fixo e vai à frente: a cache apanha as ferramentas e o aviso; a de cima, o resto da conversa.
-        system: [{ type: "text", text: AVISO_AO_MODELO, cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: deps.recolha ? deps.recolha.aviso : AVISO_AO_MODELO, cache_control: { type: "ephemeral" } }],
         cache_control: { type: "ephemeral" },
-        tools: FERRAMENTAS_DA_VITORIA,
+        tools: deps.recolha ? deps.recolha.ferramentas : FERRAMENTAS_DA_VITORIA,
         tool_choice: { type: "auto" },
         messages: mensagens,
       });
@@ -222,7 +241,7 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
 
     const resultados: Anthropic.Beta.BetaToolResultBlockParam[] = [];
     for (const b of pedidosDeFerramenta) {
-      const r = await correrFerramenta(b.name, b.input, deps.ferramentas, estado);
+      const r = deps.recolha ? await deps.recolha.correr(b.name, b.input, estado) : await correrFerramenta(b.name, b.input, deps.ferramentas, estado);
       await deps.registar({ ferramenta: b.name, entrada: b.input, resultado: r.resultado, erro: r.erro ? "recusada" : null }).catch(() => {});
       resultados.push({ type: "tool_result", tool_use_id: b.id, content: JSON.stringify(r.resultado), ...(r.erro ? { is_error: true } : {}) });
     }
