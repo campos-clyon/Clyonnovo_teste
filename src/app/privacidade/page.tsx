@@ -9,6 +9,7 @@ import {
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
   DIAS_DOS_ERROS_DA_APP,
+  DIAS_DAS_FOTOS_SEM_PEDIDO,
   MESES_ATE_ANONIMIZAR_O_ARQUIVO,
 } from "@/lib/retencao";
 /* 12-11-2026 (d6): a transferência, a folha da mudança e a lista pública — números e nomes das constantes. */
@@ -616,6 +617,12 @@ export default function PrivacidadePage() {
                     <strong>Mensagens de WhatsApp:</strong> {DIAS_DE_RETENCAO_DOS_PEDIDOS} dias. As
                     conversas com o assistente do WhatsApp que não chegaram a pedido:{" "}
                     {DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP} dias.
+                  </li>
+                  {/* 23-11-2026 (d98, com o ok do Jurídico): DIAS_DAS_FOTOS_SEM_PEDIDO (retencao.ts) — o mesmo prazo da junção e do rascunho. */}
+                  <li>
+                    <strong>Fotografias enviadas pelo WhatsApp antes de haver pedido:</strong>{" "}
+                    {DIAS_DAS_FOTOS_SEM_PEDIDO} dias; se o pedido for criado nesse prazo, passam a fazer
+                    parte dele.
                   </li>
                   {/* 22-11-2026 (d85): vitoriaAccoes e vitoriaEnsaios, na purga da noite (vitoria-agente/purga-do-registo.ts). */}
                   <li>

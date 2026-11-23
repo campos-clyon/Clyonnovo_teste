@@ -1,3 +1,5 @@
+import { HORAS_DO_RASCUNHO } from "./conversa-parada-a-meio";
+
 /**
  * QUANTO TEMPO SE GUARDA — o número, num sítio só.
  *
@@ -59,13 +61,18 @@ export const DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP = DIAS_PARA_OS_ABANDONADOS;
  * AS FOTOGRAFIAS DO WHATSAPP QUE NUNCA CHEGARAM A PEDIDO — 10-10-2026.
  *
  * Desde este dia as fotografias que chegam antes de haver pedido ficam à
- * espera dele (`whatsappFotosPendentes`), e entram no pedido quando ele nasce
- * — até 48 horas depois. Passado isso já não entram em lado nenhum, e ninguém
- * as vê: não há ecrã que as mostre. Guardá-las os 90 dias dos abandonados
- * seria guardar fotografias da casa de alguém sem serventia nenhuma. Três dias
- * dão folga às 48 horas, e a purga da noite leva-as com o ficheiro do Blob.
+ * espera dele (`whatsappFotosPendentes`), e entram no pedido quando ele nasce.
+ * Passado o prazo já não entram em lado nenhum, e ninguém as vê: não há ecrã
+ * que as mostre — a purga da noite leva-as com o ficheiro do Blob.
+ *
+ * 7 DIAS DESDE 23-11-2026 (d98, com o ok do Jurídico). Eram 3 dias, para uma
+ * espera de 48 horas; o rascunho da recolha passou a 7 dias na d93, e a
+ * fotografia de quem retomava a conversa ao quarto dia já tinha saído quando
+ * o pedido nascia. A purga, a janela de junção (`HORAS_DAS_FOTOS_PENDENTES`,
+ * db.ts) e o rascunho (`HORAS_DO_RASCUNHO`) dizem agora o mesmo, da mesma
+ * constante; a Política de Privacidade (secção 6) diz este número.
  */
-export const DIAS_DAS_FOTOS_SEM_PEDIDO = 3;
+export const DIAS_DAS_FOTOS_SEM_PEDIDO = HORAS_DO_RASCUNHO / 24;
 
 /**
  * O NOME E O TELEFONE DE QUEM PAROU A MEIO — 14-10-2026.
