@@ -17,6 +17,13 @@
  *    a fila das 8h00 e fecha os envios que ficaram a meio;
  *  - a linha de cada pedido no cartão dos «por enviar» da Mesa.
  *
+ * d88 (23-11-2026, CEO e dono): a MESMA rotina varre também os «Orçamentos
+ * novos» de todas as origens (simulador, formulário, WhatsApp, registado na
+ * Mesa) e manda os completos pela mesma função, com as condições da d87 e as
+ * que os deixam sempre com uma pessoa (`porqueFicaComUmaPessoa`), depois dos 10
+ * minutos de espera. O mesmo interruptor (agora «todas as origens») e uma
+ * segunda chave, «Só os da Vitória», desligada por omissão.
+ *
  * Nunca DELETE: a linha fica, com o que aconteceu.
  */
 
@@ -28,6 +35,8 @@ import {
   mensagensDoNumeroWhatsApp,
   negociacoesDoPedido,
   numeroBloqueadoWhatsApp,
+  numeroInterrompidoWhatsApp,
+  pedidosPorPromover,
   registarNaTransaccao,
 } from "@/lib/db";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
@@ -37,23 +46,37 @@ import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { enviarAosProfissionais } from "@/lib/enviar-aos-profissionais";
 import { urlDeAccao } from "@/lib/url-do-site";
+import { arrumarAsFaltas } from "@/lib/mensagem-do-que-falta";
 import {
   aEquipaEscreveuDepoisDoModelo,
+  canalDoAvisoAoCliente,
   coordenadasValidas,
+  estimativaComIva,
+  historicoDaEspera,
   historicoDaFila,
   historicoDoQueFicou,
+  horaDeSaida,
   lerMotivo,
   linhaDoEnvioAutomaticoNaMesa,
   naJanelaDoEnvioAutomatico,
   NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO,
+  NOME_DO_INTERRUPTOR_SO_DA_VITORIA,
+  origemNoEnvioAutomatico,
+  porqueFicaComUmaPessoa,
   porqueNaoSegueSozinho,
+  registadoSozinhoNoHistorico,
+  seguirSoDepoisDe,
+  slugDaOrigem,
   type LinhaDoEnvioAutomatico,
   type MotivoDoEnvioAutomatico,
+  type OrigemNoEnvioAutomatico,
 } from "@/lib/envio-automatico-aos-parceiros";
 
 /* ── As tabelas ──────────────────────────────────────────────────────────── */
 
 export const CHAVE_DO_ENVIO_AUTOMATICO = "envio_automatico_parceiros_d87";
+/** A segunda chave (d88): ligada, só os da Vitória seguem sozinhos (o comportamento da d87). */
+export const CHAVE_SO_DA_VITORIA = "envio_automatico_so_vitoria_d88";
 
 export type InterruptorDoEnvioAutomatico = { ligado: boolean; mudadoEm: string | null; porQuem: string | null };
 
@@ -78,8 +101,20 @@ export const SQL_DAS_TABELAS_DO_ENVIO_AUTOMATICO = [
       criadoEm   DATETIME NOT NULL,
       mudadoEm   DATETIME NOT NULL,
       enviadoEm  DATETIME NULL DEFAULT NULL,
+      seguirApos DATETIME NULL DEFAULT NULL,
+      vistoEm    DATETIME NULL DEFAULT NULL,
       KEY idx_envio_automatico_estado (estado, criadoEm)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+];
+
+/**
+ * As colunas da d88 numa tabela que a d87 já criou: `seguirApos` (a espera dos
+ * 10 minutos — não sai antes) e `vistoEm` (quando a rotina o viu pela última
+ * vez, para rever os que ficaram uma vez por hora e não a cada passagem).
+ */
+export const SQL_DAS_COLUNAS_DA_D88 = [
+  "ALTER TABLE envioAutomaticoAosParceiros ADD COLUMN seguirApos DATETIME NULL DEFAULT NULL",
+  "ALTER TABLE envioAutomaticoAosParceiros ADD COLUMN vistoEm DATETIME NULL DEFAULT NULL",
 ];
 
 async function garantirTabelas(): Promise<Pool> {
@@ -87,6 +122,16 @@ async function garantirTabelas(): Promise<Pool> {
   if (!pool) throw new Error("[envio-automatico] base de dados indisponível");
   if (!tabelasProntas) {
     for (const sql of SQL_DAS_TABELAS_DO_ENVIO_AUTOMATICO) await pool.execute(sql);
+    for (const sql of SQL_DAS_COLUNAS_DA_D88) {
+      try {
+        await pool.execute(sql);
+      } catch (e) {
+        // Já existe (ER_DUP_FIELDNAME): é o caso de todas as vezes menos a primeira.
+        if ((e as { code?: string })?.code !== "ER_DUP_FIELDNAME") {
+          console.error("[envio-automatico] coluna da d88:", e instanceof Error ? e.message : e);
+        }
+      }
+    }
     tabelasProntas = true;
   }
   return pool;
@@ -94,49 +139,59 @@ async function garantirTabelas(): Promise<Pool> {
 
 const linhasMudadas = (r: unknown) => Number((r as { affectedRows?: number } | undefined)?.affectedRows ?? 0);
 
-/* ── O interruptor de emergência (Configs) — LIGADO por omissão ──────────── */
+/* ── Os interruptores (Configs) ──────────────────────────────────────────── */
 
-/** LIGADO SEM LINHA (o dono pediu). Com a base a falhar, DESLIGADO — sem saber, não se envia. */
-export async function interruptorDoEnvioAutomatico(): Promise<InterruptorDoEnvioAutomatico> {
+async function lerChave(chave: string, semLinha: boolean, comErro: boolean): Promise<InterruptorDoEnvioAutomatico> {
   try {
     const pool = await garantirTabelas();
     const [rows] = (await pool.execute(
       "SELECT ligado, mudadoEm, porQuem FROM retencaoInterruptores WHERE chave = ? LIMIT 1",
-      [CHAVE_DO_ENVIO_AUTOMATICO],
+      [chave],
     )) as [Array<{ ligado: number; mudadoEm: Date | string | null; porQuem: string | null }>, unknown];
     const l = rows[0];
-    if (!l) return { ligado: true, mudadoEm: null, porQuem: null };
+    if (!l) return { ligado: semLinha, mudadoEm: null, porQuem: null };
     return {
       ligado: Number(l.ligado) === 1,
       mudadoEm: l.mudadoEm ? (instanteDaBase(l.mudadoEm)?.toISOString() ?? null) : null,
       porQuem: l.porQuem ?? null,
     };
   } catch (e) {
-    console.error("[envio-automatico] não li o interruptor — fica desligado:", e instanceof Error ? e.message : e);
-    return { ligado: false, mudadoEm: null, porQuem: null };
+    console.error(`[envio-automatico] não li o interruptor ${chave}:`, e instanceof Error ? e.message : e);
+    return { ligado: comErro, mudadoEm: null, porQuem: null };
   }
 }
 
-/** Liga ou desliga; a mudança e quem a fez ficam no registo permanente, na mesma transacção. */
-export async function mudarInterruptorDoEnvioAutomatico(ligar: boolean, porQuem: string): Promise<InterruptorDoEnvioAutomatico> {
+/** LIGADO SEM LINHA (o dono pediu). Com a base a falhar, DESLIGADO — sem saber, não se envia. */
+export async function interruptorDoEnvioAutomatico(): Promise<InterruptorDoEnvioAutomatico> {
+  return lerChave(CHAVE_DO_ENVIO_AUTOMATICO, true, false);
+}
+
+/**
+ * «SÓ OS DA VITÓRIA» (d88): DESLIGADA sem linha — todas as origens seguem. Com
+ * a base a falhar, LIGADA: sem saber, a rotina não varre os «Orçamentos novos».
+ */
+export async function soOsDaVitoria(): Promise<InterruptorDoEnvioAutomatico> {
+  return lerChave(CHAVE_SO_DA_VITORIA, false, true);
+}
+
+async function mudarChave(chave: string, nome: string, ligar: boolean, porQuem: string, antes: boolean): Promise<void> {
   const pool = await garantirTabelas();
   await ensureRegistoTable();
-  const antes = await interruptorDoEnvioAutomatico();
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     await conn.execute(
       `INSERT INTO retencaoInterruptores (chave, ligado, mudadoEm, porQuem) VALUES (?, ?, UTC_TIMESTAMP(), ?)
        ON DUPLICATE KEY UPDATE ligado = VALUES(ligado), mudadoEm = VALUES(mudadoEm), porQuem = VALUES(porQuem)`,
-      [CHAVE_DO_ENVIO_AUTOMATICO, ligar ? 1 : 0, porQuem.slice(0, 120)],
+      [chave, ligar ? 1 : 0, porQuem.slice(0, 120)],
     );
     await registarNaTransaccao(conn, {
       acontecimento: "envio_automatico_interruptor",
       autorTipo: "clyon",
       autorNome: porQuem,
-      estadoAntes: antes.ligado ? "ligado" : "desligado",
+      estadoAntes: antes ? "ligado" : "desligado",
       estadoDepois: ligar ? "ligado" : "desligado",
-      resumo: `«${NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO}» ${ligar ? "LIGADO" : "DESLIGADO"} por ${porQuem} (d87).`,
+      resumo: `«${nome}» ${ligar ? "LIGADO" : "DESLIGADO"} por ${porQuem} (d87/d88).`,
     });
     await conn.commit();
   } catch (e) {
@@ -149,12 +204,29 @@ export async function mudarInterruptorDoEnvioAutomatico(ligar: boolean, porQuem:
   } finally {
     conn.release();
   }
+}
+
+/** Liga ou desliga; a mudança e quem a fez ficam no registo permanente, na mesma transacção. */
+export async function mudarInterruptorDoEnvioAutomatico(ligar: boolean, porQuem: string): Promise<InterruptorDoEnvioAutomatico> {
+  const antes = await interruptorDoEnvioAutomatico();
+  await mudarChave(CHAVE_DO_ENVIO_AUTOMATICO, NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO, ligar, porQuem, antes.ligado);
   return interruptorDoEnvioAutomatico();
+}
+
+/** A segunda chave (d88), com o mesmo registo permanente. */
+export async function mudarSoOsDaVitoria(ligar: boolean, porQuem: string): Promise<InterruptorDoEnvioAutomatico> {
+  const antes = await soOsDaVitoria();
+  await mudarChave(CHAVE_SO_DA_VITORIA, NOME_DO_INTERRUPTOR_SO_DA_VITORIA, ligar, porQuem, antes.ligado);
+  return soOsDaVitoria();
 }
 
 /* ── A reserva, a fila e o que ficou ─────────────────────────────────────── */
 
-export type OrigemDoEnvioAutomatico = "pedir_o_que_falta" | "registado" | "fila";
+/** `orcamentos_novos` (d88): visto pela rotina que varre os «Orçamentos novos» de todas as origens. */
+export type OrigemDoEnvioAutomatico = "pedir_o_que_falta" | "registado" | "fila" | "orcamentos_novos";
+
+/** A origem que a d88 grava na linha: a fila sabe por ela que as condições das origens novas contam. */
+export const ORIGEM_DOS_ORCAMENTOS_NOVOS = "orcamentos_novos" satisfies OrigemDoEnvioAutomatico;
 
 /**
  * A RESERVA — só quem a ganha envia. Uma linha nova («a enviar»), ou uma que
@@ -189,6 +261,35 @@ async function porNaFila(pool: Pool, pedidoId: number, origem: OrigemDoEnvioAuto
     [enviariaA, pedidoId],
   );
   return linhasMudadas(deVolta) === 1;
+}
+
+/**
+ * NA FILA DA d88 — à espera dos 10 minutos (`seguirApos`) ou das 8h00 (null).
+ * A linha fica com a origem dos «Orçamentos novos», para a fila voltar a ver as
+ * condições das origens novas. Devolve `true` só quando entrou agora (o
+ * histórico diz uma vez); quem já estava na fila só muda a hora.
+ */
+async function porNaFilaDosOrcamentosNovos(pool: Pool, pedidoId: number, enviariaA: number, seguirApos: Date | null): Promise<boolean> {
+  const origem = ORIGEM_DOS_ORCAMENTOS_NOVOS;
+  const [nova] = await pool.execute(
+    `INSERT IGNORE INTO envioAutomaticoAosParceiros (pedidoId, estado, origem, enviariaA, seguirApos, criadoEm, mudadoEm)
+     VALUES (?, 'na_fila', ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())`,
+    [pedidoId, origem, enviariaA, seguirApos],
+  );
+  if (linhasMudadas(nova) === 1) return true;
+  const [deVolta] = await pool.execute(
+    `UPDATE envioAutomaticoAosParceiros
+        SET estado = 'na_fila', motivo = NULL, origem = ?, enviariaA = ?, seguirApos = ?, mudadoEm = UTC_TIMESTAMP()
+      WHERE pedidoId = ? AND estado = 'ficou'`,
+    [origem, enviariaA, seguirApos, pedidoId],
+  );
+  if (linhasMudadas(deVolta) === 1) return true;
+  await pool.execute(
+    `UPDATE envioAutomaticoAosParceiros SET origem = ?, enviariaA = ?, seguirApos = ?
+      WHERE pedidoId = ? AND estado = 'na_fila'`,
+    [origem, enviariaA, seguirApos, pedidoId],
+  );
+  return false;
 }
 
 /**
@@ -229,11 +330,58 @@ async function marcarEnviado(pool: Pool, pedidoId: number, receberam: number): P
   );
 }
 
+/* ── O aviso ao cliente (d88) ────────────────────────────────────────────── */
+
+type MensagemDoFio = { direccao: string; texto: string; haSegundos: number | null };
+
+/**
+ * O CLIENTE DOS «ORÇAMENTOS NOVOS» FICA A SABER QUE SEGUIU — pelo canal que
+ * usou (`canalDoAvisoAoCliente`). Pelo WhatsApp, a mesma frase da d87 («O seu
+ * pedido já seguiu para os parceiros da sua zona. As propostas chegam-lhe por
+ * aqui.»), na língua dele ou nada (d63), e nunca no dia em que já saiu outra
+ * mensagem automática a este número (d85). Pelo email, nada a mais: a função da
+ * Mesa já mandou a ligação do pedido. Nunca lança.
+ */
+async function avisarOClienteQueSeguiu(
+  pedidoId: number,
+  contacto: { telefone: string; email: string | null },
+  origem: OrigemNoEnvioAutomatico | null,
+  fio: ReadonlyArray<MensagemDoFio>,
+  agora: Date,
+): Promise<void> {
+  try {
+    if (canalDoAvisoAoCliente(origem, fio.some((m) => m.direccao === "in")) !== "whatsapp") return;
+    if (contacto.telefone.replace(/\D/g, "").length < 9) return;
+    const { jaSaiuHojeUmaMensagemAutomatica } = await import("@/lib/uma-mensagem-automatica-por-dia");
+    if (await jaSaiuHojeUmaMensagemAutomatica({ telefone: contacto.telefone, email: contacto.email }, agora).catch(() => true)) {
+      await appendOrderHistory(pedidoId, {
+        type: "created",
+        by: null,
+        message: "O cliente não foi avisado pelo WhatsApp de que seguiu: já saiu hoje outra mensagem automática a este número.",
+      }).catch(() => {});
+      return;
+    }
+    const { PEDIDO_JA_SEGUIU } = await import("@/lib/resposta-ao-que-falta");
+    const { enviarAvisoWhatsApp } = await import("@/lib/whatsapp-cloud");
+    const saiu = await enviarAvisoWhatsApp(contacto.telefone, PEDIDO_JA_SEGUIU, { semLinguaErrada: true }).catch(() => false);
+    await appendOrderHistory(pedidoId, {
+      type: "created",
+      by: null,
+      message: saiu
+        ? `Cliente avisado pelo WhatsApp: «${PEDIDO_JA_SEGUIU}»`
+        : "O aviso ao cliente pelo WhatsApp de que seguiu não saiu.",
+    }).catch(() => {});
+  } catch (e) {
+    console.error(`[envio-automatico] o aviso ao cliente do #${pedidoId} falhou:`, e instanceof Error ? e.message : e);
+  }
+}
+
 /* ── Seguir sozinho ──────────────────────────────────────────────────────── */
 
 export type ResultadoDoEnvioAutomatico =
   | { estado: "enviado"; receberam: number }
-  | { estado: "na_fila"; enviariaA: number }
+  /** `ate` (d88): à espera dos 10 minutos — sai na primeira passagem depois disto. */
+  | { estado: "na_fila"; enviariaA: number; ate?: string }
   | { estado: "ficou"; motivo: MotivoDoEnvioAutomatico; enviariaA?: number }
   /** Já tinha negociações vivas — enviado antes (pela Mesa ou por outra execução). */
   | { estado: "ja_enviado" }
@@ -252,12 +400,16 @@ function emailsDeTesteDoAmbiente(): Set<string> {
 }
 
 /**
- * O PEDIDO COMPLETO PELA VITÓRIA SEGUE SOZINHO PARA OS PARCEIROS? — e, se
- * sim, segue: pela MESMA função da Mesa (`enviarAosProfissionais`), com a
- * reserva ganha antes. Todas as condições de `envio-automatico-aos-parceiros.ts`
- * se vêem aqui, por esta ordem; a primeira que falha deixa-o nos «por enviar»
- * com o motivo (no cartão e no histórico). Fora das 8h–21h, fica na fila.
- * Nunca lança: um erro deixa-o nos «por enviar», como hoje.
+ * O PEDIDO COMPLETO SEGUE SOZINHO PARA OS PARCEIROS? — e, se sim, segue: pela
+ * MESMA função da Mesa (`enviarAosProfissionais`), com a reserva ganha antes.
+ * Todas as condições de `envio-automatico-aos-parceiros.ts` se vêem aqui, por
+ * esta ordem; a primeira que falha deixa-o nos «por enviar» com o motivo (no
+ * cartão e no histórico). Fora das 8h–21h, fica na fila. Nunca lança: um erro
+ * deixa-o nos «por enviar», como hoje.
+ *
+ * Com `todasAsOrigens` (d88 — a rotina dos «Orçamentos novos»): mais as
+ * condições que o deixam sempre com uma pessoa, a espera dos 10 minutos e o
+ * aviso ao cliente pelo canal dele. Sem ela, é a Vitória (d87), tal e qual.
  */
 export async function seguirSozinhoParaOsParceiros(
   pedidoId: number,
@@ -267,10 +419,13 @@ export async function seguirSozinhoParaOsParceiros(
     porTraduzir?: boolean;
     /** Registado sem o SIM do cliente ao resumo. */
     registadoSozinho?: boolean;
+    /** d88: visto pela rotina dos «Orçamentos novos», e não pela Vitória. */
+    todasAsOrigens?: boolean;
     agora?: Date;
   },
 ): Promise<ResultadoDoEnvioAutomatico> {
   const agora = opcoes.agora ?? new Date();
+  const todas = opcoes.todasAsOrigens === true;
   let pool: Pool;
   try {
     pool = await garantirTabelas();
@@ -281,7 +436,7 @@ export async function seguirSozinhoParaOsParceiros(
   const ficar = async (motivo: MotivoDoEnvioAutomatico, enviariaA: number | null = null, daReserva = false) => {
     const novo = await ficaComOMotivo(pool, pedidoId, opcoes.origem, motivo, enviariaA, daReserva).catch(() => false);
     if (novo) {
-      await appendOrderHistory(pedidoId, { type: "created", by: null, message: historicoDoQueFicou(motivo, enviariaA) }).catch(() => {});
+      await appendOrderHistory(pedidoId, { type: "created", by: null, message: historicoDoQueFicou(motivo, enviariaA, !todas) }).catch(() => {});
     }
     return { estado: "ficou" as const, motivo, ...(enviariaA != null ? { enviariaA } : {}) };
   };
@@ -300,6 +455,14 @@ export async function seguirSozinhoParaOsParceiros(
       precisaFatura?: unknown;
       precisaGuiaTransporte?: unknown;
       formaDePagamento?: unknown;
+      createdAt?: Date | string | null;
+      historyJson?: string | null;
+      notasInternas?: string | null;
+      assignedToId?: unknown;
+      propostaEnviadaEm?: unknown;
+      escolhaDosParceirosJson?: unknown;
+      estimateTotal?: unknown;
+      estimateMax?: unknown;
     };
     const rawOrderJson = typeof p.rawOrderJson === "string" ? p.rawOrderJson : JSON.stringify(p.rawOrderJson ?? {});
     const motivo = porqueNaoSegueSozinho(
@@ -312,7 +475,8 @@ export async function seguirSozinhoParaOsParceiros(
         codigoPostal: (typeof p.postalCode === "string" && p.postalCode.trim()) || codigoPostalGuardado(rawOrderJson),
         valorFixoClyon: p.valorFixoClyon,
         porTraduzir: opcoes.porTraduzir === true,
-        registadoSozinho: opcoes.registadoSozinho === true,
+        // d88: a rotina não ouviu a Vitória — o histórico diz se ela o registou sem o SIM do cliente.
+        registadoSozinho: opcoes.registadoSozinho === true || (todas && registadoSozinhoNoHistorico(p.historyJson)),
       },
       emailsDeTesteDoAmbiente(),
     );
@@ -324,11 +488,28 @@ export async function seguirSozinhoParaOsParceiros(
     if (motivo === "incompleto") return { estado: "ficou", motivo };
     if (motivo) return await ficar(motivo);
 
+    // d88: os que ficam SEMPRE com uma pessoa — Trabalho CLYON e valor fixo já acima, e estes.
+    const origemDoPedido = origemNoEnvioAutomatico(slugDaOrigem(rawOrderJson));
+    if (todas) {
+      const comUmaPessoa = porqueFicaComUmaPessoa({
+        origem: slugDaOrigem(rawOrderJson),
+        propostaEnviadaEm: p.propostaEnviadaEm,
+        escolhaDosParceirosJson: p.escolhaDosParceirosJson,
+        estimativaComIva: estimativaComIva(p.estimateTotal, p.estimateMax),
+        notasInternas: p.notasInternas,
+        assignedToId: p.assignedToId,
+      });
+      if (comUmaPessoa) return await ficar(comUmaPessoa);
+    }
+
     // A regra d73: a equipa escreveu à mão depois do último envio de modelo.
     const telefone = String(p.contactPhone ?? "");
-    const fio = telefone.replace(/\D/g, "").length >= 9 ? await mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []) : [];
+    const comTelefone = telefone.replace(/\D/g, "").length >= 9;
+    const fio = comTelefone ? await mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []) : [];
     if (aEquipaEscreveuDepoisDoModelo(fio)) return await ficar("equipa_escreveu");
     if (telefone && (await numeroBloqueadoWhatsApp(telefone).catch(() => false))) return await ficar("bloqueado");
+    // d88: a conversa passou a uma pessoa da equipa (também quando a descrição ficou por traduzir, d46).
+    if (todas && comTelefone && (await numeroInterrompidoWhatsApp(telefone).catch(() => true))) return await ficar("com_a_equipa");
 
     // As coordenadas (a distribuição precisa delas), indo buscá-las como a Mesa faz.
     const geo = await coordenadasDoPedido(pedido);
@@ -352,6 +533,22 @@ export async function seguirSozinhoParaOsParceiros(
     // O interruptor de emergência: desligado, fica como hoje, e o cartão diz a quantos iria.
     if (!(await interruptorDoEnvioAutomatico()).ligado) return await ficar("desligado", enviariaA);
 
+    if (todas) {
+      // A segunda chave (d88): «Só os da Vitória» ligada — a rotina não manda os das outras origens.
+      if ((await soOsDaVitoria()).ligado) return await ficar("so_da_vitoria", enviariaA);
+      // A espera dos 10 minutos: depois de entrar, e depois da última mensagem da conversa.
+      const ultima = fio.reduce<number | null>((m, x) => (x.haSegundos == null ? m : m == null ? x.haSegundos : Math.min(m, x.haSegundos)), null);
+      const ate = seguirSoDepoisDe(instanteDaBase(p.createdAt ?? null), ultima, agora);
+      if (ate || !naJanelaDoEnvioAutomatico(agora)) {
+        const entrou = await porNaFilaDosOrcamentosNovos(pool, pedidoId, enviariaA, ate);
+        if (entrou) {
+          const message = ate ? historicoDaEspera(enviariaA, horaDeSaida(ate), agora) : historicoDaFila(enviariaA, false);
+          await appendOrderHistory(pedidoId, { type: "created", by: null, message }).catch(() => {});
+        }
+        return { estado: "na_fila", enviariaA, ...(ate ? { ate: ate.toISOString() } : {}) };
+      }
+    }
+
     // Fora das 8h–21h de Lisboa: na fila, sai às 8h00.
     if (!naJanelaDoEnvioAutomatico(agora)) {
       const entrou = await porNaFila(pool, pedidoId, opcoes.origem, enviariaA);
@@ -362,14 +559,18 @@ export async function seguirSozinhoParaOsParceiros(
     // A reserva: só quem a ganha envia.
     if (!(await reservarOEnvio(pool, pedidoId, opcoes.origem))) return { estado: "reservado" };
 
-    const r = await enviarAosProfissionais(pedidoId, { baseUrl: urlDeAccao(), pelaVitoria: true });
+    // A MESMA função do botão «Negociação» da Mesa, com a caixa vazia: a conta da CLYON.
+    const r = todas
+      ? await enviarAosProfissionais(pedidoId, { baseUrl: urlDeAccao(), automaticamente: true })
+      : await enviarAosProfissionais(pedidoId, { baseUrl: urlDeAccao(), pelaVitoria: true });
     if (!r.ok) {
       console.error(`[envio-automatico] o pedido #${pedidoId} não seguiu: ${r.status} ${r.error}`);
       return await ficar("falhou", enviariaA, true);
     }
     if (r.receberam > 0) {
       await marcarEnviado(pool, pedidoId, r.receberam);
-      console.info(`[envio-automatico] pedido #${pedidoId} enviado a ${r.receberam} parceiro(s) pela Vitória (d87)`);
+      console.info(`[envio-automatico] pedido #${pedidoId} enviado a ${r.receberam} parceiro(s) ${todas ? "pela rotina (d88)" : "pela Vitória (d87)"}`);
+      if (todas) await avisarOClienteQueSeguiu(pedidoId, { telefone, email: p.contactEmail ?? null }, origemDoPedido, fio, agora);
       return { estado: "enviado", receberam: r.receberam };
     }
     return await ficar("nao_chegou", enviariaA, true);
@@ -379,7 +580,7 @@ export async function seguirSozinhoParaOsParceiros(
   }
 }
 
-/* ── A rotina das 8h00 (de 15 em 15 minutos) ─────────────────────────────── */
+/* ── A rotina (de 15 em 15 minutos) ──────────────────────────────────────── */
 
 export type ResultadoDaRotinaDoEnvioAutomatico = {
   desligado: boolean;
@@ -388,13 +589,100 @@ export type ResultadoDaRotinaDoEnvioAutomatico = {
   enviados: number;
   ficaram: number;
   interrompidos: number;
+  /** d88: os «Orçamentos novos» vistos nesta passagem, os enviados e os que ficaram à espera. */
+  vistos: number;
+  enviadosDosNovos: number;
+  aEsperar: number;
+  /** d88: a segunda chave «Só os da Vitória» está ligada — não se varreu. */
+  soDaVitoria: boolean;
 };
 
-/** Quantos se soltam por passagem: cada envio fala com o Google e com o email, e a rotina tem 60 s. */
+/** Quantos se ENVIAM por passagem (a fila e os «Orçamentos novos» juntos): cada envio fala com o Google e com o email, e a rotina tem 60 s. */
 export const POR_PASSAGEM = 5;
 
+/** Quantos «Orçamentos novos» se VÊEM por passagem (d88) — os mais recentes primeiro. */
+export const VISTOS_POR_PASSAGEM = 10;
+
+/** Um pedido que ficou volta a ser visto ao fim de uma hora (o motivo pode ter mudado), e não a cada passagem. */
+const MINUTOS_PARA_REVER = 60;
+
+/**
+ * Os motivos que NUNCA se revêem sozinhos: um envio que ficou a meio, que não
+ * chegou a ninguém ou que falhou passa à equipa (d87); o registado sem o SIM do
+ * cliente e a descrição por traduzir só a Vitória os sabe (d46).
+ */
+const MOTIVOS_QUE_NAO_SE_REVEEM: ReadonlySet<string> = new Set(["falhou", "interrompido", "nao_chegou", "registado_sozinho", "por_traduzir"]);
+
+/**
+ * OS «ORÇAMENTOS NOVOS» DE TODAS AS ORIGENS (d88). Os abertos da Mesa
+ * (`pedidosPorPromover`, a mesma lista do bloco); os incompletos ficam de fora
+ * sem custo (a Mesa já diz o que falta); os que nunca foram vistos primeiro, do
+ * mais recente para trás, e depois os que ficaram há mais de uma hora. Cada um
+ * passa por `seguirSozinhoParaOsParceiros` com todas as condições; no máximo
+ * `orcamento` envios.
+ */
+async function varrerOsOrcamentosNovos(
+  pool: Pool,
+  agora: Date,
+  orcamento: number,
+): Promise<{ vistos: number; enviados: number; aEsperar: number; ficaram: number }> {
+  const r = { vistos: 0, enviados: 0, aEsperar: 0, ficaram: 0 };
+  const abertos = await pedidosPorPromover(100);
+  const ids = abertos.map((p) => Number(p.id)).filter((n) => Number.isInteger(n) && n > 0);
+  if (ids.length === 0) return r;
+  const [linhas] = (await pool.execute(
+    `SELECT pedidoId, estado, motivo, vistoEm FROM envioAutomaticoAosParceiros
+      WHERE pedidoId IN (${ids.map(() => "?").join(",")})`,
+    ids,
+  )) as [Array<{ pedidoId: number; estado: string; motivo: string | null; vistoEm: Date | string | null }>, unknown];
+  const porId = new Map(linhas.map((l) => [Number(l.pedidoId), l]));
+
+  const nuncaVistos: number[] = [];
+  const paraRever: Array<{ id: number; visto: number }> = [];
+  for (const p of abertos) {
+    const id = Number(p.id);
+    const { description, filesJson, dataAgendada, rawDoQueFalta, ...resto } = p;
+    const faltas = oQueFaltaNoPedido({ ...resto, description, filesJson, dataAgendada, rawOrderJson: rawDoQueFalta } as unknown as PedidoParaOQueFalta);
+    if (arrumarAsFaltas(faltas).length > 0) continue;
+    const l = porId.get(id);
+    if (!l) {
+      nuncaVistos.push(id);
+      continue;
+    }
+    if (l.estado !== "ficou" || MOTIVOS_QUE_NAO_SE_REVEEM.has(String(l.motivo ?? ""))) continue;
+    const visto = instanteDaBase(l.vistoEm)?.getTime() ?? 0;
+    if (agora.getTime() - visto >= MINUTOS_PARA_REVER * 60_000) paraRever.push({ id, visto });
+  }
+  paraRever.sort((a, b) => a.visto - b.visto);
+  const aVer = [...nuncaVistos, ...paraRever.map((x) => x.id)].slice(0, VISTOS_POR_PASSAGEM);
+
+  for (const id of aVer) {
+    if (r.enviados >= orcamento) break;
+    const e = await seguirSozinhoParaOsParceiros(id, { origem: ORIGEM_DOS_ORCAMENTOS_NOVOS, todasAsOrigens: true, agora });
+    r.vistos++;
+    if (e.estado === "enviado") r.enviados++;
+    else if (e.estado === "na_fila") r.aEsperar++;
+    else if (e.estado === "ficou") r.ficaram++;
+    await pool
+      .execute("UPDATE envioAutomaticoAosParceiros SET vistoEm = ? WHERE pedidoId = ?", [agora, id])
+      .catch(() => undefined);
+  }
+  return r;
+}
+
 export async function rotinaDoEnvioAutomatico(agora: Date = new Date()): Promise<ResultadoDaRotinaDoEnvioAutomatico> {
-  const r: ResultadoDaRotinaDoEnvioAutomatico = { desligado: false, foraDaJanela: false, naFila: 0, enviados: 0, ficaram: 0, interrompidos: 0 };
+  const r: ResultadoDaRotinaDoEnvioAutomatico = {
+    desligado: false,
+    foraDaJanela: false,
+    naFila: 0,
+    enviados: 0,
+    ficaram: 0,
+    interrompidos: 0,
+    vistos: 0,
+    enviadosDosNovos: 0,
+    aEsperar: 0,
+    soDaVitoria: false,
+  };
   const pool = await garantirTabelas();
   // Um envio que ficou «a enviar» mais de 15 minutos morreu a meio: fica para a equipa (nunca se reenvia sozinho).
   const [presos] = await pool.execute(
@@ -406,19 +694,45 @@ export async function rotinaDoEnvioAutomatico(agora: Date = new Date()): Promise
     r.desligado = true;
     return r;
   }
+  r.soDaVitoria = (await soOsDaVitoria()).ligado;
+  const varrer = async () => {
+    if (r.soDaVitoria) return;
+    try {
+      const v = await varrerOsOrcamentosNovos(pool, agora, Math.max(0, POR_PASSAGEM - r.enviados));
+      r.vistos = v.vistos;
+      r.enviadosDosNovos = v.enviados;
+      r.aEsperar = v.aEsperar;
+      r.ficaram += v.ficaram;
+    } catch (e) {
+      console.error("[envio-automatico] a rotina dos «Orçamentos novos» falhou:", e instanceof Error ? e.message : e);
+    }
+  };
   if (!naJanelaDoEnvioAutomatico(agora)) {
     r.foraDaJanela = true;
+    // De noite não sai nada; os completos entram na fila das 8h00 (o cartão diz «Segue sozinho a … às 08:00»).
+    await varrer();
     return r;
   }
+  // A fila: os da Vitória de fora de horas, e os dos «Orçamentos novos» cuja espera já acabou.
   const [rows] = (await pool.execute(
-    `SELECT pedidoId FROM envioAutomaticoAosParceiros WHERE estado = 'na_fila' ORDER BY criadoEm ASC LIMIT ${POR_PASSAGEM}`,
-  )) as [Array<{ pedidoId: number }>, unknown];
+    `SELECT pedidoId, origem FROM envioAutomaticoAosParceiros
+      WHERE estado = 'na_fila' AND (seguirApos IS NULL OR seguirApos <= ?)
+        ${r.soDaVitoria ? `AND (origem IS NULL OR origem <> '${ORIGEM_DOS_ORCAMENTOS_NOVOS}')` : ""}
+      ORDER BY criadoEm ASC LIMIT ${POR_PASSAGEM}`,
+    [agora],
+  )) as [Array<{ pedidoId: number; origem: string | null }>, unknown];
   r.naFila = rows.length;
   for (const l of rows) {
-    const e = await seguirSozinhoParaOsParceiros(Number(l.pedidoId), { origem: "fila", agora });
+    const dosNovos = l.origem === ORIGEM_DOS_ORCAMENTOS_NOVOS;
+    const e = await seguirSozinhoParaOsParceiros(Number(l.pedidoId), {
+      origem: dosNovos ? ORIGEM_DOS_ORCAMENTOS_NOVOS : "fila",
+      todasAsOrigens: dosNovos,
+      agora,
+    });
     if (e.estado === "enviado") r.enviados++;
     else if (e.estado === "ficou") r.ficaram++;
   }
+  await varrer();
   return r;
 }
 
@@ -426,26 +740,31 @@ export function resumoDaRotinaDoEnvioAutomatico(r: ResultadoDaRotinaDoEnvioAutom
   const partes: string[] = [];
   if (r.interrompidos > 0) partes.push(`${r.interrompidos} interrompido(s), para a equipa`);
   if (r.desligado) partes.push("desligado nas Configs");
-  else if (r.foraDaJanela) partes.push("fora das 8h–21h");
-  else if (r.naFila > 0) partes.push(`${r.enviados} enviado(s), ${r.ficaram} ficaram nos «por enviar»`);
+  else {
+    if (r.foraDaJanela) partes.push("fora das 8h–21h");
+    else if (r.naFila > 0) partes.push(`fila: ${r.enviados} enviado(s), ${r.ficaram} ficaram nos «por enviar»`);
+    if (r.soDaVitoria) partes.push("só os da Vitória");
+    else if (r.vistos > 0) partes.push(`orçamentos novos: ${r.vistos} visto(s), ${r.enviadosDosNovos} enviado(s), ${r.aEsperar} à espera`);
+  }
   return partes.length > 0 ? partes.join("; ") : null;
 }
 
 /* ── O cartão dos «por enviar» na Mesa ───────────────────────────────────── */
 
 /** A linha do envio automático de cada pedido (só os que a têm). Nunca rebenta a Mesa. */
-export async function linhasDoEnvioAutomaticoNaMesa(ids: number[]): Promise<Map<number, string>> {
+export async function linhasDoEnvioAutomaticoNaMesa(ids: number[], agora: Date = new Date()): Promise<Map<number, string>> {
   const m = new Map<number, string>();
   const limpos = [...new Set(ids.filter((n) => Number.isInteger(n) && n > 0))];
   if (limpos.length === 0) return m;
   try {
     const pool = await garantirTabelas();
     const [rows] = (await pool.execute(
-      `SELECT pedidoId, estado, motivo, enviariaA, mudadoEm FROM envioAutomaticoAosParceiros
+      `SELECT pedidoId, estado, motivo, enviariaA, mudadoEm, seguirApos, origem FROM envioAutomaticoAosParceiros
         WHERE pedidoId IN (${limpos.map(() => "?").join(",")})`,
       limpos,
     )) as [Array<Record<string, unknown>>, unknown];
     const { ligado } = await interruptorDoEnvioAutomatico();
+    const soDaVitoria = (await soOsDaVitoria()).ligado;
     for (const l of rows) {
       const estado = String(l.estado ?? "");
       if (!["a_enviar", "enviado", "na_fila", "ficou"].includes(estado)) continue;
@@ -454,8 +773,10 @@ export async function linhasDoEnvioAutomaticoNaMesa(ids: number[]): Promise<Map<
         motivo: lerMotivo(l.motivo),
         enviariaA: l.enviariaA == null ? null : Number(l.enviariaA),
         mudadoEm: instanteDaBase(l.mudadoEm as string | Date | null),
+        seguirApos: instanteDaBase(l.seguirApos as string | Date | null),
+        doVarrimento: l.origem === ORIGEM_DOS_ORCAMENTOS_NOVOS,
       };
-      const texto = linhaDoEnvioAutomaticoNaMesa(linha, ligado);
+      const texto = linhaDoEnvioAutomaticoNaMesa(linha, ligado, { soDaVitoria, agora });
       if (texto) m.set(Number(l.pedidoId), texto);
     }
   } catch (e) {

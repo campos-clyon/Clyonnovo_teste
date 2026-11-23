@@ -51,7 +51,10 @@ import {
  * É uma acção de uma pessoa, pedido a pedido — com UMA excepção desde
  * 22-11-2026 (d87, CEO e dono): o pedido que a Vitória deixa completo pelo
  * WhatsApp, com todas as condições de `envio-automatico-aos-parceiros.ts`,
- * segue sozinho. Tudo o resto continua a ser decidido aqui por uma pessoa.
+ * segue sozinho. E desde 23-11-2026 (d88) todo o pedido completo dos «Orçamentos
+ * novos», de qualquer origem, pela rotina de 15 em 15 minutos — com as mesmas
+ * condições e as que o deixam sempre com uma pessoa. O valor de partida é o do
+ * botão «Negociação» da Mesa com a caixa vazia: a conta da CLYON.
  */
 
 export type ResultadoDoEnvioAosProfissionais =
@@ -72,6 +75,7 @@ export async function enviarAosProfissionais(
     baseUrl,
     colab,
     pelaVitoria = false,
+    automaticamente = false,
   }: {
     /** O valor escrito na caixa da Mesa (vazio = a conta da CLYON). */
     valor?: unknown;
@@ -83,6 +87,8 @@ export async function enviarAosProfissionais(
     colab?: { id: number; nome: string; papel: PapelDoPainel } | null;
     /** O envio automático da d87: o histórico diz que foi a Vitória, sozinha. */
     pelaVitoria?: boolean;
+    /** O envio automático da d88 (os «Orçamentos novos» de todas as origens): o histórico diz que foi sozinho. */
+    automaticamente?: boolean;
   },
 ): Promise<ResultadoDoEnvioAosProfissionais> {
   const pedido = await getSimulatorOrderById(pedidoId);
@@ -278,7 +284,9 @@ export async function enviarAosProfissionais(
         // Pela Vitória (d87): a primeira frase diz que foi sozinho, e a quantos.
         (pelaVitoria && r.receberam > 0
           ? `Enviado aos parceiros automaticamente (${r.receberam} ${r.receberam === 1 ? "parceiro" : "parceiros"}) — pela Vitória. `
-          : "") +
+          : automaticamente && r.receberam > 0
+            ? `Enviado aos parceiros automaticamente (${r.receberam} ${r.receberam === 1 ? "parceiro" : "parceiros"}). `
+            : "") +
         // Fica escrito DE ONDE veio o número: quem ler isto daqui a um mês
         // tem de saber se foi a fórmula ou se foi alguém que escreveu.
         `Promovido a pedido de plataforma por ${valor} € ` +

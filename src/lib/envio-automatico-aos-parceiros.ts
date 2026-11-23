@@ -1,4 +1,4 @@
-import { pecasEmLisboa, diaMesEHoraEmLisboa } from "./hora-de-lisboa";
+import { pecasEmLisboa, diaMesEHoraEmLisboa, diaEmLisboa, horaEmLisboa, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { pedidoFechado } from "./pedido-arrumado";
 import { eDeTeste } from "./lembrete-do-que-falta";
 import { arrumarAsFaltas, type ChaveDaFalta } from "./mensagem-do-que-falta";
@@ -51,7 +51,7 @@ import { haQuantoFalouAEquipa, HORAS_SEM_PISAR_A_EQUIPA } from "./pedido-em-curs
  * `envio-automatico-aos-parceiros-na-base.ts`.
  */
 
-export { NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO } from "./envio-automatico-nome";
+export { NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO, NOME_DO_INTERRUPTOR_SO_DA_VITORIA } from "./envio-automatico-nome";
 
 /** Os avisos aos parceiros saem das 8h00 às 21h00 de Lisboa. */
 export const JANELA_DO_ENVIO_AUTOMATICO = { abre: 8, fecha: 21 } as const;
@@ -78,6 +78,15 @@ export type MotivoDoEnvioAutomatico =
   | "sem_coordenadas"
   | "sem_parceiros"
   | "desligado"
+  /* d88 (23-11-2026): os «Orçamentos novos» de todas as origens — os que ficam SEMPRE com uma pessoa. */
+  | "origem_fora"
+  | "proposta_enviada"
+  | "escolhidos_pelo_cliente"
+  | "atribuido"
+  | "com_nota"
+  | "acima_de_500"
+  | "com_a_equipa"
+  | "so_da_vitoria"
   | "nao_chegou"
   | "interrompido"
   | "falhou";
@@ -98,6 +107,14 @@ export const MOTIVOS_DO_ENVIO_AUTOMATICO: Readonly<Record<MotivoDoEnvioAutomatic
   sem_coordenadas: "a morada não tem coordenadas válidas",
   sem_parceiros: "sem parceiros na zona",
   desligado: "o envio automático está desligado nas Configs",
+  origem_fora: "a origem do pedido não segue sozinha (formulário a meio ou conta de teste)",
+  proposta_enviada: "a equipa já enviou uma proposta ao cliente",
+  escolhidos_pelo_cliente: "mudança com parceiros escolhidos pelo cliente — vai só a esses",
+  atribuido: "alguém da equipa está a tratar dele",
+  com_nota: "tem uma nota da equipa",
+  acima_de_500: "estimativa acima de 500 € com IVA — fica com uma pessoa",
+  com_a_equipa: "a conversa do WhatsApp está com uma pessoa da equipa",
+  so_da_vitoria: "o envio automático está só para os da Vitória nas Configs",
   nao_chegou: "não chegou a nenhum parceiro",
   interrompido: "o envio automático não terminou — conferir e enviar à mão",
   falhou: "o envio automático falhou — enviar à mão",
@@ -194,10 +211,10 @@ export function aEquipaEscreveuDepoisDoModelo(
 const parceiros = (n: number) => `${n} ${n === 1 ? "parceiro" : "parceiros"}`;
 
 /** O histórico do pedido quando fica nos «por enviar». */
-export function historicoDoQueFicou(motivo: MotivoDoEnvioAutomatico, enviariaA?: number | null): string {
+export function historicoDoQueFicou(motivo: MotivoDoEnvioAutomatico, enviariaA?: number | null, daVitoria = true): string {
   if (motivo === "desligado") {
     return (
-      `Completo pela Vitória, mas o envio automático aos parceiros está desligado nas Configs` +
+      `Completo${daVitoria ? " pela Vitória" : ""}, mas o envio automático aos parceiros está desligado nas Configs` +
       (enviariaA != null && enviariaA > 0 ? ` — enviaria a ${parceiros(enviariaA)}` : "") +
       ". Fica nos «por enviar»."
     );
@@ -206,10 +223,18 @@ export function historicoDoQueFicou(motivo: MotivoDoEnvioAutomatico, enviariaA?:
 }
 
 /** O histórico do pedido quando fica na fila (fora das 8h–21h). */
-export function historicoDaFila(enviariaA: number): string {
+export function historicoDaFila(enviariaA: number, daVitoria = true): string {
   return (
-    `Completo pela Vitória fora das 8h–21h: o envio automático aos parceiros (${parceiros(enviariaA)}) ` +
+    `Completo${daVitoria ? " pela Vitória" : ""} fora das 8h–21h: o envio automático aos parceiros (${parceiros(enviariaA)}) ` +
     "fica na fila e sai às 8h00."
+  );
+}
+
+/** O histórico do pedido que espera os 10 minutos (d88): sai à hora dita. */
+export function historicoDaEspera(enviariaA: number, saida: Date, agora: Date): string {
+  return (
+    `Completo: segue sozinho para os parceiros (${parceiros(enviariaA)}) ${quandoSai(saida, agora)}, ` +
+    `depois de ${MINUTOS_DE_ESPERA} minutos sem mensagens do cliente.`
   );
 }
 
@@ -219,13 +244,21 @@ export type LinhaDoEnvioAutomatico = {
   motivo: MotivoDoEnvioAutomatico | null;
   enviariaA: number | null;
   mudadoEm: Date | null;
+  /** d88: na fila à espera dos 10 minutos — não sai antes disto. */
+  seguirApos?: Date | null;
+  /** d88: posto na fila pela rotina dos «Orçamentos novos» (todas as origens), e não pela Vitória. */
+  doVarrimento?: boolean;
 };
 
 /**
  * A LINHA NO CARTÃO DOS «POR ENVIAR» — o que aconteceu ao envio automático
  * deste pedido, ou null. Com o interruptor desligado, «enviaria a N parceiros».
  */
-export function linhaDoEnvioAutomaticoNaMesa(l: LinhaDoEnvioAutomatico | null | undefined, ligado: boolean): string | null {
+export function linhaDoEnvioAutomaticoNaMesa(
+  l: LinhaDoEnvioAutomatico | null | undefined,
+  ligado: boolean,
+  opcoes: { soDaVitoria?: boolean; agora?: Date } = {},
+): string | null {
   if (!l) return null;
   const quando = l.mudadoEm ? ` (${diaMesEHoraEmLisboa(l.mudadoEm)})` : "";
   const n = l.enviariaA != null && l.enviariaA > 0 ? l.enviariaA : null;
@@ -233,7 +266,12 @@ export function linhaDoEnvioAutomaticoNaMesa(l: LinhaDoEnvioAutomatico | null | 
   if (l.estado === "a_enviar") return `Envio automático aos parceiros a correr${quando}.`;
   if (l.estado === "na_fila") {
     if (!ligado) return `Envio automático desligado nas Configs${n ? ` — enviaria a ${parceiros(n)}` : ""}.`;
-    return `Envio automático aos parceiros na fila: sai às 8h00${n ? `, para ${parceiros(n)}` : ""}${quando}.`;
+    if (l.doVarrimento && opcoes.soDaVitoria) {
+      return `Envio automático só para os da Vitória nas Configs${n ? ` — enviaria a ${parceiros(n)}` : ""}.`;
+    }
+    // d88: «Segue sozinho às HH:MM» — a passagem da rotina em que sai (8h–21h, de 15 em 15 minutos).
+    const agora = opcoes.agora ?? new Date();
+    return `Segue sozinho ${quandoSai(horaDeSaida(l.seguirApos ?? agora), agora)}${n ? `, para ${parceiros(n)}` : ""}.`;
   }
   if (l.motivo === "desligado") return `Envio automático desligado nas Configs${n ? ` — enviaria a ${parceiros(n)}` : ""}${quando}.`;
   const motivo = l.motivo ? MOTIVOS_DO_ENVIO_AUTOMATICO[l.motivo] : MOTIVOS_DO_ENVIO_AUTOMATICO.falhou;
@@ -243,4 +281,167 @@ export function linhaDoEnvioAutomaticoNaMesa(l: LinhaDoEnvioAutomatico | null | 
 /** Lê um motivo gravado na base; o que não se conhece fica null. */
 export function lerMotivo(v: unknown): MotivoDoEnvioAutomatico | null {
   return typeof v === "string" && v in MOTIVOS_DO_ENVIO_AUTOMATICO ? (v as MotivoDoEnvioAutomatico) : null;
+}
+
+/* ── d88 (23-11-2026): todo o pedido completo, de qualquer origem ────────── */
+
+/**
+ * TODO O PEDIDO COMPLETO, DE QUALQUER ORIGEM, SEGUE SOZINHO — 23-11-2026
+ * (decisão d88, passo 2, CEO e dono: «Aprovo a d88»).
+ *
+ * A d87 só mandava sozinhos os que a Vitória completava pelo WhatsApp. Os do
+ * simulador, do formulário do site e os registados à mão na Mesa ficavam nos
+ * «Orçamentos novos» à espera da equipa. Agora a rotina de 15 em 15 minutos
+ * (a mesma da d87, a mesma tabela de reserva, o mesmo interruptor) varre os
+ * abertos e manda pela MESMA função do botão «Negociação» da Mesa
+ * (`enviarAosProfissionais`, com a conta da CLYON como valor de partida),
+ * com todas as condições da d87 MAIS estas — basta uma para ficar com uma
+ * pessoa, com o motivo no cartão:
+ *
+ *   · a origem é uma das que seguem (simulador, formulário, WhatsApp,
+ *     registado na Mesa) — nunca o «formulário a meio» nem a plataforma de teste;
+ *   · não é Trabalho CLYON nem tem «Valor fixo» (já da d87), nem a equipa já
+ *     enviou uma proposta ao cliente;
+ *   · não é uma mudança com parceiros escolhidos pelo cliente (vão só a esses,
+ *     por `enviarAosEscolhidos`);
+ *   · a estimativa não passa dos 500 € com IVA;
+ *   · não tem nota da equipa, nem está atribuído a uma pessoa, nem a conversa
+ *     do WhatsApp está com a equipa;
+ *   · ESPERA: só 10 minutos depois de o pedido entrar, e nunca com mensagem na
+ *     conversa do cliente há menos de 10 minutos (pode estar a mandar
+ *     fotografias). Até lá fica na fila, e o cartão diz «Segue sozinho às HH:MM».
+ *
+ * Os da Vitória (a resposta ao «Pedir o que falta» e o registo já completo)
+ * continuam como na d87: seguem logo, sem a espera — ela acabou de falar com o cliente.
+ */
+
+/** A espera mínima (d88): depois de o pedido entrar, e depois da última mensagem do cliente. */
+export const MINUTOS_DE_ESPERA = 10;
+
+/** Acima disto (estimativa com IVA) fica com uma pessoa. */
+export const TECTO_COM_IVA_DO_ENVIO_AUTOMATICO = 500;
+
+/** De onde vem o pedido, para o envio automático. */
+export type OrigemNoEnvioAutomatico = "simulador" | "formulario" | "whatsapp" | "backoffice";
+
+const ORIGENS_DO_FORMULARIO = new Set(["hero_quote_form", "formulario_site", "formulario_contactos", "quero_contratar", "quero_contratar_header"]);
+
+/**
+ * A origem pelo slug do pedido (`origemPedido` / `_source` / `source`, como
+ * em `acesso.ts`: sem slug é o simulador). Fora (null): o «formulário a meio»
+ * (a pessoa não enviou — é para a equipa ligar), a plataforma de teste e o que
+ * não se conhece.
+ */
+export function origemNoEnvioAutomatico(slug: string | null | undefined): OrigemNoEnvioAutomatico | null {
+  const s = (slug ?? "").trim();
+  if (!s || s === "simulador") return "simulador";
+  if (ORIGENS_DO_FORMULARIO.has(s)) return "formulario";
+  if (s === "whatsapp") return "whatsapp";
+  if (s === "backoffice") return "backoffice";
+  return null;
+}
+
+/** O slug guardado no JSON do pedido (a mesma ordem de `origemDoPedido`). */
+export function slugDaOrigem(rawOrderJson: string | null | undefined): string {
+  try {
+    const raw = JSON.parse(rawOrderJson || "{}") as Record<string, unknown>;
+    const bruto = raw.origemPedido ?? raw._source ?? raw.source ?? null;
+    return typeof bruto === "string" ? bruto.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+/** O que as condições das origens novas precisam de saber do pedido. */
+export type CandidatoDasOrigensNovas = {
+  origem: string | null | undefined;
+  propostaEnviadaEm?: unknown;
+  escolhaDosParceirosJson?: unknown;
+  /** A estimativa gravada, COM IVA (a maior das duas colunas). */
+  estimativaComIva?: number | null;
+  notasInternas?: string | null;
+  assignedToId?: unknown;
+};
+
+const preenchido = (v: unknown) => v != null && String(v).trim() !== "";
+
+/** A estimativa com IVA: a maior das que estão gravadas, ou null. */
+export function estimativaComIva(...valores: unknown[]): number | null {
+  const n = valores.map((v) => (v == null || v === "" ? Number.NaN : Number(v))).filter((v) => Number.isFinite(v) && v > 0);
+  return n.length > 0 ? Math.max(...n) : null;
+}
+
+/**
+ * OS QUE FICAM SEMPRE COM UMA PESSOA (d88) — o primeiro motivo, ou null. Só
+ * para a rotina dos «Orçamentos novos»; os da Vitória seguem as da d87.
+ */
+export function porqueFicaComUmaPessoa(c: CandidatoDasOrigensNovas): MotivoDoEnvioAutomatico | null {
+  if (!origemNoEnvioAutomatico(c.origem)) return "origem_fora";
+  if (preenchido(c.propostaEnviadaEm)) return "proposta_enviada";
+  if (preenchido(c.escolhaDosParceirosJson)) return "escolhidos_pelo_cliente";
+  if (Number(c.assignedToId) > 0) return "atribuido";
+  if (typeof c.notasInternas === "string" && c.notasInternas.trim() !== "") return "com_nota";
+  if (c.estimativaComIva != null && c.estimativaComIva > TECTO_COM_IVA_DO_ENVIO_AUTOMATICO) return "acima_de_500";
+  return null;
+}
+
+/** O histórico diz que a Vitória o registou sem o SIM do cliente (whatsapp-negociacao.ts)? */
+export function registadoSozinhoNoHistorico(historyJson: unknown): boolean {
+  return typeof historyJson === "string" && historyJson.includes("Registado sozinho pela Vitória");
+}
+
+/**
+ * A ESPERA (d88): até quando o pedido não sai — 10 minutos depois de entrar e
+ * 10 minutos depois da última mensagem da conversa do cliente. Null: já pode.
+ */
+export function seguirSoDepoisDe(
+  criadoEm: Date | null,
+  ultimaMensagemHaSegundos: number | null | undefined,
+  agora: Date,
+): Date | null {
+  const espera = MINUTOS_DE_ESPERA * 60_000;
+  const fins: number[] = [];
+  if (criadoEm && Number.isFinite(criadoEm.getTime())) fins.push(criadoEm.getTime() + espera);
+  if (ultimaMensagemHaSegundos != null && Number.isFinite(ultimaMensagemHaSegundos)) {
+    fins.push(agora.getTime() - Math.max(0, ultimaMensagemHaSegundos) * 1000 + espera);
+  }
+  if (fins.length === 0) return null;
+  const fim = Math.max(...fins);
+  return fim > agora.getTime() ? new Date(fim) : null;
+}
+
+/**
+ * A HORA A QUE SAI: a primeira passagem da rotina (de 15 em 15 minutos) a
+ * partir de `desde`, dentro das 8h–21h de Lisboa — fora delas, às 8h00.
+ */
+export function horaDeSaida(desde: Date): Date {
+  const quarto = 15 * 60_000;
+  const t = new Date(Math.ceil(desde.getTime() / quarto) * quarto);
+  if (naJanelaDoEnvioAutomatico(t)) return t;
+  // Fora das 8h–21h: as 8h00 de Lisboa desse dia, ou do dia seguinte se já passou das 21h.
+  const hoje = diaEmLisboa(t);
+  const dia = pecasEmLisboa(t).hora >= JANELA_DO_ENVIO_AUTOMATICO.fecha ? somarDiasAoDia(hoje, 1) : hoje;
+  return instanteEmLisboa(`${dia}T${String(JANELA_DO_ENVIO_AUTOMATICO.abre).padStart(2, "0")}:00`) ?? t;
+}
+
+/** «às 14:15» (hoje, em Lisboa) ou «a 24/11 às 08:00». */
+export function quandoSai(saida: Date, agora: Date): string {
+  const hora = horaEmLisboa(saida);
+  if (diaEmLisboa(saida) === diaEmLisboa(agora)) return `às ${hora}`;
+  const p = pecasEmLisboa(saida);
+  return `a ${String(p.dia).padStart(2, "0")}/${String(p.mes).padStart(2, "0")} às ${hora}`;
+}
+
+/**
+ * POR ONDE SE AVISA O CLIENTE (d88) — pelo canal que ele usou. Quem falou pelo
+ * WhatsApp (o pedido do WhatsApp, ou o registado na Mesa a partir da conversa
+ * dele) leva a mensagem da d87 por lá. O do simulador e o do formulário levam
+ * o email que a Mesa já manda (`enviarLinkDoPedido`, a ligação do pedido) —
+ * não se duplica.
+ */
+export function canalDoAvisoAoCliente(
+  origem: OrigemNoEnvioAutomatico | null,
+  falouPeloWhatsApp: boolean,
+): "whatsapp" | "email_da_mesa" {
+  return (origem === "whatsapp" || origem === "backoffice") && falouPeloWhatsApp ? "whatsapp" : "email_da_mesa";
 }

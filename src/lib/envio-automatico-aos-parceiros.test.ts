@@ -45,6 +45,9 @@ vi.mock("@/lib/db", async (original) => {
     const t = base.tabela;
     const agora = new Date();
     if (/^\s*CREATE TABLE/.test(sql)) return mudadas(0);
+    // As colunas da d88 (23-11-2026) e a segunda chave «Só os da Vitória» (sem linha: desligada).
+    if (/^\s*ALTER TABLE envioAutomaticoAosParceiros ADD COLUMN/.test(sql)) return mudadas(0);
+    if (/FROM retencaoInterruptores/.test(sql) && p[0] === "envio_automatico_so_vitoria_d88") return [[], undefined];
     if (/FROM retencaoInterruptores/.test(sql)) {
       return [base.interruptor == null ? [] : [{ ligado: base.interruptor, mudadoEm: null, porQuem: "teste" }], undefined];
     }
@@ -88,10 +91,10 @@ vi.mock("@/lib/db", async (original) => {
       return mudadas(1);
     }
     if (/motivo = 'interrompido'/.test(sql)) return mudadas(0);
-    if (/SELECT pedidoId FROM envioAutomaticoAosParceiros WHERE estado = 'na_fila'/.test(sql)) {
-      return [[...t.values()].filter((l) => l.estado === "na_fila").map((l) => ({ pedidoId: l.pedidoId })), undefined];
+    if (/SELECT pedidoId, origem FROM envioAutomaticoAosParceiros\s+WHERE estado = 'na_fila'/.test(sql)) {
+      return [[...t.values()].filter((l) => l.estado === "na_fila").map((l) => ({ pedidoId: l.pedidoId, origem: l.origem })), undefined];
     }
-    if (/SELECT pedidoId, estado, motivo, enviariaA, mudadoEm FROM envioAutomaticoAosParceiros/.test(sql)) {
+    if (/SELECT pedidoId, estado, motivo, enviariaA, mudadoEm/.test(sql)) {
       return [[...t.values()].filter((l) => p.includes(l.pedidoId)), undefined];
     }
     throw new Error(`SQL por fingir: ${sql.slice(0, 80)}`);
@@ -103,6 +106,8 @@ vi.mock("@/lib/db", async (original) => {
     negociacoesDoPedido: vi.fn(async () => base.negs),
     mensagensDoNumeroWhatsApp: vi.fn(async () => base.fio),
     numeroBloqueadoWhatsApp: vi.fn(async () => base.bloqueado),
+    // A rotina da d88 varre os «Orçamentos novos»: aqui não há nenhum (os testes da d88 estão noutro ficheiro).
+    pedidosPorPromover: vi.fn(async () => []),
     appendOrderHistory: vi.fn(async (_id: number, e: { message: string }) => {
       base.historico.push(e.message);
     }),
@@ -180,7 +185,7 @@ const AS_8H = new Date("2026-11-23T08:00:00Z");
 const COMPLETO: CandidatoAoEnvioAutomatico = {
   status: "sem_assistente",
   serviceType: "recolha_moveis",
-  contactName: "Leonor Brisa",
+  contactName: "Leonor Teixo",
   contactEmail: "leonor@exemplo.pt",
   faltas: [],
   codigoPostal: "2800-123",
@@ -191,12 +196,12 @@ const PEDIDO_COMPLETO = {
   id: 9101,
   status: "sem_assistente",
   serviceType: "recolha_moveis",
-  contactName: "Leonor Brisa",
+  contactName: "Leonor Teixo",
   contactEmail: "leonor@exemplo.pt",
   contactPhone: "910000001",
   postalCode: "2800-123",
   city: "Almada",
-  address: "Rua das Amoras 3",
+  address: "Rua das Flores 3",
   urgency: null,
   rawOrderJson: "{}",
   valorFixoClyon: null,
@@ -243,7 +248,7 @@ describe("as condições puras — todas obrigatórias", () => {
     expect(porqueNaoSegueSozinho({ ...COMPLETO, serviceType: "montagem_moveis" })).toBe("servico_fora");
     expect(porqueNaoSegueSozinho({ ...COMPLETO, serviceType: "jardinagem" })).toBe("servico_fora");
     expect(porqueNaoSegueSozinho({ ...COMPLETO, serviceType: "outro" })).toBe("servico_fora");
-    expect(porqueNaoSegueSozinho({ ...COMPLETO, contactName: "Teste Fred" })).toBe("de_teste");
+    expect(porqueNaoSegueSozinho({ ...COMPLETO, contactName: "Fred Teste" })).toBe("de_teste");
     expect(porqueNaoSegueSozinho({ ...COMPLETO }, new Set(["leonor@exemplo.pt"]))).toBe("de_teste");
     for (const s of ["cancelado", "arquivado", "rejeitado", "concluido"]) {
       expect(porqueNaoSegueSozinho({ ...COMPLETO, status: s })).toBe("fechado");
@@ -275,7 +280,7 @@ describe("as condições puras — todas obrigatórias", () => {
 });
 
 describe("a regra d73: a equipa escreveu à mão depois do último envio de modelo", () => {
-  const DO_MODELO = { id: 9101, serviceType: "recolha_moveis", contactName: "Leonor Brisa" };
+  const DO_MODELO = { id: 9101, serviceType: "recolha_moveis", contactName: "Leonor Teixo" };
   const MODELO = mensagemDoQueFalta(DO_MODELO, ["fotografias"], DE_TARDE);
   it("o modelo e a resposta do cliente: não", () => {
     const fio = [
@@ -302,8 +307,9 @@ describe("a regra d73: a equipa escreveu à mão depois do último envio de mode
 describe("o cartão dos «por enviar» diz o que aconteceu", () => {
   const quando = new Date("2026-11-22T22:30:00Z");
   it("na fila, desligado, e o motivo", () => {
-    expect(linhaDoEnvioAutomaticoNaMesa({ estado: "na_fila", motivo: null, enviariaA: 3, mudadoEm: quando }, true)).toBe(
-      "Envio automático aos parceiros na fila: sai às 8h00, para 3 parceiros (22/11 22:30).",
+    // d88: «Segue sozinho às HH:MM» — às 22h30 é a passagem das 8h00 do dia seguinte.
+    expect(linhaDoEnvioAutomaticoNaMesa({ estado: "na_fila", motivo: null, enviariaA: 3, mudadoEm: quando }, true, { agora: quando })).toBe(
+      "Segue sozinho a 23/11 às 08:00, para 3 parceiros.",
     );
     expect(linhaDoEnvioAutomaticoNaMesa({ estado: "ficou", motivo: "desligado", enviariaA: 1, mudadoEm: null }, false)).toBe(
       "Envio automático desligado nas Configs — enviaria a 1 parceiro.",
@@ -317,7 +323,7 @@ describe("o cartão dos «por enviar» diz o que aconteceu", () => {
     expect(linhaDoEnvioAutomaticoNaMesa({ estado: "enviado", motivo: null, enviariaA: 3, mudadoEm: null }, true)).toBeNull();
   });
   it("o nome do interruptor e o histórico da fila", () => {
-    expect(NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO).toBe("Envio automático aos parceiros");
+    expect(NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO).toBe("Envio automático aos parceiros (todas as origens)");
     expect(historicoDaFila(2)).toContain("sai às 8h00");
     expect(MOTIVOS_DO_ENVIO_AUTOMATICO.sem_parceiros).toBe("sem parceiros na zona");
   });
@@ -435,7 +441,7 @@ describe("fora de horas: fica na fila e sai às 8h00", () => {
     expect(r).toEqual({ estado: "na_fila", enviariaA: 3 });
     expect(base.enviados).toEqual([]);
     expect(base.historico.some((h) => h.includes("sai às 8h00"))).toBe(true);
-    expect((await linhasDoEnvioAutomaticoNaMesa([9101])).get(9101)).toContain("na fila: sai às 8h00");
+    expect((await linhasDoEnvioAutomaticoNaMesa([9101], DE_NOITE)).get(9101)).toBe("Segue sozinho a 23/11 às 08:00, para 3 parceiros.");
 
     // A rotina das 7h45 ainda não solta.
     const cedo = await rotinaDoEnvioAutomatico(new Date("2026-11-23T07:45:00Z"));

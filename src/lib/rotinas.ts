@@ -50,7 +50,8 @@ export const ROTINAS: readonly Rotina[] = [
   // 21-11-2026 (d83): o seguimento do cliente que a equipa marcou na Mesa — 3 mensagens à mesma hora, arquivo no 4.º dia (9h–21h; interruptor de emergência nas Configs).
   { nome: "seguimento-do-cliente", titulo: "Seguimento do cliente: as mensagens marcadas na Mesa e o fecho ao 4.º dia (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
   // 22-11-2026 (d87): os pedidos completos pela Vitória fora das 8h–21h saem às 8h00; os envios a meio passam à equipa (interruptor de emergência nas Configs).
-  { nome: "envio-aos-parceiros", titulo: "Envio automático aos parceiros: a fila das 8h00 dos pedidos completos pela Vitória (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
+  // 23-11-2026 (d88): a mesma rotina manda também os «Orçamentos novos» completos de todas as origens (10 min de espera, no máximo 5 envios por passagem).
+  { nome: "envio-aos-parceiros", titulo: "Envio automático aos parceiros: os «Orçamentos novos» completos de todas as origens e a fila das 8h00 (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
   { nome: "weekly-digest", titulo: "Resumo semanal por email", horario: "0 9 * * 1", intervaloMin: 7 * 24 * 60 },
 ];
 

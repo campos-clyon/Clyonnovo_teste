@@ -27,10 +27,12 @@ export const runtime = "nodejs";
  * da base da CLYON, pessoal, fixos e a margem, sem IVA — a mesma fórmula que
  * cada profissional vê no link, só que com os quilómetros dele.
  *
- * É uma acção de uma pessoa, e não algo que aconteça sozinho. Quem preencheu o
- * simulador pediu um orçamento à CLYON — não pediu para entrar num mercado. A
- * partir daqui passa a receber propostas de terceiros, e isso tem de ser
- * decidido, pedido a pedido.
+ * Era uma acção de uma pessoa, pedido a pedido. Desde 22-11-2026 (d87) os que
+ * a Vitória completa seguem sozinhos, e desde 23-11-2026 (d88) todo o pedido
+ * completo dos «Orçamentos novos», de qualquer origem, pela rotina de 15 em 15
+ * minutos e por esta mesma função (`enviarAosProfissionais`) — com as
+ * condições de `envio-automatico-aos-parceiros.ts`. O botão fica para os que
+ * ficam com uma pessoa.
  */
 export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);

@@ -12,6 +12,11 @@ import { bearerConfere } from "@/lib/segredo-igual";
  * a ver todas as condições, e fecha para a equipa os envios que ficaram a meio.
  * Com o interruptor «Envio automático aos parceiros» desligado nas Configs, a
  * fila espera e nada sai.
+ *
+ * d88 (23-11-2026): a mesma passagem varre os «Orçamentos novos» de todas as
+ * origens (simulador, formulário, WhatsApp, registado na Mesa) e manda os
+ * completos pela mesma função da Mesa, 10 minutos depois de entrarem — no
+ * máximo cinco envios por passagem, a fila e os novos juntos.
  */
 
 export const runtime = "nodejs";
