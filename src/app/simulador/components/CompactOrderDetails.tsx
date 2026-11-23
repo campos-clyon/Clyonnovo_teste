@@ -90,7 +90,7 @@ export default function CompactOrderDetails({
           </p>
         ) : (
           <p id={`${idDaDescricao}-ajuda`} className="text-xs text-slate-600">
-            Opcional — ajude o parceiro com detalhes
+            Recomendado — ajuda o parceiro a dar o preço (o que há, onde está, uma fotografia)
           </p>
         )}
         <textarea

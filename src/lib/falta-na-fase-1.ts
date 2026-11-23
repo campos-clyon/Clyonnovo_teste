@@ -30,6 +30,9 @@ export interface DadosDaFase1 {
 /** O texto do que falta quando só a descrição (ou uma fotografia) segura o passo. */
 export const FALTA_A_DESCRICAO = "uma descrição do que precisa (ou uma fotografia)";
 
+/** Os serviços em que a descrição (ou uma fotografia) é o que diz o que é. */
+const SEM_QUANTIDADE = new Set(["outro", "manutencao_casa"]);
+
 const ESPACOS = new Set(["esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]);
 
 export function pecasDosMoveis(d: DadosDaFase1): number {
@@ -60,6 +63,14 @@ export function faltaNaFase1(d: DadosDaFase1): string[] {
   if (d.serviceType === "recolha_moveis" && d.movelMode === "item") {
     return pecasDosMoveis(d) > 0 ? [] : ["as peças (quantas pequenas, médias ou grandes)"];
   }
+
+  /*
+   * Quem já disse a quantidade — mesmo «Não tenho a certeza» — avança sem ser
+   * obrigado a descrever nem a fotografar (d4, 23-11-2026): a descrição e a
+   * fotografia passam a recomendação. Só «Outro serviço» e «Manutenção da
+   * casa» não têm quantidade e continuam a precisar de uma das duas.
+   */
+  if (!SEM_QUANTIDADE.has(d.serviceType) && (d.volumeTier || d.quantityExact?.trim())) return [];
 
   const temDescricao = !!d.description?.trim();
   const temFicheiros = (d.files ?? []).length > 0;

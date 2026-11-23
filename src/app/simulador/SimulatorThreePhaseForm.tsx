@@ -1450,11 +1450,36 @@ function Phase1Service({
       ? null
       : pareceUmEsvaziamento({ servico: formData.serviceType, pecas: pecasDaLista, texto: formData.description });
 
+  /*
+   * UM SÓ CARTÃO PARA O ESVAZIAMENTO DE CASA OU APARTAMENTO — d4, 23-11-2026.
+   * Dois cartões quase iguais faziam hesitar no telemóvel. O de apartamento
+   * sai da lista; o de casa passa a dizer os dois, e acende também quando o
+   * link antigo (`?servico=esvaziamento-apartamento`) já escolheu o apartamento.
+   */
   const services = SERVICOS_PUBLICOS.map((category) => ({
     id: category.id as ServiceType,
-    label: category.label,
+    label: category.id === "esvaziamento_casa" ? "Esvaziamento de casa ou apartamento" : category.label,
     icon: category.emoji,
-  }));
+  })).filter((s) => s.id !== "esvaziamento_apartamento");
+  const cartaoAceso: ServiceType | undefined =
+    formData.serviceType === "esvaziamento_apartamento" ? ("esvaziamento_casa" as ServiceType) : formData.serviceType;
+
+  /*
+   * DESCER À PRIMEIRA PERGUNTA — d4, 23-11-2026. No telemóvel, tocar num
+   * serviço não mudava nada à vista: as perguntas ficavam abaixo do ecrã. Ao
+   * escolher (ou ao abrir com `?servico=`), a página desce até elas.
+   */
+  const descerAPergunta = useRef(false);
+  const primeiraPergunta = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (servicoDaLigacao(window.location.search)) descerAPergunta.current = true;
+  }, []);
+  useEffect(() => {
+    if (!formData.serviceType || !descerAPergunta.current) return;
+    descerAPergunta.current = false;
+    const t = setTimeout(() => primeiraPergunta.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+    return () => clearTimeout(t);
+  }, [formData.serviceType]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -1486,8 +1511,9 @@ function Phase1Service({
       {/* Service Cards */}
       <ServiceTypeCards
         services={services}
-        selected={formData.serviceType}
+        selected={cartaoAceso}
         onSelect={(serviceType) => {
+          if (serviceType !== formData.serviceType) descerAPergunta.current = true;
           updateField("serviceType", serviceType);
           // A garagem e a cave não perguntam o andar (29-10-2026): ficam no rés-do-chão.
           if (PERGUNTAS_DO_ESPACO[serviceType] && !PERGUNTAS_DO_ESPACO[serviceType].perguntaOAndar) {
@@ -1500,6 +1526,9 @@ function Phase1Service({
       {/* O preço de referência, com o IVA ao lado — o mesmo da app (S13, 29-10-2026);
           desde 03-11-2026 (d1) pelo mesmo caminho da R12: o entulho pela quantidade, o acesso, o porquê. */}
       <PrecoDeReferencia servico={formData.serviceType} formulario={formData} />
+
+      {/* Onde a página desce ao escolher o serviço (d4): a primeira pergunta. */}
+      <div ref={primeiraPergunta} className="scroll-mt-16" aria-hidden="true" />
 
       {/* Garagem, sótão e cave (29-10-2026): as perguntas próprias, que escrevem na descrição. */}
       {eEsvaziamentoDeEspaco(formData.serviceType) && (
