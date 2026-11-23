@@ -211,7 +211,7 @@ function base(over: Partial<DependenciasDasFerramentas> = {}): DependenciasDasFe
 }
 
 describe("as ferramentas", () => {
-  it("catorze (d92), numa ordem fixa, todas strict, com additionalProperties false e tudo em required", () => {
+  it("quinze (d92, d97), numa ordem fixa, todas strict, com additionalProperties false e tudo em required", () => {
     expect(FERRAMENTAS_DA_VITORIA.map((f) => f.name)).toEqual([
       "pedidos_do_cliente",
       "ler_pedido",
@@ -227,6 +227,7 @@ describe("as ferramentas", () => {
       "cancelar_pedido",
       "perguntar_ao_parceiro",
       "perguntas_frequentes",
+      "o_que_o_servico_inclui",
     ]);
     for (const f of FERRAMENTAS_DA_VITORIA) {
       expect(f.strict, f.name).toBe(true);

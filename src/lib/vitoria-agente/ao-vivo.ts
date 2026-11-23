@@ -22,6 +22,11 @@
  *     `enviarTextoWhatsApp`, que traduz para a língua do cliente e não repete);
  *     ao passar à equipa, sai a mensagem que ele escreveu (revista) e a
  *     conversa fica para uma pessoa;
+ *  3b. d97: a pergunta ao parceiro SAI sozinha (`perguntarAoParceiro`: o
+ *     WhatsApp dos avisos e a app Pro); só se não puder sair passa à equipa.
+ *     E quando o cliente pergunta alguma coisa a meio de um fecho proposto
+ *     («inclui o transporte?»), o agente sabe-o (a nota do turno): responde
+ *     e repete a pergunta do SIM;
  *  4. REDE DE SEGURANÇA: se o agente falhar, passar o prazo da volta, passar o
  *     tecto do dia, ou a guarda bloquear, respondem as regras, como hoje.
  *
@@ -30,8 +35,8 @@
 
 import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA } from "../voz-da-vitoria";
 import type { ResultadoDoAgente } from "./cliente";
-import { pendenteEmPalavras, respostaAoPendente, type Pendente } from "./pendentes";
-import { motivoParaNaoFecharNoSim, type PropostaDoAgente } from "./propostas-do-agente";
+import { pendenteEmPalavras, respostaAoPendente, type Pendente, type PerguntaAoParceiro } from "./pendentes";
+import { emEuros, motivoParaNaoFecharNoSim, type FechoProposto, type PropostaDoAgente } from "./propostas-do-agente";
 
 /** O tempo da volta do agente a sério: cabe nos 60 s da ponte, com a espera da rajada e, se falhar, as regras. */
 export const PRAZO_DA_VOLTA_AO_VIVO_MS = 22_000;
@@ -85,7 +90,10 @@ export type DependenciasAoVivo = {
   fecharPeloBotao: (pedidoId: number, negociacaoId: number) => Promise<void>;
   cancelarPeloCancelar: (pedidoId: number) => Promise<{ ok: true } | { ok: false; porque: string }>;
   marcarPerguntaDoCancelar: (pedidoId: number) => Promise<void>;
-  correrOAgente: (prazoMs: number) => Promise<ResultadoDoAgente>;
+  /** d97: `nota` é o que o agente tem de saber deste turno (um fecho que estava à espera do SIM). */
+  correrOAgente: (prazoMs: number, nota?: string) => Promise<ResultadoDoAgente>;
+  /** d97: manda a pergunta ao parceiro (WhatsApp dos avisos + app Pro) e regista-a. Sem canal, diz porquê. */
+  perguntarAoParceiro: (p: PerguntaAoParceiro) => Promise<{ ok: true; jaPerguntado?: boolean; ate?: string } | { ok: false; porque: string }>;
   /** A porta de sempre (traduz, não repete). */
   enviar: (texto: string) => Promise<boolean>;
   /** Passa a uma pessoa: manda a mensagem (null = nenhuma, já saiu a do agente) e interrompe o número com o motivo. */
@@ -99,6 +107,15 @@ export type QuemRespondeu = "agente" | "codigo" | "regras";
 /** A mensagem de quando o SIM chega e a proposta já não é a mesma. */
 export function mensagemDaPropostaMudada(parceiro: string): string {
   return `Obrigada pela resposta! Entretanto a proposta de ${parceiro} mudou, por isso ainda não reservei nada — uma pessoa da equipa confirma consigo o valor de agora, já a seguir.`;
+}
+
+/** d97: a nota do turno quando o cliente responde a um fecho proposto com outra coisa (uma pergunta). */
+export function notaDoFechoAEspera(f: FechoProposto): string {
+  return (
+    `A CLYON tinha acabado de propor o fecho do pedido #${f.pedidoId} com ${f.parceiro} (${emEuros(f.total)}, à espera do SIM), ` +
+    "e o cliente respondeu com outra coisa. Responde ao que ele disse (o que o serviço inclui responde-se já, com o_que_o_servico_inclui); " +
+    `se ele continua com esta proposta, chama aceitar_proposta (pedido ${f.pedidoId}, escolha «${f.parceiro}») para a pergunta do SIM ir outra vez na resposta.`
+  );
 }
 
 /**
@@ -128,6 +145,7 @@ export async function responderAoVivo(conteudo: ConteudoDaRajada, deps: Dependen
 
     // 1. O que o agente deixou pendente — lido pelo código, antes de tudo.
     let acabouDeResponderAoAgente = false;
+    let nota: string | undefined;
     const p = await deps.pendente();
     if (p && p.tipo !== "parceiro") {
       const r = respostaAoPendente(p, texto, deps.agora);
@@ -164,6 +182,7 @@ export async function responderAoVivo(conteudo: ConteudoDaRajada, deps: Dependen
       // Outra resposta (ou o prazo passou, ou o «aceitar» desligou-se): o pendente acaba e quem responde é o agente.
       await deps.acabarPendente(p, r.tipo === "confirmou" ? "confirmou com o «aceitar» desligado" : r.tipo);
       acabouDeResponderAoAgente = true;
+      if (p.tipo === "fecho" && r.tipo === "outra") nota = notaDoFechoAEspera(p);
     }
 
     // 2. O que fica com as regras.
@@ -178,7 +197,7 @@ export async function responderAoVivo(conteudo: ConteudoDaRajada, deps: Dependen
     // O prazo também por fora: uma ida lenta não pode deixar o cliente sem resposta (a função da ponte tem 60 s).
     let relogio: ReturnType<typeof setTimeout> | undefined;
     const r = await Promise.race([
-      deps.correrOAgente(PRAZO_DA_VOLTA_AO_VIVO_MS),
+      deps.correrOAgente(PRAZO_DA_VOLTA_AO_VIVO_MS, nota),
       new Promise<null>((res) => {
         relogio = setTimeout(() => res(null), PRAZO_DA_VOLTA_AO_VIVO_MS + 6_000);
       }),
@@ -195,13 +214,22 @@ export async function responderAoVivo(conteudo: ConteudoDaRajada, deps: Dependen
         await deps.gravarPendente(r.pendente);
         if (r.pendente.tipo === "cancelar") await deps.marcarPerguntaDoCancelar(r.pendente.pedidoId).catch(() => {});
         if (r.pendente.tipo === "parceiro") {
-          // O parceiro responde pela equipa (nesta entrega): a conversa fica para uma pessoa, com a pergunta pronta.
-          await deps.passarAEquipa(
-            `Pedido #${r.pendente.pedidoId}: perguntar a ${r.pendente.parceiro} se consegue «${r.pendente.condicao}». Mensagem pronta: ${r.pendente.mensagem}`,
-            null,
-          );
-        }
-        feito.push(pendenteEmPalavras(r.pendente, false));
+          // d97: a pergunta sai sozinha para o parceiro. Só se não puder sair (sem WhatsApp dos avisos nem app) vai à equipa.
+          const q = await deps.perguntarAoParceiro(r.pendente).catch((e) => ({ ok: false as const, porque: e instanceof Error ? e.message.slice(0, 120) : "falhou" }));
+          if (q.ok) {
+            feito.push(
+              q.jaPerguntado
+                ? `a pergunta a ${r.pendente.parceiro} sobre «${r.pendente.condicao}» já tinha saído (#${r.pendente.pedidoId}): não se repete`
+                : `perguntou ao parceiro ${r.pendente.parceiro}: «${r.pendente.condicao}» (#${r.pendente.pedidoId}) — à espera da resposta${q.ate ? ` até ${q.ate}` : ""}`,
+            );
+          } else {
+            await deps.passarAEquipa(
+              `Pedido #${r.pendente.pedidoId}: perguntar a ${r.pendente.parceiro} se consegue «${r.pendente.condicao}» — a pergunta não saiu (${q.porque}). Mensagem pronta: ${r.pendente.mensagem}`,
+              null,
+            );
+            feito.push(`a pergunta a ${r.pendente.parceiro} não saiu (${q.porque}): passou à equipa`);
+          }
+        } else feito.push(pendenteEmPalavras(r.pendente, false));
       }
       await deps.registar({ estado: "vivo_ok", texto: r.texto, motivo: null, teriaFeito: feito, resultado: r });
       return "agente";

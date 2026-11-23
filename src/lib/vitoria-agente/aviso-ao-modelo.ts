@@ -19,6 +19,12 @@
  * língua. E o caso …366 (23-11): o que o cliente já deu (o código postal
  * chega marcado «[código postal recebido]») nunca se pede outra vez, e as
  * perguntas directas dele respondem-se antes de pedir mais dados.
+ *
+ * d97 (23-11-2026), o caso #664: «inclui o transporte?» depois do fecho
+ * proposto respondeu-se com «vou confirmar com o parceiro», e o pedido parou.
+ * O que o serviço inclui responde-se logo (o_que_o_servico_inclui) e a pergunta
+ * do SIM repete-se; ao parceiro só se pergunta o que depende dele — e essa
+ * pergunta SAI, e a resposta dele volta numa nota do turno.
  */
 
 import { NOME_DA_ASSISTENTE, O_QUE_ELA_FAZ, QUEM_FALA, SE_PREFERIR_UMA_PESSOA, SOU_A_ASSISTENTE_AUTOMATICA } from "../voz-da-vitoria";
@@ -56,7 +62,9 @@ O QUE TENS SEMPRE PRESENTE
 
 QUANDO O CLIENTE DECIDE
 - Escolhe uma proposta («fico com o da Recolhas Tejo», «a de 85», «a primeira»): chama aceitar_proposta. Ela relê a proposta e devolve uma pergunta que vai na tua resposta tal e qual («… Responda SIM.»). Tu não fechas nada: o sistema fecha quando ele responder SIM.
-- Escolhe com uma condição («até quinta-feira», «só de manhã», «se levar também o frigorífico»): chama perguntar_ao_parceiro e diz-lhe, com naturalidade, que vais confirmar com o parceiro e que lhe dizes logo que ele responda — sem prometer o sim.
+- Pergunta o que o serviço inclui («inclui o transporte?», «inclui a descida?», «levam para o lixo / a reciclagem?»): isso já sabes, não é pergunta para o parceiro. Lê o_que_o_servico_inclui e responde logo, com segurança e numa frase. Se a CLYON tinha acabado de propor o fecho («… Responda SIM.»), volta a chamar aceitar_proposta com a mesma proposta, para a pergunta do SIM ir outra vez na resposta.
+- Escolhe com uma condição que só o parceiro pode dizer (uma data ou um prazo, «só de manhã», «só a descida», «se levar também o frigorífico»): chama perguntar_ao_parceiro — a pergunta sai para o parceiro — e diz-lhe, com naturalidade, que vais confirmar com o parceiro e que lhe dizes logo que ele responda, sem prometer o sim nem uma hora.
+- Quando a mensagem do turno traz uma nota do sistema com a resposta do parceiro, escreves ao cliente o resultado: com o sim, dizes que o parceiro confirma (e quando, se o disse) e chamas aceitar_proposta para a pergunta do SIM ir na resposta; com o não, dizes com delicadeza e ofereces a alternativa (as outras propostas, de propostas_vivas, ou manter esta sem a condição).
 - Quer cancelar: chama cancelar_pedido; a pergunta do CANCELAR vai na resposta tal e qual. Só o CANCELAR dele cancela.
 - Se uma destas ferramentas disser que passa à equipa (um valor alto, um Trabalho CLYON, uma mudança à hora, um pedido já fechado ou pago), passa.
 - Para gravar o que o cliente disse (a morada, o andar, a data…), gravar_dado; para voltar a falar mais tarde, marcar_seguimento.
@@ -79,11 +87,13 @@ export type LinhaParaOModelo = { direccao: string; texto: string };
  * A MENSAGEM DO TURNO: o dia, os pedidos deste número e a conversa até à
  * última mensagem do cliente (a que se responde). Já sem dados de pessoas.
  */
-export function mensagemDoTurno(agora: Date, conversa: readonly LinhaParaOModelo[], pedidos: readonly number[]): string {
+export function mensagemDoTurno(agora: Date, conversa: readonly LinhaParaOModelo[], pedidos: readonly number[], nota?: string): string {
   const fio = conversa
     .slice(-30)
     .map((l) => `${l.direccao === "in" ? "[cliente]" : "[CLYON]"} ${l.texto.replace(/\s+/g, " ").trim()}`)
     .join("\n");
   const doNumero = pedidos.length > 0 ? `Pedidos deste número: ${pedidos.map((p) => `#${p}`).join(", ")}.` : "Este número ainda não tem pedidos.";
-  return `${linhaDoDia(agora)}\n${doNumero}\n\nA conversa até agora (a última linha do cliente é a que tens de responder):\n${fio}`;
+  const base = `${linhaDoDia(agora)}\n${doNumero}\n\nA conversa até agora (a última linha do cliente é a que tens de responder):\n${fio}`;
+  // d97: o que não é do cliente vai à parte, marcado (a resposta do parceiro, um fecho à espera do SIM).
+  return nota && nota.trim() ? `${base}\n\nNota do sistema (não é do cliente): ${nota.replace(/\s+/g, " ").trim().slice(0, 1200)}` : base;
 }

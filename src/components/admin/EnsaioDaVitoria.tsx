@@ -60,6 +60,7 @@ const ESTADO: Record<string, string> = {
   vivo_codigo: "saiu a sério — o código agiu",
   vivo_regras: "responderam as regras",
   vivo_a_correr: "a correr (a sério)",
+  vivo_parceiro: "a sério — o parceiro respondeu (ou não, a tempo)",
 };
 
 const quando = (iso: string) =>

@@ -101,7 +101,9 @@ export async function responderAoClienteAoVivo(
       },
       cancelarPeloCancelar: async (pedidoId) => (await import("./accoes-na-base")).cancelarPeloCancelarDoAgente(pedidoId, telefone),
       marcarPerguntaDoCancelar: async (pedidoId) => (await import("./accoes-na-base")).marcarPerguntaDoCancelar(pedidoId, telefone),
-      correrOAgente: async (prazoMs): Promise<ResultadoDoAgente> => {
+      // d97: a pergunta ao parceiro sai sozinha (o WhatsApp dos avisos e a app Pro), e regista-se.
+      perguntarAoParceiro: async (p) => (await import("./pergunta-ao-parceiro-na-base")).perguntarAoParceiroDeVerdade(telefone, p, agora),
+      correrOAgente: async (prazoMs, nota): Promise<ResultadoDoAgente> => {
         const db = await import("../db");
         const fio = await db.mensagensDoNumeroWhatsApp(telefone, 40);
         const partido = partirNaUltimaDoCliente(fio);
@@ -114,7 +116,7 @@ export async function responderAoClienteAoVivo(
         ensaioId = Number(novo.insertId);
         const aceitar = (await lerInterruptor("aceitar")).ligado;
         return correrOAgente(
-          { conversa: conversaAnonimizada(partido?.conversa ?? fio, quem), pedidos, agora, prazoMs },
+          { conversa: conversaAnonimizada(partido?.conversa ?? fio, quem), pedidos, agora, prazoMs, nota },
           {
             cliente: clienteDoClaude(),
             ferramentas: await ferramentasDeVerdade(telefone, agora, quem, { aoVivo: true, aceitarLigado: aceitar }),

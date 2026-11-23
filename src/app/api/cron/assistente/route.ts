@@ -163,9 +163,27 @@ export async function GET(req: NextRequest) {
         detalhe: { linhas: daRua.linhas.slice(0, 40) },
       });
     }
+    /*
+     * A PERGUNTA AO PARCEIRO SEM RESPOSTA — 23-11-2026 (d97). A Vitória
+     * perguntou a um parceiro uma condição do cliente e ele não respondeu em
+     * 2 h (das 8h às 21h): a conversa do cliente passa a uma pessoa, com o
+     * motivo no cartão. Ver `pergunta-ao-parceiro-na-base.ts`.
+     */
+    const { correrOsPrazosDasPerguntas } = await import("@/lib/vitoria-agente/pergunta-ao-parceiro-na-base");
+    const semResposta = await correrOsPrazosDasPerguntas().catch(() => ({ linhas: [] as string[] }));
+    if (semResposta.linhas.length > 0) {
+      await registarSemFalhar({
+        acontecimento: "assistente_alerta",
+        autorTipo: "assistente",
+        autorNome: "pergunta ao parceiro",
+        resumo: `${semResposta.linhas.length} pergunta(s) ao parceiro sem resposta em 2 h, passada(s) à equipa: ${semResposta.linhas.slice(0, 10).join("; ")}.`,
+        detalhe: { linhas: semResposta.linhas.slice(0, 40) },
+      });
+    }
     return NextResponse.json({
       ok: true,
       ruaDepoisDoAceite: daRua.linhas.length,
+      perguntasSemResposta: semResposta.linhas.length,
       ...r,
       recolhasParadas: paradas,
       paradasFalharam,

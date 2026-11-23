@@ -9,7 +9,8 @@
  */
 
 /** Os estados das linhas a sério (o que saiu para o cliente). */
-export const ESTADOS_A_SERIO = ["vivo_ok", "vivo_equipa", "vivo_codigo", "vivo_regras", "vivo_a_correr"] as const;
+/** d97: «vivo_parceiro» — a resposta do parceiro à pergunta da Vitória (ou o prazo dela) chegou ao cliente ou à equipa. */
+export const ESTADOS_A_SERIO = ["vivo_ok", "vivo_equipa", "vivo_codigo", "vivo_regras", "vivo_a_correr", "vivo_parceiro"] as const;
 
 export function eASerio(estado: string): boolean {
   return estado.startsWith("vivo_");

@@ -161,10 +161,10 @@ describe("o SIM e o CANCELAR lidos pelo código", () => {
 /* ── As ferramentas que propõem ──────────────────────────────────────────── */
 
 describe("aceitar, perguntar ao parceiro e cancelar só propõem", () => {
-  it("catorze ferramentas, strict, com as novas no fim (a cache)", () => {
+  it("quinze ferramentas, strict, com as novas no fim (a cache; d97: o_que_o_servico_inclui)", () => {
     const nomes = FERRAMENTAS_DA_VITORIA.map((f) => f.name);
-    expect(nomes.slice(-4)).toEqual(["aceitar_proposta", "cancelar_pedido", "perguntar_ao_parceiro", "perguntas_frequentes"]);
-    expect(nomes.length).toBe(14);
+    expect(nomes.slice(-5)).toEqual(["aceitar_proposta", "cancelar_pedido", "perguntar_ao_parceiro", "perguntas_frequentes", "o_que_o_servico_inclui"]);
+    expect(nomes.length).toBe(15);
     for (const f of FERRAMENTAS_DA_VITORIA) expect(f.strict, f.name).toBe(true);
   });
 
@@ -275,8 +275,8 @@ function accaoDe(r: ResultadoDoAgente): string {
 }
 
 describe("o conjunto de conversas de teste (SDK simulado)", () => {
-  it("são onze, todas inventadas, com uma em inglês", () => {
-    expect(CONVERSAS_DE_TESTE.length).toBe(11);
+  it("são doze, todas inventadas, com uma em inglês (d97: a 12.ª, «inclui o transporte?»)", () => {
+    expect(CONVERSAS_DE_TESTE.length).toBe(12);
     expect(CONVERSAS_DE_TESTE.some((c) => /\b(Hi|Which|I'll)\b/.test(c.conversa.at(-1)!.texto))).toBe(true);
   });
 
@@ -332,6 +332,10 @@ function mundo(over: Partial<DependenciasAoVivo> = {}, estado: { pendente?: Pend
       return { ok: true };
     },
     marcarPerguntaDoCancelar: async (p) => void chamadas.push(`pergunta do cancelar #${p}`),
+    perguntarAoParceiro: async (p) => {
+      chamadas.push(`perguntou a ${p.parceiro}: ${p.condicao}`);
+      return { ok: true, ate: "hoje às 17:00" };
+    },
     correrOAgente: async () => {
       throw new Error("sem roteiro");
     },
@@ -416,11 +420,20 @@ describe("a sério (a «conversa livre»)", () => {
     expect(m.equipa[0].mensagem).toMatch(/ainda não reservei/);
   });
 
-  it("a condição: o cliente lê que se confirma com o parceiro; a equipa recebe a pergunta pronta", async () => {
+  it("a condição: o cliente lê que se confirma com o parceiro; d97: a pergunta SAI para o parceiro (sem passar à equipa)", async () => {
     const m = mundo({ correrOAgente: comOCaso(caso(2)) });
     await responderAoVivo({ tipo: "texto", texto: caso(2).conversa.at(-1)!.texto }, m.deps);
     expect(m.enviados[0]).toMatch(/confirmar com a Recolhas Tejo/);
+    expect(m.chamadas).toContain("perguntou a Recolhas Tejo: até quinta-feira");
+    expect(m.equipa).toEqual([]);
+    expect(m.registos.at(-1)?.teriaFeito.join(" ")).toMatch(/perguntou ao parceiro Recolhas Tejo/);
+  });
+
+  it("d97: sem canal para o parceiro, a pergunta não sai — passa à equipa, com a mensagem pronta", async () => {
+    const m = mundo({ correrOAgente: comOCaso(caso(2)), perguntarAoParceiro: async () => ({ ok: false, porque: "sem avisos nem app" }) });
+    await responderAoVivo({ tipo: "texto", texto: caso(2).conversa.at(-1)!.texto }, m.deps);
     expect(m.equipa[0].mensagem).toBeNull(); // a mensagem do agente já saiu
+    expect(m.equipa[0].motivo).toContain("sem avisos nem app");
     expect(m.equipa[0].motivo).toContain("Mensagem pronta: Olá! O cliente do pedido #664");
   });
 

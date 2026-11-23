@@ -90,7 +90,11 @@ export async function POST(req: NextRequest) {
               const { desligarAvisosPeloTelefone } = await import("@/lib/db");
               await desligarAvisosPeloTelefone(msg.from).catch(() => {});
             }
-            await tratarMensagemDoCliente(msg.from, { tipo: "texto", texto: msg.text.body });
+            // d97: a resposta do parceiro a uma pergunta da Vitória vai para o cliente (o mesmo da ponte).
+            const { respostaDoParceiroPeloWhatsApp } = await import("@/lib/vitoria-agente/pergunta-ao-parceiro-na-base");
+            if (!(await respostaDoParceiroPeloWhatsApp(msg.from, msg.text.body).catch(() => false))) {
+              await tratarMensagemDoCliente(msg.from, { tipo: "texto", texto: msg.text.body });
+            }
           } else if (msg.type === "image" && msg.image?.id) {
             await registarMensagemWhatsApp(msg.from, "in", "[fotografia]").catch(() => {});
             await tratarFotoDoCliente(msg.from, msg.image.id, msg.image.mime_type ?? null);

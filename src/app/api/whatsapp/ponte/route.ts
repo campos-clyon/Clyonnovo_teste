@@ -555,6 +555,15 @@ export async function POST(req: NextRequest) {
        */
       const { lerARespostaDaRua } = await import("@/lib/rua-depois-do-aceite-na-base");
       await lerARespostaDaRua(telefone, texto).catch(() => null);
+      /*
+       * E A RESPOSTA DO PARCEIRO À PERGUNTA DA VITÓRIA — 23-11-2026 (d97). Os
+       * números dos parceiros estão muitas vezes entregues a uma pessoa; se a
+       * última mensagem que lhe saiu é a pergunta de um pedido, a resposta
+       * segue para o cliente — sem lhe escrever nada a ele (a conversa é de
+       * quem a tem).
+       */
+      const { respostaDoParceiroPeloWhatsApp } = await import("@/lib/vitoria-agente/pergunta-ao-parceiro-na-base");
+      await respostaDoParceiroPeloWhatsApp(telefone, texto, { interrompido: true }).catch(() => false);
     }
 
     /*
@@ -692,7 +701,9 @@ export async function POST(req: NextRequest) {
       await responderARajada(telefone, daLegenda ?? daImagem, texto);
     } else {
       const id = await registarMensagemWhatsApp(telefone, "in", texto).catch(() => null);
-      await responderARajada(telefone, id, texto);
+      // d97: a resposta do parceiro a uma pergunta da Vitória vai para o cliente, e não para a conversa de sempre.
+      const { respostaDoParceiroPeloWhatsApp } = await import("@/lib/vitoria-agente/pergunta-ao-parceiro-na-base");
+      if (!(await respostaDoParceiroPeloWhatsApp(telefone, texto).catch(() => false))) await responderARajada(telefone, id, texto);
     }
   } catch (e) {
     // A conversa é nossa na mesma — um erro aqui não pode atirar o cliente

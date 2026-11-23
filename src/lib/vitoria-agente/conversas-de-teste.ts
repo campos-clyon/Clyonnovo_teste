@@ -314,4 +314,28 @@ export const CONVERSAS_DE_TESTE: CasoDeTeste[] = [
       }),
     },
   },
+  {
+    nome: "12. «Inclui o transporte?» depois do fecho proposto (o caso que motivou a d97)",
+    pedidoId: 674,
+    conversa: [
+      { direccao: "out", texto: PROPOSTAS_DITAS(674) },
+      { direccao: "in", texto: `Fico com a da ${RECOLHAS_TEJO}.` },
+      {
+        direccao: "out",
+        texto: `Ótima escolha! O parceiro desce, carrega e leva tudo. Reservo ${RECOLHAS_TEJO} por 86,96 € (parceiro isento de IVA — só a taxa da plataforma leva IVA) no pedido #674? Responda SIM.`,
+      },
+      { direccao: "in", texto: "Antes queria validar que o serviço inclui o transporte" },
+    ],
+    pedido: pedido(674),
+    negociacoes: DUAS(674),
+    // Responde-se logo, sem perguntar ao parceiro, e a pergunta do SIM vai outra vez.
+    espera: { accao: "fecho", contem: ["transporte", "Responda SIM."], naoContem: ["vou confirmar", "confirmar com o parceiro"] },
+    roteiro: {
+      ferramentas: [
+        { nome: "o_que_o_servico_inclui", entrada: { pedido: 674 } },
+        { nome: "aceitar_proposta", entrada: { pedido: 674, escolha: RECOLHAS_TEJO } },
+      ],
+      resposta: comAFrase("Inclui, sim: a recolha inclui a descida, a carga e o transporte, e o parceiro trata do destino."),
+    },
+  },
 ];

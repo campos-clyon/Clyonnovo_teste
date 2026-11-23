@@ -41,6 +41,7 @@ import {
   type PropostaComOValorDoParceiro,
 } from "./propostas-do-agente";
 import { pendenteEmPalavras, type Pendente } from "./pendentes";
+import { condicaoJaIncluida, oQueOServicoInclui } from "./o-que-o-servico-inclui";
 
 /** O pedido como a base o tem (as colunas que as ferramentas lêem). */
 export type PedidoParaOAgente = PedidoParaOQueFalta & {
@@ -214,7 +215,7 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
   {
     name: "perguntar_ao_parceiro",
     description:
-      "Quando o cliente escolhe uma proposta COM uma condição («até quinta-feira», «só de manhã», «se levar também o frigorífico»): prepara a pergunta ao parceiro escolhido. Depois dizes ao cliente, com naturalidade, que vais confirmar com o parceiro e que lhe dizes assim que ele responder (sem prometer o sim).",
+      "Quando o cliente escolhe uma proposta COM uma condição que só o parceiro pode dizer («até quinta-feira», «só de manhã», «só a descida», «se levar também o frigorífico»): a pergunta SAI para o parceiro (WhatsApp e app) e a resposta dele volta ao cliente. NÃO é para o que o serviço já inclui (descer, carregar, o transporte, levar ao destino): isso responde-se logo, com o_que_o_servico_inclui. Depois dizes ao cliente, com naturalidade, que vais confirmar com o parceiro e que lhe dizes assim que ele responder (sem prometer o sim nem uma hora).",
     input_schema: objecto({ pedido: PEDIDO, escolha: ESCOLHA, condicao: { type: "string", description: "A condição, como o cliente a disse." } }, [
       "pedido",
       "escolha",
@@ -227,6 +228,13 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
     description:
       "As perguntas frequentes do site da CLYON (como funciona, preços, IVA, cargas, esvaziamentos, limpeza depois de esvaziar, mudanças, zonas, pagamentos, cancelar, o selo dos parceiros) que batem com a procura. Usa-a para dúvidas gerais, antes de responder.",
     input_schema: objecto({ procura: { type: "string", description: "Duas ou três palavras do que o cliente quer saber." } }, ["procura"]),
+    strict: true,
+  },
+  {
+    name: "o_que_o_servico_inclui",
+    description:
+      "O que o serviço de um pedido deste cliente inclui sempre (numa recolha: descer, carregar, o transporte e levar a um destino legal), o que acontece se no dia houver mais, e o que só o parceiro pode dizer. Usa-a para «inclui o transporte?», «inclui a descida?», «levam para o lixo / a reciclagem?»: responde logo com isto, sem perguntar ao parceiro.",
+    input_schema: objecto({ pedido: PEDIDO }, ["pedido"]),
     strict: true,
   },
 ];
@@ -440,6 +448,15 @@ export async function correrFerramenta(
       }
       case "o_que_o_site_sabe":
         return guardar(estado, { oQueOSiteSabe: deps.oQueOSiteSabe() });
+      case "o_que_o_servico_inclui": {
+        const p = await doTelefone(deps, inteiro(e.pedido));
+        if (typeof p === "string") return erro(p);
+        return guardar(estado, {
+          pedido: p.id,
+          ...oQueOServicoInclui(p.serviceType ?? null, p.baseDoPreco ?? null),
+          nota: "O que está em «inclui» responde-se já, sem perguntar ao parceiro. Se a CLYON tinha proposto o fecho («… Responda SIM.»), responde e chama aceitar_proposta outra vez, para a pergunta do SIM ir na resposta.",
+        });
+      }
       case "perguntas_frequentes": {
         const todas = deps.perguntasFrequentes ? deps.perguntasFrequentes(texto(e.procura, 120)) : [];
         return guardar(estado, {
@@ -539,6 +556,17 @@ export async function correrFerramenta(
         if (typeof p === "string") return erro(p);
         const condicao = texto(e.condicao, 200);
         if (!condicao) return erro("Falta a condição do cliente.");
+        // d97 (o caso #664): o que o serviço já inclui não se pergunta ao parceiro — responde-se.
+        const jaIncluida = condicaoJaIncluida(condicao, p.serviceType ?? null);
+        if (jaIncluida) {
+          return guardar(estado, {
+            perguntaPreparada: false,
+            jaIncluido: true,
+            resposta: jaIncluida,
+            oQueFazer:
+              "Não perguntes ao parceiro: responde ao cliente com isto. Se ele já escolheu a proposta, chama aceitar_proposta para a pergunta do SIM ir na resposta.",
+          });
+        }
         const r = await escolhida(deps, p.id, texto(e.escolha, 200));
         if ("erro" in r) return erro(r.erro);
         if ("equipa" in r) return paraAEquipa(r.equipa);

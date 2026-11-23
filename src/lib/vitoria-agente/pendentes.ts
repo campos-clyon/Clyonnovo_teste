@@ -9,8 +9,9 @@
  *              de 30 minutos fecha pelo caminho de sempre; outra coisa não;
  *   · cancelar — só o CANCELAR (`eConfirmacaoDoCancelamento`, a mesma regra da
  *              pergunta de sempre) dentro de 48 horas;
- *   · parceiro — a pergunta ao parceiro (a condição do cliente): fica para a
- *              equipa / o parceiro responder; o cliente não a confirma.
+ *   · parceiro — a pergunta ao parceiro (a condição do cliente): desde a d97
+ *              sai sozinha para o parceiro e a resposta dele volta ao
+ *              cliente (`pergunta-ao-parceiro.ts`); o cliente não a confirma.
  *
  * Um texto do modelo a dizer «fechado» não fecha nada: só esta leitura.
  */

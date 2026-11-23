@@ -40,6 +40,7 @@ import Avaliacoes from "./Avaliacoes";
 import AvisosNoTelemovel from "./AvisosNoTelemovel";
 import ConviteDaAppPro from "./ConviteDaAppPro";
 import AvisoDoNovoModelo from "./AvisoDoNovoModelo";
+import PerguntaDoCliente from "./PerguntaDoCliente";
 import AceitarOsTermos, { ABRIR_OS_TERMOS } from "./AceitarOsTermos";
 import ProntoParaReceber from "./ProntoParaReceber";
 import AvisosNoWhatsApp from "./AvisosNoWhatsApp";
@@ -739,6 +740,9 @@ function PainelNoBrowser() {
 
       {/* O aviso do modelo de 15-11 (d11): só com «Mostrar o aviso do novo modelo» ligado nas Configs. */}
       <AvisoDoNovoModelo onCompletarPerfil={() => abrir("banco")} />
+
+      {/* d97: o cliente quer escolher a proposta dele com uma condição — responde aqui (ou no WhatsApp). */}
+      <PerguntaDoCliente />
 
       {/*
         E O MESMO PEDIDO, PARA O WHATSAPP — 20-09-2026.

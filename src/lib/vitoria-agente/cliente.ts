@@ -77,6 +77,8 @@ export type PedidoAoAgente = {
   esforco?: EsforcoDoAgente;
   /** d92: o tempo máximo da volta (a resposta a sério tem de caber na função da ponte). Passado, pára entre idas. */
   prazoMs?: number;
+  /** d97: o que o agente tem de saber deste turno e não é do cliente (a resposta do parceiro, um fecho à espera do SIM). */
+  nota?: string;
 };
 
 export type ResultadoDoAgente = {
@@ -148,7 +150,7 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
 
   const estado = estadoNovo();
   const mensagens: Anthropic.Beta.BetaMessageParam[] = [
-    { role: "user", content: mensagemDoTurno(pedido.agora, pedido.conversa, pedido.pedidos) },
+    { role: "user", content: mensagemDoTurno(pedido.agora, pedido.conversa, pedido.pedidos, pedido.nota) },
   ];
   let uso = USO_VAZIO;
   let modelo: string | null = null;
