@@ -302,9 +302,10 @@ async function linguaSemTraducao(
   faltas: readonly ChaveDaFalta[],
 ): Promise<string | null> {
   try {
-    const { linguaDoNumero } = await import("./db");
-    const lingua = await linguaDoNumero(telefone);
-    if (!lingua || lingua === "pt") return null;
+    // A língua da conversa: a guardada, ou a que a conversa mostra (o #659).
+    const { linguaDaConversa } = await import("./lingua-da-conversa");
+    const lingua = await linguaDaConversa(telefone);
+    if (!lingua) return null;
     const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
     const texto = textoDoPasso("lembrete2", pedido, faltas as ChaveDaFalta[], new Date());
     return texto && traducaoFixa(texto, lingua) != null ? null : lingua;

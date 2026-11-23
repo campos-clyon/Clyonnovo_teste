@@ -645,7 +645,13 @@ export async function PATCH(req: NextRequest) {
           );
         }
       }
-      const saiu = await enviarTextoManualWhatsApp(telefone, texto);
+      // d88 (o #659): na língua da conversa, ou não sai — e diz-se porquê (`lingua-da-conversa.ts`).
+      const { orcamentoNaLinguaDaConversa } = await import("@/lib/lingua-da-conversa");
+      const naLingua = await orcamentoNaLinguaDaConversa(telefone, texto, { guardar: true });
+      if (!naLingua.ok) {
+        return NextResponse.json({ error: `Não saiu: ${naLingua.motivo}.`, semTraducao: naLingua.lingua, texto }, { status: 409 });
+      }
+      const saiu = await enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true });
       if (!saiu) {
         return NextResponse.json(
           {

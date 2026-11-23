@@ -1,4 +1,5 @@
 import { lerBase } from "./base-do-preco";
+import { nomeEmPortugues } from "./coverage";
 import { mensagemDasPropostas, propostasParaOCliente, trabalhoFechado, type PropostaParaOCliente } from "./mensagem-das-propostas";
 import { SERVICE_CATEGORIES } from "./service-categories";
 import { comValidade } from "./validade-do-orcamento";
@@ -40,6 +41,16 @@ export function nomeDoServicoDoOrcamento(id: string | null): string | null {
   return (c?.label ?? id.replace(/_/g, " ")).toLowerCase();
 }
 
+/**
+ * A LOCALIDADE EM PORTUGUÊS — «Lisbon» (como a morada do Google às vezes a
+ * grava) é «Lisboa» na mensagem em português (o #659, d88); a tradução diz
+ * depois a forma da língua do cliente. Sem «, Portugal» no fim.
+ */
+export function localidadeDoOrcamento(cidade: string | null | undefined): string | null {
+  const limpa = String(cidade ?? "").replace(/\s*,?\s*portugal\s*$/i, "").trim();
+  return limpa ? nomeEmPortugues(limpa) : null;
+}
+
 /** A mensagem do orçamento, tal como sai pela Mesa. */
 export function textoDoOrcamentoDaMesa(
   p: PedidoDoOrcamento,
@@ -63,7 +74,7 @@ export function textoDoOrcamentoDaMesa(
           nomeCliente: p.contactName,
           servico: nomeDoServicoDoOrcamento(p.serviceType),
           servicoId: p.serviceType,
-          cidade: p.city,
+          cidade: localidadeDoOrcamento(p.city),
           valorSemIva: p.valorUnicoCliente,
           base: lerBase(p.baseDoPreco),
         },
@@ -77,7 +88,7 @@ export function textoDoOrcamentoDaMesa(
     nomeCliente: p.contactName,
     servico: nomeDoServicoDoOrcamento(p.serviceType),
     servicoId: p.serviceType,
-    cidade: p.city,
+    cidade: localidadeDoOrcamento(p.city),
     propostas,
     fechado: trabalhoFechado(p.negociacoes),
     // Por carga, diz-se em cada valor — a Célia (#375) leu-os como o total.

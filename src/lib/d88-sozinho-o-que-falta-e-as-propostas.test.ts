@@ -28,6 +28,21 @@ const base = vi.hoisted(() => ({
   pedidosDaMesa: [] as Array<Record<string, unknown>>,
   interruptor: null as null | { ligado: number },
   linhaDoEnvio: null as null | { pedidoId: number; estado: string; motivo: string | null },
+  fio: [] as Array<{ direccao: string; texto: string; criadoEm: string; haSegundos: number | null }>,
+  lingua: null as null | "en" | "fr" | "es",
+  guardadas: [] as string[],
+  opcoesDoEnvio: [] as Array<{ semLinguaErrada?: boolean } | undefined>,
+  traducao: "tradutor" as "tradutor" | "falha",
+}));
+
+vi.mock("./traduzir-para-o-cliente", async (original) => ({
+  ...(await original<typeof import("./traduzir-para-o-cliente")>()),
+  // O tradutor fingido: «tradutor» devolve o texto marcado; «falha», a tradução fixa ou nada (como o verdadeiro).
+  traduzirSemLinguaErrada: vi.fn(async (texto: string, lingua: string) => {
+    if (base.traducao === "tradutor") return `[${lingua}] ${texto}`;
+    const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
+    return traducaoFixa(texto, lingua as "en");
+  }),
 }));
 
 vi.mock("./uma-mensagem-automatica-por-dia", async (original) => ({
@@ -74,8 +89,11 @@ vi.mock("./db", async (original) => {
     respostasDoClienteNoWhatsApp: async () => new Map(),
     numeroInterrompidoWhatsApp: async () => false,
     numeroBloqueadoWhatsApp: async () => false,
-    mensagensDoNumeroWhatsApp: async () => [],
-    linguaDoNumero: async () => null,
+    mensagensDoNumeroWhatsApp: async () => base.fio,
+    linguaDoNumero: async () => base.lingua,
+    guardarLinguaDoNumero: async (_t: string, l: string) => {
+      base.guardadas.push(l);
+    },
     retomarNumeroWhatsApp: async () => {},
     pedidosPorPromover: async () => (base.pedidoDoQueFalta ? [{ id: base.pedidoDoQueFalta.id }] : []),
     pedidosComNegociacoes: async () => base.pedidosDaMesa,
@@ -93,8 +111,9 @@ vi.mock("./whatsapp-cloud", async (original) => ({
     base.enviados.push(texto);
     return true;
   }),
-  enviarTextoManualWhatsApp: vi.fn(async (_t: string, texto: string) => {
+  enviarTextoManualWhatsApp: vi.fn(async (_t: string, texto: string, opcoes?: { semLinguaErrada?: boolean }) => {
     base.enviados.push(texto);
+    base.opcoesDoEnvio.push(opcoes);
     return true;
   }),
 }));
@@ -155,6 +174,11 @@ beforeEach(() => {
   base.pedidosDaMesa = [];
   base.interruptor = null;
   base.linhaDoEnvio = null;
+  base.fio = [];
+  base.lingua = null;
+  base.guardadas = [];
+  base.opcoesDoEnvio = [];
+  base.traducao = "tradutor";
 });
 
 /* ── Passo 1 ─────────────────────────────────────────────────────────────── */
@@ -420,11 +444,11 @@ describe("passo 3: a mesma função do botão", () => {
     expect(painel).toContain("return textoDoOrcamentoDaMesa(p, new Date(), propostas);");
     const naBase = ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts");
     expect(naBase).toContain("textoDoOrcamentoDaMesa(c.pedido, agora)");
-    expect(naBase).toContain("enviarTextoManualWhatsApp(telefone, texto)");
+    expect(naBase).toContain("enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true })");
     expect(naBase).toContain("db.marcarOrcamentoEnviado(pedidoId)");
     expect(naBase).toContain("db.retomarNumeroWhatsApp(telefone)");
     // A reserva vem ANTES de enviar.
-    expect(naBase.indexOf("SET estado = 'a_enviar'")).toBeLessThan(naBase.indexOf("enviarTextoManualWhatsApp(telefone, texto)"));
+    expect(naBase.indexOf("SET estado = 'a_enviar'")).toBeLessThan(naBase.indexOf("enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true })"));
     expect(naBase).not.toMatch(/DELETE FROM/);
   });
 
@@ -522,5 +546,88 @@ describe("as rotinas e a ponte estão ligadas", () => {
 
   it("o orçamento automático conta para a uma-por-dia de todas as rotinas", () => {
     expect(ler("src/lib/uma-mensagem-automatica-por-dia.ts")).toContain('tabela: "envioDasPropostasAoCliente", colunas: ["enviadoEm"]');
+  });
+});
+
+/* ── O orçamento na língua da conversa (o #659) ─────────────────────────── */
+
+describe("o orçamento sai na língua da conversa — uma conversa em inglês (o #659)", { timeout: 60_000 }, () => {
+  /** Uma conversa toda em inglês, inventada. */
+  const EM_INGLES = [
+    { direccao: "in", texto: "Hello, I need to get rid of an old sofa and two mattresses", criadoEm: "", haSegundos: 7200 },
+    { direccao: "out", texto: "Olá! Aqui é a Vitória, a assistente automática da CLYON.", criadoEm: "", haSegundos: 7100 },
+    { direccao: "in", texto: "Thank you, the building has an elevator and there is parking", criadoEm: "", haSegundos: 7000 },
+  ];
+
+  it("a língua lê-se da conversa quando ainda não há nenhuma guardada", async () => {
+    const { linguaDoFio } = await import("./lingua-da-conversa");
+    expect(linguaDoFio(EM_INGLES)).toBe("en");
+    expect(linguaDoFio([{ direccao: "in", texto: "Bom dia, preciso de levar um sofá velho" }])).toBeNull();
+    expect(linguaDoFio([])).toBeNull();
+  });
+
+  it("em português, a localidade em português («Lisbon» é «Lisboa»); em inglês, «Lisbon», com o IVA e a validade traduzidos", async () => {
+    const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
+    const p = pedidoDaMesa({ city: "Lisbon" });
+    const pt = textoDoOrcamentoDaMesa(p, AGORA);
+    expect(pt).toContain("para a recolha de monos em Lisboa:");
+    expect(pt).not.toContain("Lisbon");
+    const en = traducaoFixa(pt, "en");
+    expect(en).not.toBeNull();
+    expect(en).toContain("We have received 3 quotes for your request (bulky items removal) in Lisbon:");
+    expect(en).toContain("Recolhas Inventadas: ");
+    expect(en).toContain("+ VAT = ");
+    expect(en).toContain("This quote is valid until Thursday, 26/11.");
+    expect(en).not.toMatch(/\b(Olá|propostas|Já recebemos|válida até)\b/);
+    expect(traducaoFixa(pt, "fr")).toContain("à Lisbonne :");
+    expect(traducaoFixa(pt, "es")).toContain("en Lisboa:");
+  });
+
+  it("o automático, com o tradutor em baixo: sai pela tradução fixa, nunca em português, e a língua fica guardada", async () => {
+    base.fio = EM_INGLES;
+    base.traducao = "falha";
+    base.pedidosDaMesa = [pedidoDaMesa({ city: "Lisbon" })];
+    const { enviarAsPropostasAoCliente } = await import("./envio-das-propostas-ao-cliente-na-base");
+    expect((await enviarAsPropostasAoCliente(9102, AGORA)).ok).toBe(true);
+    expect(base.opcoesDoEnvio).toEqual([{ semLinguaErrada: true }]);
+    expect(base.guardadas).toEqual(["en"]);
+  });
+
+  it("o automático, sem tradução fixa da mensagem: fica com uma pessoa, «cliente noutra língua»", async () => {
+    base.fio = EM_INGLES;
+    // Uma negociação de antes do IVA incluído, em dinheiro: a frase da taxa em dinheiro não tem tradução fixa.
+    const antiga = { ...negociacao(1, "Recolhas Inventadas", 100, antes(200)), criadaEm: "2026-09-15 10:00:00", formaDePagamento: "dinheiro" };
+    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [antiga] })];
+    const { candidatosAoEnvio, enviarAsPropostasAoCliente } = await import("./envio-das-propostas-ao-cliente-na-base");
+    const [c] = await candidatosAoEnvio(AGORA);
+    const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
+    expect(traducaoFixa(textoDoOrcamentoDaMesa(c.pedido, AGORA), "en")).toBeNull();
+    expect(c.estado).toEqual({ tipo: "fica", motivo: "noutra_lingua" });
+    expect((await enviarAsPropostasAoCliente(9102, AGORA)).ok).toBe(false);
+    expect(base.enviados).toEqual([]);
+  });
+
+  it("o botão: o tradutor falha e não há tradução fixa — não sai, e diz-se porquê", async () => {
+    base.fio = EM_INGLES;
+    base.traducao = "falha";
+    const { orcamentoNaLinguaDaConversa } = await import("./lingua-da-conversa");
+    const r = await orcamentoNaLinguaDaConversa("351912345678", "Olá! Isto é uma frase que não tem tradução fixa nenhuma, escrita à mão.");
+    expect(r).toMatchObject({ ok: false, lingua: "en" });
+    expect(r.ok === false && r.motivo).toContain("cliente noutra língua (inglês)");
+    // Com a mensagem do orçamento, a tradução fixa chega.
+    expect((await orcamentoNaLinguaDaConversa("351912345678", textoDoOrcamentoDaMesa(pedidoDaMesa(), AGORA))).ok).toBe(true);
+    // E em português, sai sempre.
+    base.fio = [];
+    expect(await orcamentoNaLinguaDaConversa("351912345678", "Olá!")).toEqual({ ok: true, lingua: null });
+  });
+
+  it("o «Enviar pela CLYON» (Mesa e Trabalhos CLYON) vê a língua antes de enviar, e envia sem a língua errada", () => {
+    for (const rota of ["src/app/api/admin/negociacoes/route.ts", "src/app/api/admin/trabalhos-clyon/route.ts"]) {
+      const f = ler(rota);
+      const i = f.indexOf("orcamentoNaLinguaDaConversa(telefone, texto, { guardar: true })");
+      expect(i, rota).toBeGreaterThan(-1);
+      expect(f.indexOf("enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true })"), rota).toBeGreaterThan(i);
+      expect(f, rota).toContain("Não saiu: ${naLingua.motivo}.");
+    }
   });
 });

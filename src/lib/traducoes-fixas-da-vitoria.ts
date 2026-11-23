@@ -58,6 +58,14 @@ const DIAS = dados.dias as Linha4[];
 const MESES = dados.meses as Linha4[];
 const LIGACOES = mapa(dados.ligacoes as Linha4[]);
 
+const LOCALIDADES = mapa((dados.localidades ?? []) as Linha4[]);
+
+/** O nome de uma localidade, na língua: «Lisboa» → «Lisbon»; as que não mudam, tal e qual. */
+function localidade(nome: string, lingua: Alvo): string {
+  const l = LOCALIDADES.get(chaveDe(nome)) ?? (/^lisbon$/i.test(nome.trim()) ? LOCALIDADES.get("lisboa") : undefined);
+  return l ? l[POSICAO[lingua]] : nome;
+}
+
 /** O nome de um serviço, na língua — ou null. */
 function servico(nome: string, lingua: Alvo): string | null {
   const l = SERVICOS.get(chaveDe(nome));
@@ -75,6 +83,8 @@ function porMolde(texto: string, moldes: typeof MOLDES, lingua: Alvo): string | 
         if (!s) falhou = true;
         return (s ?? "").toLowerCase();
       })
+      // d88 (o #659): a localidade na forma da língua — «Lisboa» é «Lisbon» em inglês; as outras ficam como estão.
+      .replace(/\{l(\d)\}/g, (_, i: string) => localidade(m[Number(i)] ?? "", lingua))
       .replace(/\$(\d)/g, (_, i: string) => m[Number(i)] ?? "");
     if (!falhou) return saida;
   }

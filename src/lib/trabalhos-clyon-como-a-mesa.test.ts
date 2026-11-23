@@ -143,7 +143,8 @@ describe("as acções da Mesa (fase 3)", () => {
     // Desde 05-11-2026 (d19) o «Enviar pela CLYON» deu lugar ao «Enviar valores para pagamento».
     expect(CARTAO).toContain("<EnviarValoresParaPagamento");
     expect(ROTA).toContain("if (await numeroBloqueadoWhatsApp(telefone)) {");
-    expect(ROTA).toContain("const saiu = await enviarTextoManualWhatsApp(telefone, texto);");
+    // d88 (o #659): na língua da conversa, ou não sai.
+    expect(ROTA).toContain("const saiu = await enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true });");
   });
 
   it("a ficha do pedido, sem o botão de apagar, e as rotas dela abertas a esta secção", () => {

@@ -241,7 +241,18 @@
     ["Elevador no destino","Lift at the destination","Ascenseur à destination","Ascensor en el destino"],
     ["Estacionamento no destino","Parking at the destination","Stationnement à destination","Aparcamiento en el destino"],
     ["Data pretendida","Preferred date","Date souhaitée","Fecha deseada"],
-    ["Nome","Name","Nom","Nombre"]
+    ["Nome","Name","Nom","Nombre"],
+    ["Olá!","Hello!","Bonjour !","¡Hola!"],
+    ["O valor a pagar é o com IVA.","The amount to pay is the one with VAT.","Le montant à payer est le montant TTC.","El importe a pagar es el que incluye IVA."],
+    ["Valores dados online, pelo que descreveu — confirmam-se no local antes de começar.","Prices given online, based on what you described - they are confirmed on site before starting.","Prix donnés en ligne, d'après ce que vous avez décrit - ils sont confirmés sur place avant de commencer.","Precios dados online, según lo que describió - se confirman en el lugar antes de empezar."],
+    ["Diga-nos qual prefere e tratamos do resto — quem faz o trabalho é o parceiro escolhido.","Tell us which one you prefer and we will take care of the rest - the work is done by the partner you choose.","Dites-nous laquelle vous préférez et nous nous occupons du reste - le travail est fait par le partenaire choisi.","Díganos cuál prefiere y nos encargamos del resto - el trabajo lo hace el colaborador elegido."],
+    ["Qualquer dúvida, é só dizer.","Any questions, just let us know.","Pour toute question, n'hésitez pas à nous le dire.","Cualquier duda, solo tiene que decirlo."],
+    ["Valores sem IVA.","Prices without VAT.","Prix HT.","Precios sin IVA."],
+    ["Com fatura acrescem 23 % de IVA.","With an invoice, 23% VAT is added.","Avec facture, 23 % de TVA s'ajoutent.","Con factura, se añade un 23 % de IVA."],
+    ["Paga diretamente ao parceiro que contratar — por transferência, MB WAY ou dinheiro no local.","You pay the partner you hire directly - by bank transfer, MB WAY or cash on site.","Vous payez directement le partenaire que vous engagez - par virement, MB WAY ou en espèces sur place.","Paga directamente al colaborador que contrate - por transferencia, MB WAY o efectivo en el lugar."],
+    ["O preço da proposta já é o total a pagar, com a taxa da plataforma.","The quote price is already the total to pay, including the platform fee.","Le prix de la proposition est déjà le total à payer, frais de la plateforme compris.","El precio de la propuesta ya es el total a pagar, con la tarifa de la plataforma."],
+    ["Materiais incluídos no valor.","Materials included in the price.","Matériaux inclus dans le prix.","Materiales incluidos en el precio."],
+    ["Atenção: são preços POR CARGA.","Please note: these are prices PER LOAD.","Attention : ce sont des prix PAR CHARGEMENT.","Atención: son precios POR CARGA."]
   ],
   "moldes": [
     ["^O pedido #(\\d+) já está registado e a equipa está a conferi-lo; depois segue para os parceiros da sua zona, e as propostas chegam-lhe por aqui\\.$","Request #$1 is already registered and the team is checking it; then it goes to the partners in your area, and the quotes will reach you here.","La demande n° $1 est déjà enregistrée et l'équipe la vérifie ; ensuite, elle part chez les partenaires de votre zone, et les propositions vous arrivent ici.","El pedido #$1 ya está registrado y el equipo lo está revisando; después pasa a los colaboradores de su zona, y las propuestas le llegan por aquí."],
@@ -249,7 +260,7 @@
     ["^Obrigada! As fotografias ficaram no pedido #(\\d+), para os parceiros as verem\\.$","Thank you! The photos are saved in request #$1, for the partners to see.","Merci ! Les photos sont dans la demande n° $1, pour que les partenaires les voient.","¡Gracias! Las fotografías quedaron en el pedido #$1, para que los colaboradores las vean."],
     ["^Fica como um pedido novo, à parte do pedido #(\\d+)\\.$","This will be a new request, separate from request #$1.","Ce sera une nouvelle demande, à part de la demande n° $1.","Queda como un pedido nuevo, aparte del pedido #$1."],
     ["^O trabalho é feito por (.+?), parceiro (verificado pela|da) CLYON. Responda SIM e fica reservado\\.$","The work is done by $1, a CLYON partner. Reply YES and it is booked.","Le travail est fait par $1, partenaire de CLYON. Répondez OUI et c'est réservé.","El trabajo lo hace $1, colaborador de CLYON. Responda SÍ y queda reservado."],
-    ["^O orçamento para (?:a|o) (.+?) em (.+?) é ([\\d ,]+ €) \\+ IVA = ([\\d ,]+ €)( por hora| por carga)?\\.$","The quote for {s1} in $2 is $3 + VAT = $4$5.","Le devis pour {s1} à $2 est de $3 HT = $4 TTC$5.","El presupuesto para {s1} en $2 es $3 + IVA = $4$5."],
+    ["^O orçamento para (?:a|o) (.+?) em (.+?) é ([\\d ,]+ €) \\+ IVA = ([\\d ,]+ €)( por hora| por carga)?\\.$","The quote for {s1} in {l2} is $3 + VAT = $4$5.","Le devis pour {s1} à {l2} est de $3 HT = $4 TTC$5.","El presupuesto para {s1} en {l2} es $3 + IVA = $4$5."],
     ["^O orçamento para (?:a|o) (.+?) é ([\\d ,]+ €) \\+ IVA = ([\\d ,]+ €)( por hora| por carga)?\\.$","The quote for {s1} is $2 + VAT = $3$4.","Le devis pour {s1} est de $2 HT = $3 TTC$4.","El presupuesto para {s1} es $2 + IVA = $3$4."],
     ["^O orçamento para o seu pedido(?: em (.+?))? é ([\\d ,]+ €) \\+ IVA = ([\\d ,]+ €)( por hora| por carga)?\\.$","The quote for your request is $2 + VAT = $3$4.","Le devis pour votre demande est de $2 HT = $3 TTC$4.","El presupuesto para su pedido es $2 + IVA = $3$4."],
     ["^Nas mudanças, cada parceiro tem o seu preço por hora - desde ([\\d,]+ €) \\+ IVA/h \\(([\\d,]+ €) com IVA\\), equipa de 2\\.$", "For moves, each partner has their own hourly price - from $1 + VAT/h ($2 incl. VAT), team of 2.", "Pour les déménagements, chaque partenaire a son propre prix horaire - à partir de $1 HT/h ($2 TTC), équipe de 2.", "En las mudanzas, cada colaborador tiene su propio precio por hora - desde $1 + IVA/h ($2 con IVA), equipo de 2."],
@@ -289,7 +300,24 @@
     ["^Volto ao seu pedido #(\\d+) \\(([^)]+)\\): ainda quer avançar\\?$", "Following up on your request #$1 ({s2}): do you still want to go ahead?", "Je reviens vers vous pour votre demande n° $1 ({s2}) : souhaitez-vous toujours continuer ?", "Vuelvo a su pedido n.º $1 ({s2}): ¿todavía quiere avanzar?"],
     ["^Esta é a última mensagem sobre o seu pedido #(\\d+) \\(([^)]+)\\)\\.$", "This is the last message about your request #$1 ({s2}).", "Ceci est le dernier message concernant votre demande n° $1 ({s2}).", "Este es el último mensaje sobre su pedido n.º $1 ({s2})."],
     ["^Fechámos o pedido #(\\d+), porque não tivemos resposta\\.$", "We have closed request #$1, as we had no reply.", "Nous avons clôturé la demande n° $1, faute de réponse.", "Hemos cerrado el pedido n.º $1, porque no tuvimos respuesta."],
-    ["^Ficou anotado no seu pedido #(\\d+):$","Noted on your request #$1:","C'est noté sur votre demande n° $1 :","Queda anotado en su pedido #$1:"]
+    ["^Ficou anotado no seu pedido #(\\d+):$","Noted on your request #$1:","C'est noté sur votre demande n° $1 :","Queda anotado en su pedido #$1:"],
+    ["^Já recebemos (\\d+) propostas para (?:a|o) (.+?) em (.+):$","We have received $1 quotes for your request ({s2}) in {l3}:","Nous avons reçu $1 propositions pour votre demande ({s2}) à {l3} :","Ya hemos recibido $1 propuestas para su pedido ({s2}) en {l3}:"],
+    ["^Já recebemos (\\d+) propostas para o seu pedido:$","We have received $1 quotes for your request:","Nous avons reçu $1 propositions pour votre demande :","Ya hemos recibido $1 propuestas para su pedido:"],
+    ["^Já recebemos (\\d+) propostas para (?:a|o) (.+?):$","We have received $1 quotes for your request ({s2}):","Nous avons reçu $1 propositions pour votre demande ({s2}) :","Ya hemos recibido $1 propuestas para su pedido ({s2}):"],
+    ["^Já recebemos uma proposta para (?:a|o) (.+?) em (.+):$","We have received one quote for your request ({s1}) in {l2}:","Nous avons reçu une proposition pour votre demande ({s1}) à {l2} :","Ya hemos recibido una propuesta para su pedido ({s1}) en {l2}:"],
+    ["^Já recebemos uma proposta para o seu pedido:$","We have received one quote for your request:","Nous avons reçu une proposition pour votre demande :","Ya hemos recibido una propuesta para su pedido:"],
+    ["^Já recebemos uma proposta para (?:a|o) (.+?):$","We have received one quote for your request ({s1}):","Nous avons reçu une proposition pour votre demande ({s1}) :","Ya hemos recibido una propuesta para su pedido ({s1}):"],
+    ["^(.+?): ([\\d .]+,\\d{2} €) \\+ IVA = ([\\d .]+,\\d{2} €)$","$1: $2 + VAT = $3","$1 : $2 HT = $3 TTC","$1: $2 + IVA = $3"],
+    ["^(.+?): ([\\d .]+,\\d{2} €) \\+ IVA = ([\\d .]+,\\d{2} €) por carga$","$1: $2 + VAT = $3 per load","$1 : $2 HT = $3 TTC par chargement","$1: $2 + IVA = $3 por carga"],
+    ["^(.+?): ([\\d .]+,\\d{2} €) \\+ IVA = ([\\d .]+,\\d{2} €) por hora$","$1: $2 + VAT = $3 per hour","$1 : $2 HT = $3 TTC de l'heure","$1: $2 + IVA = $3 por hora"],
+    ["^(.+?): ([\\d .]+,\\d{2} €)$","$1: $2","$1 : $2","$1: $2"],
+    ["^Esta proposta é válida até segunda-feira, (\\d{2}/\\d{2})\\.$","This quote is valid until Monday, $1.","Cette proposition est valable jusqu'au lundi $1.","Esta propuesta es válida hasta el lunes, $1."],
+    ["^Esta proposta é válida até terça-feira, (\\d{2}/\\d{2})\\.$","This quote is valid until Tuesday, $1.","Cette proposition est valable jusqu'au mardi $1.","Esta propuesta es válida hasta el martes, $1."],
+    ["^Esta proposta é válida até quarta-feira, (\\d{2}/\\d{2})\\.$","This quote is valid until Wednesday, $1.","Cette proposition est valable jusqu'au mercredi $1.","Esta propuesta es válida hasta el miércoles, $1."],
+    ["^Esta proposta é válida até quinta-feira, (\\d{2}/\\d{2})\\.$","This quote is valid until Thursday, $1.","Cette proposition est valable jusqu'au jeudi $1.","Esta propuesta es válida hasta el jueves, $1."],
+    ["^Esta proposta é válida até sexta-feira, (\\d{2}/\\d{2})\\.$","This quote is valid until Friday, $1.","Cette proposition est valable jusqu'au vendredi $1.","Esta propuesta es válida hasta el viernes, $1."],
+    ["^Esta proposta é válida até sábado, (\\d{2}/\\d{2})\\.$","This quote is valid until Saturday, $1.","Cette proposition est valable jusqu'au samedi $1.","Esta propuesta es válida hasta el sábado, $1."],
+    ["^Esta proposta é válida até domingo, (\\d{2}/\\d{2})\\.$","This quote is valid until Sunday, $1.","Cette proposition est valable jusqu'au dimanche $1.","Esta propuesta es válida hasta el domingo, $1."]
   ],
   "servicos": [
     ["Recolha de móveis", "Furniture removal", "Enlèvement de meubles", "Recogida de muebles"],
@@ -385,5 +413,9 @@
     ["a partir das","from","à partir de","a partir de las"],
     ["depois das","after","après","después de las"],
     ["antes das","before","avant","antes de las"]
+  ],
+  "localidades": [
+    ["Lisboa","Lisbon","Lisbonne","Lisboa"],
+    ["Porto","Porto","Porto","Oporto"]
   ]
 }

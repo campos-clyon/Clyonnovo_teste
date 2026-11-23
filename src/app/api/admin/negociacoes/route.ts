@@ -319,7 +319,21 @@ export async function POST(req: NextRequest) {
         );
       }
     }
-    const saiu = await enviarTextoManualWhatsApp(telefone, texto);
+    /*
+     * NA LÍNGUA DA CONVERSA, OU NÃO SAI — 23-11-2026 (d88, o #659): a cliente
+     * escrevia em inglês e o orçamento saiu em português. Noutra língua sai
+     * traduzido (o tradutor, ou a tradução fixa); sem tradução, não sai e
+     * diz-se porquê — a equipa escreve-lhe à mão, na língua dele.
+     */
+    const { orcamentoNaLinguaDaConversa } = await import("@/lib/lingua-da-conversa");
+    const naLingua = await orcamentoNaLinguaDaConversa(telefone, texto, { guardar: true });
+    if (!naLingua.ok) {
+      return NextResponse.json(
+        { error: `Não saiu: ${naLingua.motivo}.`, semTraducao: naLingua.lingua },
+        { status: 409 },
+      );
+    }
+    const saiu = await enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true });
     if (!saiu) {
       return NextResponse.json(
         {

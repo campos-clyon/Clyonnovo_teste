@@ -517,7 +517,17 @@ export async function enviarTextoWhatsApp(para: string, texto: string): Promise<
  * escreve é a pessoa, e a pessoa manda no portão, não o contrário. O único
  * não que resta é o do próprio WhatsApp (janela de 24 h fechada).
  */
-export async function enviarTextoManualWhatsApp(para: string, texto: string): Promise<boolean> {
+export async function enviarTextoManualWhatsApp(
+  para: string,
+  texto: string,
+  /**
+   * d88 (23-11-2026, o #659): o orçamento — o do «Enviar pela CLYON» e o que a
+   * Vitória envia sozinha — sai na língua da conversa ou não sai, nunca em
+   * português a quem escreve noutra língua (`lingua-da-conversa.ts`).
+   */
+  opcoes: { semLinguaErrada?: boolean } = {},
+): Promise<boolean> {
+  if (opcoes.semLinguaErrada === true) return enviarTextoPorCanal(para, texto, { semLinguaErrada: true });
   return enviarTextoPorCanal(para, texto);
 }
 

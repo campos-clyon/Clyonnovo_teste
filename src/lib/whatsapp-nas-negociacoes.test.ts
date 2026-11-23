@@ -27,7 +27,8 @@ describe("na Mesa, as negociações", () => {
     expect(corpo).toContain("const pedido = await getSimulatorOrderById(pedidoId);");
     expect(corpo).toContain("const telefone = String(pedido.contactPhone ?? \"\");");
     expect(corpo).toContain("if (await numeroBloqueadoWhatsApp(telefone)) {");
-    expect(corpo).toContain("const saiu = await enviarTextoManualWhatsApp(telefone, texto);");
+    // d88 (o #659): na língua da conversa, ou não sai.
+    expect(corpo).toContain("const saiu = await enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true });");
     expect(corpo).toContain("24 horas");
   });
 

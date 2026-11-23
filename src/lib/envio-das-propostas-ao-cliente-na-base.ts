@@ -196,15 +196,14 @@ async function oCliente(
   const { haQueixaNaConversa } = await import("./queixa-na-conversa");
   const comUmaPessoa = interrompido || fio == null || aEquipaFalouHaPouco(fio);
   const queixa = fio != null && haQueixaNaConversa(fio);
+  // A língua da conversa (a guardada, ou a que a conversa mostra — o #659); sozinha, só com tradução fixa.
   let linguaSemTraducao: string | null = null;
   try {
-    const lingua = await db.linguaDoNumero(telefone);
-    if (lingua && lingua !== "pt") {
-      const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
-      if (traducaoFixa(texto, lingua) == null) linguaSemTraducao = lingua;
-    }
+    const { orcamentoNaLinguaDaConversa } = await import("./lingua-da-conversa");
+    const naLingua = await orcamentoNaLinguaDaConversa(telefone, texto, { soFixa: true });
+    if (!naLingua.ok) linguaSemTraducao = naLingua.lingua;
   } catch {
-    /* sem saber a língua, é a de sempre */
+    linguaSemTraducao = "?";
   }
   const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
   const jaSaiuHoje = await jaSaiuHojeUmaMensagemAutomatica({ telefone }, agora, { pool }).catch(() => true);
@@ -442,8 +441,11 @@ export async function enviarAsPropostasAoCliente(pedidoId: number, agora: Date):
 
   const telefone = String(c.pedido.contactPhone ?? "");
   const texto = textoDoOrcamentoDaMesa(c.pedido, agora);
+  // Na língua da conversa, ou não sai (d88, o #659): a língua lida fica guardada para o envio a traduzir.
+  const { linguaDaConversa } = await import("./lingua-da-conversa");
+  await linguaDaConversa(telefone, { guardar: true }).catch(() => null);
   const { enviarTextoManualWhatsApp } = await import("./whatsapp-cloud");
-  const saiu = await enviarTextoManualWhatsApp(telefone, texto).catch(() => false);
+  const saiu = await enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true }).catch(() => false);
   if (!saiu) {
     await pool.execute("UPDATE envioDasPropostasAoCliente SET estado = 'falhou', motivo = ? WHERE pedidoId = ?", [
       "o WhatsApp não saiu",
