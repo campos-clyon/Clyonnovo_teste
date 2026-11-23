@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-23",
+      "nota": "Novo separador «Cancelados»: o pedido cancelado aparece lá com o motivo; o arquivado vai para os Arquivados, também com o motivo.\nO sino avisa quando um pedido seu é cancelado, arquivado ou apagado.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-20",
       "nota": "Ao sair da app, a sua sessão fecha-se em todos os telemóveis e no painel.\nNo Início, o que falta pagar à CLYON é o mesmo que o painel mostra, com «Pagar a parte da CLYON».",
       "updates": [
