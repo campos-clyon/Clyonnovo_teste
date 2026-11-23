@@ -78,6 +78,15 @@ export async function avisarProfissionalEscolhido(a: {
     if (a.whatsapp !== false && valor != null) {
       const telefone = telemovelParaWhatsApp(linha?.profissionalTelefone ?? null);
       if (telefone && (await assistentePode("avisar_profissional").catch(() => false))) {
+        // d100: no modelo de 15-11 o aviso diz que não há nada a pagar agora (a referência vem na confirmação).
+        const novoModelo = await (async () => {
+          try {
+            const { segueONovoModelo } = await import("./novo-modelo-no-servidor");
+            return await segueONovoModelo({ id: a.negociacaoId });
+          } catch {
+            return false;
+          }
+        })();
         await enviarAvisoWhatsApp(
           telefone,
           avisoDeEscolhaAoProfissional(
@@ -96,6 +105,7 @@ export async function avisarProfissionalEscolhido(a: {
                     ? new Date(pedido.dataAgendada as unknown as string)
                     : null
                 : null,
+              novoModelo,
             },
             new Date(),
           ),

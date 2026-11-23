@@ -19,6 +19,51 @@ export type Coordenadas = { lat: number; lng: number };
 
 const TEMPO_LIMITE_MS = 5000;
 
+/**
+ * A ZONA ONDE A CLYON TRABALHA — Grande Lisboa, Margem Sul e Setúbal, com
+ * folga — d100 (23-11-2026).
+ *
+ * Pedia-se ao Nominatim só o PRIMEIRO resultado de um nome, e há nomes que o
+ * país tem duas vezes. «Alvalade» é um bairro de Lisboa e é uma vila do
+ * Alentejo, a mais de 100 km: a base de um parceiro de Lisboa ficou no
+ * Alentejo, e o aviso de uma recolha em Lisboa disse-lhe «a cerca de 146 km da
+ * sua base». Agora pedem-se vários resultados e, quando um deles cai nesta
+ * zona, é esse que fica; quando nenhum cai (uma terra do Porto, por exemplo),
+ * fica o primeiro, como antes.
+ */
+export const ZONA_DA_CLYON = { latMin: 38.35, latMax: 39.1, lngMin: -9.6, lngMax: -8.45 } as const;
+
+/** Quantos resultados se pedem ao Nominatim, para poder escolher o da zona. */
+export const RESULTADOS_POR_NOME = 10;
+
+export function naZonaDaClyon(c: Coordenadas): boolean {
+  return (
+    c.lat >= ZONA_DA_CLYON.latMin &&
+    c.lat <= ZONA_DA_CLYON.latMax &&
+    c.lng >= ZONA_DA_CLYON.lngMin &&
+    c.lng <= ZONA_DA_CLYON.lngMax
+  );
+}
+
+/**
+ * De vários resultados do mesmo nome, o que fica: o primeiro dentro da zona
+ * da CLYON, ou — sem nenhum lá — o primeiro de todos. Pura.
+ */
+export function escolherResultado(
+  dados: ReadonlyArray<{ lat?: string | number; lon?: string | number }> | null | undefined,
+): Coordenadas | null {
+  if (!Array.isArray(dados)) return null;
+  const validos: Coordenadas[] = [];
+  for (const d of dados) {
+    if (d?.lat == null || d?.lon == null || d.lat === "" || d.lon === "") continue;
+    const lat = Number(d.lat);
+    const lng = Number(d.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    validos.push({ lat, lng });
+  }
+  return validos.find(naZonaDaClyon) ?? validos[0] ?? null;
+}
+
 export async function geocodificarLocalidade(
   localidade: string,
 ): Promise<Coordenadas | null> {
@@ -28,7 +73,8 @@ export async function geocodificarLocalidade(
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", termo);
   url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "1");
+  // Vários, para escolher o da zona da CLYON quando o nome se repete (d100).
+  url.searchParams.set("limit", String(RESULTADOS_POR_NOME));
   // Sem isto, "Braga" tanto podia ser a portuguesa como uma povoação italiana
   // com o mesmo nome — e o profissional ficava com a base a 2000 km.
   url.searchParams.set("countrycodes", "pt");
@@ -47,14 +93,7 @@ export async function geocodificarLocalidade(
     if (!resposta.ok) return null;
 
     const dados = (await resposta.json()) as Array<{ lat?: string; lon?: string }>;
-    const primeiro = Array.isArray(dados) ? dados[0] : null;
-    if (!primeiro?.lat || !primeiro?.lon) return null;
-
-    const lat = Number(primeiro.lat);
-    const lng = Number(primeiro.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-    return { lat, lng };
+    return escolherResultado(dados);
   } catch (err) {
     console.warn("[geocodificar] falhou para", termo, "—", String(err).slice(0, 120));
     return null;

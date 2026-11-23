@@ -10,6 +10,21 @@ import type { ModoDaOferta } from "./oferta-clyon";
 import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
 import { avisoDaBase, lerBase, precoComBase } from "./base-do-preco";
 import { diaEHoraCurtosEmLisboa } from "./hora-de-lisboa";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO } from "./novo-modelo";
+
+/**
+ * NADA A PAGAR AGORA — d100 (CEO e dono, 23-11-2026). Logo a seguir ao aviso
+ * de que o trabalho é seu, um parceiro perguntou «qual entidade e referência
+ * para o pagamento». No modelo de 15-11 não há nada a pagar nesse momento: o
+ * cliente paga-lhe a ele, e a referência da taxa da plataforma e do IVA dela
+ * nasce quando o trabalho fica confirmado (`avisar-confirmacao.ts`: fica na
+ * carteira do painel e vai no email), com o prazo de
+ * `DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO` dias. Só nos trabalhos do modelo de 15-11.
+ */
+export const NADA_A_PAGAR_AGORA_NO_NOVO_MODELO =
+  "Não tem nada a pagar agora: o cliente paga-lhe diretamente no dia do trabalho. " +
+  "Quando o trabalho ficar confirmado, recebe no painel e por email a referência Multibanco da taxa da plataforma " +
+  `e do IVA dela, e tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias para a pagar.`;
 
 /*
  * ── O AVISO NO WHATSAPP DO PROFISSIONAL ────────────────────────────────────
@@ -90,6 +105,8 @@ export function avisoDeEscolhaAoProfissional(
      */
     porFora?: boolean;
     quando?: Date | null;
+    /** O trabalho segue o modelo de 15-11 (`segueONovoModelo`): diz-se que não há nada a pagar agora (d100). */
+    novoModelo?: boolean;
   },
   agora: Date,
 ): string {
@@ -104,7 +121,10 @@ export function avisoDeEscolhaAoProfissional(
         `Não precisa de aceitar nada.${dia}`
       : `O trabalho é seu: a CLYON escolheu-o para ${trabalho}, com ganhos estimados de ${eurosPorExtenso(o.valor)}.${dia}`,
     `A morada e o contacto do cliente já estão no seu painel: ${o.link}`,
-  ].join("\n\n");
+    o.novoModelo === true ? NADA_A_PAGAR_AGORA_NO_NOVO_MODELO : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /**
