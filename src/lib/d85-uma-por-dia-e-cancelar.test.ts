@@ -78,6 +78,7 @@ import {
 } from "./cancelar-pelo-lembrete";
 import { MENSAGEM_DE_CANCELAMENTO } from "./mensagens-das-fases";
 import { jaSaiuHojeAoCliente } from "./seguimento-do-cliente";
+import { textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const TEL = "351912345678";
@@ -104,6 +105,8 @@ describe("uma mensagem automática por dia, por telefone, comum a todas as rotin
       "lembretesDoQueFalta",
       "seguimentoDoCliente",
       "envioDasPropostasAoCliente",
+      // d93 (23-11-2026): os lembretes da conversa parada a meio.
+      "conversasParadas",
     ]);
   });
 
@@ -183,7 +186,9 @@ describe("um só caminho de cancelar pelo lembrete (d62, d71, d83)", () => {
     base.aEspera = 0;
     const r = await responderAoCancelamento(FONTES_DO_CANCELAMENTO.validade, pool, 612, TEL, "3", { verificar: verificarOk });
     expect(r).toEqual({ ok: true, estado: "pediu_confirmacao" });
-    expect(base.enviados).toEqual([{ para: TEL, texto: "Confirma que quer cancelar o pedido #612? Responda CANCELAR." }]);
+    // d91 (3.17): com a frase que salva os «3» que são uma objecção de preço ou de data.
+    expect(base.enviados).toEqual([{ para: TEL, texto: textoDaConfirmacaoDoCancelamento(612) }]);
+    expect(base.enviados[0].texto.startsWith("Confirma que quer cancelar o pedido #612? Responda CANCELAR.")).toBe(true);
     expect(base.cancelados).toEqual([]);
   });
 

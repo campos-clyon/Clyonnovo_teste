@@ -175,6 +175,8 @@ export type ConversaNaMesa = {
   fechadaPor: string | null;
   /** O profissional registado com este telefone, se for um (d21). */
   profissional: { id: number; nome: string } | null;
+  /** d93: o cliente cancelou pela conversa e pediu para não voltar a ser contactado. */
+  naoContactar?: boolean;
 };
 
 export type QuemFalou = "cliente" | "vitoria" | "equipa";

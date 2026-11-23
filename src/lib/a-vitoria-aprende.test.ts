@@ -399,7 +399,8 @@ describe("a voz de plataforma nas frases da Vitória", () => {
 
   it("a apresentação diz que o pedido vai aos profissionais, que dão o preço deles", () => {
     expect(O_QUE_ELA_FAZ).toBe(
-      "Vou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles.",
+      // d91 (3.1, 23-11-2026).
+      "Faço-lhe só as perguntas de que os parceiros da sua zona precisam e envio-lhes o seu pedido: eles respondem com o preço deles, e pedir é grátis e sem compromisso.",
     );
     expect(PERGUNTA_ANOTADA).toBe("Boa pergunta! Deixo-a anotada para uma pessoa da CLYON lhe responder.");
   });

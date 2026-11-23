@@ -35,6 +35,7 @@ import {
 import {
   aUltimaSaidaE,
   clienteRespondeuNoCiclo,
+  diaDaValidade,
   DIAS_ATE_ANONIMIZAR_O_CANCELADO,
   eConfirmacaoDoCancelamento,
   HORAS_PARA_CONFIRMAR_O_CANCELAMENTO,
@@ -49,6 +50,7 @@ import {
   textoDoFechoAoCliente,
   textoDoLembrete,
   textoDoUltimoAviso,
+  varianteDoLembrete,
   type CicloDoOrcamento,
   type PassoDaValidade,
   type PropostaCandidata,
@@ -656,6 +658,9 @@ async function darOPasso(
     total: tem.proposta.total,
     unidade: base === "carga" ? ("carga" as const) : base === "hora" ? ("hora" as const) : null,
     parceiro: tem.proposta.parceiro,
+    // d91 (3.13): «Válido até …», o dia da validade deste ciclo; e a nota do parceiro, do campo (5.2, variante B).
+    validaAte: diaDaValidade(c.desde),
+    nota: tem.proposta.nota ?? null,
   };
   const quem = opcoes.porQuem ? ` (Lembrar agora, por ${opcoes.porQuem})` : "";
 
@@ -696,7 +701,9 @@ async function darOPasso(
     }
     const { retomarNumeroWhatsApp } = await import("./db");
     await retomarNumeroWhatsApp(telefone).catch(() => {});
-    const feito = `${passo === "lembrete1" ? "Lembrete do orçamento" : "Último aviso do orçamento"} enviado ao cliente pelo WhatsApp${quem}.`;
+    // d91 (5.2): o lembrete D+1 tem duas variantes — par A, ímpar B —, e a que saiu fica no histórico.
+    const variante = passo === "lembrete1" ? ` Variante ${varianteDoLembrete(pedidoId)} (A/B da d91).` : "";
+    const feito = `${passo === "lembrete1" ? "Lembrete do orçamento" : "Último aviso do orçamento"} enviado ao cliente pelo WhatsApp${quem}.${variante}`;
     await appendOrderHistory(pedidoId, { type: "note", by: null, message: feito }).catch(() => {});
     return { ok: true, feito };
   }

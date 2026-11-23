@@ -57,7 +57,8 @@ describe("a conversa do Tomé", () => {
     const { disse } = falaComOTome();
     expect(disse[0]).toContain("Aqui é a Vitória, a assistente automática da CLYON");
     expect(disse[0]).toContain(O_QUE_ELA_FAZ);
-    expect(O_QUE_ELA_FAZ).toMatch(/anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles/);
+    // d91 (3.1): diz porque pergunta, e que pedir é grátis e sem compromisso.
+    expect(O_QUE_ELA_FAZ).toMatch(/perguntas de que os parceiros da sua zona precisam e envio-lhes o seu pedido: eles respondem com o preço deles/);
   });
 
   it("sem «Muito prazer» — agradece o nome, e segue", () => {

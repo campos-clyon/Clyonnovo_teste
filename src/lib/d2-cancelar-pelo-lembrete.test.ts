@@ -113,7 +113,8 @@ describe("a conversa do «3» ao lembrete do orçamento (d2)", () => {
   it("«3» → só pergunta; nada se cancela e a conversa não passa à equipa", async () => {
     await oClienteEscreve("3");
     expect(estado.enviados.at(-1)).toBe(PERGUNTA);
-    expect(PERGUNTA).toBe("Confirma que quer cancelar o pedido #612? Responda CANCELAR.");
+    // d91 (3.17): o marcador fica letra a letra, com a frase que salva os «3» de preço ou de data.
+    expect(PERGUNTA.startsWith("Confirma que quer cancelar o pedido #612? Responda CANCELAR.")).toBe(true);
     expect(estado.cancelado).toBe(false);
     expect(estado.passadas).toEqual([]);
     // O texto do cliente vai com a chamada.

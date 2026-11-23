@@ -59,13 +59,14 @@ describe("a mensagem", () => {
     expect(texto).toBe(
       [
         "Boa tarde! Aqui é a equipa da CLYON.",
-        "Estamos a contactar por causa do seu pedido #812 (recolha de monos em Almada). Para lhe enviarmos o orçamento mais adequado, precisamos de algumas informações que estão em falta:",
+        // d91 (3.7, 23-11-2026): «quase pronto» em vez de «em falta», e a resposta ao «posso enviar a foto amanhã?».
+        "O seu pedido #812 (recolha de monos em Almada) está quase pronto para seguir para os parceiros da sua zona. Só falta:",
         [
-          "- Fotografias do que é para levar, para os parceiros avaliarem o volume.",
+          "- 2 ou 3 fotografias do que é para levar: com elas, os parceiros dão um preço certo e sem surpresas no dia.",
           "- O número da porta da morada.",
           "- Se há elevador no prédio e se lá cabe o que é para levar.",
         ].join("\n"),
-        "Pode responder a esta mensagem com o que falta.",
+        "Pode responder a esta mensagem com o que falta. Se agora só tiver uma parte, envie essa: o resto pode vir depois, e assim que estiver completo o pedido segue e as propostas chegam-lhe por aqui. Pedir continua a ser grátis e sem compromisso.",
         "Obrigado,\nEquipa CLYON",
       ].join("\n\n"),
     );
@@ -81,10 +82,9 @@ describe("a mensagem", () => {
     expect(texto).not.toMatch(/fotografia|elevador|andar|nome/i);
   });
 
-  it("uma falta só, no singular", () => {
-    expect(mensagemDoQueFalta(PEDIDO, ["morada"], TARDE)).toContain(
-      "precisamos de uma informação que está em falta:",
-    );
+  it("uma falta só, ou várias: «Só falta:» (d91, 3.7)", () => {
+    expect(mensagemDoQueFalta(PEDIDO, ["morada"], TARDE)).toContain("está quase pronto para seguir para os parceiros da sua zona. Só falta:");
+    expect(mensagemDoQueFalta(PEDIDO, ["morada", "andar"], TARDE)).toContain("Só falta:");
   });
 
   it("sem faltas, não há mensagem — e chaves estranhas ou repetidas caem", () => {
@@ -97,13 +97,14 @@ describe("a mensagem", () => {
       const texto = mensagemDoQueFalta({ id: 7, serviceType: servico, city: "Seixal" }, [...CHAVES_DAS_FALTAS], TARDE);
       expect(texto, String(servico)).not.toMatch(/\p{Extended_Pictographic}/u);
       expect(texto, String(servico)).not.toMatch(/[…—–«»“”•✓→]/);
-      expect(texto, String(servico)).not.toMatch(/€|\bIVA\b|preço/i);
+      // Nenhum valor: a d91 (3.7) diz porque se pedem as fotografias («um preço certo»), mas número nenhum.
+      expect(texto, String(servico)).not.toMatch(/€|\bIVA\b|preço\s+(de|é|:)?\s*\d/i);
       expect(linhasDaLista(texto)).toHaveLength(CHAVES_DAS_FALTAS.length);
     }
   });
 
   it("sem o serviço ou sem a localidade, diz o que sabe", () => {
-    expect(mensagemDoQueFalta({ id: 9, serviceType: null, city: null }, ["servico"], TARDE)).toContain("seu pedido #9. Para");
+    expect(mensagemDoQueFalta({ id: 9, serviceType: null, city: null }, ["servico"], TARDE)).toContain("seu pedido #9 está quase pronto");
     expect(mensagemDoQueFalta({ id: 9, serviceType: "mudanca", city: null }, ["morada"], TARDE)).toContain("#9 (mudança)");
     expect(mensagemDoQueFalta({ id: 9, serviceType: "outro", city: "Setúbal, Portugal" }, ["morada"], TARDE)).toContain(
       "#9 (em Setúbal)",

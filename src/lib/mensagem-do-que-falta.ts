@@ -159,12 +159,13 @@ export function linhaDaFalta(chave: ChaveDaFalta, servico?: string | null): stri
     case "servico":
       return "Que serviço precisa: recolha, esvaziamento, mudança ou manutenção da casa.";
     case "fotografias":
-      if (mudanca) return "Algumas fotografias das divisões e dos móveis maiores, para os parceiros avaliarem o volume.";
-      if (s === "manutencao_casa") return "Fotografias do que é para reparar, para os parceiros perceberem o trabalho.";
-      if (s === "recolha_entulho") return "Fotografias do entulho, para os parceiros avaliarem o volume.";
-      if (ESVAZIAMENTO.has(s)) return "Fotografias das divisões a esvaziar, para os parceiros avaliarem o volume.";
-      if (RECOLHA.has(s)) return "Fotografias do que é para levar, para os parceiros avaliarem o volume.";
-      return "Algumas fotografias, para os parceiros perceberem o trabalho.";
+      // d91 (3.7): a razão que conta para o cliente — um preço certo e sem surpresas no dia (o objecto muda com o serviço).
+      if (mudanca) return `2 ou 3 fotografias das divisões e dos móveis maiores${SEM_SURPRESAS}`;
+      if (s === "manutencao_casa") return `2 ou 3 fotografias do que é para reparar${SEM_SURPRESAS}`;
+      if (s === "recolha_entulho") return `2 ou 3 fotografias do entulho${SEM_SURPRESAS}`;
+      if (ESVAZIAMENTO.has(s)) return `2 ou 3 fotografias das divisões a esvaziar${SEM_SURPRESAS}`;
+      if (RECOLHA.has(s)) return `2 ou 3 fotografias do que é para levar${SEM_SURPRESAS}`;
+      return `2 ou 3 fotografias do trabalho${SEM_SURPRESAS}`;
     case "descricao":
       if (mudanca) return "O que é para mudar: os móveis maiores, os eletrodomésticos e se há caixas.";
       if (s === "manutencao_casa") return "O que é para reparar ou fazer, com o máximo de pormenor que conseguir.";
@@ -209,7 +210,8 @@ export function linhaDaFalta(chave: ChaveDaFalta, servico?: string | null): stri
     case "estacionamentoDestino":
       return "Se há onde estacionar perto da porta, no destino.";
     case "data":
-      return "Para quando precisa do serviço (um dia certo, ou se tem flexibilidade).";
+      // d91 (3.7): os parceiros dizem logo nas propostas se podem.
+      return "Para quando precisa (um dia certo, ou se tem flexibilidade): os parceiros dizem-lhe logo nas propostas se podem.";
     case "nome":
       return "O seu nome, para o pedido ficar em seu nome.";
   }
@@ -251,6 +253,13 @@ export function oPedidoEmPalavras(p: PedidoDaMensagem): string {
 export const EQUIPA_DA_CLYON_NO_MODELO = "Aqui é a equipa da CLYON.";
 export const PODE_RESPONDER_COM_O_QUE_FALTA = "Pode responder a esta mensagem com o que falta.";
 
+/** d91 (3.7): o fim da linha das fotografias. */
+const SEM_SURPRESAS = ": com elas, os parceiros dão um preço certo e sem surpresas no dia.";
+
+/** d91 (3.7): o que se pode mandar já, e o que continua a ser verdade. */
+export const SE_SO_TIVER_UMA_PARTE =
+  "Se agora só tiver uma parte, envie essa: o resto pode vir depois, e assim que estiver completo o pedido segue e as propostas chegam-lhe por aqui. Pedir continua a ser grátis e sem compromisso.";
+
 /**
  * A MENSAGEM, para o WhatsApp e para o corpo do email. Pede só o que falta,
  * uma linha por falta. Sem faltas, devolve "" — um pedido completo não se
@@ -265,15 +274,17 @@ export function mensagemDoQueFalta(
   if (lista.length === 0) return "";
   const emPalavras = oPedidoEmPalavras(pedido);
   const doPedido = `#${pedido.id}${emPalavras ? ` (${emPalavras})` : ""}`;
-  const precisamos =
-    lista.length === 1
-      ? "Para lhe enviarmos o orçamento mais adequado, precisamos de uma informação que está em falta:"
-      : "Para lhe enviarmos o orçamento mais adequado, precisamos de algumas informações que estão em falta:";
+  /*
+   * d91 (3.7, 23-11-2026): «quase pronto» (progresso) em vez de «em falta»
+   * (culpa); responde já ao «posso enviar a foto amanhã?»; repete que é
+   * grátis. Ficam letra a letra «Aqui é a equipa da CLYON.», «pedido #N» e
+   * «Pode responder a esta mensagem com o que falta.» (d86, envio-de-modelo.ts).
+   */
   return [
     `${cumprimentoPelaHora(quando)}! ${EQUIPA_DA_CLYON_NO_MODELO}`,
-    `Estamos a contactar por causa do seu pedido ${doPedido}. ${precisamos}`,
+    `O seu pedido ${doPedido} está quase pronto para seguir para os parceiros da sua zona. Só falta:`,
     lista.map((c) => `- ${linhaDaFalta(c, pedido.serviceType)}`).join("\n"),
-    PODE_RESPONDER_COM_O_QUE_FALTA,
+    `${PODE_RESPONDER_COM_O_QUE_FALTA} ${SE_SO_TIVER_UMA_PARTE}`,
     "Obrigado,\nEquipa CLYON",
   ].join("\n\n");
 }

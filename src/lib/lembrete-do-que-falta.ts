@@ -42,6 +42,8 @@ import { aHoraDoDia, diaEHoraCurtos, momentoDeSaida, naJanelaDasMensagensAutomat
 import {
   arrumarAsFaltas,
   cumprimentoPelaHora,
+  EQUIPA_DA_CLYON_NO_MODELO,
+  linhaDaFalta,
   mensagemDoQueFalta,
   oPedidoEmPalavras,
   type ChaveDaFalta,
@@ -336,21 +338,9 @@ export function porqueParaOCiclo(
 
 /* ── Os textos ───────────────────────────────────────────────────────────── */
 
-/** A assinatura do modelo — a frase da d71 entra antes dela. */
-const ASSINATURA_DO_MODELO = "Obrigado,\nEquipa CLYON";
-
 function oPedido(p: PedidoDaMensagem): string {
   const em = oPedidoEmPalavras(p);
   return `#${p.id}${em ? ` (${em})` : ""}`;
-}
-
-/** O modelo com o «responda 2» antes da assinatura. */
-function comOResponda2(modelo: string): string {
-  if (!modelo) return "";
-  if (modelo.endsWith(ASSINATURA_DO_MODELO)) {
-    return `${modelo.slice(0, -ASSINATURA_DO_MODELO.length)}${SE_JA_NAO_PRECISAR}\n\n${ASSINATURA_DO_MODELO}`;
-  }
-  return `${modelo}\n\n${SE_JA_NAO_PRECISAR}`;
 }
 
 /**
@@ -361,20 +351,61 @@ export function textoDoLembrete1(p: PedidoDaMensagem, faltas: readonly ChaveDaFa
   return mensagemDoQueFalta(p, faltas, quando);
 }
 
-/** A 2.ª, no dia seguinte — o modelo, mais o «responda 2» da d71. Sem faltas, "". */
+/*
+ * A 2.ª, A 3.ª E O ARQUIVO — os textos da d91 (Marketing, secção 3.19),
+ * passados dos dias 1/3/5/7 da d71 ao ritmo da d88 (1.ª aos 30 min, 2.ª no dia
+ * seguinte, 3.ª no dia a seguir, arquivo no seguinte): a 3.ª avisa que o pedido
+ * é arquivado AMANHÃ. Ficam letra a letra «Aqui é a equipa da CLYON» (o
+ * `pedidoDoEnvioDeModelo` da d86), «#N» e `SE_JA_NAO_PRECISAR` (o
+ * `eLembreteDoQueFalta`). A lista vai em linhas («- …»), as mesmas do modelo
+ * (`linhaDaFalta`), para as traduções fixas a lerem.
+ */
+const listaDasFaltas = (p: PedidoDaMensagem, faltas: readonly ChaveDaFalta[]) =>
+  arrumarAsFaltas(faltas)
+    .map((c) => `- ${linhaDaFalta(c, p.serviceType)}`)
+    .join("\n");
+
+/** d91 (3.19, 2.ª): o pedido continua guardado, e basta responder. */
+export const COM_ISSO_SEGUE = "Com isso, segue para os parceiros da sua zona e as propostas chegam-lhe por aqui. Basta responder a esta mensagem.";
+
+/** d91 (3.19, 3.ª): a perda verdadeira, sem ameaça — o pedido arquiva-se amanhã. */
+export const SEM_RESPOSTA_ARQUIVA_AMANHA =
+  "Sem resposta, o pedido fica arquivado amanhã, e para receber propostas teria de o fazer de novo. Basta responder a esta mensagem para ele seguir para os parceiros.";
+
+/** A 2.ª, no dia seguinte — «continua guardado», com o «responda 2» da d71. Sem faltas, "". */
 export function textoDoLembrete2(p: PedidoDaMensagem, faltas: readonly ChaveDaFalta[], quando: Date): string {
-  return comOResponda2(mensagemDoQueFalta(p, faltas, quando));
+  if (arrumarAsFaltas(faltas).length === 0) return "";
+  return [
+    `${cumprimentoPelaHora(quando)}! ${EQUIPA_DA_CLYON_NO_MODELO}`,
+    `O seu pedido ${oPedido(p)} continua guardado, à espera de:`,
+    listaDasFaltas(p, faltas),
+    COM_ISSO_SEGUE,
+    SE_JA_NAO_PRECISAR,
+    "Equipa CLYON",
+  ].join("\n\n");
 }
 
-/** A 3.ª e última — o mesmo texto da 2.ª. Sem faltas, "". */
+/** A 3.ª e última — o último aviso: o pedido arquiva-se amanhã. Sem faltas, "". */
 export function textoDoLembrete3(p: PedidoDaMensagem, faltas: readonly ChaveDaFalta[], quando: Date): string {
-  return comOResponda2(mensagemDoQueFalta(p, faltas, quando));
+  if (arrumarAsFaltas(faltas).length === 0) return "";
+  return [
+    `${cumprimentoPelaHora(quando)}! ${EQUIPA_DA_CLYON_NO_MODELO}`,
+    `Último aviso sobre o seu pedido ${oPedido(p)}. Ainda falta:`,
+    listaDasFaltas(p, faltas),
+    SEM_RESPOSTA_ARQUIVA_AMANHA,
+    SE_JA_NAO_PRECISAR,
+    "Equipa CLYON",
+  ].join("\n\n");
 }
+
+/** d91 (3.19, arquivo): pode voltar a pedir, grátis e sem compromisso. */
+export const SE_AINDA_PRECISAR_DO_ARQUIVO =
+  "Se ainda precisar, basta responder por aqui ou pedir de novo na plataforma clyon.pt: é grátis e sem compromisso, e teremos todo o gosto em ajudar.";
 
 /** No dia a seguir à 3.ª — o pedido foi arquivado sem resposta: pode voltar a pedir quando quiser. */
 export function textoDoArquivo(p: PedidoDaMensagem, quando: Date): string {
   return [
-    `${cumprimentoPelaHora(quando)}! Como não tivemos resposta, arquivámos o seu pedido ${oPedido(p)}. Pode voltar a pedir quando quiser, pela plataforma clyon.pt ou por aqui, e teremos todo o gosto em ajudar.`,
+    `${cumprimentoPelaHora(quando)}! Como não tivemos resposta, arquivámos o seu pedido ${oPedido(p)}. ${SE_AINDA_PRECISAR_DO_ARQUIVO}`,
     "Equipa CLYON",
   ].join("\n\n");
 }
@@ -389,8 +420,10 @@ export function textoDoPasso(passo: PassoDoQueFalta, p: PedidoDaMensagem, faltas
 
 /** O assunto do email (sem travessões). */
 export function assuntoDoLembrete(passo: PassoDoQueFalta, pedidoId: number): string {
+  // d91 (3.19): os assuntos novos.
   if (passo === "arquivar") return `Pedido #${pedidoId} arquivado`;
-  return `Pedido #${pedidoId}: informações em falta`;
+  if (passo === "lembrete3") return `Pedido #${pedidoId}: último aviso antes de arquivar`;
+  return `Pedido #${pedidoId}: falta pouco para receber propostas`;
 }
 
 /* ── A resposta: o «2» cancela, o resto segue a conversa ────────────────── */

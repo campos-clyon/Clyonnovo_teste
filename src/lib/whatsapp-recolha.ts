@@ -99,6 +99,7 @@ import { estimativaDoEntulhoDito } from "./preco-do-entulho-na-conversa";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 import { datasDitas, parteDoDiaNaFrase, primeiraPreferida, quandoComVariasDatas } from "./datas-ditas";
 import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
+import { naJanelaDasMensagensAutomaticas } from "./janela-das-mensagens-automaticas";
 import { COMO_FUNCIONA, perguntaOQueAconteceAgora } from "./perguntas-frequentes-da-vitoria";
 import { separarASegundaMorada, type SegundaMorada } from "./segunda-morada";
 import type { AnuncioDeImovel } from "./anuncio-de-imovel";
@@ -1765,6 +1766,17 @@ function linhasDoResumo(d: DadosDaRecolha): string[] {
     `Fatura: ${factura}`,
   ].filter((l): l is string => l != null);
   return linhas;
+}
+
+/**
+ * O QUE JÁ ESTÁ ANOTADO — d93 (23-11-2026). As linhas do resumo que já têm
+ * resposta, na mesma forma (as traduções fixas lêem-nas como lêem o resumo):
+ * para o lembrete da conversa parada a meio dizer onde ficou, sem recomeçar.
+ * O que ainda não se sabe («—») e a fatura por perguntar ficam de fora.
+ */
+export function oQueJaEstaAnotado(d: DadosDaRecolha): string[] {
+  const temQuando = Boolean(d.quandoComTodas || d.dataDesejada || d.quandoTexto || d.urgency);
+  return linhasDoResumo(d).filter((l) => !l.includes("—") && (temQuando || !l.startsWith("Quando: ")));
 }
 
 export function resumo(d: DadosDaRecolha): string {
@@ -5232,8 +5244,14 @@ export function perguntaDeSeguimento(passo: PassoDaRecolha, d: DadosDaRecolha): 
   }
 }
 
+/** d91 (3.2): o efeito de progresso — com 3 perguntas ou menos por fazer. */
+export const FALTA_POUCO = "Falta pouco para o seu pedido seguir para os parceiros.";
+
 export function textoDoSeguimento(passo: PassoDaRecolha, d: DadosDaRecolha): string {
-  return `${ABERTURA_DO_SEGUIMENTO} ${perguntaDeSeguimento(passo, d)}`;
+  // As perguntas de `perguntaDeSeguimento` ficam como estão: o `passoDaPergunta` reconhece-as.
+  const faltam = passosEmFalta(d).length;
+  const pouco = faltam > 0 && faltam <= 3 ? ` ${FALTA_POUCO}` : "";
+  return `${ABERTURA_DO_SEGUIMENTO}${pouco} ${perguntaDeSeguimento(passo, d)}`;
 }
 
 /**
@@ -5623,6 +5641,11 @@ export function mensagemDePedidoRegistado(
   sozinho = false,
   /** Já seguiu para os parceiros pelo envio automático (d87, 22-11-2026): diz-se a verdade. */
   jaSeguiu = false,
+  /**
+   * d91 (3.5): fora das 8h–21h de Lisboa o envio aos parceiros espera pelas 8h
+   * (d87/d88) — diz-se «a partir das 8h» em vez do prazo. Sem isto, o prazo.
+   */
+  agora?: Date,
 ): string {
   const p = primeiroNome(nome);
   /*
@@ -5630,17 +5653,33 @@ export function mensagemDePedidoRegistado(
    * orçamento?» no mesmo minuto em que confirmou, e a resposta foi só «as
    * propostas chegam-lhe por aqui». Agora diz-se quando.
    */
+  const deNoite = agora != null && !jaSeguiu && !naJanelaDasMensagensAutomaticas(agora);
+  const asPropostas = deNoite
+    ? "e as propostas começam a chegar-lhe por aqui a partir das 8h."
+    : `e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
+  /*
+   * d91 (3.5, 23-11-2026): é o momento de maior intenção — tiram-se as duas
+   * dúvidas que travam a escolha mais tarde (o custo de pedir e o pagar
+   * adiantado: «não paga nada adiantado», a frase do modelo de 15-11) e dá-se
+   * uma razão concreta para a fotografia (propostas sem surpresas no dia).
+   */
   return (
     `Pedido #${pedidoId} registado! Muito obrigada${p ? `, ${p}` : ""}.\n\n` +
     (sozinho
       ? "Como não recebi resposta ao resumo, registei-o com os dados que me deu — se alguma coisa estiver mal, é só dizer-me e corrigimos.\n\n"
       : "") +
     (jaSeguiu
-      ? `O seu pedido já seguiu para os parceiros da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`
-      : `A CLYON vai conferi-lo e enviá-lo aos parceiros da sua zona, e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`) +
-    (comFotos
-      ? ""
-      : "\n\nSe tiver fotografias do que é para levar, envie-as agora por aqui: ficam no pedido e ajudam a acertar o preço.") +
+      ? `O seu pedido já seguiu para os parceiros da sua zona, ${asPropostas}`
+      : `A CLYON confere-o e envia-o aos parceiros da sua zona, ${asPropostas}`) +
+    ` ${DEPOIS_E_SO_ESCOLHER}` +
+    (comFotos ? "" : `\n\n${AS_FOTOGRAFIAS_DO_REGISTO}`) +
     "\n\nQualquer dúvida, estou por aqui 😊"
   );
 }
+
+/** d91 (3.5): o passo seguinte, sem medo — pedir é grátis e não há nada adiantado. */
+export const DEPOIS_E_SO_ESCOLHER = "Depois é só escolher: pedir é grátis e não paga nada adiantado.";
+
+/** d91 (3.5): a razão concreta para a fotografia. */
+export const AS_FOTOGRAFIAS_DO_REGISTO =
+  "Uma ou duas fotografias do que é para levar trazem propostas mais certas e sem surpresas no dia. Pode enviá-las agora por aqui.";

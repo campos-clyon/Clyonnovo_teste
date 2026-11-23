@@ -277,10 +277,11 @@ describe("os textos ao cliente", () => {
   ];
 
   it("a 1.ª é a do texto base: o primeiro nome, o pedido, o serviço e as três opções", () => {
+    // d91 (3.18 e 5.3): o 612 (par) leva a variante A — o risco que se tira.
     expect(textoDaMensagem1(d)).toBe(
-      "Olá, Ana! Ficou de pensar no seu pedido #612 (recolha de monos). Ainda quer avançar? Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.",
+      "Olá, Ana! Ficou de pensar no seu pedido #612 (recolha de monos). Se ajudar a decidir: o valor da proposta já é o total a pagar, não paga nada adiantado, e o que aparecer a mais no dia só se faz com o seu acordo. Ainda quer avançar? Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.",
     );
-    expect(textoDaMensagem3(d)).toContain("Se não tivermos resposta, o pedido fecha amanhã.");
+    expect(textoDaMensagem3(d)).toContain("Se não tivermos resposta, o pedido fecha amanhã e, para avançar depois, terá de pedir propostas de novo.");
     expect(textoDoFechoDoSeguimento(612)).toContain("pode voltar a pedir quando quiser");
     for (const t of textos.slice(0, 5)) expect(t).toContain(AS_OPCOES_DO_SEGUIMENTO);
   });
@@ -381,7 +382,8 @@ describe("a conversa do seguimento", () => {
 
   it("«3» → só pergunta; o CANCELAR cancela, uma vez", async () => {
     await oClienteEscreve("3");
-    expect(estado.enviados.at(-1)).toBe("Confirma que quer cancelar o pedido #612? Responda CANCELAR.");
+    expect(estado.enviados.at(-1)).toBe(textoDaConfirmacaoDoCancelamento(612));
+    expect(estado.enviados.at(-1)?.startsWith("Confirma que quer cancelar o pedido #612? Responda CANCELAR.")).toBe(true);
     expect(estado.cancelado).toBe(false);
     expect(estado.passadas).toEqual([]);
     // Outro «3» à espera: nem pergunta outra vez, nem cancela.

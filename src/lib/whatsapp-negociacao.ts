@@ -137,8 +137,13 @@ export async function recolherPedidoPorWhatsApp(
   const { compreender, compreensaoDisponivel } = await import("@/lib/whatsapp-compreensao");
 
   const guardada = await recolhaWhatsApp(telefone);
-  const paradaHaMuito =
-    guardada != null && Date.now() - new Date(guardada.actualizadoEm).getTime() > 24 * 3600_000;
+  /*
+   * O RASCUNHO GUARDA-SE 7 DIAS — d93 (23-11-2026). Era um dia: a cliente que
+   * disse tudo às 11h58 ouviu no dia seguinte «o que é para levar?» outra vez.
+   * Ver `conversa-parada-a-meio.ts` (`HORAS_DO_RASCUNHO`).
+   */
+  const { rascunhoAindaVale } = await import("@/lib/conversa-parada-a-meio");
+  const paradaHaMuito = guardada != null && !rascunhoAindaVale(guardada.actualizadoEm);
   type Estado = Parameters<typeof responderNaRecolha>[0];
 
   /*
@@ -624,7 +629,7 @@ export async function registarARecolha(
       disseQueMandouFotografias(dados);
     await enviarTextoWhatsApp(
       telefone,
-      mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true, jaSeguiu),
+      mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true, jaSeguiu, new Date()),
     );
     /*
      * A DESCRIÇÃO FICOU POR TRADUZIR (d46): o tradutor falhou e ela está na
@@ -923,6 +928,101 @@ async function tratarOValorUnico(
 }
 
 /**
+ * O «VOU PENSAR» — d90 (23-11-2026). Lido no texto dele (`disseQueVaiPensar`):
+ * a resposta delicada (o banco de objecções da d91) e o seguimento da d83 a
+ * arrancar sozinho (`arrancarOSeguimentoSozinho`, «vai_pensar», amanhã às
+ * 10h). Se o seguimento não puder arrancar (desligado, já correu neste pedido,
+ * Trabalho CLYON, sem contacto), a mesma resposta, e a conversa passa à equipa.
+ * Devolve true quando tratou a mensagem.
+ */
+export async function tentarOVaiPensar(telefone: string, texto: string, pedidoId: number): Promise<boolean> {
+  const vp = await import("@/lib/o-cliente-vai-pensar");
+  const { reclamaDoAtendimento } = await import("@/lib/voz-da-vitoria");
+  const tipo = vp.disseQueVaiPensar(texto, { queixa: reclamaDoAtendimento(texto) });
+  if (!tipo) return false;
+  const resposta = vp.respostaAoVaiPensar(tipo);
+  const { arrancarOSeguimentoSozinho } = await import("@/lib/seguimento-do-cliente-na-base");
+  const r = await arrancarOSeguimentoSozinho(pedidoId, "vai_pensar").catch((err) => ({
+    ok: false as const,
+    porque: err instanceof Error ? err.message : "erro",
+  }));
+  if (!r.ok) {
+    await passarAUmaPessoa(telefone, `Pedido #${pedidoId}: o cliente disse que ia pensar — sem seguimento automático (${r.porque})`, resposta);
+    return true;
+  }
+  await enviarTextoWhatsApp(telefone, resposta);
+  return true;
+}
+
+/**
+ * O CLIENTE QUER CANCELAR — d93 (23-11-2026). Devolve true quando tratou a
+ * mensagem: cancelou (e anonimizou), perguntou o CANCELAR, ou passou à equipa.
+ * Sem pedido aberto, ou com uma recolha a meio (o «cancelar» é dela), não é
+ * daqui.
+ */
+export async function tratarOCancelamentoPeloCliente(telefone: string, texto: string): Promise<boolean> {
+  const cpc = await import("@/lib/cancelar-pelo-cliente");
+  const { eConfirmacaoDoCancelamento } = await import("@/lib/validade-do-orcamento");
+  const leitura = cpc.querCancelar(texto);
+  const oCancelar = eConfirmacaoDoCancelamento(texto);
+  if (!leitura && !oCancelar) return false;
+  const base = await import("@/lib/cancelar-pelo-cliente-na-base");
+  const abertos = await base.pedidosAbertosDoTelefone(telefone).catch(() => [] as number[]);
+  if (abertos.length === 0) return false;
+  // Uma recolha a meio, sem pedido: o «cancelar» é dela (a desistência da recolha).
+  const { recolhaWhatsApp, mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+  const g = await recolhaWhatsApp(telefone).catch(() => null);
+  const { rascunhoAindaVale } = await import("@/lib/conversa-parada-a-meio");
+  if (g && g.pedidoId == null && g.passo !== "servico" && rascunhoAindaVale(g.actualizadoEm)) return false;
+
+  const cancelarJa = async (pedidoId: number): Promise<boolean> => {
+    const r = await base.cancelarPeloCliente(pedidoId, telefone).catch((err) => ({
+      ok: false as const,
+      porque: err instanceof Error ? err.message : "erro",
+      daEquipa: false,
+    }));
+    if (r.ok) return true;
+    await passarAUmaPessoa(
+      telefone,
+      `Pedido #${pedidoId}: o cliente quer cancelar, mas ${r.porque} — ${r.daEquipa ? "tratar à mão" : "cancelar à mão"}`,
+      r.daEquipa ? cpc.PASSO_O_CANCELAMENTO_A_EQUIPA : MENSAGEM_DE_PASSAR_A_UMA_PESSOA,
+    );
+    return true;
+  };
+
+  // O CANCELAR à pergunta deste caminho (a última mensagem que lhe saiu, há menos de 48 h).
+  if (oCancelar) {
+    const fio = await mensagensDoNumeroWhatsApp(telefone, 10).catch(() => []);
+    const ultimaSaida = [...fio].reverse().find((m) => m.direccao === "out") ?? null;
+    const perguntado = abertos.find((id) => cpc.aPerguntaDoCancelarVale(ultimaSaida, id));
+    if (perguntado != null) return cancelarJa(perguntado);
+  }
+
+  const escrito = cpc.pedidoNaFrase(texto);
+  const alvo = escrito != null && abertos.includes(escrito) ? escrito : abertos.length === 1 ? abertos[0] : null;
+  if (alvo == null) {
+    await passarAUmaPessoa(telefone, `Quer cancelar, e tem ${abertos.length} pedidos abertos (#${abertos.join(", #")}) — confirmar qual`);
+    return true;
+  }
+  // O contratado, pago, com referência viva ou faturado: a equipa, logo (nem se pergunta).
+  const p = await base.lerOPedidoParaCancelar(alvo).catch(() => null);
+  const fica = p ? cpc.porqueFicaComAEquipa(p) : "o pedido não se leu";
+  if (fica) {
+    await passarAUmaPessoa(telefone, `Pedido #${alvo}: o cliente quer cancelar, mas ${fica} — tratar à mão`, cpc.PASSO_O_CANCELAMENTO_A_EQUIPA);
+    return true;
+  }
+  if (leitura === "claro") return cancelarJa(alvo);
+  // Ambíguo (ou o CANCELAR sem a pergunta feita): pergunta-se.
+  await enviarTextoWhatsApp(telefone, cpc.perguntaDoCancelamento(alvo));
+  await appendOrderHistory(alvo, {
+    type: "note",
+    by: null,
+    message: "O cliente falou em cancelar na conversa: perguntámos se confirma (responde CANCELAR). Nada foi cancelado (d93).",
+  }).catch(() => {});
+  return true;
+}
+
+/**
  * O «1», O «2» E O «3» AO LEMBRETE DO ORÇAMENTO — 18-11-2026 (d62).
  *
  *   · «1» (ou «sim», «avançar»): numa negociação, fecha a proposta do lembrete
@@ -976,6 +1076,9 @@ export async function responderAoLembreteDoOrcamento(
     return;
   }
   const c = ciclos[0];
+
+  // d90: «vou pensar» ao lembrete — a resposta delicada e o seguimento sozinho (que pára a validade).
+  if (leitura === null && (await tentarOVaiPensar(telefone, texto, c.pedidoId))) return;
 
   if (leitura === null || leitura === "duvidas") {
     await base.pararOCiclo(c.pedidoId, leitura === "duvidas" ? "«2» — dúvidas ou outra data" : "o cliente escreveu").catch(() => {});
@@ -2434,7 +2537,9 @@ async function conversaPresaARecolha(telefone: string, pedidos: number[], soImag
   const { recolhaWhatsApp } = await import("@/lib/db");
   const g = await recolhaWhatsApp(telefone).catch(() => null);
   if (!g) return false;
-  if (Date.now() - new Date(g.actualizadoEm).getTime() > 24 * 3600_000) return false;
+  // O rascunho vale 7 dias (d93).
+  const { rascunhoAindaVale } = await import("@/lib/conversa-parada-a-meio");
+  if (!rascunhoAindaVale(g.actualizadoEm)) return false;
   const d = g.dados as DadosDaRecolhaAqui;
   const presa =
     g.pedidoId == null
@@ -2837,8 +2942,17 @@ export async function tratarMensagemDoCliente(
         await responderAoSeguimentoDoCliente(telefone, conteudo.texto, lido.responde);
         return;
       }
+      /*
+       * UM «OBRIGADO» SOZINHO NÃO PÁRA O SEGUIMENTO — d90 (23-11-2026). A quem
+       * disse que ia pensar, a Vitória respondeu com delicadeza; o «obrigada» que
+       * vem a seguir não é uma resposta que precise de nós: o ciclo continua
+       * (a marcação passa para agora, para a rotina não o ler como resposta).
+       */
+      const { eSoUmObrigado: soObrigado } = await import("@/lib/aviso-de-data-ao-cliente");
+      const soAgradeceu = !soImagens && soObrigado(conteudo.texto);
       for (const id of lido?.aCorrer ?? []) {
-        await seguimento.pararSeguimento(id, "o cliente respondeu", new Date()).catch(() => false);
+        if (soAgradeceu) await seguimento.seguimentoContinuaDepoisDoObrigado(id).catch(() => false);
+        else await seguimento.pararSeguimento(id, "o cliente respondeu", new Date()).catch(() => false);
       }
     }
 
@@ -2872,6 +2986,15 @@ export async function tratarMensagemDoCliente(
         }
       }
     }
+
+    /*
+     * O CLIENTE CANCELA PELA CONVERSA — 23-11-2026 (decisão d93). «Quero
+     * cancelar o pedido», «já não preciso, cancelem»: cancela logo, anonimiza
+     * na hora e o número não volta a ser contactado; «cancelar a data», «se
+     * calhar já não»: pergunta o CANCELAR. O contratado, pago, com referência
+     * viva ou faturado vai à equipa. Ver `cancelar-pelo-cliente.ts`.
+     */
+    if (!soImagens && (await tratarOCancelamentoPeloCliente(telefone, conteudo.texto))) return;
 
     /*
      * A RESPOSTA AO «PEDIR O QUE FALTA» — 22-11-2026 (decisão d86). A última
@@ -3224,6 +3347,30 @@ export async function tratarMensagemDoCliente(
    * estiver configurado, ou falhar, ou não perceber, lê-se o texto original —
    * que é exactamente o comportamento de sempre.
    */
+  /*
+   * COM PROPOSTAS EM CIMA DA MESA — d90 e d91 (23-11-2026), antes da tradução:
+   *   · «escolho o X com a condição de…» não é um SIM — fica anotado, e a
+   *     equipa confirma com o parceiro (nada fica marcado nem pago);
+   *   · «vou pensar», «estou a aguardar outros orçamentos», «depois digo»: a
+   *     resposta delicada, o pedido em «A aguardar cliente» e o seguimento a
+   *     arrancar sozinho amanhã às 10h. O preço, a queixa, a alteração e o
+   *     «quero falar com alguém» ficam com uma pessoa, como sempre.
+   */
+  if (conteudo.tipo === "texto") {
+    const comPropostas = (await alvosAccionaveis(pedidos)).filter((a) => a.precoNaMesa != null);
+    const { escolheComCondicao, ESCOLHA_COM_CONDICAO_ANOTADA } = await import("@/lib/perguntas-frequentes-da-vitoria");
+    if (comPropostas.length > 0 && escolheComCondicao(conteudo.texto)) {
+      await passarAUmaPessoa(
+        telefone,
+        `Pedido #${comPropostas[0].pedidoId}: escolheu uma proposta com uma condição — confirmar com o parceiro`,
+        ESCOLHA_COM_CONDICAO_ANOTADA,
+      );
+      return;
+    }
+    const doPedido = [...new Set(comPropostas.map((a) => a.pedidoId))];
+    if (doPedido.length === 1 && (await tentarOVaiPensar(telefone, conteudo.texto, doPedido[0]))) return;
+  }
+
   const {
     texto,
     accao: percebida,
@@ -3817,7 +3964,9 @@ export async function guardarFotoDoClienteNoPedido(
    */
   const conversa = await recolhaWhatsApp(telefone).catch(() => null);
   const naConversa = (conversa?.dados ?? {}) as { pedidoAberto?: number; pedidosAEscolher?: number[]; trocouDoPedido?: number };
-  const recente = conversa != null && Date.now() - new Date(conversa.actualizadoEm).getTime() < 24 * 3600_000;
+  // O rascunho vale 7 dias (d93).
+  const { rascunhoAindaVale } = await import("@/lib/conversa-parada-a-meio");
+  const recente = conversa != null && rascunhoAindaVale(conversa.actualizadoEm);
   let doPedidoAberto: number | null =
     conversa?.pedidoId != null && naConversa.pedidoAberto === conversa.pedidoId ? conversa.pedidoId : null;
   if (doPedidoAberto != null) {

@@ -175,8 +175,15 @@ describe("os textos", () => {
   const dados = { pedidoId: 701, nome: "maria exemplo", servico: "recolha de monos", semIva: 105, total: 129.15, parceiro: "Recolhas Exemplo" };
 
   it("o lembrete, com o valor e o IVA ao lado (nunca sozinho), o parceiro e as três opções", () => {
+    // d91 (3.13 e 5.2): o 700 (par) leva a variante A; o 701 (ímpar), a B.
+    expect(textoDoLembrete({ ...dados, pedidoId: 700 })).toBe(
+      "Olá, Maria! O orçamento do seu pedido #700 (recolha de monos) continua à sua espera: 105 € + IVA (129,15 € com IVA), com o parceiro Recolhas Exemplo. " +
+        "É o total a pagar, e não paga nada adiantado. " +
+        AS_TRES_OPCOES,
+    );
     expect(textoDoLembrete(dados)).toBe(
-      "Olá, Maria! O orçamento do seu pedido #701 (recolha de monos) é de 105 € + IVA (129,15 € com IVA), com o parceiro Recolhas Exemplo. " +
+      "Olá, Maria! Ficou alguma dúvida sobre o orçamento do pedido #701 (recolha de monos)? 105 € + IVA (129,15 € com IVA), com o parceiro Recolhas Exemplo. " +
+        "É o total a pagar, e não paga nada adiantado. " +
         AS_TRES_OPCOES,
     );
     expect(valorDoLembrete(50, 61.5, "hora")).toBe("50 € + IVA (61,50 € com IVA) por hora");
@@ -189,7 +196,10 @@ describe("os textos", () => {
   });
 
   it("o fecho, ao cliente e aos parceiros, palavra por palavra", () => {
-    expect(textoDoFechoAoCliente(701)).toBe("Fechámos o pedido #701. Se ainda precisar, responda aqui e reabrimos.");
+    // d91 (3.15).
+    expect(textoDoFechoAoCliente(701)).toBe(
+      "Fechámos o pedido #701, porque não tivemos resposta. Se ainda precisar, responda aqui e reabrimo-lo para os parceiros. Obrigada pelo seu tempo.",
+    );
     expect(textoDoFechoAoParceiro(701)).toBe("Pedido #701 fechado: o cliente não respondeu ao orçamento. Saiu da sua lista de pedidos.");
     expect(avisoSemOTrabalho({ pedidoId: 701, porque: "fechado_sem_resposta" }).body).toBe(textoDoFechoAoParceiro(701));
   });
@@ -370,7 +380,10 @@ describe("o interruptor — desligado por omissão", () => {
  */
 describe("d2 — o «3» pede confirmação e só o CANCELAR cancela", () => {
   it("a pergunta, palavra por palavra, com tradução fixa (en, fr, es)", () => {
-    expect(textoDaConfirmacaoDoCancelamento(612)).toBe("Confirma que quer cancelar o pedido #612? Responda CANCELAR.");
+    // d91 (3.17): o marcador fica letra a letra, e segue-se a frase que salva os «3» de preço ou de data.
+    expect(textoDaConfirmacaoDoCancelamento(612)).toBe(
+      "Confirma que quer cancelar o pedido #612? Responda CANCELAR. Se for por causa do valor ou da data, diga-nos o que lhe serve e falamos com os parceiros antes de fechar.",
+    );
     for (const l of ["en", "fr", "es"] as const) {
       const t = traducaoFixa(textoDaConfirmacaoDoCancelamento(612), l);
       expect(t, l).not.toBeNull();

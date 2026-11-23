@@ -90,8 +90,12 @@ export const SORRISO = "😊";
  * lhe darem o orçamento» punha a CLYON a orçamentar; o preço é de cada
  * profissional. A frase é a do Produto (frase-padrão 3).
  */
+/*
+ * d91 (3.1, 23-11-2026): quem sabe porque lhe fazem perguntas responde a elas, e
+ * «grátis e sem compromisso» tira logo o medo de ficar preso.
+ */
 export const O_QUE_ELA_FAZ =
-  "Vou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles.";
+  "Faço-lhe só as perguntas de que os parceiros da sua zona precisam e envio-lhes o seu pedido: eles respondem com o preço deles, e pedir é grátis e sem compromisso.";
 
 /**
  * «Boa tarde, Ana! Aqui é a Vitória, a assistente automática da CLYON 😊
@@ -365,13 +369,18 @@ export function reclamaDoAtendimento(texto: string): boolean {
 }
 
 /** O que ela diz a quem se queixou — e a conversa passa a uma colega. */
+/** d91 (3.3): a última frase das desculpas — segura o pedido. */
+export const NADA_SE_PERDE = "Nada do que já me disse se perde.";
+
 export function desculpasPeloAtendimento(primeiroNome: string | null | undefined, perguntouSeEUmaPessoa = false): string {
   const a = primeiroNome ? `, ${primeiroNome}` : "";
   // «Estou a falar com um robô?» — a verdade antes de passar (d85, 22-11-2026).
   const verdade = perguntouSeEUmaPessoa ? `${SOU_A_ASSISTENTE_AUTOMATICA} ` : "";
   return (
     `Peço imensa desculpa${a}. ${verdade}Não era nada disto que queríamos que sentisse. ` +
-    "Vou passar já a conversa a uma pessoa da CLYON, que trata de tudo consigo pessoalmente, com todo o cuidado."
+    "Vou passar já a conversa a uma pessoa da CLYON, que trata de tudo consigo pessoalmente, com todo o cuidado. " +
+    // d91 (3.3): quem está zangado teme ter de repetir tudo.
+    NADA_SE_PERDE
   );
 }
 

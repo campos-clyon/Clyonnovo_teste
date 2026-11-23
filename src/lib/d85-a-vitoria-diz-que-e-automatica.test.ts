@@ -33,7 +33,7 @@ describe("a apresentação diz que é automática, e oferece uma pessoa", () => 
     expect(QUEM_FALA).toBe("Aqui é a Vitória, a assistente automática da CLYON");
     expect(apresentacao("Boa tarde", "Ana")).toBe(
       "Boa tarde, Ana! Aqui é a Vitória, a assistente automática da CLYON 😊\n" +
-        "Vou anotar o seu pedido e enviá-lo aos parceiros da sua zona, que lhe respondem com o preço deles. " +
+        "Faço-lhe só as perguntas de que os parceiros da sua zona precisam e envio-lhes o seu pedido: eles respondem com o preço deles, e pedir é grátis e sem compromisso. " +
         "Se preferir falar com uma pessoa da equipa, é só dizer.",
     );
     // Um emoji só, o do cumprimento.
@@ -50,7 +50,7 @@ describe("a apresentação diz que é automática, e oferece uma pessoa", () => 
     const ola = apresentacao("Boa tarde", null);
     expect(traducaoFixa(ola, "en")).toBe(
       "Good afternoon! This is Vitória, CLYON's automated assistant 😊\n" +
-        "I'll note down your request and send it to the partners in your area, who will reply with their price. " +
+        "I'll only ask you the questions the partners in your area need, and send them your request: they reply with their own price, and asking is free and with no commitment. " +
         "If you'd rather speak to a person from the team, just let me know.",
     );
     expect(traducaoFixa(ola, "fr")).toContain("Ici Vitória, l'assistante automatique de CLYON 😊");

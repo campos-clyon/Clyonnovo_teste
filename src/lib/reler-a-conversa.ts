@@ -412,7 +412,8 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
    * elevador, da carrinha e do código postal; quem diz qual é a pergunta é o
    * fim da mensagem.
    */
-  const falta = t.lastIndexOf("so me falta uma coisa:");
+  // E o lembrete da conversa parada a meio (d93, 23-11-2026): «Já tenho anotado: […] Para continuarmos: {a pergunta}».
+  const falta = Math.max(t.lastIndexOf("so me falta uma coisa:"), t.lastIndexOf("para continuarmos:"));
   if (falta >= 0) {
     const fim = t.slice(falta);
     for (const [re, passo] of regras) if (re.test(fim)) return passo;

@@ -213,6 +213,58 @@ export function perguntaOQueAconteceAgora(texto: string): boolean {
   });
 }
 
+/*
+ * O BANCO DE OBJECÇÕES — d91 (Marketing, 23-11-2026, secção 4). As que se
+ * reconhecem com segurança respondem-se aqui; o «estou a aguardar orçamentos
+ * de outras empresas» e o «depois digo» são o «vou pensar» da d90
+ * (`o-cliente-vai-pensar.ts`); o «escolho X com a condição de…» responde-se e
+ * passa à equipa (`escolheComCondicao`).
+ */
+
+/** «Posso enviar a foto amanhã?» — fica tudo guardado no pedido. */
+export const PODE_ENVIAR_DEPOIS = "Claro que sim. Fica tudo guardado no pedido; quando a enviar, o pedido segue para os parceiros.";
+
+/** «Posso mandar as fotos amanhã?», «envio as fotografias logo à noite?». */
+export function perguntaSePodeEnviarDepois(texto: string): boolean {
+  return linhas(texto).some((l) => {
+    const t = semAcentos(l);
+    if (!/\b(fotos?|fotografias?|imagens?|videos?)\b/.test(t)) return false;
+    if (!/\b(amanha|depois|mais tarde|logo|a noite|ao fim do dia|no fim de semana|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b/.test(t)) return false;
+    return /\?\s*$/.test(l) || /^(posso|pode|podia|da para|e possivel|tem problema)\b/.test(t);
+  });
+}
+
+/** «A limpeza está incluída?» — só se estiver na proposta. */
+export const A_LIMPEZA_SO_NA_PROPOSTA =
+  "Só se estiver na proposta. Num esvaziamento, se quiser a limpeza no fim (ou a lavagem do chão), diga-nos: o parceiro põe-na na proposta, com o preço, antes de combinar. No entulho, o parceiro tira e leva o entulho; a limpeza final contrata-se à parte.";
+
+/** «A limpeza está incluída?», «fazem a limpeza no fim?», «e a limpeza?». */
+export function perguntaPelaLimpeza(texto: string): boolean {
+  return linhas(texto).some((l) => {
+    const t = semAcentos(l);
+    if (!/\blimpeza\b/.test(t)) return false;
+    return /\?/.test(l) && /\b(inclui|incluida|incluido|fazem|faz|tambem|e a limpeza|limpeza no fim|limpeza final|deixam limpo|fica limpo)\b/.test(t);
+  });
+}
+
+/**
+ * «ESCOLHO O X COM A CONDIÇÃO DE…» (o #663) — uma escolha que ainda não é um
+ * sim: nunca se fecha por aqui (um «aceito a proposta do X» lia-se como um
+ * SIM). Responde-se que fica anotado, que se confirma com o parceiro, e que
+ * nada fica marcado nem pago até lá; a conversa passa à equipa. Pura.
+ */
+export function escolheComCondicao(texto: string): boolean {
+  const t = semAcentos(texto);
+  return (
+    /\b(escolho|escolhemos|fico com|ficamos com|aceito|aceitamos|quero|queremos|prefiro|preferimos|avanco com|avancamos com)\b/.test(t) &&
+    /\b(com a condicao|na condicao|desde que|contanto que|se (for|puder ser|conseguir|conseguirem|der para)|mas so se|so se for|com a garantia)\b/.test(t)
+  );
+}
+
+/** A resposta à escolha com condição (d91, secção 4: a primeira frase). */
+export const ESCOLHA_COM_CONDICAO_ANOTADA =
+  "Obrigada! Fica anotado o que escolheu, com a condição que pôs. Uma pessoa da equipa confirma com o parceiro e responde-lhe por aqui assim que ele disser. Até lá nada fica marcado nem pago.";
+
 /**
  * A RESPOSTA DO SITE à pergunta que ele fez — ou `null`, quando não é uma das
  * que se reconhecem. Duas perguntas na mesma rajada levam as duas respostas,
@@ -222,9 +274,15 @@ export function respostaFrequente(texto: string, agora: Date = agoraDoModelo()):
   const t = texto.trim();
   if (!t) return null;
   const respostas: string[] = [];
-  if (perguntaSePodeMandarImagens(t)) respostas.push(PODE_MANDAR_IMAGENS);
+  // «Posso enviar a foto amanhã?» não é «pode ser um vídeo?» nem «é possível amanhã?» (d91).
+  const fotoDepois = perguntaSePodeEnviarDepois(t);
+  if (fotoDepois) respostas.push(PODE_ENVIAR_DEPOIS);
+  else if (perguntaSePodeMandarImagens(t)) respostas.push(PODE_MANDAR_IMAGENS);
   if (perguntaOQueEACarga(t)) respostas.push(O_QUE_E_A_CARGA);
-  if (perguntaPeloMesmoDia(t)) respostas.push(NO_MESMO_DIA);
+  if (perguntaPelaLimpeza(t)) respostas.push(A_LIMPEZA_SO_NA_PROPOSTA);
+  if (fotoDepois) {
+    /* o «amanhã» é das fotografias, e não do serviço */
+  } else if (perguntaPeloMesmoDia(t)) respostas.push(NO_MESMO_DIA);
   else if (perguntaPeloPrazoDasPropostas(t)) respostas.push(PROMESSA_DO_PRAZO);
   if (perguntaPeloIva(t)) respostas.push(O_IVA_NA_PROPOSTA);
   if (perguntaPorContentores(t)) respostas.push(RESPOSTA_SOBRE_CONTENTORES);

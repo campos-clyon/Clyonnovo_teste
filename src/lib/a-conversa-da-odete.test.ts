@@ -119,9 +119,9 @@ describe("a conversa da Odete: as fotografias que ela mandou", () => {
     const { estado } = falaComAOdete();
     const fim = mensagemDePedidoRegistado(446, disseQueMandouFotografias(estado.dados), estado.dados.contactName);
     expect(fim).toMatch(/^Pedido #446 registado! Muito obrigada, Odete\./);
-    expect(fim).not.toContain("Se tiver fotografias");
-    // A quem não disse nada de fotografias, continua a pedir-se.
-    expect(mensagemDePedidoRegistado(447, disseQueMandouFotografias({}), "Rui")).toContain("Se tiver fotografias");
+    expect(fim).not.toContain("fotografias do que é para levar");
+    // A quem não disse nada de fotografias, continua a pedir-se (d91, 3.5: a razão concreta — sem surpresas no dia).
+    expect(mensagemDePedidoRegistado(447, disseQueMandouFotografias({}), "Rui")).toContain("Uma ou duas fotografias do que é para levar");
   });
 
   it("é a marca que vai para a mensagem do registo, ao lado das que chegaram", () => {

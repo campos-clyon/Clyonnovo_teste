@@ -259,6 +259,20 @@ export async function pararSeguimento(pedidoId: number, porque: string, responde
   return Number(u.affectedRows) === 1;
 }
 
+/**
+ * UM «OBRIGADO» SOZINHO NÃO É UMA RESPOSTA — d90 (23-11-2026). O ciclo
+ * continua: a marcação passa para agora (a rotina compara a última mensagem
+ * dele com ela), e nada mais muda — nem o dia, nem a hora, nem o que já saiu.
+ */
+export async function seguimentoContinuaDepoisDoObrigado(pedidoId: number): Promise<boolean> {
+  const pool = await garantirTabelas();
+  const [u] = (await pool.execute(
+    `UPDATE seguimentoDoCliente SET marcadoEm = UTC_TIMESTAMP() WHERE pedidoId = ? AND ${A_CORRER_SQL}`,
+    [pedidoId],
+  )) as [{ affectedRows: number }, unknown];
+  return Number(u.affectedRows) === 1;
+}
+
 /* ── O pedido, como as regras o lêem ─────────────────────────────────────── */
 
 type PedidoLido = {
@@ -427,6 +441,134 @@ export async function falarComOCliente(m: Marcacao, agora: Date = new Date()): P
   return { ok: true, feito };
 }
 
+/* ── O seguimento que arranca sozinho — d90 (23-11-2026) ─────────────────── */
+
+export type PorqueArrancaSozinho = "vai_pensar" | "depois_da_equipa";
+
+export type ResultadoDoArranque = { ok: true; feito: string; voltarEm: Date } | { ok: false; porque: string };
+
+/**
+ * O SEGUIMENTO ARRANCA SOZINHO (d90). Como o «Falei com o cliente» da Mesa,
+ * com a resposta «vai_pensar» e quem marca «a Vitória (automático)»:
+ *
+ *   · «vai_pensar» — o cliente disse que ia pensar: a 1.ª mensagem amanhã às
+ *     10h (Lisboa); o pedido passa a «A aguardar cliente» (a proposta foi-lhe
+ *     dada, e agora a espera é dele);
+ *   · «depois_da_equipa» — a equipa respondeu à pergunta dele e ele não disse
+ *     mais nada até hoje: a 1.ª mensagem hoje às 10h.
+ *
+ * Só uma vez por pedido (um segundo «vou pensar», depois do seguimento, vai à
+ * equipa: nada de ciclos sem fim), nunca com um seguimento a correr, com o
+ * interruptor desligado, num pedido que já saiu do «Precisa de si», num
+ * Trabalho CLYON (o acordo é à mão) ou sem canal. A uma-por-dia, a janela e o
+ * «não contactar» seguem pela rotina de sempre.
+ */
+export async function arrancarOSeguimentoSozinho(
+  pedidoId: number,
+  porque: PorqueArrancaSozinho,
+  agora: Date = new Date(),
+): Promise<ResultadoDoArranque> {
+  if (!(await interruptorDoSeguimento()).ligado) return { ok: false, porque: "o seguimento do cliente está desligado" };
+  const pool = await garantirTabelas();
+  const p = (await lerPedidos(pool, [pedidoId])).get(pedidoId);
+  const saiu = saiuDoPrecisaDeSi(p);
+  if (saiu || !p) return { ok: false, porque: saiu ?? "o pedido não existe" };
+  if (p.eClyon) return { ok: false, porque: "Trabalho CLYON — o acordo é à mão" };
+  const { canal, porque: semCanal } = canalParaOPedido(p, emailsDeTesteDoAmbiente());
+  if (!canal) return { ok: false, porque: semCanal ?? "sem contacto" };
+  const antes = await cicloDoPedido(pool, pedidoId);
+  if (antes && seguimentoEmCurso(antes)) return { ok: false, porque: "já há um seguimento a correr" };
+  const { POR_A_VITORIA, NOTA_DO_VAI_PENSAR, NOTA_DEPOIS_DA_EQUIPA, voltarAmanhaAsDez, hojeAsDez } = await import("./o-cliente-vai-pensar");
+  if (antes?.contactos.some((k) => k.por === POR_A_VITORIA)) return { ok: false, porque: "o seguimento automático já correu neste pedido" };
+
+  const voltarEm = porque === "vai_pensar" ? voltarAmanhaAsDez(agora) : hojeAsDez(agora);
+  const nota = porque === "vai_pensar" ? "o cliente disse que ia pensar" : "o cliente não voltou a escrever depois da resposta da equipa";
+  const contacto: ContactoDoSeguimento = { em: agora.toISOString(), por: POR_A_VITORIA, resposta: "vai_pensar", nota, voltarEm: voltarEm.toISOString() };
+  const contactos = [...(antes?.contactos ?? []), contacto].slice(-CONTACTOS_GUARDADOS);
+  await pool.execute(
+    `INSERT INTO seguimentoDoCliente (pedidoId, marcadoEm, marcadoPor, resposta, voltarEm, canal, semEnvioPorque, contactosJson)
+     VALUES (?, UTC_TIMESTAMP(), ?, 'vai_pensar', ?, ?, NULL, ?)
+     ON DUPLICATE KEY UPDATE marcadoEm = VALUES(marcadoEm), marcadoPor = VALUES(marcadoPor), resposta = VALUES(resposta),
+       voltarEm = VALUES(voltarEm), canal = VALUES(canal), semEnvioPorque = NULL, contactosJson = VALUES(contactosJson),
+       mensagem1Em = NULL, mensagem2Em = NULL, mensagem3Em = NULL, arquivadoEm = NULL, canceladoEm = NULL,
+       paradoEm = NULL, paradoPorque = NULL, respondeuEm = NULL, porEnviar = NULL, porEnviarDesde = NULL,
+       ultimaFalha = NULL, cancelarPedidoEm = NULL`,
+    [pedidoId, POR_A_VITORIA.slice(0, 120), voltarEm, canal, JSON.stringify(contactos)],
+  );
+  // A validade do orçamento (d62) pára: daqui em diante é o seguimento que fala (como no «Falei com o cliente»).
+  try {
+    const { marcarCicloTerminado } = await import("./validade-do-orcamento-na-base");
+    await marcarCicloTerminado(pedidoId, "o seguimento do cliente arrancou sozinho (d90)");
+  } catch {
+    /* sem ciclo da validade */
+  }
+  if (porque === "vai_pensar") {
+    // «A aguardar cliente»: a proposta está com ele (num pedido que negoceia; num Trabalho CLYON não chega aqui).
+    const { marcarOrcamentoEnviado } = await import("./db");
+    await marcarOrcamentoEnviado(pedidoId).catch(() => {});
+  }
+  const { linhaDoContacto: linha } = await import("./seguimento-do-cliente");
+  const titulo = porque === "vai_pensar" ? NOTA_DO_VAI_PENSAR : NOTA_DEPOIS_DA_EQUIPA;
+  const feito = `${titulo} (${linha(contacto)}).`;
+  await appendOrderHistory(pedidoId, { type: "note", by: null, message: `${feito} (d90)` }).catch(() => {});
+  await registarSemFalhar({
+    acontecimento: "seguimento_do_cliente",
+    pedidoId,
+    autorTipo: "sistema",
+    autorNome: POR_A_VITORIA,
+    resumo: `${titulo} — seguimento automático ${canal === "whatsapp" ? "pelo WhatsApp" : "por email"} (d90).`,
+  });
+  return { ok: true, feito, voltarEm };
+}
+
+/**
+ * OS QUE A EQUIPA RESPONDEU ONTEM E O CLIENTE NÃO VOLTOU A ESCREVER (d90). Às
+ * 10h do dia seguinte (a rotina corre de 15 em 15 minutos), cada pedido com a
+ * proposta no cliente, sem seguimento, cujo fio acaba numa resposta à mão da
+ * equipa a uma pergunta dele, de ontem: o seguimento arranca sozinho, hoje às
+ * 10h. Devolve quantos arrancaram.
+ */
+export async function arrancarOsSeguimentosDepoisDaEquipa(agora: Date = new Date()): Promise<number> {
+  const { pecasEmLisboa } = await import("./hora-de-lisboa");
+  if (pecasEmLisboa(agora).hora < 10) return 0;
+  const pool = await garantirTabelas();
+  await ensureSimulatorOrdersTable();
+  await ensureNegociacoesTable();
+  const [rows] = (await pool.query(
+    `SELECT o.id, o.contactPhone
+       FROM simulatorOrders o
+      WHERE o.propostaEnviadaEm IS NOT NULL
+        AND o.propostaEnviadaEm > UTC_TIMESTAMP() - INTERVAL 30 DAY
+        AND o.valorFixoClyon IS NULL
+        AND o.anonimizadoEm IS NULL
+        AND (o.status IS NULL OR o.status NOT IN ('cancelado','arquivado','rejeitado','concluido'))
+        AND NOT EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id AND n.estado = 'acordada')
+        AND NOT EXISTS (SELECT 1 FROM seguimentoDoCliente s WHERE s.pedidoId = o.id)
+      ORDER BY o.id DESC
+      LIMIT 60`,
+  )) as [Array<{ id: number; contactPhone: string | null }>, unknown];
+  if (rows.length === 0) return 0;
+  const { mensagensDoNumeroWhatsApp } = await import("./db");
+  const { eDaEquipa } = await import("./rajada-do-whatsapp");
+  const { aEquipaRespondeuEOClienteCalou } = await import("./o-cliente-vai-pensar");
+  let arrancaram = 0;
+  const vistos = new Set<string>();
+  for (const r of rows) {
+    const tel = noveDigitos(r.contactPhone);
+    if (!tel || vistos.has(tel)) continue;
+    vistos.add(tel);
+    try {
+      const fio = await mensagensDoNumeroWhatsApp(String(r.contactPhone), 20);
+      if (!aEquipaRespondeuEOClienteCalou(fio, agora, eDaEquipa)) continue;
+      const feito = await arrancarOSeguimentoSozinho(Number(r.id), "depois_da_equipa", agora);
+      if (feito.ok) arrancaram += 1;
+    } catch (e) {
+      console.error("[seguimento-do-cliente] arranque depois da equipa, pedido", r.id, e instanceof Error ? e.message : e);
+    }
+  }
+  return arrancaram;
+}
+
 /** «Parar o seguimento»: desmarca o ciclo em curso. Fica no histórico. */
 export async function pararSeguimentoAMao(pedidoId: number, porQuem: string, agora: Date = new Date()): Promise<ResultadoDaMarcacao> {
   const pool = await garantirTabelas();
@@ -538,6 +680,8 @@ export type ResultadoDaRotinaDoSeguimento = {
   porEmail: number;
   parados: number;
   falhados: number;
+  /** d90: os que arrancaram sozinhos (a equipa respondeu ontem e o cliente calou-se). */
+  arrancados?: number;
 };
 
 const INTERVALO_ENTRE_EMAILS_MS = 600;
@@ -558,6 +702,11 @@ export async function rotinaDoSeguimento(agora: Date = new Date()): Promise<Resu
     r.foraDaJanela = true;
     return r;
   }
+  // d90: a equipa respondeu ontem à pergunta dele e ele calou-se — o seguimento arranca hoje às 10h.
+  r.arrancados = await arrancarOsSeguimentosDepoisDaEquipa(agora).catch((e) => {
+    console.error("[seguimento-do-cliente] o arranque depois da equipa falhou:", e instanceof Error ? e.message : e);
+    return 0;
+  });
   const pool = await garantirTabelas();
   const [linhas] = (await pool.query(
     `SELECT * FROM seguimentoDoCliente WHERE canal IS NOT NULL AND ${A_CORRER_SQL} ORDER BY pedidoId ASC LIMIT 300`,
@@ -634,8 +783,12 @@ export async function rotinaDoSeguimento(agora: Date = new Date()): Promise<Resu
 export function resumoDaRotinaDoSeguimento(r: ResultadoDaRotinaDoSeguimento): string | null {
   if (!r.ligado) return `desligado (interruptor «${NOME_DO_INTERRUPTOR_DO_SEGUIMENTO}» nas Configs)`;
   if (r.foraDaJanela) return "fora das 9h–21h de Lisboa";
-  if (r.naFila === 0 && r.porEmail === 0 && r.parados === 0 && r.falhados === 0) return null;
-  return `${r.aCorrer} em seguimento · ${r.naFila} WhatsApp na fila · ${r.porEmail} email(s) · ${r.parados} parado(s)` + (r.falhados ? ` · ${r.falhados} falhado(s)` : "");
+  if (r.naFila === 0 && r.porEmail === 0 && r.parados === 0 && r.falhados === 0 && !r.arrancados) return null;
+  return (
+    `${r.aCorrer} em seguimento · ${r.naFila} WhatsApp na fila · ${r.porEmail} email(s) · ${r.parados} parado(s)` +
+    (r.arrancados ? ` · ${r.arrancados} arrancado(s) sozinho(s)` : "") +
+    (r.falhados ? ` · ${r.falhados} falhado(s)` : "")
+  );
 }
 
 /* ── A passagem: um WhatsApp por vez, às rondas da ponte ─────────────────── */
@@ -773,7 +926,10 @@ export async function darOPasso(pedidoId: number, passo: PassoDoSeguimento, agor
     const { retomarNumeroWhatsApp } = await import("./db");
     await retomarNumeroWhatsApp(telefoneDoSeguimento(p.contactPhone)!).catch(() => {});
   }
-  const feito = `Seguimento do cliente ${n}/3 enviado ${c.canal === "whatsapp" ? "pelo WhatsApp" : "por email"} (automático, d83).`;
+  // d91 (5.3): a 1.ª do «Vai pensar» tem duas variantes — par A, ímpar B —, e a que saiu fica no histórico.
+  const { varianteDaMensagem1 } = await import("./seguimento-do-cliente");
+  const variante = passo === "mensagem1" && c.resposta === "vai_pensar" ? ` Variante ${varianteDaMensagem1(pedidoId)} (A/B da d91).` : "";
+  const feito = `Seguimento do cliente ${n}/3 enviado ${c.canal === "whatsapp" ? "pelo WhatsApp" : "por email"} (automático, d83).${variante}`;
   await appendOrderHistory(pedidoId, { type: "note", by: null, message: feito }).catch(() => {});
   return { ok: true, feito };
 }

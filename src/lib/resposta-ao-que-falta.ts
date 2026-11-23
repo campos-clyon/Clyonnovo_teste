@@ -270,17 +270,20 @@ export const PEDIDO_COMPLETO_PELO_WHATSAPP =
 const comMaiuscula = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 /** A frase do fim, com o pedido completo. */
+// d91 (3.8, 23-11-2026): o fim aponta o passo seguinte — escolher.
 export const PEDIDO_FICA_COMPLETO =
-  "Com isto, o pedido fica completo: a equipa confere-o e segue para os parceiros da sua zona. As propostas chegam-lhe por aqui.";
+  "Com isto, o pedido fica completo: a equipa confere-o e segue para os parceiros da sua zona. As propostas chegam-lhe por aqui, e depois é só escolher a que preferir.";
 /**
  * A frase do fim, com o pedido completo E JÁ ENVIADO aos parceiros pelo envio
  * automático (d87, 22-11-2026). Só se diz quando o envio foi mesmo feito; se o
  * pedido ficou nos «por enviar» (ou na fila das 8h00), diz-se a de cima.
  */
-export const PEDIDO_JA_SEGUIU = "O seu pedido já seguiu para os parceiros da sua zona. As propostas chegam-lhe por aqui.";
+export const PEDIDO_JA_SEGUIU =
+  "O seu pedido já seguiu para os parceiros da sua zona. As propostas chegam-lhe por aqui, e depois é só escolher a que preferir.";
 /** A frase do fim, quando ainda falta alguma coisa. */
+// d91 (3.8): «posso enviar a foto amanhã?» passa a ter resposta tranquila.
 export const PODE_ENVIAR_O_QUE_FALTA =
-  "Pode enviar por aqui quando puder. Com isso, o pedido fica completo e segue para os parceiros da sua zona.";
+  "Pode enviar quando lhe der jeito, mesmo amanhã: fica tudo guardado no pedido. Com isso, o pedido fica completo e segue para os parceiros da sua zona.";
 /** O que não se percebeu ficou nas notas. */
 export const PORMENORES_NAS_NOTAS = "Outros pormenores, nas notas do pedido";
 

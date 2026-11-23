@@ -122,7 +122,14 @@ export function oQueFazerComARecolha(
   return s >= MINUTOS_PARA_SALTAR * 60 ? "saltar" : "nada";
 }
 
-export type PassagemDasRecolhas = { saltadas: number; registadas: number; seguidas: number; linhas: string[] };
+export type PassagemDasRecolhas = {
+  saltadas: number;
+  registadas: number;
+  seguidas: number;
+  /** d93: os lembretes da conversa parada a meio (e os fechos). */
+  lembradas?: number;
+  linhas: string[];
+};
 
 /**
  * A passagem: cada recolha em curso, a decisão, e o gesto. Só com o WhatsApp
@@ -184,6 +191,21 @@ export async function correrAsRecolhasParadas(): Promise<PassagemDasRecolhas> {
         if (id != null) {
           r.registadas += 1;
           r.linhas.push(`${telefone}: pedido #${id} registado sozinho (sem resposta ao resumo)`);
+        }
+      } else {
+        /*
+         * A CONVERSA PARADA A MEIO — d93 (23-11-2026). Sem a mensagem gentil nem
+         * o salto a fazer: o lembrete das 2 horas, o da manhã seguinte, o último
+         * e o fecho, cada um a retomar de onde ficou. Ver `conversa-parada-a-meio.ts`.
+         */
+        const { lembrarAConversaParada } = await import("./conversa-parada-a-meio-na-base");
+        const feito = await lembrarAConversaParada(telefone, estado, fio).catch((e) => {
+          console.error("[recolhas-paradas] lembrete da conversa parada:", e instanceof Error ? e.message : e);
+          return null;
+        });
+        if (feito) {
+          r.lembradas = (r.lembradas ?? 0) + 1;
+          r.linhas.push(feito);
         }
       }
     } catch (e) {

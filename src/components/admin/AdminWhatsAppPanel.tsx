@@ -1696,6 +1696,10 @@ export default function AdminWhatsAppPanel() {
                       {l.motivoDaEntrega && l.estado !== "resolvida" && (
                         <p className="truncate text-[11px] text-amber-300/80">Entregue: {l.motivoDaEntrega}</p>
                       )}
+                      {/* d93: cancelou pela conversa — nenhuma mensagem automática lhe sai. */}
+                      {l.naoContactar && (
+                        <p className="truncate text-[11px] font-semibold text-rose-300">Não contactar — cancelou o pedido e pediu para não voltar a ser contactado</p>
+                      )}
                       {/* Quando o porquê já cita a última mensagem (ou diz que foi marcada), não se repete. */}
                       {l.onde !== "painel" && !(l.ultimaMensagem && l.porque.includes(l.ultimaMensagem)) && (
                         <p className="truncate text-xs text-slate-500">

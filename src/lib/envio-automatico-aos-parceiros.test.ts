@@ -556,7 +556,8 @@ describe("a mensagem da Vitória ao cliente diz a verdade", () => {
   };
   it("com o envio feito: «O seu pedido já seguiu…»", () => {
     const m = respostaAoQueFalta({ ...PARA, anotado: [...PARA.anotado], jaSeguiu: true });
-    expect(m).toContain("O seu pedido já seguiu para os parceiros da sua zona. As propostas chegam-lhe por aqui.");
+    // d91 (3.8): e o passo seguinte — escolher.
+    expect(m).toContain("O seu pedido já seguiu para os parceiros da sua zona. As propostas chegam-lhe por aqui, e depois é só escolher a que preferir.");
     expect(m).not.toContain(PEDIDO_FICA_COMPLETO);
   });
   it("se ficou nos «por enviar» (ou na fila): «a equipa confere-o e segue…»", () => {
@@ -567,7 +568,8 @@ describe("a mensagem da Vitória ao cliente diz a verdade", () => {
   });
   it("o pedido registado já completo também diz que seguiu", () => {
     expect(mensagemDePedidoRegistado(9101, true, "Leonor", false, true)).toContain("O seu pedido já seguiu para os parceiros da sua zona");
-    expect(mensagemDePedidoRegistado(9101, true, "Leonor")).toContain("A CLYON vai conferi-lo e enviá-lo aos parceiros");
+    // d91 (3.5).
+    expect(mensagemDePedidoRegistado(9101, true, "Leonor")).toContain("A CLYON confere-o e envia-o aos parceiros");
   });
   it("traduções fixas em inglês, francês e espanhol", () => {
     for (const lingua of ["en", "fr", "es"] as const) {
@@ -581,7 +583,9 @@ describe("a mensagem da Vitória ao cliente diz a verdade", () => {
         expect(t).not.toContain("já seguiu");
       }
     }
-    expect(traducaoFixa(PEDIDO_JA_SEGUIU, "en")).toBe("Your request has already gone to the partners in your area. The quotes will reach you here.");
+    expect(traducaoFixa(PEDIDO_JA_SEGUIU, "en")).toBe(
+      "Your request has already gone to the partners in your area. The quotes will reach you here, and then you just choose the one you prefer.",
+    );
   });
 });
 
@@ -618,7 +622,8 @@ describe("o envio automático usa a MESMA função do «Enviar aos profissionais
     expect(NEG.match(/seguirSozinhoParaOsParceiros\(id, \{/g)?.length).toBe(3);
     expect(NEG).toContain('origem: "registado",');
     expect(NEG).toContain("registadoSozinho: opcoes.sozinho === true,");
-    expect(NEG).toContain("mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true, jaSeguiu)");
+    // d91 (3.5): com a hora, para dizer «a partir das 8h» fora da janela.
+    expect(NEG).toContain("mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true, jaSeguiu, new Date())");
     expect(NEG).toContain('jaSeguiu = envio?.estado === "enviado";');
     expect(NEG).toContain("    jaSeguiu,\n  });");
     expect(NEG).toContain('envio?.estado === "enviado" ? PEDIDO_JA_SEGUIU : PEDIDO_FICA_COMPLETO');

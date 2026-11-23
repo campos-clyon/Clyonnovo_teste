@@ -14199,6 +14199,8 @@ export async function apagarConversaWhatsApp(telefone: string): Promise<number> 
   await pool.execute("DELETE FROM whatsappNoTelemovel WHERE chave = RIGHT(?, 9)", [digitos]).catch(() => {});
   // E o «Devolver ao site» (d73, 21-11-2026) — sem tabela ainda, não há nada a apagar.
   await pool.execute("DELETE FROM whatsappDevolvidas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos]).catch(() => {});
+  // E os lembretes da conversa parada a meio (d93, 23-11-2026). O «não contactar» NÃO sai: é uma decisão do cliente em vigor.
+  await pool.execute("DELETE FROM conversasParadas WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos]).catch(() => {});
   return Number(r?.affectedRows ?? 0);
 }
 

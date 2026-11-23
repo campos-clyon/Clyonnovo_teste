@@ -155,7 +155,13 @@ export async function GET(req: NextRequest) {
       // O termómetro do tradutor, da leitura das conversas e das fotografias (d7).
       falhasDaIa().catch(() => []),
     ]);
-  const mesa = aMesa.linhas;
+  /*
+   * NÃO CONTACTAR — d93 (23-11-2026): quem cancelou pela conversa pediu para não
+   * voltar a ser contactado. Se voltar a escrever, a Mesa diz-o na conversa.
+   */
+  const { numerosParaNaoContactar } = await import("@/lib/nao-contactar");
+  const naoContactar = await numerosParaNaoContactar(aMesa.linhas.map((l) => l.telefone)).catch(() => new Set<string>());
+  const mesa = aMesa.linhas.map((l) => (naoContactar.has(l.telefone) ? { ...l, naoContactar: true } : l));
   return NextResponse.json({
     ligado,
     // "meta", "ponte", "manual" (o número da CLYON à mão, sem API) ou "nenhum".

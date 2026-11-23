@@ -318,12 +318,18 @@ describe("os textos: o modelo da Mesa, tal e qual (d86 reconhece-o)", () => {
     expect(l1).not.toContain(SE_JA_NAO_PRECISAR);
   });
 
-  it("a 2.ª e a 3.ª: o modelo, mais o «responda 2» da d71 antes da assinatura", () => {
+  it("a 2.ª e a 3.ª (d91, 3.19): «continua guardado» e o último aviso, com a lista e o «responda 2» da d71", () => {
     for (const t of [l2, l3]) {
-      expect(t.startsWith(l1.slice(0, l1.indexOf("Obrigado,")))).toBe(true);
-      expect(t).toContain(`${SE_JA_NAO_PRECISAR}\n\nObrigado,\nEquipa CLYON`);
+      expect(t.startsWith("Bom dia! Aqui é a equipa da CLYON.")).toBe(true);
+      expect(t).toContain(`${SE_JA_NAO_PRECISAR}\n\nEquipa CLYON`);
       expect(t).toContain("#812 (recolha de monos em Almada)");
+      // A mesma lista do modelo, linha a linha.
+      for (const linha of l1.split("\n").filter((x) => x.startsWith("- "))) expect(t).toContain(linha);
     }
+    expect(l2).toContain("continua guardado, à espera de:");
+    // A 3.ª avisa que o pedido é arquivado no dia seguinte (o ritmo da d88).
+    expect(l3).toContain("Último aviso sobre o seu pedido #812");
+    expect(l3).toContain("o pedido fica arquivado amanhã");
   });
 
   it("uma pessoa a escrever: sem emojis, reticências, travessões, aspas tipográficas nem preços", () => {
@@ -339,7 +345,8 @@ describe("os textos: o modelo da Mesa, tal e qual (d86 reconhece-o)", () => {
 
   it("o do arquivo é simpático, diz que pode voltar a pedir, e não tem o «responda 2»", () => {
     expect(arq).toMatch(/arquivámos o seu pedido #812/);
-    expect(arq).toMatch(/pode voltar a pedir quando quiser/i);
+    // d91 (3.19): pode voltar a pedir — por aqui ou na plataforma, grátis e sem compromisso.
+    expect(arq).toMatch(/basta responder por aqui ou pedir de novo na plataforma clyon\.pt: é grátis e sem compromisso/i);
     expect(arq).not.toContain("responda 2");
   });
 

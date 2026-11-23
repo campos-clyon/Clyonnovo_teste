@@ -26,6 +26,11 @@ export type FonteDasMensagensAutomaticas = {
   rotina: string;
   tabela: string;
   colunas: readonly string[];
+  /**
+   * d93 (23-11-2026): a tabela não tem pedido (uma conversa parada antes de o
+   * pedido nascer) — lê-se pela coluna `telefone`, sem a junção ao pedido.
+   */
+  porTelefone?: boolean;
 };
 
 /** TODAS as mensagens automáticas a clientes. Uma rotina nova entra aqui. */
@@ -35,6 +40,13 @@ export const FONTES_DAS_MENSAGENS_AUTOMATICAS: readonly FonteDasMensagensAutomat
   { rotina: "seguimento do cliente (d83)", tabela: "seguimentoDoCliente", colunas: ["mensagem1Em", "mensagem2Em", "mensagem3Em", "arquivadoEm"] },
   // d88 (23-11-2026): o orçamento que a Vitória envia sozinha ao cliente.
   { rotina: "propostas ao cliente (d88)", tabela: "envioDasPropostasAoCliente", colunas: ["enviadoEm"] },
+  // d93 (23-11-2026): os lembretes da conversa parada a meio, antes do pedido (os 10 minutos da d25 não contam).
+  {
+    rotina: "conversa parada a meio (d93)",
+    tabela: "conversasParadas",
+    colunas: ["lembrete1Em", "lembrete2Em", "lembrete3Em", "fechadoEm"],
+    porTelefone: true,
+  },
 ]);
 
 /** Pura: alguma destas datas é de hoje, em Lisboa? */
@@ -73,6 +85,27 @@ export async function datasDasMensagensAutomaticas(
   if (!pool) throw new Error("[uma-mensagem-automatica-por-dia] base de dados indisponível");
   const datas: Date[] = [];
   for (const f of opcoes.fontes ?? FONTES_DAS_MENSAGENS_AUTOMATICAS) {
+    if (f.porTelefone) {
+      if (!tel || !telefone) continue;
+      let linhas: Array<Record<string, unknown>> = [];
+      try {
+        [linhas] = (await pool.execute(
+          `SELECT ${f.colunas.map((c) => `v.${c}`).join(", ")}, v.telefone FROM ${f.tabela} v WHERE RIGHT(v.telefone, 9) = ? LIMIT 20`,
+          [tel],
+        )) as [Array<Record<string, unknown>>, unknown];
+      } catch (err) {
+        if (naoHaTabela(err)) continue;
+        throw err;
+      }
+      for (const r of Array.isArray(linhas) ? linhas : []) {
+        if (!mesmoTelefoneEstrito(String(r.telefone ?? ""), telefone)) continue;
+        for (const c of f.colunas) {
+          const d = instanteDaBase(r[c] as string | Date | null);
+          if (d) datas.push(d);
+        }
+      }
+      continue;
+    }
     const onde: string[] = [];
     const params: string[] = [];
     if (tel) {
@@ -120,5 +153,14 @@ export async function jaSaiuHojeUmaMensagemAutomatica(
   agora: Date,
   opcoes: { pool?: Pool } = {},
 ): Promise<boolean> {
+  /*
+   * NÃO CONTACTAR — d93 (23-11-2026). Quem cancelou pela conversa ouviu «Não
+   * voltaremos a contactá-lo»: para todas as rotinas, é como se a mensagem do
+   * dia já tivesse saído — nada sai, hoje nem nunca. Ver `nao-contactar.ts`.
+   */
+  if (contacto.telefone) {
+    const { eParaNaoContactar } = await import("./nao-contactar");
+    if (await eParaNaoContactar(String(contacto.telefone), opcoes)) return true;
+  }
   return algumaDeHoje(await datasDasMensagensAutomaticas(contacto, opcoes), agora);
 }

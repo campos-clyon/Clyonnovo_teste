@@ -333,8 +333,30 @@ export type DadosDaMensagem = {
 /** As três opções. É também por esta frase que se reconhece o seguimento na conversa. */
 export const AS_OPCOES_DO_SEGUIMENTO = "Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.";
 export const AINDA_QUER_AVANCAR = "Ainda quer avançar?";
-export const O_PEDIDO_FECHA_AMANHA = "Se não tivermos resposta, o pedido fecha amanhã.";
+/** d91 (3.18): a perda verdadeira — um pedido fechado não guarda a proposta. */
+export const O_PEDIDO_FECHA_AMANHA = "Se não tivermos resposta, o pedido fecha amanhã e, para avançar depois, terá de pedir propostas de novo.";
 export const PODE_VOLTAR_A_PEDIR = "Se ainda precisar, pode voltar a pedir quando quiser: basta responder aqui.";
+
+/*
+ * AS FRASES DA d91 (Marketing, 23-11-2026, secção 3.18), com a correcção do CEO:
+ * do pagamento só o que o código cumpre desde 15-11 — nada adiantado
+ * (`SEM_PAGAMENTO_ADIANTADO`, o-pagamento-da-vitoria.ts); nunca «só paga
+ * depois do trabalho feito». Cada uma responde à objecção daquele dia: a 1.ª
+ * ao «depois digo» (o risco), a 2.ª ao «estou a ver outras empresas» (comparar
+ * total com total), a 3.ª com a perda verdadeira.
+ */
+/** 1.ª «Vai pensar», variante A (pedido par): o risco que se tira. */
+export const SE_AJUDAR_A_DECIDIR =
+  "Se ajudar a decidir: o valor da proposta já é o total a pagar, não paga nada adiantado, e o que aparecer a mais no dia só se faz com o seu acordo.";
+/** 2.ª: comparar total com total. */
+export const SE_ESTA_A_COMPARAR =
+  "Se ainda está a comparar com outras empresas, compare à vontade: o valor da proposta já leva o IVA e a taxa da plataforma, e não paga nada adiantado.";
+/** 1.ª «Não atendeu»: por aqui é mais rápido. */
+export const POR_AQUI_E_MAIS_RAPIDO = "Por aqui é mais rápido: ainda quer avançar?";
+/** 1.ª «Outra data». */
+export const DIGA_NOS_O_DIA = "Diga-nos o dia que lhe dá jeito e confirmamos com o parceiro.";
+/** 1.ª «Vai pensar», variante B (pedido ímpar): a resposta livre vai à equipa, como sempre. */
+export const SE_JA_ESTIVER_DECIDIDO = "Pode dizer-me por aqui. Se já estiver decidido, é só escolher.";
 
 function ola(nome: string | null | undefined): string {
   const p = (nome ?? "").trim().split(/\s+/)[0] ?? "";
@@ -343,20 +365,30 @@ function ola(nome: string | null | undefined): string {
 
 const oPedido = (d: DadosDaMensagem) => `#${d.pedidoId} (${d.servico})`;
 
+/** A variante do A/B da 1.ª «Vai pensar» (d91, 5.3): pedido par → A, ímpar → B. Pura. */
+export function varianteDaMensagem1(pedidoId: number): "A" | "B" {
+  return Math.abs(Math.trunc(pedidoId)) % 2 === 0 ? "A" : "B";
+}
+
 /** A 1.ª, na data marcada. */
 export function textoDaMensagem1(d: DadosDaMensagem): string {
-  const frase =
-    d.resposta === "nao_atendeu"
-      ? `Tentámos falar consigo sobre o seu pedido ${oPedido(d)}.`
-      : d.resposta === "outra_data"
-        ? `Ficou de nos dizer outra data para o seu pedido ${oPedido(d)}.`
-        : `Ficou de pensar no seu pedido ${oPedido(d)}.`;
-  return `${ola(d.nome)} ${frase} ${AINDA_QUER_AVANCAR} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  if (d.resposta === "nao_atendeu") {
+    return `${ola(d.nome)} Tentámos ligar-lhe sobre o seu pedido ${oPedido(d)}. ${POR_AQUI_E_MAIS_RAPIDO} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  }
+  if (d.resposta === "outra_data") {
+    return `${ola(d.nome)} Ficou de nos dizer outra data para o seu pedido ${oPedido(d)}. ${DIGA_NOS_O_DIA} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  }
+  // «Vai pensar» — o A/B da d91 (5.3): A tira o risco, B faz uma pergunta só.
+  if (varianteDaMensagem1(d.pedidoId) === "B") {
+    // A frase das opções fica inteira, letra a letra (o `eMensagemDoSeguimento` e o `paraEmail` procuram-na).
+    return `${ola(d.nome)} Sobre o seu pedido ${oPedido(d)}: o que falta para decidir, o valor, o dia ou outra coisa? ${SE_JA_ESTIVER_DECIDIDO} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  }
+  return `${ola(d.nome)} Ficou de pensar no seu pedido ${oPedido(d)}. ${SE_AJUDAR_A_DECIDIR} ${AINDA_QUER_AVANCAR} ${AS_OPCOES_DO_SEGUIMENTO}`;
 }
 
 /** A 2.ª, no dia seguinte à mesma hora. */
 export function textoDaMensagem2(d: DadosDaMensagem): string {
-  return `${ola(d.nome)} Volto ao seu pedido ${oPedido(d)}: ainda quer avançar? ${AS_OPCOES_DO_SEGUIMENTO}`;
+  return `${ola(d.nome)} Volto ao seu pedido ${oPedido(d)}. ${SE_ESTA_A_COMPARAR} ${AINDA_QUER_AVANCAR} ${AS_OPCOES_DO_SEGUIMENTO}`;
 }
 
 /** A 3.ª, no outro dia à mesma hora: diz que o pedido fecha amanhã. */
