@@ -93,7 +93,8 @@ describe("S11 — vistoPeloClienteEm", () => {
     await ler();
     expect(vistas.get(41)).toBe(primeira);
     expect(vistas.has(42)).toBe(false);
-  });
+    // Prazo largo: no meio da suite inteira, a primeira chamada à rota passou dos 5 s.
+  }, 120_000);
 
   it("o SQL só escreve uma vez e não mexe na última actividade", () => {
     const DB = readFileSync(join(process.cwd(), "src/lib/db.ts"), "utf8");

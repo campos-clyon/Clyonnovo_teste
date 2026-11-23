@@ -63,12 +63,12 @@ describe("d4 (2) — o link sem conta não mostra os dados de pagamento", () => 
     const completo = {
       parceiro: "Parceiro Exemplo",
       conta: { total: 100 },
-      paraPagar: { iban: "PT50000000000000000000000", titular: "X", mbway: "910000000" },
+      paraPagar: { iban: "PT50000000000000000000000", titular: "X", mbway: "900000000" },
       opcoes: [{ id: "mbway" }],
       faturas: { frase: "f" },
     };
     const visto = JSON.stringify(vistoParaQuemSoTemOLink(completo));
-    expect(visto).not.toMatch(/iban|PT50|mbway|910000000|titular|faturas/i);
+    expect(visto).not.toMatch(/iban|PT50|mbway|900000000|titular|faturas/i);
     expect(vistoParaQuemSoTemOLink(completo).convidado).toBe(true);
   });
 
