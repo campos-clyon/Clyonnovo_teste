@@ -66,7 +66,7 @@ describe("a /sobre-nos", () => {
 
   it("a grelha «O que se pede à CLYON» tem a manutenção, com o nome, a página e o preço das fontes", async () => {
     const mod = await import("@/app/sobre-nos/page");
-    const html = renderToStaticMarkup(React.createElement(mod.default));
+    const html = renderToStaticMarkup(await mod.default());
     const texto = textoDe(html);
     expect(html).toContain(`href="${MANUTENCAO.href}"`);
     expect(texto).toContain(MANUTENCAO.label);
@@ -136,7 +136,7 @@ describe("a região de Lisboa", () => {
 describe("os títulos dos cartões do hub /servicos", () => {
   it("quebram a linha em vez de serem cortados, e o selo do preço não encolhe", async () => {
     const mod = await import("@/app/servicos/page");
-    const html = renderToStaticMarkup(React.createElement(mod.default));
+    const html = renderToStaticMarkup(await mod.default());
     const titulos = [...html.matchAll(/<h3 class="([^"]*)">([^<]*)<\/h3>/g)].filter((m) =>
       /text-\[15px\]/.test(m[1]),
     );

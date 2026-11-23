@@ -40,7 +40,6 @@ import {
 import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO } from "@/lib/identificacao-legal";
 import { etiquetaComOIvaAoLado, MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
-import type { PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 import { DUAS_FATURAS_POR_TRABALHO, DUAS_FATURAS_POR_TRABALHO_CURTA, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
@@ -183,7 +182,7 @@ const CARTA = [
     "de chegarem até si e explica o que não estiver claro. Não o deixamos sozinho com um formulário.",
 ];
 
-const servicosDe = (pp: PrecoPublicoDasMudancas) => [
+const SERVICOS = [
   {
     icone: Sofa,
     titulo: "Recolha de móveis",
@@ -216,7 +215,7 @@ const servicosDe = (pp: PrecoPublicoDasMudancas) => [
     icone: Building2,
     titulo: "Mudanças",
     href: "/mudancas",
-    preco: etiquetaComOIvaAoLado("mudanca", pp),
+    preco: etiquetaComOIvaAoLado("mudanca"),
     texto: "Mudanças de casa e de escritório, transporte de móveis e pequenas mudanças, pagas à hora.",
   },
   /*
@@ -390,7 +389,8 @@ export const revalidate = 3600;
 
 export default async function SobreNosPage() {
   // O «desde» das mudanças é o da lista de parceiros, lido da base (d2 de 22/11).
-  const SERVICOS = servicosDe(await precoPublicoDasMudancas());
+  const pp = await precoPublicoDasMudancas();
+  const servicos = SERVICOS.map((s) => (s.href === "/mudancas" ? { ...s, preco: etiquetaComOIvaAoLado("mudanca", pp) } : s));
   const novo = novoModeloEmVigor(agoraDoModelo());
   // d16: desde 15-11 a fatura do trabalho é do parceiro e a da taxa da empresa parceira da CLYON.
   const comAFaturaDoModelo = (t: string) => (novo ? t.replace(QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO) : t);
@@ -540,7 +540,7 @@ export default async function SobreNosPage() {
           </p>
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICOS.map((s) => (
+          {servicos.map((s) => (
             <Link
               key={s.href}
               href={s.href}

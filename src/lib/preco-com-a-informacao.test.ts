@@ -145,7 +145,7 @@ describe("nenhum preço sai sozinho", () => {
   });
 
   it("nos cartões e nas frases que mostram o número em letra grande", () => {
-    expect(ler("src/app/page.tsx")).toContain("{maisIva(price)}");
+    expect(ler("src/app/page.tsx")).toContain("{price}");
     expect(ler("src/app/servicos/page.tsx")).toContain("return preco ? maisIva(preco) : \"orçamento personalizado\";");
     // Em /precos vai sozinho num título, com maiúscula (15-10-2026).
     expect(ler("src/app/precos/page.tsx")).toContain(
@@ -255,7 +255,7 @@ describe("o sem IVA nunca sozinho, também nas listas (31-10-2026)", () => {
     expect(comIvaDaEtiqueta("outro")).toBeNull();
 
     const contactos = ler("src/app/contactos/page.tsx");
-    expect(contactos).toContain("{comIvaDaEtiqueta(chave)}");
+    expect(contactos).toContain("{comIvaDaEtiqueta(chave, pp)}");
     expect(contactos).not.toContain("{PRECOS[chave]?.etiqueta}");
     for (const f of ["src/app/esvaziamento-de-casas/page.tsx", "src/app/esvaziamento-de-casas-amadora/page.tsx"]) {
       expect(ler(f), f).toContain("price: esvaziamentoComOIvaAoLado(t.chave)");

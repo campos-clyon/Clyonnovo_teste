@@ -53,7 +53,7 @@ describe("1. a /sobre-nos diz a manutenção da casa onde só dizia três servi�
 
   it("o parágrafo do herói, logo a seguir ao título", async () => {
     const mod = await import("@/app/sobre-nos/page");
-    const html = renderToStaticMarkup(React.createElement(mod.default));
+    const html = renderToStaticMarkup(await mod.default());
     const heroi = html.match(/<\/h1>\s*<p[^>]*>([\s\S]*?)<\/p>/);
     expect(heroi).not.toBeNull();
     const texto = textoDe(heroi![1]);
@@ -70,7 +70,7 @@ describe("1. a /sobre-nos diz a manutenção da casa onde só dizia três servi�
 
   it("e o convite aos profissionais", async () => {
     const mod = await import("@/app/sobre-nos/page");
-    const html = renderToStaticMarkup(React.createElement(mod.default));
+    const html = renderToStaticMarkup(await mod.default());
     const convites = [...html.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)].map((m) => m[1]).filter((t) => t.startsWith("É profissional de"));
     expect(convites).toHaveLength(1);
     expect(convites[0]).toMatch(/manutenção\?$/);
@@ -117,7 +117,7 @@ describe("4. o hub /servicos", () => {
     // Pelos sacos desde a d7 (04-11-2026): 2 m³ = 80 sacos, uma faixa (era o «desde» de 288 €).
     expect(r?.valor).toEqual({ tipo: "faixa", de: 320, ate: 384 });
     const mod = await import("@/app/servicos/page");
-    const texto = textoDe(cartaoDoEntulho(renderToStaticMarkup(React.createElement(mod.default))));
+    const texto = textoDe(cartaoDoEntulho(renderToStaticMarkup(await mod.default())));
     expect(texto).toContain(`Com 2 m³, a referência é ${semIvaEscrito(r!.valor)} + IVA (${comIvaEscrito(r!.valor)} com IVA).`);
     // O sem IVA sozinho, como estava, não volta.
     expect(texto).not.toMatch(/\d €, sem IVA\./);
@@ -142,7 +142,7 @@ describe("4. o hub /servicos", () => {
      * partia o «Ver mais» em duas linhas. Até 30 letras cabe com folga.
      */
     const mod = await import("@/app/servicos/page");
-    const cartao = cartaoDoEntulho(renderToStaticMarkup(React.createElement(mod.default)));
+    const cartao = cartaoDoEntulho(renderToStaticMarkup(await mod.default()));
     const rodape = cartao.match(/<p class="text-sm text-slate-600">([^<]*)<\/p>/);
     expect(rodape).not.toBeNull();
     const frase = textoDe(rodape![1]);

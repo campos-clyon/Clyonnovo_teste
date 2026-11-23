@@ -1,5 +1,6 @@
 import { PRECOS, RECOLHA_MINIMA_DOS_MOVEIS } from "./precos-publicos";
 import { aPassarAClyonDaConta, type ContaDoPagamento } from "./conta-do-pagamento";
+import { ROTULO_DO_BOTAO } from "./cliente-paga-a-clyon";
 
 /**
  * ACORDOS FORA DA REGRA PEDEM MOTIVO — d6 (CEO e dono, 22-11-2026). Não muda
@@ -33,7 +34,7 @@ const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 export function fraseDoAcordoAbaixoDoMinimo(servico: unknown, valor: number): string | null {
   const min = minimoDoServico(servico);
   if (min == null || !(valor < min)) return null;
-  return `Este acordo (${euros(valor)} sem IVA) está abaixo do preço mínimo do serviço (${euros(min)} + IVA). Escreva o motivo — fica no pedido.`;
+  return `Este acordo (${euros(valor)} + IVA) está abaixo do preço mínimo do serviço (${euros(min)} + IVA). Escreva o motivo — fica no pedido.`;
 }
 
 /** Um acordo abaixo do mínimo só se grava com um motivo escrito (3 caracteres, como nos outros). */
@@ -67,6 +68,6 @@ export function avisoDaReserva(conta: ContaDoPagamento | null | undefined): Avis
     percentagem,
     texto:
       `A parte da CLYON (${euros(aPassar)}) é ${percentagem} % do que o cliente paga ao parceiro (${euros(conta.total)}): ` +
-      `o parceiro teria de devolver mais de metade. Proponha «O cliente paga à CLYON» (abaixo), em vez de lhe pedir a devolução.`,
+      `o parceiro teria de devolver mais de metade. Proponha «${ROTULO_DO_BOTAO}» (abaixo), em vez de lhe pedir a devolução.`,
   };
 }

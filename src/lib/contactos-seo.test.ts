@@ -80,7 +80,7 @@ describe("os números", () => {
     expect(PAGINA).not.toContain("AVALIACOES.fixando");
     expect(PAGINA).toContain("{MES_DAS_CONTAGENS}");
     // Desde 17-11-2026 (d62/d63) a linha grande vem de etiquetaDoCartao, que lê PRECOS (e a lista das mudanças).
-    expect(PAGINA).toContain("etiquetaDoCartao(chave)");
+    expect(PAGINA).toContain("etiquetaDoCartao(chave, pp)");
     // As avaliações e os preços existem mesmo, e são conferíveis.
     expect(AVALIACOES.google).toBeGreaterThan(0);
     expect(PRECOS.recolha_moveis.etiqueta).toBeTruthy();

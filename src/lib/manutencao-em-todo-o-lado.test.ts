@@ -68,7 +68,7 @@ describe("a página da manutenção da casa", () => {
 describe("o hub /servicos", () => {
   it("tem a manutenção num cartão como os outros, a ligar à página dela", async () => {
     const mod = await import("@/app/servicos/page");
-    const html = renderToStaticMarkup(React.createElement(mod.default));
+    const html = renderToStaticMarkup(await mod.default());
     expect(html).toContain('href="/servicos/manutencao-casa"');
     expect(textoDe(html)).toContain("Manutenção da Casa");
     // O preço do cartão é o da fonte, com o IVA dito ao lado.

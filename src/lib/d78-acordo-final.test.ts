@@ -186,6 +186,6 @@ describe("a rota: só o administrador, nada se apaga, nada se envia", () => {
   });
 
   it("o cliente não paga pelo link um trabalho com acordo — paga a referência que a CLYON envia", () => {
-    expect(ACESSO).toContain("credencial.backoffice !== true && acordoFinal != null");
+    expect(ACESSO).toContain("credencial.backoffice !== true && credencial.soParaVer !== true && acordoFinal != null");
   });
 });

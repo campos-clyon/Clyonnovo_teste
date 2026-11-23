@@ -1,8 +1,8 @@
 /**
  * O PROFISSIONAL RECEBE DEPOIS DO CLIENTE — d5 (CEO e dono, 22-11-2026).
  *
- * Num Trabalho CLYON a CLYON recebe do cliente e paga ao profissional. O #591 e
- * o #505 foram pagos ao profissional antes de o cliente pagar: no #591 o
+ * Nos Trabalhos CLYON a CLYON recebe do cliente e paga ao profissional. Houve
+ * trabalhos pagos ao profissional antes de o cliente pagar: num deles o
  * cliente acabou por pagar 100 € a menos e a CLYON ficou com −100 €. Por isso o
  * «Pagar ao profissional» só fica livre depois de o cliente pagar; antes, pede
  * um motivo escrito do administrador, que fica no histórico do pedido e no
@@ -19,7 +19,7 @@ export const MOTIVO_DO_ADIANTAMENTO_MAXIMO = 300;
 
 /** A frase da recusa, que o backoffice mostra e que leva a caixa do motivo. */
 export const PAGAR_ANTES_DO_CLIENTE =
-  "O cliente ainda não pagou este Trabalho CLYON. Para pagar ao profissional antes, escreva o motivo (fica registado).";
+  "O cliente ainda não pagou este Trabalho CLYON. Para pagar antes, escreva o motivo (fica registado).";
 
 /** Um Trabalho CLYON é o pedido com valor fixo ou a negociação que nasceu de uma oferta. */
 export function eTrabalhoClyon(l: { valorFixoClyon?: unknown; ofertaClyon?: unknown }): boolean {

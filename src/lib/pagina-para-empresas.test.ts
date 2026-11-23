@@ -52,7 +52,7 @@ describe("a página para empresas", () => {
     const { NOMES_DOS_SERVICOS } = await import("./service-categories");
     const { etiquetaComOIvaAoLado } = await import("./preco-de-referencia");
     const mod = await import("@/app/empresas/page");
-    const html = renderToStaticMarkup(React.createElement(mod.default)).replace(/<!-- -->/g, "");
+    const html = renderToStaticMarkup(await mod.default()).replace(/<!-- -->/g, "");
     expect(html).toContain(`${NOMES_DOS_SERVICOS.manutencao_casa} (reparações e remodelações)`);
     expect(html).toContain(`a ${NOMES_DOS_SERVICOS.manutencao_casa.toLowerCase()}, com`);
     expect(html).toContain('href="/servicos/manutencao-casa"');

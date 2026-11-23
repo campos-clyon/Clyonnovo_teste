@@ -152,7 +152,7 @@ const chamar = (url: string, bearer?: string) =>
 describe("S9 — a tabela, sozinha", () => {
   const base = { status: "pendente", trabalhoClyon: false, contratado: null, comPropostas: 0, enviado: false };
   it("as linhas do E2, pela ordem em que se aplicam", () => {
-    expect(estadoDoPedidoParaOCliente({ ...base, status: "arquivado" })).toBe("Cancelado");
+    expect(estadoDoPedidoParaOCliente({ ...base, status: "arquivado" })).toBe("Arquivado");
     expect(estadoDoPedidoParaOCliente({ ...base, status: "concluido" })).toBe("Concluído");
     expect(estadoDoPedidoParaOCliente({ ...base, trabalhoClyon: true })).toBe("A ser revisto pela CLYON");
     expect(estadoDoPedidoParaOCliente({ ...base, trabalhoClyon: true, precoEnviado: true })).toBe("Preço da CLYON por responder");
