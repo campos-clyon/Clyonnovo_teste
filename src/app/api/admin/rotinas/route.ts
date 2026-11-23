@@ -21,7 +21,10 @@ export async function GET(req: NextRequest) {
     const { ultimaPassagemDeCadaRotina } = await import("@/lib/licoes-da-vitoria-na-base");
     const { ultimas, carimbosHaSegundos } = await ultimaPassagemDeCadaRotina();
     const estados = estadoDasRotinas(ultimas, carimbosHaSegundos);
-    return NextResponse.json({ estados, vermelhas: contarVermelhas(estados) });
+    // d1 (23-11-2026): o espaço da base — o alarme dos 85 % do volume do Railway. Uma falha a medir não derruba as rotinas.
+    const { medirOEspaco } = await import("@/lib/espaco-da-base-na-base");
+    const espaco = await medirOEspaco().catch(() => null);
+    return NextResponse.json({ estados, vermelhas: contarVermelhas(estados) + (espaco?.alarme ? 1 : 0), espaco });
   } catch (e) {
     console.error("[admin/rotinas GET]", e);
     return NextResponse.json({ error: "As rotinas não carregaram." }, { status: 500 });

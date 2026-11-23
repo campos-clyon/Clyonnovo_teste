@@ -6,6 +6,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { diaMesEHoraEmLisboa } from "@/lib/hora-de-lisboa";
 import { haQuantoTempo, type EstadoDaRotina } from "@/lib/rotinas";
+import type { EspacoDaBase } from "@/lib/espaco-da-base";
 
 /**
  * AS ROTINAS — 27-10-2026 (decisão d7).
@@ -20,6 +21,7 @@ import { haQuantoTempo, type EstadoDaRotina } from "@/lib/rotinas";
 export default function AdminRotinasPanel() {
   const { token, ready } = useAdminAuth();
   const [estados, setEstados] = useState<EstadoDaRotina[] | null>(null);
+  const [espaco, setEspaco] = useState<EspacoDaBase | null>(null);
   const [vistoEm, setVistoEm] = useState<number>(Date.now());
   const [erro, setErro] = useState("");
 
@@ -29,12 +31,13 @@ export default function AdminRotinasPanel() {
     void silencioso;
     try {
       const res = await fetch("/api/admin/rotinas", { headers: { Authorization: `Bearer ${token}` } });
-      const d = (await res.json()) as { estados?: EstadoDaRotina[]; error?: string };
+      const d = (await res.json()) as { estados?: EstadoDaRotina[]; espaco?: EspacoDaBase | null; error?: string };
       if (!res.ok || !d.estados) {
         setErro(d.error ?? "As rotinas não carregaram.");
         return;
       }
       setEstados(d.estados);
+      setEspaco(d.espaco ?? null);
       setVistoEm(Date.now());
       setErro("");
     } catch {
@@ -57,6 +60,30 @@ export default function AdminRotinasPanel() {
   }
 
   return (
+    <>
+    {/* d1 (23-11-2026): o espaço da base no Railway; vermelho a partir dos 85 %. */}
+    {espaco && (
+      <p
+        role={espaco.alarme ? "alert" : "status"}
+        className={`mb-3 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm ${
+          espaco.alarme ? "border-red-500/40 bg-red-500/10 text-red-200" : "border-slate-700 bg-slate-800/40 text-slate-300"
+        }`}
+      >
+        {espaco.alarme ? (
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-400" aria-hidden="true" />
+        ) : (
+          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-400" aria-hidden="true" />
+        )}
+        <span>
+          {espaco.frase}
+          {espaco.maiores.length > 0 && (
+            <span className="mt-1 block text-xs text-slate-400">
+              Maiores: {espaco.maiores.map((m) => `${m.tabela} ${m.totalMb} MB`).join(" · ")}
+            </span>
+          )}
+        </span>
+      </p>
+    )}
     <ul className="divide-y divide-slate-800">
       {estados.map((e) => {
         const quando = e.ultima ? new Date(vistoEm - e.ultima.haSegundos * 1000) : null;
@@ -93,5 +120,6 @@ export default function AdminRotinasPanel() {
         );
       })}
     </ul>
+    </>
   );
 }

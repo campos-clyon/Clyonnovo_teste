@@ -454,7 +454,11 @@ export async function contarRotinasVermelhas(): Promise<number> {
   try {
     const { estadoDasRotinas, contarVermelhas } = await import("./rotinas");
     const { ultimas, carimbosHaSegundos } = await ultimaPassagemDeCadaRotina();
-    return contarVermelhas(estadoDasRotinas(ultimas, carimbosHaSegundos));
+    const rotinas = contarVermelhas(estadoDasRotinas(ultimas, carimbosHaSegundos));
+    // d1 (23-11-2026): o volume da base acima dos 85 % também acende o selo.
+    const { medirOEspaco } = await import("./espaco-da-base-na-base");
+    const espaco = await medirOEspaco().catch(() => null);
+    return rotinas + (espaco?.alarme ? 1 : 0);
   } catch {
     return 0;
   }
