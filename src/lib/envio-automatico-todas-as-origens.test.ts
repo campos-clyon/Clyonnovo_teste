@@ -121,6 +121,17 @@ vi.mock("@/lib/db", async (original) => {
       return mudadas(1);
     }
     if (/motivo = 'interrompido'/.test(sql)) return mudadas(0);
+    // d2: a contagem da fila, a limpeza das linhas presas, o «tirar da fila» e o pedido repetido do mesmo contacto.
+    if (/SELECT COUNT\(\*\) AS n FROM envioAutomaticoAosParceiros/.test(sql)) return [[{ n: [...t.values()].filter((l) => l.estado === "na_fila").length }], undefined];
+    if (/e\.motivo = 'ja_enviado'/.test(sql)) return mudadas(0);
+    if (/e\.motivo = 'fechado'/.test(sql)) return mudadas(0);
+    if (/SET motivo = \?, estado = 'ficou'/.test(sql)) {
+      const l = t.get(Number(p[1]));
+      if (!l || l.estado !== "na_fila") return mudadas(0);
+      Object.assign(l, { estado: "ficou", motivo: String(p[0]), mudadoEm: agora });
+      return mudadas(1);
+    }
+    if (/FROM simulatorOrders o\s+WHERE o\.id < \?/.test(sql)) return [[], undefined];
     if (/SET vistoEm = \?/.test(sql)) {
       const l = t.get(Number(p[1]));
       if (!l) return mudadas(0);

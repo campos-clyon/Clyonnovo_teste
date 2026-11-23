@@ -37,6 +37,14 @@ const base = vi.hoisted(() => ({
   receberam: 3,
   enviados: [] as number[],
   historico: [] as string[],
+  /** d2: a limpeza das linhas presas falha (ou a negociação só aparece depois): a fila tem de se defender sozinha. */
+  limpezaFalha: false,
+  /** d2: o mesmo contacto tem outro pedido aberto nos últimos 7 dias. */
+  outroAberto: false,
+  /** d2: os pedidos da fila (por id) — a rotina da fila de várias linhas. */
+  pedidos: new Map<number, Record<string, unknown>>(),
+  negsPorPedido: new Map<number, Array<{ estado: string }>>(),
+  sqlDoRepetido: [] as string[],
 }));
 
 vi.mock("@/lib/db", async (original) => {
@@ -91,6 +99,33 @@ vi.mock("@/lib/db", async (original) => {
       return mudadas(1);
     }
     if (/motivo = 'interrompido'/.test(sql)) return mudadas(0);
+    // d2: a contagem da fila, a limpeza das linhas presas, o «tirar da fila» e o pedido repetido do mesmo contacto.
+    if (/SELECT COUNT\(\*\) AS n FROM envioAutomaticoAosParceiros/.test(sql)) {
+      return [[{ n: [...t.values()].filter((l) => l.estado === "na_fila").length }], undefined];
+    }
+    if (/e\.motivo = 'ja_enviado'/.test(sql)) {
+      if (base.limpezaFalha) throw new Error("a limpeza não correu");
+      let n = 0;
+      for (const l of t.values()) {
+        const negs = base.negsPorPedido.get(l.pedidoId) ?? (base.pedidos.size === 0 ? base.negs : []);
+        if (l.estado === "na_fila" && negs.length > 0) {
+          Object.assign(l, { estado: "ficou", motivo: "ja_enviado", mudadoEm: agora });
+          n++;
+        }
+      }
+      return mudadas(n);
+    }
+    if (/e\.motivo = 'fechado'/.test(sql)) return mudadas(0);
+    if (/SET motivo = \?, estado = 'ficou'/.test(sql)) {
+      const l = t.get(Number(p[1]));
+      if (!l || l.estado !== "na_fila") return mudadas(0);
+      Object.assign(l, { estado: "ficou", motivo: String(p[0]), mudadoEm: agora });
+      return mudadas(1);
+    }
+    if (/FROM simulatorOrders o\s+WHERE o\.id < \?/.test(sql)) {
+      base.sqlDoRepetido.push(sql);
+      return [base.outroAberto ? [{ id: 1 }] : [], undefined];
+    }
     if (/SELECT pedidoId, origem FROM envioAutomaticoAosParceiros\s+WHERE estado = 'na_fila'/.test(sql)) {
       return [[...t.values()].filter((l) => l.estado === "na_fila").map((l) => ({ pedidoId: l.pedidoId, origem: l.origem })), undefined];
     }
@@ -102,8 +137,8 @@ vi.mock("@/lib/db", async (original) => {
   return {
     ...(await original<typeof import("@/lib/db")>()),
     getPool: vi.fn(async () => ({ execute })),
-    getSimulatorOrderById: vi.fn(async () => base.pedido),
-    negociacoesDoPedido: vi.fn(async () => base.negs),
+    getSimulatorOrderById: vi.fn(async (id?: number) => (base.pedidos.size > 0 ? base.pedidos.get(Number(id)) : base.pedido)),
+    negociacoesDoPedido: vi.fn(async (id?: number) => base.negsPorPedido.get(Number(id)) ?? base.negs),
     mensagensDoNumeroWhatsApp: vi.fn(async () => base.fio),
     numeroBloqueadoWhatsApp: vi.fn(async () => base.bloqueado),
     // A rotina da d88 varre os «Orçamentos novos»: aqui não há nenhum (os testes da d88 estão noutro ficheiro).
@@ -160,10 +195,12 @@ import {
   NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO,
   porqueNaoSegueSozinho,
   servicoDaListaDaClyon,
+  dataPedidaJaPassou,
   type CandidatoAoEnvioAutomatico,
 } from "./envio-automatico-aos-parceiros";
 import {
   linhasDoEnvioAutomaticoNaMesa,
+  resumoDaRotinaDoEnvioAutomatico,
   rotinaDoEnvioAutomatico,
   seguirSozinhoParaOsParceiros,
 } from "./envio-automatico-aos-parceiros-na-base";
@@ -220,6 +257,11 @@ beforeEach(() => {
   base.receberam = 3;
   base.enviados = [];
   base.historico = [];
+  base.limpezaFalha = false;
+  base.outroAberto = false;
+  base.pedidos.clear();
+  base.negsPorPedido.clear();
+  base.sqlDoRepetido = [];
 });
 
 /* ── As regras puras ─────────────────────────────────────────────────────── */
@@ -591,5 +633,172 @@ describe("o envio automático usa a MESMA função do «Enviar aos profissionais
     expect(cron).toContain('carimbarPassagem("envio-aos-parceiros"');
     const vercel = JSON.parse(ler("vercel.json")) as { crons: Array<{ path: string; schedule: string }> };
     expect(vercel.crons).toContainEqual({ path: "/api/cron/envio-aos-parceiros", schedule: "*/15 * * * *" });
+  });
+});
+
+/* ── d2 (23-11-2026): a fila que não prende, a data que passou, o pedido repetido ── */
+
+describe("d2 — o dia pedido não pode ter passado (em Lisboa)", () => {
+  it("antes de hoje: passou; hoje e depois: não; sem data: não", () => {
+    expect(dataPedidaJaPassou(new Date("2026-11-21T00:00:00Z"), DE_TARDE)).toBe(true);
+    expect(dataPedidaJaPassou(new Date("2026-11-22T00:00:00Z"), DE_TARDE)).toBe(false);
+    expect(dataPedidaJaPassou(new Date("2026-11-22T08:00:00Z"), DE_TARDE)).toBe(false);
+    expect(dataPedidaJaPassou(new Date("2026-11-23T00:00:00Z"), DE_TARDE)).toBe(false);
+    expect(dataPedidaJaPassou(null, DE_TARDE)).toBe(false);
+    expect(dataPedidaJaPassou("lixo", DE_TARDE)).toBe(false);
+  });
+  it("conta-se no relógio de Lisboa, não no do servidor (Verão: 00h30 de Lisboa já é dia 11)", () => {
+    const a1h30 = new Date("2026-07-10T23:30:00Z"); // 00h30 de 11/07 em Lisboa
+    expect(dataPedidaJaPassou(new Date("2026-07-10T12:00:00Z"), a1h30)).toBe(true);
+    expect(dataPedidaJaPassou(new Date("2026-07-10T23:15:00Z"), a1h30)).toBe(false); // 00h15 de 11/07: o mesmo dia
+  });
+  it("a condição pura e o motivo", () => {
+    expect(porqueNaoSegueSozinho({ ...COMPLETO, dataAgendada: new Date("2026-11-20T00:00:00Z"), agora: DE_TARDE })).toBe("data_passada");
+    expect(porqueNaoSegueSozinho({ ...COMPLETO, dataAgendada: new Date("2026-11-22T00:00:00Z"), agora: DE_TARDE })).toBeNull();
+    expect(MOTIVOS_DO_ENVIO_AUTOMATICO.data_passada).toContain("já passou");
+  });
+  it("com a data passada o pedido não segue: fica nos «por enviar» com o motivo", async () => {
+    base.pedido = { ...PEDIDO_COMPLETO, dataAgendada: new Date("2026-11-20T00:00:00Z") };
+    const r = await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_TARDE });
+    expect(r).toEqual({ estado: "ficou", motivo: "data_passada" });
+    expect(base.enviados).toEqual([]);
+    expect(base.tabela.get(9101)?.motivo).toBe("data_passada");
+    expect((await linhasDoEnvioAutomaticoNaMesa([9101])).get(9101)).toContain("o dia pedido pelo cliente já passou");
+  });
+  it("com o dia de hoje segue", async () => {
+    base.pedido = { ...PEDIDO_COMPLETO, dataAgendada: new Date("2026-11-22T00:00:00Z") };
+    expect((await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_TARDE })).estado).toBe("enviado");
+  });
+});
+
+describe("d2 — outro pedido aberto do mesmo contacto nos últimos 7 dias", () => {
+  it("há outro: fica nos «por enviar» com o motivo, e nada sai", async () => {
+    base.outroAberto = true;
+    const r = await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_TARDE });
+    expect(r).toEqual({ estado: "ficou", motivo: "pedido_repetido" });
+    expect(base.enviados).toEqual([]);
+    expect((await linhasDoEnvioAutomaticoNaMesa([9101])).get(9101)).toContain("outro pedido aberto nos últimos 7 dias");
+  });
+  it("não há: segue — e a pergunta é pelos 7 dias, só os de antes, só os abertos, pelo telefone ou pelo email", async () => {
+    expect((await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_TARDE })).estado).toBe("enviado");
+    const sql = base.sqlDoRepetido[0];
+    expect(sql).toContain("o.id < ?");
+    expect(sql).toContain("INTERVAL 7 DAY");
+    for (const e of ["cancelado", "rejeitado", "arquivado", "concluido"]) expect(sql).toContain(`'${e}'`);
+    expect(sql).toContain("contactPhone");
+    expect(sql).toContain("contactEmail");
+  });
+  it("o repetido que entretanto deixou de o ser (o outro fechou) segue na passagem seguinte", async () => {
+    base.outroAberto = true;
+    await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_TARDE });
+    base.outroAberto = false;
+    expect((await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_TARDE })).estado).toBe("enviado");
+  });
+});
+
+describe("d2 — a fila não prende: o que já não pode seguir sai dela, com o motivo", () => {
+  /** Uma fila de `n` pedidos, todos completos e distintos, postos na fila de noite. */
+  async function filaDe(n: number): Promise<number[]> {
+    const ids = Array.from({ length: n }, (_, i) => 9300 + i);
+    for (const id of ids) {
+      base.pedidos.set(id, { ...PEDIDO_COMPLETO, id, contactPhone: `91000${String(id).slice(-4).padStart(4, "0")}`, contactEmail: null });
+      await seguirSozinhoParaOsParceiros(id, { origem: "pedir_o_que_falta", agora: DE_NOITE });
+      const l = base.tabela.get(id);
+      if (l) l.criadoEm = new Date(DE_NOITE.getTime() + (id - 9300) * 1000);
+    }
+    return ids;
+  }
+
+  it("fila com 6 linhas e 5 já enviadas à mão: a 6.ª sai (a limpeza falhou — a rotina defende-se sozinha)", async () => {
+    const ids = await filaDe(6);
+    expect(ids.every((id) => base.tabela.get(id)?.estado === "na_fila")).toBe(true);
+    for (const id of ids.slice(0, 5)) base.negsPorPedido.set(id, [{ estado: "aberta" }]);
+    base.limpezaFalha = true;
+    const r = await rotinaDoEnvioAutomatico(AS_8H);
+    expect(base.enviados).toEqual([ids[5]]);
+    expect(r).toMatchObject({ naFila: 6, enviados: 1, tiradosDaFila: 5, limpas: 0 });
+    for (const id of ids.slice(0, 5)) expect(base.tabela.get(id)).toMatchObject({ estado: "ficou", motivo: "ja_enviado" });
+    expect(base.tabela.get(ids[5])?.estado).toBe("enviado");
+    // Na passagem seguinte a fila está vazia.
+    const r2 = await rotinaDoEnvioAutomatico(new Date("2026-11-23T08:15:00Z"));
+    expect(r2.naFila).toBe(0);
+    expect(base.enviados).toEqual([ids[5]]);
+  });
+
+  it("a limpeza das linhas presas: tira-as da fila com o motivo, sem enviar nada a quem já foi enviado", async () => {
+    const ids = await filaDe(6);
+    for (const id of ids.slice(0, 5)) base.negsPorPedido.set(id, [{ estado: "aberta" }]);
+    const r = await rotinaDoEnvioAutomatico(AS_8H);
+    expect(r).toMatchObject({ naFila: 6, limpas: 5, enviados: 1 });
+    expect(base.enviados).toEqual([ids[5]]);
+    expect(resumoDaRotinaDoEnvioAutomatico(r)).toContain("5 linha(s) presa(s) limpa(s) da fila");
+  });
+
+  it("enviado à mão com as negociações já mortas: nunca volta a sair sozinho", async () => {
+    const ids = await filaDe(1);
+    base.negsPorPedido.set(ids[0], [{ estado: "morta" }, { estado: "recusada" }]);
+    base.limpezaFalha = true;
+    await rotinaDoEnvioAutomatico(AS_8H);
+    expect(base.enviados).toEqual([]);
+    expect(base.tabela.get(ids[0])).toMatchObject({ estado: "ficou", motivo: "ja_enviado" });
+    // E por outra origem também: já tem negociações, mesmo mortas.
+    expect(await seguirSozinhoParaOsParceiros(ids[0], { origem: "registado", agora: AS_8H })).toEqual({ estado: "ja_enviado" });
+    expect(base.enviados).toEqual([]);
+  });
+
+  it("apagado: sai da fila, com o motivo", async () => {
+    const ids = await filaDe(1);
+    base.pedidos.delete(ids[0]);
+    base.pedidos.set(1, {}); // a lista continua a existir (e a servir de «base»), mas este id já não está nela
+    base.limpezaFalha = true;
+    const r = await rotinaDoEnvioAutomatico(AS_8H);
+    expect(base.enviados).toEqual([]);
+    expect(base.tabela.get(ids[0])).toMatchObject({ estado: "ficou", motivo: "fechado" });
+    expect(r.naFila).toBe(1);
+  });
+
+  it("deixou de estar completo: sai da fila, com o motivo", async () => {
+    const ids = await filaDe(1);
+    base.faltas = ["fotografias"];
+    await rotinaDoEnvioAutomatico(AS_8H);
+    expect(base.enviados).toEqual([]);
+    expect(base.tabela.get(ids[0])).toMatchObject({ estado: "ficou", motivo: "incompleto" });
+  });
+
+  it("a data passou entretanto: fica nos «por enviar» com o motivo, sai da fila, e o seguinte sai", async () => {
+    const [a, b] = await filaDe(2);
+    base.pedidos.set(a, { ...base.pedidos.get(a), dataAgendada: new Date("2026-11-20T00:00:00Z") });
+    await rotinaDoEnvioAutomatico(AS_8H);
+    expect(base.enviados).toEqual([b]);
+    expect(base.tabela.get(a)).toMatchObject({ estado: "ficou", motivo: "data_passada" });
+  });
+
+  it("há outro pedido aberto do mesmo contacto: fica nos «por enviar» com o motivo e sai da fila", async () => {
+    const [a] = await filaDe(1);
+    base.outroAberto = true;
+    await rotinaDoEnvioAutomatico(AS_8H);
+    expect(base.enviados).toEqual([]);
+    expect(base.tabela.get(a)).toMatchObject({ estado: "ficou", motivo: "pedido_repetido" });
+  });
+});
+
+describe("d2 — o resumo da rotina diz sempre quantos havia na fila", () => {
+  it("fila vazia: «0 na fila»", async () => {
+    const r = await rotinaDoEnvioAutomatico(AS_8H);
+    expect(r.naFila).toBe(0);
+    expect(resumoDaRotinaDoEnvioAutomatico(r)).toBe("0 na fila");
+  });
+  it("com fila: quantos havia, enviados, ficaram e tirados", async () => {
+    await seguirSozinhoParaOsParceiros(9101, { origem: "pedir_o_que_falta", agora: DE_NOITE });
+    const r = await rotinaDoEnvioAutomatico(AS_8H);
+    expect(resumoDaRotinaDoEnvioAutomatico(r)).toBe("1 na fila: 1 enviado(s), 0 ficaram nos «por enviar», 0 tirado(s) da fila");
+  });
+  it("fora das 8h–21h também conta (e desligado)", async () => {
+    await seguirSozinhoParaOsParceiros(9101, { origem: "pedir_o_que_falta", agora: DE_NOITE });
+    const cedo = await rotinaDoEnvioAutomatico(new Date("2026-11-23T07:45:00Z"));
+    expect(resumoDaRotinaDoEnvioAutomatico(cedo)).toBe("fora das 8h–21h (1 na fila)");
+    base.interruptor = 0;
+    const off = await rotinaDoEnvioAutomatico(AS_8H);
+    expect(resumoDaRotinaDoEnvioAutomatico(off)).toBe("desligado nas Configs (1 na fila)");
   });
 });

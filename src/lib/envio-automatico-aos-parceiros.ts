@@ -1,4 +1,4 @@
-import { pecasEmLisboa, diaMesEHoraEmLisboa, diaEmLisboa, horaEmLisboa, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
+import { pecasEmLisboa, diaMesEHoraEmLisboa, diaEmLisboa, horaEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { pedidoFechado } from "./pedido-arrumado";
 import { eDeTeste } from "./lembrete-do-que-falta";
 import { arrumarAsFaltas, type ChaveDaFalta } from "./mensagem-do-que-falta";
@@ -89,7 +89,11 @@ export type MotivoDoEnvioAutomatico =
   | "so_da_vitoria"
   | "nao_chegou"
   | "interrompido"
-  | "falhou";
+  | "falhou"
+  /* d2 (23-11-2026): o dia pedido já passou; outro pedido aberto do mesmo contacto; já enviado à mão. */
+  | "data_passada"
+  | "pedido_repetido"
+  | "ja_enviado";
 
 /** Os motivos, como o cartão da Mesa e o histórico os dizem. */
 export const MOTIVOS_DO_ENVIO_AUTOMATICO: Readonly<Record<MotivoDoEnvioAutomatico, string>> = Object.freeze({
@@ -118,7 +122,22 @@ export const MOTIVOS_DO_ENVIO_AUTOMATICO: Readonly<Record<MotivoDoEnvioAutomatic
   nao_chegou: "não chegou a nenhum parceiro",
   interrompido: "o envio automático não terminou — conferir e enviar à mão",
   falhou: "o envio automático falhou — enviar à mão",
+  data_passada: "o dia pedido pelo cliente já passou — confirmar a data com ele",
+  pedido_repetido: "o mesmo contacto tem outro pedido aberto nos últimos 7 dias — ver se é o mesmo",
+  ja_enviado: "já tinha sido enviado aos parceiros (à mão)",
 });
+
+/**
+ * O DIA PEDIDO JÁ PASSOU? — conta-se em Lisboa (hora-de-lisboa.ts), nunca no
+ * fuso do servidor. Hoje ainda vale; um dia antes de hoje já não. Sem data (ou
+ * uma data que não se lê), não passou: a falta de data é a «incompleto» que a
+ * vê.
+ */
+export function dataPedidaJaPassou(dataAgendada: Date | string | null | undefined, agora: Date): boolean {
+  const d = instanteDaBase(dataAgendada ?? null);
+  if (!d) return false;
+  return diaEmLisboa(d) < diaEmLisboa(agora);
+}
 
 /** O que as regras puras precisam de saber do pedido. */
 export type CandidatoAoEnvioAutomatico = {
@@ -130,6 +149,9 @@ export type CandidatoAoEnvioAutomatico = {
   faltas: readonly ChaveDaFalta[];
   codigoPostal: string | null | undefined;
   valorFixoClyon?: unknown;
+  /** d2: o dia que o cliente pediu e o instante de agora — o dia pedido não pode ter passado. */
+  dataAgendada?: Date | string | null;
+  agora?: Date;
   /** A descrição ficou na língua do cliente — o tradutor falhou (d46). */
   porTraduzir?: boolean;
   /** Registado sem o SIM do cliente, 30 minutos depois do resumo. */
@@ -170,6 +192,7 @@ export function porqueNaoSegueSozinho(
   if (!servicoDaListaDaClyon(c.serviceType)) return "servico_fora";
   if (eDeTeste(c.contactName, c.contactEmail, emailsDeTeste)) return "de_teste";
   if (arrumarAsFaltas(c.faltas).length > 0) return "incompleto";
+  if (dataPedidaJaPassou(c.dataAgendada, c.agora ?? new Date())) return "data_passada";
   if (!codigoPostalValido(c.codigoPostal)) return "sem_codigo_postal";
   if (c.porTraduzir) return "por_traduzir";
   if (c.registadoSozinho) return "registado_sozinho";

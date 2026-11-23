@@ -40,6 +40,7 @@ import {
   registarNaTransaccao,
 } from "@/lib/db";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
+import { ESTADOS_DE_PEDIDO_FECHADO_SQL } from "@/lib/pedido-arrumado";
 import { oQueFaltaNoPedido, type PedidoParaOQueFalta } from "@/lib/o-que-falta-no-pedido";
 import { codigoPostalGuardado } from "@/lib/morada-partida";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
@@ -321,6 +322,53 @@ async function ficaComOMotivo(
   return linhasMudadas(mudou) === 1;
 }
 
+/**
+ * TIRAR DA FILA, COM O MOTIVO (d2, 23-11-2026). Uma linha «na fila» cujo pedido
+ * já foi enviado à mão, foi apagado ou deixou de estar completo nunca mais
+ * sairia — e, por ser das mais antigas, ocupava o lugar dos que esperam atrás
+ * dela. Só mexe na linha da fila de envio (estado «na fila» → «ficou»); nunca
+ * no pedido nem noutra tabela.
+ */
+async function tirarDaFila(pool: Pool, pedidoId: number, motivo: MotivoDoEnvioAutomatico): Promise<void> {
+  await pool
+    .execute(
+      `UPDATE envioAutomaticoAosParceiros SET motivo = ?, estado = 'ficou', mudadoEm = UTC_TIMESTAMP()
+        WHERE pedidoId = ? AND estado = 'na_fila'`,
+      [motivo, pedidoId],
+    )
+    .catch(() => undefined);
+}
+
+/**
+ * HÁ OUTRO PEDIDO ABERTO DO MESMO CONTACTO NOS ÚLTIMOS 7 DIAS? (d2) — pelo
+ * telemóvel (os 9 últimos dígitos) ou pelo email. Só contam os criados ANTES
+ * deste: o primeiro segue, o repetido fica com uma pessoa (se contassem os dois
+ * lados, nenhum seguia nunca). Aberto = nem cancelado, nem arquivado, nem
+ * rejeitado, nem concluído.
+ */
+async function haOutroPedidoAbertoDoMesmoContacto(
+  pool: Pool,
+  pedidoId: number,
+  telefone: unknown,
+  email: unknown,
+): Promise<boolean> {
+  const noves = String(telefone ?? "").replace(/\D/g, "").slice(-9);
+  const nove = noves.length === 9 ? noves : "";
+  const mail = String(email ?? "").trim().toLowerCase();
+  const email1 = mail.includes("@") ? mail : "";
+  if (!nove && !email1) return false;
+  const [rows] = (await pool.execute(
+    `SELECT o.id FROM simulatorOrders o
+      WHERE o.id < ? AND o.createdAt > NOW() - INTERVAL 7 DAY
+        AND (o.status IS NULL OR o.status NOT IN ${ESTADOS_DE_PEDIDO_FECHADO_SQL})
+        AND ((? <> '' AND RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?)
+          OR (? <> '' AND LOWER(COALESCE(o.contactEmail, '')) = ?))
+      LIMIT 1`,
+    [pedidoId, nove, nove, email1, email1],
+  )) as [Array<{ id: number }>, unknown];
+  return rows.length > 0;
+}
+
 async function marcarEnviado(pool: Pool, pedidoId: number, receberam: number): Promise<void> {
   await pool.execute(
     `UPDATE envioAutomaticoAosParceiros
@@ -388,7 +436,6 @@ export type ResultadoDoEnvioAutomatico =
   /** Outra execução tem a reserva: não se envia duas vezes. */
   | { estado: "reservado" };
 
-const VIVAS = ["aberta", "aguarda_contratacao", "acordada"];
 
 function emailsDeTesteDoAmbiente(): Set<string> {
   return new Set(
@@ -421,6 +468,8 @@ export async function seguirSozinhoParaOsParceiros(
     registadoSozinho?: boolean;
     /** d88: visto pela rotina dos «Orçamentos novos», e não pela Vitória. */
     todasAsOrigens?: boolean;
+    /** d2: a rotina está a soltar a FILA — o que já não pode seguir sai da fila, com o motivo. */
+    daFila?: boolean;
     agora?: Date;
   },
 ): Promise<ResultadoDoEnvioAutomatico> {
@@ -433,6 +482,7 @@ export async function seguirSozinhoParaOsParceiros(
     console.error("[envio-automatico] sem base — fica nos «por enviar»:", e instanceof Error ? e.message : e);
     return { estado: "ficou", motivo: "falhou" };
   }
+  const daFila = opcoes.daFila === true || opcoes.origem === "fila";
   const ficar = async (motivo: MotivoDoEnvioAutomatico, enviariaA: number | null = null, daReserva = false) => {
     const novo = await ficaComOMotivo(pool, pedidoId, opcoes.origem, motivo, enviariaA, daReserva).catch(() => false);
     if (novo) {
@@ -443,9 +493,19 @@ export async function seguirSozinhoParaOsParceiros(
 
   try {
     const pedido = await getSimulatorOrderById(pedidoId);
-    if (!pedido) return { estado: "ficou", motivo: "fechado" };
-    // Já foi enviado (pela Mesa, ou por outra execução que já acabou): nada a fazer, e nada a escrever.
-    if ((await negociacoesDoPedido(pedidoId)).some((n) => VIVAS.includes(n.estado))) return { estado: "ja_enviado" };
+    if (!pedido) {
+      if (daFila) await tirarDaFila(pool, pedidoId, "fechado");
+      return { estado: "ficou", motivo: "fechado" };
+    }
+    /*
+     * Já foi enviado (pela Mesa, ou por outra execução que já acabou). Conta
+     * QUALQUER negociação, viva ou morta (d2): um pedido enviado à mão, mesmo com
+     * as negociações já mortas, nunca volta a sair sozinho. Da fila, sai com o motivo.
+     */
+    if ((await negociacoesDoPedido(pedidoId)).length > 0) {
+      if (daFila) await tirarDaFila(pool, pedidoId, "ja_enviado");
+      return { estado: "ja_enviado" };
+    }
 
     const p = pedido as unknown as PedidoParaOQueFalta & {
       status?: string | null;
@@ -463,6 +523,7 @@ export async function seguirSozinhoParaOsParceiros(
       escolhaDosParceirosJson?: unknown;
       estimateTotal?: unknown;
       estimateMax?: unknown;
+      dataAgendada?: Date | string | null;
     };
     const rawOrderJson = typeof p.rawOrderJson === "string" ? p.rawOrderJson : JSON.stringify(p.rawOrderJson ?? {});
     const motivo = porqueNaoSegueSozinho(
@@ -474,6 +535,8 @@ export async function seguirSozinhoParaOsParceiros(
         faltas: oQueFaltaNoPedido(p),
         codigoPostal: (typeof p.postalCode === "string" && p.postalCode.trim()) || codigoPostalGuardado(rawOrderJson),
         valorFixoClyon: p.valorFixoClyon,
+        dataAgendada: p.dataAgendada ?? null,
+        agora,
         porTraduzir: opcoes.porTraduzir === true,
         // d88: a rotina não ouviu a Vitória — o histórico diz se ela o registou sem o SIM do cliente.
         registadoSozinho: opcoes.registadoSozinho === true || (todas && registadoSozinhoNoHistorico(p.historyJson)),
@@ -485,8 +548,13 @@ export async function seguirSozinhoParaOsParceiros(
      * a Vitória regista sem tudo não leva uma linha a dizê-lo outra vez (nem no
      * histórico). Quando ficar completo pela resposta do cliente, vê-se de novo.
      */
-    if (motivo === "incompleto") return { estado: "ficou", motivo };
+    if (motivo === "incompleto") {
+      if (daFila) await tirarDaFila(pool, pedidoId, "incompleto");
+      return { estado: "ficou", motivo };
+    }
     if (motivo) return await ficar(motivo);
+    // d2: outro pedido aberto do mesmo contacto nos últimos 7 dias — fica com uma pessoa.
+    if (await haOutroPedidoAbertoDoMesmoContacto(pool, pedidoId, p.contactPhone, p.contactEmail)) return await ficar("pedido_repetido");
 
     // d88: os que ficam SEMPRE com uma pessoa — Trabalho CLYON e valor fixo já acima, e estes.
     const origemDoPedido = origemNoEnvioAutomatico(slugDaOrigem(rawOrderJson));
@@ -585,9 +653,14 @@ export async function seguirSozinhoParaOsParceiros(
 export type ResultadoDaRotinaDoEnvioAutomatico = {
   desligado: boolean;
   foraDaJanela: boolean;
+  /** Quantos havia na fila (estado «na fila») quando a passagem começou — sempre contado, dentro ou fora do horário. */
   naFila: number;
   enviados: number;
   ficaram: number;
+  /** d2: tirados da fila, com o motivo — já enviados à mão, apagados ou deixaram de estar completos. */
+  tiradosDaFila: number;
+  /** d2: as linhas já presas, limpas no início da passagem. */
+  limpas: number;
   interrompidos: number;
   /** d88: os «Orçamentos novos» vistos nesta passagem, os enviados e os que ficaram à espera. */
   vistos: number;
@@ -603,6 +676,36 @@ export const POR_PASSAGEM = 5;
 /** Quantos «Orçamentos novos» se VÊEM por passagem (d88) — os mais recentes primeiro. */
 export const VISTOS_POR_PASSAGEM = 10;
 
+/** Quantas linhas da fila se LEEM por passagem (d2): bem mais do que as que se enviam, para as já fechadas não travarem as que esperam. */
+export const VISTOS_DA_FILA_POR_PASSAGEM = 50;
+
+/** Os que saem da fila sem custo de envio: não falam com o Google nem com o email. */
+const MOTIVOS_QUE_SAEM_DA_FILA_SEM_CUSTO: ReadonlySet<string> = new Set(["fechado", "incompleto", "data_passada", "pedido_repetido"]);
+
+/**
+ * A LIMPEZA DAS LINHAS JÁ PRESAS (d2) — as «na fila» cujo pedido já tem
+ * negociações (foi enviado à mão) ou já não existe. Só mexe na tabela do envio
+ * automático (estado «na fila» → «ficou», com o motivo); nunca apaga nem muda
+ * pedidos, clientes ou negociações. Idempotente: depois da primeira passagem
+ * não há mais nada para limpar. Devolve quantas linhas limpou.
+ */
+async function limparAsLinhasPresasDaFila(pool: Pool): Promise<number> {
+  try {
+    const [jaEnviados] = await pool.execute(
+      `UPDATE envioAutomaticoAosParceiros e SET e.motivo = 'ja_enviado', e.estado = 'ficou', e.mudadoEm = UTC_TIMESTAMP()
+        WHERE e.estado = 'na_fila' AND EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = e.pedidoId)`,
+    );
+    const [apagados] = await pool.execute(
+      `UPDATE envioAutomaticoAosParceiros e SET e.motivo = 'fechado', e.estado = 'ficou', e.mudadoEm = UTC_TIMESTAMP()
+        WHERE e.estado = 'na_fila' AND NOT EXISTS (SELECT 1 FROM simulatorOrders o WHERE o.id = e.pedidoId)`,
+    );
+    return linhasMudadas(jaEnviados) + linhasMudadas(apagados);
+  } catch (e) {
+    console.error("[envio-automatico] a limpeza da fila falhou:", e instanceof Error ? e.message : e);
+    return 0;
+  }
+}
+
 /** Um pedido que ficou volta a ser visto ao fim de uma hora (o motivo pode ter mudado), e não a cada passagem. */
 const MINUTOS_PARA_REVER = 60;
 
@@ -611,7 +714,7 @@ const MINUTOS_PARA_REVER = 60;
  * chegou a ninguém ou que falhou passa à equipa (d87); o registado sem o SIM do
  * cliente e a descrição por traduzir só a Vitória os sabe (d46).
  */
-const MOTIVOS_QUE_NAO_SE_REVEEM: ReadonlySet<string> = new Set(["falhou", "interrompido", "nao_chegou", "registado_sozinho", "por_traduzir"]);
+const MOTIVOS_QUE_NAO_SE_REVEEM: ReadonlySet<string> = new Set(["falhou", "interrompido", "nao_chegou", "registado_sozinho", "por_traduzir", "ja_enviado"]);
 
 /**
  * OS «ORÇAMENTOS NOVOS» DE TODAS AS ORIGENS (d88). Os abertos da Mesa
@@ -677,6 +780,8 @@ export async function rotinaDoEnvioAutomatico(agora: Date = new Date()): Promise
     naFila: 0,
     enviados: 0,
     ficaram: 0,
+    tiradosDaFila: 0,
+    limpas: 0,
     interrompidos: 0,
     vistos: 0,
     enviadosDosNovos: 0,
@@ -690,10 +795,20 @@ export async function rotinaDoEnvioAutomatico(agora: Date = new Date()): Promise
       WHERE estado = 'a_enviar' AND mudadoEm < UTC_TIMESTAMP() - INTERVAL 15 MINUTE`,
   );
   r.interrompidos = linhasMudadas(presos);
+  // d2: o resumo diz sempre quantos havia na fila.
+  try {
+    const [[contagem]] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM envioAutomaticoAosParceiros WHERE estado = 'na_fila'",
+    )) as [Array<{ n: number | string }>, unknown];
+    r.naFila = Number(contagem?.n ?? 0) || 0;
+  } catch (e) {
+    console.error("[envio-automatico] não contei a fila:", e instanceof Error ? e.message : e);
+  }
   if (!(await interruptorDoEnvioAutomatico()).ligado) {
     r.desligado = true;
     return r;
   }
+  r.limpas = await limparAsLinhasPresasDaFila(pool);
   r.soDaVitoria = (await soOsDaVitoria()).ligado;
   const varrer = async () => {
     if (r.soDaVitoria) return;
@@ -718,17 +833,30 @@ export async function rotinaDoEnvioAutomatico(agora: Date = new Date()): Promise
     `SELECT pedidoId, origem FROM envioAutomaticoAosParceiros
       WHERE estado = 'na_fila' AND (seguirApos IS NULL OR seguirApos <= ?)
         ${r.soDaVitoria ? `AND (origem IS NULL OR origem <> '${ORIGEM_DOS_ORCAMENTOS_NOVOS}')` : ""}
-      ORDER BY criadoEm ASC LIMIT ${POR_PASSAGEM}`,
+      ORDER BY criadoEm ASC LIMIT ${VISTOS_DA_FILA_POR_PASSAGEM}`,
     [agora],
   )) as [Array<{ pedidoId: number; origem: string | null }>, unknown];
-  r.naFila = rows.length;
+  /*
+   * d2: os que se TIRAM da fila sem custo (já enviados à mão, apagados, sem
+   * estar completos, a data passada, repetidos) não gastam a vez dos que ficam
+   * atrás — senão cinco linhas presas à frente travavam a fila toda.
+   */
+  let tentados = 0;
   for (const l of rows) {
+    if (tentados >= POR_PASSAGEM) break;
     const dosNovos = l.origem === ORIGEM_DOS_ORCAMENTOS_NOVOS;
     const e = await seguirSozinhoParaOsParceiros(Number(l.pedidoId), {
       origem: dosNovos ? ORIGEM_DOS_ORCAMENTOS_NOVOS : "fila",
       todasAsOrigens: dosNovos,
+      daFila: true,
       agora,
     });
+    if (e.estado === "ja_enviado" || (e.estado === "ficou" && MOTIVOS_QUE_SAEM_DA_FILA_SEM_CUSTO.has(e.motivo))) {
+      if (e.estado === "ja_enviado" || e.motivo === "incompleto") r.tiradosDaFila++;
+      else r.ficaram++;
+      continue;
+    }
+    tentados++;
     if (e.estado === "enviado") r.enviados++;
     else if (e.estado === "ficou") r.ficaram++;
   }
@@ -739,10 +867,15 @@ export async function rotinaDoEnvioAutomatico(agora: Date = new Date()): Promise
 export function resumoDaRotinaDoEnvioAutomatico(r: ResultadoDaRotinaDoEnvioAutomatico): string | null {
   const partes: string[] = [];
   if (r.interrompidos > 0) partes.push(`${r.interrompidos} interrompido(s), para a equipa`);
-  if (r.desligado) partes.push("desligado nas Configs");
+  if (r.desligado) partes.push(`desligado nas Configs (${r.naFila} na fila)`);
   else {
-    if (r.foraDaJanela) partes.push("fora das 8h–21h");
-    else if (r.naFila > 0) partes.push(`fila: ${r.enviados} enviado(s), ${r.ficaram} ficaram nos «por enviar»`);
+    if (r.limpas > 0) partes.push(`${r.limpas} linha(s) presa(s) limpa(s) da fila`);
+    if (r.foraDaJanela) partes.push(`fora das 8h–21h (${r.naFila} na fila)`);
+    else if (r.naFila > 0) {
+      partes.push(
+        `${r.naFila} na fila: ${r.enviados} enviado(s), ${r.ficaram} ficaram nos «por enviar», ${r.tiradosDaFila} tirado(s) da fila`,
+      );
+    } else partes.push("0 na fila");
     if (r.soDaVitoria) partes.push("só os da Vitória");
     else if (r.vistos > 0) partes.push(`orçamentos novos: ${r.vistos} visto(s), ${r.enviadosDosNovos} enviado(s), ${r.aEsperar} à espera`);
   }
