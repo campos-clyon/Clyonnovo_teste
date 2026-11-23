@@ -194,11 +194,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Páginas por cidade em /mudancas/[cidade] — pSEO real com conteúdo único
-  const mudancasCidadePages = getAllCidadeSlugs().map((slug) => ({
-    url: `${SITE_URL}/mudancas/${slug}`,
-    changeFrequency: "weekly" as const,
-    priority: 0.94,
-  }));
+  // Com a data verdadeira de datas-das-paginas.ts, quando a tem (d96, 23-11-2026); as outras sem `lastmod`.
+  const mudancasCidadePages = getAllCidadeSlugs().map((slug) => {
+    const data = actualizadoEm(`/mudancas/${slug}`);
+    return {
+      url: `${SITE_URL}/mudancas/${slug}`,
+      ...(data ? { lastModified: data } : {}),
+      changeFrequency: "weekly" as const,
+      priority: 0.94,
+    };
+  });
 
   /*
    * AS PÁGINAS DOS PROFISSIONAIS — as únicas do sitemap que não são escritas.

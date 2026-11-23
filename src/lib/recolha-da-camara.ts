@@ -30,6 +30,8 @@ export type InformacaoDaCamara = {
   /** Frases prontas a mostrar, e só com o que as fontes dizem. */
   texto: string;
   fontes: FonteOficial[];
+  /** Quando as fontes DESTE bloco foram relidas, se não foi a `CONSULTADAS_EM` (AAAA-MM-DD). */
+  consultadasEm?: string;
 };
 
 export type RecolhaDaCamara = {
@@ -178,7 +180,9 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
     de: "de Odivelas",
     monos: {
       texto:
-        "Em Odivelas, a recolha de monos pede-se à junta de freguesia ou aos SIMAR, pela linha gratuita 800 100 250 (24 horas por dia) ou por geral@simar-louresodivelas.pt. É gratuita para os clientes dos SIMAR, com data e local combinados, e os SIMAR respondem em até 5 dias úteis. Os monos só vão para junto do contentor, no máximo, 24 horas antes da recolha marcada.",
+        // d96 (23-11-2026): a Câmara diz hoje que o serviço é das juntas, e publica os quatro contactos.
+        "Em Odivelas, a recolha de monos é das juntas de freguesia, por acordo com a Câmara, e cada uma tem o seu contacto, publicado no site da Câmara. Os SIMAR também os recolhem, sem custo para os seus clientes, pela linha gratuita 800 100 250 (24 horas por dia) ou por geral@simar-louresodivelas.pt, com data e local combinados e resposta em até 5 dias úteis. Os monos só vão para junto do contentor, no máximo, 24 horas antes da recolha marcada.",
+      consultadasEm: "2026-11-23",
       fontes: [
         {
           nome: "Câmara Municipal de Odivelas",
@@ -269,8 +273,11 @@ export const RECOLHA_DA_CAMARA: Record<string, RecolhaDaCamara> = {
     de: "de Oeiras",
     monos: {
       texto:
-        "Em Oeiras, a recolha de monos pede-se ao Município pelo Número Verde 800 201 205 (gratuito) ou por daqv@oeiras.pt. O dia, a hora e o local combinam-se com a Câmara, nos dias de recolha de cada zona, e levar os monos até lá é com o munícipe; deixá-los na rua sem esse acordo não é permitido.",
+        // d96 (23-11-2026): a ficha de serviços da Câmara diz o limite de 1 m³ sem custo.
+        "Em Oeiras, a recolha de monos pede-se ao Município pelo Número Verde 800 201 205 (gratuito) ou por daqv@oeiras.pt. É gratuita até 1 m³; acima disso, a Câmara avalia e faz um orçamento. O dia, a hora e o local combinam-se com a Câmara, nos dias de recolha de cada zona, e levar os monos até lá é com o munícipe; deixá-los na rua sem esse acordo não é permitido.",
+      consultadasEm: "2026-11-23",
       fontes: [
+        { nome: "Município de Oeiras — Recolha de Monos e Verdes", url: "https://www.oeiras.pt/w/fs-recolha-monos-verdes" },
         {
           nome: "Câmara Municipal de Oeiras — «Cada resíduo no seu lugar»",
           url: "https://oeirasinterativa.oeiras.pt/dadosabertos/dataset/b2965561-5791-4fbf-9898-b3506013a9f0/resource/a09d4b5e-4db5-44d3-b31c-716f492ffabd/download/202305_cada-residuo-no-seu-lugar-folheto-pdf.pdf",

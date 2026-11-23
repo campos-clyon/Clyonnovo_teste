@@ -1,6 +1,7 @@
 import { AVALIACOES, PRAZO_DE_RESPOSTA, NOTAS_EM_FRASE } from "./seo-data";
-import { PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
-import { ENTULHO_EM_FRASE } from "./preco-de-referencia";
+import { ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, SEM_IVA_NA_FRASE } from "./precos-publicos";
+import { ENTULHO_EM_FRASE, desdeSemEComIva, faixaSemEComIva } from "./preco-de-referencia";
+import { ENTULHO_10_SACOS_NA_FRASE } from "./descricoes-seo";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import {
   AO_FIM_DE_SEMANA,
@@ -66,6 +67,11 @@ export interface CityServiceContent {
 // =============================================================================
 // CONTEÚDO ÚNICO POR CIDADE+SERVIÇO (10 páginas prioritárias)
 // =============================================================================
+
+// As tipologias do esvaziamento, para as FAQ de preço (d96): da tabela, nunca à mão.
+const T0T1 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T0/T1")!;
+const T2 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T2")!;
+const MORADIA = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "moradia")!;
 
 export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   // ---------------------------------------------------------------------------
@@ -171,8 +177,8 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   "recolha-monos-lisboa": {
     citySlug: "lisboa",
     serviceSlug: "recolha-monos",
-    metaTitle: "Recolha de Monos em Lisboa — Alternativa Rápida à Câmara",
-    h1: "Recolha de Monos em Lisboa — A Alternativa Rápida à Câmara Municipal",
+    metaTitle: "Monos em Lisboa: Câmara Grátis ou Parceiro em Casa",
+    h1: "Recolha de Monos em Lisboa: pela Câmara ou de dentro de casa",
     localIntro:
       `Tem monos em casa que precisa de retirar? A remoção de monos da Câmara de Lisboa é gratuita para particulares e marca-se com antecedência. Pela CLYON, o parceiro vai buscá-los onde estiverem — num 5.º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. Descreve o pedido, recebe propostas ${PROPOSTAS_EM_ATE}, e o parceiro escolhido aparece no dia combinado e leva tudo.`,
     accessNotes:
@@ -760,48 +766,6 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
   },
 
   // ---------------------------------------------------------------------------
-  // MONTE ABRAÃO - ESVAZIAMENTO DE CASAS
-  // ---------------------------------------------------------------------------
-  "esvaziamento-casas-monte-abraao": {
-    citySlug: "monte-abraao",
-    serviceSlug: "esvaziamento-casas",
-    metaTitle: "Esvaziamento de Casas em Monte Abraão - Heranças e Mudanças | CLYON",
-    h1: "Esvaziamento de Casas e Apartamentos em Monte Abraão",
-    localIntro:
-      "Precisa de esvaziar um apartamento em Monte Abraão? Pela CLYON, pede o esvaziamento completo a parceiros da zona — para heranças, mudanças, entregas de imóveis arrendados e recheios acumulados. Os parceiros retiram todos os móveis, eletrodomésticos, roupa, decoração e tralha — o apartamento fica completamente vazio e pronto para entrega ou nova ocupação.",
-    accessNotes:
-      "Monte Abraão tem prédios com elevador na maioria, o que facilita o esvaziamento. Para apartamentos maiores ou com muito recheio, pode ser preciso fazer várias viagens ou juntar mais uma pessoa — é o parceiro que o diz na proposta.",
-    neighborhoodHighlight:
-      "Os pedidos de esvaziamento em Monte Abraão vêm sobretudo de heranças (famílias que precisam de limpar casa de familiar falecido) e de senhorios que recuperam apartamentos arrendados com recheio deixado por inquilinos.",
-    nearbyAreas: ["Queluz", "Massamá", "Sintra", "Amadora"],
-    faqs: [
-      {
-        q: "Há esvaziamento de apartamentos em Monte Abraão?",
-        a: "Sim, há esvaziamento completo de apartamentos T1 a T4 em Monte Abraão, Queluz e Massamá. Os parceiros retiram tudo: móveis, eletrodomésticos, roupa, decoração e lixo acumulado.",
-      },
-      {
-        q: "Quanto custa esvaziar um apartamento em Monte Abraão?",
-        a: `O valor depende da tipologia do apartamento, volume de recheio e facilidade de acesso. Um T2 standard em Monte Abraão tem um preço diferente de um T3 cheio até ao tecto. Descreva-o com fotos e recebe propostas ${PROPOSTAS_EM_ATE}.`,
-      },
-      {
-        q: "Fazem esvaziamento de heranças em Monte Abraão?",
-        a: "Sim, é dos pedidos mais frequentes. O parceiro retira o recheio e deixa o imóvel vazio, pronto para venda ou arrendamento. Se quiser doar peças em bom estado, separe-as antes — a página «Doar móveis usados em Lisboa» diz quem as recebe.",
-      },
-      {
-        q: "Podem limpar o apartamento depois do esvaziamento?",
-        // 15-11-2026: a limpeza e a lavagem depois de um esvaziamento fazem-se,
-        // se a pessoa as pedir (dono, 14-11) — o mesmo da página do anúncio (d42).
-        a: "Sim, se a pedir. Escreva no pedido que quer a limpeza no fim — e a lavagem do pavimento, se for o caso. Fica escrita na proposta, com o preço, e quem a faz é o parceiro escolhido.",
-      },
-      {
-        q: "Quanto tempo demora a esvaziar um apartamento em Monte Abraão?",
-        a: "Um T2 standard pode ser esvaziado num dia. Apartamentos maiores ou com muito recheio podem precisar de mais tempo. O prazo combina-se com o parceiro antes de começar.",
-      },
-    ],
-    ctaText: "Precisa de esvaziar um apartamento em Monte Abraão? Envie fotos para orçamento.",
-  },
-
-  // ---------------------------------------------------------------------------
   // QUELUZ
   // ---------------------------------------------------------------------------
   "recolha-moveis-queluz": {
@@ -850,9 +814,9 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis em Carnaxide - Linda-a-Velha e Queijas | CLYON",
     h1: "Recolha de Móveis em Carnaxide - Sofás, Camas e Armários",
     localIntro:
-      "Precisa de retirar móveis em Carnaxide? Pela CLYON, parceiros da zona recolhem sofás, camas, armários e eletrodomésticos em toda a freguesia e zonas vizinhas: Linda-a-Velha, Queijas, Alto da Loba e Miraflores. Carnaxide é uma zona residencial moderna com bons acessos pelo IC19 e pela A5.",
+      "Precisa de retirar móveis em Carnaxide? Pela CLYON, parceiros da zona recolhem sofás, camas, armários e eletrodomésticos em toda a freguesia e zonas vizinhas: Linda-a-Velha, Queijas e Miraflores. Carnaxide é uma zona residencial moderna com bons acessos pelo IC19 e pela A5.",
     accessNotes:
-      "Carnaxide tem maioritariamente prédios recentes com elevador e bons acessos. Algumas urbanizações fechadas (como o Alto da Loba) requerem coordenação prévia para entrada — o acesso pode influenciar o orçamento e deve ser confirmado antes da marcação.",
+      "Carnaxide tem maioritariamente prédios recentes com elevador e bons acessos. Algumas urbanizações fechadas requerem coordenação prévia para entrada — o acesso pode influenciar o orçamento e deve ser confirmado antes da marcação.",
     neighborhoodHighlight:
       "Carnaxide e Linda-a-Velha são zonas muito procuradas por famílias, com muitos apartamentos em condomínios modernos. Os pedidos mais frequentes são recolha de sofás, camas de casal e mobília de quarto durante mudanças ou renovações.",
     nearbyAreas: ["Oeiras", "Lisboa", "Amadora", "Algés"],
@@ -867,7 +831,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Podem entrar em condomínios fechados em Carnaxide?",
-        a: "Sim. Em condomínios fechados como o Alto da Loba, a entrada combina-se com o parceiro — ou deixa o nome dele na portaria.",
+        a: "Sim. Num condomínio fechado, a entrada combina-se com o parceiro — ou deixa o nome dele na portaria.",
       },
       {
         q: "Recolhem em Linda-a-Velha e Queijas?",
@@ -879,6 +843,390 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
     ],
     ctaText: `Precisa de recolha de móveis em Carnaxide? Envie fotos e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  // ---------------------------------------------------------------------------
+  // d96 (23-11-2026): AS 15 PÁGINAS DE CIDADE QUE O GOOGLE PÔS DE LADO.
+  //
+  // Eram o texto genérico com o nome da terra trocado. Cada uma tem agora o
+  // seu: as freguesias, o tipo de casa, o acesso, o serviço da câmara ou da
+  // junta DESSA terra (das páginas oficiais, lidas a 23-11-2026) e uma
+  // pergunta que só ali se faz. Preços só pelas constantes. Um teste mede a
+  // semelhança entre quaisquer duas páginas (cidades-sem-texto-repetido-d96).
+  // ---------------------------------------------------------------------------
+  "recolha-monos-odivelas": {
+    citySlug: "odivelas",
+    serviceSlug: "recolha-monos",
+    metaTitle: "Monos em Odivelas: Junta Grátis ou Parceiro em Casa",
+    h1: "Recolha de Monos em Odivelas: pela junta ou de dentro de casa",
+    localIntro:
+      `Em Odivelas, a recolha de monos é das juntas de freguesia: a Câmara passou-lhes esse serviço, e cada uma tem o seu contacto. Os SIMAR também os recolhem, sem custo para os seus clientes, na data e no local combinados. Um parceiro da CLYON faz sentido quando o sofá ainda está lá em cima, quando não dá para esperar ou quando é preciso desmontar antes de descer. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Odivelas é terra de rampas. No centro, na Ramada e na Pontinha há prédios com a porta meio piso acima ou abaixo do passeio, e esses degraus contam tanto como os andares. Em Caneças e Famões há mais moradias, e a carrinha encosta melhor. No pedido diga o andar, se há elevador e quantos degraus separam a rua da entrada.",
+    neighborhoodHighlight:
+      "Os contactos das juntas estão na página da Câmara de Odivelas, por exemplo: Pontinha e Famões, 214 787 280; Póvoa de Santo Adrião e Olival Basto, 219 379 990; Ramada e Caneças, 210 529 834. Os SIMAR atendem pela linha gratuita 800 100 250.",
+    nearbyAreas: ["Loures","Lumiar","Lisboa","Amadora"],
+    faqs: [
+      {
+        q: "Em Odivelas, quem recolhe os monos: a Câmara ou a junta?",
+        a: "A junta da sua zona: a Câmara de Odivelas diz que o serviço é das juntas. Se for cliente dos SIMAR, também pode pedir pelo 800 100 250. Nos dois casos os monos ficam no local e no dia combinados. Para os ir buscar dentro de casa, peça propostas a parceiros da CLYON.",
+      },
+      {
+        q: "Quanto custa a recolha de monos em Odivelas com um parceiro?",
+        a: `A recolha começa ${desdeSemEComIva(PRECOS.recolha_monos.minimo!)}, e cada peça conta pela tabela desta página. Os degraus à porta, o andar e a desmontagem entram na proposta, que recebe ${PROPOSTAS_EM_ATE}. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Monos para tirar de casa em Odivelas? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "recolha-monos-sesimbra": {
+    citySlug: "sesimbra",
+    serviceSlug: "recolha-monos",
+    metaTitle: "Monos em Sesimbra: Câmara Grátis ou Parceiro em Casa",
+    h1: "Recolha de Monos em Sesimbra e na Quinta do Conde",
+    localIntro:
+      `Sesimbra tem dois feitios. A vila desce até ao mar por ruas curtas e inclinadas, algumas só para peões. A Quinta do Conde é plana, de moradias e prédios baixos, com a carrinha à porta. A Câmara recolhe monos sem custo, no espaço público, até 1100 litros de cada vez. Quando o volume é maior, quando os móveis estão dentro de casa ou quando é preciso desmontar, pede a um parceiro da CLYON e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Na vila, diga no pedido a rua e se a carrinha chega à porta: onde não chega, as peças vão a pé até onde ela pode parar, e isso conta no tempo. Na Quinta do Conde, na Lagoa de Albufeira e no Zambujal o acesso é simples; conte com a garagem e o quintal.",
+    neighborhoodHighlight:
+      "A recolha da Câmara pede-se na app Nós Sesimbra, pelo 21 228 85 82 ou no Balcão Único de Serviços. Para grandes quantidades a Câmara aluga contentores de 3 ou 7 m³. Também pode entregar os monos nos pontos REMOVE ou, sem custo, no Ecocentro de Sesimbra, da Amarsul, no Pinhal do Cabedal.",
+    nearbyAreas: ["Seixal","Setúbal","Palmela","Almada"],
+    faqs: [
+      {
+        q: "Quanto leva a recolha grátis de monos da Câmara de Sesimbra?",
+        a: "Até 1100 litros de cada vez, deixados no espaço público no dia marcado, nunca na via pública antes disso nem junto aos contentores. Se tem um recheio inteiro, ou peças que ainda estão lá dentro, um parceiro da CLYON vai buscá-las a casa e leva tudo de uma vez.",
+      },
+      {
+        q: "Quanto custa a recolha de monos em Sesimbra com um parceiro?",
+        a: `Começa ${desdeSemEComIva(PRECOS.recolha_monos.minimo!)}, com cada peça pela tabela desta página. Na vila, a distância entre a porta e a carrinha pesa no tempo; diga-a no pedido para vir na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Monos na vila ou na Quinta do Conde? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "recolha-monos-montijo": {
+    citySlug: "montijo",
+    serviceSlug: "recolha-monos",
+    metaTitle: "Monos no Montijo: Câmara Grátis ou Parceiro em Casa",
+    h1: "Recolha de Monos no Montijo: pela Câmara, pela junta ou de casa",
+    localIntro:
+      `No Montijo, quem recolhe os monos depende da freguesia. Na União de Freguesias de Montijo e Afonsoeiro é a Câmara; em Atalaia e Alto Estanqueiro-Jardia, Sarilhos Grandes, Canha e Pegões é a junta. Em qualquer delas o serviço não tem custo. A recolha paga, por um parceiro da CLYON, serve para o que não pode esperar pela data e para o que está dentro de casa ou num andar sem elevador. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "O centro tem ruas de comércio estreitas e prédios de três a quatro pisos, muitos sem elevador; o Afonsoeiro tem construção mais recente, com garagem. O concelho tem duas partes separadas, e Canha e Pegões ficam longe da cidade: diga a morada completa no pedido, para a proposta contar com a viagem.",
+    neighborhoodHighlight:
+      "Na União de Freguesias de Montijo e Afonsoeiro, a recolha marca-se com o Serviço de Higiene Urbana da Câmara, pelo 212 327 837, de segunda a sábado das 8h às 14h. Se preferir levar os monos, o Ecocentro do Montijo, da Amarsul, fica na Estrada do Seixalinho e recebe sem custo colchões, móveis e sofás.",
+    nearbyAreas: ["Alcochete","Moita","Barreiro","Palmela"],
+    faqs: [
+      {
+        q: "A quem peço a recolha de monos no Montijo?",
+        a: "Se mora na União de Freguesias de Montijo e Afonsoeiro, à Câmara, pelo 212 327 837. Nas outras freguesias, à sua junta. A Câmara diz que estes serviços não têm qualquer custo. Para quem não pode pôr os móveis cá fora, um parceiro da CLYON vai buscá-los dentro de casa, na data que combinar com ele.",
+      },
+      {
+        q: "Quanto custa a recolha de monos no Montijo com um parceiro?",
+        a: `Começa ${desdeSemEComIva(PRECOS.recolha_monos.minimo!)}, e cada peça conta pela tabela desta página. O andar sem elevador, a desmontagem e a distância, em Canha ou Pegões, entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Monos para tirar de casa no Montijo? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "recolha-monos-carnaxide": {
+    citySlug: "carnaxide",
+    serviceSlug: "recolha-monos",
+    metaTitle: "Monos em Carnaxide: Grátis até 1 m³ ou de Casa",
+    h1: "Recolha de Monos em Carnaxide e Queijas",
+    localIntro:
+      `Carnaxide e Queijas são do concelho de Oeiras, e é a Câmara de Oeiras que recolhe os monos: por marcação antecipada, sem custo até 1 m³, e com orçamento quando é mais do que isso. A recolha faz-se nos dias de cada zona, que se sabem pelo Número Verde. Um parceiro da CLYON faz sentido quando o volume passa de 1 m³, quando os móveis estão lá dentro ou quando é preciso desmontar um roupeiro. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "A freguesia mistura o núcleo antigo de Carnaxide, com ruas de sentido único onde a carrinha bloqueia o trânsito enquanto carrega, com urbanizações de garagem e elevador na Outurela, na Portela e em Queijas. Em condomínio fechado, diga no pedido se é preciso avisar a portaria ou reservar o elevador.",
+    neighborhoodHighlight:
+      "A marcação faz-se pelo Número Verde do Ambiente de Oeiras, 800 201 205 (chamada gratuita, de segunda a sexta das 9h às 17h30), ou por daqv@oeiras.pt. A Câmara pede o contacto prévio para os monos não ficarem vários dias na rua à espera.",
+    nearbyAreas: ["Oeiras","Benfica","Amadora","Cascais"],
+    faqs: [
+      {
+        q: "A recolha de monos em Carnaxide é grátis?",
+        a: "Sim, até 1 m³: a Câmara de Oeiras recolhe sem custo, com marcação pelo 800 201 205. Acima disso faz uma avaliação e um orçamento. Para esses casos, ou para tirar as peças de dentro de casa, peça propostas a parceiros da CLYON.",
+      },
+      {
+        q: "Quanto custa a recolha de monos em Carnaxide com um parceiro?",
+        a: `Começa ${desdeSemEComIva(PRECOS.recolha_monos.minimo!)}, e cada peça conta pela tabela desta página. O elevador, a garagem e as regras do condomínio entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Mais de 1 m³ de monos em Carnaxide? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "recolha-monos-olivais": {
+    citySlug: "olivais",
+    serviceSlug: "recolha-monos",
+    metaTitle: "Monos nos Olivais: Câmara Grátis ou Parceiro em Casa",
+    h1: "Recolha de Monos nos Olivais",
+    localIntro:
+      `Os Olivais Norte e Sul foram planeados com espaço entre os blocos, e a carrinha chega quase sempre junto da porta. O Bairro da Encarnação é diferente: casas baixas, com quintal e ruas mais estreitas. A Câmara de Lisboa recolhe monos sem custo a quem pede em nome individual. Um parceiro da CLYON serve para o que tem de sair de dentro de casa, para o que não pode esperar pela marcação e para desmontar antes de descer. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Nos blocos altos há elevador, mas alguns são de cabina pequena, onde um sofá de três lugares não entra: diga no pedido as medidas da peça maior e o andar. Na Encarnação conte com o que está no quintal e no anexo. O estacionamento é largo e gratuito na maior parte da freguesia.",
+    neighborhoodHighlight:
+      "A recolha da Câmara pede-se na Na Minha Rua LX, pelo 800 910 211 (chamada gratuita) ou pelo 218 170 552. O Ecocentro do Lumiar, da Valorsul, é o mais perto e é público e gratuito; não recebe entulho de obras.",
+    nearbyAreas: ["Alvalade","Lumiar","Loures","Lisboa"],
+    faqs: [
+      {
+        q: "A Câmara de Lisboa recolhe monos de uma empresa ou de um senhorio com vários andares?",
+        a: "A remoção gratuita de volumosos é só para pessoas em nome individual; empresas e associações recorrem a um coletor particular, diz a Câmara. Para esvaziar uma loja, um escritório ou vários apartamentos nos Olivais, peça propostas a parceiros da CLYON, com o preço fechado antes de começar.",
+      },
+      {
+        q: "Quanto custa a recolha de monos nos Olivais com um parceiro?",
+        a: `Começa ${desdeSemEComIva(PRECOS.recolha_monos.minimo!)}, e cada peça conta pela tabela desta página. O elevador pequeno, o andar e a desmontagem entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Monos nos Olivais ou na Encarnação? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-almada": {
+    citySlug: "almada",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas em Almada e Cacilhas",
+    h1: "Esvaziamento de Casas e Apartamentos em Almada",
+    localIntro:
+      `Em Almada, o mesmo T2 dá trabalhos muito diferentes. Em Almada velha e Cacilhas há muitos prédios anteriores aos anos 60, de escada única e sem elevador, sobre a arriba; no Pragal e no Feijó há elevador e garagem; na Charneca de Caparica e na Sobreda há moradias com anexo e quintal. Para heranças, vendas e fins de arrendamento, os parceiros retiram móveis, eletrodomésticos e o recheio miúdo, e deixam a casa vazia. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Diga no pedido o andar, se há elevador e se há degraus entre a rua e a porta: em Cacilhas e em Almada velha é isso que decide quantas pessoas vão e quanto tempo leva. Na Costa da Caparica, entre junho e setembro, estacionar junto à praia é o maior obstáculo.",
+    neighborhoodHighlight:
+      "Se quiser tirar parte dos monos antes, as juntas de Almada recolhem-nos grátis à porta, por marcação na linha verde de cada uma (a de Almada, Cova da Piedade, Pragal e Cacilhas é o 800 100 304). O Ecocentro de Almada, da Amarsul, fica na Sobreda (Quinta da Matosa) e recebe colchões, móveis e sofás.",
+    nearbyAreas: ["Seixal","Lisboa","Sesimbra","Barreiro"],
+    faqs: [
+      {
+        q: "Posso levar parte do recheio ao Ecocentro de Almada?",
+        a: "Pode. O Ecocentro de Almada, na Sobreda, recebe colchões, móveis e sofás; abre de segunda a sábado. A entrega nos ecocentros da Amarsul é gratuita para quem vive na área. Para uma casa inteira, um parceiro leva tudo numa só vez.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa em Almada?",
+        a: `A tabela de referência por tipologia está nesta página: um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}. Em Almada velha, sem elevador, a proposta conta com mais tempo do que no Pragal. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Uma casa para esvaziar em Almada? Envie fotografias de cada divisão e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-seixal": {
+    citySlug: "seixal",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas no Seixal, Amora e Corroios",
+    h1: "Esvaziamento de Casas no Seixal, na Amora, em Corroios e Fernão Ferro",
+    localIntro:
+      `O concelho do Seixal tem dois tipos de casa. Na Amora, na Cruz de Pau e no Miratejo são prédios de vários andares; em Fernão Ferro, Santa Marta do Pinhal e Vale de Milhaços são moradias com garagem, arrecadação e quintal, onde o recheio de fora costuma ser tanto como o de dentro. Os parceiros esvaziam tudo: móveis, eletrodomésticos, caixas, ferramentas e o que está no anexo. Descreve a casa, fotografa também a garagem e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Estacionar não é problema em quase todo o concelho, e nas moradias a carrinha encosta ao portão. O que pesa é o volume: diga no pedido se há garagem, sótão ou quintal com coisas, para a proposta não ficar curta no dia.",
+    neighborhoodHighlight:
+      "A Câmara do Seixal recolhe monos sem custo até 8 m³, com marcação pela Linha Seixal Limpo, 210 976 011, ou por seixal.limpo@cm-seixal.pt, num dia fixo por semana para cada freguesia. Também os pode entregar, sem custo, no Centro Municipal de Higiene Urbana de Fernão Ferro ou no Ecocentro de Vale de Milhaços.",
+    nearbyAreas: ["Almada","Barreiro","Sesimbra","Lisboa"],
+    faqs: [
+      {
+        q: "A Câmara do Seixal leva o recheio de uma casa?",
+        a: "Leva os monos, até 8 m³ sem custo, no dia da sua freguesia e com marcação prévia. O recheio miúdo, como roupa, loiça, livros e caixas, não é mono, e os monos têm de estar cá fora no dia. Para esvaziar a casa inteira de uma vez, com o que está na garagem, um parceiro da CLYON faz o trabalho todo.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa no Seixal?",
+        a: `A tabela por tipologia está nesta página: um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}, uma moradia completa ${desdeSemEComIva(MORADIA.minimo)}. A garagem e o quintal contam no volume. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Uma casa ou moradia para esvaziar no Seixal? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-oeiras": {
+    citySlug: "oeiras",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas em Oeiras e Algés",
+    h1: "Esvaziamento de Casas e Apartamentos em Oeiras",
+    localIntro:
+      `Em Oeiras, a encosta faz a diferença. Algés, Linda-a-Velha e a Cruz Quebrada têm prédios antigos em ruas inclinadas, onde a carrinha fica num plano diferente da porta; Oeiras, Paço de Arcos e Porto Salvo têm mais construção recente, com elevador e garagem. Quando a casa tem de ficar livre para uma venda ou uma partilha, o parceiro escolhido leva tudo, do sofá à última caixa de loiça. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Junto à marginal e às estações de Algés, Paço de Arcos e Oeiras, estacionar é sempre disputado; nas ruas acima da linha resolve-se. Diga no pedido se a casa fica num desses troços e se há elevador, para o parceiro vir com as pessoas certas.",
+    neighborhoodHighlight:
+      "A Câmara de Oeiras recolhe resíduos volumosos por marcação prévia, pelo Número Verde 800 201 205 ou por daqv@oeiras.pt. É gratuito até 1 m³; acima disso o serviço é avaliado e orçamentado. Os dias de recolha de cada zona dizem-se pelo mesmo número.",
+    nearbyAreas: ["Carnaxide","Cascais","Amadora","Lisboa"],
+    faqs: [
+      {
+        q: "A Câmara de Oeiras leva os móveis de uma casa inteira?",
+        a: "Sem custo, só até 1 m³; acima disso a Câmara faz uma avaliação e um orçamento, e os volumosos ficam na via pública no dia marcado. Uma casa inteira passa quase sempre desse volume, e o recheio miúdo não conta como volumoso. Para tudo de uma vez, de dentro de casa, um parceiro da CLYON faz o esvaziamento completo.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa em Oeiras?",
+        a: `A tabela por tipologia está nesta página: um T0/T1 ${faixaSemEComIva(T0T1.minimo, T0T1.maximo!)}, um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}. A rua inclinada e a falta de elevador entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Uma casa para esvaziar em Oeiras? Envie fotografias de cada divisão e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-barreiro": {
+    citySlug: "barreiro",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas no Barreiro e no Lavradio",
+    h1: "Esvaziamento de Casas no Barreiro",
+    localIntro:
+      `No Barreiro velho e nos bairros operários que cresceram à volta das fábricas, muitas casas são de dois pisos, com porta estreita e escada de um lanço, onde um roupeiro só sai desmontado. No Alto do Seixalinho, em Santo André e na Verderena os prédios são mais recentes e têm elevador. O parceiro tira os móveis, os eletrodomésticos e o que está nos armários, e a casa fica pronta para a escritura ou para a entrega das chaves. As propostas chegam ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "No centro antigo as ruas mal dão para dois carros se cruzarem, e a carrinha pode ter de ficar mais longe: diga a rua no pedido. Em Santo António da Charneca e em Palhais há mais moradias, com espaço à porta.",
+    neighborhoodHighlight:
+      "A Câmara do Barreiro recolhe monos sem custo: liga-se para o 212 068 068 e combina-se a recolha. Também se podem entregar no Ecocentro do Barreiro, da Amarsul, no Lavradio (Rua Mártires da Guerra Colonial), que recebe colchões, móveis e sofás sem custo.",
+    nearbyAreas: ["Moita","Seixal","Montijo","Almada"],
+    faqs: [
+      {
+        q: "No Barreiro, a recolha de monos da Câmara chega para esvaziar uma casa?",
+        a: "Para os móveis grandes pode chegar: o serviço é gratuito e combina-se pelo 212 068 068. Mas o recheio miúdo fica de fora, e é preciso pôr tudo no local combinado. Quando a casa tem de ficar vazia para uma escritura ou uma entrega de chaves, um parceiro da CLYON retira tudo de uma vez, de dentro de casa.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa no Barreiro?",
+        a: `A tabela por tipologia está nesta página: um T0/T1 ${faixaSemEComIva(T0T1.minimo, T0T1.maximo!)}, um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}. A escada estreita e a desmontagem entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Uma casa para esvaziar no Barreiro? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-queluz": {
+    citySlug: "queluz",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas em Queluz, Belas e Massamá",
+    h1: "Esvaziamento de Casas em Queluz e Belas",
+    localIntro:
+      `Queluz tem o centro antigo à volta do Palácio, com ruas estreitas e trânsito condicionado, e à volta urbanizações de prédios com elevador, no Pendão, em Belas e em Massamá. São casas em que se junta muito ao longo dos anos: arrecadação na cave, marquise cheia, roupeiros embutidos. Os parceiros levam tudo isso, com os móveis e os eletrodomésticos, até a casa ficar vazia. Descreve o que há e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Junto ao Palácio e à estação estacionar é difícil; no resto da zona resolve-se. Se há arrecadação na cave ou no sótão do prédio, diga-o no pedido e fotografe-a: é o que mais vezes fica de fora da descrição e aparece no dia.",
+    neighborhoodHighlight:
+      "Antes do esvaziamento, os eletrodomésticos grandes podem sair sem custo: desde março de 2025 o Electrão e o Município de Sintra recolhem-nos porta a porta em todas as freguesias do concelho, Queluz e Belas incluída, a pedido à junta ou aos SMAS de Sintra.",
+    nearbyAreas: ["Monte Abraão","Amadora","Sintra","Benfica"],
+    faqs: [
+      {
+        q: "O que faço ao frigorífico e à máquina de lavar antes de esvaziar a casa?",
+        a: "Em Queluz e Belas há recolha gratuita porta a porta de eletrodomésticos grandes, do Electrão com o Município de Sintra: pede-se à junta ou aos SMAS de Sintra. Se preferir que saia tudo na mesma viagem, o parceiro que esvazia a casa leva também os eletrodomésticos, e encaminha-os para o circuito dos resíduos elétricos.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa em Queluz?",
+        a: `A tabela por tipologia está nesta página: um T0/T1 ${faixaSemEComIva(T0T1.minimo, T0T1.maximo!)}, um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}. A arrecadação e a marquise contam no volume. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Uma casa para esvaziar em Queluz ou Belas? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-monte-abraao": {
+    citySlug: "monte-abraao",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas em Monte Abraão e Massamá",
+    h1: "Esvaziamento de Apartamentos em Monte Abraão e Massamá",
+    localIntro:
+      `Monte Abraão e Massamá cresceram em blocos altos, construídos em conjunto, quase todos com elevador. O que complica um esvaziamento aqui não é a escada: são os acessos entre blocos, muitas vezes só para peões, que obrigam a levar tudo a pé até onde a carrinha pode parar. Os parceiros fazem esse percurso as vezes que forem precisas e deixam o apartamento vazio, com móveis, eletrodomésticos e recheio. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Diga no pedido a distância aproximada entre a porta do prédio e o sítio onde a carrinha pode parar, e se o elevador leva um sofá. Nas avenidas principais há onde parar; nas ruas interiores os lugares são dos residentes.",
+    neighborhoodHighlight:
+      "A União das Freguesias de Massamá e Monte Abraão recolhe monos sem custo: marca-se na plataforma O Meu Bairro, em «Ambiente, Higiene, Limpeza Urbana» e depois «Remoção de Monos». A união diz que já recolheu mais de 330 toneladas de monos deixados na rua desde 2019. O contacto geral é o 210 133 550.",
+    nearbyAreas: ["Queluz","Sintra","Amadora","Oeiras"],
+    faqs: [
+      {
+        q: "Como marco a recolha grátis de monos em Monte Abraão?",
+        a: "Na plataforma O Meu Bairro: escolha o tipo «Ambiente, Higiene, Limpeza Urbana» e o subtipo «Remoção de Monos». É um serviço da União das Freguesias de Massamá e Monte Abraão, para os monos que deixa no local combinado. Se o apartamento tem de ficar vazio de uma vez, com o recheio todo, um parceiro da CLYON trata disso.",
+      },
+      {
+        q: "Quanto custa esvaziar um apartamento em Monte Abraão?",
+        a: `A tabela por tipologia está nesta página: um T0/T1 ${faixaSemEComIva(T0T1.minimo, T0T1.maximo!)}, um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}. O percurso a pé entre o prédio e a carrinha entra na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Um apartamento para esvaziar em Monte Abraão? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-alcochete": {
+    citySlug: "alcochete",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas em Alcochete e no Samouco",
+    h1: "Esvaziamento de Casas e Moradias em Alcochete",
+    localIntro:
+      `Alcochete é vila de casas baixas, e quase todas se alcançam de carrinha até à porta. No Samouco e em São Francisco há mais moradias com quintal e anexo, onde o recheio de fora pesa tanto como o de dentro. A zona ribeirinha tem ruas mais estreitas e pavimento irregular. O parceiro escolhido esvazia a casa e o exterior, e deixa-a pronta para vender ou arrendar. Descreve o que há e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Fora do Verão, estacionar é simples; nos meses quentes a frente ribeirinha enche. Se a casa tem anexo, garagem ou quintal com coisas, fotografe-os e diga-o no pedido.",
+    neighborhoodHighlight:
+      "A Câmara de Alcochete recolhe monos sem custo, por marcação no 212 348 671 ou por dahuev@cm-alcochete.pt, nos dias úteis das 9h às 12h30 e das 14h às 17h30. Também se podem entregar sem custo no Ecocentro de Alcochete, no Caminho Municipal 1004 (Pinheiro Marco Batel), aberto nos dias úteis das 9h às 19h.",
+    nearbyAreas: ["Montijo","Moita","Palmela","Barreiro"],
+    faqs: [
+      {
+        q: "Posso levar móveis de uma casa em Alcochete ao ecocentro?",
+        a: "Pode: o Ecocentro de Alcochete recebe-os sem custo, nos dias úteis das 9h às 19h (linha gratuita da Amarsul, 800 911 400). Precisa de carro ou carrinha para lá chegar. Se não tem como os levar, ou se a casa tem de ficar vazia de uma vez, um parceiro da CLYON retira tudo de dentro de casa.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa em Alcochete?",
+        a: `A tabela por tipologia está nesta página: um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}, uma moradia completa ${desdeSemEComIva(MORADIA.minimo)}. O anexo e o quintal contam no volume. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Uma casa para esvaziar em Alcochete? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-carnaxide": {
+    citySlug: "carnaxide",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas em Carnaxide e Queijas",
+    h1: "Esvaziamento de Casas em Carnaxide e Queijas",
+    localIntro:
+      `Em Carnaxide e Queijas, a maior parte das casas está em urbanizações com elevador, garagem e, muitas vezes, condomínio com regras próprias para mudanças e cargas. No núcleo antigo de Carnaxide há ruas de sentido único, onde a carrinha bloqueia o trânsito enquanto carrega. Com as regras do condomínio no pedido, o parceiro esvazia o apartamento de uma vez: móveis, eletrodomésticos e o que está nos armários. As propostas chegam ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Antes de marcar, pergunte à administração do condomínio se há horário para cargas, se o elevador tem de ser protegido e onde a carrinha pode parar. Ao fim do dia, as ruas junto aos centros comerciais ficam cheias.",
+    neighborhoodHighlight:
+      "Carnaxide e Queijas são do concelho de Oeiras: a Câmara recolhe volumosos por marcação pelo 800 201 205 ou por daqv@oeiras.pt, sem custo até 1 m³ e com orçamento acima disso, nos dias de recolha de cada zona.",
+    nearbyAreas: ["Oeiras","Benfica","Amadora","Lisboa"],
+    faqs: [
+      {
+        q: "O condomínio pode impedir um esvaziamento em Carnaxide?",
+        a: "Pode impor regras: horário para usar o elevador, protecção das paredes e do chão, sítio para a carrinha parar. Pergunte à administração antes de marcar e escreva essas regras no pedido. Assim entram na proposta do parceiro, e o dia corre sem discussões à porta.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa em Carnaxide?",
+        a: `A tabela por tipologia está nesta página: um T0/T1 ${faixaSemEComIva(T0T1.minimo, T0T1.maximo!)}, um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}. As regras do condomínio e a protecção do elevador entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Um apartamento para esvaziar em Carnaxide? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "esvaziamento-casas-olivais": {
+    citySlug: "olivais",
+    serviceSlug: "esvaziamento-casas",
+    metaTitle: "Esvaziamento de Casas nos Olivais e na Encarnação",
+    h1: "Esvaziamento de Casas nos Olivais",
+    localIntro:
+      `Nos Olivais Norte e Sul, os blocos têm espaço à volta e a carrinha encosta quase à porta, o que em Lisboa é raro; alguns elevadores, porém, são de cabina pequena. No Bairro da Encarnação as casas são baixas, com quintal e anexo. Os parceiros retiram tudo, do roupeiro aos sacos de roupa, e deixam a casa pronta para entregar. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Estacionar é largo e gratuito na maior parte da freguesia. Diga no pedido o andar e as medidas da peça maior, para se saber se desce no elevador ou pela escada.",
+    neighborhoodHighlight:
+      "A Câmara de Lisboa recolhe volumosos sem custo a quem pede em nome individual, na Na Minha Rua LX ou pelo 800 910 211. Empresas e associações têm de recorrer a um coletor particular. O Ecocentro do Lumiar, da Valorsul, é público e gratuito.",
+    nearbyAreas: ["Alvalade","Lumiar","Loures","Lisboa"],
+    faqs: [
+      {
+        q: "Uma imobiliária pode pedir à Câmara para levar o recheio de uma casa nos Olivais?",
+        a: "Não: a remoção gratuita de volumosos da Câmara de Lisboa é só para pessoas em nome individual, e as empresas têm de recorrer a um coletor particular. Uma imobiliária, um senhorio com empresa ou um gestor de alojamento local pode pedir propostas a parceiros da CLYON, com o preço fechado antes de começar.",
+      },
+      {
+        q: "Quanto custa esvaziar uma casa nos Olivais?",
+        a: `A tabela por tipologia está nesta página: um T0/T1 ${faixaSemEComIva(T0T1.minimo, T0T1.maximo!)}, um T2 ${faixaSemEComIva(T2.minimo, T2.maximo!)}. O elevador pequeno e o anexo da Encarnação entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Uma casa para esvaziar nos Olivais? Envie fotografias e receba propostas ${PROPOSTAS_EM_ATE}.`,
+  },
+
+  "recolha-entulho-loures": {
+    citySlug: "loures",
+    serviceSlug: "recolha-entulho",
+    metaTitle: "Recolha de Entulho em Loures: SIMAR ou a Saco",
+    h1: "Recolha de Entulho em Loures, Sacavém e Santo António dos Cavaleiros",
+    localIntro:
+      `Em Loures, o entulho de uma pequena obra feita pelo próprio pode ir pelos SIMAR: o serviço é gratuito para os clientes, até 1 m³ por obra, e só aceita alguns materiais. Quando a obra é maior, quando há madeira, louças ou outros restos misturados, ou quando o entulho está lá em cima e não pode esperar uma semana, um parceiro da CLYON recolhe-o em sacos de obra de ${PESO_DO_SACO} ou a granel. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+    accessNotes:
+      "Santo António dos Cavaleiros são torres com elevador, onde os sacos descem bem; no centro de Loures e na Bobadela há casas antigas de dois pisos com escada interior estreita. Diga o andar e se o entulho já está ensacado.",
+    neighborhoodHighlight:
+      "Os SIMAR aceitam betão, tijolo, ladrilho, telha, cerâmica, pladur, fios eléctricos e plásticos, de obras isentas de licença. Pede-se pelo formulário no site, por geral@simar-louresodivelas.pt ou pelo 219 848 500; entregam o saco no dia combinado e levam-no uma semana depois. A Valorsul não tem ecocentro no concelho, e o do Lumiar não recebe entulho.",
+    nearbyAreas: ["Odivelas","Lumiar","Olivais","Lisboa"],
+    faqs: [
+      {
+        q: "Os SIMAR recolhem o entulho da minha obra em Loures?",
+        a: "Se for cliente dos SIMAR, a obra estiver isenta de licença e o entulho não passar de 1 m³, sim, sem custo, e só com os materiais da lista deles. Fora disso, ou com pressa, um parceiro da CLYON recolhe-o em sacos ou a granel. A CLYON não fornece contentores.",
+      },
+      {
+        q: "Quanto custa a recolha de entulho em Loures com um parceiro?",
+        a: `${ENTULHO_10_SACOS_NA_FRASE}, e conta-se saco a saco a partir daí. O andar e a escada entram na proposta. Não paga nada adiantado.`,
+      },
+    ],
+    ctaText: `Entulho de obras em Loures? Diga quantos sacos são e receba propostas ${PROPOSTAS_EM_ATE}.`,
   },
 };
 
@@ -965,7 +1313,7 @@ export const CITY_BASE_CONTENT: Record<string, CityBaseContent> = {
     name: "Carnaxide",
     region: "lisboa",
     localIntro: "Em Carnaxide, o pedido chega a parceiros de toda a freguesia, incluindo Linda-a-Velha, Queijas e as zonas residenciais junto ao IC19. Carnaxide combina urbanizações modernas com condomínios fechados e prédios tradicionais.",
-    landmarks: ["Centro de Carnaxide", "Linda-a-Velha", "Queijas", "Urbanização do Alto da Loba", "Fórum Oeiras", "Estádio de Oeiras"],
+    landmarks: ["Centro de Carnaxide", "Linda-a-Velha", "Queijas", "Outurela", "Fórum Oeiras", "Estádio de Oeiras"],
     accessNotes: "Carnaxide tem excelentes acessos pelo IC19 e A5. A maioria dos prédios são recentes e têm elevador. Algumas urbanizações fechadas requerem coordenação prévia para entrada.",
     nearbyAreas: ["Oeiras", "Lisboa", "Amadora", "Algés"],
   },

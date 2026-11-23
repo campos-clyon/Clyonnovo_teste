@@ -108,6 +108,47 @@ export function emTerraDaPagina(serviceSlug: string, citySlug: string, cityName:
   return terra ? `${emTerra(cityName)} e ${emTerra(terra)}` : emTerra(cityName);
 }
 
+/*
+ * OS TÍTULOS PRÓPRIOS — 23-11-2026 (d96).
+ *
+ * As 15 páginas de cidade que o Google pôs de lado («Rastreada, mas não
+ * indexada») e três com muitas impressões e poucos cliques têm um título
+ * escrito para elas, que responde primeiro à pergunta de quem procura (a
+ * recolha da Câmara ou da junta dali) e depois diz quando vale um parceiro.
+ * Têm «:» em vez de « — », por isso não passam por `comOPrimeiroQueCabe`.
+ * Lidos antes das regras gerais; um que não caiba nos 60 cai na regra geral.
+ *
+ * /recolha-moveis-lisboa: a d5 de 23-11 tinha tirado o preço do título («De
+ * Casa, Sem Esperar»); a d96, aprovada a seguir pelo dono, põe o «desde» da
+ * peça (o mínimo vai na descrição). Mede-se 28 dias no Search Console contra o
+ * título anterior: os 28 dias antes de 23-11 tinham «— 15–65 €/Peça + IVA» (o
+ * «— De Casa, Sem Esperar» da d5 esteve no ar só umas horas, a 23-11).
+ *
+ * /recolha-monos-cascais: a Cascais Ambiente dá prazos que se contradizem (24 h
+ * no folheto, 24 ou 48 h de antecedência na página do serviço) — vai a versão
+ * sem prazo.
+ */
+export const TITULO_PROPRIO: Readonly<Record<string, string>> = {
+  "recolha-monos-odivelas": "Monos em Odivelas: Junta Grátis ou Parceiro em Casa",
+  "recolha-monos-sesimbra": "Monos em Sesimbra: Câmara Grátis ou Parceiro em Casa",
+  "recolha-monos-montijo": "Monos no Montijo: Câmara Grátis ou Parceiro em Casa",
+  "recolha-monos-carnaxide": "Monos em Carnaxide: Grátis até 1 m³ ou de Casa",
+  "recolha-monos-olivais": "Monos nos Olivais: Câmara Grátis ou Parceiro em Casa",
+  "esvaziamento-casas-almada": "Esvaziamento de Casas em Almada e Cacilhas",
+  "esvaziamento-casas-seixal": "Esvaziamento de Casas no Seixal, Amora e Corroios",
+  "esvaziamento-casas-oeiras": "Esvaziamento de Casas em Oeiras e Algés",
+  "esvaziamento-casas-barreiro": "Esvaziamento de Casas no Barreiro e no Lavradio",
+  "esvaziamento-casas-queluz": "Esvaziamento de Casas em Queluz, Belas e Massamá",
+  "esvaziamento-casas-monte-abraao": "Esvaziamento de Casas em Monte Abraão e Massamá",
+  "esvaziamento-casas-alcochete": "Esvaziamento de Casas em Alcochete e no Samouco",
+  "esvaziamento-casas-carnaxide": "Esvaziamento de Casas em Carnaxide e Queijas",
+  "esvaziamento-casas-olivais": "Esvaziamento de Casas nos Olivais e na Encarnação",
+  "recolha-entulho-loures": "Recolha de Entulho em Loures: SIMAR ou a Saco",
+  "recolha-monos-lisboa": "Monos em Lisboa: Câmara Grátis ou Parceiro em Casa",
+  "recolha-monos-cascais": "Monos em Cascais: Como Marcar a Recolha Grátis",
+  "recolha-moveis-lisboa": `Recolha de Móveis em Lisboa: Desde ${PRECO_POR_ITEM.pequeno} €/Peça + IVA`,
+};
+
 /**
  * O título de uma página de cidade + serviço.
  *
@@ -121,6 +162,9 @@ export function tituloDaCidade(
   serviceSlug: string,
   citySlug: string,
 ): string {
+  const proprio = TITULO_PROPRIO[`${serviceSlug}-${citySlug}`];
+  if (proprio && cabeNoGoogle(proprio)) return proprio;
+
   if (serviceSlug === "recolha-moveis") {
     const base = `Recolha de Móveis ${emTerra(cityName)}`;
     /*
@@ -146,9 +190,7 @@ export function tituloDaCidade(
       }
       return `Recolha de Móveis ${emTerraDaPagina(serviceSlug, citySlug, cityName)}`;
     }
-    // 23-11-2026 (d5): Lisboa leva a fórmula de /recolha-monos-lisboa (o preço no título era o problema);
-    // as outras 22 cidades ficam com o preço por peça, para comparar. A descrição diz o mínimo com IVA.
-    if (citySlug === "lisboa") return comOPrimeiroQueCabe(base, "De Casa, Sem Esperar", SEM_PRECO);
+    // Lisboa tem título próprio desde a d96 (TITULO_PROPRIO, em cima); a d5 dava «De Casa, Sem Esperar».
     return comOPrimeiroQueCabe(base, PRECO_MOVEIS, MOVEIS_DESDE, SEM_PRECO);
   }
 

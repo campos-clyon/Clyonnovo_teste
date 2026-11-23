@@ -8,10 +8,14 @@ import { descricaoDaCidade } from "./descricoes-seo";
  */
 describe("a descrição das páginas de cidade", () => {
   it("diz o preço com IVA ao lado do sem IVA", () => {
+    // Lisboa (monos e móveis) com descrição própria desde a d96 (23-11-2026): o par sem/com IVA fica.
     expect(descricaoDaCidade("recolha-monos", "Recolha de Monos", "Lisboa", "lisboa")).toContain(
-      "Desde 60 € + IVA (73,80 € com IVA).",
+      "desde 60 € + IVA (73,80 € com IVA).",
     );
     expect(descricaoDaCidade("recolha-moveis", "Recolha de Móveis", "Lisboa", "lisboa")).toContain(
+      "desde 15 € + IVA (18,45 € com IVA) por peça; mínimo 60 € + IVA (73,80 € com IVA).",
+    );
+    expect(descricaoDaCidade("recolha-moveis", "Recolha de Móveis", "Almada", "almada")).toContain(
       // Por peça desde 03-11-2026 (d6 v2), com a recolha mínima desde a d7 (04-11-2026).
       "Por peça, 15 a 65 € + IVA (18,45 a 79,95 € com IVA), mínimo 60 € + IVA.",
     );

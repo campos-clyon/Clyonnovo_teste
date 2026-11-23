@@ -2,8 +2,9 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { PAGINAS_DE_TIPO_DE_MUDANCA } from "./tipos-de-mudanca";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
-import { getAllCityServiceSlugs } from "@/lib/seo-data";
+import { SITE_URL, getAllCityServiceSlugs } from "@/lib/seo-data";
 import { zonasDoArtigo } from "@/lib/blog-zonas";
+import { ACTUALIZADO_EM } from "@/lib/datas-das-paginas";
 
 describe("robots.txt — o grupo específico não pode anular as restrições", () => {
   // Em robots.txt vence o grupo de user-agent mais específico, e um robô só
@@ -115,8 +116,9 @@ describe("lastmod — só muda quando o conteúdo muda", () => {
   });
 
   it("as páginas de cidade partilham a data do conteúdo local", () => {
-    // Menos as que têm data verdadeira à mão em datas-das-paginas.ts (d68, 17-11-2026; Lisboa, d5, 23-11-2026).
-    const cidade = entradas.filter((e) => e.url.includes("/recolha-moveis-") && !e.url.endsWith("/recolha-moveis-seixal") && !e.url.endsWith("/recolha-moveis-lisboa"));
+    // Menos as que têm data verdadeira à mão em datas-das-paginas.ts (d68, 17-11-2026; Lisboa, d5, 23-11-2026;
+    // e as da d96, 23-11-2026, que mostram os factos corrigidos).
+    const cidade = entradas.filter((e) => e.url.includes("/recolha-moveis-") && !ACTUALIZADO_EM[e.url.slice(SITE_URL.length)]);
     const datas = new Set(cidade.map((e) => String(e.lastModified)));
     expect(cidade.length).toBeGreaterThan(10);
     expect(datas.size).toBe(1);

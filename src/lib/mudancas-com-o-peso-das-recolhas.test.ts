@@ -41,9 +41,12 @@ describe("as cidades", () => {
       expect(c.desafio.length, c.slug).toBeGreaterThan(80);
       expect(c.faqs.length, c.slug).toBeGreaterThanOrEqual(2);
     }
-    // As treze novas têm três perguntas cada.
-    for (const slug of ["almada", "seixal", "setubal", "cascais", "amadora"]) {
+    // As treze novas têm três perguntas cada; Almada, Seixal e Amadora mais a pergunta local da d96 (23-11-2026).
+    for (const slug of ["setubal", "cascais"]) {
       expect(CIDADES_MUDANCAS.find((c) => c.slug === slug)!.faqs.length, slug).toBe(3);
+    }
+    for (const slug of ["almada", "seixal", "amadora"]) {
+      expect(CIDADES_MUDANCAS.find((c) => c.slug === slug)!.faqs.length, slug).toBe(4);
     }
   });
 
@@ -122,7 +125,8 @@ describe("o resto do site liga às mudanças", () => {
 
   it("as páginas de recolha de cada cidade ligam à mudança na mesma cidade", () => {
     const S = ler("src/app/[...slug]/page.tsx");
-    expect((S.match(/caminhoDoServicoNaCidade\("mudancas", city\.slug\)/g) ?? []).length).toBe(2);
+    // Desde a d96 (23-11-2026) também as de monos e de entulho (eram as de móveis e o resto).
+    expect((S.match(/caminhoDoServicoNaCidade\("mudancas", city\.slug\)/g) ?? []).length).toBe(4);
   });
 
   it("a página inicial, as áreas e os artigos de mudanças também", () => {

@@ -390,8 +390,14 @@ export default async function ServiceCityPage({ params }: Props) {
    */
   const monosDaCamara = recolhaDaCamara(city.slug);
   const regraDosMonos = monosDaCamara?.monos ? primeiraFrase(monosDaCamara.monos.texto) : null;
+  // d96 (23-11-2026): um esvaziamento com perguntas próprias que já falam da câmara ou da junta não
+  // leva esta outra vez (o Seixal ficava com «A Câmara do Seixal leva o recheio de uma casa?» duas vezes).
+  const jaPerguntaPelaCamara =
+    service.slug === "esvaziamento-casas" && (priorityContent?.faqs ?? []).some((f) => /Câmara|junta/.test(f.q));
   const perguntaDaCamaraSobreMoveis =
-    monosDaCamara?.monos && isFurnitureService(service.slug)
+    jaPerguntaPelaCamara
+      ? null
+      : monosDaCamara?.monos && isFurnitureService(service.slug)
       ? {
           q: `A Câmara ${monosDaCamara.de} recolhe móveis velhos?`,
           a: `Sim: os móveis velhos contam como monos. ${monosDaCamara.monos.texto}`,
@@ -574,6 +580,8 @@ export default async function ServiceCityPage({ params }: Props) {
         ...(currentServiceHub ? [currentServiceHub] : []),
         { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis ${emTerra(city.name)}` },
         { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas ${emTerra(city.name)}` },
+        // d96 (23-11-2026): a página de mudanças da mesma cidade, também daqui.
+        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças ${emTerra(city.name)}` },
         { href: "/blog/recolha-de-monos-o-que-inclui", label: "Guia: o que inclui a recolha de monos" },
         { href: "/contactos", label: "Contactos" },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
@@ -583,6 +591,7 @@ export default async function ServiceCityPage({ params }: Props) {
         ...(currentServiceHub ? [currentServiceHub] : []),
         { href: caminhoDoServicoNaCidade("esvaziamento-casas", city.slug), label: `Esvaziamento de casas ${emTerra(city.name)}` },
         { href: caminhoDoServicoNaCidade("recolha-moveis", city.slug), label: `Recolha de móveis ${emTerra(city.name)}` },
+        { href: caminhoDoServicoNaCidade("mudancas", city.slug), label: `Mudanças ${emTerra(city.name)}` },
         { href: "/blog/recolha-de-entulho-legal-e-organizada", label: "Guia: recolha de entulho" },
         { href: "/contactos", label: "Contactos" },
         ...(clusterLinks[city.region] || []).filter(link => !link.href.includes(city.slug)).slice(0, 2),
@@ -947,7 +956,7 @@ export default async function ServiceCityPage({ params }: Props) {
                     </a>
                   </span>
                 ))}
-              {" "}— lidas a {CONSULTADAS_EM.split("-").reverse().join("-")}. Os serviços municipais mudam:
+              {" "}— lidas a {(daCamara.consultadasEm ?? CONSULTADAS_EM).split("-").reverse().join("-")}. Os serviços municipais mudam:
               confirme os contactos antes de marcar.
             </p>
           </div>

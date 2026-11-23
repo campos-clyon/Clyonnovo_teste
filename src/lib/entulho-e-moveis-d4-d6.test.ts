@@ -143,13 +143,15 @@ describe("d6 v2 — a frase por peça nos títulos e nas descrições das cidade
     for (const { service, city } of paginas) {
       const t = tituloDaCidade(service.name, city.name, service.slug, city.slug);
       // O «desde» é a recolha mínima desde a d7 (era «Desde 15 € + IVA»), e a descrição di-la.
-      // Lisboa leva «De Casa, Sem Esperar» desde a d5 de 23/11; a descrição mantém o preço com IVA.
+      // Lisboa tem título e descrição próprios desde a d96 (23/11): «Desde 15 €/Peça + IVA» e o mínimo com IVA.
       if (city.slug !== "lisboa") expect([`— 15–65 €/Peça + IVA`, `— Desde 60 € + IVA`].some((fim) => t.endsWith(fim)), t).toBe(true);
-      expect(descricaoDaCidade(service.slug, service.name, city.name, city.slug), city.slug).toContain(
-        "Por peça, 15 a 65 € + IVA (18,45 a 79,95 € com IVA), mínimo 60 € + IVA.",
-      );
+      if (city.slug !== "lisboa")
+        expect(descricaoDaCidade(service.slug, service.name, city.name, city.slug), city.slug).toContain(
+          "Por peça, 15 a 65 € + IVA (18,45 a 79,95 € com IVA), mínimo 60 € + IVA.",
+        );
     }
-    expect(tituloDaCidade("Recolha de Móveis", "Lisboa", "recolha-moveis", "lisboa")).toBe("Recolha de Móveis em Lisboa — De Casa, Sem Esperar");
+    expect(tituloDaCidade("Recolha de Móveis", "Lisboa", "recolha-moveis", "lisboa")).toBe("Recolha de Móveis em Lisboa: Desde 15 €/Peça + IVA");
+    expect(descricaoDaCidade("recolha-moveis", "Recolha de Móveis", "Lisboa", "lisboa")).toContain("mínimo 60 € + IVA (73,80 € com IVA)");
     expect(tituloDaCidade("Recolha de Monos", "Seixal", "recolha-monos", "seixal")).toBe("Recolha de Monos no Seixal, Amora e Corroios");
   });
 });

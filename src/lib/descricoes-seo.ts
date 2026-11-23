@@ -1,10 +1,11 @@
 import { emTerra } from "./preposicao-da-terra";
 import { PRAZO_DE_RESPOSTA } from "@/lib/seo-data";
-import { ENTULHO_ATE_10_SACOS, PRECOS, comMaiuscula } from "@/lib/precos-publicos";
+import { ENTULHO_ATE_10_SACOS, ESVAZIAMENTO_POR_TIPOLOGIA, PRECOS, PRECO_POR_ITEM, comMaiuscula } from "@/lib/precos-publicos";
 import { comIva, euros } from "@/lib/quanto-custa";
 import { PESO_DO_SACO } from "@/lib/sacos-de-entulho";
 import { getCidadeLocal } from "@/lib/cidades-local";
-import { MOVEIS_POR_PECA_CURTO, desdeSemEComIva, faixaSemEComIva } from "@/lib/preco-de-referencia";
+import { MOVEIS_POR_PECA_CURTO, RECOLHA_MINIMA_COM_IVA, desdeSemEComIva, faixaSemEComIva, valorSemEComIva } from "@/lib/preco-de-referencia";
+import { NOTAS_EM_LINHA } from "@/lib/avaliacoes-publicas";
 import { TERRA_JUNTA_NO_TITULO, emTerraDaPagina, monosCamaraOuDeCasa } from "./titulos-seo";
 
 /**
@@ -114,9 +115,40 @@ export function comOPrimeiroQueCabeNoFim(frases: string[], alternativas: string[
 export const DESCRICAO_DOS_MONOS_CAMARA_OU_DE_CASA: Record<string, (preco: string) => string> = {
   cascais: (preco) => `Monos em Cascais: a Cascais Ambiente recolhe-os grátis, no dia marcado. De casa e sem esperar: parceiros, ${preco}.`,
   oeiras: (preco) => `Monos em Oeiras: a Câmara recolhe grátis, no dia e local combinados. De casa e sem esperar: parceiros, ${preco}.`,
-  odivelas: (preco) => `Monos em Odivelas: os SIMAR recolhem grátis, em até 5 dias úteis. De casa e sem esperar: parceiros, ${preco}.`,
+  odivelas: (preco) => `Monos em Odivelas: a junta ou os SIMAR recolhem grátis, com marcação. De casa e sem esperar: parceiros, ${preco}.`,
   sintra: (preco) => `Monos em Sintra: a junta recolhe grátis até 10 peças por mês. De casa e sem esperar: parceiros, ${preco}.`,
   queluz: (preco) => `Monos em Queluz e Massamá: a junta recolhe grátis até 10 por mês. De casa e sem esperar: parceiros, ${preco}.`,
+};
+
+/*
+ * AS DESCRIÇÕES PRÓPRIAS — 23-11-2026 (d96), as das mesmas páginas de
+ * `TITULO_PROPRIO` (titulos-seo.ts). Lidas antes das regras gerais; uma que
+ * passe dos 155 cai na regra geral. Preços só pelas constantes.
+ */
+const T2 = ESVAZIAMENTO_POR_TIPOLOGIA.find((t) => t.chave === "T2")!;
+const T2_NA_FRASE = faixaSemEComIva(T2.minimo, T2.maximo!);
+const MONOS_DESDE = desdeSemEComIva(PRECOS.recolha_monos.minimo!);
+
+export const DESCRICAO_PROPRIA: Readonly<Record<string, string>> = {
+  "recolha-monos-odivelas": `Em Odivelas a junta ou os SIMAR levam os monos grátis, com marcação. Para os tirar de dentro de casa, um parceiro: ${MONOS_DESDE}.`,
+  "recolha-monos-sesimbra": `Em Sesimbra a Câmara recolhe monos grátis até 1100 litros, com marcação. De dentro de casa, um parceiro: ${MONOS_DESDE}.`,
+  "recolha-monos-montijo": `No Montijo a recolha de monos é grátis, pela Câmara ou pela junta. De dentro de casa, um parceiro: ${MONOS_DESDE}.`,
+  "recolha-monos-carnaxide": `Em Carnaxide e Queijas, Oeiras recolhe monos grátis até 1 m³, com marcação. De dentro de casa, um parceiro: ${MONOS_DESDE}.`,
+  "recolha-monos-olivais": `Nos Olivais a Câmara recolhe monos grátis a particulares, pela Na Minha Rua LX. De dentro de casa, um parceiro: ${MONOS_DESDE}.`,
+  "esvaziamento-casas-almada": `Esvaziar uma casa em Almada: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}. Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+  "esvaziamento-casas-seixal": `Esvaziar uma casa ou moradia no Seixal: parceiros levam o recheio todo, garagem incluída. Um T2 ${T2_NA_FRASE}.`,
+  "esvaziamento-casas-oeiras": `Esvaziar uma casa em Oeiras, Algés ou Paço de Arcos: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}.`,
+  "esvaziamento-casas-barreiro": `Esvaziar uma casa no Barreiro, no Lavradio ou na Verderena: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}.`,
+  "esvaziamento-casas-queluz": `Esvaziar uma casa em Queluz, Belas ou Massamá: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}. Propostas grátis.`,
+  "esvaziamento-casas-monte-abraao": `Esvaziar um apartamento em Monte Abraão ou Massamá: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}.`,
+  "esvaziamento-casas-alcochete": `Esvaziar uma casa ou moradia em Alcochete ou no Samouco: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}.`,
+  "esvaziamento-casas-carnaxide": `Esvaziar um apartamento em Carnaxide, Queijas ou na Outurela: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}.`,
+  "esvaziamento-casas-olivais": `Esvaziar um apartamento nos Olivais ou uma casa na Encarnação: parceiros levam o recheio todo. Um T2 ${T2_NA_FRASE}.`,
+  "recolha-entulho-loures": `Entulho de obras em Loures: os SIMAR levam 1 m³ grátis aos clientes. Com um parceiro, sacos ou granel: ${ENTULHO_10_SACOS_NA_FRASE}.`,
+  "recolha-monos-lisboa": `Em Lisboa a Câmara leva monos grátis a particulares, pela Na Minha Rua LX. De dentro de casa, parceiros ${MONOS_DESDE}.`,
+  // Sem o prazo de 24 h, como o título (ver TITULO_PROPRIO).
+  "recolha-monos-cascais": `A Cascais Ambiente leva monos grátis, com marcação: 800 203 186. De dentro de casa, parceiros ${MONOS_DESDE}.`,
+  "recolha-moveis-lisboa": `Recolha de móveis em Lisboa desde ${valorSemEComIva(PRECO_POR_ITEM.pequeno)} por peça; mínimo ${RECOLHA_MINIMA_COM_IVA}. ${NOTAS_EM_LINHA}.`,
 };
 
 /**
@@ -132,6 +164,9 @@ export function descricaoDaCidade(
   cityName: string,
   citySlug: string,
 ): string {
+  const propriaDaPagina = DESCRICAO_PROPRIA[`${serviceSlug}-${citySlug}`];
+  if (propriaDaPagina && tamanho(propriaDaPagina) <= LIMITE_DA_DESCRICAO) return propriaDaPagina;
+
   const servico = SERVICO_NA_FRASE[serviceSlug] ?? serviceName;
   // A terra junta ao lado do concelho (d68): a frase encolhe para o preço caber.
   const comTerraJunta = Boolean(TERRA_JUNTA_NO_TITULO[`${serviceSlug}-${citySlug}`]);

@@ -541,7 +541,8 @@ export default async function MudancasPage() {
           <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-600">
             {/* Prometia "faixa de preço" nos dados locais — as páginas de
                 cidade deixaram de a mostrar. */}
-            Para cada cidade principal há uma página com dados locais — rotas mais pedidas, particularidades de acesso e perguntas frequentes.
+            {/* d96 (23-11-2026): o parágrafo e a linha de cada cartão próprios da cidade. */}
+            Cada cidade tem a sua página com as rotas mais pedidas, o que pesa no acesso (andares, ruas estreitas, estacionamento) e onde deixar os móveis que não seguem para a casa nova. Escolha a sua e veja os parceiros que trabalham lá, com a nota e o preço por hora de cada um.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {CIDADES_MUDANCAS.map((cidade) => (
@@ -564,7 +565,7 @@ export default async function MudancasPage() {
                       distância à CLYON, que não vai a lado nenhum, e um prazo
                       que não é o da plataforma. */}
                   <p className="mt-0.5 text-xs text-slate-500">
-                    Propostas em menos de 6 horas
+                    {cidade.linhaNoHub ?? "Propostas em menos de 6 horas"}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-tinta-fraca group-hover:translate-x-0.5 group-hover:text-emerald-600" />

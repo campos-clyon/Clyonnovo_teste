@@ -67,6 +67,20 @@ export interface CidadeMudanca {
   testemunho: { autor: string; texto: string; rating: number } | null;
   /** URLs de páginas relacionadas para internal linking (cidades vizinhas) */
   cidadesVizinhas: string[]; // slugs
+  /**
+   * d96 (23-11-2026): o texto corrido da cidade, em parágrafos, mostrado depois do
+   * herói («Mudar no Seixal: o que convém saber»). Sem preços: o preço sai do
+   * cartão do topo (a lista de parceiros).
+   */
+  textoLocal?: string[];
+  /**
+   * d96: a abertura da description desta cidade («Mudanças no Seixal, da Amora a
+   * Fernão Ferro»), a que a página junta o preço vivo da lista, e a frase que
+   * segue se couber.
+   */
+  descricaoLocal?: { abertura: string; depois: string };
+  /** d96: a linha de baixo do cartão desta cidade em /mudancas (era «Propostas em menos de 6 horas» nas 23). */
+  linhaNoHub?: string;
 }
 
 /**
@@ -118,6 +132,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     // veio não entra.
     testemunho: null,
     cidadesVizinhas: ["oeiras", "cascais", "sintra", "almada"],
+    linhaNoHub: "De Alfama ao Parque das Nações, com licença de estacionamento",
   },
   {
     slug: "alcochete",
@@ -152,6 +167,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["montijo", "barreiro", "seixal", "lisboa"],
+    linhaNoHub: "Vila de casas baixas, perto da Vasco da Gama",
   },
   {
     slug: "barreiro",
@@ -186,6 +202,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["seixal", "moita", "almada", "lisboa"],
+    linhaNoHub: "Do centro antigo ao Alto do Seixalinho",
   },
   {
     slug: "montijo",
@@ -220,6 +237,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["alcochete", "palmela", "setubal", "lisboa"],
+    linhaNoHub: "Para Lisboa pela ponte Vasco da Gama",
   },
   {
     slug: "sintra",
@@ -254,6 +272,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["oeiras", "cascais", "lisboa"],
+    linhaNoHub: "Da Vila ao Cacém e a Mem Martins",
   },
   {
     slug: "oeiras",
@@ -288,6 +307,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["cascais", "amadora", "sintra", "lisboa"],
+    linhaNoHub: "Algés, Paço de Arcos e a linha",
   },
   {
     slug: "carnaxide",
@@ -322,6 +342,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["oeiras", "amadora", "lisboa", "sintra"],
+    linhaNoHub: "Urbanizações com condomínio, perto da A5",
   },
   {
     slug: "corroios",
@@ -390,6 +411,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["montijo", "setubal", "almada", "alcochete"],
+    linhaNoHub: "A vila em encosta e o Pinhal Novo plano",
   },
   {
     slug: "odivelas",
@@ -424,6 +446,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["lisboa", "amadora", "sintra", "loures"],
+    linhaNoHub: "Ruas em rampa, da Ramada a Caneças",
   },
   {
     slug: "lumiar",
@@ -458,6 +481,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["lisboa", "odivelas", "loures", "amadora"],
+    linhaNoHub: "Telheiras e Alta de Lisboa, garagens baixas",
   },
   {
     slug: "sesimbra",
@@ -492,6 +516,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["almada", "seixal", "palmela", "setubal"],
+    linhaNoHub: "A vila a pique e a Quinta do Conde",
   },
   {
     slug: "costa-da-caparica",
@@ -557,6 +582,11 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       "Almada velha e Cacilhas ficam sobre a arriba: ruas curtas e inclinadas, com escadinhas entre patamares, onde a carrinha nem sempre chega à porta. Diga no pedido se há degraus entre a rua e a entrada — é isso que decide quantas pessoas são precisas.",
     faqs: [
       {
+        pergunta: "Mudo de Cacilhas e a carrinha não chega à porta. O que muda na proposta?",
+        resposta:
+          "Mais pessoas ou mais horas, porque as peças vão a pé até à carrinha. Diga no pedido quantos degraus ou metros há entre a porta e o sítio onde a carrinha pode parar, e o andar. Com isso o parceiro põe na proposta a equipa certa, e no simulador compara o preço por hora de cada um.",
+      },
+      {
         pergunta: "Fazem mudanças de Almada para Lisboa?",
         resposta:
           "Sim. A travessia é pela ponte 25 de Abril, e a portagem entra na proposta. Diga as duas moradas e os andares: recebe propostas grátis em menos de 6 horas.",
@@ -574,6 +604,14 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["seixal", "lisboa", "sesimbra", "barreiro"],
+    // d96 (23-11-2026): o texto próprio, a pergunta local e a abertura da description.
+    textoLocal: [
+      "Almada tem três tipos de mudança. Em Almada velha e em Cacilhas, sobre a arriba, há ruas curtas e inclinadas e escadinhas entre patamares, e muitos prédios anteriores aos anos 60 sem elevador: a carrinha nem sempre chega à porta, e o caminho até ela faz-se a pé. No Pragal e no Feijó há elevador e garagem. Na Charneca de Caparica e na Sobreda são moradias, com espaço para encostar.",
+      "Para Lisboa atravessa-se a ponte 25 de Abril, com a portagem paga no sentido de Lisboa; na Costa da Caparica, entre junho e setembro, estacionar perto da praia é o maior obstáculo. Diga as duas moradas, os andares e se há degraus entre a rua e a entrada.",
+      "O que não segue para a casa nova pode ir pela junta: as juntas de Almada recolhem monos grátis à porta, por marcação na linha verde de cada uma (a de Almada, Cova da Piedade, Pragal e Cacilhas é o 800 100 304), e o Ecocentro de Almada, na Sobreda, recebe móveis, colchões e sofás.",
+    ],
+    descricaoLocal: { abertura: "Mudanças em Almada, de Cacilhas à Charneca", depois: "Propostas em menos de 6 horas." },
+    linhaNoHub: "Cacilhas, Pragal e a ponte 25 de Abril",
   },
   {
     slug: "seixal",
@@ -596,6 +634,11 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       "O Seixal é dos concelhos onde mais vezes se encosta a carrinha à porta: bairros de moradias e ruas largas. O que pesa é o contrário — o concelho é espalhado, e de Fernão Ferro a Paio Pires ainda é trajecto. Diga as duas moradas no pedido.",
     faqs: [
       {
+        pergunta: "Mudar do Seixal para Lisboa custa mais por causa da ponte?",
+        resposta:
+          "A portagem da ponte 25 de Abril paga-se no sentido de Lisboa e entra na proposta, tal como o tempo de travessia. A mudança paga-se à hora, ao preço de cada parceiro, e no simulador vê a lista com a nota e o preço de cada um. Marcar fora das horas de ponta da ponte encurta o dia.",
+      },
+      {
         pergunta: "Fazem mudanças dentro do concelho do Seixal?",
         resposta:
           "Sim — entre Fernão Ferro, Paio Pires, Arrentela, Amora ou Corroios, ou para fora do concelho. O pedido chega a parceiros com atividade na zona, e as propostas chegam em menos de 6 horas.",
@@ -613,6 +656,14 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["almada", "barreiro", "sesimbra", "lisboa"],
+    // d96 (23-11-2026): o texto próprio, a pergunta local e a abertura da description.
+    textoLocal: [
+      "No concelho do Seixal, a maior parte das mudanças é fácil à porta e longa no caminho. Em Fernão Ferro, Santa Marta do Pinhal e Vale de Milhaços são moradias, onde a carrinha encosta ao portão; na Amora, na Cruz de Pau e no Miratejo são prédios de quatro a seis andares, a maioria com elevador. Entre Fernão Ferro e Paio Pires ainda é caminho, e para Lisboa há a ponte 25 de Abril, com a portagem paga no sentido de Lisboa.",
+      "Numa moradia, o que mais vezes fica de fora do pedido é o que está fora de casa: garagem, arrecadação, móveis de jardim, ferramentas. Fotografe-os e diga-os, para a equipa e as horas da proposta não ficarem curtas.",
+      "E o que não vai para a casa nova? A Câmara do Seixal recolhe monos sem custo até 8 m³, com marcação pela Linha Seixal Limpo, 210 976 011, num dia fixo por semana para cada freguesia. Marque com tempo, para não ficar com o sofá velho na casa que está a entregar.",
+    ],
+    descricaoLocal: { abertura: "Mudanças no Seixal, da Amora a Fernão Ferro", depois: "Propostas em menos de 6 horas." },
+    linhaNoHub: "Moradias em Fernão Ferro, prédios na Amora",
   },
   {
     slug: "setubal",
@@ -652,6 +703,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["palmela", "sesimbra", "seixal"],
+    linhaNoHub: "Do centro histórico a Azeitão",
   },
   {
     slug: "cascais",
@@ -691,6 +743,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["oeiras", "sintra", "carnaxide", "lisboa"],
+    linhaNoHub: "Moradias com portão, pela A5 ou pela Marginal",
   },
   {
     slug: "amadora",
@@ -713,6 +766,11 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       "A Amadora tem densidade alta e prédios dos anos 70 e 80, onde elevadores pequenos e escadas estreitas são a regra: os móveis grandes descem desmontados. E é das zonas mais difíceis da Grande Lisboa para estacionar uma carrinha de dia — marcar cedo faz diferença.",
     faqs: [
       {
+        pergunta: "Em que dia a Câmara da Amadora recolhe os monos da minha freguesia?",
+        resposta:
+          "Alfragide à segunda, Mina de Água à terça, Águas Livres à quarta, Encosta do Sol à quinta, Falagueira-Venda Nova à sexta e Venteira ao sábado, sempre com marcação pelo 214 369 040 e só no local e à hora indicados. Se precisa que os móveis velhos saiam no dia da mudança, diga-o no pedido: o parceiro pode levá-los na mesma viagem, com o preço na proposta.",
+      },
+      {
         pergunta: "Os móveis passam no elevador?",
         resposta:
           "Muitas vezes não: nos prédios dos anos 70 e 80 da Amadora, elevadores pequenos e escadas estreitas tornam o desmonte quase sempre necessário. Peça desmontagem e montagem no pedido, para virem incluídas na proposta.",
@@ -730,6 +788,14 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["benfica", "lisboa", "sintra", "queluz"],
+    // d96 (23-11-2026): o texto próprio, a pergunta local e a abertura da description.
+    textoLocal: [
+      "Na Amadora, a mudança decide-se nas escadas. A maior parte das casas está em prédios dos anos 70 e 80, na Damaia, na Reboleira, na Falagueira e na Venda Nova, com elevadores pequenos e escadas estreitas: os roupeiros, as camas e os sofás grandes descem quase sempre desmontados. Peça a desmontagem e a montagem no pedido, para virem na proposta e não se descobrirem no dia.",
+      "De dia, as ruas estão cheias e a carrinha pode ter de parar longe da porta; uma mudança que começa cedo ganha esse tempo. Em Alfragide há mais espaço, e a saída para Lisboa, Oeiras e Sintra faz-se pelo IC19 e pela CRIL.",
+      "O que fica para trás pode ir pela Câmara: o Serviço de Higiene Urbana recolhe monos de segunda a sábado, das 14h às 20h, por marcação pelo 214 369 040, num dia fixo para cada freguesia. Os objetos só vão para o local indicado, no dia e à hora marcados.",
+    ],
+    descricaoLocal: { abertura: "Mudanças na Amadora, da Reboleira a Alfragide", depois: "Desmontagem a pedido." },
+    linhaNoHub: "Escadas estreitas, móveis desmontados",
   },
   {
     slug: "benfica",
@@ -769,6 +835,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["lisboa", "amadora", "carnaxide", "lumiar"],
+    linhaNoHub: "Elevadores estreitos e a Estrada de Benfica",
   },
   {
     slug: "alvalade",
@@ -808,6 +875,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["lisboa", "lumiar", "olivais", "odivelas"],
+    linhaNoHub: "Prédios de quatro andares sem elevador",
   },
   {
     slug: "olivais",
@@ -847,6 +915,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["lisboa", "alvalade", "loures", "lumiar"],
+    linhaNoHub: "Blocos com espaço à porta e a Encarnação",
   },
   {
     slug: "loures",
@@ -886,6 +955,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["odivelas", "lumiar", "olivais", "lisboa"],
+    linhaNoHub: "De Sacavém a Santo António dos Cavaleiros",
   },
   {
     slug: "monte-abraao",
@@ -925,6 +995,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["queluz", "sintra", "amadora", "oeiras"],
+    linhaNoHub: "Blocos altos e caminhos só para peões",
   },
   {
     slug: "queluz",
@@ -964,6 +1035,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["monte-abraao", "amadora", "sintra", "benfica"],
+    linhaNoHub: "Do Palácio a Belas e Massamá",
   },
   {
     slug: "amora",
@@ -1042,6 +1114,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
     ],
     testemunho: null,
     cidadesVizinhas: ["barreiro", "montijo", "alcochete", "palmela"],
+    linhaNoHub: "Baixa da Banheira, Alhos Vedros e a Vasco da Gama",
   },
 ];
 

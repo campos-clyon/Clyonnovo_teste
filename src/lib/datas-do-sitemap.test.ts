@@ -43,7 +43,8 @@ describe("o lastmod do sitemap", () => {
     // Só as que têm uma data verdadeira escrita à mão em datas-das-paginas.ts (d68, 17-11-2026).
     const comData = entradas.filter((e) => e.lastModified).map((e) => e.url.slice(SITE_URL.length));
     expect(comData.filter((c) => !ACTUALIZADO_EM[c])).toEqual([]);
-    expect(comData.length).toBeLessThanOrEqual(5);
+    // d96 (23-11-2026): as 15 páginas de cidade com texto próprio e as que mostram os factos corrigidos.
+    expect(comData.length).toBeLessThanOrEqual(40);
   }, 30_000);
 
   it("nenhuma data se repete por mais de 40 endereços", async () => {

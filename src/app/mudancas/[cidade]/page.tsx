@@ -35,7 +35,7 @@ import {
   NOTAS_EM_LINHA,
 } from "@/lib/seo-data";
 import { PRESTADOR } from "@/lib/dados-estruturados";
-import { descricaoQueCabe } from "@/lib/descricoes-seo";
+import { LIMITE_DA_DESCRICAO, descricaoQueCabe, tamanho } from "@/lib/descricoes-seo";
 import {
   CIDADES_MUDANCAS,
   getAllCidadeSlugs,
@@ -138,11 +138,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // E até 155 caracteres (29-09-2026): tinha 161 a 173, e o Google cortava o
   // prazo, que é o que a pessoa quer saber. O essencial primeiro; o resto só
   // se couber inteiro (ver descricoes-seo.ts).
-  const description = descricaoQueCabe([
+  const geral = descricaoQueCabe([
     `Mudanças ${emTerra(c.nome)} à hora, ${precoDaMudancaNaDescricao(preco)}.`,
     `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
     "Orçamento grátis.",
   ]);
+  // d96 (23-11-2026): Seixal, Amadora e Almada abrem com as terras que se procuram, e o preço
+  // vivo da lista; se a abertura com o preço não couber nos 155, fica a geral.
+  const local = c.descricaoLocal
+    ? descricaoQueCabe([`${c.descricaoLocal.abertura}, ${precoDaMudancaCurto(preco)}.`, c.descricaoLocal.depois])
+    : null;
+  const description = local && tamanho(local) <= LIMITE_DA_DESCRICAO ? local : geral;
 
   return {
     title,
@@ -322,6 +328,20 @@ export default async function MudancasCidadePage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      {/* ── O texto próprio da cidade (d96, 23-11-2026) ── */}
+      {c.textoLocal && c.textoLocal.length > 0 && (
+        <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            Mudar {emTerra(c.nome)}: o que convém saber
+          </h2>
+          {c.textoLocal.map((paragrafo) => (
+            <p key={paragrafo.slice(0, 40)} className="mt-4 text-base leading-relaxed text-slate-700">
+              {paragrafo}
+            </p>
+          ))}
+        </section>
+      )}
 
       {/* ── Rotas comuns ── */}
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

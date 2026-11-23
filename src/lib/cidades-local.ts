@@ -99,7 +99,8 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
   },
   {
     slug: "olivais",
-    zonas: ["Olivais Norte", "Olivais Sul", "Encarnação", "Moscavide"],
+    // d96 (23-11-2026): saiu Moscavide, que é da freguesia de Moscavide e Portela, no concelho de Loures.
+    zonas: ["Olivais Norte", "Olivais Sul", "Encarnação"],
     acesso:
       "Os Olivais foram planeados com espaço entre os blocos: acesso de carrinha até junto da porta, o que raramente acontece no resto de Lisboa. Os blocos altos têm elevador, mas alguns são de cabina pequena.",
     estacionamento: "Largo e gratuito na maior parte da zona. É das áreas de Lisboa onde é mais simples.",
@@ -149,7 +150,8 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
     acesso:
       "Concelho de contrastes: Santo António dos Cavaleiros são torres com elevador e acesso fácil; o centro de Loures e a Bobadela têm casas antigas de dois pisos com escada interior estreita.",
     estacionamento: "Sem grande dificuldade fora das horas de ponta em Sacavém e Camarate.",
-    destinoResiduos: { nome: "Ecocentro de Loures", entidade: "Valorsul / CM Loures" },
+    // d96 (23-11-2026): a lista da Valorsul não tem ecocentro neste concelho; fica o do Lumiar (público e gratuito).
+    destinoResiduos: { nome: "Ecocentro do Lumiar", entidade: "Valorsul" },
   },
   {
     slug: "odivelas",
@@ -157,7 +159,8 @@ export const CIDADES_LOCAIS: CidadeLocal[] = [
     acesso:
       "Terreno com desnível acentuado. Muitas ruas em rampa, e prédios cuja entrada fica meio piso acima ou abaixo do passeio — os degraus à porta contam tanto como os andares.",
     estacionamento: "Apertado no centro de Odivelas. Em Famões e Caneças é mais folgado.",
-    destinoResiduos: { nome: "Ecocentro de Odivelas", entidade: "Valorsul / CM Odivelas" },
+    // d96 (23-11-2026): a lista da Valorsul não tem ecocentro neste concelho; fica o do Lumiar (público e gratuito).
+    destinoResiduos: { nome: "Ecocentro do Lumiar", entidade: "Valorsul" },
   },
   {
     slug: "carnaxide",

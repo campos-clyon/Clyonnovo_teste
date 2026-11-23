@@ -39,12 +39,13 @@ describe("monos e entulho, nas 26 terras", () => {
   }
 
   it("Lisboa, Almada e Barreiro como a decisão os quer", () => {
-    expect(tituloDaCidade("", "Lisboa", "recolha-monos", "lisboa")).toBe("Recolha de Monos em Lisboa — De Casa, Sem Esperar");
+    // Lisboa com título próprio desde a d96 (23-11-2026); as outras terras de monos ficam com a regra da d9.
+    expect(tituloDaCidade("", "Lisboa", "recolha-monos", "lisboa")).toBe("Monos em Lisboa: Câmara Grátis ou Parceiro em Casa");
     expect(tituloDaCidade("", "Almada", "recolha-monos", "almada")).toBe("Recolha de Monos em Almada — De Casa, Sem Esperar");
     expect(tituloDaCidade("", "Lisboa", "recolha-entulho", "lisboa")).toBe("Recolha de Entulho em Lisboa — desde 49,20 € c/ IVA");
     expect(ENTULHO_DESDE_COM_IVA).toBe("desde 49,20 € c/ IVA");
-    expect(descricaoDaCidade("recolha-monos", "", "Lisboa", "lisboa")).toBe(
-      "Monos em Lisboa sem esperar pela Câmara: parceiros tiram-nos de dentro de casa. Desde 60 € + IVA (73,80 € com IVA). Propostas grátis em menos de 6 horas.",
+    expect(descricaoDaCidade("recolha-monos", "", "Almada", "almada")).toBe(
+      "Monos em Almada sem esperar pela Câmara: parceiros tiram-nos de dentro de casa. Desde 60 € + IVA (73,80 € com IVA). Propostas grátis em menos de 6 horas.",
     );
     expect(descricaoDaCidade("recolha-entulho", "", "Lisboa", "lisboa")).toBe(
       "Entulho de obras em Lisboa, em sacos ou a granel e sem contentor: 10 sacos 40 – 48 € + IVA (49,20 – 59,04 € com IVA). Propostas grátis em menos de 6 horas.",

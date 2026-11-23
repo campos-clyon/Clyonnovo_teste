@@ -20,6 +20,7 @@
  * AQUI (AAAA-MM-DD, hora de Lisboa).
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
+  // 23-11-2026 (d96): /mudancas com o parágrafo das cidades e uma linha própria em cada cartão.
   // 23-11-2026 (d7): o cartão do guia «Quanto custa uma mudança» em /mudancas lê a lista de parceiros, como o resto da página.
   // 17-11-2026 (d62/d63, acertos): o cartão das mudanças em /contactos com o com IVA da mesma etiqueta (49,20 €/h).
   // 17-11-2026 (d63): os monos desde 60 € + IVA (a recolha mínima), o esvaziamento de casa desde 260 € + IVA
@@ -106,6 +107,43 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 23-11-2026 (d5): o título de Lisboa (móveis) e o do Seixal (monos).
   "/recolha-moveis-lisboa": "2026-11-23",
   "/recolha-monos-seixal": "2026-11-23",
+  // 23-11-2026 (d96): as 15 páginas de cidade que o Google pôs de lado, com texto, título e descrição próprios.
+  "/recolha-monos-odivelas": "2026-11-23",
+  "/recolha-monos-sesimbra": "2026-11-23",
+  "/recolha-monos-montijo": "2026-11-23",
+  "/recolha-monos-carnaxide": "2026-11-23",
+  "/recolha-monos-olivais": "2026-11-23",
+  "/esvaziamento-casas-almada": "2026-11-23",
+  "/esvaziamento-casas-seixal": "2026-11-23",
+  "/esvaziamento-casas-oeiras": "2026-11-23",
+  "/esvaziamento-casas-barreiro": "2026-11-23",
+  "/esvaziamento-casas-queluz": "2026-11-23",
+  "/esvaziamento-casas-monte-abraao": "2026-11-23",
+  "/esvaziamento-casas-alcochete": "2026-11-23",
+  "/esvaziamento-casas-carnaxide": "2026-11-23",
+  "/esvaziamento-casas-olivais": "2026-11-23",
+  "/recolha-entulho-loures": "2026-11-23",
+  // d96: o título e a descrição dos monos em Lisboa e em Cascais (o de móveis em Lisboa já está em cima).
+  "/recolha-monos-lisboa": "2026-11-23",
+  "/recolha-monos-cascais": "2026-11-23",
+  // d96: factos corrigidos que estas páginas mostram — o ecocentro de Loures e de Odivelas (é o do Lumiar),
+  // os monos de Odivelas pelas juntas, Oeiras grátis até 1 m³, Moscavide fora dos Olivais, o Alto da Loba fora de Carnaxide.
+  "/recolha-moveis-loures": "2026-11-23",
+  "/recolha-monos-loures": "2026-11-23",
+  "/esvaziamento-casas-loures": "2026-11-23",
+  "/recolha-moveis-odivelas": "2026-11-23",
+  "/esvaziamento-casas-odivelas": "2026-11-23",
+  "/recolha-moveis-olivais": "2026-11-23",
+  "/recolha-entulho-olivais": "2026-11-23",
+  "/recolha-monos-oeiras": "2026-11-23",
+  "/recolha-moveis-oeiras": "2026-11-23",
+  "/recolha-moveis-carnaxide": "2026-11-23",
+  "/recolha-entulho-carnaxide": "2026-11-23",
+  // d96: as mudanças com texto próprio (Seixal, Amadora, Almada) e os Olivais sem Moscavide nas zonas.
+  "/mudancas/seixal": "2026-11-23",
+  "/mudancas/amadora": "2026-11-23",
+  "/mudancas/almada": "2026-11-23",
+  "/mudancas/olivais": "2026-11-23",
 };
 
 /**
