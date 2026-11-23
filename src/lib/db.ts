@@ -3153,6 +3153,8 @@ export async function pedidosComNegociacoes(limite = 30): Promise<
             -- Com ou sem factura, para a conta em degraus do trabalho fechado (15-10-2026).
             n.pagamentoParaQue, n.semFactura,
             n.createdAt AS criadaEm, n.updatedAt AS actualizadaEm,
+            -- Quando o cliente abriu as propostas (S11): o selo «ainda não as viu» da Mesa (d6, 23-11-2026).
+            n.vistoPeloClienteEm,
             -- As horas de um trabalho por hora e os materiais da proposta (v14, 31-10-2026).
             n.valorPorHora, n.horasInicioEm, n.horasFimEm, n.horasMinutos, n.horasFaturadas, n.valorDasHoras,
             n.horasMarcadasEm, n.horasConfirmadasEm, n.horasConfirmadasPor, n.horasContestadasEm, n.horasContestacao,

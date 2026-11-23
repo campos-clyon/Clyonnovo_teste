@@ -80,7 +80,7 @@ export default function EnviarAsPropostas() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{NOME_DO_INTERRUPTOR_DAS_PROPOSTAS}</p>
       <p className="mt-1 text-sm leading-6 text-slate-300">
         Num pedido em negociação com propostas de parceiros por enviar, a Vitória envia ao cliente o orçamento (o mesmo
-        do «Enviar pela CLYON», com a validade) quando houver 3 propostas ou 3 horas depois da 1.ª, das 8h às 21h de
+        do «Enviar pela CLYON», com a validade) assim que chega a 1.ª proposta (10 min depois de o parceiro a pôr), das 8h às 21h de
         Lisboa (o que fica fora sai às 9h). Uma vez por pedido, e uma mensagem automática por dia a cada cliente. Ficam
         com uma pessoa: a melhor proposta acima de 500 € com IVA, os Trabalhos CLYON e o valor único, as mudanças à
         hora, a conversa com uma pessoa, o cliente noutra língua, um pedido com queixa, e espera-se 10 min depois de um

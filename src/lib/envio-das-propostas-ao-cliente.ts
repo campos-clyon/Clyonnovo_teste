@@ -14,7 +14,8 @@ import {
  * «Enviar orçamento» ou «Enviar pela CLYON». Agora, num pedido em negociação
  * com propostas por enviar (a mesma conta da Mesa, `propostasPorEnviarDoPedido`):
  *
- *   · com 3 propostas, OU 3 horas depois da 1.ª (o que vier primeiro), a
+ *   · (d6, 23-11-2026) assim que chega a 1.ª proposta — a regra de antes, 3
+ *     propostas ou 3 horas depois da 1.ª, fica para as que chegaram antes dela —, a
  *     Vitória envia ao cliente o orçamento — o MESMO texto e o mesmo caminho do
  *     «Enviar pela CLYON» (`textoDoOrcamentoDaMesa`, `enviarTextoManualWhatsApp`,
  *     `marcarOrcamentoEnviado`): «válido até…», cada parceiro com o valor sem
@@ -41,10 +42,26 @@ import {
 
 export const NOME_DO_INTERRUPTOR_DAS_PROPOSTAS = "Enviar as propostas ao cliente";
 
-/** Com tantas propostas, vai logo. */
-export const PROPOSTAS_PARA_IR_LOGO = 3;
-/** Senão, tantas horas depois da 1.ª. */
-export const HORAS_DEPOIS_DA_PRIMEIRA = 3;
+/**
+ * A REGRA DO MOMENTO (d6, 23-11-2026): a 1.ª proposta de um parceiro já pode
+ * ir ao cliente — não se espera por mais nenhuma. Só se espera os
+ * `MINUTOS_DEPOIS_DE_MUDAR` (10) depois de o parceiro mexer na proposta.
+ * Antes eram 3 propostas, ou 3 h depois da 1.ª.
+ */
+export const PROPOSTAS_PARA_IR_LOGO = 1;
+/** Depois da 1.ª proposta, tantos minutos de espera (além dos 10 de assentar): nenhum. */
+export const MINUTOS_DEPOIS_DA_PRIMEIRA = 0;
+
+/** A REGRA DE ANTES (3 propostas, ou 3 h depois da 1.ª) — fica para o que chegou antes da nova. */
+export const PROPOSTAS_PARA_IR_LOGO_ANTES = 3;
+export const HORAS_DEPOIS_DA_PRIMEIRA_ANTES = 3;
+/**
+ * A nova regra vale só para propostas que chegaram a partir deste instante
+ * (23-11-2026, 16h00 UTC). O que já esperava na Mesa quando ela entrou — os
+ * pedidos que já estavam à espera — segue a regra de antes,
+ * e nenhuma mensagem sai por causa da mudança.
+ */
+export const NOVA_REGRA_DESDE = new Date("2026-11-23T16:00:00Z");
 /** Acima disto (com IVA) na melhor proposta, fica com uma pessoa. */
 export const LIMITE_DA_MELHOR_COM_IVA = 500;
 /** Um parceiro mudou a proposta há menos disto: espera-se. */
@@ -112,13 +129,18 @@ export function porqueFicaComUmaPessoa(p: PedidoParaOEnvio): MotivoComUmaPessoa 
 }
 
 /**
- * A PARTIR DE QUANDO PODE SAIR — pura. Com 3 propostas, quando chegou a 3.ª;
- * senão, 3 horas depois da 1.ª; e nunca antes de 10 min depois da última
- * mudança de um parceiro.
+ * A PARTIR DE QUANDO PODE SAIR — pura. Com a regra de 23-11 (d6): quando chega
+ * a 1.ª proposta (`MINUTOS_DEPOIS_DA_PRIMEIRA` = 0), e nunca antes de 10 min
+ * depois da última mudança de um parceiro. As propostas que chegaram antes da
+ * regra (`NOVA_REGRA_DESDE`) seguem a de antes: 3 propostas, ou 3 h depois da 1.ª.
  */
 export function devidoDasPropostas(p: Pick<PedidoParaOEnvio, "parceiros" | "primeiraEm" | "terceiraEm" | "ultimaMudancaEm">): Date {
-  const pelaPrimeira = p.primeiraEm.getTime() + HORAS_DEPOIS_DA_PRIMEIRA * 3_600_000;
-  const pelasTres = p.parceiros >= PROPOSTAS_PARA_IR_LOGO ? (p.terceiraEm ?? p.ultimaMudancaEm).getTime() : Number.POSITIVE_INFINITY;
+  const nova = p.primeiraEm.getTime() >= NOVA_REGRA_DESDE.getTime();
+  const pelaPrimeira = nova
+    ? p.primeiraEm.getTime() + MINUTOS_DEPOIS_DA_PRIMEIRA * 60_000
+    : p.primeiraEm.getTime() + HORAS_DEPOIS_DA_PRIMEIRA_ANTES * 3_600_000;
+  const pelasTres =
+    !nova && p.parceiros >= PROPOSTAS_PARA_IR_LOGO_ANTES ? (p.terceiraEm ?? p.ultimaMudancaEm).getTime() : Number.POSITIVE_INFINITY;
   const depoisDaMudanca = p.ultimaMudancaEm.getTime() + MINUTOS_DEPOIS_DE_MUDAR * 60_000;
   return new Date(Math.max(Math.min(pelaPrimeira, pelasTres), depoisDaMudanca));
 }

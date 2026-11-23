@@ -147,6 +147,14 @@ import {
   trabalhoFechado,
 } from "@/lib/mensagem-das-propostas";
 import { linkDeWhatsApp, numeroParaWhatsApp } from "@/lib/link-de-whatsapp";
+import {
+  passoDoSeguimento,
+  primeiraPropostaEm,
+  ROTULO_DO_SEGUIMENTO,
+  temOSeloDasPropostas,
+  TEXTO_DO_SELO,
+  textoDoSeguimentoDasPropostas,
+} from "@/lib/seguimento-das-propostas";
 import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
@@ -235,6 +243,8 @@ type Negociacao = {
   taxaProfissional?: string | number | null;
   criadaEm: string;
   actualizadaEm: string;
+  /** Quando o cliente abriu as propostas (S11) — o selo «ainda não as viu» (d6, 23-11-2026). */
+  vistoPeloClienteEm?: string | null;
   /** O dia combinado com o profissional («Marcar»). */
   dataCombinada?: string | null;
   /** «com_factura» ou «sem_factura», quando se declarou o pagamento. */
@@ -2988,6 +2998,12 @@ export default function AdminNegociacoesPanel({
                   Valor único aceite
                 </span>
               )}
+              {/* d6 (23-11-2026): propostas há mais de 1 h e o cliente ainda não as viu. */}
+              {temOSeloDasPropostas(p, new Date()) && (
+                <span className="rounded-full border border-amber-500/60 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-200" title="O cliente ainda não abriu as propostas, na ligação nem na conta">
+                  {TEXTO_DO_SELO}
+                </span>
+              )}
               <EtiquetaDaOrigem slug={p.origem} />
               <span className="truncate">
                 {/* A categoria em palavras, à frente da zona (21-10-2026). */}
@@ -3589,6 +3605,34 @@ export default function AdminNegociacoesPanel({
               Enviar pela CLYON
             </button>
           )}
+          {/*
+            O SEGUIMENTO (d6, 23-11-2026): 24 h e 72 h depois das propostas. Abre o
+            WhatsApp com o texto escrito, na língua do cliente — NÃO envia: quem envia é a equipa.
+          */}
+          {(() => {
+            const passo = passoDoSeguimento(primeiraPropostaEm(p), new Date());
+            const propostas = propostasParaOCliente(p.negociacoes);
+            if (!passo || propostas.length === 0 || trabalhoFechado(p.negociacoes) || p.valorUnicoCliente != null || !numeroParaWhatsApp(p.contactPhone)) return null;
+            const barata = [...propostas].sort((a, b) => a.total - b.total || a.semIva - b.semIva)[0];
+            const base = lerBase(p.baseDoPreco);
+            const texto = textoDoSeguimentoDasPropostas(passo, {
+              pedidoId: p.id,
+              nome: p.contactName,
+              servico: nomeDoServicoDoOrcamento(p.serviceType) ?? "pedido",
+              propostas: propostas.length,
+              semIva: barata.semIva,
+              total: barata.total,
+              unidade: base === "carga" || base === "hora" ? base : null,
+            });
+            return (
+              <MensagemDaFase
+                telefone={p.contactPhone}
+                rotulo={ROTULO_DO_SEGUIMENTO[passo]}
+                texto={texto}
+                titulo="Abre o WhatsApp com o texto do seguimento escrito. Não sai sozinho: fica à sua frente para enviar."
+              />
+            );
+          })()}
           {/* d88: o envio automático — quando a Vitória envia o orçamento sozinha, ou porque fica com uma pessoa. */}
           {p.envioAutomatico && propostasParaOCliente(p.negociacoes).length > 0 && (
             <p className="basis-full text-[11px] leading-4 text-slate-400">Envio automático: {p.envioAutomatico}</p>

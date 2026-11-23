@@ -7,7 +7,7 @@ import { bearerConfere } from "@/lib/segredo-igual";
  * AS PROPOSTAS VÃO AO CLIENTE SOZINHAS — de 15 em 15 min (d88, 23-11-2026).
  *
  * Ver `envio-das-propostas-ao-cliente.ts`: num pedido em negociação com
- * propostas de parceiros por enviar, com 3 propostas ou 3 horas depois da 1.ª,
+ * propostas de parceiros por enviar, assim que chega a 1.ª proposta (d6),
  * das 8h às 21h de Lisboa, o orçamento entra na fila e sai pela ponte, um de
  * cada vez (20–45 s entre cada), pelo caminho do «Enviar pela CLYON». Com o
  * interruptor «Enviar as propostas ao cliente» desligado nas Configs, responde
