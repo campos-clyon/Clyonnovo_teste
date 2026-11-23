@@ -299,6 +299,8 @@ export type DividaDaCarteira = {
    * nenhuma: a dos pagos em mão também se paga por referência.
    */
   descontaNoSaldo?: boolean;
+  /** d89: um Trabalho CLYON que o cliente lhe pagou — a taxa (e o IVA, com fatura), como o valor a passar à CLYON. */
+  trabalhoClyonEmMao?: boolean;
   referencia: {
     metodo: "mbway" | "multibanco";
     entidade: string | null;

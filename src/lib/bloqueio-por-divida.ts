@@ -1,5 +1,5 @@
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
-import { dividasDe, type DividaNaCarteira, type TrabalhoNaCarteira } from "./carteira";
+import { dividasDe, eValorAPassarAClyon, type DividaNaCarteira, type TrabalhoNaCarteira } from "./carteira";
 import { standByDe, type StandBy } from "./valor-em-atraso";
 
 /**
@@ -54,8 +54,9 @@ export function dividasEmAtraso(trabalhos: TrabalhoNaCarteira[], agora: Date): D
   const saida: DividaEmAtraso[] = [];
   for (const d of dividasDe(trabalhos, agora)) {
     if (d.paga) continue;
-    // O modelo de 15-11 (d10) tem a sua regra: 4 dias e stand-by (`standByDoNovoModelo`).
-    if (d.novoModelo) continue;
+    // O modelo de 15-11 (d10) tem a sua regra: 4 dias e stand-by (`standByDoNovoModelo`) —
+    // e, desde a d89, as dos Trabalhos CLYON pagos ao profissional também.
+    if (eValorAPassarAClyon(d)) continue;
     /*
      * Uma dívida sem referência por onde a pagar não bloqueia: bloquear por
      * uma dívida que ele não tem como pagar era castigá-lo por um caminho que
@@ -136,7 +137,7 @@ function explicacaoDoBloqueioNoModeloAntigo(dividas: DividaParaDizer[]): string 
  */
 export function standByDoNovoModelo(trabalhos: TrabalhoNaCarteira[], agora: Date): StandBy {
   const valores = dividasDe(trabalhos, agora)
-    .filter((d) => d.novoModelo === true)
-    .map((d) => ({ negociacaoId: d.negociacaoId, total: d.total, nasceuEm: d.nasceuEm, paga: d.paga }));
+    .filter(eValorAPassarAClyon)
+    .map((d) => ({ negociacaoId: d.negociacaoId, total: d.total, nasceuEm: d.nasceuEm, prazoDesde: d.prazoDesde ?? null, paga: d.paga }));
   return standByDe(valores, agora);
 }

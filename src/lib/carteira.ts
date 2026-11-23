@@ -170,7 +170,22 @@ export type TrabalhoNaCarteira = Trabalho & {
    * `trabalhosDaCarteira`; ausente = modelo antigo.
    */
   noNovoModelo?: boolean;
+  /**
+   * UM TRABALHO CLYON (valor fixo combinado pela CLYON) — d89, 23-11-2026.
+   * Decide-o `trabalhosDaCarteira` pela negociação e pelo pedido. Só serve para
+   * a dívida de um Trabalho CLYON pago ao profissional ir para o mesmo sítio do
+   * valor a passar à CLYON (`eValorAPassarAClyon`).
+   */
+  trabalhoClyon?: boolean;
 };
+
+/**
+ * O PRAZO DAS DÍVIDAS DOS TRABALHOS CLYON PAGOS AO PROFISSIONAL — d89 (CEO e
+ * dono, 23-11-2026). Passam a contar como o valor a passar à CLYON (4 dias e
+ * depois stand-by), mas sem castigo para trás: o prazo das que já existiam conta
+ * a partir daqui (o deploy), e nunca do dia em que nasceram.
+ */
+export const DIVIDAS_DOS_TRABALHOS_CLYON_CONTAM_DESDE = new Date("2026-11-23T16:00:00Z");
 
 /** Opções de leitura da carteira. Existem para os testes poderem ver os dois mundos. */
 export type ComoLerACarteira = {
@@ -705,6 +720,18 @@ export type DividaNaCarteira = {
   acertoDaFolhaFinal?: boolean;
   /** O nome da dívida quando não é a de sempre («acerto da folha final do pedido #N»). */
   rotulo?: string;
+  /**
+   * UM TRABALHO CLYON QUE O CLIENTE PAGOU AO PROFISSIONAL — d89 (23-11-2026). A
+   * dívida (a taxa, e o IVA com fatura) é a mesma do pago em mão (`aParte`), mas
+   * mostra-se e conta como o valor a passar à CLYON: na caixa de cima da
+   * carteira, no Início e no stand-by (`eValorAPassarAClyon`).
+   */
+  trabalhoClyonEmMao?: boolean;
+  /**
+   * DE ONDE SE CONTA O PRAZO, quando não é `nasceuEm` — d89: nas dívidas dos
+   * Trabalhos CLYON que já existiam, o deploy (`DIVIDAS_DOS_TRABALHOS_CLYON_CONTAM_DESDE`).
+   */
+  prazoDesde?: Date | null;
   /** Numa dívida à parte, o `trid` da linha de `pagamentos` que a fecha. */
   tridAParte?: string;
   /**
@@ -750,6 +777,24 @@ function comAsPartes(
     ivaDaDivida: d.iva,
     comissaoDaDivida: d.comissao,
   };
+}
+
+/** d89: o prazo de uma dívida de Trabalho CLYON pago ao profissional — do fecho, mas nunca antes do deploy. */
+export function prazoDaDividaDoTrabalhoClyon(nasceuEm: Date | null): Date | null {
+  if (!nasceuEm || Number.isNaN(nasceuEm.getTime())) return null;
+  return nasceuEm.getTime() < DIVIDAS_DOS_TRABALHOS_CLYON_CONTAM_DESDE.getTime()
+    ? DIVIDAS_DOS_TRABALHOS_CLYON_CONTAM_DESDE
+    : nasceuEm;
+}
+
+/**
+ * É UM VALOR A PASSAR À CLYON (4 dias e stand-by, a caixa de cima da carteira e
+ * o Início)? — d89. As do modelo de 15-11 e, desde 23-11-2026, as dos Trabalhos
+ * CLYON que o cliente pagou ao profissional. A pergunta única do servidor: a
+ * carteira, o stand-by, o bloqueio e o backoffice perguntam-lhe a ela.
+ */
+export function eValorAPassarAClyon(d: Pick<DividaNaCarteira, "novoModelo" | "trabalhoClyonEmMao">): boolean {
+  return d.novoModelo === true || d.trabalhoClyonEmMao === true;
 }
 
 export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaNaCarteira[] {
@@ -834,6 +879,10 @@ export function dividasDe(trabalhos: TrabalhoNaCarteira[], agora: Date): DividaN
         nasceuEm: quandoLiberta(t),
         aParte: true,
         tridAParte: tridDoAbatimentoAParte(t.negociacaoId),
+        // d89: num Trabalho CLYON, vai para o valor a passar à CLYON — o prazo nunca antes do deploy.
+        ...(t.trabalhoClyon === true
+          ? { trabalhoClyonEmMao: true, prazoDesde: prazoDaDividaDoTrabalhoClyon(quandoLiberta(t)) }
+          : {}),
       });
       continue;
     }

@@ -11,6 +11,7 @@ import {
   carteiraDe,
   cativoPorFazerDe,
   dividasDe,
+  eValorAPassarAClyon,
   levantavelDe,
   type TrabalhoNaCarteira,
 } from "@/lib/carteira";
@@ -158,7 +159,10 @@ export async function GET(req: NextRequest) {
              * `bloqueio-por-divida.ts`.
              */
             // Sem prazo quando se desconta no saldo: não bloqueia (01-11-2026).
-            venceEm: d.descontaNoSaldo ? null : (venceEm(d)?.toISOString() ?? null),
+            // d89: um valor a passar à CLYON tem o prazo dos 4 dias (`prazoDoValorEmAtraso`), não o dos 7.
+            venceEm: d.descontaNoSaldo
+              ? null
+              : ((eValorAPassarAClyon(d) ? prazoDoValorEmAtraso(d) : venceEm(d))?.toISOString() ?? null),
             pedidoId: l?.pedidoId ?? null,
             titulo:
               SERVICE_CATEGORIES.find((c) => c.id === l?.serviceType)?.label ??
@@ -222,8 +226,12 @@ export async function GET(req: NextRequest) {
             const r = dividas.find((x) => x.negociacaoId === negociacaoId)?.referencia;
             return r?.metodo === "multibanco" ? { entidade: r.entidade, referencia: r.referencia } : null;
           };
+          /*
+           * d89 (23-11-2026): com as do modelo de 15-11, as dos Trabalhos CLYON que o
+           * cliente pagou ao profissional — o mesmo número do backoffice, na mesma caixa.
+           */
           const valores = dividasDe(trabalhos, agoraDoNovoModelo)
-            .filter((d) => d.novoModelo === true && !d.paga)
+            .filter((d) => eValorAPassarAClyon(d) && !d.paga)
             .map((d) => ({
               negociacaoId: d.negociacaoId,
               pedidoId: dividas.find((x) => x.negociacaoId === d.negociacaoId)?.pedidoId ?? null,
@@ -235,6 +243,8 @@ export async function GET(req: NextRequest) {
               multibanco: comReferencia(d.negociacaoId),
               // d55: com valor único, a parte da CLYON leva a reserva — a app diz-lho como o painel.
               comReserva: Boolean(trabalhos.find((t) => t.negociacaoId === d.negociacaoId)?.reservaCent),
+              // d89: sem IVA por pagar (um Trabalho CLYON sem fatura), a faixa diz só a taxa.
+              semIva: !(d.iva > 0),
               // d4: «A passar à CLYON · X € até dd/mm» no prazo; «Em atraso» só depois dele. A app lê a mesma linha.
               ...(({ estado, linha }) => ({ estado, linha }))(
                 linhaDoValorAPassar({ total: d.total, prazoAte: prazoDoValorEmAtraso(d), paga: false }, agoraDoNovoModelo),

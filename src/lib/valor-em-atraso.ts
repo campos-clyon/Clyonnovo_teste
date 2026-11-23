@@ -33,15 +33,19 @@ export type ValorEmAtraso = {
   total: number;
   /** Quando nasceu (o trabalho fechou). */
   nasceuEm: Date | null;
+  /** d89: de onde se conta o prazo, quando não é `nasceuEm` (os Trabalhos CLYON pagos ao profissional). */
+  prazoDesde?: Date | null;
   paga: boolean;
   /** A referência viva para o pagar, quando há. */
   multibanco?: { entidade: string | null; referencia: string | null } | null;
 };
 
 /** O fim do prazo — `null` sem data de nascimento. */
-export function prazoDoValorEmAtraso(v: Pick<ValorEmAtraso, "nasceuEm">): Date | null {
-  if (!v.nasceuEm || Number.isNaN(v.nasceuEm.getTime())) return null;
-  return new Date(v.nasceuEm.getTime() + DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO * DIA);
+export function prazoDoValorEmAtraso(v: Pick<ValorEmAtraso, "nasceuEm" | "prazoDesde">): Date | null {
+  // d89: uma dívida de Trabalho CLYON que já existia conta do deploy, nunca para trás.
+  const desde = v.prazoDesde ?? v.nasceuEm;
+  if (!desde || Number.isNaN(desde.getTime())) return null;
+  return new Date(desde.getTime() + DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO * DIA);
 }
 
 /**

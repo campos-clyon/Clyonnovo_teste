@@ -165,6 +165,8 @@ type ValorDaFaixa = {
   estado?: EstadoDoValorAPassar;
   linha?: string;
   comReserva?: boolean;
+  /** d89: sem IVA por pagar (um Trabalho CLYON pago ao profissional sem fatura) — só a taxa. */
+  semIva?: boolean;
 };
 
 
@@ -186,7 +188,9 @@ export function faixaDoValorAPassar(valores: ValorDaFaixa[], agora: Date): Faixa
   const n = porPassar.length;
   const oQue = porPassar.some((v) => v.comReserva === true)
     ? `A ${PARTE_DA_CLYON_COM_RESERVA} e o IVA dela`
-    : "A taxa da plataforma e o IVA dela";
+    : porPassar.every((v) => v.semIva === true)
+      ? "A taxa da plataforma"
+      : "A taxa da plataforma e o IVA dela";
   const depois = "Depois do prazo, não pode aceitar nem enviar propostas até pagar.";
 
   if (n === 1) {

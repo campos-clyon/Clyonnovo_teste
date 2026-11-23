@@ -28,6 +28,7 @@ import {
   useContasDeDestino,
 } from "./ProvaDoPagamento";
 import type { ContaDeDestino } from "@/lib/contas-de-destino";
+import { linkDoWhatsApp } from "@/lib/mensagem-da-referencia";
 
 /**
  * PAGAMENTOS › «A RECEBER DOS PROFISSIONAIS» — 11-11-2026 (dono).
@@ -53,6 +54,8 @@ export type TrabalhoAReceber = {
   rotulo?: string | null;
   /** d66: de onde veio cada parte paga (a conta, o euPago…) e os comprovativos. */
   registos?: RegistoDoDinheiro[];
+  /** d89: um Trabalho CLYON que o cliente pagou ao profissional — tem o botão «Gerar referência». */
+  trabalhoClyonEmMao?: boolean;
   /** d10: no modelo de 15-11, o valor em atraso (a taxa e o IVA dela), o estado e a referência. */
   valorEmAtraso?: {
     estado: "pago" | "no_prazo" | "stand_by" | "sem_data";
@@ -239,6 +242,100 @@ export default function AReceberDosProfissionais({
   );
 }
 
+/**
+ * «GERAR REFERÊNCIA» DA DÍVIDA DE UM TRABALHO CLYON PAGO AO PROFISSIONAL — d89
+ * (CEO e dono, 23-11-2026). Como o `GerarReferencia` do cliente: gera (ou
+ * mostra a Multibanco viva que já há — nunca duas) e entrega o texto pronto a
+ * copiar ou a abrir no WhatsApp do profissional. Não manda nada sozinho.
+ */
+function GerarReferenciaDaDivida({
+  negociacaoId,
+  token,
+  onMudou,
+}: {
+  negociacaoId: number;
+  token: string | null;
+  onMudou: () => void | Promise<void>;
+}) {
+  const [aGerar, setAGerar] = useState<"multibanco" | "mbway" | null>(null);
+  const [erro, setErro] = useState("");
+  const [feito, setFeito] = useState<{ mensagem: string; telefone: string | null; reaproveitada: boolean } | null>(null);
+  const [copiada, setCopiada] = useState(false);
+
+  async function gerar(metodo: "multibanco" | "mbway") {
+    if (!token) return;
+    setAGerar(metodo);
+    setErro("");
+    try {
+      const res = await fetch("/api/admin/pagamentos/a-receber-dos-profissionais", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ accao: "gerar_referencia", negociacaoId, metodo }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(j.error ?? "Não foi possível gerar a referência.");
+        return;
+      }
+      setFeito({ mensagem: String(j.mensagem ?? ""), telefone: j.telefone ?? null, reaproveitada: j.reaproveitada === true });
+      await onMudou();
+    } catch {
+      setErro("Erro de rede.");
+    } finally {
+      setAGerar(null);
+    }
+  }
+
+  const botao =
+    "rounded-lg border border-slate-700 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:border-cyan-500 hover:text-white disabled:opacity-50";
+  const whatsapp = feito ? linkDoWhatsApp(feito.telefone, feito.mensagem) : null;
+
+  return (
+    <div className="mt-2">
+      {!feito && (
+        <div className="flex flex-wrap gap-2">
+          <button className={botao} disabled={aGerar != null} onClick={() => void gerar("multibanco")}>
+            {aGerar === "multibanco" ? "A gerar…" : "Gerar referência"}
+          </button>
+          <button className={botao} disabled={aGerar != null} onClick={() => void gerar("mbway")}>
+            {aGerar === "mbway" ? "A pedir…" : "Pedir por MB WAY"}
+          </button>
+        </div>
+      )}
+      {erro && <p className="mt-1 text-[12px] text-rose-300">{erro}</p>}
+      {feito && (
+        <div className="mt-1 rounded-lg border border-slate-700 bg-slate-950/60 p-2.5">
+          {feito.reaproveitada && (
+            <p className="mb-1 text-[11px] text-amber-200">Já havia uma Multibanco viva para esta dívida: é essa que vale.</p>
+          )}
+          <pre className="whitespace-pre-wrap font-sans text-[12px] leading-relaxed text-slate-200">{feito.mensagem}</pre>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              className={botao}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(feito.mensagem);
+                  setCopiada(true);
+                  setTimeout(() => setCopiada(false), 2000);
+                } catch {
+                  /* Sem área de transferência, o texto continua à vista. */
+                }
+              }}
+            >
+              {copiada ? "Copiada" : "Copiar mensagem"}
+            </button>
+            {whatsapp && (
+              <a className={botao} href={whatsapp} target="_blank" rel="noopener noreferrer">
+                Abrir no WhatsApp
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LinhaDoTrabalho({
   t,
   token,
@@ -336,7 +433,7 @@ function LinhaDoTrabalho({
         <p
           className={`mt-1 text-[12px] ${t.valorEmAtraso.estado === "stand_by" ? "font-semibold text-red-300" : t.valorEmAtraso.estado === "pago" ? "text-emerald-300" : "text-amber-200"}`}
         >
-          Modelo de 15/11 · {t.valorEmAtraso.frase}
+          {t.trabalhoClyonEmMao ? "Trabalho CLYON pago ao profissional" : "Modelo de 15/11"} · {t.valorEmAtraso.frase}
           {t.valorEmAtraso.referencia?.referencia
             ? ` · Multibanco: entidade ${t.valorEmAtraso.referencia.entidade ?? "—"}, referência ${t.valorEmAtraso.referencia.referencia}`
             : t.valorEmAtraso.estado !== "pago"
@@ -375,6 +472,11 @@ function LinhaDoTrabalho({
             conferir={eAdministrador ? (r) => <BotaoConferidoNoExtrato r={r} onFeito={() => void onMudou()} /> : undefined}
           />
         </div>
+      )}
+
+      {/* d89: a referência para o profissional pagar já — só o administrador, só nos Trabalhos CLYON pagos ao profissional. */}
+      {eAdministrador && t.trabalhoClyonEmMao && t.porPagar > 0 && (
+        <GerarReferenciaDaDivida negociacaoId={t.negociacaoId} token={token} onMudou={onMudou} />
       )}
 
       {eAdministrador && pendentes.length > 0 && !aMarcar && (

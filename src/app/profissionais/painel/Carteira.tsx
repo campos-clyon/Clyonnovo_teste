@@ -506,11 +506,19 @@ function Divida({
               <p className={`mt-0.5 text-xs font-semibold ${valorEmAtraso.estado === "em_atraso" ? "text-red-700" : "text-amber-900"}`}>
                 {valorEmAtraso.linha ?? PAGAR_O_VALOR_EM_ATRASO}
               </p>
-              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                {d.comReserva
-                  ? `A ${PARTE_DA_CLYON_COM_RESERVA} e o IVA dela deste trabalho, que o cliente lhe pagou com o preço.`
-                  : "A taxa da plataforma e o IVA dela deste trabalho, que o cliente lhe pagou com o preço."}
-              </p>
+              {d.trabalhoClyonEmMao ? (
+                <>
+                  {/* d89: um Trabalho CLYON que o cliente lhe pagou — a frase e as partes do backoffice (sem fatura, só a taxa). */}
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{fraseDaDividaEmMao(d)}</p>
+                  <PartesDaDivida d={d} />
+                </>
+              ) : (
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                  {d.comReserva
+                    ? `A ${PARTE_DA_CLYON_COM_RESERVA} e o IVA dela deste trabalho, que o cliente lhe pagou com o preço.`
+                    : "A taxa da plataforma e o IVA dela deste trabalho, que o cliente lhe pagou com o preço."}
+                </p>
+              )}
               {diaDe(valorEmAtraso.prazoAte) && valorEmAtraso.estado !== "em_atraso" && (
                 <p className="mt-1 text-xs font-medium text-amber-800">
                   Pague até {diaDe(valorEmAtraso.prazoAte)}. Depois disso a conta fica suspensa: vê os pedidos, mas não aceita nem envia propostas até pagar.

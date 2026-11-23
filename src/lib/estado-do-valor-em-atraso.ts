@@ -29,11 +29,11 @@ export type EstadoDoValorEmAtraso =
 const DIA = 86_400_000;
 
 export function estadoDoValorEmAtraso(
-  v: { paga: boolean; porPagar: number; nasceuEm: Date | null },
+  v: { paga: boolean; porPagar: number; nasceuEm: Date | null; prazoDesde?: Date | null },
   agora: Date,
 ): EstadoDoValorEmAtraso {
   if (v.paga || v.porPagar <= 0) return { estado: "pago", frase: "Pago" };
-  const fim = prazoDoValorEmAtraso({ nasceuEm: v.nasceuEm });
+  const fim = prazoDoValorEmAtraso({ nasceuEm: v.nasceuEm, prazoDesde: v.prazoDesde ?? null });
   if (!fim) return { estado: "sem_data", frase: "A passar à CLYON, sem data de fecho — não conta para a suspensão da conta" };
   if (agora.getTime() > fim.getTime()) {
     return {

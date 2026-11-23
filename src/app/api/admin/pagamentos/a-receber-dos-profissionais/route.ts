@@ -13,6 +13,9 @@ import { conferirRegistoAMao } from "@/lib/origem-do-pagamento";
 import { contasDeDestino } from "@/lib/contas-de-destino-na-base";
 import { ficheiroDoComprovativo, juntarComprovativo } from "@/lib/comprovativo-no-servidor";
 import { registosDasNegociacoes } from "@/lib/rasto-do-pagamento-na-base";
+import { eValorAPassarAClyon } from "@/lib/carteira";
+import { gerarReferenciaDaDivida } from "@/lib/cobrar-divida-do-profissional";
+import { mensagemDaDividaAoProfissional, referenciaVivaDaDivida } from "@/lib/referencia-da-divida-no-backoffice";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,12 +50,9 @@ export async function GET(req: NextRequest) {
     const doNovoModelo = new Map<number, { referencia: { entidade: string | null; referencia: string | null } | null }>();
     for (const ds of porProfissional.values()) {
       for (const d of ds) {
-        if (!d.novoModelo) continue;
-        const viva = d.paga
-          ? null
-          : ((await pagamentosDaNegociacao(d.negociacaoId)).find(
-              (p) => p.estado === "pendente" && p.referencia != null && (!p.expiraEm || new Date(p.expiraEm).getTime() > agora.getTime()),
-            ) ?? null);
+        // d89: e os Trabalhos CLYON pagos ao profissional — a referência viva da dívida à parte.
+        if (!eValorAPassarAClyon(d)) continue;
+        const viva = d.paga ? null : referenciaVivaDaDivida(d, await pagamentosDaNegociacao(d.negociacaoId), agora);
         doNovoModelo.set(d.negociacaoId, { referencia: viva ? { entidade: viva.entidade ?? null, referencia: viva.referencia ?? null } : null });
       }
     }
@@ -93,12 +93,17 @@ export async function GET(req: NextRequest) {
             partes: d.partes,
             // d38 v2: «acerto da folha final do pedido #N» (nulo na dívida de sempre).
             rotulo: d.rotulo ?? null,
+            // d89: um Trabalho CLYON pago ao profissional — o botão «Gerar referência» (só o administrador).
+            trabalhoClyonEmMao: d.trabalhoClyonEmMao === true,
             // d66: os registos do dinheiro deste trabalho, com a origem e o comprovativo.
             registos: registos.get(d.negociacaoId) ?? [],
-            // d10: o valor em atraso do modelo de 15-11 (nulo nos trabalhos de antes).
-            valorEmAtraso: d.novoModelo
+            // d10: o valor em atraso do modelo de 15-11 (nulo nos trabalhos de antes); d89: e os Trabalhos CLYON pagos ao profissional.
+            valorEmAtraso: eValorAPassarAClyon(d)
               ? {
-                  ...estadoDoValorEmAtraso({ paga: d.paga, porPagar: d.paga ? 0 : d.porPagar, nasceuEm: d.nasceuEm }, agora),
+                  ...estadoDoValorEmAtraso(
+                    { paga: d.paga, porPagar: d.paga ? 0 : d.porPagar, nasceuEm: d.nasceuEm, prazoDesde: d.prazoDesde ?? null },
+                    agora,
+                  ),
                   referencia: doNovoModelo.get(d.negociacaoId)?.referencia ?? null,
                 }
               : null,
@@ -182,6 +187,51 @@ export async function POST(req: NextRequest) {
   const quem = String(colab?.nome ?? "a CLYON");
 
   try {
+    /*
+     * GERAR A REFERÊNCIA DA DÍVIDA — d89 (CEO e dono, 23-11-2026). Para o caso em
+     * que o profissional precisa dela já: a mesma porta da carteira dele
+     * (`gerarReferenciaDaDivida`) — só o que falta, só com o trabalho feito, e uma
+     * Multibanco viva é reaproveitada (nunca duas para a mesma dívida). Devolve o
+     * texto pronto a copiar ou a mandar pelo WhatsApp; não manda nada.
+     */
+    if (corpo.accao === "gerar_referencia") {
+      const metodo = corpo.metodo === "mbway" ? "mbway" : "multibanco";
+      const r = await gerarReferenciaDaDivida(negociacaoId, { metodo, autor: { tipo: "clyon", nome: quem } });
+      if (!r.ok) {
+        return NextResponse.json({ error: r.jaPaga ? "Esta dívida já está paga." : r.porque }, { status: r.jaPaga ? 409 : 400 });
+      }
+      const p = r.pagamento;
+      const pool = await getPool();
+      const [neg] = pool
+        ? ((await pool.execute(
+            `SELECT n.pedidoId, pr.name AS nome, pr.phone AS telefone
+               FROM negociacoes n JOIN providers pr ON pr.id = n.providerId
+              WHERE n.id = ? LIMIT 1`,
+            [negociacaoId],
+          )) as [Array<{ pedidoId: number | null; nome: string | null; telefone: string | null }>, unknown])
+        : [[]];
+      const l = neg[0];
+      const mensagem = mensagemDaDividaAoProfissional({
+        pedidoId: l?.pedidoId != null ? Number(l.pedidoId) : null,
+        pagamento: p,
+        divida: r.divida,
+        nome: l?.nome ?? null,
+      });
+      return NextResponse.json({
+        ok: true,
+        reaproveitada: r.reaproveitada,
+        referencia: {
+          metodo: p.metodo,
+          entidade: p.entidade,
+          referencia: p.referencia,
+          valor: p.valor,
+          expiraEm: p.expiraEm,
+        },
+        mensagem,
+        telefone: (l?.telefone ?? "").trim() || null,
+      });
+    }
+
     if (corpo.accao === "desfazer") {
       if (!eParteDaDivida(corpo.parte)) {
         return NextResponse.json({ error: "Diga que parte desfazer: o IVA ou a taxa." }, { status: 400 });

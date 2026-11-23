@@ -114,12 +114,14 @@ export async function valoresDaCarteiraDoProfissional(providerId: number, agora:
   try {
     const { dividasDoProfissional } = await import("./cobrancas-na-base");
     const { standByDe } = await import("./valor-em-atraso");
-    const doModeloNovo = (await dividasDoProfissional(providerId, agora)).filter((d) => d.novoModelo === true);
+    const { eValorAPassarAClyon } = await import("./carteira");
+    // d89: com as dos Trabalhos CLYON pagos ao profissional — o mesmo número da carteira e do backoffice.
+    const doModeloNovo = (await dividasDoProfissional(providerId, agora)).filter(eValorAPassarAClyon);
     const porPagar = doModeloNovo
       .filter((d) => !d.paga && d.total > 0)
       .map((d) => ({ pedidoId: d.pedidoId, taxa: d.comissao, ivaDaTaxa: d.iva, total: d.total }));
     const standBy = standByDe(
-      doModeloNovo.map((d) => ({ negociacaoId: d.negociacaoId, pedidoId: d.pedidoId, total: d.total, nasceuEm: d.nasceuEm, paga: d.paga })),
+      doModeloNovo.map((d) => ({ negociacaoId: d.negociacaoId, pedidoId: d.pedidoId, total: d.total, nasceuEm: d.nasceuEm, prazoDesde: d.prazoDesde ?? null, paga: d.paga })),
       agora,
     );
     return { porPagar, emAtraso: standBy.total };

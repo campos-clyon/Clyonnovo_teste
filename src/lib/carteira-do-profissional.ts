@@ -19,6 +19,17 @@ import { trabalhosClyonDasNegociacoes, type TrabalhoClyonDaBase } from "./trabal
 import { pagoAClyonAntesDoCorte } from "./taxa-a-passar-a-clyon";
 import { agoraDoModelo } from "./relogio-do-modelo";
 
+/** d89: é um Trabalho CLYON — pela negociação, pelo pedido, ou pela leitura da base (`trabalhosClyonDasNegociacoes`). */
+export function eTrabalhoClyonDaLinha(l: { ofertaClyon?: unknown; valorFixoClyon?: unknown }, naBase = false): boolean {
+  const oferta = l.ofertaClyon;
+  const fixo = l.valorFixoClyon;
+  return (
+    naBase ||
+    (oferta != null && oferta !== "" && oferta !== 0 && oferta !== "0") ||
+    (fixo != null && fixo !== "")
+  );
+}
+
 type LinhaAVerificar = { id: number; createdAt?: Date | string | null; formaDePagamento?: unknown };
 
 /** Os ids por que vale a pena perguntar à tabela dos pagamentos. */
@@ -191,6 +202,8 @@ export async function trabalhosDaCarteira(
     createdAt?: Date | string | null;
     /** Trabalho CLYON de valor fixo: pago pela CLYON. Ver `oferta-clyon.ts`. */
     ofertaClyon?: unknown;
+    /** O valor fixo do pedido (Trabalho CLYON), quando a leitura o traz — d89. */
+    valorFixoClyon?: unknown;
   }>,
 ): Promise<TrabalhoNaCarteira[]> {
   /*
@@ -316,6 +329,8 @@ export async function trabalhosDaCarteira(
     // carteira.ts. Um de depois do corte (d33) é do parceiro: o cliente paga-lhe.
     pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm }, agora),
     marcasDaDivida: marcas.get(Number(l.id)) ?? [],
+    // d89: a dívida de um Trabalho CLYON pago ao profissional vai para o valor a passar à CLYON.
+    trabalhoClyon: eTrabalhoClyonDaLinha(l, clyon.has(Number(l.id))),
     pagoAoProfissionalValor: l.pagoEm != null ? (transferidos.get(Number(l.id)) ?? null) : null,
     reservaCent: reservas.get(Number(l.id)) ?? null,
     };

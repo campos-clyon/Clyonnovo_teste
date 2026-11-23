@@ -51,6 +51,11 @@ export type DadosDaMensagem = {
    * `cliente` passa a ser o nome do profissional.
    */
   paraOProfissional?: boolean;
+  /**
+   * O QUE A REFERÊNCIA DO PROFISSIONAL PAGA, quando não é a do dinheiro — d89
+   * (um Trabalho CLYON que o cliente lhe pagou: sem fatura, só a taxa).
+   */
+  oQueParaOProfissional?: string;
 };
 
 function euros(n: number): string {
@@ -83,7 +88,7 @@ export function mensagemDaReferencia(d: DadosDaMensagem): string {
   // O que esta referência paga — o trabalho (ao cliente) ou a parte da CLYON
   // de um trabalho pago em dinheiro (ao profissional).
   const oQue = d.paraOProfissional
-    ? `o IVA e a taxa da plataforma do pedido #${d.pedidoId}, que o cliente lhe pagou em dinheiro`
+    ? (d.oQueParaOProfissional ?? `o IVA e a taxa da plataforma do pedido #${d.pedidoId}, que o cliente lhe pagou em dinheiro`)
     : `o pedido #${d.pedidoId} na CLYON`;
 
   if (d.metodo === "multibanco") {
