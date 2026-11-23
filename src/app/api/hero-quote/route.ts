@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { createSimulatorOrder, createLead, createLeadEvent, appendOrderHistory, calculateOrderPriority, esquecerContactoAMeio } from "@/lib/db";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { notifyNewOrder } from "@/lib/whatsapp";
+import { seguirOPedidoNovo } from "@/lib/seguir-o-pedido-novo";
 import { SITE_URL } from "@/lib/seo-data";
 import { problemaDoTelefone, juntarIndicativo, MENSAGENS_DO_TELEFONE } from "@/lib/telefone-do-cliente";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
@@ -286,6 +287,10 @@ export async function POST(req: NextRequest) {
       by: null,
       message: `Pedido criado via formulário hero (homepage). Serviço: ${tipoServico}. Prioridade: ${priority}.`,
     }).catch((e) => console.error("[hero-quote] appendOrderHistory error:", e));
+
+    // O pedido completo segue sozinho para os parceiros (d3, 23-11-2026); um incompleto fica de fora sem barulho.
+    const novoId = orderId;
+    after(() => seguirOPedidoNovo(novoId));
 
     notifyNewOrder({
       id: orderId,

@@ -171,5 +171,14 @@ export async function responderAClyon(
     by: { id: 0, nome: quem.nome, role: "cliente" },
     message: `${mensagem || "Fotografias enviadas."}${juntou}`,
   });
+  /*
+   * RESPOSTA AO «PEDIR O QUE FALTA» (d3, 23-11-2026): a conta e a app fazem o
+   * mesmo que o WhatsApp — gravam o que ficou respondido, dizem o que falta e,
+   * completo, o pedido segue sozinho para os parceiros. Nunca falha a resposta.
+   */
+  if (mensagem || fotografias.length > 0) {
+    const { aplicarARespostaAoQueFalta } = await import("./resposta-ao-que-falta-na-conta");
+    await aplicarARespostaAoQueFalta(pedidoId, mensagem, fotografias.length);
+  }
   return { ok: true };
 }

@@ -265,6 +265,10 @@ export function estadoDeVoltaDoPrecisaInfo(assignedToId: unknown): string {
 export const PEDIDO_COMPLETO_PELO_WHATSAPP =
   "O cliente respondeu no WhatsApp ao «Pedir o que falta» e o pedido ficou completo — voltou aos «por enviar», pronto para os parceiros.";
 
+/** O mesmo, quando a resposta veio pela conta do site ou pela app (d3, 23-11-2026). */
+export const PEDIDO_COMPLETO_PELA_CONTA =
+  "O cliente respondeu na conta ou na app ao «Pedir o que falta» e o pedido ficou completo — voltou aos «por enviar», pronto para os parceiros.";
+
 /* ── A resposta da Vitória ───────────────────────────────────────────────── */
 
 const comMaiuscula = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);

@@ -22,6 +22,7 @@ import {
   urgenciaDoDia,
 } from "@/lib/pedido-da-app-de-cliente";
 import { notifyNewOrder } from "@/lib/whatsapp";
+import { seguirOPedidoNovo } from "@/lib/seguir-o-pedido-novo";
 import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { calculateFastEstimate, camposDoPedidoParaOMotor } from "@/lib/pricing-helper";
@@ -765,6 +766,9 @@ export async function POST(req: NextRequest) {
         }
       }
     });
+
+    // O pedido completo segue sozinho para os parceiros (d3, 23-11-2026), depois de o cliente ter a resposta.
+    after(() => seguirOPedidoNovo(id));
 
     /*
      * PARA ONDE VAI O EMAIL COM O LINK — ou `null`, se não vai nenhum.

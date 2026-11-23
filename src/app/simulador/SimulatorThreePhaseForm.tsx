@@ -521,6 +521,59 @@ export default function SimulatorThreePhaseForm() {
   if (!formData.urgency) faltaNaFase3.push("quando precisa");
 
   /*
+   * PARA SEGUIR JÁ PARA OS PARCEIROS — d3, 23-11-2026. Só informa, nunca
+   * bloqueia: o servidor conta o que falta com a MESMA régua do «Pedir o que
+   * falta» e do envio automático (`oQueFaltaNoPedido`), sobre o pedido como
+   * seria gravado. O pedido vai sem as fotografias, só com quantas são.
+   */
+  const [faltaParaSeguirJa, setFaltaParaSeguirJa] = useState<string[] | null>(null);
+  const pedidoParaAReguaDoServidor =
+    phase === 3
+      ? JSON.stringify({
+          order: {
+            serviceType: formData.serviceType,
+            description: formData.description,
+            address: formData.address,
+            city: formData.city,
+            floor: formData.floor,
+            hasElevator: formData.hasElevator,
+            parkingDistance: formData.parkingDistance,
+            urgency: formData.urgency,
+            receiver: { name: formData.receiver?.name },
+            tipologia: formData.tipologia,
+            entulhoQuantidade: formData.entulhoQuantidade,
+            entulhoVolume: formData.entulhoVolume,
+            originAddress: formData.originAddress,
+            destinationAddress: formData.destinationAddress,
+            originAccess: formData.originAccess,
+            destinationAccess: formData.destinationAccess,
+          },
+          ficheiros: totalDeFotos,
+        })
+      : null;
+  useEffect(() => {
+    if (!pedidoParaAReguaDoServidor) return;
+    const controlo = new AbortController();
+    const espera = setTimeout(() => {
+      fetch("/api/simulador/o-que-falta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: pedidoParaAReguaDoServidor,
+        signal: controlo.signal,
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { faltam?: unknown } | null) => {
+          setFaltaParaSeguirJa(Array.isArray(j?.faltam) ? (j!.faltam as unknown[]).filter((x): x is string => typeof x === "string") : null);
+        })
+        .catch(() => {});
+    }, 700);
+    return () => {
+      clearTimeout(espera);
+      controlo.abort();
+    };
+  }, [pedidoParaAReguaDoServidor]);
+
+  /*
    * O que não IMPEDE, mas custa.
    *
    * Uma lista à parte, e não um item mais bonito na mesma lista: misturar «não
@@ -1324,6 +1377,11 @@ export default function SimulatorThreePhaseForm() {
                       {!canAnalyze && faltaNaFase3.length > 0 && (
                         <p className="text-xs font-medium text-red-600">
                           Falta preencher: {faltaNaFase3.join(", ")}.
+                        </p>
+                      )}
+                      {faltaParaSeguirJa && faltaParaSeguirJa.length > 0 && (
+                        <p className="text-xs font-medium text-amber-700">
+                          Para seguir já para os parceiros, falta: {faltaParaSeguirJa.join(", ")}.
                         </p>
                       )}
                       {canAnalyze && recomendadoNaFase3.length > 0 && (

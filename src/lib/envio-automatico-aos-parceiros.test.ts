@@ -619,13 +619,15 @@ describe("o envio automático usa a MESMA função do «Enviar aos profissionais
   it("a Vitória chama o envio automático nos três sítios, antes de responder", () => {
     expect(NEG).not.toContain("distribuirPedido(");
     expect(NEG).not.toContain("enviarAosProfissionais(");
-    expect(NEG.match(/seguirSozinhoParaOsParceiros\(id, \{/g)?.length).toBe(3);
+    // d3 (23-11-2026): a resposta ao «Pedir o que falta» passou para a função comum (WhatsApp, conta e app).
+    expect(NEG.match(/seguirSozinhoParaOsParceiros\(id, \{/g)?.length).toBe(2);
     expect(NEG).toContain('origem: "registado",');
     expect(NEG).toContain("registadoSozinho: opcoes.sozinho === true,");
     // d91 (3.5): com a hora, para dizer «a partir das 8h» fora da janela.
     expect(NEG).toContain("mensagemDePedidoRegistado(id, comFotos, dados.contactName, opcoes.sozinho === true, jaSeguiu, new Date())");
-    expect(NEG).toContain('jaSeguiu = envio?.estado === "enviado";');
-    expect(NEG).toContain("    jaSeguiu,\n  });");
+    // E a da resposta ao «Pedir o que falta», agora na função comum (d3).
+    expect(semNotas(ler("src/lib/gravar-a-resposta-ao-que-falta.ts"))).toContain('jaSeguiu = envio?.estado === "enviado";');
+    expect(semNotas(ler("src/lib/gravar-a-resposta-ao-que-falta.ts"))).toContain("    jaSeguiu,\n  });");
     expect(NEG).toContain('envio?.estado === "enviado" ? PEDIDO_JA_SEGUIU : PEDIDO_FICA_COMPLETO');
   });
   it("o simulador continua sem distribuir (só a mudança com escolhidos vai logo)", () => {

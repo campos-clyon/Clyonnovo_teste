@@ -52,6 +52,7 @@ const semNotas = (s: string) => s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
 const NEG = semNotas(ler("src/lib/whatsapp-negociacao.ts"));
 const PONTE = semNotas(ler("src/app/api/whatsapp/ponte/route.ts"));
 const NA_BASE = semNotas(ler("src/lib/resposta-ao-que-falta-na-base.ts"));
+const COMUM = semNotas(ler("src/lib/gravar-a-resposta-ao-que-falta.ts"));
 const EM_CURSO = semNotas(ler("src/lib/pedido-em-curso.ts"));
 
 const corpoDe = (fonte: string, inicio: string, fim: string) => {
@@ -245,11 +246,13 @@ describe("o que se grava no pedido", () => {
 
   it("a base grava pelos caminhos de sempre, e só tira o pedido de «precisa info»", () => {
     const g = corpoDe(NEG, "async function gravarARespostaAoModelo(", "\n}\n");
-    expect(g).toContain("rq.lerARespostaAoQueFalta(dados, texto, agora, { imagens: x.recebidas })");
-    expect(g).toContain("pa.camposParaOPedido(oPedido, depois)");
-    expect(g).toContain("rq.oDiaParaOPedido(");
-    expect(g).toContain("nb.juntarAConversaNaDescricao(id, novos)");
-    expect(g).toContain("oPedidoFicouCompleto(id)");
+    // d3 (23-11-2026): a leitura e a gravação são da função comum (WhatsApp, conta e app).
+    expect(g).toContain("gravarARespostaAoQueFalta({");
+    expect(COMUM).toContain("rq.lerARespostaAoQueFalta(x.dados, x.texto, agora, { imagens: x.imagens })");
+    expect(COMUM).toContain("pa.camposParaOPedido(x.pedido, depois)");
+    expect(COMUM).toContain("rq.oDiaParaOPedido(");
+    expect(COMUM).toContain("nb.juntarAConversaNaDescricao(id, novos)");
+    expect(COMUM).toContain("oPedidoFicouCompleto(id, x.canal)");
     expect(g).toContain("db.ligarRecolhaWhatsAppAoPedido(telefone, id)");
     expect(g.match(/await enviarTextoWhatsApp\(/g)?.length).toBe(1);
     expect(NA_BASE).toContain("UPDATE simulatorOrders SET status = ?, updatedAt = NOW() WHERE id = ? AND status = 'precisa_info'");
