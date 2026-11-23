@@ -106,3 +106,24 @@ export function getClientIp(request: Request): string {
     "unknown"
   );
 }
+
+/**
+ * Quantas vezes a chave já foi contada nesta janela, SEM contar mais uma (d2,
+ * 23-11-2026). Serve a travões que só contam as falhas: lê-se antes, e quem
+ * falha conta-se depois com `checkRateLimit`. Sem Redis, lê o contador em
+ * memória; se o Redis falhar, 0 (o travão por máquina continua a valer).
+ */
+export async function lerContador(key: string): Promise<number> {
+  const redis = getRedis();
+  if (!redis) {
+    const r = memoria.get(key);
+    return r && r.expiraEm > Date.now() ? r.count : 0;
+  }
+  try {
+    const n = await redis.get<number>(`rl:${key}`);
+    return typeof n === "number" ? n : Number(n ?? 0) || 0;
+  } catch {
+    const r = memoria.get(key);
+    return r && r.expiraEm > Date.now() ? r.count : 0;
+  }
+}

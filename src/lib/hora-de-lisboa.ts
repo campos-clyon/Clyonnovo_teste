@@ -350,3 +350,9 @@ export function dataPorExtensoEmLisboa(instante: Date): string {
   const p = pecasEmLisboa(instante);
   return `${p.dia} de ${MESES_POR_EXTENSO[p.mes - 1]} de ${p.ano}`;
 }
+
+/** `DD/MM` — o dia e o mês em Lisboa (d3, 23-11-2026): «Pago a … · 23/11». */
+export function diaMesEmLisboa(instante: Date): string {
+  const p = pecasEmLisboa(instante);
+  return `${dois(p.dia)}/${dois(p.mes)}`;
+}

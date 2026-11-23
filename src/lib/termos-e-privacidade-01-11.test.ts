@@ -113,7 +113,7 @@ describe("os erros das apps e as zonas na Privacidade", () => {
     expect(datas).toContain('"/termos": "2026-11-15"'); // d39: o valor único nos Termos de 15-11
     // d85 (22-11-2026): a Anthropic na Privacidade — a data do modelo novo passa a 22-11; a de 12-11 fica no texto de antes de 15-11.
     expect(PRIVACIDADE).toContain("Última atualização: 23 de novembro de 2026.");
-    expect(datas).toContain('"/privacidade": "2026-11-22"');
+    expect(datas).toContain('"/privacidade": "2026-11-23"');
   });
 });
 

@@ -21,6 +21,7 @@ const estado = vi.hoisted(() => ({
     | { id: number; nome: string; isAdmin: number | null; funcao: string | null; active: number | null; codigoHash: string | null },
   indicePedido: null as string | null,
   limite: { ip: true, total: true },
+  contador: 0,
   chaves: [] as string[],
   temCodigo: false,
   colaborador: null as null | Record<string, unknown>,
@@ -35,6 +36,7 @@ vi.mock("@/lib/rate-limit", () => ({
     const allowed = chave.includes("-total") ? estado.limite.total : estado.limite.ip;
     return { allowed, count: 1, limit: 10 };
   },
+  lerContador: async () => estado.contador,
 }));
 
 vi.mock("@/lib/limite-rota-publica", () => ({
@@ -110,6 +112,7 @@ beforeEach(() => {
   estado.conta = undefined;
   estado.indicePedido = null;
   estado.limite = { ip: true, total: true };
+  estado.contador = 0;
   estado.chaves = [];
   estado.temCodigo = false;
   estado.colaborador = null;
@@ -274,14 +277,68 @@ describe("a entrada por código", () => {
     expect(r1.status).toBe(429);
     expect((await r1.json()).error).toContain(CODIGO_INVALIDO);
     expect(r1.headers.get("Retry-After")).toBe("900");
-    estado.limite = { ip: true, total: false };
+    // O total lê-se sem contar (d2, 23-11-2026): cheio, trava.
+    estado.limite = { ip: true, total: true };
+    estado.contador = 100;
     const r2 = await POST(pedido("/api/colaboradores/codigo", { codigo: CODIGO }));
     expect(r2.status).toBe(429);
     expect(estado.chaves).toContain("colaborador-codigo-ip:203.0.113.9");
-    expect(estado.chaves).toContain("colaborador-codigo-total");
     // Travado não chega a procurar a conta.
     expect(estado.indicePedido).toBeNull();
   });
+
+  it("d2: o total só conta as erradas — uma entrada certa não o faz subir", async () => {
+    const { POST } = await import("@/app/api/colaboradores/codigo/route");
+    estado.conta = {
+      id: 3,
+      nome: "DONO",
+      isAdmin: 1,
+      funcao: "admin",
+      active: 1,
+      codigoHash: await hashDoCodigo(CODIGO),
+    };
+    const certa = await POST(pedido("/api/colaboradores/codigo", { codigo: CODIGO }));
+    expect(certa.status).toBe(200);
+    expect(estado.chaves).not.toContain("colaborador-codigo-total");
+    estado.conta = undefined;
+    const errada = await POST(pedido("/api/colaboradores/codigo", { codigo: "Outro codigo 1234 #x" }));
+    expect(errada.status).toBe(401);
+    expect(estado.chaves).toContain("colaborador-codigo-total");
+  }, 30000);
+
+  it("d2: a máquina que já entrou passa com o travão total cheio; uma nova não", async () => {
+    const { POST } = await import("@/app/api/colaboradores/codigo/route");
+    const { COOKIE_DA_MAQUINA, valorDaMaquina } = await import("./maquina-conhecida");
+    estado.conta = {
+      id: 3,
+      nome: "DONO",
+      isAdmin: 1,
+      funcao: "admin",
+      active: 1,
+      codigoHash: await hashDoCodigo(CODIGO),
+    };
+    estado.contador = 100;
+    const nova = await POST(pedido("/api/colaboradores/codigo", { codigo: CODIGO }));
+    expect(nova.status).toBe(429);
+    const conhecida = new NextRequest(new URL("/api/colaboradores/codigo", "https://clyon.pt"), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "vitest",
+        cookie: `${COOKIE_DA_MAQUINA}=${valorDaMaquina(process.env.JWT_SECRET!)}`,
+      },
+      body: JSON.stringify({ codigo: CODIGO }),
+    });
+    const r = await POST(conhecida);
+    expect(r.status).toBe(200);
+    // Um cookie forjado não vale.
+    const forjada = new NextRequest(new URL("/api/colaboradores/codigo", "https://clyon.pt"), {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: `${COOKIE_DA_MAQUINA}=9999999999.abc` },
+      body: JSON.stringify({ codigo: CODIGO }),
+    });
+    expect((await POST(forjada)).status).toBe(429);
+  }, 30000);
 });
 
 describe("a palavra-passe deixa de servir quando a conta tem código", () => {

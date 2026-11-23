@@ -61,6 +61,7 @@ import { semContactoDepoisDoFim } from "@/lib/contacto-so-enquanto-ha-trabalho";
 import { ajustesDe, vistaDoAjuste } from "@/lib/ajuste-no-local";
 import { clientePagouNoCartao } from "@/lib/carteira";
 import { taxaAPassarAClyon } from "@/lib/taxa-a-passar-a-clyon";
+import { pagamentoRegistadoParaOParceiro } from "@/lib/pagamento-registado-para-o-parceiro";
 import { pagamentosAVerificar, trabalhosDaCarteira } from "@/lib/carteira-do-profissional";
 import { dividasDe } from "@/lib/carteira";
 import { comoRecebeNoNovoModelo } from "@/lib/como-recebe-no-novo-modelo";
@@ -527,6 +528,14 @@ export async function GET(req: NextRequest) {
                 );
               })()
             : null,
+        /*
+         * O PAGAMENTO AO PARCEIRO, REGISTADO — d3 (23-11-2026). O que o parceiro lê
+         * e as duas respostas («Sim, recebi» / «Ainda não recebi», ou «O cliente já
+         * me pagou» quando o cliente ainda não disse nada). Só no modelo de 15-11
+         * e num trabalho contratado; `null` nos outros.
+         */
+        pagamentoRegistado:
+          doNovoModelo.has(Number(l.id)) && l.estado === "acordada" ? pagamentoRegistadoParaOParceiro(l as never, acordado, reservas.get(Number(l.id)) ?? 0) : null,
         diasAteLibertar: diasAteLibertar(l as never, agora),
         provaJson: l.provaJson ?? null,
         actualizadoEm: l.updatedAt,

@@ -1,12 +1,25 @@
-import { perfilDoProfissional } from "./db";
+import { getSimulatorOrderById, perfilDoProfissional } from "./db";
+import { registoDoPagamentoDe } from "./pagamento-registado-na-base";
+import {
+  A_ESPERA_DO_PARCEIRO,
+  JA_PAGUEI_BOTAO,
+  confirmacaoDoJaPaguei,
+  PARCEIRO_AINDA_NAO_RECEBEU,
+  dadosDePagamentoSaem,
+  pagamentoCombinadoDiretamente,
+  pagoA,
+  registoDoPagamento,
+} from "./pagamento-registado";
 import type { TrabalhoAPagar } from "./acesso-ao-pagamento";
 import { dadosParaPagarAoParceiro } from "./dados-para-receber";
 import { perfilFiscalDoParceiro } from "./perfil-fiscal";
 import { totalAoCliente } from "./total-ao-cliente";
 import {
   AS_DUAS_FATURAS,
+  COMO_PAGAR_AO_PARCEIRO,
   COMO_PAGAR_EM_PALAVRAS,
   PAGA_DIRETAMENTE_AO_PARCEIRO_CONTRATADO,
+  type ComoPagarAoParceiro,
   PARCEIRO_SEM_DADOS_PARA_PAGAR,
   comoPagarDisponiveis,
   lerComoPagar,
@@ -83,11 +96,32 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
       console.error("[pagar-ao-parceiro] dados por confirmar:", e instanceof Error ? e.message : e);
       return true;
     });
+  /*
+   * O REGISTO DO PAGAMENTO — d3 (23-11-2026). Com o «Recebi» do parceiro (`pago`)
+   * ou com o pedido concluído (d76) sem registo, o IBAN e o MB WAY saem do ecrã:
+   * ficam «Pago a {parceiro} · dd/mm» ou «Pagamento combinado diretamente com
+   * {parceiro}». Se a leitura falhar, os dados ficam como estavam (sem registo).
+   */
+  const [linhaDoRegisto, pedidoLido] = await Promise.all([
+    (async () => registoDoPagamentoDe(t.negociacaoId))().catch(() => null),
+    (async () => getSimulatorOrderById(t.pedidoId))().catch(() => undefined),
+  ]);
+  const registo = registoDoPagamento(linhaDoRegisto ?? {}, String(pedidoLido?.status ?? "") === "concluido");
+  const sairOsDados = dadosDePagamentoSaem(registo);
   const paraPagar = dadosQueOClienteRecebe(
     dadosParaPagarAoParceiro(perfil ?? {}, { contratado: true, doNovoModelo: true }),
-    porConfirmar,
+    porConfirmar || sairOsDados,
   );
-  const opcoes = comoPagarDisponiveis(total, paraPagar ?? null);
+  const opcoes = sairOsDados ? [] : comoPagarDisponiveis(total, paraPagar ?? null);
+  const textoDoRegisto = registo.pago
+    ? pagoA(t.profissionalNome, registo.parceiroConfirmouEm)
+    : registo.concluidoSemRegisto
+      ? pagamentoCombinadoDiretamente(t.profissionalNome)
+      : registo.estado === "cliente_disse"
+        ? A_ESPERA_DO_PARCEIRO(t.profissionalNome)
+        : registo.estado === "em_duvida"
+          ? PARCEIRO_AINDA_NAO_RECEBEU(t.profissionalNome)
+          : null;
   // d28: os dados de pagamento mudaram depois de contratar? Se a leitura falhar, avisa-se (o lado seguro).
   const dadosMudados = await negociacoesComDadosDePagamentoMudados([t.negociacaoId])
     .then((s) => s.has(t.negociacaoId))
@@ -101,11 +135,29 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
     parceiro: t.profissionalNome,
     paraPagar,
     /** Sem IBAN nem MB WAY (d17, texto F): o que o cliente lê em vez dos dados. */
-    semDados: porConfirmar
+    semDados: sairOsDados
+      ? textoDoRegisto
+      : porConfirmar
       ? DADOS_DE_PAGAMENTO_A_CONFIRMAR
       : paraPagar && !paraPagar.iban && !paraPagar.mbway
         ? PARCEIRO_SEM_DADOS_PARA_PAGAR
         : null,
+    /**
+     * O REGISTO DO PAGAMENTO (d3, 23-11-2026): onde está («por_pagar», «cliente_disse», «pago»,
+     * «em_duvida»), a frase pronta para o cartão, e se o cliente ainda pode dizer «Já paguei».
+     * O site e as apps desenham-no tal como vem.
+     */
+    registo: {
+      ...registo,
+      texto: textoDoRegisto,
+      podeDizerQuePagou: !sairOsDados && total != null,
+      botao: JA_PAGUEI_BOTAO(t.profissionalNome),
+      total,
+      /** A pergunta de confirmação por forma («Confirma que pagou … a … por …?»): as apps não escrevem preços. */
+      confirmacoes: Object.fromEntries(
+        COMO_PAGAR_AO_PARCEIRO.map((f) => [f, confirmacaoDoJaPaguei(t.profissionalNome, total, f)]),
+      ) as Record<ComoPagarAoParceiro, string>,
+    },
     /** d5: os dados de pagamento estão retidos até a CLYON os confirmar com o parceiro. */
     dadosPorConfirmar: porConfirmar,
     /**

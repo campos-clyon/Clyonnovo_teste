@@ -64,6 +64,7 @@ import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materi
 import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 import { DADOS_DE_PAGAMENTO_MUDARAM, SELO_DOS_DADOS_MUDADOS } from "@/lib/dados-de-pagamento-mudados";
+import { SELO_PAGAMENTO_EM_DUVIDA } from "@/lib/pagamento-registado";
 import { CONFIRMEI_COM_O_PARCEIRO, DADOS_DE_PAGAMENTO_A_CONFIRMAR, SELO_DO_TITULAR_QUE_NAO_BATE } from "@/lib/dados-de-pagamento-por-confirmar";
 /*
  * A REGRA DO PRAZO VEM DE ONDE ELA VIVE — 20-09-2026.
@@ -273,6 +274,8 @@ type Negociacao = {
   guiaEmTransicao?: boolean;
   /** O IBAN, o titular ou o MB WAY do parceiro mudaram depois de o cliente contratar (d28). */
   dadosDePagamentoMudados?: boolean;
+  /** O pagamento ao parceiro registado (d3, 23-11-2026): o cliente disse, o parceiro confirmou, ou ficou em dúvida. */
+  pagamentoRegistado?: { estado: "por_pagar" | "cliente_disse" | "pago" | "em_duvida"; pago: boolean };
   /** d5: os dados de pagamento estão retidos ao cliente até a CLYON os confirmar com o parceiro. */
   dadosDePagamentoPorConfirmar?: "mudaram" | "titular";
   /** O cliente e o parceiro partilham o telefone, o email ou a morada (04-11-2026, d10.3). */
@@ -4095,6 +4098,22 @@ export default function AdminNegociacoesPanel({
                     {n.dadosDePagamentoMudados && (
                       <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title={DADOS_DE_PAGAMENTO_MUDARAM}>
                         {SELO_DOS_DADOS_MUDADOS}
+                      </span>
+                    )}
+                    {/* d3: o parceiro diz que ainda não recebeu o que o cliente disse ter pago; ou o que já se registou. */}
+                    {n.pagamentoRegistado?.estado === "em_duvida" && (
+                      <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-bold text-red-200" title="O cliente disse que pagou e o parceiro diz que ainda não recebeu">
+                        {SELO_PAGAMENTO_EM_DUVIDA}
+                      </span>
+                    )}
+                    {n.pagamentoRegistado?.estado === "cliente_disse" && (
+                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200" title="O cliente diz que pagou; falta o «Recebi» do parceiro">
+                        o cliente diz que pagou
+                      </span>
+                    )}
+                    {n.pagamentoRegistado?.pago && (
+                      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-200" title="O parceiro confirmou que recebeu">
+                        pago ao parceiro
                       </span>
                     )}
                     {/* d5: o titular do IBAN não bate com o nome do parceiro nem da empresa. */}

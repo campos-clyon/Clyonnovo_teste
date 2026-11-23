@@ -8,6 +8,7 @@ import { COMO_PAGAR_EM_PALAVRAS, lerComoPagar } from "@/lib/pagar-ao-parceiro";
 import { gravarComoPagarAoParceiro } from "@/lib/pagar-ao-parceiro-na-base";
 import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente";
 import { PAGAR_SO_COM_CONTA, vistoParaQuemSoTemOLink } from "@/lib/pagar-so-com-o-link";
+import { dizerQueJaPagou } from "@/lib/pagamento-registado-no-servidor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const limite = await limitarRotaPublica(req, "pagar-ao-parceiro-escolher", 20, 300);
   if (limite.erro) return limite.erro;
-  let corpo: { pedidoId?: unknown; negociacaoId?: unknown; token?: unknown; comoPagar?: unknown };
+  let corpo: { pedidoId?: unknown; negociacaoId?: unknown; token?: unknown; comoPagar?: unknown; jaPaguei?: unknown; forma?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -81,6 +82,28 @@ export async function POST(req: NextRequest) {
   // d4: registar como paga é de quem tem conta; o link sozinho só vê o cartão.
   if (!t.porSessao) return NextResponse.json({ ok: false, error: PAGAR_SO_COM_CONTA, convidado: true }, { status: 403 });
   if (!t.novoModelo) return NextResponse.json({ ok: false, error: "Este trabalho paga-se como foi combinado.", pagaAoParceiro: false }, { status: 409 });
+
+  /*
+   * «JÁ PAGUEI A {PARCEIRO}» — d3 (23-11-2026). A mesma acção da conta e da app
+   * (`agirComoCliente`), pela mesma função; aqui prova-se o pedido pelo link ou
+   * pela sessão, como no resto desta rota. Devolve o bloco já com o registo.
+   */
+  if (corpo.jaPaguei === true) {
+    const r = await dizerQueJaPagou({
+      pedidoId: t.pedidoId,
+      negociacaoId: t.negociacaoId,
+      forma: corpo.forma,
+      onde: "no site",
+      autorNome: t.nomeDoCliente ?? null,
+    });
+    if (r.status !== 200) return NextResponse.json(r.corpo, { status: r.status });
+    try {
+      return NextResponse.json({ ok: true, ...(await oQueOClienteVe(t)) });
+    } catch (e) {
+      console.error("[pagamentos/ao-parceiro POST já paguei]", e);
+      return NextResponse.json({ ok: true });
+    }
+  }
 
   const como = lerComoPagar(corpo.comoPagar);
   if (!como) return NextResponse.json({ ok: false, error: "Escolha transferência, MB WAY ou dinheiro." }, { status: 400 });

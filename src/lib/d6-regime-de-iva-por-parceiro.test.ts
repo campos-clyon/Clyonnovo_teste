@@ -1,3 +1,4 @@
+// relógio: datas explícitas em todas as chamadas — nada aqui lê o dia de hoje.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

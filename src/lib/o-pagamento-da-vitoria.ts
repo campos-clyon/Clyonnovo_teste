@@ -61,4 +61,6 @@ export const REGRAS_DO_PAGAMENTO_PARA_O_MODELO = [
   "O cliente paga o trabalho só ao parceiro que contratou, por transferência, MB WAY ou dinheiro no local. Nunca digas que paga alguma coisa adiantada, nem que é a plataforma que guarda ou recebe esse dinheiro.",
   "Há duas faturas por trabalho: a do trabalho, emitida pelo parceiro, e a da taxa da plataforma.",
   "O IBAN e o número de MB WAY de um parceiro só aparecem no pedido do cliente que o contratou. Nunca os escrevas nem os peças nesta conversa; se o cliente os pedir, diz-lhe que estão no pedido dele — e, se a CLYON ainda estiver a confirmar os dados do parceiro, que o pedido o diz e que pode pagar em dinheiro no local.",
+  // d3 (23-11-2026): o pagamento fica registado, e só o parceiro o confirma.
+  "O pagamento fica registado no pedido: o cliente carrega em «Já paguei» e o parceiro responde «Sim, recebi». A CLYON só regista; não recebe nem guarda o dinheiro. Só o parceiro confirma que recebeu: nunca digas que um pagamento está confirmado antes disso.",
 ] as const;

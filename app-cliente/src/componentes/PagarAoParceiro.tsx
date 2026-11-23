@@ -84,6 +84,28 @@ export function PagarAoParceiro({
     }
   }
 
+  const [aConfirmar, setAConfirmar] = useState(false);
+
+  /** «Já paguei a {parceiro}» (d3): o cliente confirma o total e a forma; fica registado e o parceiro é avisado. */
+  async function jaPaguei() {
+    if (!visto?.comoPagar) return;
+    setAGravar(true);
+    setErro(null);
+    try {
+      const novo = await pedirComo<VistoDoPagarAoParceiro>(ROTA_DE_PAGAR_AO_PARCEIRO, {
+        metodo: "POST",
+        corpo: { pedidoId, negociacaoId, jaPaguei: true, forma: visto.comoPagar },
+      });
+      setAConfirmar(false);
+      if (novo?.pagaAoParceiro) setVisto(novo);
+      else await ler();
+    } catch (e) {
+      setErro(mensagemDe(e, "Não foi possível registar. Tente novamente."));
+    } finally {
+      setAGravar(false);
+    }
+  }
+
   async function copiar(rotulo: string, valor: string) {
     try {
       await Clipboard.setStringAsync(valor.replace(/\s/g, ""));
@@ -115,6 +137,9 @@ export function PagarAoParceiro({
         </View>
       ) : null}
       {visto.semDados ? <Text style={{ color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{visto.semDados}</Text> : null}
+      {visto.registo?.texto && !visto.semDados ? (
+        <Aviso tom={visto.registo.estado === "em_duvida" ? "aviso" : visto.registo.pago ? "bom" : "neutro"} texto={visto.registo.texto} />
+      ) : null}
       <Text style={{ color: CORES.suave, fontSize: 12.5, lineHeight: 18 }}>{SO_PARA_ESTES_DADOS}</Text>
       {visto.opcoes && visto.opcoes.length > 0 ? (
         <View style={{ gap: 6 }}>
@@ -147,6 +172,46 @@ export function PagarAoParceiro({
           {visto.opcoes.find((o) => o.id === visto.comoPagar)?.cliente ? (
             <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{visto.opcoes.find((o) => o.id === visto.comoPagar)?.cliente}</Text>
           ) : null}
+        </View>
+      ) : null}
+      {visto.registo?.podeDizerQuePagou && visto.registo.estado !== "cliente_disse" ? (
+        <View style={{ gap: 8 }}>
+          {!aConfirmar ? (
+            <Pressable
+              disabled={aGravar || !visto.comoPagar}
+              onPress={() => setAConfirmar(true)}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: aGravar || !visto.comoPagar }}
+              style={{ backgroundColor: CORES.tinta, borderRadius: 12, paddingVertical: 12, alignItems: "center", opacity: aGravar || !visto.comoPagar ? 0.5 : 1 }}
+            >
+              <Text style={{ color: CORES.fundo, fontSize: 15, fontWeight: "700" }}>{visto.registo.botao}</Text>
+            </Pressable>
+          ) : (
+            <View style={{ gap: 8, borderWidth: 1, borderColor: CORES.linhaForte, borderRadius: 12, padding: 12 }}>
+              <Text style={{ color: CORES.tinta, fontSize: 14.5, lineHeight: 21, fontWeight: "600" }}>
+                {visto.registo.confirmacoes?.[visto.comoPagar ?? ""] ?? "Confirma que já pagou?"}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Pressable
+                  disabled={aGravar}
+                  onPress={() => void jaPaguei()}
+                  accessibilityRole="button"
+                  style={{ backgroundColor: CORES.tinta, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, opacity: aGravar ? 0.6 : 1 }}
+                >
+                  <Text style={{ color: CORES.fundo, fontSize: 14, fontWeight: "700" }}>Sim, paguei</Text>
+                </Pressable>
+                <Pressable
+                  disabled={aGravar}
+                  onPress={() => setAConfirmar(false)}
+                  accessibilityRole="button"
+                  style={{ borderWidth: 1, borderColor: CORES.linhaForte, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 }}
+                >
+                  <Text style={{ color: CORES.tinta, fontSize: 14, fontWeight: "600" }}>Ainda não</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+          {!visto.comoPagar ? <Text style={{ color: CORES.suave, fontSize: 12.5 }}>Escolha acima como vai pagar para poder registar o pagamento.</Text> : null}
         </View>
       ) : null}
       {erro ? <Aviso tom="mau" texto={erro} /> : null}

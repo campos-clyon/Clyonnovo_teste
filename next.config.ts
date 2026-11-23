@@ -46,6 +46,8 @@ const paraAsMudancasDoConcelho = (prefixo: string) =>
 
 const nextConfig: NextConfig = {
   compress: true,
+  // d2 (23-11-2026): sem o cabeçalho X-Powered-By — não diz a ninguém que corre Next.js.
+  poweredByHeader: false,
   /*
    * O TÍTULO E O CANONICAL SEMPRE NO <head> — 15-10-2026.
    *

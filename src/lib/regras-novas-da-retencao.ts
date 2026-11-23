@@ -367,6 +367,8 @@ export const COMO_SE_ANONIMIZA_O_PEDIDO: Record<string, ComoSeAnonimiza> = {
   valorUnicoEm: "fica",
   // A descrição como o cliente a escreveu noutra língua (15-11-2026, d46): é a descrição — sai com ela.
   descricaoOriginal: "nulo",
+  // d2 (23-11-2026): a descrição com os contactos que se taparam — sai com ela.
+  descricaoComContactos: "nulo",
   linguaDaDescricao: "fica",
   descricaoPorTraduzir: "fica",
   // O motivo de cancelar ou arquivar (16-11-2026, d54): uma categoria e um valor, nada da pessoa.

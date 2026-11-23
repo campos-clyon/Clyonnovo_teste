@@ -30,6 +30,8 @@ import { notaDaVariante } from "@/lib/mensagem-das-propostas";
 import { foraDaGrelhaDosPedidos } from "@/lib/custo-do-trabalho-no-servidor";
 import type { ForaDaGrelhaNaMesa } from "@/lib/custo-do-trabalho";
 import { ruaEmFaltaDosPedidos } from "@/lib/rua-depois-do-aceite-na-base";
+import { registosDoPagamento } from "@/lib/pagamento-registado-na-base";
+import { registoDoPagamento } from "@/lib/pagamento-registado";
 
 export const runtime = "nodejs";
 
@@ -90,6 +92,13 @@ export async function GET(req: NextRequest) {
       console.error("[api/admin/negociacoes GET] dados de pagamento mudados:", e);
       return new Set<number>();
     });
+    // d3 (23-11-2026): o pagamento ao parceiro registado — «cliente disse», «pago» ou «em dúvida» (o selo).
+    const registos = await registosDoPagamento(
+      pedidos.flatMap((p) => p.negociacoes).filter((n) => n.estado === "acordada" && doNovoModelo.has(Number(n.id))).map((n) => Number(n.id)),
+    ).catch((e) => {
+      console.error("[api/admin/negociacoes GET] registo do pagamento:", e);
+      return new Map<number, Awaited<ReturnType<typeof registosDoPagamento>> extends Map<number, infer V> ? V : never>();
+    });
     // d5: os dados de pagamento retidos até a CLYON os confirmar com o parceiro (mudados, ou titular que não bate).
     const porConfirmar = await negociacoesComDadosPorConfirmar(
       pedidos.flatMap((p) => p.negociacoes).filter((n) => n.estado === "acordada" && doNovoModelo.has(Number(n.id))).map((n) => Number(n.id)),
@@ -139,6 +148,7 @@ export async function GET(req: NextRequest) {
           ...(confianca.get(Number(n.id)) ?? {}),
           ...(doNovoModelo.has(Number(n.id)) ? { noNovoModelo: true } : {}),
           ...(dadosMudados.has(Number(n.id)) ? { dadosDePagamentoMudados: true } : {}),
+          ...(registos.has(Number(n.id)) ? { pagamentoRegistado: registoDoPagamento(registos.get(Number(n.id))!) } : {}),
           ...(porConfirmar.has(Number(n.id)) ? { dadosDePagamentoPorConfirmar: porConfirmar.get(Number(n.id)) } : {}),
           ...(dosParceiros.has(Number(n.providerId)) ? { doValorUnico: dosParceiros.get(Number(n.providerId)) } : {}),
           ...(doNovoModelo.has(Number(n.id)) && regimes.has(Number(n.id))

@@ -1,3 +1,4 @@
+import type { PagamentoParaOParceiro } from "@/lib/pagamento-registado-para-o-parceiro";
 import type { ComoRecebe, FaixaDoValorAPassar } from "@/lib/como-recebe-no-novo-modelo";
 import type { FolhaParaOParceiro } from "@/lib/folha-da-mudanca";
 import type { ProntoParaReceber as ProntoParaReceberDoServidor } from "@/lib/pronto-para-receber";
@@ -38,6 +39,8 @@ export type Pedido = {
   fraseDoValorNoNovoModelo?: string | null;
   /** d4: o «Como recebe» do trabalho contratado do modelo de 15-11 (`como-recebe-no-novo-modelo.ts`). */
   comoRecebe?: ComoRecebe | null;
+  /** d3 (23-11-2026): o pagamento ao parceiro registado — a frase e os botões «Sim, recebi» / «Ainda não recebi». */
+  pagamentoRegistado?: PagamentoParaOParceiro | null;
   diasAteLibertar: number | null;
   provaJson: string | null;
   /** O JSON das propostas, tal como vem da base. */

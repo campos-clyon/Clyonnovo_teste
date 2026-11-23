@@ -28,8 +28,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!email && !convidado) return NextResponse.json({ ok: false, error: "Não autenticado" }, { status: 401 });
   const porConta = await limitarPorConta("cliente-resposta-conta", email ?? `convidado:${convidado!.sessaoId}`, 10, 3600);
   if (porConta.erro) return porConta.erro;
-  const porPedido = await limitarPorConta("cliente-resposta-pedido", `pedido:${pedidoId}`, 20, 86400);
-  if (porPedido.erro) return porPedido.erro;
   let corpo: { mensagem?: unknown; fotografias?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
@@ -42,6 +40,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!pedido || (email && (pedido.contactEmail ?? "").trim().toLowerCase() !== email)) {
       return NextResponse.json({ ok: false, error: "Pedido não encontrado." }, { status: 404 });
     }
+    /*
+     * O limite por pedido conta-se DEPOIS de confirmar de quem é o pedido (d2,
+     * 23-11-2026): antes, quem tivesse uma conta qualquer gastava as 20
+     * respostas do dia de um pedido que não era seu, e o dono ficava sem poder
+     * responder à CLYON.
+     */
+    const porPedido = await limitarPorConta("cliente-resposta-pedido", `pedido:${pedidoId}`, 20, 86400);
+    if (porPedido.erro) return porPedido.erro;
     const quem = convidado ? `Cliente (pela ligação, na app; telemóvel ${convidado.prova8})` : pedido.contactName?.trim() || email!;
     const r = await responderAClyon(pedidoId, { nome: quem }, corpo ?? {});
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });

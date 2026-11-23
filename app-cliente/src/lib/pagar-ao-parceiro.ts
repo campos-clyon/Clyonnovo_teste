@@ -55,6 +55,19 @@ export type VistoDoPagarAoParceiro = {
     ivaDaTaxa?: number;
   } | null;
   comoPagar?: string | null;
+  /**
+   * O REGISTO DO PAGAMENTO (d3, 23-11-2026): onde está, a frase pronta (nada de
+   * preços escritos na app), se ainda pode dizer «Já paguei», o botão e a pergunta
+   * de confirmação por forma — tudo escrito no servidor.
+   */
+  registo?: {
+    estado: "por_pagar" | "cliente_disse" | "pago" | "em_duvida";
+    pago: boolean;
+    texto: string | null;
+    podeDizerQuePagou: boolean;
+    botao: string;
+    confirmacoes?: Record<string, string>;
+  };
   opcoes?: Array<{ id: string; curta: string; cliente: string }>;
   faturas?: {
     frase: string;

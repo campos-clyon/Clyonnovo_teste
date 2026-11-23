@@ -31,6 +31,18 @@ type Visto = {
   /** d6 (19-11-2026): a frase do total, escrita no servidor pelo regime do parceiro — a mesma da app de cliente. */
   totalEmTexto?: string | null;
   comoPagar?: string | null;
+  /** O registo do pagamento (d3, 23-11-2026): onde está, a frase pronta e se o cliente ainda pode dizer «Já paguei». */
+  registo?: {
+    estado: "por_pagar" | "cliente_disse" | "pago" | "em_duvida";
+    pago: boolean;
+    texto: string | null;
+    podeDizerQuePagou: boolean;
+    botao: string;
+    total: number | null;
+    forma: "transferencia" | "mbway" | "dinheiro" | null;
+    /** A pergunta de confirmação por forma, escrita no servidor. */
+    confirmacoes?: Record<string, string>;
+  };
   opcoes?: Array<{ id: string; curta: string; cliente: string }>;
   faturas?: {
     frase: string;
@@ -72,6 +84,34 @@ export default function PagarAoParceiro({
   useEffect(() => {
     void ler();
   }, [ler]);
+
+  const [aConfirmar, setAConfirmar] = useState(false);
+
+  /** «Já paguei a {parceiro}»: o cliente confirma o total e a forma, e fica registado. */
+  async function jaPaguei() {
+    const forma = visto?.comoPagar;
+    if (!forma) return;
+    setAGravar(true);
+    setErro("");
+    try {
+      const r = await fetch("/api/pagamentos/ao-parceiro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...cabecalhos },
+        body: JSON.stringify({ pedidoId, negociacaoId, jaPaguei: true, forma }),
+      });
+      const j = (await r.json().catch(() => ({}))) as Visto & { error?: string };
+      if (!r.ok) setErro(j.error ?? "Não foi possível registar. Tente novamente.");
+      else {
+        setAConfirmar(false);
+        if (j.pagaAoParceiro) setVisto(j);
+        else await ler();
+      }
+    } catch {
+      setErro("Não foi possível registar. Tente novamente.");
+    } finally {
+      setAGravar(false);
+    }
+  }
 
   async function escolher(id: string) {
     setAGravar(true);
@@ -151,6 +191,10 @@ export default function PagarAoParceiro({
         </dl>
       )}
       {visto.semDados && <p className="mt-3 text-slate-700">{visto.semDados}</p>}
+      {/* d3: o registo do pagamento — «Pago a …», à espera do parceiro, ou em dúvida. */}
+      {visto.registo?.texto && !visto.semDados && (
+        <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-800">{visto.registo.texto}</p>
+      )}
       <p className="mt-2 text-xs text-slate-500">
         Pague só para estes dados. Se alguém lhe pedir que pague para outra conta ou outro número, não pague e fale connosco.
       </p>
@@ -170,6 +214,40 @@ export default function PagarAoParceiro({
               {o.curta}
             </button>
           ))}
+        </div>
+      )}
+      {!soParaVer && visto.registo?.podeDizerQuePagou && visto.registo.estado !== "cliente_disse" && (
+        <div className="mt-3">
+          {!aConfirmar ? (
+            <button
+              type="button"
+              disabled={aGravar || !visto.comoPagar}
+              onClick={() => setAConfirmar(true)}
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {visto.registo.botao}
+            </button>
+          ) : (
+            <div className="rounded-xl border border-slate-300 bg-white p-3">
+              <p className="font-medium text-slate-900">
+                {visto.registo.confirmacoes?.[visto.comoPagar ?? ""] ?? `Confirma que já pagou a ${visto.parceiro ?? "o parceiro"}?`}
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  disabled={aGravar}
+                  onClick={() => void jaPaguei()}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  Sim, paguei
+                </button>
+                <button type="button" disabled={aGravar} onClick={() => setAConfirmar(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-800">
+                  Ainda não
+                </button>
+              </div>
+            </div>
+          )}
+          {!visto.comoPagar && <p className="mt-1 text-xs text-slate-500">Escolha acima como vai pagar para poder registar o pagamento.</p>}
         </div>
       )}
       {erro && <p className="mt-2 text-sm text-red-700">{erro}</p>}

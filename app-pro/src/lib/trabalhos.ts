@@ -19,6 +19,7 @@ import type { DiaReal } from "../../../src/lib/registo-real";
 import { avisoDaBase, lerBase } from "../../../src/lib/base-do-preco";
 import type { PercursoParaOParceiro } from "../../../src/lib/mapa-do-percurso";
 import type { ComoRecebe } from "../../../src/lib/como-recebe-no-novo-modelo";
+import type { PagamentoParaOParceiro } from "../../../src/lib/pagamento-registado-para-o-parceiro";
 import {
   accoesDisponiveis,
   MAX_PROPOSTAS_POR_LADO,
@@ -187,6 +188,13 @@ export type Trabalho = {
    * do modelo novo ou antes de contratado.
    */
   comoRecebe?: ComoRecebe | null;
+  /**
+   * O pagamento ao parceiro registado — d3 (23-11-2026): a frase («O cliente diz
+   * que lhe pagou … Recebeu?»), os botões («Sim, recebi» / «Ainda não recebi» /
+   * «O cliente já me pagou») e o registo. Do servidor (`pagamentoRegistado`,
+   * `pagamento-registado-para-o-parceiro.ts`); `null` fora do modelo novo.
+   */
+  pagamentoRegistado?: PagamentoParaOParceiro | null;
   /**
    * O pedido fechou pela validade do orçamento — d2 (18-11-2026): «Fechado: o
    * cliente não respondeu ao orçamento.», não «cancelado» (`pedidoFechadoSemResposta`

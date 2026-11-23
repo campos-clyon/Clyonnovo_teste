@@ -123,6 +123,8 @@ const RUAS_DE_EXEMPLO = new Set<string>([
 const AO_LADO_DO_NUMERO = new Set<string>([
   "Trabalhos CLYON", "Nova Recolha", "Minified React", "Recolhas Exemplo", "Avenida Mouzinho", "Rua Professor",
   "Rua das Amendoeiras", "Rua das Amendoeiras Inventadas", "Rua Professor Augusto Valdeira", "Olá Graciete",
+  // O nome de uma empresa parceira inventada (d97), ao lado de «#664».
+  "Recolhas Tejo",
 ]);
 
 /* ── As regras ────────────────────────────────────────────────────────────── */

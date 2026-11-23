@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
+import { descricaoSemContactos } from "@/lib/filtro-de-contactos";
 import { createSimulatorOrder, createLead, createLeadEvent, appendOrderHistory, calculateOrderPriority, esquecerContactoAMeio } from "@/lib/db";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
@@ -212,7 +213,8 @@ export async function POST(req: NextRequest) {
 
     const row = {
       serviceType: tipoServico || null,
-      description: descricao || null,
+      // d2 (23-11-2026): sem telefones nem emails; o que o cliente escreveu fica à parte, só para a equipa.
+      ...descricaoSemContactos(descricao || null),
       // Só entradas COM url. Uma linha sem url não é uma foto: é uma linha que
       // faz o painel dizer que há fotos quando não há nenhuma.
       //

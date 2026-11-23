@@ -13,7 +13,8 @@ import { contaPeloIndice, haContasActivasSemCodigo } from "@/lib/codigo-de-entra
 import { assinarSessaoDoPainel, porCookieDaSessao } from "@/lib/emitir-sessao-do-painel";
 import { contaActiva } from "@/lib/conta-do-painel";
 import { paginaInicialDoPapel, type PapelDoPainel } from "@/lib/papel-do-painel";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp, lerContador } from "@/lib/rate-limit";
+import { COOKIE_DA_MAQUINA, SEGUNDOS_DA_MAQUINA_CONHECIDA, maquinaConhecida, valorDaMaquina } from "@/lib/maquina-conhecida";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { localDosCabecalhos, navegadorESistema } from "@/lib/sessoes-do-backoffice";
 import { registarEntrada } from "@/lib/sessoes-do-backoffice-na-base";
@@ -32,9 +33,12 @@ export const runtime = "nodejs";
  * `TEMPO_MINIMO_DA_RESPOSTA_MS`.
  *
  * FORÇA BRUTA: por máquina, e no total — um código não tem «conta» à frente
- * para se contar por conta, por isso o segundo travão é a soma de todas as
- * tentativas. Contam as certas e as erradas. Com o travão, a resposta é a
- * mesma «Código inválido.», com 429 e o tempo de espera.
+ * para se contar por conta, por isso o segundo travão é a soma das tentativas.
+ * Por máquina contam todas; NO TOTAL contam só as ERRADAS (d2, 23-11-2026) —
+ * com as certas a contar, bastava a equipa entrar para o travão encher — e a
+ * máquina que já entrou com êxito nos últimos 30 dias (cookie assinado) passa
+ * mesmo com o travão cheio. Com o travão, a resposta é a mesma «Código
+ * inválido.», com 429 e o tempo de espera.
  *
  * GET: só diz se o ecrã de entrada ainda mostra «Ainda não tem código?
  * Entrar com utilizador» — enquanto houver contas activas sem código.
@@ -43,6 +47,7 @@ export const runtime = "nodejs";
 const JANELA_SEGUNDOS = 15 * 60;
 const TENTATIVAS_POR_IP = 10;
 const TENTATIVAS_NO_TOTAL = 100;
+const CHAVE_DO_TOTAL = "colaborador-codigo-total";
 
 function invalido(estado = 401, cabecalhos?: Record<string, string>) {
   return NextResponse.json({ error: CODIGO_INVALIDO }, { status: estado, headers: cabecalhos });
@@ -72,8 +77,9 @@ export async function POST(req: NextRequest) {
 
   const porIp = await checkRateLimit(`colaborador-codigo-ip:${getClientIp(req)}`, TENTATIVAS_POR_IP, JANELA_SEGUNDOS);
   if (!porIp.allowed) return bloqueado();
-  const total = await checkRateLimit("colaborador-codigo-total", TENTATIVAS_NO_TOTAL, JANELA_SEGUNDOS);
-  if (!total.allowed) return bloqueado();
+  // d2: lê-se o total SEM contar; só as tentativas erradas o fazem subir (mais abaixo).
+  const conhecida = maquinaConhecida(req.cookies.get(COOKIE_DA_MAQUINA)?.value, process.env.JWT_SECRET);
+  if (!conhecida && (await lerContador(CHAVE_DO_TOTAL)) >= TENTATIVAS_NO_TOTAL) return bloqueado();
 
   // Falha fechada: sem o segredo do índice, ninguém entra por código.
   const segredo = segredoDoIndice();
@@ -120,6 +126,8 @@ export async function POST(req: NextRequest) {
     ((eAdministrador && contaActiva(conta)) || (eAssistente && Number(conta.active) === 1));
 
   if (!podeEntrar || !conta) {
+    // d2: só as erradas contam para o travão total.
+    await checkRateLimit(CHAVE_DO_TOTAL, TENTATIVAS_NO_TOTAL, JANELA_SEGUNDOS).catch(() => undefined);
     await esperarAte(inicio);
     return invalido();
   }
@@ -146,5 +154,13 @@ export async function POST(req: NextRequest) {
     paginaInicial: paginaInicialDoPapel(papel),
   });
   porCookieDaSessao(resposta, token);
+  // d2: este navegador já entrou — não o apanha o travão total nos próximos 30 dias.
+  resposta.cookies.set(COOKIE_DA_MAQUINA, valorDaMaquina(process.env.JWT_SECRET ?? ""), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/api/colaboradores/codigo",
+    maxAge: SEGUNDOS_DA_MAQUINA_CONHECIDA,
+  });
   return resposta;
 }

@@ -20,6 +20,7 @@ import { inicioDoDiaEmLisboa, segundaDaSemanaEmLisboa } from "./hora-de-lisboa";
 import { CHEGADA_CONFIRMADA_OBRIGATORIA } from "@/lib/viagem-ate-ao-cliente";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
+import { descricaoSemContactos } from "./filtro-de-contactos";
 import type { InsertUser, InsertSimulatorOrder, SimulatorOrder, TrabalhoRealizadoData } from "../../drizzle/schema";
 import { foiJuntadoPelaApp } from "./juntado-pela-app";
 export type { TrabalhoRealizadoData };
@@ -1536,7 +1537,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 26;
+const VERSAO_DAS_NEGOCIACOES = 27;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1879,6 +1880,17 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN clientePagaAClyonPor VARCHAR(120) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN clientePagaAClyonMotivo VARCHAR(300) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN clientePagaAClyonHistoricoJson TEXT NULL`,
+    /*
+     * v27 (23-11-2026, d3) — O PAGAMENTO AO PARCEIRO FICA REGISTADO
+     * (`pagamento-registado.ts`): quando o cliente disse «Já paguei» e como
+     * (transferência, MB WAY ou dinheiro), quando o parceiro disse «Sim, recebi»
+     * e quando disse «Ainda não recebi». O «Pago» é só o `parceiroConfirmouEm`.
+     * Datas em UTC. Nulas = por pagar. Aditivas: nada se apaga.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN clienteDisseQuePagouEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN formaDita VARCHAR(20) NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN parceiroConfirmouEm DATETIME NULL DEFAULT NULL`,
+    `ALTER TABLE negociacoes ADD COLUMN parceiroNegouEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -5504,6 +5516,14 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     semFactura?: number | null;
     /** Como o cliente escolheu pagar ao parceiro no modelo de 15-11 (d4, 18-11-2026) — `pagar-ao-parceiro.ts`. */
     pagarAoParceiroPor?: string | null;
+    /** O pagamento ao parceiro registado (d3, 23-11-2026) e o que a conta do total lê. */
+    clienteDisseQuePagouEm?: Date | string | null;
+    formaDita?: string | null;
+    parceiroConfirmouEm?: Date | string | null;
+    parceiroNegouEm?: Date | string | null;
+    regimeDoProfissional?: string | null;
+    regimeIva?: string | null;
+    regimeIvaConfirmadoEm?: Date | string | null;
     /** «total», «carga» ou «hora» — o `o.baseDoPreco` do SELECT. */
     baseDoPreco: string | null;
     ajustesJson: string | null;
@@ -5596,6 +5616,9 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.materiaisJson, n.materiaisUsadosJson, n.semFactura,
             -- d4: como o cliente paga ao parceiro (modelo de 15-11), para o «Como recebe».
             n.pagarAoParceiroPor,
+            -- O pagamento ao parceiro registado (d3, 23-11-2026) e o que a conta do total lê.
+            n.clienteDisseQuePagouEm, n.formaDita, n.parceiroConfirmouEm, n.parceiroNegouEm,
+            n.regimeDoProfissional, p.regimeIva, p.regimeIvaConfirmadoEm,
             CASE WHEN JSON_VALID(o.rawOrderJson) THEN CAST(JSON_OBJECT(
               'tipologia', JSON_EXTRACT(o.rawOrderJson, '$.tipologia'),
               'needsDismantling', JSON_EXTRACT(o.rawOrderJson, '$.needsDismantling')
@@ -5603,7 +5626,7 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             n.estrelas, n.comentario, n.avaliadoEm, n.arquivadoProfissionalEm,
             n.ofertaClyon, o.valorFixoClyon, o.status AS estadoDoPedido,
             o.motivoDoFecho AS motivoDoFechoDoPedido, (o.propostaEnviadaEm IS NOT NULL) AS propostaEnviadaDoPedido,
-            o.serviceType, o.city, o.urgency, o.description, o.valorDesejadoCliente,
+            o.serviceType, o.city, o.urgency, o.description, o.descricaoComContactos, o.valorDesejadoCliente,
             o.precisaFatura, o.precisaGuiaTransporte, o.filesJson, o.dataAgendada,
             -- d64: os varios dias do trabalho (nulo com um dia so).
             o.diasDoTrabalhoJson,
@@ -9813,8 +9836,9 @@ let _simulatorOrdersEnsured = false;
 // 25 — `fontesDaDescricao` (29-10-2026), as fontes de que a descrição se escreve.
 // 28 — `escolhaDosParceirosJson` (10-11-2026), a lista que o cliente viu numa mudança e o que escolheu.
 // 30 — `valorUnicoCliente` e `valorUnicoEm` (15-11-2026, d39), o valor único ao cliente.
+// 36 — `descricaoComContactos` (23-11-2026, d2), a descrição como o cliente a escreveu, com o telefone ou o email que tapámos — só a equipa a vê.
 // 31 — `descricaoOriginal`, `linguaDaDescricao` e `descricaoPorTraduzir` (15-11-2026, d46), a descrição sempre em português.
-const MIGRATION_VERSION = 35;
+const MIGRATION_VERSION = 36;
 let _migrationVersion = 0;
 
 export async function ensureSimulatorOrdersTable() {
@@ -10091,6 +10115,11 @@ export async function ensureSimulatorOrdersTable() {
     // v35 — O REGISTO REAL (18-11-2026, d67): por dia, o início e o fim reais e a
     // pausa total; o plano fica em dataAgendada / diasDoTrabalhoJson. Ver registo-real.ts.
     `ALTER TABLE simulatorOrders ADD COLUMN registoRealJson TEXT NULL DEFAULT NULL`,
+    // v36 — OS CONTACTOS NA DESCRIÇÃO (23-11-2026, d2). A descrição que o cliente
+    // escreve passa pelo filtro de contactos (`filtro-de-contactos.ts`); o que ele
+    // escreveu, com o telefone ou o email, fica aqui — só a equipa o vê, e o
+    // parceiro contratado. Nulo quando nada foi tapado e nos pedidos de antes.
+    `ALTER TABLE simulatorOrders ADD COLUMN descricaoComContactos LONGTEXT NULL DEFAULT NULL`,
     // Os pedidos que já existem passam a ter o valor desejado igual ao que
     // pediram como mínimo — era esse o número que o profissional via.
     `UPDATE simulatorOrders SET valorDesejadoCliente = valorMinimoCliente
@@ -10125,6 +10154,17 @@ export async function createSimulatorOrder(data: InsertSimulatorOrder): Promise<
       };
       if (t.porTraduzir) porTraduzir = t.motivo ?? "o tradutor não respondeu";
     }
+  }
+  /*
+   * OS CONTACTOS FICAM FORA DA DESCRIÇÃO — d2 (23-11-2026). Um telefone ou um
+   * email escrito na descrição chegava a todos os parceiros da zona antes de o
+   * cliente escolher: o negócio fechava-se por fora, sem registo. Passa pelo
+   * mesmo filtro das conversas; o que o cliente escreveu fica à parte
+   * (`descricaoComContactos`), só para a equipa e para o parceiro contratado.
+   */
+  if (typeof data.description === "string" && data.description.trim()) {
+    const f = descricaoSemContactos(data.description);
+    if (f.descricaoComContactos) data = { ...data, description: f.description, descricaoComContactos: f.descricaoComContactos };
   }
   const cols = Object.keys(data).filter((k) => (data as Record<string, unknown>)[k] !== undefined);
   const vals = cols.map((k) => (data as Record<string, unknown>)[k]);
@@ -15572,6 +15612,10 @@ export type Acontecimento =
   // O dinheiro
   | "levantamento_pedido"
   | "levantamento_pago"
+  /* O pagamento ao parceiro fica registado — d3, 23-11-2026 (`pagamento-registado.ts`). */
+  | "cliente_diz_que_pagou"
+  | "parceiro_recebeu"
+  | "parceiro_nao_recebeu"
   /*
    * A COMISSÃO DE UM ASSISTENTE, POR PERÍODO — 08-10-2026. Pagar fotografa o
    * período (ver `comissoesPagas` em assistentes.ts); anular apaga essa
@@ -16759,7 +16803,7 @@ export async function apagarContaDeCliente(
             SET contactName = NULL, contactPhone = NULL, contactEmail = NULL,
                 nifFactura = NULL,
                 address = NULL, floor = NULL,
-                description = NULL, fontesDaDescricao = NULL, descricaoOriginal = NULL, filesJson = NULL,
+                description = NULL, fontesDaDescricao = NULL, descricaoOriginal = NULL, descricaoComContactos = NULL, filesJson = NULL,
                 rawOrderJson = NULL, percursoJson = NULL, chatJson = NULL, historyJson = NULL,
                 acessoTokenHash = NULL, acessoTokenExpiraEm = NULL
           WHERE LOWER(contactEmail) = ?`,

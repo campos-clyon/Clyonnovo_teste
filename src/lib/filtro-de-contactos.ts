@@ -255,3 +255,21 @@ export function alertaDe(texto: string, anteriores: string[] = []): string | nul
   if (formamUmTelefone([...anteriores.slice(-2), texto])) return ALERTA_NUMERO_PARTIDO;
   return null;
 }
+
+/**
+ * A DESCRIÇÃO QUE O CLIENTE ESCREVE, SEM CONTACTOS — d2 (CEO e dono, 23-11-2026).
+ *
+ * O que sai para os parceiros antes de o cliente escolher (WhatsApp, painel,
+ * email, a lista dos escolhidos de uma mudança) lê `description`; o que o
+ * cliente escreveu, com o telefone ou o email, fica em `descricaoComContactos`
+ * (só a equipa e o parceiro já contratado). Sem nada para tapar, devolve a
+ * descrição tal e qual e nenhum original.
+ */
+export function descricaoSemContactos(
+  descricao: string | null | undefined,
+  agora: Date = new Date(),
+): { description: string | null | undefined; descricaoComContactos?: string } {
+  if (typeof descricao !== "string" || !descricao.trim()) return { description: descricao };
+  const f = filtrarContactos(descricao, [], agora);
+  return f.filtrada ? { description: f.texto, descricaoComContactos: f.original } : { description: descricao };
+}

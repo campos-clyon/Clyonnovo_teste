@@ -443,10 +443,11 @@ export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente
     disponivel: e.disponivel,
     // Com um acordo final (d78): o valor acordado e a frase que ocupa o lugar do botão (d1, 22/11).
     acordoFinal: e.acordoFinal ? { valor: e.acordoFinal.valor, valorTexto: emEuros(e.acordoFinal.valor), frase: e.acordoFinal.frase } : null,
-    pago: e.doCliente && e.pago,
-    pagoEmTexto: pago ? quandoEmLisboa(pago.pagoEm) : null,
+    // d3 (23-11-2026): no modelo de 15-11 o «pago» é o «Recebi» do parceiro (o registo), nunca um palpite.
+    pago: aoParceiro ? aoParceiro.registo.pago : e.doCliente && e.pago,
+    pagoEmTexto: aoParceiro ? (aoParceiro.registo.parceiroConfirmouEm ? quandoEmLisboa(aoParceiro.registo.parceiroConfirmouEm) : null) : pago ? quandoEmLisboa(pago.pagoEm) : null,
     // O instante, para o passo a passo da app de cliente («Pago · hoje, 17:42», 02-11-2026).
-    pagoEm: pago ? isoOuNulo(pago.pagoEm) : null,
+    pagoEm: aoParceiro ? aoParceiro.registo.parceiroConfirmouEm : pago ? isoOuNulo(pago.pagoEm) : null,
     // Em dinheiro com IVA incluído paga tudo ao profissional, no local: a
     // referência que exista é a dívida DELE, e não sai para o cliente.
     // No modelo novo (d17) não é «em dinheiro»: paga ao parceiro como escolher — ver `aoParceiro`.
@@ -660,7 +661,8 @@ export async function pedidoDoClienteParaAApp(
       telefone: pedido.contactPhone ?? null,
       cidade: pedido.city ?? null,
       quando: pedido.urgency ? (QUANDO_EM_PALAVRAS[pedido.urgency] ?? null) : null,
-      descricao: pedido.description ?? null,
+      // d2 (23-11-2026): é a descrição dele — com os contactos que escreveu (os parceiros leem a versão sem eles).
+      descricao: (pedido as { descricaoComContactos?: string | null }).descricaoComContactos ?? pedido.description ?? null,
       fotos: fotografiasDoPedido(pedido.filesJson),
       // S22: os vídeos à parte (a app abre-os no navegador), o dia preferido, o acesso e a repetição.
       videos: videosDoPedido(pedido.filesJson),

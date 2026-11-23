@@ -145,6 +145,8 @@ export interface SimulatorOrder {
   descricaoOriginal?: string | null;
   linguaDaDescricao?: string | null;
   descricaoPorTraduzir?: number | null;
+  /** d2 (23-11-2026): o que o cliente escreveu, com os contactos que se taparam na descrição — só a equipa e o parceiro contratado. */
+  descricaoComContactos?: string | null;
   filesJson?: string | null;
   address?: string | null;
   city?: string | null;
@@ -327,6 +329,8 @@ export interface InsertSimulatorOrder {
   descricaoOriginal?: string | null;
   linguaDaDescricao?: string | null;
   descricaoPorTraduzir?: number | null;
+  /** d2 (23-11-2026): o que o cliente escreveu, com os contactos que se taparam na descrição — só a equipa e o parceiro contratado. */
+  descricaoComContactos?: string | null;
   filesJson?: string | null;
   address?: string | null;
   city?: string | null;

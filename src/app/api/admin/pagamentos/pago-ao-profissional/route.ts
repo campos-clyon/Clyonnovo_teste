@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   try {
     const [linhas] = (await pool.execute(
       `SELECT n.pedidoId, n.valorAcordado, n.taxaCliente, n.taxaProfissional,
-              n.formaDePagamento, n.confirmadoEm, n.ofertaClyon, o.valorFixoClyon,
+              n.formaDePagamento, n.confirmadoEm, n.ofertaClyon, o.valorFixoClyon, n.parceiroConfirmouEm,
               pr.name AS profissional, pr.email AS emailDoProfissional,
               pg.pagoEm AS clientePagouEm, pg.metodo AS comoEntrou
          FROM negociacoes n
@@ -105,7 +105,8 @@ export async function POST(req: NextRequest) {
     const porQuem = colab?.nome ?? "a CLYON";
 
     const adiantado = [
-      l.clientePagouEm == null ? "o cliente ainda não pagou" : null,
+      // d3 (23-11-2026): no modelo de 15-11 o «pagou» é o «Recebi» do parceiro (o registo), não o euPago.
+      l.clientePagouEm == null && l.parceiroConfirmouEm == null ? "o cliente ainda não pagou" : null,
       l.confirmadoEm == null ? "o cliente ainda não confirmou o trabalho" : null,
     ].filter(Boolean);
     const nota =

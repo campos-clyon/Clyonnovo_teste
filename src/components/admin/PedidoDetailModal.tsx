@@ -48,6 +48,7 @@ export type PedidoOrder = {
   description?: string | null;
   /** d46: a descrição noutra língua, à parte. */
   descricaoOriginal?: string | null;
+  descricaoComContactos?: string | null;
   linguaDaDescricao?: string | null;
   descricaoPorTraduzir?: number | null;
   descricaoNoutraLingua?: boolean;
@@ -1708,6 +1709,12 @@ export default function PedidoDetailModal({ id, token, isAdmin, colabId, onClose
                           onTraduzida={() => void fetchOrder()}
                           escuro
                         />
+                        {order.descricaoComContactos && (
+                          <p className="mt-2 whitespace-pre-wrap rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-200">
+                            <span className="font-semibold">Como o cliente a escreveu (só a equipa vê; os parceiros leem a versão sem contactos até serem contratados):</span>{" "}
+                            {order.descricaoComContactos}
+                          </p>
+                        )}
                       </div>
                     )}
 

@@ -41,7 +41,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // em vez de «40 – 120 €», nas páginas que a mostram (os cartões, as frases, as tabelas).
   // As três páginas legais dizem a data no próprio texto («Última atualização»).
   "/termos": "2026-11-15",
-  "/privacidade": "2026-11-22",
+  "/privacidade": "2026-11-23",
   "/cookies": "2026-10-29",
 
   // 29-10-2026: «parceiro» em vez de «profissional» em tudo o que o cliente lê

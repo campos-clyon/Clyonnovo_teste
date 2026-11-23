@@ -88,6 +88,7 @@ import { MARQUE_AS_HORAS_PRIMEIRO, totalEstimadoCurto } from "@/lib/horas-do-tra
 import { HorasDoTrabalho } from "./HorasDoTrabalho";
 import { FolhaDaMudanca } from "./FolhaDaMudanca";
 import { ComoRecebeDoTrabalho } from "./ComoRecebeDoTrabalho";
+import { PagamentoDoCliente } from "./PagamentoDoCliente";
 import { FICA_CONSIGO_E_PASSA_A_CLYON } from "@/lib/novo-modelo";
 import { MapaDoPercurso } from "./MapaDoPercurso";
 import { ConfirmarAHora } from "./ConfirmarAHora";
@@ -2422,6 +2423,11 @@ function DetalheDoTrabalho({
 
       {/* COMO RECEBE — d4: a forma que o cliente escolheu, o que passa à CLYON e até quando (do servidor). */}
       {fechado && pedido.comoRecebe ? <ComoRecebeDoTrabalho c={pedido.comoRecebe} /> : null}
+
+      {/* O PAGAMENTO DO CLIENTE — d3 (23-11-2026): «Sim, recebi» / «Ainda não recebi» (do servidor). */}
+      {fechado && pedido.pagamentoRegistado && pedido.negociacaoId ? (
+        <PagamentoDoCliente negociacaoId={pedido.negociacaoId} pagamento={pedido.pagamentoRegistado} />
+      ) : null}
 
       {/* A FATURA DO TRABALHO — d10: só num trabalho contratado do modelo de 15-11 (o servidor decide). */}
       {fechado && pedido.negociacaoId ? <FaturaDoTrabalho negociacaoId={pedido.negociacaoId} /> : null}

@@ -205,6 +205,7 @@ describe("o ecrã do pedido e a lista", () => {
 describe("a R5 manda a hora do pagamento", () => {
   it("o pagamento leva `pagoEm` em ISO ao lado do texto", () => {
     const r5 = readFileSync(join(process.cwd(), "src", "lib", "pedidos-do-cliente.ts"), "utf8");
-    expect(r5).toContain("pagoEm: pago ? isoOuNulo(pago.pagoEm) : null,");
+    // d3 (23-11-2026): no modelo de 15-11 a hora do «pago» é a do «Recebi» do parceiro.
+    expect(r5).toContain("pagoEm: aoParceiro ? aoParceiro.registo.parceiroConfirmouEm : pago ? isoOuNulo(pago.pagoEm) : null,");
   });
 });

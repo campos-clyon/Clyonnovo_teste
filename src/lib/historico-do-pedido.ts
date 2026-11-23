@@ -41,9 +41,16 @@ export const ACONTECIMENTOS_DO_DINHEIRO = [
   "comprovativo_do_pagamento",
   "pagamento_conferido_no_extrato",
   "levantamento_pago",
+  // d3 (23-11-2026): o pagamento ao parceiro, dito pelo cliente e confirmado pelo parceiro.
+  "cliente_diz_que_pagou",
+  "parceiro_recebeu",
+  "parceiro_nao_recebeu",
 ] as const;
 
 const NOME_DO_ACONTECIMENTO: Record<string, string> = {
+  cliente_diz_que_pagou: "O cliente diz que pagou ao parceiro",
+  parceiro_recebeu: "O parceiro confirmou que recebeu",
+  parceiro_nao_recebeu: "O parceiro diz que ainda não recebeu",
   negociacao_fechada: "Trabalho fechado com o profissional",
   execucao_confirmada: "Trabalho confirmado",
   pagamento_declarado: "Pagamento declarado ao dar o trabalho por feito",

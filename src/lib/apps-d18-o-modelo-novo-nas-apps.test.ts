@@ -124,7 +124,8 @@ describe("app Pro — a faixa do valor em atraso, com os 4 dias e «Pagar o valo
 });
 
 describe("app Pro e painel — a faixa dos dados para receber é a do CEO (d11 v2)", () => {
-  const semDados = { iban: "", ibanTitular: "", mbway: "", regimeIva: "normal", regimeIvaConfirmadoEm: null, estado: "aprovado", aprovadoEm: "2026-10-01T10:00:00Z" };
+  // d6 (23-11-2026): a data do regime é por parceiro — a frase com «até 30 de novembro» é a de quem já aceitou os Termos.
+  const semDados = { iban: "", ibanTitular: "", mbway: "", regimeIva: "normal", regimeIvaConfirmadoEm: null, estado: "aprovado", aprovadoEm: "2026-10-01T10:00:00Z", aceitouOsTermosAtuais: true };
 
   it("até 22-11 a frase é a da faixa, e o botão «Completar o perfil» é o mesmo", () => {
     const e = estadoDosDadosParaReceber(semDados, NO_DIA);

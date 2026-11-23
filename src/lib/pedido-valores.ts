@@ -172,7 +172,19 @@ export function vistaDoProfissional(pedido: Record<string, unknown>): VistaDoPro
   for (const campo of CAMPOS_VISIVEIS_AO_PROFISSIONAL) {
     if (pedido[campo] !== undefined) vista[campo] = pedido[campo];
   }
+  // d2 (23-11-2026): antes da escolha, o código postal vai só com os 4 primeiros dígitos.
+  if (vista.postalCode != null) vista.postalCode = codigoPostalSemOsUltimos(vista.postalCode);
   return vista;
+}
+
+/**
+ * «2975-123» → «2975»: o que o parceiro vê ANTES de ser contratado (d2,
+ * 23-11-2026). Quatro dígitos e a localidade chegam para saber se vale a pena
+ * propor; os três do fim, com a rua, apontam a uma casa.
+ */
+export function codigoPostalSemOsUltimos(cp: unknown): string | null {
+  const quatro = String(cp ?? "").replace(/D/g, "").slice(0, 4);
+  return quatro.length === 4 ? quatro : null;
 }
 
 /**
@@ -206,6 +218,9 @@ export function vistaDoProfissionalContratado(
   for (const campo of CAMPOS_VISIVEIS_DEPOIS_DE_CONTRATADO) {
     if (pedido[campo] !== undefined) vista[campo] = pedido[campo];
   }
+  // d2: contratado, lê o que o cliente escreveu (com os contactos que antes se taparam).
+  const comContactos = pedido.descricaoComContactos;
+  if (typeof comContactos === "string" && comContactos.trim()) vista.description = comContactos;
   return vista;
 }
 

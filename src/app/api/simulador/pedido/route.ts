@@ -10,6 +10,7 @@ import {
 } from "@/lib/db";
 import { modeloDeHoje } from "@/lib/iva-incluido";
 import { valoresDoQueOClienteEscreveu } from "@/lib/orcamento-do-cliente";
+import { descricaoSemContactos } from "@/lib/filtro-de-contactos";
 import type { InsertSimulatorOrder } from "../../../../../drizzle/schema";
 import {
   ENTRE_PARA_ENVIAR,
@@ -432,7 +433,8 @@ export async function POST(req: NextRequest) {
 
     const row: InsertSimulatorOrder = {
       serviceType: order.serviceType || null,
-      description: order.description || null,
+      // d2 (23-11-2026): sem telefones nem emails; o que o cliente escreveu fica à parte, só para a equipa.
+      ...descricaoSemContactos(order.description || null),
       filesJson: anexos.length > 0 ? JSON.stringify(anexos) : null,
       // Morada principal: para mudança guardamos a origem; para outros o endereço único
       /*

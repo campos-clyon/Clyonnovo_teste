@@ -41,6 +41,7 @@ import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { agirSobreOsEscolhidos, eAccaoDosEscolhidos } from "@/lib/escolhidos-sem-resposta-no-servidor";
 import { ACCAO_DO_FECHO, lerRespostaDoFecho } from "@/lib/fecho-do-modelo-novo";
 import { responderAoFecho } from "@/lib/fecho-do-modelo-novo-na-base";
+import { ACCAO_JA_PAGUEI, dizerQueJaPagou } from "@/lib/pagamento-registado-no-servidor";
 
 /**
  * O CLIENTE AGE NUM PEDIDO — uma função só, para as três portas (d8, R8,
@@ -87,6 +88,8 @@ export const ACCOES_SO_DO_CLIENTE = [
   "pedir_a_clyon_que_procure",
   // O fecho do modelo novo (d15, 13-11-2026): «O trabalho já foi feito?», 48 h depois da data sem «Está feito».
   "trabalho_ja_feito",
+  // O pagamento ao parceiro registado (d3, 23-11-2026): «Já paguei a {parceiro}».
+  "ja_paguei",
 ] as const;
 
 export function eAccaoSoDoCliente(accao: unknown): boolean {
@@ -120,6 +123,8 @@ export type CorpoDoCliente = {
   versao?: unknown;
   /** A marca da folha da mudança que ele tem no ecrã (`horas.folha.marca`) — o-que-o-cliente-viu.ts. */
   marcaDaFolha?: unknown;
+  /** Como pagou, em «Já paguei» (d3): «transferencia», «mbway» ou «dinheiro». */
+  forma?: unknown;
   /** A resposta a «O trabalho já foi feito?» (d15): «sim» ou «nao». */
   resposta?: unknown;
   /** «Escolher outro parceiro» (d6): os ids dos cartões escolhidos e a assinatura do preço de cada um. */
@@ -298,6 +303,15 @@ export async function agirComoCliente(a: {
       const resposta = lerRespostaDoFecho(corpo.resposta);
       if (!resposta) return falha(400, "Diga se o trabalho já foi feito.");
       return responderAoFecho({ negociacaoId, pedidoId, resposta, onde: NA_PORTA[a.porta], agora: a.agora });
+    }
+
+    /*
+     * ── «JÁ PAGUEI A {PARCEIRO}» — d3, 23-11-2026 ─────────────────────────
+     * No modelo de 15-11 o cliente paga diretamente ao parceiro; a CLYON só
+     * regista (não toca no dinheiro). Fica «à espera do Recebi» do parceiro.
+     */
+    if (accao === ACCAO_JA_PAGUEI) {
+      return dizerQueJaPagou({ pedidoId, negociacaoId, forma: corpo.forma, onde: NA_PORTA[a.porta], autorNome: a.autorNome });
     }
 
     // ── Confirmar que o profissional chegou (30-10-2026) ─────────────────
