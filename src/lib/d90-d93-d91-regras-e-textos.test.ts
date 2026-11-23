@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 /*
  * d90, d93 e a parte do I&D da d91 (CEO e dono, 23-11-2026) — as regras puras e
  * os textos. Números e nomes INVENTADOS (o repositório é público).
+ * O relógio: datas explícitas em cada chamada que depende do modelo.
  */
 
 import {
@@ -205,18 +206,18 @@ describe("d93 — a conversa parada a meio: lembretes que retomam, e o rascunho 
       serviceType: "recolha_monos",
       contactName: "Odília",
       description: "um sofá de três lugares e uma cómoda",
-      address: "Rua das Amendoeiras Tortas 12",
+      address: "Rua das Amendoeiras 12",
       postalCode: "2800-123",
       city: "Almada",
     };
     const anotado = oQueJaEstaAnotado(d);
     expect(anotado.some((l) => l.startsWith("Serviço: "))).toBe(true);
-    expect(anotado.some((l) => l.startsWith("Morada: Rua das Amendoeiras Tortas 12"))).toBe(true);
+    expect(anotado.some((l) => l.startsWith("Morada: Rua das Amendoeiras 12"))).toBe(true);
     expect(anotado.some((l) => l.includes("—"))).toBe(false);
     for (const passo of ["lembrete1", "lembrete2", "lembrete3"] as const) {
       const t = textoDaConversaParada(passo, { nome: "Odília", servico: "recolha de monos", anotado, pergunta: perguntaParaContinuar("andar", d) });
       expect(t).toContain("Já tenho anotado:");
-      expect(t).toContain("- Morada: Rua das Amendoeiras Tortas 12");
+      expect(t).toContain("- Morada: Rua das Amendoeiras 12");
       expect(t).not.toContain(perguntaDo("servico", {}, false));
       // A resposta dele cai na pergunta certa.
       expect(passoDaPergunta(t)).toBe("andar");
@@ -292,19 +293,19 @@ describe("d93 — o cliente cancela pela conversa", () => {
   });
 
   it("não contactar: o número guarda-se pela impressão, igual em todas as formas, e nunca escrito", () => {
-    const a = chaveDoNumero("+351 912 000 111");
+    const a = chaveDoNumero("+351 910 000 111");
     expect(a).toMatch(/^[0-9a-f]{64}$/);
-    expect(chaveDoNumero("912000111")).toBe(a);
-    expect(chaveDoNumero("00351912000111")).toBe(a);
-    expect(chaveDoNumero("912000112")).not.toBe(a);
+    expect(chaveDoNumero("910000111")).toBe(a);
+    expect(chaveDoNumero("00351910000111")).toBe(a);
+    expect(chaveDoNumero("910000112")).not.toBe(a);
     expect(chaveDoNumero("123")).toBeNull();
-    expect(a).not.toContain("912000111");
+    expect(a).not.toContain("910000111");
   });
 });
 
 /* ── d91 ─────────────────────────────────────────────────────────────────── */
 
-const LEMBRETE = { pedidoId: 612, nome: "Rosalinda", servico: "recolha de monos", semIva: 100, total: 123, parceiro: "Transportes Lua", validaAte: "2026-11-27", nota: { media: 4.8, quantas: 12 } };
+const LEMBRETE = { pedidoId: 612, nome: "Rosalinda", servico: "recolha de monos", semIva: 100, total: 123, parceiro: "Recolhas Exemplo", validaAte: "2026-11-27", nota: { media: 4.8, quantas: 12 } };
 
 describe("d91 — os textos novos, com os marcadores letra a letra", () => {
   it("3.1 e 3.3: a apresentação diz porque pergunta; as desculpas seguram o pedido", () => {
@@ -370,8 +371,8 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
     expect(textoDoFechoAoCliente(612)).toBe(
       "Fechámos o pedido #612, porque não tivemos resposta. Se ainda precisar, responda aqui e reabrimo-lo para os parceiros. Obrigada pelo seu tempo.",
     );
-    expect(textoDoAvancarNumTrabalhoClyon(612, "Transportes Lua", "Rosalinda")).toBe(
-      "Obrigada, Rosalinda! O pedido #612 fica reservado com o parceiro Transportes Lua. Uma pessoa da equipa fala consigo por aqui para combinar o dia.",
+    expect(textoDoAvancarNumTrabalhoClyon(612, "Recolhas Exemplo", "Rosalinda")).toBe(
+      "Obrigada, Rosalinda! O pedido #612 fica reservado com o parceiro Recolhas Exemplo. Uma pessoa da equipa fala consigo por aqui para combinar o dia.",
     );
     const pergunta = textoDaConfirmacaoDoCancelamento(612);
     expect(pergunta.startsWith("Confirma que quer cancelar o pedido #612? Responda CANCELAR.")).toBe(true);
@@ -409,10 +410,10 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
   });
 
   it("o banco de objecções: a foto amanhã, a limpeza, e a escolha com condição (que não fecha nada)", () => {
-    expect(respostaFrequente("Posso enviar a foto amanhã?")).toBe(PODE_ENVIAR_DEPOIS);
-    expect(respostaFrequente("A limpeza está incluída?")).toBe(A_LIMPEZA_SO_NA_PROPOSTA);
-    expect(escolheComCondicao("Escolho o Transportes Lua com a condição de ser até quinta-feira")).toBe(true);
-    expect(escolheComCondicao("Aceito a proposta do Transportes Lua")).toBe(false);
+    expect(respostaFrequente("Posso enviar a foto amanhã?", em("2026-11-23T10:00"))).toBe(PODE_ENVIAR_DEPOIS);
+    expect(respostaFrequente("A limpeza está incluída?", em("2026-11-23T10:00"))).toBe(A_LIMPEZA_SO_NA_PROPOSTA);
+    expect(escolheComCondicao("Escolho o Recolhas Exemplo com a condição de ser até quinta-feira")).toBe(true);
+    expect(escolheComCondicao("Aceito a proposta do Recolhas Exemplo")).toBe(false);
     expect(ESCOLHA_COM_CONDICAO_ANOTADA).toContain("Até lá nada fica marcado nem pago.");
   });
 
@@ -443,7 +444,7 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
       PODE_ENVIAR_O_QUE_FALTA,
       textoDoFechoAoCliente(612),
       textoDaConfirmacaoDoCancelamento(612),
-      textoDoAvancarNumTrabalhoClyon(612, "Transportes Lua", "Oliver"),
+      textoDoAvancarNumTrabalhoClyon(612, "Recolhas Exemplo", "Oliver"),
       textoDoAvancarNumTrabalhoClyon(612, null),
       respostaAoVaiPensar("depois"),
       respostaAoVaiPensar("outras_empresas", "sexta-feira, 27/11"),

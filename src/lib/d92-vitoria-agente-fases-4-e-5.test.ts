@@ -33,6 +33,7 @@ import { textoAnonimizado } from "./vitoria-agente/anonimizar";
 import { AVISO_AO_MODELO } from "./vitoria-agente/aviso-ao-modelo";
 import { ESFORCO_POR_OMISSAO } from "./vitoria-agente/custo";
 import { REGRAS_DO_PAGAMENTO_PARA_O_MODELO } from "./o-pagamento-da-vitoria";
+import { textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const caso = (n: number) => CONVERSAS_DE_TESTE[n - 1];
@@ -195,7 +196,9 @@ describe("aceitar, perguntar ao parceiro e cancelar só propõem", () => {
   it("cancelar: com contrato ou data passa à equipa; sem, a frase do CANCELAR", async () => {
     const e = estadoNovo();
     const r = await correrFerramenta("cancelar_pedido", { pedido: 669, motivo: "já não precisa" }, ferramentasDoCaso(caso(7)), e);
-    expect(r.resultado.fraseQueTemDeIrNaResposta).toBe("Confirma que quer cancelar o pedido #669? Responda CANCELAR.");
+    // A pergunta de sempre (d2), com a frase da d91 (3.17) que salva os «3» de preço ou de data.
+    expect(r.resultado.fraseQueTemDeIrNaResposta).toBe(textoDaConfirmacaoDoCancelamento(669));
+    expect(String(r.resultado.fraseQueTemDeIrNaResposta).startsWith("Confirma que quer cancelar o pedido #669? Responda CANCELAR.")).toBe(true);
     const comData = { ...caso(7), pedido: { ...caso(7).pedido, dataAgendada: "2026-11-26 10:00:00" } } as CasoDeTeste;
     const r2 = await correrFerramenta("cancelar_pedido", { pedido: 669, motivo: "x" }, ferramentasDoCaso(comData), estadoNovo());
     expect(r2.resultado).toMatchObject({ passarAEquipa: true });
