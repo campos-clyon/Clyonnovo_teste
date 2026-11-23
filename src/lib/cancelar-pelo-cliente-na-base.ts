@@ -141,7 +141,7 @@ export async function cancelarPeloCliente(pedidoId: number, telefone: string): P
   const { quemTemOTrabalhoClyon } = await import("./db");
   const doTrabalhoClyon = p.eClyon ? (await quemTemOTrabalhoClyon(pedidoId).catch(() => ({ vivos: [] }))).vivos : [];
 
-  const r = await cancelarPedido(pedidoId);
+  const r = await cancelarPedido(pedidoId, { motivo: MOTIVO });
   if (!r) return { ok: false, porque: "o pedido não se cancelou", daEquipa: false };
   await gravarMotivoDoFecho(pedidoId, "ja_nao_precisa", null, null).catch(() => {});
 
