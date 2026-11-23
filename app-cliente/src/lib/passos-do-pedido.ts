@@ -80,7 +80,7 @@ type NegociacaoDosPassos = { profissional: { nome: string } } & Pick<
   Partial<Pick<Negociacao, "proximoEm" | "chegadaConfirmadaEm" | "pagamento">>;
 
 const concluido = (n: NegociacaoDosPassos | null) => !!n && (n.fase === "confirmado" || n.fase === "pago");
-const cancelado = (p: Pick<PedidoDosPassos, "estadoTexto">) => /^Cancelado/i.test(p.estadoTexto);
+const cancelado = (p: Pick<PedidoDosPassos, "estadoTexto">) => /^(Cancelado|Arquivado)/i.test(p.estadoTexto);
 
 /**
  * O pagamento conta como passo? Não quando o cliente paga ao parceiro no local,
@@ -253,7 +253,7 @@ export function avisoNoTopoSeVe(caminho: string, pedidoId: number): boolean {
 export type TomDoEstado = "movimento" | "aviso" | "bom" | "apagado" | "normal";
 export function tomDoEstado(p: Pick<PedidoNaLista, "estadoTexto" | "novidade">): TomDoEstado {
   const e = p.estadoTexto;
-  if (/^Cancelado/i.test(e)) return "apagado";
+  if (/^(Cancelado|Arquivado)/i.test(e)) return "apagado";
   if (/^Conclu[íi]do/i.test(e)) return "bom";
   if (p.novidade || /^Por confirmar/i.test(e) || /precisa de mais detalhes/i.test(e)) return "aviso";
   if (/ (vai a caminho|está próximo|chegou)$/.test(e) || /^Dia combinado/.test(e) || /^Contratado/.test(e)) return "movimento";

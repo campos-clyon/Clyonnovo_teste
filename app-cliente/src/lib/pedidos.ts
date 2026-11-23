@@ -493,7 +493,7 @@ export function textoDeContratar(n: Negociacao): { titulo: string; texto: string
 export function textoDaEspera(r: Pick<RespostaDoPedido, "pedido" | "negociacoes"> & { textos?: Partial<TextosDoPedido> }): string | null {
   if (r.pedido.trabalhoClyon || r.negociacoes.some((n) => n.estado === "acordada")) return null;
   if (propostasEmAberto(r).length > 0) return null;
-  if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Concluído") return null;
+  if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Arquivado" || r.pedido.estadoTexto === "Concluído") return null;
   // d4: a frase do estado vem da R5 e mostra-se tal e qual (a mesma do site); sem ela, fica o que havia.
   const frase = r.textos?.fraseDoEstado?.trim();
   if (frase) return frase;
@@ -747,7 +747,7 @@ export const rotaDaLista = (pagina: number, s: Separador) => `${ROTA_DOS_PEDIDOS
  */
 export function noSeparador(p: Pick<PedidoNaLista, "estadoTexto">, s: Separador): boolean {
   if (s === "todos") return true;
-  const cancelado = /^Cancelado/i.test(p.estadoTexto);
+  const cancelado = /^(Cancelado|Arquivado)/i.test(p.estadoTexto);
   const concluido = /^Conclu[íi]do/i.test(p.estadoTexto);
   if (s === "cancelados") return cancelado;
   if (s === "concluidos") return concluido;

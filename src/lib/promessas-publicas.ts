@@ -125,4 +125,12 @@ export const PRECO_FECHADO = `${PRECO_FECHADO_SEM_AS_FATURAS} ${DUAS_FATURAS_POR
 export const PEDIDO_A_CONFERIR =
   "A CLYON está a conferir o seu pedido. Quando seguir para os parceiros da sua zona, avisamos por aqui e por WhatsApp.";
 export const VALOR_UNICO_EM_PREPARACAO = "A CLYON está a preparar o valor para o seu pedido.";
+/**
+ * O PEDIDO ARQUIVADO PELO SEGUIMENTO (d83) — d1 de 22/11. Sem resposta do cliente, a
+ * CLYON arquiva-o; a app e o site dizem «Arquivado» e a frase da Vitória
+ * («pode voltar a pedir quando quiser»), nunca «Cancelado».
+ */
+export const ESTADO_ARQUIVADO = "Arquivado";
+export const PEDIDO_ARQUIVADO = "O pedido ficou fechado; pode voltar a pedir quando quiser.";
+
 export const VALOR_UNICO_ACEITE = "Aceitou o valor. A CLYON está a escolher o parceiro.";

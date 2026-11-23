@@ -49,6 +49,6 @@ export function valorUnicoParaMostrar(r: {
   const v = valorUnicoDe(r.pedido);
   if (!v || r.pedido.trabalhoClyon) return null;
   if (r.negociacoes.some((n) => n.estado === "acordada")) return null;
-  if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Concluído") return null;
+  if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Arquivado" || r.pedido.estadoTexto === "Concluído") return null;
   return v;
 }

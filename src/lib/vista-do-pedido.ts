@@ -52,6 +52,8 @@ export async function negociacoesDaVistaDoCliente(
     /** Para saber se o trabalho exige a guia de resíduos (04-11-2026, d10.1). */
     serviceType?: unknown;
     precisaGuiaTransporte?: unknown;
+    /** Para o cliente ver «Concluído» num pedido que fechou sozinho (d76, d1 de 22/11). */
+    status?: unknown;
   },
   agora: Date = new Date(),
 ): Promise<NegociacaoDoCliente[]> {
@@ -108,6 +110,7 @@ export async function negociacoesDaVistaDoCliente(
       agora,
       // A guia antes de contratar (04-11-2026, d10.1): o cliente vê porquê.
       exigeGuia: trabalhoExigeGuia(pedido),
+      pedidoConcluido: pedido.status === "concluido",
       novoModeloDoServidor: doServidor.get(Number(n.id)) ?? null,
     }),
   );

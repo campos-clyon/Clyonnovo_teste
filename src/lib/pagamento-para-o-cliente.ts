@@ -5,6 +5,7 @@ import { pagamentosDaNegociacao, type Pagamento } from "@/lib/pagamentos-na-base
 import { eDoCliente } from "@/lib/parte-do-pagamento";
 import type { TrabalhoAPagar } from "@/lib/acesso-ao-pagamento";
 import { acertoDoFim } from "@/lib/horas-do-trabalho";
+import { PAGUE_PELA_REFERENCIA_DA_CLYON } from "@/lib/palavras-do-pagamento";
 import { contaDoCliente } from "@/lib/taxas-plataforma";
 import {
   METODO_TRANSFERENCIA,
@@ -117,6 +118,12 @@ export type EstadoDoPagamentoParaOCliente = {
   transferencia: TransferenciaParaOCliente | null;
   /** O cliente escolheu a transferência e ela ainda não foi dada por recebida. */
   aEsperaDaTransferencia: boolean;
+  /**
+   * O ACORDO FINAL (d78, lido na vista do cliente desde a d1 de 22/11): o valor
+   * acordado, sem IVA, e a frase que substitui o botão de pagar. `null` sem
+   * acordo. Com ele, `valores` já são os do acordo e `disponivel` é falso.
+   */
+  acordoFinal: { valor: number; frase: string } | null;
 };
 
 /** O valor que um pagamento pago trouxe: o que o euPago disse, ou o pedido. */
@@ -175,7 +182,9 @@ export async function estadoDoPagamentoParaOCliente(
      */
     !temDividaDoProfissional(trabalho.formaDePagamento, trabalho.modelo) &&
     // O modelo de 15-11 (d10): paga ao parceiro; a caixa não aparece.
-    !trabalho.novoModelo;
+    !trabalho.novoModelo &&
+    // Com um acordo final (d78) o cliente paga a referência que a CLYON lhe envia: sem botão de pagar (d1, 22/11).
+    trabalho.acordoFinal == null;
 
   /*
    * A DÍVIDA DO PROFISSIONAL NÃO SAI PARA O CLIENTE — 28-10-2026 (d10).
@@ -191,14 +200,18 @@ export async function estadoDoPagamentoParaOCliente(
   const daDiferenca = doCliente ? linhas.filter((l) => l.parte === "diferenca") : [];
   const acerto = doCliente ? acertoDasHoras(trabalho, linhas) : null;
   const pago = doClienteMesmo.some((l) => l.estado === "pago");
-  const totalComIva = quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, true);
+  // O valor do acordo final é sem IVA e sem fatura: é o que o cliente paga, e os dois números são o mesmo.
+  const acordo = trabalho.acordoFinal ?? null;
+  const totalComIva = acordo ?? quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, true);
   const totalSemIva =
-    trabalho.modelo === "iva_incluido"
+    acordo != null
+      ? acordo
+      : trabalho.modelo === "iva_incluido"
       ? contaDoCliente(trabalho.acordado, trabalho.taxas).semIva
       : quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, false);
   const transferencia = transferenciaParaOCliente({
     // Só se lê a conta (uma ida à base) quando ela pode servir.
-    conta: !pago && doCliente && chegaParaTransferencia(totalComIva) ? await contaDaTransferenciaSemFalhar() : null,
+    conta: acordo == null && !pago && doCliente && chegaParaTransferencia(totalComIva) ? await contaDaTransferenciaSemFalhar() : null,
     totalComIva,
     totalSemIva,
     pedidoId: trabalho.pedidoId,
@@ -217,16 +230,16 @@ export async function estadoDoPagamentoParaOCliente(
      * mesmo pagamento.
      */
     valores: {
-      semFactura: quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, false),
-      comFactura: quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, true),
+      semFactura: acordo ?? quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, false),
+      comFactura: acordo ?? quantoOClientePaga(trabalho.acordado, trabalho.taxas, trabalho.modelo, true),
     },
     /*
      * Com IVA incluído (01-10-2026) os dois números são o mesmo — há factura
      * em todas as vendas — e o ecrã deixa de perguntar se ele a quer.
      */
-    ivaIncluido: trabalho.modelo === "iva_incluido",
+    ivaIncluido: acordo == null && trabalho.modelo === "iva_incluido",
     desdobramento:
-      trabalho.modelo === "iva_incluido"
+      acordo == null && trabalho.modelo === "iva_incluido"
         ? (({ semIva, iva, total }) => ({ semIva, iva, total }))(contaDoCliente(trabalho.acordado, trabalho.taxas))
         : null,
     /*
@@ -235,7 +248,8 @@ export async function estadoDoPagamentoParaOCliente(
      * o ecrã do cliente não o mostra como «recebemos o seu pagamento».
      */
     doCliente,
-    transferencia,
+    transferencia: acordo != null ? null : transferencia,
+    acordoFinal: acordo != null ? { valor: acordo, frase: PAGUE_PELA_REFERENCIA_DA_CLYON } : null,
     aEsperaDaTransferencia:
       !pago &&
       doClienteMesmo.some(

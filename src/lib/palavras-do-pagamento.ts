@@ -8,6 +8,9 @@
  * `frases-do-pagamento.ts`, que reexporta estas.
  */
 
+/** O que o cliente com um acordo final (d78) lê em vez do botão de pagar — d1 de 22/11. */
+export const PAGUE_PELA_REFERENCIA_DA_CLYON = "Pague pela referência que a CLYON lhe enviou.";
+
 export const PRECO = "Preço";
 export const SERVICO = "Serviço";
 export const SEM_IVA = "(sem IVA)";

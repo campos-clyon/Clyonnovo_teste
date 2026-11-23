@@ -385,7 +385,7 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
       <EscolhidosSemResposta
         pedidoId={pedidoId}
         pedir={pedir}
-        activo={valeAPenaLer({ trabalhoClyon: !!p.trabalhoClyon, contratado: !!contratada, fechado: p.estadoTexto === "Cancelado" || p.estadoTexto === "Concluído" })}
+        activo={valeAPenaLer({ trabalhoClyon: !!p.trabalhoClyon, contratado: !!contratada, fechado: p.estadoTexto === "Cancelado" || p.estadoTexto === "Arquivado" || p.estadoTexto === "Concluído" })}
         releitura={releitura}
         aoMudar={depoisDeAgir}
       />

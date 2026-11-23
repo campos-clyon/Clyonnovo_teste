@@ -240,6 +240,8 @@ export function negociacaoParaAVista(
     horasPrevistas?: number | null;
     perfil?: PerfilNaVista | null;
     agora: Date;
+    /** O pedido já fechou («concluido», d76): a fase do cliente é a de um trabalho dado por feito (d1 de 22/11). */
+    pedidoConcluido?: boolean;
     /** O pedido exige a guia de resíduos (`trabalhoExigeGuia`) — 04-11-2026, d10.1. */
     exigeGuia?: boolean;
     /**
@@ -259,6 +261,7 @@ export function negociacaoParaAVista(
     execucaoEnviadaEm: n.execucaoEnviadaEm,
     confirmadoEm: n.confirmadoEm,
     pagoEm: n.pagoEm,
+    pedidoConcluido: o.pedidoConcluido,
   });
   const criadaEm = instanteDaBase(n.createdAt ?? null);
   return {

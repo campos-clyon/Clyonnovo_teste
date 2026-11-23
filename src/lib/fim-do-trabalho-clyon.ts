@@ -81,6 +81,8 @@ export function fimDoTrabalhoClyonParaOCliente(
      * pagamento»): o cliente lê aqui o mesmo dia (d20, 05-11-2026).
      */
     dataAgendada?: Date | string | null;
+    /** O pedido já fechou (d76): o cliente vê o trabalho concluído, sem «confirme» (d1 de 22/11). */
+    status?: unknown;
   },
   cruas: readonly LinhaDoTrabalhoClyon[],
 ): FimDoTrabalhoClyon | null {
@@ -88,7 +90,7 @@ export function fimDoTrabalhoClyonParaOCliente(
   const a = cruas.find((n) => n.estado === "acordada");
   if (!a) return null;
   const nome = String(a.profissionalNome ?? "").trim() || "o parceiro";
-  const fase = faseParaOCliente({ estado: a.estado, execucaoEnviadaEm: a.execucaoEnviadaEm, confirmadoEm: a.confirmadoEm, pagoEm: a.pagoEm });
+  const fase = faseParaOCliente({ estado: a.estado, execucaoEnviadaEm: a.execucaoEnviadaEm, confirmadoEm: a.confirmadoEm, pagoEm: a.pagoEm, pedidoConcluido: pedido.status === "concluido" });
   const confirmado = fase === "confirmado" || fase === "pago";
   const avaliadoPeloCliente = a.avaliadoEm != null && !daEquipa(a);
   const dia = a.dataCombinada ?? pedido.dataAgendada ?? null;

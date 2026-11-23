@@ -99,6 +99,8 @@ type Estado = {
     limite: number;
   } | null;
   aEsperaDaTransferencia?: boolean;
+  /** O acordo final (d78): o valor acordado e a frase que ocupa o lugar do botão de pagar (d1, 22/11). */
+  acordoFinal?: { valor: number; frase: string } | null;
 };
 
 const euros = (n: number) => `${n.toFixed(2).replace(".", ",")} €`;
@@ -206,7 +208,7 @@ export default function PagarTrabalho({
 
   /* O bloco de pagar está à vista? A página tira o cartão do preço de cima quando está. */
   const mostraOBloco = Boolean(
-    estado && !estado.pago && !soSePago && (aberto || transferenciaPendente || estado.disponivel),
+    estado && !estado.pago && !soSePago && (aberto || transferenciaPendente || estado.disponivel || estado.acordoFinal),
   );
   useEffect(() => {
     if (!aoDecidir) return;
@@ -348,6 +350,16 @@ export default function PagarTrabalho({
     );
   }
 
+  // Com um acordo final (d78) e sem referência à vista: o valor acordado e a frase, sem botão de pagar (d1, 22/11).
+  if (!aberto && !estado.disponivel && estado.acordoFinal) {
+    return (
+      <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4 text-left">
+        {titulo && <p className="mb-3 text-sm font-semibold text-slate-900">{titulo}</p>}
+        <p className="text-sm font-bold text-slate-900">Valor acordado: {euros(estado.acordoFinal.valor)}</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-600">{estado.acordoFinal.frase}</p>
+      </div>
+    );
+  }
   if (!aberto && !estado.disponivel) return null;
 
 

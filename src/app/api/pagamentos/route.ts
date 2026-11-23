@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
   const acesso = await trabalhoQueSePodePagar(
     Number(p.get("pedidoId")),
     Number(p.get("negociacaoId")),
-    { token: tokenDoPagamentoNoPedido(req), email: await quemEstaAPagar(req) },
+    { token: tokenDoPagamentoNoPedido(req), email: await quemEstaAPagar(req), soParaVer: true },
   );
   if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
 

@@ -33,7 +33,7 @@ import { fimDoTrabalhoClyonParaOCliente, type LinhaDoTrabalhoClyon } from "@/lib
 import { ORCAMENTOS_A_DISTANCIA, ORCAMENTO_A_DISTANCIA } from "@/lib/orcamento-a-distancia";
 import { RECUSAR } from "@/lib/recusar-proposta";
 import { legendaDaContraproposta } from "@/lib/frase-da-contraproposta";
-import { AINDA_SEM_PROPOSTAS } from "@/lib/promessas-publicas";
+import { AINDA_SEM_PROPOSTAS, ESTADO_ARQUIVADO, PEDIDO_ARQUIVADO } from "@/lib/promessas-publicas";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { negociacaoParaOEcra } from "@/lib/negociacao-no-ecra";
 import { alteracoesParaAApp, faseDaAlteracao } from "@/lib/alteracoes-do-cliente";
@@ -113,6 +113,7 @@ function contratadoDe(
   trabalhoClyon: boolean,
   cruas: LinhaCrua[],
   visiveis: NegociacaoDoCliente[],
+  pedidoConcluido = false,
 ): ContratadoDoPedido | null {
   if (trabalhoClyon) {
     const a = cruas.find((n) => n.estado === "acordada");
@@ -124,6 +125,7 @@ function contratadoDe(
             execucaoEnviadaEm: a.execucaoEnviadaEm,
             confirmadoEm: a.confirmadoEm,
             pagoEm: a.pagoEm,
+            pedidoConcluido,
           }),
           profissionalNome: a.profissionalNome,
           dataCombinada: a.dataCombinada ?? null,
@@ -199,10 +201,10 @@ export async function resumoDoPedidoParaOCliente(
   const porHora = lerBase(r.baseDoPreco) === "hora";
   const horasPrevistas = porHora ? horasPrevistasDaLinha(r as unknown as Record<string, unknown>) : null;
   const visiveis = negociacoesParaOCliente(cruas, trabalhoClyon, r.valorUnico).map((n) =>
-    negociacaoParaAVista(n as LinhaCrua & { estado: string; id: number }, { porCarga, porHora, horasPrevistas, agora }),
+    negociacaoParaAVista(n as LinhaCrua & { estado: string; id: number }, { porCarga, porHora, horasPrevistas, agora, pedidoConcluido: r.status === "concluido" }),
   );
   const cancelado = eCancelado(r.status, r.canceladoPeloCliente);
-  const contratado = contratadoDe(trabalhoClyon, cruas, visiveis);
+  const contratado = contratadoDe(trabalhoClyon, cruas, visiveis, r.status === "concluido");
   const precoEnviado = trabalhoClyon && !!r.propostaEnviadaEm;
   const precoAceite = trabalhoClyon && !!r.precoAceiteEm;
   const acordada = visiveis.find((n) => n.estado === "acordada") ?? null;
@@ -299,8 +301,8 @@ export type FiltroDaLista = (typeof FILTROS_DA_LISTA)[number];
 
 export function noFiltro(estadoTexto: string, filtro: FiltroDaLista): boolean {
   if (filtro === "concluidos") return estadoTexto === "Concluído";
-  if (filtro === "cancelados") return estadoTexto === "Cancelado";
-  if (filtro === "em_aberto") return estadoTexto !== "Concluído" && estadoTexto !== "Cancelado";
+  if (filtro === "cancelados") return estadoTexto === "Cancelado" || estadoTexto === "Arquivado";
+  if (filtro === "em_aberto") return estadoTexto !== "Concluído" && estadoTexto !== "Cancelado" && estadoTexto !== "Arquivado";
   return true;
 }
 
@@ -415,7 +417,7 @@ export async function listaDosPedidosDoCliente(
 /** O pagamento de um trabalho fechado, em texto — o mesmo estado do `GET /api/pagamentos`. Exportado para o teste que compara os dois (d13). */
 export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente, email: string) {
   if (n.estado !== "acordada" || n.fase === "a_negociar") return null;
-  const acesso = await trabalhoQueSePodePagar(pedidoId, n.id, { email });
+  const acesso = await trabalhoQueSePodePagar(pedidoId, n.id, { email, soParaVer: true });
   if (!acesso.ok) return null;
   const e = await estadoDoPagamentoParaOCliente(acesso.trabalho);
   const pago = e.doCliente ? e.pagamentos.find((p) => p.estado === "pago") ?? null : null;
@@ -439,6 +441,8 @@ export async function pagamentoParaAApp(pedidoId: number, n: NegociacaoDoCliente
   const semIvaDoParceiro = aoParceiro?.conta?.semIva ?? null;
   return {
     disponivel: e.disponivel,
+    // Com um acordo final (d78): o valor acordado e a frase que ocupa o lugar do botão (d1, 22/11).
+    acordoFinal: e.acordoFinal ? { valor: e.acordoFinal.valor, valorTexto: emEuros(e.acordoFinal.valor), frase: e.acordoFinal.frase } : null,
     pago: e.doCliente && e.pago,
     pagoEmTexto: pago ? quandoEmLisboa(pago.pagoEm) : null,
     // O instante, para o passo a passo da app de cliente («Pago · hoje, 17:42», 02-11-2026).
@@ -545,7 +549,7 @@ export async function pedidoDoClienteParaAApp(
     negociacoesDaVistaDoCliente(pedido, agora),
   ]);
 
-  const contratado = contratadoDe(trabalhoClyon, cruas, negociacoes);
+  const contratado = contratadoDe(trabalhoClyon, cruas, negociacoes, pedido.status === "concluido");
   const cancelado = eCancelado(pedido.status, o.canceladoPeloCliente);
   // d53: o «sim» ao valor único, se vale (posterior ao último envio).
   const valorUnicoAceite = valorUnicoAceiteValido(
@@ -644,6 +648,8 @@ export async function pedidoDoClienteParaAApp(
       id: pedido.id,
       servico: nomeDoServico(pedido.serviceType),
       estadoTexto: resumo.estadoTexto,
+      // Arquivado pelo seguimento (d83): a frase da Vitória, para a app a mostrar por baixo do estado (d1 de 22/11).
+      estadoFrase: resumo.estadoTexto === ESTADO_ARQUIVADO ? PEDIDO_ARQUIVADO : null,
       // A morada é dele: foi ele que a escreveu.
       morada: pedido.address ?? null,
       /*

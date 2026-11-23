@@ -142,6 +142,12 @@ export type CredencialDePagamento = {
   email?: string | null;
   /** O administrador já foi autenticado à porta da rota. Ver o aviso acima. */
   backoffice?: boolean;
+  /**
+   * SÓ PARA LER — d1 de 22/11. O estado do pagamento (o GET e a app) lê-se mesmo
+   * com um acordo final (d78) para mostrar o valor do acordo; criar pagamentos
+   * continua a dar 409. Como `backoffice`, NUNCA vem de um corpo de pedido.
+   */
+  soParaVer?: boolean;
 };
 
 export async function trabalhoQueSePodePagar(
@@ -229,7 +235,7 @@ export async function trabalhoQueSePodePagar(
   }
   // Com um acordo final (d78), o cliente paga a referência que a CLYON lhe envia — nunca outra conta pelo link.
   const acordoFinal = lerAcordoFinal(linha as { acordoFinalCliente?: unknown });
-  if (credencial.backoffice !== true && acordoFinal != null) {
+  if (credencial.backoffice !== true && credencial.soParaVer !== true && acordoFinal != null) {
     return { ok: false, estado: 409, erro: "Este trabalho paga-se pela referência que a CLYON lhe envia." };
   }
 

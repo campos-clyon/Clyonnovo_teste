@@ -510,14 +510,14 @@ export default function OrderDetailModal({ order, onClose, onOrderChange, onReca
               preco={order.precoClyon}
               enviarPara="/api/users/me/negociacao"
               pedidoId={order.id}
-              podeAceitar={order.estadoTexto !== "Cancelado"}
+              podeAceitar={order.estadoTexto !== "Cancelado" && order.estadoTexto !== "Arquivado"}
             />
           )}
 
           {/* «Há um problema» e «Pedir outra vez», como na app (S21, 29-10-2026). */}
           <AjudaDoPedido pedidoId={order.id} servico={order.serviceType ?? null} />
           {/* «Alterar o pedido» (S17): a rota decide se se aplica, se vai à CLYON, ou se já não se altera. */}
-          <AlterarPedido pedidoId={order.id} pode={order.estadoTexto !== "Concluído" && order.estadoTexto !== "Cancelado"} />
+          <AlterarPedido pedidoId={order.id} pode={order.estadoTexto !== "Concluído" && order.estadoTexto !== "Cancelado" && order.estadoTexto !== "Arquivado"} />
 
           {/* ── Conversa cliente ↔ assistente ── */}
           <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">

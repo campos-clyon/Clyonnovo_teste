@@ -36,6 +36,12 @@ export type Trabalho = {
    * nenhuma — o da CLYON por ele (`darPorEntreguePelaClyon`).
    */
   provaJson?: string | null;
+  /**
+   * O PEDIDO JÁ FECHOU («concluido») — d1 de 22/11. O fecho automático (d76)
+   * fecha o pedido pago dos dois lados sem o cliente confirmar; para ele, o
+   * trabalho já não está «por confirmar».
+   */
+  pedidoConcluido?: boolean;
 };
 
 /*
@@ -240,6 +246,11 @@ export function faseDoTrabalho(t: Trabalho): FaseDoTrabalho {
  * confirmar. O `pagoEm` só conta para o cliente depois da confirmação.
  */
 export function faseParaOCliente(t: Trabalho): FaseDoTrabalho {
+  // Um pedido já fechado (d76) não pede ao cliente que confirme: vê «Concluído» (d1 de 22/11).
+  if (t.pedidoConcluido === true) {
+    const f = faseDoTrabalho(t);
+    return f === "a_executar" || f === "a_confirmar" ? "confirmado" : f;
+  }
   return faseDoTrabalho(data(t.confirmadoEm) ? t : { ...t, pagoEm: null });
 }
 

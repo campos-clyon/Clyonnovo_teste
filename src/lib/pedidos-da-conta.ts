@@ -92,6 +92,7 @@ export function negociacoesDaContaNoEcra(
         agora,
         // A guia antes de contratar (04-11-2026, d10.1): o entulho, ou a guia pedida.
         exigeGuia: trabalhoExigeGuia(pedido as Record<string, unknown>),
+        pedidoConcluido: (pedido as { status?: unknown }).status === "concluido",
         novoModeloDoServidor: doServidor.get(Number(n.id)) ?? null,
       }),
       base,

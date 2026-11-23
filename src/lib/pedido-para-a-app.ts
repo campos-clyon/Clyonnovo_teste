@@ -1,5 +1,5 @@
 import { precoDoCliente, desdobramentoDoIva, type PrecoDoCliente } from "./preco-do-cliente";
-import { VALOR_UNICO_ACEITE } from "./promessas-publicas";
+import { ESTADO_ARQUIVADO, VALOR_UNICO_ACEITE } from "./promessas-publicas";
 import { taxasDaNegociacao, TAXA_IVA } from "./taxas-plataforma";
 import { precoEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { modeloDaLinha } from "./sem-factura";
@@ -357,12 +357,15 @@ export function estadoDoPedidoParaOCliente(p: {
   valorUnicoAceite?: boolean;
 }): string {
   const status = String(p.status ?? "");
+  // Arquivado pelo seguimento (d83): «Arquivado», não «Cancelado» (d1 de 22/11). Cancelado pelo cliente continua cancelado.
+  if (status === "arquivado" && Number(p.canceladoPeloCliente) !== 1) return ESTADO_ARQUIVADO;
   if (["cancelado", "rejeitado", "arquivado"].includes(status) || Number(p.canceladoPeloCliente) === 1) {
     return "Cancelado";
   }
   if (p.precisaDeSi) return ESTADO_PRECISA_DE_SI;
-  if (p.contratado) return estadoDoContratado(p.contratado);
+  // Um pedido fechado (d76, sozinho) diz «Concluído» antes da frase do contratado (d1 de 22/11).
   if (status === "concluido") return "Concluído";
+  if (p.contratado) return estadoDoContratado(p.contratado);
   if (p.trabalhoClyon) {
     if (p.precoAceite) return "Preço aceite — a CLYON escolhe quem faz";
     if (p.precoEnviado) return "Preço da CLYON por responder";
@@ -385,7 +388,7 @@ export const ESTADO_PRECISA_DE_SI = "A CLYON precisa de mais detalhes";
 
 /** Os estados de um pedido fechado — vão para o fim da lista. */
 export function pedidoFechado(estadoTexto: string): boolean {
-  return estadoTexto === "Concluído" || estadoTexto === "Cancelado";
+  return estadoTexto === "Concluído" || estadoTexto === "Cancelado" || estadoTexto === ESTADO_ARQUIVADO;
 }
 
 /** A ordem da novidade, do que mais urge para o que menos (a lista da app ordena por ela). */
