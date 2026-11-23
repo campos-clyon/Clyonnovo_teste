@@ -11,6 +11,7 @@ import {
   contaDoCliente,
   taxasDaNegociacao,
 } from "@/lib/taxas-plataforma";
+import { acordoPedeMotivo } from "@/lib/acordos-fora-da-regra";
 import {
   precoClyonAcompanha,
   precoClyonDesalinhado,
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
               n.taxaCliente, n.taxaProfissional, n.createdAt,
               p.name AS profissionalNome, p.regimeIva,
               -- O preço do Trabalho CLYON acompanha a correcção (19-10-2026).
-              n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon
+              n.ofertaClyon, o.valorFixoClyon, o.taxaClyon, o.precoClienteClyon, o.serviceType
          FROM negociacoes n JOIN providers p ON p.id = n.providerId
          LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
         WHERE n.id = ? LIMIT 1`,
@@ -116,6 +117,7 @@ export async function POST(req: NextRequest) {
         valorFixoClyon: string | null;
         taxaClyon: string | null;
         precoClienteClyon: string | null;
+        serviceType: string | null;
       }>,
       unknown,
     ];
@@ -174,6 +176,16 @@ export async function POST(req: NextRequest) {
         },
         { status: 409 },
       );
+    }
+
+    /*
+     * ABAIXO DO PREÇO MÍNIMO EXIGE MOTIVO — d6 de 22/11/2026. O #651 fechou a
+     * 25 € sem IVA (mínimo 60 €): um acordo fora da regra grava-se, mas não em
+     * silêncio — o motivo fica no histórico do pedido.
+     */
+    const abaixo = acordoPedeMotivo(linha.serviceType, novo, motivo);
+    if (abaixo.pede) {
+      return NextResponse.json({ error: abaixo.erro, precisaMotivo: true }, { status: 409 });
     }
 
     /*

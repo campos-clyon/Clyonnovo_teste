@@ -92,6 +92,7 @@ import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import CorrigirOPagamento, { type CorreccaoDoPagamento } from "@/components/admin/CorrigirOPagamento";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 import ClientePagaAClyon from "@/components/admin/ClientePagaAClyon";
+import { avisoDaReserva } from "@/lib/acordos-fora-da-regra";
 import AnularAReferencia from "@/components/admin/AnularAReferencia";
 import { isMudancaType } from "@/lib/calendar-helpers";
 import {
@@ -3037,6 +3038,12 @@ function Linha({
           {mexeNoDinheiro && t.trabalhoClyon && (t.novoModelo || t.clientePagaAClyon) && (
             <section>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Quem recebe do cliente</p>
+              {/* d6 (22/11): no valor único, a parte da CLYON acima de metade do que o parceiro recebe do cliente — propor o caminho d82. */}
+              {avisoDaReserva(t.conta) && (
+                <p className="mt-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+                  {avisoDaReserva(t.conta)?.texto}
+                </p>
+              )}
               <ClientePagaAClyon
                 pedidoId={t.pedidoId}
                 negociacaoId={t.negociacaoId}
