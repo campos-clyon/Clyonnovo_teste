@@ -146,7 +146,16 @@ export function tituloDaCidade(
       }
       return `Recolha de Móveis ${emTerraDaPagina(serviceSlug, citySlug, cityName)}`;
     }
+    // 23-11-2026 (d5): Lisboa leva a fórmula de /recolha-monos-lisboa (o preço no título era o problema);
+    // as outras 22 cidades ficam com o preço por peça, para comparar. A descrição diz o mínimo com IVA.
+    if (citySlug === "lisboa") return comOPrimeiroQueCabe(base, "De Casa, Sem Esperar", SEM_PRECO);
     return comOPrimeiroQueCabe(base, PRECO_MOVEIS, MOVEIS_DESDE, SEM_PRECO);
+  }
+
+  // 23-11-2026 (d5, da d7 de 22/11): o Seixal de monos diz as três terras que procuram.
+  if (serviceSlug === "recolha-monos" && citySlug === "seixal") {
+    const t = "Recolha de Monos no Seixal, Amora e Corroios";
+    if (cabeNoGoogle(t)) return t;
   }
 
   if (serviceSlug === "recolha-monos" && monosCamaraOuDeCasa(citySlug)) {

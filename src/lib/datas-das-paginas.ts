@@ -102,6 +102,9 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/quero-ser-parceiro": "2026-11-19",
   // 17-11-2026 (d68): a Amora no título, na descrição e no H1 (a página para onde /recolha-moveis-amora vai).
   "/recolha-moveis-seixal": "2026-11-17",
+  // 23-11-2026 (d5): o título de Lisboa (móveis) e o do Seixal (monos).
+  "/recolha-moveis-lisboa": "2026-11-23",
+  "/recolha-monos-seixal": "2026-11-23",
 };
 
 /**
