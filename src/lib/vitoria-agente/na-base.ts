@@ -418,7 +418,12 @@ export async function ferramentasDeVerdade(
     aoVivo: modo.aoVivo === true,
     aceitarLigado: modo.aceitarLigado === true,
     propostasParaEscolher: (id) => accoes.propostasParaEscolherDeVerdade(id),
-    pedidoParaOFecho: (id) => accoes.pedidoParaOFechoDeVerdade(id),
+    // E a queixa na conversa (a mesma leitura da d88: `haQueixaNaConversa`) — com queixa, fecha uma pessoa.
+    pedidoParaOFecho: async (id) => {
+      const { haQueixaNaConversa } = await import("../queixa-na-conversa");
+      const fio = await db.mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []);
+      return { ...(await accoes.pedidoParaOFechoDeVerdade(id)), queixa: haQueixaNaConversa(fio) };
+    },
     perguntasFrequentes: (procura) => procurarNasPerguntas(perguntas, procura),
     telefone,
     agora,

@@ -129,7 +129,7 @@ describe("relê antes de propor, e os limites passam à equipa", () => {
 
   it("a pergunta do fecho diz o parceiro, o total e o regime, e pede o SIM", () => {
     expect(perguntaDoFecho(isento)).toBe(
-      "Reservo Recolhas Tejo por 86,96 € (parceiro isento de IVA — só a taxa da plataforma leva IVA) no pedido #663? Responda SIM.",
+      `Reservo ${isento.parceiro} por 86,96 € (parceiro isento de IVA — só a taxa da plataforma leva IVA) no pedido #663? Responda SIM.`,
     );
   });
 });
@@ -188,7 +188,8 @@ describe("aceitar, perguntar ao parceiro e cancelar só propõem", () => {
     expect(e.pendente && e.pendente.tipo === "parceiro" ? e.pendente.mensagem : "").toBe(
       "Olá! O cliente do pedido #664 quer escolher a sua proposta (85,00 €), com uma condição: «até quinta-feira». Consegue? Responda SIM ou NÃO, por favor.",
     );
-    expect(e.teriaFeito.at(-1)).toBe("teria perguntado a Recolhas Tejo se consegue: «até quinta-feira» (#664)");
+    const parceiro = caso(2).negociacoes[0].profissionalNome;
+    expect(e.teriaFeito.at(-1)).toBe(`teria perguntado a ${parceiro} se consegue: «até quinta-feira» (#664)`);
   });
 
   it("cancelar: com contrato ou data passa à equipa; sem, a frase do CANCELAR", async () => {
