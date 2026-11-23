@@ -15597,6 +15597,8 @@ export type Acontecimento =
   | "seguimento_do_cliente_interruptor"
   // O envio automático aos parceiros dos pedidos completos pela Vitória (d87, 22-11-2026): o interruptor das Configs.
   | "envio_automatico_interruptor"
+  // As propostas ao cliente enviadas pela Vitória (d88, 23-11-2026): o interruptor das Configs.
+  | "envio_das_propostas_interruptor"
   // A mensagem gentil da Vitória a quem fica calado (d25 v2, 14-11-2026): o interruptor das Configs.
   | "vitoria_seguimento_interruptor"
   // A Vitória agente em ensaio (d85, 22-11-2026): o interruptor das Configs.

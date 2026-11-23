@@ -97,9 +97,11 @@ vi.mock("./avisar-cancelamento", () => ({ avisarDoCancelamento: vi.fn(async () =
 
 import {
   canalDoLembrete,
-  eAHoraDosLembretes,
+  devidoDoPrimeiro,
   eLembreteDoQueFalta,
   linhaDoLembreteNaMesa,
+  naJanelaDosLembretes,
+  noDiaSeguinte,
   porqueFicaDeFora,
   porqueParaOCiclo,
   proximoPassoDoQueFalta,
@@ -113,7 +115,7 @@ import {
   type CandidatoAoLembrete,
   type CicloDoQueFalta,
 } from "./lembrete-do-que-falta";
-import { registoDoQueFalta } from "./mensagem-do-que-falta";
+import { mensagemDoQueFalta, registoDoQueFalta } from "./mensagem-do-que-falta";
 import { MENSAGEM_DE_CANCELAMENTO } from "./mensagens-das-fases";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
@@ -121,7 +123,10 @@ const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(
 // 19-11-2026 às 10h de Lisboa (Inverno: Lisboa = UTC).
 const AGORA = new Date("2026-11-19T10:00:00Z");
 const horas = (h: number) => new Date(AGORA.getTime() - h * 3_600_000);
+const minutos = (m: number) => new Date(AGORA.getTime() - m * 60_000);
 const dia = (d: string) => new Date(`${d}T10:00:00Z`);
+/** Um instante em Lisboa (Inverno: Lisboa = UTC). */
+const as = (d: string, hhmm: string) => new Date(`${d}T${hhmm}:00Z`);
 
 const candidato = (o: Partial<CandidatoAoLembrete> = {}): CandidatoAoLembrete => ({
   id: 812,
@@ -139,8 +144,8 @@ const candidato = (o: Partial<CandidatoAoLembrete> = {}): CandidatoAoLembrete =>
   ...o,
 });
 
-describe("quem entra e quem fica de fora", () => {
-  it("um pedido dos «Orçamentos novos» com faltas, de há 20 h, entra", () => {
+describe("quem entra e quem fica de fora (d88: de qualquer origem, 30 min depois)", () => {
+  it("um pedido dos «Orçamentos novos» com faltas entra", () => {
     expect(porqueFicaDeFora(candidato(), AGORA)).toBeNull();
   });
 
@@ -150,11 +155,21 @@ describe("quem entra e quem fica de fora", () => {
     }
   });
 
-  it("fica de fora: já foi aos parceiros, completo, de há menos de 12 h", () => {
+  it("fica de fora: já foi aos parceiros (ou é um Trabalho CLYON), completo, de há menos de 30 min", () => {
     expect(porqueFicaDeFora(candidato({ jaFoiEnviado: true }), AGORA)).toBe("ja_foi_enviado");
     expect(porqueFicaDeFora(candidato({ faltas: [] }), AGORA)).toBe("completo");
-    expect(porqueFicaDeFora(candidato({ criadoEm: horas(11) }), AGORA)).toBe("recente");
-    expect(porqueFicaDeFora(candidato({ criadoEm: horas(13) }), AGORA)).toBeNull();
+    expect(porqueFicaDeFora(candidato({ criadoEm: minutos(29) }), AGORA)).toBe("recente");
+    expect(porqueFicaDeFora(candidato({ criadoEm: minutos(31) }), AGORA)).toBeNull();
+  });
+
+  it("fica de fora: atribuído a uma pessoa, o «Outro serviço» e os serviços fora da lista", () => {
+    expect(porqueFicaDeFora(candidato({ atribuido: true }), AGORA)).toBe("atribuido");
+    // Em «precisa info» por um «Pedir info» escrito à mão: a equipa já perguntou outra coisa.
+    expect(porqueFicaDeFora(candidato({ pedirInfoDaEquipa: true }), AGORA)).toBe("pedir_info");
+    for (const servico of ["outro", "montagem_moveis", "jardinagem"]) {
+      expect(porqueFicaDeFora(candidato({ servico }), AGORA), servico).toBe("outro_servico");
+    }
+    expect(porqueFicaDeFora(candidato({ servico: "recolha_monos" }), AGORA)).toBeNull();
   });
 
   it("fica de fora: conta de teste (nome, email, ou a lista do ambiente)", () => {
@@ -172,22 +187,29 @@ describe("quem entra e quem fica de fora", () => {
     expect(porqueFicaDeFora(candidato({ contactPhone: null, contactEmail: null }), AGORA)).toBe("sem_contacto");
   });
 
-  it("fica de fora: «Pedir o que falta» ou mensagem do cliente nas últimas 24 h, ou a conversa com uma pessoa", () => {
-    expect(porqueFicaDeFora(candidato({ equipaPediuEm: horas(5) }), AGORA)).toBe("equipa_pediu");
-    expect(porqueFicaDeFora(candidato({ equipaPediuEm: horas(30) }), AGORA)).toBeNull();
-    expect(porqueFicaDeFora(candidato({ clienteEscreveuEm: horas(2) }), AGORA)).toBe("cliente_escreveu");
-    expect(porqueFicaDeFora(candidato({ clienteEscreveuEm: horas(26) }), AGORA)).toBeNull();
+  it("fica de fora: bloqueado, o cliente a escrever há menos de 30 min, a conversa com uma pessoa, outra língua sem tradução", () => {
+    expect(porqueFicaDeFora(candidato({ bloqueado: true }), AGORA)).toBe("bloqueado");
+    expect(porqueFicaDeFora(candidato({ clienteEscreveuEm: minutos(10) }), AGORA)).toBe("cliente_escreveu");
+    expect(porqueFicaDeFora(candidato({ clienteEscreveuEm: minutos(40) }), AGORA)).toBeNull();
     expect(porqueFicaDeFora(candidato({ comUmaPessoa: true }), AGORA)).toBe("com_uma_pessoa");
+    expect(porqueFicaDeFora(candidato({ linguaSemTraducao: "en" }), AGORA)).toBe("noutra_lingua");
+    // Por email, o WhatsApp não conta: o bloqueio e a conversa são do WhatsApp.
+    expect(porqueFicaDeFora(candidato({ contactPhone: null, bloqueado: true, comUmaPessoa: true }), AGORA)).toBeNull();
   });
 
-  it("um ciclo por pedido: quem já teve o seu não volta a entrar", () => {
+  it("o «Pedir o que falta» da equipa NÃO deixa de fora: conta como a 1.ª mensagem", () => {
+    expect(porqueFicaDeFora(candidato({ equipaPediuEm: horas(5) }), AGORA)).toBeNull();
+  });
+
+  it("um ciclo por pedido: quem já teve o seu (o da d71 também) não volta a entrar", () => {
     expect(porqueFicaDeFora(candidato({ jaTeveCiclo: true }), AGORA)).toBe("ja_teve_ciclo");
   });
 
-  it("o «Pedir o que falta» lê-se do histórico, e os lembretes automáticos não contam", () => {
+  it("o «Pedir o que falta» lê-se do histórico, e as mensagens automáticas não contam", () => {
     const hist = JSON.stringify([
       { type: "note", message: registoDoQueFalta("Rita", "whatsapp", ["fotografias"], "recolha_monos"), createdAt: "2026-11-18 14:00:00" },
       { type: "note", message: registoDoQueFalta("Rita", "copiar", ["andar"], "recolha_monos"), createdAt: "2026-11-18 16:30:00" },
+      { type: "note", message: "«Pedir o que falta» enviado ao cliente pelo WhatsApp — automático, pela Vitória (1/3, d88).", createdAt: "2026-11-19 10:00:00" },
       { type: "note", message: "Lembrete do que falta 1/3 enviado ao cliente pelo WhatsApp (automático, d71).", createdAt: "2026-11-19 10:00:00" },
     ]);
     expect(ultimoPedirOQueFalta(hist)?.toISOString()).toBe("2026-11-18T16:30:00.000Z");
@@ -196,35 +218,70 @@ describe("quem entra e quem fica de fora", () => {
   });
 });
 
-describe("o calendário: dia 1, dia 3, dia 5 e o arquivo ao dia 7, às 10h de Lisboa", () => {
-  it("só às 10h de Lisboa: no Inverno a das 10h UTC, no Verão a das 9h UTC", () => {
-    expect(eAHoraDosLembretes(new Date("2026-11-19T10:00:00Z"))).toBe(true);
-    expect(eAHoraDosLembretes(new Date("2026-11-19T09:00:00Z"))).toBe(false);
-    expect(eAHoraDosLembretes(new Date("2026-07-01T09:00:00Z"))).toBe(true);
-    expect(eAHoraDosLembretes(new Date("2026-07-01T10:00:00Z"))).toBe(false);
+describe("o ritmo: 30 min depois, o dia seguinte à mesma hora, 3 no máximo, das 8h às 21h", () => {
+  it("a janela é das 8h às 21h de Lisboa (no Verão, Lisboa = UTC+1)", () => {
+    expect(naJanelaDosLembretes(as("2026-11-19", "07:59"))).toBe(false);
+    expect(naJanelaDosLembretes(as("2026-11-19", "08:00"))).toBe(true);
+    expect(naJanelaDosLembretes(as("2026-11-19", "20:59"))).toBe(true);
+    expect(naJanelaDosLembretes(as("2026-11-19", "21:00"))).toBe(false);
+    expect(naJanelaDosLembretes(new Date("2026-07-01T07:30:00Z"))).toBe(true); // 8h30 em Lisboa
   });
 
-  it("os passos, contados do primeiro envio", () => {
-    const c: CicloDoQueFalta = {};
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-19"))).toBe("lembrete1");
-    c.lembrete1Em = dia("2026-11-19");
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-19"))).toBeNull();
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-20"))).toBeNull();
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-21"))).toBe("lembrete2");
-    c.lembrete2Em = dia("2026-11-21");
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-22"))).toBeNull();
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-23"))).toBe("lembrete3");
-    c.lembrete3Em = dia("2026-11-23");
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-24"))).toBeNull();
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-25"))).toBe("arquivar");
-    c.arquivadoEm = dia("2026-11-25");
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-30"))).toBeNull();
+  it("a 1.ª: 30 min depois de o pedido entrar, dentro da janela", () => {
+    const entrou = as("2026-11-19", "14:00");
+    const desde = devidoDoPrimeiro(entrou);
+    expect(proximoPassoDoQueFalta({}, as("2026-11-19", "14:20"), desde)).toBeNull();
+    expect(proximoPassoDoQueFalta({}, as("2026-11-19", "14:30"), desde)).toBe("lembrete1");
   });
 
-  it("um passo atrasado empurra os seguintes (nunca dois no mesmo dia), e no máximo 3 lembretes", () => {
-    const c: CicloDoQueFalta = { lembrete1Em: dia("2026-11-19"), lembrete2Em: dia("2026-11-24") };
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-25"))).toBeNull();
-    expect(proximoPassoDoQueFalta(c, dia("2026-11-26"))).toBe("lembrete3");
+  it("a 1.ª de um pedido que entra fora de horas sai às 9h (e não às 8h)", () => {
+    const desde = devidoDoPrimeiro(as("2026-11-19", "22:10"));
+    expect(proximoPassoDoQueFalta({}, as("2026-11-19", "22:45"), desde)).toBeNull();
+    expect(proximoPassoDoQueFalta({}, as("2026-11-20", "08:15"), desde)).toBeNull();
+    expect(proximoPassoDoQueFalta({}, as("2026-11-20", "09:00"), desde)).toBe("lembrete1");
+    // E de madrugada, também às 9h.
+    const cedo = devidoDoPrimeiro(as("2026-11-20", "06:00"));
+    expect(proximoPassoDoQueFalta({}, as("2026-11-20", "08:00"), cedo)).toBeNull();
+    expect(proximoPassoDoQueFalta({}, as("2026-11-20", "09:05"), cedo)).toBe("lembrete1");
+  });
+
+  it("a 2.ª no dia seguinte, à mesma hora; a 3.ª no outro; o arquivo no dia a seguir à 3.ª", () => {
+    const c: CicloDoQueFalta = { lembrete1Em: as("2026-11-19", "14:35") };
+    expect(proximoPassoDoQueFalta(c, as("2026-11-19", "20:00"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-20", "14:30"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-20", "14:35"))).toBe("lembrete2");
+    c.lembrete2Em = as("2026-11-20", "14:40");
+    expect(proximoPassoDoQueFalta(c, as("2026-11-21", "14:39"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-21", "14:40"))).toBe("lembrete3");
+    c.lembrete3Em = as("2026-11-21", "14:45");
+    expect(proximoPassoDoQueFalta(c, as("2026-11-22", "14:00"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-22", "14:45"))).toBe("arquivar");
+    c.arquivadoEm = as("2026-11-22", "14:50");
+    expect(proximoPassoDoQueFalta(c, as("2026-11-30", "10:00"))).toBeNull();
+  });
+
+  it("no máximo 3 mensagens: depois da 3.ª, só o arquivo", () => {
+    const c: CicloDoQueFalta = { lembrete1Em: dia("2026-11-19"), lembrete2Em: dia("2026-11-20"), lembrete3Em: dia("2026-11-21") };
+    expect(proximoPassoDoQueFalta(c, dia("2026-11-22"))).toBe("arquivar");
+  });
+
+  it("a 1.ª da equipa às 22h: a 2.ª no dia seguinte às 10h", () => {
+    const equipa = as("2026-11-19", "22:00");
+    expect(noDiaSeguinte(equipa).toISOString()).toBe(as("2026-11-20", "10:00").toISOString());
+    const c: CicloDoQueFalta = { lembrete1Em: equipa, lembrete1PelaEquipa: true };
+    expect(proximoPassoDoQueFalta(c, as("2026-11-20", "09:30"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-20", "10:00"))).toBe("lembrete2");
+  });
+
+  it("um passo atrasado (fora de horas, ou a uma-por-dia) sai no dia seguinte às 9h, e empurra os seguintes", () => {
+    const c: CicloDoQueFalta = { lembrete1Em: as("2026-11-19", "20:30") };
+    // A 2.ª devia sair a 20/11 às 20h30; às 21h já não; no dia 21, às 9h.
+    expect(proximoPassoDoQueFalta(c, as("2026-11-20", "21:10"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-21", "08:30"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-21", "09:00"))).toBe("lembrete2");
+    c.lembrete2Em = as("2026-11-21", "09:00");
+    expect(proximoPassoDoQueFalta(c, as("2026-11-22", "08:59"))).toBeNull();
+    expect(proximoPassoDoQueFalta(c, as("2026-11-22", "09:00"))).toBe("lembrete3");
   });
 
   it("parado, cancelado ou arquivado: nada mais sai", () => {
@@ -232,7 +289,7 @@ describe("o calendário: dia 1, dia 3, dia 5 e o arquivo ao dia 7, às 10h de Li
     expect(proximoPassoDoQueFalta({ lembrete1Em: dia("2026-11-19"), canceladoEm: dia("2026-11-20") }, dia("2026-11-25"))).toBeNull();
   });
 
-  it("o ciclo pára: o cliente respondeu, o pedido ficou completo, saiu dos «Orçamentos novos» ou a equipa pediu à mão", () => {
+  it("o ciclo pára: o cliente respondeu, o pedido ficou completo, saiu dos «Orçamentos novos», foi atribuído, ou a equipa pediu à mão depois", () => {
     const c: CicloDoQueFalta = { lembrete1Em: dia("2026-11-19") };
     const p = { status: null, jaFoiEnviado: false, faltas: ["andar"] as const, clienteEscreveuEm: null, equipaPediuEm: null };
     expect(porqueParaOCiclo(c, { ...p, faltas: ["andar"] })).toBeNull();
@@ -241,17 +298,33 @@ describe("o calendário: dia 1, dia 3, dia 5 e o arquivo ao dia 7, às 10h de Li
     expect(porqueParaOCiclo(c, { ...p, faltas: [] })).toBe("o pedido ficou completo");
     expect(porqueParaOCiclo(c, { ...p, faltas: ["andar"], jaFoiEnviado: true })).toBe("o pedido foi aos parceiros");
     expect(porqueParaOCiclo(c, { ...p, faltas: ["andar"], status: "arquivado" })).toBe("o pedido foi fechado");
+    expect(porqueParaOCiclo(c, { ...p, faltas: ["andar"], atribuido: true })).toBe("o pedido foi atribuído a uma pessoa da equipa");
     expect(porqueParaOCiclo(c, { ...p, faltas: ["andar"], equipaPediuEm: dia("2026-11-20") })).toBe("a equipa pediu o que falta à mão");
+    // A 1.ª que FOI a da equipa não pára o próprio ciclo.
+    expect(porqueParaOCiclo({ lembrete1Em: dia("2026-11-19"), lembrete1PelaEquipa: true }, { ...p, faltas: ["andar"], equipaPediuEm: dia("2026-11-19") })).toBeNull();
   });
 });
 
-describe("os textos", () => {
+describe("os textos: o modelo da Mesa, tal e qual (d86 reconhece-o)", () => {
   const P = { id: 812, serviceType: "recolha_monos", city: "Almada" };
   const F = ["fotografias", "andar", "elevador"] as const;
   const l1 = textoDoLembrete1(P, [...F], AGORA);
   const l2 = textoDoLembrete2(P, [...F], AGORA);
   const l3 = textoDoLembrete3(P, [...F], AGORA);
   const arq = textoDoArquivo(P, AGORA);
+
+  it("a 1.ª é o «Pedir o que falta» da Mesa, sem tirar nem pôr", () => {
+    expect(l1).toBe(mensagemDoQueFalta(P, [...F], AGORA));
+    expect(l1).not.toContain(SE_JA_NAO_PRECISAR);
+  });
+
+  it("a 2.ª e a 3.ª: o modelo, mais o «responda 2» da d71 antes da assinatura", () => {
+    for (const t of [l2, l3]) {
+      expect(t.startsWith(l1.slice(0, l1.indexOf("Obrigado,")))).toBe(true);
+      expect(t).toContain(`${SE_JA_NAO_PRECISAR}\n\nObrigado,\nEquipa CLYON`);
+      expect(t).toContain("#812 (recolha de monos em Almada)");
+    }
+  });
 
   it("uma pessoa a escrever: sem emojis, reticências, travessões, aspas tipográficas nem preços", () => {
     for (const t of [l1, l2, l3, arq]) {
@@ -264,31 +337,13 @@ describe("os textos", () => {
     }
   });
 
-  it("os três lembretes acabam com o «responda 2», dizem «parceiros» e o número do pedido", () => {
-    for (const t of [l1, l2, l3]) {
-      expect(t).toContain(SE_JA_NAO_PRECISAR);
-      expect(t).toContain("#812 (recolha de monos em Almada)");
-      expect(t).toMatch(/parceiros/);
-    }
-    expect(l1.startsWith("Bom dia!")).toBe(true);
-  });
-
-  it("o 1.º traz a lista inteira; o 2.º e o 3.º são mais curtos; o 3.º diz que é o último aviso", () => {
-    expect(l1).toContain("- Fotografias do que é para levar");
-    expect(l2.length).toBeLessThan(l1.length);
-    expect(l3.length).toBeLessThan(l1.length);
-    expect(l2).toContain("Ainda falta: fotografias, andar e elevador.");
-    expect(l3).toMatch(/último aviso/);
-    expect(l2).not.toMatch(/último aviso/);
-  });
-
   it("o do arquivo é simpático, diz que pode voltar a pedir, e não tem o «responda 2»", () => {
     expect(arq).toMatch(/arquivámos o seu pedido #812/);
     expect(arq).toMatch(/pode voltar a pedir quando quiser/i);
     expect(arq).not.toContain("responda 2");
   });
 
-  it("sem faltas, nenhum lembrete", () => {
+  it("sem faltas, nenhuma mensagem", () => {
     expect(textoDoLembrete1(P, [], AGORA)).toBe("");
     expect(textoDoLembrete2(P, [], AGORA)).toBe("");
     expect(textoDoLembrete3(P, [], AGORA)).toBe("");
@@ -308,27 +363,34 @@ describe("o «2» e as outras respostas", () => {
     }
   });
 
-  it("só responde ao lembrete deste pedido, se for a última mensagem que lhe saiu", () => {
-    const l1 = textoDoLembrete1({ id: 812, serviceType: "recolha_monos", city: "Almada" }, ["andar"], AGORA);
-    expect(eLembreteDoQueFalta(l1, 812)).toBe(true);
-    expect(eLembreteDoQueFalta(l1, 81)).toBe(false);
-    expect(eLembreteDoQueFalta(l1, 8120)).toBe(false);
+  it("só responde à 2.ª ou à 3.ª deste pedido (a 1.ª não pede o «2»), se for a última mensagem que lhe saiu", () => {
+    const P = { id: 812, serviceType: "recolha_monos", city: "Almada" };
+    const l2 = textoDoLembrete2(P, ["andar"], AGORA);
+    expect(eLembreteDoQueFalta(l2, 812)).toBe(true);
+    expect(eLembreteDoQueFalta(textoDoLembrete3(P, ["andar"], AGORA), 812)).toBe(true);
+    expect(eLembreteDoQueFalta(textoDoLembrete1(P, ["andar"], AGORA), 812)).toBe(false);
+    expect(eLembreteDoQueFalta(l2, 81)).toBe(false);
+    expect(eLembreteDoQueFalta(l2, 8120)).toBe(false);
     expect(eLembreteDoQueFalta("Olá! Em que posso ajudar com o pedido #812?", 812)).toBe(false);
     expect(eLembreteDoQueFalta(null, 812)).toBe(false);
   });
 });
 
 describe("a linha da Mesa", () => {
-  it("«Lembrete 1/3 enviado a …», «Cancelado pelo cliente (respondeu 2)», «Arquivado sem resposta»", () => {
-    expect(linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19") }, true)).toBe("Lembrete 1/3 enviado a 19/11 · o 2.º a 21/11 às 10h");
-    expect(linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19") }, false)).toBe("Lembrete 1/3 enviado a 19/11 · o 2.º sairia a 21/11 às 10h");
+  it("«Mensagem 1/3 enviada a …», a da equipa, «Cancelado pelo cliente (respondeu 2)», «Arquivado sem resposta»", () => {
+    const um = { lembrete1Em: as("2026-11-19", "14:35") };
+    expect(linhaDoLembreteNaMesa(um, true, as("2026-11-19", "15:00"))).toBe("Mensagem 1/3 enviada a 19/11 · a 2.ª a 20/11 às 14h35");
+    expect(linhaDoLembreteNaMesa(um, false, as("2026-11-19", "15:00"))).toBe("Mensagem 1/3 enviada a 19/11 · a 2.ª sairia a 20/11 às 14h35");
+    expect(linhaDoLembreteNaMesa({ lembrete1Em: as("2026-11-19", "22:00"), lembrete1PelaEquipa: true }, true, as("2026-11-19", "22:05"))).toBe(
+      "«Pedir o que falta» da equipa a 19/11 (conta como a 1.ª) · a 2.ª a 20/11 às 10h",
+    );
     expect(
-      linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), lembrete2Em: dia("2026-11-21"), lembrete3Em: dia("2026-11-23") }, true),
-    ).toBe("Lembrete 3/3 enviado a 23/11 · arquiva a 25/11 às 10h sem resposta");
+      linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), lembrete2Em: dia("2026-11-20"), lembrete3Em: dia("2026-11-21") }, true, dia("2026-11-21")),
+    ).toBe("Mensagem 3/3 enviada a 21/11 · arquiva a 22/11 às 10h sem resposta");
     expect(linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), canceladoEm: dia("2026-11-20") }, true)).toBe(
       "Cancelado pelo cliente (respondeu 2) a 20/11",
     );
-    expect(linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), arquivadoEm: dia("2026-11-25") }, true)).toBe("Arquivado sem resposta a 25/11");
+    expect(linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), arquivadoEm: dia("2026-11-22") }, true)).toBe("Arquivado sem resposta a 22/11");
     expect(linhaDoLembreteNaMesa(null, true)).toBeNull();
   });
 });
@@ -385,10 +447,10 @@ describe("o interruptor desligado não faz nada", { timeout: 60_000 }, () => {
     base.cancelados = [];
     base.ciclo = { ...CICLO };
     base.pedido = { ...PEDIDO };
-    base.ultimaSaida = textoDoLembrete1({ id: 812, serviceType: "recolha_monos", city: "Almada" }, ["andar"], AGORA);
+    base.ultimaSaida = textoDoLembrete2({ id: 812, serviceType: "recolha_monos", city: "Almada" }, ["andar"], AGORA);
   });
 
-  it("a rotina das 10h não cria ciclos, não põe nada na fila e não envia", async () => {
+  it("a rotina não cria ciclos, não põe nada na fila e não envia", async () => {
     const { rotinaDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
     const r = await rotinaDoQueFalta(AGORA);
     expect(r.ligado).toBe(false);
@@ -415,7 +477,7 @@ describe("com o interruptor ligado: o «2» cancela só com um lembrete em abert
     base.reservaCancelamento = 1;
     base.ciclo = { ...CICLO };
     base.pedido = { ...PEDIDO };
-    base.ultimaSaida = textoDoLembrete1({ id: 812, serviceType: "recolha_monos", city: "Almada" }, ["andar"], AGORA);
+    base.ultimaSaida = textoDoLembrete2({ id: 812, serviceType: "recolha_monos", city: "Almada" }, ["andar"], AGORA);
   });
 
   it("com o lembrete do #812 como última saída, o telefone tem o lembrete em aberto", async () => {
@@ -468,17 +530,17 @@ describe("com o interruptor ligado: o «2» cancela só com um lembrete em abert
     expect(base.cancelados).toEqual([]);
   });
 
-  it("fora das 10h de Lisboa, a rotina não faz nada", async () => {
+  it("fora das 8h–21h de Lisboa, a rotina não faz nada", async () => {
     const { rotinaDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
-    const r = await rotinaDoQueFalta(new Date("2026-11-19T09:00:00Z"));
+    const r = await rotinaDoQueFalta(new Date("2026-11-19T21:30:00Z"));
     expect(r).toMatchObject({ ligado: true, foraDeHoras: true, novos: 0, naFila: 0 });
   });
 });
 
 describe("a rotina, a fila e a conversa estão ligadas", () => {
-  it("vercel.json corre às 9h e às 10h UTC (uma é a das 10h de Lisboa)", () => {
+  it("vercel.json corre de 15 em 15 min (d88: 30 min depois de o pedido entrar)", () => {
     const crons = (JSON.parse(ler("vercel.json")) as { crons: Array<{ path: string; schedule: string }> }).crons;
-    expect(crons).toContainEqual({ path: "/api/cron/lembretes-do-que-falta", schedule: "0 9,10 * * *" });
+    expect(crons).toContainEqual({ path: "/api/cron/lembretes-do-que-falta", schedule: "7,22,37,52 * * * *" });
   });
 
   it("a rota falha fechada sem CRON_SECRET", () => {

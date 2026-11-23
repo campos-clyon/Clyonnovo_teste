@@ -98,8 +98,13 @@ beforeEach(() => {
 /* ── Uma por dia, comum ──────────────────────────────────────────────────── */
 
 describe("uma mensagem automática por dia, por telefone, comum a todas as rotinas", () => {
-  it("a lista tem as três rotinas de hoje — e uma nova entra aqui", () => {
-    expect(FONTES_DAS_MENSAGENS_AUTOMATICAS.map((f) => f.tabela)).toEqual(["validadeDosOrcamentos", "lembretesDoQueFalta", "seguimentoDoCliente"]);
+  it("a lista tem as rotinas de hoje — e uma nova entra aqui (d88: as propostas ao cliente)", () => {
+    expect(FONTES_DAS_MENSAGENS_AUTOMATICAS.map((f) => f.tabela)).toEqual([
+      "validadeDosOrcamentos",
+      "lembretesDoQueFalta",
+      "seguimentoDoCliente",
+      "envioDasPropostasAoCliente",
+    ]);
   });
 
   it("o dia é o de Lisboa (a mesma regra que a d83 já tinha)", () => {

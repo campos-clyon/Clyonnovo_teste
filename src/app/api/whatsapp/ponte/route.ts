@@ -278,13 +278,21 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("[ponte] validade dos orçamentos:", e instanceof Error ? e.message : e);
     }
-    // Os lembretes do que falta (d71, 19-11-2026): os que a rotina das 10h pôs na
-    // fila, um por vez, 20–45 s entre cada, 9h–21h de Lisboa.
+    // O «Pedir o que falta» sozinho (d71, no ritmo da d88): o que a rotina pôs na
+    // fila, um por vez, 20–45 s entre cada, 8h–21h de Lisboa.
     try {
       const { passagemDoQueFalta } = await import("@/lib/lembrete-do-que-falta-na-base");
       await passagemDoQueFalta();
     } catch (e) {
       console.error("[ponte] lembretes do que falta:", e instanceof Error ? e.message : e);
+    }
+    // As propostas ao cliente (d88, 23-11-2026): o orçamento que a rotina pôs na
+    // fila, um por vez, 20–45 s entre cada, 8h–21h de Lisboa.
+    try {
+      const { passagemDasPropostas } = await import("@/lib/envio-das-propostas-ao-cliente-na-base");
+      await passagemDasPropostas();
+    } catch (e) {
+      console.error("[ponte] propostas ao cliente:", e instanceof Error ? e.message : e);
     }
     // O seguimento do cliente (d83, 21-11-2026): as mensagens que a equipa marcou na
     // Mesa e o fecho ao 4.º dia, um por vez, 20–45 s entre cada, 9h–21h de Lisboa.

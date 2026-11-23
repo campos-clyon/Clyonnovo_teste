@@ -211,7 +211,9 @@ describe("os textos", () => {
     expect(mensagemDaPropostaClyon(t, ENVIO)).not.toContain("válida até");
     // O «Enviar pela CLYON» dos Trabalhos CLYON e o «Enviar orçamento» das negociações.
     expect(ROTA_TC).toContain("comValidade: true,");
-    expect(MESA).toContain("return comPropostas ? comValidade(texto, new Date()) : texto;");
+    // d88: a mensagem do orçamento da Mesa, num sítio só (a mesma da Vitória quando envia sozinha).
+    expect(MESA).toContain("return textoDoOrcamentoDaMesa(p, new Date(), propostas);");
+    expect(ler("src/lib/texto-do-orcamento-da-mesa.ts")).toContain("return comPropostas ? comValidade(texto, agora) : texto;");
   });
 });
 

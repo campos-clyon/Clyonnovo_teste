@@ -117,9 +117,13 @@ export async function GET(req: NextRequest) {
       console.error("[api/admin/negociacoes GET] falta a rua:", e);
       return new Map<number, { aceite: boolean; pedidaEm: string | null; passadaEm: string | null }>();
     });
+    // d88: o envio automático das propostas ao cliente — a linha do cartão (quando a Vitória envia, ou porque fica com uma pessoa).
+    const { linhasDoEnvioNaMesa } = await import("@/lib/envio-das-propostas-ao-cliente-na-base");
+    const envioAutomatico = await linhasDoEnvioNaMesa(agora, pedidos).catch(() => new Map<number, string>());
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
+        envioAutomatico: envioAutomatico.get(Number(p.id)) ?? null,
         valorUnicoAceite: aceites.get(Number(p.id)) ?? null,
         foraDaGrelha: foraDaGrelha.get(Number(p.id)) ?? null,
         faltaARua: semRua.get(Number(p.id)) ?? null,

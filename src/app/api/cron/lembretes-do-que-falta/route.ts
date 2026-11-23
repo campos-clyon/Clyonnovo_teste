@@ -4,16 +4,17 @@ import { resumoDaRotinaDoQueFalta, rotinaDoQueFalta } from "@/lib/lembrete-do-qu
 import { bearerConfere } from "@/lib/segredo-igual";
 
 /**
- * OS LEMBRETES DO QUE FALTA — às 10h de Lisboa (d71, 19-11-2026).
+ * O «PEDIR O QUE FALTA» SOZINHO — de 15 em 15 min (d71, 19-11-2026, no ritmo da
+ * d88, 23-11-2026).
  *
- * Ver `lembrete-do-que-falta.ts`: os pedidos dos «Orçamentos novos» a que falta
- * informação recebem um lembrete no dia 1, no dia 3 e no dia 5, e são
- * arquivados no dia 7 sem resposta. O cron do Vercel corre em UTC, às 9h e às
- * 10h: por dentro só se faz alguma coisa às 10h de Lisboa (no Verão é a das
- * 9h UTC, no Inverno a das 10h); a outra carimba e sai. Os WhatsApp vão para
- * a fila e saem um de cada vez, 20–45 s entre cada, às rondas da ponte; os
- * emails saem logo. DESLIGADA por omissão: com o interruptor «Lembretes do
- * que falta» desligado nas Configs, responde «desligado» e não mexe em nada.
+ * Ver `lembrete-do-que-falta.ts`: os pedidos dos «Orçamentos novos» a que
+ * falta informação recebem o «Pedir o que falta» 30 min depois de entrarem, a
+ * repetição no dia seguinte à mesma hora (no máximo 3 mensagens), e são
+ * arquivados no dia a seguir à 3.ª, sem resposta. Por dentro só se faz alguma
+ * coisa das 8h às 21h de Lisboa (o que fica fora sai às 9h). Os WhatsApp vão
+ * para a fila e saem um de cada vez, 20–45 s entre cada, às rondas da ponte;
+ * os emails saem logo. Com o interruptor «Lembretes do que falta» desligado
+ * nas Configs, responde «desligado» e não mexe em nada.
  */
 
 export const runtime = "nodejs";

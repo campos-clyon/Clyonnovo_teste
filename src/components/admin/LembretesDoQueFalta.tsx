@@ -27,10 +27,10 @@ type Estado = {
 };
 
 const TITULOS: Array<[keyof NonNullable<Estado["textos"]>, string]> = [
-  ["lembrete1", "Dia 1: o primeiro lembrete"],
-  ["lembrete2", "Dia 3: o segundo, mais curto"],
-  ["lembrete3", "Dia 5: o último aviso"],
-  ["arquivo", "Dia 7: arquivado sem resposta"],
+  ["lembrete1", "1.ª mensagem, 30 min depois de o pedido entrar: o «Pedir o que falta» da Mesa, tal e qual"],
+  ["lembrete2", "2.ª, no dia seguinte à mesma hora: o modelo e o «responda 2»"],
+  ["lembrete3", "3.ª e última, no dia a seguir"],
+  ["arquivo", "No dia a seguir à 3.ª: arquivado sem resposta"],
   ["cancelamento", "Respondeu 2: o texto de cancelamento (d55)"],
 ];
 
@@ -96,10 +96,13 @@ export default function LembretesDoQueFalta() {
     <div className="rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{NOME_DO_INTERRUPTOR_DO_QUE_FALTA}</p>
       <p className="mt-1 text-sm leading-6 text-slate-300">
-        Os pedidos dos «Orçamentos novos» a que falta informação (criados há mais de 12 h, sem «Pedir o que falta» nem
-        mensagem do cliente nas últimas 24 h) recebem às 10h de Lisboa um lembrete no dia 1, no dia 3 e no dia 5, pelo
-        WhatsApp ou, sem telemóvel, por email. Sem resposta, o pedido é arquivado no dia 7 (nunca apagado). O «2»
-        cancela o pedido; qualquer outra resposta pára os lembretes e segue a conversa. Um ciclo por pedido.
+        Os pedidos dos «Orçamentos novos» a que falta informação, sem pessoa atribuída, recebem o «Pedir o que falta»
+        sozinho 30 min depois de entrarem (nunca com o cliente a escrever há menos de 30 min), e a repetição no dia
+        seguinte à mesma hora: no máximo 3 mensagens, das 8h às 21h de Lisboa (o que fica fora sai às 9h), pelo
+        WhatsApp ou, sem telemóvel, por email. O «Pedir o que falta» da equipa conta como a 1.ª. Sem resposta, o
+        pedido é arquivado no dia a seguir à 3.ª (nunca apagado). O «2» cancela o pedido; qualquer outra resposta
+        pára as mensagens e a Vitória grava o que o cliente disse. Um ciclo por pedido, e uma mensagem automática
+        por dia a cada cliente.
       </p>
       <p className={`mt-2 text-sm font-semibold ${ligado ? "text-red-300" : "text-amber-200"}`}>
         {estado == null ? "A ler…" : ligado ? "LIGADO" : "Desligado: nada sai, nada se cancela e nada se arquiva"}

@@ -45,13 +45,15 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "licoes-da-vitoria", titulo: "Lições da Vitória", horario: "20 5 * * *", intervaloMin: 24 * 60 },
   // 17-11-2026 (d59): o lembrete único da app de cliente, 3 dias depois do convite — desligado até os textos estarem aprovados.
   { nome: "lembrete-da-app", titulo: "App de cliente: lembrete a quem foi convidado e não aderiu (desligado por omissão)", horario: "0 10 * * *", intervaloMin: 24 * 60 },
-  // 19-11-2026 (d71): os pedidos dos «Orçamentos novos» a que falta informação — lembretes no dia 1, 3 e 5, arquivo no dia 7 (10h de Lisboa; interruptor nas Configs).
-  { nome: "lembretes-do-que-falta", titulo: "Lembretes do que falta: os «Orçamentos novos» incompletos, às 10h de Lisboa (interruptor nas Configs)", horario: "0 9,10 * * *", intervaloMin: 24 * 60 },
+  // 19-11-2026 (d71), no ritmo da d88 (23-11-2026): o «Pedir o que falta» sozinho, 30 min depois de o pedido entrar, repetido no dia seguinte (3 no máximo), arquivo no dia a seguir à 3.ª (8h–21h; interruptor nas Configs).
+  { nome: "lembretes-do-que-falta", titulo: "Pedir o que falta sozinho: os «Orçamentos novos» incompletos, 8h–21h de Lisboa (interruptor nas Configs)", horario: "7,22,37,52 * * * *", intervaloMin: 15 },
   // 21-11-2026 (d83): o seguimento do cliente que a equipa marcou na Mesa — 3 mensagens à mesma hora, arquivo no 4.º dia (9h–21h; interruptor de emergência nas Configs).
   { nome: "seguimento-do-cliente", titulo: "Seguimento do cliente: as mensagens marcadas na Mesa e o fecho ao 4.º dia (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
   // 22-11-2026 (d87): os pedidos completos pela Vitória fora das 8h–21h saem às 8h00; os envios a meio passam à equipa (interruptor de emergência nas Configs).
   // 23-11-2026 (d88): a mesma rotina manda também os «Orçamentos novos» completos de todas as origens (10 min de espera, no máximo 5 envios por passagem).
   { nome: "envio-aos-parceiros", titulo: "Envio automático aos parceiros: os «Orçamentos novos» completos de todas as origens e a fila das 8h00 (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
+  // 23-11-2026 (d88): as propostas dos parceiros vão ao cliente sozinhas, com 3 propostas ou 3 h depois da 1.ª (8h–21h; interruptor nas Configs, ligado por omissão).
+  { nome: "propostas-ao-cliente", titulo: "Propostas ao cliente: o orçamento sai sozinho pela Vitória (interruptor nas Configs)", horario: "2,17,32,47 * * * *", intervaloMin: 15 },
   { nome: "weekly-digest", titulo: "Resumo semanal por email", horario: "0 9 * * 1", intervaloMin: 7 * 24 * 60 },
 ];
 

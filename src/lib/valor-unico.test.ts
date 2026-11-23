@@ -127,7 +127,9 @@ describe("d39 B — «Escolher por mim»", () => {
     expect(MESA).toContain('if (accao === "aceitar" && avisoAntesDeAceitar && !window.confirm(avisoAntesDeAceitar)) return;');
     expect(MESA).toContain("avisoAntesDeAceitar={avisoDoValorUnico(pedido, negociacao)}");
     // O «Enviar orçamento» e o «Enviar pela CLYON» usam a mensagem do valor único.
-    expect(MESA).toContain("if (p.valorUnicoCliente != null && !trabalhoFechado(p.negociacoes)) {");
+    // d88: pela mensagem do orçamento da Mesa, num sítio só (a mesma da Vitória).
+    expect(MESA).toContain("return textoDoOrcamentoDaMesa(p, new Date(), propostas);");
+    expect(ler("src/lib/texto-do-orcamento-da-mesa.ts")).toContain("if (p.valorUnicoCliente != null && !trabalhoFechado(p.negociacoes)) {");
   });
 });
 

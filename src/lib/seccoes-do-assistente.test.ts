@@ -295,6 +295,7 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/interruptor-do-seguimento", porque: "desligar (ou voltar a ligar) o seguimento do cliente é do administrador — é o travão de emergência (d83, 21-11-2026)" },
   { seccao: "configs", rota: "/api/admin/interruptor-do-envio-automatico", porque: "desligar (ou voltar a ligar) o envio automático aos parceiros é do administrador — é o travão de emergência (d87, 22-11-2026)" },
   { seccao: "configs", rota: "/api/admin/lembretes-do-que-falta", porque: "ligar os lembretes do que falta (mensagens, cancelamentos e arquivos automáticos) é do administrador, com o sim do dono (d71, 19-11-2026)" },
+  { seccao: "configs", rota: "/api/admin/propostas-ao-cliente", porque: "desligar (ou voltar a ligar) o envio das propostas ao cliente pela Vitória é do administrador (d88, 23-11-2026)" },
   // O aviso a todos os profissionais (d11, 15-11-2026): enviar a todos e o interruptor da faixa são do administrador.
   { seccao: "profissionais", rota: "/api/admin/aviso-aos-profissionais", porque: "o aviso a todos os profissionais (envio em massa) é só do administrador (d11, 15-11-2026)" },
   // «Quem conta para os 12» (d60, 17-11-2026): nomes, emails e telefones de quem está no teste das apps.

@@ -47,6 +47,7 @@ import InterruptorDaValidadeDosOrcamentos from "@/components/admin/InterruptorDa
 import InterruptorDoSeguimentoDoCliente from "@/components/admin/InterruptorDoSeguimentoDoCliente";
 import InterruptorDoEnvioAutomatico from "@/components/admin/InterruptorDoEnvioAutomatico";
 import LembretesDoQueFalta from "@/components/admin/LembretesDoQueFalta";
+import EnviarAsPropostas from "@/components/admin/EnviarAsPropostas";
 import InterruptorDoAvisoDoNovoModelo from "@/components/admin/InterruptorDoAvisoDoNovoModelo";
 import InterruptorDoSeguimentoDaVitoria from "@/components/admin/InterruptorDoSeguimentoDaVitoria";
 import InterruptorDaVitoriaAgente from "@/components/admin/InterruptorDaVitoriaAgente";
@@ -3669,8 +3670,11 @@ export default function ColaboradorAdminClient({
               {/* O envio automático aos parceiros (d87): os pedidos completos pela Vitória; ligado por omissão, desligar é a emergência. */}
               <InterruptorDoEnvioAutomatico />
 
-              {/* Os lembretes do que falta (d71): os «Orçamentos novos» incompletos, às 10h; desligados por omissão, só o administrador, com o ensaio e os textos. */}
+              {/* O «Pedir o que falta» sozinho (d71, no ritmo da d88): os «Orçamentos novos» incompletos, 30 min depois; só o administrador, com o ensaio e os textos. */}
               <LembretesDoQueFalta />
+
+              {/* As propostas ao cliente (d88): o orçamento sai sozinho pela Vitória; ligado por omissão, só o administrador, com o ensaio. */}
+              <EnviarAsPropostas />
 
               {/* A faixa e a página «Saber mais» do aviso do novo modelo (d11): desligadas por omissão, só o administrador. */}
               <InterruptorDoAvisoDoNovoModelo />

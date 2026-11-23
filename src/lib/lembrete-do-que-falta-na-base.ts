@@ -1,5 +1,7 @@
 /**
- * OS LEMBRETES DO QUE FALTA, NA BASE — d71 (CEO e dono, 19-11-2026).
+ * OS LEMBRETES DO QUE FALTA, NA BASE — d71 (CEO e dono, 19-11-2026), no ritmo
+ * da d88 (23-11-2026): o «Pedir o que falta» sozinho, 30 min depois de o pedido
+ * entrar, e a repetição no dia seguinte, das 8h às 21h de Lisboa.
  *
  * As regras puras estão em `lembrete-do-que-falta.ts`. Aqui:
  *
@@ -11,9 +13,10 @@
  *    pessoas: o telefone, o email e o nome lêem-se do pedido no momento;
  *  - `lembretesDoQueFaltaVez` — o carimbo «o próximo pode sair a partir de…»,
  *    20 a 45 s entre WhatsApp, como as outras filas;
- *  - a rotina (`/api/cron/lembretes-do-que-falta`, às 10h de Lisboa) que decide
- *    o passo de cada pedido: os emails saem logo, os WhatsApp vão para a fila;
- *    a passagem (às rondas da ponte) envia UM de cada vez, das 9h às 21h;
+ *  - a rotina (`/api/cron/lembretes-do-que-falta`, de 15 em 15 min, das 8h às
+ *    21h de Lisboa) que decide o passo de cada pedido: os emails saem logo, os
+ *    WhatsApp vão para a fila; a passagem (às rondas da ponte) envia UM de cada
+ *    vez, das 8h às 21h;
  *  - o «2» (chamado por `whatsapp-negociacao.ts`) e a linha da Mesa.
  *
  * Com o interruptor desligado, nada sai, nada se cancela e nada se arquiva.
@@ -25,11 +28,13 @@ import { appendOrderHistory, ensureNegociacoesTable, ensureRegistoTable, ensureS
 import { instanteDaBase } from "./hora-de-lisboa";
 import {
   canalDoLembrete,
-  eAHoraDosLembretes,
+  devidoDoPrimeiro,
   eLembreteDoQueFalta,
   emailValido,
   linhaDoLembreteNaMesa,
+  MINUTOS_DE_SOSSEGO,
   MOTIVOS_DE_FORA,
+  naJanelaDosLembretes,
   NOME_DO_INTERRUPTOR_DO_QUE_FALTA,
   porqueFicaDeFora,
   porqueParaOCiclo,
@@ -104,12 +109,19 @@ export const COLUNA_DA_PURGA_DO_QUE_FALTA = `ALTER TABLE lembretesDoQueFalta ADD
  */
 export const COLUNA_DA_PERGUNTA_DO_QUE_FALTA = `ALTER TABLE lembretesDoQueFalta ADD COLUMN cancelarPedidoEm DATETIME NULL DEFAULT NULL`;
 
+/**
+ * d88 (23-11-2026) — aditiva, 0 nas linhas de antes: a 1.ª mensagem do ciclo foi
+ * o «Pedir o que falta» da equipa, à mão (conta como a 1.ª; a 2.ª sai no dia
+ * seguinte). `lembrete1Em` guarda o quando dela, para a uma-por-dia contar.
+ */
+export const COLUNA_DA_EQUIPA_DO_QUE_FALTA = `ALTER TABLE lembretesDoQueFalta ADD COLUMN lembrete1PelaEquipa TINYINT(1) NOT NULL DEFAULT 0`;
+
 async function garantirTabelas(): Promise<Pool> {
   const pool = await getPool();
   if (!pool) throw new Error("[lembrete-do-que-falta] base de dados indisponível");
   if (!tabelasProntas) {
     for (const sql of SQL_DAS_TABELAS_DO_QUE_FALTA) await pool.execute(sql);
-    for (const coluna of [COLUNA_DA_PURGA_DO_QUE_FALTA, COLUNA_DA_PERGUNTA_DO_QUE_FALTA]) {
+    for (const coluna of [COLUNA_DA_PURGA_DO_QUE_FALTA, COLUNA_DA_PERGUNTA_DO_QUE_FALTA, COLUNA_DA_EQUIPA_DO_QUE_FALTA]) {
       try {
         await pool.execute(coluna);
       } catch (err) {
@@ -203,6 +215,7 @@ function lerLinha(l: Record<string, unknown>): LinhaDoCiclo {
     canceladoEm: d(l.canceladoEm),
     paradoEm: d(l.paradoEm),
     paradoPorque: (l.paradoPorque as string | null) ?? null,
+    lembrete1PelaEquipa: Number(l.lembrete1PelaEquipa ?? 0) === 1,
     porEnviar: (PASSOS as readonly string[]).includes(passo) ? (passo as PassoDoQueFalta) : null,
     ultimaFalha: (l.ultimaFalha as string | null) ?? null,
   };
@@ -258,6 +271,48 @@ function emailsDeTesteDoAmbiente(): Set<string> {
   );
 }
 
+/** O número está bloqueado no WhatsApp da plataforma? Na dúvida, sim (não se envia). */
+async function numeroBloqueado(telefone: string): Promise<boolean> {
+  const { numeroBloqueadoWhatsApp } = await import("./db");
+  return numeroBloqueadoWhatsApp(telefone).catch(() => true);
+}
+
+/** A equipa escreveu à mão a este número há pouco (a regra das 12 h da d73)? Na dúvida, não. */
+async function aEquipaFalouHaPoucoAo(telefone: string | null): Promise<boolean> {
+  if (!telefone) return false;
+  try {
+    const { mensagensDoNumeroWhatsApp } = await import("./db");
+    const { aEquipaFalouHaPouco } = await import("./pedido-em-curso");
+    return aEquipaFalouHaPouco(await mensagensDoNumeroWhatsApp(telefone, 40));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * O CLIENTE FALA OUTRA LÍNGUA E A MENSAGEM NÃO TEM TRADUÇÃO FIXA? — a língua,
+ * ou null. As traduções fixas (`traducoes-fixas-da-vitoria.json`) não têm o
+ * «Pedir o que falta» (é escrito pedido a pedido): um cliente noutra língua
+ * fica de fora e a equipa pede-lhe à mão, na língua dele. Sem saber a língua,
+ * é o português.
+ */
+async function linguaSemTraducao(
+  telefone: string,
+  pedido: { id: number; serviceType: string | null; city: string | null },
+  faltas: readonly ChaveDaFalta[],
+): Promise<string | null> {
+  try {
+    const { linguaDoNumero } = await import("./db");
+    const lingua = await linguaDoNumero(telefone);
+    if (!lingua || lingua === "pt") return null;
+    const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
+    const texto = textoDoPasso("lembrete2", pedido, faltas as ChaveDaFalta[], new Date());
+    return texto && traducaoFixa(texto, lingua) != null ? null : lingua;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Os pedidos pedidos, com tudo o que as regras precisam: o estado, se já foi
  * a alguém, o que falta (`oQueFaltaNoPedido`, a mesma conta da Mesa), o último
@@ -277,7 +332,7 @@ async function lerPedidos(pool: Pool, ids?: number[]): Promise<PedidoLido[]> {
   const [rows] = (await pool.execute(
     `SELECT o.id, o.status, o.createdAt, o.contactName, o.contactEmail, o.contactPhone, o.serviceType, o.city,
             o.address, o.postalCode, o.floor, o.hasElevator, o.parkingDistance, o.description, o.filesJson,
-            o.urgency, o.dataAgendada, o.rawOrderJson, o.historyJson, o.anonimizadoEm,
+            o.urgency, o.dataAgendada, o.rawOrderJson, o.historyJson, o.anonimizadoEm, o.assignedToId,
             (o.valorFixoClyon IS NOT NULL OR o.propostaEnviadaEm IS NOT NULL
               OR EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id)) AS jaFoiEnviado
        FROM simulatorOrders o
@@ -295,9 +350,29 @@ async function lerPedidos(pool: Pool, ids?: number[]): Promise<PedidoLido[]> {
     const id = Number(r.id);
     const telefone = (r.contactPhone as string | null) ?? null;
     const tel = noveDigitos(telefone);
-    const comUmaPessoa = tel ? await numeroInterrompidoWhatsApp(tel).catch(() => true) : false;
     const faltas = oQueFaltaNoPedido(r as unknown as Parameters<typeof oQueFaltaNoPedido>[0]);
+    // Só se pergunta à base o que custa (a conversa, o bloqueio, a língua) por um pedido que pode receber mensagens.
+    const vivo =
+      faltas.length > 0 && Number(r.jaFoiEnviado) !== 1 && r.anonimizadoEm == null && !pedidoFechado((r.status as string | null) ?? null);
+    // d88: a conversa com uma pessoa (d73) — entregue, ou a equipa escreveu à mão há pouco.
+    const comUmaPessoa =
+      tel && vivo ? (await numeroInterrompidoWhatsApp(tel).catch(() => true)) || (await aEquipaFalouHaPoucoAo(telefone)) : false;
+    const doWhatsApp = vivo ? telemovelPortugues(telefone) : null;
+    const equipaPediuEm = ultimoPedirOQueFalta(r.historyJson as string | null);
+    const extra = doWhatsApp
+      ? {
+          bloqueado: await numeroBloqueado(doWhatsApp),
+          linguaSemTraducao: await linguaSemTraducao(doWhatsApp, {
+            id,
+            serviceType: (r.serviceType as string | null) ?? null,
+            city: (r.city as string | null) ?? null,
+          }, faltas),
+        }
+      : { bloqueado: false, linguaSemTraducao: null };
     lidos.push({
+      atribuido: Number(r.assignedToId ?? 0) > 0,
+      servico: (r.serviceType as string | null) ?? null,
+      ...extra,
       id,
       status: (r.status as string | null) ?? null,
       jaFoiEnviado: Number(r.jaFoiEnviado) === 1 || r.anonimizadoEm != null,
@@ -306,7 +381,9 @@ async function lerPedidos(pool: Pool, ids?: number[]): Promise<PedidoLido[]> {
       contactEmail: (r.contactEmail as string | null) ?? null,
       contactPhone: telefone,
       faltas,
-      equipaPediuEm: ultimoPedirOQueFalta(r.historyJson as string | null),
+      equipaPediuEm,
+      // d88: «precisa info» por um «Pedir info» escrito à mão (e não o «Pedir o que falta»): a equipa já perguntou outra coisa.
+      pedirInfoDaEquipa: String(r.status ?? "").trim() === "precisa_info" && !equipaPediuEm,
       clienteEscreveuEm: (tel ? respostas.get(tel)?.ultimaMensagemEm : null) ?? null,
       comUmaPessoa,
       jaTeveCiclo: jaTem.has(id),
@@ -347,7 +424,7 @@ export async function ensaioDoQueFalta(agora: Date = new Date()): Promise<Ensaio
   const aCorrer = (await ciclosACorrer(pool)).map((c) => ({
     pedidoId: c.pedidoId,
     canal: c.canal,
-    linha: linhaDoLembreteNaMesa(c, ligado),
+    linha: linhaDoLembreteNaMesa(c, ligado, agora),
     passoDeHoje: proximoPassoDoQueFalta(c, agora),
   }));
   return { ligado, entrariam, aCorrer, deFora };
@@ -355,7 +432,7 @@ export async function ensaioDoQueFalta(agora: Date = new Date()): Promise<Ensaio
 
 export { MOTIVOS_DE_FORA };
 
-/* ── A rotina: às 10h de Lisboa ──────────────────────────────────────────── */
+/* ── A rotina: de 15 em 15 min, das 8h às 21h de Lisboa ──────────────────── */
 
 export type ResultadoDaRotinaDoQueFalta = {
   ligado: boolean;
@@ -372,16 +449,18 @@ const INTERVALO_ENTRE_EMAILS_MS = 600;
 
 /**
  * Os ciclos a correr em dia (parados se o pedido saiu, ficou completo ou o
- * cliente respondeu); os pedidos novos que entram; e o passo de hoje de cada
- * um — um por telefone. Os emails saem logo, espaçados; os WhatsApp vão para a
- * fila da ponte. Desligado, ou fora das 10h de Lisboa, não faz nada.
+ * cliente respondeu); os pedidos novos que entram (com o «Pedir o que falta»
+ * da equipa, se houve, como a 1.ª mensagem); e o passo que já pode sair de
+ * cada um — um por telefone, e nunca no dia em que já saiu outra mensagem
+ * automática a esse cliente. Os emails saem logo, espaçados; os WhatsApp vão
+ * para a fila da ponte. Desligado, ou fora das 8h–21h de Lisboa, não faz nada.
  */
 export async function rotinaDoQueFalta(agora: Date = new Date()): Promise<ResultadoDaRotinaDoQueFalta> {
   const r: ResultadoDaRotinaDoQueFalta = { ligado: false, novos: 0, naFila: 0, porEmail: 0, parados: 0, falhados: 0 };
   const { ligado } = await interruptorDoQueFalta();
   if (!ligado) return r;
   r.ligado = true;
-  if (!eAHoraDosLembretes(agora)) {
+  if (!naJanelaDosLembretes(agora)) {
     r.foraDeHoras = true;
     return r;
   }
@@ -407,24 +486,39 @@ export async function rotinaDoQueFalta(agora: Date = new Date()): Promise<Result
   for (const p of await lerPedidos(pool)) {
     if (porqueFicaDeFora(p, agora, teste)) continue;
     const canal = canalDoLembrete(p)!;
-    const [novo] = (await pool.execute("INSERT IGNORE INTO lembretesDoQueFalta (pedidoId, canal) VALUES (?, ?)", [p.id, canal])) as [
+    // d88: a equipa carregou em «Pedir o que falta» — conta como a 1.ª mensagem (a 2.ª sai no dia seguinte).
+    const daEquipa = p.equipaPediuEm instanceof Date && !Number.isNaN(p.equipaPediuEm.getTime());
+    const [novo] = (await (daEquipa
+      ? pool.execute("INSERT IGNORE INTO lembretesDoQueFalta (pedidoId, canal, lembrete1Em, lembrete1PelaEquipa) VALUES (?, ?, ?, 1)", [
+          p.id,
+          canal,
+          p.equipaPediuEm!.toISOString().slice(0, 19).replace("T", " "),
+        ])
+      : pool.execute("INSERT IGNORE INTO lembretesDoQueFalta (pedidoId, canal) VALUES (?, ?)", [p.id, canal]))) as [
       { affectedRows: number },
       unknown,
     ];
     if (Number(novo.affectedRows) !== 1) continue;
     r.novos += 1;
-    vivos.push({ c: { pedidoId: p.id, canal, porEnviar: null, ultimaFalha: null }, p });
+    vivos.push({
+      c: { pedidoId: p.id, canal, porEnviar: null, ultimaFalha: null, ...(daEquipa ? { lembrete1Em: p.equipaPediuEm, lembrete1PelaEquipa: true } : {}) },
+      p,
+    });
   }
 
-  // 3. O passo de hoje, um por telefone (ou email): com dois pedidos, sai um por dia.
+  // 3. O passo que já pode sair, um por telefone (ou email): com dois pedidos, sai um por dia.
   const vistos = new Set<string>();
   let emails = 0;
+  const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
   for (const { c, p } of vivos.sort((a, b) => a.c.pedidoId - b.c.pedidoId)) {
-    const passo = proximoPassoDoQueFalta(c, agora);
+    const passo = proximoPassoDoQueFalta(c, agora, devidoDoPrimeiro(p.criadoEm));
     if (!passo || c.porEnviar) continue;
     const contacto = c.canal === "whatsapp" ? noveDigitos(p.contactPhone) : (emailValido(p.contactEmail) ?? "");
     if (!contacto || vistos.has(contacto)) continue;
     vistos.add(contacto);
+    // A uma-por-dia comum (d85): já saiu hoje outra automática a este cliente — fica para amanhã, às 9h.
+    const contactoDaMensagem = c.canal === "whatsapp" ? { telefone: p.contactPhone } : { telefone: null, email: p.contactEmail };
+    if (await jaSaiuHojeUmaMensagemAutomatica(contactoDaMensagem, agora, { pool }).catch(() => true)) continue;
     if (c.canal === "whatsapp") {
       const [u] = (await pool.execute(
         `UPDATE lembretesDoQueFalta SET porEnviar = ?, porEnviarDesde = UTC_TIMESTAMP(), ultimaFalha = NULL
@@ -445,7 +539,7 @@ export async function rotinaDoQueFalta(agora: Date = new Date()): Promise<Result
 
 export function resumoDaRotinaDoQueFalta(r: ResultadoDaRotinaDoQueFalta): string | null {
   if (!r.ligado) return `desligado (interruptor «${NOME_DO_INTERRUPTOR_DO_QUE_FALTA}» nas Configs)`;
-  if (r.foraDeHoras) return "fora das 10h de Lisboa (o cron corre às 9h e às 10h UTC)";
+  if (r.foraDeHoras) return "fora das 8h–21h de Lisboa";
   if (r.novos === 0 && r.naFila === 0 && r.porEmail === 0 && r.parados === 0 && r.falhados === 0) return null;
   return `${r.novos} ciclo(s) novo(s) · ${r.naFila} WhatsApp na fila · ${r.porEmail} email(s) · ${r.parados} parado(s)` + (r.falhados ? ` · ${r.falhados} falhado(s)` : "");
 }
@@ -455,8 +549,9 @@ export function resumoDaRotinaDoQueFalta(r: ResultadoDaRotinaDoQueFalta): string
 export type ResultadoDaPassagemDoQueFalta = "desligado" | "fora-da-janela" | "nada" | "nao-e-a-vez" | "feito" | "falhou";
 
 export async function passagemDoQueFalta(agora: Date = new Date()): Promise<ResultadoDaPassagemDoQueFalta> {
-  const { dentroDaJanelaDoWhatsApp, intervaloAoAcaso } = await import("./aviso-aos-profissionais");
-  if (!dentroDaJanelaDoWhatsApp(agora)) return "fora-da-janela";
+  const { intervaloAoAcaso } = await import("./aviso-aos-profissionais");
+  // d88: das 8h às 21h de Lisboa (a janela das mensagens automáticas).
+  if (!naJanelaDosLembretes(agora)) return "fora-da-janela";
   const pool = await garantirTabelas();
   const [proximos] = (await pool.query(
     "SELECT pedidoId, porEnviar FROM lembretesDoQueFalta WHERE porEnviar IS NOT NULL ORDER BY porEnviarDesde ASC LIMIT 1",
@@ -528,12 +623,34 @@ export async function darOPasso(pedidoId: number, passo: PassoDoQueFalta, agora:
     await pararOCiclo(pool, pedidoId, parar);
     return { ok: false, porque: parar };
   }
-  if (proximoPassoDoQueFalta(c, agora) !== passo) return { ok: false, porque: "não é a vez deste passo" };
+  if (proximoPassoDoQueFalta(c, agora, devidoDoPrimeiro(p!.criadoEm)) !== passo) return { ok: false, porque: "não é a vez deste passo" };
+  // d88: a 1.ª nunca com o cliente a escrever há menos de 30 min (não se pisa a conversa a meio).
+  if (passo === "lembrete1" && p!.clienteEscreveuEm && agora.getTime() - p!.clienteEscreveuEm.getTime() < MINUTOS_DE_SOSSEGO * 60_000) {
+    return { ok: false, porque: "o cliente escreveu há menos de 30 min" };
+  }
+  // d88: o número bloqueado e o cliente noutra língua sem tradução fixa — outra vez, antes de sair.
+  if (c.canal === "whatsapp" && passo !== "arquivar") {
+    if (p!.bloqueado) {
+      await pararOCiclo(pool, pedidoId, "o número está bloqueado");
+      return { ok: false, porque: "o número está bloqueado" };
+    }
+    if (p!.linguaSemTraducao) {
+      const porque = `cliente noutra língua (${p!.linguaSemTraducao}), sem tradução fixa: a equipa pede o que falta à mão`;
+      await pararOCiclo(pool, pedidoId, porque);
+      return { ok: false, porque };
+    }
+  }
   // d85 (fase 0): nunca no dia em que já saiu outra mensagem automática a este número — de qualquer rotina, pela contagem comum.
   if (c.canal === "whatsapp" && p?.contactPhone) {
     const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
     const outra = await jaSaiuHojeUmaMensagemAutomatica({ telefone: p.contactPhone }, agora, { pool }).catch(() => false);
     if (outra) return { ok: false, porque: "já saiu hoje uma mensagem automática a este número (de outra rotina)" };
+  }
+  // d88: e por email, o mesmo, pelo email.
+  if (c.canal === "email" && p?.contactEmail) {
+    const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
+    const outra = await jaSaiuHojeUmaMensagemAutomatica({ telefone: null, email: p.contactEmail }, agora, { pool }).catch(() => false);
+    if (outra) return { ok: false, porque: "já saiu hoje uma mensagem automática a este email (de outra rotina)" };
   }
   const pedido = { id: p!.id, serviceType: p!.serviceType, city: p!.city };
   const texto = textoDoPasso(passo, pedido, p!.faltas as ChaveDaFalta[], agora);
@@ -563,7 +680,10 @@ export async function darOPasso(pedidoId: number, passo: PassoDoQueFalta, agora:
     );
     return { ok: false, porque: "o envio falhou" };
   }
-  const feito = `Lembrete do que falta ${n}/3 enviado ao cliente ${c.canal === "whatsapp" ? "pelo WhatsApp" : "por email"} (automático, d71).`;
+  const feito =
+    n === 1
+      ? `«Pedir o que falta» enviado ao cliente ${c.canal === "whatsapp" ? "pelo WhatsApp" : "por email"} — automático, pela Vitória (1/3, d88).`
+      : `«Pedir o que falta» repetido ao cliente ${c.canal === "whatsapp" ? "pelo WhatsApp" : "por email"} — automático, pela Vitória (${n}/3, d88).`;
   await appendOrderHistory(pedidoId, { type: "note", by: null, message: feito }).catch(() => {});
   return { ok: true, feito };
 }
@@ -594,7 +714,7 @@ async function arquivarSemResposta(pool: Pool, p: PedidoLido, canal: CanalDoLemb
   await fecharPagamentosAbertosDoPedido(p.id, "arquivado").catch(() => {});
   const saiu = await enviarPeloCanal(canal, p, "arquivar", texto);
   const resumo =
-    "Arquivado sozinho sem resposta (lembretes do que falta, d71): três lembretes ao cliente, sem resposta. " +
+    "Arquivado sozinho sem resposta (o «Pedir o que falta», d71/d88): três mensagens ao cliente, sem resposta. " +
     `${saiu ? `O cliente foi avisado ${canal === "whatsapp" ? "pelo WhatsApp" : "por email"}` : "O aviso ao cliente não saiu"}; pode voltar a pedir quando quiser.`;
   await appendOrderHistory(p.id, { type: "archived", by: null, message: resumo }).catch(() => {});
   await registarSemFalhar({ acontecimento: "lembrete_do_que_falta", pedidoId: p.id, autorTipo: "sistema", autorNome: "lembretes do que falta", resumo });
@@ -721,7 +841,7 @@ export async function lembretesNaMesa(ids: number[]): Promise<{
     const pool = await garantirTabelas();
     const linhas = new Map<number, string>();
     for (const [id, c] of await ciclosDosPedidos(pool, ids)) {
-      const l = linhaDoLembreteNaMesa(c, ligado);
+      const l = linhaDoLembreteNaMesa(c, ligado, new Date());
       if (l) linhas.set(id, l);
     }
     const [rows] = (await pool.query(

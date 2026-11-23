@@ -66,6 +66,8 @@ describe("a mensagem das propostas num pedido por carga", () => {
     const PAINEL = readFileSync(join(process.cwd(), "src/components/admin/AdminNegociacoesPanel.tsx"), "utf8");
     // d39: e a mensagem do valor único (`mensagemDoValorUnico`), a terceira.
     // d63: e a adjudicação (a frase da base), a quarta.
-    expect(PAINEL.split("base: lerBase(p.baseDoPreco),").length - 1).toBe(4);
+    // d88: as duas da mensagem do orçamento saíram para `texto-do-orcamento-da-mesa.ts` (a mesma da Vitória).
+    const DO_ORCAMENTO = readFileSync(join(process.cwd(), "src/lib/texto-do-orcamento-da-mesa.ts"), "utf8");
+    expect((PAINEL + DO_ORCAMENTO).split("base: lerBase(p.baseDoPreco),").length - 1).toBe(4);
   });
 });

@@ -2285,7 +2285,9 @@ describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulado
       expect(readFileSync(join(RAIZ, f), "utf8"), f).toMatch(/legendaDaContraproposta\(\{[^}]*minimoHoras: /);
     }
     const painel = readFileSync(join(RAIZ, "src/components/admin/AdminNegociacoesPanel.tsx"), "utf8");
-    expect(painel.match(/mudancaDaLista: p\.negociacoes\.some/g)?.length).toBe(2);
+    // d88: a mensagem do orçamento da Mesa saiu para `texto-do-orcamento-da-mesa.ts` (a mesma da Vitória).
+    const doOrcamento = readFileSync(join(RAIZ, "src/lib/texto-do-orcamento-da-mesa.ts"), "utf8");
+    expect((painel + doOrcamento).match(/mudancaDaLista: p\.negociacoes\.some/g)?.length).toBe(2);
   });
 
   it("o «Reenviar ao profissional» diz a hora dele, congelada, como o primeiro aviso", async () => {

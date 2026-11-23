@@ -33,6 +33,8 @@ export const FONTES_DAS_MENSAGENS_AUTOMATICAS: readonly FonteDasMensagensAutomat
   { rotina: "validade dos orçamentos (d62)", tabela: "validadeDosOrcamentos", colunas: ["lembrete1Em", "ultimoAvisoEm", "fechadoEm"] },
   { rotina: "lembretes do que falta (d71)", tabela: "lembretesDoQueFalta", colunas: ["lembrete1Em", "lembrete2Em", "lembrete3Em", "arquivadoEm"] },
   { rotina: "seguimento do cliente (d83)", tabela: "seguimentoDoCliente", colunas: ["mensagem1Em", "mensagem2Em", "mensagem3Em", "arquivadoEm"] },
+  // d88 (23-11-2026): o orçamento que a Vitória envia sozinha ao cliente.
+  { rotina: "propostas ao cliente (d88)", tabela: "envioDasPropostasAoCliente", colunas: ["enviadoEm"] },
 ]);
 
 /** Pura: alguma destas datas é de hoje, em Lisboa? */

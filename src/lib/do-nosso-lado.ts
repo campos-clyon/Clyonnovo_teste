@@ -106,6 +106,8 @@ export type PedidoParaOLado = {
   dataAgendada?: string | null;
   /** O resumo da escolha dos parceiros numa mudança (d6) — `escolhidosDeJson`. */
   escolhidosJson?: string | null;
+  /** d88: o envio automático das propostas ao cliente, dito numa linha (posto pela Mesa). */
+  envioAutomatico?: string | null;
   negociacoes: NegociacaoParaOLado[];
 };
 
@@ -211,52 +213,68 @@ export function precosClyonDoNossoLado(trabalhos: TrabalhoClyonParaOLado[], agor
 /* ── 3. As propostas por enviar ─────────────────────────────────────────── */
 
 /**
- * As propostas que esperam por nós, pela regra da Mesa: um pedido que a CLYON
- * negoceia (`quemNegoceia`), com uma proposta de parceiro pendente — ou um
- * parceiro que aceitou o valor e falta contratar — e o orçamento ainda não
+ * AS PROPOSTAS POR ENVIAR DE UM PEDIDO, pela regra da Mesa: um pedido que a
+ * CLYON negoceia (`quemNegoceia`), com uma proposta de parceiro pendente — ou
+ * um parceiro que aceitou o valor e falta contratar — e o orçamento ainda não
  * enviado depois dela (`orcamentoEnviadoCobre`, no painel). Os feitos por
- * confirmar ficam de fora: são o bloco deles.
+ * confirmar ficam de fora: são o bloco deles. Devolve os instantes de cada
+ * proposta à espera de nós e de quantos parceiros são — ou null, se o pedido
+ * não está nesta espera. É a mesma conta do envio automático das propostas
+ * ao cliente (d88, `envio-das-propostas-ao-cliente.ts`).
  */
-export function propostasDoNossoLado(pedidos: PedidoParaOLado[], agora: Date): LinhaDoNossoLado[] {
-  const out: LinhaDoNossoLado[] = [];
-  for (const p of pedidos) {
-    if (fechado(p.status)) continue;
-    if (p.negociacoes.some((n) => n.confirmadoEm != null)) continue;
-    if (quemNegoceia(p) !== "clyon") continue;
-    const vivas = p.negociacoes.filter((n) => VIVA(n.estado) && n.estado !== "acordada");
-    if (p.negociacoes.some((n) => VIVA(n.estado) && n.execucaoEnviadaEm != null && n.confirmadoEm == null)) continue;
-    const enviado = instanteDaBase(p.propostaEnviadaEm ?? null)?.getTime() ?? null;
+export function propostasPorEnviarDoPedido(
+  p: PedidoParaOLado,
+  agora: Date,
+): { instantes: number[]; parceiros: number } | null {
+  if (fechado(p.status)) return null;
+  if (p.negociacoes.some((n) => n.confirmadoEm != null)) return null;
+  if (quemNegoceia(p) !== "clyon") return null;
+  const vivas = p.negociacoes.filter((n) => VIVA(n.estado) && n.estado !== "acordada");
+  if (p.negociacoes.some((n) => VIVA(n.estado) && n.execucaoEnviadaEm != null && n.confirmadoEm == null)) return null;
+  const enviado = instanteDaBase(p.propostaEnviadaEm ?? null)?.getTime() ?? null;
 
-    /* Os instantes de cada proposta à espera de nós — as de depois do envio. */
-    const desde: number[] = [];
-    let quantas = 0;
-    for (const n of vivas) {
-      const propostas = propostasDe(n.propostasJson);
-      if (n.estado === "aguarda_contratacao") {
-        const aceite = [...propostas].reverse().find((x) => x.estado === "aceite");
-        const t = instanteDaBase((aceite?.criadaEm as string) ?? n.actualizadaEm ?? null)?.getTime();
-        if (t != null && (enviado == null || t > enviado)) {
-          desde.push(t);
-          quantas += 1;
-        }
-        continue;
-      }
+  /* Os instantes de cada proposta à espera de nós — as de depois do envio. */
+  const instantes: number[] = [];
+  let parceiros = 0;
+  for (const n of vivas) {
+    const propostas = propostasDe(n.propostasJson);
+    const antes = instantes.length;
+    if (n.estado === "aguarda_contratacao") {
+      const aceite = [...propostas].reverse().find((x) => x.estado === "aceite");
+      const t = instanteDaBase((aceite?.criadaEm as string) ?? n.actualizadaEm ?? null)?.getTime();
+      if (t != null && (enviado == null || t > enviado)) instantes.push(t);
+    } else {
       for (const x of propostas) {
         if (x.por !== "profissional" || x.estado !== "pendente") continue;
         if (estaExpirada(x as unknown as PropostaDoMotor, agora)) continue;
         const t = instanteDaBase(x.criadaEm as string)?.getTime();
         if (t == null || (enviado != null && t <= enviado)) continue;
-        desde.push(t);
-        quantas += 1;
+        instantes.push(t);
       }
     }
-    if (quantas === 0) continue;
+    if (instantes.length > antes) parceiros += 1;
+  }
+  return instantes.length > 0 ? { instantes, parceiros } : null;
+}
+
+/**
+ * As propostas que esperam por nós, pela regra da Mesa (`propostasPorEnviarDoPedido`).
+ * Com a linha do envio automático (d88) posta pela Mesa, diz-se também quando
+ * a Vitória as envia, ou porque ficam com uma pessoa.
+ */
+export function propostasDoNossoLado(pedidos: PedidoParaOLado[], agora: Date): LinhaDoNossoLado[] {
+  const out: LinhaDoNossoLado[] = [];
+  for (const p of pedidos) {
+    const por = propostasPorEnviarDoPedido(p, agora);
+    if (!por) continue;
+    const quantas = por.instantes.length;
+    const envio = typeof p.envioAutomatico === "string" && p.envioAutomatico.trim() ? ` · ${p.envioAutomatico.trim()}` : "";
     out.push({
       tipo: "propostas",
       pedidoId: p.id,
       telefone: null,
-      esperaS: Math.max(0, Math.floor((agora.getTime() - Math.min(...desde)) / 1000)),
-      oQue: `${quantas} ${quantas === 1 ? "proposta" : "propostas"} de parceiros por enviar ao cliente`,
+      esperaS: Math.max(0, Math.floor((agora.getTime() - Math.min(...por.instantes)) / 1000)),
+      oQue: `${quantas} ${quantas === 1 ? "proposta" : "propostas"} de parceiros por enviar ao cliente${envio}`,
     });
   }
   return out;

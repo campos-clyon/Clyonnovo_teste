@@ -87,8 +87,8 @@ import { CONFIRMEI_COM_O_PARCEIRO, DADOS_DE_PAGAMENTO_A_CONFIRMAR, SELO_DO_TITUL
  */
 import { estaExpirada, type Proposta as PropostaDoMotor } from "@/lib/negociacao";
 import { combinaComABusca } from "@/lib/procurar-pedido";
-import { avisoAcimaDoValorUnico, mensagemDoValorUnico, valorUnicoSugerido } from "@/lib/valor-unico";
-import { comValidade } from "@/lib/validade-do-orcamento";
+import { avisoAcimaDoValorUnico, valorUnicoSugerido } from "@/lib/valor-unico";
+import { nomeDoServicoDoOrcamento, textoDoOrcamentoDaMesa } from "@/lib/texto-do-orcamento-da-mesa";
 import PassoDaValidade, { type ValidadeNaMesa } from "@/components/admin/PassoDaValidade";
 import SeguimentoDoCliente, { type SeguimentoNaMesa } from "@/components/admin/SeguimentoDoCliente";
 import ValorUnicoNaMesa, { VALOR_UNICO_ACEITE_NA_MESA } from "./ValorUnicoNaMesa";
@@ -141,7 +141,6 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
-import { SERVICE_CATEGORIES } from "@/lib/service-categories";
 import {
   mensagemDasPropostas,
   propostasParaOCliente,
@@ -578,9 +577,8 @@ function nomeComMaiuscula(id: string | null): string {
 }
 
 function nomeDoServico(id: string | null): string | null {
-  if (!id) return null;
-  const c = SERVICE_CATEGORIES.find((x) => x.id === id);
-  return (c?.label ?? id.replace(/_/g, " ")).toLowerCase();
+  // d88: o mesmo nome que a mensagem do orçamento usa (`texto-do-orcamento-da-mesa.ts`).
+  return nomeDoServicoDoOrcamento(id);
 }
 
 const ESTADO_DA_PROPOSTA: Record<string, string> = {
@@ -631,6 +629,8 @@ type Pedido = {
   concluidoVistoEm: string | null;
   /** Quando o orçamento foi ao cliente (21-10-2026) — ver `orcamentoEnviadoCobre`. */
   propostaEnviadaEm?: string | null;
+  /** d88: o envio automático das propostas ao cliente, numa linha (posta pela rota). */
+  envioAutomatico?: string | null;
   /** d62: a validade dos orçamentos ligada e o cliente respondeu — posto pela Mesa ao ler (`validadeNaMesa`). */
   validadeParada?: boolean;
   /** O valor único ao cliente, sem IVA (d39, 15-11-2026). */
@@ -1784,44 +1784,11 @@ export default function AdminNegociacoesPanel({
   /** A mensagem do orçamento — a do link e a do «Enviar pela CLYON» (23-10-2026). */
   function textoDoOrcamento(p: Pedido, propostas = propostasParaOCliente(p.negociacoes)): string {
     /*
-     * O VALOR ÚNICO (d39, 15-11-2026): com ele, o «Enviar orçamento» e o «Enviar
-     * pela CLYON» mandam um valor só, sem nomes nem lista. Já fechado, a
-     * mensagem de sempre («Está combinado com…»).
+     * d88 (23-11-2026): a MESMA função com que a Vitória envia as propostas ao
+     * cliente sozinha (`texto-do-orcamento-da-mesa.ts`) — o valor único (d39),
+     * as propostas com a validade (d62), ou «Está combinado com…».
      */
-    /*
-     * O ORÇAMENTO TEM VALIDADE — 18-11-2026 (d62): «Esta proposta é válida até
-     * {dia da semana, dd/mm}», 3 dias depois do envio (Lisboa). Só quando há
-     * proposta a escolher; o «Está combinado com…» não a leva.
-     */
-    if (p.valorUnicoCliente != null && !trabalhoFechado(p.negociacoes)) {
-      return comValidade(mensagemDoValorUnico(
-        {
-          nomeCliente: p.contactName,
-          servico: nomeDoServico(p.serviceType),
-          servicoId: p.serviceType,
-          cidade: p.city,
-          valorSemIva: p.valorUnicoCliente,
-          base: lerBase(p.baseDoPreco),
-        },
-        new Date(),
-      ), new Date());
-    }
-    const comPropostas = !trabalhoFechado(p.negociacoes) && propostas.length > 0;
-    const texto = mensagemDasPropostas({
-      nomeCliente: p.contactName,
-      servico: nomeDoServico(p.serviceType),
-      servicoId: p.serviceType,
-      cidade: p.city,
-      propostas,
-      fechado: trabalhoFechado(p.negociacoes),
-      // Por carga, diz-se em cada valor — a Célia (#375) leu-os como o total.
-      base: lerBase(p.baseDoPreco),
-      // Por hora, a estimativa pelas horas previstas (31-10-2026).
-      horasPrevistas: p.horasPrevistas ?? null,
-      // Numa mudança da lista, o mínimo é o de cada parceiro (d7, 11-11-2026).
-      mudancaDaLista: p.negociacoes.some((n) => Number(n.escolhidoPeloCliente) === 1),
-    });
-    return comPropostas ? comValidade(texto, new Date()) : texto;
+    return textoDoOrcamentoDaMesa(p, new Date(), propostas);
   }
 
   /**
@@ -3616,6 +3583,10 @@ export default function AdminNegociacoesPanel({
               <Send className="h-3.5 w-3.5" aria-hidden="true" />
               Enviar pela CLYON
             </button>
+          )}
+          {/* d88: o envio automático — quando a Vitória envia o orçamento sozinha, ou porque fica com uma pessoa. */}
+          {p.envioAutomatico && propostasParaOCliente(p.negociacoes).length > 0 && (
+            <p className="basis-full text-[11px] leading-4 text-slate-400">Envio automático: {p.envioAutomatico}</p>
           )}
           {/*
             A ADJUDICAÇÃO — 23-10-2026. *«…e o outro, para enviar depois de já ter
