@@ -16,10 +16,8 @@
  *    «pergunta», só o CANCELAR cancela; com «logo», a resposta ao lembrete
  *    cancela sem a pergunta.
  *
- * A opção «logo» existe só para a d71, que hoje cancela com o «2» sem pedir o
- * CANCELAR (decisão do dono a 19-11-2026: «2 cancela logo»). O comportamento
- * da d71 fica como estava; passar a pedir o CANCELAR é uma decisão do CEO e do
- * dono (basta mudar a `confirmacao` da fonte dela).
+ * A opção «logo» já não é usada: a d71 passou a pedir o CANCELAR na d5 (CEO e dono,
+ * 21-11-2026) — o «2» nunca cancela à primeira.
  */
 
 import type { Pool } from "mysql2/promise";
@@ -93,14 +91,14 @@ export const FONTES_DO_CANCELAMENTO = {
     decisao: "d71",
     tabela: "lembretesDoQueFalta",
     agoraSql: "UTC_TIMESTAMP()",
-    abertoSql: "lembrete1Em IS NOT NULL AND arquivadoEm IS NULL AND paradoEm IS NULL",
-    confirmacao: "logo",
+    abertoSql: "lembrete1Em IS NOT NULL AND arquivadoEm IS NULL",
+    confirmacao: "pergunta",
     aoPerguntarSql: "paradoEm = COALESCE(paradoEm, UTC_TIMESTAMP()), paradoPorque = COALESCE(paradoPorque, ?)",
     autorNome: "WhatsApp (lembrete do que falta)",
     notaDaPergunta:
       "O cliente respondeu ao lembrete do que falta: perguntámos se confirma o cancelamento (responde CANCELAR). Nada foi cancelado.",
     resumo: () =>
-      `O cliente respondeu «2» ao lembrete do que falta (d71): pedido cancelado, com o texto de cancelamento ao cliente. ${DEPOIS_DA_PURGA}`,
+      `O cliente respondeu «3» ao lembrete do que falta e confirmou com CANCELAR (d71, d5): pedido cancelado, com o texto de cancelamento ao cliente. ${DEPOIS_DA_PURGA}`,
     avisaComoTrabalhoClyon: false,
     paraAValidade: false,
   },

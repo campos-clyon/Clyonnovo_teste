@@ -15688,6 +15688,8 @@ export type Acontecimento =
   | "validade_orcamentos_interruptor"
   // Os lembretes do que falta (d71, 19-11-2026): o interruptor das Configs e o arquivo sem resposta.
   | "lembretes_do_que_falta_interruptor"
+  | "whatsapp_pela_meta_interruptor"
+  | "whatsapp_meta_erro"
   | "lembrete_do_que_falta"
   // O seguimento do cliente (d83, 21-11-2026): o «Falei com o cliente», o arquivo sem resposta e o interruptor das Configs.
   | "seguimento_do_cliente"
@@ -18319,6 +18321,8 @@ export type PedidoParaOAssistente = {
      * assistente antes de falar (`segueONovoModelo`); sem ele, o de antes.
      */
     noNovoModelo?: boolean;
+    /** d5 (21-11): os dados de pagamento do parceiro por confirmar — a Vitória não manda procurar o IBAN no pedido. Posto por `marcarONovoModelo`. */
+    dadosPorConfirmar?: boolean;
     /**
      * d17: o regime congelado ao contratar e a confirmação do perfil — o total
      * do modelo novo depende deles (`totalAoClienteDaNegociacao`). Opcionais

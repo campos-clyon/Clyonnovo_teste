@@ -21,6 +21,7 @@ const base = vi.hoisted(() => ({
   pedido: null as Record<string, unknown> | null,
   ultimaSaida: "" as string,
   reservaCancelamento: 1,
+  aEspera: 0,
   purga: { validadeDosOrcamentos: [] as Array<Record<string, unknown>>, lembretesDoQueFalta: [] as Array<Record<string, unknown>> },
   anonimizados: [] as Array<{ id: number; autorNome: string }>,
 }));
@@ -44,6 +45,7 @@ vi.mock("./db", async (original) => {
       const purga = /FROM (validadeDosOrcamentos|lembretesDoQueFalta) v\s+JOIN simulatorOrders/.exec(sql);
       if (purga) return [base.purga[purga[1] as "validadeDosOrcamentos" | "lembretesDoQueFalta"], []];
       if (/FROM whatsappMensagens/.test(sql)) return [[{ telefone: "351912345678", texto: base.ultimaSaida }], []];
+      if (/AS aEspera\s+FROM lembretesDoQueFalta/.test(sql)) return [[{ aEspera: base.aEspera }], []];
       if (/SET canceladoEm = UTC_TIMESTAMP\(\)/.test(sql)) return [{ affectedRows: base.reservaCancelamento }, []];
       if (/^\s*(UPDATE|INSERT)/.test(sql)) return [{ affectedRows: 1 }, []];
       void params;
@@ -106,6 +108,10 @@ import {
   porqueParaOCiclo,
   proximoPassoDoQueFalta,
   querCancelarPeloLembrete,
+  querEnviarOQueFalta,
+  temUmaDuvidaNoLembrete,
+  eDasOpcoesAntigas,
+  SE_JA_NAO_PRECISAR_ANTIGA,
   textoDoArquivo,
   textoDoLembrete1,
   textoDoLembrete2,
@@ -117,6 +123,7 @@ import {
 } from "./lembrete-do-que-falta";
 import { mensagemDoQueFalta, registoDoQueFalta } from "./mensagem-do-que-falta";
 import { MENSAGEM_DE_CANCELAMENTO } from "./mensagens-das-fases";
+import { textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
@@ -357,15 +364,32 @@ describe("os textos: o modelo da Mesa, tal e qual (d86 reconhece-o)", () => {
   });
 });
 
-describe("o «2» e as outras respostas", () => {
-  it("cancela: o «2», «opção 2», «cancelar», «já não preciso», «desisto»", () => {
-    for (const t of ["2", " 2 ", "Opção 2", "cancelar", "Pode cancelar.", "Já não preciso, obrigada", "desisto", "already found someone"]) {
+describe("o «3» e as outras respostas (d5: o «2» nunca cancela à primeira)", () => {
+  it("quer cancelar: o «3», «opção 3», «cancelar», «já não preciso», «desisto»", () => {
+    for (const t of ["3", " 3 ", "Opção 3", "cancelar", "Pode cancelar.", "Já não preciso, obrigada", "desisto", "already found someone"]) {
       expect(querCancelarPeloLembrete(t), t).toBe(true);
     }
   });
 
+  it("nos lembretes de antes da d5 («responda 2 e cancelamos»), o «2» é que quer cancelar — e pergunta o CANCELAR na mesma", () => {
+    expect(querCancelarPeloLembrete("2", true)).toBe(true);
+    expect(querCancelarPeloLembrete("3", true)).toBe(false);
+    expect(querEnviarOQueFalta("1", true)).toBe(false);
+    expect(temUmaDuvidaNoLembrete("2", true)).toBe(false);
+    expect(eDasOpcoesAntigas(SE_JA_NAO_PRECISAR_ANTIGA)).toBe(true);
+    expect(eDasOpcoesAntigas(SE_JA_NAO_PRECISAR)).toBe(false);
+  });
+
+  it("o «1» envia o que falta e o «2» é uma dúvida (as mesmas três opções do lembrete do orçamento)", () => {
+    expect(SE_JA_NAO_PRECISAR).toBe("Responda 1 se vai enviar o que falta, 2 se tiver uma dúvida, ou 3 se já não precisar.");
+    for (const t of ["1", " 1 ", "Opção 1"]) expect(querEnviarOQueFalta(t), t).toBe(true);
+    for (const t of ["2", "opção 2"]) expect(temUmaDuvidaNoLembrete(t), t).toBe(true);
+    expect(querCancelarPeloLembrete("1")).toBe(false);
+    expect(querCancelarPeloLembrete("2")).toBe(false);
+  });
+
   it("não cancela: outro número, uma pergunta, um «mas», dados ou fotografias", () => {
-    for (const t of ["1", "3", "22", "2?", "cancelar?", "não sei, talvez", "sim mas só para a semana", "é no 3.º andar sem elevador", "", "Rua Inventada 12"]) {
+    for (const t of ["1", "2", "22", "3?", "cancelar?", "não sei, talvez", "sim mas só para a semana", "é no 3.º andar sem elevador", "", "Rua Inventada 12"]) {
       expect(querCancelarPeloLembrete(t), t).toBe(false);
     }
   });
@@ -384,7 +408,7 @@ describe("o «2» e as outras respostas", () => {
 });
 
 describe("a linha da Mesa", () => {
-  it("«Mensagem 1/3 enviada a …», a da equipa, «Cancelado pelo cliente (respondeu 2)», «Arquivado sem resposta»", () => {
+  it("«Mensagem 1/3 enviada a …», a da equipa, «Cancelado pelo cliente (respondeu CANCELAR)», «Arquivado sem resposta»", () => {
     const um = { lembrete1Em: as("2026-11-19", "14:35") };
     expect(linhaDoLembreteNaMesa(um, true, as("2026-11-19", "15:00"))).toBe("Mensagem 1/3 enviada a 19/11 · a 2.ª a 20/11 às 14h35");
     expect(linhaDoLembreteNaMesa(um, false, as("2026-11-19", "15:00"))).toBe("Mensagem 1/3 enviada a 19/11 · a 2.ª sairia a 20/11 às 14h35");
@@ -395,7 +419,7 @@ describe("a linha da Mesa", () => {
       linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), lembrete2Em: dia("2026-11-20"), lembrete3Em: dia("2026-11-21") }, true, dia("2026-11-21")),
     ).toBe("Mensagem 3/3 enviada a 21/11 · arquiva a 22/11 às 10h sem resposta");
     expect(linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), canceladoEm: dia("2026-11-20") }, true)).toBe(
-      "Cancelado pelo cliente (respondeu 2) a 20/11",
+      "Cancelado pelo cliente (respondeu CANCELAR) a 20/11",
     );
     expect(linhaDoLembreteNaMesa({ lembrete1Em: dia("2026-11-19"), arquivadoEm: dia("2026-11-22") }, true)).toBe("Arquivado sem resposta a 22/11");
     expect(linhaDoLembreteNaMesa(null, true)).toBeNull();
@@ -475,7 +499,7 @@ describe("o interruptor desligado não faz nada", { timeout: 60_000 }, () => {
   });
 });
 
-describe("com o interruptor ligado: o «2» cancela só com um lembrete em aberto", { timeout: 60_000 }, () => {
+describe("com o interruptor ligado: o «3» pergunta o CANCELAR, só com um lembrete em aberto", { timeout: 60_000 }, () => {
   beforeEach(() => {
     base.ligado = true;
     base.sqls = [];
@@ -498,15 +522,56 @@ describe("com o interruptor ligado: o «2» cancela só com um lembrete em abert
     expect(await lembreteEmAbertoDoTelefone("351912345678")).toBeNull();
   });
 
-  it("«2» cancela o pedido e manda o texto de cancelamento aprovado (d55)", async () => {
+  it("«3» NÃO cancela: pergunta «Responda CANCELAR» e fica à espera (d5)", async () => {
+    base.aEspera = 0;
+    const { responderAoLembreteDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
+    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "3", false);
+    expect(r).toEqual({ tipo: "perguntou_o_cancelar", pedidoId: 812 });
+    expect(base.cancelados).toEqual([]);
+    expect(base.enviados).toHaveLength(1);
+    expect(base.enviados[0]).toMatch(/^Confirma que quer cancelar o pedido #812\? Responda CANCELAR\./);
+  });
+
+  it("o «2» (lembrete novo) é uma dúvida: pára o ciclo, nada se cancela, passa a uma pessoa", async () => {
     const { responderAoLembreteDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
     const r = await responderAoLembreteDoQueFalta(812, "351912345678", "2", false);
+    expect(r).toEqual({ tipo: "duvida", pedidoId: 812 });
+    expect(base.cancelados).toEqual([]);
+    expect(base.enviados).toEqual([]);
+    expect(base.sqls.some((q) => /SET paradoEm = UTC_TIMESTAMP\(\)/.test(q))).toBe(true);
+  });
+
+  it("o «1» (lembrete novo) pára o ciclo e a Vitória diz que pode enviar o que falta", async () => {
+    const { responderAoLembreteDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
+    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "1", false);
+    expect(r).toEqual({ tipo: "vai_enviar", pedidoId: 812 });
+    expect(base.cancelados).toEqual([]);
+  });
+
+  it("à espera do CANCELAR, o CANCELAR cancela (texto de cancelamento aprovado, d55); outro «3» ou outro texto não cancela", async () => {
+    base.aEspera = 1;
+    base.ultimaSaida = textoDaConfirmacaoDoCancelamento(812);
+    const { responderAoLembreteDoQueFalta, lembreteEmAbertoDoTelefone } = await import("./lembrete-do-que-falta-na-base");
+    expect(await lembreteEmAbertoDoTelefone("351912345678")).toBe(812);
+    expect(await responderAoLembreteDoQueFalta(812, "351912345678", "3", false)).toEqual({ tipo: "segue_a_conversa", pedidoId: 812 });
+    expect(await responderAoLembreteDoQueFalta(812, "351912345678", "2", false)).toEqual({ tipo: "segue_a_conversa", pedidoId: 812 });
+    expect(base.cancelados).toEqual([]);
+    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "CANCELAR", false);
     expect(r).toEqual({ tipo: "cancelado", pedidoId: 812 });
     expect(base.cancelados).toEqual([812]);
     expect(base.enviados).toEqual([MENSAGEM_DE_CANCELAMENTO]);
     // d71 v2: marcado para a purga dos cancelados pelo lembrete, daqui a 7 dias (nada sai agora).
     expect(base.sqls.some((q) => /UPDATE lembretesDoQueFalta SET anonimizarAPartirDe = NOW\(\) \+ INTERVAL 7 DAY/.test(q))).toBe(true);
     expect(base.anonimizados).toEqual([]);
+  });
+
+  it("num lembrete de ANTES da d5 («responda 2 e cancelamos»), o «2» também só pergunta o CANCELAR", async () => {
+    base.aEspera = 0;
+    base.ultimaSaida = `Aqui é a equipa da CLYON. Pedido #812. ${SE_JA_NAO_PRECISAR_ANTIGA}`;
+    const { responderAoLembreteDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
+    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "2", false);
+    expect(r).toEqual({ tipo: "perguntou_o_cancelar", pedidoId: 812 });
+    expect(base.cancelados).toEqual([]);
   });
 
   it("uma resposta ambígua, com dados ou com fotografias não cancela: pára os lembretes e segue a conversa", async () => {
@@ -521,10 +586,11 @@ describe("com o interruptor ligado: o «2» cancela só com um lembrete em abert
     expect(base.enviados).toEqual([]);
   });
 
-  it("sem o lembrete em aberto (já cancelado, arquivado ou parado), o «2» não cancela", async () => {
+  it("sem o lembrete em aberto (já cancelado ou arquivado), o CANCELAR não cancela", async () => {
+    base.aEspera = 1;
     base.reservaCancelamento = 0;
     const { responderAoLembreteDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
-    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "2", false);
+    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "CANCELAR", false);
     expect(r.tipo).toBe("nao_cancelou");
     expect(base.cancelados).toEqual([]);
   });
@@ -532,7 +598,9 @@ describe("com o interruptor ligado: o «2» cancela só com um lembrete em abert
   it("um pedido que já estava fechado não se cancela por aqui (d27): passa à equipa", async () => {
     base.pedido = { ...PEDIDO, status: "arquivado" };
     const { responderAoLembreteDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
-    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "cancelar", false);
+    // O pedido fechado recusa-se ao confirmar (d27).
+    base.aEspera = 1;
+    const r = await responderAoLembreteDoQueFalta(812, "351912345678", "CANCELAR", false);
     expect(r).toEqual({ tipo: "nao_cancelou", pedidoId: 812, porque: "o pedido já estava fechado" });
     expect(base.cancelados).toEqual([]);
   });

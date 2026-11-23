@@ -17,6 +17,7 @@
  * Puro.
  */
 import { AS_DUAS_FATURAS } from "./pagar-ao-parceiro";
+import { DADOS_DE_PAGAMENTO_A_CONFIRMAR } from "./dados-de-pagamento-por-confirmar";
 import { COMO_SE_PAGA_NO_NOVO_MODELO } from "./pagamento-na-plataforma";
 
 /** Não há nada a pagar antes, nem dinheiro à guarda de ninguém. */
@@ -25,12 +26,25 @@ export const SEM_PAGAMENTO_ADIANTADO =
 
 /** Onde estão o IBAN e o MB WAY do parceiro — sem os dizer. */
 export const OS_DADOS_DO_PARCEIRO_ESTAO_NO_PEDIDO =
-  "O IBAN e o MB WAY do parceiro aparecem no seu pedido, depois de o contratar — é por lá que os vê. Por segurança, não os mando por aqui.";
+  "O IBAN e o MB WAY do parceiro aparecem no seu pedido, depois de o contratar — é por lá que os vê. Se a CLYON ainda estiver a confirmar os dados dele, o pedido diz isso e pode pagar em dinheiro no local. Por segurança, não os mando por aqui.";
 
 /** A quem já contratou: como paga, onde vê os dados dele, e as duas faturas. */
 export const PAGA_AO_CONTRATADO =
   "Paga-lhe diretamente — por transferência, MB WAY ou dinheiro no local, como preferir; o IBAN e o MB WAY dele estão no seu pedido. " +
   AS_DUAS_FATURAS;
+
+/**
+ * d5 (21-11-2026): com os dados de pagamento do parceiro por confirmar (d5 de
+ * 19-11) o pedido não mostra IBAN nem MB WAY — a Vitória não manda o cliente
+ * procurá-los. Diz a frase única e lembra o dinheiro no local.
+ */
+export const PAGA_AO_CONTRATADO_POR_CONFIRMAR =
+  `Paga-lhe diretamente. ${DADOS_DE_PAGAMENTO_A_CONFIRMAR} Pode sempre pagar em dinheiro no local. ` + AS_DUAS_FATURAS;
+
+/** A frase de «como paga a quem contratou», pelo estado dos dados dele. */
+export function pagaAoContratado(dadosPorConfirmar: boolean): string {
+  return dadosPorConfirmar ? PAGA_AO_CONTRATADO_POR_CONFIRMAR : PAGA_AO_CONTRATADO;
+}
 
 /** «Como se paga?» no modelo novo: ao parceiro, só para os dados do pedido, as duas faturas, nada adiantado. */
 /*
@@ -46,5 +60,5 @@ export const COMO_SE_PAGA_NO_WHATSAPP = `${COMO_SE_PAGA_NO_NOVO_MODELO} ${SEM_PA
 export const REGRAS_DO_PAGAMENTO_PARA_O_MODELO = [
   "O cliente paga o trabalho só ao parceiro que contratou, por transferência, MB WAY ou dinheiro no local. Nunca digas que paga alguma coisa adiantada, nem que é a plataforma que guarda ou recebe esse dinheiro.",
   "Há duas faturas por trabalho: a do trabalho, emitida pelo parceiro, e a da taxa da plataforma.",
-  "O IBAN e o número de MB WAY de um parceiro só aparecem no pedido do cliente que o contratou. Nunca os escrevas nem os peças nesta conversa; se o cliente os pedir, diz-lhe que estão no pedido dele.",
+  "O IBAN e o número de MB WAY de um parceiro só aparecem no pedido do cliente que o contratou. Nunca os escrevas nem os peças nesta conversa; se o cliente os pedir, diz-lhe que estão no pedido dele — e, se a CLYON ainda estiver a confirmar os dados do parceiro, que o pedido o diz e que pode pagar em dinheiro no local.",
 ] as const;

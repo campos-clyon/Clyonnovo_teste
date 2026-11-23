@@ -26,7 +26,7 @@ import {
 import { modeloDaNegociacao, type ModeloDoPreco } from "@/lib/iva-incluido";
 import { lerForma, type FormaDePagamento } from "@/lib/forma-de-pagamento";
 import { promessaDaForma } from "@/lib/pagamento-na-plataforma";
-import { PAGA_AO_CONTRATADO } from "@/lib/o-pagamento-da-vitoria";
+import { pagaAoContratado } from "@/lib/o-pagamento-da-vitoria";
 import {
   lerBase,
   precoComBase,
@@ -1444,7 +1444,7 @@ async function fecharPeloCliente(
         (factura ? ` ${factura}` : "") +
         // d17: quem passa a fatura do trabalho (com IVA, ou com a isenção do art. 53.º).
         (totalNovo ? ` ${quemPassaAFatura(alvo.linha)}` : "") +
-        (novo ? ` ${PAGA_AO_CONTRATADO}` : "");
+        (novo ? ` ${pagaAoContratado(await dadosPorConfirmarDe(alvo.negociacaoId))}` : "");
   /*
    * O LINK DO PEDIDO — 01-11-2026 (ordem do CEO, aprovada pelo dono). Quem
    * fecha pelo WhatsApp nunca o tinha: pagar sozinho, confirmar a chegada e o
@@ -2496,7 +2496,7 @@ export async function ecraDoPedido(pedidoId: number): Promise<string> {
                 : "sem IVA"
           }.` +
           (totalDela ? ` ${quemPassaAFatura(acordada)}` : "") +
-          (novoDela ? ` ${PAGA_AO_CONTRATADO}` : "");
+          (novoDela ? ` ${pagaAoContratado(await dadosPorConfirmarDe(Number(acordada.id)))}` : "");
     return (
       `Pedido #${pedidoId}: fechado com ${acordada.profissionalNome} —${comoPaga}` +
       comNotaDaCarga(base) +
@@ -2867,8 +2867,8 @@ export async function tratarMensagemDoCliente(
     /*
      * A RESPOSTA AO LEMBRETE DO QUE FALTA — 19-11-2026 (d71). Com um lembrete
      * destes em aberto para este número e pedido (a última mensagem que lhe
-     * saiu é o lembrete dele): o «2» (ou «cancelar», «já não preciso») cancela
-     * o pedido e manda o texto de cancelamento aprovado; o resto (fotografias,
+     * saiu é o lembrete dele): o «3» (ou «cancelar», «já não preciso») pergunta
+     * «Responda CANCELAR» e só o CANCELAR cancela (d5, 21-11-2026; o «1» envia o que falta, o «2» é uma dúvida); o resto (fotografias,
      * dados, uma resposta ambígua) pára os lembretes e segue a conversa de
      * sempre, onde a Vitória recolhe o que falta. Um «2» que não se consegue
      * cancelar passa a uma pessoa. Com o interruptor desligado, nada muda.
@@ -2887,9 +2887,18 @@ export async function tratarMensagemDoCliente(
             console.error("[whatsapp] a resposta ao lembrete do que falta falhou:", err instanceof Error ? err.message : err);
             return { tipo: "nao_cancelou" as const, pedidoId: pedidoDoLembrete, porque: "erro" };
           });
-        if (r.tipo === "cancelado") return;
+        if (r.tipo === "cancelado" || r.tipo === "perguntou_o_cancelar") return;
         if (r.tipo === "nao_cancelou") {
-          await passarAUmaPessoa(telefone, `Pedido #${r.pedidoId}: respondeu «2» ao lembrete do que falta, mas ${r.porque} — cancelar à mão`);
+          await passarAUmaPessoa(telefone, `Pedido #${r.pedidoId}: disse que já não precisa (lembrete do que falta), mas ${r.porque} — cancelar à mão`);
+          return;
+        }
+        if (r.tipo === "vai_enviar") {
+          // d5: o «1» — pode enviar; a Vitória anota o que vier (a conversa de sempre).
+          await enviarTextoWhatsApp(telefone, "Combinado! Pode enviar aqui o que falta, quando lhe der jeito, que eu anoto no pedido.").catch(() => false);
+          return;
+        }
+        if (r.tipo === "duvida") {
+          await passarAUmaPessoa(telefone, `Pedido #${r.pedidoId}: tem uma dúvida («2» ao lembrete do que falta)`);
           return;
         }
       }
@@ -4106,6 +4115,16 @@ async function nasNovoModelo(
       return new Set(linhas.filter((n) => eDoNovoModelo({ ofertaClyon: n.ofertaClyon }, agora)).map((n) => Number(n.id)));
     },
   );
+}
+
+/** d5 (21-11): os dados de pagamento do parceiro desta negociação estão por confirmar? Falha para «não» (o de antes). */
+async function dadosPorConfirmarDe(negociacaoId: number): Promise<boolean> {
+  try {
+    const { negociacoesComDadosPorConfirmar } = await import("@/lib/dados-de-pagamento-por-confirmar-na-base");
+    return (await negociacoesComDadosPorConfirmar([negociacaoId])).has(negociacaoId);
+  } catch {
+    return false;
+  }
 }
 
 async function noNovoModelo(n: { id: number | string; estado?: unknown; ofertaClyon?: unknown }): Promise<boolean> {

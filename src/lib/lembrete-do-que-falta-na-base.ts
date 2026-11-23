@@ -39,7 +39,10 @@ import {
   porqueFicaDeFora,
   porqueParaOCiclo,
   proximoPassoDoQueFalta,
+  eDasOpcoesAntigas,
   querCancelarPeloLembrete,
+  querEnviarOQueFalta,
+  temUmaDuvidaNoLembrete,
   telemovelPortugues,
   textoDoPasso,
   assuntoDoLembrete,
@@ -756,7 +759,8 @@ export async function lembreteEmAbertoDoTelefone(telefone: string): Promise<numb
        FROM lembretesDoQueFalta l
        JOIN simulatorOrders o ON o.id = l.pedidoId
       WHERE l.canal = 'whatsapp' AND l.lembrete1Em IS NOT NULL
-        AND l.arquivadoEm IS NULL AND l.canceladoEm IS NULL AND l.paradoEm IS NULL
+        AND l.arquivadoEm IS NULL AND l.canceladoEm IS NULL
+        AND (l.paradoEm IS NULL OR l.cancelarPedidoEm IS NOT NULL)
         AND RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
       ORDER BY l.pedidoId DESC
       LIMIT 5`,
@@ -766,11 +770,22 @@ export async function lembreteEmAbertoDoTelefone(telefone: string): Promise<numb
   const doTelefone = rows.filter((r) => mesmoTelefoneEstrito(String(r.contactPhone ?? ""), telefone));
   if (doTelefone.length === 0) return null;
   const ultima = await ultimaSaidaParaOTelefone(pool, telefone).catch(() => null);
-  return doTelefone.find((r) => eLembreteDoQueFalta(ultima, Number(r.pedidoId)))?.pedidoId ?? null;
+  // O lembrete em si, ou a pergunta do CANCELAR que lhe saiu a seguir (d5): ambos são a última coisa que lhe dissemos.
+  const { aUltimaSaidaE } = await import("./validade-do-orcamento");
+  return (
+    doTelefone.find((r) => eLembreteDoQueFalta(ultima, Number(r.pedidoId)) || aUltimaSaidaE(ultima, Number(r.pedidoId)) === "confirmacao")
+      ?.pedidoId ?? null
+  );
 }
 
 export type RespostaAoLembreteDoQueFalta =
   | { tipo: "cancelado"; pedidoId: number }
+  /** d5: o «3» (ou «já não preciso») perguntou «Responda CANCELAR»; nada foi cancelado. */
+  | { tipo: "perguntou_o_cancelar"; pedidoId: number }
+  /** d5: o «1» — vai enviar o que falta; o ciclo pára e a Vitória diz que pode enviar. */
+  | { tipo: "vai_enviar"; pedidoId: number }
+  /** d5: o «2» — tem uma dúvida; o ciclo pára e passa a uma pessoa. */
+  | { tipo: "duvida"; pedidoId: number }
   | { tipo: "nao_cancelou"; pedidoId: number; porque: string }
   | { tipo: "segue_a_conversa"; pedidoId: number };
 
@@ -788,13 +803,42 @@ export async function responderAoLembreteDoQueFalta(
   texto: string,
   temImagens: boolean,
 ): Promise<RespostaAoLembreteDoQueFalta> {
-  if (temImagens || !querCancelarPeloLembrete(texto)) {
-    const pool = await garantirTabelas();
-    await pararOCiclo(pool, pedidoId, "o cliente respondeu");
+  const pool = await garantirTabelas();
+  const parar = (porque: string) => pararOCiclo(pool, pedidoId, porque);
+  if (temImagens) {
+    await parar("o cliente respondeu");
     return { tipo: "segue_a_conversa", pedidoId };
   }
-  const r = await cancelarPeloLembreteDoQueFalta(pedidoId, telefone);
-  return r.ok ? { tipo: "cancelado", pedidoId } : { tipo: "nao_cancelou", pedidoId, porque: r.porque };
+  const { FONTES_DO_CANCELAMENTO, estadoDaPergunta } = await import("./cancelar-pelo-lembrete");
+  const { eConfirmacaoDoCancelamento } = await import("./validade-do-orcamento");
+  // O CANCELAR à pergunta do CANCELAR: antes de ler a resposta como «1», «2» ou «3».
+  const aEspera = (await estadoDaPergunta(FONTES_DO_CANCELAMENTO.queFalta, pool, pedidoId).catch(() => null))?.aEspera === true;
+  if (aEspera) {
+    if (eConfirmacaoDoCancelamento(texto)) {
+      const r = await cancelarPeloLembreteDoQueFalta(pedidoId, telefone, texto);
+      return r.ok ? { tipo: "cancelado", pedidoId } : { tipo: "nao_cancelou", pedidoId, porque: r.porque };
+    }
+    // Outro texto, ou outro «3», não cancela nem pergunta outra vez: segue a conversa.
+    return { tipo: "segue_a_conversa", pedidoId };
+  }
+  const ultima = await ultimaSaidaParaOTelefone(pool, telefone).catch(() => null);
+  const antigas = eDasOpcoesAntigas(ultima);
+  if (querCancelarPeloLembrete(texto, antigas)) {
+    // d5: nunca cancela à primeira — pergunta «Responda CANCELAR».
+    const r = await cancelarPeloLembreteDoQueFalta(pedidoId, telefone, null);
+    if (!r.ok) return { tipo: "nao_cancelou", pedidoId, porque: r.porque };
+    return r.estado === "cancelado" ? { tipo: "cancelado", pedidoId } : { tipo: "perguntou_o_cancelar", pedidoId };
+  }
+  if (querEnviarOQueFalta(texto, antigas)) {
+    await parar("«1» — vai enviar o que falta");
+    return { tipo: "vai_enviar", pedidoId };
+  }
+  if (temUmaDuvidaNoLembrete(texto, antigas)) {
+    await parar("«2» — tem uma dúvida");
+    return { tipo: "duvida", pedidoId };
+  }
+  await parar("o cliente respondeu");
+  return { tipo: "segue_a_conversa", pedidoId };
 }
 
 /**
@@ -807,11 +851,13 @@ export async function responderAoLembreteDoQueFalta(
 export async function cancelarPeloLembreteDoQueFalta(
   pedidoId: number,
   telefone: string,
-): Promise<{ ok: true } | { ok: false; porque: string }> {
+  /** O texto do cliente; sem ele (o «3»), pergunta o CANCELAR. Com ele, só o CANCELAR cancela. */
+  texto: string | null = null,
+): Promise<{ ok: true; estado: "pediu_confirmacao" | "a_espera_de_cancelar" | "cancelado" } | { ok: false; porque: string }> {
   const pool = await garantirTabelas();
-  // d85 (fase 0): o caminho comum de cancelar pelo lembrete, com a confirmação «logo» desta fonte (o «2» cancela, dono 19-11-2026).
+  // d85 (fase 0): o caminho comum de cancelar pelo lembrete. d5 (21-11-2026): o «3» pergunta, só o CANCELAR cancela.
   const { FONTES_DO_CANCELAMENTO, responderAoCancelamento } = await import("./cancelar-pelo-lembrete");
-  const r = await responderAoCancelamento(FONTES_DO_CANCELAMENTO.queFalta, pool, pedidoId, telefone, null, {
+  const r = await responderAoCancelamento(FONTES_DO_CANCELAMENTO.queFalta, pool, pedidoId, telefone, texto, {
     verificar: async () => {
       const [p] = await lerPedidos(pool, [pedidoId]);
       if (!p) return { porque: "o pedido já não existe" };
@@ -821,7 +867,7 @@ export async function cancelarPeloLembreteDoQueFalta(
     },
     aoDesfazer: (porque) => pararOCiclo(pool, pedidoId, porque),
   });
-  return r.ok ? { ok: true } : r;
+  return r.ok ? { ok: true, estado: r.estado } : r;
 }
 
 /* ── A Mesa ──────────────────────────────────────────────────────────────── */

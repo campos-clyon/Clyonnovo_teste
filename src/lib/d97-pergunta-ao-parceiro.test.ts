@@ -215,7 +215,7 @@ describe("o prazo: 2 h dentro das 8h–21h de Lisboa", () => {
 
   it("o motivo do cartão «Precisa de si» diz que está à espera do parceiro há 2 h", () => {
     expect(motivoDoPrazo({ pedidoId: 664, parceiro: RECOLHAS_TEJO, condicao: "até quinta-feira" })).toBe(
-      "À espera do parceiro há 2 h — pedido #664: Recolhas Tejo não respondeu se consegue «até quinta-feira». Responder ao cliente",
+      `À espera do parceiro há 2 h — pedido #664: ${RECOLHAS_TEJO} não respondeu se consegue «até quinta-feira». Responder ao cliente`,
     );
   });
 });

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { numeroParaWhatsApp } from "./link-de-whatsapp";
 import { TELEFONE_DA_CLYON_DIGITOS } from "./telefone-da-clyon";
 import type { Lingua } from "./lingua-do-cliente";
+import { enviarPelaMeta, registarErroDaMeta } from "./whatsapp-pela-meta";
 
 /**
  * O WhatsApp como ecrã do cliente — o transporte, e só ele.
@@ -159,7 +160,8 @@ export function telemovelParaWhatsApp(telefone: string | null | undefined): stri
 }
 
 async function enviar(corpo: Record<string, unknown>): Promise<boolean> {
-  if (!whatsappConfigurado()) return false;
+  // d5 (21-11-2026): as quatro variáveis não chegam — os envios só passam para a Meta com o interruptor «WhatsApp pela Meta» ligado.
+  if (!whatsappConfigurado() || !(await enviarPelaMeta())) return false;
   try {
     const res = await fetch(
       `${API}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -175,7 +177,10 @@ async function enviar(corpo: Record<string, unknown>): Promise<boolean> {
     if (!res.ok) {
       // O corpo do erro da Meta diz porquê (janela de 24 h fechada, template
       // em falta, número não registado) — sem ele, cada falha é um mistério.
-      console.error("[whatsapp] envio falhou", res.status, (await res.text()).slice(0, 300));
+      const detalhe = (await res.text()).slice(0, 300);
+      console.error("[whatsapp] envio falhou", res.status, detalhe);
+      // d5: o erro da Meta fica marcado no registo e o painel mostra-o.
+      await registarErroDaMeta(res.status, detalhe);
       return false;
     }
     return true;
@@ -385,7 +390,7 @@ async function enviarTextoPorCanal(para: string, texto: string, opcoes: { semLin
     texto = paraTeclado(r.texto ?? emPortugues);
   }
   let saiu = false;
-  if (whatsappConfigurado()) {
+  if (whatsappConfigurado() && (await enviarPelaMeta())) {
     saiu = await enviar({
       to: telefoneParaWhatsApp(para),
       type: "text",
@@ -612,7 +617,7 @@ export async function enviarBotoesWhatsApp(
   }
   texto = corpo.texto ?? texto;
 
-  if (whatsappConfigurado()) {
+  if (whatsappConfigurado() && (await enviarPelaMeta())) {
     const saiu = await enviar({
       to: telefoneParaWhatsApp(para),
       type: "interactive",

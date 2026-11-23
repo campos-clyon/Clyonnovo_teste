@@ -61,7 +61,19 @@ export async function POST(req: NextRequest) {
       by: colab.id != null ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
       message: resumo,
     }).catch(() => {});
-    return NextResponse.json({ ok: true });
+    // d5 (21-11-2026): o cliente sabe que já pode ver os dados — push na app, senão email. Nunca bloqueia a confirmação.
+    let avisado: "push" | "email" | "nenhum" = "nenhum";
+    try {
+      const [p] = (await pool.execute("SELECT contactEmail FROM simulatorOrders WHERE id = ? LIMIT 1", [Number(n.pedidoId)])) as unknown as [
+        Array<{ contactEmail: string | null }>,
+        unknown,
+      ];
+      const { avisarClienteDosDadosConfirmados } = await import("@/lib/avisar-dados-de-pagamento-confirmados");
+      avisado = await avisarClienteDosDadosConfirmados({ pedidoId: Number(n.pedidoId), email: p?.[0]?.contactEmail });
+    } catch (e) {
+      console.error("[api/admin/negociacoes/dados-de-pagamento] o aviso ao cliente falhou:", e instanceof Error ? e.message : e);
+    }
+    return NextResponse.json({ ok: true, avisado });
   } catch (e) {
     console.error("[api/admin/negociacoes/dados-de-pagamento]", e);
     return NextResponse.json({ error: "Não foi possível confirmar." }, { status: 500 });

@@ -165,10 +165,10 @@ describe("uma mensagem automática por dia, por telefone, comum a todas as rotin
 const verificarOk = async () => ({ eClyon: false, servico: "recolha_monos", localidade: "Almada" });
 
 describe("um só caminho de cancelar pelo lembrete (d62, d71, d83)", () => {
-  it("as três fontes: a d62 e a d83 com a pergunta do CANCELAR; a d71 com «logo» (o «2» cancela, dono 19-11)", () => {
+  it("as três fontes perguntam o CANCELAR — a d71 desde a d5 de 21-11-2026 (o «2» nunca cancela à primeira)", () => {
     expect(FONTES_DO_CANCELAMENTO.validade.confirmacao).toBe("pergunta");
     expect(FONTES_DO_CANCELAMENTO.seguimento.confirmacao).toBe("pergunta");
-    expect(FONTES_DO_CANCELAMENTO.queFalta.confirmacao).toBe("logo");
+    expect(FONTES_DO_CANCELAMENTO.queFalta.confirmacao).toBe("pergunta");
     const d62 = ler("src/lib/validade-do-orcamento-na-base.ts");
     const d71 = ler("src/lib/lembrete-do-que-falta-na-base.ts");
     const d83 = ler("src/lib/seguimento-do-cliente-na-base.ts");
@@ -216,9 +216,10 @@ describe("um só caminho de cancelar pelo lembrete (d62, d71, d83)", () => {
     expect(base.sqls.some((q) => /DELETE/i.test(q.sql))).toBe(false);
   });
 
-  it("com «logo» (d71), a resposta ao lembrete cancela sem a pergunta — o comportamento de hoje", async () => {
+  it("com «logo» (opção que já nenhuma fonte usa), a resposta cancela sem a pergunta", async () => {
     const pool = (await getPool())!;
-    const r = await responderAoCancelamento(FONTES_DO_CANCELAMENTO.queFalta, pool, 812, TEL, null, { verificar: verificarOk });
+    const comLogo = { ...FONTES_DO_CANCELAMENTO.queFalta, confirmacao: "logo" as const };
+    const r = await responderAoCancelamento(comLogo, pool, 812, TEL, null, { verificar: verificarOk });
     expect(r).toEqual({ ok: true, estado: "cancelado" });
     expect(base.cancelados).toEqual([812]);
     expect(base.enviados.map((e) => e.texto)).toEqual([MENSAGEM_DE_CANCELAMENTO]);

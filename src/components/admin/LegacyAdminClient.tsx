@@ -45,6 +45,7 @@ import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFe
 import InterruptorDaVitoriaAosProfissionais from "@/components/admin/InterruptorDaVitoriaAosProfissionais";
 import InterruptorDaValidadeDosOrcamentos from "@/components/admin/InterruptorDaValidadeDosOrcamentos";
 import InterruptorDoSeguimentoDoCliente from "@/components/admin/InterruptorDoSeguimentoDoCliente";
+import InterruptorDoWhatsAppPelaMeta from "@/components/admin/InterruptorDoWhatsAppPelaMeta";
 import InterruptorDoEnvioAutomatico from "@/components/admin/InterruptorDoEnvioAutomatico";
 import LembretesDoQueFalta from "@/components/admin/LembretesDoQueFalta";
 import EnviarAsPropostas from "@/components/admin/EnviarAsPropostas";
@@ -3675,6 +3676,7 @@ export default function ColaboradorAdminClient({
 
               {/* O seguimento do cliente (d83): o «Falei com o cliente» da Mesa; ligado por omissão, desligar é a emergência. */}
               <InterruptorDoSeguimentoDoCliente />
+              <InterruptorDoWhatsAppPelaMeta />
 
               {/* O envio automático aos parceiros (d87): os pedidos completos pela Vitória; ligado por omissão, desligar é a emergência. */}
               <InterruptorDoEnvioAutomatico />

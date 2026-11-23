@@ -1,5 +1,5 @@
 import { EQUIPA_DA_CLYON_NO_MODELO, PODE_RESPONDER_COM_O_QUE_FALTA } from "./mensagem-do-que-falta";
-import { SE_JA_NAO_PRECISAR } from "./lembrete-do-que-falta";
+import { SE_JA_NAO_PRECISAR, SE_JA_NAO_PRECISAR_ANTIGA } from "./lembrete-do-que-falta";
 import { semMarcaDeMao } from "./rajada-do-whatsapp";
 
 /**
@@ -49,7 +49,7 @@ export function pedidoDoEnvioDeModelo(texto: string | null | undefined): number 
   const t = plano(semMarcaDeMao(texto));
   if (!t.includes(plano(EQUIPA_DA_CLYON_NO_MODELO).replace(/\.$/, ""))) return null;
   const doQueFalta = t.includes(plano(PODE_RESPONDER_COM_O_QUE_FALTA).replace(/\.$/, ""));
-  const doLembrete = t.includes(plano(SE_JA_NAO_PRECISAR));
+  const doLembrete = t.includes(plano(SE_JA_NAO_PRECISAR)) || t.includes(plano(SE_JA_NAO_PRECISAR_ANTIGA));
   if (!doQueFalta && !doLembrete) return null;
   const m = PEDIDO_DO_MODELO.exec(t);
   const id = m ? Number(m[1]) : NaN;

@@ -1,4 +1,5 @@
 import { getPool } from "./db";
+import { mesmoTelefoneEstrito } from "./validade-do-orcamento";
 import { DIAS_DE_UM_PEDIDO_FECHADO, contaComoEmCurso, type PedidoEmCurso } from "./pedido-em-curso";
 
 /**
@@ -42,7 +43,7 @@ export async function pedidosEmCursoDoTelefone(telefone: string): Promise<Pedido
   const pool = await getPool();
   if (!pool) return [];
   const [rows] = (await pool.execute(
-    `SELECT id, status, serviceType, filesJson, valorFixoClyon,
+    `SELECT id, status, serviceType, filesJson, valorFixoClyon, contactPhone,
             TIMESTAMPDIFF(SECOND, COALESCE(updatedAt, createdAt), CURRENT_TIMESTAMP) AS haSegundos
        FROM simulatorOrders
       WHERE RIGHT(REGEXP_REPLACE(COALESCE(contactPhone, ''), '[^0-9]', ''), 9) = ?
@@ -55,6 +56,8 @@ export async function pedidosEmCursoDoTelefone(telefone: string): Promise<Pedido
   )) as [Linha[], unknown];
   const pedidos: PedidoEmCurso[] = [];
   for (const r of rows) {
+    // d3 (22-11): os 9 dígitos finais só pré-selecionam; o número tem de ser o mesmo, inteiro (um número de outro país com o mesmo fim não ouve o pedido de outra pessoa).
+    if (!mesmoTelefoneEstrito(String(r.contactPhone ?? ""), telefone)) continue;
     const id = Number(r.id);
     const negs = await negociacoesDe(id).catch(() => [] as Linha[]);
     const negIds = negs.map((n) => Number(n.id)).filter((n) => Number.isFinite(n));
@@ -159,11 +162,15 @@ export async function aEquipaNaConversa(
   const idade = async (tabela: string): Promise<number | null> => {
     try {
       const [rows] = (await pool.execute(
-        `SELECT MIN(TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP)) AS ha FROM ${tabela} WHERE RIGHT(telefone, 9) = ?`,
+        `SELECT telefone, TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP) AS ha FROM ${tabela} WHERE RIGHT(telefone, 9) = ?`,
         [digitos],
       )) as [Linha[], unknown];
-      const ha = rows[0]?.ha;
-      return ha == null || !Number.isFinite(Number(ha)) ? null : Math.max(0, Number(ha));
+      // d3 (22-11): o mesmo número, inteiro — não só os 9 dígitos finais.
+      const has = rows
+        .filter((r) => mesmoTelefoneEstrito(String(r.telefone ?? ""), telefone))
+        .map((r) => Number(r.ha))
+        .filter((n) => Number.isFinite(n));
+      return has.length === 0 ? null : Math.max(0, Math.min(...has));
     } catch {
       return null; // a tabela ainda não existe
     }

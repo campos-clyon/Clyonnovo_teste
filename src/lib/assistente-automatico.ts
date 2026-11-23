@@ -28,7 +28,7 @@ import { lerBase, precoComBase } from "./base-do-preco";
 import { notaDoPrecoParaOCliente } from "./itens-a-mais";
 import { ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { prazoAutomaticoPorExtenso, promessaDaForma } from "./pagamento-na-plataforma";
-import { PAGA_AO_CONTRATADO } from "./o-pagamento-da-vitoria";
+import { pagaAoContratado } from "./o-pagamento-da-vitoria";
 import { DIAS_ATE_LIBERTAR_SOZINHO, prazoCorre } from "./trabalho";
 
 /**
@@ -485,8 +485,8 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
                   : modelo === "iva_incluido"
                     ? `IVA incluído (${desdobramentoDoIva(precoDoCliente(acordado, taxas, modelo))})`
                     : "sem IVA"
-              }.${totalNovo(acordado) ? ` ${quemPassaAFatura(n)}` : ""}${novo ? ` ${PAGA_AO_CONTRATADO}` : ""} Ele já tem a morada e o seu contacto.`
-          : `.${novo ? ` ${PAGA_AO_CONTRATADO}` : ""} Ele já tem a morada e o seu contacto.`) +
+              }.${totalNovo(acordado) ? ` ${quemPassaAFatura(n)}` : ""}${novo ? ` ${pagaAoContratado(n.dadosPorConfirmar === true)}` : ""} Ele já tem a morada e o seu contacto.`
+          : `.${novo ? ` ${pagaAoContratado(n.dadosPorConfirmar === true)}` : ""} Ele já tem a morada e o seu contacto.`) +
         eANota +
         (combinada ? "" : " Se já tem dia pensado, diga-me qual que eu deixo marcado."),
     });
@@ -737,6 +737,13 @@ export async function marcarONovoModelo(pedidos: PedidoParaOAssistente[], agora:
       }),
     ),
   );
+  // d5 (21-11): os dados de pagamento por confirmar não se mandam procurar no pedido.
+  const { negociacoesComDadosPorConfirmar } = await import("./dados-de-pagamento-por-confirmar-na-base");
+  const ids = pedidos.flatMap((p) => p.negociacoes.filter((n) => n.estado === "acordada" && n.noNovoModelo === true).map((n) => Number(n.id)));
+  const porConfirmar = await negociacoesComDadosPorConfirmar(ids).catch(() => new Map<number, unknown>());
+  for (const p of pedidos) {
+    for (const n of p.negociacoes) n.dadosPorConfirmar = porConfirmar.has(Number(n.id));
+  }
 }
 
 /**

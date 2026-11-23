@@ -69,8 +69,17 @@ export const DIAS_ENTRE_PASSOS = 1;
 export type PassoDoQueFalta = "lembrete1" | "lembrete2" | "lembrete3" | "arquivar";
 export type CanalDoLembrete = "whatsapp" | "email";
 
-/** A frase do fim da 2.ª e da 3.ª mensagens. É também por ela que se reconhece o lembrete na conversa. */
-export const SE_JA_NAO_PRECISAR = "Se já não precisar do orçamento, responda 2 e cancelamos o pedido.";
+/**
+ * A frase do fim da 2.ª e da 3.ª mensagens. É também por ela que se reconhece o
+ * lembrete na conversa. d5 (CEO e dono, 21-11-2026): os MESMOS números do
+ * lembrete do orçamento (`AS_TRES_OPCOES`): 1 envio o que falta, 2 tenho uma
+ * dúvida, 3 já não preciso — e o 3 só pergunta «Responda CANCELAR»; nunca
+ * cancela à primeira.
+ */
+export const SE_JA_NAO_PRECISAR = "Responda 1 se vai enviar o que falta, 2 se tiver uma dúvida, ou 3 se já não precisar.";
+
+/** A frase de ANTES da d5: os lembretes já enviados com ela ainda se reconhecem (e nesses o «2» é «já não preciso»). */
+export const SE_JA_NAO_PRECISAR_ANTIGA = "Se já não precisar do orçamento, responda 2 e cancelamos o pedido.";
 
 /** Das 8h às 21h de Lisboa: a rotina e a fila só trabalham dentro. */
 export function naJanelaDosLembretes(agora: Date): boolean {
@@ -445,14 +454,30 @@ function normalizar(texto: string): string {
  * frases do lembrete do orçamento (`lerRespostaAoLembrete`, d62/d63). Outro
  * número, uma pergunta, um «mas», fotografias ou dados: não cancela.
  */
-export function querCancelarPeloLembrete(texto: string | null | undefined): boolean {
+export function querCancelarPeloLembrete(texto: string | null | undefined, comAsOpcoesAntigas = false): boolean {
   const cru = texto ?? "";
   const t = normalizar(cru);
   if (!t) return false;
   const numero = /^(?:opcao|op|numero|n)?\s*(\d+)$/.exec(t)?.[1];
-  if (numero != null) return numero === "2";
+  // d5: o «3» (nos lembretes de antes da d5, o «2»). Nunca cancela à primeira: pede o CANCELAR.
+  if (numero != null) return numero === (comAsOpcoesAntigas ? "2" : "3");
   if (/\?/.test(cru)) return false;
   return lerRespostaAoLembrete(cru) === "cancelar";
+}
+
+/** O «1» ao lembrete (nas opções novas): vai enviar o que falta. */
+export function querEnviarOQueFalta(texto: string | null | undefined, comAsOpcoesAntigas = false): boolean {
+  return !comAsOpcoesAntigas && /^(?:opcao|op|numero|n)?\s*1$/.test(normalizar(texto ?? ""));
+}
+
+/** O «2» ao lembrete (nas opções novas): tem uma dúvida — passa a uma pessoa. */
+export function temUmaDuvidaNoLembrete(texto: string | null | undefined, comAsOpcoesAntigas = false): boolean {
+  return !comAsOpcoesAntigas && /^(?:opcao|op|numero|n)?\s*2$/.test(normalizar(texto ?? ""));
+}
+
+/** O lembrete que saiu é o de antes da d5 (o «2» cancela)? */
+export function eDasOpcoesAntigas(texto: string | null | undefined): boolean {
+  return normalizar(texto ?? "").includes("responda 2 e cancelamos o pedido");
 }
 
 /**
@@ -466,7 +491,7 @@ export function eLembreteDoQueFalta(texto: string | null | undefined, pedidoId: 
   if (!Number.isInteger(pedidoId) || pedidoId <= 0) return false;
   const t = (texto ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   if (!new RegExp(`#${pedidoId}(?!\\d)`).test(t)) return false;
-  return t.includes("responda 2 e cancelamos o pedido");
+  return t.includes("responda 2 e cancelamos o pedido") || t.includes("responda 1 se vai enviar o que falta, 2 se tiver uma duvida");
 }
 
 /* ── A linha da Mesa ─────────────────────────────────────────────────────── */
@@ -478,13 +503,13 @@ const ddmm = (d: Date) => {
 
 /**
  * O ESTADO NO CARTÃO DO PEDIDO — «Mensagem 1/3 enviada a 23/11 · a 2.ª a 24/11
- * às 14h35», «Cancelado pelo cliente (respondeu 2)», «Arquivado sem resposta».
+ * às 14h35», «Cancelado pelo cliente (respondeu CANCELAR)», «Arquivado sem resposta».
  * Com o interruptor desligado, os passos por dar dizem «sairia»/«arquivaria».
  * Sem ciclo, null. Pura.
  */
 export function linhaDoLembreteNaMesa(c: CicloDoQueFalta | null | undefined, ligado: boolean, agora: Date = new Date()): string | null {
   if (!c) return null;
-  if (c.canceladoEm) return `Cancelado pelo cliente (respondeu 2) a ${ddmm(c.canceladoEm)}`;
+  if (c.canceladoEm) return `Cancelado pelo cliente (respondeu CANCELAR) a ${ddmm(c.canceladoEm)}`;
   if (c.arquivadoEm) return `Arquivado sem resposta a ${ddmm(c.arquivadoEm)}`;
   const n = lembretesEnviados(c);
   const ultimo = ultimaDoCiclo(c);

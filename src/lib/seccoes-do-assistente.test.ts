@@ -293,6 +293,7 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/interruptor-da-validade", porque: "ligar a validade dos orçamentos (lembretes e fecho automáticos) é do administrador, com o sim do dono (d62, 18-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-agente", porque: "ligar o ensaio da Vitória agente e mudar o tecto diário de gasto são do administrador, com o sim do dono (d85, 22-11-2026)" },
   { seccao: "configs", rota: "/api/admin/interruptor-do-seguimento", porque: "desligar (ou voltar a ligar) o seguimento do cliente é do administrador — é o travão de emergência (d83, 21-11-2026)" },
+  { seccao: "configs", rota: "/api/admin/interruptor-do-whatsapp-pela-meta", porque: "passar os envios da ponte para a Cloud API da Meta (que não envia templates) é do administrador, com o sim do dono (d5, 21-11-2026)" },
   { seccao: "configs", rota: "/api/admin/interruptor-do-envio-automatico", porque: "desligar (ou voltar a ligar) o envio automático aos parceiros é do administrador — é o travão de emergência (d87, 22-11-2026)" },
   { seccao: "configs", rota: "/api/admin/lembretes-do-que-falta", porque: "ligar os lembretes do que falta (mensagens, cancelamentos e arquivos automáticos) é do administrador, com o sim do dono (d71, 19-11-2026)" },
   { seccao: "configs", rota: "/api/admin/propostas-ao-cliente", porque: "desligar (ou voltar a ligar) o envio das propostas ao cliente pela Vitória é do administrador (d88, 23-11-2026)" },

@@ -6,7 +6,7 @@ import { precoDoCliente, semEComIva } from "./preco-do-cliente";
 import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
 
 import { promessaDaForma } from "./pagamento-na-plataforma";
-import { PAGA_AO_CONTRATADO } from "./o-pagamento-da-vitoria";
+import { pagaAoContratado } from "./o-pagamento-da-vitoria";
 import {
   FORMA_EM_PALAVRAS,
   FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO,
@@ -203,6 +203,8 @@ export type PropostaParaOCliente = {
   materiais?: string | null;
   /** d10: um trabalho do modelo de 15-11-2026 — o cliente paga ao parceiro. */
   novoModelo?: boolean;
+  /** d5 (21-11): os dados de pagamento do parceiro por confirmar — não se manda o cliente procurá-los no pedido. */
+  dadosPorConfirmar?: boolean;
   /**
    * d17: a conta do total do modelo novo (as taxas e o regime do parceiro), para
    * a estimativa das horas dizer a mesma conta. Só quando o total é dele.
@@ -240,6 +242,8 @@ type NegociacaoParaLer = {
    * (`segueONovoModelo`, posto pela rota da Mesa); sem ele, o de antes.
    */
   noNovoModelo?: boolean;
+  /** d5 (21-11): posto pela rota da Mesa (`dadosDePagamentoPorConfirmar`: «mudaram» ou «titular»). */
+  dadosDePagamentoPorConfirmar?: unknown;
   /**
    * d17 (13-11-2026): o regime com que se faz o total do modelo novo (o congelado
    * ou o do perfil), posto pela rota da Mesa. Com ele, o número da mensagem é o
@@ -298,6 +302,7 @@ function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente
     aPagar: conta.aPagar,
     forma: lerForma(n.formaDePagamento),
     ...(n.noNovoModelo === true ? { novoModelo: true } : {}),
+    ...(n.dadosDePagamentoPorConfirmar ? { dadosPorConfirmar: true } : {}),
     ...(total && regime ? { contaDoNovoModelo: { taxas: taxasDaNegociacao(n), regime }, ivaDaTaxa: total.ivaDaTaxa } : {}),
     // Só quando o parceiro disse (sem a pergunta respondida, a proposta fica como era).
     ...((): { materiais?: string } => {
@@ -589,7 +594,7 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
     if (avisoDaUnidade) linhas.push(avisoDaUnidade);
     if (d.fechado.novoModelo) {
       // d10: paga ao parceiro, como escolher no pedido, e há duas faturas.
-      linhas.push(PAGA_AO_CONTRATADO);
+      linhas.push(pagaAoContratado(d.fechado.dadosPorConfirmar === true));
     } else if (d.fechado.forma === "dinheiro") {
       /*
         EM DINHEIRO SÃO DUAS ENTREGAS — 29-09-2026. O número de cima é o total
