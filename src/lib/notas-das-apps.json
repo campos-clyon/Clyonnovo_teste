@@ -3,7 +3,9 @@
     {
       "id": "pro-2026-11-23",
       "nota": "Novo separador «Cancelados»: o pedido cancelado aparece lá com o motivo; o arquivado vai para os Arquivados, também com o motivo.\nO sino avisa quando um pedido seu é cancelado, arquivado ou apagado.",
-      "updates": []
+      "updates": [
+        "01a20936-b6a3-7455-b284-b7ed82f7b790"
+      ]
     },
     {
       "id": "pro-2026-11-20",
