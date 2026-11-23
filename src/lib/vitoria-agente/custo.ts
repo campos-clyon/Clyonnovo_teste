@@ -14,8 +14,14 @@ export const MODELO_DA_VITORIA_AGENTE = "claude-sonnet-5-5";
 /** A beta da recolha pelo servidor quando o modelo recusa (`fallbacks: "default"`). */
 export const BETA_DA_RECOLHA = "server-side-fallback-2026-07-01";
 
-/** O esforço por omissão (conversa curta). O script de medição compara «low» e «medium». */
-export const ESFORCO_POR_OMISSAO = "low" as const;
+/**
+ * O esforço por omissão. Era «low» (d85); desde a d92 (23-11-2026) «medium»: o
+ * dono quer qualidade («podemos pagar mais qualidade»; ~0,6 cêntimos por
+ * chamada em «low»), e as voltas da fase 4 têm várias ferramentas seguidas
+ * (ler as propostas, identificar, propor o fecho). Os scripts de medição e de
+ * avaliação comparam «low» e «medium» para o CEO confirmar pela qualidade.
+ */
+export const ESFORCO_POR_OMISSAO = "medium" as const;
 export type EsforcoDoAgente = "low" | "medium";
 
 /** Dólares por milhão de tokens — Claude Sonnet 5.5 (a cache de 5 minutos). */

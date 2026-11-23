@@ -28,7 +28,7 @@ import { conversaAnonimizada, textoAnonimizado, ultimosDigitos } from "./vitoria
 import {
   correrFerramenta,
   estadoNovo,
-  FERRAMENTAS_BLOQUEADAS,
+  FERRAMENTAS_QUE_PROPOEM,
   FERRAMENTAS_DA_VITORIA,
   type DependenciasDasFerramentas,
   type PedidoParaOAgente,
@@ -167,8 +167,9 @@ describe("a anonimização (o ensaio e o script de medição)", () => {
       quem,
     );
     for (const fora of ["Leonor", "Fontoura", "912", "345 678", "@", "123456789", "PT50", "2800-123", "Amendoeiras"]) expect(t, fora).not.toContain(fora);
-    expect(t).toContain("[contacto]");
-    expect(t).toContain("[código postal]");
+    // d92: a marca diz que o dado foi recebido (o agente nunca o volta a pedir).
+    expect(t).toContain("[código postal recebido]");
+    expect(t).toContain("[contacto recebido]");
     expect(t).toContain("Almada");
   });
 
@@ -210,7 +211,7 @@ function base(over: Partial<DependenciasDasFerramentas> = {}): DependenciasDasFe
 }
 
 describe("as ferramentas", () => {
-  it("doze, numa ordem fixa, todas strict, com additionalProperties false e tudo em required", () => {
+  it("catorze (d92), numa ordem fixa, todas strict, com additionalProperties false e tudo em required", () => {
     expect(FERRAMENTAS_DA_VITORIA.map((f) => f.name)).toEqual([
       "pedidos_do_cliente",
       "ler_pedido",
@@ -224,6 +225,8 @@ describe("as ferramentas", () => {
       "propor_resposta",
       "aceitar_proposta",
       "cancelar_pedido",
+      "perguntar_ao_parceiro",
+      "perguntas_frequentes",
     ]);
     for (const f of FERRAMENTAS_DA_VITORIA) {
       expect(f.strict, f.name).toBe(true);
@@ -261,20 +264,21 @@ describe("as ferramentas", () => {
     const fora = await correrFerramenta("marcar_seguimento", { pedido: 812, dia: "2026-11-24", hora: "23:00", nota: "" }, base(), e);
     expect(fora.erro).toBe(true);
     const q = await correrFerramenta("passar_a_equipa", { motivo: "pede uma pessoa" }, base(), e);
-    expect(q.resultado).toMatchObject({ ensaio: true, passado: false });
+    // d92: a mensagem ao cliente é escrita pelo modelo; sem ela, fica a frase de sempre (quem passa é quem chama).
+    expect(q.resultado).toMatchObject({ passado: true, mensagemAceite: false });
+    expect(e.mensagemDeEquipa).toBeNull();
     expect(e.passouAEquipa).toBe("pede uma pessoa");
     expect(e.teriaFeito.length).toBe(3);
   });
 
-  it("aceitar e cancelar estão declaradas mas BLOQUEADAS (fase 4)", async () => {
-    expect([...FERRAMENTAS_BLOQUEADAS]).toEqual(["aceitar_proposta", "cancelar_pedido"]);
-    for (const nome of FERRAMENTAS_BLOQUEADAS) {
-      const r = await correrFerramenta(nome, { pedido: 812, parceiro: "X", motivo: "x" }, base(), estadoNovo());
-      expect(r.erro, nome).toBe(true);
-      expect(JSON.stringify(r.resultado)).toMatch(/Ainda não disponível/);
-    }
+  it("d92: aceitar, cancelar e perguntar ao parceiro só PROPÕEM (o código é que fecha e cancela)", async () => {
+    expect([...FERRAMENTAS_QUE_PROPOEM]).toEqual(["aceitar_proposta", "perguntar_ao_parceiro", "cancelar_pedido"]);
+    // Sem propostas no pedido, aceitar não tem o que escolher.
+    const r = await correrFerramenta("aceitar_proposta", { pedido: 812, escolha: "X" }, base(), estadoNovo());
+    expect(r.erro).toBe(true);
+    expect(JSON.stringify(r.resultado)).toMatch(/Não há propostas/);
     const codigo = ler("src/lib/vitoria-agente/ferramentas.ts");
-    expect(codigo).not.toMatch(/cancelarPedido|fecharPeloCliente|atribuirOferta|INSERT|UPDATE/);
+    expect(codigo).not.toMatch(/cancelarPedido\(|fecharPeloCliente|atribuirOferta|INSERT|UPDATE/);
   });
 
   it("propor_resposta passa pela guarda, com os euros que as ferramentas deram", async () => {
@@ -356,7 +360,7 @@ describe("o cliente do Claude", () => {
     expect(semSaber.estado).toBe("tecto");
   });
 
-  it("o pedido: Sonnet 5.5, adaptativo com esforço baixo, sem temperature, recolha «default», strict, auto, cache, e a data FORA do aviso", async () => {
+  it("o pedido: Sonnet 5.5, adaptativo com esforço médio (d92), sem temperature, recolha «default», strict, auto, cache, e a data FORA do aviso", async () => {
     const minimo = pt(RECOLHA_MINIMA_DOS_MOVEIS);
     const com = pt(comIva(RECOLHA_MINIMA_DOS_MOVEIS));
     const { cliente, pedidos } = clienteFingido([
@@ -382,7 +386,7 @@ describe("o cliente do Claude", () => {
     const p = pedidos[0] as Pedido & Record<string, unknown>;
     expect(p.model).toBe("claude-sonnet-5-5");
     expect(p.thinking).toEqual({ type: "adaptive" });
-    expect(p.output_config).toEqual({ effort: "low" });
+    expect(p.output_config).toEqual({ effort: "medium" });
     expect(p).not.toHaveProperty("temperature");
     expect(p).not.toHaveProperty("top_p");
     expect(p.fallbacks).toBe("default");

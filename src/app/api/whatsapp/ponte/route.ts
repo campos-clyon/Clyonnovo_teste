@@ -93,6 +93,8 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
   }
 
   let respondida = false;
+  // d92: quem respondeu — as regras, o agente (a «conversa livre») ou o código (o SIM / o CANCELAR ao agente).
+  let quemRespondeu: "regras" | "agente" | "codigo" = "regras";
   await comTrancaDoNumeroWhatsApp(telefone, async () => {
     // Relido DENTRO da tranca: quem a teve antes pode ter respondido a parte
     // disto, e o que já teve resposta não se responde outra vez.
@@ -112,9 +114,19 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
      * mensagem nova — ver `rajada-em-curso.ts`.
      */
     const { dentroDaRajada } = await import("@/lib/rajada-em-curso");
-    await dentroDaRajada({ telefone, ultimaLida: ultimaMensagemLida(agora) }, () =>
-      tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto, videos }),
-    );
+    /*
+     * A VITÓRIA AGENTE A SÉRIO — d92 (23-11-2026). Com «Vitória agente —
+     * conversa livre» ligado (DESLIGADO por omissão), a resposta do agente é a
+     * que sai (quem já tem pedido, fora da recolha e das respostas que o
+     * código lê); as regras ficam de rede de segurança. Desligado, respondem
+     * as regras, como sempre. Ver `vitoria-agente/ao-vivo.ts`.
+     */
+    const { responderAoClienteAoVivo } = await import("@/lib/vitoria-agente/ao-vivo-na-base");
+    await dentroDaRajada({ telefone, ultimaLida: ultimaMensagemLida(agora) }, async () => {
+      quemRespondeu = await responderAoClienteAoVivo(telefone, { tipo: "texto", texto: junto, imagens, visto, videos }, () =>
+        tratarMensagemDoCliente(telefone, { tipo: "texto", texto: junto, imagens, visto, videos }),
+      );
+    });
     respondida = true;
   });
   /*
@@ -124,7 +136,8 @@ async function responderARajada(telefone: string, minhaId: number | null, texto:
    * mesma conversa, sem dados de pessoas, e grava o que teria dito e feito.
    * NUNCA envia. Desligado, sem chave ou com o tecto passado, não chama nada.
    */
-  if (respondida) {
+  // O ensaio só quando responderam as regras (o que o agente disse a sério já ficou no painel).
+  if (respondida && quemRespondeu === "regras") {
     after(async () => {
       const { ensaioEmSombra } = await import("@/lib/vitoria-agente/na-base");
       await ensaioEmSombra(telefone).catch(() => undefined);

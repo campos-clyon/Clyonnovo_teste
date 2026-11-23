@@ -1,29 +1,46 @@
 /**
- * AS FERRAMENTAS DA VITÓRIA AGENTE — d85, fase 0 (22-11-2026).
+ * AS FERRAMENTAS DA VITÓRIA AGENTE — d85, fase 0 (22-11-2026); d92, fases 4 e 5 (23-11-2026).
  *
  * O modelo escolhe as ferramentas; o código decide o que é permitido. Nada de
  * lógica nova de negócio: cada ferramenta é uma porta para o que já existe —
  * o pedido, a conversa, o que falta (`oQueFaltaNoPedido`), as propostas como o
- * cliente as vê (o mesmo «ecrã» da Vitória), o que o site sabe (as fontes
- * únicas dos preços: `precos-publicos.ts`, `tabela-das-mudancas.ts`,
- * `sacos-de-entulho.ts`, o IVA de `taxas-plataforma.ts`), os validadores da
+ * cliente as vê (o mesmo «ecrã» da Vitória) e com a conta e o regime de cada
+ * uma (`propostas-do-agente.ts`, do mesmo cálculo da mensagem das propostas),
+ * o que o site sabe (as fontes únicas dos preços: `precos-publicos.ts`,
+ * `tabela-das-mudancas.ts`, `sacos-de-entulho.ts`, o IVA de
+ * `taxas-plataforma.ts`), as perguntas frequentes do site, os validadores da
  * recolha (`guardarARespostaComoVeio`) e o do seguimento (`validarVoltarEm`).
  *
- * NESTA FASE NADA ESCREVE: tudo corre em ensaio. Gravar um dado, marcar o
- * seguimento e passar à equipa validam a entrada e dizem o que TERIAM feito.
- * Aceitar uma proposta e cancelar um pedido (mexem em dinheiro e no estado)
- * estão declaradas mas BLOQUEADAS — são da fase 4.
+ * NADA AQUI ESCREVE NEM ENVIA. Gravar um dado e marcar o seguimento dizem o
+ * que TERIAM feito. Aceitar, cancelar e perguntar ao parceiro (d92) só
+ * PROPÕEM: deixam um «pendente» no estado da conversa e a frase que tem de ir
+ * na resposta («… Responda SIM.», «… Responda CANCELAR.»). Quem fecha ou
+ * cancela é o código, quando lê a resposta seguinte do cliente
+ * (`pendentes.ts`), pelos caminhos de sempre — e só com o interruptor
+ * «Vitória agente — aceitar» ligado; desligado, fica no ensaio.
  *
  * Só se lêem os pedidos DESTE telefone, e sem dados de pessoas (sem o nome,
- * o telefone, o email nem a rua).
+ * o telefone, o email nem a rua). O valor que o parceiro escreveu nunca vai
+ * ao modelo: só a conta como o cliente a paga.
  */
 
 import type Anthropic from "@anthropic-ai/sdk";
 import { oQueFaltaNoPedido, type PedidoParaOQueFalta } from "../o-que-falta-no-pedido";
 import { validarVoltarEm } from "../seguimento-do-cliente";
 import { guardarARespostaComoVeio, type DadosDaRecolha, type PassoDaRecolha } from "../whatsapp-recolha";
+import { textoDaConfirmacaoDoCancelamento } from "../validade-do-orcamento";
 import { eurosDosResultados, motivoParaBloquearOAgente } from "./guarda";
 import { textoAnonimizado } from "./anonimizar";
+import {
+  identificarProposta,
+  mensagemAoParceiro,
+  motivoParaNaoFecharPeloAgente,
+  perguntaDoFecho,
+  semOValorDoParceiro,
+  type PedidoParaOFecho,
+  type PropostaComOValorDoParceiro,
+} from "./propostas-do-agente";
+import { pendenteEmPalavras, type Pendente } from "./pendentes";
 
 /** O pedido como a base o tem (as colunas que as ferramentas lêem). */
 export type PedidoParaOAgente = PedidoParaOQueFalta & {
@@ -32,6 +49,8 @@ export type PedidoParaOAgente = PedidoParaOQueFalta & {
 };
 
 export type LinhaLida = { direccao: string; texto: string; criadoEm?: string | null };
+
+export type PerguntaDoSite = { pergunta: string; resposta: string };
 
 /** O que as ferramentas precisam do mundo. Nos testes, uma base fingida. */
 export type DependenciasDasFerramentas = {
@@ -42,6 +61,16 @@ export type DependenciasDasFerramentas = {
   lerConversa: (quantas: number) => Promise<LinhaLida[]>;
   propostasDoPedido: (id: number) => Promise<string>;
   oQueOSiteSabe: () => string;
+  /** d92: as propostas que o cliente pode escolher, com a conta e o regime (e o valor do parceiro, que fica no código). */
+  propostasParaEscolher?: (id: number) => Promise<PropostaComOValorDoParceiro[]>;
+  /** d92: o que o fecho pelo agente precisa de saber do pedido (valor único, já fechado, pago…). */
+  pedidoParaOFecho?: (id: number) => Promise<PedidoParaOFecho>;
+  /** d92: as perguntas frequentes do site que batem com a procura. */
+  perguntasFrequentes?: (procura: string) => PerguntaDoSite[];
+  /** d92: «Vitória agente — aceitar» ligado? Só muda o que as ferramentas dizem (o código é que age). */
+  aceitarLigado?: boolean;
+  /** d92: a sério (a resposta sai para o cliente)? Com o «aceitar» desligado, aí as acções passam à equipa (as perguntas do SIM não podem sair). */
+  aoVivo?: boolean;
 };
 
 /** Os passos da recolha que o agente pode gravar (os mesmos validadores das regras). */
@@ -62,8 +91,8 @@ export const PASSOS_QUE_O_AGENTE_GRAVA = [
   "descricao",
 ] as const satisfies readonly PassoDaRecolha[];
 
-/** As que mexem em dinheiro ou no estado do pedido: declaradas, bloqueadas até à fase 4. */
-export const FERRAMENTAS_BLOQUEADAS = ["aceitar_proposta", "cancelar_pedido"] as const;
+/** As que deixam uma acção à espera da confirmação do cliente (ou do parceiro), lida pelo código. */
+export const FERRAMENTAS_QUE_PROPOEM = ["aceitar_proposta", "perguntar_ao_parceiro", "cancelar_pedido"] as const;
 
 const objecto = (properties: Record<string, unknown>, required: string[]) => ({
   type: "object" as const,
@@ -72,6 +101,10 @@ const objecto = (properties: Record<string, unknown>, required: string[]) => ({
   additionalProperties: false,
 });
 const PEDIDO = { type: "integer", description: "O número do pedido (sem o #)." };
+const ESCOLHA = {
+  type: "string",
+  description: "Qual proposta, como o cliente a disse: o nome do parceiro, o valor («a de 85») ou a ordem («a primeira»).",
+};
 
 /**
  * AS FERRAMENTAS, numa ordem fixa (a cache de prompt depende de não mudarem
@@ -86,7 +119,8 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "ler_pedido",
-    description: "Um pedido deste cliente: o serviço, o estado, a localidade, o andar, o elevador, o estacionamento, a data, a descrição e quantas fotografias tem. Sem dados pessoais.",
+    description:
+      "Um pedido deste cliente: o serviço, o estado, a localidade, o andar, o elevador, o estacionamento, a data combinada ou preferida, a descrição e quantas fotografias tem. Sem dados pessoais.",
     input_schema: objecto({ pedido: PEDIDO }, ["pedido"]),
     strict: true,
   },
@@ -98,7 +132,8 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "propostas_vivas",
-    description: "As propostas dos parceiros a um pedido deste cliente, exactamente como o cliente as vê (o preço a pagar, com o IVA), ou que ainda não há propostas.",
+    description:
+      "As propostas dos parceiros a um pedido deste cliente: como o cliente as vê, e para cada uma o regime de IVA do parceiro (com IVA, isento, a confirmar), a conta (trabalho do parceiro, taxa da plataforma, o IVA de cada um, o total) e uma explicação do IVA em palavras simples. Usa-a para qualquer pergunta sobre os valores ou o IVA de uma proposta.",
     input_schema: objecto({ pedido: PEDIDO }, ["pedido"]),
     strict: true,
   },
@@ -144,27 +179,54 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "passar_a_equipa",
-    description: "Passa a conversa a uma pessoa da equipa da CLYON, com o motivo. Usa quando não sabes, quando o cliente pede uma pessoa, se queixa, quer aceitar ou cancelar, ou quando nenhuma resposta tua passa na revisão.",
-    input_schema: objecto({ motivo: { type: "string", description: "Porquê, numa frase (sem dados pessoais)." } }, ["motivo"]),
+    description:
+      "Passa a conversa a uma pessoa da equipa da CLYON, com o motivo e a mensagem que o cliente vai ler (escrita por ti, natural, a dizer o que acontece a seguir). Usa só quando é mesmo preciso: o cliente pede uma pessoa, se queixa, há dinheiro que as ferramentas não explicam, uma ferramenta diz que passa à equipa, ou não sabes responder.",
+    input_schema: objecto(
+      {
+        motivo: { type: "string", description: "Porquê, numa frase, para a equipa (sem dados pessoais)." },
+        mensagem: { type: "string", description: "A mensagem ao cliente, curta e humana (passa pela mesma revisão)." },
+      },
+      ["motivo", "mensagem"],
+    ),
     strict: true,
   },
   {
     name: "propor_resposta",
     description:
-      "Propõe a mensagem de WhatsApp a enviar ao cliente. Passa por uma revisão (os preços têm de vir das ferramentas desta conversa, o IVA nunca sozinho, «parceiro», português de Portugal). Se for recusada, diz porquê: reescreve, ou passa à equipa.",
+      "Propõe a mensagem de WhatsApp a enviar ao cliente. Passa por uma revisão (os preços têm de vir das ferramentas desta conversa, o IVA nunca sozinho, «parceiro», português de Portugal, e a frase obrigatória de uma acção proposta). Se for recusada, diz porquê: reescreve, ou passa à equipa.",
     input_schema: objecto({ texto: { type: "string", description: "A mensagem, como o cliente a vai ler." } }, ["texto"]),
     strict: true,
   },
   {
     name: "aceitar_proposta",
-    description: "Aceita a proposta de um parceiro em nome do cliente. AINDA NÃO DISPONÍVEL: passa à equipa.",
-    input_schema: objecto({ pedido: PEDIDO, parceiro: { type: "string", description: "O nome do parceiro, como na proposta." } }, ["pedido", "parceiro"]),
+    description:
+      "Quando o cliente escolhe uma proposta: identifica-a, relê-a e prepara o fecho. NÃO fecha — devolve a pergunta que tens de pôr na resposta, tal e qual («… Responda SIM.»); quem fecha é o sistema, quando o cliente responder SIM. Se disser para passar à equipa, passa.",
+    input_schema: objecto({ pedido: PEDIDO, escolha: ESCOLHA }, ["pedido", "escolha"]),
     strict: true,
   },
   {
     name: "cancelar_pedido",
-    description: "Cancela um pedido a pedido do cliente. AINDA NÃO DISPONÍVEL: passa à equipa.",
-    input_schema: objecto({ pedido: PEDIDO, motivo: { type: "string", description: "O que o cliente disse." } }, ["pedido", "motivo"]),
+    description:
+      "Quando o cliente quer cancelar um pedido: confere se pode ser e devolve a pergunta que tens de pôr na resposta, tal e qual («Confirma que quer cancelar o pedido #N? Responda CANCELAR.»). NÃO cancela: só o CANCELAR do cliente, lido pelo sistema, cancela.",
+    input_schema: objecto({ pedido: PEDIDO, motivo: { type: "string", description: "O que o cliente disse, em poucas palavras." } }, ["pedido", "motivo"]),
+    strict: true,
+  },
+  {
+    name: "perguntar_ao_parceiro",
+    description:
+      "Quando o cliente escolhe uma proposta COM uma condição («até quinta-feira», «só de manhã», «se levar também o frigorífico»): prepara a pergunta ao parceiro escolhido. Depois dizes ao cliente, com naturalidade, que vais confirmar com o parceiro e que lhe dizes assim que ele responder (sem prometer o sim).",
+    input_schema: objecto({ pedido: PEDIDO, escolha: ESCOLHA, condicao: { type: "string", description: "A condição, como o cliente a disse." } }, [
+      "pedido",
+      "escolha",
+      "condicao",
+    ]),
+    strict: true,
+  },
+  {
+    name: "perguntas_frequentes",
+    description:
+      "As perguntas frequentes do site da CLYON (como funciona, preços, IVA, cargas, esvaziamentos, limpeza depois de esvaziar, mudanças, zonas, pagamentos, cancelar, o selo dos parceiros) que batem com a procura. Usa-a para dúvidas gerais, antes de responder.",
+    input_schema: objecto({ procura: { type: "string", description: "Duas ou três palavras do que o cliente quer saber." } }, ["procura"]),
     strict: true,
   },
 ];
@@ -179,18 +241,41 @@ export type EstadoDaConversa = {
   recusadas: Array<{ texto: string; motivo: string }>;
   /** O motivo, se passou à equipa. */
   passouAEquipa: string | null;
+  /** A mensagem ao cliente ao passar à equipa (escrita pelo modelo, revista), ou null. */
+  mensagemDeEquipa: string | null;
   /** O que teria feito (ensaio): uma linha por acção. */
   teriaFeito: string[];
+  /**
+   * d92: a sério, um dado do pedido ou um seguimento gravam-nos as regras de
+   * sempre (o agente ainda não escreve no pedido): a volta acaba e respondem
+   * as regras, que gravam e perguntam o que falta. O porquê, ou null.
+   */
+  deixarAsRegras: string | null;
+  /** d92: a acção que fica à espera da confirmação do cliente (ou do parceiro). */
+  pendente: Pendente | null;
+  /** d92: a frase que a resposta tem de levar tal e qual (a pergunta do SIM ou do CANCELAR). */
+  fraseObrigatoria: string | null;
 };
 
 export function estadoNovo(): EstadoDaConversa {
-  return { resultados: [], respostaAceite: null, recusadas: [], passouAEquipa: null, teriaFeito: [] };
+  return {
+    resultados: [],
+    respostaAceite: null,
+    recusadas: [],
+    passouAEquipa: null,
+    mensagemDeEquipa: null,
+    teriaFeito: [],
+    deixarAsRegras: null,
+    pendente: null,
+    fraseObrigatoria: null,
+  };
 }
 
 export type ResultadoDaFerramenta = { resultado: Record<string, unknown>; erro?: boolean };
 
 const inteiro = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null);
 const texto = (v: unknown, max = 600) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+const espacos = (s: string) => s.replace(/\s+/g, " ").trim();
 
 function pedidoSemDadosPessoais(p: PedidoParaOAgente) {
   const fotos = (() => {
@@ -209,6 +294,7 @@ function pedidoSemDadosPessoais(p: PedidoParaOAgente) {
     andar: p.floor ?? null,
     elevador: p.hasElevator ?? null,
     estacionamento: p.parkingDistance ?? null,
+    dataCombinada: p.dataAgendada ? String(p.dataAgendada) : null,
     quando: p.dataAgendada ? String(p.dataAgendada) : (p.urgency ?? null),
     descricao: p.description ? textoAnonimizado(String(p.description), [p]) : null,
     fotografias: fotos,
@@ -230,6 +316,50 @@ async function doTelefone(deps: DependenciasDasFerramentas, id: number | null): 
 
 const erro = (mensagem: string): ResultadoDaFerramenta => ({ resultado: { erro: mensagem }, erro: true });
 
+/** Para a equipa (não é um erro): a ferramenta diz porquê, e o modelo chama passar_a_equipa. */
+const paraAEquipa = (motivo: string): ResultadoDaFerramenta => ({
+  resultado: { feito: false, passarAEquipa: true, motivo, oQueFazer: "Chama passar_a_equipa com este motivo e uma mensagem tua ao cliente." },
+});
+
+/** A escolhida, relida pelo código, e o porquê de não seguir (se houver). */
+async function escolhida(
+  deps: DependenciasDasFerramentas,
+  pedidoId: number,
+  dito: string,
+): Promise<{ proposta: PropostaComOValorDoParceiro } | { erro: string } | { equipa: string }> {
+  const lista = deps.propostasParaEscolher ? await deps.propostasParaEscolher(pedidoId) : [];
+  const id = identificarProposta(dito, lista);
+  if (!id.ok) return { erro: id.porque };
+  const pedido = deps.pedidoParaOFecho ? await deps.pedidoParaOFecho(pedidoId) : {};
+  const motivo = motivoParaNaoFecharPeloAgente(id.proposta, pedido, deps.agora);
+  if (motivo) return { equipa: `Pedido #${pedidoId}, ${id.proposta.parceiro}: ${motivo}` };
+  return { proposta: id.proposta };
+}
+
+/** As perguntas frequentes que batem com a procura (as palavras com 4+ letras), as melhores primeiro. */
+export function procurarNasPerguntas(lista: readonly PerguntaDoSite[], procura: string, maximo = 5): PerguntaDoSite[] {
+  const norm = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase();
+  const palavras = norm(procura)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 4);
+  if (palavras.length === 0) return lista.slice(0, maximo);
+  return lista
+    .map((q) => {
+      const p = norm(q.pergunta);
+      const r = norm(q.resposta);
+      const pontos = palavras.reduce((s, w) => s + (p.includes(w) ? 3 : 0) + (r.includes(w) ? 1 : 0), 0);
+      return { q, pontos };
+    })
+    .filter((x) => x.pontos > 0)
+    .sort((a, b) => b.pontos - a.pontos)
+    .slice(0, maximo)
+    .map((x) => x.q);
+}
+
 /**
  * CORRE UMA FERRAMENTA. Nunca lança: um erro volta ao modelo como resultado
  * (`is_error`), para ele seguir ou passar à equipa.
@@ -241,6 +371,10 @@ export async function correrFerramenta(
   estado: EstadoDaConversa,
 ): Promise<ResultadoDaFerramenta> {
   const e = (entrada && typeof entrada === "object" ? entrada : {}) as Record<string, unknown>;
+  const ensaio = deps.aceitarLigado !== true;
+  if (deps.aoVivo && ensaio && (FERRAMENTAS_QUE_PROPOEM as readonly string[]).includes(nome)) {
+    return paraAEquipa("Fechar, cancelar e perguntar ao parceiro pela Vitória estão desligados («Vitória agente — aceitar»): trata uma pessoa da equipa.");
+  }
   try {
     switch (nome) {
       case "pedidos_do_cliente": {
@@ -266,7 +400,14 @@ export async function correrFerramenta(
       case "propostas_vivas": {
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
-        return guardar(estado, { pedido: p.id, comoOClienteVe: await deps.propostasDoPedido(p.id) });
+        const lista = deps.propostasParaEscolher ? await deps.propostasParaEscolher(p.id) : [];
+        return guardar(estado, {
+          pedido: p.id,
+          comoOClienteVe: await deps.propostasDoPedido(p.id),
+          propostas: lista.map(semOValorDoParceiro),
+          dataCombinada: p.dataAgendada ? String(p.dataAgendada) : null,
+          dataPreferida: p.urgency ?? null,
+        });
       }
       case "ler_conversa": {
         const n = Math.max(1, Math.min(40, inteiro(e.mensagens) ?? 20));
@@ -277,9 +418,20 @@ export async function correrFerramenta(
       }
       case "o_que_o_site_sabe":
         return guardar(estado, { oQueOSiteSabe: deps.oQueOSiteSabe() });
+      case "perguntas_frequentes": {
+        const todas = deps.perguntasFrequentes ? deps.perguntasFrequentes(texto(e.procura, 120)) : [];
+        return guardar(estado, {
+          perguntas: todas,
+          nota: todas.length === 0 ? "Nada nas perguntas frequentes: usa o_que_o_site_sabe, ou passa à equipa se não souberes." : undefined,
+        });
+      }
       case "gravar_dado": {
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
+        if (deps.aoVivo) {
+          estado.deixarAsRegras = `o cliente deu um dado do pedido #${p.id} (${texto(e.passo, 40)}): gravam as regras`;
+          return { resultado: { feito: false, nota: "Isto grava o sistema de sempre, que responde ao cliente: termina sem propor resposta." } };
+        }
         const passo = texto(e.passo) as (typeof PASSOS_QUE_O_AGENTE_GRAVA)[number];
         if (!(PASSOS_QUE_O_AGENTE_GRAVA as readonly string[]).includes(passo)) return erro("Esse dado não se grava por aqui.");
         const dito = texto(e.texto, 300);
@@ -290,26 +442,40 @@ export async function correrFerramenta(
           Object.entries(depois).filter(([k, v]) => k !== "saltados" && JSON.stringify(v) !== JSON.stringify((antes as Record<string, unknown>)[k])),
         );
         if (Object.keys(mudou).length === 0) return erro("Não percebi um valor para gravar nesse texto: pergunte outra vez ao cliente.");
-        estado.teriaFeito.push(`gravar no #${p.id}: ${passo}`);
+        estado.teriaFeito.push(`teria gravado no #${p.id}: ${passo}`);
         return { resultado: { ensaio: true, gravado: false, teriaGravado: mudou } };
       }
       case "marcar_seguimento": {
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
+        if (deps.aoVivo) {
+          estado.deixarAsRegras = `o cliente quer falar mais tarde sobre o #${p.id}: marcam as regras`;
+          return { resultado: { feito: false, nota: "Isto marca o sistema de sempre, que responde ao cliente: termina sem propor resposta." } };
+        }
         const v = validarVoltarEm(e.dia, e.hora, deps.agora);
         if (!v.ok) return erro(v.porque);
-        estado.teriaFeito.push(`seguimento do #${p.id} a ${String(e.dia)} ${String(e.hora)}`);
+        estado.teriaFeito.push(`teria marcado o seguimento do #${p.id} para ${String(e.dia)} às ${String(e.hora)}`);
         return { resultado: { ensaio: true, marcado: false, teriaMarcado: { pedido: p.id, dia: e.dia, hora: e.hora, nota: texto(e.nota, 200) } } };
       }
       case "passar_a_equipa": {
         const motivo = texto(e.motivo, 200) || "sem motivo";
+        const mensagem = texto(e.mensagem, 800);
         estado.passouAEquipa = motivo;
-        estado.teriaFeito.push(`passar à equipa: ${motivo}`);
-        return { resultado: { ensaio: true, passado: false, teriaPassado: true } };
+        // A mensagem dele passa pela mesma revisão; se não passar, sai a frase de sempre.
+        const bloqueio = mensagem ? motivoParaBloquearOAgente(mensagem, eurosDosResultados(estado.resultados)) : "sem mensagem";
+        estado.mensagemDeEquipa = bloqueio ? null : mensagem;
+        // Passar à equipa desfaz o que estava a ser proposto.
+        estado.pendente = null;
+        estado.fraseObrigatoria = null;
+        estado.teriaFeito.push(`passaria à equipa: ${motivo}`);
+        return { resultado: { passado: true, mensagemAceite: !bloqueio, ...(bloqueio ? { porqueNao: bloqueio } : {}) } };
       }
       case "propor_resposta": {
         const t = texto(e.texto, 2000);
-        const motivo = motivoParaBloquearOAgente(t, eurosDosResultados(estado.resultados));
+        let motivo = motivoParaBloquearOAgente(t, eurosDosResultados(estado.resultados));
+        if (!motivo && estado.fraseObrigatoria && !espacos(t).includes(espacos(estado.fraseObrigatoria))) {
+          motivo = `Tem de levar, tal e qual, a frase: «${estado.fraseObrigatoria}»`;
+        }
         if (motivo) {
           estado.recusadas.push({ texto: t, motivo });
           return {
@@ -320,10 +486,76 @@ export async function correrFerramenta(
         estado.respostaAceite = t;
         return { resultado: { aceite: true } };
       }
-      case "aceitar_proposta":
-      case "cancelar_pedido":
-        estado.teriaFeito.push(`${nome} (bloqueada nesta fase)`);
-        return erro("Ainda não disponível: chama passar_a_equipa com o motivo.");
+      case "aceitar_proposta": {
+        const p = await doTelefone(deps, inteiro(e.pedido));
+        if (typeof p === "string") return erro(p);
+        const r = await escolhida(deps, p.id, texto(e.escolha, 200));
+        if ("erro" in r) return erro(r.erro);
+        if ("equipa" in r) return paraAEquipa(r.equipa);
+        const prop = r.proposta;
+        const frase = perguntaDoFecho(prop);
+        estado.pendente = {
+          tipo: "fecho",
+          pedidoId: p.id,
+          negociacaoId: prop.negociacaoId,
+          parceiro: prop.parceiro,
+          total: prop.conta.total,
+          propostoEm: deps.agora.toISOString(),
+        };
+        estado.fraseObrigatoria = frase;
+        estado.teriaFeito.push(pendenteEmPalavras(estado.pendente, ensaio));
+        return guardar(estado, {
+          proposto: true,
+          fechado: false,
+          fraseQueTemDeIrNaResposta: frase,
+          proposta: semOValorDoParceiro(prop),
+          nota: "Só o SIM do cliente fecha, lido pelo sistema. Podes juntar uma frase tua antes (curta).",
+        });
+      }
+      case "perguntar_ao_parceiro": {
+        const p = await doTelefone(deps, inteiro(e.pedido));
+        if (typeof p === "string") return erro(p);
+        const condicao = texto(e.condicao, 200);
+        if (!condicao) return erro("Falta a condição do cliente.");
+        const r = await escolhida(deps, p.id, texto(e.escolha, 200));
+        if ("erro" in r) return erro(r.erro);
+        if ("equipa" in r) return paraAEquipa(r.equipa);
+        const prop = r.proposta;
+        estado.pendente = {
+          tipo: "parceiro",
+          pedidoId: p.id,
+          negociacaoId: prop.negociacaoId,
+          parceiro: prop.parceiro,
+          condicao,
+          // O texto ao parceiro fica no código (leva o valor dele, que não vai ao modelo).
+          mensagem: mensagemAoParceiro(prop, condicao),
+          propostoEm: deps.agora.toISOString(),
+        };
+        estado.fraseObrigatoria = null;
+        estado.teriaFeito.push(pendenteEmPalavras(estado.pendente, ensaio));
+        return guardar(estado, {
+          perguntaPreparada: true,
+          parceiro: prop.parceiro,
+          proposta: semOValorDoParceiro(prop),
+          oQueDizerAoCliente:
+            "Que vais confirmar com o parceiro se consegue cumprir a condição e que lhe dizes assim que ele responder. Não prometas o sim nem uma hora.",
+        });
+      }
+      case "cancelar_pedido": {
+        const p = await doTelefone(deps, inteiro(e.pedido));
+        if (typeof p === "string") return erro(p);
+        const estadoDoPedido = String(p.status ?? "").toLowerCase();
+        if (/cancel/.test(estadoDoPedido)) return erro(`O pedido #${p.id} já está cancelado.`);
+        if (/conclu|complet/.test(estadoDoPedido)) return paraAEquipa(`Pedido #${p.id} concluído: o cliente quer cancelar`);
+        const fecho = deps.pedidoParaOFecho ? await deps.pedidoParaOFecho(p.id) : {};
+        if (fecho.temAcordada || p.dataAgendada) return paraAEquipa(`Pedido #${p.id} já contratado ou com data: o cliente quer cancelar`);
+        if (fecho.jaPago) return paraAEquipa(`Pedido #${p.id} com dinheiro pago: o cliente quer cancelar`);
+        const frase = textoDaConfirmacaoDoCancelamento(p.id);
+        estado.pendente = { tipo: "cancelar", pedidoId: p.id, propostoEm: deps.agora.toISOString() };
+        estado.fraseObrigatoria = frase;
+        estado.teriaFeito.push(pendenteEmPalavras(estado.pendente, ensaio));
+        return { resultado: { proposto: true, cancelado: false, fraseQueTemDeIrNaResposta: frase, nota: "Só o CANCELAR do cliente cancela, lido pelo sistema." } };
+      }
       default:
         return erro(`Não há a ferramenta «${nome}».`);
     }

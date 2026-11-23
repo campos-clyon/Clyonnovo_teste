@@ -371,6 +371,7 @@ describe("o ensaio em sombra da Vitória agente corre também nestes casos", () 
   it("corre depois de cada mensagem tratada, tenha a Vitória respondido ou não", () => {
     const ponte = corpoDe(PONTE, "tratarMensagemDoCliente(telefone, { tipo: \"texto\", texto: junto, imagens, visto, videos })", "ensaioEmSombra(telefone)");
     expect(ponte).toContain("respondida = true;");
-    expect(ponte).toContain("if (respondida) {");
+    // d92: e só quando responderam as regras (com a «conversa livre», o que o agente disse a sério já ficou no painel).
+    expect(ponte).toContain("if (respondida && quemRespondeu === \"regras\") {");
   });
 });

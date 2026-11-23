@@ -23,9 +23,16 @@ import { conversaAnonimizada, ultimosDigitos, type QuemEscreve } from "./anonimi
 import { clienteDoClaude, chaveDoClaude, correrOAgente, type ClienteDoClaude, type LinhaDoRegistoDoAgente, type ResultadoDoAgente } from "./cliente";
 import { MODELO_DA_VITORIA_AGENTE, TECTO_DIARIO_POR_OMISSAO_USD, tectoDasConfigs, tectoValido, type EsforcoDoAgente } from "./custo";
 import type { DependenciasDasFerramentas, LinhaLida, PedidoParaOAgente } from "./ferramentas";
+import { respostaAoPendente } from "./pendentes";
+import { emEuros, motivoParaNaoFecharNoSim } from "./propostas-do-agente";
+import { eASerio, oQueTeriaFeito } from "./painel-do-ensaio";
 
 export const NOME_DO_INTERRUPTOR_DO_ENSAIO = "Vitória agente — ensaio";
 export const CHAVE_DO_ENSAIO = "vitoria_agente_ensaio";
+export const NOME_DO_INTERRUPTOR_DA_CONVERSA_LIVRE = "Vitória agente — conversa livre";
+export const CHAVE_DA_CONVERSA_LIVRE = "vitoria_agente_conversa";
+export const NOME_DO_INTERRUPTOR_DO_ACEITAR = "Vitória agente — aceitar";
+export const CHAVE_DO_ACEITAR = "vitoria_agente_aceitar";
 const CHAVE_DO_TECTO = "tecto_diario_usd";
 
 export const SQL_DAS_TABELAS_DA_VITORIA_AGENTE = [
@@ -111,17 +118,35 @@ const json = (v: unknown, max: number) => {
   }
 };
 
-/* ── O interruptor do ensaio ─────────────────────────────────────────────── */
+/* ── Os interruptores ────────────────────────────────────────────────────── */
 
 export type InterruptorDoEnsaio = { ligado: boolean; mudadoEm: string | null; porQuem: string | null };
 
+/**
+ * OS TRÊS INTERRUPTORES DA VITÓRIA AGENTE (Configs, só o administrador, LIGAR):
+ *  - «Vitória agente — ensaio» (d85): o agente corre em sombra, nunca envia;
+ *  - «Vitória agente — conversa livre» (d92): a resposta do agente PASSA A SER
+ *    a que sai para o cliente (quem já tem pedido, fora da recolha e das
+ *    respostas que o código lê); as regras ficam de rede de segurança;
+ *  - «Vitória agente — aceitar» (d92): o SIM e o CANCELAR às perguntas do
+ *    agente fecham e cancelam a sério, pelos caminhos de sempre. Só tem efeito
+ *    com a «conversa livre» ligada (sem ela, as perguntas do agente não saem).
+ * Todos DESLIGADOS por omissão e na dúvida.
+ */
+export const INTERRUPTORES_DA_VITORIA_AGENTE = {
+  ensaio: { chave: CHAVE_DO_ENSAIO, nome: NOME_DO_INTERRUPTOR_DO_ENSAIO, decisao: "d85" },
+  conversa: { chave: CHAVE_DA_CONVERSA_LIVRE, nome: NOME_DO_INTERRUPTOR_DA_CONVERSA_LIVRE, decisao: "d92" },
+  aceitar: { chave: CHAVE_DO_ACEITAR, nome: NOME_DO_INTERRUPTOR_DO_ACEITAR, decisao: "d92" },
+} as const;
+export type QualInterruptor = keyof typeof INTERRUPTORES_DA_VITORIA_AGENTE;
+
 /** DESLIGADO NA DÚVIDA: sem linha, sem tabela, ou com a base a falhar. */
-export async function interruptorDoEnsaio(): Promise<InterruptorDoEnsaio> {
+export async function lerInterruptor(qual: QualInterruptor): Promise<InterruptorDoEnsaio> {
   const desligado: InterruptorDoEnsaio = { ligado: false, mudadoEm: null, porQuem: null };
   try {
     const pool = await garantirTabelas();
     const [rows] = (await pool.execute("SELECT ligado, mudadoEm, porQuem FROM retencaoInterruptores WHERE chave = ? LIMIT 1", [
-      CHAVE_DO_ENSAIO,
+      INTERRUPTORES_DA_VITORIA_AGENTE[qual].chave,
     ])) as [Array<{ ligado: number; mudadoEm: Date | string | null; porQuem: string | null }>, unknown];
     const l = rows[0];
     if (!l) return desligado;
@@ -132,26 +157,33 @@ export async function interruptorDoEnsaio(): Promise<InterruptorDoEnsaio> {
   }
 }
 
+/** O do ensaio (d85), com o nome de sempre. */
+export async function interruptorDoEnsaio(): Promise<InterruptorDoEnsaio> {
+  return lerInterruptor("ensaio");
+}
+
 /** Liga ou desliga; a mudança e quem a fez ficam no registo permanente, na mesma transacção. */
-export async function mudarInterruptorDoEnsaio(ligar: boolean, porQuem: string): Promise<InterruptorDoEnsaio> {
+export async function mudarInterruptor(qual: QualInterruptor, ligar: boolean, porQuem: string): Promise<InterruptorDoEnsaio> {
+  const i = INTERRUPTORES_DA_VITORIA_AGENTE[qual];
   const pool = await garantirTabelas();
   await ensureRegistoTable();
-  const antes = await interruptorDoEnsaio();
+  const antes = await lerInterruptor(qual);
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     await conn.execute(
       `INSERT INTO retencaoInterruptores (chave, ligado, mudadoEm, porQuem) VALUES (?, ?, UTC_TIMESTAMP(), ?)
        ON DUPLICATE KEY UPDATE ligado = VALUES(ligado), mudadoEm = VALUES(mudadoEm), porQuem = VALUES(porQuem)`,
-      [CHAVE_DO_ENSAIO, ligar ? 1 : 0, porQuem.slice(0, 120)],
+      [i.chave, ligar ? 1 : 0, porQuem.slice(0, 120)],
     );
     await registarNaTransaccao(conn, {
+      // O mesmo acontecimento para os três (o resumo diz qual): db.ts fica como está.
       acontecimento: "vitoria_agente_ensaio",
       autorTipo: "clyon",
       autorNome: porQuem,
       estadoAntes: antes.ligado ? "ligado" : "desligado",
       estadoDepois: ligar ? "ligado" : "desligado",
-      resumo: `«${NOME_DO_INTERRUPTOR_DO_ENSAIO}» ${ligar ? "LIGADO" : "DESLIGADO"} por ${porQuem} (d85).`,
+      resumo: `«${i.nome}» ${ligar ? "LIGADO" : "DESLIGADO"} por ${porQuem} (${i.decisao}).`,
     });
     await conn.commit();
   } catch (e) {
@@ -160,7 +192,12 @@ export async function mudarInterruptorDoEnsaio(ligar: boolean, porQuem: string):
   } finally {
     conn.release();
   }
-  return interruptorDoEnsaio();
+  return lerInterruptor(qual);
+}
+
+/** O do ensaio (d85), com o nome de sempre. */
+export async function mudarInterruptorDoEnsaio(ligar: boolean, porQuem: string): Promise<InterruptorDoEnsaio> {
+  return mudarInterruptor("ensaio", ligar, porQuem);
 }
 
 /* ── O tecto e o gasto ───────────────────────────────────────────────────── */
@@ -288,6 +325,9 @@ export async function registarAccao(
 
 export type Termometro = {
   ensaio: InterruptorDoEnsaio;
+  /** d92: a conversa livre (a resposta do agente sai) e o aceitar (o SIM / o CANCELAR ao agente agem). */
+  conversa: InterruptorDoEnsaio;
+  aceitar: InterruptorDoEnsaio;
   chave: { existe: boolean; porque: string | null };
   modelo: string;
   tectoUsd: number;
@@ -299,7 +339,7 @@ export type Termometro = {
 
 /** O estado do agente para o painel. Sem a base, diz o que sabe (a chave e o interruptor). */
 export async function termometro(agora: Date = new Date()): Promise<Termometro> {
-  const ensaio = await interruptorDoEnsaio();
+  const [ensaio, conversa, aceitar] = await Promise.all([interruptorDoEnsaio(), lerInterruptor("conversa"), lerInterruptor("aceitar")]);
   const existe = chaveDoClaude() != null;
   const chave = { existe, porque: existe ? null : "Falta a variável ANTHROPIC_API_KEY na Vercel: o agente está inactivo." };
   const tectoUsd = await tectoDiarioUsd();
@@ -312,6 +352,8 @@ export async function termometro(agora: Date = new Date()): Promise<Termometro> 
   const t = totaisDasChamadas(linhas, agora);
   return {
     ensaio,
+    conversa,
+    aceitar,
     chave,
     modelo: MODELO_DA_VITORIA_AGENTE,
     tectoUsd,
@@ -358,12 +400,26 @@ export function partirNaUltimaDoCliente<T extends LinhaDoFio>(fio: readonly T[])
 }
 
 /** As dependências de verdade das ferramentas, para um telefone. A conversa e as descrições já sem dados de pessoas. */
-export async function ferramentasDeVerdade(telefone: string, agora: Date, quem: readonly QuemEscreve[]): Promise<DependenciasDasFerramentas> {
+export async function ferramentasDeVerdade(
+  telefone: string,
+  agora: Date,
+  quem: readonly QuemEscreve[],
+  modo: { aoVivo?: boolean; aceitarLigado?: boolean } = {},
+): Promise<DependenciasDasFerramentas> {
   const neg = await import("../whatsapp-negociacao");
   const db = await import("../db");
   const { oQueOSiteSabe } = await import("../o-que-o-site-sabe");
+  const accoes = await import("./accoes-na-base");
+  const { procurarNasPerguntas } = await import("./ferramentas");
+  // d92: as perguntas frequentes do site, lidas uma vez por volta.
+  const perguntas = await accoes.perguntasDoSite(agora).catch(() => []);
   let meus: number[] | null = null;
   return {
+    aoVivo: modo.aoVivo === true,
+    aceitarLigado: modo.aceitarLigado === true,
+    propostasParaEscolher: (id) => accoes.propostasParaEscolherDeVerdade(id),
+    pedidoParaOFecho: (id) => accoes.pedidoParaOFechoDeVerdade(id),
+    perguntasFrequentes: (procura) => procurarNasPerguntas(perguntas, procura),
     telefone,
     agora,
     pedidosDoTelefone: async () => (meus ??= await neg.pedidosDoTelefone(telefone)),
@@ -375,7 +431,7 @@ export async function ferramentasDeVerdade(telefone: string, agora: Date, quem: 
 }
 
 /** Quem escreve neste número (para lhe tirar o nome e a rua do que vai ao modelo). */
-async function quemEscreveNoNumero(telefone: string): Promise<{ pedidos: number[]; quem: QuemEscreve[] }> {
+export async function quemEscreveNoNumero(telefone: string): Promise<{ pedidos: number[]; quem: QuemEscreve[] }> {
   const neg = await import("../whatsapp-negociacao");
   const db = await import("../db");
   const pedidos = await neg.pedidosDoTelefone(telefone).catch(() => [] as number[]);
@@ -419,6 +475,37 @@ export async function ensaioEmSombra(
     )) as [{ insertId: number }, unknown];
     const ensaioId = Number(novo.insertId);
 
+    /*
+     * d92: O QUE O AGENTE DEIXOU PENDENTE NO ENSAIO. Se a resposta do cliente
+     * for o SIM (ou o CANCELAR) à pergunta que o agente TERIA feito, o código
+     * diz o que TERIA feito — relida a proposta, como a sério — sem chamar o
+     * modelo. Outra resposta acaba o pendente, e o agente responde.
+     */
+    const accoes = await import("./accoes-na-base");
+    const pend = await accoes.pendenteDoTelefone(telefone, true);
+    if (pend && pend.tipo !== "parceiro") {
+      const r = respostaAoPendente(pend, partido.doCliente, agora);
+      if (r.tipo === "confirmou") {
+        let linha: string;
+        if (pend.tipo === "fecho") {
+          const motivo = motivoParaNaoFecharNoSim(pend, agora, await accoes.propostasParaEscolherDeVerdade(pend.pedidoId).catch(() => []));
+          linha = motivo
+            ? `não teria fechado o #${pend.pedidoId}: ${motivo}`
+            : `teria fechado o #${pend.pedidoId} com ${pend.parceiro} por ${emEuros(pend.total)} (o SIM do cliente, pelo caminho de sempre)`;
+        } else {
+          linha = `teria cancelado o #${pend.pedidoId} (o CANCELAR do cliente, pelo caminho único)`;
+        }
+        await accoes.acabarPendente(telefone, pend, linha, true, ensaioId);
+        await pool.execute("UPDATE vitoriaEnsaios SET teriaFeitoJson = ?, estado = 'codigo', motivo = ? WHERE id = ?", [
+          json([linha], 4000),
+          "o código leu a resposta ao que o agente propôs",
+          ensaioId,
+        ]);
+        return { feito: true, porque: "codigo", ensaioId };
+      }
+      await accoes.acabarPendente(telefone, pend, r.tipo, true, ensaioId);
+    }
+
     const resultado = await correrOAgente(
       { conversa, pedidos, agora, esforco: opcoes.esforco },
       {
@@ -446,6 +533,7 @@ export async function ensaioEmSombra(
         ensaioId,
       ],
     );
+    if (resultado.pendente) await accoes.gravarPendente(telefone, resultado.pendente, true, ensaioId);
     return { feito: true, porque: resultado.estado, ensaioId, resultado };
   } catch (e) {
     console.error("[vitoria-agente] o ensaio falhou:", e instanceof Error ? e.message : e);
@@ -464,6 +552,11 @@ export type EnsaioNoPainel = {
   respostaReal: string | null;
   respostaDoAgente: string | null;
   teriaFeito: string[];
+  /** d92: o que teria feito (ou fez, a sério), numa frase; e se agiria (filtro «só as que agiriam»). */
+  oQueTeriaFeito: string;
+  agiria: boolean;
+  /** d92: a linha é de uma resposta que saiu a sério (a «conversa livre» ligada). */
+  aSerio: boolean;
   estado: string;
   motivo: string | null;
   custoUsd: number;
@@ -490,6 +583,9 @@ export async function ensaiosNoPainel(limite = 50): Promise<{ ensaios: EnsaioNoP
       /* fica vazio */
     }
     const av = String(r.avaliacao ?? "");
+    const estado = String(r.estado ?? "");
+    const motivo = (r.motivo as string | null) ?? null;
+    const o = oQueTeriaFeito(estado, motivo, teriaFeito);
     return {
       id: Number(r.id),
       em: instanteDaBase(r.criadoEm as string | Date | null)?.toISOString() ?? "",
@@ -499,8 +595,11 @@ export async function ensaiosNoPainel(limite = 50): Promise<{ ensaios: EnsaioNoP
       respostaReal: (r.respostaReal as string | null) ?? null,
       respostaDoAgente: (r.respostaDoAgente as string | null) ?? null,
       teriaFeito,
-      estado: String(r.estado ?? ""),
-      motivo: (r.motivo as string | null) ?? null,
+      oQueTeriaFeito: o.frase,
+      agiria: o.agiria,
+      aSerio: eASerio(estado),
+      estado,
+      motivo,
       custoUsd: Number(r.custoUsd) || 0,
       tokensCacheLidos: Number(r.tokensCacheLidos) || 0,
       avaliacao: av === "melhor" || av === "pior" ? av : null,

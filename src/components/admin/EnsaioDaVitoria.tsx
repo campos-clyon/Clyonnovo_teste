@@ -13,6 +13,12 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
  * respondido e feito, com o custo. A equipa diz se a do agente estava melhor
  * ou pior — é com isto que se decide ligá-lo a sério. Só leitura: nada daqui
  * chega ao cliente.
+ *
+ * d92 (23-11-2026): cada linha diz numa frase o que o agente TERIA FEITO
+ * («teria proposto o fecho do #… por … (à espera do SIM)», «teria perguntado
+ * ao parceiro se consegue: …», «teria passado à equipa: …»), com o filtro «só
+ * as que agiriam». Com a «conversa livre» ligada, as linhas «saiu a sério»
+ * são respostas que o cliente recebeu.
  */
 type Ensaio = {
   id: number;
@@ -23,6 +29,9 @@ type Ensaio = {
   respostaReal: string | null;
   respostaDoAgente: string | null;
   teriaFeito: string[];
+  oQueTeriaFeito?: string;
+  agiria?: boolean;
+  aSerio?: boolean;
   estado: string;
   motivo: string | null;
   custoUsd: number;
@@ -44,6 +53,12 @@ const ESTADO: Record<string, string> = {
   recusou: "recusou",
   inactivo: "sem chave",
   a_correr: "a correr",
+  codigo: "o código leu a resposta",
+  vivo_ok: "saiu a sério",
+  vivo_equipa: "saiu a sério — passou à equipa",
+  vivo_codigo: "saiu a sério — o código agiu",
+  vivo_regras: "responderam as regras",
+  vivo_a_correr: "a correr (a sério)",
 };
 
 const quando = (iso: string) =>
@@ -55,6 +70,7 @@ export default function EnsaioDaVitoria() {
   const [aberto, setAberto] = useState<number | null>(null);
   const [accoes, setAccoes] = useState<Accao[] | null>(null);
   const [ocupado, setOcupado] = useState<number | null>(null);
+  const [soAsQueAgiriam, setSoAsQueAgiriam] = useState(false);
 
   const ler = useCallback(async () => {
     if (!token) return;
@@ -102,6 +118,7 @@ export default function EnsaioDaVitoria() {
   }
 
   if (!dados) return null;
+  const visiveis = soAsQueAgiriam ? dados.ensaios.filter((e) => e.agiria) : dados.ensaios;
 
   return (
     <div className="mt-8 border-t border-slate-800 pt-5">
@@ -112,9 +129,13 @@ export default function EnsaioDaVitoria() {
           : "O ensaio está desligado (Configs › «Vitória agente — ensaio»)."}{" "}
         Melhor: {dados.melhor} · Pior: {dados.pior} · Por avaliar: {dados.porAvaliar}
       </p>
-      {dados.ensaios.length > 0 && (
+      <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
+        <input type="checkbox" checked={soAsQueAgiriam} onChange={(ev) => setSoAsQueAgiriam(ev.target.checked)} />
+        Só as que agiriam (fechar, cancelar, perguntar ao parceiro, passar à equipa, gravar)
+      </label>
+      {visiveis.length > 0 && (
         <ul className="mt-4 space-y-3">
-          {dados.ensaios.map((e) => (
+          {visiveis.map((e) => (
             <li key={e.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-sm">
               <p className="text-xs text-slate-400">
                 {quando(e.em)} · {e.telefone}
@@ -127,13 +148,16 @@ export default function EnsaioDaVitoria() {
               </p>
               <div className="mt-2 grid gap-2 md:grid-cols-2">
                 <div className="rounded-lg bg-slate-900/70 p-2">
-                  <p className="text-xs font-semibold text-slate-400">A Vitória de hoje</p>
-                  <p className="mt-1 whitespace-pre-wrap text-slate-200">{e.respostaReal || "(não respondeu)"}</p>
+                  <p className="text-xs font-semibold text-slate-400">{e.aSerio ? "As regras" : "A Vitória de hoje"}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-slate-200">{e.respostaReal || (e.aSerio ? "(não responderam: respondeu o agente)" : "(não respondeu)")}</p>
                 </div>
                 <div className="rounded-lg bg-slate-900/70 p-2">
-                  <p className="text-xs font-semibold text-slate-400">O agente teria dito</p>
+                  <p className="text-xs font-semibold text-slate-400">{e.aSerio ? "O agente disse (saiu)" : "O agente teria dito"}</p>
                   <p className="mt-1 whitespace-pre-wrap text-slate-200">{e.respostaDoAgente || "(nada)"}</p>
-                  {e.teriaFeito.length > 0 && <p className="mt-1 text-xs text-slate-400">E teria feito: {e.teriaFeito.join(" · ")}</p>}
+                </div>
+                <div className="rounded-lg bg-slate-900/70 p-2 md:col-span-2">
+                  <p className="text-xs font-semibold text-slate-400">{e.aSerio ? "O que fez" : "O que teria feito"}</p>
+                  <p className="mt-1 text-slate-200">{e.oQueTeriaFeito || (e.teriaFeito.length > 0 ? e.teriaFeito.join(" · ") : "—")}</p>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">

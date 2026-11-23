@@ -53,6 +53,14 @@ export function eurosDosResultados(resultados: readonly unknown[]): number[] {
   return [...out];
 }
 
+/**
+ * d92: o pagamento diz-se só pelas regras do modelo (`REGRAS_DO_PAGAMENTO_PARA_O_MODELO`):
+ * paga ao parceiro que contratou, nada adiantado, duas faturas. «Só paga depois
+ * do trabalho feito» e «a CLYON guarda o dinheiro» não são garantias do modelo de 15-11.
+ */
+const PROMESSA_DO_PAGAMENTO =
+  /(s[óo]\s+(?:paga|pagar[aá]?|pague)\s+(?:depois|no\s+fim|quando)|paga(?:r)?\s+(?:s[óo]|apenas)\s+(?:depois|no\s+fim)|(?:a\s+CLYON|a\s+plataforma)\s+(?:guarda|ret[ée]m|segura)\s+o\s+(?:seu\s+)?dinheiro|dinheiro\s+(?:fica\s+)?(?:cativo|guardado))/i;
+
 const PALAVRAS_DO_BRASIL = /(?<!\p{L})(voc[eê]s?|celular(es)?|equipe|cadastr\p{L}*|[oô]nibus|caminh[aã]o|banheiro|geladeira)(?!\p{L})/iu;
 
 /** Tira os valores em euros (já conferidos) antes da guarda geral, que só conhece os preços do site. */
@@ -78,9 +86,11 @@ export function motivoParaBloquearOAgente(texto: string | null | undefined, euro
     }
   }
   const semIva = /(\+\s*IVA\b|\bsem\s+IVA\b|\bs\/\s*IVA\b|\bIVA\s+[àa]\s+parte\b)/i.test(t);
-  const comIva = /(\bcom\s+IVA\b|\bIVA\s+inclu[ií]do\b|\bisento\s+de\s+IVA\b)/i.test(t);
+  // d92: «85,00 € + IVA = 86,96 €» (como a mensagem das propostas o diz) já leva o com IVA ao lado.
+  const comIva = /(\bcom\s+IVA\b|\bIVA\s+inclu[ií]do\b|\bisento\s+de\s+IVA\b|\+\s*IVA\s*=\s*\d)/i.test(t);
   if (semIva && !comIva) return "Um preço sem IVA sozinho — diz-se sempre também o valor com IVA.";
   if (/\bprofissiona(l|is)\b/i.test(t)) return "Ao cliente diz-se «parceiro» (a palavra antiga não se usa).";
+  if (PROMESSA_DO_PAGAMENTO.test(t)) return "Promete como se paga o que o modelo de pagamento não garante: paga ao parceiro que contratou, nada adiantado, duas faturas.";
   const brasil = PALAVRAS_DO_BRASIL.exec(t);
   if (brasil) return `«${brasil[0]}» não é português de Portugal.`;
   return motivoParaBloquear(semOsEuros(t));

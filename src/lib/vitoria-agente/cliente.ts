@@ -32,6 +32,7 @@ import {
   type UsoSomado,
 } from "./custo";
 import { correrFerramenta, estadoNovo, FERRAMENTAS_DA_VITORIA, type DependenciasDasFerramentas } from "./ferramentas";
+import type { Pendente } from "./pendentes";
 import { motivoParaBloquearOAgente, eurosDosResultados } from "./guarda";
 
 /** Quantas idas ao modelo numa volta, no máximo (cada ida pode trazer várias ferramentas). */
@@ -74,6 +75,8 @@ export type PedidoAoAgente = {
   pedidos: readonly number[];
   agora: Date;
   esforco?: EsforcoDoAgente;
+  /** d92: o tempo máximo da volta (a resposta a sério tem de caber na função da ponte). Passado, pára entre idas. */
+  prazoMs?: number;
 };
 
 export type ResultadoDoAgente = {
@@ -87,6 +90,10 @@ export type ResultadoDoAgente = {
   custoUsd: number;
   idas: number;
   modelo: string | null;
+  /** d92: a acção que ficou à espera do SIM / do CANCELAR / do parceiro (só com «ok»). */
+  pendente: Pendente | null;
+  /** d92: a mensagem ao cliente ao passar à equipa, escrita pelo modelo e revista (null = a frase de sempre). */
+  mensagemDeEquipa: string | null;
 };
 
 export type DependenciasDoAgente = {
@@ -107,6 +114,8 @@ const vazio = (estado: ResultadoDoAgente["estado"], motivo: string): ResultadoDo
   custoUsd: 0,
   idas: 0,
   modelo: null,
+  pendente: null,
+  mensagemDeEquipa: null,
 });
 
 /** O erro da API em palavras (os tipos do SDK, do mais concreto para o mais geral). */
@@ -143,8 +152,13 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
   let modelo: string | null = null;
   let idas = 0;
   let textoSolto: string | null = null;
-  const fim = (r: Omit<ResultadoDoAgente, "uso" | "custoUsd" | "idas" | "modelo" | "teriaFeito" | "recusadas">): ResultadoDoAgente => ({
+  const fim = (
+    r: Omit<ResultadoDoAgente, "uso" | "custoUsd" | "idas" | "modelo" | "teriaFeito" | "recusadas" | "pendente" | "mensagemDeEquipa">,
+  ): ResultadoDoAgente => ({
     ...r,
+    // A acção proposta só conta com uma resposta aceite (que leva a pergunta do SIM / do CANCELAR).
+    pendente: r.estado === "ok" ? estado.pendente : null,
+    mensagemDeEquipa: r.estado === "equipa" ? estado.mensagemDeEquipa : null,
     teriaFeito: estado.teriaFeito,
     recusadas: estado.recusadas,
     uso,
@@ -153,7 +167,11 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
     modelo,
   });
 
+  const comecou = Date.now();
   while (idas < IDAS_NO_MAXIMO) {
+    if (pedido.prazoMs != null && idas > 0 && Date.now() - comecou > pedido.prazoMs) {
+      return fim({ estado: "erro", texto: null, motivo: `passou o prazo da volta (${Math.round(pedido.prazoMs / 1000)} s)` });
+    }
     idas += 1;
     let resposta: Anthropic.Beta.BetaMessage;
     try {
@@ -207,6 +225,8 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
     mensagens.push({ role: "user", content: resultados });
     // Depois de uma resposta aceite, não há mais nada a fazer.
     if (estado.respostaAceite && pedidosDeFerramenta.some((b) => b.name === "propor_resposta")) break;
+    // d92: a sério, um dado do pedido gravam-no as regras — a volta acaba aqui, e quem chama passa às regras.
+    if (estado.deixarAsRegras) return fim({ estado: "bloqueado", texto: null, motivo: `deixa às regras: ${estado.deixarAsRegras}` });
   }
 
   if (estado.respostaAceite) {
@@ -218,7 +238,11 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
   }
   // Sem propor_resposta: o texto solto também passa pela guarda.
   if (textoSolto) {
-    const motivo = motivoParaBloquearOAgente(textoSolto, eurosDosResultados(estado.resultados));
+    const motivo =
+      motivoParaBloquearOAgente(textoSolto, eurosDosResultados(estado.resultados)) ??
+      (estado.fraseObrigatoria && !textoSolto.replace(/\s+/g, " ").includes(estado.fraseObrigatoria.replace(/\s+/g, " ").trim())
+        ? `falta a frase obrigatória: «${estado.fraseObrigatoria}»`
+        : null);
     if (!motivo) {
       await deps.registar({ ferramenta: "resposta", texto: textoSolto }).catch(() => {});
       return fim({ estado: "ok", texto: textoSolto, motivo: null });

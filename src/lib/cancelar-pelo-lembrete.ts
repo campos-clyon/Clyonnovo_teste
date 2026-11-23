@@ -46,7 +46,8 @@ export type ConfirmacaoDoCancelamento =
 
 export type FonteDoCancelamento = {
   decisao: string;
-  tabela: "validadeDosOrcamentos" | "lembretesDoQueFalta" | "seguimentoDoCliente";
+  // d92: «vitoriaCancelamentos» — a pergunta do CANCELAR feita pela Vitória agente (vitoria-agente/na-base.ts).
+  tabela: "validadeDosOrcamentos" | "lembretesDoQueFalta" | "seguimentoDoCliente" | "vitoriaCancelamentos";
   /** O «agora» de cada tabela, como estava (a d62 grava NOW(); as outras UTC_TIMESTAMP()). */
   agoraSql: "NOW()" | "UTC_TIMESTAMP()";
   /** O ciclo ainda aberto (além de `canceladoEm IS NULL`). */
