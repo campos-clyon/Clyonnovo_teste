@@ -19,6 +19,7 @@ import {
   PRAZO_DE_RESPOSTA,
 } from "@/lib/seo-data";
 import { comIvaDaEtiqueta, etiquetaDoCartao } from "@/lib/preco-de-referencia";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { PROMESSA, promessaGeral } from "@/lib/pagamento-na-plataforma";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
@@ -245,7 +246,9 @@ const breadcrumbSchema = {
   ],
 };
 
-export default function ContactosPage() {
+export default async function ContactosPage() {
+  // O «desde» das mudanças é o da lista de parceiros, lido da base (d2 de 22/11).
+  const pp = await precoPublicoDasMudancas();
   return (
     <>
       <script
@@ -400,9 +403,9 @@ export default function ContactosPage() {
                     <span className="text-sm font-semibold text-tinta">{rotulo}</span>
                     <span className="flex flex-col items-end text-right">
                       <span className="whitespace-nowrap text-sm font-bold text-acao">
-                        {etiquetaDoCartao(chave) ?? ""}
+                        {etiquetaDoCartao(chave, pp) ?? ""}
                       </span>
-                      <span className="whitespace-nowrap text-xs text-slate-500">{comIvaDaEtiqueta(chave)}</span>
+                      <span className="whitespace-nowrap text-xs text-slate-500">{comIvaDaEtiqueta(chave, pp)}</span>
                     </span>
                   </Link>
                 </li>

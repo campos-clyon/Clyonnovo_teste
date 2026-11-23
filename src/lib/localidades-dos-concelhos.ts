@@ -92,7 +92,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-monos-amora",
       titulo: "Recolha de monos na Amora",
       texto:
-        `Na Amora, os monos saem tanto das casas como das arrecadações e das garagens: o colchão velho, o móvel que sobrou de uma mudança, o eletrodoméstico que já não liga. A recolha da Câmara do Seixal é gratuita, mas faz-se à porta ou junto ao contentor, no dia da semana marcado para a freguesia. Quando o mono está num andar sem elevador — nos blocos mais antigos da Cruz de Pau, por exemplo —, tem de ser desmontado ou não pode esperar pela data, um parceiro vai buscá-lo lá dentro e leva-o para destino licenciado, por ${PRECO_MONOS}. Mande uma fotografia e diga o andar. ${PROMESSA_DO_PRAZO}`,
+        `Na Amora, os monos saem tanto das casas como das arrecadações e das garagens: o colchão velho, o móvel que sobrou de uma mudança, o eletrodoméstico que já não liga. A recolha da Câmara do Seixal é gratuita, mas faz-se à porta ou junto ao contentor, no dia da semana marcado para a freguesia. Quando o mono está num andar sem elevador — nos blocos mais antigos da Cruz de Pau, por exemplo —, tem de ser desmontado ou não pode esperar pela data, um parceiro vai buscá-lo lá dentro e leva-o para destino licenciado, ${PRECO_MONOS}. Mande uma fotografia e diga o andar. ${PROMESSA_DO_PRAZO}`,
     },
     {
       nome: "Corroios",
@@ -169,7 +169,7 @@ export const LOCALIDADES_DO_CONCELHO: Readonly<Record<string, LocalidadeDoConcel
       enderecoAntigo: "/recolha-monos-costa-da-caparica",
       titulo: "Recolha de monos na Costa da Caparica",
       texto:
-        `Na Costa da Caparica, a recolha de monos da Câmara de Almada é gratuita e marca-se com a Junta de Freguesia da Costa da Caparica, pela linha verde ou por email; os monos ficam no local e no dia combinados, nunca junto aos contentores. Serve quando os consegue pôr à porta e pode esperar pela data. Quando o mono está num andar sem elevador, numa garagem cheia ou numa casa de férias que tem de ficar livre antes do próximo inquilino, um parceiro vai buscá-lo lá dentro e leva-o para destino licenciado, por ${PRECO_MONOS}. No verão, diga a rua: junto à praia, a carrinha pode ter de parar mais longe. ${PROMESSA_DO_PRAZO}`,
+        `Na Costa da Caparica, a recolha de monos da Câmara de Almada é gratuita e marca-se com a Junta de Freguesia da Costa da Caparica, pela linha verde ou por email; os monos ficam no local e no dia combinados, nunca junto aos contentores. Serve quando os consegue pôr à porta e pode esperar pela data. Quando o mono está num andar sem elevador, numa garagem cheia ou numa casa de férias que tem de ficar livre antes do próximo inquilino, um parceiro vai buscá-lo lá dentro e leva-o para destino licenciado, ${PRECO_MONOS}. No verão, diga a rua: junto à praia, a carrinha pode ter de parar mais longe. ${PROMESSA_DO_PRAZO}`,
     },
   ],
   "recolha-entulho-almada": [

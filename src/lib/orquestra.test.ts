@@ -2760,3 +2760,60 @@ describe("d7) as FAQ «… é pago?» dizem com quem se paga", () => {
     expect(perguntas.filter((p) => !p.a.includes("${PAGA_AO_PARCEIRO_QUE_CONTRATOU}")).map((p) => `${p.f}: ${p.q}`)).toEqual([]);
   });
 });
+
+/*
+ * d2) UM SÓ «DESDE» DAS MUDANÇAS EM TODAS AS PÁGINAS — d2 (CEO e dono, 22-11-2026).
+ * A inicial lia 40 €/h da memória da instância e /mudancas 45 €/h da lista de
+ * parceiros — e a mesma página mudava de uma visita para a outra. Agora as
+ * páginas leem `precoPublicoDasMudancas()` e passam-no às etiquetas; a
+ * referência (40 €/h) só com a lista vazia.
+ */
+describe("d2) o «desde» das mudanças é o da lista de parceiros, em todas as páginas", () => {
+  const PAGINAS_DO_DESDE = [
+    "src/app/page.tsx",
+    "src/app/sobre-nos/page.tsx",
+    "src/app/empresas/page.tsx",
+    "src/app/contactos/page.tsx",
+    "src/app/servicos/page.tsx",
+  ];
+  const COM_LISTA = {
+    tipo: "parceiros" as const,
+    parceiros: 3,
+    desde: { semIvaCent: 4500, comIvaCent: 5535 },
+  };
+
+  it("as 5 páginas leem a lista da base e não a memória da instância", () => {
+    for (const f of PAGINAS_DO_DESDE) {
+      const t = SEM_COMENTARIOS(readFileSync(join(RAIZ, f), "utf8"));
+      expect(t, f).toContain("await precoPublicoDasMudancas()");
+      expect(t, f).not.toContain("precoPublicoConhecido");
+    }
+  });
+
+  it("com a lista cheia nenhuma etiqueta diz a referência de 40 €/h", async () => {
+    const { etiquetaDoCartao, etiquetaComOIvaAoLado, comIvaDaEtiqueta } = await import("./preco-de-referencia");
+    for (const e of [
+      etiquetaDoCartao("mudanca", COM_LISTA),
+      etiquetaComOIvaAoLado("mudanca", COM_LISTA),
+      comIvaDaEtiqueta("mudanca", COM_LISTA),
+    ]) {
+      expect(e).toMatch(/45|55,35/);
+      expect(e).not.toMatch(/referência|\b40\b/);
+    }
+    expect(etiquetaComOIvaAoLado("mudanca", COM_LISTA)).toBe("desde 45 €/hora + IVA (55,35 €/hora com IVA)");
+  });
+
+  it("com a lista vazia, a referência — dita como referência", async () => {
+    const { etiquetaComOIvaAoLado } = await import("./preco-de-referencia");
+    expect(etiquetaComOIvaAoLado("mudanca", { tipo: "referencia" })).toMatch(/^referência desde/);
+  });
+
+  it("nenhum texto diz «por desde» (a gralha do «por desde 60 €»)", () => {
+    const achados: string[] = [];
+    for (const f of FONTES) {
+      const t = SEM_COMENTARIOS(readFileSync(join(RAIZ, f), "utf8"));
+      if (/\bpor desde\b/i.test(t) || t.includes("por ${PRECO_MONOS}")) achados.push(f);
+    }
+    expect(achados).toEqual([]);
+  });
+});

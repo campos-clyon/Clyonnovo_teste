@@ -8,7 +8,8 @@ import { PRAZO_DE_RESPOSTA, NA_PROPOSTA_COM_IVA, AVALIACOES, MES_DAS_CONTAGENS, 
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { emTerra } from "@/lib/preposicao-da-terra";
-import { precoDe, maisIva } from "@/lib/precos-publicos";
+import { etiquetaDoCartao } from "@/lib/preco-de-referencia";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import HeroQuoteForm from "@/components/HeroQuoteForm";
 import HeroBackground from "@/components/HeroBackground";
@@ -354,7 +355,9 @@ const homeFaqSchema = {
 
 export const revalidate = 3600;
 
-export default function HomePage() {
+export default async function HomePage() {
+  // O «desde» das mudanças é o da lista de parceiros, lido da base (d2 de 22/11).
+  const pp = await precoPublicoDasMudancas();
   return (
     <div className="min-h-screen bg-white">
 
@@ -602,7 +605,7 @@ export default function HomePage() {
             {SERVICOS_PUBLICOS.filter((c) => c.id !== "outro").map((cat) => {
               const Icon = CATEGORY_ICONS[cat.id] ?? Star;
               const colors = CATEGORY_COLORS[cat.id] ?? { bg: "bg-cyan-50", text: "text-acao" };
-              const price = precoDe(cat.id);
+              const price = etiquetaDoCartao(cat.id, pp);
               return (
                 <Link
                   key={cat.id}
@@ -620,7 +623,7 @@ export default function HomePage() {
                   </p>
                   {price && (
                     <div className={`mt-2.5 text-xs font-bold sm:text-sm ${colors.text}`}>
-                      {maisIva(price)}
+                      {price}
                     </div>
                   )}
                 </Link>

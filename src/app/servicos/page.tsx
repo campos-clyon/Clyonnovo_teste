@@ -28,7 +28,8 @@ import {
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { MENOR_PRECO_PUBLICADO, PRECOS, SEM_IVA_NA_FRASE, precoDe, maisIva } from "@/lib/precos-publicos";
-import { MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
+import { MOVEIS_POR_PECA, etiquetaDoCartao } from "@/lib/preco-de-referencia";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 import { comIvaEscrito, referenciaDoEntulho, semIvaEscrito } from "@/lib/quanto-custa";
 
 /**
@@ -340,7 +341,10 @@ function ChatCard({ service }: { service: Service }) {
   );
 }
 
-export default function ServicosPage() {
+export default async function ServicosPage() {
+  // O «desde» das mudanças é o da lista de parceiros, lido da base (d2 de 22/11).
+  const pp = await precoPublicoDasMudancas();
+  const lista = services.map((s) => (s.href === '/mudancas' ? { ...s, price: etiquetaDoCartao('mudanca', pp) ?? s.price } : s));
   const asFaqs = faqsPelaData(agoraDoModelo());
   return (
     <div className="min-h-screen bg-white">
@@ -422,7 +426,7 @@ export default function ServicosPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s) => (
+            {lista.map((s) => (
               <ChatCard key={s.title} service={s} />
             ))}
           </div>

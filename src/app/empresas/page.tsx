@@ -6,6 +6,8 @@ import { jsonLd } from "@/lib/json-ld";
 import { og } from "@/lib/open-graph";
 import { IDENTIFICACAO } from "@/lib/identificacao-legal";
 import { etiquetaComOIvaAoLado, MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
+import type { PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { PROPOSTAS_EM_ATE } from "@/lib/promessas-publicas";
 import { BUSINESS_EMAIL, BUSINESS_PHONE, NA_PROPOSTA_COM_IVA, SITE_URL, pagamentoDasEmpresas } from "@/lib/seo-data";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
@@ -54,13 +56,13 @@ const PARA_QUEM = [
  */
 const MANUTENCAO = NOMES_DOS_SERVICOS.manutencao_casa;
 
-const O_QUE_PODE_PEDIR = [
+const oQuePodePedir = (pp: PrecoPublicoDasMudancas) => [
   { href: "/recolha-de-entulho", titulo: NOMES_DOS_SERVICOS.recolha_entulho, preco: etiquetaComOIvaAoLado("recolha_entulho") },
   { href: "/recolha-de-monos", titulo: NOMES_DOS_SERVICOS.recolha_monos, preco: etiquetaComOIvaAoLado("recolha_monos") },
   { href: "/esvaziamento-de-casas", titulo: "Esvaziamentos", preco: etiquetaComOIvaAoLado("esvaziamento_casa") },
   // A página dos armazéns, escritórios e lojas (d43, 15-11-2026): sem preço publicado.
   { href: "/esvaziamento-de-armazens-e-escritorios", titulo: NOMES_DOS_SERVICOS.esvaziamento_empresa, preco: "proposta pelo espaço" },
-  { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório", preco: etiquetaComOIvaAoLado("mudanca") },
+  { href: "/mudancas-de-escritorio", titulo: "Mudanças de escritório", preco: etiquetaComOIvaAoLado("mudanca", pp) },
   { href: "/recolha-de-moveis", titulo: NOMES_DOS_SERVICOS.recolha_moveis, preco: MOVEIS_POR_PECA },
   {
     href: "/servicos/manutencao-casa",
@@ -81,7 +83,9 @@ const migalhas = {
 // De hora a hora: o pagamento e a fatura mudam a 15-11-2026 pela data do modelo (d16).
 export const revalidate = 3600;
 
-export default function EmpresasPage() {
+export default async function EmpresasPage() {
+  // O «desde» das mudanças é o da lista de parceiros, lido da base (d2 de 22/11), e não a memória da instância.
+  const O_QUE_PODE_PEDIR = oQuePodePedir(await precoPublicoDasMudancas());
   return (
     <div className="bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(migalhas) }} />

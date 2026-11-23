@@ -39,6 +39,8 @@ import {
 } from "@/lib/seo-data";
 import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO } from "@/lib/identificacao-legal";
 import { etiquetaComOIvaAoLado, MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
+import type { PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
 import { DUAS_FATURAS_POR_TRABALHO, DUAS_FATURAS_POR_TRABALHO_CURTA, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
@@ -181,7 +183,7 @@ const CARTA = [
     "de chegarem até si e explica o que não estiver claro. Não o deixamos sozinho com um formulário.",
 ];
 
-const SERVICOS = [
+const servicosDe = (pp: PrecoPublicoDasMudancas) => [
   {
     icone: Sofa,
     titulo: "Recolha de móveis",
@@ -214,7 +216,7 @@ const SERVICOS = [
     icone: Building2,
     titulo: "Mudanças",
     href: "/mudancas",
-    preco: etiquetaComOIvaAoLado("mudanca"),
+    preco: etiquetaComOIvaAoLado("mudanca", pp),
     texto: "Mudanças de casa e de escritório, transporte de móveis e pequenas mudanças, pagas à hora.",
   },
   /*
@@ -386,7 +388,9 @@ const faqSchema = {
 // De hora a hora: o modelo de 15-11-2026 (d10) muda o «Paga como preferir» pela data.
 export const revalidate = 3600;
 
-export default function SobreNosPage() {
+export default async function SobreNosPage() {
+  // O «desde» das mudanças é o da lista de parceiros, lido da base (d2 de 22/11).
+  const SERVICOS = servicosDe(await precoPublicoDasMudancas());
   const novo = novoModeloEmVigor(agoraDoModelo());
   // d16: desde 15-11 a fatura do trabalho é do parceiro e a da taxa da empresa parceira da CLYON.
   const comAFaturaDoModelo = (t: string) => (novo ? t.replace(QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO) : t);

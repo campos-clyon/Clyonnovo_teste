@@ -212,12 +212,11 @@ export const MOVEIS_POR_PECA_COM_IVA =
  * IVA» —, para a linha pequena por baixo de `maisIva(etiqueta)` num cartão
  * onde a frase inteira não cabe. `null` quando o serviço não publica preço.
  */
-export function comIvaDaEtiqueta(servico: string): string | null {
+export function comIvaDaEtiqueta(servico: string, pp: PrecoPublicoDasMudancas = precoPublicoConhecido()): string | null {
   const p = PRECOS[servico];
   if (!p || p.minimo == null) return null;
   if (servico === "mudanca") {
-    // Ao preço de cada parceiro (11-11-2026): o «desde» conhecido, ou a referência.
-    const pp = precoPublicoConhecido();
+    // Ao preço de cada parceiro (11-11-2026): o «desde» da lista, ou a referência.
     // Sem parceiros, a referência — e dita como referência também na linha do com IVA (d7).
     // O com IVA da MESMA etiqueta (d62/d63, 17-11-2026): a etiqueta diz a equipa de 2 (40 €/h),
     // e por baixo ia o com IVA da equipa de 3 (67,65 €/h, de 55 €/h).
@@ -237,11 +236,10 @@ export function comIvaDaEtiqueta(servico: string): string | null {
  * diz o «desde» da lista, para o sem IVA e o com IVA serem do mesmo preço (a
  * etiqueta fixa diz a referência, que com a lista sai de cena).
  */
-export function etiquetaDoCartao(servico: string): string | null {
+export function etiquetaDoCartao(servico: string, pp: PrecoPublicoDasMudancas = precoPublicoConhecido()): string | null {
   const p = PRECOS[servico];
   if (!p) return null;
   if (servico === "mudanca") {
-    const pp = precoPublicoConhecido();
     if (pp.tipo === "parceiros") return `desde ${euros(pp.desde.semIvaCent / 100)}/hora + IVA`;
   }
   return maisIva(p.etiqueta);
@@ -254,11 +252,15 @@ export function etiquetaDoCartao(servico: string): string | null {
  * «desde»: o tecto dos monos é só da estimativa). Para os cartões de /empresas e
  * /sobre-nos, onde o sem IVA ia sozinho. `null` quando o serviço não publica preço.
  */
-export function etiquetaComOIvaAoLado(servico: string): string | null {
+export function etiquetaComOIvaAoLado(servico: string, pp: PrecoPublicoDasMudancas = precoPublicoConhecido()): string | null {
   const p = PRECOS[servico];
   if (!p || p.minimo == null) return null;
   if (servico === "recolha_moveis") return MOVEIS_POR_PECA;
   if (servico === "mudanca") {
+    // Com parceiros na lista, o «desde» da lista (d2 de 22/11): a referência de 40 €/h só com a lista vazia (d7 de 11/11).
+    if (pp.tipo === "parceiros") {
+      return `desde ${euros(pp.desde.semIvaCent / 100)}/hora + IVA (${euros(pp.desde.comIvaCent / 100)}/hora com IVA)`;
+    }
     // A etiqueta diz a referência da equipa de 2 (d60): o com IVA é o dessa.
     return `referência desde ${euros(PRECO_POR_HORA_DUAS_PESSOAS)}/hora + IVA (${euros(comIva(PRECO_POR_HORA_DUAS_PESSOAS))}/hora com IVA)`;
   }
