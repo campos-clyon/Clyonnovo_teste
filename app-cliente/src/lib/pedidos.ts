@@ -416,6 +416,8 @@ export type Pedido = {
   precoAceiteEmTexto?: string | null;
   /** d39: o valor único que a CLYON lhe enviou (título, valor com o IVA ao lado, quem faz); null nos outros pedidos. */
   valorUnico?: ValorUnico | null;
+  /** d4: só no link sem conta, depois de contratar: «Pagar a {parceiro} · {total}» e a frase de criar conta (sem IBAN nem MB WAY). */
+  pagarSemConta?: { titulo: string; texto: string } | null;
 };
 
 export type TextosDoPedido = {
@@ -425,6 +427,8 @@ export type TextosDoPedido = {
   recusar?: { comOutras: string; semOutras: string };
   /** d8: à espera das primeiras propostas, com o prazo — a mesma frase do /pedido/[token]. */
   aindaSemPropostas?: string;
+  /** d4 (21-11-2026): a frase do estado do pedido, a mesma do /pedido/[token] (null quando o estado se diz por outro cartão). */
+  fraseDoEstado?: string | null;
 };
 
 export type RespostaDoPedido = {
@@ -489,9 +493,12 @@ export function textoDeContratar(n: Negociacao): { titulo: string; texto: string
 export function textoDaEspera(r: Pick<RespostaDoPedido, "pedido" | "negociacoes"> & { textos?: Partial<TextosDoPedido> }): string | null {
   if (r.pedido.trabalhoClyon || r.negociacoes.some((n) => n.estado === "acordada")) return null;
   if (propostasEmAberto(r).length > 0) return null;
+  if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Concluído") return null;
+  // d4: a frase do estado vem da R5 e mostra-se tal e qual (a mesma do site); sem ela, fica o que havia.
+  const frase = r.textos?.fraseDoEstado?.trim();
+  if (frase) return frase;
   // d39: com o valor único, o cartão dele é o estado — nunca «ainda sem propostas».
   if (valorUnicoDe(r.pedido)) return null;
-  if (r.pedido.estadoTexto === "Cancelado" || r.pedido.estadoTexto === "Concluído") return null;
   if (r.pedido.estadoTexto === "À espera de propostas") {
     // A frase do site, com o prazo (d8, 31-10-2026), vem da R5; um site antigo não a manda.
     return r.textos?.aindaSemPropostas ?? "Ainda sem propostas.";

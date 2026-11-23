@@ -93,6 +93,8 @@ vi.mock("@/lib/acesso-ao-pagamento", () => ({
       modelo: "iva_incluido",
       libertado: false,
       novoModelo: true,
+      // d4: o bloco completo (IBAN, MB WAY, conta) é de quem entrou pela conta; só com o link vê o cartão.
+      porSessao: true,
       porHora: null,
       telefoneDoCliente: null,
       telefoneDoProfissional: "912345678",

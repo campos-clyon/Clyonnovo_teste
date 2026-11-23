@@ -41,7 +41,7 @@ import { IDENTIFICACAO, QUEM_FACTURA_EM_PALAVRAS, QUEM_FATURA_NO_NOVO_MODELO } f
 import { etiquetaComOIvaAoLado, MOVEIS_POR_PECA } from "@/lib/preco-de-referencia";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { PRECO_FECHADO } from "@/lib/promessas-publicas";
-import { DUAS_FATURAS_POR_TRABALHO, DUAS_FATURAS_POR_TRABALHO_CURTA } from "@/lib/pagar-ao-parceiro";
+import { DUAS_FATURAS_POR_TRABALHO, DUAS_FATURAS_POR_TRABALHO_CURTA, PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
 import { getCitiesByRegion } from "@/lib/city-content";
 import { reviews } from "@/lib/reviews-data";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
@@ -249,8 +249,7 @@ const TAMBEM = [
  */
 const PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO =
   "Pela plataforma, por MB WAY ou Multibanco, ou em dinheiro ao parceiro. Pela plataforma, o valor só é entregue depois de confirmar que ficou tudo bem.";
-const PAGA_COMO_PREFERIR_NO_NOVO_MODELO =
-  "Paga diretamente ao parceiro que contratar: por transferência, MB WAY ou dinheiro no local. O preço da proposta já é o total a pagar, com a taxa da plataforma.";
+const PAGA_COMO_PREFERIR_NO_NOVO_MODELO = PAGA_DIRETAMENTE_AO_PARCEIRO;
 
 /** A frase de quem passa a fatura em «Quem somos», antes de 15-11-2026 (d30). */
 const QUEM_FATURA_NO_MODELO_ANTIGO = `${QUEM_FACTURA_EM_PALAVRAS} Há fatura em todas as vendas.`;

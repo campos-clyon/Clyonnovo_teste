@@ -101,6 +101,11 @@ export type TrabalhoAPagar = {
    * já o conhece. Serve só para a decisão do lado do servidor.
    */
   emailDoCliente: string | null;
+  /**
+   * d4 (21-11-2026): entrou pela sessão do cliente (a conta) e não só pelo link.
+   * Quem só tem o link não vê o IBAN nem o MB WAY do parceiro.
+   */
+  porSessao?: boolean;
 };
 
 export type Acesso =
@@ -291,6 +296,7 @@ export async function trabalhoQueSePodePagar(
       telefoneDoProfissional: (linha.profissionalTelefone ?? "").trim() || null,
       nomeDoCliente: ((pedido as { contactName?: string | null }).contactName ?? "").trim() || null,
       emailDoCliente: (pedido.contactEmail ?? "").trim().toLowerCase() || null,
+      porSessao,
     },
   };
 }

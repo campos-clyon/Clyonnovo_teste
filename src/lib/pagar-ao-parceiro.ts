@@ -81,6 +81,12 @@ export const PAGA_DIRETAMENTE_AO_PARCEIRO =
 /** Ao pé do preço e da chamada da página dos anúncios — d30 (15-11-2026). */
 export const PAGA_AO_PARCEIRO_QUE_CONTRATOU = "Paga diretamente ao parceiro que contratou.";
 
+/**
+ * A frase do bloco «Pagar a …», DEPOIS de contratar (d4, 21-11-2026): já não é «o parceiro
+ * que contratar» — é o que contratou. Parte da constante curta, para não haver duas redacções.
+ */
+export const PAGA_DIRETAMENTE_AO_PARCEIRO_CONTRATADO = PAGA_DIRETAMENTE_AO_PARCEIRO.replace("que contratar", "que contratou");
+
 /** As duas faturas de cada trabalho, ditas ao cliente. */
 export const AS_DUAS_FATURAS =
   "Recebe duas faturas, as duas juntas ao pedido: a do trabalho, emitida pelo parceiro, e a da taxa da plataforma.";

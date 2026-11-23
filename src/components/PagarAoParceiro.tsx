@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CABECALHO_DO_TOKEN_DO_PAGAMENTO } from "@/lib/cabecalho-do-pagamento";
+import { CRIAR_CONTA_PARA_PAGAR } from "@/lib/pagar-so-com-o-link";
 
 /**
  * PAGAR AO PARCEIRO — d10, o modelo de 15-11-2026 (`novo-modelo.ts`).
@@ -15,6 +16,9 @@ import { CABECALHO_DO_TOKEN_DO_PAGAMENTO } from "@/lib/cabecalho-do-pagamento";
 
 type Visto = {
   pagaAoParceiro: boolean;
+  /** d4: quem só tem o link vê este cartão em vez dos dados de pagamento. */
+  convidado?: boolean;
+  cartao?: { titulo: string; texto: string };
   frase?: string;
   parceiro?: string;
   paraPagar?: { iban: string | null; titular: string | null; mbway: string | null } | null;
@@ -49,6 +53,7 @@ export default function PagarAoParceiro({
   const [visto, setVisto] = useState<Visto | null>(null);
   const [erro, setErro] = useState("");
   const [aGravar, setAGravar] = useState(false);
+  const [copiado, setCopiado] = useState<string | null>(null);
   const cabecalhos: Record<string, string> = token ? { [CABECALHO_DO_TOKEN_DO_PAGAMENTO]: token } : {};
 
   const ler = useCallback(async () => {
@@ -87,7 +92,28 @@ export default function PagarAoParceiro({
     }
   }
 
+  async function copiar(valor: string) {
+    try {
+      await navigator.clipboard.writeText(valor.replaceAll(" ", ""));
+      setCopiado(valor);
+      setTimeout(() => setCopiado((c) => (c === valor ? null : c)), 2000);
+    } catch {
+      // Sem acesso à área de transferência, o número fica à vista para copiar à mão.
+    }
+  }
+
   if (!visto?.pagaAoParceiro) return null;
+  if (visto.convidado && visto.cartao) {
+    return (
+      <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <h3 className="text-base font-semibold text-slate-900">{visto.cartao.titulo}</h3>
+        <p className="mt-1">{visto.cartao.texto}</p>
+        <a href="/entrar" className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white">
+          {CRIAR_CONTA_PARA_PAGAR}
+        </a>
+      </section>
+    );
+  }
   const p = visto.paraPagar;
   return (
     <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
@@ -111,6 +137,7 @@ export default function PagarAoParceiro({
             <div>
               <dt className="inline text-slate-500">IBAN: </dt>
               <dd className="inline font-mono">{p.iban}</dd>
+              <BotaoCopiar valor={p.iban} copiado={copiado} aoCopiar={copiar} />
               {p.titular && <span className="text-slate-500"> ({p.titular})</span>}
             </div>
           )}
@@ -118,6 +145,7 @@ export default function PagarAoParceiro({
             <div>
               <dt className="inline text-slate-500">MB WAY: </dt>
               <dd className="inline font-mono">{p.mbway}</dd>
+              <BotaoCopiar valor={p.mbway} copiado={copiado} aoCopiar={copiar} />
             </div>
           )}
         </dl>
@@ -171,5 +199,13 @@ export default function PagarAoParceiro({
         </div>
       )}
     </section>
+  );
+}
+
+function BotaoCopiar({ valor, copiado, aoCopiar }: { valor: string; copiado: string | null; aoCopiar: (v: string) => void }) {
+  return (
+    <button type="button" onClick={() => aoCopiar(valor)} className="ml-2 rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-700">
+      {copiado === valor ? "Copiado" : "Copiar"}
+    </button>
   );
 }

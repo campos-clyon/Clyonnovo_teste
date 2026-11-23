@@ -6,7 +6,7 @@ import { totalAoCliente } from "./total-ao-cliente";
 import {
   AS_DUAS_FATURAS,
   COMO_PAGAR_EM_PALAVRAS,
-  PAGA_DIRETAMENTE_AO_PARCEIRO,
+  PAGA_DIRETAMENTE_AO_PARCEIRO_CONTRATADO,
   PARCEIRO_SEM_DADOS_PARA_PAGAR,
   comoPagarDisponiveis,
   lerComoPagar,
@@ -97,7 +97,7 @@ export async function oQueOClienteVeDoParceiro(t: TrabalhoAPagar) {
     });
   return {
     pagaAoParceiro: true as const,
-    frase: PAGA_DIRETAMENTE_AO_PARCEIRO,
+    frase: PAGA_DIRETAMENTE_AO_PARCEIRO_CONTRATADO,
     parceiro: t.profissionalNome,
     paraPagar,
     /** Sem IBAN nem MB WAY (d17, texto F): o que o cliente lê em vez dos dados. */

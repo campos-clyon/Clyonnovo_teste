@@ -7,6 +7,7 @@ import { registarSemFalhar } from "@/lib/db";
 import { COMO_PAGAR_EM_PALAVRAS, lerComoPagar } from "@/lib/pagar-ao-parceiro";
 import { gravarComoPagarAoParceiro } from "@/lib/pagar-ao-parceiro-na-base";
 import { oQueOClienteVeDoParceiro } from "@/lib/pagar-ao-parceiro-para-o-cliente";
+import { PAGAR_SO_COM_CONTA, vistoParaQuemSoTemOLink } from "@/lib/pagar-so-com-o-link";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +53,10 @@ export async function GET(req: NextRequest) {
   if (!acesso.ok) return NextResponse.json({ error: acesso.erro }, { status: acesso.estado });
   if (!acesso.trabalho.novoModelo) return NextResponse.json({ pagaAoParceiro: false });
   try {
-    return NextResponse.json(await oQueOClienteVe(acesso.trabalho));
+    const visto = await oQueOClienteVe(acesso.trabalho);
+    // d4: quem só tem o link (sem sessão da conta) não recebe o IBAN nem o MB WAY — só o cartão para criar conta.
+    if (!acesso.trabalho.porSessao) return NextResponse.json(vistoParaQuemSoTemOLink(visto));
+    return NextResponse.json(visto);
   } catch (e) {
     console.error("[pagamentos/ao-parceiro GET]", e);
     return NextResponse.json({ error: "Não foi possível ler os dados do pagamento." }, { status: 500 });
@@ -74,6 +78,8 @@ export async function POST(req: NextRequest) {
   });
   if (!acesso.ok) return NextResponse.json({ ok: false, error: acesso.erro }, { status: acesso.estado });
   const t = acesso.trabalho;
+  // d4: registar como paga é de quem tem conta; o link sozinho só vê o cartão.
+  if (!t.porSessao) return NextResponse.json({ ok: false, error: PAGAR_SO_COM_CONTA, convidado: true }, { status: 403 });
   if (!t.novoModelo) return NextResponse.json({ ok: false, error: "Este trabalho paga-se como foi combinado.", pagaAoParceiro: false }, { status: 409 });
 
   const como = lerComoPagar(corpo.comoPagar);

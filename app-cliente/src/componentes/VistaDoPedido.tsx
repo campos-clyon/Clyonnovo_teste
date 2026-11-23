@@ -347,8 +347,9 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
         <Titulo>{p.servico}</Titulo>
         <Text style={{ color: CORES.suave, fontSize: 13.5 }}>{cabecalho}</Text>
         {/* Com o aviso do momento, a pílula do estado repetia-o em cor discreta: sai (02-11-2026). */}
+        {/* d4: com a frase do estado no cartão de espera, a pílula não a repete. */}
         {/* Com o valor único, o cartão dele diz o momento: a pílula («À espera de propostas») sai (d39). */}
-        {momento || valorUnico ? null : <Etiqueta texto={p.estadoTexto} />}
+        {momento || valorUnico || espera ? null : <Etiqueta texto={p.estadoTexto} />}
       </View>
 
       {/* O aviso do momento, em cor forte, e o passo a passo (02-11-2026). */}
@@ -400,6 +401,15 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
           <Paragrafo pequeno suave>{valorUnico.quemFaz}</Paragrafo>
           <Paragrafo pequeno suave>{PARA_ACEITAR}</Paragrafo>
           <Botao titulo={ACEITAR} tipo="whatsapp" aoCarregar={() => whatsappDaClyon(mensagemDeAceitar(p.id))} />
+        </Cartao>
+      ) : null}
+
+      {/* d4: no link sem conta, depois de contratar, o parceiro e o total; os dados de pagamento ficam para a conta. */}
+      {convidado && p.pagarSemConta ? (
+        <Cartao destaque>
+          <Subtitulo>{p.pagarSemConta.titulo}</Subtitulo>
+          <Paragrafo>{p.pagarSemConta.texto}</Paragrafo>
+          <Botao titulo={LINK.criarConta} aoCarregar={convidado.aoCriarConta} />
         </Cartao>
       ) : null}
 

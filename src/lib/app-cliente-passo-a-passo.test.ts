@@ -182,7 +182,7 @@ describe("o ecrã do pedido e a lista", () => {
     expect(v).toContain("{momento ? <MomentoDoPedido momento={momento} /> : null}");
     expect(v).toContain("{passos ? <PassosDoPedido passos={passos} /> : null}");
     // d39: com o valor único, o cartão dele também tira a pílula.
-    expect(v).toContain("{momento || valorUnico ? null : <Etiqueta texto={p.estadoTexto} />}");
+    expect(v).toContain("{momento || valorUnico || espera ? null : <Etiqueta texto={p.estadoTexto} />}");
     expect(v.indexOf("<MomentoDoPedido")).toBeLessThan(v.indexOf("<Mensagens "));
     expect(ler("componentes/Acompanhar.tsx")).toContain("n.viagemTexto && !n.execucaoEnviadaEm && !semViagem");
   });

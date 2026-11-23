@@ -65,6 +65,7 @@ import {
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
 import { precoEmTresLinhas } from "@/lib/preco-em-tres-linhas";
 import { TAXA_IVA } from "@/lib/taxas-plataforma";
+import { cartaoDePagarSemConta } from "@/lib/pagar-so-com-o-link";
 import { METODO_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
 import { TRANSFERENCIA_BANCARIA } from "@/lib/palavras-do-pagamento";
 
@@ -766,6 +767,9 @@ export async function pedidoDoConvidadoParaAApp(pedidoId: number, agora: Date = 
   const v = await pedidoDoClienteParaAApp(pedidoId, "", agora, { convidado: true });
   if (!v) return null;
   const p = v.pedido;
+  // d4: quem só tem o link não vê o IBAN nem o MB WAY — vê o parceiro, o total e o caminho para criar conta.
+  const contratada = v.negociacoes.find((n) => n.estado === "acordada" && n.novoModelo);
+  const pagarSemConta = contratada ? cartaoDePagarSemConta(contratada.profissional.nome, contratada.novoModelo?.total ?? null) : null;
   return {
     convidado: true as const,
     pedido: {
@@ -794,6 +798,7 @@ export async function pedidoDoConvidadoParaAApp(pedidoId: number, agora: Date = 
       // O valor único (d39): o convidado vê o mesmo orçamento que a conta.
       valorUnico: p.valorUnico,
       // O convidado não paga: o pagamento já vem a null (R15).
+      pagarSemConta,
       fimClyon: p.fimClyon,
     },
     negociacoes: v.negociacoes,

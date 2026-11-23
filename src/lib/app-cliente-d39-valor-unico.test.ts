@@ -103,7 +103,7 @@ describe("d39 na app de cliente — o valor único", () => {
     expect(s).toContain("{valorUnico.quemFaz}");
     expect(s).toContain("{PARA_ACEITAR}");
     expect(s).toContain('<Botao titulo={ACEITAR} tipo="whatsapp" aoCarregar={() => whatsappDaClyon(mensagemDeAceitar(p.id))} />');
-    expect(s).toContain("{momento || valorUnico ? null : <Etiqueta texto={p.estadoTexto} />}");
+    expect(s).toContain("{momento || valorUnico || espera ? null : <Etiqueta texto={p.estadoTexto} />}");
     // Nenhuma aceitação inventada: o cartão não chama a rota das acções.
     const cartao = s.slice(s.indexOf("{valorUnico ? ("), s.indexOf("{espera ? ("));
     expect(cartao).not.toMatch(/agir\(|ROTA_DAS_ACCOES|pedirComConta/);
