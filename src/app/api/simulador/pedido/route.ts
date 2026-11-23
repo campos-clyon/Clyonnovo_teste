@@ -28,6 +28,7 @@ import { calculateFastEstimate, camposDoPedidoParaOMotor } from "@/lib/pricing-h
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { nifDaFactura, validarValorDesejado } from "@/lib/pedido-valores";
 import { gerarTokenDeAcesso, linkDoPedido } from "@/lib/pedido-acesso";
+import { limitarCorpoDoPedido } from "@/lib/limites-do-pedido";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 
 import { valorDeArranque as valorDeArranqueCalculado } from "@/lib/valor-de-arranque";
@@ -61,6 +62,8 @@ export async function POST(req: NextRequest) {
   try {
     // A `estimate` que o browser manda já não se lê (d22, 10-11-2026): ver «O motor de preços», abaixo.
     const { order, chatHistory } = await req.json();
+    // Tetos de tamanho (d8, 23-11-2026): descrição e anexos cortados no próprio pedido; o histórico à parte.
+    const historico = order ? limitarCorpoDoPedido(order, chatHistory).chatHistory : chatHistory;
     if (!order) {
       return NextResponse.json({ error: "Pedido em falta." }, { status: 400 });
     }
@@ -544,7 +547,7 @@ export async function POST(req: NextRequest) {
         const kmStr = `${String(km).replace(".", ",")} km`;
         return src?.durationText ? `${kmStr} · ${src.durationText}` : kmStr;
       })(),
-      chatJson: chatHistory ? JSON.stringify(chatHistory) : null,
+      chatJson: historico ? JSON.stringify(historico) : null,
       priority,
       // Sempre sem assistente — fluxo de aceitação manual obrigatório
       status: "sem_assistente",

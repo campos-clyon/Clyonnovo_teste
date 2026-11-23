@@ -9,7 +9,7 @@ const ler = (f: string) => readFileSync(f, "utf8").replace(/\r\n/g, "\n");
 describe("propostas de 23/10", () => {
   it("p1: o Next.js está na versão corrigida", () => {
     const pkg = JSON.parse(ler("package.json"));
-    expect(pkg.dependencies.next).toBe("15.5.28");
+    expect(pkg.dependencies.next).toBe("15.5.29");
     expect(pkg.pnpm.overrides["source-map-js@<1.2.2"]).toBe("^1.2.2");
   });
 
