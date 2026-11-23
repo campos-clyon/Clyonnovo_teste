@@ -20,6 +20,7 @@
  * AQUI (AAAA-MM-DD, hora de Lisboa).
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
+  // 23-11-2026 (d7): o cartão do guia «Quanto custa uma mudança» em /mudancas lê a lista de parceiros, como o resto da página.
   // 17-11-2026 (d62/d63, acertos): o cartão das mudanças em /contactos com o com IVA da mesma etiqueta (49,20 €/h).
   // 17-11-2026 (d63): os monos desde 60 € + IVA (a recolha mínima), o esvaziamento de casa desde 260 € + IVA
   // (o T0/T1) e o mínimo da mudança dito com as pessoas (120 € com 2, 165 € com 3) — nas páginas que os mostram.
@@ -89,7 +90,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/esvaziamento-de-casas": "2026-11-17",
   "/esvaziamento-de-casas-amadora": "2026-11-17",
   // 11-11-2026: as mudanças ao preço de cada parceiro (o «desde» dos parceiros da lista, ou a referência).
-  "/mudancas": "2026-11-17",
+  "/mudancas": "2026-11-23",
   "/transporte-de-moveis": "2026-11-16",
   "/pequenas-mudancas": "2026-11-16",
   "/mudancas-de-escritorio": "2026-11-16",

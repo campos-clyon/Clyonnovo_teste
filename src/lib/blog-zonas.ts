@@ -1,5 +1,6 @@
 import { CIDADES_COM_PAGINA } from "@/lib/seo-data";
 import type { BlogPost } from "@/lib/blog-data";
+import type { PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { artigosPublicados } from "@/lib/artigos-do-blog";
 import { caminhoDoServicoNaCidade } from "@/lib/caminho-da-cidade";
 import { getCidadeLocal } from "@/lib/cidades-local";
@@ -43,8 +44,9 @@ const ARTIGO_SERVICO: Record<string, string> = {
 };
 
 /** Os artigos publicados de um serviço — para o bloco de guias no hub dele (14-10-2026). */
-export function artigosDoServico(servico: string): BlogPost[] {
-  return artigosPublicados().filter((a) => ARTIGO_SERVICO[a.slug] === servico);
+/** Com o preço público das mudanças, o guia das mudanças diz o que a lista dá (d7), como o resto de /mudancas. */
+export function artigosDoServico(servico: string, preco?: PrecoPublicoDasMudancas): BlogPost[] {
+  return artigosPublicados(preco).filter((a) => ARTIGO_SERVICO[a.slug] === servico);
 }
 
 export interface ZonaLigada {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 
 import { artigosDoServico } from "@/lib/blog-zonas";
+import { precoPublicoDasMudancas } from "@/lib/ler-preco-publico-das-mudancas";
 
 /*
  * OS GUIAS DE UM SERVIÇO, NO HUB DELE — 14-10-2026 (pente fino de SEO).
@@ -11,8 +12,9 @@ import { artigosDoServico } from "@/lib/blog-zonas";
  * lhe respondia à dúvida. A lista sai do mapa que já liga cada artigo ao seu
  * serviço (blog-zonas.ts) — um artigo novo entra sozinho no hub dele.
  */
-export default function GuiasDoServico({ servico, titulo = "Guias para decidir" }: { servico: string; titulo?: string }) {
-  const artigos = artigosDoServico(servico);
+export default async function GuiasDoServico({ servico, titulo = "Guias para decidir" }: { servico: string; titulo?: string }) {
+  // O cartão do guia das mudanças diz o que a lista de parceiros dá, não a referência (d7, 23-11-2026).
+  const artigos = artigosDoServico(servico, servico === "mudancas" ? await precoPublicoDasMudancas() : undefined);
   if (artigos.length === 0) return null;
   return (
     <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">

@@ -78,7 +78,7 @@ const faixaComIva = (de: number, ate: number) => `${euros(comIva(de)).replace(" 
 export { faixaSemEComIva };
 const PRECO: Record<string, string> = {
   // Por peça desde 03-11-2026 (d6), com a recolha mínima desde a d7 (04-11-2026):
-  // «Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 40 € + IVA.»
+  // «Por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 60 € + IVA.»
   "recolha-moveis": `${comMaiuscula(MOVEIS_POR_PECA_CURTO)}.`,
   // «Desde 60 € + IVA (73,80 € com IVA).» — a recolha mínima (d63, 17-11-2026); era a faixa 30 – 100 €.
   "recolha-monos": `${comMaiuscula(desdeSemEComIva(PRECOS.recolha_monos.minimo!))}.`,

@@ -2061,6 +2061,7 @@ describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulado
     const { mensagemDaMudanca } = await import("./pricing-helper");
     const { tituloDaMudanca } = await import("./titulos-seo");
     const { horasDaMudanca } = await import("./lista-de-parceiros-da-mudanca");
+    const { artigosDoServico } = await import("./blog-zonas");
     const { orcamentoDaMudanca, pessoasParaACasa } = await import("./tabela-das-mudancas");
     m.lembrarPrecoPublico(preco);
     try {
@@ -2080,6 +2081,8 @@ describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulado
           "a página /precos/mudancas": [conteudoDoPrecoDasMudancas(preco), descricaoDoPrecoDasMudancas(preco)],
           "as frases das mudanças no blog": mudancaNoBlog(preco),
           "os artigos do blog": getAllBlogPosts(preco),
+          // Os cartões do guia em /mudancas (GuiasDoServico) liam a referência com a lista cheia (23-11-2026).
+          "os cartões dos guias em /mudancas": artigosDoServico("mudancas", preco).map((a) => [a.title, a.description]),
           "as perguntas frequentes": perguntasFrequentes(preco),
           "a cabeça, a descrição e o título das páginas": [
             m.precoDaMudancaNaCabeca(preco),
@@ -2110,6 +2113,16 @@ describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulado
       expect(frases(v).filter((f) => /na refer[êe]ncia|refer[êe]ncia:? \d/i.test(f)), quem).toEqual([]);
     }
   }, 60_000);
+
+  it("o cartão do guia em /mudancas lê o preço público, e a referência diz «com 3 pessoas»", async () => {
+    const comp = readFileSync(join(RAIZ, "src/components/GuiasDoServico.tsx"), "utf8");
+    expect(comp).toContain("artigosDoServico(servico, servico === \"mudancas\" ? await precoPublicoDasMudancas()");
+    const { SEM_PARCEIROS } = await import("./preco-publico-das-mudancas");
+    const { mudancaNoBlog } = await import("./mudanca-no-blog");
+    const b = mudancaNoBlog(SEM_PARCEIROS);
+    expect(b.descricaoDoQuantoCusta).toContain("na referência, com 3 pessoas, ");
+    expect(b.descricaoDaMargemSul).toContain("(referência com 3 pessoas, ");
+  });
 
   it("e dizem o que a lista dá: o «desde» de 2 e de 3 e um exemplo por tipologia, com a proteção e os km", async () => {
     const { m, preco } = await comALista();

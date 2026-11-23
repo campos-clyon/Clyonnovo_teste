@@ -155,29 +155,29 @@ export const PECAS_COM_IVA =
   `${[PRECO_POR_ITEM.pequeno, PRECO_POR_ITEM.medio, PRECO_DA_PRIMEIRA_GRANDE].map((v) => euros(comIva(v)).replace(" €", "")).join(" / ")} ` +
   `e ${euros(comIva(PRECO_POR_ITEM.grande))}`;
 
-/** «40 € + IVA (49,20 € com IVA)» — a recolha mínima dos móveis (d7, 04-11-2026). */
+/** «60 € + IVA (73,80 € com IVA)» — a recolha mínima dos móveis (d7, 04-11-2026). */
 export const RECOLHA_MINIMA_COM_IVA = valorSemEComIva(RECOLHA_MINIMA_DOS_MOVEIS);
 
-/** «A recolha mínima, 40 € + IVA (49,20 € com IVA), já inclui o parceiro ir a casa, carregar e levar tudo ao destino certo.» */
+/** «A recolha mínima, 60 € + IVA (73,80 € com IVA), já inclui o parceiro ir a casa, carregar e levar tudo ao destino certo.» */
 export const O_QUE_INCLUI_A_RECOLHA_MINIMA = `A recolha mínima, ${RECOLHA_MINIMA_COM_IVA}, já inclui o parceiro ir a casa, carregar e levar tudo ao destino certo.`;
 
 /**
  * «por peça: pequena 15 €, média 30 €, grande 50 € + IVA (18,45 / 36,90 / 61,50
- * € com IVA); recolha mínima 40 € + IVA (49,20 € com IVA)» — a frase pública dos
+ * € com IVA); recolha mínima 60 € + IVA (73,80 € com IVA)» — a frase pública dos
  * móveis (d6; a recolha mínima desde a d7).
  */
 export const MOVEIS_POR_PECA = `por peça: ${PECAS_EM_TEXTO} + IVA (${PECAS_COM_IVA} com IVA); recolha mínima ${RECOLHA_MINIMA_COM_IVA}`;
 
 /**
- * «por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 40 € + IVA» —
+ * «por peça, 15 a 50 € + IVA (18,45 a 61,50 € com IVA), mínimo 60 € + IVA» —
  * onde a frase inteira não cabe (descrições, cartões).
  */
 export const MOVEIS_POR_PECA_CURTO = `por peça, ${euros(PRECO_POR_ITEM.pequeno).replace(" €", "")} a ${euros(PRECO_MAXIMO_DA_PECA)} + IVA (${euros(comIva(PRECO_POR_ITEM.pequeno)).replace(" €", "")} a ${euros(comIva(PRECO_MAXIMO_DA_PECA))} com IVA), mínimo ${euros(RECOLHA_MINIMA_DOS_MOVEIS)} + IVA`;
 
 /**
  * «Recolhem desde uma única peça. Cada peça conta pela tabela (pequena 15 €,
- * média 30 €, grande 50 € + IVA) e cada recolha tem um mínimo de 40 € + IVA
- * (49,20 € com IVA), que já inclui ir a sua casa, carregar e levar ao destino
+ * média 30 €, grande 50 € + IVA) e cada recolha tem um mínimo de 60 € + IVA
+ * (73,80 € com IVA), que já inclui ir a sua casa, carregar e levar ao destino
  * certo.» — a resposta do /faq a «Recolhem apenas uma peça?» (d7, 04-11-2026; era
  * «Não há mínimo de volume»).
  */
@@ -194,7 +194,7 @@ export const ANDARES_DOS_MOVEIS =
   `(nunca menos de ${euros(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} + IVA por andar); a peça grande que não cabe no elevador conta como escada`;
 
 /**
- * «por peça: … (… com IVA); recolha mínima 40 € + IVA (49,20 € com IVA); e,
+ * «por peça: … (… com IVA); recolha mínima 60 € + IVA (73,80 € com IVA); e,
  * depois do mínimo, mais 5 € + IVA por andar com elevador e 15 € + IVA por andar
  * sem elevador» — os andares somam-se DEPOIS do mínimo (d7).
  */
@@ -387,7 +387,7 @@ export function precoDoItem(tamanho: TamanhoDoItem): string {
 
 /**
  * A conta das peças, sem IVA: `soma` peça a peça e `total`, que nunca fica
- * abaixo da recolha mínima (d7, 04-11-2026: `RECOLHA_MINIMA_DOS_MOVEIS`, 40 €;
+ * abaixo da recolha mínima (d7, 04-11-2026: `RECOLHA_MINIMA_DOS_MOVEIS`, 60 €;
  * na d6 não havia mínimo, e antes era 80 €). `pelaRecolhaMinima` diz se o
  * mínimo subiu a soma. Sem peças, tudo a zero.
  */
@@ -787,11 +787,11 @@ export type ValorDosMoveis = { itens: ReturnType<typeof contaDosItens>; sup: Sup
 
 /**
  * O VALOR DOS MÓVEIS POR PEÇA — 03-11-2026 (d6 v2). Peça a peça
- * (`PRECO_POR_ITEM`), nunca abaixo da recolha mínima (d7, 04-11-2026: 40 €), e
+ * (`PRECO_POR_ITEM`), nunca abaixo da recolha mínima (d7, 04-11-2026: 60 €), e
  * os andares por trabalho somados DEPOIS do mínimo: um valor fixo. A mesma
  * função para a R12, o simulador do site e o motor. `null` sem peças.
- * Exemplos do dono: 1 peça pequena no rés-do-chão = 40 € + IVA; 1 média num 3.º
- * andar sem elevador = 40 + 45 = 85 € + IVA; 2 grandes + 1 média num 2.º andar
+ * Exemplos do dono: 1 peça pequena no rés-do-chão = 60 € + IVA; 1 média num 3.º
+ * andar sem elevador = 60 + 45 = 105 € + IVA; 2 grandes + 1 média num 2.º andar
  * com elevador = 140 € + IVA.
  */
 export function valorDosMoveis(itens: ItensDosMoveis, acesso: AcessoDoEntulho | null | undefined): ValorDosMoveis | null {
@@ -808,7 +808,7 @@ const TAMANHOS_DAS_GRANDES_PARA_AS_PEQUENAS = ["grande", "medio", "pequeno"] as 
 /**
  * «2 peças grandes × 50 € = 100 € + IVA» — uma linha por tamanho, só os que têm
  * peças, das grandes para as pequenas. Abaixo da recolha mínima, uma linha só
- * (d7): «1 peça pequena (15 €): conta a recolha mínima de 40 € + IVA».
+ * (d7): «1 peça pequena (15 €): conta a recolha mínima de 60 € + IVA».
  */
 function porqueDosItens(c: ReturnType<typeof contaDosItens>): string[] {
   const comPecas = TAMANHOS_DAS_GRANDES_PARA_AS_PEQUENAS.filter((t) => c[t] > 0);

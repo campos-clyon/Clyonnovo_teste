@@ -15,7 +15,7 @@ import LandingClient from "./LandingClient";
  * com a grelha, e o sem IVA sozinho. Até 155 caracteres, o essencial primeiro
  * (`descricaoQueCabe`): o que não couber inteiro fica de fora.
  */
-// A recolha mínima desde 04-11-2026 (d7): o «desde» dos móveis é 40 € + IVA (era a peça pequena, 15 €).
+// A recolha mínima desde 04-11-2026 (d7): o «desde» dos móveis é 60 € + IVA (era a peça pequena, 15 €).
 const MOVEIS_DESDE = PRECOS.recolha_moveis.minimo!;
 const DESCRICAO = descricaoQueCabe([
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).

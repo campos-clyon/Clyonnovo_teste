@@ -333,10 +333,10 @@ function Hero({ heroRef, variante }: { heroRef: React.RefObject<HTMLDivElement |
    * O PREÇO NO PRIMEIRO ECRÃ — 21-10-2026 (análise diária do Ads).
    *
    * O título do anúncio mais clicado a seguir aos de serviço é «Móveis desde
-   * 40 € + IVA», e no telemóvel o número só aparecia três ecrãs abaixo. Fica
+   * 60 € + IVA», e no telemóvel o número só aparecia três ecrãs abaixo. Fica
    * aqui, da fonte única, com o IVA ao lado.
    */
-  // Por peça desde 03-11-2026 (d6); desde a d7 (04-11-2026) o «desde» é a recolha mínima, 40 € + IVA.
+  // Por peça desde 03-11-2026 (d6); desde a d7 (04-11-2026) o «desde» é a recolha mínima, 60 € + IVA.
   const desdeMoveis: Valor = { tipo: "desde", de: PRECOS.recolha_moveis.minimo ?? RECOLHA_MINIMA_DOS_MOVEIS };
   /*
    * A VERSÃO DO ESVAZIAMENTO — 15-11-2026 (d42). O que está incluído, do
@@ -898,7 +898,7 @@ function PricingGuide({ variante }: { variante: VarianteDaLanding }) {
   /*
    * COM OS PREÇOS DE REFERÊNCIA — 20-10-2026.
    *
-   * O anúncio diz «Móveis desde 40 € + IVA» e esta página, a que recebe quase
+   * O anúncio diz «Móveis desde 60 € + IVA» e esta página, a que recebe quase
    * todos os cliques dele, não mostrava número nenhum. Quem clica por causa de
    * um preço e não o encontra volta para trás. Os valores vêm da fonte única
    * (`precos-publicos.ts`), sem IVA e com o IVA ao lado — nunca sozinhos.

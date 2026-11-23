@@ -133,7 +133,7 @@ function pelaLista(preco: Extract<PrecoPublicoDasMudancas, { tipo: "parceiros" }
 function naReferencia(): MudancaNoBlog {
   return {
     // A hora com o com IVA ao lado; dizia «…, T3 250 €, sem IVA.» (31-10-2026).
-    descricaoDoQuantoCusta: `Quanto custa uma mudança em Lisboa: cada parceiro tem o seu preço por hora; na referência, ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))}/h com IVA) — T2 ${faixaDaCasa("T2")} + IVA.`,
+    descricaoDoQuantoCusta: `Quanto custa uma mudança em Lisboa: cada parceiro tem o seu preço por hora; na referência, com 3 pessoas, ${PRECO_POR_HORA} €/h + IVA (${euros(comIva(PRECO_POR_HORA))} com IVA).`,
     paraTerUmaIdeia: `Para ter uma ideia antes de comparar, a ${REFERENCIA_DA_MUDANCA}.`,
     antesDasLinhas:
       "Antes de alguém ver a casa, contam-se estas horas pela tipologia (equipa de 3; com 2 pessoas leva mais tempo), sem andares a pé nem distâncias longas. No fim pagam-se as horas confirmadas na folha do dia:",
@@ -147,7 +147,7 @@ function naReferencia(): MudancaNoBlog {
     ],
     pequenasMudancas: `Pagam-se como as mudanças: à hora, ao preço do parceiro escolhido, com o mínimo de horas dele. Na referência, ${PRECO_POR_HORA_DUAS_PESSOAS} € + IVA por hora com 2 pessoas (${PRECO_POR_HORA} € com ${PESSOAS_NA_EQUIPA}), com o ${MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO}. Uma pequena mudança conta-se, à partida, pelo mínimo, e por isso fica bem abaixo de uma mudança completa. No simulador vê o preço de cada parceiro.`,
     soUmSofa: `Sim. É um dos pedidos mais comuns. Paga-se à hora, ao preço do parceiro escolhido, com o mínimo de horas dele (na referência, ${MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO}); o tamanho do sofá, a distância e o acesso nos dois endereços dizem se esse mínimo chega.`,
-    descricaoDaMargemSul: `De Lisboa para Almada, Seixal ou Barreiro, ou o contrário: a ponte, o tempo e o preço — à hora, ao preço do parceiro (referência ${PRECO_POR_HORA} €/h + IVA).`,
+    descricaoDaMargemSul: `De Lisboa para Almada, Seixal ou Barreiro, ou o contrário: a ponte, o tempo e o preço — à hora (referência com 3 pessoas, ${PRECO_POR_HORA} €/h + IVA).`,
     umT2PorExemplo: `Um T2, por exemplo, leva ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — ${faixaDaCasa("T2")} + IVA na referência, com a proteção (${faixaDaCasa("T2", true)} com IVA); os km entre as margens contam pela tarifa do parceiro. ${TABELA_NO_BLOG}`,
     t2ParaOSeixal: `Conte com ${intervaloDeHorasEmTexto(HORAS_COM_TRES_PESSOAS.T2)} com 3 pessoas — na referência, com a proteção, ${faixaDaCasa("T2")} + IVA (${faixaDaCasa("T2", true)} com IVA) —, mais os km e as caixas, se as pedir. Cada parceiro tem o seu preço por hora: no simulador vê os disponíveis e escolhe.`,
     incluiIva: `Na lista dos parceiros cada preço por hora aparece sem IVA e com IVA (na referência, ${valorSemEComIva(PRECO_POR_HORA)} por hora). ${DUAS_FATURAS_POR_TRABALHO_CURTA}`,
