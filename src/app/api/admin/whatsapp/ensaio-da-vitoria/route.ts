@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ...lista, ligado: interruptor.ligado });
   } catch (e) {
     console.error("[admin/whatsapp/ensaio-da-vitoria]", e);
-    return NextResponse.json({ ensaios: [], melhor: 0, pior: 0, porAvaliar: 0, ligado: false });
+    return NextResponse.json({ ensaios: [], melhor: 0, pior: 0, avaliados: 0, porAvaliar: 0, ligado: false });
   }
 }
 

@@ -233,8 +233,18 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
 
 /** O que aconteceu nesta conversa com o agente (para a guarda e o resultado). */
 export type EstadoDaConversa = {
-  /** Os resultados das ferramentas de leitura: de onde podem vir os euros. */
+  /**
+   * Os resultados das ferramentas de leitura que vêm DAS FONTES DA CLYON (as
+   * propostas, o que o site sabe, o que falta, as perguntas frequentes): a
+   * ÚNICA origem dos euros que a guarda aceita.
+   */
   resultados: unknown[];
+  /**
+   * O que o CLIENTE escreveu (a conversa, a descrição e os campos de texto do
+   * pedido): o modelo lê-o, mas NUNCA conta como origem de euros — um valor
+   * escrito pelo cliente não é um preço da CLYON.
+   */
+  lidoDoCliente: unknown[];
   /** A última resposta que passou na guarda. */
   respostaAceite: string | null;
   /** As que a guarda recusou, com o porquê. */
@@ -260,6 +270,7 @@ export type EstadoDaConversa = {
 export function estadoNovo(): EstadoDaConversa {
   return {
     resultados: [],
+    lidoDoCliente: [],
     respostaAceite: null,
     recusadas: [],
     passouAEquipa: null,
@@ -384,12 +395,14 @@ export async function correrFerramenta(
           const p = await deps.lerPedido(id);
           if (p) pedidos.push({ pedido: p.id, servico: p.serviceType ?? null, estado: p.status ?? null, localidade: p.city ?? null });
         }
-        return guardar(estado, { pedidos });
+        return guardar(estado, { pedidos }, { doCliente: true });
       }
       case "ler_pedido": {
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
-        return guardar(estado, pedidoSemDadosPessoais(p));
+        // Só o que a CLYON calcula (a base do preço) fica como origem de euros; o texto do pedido é do cliente.
+        const lido = pedidoSemDadosPessoais(p);
+        return guardar(estado, lido, { doCliente: true, daClyon: { pedido: lido.pedido, baseDoPreco: lido.baseDoPreco } });
       }
       case "o_que_falta": {
         const p = await doTelefone(deps, inteiro(e.pedido));
@@ -401,20 +414,29 @@ export async function correrFerramenta(
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
         const lista = deps.propostasParaEscolher ? await deps.propostasParaEscolher(p.id) : [];
-        return guardar(estado, {
-          pedido: p.id,
-          comoOClienteVe: await deps.propostasDoPedido(p.id),
-          propostas: lista.map(semOValorDoParceiro),
-          dataCombinada: p.dataAgendada ? String(p.dataAgendada) : null,
-          dataPreferida: p.urgency ?? null,
-        });
+        const dataPreferida = p.urgency ?? null;
+        return guardar(
+          estado,
+          {
+            pedido: p.id,
+            comoOClienteVe: await deps.propostasDoPedido(p.id),
+            propostas: lista.map(semOValorDoParceiro),
+            dataCombinada: p.dataAgendada ? String(p.dataAgendada) : null,
+            dataPreferida,
+          },
+          // A data que o cliente preferiu é texto dele: não conta como origem de euros.
+          { doCliente: false, semNaGuarda: ["dataPreferida"] },
+        );
       }
       case "ler_conversa": {
         const n = Math.max(1, Math.min(40, inteiro(e.mensagens) ?? 20));
         const linhas = await deps.lerConversa(n);
-        return guardar(estado, {
-          mensagens: linhas.map((l) => ({ de: l.direccao === "in" ? "cliente" : "clyon", texto: l.texto, em: l.criadoEm ?? null })),
-        });
+        // A conversa é do cliente (e as respostas da CLYON repetem-no): nunca origem de euros.
+        return guardar(
+          estado,
+          { mensagens: linhas.map((l) => ({ de: l.direccao === "in" ? "cliente" : "clyon", texto: l.texto, em: l.criadoEm ?? null })) },
+          { doCliente: true },
+        );
       }
       case "o_que_o_site_sabe":
         return guardar(estado, { oQueOSiteSabe: deps.oQueOSiteSabe() });
@@ -564,7 +586,30 @@ export async function correrFerramenta(
   }
 }
 
-function guardar(estado: EstadoDaConversa, resultado: Record<string, unknown>): ResultadoDaFerramenta {
-  estado.resultados.push(resultado);
+/**
+ * Guarda o que a ferramenta devolveu. O modelo recebe sempre o resultado todo;
+ * à guarda dos € só chega o que veio das fontes da CLYON:
+ *  - `doCliente`: o resultado é texto do cliente — vai para `lidoDoCliente`,
+ *    e só entra em `resultados` o que vier em `daClyon` (se vier);
+ *  - `semNaGuarda`: chaves de um resultado da CLYON que são texto do cliente.
+ */
+function guardar(
+  estado: EstadoDaConversa,
+  resultado: Record<string, unknown>,
+  origem: { doCliente?: boolean; daClyon?: Record<string, unknown>; semNaGuarda?: readonly string[] } = {},
+): ResultadoDaFerramenta {
+  if (origem.doCliente) {
+    estado.lidoDoCliente.push(resultado);
+    if (origem.daClyon) estado.resultados.push(origem.daClyon);
+  } else if (origem.semNaGuarda?.length) {
+    const limpo: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(resultado)) {
+      if (origem.semNaGuarda.includes(k)) estado.lidoDoCliente.push({ [k]: v });
+      else limpo[k] = v;
+    }
+    estado.resultados.push(limpo);
+  } else {
+    estado.resultados.push(resultado);
+  }
   return { resultado };
 }

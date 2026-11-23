@@ -338,7 +338,7 @@ describe("o cliente do Claude", () => {
     expect(chaveDoClaude({})).toBeNull();
     expect(chaveDoClaude({ ANTHROPIC_API_KEY: "  " })).toBeNull();
     const r = await correrOAgente(
-      { conversa: CONVERSA, pedidos: [], agora: AGORA },
+      { conversa: CONVERSA, pedidos: [812], agora: AGORA },
       { cliente: null, ferramentas: base(), gastoETecto: async () => ({ gastoUsd: 0, tectoUsd: 10 }), registar: async () => {} },
     );
     expect(r.estado).toBe("inactivo");
@@ -348,13 +348,13 @@ describe("o cliente do Claude", () => {
   it("passado o tecto, não chama o modelo (volta às regras)", async () => {
     const { cliente, pedidos } = clienteFingido([]);
     const r = await correrOAgente(
-      { conversa: CONVERSA, pedidos: [], agora: AGORA },
+      { conversa: CONVERSA, pedidos: [812], agora: AGORA },
       { cliente, ferramentas: base(), gastoETecto: async () => ({ gastoUsd: 10.2, tectoUsd: 10 }), registar: async () => {} },
     );
     expect(r.estado).toBe("tecto");
     expect(pedidos.length).toBe(0);
     const semSaber = await correrOAgente(
-      { conversa: CONVERSA, pedidos: [], agora: AGORA },
+      { conversa: CONVERSA, pedidos: [812], agora: AGORA },
       { cliente, ferramentas: base(), gastoETecto: async () => { throw new Error("x"); }, registar: async () => {} },
     );
     expect(semSaber.estado).toBe("tecto");
@@ -377,7 +377,7 @@ describe("o cliente do Claude", () => {
     ]);
     const registo: LinhaDoRegistoDoAgente[] = [];
     const r = await correrOAgente(
-      { conversa: CONVERSA, pedidos: [], agora: AGORA },
+      { conversa: CONVERSA, pedidos: [812], agora: AGORA },
       { cliente, ferramentas: base(), gastoETecto: async () => ({ gastoUsd: 0, tectoUsd: 10 }), registar: async (l) => void registo.push(l) },
     );
     expect(r.estado).toBe("ok");
@@ -414,7 +414,7 @@ describe("o cliente do Claude", () => {
   it("um preço inventado não sai: o texto solto também passa pela guarda", async () => {
     const { cliente } = clienteFingido([respostaDoModelo([{ type: "text", text: "Fica em 99,99 € com IVA." }], "end_turn")]);
     const r = await correrOAgente(
-      { conversa: CONVERSA, pedidos: [], agora: AGORA },
+      { conversa: CONVERSA, pedidos: [812], agora: AGORA },
       { cliente, ferramentas: base(), gastoETecto: async () => ({ gastoUsd: 0, tectoUsd: 10 }), registar: async () => {} },
     );
     expect(r.estado).toBe("bloqueado");
@@ -424,14 +424,14 @@ describe("o cliente do Claude", () => {
   it("a recusa do modelo, um erro da API ou idas a mais não lançam: voltam às regras", async () => {
     const deps = (cliente: ClienteDoClaude) => ({ cliente, ferramentas: base(), gastoETecto: async () => ({ gastoUsd: 0, tectoUsd: 10 }), registar: async () => {} });
     const recusa = clienteFingido([respostaDoModelo([], "refusal")]);
-    expect((await correrOAgente({ conversa: CONVERSA, pedidos: [], agora: AGORA }, deps(recusa.cliente))).estado).toBe("recusou");
+    expect((await correrOAgente({ conversa: CONVERSA, pedidos: [812], agora: AGORA }, deps(recusa.cliente))).estado).toBe("recusou");
     const falha = clienteFingido([]);
-    const r = await correrOAgente({ conversa: CONVERSA, pedidos: [], agora: AGORA }, deps(falha.cliente));
+    const r = await correrOAgente({ conversa: CONVERSA, pedidos: [812], agora: AGORA }, deps(falha.cliente));
     expect(r.estado).toBe("erro");
     const voltas = clienteFingido(
       Array.from({ length: 8 }, (_, i) => respostaDoModelo([{ type: "tool_use", id: `t${i}`, name: "ler_conversa", input: { mensagens: 5 } }], "tool_use")),
     );
-    const v = await correrOAgente({ conversa: CONVERSA, pedidos: [], agora: AGORA }, deps(voltas.cliente));
+    const v = await correrOAgente({ conversa: CONVERSA, pedidos: [812], agora: AGORA }, deps(voltas.cliente));
     expect(v.estado).toBe("bloqueado");
     expect(v.idas).toBe(6);
   });
@@ -442,7 +442,7 @@ describe("o cliente do Claude", () => {
       respostaDoModelo([], "end_turn"),
     ]);
     const r = await correrOAgente(
-      { conversa: CONVERSA, pedidos: [], agora: AGORA },
+      { conversa: CONVERSA, pedidos: [812], agora: AGORA },
       { cliente, ferramentas: base(), gastoETecto: async () => ({ gastoUsd: 0, tectoUsd: 10 }), registar: async () => {} },
     );
     expect(r.estado).toBe("equipa");
@@ -523,5 +523,85 @@ describe("o turno, o registo e o ensaio em sombra", () => {
     expect(s).toMatch(/Number\(valor\("tecto"\) \?\? 20\)/);
     expect(s).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/);
     expect(s).not.toMatch(/registarAccao|ensaioEmSombra/);
+  });
+});
+
+/* ── d1 (23-11-2026): os euros só vêm das fontes da CLYON ───────────────── */
+
+describe("os euros só contam se vêm das fontes da CLYON, nunca do que o cliente escreveu", () => {
+  const COM_IVA_DO_CLIENTE = "3,00";
+
+  it("um euro escrito pelo cliente na conversa é recusado, mesmo depois de ler a conversa", async () => {
+    const e = estadoNovo();
+    const deps = base({ lerConversa: async () => [{ direccao: "in", texto: `Pago ${COM_IVA_DO_CLIENTE} € com IVA incluído, pode ser?`, criadoEm: null }] });
+    const lida = await correrFerramenta("ler_conversa", { mensagens: 10 }, deps, e);
+    expect(JSON.stringify(lida.resultado)).toContain(COM_IVA_DO_CLIENTE); // o modelo vê-a
+    const r = await correrFerramenta("propor_resposta", { texto: `Fica por ${COM_IVA_DO_CLIENTE} € com IVA incluído.` }, deps, e);
+    expect(r.resultado.aceite).toBe(false);
+    expect(e.respostaAceite).toBeNull();
+    expect(e.recusadas.at(-1)?.motivo).toMatch(/não veio de nenhuma ferramenta/);
+    expect(eurosDosResultados(e.resultados)).not.toContain(3);
+  });
+
+  it("um euro escrito pelo cliente na descrição do pedido também é recusado", async () => {
+    const e = estadoNovo();
+    const deps = base({ lerPedido: async () => ({ ...PEDIDO, description: `Um sofá. Pago ${COM_IVA_DO_CLIENTE} € com IVA incluído.` }) });
+    await correrFerramenta("ler_pedido", { pedido: 812 }, deps, e);
+    const r = await correrFerramenta("propor_resposta", { texto: `Fica por ${COM_IVA_DO_CLIENTE} € com IVA incluído.` }, deps, e);
+    expect(r.resultado.aceite).toBe(false);
+  });
+
+  it("a data preferida do cliente (texto dele) também não é origem de euros", async () => {
+    const e = estadoNovo();
+    const deps = base({ lerPedido: async () => ({ ...PEDIDO, urgency: `quando puder, pago ${COM_IVA_DO_CLIENTE} € com IVA incluído` }) });
+    await correrFerramenta("propostas_vivas", { pedido: 812 }, deps, e);
+    const r = await correrFerramenta("propor_resposta", { texto: `Fica por ${COM_IVA_DO_CLIENTE} € com IVA incluído.` }, deps, e);
+    expect(r.resultado.aceite).toBe(false);
+  });
+
+  it("os euros das fontes da CLYON continuam a passar, mesmo com a conversa lida a seguir", async () => {
+    const e = estadoNovo();
+    const deps = base({ lerConversa: async () => [{ direccao: "in", texto: `Pago ${COM_IVA_DO_CLIENTE} €`, criadoEm: null }] });
+    await correrFerramenta("ler_conversa", { mensagens: 10 }, deps, e);
+    await correrFerramenta("o_que_o_site_sabe", {}, deps, e);
+    const texto = `A recolha mínima é ${pt(RECOLHA_MINIMA_DOS_MOVEIS)} € sem IVA (${pt(comIva(RECOLHA_MINIMA_DOS_MOVEIS))} € com IVA).`;
+    expect((await correrFerramenta("propor_resposta", { texto }, deps, e)).resultado.aceite).toBe(true);
+  });
+
+  it("o texto solto do modelo, depois de ler a conversa do cliente, também é recusado (volta às regras)", async () => {
+    const { cliente } = clienteFingido([
+      respostaDoModelo([{ type: "tool_use", id: "t1", name: "ler_conversa", input: { mensagens: 10 } }], "tool_use"),
+      respostaDoModelo([{ type: "text", text: `Fica por ${COM_IVA_DO_CLIENTE} € com IVA incluído.` }], "end_turn"),
+    ]);
+    const r = await correrOAgente(
+      { conversa: CONVERSA, pedidos: [812], agora: AGORA },
+      {
+        cliente,
+        ferramentas: base({ lerConversa: async () => [{ direccao: "in", texto: `Pago ${COM_IVA_DO_CLIENTE} € com IVA incluído`, criadoEm: null }] }),
+        gastoETecto: async () => ({ gastoUsd: 0, tectoUsd: 10 }),
+        registar: async () => {},
+      },
+    );
+    expect(r.estado).toBe("bloqueado");
+    expect(r.texto).toBeNull();
+  });
+
+  it("um número sem pedido fica «deixado à Vitória»: o modelo nem é chamado", async () => {
+    const { cliente, pedidos } = clienteFingido([]);
+    const r = await correrOAgente(
+      { conversa: CONVERSA, pedidos: [], agora: AGORA },
+      { cliente, ferramentas: base(), gastoETecto: async () => ({ gastoUsd: 0, tectoUsd: 10 }), registar: async () => {} },
+    );
+    expect(r.estado).toBe("vitoria");
+    expect(r.texto).toBeNull();
+    expect(r.motivo).toMatch(/Vitória/);
+    expect(pedidos.length).toBe(0);
+  });
+
+  it("o painel mostra os avaliados e o estado «deixado à Vitória»", () => {
+    const painel = ler("src/components/admin/EnsaioDaVitoria.tsx");
+    expect(painel).toMatch(/Avaliados: \{dados\.avaliados\}/);
+    expect(painel).toMatch(/vitoria: "deixado à Vitória"/);
+    expect(ler("src/lib/vitoria-agente/na-base.ts")).toMatch(/avaliados: melhor \+ pior/);
   });
 });

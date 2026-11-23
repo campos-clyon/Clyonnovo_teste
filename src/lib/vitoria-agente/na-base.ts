@@ -571,7 +571,7 @@ export type EnsaioNoPainel = {
 };
 
 /** Os últimos ensaios (só os últimos dígitos do telefone), e quantos melhor/pior. */
-export async function ensaiosNoPainel(limite = 50): Promise<{ ensaios: EnsaioNoPainel[]; melhor: number; pior: number; porAvaliar: number }> {
+export async function ensaiosNoPainel(limite = 50): Promise<{ ensaios: EnsaioNoPainel[]; melhor: number; pior: number; avaliados: number; porAvaliar: number }> {
   const pool = await garantirTabelas();
   const n = Math.max(1, Math.min(200, Math.floor(limite)));
   const [rows] = (await pool.execute(
@@ -616,10 +616,13 @@ export async function ensaiosNoPainel(limite = 50): Promise<{ ensaios: EnsaioNoP
             SUM(avaliacao IS NULL AND estado = 'ok') AS porAvaliar
        FROM vitoriaEnsaios`,
   )) as [Array<Record<string, unknown>>, unknown];
+  const melhor = Number(cont[0]?.melhor) || 0;
+  const pior = Number(cont[0]?.pior) || 0;
   return {
     ensaios,
-    melhor: Number(cont[0]?.melhor) || 0,
-    pior: Number(cont[0]?.pior) || 0,
+    melhor,
+    pior,
+    avaliados: melhor + pior,
     porAvaliar: Number(cont[0]?.porAvaliar) || 0,
   };
 }

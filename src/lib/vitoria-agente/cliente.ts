@@ -80,7 +80,7 @@ export type PedidoAoAgente = {
 };
 
 export type ResultadoDoAgente = {
-  estado: "inactivo" | "tecto" | "erro" | "recusou" | "bloqueado" | "equipa" | "ok";
+  estado: "vitoria" | "inactivo" | "tecto" | "erro" | "recusou" | "bloqueado" | "equipa" | "ok";
   /** O que teria dito ao cliente (só com «ok», ou o da passagem à equipa). */
   texto: string | null;
   motivo: string | null;
@@ -133,6 +133,8 @@ export function erroEmPalavras(err: unknown): string {
  * UMA VOLTA DO AGENTE. Nunca lança: o resultado diz sempre o estado e porquê.
  */
 export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDoAgente): Promise<ResultadoDoAgente> {
+  // Um número sem pedido não é conversa para o agente: fica à Vitória de sempre (sem chamar o modelo).
+  if (pedido.pedidos.length === 0) return vazio("vitoria", "o número não tem pedido: deixado à Vitória");
   if (!deps.cliente) return vazio("inactivo", "falta a chave ANTHROPIC_API_KEY na Vercel");
   let tecto: { gastoUsd: number; tectoUsd: number };
   try {

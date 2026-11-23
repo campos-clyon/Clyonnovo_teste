@@ -39,13 +39,14 @@ type Ensaio = {
   avaliacao: "melhor" | "pior" | null;
   avaliadoPor: string | null;
 };
-type Resposta = { ensaios: Ensaio[]; melhor: number; pior: number; porAvaliar: number; ligado: boolean };
+type Resposta = { ensaios: Ensaio[]; melhor: number; pior: number; avaliados: number; porAvaliar: number; ligado: boolean };
 type Accao = { em: string; ferramenta: string; entrada: string | null; resultado: string | null; texto: string | null; custoUsd: number; erro: string | null };
 
 const ROTA = "/api/admin/whatsapp/ensaio-da-vitoria";
 
 const ESTADO: Record<string, string> = {
   ok: "respondeu",
+  vitoria: "deixado à Vitória",
   equipa: "passaria à equipa",
   bloqueado: "bloqueada pela revisão",
   tecto: "tecto do dia",
@@ -127,7 +128,7 @@ export default function EnsaioDaVitoria() {
         {dados.ligado
           ? "O agente corre ao lado da Vitória e grava o que teria respondido. Nada daqui chegou ao cliente."
           : "O ensaio está desligado (Configs › «Vitória agente — ensaio»)."}{" "}
-        Melhor: {dados.melhor} · Pior: {dados.pior} · Por avaliar: {dados.porAvaliar}
+        Avaliados: {dados.avaliados} · Melhor: {dados.melhor} · Pior: {dados.pior} · Por avaliar: {dados.porAvaliar}
       </p>
       <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
         <input type="checkbox" checked={soAsQueAgiriam} onChange={(ev) => setSoAsQueAgiriam(ev.target.checked)} />
