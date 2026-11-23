@@ -432,6 +432,8 @@ export async function ferramentasDeVerdade(
     lerConversa: async (n): Promise<LinhaLida[]> => conversaAnonimizada(await db.mensagensDoNumeroWhatsApp(telefone, n), quem),
     propostasDoPedido: (id) => neg.ecraDoPedido(id),
     oQueOSiteSabe: () => oQueOSiteSabe(agora),
+    // d98: as que o número mandou pelo WhatsApp e esperam pelo pedido.
+    fotografiasAEsperar: () => db.contarFotosPendentesWhatsApp(telefone).catch(() => 0),
   };
 }
 

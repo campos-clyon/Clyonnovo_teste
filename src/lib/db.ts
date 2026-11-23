@@ -17,6 +17,7 @@ import { limparZonasAntigas } from "@/lib/zonas-limpas";
 import { SQL_DAS_FATURAS_POR_EMITIR } from "@/lib/faturas-por-emitir";
 import { horasPrevistasDaLinha } from "@/lib/horas-do-trabalho";
 import { inicioDoDiaEmLisboa, segundaDaSemanaEmLisboa } from "./hora-de-lisboa";
+import { HORAS_DO_RASCUNHO } from "./conversa-parada-a-meio";
 import { CHEGADA_CONFIRMADA_OBRIGATORIA } from "@/lib/viagem-ate-ao-cliente";
 import { eq, desc, inArray } from "drizzle-orm";
 import { users, colaboradores, simulatorSettings, galleryMedia, trabalhosRealizados } from "../../drizzle/schema";
@@ -14535,8 +14536,13 @@ export async function apagarRecolhaWhatsApp(telefone: string): Promise<void> {
  * de alguém.
  * ────────────────────────────────────────────────────────────────────────── */
 
-/** Quanto tempo uma fotografia espera pelo pedido da conversa dela. */
-const HORAS_DAS_FOTOS_PENDENTES = 48;
+/**
+ * Quanto tempo uma fotografia espera pelo pedido da conversa dela — o mesmo
+ * que o rascunho da recolha (d98, 23-11-2026). Eram 48 horas, e o rascunho
+ * passou a 7 dias na d93: a cliente que retomava a conversa ao terceiro dia
+ * registava o pedido e as fotografias já não entravam nele.
+ */
+export const HORAS_DAS_FOTOS_PENDENTES = HORAS_DO_RASCUNHO;
 
 let whatsappFotosPendentesReady = false;
 async function ensureWhatsappFotosPendentesTable() {
@@ -14596,54 +14602,152 @@ export async function contarFotosPendentesWhatsApp(telefone: string): Promise<nu
 }
 
 /**
+ * JUNTAR FICHEIROS AO PEDIDO NUMA SÓ INSTRUÇÃO — 23-11-2026 (d98).
+ *
+ * Era ler o `filesJson`, juntar em código e gravar a lista inteira. Quatro
+ * fotografias da mesma rajada chegavam em paralelo pela ponte, cada uma lia a
+ * lista antes de a outra a gravar, e ficava no pedido só a última. Agora a
+ * base junta-as ela própria (`JSON_MERGE_PRESERVE` de duas listas = a de lá
+ * seguida das novas), com a linha trancada pelo próprio UPDATE: nenhuma se
+ * perde. Um `filesJson` vazio ou ilegível recomeça a lista, como antes.
+ *
+ * `executor`: a ligação da transacção, quando há uma (ver
+ * `anexarFotosPendentesAoPedido`). Devolve se o pedido existia.
+ */
+export const SQL_DE_JUNTAR_FICHEIROS_AO_PEDIDO = `UPDATE simulatorOrders
+    SET filesJson = JSON_MERGE_PRESERVE(
+          CASE WHEN JSON_VALID(filesJson)
+               THEN (CASE WHEN JSON_TYPE(filesJson) = 'ARRAY' THEN filesJson ELSE JSON_ARRAY() END)
+               ELSE JSON_ARRAY() END,
+          CAST(? AS JSON))
+  WHERE id = ?`;
+
+export type FicheiroDoPedido = { url: string; name: string; size: number; type: string };
+
+export async function juntarFicheirosAoPedido(
+  pedidoId: number,
+  novos: FicheiroDoPedido[],
+  executor?: Pick<mysql.PoolConnection, "execute">,
+): Promise<boolean> {
+  if (novos.length === 0) return false;
+  await ensureSimulatorOrdersTable();
+  const quem = executor ?? (await getPool());
+  if (!quem) return false;
+  const [r] = (await quem.execute(SQL_DE_JUNTAR_FICHEIROS_AO_PEDIDO, [JSON.stringify(novos), pedidoId])) as [
+    { affectedRows?: number },
+    unknown,
+  ];
+  return Number(r?.affectedRows ?? 0) > 0;
+}
+
+/**
  * Passa as fotografias à espera deste número para o pedido — e devolve
  * quantas foram. Saem da fila só depois de estarem no pedido: uma falha a
  * meio deixa-as à espera, e não perdidas.
+ *
+ * NUMA TRANSACÇÃO, COM AS LINHAS TRANCADAS — 23-11-2026 (d98). Duas junções
+ * ao mesmo tempo (a conversa a registar o pedido e o «Criar pedido» do
+ * painel, ou o site e a ponte) liam as mesmas fotografias e punham-nas duas
+ * vezes; e o `filesJson` lido-alterado-gravado perdia a fotografia que
+ * entrasse pelo meio. Agora o `FOR UPDATE` deixa a segunda à espera da
+ * primeira — e, quando passa, já não há nada para juntar — e a lista cresce
+ * na própria base (`juntarFicheirosAoPedido`).
  */
 export async function anexarFotosPendentesAoPedido(telefone: string, pedidoId: number): Promise<number> {
   const digitos = soDigitos(telefone);
   if (digitos.length < 9) return 0;
   await ensureWhatsappFotosPendentesTable();
+  await ensureSimulatorOrdersTable();
   const pool = await getPool();
   if (!pool) return 0;
-  const [rows] = (await pool.execute(
-    `SELECT id, url, nome, tamanho, tipo FROM whatsappFotosPendentes
-      WHERE RIGHT(telefone, 9) = RIGHT(?, 9)
-        AND criadoEm > NOW() - INTERVAL ${HORAS_DAS_FOTOS_PENDENTES} HOUR
-      ORDER BY id`,
-    [digitos],
-  )) as [Array<{ id: number; url: string; nome: string; tamanho: number; tipo: string }>, unknown];
-  if (rows.length === 0) return 0;
-
-  const pedido = await getSimulatorOrderById(pedidoId);
-  if (!pedido) return 0;
-  let ficheiros: unknown[] = [];
+  const conn = await pool.getConnection();
+  let juntas = 0;
   try {
-    const lidos = JSON.parse(pedido.filesJson ?? "[]");
-    if (Array.isArray(lidos)) ficheiros = lidos;
-  } catch {
-    /* filesJson ilegível: recomeça a lista em vez de perder as fotografias */
+    await conn.beginTransaction();
+    const [rows] = (await conn.execute(
+      `SELECT id, url, nome, tamanho, tipo FROM whatsappFotosPendentes
+        WHERE RIGHT(telefone, 9) = RIGHT(?, 9)
+          AND criadoEm > NOW() - INTERVAL ${HORAS_DAS_FOTOS_PENDENTES} HOUR
+        ORDER BY id
+        FOR UPDATE`,
+      [digitos],
+    )) as [Array<{ id: number; url: string; nome: string; tamanho: number; tipo: string }>, unknown];
+    if (rows.length === 0) {
+      await conn.rollback();
+      return 0;
+    }
+    const existia = await juntarFicheirosAoPedido(
+      pedidoId,
+      rows.map((r) => ({ url: r.url, name: r.nome, size: Number(r.tamanho), type: r.tipo })),
+      conn,
+    );
+    if (!existia) {
+      await conn.rollback();
+      return 0;
+    }
+    const ids = rows.map((r) => Number(r.id));
+    await conn.execute(
+      `DELETE FROM whatsappFotosPendentes WHERE id IN (${ids.map(() => "?").join(", ")})`,
+      ids,
+    );
+    await conn.commit();
+    juntas = rows.length;
+  } catch (e) {
+    await conn.rollback().catch(() => {});
+    throw e;
+  } finally {
+    conn.release();
   }
-  for (const r of rows) {
-    ficheiros.push({ url: r.url, name: r.nome, size: Number(r.tamanho), type: r.tipo });
-  }
-  await updateSimulatorOrder(
-    pedidoId,
-    { filesJson: JSON.stringify(ficheiros) } as unknown as Parameters<typeof updateSimulatorOrder>[1],
-  );
-  const ids = rows.map((r) => Number(r.id));
-  await pool.execute(
-    `DELETE FROM whatsappFotosPendentes WHERE id IN (${ids.map(() => "?").join(", ")})`,
-    ids,
-  );
   await appendOrderHistory(pedidoId, {
     type: "created",
     by: null,
     message:
-      (rows.length === 1 ? "Uma fotografia enviada" : `${rows.length} fotografias enviadas`) +
+      (juntas === 1 ? "Uma fotografia enviada" : `${juntas} fotografias enviadas`) +
       " por WhatsApp antes do registo — anexadas ao pedido.",
-  });
-  return rows.length;
+  }).catch(() => {});
+  return juntas;
+}
+
+/**
+ * AS QUE FICARAM À ESPERA COM O PEDIDO JÁ FEITO — 23-11-2026 (d98).
+ *
+ * Até à d98 uma fotografia ficava à espera sempre que a conversa estava a meio
+ * e o pedido aberto não tinha propostas — mesmo com o pedido já registado
+ * (e o site e o formulário da página inicial nunca as iam buscar). Para cada
+ * número com fotografias à espera e um pedido aberto criado nos últimos
+ * `dias`, devolve o pedido mais recente e quantas são. O telefone fica cá
+ * dentro: quem chama só precisa do número do pedido.
+ */
+export async function pendentesComPedidoAberto(
+  dias = HORAS_DAS_FOTOS_PENDENTES / 24,
+): Promise<Array<{ telefone: string; pedidoId: number; fotografias: number }>> {
+  await ensureWhatsappFotosPendentesTable();
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const n = Math.max(1, Math.floor(dias));
+  const [grupos] = (await pool.execute(
+    `SELECT RIGHT(telefone, 9) AS tel, COUNT(*) AS n FROM whatsappFotosPendentes
+      WHERE criadoEm > NOW() - INTERVAL ${HORAS_DAS_FOTOS_PENDENTES} HOUR
+      GROUP BY RIGHT(telefone, 9)`,
+  )) as [Array<{ tel: string; n: number | string }>, unknown];
+  const lista: Array<{ telefone: string; pedidoId: number; fotografias: number }> = [];
+  for (const g of grupos) {
+    const tel = String(g.tel ?? "");
+    if (tel.length < 9) continue;
+    const [pedidos] = (await pool.execute(
+      `SELECT id FROM simulatorOrders
+        WHERE RIGHT(REGEXP_REPLACE(COALESCE(contactPhone, ''), '[^0-9]', ''), 9) = ?
+          AND (status IS NULL OR status NOT IN ('cancelado', 'concluido', 'arquivado'))
+          AND createdAt > NOW() - INTERVAL ${n} DAY
+        ORDER BY createdAt DESC
+        LIMIT 1`,
+      [tel],
+    )) as [Array<{ id: number }>, unknown];
+    const id = Number(pedidos[0]?.id ?? 0);
+    if (id > 0) lista.push({ telefone: tel, pedidoId: id, fotografias: Number(g.n ?? 0) });
+  }
+  return lista;
 }
 
 /**

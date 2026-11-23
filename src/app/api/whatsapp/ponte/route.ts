@@ -536,6 +536,16 @@ export async function POST(req: NextRequest) {
     const { registarMensagemWhatsApp } = await import("@/lib/db");
     if (fotoBase64) {
       await registarMensagemWhatsApp(telefone, "in", MARCA_DE_FOTOGRAFIA).catch(() => {});
+      /*
+       * E A FOTOGRAFIA FICA NO PEDIDO — 23-11-2026 (d98). Ficava só a marca no
+       * fio, e quem tinha a conversa não a encontrava no pedido. Guarda-se pelo
+       * caminho de sempre (no pedido, ou à espera dele), sem resposta ao
+       * cliente: a conversa é de quem a tem.
+       */
+      const { guardarFotoDoClienteNoPedido } = await import("@/lib/whatsapp-negociacao");
+      await guardarFotoDoClienteNoPedido(telefone, Buffer.from(fotoBase64, "base64"), fotoMime, {
+        semResposta: true,
+      }).catch(() => {});
     }
     if (marcaSemBytes) {
       await registarMensagemWhatsApp(telefone, "in", marcaSemBytes).catch(() => {});

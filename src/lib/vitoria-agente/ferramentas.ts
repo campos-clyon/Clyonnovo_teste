@@ -72,6 +72,8 @@ export type DependenciasDasFerramentas = {
   aceitarLigado?: boolean;
   /** d92: a sério (a resposta sai para o cliente)? Com o «aceitar» desligado, aí as acções passam à equipa (as perguntas do SIM não podem sair). */
   aoVivo?: boolean;
+  /** d98: as fotografias que este número mandou pelo WhatsApp e ainda esperam pelo pedido (`whatsappFotosPendentes`). */
+  fotografiasAEsperar?: () => Promise<number>;
 };
 
 /** Os passos da recolha que o agente pode gravar (os mesmos validadores das regras). */
@@ -121,7 +123,7 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
   {
     name: "ler_pedido",
     description:
-      "Um pedido deste cliente: o serviço, o estado, a localidade, o andar, o elevador, o estacionamento, a data combinada ou preferida, a descrição e quantas fotografias tem. Sem dados pessoais.",
+      "Um pedido deste cliente: o serviço, o estado, a localidade, o andar, o elevador, o estacionamento, a data combinada ou preferida, a descrição e quantas fotografias tem (contando as que o cliente mandou pelo WhatsApp e ainda estão a caminho do pedido). Sem dados pessoais.",
     input_schema: objecto({ pedido: PEDIDO }, ["pedido"]),
     strict: true,
   },
@@ -331,6 +333,23 @@ function pedidoSemDadosPessoais(p: PedidoParaOAgente) {
   };
 }
 
+/**
+ * AS FOTOGRAFIAS A CAMINHO — 23-11-2026 (d98). As que o cliente mandou pelo
+ * WhatsApp antes de o pedido as receber ficam à espera dele; contavam 0, e a
+ * Vitória pedia fotografias a quem as tinha acabado de mandar. Contam agora
+ * (`fotografias` = no pedido + a caminho), com as duas partes ao lado.
+ */
+async function fotografiasAEsperar(deps: DependenciasDasFerramentas): Promise<number> {
+  if (!deps.fotografiasAEsperar) return 0;
+  const n = await deps.fotografiasAEsperar().catch(() => 0);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+function comAsQueEstaoAChegar<T extends { fotografias: number }>(lido: T, aChegar: number) {
+  if (aChegar <= 0) return lido;
+  return { ...lido, fotografias: lido.fotografias + aChegar, fotografiasNoPedido: lido.fotografias, fotografiasAChegar: aChegar };
+}
+
 /** O pedido, só se for deste telefone. */
 async function doTelefone(deps: DependenciasDasFerramentas, id: number | null): Promise<PedidoParaOAgente | string> {
   if (id == null) return "Falta o número do pedido.";
@@ -416,13 +435,15 @@ export async function correrFerramenta(
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
         // Só o que a CLYON calcula (a base do preço) fica como origem de euros; o texto do pedido é do cliente.
-        const lido = pedidoSemDadosPessoais(p);
+        const lido = comAsQueEstaoAChegar(pedidoSemDadosPessoais(p), await fotografiasAEsperar(deps));
         return guardar(estado, lido, { doCliente: true, daClyon: { pedido: lido.pedido, baseDoPreco: lido.baseDoPreco } });
       }
       case "o_que_falta": {
         const p = await doTelefone(deps, inteiro(e.pedido));
         if (typeof p === "string") return erro(p);
-        const faltas = oQueFaltaNoPedido(p);
+        // As fotografias a caminho do pedido (d98) não faltam: o cliente já as mandou.
+        const aChegar = await fotografiasAEsperar(deps);
+        const faltas = oQueFaltaNoPedido(p).filter((f) => !(f === "fotografias" && aChegar > 0));
         return guardar(estado, { pedido: p.id, falta: faltas, completo: faltas.length === 0 });
       }
       case "propostas_vivas": {

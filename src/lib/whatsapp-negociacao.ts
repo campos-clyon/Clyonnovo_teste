@@ -3838,8 +3838,7 @@ export async function tratarFotoDoCliente(
   mediaId: string,
   mime: string | null,
 ): Promise<void> {
-  const { podeOWhatsAppFalarCom } = await import("@/lib/db");
-  if (!(await podeOWhatsAppFalarCom(telefone))) return;
+  if (!(await portaDaFotografia(telefone)).guarda) return;
   if (!process.env.WHATSAPP_TOKEN) return;
 
   try {
@@ -3858,17 +3857,41 @@ export async function tratarFotoDoCliente(
 }
 
 /**
+ * GUARDAR E FALAR SÃO DUAS DECISÕES — 23-11-2026 (d98).
+ *
+ * Era o portão das mensagens (`podeOWhatsAppFalarCom`) a decidir também se a
+ * fotografia se guardava, e a fotografia de um número entregue à equipa ia
+ * para o lixo: quem tinha a conversa via «[fotografia]» no fio e nada no
+ * pedido. Agora guarda-se na mesma — no pedido ou à espera dele — sem
+ * resposta ao cliente (a conversa é de quem a tem). De fora continuam o
+ * WhatsApp desligado no painel, o número bloqueado e o «não contactar» (d93):
+ * esses não guardam nada, que é o que bloquear quer dizer.
+ */
+export async function portaDaFotografia(telefone: string): Promise<{ guarda: boolean; falar: boolean }> {
+  const { whatsappLigado, numeroBloqueadoWhatsApp, podeOWhatsAppFalarCom } = await import("@/lib/db");
+  if (!(await whatsappLigado())) return { guarda: false, falar: false };
+  if (await numeroBloqueadoWhatsApp(telefone)) return { guarda: false, falar: false };
+  const { eParaNaoContactar } = await import("@/lib/nao-contactar");
+  if (await eParaNaoContactar(telefone).catch(() => false)) return { guarda: false, falar: false };
+  return { guarda: true, falar: await podeOWhatsAppFalarCom(telefone) };
+}
+
+/**
  * Os bytes de uma fotografia do cliente, para o pedido dele — Blob →
  * filesJson → histórico. Serve a API da Meta (que os descarrega acima) e a
- * ponte (que os traz já descarregados do WhatsApp Web).
+ * ponte (que os traz já descarregados do WhatsApp Web). `semResposta`: a
+ * ponte com o número entregue à equipa (d98) — guarda, e não diz nada.
  */
 export async function guardarFotoDoClienteNoPedido(
   telefone: string,
   bytes: Buffer,
   mime: string | null,
+  opcoes: { semResposta?: boolean } = {},
 ): Promise<void> {
-  const { podeOWhatsAppFalarCom, recolhaWhatsApp } = await import("@/lib/db");
-  if (!(await podeOWhatsAppFalarCom(telefone))) return;
+  const porta = await portaDaFotografia(telefone);
+  if (!porta.guarda) return;
+  const podeFalar = porta.falar && opcoes.semResposta !== true;
+  const { recolhaWhatsApp } = await import("@/lib/db");
   const pedidos = await pedidosDoTelefone(telefone);
   /*
    * A CONVERSA DIZ A QUE PEDIDO VAI A FOTOGRAFIA — 26-10-2026 (decisão d30).
@@ -3883,22 +3906,31 @@ export async function guardarFotoDoClienteNoPedido(
   const naConversa = (conversa?.dados ?? {}) as { pedidoAberto?: number; pedidosAEscolher?: number[]; trocouDoPedido?: number };
   // O rascunho vale 7 dias (d93).
   const { rascunhoAindaVale } = await import("@/lib/conversa-parada-a-meio");
+  const { pedidoEstaAberto } = await import("@/lib/pedido-aberto-na-conversa");
   const recente = conversa != null && rascunhoAindaVale(conversa.actualizadoEm);
   let doPedidoAberto: number | null =
     conversa?.pedidoId != null && naConversa.pedidoAberto === conversa.pedidoId ? conversa.pedidoId : null;
   if (doPedidoAberto != null) {
-    const { pedidoEstaAberto } = await import("@/lib/pedido-aberto-na-conversa");
     const p = await getSimulatorOrderById(doPedidoAberto).catch(() => undefined);
     if (!pedidoEstaAberto(p as { id: number; status?: string | null } | undefined)) doPedidoAberto = null;
   }
   const aEscolher = Array.isArray(naConversa.pedidosAEscolher) && naConversa.pedidosAEscolher.length > 0;
-  const aMeio =
-    recente &&
-    conversa?.pedidoId == null &&
-    (aEscolher ||
-      // A recolha nova de quem trocou de sítio (d51): as fotografias esperam pelo pedido novo, e não vão para o antigo.
-      naConversa.trocouDoPedido != null ||
-      (conversa != null && conversa.passo !== "servico" && pedidos.length > 0 && (await alvosAccionaveis(pedidos)).length === 0));
+  /*
+   * SÓ FICA À ESPERA QUEM ESTÁ MESMO A FAZER UM PEDIDO NOVO — 23-11-2026 (d98).
+   *
+   * Ficava à espera sempre que a conversa estava a meio de uma recolha e o
+   * pedido aberto do número não tinha propostas para aceitar — com o pedido
+   * já feito, e a fotografia nunca lá chegava (a junção só corre quando um
+   * pedido NASCE). Agora espera só: a meio da escolha «a qual se refere?»; na
+   * recolha nova de quem trocou de sítio (d51), que não vai para o antigo; ou
+   * numa recolha a meio sem nenhum pedido aberto do número. Nos outros casos
+   * vai para o pedido aberto mais recente.
+   */
+  let aMeio = recente && conversa?.pedidoId == null && (aEscolher || naConversa.trocouDoPedido != null);
+  if (!aMeio && recente && conversa != null && conversa.pedidoId == null && conversa.passo !== "servico") {
+    const maisRecente = pedidos[0] != null ? await getSimulatorOrderById(pedidos[0]).catch(() => undefined) : undefined;
+    if (!pedidoEstaAberto(maisRecente as { id: number; status?: string | null } | undefined)) aMeio = true;
+  }
   /*
    * A FOTOGRAFIA QUE RESPONDE AO «PEDIR O QUE FALTA» — 22-11-2026 (d86). Vai
    * para o pedido do modelo (se for deste número), e quem agradece é a
@@ -3930,6 +3962,7 @@ export async function guardarFotoDoClienteNoPedido(
       addRandomSuffix: true,
       ...(tokenBlob.modo === "token" ? { token: tokenBlob.token } : { storeId: tokenBlob.storeId }),
     });
+    const ficheiro = { url: blob.url, name: nome, size: bytes.length, type: tipo };
 
     /*
      * AINDA SEM PEDIDO: FICA À ESPERA DELE — 10-10-2026.
@@ -3942,35 +3975,25 @@ export async function guardarFotoDoClienteNoPedido(
      * `DIAS_DAS_FOTOS_SEM_PEDIDO`. Sem resposta ao cliente: a conversa segue
      * pelo texto, e o assistente já sabe que elas chegaram.
      */
+    const { guardarFotoPendenteWhatsApp, juntarFicheirosAoPedido } = await import("@/lib/db");
     if (pedidoId == null) {
-      const { guardarFotoPendenteWhatsApp } = await import("@/lib/db");
-      await guardarFotoPendenteWhatsApp(telefone, { url: blob.url, name: nome, size: bytes.length, type: tipo });
+      await guardarFotoPendenteWhatsApp(telefone, ficheiro);
       return;
     }
 
-    const pedido = await getSimulatorOrderById(pedidoId);
-    if (!pedido) return;
-    let ficheiros: unknown[] = [];
-    try {
-      const lidos = JSON.parse(pedido.filesJson ?? "[]");
-      if (Array.isArray(lidos)) ficheiros = lidos;
-    } catch {
-      /* filesJson ilegível: recomeça a lista em vez de perder a foto nova */
+    // Junta-se na própria base, sem ler-alterar-gravar (d98): a rajada de quatro fica com as quatro.
+    if (!(await juntarFicheirosAoPedido(pedidoId, [ficheiro]))) {
+      // O pedido desapareceu entretanto: espera por outro, em vez de se perder.
+      await guardarFotoPendenteWhatsApp(telefone, ficheiro);
+      return;
     }
-    ficheiros.push({ url: blob.url, name: nome, size: bytes.length, type: tipo });
-    await updateSimulatorOrder(
-      pedidoId,
-      { filesJson: JSON.stringify(ficheiros) } as unknown as Parameters<
-        typeof updateSimulatorOrder
-      >[1],
-    );
     await appendOrderHistory(pedidoId, {
       type: "created",
       by: null,
       message: "Cliente enviou uma fotografia por WhatsApp — anexada ao pedido.",
-    });
+    }).catch(() => {});
     // Na conversa que completa o pedido (ou responde ao modelo, d86), agradece a Vitória — uma vez por rajada.
-    if (doPedidoAberto == null && doModelo == null) {
+    if (doPedidoAberto == null && doModelo == null && podeFalar) {
       await enviarTextoWhatsApp(
         telefone,
         `Recebi a fotografia — ficou anexada ao pedido #${pedidoId}.`,

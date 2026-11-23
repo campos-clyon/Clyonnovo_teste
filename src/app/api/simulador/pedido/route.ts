@@ -5,6 +5,7 @@ import {
   createSimulatorOrder,
   getSimulatorOrderById,
   appendOrderHistory,
+  anexarFotosPendentesAoPedido,
   calculateOrderPriority,
   taxasActuais,
 } from "@/lib/db";
@@ -633,6 +634,18 @@ export async function POST(req: NextRequest) {
             : "")
           + (recurrenceFrequency ? ` Marcação recorrente (${recurrenceFrequency}, desconto de ${recurringDiscountPercent}% já aplicado à estimativa).` : ""),
       });
+
+      /*
+       * AS FOTOGRAFIAS QUE O CLIENTE JÁ MANDOU PELO WHATSAPP — 23-11-2026 (d98).
+       * Quem começou pelo WhatsApp e acabou o pedido aqui deixava-as à espera
+       * para sempre (só a conversa e o «Criar pedido» do painel as iam
+       * buscar). Entram agora, antes do envio aos parceiros.
+       */
+      if (row.contactPhone) {
+        await anexarFotosPendentesAoPedido(row.contactPhone, id).catch((e) =>
+          console.error("[simulador/pedido] fotografias do WhatsApp por juntar:", e),
+        );
+      }
 
       // Notificação WhatsApp — assíncrona, não bloqueia a resposta ao cliente.
       // Se falhar, o pedido já está guardado e o erro apenas fica no log.

@@ -297,7 +297,8 @@ describe("o pedido completo sai de «precisa info» pelo caminho de um pedido qu
     const foto = corpoDe(NEG, "export async function guardarFotoDoClienteNoPedido(", "\n}\n");
     expect(foto).toContain("respostaAoEnvioDeModelo(");
     expect(foto).toContain("doPedidoAberto ?? doModelo ??");
-    expect(foto).toContain("if (doPedidoAberto == null && doModelo == null) {");
+    // d98: e só quando se pode falar com o número (entregue à equipa, guarda calada).
+    expect(foto).toMatch(/if \(doPedidoAberto == null && doModelo == null(?: && podeFalar)?\) \{/);
   });
 });
 

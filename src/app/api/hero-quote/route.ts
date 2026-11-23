@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { descricaoSemContactos } from "@/lib/filtro-de-contactos";
-import { createSimulatorOrder, createLead, createLeadEvent, appendOrderHistory, calculateOrderPriority, esquecerContactoAMeio } from "@/lib/db";
+import {
+  createSimulatorOrder,
+  createLead,
+  createLeadEvent,
+  appendOrderHistory,
+  anexarFotosPendentesAoPedido,
+  calculateOrderPriority,
+  esquecerContactoAMeio,
+} from "@/lib/db";
 import { calculateFastEstimate } from "@/lib/pricing-helper";
 import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -289,6 +297,15 @@ export async function POST(req: NextRequest) {
       by: null,
       message: `Pedido criado via formulário hero (homepage). Serviço: ${tipoServico}. Prioridade: ${priority}.`,
     }).catch((e) => console.error("[hero-quote] appendOrderHistory error:", e));
+
+    /*
+     * AS FOTOGRAFIAS QUE O CLIENTE JÁ MANDOU PELO WHATSAPP — 23-11-2026 (d98).
+     * Ficavam à espera para sempre quando o pedido nascia aqui; entram agora,
+     * antes de o pedido seguir para os parceiros.
+     */
+    await anexarFotosPendentesAoPedido(telefoneFull, orderId).catch((e) =>
+      console.error("[hero-quote] fotografias do WhatsApp por juntar:", e),
+    );
 
     // O pedido completo segue sozinho para os parceiros (d3, 23-11-2026); um incompleto fica de fora sem barulho.
     const novoId = orderId;
