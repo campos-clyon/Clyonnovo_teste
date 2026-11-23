@@ -36,7 +36,7 @@ describe("a nota ao lado do preço, para o cliente", () => {
   it("por carga: que o total depende das cargas — e num Trabalho CLYON, confirma-se connosco", () => {
     // d63: a frase única da base, igual com a CLYON e com o parceiro.
     expect(notaDoPrecoParaOCliente("carga")).toContain("O valor é por carga.");
-    expect(notaDoPrecoParaOCliente("carga", "clyon")).toContain("O número de cargas é confirmado consigo no local, pela equipa, antes de começar.");
+    expect(notaDoPrecoParaOCliente("carga", "clyon")).toContain("O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar.");
     expect(notaDoPrecoParaOCliente("hora")).toContain("O valor é por hora");
   });
 });
@@ -47,7 +47,7 @@ describe("a proposta de um Trabalho CLYON ao cliente (o #466)", () => {
     // d47: curta — «X € + IVA = Y € por carga», e mais uma carga ao mesmo preço.
     expect(m).toContain("360 € + IVA = 442,80 € por carga.");
     // d63: a regra da base, com o exemplo das cargas.
-    expect(m).toContain("O número de cargas é confirmado consigo no local, pela equipa, antes de começar. Por exemplo: 1 carga = 442,80 €; 2 cargas = 885,60 €.");
+    expect(m).toContain("O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar. Por exemplo: 1 carga = 442,80 €; 2 cargas = 885,60 €.");
     expect(m).not.toContain("32 €");
   });
 

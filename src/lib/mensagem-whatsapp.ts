@@ -18,12 +18,15 @@
  *
  * Esta versão parte do que foi recolhido. Cada frase só aparece se houver
  * informação para ela; nada é inventado nem preenchido com "não indicado".
+ *
+ * d91 (23-11-2026, 3.20): «Para lhe dar um valor certo» e «É com elas que
+ * acertamos no volume e no preço» punham a CLYON a orçar, e a linha do preço
+ * era do modelo antigo. Quem dá o preço são os parceiros; a linha do preço
+ * saiu (para mandar um valor, o orçamento curto da Mesa). E não começa por
+ * «Aqui é a equipa da CLYON.»: é a marca do «Pedir o que falta» (d86).
  */
 
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
-import { precoParaOCliente } from "@/lib/preco-do-cliente";
-import { comFacturaEmPalavras } from "@/lib/conta-em-palavras";
-import { etiquetaDoPreco, modeloDaNegociacao } from "@/lib/iva-incluido";
 
 const QUANDO: Record<string, string> = {
   today:     "para hoje",
@@ -73,20 +76,12 @@ export type DadosMensagem = {
   /** Quantas fotos temos mesmo. Sem nenhuma, vale a pena pedir. */
   fotosRecebidas?: number;
   /**
-   * O preço aprovado, SEM IVA e sem a taxa — o `precoFinal` da base.
-   *
-   * Era o `precoFinalIva`, e a mensagem dizia «O orçamento é de X € com IVA»:
-   * o único sítio a anunciar um preço com imposto, feito à mão e sem a taxa.
-   * Desde 29-09-2026 diz o preço como em todo o lado — sem IVA, já com a taxa
-   * — e o que acresce com factura, numa linha à parte.
+   * O preço aprovado (o `precoFinal` da base). Desde a d91 (23-11-2026) a
+   * mensagem já não o diz — quem dá o preço são os parceiros, e um valor
+   * manda-se pelo orçamento curto da Mesa. Fica no tipo para os ecrãs que o passam.
    */
   precoFinal?: string | number | null;
-  /**
-   * QUANDO O PEDIDO NASCEU — decide o modelo do preço (01-10-2026): com IVA
-   * incluído nos pedidos a partir de `IVA_INCLUIDO_DESDE`, sem IVA nos de
-   * antes. Sem ela, o de antes. Os dois ecrãs que a montam passam-na, para o email, a página e a mensagem do mesmo
-   * orçamento dizerem o mesmo número.
-   */
+  /** Quando o pedido nasceu. Sem uso desde a d91 (era para o modelo do preço). */
   pedidoCriadoEm?: Date | string | null;
 };
 
@@ -99,7 +94,7 @@ export function mensagemWhatsApp(d: DadosMensagem): string {
   const servico = rotuloServico(d.serviceType);
   const linhas: string[] = [];
 
-  linhas.push(nome ? `Olá ${nome}, é da CLYON.` : "Olá, é da CLYON.");
+  linhas.push(nome ? `Olá ${nome}, é da equipa da CLYON.` : "Olá, é da equipa da CLYON.");
 
   // O que recebemos, com o que sabemos dele
   const onde = [d.address?.trim(), d.city?.trim()]
@@ -119,24 +114,11 @@ export function mensagemWhatsApp(d: DadosMensagem): string {
   if (perdidas > 0) {
     linhas.push(
       `Reparámos que tentou enviar ${perdidas} foto${perdidas === 1 ? "" : "s"} que não chegaram até nós. ` +
-      `Pode enviá-las por aqui? É com elas que acertamos no volume e no preço.`,
+      `Pode enviá-las por aqui? É com elas que os parceiros lhe dão um preço certo e sem surpresas no dia.`,
     );
   } else if (recebidas === 0) {
     linhas.push(
-      "Para lhe dar um valor certo, pode enviar-nos aqui algumas fotos do que é para retirar? " +
-      "É o que nos permite acertar no volume e evitar surpresas no dia.",
-    );
-  }
-
-  // Valor, só quando já está fechado
-  const aprovado = Number(d.precoFinal ?? 0);
-  if (aprovado > 0) {
-    const modelo = modeloDaNegociacao(d.pedidoCriadoEm);
-    const preco = precoParaOCliente(aprovado, undefined, modelo).toFixed(2).replace(".", ",");
-    const factura = comFacturaEmPalavras(aprovado, modelo);
-    linhas.push(
-      `O orçamento é de ${preco} €, ${etiquetaDoPreco(modelo)} e já com a taxa da plataforma.` +
-        (factura ? ` ${factura}` : ""),
+      "Para os parceiros lhe darem um preço certo e sem surpresas no dia, pode enviar-nos por aqui 2 ou 3 fotografias do que é para levar?",
     );
   }
 

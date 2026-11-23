@@ -29,7 +29,7 @@ const DO_TOTAL = /volume a mais|mais coisas/i;
 describe("d63 — a frase da base", () => {
   it("por carga: o valor, as cargas confirmadas no local e o exemplo", () => {
     expect(fraseDaBase("carga", "esvaziamento_casa", { semIva: 360, total: 442.8 })).toBe(
-      "O valor é 360 € + IVA (442,80 €) por carga. O número de cargas é confirmado consigo no local, pela equipa, antes de começar. " +
+      "O valor é 360 € + IVA (442,80 €) por carga. O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar. " +
         "Por exemplo: 1 carga = 442,80 €; 2 cargas = 885,60 €.",
     );
   });

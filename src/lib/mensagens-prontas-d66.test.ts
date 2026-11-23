@@ -162,13 +162,13 @@ describe("d66: os textos do Vendas", () => {
 
   it("os lembretes das 24 e das 72 horas", () => {
     expect(mensagemDoLembrete(LEMBRETE)).toBe(
-      "Olá! O seu pedido #812 já tem uma proposta de um parceiro verificado: 105 € + IVA = 129,15 €. Quer que a reservemos? Responda SIM, ou veja-a na ligação do pedido que lhe enviámos. Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.",
+      "Olá! O seu pedido #812 já tem uma proposta de um parceiro verificado: 105 € + IVA = 129,15 €. Quer que a reservemos? Responda SIM, ou veja-a na ligação do pedido que lhe enviámos. Não paga nada adiantado. Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.",
     );
     const varias = mensagemDoLembrete({ ...LEMBRETE, quantas: 3 });
     expect(varias).toContain("já tem 3 propostas de parceiros verificados, desde 105 € + IVA = 129,15 €. Quer que reservemos a mais em conta?");
     const tarde = mensagemDoLembrete({ ...LEMBRETE, fase: "72h", quantas: 1 });
     expect(tarde).toBe(
-      "Olá! A proposta do pedido #812 continua válida. Se ainda quiser avançar, responda SIM e reservamos a proposta. Se o preço não serve, diga quanto queria pagar e passamos isso aos parceiros. Se já resolveu de outra forma, diga-nos e fechamos o pedido.",
+      "Olá! A proposta do pedido #812 continua válida. Se está a comparar com outras empresas, compare à vontade: o valor da proposta já é o total a pagar, e não paga nada adiantado. Para avançar, responda SIM e reservamos a proposta. Se o preço não serve, diga quanto queria pagar e passamos isso aos parceiros. Se já resolveu de outra forma, diga-nos e fechamos o pedido.",
     );
     expect(mensagemDoLembrete({ ...LEMBRETE, fase: "72h", quantas: 2 })).toContain("As propostas do pedido #812 continuam válidas.");
     // O 72h continua sem link.

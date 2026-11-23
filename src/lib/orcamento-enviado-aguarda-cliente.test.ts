@@ -38,6 +38,6 @@ describe("o orçamento enviado", () => {
     expect(f).toContain("void marcarOrcamentoEnviado(p);");
     expect(M).toContain("onClick={() => void marcarOrcamentoEnviado(p)}");
     expect(M).toContain("Já enviei");
-    expect(M).toContain('body: JSON.stringify({ accao: "orcamento_enviado", pedidoId: p.id }),');
+    expect(M).toContain('body: JSON.stringify({ accao: "orcamento_enviado", pedidoId: p.id, texto: textoDoOrcamento(p) }),');
   });
 });

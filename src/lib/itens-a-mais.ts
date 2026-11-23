@@ -172,7 +172,7 @@ export function notaDoPrecoParaOCliente(
   /*
    * d63 (18-11-2026): por carga ou por hora, a frase única da base
    * (`frase-da-base.ts`) — a mesma com a CLYON e com o parceiro: as cargas
-   * confirmam-se no local, pela equipa, antes de começar. Com o valor, o exemplo.
+   * confirmam-se no local, pelo parceiro, antes de começar. Com o valor, o exemplo.
    */
   void comQuem;
   return notaDaCargaParaOCliente(base, valor) ?? (avisoDosItens(base, "cliente", servico) as string);

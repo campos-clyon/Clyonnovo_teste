@@ -23,9 +23,12 @@ import { servicoEmPalavras } from "@/lib/servico-em-palavras";
  * de menor valor sem IVA: com parceiros de regimes diferentes, as duas ordens
  * divergem. `propostasParaOCliente` já as devolve por esse total (`aPagar`).
  *
- * O VALOR diz-se como no resto das mensagens (`valorComIva`, d47): «105 € +
- * IVA = 129,15 €»; com um parceiro isento, o total e «(isento de IVA)». A
- * unidade («por carga», «por hora») vem da base do preço do pedido.
+ * O VALOR — d91 (23-11-2026): no modelo de 15-11, o total que o cliente paga,
+ * «129,15 € no total» (e «86,96 € no total» com um isento: dizia «(isento de
+ * IVA)», e a taxa da plataforma leva IVA — o #663). Antes do modelo de 15-11,
+ * como no resto das mensagens (`valorComIva`, d47): «105 € + IVA = 129,15 €».
+ * Por unidade («por carga», «por hora», da base do preço do pedido), o total e
+ * a unidade.
  *
  * «VERIFICADO» SÓ QUANDO É VERDADE (Termos §10, a regra q da orquestra): a
  * mensagem diz «parceiros verificados» quando todos os que propuseram têm as
@@ -78,7 +81,7 @@ export type Lembrete = {
   /** Há quantas horas inteiras o cliente tem as propostas. */
   horas: number;
   quantas: number;
-  /** A mais em conta, já dita: «105 € + IVA = 129,15 €» ou «120 € (isento de IVA)». */
+  /** A mais em conta, já dita: «129,15 € no total», «61,50 €» (com a unidade a seguir) ou, antes de 15-11, «105 € + IVA = 129,15 €». */
   valorDoCliente: string;
   /** « por carga», « por hora» ou "". */
   unidade: string;
@@ -157,9 +160,10 @@ export function lembreteDasPropostas(p: PedidoParaOLembrete, agora: Date): Lembr
     fase: horas >= HORAS_DA_ULTIMA_LEMBRANCA ? "72h" : "24h",
     horas: Math.floor(horas),
     quantas: propostas.length,
-    valorDoCliente: isento
-      ? `${eurosCurtos(maisEmConta.total)} (isento de IVA)`
-      : valorComIva(maisEmConta.semIva, maisEmConta.total),
+    valorDoCliente:
+      maisEmConta.novoModelo === true || isento
+        ? `${eurosCurtos(maisEmConta.total)}${unidadeDaBase(lerBase(p.baseDoPreco)) ? "" : " no total"}`
+        : valorComIva(maisEmConta.semIva, maisEmConta.total),
     unidade: unidadeDaBase(lerBase(p.baseDoPreco)),
     isento,
     verificados,
@@ -169,10 +173,13 @@ export function lembreteDasPropostas(p: PedidoParaOLembrete, agora: Date): Lembr
 /** A mensagem pronta a copiar — sem link: remete para o que o cliente já recebeu. */
 export function mensagemDoLembrete(l: Lembrete): string {
   // Textos do Vendas desde 17-11-2026 (d66): mais vendedores, sem emoji; o 72h continua sem link.
+  // d91 (23-11-2026, 3.12): o total a pagar, «nada adiantado», e às 72 h a comparação justa com outras empresas.
   if (l.fase === "72h") {
+    const uma = l.quantas === 1;
     return (
-      `Olá! ${l.quantas === 1 ? `A proposta do pedido #${l.pedidoId} continua válida.` : `As propostas do pedido #${l.pedidoId} continuam válidas.`} ` +
-      `Se ainda quiser avançar, responda SIM e reservamos ${l.quantas === 1 ? "a proposta" : "a mais em conta"}. ` +
+      `Olá! ${uma ? `A proposta do pedido #${l.pedidoId} continua válida.` : `As propostas do pedido #${l.pedidoId} continuam válidas.`} ` +
+      `Se está a comparar com outras empresas, compare à vontade: o valor ${uma ? "da proposta" : "de cada proposta"} já é o total a pagar, e não paga nada adiantado. ` +
+      `Para avançar, responda SIM e reservamos ${uma ? "a proposta" : "a mais em conta"}. ` +
       `Se o preço não serve, diga quanto queria pagar e passamos isso aos parceiros. ` +
       `Se já resolveu de outra forma, diga-nos e fechamos o pedido.`
     );
@@ -181,15 +188,15 @@ export function mensagemDoLembrete(l: Lembrete): string {
     return (
       `Olá! O seu pedido #${l.pedidoId} já tem uma proposta de um parceiro${l.verificados ? " verificado" : ""}: ` +
       `${l.valorDoCliente}${l.unidade}. Quer que a reservemos? ` +
-      `Responda SIM, ou veja-a ${NO_LINK_QUE_TEM}. ` +
+      `Responda SIM, ou veja-a ${NO_LINK_QUE_TEM}. Não paga nada adiantado. ` +
       `Se o dia ou o valor não lhe servirem, diga-nos e falamos com o parceiro.`
     );
   }
   return (
     `Olá! O seu pedido #${l.pedidoId} já tem ${l.quantas} propostas de parceiros${l.verificados ? " verificados" : ""}, ` +
     `desde ${l.valorDoCliente}${l.unidade}. Quer que reservemos a mais em conta? ` +
-    `Responda SIM, ou escolha ${NO_LINK_QUE_TEM}. ` +
-    `Se nenhuma servir, diga-nos o que precisa e falamos com os parceiros.`
+    `Responda SIM, ou escolha ${NO_LINK_QUE_TEM}. Não paga nada adiantado. ` +
+    `Se o dia ou o valor não servirem, diga-nos e falamos com os parceiros.`
   );
 }
 

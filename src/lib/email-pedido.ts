@@ -25,6 +25,14 @@ import { PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { TAXA_IVA } from "./taxas-plataforma";
 
 import { NOMES_DOS_SERVICOS } from "./service-categories";
+
+/**
+ * d91 (23-11-2026, 3.6): as mesmas promessas do WhatsApp — pedir não custa nada,
+ * nada adiantado, e paga-se ao parceiro escolhido (sem prometer «quando»).
+ */
+export const PEDIR_E_GRATIS_NO_EMAIL =
+  "Pedir é grátis e sem compromisso. Não paga nada adiantado: quando escolher uma proposta, paga diretamente ao parceiro escolhido.";
+
 const ETIQUETAS_DE_SERVICO: Record<string, string> = NOMES_DOS_SERVICOS;
 
 export interface LinkDoPedidoParams {
@@ -85,6 +93,7 @@ function montarHtml(p: LinkDoPedidoParams): string {
             Pedido <strong>#${p.pedidoId}</strong> — ${e(servico)}.
             A CLYON confere o pedido e envia-o aos parceiros da sua zona.
             ${PROMESSA_DO_PRAZO}
+            ${PEDIR_E_GRATIS_NO_EMAIL}
           </p>
 
           <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">

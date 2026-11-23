@@ -1750,7 +1750,8 @@ export default function AdminNegociacoesPanel({
       const res = await fetch("/api/admin/negociacoes", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ accao: "orcamento_enviado", pedidoId: p.id }),
+        // d91: o texto vai para o histórico dizer a variante A/B da mensagem das propostas.
+        body: JSON.stringify({ accao: "orcamento_enviado", pedidoId: p.id, texto: textoDoOrcamento(p) }),
       });
       if (!res.ok) return;
       setAviso(`#${p.id}: orçamento enviado — fica em «A aguardar cliente».`);
@@ -3894,6 +3895,8 @@ export default function AdminNegociacoesPanel({
               nomeCliente: p.contactName,
               servico: nomeDoServico(p.serviceType),
               servicoId: p.serviceType,
+              // d91: a mesma variante A/B do «Enviar orçamento» (par A, ímpar B).
+              pedidoId: p.id,
               cidade: p.city,
               propostas: propostasParaOCliente(p.negociacoes),
               fechado: trabalhoFechado(p.negociacoes),

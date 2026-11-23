@@ -7,7 +7,6 @@ import { modeloDaNegociacao, type ModeloDoPreco } from "./iva-incluido";
 
 import { promessaDaForma } from "./pagamento-na-plataforma";
 import { PAGA_AO_CONTRATADO } from "./o-pagamento-da-vitoria";
-import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 import {
   FORMA_EM_PALAVRAS,
   FORMA_EM_PALAVRAS_ANTES_DO_IVA_INCLUIDO,
@@ -21,6 +20,80 @@ import { MINIMO_DE_HORAS } from "./tabela-das-mudancas";
 import { AS_CARGAS_CONFIRMAM_SE_NO_LOCAL, AS_HORAS_CONTAM_SE_NO_DIA, extraNoLocal, INCLUI } from "./extra-no-local";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { estimativaDasHoras, horasDaEstimativa, horasEmPalavras } from "./horas-do-trabalho";
+import { MARGEM_PARA_A_MELHOR_AVALIADA } from "./validade-do-orcamento";
+
+/*
+ * ── A MENSAGEM DAS PROPOSTAS DO MODELO DE 15-11 — d91 (23-11-2026) ─────────
+ *
+ * O #663: «Parceiro isento: 85,00 € + IVA = 86,96 €» lia-se como
+ * 23 % de IVA que não estavam lá (o parceiro é isento; só a taxa da plataforma
+ * leva IVA), e a cliente perguntou se o IVA estava certo. Agora o total vem
+ * primeiro, e a conta diz-se a si própria:
+ *
+ *   Parceiro isento: 86,96 € no total — parceiro isento de IVA (85,00 € + 1,96 € de IVA da taxa da plataforma)
+ *   Parceiro do regime normal: 132,84 € no total (108,00 € + 24,84 € de IVA)
+ *
+ * Só no modelo de 15-11 (todas as propostas nele); o de antes e as listas
+ * misturadas ficam como estavam.
+ */
+
+/** O cabeçalho: o valor de cada proposta é o total — pelo trabalho todo, ou por unidade. */
+export const O_VALOR_E_O_TOTAL_VARIAS = "O valor de cada uma é o total a pagar, com o IVA e a taxa da plataforma:";
+export const O_VALOR_E_O_TOTAL_UMA = "O valor é o total a pagar, com o IVA e a taxa da plataforma:";
+export const O_VALOR_JA_LEVA_TUDO_VARIAS = "O valor de cada uma já leva o IVA e a taxa da plataforma:";
+export const O_VALOR_JA_LEVA_TUDO_UMA = "O valor já leva o IVA e a taxa da plataforma:";
+
+/**
+ * O pagamento, no modelo de 15-11: nada adiantado, e ao parceiro que contratar
+ * (sem prometer «quando» — o momento combina-se com o parceiro).
+ */
+export const NADA_ADIANTADO_PAGA_AO_PARCEIRO =
+  "Não paga nada adiantado: paga diretamente ao parceiro que contratar — por transferência, MB WAY ou dinheiro no local.";
+
+/** O fim: um só pedido de acção, e com pouco esforço («basta o nome»). */
+export const DIGA_QUAL_PREFERE = "Diga-nos qual prefere (basta o nome) e tratamos do resto — quem faz o trabalho é o parceiro escolhido.";
+export const DIGA_SE_QUER_AVANCAR = "Diga-nos se quer avançar e tratamos do resto — quem faz o trabalho é o parceiro escolhido.";
+
+/*
+ * O TESTE A/B DA MENSAGEM DAS PROPOSTAS — d91, 5.1 (23-11-2026), 14 dias.
+ *
+ * Pelo n.º do pedido, fixo e sem estado novo: par → A (o texto de cima), ímpar
+ * → B (o mesmo, e a seguir à lista a escolha feita por ele, pela regra de
+ * `melhorProposta`: a mais em conta, ou a mais bem avaliada até 10 % acima).
+ * A variante fica no histórico do pedido (`notaDaVariante`).
+ */
+export type VarianteDasPropostas = "A" | "B";
+
+/** Par → A; ímpar → B. Sem número, A. */
+export function varianteDasPropostas(pedidoId: number | string | null | undefined): VarianteDasPropostas {
+  const n = Number(pedidoId);
+  return Number.isInteger(n) && Math.abs(n) % 2 === 1 ? "B" : "A";
+}
+
+const MARGEM_EM_TEXTO = `${Math.round(MARGEM_PARA_A_MELHOR_AVALIADA * 100)} %`;
+
+/** A frase da variante B: o «SIM» reserva pela regra da `melhorProposta`. */
+export const RESERVAMOS_A_MAIS_EM_CONTA =
+  `Se preferir, responda SIM e reservamos a mais em conta, ou a mais bem avaliada até ${MARGEM_EM_TEXTO} acima, se houver.`;
+export const RESERVAMOS_ESTA_PROPOSTA = "Se preferir, responda SIM e reservamos esta proposta.";
+
+const CABECALHO_DO_NOVO_MODELO = /^Já tem (?:\d+ propostas|uma proposta) para .+\. O valor /m;
+
+/**
+ * A variante de uma mensagem já escrita — ou null, se não é a lista das
+ * propostas do modelo de 15-11 (o valor único, «Está combinado com…», o de antes).
+ */
+export function varianteDoTexto(texto: string | null | undefined): VarianteDasPropostas | null {
+  const t = String(texto ?? "");
+  if (!CABECALHO_DO_NOVO_MODELO.test(t)) return null;
+  return t.includes(RESERVAMOS_A_MAIS_EM_CONTA) || t.includes(RESERVAMOS_ESTA_PROPOSTA) ? "B" : "A";
+}
+
+/** O que se junta ao histórico do pedido quando a mensagem sai: « Mensagem das propostas: variante B (d91).» */
+export function notaDaVariante(texto: string | null | undefined): string {
+  const v = varianteDoTexto(texto);
+  return v ? ` Mensagem das propostas: variante ${v} (d91).` : "";
+}
 
 /**
  * POR CARGA, DITO NA MENSAGEM — 12-10-2026.
@@ -135,6 +208,8 @@ export type PropostaParaOCliente = {
    * a estimativa das horas dizer a mesma conta. Só quando o total é dele.
    */
   contaDoNovoModelo?: { taxas: Taxas; regime: RegimeDoProfissional };
+  /** d91: o IVA da taxa da plataforma dentro do total (o que um isento leva). Só com o total do modelo novo. */
+  ivaDaTaxa?: number;
 };
 
 type NegociacaoParaLer = {
@@ -178,6 +253,25 @@ function precoDaLinha(p: PropostaParaOCliente): string {
   return semEComIva({ semIva: p.semIva, total: p.total, ivaIncluido: p.modelo === "iva_incluido" });
 }
 
+/**
+ * d91 (o #663): a linha de uma proposta do modelo de 15-11 — o total primeiro.
+ *
+ *   «86,96 € no total — parceiro isento de IVA (85,00 € + 1,96 € de IVA da taxa da plataforma)»
+ *   «132,84 € no total (108,00 € + 24,84 € de IVA)»
+ *
+ * Por carga ou por hora, a unidade no lugar de «no total». O sem IVA nunca
+ * vai sozinho: o total está na mesma linha (regra p).
+ */
+export function precoDaLinhaDoNovoModelo(p: PropostaParaOCliente, unidade = ""): string {
+  const cent = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+  const quanto = `${euros(p.total)} ${unidade.trim() || "no total"}`;
+  if (p.contaDoNovoModelo?.regime === "isento") {
+    const ivaDaTaxa = cent(p.ivaDaTaxa ?? p.total - p.semIva);
+    return `${quanto} — parceiro isento de IVA (${euros(p.semIva)} + ${euros(ivaDaTaxa)} de IVA da taxa da plataforma)`;
+  }
+  return `${quanto} (${euros(p.semIva)} + ${euros(cent(p.total - p.semIva))} de IVA)`;
+}
+
 /** A proposta, contada no modelo da negociação. */
 function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente {
   const modelo = modeloDaNegociacao(n.criadaEm);
@@ -204,7 +298,7 @@ function paraOCliente(n: NegociacaoParaLer, valor: number): PropostaParaOCliente
     aPagar: conta.aPagar,
     forma: lerForma(n.formaDePagamento),
     ...(n.noNovoModelo === true ? { novoModelo: true } : {}),
-    ...(total && regime ? { contaDoNovoModelo: { taxas: taxasDaNegociacao(n), regime } } : {}),
+    ...(total && regime ? { contaDoNovoModelo: { taxas: taxasDaNegociacao(n), regime }, ivaDaTaxa: total.ivaDaTaxa } : {}),
     // Só quando o parceiro disse (sem a pergunta respondida, a proposta fica como era).
     ...((): { materiais?: string } => {
       const m = materiaisParaOCliente(lerMateriaisDaProposta(n.materiaisJson ?? null), taxasDaNegociacao(n), modelo);
@@ -223,6 +317,8 @@ function estimativaDaLinha(p: PropostaParaOCliente, horasPrevistas: number | nul
   const doNovo = p.contaDoNovoModelo
     ? totalAoCliente(estimativaDasHoras(p.valor, horas), p.contaDoNovoModelo.taxas, p.contaDoNovoModelo.regime)
     : null;
+  // d91: no modelo novo, o total (o «+ IVA =» de um isento lia-se como 23 % que não estão lá — o #663).
+  if (doNovo && p.novoModelo === true) return `   ≈ ${euros(doNovo.total)} no total em ${horasEmPalavras(horas)} (estimativa)`;
   if (doNovo) return `   ≈ ${semEComIva(precoDoNovoModelo(doNovo))} em ${horasEmPalavras(horas)} (estimativa)`;
   const conta = precoDoCliente(estimativaDasHoras(p.valor, horas), { cliente: p.taxaCliente, profissional: 0 }, p.modelo);
   return `   ≈ ${semEComIva(conta)} em ${horasEmPalavras(horas)} (estimativa)`;
@@ -417,6 +513,8 @@ export type DadosDaMensagem = {
   mudancaDaLista?: boolean;
   /** O id do serviço («recolha_monos»): a regra do extra no local (d47, 15-11-2026). */
   servicoId?: string | null;
+  /** O n.º do pedido: decide a variante do teste A/B (d91) — par A, ímpar B. */
+  pedidoId?: number | string | null;
   /*
    * SEM LINK — 03-10-2026. *«Não coloque a mensagem do link e nem o link,
    * vamos fazer manualmente.»* A mensagem diz as propostas e pede-lhe que
@@ -525,6 +623,36 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * que há propostas seria o pior; ficar calado é o que já acontecia.
      */
     linhas.push(`Ainda não temos propostas para ${oQue}. Assim que chegarem, avisamos.`);
+  } else if (
+    d.propostas.every((p) => p.modelo === "iva_incluido" && p.novoModelo === true)
+  ) {
+    /*
+     * O MODELO DE 15-11 — d91 (23-11-2026). O total primeiro, cada linha com a
+     * sua conta, nada adiantado, e um só pedido de acção. A/B pelo n.º do
+     * pedido (`varianteDasPropostas`).
+     */
+    const porUnidade = base === "carga" || base === "hora";
+    linhas.push(
+      quantas === 1
+        ? `Já tem uma proposta para ${oQue}. ${porUnidade ? O_VALOR_JA_LEVA_TUDO_UMA : O_VALOR_E_O_TOTAL_UMA}`
+        : `Já tem ${quantas} propostas para ${oQue}. ${porUnidade ? O_VALOR_JA_LEVA_TUDO_VARIAS : O_VALOR_E_O_TOTAL_VARIAS}`,
+    );
+    linhas.push("");
+    for (const p of d.propostas) {
+      linhas.push(`${p.profissional}: ${precoDaLinhaDoNovoModelo(p, unidade)}`);
+      if (base === "hora") linhas.push(estimativaDaLinha(p, d.horasPrevistas));
+      if (p.materiais) linhas.push(`   ${p.materiais}`);
+    }
+    linhas.push("");
+    if (varianteDasPropostas(d.pedidoId) === "B") {
+      linhas.push(quantas === 1 ? RESERVAMOS_ESTA_PROPOSTA : RESERVAMOS_A_MAIS_EM_CONTA);
+      linhas.push("");
+    }
+    if (avisoDaUnidade) linhas.push(avisoDaUnidade);
+    linhas.push(NADA_ADIANTADO_PAGA_AO_PARCEIRO);
+    linhas.push(ORCAMENTOS_A_DISTANCIA);
+    linhas.push("");
+    linhas.push(quantas === 1 ? DIGA_SE_QUER_AVANCAR : DIGA_QUAL_PREFERE);
   } else {
     linhas.push(
       quantas === 1
@@ -597,11 +725,8 @@ export function mensagemDasPropostas(d: DadosDaMensagem): string {
      * (uma redistribuição depois dele). Aí cada linha diz o seu, e a frase
      * explica as duas.
      */
-    // d10: no modelo de 15-11 paga-se ao parceiro escolhido, como escolher no pedido.
-    const todasNoNovoModelo = d.propostas.length > 0 && d.propostas.every((p) => p.novoModelo === true);
-    if (todasComIva && todasNoNovoModelo) {
-      linhas.push(`O valor a pagar é o com IVA. ${PAGA_DIRETAMENTE_AO_PARCEIRO}`);
-    } else if (todasComIva) {
+    // d10: o modelo de 15-11 (todas nele) tem o ramo dele, mais acima (d91).
+    if (todasComIva) {
       linhas.push(
         emDinheiro
           ? `O valor a pagar é o com IVA. ${FORMA_EM_PALAVRAS.dinheiro.cliente}`

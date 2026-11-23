@@ -26,7 +26,7 @@ export function valorComIva(semIva: number, total: number): string {
 
 /** d63: o que o cliente lê sobre as cargas — igual em todo o lado (`frase-da-base.ts`). */
 export const AS_CARGAS_CONFIRMAM_SE_NO_LOCAL =
-  "O número de cargas é confirmado consigo no local, pela equipa, antes de começar.";
+  "O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar.";
 
 /** d63: o que o cliente lê sobre as horas — igual em todo o lado (`frase-da-base.ts`). */
 export const AS_HORAS_CONTAM_SE_NO_DIA = "As horas contam-se no dia e o total fica na folha que valida no fim.";

@@ -84,7 +84,7 @@ describe("as quatro partes", () => {
     expect(extraNoLocal("mudanca")).not.toContain(`${PRECO_POR_HORA} €`);
     // d63: por hora e por carga, a regra única da base (`frase-da-base.ts`).
     expect(extraNoLocal("mudanca", "hora")).toBe("As horas contam-se no dia e o total fica na folha que valida no fim.");
-    expect(extraNoLocal("recolha_moveis", "carga")).toBe("O número de cargas é confirmado consigo no local, pela equipa, antes de começar.");
+    expect(extraNoLocal("recolha_moveis", "carga")).toBe("O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar.");
     for (const s of ["recolha_moveis", "recolha_monos", "recolha_entulho", "mudanca"]) {
       const e = extraNoLocal(s);
       expect(extraComPreco(e), s).toBe(true);

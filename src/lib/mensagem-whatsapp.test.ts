@@ -64,7 +64,7 @@ describe("mensagemWhatsApp", () => {
    */
   it("sem fotos, pede-as — é isso que decide o orçamento", () => {
     const m = mensagemWhatsApp(base);
-    expect(m.toLowerCase()).toContain("fotos");
+    expect(m.toLowerCase()).toContain("fotografias");
   });
 
   it("se as fotos falharam a subir, diz que reparou e pede-as de volta", () => {
@@ -78,24 +78,33 @@ describe("mensagemWhatsApp", () => {
     expect(m.toLowerCase()).not.toContain("pode enviar-nos aqui algumas fotos");
   });
 
-  it("o preço só aparece quando existe", () => {
+  /*
+   * SEM PREÇO, E SEM A CLYON A ORÇAR — d91 (23-11-2026, 3.20). Quem dá o preço
+   * são os parceiros; um valor manda-se pelo orçamento curto da Mesa.
+   */
+  it("nunca diz um preço, nem com o preço aprovado no pedido", () => {
     expect(mensagemWhatsApp(base)).not.toContain("€");
-    expect(mensagemWhatsApp({ ...base, precoFinal: "160" })).toContain("€");
+    expect(mensagemWhatsApp({ ...base, precoFinal: "160" })).not.toContain("€");
+    expect(mensagemWhatsApp({ ...base, precoFinal: "160" })).not.toMatch(/orçamento é de/);
   });
 
-  /*
-   * SEM IVA, JÁ COM A TAXA — E O IVA À PARTE. 29-09-2026.
-   *
-   * Dizia «O orçamento é de 196,80 € com IVA»: o preço aprovado × 1,23, feito
-   * à mão, sem a taxa da plataforma, e o único sítio do produto a anunciar um
-   * valor com imposto. Agora diz o que o resto diz, com as contas de todos.
-   */
-  it("diz o preço sem IVA e já com a taxa, e o IVA numa frase à parte", () => {
-    const m = mensagemWhatsApp({ ...base, precoFinal: "160" });
-    // 160 + 5 % de taxa = 168,00; com factura, mais 23 % = 206,64.
-    expect(m).toContain("O orçamento é de 168,00 €, sem IVA e já com a taxa da plataforma.");
-    expect(m).toContain("Com fatura acrescem 23 % de IVA: 206,64 €.");
-    expect(m).not.toContain("com IVA.");
+  it("os parceiros dão o preço: sem «acertamos», sem «lhe dar um valor»", () => {
+    const m = mensagemWhatsApp(base);
+    expect(m).toContain(
+      "Para os parceiros lhe darem um preço certo e sem surpresas no dia, pode enviar-nos por aqui 2 ou 3 fotografias do que é para levar?",
+    );
+    const perdidas = mensagemWhatsApp({ ...base, fotosNaoEnviadas: 2 });
+    expect(perdidas).toContain("É com elas que os parceiros lhe dão um preço certo e sem surpresas no dia.");
+    for (const t of [m, perdidas]) {
+      expect(t).not.toMatch(/acertamos/);
+      expect(t).not.toMatch(/lhe dar um valor/);
+    }
+  });
+
+  it("começa por «é da equipa da CLYON», e nunca por «Aqui é a equipa da CLYON.» (a marca do «Pedir o que falta»)", () => {
+    const m = mensagemWhatsApp(base);
+    expect(m.startsWith("Olá Amelia, é da equipa da CLYON.")).toBe(true);
+    expect(m).not.toContain("Aqui é a equipa da CLYON.");
   });
 
   /**
@@ -114,7 +123,7 @@ describe("mensagemWhatsApp", () => {
 
   it("com pouca informação, encurta em vez de dizer 'não indicado'", () => {
     const m = mensagemWhatsApp({ id: 9, serviceType: "mudanca" });
-    expect(m).toContain("Olá, é da CLYON.");
+    expect(m).toContain("Olá, é da equipa da CLYON.");
     expect(m).toContain("mudança (#9)");
     expect(m).not.toContain("undefined");
     expect(m).not.toContain("null");

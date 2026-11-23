@@ -18,7 +18,7 @@ import { MINIMO_DE_HORAS, horasEscritas } from "./tabela-das-mudancas";
  *   · total — «Inclui o que está nas fotografias e na descrição.» e o extra no
  *     local, pela regra de cada serviço (`extra-no-local.ts`);
  *   · carga — «O valor é 360 € + IVA (442,80 €) por carga. O número de cargas é
- *     confirmado consigo no local, pela equipa, antes de começar. Por exemplo:
+ *     confirmado consigo no local, pelo parceiro, antes de começar. Por exemplo:
  *     1 carga = 442,80 €; 2 cargas = 885,60 €.»;
  *   · hora — «O valor é 50 €/h + IVA (61,50 €/h), com mínimo de 3 horas. As
  *     horas contam-se no dia e o total fica na folha que valida no fim.».

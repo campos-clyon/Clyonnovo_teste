@@ -158,7 +158,7 @@ describe("(4) a mensagem de adjudicação do modelo novo", () => {
   it("por carga, o valor é de uma carga, × o número de cargas", () => {
     expect(valorDoBlocoDoNovoModelo({ total: 123, semIva: 100, base: "carga" })).toBe(
       // d63: a frase única da base, com o exemplo das cargas.
-      "O valor é 100 € + IVA (123 €) por carga. O número de cargas é confirmado consigo no local, pela equipa, antes de começar. Por exemplo: 1 carga = 123 €; 2 cargas = 246 €. Já com a taxa da plataforma.",
+      "O valor é 100 € + IVA (123 €) por carga. O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar. Por exemplo: 1 carga = 123 €; 2 cargas = 246 €. Já com a taxa da plataforma.",
     );
     const m = mensagemDeAdjudicacao({ ...base, formas: formas({ total: 123, semIva: 100, base: "carga", formas: ["transferencia"] }) }, AGORA);
     expect(m).not.toContain("O total é");

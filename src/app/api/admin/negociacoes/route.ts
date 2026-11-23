@@ -26,6 +26,7 @@ import { avisarClienteDoValorUnico } from "@/lib/email-proposta";
 import { aceitesDoValorUnico, marcarValorUnicoAceite, type AceiteDoValorUnico } from "@/lib/valor-unico-no-whatsapp-na-base";
 import { lerBase } from "@/lib/base-do-preco";
 import { servicoEmPalavras } from "@/lib/servico-em-palavras";
+import { notaDaVariante } from "@/lib/mensagem-das-propostas";
 import { foraDaGrelhaDosPedidos } from "@/lib/custo-do-trabalho-no-servidor";
 import type { ForaDaGrelhaNaMesa } from "@/lib/custo-do-trabalho";
 import { ruaEmFaltaDosPedidos } from "@/lib/rua-depois-do-aceite-na-base";
@@ -270,7 +271,8 @@ export async function POST(req: NextRequest) {
     await appendOrderHistory(pedidoId, {
       type: "note",
       by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
-      message: `Orçamento enviado ao cliente, por ${colab?.nome ?? "a CLYON"} — à espera da resposta dele.`,
+      // d91: a variante A/B da mensagem das propostas, lida do texto que saiu.
+      message: `Orçamento enviado ao cliente, por ${colab?.nome ?? "a CLYON"} — à espera da resposta dele.${notaDaVariante(typeof corpo.texto === "string" ? corpo.texto : null)}`,
     });
     return NextResponse.json({ ok: true });
   }
@@ -349,7 +351,8 @@ export async function POST(req: NextRequest) {
     await appendOrderHistory(pedidoId, {
       type: "note",
       by: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
-      message: resumo,
+      // d91: a variante A/B da mensagem das propostas, lida do texto que saiu.
+      message: `${resumo}${notaDaVariante(texto)}`,
     });
     return NextResponse.json({
       ok: true,

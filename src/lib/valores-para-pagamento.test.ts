@@ -83,7 +83,7 @@ describe("a mensagem leva os valores da conta e o link", () => {
     );
     expect(porCarga).toContain(`${emEuros(CONTA.total)} por carga`);
     // d63: a regra única da base, com o exemplo.
-    expect(porCarga).toContain("O número de cargas é confirmado consigo no local, pela equipa, antes de começar. Por exemplo: 1 carga = ");
+    expect(porCarga).toContain("O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar. Por exemplo: 1 carga = ");
   });
 });
 

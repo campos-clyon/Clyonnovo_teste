@@ -3,7 +3,7 @@ import type { PedidoParaOAssistente } from "./db";
 import { novidadesDoPedido } from "./assistente-automatico";
 import { fraseDoLinkDoFecho } from "./link-de-quem-fecha-pelo-whatsapp";
 import { respostaDoSiteOuDasLicoes, respostaPelasLicoes, licoesParaOModelo, type LicaoEmUso } from "./licoes-da-vitoria";
-import { mensagemDasPropostas, propostasParaOCliente, trabalhoFechado } from "./mensagem-das-propostas";
+import { mensagemDasPropostas, NADA_ADIANTADO_PAGA_AO_PARCEIRO, propostasParaOCliente, trabalhoFechado } from "./mensagem-das-propostas";
 import { oQueOSiteSabe } from "./o-que-o-site-sabe";
 import {
   COMO_SE_PAGA_NO_WHATSAPP,
@@ -198,8 +198,10 @@ describe("as mensagens de um trabalho — o servidor diz o modelo", () => {
     };
     const hoje = mensagemDasPropostas({ ...DADOS, propostas: propostasParaOCliente([aberta]) });
     expect(hoje).not.toContain(PAGA_DIRETAMENTE_AO_PARCEIRO);
+    expect(hoje).not.toContain(NADA_ADIANTADO_PAGA_AO_PARCEIRO);
     const novo = mensagemDasPropostas({ ...DADOS, propostas: propostasParaOCliente([{ ...aberta, noNovoModelo: true }]) });
-    expect(novo).toContain(PAGA_DIRETAMENTE_AO_PARCEIRO);
+    // d91 (23-11-2026): «Não paga nada adiantado: paga diretamente ao parceiro que contratar — …».
+    expect(novo).toContain(NADA_ADIANTADO_PAGA_AO_PARCEIRO);
     limpo(novo);
   });
 });

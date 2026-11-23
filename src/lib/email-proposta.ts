@@ -144,6 +144,11 @@ export async function avisarClienteDaProposta(p: {
   /** Pelo trabalho todo, ou por carga. Por carga, o valor leva a unidade. */
   base?: BaseDoPreco;
   /**
+   * ATÉ QUANDO VALE — d91 (23-11-2026): «sexta-feira, 27/11», com o interruptor
+   * «Validade dos orçamentos» ligado (d62); null com ele desligado.
+   */
+  validaAte?: string | null;
+  /**
    * O link do pedido, para quem não tem conta.
    *
    * Vazio quando o cliente tem conta: aí o email aponta para /conta, e o link
@@ -175,7 +180,10 @@ export async function avisarClienteDaProposta(p: {
           p.ivaIncluido
             ? `com IVA incluído${p.semIvaEIva ? ` (${e(desdobramentoDoIva(p.semIvaEIva))})` : ""}`
             : "sem IVA"
-        }.${p.fatura ? ` ${e(p.fatura)}, passada pelo parceiro.` : ""} Pode aceitar, propor outro valor, ou esperar por mais propostas.
+        }.${p.fatura ? ` ${e(p.fatura)}, passada pelo parceiro.` : ""}
+      </p>
+      <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">
+        ${e(oQuePodeFazer(p.validaAte ?? null))}
       </p>
       ${
         // Por carga, a unidade; pelo trabalho todo, os itens a mais pela tabela das peças (eram 32 € a 22-10-2026).
@@ -183,12 +191,21 @@ export async function avisarClienteDaProposta(p: {
           ? `<p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#92400e;">${e(notaDoPrecoParaOCliente(p.base ?? "total"))}</p>`
           : ""
       }
-      ${botao(url, "Ver a proposta")}
-      <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
-        A proposta fica de pé até lhe responder. Pode demorar o tempo que precisar
-        para decidir.
-      </p>`),
+      ${botao(url, "Ver a proposta")}`),
   );
+}
+
+/**
+ * O QUE O CLIENTE PODE FAZER COM A PROPOSTA — d91 (23-11-2026, 3.11).
+ *
+ * Dizia «A proposta fica de pé até lhe responder. Pode demorar o tempo que
+ * precisar para decidir.», e desde a d62 a proposta tem validade e o pedido
+ * fecha. Com a validade ligada, o dia; desligada, sem ele. Nada adiantado
+ * (`SEM_PAGAMENTO_ADIANTADO`), sem prometer «quando» se paga.
+ */
+export function oQuePodeFazer(validaAte: string | null): string {
+  const resto = "Pode aceitá-la, propor outro valor ou esperar por mais propostas — e não paga nada adiantado.";
+  return validaAte ? `Esta proposta é válida até ${validaAte}. ${resto}` : resto;
 }
 
 // ── O cliente propôs: avisar o profissional ─────────────────────────────────

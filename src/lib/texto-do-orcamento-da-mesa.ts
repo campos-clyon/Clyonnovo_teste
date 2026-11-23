@@ -25,6 +25,8 @@ export type NegociacaoDoOrcamento = Parameters<typeof propostasParaOCliente>[0][
 };
 
 export type PedidoDoOrcamento = {
+  /** O n.º do pedido: a variante A/B da mensagem das propostas (d91). */
+  id?: number | string | null;
   contactName: string | null;
   serviceType: string | null;
   city: string | null;
@@ -88,6 +90,8 @@ export function textoDoOrcamentoDaMesa(
     nomeCliente: p.contactName,
     servico: nomeDoServicoDoOrcamento(p.serviceType),
     servicoId: p.serviceType,
+    // d91: A/B pelo n.º do pedido (par A, ímpar B).
+    pedidoId: p.id ?? null,
     cidade: localidadeDoOrcamento(p.city),
     propostas,
     fechado: trabalhoFechado(p.negociacoes),

@@ -26,7 +26,7 @@ import { appendOrderHistory, ensureRegistoTable, getPool, registarNaTransaccao }
 import { propostasPorEnviarDoPedido, type PedidoParaOLado } from "./do-nosso-lado";
 import { instanteDaBase } from "./hora-de-lisboa";
 import { naJanelaDasMensagensAutomaticas } from "./janela-das-mensagens-automaticas";
-import { propostasParaOCliente } from "./mensagem-das-propostas";
+import { notaDaVariante, propostasParaOCliente } from "./mensagem-das-propostas";
 import { textoDoOrcamentoDaMesa, type PedidoDoOrcamento } from "./texto-do-orcamento-da-mesa";
 import { melhorProposta } from "./validade-do-orcamento";
 import {
@@ -459,7 +459,8 @@ export async function enviarAsPropostasAoCliente(pedidoId: number, agora: Date):
     "UPDATE envioDasPropostasAoCliente SET estado = 'enviado', enviadoEm = UTC_TIMESTAMP(), propostas = ? WHERE pedidoId = ?",
     [Math.min(255, c.propostas), pedidoId],
   );
-  const feito = historicoDoEnvioAutomatico(c.propostas);
+  // d91: com a variante A/B da mensagem das propostas.
+  const feito = `${historicoDoEnvioAutomatico(c.propostas)}${notaDaVariante(texto)}`;
   await appendOrderHistory(pedidoId, { type: "note", by: null, message: feito }).catch(() => {});
   return { ok: true, feito };
 }

@@ -151,6 +151,8 @@ export async function avisarDaProposta(dados: {
         // E de que é feito — o sem IVA e o imposto (03-10-2026).
         semIvaEIva: { semIva: conta.semIva, iva: conta.iva },
         base,
+        // d91: até quando vale, com a validade dos orçamentos ligada (d62).
+        validaAte: await validadeDaPropostaNoEmail(new Date()),
         token,
         baseUrl: dados.baseUrl,
       });
@@ -220,5 +222,21 @@ export async function avisarDaProposta(dados: {
     });
   } catch (err) {
     console.error("[avisar-da-proposta] falhou:", err);
+  }
+}
+
+/**
+ * A VALIDADE NO EMAIL «TEM UMA PROPOSTA» — d91 (23-11-2026, 3.11). Com o
+ * interruptor «Validade dos orçamentos» ligado, o dia da linha de sempre
+ * (`diaDaValidade`: o de hoje + 3, Lisboa); desligado, ou na dúvida, null.
+ */
+async function validadeDaPropostaNoEmail(agora: Date): Promise<string | null> {
+  try {
+    const { interruptorDaValidade } = await import("./validade-do-orcamento-na-base");
+    if (!(await interruptorDaValidade()).ligado) return null;
+    const { diaDaSemanaEDia, diaDaValidade } = await import("./validade-do-orcamento");
+    return diaDaSemanaEDia(diaDaValidade(agora));
+  } catch {
+    return null;
   }
 }

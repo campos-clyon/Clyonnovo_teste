@@ -47,7 +47,7 @@ describe("a conta dita ao cliente, por carga", () => {
   it("a nota só existe para o preço por carga", () => {
     expect(notaDaCargaParaOCliente("total")).toBeNull();
     // d63: a frase única da base.
-    expect(notaDaCargaParaOCliente("carga")).toContain("O número de cargas é confirmado consigo no local, pela equipa, antes de começar.");
+    expect(notaDaCargaParaOCliente("carga")).toContain("O número de cargas é confirmado consigo no local, pelo parceiro, antes de começar.");
   });
 
   it("a lista de propostas diz a unidade em cada linha, e acaba com a nota", () => {
