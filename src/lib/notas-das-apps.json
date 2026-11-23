@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-24",
+      "nota": "No trabalho contratado, o pagamento do cliente fica registado: «Sim, recebi» ou «Ainda não recebi» quando o cliente diz que pagou, ou «O cliente já me pagou».",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-23",
       "nota": "Novo separador «Cancelados»: o pedido cancelado aparece lá com o motivo; o arquivado vai para os Arquivados, também com o motivo.\nO sino avisa quando um pedido seu é cancelado, arquivado ou apagado.",
       "updates": [

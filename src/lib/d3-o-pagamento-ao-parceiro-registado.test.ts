@@ -16,7 +16,7 @@ vi.mock("./db", () => ({
   perfilDoProfissional: async () => ({
     iban: "PT50000000000000000000000",
     ibanTitular: "Parceiro de Teste",
-    mbway: "912000111",
+    mbway: "nº de teste",
     name: "Parceiro de Teste",
     regimeIva: "normal",
     regimeIvaConfirmadoEm: "2026-11-10T10:00:00Z",
@@ -106,7 +106,7 @@ describe("d3 — o que o cliente vê no bloco «Pagar a …»", () => {
   it("por pagar: IBAN e MB WAY à vista e o botão «Já paguei a …»", async () => {
     const v = await oQueOClienteVeDoParceiro(trabalho);
     expect(v.paraPagar?.iban).toBe("PT50000000000000000000000");
-    expect(v.paraPagar?.mbway).toBe("912000111");
+    expect(v.paraPagar?.mbway).toBe("nº de teste");
     expect(v.registo.estado).toBe("por_pagar");
     expect(v.registo.podeDizerQuePagou).toBe(true);
     expect(v.registo.botao).toBe("Já paguei a Parceiro de Teste");
