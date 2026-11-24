@@ -287,6 +287,16 @@ export function precoDaMudancaNaDescricao(p: PrecoPublicoDasMudancas): string {
 }
 
 /**
+ * d5 (24-11-2026): o «desde» de 3 pessoas para a descrição das páginas de cidade, com o valor com IVA ao
+ * lado. Vai como frase extra (`descricaoQueCabe` deita-a fora se não couber nos 155). `null` sem parceiros
+ * ou se nenhum faz com 3.
+ */
+export function precoDaMudancaCom3NaDescricao(p: PrecoPublicoDasMudancas): string | null {
+  if (p.tipo !== "parceiros" || !p.desde3) return null;
+  return `Com 3 pessoas, desde ${numero(p.desde3.semIvaCent)} €/h + IVA (${numero(p.desde3.comIvaCent)} € com IVA).`;
+}
+
+/**
  * O preço nos dados estruturados: o «desde» real, à hora, sem IVA; sem
  * parceiros, nenhum (a referência não se declara ao Google como oferta).
  */

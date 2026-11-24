@@ -2,6 +2,7 @@ import {
   ofertaDaMudanca,
   precoDaMudancaCurto,
   precoDaMudancaEmDetalhe,
+  precoDaMudancaCom3NaDescricao,
   precoDaMudancaNaDescricao,
   precoDaMudancaNumaFrase,
   type PrecoPublicoDasMudancas,
@@ -140,6 +141,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // se couber inteiro (ver descricoes-seo.ts).
   const geral = descricaoQueCabe([
     `Mudanças ${emTerra(c.nome)} à hora, ${precoDaMudancaNaDescricao(preco)}.`,
+    // d5 (24-11-2026): o «desde» de 3 pessoas, com o valor com IVA ao lado; fica se couber nos 155.
+    precoDaMudancaCom3NaDescricao(preco),
     `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
     "Orçamento grátis.",
   ]);
