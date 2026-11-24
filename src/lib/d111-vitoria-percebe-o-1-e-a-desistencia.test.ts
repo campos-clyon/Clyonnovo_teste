@@ -214,8 +214,10 @@ describe("o «1» ao seguimento", () => {
     expect(estado.fechos).toEqual([]);
     expect(estado.passadas).toEqual([]);
     const lista = estado.enviados.at(-1) ?? "";
+    // A cabeça numa linha à parte: o nome da empresa (inventado) não fica ao lado do número do pedido.
+    const cabeca = "Tem 2 propostas para o pedido #612:";
     expect(lista).toBe(
-      ["Tem 2 propostas para o pedido #612:", "1. Recolhas Tejo: 74,85 € + IVA = 92,07 €", "2. Monos do Sul: 90,00 € + IVA = 110,70 €", QUAL_QUER_ESCOLHER].join("\n"),
+      [cabeca, "1. Recolhas Tejo: 74,85 € + IVA = 92,07 €", "2. Monos do Sul: 90,00 € + IVA = 110,70 €", QUAL_QUER_ESCOLHER].join("\n"),
     );
     expect(lerAListaDasPropostas(lista)?.linhas.map((l) => l.parceiro)).toEqual(["Recolhas Tejo", "Monos do Sul"]);
     estado.entradas.push("2");

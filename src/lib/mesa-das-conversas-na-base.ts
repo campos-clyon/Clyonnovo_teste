@@ -81,7 +81,9 @@ export async function mesaComOTelemovelWhatsApp(): Promise<MesaDasConversas> {
       noTelemovel: telemovel.porChave.get(chave) ?? null,
       respondida: respondidas.get(chave) ?? null,
       bloqueada: bloqueadoDe.has(chave),
-      entregue: entregueDe.has(chave),
+      // d112: a entrega que voltou à Vitória (24 h sem a equipa) fica na base, mas já não a cala.
+      entregue: entregueDe.has(chave) && !entregueDe.get(chave)?.voltouAVitoria,
+      voltouAVitoria: entregueDe.get(chave)?.voltouAVitoria === true,
       motivoDaEntrega: entregueDe.get(chave)?.motivo ?? null,
       fecho: fecho
         ? { haSegundos: fecho.haSegundos, quando: fecho.criadoEm, motivo: fecho.motivo, porQuem: fecho.porQuem }

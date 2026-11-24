@@ -1,4 +1,5 @@
 import { ESTADOS_DE_PEDIDO_FECHADO } from "./pedido-arrumado";
+import { VOLTOU_A_VITORIA } from "./prazo-da-volta-a-vitoria";
 import { eDaEquipa, eFotografiaFalhada, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
 
 /**
@@ -124,6 +125,12 @@ export type FactosDaConversa = {
   entregue: boolean;
   /** Porque foi entregue: «Pediu para falar com uma pessoa», «Respondeu à mão»… */
   motivoDaEntrega?: string | null;
+  /**
+   * Foi entregue porque alguém respondeu à mão e já passaram 24 h sem a
+   * equipa escrever: voltou à Vitória (d112, 25-11-2026). `entregue` é então
+   * false — a entrega ficou na base, mas já não cala a Vitória.
+   */
+  voltouAVitoria?: boolean;
   /** O fecho (arquivo), com o porquê e quem fechou. */
   fecho: { haSegundos: number | null; quando: string; motivo: string | null; porQuem: string | null } | null;
   /** A recolha de um pedido a meio — sem pedido registado ainda. */
@@ -150,6 +157,8 @@ export type ConversaNaMesa = {
   dono: "assistente" | "equipa";
   /** Porque foi entregue à equipa, quando foi. */
   motivoDaEntrega: string | null;
+  /** «Voltou à Vitória (24 h sem a equipa)», no lugar do «Entregue», quando voltou (d112). */
+  voltouAVitoria: string | null;
   ultimaMensagem: string | null;
   direccao: "in" | "out" | null;
   quando: string | null;
@@ -370,6 +379,7 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
     telefone: f.telefone,
     dono,
     motivoDaEntrega: f.entregue ? (f.motivoDaEntrega ?? null) : null,
+    voltouAVitoria: !f.entregue && f.voltouAVitoria ? VOLTOU_A_VITORIA : null,
     ultimaMensagem: !palavra
       ? null
       : palavra.onde === "painel"

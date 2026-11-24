@@ -1696,6 +1696,10 @@ export default function AdminWhatsAppPanel() {
                       {l.motivoDaEntrega && l.estado !== "resolvida" && (
                         <p className="truncate text-[11px] text-amber-300/80">Entregue: {l.motivoDaEntrega}</p>
                       )}
+                      {/* d112: respondida à mão e 24 h sem a equipa — a Vitória fala outra vez nesta conversa. */}
+                      {l.voltouAVitoria && l.estado !== "resolvida" && (
+                        <p className="truncate text-[11px] text-violet-300/80">{l.voltouAVitoria}</p>
+                      )}
                       {/* d93: cancelou pela conversa — nenhuma mensagem automática lhe sai. */}
                       {l.naoContactar && (
                         <p className="truncate text-[11px] font-semibold text-rose-300">Não contactar — cancelou o pedido e pediu para não voltar a ser contactado</p>

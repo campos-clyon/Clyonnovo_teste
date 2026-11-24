@@ -144,6 +144,26 @@ export async function GET(req: NextRequest) {
       });
     }
     /*
+     * A CONVERSA QUE VOLTOU À VITÓRIA — 25-11-2026 (d112). Respondida à mão e
+     * 24 h sem a equipa: se a última mensagem do cliente ficou sem resposta, a
+     * Vitória lê-a e responde (ou passa à equipa pelas regras dela), das 9h às
+     * 20h e com uma mensagem automática por dia. Ver `volta-a-vitoria-na-base.ts`.
+     */
+    const { responderAsQueVoltaramAVitoria } = await import("@/lib/volta-a-vitoria-na-base");
+    const voltas = await responderAsQueVoltaramAVitoria().catch((e) => {
+      console.error("[cron/assistente] conversas que voltaram à Vitória:", e);
+      return { vistas: 0, respondidas: 0, antigas: 0, linhas: [] as string[] };
+    });
+    if (voltas.linhas.length > 0) {
+      await registarSemFalhar({
+        acontecimento: "assistente_alerta",
+        autorTipo: "assistente",
+        autorNome: "conversas que voltaram à Vitória",
+        resumo: `${voltas.respondidas} conversa(s) que voltaram à Vitória respondida(s); ${voltas.antigas} com a última mensagem antiga, deixada(s) na Mesa.`,
+        detalhe: { linhas: voltas.linhas.slice(0, 40) },
+      });
+    }
+    /*
      * A RUA DEPOIS DO ACEITE — 17-11-2026 (d69). Os pedidos só com a zona
      * aceites por outro caminho (o link, a app, a Mesa) levam a pergunta da
      * rua, uma vez; os que ficaram sem resposta há 2 h passam à equipa. Ver

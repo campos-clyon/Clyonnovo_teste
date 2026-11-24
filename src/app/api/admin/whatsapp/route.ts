@@ -175,7 +175,8 @@ export async function GET(req: NextRequest) {
      */
     ponteVistaEm: ponteVistaEm ? ponteVistaEm.toISOString() : null,
     numeroManual: numeroManualWhatsApp(),
-    interrompidos,
+    // d112: as que voltaram à Vitória (24 h sem a equipa) já não são «conversas suas».
+    interrompidos: interrompidos.filter((i) => !i.voltouAVitoria),
     bloqueados,
     fila,
     conversas,

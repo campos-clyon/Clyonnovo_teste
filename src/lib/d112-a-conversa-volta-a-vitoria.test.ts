@@ -1,0 +1,316 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * d112 — UMA CONVERSA RESPONDIDA À MÃO VOLTA À VITÓRIA AO FIM DE 24 H SEM A
+ * EQUIPA (25-11-2026). Números e textos inventados; a base é fingida.
+ */
+
+const base = vi.hoisted(() => ({
+  entregas: [] as Array<Record<string, unknown>>,
+  fio: [] as Array<Record<string, unknown>>,
+  jaSaiuHoje: false,
+  tratadas: [] as Array<{ telefone: string; texto: string }>,
+  marcadas: [] as Array<{ telefone: string; ateId: number }>,
+  chamadasABase: 0,
+}));
+
+vi.mock("./db", () => ({
+  getPool: async () => {
+    base.chamadasABase++;
+    return { execute: async () => [base.fio.slice().reverse(), []] };
+  },
+  whatsappLigado: async () => {
+    base.chamadasABase++;
+    return true;
+  },
+  listarNumerosInterrompidosWhatsApp: async () => {
+    base.chamadasABase++;
+    return base.entregas;
+  },
+  numeroBloqueadoWhatsApp: async () => false,
+  podeOWhatsAppFalarCom: async () => true,
+  marcarRetomadaWhatsApp: async (telefone: string, ateId: number) => void base.marcadas.push({ telefone, ateId }),
+  comTrancaDoNumeroWhatsApp: async <T>(_t: string, fazer: () => Promise<T>) => fazer(),
+}));
+vi.mock("./uma-mensagem-automatica-por-dia", () => ({
+  jaSaiuHojeUmaMensagemAutomatica: async () => base.jaSaiuHoje,
+}));
+vi.mock("./whatsapp-negociacao", () => ({
+  tratarMensagemDoCliente: async (telefone: string, c: { texto: string }) => void base.tratadas.push({ telefone, texto: c.texto }),
+}));
+
+import {
+  DIAS_PARA_RESPONDER_AO_QUE_FICOU,
+  entregaPorResposta,
+  guardaOMotivoDeAntes,
+  haQuantoAEquipaEscreveu,
+  HORAS_PARA_VOLTAR_A_VITORIA,
+  MOTIVO_DA_RESPOSTA_A_MAO,
+  oQueFicouPorResponder,
+  voltouAVitoria,
+  VOLTOU_A_VITORIA,
+} from "./volta-a-vitoria";
+import { responderAsQueVoltaramAVitoria } from "./volta-a-vitoria-na-base";
+import { naMesa, type FactosDaConversa } from "./mesa-das-conversas";
+import { MARCA_DE_MAO } from "./rajada-do-whatsapp";
+import { mensagemDoQueFalta } from "./mensagem-do-que-falta";
+import { MOTIVOS_DO_SEGUIMENTO } from "./a-escolha-e-a-desistencia";
+import { motivoDoValorUnicoAceite } from "./valor-unico-no-whatsapp";
+import { MOTIVO_DE_NAO_REPETIR } from "./pedido-em-curso";
+
+const H = 3600;
+const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
+const daEquipa = (texto: string, haSegundos: number) => ({ direccao: "out", texto: `${MARCA_DE_MAO} ${texto}`, haSegundos });
+const voltou = (haSegundosDaEquipa: number | null, extra: Partial<Parameters<typeof voltouAVitoria>[0]> = {}) =>
+  voltouAVitoria({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa", haSegundosDaEquipa, vitoriaJaFalou: true, profissional: false, ...extra });
+
+describe("o prazo — 24 h desde a última palavra da equipa", () => {
+  it("o 24 está numa constante, e a Mesa diz-o", () => {
+    expect(HORAS_PARA_VOLTAR_A_VITORIA).toBe(24);
+    expect(VOLTOU_A_VITORIA).toBe("Voltou à Vitória (24 h sem a equipa)");
+  });
+
+  it("23 h depois continua com a equipa; 25 h depois voltou à Vitória", () => {
+    expect(voltou(23 * H)).toBe(false);
+    expect(voltou(24 * H)).toBe(false);
+    expect(voltou(25 * H)).toBe(true);
+    expect(voltou(null)).toBe(false);
+  });
+
+  it("conta a partir da última mensagem da equipa, não do momento da entrega", () => {
+    // Entregue há 5 dias, a equipa voltou a escrever há 2 h: o relógio recomeçou.
+    const ha = haQuantoAEquipaEscreveu({
+      fio: [daEquipa("bom dia", 5 * 24 * H), daEquipa("já vejo isso", 2 * H)],
+      entregueHaSegundos: 5 * 24 * H,
+    });
+    expect(ha).toBe(2 * H);
+    expect(voltou(ha)).toBe(false);
+  });
+
+  it("o relógio recomeça com a resposta pelo backoffice, o «Já respondi» e o aviso da ponte", () => {
+    const fio = [daEquipa("olá", 3 * 24 * H)];
+    expect(haQuantoAEquipaEscreveu({ fio, respondidaHaSegundos: 30 * 60 })).toBe(30 * 60);
+    expect(haQuantoAEquipaEscreveu({ fio, respostaHaSegundos: 10 * 60 })).toBe(10 * 60);
+    expect(haQuantoAEquipaEscreveu({ fio })).toBe(3 * 24 * H);
+  });
+
+  it("o envio de modelo da equipa («Pedir o que falta», d86) não é a equipa a conversar", () => {
+    const modelo = mensagemDoQueFalta({ id: 812, serviceType: "recolha_monos", city: "Almada" }, ["fotografias"], new Date("2026-11-25T10:00:00Z"));
+    expect(modelo).toContain("#812");
+    const fio = [daEquipa("olá", 30 * H), { direccao: "out", texto: `${MARCA_DE_MAO} ${modelo}`, haSegundos: H }];
+    expect(haQuantoAEquipaEscreveu({ fio })).toBe(30 * H);
+  });
+
+  it("as mensagens da Vitória e do cliente não mexem no relógio", () => {
+    const fio = [daEquipa("olá", 30 * H), { direccao: "out", texto: "Obrigada!", haSegundos: H }, { direccao: "in", texto: "ok", haSegundos: 60 }];
+    expect(haQuantoAEquipaEscreveu({ fio })).toBe(30 * H);
+  });
+
+  it("uma entrega antiga sem nenhuma resposta escrita conta desde a entrega", () => {
+    expect(haQuantoAEquipaEscreveu({ fio: [], entregueHaSegundos: 40 * H })).toBe(40 * H);
+    expect(haQuantoAEquipaEscreveu({ fio: [] })).toBeNull();
+  });
+
+  it("vale para as entregas que já existem (sem `quem`, pelo texto do motivo)", () => {
+    expect(voltou(30 * H, { quem: null })).toBe(true);
+  });
+});
+
+describe("as excepções — ficam sempre com a equipa", () => {
+  it("só a entrega porque uma pessoa respondeu tem prazo", () => {
+    expect(entregaPorResposta({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa" })).toBe(true);
+    expect(entregaPorResposta({ motivo: "  respondeu à mão no whatsapp ", quem: null })).toBe(true);
+  });
+
+  it("as entregas feitas por uma razão nunca voltam", () => {
+    const razoes = [
+      "Pediu para falar com uma pessoa",
+      "Cliente a perder a paciência — responder já",
+      "Pelo backoffice", // o «Assumir»
+      "Fecho desfeito - fale com o cliente",
+      "Pedido #700: o cliente cancelou (trabalho pago) — tratar do resto com ele e com o parceiro",
+      motivoDoValorUnicoAceite(700),
+      MOTIVOS_DO_SEGUIMENTO.outraData(700),
+      MOTIVOS_DO_SEGUIMENTO.respondeu(700),
+      MOTIVO_DE_NAO_REPETIR,
+      "O tradutor falhou e a mensagem da Vitória não tem tradução fixa — responder à mão, em inglês",
+      "Valor acima de 500 € com IVA — confirmar com o cliente",
+      "Mudança à hora — combinar com o cliente",
+      null,
+    ];
+    for (const motivo of razoes) {
+      for (const quem of ["vitoria", "pessoa", null] as const) {
+        expect(voltouAVitoria({ motivo, quem, haSegundosDaEquipa: 30 * 24 * H, vitoriaJaFalou: true, profissional: false })).toBe(false);
+      }
+    }
+  });
+
+  it("o motivo da resposta à mão dito pela Vitória não conta como resposta", () => {
+    expect(entregaPorResposta({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "vitoria" })).toBe(false);
+  });
+
+  it("a conversa de um profissional, ou com quem a Vitória nunca falou, fica com a equipa", () => {
+    expect(voltou(30 * H, { profissional: true })).toBe(false);
+    expect(voltou(30 * H, { vitoriaJaFalou: false })).toBe(false);
+  });
+
+  it("a resposta à mão não apaga uma razão que já lá estava", () => {
+    const agora = { motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa" as const };
+    expect(guardaOMotivoDeAntes({ motivo: "Pediu para falar com uma pessoa", quem: "vitoria", emVigor: true }, agora)).toBe(true);
+    expect(guardaOMotivoDeAntes({ motivo: "Pelo backoffice", quem: "pessoa", emVigor: true }, agora)).toBe(true);
+    // Uma entrega por resposta escreve-se por cima (o relógio recomeça), e uma que já não vale também.
+    expect(guardaOMotivoDeAntes({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa", emVigor: true }, agora)).toBe(false);
+    expect(guardaOMotivoDeAntes({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa", emVigor: false }, agora)).toBe(false);
+    expect(guardaOMotivoDeAntes(null, agora)).toBe(false);
+    // Uma razão nova (a Vitória, o «Assumir») escreve sempre por cima.
+    expect(guardaOMotivoDeAntes({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa", emVigor: false }, { motivo: "Pediu para falar com uma pessoa", quem: "vitoria" })).toBe(false);
+  });
+});
+
+describe("o que ficou por responder quando a conversa volta", () => {
+  const m = (id: number, direccao: string, texto: string, haSegundos: number) => ({ id, direccao, texto, haSegundos });
+
+  it("a mensagem do cliente depois da última nossa responde-se; uma vez", () => {
+    const fio = [m(1, "out", `${MARCA_DE_MAO} já vejo`, 30 * H), m(2, "in", "Então?", 26 * H), m(3, "in", "Ainda dá?", 25 * H)];
+    expect(oQueFicouPorResponder(fio, null)).toEqual({ ateId: 3, antiga: false });
+    expect(oQueFicouPorResponder(fio, 3)).toBeNull();
+  });
+
+  it("com a última palavra nossa não há nada para responder", () => {
+    expect(oQueFicouPorResponder([m(1, "in", "Olá", 30 * H), m(2, "out", `${MARCA_DE_MAO} olá`, 29 * H)], null)).toBeNull();
+  });
+
+  it("a que passou de 7 dias fica para quem a vir", () => {
+    expect(DIAS_PARA_RESPONDER_AO_QUE_FICOU).toBe(7);
+    expect(oQueFicouPorResponder([m(1, "out", "x", 9 * 24 * H), m(2, "in", "Olá", 8 * 24 * H)], null)).toEqual({ ateId: 2, antiga: true });
+  });
+});
+
+describe("a janela — das 9h às 20h, uma mensagem automática por dia, sem dizer que voltou", () => {
+  const entregaQueVoltou = {
+    telefone: "351910000112",
+    motivo: MOTIVO_DA_RESPOSTA_A_MAO,
+    criadoEm: "2026-11-20 10:00:00",
+    quem: "pessoa",
+    retomadaAteId: null,
+    voltouAVitoria: true,
+  };
+  beforeEach(() => {
+    base.entregas = [entregaQueVoltou, { ...entregaQueVoltou, telefone: "351910000113", voltouAVitoria: false }];
+    base.fio = [
+      { id: 10, direccao: "out", texto: `${MARCA_DE_MAO} vou ver`, haSegundos: 30 * H },
+      { id: 11, direccao: "in", texto: "Então, como fica?", haSegundos: 26 * H },
+    ];
+    base.jaSaiuHoje = false;
+    base.tratadas = [];
+    base.marcadas = [];
+    base.chamadasABase = 0;
+  });
+
+  it("fora das 9h–20h de Lisboa não faz nada — nem lê a base", async () => {
+    for (const hora of ["2026-11-25T22:00:00Z", "2026-11-25T07:30:00Z", "2026-11-25T20:00:00Z"]) {
+      const r = await responderAsQueVoltaramAVitoria(new Date(hora));
+      expect(r.respondidas).toBe(0);
+    }
+    expect(base.chamadasABase).toBe(0);
+    expect(base.tratadas).toEqual([]);
+  });
+
+  it("dentro da janela, a Vitória lê a mensagem que ficou — só nas que voltaram, e uma vez", async () => {
+    const r = await responderAsQueVoltaramAVitoria(new Date("2026-11-25T10:00:00Z"));
+    expect(r.respondidas).toBe(1);
+    expect(base.tratadas).toEqual([{ telefone: "351910000112", texto: "Então, como fica?" }]);
+    expect(base.marcadas).toEqual([{ telefone: "351910000112", ateId: 11 }]);
+    // Responde ao que ele escreveu: não há nenhuma mensagem «voltei».
+    expect(ler("src/lib/volta-a-vitoria-na-base.ts")).not.toMatch(/enviarTextoWhatsApp|enviarAvisoWhatsApp/);
+  });
+
+  it("quem já recebeu hoje uma mensagem automática fica para amanhã", async () => {
+    base.jaSaiuHoje = true;
+    const r = await responderAsQueVoltaramAVitoria(new Date("2026-11-25T10:00:00Z"));
+    expect(r.respondidas).toBe(0);
+    expect(base.tratadas).toEqual([]);
+    expect(base.marcadas).toEqual([]);
+  });
+
+  it("a mensagem antiga (mais de 7 dias) marca-se e não se responde", async () => {
+    base.fio = [{ id: 11, direccao: "in", texto: "Olá", haSegundos: 8 * 24 * H }];
+    const r = await responderAsQueVoltaramAVitoria(new Date("2026-11-25T10:00:00Z"));
+    expect(r.antigas).toBe(1);
+    expect(base.tratadas).toEqual([]);
+    expect(base.marcadas).toEqual([{ telefone: "351910000112", ateId: 11 }]);
+  });
+});
+
+describe("a Mesa mostra «Voltou à Vitória (24 h sem a equipa)» em vez de «Entregue»", () => {
+  const factos: FactosDaConversa = {
+    telefone: "351910000112",
+    ultimaEntrada: { id: 11, direccao: "in", texto: "Então, como fica?", haSegundos: 26 * H, quando: "2026-11-24 08:00:00" } as never,
+    ultimaSaida: { id: 10, direccao: "out", texto: `${MARCA_DE_MAO} vou ver`, haSegundos: 30 * H, quando: "2026-11-24 04:00:00" } as never,
+    bloqueada: false,
+    entregue: false,
+    voltouAVitoria: true,
+    motivoDaEntrega: MOTIVO_DA_RESPOSTA_A_MAO,
+    fecho: null,
+    recolha: null,
+    pedidoVivo: null,
+    ultimoPedido: null,
+    guardada: null,
+  };
+
+  it("a linha é da Vitória, sem o «Entregue»", () => {
+    const l = naMesa(factos);
+    expect(l.dono).toBe("assistente");
+    expect(l.motivoDaEntrega).toBeNull();
+    expect(l.voltouAVitoria).toBe("Voltou à Vitória (24 h sem a equipa)");
+  });
+
+  it("ainda entregue, continua «Entregue» e da equipa", () => {
+    const l = naMesa({ ...factos, entregue: true, voltouAVitoria: false });
+    expect(l.dono).toBe("equipa");
+    expect(l.motivoDaEntrega).toBe(MOTIVO_DA_RESPOSTA_A_MAO);
+    expect(l.voltouAVitoria).toBeNull();
+  });
+
+  it("o painel mostra a frase da linha, e a base junta-a à entrega", () => {
+    expect(ler("src/components/admin/AdminWhatsAppPanel.tsx")).toContain("{l.voltouAVitoria}");
+    const naBase = ler("src/lib/mesa-das-conversas-na-base.ts");
+    expect(naBase).toContain("entregue: entregueDe.has(chave) && !entregueDe.get(chave)?.voltouAVitoria");
+  });
+});
+
+describe("na base — a mesma porta para todas as rotinas", () => {
+  const DB = ler("src/lib/db.ts");
+  const corpo = (nome: string) => {
+    const i = DB.indexOf(`export async function ${nome}(`);
+    return DB.slice(i, DB.indexOf("\n}\n", i));
+  };
+
+  it("a ponte grava o motivo da resposta à mão, igual à constante", () => {
+    expect(ler("src/app/api/whatsapp/ponte/route.ts")).toContain(`"${MOTIVO_DA_RESPOSTA_A_MAO}", "pessoa")`);
+  });
+
+  it("«a conversa está entregue?» já sabe do prazo — e na dúvida fica entregue", () => {
+    const f = corpo("numeroInterrompidoWhatsApp");
+    expect(f).toContain("entregasQueVoltaramAVitoria([entrega])");
+    expect(f).toContain(".catch(() => new Set<string>())");
+  });
+
+  it("o registo não se apaga: as que voltaram continuam na tabela", () => {
+    expect(corpo("listarNumerosInterrompidosWhatsApp")).not.toContain("DELETE");
+    expect(corpo("numeroInterrompidoWhatsApp")).not.toContain("DELETE");
+    expect(DB).toContain("ALTER TABLE whatsappInterrompidos ADD COLUMN quem VARCHAR(16)");
+  });
+
+  it("quem entrega fica escrito, e a resposta à mão não troca uma razão", () => {
+    const f = corpo("interromperNumeroWhatsApp");
+    expect(f).toContain("guardaOMotivoDeAntes(");
+    expect(f).toContain("quem = VALUES(quem)");
+  });
+
+  it("a passagem do assistente trata as que voltaram", () => {
+    expect(ler("src/app/api/cron/assistente/route.ts")).toContain("responderAsQueVoltaramAVitoria()");
+  });
+});
