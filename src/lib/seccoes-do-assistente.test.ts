@@ -272,6 +272,7 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "pagamentos", rota: "/api/admin/profissionais/1", porque: "marcar conta de teste é do administrador; mexer no profissional é da secção Profissionais" },
   // O painel das rotinas (27-10-2026, d7) mostra o que corre no servidor — do administrador.
   { seccao: "configs", rota: "/api/admin/rotinas", porque: "o painel das rotinas é do administrador (d7)" },
+  { seccao: "configs", rota: "/api/admin/rotinas/o-que-a-vitoria-fez", porque: "as somas das passagens das rotinas são do painel das rotinas, do administrador (d102, 24-11-2026)" },
   // O dinheiro do Início (d56, 17-11-2026): pede também as Carteiras (as Finanças); sem elas a secção não aparece.
   { seccao: "overview", rota: "/api/admin/financas/inicio", porque: "o lucro no Início pede também a secção Carteiras, como as Finanças (d56)" },
   { seccao: "configs", rota: "/api/admin/livro", porque: "o livro da carteira não é configuração — escreve-se uma vez e não se reescreve" },

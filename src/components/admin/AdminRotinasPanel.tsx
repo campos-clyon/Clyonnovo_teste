@@ -7,6 +7,7 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { diaMesEHoraEmLisboa } from "@/lib/hora-de-lisboa";
 import { haQuantoTempo, type EstadoDaRotina } from "@/lib/rotinas";
 import type { EspacoDaBase } from "@/lib/espaco-da-base";
+import OQueAVitoriaFez from "@/components/admin/OQueAVitoriaFez";
 
 /**
  * AS ROTINAS — 27-10-2026 (decisão d7).
@@ -61,6 +62,8 @@ export default function AdminRotinasPanel() {
 
   return (
     <>
+    {/* d102 (24-11-2026): as somas das passagens nas últimas 24 h e, a pedido, dia a dia nos últimos 7. */}
+    <OQueAVitoriaFez />
     {/* d1 (23-11-2026): o espaço da base no Railway; vermelho a partir dos 85 %. */}
     {espaco && (
       <p
