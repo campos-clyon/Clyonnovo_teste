@@ -74,6 +74,10 @@
     {
       "path": "/api/cron/propostas-ao-cliente",
       "schedule": "2,17,32,47 * * * *"
+    },
+    {
+      "path": "/api/cron/pedidos-sem-propostas",
+      "schedule": "12,27,42,57 * * * *"
     }
   ]
 }

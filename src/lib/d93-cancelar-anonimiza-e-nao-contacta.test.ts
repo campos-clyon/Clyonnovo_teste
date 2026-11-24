@@ -94,7 +94,7 @@ afterEach(() => vi.clearAllMocks());
 describe("d93 — cancelar pela conversa: anonimizado na hora, não contactar, e a mensagem", () => {
   it("a ordem: cancelar → avisar os parceiros → a mensagem → não contactar → histórico → anonimizar → apagar a conversa", async () => {
     const r = await cancelarPeloCliente(812, "351910000001");
-    expect(r).toEqual({ ok: true, encerradas: 1, conversaApagada: true });
+    expect(r).toEqual({ ok: true, encerradas: 1, conversaApagada: true, mensagemPor: "whatsapp" });
     expect(e.ordem).toEqual([
       "cancelar",
       "avisar-parceiros",

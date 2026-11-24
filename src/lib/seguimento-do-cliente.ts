@@ -33,6 +33,7 @@
 
 import { diaEmLisboa, instanteDaBase, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { lerRespostaAoLembrete, type RespostaAoLembrete } from "./validade-do-orcamento";
+import { TELEFONE_DA_CLYON_NACIONAL } from "./telefone-da-clyon";
 
 /** O nome do interruptor de emergência, como aparece nas Configs. */
 export const NOME_DO_INTERRUPTOR_DO_SEGUIMENTO = "Seguimento do cliente";
@@ -413,9 +414,22 @@ export function assuntoDoSeguimento(passo: PassoDoSeguimento, pedidoId: number):
   return passo === "arquivar" ? `O seu pedido #${pedidoId} na CLYON foi fechado` : `O seu pedido #${pedidoId} na CLYON`;
 }
 
-/** Por email não se responde com «1», «2» ou «3»: a última frase muda. */
-export function paraEmail(texto: string): string {
-  return texto.replace(AS_OPCOES_DO_SEGUIMENTO, "Responda a este email, ou fale connosco pelo WhatsApp, para escolher o parceiro, marcar outra data ou cancelar.");
+/**
+ * Por email não se responde com «1», «2» ou «3»: a última frase muda.
+ *
+ * d102 (24-11-2026): e não diz «responda a este email» — nenhuma caixa lida
+ * pelo sistema recebe a resposta, e um «cancelem» escrito ali não cancelava
+ * nada. Diz como se faz: o link do pedido (escolher o parceiro, cancelar) e o
+ * WhatsApp da CLYON para outra data. Sem o link, o WhatsApp para tudo.
+ */
+export function paraEmail(texto: string, linkDoPedido?: string | null): string {
+  const link = (linkDoPedido ?? "").trim();
+  return texto.replace(
+    AS_OPCOES_DO_SEGUIMENTO,
+    link
+      ? `Para escolher o parceiro ou cancelar o pedido, abra-o aqui: ${link} Para marcar outra data, fale connosco pelo WhatsApp, no ${TELEFONE_DA_CLYON_NACIONAL}.`
+      : `Para escolher o parceiro, marcar outra data ou cancelar o pedido, fale connosco pelo WhatsApp, no ${TELEFONE_DA_CLYON_NACIONAL}.`,
+  );
 }
 
 /**

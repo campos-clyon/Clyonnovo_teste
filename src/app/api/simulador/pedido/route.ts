@@ -25,6 +25,7 @@ import {
 } from "@/lib/pedido-da-app-de-cliente";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { seguirOPedidoNovo } from "@/lib/seguir-o-pedido-novo";
+import { avisarQueRecebemosOPedido } from "@/lib/recebemos-o-pedido-na-base";
 import { SITE_URL } from "@/lib/seo-data";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { calculateFastEstimate, camposDoPedidoParaOMotor } from "@/lib/pricing-helper";
@@ -784,6 +785,9 @@ export async function POST(req: NextRequest) {
 
     // O pedido completo segue sozinho para os parceiros (d3, 23-11-2026), depois de o cliente ter a resposta.
     after(() => seguirOPedidoNovo(id));
+    // d102 (d): «Recebemos o seu pedido #N» pelo WhatsApp (com o que falta, se faltar) — não na app de cliente, que tem o seu aviso.
+    if (order.origemPedido !== ORIGEM_DA_APP_DE_CLIENTE) after(() => avisarQueRecebemosOPedido(id));
+
 
     /*
      * PARA ONDE VAI O EMAIL COM O LINK — ou `null`, se não vai nenhum.

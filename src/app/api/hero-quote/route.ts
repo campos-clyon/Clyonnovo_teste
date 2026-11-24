@@ -15,6 +15,7 @@ import { kmParaOrcamento } from "@/lib/distancia-estimada";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { notifyNewOrder } from "@/lib/whatsapp";
 import { seguirOPedidoNovo } from "@/lib/seguir-o-pedido-novo";
+import { avisarQueRecebemosOPedido } from "@/lib/recebemos-o-pedido-na-base";
 import { SITE_URL } from "@/lib/seo-data";
 import { problemaDoTelefone, juntarIndicativo, MENSAGENS_DO_TELEFONE } from "@/lib/telefone-do-cliente";
 import { urlDeAnexoPermitido } from "@/lib/url-externo-seguro";
@@ -310,6 +311,9 @@ export async function POST(req: NextRequest) {
     // O pedido completo segue sozinho para os parceiros (d3, 23-11-2026); um incompleto fica de fora sem barulho.
     const novoId = orderId;
     after(() => seguirOPedidoNovo(novoId));
+    // d102 (d): «Recebemos o seu pedido #N» pelo WhatsApp (com o que falta, se faltar).
+    after(() => avisarQueRecebemosOPedido(novoId));
+
 
     notifyNewOrder({
       id: orderId,

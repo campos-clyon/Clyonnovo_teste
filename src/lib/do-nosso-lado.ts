@@ -42,7 +42,7 @@ import { esperaEDoCliente, mapaDoSeguimento, type PedidoEmSeguimento } from "./s
 /** Mais de 2 h sem resposta a um cliente é já «do nosso lado». */
 export const DUAS_HORAS_S = 2 * 3600;
 
-export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada" | "sem_resposta" | "sem_fecho";
+export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada" | "sem_resposta" | "sem_fecho" | "sem_propostas";
 
 export type LinhaDoNossoLado = {
   tipo: TipoDoNossoLado;
@@ -72,7 +72,25 @@ export const TITULOS_DO_NOSSO_LADO: Record<TipoDoNossoLado, string> = {
   sem_resposta: TITULO_DO_GRUPO_SEM_RESPOSTA,
   // d15 (13-11-2026): o modelo de 15-11 — 24 h depois da data, sem «Está feito».
   sem_fecho: TITULO_DO_GRUPO_DO_FECHO,
+  // d102 (a), 24-11-2026: o pedido que seguiu e não teve resposta, ou ficou sem parceiros na zona.
+  sem_propostas: "Pedidos sem propostas dos parceiros (ou sem parceiros na zona)",
 };
+
+/** Um pedido sem propostas, como a rota da Mesa o dá (`/api/admin/negociacoes/sem-propostas`). */
+export type SemPropostasParaOLado = { pedidoId: number; desde: string; linha: string };
+
+/** As linhas do grupo «sem propostas»: desde quando, e a linha com o motivo. Pura. */
+export function semPropostasDoNossoLado(lista: readonly SemPropostasParaOLado[], agora: Date): LinhaDoNossoLado[] {
+  const out: LinhaDoNossoLado[] = [];
+  const vistos = new Set<number>();
+  for (const p of lista) {
+    const d = new Date(p.desde);
+    if (vistos.has(p.pedidoId) || Number.isNaN(d.getTime())) continue;
+    vistos.add(p.pedidoId);
+    out.push({ tipo: "sem_propostas", pedidoId: p.pedidoId, telefone: null, esperaS: Math.max(0, Math.floor((agora.getTime() - d.getTime()) / 1000)), oQue: p.linha });
+  }
+  return out;
+}
 
 /* ── As formas que se lêem — o mínimo de cada fonte ─────────────────────── */
 
@@ -447,6 +465,8 @@ export function doNossoLado(fontes: {
    * dos grupos de `GRUPOS_QUE_O_SEGUIMENTO_TIRA`. Sem a lista, conta-se como antes.
    */
   emSeguimento?: readonly PedidoEmSeguimento[] | null;
+  /** d102 (a): os pedidos sem propostas, lidos à parte (todos os dos últimos 30 dias). */
+  semPropostas?: readonly SemPropostasParaOLado[] | null;
   agora: Date;
 }): GrupoDoNossoLado[] {
   const porEspera = (l: LinhaDoNossoLado[]) =>
@@ -468,6 +488,7 @@ export function doNossoLado(fontes: {
     ["data_passada", datasPassadasDoNossoLado(fontes.pedidos, fontes.trabalhosClyon, fontes.agora).filter((l) => !noFecho.has(l.pedidoId ?? -1))],
     ["sem_resposta", semRespostaDoNossoLado(fontes.pedidos, fontes.agora)],
     ["sem_fecho", semFecho],
+    ["sem_propostas", semPropostasDoNossoLado(fontes.semPropostas ?? [], fontes.agora)],
   ];
   return grupos.map(([tipo, linhas]) => ({
     tipo,

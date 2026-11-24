@@ -857,7 +857,18 @@ async function enviarPeloCanal(canal: CanalDoSeguimento, p: PedidoLido, passo: P
   const email = emailValido(p.contactEmail);
   if (!email) return false;
   const { enviarEmailDoSeguimento } = await import("./seguimento-da-app-envio");
-  return enviarEmailDoSeguimento({ para: email, assunto: assuntoDoSeguimento(passo, p.id), texto: paraEmail(texto) }).catch(() => false);
+  // d102: o link do pedido (ou a conta), por onde se escolhe o parceiro e se cancela — o fecho já não o leva.
+  let link: string | null = null;
+  if (passo !== "arquivar") {
+    const { linkParaQuemFechou } = await import("./link-de-quem-fecha-pelo-whatsapp");
+    const db = await import("./db");
+    link = await linkParaQuemFechou(p.id, {
+      emailDoPedido: async () => email,
+      existeContaComEmail: db.existeContaComEmail,
+      substituirTokenDoPedido: db.substituirTokenDoPedido,
+    }).catch(() => null);
+  }
+  return enviarEmailDoSeguimento({ para: email, assunto: assuntoDoSeguimento(passo, p.id), texto: paraEmail(texto, link) }).catch(() => false);
 }
 
 /**

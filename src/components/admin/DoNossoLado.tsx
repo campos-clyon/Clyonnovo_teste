@@ -12,6 +12,7 @@ import {
   type ConversaParaOLado,
   type LinhaDoNossoLado,
   type PedidoParaOLado,
+  type SemPropostasParaOLado,
   type TrabalhoClyonParaOLado,
 } from "@/lib/do-nosso-lado";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
@@ -93,6 +94,32 @@ export default function DoNossoLado({
     void lerSemFecho(true);
   }, [lerSemFecho]);
 
+  /* d102 (a): os pedidos sem propostas (ou sem parceiros na zona) — lidos à parte, de 2 em 2 minutos. */
+  const [semPropostas, setSemPropostas] = useState<SemPropostasParaOLado[] | null>(null);
+  const semPropostasLidoEm = useRef(0);
+  const lerSemPropostas = useCallback(
+    async (forcar = false) => {
+      if (!token) return;
+      if (!forcar && Date.now() - semPropostasLidoEm.current < CONVERSAS_DE_MS) return;
+      semPropostasLidoEm.current = Date.now();
+      try {
+        const r = await fetch("/api/admin/negociacoes/sem-propostas", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        setSemPropostas(Array.isArray(d?.pedidos) ? (d.pedidos as SemPropostasParaOLado[]) : []);
+      } catch {
+        /* fica o que já se tinha lido */
+      }
+    },
+    [token],
+  );
+  useEffect(() => {
+    void lerSemPropostas(true);
+  }, [lerSemPropostas]);
+
   const lerConversas = useCallback(
     async (forcar = false) => {
       if (!token || !podeVerConversas) return;
@@ -124,10 +151,11 @@ export default function DoNossoLado({
   useAutoRefresh(() => {
     setAgora(new Date());
     void lerSemFecho();
+    void lerSemPropostas();
     return lerConversas();
   });
 
-  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, semFecho, emSeguimento, agora });
+  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, semFecho, emSeguimento, semPropostas, agora });
   const total = grupos.reduce((s, g) => s + g.linhas.length, 0);
   const visiveis = grupos.filter((g) => g.linhas.length > 0 || (g.tipo === "conversa" && podeVerConversas && conversasFalharam));
 

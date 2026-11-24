@@ -63,6 +63,12 @@ export type FonteDoCancelamento = {
   avisaComoTrabalhoClyon: boolean;
   /** Pára também a validade do orçamento deste pedido (a d83). */
   paraAValidade: boolean;
+  /**
+   * d102 (24-11-2026): cancela pelo caminho da d93 — os dados saem NA HORA, o
+   * número fica em «não contactar» e a mensagem diz isso (`cancelarEApagarNaHora`).
+   * Sem isto, o de sempre: o texto de cancelamento e a purga 7 dias depois.
+   */
+  anonimizaNaHora?: boolean;
 };
 
 const QUANDO_SE_PERGUNTA = "«3» — à espera do CANCELAR";
@@ -221,6 +227,19 @@ export async function cancelarPeloLembreteComum(
   if (v.porque !== undefined) {
     await desfazer(v.porque);
     return { ok: false, porque: v.porque };
+  }
+  if (f.anonimizaNaHora) {
+    const { cancelarEApagarNaHora } = await import("./cancelar-pelo-cliente-na-base");
+    const d = await cancelarEApagarNaHora(pedidoId, { origem: "vitoria", telefone, verificarTelefone: false }).catch((e) => ({
+      ok: false as const,
+      porque: e instanceof Error ? e.message : "erro ao cancelar",
+      daEquipa: false,
+    }));
+    if (!d.ok) {
+      await desfazer(d.porque);
+      return { ok: false, porque: d.porque };
+    }
+    return { ok: true, encerradas: d.encerradas };
   }
   const eClyon = f.avisaComoTrabalhoClyon && v.eClyon;
   const existentes = await negociacoesDoPedido(pedidoId).catch(() => []);

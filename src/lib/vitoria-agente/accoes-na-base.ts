@@ -145,6 +145,8 @@ export const FONTE_DO_CANCELAR_DO_AGENTE: FonteDoCancelamento = {
   resumo: (n) => `O cliente confirmou com CANCELAR, à pergunta da Vitória (d92): pedido cancelado, ${n} negociação(ões) encerrada(s).`,
   avisaComoTrabalhoClyon: false,
   paraAValidade: true,
+  // d102 (24-11-2026): o CANCELAR à Vitória cancela como na conversa (d93) — dados apagados na hora, «não contactar».
+  anonimizaNaHora: true,
 };
 
 async function poolDosCancelamentos() {

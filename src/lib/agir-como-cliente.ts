@@ -13,6 +13,7 @@ import {
   cancelarPedido,
   registarSemFalhar,
   aceitarPrecoClyon,
+  interromperNumeroWhatsApp,
 } from "@/lib/db";
 import { avisarProfissionalDaChegadaConfirmada, confirmarAChegada } from "@/lib/confirmar-a-chegada";
 import { confirmarAsHoras, contestarAsHoras } from "@/lib/horas-no-servidor";
@@ -232,8 +233,40 @@ export async function agirComoCliente(a: {
         );
       }
 
+      /*
+       * IGUAL EM TODO O LADO — d102 (CEO e dono, 24-11-2026). Sem acordo, data,
+       * pagamento, referência viva nem fatura, o cancelamento do painel e da app
+       * é o da conversa (d93): cancela, avisa os parceiros, apaga os dados na
+       * hora, «não contactar», e a mensagem ao cliente a confirmar. Com uma
+       * dessas excepções, o cancelamento continua a ser o de sempre (é direito
+       * do cliente, com o motivo), os dados ficam (a lei obriga a guardar o que
+       * se pagou ou faturou) e o pedido passa à equipa, que trata do resto.
+       */
+      const { lerOPedidoParaCancelar, cancelarEApagarNaHora } = await import("./cancelar-pelo-cliente-na-base");
+      const { porqueFicaComAEquipa } = await import("./cancelar-pelo-cliente");
+      const lido = await lerOPedidoParaCancelar(pedidoId);
+      if (!lido) return falha(404, "Pedido não encontrado.");
+      const ficaComAEquipa = porqueFicaComAEquipa(lido);
+      if (!ficaComAEquipa) {
+        const d = await cancelarEApagarNaHora(pedidoId, {
+          origem: a.porta === "convidado" ? "link" : a.porta,
+          verificarTelefone: false,
+          motivo: motivo || null,
+        });
+        if (d.ok) return { status: 200, corpo: { ok: true, cancelado: true, encerradas: d.encerradas, dadosApagados: true } };
+        if (!d.daEquipa) return falha(500, "Não foi possível cancelar. Tente novamente.");
+      }
+
       const r = await cancelarPedido(pedidoId, { motivo: motivo || "o cliente cancelou" });
       if (!r) return falha(404, "Pedido não encontrado.");
+      // d102: a excepção passa à equipa — a conversa fica com uma pessoa, com o motivo.
+      if (ficaComAEquipa && lido.contactPhone) {
+        await interromperNumeroWhatsApp(
+          lido.contactPhone,
+          `Pedido #${pedidoId}: o cliente cancelou (${ficaComAEquipa}) — tratar do resto com ele e com o parceiro`,
+          "pessoa",
+        ).catch(() => {});
+      }
       // Os profissionais com proposta ou contratados ficam a saber, com o motivo (S19, BO24).
       await avisarDoCancelamento({ pedidoId, negociacoes: existentes, motivo, porQuem: "cliente" });
 

@@ -105,6 +105,8 @@ describe("uma mensagem automática por dia, por telefone, comum a todas as rotin
       "lembretesDoQueFalta",
       "seguimentoDoCliente",
       "envioDasPropostasAoCliente",
+      // d102 (24-11-2026): o aviso do pedido sem propostas.
+      "semPropostasAoCliente",
       // d93 (23-11-2026): os lembretes da conversa parada a meio.
       "conversasParadas",
     ]);

@@ -50,6 +50,20 @@ vi.mock("@/lib/db", () => ({
   deletePushSubscription: vi.fn(async () => {}),
   getPushSubscriptionsByEmail: vi.fn(async () => []),
 }));
+// d102: o cancelar sem acordo passa pelo caminho da d93 (aqui fingido, com o cancelarPedido de sempre).
+vi.mock("@/lib/cancelar-pelo-cliente-na-base", async () => {
+  const base = await import("@/lib/db");
+  return {
+    lerOPedidoParaCancelar: vi.fn(async () => ({
+      existe: true, status: "enviado", anonimizado: false, contratado: false, dataMarcada: false, pago: false,
+      referenciaViva: false, faturado: false, contactPhone: null, contactEmail: null, eClyon: false, servico: null, localidade: null,
+    })),
+    cancelarEApagarNaHora: vi.fn(async (id: number) => {
+      await base.cancelarPedido(id, {});
+      return { ok: true, encerradas: 1, conversaApagada: false, mensagemPor: null };
+    }),
+  };
+});
 vi.mock("@/auth", () => ({ authOptions: {} }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn(async () => null) }));
 vi.mock("@/lib/limite-rota-publica", () => ({

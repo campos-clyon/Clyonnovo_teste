@@ -40,6 +40,9 @@ export const FONTES_DAS_MENSAGENS_AUTOMATICAS: readonly FonteDasMensagensAutomat
   { rotina: "seguimento do cliente (d83)", tabela: "seguimentoDoCliente", colunas: ["mensagem1Em", "mensagem2Em", "mensagem3Em", "arquivadoEm"] },
   // d88 (23-11-2026): o orçamento que a Vitória envia sozinha ao cliente.
   { rotina: "propostas ao cliente (d88)", tabela: "envioDasPropostasAoCliente", colunas: ["enviadoEm"] },
+  // d102 (24-11-2026): o aviso do pedido sem propostas (ou sem parceiros na zona). O «recebemos o seu pedido» NÃO conta:
+  // é a resposta ao pedido que ele acabou de fazer, e contá-lo atrasava para o dia seguinte as propostas desse mesmo dia.
+  { rotina: "pedido sem propostas (d102)", tabela: "semPropostasAoCliente", colunas: ["enviadoEm"] },
   // d93 (23-11-2026): os lembretes da conversa parada a meio, antes do pedido (os 10 minutos da d25 não contam).
   {
     rotina: "conversa parada a meio (d93)",

@@ -597,6 +597,8 @@ export function aindaENovidade(n: Novidade, agora: Date): boolean {
  * porque houve uma proposta seria perder exactamente a informação de que a
  * equipa precisa.
  */
+const temEmail = (e: string | null | undefined) => typeof e === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
+
 export function novidadeAContar(
   p: PedidoParaOAssistente,
   agora: Date,
@@ -604,7 +606,16 @@ export function novidadeAContar(
 ): Novidade[] {
   const frescas = novidadesDoPedido(p, agora)
     .filter((n) => aindaENovidade(n, agora))
-    .filter((n) => podeFazer(n.capacidade));
+    .filter((n) => podeFazer(n.capacidade))
+    /*
+     * d102 (e), 24-11-2026 — SEM DUPLICAR O QUE OUTRA ROTINA JÁ DIZ:
+     *   · «Está marcado» (acompanhar) não sai com o «Avisar o cliente da data»
+     *     ligado — esse já diz o dia, pela mudança que o grava;
+     *   · «X diz que está feito» e o pedido de avaliação não saem pelo WhatsApp a
+     *     quem tem email: o email da confirmação e o da avaliação já lhe chegam.
+     */
+    .filter((n) => !(n.especie === "dia_marcado" && podeFazer("avisar_data")))
+    .filter((n) => !((n.especie === "trabalho_feito" || n.especie === "avaliacao") && temEmail(p.contactEmail)));
 
   const daEquipa = frescas.filter((n) => eParaAEquipa(n.especie));
   const doCliente = frescas
@@ -961,8 +972,11 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
           },
           agora,
         );
-        const saiu = await enviarAvisoWhatsApp(telefoneDoCliente, texto).catch(() => false);
-        porqueNaoSaiu = saiu ? null : "nao saiu";
+        // d102 (e): nunca a quem está em «não contactar» (cancelou e ouviu «não voltaremos a contactá-lo»).
+        const { eParaNaoContactar } = await import("./nao-contactar");
+        const naoContactar = await eParaNaoContactar(telefoneDoCliente).catch(() => true);
+        const saiu = naoContactar ? false : await enviarAvisoWhatsApp(telefoneDoCliente, texto).catch(() => false);
+        porqueNaoSaiu = saiu ? null : naoContactar ? "nao contactar" : "nao saiu";
         if (saiu) {
           resumo.novidades++;
           resumo.linhas.push(`Cliente avisado da data nova do pedido #${a.pedidoId}.`);
@@ -1157,6 +1171,15 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
       if (!eParaAEquipa(n.especie)) {
         if (jaFalouComEle) break;
         if (!horaDeFalar(agora)) continue;
+      }
+
+      /*
+       * d102 (e): ao cliente, como todas as rotinas — nunca a quem está em «não
+       * contactar», nem no dia em que já lhe saiu outra mensagem automática.
+       */
+      if (!eParaAEquipa(n.especie)) {
+        const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
+        if (await jaSaiuHojeUmaMensagemAutomatica({ telefone: n.telefone }, agora).catch(() => true)) continue;
       }
 
       const { id } = await db.reservarAvisoDoAssistente({

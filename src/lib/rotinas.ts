@@ -54,6 +54,8 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "envio-aos-parceiros", titulo: "Envio automático aos parceiros: os «Orçamentos novos» completos de todas as origens e a fila das 8h00 (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
   // 23-11-2026 (d88): as propostas dos parceiros vão ao cliente sozinhas, assim que chega a 1.ª proposta (8h–21h; interruptor nas Configs, ligado por omissão).
   { nome: "propostas-ao-cliente", titulo: "Propostas ao cliente: o orçamento sai sozinho pela Vitória (interruptor nas Configs)", horario: "2,17,32,47 * * * *", intervaloMin: 15 },
+  // 24-11-2026 (d102 (a)): o pedido sem propostas 24 h depois de seguir para os parceiros, ou «sem parceiros na zona» — a Vitória avisa o cliente uma vez (8h–21h).
+  { nome: "pedidos-sem-propostas", titulo: "Pedidos sem propostas: a Vitória avisa o cliente uma vez (8h–21h de Lisboa)", horario: "12,27,42,57 * * * *", intervaloMin: 15 },
   { nome: "weekly-digest", titulo: "Resumo semanal por email", horario: "0 9 * * 1", intervaloMin: 7 * 24 * 60 },
 ];
 

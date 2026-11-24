@@ -18427,6 +18427,8 @@ export type PedidoParaOAssistente = {
   id: number;
   contactName: string | null;
   contactPhone: string | null;
+  /** d102 (e): quem tem email já recebe a confirmação e a avaliação por lá. Opcional para os testes antigos. */
+  contactEmail?: string | null;
   serviceType: string | null;
   status: string | null;
   createdAt: Date;
@@ -18503,7 +18505,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
   if (!pool) return [];
 
   const [pedidos] = (await pool.execute(
-    `SELECT o.id, o.contactName, o.contactPhone, o.serviceType, o.status,
+    `SELECT o.id, o.contactName, o.contactPhone, o.contactEmail, o.serviceType, o.status,
             o.createdAt, o.dataAgendada, o.baseDoPreco
        FROM simulatorOrders o
       WHERE o.contactPhone IS NOT NULL AND TRIM(o.contactPhone) <> ''
@@ -18568,6 +18570,7 @@ export async function pedidosParaOAssistente(limite = 120): Promise<PedidoParaOA
     id: Number(p.id),
     contactName: (p.contactName as string) ?? null,
     contactPhone: (p.contactPhone as string) ?? null,
+    contactEmail: (p.contactEmail as string) ?? null,
     serviceType: (p.serviceType as string) ?? null,
     status: (p.status as string) ?? null,
     createdAt: p.createdAt as Date,

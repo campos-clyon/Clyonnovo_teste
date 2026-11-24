@@ -1206,6 +1206,35 @@ export async function responderAoSeguimentoDoCliente(
  * pendente (se o houver) e contratar. É o mesmo caminho do botão «Fechar» e
  * da palavra SIM: um só corpo, para nunca haver dois comportamentos.
  */
+/**
+ * O PARCEIRO CONTRATADO PELO WHATSAPP FICA A SABER — d102 (CEO e dono,
+ * 24-11-2026). Pelo painel e pela app, quem é contratado recebe logo o email
+ * (com a morada) e o aviso no telemóvel (`avisarQueFoiContratadoSemFalhar`);
+ * pelo WhatsApp — o SIM pelas regras, o SIM à pergunta da Vitória agente e o
+ * «1» ao lembrete da validade (d62), que passam todos por `fecharPeloCliente`
+ * — não recebia nada, e a Vitória dizia ao cliente que «o parceiro recebeu a
+ * morada». Chama-se UMA vez, só depois de o fecho ficar gravado (a transacção
+ * da d26 só deixa passar um). Nunca lança: o negócio já está fechado.
+ */
+export async function avisarOContratadoDoFechoPeloWhatsApp(pedidoId: number, negociacaoId: number, valorAcordado: number | null): Promise<void> {
+  try {
+    const linha = (await negociacoesDoPedido(pedidoId)).find((n) => Number(n.id) === negociacaoId);
+    if (!linha || !Number(linha.providerId)) return;
+    const { avisarQueFoiContratadoSemFalhar } = await import("@/lib/agir-como-cliente");
+    const { urlDeAccao } = await import("@/lib/url-do-site");
+    await avisarQueFoiContratadoSemFalhar({
+      pedidoId,
+      negociacaoId,
+      providerId: Number(linha.providerId),
+      linha: linha as Parameters<typeof avisarQueFoiContratadoSemFalhar>[0]["linha"],
+      valorAcordado,
+      baseUrl: urlDeAccao(),
+    });
+  } catch (e) {
+    console.error("[whatsapp] o aviso ao contratado não saiu:", e instanceof Error ? e.message : e);
+  }
+}
+
 async function fecharPeloCliente(
   telefone: string,
   alvo: Alvo,
@@ -1326,6 +1355,7 @@ async function fecharPeloCliente(
   }
   const encerradas = gravou.encerradas;
   if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId: alvo.pedidoId, quem: perdem, porque: "outro" });
+  await avisarOContratadoDoFechoPeloWhatsApp(alvo.pedidoId, alvo.negociacaoId, r2.negociacao.valorAcordado ?? null);
   await registarAccao(
     alvo.pedidoId,
     alvo.negociacaoId,

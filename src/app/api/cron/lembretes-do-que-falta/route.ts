@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
 import { resumoDaRotinaDoQueFalta, rotinaDoQueFalta } from "@/lib/lembrete-do-que-falta-na-base";
+import { rotinaDoRecebido } from "@/lib/recebemos-o-pedido-na-base";
 import { bearerConfere } from "@/lib/segredo-igual";
 
 /**
@@ -32,7 +33,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
   try {
-    const r = await carimbarPassagem("lembretes-do-que-falta", () => rotinaDoQueFalta(new Date()), (p) => ({
+    const r = await carimbarPassagem("lembretes-do-que-falta", async () => {
+      // d102 (d): os «Recebemos o seu pedido #N» que ficaram para as 8h saem ANTES (levam a 1.ª do que falta).
+      await rotinaDoRecebido(new Date()).catch((e) => console.error("[cron/lembretes-do-que-falta] recebemos:", e instanceof Error ? e.message : e));
+      return rotinaDoQueFalta(new Date());
+    }, (p) => ({
       ok: p.falhados === 0,
       motivo: resumoDaRotinaDoQueFalta(p),
       detalhe: p,

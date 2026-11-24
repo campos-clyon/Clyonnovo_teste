@@ -142,7 +142,8 @@ describe("o cliente também cancela", () => {
 
   it("fica no histórico e no registo permanente, como o do admin", () => {
     const i = ROTA_CLIENTE.indexOf('accao === "cancelar_pedido"');
-    const bloco = ROTA_CLIENTE.slice(i, i + 3000);
+    // d102: o bloco cresceu (o caminho da d93 vem primeiro).
+    const bloco = ROTA_CLIENTE.slice(i, i + 5000);
     expect(bloco).toContain("appendOrderHistory");
     expect(bloco).toContain('acontecimento: "pedido_cancelado"');
     expect(bloco).toContain('autorTipo: "cliente"');

@@ -907,3 +907,35 @@ export async function lembretesNaMesa(ids: number[]): Promise<{
     return vazio;
   }
 }
+
+/* ── d102 (d): o «Recebemos o seu pedido #N» leva a 1.ª ─────────────────── */
+
+/**
+ * O «PEDIR O QUE FALTA» QUE VAI JUNTO DO «RECEBEMOS» — o texto da 1.ª, se o
+ * pedido entraria agora no ciclo (o interruptor ligado, pelo WhatsApp, e pelas
+ * mesmas regras de fora — menos a dos 30 minutos, que é a que o «recebemos»
+ * antecipa). Sem isso, null: o «recebemos» sai sozinho e o ciclo segue como
+ * sempre.
+ */
+export async function oQueFaltaParaORecebido(pedidoId: number, agora: Date = new Date()): Promise<string | null> {
+  const { ligado } = await interruptorDoQueFalta();
+  if (!ligado) return null;
+  const pool = await garantirTabelas();
+  const [p] = await lerPedidos(pool, [pedidoId]);
+  if (!p) return null;
+  const fora = porqueFicaDeFora(p, agora, emailsDeTesteDoAmbiente());
+  if (fora && fora !== "recente") return null;
+  if (canalDoLembrete(p) !== "whatsapp") return null;
+  const texto = textoDoPasso("lembrete1", { id: p.id, serviceType: p.serviceType, city: p.city }, p.faltas as ChaveDaFalta[], agora);
+  return texto || null;
+}
+
+/** O «recebemos» levou o que falta: conta como a 1.ª do ciclo (a 2.ª sai no dia seguinte) — o lembrete dos 30 min não sai. */
+export async function marcarOPrimeiroPeloRecebido(pedidoId: number): Promise<void> {
+  const pool = await garantirTabelas();
+  await pool.execute(
+    `INSERT INTO lembretesDoQueFalta (pedidoId, canal, lembrete1Em) VALUES (?, 'whatsapp', UTC_TIMESTAMP())
+     ON DUPLICATE KEY UPDATE lembrete1Em = COALESCE(lembrete1Em, VALUES(lembrete1Em))`,
+    [pedidoId],
+  );
+}
