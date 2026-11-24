@@ -24,8 +24,9 @@
  * `window.__clyonSocket()`, que devolve o Socket verdadeiro quando ele existe
  * (sessão já emparelhada, rota /) e, na /login, um adaptador por cima do
  * BackendEventBus com a mesma forma (`state`, `on`/`off` de `change:state` e
- * `change:hasSynced`, `logout`, `reconnect`). O adaptador é definido no início
- * de cada `inject` (que corre de novo a cada navegação).
+ * `change:hasSynced`, `logout`, `reconnect`). O adaptador é definido em cada
+ * documento novo da página (evaluateOnNewDocument, desde o 1.º inject) e no
+ * início de cada `inject` (que corre de novo a cada navegação).
  *
  * Só cobre a versão VERSAO_COBERTA, e confere a impressão digital dos dois
  * ficheiros antes de mexer: qualquer diferença falha o build com uma
@@ -162,7 +163,18 @@ export function remendarClient(texto) {
     );
   }
   const trocado = trocarOSocket(texto, "src/Client.js");
-  const definir = `        ${MARCA}\n        await this.pupPage.evaluate(${definirOSocketDaClyon.toString()});\n`;
+  // Em cada documento novo (evaluateOnNewDocument, uma vez por página) E no
+  // actual: uma navegação a meio do inject (a página volta a / depois de
+  // emparelhar) deixava o documento novo sem o adaptador — «window.__clyonSocket
+  // is not a function», visto no ensaio de 24-11.
+  const fn = definirOSocketDaClyon.toString();
+  const definir =
+    `        ${MARCA}\n` +
+    `        if (!this.__clyonEmCadaDocumento) {\n` +
+    `            this.__clyonEmCadaDocumento = true;\n` +
+    `            await this.pupPage.evaluateOnNewDocument(${fn});\n` +
+    `        }\n` +
+    `        await this.pupPage.evaluate(${fn});\n`;
   return trocado.replace(ANCORA, definir + ANCORA);
 }
 

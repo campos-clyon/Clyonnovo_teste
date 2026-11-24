@@ -126,6 +126,11 @@ describe(`nos ficheiros verdadeiros da whatsapp-web.js`, () => {
     const expor = novo.indexOf("await this.pupPage.evaluate(ExposeAuthStore);");
     expect(definir).toBeGreaterThan(novo.indexOf("async inject()"));
     expect(definir).toBeLessThan(expor);
+    // Também em cada documento novo: uma navegação a meio do inject deixava o
+    // documento novo sem ele («window.__clyonSocket is not a function»).
+    const cadaDocumento = novo.indexOf("await this.pupPage.evaluateOnNewDocument(function definirOSocketDaClyon()");
+    expect(cadaDocumento).toBeGreaterThan(novo.indexOf("async inject()"));
+    expect(cadaDocumento).toBeLessThan(expor);
     // Só compila (não corre): um erro de sintaxe rebentava aqui.
     expect(() => new Function("require", "module", "exports", novo)).not.toThrow();
   });
@@ -222,5 +227,49 @@ describe("o adaptador da /login", () => {
     const socket = paginaDeLogin({ WAWebBackendEventBus: { BackendEventBus: busFalso() } });
     expect((socket().logout as () => string)()).toBe("logout");
     expect((socket().reconnect as () => string)()).toBe("reconnect");
+  });
+});
+
+/**
+ * A PÁGINA AO VIVO E O REGISTO DE CADA PASSO — 24-11-2026 (2.ª volta).
+ *
+ * Com a cache remota, o HTML guardado da página de quem não tem sessão era
+ * servido no lugar de https://web.whatsapp.com/ — também quando a página
+ * voltava a / depois de o telemóvel aceitar o código, e o emparelhamento
+ * nunca fechava. Por omissão: sem cache. E o registo diz cada passo.
+ */
+describe("a ponte carrega a página ao vivo e diz cada passo", () => {
+  const PONTE = ler("ponte-whatsapp/index.js").replace(/\r\n/g, "\n");
+  const CODIGO = PONTE.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/^\s*\/\/.*$/gm, "");
+
+  it("sem VERSAO_DA_PAGINA: sem cache de versão; a cache remota só com a variável", () => {
+    expect(CODIGO).toContain('{ webVersionCache: { type: "none" } }');
+    const i = CODIGO.indexOf("async function versaoDaPagina()");
+    const corpo = CODIGO.slice(i, CODIGO.indexOf("\n}\n", i));
+    expect(corpo).toContain("return VERSAO_FIXA || null;");
+    expect(corpo).not.toContain("fetch(");
+    expect(CODIGO).toMatch(/versao\s*\?\s*\{\s*webVersion: versao,\s*webVersionCache: \{ type: "remote"/);
+  });
+
+  it("escreve cada código novo pelo evento code, e cada QR só como «QR novo»", () => {
+    expect(CODIGO).toContain('client.on("code", (codigo) => {');
+    expect(CODIGO).toContain("CÓDIGO DE EMPARELHAMENTO (n.º ${codigos}):");
+    expect(CODIGO).toContain("QR novo (n.º ${qrs})");
+    expect(CODIGO).toContain("await client.requestPairingCode(NUMERO);");
+  });
+
+  it("escreve os estados, a autenticação, o pronto, a desligação e a rota da página", () => {
+    for (const evento of ["loading_screen", "change_state", "authenticated", "auth_failure", "ready", "disconnected"]) {
+      expect(CODIGO).toContain(`client.on("${evento}"`);
+    }
+    expect(CODIGO).toContain('pagina.on("framenavigated"');
+    expect(CODIGO).toContain("log(\"página: navegou para\", rota);");
+    const vigiar = CODIGO.indexOf("vigiarAPagina(client);");
+    expect(vigiar).toBeGreaterThan(-1);
+    expect(vigiar).toBeLessThan(CODIGO.indexOf("await client.initialize();"));
+  });
+
+  it("um erro sem dono escreve-se e não mata a ponte a meio de emparelhar", () => {
+    expect(CODIGO).toContain('process.on("unhandledRejection"');
   });
 });

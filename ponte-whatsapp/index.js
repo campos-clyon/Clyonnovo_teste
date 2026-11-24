@@ -28,8 +28,8 @@
  *   PONTE_WHATSAPP_SEGREDO  — o segredo partilhado com o site (obrigatório)
  *   PONTE_NUMERO            — 351931632622: com isto, emparelha-se por CÓDIGO
  *                             (mais fácil de ler nos logs do que um QR)
- *   VERSAO_DA_PAGINA        — vazio = usa a versão actual do WhatsApp Web,
- *                             descoberta no arranque. Quando a Meta mexe na
+ *   VERSAO_DA_PAGINA        — vazio = o WhatsApp Web ao vivo, sem cache de
+ *                             versão (desde 24-11-2026). Quando a Meta mexe na
  *                             página e a biblioteca deixa de a conhecer (o
  *                             texto anda, as fotos param), fixa-se aqui uma
  *                             versão anterior que funcione.
@@ -41,6 +41,7 @@
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import pkg from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 import { deveSairAgora, CODIGO_DA_SAIDA_DIARIA } from "./saida-diaria.js";
@@ -63,6 +64,19 @@ if (!SEGREDO) {
 }
 
 const log = (...a) => console.log(new Date().toISOString(), "[ponte]", ...a);
+
+/*
+ * UM ERRO SEM DONO NÃO MATA A PONTE A MEIO DE EMPARELHAR — 24-11-2026.
+ *
+ * A biblioteca volta a correr o `inject` em cada navegação da página
+ * (framenavigated) sem apanhar o erro; no Node 22 um erro assim termina o
+ * processo — e, se for logo depois de o telemóvel aceitar o código, leva o
+ * emparelhamento com ele. Escreve-se e segue: os guardas de baixo (o pulso,
+ * «emparelhada e nunca pronta») continuam a sair quando é mesmo avaria.
+ */
+process.on("unhandledRejection", (e) => {
+  log("erro sem dono (a ponte continua):", e?.stack ?? e?.message ?? e);
+});
 
 /*
  * QUE VERSÃO ESTÁ A CORRER — 23-10-2026.
@@ -527,24 +541,114 @@ async function telefoneDaMensagem(msg, bruto) {
 }
 
 /**
- * A versão da página do WhatsApp Web a carregar.
+ * A versão da página do WhatsApp Web a carregar — 24-11-2026: AO VIVO.
  *
- * Sem `VERSAO_DA_PAGINA`, pergunta-se qual é a actual — um número fixo no
- * código envelhece e um dia deixa de existir no repositório das versões, e
- * aí nem sequer arranca. Com a variável posta, manda ela: é o botão de
- * emergência para quando a versão nova parte as fotografias.
+ * Sem `VERSAO_DA_PAGINA` carrega-se o WhatsApp Web verdadeiro, ao vivo, sem
+ * cache de versão (`webVersionCache: { type: "none" }`): a biblioteca não
+ * intercepta nada. Antes ia-se buscar a versão actual ao repositório das
+ * versões e servia-se o HTML guardado no lugar de https://web.whatsapp.com/.
+ * Desde a rota /login (24-11), esse HTML é o de quem NÃO tem sessão: depois
+ * de o telemóvel aceitar o código a página volta a /, recebia outra vez o
+ * HTML guardado, e o emparelhamento nunca fechava («Não foi possível ligar o
+ * dispositivo» no telemóvel, nada no registo).
+ *
+ * Com a variável posta, manda ela: é o botão de emergência para quando a
+ * versão nova parte alguma coisa (cache remota dessa versão).
  */
 async function versaoDaPagina() {
-  if (VERSAO_FIXA) return VERSAO_FIXA;
+  return VERSAO_FIXA || null;
+}
+
+/**
+ * O USER-AGENT DO CHROMIUM QUE CORRE — 24-11-2026.
+ *
+ * Por omissão a biblioteca diz que é um Chrome 101 num Mac, num motor que é
+ * de 2026. Diz-se agora a verdade: o Chromium do contentor, em Linux, com a
+ * versão dele. Se não se conseguir ler a versão, fica o da biblioteca.
+ */
+let agenteLido = null;
+function agenteDoChromium() {
+  if (agenteLido !== null) return agenteLido || undefined;
+  agenteLido = "";
   try {
-    const res = await fetch(`${VERSOES}/versions.json`, { signal: AbortSignal.timeout(15000) });
-    const dados = await res.json();
-    const v = dados?.currentVersion;
-    if (typeof v === "string" && v.length > 0) return v;
+    const saida = execFileSync(CHROME, ["--version"], { timeout: 15_000, encoding: "utf8" });
+    const principal = /(\d+)\.\d+\.\d+\.\d+/.exec(saida)?.[1];
+    if (principal) {
+      agenteLido =
+        `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ` +
+        `Chrome/${principal}.0.0.0 Safari/537.36`;
+    }
   } catch (e) {
-    log("não descobri a versão actual da página:", e.message);
+    log("não li a versão do Chromium (fica o user-agent da biblioteca):", e.message);
   }
-  return null;
+  return agenteLido || undefined;
+}
+
+/**
+ * O QUE A PÁGINA FAZ ENQUANTO EMPARELHA — 24-11-2026.
+ *
+ * A 24-11 o telemóvel aceitava o código, ficava «A ligar…» e falhava, e o
+ * registo não tinha nada além dos QR. Agora diz cada passo: a rota da página
+ * quando muda (/login ↔ /), o estado da ligação e de que módulo vem
+ * (WAWebSocketModel = a app inteira; BackendEventBus = a página de login), e
+ * a versão da página ao vivo. Pára quando fica LIGADA ou quando o cliente
+ * muda (novo arranque).
+ *
+ * Também guarda contra um `ready` que nunca chega: com a ligação CONNECTED na
+ * app inteira, conta como emparelhada para o guarda de `emparelhadaDesde`
+ * (10 min e sai, e o Railway levanta-a com a sessão do volume).
+ */
+function vigiarAPagina(este) {
+  let pagina = null;
+  let ultimo = "";
+  const relogio = setInterval(async () => {
+    if (client !== este || ligado || aSair) {
+      clearInterval(relogio);
+      return;
+    }
+    if (!pagina) {
+      pagina = este.pupPage ?? null;
+      if (!pagina) return;
+      pagina.on("framenavigated", (f) => {
+        if (f !== pagina.mainFrame()) return;
+        let rota = f.url();
+        try {
+          rota = new URL(rota).pathname;
+        } catch {
+          /* fica o endereço como veio */
+        }
+        log("página: navegou para", rota);
+      });
+    }
+    try {
+      const v = await pagina.evaluate(() => {
+        const modelo = window.require?.("WAWebSocketModel");
+        const bus = window.require?.("WAWebBackendEventBus");
+        return {
+          rota: location.pathname,
+          estado: modelo?.Socket?.state ?? bus?.BackendEventBus?.socketState ?? null,
+          de: modelo?.Socket ? "WAWebSocketModel" : bus?.BackendEventBus ? "BackendEventBus" : "nenhum",
+          versao: window.Debug?.VERSION ?? null,
+        };
+      });
+      if (v.versao && v.versao !== versaoDaPaginaCarregada) {
+        versaoDaPaginaCarregada = v.versao;
+        log("página do WhatsApp Web ao vivo:", v.versao);
+      }
+      const agora = `${v.rota} ${v.estado} ${v.de}`;
+      if (agora !== ultimo) {
+        ultimo = agora;
+        log("estado da ligação:", v.estado ?? "—", "· rota", v.rota, "· de", v.de);
+      }
+      if (v.estado === "CONNECTED" && v.de === "WAWebSocketModel" && !emparelhadaDesde && !ligado) {
+        emparelhadaDesde = Date.now();
+        log("ligação aberta na app inteira — à espera do «pronto» (prazo de", PRAZO_PARA_FICAR_PRONTA_MS / 60_000, "min)");
+      }
+    } catch {
+      /* a página está a meio de uma navegação: a volta seguinte lê */
+    }
+  }, 3000);
+  relogio.unref();
 }
 
 async function enviar(telefone, texto) {
@@ -1016,9 +1120,15 @@ async function arrancar() {
   destrancarOPerfil();
   const versao = await versaoDaPagina();
   versaoDaPaginaCarregada = versao;
-  log("a arrancar com o Chromium em", CHROME, "e a página", versao ?? "que a biblioteca trouxer");
+  const agente = agenteDoChromium();
+  log(
+    "a arrancar com o Chromium em", CHROME, "e a página",
+    versao ? `${versao} (fixada em VERSAO_DA_PAGINA, cache remota)` : "ao vivo (sem cache de versão)",
+  );
+  if (agente) log("user-agent:", agente);
 
   client = new Client({
+    ...(agente ? { userAgent: agente } : {}),
     authStrategy: new LocalAuth({ dataPath: PASTA }),
     puppeteer: {
       executablePath: CHROME,
@@ -1049,43 +1159,69 @@ async function arrancar() {
         "--no-zygote",
       ],
     },
+    /*
+     * Sem VERSAO_DA_PAGINA: a página ao vivo, sem cache — o tipo "none" não
+     * intercepta o documento (ver `versaoDaPagina`). Com ela: a cache remota
+     * dessa versão, o botão de emergência de sempre.
+     */
     ...(versao
       ? {
           webVersion: versao,
           webVersionCache: { type: "remote", remotePath: `${VERSOES}/html/${versao}.html` },
         }
-      : {}),
+      : { webVersionCache: { type: "none" } }),
   });
 
   let pedirCodigo = Boolean(NUMERO);
+  let codigoFalhou = false;
+  let qrs = 0;
+  let codigos = 0;
+
+  /*
+   * CADA CÓDIGO NO REGISTO — 24-11-2026. A biblioteca pede um código novo de
+   * 3 em 3 minutos enquanto o telemóvel não emparelha, e só o primeiro era
+   * escrito: quem lesse o registo dez minutos depois metia um código morto.
+   * Agora sai cada um, com a hora, pelo evento `code`.
+   */
+  client.on("code", (codigo) => {
+    codigos += 1;
+    log("=====================================================");
+    log(`CÓDIGO DE EMPARELHAMENTO (n.º ${codigos}):`, codigo, "— vale cerca de 3 min; o seguinte aparece aqui");
+    log("No telemóvel do", NUMERO + ":");
+    log("Definições › Dispositivos ligados › Ligar dispositivo › Ligar com número de telefone");
+    log("=====================================================");
+  });
 
   client.on("qr", async (qr) => {
+    qrs += 1;
+    log(`QR novo (n.º ${qrs})`);
     if (pedirCodigo) {
-      pedirCodigo = false; // uma vez só: o QR volta a sair de tempos a tempos
+      pedirCodigo = false; // uma vez só: depois a biblioteca renova o código sozinha
       try {
-        const codigo = await client.requestPairingCode(NUMERO);
-        log("=====================================================");
-        log("CÓDIGO DE EMPARELHAMENTO:", codigo);
-        log("No telemóvel do", NUMERO + ":");
-        log("Definições › Dispositivos ligados › Ligar dispositivo › Ligar com número de telefone");
-        log("=====================================================");
+        await client.requestPairingCode(NUMERO); // o código sai pelo evento `code`
         return;
       } catch (e) {
+        codigoFalhou = true;
         log("não consegui pedir o código, fica o QR:", e.message);
       }
     }
-    log("Leia este QR no telemóvel (Definições › Dispositivos ligados):");
-    qrcode.generate(qr, { small: true });
+    // Com PONTE_NUMERO emparelha-se pelo código: o desenho do QR só sai sem
+    // ele, ou se o pedido do código falhou.
+    if (!NUMERO || codigoFalhou) {
+      log("Leia este QR no telemóvel (Definições › Dispositivos ligados):");
+      qrcode.generate(qr, { small: true });
+    }
   });
 
   client.on("loading_screen", (p) => log("a carregar o WhatsApp Web…", p + "%"));
+  client.on("change_state", (estado) => log("estado:", estado));
   client.on("authenticated", () => {
     // Daqui ao `ready` há um prazo — ver `emparelhadaDesde`.
     emparelhadaDesde = Date.now();
-    log("emparelhado — sessão guardada em", PASTA);
+    log("emparelhado (authenticated) — sessão guardada em", PASTA);
   });
   client.on("auth_failure", (m) =>
-    log("falha de autenticação:", m, "— apague o conteúdo do volume e emparelhe de novo"),
+    log("falha de autenticação (auth_failure):", m, "— apague o conteúdo do volume e emparelhe de novo"),
   );
 
   client.on("ready", () => {
@@ -1101,7 +1237,15 @@ async function arrancar() {
      * tique depois de ela ligar, e outra vez, e outra vez.
      */
     ultimaRondaBoa = Date.now();
-    log("LIGADO AO WHATSAPP. A ir buscar a fila a cada", INTERVALO, "ms.");
+    log("LIGADO AO WHATSAPP (ready). A ir buscar a fila a cada", INTERVALO, "ms.");
+    // De que módulo veio a ligação: tem de ser o WAWebSocketModel (a app inteira).
+    client.pupPage
+      ?.evaluate(() => ({
+        rota: location.pathname,
+        socket: window.require?.("WAWebSocketModel")?.Socket ? "WAWebSocketModel" : "BackendEventBus",
+      }))
+      .then((v) => log("pronta na rota", v.rota, "com o", v.socket))
+      .catch(() => {});
     void rondaDaFila();
     // O primeiro retrato do telemóvel — ver `retratarOTelemovel`.
     setTimeout(() => void retratarOTelemovel(), 2 * 60_000).unref();
@@ -1113,7 +1257,7 @@ async function arrancar() {
     if (aSair) return;
     // O arranque que vem a seguir volta a pôr o cronómetro no «emparelhado».
     emparelhadaDesde = 0;
-    log("desligado:", motivo, "— a reiniciar em 5 s");
+    log("desligado (disconnected):", motivo, "— a reiniciar em 5 s");
     setTimeout(async () => {
       // Fechado ANTES de abrir o seguinte — ver `fecharOChromium`.
       await fecharOChromium(client);
@@ -1275,6 +1419,7 @@ async function arrancar() {
     }
   });
 
+  vigiarAPagina(client);
   await client.initialize();
 }
 
