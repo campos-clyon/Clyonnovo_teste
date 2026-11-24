@@ -156,3 +156,67 @@ describe("o responsável escreve-se na ficha do profissional", () => {
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("responsavel: n.responsavel,");
   });
 });
+
+/**
+ * d103 (CEO e dono, 24-11-2026): no modelo antigo, pelo trabalho todo, com só o
+ * link do pedido para pagar, a mensagem não dizia valor nenhum («… fica
+ * confirmada. Inclui o que está nas fotografias…»). Agora diz o total com IVA,
+ * logo a seguir ao «fica confirmada/marcada» e antes do que cobre.
+ */
+describe("d103: o total no modelo antigo, pelo trabalho todo", () => {
+  const RECOLHA = {
+    cliente: "Rui",
+    quando: null,
+    servico: "recolha_moveis",
+    localidade: "Amadora",
+    empresa: "Recolhas Exemplo",
+    base: "total" as const,
+    valor: { semIva: 100, total: 123 },
+    formas: { comDadosDoDono: false, referencias: [], link: "https://clyon.pt/pedido/exemplo" },
+  };
+
+  it("só o link, base total: diz o total com IVA, entre o «fica confirmada» e o «Inclui»", () => {
+    const m = mensagemDeAdjudicacao(RECOLHA, AGORA);
+    expect(m).toContain("A recolha de móveis em Amadora fica confirmada.\n\nO total é 100 € + IVA = 123 €. Inclui o que está nas fotografias e na descrição.");
+    expect(m).toContain("Pode pagar por MB WAY, por Multibanco ou por transferência, no seu pedido:");
+    // No modelo antigo o cliente paga um total à CLYON: sem a cauda da taxa da plataforma.
+    expect(m).not.toContain("taxa da plataforma");
+    expect(m.match(/O total é/g)).toHaveLength(1);
+  });
+
+  it("também com o dia por vir e sem formas escolhidas", () => {
+    const m = mensagemDeAdjudicacao({ ...RECOLHA, quando: QUINTA, formas: undefined }, AGORA);
+    expect(m).toMatch(/fica marcada para [^\n]+\.\n\nO total é 100 € \+ IVA = 123 €\. Inclui /);
+  });
+
+  it("sem IVA a acrescer, o total sozinho; nunca o sem IVA sozinho", () => {
+    const m = mensagemDeAdjudicacao({ ...RECOLHA, valor: { semIva: 282, total: 282 } }, AGORA);
+    expect(m).toContain("O total é 282 €. Inclui ");
+  });
+
+  it("sem valor gravado, nada muda", () => {
+    const m = mensagemDeAdjudicacao({ ...RECOLHA, valor: null }, AGORA);
+    expect(m).not.toContain("O total é");
+    expect(m).toContain("A recolha de móveis em Amadora fica confirmada.\n\nInclui o que está nas fotografias");
+  });
+
+  it("por carga e por hora o número já vai na frase da base: não se duplica", () => {
+    const carga = mensagemDeAdjudicacao({ ...RECOLHA, base: "carga" as const, valor: { semIva: 360, total: 442.8 } }, AGORA);
+    expect(carga).not.toContain("O total é");
+    expect(carga.match(/360 € \+ IVA/g)).toHaveLength(1);
+    const hora = mensagemDeAdjudicacao({ ...RECOLHA, servico: "mudanca", base: "hora" as const, valor: { semIva: 50, total: 61.5 } }, AGORA);
+    expect(hora).not.toContain("O total é");
+  });
+
+  it("no modelo de 15-11 o total vai no bloco do pagamento, uma só vez", () => {
+    const m = mensagemDeAdjudicacao(
+      {
+        ...RECOLHA,
+        formas: { ...RECOLHA.formas, novoModelo: { total: 123, semIva: 100, base: "total" as const, formas: ["transferencia" as const] } },
+      },
+      AGORA,
+    );
+    expect(m.match(/O total é/g)).toHaveLength(1);
+    expect(m).toContain("O total é 100 € + IVA = 123 €, já com a taxa da plataforma.");
+  });
+});

@@ -276,6 +276,26 @@ export function baseDaAdjudicacao(t: Pick<TrabalhoAdjudicado, "base" | "formas">
 
 const maiuscula = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
+/**
+ * O TOTAL NO MODELO ANTIGO — d103 (CEO e dono, 24-11-2026). Pelo trabalho todo, a
+ * `fraseDaBase` não diz o número (cada mensagem di-lo com as suas palavras), e
+ * esta não o dizia: um cliente recebeu «… fica confirmada. Inclui o que está nas
+ * fotografias…» sem valor nenhum, com só o link do pedido para pagar. Desde hoje
+ * diz-se com as palavras do modelo de 15-11 (`valorDoBlocoDoNovoModelo`), sem a
+ * cauda da taxa da plataforma: no modelo antigo o cliente paga um total à CLYON.
+ * Nunca o sem IVA sozinho (`valorComIva`). Por carga e por hora o número já vai
+ * na frase da base; sem valor gravado, nada.
+ */
+export function totalDaAdjudicacaoNoModeloAntigo(t: Pick<TrabalhoAdjudicado, "base" | "formas" | "valor">): string | null {
+  if (t.formas?.novoModelo || baseDaAdjudicacao(t) !== "total") return null;
+  const tem = (v: number | null | undefined): v is number => typeof v === "number" && Number.isFinite(v) && v > 0;
+  const v = t.valor ?? null;
+  const semIva = tem(v?.semIva) ? v.semIva : tem(v?.total) ? v.total : null;
+  const total = tem(v?.total) ? v.total : semIva;
+  if (semIva == null || total == null) return null;
+  return `O total é ${valorComIva(semIva, total)}.`;
+}
+
 export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): string {
   const nome = primeiroNome(t.cliente);
 
@@ -328,11 +348,17 @@ export function mensagemDeAdjudicacao(t: TrabalhoAdjudicado, agora: Date): strin
      */
     t.formas?.novoModelo && baseDaAdjudicacao(t) !== "total"
       ? null
-      : fraseDaBase(baseDaAdjudicacao(t), t.servico ?? null, {
-          semIva: t.valor?.semIva ?? null,
-          total: t.valor?.total ?? null,
-          minimoHoras: t.minimoHoras ?? null,
-        }),
+      : [
+          // d103: no modelo antigo, pelo trabalho todo, o total antes do que cobre.
+          totalDaAdjudicacaoNoModeloAntigo(t),
+          fraseDaBase(baseDaAdjudicacao(t), t.servico ?? null, {
+            semIva: t.valor?.semIva ?? null,
+            total: t.valor?.total ?? null,
+            minimoHoras: t.minimoHoras ?? null,
+          }),
+        ]
+          .filter(Boolean)
+          .join(" "),
     quemFaz,
     ...(t.formas?.novoModelo
       ? // O modelo de 15-11 (d17): o texto D, que já diz para guardar o comprovativo.
