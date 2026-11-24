@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PERGUNTAS_DO_PROFISSIONAL, perguntasDoProfissional, taxasDaAjuda } from "./ajuda-plataforma";
+import { perguntasDoProfissional, taxasDaAjuda } from "./ajuda-plataforma";
 import { TAXA_MAXIMA, type Taxas } from "./taxas-plataforma";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
+/* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
+const PERGUNTAS_DO_PROFISSIONAL = [...perguntasDoProfissional(null, ANTES_DO_MODELO), ...perguntasDoProfissional(null, DEPOIS_DO_MODELO)];
 
 /**
  * A AJUDA DOS PROFISSIONAIS DIZ A TAXA EM VIGOR — 28-10-2026 (d8).
@@ -57,7 +59,7 @@ describe("a resposta «Quanto é que a CLYON leva?» lê a taxa (modelo antigo)"
     expect(r).toContain("Nas negociações, a CLYON fica com a taxa da plataforma em vigor");
     expect(r).not.toMatch(/\d\s?%/);
     // A lista que a app CLYON Pro importa é esta, sem número.
-    expect(PERGUNTAS_DO_PROFISSIONAL).toEqual(perguntasDoProfissional(null, ANTES_DO_MODELO));
+    expect(perguntasDoProfissional(null, ANTES_DO_MODELO).map((q) => q.pergunta)).toContain("Quanto é que a CLYON leva?");
   });
 
   it("as outras respostas não mudam com a taxa", () => {

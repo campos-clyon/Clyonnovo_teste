@@ -4,10 +4,12 @@ import { join } from "node:path";
 import { DIAS_PARA_MARCAR, HORAS_PARA_MARCAR, diasParaMarcar } from "../../app-pro/src/lib/trabalhos";
 import { JANELA_PADRAO } from "./agenda-em-grelha";
 import { FORA_DO_PLANO, SERVICOS_PUBLICOS } from "./service-categories";
-import { PERGUNTAS_DO_PROFISSIONAL, perguntasDoProfissional } from "./ajuda-plataforma";
+import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { PASSOS_DO_PROFISSIONAL } from "./como-funciona-para-o-profissional";
 import { avisoDosItens } from "./itens-a-mais";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
+/* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
+const PERGUNTAS_DO_PROFISSIONAL = [...perguntasDoProfissional(null, ANTES_DO_MODELO), ...perguntasDoProfissional(null, DEPOIS_DO_MODELO)];
 
 /**
  * A ACTUALIZAÇÃO SEM LOJA DE 25-10-2026 (EAS Update sobre a build 13).

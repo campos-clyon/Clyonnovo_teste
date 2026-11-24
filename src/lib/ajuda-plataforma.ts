@@ -16,10 +16,15 @@ import { DIAS_ATE_LIBERTAR_SOZINHO } from "./trabalho";
 import { MINIMO_PARA_LEVANTAR } from "./carteira";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
 import { PROMESSA, PROMESSA_DO_NOVO_MODELO } from "./pagamento-na-plataforma";
-import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "./novo-modelo";
+import {
+  DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO,
+  NOVO_MODELO_DESDE_POR_EXTENSO,
+  novoModeloEmVigor,
+} from "./novo-modelo";
+import { NADA_A_PAGAR_AGORA_NO_NOVO_MODELO } from "./nada-a-pagar-agora";
 import { contaDoValorAcordado } from "./pagamento-directo";
 import { quotaEmPontos } from "./quota-da-clyon";
-import { TAXA_DAS_MUDANCAS_EM_FRASE, TAXA_DAS_MUDANCAS_SEM_NUMERO, TAXA_IVA, TAXA_MAXIMA, TAXA_TOTAL, type Taxas } from "./taxas-plataforma";
+import { TAXA_DAS_MUDANCAS_EM_FRASE, TAXA_DAS_MUDANCAS_SEM_NUMERO, TAXA_MAXIMA, TAXA_TOTAL, type Taxas } from "./taxas-plataforma";
 
 export type PerguntaFrequente = {
   pergunta: string;
@@ -48,32 +53,6 @@ export function taxasDaAjuda(v: unknown): Taxas | null {
   const boa = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= TAXA_MAXIMA;
   return t && boa(t.cliente) && boa(t.profissional) ? { cliente: t.cliente, profissional: t.profissional } : null;
 }
-
-/*
- * O EXEMPLO DO «RECEBI EM DINHEIRO» — 03-11-2026 (d15). Uma proposta de 100 €
- * + IVA num pedido com a taxa de 11 % (a regra geral de 22-10-2026). As contas
- * fazem-se aqui, para os números do exemplo baterem sempre uns com os outros.
- *
- * A taxa do exemplo lê-se de `TAXA_TOTAL` (taxas-plataforma.ts) desde
- * 10-11-2026 (d28) — estava escrita à mão. O exemplo diz a taxa que usa
- * («num pedido com a taxa de…»); a de cada pedido é a que ele guardou.
- */
-const EXEMPLO_EM_DINHEIRO = (() => {
-  const semIva = 100;
-  const taxa = TAXA_TOTAL;
-  const iva = Math.round(semIva * TAXA_IVA * 100) / 100;
-  const daTaxa = Math.round(semIva * taxa * 100) / 100;
-  const n = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
-  return {
-    taxa: `${Math.round(taxa * 100)} %`,
-    semIva: n(semIva),
-    comIva: n(semIva + iva),
-    ganhos: n(semIva - daTaxa),
-    entrega: n(iva + daTaxa),
-    iva: n(iva),
-    daTaxa: n(daTaxa),
-  };
-})();
 
 function perguntasDoProfissionalNoModeloAntigo(taxas: Taxas | null): PerguntaFrequente[] {
   return [
@@ -171,35 +150,6 @@ function perguntasDoProfissionalNoModeloAntigo(taxas: Taxas | null): PerguntaFre
         "contar entre si e nós — declare-o em Faturação e IVA — e é com ele que nos fatura " +
         "a si o que recebe.",
     },
-    /*
-     * «RECEBI EM DINHEIRO: E AGORA?» — 03-11-2026 (d15, aprovada pelo dono a
-     * 04-11). Os parceiros activos perguntavam-no todas as semanas pelo
-     * WhatsApp, e a equipa explicava a taxa de três maneiras. O texto é o do
-     * Apoio, revisto pela Rede: cinco pontos e um exemplo, os botões com os
-     * nomes da Carteira (painel e app). O recibo verde não é parecer: remete
-     * para a CLYON ou para o contabilista.
-     */
-    {
-      pergunta: "Recebi em dinheiro: e agora?",
-      resposta: [
-        "1. Veja no trabalho como o cliente paga. Se diz «Dinheiro no local», recebe dele o preço da proposta, " +
-          "com IVA, e mais nada. Se diz que paga pela plataforma e o cliente lhe quer dar dinheiro, avise a CLYON " +
-          "antes de receber.",
-        "2. Fica consigo o valor dos seus ganhos, o mesmo que vê no trabalho. O resto, o IVA e a taxa da " +
-          "plataforma, entrega-o à CLYON.",
-        "3. Depois de o trabalho ser confirmado, a conta aparece em Carteira › Pagamentos em dinheiro: carregue " +
-          "em «Pagar por MB WAY» ou «Gerar referência Multibanco». Se tiver saldo na Carteira, o valor fica " +
-          "reservado e é descontado na transferência seguinte.",
-        `4. Tem ${DIAS_PARA_PAGAR_A_DIVIDA} dias a partir daí. Se passarem, deixa de poder propor ou aceitar ` +
-          "trabalhos pagos em dinheiro até a conta estar paga.",
-        `5. A fatura ao cliente é passada pela ${EMPRESA_PARCEIRA_AO_PUBLICO}, já com o IVA. Sobre recibos verdes ` +
-          "ou outros documentos seus, fale com a CLYON ou com o seu contabilista.",
-        `Exemplo, num pedido com a taxa de ${EXEMPLO_EM_DINHEIRO.taxa}: proposta de ${EXEMPLO_EM_DINHEIRO.semIva} € + IVA. ` +
-          `O cliente paga-lhe ${EXEMPLO_EM_DINHEIRO.comIva} €; fica com ${EXEMPLO_EM_DINHEIRO.ganhos} € e entrega ` +
-          `${EXEMPLO_EM_DINHEIRO.entrega} € à CLYON (${EXEMPLO_EM_DINHEIRO.iva} € de IVA e ${EXEMPLO_EM_DINHEIRO.daTaxa} € de taxa). ` +
-          "Num Trabalho CLYON, a conta faz-se da mesma maneira, com os ganhos que viu antes de aceitar.",
-      ].join("\n"),
-    },
   ];
 }
 
@@ -225,6 +175,9 @@ const EXEMPLO_NO_NOVO_MODELO = (() => {
       }
     : null;
 })();
+
+/** A pergunta que no modelo antigo tinha a resposta de «Carteira › Pagamentos em dinheiro» (tirada a 24-11-2026, d4). */
+const PERGUNTA_DO_DINHEIRO_RECEBIDO = "Recebi em dinheiro: e agora?";
 
 /** As respostas do dinheiro no modelo de 15-11-2026 (d10). As outras ficam. */
 function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFrequente> {
@@ -265,8 +218,11 @@ function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFreq
         "2. Fica consigo a sua parte. A taxa da plataforma e o IVA dela são da CLYON: quando o trabalho fecha, " +
           "aparecem na Carteira, em «A pagar à CLYON», como «A passar à CLYON» até ao dia do prazo, com «Pagar por " +
           "MB WAY» ou «Gerar referência Multibanco».",
-        `3. Tem ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias. Só fica em atraso se passarem; aí, a conta fica suspensa até pagar; o ` +
-          "pagamento confirmado desbloqueia-a sozinho.",
+        // d4 (24-11-2026): uma só resposta, com a frase da d100 e os prazos das constantes.
+        `3. ${NADA_A_PAGAR_AGORA_NO_NOVO_MODELO} Só fica em atraso se passarem; aí, a conta fica suspensa até pagar; o ` +
+          "pagamento confirmado desbloqueia-a sozinho. " +
+          `Os ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias valem nos trabalhos de ${NOVO_MODELO_DESDE_POR_EXTENSO} em diante; ` +
+          `as dívidas antigas, de dinheiro recebido antes, mantêm os ${DIAS_PARA_PAGAR_A_DIVIDA} dias.`,
         "4. A fatura do trabalho é sua: emita-a ao cliente e junte-a ao pedido. A da taxa da plataforma é passada " +
           `pela ${EMPRESA_PARCEIRA_AO_PUBLICO}.`,
         ...(EXEMPLO_NO_NOVO_MODELO
@@ -289,15 +245,8 @@ export function perguntasDoProfissional(taxas: Taxas | null, agora: Date = new D
   const antigas = perguntasDoProfissionalNoModeloAntigo(taxas);
   if (!novoModeloEmVigor(agora)) return antigas;
   const novas = respostasDoNovoModelo(taxas);
-  return antigas.map((p) => novas[p.pergunta] ?? p);
+  return [...antigas.map((p) => novas[p.pergunta] ?? p), novas[PERGUNTA_DO_DINHEIRO_RECEBIDO]];
 }
-
-/**
- * As perguntas sem a percentagem — para quem ainda não lê a taxa em vigor (a
- * app CLYON Pro importa esta lista; as Apps passam a `perguntasDoProfissional`).
- * O painel usa `perguntasDoProfissional`.
- */
-export const PERGUNTAS_DO_PROFISSIONAL: PerguntaFrequente[] = perguntasDoProfissionalNoModeloAntigo(null);
 
 /** Os assuntos por que um pedido de ajuda pode ser classificado. */
 export const ASSUNTOS_DE_AJUDA = [

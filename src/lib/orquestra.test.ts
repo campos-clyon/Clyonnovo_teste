@@ -1819,17 +1819,19 @@ describe("u–x) emails, taxa, plataforma e distância pelas fontes (d28, parte 
   });
 
   it("o exemplo da ajuda faz as contas com a taxa de taxas-plataforma.ts", async () => {
-    const { TAXA_TOTAL, TAXA_IVA } = await import("./taxas-plataforma");
-    const { PERGUNTAS_DO_PROFISSIONAL } = await import("./ajuda-plataforma");
+    const { TAXA_TOTAL } = await import("./taxas-plataforma");
+    const { perguntasDoProfissional } = await import("./ajuda-plataforma");
+    const { contaDoValorAcordado } = await import("./pagamento-directo");
     const fonte = readFileSync(join(RAIZ, "src/lib/ajuda-plataforma.ts"), "utf8");
-    expect(fonte).toMatch(/const taxa = TAXA_TOTAL;/);
-    const n = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
-    const daTaxa = Math.round(100 * TAXA_TOTAL * 100) / 100;
-    const iva = Math.round(100 * TAXA_IVA * 100) / 100;
-    const exemplo = PERGUNTAS_DO_PROFISSIONAL.map((p) => p.resposta).find((r) => r.includes("Exemplo, num pedido com a taxa de"));
+    expect(fonte).toContain("contaDoValorAcordado(100, { cliente: 0, profissional: TAXA_TOTAL }");
+    const n = (cent: number) => (cent / 100 % 1 === 0 ? String(cent / 100) : (cent / 100).toFixed(2).replace(".", ","));
+    const c = contaDoValorAcordado(100, { cliente: 0, profissional: TAXA_TOTAL }, "normal")!;
+    const exemplo = perguntasDoProfissional(null, new Date("2030-01-01T12:00:00Z"))
+      .map((p) => p.resposta)
+      .find((r) => r.includes("Exemplo, num pedido com a taxa de"));
     expect(exemplo).toBeTruthy();
-    expect(exemplo).toContain("fica com " + n(100 - daTaxa) + " € e entrega " + n(iva + daTaxa) + " € à CLYON");
-    expect(exemplo).toContain(n(daTaxa) + " € de taxa");
+    expect(exemplo).toContain("fica com " + n(c.ficaAoProfissionalCent) + " € e passa " + n(c.aPassarAClyonCent) + " € à CLYON");
+    expect(exemplo).toContain(n(c.taxaCent) + " € de taxa");
   });
 
   it("a distância das mudanças é uma só, na página de cidade e no que o modelo lê", async () => {
@@ -2333,7 +2335,8 @@ describe("z) as mudanças pela lista nas páginas, no blog, na FAQ e no simulado
   it("a taxa das mudanças só da fonte única, e a ajuda e o «Como funciona» dizem-na de lá", async () => {
     const t = await import("./taxas-plataforma");
     const { REGRAS_DAS_MUDANCAS, TAXA_DAS_MUDANCAS } = await import("./conta-da-mudanca");
-    const { perguntasDoProfissional, PERGUNTAS_DO_PROFISSIONAL } = await import("./ajuda-plataforma");
+    const { perguntasDoProfissional } = await import("./ajuda-plataforma");
+    const PERGUNTAS_DO_PROFISSIONAL = perguntasDoProfissional(null, new Date(0));
     const { comissaoEmPalavras } = await import("./como-funciona-para-o-profissional");
     expect(TAXA_DAS_MUDANCAS).toBe(t.TAXA_DAS_MUDANCAS);
     expect(REGRAS_DAS_MUDANCAS.taxa).toBe(t.TAXA_DAS_MUDANCAS);

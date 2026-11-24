@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { BUSINESS_EMAIL, BUSINESS_PHONE } from "./seo-data";
 import { IDENTIFICACAO } from "./identificacao-legal";
 import { telefoneLegivel } from "./telefone-legivel";
-import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
+import { perguntasDoProfissional } from "./ajuda-plataforma";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
+/* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
+const PERGUNTAS_DO_PROFISSIONAL = [...perguntasDoProfissional(null, ANTES_DO_MODELO), ...perguntasDoProfissional(null, DEPOIS_DO_MODELO)];
 
 /**
  * O QUE OS EMAILS E AS AJUDAS PROMETEM, E SE SE CUMPRE — 29-09-2026.

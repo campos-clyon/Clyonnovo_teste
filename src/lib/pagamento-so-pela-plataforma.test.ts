@@ -3,13 +3,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { lerMotivoDosDadosDoDono, mensagemDeAdjudicacao } from "./mensagem-de-adjudicacao";
 import { oQueNaoPodeIr } from "./valores-para-pagamento";
-import { perguntasDoProfissional, PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
+import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO } from "./novo-modelo";
 import { ABERTURA_DO_QUE_FALTA } from "./mensagem-do-que-falta";
 import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA } from "./voz-da-vitoria";
 import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
 import { assistenteComSeccoesPodeChamar } from "./papel-do-painel";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
+/* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
+const PERGUNTAS_DO_PROFISSIONAL = [...perguntasDoProfissional(null, ANTES_DO_MODELO), ...perguntasDoProfissional(null, DEPOIS_DO_MODELO)];
 
 /**
  * PAGAMENTO SÓ PELA PLATAFORMA — d15 (03-11-2026, aprovada pelo dono a 04-11).
@@ -108,40 +111,33 @@ describe("o botão «Enviar adjudicação»", () => {
   });
 });
 
-describe("«Recebi em dinheiro: e agora?» na Ajuda do painel e da app Pro", () => {
-  const p = PERGUNTAS_DO_PROFISSIONAL.find((x) => x.pergunta === "Recebi em dinheiro: e agora?");
+describe("«O cliente pagou-me: e agora?» na Ajuda do painel e da app Pro (d4, 24-11-2026: sem a resposta do modelo antigo)", () => {
+  const p = perguntasDoProfissional({ cliente: 0, profissional: 0.11 }, DEPOIS_DO_MODELO).find((x) => x.pergunta === "O cliente pagou-me: e agora?");
 
-  it("está na lista que o painel e a app lêem, com os cinco pontos e o exemplo", () => {
+  it("está na lista que o painel e a app lêem, com os quatro pontos e o exemplo; a antiga já não existe", () => {
     expect(p).toBeDefined();
-    // d29: com a data explícita. Desde 15-11-2026 a mesma pergunta passa a «O cliente pagou-me: e agora?».
     const tem = (agora: Date, pergunta: string) =>
       perguntasDoProfissional({ cliente: 0, profissional: 0.11 }, agora).some((x) => x.pergunta === pergunta);
-    expect(tem(ANTES_DO_MODELO, p!.pergunta)).toBe(true);
-    expect(tem(DEPOIS_DO_MODELO, p!.pergunta)).toBe(false);
-    expect(tem(DEPOIS_DO_MODELO, "O cliente pagou-me: e agora?")).toBe(true);
+    expect(tem(ANTES_DO_MODELO, "Recebi em dinheiro: e agora?")).toBe(false);
+    expect(tem(DEPOIS_DO_MODELO, "Recebi em dinheiro: e agora?")).toBe(false);
     const linhas = p!.resposta.split("\n");
-    expect(linhas.slice(0, 5).map((l) => l.slice(0, 2))).toEqual(["1.", "2.", "3.", "4.", "5."]);
-    expect(linhas[5]).toMatch(/^Exemplo/);
+    expect(linhas.slice(0, 4).map((l) => l.slice(0, 2))).toEqual(["1.", "2.", "3.", "4."]);
+    expect(linhas[4]).toMatch(/^Exemplo/);
   });
 
-  it("diz por onde se paga, com os nomes dos botões da Carteira, e os dias do prazo", () => {
-    expect(p!.resposta).toContain("Carteira › Pagamentos em dinheiro");
-    expect(p!.resposta).toContain("«Pagar por MB WAY» ou «Gerar referência Multibanco»");
-    expect(p!.resposta).toContain(`Tem ${DIAS_PARA_PAGAR_A_DIVIDA} dias`);
-    for (const botao of ["Pagar por MB WAY", "Gerar referência Multibanco", "Pagamentos em dinheiro"]) {
+  it("diz que não há nada a pagar agora, os dias do prazo (modelo novo e dívidas antigas) e os botões da Carteira", () => {
+    expect(p!.resposta).toContain("Não tem nada a pagar agora");
+    expect(p!.resposta).toContain(`${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias`);
+    expect(p!.resposta).toContain(`mantêm os ${DIAS_PARA_PAGAR_A_DIVIDA} dias`);
+    expect(p!.resposta).not.toContain("Carteira › Pagamentos em dinheiro");
+    for (const botao of ["Pagar por MB WAY", "Gerar referência Multibanco"]) {
       expect(ler("src/app/profissionais/painel/Carteira.tsx")).toContain(botao);
       expect(ler("app-pro/src/app/(app)/carteira.tsx")).toContain(botao);
     }
   });
 
-  it("a conta do exemplo bate: 100 € + IVA, 11 % de taxa", () => {
-    expect(p!.resposta).toContain("Exemplo, num pedido com a taxa de 11 %: proposta de 100 € + IVA. O cliente paga-lhe 123 €");
-    expect(p!.resposta).toContain("fica com 89 €");
-    expect(p!.resposta).toContain("entrega 34 € à CLYON (23 € de IVA e 11 € de taxa)");
-  });
-
-  it("o recibo verde não é parecer: remete para a CLYON ou para o contabilista", () => {
-    expect(p!.resposta).toContain("fale com a CLYON ou com o seu contabilista");
+  it("o recibo verde não é parecer, e a fatura da taxa é da empresa parceira, não da CLYON", () => {
+    expect(p!.resposta).toContain("A fatura do trabalho é sua");
   });
 
   it("o painel mostra as linhas partidas", () => {

@@ -54,8 +54,10 @@ import {
 } from "./trabalho";
 import { clyonPodeConfirmarOTrabalho } from "./quem-negoceia";
 import { PASSOS_DO_PROFISSIONAL, COMO_RECEBE } from "./como-funciona-para-o-profissional";
-import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
+import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO, comORelogioEm } from "./relogio-dos-testes";
+/* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
+const PERGUNTAS_DO_PROFISSIONAL = [...perguntasDoProfissional(null, ANTES_DO_MODELO), ...perguntasDoProfissional(null, DEPOIS_DO_MODELO)];
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const semNotas = (t: string) =>

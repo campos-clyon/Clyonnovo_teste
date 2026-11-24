@@ -5,10 +5,13 @@ import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 import { EMPRESA_PARCEIRA_AO_PUBLICO, QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { FACTURA_EM_PALAVRAS_ANTIGA, NOTA_DE_PRECO } from "./seo-data";
 import { PASSOS_DO_PROFISSIONAL } from "./como-funciona-para-o-profissional";
-import { PERGUNTAS_DO_PROFISSIONAL } from "./ajuda-plataforma";
+import { perguntasDoProfissional } from "./ajuda-plataforma";
+import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 import { mensagemDaReferencia } from "./mensagem-da-referencia";
 import { NOTA_DO_IVA, contaDaLinha } from "./conta-do-pagamento";
 import { conteudoDoComprovativo } from "./comprovativo-pdf";
+/* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
+const PERGUNTAS_DO_PROFISSIONAL = [...perguntasDoProfissional(null, ANTES_DO_MODELO), ...perguntasDoProfissional(null, DEPOIS_DO_MODELO)];
 
 /**
  * A EMPRESA PARCEIRA QUE EMITE AS FACTURAS NÃO SE EXPÕE AO PÚBLICO — 26-10-2026.
