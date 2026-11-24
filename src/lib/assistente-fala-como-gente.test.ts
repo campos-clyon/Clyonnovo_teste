@@ -260,12 +260,20 @@ describe("a ponte aguenta um arranque lento, e não morre à primeira", () => {
   it("mata o Chromium pendurado antes de tentar de novo", () => {
     // Senão o `destrancarOPerfil` da tentativa seguinte apaga uma tranca que
     // ainda tem dono, e ficam dois a disputar o mesmo perfil.
+    // Desde 24-11-2026 por `fecharOChromium`: o destroy com prazo, e SIGKILL
+    // se o processo ficar vivo («spawn chromium EAGAIN» nessa manhã).
     const i = PONTE_CLIENTE.indexOf("while (!(await confirmarOSite()))");
     const fim = PONTE_CLIENTE.slice(i);
-    expect(fim).toContain("await client?.destroy();");
-    expect(fim.indexOf("await client?.destroy();")).toBeLessThan(
+    expect(fim).toContain("await fecharOChromium(client);");
+    expect(fim.indexOf("await fecharOChromium(client);")).toBeLessThan(
       fim.indexOf("espera = Math.min(espera * 2"),
     );
+    const j = PONTE_CLIENTE.indexOf("async function fecharOChromium(c)");
+    expect(j).toBeGreaterThan(-1);
+    const fechar = PONTE_CLIENTE.slice(j, PONTE_CLIENTE.indexOf("\n}\n", j));
+    expect(fechar).toContain("c.destroy()");
+    expect(fechar).toContain('kill("SIGKILL")');
+    expect(fechar).not.toContain("logout");
   });
 });
 

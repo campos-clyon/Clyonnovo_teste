@@ -951,6 +951,42 @@ setInterval(() => void saidaDiaria(), 60_000).unref();
  * Como aqui só corre uma ponte, uma tranca encontrada ao arrancar é sempre de
  * um Chromium que já não existe. Apaga-se.
  */
+/**
+ * FECHAR O CHROMIUM DE VEZ — 24-11-2026.
+ *
+ * Na manhã de 24-11 a ponte falhava o arranque em ciclo e cada volta deixava
+ * um Chromium para trás, até o contentor não conseguir abrir mais nenhum
+ * («spawn chromium EAGAIN»). O `destroy` fecha o navegador com educação, mas
+ * pode pendurar-se, ou não chegar ao processo se a ligação ao browser já
+ * caiu. Por isso: guarda-se o processo antes, espera-se pelo `destroy` no
+ * máximo 30 s, e se o processo ainda estiver vivo leva SIGKILL. Os filhos
+ * órfãos recolhe-os o tini (ver o Dockerfile).
+ *
+ * `destroy`, nunca `logout`: o logout apagava a sessão do volume.
+ */
+async function fecharOChromium(c) {
+  if (!c) return;
+  let processo = null;
+  try {
+    processo = c.pupBrowser?.process?.() ?? null;
+  } catch {
+    /* sem browser lançado */
+  }
+  try {
+    await Promise.race([c.destroy(), esperar(30_000)]);
+  } catch (e) {
+    log("o Chromium não fechou limpo:", e?.message ?? e);
+  }
+  if (processo && processo.exitCode === null && processo.signalCode === null) {
+    log("o Chromium não fechou em 30 s — a matá-lo (SIGKILL)");
+    try {
+      processo.kill("SIGKILL");
+    } catch {
+      /* já tinha morrido entretanto */
+    }
+  }
+}
+
 function destrancarOPerfil() {
   const trancas = ["SingletonLock", "SingletonSocket", "SingletonCookie"];
   let pastas;
@@ -1078,8 +1114,9 @@ async function arrancar() {
     // O arranque que vem a seguir volta a pôr o cronómetro no «emparelhado».
     emparelhadaDesde = 0;
     log("desligado:", motivo, "— a reiniciar em 5 s");
-    setTimeout(() => {
-      client.destroy().catch(() => {});
+    setTimeout(async () => {
+      // Fechado ANTES de abrir o seguinte — ver `fecharOChromium`.
+      await fecharOChromium(client);
       arrancar().catch((e) => log("não religou:", e.message));
     }, 5000);
   });
@@ -1270,11 +1307,7 @@ setInterval(rondaDaFila, INTERVALO);
       return;
     } catch (e) {
       log("não arrancou:", e.message, `— outra vez daqui a ${Math.round(espera / 1000)} s`);
-      try {
-        await client?.destroy();
-      } catch {
-        /* já estava morto, ou nunca chegou a nascer */
-      }
+      await fecharOChromium(client);
       client = null;
       await new Promise((r) => setTimeout(r, espera));
       espera = Math.min(espera * 2, 5 * 60_000);
