@@ -218,7 +218,8 @@ describe("a Política de Privacidade (d85)", () => {
   it("os outros pontos do Jurídico, a data, e as secções como estavam", { timeout: 120_000 }, async () => {
     const html = await pagina();
     const t = texto(html);
-    expect(t).toContain("Última atualização: 23 de novembro de 2026.");
+    // d106 (24-11-2026): o convite para o teste da app de cliente, a contagem das aberturas e o «Algo não funciona?».
+    expect(t).toContain("Última atualização: 24 de novembro de 2026.");
     expect(t).toContain("Conversas com a assistente do WhatsApp:");
     expect(t).toContain("através da Vitória, a nossa assistente automática");
     expect(t).toContain("sem nome, telefone, email, morada nem código postal");

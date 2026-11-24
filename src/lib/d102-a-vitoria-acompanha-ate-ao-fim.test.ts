@@ -143,6 +143,8 @@ vi.mock("./seguimento-da-app-envio", () => ({
   }),
 }));
 vi.mock("./nao-contactar", () => ({
+  // d106: o email também fica no «não contactar».
+  marcarEmailParaNaoContactar: vi.fn(async () => true),
   marcarParaNaoContactar: vi.fn(async () => {
     e.ordem.push("nao-contactar");
     return true;

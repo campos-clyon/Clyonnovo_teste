@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import AdesaoDaApp, { type TextosDaAdesao } from "@/components/AdesaoDaApp";
+import type { TextosDaAdesao } from "@/components/AdesaoDaApp";
+import PercursoDaAppCliente from "@/components/PercursoDaAppCliente";
 import { APP_CLIENTE_NA_PLAY, LINK_DO_TESTE_DA_APP_CLIENTE } from "@/lib/links-da-app";
 import { linkDeAdesaoGuardado } from "@/lib/convite-app-cliente-na-base";
 import { TEXTOS_DO_CONVITE_NO_SITE } from "@/lib/programa-da-app";
@@ -13,6 +14,11 @@ import { TEXTOS_DO_CONVITE_NO_SITE } from "@/lib/programa-da-app";
  *
  * O link de adesão é o que o backoffice guarda (Configs → «Link do programa
  * da app»); sem ele, o formato da Play para o pacote da app.
+ *
+ * O CAMINHO CERTO PARA CADA APARELHO — 24-11-2026 (d106): Android, iPhone ou
+ * computador, e «Não consegui» em cada passo (PercursoDaAppCliente). O link do
+ * convite traz `?c=<código>`, lido só no navegador: a página continua igual
+ * para todos (estática), e o registo vai por /api/app-cliente/percurso.
  */
 
 export const metadata: Metadata = {
@@ -89,7 +95,7 @@ export default async function AppClientePage() {
   const link = await linkDeAdesao();
   return (
     <div className="min-h-[100dvh] bg-white">
-      <AdesaoDaApp tipo="cliente" linkDoTeste={link} linkDaLoja={APP_CLIENTE_NA_PLAY} textos={TEXTOS} />
+      <PercursoDaAppCliente linkDoTeste={link} linkDaLoja={APP_CLIENTE_NA_PLAY} textos={TEXTOS} />
     </div>
   );
 }

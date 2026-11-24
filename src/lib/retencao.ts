@@ -117,6 +117,16 @@ export const MESES_ATE_ANONIMIZAR_O_ARQUIVO = 12;
 export const DIAS_DOS_ERROS_DA_APP = 30;
 
 /**
+ * O PERCURSO DO CONVITE DA APP DE CLIENTE — 24-11-2026 (d106, com o
+ * Jurídico). O clique, a classe do aparelho, o passo e o «Não consegui» de
+ * cada pessoa convidada (`percursoDoConviteDaApp`) servem para perceber
+ * onde se perde a entrada no teste. Saem 90 dias depois da última coisa nova
+ * (o código caduca aos 60). Corre no cron da purga, com o mesmo
+ * `PURGA_ARMADA`: a seco, só conta.
+ */
+export const DIAS_DO_PERCURSO_DO_CONVITE_DA_APP = 90;
+
+/**
  * AS CONVERSAS DA CLYON — 30-10-2026 (decisão 3b do dono).
  *
  * As conversas de um pedido (cliente e parceiro) guardam-se 6 MESES depois de

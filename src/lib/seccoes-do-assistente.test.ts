@@ -292,6 +292,7 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/fecho-do-modelo/interruptor", porque: "ligar o email «O trabalho já foi feito?» ao cliente é do administrador, com o sim do dono (d15, 13-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-aos-profissionais/interruptor", porque: "ligar as respostas automáticas da Vitória aos profissionais é do administrador, com o sim do dono (d21, 13-11-2026)" },
   { seccao: "configs", rota: "/api/admin/interruptor-da-validade", porque: "ligar a validade dos orçamentos (lembretes e fecho automáticos) é do administrador, com o sim do dono (d62, 18-11-2026)" },
+  { seccao: "configs", rota: "/api/admin/interruptor-da-linha-da-app", porque: "pôr a linha da app no aviso de propostas é do administrador, com o sim do dono (d106, 24-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-agente", porque: "ligar o ensaio da Vitória agente e mudar o tecto diário de gasto são do administrador, com o sim do dono (d85, 22-11-2026)" },
   { seccao: "configs", rota: "/api/admin/interruptor-do-seguimento", porque: "desligar (ou voltar a ligar) o seguimento do cliente é do administrador — é o travão de emergência (d83, 21-11-2026)" },
   { seccao: "configs", rota: "/api/admin/interruptor-do-whatsapp-pela-meta", porque: "passar os envios da ponte para a Cloud API da Meta (que não envia templates) é do administrador, com o sim do dono (d5, 21-11-2026)" },

@@ -247,6 +247,14 @@ export async function cancelarEApagarNaHora(
     );
   }
 
+  // d106: o email também, para os convites e lembretes da app (depois de anonimizar já não se sabe qual era).
+  if (p.contactEmail) {
+    const { marcarEmailParaNaoContactar } = await import("./nao-contactar");
+    await marcarEmailParaNaoContactar(p.contactEmail, `cancelou o pedido (${opcoes.origem}, d106)`).catch((e) =>
+      console.error("[cancelar-pelo-cliente] o «não contactar» do email não ficou:", e instanceof Error ? e.message : e),
+    );
+  }
+
   // O histórico e o registo ANTES de anonimizar (sem o nome nem o telefone).
   const resumo =
     `O cliente cancelou o pedido ${NO_HISTORICO[opcoes.origem]}: ${r.encerradas} negociação(ões) encerrada(s), parceiros avisados. ` +

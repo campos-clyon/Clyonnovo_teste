@@ -113,8 +113,15 @@ export async function POST(req: NextRequest) {
       const lote = await adicionadosParaConvidar(corpo.ids, CONVITES_POR_LOTE);
       let enviados = 0;
       let falhados = 0;
+      let foraPorNaoContactar = 0;
+      const { naoContactarNaApp } = await import("@/lib/nao-contactar-na-app");
       for (const [i, d] of lote.entries()) {
         if (i > 0) await espera(INTERVALO_ENTRE_CONVITES_MS);
+        // d106 (Jurídico): o «não contactar» e os pedidos cancelados ficam de fora.
+        if (await naoContactarNaApp({ email: d.email })) {
+          foraPorNaoContactar++;
+          continue;
+        }
         // Reservar ANTES: se outra chamada já o tem, esta não envia.
         if (!(await reservarConviteDoPrograma(d.id, porQuem))) continue;
         const ok = await enviarConviteDoPrograma({ para: d.email, linkDeAdesao: link });
@@ -126,7 +133,7 @@ export async function POST(req: NextRequest) {
       }
       // Os que falharam voltam a `adicionado`: não contam como «restantes» desta volta.
       const restantes = falhados > 0 ? 0 : await adicionadosPorConvidar(corpo.ids);
-      return NextResponse.json({ ok: true, enviados, falhados, restantes });
+      return NextResponse.json({ ok: true, enviados, falhados, restantes, foraPorNaoContactar });
     }
 
     return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });

@@ -90,44 +90,32 @@ describe("o lembrete único", () => {
     expect(precisaDoLembrete({ convidadoEm: convidado, aderiu: null, lembreteEm: agora }, agora)).toBe(false);
   });
 
-  it("LIGADO desde 17-11-2026 com os textos aprovados pelo dono, à letra", () => {
-    expect(TEXTOS.LEMBRETE_DA_APP_LIGADO).toBe(true);
-    expect(TEXTOS.LEMBRETE_DA_APP_POR_WHATSAPP_LIGADO).toBe(true);
-    expect(estadoDoLembrete()).toEqual({ email: true, whatsapp: true });
-    expect(TEXTOS.TEXTO_DO_LEMBRETE_POR_EMAIL).toEqual({
-      assunto: "Falta só um toque para a app CLYON",
-      texto: [
-        "Olá, {Nome}. Ainda faltam alguns clientes com Android para a app CLYON chegar a toda a gente.",
-        "Abra {linkDeAdesao} com o Gmail do telemóvel, toque em «Tornar-me testador» e instale a app.",
-        "Se o seu Gmail for outro, responda só com ele. Se não puder, não faz mal: não voltamos a escrever sobre isto.",
-        "Equipa CLYON",
-      ].join("\n\n"),
-    });
+  it("DESLIGADO desde 24-11-2026 (d106): o lembrete ao grupo de 17/11 espera pelo advogado; os textos são a v3, à letra", () => {
+    expect(TEXTOS.LEMBRETE_DA_APP_LIGADO).toBe(false);
+    expect(TEXTOS.LEMBRETE_DA_APP_POR_WHATSAPP_LIGADO).toBe(false);
+    expect(estadoDoLembrete()).toEqual({ email: false, whatsapp: false });
+    expect(TEXTOS.MODELO_DO_LEMBRETE_POR_EMAIL.assunto).toBe("Conseguiu instalar a app CLYON?");
     expect(TEXTOS.TEXTO_DO_LEMBRETE_POR_WHATSAPP).toBe(
       [
-        "Olá, {Nome}, é a Vitória outra vez. Ainda precisamos de alguns clientes com Android para lançar a app CLYON.",
-        "É só abrir {linkDeAdesao} com o Gmail do telemóvel e instalar a app.",
-        "Se o Gmail for outro, envie-mo por aqui.",
-        "Se não puder, não faz mal, obrigada na mesma!",
+        "Olá, {Nome}, é a Vitória outra vez. Conseguiu instalar a app CLYON?",
+        "Se ficou a meio, responda só com um número:",
+        "1 — tentei e não consegui entrar",
+        "2 — não tenho Android",
+        "3 — não me interessa",
+        "A ligação continua aqui: {linkDeAdesao}",
+        "Para não receber mais mensagens sobre a app, responda SEM APP.",
       ].join("\n"),
     );
     expect(TEXTOS.TEXTO_DO_CONVITE_POR_WHATSAPP).toBe(
       [
-        // «a assistente automática» desde a d85 (22-11-2026): a Vitória diz que é automática em todo o lado.
         "Olá, {Nome}! Sou a Vitória, a assistente automática da CLYON.",
-        "Tem telemóvel Android? Estamos a lançar a app CLYON e procuramos 12 clientes para a experimentarem primeiro 😊",
-        "Na app acompanha os seus pedidos, vê as fotografias e paga ao parceiro, tudo no telemóvel.",
-        "1) Abra esta ligação com o Gmail do telemóvel e toque em «Tornar-me testador»: {linkDeAdesao}",
-        "2) Instale a app e fique com ela 14 dias.",
-        "Se o Gmail do telemóvel for outro, envie-mo por aqui, por favor.",
+        "Já pode acompanhar os seus pedidos na app CLYON: recebe e compara as propostas dos parceiros, vê as fotografias do trabalho e paga ao parceiro, tudo no telemóvel 😊",
+        "A app é opcional, ainda está em teste e, por agora, é só para Android. Como instalar, em menos de 2 minutos: {linkDeAdesao}",
+        "Para não receber mais mensagens sobre a app, responda SEM APP.",
       ].join("\n"),
     );
-    // O convite que pede o Gmail é o mesmo convite novo (já traz o parágrafo do Gmail).
-    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL?.texto).toContain(
-      "O email onde recebeu esta mensagem não é o Gmail do seu telemóvel? Responda a este email só com esse Gmail e nós tratamos do resto.",
-    );
-    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL?.texto.startsWith("Olá, {Nome}.\n")).toBe(true);
-    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL?.texto).toContain("({linkDeAdesao})");
+    // Desde a v3, o convite a quem não tem Gmail é o mesmo convite (a página trata da conta Google).
+    expect(TEXTOS.TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL).toBe(TEXTOS.MODELO_DO_CONVITE_POR_EMAIL);
   });
 
   it("só a quem recebeu o convite NOVO, 3 dias depois DELE (o convite de 01-11 não conta)", () => {
@@ -143,10 +131,11 @@ describe("o lembrete único", () => {
     expect(f).not.toContain("enviarAvisoWhatsApp(");
   });
 
-  it("só sai com interruptor E texto, e reserva antes de enviar", () => {
+  it("só sai com o interruptor, e reserva antes de enviar", () => {
     const f = ler("src/lib/lembrete-da-app.ts");
-    expect(f).toContain("LEMBRETE_DA_APP_LIGADO && TEXTO_DO_LEMBRETE_POR_EMAIL !== null");
-    expect(f).toContain("if (!ligado.email || !textoEmail) return { ligado: false");
+    // d106: o texto é o modelo v3 (nunca nulo); quem decide é o interruptor.
+    expect(f).toContain("const email = LEMBRETE_DA_APP_LIGADO;");
+    expect(f).toContain("if (!ligado.email) return { ligado: false");
     expect(f.indexOf("reservarLembrete(c.email)")).toBeLessThan(f.indexOf("enviarEmailDoSeguimento({"));
     const rota = ler("src/app/api/cron/lembrete-da-app/route.ts");
     expect(rota).toContain("bearerConfere(");

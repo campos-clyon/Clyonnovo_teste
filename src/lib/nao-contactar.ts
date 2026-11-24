@@ -93,3 +93,87 @@ export async function numerosParaNaoContactar(telefones: readonly string[]): Pro
   }
   return fora;
 }
+
+/* ─── O EMAIL TAMBÉM — 24-11-2026 (d106, condição do Jurídico) ─────────────
+ *
+ * Quem cancelou pela conversa (ou pelo painel, pela app) tem o pedido
+ * anonimizado na hora: depois disso o email já não está em lado nenhum que
+ * ligue a pessoa ao cancelamento. Para os convites e lembretes da app de
+ * cliente (que saem por email) também não lhe escreverem, guarda-se a
+ * impressão do EMAIL na mesma tabela, com outro prefixo (as duas impressões
+ * nunca se confundem). Como o número, o email não fica escrito.
+ */
+
+const PREFIXO_DO_EMAIL = "clyon-nao-contactar-email-d106:";
+
+/** A impressão do email (minúsculas, sem espaços), ou null sem email. Pura. */
+export function chaveDoEmailNaoContactar(email: string | null | undefined): string | null {
+  const e = String(email ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
+  return createHash("sha256").update(`${PREFIXO_DO_EMAIL}${e}`).digest("hex");
+}
+
+/** Marca o email: nenhum convite nem lembrete da app lhe volta a sair. */
+export async function marcarEmailParaNaoContactar(email: string, origem: string): Promise<boolean> {
+  const chave = chaveDoEmailNaoContactar(email);
+  if (!chave) return false;
+  const pool = await tabela();
+  await pool.execute("INSERT IGNORE INTO naoContactar (chave, origem) VALUES (?, ?)", [chave, origem.slice(0, 60)]);
+  return true;
+}
+
+/** Este email está na lista? Lança se a base falhar (quem chama não envia). */
+export async function eEmailParaNaoContactar(email: string | null | undefined, opcoes: { pool?: Pool } = {}): Promise<boolean> {
+  const chave = chaveDoEmailNaoContactar(email);
+  if (!chave) return false;
+  const pool = await tabela(opcoes.pool);
+  const [rows] = (await pool.execute("SELECT 1 AS x FROM naoContactar WHERE chave = ? LIMIT 1", [chave])) as [Array<{ x: number }>, unknown];
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+/* ─── «SEM APP» — 24-11-2026 (d106, v3 da d107) ────────────────────────────
+ *
+ * A recusa das mensagens SOBRE A APP ({LINK_RECUSA}, o botão «Não me
+ * interessa», «Não tenho Android», a página aberta num iPhone, o «SEM APP» na
+ * conversa). Trava tudo o que é sobre a app — convite, lembrete, «Já pode
+ * instalar», a linha no aviso de propostas — e NÃO as mensagens do pedido:
+ * por isso tem a sua chave (outro prefixo), que só `naoContactarNaApp` lê.
+ * Fica na mesma tabela (não sai com a purga do percurso, que é de 90 dias):
+ * uma recusa não caduca. Pelo email e/ou pelo telefone; nenhum fica escrito.
+ */
+
+const PREFIXO_SEM_APP_EMAIL = "clyon-sem-app-email-d106:";
+const PREFIXO_SEM_APP_TELEFONE = "clyon-sem-app-tel-d106:";
+
+/** As impressões «sem app» desta pessoa (pelo email e pelo telefone). Pura. */
+export function chavesSemApp(p: { email?: string | null; telefone?: string | null }): string[] {
+  const chaves: string[] = [];
+  const e = String(p.email ?? "").trim().toLowerCase();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) chaves.push(createHash("sha256").update(`${PREFIXO_SEM_APP_EMAIL}${e}`).digest("hex"));
+  const d = String(p.telefone ?? "").replace(/\D/g, "");
+  if (d.length >= 9) chaves.push(createHash("sha256").update(`${PREFIXO_SEM_APP_TELEFONE}${d.slice(-9)}`).digest("hex"));
+  return chaves;
+}
+
+/** Grava a recusa das mensagens sobre a app (o ponto de escrita para a Vitória também). */
+export async function marcarSemApp(p: { email?: string | null; telefone?: string | null }, origem: string): Promise<boolean> {
+  const chaves = chavesSemApp(p);
+  if (chaves.length === 0) return false;
+  const pool = await tabela();
+  for (const chave of chaves) {
+    await pool.execute("INSERT IGNORE INTO naoContactar (chave, origem) VALUES (?, ?)", [chave, origem.slice(0, 60)]);
+  }
+  return true;
+}
+
+/** Recusou as mensagens sobre a app? Lança se a base falhar (quem chama não envia). */
+export async function eSemApp(p: { email?: string | null; telefone?: string | null }, opcoes: { pool?: Pool } = {}): Promise<boolean> {
+  const chaves = chavesSemApp(p);
+  if (chaves.length === 0) return false;
+  const pool = await tabela(opcoes.pool);
+  const [rows] = (await pool.execute(
+    `SELECT 1 AS x FROM naoContactar WHERE chave IN (${chaves.map(() => "?").join(",")}) LIMIT 1`,
+    chaves,
+  )) as [Array<{ x: number }>, unknown];
+  return Array.isArray(rows) && rows.length > 0;
+}

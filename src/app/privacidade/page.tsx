@@ -9,11 +9,13 @@ import {
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
   DIAS_DOS_ERROS_DA_APP,
+  DIAS_DO_PERCURSO_DO_CONVITE_DA_APP,
   DIAS_DAS_FOTOS_SEM_PEDIDO,
   MESES_ATE_ANONIMIZAR_O_ARQUIVO,
 } from "@/lib/retencao";
 /* 12-11-2026 (d6): a transferência, a folha da mudança e a lista pública — números e nomes das constantes. */
 import { LIMITE_DA_TRANSFERENCIA } from "@/lib/transferencia-bancaria";
+import { DIAS_QUE_SE_GUARDAM } from "@/lib/sinais-da-app-de-cliente";
 import { TEXTOS_DOS_PRECOS_DAS_MUDANCAS } from "@/lib/precos-das-mudancas-do-profissional";
 /*
  * A PRIVACIDADE DE 15-11-2026 — d10 (Jurídico; CEO e dono): o cliente paga ao
@@ -70,7 +72,7 @@ export default function PrivacidadePage() {
           {novo ? (
             <p className="mt-3 text-sm text-slate-500">
               Versão de {VERSAO_DOS_TERMOS_POR_EXTENSO}. Em vigor desde{" "}
-              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}. Última atualização: 23 de novembro de 2026.
+              {PAGAMENTO_AO_PARCEIRO_DESDE_POR_EXTENSO}. Última atualização: 24 de novembro de 2026.
             </p>
           ) : (
           <p className="mt-3 text-sm text-slate-500">
@@ -256,6 +258,12 @@ export default function PrivacidadePage() {
                   </li>
                   <li>Gerir as propostas, as contrapropostas e o registo do que foi combinado.</li>
                   <li>Comunicar consigo por email, telefone ou WhatsApp sobre o pedido.</li>
+                  {/* 24-11-2026 (d106/d109): o convite para o teste da app de cliente, à letra do Jurídico (aprovado pelo dono). */}
+                  <li>
+                    Convidar quem tem um pedido connosco, e quem se ofereça, a experimentar a app CLYON
+                    durante o teste na Google Play — uma só vez, com a opção de recusar no próprio
+                    convite — e perceber em que passo a adesão falhou, para a corrigir.
+                  </li>
                   {/*
                     22-11-2026 (d85) — a Vitória com o Claude (Anthropic). O ensaio
                     à parte: a conversa vai sem dados de pessoas (anonimizar.ts) e a
@@ -390,7 +398,10 @@ export default function PrivacidadePage() {
                     conversas sem os dados que o identificam, antes de ela responder a clientes, e
                     para lhe mostrar as avaliações que os
                     parceiros lhe dão, para que saiba como correu cada trabalho do lado de quem o
-                    fez. Pode opor-se a este tratamento escrevendo-nos.
+                    fez, e para lhe dizer, uma só vez, que pode acompanhar o seu pedido na app CLYON
+                    enquanto ela está em teste, e saber em que passo o convite falhou. Pode recusar no
+                    próprio convite, ou escrevendo-nos, e não voltamos a falar-lhe da app. Pode opor-se
+                    a este tratamento escrevendo-nos.
                   </li>
                 </ul>
               </>
@@ -643,6 +654,10 @@ export default function PrivacidadePage() {
                   </li>
                   <li>
                     <strong>Erros das apps:</strong> {DIAS_DOS_ERROS_DA_APP} dias.
+                  </li>
+                  <li>
+                    <strong>O link do convite para a app CLYON:</strong>{" "}
+                    {DIAS_DO_PERCURSO_DO_CONVITE_DA_APP} dias depois da última vez que o abriu.
                   </li>
                   <li>
                     <strong>Dados de faturação:</strong> 10 anos, conforme legislação em vigor.
@@ -1073,10 +1088,41 @@ export default function PrivacidadePage() {
                     onde veio, e com emails, números e códigos retirados da mensagem. Serve só para
                     corrigir a app e é apagado ao fim de {DIAS_DOS_ERROS_DA_APP} dias.
                   </li>
+                  {/*
+                    24-11-2026 (d106/d109/d108): o teste na Google Play, o link do convite
+                    (percursoDoConviteDaApp, DIAS_DO_PERCURSO_DO_CONVITE_DA_APP), a contagem das
+                    primeiras aberturas e o «Algo não funciona?» (d108, 90 dias). À letra do Jurídico.
+                  */}
+                  <li>
+                    <strong>Teste na Google Play:</strong> se aceitar entrar no teste, o email da conta
+                    Google que nos indicar é posto na lista de testadores da app na Google Play (Google),
+                    só para lhe dar acesso à app de teste. Sai da lista quando o teste acabar ou quando
+                    nos pedir.
+                  </li>
+                  <li>
+                    <strong>O link do convite:</strong> se abrir o link do convite, registamos que o
+                    abriu, se foi num Android, num iPhone ou num computador (não guardamos o endereço de
+                    onde veio), o passo onde ficou e, se nos disser, porque não conseguiu. Serve só para
+                    corrigir o convite e a app e é apagado ao fim de {DIAS_DO_PERCURSO_DO_CONVITE_DA_APP}{" "}
+                    dias.
+                  </li>
+                  <li>
+                    <strong>Contagem de instalações:</strong> na primeira vez que abre a app, ela
+                    avisa-nos de que foi instalada, com a versão e a plataforma e sem nada que o
+                    identifique a si ou ao seu telemóvel (não guardamos o endereço de onde veio).
+                    Guardamos esta contagem {DIAS_QUE_SE_GUARDAM} dias.
+                  </li>
+                  <li>
+                    <strong>«Algo não funciona?»:</strong> se nos escrever na Ajuda da app, recebemos o
+                    que escreveu, onde aconteceu, a versão da app, o modelo e o sistema do telemóvel e,
+                    se tiver entrado na conta, o email da conta. Serve só para corrigir a app e é
+                    apagado ao fim de {DIAS_QUE_SE_GUARDAM} dias.
+                  </li>
                 </ul>
                 A app <strong>não lê</strong> a localização do telemóvel (a morada é a que escreve ou
                 escolhe na lista), os contactos, o calendário nem o microfone, e não tem publicidade
-                nem ferramentas de medição.
+                nem ferramentas de medição de terceiros; a única contagem é a da primeira abertura,
+                descrita acima.
                 <br />
                 <br />
                 Além dos que estão na secção 5, estes dados passam por: <strong>Expo</strong> e{" "}

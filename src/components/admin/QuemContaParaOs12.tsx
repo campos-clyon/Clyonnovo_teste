@@ -13,6 +13,14 @@ import {
   type EstadoDeUso,
   type LinhaDoQuadro,
 } from "@/lib/quem-conta-para-os-12";
+import {
+  PASSOS_DA_ADESAO,
+  ROTULOS_DO_APARELHO,
+  ROTULOS_DO_MOTIVO,
+  ultimoPassoEmPalavras,
+  type Percurso,
+  type ResumoDosPercursos,
+} from "@/lib/percurso-da-app-cliente";
 
 /*
  * «QUEM CONTA PARA OS 12» — 17-11-2026 (d60, pedida e aprovada pelo dono).
@@ -27,10 +35,16 @@ import {
  * Só o administrador (a rota é `requireAdminGeral`). Na CLYON Pro vive na
  * secção Profissionais (tema escuro); na app de cliente, em Contas › Programa
  * da app (tema claro).
+ *
+ * d106 (24-11-2026): na app de cliente, a coluna «Na ligação do convite» (o
+ * último passo: convite enviado → clicou → aparelho → passo → «Não consegui»
+ * com o motivo) e, por cima, o resumo de todos (cliques, % iPhone e
+ * computador, motivos por passo).
  */
 
 type Quadro = {
-  linhas: LinhaDoQuadro[];
+  linhas: Array<LinhaDoQuadro & { percurso?: Percurso | null }>;
+  percursos?: ResumoDosPercursos | null;
   semConta: EmailDaPlaySemConta[];
   totais: Record<EstadoDeUso, number>;
   usaNaPlay: number | null;
@@ -140,13 +154,15 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
       });
       const d = (await res.json().catch(() => ({}))) as Quadro & {
         error?: string;
-        avisos?: { avisados: number; falharam: number } | null;
+        avisos?: { avisados: number; falharam: number; desligado?: boolean } | null;
       };
       if (!res.ok) throw new Error(d.error ?? "Não consegui guardar a lista.");
       setQuadro(d);
       // O aviso «Já pode entrar no teste» (d6, 18-11-2026): só a quem passou a estar na lista, uma vez.
       setAvisos(
-        d.avisos && (d.avisos.avisados || d.avisos.falharam)
+        d.avisos?.desligado
+          ? "O aviso «Já pode instalar» da app de cliente está desligado: não saiu nada."
+          : d.avisos && (d.avisos.avisados || d.avisos.falharam)
           ? `Avisados agora (email/app): ${d.avisos.avisados}${d.avisos.falharam ? ` · sem caminho para avisar: ${d.avisos.falharam}` : ""}.`
           : "",
       );
@@ -218,12 +234,38 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
         </div>
       )}
 
+      {quadro?.percursos && (
+        <div className={`mt-4 rounded-xl border px-3 py-3 ${tema === "escuro" ? "border-slate-800" : "border-slate-200"}`}>
+          <p className={t.forte}>Na ligação do convite</p>
+          <p className={`mt-1 ${t.texto}`}>
+            Com ligação: {quadro.percursos.comLink} · clicaram: {quadro.percursos.clicaram}
+            {quadro.percursos.comLink > 0 &&
+              ` (${Math.round((quadro.percursos.clicaram / quadro.percursos.comLink) * 100)} %)`}
+            {quadro.percursos.clicaram > 0 &&
+              ` · iPhone: ${quadro.percursos.percentIphone} % · computador: ${quadro.percursos.percentPc} % · Android: ${quadro.percursos.porAparelho.android}`}
+          </p>
+          {quadro.percursos.motivos.length > 0 ? (
+            <ul className={`mt-2 space-y-0.5 ${t.texto}`}>
+              {quadro.percursos.motivos.map((m) => (
+                <li key={`${m.passo}-${m.motivo}`}>
+                  Passo {m.passo} ({PASSOS_DA_ADESAO[m.passo]}): {ROTULOS_DO_MOTIVO[m.motivo]} — {m.n}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={`mt-1 ${t.fraco}`}>Ainda ninguém carregou em «Não consegui».</p>
+          )}
+        </div>
+      )}
+
       {colar && (
         <div className="mt-4 space-y-2">
           <label className={`block ${t.texto}`} htmlFor={`lista-da-play-${app}`}>
             Cole os emails da lista de testadores (Play Console › Testes › Teste fechado › Testadores), separados
-            por vírgulas ou linhas. Fica guardada a última lista colada.{app === "pro" &&
-              " Quem passar a estar na lista e ainda não abriu a app recebe, uma vez, o aviso «Já pode entrar no teste»."}
+            por vírgulas ou linhas. Fica guardada a última lista colada.
+            {app === "pro"
+              ? " Quem passar a estar na lista e ainda não abriu a app recebe, uma vez, o aviso «Já pode entrar no teste»."
+              : " O aviso «Já pode instalar» da app de cliente está desligado; quando se ligar, sai uma vez a quem nos deu o Gmail e passou a estar na lista."}
           </label>
           <textarea
             id={`lista-da-play-${app}`}
@@ -268,7 +310,8 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
                 <th className="py-2 pr-3 font-semibold">Estado</th>
                 <th className="py-2 pr-3 font-semibold">Última abertura</th>
                 <th className="py-2 pr-3 font-semibold">Telefone</th>
-                <th className="py-2 font-semibold">Lista da Play</th>
+                <th className="py-2 pr-3 font-semibold">Lista da Play</th>
+                {quadro?.percursos && <th className="py-2 font-semibold">Na ligação do convite</th>}
               </tr>
             </thead>
             <tbody className={t.tabela}>
@@ -303,7 +346,7 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
                         <span className={t.fraco}>sem telefone</span>
                       )}
                     </td>
-                    <td className="py-2.5">
+                    <td className="py-2.5 pr-3">
                       <div className="flex flex-wrap gap-1">
                         {quadro?.listaColada &&
                           (l.emailNaPlay ? (
@@ -318,6 +361,18 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
                         )}
                       </div>
                     </td>
+                    {quadro?.percursos && (
+                      <td className={`py-2.5 ${t.texto}`}>
+                        <div className={l.percurso?.naoConsegui ? t.aviso : undefined}>{ultimoPassoEmPalavras(l.percurso ?? null)}</div>
+                        {l.percurso?.naoConsegui?.texto && <div className={t.fraco}>«{l.percurso.naoConsegui.texto}»</div>}
+                        {l.percurso && l.percurso.aparelhos.length > 0 && (
+                          <div className={t.fraco}>
+                            {l.percurso.aparelhos.map((a) => ROTULOS_DO_APARELHO[a]).join(" · ")} · {l.percurso.cliques} clique(s)
+                            {l.percurso.cliqueEm ? ` · 1.º a ${quando(l.percurso.cliqueEm)}` : ""}
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

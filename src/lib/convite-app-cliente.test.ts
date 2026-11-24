@@ -16,48 +16,48 @@ import {
 
 const LINK = "https://play.google.com/apps/testing/pt.clyon.cliente";
 
-describe("o convite novo da app de cliente (texto aprovado à letra, 17-11-2026)", () => {
+describe("o convite da app de cliente (v3 da d107, aprovada à letra a 24-11-2026)", () => {
+  const NOSSO = "https://clyon.pt/app-cliente?c=AbCdEfGhIjKlMnOp";
+
   it("assunto, pré-cabeçalho e corpo como o dono os aprovou", () => {
-    expect(ASSUNTO_DO_CONVITE).toBe("Tem Android? Ajude-nos a lançar a app CLYON (2 minutos)");
-    expect(PRE_CABECALHO_DO_CONVITE).toBe("São 2 toques: a ligação e a instalação. Precisamos de 12 clientes.");
-    expect(textoDoConvite({ nome: "ana maria silva", link: LINK })).toBe(
+    expect(ASSUNTO_DO_CONVITE).toBe("Os seus pedidos CLYON no telemóvel (Android)");
+    expect(PRE_CABECALHO_DO_CONVITE).toBe("Peça, compare propostas e acompanhe o trabalho na app. Por agora só Android.");
+    expect(textoDoConvite({ nome: "ana maria silva", link: NOSSO })).toBe(
       [
         "Olá, Ana.",
-        "Este convite é só para quem tem telemóvel Android (no iPhone ainda não há app).",
         "",
-        "A app CLYON está quase pronta e precisamos de 12 clientes que a usem 14 dias para a Google Play a abrir a toda a gente. Como já fez um pedido connosco, gostávamos muito que fosse um deles.",
+        "Já pode acompanhar os seus pedidos CLYON no telemóvel. Com a app:",
         "",
-        "Com a app, no telemóvel:",
-        "- faz um pedido com fotografias e vê as propostas dos parceiros;",
+        "- faz um pedido com fotografias e recebe as propostas dos parceiros no mesmo sítio;",
+        "- compara as propostas e escolhe com calma;",
         "- acompanha o trabalho passo a passo, com as fotografias do parceiro;",
-        "- vê quanto paga e paga ao parceiro (MB WAY ou transferência), sem andar à procura de mensagens;",
-        "- fala connosco pelo WhatsApp ou dentro do próprio pedido.",
+        "- vê quanto paga e paga ao parceiro sem andar à procura de mensagens.",
         "",
-        "São 2 passos, menos de 2 minutos:",
-        `1. No telemóvel, com o Gmail que usa na Play Store, toque em «Quero testar a app» (${LINK}) e carregue em «Tornar-me testador».`,
-        "2. Instale a app CLYON na Play Store e abra-a. Fique com ela 14 dias e abra-a de vez em quando.",
+        `Ver como instalar: ${NOSSO}`,
         "",
-        "O email onde recebeu esta mensagem não é o Gmail do seu telemóvel? Responda a este email só com esse Gmail e nós tratamos do resto.",
+        "A ligação mostra o passo-a-passo, em menos de 2 minutos. Se alguma coisa não correr bem, diga-nos lá em que passo ficou e nós ajudamos.",
         "",
-        "Obrigado por nos ajudar a pôr a CLYON no bolso de mais gente.",
+        "A app é opcional: no site faz tudo na mesma. Ainda está em teste na Google Play e, por agora, é só para Android.",
         "",
         "Equipa CLYON",
         "",
-        "Se não tiver Android ou não quiser participar, basta ignorar este email. Só lhe lembramos mais uma vez, daqui a 3 dias.",
+        `Não quero receber mensagens sobre a app: ${NOSSO}&r=3`,
       ].join("\n"),
     );
   });
 
-  it("sem a linha dos avisos no telemóvel: a chave FCM V1 da app de cliente ainda não está na EAS", () => {
-    expect(textoDoConvite({ nome: null, link: LINK })).not.toMatch(/recebe um aviso/);
-    expect(htmlDoConvite({ nome: null, link: LINK })).not.toMatch(/recebe um aviso/);
+  it("sem a linha dos avisos no telemóvel ([SÓ COM AVISOS]): a chave FCM V1 ainda não está confirmada", () => {
+    expect(textoDoConvite({ nome: null, link: NOSSO })).not.toMatch(/recebe um aviso/);
+    expect(htmlDoConvite({ nome: null, link: NOSSO })).not.toMatch(/recebe um aviso/);
   });
 
-  it("o HTML leva o pré-cabeçalho escondido e o botão «Quero testar a app»", () => {
-    const html = htmlDoConvite({ nome: "Ana", link: LINK });
-    expect(html).toContain(PRE_CABECALHO_DO_CONVITE);
-    expect(html).toMatch(/display:none[^>]*>São 2 toques/);
-    expect(html).toMatch(/>\s*Quero testar a app\s*<\/a>/);
+  it("o HTML leva o pré-cabeçalho escondido, o botão «Ver como instalar» e a recusa, sem píxel", () => {
+    const html = htmlDoConvite({ nome: "Ana", link: NOSSO });
+    expect(html).toMatch(/display:none[^>]*>Peça, compare propostas/);
+    expect(html).toMatch(/>Ver como instalar<\/a>/);
+    expect(html).toContain(`href="${NOSSO}&amp;r=3"`);
+    expect(html).toContain(">Não quero receber mensagens sobre a app</a>");
+    expect(html).not.toMatch(/<img/i);
   });
 
   it("o convite e o lembrete saem de geral@clyon.pt", () => {
@@ -79,10 +79,8 @@ describe("o convite novo da app de cliente (texto aprovado à letra, 17-11-2026)
     expect(primeiroNome("joão")).toBe("João");
   });
 
-  it("o HTML leva a ligação como botão e escrito, e escapa o nome", () => {
-    const html = htmlDoConvite({ nome: "<b>Rui</b>", link: LINK });
-    expect(html.split(`href="${LINK}"`).length - 1).toBe(2);
-    expect(html).toContain(`>${LINK}</a>`);
+  it("o HTML escapa o nome e assina pela Equipa CLYON", () => {
+    const html = htmlDoConvite({ nome: "<b>Rui</b>", link: "https://clyon.pt/app-cliente?c=AbCdEfGhIjKlMnOp" });
     expect(html).not.toContain("<b>Rui");
     expect(html).toContain("Equipa CLYON");
   });

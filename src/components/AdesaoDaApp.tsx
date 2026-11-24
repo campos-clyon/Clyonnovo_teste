@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { eGmail, emailLimpo } from "@/lib/gmail-do-telemovel";
 import { TEXTOS_DO_CONVITE_NO_SITE } from "@/lib/programa-da-app";
@@ -74,6 +74,13 @@ type Props = {
   linkDoTeste: string;
   linkDaLoja: string;
   textos: TextosDaAdesao;
+  /**
+   * d106 (24-11-2026, só a app de cliente): avisa a página do passo a que a
+   * pessoa chegou (1–4) — o percurso do convite grava-o.
+   */
+  aoChegarAoPasso?: (passo: 1 | 2 | 3 | 4) => void;
+  /** d106: o que aparece por baixo dos botões de cada passo (o «Não consegui»). */
+  ajudaDoPasso?: (passo: 1 | 2 | 3 | 4) => ReactNode;
 };
 
 const TOTAL = 4;
@@ -91,7 +98,7 @@ function passoDoEndereco(): number {
   }
 }
 
-export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: Props) {
+export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos, aoChegarAoPasso, ajudaDoPasso }: Props) {
   const [pronto, setPronto] = useState(false);
   const [passo, setPasso] = useState(0);
   const [sessao, setSessao] = useState<boolean | null>(null);
@@ -147,6 +154,11 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
       vivo = false;
     };
   }, [tipo]);
+
+  // d106: o passo a que chegou, para o percurso do convite (só quem passou a função).
+  useEffect(() => {
+    if (pronto && aoChegarAoPasso) aoChegarAoPasso((passo + 1) as 1 | 2 | 3 | 4);
+  }, [passo, pronto, aoChegarAoPasso]);
 
   // O foco vai para o título do passo novo (leitores de ecrã e teclado), menos no primeiro.
   useEffect(() => {
@@ -477,6 +489,7 @@ export default function AdesaoDaApp({ tipo, linkDoTeste, linkDaLoja, textos }: P
           </>
         )}
         {passo === 3 && botaoDaLoja}
+        {ajudaDoPasso && ajudaDoPasso((passo + 1) as 1 | 2 | 3 | 4)}
       </div>
     </div>
   );

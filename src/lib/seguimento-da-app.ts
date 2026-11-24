@@ -128,7 +128,8 @@ export function quandoSaiOLembrete(convidadoEm: Date): Date {
 export function preencherTexto(texto: string, valores: Record<string, string>): string {
   const nome = (valores.Nome ?? "").trim();
   const comNome = nome ? texto.replace(/\{Nome\}/g, nome) : texto.replace(/,? ?\{Nome\}/g, "");
-  return comNome.replace(/\{(linkDeAdesao|linkDaPlayStore|linkDaConta)\}/g, (_, k: string) => valores[k] ?? "");
+  // d106: e {linkDoPedido} e {n} (a linha da app no aviso de propostas, v3 da d107).
+  return comNome.replace(/\{(linkDeAdesao|linkDaPlayStore|linkDaConta|linkDoPedido|n)\}/g, (_, k: string) => valores[k] ?? "");
 }
 
 /** Os links https dentro de um texto já escapado ficam clicáveis. */

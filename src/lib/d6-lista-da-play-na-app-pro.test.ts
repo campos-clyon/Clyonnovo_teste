@@ -94,7 +94,11 @@ describe("o aviso sai uma vez, e só ao colar uma lista", () => {
 
   it("dispara só no POST que grava a lista da CLYON Pro — nenhuma rotina nem arranque o chama", () => {
     const rota = semNotas(ler("src/app/api/admin/quem-conta-para-os-12/route.ts"));
-    expect(rota).toContain('corpo.app === "pro" ? await avisarQuemEntrouNaListaDaPlay(emailsDaListaColada(lista)) : null');
+    // d106 (24-11-2026): a app de cliente tem o seu (desligado até haver texto aprovado); a Pro continua só no POST da Pro.
+    const soEspacos = rota.replace(/\s+/g, " ");
+    expect(soEspacos).toContain(
+      'corpo.app === "pro" ? await avisarQuemEntrouNaListaDaPlay(emailsDaListaColada(lista)) : await avisarClientesQueEntraramNaListaDaPlay(emailsDaListaColada(lista))',
+    );
     const get = rota.slice(rota.indexOf("export async function GET"), rota.indexOf("export async function POST"));
     expect(get).not.toContain("avisarQuemEntrouNaListaDaPlay");
   });

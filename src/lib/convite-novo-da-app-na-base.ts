@@ -23,7 +23,7 @@
 
 import { getPool } from "./db";
 import { dentroDaJanelaDoWhatsApp, intervaloAoAcaso, telemovelDoAviso } from "./aviso-aos-profissionais";
-import { LINK_DE_ADESAO_SUGERIDO, primeiroNome } from "./convite-app-cliente";
+import { primeiroNome } from "./convite-app-cliente";
 import {
   contagemDoConviteNovo,
   elegiveisParaOConviteNovo,
@@ -223,19 +223,26 @@ export async function passagemDosWhatsAppDaApp(agora: Date = new Date()): Promis
       [p.email, p.email],
     ).catch(() => [[]])) as [Array<{ sim: number }>, unknown];
     if (aderiu.length > 0) return marcar("falhou", "já aderiu");
+    // d106 (Jurídico): o «não contactar» e os pedidos cancelados ficam de fora.
+    const { naoContactarNaApp } = await import("./nao-contactar-na-app");
+    if (await naoContactarNaApp({ email: p.email, telefone: conta.phone })) return marcar("falhou", "não contactar");
 
     const textos = await import("./textos-do-seguimento-da-app");
     const modelo =
       p.tipo === "convite"
-        ? textos.TEXTO_DO_CONVITE_POR_WHATSAPP
+        ? // d106: o convite ao grupo de 17/11 espera pelo advogado.
+          textos.ENVIOS_AO_GRUPO_DE_17_11_LIGADOS
+          ? textos.TEXTO_DO_CONVITE_POR_WHATSAPP
+          : null
         : textos.LEMBRETE_DA_APP_LIGADO && textos.LEMBRETE_DA_APP_POR_WHATSAPP_LIGADO
           ? textos.TEXTO_DO_LEMBRETE_POR_WHATSAPP
           : null;
-    if (!modelo) return marcar("falhou", "lembrete por WhatsApp desligado");
+    if (!modelo) return marcar("falhou", p.tipo === "convite" ? "convite ao grupo de 17/11 desligado" : "lembrete por WhatsApp desligado");
 
-    const { linkDeAdesaoGuardado } = await import("./convite-app-cliente-na-base");
     const { preencherTexto } = await import("./seguimento-da-app");
-    const link = (await linkDeAdesaoGuardado()) ?? LINK_DE_ADESAO_SUGERIDO;
+    // d106: o link NOSSO desta pessoa (/app-cliente?c=…), no lugar do da Play.
+    const { linkNossoDoConvite } = await import("./percurso-da-app-cliente-na-base");
+    const link = await linkNossoDoConvite(p.email);
     const texto = preencherTexto(modelo, { Nome: primeiroNome(conta.name) ?? "", linkDeAdesao: link });
 
     const { enviarAvisoWhatsApp } = await import("./whatsapp-cloud");
@@ -257,7 +264,8 @@ export async function apagarConviteNovoDosEmails(conn: Executor, emails: string[
   const limpos = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
   if (limpos.length === 0) return;
   const marcas = limpos.map(() => "?").join(", ");
-  for (const tabela of ["whatsappDaAppPorEnviar", "conviteNovoDaApp"]) {
+  // d106: e o percurso do link do convite.
+  for (const tabela of ["whatsappDaAppPorEnviar", "conviteNovoDaApp", "percursoDoConviteDaApp"]) {
     try {
       await conn.execute(`DELETE FROM ${tabela} WHERE email IN (${marcas})`, limpos);
     } catch (err) {
@@ -274,6 +282,12 @@ export async function apagarConviteNovoDaConta(conn: Executor, userId: number): 
       [userId],
     );
     await conn.execute("DELETE FROM conviteNovoDaApp WHERE userId = ?", [userId]);
+  } catch (err) {
+    if ((err as { code?: string })?.code !== "ER_NO_SUCH_TABLE") throw err;
+  }
+  // d106: o percurso do link do convite desta conta.
+  try {
+    await conn.execute("DELETE FROM percursoDoConviteDaApp WHERE userId = ?", [userId]);
   } catch (err) {
     if ((err as { code?: string })?.code !== "ER_NO_SUCH_TABLE") throw err;
   }

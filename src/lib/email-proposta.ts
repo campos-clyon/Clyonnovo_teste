@@ -11,6 +11,7 @@ import type { DestinoDoValor } from "./carteira";
 import { BUSINESS_EMAIL } from "./seo-data";
 import { desdobramentoDoIva } from "./preco-do-cliente";
 import { A_TAXA_E_O_IVA_DELA_PASSAM_A_CLYON, DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, FICA_CONSIGO } from "./novo-modelo";
+import { htmlDaLinhaDaApp } from "./linha-da-app-nas-propostas";
 
 
 /**
@@ -157,6 +158,12 @@ export async function avisarClienteDaProposta(p: {
    */
   token: string;
   baseUrl?: string;
+  /**
+   * d106 (24-11-2026, v3 da d107, secção 0): a linha da app CLYON, com a
+   * ligação NOSSA da pessoa — só com o interruptor das Configs ligado, uma vez
+   * por pessoa (`linhaDaAppParaEsteAviso`). Sem ela, o email de sempre.
+   */
+  linhaDaApp?: { link: string } | null;
 }): Promise<boolean> {
   const base = p.baseUrl ?? urlDeAccao();
   const url = p.token ? linkDoPedido(base, p.token) : `${base}/conta`;
@@ -191,7 +198,7 @@ export async function avisarClienteDaProposta(p: {
           ? `<p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#92400e;">${e(notaDoPrecoParaOCliente(p.base ?? "total"))}</p>`
           : ""
       }
-      ${botao(url, "Ver a proposta")}`),
+      ${botao(url, "Ver a proposta")}${p.linhaDaApp ? htmlDaLinhaDaApp(p.linhaDaApp.link) : ""}`),
   );
 }
 

@@ -14,6 +14,7 @@ import {
   DIAS_DAS_FOTOS_SEM_PEDIDO,
   DIAS_DOS_CONTACTOS_A_MEIO,
   DIAS_DOS_ERROS_DA_APP,
+  DIAS_DO_PERCURSO_DO_CONVITE_DA_APP,
   DIAS_DE_RETENCAO_DOS_PEDIDOS,
   DIAS_PARA_AS_RECOLHAS_DO_WHATSAPP,
   DIAS_PARA_OS_ABANDONADOS,
@@ -293,6 +294,20 @@ export async function GET(req: NextRequest) {
       0,
       passosQueFalharam,
     );
+    /*
+     * O PERCURSO DO CONVITE DA APP DE CLIENTE — 24-11-2026 (d106): as linhas
+     * sem nada novo há DIAS_DO_PERCURSO_DO_CONVITE_DA_APP (90) dias. À parte
+     * dos pedidos, com o mesmo `PURGA_ARMADA` (a seco só conta).
+     */
+    const percursoDoConvite = await passoSecundario(
+      "percurso do convite da app",
+      async () => {
+        const { purgarPercursosDaApp } = await import("@/lib/percurso-da-app-cliente-na-base");
+        return purgarPercursosDaApp(DIAS_DO_PERCURSO_DO_CONVITE_DA_APP, { aSerio: armada });
+      },
+      0,
+      passosQueFalharam,
+    );
     const errosDaAppEmPalavras =
       (canceladosPeloLembrete > 0
         ? (armada ? ". Dos cancelados pelo lembrete (do orçamento ou do que falta), " : ". Dos cancelados pelo lembrete (do orçamento ou do que falta), seriam ") +
@@ -317,6 +332,10 @@ export async function GET(req: NextRequest) {
       (registoDaVitoriaAgente > 0
         ? (armada ? ". Do registo da Vitória agente e dos testes dela, " : ". Do registo da Vitória agente e dos testes dela, seriam ") +
           `${registoDaVitoriaAgente} linha(s) apagada(s) (mais de ${DIAS_DE_RETENCAO_DOS_PEDIDOS} dias)`
+        : "") +
+      (percursoDoConvite > 0
+        ? (armada ? ". Do percurso do convite da app, " : ". Do percurso do convite da app, seriam ") +
+          `${percursoDoConvite} linha(s) apagada(s) (mais de ${DIAS_DO_PERCURSO_DO_CONVITE_DA_APP} dias sem nada novo)`
         : "");
 
     /*

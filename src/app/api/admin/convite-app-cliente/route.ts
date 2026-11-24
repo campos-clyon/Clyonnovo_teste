@@ -24,7 +24,11 @@ import {
   reservarConviteNovo,
   whatsappsDaAppPorSair,
 } from "@/lib/convite-novo-da-app-na-base";
-import { TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL } from "@/lib/textos-do-seguimento-da-app";
+import { ENVIOS_AO_GRUPO_DE_17_11_LIGADOS, TEXTO_DO_CONVITE_QUE_PEDE_O_GMAIL } from "@/lib/textos-do-seguimento-da-app";
+import { linkNossoDoConvite } from "@/lib/percurso-da-app-cliente-na-base";
+import { linkDoConviteDaApp } from "@/lib/percurso-da-app-cliente";
+import { naoContactarNaApp } from "@/lib/nao-contactar-na-app";
+import { urlDeAccao } from "@/lib/url-do-site";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -55,6 +59,13 @@ export const maxDuration = 60;
  * POST enviar-lote {} — agora só as contas SEM Gmail ainda não convidadas:
  *   o mesmo convite, que lhes pede o Gmail do telemóvel. As com Gmail vão
  *   pelo convite novo (nunca pelos dois caminhos).
+ *
+ * d106 (24-11-2026): o link do convite é o NOSSO, um por pessoa
+ * (`linkNossoDoConvite` → /app-cliente?c=<código>), que mostra o caminho
+ * certo para o aparelho e leva à Play; a ligação da Play continua a ter de
+ * estar guardada (é para lá que a página manda). O envio de prova vai sem
+ * código. Ficam de fora (e não entopem o lote) quem está no «não contactar»
+ * ou tem um pedido cancelado (`naoContactarNaApp`, Jurídico).
  */
 
 type Destinatario = Awaited<ReturnType<typeof estadoDosConvites>>["destinatarios"][number];
@@ -150,15 +161,32 @@ export async function POST(req: NextRequest) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return NextResponse.json({ error: "Escreva o seu email." }, { status: 400 });
       }
-      const ok = await enviarConviteDaApp({ para: email, nome: porQuem, link });
+      const ok = await enviarConviteDaApp({ para: email, nome: porQuem, link: linkDoConviteDaApp(urlDeAccao(), null) });
       return ok
         ? NextResponse.json({ ok: true })
         : NextResponse.json({ error: "O serviço de email recusou o envio." }, { status: 502 });
     }
 
+    // d106 (24-11-2026): o convite e o lembrete ao grupo de 17/11 esperam pelo advogado — desligados.
+    if (["enviar-convite-novo", "enviar-lote"].includes(String(corpo.accao)) && !ENVIOS_AO_GRUPO_DE_17_11_LIGADOS) {
+      return NextResponse.json(
+        { error: "O convite ao grupo de 17/11 está desligado (à espera do advogado). Não saiu nada." },
+        { status: 409 },
+      );
+    }
+
     if (corpo.accao === "enviar-convite-novo") {
       const estado = await estadoDoConviteNovo();
-      const lote = estado.elegiveis.slice(0, ENVIOS_POR_LOTE);
+      const lote: typeof estado.elegiveis = [];
+      let foraPorNaoContactar = 0;
+      for (const d of estado.elegiveis) {
+        if (lote.length >= ENVIOS_POR_LOTE) break;
+        if (await naoContactarNaApp({ email: d.email, telefone: d.telemovel ?? undefined })) {
+          foraPorNaoContactar++;
+          continue;
+        }
+        lote.push(d);
+      }
       let enviados = 0;
       let falhados = 0;
       let whatsappsNaFila = 0;
@@ -168,7 +196,7 @@ export async function POST(req: NextRequest) {
         if (!(await reservarConviteNovo(d.email, d.id, porQuem))) continue;
         // Quem nunca foi convidado fica também no registo de 01-11 (é por lá que o seguimento o vê).
         const registouAgora = !d.registado && (await reservarConvite(d.id, d.email, porQuem));
-        const ok = await enviarConviteDaApp({ para: d.email, nome: d.nome, link });
+        const ok = await enviarConviteDaApp({ para: d.email, nome: d.nome, link: await linkNossoDoConvite(d.email, d.id) });
         if (!ok) {
           await libertarConviteNovo(d.email);
           if (registouAgora) await libertarConvite(d.id);
@@ -180,14 +208,23 @@ export async function POST(req: NextRequest) {
         enviados++;
         if (d.telemovel && (await porWhatsAppDaAppNaFila(d.email, "convite"))) whatsappsNaFila++;
       }
-      const restantes = Math.max(0, estado.elegiveis.length - lote.length);
-      return NextResponse.json({ ok: true, enviados, falhados, whatsappsNaFila, restantes });
+      const restantes = Math.max(0, estado.elegiveis.length - lote.length - foraPorNaoContactar);
+      return NextResponse.json({ ok: true, enviados, falhados, whatsappsNaFila, restantes, foraPorNaoContactar });
     }
 
     if (corpo.accao === "enviar-lote") {
       const estado = await estadoDosConvites();
       const porEnviar = estado.destinatarios.filter(podeReceber);
-      const lote = porEnviar.slice(0, ENVIOS_POR_LOTE);
+      const lote: typeof porEnviar = [];
+      let foraPorNaoContactar = 0;
+      for (const d of porEnviar) {
+        if (lote.length >= ENVIOS_POR_LOTE) break;
+        if (await naoContactarNaApp({ email: d.email })) {
+          foraPorNaoContactar++;
+          continue;
+        }
+        lote.push(d);
+      }
       let enviados = 0;
       let falhados = 0;
       for (const [i, d] of lote.entries()) {
@@ -195,7 +232,7 @@ export async function POST(req: NextRequest) {
         // Reservar ANTES: se outra chamada já a tem, esta não envia.
         if (!(await reservarConvite(d.id, d.email, porQuem))) continue;
         // O mesmo convite novo: já traz o parágrafo que pede o Gmail do telemóvel.
-        const ok = await enviarConviteDaApp({ para: d.email, nome: d.nome, link });
+        const ok = await enviarConviteDaApp({ para: d.email, nome: d.nome, link: await linkNossoDoConvite(d.email, d.id) });
         if (ok) {
           await marcarConviteEnviado(d.id);
           enviados++;
@@ -204,8 +241,8 @@ export async function POST(req: NextRequest) {
           falhados++;
         }
       }
-      const restantes = Math.max(0, porEnviar.length - lote.length);
-      return NextResponse.json({ ok: true, enviados, falhados, restantes });
+      const restantes = Math.max(0, porEnviar.length - lote.length - foraPorNaoContactar);
+      return NextResponse.json({ ok: true, enviados, falhados, restantes, foraPorNaoContactar });
     }
 
     return NextResponse.json({ error: "Ação desconhecida." }, { status: 400 });

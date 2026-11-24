@@ -155,6 +155,8 @@ export async function avisarDaProposta(dados: {
         validaAte: await validadeDaPropostaNoEmail(new Date()),
         token,
         baseUrl: dados.baseUrl,
+        // d106 (v3 da d107, secção 0): a linha da app, só com o interruptor das Configs ligado e uma vez por pessoa.
+        linhaDaApp: await linhaDaAppParaEsteAvisoSemFalhar(email),
       });
 
       /*
@@ -230,6 +232,15 @@ export async function avisarDaProposta(dados: {
  * interruptor «Validade dos orçamentos» ligado, o dia da linha de sempre
  * (`diaDaValidade`: o de hoje + 3, Lisboa); desligado, ou na dúvida, null.
  */
+async function linhaDaAppParaEsteAvisoSemFalhar(email: string): Promise<{ link: string } | null> {
+  try {
+    const { linhaDaAppParaEsteAviso } = await import("./linha-da-app-nas-propostas-na-base");
+    return await linhaDaAppParaEsteAviso(email);
+  } catch {
+    return null;
+  }
+}
+
 async function validadeDaPropostaNoEmail(agora: Date): Promise<string | null> {
   try {
     const { interruptorDaValidade } = await import("./validade-do-orcamento-na-base");

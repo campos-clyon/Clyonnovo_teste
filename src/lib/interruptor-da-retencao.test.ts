@@ -67,6 +67,11 @@ vi.mock("@/lib/vitoria-agente/recolha-em-ensaio-na-base", () => ({
   purgarARecolhaEmEnsaio: vi.fn(async () => 0),
 }));
 
+// O percurso do convite da app de cliente, aos 90 dias (d106, 24-11-2026).
+vi.mock("@/lib/percurso-da-app-cliente-na-base", () => ({
+  purgarPercursosDaApp: vi.fn(async () => 0),
+}));
+
 vi.mock("@/lib/regras-novas-na-base", () => ({
   purgarComAsRegrasNovas: vi.fn(async (o: { aSerio: boolean }) => ({ ...ZERO, aSerio: o.aSerio })),
   regrasNovasDaNoite: vi.fn(async (o: { aSerio: boolean }) => ({ aSerio: o.aSerio, e: { lista: ["simulador/x.jpg"] } })),

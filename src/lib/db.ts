@@ -6549,6 +6549,22 @@ export async function contarNovidades(
     "SELECT COUNT(*) AS n FROM users WHERE deletedAt IS NULL AND createdAt > ?",
     [desde.contas],
   );
+  /*
+   * d106 (24-11-2026, texto v3 da d107): um «Não consegui» com «Outro» na
+   * ligação do convite da app acende o selo de Contas (o Programa da app vive
+   * lá), para alguém responder. Antes de a tabela existir, não há nada.
+   */
+  try {
+    const [linhas] = (await pool.execute(
+      "SELECT COUNT(*) AS n FROM percursoDoConviteDaApp WHERE naoConseguiMotivo = 'outro' AND naoConseguiEm > ?",
+      [desde.contas],
+    )) as any[];
+    saida.contas = Number(saida.contas ?? 0) + Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+  } catch (e) {
+    if ((e as { code?: string })?.code !== "ER_NO_SUCH_TABLE") {
+      console.error("[contarNovidades:contas/percurso]", e instanceof Error ? e.message : e);
+    }
+  }
 
   /*
    * ASSISTENTES — 31-10-2026: as marcações da agenda das assistentes feitas ou
