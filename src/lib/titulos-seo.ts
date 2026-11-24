@@ -118,11 +118,8 @@ export function emTerraDaPagina(serviceSlug: string, citySlug: string, cityName:
  * Têm «:» em vez de « — », por isso não passam por `comOPrimeiroQueCabe`.
  * Lidos antes das regras gerais; um que não caiba nos 60 cai na regra geral.
  *
- * /recolha-moveis-lisboa: a d5 de 23-11 tinha tirado o preço do título («De
- * Casa, Sem Esperar»); a d96, aprovada a seguir pelo dono, põe o «desde» da
- * peça (o mínimo vai na descrição). Mede-se 28 dias no Search Console contra o
- * título anterior: os 28 dias antes de 23-11 tinham «— 15–65 €/Peça + IVA» (o
- * «— De Casa, Sem Esperar» da d5 esteve no ar só umas horas, a 23-11).
+ * /recolha-moveis-lisboa: o título da d5 de 23-11 (o benefício, sem o preço); a d96 pôs o «desde» da
+ * peça e a d2 de 24-11 repõe o benefício. O mínimo com IVA vai na descrição.
  *
  * /recolha-monos-cascais: a Cascais Ambiente dá prazos que se contradizem (24 h
  * no folheto, 24 ou 48 h de antecedência na página do serviço) — vai a versão
@@ -146,7 +143,7 @@ export const TITULO_PROPRIO: Readonly<Record<string, string>> = {
   "recolha-entulho-loures": "Recolha de Entulho em Loures: SIMAR ou a Saco",
   "recolha-monos-lisboa": "Monos em Lisboa: Câmara Grátis ou Parceiro em Casa",
   "recolha-monos-cascais": "Monos em Cascais: Como Marcar a Recolha Grátis",
-  "recolha-moveis-lisboa": `Recolha de Móveis em Lisboa: Desde ${PRECO_POR_ITEM.pequeno} €/Peça + IVA`,
+  "recolha-moveis-lisboa": "Recolha de Móveis em Lisboa: De Casa, Sem Esperar",
 };
 
 /**

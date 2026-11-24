@@ -105,7 +105,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 17-11-2026 (d68): a Amora no título, na descrição e no H1 (a página para onde /recolha-moveis-amora vai).
   "/recolha-moveis-seixal": "2026-11-17",
   // 23-11-2026 (d5): o título de Lisboa (móveis) e o do Seixal (monos).
-  "/recolha-moveis-lisboa": "2026-11-23",
+  "/recolha-moveis-lisboa": "2026-11-24",
   "/recolha-monos-seixal": "2026-11-23",
   // 23-11-2026 (d96): as 15 páginas de cidade que o Google pôs de lado, com texto, título e descrição próprios.
   "/recolha-monos-odivelas": "2026-11-23",
