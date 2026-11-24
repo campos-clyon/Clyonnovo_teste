@@ -83,11 +83,14 @@ export async function responderAoClienteAoVivo(
               ? (Array.isArray(d.pedidosAEscolher) && d.pedidosAEscolher.length > 0) || g.passo !== "servico"
               : d.pedidoAberto === g.pedidoId && g.passo !== "confirmar";
         }
+        // d111: a desistência às propostas, a resposta à lista e a escolha ao seguimento ficam com o código.
+        const { oCodigoLeEstaResposta } = await import("../a-escolha-e-a-desistencia-no-whatsapp");
         return {
           temPedidos: pedidos.length > 0,
           interrompida,
           recolhaEmCurso,
           perguntaDeDadosAEspera: perguntaDeDadosAEspera(fio, passoDaPergunta),
+          oCodigoLe: pedidos.length > 0 && !interrompida ? await oCodigoLeEstaResposta(String(conteudo.texto ?? ""), fio) : false,
         };
       },
       pendente: async () => (await import("./accoes-na-base")).pendenteDoTelefone(telefone, false),

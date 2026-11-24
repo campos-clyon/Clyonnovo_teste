@@ -1145,12 +1145,18 @@ export async function responderAoLembreteDoOrcamento(
  *
  *   · à espera do CANCELAR, o CANCELAR cancela
  *     (`confirmarCancelamentoPeloSeguimento`); se não se fizer, passa a uma pessoa;
- *   · «3» (ou «já não preciso»): NÃO cancela — pergunta «Confirma que quer
- *     cancelar o pedido #N? Responda CANCELAR.» (d2); outro «3» à espera não
- *     repete a pergunta;
- *   · «1»: quer avançar — o seguimento não tem uma proposta escolhida, por isso
- *     passa a uma pessoa, para escolher o parceiro com ele;
+ *   · a desistência clara («já tenho outra opção», «já contratei outra
+ *     empresa», «já não preciso», «já resolvi», «não estou interessado» — d111):
+ *     cancela logo, pelo caminho da d93/d94 (anonimiza, «não contactar»), e diz
+ *     que o pedido foi cancelado e os dados serão apagados;
+ *   · «3» (ou um «cancelar» sozinho): NÃO cancela — pergunta «Confirma que
+ *     quer cancelar o pedido #N? Responda CANCELAR.» (d2); outro «3» à espera
+ *     não repete a pergunta;
+ *   · «1» (d111): com UMA proposta aceita-a (o fecho de sempre); com VÁRIAS,
+ *     a lista numerada e «Qual quer escolher?»; sem nenhuma, a equipa;
  *   · «2»: outra data — passa a uma pessoa;
+ *   · a escolha por palavras («Gostaria de escolher a proposta da X», d111):
+ *     aceita essa; na dúvida, a lista;
  *   · o resto: passa a uma pessoa.
  *
  * Em todos, o ciclo pára e o pedido volta a contar no «Precisa de si».
@@ -1163,7 +1169,15 @@ export async function responderAoSeguimentoDoCliente(
 ): Promise<void> {
   const regras = await import("@/lib/validade-do-orcamento");
   const base = await import("@/lib/seguimento-do-cliente-na-base");
+  const d111 = await import("@/lib/a-escolha-e-a-desistencia-no-whatsapp");
+  const { desisteClaramente, MOTIVOS_DO_SEGUIMENTO } = await import("@/lib/a-escolha-e-a-desistencia");
   const agora = new Date();
+
+  // d111: «já tenho outra opção» — cancela logo (o «3» continua a pedir o CANCELAR).
+  if (desisteClaramente(texto)) {
+    await d111.desistirDoPedido(telefone, c.pedidoId, "resposta ao seguimento");
+    return;
+  }
 
   if (c.aEsperaDeCancelar && regras.eConfirmacaoDoCancelamento(texto)) {
     const r = await base.confirmarCancelamentoPeloSeguimento(c.pedidoId, telefone, texto).catch((err) => {
@@ -1188,17 +1202,34 @@ export async function responderAoSeguimentoDoCliente(
     return;
   }
 
-  const porque =
-    leitura === "avancar" ? "«1» — quer avançar: escolher o parceiro" : leitura === "duvidas" ? "«2» — quer outra data" : "o cliente respondeu";
-  await base.pararSeguimento(c.pedidoId, porque, agora).catch(() => false);
+  // d111: o «1» foi a Vitória que o ofereceu — uma proposta aceita-se, várias vão em lista.
+  if (leitura === "avancar") {
+    await d111.responderAoUmDoSeguimento(telefone, c.pedidoId);
+    return;
+  }
+  // d111: «Gostaria de escolher a proposta da X» — aceita essa (na dúvida, a lista).
+  if (leitura === null && (await d111.escolhaPorPalavrasNoSeguimento(telefone, c.pedidoId, texto))) return;
+
+  await base.pararSeguimento(c.pedidoId, leitura === "duvidas" ? "«2» — quer outra data" : "o cliente respondeu", agora).catch(() => false);
   await passarAUmaPessoa(
     telefone,
-    leitura === "avancar"
-      ? `Pedido #${c.pedidoId}: respondeu «1» ao seguimento — quer avançar, escolher o parceiro com ele`
-      : leitura === "duvidas"
-        ? `Pedido #${c.pedidoId}: quer outra data («2» ao seguimento)`
-        : `Respondeu ao seguimento do pedido #${c.pedidoId} — responder`,
+    leitura === "duvidas" ? MOTIVOS_DO_SEGUIMENTO.outraData(c.pedidoId) : MOTIVOS_DO_SEGUIMENTO.respondeu(c.pedidoId),
   );
+}
+
+/**
+ * A ESCOLHA DO CLIENTE, FECHADA — d111. O mesmo caminho do botão «Fechar»
+ * (`ct:pedido:negociação`, que a Vitória agente também usa): o pedido tem de
+ * ser deste número e a negociação dele; depois `fecharPeloCliente` (o
+ * interruptor «fechar», a guia, a transacção da d26, o aviso ao contratado e a
+ * mensagem do fecho). Devolve false quando não havia o que fechar.
+ */
+export async function fecharAEscolhaDoCliente(telefone: string, pedidoId: number, negociacaoId: number): Promise<boolean> {
+  if (!(await pedidosDoTelefone(telefone)).includes(pedidoId)) return false;
+  const alvo = await alvoDe(pedidoId, negociacaoId);
+  if (!alvo) return false;
+  await fecharPeloCliente(telefone, alvo);
+  return true;
 }
 
 /**
@@ -2656,7 +2687,22 @@ export async function tratarMensagemDoCliente(
   // O painel manda primeiro: desligado, bloqueado ou entregue a uma pessoa,
   // o cérebro não diz UMA palavra — nem sequer a de "não o conheço".
   const { podeOWhatsAppFalarCom } = await import("@/lib/db");
-  if (!(await podeOWhatsAppFalarCom(telefone))) return;
+  if (!(await podeOWhatsAppFalarCom(telefone))) {
+    /*
+     * d111 (24-11-2026): a conversa que a VITÓRIA entregou à equipa no
+     * seguimento, sem uma pessoa ter escrito depois, e o cliente escolhe uma
+     * proposta do pedido («Gostaria de escolher a proposta da X»): a Vitória
+     * retoma-a e aceita. Pela ponte, a mesma porta está na rota (o número
+     * entregue nem chega aqui).
+     */
+    if (conteudo.tipo === "texto" && conteudo.texto.trim()) {
+      const { escolhaNumaConversaEntregue } = await import("@/lib/a-escolha-e-a-desistencia-no-whatsapp");
+      await escolhaNumaConversaEntregue(telefone, conteudo.texto).catch((err) =>
+        console.error("[whatsapp] a escolha depois do seguimento falhou:", err instanceof Error ? err.message : err),
+      );
+    }
+    return;
+  }
 
   /*
    * AS LIÇÕES APROVADAS PELA EQUIPA — 27-10-2026 (decisão d11). Lidas da base
@@ -2771,6 +2817,19 @@ export async function tratarMensagemDoCliente(
       );
       return;
     }
+    /*
+     * A DESISTÊNCIA CLARA ÀS PROPOSTAS E A RESPOSTA À LISTA — d111 (24-11-2026).
+     * «Obrigado, já tenho outra opção» em resposta ao seguimento, à lista ou a
+     * uma proposta cancela o pedido logo (d93/d94); a resposta à lista das
+     * propostas («2», «a da Recolhas Tejo») aceita essa. Antes da impaciência,
+     * que lia «já contratei outra empresa» como uma ameaça de ir embora.
+     */
+    if (!soImagens) {
+      const d111 = await import("@/lib/a-escolha-e-a-desistencia-no-whatsapp");
+      if (await d111.tratarADesistencia(telefone, conteudo.texto)) return;
+      if (await d111.responderALista(telefone, conteudo.texto)) return;
+    }
+
     const { estaAPerderAPaciencia, RESPOSTA_A_QUEM_ESPEROU, MOTIVO_NO_PAINEL } = await import(
       "@/lib/cliente-a-perder-a-paciencia"
     );

@@ -585,6 +585,20 @@ export async function POST(req: NextRequest) {
        */
       const { respostaDoParceiroPeloWhatsApp } = await import("@/lib/vitoria-agente/pergunta-ao-parceiro-na-base");
       await respostaDoParceiroPeloWhatsApp(telefone, texto, { interrompido: true }).catch(() => false);
+      /*
+       * E A ESCOLHA DEPOIS DO SEGUIMENTO — 24-11-2026 (d111). Se foi a VITÓRIA
+       * que entregou a conversa à equipa no seguimento, sem uma pessoa ter
+       * escrito depois, e o cliente escolhe uma proposta do pedido («Gostaria
+       * de escolher a proposta da X»), ela retoma a conversa e aceita — a
+       * resposta fica na fila e sai na ronda seguinte da ponte (poucos
+       * segundos). Com uma pessoa a responder, fica com ela.
+       */
+      const { comTrancaDoNumeroWhatsApp } = await import("@/lib/db");
+      const { escolhaNumaConversaEntregue } = await import("@/lib/a-escolha-e-a-desistencia-no-whatsapp");
+      await comTrancaDoNumeroWhatsApp(telefone, () => escolhaNumaConversaEntregue(telefone, texto)).catch((e) => {
+        console.error("[whatsapp/ponte] a escolha depois do seguimento falhou:", e);
+        return false;
+      });
     }
 
     /*

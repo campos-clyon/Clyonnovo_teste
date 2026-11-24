@@ -13442,6 +13442,20 @@ export async function numeroInterrompidoWhatsApp(telefone: string): Promise<bool
   return rows.length > 0;
 }
 
+/** O motivo com que a conversa foi entregue a uma pessoa (o último), ou null — d111. */
+export async function motivoDaEntregaWhatsApp(telefone: string): Promise<string | null> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return null;
+  await ensureWhatsappEstadoTables();
+  const pool = await getPool();
+  if (!pool) return null;
+  const [rows] = (await pool.execute(
+    "SELECT motivo FROM whatsappInterrompidos WHERE RIGHT(telefone, 9) = RIGHT(?, 9) LIMIT 1",
+    [digitos],
+  )) as [Array<{ motivo: string | null }>, unknown];
+  return rows[0]?.motivo ?? null;
+}
+
 export async function whatsappLigado(): Promise<boolean> {
   await ensureWhatsappEstadoTables();
   const pool = await getPool();

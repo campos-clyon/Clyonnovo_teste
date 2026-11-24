@@ -130,10 +130,11 @@ export type ResultadoDoCancelamentoPeloCliente =
  * do cliente no site (o link do pedido e a conta) e a app de cliente. O
  * resultado é o MESMO pelas quatro; só muda o que fica escrito no histórico.
  */
-export type OrigemDoCancelamento = "conversa" | "vitoria" | "link" | "conta" | "app";
+export type OrigemDoCancelamento = "conversa" | "desistencia" | "vitoria" | "link" | "conta" | "app";
 
 const NO_HISTORICO: Record<OrigemDoCancelamento, string> = {
   conversa: "na conversa do WhatsApp (d93)",
+  desistencia: "na conversa do WhatsApp, ao dizer que já não precisa (d111)",
   vitoria: "à pergunta da Vitória no WhatsApp (CANCELAR, d92/d102)",
   link: "na ligação do pedido (d102)",
   conta: "na conta do site (d102)",
@@ -142,6 +143,7 @@ const NO_HISTORICO: Record<OrigemDoCancelamento, string> = {
 
 const AUTOR: Record<OrigemDoCancelamento, string> = {
   conversa: "WhatsApp (o cliente cancelou)",
+  desistencia: "WhatsApp (o cliente desistiu)",
   vitoria: "WhatsApp (Vitória agente)",
   link: "Cliente (ligação do pedido)",
   conta: "Cliente (conta do site)",
@@ -156,8 +158,9 @@ const AUTOR: Record<OrigemDoCancelamento, string> = {
 async function confirmarAoCliente(
   pedidoId: number,
   contacto: { telefone: string | null; email: string | null; daConversa: boolean },
+  mensagem?: string | null,
 ): Promise<"whatsapp" | "email" | null> {
-  const texto = mensagemDoCancelamentoPeloCliente(pedidoId);
+  const texto = mensagem?.trim() || mensagemDoCancelamentoPeloCliente(pedidoId);
   const { telemovelPortugues, emailValido } = await import("./lembrete-do-que-falta");
   const tel = contacto.daConversa ? contacto.telefone : telemovelPortugues(contacto.telefone);
   if (tel) {
@@ -192,6 +195,8 @@ export async function cancelarEApagarNaHora(
     verificarTelefone: boolean;
     /** O que se diz aos parceiros. Sem ele, «O cliente já não precisa». */
     motivo?: string | null;
+    /** d111: a mensagem ao cliente, quando não é a de sempre (a da desistência). */
+    mensagem?: string | null;
   },
 ): Promise<ResultadoDoCancelamentoPeloCliente> {
   const p = await lerOPedidoParaCancelar(pedidoId);
@@ -236,8 +241,8 @@ export async function cancelarEApagarNaHora(
   }
 
   // 1. A mensagem ao cliente, antes de a conversa se apagar e os contactos saírem.
-  const daConversa = opcoes.origem === "conversa" || opcoes.origem === "vitoria";
-  const mensagemPor = await confirmarAoCliente(pedidoId, { telefone, email: p.contactEmail, daConversa }).catch(() => null);
+  const daConversa = opcoes.origem === "conversa" || opcoes.origem === "desistencia" || opcoes.origem === "vitoria";
+  const mensagemPor = await confirmarAoCliente(pedidoId, { telefone, email: p.contactEmail, daConversa }, opcoes.mensagem).catch(() => null);
 
   // 2. Não contactar.
   if (telefone) {

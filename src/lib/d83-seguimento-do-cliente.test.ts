@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -59,6 +59,12 @@ vi.mock("@/lib/seguimento-do-cliente-na-base", async () => {
     }),
   };
 });
+
+// d111: o «1» lê as propostas do pedido — aqui, nenhuma (a equipa escolhe com ele, como antes).
+vi.mock("@/lib/vitoria-agente/accoes-na-base", () => ({
+  propostasParaEscolherDeVerdade: vi.fn(async () => []),
+  pedidoParaOFechoDeVerdade: vi.fn(async () => ({ status: "pendente" })),
+}));
 
 import { responderAoSeguimentoDoCliente } from "./whatsapp-negociacao";
 import { aUltimaSaidaE, textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
@@ -357,6 +363,12 @@ async function oClienteEscreve(texto: string): Promise<void> {
   await responderAoSeguimentoDoCliente(TEL, texto, { pedidoId: PEDIDO, aEsperaDeCancelar: estado.aEspera });
 }
 
+// d111: a conversa importa a escolha e a desistência a pedido — carregadas antes, para a 1.ª não pagar o tempo da importação.
+beforeAll(async () => {
+  await import("./a-escolha-e-a-desistencia-no-whatsapp");
+  await import("./cancelar-pelo-cliente");
+}, 60_000);
+
 beforeEach(() => {
   estado.aEspera = false;
   estado.cancelado = false;
@@ -367,9 +379,10 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks());
 
 describe("a conversa do seguimento", () => {
-  it("«1» → o ciclo pára e passa à equipa, para escolher o parceiro", async () => {
+  // d111: com propostas, o «1» aceita (uma) ou manda a lista (várias) — ver d111-vitoria-percebe-o-1-e-a-desistencia.test.ts.
+  it("«1» sem propostas no pedido → o ciclo pára e passa à equipa, para escolher o parceiro", async () => {
     await oClienteEscreve("1");
-    expect(estado.chamadas).toEqual([{ f: "parar", porque: "«1» — quer avançar: escolher o parceiro" }]);
+    expect(estado.chamadas).toEqual([{ f: "parar", porque: "«1» — quer avançar: sem proposta para escolher" }]);
     expect(estado.passadas[0]).toContain("#612");
     expect(estado.passadas[0]).toContain("escolher o parceiro");
   });

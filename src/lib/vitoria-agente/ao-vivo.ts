@@ -56,6 +56,8 @@ export type SituacaoDaConversa = {
   texto: string;
   /** A última pergunta de dados que o código fez (a morada, o andar…) e ainda espera resposta? */
   perguntaDeDadosAEspera: boolean;
+  /** d111: a desistência clara às propostas, a resposta à lista ou a escolha ao seguimento — o código lê-as. */
+  oCodigoLe?: boolean;
 };
 
 export type QuemResponde = { quem: "regras" | "agente"; porque: string };
@@ -70,6 +72,7 @@ export function quemResponde(s: SituacaoDaConversa): QuemResponde {
   const t = s.texto.trim();
   if (RESPOSTA_DE_CODIGO.test(t) || SO_UM_VALOR.test(t) || SO_UMA_DATA.test(t)) return { quem: "regras", porque: "resposta curta que o código lê" };
   if (s.perguntaDeDadosAEspera) return { quem: "regras", porque: "responde a uma pergunta de dados do código" };
+  if (s.oCodigoLe) return { quem: "regras", porque: "a escolha ou a desistência às propostas, que o código lê (d111)" };
   return { quem: "agente", porque: "conversa livre" };
 }
 
