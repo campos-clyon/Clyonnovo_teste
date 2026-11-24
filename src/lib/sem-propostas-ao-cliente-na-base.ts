@@ -6,7 +6,7 @@
  *    pedido): a enviar, enviado, falhou, ou «fica» (com a equipa, e porquê).
  *    É a reserva que impede o aviso de sair duas vezes;
  *  - a rotina (`/api/cron/pedidos-sem-propostas`, de 15 em 15 min): envia,
- *    das 8h às 21h de Lisboa, no máximo 3 por passagem, um por contacto, e
+ *    das 9h às 20h de Lisboa, no máximo 3 por passagem, um por contacto, e
  *    lê tudo outra vez antes de enviar;
  *  - a lista do «Do nosso lado» da Mesa (`pedidosSemPropostasNaMesa`).
  *

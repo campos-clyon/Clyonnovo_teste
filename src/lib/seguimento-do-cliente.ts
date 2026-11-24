@@ -8,7 +8,7 @@
  *
  * Agora a equipa carrega em «Falei com o cliente» e diz o que ele respondeu —
  * «Vai pensar», «Não atendeu», «Quer outra data» ou «Quer cancelar» — e,
- * menos no cancelar, quando voltar a contactar (dia e hora, das 9h00 às 20h59
+ * menos no cancelar, quando voltar a contactar (dia e hora, das 9h00 às 19h59
  * de Lisboa; por omissão, amanhã às 10h00). A partir daí:
  *
  *   · na data marcada, a 1.ª mensagem da Vitória ao cliente; no dia seguinte e
@@ -33,13 +33,14 @@
 
 import { diaEmLisboa, instanteDaBase, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { lerRespostaAoLembrete, type RespostaAoLembrete } from "./validade-do-orcamento";
+import { JANELA_DE_CONTACTO } from "./janela-de-contacto";
 import { TELEFONE_DA_CLYON_NACIONAL } from "./telefone-da-clyon";
 
 /** O nome do interruptor de emergência, como aparece nas Configs. */
 export const NOME_DO_INTERRUPTOR_DO_SEGUIMENTO = "Seguimento do cliente";
 
-/** A janela das mensagens automáticas, em Lisboa: das 9h00 às 20h59. */
-export const JANELA_DO_SEGUIMENTO = { das: 9, as: 21 } as const;
+/** A janela das mensagens automáticas: a de contacto (das 9h00 às 19h59, em Lisboa). */
+export const JANELA_DO_SEGUIMENTO = { das: JANELA_DE_CONTACTO.abre, as: JANELA_DE_CONTACTO.fecha } as const;
 
 /** Por omissão, «voltar a contactar» é amanhã a esta hora (Lisboa). */
 export const HORA_POR_OMISSAO = "10:00";
@@ -83,7 +84,7 @@ export function eRespostaDoContacto(v: unknown): v is RespostaDoContacto {
 
 const dois = (n: number) => String(n).padStart(2, "0");
 
-/** Das 9h00 às 20h59 de Lisboa? */
+/** Das 9h00 às 19h59 de Lisboa? */
 export function naJanelaDoSeguimento(agora: Date): boolean {
   const h = pecasEmLisboa(agora).hora;
   return h >= JANELA_DO_SEGUIMENTO.das && h < JANELA_DO_SEGUIMENTO.as;
@@ -99,7 +100,7 @@ function minutosDe(hora: string): number | null {
   return h * 60 + mi;
 }
 
-/** «HH:mm» dentro da janela (9h00–20h59)? */
+/** «HH:mm» dentro da janela (9h00–19h59)? */
 export function horaNaJanela(hora: string): boolean {
   const m = minutosDe(hora);
   return m != null && m >= JANELA_DO_SEGUIMENTO.das * 60 && m < JANELA_DO_SEGUIMENTO.as * 60;
@@ -114,12 +115,12 @@ export type VoltarEmValidado = { ok: true; instante: Date } | { ok: false; porqu
 
 /**
  * O «VOLTAR A CONTACTAR EM», como a equipa o escreveu (dia e hora de Lisboa).
- * Pura. Só das 9h00 às 20h59, no futuro, e até 30 dias à frente.
+ * Pura. Só das 9h00 às 19h59, no futuro, e até 30 dias à frente.
  */
 export function validarVoltarEm(dia: unknown, hora: unknown, agora: Date): VoltarEmValidado {
   if (typeof dia !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dia)) return { ok: false, porque: "Falta o dia para voltar a contactar." };
   if (typeof hora !== "string" || minutosDe(hora) == null) return { ok: false, porque: "Falta a hora para voltar a contactar." };
-  if (!horaNaJanela(hora)) return { ok: false, porque: "A hora tem de ser entre as 9h00 e as 20h59 (Lisboa)." };
+  if (!horaNaJanela(hora)) return { ok: false, porque: `A hora tem de ser entre as ${JANELA_DE_CONTACTO.abre}h00 e as ${JANELA_DE_CONTACTO.fecha - 1}h59 (Lisboa).` };
   const instante = instanteEmLisboa(`${dia}T${hora}`);
   if (!instante) return { ok: false, porque: "O dia não é válido." };
   // O relógio de Lisboa tem de dar o que se escreveu (um 31/02 não passa).
@@ -252,7 +253,7 @@ function jaEAHora(agora: Date, c: CicloDoSeguimento): boolean {
 /**
  * O PASSO QUE TOCA AGORA — ou null. Pura.
  *
- *   · acabado, sem canal, ou fora das 9h–21h: nenhum;
+ *   · acabado, sem canal, ou fora das 9h–20h: nenhum;
  *   · cada passo a partir do dia dele, e só a partir da hora do ciclo;
  *   · nunca dois passos no mesmo dia (o arquivo também não: é uma mensagem);
  *   · o arquivo só depois de a 3.ª ter saído.

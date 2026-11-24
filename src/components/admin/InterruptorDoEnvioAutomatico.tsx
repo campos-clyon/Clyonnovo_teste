@@ -8,7 +8,7 @@ import { NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO, NOME_DO_INTERRUPTOR_SO_DA_VITO
  * O INTERRUPTOR DE EMERGÊNCIA «ENVIO AUTOMÁTICO AOS PARCEIROS» — Configs (d87, 22-11-2026).
  *
  * LIGADO POR OMISSÃO: os pedidos completos seguem sozinhos para os parceiros
- * (das 8h às 21h; fora disso, às 8h00). Desde 23-11-2026 (d88), de todas as
+ * (das 9h às 20h; fora disso, às 9h00). Desde 23-11-2026 (d88), de todas as
  * origens — simulador, formulário, WhatsApp e registado na Mesa —, 10 minutos
  * depois de entrarem. A segunda chave, «Só os da Vitória» (desligada por
  * omissão), volta ao comportamento da d87. Desligar o primeiro deixa tudo nos
@@ -90,7 +90,7 @@ export default function InterruptorDoEnvioAutomatico() {
         do cliente nos últimos 10 minutos (o cartão diz «Segue sozinho às …»). Ficam sempre com uma pessoa: Trabalhos
         CLYON e valor fixo, propostas já enviadas, mudanças com parceiros escolhidos pelo cliente, estimativas acima de
         500 € com IVA, pedidos com nota da equipa ou atribuídos a alguém. Os que a Vitória completa pelo WhatsApp seguem
-        logo. Os avisos só saem das 8h às 21h; fora disso, às 8h00. Se uma condição falhar, fica nos «por enviar» com o
+        logo. Os avisos só saem das 9h às 20h; fora disso, às 9h00. Se uma condição falhar, fica nos «por enviar» com o
         motivo no cartão. Este interruptor é para emergências.
       </p>
       <p className={`mt-2 text-sm font-semibold ${ligado ? "text-emerald-300" : "text-amber-200"}`}>

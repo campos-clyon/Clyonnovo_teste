@@ -363,7 +363,7 @@ export async function respostaDoParceiroPeloPainel(
 /* ── O prazo ────────────────────────────────────────────────────────────── */
 
 /**
- * AS PERGUNTAS SEM RESPOSTA NO PRAZO (2 h dentro das 8h–21h) passam à equipa:
+ * AS PERGUNTAS SEM RESPOSTA NO PRAZO (2 h dentro das 9h–20h) passam à equipa:
  * a conversa do cliente fica para uma pessoa, com o motivo («À espera do
  * parceiro há 2 h — …») no cartão. Uma vez por pergunta. Nunca lança.
  */

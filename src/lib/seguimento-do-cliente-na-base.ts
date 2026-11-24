@@ -15,7 +15,7 @@
  *    20 a 45 s entre WhatsApp, como as outras filas;
  *  - a rotina (`/api/cron/seguimento-do-cliente`, de 15 em 15 minutos) que
  *    decide o passo de cada pedido e o põe na fila (os emails saem logo); a
- *    passagem (às rondas da ponte) envia UM WhatsApp de cada vez, das 9h às 21h;
+ *    passagem (às rondas da ponte) envia UM WhatsApp de cada vez, das 9h às 20h;
  *  - o «Falei com o cliente» e o «Parar o seguimento» da Mesa, o «Quer
  *    cancelar» (cancela já, pelo caminho de sempre) e o que a Vitória faz com o
  *    «1», o «2», o «3» e o CANCELAR (chamado por `whatsapp-negociacao.ts`).
@@ -691,7 +691,7 @@ const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Cada ciclo a correr: parado se o pedido saiu do «Precisa de si» ou se o
  * cliente respondeu; o passo que toca (no máximo um por contacto e por dia,
  * contando as outras mensagens automáticas) na fila — ou, por email, já.
- * Desligado ou fora das 9h–21h, não faz nada. Falha fechada: sem saber se o
+ * Desligado ou fora das 9h–20h, não faz nada. Falha fechada: sem saber se o
  * cliente respondeu, não põe nada na fila.
  */
 export async function rotinaDoSeguimento(agora: Date = new Date()): Promise<ResultadoDaRotinaDoSeguimento> {
@@ -782,7 +782,7 @@ export async function rotinaDoSeguimento(agora: Date = new Date()): Promise<Resu
 
 export function resumoDaRotinaDoSeguimento(r: ResultadoDaRotinaDoSeguimento): string | null {
   if (!r.ligado) return `desligado (interruptor «${NOME_DO_INTERRUPTOR_DO_SEGUIMENTO}» nas Configs)`;
-  if (r.foraDaJanela) return "fora das 9h–21h de Lisboa";
+  if (r.foraDaJanela) return "fora das 9h–20h de Lisboa";
   if (r.naFila === 0 && r.porEmail === 0 && r.parados === 0 && r.falhados === 0 && !r.arrancados) return null;
   return (
     `${r.aCorrer} em seguimento · ${r.naFila} WhatsApp na fila · ${r.porEmail} email(s) · ${r.parados} parado(s)` +

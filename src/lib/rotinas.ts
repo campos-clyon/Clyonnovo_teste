@@ -34,28 +34,28 @@ export const ROTINAS: readonly Rotina[] = [
   { nome: "trabalhos-clyon-sem-resposta", titulo: "Trabalhos CLYON sem resposta do cliente vão para os Arquivados", horario: "50 * * * *", intervaloMin: 60 },
   // 11-11-2026: a folha da mudança sem resposta do cliente — lembretes às 2 h e 24 h, Mesa às 48 h.
   { nome: "folhas-da-mudanca", titulo: "Folhas da mudança: lembretes ao cliente e Mesa", horario: "25 * * * *", intervaloMin: 60 },
-  // 11-11-2026 (d6): os escolhidos de uma mudança que não responderam em 3 h — o cliente é avisado uma vez, entre as 8h e as 21h.
+  // 11-11-2026 (d6): os escolhidos de uma mudança que não responderam em 3 h — o cliente é avisado uma vez, entre as 9h e as 20h.
   { nome: "escolhidos-sem-resposta", titulo: "Mudanças: escolhidos sem resposta, aviso ao cliente", horario: "5 * * * *", intervaloMin: 60 },
   // 13-11-2026 (d15): «O trabalho já foi feito?» por email, 48 h depois da data sem «Está feito» — só com o interruptor das Configs ligado.
   { nome: "fecho-do-modelo-novo", titulo: "Modelo novo: «O trabalho já foi feito?» por email (interruptor nas Configs)", horario: "35 * * * *", intervaloMin: 60 },
-  // 18-11-2026 (d62): o orçamento vale 3 dias — lembrete no D+1, último aviso no D+3, fecho no D+4 às 18h (9h–21h; interruptor nas Configs).
+  // 18-11-2026 (d62): o orçamento vale 3 dias — lembrete no D+1, último aviso no D+3, fecho no D+4 às 18h (9h–20h; interruptor nas Configs).
   { nome: "validade-dos-orcamentos", titulo: "Validade dos orçamentos: lembretes e fecho de «A aguardar cliente» (interruptor nas Configs)", horario: "0 * * * *", intervaloMin: 60 },
   { nome: "libertar-por-prazo", titulo: "Trabalhos libertados por prazo", horario: "0 4 * * *", intervaloMin: 24 * 60 },
   { nome: "purgar-pedidos", titulo: "Purga dos pedidos antigos", horario: "30 4 * * *", intervaloMin: 24 * 60 },
   { nome: "licoes-da-vitoria", titulo: "Lições da Vitória", horario: "20 5 * * *", intervaloMin: 24 * 60 },
   // 17-11-2026 (d59): o lembrete único da app de cliente, 3 dias depois do convite — desligado até os textos estarem aprovados.
   { nome: "lembrete-da-app", titulo: "App de cliente: lembrete a quem foi convidado e não aderiu (desligado por omissão)", horario: "0 10 * * *", intervaloMin: 24 * 60 },
-  // 19-11-2026 (d71), no ritmo da d88 (23-11-2026): o «Pedir o que falta» sozinho, 30 min depois de o pedido entrar, repetido no dia seguinte (3 no máximo), arquivo no dia a seguir à 3.ª (8h–21h; interruptor nas Configs).
-  { nome: "lembretes-do-que-falta", titulo: "Pedir o que falta sozinho: os «Orçamentos novos» incompletos, 8h–21h de Lisboa (interruptor nas Configs)", horario: "7,22,37,52 * * * *", intervaloMin: 15 },
-  // 21-11-2026 (d83): o seguimento do cliente que a equipa marcou na Mesa — 3 mensagens à mesma hora, arquivo no 4.º dia (9h–21h; interruptor de emergência nas Configs).
+  // 19-11-2026 (d71), no ritmo da d88 (23-11-2026): o «Pedir o que falta» sozinho, 30 min depois de o pedido entrar, repetido no dia seguinte (3 no máximo), arquivo no dia a seguir à 3.ª (9h–20h; interruptor nas Configs).
+  { nome: "lembretes-do-que-falta", titulo: "Pedir o que falta sozinho: os «Orçamentos novos» incompletos, 9h–20h de Lisboa (interruptor nas Configs)", horario: "7,22,37,52 * * * *", intervaloMin: 15 },
+  // 21-11-2026 (d83): o seguimento do cliente que a equipa marcou na Mesa — 3 mensagens à mesma hora, arquivo no 4.º dia (9h–20h; interruptor de emergência nas Configs).
   { nome: "seguimento-do-cliente", titulo: "Seguimento do cliente: as mensagens marcadas na Mesa e o fecho ao 4.º dia (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
-  // 22-11-2026 (d87): os pedidos completos pela Vitória fora das 8h–21h saem às 8h00; os envios a meio passam à equipa (interruptor de emergência nas Configs).
+  // 22-11-2026 (d87): os pedidos completos pela Vitória fora das 9h–20h saem às 9h00; os envios a meio passam à equipa (interruptor de emergência nas Configs).
   // 23-11-2026 (d88): a mesma rotina manda também os «Orçamentos novos» completos de todas as origens (10 min de espera, no máximo 5 envios por passagem).
-  { nome: "envio-aos-parceiros", titulo: "Envio automático aos parceiros: os «Orçamentos novos» completos de todas as origens e a fila das 8h00 (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
-  // 23-11-2026 (d88): as propostas dos parceiros vão ao cliente sozinhas, assim que chega a 1.ª proposta (8h–21h; interruptor nas Configs, ligado por omissão).
+  { nome: "envio-aos-parceiros", titulo: "Envio automático aos parceiros: os «Orçamentos novos» completos de todas as origens e a fila das 9h00 (interruptor nas Configs)", horario: "*/15 * * * *", intervaloMin: 15 },
+  // 23-11-2026 (d88): as propostas dos parceiros vão ao cliente sozinhas, assim que chega a 1.ª proposta (9h–20h; interruptor nas Configs, ligado por omissão).
   { nome: "propostas-ao-cliente", titulo: "Propostas ao cliente: o orçamento sai sozinho pela Vitória (interruptor nas Configs)", horario: "2,17,32,47 * * * *", intervaloMin: 15 },
-  // 24-11-2026 (d102 (a)): o pedido sem propostas 24 h depois de seguir para os parceiros, ou «sem parceiros na zona» — a Vitória avisa o cliente uma vez (8h–21h).
-  { nome: "pedidos-sem-propostas", titulo: "Pedidos sem propostas: a Vitória avisa o cliente uma vez (8h–21h de Lisboa)", horario: "12,27,42,57 * * * *", intervaloMin: 15 },
+  // 24-11-2026 (d102 (a)): o pedido sem propostas 24 h depois de seguir para os parceiros, ou «sem parceiros na zona» — a Vitória avisa o cliente uma vez (9h–20h).
+  { nome: "pedidos-sem-propostas", titulo: "Pedidos sem propostas: a Vitória avisa o cliente uma vez (9h–20h de Lisboa)", horario: "12,27,42,57 * * * *", intervaloMin: 15 },
   { nome: "weekly-digest", titulo: "Resumo semanal por email", horario: "0 9 * * 1", intervaloMin: 7 * 24 * 60 },
 ];
 

@@ -7,7 +7,7 @@ import { bearerConfere } from "@/lib/segredo-igual";
  * A VALIDADE DOS ORÇAMENTOS — de hora a hora (d62, 18-11-2026).
  *
  * Ver `validade-do-orcamento.ts`: o lembrete no D+1, o último aviso no D+3 e o
- * fecho no D+4 às 18h, das 9h às 21h de Lisboa (fora disso, carimba e sai). A
+ * fecho no D+4 às 18h, das 9h às 20h de Lisboa (fora disso, carimba e sai). A
  * rotina só decide e põe na fila; os WhatsApp saem um de cada vez, 20–45 s
  * entre cada, às rondas da ponte. DESLIGADA por omissão: com o interruptor
  * «Validade dos orçamentos» desligado nas Configs, responde «desligado» e não

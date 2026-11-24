@@ -12,9 +12,9 @@ import { novoModeloEmVigor } from "./novo-modelo";
 const TRES_PASSOS_DO_MODELO_ANTIGO: ReadonlyArray<{ titulo: string; texto: string }> = [
   {
     titulo: "A CLYON confere o pedido e envia-o aos parceiros da sua zona",
-    // d3 (23-11-2026): um pedido completo segue sozinho; só sai das 8h às 21h (de Lisboa).
+    // d3 (23-11-2026): um pedido completo segue sozinho; só sai das 9h às 20h (de Lisboa).
     texto:
-      "Um pedido completo segue sozinho, entre as 8h e as 21h; fora desse horário, às 8h. Se faltar alguma coisa, a CLYON fala consigo. Com nota dada por quem já os contratou.",
+      "Um pedido completo segue sozinho, entre as 9h e as 20h; fora desse horário, às 9h. Se faltar alguma coisa, a CLYON fala consigo. Com nota dada por quem já os contratou.",
   },
   {
     titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,

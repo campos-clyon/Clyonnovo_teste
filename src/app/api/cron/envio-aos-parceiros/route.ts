@@ -4,11 +4,11 @@ import { resumoDaRotinaDoEnvioAutomatico, rotinaDoEnvioAutomatico } from "@/lib/
 import { bearerConfere } from "@/lib/segredo-igual";
 
 /**
- * O ENVIO AUTOMÁTICO AOS PARCEIROS — a fila das 8h00 (d87, 22-11-2026).
+ * O ENVIO AUTOMÁTICO AOS PARCEIROS — a fila das 9h00 (d87, 22-11-2026).
  *
  * Ver `envio-automatico-aos-parceiros.ts`: o pedido que a Vitória deixa
- * completo fora das 8h–21h de Lisboa fica na fila; esta rotina, de 15 em 15
- * minutos, solta-a a partir das 8h00 (no máximo cinco por passagem), voltando
+ * completo fora das 9h–20h de Lisboa fica na fila; esta rotina, de 15 em 15
+ * minutos, solta-a a partir das 9h00 (no máximo cinco por passagem), voltando
  * a ver todas as condições, e fecha para a equipa os envios que ficaram a meio.
  * Com o interruptor «Envio automático aos parceiros» desligado nas Configs, a
  * fila espera e nada sai.

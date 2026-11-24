@@ -8,7 +8,7 @@
  * 1.ª do ciclo dos lembretes (a 2.ª sai no dia seguinte, como sempre): o
  * lembrete dos 30 minutos não sai outra vez.
  *
- * Das 8h às 21h de Lisboa; fora disso fica à espera e sai às 8h. Nunca a quem
+ * Das 9h às 20h de Lisboa; fora disso fica à espera e sai às 9h. Nunca a quem
  * está em «não contactar», nem a um número bloqueado, nem a uma conversa
  * entregue a uma pessoa da equipa. Não conta para a regra de uma mensagem
  * automática por dia: é a resposta ao pedido que ele acabou de fazer.
@@ -16,14 +16,13 @@
  * PURO. A base está em `recebemos-o-pedido-na-base.ts`.
  */
 
-import { pecasEmLisboa } from "./hora-de-lisboa";
+import { JANELA_DE_CONTACTO, naJanelaDeContacto } from "./janela-de-contacto";
 
-/** A janela do «recebemos»: das 8h às 21h; fora dela, às 8h. */
-export const JANELA_DO_RECEBIDO = { das: 8, as: 21 } as const;
+/** A janela do «recebemos»: a de contacto; fora dela, às 9h. */
+export const JANELA_DO_RECEBIDO = { das: JANELA_DE_CONTACTO.abre, as: JANELA_DE_CONTACTO.fecha } as const;
 
 export function naJanelaDoRecebido(agora: Date): boolean {
-  const h = pecasEmLisboa(agora).hora;
-  return h >= JANELA_DO_RECEBIDO.das && h < JANELA_DO_RECEBIDO.as;
+  return naJanelaDeContacto(agora);
 }
 
 /** Depois de quantas horas um «recebemos» que ficou à espera já não faz sentido (a manhã seguinte cabe). */
@@ -50,7 +49,7 @@ export type SituacaoDoRecebido = {
 
 export type DecisaoDoRecebido = { tipo: "sai" } | { tipo: "espera" } | { tipo: "nao"; porque: string };
 
-/** Sai agora, espera pelas 8h, ou não sai. Pura. */
+/** Sai agora, espera pelas 9h, ou não sai. Pura. */
 export function decidirORecebido(s: SituacaoDoRecebido, agora: Date): DecisaoDoRecebido {
   if (s.jaTratado) return { tipo: "nao", porque: "já tratado" };
   if (!s.telemovel) return { tipo: "nao", porque: "sem telemóvel português" };

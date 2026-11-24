@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
      * OS AVISOS À EQUIPA — 10-11-2026 (d23). O que está parado no «Do nosso
      * lado» há mais de 2 h, no «Orçamentos novos» há mais de 1 h, e as conversas
      * que a Vitória entregou fora de horas: um aviso no telemóvel da equipa,
-     * uma vez por espera, só das 08h às 21h. Ver `avisos-a-equipa.ts`. Uma
+     * uma vez por espera, só das 9h às 20h. Ver `avisos-a-equipa.ts`. Uma
      * falha aqui não estraga a passagem.
      */
     const avisosDaEquipa = await correrOsAvisosDaEquipaNaBase().catch((e) => {
@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
     /*
      * A PERGUNTA AO PARCEIRO SEM RESPOSTA — 23-11-2026 (d97). A Vitória
      * perguntou a um parceiro uma condição do cliente e ele não respondeu em
-     * 2 h (das 8h às 21h): a conversa do cliente passa a uma pessoa, com o
+     * 2 h (das 9h às 20h): a conversa do cliente passa a uma pessoa, com o
      * motivo no cartão. Ver `pergunta-ao-parceiro-na-base.ts`.
      */
     const { correrOsPrazosDasPerguntas } = await import("@/lib/vitoria-agente/pergunta-ao-parceiro-na-base");

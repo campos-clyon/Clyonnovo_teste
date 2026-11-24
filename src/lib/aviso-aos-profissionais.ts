@@ -14,10 +14,11 @@
  *  - cada profissional recebe ESTE aviso uma só vez por canal, mesmo que se
  *    carregue duas vezes em «Enviar» (a chave única da tabela);
  *  - o WhatsApp sai um de cada vez, com 20 a 45 s ao acaso entre mensagens, e
- *    só das 9h às 21h de Lisboa; fora disso fica na fila para as 9h;
+ *    só das 9h às 20h de Lisboa; fora disso fica na fila para as 9h;
  *  - nada sai sem o administrador escrever ENVIAR, e «Parar» pára.
  */
 
+import { JANELA_DE_CONTACTO } from "./janela-de-contacto";
 import { e } from "./escapar-html";
 import { TELEFONE_DA_CLYON_NACIONAL } from "./telefone-da-clyon";
 import { TAXA_DAS_MUDANCAS, TAXA_IVA } from "./taxas-plataforma";
@@ -31,7 +32,7 @@ export const NOME_DO_INTERRUPTOR_DO_AVISO = "Mostrar o aviso do novo modelo";
 /** A página fixa do «Saber mais», para onde o WhatsApp e a faixa do painel ligam. */
 export const CAMINHO_DO_SABER_MAIS = "/profissionais/novo-modelo";
 
-export const JANELA_DO_WHATSAPP = { das: 9, as: 21 } as const;
+export const JANELA_DO_WHATSAPP = { das: JANELA_DE_CONTACTO.abre, as: JANELA_DE_CONTACTO.fecha } as const;
 export const INTERVALO_DO_WHATSAPP_S = { min: 20, max: 45 } as const;
 /** O Resend aceita 2 pedidos por segundo; com folga. */
 export const ESPERA_ENTRE_EMAILS_MS = 600;
@@ -116,7 +117,7 @@ export function horaEmLisboa(agora: Date): number {
   return Number.isFinite(h) ? h : -1;
 }
 
-/** Das 9h00 às 20h59 de Lisboa, seja qual for o fuso de quem corre isto. */
+/** Na janela de contacto (9h00 às 19h59 de Lisboa), seja qual for o fuso de quem corre isto. */
 export function dentroDaJanelaDoWhatsApp(agora: Date): boolean {
   const h = horaEmLisboa(agora);
   return h >= JANELA_DO_WHATSAPP.das && h < JANELA_DO_WHATSAPP.as;

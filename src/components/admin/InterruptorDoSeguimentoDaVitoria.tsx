@@ -9,7 +9,7 @@ import { useAdminAuth, useEAdministrador } from "@/hooks/useAdminAuth";
  *
  * DESLIGADO POR OMISSÃO. Ligado, quem fica calado mais de 10 minutos a meio de
  * um pedido pelo WhatsApp recebe UMA mensagem gentil com a mesma pergunta por
- * outras palavras (1 por pergunta, 2 por conversa, nunca das 21h às 9h de
+ * outras palavras (1 por pergunta, 2 por conversa, nunca das 20h às 9h de
  * Lisboa, nunca numa conversa entregue a uma pessoa nem com o pedido já
  * registado). Só o administrador o vê e muda; para ligar escreve-se LIGAR. O
  * nome é o mesmo de `NOME_DO_INTERRUPTOR_DO_SEGUIMENTO` (o teste confere).
@@ -76,7 +76,7 @@ export default function InterruptorDoSeguimentoDaVitoria() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{NOME}</p>
       <p className="mt-1 text-sm leading-6 text-slate-300">
         Quem fica calado mais de 10 minutos a meio de um pedido pelo WhatsApp recebe uma mensagem gentil, com a mesma
-        pergunta por outras palavras. No máximo uma por pergunta e duas por conversa; nunca das 21h às 9h (hora de
+        pergunta por outras palavras. No máximo uma por pergunta e duas por conversa; nunca das 20h às 9h (hora de
         Lisboa), nem numa conversa entregue a uma pessoa, nem com o pedido já registado. Desligado, fica como antes: aos
         10 minutos a Vitória passa à pergunta seguinte.
       </p>

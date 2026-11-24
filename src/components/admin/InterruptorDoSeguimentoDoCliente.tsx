@@ -72,7 +72,7 @@ export default function InterruptorDoSeguimentoDoCliente() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{NOME_DO_INTERRUPTOR_DO_SEGUIMENTO}</p>
       <p className="mt-1 text-sm leading-6 text-slate-300">
         Na Mesa, «Falei com o cliente» marca quando voltar a contactar. Nessa hora, a Vitória escreve ao cliente, e nos dois
-        dias seguintes à mesma hora (das 9h às 21h, nunca duas mensagens automáticas no mesmo dia); sem resposta, o pedido é
+        dias seguintes à mesma hora (das 9h às 20h, nunca duas mensagens automáticas no mesmo dia); sem resposta, o pedido é
         arquivado ao 4.º dia e os parceiros com proposta são avisados. Uma resposta dele pára o seguimento. Só entram os
         pedidos que a equipa marca: este interruptor é para emergências.
       </p>

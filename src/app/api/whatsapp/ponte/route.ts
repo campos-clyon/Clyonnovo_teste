@@ -275,7 +275,7 @@ export async function GET(req: NextRequest) {
   /*
    * O AVISO A TODOS OS PROFISSIONAIS (d11, 15-11-2026) anda à boleia desta
    * ronda: depois de responder, uma passagem do motor (um WhatsApp por vez,
-   * 20–45 s entre cada, 9h–21h de Lisboa, e um lote pequeno de emails). Só
+   * 20–45 s entre cada, 9h–20h de Lisboa, e um lote pequeno de emails). Só
    * faz alguma coisa com um envio começado no backoffice; nunca atrasa nem
    * parte a ronda da ponte.
    */
@@ -287,7 +287,7 @@ export async function GET(req: NextRequest) {
       console.error("[ponte] aviso aos profissionais:", e instanceof Error ? e.message : e);
     }
     // O convite novo e o lembrete da app de cliente (d59, 17-11-2026): um
-    // WhatsApp por vez, 20–45 s entre cada, 9h–21h de Lisboa.
+    // WhatsApp por vez, 20–45 s entre cada, 9h–20h de Lisboa.
     try {
       const { passagemDosWhatsAppDaApp } = await import("@/lib/convite-novo-da-app-na-base");
       await passagemDosWhatsAppDaApp();
@@ -295,7 +295,7 @@ export async function GET(req: NextRequest) {
       console.error("[ponte] WhatsApp da app de cliente:", e instanceof Error ? e.message : e);
     }
     // A validade dos orçamentos (d62, 18-11-2026): os lembretes e o fecho que a
-    // rotina pôs na fila, um por vez, 20–45 s entre cada, 9h–21h de Lisboa.
+    // rotina pôs na fila, um por vez, 20–45 s entre cada, 9h–20h de Lisboa.
     try {
       const { passagemDaValidade } = await import("@/lib/validade-do-orcamento-na-base");
       await passagemDaValidade();
@@ -303,7 +303,7 @@ export async function GET(req: NextRequest) {
       console.error("[ponte] validade dos orçamentos:", e instanceof Error ? e.message : e);
     }
     // O «Pedir o que falta» sozinho (d71, no ritmo da d88): o que a rotina pôs na
-    // fila, um por vez, 20–45 s entre cada, 8h–21h de Lisboa.
+    // fila, um por vez, 20–45 s entre cada, 9h–20h de Lisboa.
     try {
       const { passagemDoQueFalta } = await import("@/lib/lembrete-do-que-falta-na-base");
       await passagemDoQueFalta();
@@ -311,7 +311,7 @@ export async function GET(req: NextRequest) {
       console.error("[ponte] lembretes do que falta:", e instanceof Error ? e.message : e);
     }
     // As propostas ao cliente (d88, 23-11-2026): o orçamento que a rotina pôs na
-    // fila, um por vez, 20–45 s entre cada, 8h–21h de Lisboa.
+    // fila, um por vez, 20–45 s entre cada, 9h–20h de Lisboa.
     try {
       const { passagemDasPropostas } = await import("@/lib/envio-das-propostas-ao-cliente-na-base");
       await passagemDasPropostas();
@@ -319,7 +319,7 @@ export async function GET(req: NextRequest) {
       console.error("[ponte] propostas ao cliente:", e instanceof Error ? e.message : e);
     }
     // O seguimento do cliente (d83, 21-11-2026): as mensagens que a equipa marcou na
-    // Mesa e o fecho ao 4.º dia, um por vez, 20–45 s entre cada, 9h–21h de Lisboa.
+    // Mesa e o fecho ao 4.º dia, um por vez, 20–45 s entre cada, 9h–20h de Lisboa.
     try {
       const { passagemDoSeguimento } = await import("@/lib/seguimento-do-cliente-na-base");
       await passagemDoSeguimento();

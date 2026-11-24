@@ -8,7 +8,7 @@ import type { PedidoDaBase } from "./pedido-aberto-na-conversa";
  * entra nos campos que estavam vazios (andar, elevador, estacionamento, dia,
  * descrição, notas), conta-se outra vez o que falta e, completo, o pedido sai
  * de «precisa info» e segue sozinho para os parceiros (d87, com todas as
- * condições e o horário das 8h às 21h). Pela MESMA função
+ * condições e o horário das 9h às 20h). Pela MESMA função
  * (`gravarARespostaAoQueFalta`).
  *
  * O que o cliente lê: uma mensagem na conversa do pedido, da «CLYON» (nunca o

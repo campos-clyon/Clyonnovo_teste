@@ -10,7 +10,7 @@ import { join } from "node:path";
  *   1. A folha vista: corrigir entre ler e confirmar dá 409 «A folha mudou».
  *   2. O preço visto: se o parceiro mudou o preço, a escolha não se grava.
  *   3. A transição: sem marca nem assinatura aceita-se 7 dias, com data escrita.
- *   4. Os lembretes da folha só entre as 8h e as 21h de Lisboa.
+ *   4. Os lembretes da folha só entre as 9h e as 20h de Lisboa.
  *   5. O envio aos escolhidos que falha deixa uma linha no histórico do pedido.
  *   6. O rascunho da folha guarda-se sem avisar o cliente.
  *
@@ -509,36 +509,36 @@ describe("2. o preço que se congela é o que o cliente viu no cartão", () => {
 describe("4. os lembretes da folha só saem entre as 8h e as 21h de Lisboa", () => {
   const enviadaAs = (cru: string) => ({ folhaJson: FOLHA_A, horasMarcadasEm: emLisboa(cru) });
 
-  it("às 23h e às 02h nada; às 08h sai o lembrete (folha enviada às 20h30)", () => {
-    const f = enviadaAs("2026-11-11T20:30");
-    expect(passoDaFolha(f, emLisboa("2026-11-11T20:59"))).toBeNull(); // ainda não passaram 2 h
+  it("às 23h e às 02h nada; às 09h sai o lembrete (folha enviada às 19h30)", () => {
+    const f = enviadaAs("2026-11-11T19:30");
+    expect(passoDaFolha(f, emLisboa("2026-11-11T19:59"))).toBeNull(); // ainda não passaram 2 h
     expect(passoDaFolha(f, emLisboa("2026-11-11T23:00"))).toBeNull();
     expect(passoDaFolha(f, emLisboa("2026-11-12T02:00"))).toBeNull();
-    expect(passoDaFolha(f, emLisboa("2026-11-12T07:59"))).toBeNull();
-    expect(passoDaFolha(f, emLisboa("2026-11-12T08:00"))).toBe("lembrete_2h");
-    expect(passoDaFolha(f, emLisboa("2026-11-12T20:59"))).toBe("lembrete_24h");
-    expect(passoDaFolha(f, emLisboa("2026-11-12T21:00"))).toBeNull();
+    expect(passoDaFolha(f, emLisboa("2026-11-12T08:59"))).toBeNull();
+    expect(passoDaFolha(f, emLisboa("2026-11-12T09:00"))).toBe("lembrete_2h");
+    expect(passoDaFolha(f, emLisboa("2026-11-12T19:59"))).toBe("lembrete_24h");
+    expect(passoDaFolha(f, emLisboa("2026-11-12T20:00"))).toBeNull();
   });
 
   it("o das 24 h também espera pela manhã, e no Verão a janela é a de Lisboa (não a de UTC)", () => {
     const f = enviadaAs("2026-11-11T01:00");
     expect(passoDaFolha(f, emLisboa("2026-11-12T02:00"))).toBeNull();
-    expect(passoDaFolha(f, emLisboa("2026-11-12T08:00"))).toBe("lembrete_24h");
-    // Julho: as 23h de Lisboa são as 22h UTC, e as 08h são as 07h UTC.
+    expect(passoDaFolha(f, emLisboa("2026-11-12T09:00"))).toBe("lembrete_24h");
+    // Julho: as 23h de Lisboa são as 22h UTC, e as 09h são as 08h UTC.
     const v = enviadaAs("2026-07-10T20:30");
     expect(passoDaFolha(v, new Date("2026-07-10T22:00:00Z"))).toBeNull();
     expect(passoDaFolha(v, new Date("2026-07-11T01:00:00Z"))).toBeNull();
-    expect(passoDaFolha(v, new Date("2026-07-11T06:59:00Z"))).toBeNull();
-    expect(passoDaFolha(v, new Date("2026-07-11T07:00:00Z"))).toBe("lembrete_2h");
+    expect(passoDaFolha(v, new Date("2026-07-11T07:59:00Z"))).toBeNull();
+    expect(passoDaFolha(v, new Date("2026-07-11T08:00:00Z"))).toBe("lembrete_2h");
   });
 
   it("a ida à Mesa às 48 h não é uma mensagem ao cliente: não espera", () => {
     expect(passoDaFolha(enviadaAs("2026-11-11T02:30"), emLisboa("2026-11-13T02:30"))).toBe("mesa");
   });
 
-  it("a rotina: 0 lembretes e 0 avisos às 23h e às 02h; 1 às 08h", async () => {
+  it("a rotina: 0 lembretes e 0 avisos às 23h e às 02h; 1 às 09h", async () => {
     estado.porResponder = [
-      { id: 55, pedidoId: 700, providerId: 7, folhaJson: FOLHA_A, horasMarcadasEm: emLisboa("2026-11-11T20:30"), folhaLembrete2hEm: null, folhaLembrete24hEm: null },
+      { id: 55, pedidoId: 700, providerId: 7, folhaJson: FOLHA_A, horasMarcadasEm: emLisboa("2026-11-11T19:30"), folhaLembrete2hEm: null, folhaLembrete24hEm: null },
     ];
     for (const hora of ["2026-11-11T23:00", "2026-11-12T02:00"]) {
       expect(await correrARotinaDasFolhas(emLisboa(hora))).toEqual({ lembretes: 0, mesa: 0, falhados: 0 });
@@ -546,7 +546,7 @@ describe("4. os lembretes da folha só saem entre as 8h e as 21h de Lisboa", () 
     expect(estado.passos).toEqual([]);
     expect(estado.avisosAoCliente).toEqual([]);
     expect(estado.avisosNoTerreno).toEqual([]);
-    expect(await correrARotinaDasFolhas(emLisboa("2026-11-12T08:00"))).toEqual({ lembretes: 1, mesa: 0, falhados: 0 });
+    expect(await correrARotinaDasFolhas(emLisboa("2026-11-12T09:00"))).toEqual({ lembretes: 1, mesa: 0, falhados: 0 });
     expect(estado.avisosAoCliente).toHaveLength(1);
     expect(estado.avisosNoTerreno).toHaveLength(1);
   });

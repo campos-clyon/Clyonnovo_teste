@@ -11,10 +11,10 @@
  *    ganha-a quem a escrever (affectedRows = 1) — duas mensagens do cliente ao
  *    mesmo tempo, ou a rotina e uma mensagem, nunca enviam duas vezes;
  *  - `seguirSozinhoParaOsParceiros`, chamado pela Vitória quando o pedido fica
- *    completo (whatsapp-negociacao.ts) e pela rotina das 8h00; envia pela MESMA
+ *    completo (whatsapp-negociacao.ts) e pela rotina das 9h00; envia pela MESMA
  *    função do «Enviar aos profissionais» da Mesa (`enviarAosProfissionais`);
  *  - a rotina (`/api/cron/envio-aos-parceiros`, de 15 em 15 minutos) que solta
- *    a fila das 8h00 e fecha os envios que ficaram a meio;
+ *    a fila das 9h00 e fecha os envios que ficaram a meio;
  *  - a linha de cada pedido no cartão dos «por enviar» da Mesa.
  *
  * d88 (23-11-2026, CEO e dono): a MESMA rotina varre também os «Orçamentos
@@ -248,7 +248,7 @@ export async function reservarOEnvio(pool: Pool, pedidoId: number, origem: Orige
   return linhasMudadas(deVolta) === 1;
 }
 
-/** Na fila para as 8h00. Devolve `true` só quando entrou agora (para o histórico dizer uma vez). */
+/** Na fila para as 9h00. Devolve `true` só quando entrou agora (para o histórico dizer uma vez). */
 async function porNaFila(pool: Pool, pedidoId: number, origem: OrigemDoEnvioAutomatico, enviariaA: number): Promise<boolean> {
   const [nova] = await pool.execute(
     `INSERT IGNORE INTO envioAutomaticoAosParceiros (pedidoId, estado, origem, enviariaA, criadoEm, mudadoEm)
@@ -265,7 +265,7 @@ async function porNaFila(pool: Pool, pedidoId: number, origem: OrigemDoEnvioAuto
 }
 
 /**
- * NA FILA DA d88 — à espera dos 10 minutos (`seguirApos`) ou das 8h00 (null).
+ * NA FILA DA d88 — à espera dos 10 minutos (`seguirApos`) ou das 9h00 (null).
  * A linha fica com a origem dos «Orçamentos novos», para a fila voltar a ver as
  * condições das origens novas. Devolve `true` só quando entrou agora (o
  * histórico diz uma vez); quem já estava na fila só muda a hora.
@@ -451,7 +451,7 @@ function emailsDeTesteDoAmbiente(): Set<string> {
  * MESMA função da Mesa (`enviarAosProfissionais`), com a reserva ganha antes.
  * Todas as condições de `envio-automatico-aos-parceiros.ts` se vêem aqui, por
  * esta ordem; a primeira que falha deixa-o nos «por enviar» com o motivo (no
- * cartão e no histórico). Fora das 8h–21h, fica na fila. Nunca lança: um erro
+ * cartão e no histórico). Fora das 9h–20h, fica na fila. Nunca lança: um erro
  * deixa-o nos «por enviar», como hoje.
  *
  * Com `todasAsOrigens` (d88 — a rotina dos «Orçamentos novos»): mais as
@@ -617,7 +617,7 @@ export async function seguirSozinhoParaOsParceiros(
       }
     }
 
-    // Fora das 8h–21h de Lisboa: na fila, sai às 8h00.
+    // Fora das 9h–20h de Lisboa: na fila, sai às 9h00.
     if (!naJanelaDoEnvioAutomatico(agora)) {
       const entrou = await porNaFila(pool, pedidoId, opcoes.origem, enviariaA);
       if (entrou) await appendOrderHistory(pedidoId, { type: "created", by: null, message: historicoDaFila(enviariaA) }).catch(() => {});
@@ -824,7 +824,7 @@ export async function rotinaDoEnvioAutomatico(agora: Date = new Date()): Promise
   };
   if (!naJanelaDoEnvioAutomatico(agora)) {
     r.foraDaJanela = true;
-    // De noite não sai nada; os completos entram na fila das 8h00 (o cartão diz «Segue sozinho a … às 08:00»).
+    // De noite não sai nada; os completos entram na fila das 9h00 (o cartão diz «Segue sozinho a … às 08:00»).
     await varrer();
     return r;
   }
@@ -870,7 +870,7 @@ export function resumoDaRotinaDoEnvioAutomatico(r: ResultadoDaRotinaDoEnvioAutom
   if (r.desligado) partes.push(`desligado nas Configs (${r.naFila} na fila)`);
   else {
     if (r.limpas > 0) partes.push(`${r.limpas} linha(s) presa(s) limpa(s) da fila`);
-    if (r.foraDaJanela) partes.push(`fora das 8h–21h (${r.naFila} na fila)`);
+    if (r.foraDaJanela) partes.push(`fora das 9h–20h (${r.naFila} na fila)`);
     else if (r.naFila > 0) {
       partes.push(
         `${r.naFila} na fila: ${r.enviados} enviado(s), ${r.ficaram} ficaram nos «por enviar», ${r.tiradosDaFila} tirado(s) da fila`,

@@ -38,7 +38,7 @@ export type DecisaoDaRecolhaParada = "nada" | "seguir" | "saltar" | "registar";
  *
  * *«Cliente calado mais de 10 minutos a meio da recolha → UMA mensagem
  * gentil com a mesma pergunta por outras palavras (no máximo 1 por pergunta,
- * 2 por conversa, nunca entre as 21h e as 9h de Lisboa, nunca se a conversa
+ * 2 por conversa, nunca entre as 20h e as 9h de Lisboa, nunca se a conversa
  * estiver entregue a uma pessoa ou o pedido já registado), com interruptor
  * nas Configs.»*
  *
@@ -64,12 +64,12 @@ export type SituacaoDoSeguimento = {
 };
 
 /**
- * QUANTO TEMPO PODE ESPERAR A MENSAGEM GENTIL — 13 horas. Uma pergunta feita
- * às 20h50 que fica sem resposta não leva a mensagem às 21h (silêncio da
- * noite): «fica para as 9h» — o dono. Doze horas e pouco depois; o salto e o
+ * QUANTO TEMPO PODE ESPERAR A MENSAGEM GENTIL — 14 horas. Uma pergunta feita
+ * às 19h50 que fica sem resposta não leva a mensagem às 20h (silêncio da
+ * noite): «fica para as 9h» — o dono. Treze horas e pouco depois; o salto e o
  * registo continuam com as 6 horas de sempre.
  */
-export const HORAS_DE_LIMITE_DO_SEGUIMENTO = 13;
+export const HORAS_DE_LIMITE_DO_SEGUIMENTO = 14;
 
 /** Tudo menos a hora: a mensagem gentil cabe nesta conversa? Pura. */
 function seguimentoCabe(

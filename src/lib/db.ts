@@ -1796,8 +1796,8 @@ export async function ensureNegociacoesTable(): Promise<void> {
     /*
      * v17 (10-11-2026) — A MUDANÇA COM O PARCEIRO ESCOLHIDO PELO CLIENTE. A
      * tarifa dele congelada no momento da escolha (`congelarTarifa`, JSON), a
-     * equipa escolhida (2 ou 3) e o prazo para responder (3 h entre as 8h e as
-     * 21h de Lisboa). Nulas em todas as outras. Ver lista-de-parceiros-da-mudanca.ts.
+     * equipa escolhida (2 ou 3) e o prazo para responder (3 h entre as 9h e as
+     * 20h de Lisboa). Nulas em todas as outras. Ver lista-de-parceiros-da-mudanca.ts.
      */
     `ALTER TABLE negociacoes ADD COLUMN tarifaCongeladaJson TEXT NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN pessoasEscolhidas TINYINT NULL DEFAULT NULL`,

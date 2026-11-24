@@ -25,13 +25,13 @@ export * from "./escolhidos-sem-resposta-do-escolhido";
  * OS ESCOLHIDOS SEM RESPOSTA — 11-11-2026 (d6).
  *
  * Numa mudança com a lista de parceiros o pedido vai logo aos que o cliente
- * escolheu, e cada um tem 3 horas para responder (entre as 8h e as 21h de
+ * escolheu, e cada um tem 3 horas para responder (entre as 9h e as 20h de
  * Lisboa, `prazo-de-resposta-do-parceiro.ts`). Até aqui o prazo passava e não
  * acontecia nada ao cliente. Agora tem consequência:
  *
  *   1. a Mesa mostra o pedido como «escolhidos sem resposta» (a mesma regra
  *      no cartão «Do nosso lado», no selo do pedido e no aviso à equipa);
- *   2. o cliente é avisado UMA vez por pedido, só entre as 8h e as 21h, com
+ *   2. o cliente é avisado UMA vez por pedido, só entre as 9h e as 20h, com
  *      as três saídas: esperar, escolher outro parceiro ou pedir à CLYON que
  *      procure por ele. A CLYON só envia o pedido a mais parceiros se o
  *      cliente o pedir;
@@ -303,7 +303,7 @@ export function linhaDoPrazoParaOCliente(negociacoes: readonly NegociacaoDoPedid
 
 /* ══ A ROTINA HORÁRIA ════════════════════════════════════════════════════ */
 
-/** Está na janela em que se avisa o cliente? 8h–21h em Lisboa, seja qual for o fuso do servidor. */
+/** Está na janela em que se avisa o cliente? 9h–20h em Lisboa, seja qual for o fuso do servidor. */
 export function naJanelaDeResposta(agora: Date): boolean {
   const h = pecasEmLisboa(agora).hora;
   return h >= JANELA_DE_RESPOSTA.abre && h < JANELA_DE_RESPOSTA.fecha;
@@ -370,8 +370,8 @@ export type ResultadoDaRotina = {
 const tentar = (envio: () => Promise<boolean>) => envio().catch(() => false);
 
 /**
- * UMA PASSAGEM. Fora da janela (21h–8h de Lisboa) não lê nem envia: o que
- * passou de noite é avisado na primeira passagem depois das 8h. Nunca lança.
+ * UMA PASSAGEM. Fora da janela (20h–9h de Lisboa) não lê nem envia: o que
+ * passou de noite é avisado na primeira passagem depois das 9h. Nunca lança.
  * NÃO envia o pedido a mais parceiros: isso só a pedido do cliente.
  */
 export async function correrOsEscolhidosSemResposta(deps: DependenciasDaRotina, agora: Date = new Date()): Promise<ResultadoDaRotina> {

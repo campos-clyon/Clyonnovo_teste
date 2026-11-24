@@ -1,3 +1,4 @@
+import { JANELA_DE_CONTACTO, naJanelaDeContacto } from "./janela-de-contacto";
 import { pecasEmLisboa, diaMesEHoraEmLisboa, diaEmLisboa, horaEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { pedidoFechado } from "./pedido-arrumado";
 import { eDeTeste } from "./lembrete-do-que-falta";
@@ -39,8 +40,8 @@ import { haQuantoFalouAEquipa, HORAS_SEM_PISAR_A_EQUIPA } from "./pedido-em-curs
  *     sozinho, sem o SIM do cliente ao resumo (o histórico pede à equipa que
  *     confirme os dados com ele).
  *
- * HORÁRIO: os avisos aos parceiros só saem das 8h00 às 21h00 de Lisboa. Fora
- * disso o pedido fica na fila e sai às 8h00, pela rotina de 15 em 15 minutos
+ * HORÁRIO: os avisos aos parceiros só saem das 9h00 às 20h00 de Lisboa. Fora
+ * disso o pedido fica na fila e sai às 9h00, pela rotina de 15 em 15 minutos
  * (`/api/cron/envio-aos-parceiros`), que volta a ver todas as condições.
  *
  * INTERRUPTOR DE EMERGÊNCIA nas Configs, «Envio automático aos parceiros»:
@@ -53,13 +54,12 @@ import { haQuantoFalouAEquipa, HORAS_SEM_PISAR_A_EQUIPA } from "./pedido-em-curs
 
 export { NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO, NOME_DO_INTERRUPTOR_SO_DA_VITORIA } from "./envio-automatico-nome";
 
-/** Os avisos aos parceiros saem das 8h00 às 21h00 de Lisboa. */
-export const JANELA_DO_ENVIO_AUTOMATICO = { abre: 8, fecha: 21 } as const;
+/** Os avisos aos parceiros saem na janela de contacto (das 9h às 20h de Lisboa). */
+export const JANELA_DO_ENVIO_AUTOMATICO = JANELA_DE_CONTACTO;
 
-/** Está na janela em que os avisos podem sair? 8h00–21h00 em Lisboa, seja qual for o fuso do servidor. */
+/** Está na janela em que os avisos podem sair? A de contacto, em Lisboa, seja qual for o fuso do servidor. */
 export function naJanelaDoEnvioAutomatico(agora: Date): boolean {
-  const h = pecasEmLisboa(agora).hora;
-  return h >= JANELA_DO_ENVIO_AUTOMATICO.abre && h < JANELA_DO_ENVIO_AUTOMATICO.fecha;
+  return naJanelaDeContacto(agora);
 }
 
 /** Porque é que um pedido completo não seguiu sozinho. */
@@ -245,11 +245,11 @@ export function historicoDoQueFicou(motivo: MotivoDoEnvioAutomatico, enviariaA?:
   return `Não seguiu sozinho para os parceiros: ${MOTIVOS_DO_ENVIO_AUTOMATICO[motivo]}. Fica nos «por enviar».`;
 }
 
-/** O histórico do pedido quando fica na fila (fora das 8h–21h). */
+/** O histórico do pedido quando fica na fila (fora das 9h–20h). */
 export function historicoDaFila(enviariaA: number, daVitoria = true): string {
   return (
-    `Completo${daVitoria ? " pela Vitória" : ""} fora das 8h–21h: o envio automático aos parceiros (${parceiros(enviariaA)}) ` +
-    "fica na fila e sai às 8h00."
+    `Completo${daVitoria ? " pela Vitória" : ""} fora das 9h–20h: o envio automático aos parceiros (${parceiros(enviariaA)}) ` +
+    "fica na fila e sai às 9h00."
   );
 }
 
@@ -292,7 +292,7 @@ export function linhaDoEnvioAutomaticoNaMesa(
     if (l.doVarrimento && opcoes.soDaVitoria) {
       return `Envio automático só para os da Vitória nas Configs${n ? ` — enviaria a ${parceiros(n)}` : ""}.`;
     }
-    // d88: «Segue sozinho às HH:MM» — a passagem da rotina em que sai (8h–21h, de 15 em 15 minutos).
+    // d88: «Segue sozinho às HH:MM» — a passagem da rotina em que sai (9h–20h, de 15 em 15 minutos).
     const agora = opcoes.agora ?? new Date();
     return `Segue sozinho ${quandoSai(horaDeSaida(l.seguirApos ?? agora), agora)}${n ? `, para ${parceiros(n)}` : ""}.`;
   }
@@ -435,13 +435,13 @@ export function seguirSoDepoisDe(
 
 /**
  * A HORA A QUE SAI: a primeira passagem da rotina (de 15 em 15 minutos) a
- * partir de `desde`, dentro das 8h–21h de Lisboa — fora delas, às 8h00.
+ * partir de `desde`, dentro das 9h–20h de Lisboa — fora delas, às 9h00.
  */
 export function horaDeSaida(desde: Date): Date {
   const quarto = 15 * 60_000;
   const t = new Date(Math.ceil(desde.getTime() / quarto) * quarto);
   if (naJanelaDoEnvioAutomatico(t)) return t;
-  // Fora das 8h–21h: as 8h00 de Lisboa desse dia, ou do dia seguinte se já passou das 21h.
+  // Fora das 9h–20h: as 9h00 de Lisboa desse dia, ou do dia seguinte se já passou das 20h.
   const hoje = diaEmLisboa(t);
   const dia = pecasEmLisboa(t).hora >= JANELA_DO_ENVIO_AUTOMATICO.fecha ? somarDiasAoDia(hoje, 1) : hoje;
   return instanteEmLisboa(`${dia}T${String(JANELA_DO_ENVIO_AUTOMATICO.abre).padStart(2, "0")}:00`) ?? t;

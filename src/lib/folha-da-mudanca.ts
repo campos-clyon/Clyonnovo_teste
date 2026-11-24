@@ -701,9 +701,9 @@ export const folhaPrecisaDaMesa = (t: FolhaNaBase, agora: Date = new Date()): bo
 export type PassoDaFolha = "lembrete_2h" | "lembrete_24h" | "mesa";
 
 /**
- * A JANELA DOS LEMBRETES AO CLIENTE (11-11-2026): das 8h às 21h de Lisboa,
+ * A JANELA DOS LEMBRETES AO CLIENTE (11-11-2026): das 9h às 20h de Lisboa,
  * a mesma do prazo de resposta do parceiro. Uma folha enviada às 22h30 não
- * dá um WhatsApp depois da meia-noite: o lembrete sai às 8h.
+ * dá um WhatsApp depois da meia-noite: o lembrete sai às 9h.
  */
 export const JANELA_DOS_LEMBRETES = JANELA_DE_RESPOSTA;
 

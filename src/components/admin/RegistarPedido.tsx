@@ -2134,7 +2134,7 @@ function AvisoAQuemTemOTrabalhoNoEcra({ a }: { a: AvisoAQuemTemOTrabalho }) {
   if (a.dia) {
     linhas.push(
       a.avisosLigados
-        ? `O dia novo passou para o trabalho de ${a.profissional}. O WhatsApp com o dia sai daqui a uns minutos, entre as 9h e as 21h.`
+        ? `O dia novo passou para o trabalho de ${a.profissional}. O WhatsApp com o dia sai daqui a uns minutos, entre as 9h e as 20h.`
         : `O dia novo passou para o trabalho de ${a.profissional}, mas o aviso por WhatsApp está desligado — avise-o por telefone.`,
     );
   }

@@ -217,7 +217,7 @@ const semNotas = (s: string) => s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "")
 // Domingo, 22-11-2026 (Inverno: Lisboa = UTC).
 const DE_TARDE = new Date("2026-11-22T15:30:00Z");
 const DE_NOITE = new Date("2026-11-22T22:30:00Z");
-const AS_8H = new Date("2026-11-23T08:00:00Z");
+const AS_8H = new Date("2026-11-23T09:00:00Z");
 
 const COMPLETO: CandidatoAoEnvioAutomatico = {
   status: "sem_assistente",
@@ -266,16 +266,16 @@ beforeEach(() => {
 
 /* ── As regras puras ─────────────────────────────────────────────────────── */
 
-describe("os avisos aos parceiros só saem das 8h00 às 21h00 de Lisboa", () => {
+describe("os avisos aos parceiros só saem das 9h00 às 20h00 de Lisboa", () => {
   it("no Inverno (Lisboa = UTC)", () => {
-    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T07:59:00Z"))).toBe(false);
-    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T08:00:00Z"))).toBe(true);
-    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T20:59:00Z"))).toBe(true);
-    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T21:00:00Z"))).toBe(false);
+    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T08:59:00Z"))).toBe(false);
+    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T09:00:00Z"))).toBe(true);
+    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T19:59:00Z"))).toBe(true);
+    expect(naJanelaDoEnvioAutomatico(new Date("2026-11-22T20:00:00Z"))).toBe(false);
   });
   it("no Verão (Lisboa = UTC+1): pelo relógio de Lisboa, nunca pelo do servidor", () => {
-    expect(naJanelaDoEnvioAutomatico(new Date("2026-07-10T07:30:00Z"))).toBe(true); // 8h30 em Lisboa
-    expect(naJanelaDoEnvioAutomatico(new Date("2026-07-10T20:30:00Z"))).toBe(false); // 21h30 em Lisboa
+    expect(naJanelaDoEnvioAutomatico(new Date("2026-07-10T08:30:00Z"))).toBe(true); // 9h30 em Lisboa
+    expect(naJanelaDoEnvioAutomatico(new Date("2026-07-10T19:30:00Z"))).toBe(false); // 20h30 em Lisboa
   });
 });
 
@@ -349,9 +349,9 @@ describe("a regra d73: a equipa escreveu à mão depois do último envio de mode
 describe("o cartão dos «por enviar» diz o que aconteceu", () => {
   const quando = new Date("2026-11-22T22:30:00Z");
   it("na fila, desligado, e o motivo", () => {
-    // d88: «Segue sozinho às HH:MM» — às 22h30 é a passagem das 8h00 do dia seguinte.
+    // d88: «Segue sozinho às HH:MM» — às 22h30 é a passagem das 9h00 do dia seguinte.
     expect(linhaDoEnvioAutomaticoNaMesa({ estado: "na_fila", motivo: null, enviariaA: 3, mudadoEm: quando }, true, { agora: quando })).toBe(
-      "Segue sozinho a 23/11 às 08:00, para 3 parceiros.",
+      "Segue sozinho a 23/11 às 09:00, para 3 parceiros.",
     );
     expect(linhaDoEnvioAutomaticoNaMesa({ estado: "ficou", motivo: "desligado", enviariaA: 1, mudadoEm: null }, false)).toBe(
       "Envio automático desligado nas Configs — enviaria a 1 parceiro.",
@@ -366,7 +366,7 @@ describe("o cartão dos «por enviar» diz o que aconteceu", () => {
   });
   it("o nome do interruptor e o histórico da fila", () => {
     expect(NOME_DO_INTERRUPTOR_DO_ENVIO_AUTOMATICO).toBe("Envio automático aos parceiros (todas as origens)");
-    expect(historicoDaFila(2)).toContain("sai às 8h00");
+    expect(historicoDaFila(2)).toContain("sai às 9h00");
     expect(MOTIVOS_DO_ENVIO_AUTOMATICO.sem_parceiros).toBe("sem parceiros na zona");
   });
 });
@@ -477,16 +477,16 @@ describe("o que fica nos «por enviar», com o motivo", () => {
   });
 });
 
-describe("fora de horas: fica na fila e sai às 8h00", () => {
-  it("às 22h30 não sai nada; às 8h00 a rotina envia, uma vez", async () => {
+describe("fora de horas: fica na fila e sai às 9h00", () => {
+  it("às 22h30 não sai nada; às 9h00 a rotina envia, uma vez", async () => {
     const r = await seguirSozinhoParaOsParceiros(9101, { origem: "pedir_o_que_falta", agora: DE_NOITE });
     expect(r).toEqual({ estado: "na_fila", enviariaA: 3 });
     expect(base.enviados).toEqual([]);
-    expect(base.historico.some((h) => h.includes("sai às 8h00"))).toBe(true);
-    expect((await linhasDoEnvioAutomaticoNaMesa([9101], DE_NOITE)).get(9101)).toBe("Segue sozinho a 23/11 às 08:00, para 3 parceiros.");
+    expect(base.historico.some((h) => h.includes("sai às 9h00"))).toBe(true);
+    expect((await linhasDoEnvioAutomaticoNaMesa([9101], DE_NOITE)).get(9101)).toBe("Segue sozinho a 23/11 às 09:00, para 3 parceiros.");
 
     // A rotina das 7h45 ainda não solta.
-    const cedo = await rotinaDoEnvioAutomatico(new Date("2026-11-23T07:45:00Z"));
+    const cedo = await rotinaDoEnvioAutomatico(new Date("2026-11-23T08:45:00Z"));
     expect(cedo.foraDaJanela).toBe(true);
     expect(base.enviados).toEqual([]);
 
@@ -496,11 +496,11 @@ describe("fora de horas: fica na fila e sai às 8h00", () => {
     expect(base.tabela.get(9101)?.estado).toBe("enviado");
 
     // A passagem seguinte não reenvia.
-    await rotinaDoEnvioAutomatico(new Date("2026-11-23T08:15:00Z"));
+    await rotinaDoEnvioAutomatico(new Date("2026-11-23T09:15:00Z"));
     expect(base.enviados).toEqual([9101]);
   });
 
-  it("às 8h00 volta a ver as condições: cancelado de noite, não sai", async () => {
+  it("às 9h00 volta a ver as condições: cancelado de noite, não sai", async () => {
     await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_NOITE });
     base.pedido = { ...PEDIDO_COMPLETO, status: "cancelado" };
     const r8 = await rotinaDoEnvioAutomatico(AS_8H);
@@ -508,7 +508,7 @@ describe("fora de horas: fica na fila e sai às 8h00", () => {
     expect(base.enviados).toEqual([]);
   });
 
-  it("enviado à mão pela equipa de noite: às 8h00 não sai outra vez", async () => {
+  it("enviado à mão pela equipa de noite: às 9h00 não sai outra vez", async () => {
     await seguirSozinhoParaOsParceiros(9101, { origem: "registado", agora: DE_NOITE });
     base.negs = [{ estado: "aberta" }];
     await rotinaDoEnvioAutomatico(AS_8H);
@@ -649,7 +649,7 @@ describe("d2 — o dia pedido não pode ter passado (em Lisboa)", () => {
   it("antes de hoje: passou; hoje e depois: não; sem data: não", () => {
     expect(dataPedidaJaPassou(new Date("2026-11-21T00:00:00Z"), DE_TARDE)).toBe(true);
     expect(dataPedidaJaPassou(new Date("2026-11-22T00:00:00Z"), DE_TARDE)).toBe(false);
-    expect(dataPedidaJaPassou(new Date("2026-11-22T08:00:00Z"), DE_TARDE)).toBe(false);
+    expect(dataPedidaJaPassou(new Date("2026-11-22T09:00:00Z"), DE_TARDE)).toBe(false);
     expect(dataPedidaJaPassou(new Date("2026-11-23T00:00:00Z"), DE_TARDE)).toBe(false);
     expect(dataPedidaJaPassou(null, DE_TARDE)).toBe(false);
     expect(dataPedidaJaPassou("lixo", DE_TARDE)).toBe(false);
@@ -727,7 +727,7 @@ describe("d2 — a fila não prende: o que já não pode seguir sai dela, com o 
     for (const id of ids.slice(0, 5)) expect(base.tabela.get(id)).toMatchObject({ estado: "ficou", motivo: "ja_enviado" });
     expect(base.tabela.get(ids[5])?.estado).toBe("enviado");
     // Na passagem seguinte a fila está vazia.
-    const r2 = await rotinaDoEnvioAutomatico(new Date("2026-11-23T08:15:00Z"));
+    const r2 = await rotinaDoEnvioAutomatico(new Date("2026-11-23T09:15:00Z"));
     expect(r2.naFila).toBe(0);
     expect(base.enviados).toEqual([ids[5]]);
   });
@@ -800,10 +800,10 @@ describe("d2 — o resumo da rotina diz sempre quantos havia na fila", () => {
     const r = await rotinaDoEnvioAutomatico(AS_8H);
     expect(resumoDaRotinaDoEnvioAutomatico(r)).toBe("1 na fila: 1 enviado(s), 0 ficaram nos «por enviar», 0 tirado(s) da fila");
   });
-  it("fora das 8h–21h também conta (e desligado)", async () => {
+  it("fora das 9h–20h também conta (e desligado)", async () => {
     await seguirSozinhoParaOsParceiros(9101, { origem: "pedir_o_que_falta", agora: DE_NOITE });
-    const cedo = await rotinaDoEnvioAutomatico(new Date("2026-11-23T07:45:00Z"));
-    expect(resumoDaRotinaDoEnvioAutomatico(cedo)).toBe("fora das 8h–21h (1 na fila)");
+    const cedo = await rotinaDoEnvioAutomatico(new Date("2026-11-23T08:45:00Z"));
+    expect(resumoDaRotinaDoEnvioAutomatico(cedo)).toBe("fora das 9h–20h (1 na fila)");
     base.interruptor = 0;
     const off = await rotinaDoEnvioAutomatico(AS_8H);
     expect(resumoDaRotinaDoEnvioAutomatico(off)).toBe("desligado nas Configs (1 na fila)");

@@ -466,7 +466,7 @@ export type ResultadoDoFecho = {
 /**
  * DE HORA A HORA: os trabalhos na fase «pergunta» ainda sem email recebem UM
  * email com o link de um toque. Só com o interruptor ligado, só depois de
- * 15-11, só das 08h às 21h de Lisboa. Desligado, conta e não envia nada.
+ * 15-11, só das 9h às 20h de Lisboa. Desligado, conta e não envia nada.
  */
 export async function correrOFechoDoModeloNovo(agora: Date = agoraDoModelo()): Promise<ResultadoDoFecho> {
   const r: ResultadoDoFecho = {

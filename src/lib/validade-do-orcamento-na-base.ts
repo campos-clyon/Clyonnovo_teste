@@ -12,7 +12,7 @@
  *    20 a 45 s entre WhatsApp, como as outras filas;
  *  - a rotina (`/api/cron/validade-dos-orcamentos`, de hora a hora) que decide o
  *    passo de cada pedido e o põe na fila; a passagem (às rondas da ponte) que
- *    envia UM de cada vez, das 9h às 21h de Lisboa;
+ *    envia UM de cada vez, das 9h às 20h de Lisboa;
  *  - o que a Vitória faz com o «1», o «2» e o «3» (chamado por
  *    `whatsapp-negociacao.ts`), e o «Lembrar agora» da Mesa.
  *
@@ -565,7 +565,7 @@ export async function rotinaDaValidade(agora: Date = new Date()): Promise<Result
 
 export function resumoDaRotinaDaValidade(r: ResultadoDaRotinaDaValidade): string | null {
   if (!r.ligado) return "desligado (interruptor «Validade dos orçamentos» nas Configs)";
-  if (r.foraDaJanela) return "fora das 9h–21h de Lisboa";
+  if (r.foraDaJanela) return "fora das 9h–20h de Lisboa";
   if (r.naFila === 0 && r.parados === 0 && r.falhados === 0) return null;
   return `${r.aEspera} à espera do cliente · ${r.naFila} passo(s) na fila · ${r.parados} parado(s)` + (r.falhados ? ` · ${r.falhados} falhado(s)` : "");
 }

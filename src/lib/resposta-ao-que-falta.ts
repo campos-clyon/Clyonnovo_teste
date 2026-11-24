@@ -280,7 +280,7 @@ export const PEDIDO_FICA_COMPLETO =
 /**
  * A frase do fim, com o pedido completo E JÁ ENVIADO aos parceiros pelo envio
  * automático (d87, 22-11-2026). Só se diz quando o envio foi mesmo feito; se o
- * pedido ficou nos «por enviar» (ou na fila das 8h00), diz-se a de cima.
+ * pedido ficou nos «por enviar» (ou na fila das 9h00), diz-se a de cima.
  */
 export const PEDIDO_JA_SEGUIU =
   "O seu pedido já seguiu para os parceiros da sua zona. As propostas chegam-lhe por aqui, e depois é só escolher a que preferir.";

@@ -347,17 +347,17 @@ describe("a espera dos 10 minutos e a hora a que sai", () => {
     expect(seguirSoDepoisDe(MEIA_HORA_ANTES, 601, AS_15H30)).toBeNull();
     expect(seguirSoDepoisDe(MEIA_HORA_ANTES, null, AS_15H30)).toBeNull();
   });
-  it("na passagem seguinte da rotina; de noite, às 8h00 de Lisboa", () => {
+  it("na passagem seguinte da rotina; de noite, às 9h00 de Lisboa", () => {
     expect(horaDeSaida(new Date("2026-11-23T15:35:00Z")).toISOString()).toBe("2026-11-23T15:45:00.000Z");
     expect(horaDeSaida(new Date("2026-11-23T15:45:00Z")).toISOString()).toBe("2026-11-23T15:45:00.000Z");
-    expect(horaDeSaida(DE_NOITE).toISOString()).toBe("2026-11-24T08:00:00.000Z");
-    expect(horaDeSaida(new Date("2026-11-24T06:10:00Z")).toISOString()).toBe("2026-11-24T08:00:00.000Z");
-    // No Verão (Lisboa = UTC+1): as 8h00 de Lisboa são as 7h00 UTC.
-    expect(horaDeSaida(new Date("2026-07-10T21:00:00Z")).toISOString()).toBe("2026-07-11T07:00:00.000Z");
+    expect(horaDeSaida(DE_NOITE).toISOString()).toBe("2026-11-24T09:00:00.000Z");
+    expect(horaDeSaida(new Date("2026-11-24T06:10:00Z")).toISOString()).toBe("2026-11-24T09:00:00.000Z");
+    // No Verão (Lisboa = UTC+1): as 9h00 de Lisboa são as 9h00 UTC.
+    expect(horaDeSaida(new Date("2026-07-10T21:00:00Z")).toISOString()).toBe("2026-07-11T08:00:00.000Z");
   });
   it("«às HH:MM» hoje, «a DD/MM às HH:MM» noutro dia — em Lisboa", () => {
     expect(quandoSai(new Date("2026-11-23T15:45:00Z"), AS_15H30)).toBe("às 15:45");
-    expect(quandoSai(new Date("2026-11-24T08:00:00Z"), DE_NOITE)).toBe("a 24/11 às 08:00");
+    expect(quandoSai(new Date("2026-11-24T09:00:00Z"), DE_NOITE)).toBe("a 24/11 às 09:00");
   });
 });
 
@@ -522,13 +522,13 @@ describe("a espera: nunca antes dos 10 minutos", () => {
     expect(base.enviados.map((e) => e.id)).toEqual([id]);
   });
 
-  it("de noite: na fila para as 8h00, e o cartão diz quando", async () => {
+  it("de noite: na fila para as 9h00, e o cartão diz quando", async () => {
     const id = pedido({ createdAt: new Date("2026-11-23T21:40:00Z") });
     const r = await rotinaDoEnvioAutomatico(DE_NOITE);
     expect(r.foraDaJanela).toBe(true);
     expect(base.enviados).toEqual([]);
-    expect((await linhasDoEnvioAutomaticoNaMesa([id], DE_NOITE)).get(id)).toBe("Segue sozinho a 24/11 às 08:00, para 3 parceiros.");
-    await rotinaDoEnvioAutomatico(new Date("2026-11-24T08:00:00Z"));
+    expect((await linhasDoEnvioAutomaticoNaMesa([id], DE_NOITE)).get(id)).toBe("Segue sozinho a 24/11 às 09:00, para 3 parceiros.");
+    await rotinaDoEnvioAutomatico(new Date("2026-11-24T09:00:00Z"));
     expect(base.enviados.map((e) => e.id)).toEqual([id]);
   });
 

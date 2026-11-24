@@ -13,7 +13,7 @@
  *  - cada pessoa recebe o convite novo UMA vez (a chave da tabela é o email)
  *    e, 3 dias depois DELE, no máximo um lembrete (`lembrete-da-app.ts`);
  *  - o WhatsApp não sai de rajada: fica numa fila própria e sai um de cada
- *    vez, 20 a 45 s entre cada, das 9h às 21h de Lisboa, como o aviso a todos
+ *    vez, 20 a 45 s entre cada, das 9h às 20h de Lisboa, como o aviso a todos
  *    os profissionais (`aviso-aos-profissionais.ts`).
  *
  * ESTE FICHEIRO É PURO. A base está em `convite-novo-da-app-na-base.ts`.

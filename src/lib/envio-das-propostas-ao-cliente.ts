@@ -20,7 +20,7 @@ import {
  *     «Enviar pela CLYON» (`textoDoOrcamentoDaMesa`, `enviarTextoManualWhatsApp`,
  *     `marcarOrcamentoEnviado`): «válido até…», cada parceiro com o valor sem
  *     e com IVA. A partir daí correm a validade (d62) e o seguimento (d83);
- *   · das 8h às 21h de Lisboa; o que cai fora sai às 9h; e nunca no dia em que
+ *   · das 9h às 20h de Lisboa; o que cai fora sai às 9h; e nunca no dia em que
  *     já saiu outra mensagem automática a esse cliente (vai no dia seguinte, às
  *     9h);
  *   · um parceiro que mudou a proposta há menos de 10 min: espera-se;
@@ -153,7 +153,7 @@ export type EstadoDoEnvio =
 /**
  * O QUE ACONTECE A ESTE PEDIDO — pura. Já enviado; fica com uma pessoa (e
  * porquê); ou sai, e quando: já, ou à hora a que pode (o prazo, os 10 min da
- * mudança, a janela das 8h–21h, ou amanhã às 9h por já ter saído hoje outra
+ * mudança, a janela das 9h–20h, ou amanhã às 9h por já ter saído hoje outra
  * mensagem automática).
  */
 export function estadoDoEnvio(p: PedidoParaOEnvio, agora: Date, opcoes: { jaSaiuHoje?: boolean } = {}): EstadoDoEnvio {

@@ -26,6 +26,7 @@
  * «falar com alguém» entrega a conversa e o bot cala-se.
  */
 
+import { JANELA_DE_CONTACTO } from "./janela-de-contacto";
 import { FORA_DO_PLANO, SERVICE_CATEGORIES } from "./service-categories";
 import { IDS_DA_LISTA, SERVICOS_DA_VITORIA } from "./servicos-da-vitoria";
 import { primeiroNome } from "./mensagem-whatsapp";
@@ -5642,8 +5643,8 @@ export function mensagemDePedidoRegistado(
   /** Já seguiu para os parceiros pelo envio automático (d87, 22-11-2026): diz-se a verdade. */
   jaSeguiu = false,
   /**
-   * d91 (3.5): fora das 8h–21h de Lisboa o envio aos parceiros espera pelas 8h
-   * (d87/d88) — diz-se «a partir das 8h» em vez do prazo. Sem isto, o prazo.
+   * d91 (3.5): fora das 9h–20h de Lisboa o envio aos parceiros espera pelas 9h
+   * (d87/d88) — diz-se «a partir das 9h» em vez do prazo. Sem isto, o prazo.
    */
   agora?: Date,
 ): string {
@@ -5655,7 +5656,7 @@ export function mensagemDePedidoRegistado(
    */
   const deNoite = agora != null && !jaSeguiu && !naJanelaDasMensagensAutomaticas(agora);
   const asPropostas = deNoite
-    ? "e as propostas começam a chegar-lhe por aqui a partir das 8h."
+    ? `e as propostas começam a chegar-lhe por aqui a partir das ${JANELA_DE_CONTACTO.abre}h.`
     : `e as propostas chegam-lhe por aqui em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`;
   /*
    * d91 (3.5, 23-11-2026): é o momento de maior intenção — tiram-se as duas

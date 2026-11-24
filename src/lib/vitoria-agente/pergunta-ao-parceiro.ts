@@ -14,14 +14,15 @@
  *     uma data-hora (`lerARespostaDoParceiro`), e o Claude escreve ao cliente o
  *     resultado — com o sim, a pergunta do fecho («… Responda SIM.»); com o
  *     não, a alternativa. Resposta ambígua → uma pessoa da equipa;
- *  3. sem resposta em 2 h (contadas das 8h às 21h de Lisboa; fora disso,
- *     a partir das 8h) → uma pessoa da equipa, com o motivo no cartão.
+ *  3. sem resposta em 2 h (contadas das 9h às 20h de Lisboa; fora disso,
+ *     a partir das 9h) → uma pessoa da equipa, com o motivo no cartão.
  *
  * Aqui: as leituras e os textos (sem base). A orquestra da resposta
  * (`tratarARespostaDoParceiro`) recebe o mundo de fora — nos testes, fingido.
  */
 
 import { createHash } from "node:crypto";
+import { JANELA_DE_CONTACTO } from "../janela-de-contacto";
 import { pecasEmLisboa, instanteEmLisboa, diaEmLisboa, somarDiasAoDia, horaEmLisboa } from "../hora-de-lisboa";
 import type { ResultadoDoAgente } from "./cliente";
 import type { FechoProposto } from "./propostas-do-agente";
@@ -30,16 +31,16 @@ import type { PerguntaAoParceiro } from "./pendentes";
 
 /** O prazo da resposta do parceiro: 2 h, contadas só dentro do horário. */
 export const MINUTOS_PARA_O_PARCEIRO_RESPONDER = 120;
-export const HORA_QUE_ABRE = 8;
-export const HORA_QUE_FECHA = 21;
+export const HORA_QUE_ABRE = JANELA_DE_CONTACTO.abre;
+export const HORA_QUE_FECHA = JANELA_DE_CONTACTO.fecha;
 
 const dois = (n: number) => String(n).padStart(2, "0");
 const emLisboa = (dia: string, hora: number, minuto = 0) => instanteEmLisboa(`${dia}T${dois(hora)}:${dois(minuto)}`) as Date;
 
 /**
- * ATÉ QUANDO O PARCEIRO TEM PARA RESPONDER. As 2 h contam das 8h às 21h de
+ * ATÉ QUANDO O PARCEIRO TEM PARA RESPONDER. As 2 h contam das 9h às 20h de
  * Lisboa: perguntado às 20h30, acaba às 9h30 do dia seguinte; perguntado às
- * 23h ou às 6h, às 10h (conta a partir das 8h).
+ * 23h ou às 6h, às 10h (conta a partir das 9h).
  */
 export function prazoDaPergunta(perguntadoEm: Date, minutos = MINUTOS_PARA_O_PARCEIRO_RESPONDER): Date {
   let dia = diaEmLisboa(perguntadoEm);

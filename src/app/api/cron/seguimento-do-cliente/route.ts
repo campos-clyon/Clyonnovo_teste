@@ -8,7 +8,7 @@ import { bearerConfere } from "@/lib/segredo-igual";
  *
  * Ver `seguimento-do-cliente.ts`: só os pedidos que a equipa marcou com «Falei
  * com o cliente»; a 1.ª mensagem na hora marcada, a 2.ª e a 3.ª nos dias
- * seguintes à mesma hora, o arquivo no 4.º dia; das 9h às 21h de Lisboa (fora
+ * seguintes à mesma hora, o arquivo no 4.º dia; das 9h às 20h de Lisboa (fora
  * disso, carimba e sai). A rotina decide e põe na fila; os WhatsApp saem um de
  * cada vez, 20–45 s entre cada, às rondas da ponte. Com o interruptor de
  * emergência «Seguimento do cliente» desligado, responde «desligado».

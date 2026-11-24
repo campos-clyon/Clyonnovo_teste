@@ -168,7 +168,7 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "marcar_seguimento",
-    description: "Marca para voltar a contactar o cliente sobre um pedido num dia e hora de Lisboa (das 9h00 às 20h59), quando ele pede para falar mais tarde.",
+    description: "Marca para voltar a contactar o cliente sobre um pedido num dia e hora de Lisboa (das 9h00 às 19h59), quando ele pede para falar mais tarde.",
     input_schema: objecto(
       {
         pedido: PEDIDO,

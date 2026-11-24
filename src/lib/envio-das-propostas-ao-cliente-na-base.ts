@@ -9,8 +9,8 @@
  *  - `envioDasPropostasAoCliente` — UMA linha por pedido (a chave primária é o
  *    pedido): na fila, a enviar, enviado ou falhou. É a reserva que impede o
  *    mesmo orçamento de sair duas vezes;
- *  - a rotina (`/api/cron/propostas-ao-cliente`, de 15 em 15 min, das 8h às
- *    21h de Lisboa) põe na fila os que já podem sair; a passagem (às rondas da
+ *  - a rotina (`/api/cron/propostas-ao-cliente`, de 15 em 15 min, das 9h às
+ *    20h de Lisboa) põe na fila os que já podem sair; a passagem (às rondas da
  *    ponte) envia UM de cada vez, 20 a 45 s entre cada, e lê tudo outra vez
  *    antes de enviar;
  *  - a linha do cartão da Mesa e o ensaio das Configs.
@@ -368,7 +368,7 @@ export async function rotinaDasPropostas(agora: Date = new Date()): Promise<Resu
 
 export function resumoDaRotinaDasPropostas(r: ResultadoDaRotinaDasPropostas): string | null {
   if (!r.ligado) return `desligado (interruptor «${NOME_DO_INTERRUPTOR_DAS_PROPOSTAS}» nas Configs)`;
-  if (r.foraDeHoras) return "fora das 8h–21h de Lisboa";
+  if (r.foraDeHoras) return "fora das 9h–20h de Lisboa";
   if (r.naFila === 0 && r.ficam === 0 && r.esperam === 0) return null;
   return `${r.naFila} na fila · ${r.esperam} à espera da hora · ${r.ficam} com uma pessoa`;
 }

@@ -316,7 +316,7 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
     expect(desculpasPeloAtendimento("Rosalinda")).toMatch(/Nada do que já me disse se perde\.$/);
   });
 
-  it("3.5: o pedido registado começa pelo marcador, tem um só emoji e diz «a partir das 8h» de noite", () => {
+  it("3.5: o pedido registado começa pelo marcador, tem um só emoji e diz «a partir das 9h» de noite", () => {
     const dia = mensagemDePedidoRegistado(812, false, "Rosalinda", false, false, em("2026-11-23T15:00"));
     expect(dia).toMatch(/^Pedido #812 registado[.!]/);
     expect(dia).toContain("em menos de 6 horas");
@@ -324,7 +324,7 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
     expect(dia).toContain("Uma ou duas fotografias do que é para levar");
     expect(dia.match(/😊/g)?.length).toBe(1);
     const noite = mensagemDePedidoRegistado(812, true, "Rosalinda", false, false, em("2026-11-23T23:30"));
-    expect(noite).toContain("a partir das 8h");
+    expect(noite).toContain("a partir das 9h");
     expect(noite).not.toContain("fotografias do que é para levar");
   });
 

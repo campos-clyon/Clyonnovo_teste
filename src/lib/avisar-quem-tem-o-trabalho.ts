@@ -17,7 +17,7 @@ import { textoDoAvisoDeMoradaAoProfissional } from "./aviso-de-morada-ao-profiss
  *   · O DIA passa para o trabalho dele (`dataCombinada` — é o que ele vê, e o
  *     que a agenda mostra) e regista-se a mudança como a do arrasto da agenda.
  *     O WhatsApp sai pela passagem do assistente, como o desse: com a data
- *     quieta uns minutos, entre as 9h e as 21h, e o cliente avisado primeiro.
+ *     quieta uns minutos, entre as 9h e as 20h, e o cliente avisado primeiro.
  *     Sem caminho novo, sem texto novo.
  *   · A MORADA (ou o destino de uma mudança) não tinha aviso nenhum. Sai já,
  *     como o de quando a CLYON o escolhe: foi uma pessoa a mudá-la agora, e

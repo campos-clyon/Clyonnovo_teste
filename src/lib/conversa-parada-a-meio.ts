@@ -5,7 +5,7 @@
  * Vitória e o cliente não respondeu. A mensagem gentil dos 10 minutos (d25)
  * continua; depois dela:
  *
- *   · um lembrete 2 horas depois — se ainda for das 9h às 21h de Lisboa nesse
+ *   · um lembrete 2 horas depois — se ainda for das 9h às 20h de Lisboa nesse
  *     dia; senão, fica para a manhã;
  *   · outro na manhã seguinte (a partir das 10h);
  *   · um último no dia a seguir;
@@ -25,6 +25,7 @@
  * PURO. A base e a passagem estão em `conversa-parada-a-meio-na-base.ts`.
  */
 
+import { JANELA_DE_CONTACTO } from "./janela-de-contacto";
 import { diaEmLisboa, pecasEmLisboa } from "./hora-de-lisboa";
 
 /** Quanto tempo o rascunho da recolha vale (era um dia — d93). */
@@ -42,8 +43,8 @@ export function rascunhoAindaVale(actualizadoEm: string | Date | null | undefine
 export const HORAS_ATE_AO_PRIMEIRO = 2;
 /** Os outros, a partir desta hora (Lisboa). */
 export const HORA_DOS_OUTROS = 10;
-/** A janela, em Lisboa: das 9h00 às 20h59. */
-export const JANELA_DA_CONVERSA_PARADA = { das: 9, as: 21 } as const;
+/** A janela: a de contacto (das 9h00 às 19h59, em Lisboa). */
+export const JANELA_DA_CONVERSA_PARADA = { das: JANELA_DE_CONTACTO.abre, as: JANELA_DE_CONTACTO.fecha } as const;
 
 export type PassoDaConversaParada = "lembrete1" | "lembrete2" | "lembrete3" | "fechar";
 
@@ -59,7 +60,7 @@ export type CicloDaConversaParada = {
 /**
  * O PASSO QUE TOCA AGORA — ou null. Pura.
  *
- *   · fechado, ou fora das 9h–21h: nenhum;
+ *   · fechado, ou fora da janela de contacto: nenhum;
  *   · nunca dois no mesmo dia;
  *   · o 1.º (2 h depois) só no próprio dia da pergunta; passado o dia, salta-se
  *     para o da manhã (a partir das 10h);

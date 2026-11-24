@@ -280,23 +280,23 @@ describe("os textos do ecrã", () => {
   });
 });
 
-describe("o prazo de resposta do parceiro — 3 h entre as 8h e as 21h de Lisboa", () => {
+describe("o prazo de resposta do parceiro — 3 h entre as 9h e as 20h de Lisboa", () => {
   const em = (t: string) => instanteEmLisboa(t) as Date;
 
   it("a meio do dia, três horas", () => {
     expect(prazoDeResposta(em("2026-11-10T10:00")).toISOString()).toBe(em("2026-11-10T13:00").toISOString());
   });
 
-  it("perto das 21h, o que falta passa para as 8h do dia seguinte", () => {
-    expect(prazoDeResposta(em("2026-11-10T19:30")).toISOString()).toBe(em("2026-11-11T09:30").toISOString());
+  it("perto das 20h, o que falta passa para as 9h do dia seguinte", () => {
+    expect(prazoDeResposta(em("2026-11-10T19:30")).toISOString()).toBe(em("2026-11-11T11:30").toISOString());
   });
 
-  it("à noite e de madrugada, conta a partir das 8h", () => {
-    expect(prazoDeResposta(em("2026-11-10T22:15")).toISOString()).toBe(em("2026-11-11T11:00").toISOString());
-    expect(prazoDeResposta(em("2026-11-11T06:00")).toISOString()).toBe(em("2026-11-11T11:00").toISOString());
+  it("à noite e de madrugada, conta a partir das 9h", () => {
+    expect(prazoDeResposta(em("2026-11-10T22:15")).toISOString()).toBe(em("2026-11-11T12:00").toISOString());
+    expect(prazoDeResposta(em("2026-11-11T06:00")).toISOString()).toBe(em("2026-11-11T12:00").toISOString());
   });
 
   it("no Verão também (o relógio é o de Lisboa, não o do servidor)", () => {
-    expect(prazoDeResposta(em("2026-07-01T20:00")).toISOString()).toBe(em("2026-07-02T10:00").toISOString());
+    expect(prazoDeResposta(em("2026-07-01T19:00")).toISOString()).toBe(em("2026-07-02T11:00").toISOString());
   });
 });

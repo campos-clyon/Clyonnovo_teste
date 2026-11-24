@@ -117,19 +117,19 @@ function mundo(pedidos: PedidoComEscolhidos[]) {
 }
 
 describe("1. a rotina corre no relógio de Lisboa", () => {
-  it("o prazo de 3 h conta só entre as 8h e as 21h de Lisboa", () => {
+  it("o prazo de 3 h conta só entre as 9h e as 20h de Lisboa", () => {
     expect(HORAS_PARA_RESPONDER).toBe(3);
-    expect(JANELA_DE_RESPOSTA).toEqual({ abre: 8, fecha: 21 });
+    expect(JANELA_DE_RESPOSTA).toEqual({ abre: 9, fecha: 20 });
     expect(PRAZO.toISOString()).toBe(lisboa("2026-11-11T19:00").toISOString());
-    // Um pedido das 20h00 acaba às 10h00 do dia seguinte.
-    expect(prazoDeResposta(lisboa("2026-11-11T20:00")).toISOString()).toBe(lisboa("2026-11-12T10:00").toISOString());
+    // Um pedido das 19h00 acaba às 11h00 do dia seguinte.
+    expect(prazoDeResposta(lisboa("2026-11-11T19:00")).toISOString()).toBe(lisboa("2026-11-12T11:00").toISOString());
   });
 
-  it("às 23h e às 02h de Lisboa não lê nem envia; às 08h avisa o que passou de noite", async () => {
+  it("às 23h e às 02h de Lisboa não lê nem envia; às 09h avisa o que passou de noite", async () => {
     // Todos disseram que não às 22h: trata-se logo, mas o cliente só é avisado de dia.
     const m = mundo([pedido({ negociacoes: [escolhida({ estado: "desistida" })] }), pedido({ id: 611 })]);
 
-    for (const hora of ["2026-11-11T23:00", "2026-11-12T02:00", "2026-11-12T07:59"]) {
+    for (const hora of ["2026-11-11T23:00", "2026-11-12T02:00", "2026-11-12T08:59"]) {
       const r = await correrOsEscolhidosSemResposta(m.deps, lisboa(hora));
       expect(r.naJanela, hora).toBe(false);
       expect(r.avisados, hora).toEqual([]);
@@ -137,7 +137,7 @@ describe("1. a rotina corre no relógio de Lisboa", () => {
     expect(m.leituras()).toBe(0);
     expect(m.enviados.whatsapp).toEqual([]);
 
-    const r = await correrOsEscolhidosSemResposta(m.deps, lisboa("2026-11-12T08:00"));
+    const r = await correrOsEscolhidosSemResposta(m.deps, lisboa("2026-11-12T09:00"));
     expect(r.naJanela).toBe(true);
     expect(r.avisados).toEqual([610, 611]);
     expect(m.enviados.whatsapp).toHaveLength(2);
@@ -146,13 +146,13 @@ describe("1. a rotina corre no relógio de Lisboa", () => {
   it("a janela é a de Lisboa seja qual for o fuso do servidor (23h de Lisboa são 23h UTC no Inverno e 22h UTC no Verão)", () => {
     expect(naJanelaDeResposta(new Date("2026-11-11T23:00:00Z"))).toBe(false);
     expect(naJanelaDeResposta(new Date("2026-11-12T02:00:00Z"))).toBe(false);
-    expect(naJanelaDeResposta(new Date("2026-11-12T08:00:00Z"))).toBe(true);
-    expect(naJanelaDeResposta(new Date("2026-11-12T20:59:00Z"))).toBe(true);
-    expect(naJanelaDeResposta(new Date("2026-11-12T21:00:00Z"))).toBe(false);
-    // No Verão Lisboa está em UTC+1: as 08h00 de Lisboa são as 07h00 UTC.
-    expect(naJanelaDeResposta(new Date("2026-07-01T07:00:00Z"))).toBe(true);
-    expect(naJanelaDeResposta(new Date("2026-07-01T06:59:00Z"))).toBe(false);
-    expect(naJanelaDeResposta(new Date("2026-07-01T20:00:00Z"))).toBe(false);
+    expect(naJanelaDeResposta(new Date("2026-11-12T09:00:00Z"))).toBe(true);
+    expect(naJanelaDeResposta(new Date("2026-11-12T19:59:00Z"))).toBe(true);
+    expect(naJanelaDeResposta(new Date("2026-11-12T20:00:00Z"))).toBe(false);
+    // No Verão Lisboa está em UTC+1: as 09h00 de Lisboa são as 08h00 UTC.
+    expect(naJanelaDeResposta(new Date("2026-07-01T08:00:00Z"))).toBe(true);
+    expect(naJanelaDeResposta(new Date("2026-07-01T07:59:00Z"))).toBe(false);
+    expect(naJanelaDeResposta(new Date("2026-07-01T19:00:00Z"))).toBe(false);
   });
 
   it("a rota é horária, está no vercel.json e na lista das rotinas, e usa a hora de Lisboa (sem getHours)", () => {
@@ -570,7 +570,7 @@ describe("4. o escolhido confirma num toque, com a tarifa congelada", () => {
 describe("5. os textos vivem numa só lib, e a lista diz as 3 horas", () => {
   it("a linha das 3 horas e a ajuda da opção vêm da lib, com as horas lidas das constantes", () => {
     expect(LINHA_DAS_3_HORAS).toBe(
-      "Os parceiros que escolher têm 3 horas para responder, entre as 8h e as 21h. " +
+      "Os parceiros que escolher têm 3 horas para responder, entre as 9h e as 20h. " +
         "Se nenhum responder, avisamos: pode esperar, escolher outro ou pedir à CLYON que procure por si.",
     );
     expect(TEXTOS_DA_LISTA.prazo).toBe(LINHA_DAS_3_HORAS);

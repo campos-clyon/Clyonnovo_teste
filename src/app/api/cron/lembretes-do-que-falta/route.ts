@@ -12,7 +12,7 @@ import { bearerConfere } from "@/lib/segredo-igual";
  * falta informação recebem o «Pedir o que falta» 30 min depois de entrarem, a
  * repetição no dia seguinte à mesma hora (no máximo 3 mensagens), e são
  * arquivados no dia a seguir à 3.ª, sem resposta. Por dentro só se faz alguma
- * coisa das 8h às 21h de Lisboa (o que fica fora sai às 9h). Os WhatsApp vão
+ * coisa das 9h às 20h de Lisboa (o que fica fora sai às 9h). Os WhatsApp vão
  * para a fila e saem um de cada vez, 20–45 s entre cada, às rondas da ponte;
  * os emails saem logo. Com o interruptor «Lembretes do que falta» desligado
  * nas Configs, responde «desligado» e não mexe em nada.
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   }
   try {
     const r = await carimbarPassagem("lembretes-do-que-falta", async () => {
-      // d102 (d): os «Recebemos o seu pedido #N» que ficaram para as 8h saem ANTES (levam a 1.ª do que falta).
+      // d102 (d): os «Recebemos o seu pedido #N» que ficaram para as 9h saem ANTES (levam a 1.ª do que falta).
       await rotinaDoRecebido(new Date()).catch((e) => console.error("[cron/lembretes-do-que-falta] recebemos:", e instanceof Error ? e.message : e));
       return rotinaDoQueFalta(new Date());
     }, (p) => ({

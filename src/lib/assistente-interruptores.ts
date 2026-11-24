@@ -293,8 +293,8 @@ export const AVISOS_AO_PROFISSIONAL_POR_PASSAGEM = 4;
 export const LEMBRETES_POR_PASSAGEM = 8;
 
 /** As horas em que o assistente não fala. Um lembrete às 3 da manhã perde tudo. */
-export const HORA_A_QUE_ACORDA = 9;
-export const HORA_A_QUE_ADORMECE = 21;
+export const HORA_A_QUE_ACORDA = JANELA_DE_CONTACTO.abre;
+export const HORA_A_QUE_ADORMECE = JANELA_DE_CONTACTO.fecha;
 
 /**
  * Pode falar agora?
@@ -343,4 +343,5 @@ export function deveTocar(
 /** Já se insistiu tudo o que havia a insistir — passa para a mesa do admin. */
 export function esgotou(especie: string, toques: number): boolean {
   return horasAteAoToqueSeguinte(especie, toques) == null;
-}
+}import { JANELA_DE_CONTACTO } from "./janela-de-contacto";
+

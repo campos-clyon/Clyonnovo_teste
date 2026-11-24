@@ -5,6 +5,7 @@ import {
   NOVO_MODELO_DESDE,
   novoModeloEmVigor,
 } from "./novo-modelo";
+import { NADA_A_PAGAR_AGORA_NO_NOVO_MODELO } from "./aviso-de-oferta-clyon";
 import { PAGAR_O_VALOR_EM_ATRASO } from "./valor-em-atraso";
 import { ATENDIMENTO_ABRE_AS, ATENDIMENTO_FECHA_AS, emHorarioDeAtendimento, quandoSeResponde } from "./horario-de-atendimento";
 import { pecasEmLisboa } from "./hora-de-lisboa";
@@ -41,6 +42,7 @@ export type PerguntaDeDinheiro =
   | "quem_me_paga"
   | "pagar_a_taxa"
   | "referencia_nao_da"
+  | "quando_pago_a_referencia"
   | "stand_by"
   | "iban_e_mbway"
   | "regime_de_iva"
@@ -52,6 +54,7 @@ export const PERGUNTAS_DE_DINHEIRO: readonly PerguntaDeDinheiro[] = [
   "quem_me_paga",
   "pagar_a_taxa",
   "referencia_nao_da",
+  "quando_pago_a_referencia",
   "stand_by",
   "iban_e_mbway",
   "regime_de_iva",
@@ -111,6 +114,13 @@ export function qualPerguntaDeDinheiro(texto: string): PerguntaDeDinheiro | null
     /\b(nao (da|deu|funciona|funcionou|passa|passou|aceita|aceitou|entra|entrou|consigo|consegui)|erro|invalida|expirou|expirada|caducou|rejeitad)/.test(t)
   )
     return "referencia_nao_da";
+
+  // 3b. Quando pago a referência (d4, 24-11-2026): agora nada; chega com o trabalho confirmado.
+  if (
+    /\b(referencia|ref\.?|multibanco|entidade|taxa)\b/.test(t) &&
+    /\b(quando|ate quando|que dia|prazo|ja (tenho|devo|preciso|posso))\b/.test(t)
+  )
+    return "quando_pago_a_referencia";
 
   // 4. O stand-by / a conta bloqueada.
   if (
@@ -216,6 +226,10 @@ export function respostaAoProfissional(
         "Pode pagar por Multibanco (entidade e referência) ou por MB WAY. " +
         "Quando o pagamento é confirmado, a carteira atualiza sozinha; não precisa de nos mandar o comprovativo."
       );
+    case "quando_pago_a_referencia":
+      // O texto é o da d100, lido da constante: nada a pagar agora, a referência
+      // chega com o trabalho confirmado, e os dias são os do modelo.
+      return NADA_A_PAGAR_AGORA_NO_NOVO_MODELO;
     case "referencia_nao_da":
       return (
         "Veja se o valor está exatamente igual ao da carteira e se a referência ainda está dentro do prazo. " +

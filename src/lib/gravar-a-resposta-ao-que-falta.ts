@@ -142,7 +142,7 @@ export async function gravarARespostaAoQueFalta(x: {
   /*
    * O PEDIDO COMPLETO SEGUE SOZINHO PARA OS PARCEIROS (d87/d2). Antes de
    * responder, para a mensagem dizer a verdade: feito o envio, «já seguiu…»;
-   * nos «por enviar» ou na fila das 8h00, «a equipa confere-o e segue…».
+   * nos «por enviar» ou na fila das 9h00, «a equipa confere-o e segue…».
    * Pela MESMA função da Mesa.
    */
   let jaSeguiu = false;

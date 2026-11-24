@@ -1,7 +1,7 @@
 /**
  * OS LEMBRETES DO QUE FALTA, NA BASE — d71 (CEO e dono, 19-11-2026), no ritmo
  * da d88 (23-11-2026): o «Pedir o que falta» sozinho, 30 min depois de o pedido
- * entrar, e a repetição no dia seguinte, das 8h às 21h de Lisboa.
+ * entrar, e a repetição no dia seguinte, das 9h às 20h de Lisboa.
  *
  * As regras puras estão em `lembrete-do-que-falta.ts`. Aqui:
  *
@@ -13,10 +13,10 @@
  *    pessoas: o telefone, o email e o nome lêem-se do pedido no momento;
  *  - `lembretesDoQueFaltaVez` — o carimbo «o próximo pode sair a partir de…»,
  *    20 a 45 s entre WhatsApp, como as outras filas;
- *  - a rotina (`/api/cron/lembretes-do-que-falta`, de 15 em 15 min, das 8h às
- *    21h de Lisboa) que decide o passo de cada pedido: os emails saem logo, os
+ *  - a rotina (`/api/cron/lembretes-do-que-falta`, de 15 em 15 min, das 9h às
+ *    20h de Lisboa) que decide o passo de cada pedido: os emails saem logo, os
  *    WhatsApp vão para a fila; a passagem (às rondas da ponte) envia UM de cada
- *    vez, das 8h às 21h;
+ *    vez, das 9h às 20h;
  *  - o «2» (chamado por `whatsapp-negociacao.ts`) e a linha da Mesa.
  *
  * Com o interruptor desligado, nada sai, nada se cancela e nada se arquiva.
@@ -436,7 +436,7 @@ export async function ensaioDoQueFalta(agora: Date = new Date()): Promise<Ensaio
 
 export { MOTIVOS_DE_FORA };
 
-/* ── A rotina: de 15 em 15 min, das 8h às 21h de Lisboa ──────────────────── */
+/* ── A rotina: de 15 em 15 min, das 9h às 20h de Lisboa ──────────────────── */
 
 export type ResultadoDaRotinaDoQueFalta = {
   ligado: boolean;
@@ -457,7 +457,7 @@ const INTERVALO_ENTRE_EMAILS_MS = 600;
  * da equipa, se houve, como a 1.ª mensagem); e o passo que já pode sair de
  * cada um — um por telefone, e nunca no dia em que já saiu outra mensagem
  * automática a esse cliente. Os emails saem logo, espaçados; os WhatsApp vão
- * para a fila da ponte. Desligado, ou fora das 8h–21h de Lisboa, não faz nada.
+ * para a fila da ponte. Desligado, ou fora das 9h–20h de Lisboa, não faz nada.
  */
 export async function rotinaDoQueFalta(agora: Date = new Date()): Promise<ResultadoDaRotinaDoQueFalta> {
   const r: ResultadoDaRotinaDoQueFalta = { ligado: false, novos: 0, naFila: 0, porEmail: 0, parados: 0, falhados: 0 };
@@ -543,7 +543,7 @@ export async function rotinaDoQueFalta(agora: Date = new Date()): Promise<Result
 
 export function resumoDaRotinaDoQueFalta(r: ResultadoDaRotinaDoQueFalta): string | null {
   if (!r.ligado) return `desligado (interruptor «${NOME_DO_INTERRUPTOR_DO_QUE_FALTA}» nas Configs)`;
-  if (r.foraDeHoras) return "fora das 8h–21h de Lisboa";
+  if (r.foraDeHoras) return "fora das 9h–20h de Lisboa";
   if (r.novos === 0 && r.naFila === 0 && r.porEmail === 0 && r.parados === 0 && r.falhados === 0) return null;
   return `${r.novos} ciclo(s) novo(s) · ${r.naFila} WhatsApp na fila · ${r.porEmail} email(s) · ${r.parados} parado(s)` + (r.falhados ? ` · ${r.falhados} falhado(s)` : "");
 }
@@ -554,7 +554,7 @@ export type ResultadoDaPassagemDoQueFalta = "desligado" | "fora-da-janela" | "na
 
 export async function passagemDoQueFalta(agora: Date = new Date()): Promise<ResultadoDaPassagemDoQueFalta> {
   const { intervaloAoAcaso } = await import("./aviso-aos-profissionais");
-  // d88: das 8h às 21h de Lisboa (a janela das mensagens automáticas).
+  // d88: das 9h às 20h de Lisboa (a janela das mensagens automáticas).
   if (!naJanelaDosLembretes(agora)) return "fora-da-janela";
   const pool = await garantirTabelas();
   const [proximos] = (await pool.query(

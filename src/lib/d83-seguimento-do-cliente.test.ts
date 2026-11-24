@@ -6,7 +6,7 @@ import { join } from "node:path";
  * O SEGUIMENTO DO CLIENTE — d83 (CEO e dono, 21-11-2026).
  *
  * O calendário (horas de Lisboa, a mudança da hora, o dia seguinte), a janela
- * das 9h00 às 20h59, a regra de uma mensagem automática por dia, a leitura do
+ * das 9h00 às 19h59, a regra de uma mensagem automática por dia, a leitura do
  * «1», do «2» e do «3», o fecho ao 4.º dia, os textos (e as traduções fixas),
  * as linhas da Mesa, a conversa a sério com a base fingida, e as guardas no
  * código (nunca DELETE, a fila, a purga, o cron). Nenhuma mensagem sai a
@@ -101,18 +101,18 @@ describe("o «voltar a contactar»: a janela e a hora de Lisboa", () => {
     expect(voltarPorOmissao(em("2026-07-10T22:30:00Z"))).toEqual({ dia: "2026-07-11", hora: "10:00" });
   });
 
-  it("só das 9h00 às 20h59", () => {
+  it("só das 9h00 às 19h59", () => {
     expect(horaNaJanela("08:59")).toBe(false);
     expect(horaNaJanela("09:00")).toBe(true);
-    expect(horaNaJanela("20:59")).toBe(true);
-    expect(horaNaJanela("21:00")).toBe(false);
+    expect(horaNaJanela("19:59")).toBe(true);
+    expect(horaNaJanela("20:00")).toBe(false);
     expect(horaNaJanela("9:00")).toBe(false);
     expect(naJanelaDoSeguimento(em("2026-11-22T08:59:00Z"))).toBe(false);
     expect(naJanelaDoSeguimento(em("2026-11-22T09:00:00Z"))).toBe(true);
-    expect(naJanelaDoSeguimento(em("2026-11-22T20:59:00Z"))).toBe(true);
-    expect(naJanelaDoSeguimento(em("2026-11-22T21:00:00Z"))).toBe(false);
-    // No Verão, as 20h30Z já são 21h30 em Lisboa.
-    expect(naJanelaDoSeguimento(em("2026-07-10T20:30:00Z"))).toBe(false);
+    expect(naJanelaDoSeguimento(em("2026-11-22T19:59:00Z"))).toBe(true);
+    expect(naJanelaDoSeguimento(em("2026-11-22T20:00:00Z"))).toBe(false);
+    // No Verão, as 19h30Z já são 20h30 em Lisboa.
+    expect(naJanelaDoSeguimento(em("2026-07-10T19:30:00Z"))).toBe(false);
     expect(naJanelaDoSeguimento(em("2026-07-10T08:30:00Z"))).toBe(true);
   });
 
@@ -120,7 +120,7 @@ describe("o «voltar a contactar»: a janela e a hora de Lisboa", () => {
     const agora = em("2026-11-21T15:00:00Z");
     const ok = validarVoltarEm("2026-11-22", "10:00", agora);
     expect(ok).toEqual({ ok: true, instante: VOLTAR });
-    expect(validarVoltarEm("2026-11-22", "21:00", agora).ok).toBe(false);
+    expect(validarVoltarEm("2026-11-22", "20:00", agora).ok).toBe(false);
     expect(validarVoltarEm("2026-11-22", "08:45", agora).ok).toBe(false);
     expect(validarVoltarEm("2026-11-21", "10:00", agora).ok).toBe(false); // já passou
     expect(validarVoltarEm("2026-02-30", "10:00", agora).ok).toBe(false);
@@ -190,8 +190,8 @@ describe("o calendário: 1.ª, 2.ª e 3.ª à mesma hora, e o fecho ao 4.º dia"
   });
 
   it("fora da janela, acabado ou sem canal: nada", () => {
-    const tarde = ciclo({ voltarEm: em("2026-11-22T20:45:00Z") });
-    expect(proximoPassoDoSeguimento(tarde, em("2026-11-22T21:05:00Z"))).toBeNull();
+    const tarde = ciclo({ voltarEm: em("2026-11-22T19:45:00Z") });
+    expect(proximoPassoDoSeguimento(tarde, em("2026-11-22T20:05:00Z"))).toBeNull();
     expect(proximoPassoDoSeguimento(ciclo({ paradoEm: em("2026-11-22T09:00:00Z") }), em("2026-11-22T10:00:00Z"))).toBeNull();
     expect(proximoPassoDoSeguimento(ciclo({ arquivadoEm: em("2026-11-22T09:00:00Z") }), em("2026-11-22T10:00:00Z"))).toBeNull();
     expect(proximoPassoDoSeguimento(ciclo({ canceladoEm: em("2026-11-22T09:00:00Z") }), em("2026-11-22T10:00:00Z"))).toBeNull();

@@ -327,8 +327,8 @@ export const O_QUE_A_CLYON_NAO_FAZ: string[] = [
   "Não cobra mensalidade, não vende contactos e não desconta nada por responder a um pedido.",
   // 18-11-2026 (d8): dizia «e ignora os outros, sem penalização». Desde a d6
   // de 11-11, nas mudanças pela lista, o escolhido tem 3 h para responder
-  // (das 8h às 21h de Lisboa, `escolhidos-sem-resposta`): diz-se o prazo.
-  "Não escolhe por si: aceita os pedidos que quiser. Se um cliente o escolher numa mudança, responda em 3 horas (das 8h às 21h).",
+  // (das 9h às 20h de Lisboa, `escolhidos-sem-resposta`): diz-se o prazo.
+  "Não escolhe por si: aceita os pedidos que quiser. Se um cliente o escolher numa mudança, responda em 3 horas (das 9h às 20h).",
 ];
 
 /**

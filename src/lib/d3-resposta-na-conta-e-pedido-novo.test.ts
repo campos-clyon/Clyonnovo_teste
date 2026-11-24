@@ -130,7 +130,7 @@ describe("d3 — o pedido novo segue sozinho", () => {
     expect(ler("src/app/api/hero-quote/route.ts")).toMatch(/after\(\(\) => seguirOPedidoNovo\(novoId\)\)/);
   });
 
-  it("pela função das outras origens, com todas as condições (8h–21h, fila das 8h)", async () => {
+  it("pela função das outras origens, com todas as condições (9h–20h, fila das 9h)", async () => {
     seguir.mockClear();
     const { seguirOPedidoNovo } = await import("./seguir-o-pedido-novo");
     await seguirOPedidoNovo(555);
@@ -189,7 +189,7 @@ describe("d3 — o passo 3 do simulador", () => {
     const { TRES_PASSOS_DEPOIS_DE_ENVIAR } = await import("./textos-do-pedido");
     const t = TRES_PASSOS_DEPOIS_DE_ENVIAR[0].texto;
     expect(t).toMatch(/segue sozinho/);
-    expect(t).toMatch(/8h/);
+    expect(t).toMatch(/9h/);
     expect(t).not.toMatch(/pr[óo]prio dia|profissionais|contentor|big bag/i);
   });
 });

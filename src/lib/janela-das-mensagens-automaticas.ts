@@ -1,27 +1,27 @@
+import { JANELA_DE_CONTACTO, naJanelaDeContacto } from "./janela-de-contacto";
 import { diaEmLisboa, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 
 /**
  * A JANELA DAS MENSAGENS AUTOMÁTICAS DA D88 — 23-11-2026 (CEO e dono).
  *
  * O «Pedir o que falta» sozinho (passo 1) e as propostas que vão ao cliente
- * sozinhas (passo 3) saem das 8h às 21h de Lisboa. O que fica fora — um
+ * sozinhas (passo 3) saem na janela de contacto (`janela-de-contacto.ts`, das 9h às 20h de Lisboa). O que fica fora — um
  * pedido que entra às 22h, uma proposta que chega às 6h, uma mensagem que
  * não saiu ontem porque já tinha saído outra automática nesse dia — sai às 9h,
- * nunca antes: às 8h ainda é cedo para quem não está à espera de nada.
+ * nunca antes: às 8h seria cedo para quem não está à espera de nada.
  *
  * PURO, e sempre na hora de Lisboa (o servidor corre em UTC).
  */
 
-export const JANELA_DAS_MENSAGENS_AUTOMATICAS = { das: 8, as: 21 } as const;
+export const JANELA_DAS_MENSAGENS_AUTOMATICAS = { das: JANELA_DE_CONTACTO.abre, as: JANELA_DE_CONTACTO.fecha } as const;
 /** A hora a que sai o que ficou para depois (fora de horas, ou de outro dia). */
-export const HORA_DO_QUE_FICOU_PARA_DEPOIS = 9;
+export const HORA_DO_QUE_FICOU_PARA_DEPOIS = JANELA_DE_CONTACTO.abre;
 
 const dois = (n: number) => String(n).padStart(2, "0");
 
-/** Das 8h às 21h de Lisboa? */
+/** Na janela de contacto (9h–20h de Lisboa)? */
 export function naJanelaDasMensagensAutomaticas(agora: Date): boolean {
-  const h = pecasEmLisboa(agora).hora;
-  return h >= JANELA_DAS_MENSAGENS_AUTOMATICAS.das && h < JANELA_DAS_MENSAGENS_AUTOMATICAS.as;
+  return naJanelaDeContacto(agora);
 }
 
 /** Um dia (YYYY-MM-DD) a uma hora de Lisboa, como instante. */
@@ -40,7 +40,7 @@ function primeiroNaJanela(d: Date): Date {
 
 /**
  * QUANDO SAI uma mensagem que podia sair a partir de `devido`, vista `agora`.
- * Pura. Se `devido` cai fora das 8h–21h, às 9h a seguir; se `agora` já passou
+ * Pura. Se `devido` cai fora da janela, às 9h a seguir; se `agora` já passou
  * disso e está fora da janela, às 9h a seguir a `agora`; e uma que ficou de
  * outro dia (fora de horas, ou travada pela uma-por-dia), nunca antes das 9h.
  */

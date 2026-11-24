@@ -54,7 +54,8 @@ import {
 import { ATENDIMENTO } from "./promessas-publicas";
 import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA } from "./voz-da-vitoria";
 import { falaDoModeloAntigo } from "./palavras-do-modelo-antigo";
-import { NOVO_MODELO_DESDE } from "./novo-modelo";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, NOVO_MODELO_DESDE } from "./novo-modelo";
+import { NADA_A_PAGAR_AGORA_NO_NOVO_MODELO } from "./aviso-de-oferta-clyon";
 
 /**
  * A VITÓRIA RESPONDE AOS PROFISSIONAIS — d21 (CEO e dono, 13-11-2026).
@@ -103,6 +104,12 @@ const CADERNO: Record<PerguntaDeDinheiro, string[]> = {
     "a referencia multibanco nao funciona",
     "Tentei pagar e deu erro na referência",
     "a referência expirou",
+  ],
+  quando_pago_a_referencia: [
+    "Quando pago a referência?",
+    "quando é que tenho de pagar a referência da taxa",
+    "Qual é o prazo para pagar a referência?",
+    "já tenho de pagar a taxa?",
   ],
   stand_by: [
     "O que é o stand-by?",
@@ -157,8 +164,8 @@ describe("o caderno das frases — as 9 perguntas de dinheiro", () => {
       for (const f of CADERNO[id]) expect(qualPerguntaDeDinheiro(f), f).toBe(id);
     });
   }
-  it("o caderno tem as 9, e cada uma com mais de uma forma", () => {
-    expect(PERGUNTAS_DE_DINHEIRO).toHaveLength(9);
+  it("o caderno tem as 10, e cada uma com mais de uma forma", () => {
+    expect(PERGUNTAS_DE_DINHEIRO).toHaveLength(10);
     for (const id of PERGUNTAS_DE_DINHEIRO) expect(CADERNO[id].length).toBeGreaterThan(2);
   });
   it.each(NAO_SAO)("«%s» não é uma das 9", (f) => {
@@ -171,6 +178,11 @@ describe("as respostas — o texto do CEO, na voz da equipa", () => {
     expect(respostaAoProfissional("quem_me_paga")).toContain("o cliente paga-lhe directamente, por transferência, MB WAY ou em dinheiro");
     expect(respostaAoProfissional("quem_me_paga")).toContain("antes de 15/11, seguem como estavam");
     expect(respostaAoProfissional("pagar_a_taxa")).toContain("Pode pagar por Multibanco (entidade e referência) ou por MB WAY");
+    // d4 (24-11-2026): «quando pago a referência?» — agora nada; chega na confirmação; os dias vêm da constante.
+    expect(respostaAoProfissional("quando_pago_a_referencia")).toBe(NADA_A_PAGAR_AGORA_NO_NOVO_MODELO);
+    expect(respostaAoProfissional("quando_pago_a_referencia")).toContain("nada a pagar agora");
+    expect(respostaAoProfissional("quando_pago_a_referencia")).toContain("Quando o trabalho ficar confirmado");
+    expect(respostaAoProfissional("quando_pago_a_referencia")).toContain(`${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias`);
     expect(respostaAoProfissional("referencia_nao_da")).toContain("diga-nos o n.º do trabalho e geramos outra");
     expect(respostaAoProfissional("stand_by")).toContain("mais de 4 dias");
     expect(respostaAoProfissional("stand_by")).toContain("«Pagar o valor em atraso»");
@@ -193,7 +205,9 @@ describe("as respostas — o texto do CEO, na voz da equipa", () => {
       expect(r, id).not.toMatch(/d[íi]vida/i);
       expect(falaDoModeloAntigo(r, "todos"), id).toBeNull();
       expect(r, id).not.toMatch(/\b(IA|virtual|intelig[êe]ncia artificial|garantia)\b/i);
-      expect(r, id).not.toMatch(/no próprio dia|paga no fim|no dia do trabalho/i);
+      expect(r, id).not.toMatch(/no próprio dia|paga no fim/i);
+      // A frase da d100 (aprovada) é a única que diz «no dia do trabalho».
+      if (id !== "quando_pago_a_referencia") expect(r, id).not.toMatch(/no dia do trabalho/i);
     }
   });
 

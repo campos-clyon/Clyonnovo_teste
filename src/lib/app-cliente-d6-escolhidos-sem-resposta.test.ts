@@ -466,7 +466,7 @@ describe("6. a lista: a linha das 3 horas, e «pedir à CLYON» sempre que há p
     if (!l.ligado) throw new Error("ligado");
     expect(l.textos.prazo).toBe(LINHA_DAS_3_HORAS);
     expect(l.textos.prazo).toBe(
-      "Os parceiros que escolher têm 3 horas para responder, entre as 8h e as 21h. Se nenhum responder, avisamos: pode esperar, escolher outro ou pedir à CLYON que procure por si.",
+      "Os parceiros que escolher têm 3 horas para responder, entre as 9h e as 20h. Se nenhum responder, avisamos: pode esperar, escolher outro ou pedir à CLYON que procure por si.",
     );
     expect(l.textos.procurarMaisAjuda).toBe(AJUDA_DO_PROCURAR_MAIS);
     const ECRA = semNotas("app-cliente/src/componentes/ParceirosDaMudanca.tsx");

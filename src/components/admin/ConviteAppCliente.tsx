@@ -132,7 +132,7 @@ export default function ConviteAppCliente({
         `Vão sair ${emails} email${emails !== 1 ? "s" : ""} e ${whatsapps} WhatsApp ` +
         `(a quem tem telemóvel na conta).\n\n` +
         `Só contas com Gmail que ainda não aderiram, também as do convite de 01/11. ` +
-        `Cada pessoa recebe-o uma vez. Os WhatsApp saem um de cada vez, 20 a 45 s entre cada, das 9h às 21h. ` +
+        `Cada pessoa recebe-o uma vez. Os WhatsApp saem um de cada vez, 20 a 45 s entre cada, das 9h às 20h. ` +
         `3 dias depois sai um lembrete único a quem não aderir. Não se desfaz.`,
     );
     if (!certeza) return;

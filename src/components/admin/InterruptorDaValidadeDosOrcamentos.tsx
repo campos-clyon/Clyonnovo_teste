@@ -74,7 +74,7 @@ export default function InterruptorDaValidadeDosOrcamentos() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{NOME_DO_INTERRUPTOR_DA_VALIDADE}</p>
       <p className="mt-1 text-sm leading-6 text-slate-300">
         O orçamento vale 3 dias. Ligado, a Vitória manda ao cliente um lembrete no dia seguinte ao envio e o último aviso
-        ao terceiro dia (das 9h às 21h, nunca dois no mesmo dia), e o pedido fecha no quarto dia às 18h se ele não
+        ao terceiro dia (das 9h às 20h, nunca dois no mesmo dia), e o pedido fecha no quarto dia às 18h se ele não
         responder — os parceiros com proposta são avisados. Uma resposta dele pára a contagem e passa à equipa.
       </p>
       <p className={`mt-2 text-sm font-semibold ${ligado ? "text-red-300" : "text-amber-200"}`}>

@@ -287,16 +287,16 @@ describe("a mensagem gentil aos 10 minutos de silêncio", () => {
     expect(podeSeguir(duasJa, pergunta("Há elevador?", 10 * MIN), ligado)).toBe(false);
   });
 
-  it("nunca entre as 21h e as 9h de Lisboa — pela hora de Lisboa, e não pela do servidor", () => {
+  it("nunca entre as 20h e as 9h de Lisboa — pela hora de Lisboa, e não pela do servidor", () => {
     const s = (iso: string) => ({ ligado: true, agora: new Date(iso) });
     const p = pergunta("Qual é a morada?", 10 * MIN);
-    // Inverno (Lisboa = UTC): 20h59 fala, 21h00 não, 8h59 não, 9h00 fala.
-    expect(podeSeguir(naMorada, p, s("2026-11-13T20:59:00Z"))).toBe(true);
-    expect(podeSeguir(naMorada, p, s("2026-11-13T21:00:00Z"))).toBe(false);
+    // Inverno (Lisboa = UTC): 19h59 fala, 20h00 não, 8h59 não, 9h00 fala.
+    expect(podeSeguir(naMorada, p, s("2026-11-13T19:59:00Z"))).toBe(true);
+    expect(podeSeguir(naMorada, p, s("2026-11-13T20:00:00Z"))).toBe(false);
     expect(podeSeguir(naMorada, p, s("2026-11-14T08:59:00Z"))).toBe(false);
     expect(podeSeguir(naMorada, p, s("2026-11-14T09:00:00Z"))).toBe(true);
-    // Verão (Lisboa = UTC+1): 20h30 UTC já são 21h30 em Lisboa; 08h30 UTC são 9h30.
-    expect(podeSeguir(naMorada, p, s("2026-07-10T20:30:00Z"))).toBe(false);
+    // Verão (Lisboa = UTC+1): 19h30 UTC já são 20h30 em Lisboa; 08h30 UTC são 9h30.
+    expect(podeSeguir(naMorada, p, s("2026-07-10T19:30:00Z"))).toBe(false);
     expect(podeSeguir(naMorada, p, s("2026-07-10T08:30:00Z"))).toBe(true);
   });
 
@@ -306,9 +306,9 @@ describe("a mensagem gentil aos 10 minutos de silêncio", () => {
     // Já com as duas usadas, de noite também não salta.
     const duas: EstadoDaRecolha = { passo: "elevador", dados: { ...naMorada.dados, seguimentos: ["morada", "andar"] } };
     expect(oQueFazerComARecolha(duas, pergunta("Há elevador?", 20 * MIN), SALTO_DA_PERGUNTA, noite)).toBe("nada");
-    // A pergunta das 20h50 leva a mensagem gentil às 9h do dia seguinte (12h10 depois).
+    // A pergunta das 19h50 leva a mensagem gentil às 9h do dia seguinte (13h10 depois).
     const nove = { ligado: true, agora: new Date("2026-11-14T09:00:00Z") };
-    expect(oQueFazerComARecolha(naMorada, pergunta("Qual é a morada?", 12 * 3600 + 10 * MIN), SALTO_DA_PERGUNTA, nove)).toBe("seguir");
+    expect(oQueFazerComARecolha(naMorada, pergunta("Qual é a morada?", 13 * 3600 + 10 * MIN), SALTO_DA_PERGUNTA, nove)).toBe("seguir");
     // Desligado, é como era: o salto não olha para a hora.
     expect(oQueFazerComARecolha(naMorada, pergunta("Qual é a morada?", 20 * MIN), SALTO_DA_PERGUNTA, { ligado: false, agora: noite.agora })).toBe("saltar");
   });
@@ -319,10 +319,10 @@ describe("a mensagem gentil aos 10 minutos de silêncio", () => {
     expect(podeSeguir(naMorada, p, { ...ligado, pedidoRegistado: true })).toBe(false);
     expect(podeSeguir(naMorada, pergunta(`${MARCA_DE_MAO} já lhe ligo`, 15 * MIN), ligado)).toBe(false);
     expect(podeSeguir(naMorada, { direccao: "in", texto: "um momento", haSegundos: 15 * MIN }, ligado)).toBe(false);
-    // Nem no serviço, nem no resumo (que tem o seu registo aos 30 minutos), nem numa conversa de há 14 horas.
+    // Nem no serviço, nem no resumo (que tem o seu registo aos 30 minutos), nem numa conversa de há 15 horas.
     expect(podeSeguir({ passo: "servico", dados: {} }, p, ligado)).toBe(false);
     expect(podeSeguir({ passo: "confirmar", dados: naMorada.dados }, p, ligado)).toBe(false);
-    expect(podeSeguir(naMorada, pergunta("Qual é a morada?", 14 * 3600), ligado)).toBe(false);
+    expect(podeSeguir(naMorada, pergunta("Qual é a morada?", 15 * 3600), ligado)).toBe(false);
   });
 
   it("a mesma pergunta por outras palavras, que a releitura reconhece como a mesma", () => {

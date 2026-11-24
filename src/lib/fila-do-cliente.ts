@@ -12,7 +12,7 @@
  *
  *   · mais de 2 h na fila → «atrasada»: não sai sozinha. Fica na Mesa das
  *     conversas, com selo, para a equipa decidir — enviar ou descartar;
- *   · fora da hora de falar (21h–9h de Lisboa) → espera, a não ser que o
+ *   · fora da hora de falar (20h–9h de Lisboa) → espera, a não ser que o
  *     cliente esteja a falar AGORA (escreveu há menos de meia hora): a
  *     Vitória continua a responder a quem lhe escreve de noite, mas nada
  *     que ficou para trás sai sozinho a essa hora;

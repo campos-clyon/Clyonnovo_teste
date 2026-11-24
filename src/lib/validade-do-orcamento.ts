@@ -6,7 +6,7 @@
  *
  *   · D (o envio): a mensagem do orçamento diz «Esta proposta é válida até
  *     {dia da semana, dd/mm}» — 3 dias depois, em Lisboa;
- *   · D+1, entre as 9h e as 21h de Lisboa: o lembrete, na voz da Vitória, com
+ *   · D+1, entre as 9h e as 20h de Lisboa: o lembrete, na voz da Vitória, com
  *     a melhor proposta e as opções 1/2/3;
  *   · D+3: o último aviso — «Se não tivermos resposta até amanhã às 18h,
  *     fechamos o pedido.»;
@@ -26,6 +26,7 @@
  * base, a rotina e a fila estão em `validade-do-orcamento-na-base.ts`.
  */
 
+import { JANELA_DE_CONTACTO } from "./janela-de-contacto";
 import { diaEmLisboa, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { textoDoFechoAoParceiro } from "./textos-dos-avisos-ao-profissional";
 import { regraDaBase } from "./frase-da-base";
@@ -41,8 +42,8 @@ export const DIAS_ATE_AO_LEMBRETE = 1;
 export const DIAS_ATE_AO_ULTIMO_AVISO = 3;
 /** A hora do fecho, em Lisboa, no dia a seguir ao último aviso. */
 export const HORA_DO_FECHO = 18;
-/** A janela das mensagens automáticas, em Lisboa: das 9h00 às 20h59. */
-export const JANELA_DA_VALIDADE = { das: 9, as: 21 } as const;
+/** A janela das mensagens automáticas: a de contacto (das 9h00 às 19h59, em Lisboa). */
+export const JANELA_DA_VALIDADE = { das: JANELA_DE_CONTACTO.abre, as: JANELA_DE_CONTACTO.fecha } as const;
 /** «Até 10 % mais cara, com melhor avaliação» — a escolha da proposta do lembrete. */
 export const MARGEM_PARA_A_MELHOR_AVALIADA = 0.1;
 
@@ -114,7 +115,7 @@ export function datasDoCiclo(c: CicloDoOrcamento): DatasDoCiclo {
   return { diaDoEnvio, diaDoLembrete, diaDoUltimoAviso, fecho };
 }
 
-/** Das 9h às 21h de Lisboa? */
+/** Na janela de contacto (9h–20h de Lisboa)? */
 export function naJanelaDaValidade(agora: Date): boolean {
   const h = pecasEmLisboa(agora).hora;
   return h >= JANELA_DA_VALIDADE.das && h < JANELA_DA_VALIDADE.as;
@@ -135,7 +136,7 @@ export function diaDaUltimaMensagem(c: CicloDoOrcamento): string | null {
  *   · o fecho, a partir das 18h do dia a seguir ao último aviso — e só depois
  *     de o último aviso ter saído (sem aviso, não se fecha).
  *
- * A rotina só fala dentro da janela (9h–21h). O «Lembrar agora» da Mesa
+ * A rotina só fala dentro da janela (9h–20h). O «Lembrar agora» da Mesa
  * (`manual`) salta a janela e o dia do lembrete, mas não manda dois avisos no
  * mesmo dia, e não fecha.
  */

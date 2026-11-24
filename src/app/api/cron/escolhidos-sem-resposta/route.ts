@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  *
  * De hora a hora: numa mudança em que o cliente escolheu os parceiros da
  * lista, se o prazo de 3 horas passou e nenhum respondeu (ou todos disseram
- * que não), o cliente é avisado UMA vez, só entre as 8h e as 21h de Lisboa,
+ * que não), o cliente é avisado UMA vez, só entre as 9h e as 20h de Lisboa,
  * com as três saídas. Não envia o pedido a mais ninguém: isso só a pedido do
  * cliente. A regra é `semRespostaDosEscolhidos` (escolhidos-sem-resposta.ts);
  * o trabalho, `correrARotinaDosEscolhidos`.

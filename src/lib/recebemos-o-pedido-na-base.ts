@@ -3,11 +3,11 @@
  * As regras e o texto estão em `recebemos-o-pedido.ts`.
  *
  *  - `pedidoRecebidoAoCliente` — UMA linha por pedido: à espera (fora das
- *    8h–21h), a enviar, enviado, falhou, ou «não» (e porquê). É a reserva que
+ *    9h–20h), a enviar, enviado, falhou, ou «não» (e porquê). É a reserva que
  *    impede a mensagem de sair duas vezes;
  *  - `avisarQueRecebemosOPedido` — chamado pelo simulador e pelo formulário da
  *    página inicial logo depois de gravar o pedido (em `after()`);
- *  - `rotinaDoRecebido` — os que ficaram à espera saem às 8h, pela rotina do
+ *  - `rotinaDoRecebido` — os que ficaram à espera saem às 9h, pela rotina do
  *    «Pedir o que falta» (que corre a seguir, e já encontra a 1.ª dada).
  *
  * Nunca lança para quem chama: o pedido já está gravado.
@@ -111,7 +111,7 @@ async function enviar(pool: Pool, pedidoId: number, telemovel: string, agora: Da
 
 /**
  * LOGO DEPOIS DE GRAVAR O PEDIDO (simulador e formulário da página inicial):
- * sai já, fica à espera das 8h, ou não sai (sem telemóvel português, «não
+ * sai já, fica à espera das 9h, ou não sai (sem telemóvel português, «não
  * contactar», bloqueado, conversa com uma pessoa). Nunca lança.
  */
 export async function avisarQueRecebemosOPedido(pedidoId: number, agora: Date = new Date()): Promise<void> {
@@ -138,7 +138,7 @@ export async function avisarQueRecebemosOPedido(pedidoId: number, agora: Date = 
 
 export type ResultadoDoRecebido = { enviados: number; caducados: number; naoSaem: number };
 
-/** Os que ficaram à espera (fora das 8h–21h) saem na janela, um a um. Os que perderam a vez já não saem. */
+/** Os que ficaram à espera (fora das 9h–20h) saem na janela, um a um. Os que perderam a vez já não saem. */
 export async function rotinaDoRecebido(agora: Date = new Date()): Promise<ResultadoDoRecebido> {
   const r: ResultadoDoRecebido = { enviados: 0, caducados: 0, naoSaem: 0 };
   if (!naJanelaDoRecebido(agora)) return r;

@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  * De hora a hora, os trabalhos do modelo de 15-11 com a data passada há 48 h e
  * sem «Está feito» recebem UM email com o link de um toque. SÓ com o
  * interruptor das Configs ligado (desligado por omissão), só depois de 15-11, e
- * só das 08h às 21h de Lisboa. Desligado, conta e não envia nada. A Mesa, o
+ * só das 9h às 20h de Lisboa. Desligado, conta e não envia nada. A Mesa, o
  * aviso à equipa e a pergunta na página do pedido não dependem desta rotina.
  */
 export async function GET(req: NextRequest) {

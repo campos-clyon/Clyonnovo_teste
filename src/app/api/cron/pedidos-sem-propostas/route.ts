@@ -8,7 +8,7 @@ import { bearerConfere } from "@/lib/segredo-igual";
  *
  * Ver `sem-propostas-ao-cliente.ts`: 24 h depois de o pedido seguir para os
  * parceiros sem nenhuma proposta, ou logo que fica «sem parceiros na zona», a
- * Vitória avisa o cliente uma vez (WhatsApp ou email), das 8h às 21h de
+ * Vitória avisa o cliente uma vez (WhatsApp ou email), das 9h às 20h de
  * Lisboa, dentro da regra de uma mensagem automática por dia e do «não
  * contactar». O pedido aparece no «Do nosso lado» da Mesa.
  */

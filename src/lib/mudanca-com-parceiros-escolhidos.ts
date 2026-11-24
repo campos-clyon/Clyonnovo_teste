@@ -31,7 +31,7 @@ import type { CartaoDoParceiro } from "./lista-de-parceiros-da-mudanca";
  *      (`assinaturasDoPreco`, o-que-o-cliente-viu.ts). Sem escolha, ou com o interruptor das Configs desligado, é o
  *      caminho de antes (a Mesa).
  *   2. `enviarAosEscolhidos`, DEPOIS de gravar: congela a tarifa de cada um na
- *      negociação dele, grava o prazo (3 h entre as 8h e as 21h de Lisboa),
+ *      negociação dele, grava o prazo (3 h entre as 9h e as 20h de Lisboa),
  *      envia SÓ a esses (soPara ∩ elegíveis, sem a análise da CLYON), avisa-os
  *      como a distribuição avisa, e grava no pedido o que o cliente viu.
  */
@@ -153,7 +153,7 @@ export function linhaDoHistorico(e: EscolhaPreparada, prazo: Date, resumo: strin
   return (
     `Mudança com a lista de parceiros: o cliente escolheu ${e.escolhidos.map((x) => x.nome).join(", ")} ` +
     `(equipa de ${e.pessoas}). Enviado logo aos escolhidos, sem a análise da CLYON, com a tarifa de cada um congelada. ` +
-    `Prazo de resposta: ${dataEHoraEmLisboa(prazo)} (3 h, entre as 8h e as 21h). ` +
+    `Prazo de resposta: ${dataEHoraEmLisboa(prazo)} (3 h, entre as 9h e as 20h). ` +
     (e.procurarMais ? "O cliente pediu também que a CLYON procure mais parceiros. " : "") +
     (e.pedidoDaLista.embalamento ? "O cliente precisa também de caixas e embalamento. " : "") +
     resumo

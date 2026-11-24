@@ -168,7 +168,7 @@ export async function whatsappsDaAppPorSair(): Promise<number> {
 export type ResultadoDaPassagemDaApp = "fora-da-janela" | "nada" | "nao-e-a-vez" | "enviado" | "falhou";
 
 /**
- * Uma passagem: se for a vez (20 a 45 s depois da anterior, das 9h às 21h
+ * Uma passagem: se for a vez (20 a 45 s depois da anterior, das 9h às 20h
  * de Lisboa), envia UM WhatsApp da fila. Seguro com passagens ao mesmo tempo:
  * a vez é um UPDATE condicional e cada linha é reservada (pendente → a_enviar)
  * antes de sair. Uma linha reservada que não chega a sair fica «a_enviar» e

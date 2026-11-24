@@ -13,7 +13,7 @@
  *   · «sem_parceiros» — logo que o envio aos parceiros fica «sem parceiros na
  *     zona» (`envio-automatico-aos-parceiros.ts`).
  *
- * Pelo WhatsApp quando há telemóvel português; senão, por email. Das 8h às 21h
+ * Pelo WhatsApp quando há telemóvel português; senão, por email. Das 9h às 20h
  * de Lisboa; nunca no dia em que já saiu outra mensagem automática a esse
  * cliente (`uma-mensagem-automatica-por-dia.ts`, que também diz «sim» a quem
  * está em «não contactar»); nunca com a conversa entregue a uma pessoa da
@@ -148,7 +148,7 @@ export function decidirOAvisoSemPropostas(c: ClienteSemPropostas, agora: Date): 
   if (!canal) return { tipo: "fica", porque: "sem telemóvel português nem email" };
   if (canal === "whatsapp" && c.bloqueado) return { tipo: "fica", porque: "o número está bloqueado" };
   if (canal === "whatsapp" && c.comUmaPessoa) return { tipo: "fica", porque: "a conversa está com uma pessoa da equipa" };
-  if (!naJanelaDasMensagensAutomaticas(agora)) return { tipo: "espera", porque: "fora das 8h–21h de Lisboa" };
+  if (!naJanelaDasMensagensAutomaticas(agora)) return { tipo: "espera", porque: "fora das 9h–20h de Lisboa" };
   if (c.jaSaiuHoje) return { tipo: "espera", porque: "já saiu hoje outra mensagem automática a este cliente" };
   return { tipo: "sai", canal };
 }
@@ -159,5 +159,5 @@ export function linhaSemPropostas(motivo: MotivoSemPropostas, aviso: { estado: s
   if (aviso.estado === "enviado") return `${base} · a Vitória já avisou o cliente`;
   if (aviso.estado === "falhou") return `${base} · o aviso ao cliente não saiu${aviso.porque ? ` (${aviso.porque})` : ""}`;
   if (aviso.estado === "fica") return `${base} · avisar o cliente à mão${aviso.porque ? ` (${aviso.porque})` : ""}`;
-  return `${base} · a Vitória avisa o cliente (8h–21h)`;
+  return `${base} · a Vitória avisa o cliente (9h–20h)`;
 }

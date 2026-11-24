@@ -1,10 +1,11 @@
+import { JANELA_DE_CONTACTO } from "./janela-de-contacto";
 import { diaEmLisboa, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 
 /**
  * O PRAZO DE RESPOSTA DE UM PARCEIRO ESCOLHIDO PELO CLIENTE — 10-11-2026.
  *
  * Numa mudança com a lista de parceiros, o pedido vai logo aos escolhidos, e
- * cada um tem 3 horas para responder — contadas só entre as 8h e as 21h de
+ * cada um tem 3 horas para responder — contadas só entre as 9h e as 20h de
  * Lisboa (um pedido das 20h00 acaba às 10h00 do dia seguinte). O prazo grava-se
  * na negociação e vê-se na Mesa. O que acontece quando passa fica para a fase
  * seguinte.
@@ -14,7 +15,7 @@ import { diaEmLisboa, instanteEmLisboa, pecasEmLisboa, somarDiasAoDia } from "./
  */
 
 export const HORAS_PARA_RESPONDER = 3;
-export const JANELA_DE_RESPOSTA = Object.freeze({ abre: 8, fecha: 21 });
+export const JANELA_DE_RESPOSTA = JANELA_DE_CONTACTO;
 
 const dois = (n: number) => String(n).padStart(2, "0");
 const naHora = (dia: string, hora: number) => instanteEmLisboa(`${dia}T${dois(hora)}:00`) as Date;

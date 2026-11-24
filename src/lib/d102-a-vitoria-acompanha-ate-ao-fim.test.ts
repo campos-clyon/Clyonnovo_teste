@@ -271,7 +271,7 @@ describe("d102 (a) — o pedido sem propostas: a rotina", () => {
     expect(e.enviados).toHaveLength(1);
   });
 
-  it("fora das 8h–21h, ou com outra mensagem automática hoje (ou «não contactar»), não sai", async () => {
+  it("fora das 9h–20h, ou com outra mensagem automática hoje (ou «não contactar»), não sai", async () => {
     umPedido();
     expect((await rotinaSemPropostas(NOITE)).enviados).toBe(0);
     e.naoContactar = true;
@@ -402,11 +402,11 @@ describe("d102 (d) — «Recebemos o seu pedido #N»", () => {
     for (const l of ["en", "fr", "es"] as const) expect(traducaoFixa(textoDoRecebido(901, null), l)).not.toBeNull();
   });
 
-  it("das 8h às 21h; fora disso, à espera das 8h; nunca a quem está em «não contactar»", () => {
+  it("das 9h às 20h; fora disso, à espera das 9h; nunca a quem está em «não contactar»", () => {
     const s = { telemovel: "351910000002", naoContactar: false, bloqueado: false, comUmaPessoa: false, jaTratado: false };
     expect(decidirORecebido(s, TARDE).tipo).toBe("sai");
     expect(decidirORecebido(s, NOITE).tipo).toBe("espera");
-    expect(decidirORecebido(s, new Date("2026-11-24T08:05:00Z")).tipo).toBe("sai");
+    expect(decidirORecebido(s, new Date("2026-11-24T09:05:00Z")).tipo).toBe("sai");
     expect(decidirORecebido({ ...s, naoContactar: true }, TARDE).tipo).toBe("nao");
     expect(decidirORecebido({ ...s, telemovel: null }, TARDE).tipo).toBe("nao");
   });
@@ -426,7 +426,7 @@ describe("d102 (d) — «Recebemos o seu pedido #N»", () => {
     expect(e.marcadosPeloRecebido).toEqual([]);
   });
 
-  it("à noite não sai (fica para as 8h); em «não contactar», nunca", async () => {
+  it("à noite não sai (fica para as 9h); em «não contactar», nunca", async () => {
     await avisarQueRecebemosOPedido(903, NOITE);
     expect(e.recebidos.get(903)).toBe("espera");
     e.naoContactar = true;
@@ -434,7 +434,7 @@ describe("d102 (d) — «Recebemos o seu pedido #N»", () => {
     expect(e.enviados).toHaveLength(0);
   });
 
-  it("o simulador e o formulário chamam-no; a rotina das 8h corre antes da do que falta", () => {
+  it("o simulador e o formulário chamam-no; a rotina das 9h corre antes da do que falta", () => {
     expect(ler("src/app/api/simulador/pedido/route.ts")).toContain("after(() => avisarQueRecebemosOPedido(id))");
     expect(ler("src/app/api/hero-quote/route.ts")).toContain("after(() => avisarQueRecebemosOPedido(novoId))");
     const cron = ler("src/app/api/cron/lembretes-do-que-falta/route.ts");

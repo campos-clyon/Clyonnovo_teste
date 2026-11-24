@@ -130,7 +130,7 @@ export async function avancarOAviso(
     }
   }
 
-  /* ── WhatsApp: um por vez, 20–45 s entre cada, 9h–21h de Lisboa ──────────── */
+  /* ── WhatsApp: um por vez, 20–45 s entre cada, 9h–20h de Lisboa ──────────── */
   if (envio.canais.includes("whatsapp")) {
     if (!dentroDaJanelaDoWhatsApp(agora)) {
       r.foraDaJanela = true;

@@ -66,7 +66,7 @@ describe("a linha das mudanças escolhidas", () => {
   it("diz o prazo das 3 horas, e não «sem penalização»", () => {
     const tudo = O_QUE_A_CLYON_NAO_FAZ.join(" ");
     expect(tudo).not.toMatch(/sem penaliza/i);
-    expect(tudo).toContain("Se um cliente o escolher numa mudança, responda em 3 horas (das 8h às 21h).");
+    expect(tudo).toContain("Se um cliente o escolher numa mudança, responda em 3 horas (das 9h às 20h).");
   });
 });
 

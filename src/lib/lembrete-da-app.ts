@@ -79,7 +79,7 @@ export async function enviarLembretesDaApp(agora: Date): Promise<{
       canais.push("email");
     }
     // O WhatsApp não sai daqui de rajada: entra na fila própria e sai um de
-    // cada vez, 20–45 s entre cada, das 9h às 21h (convite-novo-da-app-na-base.ts).
+    // cada vez, 20–45 s entre cada, das 9h às 20h (convite-novo-da-app-na-base.ts).
     if (ligado.whatsapp && textoWhats && telemovelDoAviso(c.telefone)) {
       try {
         if (await porWhatsAppDaAppNaFila(c.email, "lembrete")) {

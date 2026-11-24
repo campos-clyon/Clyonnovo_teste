@@ -476,8 +476,7 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         `${ola} Está combinado com ${pro} para ${servico}` +
         (acordado != null
           ? forma === "dinheiro" && !novo
-            ? `, por ${dele(acordado)}. ${totalEmPalavras(acordado, modelo, taxas, "dinheiro", base)}` +
-              ` Ele já tem a morada e o seu contacto.`
+            ? `, por ${dele(acordado)}. ${totalEmPalavras(acordado, modelo, taxas, "dinheiro", base)}`
             : `, por ${dele(acordado)}, ${
                 // Com IVA incluído, e de que é feito — 03-10-2026. Ver `desdobramentoDoIva`.
                 totalNovo(acordado)
@@ -485,8 +484,8 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
                   : modelo === "iva_incluido"
                     ? `IVA incluído (${desdobramentoDoIva(precoDoCliente(acordado, taxas, modelo))})`
                     : "sem IVA"
-              }.${totalNovo(acordado) ? ` ${quemPassaAFatura(n)}` : ""}${novo ? ` ${pagaAoContratado(n.dadosPorConfirmar === true)}` : ""} Ele já tem a morada e o seu contacto.`
-          : `.${novo ? ` ${pagaAoContratado(n.dadosPorConfirmar === true)}` : ""} Ele já tem a morada e o seu contacto.`) +
+              }.${totalNovo(acordado) ? ` ${quemPassaAFatura(n)}` : ""}${novo ? ` ${pagaAoContratado(n.dadosPorConfirmar === true)}` : ""}`
+          : `.${novo ? ` ${pagaAoContratado(n.dadosPorConfirmar === true)}` : ""}`) +
         eANota +
         (combinada ? "" : " Se já tem dia pensado, diga-me qual que eu deixo marcado."),
     });
@@ -554,8 +553,8 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
         negociacaoId: n.id,
         quando: confirmado,
         texto:
-          `${ola} Está tudo fechado, e fico-lhe grato por ter confiado ${servico} à CLYON. ` +
-          `Foi um gosto tratar disto consigo. Ficamos por aqui para o que precisar.`,
+          `${ola} Está tudo fechado. Obrigada por ter confiado ${servico} à CLYON: o parceiro escolhido trata do trabalho, ` +
+          `e por aqui ficamos para o que precisar.`,
       });
 
       /*
@@ -931,7 +930,7 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
    * (`whatsappAvisos`): o dono escolheu que este chega a todos — ver
    * `aviso-de-data-ao-profissional.ts`.
    *
-   * RESPEITA A HORA, como tudo o que fala com gente: das 9 h às 21 h, para os
+   * RESPEITA A HORA, como tudo o que fala com gente: das 9 h às 20 h, para os
    * dois. Uma mudança às 23 h sai às 9 h; se nessa altura o dia novo já tiver
    * passado, já não é aviso.
    */

@@ -98,7 +98,7 @@ export default function LembretesDoQueFalta() {
       <p className="mt-1 text-sm leading-6 text-slate-300">
         Os pedidos dos «Orçamentos novos» a que falta informação, sem pessoa atribuída, recebem o «Pedir o que falta»
         sozinho 30 min depois de entrarem (nunca com o cliente a escrever há menos de 30 min), e a repetição no dia
-        seguinte à mesma hora: no máximo 3 mensagens, das 8h às 21h de Lisboa (o que fica fora sai às 9h), pelo
+        seguinte à mesma hora: no máximo 3 mensagens, das 9h às 20h de Lisboa (o que fica fora sai às 9h), pelo
         WhatsApp ou, sem telemóvel, por email. O «Pedir o que falta» da equipa conta como a 1.ª. Sem resposta, o
         pedido é arquivado no dia a seguir à 3.ª (nunca apagado). O «2» cancela o pedido; qualquer outra resposta
         pára as mensagens e a Vitória grava o que o cliente disse. Um ciclo por pedido, e uma mensagem automática

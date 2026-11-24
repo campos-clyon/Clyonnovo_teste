@@ -14,7 +14,7 @@
  *     a 3.ª no dia a seguir a essa; no máximo 3 mensagens no total;
  *   · sem resposta, no dia a seguir à 3.ª o pedido é ARQUIVADO (nunca apagado),
  *     com a mensagem a dizer que pode voltar a pedir quando quiser;
- *   · tudo das 8h às 21h de Lisboa; o que cai fora sai às 9h
+ *   · tudo das 9h às 20h de Lisboa; o que cai fora sai às 9h
  *     (`janela-das-mensagens-automaticas.ts`); e nunca no dia em que já saiu
  *     outra mensagem automática a esse cliente (a uma-por-dia comum, d85);
  *   · a equipa que carrega à mão em «Pedir o que falta» conta como a 1.ª
@@ -37,6 +37,7 @@
  * rotina e a fila estão em `lembrete-do-que-falta-na-base.ts`.
  */
 
+import { naJanelaDeContacto } from "./janela-de-contacto";
 import { diaEmLisboa, instanteDaBase, pecasEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { aHoraDoDia, diaEHoraCurtos, momentoDeSaida, naJanelaDasMensagensAutomaticas, podeSairAgora } from "./janela-das-mensagens-automaticas";
 import {
@@ -81,7 +82,7 @@ export const SE_JA_NAO_PRECISAR = "Responda 1 se vai enviar o que falta, 2 se ti
 /** A frase de ANTES da d5: os lembretes já enviados com ela ainda se reconhecem (e nesses o «2» é «já não preciso»). */
 export const SE_JA_NAO_PRECISAR_ANTIGA = "Se já não precisar do orçamento, responda 2 e cancelamos o pedido.";
 
-/** Das 8h às 21h de Lisboa: a rotina e a fila só trabalham dentro. */
+/** Na janela de contacto (9h–20h de Lisboa): a rotina e a fila só trabalham dentro. */
 export function naJanelaDosLembretes(agora: Date): boolean {
   return naJanelaDasMensagensAutomaticas(agora);
 }
@@ -271,13 +272,13 @@ function ultimaDoCiclo(c: CicloDoQueFalta): Date | null {
 
 /**
  * O DIA SEGUINTE À MESMA HORA — o instante a partir do qual sai o passo a
- * seguir a `ultimo`. Se essa hora cair fora das 8h–21h (a 1.ª foi a da equipa,
+ * seguir a `ultimo`. Se essa hora cair fora das 9h–20h (a 1.ª foi a da equipa,
  * às 22h), às 10h. Pura.
  */
 export function noDiaSeguinte(ultimo: Date): Date {
   const { hora, minuto } = pecasEmLisboa(ultimo);
   const dia = somarDiasAoDia(diaEmLisboa(ultimo), DIAS_ENTRE_PASSOS);
-  const dentro = hora >= 8 && hora < 21;
+  const dentro = naJanelaDeContacto(ultimo);
   return dentro ? aHoraDoDia(dia, hora, minuto) : aHoraDoDia(dia, HORA_DOS_LEMBRETES);
 }
 

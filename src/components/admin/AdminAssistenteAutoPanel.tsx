@@ -337,7 +337,7 @@ export default function AdminAssistenteAutoPanel() {
                                   Fila: {estado.filaDeAvisos.porSair} por sair ·{" "}
                                   {estado.filaDeAvisos.enviados} enviados ·{" "}
                                   {estado.filaDeAvisos.naoSairam} não saíram. Saem até quatro em
-                                  cada passagem, entre as 9h e as 21h.
+                                  cada passagem, entre as 9h e as 20h.
                                 </span>
                               ) : (
                                 <span className="mt-1 block text-slate-400">

@@ -25,7 +25,7 @@ import {
 
 /*
  * O AVISO A TODOS OS PROFISSIONAIS — d11 (15-11-2026): quem recebe, a janela
- * das 9h às 21h de Lisboa, o intervalo de 20–45 s, uma vez por canal, e «Parar».
+ * das 9h às 20h de Lisboa, o intervalo de 20–45 s, uma vez por canal, e «Parar».
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
@@ -67,18 +67,18 @@ describe("quem recebe o aviso", () => {
   });
 });
 
-describe("a janela do WhatsApp: das 9h às 21h de Lisboa", () => {
+describe("a janela do WhatsApp: das 9h às 20h de Lisboa", () => {
   it("no Inverno (Lisboa = UTC)", () => {
     expect(dentroDaJanelaDoWhatsApp(new Date("2026-11-15T08:59:00Z"))).toBe(false);
     expect(dentroDaJanelaDoWhatsApp(new Date("2026-11-15T09:00:00Z"))).toBe(true);
-    expect(dentroDaJanelaDoWhatsApp(new Date("2026-11-15T20:59:00Z"))).toBe(true);
-    expect(dentroDaJanelaDoWhatsApp(new Date("2026-11-15T21:00:00Z"))).toBe(false);
+    expect(dentroDaJanelaDoWhatsApp(new Date("2026-11-15T19:59:00Z"))).toBe(true);
+    expect(dentroDaJanelaDoWhatsApp(new Date("2026-11-15T20:00:00Z"))).toBe(false);
   });
   it("no Verão (Lisboa = UTC+1), seja qual for o fuso desta máquina", () => {
     expect(dentroDaJanelaDoWhatsApp(new Date("2026-07-01T07:59:00Z"))).toBe(false);
     expect(dentroDaJanelaDoWhatsApp(new Date("2026-07-01T08:00:00Z"))).toBe(true);
-    expect(dentroDaJanelaDoWhatsApp(new Date("2026-07-01T19:59:00Z"))).toBe(true);
-    expect(dentroDaJanelaDoWhatsApp(new Date("2026-07-01T20:00:00Z"))).toBe(false);
+    expect(dentroDaJanelaDoWhatsApp(new Date("2026-07-01T18:59:00Z"))).toBe(true);
+    expect(dentroDaJanelaDoWhatsApp(new Date("2026-07-01T19:00:00Z"))).toBe(false);
   });
 });
 
@@ -246,7 +246,7 @@ describe("o motor do envio", () => {
     expect(b.saidas).toHaveLength(1);
   });
 
-  it("fora das 9h–21h de Lisboa o WhatsApp fica na fila (o email não espera)", async () => {
+  it("fora das 9h–20h de Lisboa o WhatsApp fica na fila (o email não espera)", async () => {
     const b = baseEmMemoria([1, 2]);
     b.comecar();
     const r = await avancarOAviso(b.repo, b.portas, DE_NOITE, { maxEmails: 10 });

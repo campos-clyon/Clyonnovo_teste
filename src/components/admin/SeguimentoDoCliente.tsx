@@ -20,7 +20,7 @@ import {
  * O botão abre um painel pequeno: o que o cliente respondeu («Vai pensar»,
  * «Não atendeu», «Quer outra data», «Quer cancelar»), uma nota curta, e —
  * menos no cancelar — quando voltar a contactar (dia e hora de Lisboa, das
- * 9h00 às 20h59; por omissão amanhã às 10h00). Por baixo, os contactos
+ * 9h00 às 19h59; por omissão amanhã às 10h00). Por baixo, os contactos
  * guardados e o passo do seguimento, escritos no servidor (`seguimentoNaMesa`).
  * «Parar o seguimento» desmarca o ciclo em curso.
  */
@@ -196,7 +196,7 @@ export default function SeguimentoDoCliente({
                 aria-label="Hora para voltar a contactar"
                 className="rounded-md border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-slate-100 [color-scheme:dark]"
               />
-              <span className={horaValida ? "text-slate-500" : "text-red-300"}>das 9h00 às 20h59 (Lisboa)</span>
+              <span className={horaValida ? "text-slate-500" : "text-red-300"}>das 9h00 às 19h59 (Lisboa)</span>
             </div>
           )}
           {resposta === "quer_cancelar" && (

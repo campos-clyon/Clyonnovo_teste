@@ -300,6 +300,29 @@ describe("as novidades que ele tem para contar", () => {
     ).toEqual(expect.arrayContaining(["agradecimento", "avaliacao"]));
   });
 
+  it("d7: o fecho e o agradecimento falam no feminino e na voz da plataforma, sem prometer o que a base não sabe", () => {
+    const comum = { estado: "acordada", valorAcordado: "300.00" };
+    const textos = novidadesDoPedido(
+      pedido({
+        negociacoes: [
+          negociacao({
+            ...comum,
+            execucaoEnviadaEm: new Date("2026-09-15T11:00:00Z"),
+            confirmadoEm: new Date("2026-09-16T11:00:00Z"),
+          }),
+        ],
+      }),
+      TARDE,
+    );
+    const obrigado = textos.find((x) => x.especie === "agradecimento")!.texto;
+    expect(obrigado).toContain("Obrigada por ter confiado");
+    expect(obrigado).toContain("o parceiro escolhido trata do trabalho");
+    expect(obrigado).not.toMatch(/grat[oa]|obrigado|tratar disto consigo|fico-lhe/i);
+    const fecho = novidadesDoPedido(pedido({ negociacoes: [negociacao(comum)] }), TARDE).find((x) => x.especie === "fechado")!.texto;
+    // «Ele já tem a morada e o seu contacto» era uma promessa que a base não confirma (e masculina).
+    expect(fecho).not.toMatch(/Ele já tem a morada|o seu contacto/);
+  });
+
   it("a avaliação só no dia seguinte, e nunca a quem já avaliou", () => {
     const base = {
       estado: "acordada",

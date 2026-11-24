@@ -199,18 +199,18 @@ describe("a resposta do parceiro, lida pelo código", () => {
   });
 });
 
-/* ── 3. O prazo das 2 h, das 8h às 21h ───────────────────────────────────── */
+/* ── 3. O prazo das 2 h, das 9h às 20h ───────────────────────────────────── */
 
-describe("o prazo: 2 h dentro das 8h–21h de Lisboa", () => {
+describe("o prazo: 2 h dentro das 9h–20h de Lisboa", () => {
   // Novembro: Lisboa = UTC.
   const em = (iso: string) => prazoDaPergunta(new Date(iso));
-  it("de dia, 2 h; ao fim do dia, continua às 8h; de noite ou de madrugada, conta a partir das 8h", () => {
+  it("de dia, 2 h; ao fim do dia, continua às 9h; de noite ou de madrugada, conta a partir das 9h", () => {
     expect(em("2026-11-23T15:00:00Z").toISOString()).toBe("2026-11-23T17:00:00.000Z");
-    expect(em("2026-11-23T20:30:00Z").toISOString()).toBe("2026-11-24T09:30:00.000Z");
-    expect(em("2026-11-23T23:00:00Z").toISOString()).toBe("2026-11-24T10:00:00.000Z");
-    expect(em("2026-11-24T06:00:00Z").toISOString()).toBe("2026-11-24T10:00:00.000Z");
-    const p = em("2026-11-23T19:00:00Z");
-    expect(`${diaEmLisboa(p)} ${horaEmLisboa(p)}`).toBe("2026-11-23 21:00");
+    expect(em("2026-11-23T18:30:00Z").toISOString()).toBe("2026-11-24T09:30:00.000Z");
+    expect(em("2026-11-23T23:00:00Z").toISOString()).toBe("2026-11-24T11:00:00.000Z");
+    expect(em("2026-11-24T06:00:00Z").toISOString()).toBe("2026-11-24T11:00:00.000Z");
+    const p = em("2026-11-23T17:00:00Z");
+    expect(`${diaEmLisboa(p)} ${horaEmLisboa(p)}`).toBe("2026-11-23 19:00");
   });
 
   it("o motivo do cartão «Precisa de si» diz que está à espera do parceiro há 2 h", () => {

@@ -18,7 +18,7 @@ import {
  *
  * Quem recebe (só contagens e ids), o texto do email e do WhatsApp com versão,
  * a pré-visualização, «Enviar teste para mim», e o envio: email pelo Resend em
- * lotes, WhatsApp pela ponte um de cada vez (20–45 s ao acaso, 9h–21h de
+ * lotes, WhatsApp pela ponte um de cada vez (20–45 s ao acaso, 9h–20h de
  * Lisboa), cada profissional uma só vez por canal, com «Parar» e o registo de
  * cada destinatário. Nada sai sem escrever ENVIAR.
  */

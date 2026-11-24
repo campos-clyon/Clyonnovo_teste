@@ -225,13 +225,13 @@ describe("quem entra e quem fica de fora (d88: de qualquer origem, 30 min depois
   });
 });
 
-describe("o ritmo: 30 min depois, o dia seguinte à mesma hora, 3 no máximo, das 8h às 21h", () => {
-  it("a janela é das 8h às 21h de Lisboa (no Verão, Lisboa = UTC+1)", () => {
-    expect(naJanelaDosLembretes(as("2026-11-19", "07:59"))).toBe(false);
-    expect(naJanelaDosLembretes(as("2026-11-19", "08:00"))).toBe(true);
-    expect(naJanelaDosLembretes(as("2026-11-19", "20:59"))).toBe(true);
-    expect(naJanelaDosLembretes(as("2026-11-19", "21:00"))).toBe(false);
-    expect(naJanelaDosLembretes(new Date("2026-07-01T07:30:00Z"))).toBe(true); // 8h30 em Lisboa
+describe("o ritmo: 30 min depois, o dia seguinte à mesma hora, 3 no máximo, das 9h às 20h", () => {
+  it("a janela é das 9h às 20h de Lisboa (no Verão, Lisboa = UTC+1)", () => {
+    expect(naJanelaDosLembretes(as("2026-11-19", "08:59"))).toBe(false);
+    expect(naJanelaDosLembretes(as("2026-11-19", "09:00"))).toBe(true);
+    expect(naJanelaDosLembretes(as("2026-11-19", "19:59"))).toBe(true);
+    expect(naJanelaDosLembretes(as("2026-11-19", "20:00"))).toBe(false);
+    expect(naJanelaDosLembretes(new Date("2026-07-01T08:30:00Z"))).toBe(true); // 9h30 em Lisboa
   });
 
   it("a 1.ª: 30 min depois de o pedido entrar, dentro da janela", () => {
@@ -605,7 +605,7 @@ describe("com o interruptor ligado: o «3» pergunta o CANCELAR, só com um lemb
     expect(base.cancelados).toEqual([]);
   });
 
-  it("fora das 8h–21h de Lisboa, a rotina não faz nada", async () => {
+  it("fora das 9h–20h de Lisboa, a rotina não faz nada", async () => {
     const { rotinaDoQueFalta } = await import("./lembrete-do-que-falta-na-base");
     const r = await rotinaDoQueFalta(new Date("2026-11-19T21:30:00Z"));
     expect(r).toMatchObject({ ligado: true, foraDeHoras: true, novos: 0, naFila: 0 });
