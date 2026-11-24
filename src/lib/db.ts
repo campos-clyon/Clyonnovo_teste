@@ -52,6 +52,12 @@ import { choquesDoProfissional, type Marcacao } from "@/lib/choques-de-agenda";
 import { quaisPedidosComRespostaDoProfissional, type NegociacaoParaOSelo } from "@/lib/novidades-do-backoffice";
 // (30-10-2026) as fotografias deixaram de contar para o prazo e para o selo.
 import { sslDaBase } from "@/lib/ssl-da-base";
+import {
+  ESTADO_DE_VOLTA_DO_PRECISA_INFO_SQL,
+  SAIU_DO_PRECISA_INFO,
+  eRespostaDeParceiro,
+  type PorqueSaiDoPrecisaInfo,
+} from "@/lib/precisa-info-ao-avancar";
 import { linguaDepoisDaMensagem, linguaValida, type Lingua } from "@/lib/lingua-do-cliente";
 import {
   TAXAS_DE_ORIGEM,
@@ -2656,6 +2662,18 @@ export async function gravarNegociacao(
   await ensureNegociacoesTable();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
+  const r = await gravarNegociacaoSemOPrecisaInfo(pool, id, dados, seAinda);
+  // d110: a primeira resposta de um parceiro tira o pedido de «precisa info».
+  if (r.ok && eRespostaDeParceiro(dados)) await sairDoPrecisaInfoPelaNegociacao(id, "proposta").catch(() => {});
+  return r;
+}
+
+async function gravarNegociacaoSemOPrecisaInfo(
+  pool: mysql.Pool,
+  id: number,
+  dados: { estado: string; valorAcordado: number | null; propostasJson: string },
+  seAinda?: { estado: string; pedidoId: number },
+): Promise<NegociacaoGravada> {
   if (!seAinda) {
     await pool.execute(
       "UPDATE negociacoes SET estado = ?, valorAcordado = ?, propostasJson = ? WHERE id = ?",
@@ -4478,6 +4496,8 @@ export async function marcarPropostaEnviada(pedidoId: number): Promise<void> {
     "UPDATE simulatorOrders SET propostaEnviadaEm = NOW(), updatedAt = updatedAt WHERE id = ? AND valorFixoClyon IS NOT NULL",
     [pedidoId],
   );
+  // d110: o orçamento foi ao cliente — já não se espera pelo «precisa info».
+  await sairDoPrecisaInfo(pedidoId, "orcamento").catch(() => {});
 }
 
 /*
@@ -4515,6 +4535,46 @@ export async function marcarOrcamentoEnviado(pedidoId: number): Promise<void> {
     "UPDATE simulatorOrders SET propostaEnviadaEm = NOW(), updatedAt = updatedAt WHERE id = ? AND valorFixoClyon IS NULL",
     [pedidoId],
   );
+  // d110: o orçamento foi ao cliente — já não se espera pelo «precisa info».
+  await sairDoPrecisaInfo(pedidoId, "orcamento").catch(() => {});
+}
+
+/**
+ * O PEDIDO QUE AVANÇOU SAI DE «PRECISA INFO» — 24-11-2026 (d110, o #658).
+ * Seguiu para os parceiros, chegou a primeira resposta de um parceiro, ou o
+ * orçamento foi ao cliente: volta ao estado de um pedido em negociação
+ * («atribuído» se alguém o tem, «por atribuir» se não — a regra de
+ * `estadoDeVoltaDoPrecisaInfo`), com uma linha no histórico. Pela base, sem o
+ * email da mudança de estado, e só se ainda está em «precisa info» (a guarda
+ * no UPDATE). Devolve se saiu. Ver `precisa-info-ao-avancar.ts`.
+ */
+export async function sairDoPrecisaInfo(pedidoId: number, porque: PorqueSaiDoPrecisaInfo): Promise<boolean> {
+  await ensureSimulatorOrdersTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [r] = (await pool.execute(
+    `UPDATE simulatorOrders SET status = ${ESTADO_DE_VOLTA_DO_PRECISA_INFO_SQL}, updatedAt = NOW()
+      WHERE id = ? AND status = 'precisa_info'`,
+    [pedidoId],
+  )) as [{ affectedRows?: number }, unknown];
+  const saiu = Number(r?.affectedRows ?? 0) > 0;
+  if (saiu) {
+    await appendOrderHistory(pedidoId, { type: "note", by: null, message: SAIU_DO_PRECISA_INFO[porque] }).catch(() => {});
+  }
+  return saiu;
+}
+
+/** O mesmo, a partir de uma negociação: o pedido dela, se ainda estiver em «precisa info». */
+async function sairDoPrecisaInfoPelaNegociacao(negociacaoId: number, porque: PorqueSaiDoPrecisaInfo): Promise<boolean> {
+  const pool = await getPool();
+  if (!pool) return false;
+  const [linhas] = (await pool.execute(
+    `SELECT o.id FROM negociacoes n JOIN simulatorOrders o ON o.id = n.pedidoId
+      WHERE n.id = ? AND o.status = 'precisa_info' LIMIT 1`,
+    [negociacaoId],
+  )) as [Array<{ id: number }>, unknown];
+  const pedidoId = Number(linhas[0]?.id ?? 0);
+  return pedidoId > 0 ? sairDoPrecisaInfo(pedidoId, porque) : false;
 }
 
 /*

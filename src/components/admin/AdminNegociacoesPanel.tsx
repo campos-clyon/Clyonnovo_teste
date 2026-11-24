@@ -193,6 +193,7 @@ import { useMetodosDePagamento } from "@/hooks/useMetodosDePagamento";
 import { OUTRO_SERVICO_SEM_PROPOSTAS, outroSemPropostas } from "@/lib/outro-servico";
 import { O_CLIENTE_RESPONDEU } from "@/lib/prazo-do-cliente-clyon";
 import { blocoDoClyonNaMesa, mostraOClienteRespondeu, type TrabalhoClyonParaAMesa } from "@/lib/trabalho-clyon-na-mesa";
+import { pedidosSemBloco, SEM_BLOCO_DICA, SEM_BLOCO_TITULO } from "@/lib/mesa-sem-bloco";
 import { pedirMotivoAoApagar } from "./motivo-ao-apagar";
 
 type Proposta = {
@@ -2739,6 +2740,39 @@ export default function AdminNegociacoesPanel({
     soOBloco && !aProcurar ? blocosDoModo.filter((b) => b.chave === soOBloco) : blocosDoModo;
 
   /*
+   * A REDE DA MESA — d110 (24-11-2026, o #658): «1 pedido em toda a mesa» e
+   * todos os blocos a 0. O que a Mesa conta (o que carregou e a busca deixou
+   * passar; os arrumados só a procurar, como o bloco deles) compara-se com o
+   * que os blocos desenham, pelas MESMAS listas dos blocos; o que sobra vai
+   * para a linha «Sem bloco — ver», e entra no «Geral». Só no ecrã inteiro
+   * («tudo»): os outros modos mostram metade da mesa de propósito.
+   */
+  const idsDe = (l: ReadonlyArray<{ id: number }>) => l.map((p) => p.id);
+  const idsClyonDe = (chave: ChaveDoBloco) => clyonDoBloco(chave).map((t) => t.pedidoId);
+  const semBloco =
+    mostrar !== "tudo"
+      ? []
+      : pedidosSemBloco(
+          [
+            ...idsDe(pedidosNaMesa.filter((p) => aProcurar || !pedidoArrumado(p.status))),
+            ...idsDe(porPromoverNaMesa),
+            ...clyonNaMesa
+              .filter((t) => aProcurar || blocoDoClyonNaMesa(paraAMesa(t)) !== "cancelados")
+              .map((t) => t.pedidoId),
+          ],
+          {
+            porEnviar: idsDe(porPromoverNaMesa),
+            porConfirmar: [...idsDe(porNivel.porConfirmar), ...idsClyonDe("porConfirmar")],
+            n1: [...idsDe(porNivel.n1), ...idsDe(outrosSemPropostas), ...idsClyonDe("n1")],
+            aguardaCliente: [...idsDe(porNivel.aguardaCliente), ...idsClyonDe("aguardaCliente")],
+            n2: [...idsDe(porNivel.n2), ...idsClyonDe("n2")],
+            n3: [...idsDe(porNivel.n3), ...idsClyonDe("n3")],
+            concluidos: [...idsDe(concluidos), ...idsClyonDe("concluidos")],
+            ...(aProcurar ? { cancelados: [...idsDe(cancelados), ...idsClyonDe("cancelados")] } : {}),
+          },
+        );
+
+  /*
    * O cartao de um pedido, desenhado uma vez e usado nos dois grupos.
    *
    * Estava dentro do `.map()` da lista unica. Ao separar as negociacoes da
@@ -5001,7 +5035,7 @@ export default function AdminNegociacoesPanel({
         >
           <p className={TITULO_DO_FILTRO}>Geral</p>
           <p className="text-lg font-bold leading-tight text-slate-100">
-            {blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0)}
+            {blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0) + semBloco.length}
           </p>
         </button>
         {blocosDoModo.map((b) => {
@@ -5399,8 +5433,9 @@ export default function AdminNegociacoesPanel({
            * vazios. «Concluídos» nasce fechado, e é lá que muitas vezes está o
            * pedido que se anda a procurar.
            */
+          // d110: a procurar, um «Precisa de si» só com pedidos em seguimento conta 0 mas tem-nos — não fecha.
           const fechado = aProcurar
-            ? quantosNoBloco(b.chave) === 0
+            ? quantosNoBloco(b.chave) === 0 && !(b.chave === "n1" && emSeguimentoNoN1.length > 0)
             : soOBloco === b.chave
               ? false
               : fechados.has(b.chave);
@@ -5427,6 +5462,12 @@ export default function AdminNegociacoesPanel({
                 <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
                   {quantos}
                 </span>
+                {/* d110: os em seguimento não contam no número, mas estão no bloco. */}
+                {b.chave === "n1" && emSeguimentoNoN1.length > 0 && (
+                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
+                    + {emSeguimentoNoN1.length} em seguimento
+                  </span>
+                )}
                 {/* O selo passa a alerta: feitos há dois dias ou mais sem confirmação (27-10-2026). */}
                 {b.chave === "porConfirmar" && feitosAtrasados > 0 && (
                   <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold text-white">
@@ -5753,6 +5794,48 @@ export default function AdminNegociacoesPanel({
             </section>
           );
         })}
+        {/* A REDE DA MESA (d110): o que foi contado e não caiu em bloco nenhum. */}
+        {semBloco.length > 0 && (
+          <section aria-labelledby="mesa-sem-bloco">
+            <div className="flex w-full items-center gap-2.5 rounded-xl border-l-4 border-rose-500 bg-slate-900 px-3 py-1.5">
+              <h3 id="mesa-sem-bloco" className="text-xs font-bold uppercase tracking-wider text-rose-300">
+                {SEM_BLOCO_TITULO}
+              </h3>
+              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-200">
+                {semBloco.length}
+              </span>
+              <span className="hidden min-w-0 flex-1 truncate text-[11px] text-slate-500 sm:block">{SEM_BLOCO_DICA}</span>
+            </div>
+            <div className="mt-2 space-y-1.5 pl-1">
+              <p className="mb-2 text-xs text-slate-500 sm:hidden">{SEM_BLOCO_DICA}</p>
+              {semBloco.map((id) => {
+                const p = pedidosNaMesa.find((x) => x.id === id);
+                if (p) return cartaoDoPedido(p);
+                const nome =
+                  porPromoverNaMesa.find((x) => x.id === id)?.contactName ??
+                  clyonNaMesa.find((t) => t.pedidoId === id)?.cliente ??
+                  null;
+                return (
+                  <div
+                    key={`sem-bloco-${id}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-sm text-slate-200"
+                  >
+                    <span>
+                      #{id} · {nome || "Cliente sem nome"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAEditar(id)}
+                      className="rounded-md border border-slate-600 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-slate-400"
+                    >
+                      Abrir pedido
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
 
       {/*

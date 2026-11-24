@@ -35,8 +35,8 @@ describe("o «Geral»", () => {
     expect(PAINEL).toContain("const [soOBloco, setSoOBloco] = useState<ChaveDoBloco | null>(null);");
   });
 
-  it("conta o que os blocos deste modo contam, e nada mais", () => {
-    expect(FILA).toContain("{blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0)}");
+  it("conta o que os blocos deste modo contam, mais os «sem bloco» (d110), e nada mais", () => {
+    expect(FILA).toContain("{blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0) + semBloco.length}");
   });
 });
 

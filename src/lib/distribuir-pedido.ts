@@ -5,6 +5,7 @@ import {
   porNaFilaDeAvisosAoProfissional,
   assistentePode,
   taxasParaUmaNegociacaoNova,
+  sairDoPrecisaInfo,
   type ProfissionalNaBase,
 } from "./db";
 import { telemovelParaWhatsApp } from "./whatsapp-cloud";
@@ -837,6 +838,19 @@ export async function distribuirPedido(
   const receberam = envios.filter((e) => e.recebeu).length;
   const avisados = envios.filter((e) => e.avisado).length;
   const jaTinham = envios.filter((e) => "jaTinha" in e && e.jaTinha).length;
+
+  /*
+   * SEGUIU PARA OS PARCEIROS: SAI DE «PRECISA INFO» — d110 (24-11-2026, o #658).
+   * Enviar, redistribuir e recomeçar passam todos por aqui. Só conta se chegou
+   * a alguém (ou se já estava com parceiros); nunca derruba a distribuição.
+   */
+  if (receberam + jaTinham > 0) {
+    try {
+      await sairDoPrecisaInfo(pedido.id, "enviado");
+    } catch {
+      /* o estado fica como estava; a distribuição está feita */
+    }
+  }
 
   return {
     avisados,
