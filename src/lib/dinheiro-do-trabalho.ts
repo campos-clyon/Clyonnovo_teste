@@ -160,7 +160,9 @@ export function dividaPorReceber(t: TrabalhoParaGerir): boolean {
 }
 
 /** O cliente entregou o valor ao profissional, em mão. Nada passa pela CLYON. */
-export function pagouAoProfissional(t: TrabalhoParaGerir): boolean {
+export function pagouAoProfissional(
+  t: Pick<TrabalhoParaGerir, "formaDePagamento" | "comoEntrou" | "novoModelo">,
+): boolean {
   // A mesma pergunta da carteira (01-11-2026) — ver `pago-em-mao.ts`.
   // Desde 15-11-2026 (d31), todo o trabalho do modelo novo: o cliente paga-lhe diretamente.
   return foiPagoEmMaoPor(t.formaDePagamento, t.comoEntrou) || t.novoModelo === true;
@@ -280,9 +282,34 @@ export function prontoAPagar(t: TrabalhoParaGerir): boolean {
  */
 export const FALTA_PAGAR_AO_PROFISSIONAL = "Recebido do cliente — falta pagar ao profissional";
 
-export function faltaPagarAoProfissional(t: TrabalhoParaGerir): boolean {
+/** Os campos que a regra lê — o selo do menu monta-os sem a linha inteira (d104). */
+export type ParaOFaltaPagar = Pick<
+  TrabalhoParaGerir,
+  "formaDePagamento" | "comoEntrou" | "novoModelo" | "clientePagouEm" | "pagoEm"
+>;
+
+export function faltaPagarAoProfissional(t: ParaOFaltaPagar & Partial<TrabalhoParaGerir>): boolean {
   if (pagouAoProfissional(t)) return false;
   return t.clientePagouEm != null && t.pagoEm == null;
+}
+
+/**
+ * O SELO DOS PAGAMENTOS NO MENU — d104 (CEO e dono, 24-11-2026). Quantos
+ * trabalhos estão em «Recebido do cliente — falta pagar ao profissional»: a
+ * mesma regra do grupo do ecrã (`faltaPagarAoProfissional`), com o modelo de
+ * cada um dado por `contratadasNoNovoModelo` (o mesmo de `trabalhosParaGerir`).
+ *
+ * No modelo de 15-11 o pagamento da negociação é o do PARCEIRO à CLYON (a taxa
+ * e o IVA dela), não o do cliente: não há nada a pagar ao profissional. Sem
+ * isto, cada taxa paga acendia o selo para sempre.
+ */
+export function porPagarAoProfissionalNoSelo(
+  linhas: ReadonlyArray<Omit<ParaOFaltaPagar, "novoModelo"> & { id: number }>,
+  doNovoModelo: ReadonlySet<number>,
+): number {
+  return linhas.filter((l) =>
+    faltaPagarAoProfissional({ ...l, novoModelo: doNovoModelo.has(Number(l.id)) ? true : undefined }),
+  ).length;
 }
 
 /**

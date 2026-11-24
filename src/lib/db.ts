@@ -6594,19 +6594,52 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
   const pool = await getPool();
   if (!pool) return saida;
   try {
+    /*
+     * d104 (24-11-2026): os do modelo de 15-11 ficam de fora — o pagamento
+     * deles é a taxa que o PARCEIRO passou à CLYON, não o do cliente. O modelo
+     * de cada um sai de `contratadasNoNovoModelo`, o mesmo dos Pagamentos, e a
+     * conta de `porPagarAoProfissionalNoSelo`, a do grupo do ecrã.
+     */
     const [linhas] = (await pool.execute(
-      `SELECT COUNT(*) AS n
+      `SELECT n.id, n.ofertaClyon, n.estado, n.execucaoEnviadaEm, n.provaJson, n.confirmadoEm,
+              n.pagoEm, n.formaDePagamento, o.createdAt AS pedidoCriadoEm,
+              pg.metodo AS comoEntrou, pg.pagoEm AS clientePagouEm
          FROM negociacoes n
          JOIN providers pr ON pr.id = n.providerId
          JOIN pagamentos pg ON pg.negociacaoPaga = n.id
+         LEFT JOIN simulatorOrders o ON o.id = n.pedidoId
         WHERE n.estado = 'acordada' AND n.valorAcordado IS NOT NULL
           AND n.pagoEm IS NULL
           AND pg.pagoEm IS NOT NULL
           AND pg.metodo <> 'ao_profissional'
           AND (n.formaDePagamento IS NULL OR n.formaDePagamento <> 'dinheiro')
           AND COALESCE(pr.contaDeTeste, 0) = 0`,
-    )) as any[];
-    saida.pagamentos = Number((linhas as Array<{ n: number }>)[0]?.n ?? 0);
+    )) as [Array<Record<string, unknown>>, unknown];
+    const { contratadasNoNovoModelo } = await import("./novo-modelo-no-servidor");
+    const { porPagarAoProfissionalNoSelo } = await import("./dinheiro-do-trabalho");
+    const { agoraDoModelo } = await import("./relogio-do-modelo");
+    const candidatos = linhas.map((l) => ({
+      id: Number(l.id),
+      ofertaClyon: l.ofertaClyon,
+      estado: l.estado,
+      execucaoEnviadaEm: l.execucaoEnviadaEm,
+      provaJson: l.provaJson,
+      confirmadoEm: l.confirmadoEm,
+      pagoEm: l.pagoEm,
+      formaDePagamento: l.formaDePagamento,
+      pedidoCriadoEm: (l.pedidoCriadoEm as Date | string | null) ?? null,
+    }));
+    const doNovoModelo = await contratadasNoNovoModelo(candidatos, agoraDoModelo());
+    saida.pagamentos = porPagarAoProfissionalNoSelo(
+      linhas.map((l) => ({
+        id: Number(l.id),
+        formaDePagamento: (l.formaDePagamento as string) ?? null,
+        comoEntrou: (l.comoEntrou as string) ?? null,
+        clientePagouEm: l.clientePagouEm ? String(l.clientePagouEm) : null,
+        pagoEm: l.pagoEm ? String(l.pagoEm) : null,
+      })),
+      doNovoModelo,
+    );
   } catch (e) {
     console.error("[contarPorFazer:pagamentos]", e instanceof Error ? e.message : e);
   }
