@@ -104,7 +104,9 @@ describe("d39 B — «Escolher por mim»", () => {
     const s = escolherPorMim([c(1, "A", 125, null), c(2, "B", 130, null)], 140);
     expect(s?.candidato.nome).toBe("A");
     expect(s?.diferenca).toBe(15);
-    expect(diferencaEmTexto(140, 125)).toBe("reserva para imprevistos: +15,00 € (fica na parte da CLYON)");
+    // d101: só com a reserva ligada se fala dela.
+    expect(diferencaEmTexto(140, 125, true)).toBe("reserva para imprevistos: +15,00 € (fica na parte da CLYON)");
+    expect(diferencaEmTexto(140, 125)).toBe("15,00 € abaixo do valor único (conta a proposta do parceiro)");
   });
 
   it("ninguém cabe: o mais barato, e avisa-se antes de aceitar", () => {
@@ -112,7 +114,8 @@ describe("d39 B — «Escolher por mim»", () => {
     expect(s?.candidato.nome).toBe("B");
     expect(s?.acimaDoValorUnico).toBe(true);
     expect(s?.diferenca).toBe(-10);
-    expect(diferencaEmTexto(140, 150)).toBe("reserva para imprevistos: −10,00 € (a parte da CLYON desce)");
+    expect(diferencaEmTexto(140, 150, true)).toBe("reserva para imprevistos: −10,00 € (a parte da CLYON desce)");
+    expect(diferencaEmTexto(140, 150)).toBe("10,00 € acima do valor único (conta a proposta do parceiro)");
     expect(avisoAcimaDoValorUnico("B", 150, 140)).toContain("mais do que o valor único");
   });
 
@@ -123,9 +126,9 @@ describe("d39 B — «Escolher por mim»", () => {
 
   it("a Mesa avisa antes de aceitar, nos dois «Aceitar»", () => {
     const MESA = ler("src/components/admin/AdminNegociacoesPanel.tsx");
-    expect(MESA).toContain("const acima = avisoDoValorUnico(pedido, negociacao);");
+    expect(MESA).toContain("const acima = avisoDoValorUnico(pedido, negociacao, comReserva);");
     expect(MESA).toContain('if (accao === "aceitar" && avisoAntesDeAceitar && !window.confirm(avisoAntesDeAceitar)) return;');
-    expect(MESA).toContain("avisoAntesDeAceitar={avisoDoValorUnico(pedido, negociacao)}");
+    expect(MESA).toContain("avisoAntesDeAceitar={avisoDoValorUnico(pedido, negociacao, comReserva)}");
     // O «Enviar orçamento» e o «Enviar pela CLYON» usam a mensagem do valor único.
     // d88: pela mensagem do orçamento da Mesa, num sítio só (a mesma da Vitória).
     expect(MESA).toContain("return textoDoOrcamentoDaMesa(p, new Date(), propostas);");

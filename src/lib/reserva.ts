@@ -23,6 +23,30 @@ import { contaDoCliente, type Taxas } from "./taxas-plataforma";
  * se mexe com parceiro contratado. Em cêntimos, inteiros. PURA.
  */
 
+/*
+ * O INTERRUPTOR — d101 (dono, 24-11-2026): «por enquanto deixa sem a reserva».
+ *
+ * DESLIGADO por omissão e na dúvida. Desligado, a reserva não se grava ao
+ * fechar e as já gravadas não contam em lado nenhum: quem lê as negociações da
+ * base (`negociacoesDoPedido`, `negociacaoPorTokenHash`) e as reservas
+ * (`reservasDe`) recebe-as a nulo, e a conta volta à de antes da d39 — o
+ * parceiro passa à CLYON só a taxa da plataforma e o IVA dela. A coluna e os
+ * valores gravados ficam na base (histórico). Só o administrador o liga, com
+ * LIGAR (reserva-na-base.ts).
+ */
+export const NOME_DO_INTERRUPTOR_DA_RESERVA = "Reserva do valor único";
+export const CHAVE_DO_INTERRUPTOR_DA_RESERVA = "reserva_valor_unico_d101";
+/** O motivo das referências refeitas sem a reserva (rota de admin da d101). */
+export const MOTIVO_DA_RESERVA_RETIRADA = "Reserva do valor único retirada (dono, 24/11/2026)";
+
+/** As linhas sem a reserva — em memória; a base fica como está. */
+export function semAReserva<T>(linhas: T[]): T[] {
+  return linhas.map((l) => {
+    const r = (l as { reservaCent?: unknown } | null)?.reservaCent;
+    return r != null ? ({ ...l, reservaCent: null } as T) : l;
+  });
+}
+
 export const RESERVA_EM_PALAVRAS = "reserva para imprevistos";
 /** O que o parceiro lê no que deve à CLYON quando há reserva — sem dizer «valor único». */
 export const PARTE_DA_CLYON_COM_RESERVA = "parte da CLYON (taxa da plataforma e reserva)";

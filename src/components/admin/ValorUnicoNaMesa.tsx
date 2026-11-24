@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Sparkles, Tag } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useReservaDoValorUnico } from "@/hooks/useReservaDoValorUnico";
 import {
   diferencaEmTexto,
   escolherPorMim,
@@ -22,9 +23,10 @@ import {
  *
  * Depois de o cliente dizer que sim, «Escolher por mim» sugere o parceiro
  * (`escolherPorMim`), e a equipa aceita a proposta dele pelo «Aceitar» de
- * sempre — que avisa antes se ele pediu mais do que o valor único. A
- * diferença é a reserva para imprevistos (d39): gravada ao fechar, na parte
- * da CLYON (reserva.ts).
+ * sempre — que avisa antes se ele pediu mais do que o valor único. Com o
+ * interruptor «Reserva do valor único» ligado (d101), a diferença é a reserva
+ * (d39): gravada ao fechar, na parte da CLYON (reserva.ts); desligado, conta a
+ * proposta do parceiro.
  */
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
@@ -52,6 +54,8 @@ export default function ValorUnicoNaMesa({
   onMudou: (aviso?: string) => void;
 }) {
   const { token } = useAdminAuth();
+  // d101: a «reserva» só se diz com o interruptor ligado.
+  const comReserva = useReservaDoValorUnico();
   const sugerido = valorUnicoSugerido(propostas.map((p) => p.semIva));
   const [aEditar, setAEditar] = useState(false);
   const [escrito, setEscrito] = useState("");
@@ -264,7 +268,7 @@ export default function ValorUnicoNaMesa({
                     Sugestão: <strong className="text-white">{sugestao.candidato.nome}</strong> — pediu{" "}
                     {euros(sugestao.candidato.semIva)} + IVA; {sugestao.porque}.
                   </p>
-                  <p className="mt-1 text-slate-400">{diferencaEmTexto(valorUnico, sugestao.candidato.semIva)}.</p>
+                  <p className="mt-1 text-slate-400">{diferencaEmTexto(valorUnico, sugestao.candidato.semIva, comReserva)}.</p>
                   {sugestao.acimaDoValorUnico && (
                     <p className="mt-1 font-semibold text-amber-300">
                       Pediu mais do que o valor único: o «Aceitar» pergunta antes de fechar.
@@ -286,7 +290,7 @@ export default function ValorUnicoNaMesa({
                       <li key={p.negociacaoId}>
                         {p.nome}: {euros(p.semIva)} + IVA
                         {p.nota ? ` · ${p.nota.media.toFixed(1).replace(".", ",")} (${p.nota.quantas})` : " · sem avaliações"}
-                        {p.verificado ? "" : " · não verificado"} · {diferencaEmTexto(valorUnico, p.semIva)}
+                        {p.verificado ? "" : " · não verificado"} · {diferencaEmTexto(valorUnico, p.semIva, comReserva)}
                       </li>
                     ))}
                 </ul>

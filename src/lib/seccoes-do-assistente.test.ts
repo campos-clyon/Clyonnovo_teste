@@ -296,6 +296,11 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   { seccao: "configs", rota: "/api/admin/interruptor-do-whatsapp-pela-meta", porque: "passar os envios da ponte para a Cloud API da Meta (que não envia templates) é do administrador, com o sim do dono (d5, 21-11-2026)" },
   { seccao: "configs", rota: "/api/admin/interruptor-do-envio-automatico", porque: "desligar (ou voltar a ligar) o envio automático aos parceiros é do administrador — é o travão de emergência (d87, 22-11-2026)" },
   { seccao: "configs", rota: "/api/admin/lembretes-do-que-falta", porque: "ligar os lembretes do que falta (mensagens, cancelamentos e arquivos automáticos) é do administrador, com o sim do dono (d71, 19-11-2026)" },
+  // A reserva do valor único (d101, 24-11-2026): ligar e refazer as referências são do administrador; a Mesa lê o interruptor e, sem acesso, fala sem a reserva.
+  { seccao: "configs", rota: "/api/admin/reserva-do-valor-unico/interruptor", porque: "ligar a reserva do valor único é do administrador, com o sim do dono (d101, 24-11-2026)" },
+  { seccao: "configs", rota: "/api/admin/reserva-do-valor-unico/refazer", porque: "refazer as referências sem a reserva é do administrador (d101, 24-11-2026)" },
+  { seccao: "negociacoes_clyon", rota: "/api/admin/reserva-do-valor-unico/interruptor", porque: "o assistente não lê o interruptor: a Mesa fala sem a reserva, que é o estado por omissão (d101)" },
+  { seccao: "trabalhos_clyon", rota: "/api/admin/reserva-do-valor-unico/interruptor", porque: "o assistente não lê o interruptor: a Mesa fala sem a reserva, que é o estado por omissão (d101)" },
   { seccao: "configs", rota: "/api/admin/propostas-ao-cliente", porque: "desligar (ou voltar a ligar) o envio das propostas ao cliente pela Vitória é do administrador (d88, 23-11-2026)" },
   // O aviso a todos os profissionais (d11, 15-11-2026): enviar a todos e o interruptor da faixa são do administrador.
   { seccao: "profissionais", rota: "/api/admin/aviso-aos-profissionais", porque: "o aviso a todos os profissionais (envio em massa) é só do administrador (d11, 15-11-2026)" },

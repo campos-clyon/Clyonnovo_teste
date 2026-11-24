@@ -44,6 +44,7 @@ import AdminRetencaoPanel from "@/components/admin/AdminRetencaoPanel";
 import InterruptorDoEmailDoFecho from "@/components/admin/InterruptorDoEmailDoFecho";
 import InterruptorDaVitoriaAosProfissionais from "@/components/admin/InterruptorDaVitoriaAosProfissionais";
 import InterruptorDaValidadeDosOrcamentos from "@/components/admin/InterruptorDaValidadeDosOrcamentos";
+import InterruptorDaReservaDoValorUnico from "@/components/admin/InterruptorDaReservaDoValorUnico";
 import InterruptorDoSeguimentoDoCliente from "@/components/admin/InterruptorDoSeguimentoDoCliente";
 import InterruptorDoWhatsAppPelaMeta from "@/components/admin/InterruptorDoWhatsAppPelaMeta";
 import InterruptorDoEnvioAutomatico from "@/components/admin/InterruptorDoEnvioAutomatico";
@@ -3673,6 +3674,9 @@ export default function ColaboradorAdminClient({
 
               {/* A validade dos orçamentos (d62): lembretes e fecho de «A aguardar cliente»; desligada por omissão, só o administrador. */}
               <InterruptorDaValidadeDosOrcamentos />
+
+              {/* A reserva do valor único (d101, 24-11-2026): desligada por omissão, só o administrador; e o «Refazer as referências». */}
+              <InterruptorDaReservaDoValorUnico />
 
               {/* O seguimento do cliente (d83): o «Falei com o cliente» da Mesa; ligado por omissão, desligar é a emergência. */}
               <InterruptorDoSeguimentoDoCliente />

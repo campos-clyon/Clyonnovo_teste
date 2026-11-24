@@ -146,17 +146,25 @@ export function escolherPorMim(candidatos: readonly CandidatoAoValorUnico[], val
  * «reserva para imprevistos: +15,00 € (fica na parte da CLYON)» — d39, decidido
  * a 15-11-2026: a diferença é a reserva, gravada ao fechar (reserva.ts).
  */
-export function diferencaEmTexto(valorUnico: number, semIvaDoParceiro: number): string {
+export function diferencaEmTexto(valorUnico: number, semIvaDoParceiro: number, comReserva = false): string {
   const d = Math.round((valorUnico - semIvaDoParceiro) * 100) / 100;
+  // d101 (24-11-2026): sem a reserva ligada, não se fala dela — conta a proposta do parceiro.
+  if (!comReserva) {
+    if (d === 0) return "igual ao valor único";
+    return `${euros(Math.abs(d))} ${d > 0 ? "abaixo" : "acima"} do valor único (conta a proposta do parceiro)`;
+  }
   const sinal = d > 0 ? "+" : d < 0 ? "−" : "";
   const onde = d < 0 ? "a parte da CLYON desce" : "fica na parte da CLYON";
   return `reserva para imprevistos: ${sinal}${euros(Math.abs(d))} (${onde})`;
 }
 
 /** O aviso antes de aceitar uma proposta acima do valor único. */
-export function avisoAcimaDoValorUnico(nome: string, semIvaDoParceiro: number, valorUnico: number): string {
+export function avisoAcimaDoValorUnico(nome: string, semIvaDoParceiro: number, valorUnico: number, comReserva = false): string {
+  const inicio = `${nome} pediu ${euros(semIvaDoParceiro)} + IVA, mais do que o valor único enviado ao cliente (${euros(valorUnico)} + IVA). `;
+  // d101 (24-11-2026): sem a reserva ligada, a conta é a da proposta dele.
+  if (!comReserva) return inicio + "A conta passa a ser a da proposta dele, não a do valor único. Aceitar mesmo assim?";
   return (
-    `${nome} pediu ${euros(semIvaDoParceiro)} + IVA, mais do que o valor único enviado ao cliente (${euros(valorUnico)} + IVA). ` +
+    inicio +
     `A diferença (${euros(semIvaDoParceiro - valorUnico)}) sai da parte da CLYON: a reserva fica negativa e, se passar a taxa, a CLYON paga-lhe o resto por crédito na carteira. Aceitar mesmo assim?`
   );
 }

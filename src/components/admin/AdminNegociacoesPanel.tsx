@@ -139,6 +139,7 @@ import {
   type PedidoAConfirmar,
 } from "@/lib/confirmar-varios";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useReservaDoValorUnico } from "@/hooks/useReservaDoValorUnico";
 import { useProcuraDoBackoffice } from "@/components/admin/NoutrosSitios";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
@@ -5965,12 +5966,14 @@ function MotivoParaCancelarVarios({
 function avisoDoValorUnico(
   p: Partial<Pick<Pedido, "valorUnicoCliente" | "negociacoes">>,
   n: Negociacao,
+  /** d101: com a «Reserva do valor único» ligada, o aviso fala da reserva. */
+  comReserva = false,
 ): string | null {
   const vu = p.valorUnicoCliente;
   if (vu == null || !p.negociacoes) return null;
   const desta = propostasParaOCliente(p.negociacoes).find((x) => x.negociacaoId === n.id);
   if (!desta || desta.semIva <= vu + 0.005) return null;
-  return avisoAcimaDoValorUnico(n.profissionalNome, desta.semIva, vu);
+  return avisoAcimaDoValorUnico(n.profissionalNome, desta.semIva, vu, comReserva);
 }
 
 function AceitarNaLista({
@@ -5986,6 +5989,7 @@ function AceitarNaLista({
   pedido: Pick<Pedido, "baseDoPreco" | "horasPrevistas"> & Partial<Pick<Pedido, "valorUnicoCliente" | "negociacoes">>;
 }) {
   const { token } = useAdminAuth();
+  const comReserva = useReservaDoValorUnico();
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -6019,8 +6023,8 @@ function AceitarNaLista({
 
   async function agir() {
     if (!token) return;
-    // d39: acima do valor único, avisa antes (a reserva fica negativa: a parte da CLYON desce).
-    const acima = avisoDoValorUnico(pedido, negociacao);
+    // d39: acima do valor único, avisa antes (com a reserva ligada, d101: a reserva fica negativa e a parte da CLYON desce).
+    const acima = avisoDoValorUnico(pedido, negociacao, comReserva);
     if (acima && !window.confirm(acima)) return;
     const texto =
       `${contratar ? "Contratar" : "Aceitar, em nome do cliente, a proposta de"} ` +
@@ -7547,6 +7551,7 @@ function TrocaDePropostas({
   podeConfirmar: boolean;
   onMudou: () => void;
 }) {
+  const comReserva = useReservaDoValorUnico();
   const propostas = propostasDe(negociacao.propostasJson);
   const prova = provaDe(negociacao.provaJson);
 
@@ -7597,7 +7602,7 @@ function TrocaDePropostas({
         propostas={propostas}
         onMudou={onMudou}
         sufixo={sufixoDaBase(lerBase(pedido.baseDoPreco))}
-        avisoAntesDeAceitar={avisoDoValorUnico(pedido, negociacao)}
+        avisoAntesDeAceitar={avisoDoValorUnico(pedido, negociacao, comReserva)}
       />
 
       {/* Depois do acordo: a prova e a confirmação. */}

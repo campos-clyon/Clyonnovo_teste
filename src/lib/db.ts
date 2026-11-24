@@ -2542,7 +2542,8 @@ export async function negociacaoPorTokenHash(
     "SELECT * FROM negociacoes WHERE acessoTokenHash = ? LIMIT 1",
     [hash],
   ) as any[];
-  return (rows as NegociacaoNaBase[])[0];
+  // d101 (24-11-2026): com o interruptor «Reserva do valor único» desligado, a reserva gravada não conta.
+  return (await (await import("./reserva-na-base")).semAReservaSeDesligada(rows as NegociacaoNaBase[]))[0];
 }
 
 export async function negociacoesDoPedido(pedidoId: number): Promise<
@@ -2576,7 +2577,8 @@ export async function negociacoesDoPedido(pedidoId: number): Promise<
       ORDER BY n.updatedAt DESC`,
     [pedidoId],
   ) as any[];
-  return rows as any[];
+  // d101 (24-11-2026): com o interruptor «Reserva do valor único» desligado, a reserva gravada não conta.
+  return (await import("./reserva-na-base")).semAReservaSeDesligada(rows as any[]);
 }
 
 /**
@@ -15834,6 +15836,8 @@ export type Acontecimento =
   | "vitoria_profissionais_interruptor"
   // A validade dos orçamentos (d62, 18-11-2026): o interruptor das Configs.
   | "validade_orcamentos_interruptor"
+  // A reserva do valor único (d101, 24-11-2026): o interruptor das Configs.
+  | "reserva_valor_unico_interruptor"
   // Os lembretes do que falta (d71, 19-11-2026): o interruptor das Configs e o arquivo sem resposta.
   | "lembretes_do_que_falta_interruptor"
   | "whatsapp_pela_meta_interruptor"

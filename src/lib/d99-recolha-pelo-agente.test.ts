@@ -55,7 +55,7 @@ const semComentarios = (s: string) =>
 const AGORA = new Date("2026-11-24T10:00:00Z");
 
 /* Dados inventados — nomes, ruas e NIF de exemplo, que nunca podem chegar ao modelo. */
-const NOME = "Joaquina Ferreirinha";
+const NOME = "Graciete Moreirinha";
 const RUA = "Rua das Camélias Brancas";
 const NIF = "123456789";
 const PRIMEIRA = `Bom dia, chamo-me ${NOME}. Queria levar um sofá e duas cadeiras. A morada é ${RUA} 14, 2800-123 Almada. O NIF para a fatura é ${NIF}.`;
@@ -161,7 +161,7 @@ describe("o nome, a morada e o NIF: lidos pelo código, trocados por marcas", ()
   });
 
   it("a resposta curta à pergunta que falta («como se chama?») também é do código", () => {
-    const l = lerDadosPessoais("Joaquina Ferreirinha", { serviceType: RECOLHA });
+    const l = lerDadosPessoais("Graciete Moreirinha", { serviceType: RECOLHA });
     expect(l.campos.nome).toBe(NOME);
   });
 
@@ -172,7 +172,7 @@ describe("o nome, a morada e o NIF: lidos pelo código, trocados por marcas", ()
   it("o texto que vai ao modelo não tem o nome, a rua nem o NIF — tem as marcas", () => {
     const k = lerDadosPessoais(PRIMEIRA, {}).conhecidos;
     const t = marcarDadosPessoais(PRIMEIRA, k);
-    expect(t).not.toMatch(/Joaquina|Ferreirinha|Camélias|Camelias|123456789|2800-123/i);
+    expect(t).not.toMatch(/Graciete|Moreirinha|Camélias|Camelias|123456789|2800-123/i);
     expect(t).toContain(MARCA_DO_NOME);
     expect(t).toContain("[morada recebida: Almada]");
     expect(t).toContain(MARCA_DO_NIF);
@@ -186,12 +186,12 @@ describe("o nome, a morada e o NIF: lidos pelo código, trocados por marcas", ()
     const k = conhecidosDoRascunho(dados);
     const t = marcarDadosPessoais(resumo({ ...dados, serviceType: RECOLHA }), k);
     expect(fugasNoTexto(t, k)).toBe(0);
-    expect(t).not.toMatch(/Joaquina|Ferreirinha|Camélias/i);
+    expect(t).not.toMatch(/Graciete|Moreirinha|Camélias/i);
   });
 
   it("uma fuga conta-se (e então o modelo não se chama)", () => {
     const k = juntarConhecidos(conhecidosDoRascunho({ contactName: NOME, address: `${RUA} 14` }));
-    expect(fugasNoTexto("Obrigada, Joaquina!", k)).toBeGreaterThan(0);
+    expect(fugasNoTexto("Obrigada, Graciete!", k)).toBeGreaterThan(0);
     expect(fugasNoTexto("Fica na rua das camelias brancas, junto ao café", k)).toBeGreaterThan(0);
   });
 });
@@ -239,7 +239,7 @@ describe("o modelo grava pelos validadores da recolha; o que falha volta com a r
   it("o rascunho que o modelo lê vem com marcas, os passos que faltam e a lista do site", () => {
     const dados = fundirCampos({ serviceType: RECOLHA }, lerDadosPessoais(PRIMEIRA, {}).campos, AGORA);
     const v = vistaDoRascunho(dados);
-    expect(JSON.stringify(v)).not.toMatch(/Joaquina|Ferreirinha|Camélias|123456789/);
+    expect(JSON.stringify(v)).not.toMatch(/Graciete|Moreirinha|Camélias|123456789/);
     expect(v.jaSeSabe.nome).toBe(MARCA_DO_NOME);
     expect(v.passosEmFalta).toEqual(passosEmFalta(dados));
     expect(v.servicosDoSite.map((s) => s.id)).toEqual([...IDS_DA_LISTA]);
@@ -378,7 +378,7 @@ describe("a recolha em ensaio (orquestra)", () => {
     expect(r.porque).toBe("ok");
     // O que foi ao modelo: nem o nome, nem a rua, nem o NIF, nem o código postal.
     const foi = JSON.stringify(pedidos);
-    expect(foi).not.toMatch(/Joaquina|Ferreirinha|Camélias|Camelias|123456789|2800-123/i);
+    expect(foi).not.toMatch(/Graciete|Moreirinha|Camélias|Camelias|123456789|2800-123/i);
     expect(foi).toContain("[nome recebido]");
     expect((pedidos[0].system as Array<{ text: string }>)[0].text).toBe(AVISO_DA_RECOLHA);
     // A sombra tem o que o código leu e o que o modelo gravou.
@@ -388,13 +388,13 @@ describe("a recolha em ensaio (orquestra)", () => {
     expect(sombra.dados.nifFactura).toBe(NIF);
     // A linha do ensaio: sem dados de pessoas.
     const linha = escrito.ensaios[0];
-    expect(JSON.stringify(linha)).not.toMatch(/Joaquina|Ferreirinha|Camélias|123456789/);
+    expect(JSON.stringify(linha)).not.toMatch(/Graciete|Moreirinha|Camélias|123456789/);
     expect(linha.fechado?.estado).toBe("recolha_ok");
     expect(linha.fechado?.teriaFeito.join(" ")).toMatch(/teria gravado no rascunho: servico, descricao/);
     // A comparação, sem fugas no que foi ao modelo.
     expect(escrito.comparacoes[0].fugasNoModelo).toBe(0);
     expect(escrito.comparacoes[0].chamouOModelo).toBe(true);
-    expect(JSON.stringify(escrito.comparacoes)).not.toMatch(/Joaquina|Ferreirinha|Camélias|123456789/);
+    expect(JSON.stringify(escrito.comparacoes)).not.toMatch(/Graciete|Moreirinha|Camélias|123456789/);
     // O rascunho real só foi lido; a orquestra nem tem como enviar ou gravar nele.
     expect(escrito.lidoORascunhoReal).toBeGreaterThan(0);
     expect(Object.keys(deps).some((k) => /enviar|guardarRecolha|registar(?!Accao)/i.test(k))).toBe(false);
@@ -452,7 +452,7 @@ describe("a comparação com a Vitória de sempre e os critérios da d99", () =>
     expect(igual.iguais).toBe(igual.comparados);
     const outro = compararOsResumos(d, { ...d, floor: "3" });
     expect(outro.iguais).toBe(outro.comparados - 1);
-    expect(JSON.stringify(igual)).not.toMatch(/Joaquina|Ferreirinha|Camélias|2800-123/);
+    expect(JSON.stringify(igual)).not.toMatch(/Graciete|Moreirinha|Camélias|2800-123/);
     expect(igual.campos.find((c) => c.campo === "Nome")?.agente).toBe("[dado tapado]");
   });
 
