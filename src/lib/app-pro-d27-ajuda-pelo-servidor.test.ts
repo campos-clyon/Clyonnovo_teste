@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { perguntasDaAjuda } from "../../app-pro/src/lib/novo-modelo";
+import { comONadaAPagarAgora, perguntasDaAjuda } from "../../app-pro/src/lib/novo-modelo";
 import { avisoDosDadosMudados, type VistoDoPagarAoParceiro } from "../../app-cliente/src/lib/pagar-ao-parceiro";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
 
@@ -34,7 +34,8 @@ describe("d27 — a Ajuda da app Pro pelo modelo do servidor", () => {
   it("com o servidor no modelo novo, as respostas são as do modelo novo, seja qual for o relógio do telemóvel", () => {
     vi.setSystemTime(new Date("2026-10-01T10:00:00Z"));
     const app = perguntasDaAjuda(TAXAS, true);
-    expect(app).toEqual(perguntasDoProfissional(TAXAS, NO_DIA));
+    // d4 (24-11): a app acrescenta «nada a pagar agora» só se a lista do site ainda não a trouxer.
+    expect(app).toEqual(comONadaAPagarAgora(perguntasDoProfissional(TAXAS, NO_DIA)));
     expect(quantoLeva(app)).toContain("O cliente paga-lhe diretamente");
   });
 
@@ -48,7 +49,7 @@ describe("d27 — a Ajuda da app Pro pelo modelo do servidor", () => {
 
   it("sem as taxas ainda, o mesmo modelo, com o nome da taxa sem número", () => {
     vi.setSystemTime(new Date("2026-10-01T10:00:00Z"));
-    expect(perguntasDaAjuda(null, true)).toEqual(perguntasDoProfissional(null, NO_DIA));
+    expect(perguntasDaAjuda(null, true)).toEqual(comONadaAPagarAgora(perguntasDoProfissional(null, NO_DIA)));
     expect(perguntasDaAjuda(null, false)).toEqual(perguntasDoProfissional(null, ANTES));
   });
 

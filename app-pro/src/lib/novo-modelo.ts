@@ -15,6 +15,8 @@
  * painel). Puro (sem React Native): os testes do site importam-no.
  */
 import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, PAGAR_O_VALOR_EM_ATRASO } from "../../../src/lib/valor-em-atraso";
+import { NADA_A_PAGAR_AGORA_NO_NOVO_MODELO } from "../../../src/lib/nada-a-pagar-agora";
+import { DIAS_PARA_PAGAR_A_DIVIDA } from "../../../src/lib/divida-do-profissional";
 import { NOME_DA_FATURA, MENSAGENS_DA_FATURA } from "../../../src/lib/faturas-do-trabalho";
 import { COMO_PAGAR_EM_PALAVRAS } from "../../../src/lib/pagar-ao-parceiro";
 import { COMPLETAR_O_PERFIL } from "../../../src/lib/dados-para-receber";
@@ -306,5 +308,28 @@ const DEPOIS_DE_TUDO = new Date(8.64e15);
  * (modelo antigo) ou o último (modelo novo).
  */
 export function perguntasDaAjuda(taxas: Taxas | null, noNovoModelo: boolean): PerguntaFrequente[] {
-  return perguntasDoProfissional(taxas, noNovoModelo ? DEPOIS_DE_TUDO : ANTES_DE_TUDO);
+  const lista = perguntasDoProfissional(taxas, noNovoModelo ? DEPOIS_DE_TUDO : ANTES_DE_TUDO);
+  return noNovoModelo ? comONadaAPagarAgora(lista) : lista;
+}
+
+/**
+ * «TENHO ALGUMA COISA A PAGAR QUANDO SOU ESCOLHIDO?» — d4 (CEO e dono,
+ * 24-11-2026). Um parceiro perguntou «qual entidade e referência para o
+ * pagamento» logo a seguir ao aviso de que o trabalho era dele (d100). No
+ * modelo de 15-11 não há nada a pagar nesse momento: a referência chega quando
+ * o trabalho fica confirmado, e há `DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO` dias
+ * para a pagar (`DIAS_PARA_PAGAR_A_DIVIDA` nas dívidas antigas, de antes do
+ * modelo). A frase é a do aviso (`NADA_A_PAGAR_AGORA_NO_NOVO_MODELO`) e os dias
+ * vêm das constantes do site: a app não escreve nenhum número. Se a lista do
+ * site (a do painel) já traz esta resposta, não se repete.
+ */
+export const PERGUNTA_DO_NADA_A_PAGAR_AGORA = "Tenho de pagar alguma coisa quando sou escolhido?";
+
+export function respostaDoNadaAPagarAgora(): string {
+  return `${NADA_A_PAGAR_AGORA_NO_NOVO_MODELO} São ${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias no modelo novo e ${DIAS_PARA_PAGAR_A_DIVIDA} nas dívidas antigas.`;
+}
+
+export function comONadaAPagarAgora(lista: PerguntaFrequente[]): PerguntaFrequente[] {
+  if (lista.some((p) => p.resposta.includes(NADA_A_PAGAR_AGORA_NO_NOVO_MODELO))) return lista;
+  return [...lista, { pergunta: PERGUNTA_DO_NADA_A_PAGAR_AGORA, resposta: respostaDoNadaAPagarAgora() }];
 }

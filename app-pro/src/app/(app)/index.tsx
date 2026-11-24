@@ -9,6 +9,7 @@ import { BordaABrilhar } from "../../componentes/BordaABrilhar";
 import { VersaoNova } from "../../componentes/VersaoNova";
 import { OQueHaDeNovo } from "../../componentes/Novidades";
 import { AvisosDoNovoModelo } from "../../componentes/AvisosDoNovoModelo";
+import { PerguntaDoCliente } from "../../componentes/PerguntaDoCliente";
 import { AceitarOsTermos } from "../../componentes/AceitarOsTermos";
 import { dataEHora } from "../../../../src/lib/historico-negociacao";
 import { ETIQUETA_DO_FECHO_SEM_RESPOSTA } from "../../../../src/lib/textos-dos-avisos-ao-profissional";
@@ -187,6 +188,8 @@ export default function Trabalhos() {
                 <Mensagem texto={carteira.bloqueioEmDinheiro.explicacao} />
               </Pressable>
             ) : null}
+            {/* d3 (24-11): o cliente quer escolher a proposta dele com uma condição — responde aqui (a pergunta vem do servidor). */}
+            <PerguntaDoCliente />
             {/* O modelo de 15-11 (d10): o stand-by e os dados para receber, como no painel. Nada antes da data. */}
             <AvisosDoNovoModelo />
             {erro && lidaEm ? (

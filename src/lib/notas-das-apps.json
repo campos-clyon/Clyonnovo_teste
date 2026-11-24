@@ -2,7 +2,7 @@
   "pro": [
     {
       "id": "pro-2026-11-24",
-      "nota": "No trabalho contratado, o pagamento do cliente fica registado: «Sim, recebi» ou «Ainda não recebi» quando o cliente diz que pagou, ou «O cliente já me pagou».",
+      "nota": "O pagamento do cliente fica registado no trabalho: «Sim, recebi» ou «Ainda não recebi».\nNo Início, o cliente pergunta se consegue uma condição («até quinta»): responda Sim, com o quando, ou Não.",
       "updates": []
     },
     {

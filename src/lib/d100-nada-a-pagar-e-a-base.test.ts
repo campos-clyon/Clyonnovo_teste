@@ -60,7 +60,7 @@ describe("d100 (1): nada a pagar agora, no aviso ao escolhido", () => {
   });
 
   it("o número de dias não está escrito à mão: vem de novo-modelo.ts", () => {
-    const fonte = semComentarios(ler("src/lib/aviso-de-oferta-clyon.ts"));
+    const fonte = semComentarios(ler("src/lib/nada-a-pagar-agora.ts"));
     expect(fonte).toContain("${DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO} dias para a pagar");
     expect(fonte).not.toMatch(/\b\d+ dias para a pagar/);
   });
