@@ -121,7 +121,8 @@ import {
   type CandidatoAoLembrete,
   type CicloDoQueFalta,
 } from "./lembrete-do-que-falta";
-import { mensagemDoQueFalta, registoDoQueFalta } from "./mensagem-do-que-falta";
+import { mensagemAutomaticaDoQueFalta, mensagemDoQueFalta, registoDoQueFalta, VITORIA_NO_AUTOMATICO } from "./mensagem-do-que-falta";
+import { pedidoDoEnvioDeModelo } from "./envio-de-modelo";
 import { MENSAGEM_DE_CANCELAMENTO } from "./mensagens-das-fases";
 import { textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
 
@@ -312,7 +313,7 @@ describe("o ritmo: 30 min depois, o dia seguinte à mesma hora, 3 no máximo, da
   });
 });
 
-describe("os textos: o modelo da Mesa, tal e qual (d86 reconhece-o)", () => {
+describe("os textos: a lista do modelo da Mesa, na voz da Vitória (d113; a d86 reconhece-os)", () => {
   const P = { id: 812, serviceType: "recolha_monos", city: "Almada" };
   const F = ["fotografias", "andar", "elevador"] as const;
   const l1 = textoDoLembrete1(P, [...F], AGORA);
@@ -320,15 +321,31 @@ describe("os textos: o modelo da Mesa, tal e qual (d86 reconhece-o)", () => {
   const l3 = textoDoLembrete3(P, [...F], AGORA);
   const arq = textoDoArquivo(P, AGORA);
 
-  it("a 1.ª é o «Pedir o que falta» da Mesa, sem tirar nem pôr", () => {
-    expect(l1).toBe(mensagemDoQueFalta(P, [...F], AGORA));
+  it("a 1.ª é a lista do «Pedir o que falta» da Mesa, dita pela Vitória — e a d86 reconhece-a", () => {
+    // d113: é a máquina a escrever, e diz-o (d85); o envio à mão da equipa fica tal e qual.
+    expect(l1).toBe(mensagemAutomaticaDoQueFalta(P, [...F]));
+    expect(l1).toBe(
+      [
+        "Olá! Aqui é a Vitória, a assistente automática da CLYON.",
+        "Falta pouco para o seu pedido #812 (recolha de monos em Almada) seguir para os parceiros da sua zona. Só preciso de:",
+        mensagemDoQueFalta(P, [...F], AGORA).split("\n").filter((x) => x.startsWith("- ")).join("\n"),
+        "Pode mandar só uma parte. Se preferir falar com uma pessoa, diga.",
+      ].join("\n\n"),
+    );
+    expect(l1).not.toContain("Equipa CLYON");
+    expect(l1).not.toContain("Aqui é a equipa da CLYON");
+    expect(mensagemDoQueFalta(P, [...F], AGORA)).toContain("Aqui é a equipa da CLYON.");
+    expect(pedidoDoEnvioDeModelo(l1)).toBe(812);
     expect(l1).not.toContain(SE_JA_NAO_PRECISAR);
   });
 
   it("a 2.ª e a 3.ª (d91, 3.19): «continua guardado» e o último aviso, com a lista e o «responda 2» da d71", () => {
     for (const t of [l2, l3]) {
-      expect(t.startsWith("Bom dia! Aqui é a equipa da CLYON.")).toBe(true);
-      expect(t).toContain(`${SE_JA_NAO_PRECISAR}\n\nEquipa CLYON`);
+      // d113: na voz da Vitória, sem a assinatura «Equipa CLYON».
+      expect(t.startsWith(`Bom dia! ${VITORIA_NO_AUTOMATICO}`)).toBe(true);
+      expect(t.endsWith(SE_JA_NAO_PRECISAR)).toBe(true);
+      expect(t).not.toContain("Equipa CLYON");
+      expect(pedidoDoEnvioDeModelo(t)).toBe(812);
       expect(t).toContain("#812 (recolha de monos em Almada)");
       // A mesma lista do modelo, linha a linha.
       for (const linha of l1.split("\n").filter((x) => x.startsWith("- "))) expect(t).toContain(linha);
@@ -351,9 +368,10 @@ describe("os textos: o modelo da Mesa, tal e qual (d86 reconhece-o)", () => {
   });
 
   it("o do arquivo é simpático, diz que pode voltar a pedir, e não tem o «responda 2»", () => {
-    expect(arq).toMatch(/arquivámos o seu pedido #812/);
+    expect(arq).toMatch(/Como não tive notícias, arquivei o seu pedido #812/);
     // d91 (3.19): pode voltar a pedir — por aqui ou na plataforma, grátis e sem compromisso.
-    expect(arq).toMatch(/basta responder por aqui ou pedir de novo na plataforma clyon\.pt: é grátis e sem compromisso/i);
+    expect(arq).toMatch(/é só responder por aqui ou pedir de novo na plataforma clyon\.pt: é grátis e sem compromisso/i);
+    expect(arq).not.toContain("Equipa CLYON");
     expect(arq).not.toContain("responda 2");
   });
 

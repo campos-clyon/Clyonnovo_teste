@@ -153,9 +153,11 @@ export const PERGUNTA_ANOTADA =
  * proposta 7 do Apoio). Dizia «um colega (…) fala-lhe já de seguida», quando a
  * primeira resposta de uma pessoa leva horas: promete-se o que se cumpre — uma
  * pessoa da CLYON, por aqui, no horário de atendimento. Tem tradução fixa.
+ * d113 (25-11-2026): no tom do dia a dia, e com o mesmo horário de todo o lado
+ * (`horario-de-atendimento.ts`, `ATENDIMENTO` das promessas públicas).
  */
 export const MENSAGEM_DE_PASSAR_A_UMA_PESSOA =
-  "Percebi o que me disse. Vou passar isto a uma pessoa da CLYON, que lhe responde por aqui (de segunda a sábado, das 8h às 20h).";
+  "Combinado, vou chamar uma pessoa da equipa, que lhe responde aqui (de segunda a sábado, das 8h às 20h).";
 
 /**
  * «DO YOU SPEAK ENGLISH?» — «Yes, of course!» — 28-10-2026 (decisão d35).

@@ -104,10 +104,15 @@ describe("os ecrãs do cliente dizem o sem IVA ao lado", () => {
   });
 
   it("o assistente diz o mesmo, ao fechar e na pergunta", () => {
-    for (const f of ["src/lib/whatsapp-negociacao.ts", "src/lib/assistente-automatico.ts"]) {
+    // O valor que o cliente propõe é dito com IVA. d113: no assistente, a pergunta é «Serve-lhe, ou prefere propor outro valor (com IVA)?».
+    const PERGUNTA: Record<string, string> = {
+      "src/lib/whatsapp-negociacao.ts": "o valor que gostaria de pagar${comIvaNaResposta(modelo)}.",
+      "src/lib/assistente-automatico.ts": "Serve-lhe, ou prefere propor outro valor${comIvaNaResposta(modelo)}?",
+    };
+    for (const [f, pergunta] of Object.entries(PERGUNTA)) {
       const s = semComentarios(ler(f));
       expect(s, f).toContain("desdobramentoDoIva(");
-      expect(s, f).toContain("o valor que gostaria de pagar${comIvaNaResposta(modelo)}.");
+      expect(s, f).toContain(pergunta);
     }
   });
 });

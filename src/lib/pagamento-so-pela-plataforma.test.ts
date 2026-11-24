@@ -154,9 +154,11 @@ describe("as duas frases ao cliente que prometiam o que não acontece", () => {
   });
 
   it("a Vitória passa a uma pessoa da CLYON, sem prometer «já de seguida»", () => {
+    // d113: no tom do dia a dia, com o mesmo horário de todo o lado.
     expect(MENSAGEM_DE_PASSAR_A_UMA_PESSOA).toBe(
-      "Percebi o que me disse. Vou passar isto a uma pessoa da CLYON, que lhe responde por aqui (de segunda a sábado, das 8h às 20h).",
+      "Combinado, vou chamar uma pessoa da equipa, que lhe responde aqui (de segunda a sábado, das 8h às 20h).",
     );
+    expect(MENSAGEM_DE_PASSAR_A_UMA_PESSOA).not.toMatch(/já de seguida|de imediato|agora mesmo/);
     const negociacao = ler("src/lib/whatsapp-negociacao.ts");
     expect(negociacao).toContain("mensagem = MENSAGEM_DE_PASSAR_A_UMA_PESSOA,");
     expect(negociacao).not.toContain("um colega para confirmar tudo consigo, e ele fala-lhe já de seguida");
@@ -164,7 +166,7 @@ describe("as duas frases ao cliente que prometiam o que não acontece", () => {
 
   it("com a tradução fixa nas três línguas", () => {
     expect(traducaoFixa(MENSAGEM_DE_PASSAR_A_UMA_PESSOA, "en")).toBe(
-      "I understood what you told me. I'll pass this to a person from CLYON, who will reply to you here (Monday to Saturday, 8am to 8pm).",
+      "All right, I'll call a person from the team, who will reply to you here (Monday to Saturday, 8am to 8pm).",
     );
     expect(traducaoFixa(MENSAGEM_DE_PASSAR_A_UMA_PESSOA, "fr")).toContain("du lundi au samedi, de 8h à 20h");
     expect(traducaoFixa(MENSAGEM_DE_PASSAR_A_UMA_PESSOA, "es")).toContain("de lunes a sábado, de 8:00 a 20:00");

@@ -335,9 +335,9 @@ export type DadosDaMensagem = {
 /** As três opções. É também por esta frase que se reconhece o seguimento na conversa. */
 export const AS_OPCOES_DO_SEGUIMENTO = "Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.";
 export const AINDA_QUER_AVANCAR = "Ainda quer avançar?";
-/** d91 (3.18): a perda verdadeira — um pedido fechado não guarda a proposta. */
-export const O_PEDIDO_FECHA_AMANHA = "Se não tivermos resposta, o pedido fecha amanhã e, para avançar depois, terá de pedir propostas de novo.";
-export const PODE_VOLTAR_A_PEDIR = "Se ainda precisar, pode voltar a pedir quando quiser: basta responder aqui.";
+/** d113 (25-11-2026): o prazo, dito por ela, numa frase. */
+export const O_PEDIDO_FECHA_AMANHA = "Se não me disser nada, o pedido fecha amanhã.";
+export const PODE_VOLTAR_A_PEDIR = "Se ainda precisar, é só responder aqui.";
 
 /*
  * AS FRASES DA d91 (Marketing, 23-11-2026, secção 3.18), com a correcção do CEO:
@@ -347,9 +347,8 @@ export const PODE_VOLTAR_A_PEDIR = "Se ainda precisar, pode voltar a pedir quand
  * ao «depois digo» (o risco), a 2.ª ao «estou a ver outras empresas» (comparar
  * total com total), a 3.ª com a perda verdadeira.
  */
-/** 1.ª «Vai pensar», variante A (pedido par): o risco que se tira. */
-export const SE_AJUDAR_A_DECIDIR =
-  "Se ajudar a decidir: o valor da proposta já é o total a pagar, não paga nada adiantado, e o que aparecer a mais no dia só se faz com o seu acordo.";
+/** 1.ª «Vai pensar», variante A (pedido par): o risco que se tira (d113: numa frase do dia a dia). */
+export const SE_AJUDAR_A_DECIDIR = "O valor é o total, sem nada adiantado, e qualquer extra no dia só com o seu ok.";
 /** 2.ª: comparar total com total. */
 export const SE_ESTA_A_COMPARAR =
   "Se ainda está a comparar com outras empresas, compare à vontade: o valor da proposta já leva o IVA e a taxa da plataforma, e não paga nada adiantado.";
@@ -385,7 +384,7 @@ export function textoDaMensagem1(d: DadosDaMensagem): string {
     // A frase das opções fica inteira, letra a letra (o `eMensagemDoSeguimento` e o `paraEmail` procuram-na).
     return `${ola(d.nome)} Sobre o seu pedido ${oPedido(d)}: o que falta para decidir, o valor, o dia ou outra coisa? ${SE_JA_ESTIVER_DECIDIDO} ${AS_OPCOES_DO_SEGUIMENTO}`;
   }
-  return `${ola(d.nome)} Ficou de pensar no seu pedido ${oPedido(d)}. ${SE_AJUDAR_A_DECIDIR} ${AINDA_QUER_AVANCAR} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  return `${ola(d.nome)} Já conseguiu pensar no seu pedido ${oPedido(d)}? ${SE_AJUDAR_A_DECIDIR} ${AS_OPCOES_DO_SEGUIMENTO}`;
 }
 
 /** A 2.ª, no dia seguinte à mesma hora. */
@@ -393,14 +392,14 @@ export function textoDaMensagem2(d: DadosDaMensagem): string {
   return `${ola(d.nome)} Volto ao seu pedido ${oPedido(d)}. ${SE_ESTA_A_COMPARAR} ${AINDA_QUER_AVANCAR} ${AS_OPCOES_DO_SEGUIMENTO}`;
 }
 
-/** A 3.ª, no outro dia à mesma hora: diz que o pedido fecha amanhã. */
+/** A 3.ª, no outro dia à mesma hora: diz que não insiste mais e que o pedido fecha amanhã. */
 export function textoDaMensagem3(d: DadosDaMensagem): string {
-  return `${ola(d.nome)} Esta é a última mensagem sobre o seu pedido ${oPedido(d)}. ${O_PEDIDO_FECHA_AMANHA} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  return `${ola(d.nome)} Sobre o seu pedido ${oPedido(d)}: não volto a insistir. ${O_PEDIDO_FECHA_AMANHA} ${AS_OPCOES_DO_SEGUIMENTO}`;
 }
 
 /** No 4.º dia, ao arquivar. */
 export function textoDoFechoDoSeguimento(pedidoId: number): string {
-  return `Fechámos o pedido #${pedidoId}, porque não tivemos resposta. ${PODE_VOLTAR_A_PEDIR}`;
+  return `Como não tive notícias, fechei o pedido #${pedidoId}. ${PODE_VOLTAR_A_PEDIR}`;
 }
 
 export function textoDoPassoDoSeguimento(passo: PassoDoSeguimento, d: DadosDaMensagem): string {

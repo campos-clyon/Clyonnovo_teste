@@ -17,6 +17,7 @@ import {
   textoDoFechoAoParceiro,
   textoDoLembrete,
   textoDoUltimoAviso,
+  valorComIvaPrimeiro,
   valorDoLembrete,
   clienteRespondeuNoCiclo,
   aUltimaSaidaE,
@@ -176,17 +177,21 @@ describe("os textos", () => {
 
   it("o lembrete, com o valor e o IVA ao lado (nunca sozinho), o parceiro e as três opções", () => {
     // d91 (3.13 e 5.2): o 700 (par) leva a variante A; o 701 (ímpar), a B.
+    // d113 (25-11-2026): o tom leve — o parceiro que faz, o com IVA e o sem IVA ao lado, uma ideia por frase.
     expect(textoDoLembrete({ ...dados, pedidoId: 700 })).toBe(
-      "Olá, Maria! O orçamento do seu pedido #700 (recolha de monos) continua à sua espera: 105 € + IVA (129,15 € com IVA), com o parceiro Recolhas Exemplo. " +
-        "É o total a pagar, e não paga nada adiantado. " +
+      "Olá, Maria! Ficou a pensar no seu pedido #700 (recolha de monos)? O parceiro Recolhas Exemplo faz por 129,15 € com IVA (105 € + IVA). " +
+        "É o total, sem nada adiantado. " +
         AS_TRES_OPCOES,
     );
     expect(textoDoLembrete(dados)).toBe(
-      "Olá, Maria! Ficou alguma dúvida sobre o orçamento do pedido #701 (recolha de monos)? 105 € + IVA (129,15 € com IVA), com o parceiro Recolhas Exemplo. " +
-        "É o total a pagar, e não paga nada adiantado. " +
+      "Olá, Maria! Ficou alguma dúvida sobre o orçamento do pedido #701 (recolha de monos)? O parceiro Recolhas Exemplo faz por 129,15 € com IVA (105 € + IVA). " +
+        "É o total, sem nada adiantado. " +
         AS_TRES_OPCOES,
     );
     expect(valorDoLembrete(50, 61.5, "hora")).toBe("50 € + IVA (61,50 € com IVA) por hora");
+    expect(valorComIvaPrimeiro(50, 61.5, "hora")).toBe("61,50 € com IVA (50 € + IVA) por hora");
+    // O sem IVA nunca sozinho (a regra p da orquestra): cada «+ IVA» com o «com IVA» ao lado.
+    for (const t of [textoDoLembrete(dados), textoDoUltimoAviso(dados)]) expect(t).toMatch(/[\d,]+ € com IVA \([\d ,]+ € \+ IVA\)/);
   });
 
   it("o último aviso diz até quando", () => {
@@ -197,8 +202,9 @@ describe("os textos", () => {
 
   it("o fecho, ao cliente e aos parceiros, palavra por palavra", () => {
     // d91 (3.15).
+    // d113: dito por ela, com a porta aberta.
     expect(textoDoFechoAoCliente(701)).toBe(
-      "Fechámos o pedido #701, porque não tivemos resposta. Se ainda precisar, responda aqui e reabrimo-lo para os parceiros. Obrigada pelo seu tempo.",
+      "Como não tive notícias, fechei o pedido #701. Se ainda precisar, é só responder e volto a abri-lo.",
     );
     expect(textoDoFechoAoParceiro(701)).toBe("Pedido #701 fechado: o cliente não respondeu ao orçamento. Saiu da sua lista de pedidos.");
     expect(avisoSemOTrabalho({ pedidoId: 701, porque: "fechado_sem_resposta" }).body).toBe(textoDoFechoAoParceiro(701));

@@ -1,4 +1,9 @@
-import { EQUIPA_DA_CLYON_NO_MODELO, PODE_RESPONDER_COM_O_QUE_FALTA } from "./mensagem-do-que-falta";
+import {
+  EQUIPA_DA_CLYON_NO_MODELO,
+  PODE_MANDAR_SO_UMA_PARTE,
+  PODE_RESPONDER_COM_O_QUE_FALTA,
+  VITORIA_NO_AUTOMATICO,
+} from "./mensagem-do-que-falta";
 import { SE_JA_NAO_PRECISAR, SE_JA_NAO_PRECISAR_ANTIGA } from "./lembrete-do-que-falta";
 import { semMarcaDeMao } from "./rajada-do-whatsapp";
 
@@ -30,6 +35,10 @@ import { semMarcaDeMao } from "./rajada-do-whatsapp";
  *
  * Se a equipa mudar o texto no WhatsApp antes de o enviar (tirar uma das
  * frases), deixa de ser o modelo: conta como escrito à mão, como hoje.
+ *
+ * Desde 25-11-2026 (d113) o automático apresenta-se como a Vitória: «Aqui é a
+ * Vitória, a assistente automática da CLYON.» e «Pode mandar só uma parte.»
+ * (ou, nos lembretes, a mesma frase das opções) valem como as do modelo.
  */
 
 /** Sem quebras de linha nem espaços a mais — o WhatsApp pode trocar «\n» por «\r\n». */
@@ -47,8 +56,12 @@ const PEDIDO_DO_MODELO = /\bpedido #(\d{1,7})\b/;
 export function pedidoDoEnvioDeModelo(texto: string | null | undefined): number | null {
   if (typeof texto !== "string") return null;
   const t = plano(semMarcaDeMao(texto));
-  if (!t.includes(plano(EQUIPA_DA_CLYON_NO_MODELO).replace(/\.$/, ""))) return null;
-  const doQueFalta = t.includes(plano(PODE_RESPONDER_COM_O_QUE_FALTA).replace(/\.$/, ""));
+  const daEquipa = t.includes(plano(EQUIPA_DA_CLYON_NO_MODELO).replace(/\.$/, ""));
+  const daVitoria = t.includes(plano(VITORIA_NO_AUTOMATICO).replace(/\.$/, ""));
+  if (!daEquipa && !daVitoria) return null;
+  const doQueFalta =
+    t.includes(plano(PODE_RESPONDER_COM_O_QUE_FALTA).replace(/\.$/, "")) ||
+    (daVitoria && t.includes(plano(PODE_MANDAR_SO_UMA_PARTE).replace(/\.$/, "")));
   const doLembrete = t.includes(plano(SE_JA_NAO_PRECISAR)) || t.includes(plano(SE_JA_NAO_PRECISAR_ANTIGA));
   if (!doQueFalta && !doLembrete) return null;
   const m = PEDIDO_DO_MODELO.exec(t);

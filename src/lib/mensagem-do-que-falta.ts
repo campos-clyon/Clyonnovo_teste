@@ -253,6 +253,20 @@ export function oPedidoEmPalavras(p: PedidoDaMensagem): string {
 export const EQUIPA_DA_CLYON_NO_MODELO = "Aqui é a equipa da CLYON.";
 export const PODE_RESPONDER_COM_O_QUE_FALTA = "Pode responder a esta mensagem com o que falta.";
 
+/**
+ * QUANDO É A MÁQUINA A ESCREVER — 25-11-2026 (decisão d113). O «Pedir o que
+ * falta» automático (a 1.ª aos 30 minutos, d88, e os lembretes que se lhe
+ * seguem) dizia «Aqui é a equipa da CLYON… Equipa CLYON» sem ser uma pessoa a
+ * escrever — o contrário da d85. Agora apresenta-se a Vitória, a assistente
+ * automática, e oferece uma pessoa. O envio feito à mão pela equipa (o botão
+ * da Mesa, `mensagemDoQueFalta`) fica tal e qual. Estas frases são também os
+ * marcadores pelos quais o site reconhece a resposta do cliente
+ * (`envio-de-modelo.ts`): mudá-las aqui muda o reconhecimento.
+ */
+export const VITORIA_NO_AUTOMATICO = "Aqui é a Vitória, a assistente automática da CLYON.";
+export const PODE_MANDAR_SO_UMA_PARTE = "Pode mandar só uma parte.";
+export const SE_PREFERIR_UMA_PESSOA_DIGA = "Se preferir falar com uma pessoa, diga.";
+
 /** d91 (3.7): o fim da linha das fotografias. */
 const SEM_SURPRESAS = ": com elas, os parceiros dão um preço certo e sem surpresas no dia.";
 
@@ -286,6 +300,24 @@ export function mensagemDoQueFalta(
     lista.map((c) => `- ${linhaDaFalta(c, pedido.serviceType)}`).join("\n"),
     `${PODE_RESPONDER_COM_O_QUE_FALTA} ${SE_SO_TIVER_UMA_PARTE}`,
     "Obrigado,\nEquipa CLYON",
+  ].join("\n\n");
+}
+
+/**
+ * O «PEDIR O QUE FALTA» AUTOMÁTICO (d113) — a mesma lista, na voz da Vitória:
+ * «Olá! Aqui é a Vitória… Falta pouco… Só preciso de: … Pode mandar só uma
+ * parte. Se preferir falar com uma pessoa, diga.» Sem faltas, "".
+ */
+export function mensagemAutomaticaDoQueFalta(pedido: PedidoDaMensagem, faltas: readonly ChaveDaFalta[]): string {
+  const lista = arrumarAsFaltas(faltas);
+  if (lista.length === 0) return "";
+  const emPalavras = oPedidoEmPalavras(pedido);
+  const doPedido = `#${pedido.id}${emPalavras ? ` (${emPalavras})` : ""}`;
+  return [
+    `Olá! ${VITORIA_NO_AUTOMATICO}`,
+    `Falta pouco para o seu pedido ${doPedido} seguir para os parceiros da sua zona. Só preciso de:`,
+    lista.map((c) => `- ${linhaDaFalta(c, pedido.serviceType)}`).join("\n"),
+    `${PODE_MANDAR_SO_UMA_PARTE} ${SE_PREFERIR_UMA_PESSOA_DIGA}`,
   ].join("\n\n");
 }
 

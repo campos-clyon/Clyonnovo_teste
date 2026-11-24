@@ -5,8 +5,9 @@
  *
  * Todo o pedido INCOMPLETO dos «Orçamentos novos» (do simulador, do formulário,
  * do WhatsApp ou registado na Mesa), sem pessoa atribuída, recebe o «Pedir o que
- * falta» com o MESMO texto do modelo da Mesa (`mensagemDoQueFalta`), para a
- * Vitória reconhecer a resposta e a gravar no pedido (d86):
+ * falta» com a MESMA lista do modelo da Mesa, na voz da Vitória desde a d113
+ * (`mensagemAutomaticaDoQueFalta`), para ela reconhecer a resposta e a gravar
+ * no pedido (d86):
  *
  *   · a 1.ª mensagem 30 minutos depois de o pedido entrar, e nunca com o cliente
  *     a escrever há menos de 30 minutos (não se pisa a conversa a meio);
@@ -43,10 +44,10 @@ import { aHoraDoDia, diaEHoraCurtos, momentoDeSaida, naJanelaDasMensagensAutomat
 import {
   arrumarAsFaltas,
   cumprimentoPelaHora,
-  EQUIPA_DA_CLYON_NO_MODELO,
   linhaDaFalta,
-  mensagemDoQueFalta,
+  mensagemAutomaticaDoQueFalta,
   oPedidoEmPalavras,
+  VITORIA_NO_AUTOMATICO,
   type ChaveDaFalta,
   type PedidoDaMensagem,
 } from "./mensagem-do-que-falta";
@@ -354,19 +355,24 @@ function oPedido(p: PedidoDaMensagem): string {
 }
 
 /**
- * A 1.ª — o «Pedir o que falta» da Mesa, TAL E QUAL (`mensagemDoQueFalta`):
- * é por ele que a Vitória reconhece a resposta (d86). Sem faltas, "".
+ * A 1.ª — a mesma lista do «Pedir o que falta» da Mesa, na voz da Vitória
+ * (`mensagemAutomaticaDoQueFalta`, d113): é a máquina a escrever, e diz-o
+ * (d85). A Vitória reconhece a resposta pelas frases dela (d86,
+ * `envio-de-modelo.ts`). Sem faltas, "". O `quando` fica para a assinatura de
+ * sempre dos passos.
  */
 export function textoDoLembrete1(p: PedidoDaMensagem, faltas: readonly ChaveDaFalta[], quando: Date): string {
-  return mensagemDoQueFalta(p, faltas, quando);
+  void quando;
+  return mensagemAutomaticaDoQueFalta(p, faltas);
 }
 
 /*
  * A 2.ª, A 3.ª E O ARQUIVO — os textos da d91 (Marketing, secção 3.19),
  * passados dos dias 1/3/5/7 da d71 ao ritmo da d88 (1.ª aos 30 min, 2.ª no dia
  * seguinte, 3.ª no dia a seguir, arquivo no seguinte): a 3.ª avisa que o pedido
- * é arquivado AMANHÃ. Ficam letra a letra «Aqui é a equipa da CLYON» (o
- * `pedidoDoEnvioDeModelo` da d86), «#N» e `SE_JA_NAO_PRECISAR` (o
+ * é arquivado AMANHÃ. Desde a d113 falam na voz da Vitória (`VITORIA_NO_AUTOMATICO`,
+ * sem a assinatura «Equipa CLYON»: é a máquina a escrever). Ficam letra a letra
+ * essa frase (o `pedidoDoEnvioDeModelo` da d86), «#N» e `SE_JA_NAO_PRECISAR` (o
  * `eLembreteDoQueFalta`). A lista vai em linhas («- …»), as mesmas do modelo
  * (`linhaDaFalta`), para as traduções fixas a lerem.
  */
@@ -378,20 +384,19 @@ const listaDasFaltas = (p: PedidoDaMensagem, faltas: readonly ChaveDaFalta[]) =>
 /** d91 (3.19, 2.ª): o pedido continua guardado, e basta responder. */
 export const COM_ISSO_SEGUE = "Com isso, segue para os parceiros da sua zona e as propostas chegam-lhe por aqui. Basta responder a esta mensagem.";
 
-/** d91 (3.19, 3.ª): a perda verdadeira, sem ameaça — o pedido arquiva-se amanhã. */
+/** d91 (3.19, 3.ª): o pedido arquiva-se amanhã — d113: dito por ela, curto. */
 export const SEM_RESPOSTA_ARQUIVA_AMANHA =
-  "Sem resposta, o pedido fica arquivado amanhã, e para receber propostas teria de o fazer de novo. Basta responder a esta mensagem para ele seguir para os parceiros.";
+  "Se não me disser nada, o pedido fica arquivado amanhã. Basta responder a esta mensagem para ele seguir para os parceiros.";
 
 /** A 2.ª, no dia seguinte — «continua guardado», com o «responda 2» da d71. Sem faltas, "". */
 export function textoDoLembrete2(p: PedidoDaMensagem, faltas: readonly ChaveDaFalta[], quando: Date): string {
   if (arrumarAsFaltas(faltas).length === 0) return "";
   return [
-    `${cumprimentoPelaHora(quando)}! ${EQUIPA_DA_CLYON_NO_MODELO}`,
+    `${cumprimentoPelaHora(quando)}! ${VITORIA_NO_AUTOMATICO}`,
     `O seu pedido ${oPedido(p)} continua guardado, à espera de:`,
     listaDasFaltas(p, faltas),
     COM_ISSO_SEGUE,
     SE_JA_NAO_PRECISAR,
-    "Equipa CLYON",
   ].join("\n\n");
 }
 
@@ -399,25 +404,21 @@ export function textoDoLembrete2(p: PedidoDaMensagem, faltas: readonly ChaveDaFa
 export function textoDoLembrete3(p: PedidoDaMensagem, faltas: readonly ChaveDaFalta[], quando: Date): string {
   if (arrumarAsFaltas(faltas).length === 0) return "";
   return [
-    `${cumprimentoPelaHora(quando)}! ${EQUIPA_DA_CLYON_NO_MODELO}`,
+    `${cumprimentoPelaHora(quando)}! ${VITORIA_NO_AUTOMATICO}`,
     `Último aviso sobre o seu pedido ${oPedido(p)}. Ainda falta:`,
     listaDasFaltas(p, faltas),
     SEM_RESPOSTA_ARQUIVA_AMANHA,
     SE_JA_NAO_PRECISAR,
-    "Equipa CLYON",
   ].join("\n\n");
 }
 
-/** d91 (3.19, arquivo): pode voltar a pedir, grátis e sem compromisso. */
+/** d91 (3.19, arquivo): pode voltar a pedir, grátis e sem compromisso — d113: mais curto. */
 export const SE_AINDA_PRECISAR_DO_ARQUIVO =
-  "Se ainda precisar, basta responder por aqui ou pedir de novo na plataforma clyon.pt: é grátis e sem compromisso, e teremos todo o gosto em ajudar.";
+  "Se ainda precisar, é só responder por aqui ou pedir de novo na plataforma clyon.pt: é grátis e sem compromisso.";
 
 /** No dia a seguir à 3.ª — o pedido foi arquivado sem resposta: pode voltar a pedir quando quiser. */
 export function textoDoArquivo(p: PedidoDaMensagem, quando: Date): string {
-  return [
-    `${cumprimentoPelaHora(quando)}! Como não tivemos resposta, arquivámos o seu pedido ${oPedido(p)}. ${SE_AINDA_PRECISAR_DO_ARQUIVO}`,
-    "Equipa CLYON",
-  ].join("\n\n");
+  return `${cumprimentoPelaHora(quando)}! Como não tive notícias, arquivei o seu pedido ${oPedido(p)}. ${SE_AINDA_PRECISAR_DO_ARQUIVO}`;
 }
 
 /** O texto de cada passo. */

@@ -250,6 +250,16 @@ export function valorDoLembrete(semIva: number, total: number, unidade?: "carga"
   return `${euros(semIva)} + IVA (${euros(total)} com IVA)${por}`;
 }
 
+/**
+ * «129,15 € com IVA (105 € + IVA)» — o que paga primeiro, e o sem IVA ao lado
+ * (nunca sozinho: a regra p da orquestra). Sem IVA a acrescer, o total. d113.
+ */
+export function valorComIvaPrimeiro(semIva: number, total: number, unidade?: "carga" | "hora" | null): string {
+  const por = unidade === "carga" ? " por carga" : unidade === "hora" ? " por hora" : "";
+  if (Math.abs(total - semIva) < 0.005) return `${euros(total)}${por}`;
+  return `${euros(total)} com IVA (${euros(semIva)} + IVA)${por}`;
+}
+
 export const AS_TRES_OPCOES =
   "Responda 1 para avançar, 2 se tiver dúvidas ou quiser outra data, ou 3 se já não precisar.";
 
@@ -258,8 +268,23 @@ function olaENome(nome: string | null | undefined): string {
   return p.length >= 2 ? `Olá, ${p.charAt(0).toUpperCase()}${p.slice(1)}!` : "Olá!";
 }
 
-/** «, com o parceiro X» — ou nada. */
-const comOParceiro = (d: DadosDoLembrete) => (d.parceiro?.trim() ? `, com o parceiro ${d.parceiro.trim()}` : "");
+/**
+ * «O parceiro X faz por 129,15 € com IVA (105 € + IVA).» — d113 (25-11-2026):
+ * quem faz é o parceiro, e o valor numa frase só. Sem o nome (um valor único,
+ * em que o parceiro ainda se escolhe), «O parceiro faz por …».
+ */
+export function oParceiroFazPor(d: Pick<DadosDoLembrete, "parceiro" | "semIva" | "total" | "unidade">): string {
+  const nome = d.parceiro?.trim() ? ` ${d.parceiro.replace(/\s+/g, " ").trim()}` : "";
+  return `O parceiro${nome} faz por ${valorComIvaPrimeiro(d.semIva, d.total, d.unidade)}.`;
+}
+
+/** «Tem nota 4,8 em 12 avaliações.» — só a nota do campo, quando a há (nunca escrita à mão). */
+function notaDoParceiro(d: DadosDoLembrete): string {
+  const n = d.nota;
+  if (!n || !Number.isFinite(n.media) || !Number.isInteger(n.quantas) || n.quantas <= 0) return "";
+  const media = (Math.round(n.media * 10) / 10).toFixed(1).replace(".", ",");
+  return `Tem nota ${media} em ${n.quantas} ${n.quantas === 1 ? "avaliação" : "avaliações"}.`;
+}
 
 /** d63: por carga ou por hora, a regra única da base (`frase-da-base.ts`), com o exemplo das cargas — ou nada. */
 const aRegraDaBase = (d: DadosDoLembrete) => (d.unidade ? regraDaBase(d.unidade, null, { semIva: d.semIva, total: d.total }) : "");
@@ -271,14 +296,14 @@ const aRegraDaBase = (d: DadosDoLembrete) => (d.unidade ? regraDaBase(d.unidade,
  * feito». «É o total a pagar» só num valor fechado: por carga ou por hora o
  * total depende das cargas ou das horas, e diz-o a regra da base.
  */
-/** Num valor fechado: o que o cliente lê é o que paga. */
-export const E_O_TOTAL_A_PAGAR = "É o total a pagar, e não paga nada adiantado.";
+/** Num valor fechado: o que o cliente lê é o que paga (d113: mais curto). */
+export const E_O_TOTAL_A_PAGAR = "É o total, sem nada adiantado.";
 /** Por carga ou por hora. */
 export const NAO_PAGA_NADA_ADIANTADO = "Não paga nada adiantado.";
 
-/** «Válido até sexta-feira, 27/11.» — ou nada, sem o dia. */
+/** «Vale até sexta-feira, 27/11.» — ou nada, sem o dia. */
 function validoAte(d: DadosDoLembrete): string {
-  return d.validaAte && /^\d{4}-\d{2}-\d{2}$/.test(d.validaAte) ? `Válido até ${diaDaSemanaEDia(d.validaAte)}.` : "";
+  return d.validaAte && /^\d{4}-\d{2}-\d{2}$/.test(d.validaAte) ? `Vale até ${diaDaSemanaEDia(d.validaAte)}.` : "";
 }
 
 const juntar = (...partes: string[]) => partes.filter((p) => p && p.trim()).join(" ");
@@ -288,28 +313,22 @@ export function varianteDoLembrete(pedidoId: number): "A" | "B" {
   return Math.abs(Math.trunc(pedidoId)) % 2 === 0 ? "A" : "B";
 }
 
-/** «, nota 4,8 em 12 avaliações» — só a nota do campo, quando a há (nunca escrita à mão). */
-function aNota(d: DadosDoLembrete): string {
-  const n = d.nota;
-  if (!n || !Number.isFinite(n.media) || !Number.isInteger(n.quantas) || n.quantas <= 0) return "";
-  const media = (Math.round(n.media * 10) / 10).toFixed(1).replace(".", ",");
-  return `, nota ${media} em ${n.quantas} ${n.quantas === 1 ? "avaliação" : "avaliações"}`;
-}
 
 /**
- * D+1 — o lembrete. A/B (d91, 5.2): A (par) «o orçamento continua à sua
- * espera»; B (ímpar) «ficou alguma dúvida?». As duas acabam nas três opções,
- * letra a letra (`aUltimaSaidaE`).
+ * D+1 — o lembrete. A/B (d91, 5.2): A (par) «ficou a pensar?»; B (ímpar)
+ * «ficou alguma dúvida?». As duas acabam nas três opções, letra a letra
+ * (`aUltimaSaidaE`). d113 (25-11-2026): o tom leve do dia a dia — uma ideia
+ * por frase, o parceiro que faz, o valor com IVA e o sem IVA ao lado.
  */
 export function textoDoLembrete(d: DadosDoLembrete): string {
-  const valor = `${valorDoLembrete(d.semIva, d.total, d.unidade)}${comOParceiro(d)}`;
   const pagar = d.unidade ? NAO_PAGA_NADA_ADIANTADO : E_O_TOTAL_A_PAGAR;
   if (varianteDoLembrete(d.pedidoId) === "B") {
     // A regra da base fica como frase dela (a mesma de todo o lado, e com tradução fixa).
     return juntar(
       olaENome(d.nome),
       `Ficou alguma dúvida sobre o orçamento do pedido #${d.pedidoId} (${d.servico})?`,
-      `${valor}${aNota(d)}.`,
+      oParceiroFazPor(d),
+      notaDoParceiro(d),
       aRegraDaBase(d),
       pagar,
       validoAte(d),
@@ -318,7 +337,8 @@ export function textoDoLembrete(d: DadosDoLembrete): string {
   }
   return juntar(
     olaENome(d.nome),
-    `O orçamento do seu pedido #${d.pedidoId} (${d.servico}) continua à sua espera: ${valor}.`,
+    `Ficou a pensar no seu pedido #${d.pedidoId} (${d.servico})?`,
+    oParceiroFazPor(d),
     pagar,
     aRegraDaBase(d),
     validoAte(d),
@@ -326,24 +346,27 @@ export function textoDoLembrete(d: DadosDoLembrete): string {
   );
 }
 
-/** d91 (3.14): a perda verdadeira — um pedido fechado não guarda a proposta. */
-export const SE_NAO_TIVERMOS_RESPOSTA =
-  "Se não tivermos resposta até amanhã às 18h, fechamos o pedido, e para avançar depois terá de pedir propostas de novo.";
+/** d113: o prazo, dito por ela, numa frase. */
+export const SE_NAO_TIVERMOS_RESPOSTA = "Se não me disser nada até amanhã às 18h, o pedido fecha.";
 
 /** D+3 — o último aviso. */
 export function textoDoUltimoAviso(d: DadosDoLembrete): string {
   return juntar(
     olaENome(d.nome),
-    `Último aviso sobre o orçamento do pedido #${d.pedidoId} (${d.servico}): ${valorDoLembrete(d.semIva, d.total, d.unidade)}${comOParceiro(d)}.`,
+    `Não queria que perdesse o orçamento do pedido #${d.pedidoId} (${d.servico}).`,
+    oParceiroFazPor(d),
     aRegraDaBase(d),
     SE_NAO_TIVERMOS_RESPOSTA,
     AS_TRES_OPCOES,
   );
 }
 
+/** d113: a porta que fica aberta depois do fecho. */
+export const SE_AINDA_PRECISAR_REABRO = "Se ainda precisar, é só responder e volto a abri-lo.";
+
 /** D+4 às 18h — ao cliente. */
 export function textoDoFechoAoCliente(pedidoId: number): string {
-  return `Fechámos o pedido #${pedidoId}, porque não tivemos resposta. Se ainda precisar, responda aqui e reabrimo-lo para os parceiros. Obrigada pelo seu tempo.`;
+  return `Como não tive notícias, fechei o pedido #${pedidoId}. ${SE_AINDA_PRECISAR_REABRO}`;
 }
 
 /** D+4 às 18h — aos parceiros com proposta (o texto vive com os outros avisos ao profissional). */

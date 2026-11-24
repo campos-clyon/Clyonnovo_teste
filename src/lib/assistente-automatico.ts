@@ -430,11 +430,12 @@ export function novidadesDoPedido(p: PedidoParaOAssistente, agora: Date): Novida
             negociacaoId: n.id,
             quando: criada,
             texto:
-              `${ola} Acabou de receber uma proposta de ${pro} para ${servico}: ` +
+              // d113 (25-11-2026): no tom do dia a dia — o serviço certo («a sua recolha de monos», «a sua mudança»), e uma pergunta no fim.
+              `${ola} Chegou uma proposta de ${pro} para ${servico}: ` +
               `${dele(pendente.valor)}. ` +
               `${totalDito(pendente.valor, formaDita)} ` +
               `${ORCAMENTO_A_DISTANCIA}${eANota} ` +
-              `${comoPaga} Diga-me se lhe serve, ou responda com o valor que gostaria de pagar${comIvaNaResposta(modelo)}.`,
+              `${comoPaga} Serve-lhe, ou prefere propor outro valor${comIvaNaResposta(modelo)}?`,
           });
         }
       }

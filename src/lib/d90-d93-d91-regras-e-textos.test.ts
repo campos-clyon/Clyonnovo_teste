@@ -356,20 +356,23 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
     expect(varianteDoLembrete(613)).toBe("B");
     const a = textoDoLembrete(LEMBRETE);
     const b = textoDoLembrete({ ...LEMBRETE, pedidoId: 613 });
-    expect(a).toContain("continua à sua espera");
-    expect(a).toContain("É o total a pagar, e não paga nada adiantado.");
-    expect(a).toContain("Válido até sexta-feira, 27/11.");
+    // d113: o tom leve — o parceiro que faz, o valor com IVA e o sem IVA ao lado, uma ideia por frase.
+    expect(a).toContain("Ficou a pensar no seu pedido #612 (recolha de monos)?");
+    expect(a).toContain("O parceiro Recolhas Exemplo faz por 123 € com IVA (100 € + IVA).");
+    expect(a).toContain("É o total, sem nada adiantado.");
+    expect(a).toContain("Vale até sexta-feira, 27/11.");
     expect(b).toContain("Ficou alguma dúvida sobre o orçamento do pedido #613");
-    expect(b).toContain("nota 4,8 em 12 avaliações");
+    expect(b).toContain("Tem nota 4,8 em 12 avaliações.");
     for (const [t, id] of [[a, 612], [b, 613]] as const) {
       expect(t.endsWith(AS_TRES_OPCOES)).toBe(true);
       expect(aUltimaSaidaE(t, id)).toBe("lembrete");
     }
-    // Por carga, nunca «é o total a pagar» (o total depende das cargas).
-    expect(textoDoLembrete({ ...LEMBRETE, unidade: "carga" })).not.toContain("É o total a pagar");
-    expect(textoDoUltimoAviso(LEMBRETE)).toContain("e para avançar depois terá de pedir propostas de novo");
+    // Por carga, nunca «é o total» (o total depende das cargas).
+    expect(textoDoLembrete({ ...LEMBRETE, unidade: "carga" })).not.toContain("É o total");
+    expect(textoDoUltimoAviso(LEMBRETE)).toContain("Não queria que perdesse o orçamento do pedido #612 (recolha de monos).");
+    expect(textoDoUltimoAviso(LEMBRETE)).toContain("Se não me disser nada até amanhã às 18h, o pedido fecha.");
     expect(textoDoFechoAoCliente(612)).toBe(
-      "Fechámos o pedido #612, porque não tivemos resposta. Se ainda precisar, responda aqui e reabrimo-lo para os parceiros. Obrigada pelo seu tempo.",
+      "Como não tive notícias, fechei o pedido #612. Se ainda precisar, é só responder e volto a abri-lo.",
     );
     expect(textoDoAvancarNumTrabalhoClyon(612, "Recolhas Exemplo", "Rosalinda")).toBe(
       "Obrigada, Rosalinda! O pedido #612 fica reservado com o parceiro Recolhas Exemplo. Uma pessoa da equipa fala consigo por aqui para combinar o dia.",
@@ -394,11 +397,11 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
     }
     const a = textoDaMensagem1({ pedidoId: 612, nome: "Rosalinda", servico: "recolha de monos", resposta: "vai_pensar" });
     const b = textoDaMensagem1({ pedidoId: 613, nome: "Rosalinda", servico: "recolha de monos", resposta: "vai_pensar" });
-    expect(a).toContain("Ficou de pensar no seu pedido #612");
-    expect(a).toContain("não paga nada adiantado");
+    expect(a).toContain("Já conseguiu pensar no seu pedido #612");
+    expect(a).toContain("O valor é o total, sem nada adiantado, e qualquer extra no dia só com o seu ok.");
     expect(b).toContain("o que falta para decidir, o valor, o dia ou outra coisa?");
     expect(textoDaMensagem3({ pedidoId: 612, nome: null, servico: "recolha de monos", resposta: "vai_pensar" })).toContain(
-      "terá de pedir propostas de novo",
+      "não volto a insistir. Se não me disser nada, o pedido fecha amanhã.",
     );
   });
 
@@ -471,6 +474,7 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
       const faltam = ms.filter((m) => traducaoFixa(m, l) == null);
       expect(faltam, l).toEqual([]);
     }
-    expect(traducaoFixa(textoDoLembrete(LEMBRETE), "en")).toContain("is still waiting for you");
+    expect(traducaoFixa(textoDoLembrete(LEMBRETE), "en")).toContain("Still thinking about your request #612");
+    expect(traducaoFixa(textoDoLembrete(LEMBRETE), "en")).toContain("123 € incl. VAT (100 € + VAT)");
   });
 });
