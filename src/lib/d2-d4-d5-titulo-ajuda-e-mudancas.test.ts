@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { NADA_A_PAGAR_AGORA_NO_NOVO_MODELO as DAQUI } from "./aviso-de-oferta-clyon";
 import { DIAS_PARA_PAGAR_A_DIVIDA } from "./divida-do-profissional";
-import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO, NADA_A_PAGAR_AGORA_NO_NOVO_MODELO } from "./novo-modelo";
+import { DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO } from "./novo-modelo";
+import { NADA_A_PAGAR_AGORA_NO_NOVO_MODELO } from "./nada-a-pagar-agora";
+import { perguntasDaAjuda } from "../../app-pro/src/lib/novo-modelo";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 import { emTerra } from "./preposicao-da-terra";
 import { descricaoDaCidade, LIMITE_DA_DESCRICAO, tamanho } from "./descricoes-seo";
@@ -51,7 +53,7 @@ describe("d4 (24/11): uma só resposta ao parceiro — nada a pagar agora, a ref
     expect(ler("src/lib/ajuda-plataforma.ts")).not.toContain("PERGUNTAS_DO_PROFISSIONAL");
   });
 
-  it("a frase é uma só: o aviso do WhatsApp re-exporta a de novo-modelo.ts", () => {
+  it("a frase é uma só (nada-a-pagar-agora.ts): o aviso do WhatsApp re-exporta-a", () => {
     expect(DAQUI).toBe(NADA_A_PAGAR_AGORA_NO_NOVO_MODELO);
     expect(ler("src/lib/aviso-de-oferta-clyon.ts")).not.toMatch(/Não tem nada a pagar agora/);
   });
@@ -69,11 +71,14 @@ describe("d4 (24/11): uma só resposta ao parceiro — nada a pagar agora, a ref
       expect(ler(f), f).toMatch(/DIAS_PARA_PAGAR_O_VALOR_EM_ATRASO|NADA_A_PAGAR_AGORA_NO_NOVO_MODELO/);
     }
     // Os textos que a ajuda e o aviso escrevem não levam o número à mão.
-    for (const f of ["src/lib/ajuda-plataforma.ts", "src/lib/aviso-de-oferta-clyon.ts", "src/lib/novo-modelo.ts"]) {
+    for (const f of ["src/lib/ajuda-plataforma.ts", "src/lib/aviso-de-oferta-clyon.ts", "src/lib/nada-a-pagar-agora.ts"]) {
       const codigo = ler(f).replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
       expect(codigo, f).not.toMatch(/\b4 dias\b|\bquatro dias\b/);
     }
     expect(ler("app-pro/src/lib/novo-modelo.ts")).toContain("perguntasDoProfissional(taxas");
+    // A app Pro não repete a resposta: a lista do site já a traz, e a app só acrescenta a sua se faltar.
+    const naApp = perguntasDaAjuda({ cliente: 0, profissional: 0.1 }, true);
+    expect(naApp.filter((p) => p.resposta.includes(NADA_A_PAGAR_AGORA_NO_NOVO_MODELO)).length).toBe(1);
   });
 });
 
