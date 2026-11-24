@@ -32,6 +32,7 @@ import ContasPanel from "@/components/admin/ContasPanel";
 import ProgramaDaAppPanel from "@/components/admin/ProgramaDaAppPanel";
 import QuemContaParaOs12 from "@/components/admin/QuemContaParaOs12";
 import AdminLinkDoProgramaDaAppPanel from "@/components/admin/AdminLinkDoProgramaDaAppPanel";
+import SinaisDaAppDeCliente from "@/components/admin/SinaisDaAppDeCliente";
 import { SECCOES_COM_AVISO } from "@/lib/novidades-do-backoffice";
 import AdminProfissionaisSeccao from "@/components/admin/AdminProfissionaisSeccao";
 import AdminNegociacoesPanel from "@/components/admin/AdminNegociacoesPanel";
@@ -3409,6 +3410,10 @@ export default function ColaboradorAdminClient({
                   {/* «Quem conta para os 12» da app de cliente — 17-11-2026 (d60). */}
                   <div className="mt-6">
                     <QuemContaParaOs12 app="cliente" tema="claro" />
+                  </div>
+                  {/* Primeiras aberturas e «Algo não funciona?» da app de cliente — 24-11-2026 (d108). */}
+                  <div className="mt-6">
+                    <SinaisDaAppDeCliente />
                   </div>
                 </>
               ) : (

@@ -23,6 +23,7 @@ import { SessaoProvider, useSessao } from "../estado/Sessao";
 import { SITE } from "../lib/api";
 import { contadorDeErros, corpoDoErro, ecraDe, enviarErroDaApp, versaoDaApp } from "../lib/erro-da-app";
 import { caminhoDoAviso } from "../lib/links";
+import { avisarAPrimeiraAbertura } from "../lib/primeira-abertura";
 import { CORES } from "../tema";
 
 /**
@@ -116,6 +117,10 @@ function Navegacao() {
     PlusJakartaSans_700Bold,
   });
   useAbrirAoTocarNoAviso(ligado);
+  // A primeira abertura neste telemóvel, uma vez, sem identificador (d108).
+  useEffect(() => {
+    void avisarAPrimeiraAbertura();
+  }, []);
   // Nunca preso num ecrã vazio: as letras têm 4 s; depois segue com as do sistema.
   const [semEsperarPelasLetras, setSemEsperarPelasLetras] = useState(false);
   useEffect(() => {
@@ -161,6 +166,7 @@ function Navegacao() {
         <Stack.Screen name="morada" options={{ headerShown: true, title: "A sua morada" }} />
         <Stack.Screen name="conversas" options={{ headerShown: true, title: "Conversas" }} />
         <Stack.Screen name="ajuda" options={{ headerShown: true, title: "Ajuda" }} />
+        <Stack.Screen name="algo-nao-funciona" options={{ headerShown: true, title: "Algo não funciona?" }} />
         <Stack.Screen name="notificacoes" options={{ headerShown: true, title: "Notificações" }} />
         <Stack.Screen name="info/[tema]" options={{ headerShown: true, title: "" }} />
         <Stack.Screen name="juntar/[id]" options={{ headerShown: true, title: "Juntar à conta" }} />

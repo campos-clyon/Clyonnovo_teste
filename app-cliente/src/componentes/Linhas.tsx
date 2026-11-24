@@ -42,7 +42,8 @@ export function Linha({ icone, titulo, texto, aoCarregar, ultima = false }: { ic
 /**
  * AS LINHAS DA AJUDA — uma só lista, usada no Perfil (grupo «Ajuda») e no
  * ecrã «Ajuda» da barra de cima: como funciona, preços, zonas, avaliações,
- * perguntas frequentes, Termos e Privacidade.
+ * perguntas frequentes, «Algo não funciona?» (d108, 24-11-2026), Termos e
+ * Privacidade.
  */
 export function LinhasDaAjuda() {
   const { catalogo } = useCatalogo();
@@ -54,6 +55,7 @@ export function LinhasDaAjuda() {
       <Linha icone="map-outline" titulo="Zonas" aoCarregar={() => router.push("/info/zonas")} />
       <Linha icone="star-outline" titulo="Avaliações no Google" aoCarregar={() => router.push("/info/avaliacoes")} />
       <Linha icone="help-circle-outline" titulo="Perguntas frequentes" aoCarregar={() => router.push("/info/perguntas")} />
+      <Linha icone="construct-outline" titulo="Algo não funciona?" texto="Diga-nos o que aconteceu na app" aoCarregar={() => router.push("/algo-nao-funciona" as never)} />
       <Linha icone="document-text-outline" titulo="Termos" texto="Abre em clyon.pt" aoCarregar={() => abrirNoNavegador("/termos")} />
       <Linha icone="shield-checkmark-outline" titulo="Privacidade" texto="Abre em clyon.pt" aoCarregar={() => abrirNoNavegador("/privacidade")} ultima />
     </Grupo>

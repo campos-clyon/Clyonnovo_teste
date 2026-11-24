@@ -13,7 +13,10 @@ import { apagarDoCofre, guardarNoCofre, guardarTokenDosAvisos, lerDoCofre, lerTo
  * com `app: "cliente"` — nunca toca na CLYON Pro do mesmo email) e abre o
  * pedido certo quando ele toca no aviso (`caminhoDoAviso`, pelo `pedidoId`).
  *
- * A AUTORIZAÇÃO PEDE-SE UMA VEZ, NO E4 (o momento em que o aviso tem valor);
+ * A AUTORIZAÇÃO PEDE-SE UMA VEZ: desde 24-11-2026 (d108) logo no primeiro uso,
+ * no Início, com o porquê (`devePerguntarPelosAvisos`); quem ainda não tiver
+ * respondido aí vê a pergunta no E4, depois de um pedido. O «Agora não» fica
+ * guardado e não se volta a perguntar (só o «Ligar» da Conta o faz).
  * ao abrir a app só se regista o telemóvel se já estiver autorizado e ele não
  * os tiver desligado na Conta. Ao sair (ou trocar de conta), o telemóvel sai
  * da conta no site (`DELETE`), com o token dessa conta.
@@ -45,6 +48,27 @@ function idDoProjecto(): string | undefined {
 export const avisosDesligadosPorEle = async () => (await lerDoCofre(DESLIGADOS)) === "1";
 export const jaPerguntouPelosAvisos = async () => (await lerDoCofre(JA_PERGUNTOU)) === "1";
 export const marcarQueJaPerguntou = () => guardarNoCofre(JA_PERGUNTOU, "1");
+
+/**
+ * PERGUNTAR NO PRIMEIRO USO (d108): só num telemóvel a sério, se nunca se
+ * perguntou, se ele não os desligou e se o sistema ainda deixa perguntar. Se o
+ * telemóvel já os autorizou, marca-se como perguntado e não se mostra nada.
+ */
+export async function devePerguntarPelosAvisos(): Promise<boolean> {
+  if (Platform.OS === "web" || !Device.isDevice) return false;
+  try {
+    if (await jaPerguntouPelosAvisos()) return false;
+    if (await avisosDesligadosPorEle()) return false;
+    const p = await Notifications.getPermissionsAsync();
+    if (p.status === "granted") {
+      await marcarQueJaPerguntou();
+      return false;
+    }
+    return p.canAskAgain !== false;
+  } catch {
+    return false;
+  }
+}
 
 async function registar(): Promise<ResultadoDosAvisos> {
   const projectId = idDoProjecto();

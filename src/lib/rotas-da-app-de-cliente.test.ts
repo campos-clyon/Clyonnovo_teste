@@ -753,7 +753,10 @@ describe("Segurança — as regras das rotas do cliente", () => {
     for (const f of rotas) {
       const s = ler(f);
       expect(s, f).not.toMatch(/getServerSession\s*\(/);
-      expect(s, f).toMatch(/limitarRotaPublica\(/);
+      // A primeira abertura (d108) não pode usar o endereço (Jurídico, 24-11-2026):
+      // o travão é um só para toda a gente, pelo limitarPorConta com uma chave fixa.
+      if (f.endsWith("cliente/primeira-abertura/route.ts")) expect(s, f).toMatch(/limitarPorConta\("app-cliente-primeira-abertura", "todos"/);
+      else expect(s, f).toMatch(/limitarRotaPublica\(/);
       // As que não leem sessão nenhuma, de propósito: a entrada (R1, R1a) troca
       // uma prova por uma sessão, ou diz de quem é o link sem o gastar; o
       // catálogo (R7) abre o primeiro ecrã; os erros (S3) dão-se antes de entrar.
@@ -766,6 +769,8 @@ describe("Segurança — as regras das rotas do cliente", () => {
         "cliente/referencia/route.ts",
         // O leitor do pedido (d1, 03-11-2026): sugere as respostas do simulador sem conta.
         "cliente/ler-pedido/route.ts",
+        // A primeira abertura (d108, 24-11-2026): sem sessão e sem identificador, de propósito.
+        "cliente/primeira-abertura/route.ts",
       ];
       if (SEM_SESSAO.some((x) => f.endsWith(x))) {
         expect(s, f).not.toMatch(/\b(emailDoCliente|clienteDaSessao|sessaoActivaDoCliente)\(/);
