@@ -82,6 +82,11 @@
   ],
   "cliente": [
     {
+      "id": "cliente-2026-11-24",
+      "nota": "Ao abrir pela primeira vez, a app pergunta se quer avisos dos seus pedidos.\nNa Ajuda há «Algo não funciona?»: diga-nos o que aconteceu e a equipa vê.",
+      "updates": []
+    },
+    {
       "id": "cliente-2026-11-20",
       "nota": "O IBAN e o MB WAY do parceiro só aparecem no pedido depois de a CLYON os confirmar.\nE revimos os textos da app, agora na grafia do Acordo Ortográfico.",
       "updates": [
