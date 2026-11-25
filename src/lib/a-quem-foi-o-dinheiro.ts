@@ -347,6 +347,26 @@ export function porCobrarNosPagosEmMao(linhas: ReadonlyArray<{ taxaEmMao?: TaxaD
 }
 
 /**
+ * O «POR COBRAR AO PROFISSIONAL» DO SEPARADOR «PAGOS EM MÃO» — d125 (CEO e
+ * dono, 25-11-2026). Somava a parte da CLYON de todas as linhas do separador,
+ * também as de trabalhos ainda por fazer, e dava um número diferente do de «A
+ * receber dos profissionais». Agora é a MESMA conta (`dividasDe`, pela rota do
+ * separador «A receber»): o que falta das dívidas já nascidas, só as dos
+ * trabalhos deste separador. Sem essa leitura, nada (o cartão não diz um
+ * número que não é o certo).
+ */
+export function porCobrarDasDividasNasLinhas(
+  linhas: ReadonlyArray<{ negociacaoId: number }>,
+  dividas: ReadonlyArray<{ negociacaoId: number; porPagar: number }> | null | undefined,
+): number {
+  if (!dividas) return 0;
+  const doSeparador = new Set(linhas.map((l) => Number(l.negociacaoId)));
+  return aosCentimos(
+    dividas.reduce((n, d) => n + (doSeparador.has(Number(d.negociacaoId)) ? Math.max(0, Number(d.porPagar) || 0) : 0), 0),
+  );
+}
+
+/**
  * O REGISTO DOS PAGAMENTOS, POR SECÇÃO.
  *
  * A base agrupa as linhas por método e estado (`resumoDosPagamentos`); daqui

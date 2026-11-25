@@ -53,7 +53,7 @@ import {
   SECCAO_DO_SEPARADOR,
   destinoDoTrabalho,
   noSeparador,
-  porCobrarNosPagosEmMao,
+  porCobrarDasDividasNasLinhas,
   somaDoSeparador,
   ultimosDe,
   fraseDaParteDaClyon,
@@ -1522,7 +1522,11 @@ function GestorDoDinheiro({
               <div role="tablist" aria-label={SECCOES[seccao].titulo} className={`mt-2 grid gap-2 ${seccao === "clyon" ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"}`}>
                 {daSeccao.map((c) => {
                   const activo = c.id === separador && !verAReceber;
-                  const porCobrar = c.id === "em_mao" ? porCobrarNosPagosEmMao(c.linhas) : 0;
+                  // d125: a mesma conta de «A receber dos profissionais», só nos trabalhos deste separador.
+                  const porCobrar =
+                    c.id === "em_mao"
+                      ? porCobrarDasDividasNasLinhas(c.linhas, aReceber.dados?.profissionais.flatMap((p) => p.trabalhos))
+                      : 0;
                   return (
                     <button
                       key={c.id}

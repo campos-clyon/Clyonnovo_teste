@@ -4,6 +4,7 @@ import { dividasDe, type DividaNaCarteira } from "./carteira";
 import { registarRecebimentoAMao } from "./pagamentos-na-base";
 import { configuracaoDoEupago } from "./eupago";
 import { METODO_PAGO_AO_PROFISSIONAL } from "./pago-em-mao";
+import { podeTerDividaParaAClyon, type NegociacaoCandidata } from "./quem-pode-ter-divida";
 import { garantirTabelaDasCobrancas, origemLida } from "./marcas-da-divida-na-base";
 import { ensureFolhasFinais } from "./folha-final-na-base";
 import { anotarContaDeDestino, garantirTabelaDosComprovativos } from "./rasto-do-pagamento-na-base";
@@ -60,28 +61,34 @@ export async function dividasDoProfissional(
 
 /**
  * QUEM PODE TER DÍVIDA — os profissionais com trabalhos combinados em dinheiro
- * ou registados «pago ao profissional», e (d38 v2) os pagos com folha final depois. Só pré-filtra: quem deve, e quanto,
- * decide-o `dividasDe`.
+ * ou registados «pago ao profissional», (d38 v2) os pagos com folha final
+ * depois e, desde a d125 (25-11-2026), os do modelo de 15-11 — o cliente pagou
+ * ao parceiro e o parceiro passa à CLYON a taxa e o IVA dela (e os Trabalhos
+ * CLYON do mesmo modelo). Só pré-filtra (`podeTerDividaParaAClyon`): quem
+ * deve, e quanto, decide-o `dividasDe` — a mesma conta da carteira dele.
  */
-export async function profissionaisComDividaPossivel(): Promise<number[]> {
+export async function profissionaisComDividaPossivel(agora: Date = new Date()): Promise<number[]> {
   // O acerto da folha final (d38 v2): a tabela tem de existir para a pergunta não partir.
   await ensureFolhasFinais().catch(() => undefined);
   const pool = await getPool();
   if (!pool) return [];
   try {
     const [linhas] = (await pool.execute(
-      `SELECT DISTINCT n.providerId
+      `SELECT n.providerId, n.formaDePagamento, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
+              EXISTS (SELECT 1 FROM pagamentos p
+                       WHERE p.negociacaoId = n.id AND p.estado = 'pago' AND p.metodo = ?) AS pagoAoProfissional,
+              (n.pagoEm IS NOT NULL
+               AND EXISTS (SELECT 1 FROM folhasFinais f
+                            WHERE f.negociacaoId = n.id AND f.jaPago = 1)) AS folhaFinalDepoisDePago
          FROM negociacoes n
-        WHERE n.estado = 'acordada' AND n.providerId IS NOT NULL
-          AND (n.formaDePagamento = 'dinheiro'
-               OR EXISTS (SELECT 1 FROM pagamentos p
-                           WHERE p.negociacaoId = n.id AND p.estado = 'pago' AND p.metodo = ?)
-               OR (n.pagoEm IS NOT NULL
-                   AND EXISTS (SELECT 1 FROM folhasFinais f
-                                WHERE f.negociacaoId = n.id AND f.jaPago = 1)))`,
+        WHERE n.estado = 'acordada' AND n.providerId IS NOT NULL`,
       [METODO_PAGO_AO_PROFISSIONAL],
-    )) as [Array<{ providerId: number }>, unknown];
-    return linhas.map((l) => Number(l.providerId)).filter((n) => Number.isInteger(n) && n > 0);
+    )) as [Array<NegociacaoCandidata & { providerId: number }>, unknown];
+    const ids = linhas
+      .filter((l) => podeTerDividaParaAClyon(l, agora))
+      .map((l) => Number(l.providerId))
+      .filter((n) => Number.isInteger(n) && n > 0);
+    return [...new Set(ids)];
   } catch (e) {
     if ((e as { code?: string })?.code === "ER_NO_SUCH_TABLE") return [];
     throw e;
@@ -93,7 +100,7 @@ export async function dividasDosProfissionais(
   providerIds?: number[],
   agora: Date = new Date(),
 ): Promise<Map<number, DividaDoProfissionalComPedido[]>> {
-  const ids = providerIds ?? (await profissionaisComDividaPossivel());
+  const ids = providerIds ?? (await profissionaisComDividaPossivel(agora));
   const mapa = new Map<number, DividaDoProfissionalComPedido[]>();
   for (const pid of [...new Set(ids)]) {
     const dividas = await dividasDoProfissional(pid, agora);
