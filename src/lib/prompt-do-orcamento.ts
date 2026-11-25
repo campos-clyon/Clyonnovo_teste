@@ -220,15 +220,15 @@ ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
 ${regrasDaMudancaParaOModelo(precoPublicoConhecido())}
       Mudanças NÃO têm limite de distância.
 ${fechoDaMudanca()}
-   e) RECOLHAS (móveis/monos/entulho/esvaziamento): limite máximo 70 km da base CLYON.
-      Se distância > 70 km → status "onsite_required", confidence "low", recommendation "visita_presencial".
+   e) RECOLHAS (móveis/monos/entulho/esvaziamento) a mais de 70 km da base CLYON: a morada é servida por um parceiro local.
+      O preço é o da tabela normal (as regras acima), SEM deslocação: nunca somes os km desde a base. distanceCost = 0.
    f) MANUTENÇÃO DA CASA (reparações e remodelações) — a grelha publicada por tipo de trabalho (NÃO a fórmula geral custo×margem):
 ${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
 2.1. DESLOCAÇÃO NO PREÇO FINAL:
-   - Nas recolhas de itens soltos e nas cargas completas/esvaziamentos, a distância da base CLYON até à morada (secção "DADOS DE DESLOCAÇÃO") TEM SEMPRE de influenciar o preço final. NUNCA gerar esses preços ignorando a deslocação.
+   - Nas recolhas de itens soltos e nas cargas completas/esvaziamentos até 70 km da base, a distância da base CLYON até à morada (secção "DADOS DE DESLOCAÇÃO") TEM de influenciar o preço final. Acima de 70 km, não (regra 2.e).
    - Para cargas completas/esvaziamentos, as faixas da regra 2.b já incluem a deslocação — os km reais dizem onde fica o preço dentro da faixa (mais longe, mais perto do fim).
    - Para itens soltos, adiciona a componente de deslocação ao custo antes da margem: o «Custo de deslocação interno» dos DADOS DE DESLOCAÇÃO (regra interna CLYON, cobre ida+volta).
-   - Para ENTULHO NÃO somes deslocação nenhuma: o preço é a linha da grelha da regra 2.c, o mesmo a qualquer distância. A distância só conta para o limite de 70 km da regra 2.e.
+   - Para ENTULHO NÃO somes deslocação nenhuma: o preço é a linha da grelha da regra 2.c, o mesmo a qualquer distância. A distância só conta para saber se a morada está a mais de 70 km (regra 2.e).
    - Para mudança, a deslocação é a da tabela das mudanças: ${DESLOCACAO_DA_MUDANCA_PARA_O_MODELO}. As horas contam-se pela tipologia. NÃO somar custo de combustível à parte.
    - Preenche SEMPRE o objeto "travel" com distanceKm, durationText e distanceCost.
    - Se a distância NÃO estiver calculada, assume acesso local, assinala "distancia_base" em missingFields e usa confidence no máximo "medium".

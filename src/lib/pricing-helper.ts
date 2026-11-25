@@ -608,7 +608,7 @@ HORÁRIO DE TRABALHO:
   Horário normal: 08h00–18h00. Fora deste horário requer agendamento prévio com a equipa.
 
 DISTÂNCIAS:
-  Recolhas/esvaziamento: distância base→cliente × 2 (ida + volta). LIMITE: ${kmLimiteRecolha} km — acima disso é orçamento personalizado.
+  Recolhas/esvaziamento: distância base→cliente × 2 (ida + volta), até ${kmLimiteRecolha} km. ACIMA de ${kmLimiteRecolha} km a morada é servida por um parceiro local: preço pela tabela normal, SEM deslocação (nunca os km desde a base).
   Mudança: distância origem→destino (sem volta à base). Sem limite de distância.
 
 HORAS ESTIMADAS POR TIPO DE SERVIÇO:
@@ -704,7 +704,7 @@ ${CARGA_COMPLETA_PARA_O_MODELO}
   ENTULHO: mínimo ${MINIMO_DO_ENTULHO}€ s/IVA (sem zona) | MUDANÇA: ${minimoDaMudancaParaOModelo(precoPublicoConhecido())}
 ${GRELHA_DO_ENTULHO_PARA_O_MODELO}
 ${GRELHA_DA_MANUTENCAO_PARA_O_MODELO}
-  RECOLHAS: limite 70 km (acima → orçamento personalizado). MUDANÇAS: sem limite de distância.
+  RECOLHAS: acima de ${KM_LIMITE_DA_BASE_POR_OMISSAO} km da base → parceiro local, tabela normal sem deslocação. MUDANÇAS: sem limite de distância.
 ${agravamentosParaOModelo()}
 A URGÊNCIA NÃO ENTRA NO PREÇO DO TRABALHO: a taxa de agendamento é da CLYON, à parte e sem IVA, calculada pelo sistema.`;
   }
@@ -878,7 +878,10 @@ const SERVICE_REFERENCE_RANGES: Record<string, { min: number; max: number; sugge
  * NUNCA mostrar ao cliente como orçamento final.
  * Assegura que nenhum pedido fica com preço 0 ou null.
  */
-export function buildReferenceEstimate(input: FastEstimateInput): FastEstimateResult {
+export function buildReferenceEstimate(
+  input: FastEstimateInput,
+  kmLimite: number = KM_LIMITE_DA_BASE_POR_OMISSAO,
+): FastEstimateResult {
   const svc = input.serviceType ?? "outro";
   const range = SERVICE_REFERENCE_RANGES[svc] ?? SERVICE_REFERENCE_RANGES["outro"];
 
@@ -897,7 +900,12 @@ export function buildReferenceEstimate(input: FastEstimateInput): FastEstimateRe
     input.movingDistance?.distanceKm ??
     null;
 
-  if (distKm && distKm > 0) {
+  // Longe da base, o parceiro é local (d127): os km desde a base não entram.
+  if (foraDaZonaDaBase(svc, input.distanceFromBase?.distanceKm, kmLimite)) {
+    assumptions.push(
+      `Morada a ${input.distanceFromBase?.distanceKm} km da base (acima de ${kmLimite} km): parceiro local, sem deslocação desde a base`,
+    );
+  } else if (distKm && distKm > 0) {
     const distExtra = distKm * 2; // 2€/km como referência
     suggestedBase += distExtra;
     assumptions.push(`Distância: ${distKm} km × 2€/km = +${distExtra.toFixed(0)}€`);
@@ -1217,6 +1225,41 @@ export const TEMPO_DO_MOTOR = Object.freeze({
 
 /** O custo por km por omissão (o das Configs manda): o mesmo do motor e do texto ao modelo. */
 export const CUSTO_KM_POR_OMISSAO = 0.5;
+
+/** O limite de km da base CLYON nas recolhas, por omissão (o das Configs manda: `mudanca_km_limite_recolha`). */
+export const KM_LIMITE_DA_BASE_POR_OMISSAO = 70;
+
+/**
+ * LONGE DA BASE, O PARCEIRO É LOCAL — d127, 25-11-2026.
+ *
+ * Uma recolha ou um esvaziamento a mais do que o limite da base CLYON
+ * (70 km, nas Configs) era estimado pela referência interna com os km
+ * contados desde a base (2 € por km, sem tecto): a 400 km, duas peças davam
+ * mais de 950 € sem IVA. Mas a plataforma liga o cliente aos parceiros da
+ * zona dele: o trabalho é feito por um parceiro local, e os km desde a base
+ * não dizem nada. Longe da base, estima-se pela tabela normal (as peças, a
+ * recolha mínima, as faixas, os andares) e SEM deslocação — não há dados do
+ * parceiro da zona para contar uma. A mudança não entra aqui: a deslocação
+ * dela é o percurso origem→destino (tabela das mudanças), não a base.
+ */
+export function foraDaZonaDaBase(
+  servico: string | undefined | null,
+  kmDaBase: number | null | undefined,
+  kmLimite: number = KM_LIMITE_DA_BASE_POR_OMISSAO,
+): boolean {
+  if (servico === "mudanca") return false;
+  return typeof kmDaBase === "number" && Number.isFinite(kmDaBase) && kmDaBase > kmLimite;
+}
+
+/** Os km da base que contam para a deslocação de uma recolha: nenhuns fora da zona da base (d127). */
+export function kmDaBaseQueContam(
+  servico: string | undefined | null,
+  kmDaBase: number | null | undefined,
+  kmLimite: number = KM_LIMITE_DA_BASE_POR_OMISSAO,
+): number | null {
+  if (kmDaBase == null) return null;
+  return foraDaZonaDaBase(servico, kmDaBase, kmLimite) ? 0 : kmDaBase;
+}
 
 /** O estacionamento difícil fora das grelhas: a taxa fixa que o motor soma, sem IVA. */
 export const ESTACIONAMENTO_DIFICIL_EXTRA = 15;
@@ -1637,9 +1680,15 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   const labor = calculateLaborCost(laborHours);
 
   // ── 2. Custo de combustível (ida + volta ou percurso de mudança) ─────────────
-  const distKmFuel = getDistanceForFuel(input);
+  // Longe da base (acima do limite das recolhas), o parceiro é local: sem os km desde a base (d127).
+  const longeDaBase = foraDaZonaDaBase(input.serviceType, input.distanceFromBase?.distanceKm, kmLimiteRecolha);
+  const distKmFuel = longeDaBase ? 0 : getDistanceForFuel(input);
   const custoCombustivel = Math.round(distKmFuel * custoKm * 100) / 100;
-  if (distKmFuel > 0) {
+  if (longeDaBase) {
+    const linha = `Morada a ${input.distanceFromBase?.distanceKm} km da base (acima de ${kmLimiteRecolha} km): vai a um parceiro local — tabela normal, sem deslocação desde a base`;
+    assumptions.push(linha);
+    notes.push(`${linha}. Confirmar que há parceiro na zona.`);
+  } else if (distKmFuel > 0) {
     assumptions.push(`Combustível: ${distKmFuel} km × ${custoKm.toFixed(2)} €/km = ${custoCombustivel.toFixed(2)} €`);
   } else {
     assumptions.push("Distância não calculada — combustível estimado a 0 €");
@@ -1655,19 +1704,8 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // ── 4. Overhead fixo por serviço ─────────────────────────────────────────────
   assumptions.push(`Overhead fixo: ${overhead.toFixed(2)} €`);
 
-  // ── 4b. Limite de distância para recolhas (mudanças não têm limite) ──────────
+  // ── 4b. Longe da base (d127): já não sai para a referência por km — segue a tabela normal ──
   const svc = input.serviceType;
-  const distKmOneWayCheck = input.distanceFromBase?.distanceKm ?? 0;
-  if (svc !== "mudanca" && distKmOneWayCheck > kmLimiteRecolha) {
-    return {
-      ...buildReferenceEstimate(input),
-      status: "onsite_required",
-      internalNotes: [
-        `Distância ${distKmOneWayCheck} km > limite ${kmLimiteRecolha} km para recolhas — orçamento personalizado necessário.`,
-      ],
-      customerMessage: `A distância até à morada indicada (${distKmOneWayCheck} km) ultrapassa a nossa área de cobertura padrão. A equipa CLYON irá contactá-lo para apresentar um orçamento personalizado.`,
-    };
-  }
 
   // ── 5. Custo total + margem de lucro (fórmula geral) ─────────────────────────
   const custoTotal = custoCombustivel + custoPessoal + overhead;
@@ -1803,7 +1841,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
 
   // ── 7. Fallback se dados insuficientes ───────────────────────────────────────
   if (missing.length > 0 && precoSemIva <= 0) {
-    const ref = buildReferenceEstimate(input);
+    const ref = buildReferenceEstimate(input, kmLimiteRecolha);
     return {
       ...ref,
       assumptions: [...assumptions, ...ref.assumptions],
@@ -1846,7 +1884,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
 
   // ── 9. Valor recomendado pela empresa (cargas completas) ─────────────────
   // Distância de uma via para cálculo do recomendado (não ida+volta)
-  const distKmOneWay = input.distanceFromBase?.distanceKm ?? input.movingDistance?.distanceKm ?? 0;
+  const distKmOneWay = longeDaBase ? 0 : input.distanceFromBase?.distanceKm ?? input.movingDistance?.distanceKm ?? 0;
   const { recommended: precoRecomendado, note: recNote } = applyRecommendedPrice(
     precoComMinimo,
     city,
@@ -1934,7 +1972,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
     isFullLoad: isFull,
     labor,
     difficultyLevel: diff,
-    confidence: missing.length > 0 || grelha?.proposta ? "low" : distKmFuel > 0 ? "high" : "medium",
+    confidence: missing.length > 0 || grelha?.proposta ? "low" : distKmFuel > 0 || longeDaBase ? "high" : "medium",
     summary: grelha
       ? `Estimativa pela grelha publicada do entulho (${grelha.linha.replace(/^Grelha do entulho: /, "")}).`
       : faixaPublicada

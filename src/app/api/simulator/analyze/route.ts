@@ -11,6 +11,7 @@ import {
   buildReferenceEstimate,
   FULL_LOAD_ITEM_THRESHOLD,
   custoDaDeslocacao,
+  kmDaBaseQueContam,
   custoPorKmActivo,
 } from "@/lib/pricing-helper";
 import { buildAnalysisPrompt } from "@/lib/prompt-do-orcamento";
@@ -390,7 +391,8 @@ export async function POST(req: NextRequest) {
     travel = {
       distanceKm: orderKm,
       durationText: order.distanceFromBase?.durationText ?? null,
-      distanceCost: custoDaDeslocacao(orderKm, await custoPorKmActivo()),
+      // Longe da base o parceiro é local (d127): sem deslocação desde a base.
+      distanceCost: custoDaDeslocacao(kmDaBaseQueContam(order.serviceType, orderKm) ?? 0, await custoPorKmActivo()),
       source: order.distanceFromBase?.isEstimate ? "estimate" : "google",
     };
   }
@@ -507,6 +509,9 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
     );
   } else {
     const dKm = order.distanceFromBase?.distanceKm;
+    /** Os km que contam: nenhuns a mais de 70 km da base, onde o parceiro é local (d127). */
+    const kmQueContam = kmDaBaseQueContam(order.serviceType, dKm);
+    const longeDaBase = dKm != null && kmQueContam === 0 && dKm > 0;
     lines.push(
       "",
       "=== LOCALIZAÇÃO ===",
@@ -520,7 +525,9 @@ function formatOrderDataForPrompt(order: OrderData, resolvedItemCount: number, i
       `Distância da base: ${dKm ? `${dKm} km` : "(NÃO CALCULADA — assume acesso local e assinala em missingFields)"}`,
       `Tempo estimado de deslocação: ${order.distanceFromBase?.durationText || "(não calculado)"}`,
       // O custo por km do motor (d59): eram 2 € por km, quatro vezes o que o motor conta.
-      `Custo de deslocação interno (${dKm ? `${dKm} km × 2 (ida e volta) × ${custoKm.toFixed(2).replace(".", ",")} €/km` : "km × 2 (ida e volta) × custo por km"}; nas cargas completas e nos esvaziamentos já está dentro da faixa): ${dKm ? `${custoDaDeslocacao(dKm, custoKm)} €` : "(a confirmar)"}`,
+      longeDaBase
+        ? `Custo de deslocação interno: 0 € (a morada está a ${dKm} km da base, acima de 70 km — vai a um parceiro local; preço pela tabela normal, sem os km desde a base)`
+        : `Custo de deslocação interno (${dKm ? `${dKm} km × 2 (ida e volta) × ${custoKm.toFixed(2).replace(".", ",")} €/km` : "km × 2 (ida e volta) × custo por km"}; nas cargas completas e nos esvaziamentos já está dentro da faixa): ${dKm ? `${custoDaDeslocacao(dKm, custoKm)} €` : "(a confirmar)"}`,
       "",
       "=== CONDIÇÕES DE ACESSO ===",
       `Andar: ${order.floor || "(não fornecido)"}`,

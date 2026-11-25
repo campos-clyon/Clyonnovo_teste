@@ -95,6 +95,7 @@ import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { CHAVE_DO_RASCUNHO, rascunhoParaGuardar, rascunhoValido } from "@/lib/rascunho-do-simulador";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { moradaDepoisDeEscrever } from "@/lib/morada-escrita";
 
 const DRAFT_KEY = CHAVE_DO_RASCUNHO;
 const PHASES = ["Serviço", "Local e acesso", "Contacto e envio"] as const;
@@ -394,6 +395,12 @@ export default function SimulatorThreePhaseForm() {
     });
     updateField("addressStatus", "selected");
     setAddressValue(data.formattedAddress || "");
+  };
+
+  /** A pessoa escreveu na caixa da morada: se já não é a morada guardada, a guardada sai (d127). */
+  const escreverAMorada = (texto: string) => {
+    setAddressValue(texto);
+    setFormData((prev) => moradaDepoisDeEscrever(prev, texto));
   };
 
   const handleDistanceCalculated = (distance: DistanceFromBase, status: DistanceStatus) => {
@@ -1144,7 +1151,7 @@ export default function SimulatorThreePhaseForm() {
                 <Phase2Location
                   formData={formData}
                   addressValue={addressValue}
-                  setAddressValue={setAddressValue}
+                  setAddressValue={escreverAMorada}
                   onAddressSelect={handleAddressSelect}
                   onDistanceCalculated={handleDistanceCalculated}
                   updateField={updateField}
