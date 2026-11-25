@@ -107,6 +107,8 @@ import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import { rotuloDoPrazoTerminado, type EstadoNaMesa } from "@/lib/escolhidos-sem-resposta";
 import { EscolhidosNaMesa } from "./EscolhidosNaMesa";
 import { ForaDaGrelhaNaMesa } from "./ForaDaGrelhaNaMesa";
+import { BORDA_FORA_DA_ZONA, ForaDaZonaNoCartao } from "./ForaDaZonaNoCartao";
+import type { ForaDaZona } from "@/lib/fora-da-zona";
 import { linhaDaRuaNaMesa } from "@/lib/rua-na-mesa";
 import type { ForaDaGrelhaNaMesa as EstadoForaDaGrelha } from "@/lib/custo-do-trabalho";
 import {
@@ -661,6 +663,8 @@ type Pedido = {
   escolhidosNaMesa?: EstadoNaMesa | null;
   /** O custo real fora da grelha (d61, modo sombra): a etiqueta e os degraus. */
   foraDaGrelha?: EstadoForaDaGrelha | null;
+  /** d128: a morada (ou a origem da mudança) acima do limite da zona — a borda âmbar e o ⚠. */
+  foraDaZona?: ForaDaZona | null;
   /** Registado só com a zona (d69): «falta a rua», e se o cliente já aceitou e a Vitória já a pediu. */
   faltaARua?: { aceite: boolean; pedidaEm: string | null; passadaEm: string | null } | null;
   /**
@@ -706,6 +710,8 @@ const ESTADO_CLS: Record<string, string> = {
 
 type PorPromover = {
   id: number;
+  /** d128: a morada (ou a origem da mudança) acima do limite da zona — a borda âmbar e o ⚠. */
+  foraDaZona?: ForaDaZona | null;
   serviceType: string | null;
   city: string | null;
   contactName: string | null;
@@ -2927,13 +2933,30 @@ export default function AdminNegociacoesPanel({
           do título: vê-se onde uma secção acaba e a outra começa.
         */
         className={`scroll-mt-24 rounded-2xl border border-l-4 px-3 py-2 shadow-sm ${
-          aberto
+          // d128: fora da zona, a borda toda em âmbar — ganha a tudo, para saltar à vista.
+          p.foraDaZona
+            ? BORDA_FORA_DA_ZONA
+            : aberto
             ? "border-sky-400 bg-slate-900 ring-2 ring-sky-400/40"
             : porVer
               ? "border-emerald-400 bg-slate-900 ring-2 ring-emerald-400/40"
               : corDoBloco
         }`}
       >
+        {/* d128: o ⚠ no topo, com a distância, o que fica parado e os dois botões. */}
+        {p.foraDaZona && (
+          <ForaDaZonaNoCartao
+            pedidoId={p.id}
+            estado={p.foraDaZona}
+            token={token}
+            onCorrigir={() => setAEditarPlataforma(p.id)}
+            onCancelado={(texto) => {
+              setAviso(texto);
+              void carregar(true);
+            }}
+            onErro={setErro}
+          />
+        )}
         {/*
           A LINHA DA MESA — opção B, escolhida por ele no canvas.
           Uma grelha por pedido: número, cliente, o que pede, onde está a
@@ -5608,6 +5631,14 @@ export default function AdminNegociacoesPanel({
                     onEditar={setAEditarPlataforma}
                     onTrabalhoClyon={podeOferecerTrabalhoClyon ? trabalhoClyonOferecido : undefined}
                     notas={notas}
+                    onForaDaZona={(texto, falhou) => {
+                      if (falhou) {
+                        setErro(texto);
+                        return;
+                      }
+                      setAviso(texto);
+                      void carregar(true);
+                    }}
                   />
                   {/*
                     OS LEMBRETES DO QUE FALTA ACABADOS — d71, 19-11-2026. Já saíram do
@@ -6733,6 +6764,7 @@ function PedidosPorPromover({
   token,
   onTrabalhoClyon,
   notas,
+  onForaDaZona,
 }: {
   /** O bloco está aberto no pai; fechado, o componente fica montado e não desenha nada. */
   aberto: boolean;
@@ -6759,6 +6791,8 @@ function PedidosPorPromover({
   aApagar: boolean;
   /** Abre o pedido para corrigir — o mesmo editor da mesa. */
   onEditar: (id: number) => void;
+  /** d128: o «Cancelar e avisar o cliente» de um fora da zona acabou (o texto do aviso) — o pai volta a ler. */
+  onForaDaZona?: (texto: string, erro?: boolean) => void;
 }) {
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   // Os antigos nascem fechados: são os que menos merecem atenção, e são quase
@@ -6832,8 +6866,21 @@ function PedidosPorPromover({
   const linha = (p: PorPromover) => (
     <div
       key={p.id}
-      className={`flex flex-wrap items-center gap-3 rounded-xl border border-l-4 p-3 ${COR_DE_POR_ENVIAR}`}
+      className={`flex flex-wrap items-center gap-3 rounded-xl border border-l-4 p-3 ${p.foraDaZona ? BORDA_FORA_DA_ZONA + " " : ""}${COR_DE_POR_ENVIAR}`}
     >
+      {/* d128: o ⚠ no topo, com a distância, o que fica parado e os dois botões. */}
+      {p.foraDaZona && (
+        <div className="basis-full">
+          <ForaDaZonaNoCartao
+            pedidoId={p.id}
+            estado={p.foraDaZona}
+            token={token}
+            onCorrigir={() => onEditar(p.id)}
+            onCancelado={(texto) => onForaDaZona?.(texto)}
+            onErro={(texto) => onForaDaZona?.(texto, true)}
+          />
+        </div>
+      )}
       <input
         type="checkbox"
         checked={marcados.has(p.id)}

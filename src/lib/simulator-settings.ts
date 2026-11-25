@@ -29,6 +29,8 @@ export type SimulatorSettingKey =
   | "mudanca_3pessoas_hora"
   | "mudanca_minimo_horas"
   | "mudanca_km_limite_recolha"
+  // A zona de trabalho (d128, 25-11-2026): acima disto, o pedido fica «fora da zona» — fora-da-zona.ts.
+  | "zona_km_maximo"
   // O motor de custos (d61, 16-11-2026) — custo-do-trabalho.ts. Só o admin as muda.
   | "consumo_l_100km"
   | "desgaste_por_km"
@@ -265,10 +267,24 @@ export const defaultSimulatorSettings: SimulatorSettingDefinition[] = [
   {
     key: "mudanca_km_limite_recolha",
     label: "Limite de distância para recolhas (km)",
-    description: "Distância máxima aceitável para recolhas sem orçamento personalizado. Mudanças não têm limite.",
+    description: "Distância máxima aceitável para recolhas sem orçamento personalizado. As mudanças não entram nesta conta.",
     category: "geral",
     unit: "multiplier",
     value: 70,
+  },
+  /*
+   * A ZONA DE TRABALHO — d128, 25-11-2026 (dono): a CLYON não faz trabalhos a
+   * mais de 200 km de Lisboa. Na mudança conta a origem; o destino não tem
+   * limite. Acima disto o pedido fica «fora da zona» até uma pessoa confirmar a
+   * morada (fora-da-zona.ts).
+   */
+  {
+    key: "zona_km_maximo",
+    label: "Limite da zona de trabalho (km de Lisboa)",
+    description: "Acima disto, o pedido fica «fora da zona»: não vai aos parceiros até a equipa confirmar a morada. Nas mudanças conta a origem.",
+    category: "geral",
+    unit: "multiplier",
+    value: 200,
   },
   {
     key: "consumo_l_100km",

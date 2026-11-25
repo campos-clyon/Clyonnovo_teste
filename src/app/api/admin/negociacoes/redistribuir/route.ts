@@ -66,6 +66,12 @@ export async function POST(req: NextRequest) {
   if (pedidoArrumado(pedido.status)) {
     return NextResponse.json({ error: PEDIDO_ARRUMADO_NAO_SE_ENVIA }, { status: 409 });
   }
+  // d128: fora da zona não vai aos parceiros até a morada estar confirmada.
+  {
+    const { recusaSeForaDaZona } = await import("@/lib/fora-da-zona-na-base");
+    const fora = await recusaSeForaDaZona(pedido);
+    if (fora) return NextResponse.json({ error: fora, foraDaZona: true }, { status: 409 });
+  }
 
   /*
    * UM TRABALHO FECHADO NÃO ESTÁ À VENDA — 21-09-2026.

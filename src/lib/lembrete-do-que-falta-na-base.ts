@@ -488,7 +488,12 @@ export async function rotinaDoQueFalta(agora: Date = new Date()): Promise<Result
 
   // 2. Os novos: os «Orçamentos novos» que entram agora (um ciclo por pedido, para sempre).
   const teste = emailsDeTesteDoAmbiente();
-  for (const p of await lerPedidos(pool)) {
+  const candidatos = await lerPedidos(pool);
+  // d128: fora da zona, a Vitória não pede nada — fica parado até a morada estar confirmada (e retoma depois).
+  const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+  const foraDaZona = await idsForaDaZona([...vivos.map((v) => v.c.pedidoId), ...candidatos.map((p) => p.id)]);
+  for (const p of candidatos) {
+    if (foraDaZona.has(p.id)) continue;
     if (porqueFicaDeFora(p, agora, teste)) continue;
     const canal = canalDoLembrete(p)!;
     // d88: a equipa carregou em «Pedir o que falta» — conta como a 1.ª mensagem (a 2.ª sai no dia seguinte).
@@ -516,6 +521,7 @@ export async function rotinaDoQueFalta(agora: Date = new Date()): Promise<Result
   let emails = 0;
   const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
   for (const { c, p } of vivos.sort((a, b) => a.c.pedidoId - b.c.pedidoId)) {
+    if (foraDaZona.has(c.pedidoId)) continue;
     const passo = proximoPassoDoQueFalta(c, agora, devidoDoPrimeiro(p.criadoEm));
     if (!passo || c.porEnviar) continue;
     const contacto = c.canal === "whatsapp" ? noveDigitos(p.contactPhone) : (emailValido(p.contactEmail) ?? "");

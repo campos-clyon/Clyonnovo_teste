@@ -93,7 +93,9 @@ export type MotivoDoEnvioAutomatico =
   /* d2 (23-11-2026): o dia pedido já passou; outro pedido aberto do mesmo contacto; já enviado à mão. */
   | "data_passada"
   | "pedido_repetido"
-  | "ja_enviado";
+  | "ja_enviado"
+  /* d128 (25-11-2026): a morada (ou a origem da mudança) acima do limite da zona — uma pessoa confirma-a. */
+  | "fora_da_zona";
 
 /** Os motivos, como o cartão da Mesa e o histórico os dizem. */
 export const MOTIVOS_DO_ENVIO_AUTOMATICO: Readonly<Record<MotivoDoEnvioAutomatico, string>> = Object.freeze({
@@ -125,6 +127,7 @@ export const MOTIVOS_DO_ENVIO_AUTOMATICO: Readonly<Record<MotivoDoEnvioAutomatic
   data_passada: "o dia pedido pelo cliente já passou — confirmar a data com ele",
   pedido_repetido: "o mesmo contacto tem outro pedido aberto nos últimos 7 dias — ver se é o mesmo",
   ja_enviado: "já tinha sido enviado aos parceiros (à mão)",
+  fora_da_zona: "fora da zona — confirmar a morada com o cliente",
 });
 
 /**
@@ -156,6 +159,8 @@ export type CandidatoAoEnvioAutomatico = {
   porTraduzir?: boolean;
   /** Registado sem o SIM do cliente, 30 minutos depois do resumo. */
   registadoSozinho?: boolean;
+  /** d128: a morada (ou a origem da mudança) acima do limite da zona — fora-da-zona.ts. */
+  foraDaZona?: boolean;
 };
 
 /** Um código postal português: «1234-567». */
@@ -187,6 +192,7 @@ export function porqueNaoSegueSozinho(
   emailsDeTeste: ReadonlySet<string> = new Set(),
 ): MotivoDoEnvioAutomatico | null {
   if (pedidoFechado(c.status)) return "fechado";
+  if (c.foraDaZona) return "fora_da_zona";
   if (String(c.status ?? "").trim() === "precisa_info") return "precisa_info";
   if (c.valorFixoClyon != null) return "trabalho_clyon";
   if (!servicoDaListaDaClyon(c.serviceType)) return "servico_fora";

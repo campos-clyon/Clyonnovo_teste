@@ -2582,6 +2582,17 @@ async function conversaPresaARecolha(telefone: string, pedidos: number[], soImag
 /** O "ecrã" — o estado das negociações dele, reescrito em texto. */
 export async function ecraDoPedido(pedidoId: number): Promise<string> {
   const pedido = await getSimulatorOrderById(pedidoId);
+  /*
+   * FORA DA ZONA — d128 (25-11-2026): a equipa está a confirmar a morada; a
+   * Vitória di-lo com delicadeza, sem prometer parceiros, preços nem datas.
+   */
+  {
+    const { foraDaZonaDoPedido } = await import("@/lib/fora-da-zona-na-base");
+    if (await foraDaZonaDoPedido(pedido)) {
+      const { respostaDaVitoriaForaDaZona } = await import("@/lib/fora-da-zona");
+      return respostaDaVitoriaForaDaZona(pedidoId);
+    }
+  }
   const linhas = await negociacoesDoPedido(pedidoId);
   const vivas = linhas.filter((n) => n.estado !== "morta" && n.estado !== "desistida");
   if (vivas.length === 0) {

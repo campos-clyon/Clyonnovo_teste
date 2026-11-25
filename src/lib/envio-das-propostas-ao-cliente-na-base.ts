@@ -849,7 +849,15 @@ export async function rotinaDasPropostas(agora: Date = new Date()): Promise<Resu
     return r;
   }
   const pool = await garantirTabelas();
-  for (const c of await candidatosAoEnvio(agora)) {
+  const candidatos = await candidatosAoEnvio(agora);
+  // d128: fora da zona, as propostas não saem sozinhas até a morada estar confirmada.
+  const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+  const foraDaZona = await idsForaDaZona(candidatos.map((c) => Number(c.envio.pedidoId)));
+  for (const c of candidatos) {
+    if (foraDaZona.has(Number(c.envio.pedidoId))) {
+      r.ficam += 1;
+      continue;
+    }
     if (c.estado.tipo === "fica") r.ficam += 1;
     if (c.estado.tipo !== "sai") continue;
     if (!c.estado.agora) {
@@ -924,6 +932,10 @@ export async function enviarAsPropostasAoCliente(pedidoId: number, agora: Date):
   };
   const [c] = await candidatosAoEnvio(agora, [pedidoId]);
   if (!c) return esperar("já não tem propostas por enviar");
+  {
+    const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+    if ((await idsForaDaZona([pedidoId])).has(pedidoId)) return esperar("fora da zona — confirmar a morada com o cliente");
+  }
   if (c.estado.tipo === "ja_enviado") return esperar("o orçamento já foi ao cliente");
   if (c.estado.tipo === "fica") return esperar(MOTIVOS_COM_UMA_PESSOA[c.estado.motivo]);
   if (!c.estado.agora) return esperar("ainda não é a hora");

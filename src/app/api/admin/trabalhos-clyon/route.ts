@@ -187,6 +187,9 @@ export async function GET(req: NextRequest) {
       o.negociacoes
         .map((n) => pagosPeloCliente.get(Number(n.negociacaoId))?.clientePagouAClyonEm ?? null)
         .find((d) => d != null) ?? null;
+    // d128: «fora da zona» — a morada (ou a origem da mudança) acima do limite das Configs.
+    const { foraDaZonaDosPedidos } = await import("@/lib/fora-da-zona-na-base");
+    const foraDaZona = await foraDaZonaDosPedidos(ofertas.map((o) => Number(o.pedidoId)));
     return NextResponse.json({
       outros,
       trabalhos: ofertas.map((o) => {
@@ -231,6 +234,7 @@ export async function GET(req: NextRequest) {
         }));
         return {
           pedidoId: o.pedidoId,
+          foraDaZona: foraDaZona.get(Number(o.pedidoId)) ?? null,
           servico: o.servico,
           localidade: o.localidade,
           morada: o.morada,
@@ -373,6 +377,12 @@ export async function POST(req: NextRequest) {
    */
   if (pedidoArrumado(pedido.status)) {
     return NextResponse.json({ error: PEDIDO_ARRUMADO_NAO_SE_ENVIA }, { status: 409 });
+  }
+  // d128: fora da zona não vai aos parceiros até a morada estar confirmada.
+  {
+    const { recusaSeForaDaZona } = await import("@/lib/fora-da-zona-na-base");
+    const fora = await recusaSeForaDaZona(pedido);
+    if (fora) return NextResponse.json({ error: fora, foraDaZona: true }, { status: 409 });
   }
   await assumirPedidoSeLivre(pedidoId, colab);
   /*
@@ -853,6 +863,12 @@ export async function PATCH(req: NextRequest) {
       if (alvo != null && (!Number.isInteger(alvo) || alvo <= 0)) {
         return NextResponse.json({ error: "Profissional inválido." }, { status: 400 });
       }
+      {
+        // d128: fora da zona não vai aos parceiros até a morada estar confirmada.
+        const { recusaSeForaDaZona } = await import("@/lib/fora-da-zona-na-base");
+        const fora = await recusaSeForaDaZona(pedidoId);
+        if (fora) return NextResponse.json({ error: fora, foraDaZona: true }, { status: 409 });
+      }
       const r = await voltarAOferecerTrabalhoClyon(pedidoId, alvo);
       if (!r.ok) {
         const porque = {
@@ -936,6 +952,12 @@ export async function PATCH(req: NextRequest) {
       const providerId = Number(corpo.providerId);
       if (!Number.isInteger(providerId) || providerId <= 0) {
         return NextResponse.json({ error: "Escolha o profissional." }, { status: 400 });
+      }
+      {
+        // d128: fora da zona não vai aos parceiros até a morada estar confirmada.
+        const { recusaSeForaDaZona } = await import("@/lib/fora-da-zona-na-base");
+        const fora = await recusaSeForaDaZona(pedidoId);
+        if (fora) return NextResponse.json({ error: fora, foraDaZona: true }, { status: 409 });
       }
       const r = await atribuirDirectamente({
         pedidoId,

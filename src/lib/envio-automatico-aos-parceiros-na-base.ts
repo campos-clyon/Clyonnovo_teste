@@ -46,6 +46,7 @@ import { codigoPostalGuardado } from "@/lib/morada-partida";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
 import { avaliarAlcance } from "@/lib/distribuir-pedido";
 import { enviarAosProfissionais } from "@/lib/enviar-aos-profissionais";
+import { foraDaZonaDoPedido } from "@/lib/fora-da-zona-na-base";
 import { urlDeAccao } from "@/lib/url-do-site";
 import { arrumarAsFaltas } from "@/lib/mensagem-do-que-falta";
 import {
@@ -540,6 +541,8 @@ export async function seguirSozinhoParaOsParceiros(
         porTraduzir: opcoes.porTraduzir === true,
         // d88: a rotina não ouviu a Vitória — o histórico diz se ela o registou sem o SIM do cliente.
         registadoSozinho: opcoes.registadoSozinho === true || (todas && registadoSozinhoNoHistorico(p.historyJson)),
+        // d128: fora da zona fica com uma pessoa, que confirma a morada com o cliente.
+        foraDaZona: (await foraDaZonaDoPedido(pedido)) != null,
       },
       emailsDeTesteDoAmbiente(),
     );

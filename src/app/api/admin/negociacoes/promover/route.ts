@@ -76,9 +76,13 @@ export async function GET(req: NextRequest) {
      */
     const { linhasDoEnvioAutomaticoNaMesa } = await import("@/lib/envio-automatico-aos-parceiros-na-base");
     const envios = await linhasDoEnvioAutomaticoNaMesa(pedidos.map((p) => Number(p.id)));
+    // d128: «fora da zona» — a morada (ou a origem da mudança) acima do limite das Configs.
+    const { foraDaZonaDosPedidos } = await import("@/lib/fora-da-zona-na-base");
+    const foraDaZona = await foraDaZonaDosPedidos(pedidos.map((p) => Number(p.id)));
     return NextResponse.json({
       pedidos: pedidos.map((p) => ({
         ...p,
+        foraDaZona: foraDaZona.get(Number(p.id)) ?? null,
         lembreteDoQueFalta: lembretes.linhas.get(Number(p.id)) ?? null,
         envioAutomatico: envios.get(Number(p.id)) ?? null,
       })),

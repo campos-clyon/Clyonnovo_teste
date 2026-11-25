@@ -719,7 +719,11 @@ export async function rotinaDoSeguimento(agora: Date = new Date()): Promise<Resu
   const respostas = await respostasDoClienteNoWhatsApp([...pedidos.values()].map((p) => p.contactPhone));
 
   const vivos: Array<{ c: LinhaDoSeguimento; p: PedidoLido; contacto: string }> = [];
+  // d128: fora da zona, o seguimento fica parado (sem mensagem) até a morada estar confirmada.
+  const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+  const foraDaZona = await idsForaDaZona(ciclos.map((c) => c.pedidoId));
   for (const c of ciclos) {
+    if (foraDaZona.has(c.pedidoId)) continue;
     try {
       const p = pedidos.get(c.pedidoId);
       const saiu = saiuDoPrecisaDeSi(p);

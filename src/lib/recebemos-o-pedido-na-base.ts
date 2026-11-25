@@ -120,6 +120,12 @@ export async function avisarQueRecebemosOPedido(pedidoId: number, agora: Date = 
     const pool = await tabela();
     const p = await lerOPedido(pool, pedidoId);
     if (!p || p.anonimizado || pedidoFechado(p.status)) return;
+    // d128: fora da zona fica à espera (a 1.ª pergunta vai com ele) — sai se a morada for corrigida a tempo.
+    const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+    if ((await idsForaDaZona([pedidoId])).has(pedidoId)) {
+      await marcar(pool, pedidoId, "espera", null);
+      return;
+    }
     const s = await situacao(pool, p);
     const d = decidirORecebido({ ...s, jaTratado: false }, agora);
     if (d.tipo === "nao") {
@@ -148,7 +154,11 @@ export async function rotinaDoRecebido(agora: Date = new Date()): Promise<Result
       HORAS_ATE_O_RECEBIDO_PERDER_A_VEZ +
       " HOUR) AS caducou FROM pedidoRecebidoAoCliente WHERE estado = 'espera' ORDER BY pedidoId ASC LIMIT 10",
   )) as [Array<{ pedidoId: number; caducou: number }>, unknown];
+  // d128: fora da zona fica à espera (até perder a vez), sem mensagem.
+  const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+  const foraDaZona = await idsForaDaZona(rows.map((l) => Number(l.pedidoId)));
   for (const l of rows) {
+    if (Number(l.caducou) !== 1 && foraDaZona.has(Number(l.pedidoId))) continue;
     if (Number(l.caducou) === 1) {
       await pool.execute("UPDATE pedidoRecebidoAoCliente SET estado = 'nao', porque = 'perdeu a vez' WHERE pedidoId = ? AND estado = 'espera'", [l.pedidoId]);
       r.caducados += 1;

@@ -6,6 +6,7 @@ import {
   appendOrderHistory,
 } from "@/lib/db";
 import { coordenadasDoPedido } from "@/lib/coordenadas-do-pedido";
+import { foraDaZonaDoPedido } from "@/lib/fora-da-zona-na-base";
 import { distribuirPedido, resumoDaDistribuicao } from "@/lib/distribuir-pedido";
 import {
   DIAS_PARA_ALCANCAR,
@@ -69,6 +70,8 @@ export async function correrOAlcance(opcoes: {
        * um `null`.
        */
       if (!pedido || pedido.valorDesejadoCliente == null) continue;
+      // d128: fora da zona não chega a mais parceiros até a morada estar confirmada.
+      if (await foraDaZonaDoPedido(pedido)) continue;
 
       const geo = await coordenadasDoPedido(pedido);
       let fotos = 0;

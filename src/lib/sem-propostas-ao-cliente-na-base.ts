@@ -232,7 +232,14 @@ export async function rotinaSemPropostas(agora: Date = new Date()): Promise<Resu
   const candidatos = await candidatosSemPropostas(agora);
   r.candidatos = candidatos.length;
   const vistos = new Set<string>();
+  // d128: fora da zona, o aviso «sem propostas» não sai até a morada estar confirmada.
+  const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+  const foraDaZona = await idsForaDaZona(candidatos.map((c) => c.pedidoId));
   for (const c of candidatos.sort((a, b) => a.pedidoId - b.pedidoId)) {
+    if (foraDaZona.has(c.pedidoId)) {
+      r.esperam += 1;
+      continue;
+    }
     const jaAvisado = c.aviso.estado != null && c.aviso.estado !== "fica";
     if (jaAvisado) continue;
     if (r.enviados + r.falhados >= AVISOS_SEM_PROPOSTAS_POR_PASSAGEM) break;

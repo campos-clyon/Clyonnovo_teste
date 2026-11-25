@@ -6795,6 +6795,18 @@ export async function contarPorFazer(): Promise<Record<string, number>> {
     console.error("[contarPorFazer:fechoDoModeloNovo]", e instanceof Error ? e.message : e);
   }
   /*
+   * FORA DA ZONA — d128 (25-11-2026): um pedido aberto acima do limite da zona
+   * espera que uma pessoa confirme a morada com o cliente. Conta no selo da
+   * Mesa enquanto estiver marcado (não se apaga por se olhar).
+   */
+  try {
+    const { todosOsForaDaZona } = await import("./fora-da-zona-na-base");
+    const fora = (await todosOsForaDaZona()).size;
+    if (fora > 0) saida.negociacoes_clyon = (saida.negociacoes_clyon ?? 0) + fora;
+  } catch (e) {
+    console.error("[contarPorFazer:foraDaZona]", e instanceof Error ? e.message : e);
+  }
+  /*
    * AS LIÇÕES DA VITÓRIA POR REVER — 27-10-2026 (d11). Uma fila, como a de
    * cima: fica no selo do WhatsApp até alguém aprovar, corrigir ou recusar.
    * Sem a tabela (a rotina ainda não correu) não há nada a somar.
@@ -10291,6 +10303,26 @@ export async function createSimulatorOrder(data: InsertSimulatorOrder): Promise<
   if (typeof data.description === "string" && data.description.trim()) {
     const f = descricaoSemContactos(data.description);
     if (f.descricaoComContactos) data = { ...data, description: f.description, descricaoComContactos: f.descricaoComContactos };
+  }
+  /*
+   * A DISTÂNCIA À BASE FICA GRAVADA — d128 (25-11-2026). A da morada, ou a da
+   * ORIGEM numa mudança (a coluna `distanceKm` de uma mudança é o percurso),
+   * em `rawOrderJson.kmDaBase`: é a que decide o «fora da zona» (fora-da-zona.ts).
+   * Sem coordenadas nem medida, não se grava nada.
+   */
+  if (typeof data.rawOrderJson === "string" && data.rawOrderJson.trim().startsWith("{")) {
+    try {
+      const { kmDaBaseDoPedido, BASE_DA_ZONA } = await import("./fora-da-zona");
+      const raw = JSON.parse(data.rawOrderJson) as Record<string, unknown>;
+      const base = {
+        lat: Number(process.env.CLYON_BASE_LAT) || BASE_DA_ZONA.lat,
+        lng: Number(process.env.CLYON_BASE_LNG) || BASE_DA_ZONA.lng,
+      };
+      const km = kmDaBaseDoPedido(typeof data.serviceType === "string" ? data.serviceType : null, raw, base);
+      if (km) data = { ...data, rawOrderJson: JSON.stringify({ ...raw, kmDaBase: km }) };
+    } catch {
+      /* sem a distância, grava-se na mesma */
+    }
   }
   const cols = Object.keys(data).filter((k) => (data as Record<string, unknown>)[k] !== undefined);
   const vals = cols.map((k) => (data as Record<string, unknown>)[k]);

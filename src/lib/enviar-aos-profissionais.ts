@@ -103,6 +103,19 @@ export async function enviarAosProfissionais(
   if (pedidoArrumado(pedido.status)) {
     return { ok: false, status: 409, error: PEDIDO_ARRUMADO_NAO_SE_ENVIA };
   }
+  /*
+   * FORA DA ZONA NÃO VAI AOS PARCEIROS — d128 (25-11-2026). A morada (ou a
+   * origem da mudança) acima do limite das Configs: uma pessoa confirma-a com
+   * o cliente primeiro. Corrigida para dentro, a marca sai e o pedido segue.
+   */
+  {
+    const { foraDaZonaDoPedido } = await import("./fora-da-zona-na-base");
+    const fora = await foraDaZonaDoPedido(pedido);
+    if (fora) {
+      const { recusaForaDaZona } = await import("./fora-da-zona");
+      return { ok: false, status: 409, error: recusaForaDaZona(fora) };
+    }
+  }
   // Um assistente que envia um pedido sem responsável aos profissionais fica com ele.
   await assumirPedidoSeLivre(pedidoId, colab);
   /*

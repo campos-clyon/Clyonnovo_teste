@@ -521,7 +521,11 @@ export async function rotinaDaValidade(agora: Date = new Date()): Promise<Result
 
   // Os que estão mesmo à espera, com o ciclo em dia.
   const vivos: Array<{ p: PedidoAEspera; c: LinhaDoCiclo; tel: string }> = [];
+  // d128: fora da zona, os lembretes da validade ficam parados até a morada estar confirmada.
+  const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+  const foraDaZona = await idsForaDaZona(pedidos.map((p) => p.id));
   for (const p of pedidos) {
+    if (foraDaZona.has(p.id)) continue;
     try {
       const tel = noveDigitos(p.contactPhone);
       if (!tel) continue;

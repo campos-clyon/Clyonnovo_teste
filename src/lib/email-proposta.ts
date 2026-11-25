@@ -111,6 +111,21 @@ export async function avisarClienteDoValorUnico(p: {
   );
 }
 
+/**
+ * FORA DA ZONA, POR EMAIL — d128 (25-11-2026): o «Cancelar e avisar o
+ * cliente» de quem não tem telemóvel. O texto é o mesmo do WhatsApp
+ * (`mensagemDoForaDaZona`).
+ */
+export async function avisarClienteForaDaZona(p: { para: string; pedidoId: number; texto: string }): Promise<boolean> {
+  return enviar(
+    p.para,
+    `O seu pedido #${p.pedidoId} na CLYON`,
+    moldura(`
+      <p style="margin:0 0 4px;font-size:13px;color:#64748b;">Pedido #${p.pedidoId}</p>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#334155;">${e(p.texto)}</p>`),
+  );
+}
+
 // ── O profissional propôs: avisar o cliente ─────────────────────────────────
 
 export async function avisarClienteDaProposta(p: {

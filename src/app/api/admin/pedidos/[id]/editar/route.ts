@@ -196,6 +196,16 @@ export async function POST(
     Object.assign(raw, proprios.paraOJson);
 
     raw.editadoPelaClyonEm = new Date().toISOString();
+    // d128: a distância à base da morada editada (a origem, numa mudança) — a que decide o «fora da zona».
+    {
+      const { kmDaBaseDoPedido } = await import("@/lib/fora-da-zona");
+      const { baseDaZona } = await import("@/lib/fora-da-zona-na-base");
+      const km = kmDaBaseDoPedido(texto(corpo.serviceType, 80) ?? pedido.serviceType ?? null, raw, baseDaZona());
+      if (km) raw.kmDaBase = km;
+      else delete raw.kmDaBase;
+    }
+    const { foraDaZonaDoPedido } = await import("@/lib/fora-da-zona-na-base");
+    const foraAntes = await foraDaZonaDoPedido(pedido);
 
     // Como o pedido estava ANTES — para saber, depois de gravar, se mudou
     // alguma coisa que os profissionais leem.
@@ -293,10 +303,30 @@ export async function POST(
       await avisarProfissionaisDoPedido(pedidoId, "pedido_mudou", ["aberta", "aguarda_contratacao"]);
     }
 
+    /*
+     * FORA DA ZONA — d128: a morada corrigida para dentro do limite tira a marca
+     * e o pedido segue o caminho normal; ainda fora, não recomeça nos parceiros.
+     */
+    const foraDepois = depoisDeGravar ? await foraDaZonaDoPedido(depoisDeGravar) : null;
+    if (foraAntes && !foraDepois) {
+      await appendOrderHistory(pedidoId, {
+        type: "created",
+        by: null,
+        message: `Morada corrigida pela CLYON (${colab?.nome ?? "equipa"}): o pedido ficou dentro da zona e segue o caminho normal.`,
+      }).catch(() => {});
+    } else if (foraDepois) {
+      await appendOrderHistory(pedidoId, {
+        type: "created",
+        by: null,
+        message: `Continua fora da zona (${Math.round(foraDepois.km)} km de Lisboa): não vai aos parceiros até a morada estar confirmada.`,
+      }).catch(() => {});
+    }
+
     let recomeco: Awaited<ReturnType<typeof recomecarDoZero>> | null = null;
     if (mudou.length > 0 && depoisDeGravar) {
       try {
-        recomeco = await recomecarDoZero(depoisDeGravar, urlDeAccaoDoPedido(req.headers));
+        // d128: ainda fora da zona, não recomeça nos parceiros.
+        recomeco = foraDepois ? null : await recomecarDoZero(depoisDeGravar, urlDeAccaoDoPedido(req.headers));
       } catch (e) {
         // A edição já está gravada e isso não se desfaz por causa disto. O
         // ecrã fica sem a linha do recomeço, que é melhor do que dizer que

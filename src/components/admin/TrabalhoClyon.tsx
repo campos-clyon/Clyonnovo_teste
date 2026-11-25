@@ -1,5 +1,7 @@
 "use client";
 
+import { BORDA_FORA_DA_ZONA, ForaDaZonaNoCartao } from "./ForaDaZonaNoCartao";
+import type { ForaDaZona } from "@/lib/fora-da-zona";
 import { AVISO_SEM_GUIA_NO_BACKOFFICE, fetchComAConfirmacaoDaGuia } from "@/lib/guia-no-backoffice";
 import RegistoReal from "@/components/admin/RegistoReal";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
@@ -144,6 +146,8 @@ type NegociacaoDoTrabalho = {
 
 export type TrabalhoClyon = {
   pedidoId: number;
+  /** d128: a morada (ou a origem da mudança) acima do limite da zona — a borda âmbar e o ⚠. */
+  foraDaZona?: ForaDaZona | null;
   servico: string | null;
   localidade: string | null;
   morada: string | null;
@@ -1145,7 +1149,17 @@ function CartaoDoTrabalho({
       : null;
 
   return (
-    <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border px-3 py-2 ${cor ? `border-l-4 ${cor.grupo}` : corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}${porVer ? " ring-2 ring-emerald-400/60" : ""}`}>
+    <li id={`trabalho-${t.pedidoId}`} className={`scroll-mt-16 rounded-2xl border px-3 py-2 ${t.foraDaZona ? `border-l-4 ${BORDA_FORA_DA_ZONA}` : cor ? `border-l-4 ${cor.grupo}` : corDoBloco ? `border-l-4 ${corDoBloco}` : "border-slate-800 bg-slate-900/60"}${porVer && !t.foraDaZona ? " ring-2 ring-emerald-400/60" : ""}`}>
+      {/* d128: o ⚠ no topo, com a distância, o que fica parado e os dois botões. */}
+      {t.foraDaZona && (
+        <ForaDaZonaNoCartao
+          pedidoId={t.pedidoId}
+          estado={t.foraDaZona}
+          token={token}
+          onCorrigir={onEditar}
+          onCancelado={() => onMudou?.()}
+        />
+      )}
       <div className="flex items-start gap-2.5">
       {/* Marcar, para as acções em lote — fora do botão que abre o cartão. */}
       {onMarcar && (

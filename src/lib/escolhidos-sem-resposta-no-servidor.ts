@@ -55,7 +55,13 @@ const falha = (status: number, error: string, mais: Record<string, unknown> = {}
 
 function dependencias(agora: Date): DependenciasDaRotina {
   return {
-    ler: () => pedidosComEscolhidosPorResponder(),
+    // d128: fora da zona, nem os avisos ao cliente nem o envio a mais parceiros — até a morada estar confirmada.
+    ler: async () => {
+      const lidos = await pedidosComEscolhidosPorResponder();
+      const { idsForaDaZona } = await import("./fora-da-zona-na-base");
+      const fora = await idsForaDaZona(lidos.map((p) => p.id));
+      return fora.size ? lidos.filter((p) => !fora.has(p.id)) : lidos;
+    },
     reservar: (pedidoId, marca) => reservarAvisoSemResposta(pedidoId, marca),
     // Quem tem conta vai para /conta; quem não tem recebe o link do pedido (o mesmo dos avisos de proposta).
     ligacao: async (pedido) =>

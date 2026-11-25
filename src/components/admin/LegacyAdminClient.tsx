@@ -527,6 +527,7 @@ const simulatorDisplayGroups = [
       "mudancas_distancia_km",
       "mudancas_multiplicador",
       "mudanca_km_limite_recolha",
+      "zona_km_maximo",
     ],
   },
   {
