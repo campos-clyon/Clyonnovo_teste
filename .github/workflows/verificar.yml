@@ -23,8 +23,14 @@ on:
 jobs:
   verificar:
     runs-on: ubuntu-latest
+    # A regra «a app de cliente não muda sem nota» (d5, 25-11-2026) compara com o
+    # que o push trazia: precisa da história e do sítio de onde veio.
+    env:
+      VERIFICAR_BASE: ${{ github.event.before }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
 
       # Sem `version`: o package.json já traz `packageManager: pnpm@10.4.1`,
       # e esta acção recusa-se a arrancar quando lhe dizem a versão duas vezes.
