@@ -192,35 +192,35 @@ export default function AdminAssistenteAutoPanel() {
     : null;
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-2.5">
+      {/*
+        UMA LINHA DOBRADA — d124 (25-11-2026). O nome, quantas estão ligadas e,
+        a seguir, como se pausa a Vitória (d116) — que encolhe antes do resto.
+      */}
       <button
         onClick={() => setAberto((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={aberto}
+        title="O que ele conta ao cliente sozinho, e o que já contou."
+        className="flex w-full items-center gap-2 text-left"
       >
-        <span className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-cyan-400" aria-hidden="true" />
-          <span className="text-sm font-bold text-white">Assistente automático</span>
-          {ligados != null && (
-            <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-300">
-              {ligados} de {CAPACIDADES.length} ligadas
-            </span>
-          )}
-        </span>
+        <Bot className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
+        <span className="shrink-0 text-sm font-bold text-white">Assistente automático</span>
+        {ligados != null && (
+          <span className="shrink-0 rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-300">
+            {ligados} de {CAPACIDADES.length}
+          </span>
+        )}
+        {/* d116 (25-11-2026): a equipa pausa a Vitória numa conversa com * e fá-la voltar com ». */}
+        <span className="hidden min-w-0 flex-1 truncate text-xs text-slate-400 sm:inline">{COMO_PAUSAR_A_VITORIA}</span>
+        <span className="flex-1 sm:hidden" />
         {aberto ? (
           <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
         ) : (
           <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
         )}
       </button>
-
-      {/* d116 (25-11-2026): a equipa pausa a Vitória numa conversa com * e fá-la voltar com ». */}
-      <p className="mt-1 text-xs text-slate-400">{COMO_PAUSAR_A_VITORIA}</p>
-
-      {!aberto && (
-        <p className="mt-1 text-xs text-slate-500">
-          O que ele conta ao cliente sozinho, e o que já contou. Abra para ver.
-        </p>
-      )}
+      {/* No telemóvel a frase não cabe na linha: aparece com o painel aberto. */}
+      {aberto && <p className="mt-1 text-xs text-slate-400 sm:hidden">{COMO_PAUSAR_A_VITORIA}</p>}
 
       {aberto && (
         <div className="mt-4 space-y-4">

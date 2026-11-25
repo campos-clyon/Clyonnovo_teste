@@ -40,6 +40,8 @@ import { querOutroPedido } from "./pedido-aberto-na-conversa";
 import { eDaEquipa, semMarcaDeMao } from "./rajada-do-whatsapp";
 import { eEnvioDeModelo } from "./envio-de-modelo";
 import { servicoPorPalavras } from "./whatsapp-recolha";
+// As listas do «contratado» vivem num sítio só, que também a arrumação do WhatsApp lê (d124).
+import { NEGOCIACOES_CONTRATADAS, PEDIDOS_CONTRATADOS } from "./pedidos-contratados";
 
 /* ── 4. Não pisar a equipa ───────────────────────────────────────────────── */
 
@@ -145,7 +147,7 @@ export type FaseDoPedido =
 
 const FECHADOS = new Set(["cancelado", "arquivado", "rejeitado"]);
 const ENVIADOS = new Set(["enviado", "em_negociacao", "negociacao", "aprovado", "enviado_cliente"]);
-const CONTRATADOS = new Set(["acordada", "aguarda_contratacao", "confirmada", "em_execucao", "executada"]);
+const CONTRATADOS = new Set<string>(NEGOCIACOES_CONTRATADAS);
 
 /** Em que pé está o pedido — por registar na mesa, com propostas, contratado, feito, por pagar, fechado. */
 export function faseDoPedido(p: PedidoEmCurso): FaseDoPedido {
@@ -154,7 +156,7 @@ export function faseDoPedido(p: PedidoEmCurso): FaseDoPedido {
   if (FECHADOS.has(status)) return "fechado";
   if (status === "concluido") return "feito";
   if (p.negociacoes.some((n) => CONTRATADOS.has(n.estado))) return "contratado";
-  if (["confirmado", "agendado", "em_execucao", "em_curso"].includes(status)) return "contratado";
+  if ((PEDIDOS_CONTRATADOS as readonly string[]).includes(status)) return "contratado";
   if (p.negociacoes.some((n) => n.propostaPendente)) return "com_propostas";
   if (ENVIADOS.has(status) || p.negociacoes.length > 0) return "na_mesa";
   return "registado";

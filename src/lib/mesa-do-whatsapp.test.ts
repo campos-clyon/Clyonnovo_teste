@@ -59,7 +59,9 @@ describe("a mesa é uma lista só", () => {
   it("os estados são separadores dela, e não secções", () => {
     // A prova de que a fusão aconteceu: um separador por estado, num sítio só.
     // Desde 21-10-2026 dizem o que falta fazer — ver `a-mesa-das-conversas.test.ts`.
-    expect(PAINEL).toContain("{SEPARADORES_DA_MESA.map((s) => (");
+    // d124: os do dia-a-dia à vista e o resto no «Mais» — mas sempre os da mesa.
+    expect(PAINEL).toContain("{separadoresAVista.map((s) => (");
+    expect(PAINEL).toContain(".map((id) => SEPARADORES_DA_MESA.find((s) => s.id === id))");
     // E as secções antigas deixaram de ter título próprio.
     expect(PAINEL_NU).not.toContain("Conversas entregues a si");
     expect(PAINEL_NU).not.toContain("Calar o cérebro num número");
@@ -115,7 +117,11 @@ describe("ver com quem o assistente está a falar, e pará-lo", () => {
      */
     const devolver = PAINEL.slice(
       PAINEL.indexOf('{l.dono === "equipa" && l.estado !== "bloqueada" && l.estado !== "resolvida" && ('),
-      PAINEL.indexOf('{l.estado === "resolvida" && l.fechadaPor !== "pedido" && ('),
+      // d124: no «⋯» da linha, logo antes do «Excluir».
+      PAINEL.indexOf(
+        "excluir([l.telefone]",
+        PAINEL.indexOf('{l.dono === "equipa" && l.estado !== "bloqueada" && l.estado !== "resolvida" && ('),
+      ),
     );
     expect(devolver).toContain('agir("retomar", l.telefone)');
     expect(devolver).toContain("continua no passo onde ficou");

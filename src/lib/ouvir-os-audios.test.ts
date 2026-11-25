@@ -127,12 +127,12 @@ describe("o site ouve, responde, e pede para escrever quando não ouve", () => {
 describe("o painel diz porque é que uma conversa está entregue", () => {
   const PAINEL = semComentarios(ler("src/components/admin/AdminWhatsAppPanel.tsx"));
 
-  it("o motivo aparece na linha, mesmo com mensagens", () => {
+  it("o motivo aparece na conversa, antes do fio", () => {
     // Desde 21-10-2026 a linha vem da mesa das conversas, com `motivoDaEntrega`.
+    // d124: a linha ficou numa só (o porquê); o motivo da entrega mostra-se ao abrir a conversa.
     const i = PAINEL.indexOf('{l.motivoDaEntrega && l.estado !== "resolvida" && (');
     expect(i).toBeGreaterThan(-1);
-    // Antes da última mensagem, e não no lugar dela.
-    expect(PAINEL.indexOf("{l.ultimaMensagem ? (", i)).toBeGreaterThan(i);
+    expect(PAINEL.indexOf("<FioDaConversa mensagens={mensagens} />", i)).toBeGreaterThan(i);
     // d116: «Entregue: …», ou «Pausada pela equipa (*)» quando a equipa pausou.
     expect(PAINEL.slice(i, i + 300)).toContain("{linhaDaEntrega(l.motivoDaEntrega)}");
   });

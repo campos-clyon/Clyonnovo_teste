@@ -15,11 +15,14 @@ import {
   Bot,
   Check,
   CheckCheck,
+  ChevronDown,
+  ChevronRight,
+  Copy,
   ExternalLink,
   GraduationCap,
   Hand,
   Loader2,
-  MessageCircle,
+  MoreHorizontal,
   Plus,
   Power,
   RefreshCw,
@@ -48,6 +51,7 @@ import { linhaDaEntrega } from "@/lib/sinais-da-equipa";
 import {
   contarNaMesa,
   eEsperaAntiga,
+  haQuanto,
   linhasDoSeparador,
   PASSO_DA_RECOLHA,
   SEPARADORES_DA_MESA,
@@ -56,6 +60,15 @@ import {
   type SeparadorDaMesa,
 } from "@/lib/mesa-das-conversas";
 import { TELEFONE_DA_CLYON_DIGITOS } from "@/lib/telefone-da-clyon";
+import {
+  DESCARTADA_SOZINHA,
+  deQuemEAVez,
+  inicioDoTexto,
+  quemNaLinha,
+  resumoDoTopo,
+  SEPARADORES_A_VISTA,
+  SEPARADORES_NO_MAIS,
+} from "@/lib/arrumar-o-whatsapp";
 
 /**
  * O painel de controlo do WhatsApp da plataforma.
@@ -126,6 +139,8 @@ type Estado = {
    * escreve, a fila enche-se, e ninguém vê. Ver `ponte-viva.ts`.
    */
   ponteVistaEm?: string | null;
+  /** As descartadas dos últimos 7 dias, com quem e porquê (d124). */
+  descartadas?: Array<{ id: number; telefone: string; texto: string; haMinutos: number; por: string | null; porque: string | null }>;
 };
 
 type Mensagem = { direccao: string; texto: string; criadoEm: string };
@@ -156,6 +171,63 @@ const ACCAO =
  * linhas é como um número passa a aparecer de três maneiras no mesmo ecrã.
  */
 const formatarTelefone = (t: string) => telefoneLegivel(t, { comIndicativo: true });
+
+/**
+ * QUEM É ESTE NÚMERO, SEM O NÚMERO — d124. Pela linha da mesa desse número
+ * (os últimos 9 dígitos): o nome, o profissional, ou o pedido.
+ */
+function quemPeloTelefone(mesa: ConversaNaMesa[] | undefined, telefone: string): string {
+  const chave = telefone.replace(/\D/g, "").slice(-9);
+  const l = mesa?.find((c) => c.telefone.replace(/\D/g, "").slice(-9) === chave);
+  return quemNaLinha({ telefone, nome: l?.nome, profissional: l?.profissional, pedido: l?.pedido });
+}
+
+/**
+ * «VER NÚMERO» — d124 (25-11-2026). O telefone deixou de estar à vista na
+ * lista e na fila; aparece só a pedido, com o link que abre o WhatsApp do
+ * cliente e o botão de o copiar.
+ */
+function VerNumero({ telefone }: { telefone: string }) {
+  const [visto, setVisto] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  if (!visto) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setVisto(true);
+        }}
+        className="rounded px-1.5 py-0.5 text-[11px] font-semibold text-slate-400 underline decoration-dotted underline-offset-2 hover:text-slate-200"
+      >
+        Ver número
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs" onClick={(e) => e.stopPropagation()}>
+      <TelefoneComWhatsApp telefone={telefone} className="font-mono text-slate-200 underline decoration-dotted underline-offset-2">
+        {formatarTelefone(telefone)}
+      </TelefoneComWhatsApp>
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(formatarTelefone(telefone));
+            setCopiado(true);
+            window.setTimeout(() => setCopiado(false), 1500);
+          } catch {
+            /* sem área de transferência: o número está à vista */
+          }
+        }}
+        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+      >
+        <Copy className="h-3 w-3" aria-hidden="true" />
+        {copiado ? "Copiado" : "Copiar"}
+      </button>
+    </span>
+  );
+}
 
 function desde(iso: string): string {
   const d = new Date(iso);
@@ -504,6 +576,24 @@ export default function AdminWhatsAppPanel() {
   // O «Testar agora» da faixa da compreensão (12-10-2026).
   const [aTestar, setATestar] = useState(false);
   const [resultadoDoTeste, setResultadoDoTeste] = useState("");
+  /*
+   * O ECRÃ ARRUMADO — d124 (25-11-2026): o «⋯» do cabeçalho e o de cada linha,
+   * o «Mais» dos separadores e o da conversa aberta, as mensagens da fila
+   * abertas por inteiro, e as descartadas.
+   */
+  const [opcoesAbertas, setOpcoesAbertas] = useState(false);
+  const [menuDaLinha, setMenuDaLinha] = useState<string | null>(null);
+  const [maisAberto, setMaisAberto] = useState(false);
+  const [maisNaConversa, setMaisNaConversa] = useState(false);
+  const [textosAbertos, setTextosAbertos] = useState<Set<number>>(() => new Set());
+  const [descartadasAbertas, setDescartadasAbertas] = useState(false);
+  const alternarTexto = (id: number) =>
+    setTextosAbertos((antes) => {
+      const novos = new Set(antes);
+      if (novos.has(id)) novos.delete(id);
+      else novos.add(id);
+      return novos;
+    });
 
   const carregar = useCallback(async (silencioso = false) => {
     if (!token) return;
@@ -611,7 +701,7 @@ export default function AdminWhatsAppPanel() {
           partes.push(`Pedidos apagados: ${d.pedidosApagados.map((n: number) => `#${n}`).join(", ")}.`);
         }
         if (d.porFazer > 0) partes.push(`Ficaram ${d.porFazer} por fazer — carregue outra vez.`);
-        for (const f of falhas) partes.push(`${formatarTelefone(f.telefone)}: ${f.porque}`);
+        for (const f of falhas) partes.push(`${quemPeloTelefone(estado?.mesa, f.telefone)}: ${f.porque}`);
         setAvisoDoLote(partes.join(" "));
         setMarcadas(new Set(falhas.map((f) => f.telefone)));
         await carregar();
@@ -621,7 +711,7 @@ export default function AdminWhatsAppPanel() {
         setOcupado(false);
       }
     },
-    [token, carregar],
+    [token, carregar, estado],
   );
 
   /*
@@ -632,7 +722,7 @@ export default function AdminWhatsAppPanel() {
   const excluir = useCallback(
     (telefones: string[], pedidos: number[]) => {
       if (telefones.length === 0) return;
-      const quem = telefones.length === 1 ? formatarTelefone(telefones[0]) : `${telefones.length} conversas`;
+      const quem = telefones.length === 1 ? quemPeloTelefone(estado?.mesa, telefones[0]) : `${telefones.length} conversas`;
       // Os da linha — no fim diz-se quais se apagaram mesmo: um com trabalho pago fica.
       const naLinha = pedidos.length === 0 ? "" : ` (na lista: ${pedidos.map((n) => `#${n}`).join(", ")})`;
       const sim = window.confirm(
@@ -645,7 +735,7 @@ export default function AdminWhatsAppPanel() {
       setConversaAberta(null);
       void emLote("excluir", telefones);
     },
-    [emLote],
+    [emLote, estado],
   );
 
   /*
@@ -856,7 +946,8 @@ export default function AdminWhatsAppPanel() {
     () =>
       (estado?.mesa ?? []).map((c) => ({
         ...c,
-        nota: [c.porque, c.motivoDaEntrega, c.guardada?.nota, c.profissional?.nome].filter(Boolean).join(" · "),
+        // O nome do contacto também se procura (d124): o número já não está à vista.
+        nota: [c.nome, c.porque, c.motivoDaEntrega, c.guardada?.nota, c.profissional?.nome].filter(Boolean).join(" · "),
       })),
     [estado],
   );
@@ -971,26 +1062,27 @@ export default function AdminWhatsAppPanel() {
       setConversaAberta(null);
       return;
     }
+    setMaisNaConversa(false);
     setNumeroRecebido(telefone);
     void abrirConversa(telefone);
   };
 
+  /*
+   * QUEM É, SEM O NÚMERO — d124. A fila e as atrasadas só trazem o telefone;
+   * o nome (ou o pedido) vem da linha da mesa desse número.
+   */
+  const quemE = (telefone: string) => quemPeloTelefone(estado.mesa, telefone);
+  const resumo = resumoDoTopo(linhas);
+  // Os separadores à vista, e os do «Mais» (sempre o aberto, mesmo com o «Mais» fechado).
+  const separadoresAVista = [
+    ...SEPARADORES_A_VISTA,
+    ...SEPARADORES_NO_MAIS.filter((id) => maisAberto || id === separador),
+  ]
+    .map((id) => SEPARADORES_DA_MESA.find((s) => s.id === id))
+    .filter((s): s is (typeof SEPARADORES_DA_MESA)[number] => s != null);
+
   return (
-    <div className="space-y-4">
-      {/* O interruptor geral: o estado em letras grandes e UM gesto ao lado. */}
-      {/*
-        A COMPREENSÃO EM BAIXO — a avaria que não se via.
-
-        A 14-09-2026 a quota do Gemini esgotou-se. O assistente passou o dia a
-        responder por palavras-chave a clientes que escreviam frases normais
-        («Sim serve», «Aceito a proposta da Revolution»), e não houve um sinal
-        em lado nenhum — a falha é apanhada e o caminho antigo segue, que é o
-        comportamento certo, mas ninguém ficava a saber. Foi descoberto a ler
-        uma conversa à mão, um dia depois.
-
-        Fica em cima de tudo, e com o motivo de quem recusou: «429 quota
-        excedida» e «falta a chave» têm remédios diferentes.
-      */}
+    <div className="space-y-3">
       {/*
         OS OUTROS USOS DA IA EM BAIXO — 27-10-2026 (d7). O tradutor, a leitura
         das conversas e a das fotografias falhavam só para a consola; o
@@ -998,7 +1090,7 @@ export default function AdminWhatsAppPanel() {
         primeira vez que esse uso corra bem.
       */}
       {(estado.ia?.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] p-4">
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-200">
             <Bot className="h-4 w-4" aria-hidden="true" />A IA está a falhar
           </p>
@@ -1016,8 +1108,13 @@ export default function AdminWhatsAppPanel() {
         </section>
       )}
 
+      {/*
+        A COMPREENSÃO EM BAIXO — a avaria que não se via (14-09-2026). Fica em
+        cima de tudo, e com o motivo de quem recusou: «429 quota excedida» e
+        «falta a chave» têm remédios diferentes.
+      */}
       {estado.compreensao && (
-        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] p-4">
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-200">
             <Bot className="h-4 w-4" aria-hidden="true" />O assistente não está a PERCEBER as
             mensagens
@@ -1033,17 +1130,13 @@ export default function AdminWhatsAppPanel() {
             Última falha: {desde(estado.compreensao.quando)}. Esta linha desaparece sozinha na
             primeira leitura que corra bem.
           </p>
-          {/*
-            TESTAR AGORA — 12-10-2026. A faixa só muda quando o assistente lê
-            uma mensagem; depois de resolver a avaria na Google, ficava aqui até
-            um cliente escrever. Isto lê uma frase de ensaio, sem enviar nada.
-          */}
+          {/* TESTAR AGORA — 12-10-2026: lê uma frase de ensaio, sem enviar nada. */}
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => void testarLeitura()}
               disabled={aTestar}
-              className="rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-500/25 disabled:opacity-60"
+              className="rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-500/25 disabled:opacity-40"
             >
               {aTestar ? "A testar…" : "Testar agora"}
             </button>
@@ -1054,76 +1147,192 @@ export default function AdminWhatsAppPanel() {
         </section>
       )}
 
+      {/*
+        O CABEÇALHO NUMA LINHA — d124 (25-11-2026). Era um bloco grande, com a
+        explicação do canal e a da ponte sempre à vista. Agora: o estado, a
+        ponte, quantas conversas, as suas, e o «Desligar tudo» pequeno à
+        direita. A explicação da ponte só aparece quando há alguma coisa mal;
+        o raro (número à mão, pedir à Vitória para ler, atualizar, avisos no
+        telemóvel) vive no «⋯».
+      */}
       <section
-        className={`rounded-2xl border p-5 ${
-          estado.ligado
-            ? "border-emerald-500/25 bg-emerald-500/[0.06]"
-            : "border-red-500/30 bg-red-500/[0.07]"
+        className={`rounded-2xl border px-4 py-2.5 ${
+          estado.ligado ? "border-emerald-500/25 bg-emerald-500/[0.06]" : "border-red-500/30 bg-red-500/[0.07]"
         }`}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-lg font-bold text-white">
-              <MessageCircle
-                className={`h-5 w-5 ${estado.ligado ? "text-emerald-400" : "text-red-400"}`}
-                aria-hidden="true"
-              />
+        <div className="flex items-center gap-2">
+          <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 shrink-0 rounded-full ${estado.ligado ? "bg-emerald-400" : "bg-red-500"}`}
+            />
+            <b className="text-white" title={estado.ligado ? `A falar ${CANAL}.` : undefined}>
               {estado.ligado ? "Ligado" : "DESLIGADO — ninguém recebe nada"}
-            </p>
-            <p className="mt-1 text-sm text-slate-400">
-              {estado.ligado
-                ? `A falar ${CANAL}.`
-                : "As mensagens novas ficam na fila à espera de o voltar a ligar."}
-            </p>
-            {/* AS CONVERSAS SUAS — vieram do Início (d56, 17-11-2026): é aqui que se trabalham. */}
-            {estado.interrompidos.length > 0 && (
-              <p className="mt-1 text-sm text-amber-200" title="O assistente está calado nestas — é a equipa a responder.">
-                <b className="tabular-nums">{estado.interrompidos.length}</b> conversas suas
-              </p>
-            )}
-
+            </b>
             {/*
-              A PONTE ESTÁ VIVA? A pergunta que custou uma manhã.
-
-              Uma cliente escreveu às 12:58 e ninguém lhe respondeu, e para
-              saber porquê era preciso abrir o painel, procurar o número, ver
-              se a conversa lá estava e se a fila tinha coisas por sair — e
-              mesmo assim ficava a dúvida. Isto responde de relance.
+              A PONTE ESTÁ VIVA? A pergunta que custou uma manhã (22-09-2026):
+              responde-se de relance, ao lado do estado.
             */}
             {ponte && (
-              <div className="mt-2">
-                <p className={`flex items-center gap-2 text-sm font-semibold ${SINAL_DA_PONTE[ponte.estado].texto}`}>
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${SINAL_DA_PONTE[ponte.estado].ponto} ${
-                      ponte.estado === "viva" ? "animate-pulse" : ""
-                    }`}
-                    aria-hidden="true"
-                  />
-                  {ponte.titulo}
-                </p>
-                {ponte.explicacao !== "" && (
-                  <p className="mt-1 max-w-prose text-xs leading-relaxed text-slate-400">
-                    {ponte.explicacao}
-                  </p>
-                )}
-              </div>
+              <span className={`${SINAL_DA_PONTE[ponte.estado].texto} ${ponte.estado === "viva" ? "" : "font-semibold"}`}>
+                · {ponte.titulo}
+              </span>
             )}
-          </div>
+            <span className="text-slate-400">
+              · <b className="tabular-nums text-slate-200">{linhas.length}</b> conversas
+            </span>
+            {/* AS CONVERSAS SUAS — vieram do Início (d56, 17-11-2026): é aqui que se trabalham. */}
+            {estado.interrompidos.length > 0 && (
+              <span className="text-amber-200" title="O assistente está calado nestas — é a equipa a responder.">
+                · <b className="tabular-nums">{estado.interrompidos.length}</b>{" "}
+                {estado.interrompidos.length === 1 ? "conversa sua" : "conversas suas"}
+              </span>
+            )}
+            {/*
+              O TELEMÓVEL, LIDO HÁ QUANTO — 23-10-2026. A mesa sabe das
+              respostas à mão pelo retrato que a ponte tira de 10 em 10 minutos;
+              se ele parar, tem de se ver.
+            */}
+            {estado.canal === "ponte" &&
+              (() => {
+                const t = leituraDoTelemovel(estado.telemovelLidoHaSegundos);
+                return (
+                  <span className={`text-xs ${t.aviso ? "font-semibold text-amber-300" : "hidden text-slate-500 sm:inline"}`}>
+                    · {t.texto}
+                  </span>
+                );
+              })()}
+          </p>
+          <button
+            type="button"
+            onClick={() => setOpcoesAbertas((v) => !v)}
+            aria-expanded={opcoesAbertas}
+            aria-label="Mais opções do WhatsApp"
+            title="Número à mão, pedir à Vitória para ler, atualizar, avisos no telemóvel"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition ${
+              opcoesAbertas ? "border-slate-500 bg-slate-800 text-white" : "border-slate-700 text-slate-300 hover:bg-slate-800"
+            }`}
+          >
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </button>
           <button
             onClick={() => agir(estado.ligado ? "desligar" : "ligar")}
             disabled={ocupado}
-            className={`flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition disabled:opacity-50 ${
+            className={`flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-bold transition disabled:opacity-40 ${
               estado.ligado
                 ? "bg-red-500/15 text-red-300 hover:bg-red-500/25"
                 : "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
             }`}
           >
-            <Power className="h-4 w-4" aria-hidden="true" />
+            <Power className="h-3.5 w-3.5" aria-hidden="true" />
             {estado.ligado ? "Desligar tudo" : "Ligar outra vez"}
           </button>
         </div>
+        {ponte && ponte.estado !== "viva" && ponte.explicacao !== "" && (
+          <p className="mt-1 max-w-prose text-xs leading-relaxed text-slate-400">{ponte.explicacao}</p>
+        )}
+        {!estado.ligado && (
+          <p className="mt-1 text-xs text-slate-400">As mensagens novas ficam na fila à espera de o voltar a ligar.</p>
+        )}
+
+        {opcoesAbertas && (
+          <div className="mt-2 space-y-2 border-t border-slate-800 pt-2">
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setAAdicionar((v) => !v)}
+                className={`${ACCAO} border-slate-700 text-slate-300 hover:bg-slate-800`}
+              >
+                {aAdicionar ? (
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                Número à mão
+              </button>
+              <button
+                onClick={() => void pedirLeitura()}
+                disabled={aLer}
+                title="A Vitória lê as conversas paradas há 2 h com novidades e fecha as que acabaram, com o porquê. Não escreve aos clientes."
+                className={`${ACCAO} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`}
+              >
+                {aLer ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                Pedir à Vitória para ler
+              </button>
+              <button
+                onClick={() => void carregar()}
+                className={`${ACCAO} border-slate-700 text-slate-300 hover:bg-slate-800`}
+              >
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                Atualizar
+              </button>
+            </div>
+            {/*
+              Entregar ou bloquear um número que ainda não escreveu — faz-se de
+              vez em quando, e abre-se quando é preciso.
+            */}
+            {aAdicionar && (
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <p className="text-xs leading-relaxed text-slate-400">
+                  <strong className="text-slate-300">Entregar a si</strong> cala o assistente nesse
+                  número e a conversa passa a ser sua. <strong className="text-slate-300">Bloquear</strong>{" "}
+                  é para contactos pessoais: nunca mais recebem nada, até desbloquear.
+                </p>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={numeroNovo}
+                    onChange={(e) => setNumeroNovo(e.target.value)}
+                    placeholder="Número (ex.: 912 345 678)"
+                    className={`${CAIXA} sm:w-56`}
+                  />
+                  <input
+                    value={notaNova}
+                    onChange={(e) => setNotaNova(e.target.value)}
+                    placeholder="Nota (opcional — quem é, porquê)"
+                    className={`${CAIXA} flex-1`}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        await agir("interromper", numeroNovo, notaNova || undefined);
+                        setNumeroNovo("");
+                        setNotaNova("");
+                        setSeparador("a_espera");
+                      }}
+                      disabled={ocupado || numeroNovo.replace(/\D/g, "").length < 9}
+                      className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-amber-500/15 px-4 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/25 disabled:opacity-40"
+                    >
+                      <Hand className="h-4 w-4" aria-hidden="true" />
+                      Entregar a si
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await agir("bloquear", numeroNovo, notaNova || undefined);
+                        setNumeroNovo("");
+                        setNotaNova("");
+                        setMaisAberto(true);
+                        setSeparador("bloqueada");
+                      }}
+                      disabled={ocupado || numeroNovo.replace(/\D/g, "").length < 9}
+                      className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-red-500/15 px-4 text-sm font-semibold text-red-300 transition hover:bg-red-500/25 disabled:opacity-40"
+                    >
+                      <Ban className="h-4 w-4" aria-hidden="true" />
+                      Bloquear
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Os avisos no telemóvel: as conversas que a Vitória passa a uma pessoa e as que esperam há mais de 2 h (d23). */}
+            <AvisosDaEquipa token={token} />
+          </div>
+        )}
       </section>
 
+      {avisoDaLeitura && <p className="px-1 text-xs text-violet-200">{avisoDaLeitura}</p>}
       {erro && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {erro}
@@ -1131,11 +1340,27 @@ export default function AdminWhatsAppPanel() {
       )}
 
       {/*
-        O ASSISTENTE AUTOMÁTICO — os seis interruptores e o que ele fez.
+        O QUE SE LÊ NO TOPO — d124: quantas por responder, a mais antiga à
+        espera (das dos últimos 3 dias) e as que pedem uma pessoa.
+      */}
+      <p className="px-1 text-sm text-slate-300">
+        <b className={resumo.porResponder > 0 ? "text-red-300" : "text-slate-300"}>
+          {resumo.porResponder === 1 ? "1 por responder" : `${resumo.porResponder} por responder`}
+        </b>
+        {resumo.maisAntigaHaSegundos != null && (
+          <span className="text-slate-400"> · a mais antiga espera {haQuanto(resumo.maisAntigaHaSegundos).replace(/^há /, "há ")}</span>
+        )}
+        {resumo.pedemUmaPessoa > 0 && (
+          <span className="font-semibold text-amber-300">
+            {" "}
+            · {resumo.pedemUmaPessoa === 1 ? "1 pede uma pessoa" : `${resumo.pedemUmaPessoa} pedem uma pessoa`}
+          </span>
+        )}
+      </p>
 
-        Fica dobrado por omissão e num ficheiro próprio: quem abre este ecrã
-        vem quase sempre atender alguém, e a mesa tem de ser a primeira coisa
-        que se vê. Os dados dele só são pedidos quando alguém o abre.
+      {/*
+        O ASSISTENTE AUTOMÁTICO — os interruptores e o que ele fez. Uma linha
+        dobrada (d124): quem abre este ecrã vem quase sempre atender alguém.
       */}
       <AdminAssistenteAutoPanel />
 
@@ -1173,202 +1398,118 @@ export default function AdminWhatsAppPanel() {
           </button>
         ))}
       </div>
+
       {/*
         AS MENSAGENS ATRASADAS NA FILA — 27-10-2026 (d7). Mais de 2 h na fila
-        e não saíram sozinhas (a ponte esteve parada, ou era de noite): a
-        equipa decide se ainda fazem sentido. Contam no selo do WhatsApp.
+        e não saíram sozinhas: a equipa decide se ainda fazem sentido. Contam
+        no selo do WhatsApp. Desde d124 descartam-se sozinhas as de pedidos com
+        parceiro contratado ou fechados, e as de mais de 48 h; as que ficam
+        aparecem recolhidas, uma linha cada — o texto inteiro ao carregar.
       */}
       {vistaDoPainel === "conversas" && (estado.atrasadas?.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.06] p-5">
-          <h3 className="flex items-center gap-2 text-sm font-bold text-amber-200">
+        <section className="rounded-2xl border border-amber-500/40 bg-amber-500/[0.06] px-4 py-3">
+          <h3 className="flex flex-wrap items-center gap-x-2 text-sm font-bold text-amber-200">
             Atrasadas na fila
             <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
               {estado.atrasadas?.length}
             </span>
+            <span className="text-xs font-normal text-amber-100/70">mais de 2 h à espera — já não saem sozinhas</span>
           </h3>
-          <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
-            Ficaram mais de 2 horas à espera e já não saem sozinhas. Envie as que ainda fazem sentido
-            ou descarte as outras.
-          </p>
-          <ul className="mt-3 divide-y divide-amber-500/20">
-            {estado.atrasadas?.map((m) => (
-              <li key={m.id} className="py-3">
-                <p className="font-mono text-xs text-slate-400">
-                  <TelefoneComWhatsApp telefone={m.telefone} className="underline decoration-dotted underline-offset-2">
-                    {formatarTelefone(m.telefone)}
-                  </TelefoneComWhatsApp>{" "}
-                  · há {m.haMinutos >= 120 ? `${Math.round(m.haMinutos / 60)} h` : `${m.haMinutos} min`}
-                </p>
-                <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-slate-300">{m.texto}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => void agirNaFila("soltar", m.id)}
-                    disabled={ocupado}
-                    className="flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-40"
-                  >
-                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                    Enviar
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (window.confirm("Descartar esta mensagem sem a enviar?")) {
-                        void agirNaFila("descartar", m.id);
-                      }
-                    }}
-                    disabled={ocupado}
-                    className="flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-xs text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Descartar
-                  </button>
-                </div>
-              </li>
-            ))}
+          <ul className="mt-1 divide-y divide-amber-500/20">
+            {estado.atrasadas?.map((m) => {
+              const aberta = textosAbertos.has(m.id);
+              return (
+                <li key={m.id} className="py-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => alternarTexto(m.id)}
+                      aria-expanded={aberta}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="block truncate text-xs">
+                        <b className="text-slate-200">{quemE(m.telefone)}</b>
+                        <span className="text-slate-500">
+                          {" "}
+                          · há {m.haMinutos >= 120 ? `${Math.round(m.haMinutos / 60)} h` : `${m.haMinutos} min`}
+                        </span>
+                      </span>
+                      {!aberta && <span className="block truncate text-sm text-slate-400">{inicioDoTexto(m.texto)}</span>}
+                    </button>
+                    <button
+                      onClick={() => void agirNaFila("soltar", m.id)}
+                      disabled={ocupado}
+                      className="flex min-h-[32px] shrink-0 items-center gap-1 rounded-lg bg-emerald-500 px-2.5 text-xs font-bold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-40"
+                    >
+                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                      Enviar
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Descartar esta mensagem sem a enviar?")) {
+                          void agirNaFila("descartar", m.id);
+                        }
+                      }}
+                      disabled={ocupado}
+                      aria-label="Descartar"
+                      title="Descartar sem enviar"
+                      className="flex min-h-[32px] shrink-0 items-center rounded-lg px-2 text-xs text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                  {aberta && (
+                    <div className="mt-1 space-y-1">
+                      <p className="whitespace-pre-wrap break-words text-sm text-slate-300">{m.texto}</p>
+                      <VerNumero telefone={m.telefone} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
 
       <section
-        className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-5 ${vistaDoPainel === "licoes" ? "" : "hidden"}`}
+        className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-4 ${vistaDoPainel === "licoes" ? "" : "hidden"}`}
       >
         <AdminLicoesDaVitoriaPanel onPorRever={setLicoesPorRever} />
       </section>
 
       {/*
-        A MESA. Uma lista, quatro separadores — e as acções de cada número na
-        linha dele, que é onde quem está ao telefone as vai procurar.
+        A MESA. Uma lista; os separadores do dia-a-dia à vista e os outros no
+        «Mais» (d124). Cada conversa numa linha: quem, o pedido, o porquê numa
+        linha, há quanto tempo e de quem é a vez — e uma ou duas acções; o
+        resto no «⋯» da linha.
       */}
       <section
-        className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-5 ${vistaDoPainel === "conversas" ? "" : "hidden"}`}
+        className={`rounded-2xl border border-slate-800 bg-slate-900/60 px-3 py-3 sm:px-4 ${vistaDoPainel === "conversas" ? "" : "hidden"}`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-white">Conversas</h3>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setAAdicionar((v) => !v)}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800"
-            >
-              {aAdicionar ? (
-                <X className="h-3.5 w-3.5" aria-hidden="true" />
-              ) : (
-                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-              Número à mão
-            </button>
-            <button
-              onClick={() => void pedirLeitura()}
-              disabled={aLer}
-              title="A Vitória lê as conversas paradas há 2 h com novidades e fecha as que acabaram, com o porquê. Não escreve aos clientes."
-              className="flex items-center gap-1.5 rounded-lg border border-violet-500/40 px-3 py-1.5 text-xs font-semibold text-violet-300 transition hover:bg-violet-500/10 disabled:opacity-40"
-            >
-              {aLer ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              ) : (
-                <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-              Pedir à Vitória para ler
-            </button>
-            <button
-              onClick={() => void carregar()}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-slate-800"
-            >
-              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-              Atualizar
-            </button>
-          </div>
-        </div>
-        {avisoDaLeitura && <p className="mt-2 text-xs text-violet-200">{avisoDaLeitura}</p>}
-        {/*
-          O TELEMÓVEL, LIDO HÁ QUANTO — 23-10-2026. A mesa sabe das respostas
-          à mão pelo retrato que a ponte tira de 10 em 10 minutos; se ele parar,
-          tem de se ver, senão volta a parecer tudo por responder.
-        */}
-        {estado.canal === "ponte" &&
-          (() => {
-            const t = leituraDoTelemovel(estado.telemovelLidoHaSegundos);
-            return (
-              <p className={`mt-2 text-[11px] ${t.aviso ? "text-amber-300" : "text-slate-500"}`}>{t.texto}</p>
-            );
-          })()}
         {estado.mesaFalhou && (
-          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-            A lista das conversas não carregou ({estado.mesaFalhou}). Não quer dizer que esteja tudo respondido —
-            carregue em «Atualizar».
+          <p className="mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+            A lista das conversas não carregou ({estado.mesaFalhou}). Não quer dizer que esteja tudo respondido —{" "}
+            <button type="button" onClick={() => void carregar()} className="font-semibold underline underline-offset-2">
+              carregue em «Atualizar»
+            </button>
+            .
           </p>
         )}
 
-        {/*
-          Entregar ou bloquear um número que ainda não escreveu. Era um bloco
-          fixo a ocupar meio ecrã para uma coisa que se faz de vez em quando;
-          agora abre-se quando é preciso.
-        */}
-        {aAdicionar && (
-          <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-            <p className="text-xs leading-relaxed text-slate-400">
-              <strong className="text-slate-300">Entregar a si</strong> cala o assistente nesse
-              número e a conversa passa a ser sua. <strong className="text-slate-300">Bloquear</strong>{" "}
-              é para contactos pessoais: nunca mais recebem nada, até desbloquear.
-            </p>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <input
-                value={numeroNovo}
-                onChange={(e) => setNumeroNovo(e.target.value)}
-                placeholder="Número (ex.: 912 345 678)"
-                className={`${CAIXA} sm:w-56`}
-              />
-              <input
-                value={notaNova}
-                onChange={(e) => setNotaNova(e.target.value)}
-                placeholder="Nota (opcional — quem é, porquê)"
-                className={`${CAIXA} flex-1`}
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    await agir("interromper", numeroNovo, notaNova || undefined);
-                    setNumeroNovo("");
-                    setNotaNova("");
-                    setSeparador("a_espera");
-                  }}
-                  disabled={ocupado || numeroNovo.replace(/\D/g, "").length < 9}
-                  className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-amber-500/15 px-4 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/25 disabled:opacity-40"
-                >
-                  <Hand className="h-4 w-4" aria-hidden="true" />
-                  Entregar a si
-                </button>
-                <button
-                  onClick={async () => {
-                    await agir("bloquear", numeroNovo, notaNova || undefined);
-                    setNumeroNovo("");
-                    setNotaNova("");
-                    setSeparador("bloqueada");
-                  }}
-                  disabled={ocupado || numeroNovo.replace(/\D/g, "").length < 9}
-                  className="flex min-h-[40px] items-center gap-1.5 rounded-lg bg-red-500/15 px-4 text-sm font-semibold text-red-300 transition hover:bg-red-500/25 disabled:opacity-40"
-                >
-                  <Ban className="h-4 w-4" aria-hidden="true" />
-                  Bloquear
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Os avisos no telemóvel: as conversas que a Vitória passa a uma pessoa e as que esperam há mais de 2 h (d23). */}
-        <AvisosDaEquipa token={token} />
-
-        {/* Os separadores: as listas antigas, agora com o número ao lado do nome. */}
-        <div className="mt-3 flex flex-wrap gap-1.5 border-b border-slate-800 pb-3">
-          {SEPARADORES_DA_MESA.map((s) => (
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-800 pb-2" role="tablist" aria-label="Conversas">
+          {separadoresAVista.map((s) => (
             <button
               key={s.id}
+              role="tab"
+              aria-selected={separador === s.id}
               onClick={() => {
                 setSeparador(s.id);
                 setConversaAberta(null);
                 setMarcadas(new Set());
                 setAvisoDoLote("");
+                setMenuDaLinha(null);
               }}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                 separador === s.id
                   ? "bg-slate-700 text-white"
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
@@ -1382,6 +1523,20 @@ export default function AdminWhatsAppPanel() {
               )}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setMaisAberto((v) => !v)}
+            aria-expanded={maisAberto}
+            title="A meio, Com pedido, Guardadas e Bloqueadas"
+            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+          >
+            {maisAberto ? "Menos" : "Mais"}
+            {maisAberto ? (
+              <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+          </button>
         </div>
 
         {/*
@@ -1390,14 +1545,14 @@ export default function AdminWhatsAppPanel() {
           abertos — sem esta frase, o ecrã contradizia-se a si próprio.
         */}
         {aProcurar && (
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-400">
             A procurar <strong className="text-slate-200">em todos os separadores</strong>:{" "}
             {visiveis.length === 1 ? "1 conversa" : `${visiveis.length} conversas`}.
           </p>
         )}
 
         {/*
-          AS MARCADAS E O QUE SE LHES FAZ — 23-10-2026. A barra só aparece com
+          AS MARCADAS E O QUE SE LHES FAZ — 23-10-2026. A barra só cresce com
           alguma marcada; tem os mesmos botões da linha, para todas de uma vez.
         */}
         {visiveis.length > 0 &&
@@ -1408,11 +1563,11 @@ export default function AdminWhatsAppPanel() {
             const pedidos = marcadasAqui.flatMap((l) => (l.pedido ? [l.pedido.id] : []));
             return (
               <div
-                className={`sticky top-0 z-10 mt-2 flex flex-wrap items-center gap-1.5 rounded-lg px-2 py-1.5 ${
+                className={`sticky top-0 z-10 mt-1 flex flex-wrap items-center gap-1.5 rounded-lg px-1 py-1 ${
                   telefones.length > 0 ? "border border-cyan-500/30 bg-slate-900" : ""
                 }`}
               >
-                <label className="flex cursor-pointer items-center gap-2 pr-2 text-xs text-slate-400">
+                <label className="flex cursor-pointer items-center gap-2 pr-2 text-xs text-slate-500">
                   <input
                     type="checkbox"
                     checked={todas}
@@ -1535,7 +1690,7 @@ export default function AdminWhatsAppPanel() {
               </div>
             );
           })()}
-        {avisoDoLote && <p className="mt-2 text-xs text-cyan-200">{avisoDoLote}</p>}
+        {avisoDoLote && <p className="mt-1 text-xs text-cyan-200">{avisoDoLote}</p>}
 
         {visiveis.length === 0 ? (
           estado.mesaFalhou ? null : (
@@ -1546,13 +1701,17 @@ export default function AdminWhatsAppPanel() {
             </p>
           )
         ) : (
-          <ul className="mt-1 divide-y divide-slate-800">
+          <ul className="divide-y divide-slate-800">
             {visiveis.map((l, i) => {
               const aberta = conversaAberta === l.telefone;
+              const quem = quemNaLinha(l);
+              const vez = deQuemEAVez(l);
+              const menuAberto = menuDaLinha === l.telefone;
               /*
                * A LINHA QUE SEPARA AS ANTIGAS — 21-10-2026. No «Por responder»,
                * as que esperam há mais de 3 dias vêm depois das de hoje (ver
-               * `ordenarNaMesa`), e diz-se porquê.
+               * `ordenarNaMesa`), e diz-se porquê. As de pedidos fechados já
+               * não chegam cá (d124): passaram a «Resolvidas».
                */
               // E no «À espera do cliente», as que ele deixou sem resposta há mais de 3 dias (23-10-2026).
               const primeiraAntiga =
@@ -1563,7 +1722,7 @@ export default function AdminWhatsAppPanel() {
               return (
                 <Fragment key={l.telefone}>
                 {primeiraAntiga && (
-                  <li className="py-3">
+                  <li className="py-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                       {separador === "a_espera" ? "O cliente deixou de responder — há mais de 3 dias" : "Há mais de 3 dias"}
                     </p>
@@ -1575,169 +1734,104 @@ export default function AdminWhatsAppPanel() {
                   </li>
                 )}
                 <li>
-                  <div className="flex flex-col gap-2 py-2.5 lg:flex-row lg:items-center">
+                  <div className="flex items-center gap-2 py-2">
+                    {/* Marcar, para as acções de várias de uma vez (23-10-2026). Não abre a linha. */}
+                    <input
+                      type="checkbox"
+                      checked={marcadas.has(l.telefone)}
+                      onChange={() =>
+                        setMarcadas((antes) => {
+                          const novas = new Set(antes);
+                          if (novas.has(l.telefone)) novas.delete(l.telefone);
+                          else novas.add(l.telefone);
+                          return novas;
+                        })
+                      }
+                      aria-label={`Marcar ${quem}`}
+                      className="h-4 w-4 shrink-0 accent-cyan-500"
+                    />
                     {/*
-                      A LINHA QUE ABRE A CONVERSA — um botão até 21-10-2026; passou a
-                      `linhaQueAbre`, para o número dentro dela ser um link que abre
-                      o WhatsApp do cliente sem abrir a conversa aqui.
+                      A LINHA QUE ABRE A CONVERSA (`linhaQueAbre`, 21-10-2026).
+                      Desde d124 diz QUEM é — o nome, ou o pedido — e não o
+                      número: esse só aparece no «Ver número» do «⋯».
                     */}
                     <div
-                      {...linhaQueAbre(() => alternarConversa(l.telefone), `Abrir a conversa com ${formatarTelefone(l.telefone)}`)}
+                      {...linhaQueAbre(() => alternarConversa(l.telefone), `Abrir a conversa com ${quem}`)}
                       className="min-w-0 flex-1 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
                     >
-                      <p className="flex flex-wrap items-center gap-2 font-mono text-sm text-white">
-                        {/* Marcar, para as acções de várias de uma vez (23-10-2026). Não abre a linha. */}
-                        <input
-                          type="checkbox"
-                          checked={marcadas.has(l.telefone)}
-                          onChange={() =>
-                            setMarcadas((antes) => {
-                              const novas = new Set(antes);
-                              if (novas.has(l.telefone)) novas.delete(l.telefone);
-                              else novas.add(l.telefone);
-                              return novas;
-                            })
-                          }
-                          aria-label={`Marcar ${formatarTelefone(l.telefone)}`}
-                          className="h-4 w-4 accent-cyan-500"
-                        />
-                        {/* O número abre o WhatsApp do cliente (21-10-2026). */}
-                        <TelefoneComWhatsApp
-                          telefone={l.telefone}
-                          className="underline decoration-dotted underline-offset-2"
-                        >
-                          {formatarTelefone(l.telefone)}
-                        </TelefoneComWhatsApp>
-                        {/* De onde veio esta linha. Só faz falta quando a lista
-                            deixou de ser a do separador aberto. */}
-                        {(aProcurar || separador === "profissionais") && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES[l.estado]}`}
+                      <p className="flex min-w-0 items-center gap-1.5 text-sm">
+                        <span className="truncate font-semibold text-white">{quem}</span>
+                        {/*
+                          O PEDIDO, E SE JÁ ACABOU — 23-10-2026. Abre a ficha dele.
+                          Quando o nome não se sabe, o pedido já é o «quem».
+                        */}
+                        {l.pedido && quem !== `Pedido #${l.pedido.id}` && (
+                          <a
+                            href={`/admin/pedido/${l.pedido.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            title={`Pedido #${l.pedido.id} · ${l.pedido.estado}`}
+                            className={`shrink-0 rounded px-1.5 py-px text-[11px] font-semibold hover:underline ${corDoPedido(l.pedido)}`}
                           >
-                            {SEPARADORES_DA_MESA.find((s) => s.id === l.estado)?.titulo ?? l.estado}
-                          </span>
+                            #{l.pedido.id}
+                          </a>
                         )}
-                        {/* Quem a tem: a Vitória, ou alguém da equipa (entregue). */}
-                        {l.estado !== "bloqueada" && (
-                          <span
-                            title={l.motivoDaEntrega ? linhaDaEntrega(l.motivoDaEntrega) : undefined}
-                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${
-                              l.dono === "equipa" ? "bg-amber-500/15 text-amber-300" : "bg-violet-500/15 text-violet-300"
-                            }`}
-                          >
-                            {l.dono === "equipa" ? (
-                              <Hand className="h-3 w-3" aria-hidden="true" />
-                            ) : (
-                              <Bot className="h-3 w-3" aria-hidden="true" />
-                            )}
-                            {l.dono === "equipa" ? "Equipa" : "Vitória"}
-                          </span>
-                        )}
-                        {l.passo && l.dono === "assistente" && l.estado !== "resolvida" && (
-                          <span className="rounded-full bg-slate-800 px-2 py-0.5 font-sans text-[11px] text-slate-300">
-                            {PASSO_DA_RECOLHA[l.passo] ?? l.passo}
-                          </span>
+                        {l.pedido && (
+                          <span className="hidden shrink-0 text-[11px] text-slate-500 sm:inline">{l.pedido.estado}</span>
                         )}
                         {/* Quem escreve é um profissional registado — pelo telefone da ficha (d21). */}
                         {l.profissional && (
                           <span
                             title="O telefone bate com a ficha de um profissional"
-                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES.profissionais}`}
+                            className={`flex shrink-0 items-center gap-1 rounded px-1.5 py-px text-[11px] font-semibold ${CORES.profissionais}`}
                           >
                             <Wrench className="h-3 w-3" aria-hidden="true" />
-                            Profissional{l.profissional.nome ? `: ${l.profissional.nome}` : ""}
+                            <span className="hidden sm:inline">Profissional</span>
                           </span>
                         )}
                         {l.guardada && (
-                          <span
-                            title={l.guardada.nota ?? undefined}
-                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${CORES.guardada}`}
-                          >
-                            <Bookmark className="h-3 w-3" aria-hidden="true" />
-                            Guardada{l.guardada.nota ? `: ${l.guardada.nota}` : ""}
-                          </span>
+                          <Bookmark
+                            className="h-3.5 w-3.5 shrink-0 text-cyan-300"
+                            aria-label={`Guardada${l.guardada.nota ? `: ${l.guardada.nota}` : ""}`}
+                          />
                         )}
-                        {/*
-                          O PEDIDO, E SE JÁ ACABOU — 23-10-2026. *«Se o fluxo, o
-                          pedido já foi finalizado ou não.»* Abre a ficha dele.
-                        */}
-                        {l.pedido && (
-                          <a
-                            href={`/admin/pedido/${l.pedido.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className={`rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold hover:underline ${corDoPedido(l.pedido)}`}
-                          >
-                            Pedido #{l.pedido.id} · {l.pedido.estado}
-                          </a>
-                        )}
-                        {/* No telemóvel: por abrir, ou arquivada — o que no WhatsApp não se vê. */}
-                        {l.estado === "por_responder" && l.porLerNoTelemovel > 0 && (
-                          <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-sans text-[11px] font-semibold text-red-300">
-                            {l.porLerNoTelemovel === 1 ? "1 por abrir" : `${l.porLerNoTelemovel} por abrir`} no telemóvel
-                          </span>
-                        )}
-                        {l.estado === "por_responder" && l.arquivadaNoTelemovel && (
-                          <span
-                            title="Arquivada no WhatsApp: não aparece na lista das conversas do telemóvel."
-                            className="rounded-full bg-amber-500/15 px-2 py-0.5 font-sans text-[11px] font-semibold text-amber-300"
-                          >
-                            arquivada no telemóvel
+                        {/* De onde veio esta linha — só quando a lista não é a do separador aberto. */}
+                        {(aProcurar || separador === "profissionais") && (
+                          <span className={`shrink-0 rounded px-1.5 py-px text-[11px] font-semibold ${CORES[l.estado]}`}>
+                            {SEPARADORES_DA_MESA.find((s) => s.id === l.estado)?.titulo ?? l.estado}
                           </span>
                         )}
                       </p>
                       {/*
-                        PORQUE É QUE ESTÁ AQUI, E ONDE PAROU — 21-10-2026. Era o
-                        motivo da entrega, e só para alguns; agora todas dizem o
-                        que falta: «Escreveu há 2 h: «Então?»», «Parou a dar a
-                        morada», «Pedido #475 — agendado».
+                        PORQUE É QUE ESTÁ AQUI, E ONDE PAROU — 21-10-2026, numa
+                        linha: «Escreveu há 2 h: «Então?»», «Parou a dar a
+                        morada». O resto (o motivo da entrega, a volta à
+                        Vitória) está dentro da conversa.
                       */}
-                      <p title={l.porque} className={`truncate text-xs font-medium ${COR_DO_PORQUE[l.estado]}`}>
+                      <p title={l.porque} className={`truncate text-xs ${COR_DO_PORQUE[l.estado]}`}>
+                        {/* d93: cancelou pela conversa — nenhuma mensagem automática lhe sai. */}
+                        {l.naoContactar && <b className="text-rose-300">Não contactar · </b>}
                         {l.porque}
                       </p>
-                      {l.motivoDaEntrega && l.estado !== "resolvida" && (
-                        <p className="truncate text-[11px] text-amber-300/80">{linhaDaEntrega(l.motivoDaEntrega)}</p>
-                      )}
-                      {/* d112: respondida à mão e 24 h sem a equipa — a Vitória fala outra vez nesta conversa. */}
-                      {l.voltouAVitoria && l.estado !== "resolvida" && (
-                        <p className="truncate text-[11px] text-violet-300/80">{l.voltouAVitoria}</p>
-                      )}
-                      {/* d93: cancelou pela conversa — nenhuma mensagem automática lhe sai. */}
-                      {l.naoContactar && (
-                        <p className="truncate text-[11px] font-semibold text-rose-300">Não contactar — cancelou o pedido e pediu para não voltar a ser contactado</p>
-                      )}
-                      {/* Quando o porquê já cita a última mensagem (ou diz que foi marcada), não se repete. */}
-                      {l.onde !== "painel" && !(l.ultimaMensagem && l.porque.includes(l.ultimaMensagem)) && (
-                        <p className="truncate text-xs text-slate-500">
-                          {l.ultimaMensagem ? (
-                            <>
-                              {l.direccao === "out" ? "→ " : ""}
-                              {l.ultimaMensagem}
-                            </>
-                          ) : (
-                            "Sem mensagens registadas."
-                          )}
-                        </p>
-                      )}
                     </div>
 
+                    <span
+                      className="hidden shrink-0 flex-col items-end text-[11px] leading-tight sm:flex"
+                      title={
+                        l.quemFalou
+                          ? `${ULTIMA_PALAVRA[l.quemFalou].texto}${l.onde === "telemovel" ? " (visto no telemóvel)" : l.onde === "painel" ? " («Já respondi» no painel)" : ""}${l.quando ? ` — ${desde(l.quando)}` : ""}`
+                          : undefined
+                      }
+                    >
+                      <span className={vez.nossa ? "font-semibold text-red-300" : "text-slate-400"}>{vez.texto}</span>
+                      <span className="text-slate-500">{haQuanto(l.haSegundos)}</span>
+                    </span>
+
                     {/*
-                      A acção principal de cada estado, na própria linha. Parar o
-                      assistente é o gesto urgente — quem chega a este ecrã a
-                      meio de uma conversa má quer calá-lo já, e não depois de
-                      abrir mais alguma coisa.
+                      UMA OU DUAS ACÇÕES À VISTA — d124. «Já respondi» e «Fechar»
+                      no que espera por nós; «Fechar» no resto; «Reabrir» e
+                      «Desbloquear» onde fazem falta. O resto no «⋯».
                     */}
-                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                      <span className="flex flex-col items-end text-xs leading-tight">
-                        {l.quemFalou && (
-                          <span
-                            title={l.onde === "telemovel" ? "Visto no telemóvel" : l.onde === "painel" ? "«Já respondi» no painel" : undefined}
-                            className={`font-semibold ${ULTIMA_PALAVRA[l.quemFalou].cor}`}
-                          >
-                            {ULTIMA_PALAVRA[l.quemFalou].texto}
-                          </span>
-                        )}
-                        <span className="text-slate-500">{l.quando ? desde(l.quando) : ""}</span>
-                      </span>
+                    <div className="flex shrink-0 items-center gap-1">
                       {/*
                         «JÁ RESPONDI» — 23-10-2026. Respondeu-se por telefone ou
                         noutro sítio: passa para «À espera do cliente», e volta
@@ -1747,11 +1841,77 @@ export default function AdminWhatsAppPanel() {
                         <button
                           onClick={() => void agir("respondida", l.telefone)}
                           disabled={ocupado}
-                          className={`${ACCAO} border-sky-500/40 text-sky-300 hover:bg-sky-500/10`}
+                          className={`${ACCAO} border-sky-500/40 px-2 text-sky-300 hover:bg-sky-500/10`}
                           title="Respondeu por telefone ou noutro sítio: passa para «À espera do cliente». Volta se o cliente escrever."
+                          aria-label="Já respondi"
                         >
                           <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                          Já respondi
+                          <span className="hidden sm:inline">Já respondi</span>
+                        </button>
+                      )}
+                      {l.estado !== "resolvida" && l.estado !== "bloqueada" && (
+                        <button
+                          onClick={() => fecharComMotivo(l.telefone)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-emerald-500/40 px-2 text-emerald-300 hover:bg-emerald-500/10 ${
+                            l.estado === "por_responder" ? "hidden sm:flex" : ""
+                          }`}
+                          title="Passa para «Resolvidas», com o porquê. Volta à mesa sozinha se o cliente escrever outra vez."
+                          aria-label="Fechar"
+                        >
+                          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span className="hidden sm:inline">Fechar</span>
+                        </button>
+                      )}
+                      {l.estado === "resolvida" && l.fechadaPor !== "pedido" && (
+                        <button
+                          onClick={() => void agir("reabrir", l.telefone)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-slate-600 px-2 text-slate-300 hover:bg-slate-800`}
+                          title="Volta para a mesa, no pé em que estiver."
+                        >
+                          <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span className="hidden sm:inline">Reabrir</span>
+                        </button>
+                      )}
+                      {l.estado === "bloqueada" && (
+                        <button
+                          onClick={() => void agir("desbloquear", l.telefone)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
+                        >
+                          Desbloquear
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setMenuDaLinha(menuAberto ? null : l.telefone)}
+                        aria-expanded={menuAberto}
+                        aria-label={`Mais ações — ${quem}`}
+                        className={`${ACCAO} border-transparent px-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200`}
+                      >
+                        <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/*
+                    O «⋯» DA LINHA — d124. O que se faz de vez em quando, sem
+                    abrir a conversa: assumir ou devolver ao assistente, desfazer
+                    o «Já respondi», ver o número, excluir.
+                  */}
+                  {menuAberto && (
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950/60 p-2">
+                      <VerNumero telefone={l.telefone} />
+                      {/* No telemóvel o «Fechar» do «Por responder» vive aqui. */}
+                      {l.estado === "por_responder" && (
+                        <button
+                          onClick={() => fecharComMotivo(l.telefone)}
+                          disabled={ocupado}
+                          className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 sm:hidden`}
+                        >
+                          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                          Fechar
                         </button>
                       )}
                       {l.onde === "painel" && l.estado === "a_espera" && (
@@ -1765,22 +1925,13 @@ export default function AdminWhatsAppPanel() {
                           Desfazer
                         </button>
                       )}
-                      {l.estado !== "resolvida" && l.estado !== "bloqueada" && (
-                        <button
-                          onClick={() => fecharComMotivo(l.telefone)}
-                          disabled={ocupado}
-                          className={`${ACCAO} border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10`}
-                          title="Passa para «Resolvidas», com o porquê. Volta à mesa sozinha se o cliente escrever outra vez."
-                        >
-                          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-                          Fechar
-                        </button>
-                      )}
+                      {/* Parar o assistente nesta conversa — sem a abrir. */}
                       {l.dono === "assistente" && l.estado !== "bloqueada" && l.estado !== "resolvida" && (
                         <button
                           onClick={() => void agir("interromper", l.telefone, "Pelo backoffice")}
                           disabled={ocupado}
                           className={`${ACCAO} border-amber-500/40 text-amber-300 hover:bg-amber-500/10`}
+                          title="A Vitória cala-se nesta conversa: passa a ser da equipa."
                         >
                           <Hand className="h-3.5 w-3.5" aria-hidden="true" />
                           Assumir
@@ -1797,46 +1948,72 @@ export default function AdminWhatsAppPanel() {
                           Devolver ao assistente
                         </button>
                       )}
-                      {l.estado === "resolvida" && l.fechadaPor !== "pedido" && (
-                        <button
-                          onClick={() => void agir("reabrir", l.telefone)}
-                          disabled={ocupado}
-                          className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
-                          title="Volta para a mesa, no pé em que estiver."
-                        >
-                          <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
-                          Reabrir
-                        </button>
-                      )}
-                      {l.estado === "bloqueada" && (
-                        <button
-                          onClick={() => void agir("desbloquear", l.telefone)}
-                          disabled={ocupado}
-                          className={`${ACCAO} border-slate-600 text-slate-300 hover:bg-slate-800`}
-                        >
-                          Desbloquear
-                        </button>
-                      )}
                       {/* EXCLUIR — 23-10-2026: o cliente desistiu; a Vitória esquece-o. */}
                       {eAdmin && (
                         <button
                           onClick={() => excluir([l.telefone], l.pedido ? [l.pedido.id] : [])}
                           disabled={ocupado}
-                          aria-label={`Excluir ${formatarTelefone(l.telefone)}`}
                           title="Excluir: apaga a conversa e o pedido sem trabalho, e a Vitória esquece este cliente — se voltar, começa do zero."
-                          className={`${ACCAO} border-transparent px-2 text-slate-500 hover:bg-red-500/10 hover:text-red-300`}
+                          className={`${ACCAO} border-red-500/30 text-red-300 hover:bg-red-500/10`}
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          Excluir
                         </button>
                       )}
                     </div>
-                  </div>
+                  )}
 
                   {aberta && (
                     <div className="mb-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                      {/*
+                        QUEM É, E O QUE A LINHA NÃO DIZ — d124. O número a pedido,
+                        o passo da recolha, porque foi entregue, e se voltou à
+                        Vitória.
+                      */}
+                      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                        <b className="text-sm text-white">{quem}</b>
+                        <VerNumero telefone={l.telefone} />
+                        {l.pedido && (
+                          <a href={`/admin/pedido/${l.pedido.id}`} className="hover:underline">
+                            Pedido #{l.pedido.id} · {l.pedido.estado}
+                          </a>
+                        )}
+                        {l.estado !== "bloqueada" && (
+                          <span className="flex items-center gap-1">
+                            {l.dono === "equipa" ? (
+                              <Hand className="h-3 w-3 text-amber-300" aria-hidden="true" />
+                            ) : (
+                              <Bot className="h-3 w-3 text-violet-300" aria-hidden="true" />
+                            )}
+                            {l.dono === "equipa" ? "Com a equipa" : "Com a Vitória"}
+                          </span>
+                        )}
+                        {l.passo && l.dono === "assistente" && l.estado !== "resolvida" && (
+                          <span>{PASSO_DA_RECOLHA[l.passo] ?? l.passo}</span>
+                        )}
+                        {l.guardada?.nota && <span className="text-cyan-300">Guardada: {l.guardada.nota}</span>}
+                      </div>
+                      {l.motivoDaEntrega && l.estado !== "resolvida" && (
+                        <p className="mb-1 text-[11px] text-amber-300/80">{linhaDaEntrega(l.motivoDaEntrega)}</p>
+                      )}
+                      {/* d112: respondida à mão e 24 h sem a equipa — a Vitória fala outra vez nesta conversa. */}
+                      {l.voltouAVitoria && l.estado !== "resolvida" && (
+                        <p className="mb-1 text-[11px] text-violet-300/80">{l.voltouAVitoria}</p>
+                      )}
+                      {l.naoContactar && (
+                        <p className="mb-1 text-[11px] font-semibold text-rose-300">Não contactar — cancelou o pedido e pediu para não voltar a ser contactado</p>
+                      )}
+                      {/* No telemóvel: por abrir, ou arquivada — o que no WhatsApp não se vê. */}
+                      {l.estado === "por_responder" && (l.porLerNoTelemovel > 0 || l.arquivadaNoTelemovel) && (
+                        <p className="mb-1 text-[11px] text-red-300">
+                          {l.porLerNoTelemovel > 0 &&
+                            (l.porLerNoTelemovel === 1 ? "1 por abrir no telemóvel" : `${l.porLerNoTelemovel} por abrir no telemóvel`)}
+                          {l.porLerNoTelemovel > 0 && l.arquivadaNoTelemovel && " · "}
+                          {l.arquivadaNoTelemovel && "arquivada no telemóvel"}
+                        </p>
+                      )}
                       <OrigemDaConversa mensagens={mensagens} />
                       <FioDaConversa mensagens={mensagens} />
-
                       <div className="mt-3 flex gap-2">
                         <input
                           value={resposta}
@@ -1971,7 +2148,8 @@ export default function AdminWhatsAppPanel() {
                       {/*
                         O resto do poder sobre esta conversa. Fica cá dentro de
                         propósito: são gestos de arrumação, e a linha fechada
-                        tem de continuar a caber num telemóvel.
+                        tem de continuar a caber num telemóvel. Desde d124 só
+                        os três de todos os dias à vista; os outros em «Mais».
                       */}
                       <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-800 pt-3">
                         {l.estado !== "bloqueada" && (
@@ -1993,7 +2171,7 @@ export default function AdminWhatsAppPanel() {
                           "Quando clico em Recomeçar conversa ele devia ler as
                           mensagens anteriores para recomeçar de onde parámos."
                           Vem primeiro e é o botão a sério; o recomeçar do zero
-                          fica ao lado, para quando a conversa se baralhou mesmo.
+                          fica no «Mais», para quando a conversa se baralhou mesmo.
                         */}
                         <button
                           onClick={() => void reler(l.telefone, false)}
@@ -2008,45 +2186,6 @@ export default function AdminWhatsAppPanel() {
                           )}
                           Reler e continuar
                         </button>
-                        {l.passo && (
-                          <button
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  "O assistente volta a perguntar tudo desde o serviço. Continuar?",
-                                )
-                              ) {
-                                void agir("recomecarRecolha", l.telefone);
-                              }
-                            }}
-                            disabled={ocupado}
-                            className={`${ACCAO} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`}
-                            title="Apaga o que já foi respondido e recomeça do princípio."
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                            Recomeçar do zero
-                          </button>
-                        )}
-                        {l.estado !== "bloqueada" && (
-                          <button
-                            onClick={() => void pedirLeitura(l.telefone)}
-                            disabled={aLer}
-                            className={`${ACCAO} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`}
-                            title="A Vitória lê esta conversa e diz em que pé está; se acabou, fecha-a com o porquê."
-                          >
-                            {aLer ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                            ) : (
-                              <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-                            )}
-                            Pedir à Vitória para ler
-                          </button>
-                        )}
-                        {/*
-                          FECHAR, COM O PORQUÊ — 21-10-2026. Era «Arquivar».
-                          Desde 23-10-2026 está na própria linha, ao lado do
-                          «Já respondi»: fecha-se sem abrir a conversa.
-                        */}
                         {/* GUARDAR PARA CONTINUAR — 21-10-2026, com a nota do que falta. */}
                         {l.estado !== "bloqueada" &&
                           (l.guardada ? (
@@ -2072,53 +2211,100 @@ export default function AdminWhatsAppPanel() {
                               Guardar para continuar
                             </button>
                           ))}
-                        {l.estado !== "bloqueada" && (
-                          <button
-                            onClick={() => void agir("bloquear", l.telefone)}
-                            disabled={ocupado}
-                            className={`${ACCAO} border-red-500/40 text-red-300 hover:bg-red-500/10`}
-                          >
-                            <Ban className="h-3.5 w-3.5" aria-hidden="true" />
-                            Bloquear
-                          </button>
-                        )}
-                        {/*
-                          O administrador exclui (a conversa, os pedidos sem
-                          trabalho e o que a Vitória sabia — 23-10-2026); quem
-                          não é administrador apaga só a conversa, como antes.
-                        */}
-                        {eAdmin ? (
-                          <button
-                            onClick={() => excluir([l.telefone], l.pedido ? [l.pedido.id] : [])}
-                            disabled={ocupado}
-                            className={`${ACCAO} border-red-500/40 text-red-300 hover:bg-red-500/10`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                            Excluir cliente e pedido
-                          </button>
-                        ) : (
                         <button
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Apagar a conversa com ${formatarTelefone(l.telefone)}?\n\n` +
-                                  "Apaga o histórico de mensagens, a recolha a meio e o que estiver " +
-                                  "por sair na fila para este número. Não se desfaz.\n\n" +
-                                  "O bloqueio e a entrega a si, se existirem, ficam como estão.",
-                              )
-                            ) {
-                              setConversaAberta(null);
-                              void agir("apagarConversa", l.telefone);
-                            }
-                          }}
-                          disabled={ocupado}
-                          className={`${ACCAO} border-transparent text-slate-500 hover:bg-slate-800 hover:text-red-300`}
+                          type="button"
+                          onClick={() => setMaisNaConversa((v) => !v)}
+                          aria-expanded={maisNaConversa}
+                          className={`${ACCAO} border-slate-700 text-slate-400 hover:bg-slate-800`}
                         >
-                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                          Apagar conversa
+                          <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                          {maisNaConversa ? "Menos" : "Mais"}
                         </button>
-                        )}
                       </div>
+                      {maisNaConversa && (
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {l.passo && (
+                            <button
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    "O assistente volta a perguntar tudo desde o serviço. Continuar?",
+                                  )
+                                ) {
+                                  void agir("recomecarRecolha", l.telefone);
+                                }
+                              }}
+                              disabled={ocupado}
+                              className={`${ACCAO} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`}
+                              title="Apaga o que já foi respondido e recomeça do princípio."
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                              Recomeçar do zero
+                            </button>
+                          )}
+                          {l.estado !== "bloqueada" && (
+                            <button
+                              onClick={() => void pedirLeitura(l.telefone)}
+                              disabled={aLer}
+                              className={`${ACCAO} border-violet-500/40 text-violet-300 hover:bg-violet-500/10`}
+                              title="A Vitória lê esta conversa e diz em que pé está; se acabou, fecha-a com o porquê."
+                            >
+                              {aLer ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+                              )}
+                              Pedir à Vitória para ler
+                            </button>
+                          )}
+                          {l.estado !== "bloqueada" && (
+                            <button
+                              onClick={() => void agir("bloquear", l.telefone)}
+                              disabled={ocupado}
+                              className={`${ACCAO} border-red-500/40 text-red-300 hover:bg-red-500/10`}
+                            >
+                              <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                              Bloquear
+                            </button>
+                          )}
+                          {/*
+                            O administrador exclui (a conversa, os pedidos sem
+                            trabalho e o que a Vitória sabia — 23-10-2026); quem
+                            não é administrador apaga só a conversa, como antes.
+                          */}
+                          {eAdmin ? (
+                            <button
+                              onClick={() => excluir([l.telefone], l.pedido ? [l.pedido.id] : [])}
+                              disabled={ocupado}
+                              className={`${ACCAO} border-red-500/40 text-red-300 hover:bg-red-500/10`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              Excluir cliente e pedido
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Apagar a conversa com ${quem}?\n\n` +
+                                      "Apaga o histórico de mensagens, a recolha a meio e o que estiver " +
+                                      "por sair na fila para este número. Não se desfaz.\n\n" +
+                                      "O bloqueio e a entrega a si, se existirem, ficam como estão.",
+                                  )
+                                ) {
+                                  setConversaAberta(null);
+                                  void agir("apagarConversa", l.telefone);
+                                }
+                              }}
+                              disabled={ocupado}
+                              className={`${ACCAO} border-transparent text-slate-500 hover:bg-slate-800 hover:text-red-300`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              Apagar conversa
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {aCriarPedido === l.telefone && (
                         <div className="mt-3">
@@ -2203,11 +2389,13 @@ export default function AdminWhatsAppPanel() {
         A fila por enviar. Pela ponte, só se vê; à mão, é o sítio onde o
         trabalho acontece: cada mensagem tem o botão que abre o WhatsApp da
         CLYON com ela pronta, e o de a dar por enviada. Por isso à mão a
-        secção aparece sempre, mesmo vazia — é a caixa de saída.
+        secção aparece sempre, mesmo vazia — é a caixa de saída. Desde d124
+        cada mensagem é uma linha (quem, e o início do texto); o resto ao
+        carregar.
       */}
       {(estado.fila.length > 0 || aMao) && (
         <section
-          className={`rounded-2xl border p-5 ${
+          className={`rounded-2xl border px-4 py-3 ${
             aMao ? "border-cyan-500/30 bg-cyan-500/[0.05]" : "border-slate-800 bg-slate-900/60"
           }`}
         >
@@ -2223,6 +2411,12 @@ export default function AdminWhatsAppPanel() {
                   {estado.fila.length}
                 </span>
               )}
+              <span className="ml-2 text-xs font-normal text-slate-500">
+                {aMao
+                  ? `${rotuloDeAbrir} abre a conversa no ${numeroDaClyon} com o texto já escrito — envie lá e marque-a aqui.`
+                  : "O Winapp vem buscá-las de poucos em poucos segundos."}
+                {!estado.ligado && " Desligado, o assistente não escreve nada de novo."}
+              </span>
             </h3>
             {/*
               Limpar a fila inteira. Pedida ao ver o mesmo menu de dez serviços
@@ -2250,61 +2444,104 @@ export default function AdminWhatsAppPanel() {
               </button>
             )}
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            {aMao
-              ? `${rotuloDeAbrir} abre a conversa no ${numeroDaClyon} com o texto já escrito — carregue em enviar lá e volte aqui para a marcar como enviada.`
-              : "O Winapp vem buscá-las de poucos em poucos segundos."}
-            {!estado.ligado && " Desligado, o assistente não escreve nada de novo."}
-          </p>
           {estado.fila.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">Nada por enviar.</p>
+            <p className="mt-2 text-sm text-slate-500">Nada por enviar.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-slate-800">
-              {estado.fila.map((m) => (
-                <li key={m.id} className="py-3">
-                  <p className="font-mono text-xs text-slate-400">
-                    <TelefoneComWhatsApp telefone={m.telefone} className="underline decoration-dotted underline-offset-2">
-                      {formatarTelefone(m.telefone)}
-                    </TelefoneComWhatsApp>
+            <ul className="mt-1 divide-y divide-slate-800">
+              {estado.fila.map((m) => {
+                const aberta = textosAbertos.has(m.id);
+                return (
+                  <li key={m.id} className="py-2">
+                    <button
+                      type="button"
+                      onClick={() => alternarTexto(m.id)}
+                      aria-expanded={aberta}
+                      className="block w-full min-w-0 text-left"
+                    >
+                      <span className="block truncate text-xs font-semibold text-slate-200">{quemE(m.telefone)}</span>
+                      {!aberta && <span className="block truncate text-sm text-slate-400">{inicioDoTexto(m.texto)}</span>}
+                    </button>
+                    {aberta && (
+                      <div className="mt-1 space-y-1">
+                        <p className="whitespace-pre-wrap break-words text-sm text-slate-300">{m.texto}</p>
+                        <VerNumero telefone={m.telefone} />
+                      </div>
+                    )}
+                    {aMao && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <a
+                          href={linkParaEnviar(m.telefone, m.texto)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-bold text-slate-950 transition hover:bg-emerald-400"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                          {rotuloDeAbrir}
+                        </a>
+                        <button
+                          onClick={() => void agirNaFila("enviada", m.id)}
+                          disabled={ocupado}
+                          className="flex min-h-[36px] items-center gap-1.5 rounded-lg border border-slate-600 px-3 text-xs font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-40"
+                        >
+                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                          Marcar como enviada
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Descartar esta mensagem sem a enviar?")) {
+                              void agirNaFila("descartar", m.id);
+                            }
+                          }}
+                          disabled={ocupado}
+                          className="flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300 disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          Descartar
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/*
+        AS DESCARTADAS, COM QUEM E PORQUÊ — d124. Nada se apaga: uma mensagem
+        que não saiu continua escrita, e aqui vê-se quem a tirou («sozinha»,
+        ou o nome) e porquê. Recolhido: é um registo, não trabalho.
+      */}
+      {vistaDoPainel === "conversas" && (estado.descartadas?.length ?? 0) > 0 && (
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-2.5">
+          <button
+            type="button"
+            onClick={() => setDescartadasAbertas((v) => !v)}
+            aria-expanded={descartadasAbertas}
+            className="flex w-full items-center justify-between gap-2 text-left text-xs text-slate-400"
+          >
+            <span>
+              <b className="text-slate-300">Descartadas</b> nos últimos 7 dias · {estado.descartadas?.length}
+            </span>
+            {descartadasAbertas ? (
+              <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+            )}
+          </button>
+          {descartadasAbertas && (
+            <ul className="mt-1 divide-y divide-slate-800">
+              {estado.descartadas?.map((m) => (
+                <li key={m.id} className="py-1.5 text-xs">
+                  <p className="truncate text-slate-300">
+                    <b>{quemE(m.telefone)}</b>
+                    <span className="text-slate-500"> · {inicioDoTexto(m.texto, 70)}</span>
                   </p>
-                  <p
-                    className={`mt-0.5 whitespace-pre-wrap text-sm text-slate-300 ${aMao ? "" : "truncate"}`}
-                  >
-                    {m.texto}
+                  <p className="truncate text-[11px] text-slate-500">
+                    {m.porque ?? "descartada"}
+                    {m.por && m.por !== DESCARTADA_SOZINHA ? ` (${m.por})` : ""} · {haQuanto(m.haMinutos * 60)}
                   </p>
-                  {aMao && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <a
-                        href={linkParaEnviar(m.telefone, m.texto)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-500 px-3 text-xs font-bold text-slate-950 transition hover:bg-emerald-400"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                        {rotuloDeAbrir}
-                      </a>
-                      <button
-                        onClick={() => void agirNaFila("enviada", m.id)}
-                        disabled={ocupado}
-                        className="flex min-h-[36px] items-center gap-1.5 rounded-lg border border-slate-600 px-3 text-xs font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-40"
-                      >
-                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                        Marcar como enviada
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm("Descartar esta mensagem sem a enviar?")) {
-                            void agirNaFila("descartar", m.id);
-                          }
-                        }}
-                        disabled={ocupado}
-                        className="flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300 disabled:opacity-40"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                        Descartar
-                      </button>
-                    </div>
-                  )}
                 </li>
               ))}
             </ul>

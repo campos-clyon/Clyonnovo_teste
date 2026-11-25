@@ -68,6 +68,8 @@ describe("e nas conversas do WhatsApp — 21-10-2026", () => {
     expect(W).toContain("telefone={l.telefone}");
     expect(W).toContain("{...linhaQueAbre(() => alternarConversa(l.telefone),");
     expect(W).not.toMatch(/<button\s+onClick=\{\(\) => alternarConversa\(l\.telefone\)\}/);
-    expect(W).toContain("<TelefoneComWhatsApp telefone={m.telefone}");
+    // d124: o número só aparece a pedido («Ver número»), e aí abre o WhatsApp do cliente.
+    expect(W).toContain("<VerNumero telefone={m.telefone} />");
+    expect(W).toContain("<TelefoneComWhatsApp telefone={telefone}");
   });
 });

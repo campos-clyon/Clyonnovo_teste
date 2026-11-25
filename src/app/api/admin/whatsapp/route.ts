@@ -7,7 +7,9 @@ import {
   conversasWhatsApp,
   definirWhatsappLigado,
   desbloquearNumeroWhatsApp,
+  descartarDaFilaWhatsApp,
   filaWhatsAppAtrasadas,
+  filaWhatsAppDescartadas,
   filaWhatsAppPorEnviar,
   interromperNumeroWhatsApp,
   limparFilaWhatsApp,
@@ -128,7 +130,7 @@ export async function GET(req: NextRequest) {
    */
   let mesaFalhou: string | null = null;
   const { falhasDaIa } = await import("@/lib/saude-da-ia-na-base");
-  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm, aMesa, atrasadas, ia] =
+  const [ligado, interrompidos, bloqueados, fila, conversas, recolhas, arquivadas, compreensao, ponteVistaEm, aMesa, atrasadas, ia, descartadas] =
     await Promise.all([
       whatsappLigado(),
       listarNumerosInterrompidosWhatsApp(),
@@ -154,6 +156,8 @@ export async function GET(req: NextRequest) {
       filaWhatsAppAtrasadas(50).catch(() => []),
       // O termómetro do tradutor, da leitura das conversas e das fotografias (d7).
       falhasDaIa().catch(() => []),
+      // As descartadas dos últimos 7 dias, com quem e porquê (d124).
+      filaWhatsAppDescartadas(7, 40).catch(() => []),
     ]);
   /*
    * NÃO CONTACTAR — d93 (23-11-2026): quem cancelou pela conversa pediu para não
@@ -198,6 +202,7 @@ export async function GET(req: NextRequest) {
     compreensao,
     atrasadas,
     ia,
+    descartadas,
   });
 }
 
@@ -793,9 +798,12 @@ export async function POST(req: NextRequest) {
     if (!mensagem) {
       return NextResponse.json({ error: "Essa mensagem já não está na fila." }, { status: 404 });
     }
-    await marcarFilaWhatsAppEnviadas([mensagem.id]);
     if (accao === "enviada") {
+      await marcarFilaWhatsAppEnviadas([mensagem.id]);
       await registarMensagemWhatsApp(mensagem.telefone, "out", mensagem.texto);
+    } else {
+      // d124: riscada como antes, mas com quem a descartou e porquê.
+      await descartarDaFilaWhatsApp(mensagem.id, colab?.nome ?? null, "descartada pela equipa");
     }
     return NextResponse.json({ ok: true });
   }

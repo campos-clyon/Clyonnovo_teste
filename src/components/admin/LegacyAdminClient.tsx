@@ -3546,18 +3546,9 @@ export default function ColaboradorAdminClient({
           )}
 
           {activeSection === "whatsapp" && (
-            <section className="space-y-4 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
-                  Plataforma
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">WhatsApp da plataforma</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  O cérebro que fala com os clientes de telefone: propostas, fechos e
-                  datas. Aqui desliga-se tudo com um gesto, entrega-se uma conversa a
-                  uma pessoa, e bloqueiam-se os contactos que não são clientes.
-                </p>
-              </div>
+            <section className="space-y-3 rounded-[28px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4">
+              {/* d124 (25-11-2026): o título numa linha; o estado e as opções estão no cabeçalho do painel. */}
+              <h2 className="px-1 text-lg font-semibold text-white">WhatsApp da plataforma</h2>
               <AdminWhatsAppPanel />
             </section>
           )}

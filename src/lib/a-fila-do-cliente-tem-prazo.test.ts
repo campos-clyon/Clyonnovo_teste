@@ -125,7 +125,8 @@ describe("as atrasadas com mais de 48 h saem sozinhas (10-11-2026)", () => {
     const { PRAZO_PARA_DESCARTAR_S } = await import("./fila-do-cliente");
     expect(PRAZO_PARA_DESCARTAR_S).toBe(48 * 3600);
     const db = readFileSync(join(process.cwd(), "src", "lib", "db.ts"), "utf8").replace(/\r\n/g, "\n");
-    expect(db).toMatch(/UPDATE whatsappFila SET enviadoEm = NOW\(\)\s+WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL/);
+    // d124: riscada como antes, e com quem e porquê (descartadaPor/descartadaPorque) — sem DELETE.
+    expect(db).toMatch(/UPDATE whatsappFila SET enviadoEm = NOW\(\)[^;`]*?\s+WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL/);
     expect(db.match(/await descartarAtrasadasVelhas\(pool/g)?.length).toBe(2);
   });
 });

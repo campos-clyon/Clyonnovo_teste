@@ -1,5 +1,6 @@
 import { ESTADOS_DE_PEDIDO_FECHADO } from "./pedido-arrumado";
 import { VOLTOU_A_VITORIA } from "./prazo-da-volta-a-vitoria";
+import { SAI_DA_VISTA_S } from "./arrumar-o-whatsapp";
 import { eDaEquipa, eFotografiaFalhada, eMarcaDeImagem, semMarcaDeMao } from "./rajada-do-whatsapp";
 
 /**
@@ -139,6 +140,8 @@ export type FactosDaConversa = {
   pedidoVivo: { id: number; status: string | null } | null;
   /** O último pedido deste número, vivo ou não. */
   ultimoPedido: { id: number; status: string | null } | null;
+  /** O nome do contacto, do pedido mais recente que o tem — para a linha não mostrar o número (d124). */
+  nome?: string | null;
   guardada: { nota: string | null; quando: string } | null;
   /**
    * Quem escreve é um profissional registado — o telefone da ficha bate com
@@ -186,6 +189,8 @@ export type ConversaNaMesa = {
   profissional: { id: number; nome: string } | null;
   /** d93: o cliente cancelou pela conversa e pediu para não voltar a ser contactado. */
   naoContactar?: boolean;
+  /** O nome do contacto, quando se sabe — a linha mostra-o no lugar do número (d124). */
+  nome?: string | null;
 };
 
 export type QuemFalou = "cliente" | "vitoria" | "equipa";
@@ -370,6 +375,18 @@ export function deixouAnotadoParaUmaPessoa(texto: string | null | undefined): bo
   return (texto ?? "").toLowerCase().includes(MARCA_DA_PERGUNTA_ANOTADA.toLowerCase());
 }
 
+/**
+ * Sem pedido vivo, o último fechado, e o cliente sem escrever há mais de
+ * `SAI_DA_VISTA_S` (3 dias) — d124. Nunca escreveu conta como sem novidade.
+ */
+export function semNovidadeDeUmPedidoFechado(
+  f: Pick<FactosDaConversa, "pedidoVivo" | "ultimoPedido" | "ultimaEntrada" | "noTelemovel">,
+): boolean {
+  if (f.pedidoVivo || !f.ultimoPedido || !PEDIDO_FECHADO.includes(f.ultimoPedido.status ?? "")) return false;
+  const cliente = haQuantoEscreveuOCliente(f);
+  return cliente == null || cliente > SAI_DA_VISTA_S;
+}
+
 /** Em que pé está esta conversa, e porquê. */
 export function naMesa(f: FactosDaConversa): ConversaNaMesa {
   const dono: ConversaNaMesa["dono"] = f.entregue ? "equipa" : "assistente";
@@ -409,6 +426,7 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
     guardada: f.guardada ? { nota: f.guardada.nota } : null,
     fechadaPor: null as string | null,
     profissional: f.profissional ?? null,
+    nome: f.nome ?? null,
   };
 
   if (f.bloqueada) return { ...base, estado: "bloqueada", porque: "Bloqueada — o site não lhe responde." };
@@ -425,6 +443,25 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
     palavra?.onde === "site" ||
     (palavra?.haSegundos != null && f.leitura?.lidaHaSegundos != null && f.leitura.lidaHaSegundos < palavra.haSegundos);
   const lida = f.leitura?.motivo && lidaDepois ? ` — a Vitória leu: ${f.leitura.motivo}` : "";
+
+  /*
+   * O PEDIDO ACABOU E O CLIENTE CALOU-SE — d124 (25-11-2026). Conversas de 11 a
+   * 36 dias, de pedidos já concluídos, arquivados ou cancelados, enchiam o
+   * «Por responder» (o bloco «Há mais de 3 dias»). Sem pedido vivo, com o
+   * último fechado e o cliente sem escrever há mais de 3 dias, a conversa
+   * passa a «Resolvidas» — como o «Fechar», mas sem gravar nada: se ele
+   * escrever outra vez, a mensagem é nova e ela volta sozinha.
+   */
+  if (semNovidadeDeUmPedidoFechado(f) && (palavra?.de === "cliente" || deixouAnotadoParaUmaPessoa(palavra?.texto))) {
+    const ultimo = f.ultimoPedido!;
+    const estado = ESTADO_DO_PEDIDO[ultimo.status ?? ""] ?? ultimo.status;
+    return {
+      ...base,
+      estado: "resolvida",
+      porque: `Pedido #${ultimo.id} ${estado} — o cliente não escreve há mais de 3 dias`,
+      fechadaPor: "pedido",
+    };
+  }
 
   if (palavra?.de === "cliente" && !soAgradece(palavra.texto)) {
     const soNoTelemovel = palavra.onde === "telemovel";

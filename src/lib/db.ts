@@ -11910,6 +11910,14 @@ async function ensureFilaWhatsAppTable() {
   for (const sql of [
     "ALTER TABLE whatsappFila ADD COLUMN atrasadaEm DATETIME NULL DEFAULT NULL",
     "ALTER TABLE whatsappFila ADD COLUMN soltaEm DATETIME NULL DEFAULT NULL",
+    /*
+     * QUEM DESCARTOU, E PORQUÊ — d124 (25-11-2026). Uma mensagem descartada
+     * continua na fila, riscada (`enviadoEm`), mas agora diz quem a tirou
+     * («sozinha» ou o nome de quem carregou) e porquê («pedido já fechado»).
+     */
+    "ALTER TABLE whatsappFila ADD COLUMN descartadaEm DATETIME NULL DEFAULT NULL",
+    "ALTER TABLE whatsappFila ADD COLUMN descartadaPor VARCHAR(80) NULL DEFAULT NULL",
+    "ALTER TABLE whatsappFila ADD COLUMN descartadaPorque VARCHAR(160) NULL DEFAULT NULL",
   ]) {
     await pool.execute(sql).catch(() => {});
   }
@@ -12097,16 +12105,136 @@ export type MensagemAtrasadaWhatsApp = MensagemNaFilaWhatsApp & {
  * chegaram a sair) — 10-11-2026. Corre ao abrir a Mesa e em cada passagem
  * da ponte; o LIMIT trava o custo.
  */
-async function descartarAtrasadasVelhas(pool: { execute: (sql: string, p?: unknown[]) => Promise<unknown> }): Promise<void> {
+async function descartarAtrasadasVelhas(
+  pool: { execute: (sql: string, p?: unknown[]) => Promise<unknown> },
+  /** Ao abrir a Mesa olha-se sempre para os pedidos; na ponte, no máximo uma vez por minuto. */
+  sempre = false,
+): Promise<void> {
   const { PRAZO_PARA_DESCARTAR_S } = await import("./fila-do-cliente");
+  const { PORQUE_DESCARTADA, DESCARTADA_SOZINHA } = await import("./arrumar-o-whatsapp");
   await pool
     .execute(
-      `UPDATE whatsappFila SET enviadoEm = NOW()
+      `UPDATE whatsappFila SET enviadoEm = NOW(), descartadaEm = NOW(), descartadaPor = ?, descartadaPorque = ?
         WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL
           AND criadoEm < NOW() - INTERVAL ${PRAZO_PARA_DESCARTAR_S} SECOND
         LIMIT 200`,
+      [DESCARTADA_SOZINHA, PORQUE_DESCARTADA.velha],
     )
     .catch((e) => console.error("[whatsapp/fila] não descartei as velhas:", e instanceof Error ? e.message : e));
+  if (!sempre && Date.now() - atrasadasVistasPeloPedidoEm < 60_000) return;
+  atrasadasVistasPeloPedidoEm = Date.now();
+  await descartarAtrasadasDePedidosArrumados(pool).catch((e) =>
+    console.error("[whatsapp/fila] não descartei as dos pedidos fechados:", e instanceof Error ? e.message : e),
+  );
+}
+
+let atrasadasVistasPeloPedidoEm = 0;
+
+/**
+ * AS ATRASADAS DE UM PEDIDO QUE JÁ ANDOU — d124 (25-11-2026). Uma resposta que
+ * ficou na fila sobre um pedido que entretanto contratou um parceiro, ou que
+ * fechou, já não serve ao cliente: descarta-se sozinha (não sai), com o
+ * porquê escrito. A regra é `porqueDescartarSozinha` (arrumar-o-whatsapp.ts).
+ */
+async function descartarAtrasadasDePedidosArrumados(pool: {
+  execute: (sql: string, p?: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  const { porqueDescartarSozinha, vivoEUltimo, DESCARTADA_SOZINHA, NEGOCIACOES_CONTRATADAS_SQL } = await import(
+    "./arrumar-o-whatsapp"
+  );
+  const [atrasadas] = (await pool.execute(
+    `SELECT id, telefone, TIMESTAMPDIFF(SECOND, criadoEm, NOW()) AS idadeS
+       FROM whatsappFila
+      WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL
+      LIMIT 200`,
+  )) as [Array<{ id: number; telefone: string; idadeS: number | string }>, unknown];
+  if (atrasadas.length === 0) return;
+  const chaves = [...new Set(atrasadas.map((a) => soDigitos(a.telefone).slice(-9)))].filter((c) => c.length === 9);
+  if (chaves.length === 0) return;
+  const [pedidos] = (await pool.execute(
+    `SELECT o.id, o.status, RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) AS chave,
+            EXISTS (SELECT 1 FROM negociacoes n WHERE n.pedidoId = o.id AND n.estado IN ${NEGOCIACOES_CONTRATADAS_SQL}) AS negociacaoContratada
+       FROM simulatorOrders o
+      WHERE RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) IN (${chaves.map(() => "?").join(",")})
+      ORDER BY o.id DESC
+      LIMIT 1000`,
+    chaves,
+  )) as [Array<{ id: number; status: string | null; chave: string; negociacaoContratada: number | string }>, unknown];
+  const porChave = new Map<string, Array<{ id: number; status: string | null; negociacaoContratada: boolean }>>();
+  for (const p of pedidos) {
+    const lista = porChave.get(String(p.chave)) ?? [];
+    lista.push({
+      id: Number(p.id),
+      status: p.status == null ? null : String(p.status),
+      negociacaoContratada: Number(p.negociacaoContratada) === 1,
+    });
+    porChave.set(String(p.chave), lista);
+  }
+  const porPorque = new Map<string, number[]>();
+  for (const a of atrasadas) {
+    const { vivo, ultimo } = vivoEUltimo(porChave.get(soDigitos(a.telefone).slice(-9)) ?? []);
+    const porque = porqueDescartarSozinha({ atrasada: true, idadeS: Number(a.idadeS ?? 0), vivo, ultimo });
+    if (!porque) continue;
+    porPorque.set(porque, [...(porPorque.get(porque) ?? []), Number(a.id)]);
+  }
+  for (const [porque, ids] of porPorque) {
+    await pool.execute(
+      `UPDATE whatsappFila SET enviadoEm = NOW(), descartadaEm = NOW(), descartadaPor = ?, descartadaPorque = ?
+        WHERE enviadoEm IS NULL AND atrasadaEm IS NOT NULL AND id IN (${ids.map(() => "?").join(",")})`,
+      [DESCARTADA_SOZINHA, porque, ...ids],
+    );
+  }
+}
+
+/**
+ * «Descartar» pela equipa (uma mensagem da fila que não chega a sair) — com
+ * quem e porquê (d124). Devolve se riscou alguma.
+ */
+export async function descartarDaFilaWhatsApp(id: number, porQuem: string | null, porque: string): Promise<boolean> {
+  if (!Number.isInteger(id) || id <= 0) return false;
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return false;
+  const [r] = (await pool.execute(
+    `UPDATE whatsappFila SET enviadoEm = NOW(), descartadaEm = NOW(), descartadaPor = ?, descartadaPorque = ?
+      WHERE id = ? AND enviadoEm IS NULL`,
+    [(porQuem || "equipa").slice(0, 80), porque.slice(0, 160), id],
+  )) as [{ affectedRows?: number }, unknown];
+  return Number(r?.affectedRows ?? 0) > 0;
+}
+
+export type MensagemDescartadaWhatsApp = MensagemNaFilaWhatsApp & {
+  /** Há quantos minutos foi descartada — contado pela base. */
+  haMinutos: number;
+  por: string | null;
+  porque: string | null;
+};
+
+/** As descartadas dos últimos dias, com quem e porquê — o registo que a Mesa mostra recolhido (d124). */
+export async function filaWhatsAppDescartadas(dias = 7, limite = 40): Promise<MensagemDescartadaWhatsApp[]> {
+  await ensureFilaWhatsAppTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [rows] = (await pool.execute(
+    `SELECT id, telefone, texto, descartadaPor, descartadaPorque,
+            TIMESTAMPDIFF(MINUTE, descartadaEm, NOW()) AS haMinutos
+       FROM whatsappFila
+      WHERE descartadaEm IS NOT NULL
+        AND descartadaEm >= NOW() - INTERVAL ${Math.max(1, Math.min(60, Math.floor(dias)))} DAY
+      ORDER BY descartadaEm DESC, id DESC
+      LIMIT ${Math.max(1, Math.min(100, Math.floor(limite)))}`,
+  )) as [
+    Array<{ id: number; telefone: string; texto: string; descartadaPor: string | null; descartadaPorque: string | null; haMinutos: number | string }>,
+    unknown,
+  ];
+  return rows.map((r) => ({
+    id: Number(r.id),
+    telefone: r.telefone,
+    texto: r.texto,
+    haMinutos: Math.max(0, Number(r.haMinutos ?? 0)),
+    por: r.descartadaPor,
+    porque: r.descartadaPorque,
+  }));
 }
 
 /** As atrasadas — a caixa da Mesa onde a equipa decide (d7). */
@@ -12114,7 +12242,7 @@ export async function filaWhatsAppAtrasadas(limite = 50): Promise<MensagemAtrasa
   await ensureFilaWhatsAppTable();
   const pool = await getPool();
   if (!pool) return [];
-  await descartarAtrasadasVelhas(pool as never);
+  await descartarAtrasadasVelhas(pool as never, true);
   const [rows] = (await pool.execute(
     `SELECT id, telefone, texto, TIMESTAMPDIFF(MINUTE, criadoEm, NOW()) AS haMinutos
        FROM whatsappFila
@@ -14250,16 +14378,24 @@ export async function factosDasConversasWhatsApp(limite = 800): Promise<
  * o último. A chave são os últimos 9 dígitos, como em `pedidosDoTelefone`.
  */
 export async function pedidosPorTelefoneWhatsApp(): Promise<
-  Map<string, { vivo: { id: number; status: string | null } | null; ultimo: { id: number; status: string | null } }>
+  Map<
+    string,
+    {
+      vivo: { id: number; status: string | null } | null;
+      ultimo: { id: number; status: string | null };
+      /** O nome do contacto do pedido mais recente que o tem — a Mesa mostra-o no lugar do número (d124). */
+      nome?: string | null;
+    }
+  >
 > {
   const mapa = new Map<
     string,
-    { vivo: { id: number; status: string | null } | null; ultimo: { id: number; status: string | null } }
+    { vivo: { id: number; status: string | null } | null; ultimo: { id: number; status: string | null }; nome?: string | null }
   >();
   const pool = await getPool();
   if (!pool) return mapa;
   const [rows] = (await pool.execute(
-    `SELECT id, status, RIGHT(REGEXP_REPLACE(COALESCE(contactPhone, ''), '[^0-9]', ''), 9) AS chave
+    `SELECT id, status, contactName, RIGHT(REGEXP_REPLACE(COALESCE(contactPhone, ''), '[^0-9]', ''), 9) AS chave
        FROM simulatorOrders
       WHERE contactPhone IS NOT NULL AND contactPhone <> ''
       ORDER BY id DESC
@@ -14273,10 +14409,12 @@ export async function pedidosPorTelefoneWhatsApp(): Promise<
     const pedido = { id: Number(r.id), status: r.status == null ? null : String(r.status) };
     const ja = mapa.get(chave);
     const vivo = !FECHADOS.includes(pedido.status ?? "");
+    const nome = typeof r.contactName === "string" && r.contactName.trim() ? r.contactName.trim() : null;
     if (!ja) {
-      mapa.set(chave, { vivo: vivo ? pedido : null, ultimo: pedido });
-    } else if (!ja.vivo && vivo) {
-      ja.vivo = pedido;
+      mapa.set(chave, { vivo: vivo ? pedido : null, ultimo: pedido, nome });
+    } else {
+      if (!ja.vivo && vivo) ja.vivo = pedido;
+      if (!ja.nome && nome) ja.nome = nome;
     }
   }
   return mapa;

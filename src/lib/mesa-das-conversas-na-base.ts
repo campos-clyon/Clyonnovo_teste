@@ -91,6 +91,8 @@ export async function mesaComOTelemovelWhatsApp(): Promise<MesaDasConversas> {
       recolha: recolhaDe.has(chave) ? { passo: recolhaDe.get(chave)!.passo } : null,
       pedidoVivo: pedido?.vivo ?? null,
       ultimoPedido: pedido?.ultimo ?? null,
+      // O nome do contacto — a linha mostra-o no lugar do número (d124).
+      nome: pedido?.nome ?? null,
       guardada: guardada ? { nota: guardada.nota, quando: guardada.criadoEm } : null,
       profissional: profissionais.get(chave) ?? null,
       // A leitura da Vitória só vale enquanto não houver mensagem nova.
