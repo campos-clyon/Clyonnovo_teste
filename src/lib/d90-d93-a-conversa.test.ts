@@ -85,18 +85,19 @@ vi.mock("@/lib/validade-do-orcamento-na-base", () => ({
 vi.mock("@/lib/cancelar-pelo-cliente-na-base", () => ({
   pedidosAbertosDoTelefone: vi.fn(async () => estado.abertos),
   lerOPedidoParaCancelar: vi.fn(async () => estado.pedido),
-  cancelarPeloCliente: vi.fn(async (pedidoId: number) => {
+  // d126: os pedidos que ele indicou, de uma vez (o caminho de sempre está testado em d126-cancelar-o-que-ele-indicou).
+  cancelarOsPedidosPelaConversa: vi.fn(async (pedidos: number[]) => {
     const { porqueFicaComAEquipa } = await import("./cancelar-pelo-cliente");
     const fica = porqueFicaComAEquipa(estado.pedido);
-    if (fica) return { ok: false, porque: fica, daEquipa: true };
-    estado.cancelados.push(pedidoId);
-    return { ok: true, encerradas: 2, conversaApagada: true };
+    if (fica) return { cancelados: [], recusados: pedidos.map((pedidoId) => ({ pedidoId, porque: fica, daEquipa: true })), mensagemSaiu: false, conversaApagada: false };
+    estado.cancelados.push(...pedidos);
+    return { cancelados: [...pedidos], recusados: [], mensagemSaiu: true, conversaApagada: true };
   }),
 }));
 
 import { responderAoLembreteDoOrcamento, tentarOVaiPensar, tratarOCancelamentoPeloCliente } from "./whatsapp-negociacao";
 import { respostaAoVaiPensar } from "./o-cliente-vai-pensar";
-import { PASSO_O_CANCELAMENTO_A_EQUIPA } from "./cancelar-pelo-cliente";
+import { passoOCancelamentoAEquipa } from "./cancelar-pelo-cliente";
 import { textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
 
 const TEL = "351910000001";
@@ -177,7 +178,9 @@ describe("d93 — o cliente cancela pela conversa", () => {
     estado.pedido = { ...estado.pedido, contratado: true };
     expect(await tratarOCancelamentoPeloCliente(TEL, "Quero cancelar o pedido")).toBe(true);
     expect(estado.cancelados).toEqual([]);
-    expect(estado.enviados).toEqual([PASSO_O_CANCELAMENTO_A_EQUIPA]);
+    // d126: diz-lhe porquê.
+    expect(estado.enviados).toEqual([passoOCancelamentoAEquipa(812, "o trabalho já está contratado")]);
+    expect(estado.enviados[0]).toMatch(/trabalho combinado com um parceiro/);
     expect(estado.passadas[0].porque).toMatch(/#812: o cliente quer cancelar, mas o trabalho já está contratado/);
   });
 
@@ -188,6 +191,27 @@ describe("d93 — o cliente cancela pela conversa", () => {
     expect(estado.passadas[0].porque).toMatch(/2 pedidos abertos/);
     expect(await tratarOCancelamentoPeloCliente(TEL, "Quero cancelar o pedido #790")).toBe(true);
     expect(estado.cancelados).toEqual([790]);
+  });
+
+  it("d126, o caso: dois pedidos abertos, «Pedido #812: há um problema. Quero cancelar», a pergunta, o CANCELAR → cancela o #812", async () => {
+    estado.abertos = [812, 790];
+    expect(await tratarOCancelamentoPeloCliente(TEL, "Pedido #812: há um problema.Quero cancelar")).toBe(true);
+    expect(estado.enviados).toEqual([textoDaConfirmacaoDoCancelamento(812)]);
+    expect(await tratarOCancelamentoPeloCliente(TEL, "CANCELAR")).toBe(true);
+    expect(estado.cancelados).toEqual([812]);
+    expect(estado.passadas).toEqual([]);
+  });
+
+  it("d126: «Cancelar pedido 790 e pedido 812» cancela os dois de uma vez; ambíguo com os dois, a pergunta é dos dois", async () => {
+    estado.abertos = [812, 790];
+    expect(await tratarOCancelamentoPeloCliente(TEL, "Cancelar pedido 790 e pedido 812")).toBe(true);
+    expect(estado.cancelados).toEqual([790, 812]);
+    estado.cancelados = [];
+    estado.enviados = [];
+    expect(await tratarOCancelamentoPeloCliente(TEL, "Se calhar já não quero os pedidos #812 e #790")).toBe(true);
+    expect(estado.enviados[0]).toMatch(/^Confirma que quer cancelar os pedidos #812 e #790?/);
+    expect(await tratarOCancelamentoPeloCliente(TEL, "Cancelar")).toBe(true);
+    expect(estado.cancelados).toEqual([812, 790]);
   });
 
   it("sem pedido aberto, ou sem falar em cancelar: não é daqui", async () => {

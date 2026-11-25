@@ -180,6 +180,7 @@ import { FONTE_DO_CANCELAR_DO_AGENTE } from "./vitoria-agente/accoes-na-base";
 import { decidirORecebido, textoDoRecebido } from "./recebemos-o-pedido";
 import { avisarQueRecebemosOPedido } from "./recebemos-o-pedido-na-base";
 import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
+import { mensagemDepoisDeCancelar } from "./porque-cancelou";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 
@@ -324,6 +325,8 @@ describe("d102 (b) — o SIM pelo WhatsApp avisa o parceiro contratado, uma vez"
 describe("d102 (c) — cancelar é igual pela conversa, pela Vitória, pelo painel e pela app", () => {
   const ORDEM_DA_D93 = ["cancelar", "avisar-parceiros", "mensagem", "nao-contactar", "anonimizar", "apagar-conversa"];
   const MENSAGEM = "O seu pedido #812 foi cancelado. Não voltaremos a contactá-lo e os seus dados foram apagados.";
+  // d126 (25-11-2026): pela conversa (e pela Vitória agente), a mensagem nova — cancelado, os dados, e o porquê.
+  const MENSAGEM_DA_CONVERSA = mensagemDepoisDeCancelar([812], { dados: "apagados" });
 
   it("o mesmo resultado nas quatro portas: cancelado, parceiros avisados, a mensagem, «não contactar», anonimizado", async () => {
     for (const origem of ["conversa", "link", "conta", "app"] as OrigemDoCancelamento[]) {
@@ -332,7 +335,7 @@ describe("d102 (c) — cancelar é igual pela conversa, pela Vitória, pelo pain
       const r = await cancelarEApagarNaHora(812, { origem, telefone: origem === "conversa" ? "351910000001" : null, verificarTelefone: origem === "conversa" });
       expect(r.ok, origem).toBe(true);
       expect(e.ordem, origem).toEqual(ORDEM_DA_D93);
-      expect(e.enviados[0]?.texto, origem).toBe(MENSAGEM);
+      expect(e.enviados[0]?.texto, origem).toBe(origem === "conversa" ? MENSAGEM_DA_CONVERSA : MENSAGEM);
     }
   });
 
@@ -343,7 +346,7 @@ describe("d102 (c) — cancelar é igual pela conversa, pela Vitória, pelo pain
     });
     expect(r.ok).toBe(true);
     expect(e.ordem).toEqual(ORDEM_DA_D93);
-    expect(e.enviados[0]?.texto).toBe(MENSAGEM);
+    expect(e.enviados[0]?.texto).toBe(MENSAGEM_DA_CONVERSA);
   });
 
   it("sem telemóvel português, a confirmação vai por email", async () => {

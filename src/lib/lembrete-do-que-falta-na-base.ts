@@ -54,6 +54,7 @@ import {
   type PassoDoQueFalta,
 } from "./lembrete-do-que-falta";
 import { ESTADOS_DE_PEDIDO_FECHADO_SQL, pedidoFechado } from "./pedido-arrumado";
+import { HORAS_PARA_CONFIRMAR_O_CANCELAMENTO as HORAS_DA_PERGUNTA_DO_CANCELAR } from "./validade-do-orcamento";
 import type { ChaveDaFalta } from "./mensagem-do-que-falta";
 
 /* ── O interruptor (Configs) — DESLIGADO por omissão ─────────────────────── */
@@ -755,7 +756,8 @@ export async function lembreteEmAbertoDoTelefone(telefone: string): Promise<numb
   if (!(await interruptorDoQueFalta()).ligado) return null;
   const pool = await garantirTabelas();
   const [rows] = (await pool.execute(
-    `SELECT l.pedidoId, o.contactPhone
+    `SELECT l.pedidoId, o.contactPhone,
+            (l.cancelarPedidoEm IS NOT NULL AND l.cancelarPedidoEm > UTC_TIMESTAMP() - INTERVAL ${HORAS_DA_PERGUNTA_DO_CANCELAR} HOUR) AS aEspera
        FROM lembretesDoQueFalta l
        JOIN simulatorOrders o ON o.id = l.pedidoId
       WHERE l.canal = 'whatsapp' AND l.lembrete1Em IS NOT NULL
@@ -765,16 +767,22 @@ export async function lembreteEmAbertoDoTelefone(telefone: string): Promise<numb
       ORDER BY l.pedidoId DESC
       LIMIT 5`,
     [tel],
-  )) as [Array<{ pedidoId: number; contactPhone: string | null }>, unknown];
+  )) as [Array<{ pedidoId: number; contactPhone: string | null; aEspera: number | null }>, unknown];
   const { mesmoTelefoneEstrito } = await import("./validade-do-orcamento");
   const doTelefone = rows.filter((r) => mesmoTelefoneEstrito(String(r.contactPhone ?? ""), telefone));
   if (doTelefone.length === 0) return null;
   const ultima = await ultimaSaidaParaOTelefone(pool, telefone).catch(() => null);
-  // O lembrete em si, ou a pergunta do CANCELAR que lhe saiu a seguir (d5): ambos são a última coisa que lhe dissemos.
+  // O lembrete em si, ou a pergunta do CANCELAR que ESTE ciclo fez a seguir (d5): ambos são a última coisa que lhe dissemos.
+  // d126 (25-11-2026, o #684): a pergunta feita por outro caminho (a conversa, d93) não é deste ciclo — sem
+  // `aEspera`, o CANCELAR lia-se aqui como um «3», a mesma pergunta saía outra vez, a guarda de não repetir
+  // passava a conversa à equipa e nada se cancelava. Como na validade (d62) e no seguimento (d83).
   const { aUltimaSaidaE } = await import("./validade-do-orcamento");
   return (
-    doTelefone.find((r) => eLembreteDoQueFalta(ultima, Number(r.pedidoId)) || aUltimaSaidaE(ultima, Number(r.pedidoId)) === "confirmacao")
-      ?.pedidoId ?? null
+    doTelefone.find(
+      (r) =>
+        eLembreteDoQueFalta(ultima, Number(r.pedidoId)) ||
+        (Number(r.aEspera) === 1 && aUltimaSaidaE(ultima, Number(r.pedidoId)) === "confirmacao"),
+    )?.pedidoId ?? null
   );
 }
 

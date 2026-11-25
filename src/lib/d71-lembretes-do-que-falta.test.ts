@@ -40,7 +40,8 @@ vi.mock("./db", async (original) => {
       if (/SELECT \* FROM lembretesDoQueFalta WHERE pedidoId IN/.test(sql)) return [base.ciclo ? [base.ciclo] : [], []];
       if (/FROM simulatorOrders o\s+WHERE o\.id IN/.test(sql)) return [base.pedido ? [base.pedido] : [], []];
       if (/FROM lembretesDoQueFalta l\s+JOIN simulatorOrders/.test(sql)) {
-        return [base.ciclo && base.pedido ? [{ pedidoId: base.ciclo.pedidoId, contactPhone: base.pedido.contactPhone }] : [], []];
+        // d126: o ciclo diz se foi ele a fazer a pergunta do CANCELAR (aEspera).
+        return [base.ciclo && base.pedido ? [{ pedidoId: base.ciclo.pedidoId, contactPhone: base.pedido.contactPhone, aEspera: base.aEspera }] : [], []];
       }
       const purga = /FROM (validadeDosOrcamentos|lembretesDoQueFalta) v\s+JOIN simulatorOrders/.exec(sql);
       if (purga) return [base.purga[purga[1] as "validadeDosOrcamentos" | "lembretesDoQueFalta"], []];
@@ -564,6 +565,14 @@ describe("com o interruptor ligado: o «3» pergunta o CANCELAR, só com um lemb
     const r = await responderAoLembreteDoQueFalta(812, "351912345678", "1", false);
     expect(r).toEqual({ tipo: "vai_enviar", pedidoId: 812 });
     expect(base.cancelados).toEqual([]);
+  });
+
+  it("d126: a pergunta do CANCELAR feita pela conversa (d93), sem ser deste ciclo, não é do lembrete — o CANCELAR segue para a d93", async () => {
+    base.aEspera = 0;
+    base.ultimaSaida = textoDaConfirmacaoDoCancelamento(812);
+    const { lembreteEmAbertoDoTelefone } = await import("./lembrete-do-que-falta-na-base");
+    expect(await lembreteEmAbertoDoTelefone("351912345678")).toBeNull();
+    expect(base.enviados).toEqual([]);
   });
 
   it("à espera do CANCELAR, o CANCELAR cancela (texto de cancelamento aprovado, d55); outro «3» ou outro texto não cancela", async () => {

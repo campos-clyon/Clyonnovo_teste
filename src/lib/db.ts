@@ -14617,7 +14617,16 @@ export async function respondidasWhatsApp(): Promise<Map<string, { haSegundos: n
  * história, são decisões em vigor: desfazem-se onde foram tomadas, e apagar
  * o fio não pode devolver a palavra ao assistente sem ninguém ter pedido.
  */
-export async function apagarConversaWhatsApp(telefone: string): Promise<number> {
+export async function apagarConversaWhatsApp(
+  telefone: string,
+  /**
+   * d126 (25-11-2026): o que ainda está na fila da ponte por sair fica — a
+   * mensagem do cancelamento entra na fila um instante antes de a conversa se
+   * apagar, e sem isto nunca chegava ao cliente. Só as linhas já entregues
+   * (que guardam o texto da conversa) saem.
+   */
+  opcoes: { deixarOQueEstaPorSair?: boolean } = {},
+): Promise<number> {
   const digitos = soDigitos(telefone);
   if (digitos.length < 9) throw new Error("Número demasiado curto");
   await ensureWhatsappMensagensTable();
@@ -14644,7 +14653,10 @@ export async function apagarConversaWhatsApp(telefone: string): Promise<number> 
    * Verificado a 15-09-2026.
    */
   await pool
-    .execute("DELETE FROM whatsappFila WHERE RIGHT(telefone, 9) = RIGHT(?, 9)", [digitos])
+    .execute(
+      `DELETE FROM whatsappFila WHERE RIGHT(telefone, 9) = RIGHT(?, 9)${opcoes.deixarOQueEstaPorSair ? " AND enviadoEm IS NOT NULL" : ""}`,
+      [digitos],
+    )
     .catch(() => {});
   // Arquivada e apagada não é estado nenhum: sem fio, a linha sai da mesa por si.
   await pool

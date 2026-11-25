@@ -956,6 +956,16 @@ export async function tentarOVaiPensar(telefone: string, texto: string, pedidoId
   return true;
 }
 
+/** O motivo à vista no cartão da conversa, quando um cancelamento fica com a equipa (d126: um ou vários pedidos). */
+function motivoDeNaoCancelar(recusados: ReadonlyArray<{ pedidoId: number; porque: string; daEquipa: boolean }>): string {
+  const o = (x: { daEquipa: boolean }) => (x.daEquipa ? "tratar à mão" : "cancelar à mão");
+  if (recusados.length === 1) {
+    const x = recusados[0];
+    return `Pedido #${x.pedidoId}: o cliente quer cancelar, mas ${x.porque} — ${o(x)}`;
+  }
+  return `O cliente quer cancelar ${recusados.length} pedidos, mas ${recusados.map((x) => `#${x.pedidoId}: ${x.porque} (${o(x)})`).join("; ")}`;
+}
+
 /**
  * O CLIENTE QUER CANCELAR — d93 (23-11-2026). Devolve true quando tratou a
  * mensagem: cancelou (e anonimizou), perguntou o CANCELAR, ou passou à equipa.
@@ -977,50 +987,68 @@ export async function tratarOCancelamentoPeloCliente(telefone: string, texto: st
   const { rascunhoAindaVale } = await import("@/lib/conversa-parada-a-meio");
   if (g && g.pedidoId == null && g.passo !== "servico" && rascunhoAindaVale(g.actualizadoEm)) return false;
 
-  const cancelarJa = async (pedidoId: number): Promise<boolean> => {
-    const r = await base.cancelarPeloCliente(pedidoId, telefone).catch((err) => ({
-      ok: false as const,
-      porque: err instanceof Error ? err.message : "erro",
-      daEquipa: false,
+  /*
+   * d126 (25-11-2026): os pedidos que ele indicou, todos de uma vez, pelo
+   * caminho de sempre, e UMA mensagem no fim (`cancelarOsPedidosPelaConversa`).
+   * O que fica com a equipa (dinheiro, acordo, data marcada) passa a uma
+   * pessoa com o porquê à vista no cartão — e o cliente ouve porquê.
+   */
+  const cancelarJa = async (pedidos: number[]): Promise<boolean> => {
+    const r = await base.cancelarOsPedidosPelaConversa(pedidos, telefone).catch((err) => ({
+      cancelados: [] as number[],
+      recusados: pedidos.map((pedidoId) => ({ pedidoId, porque: err instanceof Error ? err.message : "erro", daEquipa: false })),
+      mensagemSaiu: false,
+      conversaApagada: false,
     }));
-    if (r.ok) return true;
-    await passarAUmaPessoa(
-      telefone,
-      `Pedido #${pedidoId}: o cliente quer cancelar, mas ${r.porque} — ${r.daEquipa ? "tratar à mão" : "cancelar à mão"}`,
-      r.daEquipa ? cpc.PASSO_O_CANCELAMENTO_A_EQUIPA : MENSAGEM_DE_PASSAR_A_UMA_PESSOA,
-    );
+    if (r.recusados.length === 0) return true;
+    const primeiro = r.recusados[0];
+    const aoCliente = primeiro.daEquipa ? cpc.passoOCancelamentoAEquipa(primeiro.pedidoId, primeiro.porque) : MENSAGEM_DE_PASSAR_A_UMA_PESSOA;
+    await passarAUmaPessoa(telefone, motivoDeNaoCancelar(r.recusados), aoCliente);
     return true;
   };
 
-  // O CANCELAR à pergunta deste caminho (a última mensagem que lhe saiu, há menos de 48 h).
+  // O CANCELAR à pergunta do CANCELAR que lhe saiu por último (há menos de 48 h), de um ou de vários pedidos,
+  // seja qual for o caminho que a fez (d126: a pergunta da d93 e a dos lembretes respondem-se aqui da mesma maneira).
   if (oCancelar) {
     const fio = await mensagensDoNumeroWhatsApp(telefone, 10).catch(() => []);
     const ultimaSaida = [...fio].reverse().find((m) => m.direccao === "out") ?? null;
-    const perguntado = abertos.find((id) => cpc.aPerguntaDoCancelarVale(ultimaSaida, id));
-    if (perguntado != null) return cancelarJa(perguntado);
+    const perguntados = cpc.pedidosDaPerguntaDoCancelar(ultimaSaida, abertos);
+    if (perguntados.length > 0) return cancelarJa(perguntados);
   }
 
-  const escrito = cpc.pedidoNaFrase(texto);
-  const alvo = escrito != null && abertos.includes(escrito) ? escrito : abertos.length === 1 ? abertos[0] : null;
-  if (alvo == null) {
+  // Os que ele escreveu (todos: «cancelar pedido 685 e pedido 684»); sem nenhum, o único aberto.
+  const escritos = cpc.pedidosNaFrase(texto).filter((id) => abertos.includes(id));
+  const alvos = escritos.length > 0 ? escritos : abertos.length === 1 ? [abertos[0]] : [];
+  if (alvos.length === 0) {
     await passarAUmaPessoa(telefone, `Quer cancelar, e tem ${abertos.length} pedidos abertos (#${abertos.join(", #")}) — confirmar qual`);
     return true;
   }
   // O contratado, pago, com referência viva ou faturado: a equipa, logo (nem se pergunta).
-  const p = await base.lerOPedidoParaCancelar(alvo).catch(() => null);
-  const fica = p ? cpc.porqueFicaComAEquipa(p) : "o pedido não se leu";
-  if (fica) {
-    await passarAUmaPessoa(telefone, `Pedido #${alvo}: o cliente quer cancelar, mas ${fica} — tratar à mão`, cpc.PASSO_O_CANCELAMENTO_A_EQUIPA);
+  const ficam: Array<{ pedidoId: number; porque: string }> = [];
+  for (const id of alvos) {
+    const p = await base.lerOPedidoParaCancelar(id).catch(() => null);
+    const fica = p ? cpc.porqueFicaComAEquipa(p) : "o pedido não se leu";
+    if (fica) ficam.push({ pedidoId: id, porque: fica });
+  }
+  if (ficam.length === alvos.length) {
+    await passarAUmaPessoa(
+      telefone,
+      motivoDeNaoCancelar(ficam.map((x) => ({ ...x, daEquipa: true }))),
+      cpc.passoOCancelamentoAEquipa(ficam[0].pedidoId, ficam[0].porque),
+    );
     return true;
   }
-  if (leitura === "claro") return cancelarJa(alvo);
-  // Ambíguo (ou o CANCELAR sem a pergunta feita): pergunta-se.
-  await enviarTextoWhatsApp(telefone, cpc.perguntaDoCancelamento(alvo));
-  await appendOrderHistory(alvo, {
-    type: "note",
-    by: null,
-    message: "O cliente falou em cancelar na conversa: perguntámos se confirma (responde CANCELAR). Nada foi cancelado (d93).",
-  }).catch(() => {});
+  // Os que se podem cancelar seguem; os que ficam passam à equipa no fim (cancelarJa diz porquê).
+  if (leitura === "claro") return cancelarJa(alvos);
+  // Ambíguo (ou o CANCELAR sem a pergunta feita): pergunta-se, por todos os que indicou.
+  await enviarTextoWhatsApp(telefone, cpc.perguntaDoCancelamento(alvos));
+  for (const id of alvos) {
+    await appendOrderHistory(id, {
+      type: "note",
+      by: null,
+      message: "O cliente falou em cancelar na conversa: perguntámos se confirma (responde CANCELAR). Nada foi cancelado (d93).",
+    }).catch(() => {});
+  }
   return true;
 }
 
@@ -2859,6 +2887,38 @@ export async function tratarMensagemDoCliente(
     const daRua = await lerARespostaDaRua(telefone, conteudo.texto);
     if (daRua) {
       await enviarTextoWhatsApp(telefone, daRua.agradecimento);
+      return;
+    }
+  }
+
+  /*
+   * A RESPOSTA AO PORQUÊ, DEPOIS DE CANCELAR — 25-11-2026 (decisão d126). Ele
+   * cancelou pela conversa e ouviu uma pergunta: porquê (1 o valor, 2 a data,
+   * 3 já resolveu, 4 outro). A resposta grava-se nos pedidos; o valor e a data
+   * passam a uma pessoa (um parceiro pode voltar a ver), o resto ouve um
+   * obrigado — e acabou: sem seguimentos (o «não contactar» manda). Antes de
+   * tudo o resto, que lia «o valor» como uma reclamação e «3» como outra coisa.
+   */
+  if (conteudo.tipo === "texto" && !soImagens) {
+    const pc = await import("@/lib/porque-cancelou");
+    const { lerARespostaAoPorque } = await import("@/lib/porque-cancelou-na-base");
+    const { eSoUmObrigado } = await import("@/lib/aviso-de-data-ao-cliente");
+    const { servicoPorPalavras } = await import("@/lib/whatsapp-recolha");
+    const resposta = await lerARespostaAoPorque(telefone, conteudo.texto, {
+      eSoUmObrigado,
+      pedeUmServico: (t) => servicoPorPalavras(t) != null,
+    }).catch((err) => {
+      console.error("[whatsapp] a resposta ao porquê não se leu:", err instanceof Error ? err.message : err);
+      return null;
+    });
+    if (resposta?.tipo === "silencio") return;
+    if (resposta?.tipo === "respondeu") {
+      const texto = pc.respostaAoPorque(resposta.porque);
+      if (resposta.porque === "valor" || resposta.porque === "data") {
+        await passarAUmaPessoa(telefone, pc.motivoDoPorqueParaAEquipa(resposta.pedidos, resposta.porque), texto);
+      } else {
+        await enviarTextoWhatsApp(telefone, texto);
+      }
       return;
     }
   }

@@ -19,7 +19,8 @@
  */
 
 import { semAcentos } from "./leitor-da-recolha";
-import { textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
+import { SE_FOR_O_VALOR_OU_A_DATA, textoDaConfirmacaoDoCancelamento } from "./validade-do-orcamento";
+import { listaDePedidos } from "./porque-cancelou";
 
 export type PedidoDeCancelamento = "claro" | "ambiguo";
 
@@ -77,12 +78,72 @@ export function pedidoNaFrase(texto: string | null | undefined): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-/** A pergunta (a de sempre, d2/d91). */
-export function perguntaDoCancelamento(pedidoId: number): string {
-  return textoDaConfirmacaoDoCancelamento(pedidoId);
+/**
+ * TODOS OS PEDIDOS QUE ELE ESCREVEU — d126 (25-11-2026). «Cancelar pedido 685
+ * e pedido 684», «cancelem os pedidos #684 e #685»: os dois. Pura; sem
+ * repetidos, pela ordem em que aparecem. Um código postal («1675-155») não é
+ * um pedido: só conta o número a seguir a «#» ou a «pedido(s)».
+ */
+export function pedidosNaFrase(texto: string | null | undefined): number[] {
+  const t = String(texto ?? "");
+  const ids: number[] = [];
+  const juntar = (n: number) => {
+    if (Number.isInteger(n) && n > 0 && !ids.includes(n)) ids.push(n);
+  };
+  const re =
+    /(?:#\s?|\bpedidos?\s(?:n\.?\s?º?\s?|n[uú]mero\s)?)(\d{2,7})\b((?:\s*(?:,|\be\b|\band\b|\bet\b|\by\b|&)\s*(?:(?:o |do |no )?pedido\s)?#?\s?\d{2,7}\b)*)/gi;
+  for (const m of t.matchAll(re)) {
+    juntar(Number(m[1]));
+    for (const n of (m[2] ?? "").matchAll(/\d{2,7}/g)) juntar(Number(n[0]));
+  }
+  return ids;
 }
 
-/** A mensagem ao cliente, depois de cancelar (d93, letra a letra). */
+/** A pergunta (a de sempre, d2/d91); com vários pedidos, no plural (d126). */
+export function perguntaDoCancelamento(pedidos: number | readonly number[]): string {
+  const ids = typeof pedidos === "number" ? [pedidos] : [...pedidos];
+  if (ids.length === 1) return textoDaConfirmacaoDoCancelamento(ids[0]);
+  return `Confirma que quer cancelar os pedidos ${listaDePedidos(ids)}? Responda CANCELAR. ${SE_FOR_O_VALOR_OU_A_DATA}`;
+}
+
+/**
+ * OS PEDIDOS DA PERGUNTA DO CANCELAR QUE LHE SAIU POR ÚLTIMO — d126. A
+ * pergunta de um pedido («Confirma que quer cancelar o pedido #684?») ou de
+ * vários («…os pedidos #684 e #685?»), há menos de 48 h, seja qual for o
+ * caminho que a fez (a conversa, d93, ou um lembrete): o CANCELAR responde-lhe
+ * a ela. Só os que ainda estão em `abertos`. Pura.
+ */
+export function pedidosDaPerguntaDoCancelar(
+  ultimaSaida: { texto: string; haSegundos: number | null } | null | undefined,
+  abertos: readonly number[],
+): number[] {
+  if (!ultimaSaida || ultimaSaida.haSegundos == null || ultimaSaida.haSegundos > HORAS_PARA_O_CANCELAR * 3600) return [];
+  const t = ultimaSaida.texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const m = /confirma que quer cancelar (?:o pedido|os pedidos) ([^?]*)\?\s*responda cancelar/.exec(t);
+  if (!m) return [];
+  const ids = [...m[1].matchAll(/#(\d{2,7})(?!\d)/g)].map((x) => Number(x[1]));
+  return ids.filter((id, i) => abertos.includes(id) && ids.indexOf(id) === i);
+}
+
+/**
+ * QUANDO NÃO SE CANCELA AQUI, DIZ-SE PORQUÊ — d126. O porquê das regras
+ * (`porqueFicaComAEquipa`) em palavras para o cliente; o que não for do
+ * dinheiro nem do acordo fica com a frase de sempre.
+ */
+export function passoOCancelamentoAEquipa(pedidoId: number, porque: string): string {
+  const razao: Array<[RegExp, string]> = [
+    [/faturado/, "já tem uma fatura emitida"],
+    [/pagamento por pagar|referencia|referência/, "tem uma referência de pagamento por pagar"],
+    [/pagamento/, "já tem um pagamento"],
+    [/contratado/, "já tem um trabalho combinado com um parceiro"],
+    [/data marcada/, "já tem uma data marcada"],
+  ];
+  const r = razao.find(([re]) => re.test(porque))?.[1];
+  if (!r) return PASSO_O_CANCELAMENTO_A_EQUIPA;
+  return `Percebi que quer cancelar o pedido #${pedidoId}. Como ele ${r}, não o consigo cancelar daqui: passo já a uma pessoa da equipa, que trata disso consigo por aqui.`;
+}
+
+/** A mensagem ao cliente, depois de cancelar (d93, letra a letra) — fora da conversa (o link, a conta, a app). Pela conversa, a da d126 (`porque-cancelou.ts`). */
 export function mensagemDoCancelamentoPeloCliente(pedidoId: number): string {
   return `O seu pedido #${pedidoId} foi cancelado. Não voltaremos a contactá-lo e os seus dados foram apagados.`;
 }

@@ -32,6 +32,7 @@ import {
 } from "./db";
 import { pedidoFechado } from "./pedido-arrumado";
 import { mesmoTelefoneEstrito } from "./validade-do-orcamento";
+import { mensagemDepoisDeCancelar } from "./porque-cancelou";
 import {
   mensagemDoCancelamentoPeloCliente,
   porqueFicaComAEquipa,
@@ -197,6 +198,10 @@ export async function cancelarEApagarNaHora(
     motivo?: string | null;
     /** d111: a mensagem ao cliente, quando não é a de sempre (a da desistência). */
     mensagem?: string | null;
+    /** d126: a mensagem sai depois, numa só, com os outros pedidos que ele cancelou (`cancelarOsPedidosPelaConversa`). */
+    semMensagem?: boolean;
+    /** d126: quem chama apaga a conversa no fim (vários pedidos de uma vez). */
+    manterConversa?: boolean;
   },
 ): Promise<ResultadoDoCancelamentoPeloCliente> {
   const p = await lerOPedidoParaCancelar(pedidoId);
@@ -242,7 +247,18 @@ export async function cancelarEApagarNaHora(
 
   // 1. A mensagem ao cliente, antes de a conversa se apagar e os contactos saírem.
   const daConversa = opcoes.origem === "conversa" || opcoes.origem === "desistencia" || opcoes.origem === "vitoria";
-  const mensagemPor = await confirmarAoCliente(pedidoId, { telefone, email: p.contactEmail, daConversa }, opcoes.mensagem).catch(() => null);
+  // d126: pela conversa, a mensagem nova (cancelado + o porquê, uma só); a d111 traz a sua.
+  const comOPorque = daConversa && !opcoes.mensagem?.trim();
+  const mensagem = comOPorque ? mensagemDepoisDeCancelar([pedidoId], { dados: "apagados" }) : opcoes.mensagem;
+  const mensagemPor = opcoes.semMensagem
+    ? null
+    : await confirmarAoCliente(pedidoId, { telefone, email: p.contactEmail, daConversa }, mensagem).catch(() => null);
+  if (comOPorque && mensagemPor === "whatsapp" && telefone) {
+    const { registarAPerguntaDoPorque } = await import("./porque-cancelou-na-base");
+    await registarAPerguntaDoPorque(telefone, [pedidoId]).catch((e) =>
+      console.error("[cancelar-pelo-cliente] a pergunta do porquê não ficou:", e instanceof Error ? e.message : e),
+    );
+  }
 
   // 2. Não contactar.
   if (telefone) {
@@ -264,7 +280,11 @@ export async function cancelarEApagarNaHora(
   const resumo =
     `O cliente cancelou o pedido ${NO_HISTORICO[opcoes.origem]}: ${r.encerradas} negociação(ões) encerrada(s), parceiros avisados. ` +
     "Dados do cliente apagados na hora e o número marcado para não voltar a ser contactado." +
-    (mensagemPor ? ` Confirmação ao cliente por ${mensagemPor === "whatsapp" ? "WhatsApp" : "email"}.` : " A confirmação ao cliente não saiu.");
+    (opcoes.semMensagem
+      ? " A confirmação ao cliente sai numa só mensagem, com os outros pedidos que cancelou (d126)."
+      : mensagemPor
+        ? ` Confirmação ao cliente por ${mensagemPor === "whatsapp" ? "WhatsApp" : "email"}${comOPorque && mensagemPor === "whatsapp" ? ", com a pergunta do porquê (d126)" : ""}.`
+        : " A confirmação ao cliente não saiu.");
   await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo }).catch(() => {});
   await registarSemFalhar({ acontecimento: "pedido_cancelado", pedidoId, autorTipo: "cliente", autorNome: AUTOR[opcoes.origem], resumo });
 
@@ -279,17 +299,80 @@ export async function cancelarEApagarNaHora(
   }).catch((e) => console.error("[cancelar-pelo-cliente] a anonimização falhou:", e instanceof Error ? e.message : e));
 
   // 4. A conversa apaga-se — só sem outro pedido aberto dele.
-  let conversaApagada = false;
-  if (telefone) {
-    const outros = (await pedidosAbertosDoTelefone(telefone).catch(() => [1])).filter((id) => id !== pedidoId);
-    if (outros.length === 0) {
-      const { apagarConversaWhatsApp } = await import("./db");
-      conversaApagada = await apagarConversaWhatsApp(telefone)
-        .then(() => true)
-        .catch(() => false);
+  const conversaApagada = telefone && !opcoes.manterConversa ? await apagarAConversaSemOutrosAbertos(telefone, [pedidoId]) : false;
+  return { ok: true, encerradas: r.encerradas, conversaApagada, mensagemPor };
+}
+
+/**
+ * A conversa apaga-se — só sem outro pedido aberto dele. A mensagem que ainda
+ * está na fila da ponte (a do cancelamento, que acabou de lá entrar) NÃO se
+ * apaga: sem isto, a ponte nunca a levava (d126, 25-11-2026).
+ */
+async function apagarAConversaSemOutrosAbertos(telefone: string, cancelados: readonly number[]): Promise<boolean> {
+  const outros = (await pedidosAbertosDoTelefone(telefone).catch(() => [0])).filter((id) => !cancelados.includes(id));
+  if (outros.length > 0) return false;
+  const { apagarConversaWhatsApp } = await import("./db");
+  return apagarConversaWhatsApp(telefone, { deixarOQueEstaPorSair: true })
+    .then(() => true)
+    .catch(() => false);
+}
+
+export type ResultadoDosCancelamentos = {
+  cancelados: number[];
+  recusados: Array<{ pedidoId: number; porque: string; daEquipa: boolean }>;
+  mensagemSaiu: boolean;
+  conversaApagada: boolean;
+};
+
+/**
+ * OS PEDIDOS QUE ELE INDICOU, CANCELADOS DE UMA VEZ — d126 (CEO e dono,
+ * 25-11-2026). Cada um pelo caminho de sempre (`cancelarEApagarNaHora`:
+ * `cancelarPedido` → `fimDoPedido`, as guardas do dinheiro e do acordo, o
+ * «não contactar», a anonimização), e no fim UMA mensagem com todos os que se
+ * cancelaram, com a pergunta do porquê (`porque-cancelou.ts`). Os que ficam
+ * com a equipa voltam em `recusados`, com o porquê — quem chama passa-os a uma
+ * pessoa e diz-lhe porquê.
+ */
+export async function cancelarOsPedidosPelaConversa(
+  pedidos: readonly number[],
+  telefone: string,
+  opcoes: { origem?: OrigemDoCancelamento } = {},
+): Promise<ResultadoDosCancelamentos> {
+  const origem = opcoes.origem ?? "conversa";
+  const cancelados: number[] = [];
+  const recusados: ResultadoDosCancelamentos["recusados"] = [];
+  for (const pedidoId of [...new Set(pedidos)]) {
+    const r = await cancelarEApagarNaHora(pedidoId, { origem, telefone, verificarTelefone: true, semMensagem: true, manterConversa: true }).catch(
+      (err) => ({ ok: false as const, porque: err instanceof Error ? err.message : "erro ao cancelar", daEquipa: false }),
+    );
+    if (r.ok) cancelados.push(pedidoId);
+    else recusados.push({ pedidoId, porque: r.porque, daEquipa: r.daEquipa });
+  }
+  let mensagemSaiu = false;
+  if (cancelados.length > 0) {
+    const { enviarTextoWhatsApp } = await import("./whatsapp-cloud");
+    mensagemSaiu = await enviarTextoWhatsApp(
+      telefone,
+      mensagemDepoisDeCancelar(cancelados, { dados: "apagados", semMaisContacto: recusados.length === 0 }),
+    ).catch(() => false);
+    if (mensagemSaiu) {
+      const { registarAPerguntaDoPorque } = await import("./porque-cancelou-na-base");
+      await registarAPerguntaDoPorque(telefone, cancelados).catch((e) =>
+        console.error("[cancelar-pelo-cliente] a pergunta do porquê não ficou:", e instanceof Error ? e.message : e),
+      );
+    }
+    for (const id of cancelados) {
+      await appendOrderHistory(id, {
+        type: "note",
+        by: null,
+        message: mensagemSaiu
+          ? `A confirmação do cancelamento saiu pelo WhatsApp, numa só mensagem (${cancelados.length > 1 ? `com ${cancelados.filter((x) => x !== id).map((x) => `#${x}`).join(", ")}` : "só este pedido"}), com a pergunta do porquê (d126).`
+          : "A confirmação do cancelamento ao cliente não saiu pelo WhatsApp (d126).",
+      }).catch(() => {});
     }
   }
-  return { ok: true, encerradas: r.encerradas, conversaApagada, mensagemPor };
+  const conversaApagada = cancelados.length > 0 && recusados.length === 0 ? await apagarAConversaSemOutrosAbertos(telefone, cancelados) : false;
+  return { cancelados, recusados, mensagemSaiu, conversaApagada };
 }
 
 /** Pela conversa (d93): o pedido tem de ser deste telefone. */

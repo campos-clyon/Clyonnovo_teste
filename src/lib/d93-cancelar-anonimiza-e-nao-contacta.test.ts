@@ -64,6 +64,12 @@ vi.mock("./whatsapp-cloud", () => ({
     return true;
   }),
 }));
+vi.mock("./porque-cancelou-na-base", () => ({
+  registarAPerguntaDoPorque: vi.fn(async () => {
+    e.ordem.push("porque");
+    return true;
+  }),
+}));
 vi.mock("./nao-contactar", () => ({
   marcarParaNaoContactar: vi.fn(async () => {
     e.ordem.push("nao-contactar");
@@ -79,6 +85,7 @@ vi.mock("./regras-novas-na-base", () => ({
 }));
 
 import { cancelarPeloCliente } from "./cancelar-pelo-cliente-na-base";
+import { mensagemDepoisDeCancelar } from "./porque-cancelou";
 
 beforeEach(() => {
   e.ordem = [];
@@ -98,7 +105,9 @@ describe("d93 — cancelar pela conversa: anonimizado na hora, não contactar, e
     expect(e.ordem).toEqual([
       "cancelar",
       "avisar-parceiros",
-      "mensagem: O seu pedido #812 foi cancelado. Não voltaremos a contactá-lo e os seus dados foram apagados.",
+      // d126: pela conversa, a mensagem nova (cancelado, dados apagados, e o porquê).
+      `mensagem: ${mensagemDepoisDeCancelar([812], { dados: "apagados" })}`,
+      "porque",
       "nao-contactar",
       "historico",
       "anonimizar",
