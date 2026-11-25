@@ -169,6 +169,8 @@ export function textoDaListaDasPropostas(
  * IVA)». Sem total que se leia, o texto tal e qual. Pura.
  */
 export function mesmoValorNaLista(valorDaLinha: string, p: Pick<PropostaDoAgente, "comoOClienteVe" | "base">): boolean {
+  // d118: a pergunta da guia antes de fechar não diz o valor — vale o de agora.
+  if (!valorDaLinha.trim()) return true;
   const daLinha = totalDoValorEscrito(valorDaLinha);
   const deAgora = totalDoValorEscrito(p.comoOClienteVe);
   if (daLinha == null || deAgora == null) return valorDaLinha === valorNaLista(p);
@@ -236,7 +238,9 @@ export function escolhaNaLista<P extends PropostaDoAgente>(
   const t = normalizar(cru);
   const mesmo = (a: string, b: string) => normalizar(a) === normalizar(b);
   const linhaDe = (p: P) => linhas.find((l) => mesmo(l.parceiro, p.parceiro)) ?? null;
-  const numero = /^(?:a |o |e a |e o |opcao |opcao n |numero |n |no )?(\d{1,2})(?: obrigad[oa]| por favor| pf| please)?$/.exec(t)?.[1];
+  // d114/d118: a mensagem de uma só proposta («Quer avançar? É só responder 1.») — o «sim» também a aceita.
+  const sim = /^(?:sim|s|yes|oui|si|ok|okay|pode ser|avanc\w*|confirmo|aceito|quero)(?: obrigad[oa]| por favor| pf| please)?$/.test(t);
+  const numero = linhas.length === 1 && sim ? "1" : /^(?:a |o |e a |e o |opcao |opcao n |numero |n |no )?(\d{1,2})(?: obrigad[oa]| por favor| pf| please)?$/.exec(t)?.[1];
   if (numero != null) {
     const l = linhas.find((x) => x.n === Number(numero));
     if (!l) return { tipo: "duvida" };

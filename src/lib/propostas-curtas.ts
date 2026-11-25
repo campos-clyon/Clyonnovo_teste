@@ -37,6 +37,7 @@
  *     proposta aceita-a.
  */
 import { horaEmLisboa } from "./hora-de-lisboa";
+import { AVISO_DA_GUIA_NO_ENTULHO, lerAPerguntaDaGuia } from "./guia-no-entulho";
 
 /** A proposta nova e o «o parceiro aceitou» já não saem um a um: diz-os a rotina das propostas (d114). */
 export const A_ROTINA_DIZ_AS_PROPOSTAS = true;
@@ -60,6 +61,10 @@ export type PropostaCurta = {
   aceitou?: boolean;
   /** A nota do parceiro (só com avaliações). */
   nota?: { media: number; quantas: number } | null;
+  /** d118: entulho de um parceiro sem guia verificada — leva a linha do Jurídico. */
+  semGuia?: boolean;
+  /** d118: entulho de um parceiro com a guia verificada. */
+  comGuia?: boolean;
 };
 
 export type DadosDaMensagemCurta = {
@@ -115,6 +120,8 @@ export const E_SO_RESPONDER_1 = "É só responder 1.";
 export const PODEM_CHEGAR_MAIS = "Se preferir, espere um pouco, que podem chegar mais.";
 export const QUAL_PREFERE = "Qual prefere?";
 export const RESPONDA_COM_O_NUMERO = "Responda com o número.";
+/** d118: ao lado das propostas de entulho com guia, quando a lista tem as duas. */
+export const COM_GUIA = ", com guia";
 
 const limpo = (t: string) => t.replace(/\s+/g, " ").trim().replace(/\.+$/, "");
 
@@ -159,6 +166,8 @@ export function mensagemCurtaDasPropostas(d: DadosDaMensagemCurta): string {
     }
     return [
       `${ola} 😊 Já tem ${d.primeira ? "a primeira" : "uma"} proposta para ${doPedido(d)}: ${valor}, do parceiro ${limpo(p.parceiro)}.`,
+      // d118: o aviso da guia ANTES de aceitar, junto à proposta de entulho de um parceiro sem guia.
+      p.semGuia ? AVISO_DA_GUIA_NO_ENTULHO : "",
       notaCurta(p.nota),
       QUER_AVANCAR,
       E_SO_RESPONDER_1,
@@ -169,7 +178,12 @@ export function mensagemCurtaDasPropostas(d: DadosDaMensagemCurta): string {
   }
   return [
     `${ola} Já tem ${lista.length} propostas para ${doPedido(d)}:`,
-    ...lista.map((p, i) => `${i + 1}) ${limpo(p.parceiro)}: ${valorCurto(p, d.unidade)}`),
+    // d118: cada proposta de entulho sem guia leva a linha do Jurídico; com os dois tipos, «com guia» ao lado das que a têm.
+    ...lista.flatMap((p, i) => {
+      const comGuia = p.comGuia && lista.some((x) => x.semGuia) ? COM_GUIA : "";
+      const linha = `${i + 1}) ${limpo(p.parceiro)}: ${valorCurto(p, d.unidade)}${comGuia}`;
+      return p.semGuia ? [linha, AVISO_DA_GUIA_NO_ENTULHO] : [linha];
+    }),
     `${QUAL_PREFERE} ${RESPONDA_COM_O_NUMERO}`,
   ].join("\n");
 }
@@ -191,12 +205,15 @@ export function lerAMensagemCurtaDasPropostas(texto: string | null | undefined):
   if (aceitou && t.includes(E_SO_RESPONDER_1)) {
     return { pedidoId: Number(aceitou[3]), linhas: [{ n: 1, parceiro: aceitou[1].trim(), valor: aceitou[2].trim() }] };
   }
+  // d118: a pergunta da guia antes de fechar — o «1» fecha.
+  const daGuia = lerAPerguntaDaGuia(t);
+  if (daGuia) return { pedidoId: daGuia.pedidoId, linhas: [{ n: 1, parceiro: daGuia.parceiro, valor: "" }] };
   const varias = /Já tem \d+ propostas para o seu pedido #(\d+)\b/.exec(t);
   if (!varias || !t.includes(`${QUAL_PREFERE} ${RESPONDA_COM_O_NUMERO}`)) return null;
   const linhas: LinhaCurta[] = [];
   for (const l of t.split("\n")) {
     const m = /^(\d{1,2})\) (.+?): (\d[\d.]*(?:,\d{2})? €.*)$/.exec(l.trim());
-    if (m) linhas.push({ n: Number(m[1]), parceiro: m[2].trim(), valor: m[3].trim() });
+    if (m) linhas.push({ n: Number(m[1]), parceiro: m[2].trim(), valor: m[3].replace(COM_GUIA, "").trim() });
   }
   return linhas.length > 0 ? { pedidoId: Number(varias[1]), linhas } : null;
 }

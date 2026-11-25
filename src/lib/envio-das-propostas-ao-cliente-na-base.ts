@@ -43,6 +43,7 @@ import {
   type PropostaCurta,
 } from "./propostas-curtas";
 import { lerBase } from "./base-do-preco";
+import { guiaVerificada, servicoExigeGuia } from "./guia-antes-de-contratar";
 import { melhorProposta } from "./validade-do-orcamento";
 import {
   estadoDoEnvio,
@@ -303,15 +304,40 @@ export async function marcarAsPropostasNomeadas(telefone: string, texto: string,
 type NotasDosParceiros = Map<number, { nota: { media: number; quantas: number } | null }>;
 
 /**
+ * A GUIA DOS PARCEIROS DE UM PEDIDO DE ENTULHO — d118: quem tem a guia de
+ * resíduos verificada (providerId → sim/não). Sem entulho, nada se lê. Na
+ * dúvida (a base falhou), ninguém tem: o aviso vai — é o lado seguro.
+ */
+async function guiasDosParceiros(pool: Pool, p: PedidoDaMesa): Promise<Map<number, boolean> | null> {
+  if (!servicoExigeGuia(p.serviceType)) return null;
+  const ids = [...new Set(p.negociacoes.map((n) => Number(n.providerId)).filter((n) => Number.isInteger(n) && n > 0))];
+  const m = new Map<number, boolean>(ids.map((id) => [id, false]));
+  if (ids.length === 0) return m;
+  try {
+    const [rows] = (await pool.execute(
+      `SELECT id, emiteGuiaTransporte, guiaVerificadaEm FROM providers WHERE id IN (${ids.map(() => "?").join(",")})`,
+      ids,
+    )) as [Array<{ id: number; emiteGuiaTransporte: unknown; guiaVerificadaEm: unknown }>, unknown];
+    for (const r of Array.isArray(rows) ? rows : []) m.set(Number(r.id), guiaVerificada(r));
+  } catch {
+    /* ninguém tem: o aviso vai */
+  }
+  return m;
+}
+
+/**
  * AS PROPOSTAS DE UM PEDIDO COMO A MENSAGEM CURTA AS DIZ (d114): o total com
  * IVA e o sem IVA, o parceiro isento, o parceiro que aceitou o valor do
  * cliente, e a nota (só com avaliações).
  */
-function propostasCurtasDoPedido(p: PedidoDaMesa, notas: NotasDosParceiros): PropostaCurta[] {
+function propostasCurtasDoPedido(p: PedidoDaMesa, notas: NotasDosParceiros, guias: Map<number, boolean> | null = null): PropostaCurta[] {
   const daNegociacao = new Map(p.negociacoes.map((n) => [Number(n.id), n]));
   return propostasParaOCliente(p.negociacoes).map((x) => {
     const n = daNegociacao.get(Number(x.negociacaoId));
+    const temGuia = guias && n ? guias.get(Number(n.providerId)) === true : null;
     return {
+      // d118: no entulho, quem não tem a guia verificada leva a linha do Jurídico.
+      ...(guias ? { semGuia: temGuia !== true, comGuia: temGuia === true } : {}),
       negociacaoId: x.negociacaoId ?? null,
       parceiro: x.profissional,
       semIva: x.semIva,
@@ -324,13 +350,19 @@ function propostasCurtasDoPedido(p: PedidoDaMesa, notas: NotasDosParceiros): Pro
 }
 
 /** A mensagem curta das propostas deste pedido, tal como sai (d114). */
-export function textoDasPropostasDoPedido(p: PedidoDaMesa, agora: Date, notas: NotasDosParceiros, primeira: boolean): string {
+export function textoDasPropostasDoPedido(
+  p: PedidoDaMesa,
+  agora: Date,
+  notas: NotasDosParceiros,
+  primeira: boolean,
+  guias: Map<number, boolean> | null = null,
+): string {
   const base = lerBase(p.baseDoPreco);
   return mensagemCurtaDasPropostas({
     pedidoId: Number(p.id),
     nome: p.contactName,
     servico: nomeDoServicoDoOrcamento(p.serviceType),
-    propostas: propostasCurtasDoPedido(p, notas),
+    propostas: propostasCurtasDoPedido(p, notas, guias),
     agora,
     unidade: base === "carga" || base === "hora" ? base : null,
     primeira,
@@ -427,7 +459,7 @@ export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: r
     const vivas = chavesDasPropostasVivas(p.negociacoes, agora);
     const ditas = await chavesJaDitas(pool, vivas.map((v) => v.chave));
     const novas = vivas.filter((v) => !ditas.has(v.chave)).length;
-    const texto = textoDasPropostasDoPedido(p, agora, notas, ultimoEnvioEm == null);
+    const texto = textoDasPropostasDoPedido(p, agora, notas, ultimoEnvioEm == null, await guiasDosParceiros(pool, p));
     const cliente = temTelemovel
       ? await oCliente(pool, telefone, texto, agora)
       : { comUmaPessoa: false, queixa: false, linguaSemTraducao: null, bloqueado: false, jaSaiuHoje: false };

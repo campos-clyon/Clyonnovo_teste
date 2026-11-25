@@ -455,7 +455,7 @@ describe("passo 3: a mesma função do botão", () => {
     const painel = ler("src/components/admin/AdminNegociacoesPanel.tsx");
     expect(painel).toContain("return textoDoOrcamentoDaMesa(p, new Date(), propostas);");
     const naBase = ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts");
-    expect(naBase).toContain("const texto = textoDasPropostasDoPedido(p, agora, notas, ultimoEnvioEm == null);");
+    expect(naBase).toContain("const texto = textoDasPropostasDoPedido(p, agora, notas, ultimoEnvioEm == null, await guiasDosParceiros(pool, p));");
     expect(naBase).toContain("const texto = c.texto;");
     expect(naBase).toContain("enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true })");
     expect(naBase).toContain("db.marcarOrcamentoEnviado(pedidoId)");

@@ -1291,15 +1291,30 @@ async function fecharPeloCliente(
    * se fecha um trabalho de resíduos com quem tem a guia por verificar: o
    * cliente lê porquê, e a conversa passa a uma pessoa da equipa.
    */
+  /*
+   * d118 (25-11-2026): a guia por verificar já não trava o entulho. A maioria
+   * dos parceiros não emite guia: leva o entulho a um centro de resíduos. Fecha
+   * como as outras desde que o cliente tenha lido o aviso ANTES de aceitar (a
+   * linha do Jurídico, na mensagem das propostas); sem ele no fio, a Vitória
+   * diz-lho primeiro e só fecha quando ele confirmar (o «1» ou o «sim»). Quem
+   * marcou no pedido que precisa de guia passa a uma pessoa. Ver
+   * `guia-no-entulho.ts`.
+   */
   const { guiaImpedeANegociacao } = await import("@/lib/guia-na-base");
   if (await guiaImpedeANegociacao(alvo.negociacaoId)) {
-    const { GUIA_POR_VERIFICAR_FRASE } = await import("@/lib/guia-antes-de-contratar");
-    await passarAUmaPessoa(
-      telefone,
-      "Guia por verificar - quis fechar",
-      `Ainda não deu para fechar: ${GUIA_POR_VERIFICAR_FRASE} Vou passar isto a um colega, que fala consigo já de seguida.`,
-    );
-    return;
+    const g = await import("@/lib/guia-no-entulho");
+    const doPedidoDaGuia = await getSimulatorOrderById(alvo.pedidoId).catch(() => null);
+    const pediuGuia = Number((doPedidoDaGuia as { precisaGuiaTransporte?: unknown } | null)?.precisaGuiaTransporte ?? 0) === 1;
+    if (pediuGuia) {
+      await passarAUmaPessoa(telefone, g.MOTIVO_DA_GUIA, g.PASSO_A_GUIA_A_UMA_PESSOA);
+      return;
+    }
+    const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
+    const fioDaGuia = await mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []);
+    if (!g.jaFoiAvisadoDaGuia(fioDaGuia)) {
+      await enviarTextoWhatsApp(telefone, g.perguntaDaGuiaAntesDeFechar(alvo.profissionalNome, alvo.pedidoId));
+      return;
+    }
   }
 
   const agora = new Date();
@@ -2841,6 +2856,23 @@ export async function tratarMensagemDoCliente(
      * propostas («2», «a da Recolhas Tejo») aceita essa. Antes da impaciência,
      * que lia «já contratei outra empresa» como uma ameaça de ir embora.
      */
+    /*
+     * QUEM PRECISA DE GUIA DE RESÍDUOS FALA COM UMA PESSOA — 25-11-2026 (d118).
+     * Num pedido de entulho aberto, o cliente que diz que precisa de guia (ou da
+     * e-GAR), que é uma empresa ou uma obra com licença, ou que exige um
+     * certificado ou um comprovativo de entrega: passa à equipa, com o motivo
+     * «Precisa de guia de resíduos».
+     */
+    if (!soImagens) {
+      const g = await import("@/lib/guia-no-entulho");
+      if (g.precisaDeGuia(conteudo.texto)) {
+        const { temPedidoDeEntulhoAberto } = await import("@/lib/guia-no-entulho-na-base");
+        if (await temPedidoDeEntulhoAberto(telefone)) {
+          await passarAUmaPessoa(telefone, g.MOTIVO_DA_GUIA, g.PASSO_A_GUIA_A_UMA_PESSOA);
+          return;
+        }
+      }
+    }
     if (!soImagens) {
       const d111 = await import("@/lib/a-escolha-e-a-desistencia-no-whatsapp");
       if (await d111.tratarADesistencia(telefone, conteudo.texto)) return;
