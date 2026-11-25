@@ -27,25 +27,32 @@
  * chaves no registo dos avisos do assistente, as mesmas dos três caminhos).
  * Só sai com os dois interruptores ligados: este («Enviar as propostas ao
  * cliente») e o «Avisar de propostas» do assistente (`podeDizerAsPropostas`).
+ *
+ * d123 (25-11-2026): a «uma por dia» deu lugar a 2 h entre mensagens e 3 por
+ * dia (`diaDosEnvios`, `enviosNoDia`); a proposta nova vai sozinha, só ela; a
+ * maneira de dizer fica em `ultimaVariante`. Ver `envio-das-propostas-ao-cliente.ts`.
  */
 
 import { appendOrderHistory, ensureRegistoTable, getPool, registarNaTransaccao } from "./db";
 import { propostasPorEnviarDoPedido, type PedidoParaOLado } from "./do-nosso-lado";
-import { instanteDaBase } from "./hora-de-lisboa";
+import { diaEmLisboa, instanteDaBase } from "./hora-de-lisboa";
 import { naJanelaDasMensagensAutomaticas } from "./janela-das-mensagens-automaticas";
 import { propostasParaOCliente, trabalhoFechado } from "./mensagem-das-propostas";
 import { nomeDoServicoDoOrcamento, type PedidoDoOrcamento } from "./texto-do-orcamento-da-mesa";
 import { chavesDasPropostasVivas } from "./chaves-das-propostas";
 import {
+  escolherAVariante,
   ESPECIE_DAS_PROPOSTAS_DITAS,
-  mensagemCurtaDasPropostas,
+  mensagemDasPropostasVariada,
   oTextoNomeia,
+  tipoDaMensagem,
   type PropostaCurta,
 } from "./propostas-curtas";
 import { lerBase } from "./base-do-preco";
 import { guiaVerificada, servicoExigeGuia } from "./guia-antes-de-contratar";
 import { melhorProposta } from "./validade-do-orcamento";
 import {
+  aEntregaPrendeAsPropostas,
   estadoDoEnvio,
   historicoDoEnvioAutomatico,
   linhaDoEnvioNaMesa,
@@ -86,6 +93,10 @@ export const SQL_DAS_TABELAS_DAS_PROPOSTAS = [
   // d114: a última mensagem das propostas (uma por dia) e quantas já foram.
   `ALTER TABLE envioDasPropostasAoCliente ADD COLUMN ultimoEnvioEm DATETIME NULL DEFAULT NULL`,
   `ALTER TABLE envioDasPropostasAoCliente ADD COLUMN envios TINYINT UNSIGNED NOT NULL DEFAULT 0`,
+  // d123: quantas saíram hoje (no máximo 3 por dia) e a maneira de dizer da última.
+  `ALTER TABLE envioDasPropostasAoCliente ADD COLUMN diaDosEnvios CHAR(10) NULL DEFAULT NULL`,
+  `ALTER TABLE envioDasPropostasAoCliente ADD COLUMN enviosNoDia TINYINT UNSIGNED NOT NULL DEFAULT 0`,
+  `ALTER TABLE envioDasPropostasAoCliente ADD COLUMN ultimaVariante VARCHAR(4) NULL DEFAULT NULL`,
   `CREATE TABLE IF NOT EXISTS envioDasPropostasVez (
       id        TINYINT UNSIGNED NOT NULL PRIMARY KEY,
       proximoEm DATETIME NOT NULL
@@ -203,26 +214,102 @@ export type CandidatoAoEnvio = {
   texto: string;
   /** As chaves das propostas vivas — as que ficam ditas quando a mensagem sai (d114). */
   chaves: Array<{ chave: string; negociacaoId: number }>;
+  /** d123: quantas propostas vão nesta mensagem (as que o cliente ainda não ouviu). */
+  porDizer: number;
+  /** d123: é uma proposta nova (só as novas), não a 1.ª mensagem. */
+  nova: boolean;
+  /** d123: a maneira de dizer («u3», «n1»). */
+  variante: string;
+  /** d123: a conversa está entregue a uma pessoa (que já não prende as propostas): depois de sair, continua com a equipa. */
+  comAEquipa: boolean;
 };
 
 const digitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 
-type LinhaDoEnvio = { estado: string; motivo: string | null; ultimoEnvioEm: Date | null };
+type LinhaDoEnvio = {
+  estado: string;
+  motivo: string | null;
+  ultimoEnvioEm: Date | null;
+  /** d123: quantas mensagens de propostas já saíram a este pedido, e a maneira da última. */
+  envios?: number;
+  ultimaVariante?: string | null;
+  diaDosEnvios?: string | null;
+  enviosNoDia?: number;
+};
 
-/** As linhas do envio dos pedidos pedidos — com a última mensagem que a Vitória mandou (d114). */
+/** As linhas do envio dos pedidos pedidos — com a última mensagem que a Vitória mandou (d114) e as contas da d123. */
 async function linhasDoEnvio(pool: Pool, ids: number[]): Promise<Map<number, LinhaDoEnvio>> {
   const m = new Map<number, LinhaDoEnvio>();
   const limpos = [...new Set(ids.filter((n) => Number.isInteger(n) && n > 0))];
   if (limpos.length === 0) return m;
   const [rows] = (await pool.execute(
-    `SELECT pedidoId, estado, motivo, COALESCE(ultimoEnvioEm, enviadoEm) AS ultimo
+    `SELECT pedidoId, estado, motivo, COALESCE(ultimoEnvioEm, enviadoEm) AS ultimo, envios, ultimaVariante, diaDosEnvios, enviosNoDia
        FROM envioDasPropostasAoCliente WHERE pedidoId IN (${limpos.map(() => "?").join(",")})`,
     limpos,
-  )) as [Array<{ pedidoId: number; estado: string; motivo: string | null; ultimo: Date | string | null }>, unknown];
+  )) as [
+    Array<{
+      pedidoId: number;
+      estado: string;
+      motivo: string | null;
+      ultimo: Date | string | null;
+      envios?: number | null;
+      ultimaVariante?: string | null;
+      diaDosEnvios?: string | null;
+      enviosNoDia?: number | null;
+    }>,
+    unknown,
+  ];
   for (const r of rows) {
-    m.set(Number(r.pedidoId), { estado: String(r.estado), motivo: r.motivo ?? null, ultimoEnvioEm: instanteDaBase(r.ultimo ?? null) });
+    m.set(Number(r.pedidoId), {
+      estado: String(r.estado),
+      motivo: r.motivo ?? null,
+      ultimoEnvioEm: instanteDaBase(r.ultimo ?? null),
+      envios: Number(r.envios ?? 0) || 0,
+      ultimaVariante: r.ultimaVariante ?? null,
+      diaDosEnvios: r.diaDosEnvios ?? null,
+      enviosNoDia: Number(r.enviosNoDia ?? 0) || 0,
+    });
   }
   return m;
+}
+
+/**
+ * A MANEIRA DA ÚLTIMA MENSAGEM DE PROPOSTAS A ESTE CLIENTE — de qualquer
+ * pedido dele (d123: nunca a mesma duas vezes seguidas ao mesmo cliente). Na
+ * dúvida, null.
+ */
+async function ultimaVarianteDoCliente(pool: Pool, telefone: string): Promise<string | null> {
+  const tel = digitos(telefone).slice(-9);
+  if (tel.length < 9) return null;
+  try {
+    const [rows] = (await pool.execute(
+      `SELECT e.ultimaVariante FROM envioDasPropostasAoCliente e JOIN simulatorOrders o ON o.id = e.pedidoId
+        WHERE e.ultimaVariante IS NOT NULL AND RIGHT(REGEXP_REPLACE(COALESCE(o.contactPhone, ''), '[^0-9]', ''), 9) = ?
+        ORDER BY e.ultimoEnvioEm DESC LIMIT 1`,
+      [tel],
+    )) as [Array<{ ultimaVariante: string | null }>, unknown];
+    return (Array.isArray(rows) ? rows[0]?.ultimaVariante : null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Quando o cliente ficou com esta proposta viva à espera dele: a proposta pendente do parceiro, ou o «aceitou». */
+function instanteDaViva(n: NegociacaoDaMesa | undefined): number | null {
+  if (!n) return null;
+  let lista: Array<{ por?: string; estado?: string; criadaEm?: string }> = [];
+  try {
+    const j = JSON.parse(String(n.propostasJson ?? "[]"));
+    lista = Array.isArray(j) ? j : [];
+  } catch {
+    lista = [];
+  }
+  if (n.estado === "aguarda_contratacao") {
+    const aceite = [...lista].reverse().find((x) => x.estado === "aceite");
+    return instanteDaBase(aceite?.criadaEm ?? (n as { actualizadaEm?: string | Date | null }).actualizadaEm ?? null)?.getTime() ?? null;
+  }
+  const pendente = [...lista].reverse().find((x) => x.estado === "pendente" && x.por === "profissional");
+  return instanteDaBase(pendente?.criadaEm ?? null)?.getTime() ?? null;
 }
 
 /**
@@ -337,11 +424,14 @@ async function marcarEnviadoPelaVitoria(pedidoId: number): Promise<void> {
   const db = await import("./db");
   await db.marcarOrcamentoEnviado(pedidoId);
   const pool = await garantirTabelas();
+  // d123: conta para as 2 h e para as 3 por dia, como uma mensagem da rotina.
+  const hoje = diaEmLisboa(new Date());
   await pool.execute(
-    `INSERT INTO envioDasPropostasAoCliente (pedidoId, estado, enviadoEm, ultimoEnvioEm, envios) VALUES (?, 'enviado', UTC_TIMESTAMP(), UTC_TIMESTAMP(), 1)
+    `INSERT INTO envioDasPropostasAoCliente (pedidoId, estado, enviadoEm, ultimoEnvioEm, envios, diaDosEnvios, enviosNoDia) VALUES (?, 'enviado', UTC_TIMESTAMP(), UTC_TIMESTAMP(), 1, ?, 1)
      ON DUPLICATE KEY UPDATE ultimoEnvioEm = UTC_TIMESTAMP(), enviadoEm = COALESCE(enviadoEm, UTC_TIMESTAMP()),
+       enviosNoDia = IF(diaDosEnvios = ?, LEAST(255, enviosNoDia + 1), 1), diaDosEnvios = ?,
        estado = IF(estado IN ('fila', 'a_enviar'), estado, 'enviado')`,
-    [pedidoId],
+    [pedidoId, hoje, hoje, hoje],
   );
   await appendOrderHistory(pedidoId, { type: "note", by: null, message: `${NOTA_DO_ENVIO_PELA_VITORIA}.` }).catch(() => {});
 }
@@ -417,7 +507,7 @@ export async function passagemUnicaDosEnviados(agora: Date = new Date()): Promis
   return ids.length;
 }
 
-type NotasDosParceiros = Map<number, { nota: { media: number; quantas: number } | null }>;
+type NotasDosParceiros = Map<number, { nota: { media: number; quantas: number } | null; verificado?: boolean }>;
 
 /**
  * A GUIA DOS PARCEIROS DE UM PEDIDO DE ENTULHO — d118: quem tem a guia de
@@ -461,50 +551,77 @@ function propostasCurtasDoPedido(p: PedidoDaMesa, notas: NotasDosParceiros, guia
       isento: x.contaDoNovoModelo?.regime === "isento",
       aceitou: n?.estado === "aguarda_contratacao",
       nota: n ? (notas.get(Number(n.providerId))?.nota ?? null) : null,
+      // d123: «verificado» só com as três confirmações.
+      verificado: n ? notas.get(Number(n.providerId))?.verificado === true : false,
     };
   });
 }
 
-/** A mensagem curta das propostas deste pedido, tal como sai (d114). */
+/**
+ * A MENSAGEM DAS PROPOSTAS DESTE PEDIDO, tal como sai (d123): só as propostas
+ * que o cliente ainda não ouviu (`soAs`, as negociações), a 1.ª ou a nova, na
+ * maneira escolhida.
+ */
 export function textoDasPropostasDoPedido(
   p: PedidoDaMesa,
   agora: Date,
   notas: NotasDosParceiros,
-  primeira: boolean,
+  como: { nova: boolean; variante: string; soAs?: ReadonlySet<number> | null },
   guias: Map<number, boolean> | null = null,
 ): string {
   const base = lerBase(p.baseDoPreco);
-  return mensagemCurtaDasPropostas({
+  const todas = propostasCurtasDoPedido(p, notas, guias);
+  const propostas = como.soAs ? todas.filter((x) => x.negociacaoId != null && como.soAs!.has(Number(x.negociacaoId))) : todas;
+  return mensagemDasPropostasVariada({
     pedidoId: Number(p.id),
     nome: p.contactName,
     servico: nomeDoServicoDoOrcamento(p.serviceType),
-    propostas: propostasCurtasDoPedido(p, notas, guias),
+    propostas,
     agora,
     unidade: base === "carga" || base === "hora" ? base : null,
-    primeira,
+    nova: como.nova,
+    variante: como.variante,
   });
 }
 
 /**
  * O CLIENTE, COMO A REGRA O PRECISA: a conversa com uma pessoa (entregue, ou a
  * equipa a escrever à mão há pouco, d73), uma queixa, a língua sem tradução
- * fixa deste texto, o número bloqueado, e se já saiu hoje outra mensagem
- * automática. Na dúvida, o lado que não envia.
+ * fixa deste texto, o número bloqueado, e o «não contactar» (d93). Na dúvida,
+ * o lado que não envia.
+ *
+ * d123: a entrega que a Vitória fez há mais de 2 h, sem resposta da equipa, já
+ * não prende as propostas (`aEntregaPrendeAsPropostas`) — saem, e a conversa
+ * continua com a equipa (`comAEquipa`). E as outras rotinas que já falaram
+ * hoje não as atrasam: da pergunta comum (`jaSaiuHojeUmaMensagemAutomatica`)
+ * fica só o «não contactar».
  */
 async function oCliente(
   pool: Pool,
   telefone: string,
   texto: string,
-  agora: Date,
-): Promise<{ comUmaPessoa: boolean; queixa: boolean; linguaSemTraducao: string | null; bloqueado: boolean; jaSaiuHoje: boolean }> {
+): Promise<{
+  comUmaPessoa: boolean;
+  comAEquipa: boolean;
+  queixa: boolean;
+  linguaSemTraducao: string | null;
+  bloqueado: boolean;
+  naoContactar: boolean;
+}> {
   const db = await import("./db");
   const bloqueado = await db.numeroBloqueadoWhatsApp(telefone).catch(() => true);
   const interrompido = await db.numeroInterrompidoWhatsApp(telefone).catch(() => true);
+  const prende = interrompido
+    ? await db
+        .entregaEmVigorWhatsApp(telefone)
+        .then((e) => (e ? aEntregaPrendeAsPropostas(e) : true))
+        .catch(() => true)
+    : false;
   const fio = await db.mensagensDoNumeroWhatsApp(telefone, 40).catch(() => null);
   const { aEquipaFalouHaPouco } = await import("./pedido-em-curso");
   const { haQueixaNaConversa } = await import("./queixa-na-conversa");
   // d116: a equipa a escrever já não cala a Vitória (só o «*», que é uma entrega).
-  const comUmaPessoa = interrompido || fio == null || aEquipaFalouHaPouco(fio);
+  const comUmaPessoa = prende || fio == null || aEquipaFalouHaPouco(fio);
   const queixa = fio != null && haQueixaNaConversa(fio);
   // A língua da conversa (a guardada, ou a que a conversa mostra — o #659); sozinha, só com tradução fixa.
   let linguaSemTraducao: string | null = null;
@@ -515,16 +632,16 @@ async function oCliente(
   } catch {
     linguaSemTraducao = "?";
   }
-  const { jaSaiuHojeUmaMensagemAutomatica } = await import("./uma-mensagem-automatica-por-dia");
-  const jaSaiuHoje = await jaSaiuHojeUmaMensagemAutomatica({ telefone }, agora, { pool }).catch(() => true);
-  return { comUmaPessoa, queixa, linguaSemTraducao, bloqueado, jaSaiuHoje };
+  const { eParaNaoContactar } = await import("./nao-contactar");
+  const naoContactar = await eParaNaoContactar(telefone, { pool }).catch(() => true);
+  return { comUmaPessoa, comAEquipa: interrompido, queixa, linguaSemTraducao, bloqueado, naoContactar };
 }
 
 /**
  * OS PEDIDOS COM PROPOSTAS POR ENVIAR — os da Mesa (`pedidosComNegociacoes`),
  * pela mesma conta do cartão («Propostas de parceiros por enviar ao cliente»),
- * com o texto do orçamento tal como sai, a melhor proposta (d62) e o estado
- * do envio de cada um. Com `ids`, só esses.
+ * com o texto tal como sai, a melhor proposta (d62) e o estado do envio de
+ * cada um. Com `ids`, só esses.
  */
 export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: readonly unknown[]): Promise<CandidatoAoEnvio[]> {
   const pool = await garantirTabelas();
@@ -552,12 +669,14 @@ export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: r
     .parceirosParaOValorUnico(negociacoes.map((n) => Number(n.providerId)))
     .catch(() => new Map<number, { nota: { media: number; quantas: number } | null; verificado: boolean }>());
   const doEnvio = await linhasDoEnvio(pool, alvo.map((p) => Number(p.id)));
+  const hoje = diaEmLisboa(agora);
 
   const out: CandidatoAoEnvio[] = [];
   for (const p of alvo) {
     const por = propostasPorEnviarDoPedido(p, agora)!;
     const propostas = propostasParaOCliente(p.negociacoes);
     const providerDe = new Map(p.negociacoes.map((n) => [Number(n.id), Number(n.providerId)]));
+    const daNegociacao = new Map(p.negociacoes.map((n) => [Number(n.id), n]));
     const melhor = melhorProposta(
       propostas.map((x) => ({
         negociacaoId: x.negociacaoId ?? null,
@@ -570,19 +689,35 @@ export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: r
     const telefone = String(p.contactPhone ?? "");
     const temTelemovel = digitos(telefone).length >= 9;
     const linha = doEnvio.get(Number(p.id)) ?? null;
-    const ultimoEnvioEm = linha?.ultimoEnvioEm ?? null;
-    // d114: as propostas que o cliente ainda não ouviu (por qualquer caminho).
+    // d123: a última mensagem de propostas a este cliente — a da Vitória, ou o orçamento que a equipa mandou à mão.
+    const enviadoEm = instanteDaBase(p.propostaEnviadaEm ?? null);
+    const daVitoria = linha?.ultimoEnvioEm ?? null;
+    const ultimoEnvioEm =
+      daVitoria && enviadoEm ? new Date(Math.max(daVitoria.getTime(), enviadoEm.getTime())) : (daVitoria ?? enviadoEm ?? null);
+    // As propostas que o cliente ainda não ouviu: nem ditas (por qualquer caminho, d114), nem de antes do orçamento que já foi.
     const vivas = chavesDasPropostasVivas(p.negociacoes, agora);
     const ditas = await chavesJaDitas(pool, vivas.map((v) => v.chave));
-    const novas = vivas.filter((v) => !ditas.has(v.chave)).length;
-    const texto = textoDasPropostasDoPedido(p, agora, notas, ultimoEnvioEm == null, await guiasDosParceiros(pool, p));
+    const porDizer = vivas.filter((v) => {
+      if (ditas.has(v.chave)) return false;
+      const t = instanteDaViva(daNegociacao.get(v.negociacaoId));
+      return enviadoEm == null || t == null || t > enviadoEm.getTime();
+    });
+    // A 1.ª mensagem diz todas; depois, só as novas — nunca a lista toda outra vez.
+    const nova = porDizer.length > 0 && porDizer.length < vivas.length;
+    const tipo = tipoDaMensagem(nova, porDizer.length);
+    const anterior = temTelemovel ? await ultimaVarianteDoCliente(pool, telefone) : null;
+    const variante = escolherAVariante(tipo, Number(p.id), (linha?.envios ?? 0) + 1, anterior ?? linha?.ultimaVariante ?? null);
+    const texto = textoDasPropostasDoPedido(
+      p,
+      agora,
+      notas,
+      { nova, variante, soAs: new Set(porDizer.map((v) => v.negociacaoId)) },
+      await guiasDosParceiros(pool, p),
+    );
     const cliente = temTelemovel
-      ? await oCliente(pool, telefone, texto, agora)
-      : { comUmaPessoa: false, queixa: false, linguaSemTraducao: null, bloqueado: false, jaSaiuHoje: false };
+      ? await oCliente(pool, telefone, texto)
+      : { comUmaPessoa: false, comAEquipa: false, queixa: false, linguaSemTraducao: null, bloqueado: false, naoContactar: false };
     const instantes = [...por.instantes].sort((a, b) => a - b);
-    // A equipa mandou o orçamento à mão depois da última mensagem da Vitória (ou sem ela): o resto é dela.
-    const enviadoEm = instanteDaBase(p.propostaEnviadaEm ?? null);
-    const aMao = enviadoEm != null && (ultimoEnvioEm == null || enviadoEm.getTime() > ultimoEnvioEm.getTime() + 15 * 60_000);
     // O parceiro que aceitou o valor do cliente (d114): a 1.ª mensagem não espera a hora.
     const aceites = p.negociacoes
       .filter((n) => n.estado === "aguarda_contratacao")
@@ -595,9 +730,11 @@ export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: r
       segundaEm: por.parceiros >= 2 && instantes.length >= 2 ? new Date(instantes[1]) : null,
       aceitouEm: aceites.length > 0 ? new Date(Math.min(...aceites)) : null,
       ultimaMudancaEm: new Date(instantes[instantes.length - 1]),
-      jaEnviado: aMao,
+      // d123: o orçamento à mão já não fecha a porta — conta em `ultimoEnvioEm`.
+      jaEnviado: false,
       ultimoEnvioEm,
-      novas,
+      enviosHoje: linha?.diaDosEnvios === hoje ? (linha?.enviosNoDia ?? 0) : 0,
+      novas: porDizer.length,
       fechado: trabalhoFechado(p.negociacoes) != null,
       trabalhoClyon: p.valorFixoClyon != null,
       valorUnico: p.valorUnicoCliente != null,
@@ -608,15 +745,20 @@ export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: r
       melhorComIva: melhor ? melhor.total : null,
       temTelemovel,
       bloqueado: cliente.bloqueado,
+      naoContactar: cliente.naoContactar,
     };
     out.push({
       pedido: p,
       envio,
       propostas: propostas.length,
-      estado: estadoDoEnvio(envio, agora, { jaSaiuHoje: cliente.jaSaiuHoje }),
+      estado: estadoDoEnvio(envio, agora),
       linhaDoEnvio: linha,
       texto,
       chaves: vivas.map(({ chave, negociacaoId }) => ({ chave, negociacaoId })),
+      porDizer: porDizer.length,
+      nova,
+      variante,
+      comAEquipa: cliente.comAEquipa,
     });
   }
   return out;
@@ -736,7 +878,7 @@ export type ResultadoDoEnvio = { ok: true; feito: string } | { ok: false; porque
 /**
  * ENVIA O ORÇAMENTO AO CLIENTE, se ainda for a vez dele: lê tudo outra vez (o
  * interruptor, o pedido ainda com propostas por enviar e sem orçamento enviado,
- * o cliente, a uma-por-dia), RESERVA a linha (só uma passagem ganha) e só então
+ * o cliente, as 2 h e as 3 por dia da d123), RESERVA a linha (só uma passagem ganha) e só então
  * envia — o texto e o caminho do «Enviar pela CLYON». O que já não é a vez volta
  * a «espera»; um envio que não sai fica «falhou» (a equipa envia à mão), e não
  * se tenta outra vez sozinho.
@@ -771,7 +913,8 @@ export async function enviarAsPropostasAoCliente(pedidoId: number, agora: Date):
 
   const telefone = String(c.pedido.contactPhone ?? "");
   const texto = c.texto;
-  const actualizacao = c.linhaDoEnvio?.ultimoEnvioEm != null;
+  // d123: a proposta nova diz-se como atualização; a 1.ª, como o orçamento.
+  const actualizacao = c.nova;
   // Na língua da conversa, ou não sai (d88, o #659): a língua lida fica guardada para o envio a traduzir.
   const { linguaDaConversa } = await import("./lingua-da-conversa");
   await linguaDaConversa(telefone, { guardar: true }).catch(() => null);
@@ -784,18 +927,21 @@ export async function enviarAsPropostasAoCliente(pedidoId: number, agora: Date):
     ]);
     return { ok: false, porque: "o WhatsApp não saiu" };
   }
-  await db.retomarNumeroWhatsApp(telefone).catch(() => {});
+  // d123: a conversa entregue a uma pessoa continua com ela — as propostas saíram, o resto é da equipa.
+  if (!c.comAEquipa) await db.retomarNumeroWhatsApp(telefone).catch(() => {});
   await db.marcarOrcamentoEnviado(pedidoId);
+  const hoje = diaEmLisboa(agora);
   await pool.execute(
     `UPDATE envioDasPropostasAoCliente
         SET estado = 'enviado', enviadoEm = COALESCE(enviadoEm, UTC_TIMESTAMP()), ultimoEnvioEm = UTC_TIMESTAMP(),
-            envios = LEAST(255, envios + 1), propostas = ?
+            envios = LEAST(255, envios + 1), propostas = ?, ultimaVariante = ?,
+            enviosNoDia = IF(diaDosEnvios = ?, LEAST(255, enviosNoDia + 1), 1), diaDosEnvios = ?
       WHERE pedidoId = ?`,
-    [Math.min(255, c.propostas), pedidoId],
+    [Math.min(255, c.propostas), c.variante, hoje, hoje, pedidoId],
   );
   // d114: o cliente ouviu estas propostas — nenhum caminho as volta a dizer sozinho.
   await marcarPropostasDitas(telefone, pedidoId, c.chaves);
-  const feito = historicoDoEnvioAutomatico(c.propostas, actualizacao);
+  const feito = `${historicoDoEnvioAutomatico(c.porDizer, actualizacao)}${c.comAEquipa ? " A conversa continua com a equipa." : ""}`;
   await appendOrderHistory(pedidoId, { type: "note", by: null, message: feito }).catch(() => {});
   return { ok: true, feito };
 }

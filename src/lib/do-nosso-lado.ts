@@ -275,6 +275,22 @@ export function propostasPorEnviarDoPedido(
   return instantes.length > 0 ? { instantes, parceiros } : null;
 }
 
+/** d123: a etiqueta da fase quando as propostas ainda não foram ao cliente. */
+export const ETIQUETA_DAS_PROPOSTAS_POR_ENVIAR = "Propostas por enviar";
+
+/**
+ * «ORÇAMENTO ENVIADO» SÓ DEPOIS DE UMA MENSAGEM QUE SAIU — 25-11-2026 (d123,
+ * o #682 e o #671). A fase dizia «Orçamento enviado» a qualquer pedido com uma
+ * proposta de parceiro à espera do cliente, mesmo sem nada ter ido ao cliente.
+ * Num pedido que a CLYON negoceia, com propostas por enviar (a conta do cartão,
+ * `propostasPorEnviarDoPedido`), a etiqueta é «Propostas por enviar». Pura;
+ * null deixa a etiqueta da fase.
+ */
+export function etiquetaDasPropostasPorEnviar(categoria: string, p: PedidoParaOLado, agora: Date): string | null {
+  if (categoria !== "orcamento_enviado") return null;
+  return propostasPorEnviarDoPedido(p, agora) ? ETIQUETA_DAS_PROPOSTAS_POR_ENVIAR : null;
+}
+
 /**
  * As propostas que esperam por nós, pela regra da Mesa (`propostasPorEnviarDoPedido`).
  * Com a linha do envio automático (d88) posta pela Mesa, diz-se também quando

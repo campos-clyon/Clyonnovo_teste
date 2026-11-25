@@ -47,7 +47,9 @@ describe("d93 — o «não contactar» cala todas as rotinas automáticas", () =
       "conversa-parada-a-meio-na-base.ts",
     ]) {
       const src = readFileSync(new URL(`./${f}`, import.meta.url), "utf8");
-      expect(src, f).toContain("jaSaiuHojeUmaMensagemAutomatica");
+      // d123: as propostas já não esperam pelas outras rotinas — do «já saiu hoje» fica só o «não contactar».
+      if (f === "envio-das-propostas-ao-cliente-na-base.ts") expect(src, f).toContain("await eParaNaoContactar(telefone, { pool })");
+      else expect(src, f).toContain("jaSaiuHojeUmaMensagemAutomatica");
     }
   });
 });

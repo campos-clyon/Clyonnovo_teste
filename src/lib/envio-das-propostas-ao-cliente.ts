@@ -17,39 +17,46 @@ import {
  *
  *   · (d6, 23-11-2026) assim que chega a 1.ª proposta — a regra de antes, 3
  *     propostas ou 3 horas depois da 1.ª, fica para as que chegaram antes dela —, a
- *     Vitória envia ao cliente o orçamento — o MESMO texto e o mesmo caminho do
- *     «Enviar pela CLYON» (`textoDoOrcamentoDaMesa`, `enviarTextoManualWhatsApp`,
- *     `marcarOrcamentoEnviado`): «válido até…», cada parceiro com o valor sem
- *     e com IVA. A partir daí correm a validade (d62) e o seguimento (d83);
- *   · das 9h às 20h de Lisboa; o que cai fora sai às 9h; e nunca no dia em que
- *     já saiu outra mensagem automática a esse cliente (vai no dia seguinte, às
- *     9h);
- *   · um parceiro que mudou a proposta há menos de 10 min: espera-se;
- *   · UMA vez por pedido (a reserva na base), e só se o orçamento ainda não foi
- *     ao cliente: depois de enviado (por aqui ou à mão), o que chegar a seguir é
- *     da equipa.
+ *     Vitória envia ao cliente o orçamento pelo caminho do «Enviar pela CLYON»
+ *     (`enviarTextoManualWhatsApp`, `marcarOrcamentoEnviado`). A partir daí
+ *     correm a validade (d62) e o seguimento (d83);
+ *   · das 9h às 20h de Lisboa; o que cai fora sai às 9h;
+ *   · um parceiro que mudou a proposta há menos de 10 min: espera-se.
  *
  * Ficam com uma pessoa (e o cartão da Mesa diz porquê): a melhor proposta acima
  * de 500 € com IVA; os Trabalhos CLYON e o valor único; as mudanças à hora (a
  * folha); a conversa com uma pessoa (d73); o cliente noutra língua sem
- * tradução; um pedido com queixa; sem telemóvel ou com o número bloqueado.
+ * tradução; um pedido com queixa; sem telemóvel ou com o número bloqueado; o
+ * «não contactar» (d93).
  *
  * O interruptor «Enviar as propostas ao cliente» (Configs, só o administrador)
  * nasce LIGADO (o dono pediu); desligado, a Mesa diz «enviaria a …».
  *
  * d114 (25-11-2026) — POUCAS MENSAGENS, CURTAS. Esta é a única rotina que diz
  * as propostas ao cliente sozinha (a proposta nova e o «o parceiro aceitou»
- * deixaram de sair uma a uma — `propostas-curtas.ts`):
+ * deixaram de sair uma a uma — `propostas-curtas.ts`); a 1.ª mensagem sai 1 h
+ * depois da 1.ª proposta, ou logo que chega a 2.ª (ou que um parceiro aceita o
+ * valor que o cliente propôs), o que vier primeiro; depois de aceitar (um
+ * parceiro contratado), nada mais; os pormenores vão na confirmação depois de
+ * aceitar.
  *
- *   · a 1.ª mensagem sai 1 h depois da 1.ª proposta, ou logo que chega a 2.ª
- *     (ou que um parceiro aceita o valor que o cliente propôs), o que vier
- *     primeiro — sempre das 9h às 20h; fora disso, às 9h com o que houver;
- *   · depois, no máximo UMA por dia, com a lista completa e curta, e só se
- *     houver propostas que o cliente ainda não ouviu (`novas`); as do mesmo
- *     dia esperam pela do dia seguinte, às 9h;
- *   · depois de aceitar (um parceiro contratado), nada mais;
- *   · o texto é `mensagemCurtaDasPropostas` — sem os pormenores, que vão na
- *     confirmação depois de aceitar.
+ * d123 (25-11-2026, CEO e dono) — AS PROPOSTAS NOVAS NÃO ESPERAM PELO DIA
+ * SEGUINTE. Substitui a «uma por dia» da d114:
+ *
+ *   · uma proposta NOVA depois da 1.ª mensagem sai sozinha, numa mensagem
+ *     curta só com ela (nunca a lista toda outra vez), pelo menos 2 h depois
+ *     da última mensagem de propostas a este cliente (as que chegarem
+ *     entretanto vão juntas numa só), no máximo 3 por dia; os 10 min depois de
+ *     um parceiro mudar o valor continuam;
+ *   · as outras rotinas (o «pedir o que falta», a validade, o seguimento) já
+ *     não atrasam as propostas para o dia seguinte; o «não contactar» (d93)
+ *     continua a calar tudo;
+ *   · o orçamento mandado à mão pela equipa conta como a última mensagem (as
+ *     2 h contam dele), e o que chegar depois sai sozinho como proposta nova;
+ *   · a conversa entregue a uma pessoa pela Vitória há mais de 2 h, sem
+ *     ninguém da equipa a responder, já não prende as propostas: saem, e a
+ *     conversa continua com a equipa (`aEntregaPrendeAsPropostas`);
+ *   · os textos variam (`mensagemDasPropostasVariada`, 5 maneiras por tipo).
  *
  * PURO: as regras, o relógio e os textos. A base está em
  * `envio-das-propostas-ao-cliente-na-base.ts`.
@@ -67,6 +74,12 @@ export { MINUTOS_ATE_A_PRIMEIRA_MENSAGEM } from "./propostas-curtas";
 export const LIMITE_DA_MELHOR_COM_IVA = 500;
 /** Um parceiro mudou a proposta há menos disto: espera-se. */
 export const MINUTOS_DEPOIS_DE_MUDAR = 10;
+/** d123: entre duas mensagens de propostas ao mesmo cliente, pelo menos isto. */
+export const MINUTOS_ENTRE_MENSAGENS_DAS_PROPOSTAS = 120;
+/** d123: no máximo isto de mensagens de propostas por dia (de Lisboa) a um pedido. */
+export const MAXIMO_DE_MENSAGENS_DAS_PROPOSTAS_POR_DIA = 3;
+/** d123: uma conversa entregue pela Vitória há mais disto, sem resposta da equipa, já não prende as propostas. */
+export const HORAS_DA_ENTREGA_SEM_RESPOSTA = 2;
 
 export type MotivoComUmaPessoa =
   | "trabalho_clyon"
@@ -77,7 +90,8 @@ export type MotivoComUmaPessoa =
   | "noutra_lingua"
   | "acima_de_500"
   | "sem_telemovel"
-  | "bloqueado";
+  | "bloqueado"
+  | "nao_contactar";
 
 export const MOTIVOS_COM_UMA_PESSOA: Record<MotivoComUmaPessoa, string> = {
   trabalho_clyon: "é um Trabalho CLYON (valor fixo)",
@@ -89,7 +103,26 @@ export const MOTIVOS_COM_UMA_PESSOA: Record<MotivoComUmaPessoa, string> = {
   acima_de_500: `a melhor proposta passa dos ${LIMITE_DA_MELHOR_COM_IVA} € com IVA`,
   sem_telemovel: "sem telemóvel para o WhatsApp",
   bloqueado: "o número está bloqueado",
+  nao_contactar: "o cliente pediu para não ser contactado",
 };
+
+/**
+ * A ENTREGA AINDA PRENDE AS PROPOSTAS? — pura (d123). Prende a que uma pessoa
+ * fez (o «Assumir», a resposta à mão), a recente (menos de 2 h), e aquela a que
+ * a equipa já respondeu depois (é com ela). Solta a que a Vitória fez há mais
+ * de 2 h e ficou sem resposta: as propostas são uma notícia do pedido, e o
+ * cliente não fica sem ela. Sem entrega, não prende.
+ */
+export function aEntregaPrendeAsPropostas(
+  e: { quem?: string | null; entregueHaSegundos?: number | null; respostaHaSegundos?: number | null } | null | undefined,
+): boolean {
+  if (!e) return false;
+  if (e.quem !== "vitoria") return true;
+  const ha = typeof e.entregueHaSegundos === "number" && Number.isFinite(e.entregueHaSegundos) ? e.entregueHaSegundos : null;
+  if (ha == null || ha < HORAS_DA_ENTREGA_SEM_RESPOSTA * 3600) return true;
+  const resposta = e.respostaHaSegundos;
+  return typeof resposta === "number" && Number.isFinite(resposta) && resposta <= ha;
+}
 
 /** O pedido, como o envio automático o vê. */
 export type PedidoParaOEnvio = {
@@ -102,10 +135,15 @@ export type PedidoParaOEnvio = {
   /** Um parceiro aceitou o valor que o cliente propôs (a mais antiga por dizer): a 1.ª mensagem não espera a hora. */
   aceitouEm?: Date | null;
   ultimaMudancaEm: Date;
-  /** A equipa mandou o orçamento à mão depois da última mensagem da Vitória: o resto é dela. */
+  /**
+   * Nada mais a dizer sobre estas propostas. Desde a d123 o orçamento mandado
+   * à mão já não o liga: conta em `ultimoEnvioEm`.
+   */
   jaEnviado: boolean;
-  /** A última mensagem das propostas que a Vitória mandou sozinha (d114), ou null. */
+  /** A última mensagem de propostas a este cliente — da Vitória ou da equipa à mão (d123) —, ou null. */
   ultimoEnvioEm?: Date | null;
+  /** d123: quantas mensagens de propostas a Vitória mandou hoje (dia de Lisboa) a este pedido. */
+  enviosHoje?: number;
   /** Quantas propostas o cliente ainda não ouviu (pela rotina, pela passagem ou pela conversa). Sem isto, as por enviar. */
   novas?: number;
   /** Já há um parceiro contratado: depois de aceitar, nada mais sobre propostas. */
@@ -121,6 +159,8 @@ export type PedidoParaOEnvio = {
   melhorComIva: number | null;
   temTelemovel: boolean;
   bloqueado?: boolean;
+  /** d93: o cliente pediu para não ser contactado. */
+  naoContactar?: boolean;
 };
 
 /** PORQUE FICA COM UMA PESSOA — ou null. Pura. */
@@ -131,6 +171,7 @@ export function porqueFicaComUmaPessoa(p: PedidoParaOEnvio): MotivoComUmaPessoa 
   if (p.queixa) return "queixa";
   if (!p.temTelemovel) return "sem_telemovel";
   if (p.bloqueado) return "bloqueado";
+  if (p.naoContactar) return "nao_contactar";
   if (p.comUmaPessoa) return "com_uma_pessoa";
   if (p.linguaSemTraducao) return "noutra_lingua";
   if (p.melhorComIva != null && p.melhorComIva > LIMITE_DA_MELHOR_COM_IVA + 0.005) return "acima_de_500";
@@ -138,12 +179,12 @@ export function porqueFicaComUmaPessoa(p: PedidoParaOEnvio): MotivoComUmaPessoa 
 }
 
 /**
- * A PARTIR DE QUANDO PODE SAIR — pura (d114). A 1.ª mensagem: 1 h depois da
+ * A PARTIR DE QUANDO PODE SAIR — pura. A 1.ª mensagem (d114): 1 h depois da
  * 1.ª proposta, ou quando chega a 2.ª, ou quando um parceiro aceitou o valor do
- * cliente — o que vier primeiro. Depois dela, a seguinte só no dia seguinte
- * (às 9h): uma por dia. Nunca antes de 10 min depois da última mudança de um
- * parceiro. A janela (9h–20h) e a uma-por-dia de todas as rotinas vêm depois,
- * em `estadoDoEnvio`.
+ * cliente — o que vier primeiro. Depois dela (d123): 2 h depois da última
+ * mensagem de propostas a este cliente. Nunca antes de 10 min depois da última
+ * mudança de um parceiro. A janela (9h–20h) e as 3 por dia vêm depois, em
+ * `estadoDoEnvio`.
  */
 export function devidoDasPropostas(
   p: Pick<PedidoParaOEnvio, "primeiraEm" | "segundaEm" | "aceitouEm" | "ultimaMudancaEm" | "ultimoEnvioEm">,
@@ -151,7 +192,7 @@ export function devidoDasPropostas(
   const depoisDaMudanca = p.ultimaMudancaEm.getTime() + MINUTOS_DEPOIS_DE_MUDAR * 60_000;
   let devido: number;
   if (p.ultimoEnvioEm) {
-    devido = aHoraDoDia(somarDiasAoDia(diaEmLisboa(p.ultimoEnvioEm), 1), HORA_DO_QUE_FICOU_PARA_DEPOIS).getTime();
+    devido = p.ultimoEnvioEm.getTime() + MINUTOS_ENTRE_MENSAGENS_DAS_PROPOSTAS * 60_000;
   } else {
     devido = Math.min(
       p.primeiraEm.getTime() + MINUTOS_ATE_A_PRIMEIRA_MENSAGEM * 60_000,
@@ -162,25 +203,27 @@ export function devidoDasPropostas(
   return new Date(Math.max(devido, depoisDaMudanca));
 }
 
+export type PorqueEspera = "mudou" | "intervalo" | "tres_por_dia" | "janela" | "prazo" | null;
+
 export type EstadoDoEnvio =
   | { tipo: "ja_enviado" }
   | { tipo: "fica"; motivo: MotivoComUmaPessoa }
-  | { tipo: "sai"; quando: Date; agora: boolean; porqueEspera: "mudou" | "uma_por_dia" | "janela" | "prazo" | "amanha" | null };
+  | { tipo: "sai"; quando: Date; agora: boolean; porqueEspera: PorqueEspera };
 
 /**
- * O QUE ACONTECE A ESTE PEDIDO — pura. Já enviado; fica com uma pessoa (e
- * porquê); ou sai, e quando: já, ou à hora a que pode (o prazo, os 10 min da
- * mudança, a janela das 9h–20h, ou amanhã às 9h por já ter saído hoje outra
- * mensagem automática).
+ * O QUE ACONTECE A ESTE PEDIDO — pura. Já dito; fica com uma pessoa (e
+ * porquê); ou sai, e quando: já, ou à hora a que pode (o prazo da 1.ª, os
+ * 10 min da mudança, as 2 h desde a última mensagem de propostas, a janela das
+ * 9h–20h, ou amanhã às 9h por já terem saído hoje 3).
  */
-export function estadoDoEnvio(p: PedidoParaOEnvio, agora: Date, opcoes: { jaSaiuHoje?: boolean } = {}): EstadoDoEnvio {
-  // d114: depois de aceitar, à mão pela equipa, ou sem nada que o cliente não tenha ouvido — nada sai.
+export function estadoDoEnvio(p: PedidoParaOEnvio, agora: Date): EstadoDoEnvio {
+  // Depois de aceitar, ou sem nada que o cliente não tenha ouvido — nada sai.
   if (p.jaEnviado || p.fechado || (p.novas ?? 1) <= 0) return { tipo: "ja_enviado" };
   const motivo = porqueFicaComUmaPessoa(p);
   if (motivo) return { tipo: "fica", motivo };
   const devido = devidoDasPropostas(p);
   let quando = momentoDeSaida(devido, agora);
-  let porqueEspera: "mudou" | "uma_por_dia" | "janela" | "prazo" | "amanha" | null = null;
+  let porqueEspera: PorqueEspera = null;
   if (quando.getTime() > agora.getTime()) {
     const daMudanca = p.ultimaMudancaEm.getTime() + MINUTOS_DEPOIS_DE_MUDAR * 60_000;
     porqueEspera =
@@ -188,13 +231,14 @@ export function estadoDoEnvio(p: PedidoParaOEnvio, agora: Date, opcoes: { jaSaiu
         ? devido.getTime() === daMudanca
           ? "mudou"
           : p.ultimoEnvioEm
-            ? "amanha"
+            ? "intervalo"
             : "prazo"
         : "janela";
   }
-  if (opcoes.jaSaiuHoje && diaEmLisboa(quando) === diaEmLisboa(agora)) {
+  // d123: no máximo 3 por dia — a 4.ª fica para amanhã às 9h.
+  if ((p.enviosHoje ?? 0) >= MAXIMO_DE_MENSAGENS_DAS_PROPOSTAS_POR_DIA && diaEmLisboa(quando) === diaEmLisboa(agora)) {
     quando = aHoraDoDia(somarDiasAoDia(diaEmLisboa(agora), 1), HORA_DO_QUE_FICOU_PARA_DEPOIS);
-    porqueEspera = "uma_por_dia";
+    porqueEspera = "tres_por_dia";
   }
   return { tipo: "sai", quando, agora: quando.getTime() <= agora.getTime(), porqueEspera };
 }
@@ -212,10 +256,10 @@ export function linhaDoEnvioNaMesa(e: EstadoDoEnvio, ligado: boolean): string | 
   const porque =
     e.porqueEspera === "mudou"
       ? " (um parceiro mudou a proposta há menos de 10 min)"
-      : e.porqueEspera === "uma_por_dia"
-        ? " (já saiu hoje outra mensagem automática a este cliente)"
-        : e.porqueEspera === "amanha"
-          ? " (as propostas novas juntam-se numa mensagem por dia)"
+      : e.porqueEspera === "tres_por_dia"
+        ? ` (já saíram hoje ${MAXIMO_DE_MENSAGENS_DAS_PROPOSTAS_POR_DIA} mensagens de propostas a este cliente)`
+        : e.porqueEspera === "intervalo"
+          ? " (2 h depois da última mensagem de propostas)"
           : e.porqueEspera === "prazo"
             ? " (1 h depois da 1.ª proposta, ou quando chegar a 2.ª)"
             : "";

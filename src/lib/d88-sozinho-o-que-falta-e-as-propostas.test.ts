@@ -344,10 +344,10 @@ describe("passo 3: quando vão as propostas (d114: 1 h, ou a 2.ª; depois uma po
     expect(e.tipo === "sai" && e.quando.toISOString()).toBe(as("2026-11-24", "09:00").toISOString());
   });
 
-  it("já saiu hoje outra mensagem automática: amanhã às 9h", () => {
-    const e = estadoDoEnvio(envio({ parceiros: 3, ultimaMudancaEm: antes(30) }), AGORA, { jaSaiuHoje: true });
-    expect(e).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "uma_por_dia" });
-    expect(linhaDoEnvioNaMesa(e, true)).toBe("a Vitória envia ao cliente a 24/11 às 9h (já saiu hoje outra mensagem automática a este cliente)");
+  it("d123: já saíram hoje 3 mensagens de propostas: amanhã às 9h", () => {
+    const e = estadoDoEnvio(envio({ parceiros: 3, ultimaMudancaEm: antes(30), ultimoEnvioEm: antes(200), enviosHoje: 3 }), AGORA);
+    expect(e).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "tres_por_dia" });
+    expect(linhaDoEnvioNaMesa(e, true)).toBe("a Vitória envia ao cliente a 24/11 às 9h (já saíram hoje 3 mensagens de propostas a este cliente)");
   });
 
   it("ficam com uma pessoa: acima de 500 € com IVA, Trabalho CLYON, valor único, à hora, com uma pessoa, outra língua, queixa", () => {
@@ -455,7 +455,8 @@ describe("passo 3: a mesma função do botão", () => {
     const painel = ler("src/components/admin/AdminNegociacoesPanel.tsx");
     expect(painel).toContain("return textoDoOrcamentoDaMesa(p, new Date(), propostas);");
     const naBase = ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts");
-    expect(naBase).toContain("const texto = textoDasPropostasDoPedido(p, agora, notas, ultimoEnvioEm == null, await guiasDosParceiros(pool, p));");
+    expect(naBase).toContain("const texto = textoDasPropostasDoPedido(");
+    expect(naBase).toContain("{ nova, variante, soAs: new Set(porDizer.map((v) => v.negociacaoId)) },");
     expect(naBase).toContain("const texto = c.texto;");
     expect(naBase).toContain("enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true })");
     expect(naBase).toContain("db.marcarOrcamentoEnviado(pedidoId)");
@@ -479,10 +480,11 @@ describe("passo 3: o envio, com a base fingida", { timeout: 60_000 }, () => {
     const r = await enviarAsPropostasAoCliente(9102, AGORA);
     expect(r).toEqual({ ok: true, feito: "Orçamento enviado ao cliente pela Vitória (WhatsApp) — 3 propostas, mensagem curta (d114)." });
     expect(base.enviados).toHaveLength(1);
-    expect(base.enviados[0]).toContain("Já tem 3 propostas para o seu pedido #9102 (recolha de monos):");
+    // d123: uma das 5 maneiras de dizer a 1.ª com várias; os pormenores (validade, fatura, taxa) só depois de aceitar.
+    expect(base.enviados[0].split("\n")[0]).toContain("seu pedido #9102 (recolha de monos)");
     expect(base.enviados[0]).toContain("1) Recolhas Inventadas: ");
-    expect(base.enviados[0]).toContain("Qual prefere? Responda com o número.");
-    expect(base.enviados[0]).not.toMatch(/válida até|fatura|adiantado|taxa/);
+    expect(base.enviados[0]).toMatch(/respond(?:a|er) com o número|o número da que/i);
+    expect(base.enviados[0]).not.toMatch(/válida até|fatura|taxa/);
     expect(base.marcados).toEqual([9102]);
     expect(base.historico).toEqual(["Orçamento enviado ao cliente pela Vitória (WhatsApp) — 3 propostas, mensagem curta (d114)."]);
     expect(base.ditas).toEqual(["proposta:1:1", "proposta:2:1", "proposta:3:1"]);
@@ -630,9 +632,8 @@ describe("o orçamento sai na língua da conversa — uma conversa em inglês (o
 
   it("o automático, sem tradução fixa da mensagem: fica com uma pessoa, «cliente noutra língua»", async () => {
     base.fio = EM_INGLES;
-    // Um nome de parceiro com um ponto a meio parte a frase em duas: a mensagem curta fica sem tradução fixa.
-    const comPonto = negociacao(1, "J. Inventado", 100, antes(200));
-    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [comPonto] })];
+    // Um serviço sem nome nas traduções fixas: a mensagem fica sem tradução fixa.
+    base.pedidosDaMesa = [pedidoDaMesa({ serviceType: "servico_inventado", negociacoes: [negociacao(1, "Recolhas Inventadas", 100, antes(200))] })];
     const { candidatosAoEnvio, enviarAsPropostasAoCliente } = await import("./envio-das-propostas-ao-cliente-na-base");
     const [c] = await candidatosAoEnvio(AGORA);
     const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");

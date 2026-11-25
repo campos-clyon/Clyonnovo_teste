@@ -120,6 +120,7 @@ import {
   CORES_DA_CATEGORIA_ESCURO,
   ETIQUETA_DA_CATEGORIA,
 } from "@/lib/assistente-categorias";
+import { etiquetaDasPropostasPorEnviar } from "@/lib/do-nosso-lado";
 import {
   contaDoCliente,
   quantoOProfissionalRecebe,
@@ -3016,7 +3017,9 @@ export default function AdminNegociacoesPanel({
               <span
                 className={`shrink-0 whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-semibold ${CORES_DA_CATEGORIA_ESCURO[categoriaDoPedido(p)] ?? "border-slate-700 text-slate-400"}`}
               >
-                {ETIQUETA_DA_CATEGORIA[categoriaDoPedido(p)]}
+                {/* d123: «Orçamento enviado» só depois de uma mensagem que saiu; antes, «Propostas por enviar». */}
+                {etiquetaDasPropostasPorEnviar(categoriaDoPedido(p), p as unknown as Parameters<typeof etiquetaDasPropostasPorEnviar>[1], new Date()) ??
+                  ETIQUETA_DA_CATEGORIA[categoriaDoPedido(p)]}
               </span>
               {/*
                 A ORIGEM COMO ETIQUETA, NÃO COMO GAVETA.

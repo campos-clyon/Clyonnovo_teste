@@ -786,6 +786,8 @@ const ONDE_O_SELO_VIVE = new Set([
   "src/lib/valor-unico-ao-cliente.ts",
   // d54: a lembrança das propostas só diz «verificados» quando todos os que propuseram o são (`l.verificados`).
   "src/lib/propostas-sem-resposta.ts",
+  // d123: a mensagem variada das propostas só diz «verificado(s)» quando todos os parceiros dela o são (`p.verificado`).
+  "src/lib/propostas-curtas.ts",
   "app-cliente/src/componentes/Proposta.tsx",
   "app-cliente/src/lib/pedidos.ts",
 ]);

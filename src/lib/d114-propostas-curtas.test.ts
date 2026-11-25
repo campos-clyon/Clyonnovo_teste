@@ -49,7 +49,7 @@ const envio = (o: Partial<PedidoParaOEnvio> = {}): PedidoParaOEnvio => ({
 const TEJO: PropostaCurta = { negociacaoId: 1, parceiro: "Recolhas Tejo", semIva: 80, total: 98.4 };
 const SADO: PropostaCurta = { negociacaoId: 2, parceiro: "Sado Transportes", semIva: 100, total: 123 };
 
-describe("quando sai — 1 h, ou a 2.ª proposta, e depois uma por dia", () => {
+describe("quando sai — 1 h, ou a 2.ª proposta; depois, 2 h entre mensagens (d123)", () => {
   it("a 1.ª proposta espera 1 h", () => {
     expect(MINUTOS_ATE_A_PRIMEIRA_MENSAGEM).toBe(60);
     expect(devidoDasPropostas(envio()).toISOString()).toBe(mais(DEZ, 60).toISOString());
@@ -75,22 +75,18 @@ describe("quando sai — 1 h, ou a 2.ª proposta, e depois uma por dia", () => {
     expect(e.tipo === "sai" && e.quando.toISOString()).toBe("2026-11-26T09:00:00.000Z");
   });
 
-  it("depois da 1.ª, as novas juntam-se numa por dia — no dia seguinte, às 9h", () => {
+  it("d123: depois da 1.ª, a nova sai 2 h depois da última mensagem — não no dia seguinte", () => {
     const nova = envio({ ultimoEnvioEm: DEZ, primeiraEm: mais(DEZ, 60), ultimaMudancaEm: mais(DEZ, 60), novas: 1 });
-    const e = estadoDoEnvio(nova, mais(DEZ, 180));
-    expect(e).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "amanha" });
-    expect(e.tipo === "sai" && diaEmLisboa(e.quando)).toBe("2026-11-26");
-    expect(e.tipo === "sai" && e.quando.toISOString()).toBe("2026-11-26T09:00:00.000Z");
-    // No dia seguinte, sai.
-    expect(estadoDoEnvio(nova, new Date("2026-11-26T09:05:00Z"))).toMatchObject({ tipo: "sai", agora: true });
+    expect(estadoDoEnvio(nova, mais(DEZ, 90))).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "intervalo" });
+    expect(estadoDoEnvio(nova, mais(DEZ, 121))).toMatchObject({ tipo: "sai", agora: true });
   });
 
-  it("a uma-por-dia de todas as rotinas também conta", () => {
-    const e = estadoDoEnvio(envio(), mais(DEZ, 61), { jaSaiuHoje: true });
-    expect(e).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "uma_por_dia" });
+  it("d123: as outras rotinas já não atrasam as propostas; o «não contactar» cala-as", () => {
+    expect(estadoDoEnvio(envio(), mais(DEZ, 61))).toMatchObject({ tipo: "sai", agora: true });
+    expect(estadoDoEnvio(envio({ naoContactar: true }), mais(DEZ, 61))).toEqual({ tipo: "fica", motivo: "nao_contactar" });
   });
 
-  it("nada sai sem propostas novas, depois de aceitar, ou depois de a equipa mandar à mão", () => {
+  it("nada sai sem propostas novas, depois de aceitar, ou com «já enviado»", () => {
     expect(estadoDoEnvio(envio({ novas: 0 }), mais(DEZ, 61)).tipo).toBe("ja_enviado");
     expect(estadoDoEnvio(envio({ fechado: true }), mais(DEZ, 61)).tipo).toBe("ja_enviado");
     expect(estadoDoEnvio(envio({ jaEnviado: true }), mais(DEZ, 61)).tipo).toBe("ja_enviado");
@@ -221,7 +217,9 @@ describe("nunca se repete — a mesma chave nos três caminhos", () => {
 
   it("a rotina marca as que disse, conta só as que ele não ouviu, e a conversa livre e a lista da d111 também marcam", () => {
     const BASE = ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts");
-    expect(BASE).toContain("const novas = vivas.filter((v) => !ditas.has(v.chave)).length;");
+    // d123: as por dizer — nem ditas, nem de antes do orçamento que já foi.
+    expect(BASE).toContain("if (ditas.has(v.chave)) return false;");
+    expect(BASE).toContain("novas: porDizer.length,");
     const envio = BASE.slice(BASE.indexOf("export async function enviarAsPropostasAoCliente("));
     expect(envio.indexOf("enviarTextoManualWhatsApp(telefone, texto")).toBeLessThan(envio.indexOf("await marcarPropostasDitas(telefone, pedidoId, c.chaves);"));
     expect(ler("src/lib/vitoria-agente/ao-vivo-na-base.ts")).toContain("marcarAsPropostasNomeadas(telefone, texto)");

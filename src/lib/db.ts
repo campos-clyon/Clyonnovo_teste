@@ -13589,6 +13589,24 @@ export async function numeroInterrompidoWhatsApp(telefone: string): Promise<bool
   return !voltaram.has(soDigitos(entrega.telefone).slice(-9));
 }
 
+/**
+ * A ENTREGA EM VIGOR DESTE NÚMERO — quem a fez, há quanto tempo, e há quanto
+ * a equipa respondeu à mão; ou null (não está entregue). Para a d123: a
+ * entrega da Vitória sem resposta há mais de 2 h já não prende as propostas
+ * (`aEntregaPrendeAsPropostas`).
+ */
+export async function entregaEmVigorWhatsApp(
+  telefone: string,
+): Promise<{ quem: "vitoria" | "pessoa" | null; entregueHaSegundos: number | null; respostaHaSegundos: number | null } | null> {
+  const digitos = soDigitos(telefone);
+  if (digitos.length < 9) return null;
+  const entrega = await entregaDoNumeroWhatsApp(digitos);
+  if (!entrega) return null;
+  const voltaram = await entregasQueVoltaramAVitoria([entrega]).catch(() => new Set<string>());
+  if (voltaram.has(soDigitos(entrega.telefone).slice(-9))) return null;
+  return { quem: entrega.quem, entregueHaSegundos: entrega.entregueHaSegundos, respostaHaSegundos: entrega.respostaHaSegundos };
+}
+
 /** O motivo com que a conversa foi entregue a uma pessoa (o último), ou null — d111. */
 export async function motivoDaEntregaWhatsApp(telefone: string): Promise<string | null> {
   const digitos = soDigitos(telefone);
