@@ -106,15 +106,15 @@ describe("a passagem única: os pedidos de hoje com as propostas já ditas pela 
   const fio = (texto: string, haMin: number, direccao = "out") => ({ direccao, texto, haSegundos: haMin * 60 });
 
   it("só os que têm uma mensagem dela, depois da proposta, a nomear o parceiro", () => {
-    const pedidos = [pedido(), pedido({ id: 9120, contactPhone: "912345679" }), pedido({ id: 9121, contactPhone: "912345670" }), pedido({ id: 9122, contactPhone: "912345671" })];
+    const pedidos = [pedido(), pedido({ id: 9120, contactPhone: "910000119" }), pedido({ id: 9121, contactPhone: "910000120" }), pedido({ id: 9122, contactPhone: "910000121" })];
     const fios: Record<string, ReturnType<typeof fio>[]> = {
       "912345678": [fio("Já tem a primeira proposta: 98,40 € (80 € + IVA), do parceiro Recolhas Inventadas.", 60)],
       // Antes da proposta: não conta.
-      "912345679": [fio("A Recolhas Inventadas é um parceiro da zona.", 200)],
+      "910000119": [fio("A Recolhas Inventadas é um parceiro da zona.", 200)],
       // Sem nomear o parceiro: não conta.
-      "912345670": [fio("Obrigada! Já anotei.", 30)],
+      "910000120": [fio("Obrigada! Já anotei.", 30)],
       // À mão, da equipa: o «Já enviei» é dela.
-      "912345671": [fio("[à mão] A proposta da Recolhas Inventadas é 98,40 €", 30)],
+      "910000121": [fio("[à mão] A proposta da Recolhas Inventadas é 98,40 €", 30)],
     };
     expect(pedidosJaDitosPelaVitoria(pedidos, (t) => fios[t] ?? [], AGORA)).toEqual([9119]);
   });
