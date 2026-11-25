@@ -373,8 +373,8 @@ describe("as peças estão ligadas", () => {
 
   it("a carteira recebe a marca", () => {
     expect(semNotas(ler("src/lib/carteira-do-profissional.ts"))).toContain(
-      // d33: a pergunta única, pela criação do pedido (com o interruptor ligado, todos).
-      "pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm }, agora),",
+      // d33: a pergunta única, pela criação do pedido (com o interruptor ligado, todos); d122: e o que já andou.
+      "pagoPelaClyon: trabalhoClyonDoModeloAntigo(\n      { ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm, confirmadoEm: l.confirmadoEm ?? null, pagoAoProfissionalEm: l.pagoEm ?? null },",
     );
     // d31 (o #612): pago quando o cliente pagou, ou quando a CLYON já lhe transferiu.
     expect(semNotas(ler("src/lib/carteira.ts"))).toContain("if (t.pagoPelaClyon) return t.clientePagouEm != null || t.pagoEm != null;");

@@ -547,6 +547,9 @@ export function negociacaoFechada(n: NegociacaoParaRetencao): boolean {
         ofertaClyon: n.ofertaClyon,
         pedidoCriadoEm: n.pedidoCriadoEm ?? null,
         clientePagouAClyonEm: n.clientePagouAClyonEm ?? null,
+        // d122: o que já andou fica como foi.
+        confirmadoEm: n.confirmadoEm ?? null,
+        pagoAoProfissionalEm: n.pagoEm ?? null,
       })
     )
       return true;

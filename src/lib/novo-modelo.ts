@@ -321,6 +321,13 @@ export function trabalhoClyonDoModeloAntigo(
      * pago pelo cliente por MB WAY a 17-11) mostrava a conta do modelo novo.
      */
     clientePagouAClyonEm?: Date | string | null;
+    /**
+     * d122 (dono e CEO, 25-11-2026): o trabalho já andou — feito e confirmado,
+     * ou a CLYON já pagou ao profissional. Um de antes do corte que já andou fica
+     * no antigo, como foi.
+     */
+    confirmadoEm?: Date | string | null;
+    pagoAoProfissionalEm?: Date | string | null;
   },
   agora: Date = new Date(),
 ): boolean {
@@ -328,7 +335,19 @@ export function trabalhoClyonDoModeloAntigo(
   if (!clyon) return false;
   if (trabalhosClyonTodosNoModeloAntigo()) return true;
   if (comoData(n.clientePagouAClyonEm) != null) return true;
-  return !trabalhoClyonNoNovoModelo(n.pedidoCriadoEm, agora);
+  if (trabalhoClyonNoNovoModelo(n.pedidoCriadoEm, agora)) return false;
+  /*
+   * d122 (25-11-2026), o dono: «Ao parceiro». Num Trabalho CLYON o cliente paga
+   * o valor todo, com IVA, diretamente ao parceiro, que fatura o trabalho e
+   * passa à CLYON a taxa — o modelo de 15-11. Os de antes do corte que ainda
+   * não foram pagos (nem à CLYON, nem ao profissional, nem confirmados) passam
+   * a ele; os que já andaram ficam como foram. Antes do modelo em vigor, todos
+   * no antigo.
+   */
+  if (!novoModeloEmVigor(agora)) return true;
+  // Sem a data do pedido, fica no antigo — nunca se passa ao novo por não se saber quando nasceu.
+  if (instanteDaBase(n.pedidoCriadoEm ?? null) == null) return true;
+  return comoData(n.confirmadoEm) != null || comoData(n.pagoAoProfissionalEm) != null;
 }
 
 /**
@@ -345,6 +364,9 @@ export function trabalhoClyonDoNovoModelo(
     pedidoCriadoEm?: Date | string | null;
     /** d58: o cliente pagou à CLYON — fica no antigo (`trabalhoClyonDoModeloAntigo`). */
     clientePagouAClyonEm?: Date | string | null;
+    /** d122: o que já andou fica no antigo, como foi. */
+    confirmadoEm?: Date | string | null;
+    pagoAoProfissionalEm?: Date | string | null;
   },
   agora: Date = new Date(),
 ): boolean {
@@ -365,7 +387,8 @@ export function eDoNovoModelo(n: NegociacaoParaOModelo, agora: Date = new Date()
   if (!novoModeloEmVigor(agora)) return false;
   if (
     trabalhoClyonDoModeloAntigo(
-      { ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm, clientePagouAClyonEm: n.clientePagouAClyonEm },
+      // d122: o trabalho que já fechou fica como foi.
+      { ofertaClyon: n.ofertaClyon, pedidoCriadoEm: n.pedidoCriadoEm, clientePagouAClyonEm: n.clientePagouAClyonEm, confirmadoEm: n.fechadoEm },
       agora,
     )
   )

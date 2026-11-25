@@ -400,6 +400,9 @@ export function novoModeloComTotais(
       ofertaClyon: n.ofertaClyon,
       pedidoCriadoEm: (n.pedidoCriadoEm as Date | string | null | undefined) ?? null,
       clientePagouAClyonEm: (n.clientePagouAClyonEm as Date | string | null | undefined) ?? null,
+      // d122: o que já andou fica como foi.
+      confirmadoEm: n.confirmadoEm ?? null,
+      pagoAoProfissionalEm: n.pagoEm ?? null,
     },
     agora,
   );

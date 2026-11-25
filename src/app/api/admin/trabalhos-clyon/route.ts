@@ -254,7 +254,14 @@ export async function GET(req: NextRequest) {
            */
           // d58: o cliente que já pagou à CLYON deixa-o no antigo (`clientePagouAClyonEm`).
           noNovoModelo: trabalhoClyonDoNovoModelo(
-            { valorFixoClyon: o.valorFixo, pedidoCriadoEm: o.criadoEm, clientePagouAClyonEm: clientePagouAClyonEm(o) },
+            {
+              valorFixoClyon: o.valorFixo,
+              pedidoCriadoEm: o.criadoEm,
+              clientePagouAClyonEm: clientePagouAClyonEm(o),
+              // d122: o que já andou (confirmado, ou pago ao profissional) fica como foi.
+              confirmadoEm: o.negociacoes.map((n) => n.confirmadoEm).find((d) => d != null) ?? null,
+              pagoAoProfissionalEm: o.negociacoes.map((n) => n.pagoEm).find((d) => d != null) ?? null,
+            },
             agoraDoModelo(),
           ),
           notas: o.notasInternas,

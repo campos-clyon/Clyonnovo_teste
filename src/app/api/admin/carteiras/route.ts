@@ -434,7 +434,13 @@ export async function GET(req: NextRequest) {
        */
       const clyonAntigo =
         trabalhoClyonDoModeloAntigo(
-          { ofertaClyon: l.ofertaClyon, pedidoCriadoEm: (l.pedidoCriadoEm as Date | string | null) ?? null },
+          {
+            ofertaClyon: l.ofertaClyon,
+            pedidoCriadoEm: (l.pedidoCriadoEm as Date | string | null) ?? null,
+            // d122: o que já andou fica como foi.
+            confirmadoEm: (l.confirmadoEm as Date | string | null | undefined) ?? null,
+            pagoAoProfissionalEm: (l.pagoEm as Date | string | null | undefined) ?? null,
+          },
           agoraDoModelo(),
         ) ||
         // d58: um Trabalho CLYON que o cliente pagou à CLYON (lido em `contratadasNoNovoModelo`) é do antigo.

@@ -61,9 +61,11 @@ describe("(a) a data de corte dos Trabalhos CLYON — 15-11-2026", () => {
     expect(trabalhoClyonNoNovoModelo("2026-11-14 23:59:59", DEPOIS)).toBe(false);
     expect(trabalhoClyonNoNovoModelo("2026-11-15 00:00:00", DEPOIS)).toBe(true);
     expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: "2026-11-15 10:00:00" }, DEPOIS)).toBe(true);
-    expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: "2026-11-14 10:00:00" }, DEPOIS)).toBe(false);
+    // d122: o de 14-11 por pagar também passa ao novo; o que já andou fica no antigo.
+    expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: "2026-11-14 10:00:00" }, DEPOIS)).toBe(true);
     expect(trabalhoClyonDoNovoModelo({ valorFixoClyon: "350.00", pedidoCriadoEm: "2026-11-15 10:00:00" }, DEPOIS)).toBe(true);
-    expect(trabalhoClyonDoNovoModelo({ valorFixoClyon: "350.00", pedidoCriadoEm: "2026-11-14 10:00:00" }, DEPOIS)).toBe(false);
+    expect(trabalhoClyonDoNovoModelo({ valorFixoClyon: "350.00", pedidoCriadoEm: "2026-11-14 10:00:00" }, DEPOIS)).toBe(true);
+    expect(trabalhoClyonDoNovoModelo({ valorFixoClyon: "350.00", pedidoCriadoEm: "2026-11-14 10:00:00", confirmadoEm: "2026-11-14 18:00:00" }, DEPOIS)).toBe(false);
   });
 
   it("sem data de criação, antes de o modelo valer, ou não sendo Trabalho CLYON: não", () => {

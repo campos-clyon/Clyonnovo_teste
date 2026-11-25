@@ -80,14 +80,16 @@ describe("a pergunta única — trabalhoClyonDoModeloAntigo", () => {
     expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(false);
   });
 
-  it("desligado: antes do corte → antigo; a partir do corte → novo", () => {
+  // d122 (25-11-2026): o de antes do corte por pagar também passa ao novo; só o que já andou fica no antigo.
+  it("desligado: antes do corte, por pagar → novo (d122); já andou → antigo; a partir do corte → novo", () => {
     desligado();
-    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, DEPOIS)).toBe(true);
+    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, DEPOIS)).toBe(false);
+    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE, confirmadoEm: ANTES_DO_CORTE }, DEPOIS)).toBe(true);
     expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(false);
     // O texto sem fuso da base lê-se em UTC.
-    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-14 23:59:59" }, DEPOIS)).toBe(true);
-    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-15 00:00:00" }, DEPOIS)).toBe(false);
-    expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, DEPOIS)).toBe(false);
+    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-14 23:59:59", pagoAoProfissionalEm: "2026-11-16 10:00:00" }, DEPOIS)).toBe(true);
+    expect(trabalhoClyonDoModeloAntigo({ ofertaClyon: "distribuida", pedidoCriadoEm: "2026-11-15 00:00:00", pagoAoProfissionalEm: "2026-11-16 10:00:00" }, DEPOIS)).toBe(false);
+    expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, DEPOIS)).toBe(true);
     expect(eDoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, DEPOIS)).toBe(true);
   });
 
@@ -111,7 +113,8 @@ describe("a pergunta única — trabalhoClyonDoModeloAntigo", () => {
       negociacaoNoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, pago as never, DEPOIS),
     ).toBe(false);
     expect(negociacaoNoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: NO_CORTE }, [], DEPOIS)).toBe(true);
-    expect(negociacaoNoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, [], DEPOIS)).toBe(false);
+    // d122: o de antes do corte, por pagar, passa ao novo.
+    expect(negociacaoNoNovoModelo({ ofertaClyon: "directa", pedidoCriadoEm: ANTES_DO_CORTE }, [], DEPOIS)).toBe(true);
   });
 });
 
@@ -136,9 +139,9 @@ describe("a vista da negociação — novoModeloComTotais", () => {
     expect(novoModeloComTotais(linha(NO_CORTE) as never, 350, DEPOIS, { segue: true, totais })).toBeNull();
   });
 
-  it("desligado: o de antes do corte não tem; o de depois tem", () => {
+  it("desligado: o de antes do corte por pagar também tem (d122); o de depois tem", () => {
     desligado();
-    expect(novoModeloComTotais(linha(ANTES_DO_CORTE) as never, 350, DEPOIS)).toBeNull();
+    expect(novoModeloComTotais(linha(ANTES_DO_CORTE) as never, 350, DEPOIS)).not.toBeNull();
     expect(novoModeloComTotais(linha(NO_CORTE) as never, 350, DEPOIS)).not.toBeNull();
   });
 
@@ -195,7 +198,8 @@ describe("o servidor — negociacoesNoNovoModelo, segueONovoModelo, contratadasN
     expect(daBase.perguntados).toEqual([]);
   });
 
-  it("desligado: a data do pedido vem da base e decide, dos dois lados", async () => {
+  // d122: o de antes do corte, por pagar, também segue o novo.
+  it("desligado: a data do pedido vem da base — e o de antes, por pagar, também é do novo (d122)", async () => {
     desligado();
     daBase.mapa.set(7, { ofertaClyon: "distribuida", valorFixoClyon: "350.00", pedidoCriadoEm: ANTES_DO_CORTE });
     daBase.mapa.set(8, { ofertaClyon: "distribuida", valorFixoClyon: "350.00", pedidoCriadoEm: NO_CORTE });
@@ -206,12 +210,12 @@ describe("o servidor — negociacoesNoNovoModelo, segueONovoModelo, contratadasN
       ],
       DEPOIS,
     );
-    expect([...abertas]).toEqual([8]);
+    expect([...abertas].sort()).toEqual([7, 8]);
     // Só com o id (como o «agir como cliente» pergunta): a marca e a data vêm da base.
-    expect(await segueONovoModelo({ id: 7, estado: "acordada" }, DEPOIS)).toBe(false);
+    expect(await segueONovoModelo({ id: 7, estado: "acordada" }, DEPOIS)).toBe(true);
     expect(await segueONovoModelo({ id: 8, estado: "acordada" }, DEPOIS)).toBe(true);
     const contratadas = await contratadasNoNovoModelo([{ id: 7 }, { id: 8 }], DEPOIS);
-    expect([...contratadas]).toEqual([8]);
+    expect([...contratadas].sort()).toEqual([7, 8]);
   });
 });
 
@@ -238,13 +242,14 @@ describe("a carteira do profissional — pagoPelaClyon e noNovoModelo", () => {
     expect(t.noNovoModelo).toBe(false);
   });
 
-  it("desligado: o de antes a CLYON paga; o de depois é do parceiro (o cliente paga-lhe)", async () => {
+  // d122: o de antes do corte, por pagar, também é do parceiro; só o que já andou a CLYON paga.
+  it("desligado: o de antes, por pagar, é do parceiro (d122); o de depois também", async () => {
     desligado();
     daBase.mapa.set(7, { ofertaClyon: "directa", valorFixoClyon: "350.00", pedidoCriadoEm: ANTES_DO_CORTE });
     daBase.mapa.set(8, { ofertaClyon: "directa", valorFixoClyon: "350.00", pedidoCriadoEm: NO_CORTE });
     const [antes, depois] = await trabalhosDaCarteira([linha(7), linha(8)]);
-    expect(antes.pagoPelaClyon).toBe(true);
-    expect(antes.noNovoModelo).toBe(false);
+    expect(antes.pagoPelaClyon).toBe(false);
+    expect(antes.noNovoModelo).toBe(true);
     expect(depois.pagoPelaClyon).toBe(false);
     expect(depois.noNovoModelo).toBe(true);
   });

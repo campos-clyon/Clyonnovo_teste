@@ -327,7 +327,11 @@ export async function trabalhosDaCarteira(
     negociacaoCriadaEm: l.createdAt ?? null,
     // Quem paga um trabalho CLYON do modelo antigo é a CLYON — ver `pagoPelaClyon` em
     // carteira.ts. Um de depois do corte (d33) é do parceiro: o cliente paga-lhe.
-    pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm }, agora),
+    // d122: o que já andou (confirmado, ou pago ao profissional) fica como foi.
+    pagoPelaClyon: trabalhoClyonDoModeloAntigo(
+      { ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm, confirmadoEm: l.confirmadoEm ?? null, pagoAoProfissionalEm: l.pagoEm ?? null },
+      agora,
+    ),
     marcasDaDivida: marcas.get(Number(l.id)) ?? [],
     // d89: a dívida de um Trabalho CLYON pago ao profissional vai para o valor a passar à CLYON.
     trabalhoClyon: eTrabalhoClyonDaLinha(l, clyon.has(Number(l.id))),

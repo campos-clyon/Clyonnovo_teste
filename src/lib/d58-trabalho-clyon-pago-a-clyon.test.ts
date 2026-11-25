@@ -121,9 +121,8 @@ describe("(3) todos os sítios que decidem o modelo do Trabalho CLYON perguntam 
 
   it("o cartão, a carteira (pagoPelaClyon), o acesso ao pagamento, as Carteiras, a vista do cliente e a retenção", () => {
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("clientePagouAClyonEm: clientePagouAClyonEm(o)");
-    expect(ler("src/lib/carteira-do-profissional.ts")).toContain(
-      "pagoPelaClyon: trabalhoClyonDoModeloAntigo({ ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm }, agora)",
-    );
+    // d122: e o que já andou (confirmado, ou pago ao profissional).
+    expect(ler("src/lib/carteira-do-profissional.ts")).toContain("pagoPelaClyon: trabalhoClyonDoModeloAntigo(\n      { ofertaClyon: l.ofertaClyon, pedidoCriadoEm, clientePagouAClyonEm, confirmadoEm: l.confirmadoEm ?? null, pagoAoProfissionalEm: l.pagoEm ?? null },");
     expect(ler("src/lib/acesso-ao-pagamento.ts")).toContain("trabalho: linha,");
     expect(ler("src/app/api/admin/carteiras/route.ts")).toContain("(trabalhoClyon && !doNovoModelo.has(Number(l.negociacaoId)))");
     expect(ler("src/lib/negociacao-na-vista.ts")).toContain("clientePagouAClyonEm: (n.clientePagouAClyonEm as Date | string | null | undefined) ?? null");

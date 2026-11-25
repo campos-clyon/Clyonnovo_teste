@@ -2582,13 +2582,22 @@ export async function ecraDoPedido(pedidoId: number): Promise<string> {
     });
     if (preco) {
       const semFactura = Number((acordada as { semFactura?: unknown } | undefined)?.semFactura ?? 0) === 1;
-      return linhaDoTrabalhoClyonNaConversa({
+      const linhaDoClyon = linhaDoTrabalhoClyonNaConversa({
         pedidoId,
         parceiro: acordada?.profissionalNome ?? null,
         preco: { semIva: preco.semIva, total: preco.total },
         semFactura,
         unidade: unidadeDaBase(base),
       });
+      /*
+       * d122 (25-11-2026), o dono: «Ao parceiro». Contratado no modelo de 15-11,
+       * o «a quem pago?» é o mesmo da confirmação e da adjudicação: ao parceiro,
+       * pelos meios dele, com a fatura dele (`pagaAoContratado`).
+       */
+      if (acordada && (await noNovoModelo(acordada))) {
+        return `${linhaDoClyon} ${quemPassaAFatura(acordada)} ${pagaAoContratado(await dadosPorConfirmarDe(Number(acordada.id)))}`;
+      }
+      return linhaDoClyon;
     }
   }
   if (acordada) {
