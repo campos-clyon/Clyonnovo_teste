@@ -56,8 +56,9 @@ const todos = (): string[] => {
 describe("os oito textos, como ficaram", () => {
   it("1. o lembrete da validade: ficou a pensar? o parceiro faz por X com IVA (Y + IVA), sem nada adiantado, vale até", () => {
     expect(textoDoLembrete(LEMBRETE)).toBe(
+      // d114: mais curto — o valor, o parceiro, até quando vale e a pergunta.
       "Olá, Rosalinda! Ficou a pensar no seu pedido #612 (recolha de monos)? O parceiro Recolhas Exemplo faz por 123 € com IVA (100 € + IVA). " +
-        `É o total, sem nada adiantado. Vale até sexta-feira, 27/11. ${AS_TRES_OPCOES}`,
+        `Vale até sexta-feira, 27/11. ${AS_TRES_OPCOES}`,
     );
   });
 
@@ -91,8 +92,8 @@ describe("os oito textos, como ficaram", () => {
 
   it("5. o seguimento, 1.ª: já conseguiu pensar? o valor é o total, sem nada adiantado, extra só com o seu ok", () => {
     expect(textoDaMensagem1(SEGUIMENTO)).toBe(
-      "Olá, Rosalinda! Já conseguiu pensar no seu pedido #612 (recolha de monos)? O valor é o total, sem nada adiantado, e qualquer extra no dia só com o seu ok. " +
-        AS_OPCOES_DO_SEGUIMENTO,
+      // d114: curto — a pergunta e as opções; os pormenores vão na confirmação depois de aceitar.
+      "Olá, Rosalinda! Já conseguiu pensar no seu pedido #612 (recolha de monos)? " + AS_OPCOES_DO_SEGUIMENTO,
     );
   });
 

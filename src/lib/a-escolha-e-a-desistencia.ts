@@ -35,6 +35,7 @@ import { eDaEquipa } from "./rajada-do-whatsapp";
 import { haQuantoFalouAEquipa } from "./pedido-em-curso";
 import { identificarProposta, type PropostaDoAgente } from "./vitoria-agente/propostas-do-agente";
 import { unidadeDaBase } from "./base-do-preco";
+import { lerAMensagemCurtaDasPropostas, totalDoValorEscrito } from "./propostas-curtas";
 
 /** Sem acentos, minúsculas, sem pontuação nem apóstrofos, espaços simples. */
 function normalizar(texto: string): string {
@@ -162,10 +163,23 @@ export function textoDaListaDasPropostas(
   return [cabeca, ...linhas, QUAL_QUER_ESCOLHER].join("\n");
 }
 
+/**
+ * O VALOR QUE O CLIENTE VIU NA LISTA É O DE AGORA? Pelo total: a lista da d111
+ * escreve «75,00 € + IVA = 92,07 €», a mensagem curta da d114 «92,07 € (75 € +
+ * IVA)». Sem total que se leia, o texto tal e qual. Pura.
+ */
+export function mesmoValorNaLista(valorDaLinha: string, p: Pick<PropostaDoAgente, "comoOClienteVe" | "base">): boolean {
+  const daLinha = totalDoValorEscrito(valorDaLinha);
+  const deAgora = totalDoValorEscrito(p.comoOClienteVe);
+  if (daLinha == null || deAgora == null) return valorDaLinha === valorNaLista(p);
+  return Math.abs(daLinha - deAgora) < 0.005;
+}
+
 /** A lista, lida do texto que saiu (o registo fica em português) — ou null. Pura. */
 export function lerAListaDasPropostas(texto: string | null | undefined): { pedidoId: number; linhas: LinhaDaLista[] } | null {
   const t = String(texto ?? "").replace(/\r/g, "");
-  if (!t.includes(QUAL_QUER_ESCOLHER)) return null;
+  // d114: a mensagem curta das propostas («Responda 1», «1) X: …») lê-se pela mesma porta.
+  if (!t.includes(QUAL_QUER_ESCOLHER)) return lerAMensagemCurtaDasPropostas(t);
   const cabeca = /(?:propostas para o pedido|das propostas do pedido) #(\d+)\b/.exec(t);
   const pedidoId = Number(cabeca?.[1]);
   if (!Number.isInteger(pedidoId) || pedidoId <= 0) return null;

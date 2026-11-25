@@ -1,3 +1,4 @@
+import { NAO_PAGA_NADA_ADIANTADO } from "@/lib/validade-do-orcamento";
 import {
   getPool,
   getSimulatorOrderById,
@@ -1529,11 +1530,27 @@ async function fecharPeloCliente(
    * se lhe diz que tem, e a Vitória pede a rua a seguir (uma vez).
    */
   const { faltaARua } = await import("@/lib/rua-depois-do-aceite");
-  const semRua = await getSimulatorOrderById(alvo.pedidoId)
-    .then((p) => faltaARua(typeof p?.address === "string" ? p.address : null))
-    .catch(() => false);
+  const doPedido = await getSimulatorOrderById(alvo.pedidoId).catch(() => null);
+  const semRua = faltaARua(typeof doPedido?.address === "string" ? doPedido.address : null);
+  /*
+   * OS PORMENORES SÓ AQUI, DEPOIS DE ACEITAR — 25-11-2026 (d114). A mensagem
+   * das propostas ficou curta (o valor, o parceiro, a pergunta); o que vem com
+   * o «sim» diz-se agora, curto: o que fica coberto e o que se faz a itens a
+   * mais (pela tabela do serviço), que se confirma no local, e — no modelo de
+   * 15-11 — que não paga nada adiantado. O pagamento, a fatura e a isenção já
+   * estão na frase de cima.
+   */
+  const { extraNoLocal } = await import("@/lib/extra-no-local");
+  const servicoDoPedido = typeof doPedido?.serviceType === "string" ? doPedido.serviceType : null;
+  const pormenores = [
+    alvo.base === "total" ? extraNoLocal(servicoDoPedido, "total") : "",
+    ORCAMENTO_A_DISTANCIA,
+    novo ? NAO_PAGA_NADA_ADIANTADO : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const oFecho =
-    `${fechado}${comNotaDaCarga(alvo.base)}\n\n` +
+    `${fechado}${comNotaDaCarga(alvo.base)}\n\n${pormenores}\n\n` +
     `O parceiro recebeu a morada e o seu contacto.${sobreODia}${doLink}`;
   await enviarTextoWhatsApp(
     telefone,
@@ -4287,6 +4304,13 @@ export async function aceitacaoParaOWhatsApp(dados: {
   // O profissional aceitou o valor DO CLIENTE — falta só o cliente fechar.
   // Sem este aviso, o "sim" do profissional morria no painel: o cliente de
   // telefone propunha um valor e nunca sabia que tinha sido aceite.
+  /*
+   * d114 (25-11-2026): já não sai aqui, um a um. Diz-o a rotina das propostas,
+   * numa mensagem curta («Boas notícias: o parceiro X aceitou os …»), logo que
+   * pode, com a uma-por-dia e a janela das 9h às 20h. Ver `propostas-curtas.ts`.
+   */
+  const { A_ROTINA_DIZ_AS_PROPOSTAS } = await import("@/lib/propostas-curtas");
+  if (A_ROTINA_DIZ_AS_PROPOSTAS) return false;
   const { chaveDaAceitacao } = await import("@/lib/assistente-automatico");
   const primeira = await podeContarPelaPrimeiraVez(
     chaveDaAceitacao(dados.negociacaoId, dados.valor),
@@ -4340,6 +4364,13 @@ export async function propostaParaOWhatsApp(dados: {
    * lado, e não depende de relógios: uma data que o MySQL devolva com um
    * milissegundo de diferença dava duas chaves e duas mensagens.
    */
+  /*
+   * d114 (25-11-2026): a proposta nova já não sai aqui, uma a uma — eram três
+   * mensagens compridas em 20 minutos à mesma cliente. Diz-a a rotina das
+   * propostas (1 h depois da 1.ª, ou quando chega a 2.ª; depois, uma por dia).
+   */
+  const { A_ROTINA_DIZ_AS_PROPOSTAS } = await import("@/lib/propostas-curtas");
+  if (A_ROTINA_DIZ_AS_PROPOSTAS) return false;
   const { chaveDaProposta } = await import("@/lib/assistente-automatico");
   const { linhas, taxas, forma, modelo, novoModelo, linha } = await comoEstaNegociacaoSePaga(
     dados.pedidoId,

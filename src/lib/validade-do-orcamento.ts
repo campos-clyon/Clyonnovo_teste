@@ -278,15 +278,7 @@ export function oParceiroFazPor(d: Pick<DadosDoLembrete, "parceiro" | "semIva" |
   return `O parceiro${nome} faz por ${valorComIvaPrimeiro(d.semIva, d.total, d.unidade)}.`;
 }
 
-/** «Tem nota 4,8 em 12 avaliações.» — só a nota do campo, quando a há (nunca escrita à mão). */
-function notaDoParceiro(d: DadosDoLembrete): string {
-  const n = d.nota;
-  if (!n || !Number.isFinite(n.media) || !Number.isInteger(n.quantas) || n.quantas <= 0) return "";
-  const media = (Math.round(n.media * 10) / 10).toFixed(1).replace(".", ",");
-  return `Tem nota ${media} em ${n.quantas} ${n.quantas === 1 ? "avaliação" : "avaliações"}.`;
-}
-
-/** d63: por carga ou por hora, a regra única da base (`frase-da-base.ts`), com o exemplo das cargas — ou nada. */
+/** d63: por carga ou por hora, a regra única da base (`frase-da-base.ts`), com o exemplo das cargas — ou nada. Fica mesmo curto (d114): é o que diz o que o valor quer dizer. */
 const aRegraDaBase = (d: DadosDoLembrete) => (d.unidade ? regraDaBase(d.unidade, null, { semIva: d.semIva, total: d.total }) : "");
 
 /*
@@ -319,31 +311,17 @@ export function varianteDoLembrete(pedidoId: number): "A" | "B" {
  * «ficou alguma dúvida?». As duas acabam nas três opções, letra a letra
  * (`aUltimaSaidaE`). d113 (25-11-2026): o tom leve do dia a dia — uma ideia
  * por frase, o parceiro que faz, o valor com IVA e o sem IVA ao lado.
+ * d114 (25-11-2026): mais curto — só o valor, o parceiro, até quando vale e a
+ * pergunta (e, por carga ou por hora, a regra da base, d63: é o que diz o que
+ * o valor quer dizer); o pagamento e a nota ficam para a confirmação depois
+ * de aceitar (e para quando ele perguntar).
  */
 export function textoDoLembrete(d: DadosDoLembrete): string {
-  const pagar = d.unidade ? NAO_PAGA_NADA_ADIANTADO : E_O_TOTAL_A_PAGAR;
-  if (varianteDoLembrete(d.pedidoId) === "B") {
-    // A regra da base fica como frase dela (a mesma de todo o lado, e com tradução fixa).
-    return juntar(
-      olaENome(d.nome),
-      `Ficou alguma dúvida sobre o orçamento do pedido #${d.pedidoId} (${d.servico})?`,
-      oParceiroFazPor(d),
-      notaDoParceiro(d),
-      aRegraDaBase(d),
-      pagar,
-      validoAte(d),
-      AS_TRES_OPCOES,
-    );
-  }
-  return juntar(
-    olaENome(d.nome),
-    `Ficou a pensar no seu pedido #${d.pedidoId} (${d.servico})?`,
-    oParceiroFazPor(d),
-    pagar,
-    aRegraDaBase(d),
-    validoAte(d),
-    AS_TRES_OPCOES,
-  );
+  const pergunta =
+    varianteDoLembrete(d.pedidoId) === "B"
+      ? `Ficou alguma dúvida sobre o orçamento do pedido #${d.pedidoId} (${d.servico})?`
+      : `Ficou a pensar no seu pedido #${d.pedidoId} (${d.servico})?`;
+  return juntar(olaENome(d.nome), pergunta, oParceiroFazPor(d), aRegraDaBase(d), validoAte(d), AS_TRES_OPCOES);
 }
 
 /** d113: o prazo, dito por ela, numa frase. */

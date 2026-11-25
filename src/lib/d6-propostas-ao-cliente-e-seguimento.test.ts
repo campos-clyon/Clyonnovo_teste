@@ -3,9 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   devidoDasPropostas,
   estadoDoEnvio,
-  MINUTOS_DEPOIS_DA_PRIMEIRA,
-  NOVA_REGRA_DESDE,
-  PROPOSTAS_PARA_IR_LOGO,
+  MINUTOS_ATE_A_PRIMEIRA_MENSAGEM,
   type PedidoParaOEnvio,
 } from "./envio-das-propostas-ao-cliente";
 import {
@@ -24,7 +22,7 @@ import {
  * os textos e o facto de nada sair sozinho.
  */
 
-const depois = new Date(NOVA_REGRA_DESDE.getTime() + 3_600_000); // 17h00 UTC
+const depois = new Date("2026-11-23T17:00:00Z"); // 17h00 em Lisboa
 const min = (t: Date, m: number) => new Date(t.getTime() + m * 60_000);
 
 const envio = (o: Partial<PedidoParaOEnvio> = {}): PedidoParaOEnvio => ({
@@ -39,20 +37,18 @@ const envio = (o: Partial<PedidoParaOEnvio> = {}): PedidoParaOEnvio => ({
   ...o,
 });
 
-describe("a regra do momento", () => {
-  it("é a 1.ª proposta, sem espera além dos 10 min de assentar", () => {
-    expect(PROPOSTAS_PARA_IR_LOGO).toBe(1);
-    expect(MINUTOS_DEPOIS_DA_PRIMEIRA).toBe(0);
-    expect(devidoDasPropostas(envio()).toISOString()).toBe(min(depois, 10).toISOString());
-    expect(estadoDoEnvio(envio(), min(depois, 11))).toMatchObject({ tipo: "sai", agora: true });
-    expect(estadoDoEnvio(envio(), min(depois, 5))).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "mudou" });
+describe("a regra do momento (d114: 1 h depois da 1.ª, ou quando chega a 2.ª)", () => {
+  it("a 1.ª proposta espera 1 h — já não vai logo", () => {
+    expect(MINUTOS_ATE_A_PRIMEIRA_MENSAGEM).toBe(60);
+    expect(devidoDasPropostas(envio()).toISOString()).toBe(min(depois, 60).toISOString());
+    expect(estadoDoEnvio(envio(), min(depois, 61))).toMatchObject({ tipo: "sai", agora: true });
+    expect(estadoDoEnvio(envio(), min(depois, 11))).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "prazo" });
   });
 
-  it("as propostas que já esperavam seguem a regra de antes (3 ou 3 h): nada sai por causa da mudança", () => {
-    const antes = new Date(NOVA_REGRA_DESDE.getTime() - 3_600_000);
-    const velha = envio({ primeiraEm: antes, ultimaMudancaEm: antes });
-    expect(devidoDasPropostas(velha).toISOString()).toBe(new Date(antes.getTime() + 3 * 3_600_000).toISOString());
-    expect(estadoDoEnvio(velha, min(antes, 90))).toMatchObject({ tipo: "sai", agora: false });
+  it("a 2.ª proposta antes de 1 h faz sair, passados os 10 min de assentar", () => {
+    const duas = envio({ parceiros: 2, segundaEm: min(depois, 5), ultimaMudancaEm: min(depois, 5) });
+    expect(estadoDoEnvio(duas, min(depois, 5))).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "mudou" });
+    expect(estadoDoEnvio(duas, min(depois, 16))).toMatchObject({ tipo: "sai", agora: true });
   });
 });
 

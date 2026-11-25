@@ -125,7 +125,8 @@ describe("sai com os valores, em todos os sítios onde eles saem", () => {
      * sempre a metade para onde ninguém está a olhar.
      */
     const CEREBRO = semComentarios(ler("src/lib/whatsapp-negociacao.ts"));
-    expect((CEREBRO.match(/ORCAMENTO_A_DISTANCIA/g) ?? []).length).toBe(3);
+    // d114: e uma quarta, nos pormenores da confirmação depois de aceitar.
+    expect((CEREBRO.match(/ORCAMENTO_A_DISTANCIA/g) ?? []).length).toBe(4);
   });
 
   it("e no ecrã do pedido, por cima dos cartões", () => {

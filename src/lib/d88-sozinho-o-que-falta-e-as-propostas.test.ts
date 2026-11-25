@@ -27,7 +27,10 @@ const base = vi.hoisted(() => ({
   pedidoDoQueFalta: null as Record<string, unknown> | null,
   pedidosDaMesa: [] as Array<Record<string, unknown>>,
   interruptor: null as null | { ligado: number },
-  linhaDoEnvio: null as null | { pedidoId: number; estado: string; motivo: string | null },
+  linhaDoEnvio: null as null | { pedidoId: number; estado: string; motivo: string | null; ultimo?: string | null },
+  /** d114: o «Avisar de propostas» do assistente e as propostas que ficaram ditas. */
+  propostasLigado: true,
+  ditas: [] as string[],
   fio: [] as Array<{ direccao: string; texto: string; criadoEm: string; haSegundos: number | null }>,
   lingua: null as null | "en" | "fr" | "es",
   guardadas: [] as string[],
@@ -99,6 +102,12 @@ vi.mock("./db", async (original) => {
     pedidosComNegociacoes: async () => base.pedidosDaMesa,
     parceirosParaOValorUnico: async () => new Map(),
     minutosDesdeAPropostaEnviada: async () => base.propostaEnviadaHa,
+    assistentePode: async (c: string) => c === "propostas" && base.propostasLigado,
+    reservarAvisoDoAssistente: async (d: { chave: string }) => {
+      base.ditas.push(d.chave);
+      return { id: base.ditas.length, jaExistia: false };
+    },
+    fecharAvisoDoAssistente: async () => {},
     marcarOrcamentoEnviado: async (id: number) => {
       base.marcados.push(id);
     },
@@ -174,6 +183,8 @@ beforeEach(() => {
   base.pedidosDaMesa = [];
   base.interruptor = null;
   base.linhaDoEnvio = null;
+  base.propostasLigado = true;
+  base.ditas = [];
   base.fio = [];
   base.lingua = null;
   base.guardadas = [];
@@ -308,16 +319,16 @@ const envio = (o: Partial<PedidoParaOEnvio> = {}): PedidoParaOEnvio => ({
   ...o,
 });
 
-describe("passo 3: quando vão as propostas", () => {
-  it("3 propostas: vai já (10 min depois da última)", () => {
-    const e = estadoDoEnvio(envio({ parceiros: 3, ultimaMudancaEm: antes(15) }), AGORA);
+describe("passo 3: quando vão as propostas (d114: 1 h, ou a 2.ª; depois uma por dia)", () => {
+  it("3 propostas: vai já (10 min depois da última), sem esperar a hora", () => {
+    const e = estadoDoEnvio(envio({ parceiros: 3, primeiraEm: antes(40), segundaEm: antes(30), ultimaMudancaEm: antes(15) }), AGORA);
     expect(e).toMatchObject({ tipo: "sai", agora: true });
   });
 
-  it("1 proposta: só 3 h depois da 1.ª", () => {
-    expect(estadoDoEnvio(envio({ primeiraEm: antes(120), ultimaMudancaEm: antes(120) }), AGORA)).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "prazo" });
-    expect(estadoDoEnvio(envio({ primeiraEm: antes(181), ultimaMudancaEm: antes(181) }), AGORA)).toMatchObject({ tipo: "sai", agora: true });
-    expect(devidoDasPropostas(envio({ primeiraEm: antes(120), ultimaMudancaEm: antes(120) })).toISOString()).toBe(antes(-60).toISOString());
+  it("1 proposta: 1 h depois da 1.ª", () => {
+    expect(estadoDoEnvio(envio({ primeiraEm: antes(30), ultimaMudancaEm: antes(30) }), AGORA)).toMatchObject({ tipo: "sai", agora: false, porqueEspera: "prazo" });
+    expect(estadoDoEnvio(envio({ primeiraEm: antes(61), ultimaMudancaEm: antes(61) }), AGORA)).toMatchObject({ tipo: "sai", agora: true });
+    expect(devidoDasPropostas(envio({ primeiraEm: antes(30), ultimaMudancaEm: antes(30) })).toISOString()).toBe(antes(-30).toISOString());
   });
 
   it("um parceiro mudou a proposta há menos de 10 min: espera-se", () => {
@@ -368,8 +379,9 @@ describe("passo 3: quando vão as propostas", () => {
   });
 
   it("o histórico diz que foi a Vitória, e quantas propostas", () => {
-    expect(historicoDoEnvioAutomatico(3)).toBe("Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas).");
-    expect(historicoDoEnvioAutomatico(1)).toBe("Orçamento enviado ao cliente automaticamente — pela Vitória (1 proposta).");
+    expect(historicoDoEnvioAutomatico(3)).toBe("Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas, mensagem curta, d114).");
+    expect(historicoDoEnvioAutomatico(1)).toBe("Orçamento enviado ao cliente automaticamente — pela Vitória (1 proposta, mensagem curta, d114).");
+    expect(historicoDoEnvioAutomatico(2, true)).toBe("Propostas atualizadas ao cliente automaticamente — pela Vitória (2 propostas, mensagem curta, d114).");
   });
 });
 
@@ -439,11 +451,12 @@ describe("passo 3: a mesma função do botão", () => {
     expect(t).toContain("Recolhas Inventadas");
   });
 
-  it("o painel e a Vitória chamam a mesma função, e o envio vai pelo caminho do botão", () => {
+  it("o painel fica com o texto do botão; a Vitória manda a mensagem curta (d114) pelo caminho do botão", () => {
     const painel = ler("src/components/admin/AdminNegociacoesPanel.tsx");
     expect(painel).toContain("return textoDoOrcamentoDaMesa(p, new Date(), propostas);");
     const naBase = ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts");
-    expect(naBase).toContain("textoDoOrcamentoDaMesa(c.pedido, agora)");
+    expect(naBase).toContain("const texto = textoDasPropostasDoPedido(p, agora, notas, ultimoEnvioEm == null);");
+    expect(naBase).toContain("const texto = c.texto;");
     expect(naBase).toContain("enviarTextoManualWhatsApp(telefone, texto, { semLinguaErrada: true })");
     expect(naBase).toContain("db.marcarOrcamentoEnviado(pedidoId)");
     expect(naBase).toContain("db.retomarNumeroWhatsApp(telefone)");
@@ -460,15 +473,28 @@ describe("passo 3: a mesma função do botão", () => {
 });
 
 describe("passo 3: o envio, com a base fingida", { timeout: 60_000 }, () => {
-  it("3 propostas: envia uma vez, marca «A aguardar cliente» e escreve no histórico", async () => {
+  it("3 propostas: envia uma vez, curta, marca «A aguardar cliente», escreve no histórico e deixa-as ditas", async () => {
     base.pedidosDaMesa = [pedidoDaMesa()];
     const { enviarAsPropostasAoCliente } = await import("./envio-das-propostas-ao-cliente-na-base");
     const r = await enviarAsPropostasAoCliente(9102, AGORA);
-    expect(r).toEqual({ ok: true, feito: "Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas)." });
+    expect(r).toEqual({ ok: true, feito: "Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas, mensagem curta, d114)." });
     expect(base.enviados).toHaveLength(1);
-    expect(base.enviados[0]).toContain("Esta proposta é válida até");
+    expect(base.enviados[0]).toContain("Já tem 3 propostas para o seu pedido #9102 (recolha de monos):");
+    expect(base.enviados[0]).toContain("1) Recolhas Inventadas: ");
+    expect(base.enviados[0]).toContain("Qual prefere? Responda com o número.");
+    expect(base.enviados[0]).not.toMatch(/válida até|fatura|adiantado|taxa/);
     expect(base.marcados).toEqual([9102]);
-    expect(base.historico).toEqual(["Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas)."]);
+    expect(base.historico).toEqual(["Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas, mensagem curta, d114)."]);
+    expect(base.ditas).toEqual(["proposta:1:1", "proposta:2:1", "proposta:3:1"]);
+  });
+
+  it("com o «Avisar de propostas» do assistente desligado, nada sai", async () => {
+    base.pedidosDaMesa = [pedidoDaMesa()];
+    base.propostasLigado = false;
+    const { enviarAsPropostasAoCliente, rotinaDasPropostas } = await import("./envio-das-propostas-ao-cliente-na-base");
+    expect(await enviarAsPropostasAoCliente(9102, AGORA)).toEqual({ ok: false, porque: "desligado" });
+    expect(await rotinaDasPropostas(AGORA)).toMatchObject({ ligado: false, naFila: 0 });
+    expect(base.enviados).toEqual([]);
   });
 
   it("repetir não reenvia: outra passagem já reservou, ou o orçamento já foi", async () => {
@@ -483,7 +509,8 @@ describe("passo 3: o envio, com a base fingida", { timeout: 60_000 }, () => {
     base.propostaEnviadaHa = 3;
     expect((await enviarAsPropostasAoCliente(9102, AGORA)).ok).toBe(false);
     base.propostaEnviadaHa = null;
-    base.linhaDoEnvio = { pedidoId: 9102, estado: "enviado", motivo: null };
+    // d114: a mensagem de hoje já saiu — a seguinte só amanhã.
+    base.linhaDoEnvio = { pedidoId: 9102, estado: "enviado", motivo: null, ultimo: naBase(antes(60)) };
     expect((await enviarAsPropostasAoCliente(9102, AGORA)).ok).toBe(false);
     expect(base.enviados).toEqual([]);
     expect(base.marcados).toEqual([]);
@@ -501,13 +528,21 @@ describe("passo 3: o envio, com a base fingida", { timeout: 60_000 }, () => {
     expect(base.enviados).toEqual([]);
   });
 
-  it("1 proposta há 1 h: espera; há 3 h: entra na fila", async () => {
+  it("1 proposta há 30 min: espera; há 1 h: entra na fila", async () => {
     const { rotinaDasPropostas } = await import("./envio-das-propostas-ao-cliente-na-base");
-    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [negociacao(1, "Recolhas Inventadas", 100, antes(60))] })];
+    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [negociacao(1, "Recolhas Inventadas", 100, antes(30))] })];
     expect(await rotinaDasPropostas(AGORA)).toMatchObject({ esperam: 1, naFila: 0 });
-    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [negociacao(1, "Recolhas Inventadas", 100, antes(185))] })];
+    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [negociacao(1, "Recolhas Inventadas", 100, antes(65))] })];
     expect(await rotinaDasPropostas(AGORA)).toMatchObject({ esperam: 0, naFila: 1 });
     expect(base.enviados).toEqual([]);
+  });
+
+  it("as que o cliente já ouviu (por qualquer caminho) não fazem sair nada", async () => {
+    base.pedidosDaMesa = [pedidoDaMesa()];
+    const { candidatosAoEnvio } = await import("./envio-das-propostas-ao-cliente-na-base");
+    const [c] = await candidatosAoEnvio(AGORA);
+    expect(c.envio.novas).toBe(3);
+    expect(c.chaves.map((x) => x.chave)).toEqual(["proposta:1:1", "proposta:2:1", "proposta:3:1"]);
   });
 
   it("fora de horas, a rotina e a passagem não fazem nada", async () => {
@@ -595,13 +630,13 @@ describe("o orçamento sai na língua da conversa — uma conversa em inglês (o
 
   it("o automático, sem tradução fixa da mensagem: fica com uma pessoa, «cliente noutra língua»", async () => {
     base.fio = EM_INGLES;
-    // Uma negociação de antes do IVA incluído, em dinheiro: a frase da taxa em dinheiro não tem tradução fixa.
-    const antiga = { ...negociacao(1, "Recolhas Inventadas", 100, antes(200)), criadaEm: "2026-09-15 10:00:00", formaDePagamento: "dinheiro" };
-    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [antiga] })];
+    // Um nome de parceiro com um ponto a meio parte a frase em duas: a mensagem curta fica sem tradução fixa.
+    const comPonto = negociacao(1, "J. Inventado", 100, antes(200));
+    base.pedidosDaMesa = [pedidoDaMesa({ negociacoes: [comPonto] })];
     const { candidatosAoEnvio, enviarAsPropostasAoCliente } = await import("./envio-das-propostas-ao-cliente-na-base");
     const [c] = await candidatosAoEnvio(AGORA);
     const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
-    expect(traducaoFixa(textoDoOrcamentoDaMesa(c.pedido, AGORA), "en")).toBeNull();
+    expect(traducaoFixa(c.texto, "en")).toBeNull();
     expect(c.estado).toEqual({ tipo: "fica", motivo: "noutra_lingua" });
     expect((await enviarAsPropostasAoCliente(9102, AGORA)).ok).toBe(false);
     expect(base.enviados).toEqual([]);

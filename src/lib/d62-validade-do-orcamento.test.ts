@@ -179,13 +179,12 @@ describe("os textos", () => {
     // d91 (3.13 e 5.2): o 700 (par) leva a variante A; o 701 (ímpar), a B.
     // d113 (25-11-2026): o tom leve — o parceiro que faz, o com IVA e o sem IVA ao lado, uma ideia por frase.
     expect(textoDoLembrete({ ...dados, pedidoId: 700 })).toBe(
+      // d114: sem o «nada adiantado» — vai na confirmação depois de aceitar.
       "Olá, Maria! Ficou a pensar no seu pedido #700 (recolha de monos)? O parceiro Recolhas Exemplo faz por 129,15 € com IVA (105 € + IVA). " +
-        "É o total, sem nada adiantado. " +
         AS_TRES_OPCOES,
     );
     expect(textoDoLembrete(dados)).toBe(
       "Olá, Maria! Ficou alguma dúvida sobre o orçamento do pedido #701 (recolha de monos)? O parceiro Recolhas Exemplo faz por 129,15 € com IVA (105 € + IVA). " +
-        "É o total, sem nada adiantado. " +
         AS_TRES_OPCOES,
     );
     expect(valorDoLembrete(50, 61.5, "hora")).toBe("50 € + IVA (61,50 € com IVA) por hora");

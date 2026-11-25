@@ -326,7 +326,13 @@
     ["Pode sempre pagar em dinheiro no local.","You can always pay in cash on site.","Vous pouvez toujours payer en espèces sur place.","Siempre puede pagar en efectivo en el lugar."],
     ["Paga-lhe diretamente.","You pay them directly.","Vous le payez directement.","Le paga directamente."],
     ["Os dados de pagamento do parceiro já estão no seu pedido.","The partner's payment details are now in your request.","Les coordonnées de paiement du partenaire sont maintenant dans votre demande.","Los datos de pago del colaborador ya están en su solicitud."],
-    ["Responda 1 se vai enviar o que falta, 2 se tiver uma dúvida, ou 3 se já não precisar.","Reply 1 if you will send what is missing, 2 if you have a question, or 3 if you no longer need it.","Répondez 1 si vous allez envoyer ce qui manque, 2 si vous avez une question, ou 3 si vous n'en avez plus besoin.","Responda 1 si va a enviar lo que falta, 2 si tiene una duda, o 3 si ya no lo necesita."]
+    ["Responda 1 se vai enviar o que falta, 2 se tiver uma dúvida, ou 3 se já não precisar.","Reply 1 if you will send what is missing, 2 if you have a question, or 3 if you no longer need it.","Répondez 1 si vous allez envoyer ce qui manque, 2 si vous avez une question, ou 3 si vous n'en avez plus besoin.","Responda 1 si va a enviar lo que falta, 2 si tiene una duda, o 3 si ya no lo necesita."],
+    ["Quer avançar?","Would you like to go ahead?","Souhaitez-vous continuer ?","¿Quiere avanzar?"],
+    ["É só responder 1.","Just reply 1.","Il suffit de répondre 1.","Basta con responder 1."],
+    ["Se preferir, espere um pouco, que podem chegar mais.","If you prefer, wait a little: more may come in.","Si vous préférez, attendez un peu : d'autres peuvent arriver.","Si lo prefiere, espere un poco, que pueden llegar más."],
+    ["Qual prefere?","Which one do you prefer?","Laquelle préférez-vous ?","¿Cuál prefiere?"],
+    ["Responda com o número.","Reply with the number.","Répondez avec le numéro.","Responda con el número."],
+    ["Valor dado online, pelo que descreveu — confirma-se no local antes de começar.","Price given online, based on your description - it is confirmed on site before starting.","Prix donné en ligne, selon votre description - il est confirmé sur place avant de commencer.","Precio dado en línea, según lo que describió - se confirma en el lugar antes de empezar."]
   ],
   "moldes": [
     ["^Ficou a pensar no seu pedido #(\\d+) \\(([^)]+)\\)\\?$","Still thinking about your request #$1 ({s2})?","Vous réfléchissez encore à votre demande n° $1 ({s2}) ?","¿Sigue pensando en su pedido n.º $1 ({s2})?"],
@@ -482,7 +488,12 @@
     ["^Já tem (\\d+) propostas para (?:a|o) (.+?)\\.$","You have $1 quotes for your request ({s2}).","Vous avez $1 propositions pour votre demande ({s2}).","Tiene $1 propuestas para su pedido ({s2})."],
     ["^Já tem uma proposta para (?:a|o) (.+?) em (.+)\\.$","You have one quote for your request ({s1}) in {l2}.","Vous avez une proposition pour votre demande ({s1}) à {l2}.","Tiene una propuesta para su pedido ({s1}) en {l2}."],
     ["^Já tem uma proposta para o seu pedido\\.$","You have one quote for your request.","Vous avez une proposition pour votre demande.","Tiene una propuesta para su pedido."],
-    ["^Já tem uma proposta para (?:a|o) (.+?)\\.$","You have one quote for your request ({s1}).","Vous avez une proposition pour votre demande ({s1}).","Tiene una propuesta para su pedido ({s1})."]
+    ["^Já tem uma proposta para (?:a|o) (.+?)\\.$","You have one quote for your request ({s1}).","Vous avez une proposition pour votre demande ({s1}).","Tiene una propuesta para su pedido ({s1})."],
+    ["^(?:😊 )?Já tem a primeira proposta para o seu pedido #(\\d+) \\(([^)]+)\\): (.+), do parceiro (.+)\\.$","😊 You already have the first quote for your request #$1 ({s2}): {v3}, from the partner $4.","😊 Vous avez déjà le premier devis pour votre demande #$1 ({s2}) : {v3}, du partenaire $4.","😊 Ya tiene el primer presupuesto para su pedido #$1 ({s2}): {v3}, del colaborador $4."],
+    ["^(?:😊 )?Já tem uma proposta para o seu pedido #(\\d+) \\(([^)]+)\\): (.+), do parceiro (.+)\\.$","😊 You have a quote for your request #$1 ({s2}): {v3}, from the partner $4.","😊 Vous avez un devis pour votre demande #$1 ({s2}) : {v3}, du partenaire $4.","😊 Tiene un presupuesto para su pedido #$1 ({s2}): {v3}, del colaborador $4."],
+    ["^Boas notícias: o parceiro (.+) aceitou os (.+) que propôs para o seu pedido #(\\d+) \\(([^)]+)\\)\\.$","Good news: the partner $1 accepted the {v2} you proposed for your request #$3 ({s4}).","Bonne nouvelle : le partenaire $1 a accepté les {v2} que vous avez proposés pour votre demande #$3 ({s4}).","Buenas noticias: el colaborador $1 aceptó los {v2} que propuso para su pedido #$3 ({s4})."],
+    ["^Já tem (\\d+) propostas para o seu pedido #(\\d+) \\(([^)]+)\\):$","You already have $1 quotes for your request #$2 ({s3}):","Vous avez déjà $1 devis pour votre demande #$2 ({s3}) :","Ya tiene $1 presupuestos para su pedido #$2 ({s3}):"],
+    ["^(\\d{1,2})\\) (.+): (\\d[\\d.]*(?:,\\d{2})? €.*)$","$1) $2: {v3}","$1) $2 : {v3}","$1) $2: {v3}"]
   ],
   "servicos": [
     ["Recolha de móveis", "Furniture removal", "Enlèvement de meubles", "Recogida de muebles"],

@@ -74,6 +74,7 @@ import { totalAoClienteDaNegociacao } from "./total-ao-cliente";
 import { aceitacaoParaOWhatsApp, propostaParaOWhatsApp } from "./whatsapp-negociacao";
 import { novidadesDoPedido } from "./assistente-automatico";
 import { quemPassaAFatura, totalEmPalavrasDoNovoModelo } from "./o-total-da-vitoria";
+import { eurosCurtos, mensagemCurtaDasPropostas } from "./propostas-curtas";
 
 const euros = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
@@ -117,16 +118,15 @@ describe("a conta é a do Site — 350 € a 0 % + 10 %", () => {
   });
 });
 
-describe("o teste da conversa — a proposta e a aceitação pelo WhatsApp", () => {
+describe("o teste da conversa — a proposta e a aceitação pelo WhatsApp (d114: pela mensagem curta)", () => {
   for (const [nome, p] of [
     ["isento", ISENTO],
     ["com IVA", COM_IVA],
   ] as const) {
-    it(`desde 15-11, parceiro ${nome}: a proposta diz o total de totalAoClienteDaNegociacao`, async () => {
+    it(`desde 15-11, parceiro ${nome}: a proposta e a aceitação já não saem uma a uma`, async () => {
       process.env.NOVO_MODELO_DATA_SIMULADA = DIA_16;
       perfil = p;
       linhaNaBase = negociacao();
-      const t = totalAoClienteDaNegociacao(linhaNaBase, 350)!;
       const saiu = await propostaParaOWhatsApp({
         telefone: TELEFONE,
         pedidoId: 800,
@@ -136,24 +136,8 @@ describe("o teste da conversa — a proposta e a aceitação pelo WhatsApp", () 
         servico: "recolha_moveis",
         base: "total",
       });
-      expect(saiu).toBe(true);
-      const texto = enviados.at(-1)!;
-      expect(texto).toContain(`propõe ${euros(t.total)}`);
-      expect(texto).toContain(euros(t.semIva));
-      expect(texto).toContain(quemPassaAFatura(linhaNaBase));
-      if (nome === "isento") expect(texto).not.toContain("430,50");
-    });
-
-    it(`desde 15-11, parceiro ${nome}: a aceitação diz o mesmo total`, async () => {
-      process.env.NOVO_MODELO_DATA_SIMULADA = DIA_16;
-      perfil = p;
-      linhaNaBase = negociacao({
-        estado: "aguarda_contratacao",
-        valorAcordado: "350.00",
-        propostasJson: JSON.stringify([{ por: "cliente", valor: 350, criadaEm: "2026-11-16T09:00:00Z", estado: "aceite" }]),
-      });
-      const t = totalAoClienteDaNegociacao(linhaNaBase, 350)!;
-      await aceitacaoParaOWhatsApp({
+      expect(saiu).toBe(false);
+      const aceitou = await aceitacaoParaOWhatsApp({
         telefone: TELEFONE,
         pedidoId: 800,
         negociacaoId: 900,
@@ -161,45 +145,26 @@ describe("o teste da conversa — a proposta e a aceitação pelo WhatsApp", () 
         valor: 350,
         base: "total",
       });
-      const texto = enviados.at(-1)!;
-      expect(texto).toContain(`aceitou os ${euros(t.total)}`);
-      expect(texto).toContain(quemPassaAFatura(linhaNaBase));
+      expect(aceitou).toBe(false);
+      expect(enviados).toEqual([]);
+    });
+
+    it(`desde 15-11, parceiro ${nome}: a mensagem curta diz o total de totalAoClienteDaNegociacao, com o sem IVA ao lado`, () => {
+      process.env.NOVO_MODELO_DATA_SIMULADA = DIA_16;
+      perfil = p;
+      const t = totalAoClienteDaNegociacao(negociacao(), 350)!;
+      const texto = mensagemCurtaDasPropostas({
+        pedidoId: 800,
+        servico: "recolha de móveis",
+        propostas: [{ negociacaoId: 900, parceiro: "Telmo Exemplo", semIva: t.semIva, total: t.total, isento: nome === "isento" }],
+        agora: new Date(DIA_16),
+        primeira: true,
+      });
+      expect(texto).toContain(eurosCurtos(t.total));
+      expect(texto).toContain(eurosCurtos(t.semIva));
+      if (nome === "isento") expect(texto).not.toContain("430,50");
     });
   }
-
-  it("antes de 15-11 nada muda: o isento ouve a conta de sempre, sem a frase da fatura", async () => {
-    process.env.NOVO_MODELO_DATA_SIMULADA = DIA_13;
-    perfil = ISENTO;
-    linhaNaBase = negociacao({ createdAt: "2026-11-13T08:00:00Z" });
-    await propostaParaOWhatsApp({
-      telefone: TELEFONE,
-      pedidoId: 800,
-      negociacaoId: 900,
-      profissionalNome: "Telmo Exemplo",
-      valor: 350,
-      servico: "recolha_moveis",
-      base: "total",
-    });
-    const texto = enviados.at(-1)!;
-    expect(texto).toContain("propõe 430,50 €");
-    expect(texto).not.toMatch(/art\. 53/);
-  });
-
-  it("um Trabalho CLYON aberto fica no modelo antigo", async () => {
-    process.env.NOVO_MODELO_DATA_SIMULADA = DIA_16;
-    perfil = ISENTO;
-    linhaNaBase = negociacao({ ofertaClyon: "1" });
-    await propostaParaOWhatsApp({
-      telefone: TELEFONE,
-      pedidoId: 800,
-      negociacaoId: 900,
-      profissionalNome: "Telmo Exemplo",
-      valor: 350,
-      servico: "recolha_moveis",
-      base: "total",
-    });
-    expect(enviados.at(-1)!).toContain("propõe 430,50 €");
-  });
 });
 
 describe("as novidades do assistente — o mesmo total", () => {

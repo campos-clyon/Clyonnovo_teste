@@ -384,12 +384,14 @@ export function textoDaMensagem1(d: DadosDaMensagem): string {
     // A frase das opções fica inteira, letra a letra (o `eMensagemDoSeguimento` e o `paraEmail` procuram-na).
     return `${ola(d.nome)} Sobre o seu pedido ${oPedido(d)}: o que falta para decidir, o valor, o dia ou outra coisa? ${SE_JA_ESTIVER_DECIDIDO} ${AS_OPCOES_DO_SEGUIMENTO}`;
   }
-  return `${ola(d.nome)} Já conseguiu pensar no seu pedido ${oPedido(d)}? ${SE_AJUDAR_A_DECIDIR} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  // d114: curto — a pergunta e as opções; os pormenores vão na confirmação depois de aceitar.
+  return `${ola(d.nome)} Já conseguiu pensar no seu pedido ${oPedido(d)}? ${AS_OPCOES_DO_SEGUIMENTO}`;
 }
 
 /** A 2.ª, no dia seguinte à mesma hora. */
 export function textoDaMensagem2(d: DadosDaMensagem): string {
-  return `${ola(d.nome)} Volto ao seu pedido ${oPedido(d)}. ${SE_ESTA_A_COMPARAR} ${AINDA_QUER_AVANCAR} ${AS_OPCOES_DO_SEGUIMENTO}`;
+  // d114: curto — sem a conta do IVA e da taxa (vai na confirmação depois de aceitar).
+  return `${ola(d.nome)} Volto ao seu pedido ${oPedido(d)}. ${AINDA_QUER_AVANCAR} ${AS_OPCOES_DO_SEGUIMENTO}`;
 }
 
 /** A 3.ª, no outro dia à mesma hora: diz que não insiste mais e que o pedido fecha amanhã. */

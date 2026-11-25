@@ -128,7 +128,12 @@ export async function responderAoClienteAoVivo(
           },
         );
       },
-      enviar: async (texto) => (await import("../whatsapp-cloud")).enviarTextoWhatsApp(telefone, texto),
+      enviar: async (texto) => {
+        const saiu = await (await import("../whatsapp-cloud")).enviarTextoWhatsApp(telefone, texto);
+        // d114: as propostas que a conversa livre nomeou ficam ditas — a rotina não as repete sozinha.
+        if (saiu) await (await import("../envio-das-propostas-ao-cliente-na-base")).marcarAsPropostasNomeadas(telefone, texto);
+        return saiu;
+      },
       passarAEquipa: async (motivo, mensagem) => {
         const { enviarTextoWhatsApp } = await import("../whatsapp-cloud");
         const { interromperNumeroWhatsApp } = await import("../db");

@@ -80,6 +80,8 @@ const ESPECIE_EM_PALAVRAS: Record<string, string> = {
   avaliacao: "Pediu a avaliação",
   sem_propostas: "Avisou a equipa: sem propostas",
   recolha_parada: "Insistiu numa recolha a meio",
+  // d114: a proposta que já foi dita ao cliente (pela rotina ou pela conversa) — não se repete.
+  propostas_ditas: "Disse as propostas ao cliente",
 };
 
 /** Porque é que deixou de estar à espera. */

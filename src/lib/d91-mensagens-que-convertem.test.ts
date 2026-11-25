@@ -197,9 +197,8 @@ describe("5.1 o A/B pela paridade do n.º do pedido", () => {
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain(
       'JSON.stringify({ accao: "orcamento_enviado", pedidoId: p.id, texto: textoDoOrcamento(p) })',
     );
-    expect(ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts")).toContain(
-      "`${historicoDoEnvioAutomatico(c.propostas)}${notaDaVariante(texto)}`",
-    );
+    // d114: a Vitória manda a mensagem curta (sem A/B); o histórico diz que foi a mensagem curta.
+    expect(ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts")).toContain("historicoDoEnvioAutomatico(c.propostas, actualizacao)");
   });
 
   it("nenhuma das duas se lê como uma pergunta do formulário (o SIM não vira resposta a outra coisa)", () => {

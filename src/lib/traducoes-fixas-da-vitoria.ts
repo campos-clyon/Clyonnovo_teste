@@ -72,6 +72,29 @@ function servico(nome: string, lingua: Alvo): string | null {
   return l ? l[POSICAO[lingua]] : null;
 }
 
+/**
+ * O VALOR DE UMA PROPOSTA NA MENSAGEM CURTA (d114), na língua: «98,40 € (80 €
+ * + IVA)», «86,96 € (85 € + 1,96 € de IVA)», «98,40 € por carga (80 € + IVA)».
+ * Os números ficam como estão; só as palavras mudam. Ou null.
+ */
+const EUR = "\\d[\\d.]*(?:,\\d{2})? €";
+const VALOR_CURTO = new RegExp(`^(${EUR})( por carga| por hora)?(?: \\((${EUR}) \\+ (?:IVA|(${EUR}) de IVA)\\))?$`);
+const POR_NA_LINGUA: Record<Alvo, Record<string, string>> = {
+  en: { " por carga": " per load", " por hora": " per hour" },
+  fr: { " por carga": " par chargement", " por hora": " de l'heure" },
+  es: { " por carga": " por carga", " por hora": " por hora" },
+};
+function valorCurtoNaLingua(texto: string, lingua: Alvo): string | null {
+  const m = VALOR_CURTO.exec(texto.trim());
+  if (!m) return null;
+  const [, total, por = "", semIva, iva] = m;
+  const unidade = POR_NA_LINGUA[lingua][por] ?? "";
+  if (!semIva) return `${total}${unidade}`;
+  if (lingua === "en") return iva ? `${total}${unidade} (${semIva} + ${iva} VAT)` : `${total}${unidade} (${semIva} + VAT)`;
+  if (lingua === "fr") return iva ? `${total} TTC${unidade} (${semIva} + ${iva} de TVA)` : `${total} TTC${unidade} (${semIva} HT)`;
+  return iva ? `${total}${unidade} (${semIva} + ${iva} de IVA)` : `${total}${unidade} (${semIva} + IVA)`;
+}
+
 function porMolde(texto: string, moldes: typeof MOLDES, lingua: Alvo): string | null {
   for (const { re, linha } of moldes) {
     const m = re.exec(texto);
@@ -85,6 +108,12 @@ function porMolde(texto: string, moldes: typeof MOLDES, lingua: Alvo): string | 
       })
       // d88 (o #659): a localidade na forma da língua — «Lisboa» é «Lisbon» em inglês; as outras ficam como estão.
       .replace(/\{l(\d)\}/g, (_, i: string) => localidade(m[Number(i)] ?? "", lingua))
+      // d114: o valor de uma proposta da mensagem curta.
+      .replace(/\{v(\d)\}/g, (_, i: string) => {
+        const v = valorCurtoNaLingua(m[Number(i)] ?? "", lingua);
+        if (v == null) falhou = true;
+        return v ?? "";
+      })
       .replace(/\$(\d)/g, (_, i: string) => m[Number(i)] ?? "");
     if (!falhou) return saida;
   }

@@ -30,6 +30,7 @@ import { ORCAMENTO_A_DISTANCIA } from "./orcamento-a-distancia";
 import { prazoAutomaticoPorExtenso, promessaDaForma } from "./pagamento-na-plataforma";
 import { pagaAoContratado } from "./o-pagamento-da-vitoria";
 import { DIAS_ATE_LIBERTAR_SOZINHO, prazoCorre } from "./trabalho";
+import { A_ROTINA_DIZ_AS_PROPOSTAS } from "./propostas-curtas";
 
 /**
  * O ASSISTENTE AUTOMÁTICO — o que ele vê, e o que decide dizer.
@@ -1168,6 +1169,12 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
      */
     let jaFalouComEle = false;
     for (const n of novidadeAContar(p, agora, podeFazer)) {
+      /*
+       * d114 (25-11-2026): a proposta nova e o «o parceiro aceitou» já não saem
+       * daqui um a um — diz-os a rotina das propostas, numa mensagem curta por
+       * dia (`envio-das-propostas-ao-cliente.ts`). Ficam por contar aqui.
+       */
+      if (A_ROTINA_DIZ_AS_PROPOSTAS && (n.especie === "proposta_nova" || n.especie === "pro_aceitou")) continue;
       if (!eParaAEquipa(n.especie)) {
         if (jaFalouComEle) break;
         if (!horaDeFalar(agora)) continue;
@@ -1284,6 +1291,16 @@ export async function correrOAssistente(agora: Date = new Date()): Promise<Resum
      * garante que a próxima vez que alguém se esquecer não custe uma conversa.
      */
     if (!esperaResposta(especie)) {
+      await db.fecharAvisoDoAssistente(a.id, "informado");
+      resumo.fechados++;
+      continue;
+    }
+    /*
+     * d114: e os lembretes da proposta («a proposta que lhe mandei continua à
+     * espera») também não — o que volta ao assunto é o lembrete da validade
+     * (d62) e o seguimento (d83), na uma-por-dia. Fecham-se.
+     */
+    if (A_ROTINA_DIZ_AS_PROPOSTAS && (especie === "proposta_nova" || especie === "pro_aceitou")) {
       await db.fecharAvisoDoAssistente(a.id, "informado");
       resumo.fechados++;
       continue;

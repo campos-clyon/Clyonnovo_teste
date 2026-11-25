@@ -286,7 +286,8 @@ describe("os textos ao cliente", () => {
     // d91 (3.18 e 5.3): o 612 (par) leva a variante A — o risco que se tira.
     // d113 (25-11-2026): no tom do dia a dia — uma pergunta, o risco que se tira, as opções.
     expect(textoDaMensagem1(d)).toBe(
-      "Olá, Ana! Já conseguiu pensar no seu pedido #612 (recolha de monos)? O valor é o total, sem nada adiantado, e qualquer extra no dia só com o seu ok. Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.",
+      // d114: curto — a pergunta e as opções.
+      "Olá, Ana! Já conseguiu pensar no seu pedido #612 (recolha de monos)? Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.",
     );
     expect(textoDaMensagem3(d)).toBe(
       "Olá, Ana! Sobre o seu pedido #612 (recolha de monos): não volto a insistir. Se não me disser nada, o pedido fecha amanhã. Responda 1 para escolher o parceiro, 2 se precisar de outra data, ou 3 para cancelar.",

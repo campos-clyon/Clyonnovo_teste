@@ -359,10 +359,11 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
     // d113: o tom leve — o parceiro que faz, o valor com IVA e o sem IVA ao lado, uma ideia por frase.
     expect(a).toContain("Ficou a pensar no seu pedido #612 (recolha de monos)?");
     expect(a).toContain("O parceiro Recolhas Exemplo faz por 123 € com IVA (100 € + IVA).");
-    expect(a).toContain("É o total, sem nada adiantado.");
+    // d114: curto — o valor, o parceiro, até quando vale e a pergunta; sem o pagamento nem a nota.
+    expect(a).not.toContain("É o total, sem nada adiantado.");
     expect(a).toContain("Vale até sexta-feira, 27/11.");
     expect(b).toContain("Ficou alguma dúvida sobre o orçamento do pedido #613");
-    expect(b).toContain("Tem nota 4,8 em 12 avaliações.");
+    expect(b).not.toContain("Tem nota 4,8 em 12 avaliações.");
     for (const [t, id] of [[a, 612], [b, 613]] as const) {
       expect(t.endsWith(AS_TRES_OPCOES)).toBe(true);
       expect(aUltimaSaidaE(t, id)).toBe("lembrete");
@@ -398,7 +399,8 @@ describe("d91 — os textos novos, com os marcadores letra a letra", () => {
     const a = textoDaMensagem1({ pedidoId: 612, nome: "Rosalinda", servico: "recolha de monos", resposta: "vai_pensar" });
     const b = textoDaMensagem1({ pedidoId: 613, nome: "Rosalinda", servico: "recolha de monos", resposta: "vai_pensar" });
     expect(a).toContain("Já conseguiu pensar no seu pedido #612");
-    expect(a).toContain("O valor é o total, sem nada adiantado, e qualquer extra no dia só com o seu ok.");
+    // d114: a 1.ª fica só com a pergunta e as opções.
+    expect(a).not.toContain("O valor é o total, sem nada adiantado, e qualquer extra no dia só com o seu ok.");
     expect(b).toContain("o que falta para decidir, o valor, o dia ou outra coisa?");
     expect(textoDaMensagem3({ pedidoId: 612, nome: null, servico: "recolha de monos", resposta: "vai_pensar" })).toContain(
       "não volto a insistir. Se não me disser nada, o pedido fecha amanhã.",

@@ -1,4 +1,5 @@
 import { diaEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
+import { MINUTOS_ATE_A_PRIMEIRA_MENSAGEM } from "./propostas-curtas";
 import {
   aHoraDoDia,
   diaEHoraCurtos,
@@ -36,6 +37,20 @@ import {
  * O interruptor «Enviar as propostas ao cliente» (Configs, só o administrador)
  * nasce LIGADO (o dono pediu); desligado, a Mesa diz «enviaria a …».
  *
+ * d114 (25-11-2026) — POUCAS MENSAGENS, CURTAS. Esta é a única rotina que diz
+ * as propostas ao cliente sozinha (a proposta nova e o «o parceiro aceitou»
+ * deixaram de sair uma a uma — `propostas-curtas.ts`):
+ *
+ *   · a 1.ª mensagem sai 1 h depois da 1.ª proposta, ou logo que chega a 2.ª
+ *     (ou que um parceiro aceita o valor que o cliente propôs), o que vier
+ *     primeiro — sempre das 9h às 20h; fora disso, às 9h com o que houver;
+ *   · depois, no máximo UMA por dia, com a lista completa e curta, e só se
+ *     houver propostas que o cliente ainda não ouviu (`novas`); as do mesmo
+ *     dia esperam pela do dia seguinte, às 9h;
+ *   · depois de aceitar (um parceiro contratado), nada mais;
+ *   · o texto é `mensagemCurtaDasPropostas` — sem os pormenores, que vão na
+ *     confirmação depois de aceitar.
+ *
  * PURO: as regras, o relógio e os textos. A base está em
  * `envio-das-propostas-ao-cliente-na-base.ts`.
  */
@@ -43,25 +58,11 @@ import {
 export const NOME_DO_INTERRUPTOR_DAS_PROPOSTAS = "Enviar as propostas ao cliente";
 
 /**
- * A REGRA DO MOMENTO (d6, 23-11-2026): a 1.ª proposta de um parceiro já pode
- * ir ao cliente — não se espera por mais nenhuma. Só se espera os
- * `MINUTOS_DEPOIS_DE_MUDAR` (10) depois de o parceiro mexer na proposta.
- * Antes eram 3 propostas, ou 3 h depois da 1.ª.
+ * A 1.ª MENSAGEM (d114): 1 h depois da 1.ª proposta, ou quando chega a 2.ª (ou
+ * um parceiro aceita o valor do cliente). Antes (d6, 23-11) era logo à 1.ª; e
+ * antes disso, 3 propostas ou 3 h.
  */
-export const PROPOSTAS_PARA_IR_LOGO = 1;
-/** Depois da 1.ª proposta, tantos minutos de espera (além dos 10 de assentar): nenhum. */
-export const MINUTOS_DEPOIS_DA_PRIMEIRA = 0;
-
-/** A REGRA DE ANTES (3 propostas, ou 3 h depois da 1.ª) — fica para o que chegou antes da nova. */
-export const PROPOSTAS_PARA_IR_LOGO_ANTES = 3;
-export const HORAS_DEPOIS_DA_PRIMEIRA_ANTES = 3;
-/**
- * A nova regra vale só para propostas que chegaram a partir deste instante
- * (23-11-2026, 16h00 UTC). O que já esperava na Mesa quando ela entrou — os
- * pedidos que já estavam à espera — segue a regra de antes,
- * e nenhuma mensagem sai por causa da mudança.
- */
-export const NOVA_REGRA_DESDE = new Date("2026-11-23T16:00:00Z");
+export { MINUTOS_ATE_A_PRIMEIRA_MENSAGEM } from "./propostas-curtas";
 /** Acima disto (com IVA) na melhor proposta, fica com uma pessoa. */
 export const LIMITE_DA_MELHOR_COM_IVA = 500;
 /** Um parceiro mudou a proposta há menos disto: espera-se. */
@@ -95,12 +96,20 @@ export type PedidoParaOEnvio = {
   pedidoId: number;
   /** De quantos parceiros são as propostas por enviar. */
   parceiros: number;
-  /** A 1.ª proposta por enviar, e a 3.ª (se houver), e a última mudança de um parceiro. */
+  /** A 1.ª proposta por enviar, a 2.ª (se houver), e a última mudança de um parceiro. */
   primeiraEm: Date;
-  terceiraEm?: Date | null;
+  segundaEm?: Date | null;
+  /** Um parceiro aceitou o valor que o cliente propôs (a mais antiga por dizer): a 1.ª mensagem não espera a hora. */
+  aceitouEm?: Date | null;
   ultimaMudancaEm: Date;
-  /** O orçamento já foi ao cliente (por aqui ou à mão). */
+  /** A equipa mandou o orçamento à mão depois da última mensagem da Vitória: o resto é dela. */
   jaEnviado: boolean;
+  /** A última mensagem das propostas que a Vitória mandou sozinha (d114), ou null. */
+  ultimoEnvioEm?: Date | null;
+  /** Quantas propostas o cliente ainda não ouviu (pela rotina, pela passagem ou pela conversa). Sem isto, as por enviar. */
+  novas?: number;
+  /** Já há um parceiro contratado: depois de aceitar, nada mais sobre propostas. */
+  fechado?: boolean;
   trabalhoClyon?: boolean;
   valorUnico?: boolean;
   /** Pelo trabalho todo, por carga ou por hora. */
@@ -129,26 +138,34 @@ export function porqueFicaComUmaPessoa(p: PedidoParaOEnvio): MotivoComUmaPessoa 
 }
 
 /**
- * A PARTIR DE QUANDO PODE SAIR — pura. Com a regra de 23-11 (d6): quando chega
- * a 1.ª proposta (`MINUTOS_DEPOIS_DA_PRIMEIRA` = 0), e nunca antes de 10 min
- * depois da última mudança de um parceiro. As propostas que chegaram antes da
- * regra (`NOVA_REGRA_DESDE`) seguem a de antes: 3 propostas, ou 3 h depois da 1.ª.
+ * A PARTIR DE QUANDO PODE SAIR — pura (d114). A 1.ª mensagem: 1 h depois da
+ * 1.ª proposta, ou quando chega a 2.ª, ou quando um parceiro aceitou o valor do
+ * cliente — o que vier primeiro. Depois dela, a seguinte só no dia seguinte
+ * (às 9h): uma por dia. Nunca antes de 10 min depois da última mudança de um
+ * parceiro. A janela (9h–20h) e a uma-por-dia de todas as rotinas vêm depois,
+ * em `estadoDoEnvio`.
  */
-export function devidoDasPropostas(p: Pick<PedidoParaOEnvio, "parceiros" | "primeiraEm" | "terceiraEm" | "ultimaMudancaEm">): Date {
-  const nova = p.primeiraEm.getTime() >= NOVA_REGRA_DESDE.getTime();
-  const pelaPrimeira = nova
-    ? p.primeiraEm.getTime() + MINUTOS_DEPOIS_DA_PRIMEIRA * 60_000
-    : p.primeiraEm.getTime() + HORAS_DEPOIS_DA_PRIMEIRA_ANTES * 3_600_000;
-  const pelasTres =
-    !nova && p.parceiros >= PROPOSTAS_PARA_IR_LOGO_ANTES ? (p.terceiraEm ?? p.ultimaMudancaEm).getTime() : Number.POSITIVE_INFINITY;
+export function devidoDasPropostas(
+  p: Pick<PedidoParaOEnvio, "primeiraEm" | "segundaEm" | "aceitouEm" | "ultimaMudancaEm" | "ultimoEnvioEm">,
+): Date {
   const depoisDaMudanca = p.ultimaMudancaEm.getTime() + MINUTOS_DEPOIS_DE_MUDAR * 60_000;
-  return new Date(Math.max(Math.min(pelaPrimeira, pelasTres), depoisDaMudanca));
+  let devido: number;
+  if (p.ultimoEnvioEm) {
+    devido = aHoraDoDia(somarDiasAoDia(diaEmLisboa(p.ultimoEnvioEm), 1), HORA_DO_QUE_FICOU_PARA_DEPOIS).getTime();
+  } else {
+    devido = Math.min(
+      p.primeiraEm.getTime() + MINUTOS_ATE_A_PRIMEIRA_MENSAGEM * 60_000,
+      p.segundaEm ? p.segundaEm.getTime() : Number.POSITIVE_INFINITY,
+      p.aceitouEm ? p.aceitouEm.getTime() : Number.POSITIVE_INFINITY,
+    );
+  }
+  return new Date(Math.max(devido, depoisDaMudanca));
 }
 
 export type EstadoDoEnvio =
   | { tipo: "ja_enviado" }
   | { tipo: "fica"; motivo: MotivoComUmaPessoa }
-  | { tipo: "sai"; quando: Date; agora: boolean; porqueEspera: "mudou" | "uma_por_dia" | "janela" | "prazo" | null };
+  | { tipo: "sai"; quando: Date; agora: boolean; porqueEspera: "mudou" | "uma_por_dia" | "janela" | "prazo" | "amanha" | null };
 
 /**
  * O QUE ACONTECE A ESTE PEDIDO — pura. Já enviado; fica com uma pessoa (e
@@ -157,15 +174,23 @@ export type EstadoDoEnvio =
  * mensagem automática).
  */
 export function estadoDoEnvio(p: PedidoParaOEnvio, agora: Date, opcoes: { jaSaiuHoje?: boolean } = {}): EstadoDoEnvio {
-  if (p.jaEnviado) return { tipo: "ja_enviado" };
+  // d114: depois de aceitar, à mão pela equipa, ou sem nada que o cliente não tenha ouvido — nada sai.
+  if (p.jaEnviado || p.fechado || (p.novas ?? 1) <= 0) return { tipo: "ja_enviado" };
   const motivo = porqueFicaComUmaPessoa(p);
   if (motivo) return { tipo: "fica", motivo };
   const devido = devidoDasPropostas(p);
   let quando = momentoDeSaida(devido, agora);
-  let porqueEspera: "mudou" | "uma_por_dia" | "janela" | "prazo" | null = null;
+  let porqueEspera: "mudou" | "uma_por_dia" | "janela" | "prazo" | "amanha" | null = null;
   if (quando.getTime() > agora.getTime()) {
     const daMudanca = p.ultimaMudancaEm.getTime() + MINUTOS_DEPOIS_DE_MUDAR * 60_000;
-    porqueEspera = devido.getTime() > agora.getTime() ? (devido.getTime() === daMudanca ? "mudou" : "prazo") : "janela";
+    porqueEspera =
+      devido.getTime() > agora.getTime()
+        ? devido.getTime() === daMudanca
+          ? "mudou"
+          : p.ultimoEnvioEm
+            ? "amanha"
+            : "prazo"
+        : "janela";
   }
   if (opcoes.jaSaiuHoje && diaEmLisboa(quando) === diaEmLisboa(agora)) {
     quando = aHoraDoDia(somarDiasAoDia(diaEmLisboa(agora), 1), HORA_DO_QUE_FICOU_PARA_DEPOIS);
@@ -189,11 +214,15 @@ export function linhaDoEnvioNaMesa(e: EstadoDoEnvio, ligado: boolean): string | 
       ? " (um parceiro mudou a proposta há menos de 10 min)"
       : e.porqueEspera === "uma_por_dia"
         ? " (já saiu hoje outra mensagem automática a este cliente)"
-        : "";
+        : e.porqueEspera === "amanha"
+          ? " (as propostas novas juntam-se numa mensagem por dia)"
+          : e.porqueEspera === "prazo"
+            ? " (1 h depois da 1.ª proposta, ou quando chegar a 2.ª)"
+            : "";
   return `a Vitória envia ao cliente ${quando}${porque}`;
 }
 
 /** O que fica no histórico do pedido quando a Vitória envia. */
-export function historicoDoEnvioAutomatico(propostas: number): string {
-  return `Orçamento enviado ao cliente automaticamente — pela Vitória (${propostas} ${propostas === 1 ? "proposta" : "propostas"}).`;
+export function historicoDoEnvioAutomatico(propostas: number, actualizacao = false): string {
+  return `${actualizacao ? "Propostas atualizadas ao cliente" : "Orçamento enviado ao cliente"} automaticamente — pela Vitória (${propostas} ${propostas === 1 ? "proposta" : "propostas"}, mensagem curta, d114).`;
 }

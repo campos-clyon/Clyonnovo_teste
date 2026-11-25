@@ -27,6 +27,7 @@ import {
   pedidoDaUltimaSaida,
   pedidoDoMotivoDoSeguimento,
   textoDaListaDasPropostas,
+  mesmoValorNaLista,
   ultimaSaidaDaVitoria,
   valorNaLista,
 } from "./a-escolha-e-a-desistencia";
@@ -86,7 +87,12 @@ export async function aceitarAEscolha(telefone: string, pedidoId: number, p: Pro
 
 /** Manda a lista das propostas (e anota no pedido). */
 async function mandarALista(telefone: string, pedidoId: number, propostas: readonly PropostaDoAgente[], deNovo = false): Promise<void> {
-  await enviar(telefone, textoDaListaDasPropostas(pedidoId, propostas, deNovo));
+  const texto = textoDaListaDasPropostas(pedidoId, propostas, deNovo);
+  // d114: a lista dita na conversa conta como dita — a rotina não a repete sozinha.
+  if (await enviar(telefone, texto)) {
+    const { marcarAsPropostasNomeadas } = await import("./envio-das-propostas-ao-cliente-na-base");
+    await marcarAsPropostasNomeadas(telefone, texto);
+  }
   if (!deNovo) await nota(pedidoId, `A Vitória mandou ao cliente a lista das ${propostas.length} propostas para escolher (d111).`);
 }
 
@@ -207,7 +213,7 @@ export async function responderALista(telefone: string, texto: string): Promise<
     await mandarALista(telefone, lista.pedidoId, propostas, true);
     return true;
   }
-  if (r.linha && r.linha.valor !== valorNaLista(r.proposta)) {
+  if (r.linha && !mesmoValorNaLista(r.linha.valor, r.proposta)) {
     const { mensagemDaPropostaMudada } = await import("./vitoria-agente/ao-vivo");
     await passarAEquipa(
       telefone,
