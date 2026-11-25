@@ -22,7 +22,7 @@ import { AVISO_AO_MODELO } from "./vitoria-agente/aviso-ao-modelo";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const DEZ = new Date("2026-11-25T10:00:00Z");
-const SEM: PropostaCurta = { negociacaoId: 1, parceiro: "Entulhos Exemplo", semIva: 40, total: 49.2, semGuia: true };
+const SEM: PropostaCurta = { negociacaoId: 1, parceiro: "Ecoentulho", semIva: 40, total: 49.2, semGuia: true };
 const COM: PropostaCurta = { negociacaoId: 2, parceiro: "Resíduos Inventados", semIva: 60, total: 73.8, comGuia: true };
 
 describe("o aviso — a frase do Jurídico, antes de aceitar", () => {
@@ -35,7 +35,7 @@ describe("o aviso — a frase do Jurídico, antes de aceitar", () => {
 
   it("a proposta de entulho sem guia leva a linha; a com guia não", () => {
     const sem = mensagemCurtaDasPropostas({ pedidoId: 9118, servico: "recolha de entulho", propostas: [SEM], agora: DEZ, primeira: true });
-    expect(sem).toContain(`do parceiro Entulhos Exemplo. ${AVISO_DA_GUIA_NO_ENTULHO} Quer avançar?`);
+    expect(sem).toContain(`do parceiro Ecoentulho. ${AVISO_DA_GUIA_NO_ENTULHO} Quer avançar?`);
     const com = mensagemCurtaDasPropostas({ pedidoId: 9118, servico: "recolha de entulho", propostas: [COM], agora: DEZ, primeira: true });
     expect(com).not.toContain(AVISO_DA_GUIA_NO_ENTULHO);
     expect(com).not.toContain("com guia");
@@ -45,14 +45,14 @@ describe("o aviso — a frase do Jurídico, antes de aceitar", () => {
     const t = mensagemCurtaDasPropostas({ pedidoId: 9118, servico: "recolha de entulho", propostas: [COM, SEM], agora: DEZ, primeira: true });
     expect(t.split("\n")).toEqual([
       "Bom dia! Já tem 2 propostas para o seu pedido #9118 (recolha de entulho):",
-      "1) Entulhos Exemplo: 49,20 € (40 € + IVA)",
+      "1) Ecoentulho: 49,20 € (40 € + IVA)",
       AVISO_DA_GUIA_NO_ENTULHO,
       "2) Resíduos Inventados: 73,80 € (60 € + IVA), com guia",
       "Qual prefere? Responda com o número.",
     ]);
     const lista = lerAListaDasPropostas(t)!;
     expect(lista.linhas.map((l) => [l.n, l.parceiro, l.valor])).toEqual([
-      [1, "Entulhos Exemplo", "49,20 € (40 € + IVA)"],
+      [1, "Ecoentulho", "49,20 € (40 € + IVA)"],
       [2, "Resíduos Inventados", "73,80 € (60 € + IVA)"],
     ]);
   });
@@ -61,7 +61,7 @@ describe("o aviso — a frase do Jurídico, antes de aceitar", () => {
     const t = mensagemCurtaDasPropostas({ pedidoId: 9118, servico: "recolha de entulho", propostas: [COM, SEM], agora: DEZ, primeira: true });
     for (const lingua of ["en", "fr", "es"] as const) {
       expect(traducaoFixa(t, lingua), lingua).not.toBeNull();
-      expect(traducaoFixa(perguntaDaGuiaAntesDeFechar("Entulhos Exemplo", 9118), lingua), lingua).not.toBeNull();
+      expect(traducaoFixa(perguntaDaGuiaAntesDeFechar("Ecoentulho", 9118), lingua), lingua).not.toBeNull();
     }
     expect(traducaoFixa(AVISO_DA_GUIA_NO_ENTULHO, "en")).toContain("e-GAR");
   });
@@ -76,11 +76,11 @@ describe("o fecho — já não trava; sem o aviso, pergunta primeiro", () => {
   });
 
   it("a pergunta antes de fechar diz a linha e o «1» (ou o «sim») fecha-a, pela porta da d111", () => {
-    const p = perguntaDaGuiaAntesDeFechar("Entulhos Exemplo", 9118);
-    expect(p).toBe(`${AVISO_DA_GUIA_NO_ENTULHO} Quer avançar com o parceiro Entulhos Exemplo no pedido #9118? É só responder 1.`);
-    expect(lerAPerguntaDaGuia(p)).toEqual({ pedidoId: 9118, parceiro: "Entulhos Exemplo" });
+    const p = perguntaDaGuiaAntesDeFechar("Ecoentulho", 9118);
+    expect(p).toBe(`${AVISO_DA_GUIA_NO_ENTULHO} Quer avançar com o parceiro Ecoentulho no pedido #9118? É só responder 1.`);
+    expect(lerAPerguntaDaGuia(p)).toEqual({ pedidoId: 9118, parceiro: "Ecoentulho" });
     const lista = lerAMensagemCurtaDasPropostas(p)!;
-    const agente = { n: 1, negociacaoId: 1, pedidoId: 9118, parceiro: "Entulhos Exemplo", comoOClienteVe: "40,00 € + IVA = 49,20 €", base: "total" } as never;
+    const agente = { n: 1, negociacaoId: 1, pedidoId: 9118, parceiro: "Ecoentulho", comoOClienteVe: "40,00 € + IVA = 49,20 €", base: "total" } as never;
     expect(escolhaNaLista("1", lista.linhas, [agente]).tipo).toBe("escolheu");
     expect(escolhaNaLista("Sim", lista.linhas, [agente]).tipo).toBe("escolheu");
     expect(mesmoValorNaLista(lista.linhas[0].valor, agente)).toBe(true);
