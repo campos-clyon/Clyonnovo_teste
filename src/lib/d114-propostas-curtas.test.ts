@@ -99,7 +99,7 @@ describe("quando sai — 1 h, ou a 2.ª proposta, e depois uma por dia", () => {
 
 describe("o texto — curto, humano, a mais barata primeiro", () => {
   it("uma proposta", () => {
-    const t = mensagemCurtaDasPropostas({ pedidoId: 9114, nome: "Kelly Santos", servico: "recolha de monos", propostas: [TEJO], agora: DEZ, primeira: true });
+    const t = mensagemCurtaDasPropostas({ pedidoId: 9114, nome: "Kelly", servico: "recolha de monos", propostas: [TEJO], agora: DEZ, primeira: true });
     expect(t).toBe(
       "Bom dia, Kelly! 😊 Já tem a primeira proposta para o seu pedido #9114 (recolha de monos): 98,40 € (80 € + IVA), do parceiro Recolhas Tejo. Quer avançar? É só responder 1. Se preferir, espere um pouco, que podem chegar mais.",
     );
