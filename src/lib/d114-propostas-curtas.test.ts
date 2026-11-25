@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
  * ACEITAR (25-11-2026). Nomes, números e pedidos inventados.
  */
 
+import { chavesDasPropostasVivas } from "./chaves-das-propostas";
 import {
-  chavesDasPropostasVivas,
   cumprimento,
   lerAMensagemCurtaDasPropostas,
   mensagemCurtaDasPropostas,

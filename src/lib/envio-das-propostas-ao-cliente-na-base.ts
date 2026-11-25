@@ -35,8 +35,8 @@ import { instanteDaBase } from "./hora-de-lisboa";
 import { naJanelaDasMensagensAutomaticas } from "./janela-das-mensagens-automaticas";
 import { propostasParaOCliente, trabalhoFechado } from "./mensagem-das-propostas";
 import { nomeDoServicoDoOrcamento, type PedidoDoOrcamento } from "./texto-do-orcamento-da-mesa";
+import { chavesDasPropostasVivas } from "./chaves-das-propostas";
 import {
-  chavesDasPropostasVivas,
   ESPECIE_DAS_PROPOSTAS_DITAS,
   mensagemCurtaDasPropostas,
   oTextoNomeia,
