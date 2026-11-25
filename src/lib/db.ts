@@ -4408,14 +4408,14 @@ function noveDigitos(v: unknown): string {
  */
 export async function respostasDoClienteNoWhatsApp(
   telefones: Array<string | null>,
-): Promise<Map<string, { ultimaMensagemEm: Date | null; passadaEm: Date | null }>> {
-  const m = new Map<string, { ultimaMensagemEm: Date | null; passadaEm: Date | null }>();
+): Promise<Map<string, { ultimaMensagemEm: Date | null; passadaEm: Date | null; ultimaDaVitoriaEm?: Date | null }>> {
+  const m = new Map<string, { ultimaMensagemEm: Date | null; passadaEm: Date | null; ultimaDaVitoriaEm?: Date | null }>();
   const noves = [...new Set(telefones.map(noveDigitos).filter(Boolean))];
   if (noves.length === 0) return m;
   const pool = await getPool();
   if (!pool) return m;
   const data = (v: unknown) => (v ? new Date(v as string) : null);
-  const vazio = () => ({ ultimaMensagemEm: null as Date | null, passadaEm: null as Date | null });
+  const vazio = () => ({ ultimaMensagemEm: null as Date | null, passadaEm: null as Date | null, ultimaDaVitoriaEm: null as Date | null });
   const marcas = noves.map(() => "?").join(",");
   try {
     await ensureWhatsappMensagensTable();
@@ -4430,6 +4430,20 @@ export async function respostasDoClienteNoWhatsApp(
     for (const l of linhas) {
       const r = m.get(String(l.t)) ?? vazio();
       r.ultimaMensagemEm = data(l.em);
+      m.set(String(l.t), r);
+    }
+    // d119: a última resposta da Vitória (não à mão) — com ela depois da do cliente, não é «connosco».
+    const [daVitoria] = (await pool.execute(
+      `SELECT RIGHT(telefone, 9) AS t, MAX(criadoEm) AS em
+         FROM whatsappMensagens
+        WHERE direccao = 'out' AND texto NOT LIKE '[à mão]%' AND criadoEm > NOW() - INTERVAL 30 DAY
+          AND RIGHT(telefone, 9) IN (${marcas})
+        GROUP BY RIGHT(telefone, 9)`,
+      noves,
+    )) as [Array<{ t: string; em: unknown }>, unknown];
+    for (const l of daVitoria) {
+      const r = m.get(String(l.t)) ?? vazio();
+      r.ultimaDaVitoriaEm = data(l.em);
       m.set(String(l.t), r);
     }
   } catch (err) {

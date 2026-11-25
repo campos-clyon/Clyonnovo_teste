@@ -51,6 +51,7 @@ import {
   linhaDoEnvioNaMesa,
   MOTIVOS_COM_UMA_PESSOA,
   NOME_DO_INTERRUPTOR_DAS_PROPOSTAS,
+  NOTA_DO_ENVIO_PELA_VITORIA,
   type EstadoDoEnvio,
   type PedidoParaOEnvio,
 } from "./envio-das-propostas-ao-cliente";
@@ -294,11 +295,126 @@ export async function marcarAsPropostasNomeadas(telefone: string, texto: string,
         })),
         agora,
       ).filter((c) => oTextoNomeia(texto, c.parceiro));
-      if (chaves.length > 0) await marcarPropostasDitas(telefone, pedidoId, chaves);
+      if (chaves.length > 0) {
+        await marcarPropostasDitas(telefone, pedidoId, chaves);
+        // d119: e, se o pedido estava à espera de nós, o orçamento conta como enviado («A aguardar cliente»).
+        await marcarEnviadoPelaVitoriaSeEsperava(pedidoId, agora);
+      }
     }
   } catch (e) {
     console.error("[envio-das-propostas] não li as propostas nomeadas:", e instanceof Error ? e.message : e);
   }
+}
+
+/**
+ * O «JÁ ENVIEI» DA VITÓRIA — 25-11-2026 (d119). Quando as propostas saem ao
+ * cliente por um caminho automático (a conversa livre que as lista, a lista da
+ * d111), grava-se como enviado pela MESMA função do «Já enviei»
+ * (`marcarOrcamentoEnviado`), com a nota no histórico — e a linha do envio
+ * fica com a hora (a rotina conta-a na uma-por-dia e não a toma pela equipa).
+ * Só se o pedido estava mesmo à espera de nós (`propostasPorEnviarDoPedido`):
+ * o que já tinha ido não se marca outra vez (a validade conta do envio).
+ * Devolve se marcou. Nunca lança.
+ */
+export async function marcarEnviadoPelaVitoriaSeEsperava(pedidoId: number, agora: Date = new Date()): Promise<boolean> {
+  try {
+    const db = await import("./db");
+    const pedido = await db.getSimulatorOrderById(pedidoId);
+    if (!pedido) return false;
+    const negociacoes = await db.negociacoesDoPedido(pedidoId);
+    const comoNaMesa = { ...(pedido as object), negociacoes } as unknown as PedidoParaOLado;
+    if (!propostasPorEnviarDoPedido(comoNaMesa, agora)) return false;
+    await marcarEnviadoPelaVitoria(pedidoId);
+    return true;
+  } catch (e) {
+    console.error("[envio-das-propostas] não marquei o envio pela Vitória:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+/** Marca o envio (o «Já enviei»), a nota no histórico e a linha do envio. */
+async function marcarEnviadoPelaVitoria(pedidoId: number): Promise<void> {
+  const db = await import("./db");
+  await db.marcarOrcamentoEnviado(pedidoId);
+  const pool = await garantirTabelas();
+  await pool.execute(
+    `INSERT INTO envioDasPropostasAoCliente (pedidoId, estado, enviadoEm, ultimoEnvioEm, envios) VALUES (?, 'enviado', UTC_TIMESTAMP(), UTC_TIMESTAMP(), 1)
+     ON DUPLICATE KEY UPDATE ultimoEnvioEm = UTC_TIMESTAMP(), enviadoEm = COALESCE(enviadoEm, UTC_TIMESTAMP()),
+       estado = IF(estado IN ('fila', 'a_enviar'), estado, 'enviado')`,
+    [pedidoId],
+  );
+  await appendOrderHistory(pedidoId, { type: "note", by: null, message: `${NOTA_DO_ENVIO_PELA_VITORIA}.` }).catch(() => {});
+}
+
+/**
+ * A PASSAGEM ÚNICA DA d119 (25-11-2026) — os pedidos abertos que estavam em
+ * «Precisa de si» com propostas que a Vitória já tinha dito ao cliente (uma
+ * mensagem dela no fio, depois da proposta mais recente, que nomeia um dos
+ * parceiros): passam a «A aguardar cliente» pela mesma função. Pura, para o
+ * teste: recebe os pedidos da Mesa e o fio de cada um.
+ */
+export function pedidosJaDitosPelaVitoria(
+  pedidos: ReadonlyArray<PedidoDaMesa>,
+  fioDe: (telefone: string) => ReadonlyArray<{ direccao: string; texto: string; haSegundos?: number | null }>,
+  agora: Date,
+): number[] {
+  const out: number[] = [];
+  for (const p of pedidos) {
+    const por = propostasPorEnviarDoPedido(p, agora);
+    if (!por || !p.contactPhone) continue;
+    const maisRecente = Math.max(...por.instantes);
+    const parceiros = p.negociacoes.map((n) => String(n.profissionalNome ?? "")).filter((n) => n.trim().length >= 3);
+    const dita = fioDe(p.contactPhone).some(
+      (m) =>
+        m.direccao === "out" &&
+        !m.texto.trim().startsWith("[à mão]") &&
+        typeof m.haSegundos === "number" &&
+        agora.getTime() - m.haSegundos * 1000 > maisRecente &&
+        parceiros.some((nome) => oTextoNomeia(m.texto, nome)),
+    );
+    if (dita) out.push(Number(p.id));
+  }
+  return out;
+}
+
+export const CHAVE_DA_PASSAGEM_UNICA_D119 = "acerto_dos_enviados_d119";
+
+/**
+ * Corre UMA vez (a marca na tabela dos interruptores): lê os pedidos da Mesa,
+ * marca os já ditos e escreve no registo quantos foram. Devolve quantos, ou
+ * null se já tinha corrido.
+ */
+export async function passagemUnicaDosEnviados(agora: Date = new Date()): Promise<number | null> {
+  const pool = await garantirTabelas();
+  const [jaFoi] = (await pool.execute(
+    "SELECT 1 FROM retencaoInterruptores WHERE chave = ? LIMIT 1",
+    [CHAVE_DA_PASSAGEM_UNICA_D119],
+  )) as [unknown[], unknown];
+  if (Array.isArray(jaFoi) && jaFoi.length > 0) return null;
+  // A marca ANTES do trabalho: duas passagens ao mesmo tempo não fazem duas vezes.
+  const [marca] = (await pool.execute(
+    "INSERT IGNORE INTO retencaoInterruptores (chave, ligado, mudadoEm, porQuem) VALUES (?, 1, UTC_TIMESTAMP(), 'd119')",
+    [CHAVE_DA_PASSAGEM_UNICA_D119],
+  )) as [{ affectedRows: number }, unknown];
+  if (Number(marca?.affectedRows ?? 0) !== 1) return null;
+  const db = await import("./db");
+  const pedidos = JSON.parse(JSON.stringify(await db.pedidosComNegociacoes(200))) as PedidoDaMesa[];
+  const fios = new Map<string, Array<{ direccao: string; texto: string; haSegundos?: number | null }>>();
+  for (const p of pedidos) {
+    if (!p.contactPhone || fios.has(p.contactPhone) || !propostasPorEnviarDoPedido(p, agora)) continue;
+    fios.set(p.contactPhone, await db.mensagensDoNumeroWhatsApp(p.contactPhone, 40).catch(() => []));
+  }
+  const ids = pedidosJaDitosPelaVitoria(pedidos, (t) => fios.get(t) ?? [], agora);
+  for (const id of ids) await marcarEnviadoPelaVitoria(id).catch(() => {});
+  await db
+    .registarSemFalhar({
+      acontecimento: "assistente_alerta",
+      autorTipo: "assistente",
+      autorNome: "d119 — orçamentos já ditos pela Vitória",
+      resumo: `d119: ${ids.length} pedido(s) com as propostas já ditas pela Vitória passaram a «A aguardar cliente»${ids.length ? ` (#${ids.join(", #")})` : ""}.`,
+    })
+    .catch(() => {});
+  return ids.length;
 }
 
 type NotasDosParceiros = Map<number, { nota: { media: number; quantas: number } | null }>;

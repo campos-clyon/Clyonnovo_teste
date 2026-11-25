@@ -420,13 +420,36 @@ export function lerRespostaAoLembrete(texto: string | null | undefined): Respost
  * a 21/11 às 18h» — ou, com o interruptor desligado, «… · fecharia a 21/11 às
  * 18h». O que já saiu diz «enviado». Pura.
  */
+/**
+ * É CONNOSCO? — d119 (25-11-2026). O cliente respondeu durante o ciclo: só é
+ * connosco («Precisa de si») se ficou sem resposta, ou se a conversa passou à
+ * equipa depois. Com a Vitória a responder-lhe a seguir (e a conversa com
+ * ela), a contagem para mas o pedido fica em «A aguardar cliente». Pura.
+ */
+export function respostaEConnosco(r: {
+  ultimaDoClienteEm: Date | null | undefined;
+  ultimaDaVitoriaEm?: Date | null;
+  passadaEm?: Date | null;
+}): boolean {
+  const cliente = r.ultimaDoClienteEm?.getTime();
+  if (cliente == null || Number.isNaN(cliente)) return true;
+  const passada = r.passadaEm?.getTime();
+  if (passada != null && !Number.isNaN(passada) && passada >= cliente) return true;
+  const vitoria = r.ultimaDaVitoriaEm?.getTime();
+  return vitoria == null || Number.isNaN(vitoria) || vitoria < cliente;
+}
+
 export function linhaDaMesa(
-  c: CicloDoOrcamento & { reaberto?: boolean },
+  c: CicloDoOrcamento & { reaberto?: boolean; vitoriaRespondeu?: boolean },
   ligado: boolean,
 ): string {
   const d = datasDoCiclo(c);
   const inicio = `${c.reaberto ? "reaberto" : "orçamento enviado"} ${ddmm(d.diaDoEnvio)}`;
   if (c.fechadoEm) return `${inicio} · fechado a ${ddmm(diaEmLisboa(c.fechadoEm))} por falta de resposta`;
+  // d119: com a Vitória a responder-lhe depois, a contagem parou mas não é connosco.
+  if (c.paradoEm && c.vitoriaRespondeu) {
+    return `${inicio} · o cliente respondeu a ${ddmm(diaEmLisboa(c.paradoEm))} e a Vitória já lhe respondeu — contagem parada`;
+  }
   if (c.paradoEm) return `${inicio} · o cliente respondeu a ${ddmm(diaEmLisboa(c.paradoEm))} — contagem parada, é connosco`;
   const lembrete = c.lembrete1Em ? `lembrete 1 enviado a ${ddmm(d.diaDoLembrete)}` : `lembrete 1 a ${ddmm(d.diaDoLembrete)}`;
   const aviso = c.ultimoAvisoEm

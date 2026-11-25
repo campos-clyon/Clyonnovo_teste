@@ -222,7 +222,13 @@ export function linhaDoEnvioNaMesa(e: EstadoDoEnvio, ligado: boolean): string | 
   return `a Vitória envia ao cliente ${quando}${porque}`;
 }
 
+/** d119: a nota de quando as propostas saem ao cliente por um caminho automático — o «Já enviei» da Vitória. */
+export const NOTA_DO_ENVIO_PELA_VITORIA = "Orçamento enviado ao cliente pela Vitória (WhatsApp)";
+
 /** O que fica no histórico do pedido quando a Vitória envia. */
 export function historicoDoEnvioAutomatico(propostas: number, actualizacao = false): string {
-  return `${actualizacao ? "Propostas atualizadas ao cliente" : "Orçamento enviado ao cliente"} automaticamente — pela Vitória (${propostas} ${propostas === 1 ? "proposta" : "propostas"}, mensagem curta, d114).`;
+  const quantas = `${propostas} ${propostas === 1 ? "proposta" : "propostas"}`;
+  return actualizacao
+    ? `Propostas atualizadas ao cliente pela Vitória (WhatsApp) — ${quantas}, mensagem curta (d114).`
+    : `${NOTA_DO_ENVIO_PELA_VITORIA} — ${quantas}, mensagem curta (d114).`;
 }

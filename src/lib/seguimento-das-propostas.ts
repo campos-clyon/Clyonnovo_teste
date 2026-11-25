@@ -34,6 +34,8 @@ export type PedidoParaOSeguimento = {
   status?: string | null;
   valorFixoClyon?: number | string | null;
   valorUnicoCliente?: number | string | null;
+  /** d119: quando o orçamento foi ao cliente (por qualquer caminho) — o que chegou antes não está «por ver». */
+  propostaEnviadaEm?: string | Date | null;
   negociacoes: ReadonlyArray<{
     estado: string;
     propostasJson?: string | null;
@@ -65,6 +67,8 @@ export function propostasPorVer(p: PedidoParaOSeguimento): number[] {
   if (p.valorFixoClyon != null || p.valorUnicoCliente != null) return [];
   if (p.negociacoes.some((n) => n.estado === "acordada" || n.confirmadoEm != null)) return [];
   const instantes: number[] = [];
+  // d119: a proposta que já foi ao cliente pelo WhatsApp (pela Vitória ou pelo «Já enviei») conta como enviada.
+  const enviado = instanteDaBase(p.propostaEnviadaEm ?? null)?.getTime() ?? null;
   for (const n of p.negociacoes) {
     if (n.estado === "morta" || n.estado === "desistida" || n.estado === "acordada") continue;
     const visto = instanteDaBase(n.vistoPeloClienteEm ?? null)?.getTime() ?? null;
@@ -74,6 +78,7 @@ export function propostasPorVer(p: PedidoParaOSeguimento): number[] {
       if (t == null) continue;
       // Vista só conta se foi aberta depois de a proposta chegar.
       if (visto != null && visto >= t) continue;
+      if (enviado != null && enviado >= t) continue;
       instantes.push(t);
     }
   }

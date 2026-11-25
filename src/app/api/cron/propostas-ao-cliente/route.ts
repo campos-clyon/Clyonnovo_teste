@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { carimbarPassagem } from "@/lib/licoes-da-vitoria-na-base";
-import { resumoDaRotinaDasPropostas, rotinaDasPropostas } from "@/lib/envio-das-propostas-ao-cliente-na-base";
+import { passagemUnicaDosEnviados, resumoDaRotinaDasPropostas, rotinaDasPropostas } from "@/lib/envio-das-propostas-ao-cliente-na-base";
 import { bearerConfere } from "@/lib/segredo-igual";
 
 /**
@@ -28,6 +28,10 @@ export async function GET(req: NextRequest) {
   if (!bearerConfere(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
+  // d119: uma vez, os pedidos com as propostas já ditas pela Vitória passam a «A aguardar cliente».
+  await passagemUnicaDosEnviados(new Date()).catch((e) =>
+    console.error("[cron/propostas-ao-cliente] a passagem única da d119:", e instanceof Error ? e.message : e),
+  );
   try {
     const r = await carimbarPassagem("propostas-ao-cliente", () => rotinaDasPropostas(new Date()), (p) => ({
       ok: true,

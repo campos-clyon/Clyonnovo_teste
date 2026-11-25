@@ -379,9 +379,9 @@ describe("passo 3: quando vão as propostas (d114: 1 h, ou a 2.ª; depois uma po
   });
 
   it("o histórico diz que foi a Vitória, e quantas propostas", () => {
-    expect(historicoDoEnvioAutomatico(3)).toBe("Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas, mensagem curta, d114).");
-    expect(historicoDoEnvioAutomatico(1)).toBe("Orçamento enviado ao cliente automaticamente — pela Vitória (1 proposta, mensagem curta, d114).");
-    expect(historicoDoEnvioAutomatico(2, true)).toBe("Propostas atualizadas ao cliente automaticamente — pela Vitória (2 propostas, mensagem curta, d114).");
+    expect(historicoDoEnvioAutomatico(3)).toBe("Orçamento enviado ao cliente pela Vitória (WhatsApp) — 3 propostas, mensagem curta (d114).");
+    expect(historicoDoEnvioAutomatico(1)).toBe("Orçamento enviado ao cliente pela Vitória (WhatsApp) — 1 proposta, mensagem curta (d114).");
+    expect(historicoDoEnvioAutomatico(2, true)).toBe("Propostas atualizadas ao cliente pela Vitória (WhatsApp) — 2 propostas, mensagem curta (d114).");
   });
 });
 
@@ -477,14 +477,14 @@ describe("passo 3: o envio, com a base fingida", { timeout: 60_000 }, () => {
     base.pedidosDaMesa = [pedidoDaMesa()];
     const { enviarAsPropostasAoCliente } = await import("./envio-das-propostas-ao-cliente-na-base");
     const r = await enviarAsPropostasAoCliente(9102, AGORA);
-    expect(r).toEqual({ ok: true, feito: "Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas, mensagem curta, d114)." });
+    expect(r).toEqual({ ok: true, feito: "Orçamento enviado ao cliente pela Vitória (WhatsApp) — 3 propostas, mensagem curta (d114)." });
     expect(base.enviados).toHaveLength(1);
     expect(base.enviados[0]).toContain("Já tem 3 propostas para o seu pedido #9102 (recolha de monos):");
     expect(base.enviados[0]).toContain("1) Recolhas Inventadas: ");
     expect(base.enviados[0]).toContain("Qual prefere? Responda com o número.");
     expect(base.enviados[0]).not.toMatch(/válida até|fatura|adiantado|taxa/);
     expect(base.marcados).toEqual([9102]);
-    expect(base.historico).toEqual(["Orçamento enviado ao cliente automaticamente — pela Vitória (3 propostas, mensagem curta, d114)."]);
+    expect(base.historico).toEqual(["Orçamento enviado ao cliente pela Vitória (WhatsApp) — 3 propostas, mensagem curta (d114)."]);
     expect(base.ditas).toEqual(["proposta:1:1", "proposta:2:1", "proposta:3:1"]);
   });
 

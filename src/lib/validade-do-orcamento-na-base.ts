@@ -41,7 +41,7 @@ import {
   HORAS_PARA_CONFIRMAR_O_CANCELAMENTO,
   jaFalouHoje,
   mesmoTelefoneEstrito,
-  linhaDaMesa,
+  linhaDaMesa, respostaEConnosco,
   melhorProposta,
   naJanelaDaValidade,
   NOME_DO_INTERRUPTOR_DA_VALIDADE,
@@ -858,11 +858,18 @@ export async function validadeNaMesa(agora: Date = new Date()): Promise<{ ligado
       const resp = respostas.get(noveDigitos(p.contactPhone));
       const respondeu = clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm);
       const vista = respondeu && !c.paradoEm ? { ...c, paradoEm: resp?.ultimaMensagemEm ?? agora } : c;
+      // d119: a Vitória respondeu-lhe depois (e a conversa não passou à equipa): não é connosco.
+      const connosco = respostaEConnosco({
+        ultimaDoClienteEm: resp?.ultimaMensagemEm ?? null,
+        ultimaDaVitoriaEm: resp?.ultimaDaVitoriaEm ?? null,
+        passadaEm: resp?.passadaEm ?? null,
+      });
+      const comAResposta = vista.paradoEm && !connosco ? { ...vista, vitoriaRespondeu: true } : vista;
       return {
         pedidoId: p.id,
-        linha: linhaDaMesa(vista, ligado),
+        linha: linhaDaMesa(comAResposta, ligado),
         lembrar: ligado && !vista.paradoEm ? rotuloDoLembrarAgora(vista, agora) : null,
-        parado: Boolean(vista.paradoEm),
+        parado: Boolean(vista.paradoEm) && connosco,
         falha: falhaDe.get(p.id) ?? null,
       };
     }),
