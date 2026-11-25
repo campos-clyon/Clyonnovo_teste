@@ -118,7 +118,7 @@ const recomecado = (o: Record<string, unknown> = {}) => ({
   city: "Almada",
   contactName: "Rui Inventado",
   contactEmail: null,
-  contactPhone: "912000111",
+  contactPhone: "912345678",
   address: null,
   postalCode: null,
   valorDesejadoCliente: null,
@@ -219,7 +219,7 @@ describe("na base (fingida): o recomeço do zero", { timeout: 60_000 }, () => {
 
   it("ao dizer outra vez uma chave que já existia, ela fica com a hora nova", async () => {
     const { marcarPropostasDitas } = await import("./envio-das-propostas-ao-cliente-na-base");
-    await marcarPropostasDitas("912000111", 9124, [{ chave: "proposta:11:1", negociacaoId: 11 }]);
+    await marcarPropostasDitas("912345678", 9124, [{ chave: "proposta:11:1", negociacaoId: 11 }]);
     const u = base.sql.find((x) => /UPDATE assistenteAvisos SET enviadoEm = UTC_TIMESTAMP\(\)/.test(x.sql));
     expect(u?.args).toEqual([9124, 11, "proposta:11:1"]);
   });
