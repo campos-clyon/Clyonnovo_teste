@@ -91,7 +91,8 @@ export type MotivoComUmaPessoa =
   | "acima_de_500"
   | "sem_telemovel"
   | "bloqueado"
-  | "nao_contactar";
+  | "nao_contactar"
+  | "ditas_por_ler";
 
 export const MOTIVOS_COM_UMA_PESSOA: Record<MotivoComUmaPessoa, string> = {
   trabalho_clyon: "é um Trabalho CLYON (valor fixo)",
@@ -104,7 +105,23 @@ export const MOTIVOS_COM_UMA_PESSOA: Record<MotivoComUmaPessoa, string> = {
   sem_telemovel: "sem telemóvel para o WhatsApp",
   bloqueado: "o número está bloqueado",
   nao_contactar: "o cliente pediu para não ser contactado",
+  ditas_por_ler: "não li o que o cliente já ouviu (a base falhou) — tenta outra vez na volta seguinte",
 };
+
+/**
+ * A PROPOSTA JÁ FOI DITA AO CLIENTE? — pura (d123, o #672). A chave de uma
+ * proposta é a negociação e o n.º da proposta nela (`chaveDaProposta`); um
+ * pedido recomeçado do zero REPÕE as mesmas negociações, e a 1.ª proposta
+ * depois do recomeço tem a mesma chave da 1.ª de antes — que já tinha sido
+ * dita. Só conta como dita o registo de DEPOIS da proposta (1 s de folga: a
+ * base guarda ao segundo). Sem registo, não; sem hora de um lado ou do outro,
+ * sim (o lado que não repete).
+ */
+export function aPropostaJaFoiDita(ditaEm: number | null | undefined, propostaEm: number | null | undefined): boolean {
+  if (ditaEm === undefined) return false;
+  if (ditaEm == null || propostaEm == null) return true;
+  return ditaEm >= propostaEm - 1000;
+}
 
 /**
  * A ENTREGA AINDA PRENDE AS PROPOSTAS? — pura (d123). Prende a que uma pessoa
@@ -161,10 +178,13 @@ export type PedidoParaOEnvio = {
   bloqueado?: boolean;
   /** d93: o cliente pediu para não ser contactado. */
   naoContactar?: boolean;
+  /** d123 (o #672): não se leu o que o cliente já ouviu — não sai, e o cartão diz porquê. */
+  ditasPorLer?: boolean;
 };
 
 /** PORQUE FICA COM UMA PESSOA — ou null. Pura. */
 export function porqueFicaComUmaPessoa(p: PedidoParaOEnvio): MotivoComUmaPessoa | null {
+  if (p.ditasPorLer) return "ditas_por_ler";
   if (p.trabalhoClyon) return "trabalho_clyon";
   if (p.valorUnico) return "valor_unico";
   if (String(p.base ?? "").trim() === "hora") return "a_hora";
@@ -206,7 +226,8 @@ export function devidoDasPropostas(
 export type PorqueEspera = "mudou" | "intervalo" | "tres_por_dia" | "janela" | "prazo" | null;
 
 export type EstadoDoEnvio =
-  | { tipo: "ja_enviado" }
+  /** `porque: "ditas"` — a Mesa ainda as conta por enviar, mas o cliente já as ouviu (a linha diz). */
+  | { tipo: "ja_enviado"; porque?: "ditas" }
   | { tipo: "fica"; motivo: MotivoComUmaPessoa }
   | { tipo: "sai"; quando: Date; agora: boolean; porqueEspera: PorqueEspera };
 
@@ -218,7 +239,9 @@ export type EstadoDoEnvio =
  */
 export function estadoDoEnvio(p: PedidoParaOEnvio, agora: Date): EstadoDoEnvio {
   // Depois de aceitar, ou sem nada que o cliente não tenha ouvido — nada sai.
-  if (p.jaEnviado || p.fechado || (p.novas ?? 1) <= 0) return { tipo: "ja_enviado" };
+  if (p.jaEnviado || p.fechado) return { tipo: "ja_enviado" };
+  if (p.ditasPorLer) return { tipo: "fica", motivo: "ditas_por_ler" };
+  if ((p.novas ?? 1) <= 0) return { tipo: "ja_enviado", porque: "ditas" };
   const motivo = porqueFicaComUmaPessoa(p);
   if (motivo) return { tipo: "fica", motivo };
   const devido = devidoDasPropostas(p);
@@ -249,7 +272,9 @@ export function estadoDoEnvio(p: PedidoParaOEnvio, agora: Date): EstadoDoEnvio {
  * interruptor desligado, «envio automático desligado: enviaria a …». Pura.
  */
 export function linhaDoEnvioNaMesa(e: EstadoDoEnvio, ligado: boolean): string | null {
-  if (e.tipo === "ja_enviado") return null;
+  // d123 (o #672): a Mesa conta-as por enviar e a rotina não as diz — nunca calado.
+  if (e.tipo === "ja_enviado")
+    return e.porque === "ditas" ? `não sai sozinha: ${LINHA_DAS_JA_DITAS}` : null;
   if (e.tipo === "fica") return `fica com uma pessoa: ${MOTIVOS_COM_UMA_PESSOA[e.motivo]}`;
   const quando = e.agora ? "já" : `a ${diaEHoraCurtos(e.quando)}`;
   if (!ligado) return `envio automático desligado: enviaria ${e.agora ? "já" : quando}`;
@@ -265,6 +290,12 @@ export function linhaDoEnvioNaMesa(e: EstadoDoEnvio, ligado: boolean): string | 
             : "";
   return `a Vitória envia ao cliente ${quando}${porque}`;
 }
+
+/** d123: a linha de quando a Mesa conta as propostas por enviar mas o cliente já as ouviu. */
+export const LINHA_DAS_JA_DITAS = "o cliente já ouviu estas propostas (na conversa ou noutro envio) — se já as tem, «Já enviei»";
+
+/** d123: a linha de quando o envio automático não conseguiu ler o pedido. */
+export const LINHA_DO_ENVIO_POR_LER = "o envio automático não leu este pedido (erro) — enviar à mão ou esperar pela volta seguinte";
 
 /** d119: a nota de quando as propostas saem ao cliente por um caminho automático — o «Já enviei» da Vitória. */
 export const NOTA_DO_ENVIO_PELA_VITORIA = "Orçamento enviado ao cliente pela Vitória (WhatsApp)";

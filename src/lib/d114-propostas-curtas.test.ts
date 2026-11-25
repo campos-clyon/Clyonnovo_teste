@@ -218,14 +218,16 @@ describe("nunca se repete — a mesma chave nos três caminhos", () => {
   it("a rotina marca as que disse, conta só as que ele não ouviu, e a conversa livre e a lista da d111 também marcam", () => {
     const BASE = ler("src/lib/envio-das-propostas-ao-cliente-na-base.ts");
     // d123: as por dizer — nem ditas, nem de antes do orçamento que já foi.
-    expect(BASE).toContain("if (ditas.has(v.chave)) return false;");
+    // d123 (o #672): só a dita depois da proposta a cala (o recomeço do zero repete a chave).
+    expect(BASE).toContain("if (aPropostaJaFoiDita(ditas.has(v.chave) ? (ditas.get(v.chave) ?? null) : undefined, t)) return false;");
     expect(BASE).toContain("novas: porDizer.length,");
     const envio = BASE.slice(BASE.indexOf("export async function enviarAsPropostasAoCliente("));
     expect(envio.indexOf("enviarTextoManualWhatsApp(telefone, texto")).toBeLessThan(envio.indexOf("await marcarPropostasDitas(telefone, pedidoId, c.chaves);"));
     expect(ler("src/lib/vitoria-agente/ao-vivo-na-base.ts")).toContain("marcarAsPropostasNomeadas(telefone, texto)");
     expect(ler("src/lib/a-escolha-e-a-desistencia-no-whatsapp.ts")).toContain("await marcarAsPropostasNomeadas(telefone, texto);");
-    // Na dúvida (a base falhou), todas contam como ditas: não se repete nada.
-    expect(BASE).toContain("return new Set(limpas);");
+    // Na dúvida (a base falhou), nada sai — e desde a d123 (o #672) o cartão diz porquê.
+    expect(BASE).toContain("return { ditas, porLer: true };");
+    expect(BASE).toContain("ditasPorLer: porLer,");
   });
 
   it("só sai com os dois interruptores: «Enviar as propostas ao cliente» e «Avisar de propostas»", () => {

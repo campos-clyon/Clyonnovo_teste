@@ -53,7 +53,9 @@ import { guiaVerificada, servicoExigeGuia } from "./guia-antes-de-contratar";
 import { melhorProposta } from "./validade-do-orcamento";
 import {
   aEntregaPrendeAsPropostas,
+  aPropostaJaFoiDita,
   estadoDoEnvio,
+  LINHA_DO_ENVIO_POR_LER,
   historicoDoEnvioAutomatico,
   linhaDoEnvioNaMesa,
   MOTIVOS_COM_UMA_PESSOA,
@@ -315,20 +317,26 @@ function instanteDaViva(n: NegociacaoDaMesa | undefined): number | null {
 /**
  * AS CHAVES QUE JÁ FORAM DITAS AO CLIENTE — no registo dos avisos do
  * assistente (a proposta nova e o «aceitou» de antes, a rotina e a conversa
- * livre). Na dúvida (a base falhou), todas: não se repete nada.
+ * livre), com a hora a que ficaram ditas (d123, o #672: depois de um recomeço
+ * do zero a chave repete-se, e só conta o registo de depois da proposta —
+ * `aPropostaJaFoiDita`). Na dúvida (a base falhou), `porLer`: nada sai, e o
+ * cartão diz porquê.
  */
-async function chavesJaDitas(pool: Pool, chaves: string[]): Promise<Set<string>> {
+async function chavesJaDitas(pool: Pool, chaves: string[]): Promise<{ ditas: Map<string, number | null>; porLer: boolean }> {
   const limpas = [...new Set(chaves)].slice(0, 200);
-  if (limpas.length === 0) return new Set();
+  const ditas = new Map<string, number | null>();
+  if (limpas.length === 0) return { ditas, porLer: false };
   try {
     const [rows] = (await pool.execute(
-      `SELECT chave FROM assistenteAvisos WHERE chave IN (${limpas.map(() => "?").join(",")})`,
+      `SELECT chave, enviadoEm FROM assistenteAvisos WHERE chave IN (${limpas.map(() => "?").join(",")})`,
       limpas,
-    )) as [Array<{ chave: string }>, unknown];
-    return new Set((Array.isArray(rows) ? rows : []).map((r) => String(r.chave)));
+    )) as [Array<{ chave: string; enviadoEm?: Date | string | null }>, unknown];
+    for (const r of Array.isArray(rows) ? rows : []) ditas.set(String(r.chave), instanteDaBase(r.enviadoEm ?? null)?.getTime() ?? null);
+    return { ditas, porLer: false };
   } catch (e) {
-    if ((e as { code?: string })?.code === "ER_NO_SUCH_TABLE") return new Set();
-    return new Set(limpas);
+    if ((e as { code?: string })?.code === "ER_NO_SUCH_TABLE") return { ditas, porLer: false };
+    console.error("[envio-das-propostas] não li as propostas já ditas:", e instanceof Error ? e.message : e);
+    return { ditas, porLer: true };
   }
 }
 
@@ -346,7 +354,7 @@ export async function marcarPropostasDitas(
   try {
     const db = await import("./db");
     for (const c of chaves) {
-      const { id } = await db.reservarAvisoDoAssistente({
+      const { id, jaExistia } = await db.reservarAvisoDoAssistente({
         chave: c.chave,
         especie: ESPECIE_DAS_PROPOSTAS_DITAS,
         telefone,
@@ -354,6 +362,17 @@ export async function marcarPropostasDitas(
         negociacaoId: c.negociacaoId,
       });
       if (id) await db.fecharAvisoDoAssistente(id, "informado").catch(() => {});
+      // d123 (o #672): a chave já existia (de antes de um recomeço do zero) — fica dita AGORA, para a rotina não a repetir.
+      else if (jaExistia) {
+        const pool = await db.getPool();
+        await pool
+          ?.execute("UPDATE assistenteAvisos SET enviadoEm = UTC_TIMESTAMP(), pedidoId = ?, negociacaoId = ? WHERE chave = ?", [
+            pedidoId,
+            c.negociacaoId,
+            c.chave.slice(0, 160),
+          ])
+          .catch(() => {});
+      }
     }
   } catch (e) {
     console.error("[envio-das-propostas] não marquei as propostas ditas:", e instanceof Error ? e.message : e);
@@ -696,10 +715,11 @@ export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: r
       daVitoria && enviadoEm ? new Date(Math.max(daVitoria.getTime(), enviadoEm.getTime())) : (daVitoria ?? enviadoEm ?? null);
     // As propostas que o cliente ainda não ouviu: nem ditas (por qualquer caminho, d114), nem de antes do orçamento que já foi.
     const vivas = chavesDasPropostasVivas(p.negociacoes, agora);
-    const ditas = await chavesJaDitas(pool, vivas.map((v) => v.chave));
+    const { ditas, porLer } = await chavesJaDitas(pool, vivas.map((v) => v.chave));
     const porDizer = vivas.filter((v) => {
-      if (ditas.has(v.chave)) return false;
       const t = instanteDaViva(daNegociacao.get(v.negociacaoId));
+      // d123 (o #672): a chave dita ANTES desta proposta (um recomeço do zero repete-a) não a cala.
+      if (aPropostaJaFoiDita(ditas.has(v.chave) ? (ditas.get(v.chave) ?? null) : undefined, t)) return false;
       return enviadoEm == null || t == null || t > enviadoEm.getTime();
     });
     // A 1.ª mensagem diz todas; depois, só as novas — nunca a lista toda outra vez.
@@ -746,6 +766,7 @@ export async function candidatosAoEnvio(agora: Date, ids?: number[], jaLidos?: r
       temTelemovel,
       bloqueado: cliente.bloqueado,
       naoContactar: cliente.naoContactar,
+      ditasPorLer: porLer,
     };
     out.push({
       pedido: p,
@@ -785,6 +806,14 @@ export async function linhasDoEnvioNaMesa(agora: Date = new Date(), pedidos?: re
     }
   } catch (e) {
     console.error("[envio-das-propostas] a Mesa não leu o envio automático:", e instanceof Error ? e.message : e);
+    // d123 (o #672): nunca calado — os que a Mesa conta por enviar dizem que o envio não os leu.
+    try {
+      for (const p of (pedidos ?? []) as PedidoDaMesa[]) {
+        if (propostasPorEnviarDoPedido(p, agora) && !m.has(Number(p.id))) m.set(Number(p.id), LINHA_DO_ENVIO_POR_LER);
+      }
+    } catch {
+      /* sem isto, a Mesa serve */
+    }
   }
   return m;
 }
