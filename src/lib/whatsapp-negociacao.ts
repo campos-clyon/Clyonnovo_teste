@@ -1,3 +1,4 @@
+import { unidadeDaBase } from "@/lib/base-do-preco";
 import { NAO_PAGA_NADA_ADIANTADO } from "@/lib/validade-do-orcamento";
 import {
   getPool,
@@ -2562,6 +2563,34 @@ export async function ecraDoPedido(pedidoId: number): Promise<string> {
   }
   const base = lerBase(pedido?.baseDoPreco);
   const acordada = vivas.find((n) => n.estado === "acordada");
+  /*
+   * O TRABALHO CLYON DIZ O PREÇO DELE — 25-11-2026 (d120, o #558). Contava-se
+   * como uma negociação (o valor do parceiro e as taxas dele), e a Vitória lia
+   * um número que não era o da conta nem o da mensagem: dizia ao cliente que
+   * «não bate certo». O preço ao cliente é o do Trabalho CLYON
+   * (`precoDaPropostaClyon`), sem fatura sem IVA.
+   */
+  const valorFixo = Number((pedido as { valorFixoClyon?: unknown } | undefined)?.valorFixoClyon);
+  if (pedido && Number.isFinite(valorFixo) && valorFixo > 0) {
+    const { precoDaPropostaClyon } = await import("@/lib/proposta-clyon-ao-cliente");
+    const { linhaDoTrabalhoClyonNaConversa } = await import("@/lib/trabalho-clyon-na-conversa");
+    const p = pedido as { taxaClyon?: unknown; precoClienteClyon?: unknown };
+    const preco = precoDaPropostaClyon({
+      valorFixo,
+      taxa: p.taxaClyon == null ? null : Number(p.taxaClyon),
+      precoAoCliente: p.precoClienteClyon == null ? null : Number(p.precoClienteClyon),
+    });
+    if (preco) {
+      const semFactura = Number((acordada as { semFactura?: unknown } | undefined)?.semFactura ?? 0) === 1;
+      return linhaDoTrabalhoClyonNaConversa({
+        pedidoId,
+        parceiro: acordada?.profissionalNome ?? null,
+        preco: { semIva: preco.semIva, total: preco.total },
+        semFactura,
+        unidade: unidadeDaBase(base),
+      });
+    }
+  }
   if (acordada) {
     const acordado = Number(acordada.valorAcordado ?? 0);
     // `acordada` é a linha crua da base, não um `Alvo`: as taxas e a forma

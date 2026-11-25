@@ -17,6 +17,7 @@
  */
 
 import { motivoParaBloquear } from "../licoes-da-vitoria";
+import { DIZ_QUE_NAO_BATE_CERTO } from "../trabalho-clyon-na-conversa";
 import { eurosNoTexto } from "../o-que-o-site-sabe";
 
 /** As chaves numéricas que trazem euros nos resultados das ferramentas. */
@@ -90,6 +91,10 @@ export function motivoParaBloquearOAgente(texto: string | null | undefined, euro
   const comIva = /(\bcom\s+IVA\b|\bIVA\s+inclu[ií]do\b|\bisento\s+de\s+IVA\b|\+\s*IVA\s*=\s*\d)/i.test(t);
   if (semIva && !comIva) return "Um preço sem IVA sozinho — diz-se sempre também o valor com IVA.";
   if (/\bprofissiona(l|is)\b/i.test(t)) return "Ao cliente diz-se «parceiro» (a palavra antiga não se usa).";
+  // d120 (o #558): nunca «não bate certo» nem desculpas por uma mensagem anterior que estava certa.
+  if (DIZ_QUE_NAO_BATE_CERTO.test(t)) {
+    return "Diz ao cliente que um valor não bate certo: compara o com IVA com o com IVA e o sem IVA com o sem IVA (100 € + IVA = 123 € é o mesmo valor) e, se baterem, confirma-o («Sim, 100 € + IVA = 123 €, o total»); se diferirem mesmo, passa à equipa sem o dizer.";
+  }
   if (PROMESSA_DO_PAGAMENTO.test(t)) return "Promete como se paga o que o modelo de pagamento não garante: paga ao parceiro que contratou, nada adiantado, duas faturas.";
   const brasil = PALAVRAS_DO_BRASIL.exec(t);
   if (brasil) return `«${brasil[0]}» não é português de Portugal.`;
