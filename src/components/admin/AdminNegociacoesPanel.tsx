@@ -1,5 +1,6 @@
 "use client";
 
+import { AVISO_SEM_GUIA_NO_BACKOFFICE, fetchComAConfirmacaoDaGuia, SELO_SEM_GUIA } from "@/lib/guia-no-backoffice";
 import RegistoReal from "@/components/admin/RegistoReal";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 import { isMudancaType } from "@/lib/calendar-helpers";
@@ -61,7 +62,7 @@ import { sufixoDaBase, totalEstimadoNoBackoffice } from "@/lib/valor-por-base";
 import { horasContestadas, horasMarcadas, horasNaoTravamOFim, CONFIRME_AS_HORAS_PRIMEIRO, FALTA_A_FOLHA, faltaAFolha } from "@/lib/horas-do-trabalho";
 import { FOLHA_POR_CONFIRMAR } from "@/lib/folha-da-mudanca";
 import { lerMateriaisDaProposta, materiaisParaOProfissional } from "@/lib/materiais-da-proposta";
-import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { AVISO_DA_TRANSICAO } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 import { DADOS_DE_PAGAMENTO_MUDARAM, SELO_DOS_DADOS_MUDADOS } from "@/lib/dados-de-pagamento-mudados";
 import { SELO_PAGAMENTO_EM_DUVIDA } from "@/lib/pagamento-registado";
@@ -3376,7 +3377,7 @@ export default function AdminNegociacoesPanel({
                 guardar={async (estrelas, comentario, comoDisse) => {
                   if (!token) return "Sem sessão.";
                   try {
-                    const res = await fetch("/api/admin/negociacoes/agir", {
+                    const res = await fetchComAConfirmacaoDaGuia("/api/admin/negociacoes/agir", {
                       method: "POST",
                       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                       body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario, comoDisse }),
@@ -4119,8 +4120,8 @@ export default function AdminNegociacoesPanel({
                     )}
                     {/* A confiança (04-11-2026, d10.1 e d10.3): a guia por verificar trava o fecho; os contactos iguais dão alerta. */}
                     {n.guiaPorVerificar && (
-                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200" title={GUIA_POR_VERIFICAR_FRASE}>
-                        guia por verificar
+                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-200" title={AVISO_SEM_GUIA_NO_BACKOFFICE}>
+                        {SELO_SEM_GUIA}
                       </span>
                     )}
                     {/* A transição de 7 dias (d10 v2): fecha-se, com o aviso âmbar. */}
@@ -6088,21 +6089,7 @@ function AceitarNaLista({
    * A GUIA ANTES DE CONTRATAR — 04-11-2026 (d10.1). O servidor recusa; o
    * botão diz porquê em vez de convidar.
    */
-  if (negociacao.guiaPorVerificar) {
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <button
-          type="button"
-          disabled
-          title={GUIA_POR_VERIFICAR_FRASE}
-          className="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-300 opacity-70"
-        >
-          {contratar ? "Contratar" : "Aceitar"} {negociacao.profissionalNome}
-        </button>
-        <span className="text-[11px] text-amber-300">{GUIA_POR_VERIFICAR_FRASE}</span>
-      </span>
-    );
-  }
+  // d121 (25-11-2026): sem guia verificada já não trava — o servidor pede o sim (fetchComAConfirmacaoDaGuia).
 
   async function agir() {
     if (!token) return;
@@ -6117,7 +6104,7 @@ function AceitarNaLista({
     setAEnviar(true);
     setErro("");
     try {
-      const res = await fetch("/api/admin/negociacoes/agir", {
+      const res = await fetchComAConfirmacaoDaGuia("/api/admin/negociacoes/agir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -6224,7 +6211,7 @@ function RespostaDaClyon({
     setAEnviar(accao);
     setErro("");
     try {
-      const res = await fetch("/api/admin/negociacoes/agir", {
+      const res = await fetchComAConfirmacaoDaGuia("/api/admin/negociacoes/agir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ pedidoId, negociacaoId: negociacao.id, accao, valor: v }),
@@ -6262,10 +6249,10 @@ function RespostaDaClyon({
           {ocupadoAEssaHora}.
         </p>
       )}
-      {/* A guia antes de contratar (04-11-2026, d10.1): aceitar e contratar ficam travados. */}
+      {/* d121 (25-11-2026): sem guia verificada, fecha-se com o sim — o aviso fica. */}
       {negociacao.guiaPorVerificar && (
         <p className="mt-2 rounded-md border border-amber-800 bg-amber-950/40 px-2 py-1.5 text-xs font-semibold text-amber-200">
-          {GUIA_POR_VERIFICAR_FRASE} Pode contrapropor, mas só se fecha depois de a guia ser verificada em Profissionais.
+          {AVISO_SEM_GUIA_NO_BACKOFFICE}
         </p>
       )}
       {/* A transição de 7 dias (d10 v2). */}
@@ -6297,8 +6284,8 @@ function RespostaDaClyon({
                 agir("contratar");
               }
             }}
-            disabled={aEnviar !== "" || negociacao.guiaPorVerificar === true}
-            title={negociacao.guiaPorVerificar ? GUIA_POR_VERIFICAR_FRASE : ocupadoAEssaHora}
+            disabled={aEnviar !== ""}
+            title={negociacao.guiaPorVerificar ? AVISO_SEM_GUIA_NO_BACKOFFICE : ocupadoAEssaHora}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 ${corDoAceitar}`}
           >
             {aEnviar === "contratar" && (
@@ -6315,8 +6302,8 @@ function RespostaDaClyon({
         {pendenteDoProfissional && (
           <button
             onClick={() => agir("aceitar")}
-            disabled={aEnviar !== "" || negociacao.guiaPorVerificar === true}
-            title={negociacao.guiaPorVerificar ? GUIA_POR_VERIFICAR_FRASE : ocupadoAEssaHora}
+            disabled={aEnviar !== ""}
+            title={negociacao.guiaPorVerificar ? AVISO_SEM_GUIA_NO_BACKOFFICE : ocupadoAEssaHora}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 ${corDoAceitar}`}
           >
             {aEnviar === "aceitar" && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
@@ -7351,7 +7338,7 @@ function ConfirmarPelaClyon({
     setAEnviar(true);
     setErro("");
     try {
-      const res = await fetch("/api/admin/negociacoes/agir", {
+      const res = await fetchComAConfirmacaoDaGuia("/api/admin/negociacoes/agir", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         // Sem factura, o motivo vai junto (25-10-2026, d19).

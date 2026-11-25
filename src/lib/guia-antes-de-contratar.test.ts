@@ -81,7 +81,8 @@ describe("as portas que fecham um trabalho perguntam à guia, no servidor", () =
     const portao = f.search(/\(accao === "aceitar" \|\| accao === "contratar"\) && \(await guiaImpedeANegociacao\(negociacaoId\)\)/);
     expect(portao).toBeGreaterThan(-1);
     expect(portao).toBeLessThan(f.indexOf('case "contratar":'));
-    expect(f.slice(portao, portao + 300)).toContain("GUIA_POR_VERIFICAR_FRASE");
+    // d121: sem a marca do cliente que leu a frase do Jurídico, recusa com ela.
+    expect(f.slice(portao, portao + 400)).toContain("AVISO_DA_GUIA_NO_ENTULHO");
   });
 
   it("a Mesa, em nome do cliente", () => {
@@ -154,12 +155,13 @@ describe("o cliente e a Mesa vêem porquê", () => {
     expect((ecra.match(/!!n\.naoSeContrata/g) ?? []).length).toBe(2);
   });
 
-  it("a Mesa e os Trabalhos CLYON: o botão trava e diz porquê", () => {
+  // d121 (25-11-2026): o botão já não trava — mostra o aviso e o servidor pede o sim (d121-entulho-sem-guia-no-backoffice.test.ts).
+  it("a Mesa e os Trabalhos CLYON: o botão fica activo e diz o aviso", () => {
     const mesa = ler("src/components/admin/AdminNegociacoesPanel.tsx");
     expect(mesa).toContain("negociacao.guiaPorVerificar");
-    expect((mesa.match(/disabled=\{aEnviar !== "" \|\| negociacao\.guiaPorVerificar === true\}/g) ?? []).length).toBe(2);
+    expect((mesa.match(/disabled=\{aEnviar !== "" \|\| negociacao\.guiaPorVerificar === true\}/g) ?? []).length).toBe(0);
     const trabalhos = ler("src/components/admin/TrabalhoClyon.tsx");
-    expect(trabalhos).toContain("n.guiaPorVerificar === true");
+    expect(trabalhos).toContain("n.guiaPorVerificar");
     expect(ler("src/app/api/admin/negociacoes/route.ts")).toContain("confiancaDasNegociacoes(");
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("confiancaDasNegociacoes(");
   });

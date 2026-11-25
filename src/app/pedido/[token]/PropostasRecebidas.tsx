@@ -207,6 +207,10 @@ export default function PropostasRecebidas({
           preco,
           negociacaoId: id,
           pedidoId,
+          // d121: o cliente leu a frase da guia (a do Jurídico) por cima do botão — aceitar vale como a confirmação.
+          ...((accao === "aceitar" || accao === "contratar") && avisoDaGuiaDe(negociacoes.find((n) => n.id === id))
+            ? { semGuiaConfirmado: true }
+            : {}),
           ...(accao === "avaliar" ? { estrelas, comentario } : {}),
           // O porquê do «Não concordo» com as horas (31-10-2026).
           ...(accao === "contestar_horas" ? { motivo } : {}),
@@ -838,17 +842,23 @@ export default function PropostasRecebidas({
                 resíduos, com a guia dele por verificar, o servidor recusa o
                 contratar; o cliente lê porquê antes de carregar.
               */}
-              {n.naoSeContrata && (n.accoes.includes("contratar") || n.accoes.includes("aceitar")) && (
-                <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                  {n.naoSeContrata} Pode escolher outra proposta, ou esperar que a CLYON a verifique.
-                </p>
+              {/* d121 (25-11-2026): o parceiro de entulho sem guia contrata-se — o cliente lê a frase do Jurídico antes. */}
+              {avisoDaGuiaDe(n) && (n.accoes.includes("contratar") || n.accoes.includes("aceitar")) ? (
+                <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{avisoDaGuiaDe(n)}</p>
+              ) : (
+                n.naoSeContrata &&
+                (n.accoes.includes("contratar") || n.accoes.includes("aceitar")) && (
+                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    {n.naoSeContrata} Pode escolher outra proposta, ou esperar que a CLYON a verifique.
+                  </p>
+                )
               )}
 
               <div className="mt-4 space-y-2">
                 {n.accoes.includes("contratar") && (
                   <button
                     onClick={() => agir(n.id, "contratar")}
-                    disabled={soParaVer || aEnviar === n.id || !!n.naoSeContrata}
+                    disabled={soParaVer || aEnviar === n.id || (!!n.naoSeContrata && !avisoDaGuiaDe(n))}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-base font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
                   >
                     {aEnviar === n.id && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -859,7 +869,7 @@ export default function PropostasRecebidas({
                 {n.accoes.includes("aceitar") && (
                   <button
                     onClick={() => agir(n.id, "aceitar")}
-                    disabled={soParaVer || aEnviar === n.id || !!n.naoSeContrata}
+                    disabled={soParaVer || aEnviar === n.id || (!!n.naoSeContrata && !avisoDaGuiaDe(n))}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
                   >
                     <HandCoins className="h-4 w-4" aria-hidden="true" />
@@ -950,4 +960,10 @@ export default function PropostasRecebidas({
       )}
     </section>
   );
+}
+
+/** d121: a frase da guia (a do Jurídico) que o servidor manda para o parceiro de entulho sem guia — ou null. */
+function avisoDaGuiaDe(n: unknown): string | null {
+  const v = (n as { avisoDaGuia?: unknown } | null | undefined)?.avisoDaGuia;
+  return typeof v === "string" && v.trim() ? v : null;
 }

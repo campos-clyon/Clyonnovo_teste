@@ -7,7 +7,7 @@ import {
   passarOTrabalhoAOutroProfissional,
 } from "@/lib/db";
 import { guiaImpedeOProfissional } from "@/lib/guia-na-base";
-import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { confirmouSemGuia, notaSemGuia, RECUSA_SEM_A_CONFIRMACAO_DA_GUIA } from "@/lib/guia-no-backoffice";
 
 export const runtime = "nodejs";
 
@@ -41,8 +41,10 @@ export async function POST(req: NextRequest) {
 
   try {
     // A guia antes de contratar (04-11-2026, d10.1): passar-lhe o trabalho é contratá-lo.
-    if (await guiaImpedeOProfissional(pedidoId, providerId)) {
-      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
+    // d121 (25-11-2026): sem guia verificada, passa-se com o sim explícito; sem ele, 409 com a frase nova.
+    const semGuia = await guiaImpedeOProfissional(pedidoId, providerId);
+    if (semGuia && !confirmouSemGuia(corpo)) {
+      return NextResponse.json(RECUSA_SEM_A_CONFIRMACAO_DA_GUIA, { status: 409 });
     }
     const r = await passarOTrabalhoAOutroProfissional(pedidoId, providerId);
     if (!r.ok) return NextResponse.json({ error: r.porque }, { status: 409 });
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
       `Mesmo valor e mesmas taxas; ${r.deQuem || "o anterior"} deixa de o ter.`;
 
     await appendOrderHistory(pedidoId, { type: "created", by: null, message: resumo });
+    if (semGuia) await appendOrderHistory(pedidoId, { type: "note", by: null, message: notaSemGuia(porQuem) }).catch(() => {});
     await registarSemFalhar({
       acontecimento: "profissional_trocado",
       pedidoId,

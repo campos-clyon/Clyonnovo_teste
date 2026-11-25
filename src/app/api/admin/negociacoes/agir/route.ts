@@ -20,7 +20,7 @@ import { avisarDaProposta } from "@/lib/avisar-da-proposta";
 import { avisarQuemFicouSemOTrabalho, quemFicaSemOTrabalho } from "@/lib/avisar-quem-perdeu";
 import { avisarQueFoiContratadoSemFalhar } from "@/lib/agir-como-cliente";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
-import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { confirmouSemGuia, notaSemGuia, RECUSA_SEM_A_CONFIRMACAO_DA_GUIA } from "@/lib/guia-no-backoffice";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { confirmarDandoPorEntregue } from "@/lib/confirmar-sem-prova";
 import { fraseDoFeitoEm } from "@/lib/feito-em";
@@ -489,8 +489,13 @@ export async function POST(req: NextRequest) {
      * Mesa também não fecha um trabalho de resíduos com quem tem a guia por
      * verificar. Ver `guia-antes-de-contratar.ts`.
      */
-    if ((accao === "aceitar" || accao === "contratar") && (await guiaImpedeANegociacao(negociacaoId))) {
-      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
+    // d121 (25-11-2026): sem guia verificada, aceita-se em nome do cliente com o sim explícito; sem ele, 409.
+    const semGuia = (accao === "aceitar" || accao === "contratar") && (await guiaImpedeANegociacao(negociacaoId));
+    if (semGuia && !confirmouSemGuia(corpo)) {
+      return NextResponse.json(RECUSA_SEM_A_CONFIRMACAO_DA_GUIA, { status: 409 });
+    }
+    if (semGuia) {
+      await appendOrderHistory(linha.pedidoId, { type: "note", by: null, message: notaSemGuia(colab?.nome ?? null) }).catch(() => {});
     }
 
     const agora = new Date();

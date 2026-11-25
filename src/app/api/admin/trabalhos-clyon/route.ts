@@ -400,10 +400,11 @@ export async function POST(req: NextRequest) {
    * o pedido: recusado, ele fica como estava.
    */
   if (atribuirA != null) {
+    // d121 (25-11-2026): sem guia verificada, atribui-se com o sim explícito; sem ele, 409 com a frase nova.
     const { guiaImpedeOProfissional } = await import("@/lib/guia-na-base");
-    const { GUIA_POR_VERIFICAR_FRASE } = await import("@/lib/guia-antes-de-contratar");
-    if (await guiaImpedeOProfissional(pedidoId, atribuirA)) {
-      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
+    const { confirmouSemGuia, RECUSA_SEM_A_CONFIRMACAO_DA_GUIA } = await import("@/lib/guia-no-backoffice");
+    if ((await guiaImpedeOProfissional(pedidoId, atribuirA)) && !confirmouSemGuia(corpo)) {
+      return NextResponse.json(RECUSA_SEM_A_CONFIRMACAO_DA_GUIA, { status: 409 });
     }
     try {
       await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida, motivoDaTaxa.motivo);
@@ -414,8 +415,9 @@ export async function POST(req: NextRequest) {
         quem,
         por: colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null,
         baseUrl: urlDeAccaoDoPedido(req.headers),
+        semGuiaConfirmado: (corpo as { semGuiaConfirmado?: unknown }).semGuiaConfirmado === true,
       });
-      if (!r.ok) return NextResponse.json({ error: r.erro, guiaPorVerificar: r.guiaPorVerificar }, { status: r.estado });
+      if (!r.ok) return NextResponse.json({ error: r.erro, guiaPorVerificar: r.guiaPorVerificar, pedeConfirmacaoDaGuia: r.pedeConfirmacaoDaGuia }, { status: r.estado });
       return NextResponse.json({
         ok: true,
         modo: "directa",
@@ -934,8 +936,9 @@ export async function PATCH(req: NextRequest) {
         quem,
         por,
         baseUrl: urlDeAccaoDoPedido(req.headers),
+        semGuiaConfirmado: (corpo as { semGuiaConfirmado?: unknown }).semGuiaConfirmado === true,
       });
-      if (!r.ok) return NextResponse.json({ error: r.erro, guiaPorVerificar: r.guiaPorVerificar }, { status: r.estado });
+      if (!r.ok) return NextResponse.json({ error: r.erro, guiaPorVerificar: r.guiaPorVerificar, pedeConfirmacaoDaGuia: r.pedeConfirmacaoDaGuia }, { status: r.estado });
       return NextResponse.json({ ok: true, feito: r.feito, avisado: r.avisado });
     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchComAConfirmacaoDaGuia } from "@/lib/guia-no-backoffice";
 import { useEffect, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -75,7 +76,7 @@ export default function TrocarProfissional({
     setAEnviar(true);
     setErro("");
     try {
-      const res = await fetch("/api/admin/negociacoes/trocar-profissional", {
+      const res = await fetchComAConfirmacaoDaGuia("/api/admin/negociacoes/trocar-profissional", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ pedidoId, providerId: escolhido }),

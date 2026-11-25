@@ -9,7 +9,7 @@ import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissionalEscolhido } from "@/lib/avisar-escolhido-da-oferta";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
-import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { confirmouSemGuia, notaSemGuia, RECUSA_SEM_A_CONFIRMACAO_DA_GUIA } from "@/lib/guia-no-backoffice";
 
 export const runtime = "nodejs";
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { negociacaoId?: unknown };
+  let corpo: { negociacaoId?: unknown; semGuiaConfirmado?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -51,8 +51,10 @@ export async function POST(req: NextRequest) {
      * A GUIA ANTES DE ESCOLHER — 04-11-2026 (d10.1). Num trabalho de resíduos,
      * quem tem a guia por verificar pode aceitar a oferta, mas não ser escolhido.
      */
-    if (await guiaImpedeANegociacao(negociacaoId)) {
-      return NextResponse.json({ error: GUIA_POR_VERIFICAR_FRASE, guiaPorVerificar: true }, { status: 409 });
+    // d121 (25-11-2026): sem guia verificada, escolhe-se com o sim explícito; sem ele, 409 com a frase nova.
+    const semGuia = await guiaImpedeANegociacao(negociacaoId);
+    if (semGuia && !confirmouSemGuia(corpo)) {
+      return NextResponse.json(RECUSA_SEM_A_CONFIRMACAO_DA_GUIA, { status: 409 });
     }
     const r = await atribuirOfertaClyon(negociacaoId);
     if (!r.ok) {
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest) {
       (r.encerradas > 0 ? `; ${r.encerradas} outro(s) que tinham aceitado ficaram de fora.` : ".");
 
     await appendOrderHistory(r.pedidoId, { type: "created", by: null, message: resumo });
+    if (semGuia) await appendOrderHistory(r.pedidoId, { type: "note", by: null, message: notaSemGuia(quem) }).catch(() => {});
     // O cliente fica a saber quem faz o trabalho (S10), como a CLYON já lho diz na adjudicação.
     await avisarOClienteDoPedido(r.pedidoId, "escolhido", { nome: aviso.profissional || null, negociacaoId });
     await registarSemFalhar({

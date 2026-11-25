@@ -37,7 +37,7 @@ import { modeloDaNegociacao } from "@/lib/iva-incluido";
 import { dividaDoProfissional, temDividaDoProfissional } from "@/lib/divida-do-profissional";
 import { modoDaOferta } from "@/lib/oferta-clyon";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
-import { GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { AVISO_DA_GUIA_NO_ENTULHO } from "@/lib/guia-no-entulho";
 import { JA_FOI_DECIDIDO } from "@/lib/ja-foi-decidido";
 import { agirSobreOsEscolhidos, eAccaoDosEscolhidos } from "@/lib/escolhidos-sem-resposta-no-servidor";
 import { ACCAO_DO_FECHO, lerRespostaDoFecho } from "@/lib/fecho-do-modelo-novo";
@@ -431,8 +431,16 @@ export async function agirComoCliente(a: {
       return falha(409, VALOR_UNICO_PELA_CLYON);
     }
 
+    /*
+     * d121 (25-11-2026), a regra da d118: o cliente lê a frase do Jurídico antes
+     * de aceitar (`avisoDaGuia` em pedido-para-a-app.ts), e aceitar vale como a
+     * confirmação — o ecrã manda `semGuiaConfirmado`. Sem a marca (uma app que
+     * ainda não mostra a frase), recusa com a frase, para ele a ler.
+     */
     if ((accao === "aceitar" || accao === "contratar") && (await guiaImpedeANegociacao(negociacaoId))) {
-      return falha(409, GUIA_POR_VERIFICAR_FRASE, { guiaPorVerificar: true });
+      if ((a.corpo as { semGuiaConfirmado?: unknown } | undefined)?.semGuiaConfirmado !== true) {
+        return falha(409, AVISO_DA_GUIA_NO_ENTULHO, { guiaPorVerificar: true, pedeConfirmacaoDaGuia: true });
+      }
     }
 
     // ── O motor das propostas ────────────────────────────────────────────

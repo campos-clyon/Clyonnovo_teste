@@ -1,5 +1,6 @@
 "use client";
 
+import { AVISO_SEM_GUIA_NO_BACKOFFICE, fetchComAConfirmacaoDaGuia } from "@/lib/guia-no-backoffice";
 import RegistoReal from "@/components/admin/RegistoReal";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 import ClientePagaAClyon from "@/components/admin/ClientePagaAClyon";
@@ -78,7 +79,7 @@ import { validarValorDesejado } from "@/lib/pedido-valores";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { textoDosChoques, type Choque } from "@/lib/choques-de-agenda";
-import { AVISO_DA_TRANSICAO, GUIA_POR_VERIFICAR_FRASE } from "@/lib/guia-antes-de-contratar";
+import { AVISO_DA_TRANSICAO } from "@/lib/guia-antes-de-contratar";
 import { avisoDasCoincidencias, type Coincidencia } from "@/lib/coincidencias-cliente-parceiro";
 
 /**
@@ -479,7 +480,8 @@ export function TrabalhoClyonComAccoes({
     onErro("");
     onAviso("");
     try {
-      const res = await fetch(url, {
+      // d121: sem guia verificada, pergunta e repete com o sim explícito.
+      const res = await fetchComAConfirmacaoDaGuia(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(corpo),
@@ -553,7 +555,7 @@ export function TrabalhoClyonComAccoes({
     onErro("");
     onAviso("");
     try {
-      const res = await fetch("/api/admin/trabalhos-clyon", {
+      const res = await fetchComAConfirmacaoDaGuia("/api/admin/trabalhos-clyon", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ pedidoId: t.pedidoId, ...corpo }),
@@ -1595,15 +1597,16 @@ function CartaoDoTrabalho({
                   <span className="text-sm text-white">{n.profissional}</span>
                 )}
                 {/* A guia antes de escolher (04-11-2026, d10.1) e os contactos iguais (d10.3). */}
-                {n.guiaPorVerificar && <span className="text-xs font-semibold text-amber-300">{GUIA_POR_VERIFICAR_FRASE}</span>}
+                {/* d121: já não trava — é informação, e o «Escolher» pede o sim. */}
+                {n.guiaPorVerificar && <span className="text-xs font-semibold text-amber-300">{AVISO_SEM_GUIA_NO_BACKOFFICE}</span>}
                 {n.guiaEmTransicao && <span className="text-xs font-semibold text-amber-300">{AVISO_DA_TRANSICAO}</span>}
                 {n.coincidencias?.length ? (
                   <span className="w-full text-xs font-semibold text-red-300">{avisoDasCoincidencias(n.coincidencias)}</span>
                 ) : null}
                 <button
                   onClick={() => onEscolher(n)}
-                  disabled={ocupado != null || n.guiaPorVerificar === true}
-                  title={n.guiaPorVerificar ? GUIA_POR_VERIFICAR_FRASE : undefined}
+                  disabled={ocupado != null}
+                  title={n.guiaPorVerificar ? AVISO_SEM_GUIA_NO_BACKOFFICE : undefined}
                   className="flex items-center gap-1.5 rounded-lg bg-acao px-3 py-1.5 text-xs font-bold text-white transition hover:bg-acao-hover disabled:opacity-50"
                 >
                   {ocupado === n.negociacaoId ? (

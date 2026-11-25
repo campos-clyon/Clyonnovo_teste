@@ -47,6 +47,7 @@ import { marcaDaFolha } from "./o-que-o-cliente-viu";
 import { lerMateriaisDaProposta, materiaisParaOCliente } from "./materiais-da-proposta";
 import { REGISTADA_PELA_CLYON } from "./origem-da-avaliacao";
 import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
+import { AVISO_DA_GUIA_NO_ENTULHO } from "./guia-no-entulho";
 import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "./pagar-ao-parceiro";
 import { ACCAO_DO_FECHO } from "./fecho-do-modelo-novo";
 import { precoDoNovoModelo, totalDoValor } from "./total-ao-cliente";
@@ -576,6 +577,13 @@ export function negociacaoParaAApp(n: NegociacaoDoCliente, base: BaseDoPreco, ag
      * mostrar antes do toque; nula quando nada impede.
      */
     naoSeContrata: n.guiaPorVerificar === true ? GUIA_POR_VERIFICAR_FRASE : null,
+    /*
+     * d121 (25-11-2026): o parceiro de entulho sem guia já se pode contratar —
+     * o ecrã mostra esta frase (a do Jurídico, d118) antes do toque, e aceitar
+     * vale como a confirmação (manda `semGuiaConfirmado`). O `naoSeContrata`
+     * fica para as apps que ainda não mostram a frase.
+     */
+    avisoDaGuia: n.guiaPorVerificar === true ? AVISO_DA_GUIA_NO_ENTULHO : null,
     aguardaContratacao: n.estado === "aguarda_contratacao",
     propostasRestantes: contratado ? 0 : propostasRestantes(motor, "cliente", agora),
     /*

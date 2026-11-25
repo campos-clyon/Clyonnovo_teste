@@ -47,8 +47,8 @@ describe("o ecrã do pedido diz o preço do Trabalho CLYON — o mesmo da conta 
     const preco = precoDaPropostaClyon({ valorFixo: 100, taxa: 0.1, precoAoCliente: null })!;
     expect(preco.semIva).toBe(100);
     expect(preco.total).toBe(123);
-    expect(linhaDoTrabalhoClyonNaConversa({ pedidoId: 9558, parceiro: "Recolhas Inventadas", preco })).toBe(
-      "Pedido #9558: Trabalho CLYON com Recolhas Inventadas — 100,00 € + IVA = 123,00 €, o total.",
+    expect(linhaDoTrabalhoClyonNaConversa({ pedidoId: 9558, parceiro: "Ecorecolha", preco })).toBe(
+      "Pedido #9558: Trabalho CLYON com Ecorecolha — 100,00 € + IVA = 123,00 €, o total.",
     );
     expect(linhaDoTrabalhoClyonNaConversa({ pedidoId: 9558, preco, semFactura: true })).toBe("Pedido #9558: Trabalho CLYON — 100,00 €, o total, sem fatura.");
   });

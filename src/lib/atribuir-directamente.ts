@@ -6,7 +6,7 @@ import {
 import { avisarProfissionalEscolhido } from "./avisar-escolhido-da-oferta";
 import { avisarOClienteDoPedido } from "./avisos-ao-cliente";
 import { guiaImpedeOProfissional } from "./guia-na-base";
-import { GUIA_POR_VERIFICAR_FRASE } from "./guia-antes-de-contratar";
+import { notaSemGuia, RECUSA_SEM_A_CONFIRMACAO_DA_GUIA } from "./guia-no-backoffice";
 
 /**
  * «ATRIBUIR DIRECTAMENTE A…» — 11-11-2026 (dono, o #591).
@@ -37,7 +37,7 @@ export const PORQUE_NAO_SE_ATRIBUI: Record<string, [string, number]> = {
 
 export type ResultadoDaAtribuicaoDirecta =
   | { ok: true; feito: string; negociacaoId: number; profissional: string; avisado: boolean }
-  | { ok: false; erro: string; estado: number; guiaPorVerificar?: boolean };
+  | { ok: false; erro: string; estado: number; guiaPorVerificar?: boolean; pedeConfirmacaoDaGuia?: boolean };
 
 export async function atribuirDirectamente(a: {
   pedidoId: number;
@@ -45,9 +45,16 @@ export async function atribuirDirectamente(a: {
   quem: string;
   por: { id: number; nome: string; role: string } | null;
   baseUrl: string;
+  /** d121: o sim explícito a um parceiro sem guia verificada («o cliente sabe»). */
+  semGuiaConfirmado?: boolean;
 }): Promise<ResultadoDaAtribuicaoDirecta> {
-  if (await guiaImpedeOProfissional(a.pedidoId, a.providerId)) {
-    return { ok: false, erro: GUIA_POR_VERIFICAR_FRASE, estado: 409, guiaPorVerificar: true };
+  /*
+   * d121 (25-11-2026): sem guia verificada, atribui-se com o sim explícito —
+   * sem ele, 409 com a frase nova (nada se fecha sem querer).
+   */
+  const semGuia = await guiaImpedeOProfissional(a.pedidoId, a.providerId);
+  if (semGuia && a.semGuiaConfirmado !== true) {
+    return { ok: false, erro: RECUSA_SEM_A_CONFIRMACAO_DA_GUIA.error, estado: 409, guiaPorVerificar: true, pedeConfirmacaoDaGuia: true };
   }
   const r = await atribuirDirectamenteTrabalhoClyon(a.pedidoId, a.providerId);
   if (!r.ok) {
@@ -71,6 +78,7 @@ export async function atribuirDirectamente(a: {
     (aviso.saiu ? ` ${nome} foi avisado.` : " O aviso por email não saiu — diga-lhe à mão.");
 
   await appendOrderHistory(r.pedidoId, { type: "created", by: a.por, message: feito });
+  if (semGuia) await appendOrderHistory(r.pedidoId, { type: "note", by: a.por, message: notaSemGuia(a.quem) }).catch(() => {});
   // O cliente fica a saber quem faz o trabalho (S10), como na escolha.
   await avisarOClienteDoPedido(r.pedidoId, "escolhido", { nome: aviso.profissional || null, negociacaoId: r.negociacaoId });
   await registarSemFalhar({
