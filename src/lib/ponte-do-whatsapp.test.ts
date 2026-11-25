@@ -130,7 +130,9 @@ describe("o painel de controlo manda em tudo", () => {
 
   it("o Winapp avisa quando o dono responde à mão — e a conversa fica entregue", () => {
     expect(PONTE).toContain('corpo.accao === "interromper"');
-    expect(PONTE).toContain("Respondeu à mão no WhatsApp");
+    // d116: o sinal decide («*» pausa, «»» retoma); só a um profissional registado fica entregue.
+    expect(PONTE).toContain("oQueFazAMensagemDaEquipa(");
+    expect(PONTE).toContain('interromperNumeroWhatsApp(telefone, MOTIVO_DA_RESPOSTA_A_MAO, "pessoa")');
   });
 
   it("interrompido é do site ({meu: true}) mas em silêncio — o bot local também se cala", () => {

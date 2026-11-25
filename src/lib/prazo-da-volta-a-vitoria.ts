@@ -1,13 +1,11 @@
 /**
- * O PRAZO DA d112, sozinho — para o painel o poder ler sem trazer as regras.
- * Ver `volta-a-vitoria.ts`.
+ * A VOLTA À VITÓRIA, sozinha — para o painel a poder ler sem trazer as regras.
+ * Ver `volta-a-vitoria.ts`. Desde 25-11-2026 (d116) a resposta à mão já não
+ * cala a Vitória: não há prazo (eram 24 h, d112).
  */
 
-/** As horas sem a equipa escrever ao fim das quais a conversa respondida à mão volta à Vitória. */
-export const HORAS_PARA_VOLTAR_A_VITORIA = 24;
-
-/** O motivo que a ponte grava quando alguém da equipa responde à mão no telemóvel. */
+/** O motivo que a ponte grava quando alguém da equipa responde à mão no telemóvel (hoje, só a um profissional). */
 export const MOTIVO_DA_RESPOSTA_A_MAO = "Respondeu à mão no WhatsApp";
 
-/** O que a Mesa mostra, em vez de «Entregue», numa conversa que voltou. */
-export const VOLTOU_A_VITORIA = `Voltou à Vitória (${HORAS_PARA_VOLTAR_A_VITORIA} h sem a equipa)`;
+/** O que a Mesa mostra, em vez de «Entregue», numa conversa entregue por uma resposta à mão que já não a cala. */
+export const VOLTOU_A_VITORIA = "Com a Vitória (a resposta à mão já não a cala)";

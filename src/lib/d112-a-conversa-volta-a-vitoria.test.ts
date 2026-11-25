@@ -3,8 +3,10 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * d112 — UMA CONVERSA RESPONDIDA À MÃO VOLTA À VITÓRIA AO FIM DE 24 H SEM A
- * EQUIPA (25-11-2026). Números e textos inventados; a base é fingida.
+ * d112 — UMA CONVERSA RESPONDIDA À MÃO VOLTA À VITÓRIA (25-11-2026). Desde a
+ * d116 (no mesmo dia) volta logo: o prazo das 24 h e a excepção «com quem ela
+ * nunca falou» caíram; ficam as razões e os profissionais. Números e textos
+ * inventados; a base é fingida.
  */
 
 const base = vi.hoisted(() => ({
@@ -45,8 +47,6 @@ import {
   DIAS_PARA_RESPONDER_AO_QUE_FICOU,
   entregaPorResposta,
   guardaOMotivoDeAntes,
-  haQuantoAEquipaEscreveu,
-  HORAS_PARA_VOLTAR_A_VITORIA,
   MOTIVO_DA_RESPOSTA_A_MAO,
   oQueFicouPorResponder,
   voltouAVitoria,
@@ -59,67 +59,31 @@ import { mensagemDoQueFalta } from "./mensagem-do-que-falta";
 import { MOTIVOS_DO_SEGUIMENTO } from "./a-escolha-e-a-desistencia";
 import { motivoDoValorUnicoAceite } from "./valor-unico-no-whatsapp";
 import { MOTIVO_DE_NAO_REPETIR } from "./pedido-em-curso";
+import { MOTIVO_DA_PAUSA } from "./pausa-da-vitoria";
 
 const H = 3600;
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
-const daEquipa = (texto: string, haSegundos: number) => ({ direccao: "out", texto: `${MARCA_DE_MAO} ${texto}`, haSegundos });
-const voltou = (haSegundosDaEquipa: number | null, extra: Partial<Parameters<typeof voltouAVitoria>[0]> = {}) =>
-  voltouAVitoria({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa", haSegundosDaEquipa, vitoriaJaFalou: true, profissional: false, ...extra });
+const voltou = (extra: Partial<Parameters<typeof voltouAVitoria>[0]> = {}) =>
+  voltouAVitoria({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa", profissional: false, ...extra });
 
-describe("o prazo — 24 h desde a última palavra da equipa", () => {
-  it("o 24 está numa constante, e a Mesa diz-o", () => {
-    expect(HORAS_PARA_VOLTAR_A_VITORIA).toBe(24);
-    expect(VOLTOU_A_VITORIA).toBe("Voltou à Vitória (24 h sem a equipa)");
+describe("sem prazo desde a d116 — a resposta à mão já não cala a Vitória", () => {
+  it("a Mesa diz que a conversa é da Vitória", () => {
+    expect(VOLTOU_A_VITORIA).toBe("Com a Vitória (a resposta à mão já não a cala)");
   });
 
-  it("23 h depois continua com a equipa; 25 h depois voltou à Vitória", () => {
-    expect(voltou(23 * H)).toBe(false);
-    expect(voltou(24 * H)).toBe(false);
-    expect(voltou(25 * H)).toBe(true);
-    expect(voltou(null)).toBe(false);
+  it("a entrega por uma resposta à mão volta logo — também as que já existem (sem `quem`)", () => {
+    expect(voltou()).toBe(true);
+    expect(voltou({ quem: null })).toBe(true);
   });
 
-  it("conta a partir da última mensagem da equipa, não do momento da entrega", () => {
-    // Entregue há 5 dias, a equipa voltou a escrever há 2 h: o relógio recomeçou.
-    const ha = haQuantoAEquipaEscreveu({
-      fio: [daEquipa("bom dia", 5 * 24 * H), daEquipa("já vejo isso", 2 * H)],
-      entregueHaSegundos: 5 * 24 * H,
-    });
-    expect(ha).toBe(2 * H);
-    expect(voltou(ha)).toBe(false);
-  });
-
-  it("o relógio recomeça com a resposta pelo backoffice, o «Já respondi» e o aviso da ponte", () => {
-    const fio = [daEquipa("olá", 3 * 24 * H)];
-    expect(haQuantoAEquipaEscreveu({ fio, respondidaHaSegundos: 30 * 60 })).toBe(30 * 60);
-    expect(haQuantoAEquipaEscreveu({ fio, respostaHaSegundos: 10 * 60 })).toBe(10 * 60);
-    expect(haQuantoAEquipaEscreveu({ fio })).toBe(3 * 24 * H);
-  });
-
-  it("o envio de modelo da equipa («Pedir o que falta», d86) não é a equipa a conversar", () => {
-    const modelo = mensagemDoQueFalta({ id: 812, serviceType: "recolha_monos", city: "Almada" }, ["fotografias"], new Date("2026-11-25T10:00:00Z"));
-    expect(modelo).toContain("#812");
-    const fio = [daEquipa("olá", 30 * H), { direccao: "out", texto: `${MARCA_DE_MAO} ${modelo}`, haSegundos: H }];
-    expect(haQuantoAEquipaEscreveu({ fio })).toBe(30 * H);
-  });
-
-  it("as mensagens da Vitória e do cliente não mexem no relógio", () => {
-    const fio = [daEquipa("olá", 30 * H), { direccao: "out", texto: "Obrigada!", haSegundos: H }, { direccao: "in", texto: "ok", haSegundos: 60 }];
-    expect(haQuantoAEquipaEscreveu({ fio })).toBe(30 * H);
-  });
-
-  it("uma entrega antiga sem nenhuma resposta escrita conta desde a entrega", () => {
-    expect(haQuantoAEquipaEscreveu({ fio: [], entregueHaSegundos: 40 * H })).toBe(40 * H);
-    expect(haQuantoAEquipaEscreveu({ fio: [] })).toBeNull();
-  });
-
-  it("vale para as entregas que já existem (sem `quem`, pelo texto do motivo)", () => {
-    expect(voltou(30 * H, { quem: null })).toBe(true);
+  it("a excepção «com quem ela nunca falou» caiu: o cliente antigo que só falou com pessoas volta", () => {
+    // O parâmetro já nem existe: não há maneira de a conversa ficar calada por isso.
+    expect(voltou()).toBe(true);
   });
 });
 
 describe("as excepções — ficam sempre com a equipa", () => {
-  it("só a entrega porque uma pessoa respondeu tem prazo", () => {
+  it("só a entrega porque uma pessoa respondeu volta", () => {
     expect(entregaPorResposta({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "pessoa" })).toBe(true);
     expect(entregaPorResposta({ motivo: "  respondeu à mão no whatsapp ", quem: null })).toBe(true);
   });
@@ -138,11 +102,12 @@ describe("as excepções — ficam sempre com a equipa", () => {
       "O tradutor falhou e a mensagem da Vitória não tem tradução fixa — responder à mão, em inglês",
       "Valor acima de 500 € com IVA — confirmar com o cliente",
       "Mudança à hora — combinar com o cliente",
+      MOTIVO_DA_PAUSA, // d116: a pausa da equipa com «*»
       null,
     ];
     for (const motivo of razoes) {
       for (const quem of ["vitoria", "pessoa", null] as const) {
-        expect(voltouAVitoria({ motivo, quem, haSegundosDaEquipa: 30 * 24 * H, vitoriaJaFalou: true, profissional: false })).toBe(false);
+        expect(voltouAVitoria({ motivo, quem, profissional: false })).toBe(false);
       }
     }
   });
@@ -151,9 +116,8 @@ describe("as excepções — ficam sempre com a equipa", () => {
     expect(entregaPorResposta({ motivo: MOTIVO_DA_RESPOSTA_A_MAO, quem: "vitoria" })).toBe(false);
   });
 
-  it("a conversa de um profissional, ou com quem a Vitória nunca falou, fica com a equipa", () => {
-    expect(voltou(30 * H, { profissional: true })).toBe(false);
-    expect(voltou(30 * H, { vitoriaJaFalou: false })).toBe(false);
+  it("a conversa de um profissional registado fica com a equipa", () => {
+    expect(voltou({ profissional: true })).toBe(false);
   });
 
   it("a resposta à mão não apaga uma razão que já lá estava", () => {
@@ -244,7 +208,7 @@ describe("a janela — das 9h às 20h, uma mensagem automática por dia, sem diz
   });
 });
 
-describe("a Mesa mostra «Voltou à Vitória (24 h sem a equipa)» em vez de «Entregue»", () => {
+describe("a Mesa mostra «Com a Vitória» em vez de «Entregue»", () => {
   const factos: FactosDaConversa = {
     telefone: "351910000112",
     ultimaEntrada: { id: 11, direccao: "in", texto: "Então, como fica?", haSegundos: 26 * H, quando: "2026-11-24 08:00:00" } as never,
@@ -264,7 +228,7 @@ describe("a Mesa mostra «Voltou à Vitória (24 h sem a equipa)» em vez de «E
     const l = naMesa(factos);
     expect(l.dono).toBe("assistente");
     expect(l.motivoDaEntrega).toBeNull();
-    expect(l.voltouAVitoria).toBe("Voltou à Vitória (24 h sem a equipa)");
+    expect(l.voltouAVitoria).toBe(VOLTOU_A_VITORIA);
   });
 
   it("ainda entregue, continua «Entregue» e da equipa", () => {
@@ -288,8 +252,9 @@ describe("na base — a mesma porta para todas as rotinas", () => {
     return DB.slice(i, DB.indexOf("\n}\n", i));
   };
 
-  it("a ponte grava o motivo da resposta à mão, igual à constante", () => {
-    expect(ler("src/app/api/whatsapp/ponte/route.ts")).toContain(`"${MOTIVO_DA_RESPOSTA_A_MAO}", "pessoa")`);
+  it("a ponte grava o motivo da resposta à mão (só a um profissional, d116) pela constante", () => {
+    expect(ler("src/app/api/whatsapp/ponte/route.ts")).toContain("interromperNumeroWhatsApp(telefone, MOTIVO_DA_RESPOSTA_A_MAO, \"pessoa\")");
+    expect(ler("src/lib/prazo-da-volta-a-vitoria.ts")).toContain(`"${MOTIVO_DA_RESPOSTA_A_MAO}"`);
   });
 
   it("«a conversa está entregue?» já sabe do prazo — e na dúvida fica entregue", () => {

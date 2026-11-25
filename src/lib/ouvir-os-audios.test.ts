@@ -133,6 +133,7 @@ describe("o painel diz porque é que uma conversa está entregue", () => {
     expect(i).toBeGreaterThan(-1);
     // Antes da última mensagem, e não no lugar dela.
     expect(PAINEL.indexOf("{l.ultimaMensagem ? (", i)).toBeGreaterThan(i);
-    expect(PAINEL.slice(i, i + 300)).toContain("Entregue: {l.motivoDaEntrega}");
+    // d116: «Entregue: …», ou «Pausada pela equipa (*)» quando a equipa pausou.
+    expect(PAINEL.slice(i, i + 300)).toContain("{linhaDaEntrega(l.motivoDaEntrega)}");
   });
 });

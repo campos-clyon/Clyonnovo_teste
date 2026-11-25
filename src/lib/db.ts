@@ -13490,70 +13490,29 @@ async function entregaDoNumeroWhatsApp(digitos: string): Promise<EntregaNaBase |
 }
 
 /**
- * QUAIS DESTAS ENTREGAS JÁ VOLTARAM À VITÓRIA — 25-11-2026 (d112). Só as
- * feitas porque uma pessoa respondeu (`entregaPorResposta`) se olham: a
- * última palavra da equipa no fio (as respostas à mão dos últimos 60 dias), o
- * «Já respondi», se a Vitória já falou com o número e se é de um profissional.
+ * QUAIS DESTAS ENTREGAS JÁ VOLTARAM À VITÓRIA — 25-11-2026 (d112, d116). Só
+ * as feitas porque uma pessoa respondeu à mão (`entregaPorResposta`) se
+ * olham, e desde a d116 voltam logo, salvo as de um profissional registado.
  * Devolve as chaves (últimos 9 dígitos) das que voltaram. Lança se a base
  * falhar — quem chama decide (na dúvida, a conversa fica com a equipa).
  */
 async function entregasQueVoltaramAVitoria(entregas: EntregaNaBase[]): Promise<Set<string>> {
-  const { entregaPorResposta, haQuantoAEquipaEscreveu, voltouAVitoria } = await import("./volta-a-vitoria");
+  const { entregaPorResposta, voltouAVitoria } = await import("./volta-a-vitoria");
   const voltaram = new Set<string>();
   const porResposta = entregas.filter((e) => entregaPorResposta(e));
-  const chaves = [...new Set(porResposta.map((e) => soDigitos(e.telefone).slice(-9)).filter((c) => c.length === 9))];
-  if (chaves.length === 0) return voltaram;
-  await ensureWhatsappMensagensTable();
-  const pool = await getPool();
-  if (!pool) return voltaram;
-  const marcas = chaves.map(() => "?").join(",");
-  const [daEquipa] = (await pool.execute(
-    `SELECT RIGHT(telefone, 9) AS t, texto, TIMESTAMPDIFF(SECOND, criadoEm, CURRENT_TIMESTAMP) AS haSegundos
-       FROM whatsappMensagens
-      WHERE direccao = 'out' AND texto LIKE '[à mão]%' AND criadoEm > NOW() - INTERVAL 60 DAY
-        AND RIGHT(telefone, 9) IN (${marcas})`,
-    chaves,
-  )) as [Array<{ t: string; texto: string; haSegundos: unknown }>, unknown];
-  const [daVitoria] = (await pool.execute(
-    `SELECT DISTINCT RIGHT(telefone, 9) AS t
-       FROM whatsappMensagens
-      WHERE direccao = 'out' AND texto NOT LIKE '[à mão]%'
-        AND RIGHT(telefone, 9) IN (${marcas})`,
-    chaves,
-  )) as [Array<{ t: string }>, unknown];
-  const fioDe = new Map<string, Array<{ direccao: string; texto: string; haSegundos: number | null }>>();
-  for (const m of daEquipa) {
-    const ha = Number(m.haSegundos);
-    const lista = fioDe.get(String(m.t)) ?? [];
-    lista.push({ direccao: "out", texto: String(m.texto), haSegundos: Number.isFinite(ha) ? ha : null });
-    fioDe.set(String(m.t), lista);
-  }
-  const falou = new Set(daVitoria.map((r) => String(r.t)));
-  const respondidas = await respondidasWhatsApp();
+  if (porResposta.length === 0) return voltaram;
   const profissionais = await telefonesDosProfissionaisWhatsApp();
   for (const e of porResposta) {
     const chave = soDigitos(e.telefone).slice(-9);
-    const haSegundosDaEquipa = haQuantoAEquipaEscreveu({
-      fio: fioDe.get(chave) ?? [],
-      respondidaHaSegundos: respondidas.get(chave)?.haSegundos ?? null,
-      respostaHaSegundos: e.respostaHaSegundos,
-      entregueHaSegundos: e.entregueHaSegundos,
-    });
-    const voltou = voltouAVitoria({
-      motivo: e.motivo,
-      quem: e.quem,
-      haSegundosDaEquipa,
-      vitoriaJaFalou: falou.has(chave),
-      profissional: profissionais.has(chave),
-    });
-    if (voltou) voltaram.add(chave);
+    if (chave.length !== 9) continue;
+    if (voltouAVitoria({ motivo: e.motivo, quem: e.quem, profissional: profissionais.has(chave) })) voltaram.add(chave);
   }
   return voltaram;
 }
 
 /**
  * AS CONVERSAS ENTREGUES A UMA PESSOA — todas as linhas, com `voltouAVitoria`
- * nas que a d112 já devolveu (24 h sem a equipa depois de uma resposta à mão).
+ * nas que já voltaram (d112; desde a d116, logo depois de uma resposta à mão).
  * As que voltaram continuam na tabela: o registo não se apaga.
  */
 export async function listarNumerosInterrompidosWhatsApp(): Promise<
@@ -13603,8 +13562,8 @@ export async function marcarRetomadaWhatsApp(telefone: string, ateId: number): P
 
 /**
  * A CONVERSA ESTÁ ENTREGUE A UMA PESSOA? — e por isso a Vitória cala-se nela.
- * Desde 25-11-2026 (d112), a entrega feita porque alguém respondeu à mão deixa
- * de calar ao fim de 24 h sem a equipa escrever (`volta-a-vitoria.ts`). Se
+ * Desde 25-11-2026 (d112, d116), a entrega feita porque alguém respondeu à mão deixa
+ * de calar (salvo a de um profissional; `volta-a-vitoria.ts`). Se
  * essa conta falhar, fica entregue.
  */
 export async function numeroInterrompidoWhatsApp(telefone: string): Promise<boolean> {

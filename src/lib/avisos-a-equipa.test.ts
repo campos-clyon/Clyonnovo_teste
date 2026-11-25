@@ -249,7 +249,7 @@ describe("a entrega a uma pessoa gera um push", () => {
     expect(fn).toContain('if (quem === "vitoria" && !jaEstava)');
     expect(fn).toContain("avisarAEquipaDaEntrega(");
     // As três portas de uma pessoa dizem-no.
-    expect(ler("src/app/api/whatsapp/ponte/route.ts")).toContain('"Respondeu à mão no WhatsApp", "pessoa")');
+    expect(ler("src/app/api/whatsapp/ponte/route.ts")).toContain('MOTIVO_DA_RESPOSTA_A_MAO, "pessoa")');
     expect(ler("src/app/api/admin/whatsapp/route.ts")).toContain('nota ?? "Pelo backoffice", "pessoa")');
     expect(DB).toContain('"Fecho desfeito - fale com o cliente", "pessoa")');
   });

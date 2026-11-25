@@ -15,22 +15,25 @@
  *   · o prazo conta-se da ÚLTIMA palavra da equipa nessa conversa (a resposta
  *     à mão no fio, a resposta pelo backoffice e o «Já respondi»), e não do
  *     momento da entrega: se a equipa volta a escrever, o relógio recomeça;
- *   · passadas `HORAS_PARA_VOLTAR_A_VITORIA` sem a equipa, a Vitória volta a
+ *   · passadas 24 h sem a equipa, a Vitória volta a
  *     falar nessa conversa. O registo da entrega não se apaga;
  *   · volta só a conversa que já era da Vitória — um número com quem ela já
  *     falou — e nunca a de um profissional registado: a conversa que a equipa
  *     começou com alguém de fora (um fornecedor, um contacto pessoal) continua
  *     dela (a decisão de 10-09-2026).
  *
+ * d116 (25-11-2026): o prazo e a excepção «com quem ela nunca falou» caíram —
+ * a entrega por uma resposta à mão já não cala a Vitória (fica só a dos
+ * profissionais registados). Quem quer a Vitória calada escreve «*». Ver
+ * `pausa-da-vitoria.ts`.
+ *
  * Quando volta, a última mensagem do cliente sem resposta lê-se e responde-se
  * (`oQueFicouPorResponder`), dentro da janela das mensagens automáticas e com
  * uma por dia — sem nunca dizer ao cliente que «voltou».
  */
-import { eEnvioDeModelo } from "./envio-de-modelo";
-import { HORAS_PARA_VOLTAR_A_VITORIA, MOTIVO_DA_RESPOSTA_A_MAO } from "./prazo-da-volta-a-vitoria";
-import { eDaEquipa } from "./rajada-do-whatsapp";
+import { MOTIVO_DA_RESPOSTA_A_MAO } from "./prazo-da-volta-a-vitoria";
 
-export { HORAS_PARA_VOLTAR_A_VITORIA, MOTIVO_DA_RESPOSTA_A_MAO, VOLTOU_A_VITORIA } from "./prazo-da-volta-a-vitoria";
+export { MOTIVO_DA_RESPOSTA_A_MAO, VOLTOU_A_VITORIA } from "./prazo-da-volta-a-vitoria";
 
 /** Até quantos dias a mensagem do cliente que ficou sem resposta ainda se responde quando a conversa volta. */
 export const DIAS_PARA_RESPONDER_AO_QUE_FICOU = 7;
@@ -51,58 +54,19 @@ export function entregaPorResposta(e: { motivo: string | null | undefined; quem?
   return plano(e.motivo) === plano(MOTIVO_DA_RESPOSTA_A_MAO);
 }
 
-type MensagemDoFio = { direccao?: string; texto?: string; haSegundos?: number | null };
-
 const idade = (v: number | null | undefined): number | null =>
   typeof v === "number" && Number.isFinite(v) ? Math.max(0, v) : null;
 
 /**
- * HÁ QUANTOS SEGUNDOS A EQUIPA ESCREVEU PELA ÚLTIMA VEZ NESTA CONVERSA — a
- * resposta à mão no fio («[à mão]», sem os envios de modelo da d86), o «Já
- * respondi» (que a resposta pelo backoffice também grava) e a última resposta
- * à mão que a ponte avisou (`respostaHaSegundos`, desde a d112). Sem nada
- * disso (uma entrega antiga, de antes de a resposta ficar escrita), conta o
- * momento da entrega. `null` quando não se sabe nada.
+ * A CONVERSA VOLTOU À VITÓRIA? Entregue porque uma pessoa respondeu à mão, e
+ * não é de um profissional registado. Desde 25-11-2026 (decisão d116) volta
+ * logo — a resposta à mão já não cala a Vitória (só o «*» a pausa, ver
+ * `pausa-da-vitoria.ts`) — e também a de um número com quem ela nunca
+ * falou: a excepção da d112 caiu. Era 24 h sem a equipa.
  */
-export function haQuantoAEquipaEscreveu(p: {
-  fio?: ReadonlyArray<MensagemDoFio> | null;
-  respondidaHaSegundos?: number | null;
-  respostaHaSegundos?: number | null;
-  entregueHaSegundos?: number | null;
-}): number | null {
-  const idades: number[] = [];
-  for (const m of Array.isArray(p.fio) ? p.fio : []) {
-    if (m?.direccao !== "out" || typeof m.texto !== "string" || !eDaEquipa(m.texto)) continue;
-    if (eEnvioDeModelo(m.texto)) continue;
-    const ha = idade(m.haSegundos);
-    if (ha != null) idades.push(ha);
-  }
-  for (const v of [p.respondidaHaSegundos, p.respostaHaSegundos]) {
-    const ha = idade(v);
-    if (ha != null) idades.push(ha);
-  }
-  if (idades.length > 0) return Math.min(...idades);
-  return idade(p.entregueHaSegundos);
-}
-
-/**
- * A CONVERSA VOLTOU À VITÓRIA? Entregue porque uma pessoa respondeu, de um
- * número com quem a Vitória já falou e que não é de um profissional, e há mais
- * de `horas` sem a equipa escrever.
- */
-export function voltouAVitoria(
-  e: {
-    motivo: string | null | undefined;
-    quem?: QuemEntregou;
-    haSegundosDaEquipa: number | null;
-    vitoriaJaFalou: boolean;
-    profissional: boolean;
-  },
-  horas: number = HORAS_PARA_VOLTAR_A_VITORIA,
-): boolean {
+export function voltouAVitoria(e: { motivo: string | null | undefined; quem?: QuemEntregou; profissional: boolean }): boolean {
   if (!entregaPorResposta(e)) return false;
-  if (e.profissional || !e.vitoriaJaFalou) return false;
-  return e.haSegundosDaEquipa != null && e.haSegundosDaEquipa > horas * 3600;
+  return !e.profissional;
 }
 
 /**

@@ -74,6 +74,16 @@ export function haQuantoFalouAEquipa(
 }
 
 /**
+ * A EQUIPA A ESCREVER JÁ NÃO CALA A VITÓRIA — 25-11-2026 (decisão d116). O
+ * dono: «Vamos colocar a Vitória para responder sempre mesmo que alguém envie
+ * mensagem.» A regra das 12 h fica escrita (e volta com este interruptor),
+ * mas não cala ninguém: quem quer a Vitória calada numa conversa escreve «*»
+ * (ver `pausa-da-vitoria.ts`), e isso fica como uma entrega a uma pessoa —
+ * que todas as rotinas já respeitam por `numeroInterrompidoWhatsApp`.
+ */
+export const A_EQUIPA_A_ESCREVER_CALA_A_VITORIA = false;
+
+/**
  * UMA PESSOA DA EQUIPA FALOU HÁ POUCO? — a resposta à mão (a marca «[à mão]»
  * no fio, do telemóvel), a resposta pelo backoffice e o «Já respondi» (os dois
  * gravam o «Já respondi»), nas últimas `horas`. Um «Devolver ao site» dado por
@@ -85,6 +95,7 @@ export function aEquipaFalouHaPouco(
   opcoes: { respondidaHaSegundos?: number | null; devolvidaHaSegundos?: number | null } = {},
   horas: number = HORAS_SEM_PISAR_A_EQUIPA,
 ): boolean {
+  if (!A_EQUIPA_A_ESCREVER_CALA_A_VITORIA) return false;
   const ha = haQuantoFalouAEquipa(fio, opcoes.respondidaHaSegundos);
   if (ha == null || ha > horas * 3600) return false;
   const devolvida = opcoes.devolvidaHaSegundos;

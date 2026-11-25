@@ -11,6 +11,7 @@ import {
   eSoCortesia,
   faseDoPedido,
   HORAS_SEM_PISAR_A_EQUIPA,
+  A_EQUIPA_A_ESCREVER_CALA_A_VITORIA,
   PASSEI_A_EQUIPA,
   pedeServicoNovo,
   pedidoPrincipal,
@@ -216,20 +217,20 @@ describe("caso C — a equipa está a responder: a Vitória não se mete", () =>
     { direccao: "in", texto: "Sim, já envio", haSegundos: 30 },
   ];
 
-  it("uma resposta à mão há 2 horas cala a Vitória; há 13 horas já não", () => {
+  // d116 (25-11-2026): a equipa a escrever já não cala a Vitória — só o «*» (pausa-da-vitoria.ts).
+  it("desde a d116 a resposta à mão já não cala a Vitória — nem há 2 horas, nem há 13", () => {
     expect(HORAS_SEM_PISAR_A_EQUIPA).toBe(12);
-    expect(aEquipaFalouHaPouco(fio)).toBe(true);
+    expect(A_EQUIPA_A_ESCREVER_CALA_A_VITORIA).toBe(false);
+    expect(aEquipaFalouHaPouco(fio)).toBe(false);
     const antigo = fio.map((m) => (m.direccao === "out" ? { ...m, haSegundos: 13 * h } : m));
     expect(aEquipaFalouHaPouco(antigo)).toBe(false);
   });
 
-  it("o «Já respondi» (também o da resposta pelo backoffice) conta; o «Devolver ao site» depois dele devolve-a", () => {
+  it("o «Já respondi» (também o da resposta pelo backoffice) também já não a cala (d116)", () => {
     const semMao = fio.filter((m) => m.direccao === "in");
     expect(aEquipaFalouHaPouco(semMao)).toBe(false);
-    expect(aEquipaFalouHaPouco(semMao, { respondidaHaSegundos: h })).toBe(true);
-    expect(aEquipaFalouHaPouco(fio, { devolvidaHaSegundos: 600 })).toBe(false);
-    // Devolvida ANTES de a equipa voltar a escrever: a equipa manda.
-    expect(aEquipaFalouHaPouco(fio, { devolvidaHaSegundos: 5 * h })).toBe(true);
+    expect(aEquipaFalouHaPouco(semMao, { respondidaHaSegundos: h })).toBe(false);
+    expect(aEquipaFalouHaPouco(fio, { devolvidaHaSegundos: 5 * h })).toBe(false);
   });
 
   it("a guarda vem logo à porta, antes de qualquer resposta; e o cron das recolhas paradas também a respeita", () => {

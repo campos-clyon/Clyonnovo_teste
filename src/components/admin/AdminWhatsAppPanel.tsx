@@ -44,6 +44,7 @@ import { conversasVisiveis, procuraActiva } from "@/lib/procurar-conversas";
 import { fichaDaPonte, type EstadoDaPonte } from "@/lib/ponte-viva";
 import { linhaDaFalha, type FalhaDaIa } from "@/lib/saude-da-ia";
 import { eDaEquipa, semMarcaDeMao } from "@/lib/rajada-do-whatsapp";
+import { linhaDaEntrega } from "@/lib/sinais-da-equipa";
 import {
   contarNaMesa,
   eEsperaAntiga,
@@ -1619,7 +1620,7 @@ export default function AdminWhatsAppPanel() {
                         {/* Quem a tem: a Vitória, ou alguém da equipa (entregue). */}
                         {l.estado !== "bloqueada" && (
                           <span
-                            title={l.motivoDaEntrega ? `Entregue: ${l.motivoDaEntrega}` : undefined}
+                            title={l.motivoDaEntrega ? linhaDaEntrega(l.motivoDaEntrega) : undefined}
                             className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${
                               l.dono === "equipa" ? "bg-amber-500/15 text-amber-300" : "bg-violet-500/15 text-violet-300"
                             }`}
@@ -1694,7 +1695,7 @@ export default function AdminWhatsAppPanel() {
                         {l.porque}
                       </p>
                       {l.motivoDaEntrega && l.estado !== "resolvida" && (
-                        <p className="truncate text-[11px] text-amber-300/80">Entregue: {l.motivoDaEntrega}</p>
+                        <p className="truncate text-[11px] text-amber-300/80">{linhaDaEntrega(l.motivoDaEntrega)}</p>
                       )}
                       {/* d112: respondida à mão e 24 h sem a equipa — a Vitória fala outra vez nesta conversa. */}
                       {l.voltouAVitoria && l.estado !== "resolvida" && (

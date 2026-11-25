@@ -39,8 +39,10 @@ describe("os quatro caminhos, e o que cada um guarda", () => {
     const i = POST.indexOf('corpo.accao === "interromper"');
     // O bloco inteiro, até à resposta — desde 21-10-2026 guarda também o que
     // se escreveu à mão (`respostas-a-mao-ficam-escritas.test.ts`).
-    const bloco = POST.slice(i, POST.indexOf("return NextResponse.json({ ok: true });", i));
+    // d116: até ao número bloqueado — o bloco tem agora várias saídas, e só o sinal cala.
+    const bloco = POST.slice(i, POST.indexOf("if (await numeroBloqueadoWhatsApp(telefone))", i));
     expect(bloco).toContain("guardarOQueEntrou()");
+    expect(bloco).toContain("aplicarOSinalDaEquipa(telefone, faz)");
     expect(bloco).toContain("interromperNumeroWhatsApp");
   });
 

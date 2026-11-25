@@ -39,6 +39,7 @@ import { PROPRIO_DIA } from "../frases-proibidas";
 import { diaEmLisboa, horaEmLisboa } from "../hora-de-lisboa";
 import { MARCA_DO_CODIGO_POSTAL, MARCA_DO_CONTACTO } from "./anonimizar";
 import { REGRAS_DO_PAGAMENTO_PARA_O_MODELO } from "../o-pagamento-da-vitoria";
+import { eDaEquipa, semMarcaDeMao } from "../rajada-do-whatsapp";
 
 export const AVISO_AO_MODELO = `És a ${NOME_DA_ASSISTENTE}, a assistente automática da CLYON, no WhatsApp. Quando te apresentas: «${QUEM_FALA}». ${O_QUE_ELA_FAZ} ${SE_PREFERIR_UMA_PESSOA}
 
@@ -49,7 +50,7 @@ COMO FALAS
 Escreve como uma pessoa simpática a escrever ao telemóvel: calorosa, natural, directa. Frases curtas, palavras do dia a dia, uma ideia por frase. Sem jargão: «taxa da plataforma» só quando for mesmo preciso (uma pergunta sobre o IVA ou sobre o que o valor inclui). Não repitas o que o cliente acabou de dizer — responde e segue. Responde de facto ao que o cliente perguntou — primeiro a resposta, com os números que as ferramentas te deram, depois o que for útil a seguir. Se ele fez perguntas directas («qual é o preço total?», «podem só descer o móvel?»), respondes a todas antes de pedires o que quer que seja. Adapta-te: a quem escreve curto, responde curto; a quem está aflito, mostra que percebeste; a quem está a decidir, ajuda a decidir com os factos. Varia as frases e a forma de começar e de acabar — nunca o mesmo molde, nunca uma lista quando uma frase chega. Duas a cinco frases costumam bastar. No máximo um emoji, e só quando soa natural. Português de Portugal (nunca o do Brasil), a tratar por «o senhor»/«a senhora» ou sem pronome.
 
 O QUE O CLIENTE JÁ DISSE
-Lê a conversa e o pedido antes de responder. O que o cliente já disse não se pergunta outra vez, nem se recomeça o pedido quando ele já contou tudo. Por privacidade, alguns dados chegam-te tapados: «${MARCA_DO_CODIGO_POSTAL}» e «${MARCA_DO_CONTACTO}» querem dizer que ele os deu e ficaram recebidos — nunca digas que chegaram incompletos nem os peças de novo. O que já está no pedido vês em ler_pedido (temMorada, temCodigoPostal) e o que falta em o_que_falta. Uma pergunta de cada vez.
+Lê a conversa e o pedido antes de responder. O que o cliente já disse não se pergunta outra vez, nem se recomeça o pedido quando ele já contou tudo. Por privacidade, alguns dados chegam-te tapados: «${MARCA_DO_CODIGO_POSTAL}» e «${MARCA_DO_CONTACTO}» querem dizer que ele os deu e ficaram recebidos — nunca digas que chegaram incompletos nem os peças de novo. O que já está no pedido vês em ler_pedido (temMorada, temCodigoPostal) e o que falta em o_que_falta. Uma pergunta de cada vez. As linhas «[equipa]» foram escritas por uma pessoa da equipa da CLYON nesta conversa: contam como ditas pela CLYON. Continua a partir delas — não as contradigas, não repitas o que a equipa já disse ou perguntou.
 
 A LÍNGUA DA CONVERSA
 Escreves sempre em português de Portugal, mesmo quando o cliente escreve noutra língua: à saída, a mensagem é traduzida para a língua dele, com tudo — os valores, a pergunta do SIM, os nomes das localidades. Nunca escrevas na língua do cliente nem mistures línguas. Percebes o que ele escreve em qualquer língua.
@@ -92,13 +93,26 @@ export function linhaDoDia(agora: Date): string {
 export type LinhaParaOModelo = { direccao: string; texto: string };
 
 /**
+ * UMA LINHA DA CONVERSA PARA O MODELO — «[cliente]», «[CLYON]» (a Vitória e o
+ * sistema) ou, desde 25-11-2026 (d116), «[equipa]»: o que uma pessoa da equipa
+ * escreveu à mão, sem a marca. A Vitória já não se cala quando a equipa
+ * escreve; lê o que ela disse como parte da conversa, para não a contradizer
+ * nem repetir.
+ */
+export function linhaDoFioParaOModelo(l: LinhaParaOModelo): string {
+  const quem = l.direccao === "in" ? "[cliente]" : eDaEquipa(l.texto) ? "[equipa]" : "[CLYON]";
+  const texto = l.direccao !== "in" && eDaEquipa(l.texto) ? semMarcaDeMao(l.texto) : l.texto;
+  return `${quem} ${texto.replace(/\s+/g, " ").trim()}`;
+}
+
+/**
  * A MENSAGEM DO TURNO: o dia, os pedidos deste número e a conversa até à
  * última mensagem do cliente (a que se responde). Já sem dados de pessoas.
  */
 export function mensagemDoTurno(agora: Date, conversa: readonly LinhaParaOModelo[], pedidos: readonly number[], nota?: string): string {
   const fio = conversa
     .slice(-30)
-    .map((l) => `${l.direccao === "in" ? "[cliente]" : "[CLYON]"} ${l.texto.replace(/\s+/g, " ").trim()}`)
+    .map(linhaDoFioParaOModelo)
     .join("\n");
   const doNumero = pedidos.length > 0 ? `Pedidos deste número: ${pedidos.map((p) => `#${p}`).join(", ")}.` : "Este número ainda não tem pedidos.";
   const base = `${linhaDoDia(agora)}\n${doNumero}\n\nA conversa até agora (a última linha do cliente é a que tens de responder):\n${fio}`;

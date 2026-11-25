@@ -61,12 +61,13 @@ describe("o site guarda-o como saída da equipa", () => {
 
   it("antes de entregar a conversa, e só quando vem texto", () => {
     const i = ROTA.indexOf('if (corpo.accao === "interromper") {');
-    const bloco = ROTA.slice(i, ROTA.indexOf("return NextResponse.json({ ok: true });", i));
+    // d116: até ao número bloqueado — o bloco tem várias saídas (o envio de modelo, o sinal).
+    const bloco = ROTA.slice(i, ROTA.indexOf("if (await numeroBloqueadoWhatsApp(telefone))", i));
     expect(bloco).toContain('const daMao = typeof corpo.daMao === "string" ? corpo.daMao.trim() : "";');
     expect(bloco).toMatch(/if \(daMao\) \{[\s\S]*registarMensagemWhatsApp\(telefone, "out", `\$\{MARCA_DE_MAO\} \$\{daMao\}`\)/);
-    expect(bloco.indexOf("registarMensagemWhatsApp(telefone, \"out\"")).toBeLessThan(
-      bloco.indexOf("interromperNumeroWhatsApp(telefone"),
-    );
+    const decide = bloco.indexOf("oQueFazAMensagemDaEquipa(");
+    expect(decide).toBeGreaterThan(-1);
+    expect(bloco.indexOf("registarMensagemWhatsApp(telefone, \"out\"")).toBeLessThan(decide);
   });
 
   it("e o painel mostra-a com a etiqueta «à mão»", () => {

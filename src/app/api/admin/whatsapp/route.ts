@@ -231,19 +231,32 @@ export async function POST(req: NextRequest) {
   // propósito — quem escreve aqui É a pessoa. Se não sair, a razão mais
   // comum é a janela de 24 h do WhatsApp estar fechada.
   if (accao === "responder") {
-    const texto = typeof corpo.nota === "string" ? corpo.nota.trim() : "";
-    if (!texto || telefone.replace(/\D/g, "").length < 9) {
+    const escrito = typeof corpo.nota === "string" ? corpo.nota.trim() : "";
+    if (!escrito || telefone.replace(/\D/g, "").length < 9) {
       return NextResponse.json({ error: "Falta o número ou o texto." }, { status: 400 });
+    }
+    /*
+     * O SINAL DA EQUIPA — 25-11-2026 (decisão d116). Responder aqui já não
+     * cala a Vitória (nem as 12 h da d73): ela continua a responder ao cliente.
+     * «*» na mensagem pausa-a nesta conversa, «»» fá-la retomar (o «Devolver
+     * ao site»); com os dois vale o último. O sinal sai da mensagem antes de
+     * ela seguir, e a mensagem que era só o sinal não sai: só se aplica a
+     * pausa ou o retomar. Ver `pausa-da-vitoria.ts`.
+     */
+    const { sinalDaEquipa, semOSinal } = await import("@/lib/pausa-da-vitoria");
+    const { aplicarOSinalDaEquipa } = await import("@/lib/pausa-da-vitoria-na-base");
+    const sinal = sinalDaEquipa(escrito);
+    const texto = sinal ? semOSinal(escrito) : escrito;
+    if (sinal) await aplicarOSinalDaEquipa(telefone, sinal);
+    if (!texto) {
+      return NextResponse.json({ ok: true, sinal, enviada: false });
     }
     // À mão, sem API: a resposta não sai daqui — devolve-se o link que abre
     // o WhatsApp do número da CLYON com o texto pronto, e regista-se no fio
     // porque quem carregou vai enviá-la.
     /*
-     * QUEM RESPONDE PELO BACKOFFICE FICA COM A CONVERSA — 21-11-2026 (d73, o
-     * caso C). Responder aqui não entregava a conversa a ninguém, e a Vitória
-     * respondia por cima da equipa à mensagem seguinte. Grava-se o «Já
-     * respondi»: nas 12 horas seguintes ela não responde sozinha (ver
-     * `aEquipaFalouHaPouco`), salvo um «Devolver ao site».
+     * O «Já respondi» continua a gravar-se (d73): é ele que põe a conversa em
+     * «À espera do cliente» na Mesa. Desde a d116 já não cala a Vitória.
      */
     const { marcarRespondidaWhatsApp } = await import("@/lib/db");
     if (canalWhatsApp() === "manual") {
@@ -251,6 +264,7 @@ export async function POST(req: NextRequest) {
       await marcarRespondidaWhatsApp(telefone, true).catch(() => {});
       return NextResponse.json({
         ok: true,
+        sinal,
         manual: true,
         link: linkParaEnviarAMao(telefone, texto),
         linkWeb: linkParaEnviarNoWhatsAppWeb(telefone, texto),
@@ -268,7 +282,7 @@ export async function POST(req: NextRequest) {
       );
     }
     await marcarRespondidaWhatsApp(telefone, true).catch(() => {});
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, sinal });
   }
 
   /*

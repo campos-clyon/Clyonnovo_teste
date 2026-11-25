@@ -122,16 +122,17 @@ describe("o envio de modelo reconhece-se pelos marcadores estáveis — e não �
     expect(aEquipaFalouHaPouco(FIO, {})).toBe(false);
   });
 
-  it("com uma mensagem à mão da equipa DEPOIS do modelo, o silêncio volta, como hoje", () => {
+  it("com uma mensagem à mão da equipa DEPOIS do modelo, conta como a equipa a falar — mas desde a d116 já não cala a Vitória", () => {
     const comAMao = [...FIO.slice(0, 2), { direccao: "out", texto: `${MARCA_DE_MAO} Já agora, é rés-do-chão?`, haSegundos: 600 }, FIO[2]];
     expect(haQuantoFalouAEquipa(comAMao)).toBe(600);
-    expect(aEquipaFalouHaPouco(comAMao, {})).toBe(true);
-    // E o «Já respondi» do backoffice continua a contar.
-    expect(aEquipaFalouHaPouco(FIO, { respondidaHaSegundos: 300 })).toBe(true);
+    expect(haQuantoFalouAEquipa(FIO, 300)).toBe(300);
+    // d116 (25-11-2026): a Vitória responde sempre; só o «*» a pausa.
+    expect(aEquipaFalouHaPouco(comAMao, {})).toBe(false);
+    expect(aEquipaFalouHaPouco(FIO, { respondidaHaSegundos: 300 })).toBe(false);
   });
 
   it("a ponte não entrega a conversa por causa do modelo — e o silêncio das 12 h ignora-o", () => {
-    const interromper = corpoDe(PONTE, 'if (corpo.accao === "interromper") {', 'interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp", "pessoa")');
+    const interromper = corpoDe(PONTE, 'if (corpo.accao === "interromper") {', "oQueFazAMensagemDaEquipa(");
     expect(interromper).toContain("registarMensagemWhatsApp(telefone, \"out\", `${MARCA_DE_MAO} ${daMao}`)");
     expect(interromper).toContain("if (eEnvioDeModelo(daMao)) {");
     expect(interromper.indexOf("registarMensagemWhatsApp(")).toBeLessThan(interromper.indexOf("if (eEnvioDeModelo(daMao)) {"));

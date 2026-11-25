@@ -44,7 +44,7 @@ import {
   type PassoDaRecolha,
 } from "../whatsapp-recolha";
 import { MARCA_DO_CODIGO_POSTAL, MARCA_DO_CONTACTO, textoAnonimizado, type QuemEscreve } from "./anonimizar";
-import { linhaDoDia, type LinhaParaOModelo } from "./aviso-ao-modelo";
+import { linhaDoDia, linhaDoFioParaOModelo, type LinhaParaOModelo } from "./aviso-ao-modelo";
 import { correrFerramenta, FERRAMENTAS_DA_VITORIA, type DependenciasDasFerramentas, type EstadoDaConversa, type ResultadoDaFerramenta } from "./ferramentas";
 import { eOSimDoCodigo } from "./pendentes";
 import { MINUTOS_PARA_O_SIM } from "./propostas-do-agente";
@@ -592,6 +592,7 @@ COMO TRABALHAS
 - Em cada volta, primeiro ler_rascunho: diz o que já se sabe, o que falta (passosEmFalta, pela ordem de perguntar) e os serviços do site (servicosDoSite). O que lá está não se pergunta outra vez.
 - O que o cliente disse nesta mensagem e ainda não está no rascunho, gravas com gravar_no_rascunho(passo, valor), um passo de cada vez, com o valor arrumado (o serviço pelo id da lista; o andar «3», «r/c»; o elevador «sim»/«não»; a data como ele a disse). Cada valor passa pelos validadores da recolha: se for recusado, lê a razão, corrige o valor ou pergunta ao cliente. Nunca inventes um valor que ele não disse.
 - Depois perguntas o primeiro passo que falta, uma pergunta de cada vez. Se ele fez perguntas, respondes primeiro.
+- As linhas «[equipa]» foram escritas por uma pessoa da equipa da CLYON nesta conversa: o que ela perguntou ou disse conta como dito. Continua a partir daí — não a contradigas nem repitas a pergunta dela.
 - Quando ler_rascunho disser resumoPronto, chamas propor_registo e pões na resposta a marca ${MARCA_DO_RESUMO}, tal e qual, numa linha à parte: o sistema troca-a pelo resumo com todos os dados, que já agradece e acaba a pedir o SIM. Não escrevas mais nada a seguir à marca.
 
 OS DADOS TAPADOS
@@ -617,7 +618,7 @@ Entrega a mensagem com propor_resposta, uma vez, no fim. Se a revisão a recusar
 export function mensagemDaRecolha(agora: Date, conversa: readonly LinhaParaOModelo[], nota?: string): string {
   const fio = conversa
     .slice(-30)
-    .map((l) => `${l.direccao === "in" ? "[cliente]" : "[CLYON]"} ${l.texto.replace(/\s+/g, " ").trim()}`)
+    .map(linhaDoFioParaOModelo)
     .join("\n");
   const base = `${linhaDoDia(agora)}\nEste número ainda não tem pedido: estás a recolher os dados do pedido novo.\n\nA conversa até agora (a última linha do cliente é a que tens de responder):\n${fio}`;
   return nota && nota.trim() ? `${base}\n\nNota do sistema (não é do cliente): ${nota.replace(/\s+/g, " ").trim().slice(0, 600)}` : base;

@@ -12,6 +12,7 @@ import {
 import { ATRASOS_SUGERIDOS, atrasoPorExtenso } from "@/lib/assistente-tempo-de-resposta";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { instanteDaBase } from "@/lib/hora-de-lisboa";
+import { COMO_PAUSAR_A_VITORIA } from "@/lib/sinais-da-equipa";
 
 /**
  * O ECRÃ DO ASSISTENTE AUTOMÁTICO.
@@ -209,6 +210,9 @@ export default function AdminAssistenteAutoPanel() {
           <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
         )}
       </button>
+
+      {/* d116 (25-11-2026): a equipa pausa a Vitória numa conversa com * e fá-la voltar com ». */}
+      <p className="mt-1 text-xs text-slate-400">{COMO_PAUSAR_A_VITORIA}</p>
 
       {!aberto && (
         <p className="mt-1 text-xs text-slate-500">

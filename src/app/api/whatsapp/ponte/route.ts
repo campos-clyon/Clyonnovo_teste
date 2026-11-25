@@ -19,6 +19,7 @@ import {
   MARCA_DE_MAO,
   MARCA_DE_VIDEO,
 } from "@/lib/rajada-do-whatsapp";
+import { MOTIVO_DA_RESPOSTA_A_MAO } from "@/lib/prazo-da-volta-a-vitoria";
 
 export const runtime = "nodejs";
 /*
@@ -466,9 +467,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // O Winapp a avisar: o dono respondeu À MÃO a este número. Responder à mão
-  // é a forma mais natural de dizer "esta conversa é minha" — o cérebro
-  // cala-se até alguém carregar em "Devolver ao site" no backoffice.
+  // O Winapp a avisar: o dono respondeu À MÃO a este número. Até 25-11-2026
+  // isto calava o cérebro até alguém carregar em "Devolver ao site"; desde a
+  // d116 só cala com «*» na mensagem (e «»» fá-lo voltar) — ver abaixo.
   if (corpo.accao === "interromper") {
     // Se o aviso trouxer a mensagem que o levou a responder, ela fica.
     await guardarOQueEntrou();
@@ -492,9 +493,33 @@ export async function POST(req: NextRequest) {
     const { eEnvioDeModelo } = await import("@/lib/envio-de-modelo");
     if (eEnvioDeModelo(daMao)) {
       console.info(`[ponte] …${telefone.slice(-3)}: envio de modelo da equipa — a conversa fica com a Vitória (d86)`);
-    } else {
-      // Foi uma pessoa: quem respondeu já tem a conversa — sem aviso à equipa (d23).
-      await interromperNumeroWhatsApp(telefone, "Respondeu à mão no WhatsApp", "pessoa");
+      return NextResponse.json({ ok: true });
+    }
+    /*
+     * A VITÓRIA RESPONDE SEMPRE — 25-11-2026 (decisão d116). A resposta à mão
+     * já não entrega a conversa: fica no fio (a Vitória lê-a como parte da
+     * conversa) e ela continua a responder ao cliente. «*» na mensagem pausa-a
+     * nesta conversa, «»» fá-la retomar (o mesmo que «Devolver ao site»); com
+     * os dois, vale o último. A conversa com um profissional registado continua
+     * a passar à equipa, como antes. O texto que afinal saiu do site (o aviso a
+     * chegar antes de a ponte o reconhecer) não conta. Ver `pausa-da-vitoria.ts`.
+     */
+    const { oQueFazAMensagemDaEquipa } = await import("@/lib/pausa-da-vitoria");
+    const { aplicarOSinalDaEquipa, saiuPeloSiteHaPouco } = await import("@/lib/pausa-da-vitoria-na-base");
+    if (daMao && (await saiuPeloSiteHaPouco(telefone, daMao))) {
+      return NextResponse.json({ ok: true });
+    }
+    const { telefonesDosProfissionaisWhatsApp } = await import("@/lib/db");
+    const profissionais = await telefonesDosProfissionaisWhatsApp().catch(() => null);
+    // Sem a lista, na dúvida trata-se como profissional: a conversa passa à equipa, como antes.
+    const profissional = profissionais == null || profissionais.has(telefone.replace(/\D/g, "").slice(-9));
+    const faz = oQueFazAMensagemDaEquipa({ texto: daMao, profissional });
+    if (faz === "pausar" || faz === "retomar") {
+      await aplicarOSinalDaEquipa(telefone, faz);
+      console.info(`[ponte] …${telefone.slice(-3)}: a equipa escreveu ${faz === "pausar" ? "* — Vitória pausada" : "» — Vitória retoma"} (d116)`);
+    } else if (faz === "entregar") {
+      // Um profissional registado: quem respondeu fica com a conversa — sem aviso à equipa (d23).
+      await interromperNumeroWhatsApp(telefone, MOTIVO_DA_RESPOSTA_A_MAO, "pessoa");
     }
     return NextResponse.json({ ok: true });
   }
