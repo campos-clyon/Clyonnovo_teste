@@ -226,9 +226,9 @@ describe("nunca repetir uma pergunta respondida", () => {
   });
 });
 
-describe("a fatura pela regra de hoje (d30: duas faturas; o preço é o mesmo com ou sem NIF)", () => {
+describe("a fatura pela regra de hoje (d30: duas faturas; d117: o IVA é o de cada proposta)", () => {
   it("a pergunta não dá a entender que sem fatura não há IVA", () => {
-    expect(PERGUNTA_DA_FATURA).toBe("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?");
+    expect(PERGUNTA_DA_FATURA).toBe("Quer o seu NIF na fatura? Se sim, diga-me o número.");
     expect(PERGUNTA_DA_FATURA).not.toMatch(/IVA|aplica-se/);
     expect(DUAS_FATURAS_POR_TRABALHO_CURTA).toMatch(/com IVA ou isento/);
     expect(passoDaPergunta(PERGUNTA_DA_FATURA)).toBe("fatura");
@@ -236,7 +236,8 @@ describe("a fatura pela regra de hoje (d30: duas faturas; o preço é o mesmo co
 
   it("o site diz o mesmo", () => {
     const site = readFileSync(join(__dirname, "..", "app", "plataforma", "pedir", "components", "ValoresEFaturacao.tsx"), "utf8");
-    expect(site).toContain("O preço é o mesmo, com ou sem NIF.");
+    expect(site).toContain("{O_NIF_E_OPCIONAL_E_O_IVA_DEPENDE}");
+    expect(site).not.toMatch(/com ou sem NIF/);
   });
 
   for (const t of ["É indiferente", "tanto faz", "Como preferir", INDIFERENTE]) {

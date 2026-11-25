@@ -143,12 +143,16 @@ const SERVICO_PELAS_IMAGENS =
  * regime dele; a da taxa, da empresa parceira da CLYON), e o preço da
  * proposta é o total a pagar. O IVA já não depende do «sim» do cliente: «com
  * fatura aplica-se IVA» dava a entender que sem fatura se pagava menos, e
- * não é verdade. O site pergunta o mesmo assim — «Quero o meu NIF na fatura.
- * O preço é o mesmo, com ou sem NIF.» (o simulador e o «pedir», d30) —, e o
- * `precisaFatura` é isso mesmo: o pedido vai só a parceiros que a emitem com
- * o NIF dele. Por omissão (quem diz «é indiferente»): não, como no site.
+ * não é verdade. O `precisaFatura` é só isto: o pedido vai a parceiros que
+ * a emitem com o NIF dele. Por omissão (quem diz «é indiferente»): não, como
+ * no site.
+ *
+ * d117 (25-11-2026): a pergunta já não diz que «o preço é o mesmo com ou sem
+ * NIF» — o dono: «pode ser com IVA 23 %». O preço depende do parceiro (com IVA
+ * a 23 % ou isento), e a pergunta do NIF não pode dar a entender que é fixo.
+ * O reconhecimento lê a pergunta nova e a antiga (`reler-a-conversa.ts`).
  */
-export const PERGUNTA_DA_FATURA = "O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?";
+export const PERGUNTA_DA_FATURA = "Quer o seu NIF na fatura? Se sim, diga-me o número.";
 const DESEJA_FACTURA = PERGUNTA_DA_FATURA;
 
 export type PassoDaRecolha =
@@ -3673,7 +3677,7 @@ export function outraVez(passo: PassoDaRecolha, d: DadosDaRecolha): string {
     case "descricao":
       return "Diga-me, por palavras suas, o que é para levar ou fazer.";
     case "fatura":
-      return "Peço desculpa, não percebi bem: quer o seu NIF na fatura? O preço é o mesmo, com ou sem NIF.";
+      return "Peço desculpa, não percebi bem: quer o seu NIF na fatura? Se sim, diga-me o número.";
     case "nif":
       return "Peço desculpa, não consegui ler o NIF. São 9 algarismos — ou, se preferir, dá-mo depois.";
     case "servico":
@@ -5237,7 +5241,7 @@ export function perguntaDeSeguimento(passo: PassoDaRecolha, d: DadosDaRecolha): 
       return "Conte-me o que há para levar ou fazer — por palavras suas, ou numa fotografia.";
     case "fatura":
       // A pergunta da fatura fica como o dono a escreveu, sempre.
-      return "Só me falta saber: quer o seu NIF na fatura? O preço é o mesmo, com ou sem NIF.";
+      return "Só me falta saber: quer o seu NIF na fatura? Se sim, diga-me o número.";
     case "nif":
       return "Qual é o NIF para a fatura? São 9 algarismos — ou, se preferir, dá-mo depois.";
     default:
@@ -5409,7 +5413,7 @@ export function naoPercebeu(texto: string): boolean {
 export function explicarDeNovo(passo: PassoDaRecolha, dados: DadosDaRecolha): string {
   if (passo === "fatura") {
     return (
-      "Peço desculpa, não fui clara! Cada trabalho tem a sua fatura, e o preço é o mesmo com ou sem NIF. " +
+      "Peço desculpa, não fui clara! Cada trabalho tem a sua fatura. " +
       "Pergunto só: quer o seu NIF na fatura?"
     );
   }

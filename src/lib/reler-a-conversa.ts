@@ -382,7 +382,8 @@ export function passoDaPergunta(texto: string): PassoDaRecolha | null {
     [/confirme, por favor|para registar,? responda sim|respond(a|er) sim e fica registado|fica anotado no pedido/, "confirmar"],
     [/qual e o nif|ler o nif/, "nif"],
     // «Deseja fatura? (aplica-se IVA de 23%)» desde 17-10-2026.
-    // «O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?» desde 18-11-2026 (d69).
+    // «… quer o seu NIF na fatura?» desde 18-11-2026 (d69), e «Quer o seu NIF na fatura? Se sim, diga-me o número.» desde
+    // 25-11-2026 (d117): as duas lêem-se aqui, porque há conversas a meio com a antiga.
     [/quer a factura|precisa de factura|deseja fa(c)?tura|nif na fa(c)?tura/, "fatura"],
     [/codigo postal do destino|localidade do destino/, "codigoPostalDestino"],
     [/para onde e a mudanca|numero do destino/, "moradaDestino"],

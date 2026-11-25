@@ -96,10 +96,11 @@ describe("a conversa do Tomé", () => {
      */
     const { disse, estados } = falaComOTome();
     expect(estados[6].passo).toBe("fatura");
-    expect(disse[6]).toMatch(/quer o seu NIF na fatura\?$/);
+    // d117: «Quer o seu NIF na fatura? Se sim, diga-me o número.»
+    expect(disse[6]).toMatch(/Quer o seu NIF na fatura\? Se sim, diga-me o número\.$/);
     // Desde a d69 a pergunta diz «NIF na fatura», como o site; o número não se pede.
     expect(disse.join("\n")).not.toMatch(/Miragem|Qual é o NIF/);
-    expect(perguntaDo("fatura", {})).toBe("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?");
+    expect(perguntaDo("fatura", {})).toBe("Quer o seu NIF na fatura? Se sim, diga-me o número.");
   });
 
   it("«Não quero vender só doar» não é um não à factura — fica no pedido, e a pergunta segue", () => {

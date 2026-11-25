@@ -102,7 +102,8 @@ describe("a conversa da Luciana", () => {
     // O IVA entrou a 17-10-2026, a pedido do dono (ver a conversa da Odete).
     const { estados, disse } = falaComALuciana();
     expect(estados[5].passo).toBe("fatura");
-    expect(disse[5]).toMatch(/quer o seu NIF na fatura\?$/);
+    // d117: «Quer o seu NIF na fatura? Se sim, diga-me o número.»
+    expect(disse[5]).toMatch(/Quer o seu NIF na fatura\? Se sim, diga-me o número\.$/);
     // Desde a d69 (18-11-2026) a pergunta diz «NIF na fatura», como o site; o número não se pede.
     expect(disse[5]).not.toMatch(/Qual é o NIF|Miragem/);
   });

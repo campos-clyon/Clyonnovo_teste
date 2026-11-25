@@ -1,3 +1,4 @@
+import { TAXA_IVA } from "./taxas-plataforma";
 import { MAXIMO_EM_NUMERARIO } from "./forma-de-pagamento";
 
 /**
@@ -101,6 +102,13 @@ export const DUAS_FATURAS_POR_TRABALHO =
   "Cada trabalho tem duas faturas, juntas ao pedido: a do trabalho, emitida pelo parceiro, com IVA ou com isenção de IVA " +
   "conforme o regime dele, e a da taxa da plataforma, emitida pela empresa parceira da CLYON, com IVA. O preço da " +
   "proposta já é o total a pagar, e no perfil de cada parceiro vê, antes de o escolher, o tipo de fatura que ele emite.";
+
+/**
+ * O NIF E O IVA, NO SITE — d117 (25-11-2026). Dizia-se «o preço é o mesmo, com
+ * ou sem NIF»: o dono — «pode ser com IVA 23 %». O IVA é o de cada proposta,
+ * conforme o parceiro; o NIF na fatura é só opcional.
+ */
+export const O_NIF_E_OPCIONAL_E_O_IVA_DEPENDE = `O NIF na fatura é opcional. O IVA vem em cada proposta: ${Math.round(TAXA_IVA * 100)} % ou isento, conforme o parceiro.`;
 
 export const DUAS_FATURAS_POR_TRABALHO_CURTA =
   "Cada trabalho tem duas faturas: a do trabalho, passada pelo parceiro (com IVA ou isento, conforme o regime dele), " +

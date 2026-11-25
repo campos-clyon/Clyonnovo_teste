@@ -113,7 +113,9 @@ describe("os tropeções da Ofélia", () => {
     const b = responderNaRecolha(naFatura, "Não entendi,", AGORA, true);
     expect(b.estado.dados.precisaFatura).toBeUndefined();
     expect(b.resposta).toBe(explicarDeNovo("fatura", naFatura.dados));
-    expect(b.resposta).toContain("o preço é o mesmo com ou sem NIF");
+    // d117: sem a promessa do preço igual.
+    expect(b.resposta).toContain("Cada trabalho tem a sua fatura.");
+    expect(b.resposta).not.toMatch(/o mesmo com ou sem NIF/);
     // E pelo Gemini, diga o modelo o que disser.
     const g = responderComCompreensao(naFatura, { intencao: "informar", campos: { fatura: "não" } }, AGORA, {
       texto: "Não entendi,",

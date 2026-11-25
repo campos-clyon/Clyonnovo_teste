@@ -196,7 +196,7 @@ describe.each(CAMINHOS)("a conversa da Leonor, %s", (_, comModelo) => {
     expect(daData.estado.dados.precisaFatura).toBeUndefined();
     expect(daData.estado.dados.notas).toEqual(["Só preciso do orçamento"]);
     expect(disse[6]).toContain(COMO_CHEGA_O_PRECO);
-    expect(disse[6].endsWith("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?")).toBe(true);
+    expect(disse[6].endsWith("Quer o seu NIF na fatura? Se sim, diga-me o número.")).toBe(true);
     expect(disse[6]).not.toMatch(/Peço desculpa/);
   });
 
@@ -261,7 +261,7 @@ describe("a corrida: a pergunta que já não serve cala-se, e a seguinte lê as 
     expect(r.estado.passo).toBe("fatura");
     expect(r.estado.dados.precisaFatura).toBeUndefined();
     expect(r.resposta).not.toMatch(/Peço desculpa|não apanhei|não percebi/);
-    expect(r.resposta.endsWith("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?")).toBe(true);
+    expect(r.resposta.endsWith("Quer o seu NIF na fatura? Se sim, diga-me o número.")).toBe(true);
   });
 
   it.each(CAMINHOS)("a descrição e a vaga em duas execuções: a carrinha não volta, segue a data (%s)", (_, comModelo) => {
@@ -290,7 +290,7 @@ describe("a corrida: a pergunta que já não serve cala-se, e a seguinte lê as 
     expect(r.estado.passo).toBe("estacionamento");
     expect(r.resposta).toBe(`Obrigada, fica anotado. ${deOutraForma("estacionamento", r.estado.dados)}`);
     expect(r.resposta).not.toContain("E a carrinha consegue encostar à porta");
-    expect(deOutraForma("fatura", {})).toBe("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?");
+    expect(deOutraForma("fatura", {})).toBe("Quer o seu NIF na fatura? Se sim, diga-me o número.");
     // A outra forma também se lê como a pergunta do mesmo passo (o fio, a Mesa, «Reler e continuar»).
     for (const passo of ["codigoPostal", "andar", "elevador", "estacionamento", "quando", "descricao", "entulhoQuantidade"] as const) {
       expect(passoDaPergunta(deOutraForma(passo, { postalCode: CODIGO })), passo).toBe(passo);
@@ -518,6 +518,6 @@ describe("está ligado na conversa viva", () => {
   it("a pergunta da factura fica exactamente como está", () => {
     const RECOLHA = ler("src/lib/whatsapp-recolha.ts");
     // Desde a d69 (18-11-2026), a pergunta da regra de hoje — a do site.
-    expect(RECOLHA).toContain('export const PERGUNTA_DA_FATURA = "O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?";');
+    expect(RECOLHA).toContain('export const PERGUNTA_DA_FATURA = "Quer o seu NIF na fatura? Se sim, diga-me o número.";');
   });
 });

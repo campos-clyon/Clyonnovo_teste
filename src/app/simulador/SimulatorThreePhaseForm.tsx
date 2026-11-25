@@ -58,7 +58,7 @@ import { PRAZO_DE_RESPOSTA, BUSINESS_PHONE } from "@/lib/seo-data";
 import { problemaDoTelefone, telefoneDoClienteValido } from "@/lib/telefone-do-cliente";
 import { SERVICOS_PUBLICOS } from "@/lib/service-categories";
 import { servicoDaLigacao } from "@/lib/servico-na-ligacao";
-import { DUAS_FATURAS_POR_TRABALHO_CURTA } from "@/lib/pagar-ao-parceiro";
+import { DUAS_FATURAS_POR_TRABALHO_CURTA, O_NIF_E_OPCIONAL_E_O_IVA_DEPENDE } from "@/lib/pagar-ao-parceiro";
 import { modeloDeHoje, temIvaIncluido } from "@/lib/iva-incluido";
 import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
 import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
@@ -156,9 +156,9 @@ export default function SimulatorThreePhaseForm() {
   /*
    * «NÃO, SEM NIF» JÁ MARCADO (14-10-2026, auditoria). A pergunta era
    * obrigatória porque a factura decidia quem podia fazer o trabalho. Desde
-   * 01-10-2026 há factura em todas as vendas, da parceira, e o preço é o
-   * mesmo com ou sem NIF: obrigar a responder era só mais um passo. Quem
-   * quer o NIF carrega em «Sim».
+   * 01-10-2026 há factura em todas as vendas, e o NIF é só opcional: obrigar
+   * a responder era só mais um passo. Quem quer o NIF carrega em «Sim». (O
+   * IVA é o de cada proposta, conforme o parceiro — d117.)
    */
   const [formData, setFormData] = useState<FormState>({ precisaFatura: false });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -2427,7 +2427,7 @@ function Phase3Contact({
         */}
         <p className="text-sm font-semibold text-gray-900">Quer o seu NIF na fatura? *</p>
         <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-          {DUAS_FATURAS_POR_TRABALHO_CURTA} Com ou sem NIF, o preço é o mesmo.
+          {DUAS_FATURAS_POR_TRABALHO_CURTA} {O_NIF_E_OPCIONAL_E_O_IVA_DEPENDE}
         </p>
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           {[

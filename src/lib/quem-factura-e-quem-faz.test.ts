@@ -86,12 +86,13 @@ describe("a fatura é da parceira, e diz-se assim", () => {
      */
     const p = perguntaDo("fatura", {});
     // E a 18-11-2026 (d69), com as duas faturas: o IVA já não depende do «sim» — a pergunta é a do site.
-    expect(p).toBe("O preço é o mesmo com ou sem NIF: quer o seu NIF na fatura?");
+    // d117: sem «o preço é o mesmo» — o IVA é o de cada proposta.
+    expect(p).toBe("Quer o seu NIF na fatura? Se sim, diga-me o número.");
     expect(p).not.toContain(ENTIDADE_QUE_FACTURA.nomeCurto);
     expect(p).not.toContain("acrescem");
     // E a repetição, quando a resposta não se percebe, também.
     expect(semComentarios(ler("src/lib/whatsapp-recolha.ts"))).toContain(
-      "Peço desculpa, não percebi bem: quer o seu NIF na fatura? O preço é o mesmo, com ou sem NIF.",
+      "Peço desculpa, não percebi bem: quer o seu NIF na fatura? Se sim, diga-me o número.",
     );
   });
 
