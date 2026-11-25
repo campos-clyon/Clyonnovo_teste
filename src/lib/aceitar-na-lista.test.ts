@@ -24,7 +24,8 @@ const BOTAO = PAINEL.slice(
 
 describe("o botão", () => {
   it("vai pelo mesmo caminho do «Responder como CLYON» — em nome do cliente", () => {
-    expect(BOTAO).toContain('fetch("/api/admin/negociacoes/agir"');
+    // d121: pelo fetch que pede o sim a um parceiro sem guia (fetchComAConfirmacaoDaGuia).
+    expect(BOTAO).toMatch(/fetch(?:ComAConfirmacaoDaGuia)?\("\/api\/admin\/negociacoes\/agir"/);
     expect(BOTAO).toContain('accao: contratar ? "contratar" : "aceitar"');
   });
 

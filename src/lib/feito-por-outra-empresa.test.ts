@@ -79,6 +79,7 @@ describe("dar por feito sem a prova do profissional", () => {
       `{!concluido && !acordada.execucaoEnviadaEm && clyonPodeConfirmar(p) && horasNaoTravamOFim(acordada) && !faltaAFolha(lerBase(p.baseDoPreco) === "hora", acordada) && (`,
     );
     // Num ficheiro dele desde 19-10-2026 (os Trabalhos CLYON usam-no também).
-    expect(ler("src/components/admin/TrocarProfissional.tsx")).toContain('fetch("/api/admin/negociacoes/trocar-profissional"');
+    // d121: pelo fetch que pede o sim a um parceiro sem guia (fetchComAConfirmacaoDaGuia).
+    expect(ler("src/components/admin/TrocarProfissional.tsx")).toMatch(/fetch(?:ComAConfirmacaoDaGuia)?\("\/api\/admin\/negociacoes\/trocar-profissional"/);
   });
 });
