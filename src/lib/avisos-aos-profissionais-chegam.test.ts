@@ -90,7 +90,7 @@ describe("o lembrete do trabalho de hoje", () => {
     expect(t).toContain("Cliente: Ana Exemplo");
     expect(t).toContain("Telefone: 910 000 788");
     expect(t).toContain("Morada: Rua das Flores, 3");
-    expect(t).toContain("escreva parar");
+    expect(t).toContain("responda parar");
   });
 
   it("sem hora marcada não inventa uma", () => {

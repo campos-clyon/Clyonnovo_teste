@@ -42,30 +42,31 @@ const ler = (p: string) =>
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("(a) o pedido novo diz o que decide", () => {
-  it("numa negociação: serviço, quando, km, fotografias e a sugestão CLYON no que recebe", () => {
+describe("(a) o pedido novo diz o que decide — curto como o WhatsApp (d135)", () => {
+  it("numa negociação: o n.º e o serviço, a localidade, os km e o ganho estimado", () => {
     expect(
       avisoDePedidoNovo({
+        pedidoId: 668,
         servico: "Recolha de móveis",
-        cidade: "Almada",
+        cidade: "Olivais, Lisboa",
         urgencia: "tomorrow",
-        distanciaKm: 12.4,
-        fotografias: 3,
-        recebe: 89,
+        distanciaKm: 22.4,
+        recebe: 67.5,
       }),
     ).toEqual({
-      title: "Pedido novo · Almada",
-      body: "Recolha de móveis · amanhã · 12 km · 3 fotografias. Sugestão CLYON: recebe 89,00 €.",
+      title: "Pedido novo #668 · Recolha de móveis",
+      body: "Olivais, Lisboa · a 22 km de si. Ganho estimado: 67,50 € (já sem a taxa e sem IVA).",
     });
   });
 
   it("sem valor de partida, a proposta é dele; por carga, o valor leva a unidade", () => {
-    expect(avisoDePedidoNovo({ servico: "Esvaziamento", cidade: "Seixal", fotografias: 0 }).body).toBe(
-      "Esvaziamento · sem fotografias. A proposta é sua.",
+    expect(avisoDePedidoNovo({ pedidoId: 9, servico: "Esvaziamento", cidade: "Seixal" }).body).toBe(
+      "Seixal. Sem valor de partida: a proposta é sua.",
     );
     expect(avisoDePedidoNovo({ servico: "Recolha de entulho", cidade: "Setúbal", recebe: 150, base: "carga" }).body).toBe(
-      "Recolha de entulho. Sugestão CLYON: recebe 150,00 € por carga.",
+      "Setúbal. Ganho estimado: 150,00 € por carga (já sem a taxa e sem IVA).",
     );
+    expect(avisoDePedidoNovo({ servico: "Esvaziamento", cidade: null }).title).toBe("Pedido novo · Esvaziamento");
   });
 
   it("num Trabalho CLYON: o valor fixo, e aceitar ou recusar", () => {
@@ -92,7 +93,7 @@ describe("(a) o pedido novo diz o que decide", () => {
     for (const campo of [
       "urgencia: pedido.urgency",
       "distanciaKm: c.distanciaKm",
-      "fotografias: pedido.quantidadeDeFotos",
+      "pedidoId: pedido.id",
       "recebe,",
       "trabalhoClyon: Boolean(oferta)",
     ]) {

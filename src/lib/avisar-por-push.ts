@@ -137,6 +137,8 @@ export async function avisarClienteDoTrabalhoFeitoPorPush(dados: {
  */
 export async function avisarProfissionalDePedidoPorPush(dados: {
   email: string | null | undefined;
+  /** O número do pedido, para o título (d135). */
+  pedidoId?: number | null;
   /** O serviço em palavras («Recolha de móveis»). */
   servico: string;
   zona: string | null;
@@ -145,7 +147,6 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
   negociacaoId?: number | null;
   urgencia?: string | null;
   distanciaKm?: number | null;
-  fotografias?: number | null;
   /** O que ele recebe (líquido). Nulo sem valor de partida. */
   recebe?: number | null;
   base?: BaseDoPreco;
@@ -153,11 +154,11 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
 }): Promise<void> {
   if (!dados.email) return;
   const aviso = avisoDePedidoNovo({
+    pedidoId: dados.pedidoId ?? null,
     servico: dados.servico,
     cidade: dados.zona,
     urgencia: dados.urgencia ?? null,
     distanciaKm: dados.distanciaKm ?? null,
-    fotografias: dados.fotografias ?? null,
     recebe: dados.recebe ?? null,
     base: dados.base,
     trabalhoClyon: dados.trabalhoClyon,

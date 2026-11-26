@@ -6,7 +6,9 @@ import {
   descricaoParaOAviso,
   urgenciaParaOAviso,
   distanciaParaOAviso,
-  valorParaOAviso,
+  distanciaCurtaParaOAviso,
+  localidadeParaOAviso,
+  ganhoParaOAviso,
   ePedidoParaParar,
   COMO_SE_SAI,
   type PedidoParaAvisar,
@@ -14,6 +16,7 @@ import {
 import { TAXAS_DE_ORIGEM, quantoOProfissionalRecebe } from "./taxas-plataforma";
 import { CAPACIDADES, FICHA_DA_CAPACIDADE } from "./assistente-interruptores";
 import { telemovelParaWhatsApp } from "./whatsapp-cloud";
+import { euros } from "./texto-da-mesa";
 
 /**
  * O AVISO DE PEDIDO NOVO AO PROFISSIONAL — 20-09-2026.
@@ -54,59 +57,85 @@ const PEDIDO: PedidoParaAvisar = {
   link: "https://clyon.pt/profissionais/pedidos/abc123",
 };
 
-describe("a mensagem diz quem escreve, e di-lo primeiro", () => {
-  it("a CLYON e o assistente de pedidos estão na abertura", () => {
-    /*
-     * Era o pedido explícito do dono — «a mensagem deve ser claro que e o
-     * assistente de pedidos que enviou da clyon» — e é também o que separa
-     * isto de uma burla aos olhos de quem recebe.
-     */
-    const m = avisoDePedidoAoProfissional("Bruno Silva", PEDIDO, TARDE);
-    const primeiraLinha = m.split("\n")[0];
-    expect(primeiraLinha).toContain("CLYON");
-    expect(primeiraLinha).toContain("assistente de pedidos");
+describe("o aviso curto — d135 (26-11-2026), o formato que o dono pediu", () => {
+  it("cinco linhas: o n.º e o serviço, onde, o ganho, a ligação e a saída", () => {
+    const m = avisoDePedidoAoProfissional("Nova Recolha", { ...PEDIDO, servico: "recolha_moveis", pedidoId: 668, localidade: "Olivais, Lisboa", distanciaKm: 22.3 }, TARDE);
+    const esperado = euros(quantoOProfissionalRecebe(100, TAXAS_DE_ORIGEM));
+    expect(m).toBe(
+      [
+        "Pedido novo #668 · Recolha de móveis",
+        "📍 Olivais, Lisboa · a 22 km de si",
+        `💶 Ganho estimado: ${esperado} (já sem a taxa e sem IVA)`,
+        `Ver e propor: ${PEDIDO.link}`,
+        "(Para não receber estes avisos, responda parar.)",
+      ].join("\n"),
+    );
   });
 
-  it("e trata-o pelo primeiro nome, sem lhe decidir o sexo", () => {
-    // A regra da casa, e já custou uma vez: ver `assistente-fala-a-toda-a-gente`.
-    const m = avisoDePedidoAoProfissional("Bruno Silva", PEDIDO, TARDE);
-    expect(m).toContain("Bruno");
-    expect(m).not.toContain("Silva");
-    expect(m).not.toMatch(/\bSr\.|\bSra\.|\bo senhor\b|\bcaro\b|\bcara\b/i);
+  it("sem saudação, sem nome — nunca «Bom dia, Nova.» para a «Nova Recolha»", () => {
+    for (const nome of ["Nova Recolha", "Bruno Silva", null]) {
+      const m = avisoDePedidoAoProfissional(nome, PEDIDO, TARDE);
+      expect(m.split("\n")[0]).toMatch(/^Pedido novo #310 · /);
+      expect(m).not.toMatch(/Bom dia|Boa tarde|Boa noite|Olá/);
+      expect(m).not.toContain("Nova");
+      expect(m).not.toContain("Bruno");
+      expect(m).not.toContain("undefined");
+      expect(m).not.toContain("null");
+    }
   });
 
-  it("sem nome, continua a ser uma frase inteira", () => {
-    const m = avisoDePedidoAoProfissional(null, PEDIDO, TARDE);
-    expect(m).not.toContain("undefined");
-    expect(m).not.toContain("null");
-    expect(m).not.toMatch(/,\s*\./);
+  it("sem a apresentação, sem a descrição, sem notas, sem a explicação do orçamento", () => {
+    const comTudo = {
+      ...PEDIDO,
+      descricao: "Para levar: dois sofás\nNotas: tocar à campainha\nPor confirmar: o dia",
+      urgencia: "hoje",
+    };
+    const m = avisoDePedidoAoProfissional("Bruno", comTudo, TARDE);
+    for (const fora of [
+      "assistente de pedidos",
+      "Aqui é a CLYON",
+      "dois sofás",
+      "Notas",
+      "Por confirmar",
+      "O orçamento é feito",
+      "Fotografias e proposta",
+      "Receberia",
+      "É para hoje",
+    ]) {
+      expect(m, fora).not.toContain(fora);
+    }
+    expect(m.split("\n")).toHaveLength(5);
   });
-});
 
-describe("o que o dono pediu que lá estivesse", () => {
-  it("localidade, descrição e valor", () => {
+  it("o n.º do pedido e a ligação, que é por onde ele vê e propõe", () => {
     const m = avisoDePedidoAoProfissional("Bruno", PEDIDO, TARDE);
-    expect(m).toContain("Alcabideche");
-    expect(m).toContain("dois sofás");
-    expect(m).toContain("94,00 €");
+    expect(m).toContain("#310");
+    expect(m).toContain(`Ver e propor: ${PEDIDO.link}`);
   });
 
-  it("e o número do pedido, que é como ele fala connosco ao telefone", () => {
-    expect(avisoDePedidoAoProfissional("Bruno", PEDIDO, TARDE)).toContain("#310");
+  it("a localidade é a do pedido, sem código postal colado", () => {
+    expect(localidadeParaOAviso("1800-123 Olivais, Lisboa")).toBe("Olivais, Lisboa");
+    expect(localidadeParaOAviso("  Alcabideche ")).toBe("Alcabideche");
+    for (const v of [null, undefined, "", "   ", "2750-001"]) expect(localidadeParaOAviso(v)).toBeNull();
   });
 
-  it("e o link, que é a única coisa accionável que a mensagem tem", () => {
-    expect(avisoDePedidoAoProfissional("Bruno", PEDIDO, TARDE)).toContain(PEDIDO.link);
+  it("sem localidade ou sem distância, a linha do 📍 fica com o que há — ou cai inteira", () => {
+    expect(avisoDePedidoAoProfissional(null, { ...PEDIDO, localidade: null }, TARDE)).toContain("📍 a 7 km de si\n");
+    expect(avisoDePedidoAoProfissional(null, { ...PEDIDO, distanciaKm: null }, TARDE)).toContain("📍 Alcabideche\n");
+    const nada = avisoDePedidoAoProfissional(null, { ...PEDIDO, localidade: "  ", distanciaKm: null }, TARDE);
+    expect(nada).not.toContain("📍");
+    expect(nada).not.toContain("km");
+    expect(nada.split("\n")).toHaveLength(4);
+    expect(distanciaCurtaParaOAviso(22.6)).toBe("a 23 km de si");
+    for (const km of [null, undefined, NaN, -1]) expect(distanciaCurtaParaOAviso(km as number | null)).toBeNull();
   });
 });
 
-describe("o número é o DELE, e é o mesmo que o painel lhe mostra", () => {
+describe("o ganho é o número DELE, e é o mesmo que o painel lhe mostra", () => {
   it("é o líquido depois da taxa da plataforma, e não o que o cliente indicou", () => {
     /*
-     * O erro caro seria mandar «100,00 €» — o valor do cliente. Ele fazia as
-     * contas à viagem por cima de um número que nunca ia receber, e descobria
-     * a diferença ao abrir o painel. O número sai da MESMA função que o painel
-     * usa, e é por isso que não se escreve aqui à mão.
+     * O erro caro seria mandar «100,00 €» — o valor do cliente. O número sai
+     * da MESMA função que o painel usa (é o que antes saía em «Receberia …»).
      */
     const esperado = quantoOProfissionalRecebe(100, TAXAS_DE_ORIGEM);
     const m = avisoDePedidoAoProfissional("Bruno", PEDIDO, TARDE);
@@ -114,26 +143,21 @@ describe("o número é o DELE, e é o mesmo que o painel lhe mostra", () => {
     expect(m).not.toContain("100,00 €");
   });
 
-  it("diz que é sem IVA, porque a decisão da casa é apresentar sem IVA", () => {
-    expect(valorParaOAviso(PEDIDO)).toContain("sem IVA");
-    expect(valorParaOAviso(PEDIDO)).toContain("taxa da plataforma");
+  it("diz que é sem a taxa e sem IVA", () => {
+    expect(ganhoParaOAviso(PEDIDO)).toContain("(já sem a taxa e sem IVA)");
   });
 
   it("POR CARGA muda a frase — 94,00 € por três cargas não é 94,00 €", () => {
     const porCarga = { ...PEDIDO, baseDoPreco: "carga" as const };
-    expect(valorParaOAviso(porCarga)).toContain("por carga");
+    expect(ganhoParaOAviso(porCarga)).toMatch(/€ por carga \(já sem a taxa e sem IVA\)$/);
   });
 
   it("sem valor de partida NÃO inventa um zero", () => {
-    /*
-     * A coluna admite nulo e o backoffice cria pedidos assim. «Receberia
-     * 0,00 €» lê-se como trabalho de graça — e quem o ler não volta a abrir
-     * uma mensagem destas.
-     */
     for (const v of [null, 0, NaN]) {
       const sem = { ...PEDIDO, valorDesejadoCliente: v as number | null };
-      expect(valorParaOAviso(sem), String(v)).toContain("a proposta é sua");
-      expect(valorParaOAviso(sem), String(v)).not.toContain("0,00");
+      expect(ganhoParaOAviso(sem), String(v)).toContain("a proposta é sua");
+      expect(ganhoParaOAviso(sem), String(v)).not.toContain("0,00");
+      expect(avisoDePedidoAoProfissional(null, sem, TARDE)).toContain("💶 Sem valor de partida: a proposta é sua.");
     }
   });
 });

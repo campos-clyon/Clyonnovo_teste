@@ -1,4 +1,3 @@
-import { comoTratar } from "./whatsapp-recolha";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import { euros } from "./texto-da-mesa";
 import { quantoOProfissionalRecebe, type Taxas } from "./taxas-plataforma";
@@ -29,7 +28,8 @@ import { precoComBase, type BaseDoPreco } from "./base-do-preco";
  *
  * ── AS REGRAS QUE ESTE TEXTO CUMPRE, E PORQUÊ ─────────────────────────────
  *
- * 1. DIZ QUEM ESCREVE, NA PRIMEIRA LINHA. Foi o que o dono pediu e é o que a
+ * 1. (ATÉ À d135, 26-11-2026 — o dono quer o aviso curto, sem apresentação;
+ *    ver `avisoDePedidoAoProfissional`.) DIZ QUEM ESCREVE, NA PRIMEIRA LINHA. Foi o que o dono pediu e é o que a
  *    situação exige: chega de um número que nunca lhe escreveu, sobre dinheiro.
  *    Sem nome à frente é indistinguível de burla — e é assim que se ensina um
  *    profissional a bloquear o número da CLYON.
@@ -150,26 +150,46 @@ export function distanciaParaOAviso(km: number | null | undefined): string | nul
   return `A cerca de ${Math.round(km)} km da sua base.`;
 }
 
-/**
- * O QUE ELE RECEBERIA — ou a verdade de que ainda não há número.
- *
- * Devolve a frase inteira, e não só o valor, porque as duas situações não têm
- * a mesma forma: uma diz quanto, a outra diz que a proposta é dele.
- */
-export function valorParaOAviso(p: PedidoParaAvisar): string {
-  const v = p.valorDesejadoCliente;
-  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
-    return "Este pedido ainda não tem valor de partida: a proposta é sua.";
-  }
-  const liquido = euros(quantoOProfissionalRecebe(v, p.taxas));
-  return (
-    `Receberia ${precoComBase(liquido, p.baseDoPreco)}, já com a taxa da plataforma ` +
-    "descontada e sem IVA. Pode propor outro."
-  );
+/** «a 22 km de si» — a forma curta do aviso de pedido novo (d135). Nada sem medida. */
+export function distanciaCurtaParaOAviso(km: number | null | undefined): string | null {
+  if (typeof km !== "number" || !Number.isFinite(km) || km < 0) return null;
+  return `a ${Math.round(km)} km de si`;
 }
 
-/** A frase de saída. É uma constante porque a rota da ponte tem de a reconhecer. */
-export const COMO_SE_SAI = "Para deixar de receber estes avisos, escreva parar.";
+/**
+ * A LOCALIDADE DO PEDIDO, e só ela (d135). A coluna é a localidade, nunca a
+ * morada; ainda assim tira-se um código postal que lá venha colado, e os
+ * espaços a mais. Vazia, não há linha.
+ */
+export function localidadeParaOAviso(l: string | null | undefined): string | null {
+  const limpa = String(l ?? "")
+    .replace(/\b\d{4}-\d{3}\b/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s,·-]+|[\s,·-]+$/g, "")
+    .trim();
+  return limpa || null;
+}
+
+/**
+ * O GANHO ESTIMADO — o mesmo número que antes saía em «Receberia …» (d135).
+ *
+ * O líquido dele, com a taxa GRAVADA na negociação e sem IVA, pela base do
+ * preço. Sem valor de partida não inventa um zero: a proposta é dele.
+ */
+export function ganhoParaOAviso(p: PedidoParaAvisar): string {
+  const v = p.valorDesejadoCliente;
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
+    return "Sem valor de partida: a proposta é sua.";
+  }
+  const liquido = euros(quantoOProfissionalRecebe(v, p.taxas));
+  return `Ganho estimado: ${precoComBase(liquido, p.baseDoPreco)} (já sem a taxa e sem IVA)`;
+}
+
+/**
+ * A frase de saída, a mesma em todos os avisos aos profissionais. É uma
+ * constante porque a rota da ponte tem de reconhecer o «parar». d135: curta.
+ */
+export const COMO_SE_SAI = "Para não receber estes avisos, responda parar.";
 
 /** A palavra que o faz parar. Em minúsculas e sem acentos — é assim que se compara. */
 export const PALAVRA_PARA_PARAR = "parar";
@@ -198,40 +218,43 @@ export function ePedidoParaParar(texto: string | null | undefined): boolean {
 }
 
 /**
- * A mensagem, inteira.
+ * O AVISO CURTO — d135 (26-11-2026), pedido pelo dono.
  *
- * Quatro blocos separados por linha em branco, porque é assim que se lê num
- * telemóvel: quem escreve, o que é, o que o cliente disse, e o que fazer a
- * seguir. Tudo o que é condicional cai por inteiro em vez de deixar um espaço
- * a mais — daí o `filter(Boolean)`.
+ * Era longo: saudação, apresentação, a descrição inteira das peças, notas,
+ * «Por confirmar: o dia» e a explicação do orçamento — e a saudação usava a
+ * primeira palavra do nome da empresa («Bom dia, Nova.» para a «Nova
+ * Recolha»). O dono quer só o que faz decidir, e o resto está na ligação:
+ *
+ *   Pedido novo #668 · Recolha de móveis
+ *   📍 Olivais, Lisboa · a 22 km de si
+ *   💶 Ganho estimado: 67,50 € (já sem a taxa e sem IVA)
+ *   Ver e propor: <ligação>
+ *   (Para não receber estes avisos, responda parar.)
+ *
+ * Sem saudação nem nome: um nome de empresa cortado à primeira palavra é pior
+ * do que nenhum. O nome continua a ser recebido (as chamadas não mudam), mas
+ * já não entra no texto.
+ *
+ * Uma linha que não tem nada para dizer cai inteira: sem localidade nem
+ * distância, não fica um «📍» pendurado.
  */
 export function avisoDePedidoAoProfissional(
-  nomeDoProfissional: string | null,
+  _nomeDoProfissional: string | null,
   p: PedidoParaAvisar,
-  agora: Date,
+  _agora: Date,
 ): string {
-  const abertura =
-    `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON. ` +
-    "Quem lhe escreve é o assistente de pedidos.";
-
-  const onde = p.localidade ? `Pedido novo em ${p.localidade}` : "Pedido novo";
-  const oQueE = [
-    `${onde}: ${servicoEmPalavras(p.servico)} (#${p.pedidoId}).`,
-    urgenciaParaOAviso(p.urgencia),
-    distanciaParaOAviso(p.distanciaKm),
-    valorParaOAviso(p),
+  const servico = servicoEmPalavras(p.servico);
+  const titulo = `Pedido novo #${p.pedidoId} · ${servico.charAt(0).toUpperCase()}${servico.slice(1)}`;
+  const onde = [localidadeParaOAviso(p.localidade), distanciaCurtaParaOAviso(p.distanciaKm)]
+    .filter(Boolean)
+    .join(" · ");
+  return [
+    titulo,
+    onde ? `📍 ${onde}` : null,
+    `💶 ${ganhoParaOAviso(p)}`,
+    `Ver e propor: ${p.link}`,
+    `(${COMO_SE_SAI})`,
   ]
     .filter(Boolean)
-    .join(" ");
-
-  const descricao = descricaoParaOAviso(p.descricao);
-  // A arrumada já não é «o que o cliente escreveu»: é o pedido (29-10-2026).
-  const oQueOClienteDisse = descricao ? `${eDescricaoArrumada(p.descricao) ? "O pedido" : "O cliente escreveu"}: ${descricao}` : null;
-
-  const fecho =
-    `Fotografias e proposta: ${p.link}\n` +
-    "O orçamento é feito pela descrição e pelas fotografias, e confirma-se no local. " +
-    COMO_SE_SAI;
-
-  return [abertura, oQueE, oQueOClienteDisse, fecho].filter(Boolean).join("\n\n");
+    .join("\n");
 }

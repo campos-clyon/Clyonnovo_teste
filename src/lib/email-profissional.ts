@@ -116,13 +116,16 @@ function primeiraFrase(p: AvisoDePedido): string {
       "Abra a ligação para aceitar ou recusar.",
     ].join(" ");
   }
-  const quer = euros(p.valorDesejadoCliente);
+  // d135: a primeira frase é o aviso curto do WhatsApp — o resto do email fica como registo.
   const recebe = euros(p.recebeLiquido);
+  const onde = [p.zona || null, p.distanciaKm != null ? `a ${Math.round(p.distanciaKm)} km de si` : null]
+    .filter(Boolean)
+    .join(" · ");
   const partes = [
-    `${servico}${p.zona ? ` em ${p.zona}` : ""}, pedido #${p.pedidoId}.`,
-    quer && recebe ? `Sugestão CLYON ${quer}, receberia ${recebe} já sem a taxa.` : null,
-    p.distanciaKm != null ? `A ~${p.distanciaKm} km da sua base.` : null,
-    "Abra a ligação para ver a conta feita para si e propor o seu valor.",
+    `Pedido novo #${p.pedidoId} · ${servico}.`,
+    onde ? `${onde}.` : null,
+    recebe ? `Ganho estimado: ${recebe} (já sem a taxa e sem IVA).` : "Sem valor de partida: a proposta é sua.",
+    "Ver e propor na ligação.",
   ].filter(Boolean);
   return partes.join(" ");
 }
@@ -293,8 +296,8 @@ export async function avisarProfissional(p: AvisoDePedido): Promise<boolean> {
       subject:
         p.valorFixo != null
           ? `Trabalho CLYON${p.zona ? ` em ${p.zona}` : ""} — ganhos estimados ${euros(p.valorFixo)}`
-          : `Novo pedido${p.zona ? ` em ${p.zona}` : ""} — ${
-              ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? "serviço"
+          : `Pedido novo #${p.pedidoId} · ${ETIQUETAS_DE_SERVICO[p.serviceType ?? ""] ?? "Serviço"}${
+              p.zona ? ` · ${p.zona}` : ""
             }`,
       html: legivelNoResumo(montarHtml(p)),
       text: montarTexto(p),

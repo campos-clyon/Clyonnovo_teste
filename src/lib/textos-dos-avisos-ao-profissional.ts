@@ -49,29 +49,25 @@ export function kmNoAviso(km: number | null | undefined): string | null {
   return `${Math.round(km)} km`;
 }
 
-/** «3 fotografias», «1 fotografia», «sem fotografias» — ou nada sem contagem. */
-export function fotografiasNoAviso(n: number | null | undefined): string | null {
-  if (typeof n !== "number" || !Number.isFinite(n) || n < 0) return null;
-  if (n === 0) return "sem fotografias";
-  return n === 1 ? "1 fotografia" : `${Math.round(n)} fotografias`;
-}
-
 /**
- * PEDIDO NOVO — os dados que fazem decidir, com os números do email.
+ * PEDIDO NOVO — o mesmo aviso curto do WhatsApp (d135, 26-11-2026): o número
+ * e o serviço, a localidade, a distância, o ganho estimado. O resto está na
+ * ligação.
  *
- *   Negociação:     «Pedido novo · Almada»
- *                   «Recolha de móveis · amanhã · 12 km · 3 fotografias. Sugestão CLYON: recebe 89,00 €.»
- *                   (sem valor de partida: «… A proposta é sua.»)
+ *   Negociação:     «Pedido novo #668 · Recolha de móveis»
+ *                   «Olivais, Lisboa · a 22 km de si. Ganho estimado: 67,50 € (já sem a taxa e sem IVA).»
+ *                   (sem valor de partida: «… Sem valor de partida: a proposta é sua.»)
  *   Trabalho CLYON: «Trabalho CLYON · Almada»
  *                   «Recolha de móveis · amanhã · 12 km. Valor fixo: recebe 120,00 €. Aceite ou recuse.»
  */
 export function avisoDePedidoNovo(p: {
+  /** O número do pedido (d135). Sem ele, o título fica sem número. */
+  pedidoId?: number | null;
   /** O serviço já em palavras («Recolha de móveis»). */
   servico: string;
   cidade: string | null | undefined;
   urgencia?: string | null;
   distanciaKm?: number | null;
-  fotografias?: number | null;
   /** O que ele recebe — o líquido, como no email. Nulo sem valor de partida. */
   recebe?: number | null;
   base?: BaseDoPreco;
@@ -91,15 +87,15 @@ export function avisoDePedidoNovo(p: {
       body: `${partes.join(" · ")}. ${recebe ? `Valor fixo: recebe ${recebe}. ` : ""}Aceite ou recuse.`,
     };
   }
-  const partes = [
-    servico,
-    quandoNoAviso(p.urgencia),
-    kmNoAviso(p.distanciaKm),
-    fotografiasNoAviso(p.fotografias),
-  ].filter(Boolean);
+  const numero = typeof p.pedidoId === "number" && p.pedidoId > 0 ? ` #${p.pedidoId}` : "";
+  const km = kmNoAviso(p.distanciaKm);
+  const onde = [cidade || null, km ? `a ${km} de si` : null].filter(Boolean).join(" · ");
+  const ganho = recebe
+    ? `Ganho estimado: ${recebe} (já sem a taxa e sem IVA).`
+    : "Sem valor de partida: a proposta é sua.";
   return {
-    title: cidade ? `Pedido novo · ${cidade}` : "Pedido novo para si",
-    body: `${partes.join(" · ")}. ${recebe ? `Sugestão CLYON: recebe ${recebe}.` : "A proposta é sua."}`,
+    title: `Pedido novo${numero} · ${servico}`,
+    body: onde ? `${onde}. ${ganho}` : ganho,
   };
 }
 

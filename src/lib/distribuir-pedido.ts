@@ -745,17 +745,17 @@ export async function distribuirPedido(
        * Depois do email e nunca em vez dele: o email é o registo, e chega a
        * quem nunca activou avisos nenhuns — que hoje são todos.
        */
-      // Com o que decide (28-10-2026, d5): quando, km, fotografias e o que recebe —
-      // os números do email. Num Trabalho CLYON o título já o diz, e o valor é o fixo.
+      // Curto como o WhatsApp (d135): o n.º e o serviço, a localidade, os km e o ganho
+      // estimado — o número do email. Num Trabalho CLYON o título já o diz, e o valor é o fixo.
       await avisarProfissionalDePedidoPorPush({
         email: c.profissional.email,
+        pedidoId: pedido.id,
         servico: tService(pedido.serviceType) || "Trabalho novo",
         zona: pedido.city,
         token,
         negociacaoId,
         urgencia: pedido.urgency,
         distanciaKm: c.distanciaKm,
-        fotografias: pedido.quantidadeDeFotos,
         recebe,
         base: pedido.baseDoPreco,
         trabalhoClyon: Boolean(oferta),
