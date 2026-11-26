@@ -1,4 +1,5 @@
 import { aosCentimos, diaValido, lerEuros, mesDoDia, VALOR_MAXIMO, type Categoria } from "./financas";
+import { somarDiasAoDia } from "./hora-de-lisboa";
 
 /**
  * OS GASTOS DA CLYON — 07-11-2026 (d21, dono).
@@ -36,6 +37,11 @@ export type Gasto = {
   inicio: string | null;
   /** Ocasional: o dia (`YYYY-MM-DD`). */
   dia: string | null;
+  /**
+   * Recorrente: o dia do mês em que é debitado (1–31; num mês mais curto, o
+   * último dia). Opcional — d129b, 26-11-2026, dono. Nulo = não se sabe.
+   */
+  diaDoDebito?: number | null;
   pausas: Pausa[];
   notas: string | null;
   criadoPor: string | null;
@@ -158,6 +164,66 @@ export function totalMensalDosRecorrentes(gastos: Gasto[], mes: string): number 
   return gastosDoMes(gastos, mes).recorrentes;
 }
 
+/**
+ * O DIA DO DÉBITO — 26-11-2026 (dono): *«Tem de ter também o dia exacto em que
+ * vai ser debitado, para sabermos quando vai ser debitado cada um.»*
+ *
+ * Um recorrente pode dizer o dia do mês em que sai da conta (1–31). Num mês
+ * que não tem esse dia (31 em Abril, 30 em Fevereiro), é o último dia do mês.
+ * Tudo em dias de calendário de Lisboa: quem chama dá o `hoje` de Lisboa.
+ */
+export const diaDoDebitoValido = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 31;
+
+/** O dia (`YYYY-MM-DD`) em que um débito ao dia `diaDoDebito` cai no mês `YYYY-MM`. */
+export function debitoNoMes(diaDoDebito: number, mes: string): string {
+  const d = Math.min(diaDoDebito, diasDoMes(mes));
+  return `${mes}-${String(d).padStart(2, "0")}`;
+}
+
+const mesSeguinte = (mes: string): string => {
+  const [a, m] = mes.split("-").map(Number);
+  return m === 12 ? `${a + 1}-01` : `${a}-${String(m + 1).padStart(2, "0")}`;
+};
+
+/**
+ * Os débitos de um recorrente entre dois dias (inclusive), por ordem. Só os
+ * meses em que o gasto conta: em pausa, ou antes do mês de início, não há
+ * débito. Sem dia do débito, ou ocasional, nenhum.
+ */
+export function debitosEntre(g: Gasto, de: string, ate: string): string[] {
+  if (g.tipo !== "recorrente" || !diaDoDebitoValido(g.diaDoDebito) || g.inicio == null || ate < de) return [];
+  const out: string[] = [];
+  for (let mes = mesDoDia(de); mes <= mesDoDia(ate); mes = mesSeguinte(mes)) {
+    const dia = debitoNoMes(g.diaDoDebito, mes);
+    if (dia >= de && dia <= ate && contaNoMes(g, mes)) out.push(dia);
+  }
+  return out;
+}
+
+/**
+ * O PRÓXIMO DÉBITO de um recorrente, a contar de hoje (hoje incluído): o
+ * primeiro mês, nos próximos três anos, em que conta. Suspenso sem data para
+ * voltar, só os débitos de antes da pausa — depois, nulo.
+ */
+export function proximoDebito(g: Gasto, hoje: string): string | null {
+  if (g.tipo !== "recorrente") return null;
+  return debitosEntre(g, hoje, somarDiasAoDia(hoje, 3 * 366))[0] ?? null;
+}
+
+export type DebitoPrevisto = { dia: string; gasto: Gasto };
+
+/** Os débitos dos recorrentes de hoje a `dias` dias (inclusive), por dia, e o total. */
+export function proximosDebitos(gastos: Gasto[], hoje: string, dias = 30): { debitos: DebitoPrevisto[]; total: number } {
+  const ate = somarDiasAoDia(hoje, dias);
+  const debitos = gastos
+    .flatMap((g) => debitosEntre(g, hoje, ate).map((dia) => ({ dia, gasto: g })))
+    .sort((a, b) => a.dia.localeCompare(b.dia) || a.gasto.nome.localeCompare(b.gasto.nome, "pt"));
+  return { debitos, total: aosCentimos(debitos.reduce((s, d) => s + d.gasto.valor, 0)) };
+}
+
+/** «2026-12-25» → «25/12/2026». */
+export const diaEmNumeros = (dia: string): string => `${dia.slice(8, 10)}/${dia.slice(5, 7)}/${dia.slice(0, 4)}`;
+
 /** As pausas guardadas na base, lidas com desconfiança. */
 export function pausasDoJson(json: unknown): Pausa[] {
   if (typeof json !== "string" || !json) return [];
@@ -196,15 +262,22 @@ export function lerGasto(
   }
   let inicio: string | null = null;
   let dia: string | null = null;
+  let diaDoDebito: number | null = null;
   if (c.tipo === "recorrente") {
     if (!mesValido(c.inicio)) return { ok: false, erro: "Escolha o mês em que começa." };
     inicio = c.inicio;
+    // Opcional: vazio fica sem dia.
+    if (c.diaDoDebito != null && c.diaDoDebito !== "") {
+      const n = Number(c.diaDoDebito);
+      if (!diaDoDebitoValido(n)) return { ok: false, erro: "O dia do débito vai de 1 a 31 (ou deixe vazio)." };
+      diaDoDebito = n;
+    }
   } else {
     if (!diaValido(c.dia)) return { ok: false, erro: "Escolha o dia." };
     dia = c.dia;
   }
   return {
     ok: true,
-    dados: { nome, valor, categoriaId, tipo: c.tipo, inicio, dia, notas: texto(c.notas, 300) || null },
+    dados: { nome, valor, categoriaId, tipo: c.tipo, inicio, dia, diaDoDebito, notas: texto(c.notas, 300) || null },
   };
 }

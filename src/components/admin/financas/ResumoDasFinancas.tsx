@@ -12,7 +12,7 @@ import {
   type DadosDasContas,
   type PeriodoDaSocia,
 } from "@/lib/financas-do-mes";
-import { totalMensalDosRecorrentes } from "@/lib/financas-gastos";
+import { diaEmNumeros, proximosDebitos, totalMensalDosRecorrentes, type Gasto } from "@/lib/financas-gastos";
 import { trabalhosPagosPorCanal } from "@/lib/canal-do-pedido";
 import { emEuros, mesCurto, mesDoDia, nomeDoMes, somarMeses } from "@/lib/financas";
 
@@ -143,6 +143,8 @@ export default function ResumoDasFinancas({
         )}
       </section>
 
+      <ProximosDebitos gastos={dados.gastos} hoje={hoje} onVerGastos={onVerGastos} />
+
       <PorCanal c={c} canais={dados.canais ?? null} />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -152,6 +154,44 @@ export default function ResumoDasFinancas({
 
       <Previsao dados={dados} ano={Number(mes.slice(0, 4))} mesDeHoje={mesDeHoje} recorrentes={totalMensalDosRecorrentes(dados.gastos, mesDeHoje)} />
     </div>
+  );
+}
+
+/**
+ * PRÓXIMOS DÉBITOS (30 DIAS) — 26-11-2026, dono: os recorrentes com dia do
+ * débito que saem da conta de hoje a 30 dias, por data, e o total. Em Lisboa:
+ * o `hoje` vem do servidor. Os suspensos não aparecem.
+ */
+function ProximosDebitos({ gastos, hoje, onVerGastos }: { gastos: Gasto[]; hoje: string; onVerGastos: () => void }) {
+  const { debitos, total } = proximosDebitos(gastos, hoje, 30);
+  const semDia = gastos.filter((g) => g.tipo === "recorrente" && g.diaDoDebito == null).length;
+  return (
+    <section aria-label="Próximos débitos" className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold text-slate-200">Próximos débitos (30 dias)</h3>
+        <span className="text-sm text-slate-400">
+          Total <strong className="tabular-nums text-white">{emEuros(total)}</strong>
+        </span>
+      </div>
+      {debitos.length === 0 ? (
+        <p className="mt-2 text-sm text-slate-500">Nenhum gasto recorrente com dia do débito nos próximos 30 dias.</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-slate-800">
+          {debitos.map((d) => (
+            <li key={`${d.gasto.id}-${d.dia}`} className="flex items-center gap-3 py-2 text-sm">
+              <span className="w-24 shrink-0 tabular-nums text-slate-400">{diaEmNumeros(d.dia)}</span>
+              <span className="min-w-0 flex-1 truncate text-slate-200">{d.gasto.nome}</span>
+              <span className="font-semibold tabular-nums text-white">{emEuros(d.gasto.valor)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {semDia > 0 && (
+        <button type="button" onClick={onVerGastos} className="mt-2 text-xs text-slate-500 hover:text-slate-300">
+          {semDia === 1 ? "1 recorrente sem dia do débito" : `${semDia} recorrentes sem dia do débito`} — ver os gastos
+        </button>
+      )}
+    </section>
   );
 }
 

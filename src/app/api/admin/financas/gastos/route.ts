@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * é de quem tiver a secção das Finanças, como os movimentos; ELIMINAR é só do
  * administrador, como em todo o backoffice. Ver `financas-gastos.ts`.
  *
- *   POST   { nome, valor, tipo, inicio | dia, categoriaId?, notas? } — novo
+ *   POST   { nome, valor, tipo, inicio | dia, diaDoDebito?, categoriaId?, notas? } — novo
  *   PATCH  { id, ...os mesmos }                                      — mudar
  *   PATCH  { id, accao: "suspender" | "reactivar", desde: "YYYY-MM" } — pausa
  *   DELETE ?id=…                                                      — eliminar

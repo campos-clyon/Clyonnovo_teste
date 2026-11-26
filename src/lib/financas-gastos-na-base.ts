@@ -42,6 +42,13 @@ async function prepararTabela(): Promise<void> {
       KEY idx_tipo (tipo)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // O DIA DO DÉBITO (26-11-2026): 1–31, NULL = não se sabe. ADD COLUMN em
+  // try/catch, como o resto do projecto: falhar porque já existe não é falhar.
+  try {
+    await pool.execute(`ALTER TABLE financasGastos ADD COLUMN diaDoDebito TINYINT UNSIGNED NULL DEFAULT NULL`);
+  } catch {
+    /* já existe */
+  }
 }
 
 export async function gastosDaClyon(): Promise<Gasto[]> {
@@ -49,7 +56,7 @@ export async function gastosDaClyon(): Promise<Gasto[]> {
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [linhas] = (await pool.execute(
-    `SELECT id, nome, valor, categoriaId, tipo, inicio, dia, pausasJson, notas, criadoPor
+    `SELECT id, nome, valor, categoriaId, tipo, inicio, dia, diaDoDebito, pausasJson, notas, criadoPor
        FROM financasGastos
       ORDER BY tipo = 'ocasional', nome, id`,
   )) as [Array<Record<string, unknown>>, unknown];
@@ -61,6 +68,7 @@ export async function gastosDaClyon(): Promise<Gasto[]> {
     tipo: l.tipo === "ocasional" ? "ocasional" : "recorrente",
     inicio: (l.inicio as string) ?? null,
     dia: (l.dia as string) ?? null,
+    diaDoDebito: l.diaDoDebito != null ? Number(l.diaDoDebito) : null,
     pausas: pausasDoJson(l.pausasJson),
     notas: (l.notas as string) ?? null,
     criadoPor: (l.criadoPor as string) ?? null,
@@ -71,15 +79,15 @@ export async function gastoPorId(id: number): Promise<Gasto | null> {
   return (await gastosDaClyon()).find((g) => g.id === id) ?? null;
 }
 
-const valores = (d: DadosDoGasto) => [d.nome, d.valor, d.categoriaId, d.tipo, d.inicio, d.dia, d.notas];
+const valores = (d: DadosDoGasto) => [d.nome, d.valor, d.categoriaId, d.tipo, d.inicio, d.dia, d.diaDoDebito ?? null, d.notas];
 
 export async function criarGasto(d: DadosDoGasto, quem: string): Promise<number> {
   await garantirTabela();
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const [r] = (await pool.execute(
-    `INSERT INTO financasGastos (nome, valor, categoriaId, tipo, inicio, dia, notas, pausasJson, criadoPor)
-     VALUES (?, ?, ?, ?, ?, ?, ?, '[]', ?)`,
+    `INSERT INTO financasGastos (nome, valor, categoriaId, tipo, inicio, dia, diaDoDebito, notas, pausasJson, criadoPor)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, '[]', ?)`,
     [...valores(d), quem.slice(0, 120)],
   )) as [{ insertId?: number }, unknown];
   return Number(r.insertId ?? 0);
@@ -92,7 +100,7 @@ export async function mudarGasto(id: number, d: DadosDoGasto, quem: string): Pro
   if (!pool) throw new Error("DB not available");
   const [r] = (await pool.execute(
     `UPDATE financasGastos
-        SET nome = ?, valor = ?, categoriaId = ?, tipo = ?, inicio = ?, dia = ?, notas = ?, actualizadoPor = ?
+        SET nome = ?, valor = ?, categoriaId = ?, tipo = ?, inicio = ?, dia = ?, diaDoDebito = ?, notas = ?, actualizadoPor = ?
       WHERE id = ?`,
     [...valores(d), quem.slice(0, 120), id],
   )) as [{ affectedRows?: number }, unknown];

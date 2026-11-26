@@ -5,8 +5,10 @@ import { Loader2, Pause, Pencil, Play, Plus, Trash2, X } from "lucide-react";
 import { emEuros, lerEuros, mesDoDia, nomeDoMes, somarMeses, type Categoria } from "@/lib/financas";
 import {
   contaNoMes,
+  diaEmNumeros,
   estaSuspenso,
   pausaAberta,
+  proximoDebito,
   totalMensalDosRecorrentes,
   type Gasto,
   type TipoDeGasto,
@@ -32,6 +34,8 @@ type Formulario = {
   tipo: TipoDeGasto | null;
   inicio: string;
   dia: string;
+  /** O dia do mês do débito, «» = sem dia. */
+  diaDoDebito: string;
   categoriaId: string;
   notas: string;
 };
@@ -110,6 +114,7 @@ export default function GastosDaClyon({
       tipo: form.tipo,
       inicio: form.tipo === "recorrente" ? form.inicio : null,
       dia: form.tipo === "ocasional" ? form.dia : null,
+      diaDoDebito: form.tipo === "recorrente" && form.diaDoDebito.trim() ? form.diaDoDebito.trim() : null,
       categoriaId: form.categoriaId || null,
       notas: form.notas,
     };
@@ -122,7 +127,7 @@ export default function GastosDaClyon({
   }
 
   const novo = () =>
-    setForm({ nome: "", valor: "", tipo: null, inicio: mesDeHoje, dia: hoje, categoriaId: "", notas: "" });
+    setForm({ nome: "", valor: "", tipo: null, inicio: mesDeHoje, dia: hoje, diaDoDebito: "", categoriaId: "", notas: "" });
   const editar = (g: Gasto) =>
     setForm({
       id: g.id,
@@ -131,6 +136,7 @@ export default function GastosDaClyon({
       tipo: g.tipo,
       inicio: g.inicio ?? mesDeHoje,
       dia: g.dia ?? hoje,
+      diaDoDebito: g.diaDoDebito != null ? String(g.diaDoDebito) : "",
       categoriaId: g.categoriaId != null ? String(g.categoriaId) : "",
       notas: g.notas ?? "",
     });
@@ -142,6 +148,7 @@ export default function GastosDaClyon({
     const cat = g.categoriaId != null ? porId.get(g.categoriaId) : undefined;
     const suspenso = estaSuspenso(g, mesDeHoje);
     const aberta = pausaAberta(g);
+    const proximo = g.tipo === "recorrente" && g.diaDoDebito != null ? proximoDebito(g, hoje) : null;
     return (
       <li key={g.id} className={`flex flex-wrap items-center gap-3 py-3 ${suspenso ? "opacity-60" : ""}`}>
         {cat ? <BolaDaCategoria cor={cat.cor} icone={cat.icone} /> : <span className="h-7 w-7 rounded-full bg-slate-800" aria-hidden="true" />}
@@ -157,6 +164,24 @@ export default function GastosDaClyon({
                 ? ` · suspenso desde ${mesEmMinusculas(aberta.de)}`
                 : " · suspenso: não conta")}
           </span>
+          {g.tipo === "recorrente" && (
+            <span className="block text-[11px] text-slate-400">
+              {g.diaDoDebito != null ? (
+                <>
+                  debita a {g.diaDoDebito} de cada mês
+                  {proximo ? (
+                    <>
+                      {" · "}próximo: <strong className="tabular-nums text-slate-200">{diaEmNumeros(proximo)}</strong>
+                    </>
+                  ) : (
+                    " · sem próximo débito"
+                  )}
+                </>
+              ) : (
+                <span className="text-slate-500">sem dia do débito</span>
+              )}
+            </span>
+          )}
         </span>
         <span className="text-sm font-bold tabular-nums text-white">
           {emEuros(g.valor)}
@@ -348,6 +373,24 @@ export default function GastosDaClyon({
                     Mudar o valor muda todos os meses. Para um preço novo a partir de um mês, suspenda este e crie outro.
                   </span>
                 )}
+              </label>
+            )}
+            {form.tipo === "recorrente" && (
+              <label className="mt-4 block">
+                <span className={rotulo}>Dia do débito (opcional)</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={31}
+                  value={form.diaDoDebito}
+                  onChange={(e) => setForm({ ...form, diaDoDebito: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) })}
+                  placeholder="Ex.: 25"
+                  className={`mt-1 ${campo} tabular-nums`}
+                />
+                <span className="mt-1 block text-[11px] text-slate-500">
+                  O dia de cada mês em que sai da conta, de 1 a 31. Num mês mais curto, conta o último dia.
+                </span>
               </label>
             )}
             {form.tipo === "ocasional" && (

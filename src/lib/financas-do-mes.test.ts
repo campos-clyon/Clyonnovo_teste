@@ -328,7 +328,8 @@ describe("quem mexe nos gastos", () => {
   it("a tabela nasce vazia: nenhum gasto se escreve por código", () => {
     const BASE = readFileSync(join(process.cwd(), "src/lib/financas-gastos-na-base.ts"), "utf8");
     expect(BASE.match(/INSERT INTO financasGastos/g)).toHaveLength(1);
-    expect(BASE).toContain("VALUES (?, ?, ?, ?, ?, ?, ?, '[]', ?)");
+    // Mais um «?» desde 26-11-2026: o dia do débito.
+    expect(BASE).toContain("VALUES (?, ?, ?, ?, ?, ?, ?, ?, '[]', ?)");
   });
   it("as contas dos assistentes só vão ao administrador", () => {
     const ROTA = readFileSync(join(process.cwd(), "src/app/api/admin/financas/route.ts"), "utf8");
