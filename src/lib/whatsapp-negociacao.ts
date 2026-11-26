@@ -325,7 +325,8 @@ export async function recolherPedidoPorWhatsApp(
     const { responderAoTurno } = await import("@/lib/turno-da-recolha");
     const r = await responderAoTurno(e, texto, agora, {
       textos: textosDaRecolha,
-      fotos,
+      // d129 (o #688): a fotografia que ficou no telemóvel (mandada antes da 1.ª mensagem) também conta — nunca se pede outra vez.
+      fotos: Math.max(fotos, (await import("@/lib/rajada-do-whatsapp")).fotografiasNaConversa(fio)),
       jaExplicouOPreco: jaExplicouOPreco(fio),
       lerOTexto: responderAoTexto,
     });
@@ -889,6 +890,51 @@ async function aoCandidato(telefone: string, texto: string): Promise<boolean> {
 }
 
 /**
+ * O QUE A PESSOA QUER, ANTES DO FLUXO FIXO — d129 (26-11-2026). O modelo lê
+ * a conversa (`vitoria-agente/intencao.ts`): o cliente segue para a recolha de
+ * sempre; o candidato a parceiro recebe a candidatura (escrita pelo modelo, com
+ * a ligação posta pelo código) e a conversa fecha-se como «candidato a
+ * parceiro» (vai para os «Profissionais» da Mesa), sem pedido e sem o
+ * rascunho; a dúvida responde-se e a pergunta do fluxo volta; a queixa e o
+ * resto passam a uma pessoa. Devolve true quando tratou a mensagem.
+ */
+async function aIntencaoAntesDaRecolha(telefone: string, texto: string): Promise<boolean> {
+  if (!texto.trim()) return false;
+  const { decidirAIntencao } = await import("@/lib/vitoria-agente/intencao-na-base");
+  const decisao = await decidirAIntencao(telefone, texto).catch(() => ({ tipo: "regras" as const, porque: "erro" }));
+  switch (decisao.tipo) {
+    case "regras":
+      return false;
+    case "candidato": {
+      const cand = await import("@/lib/candidato-a-parceiro");
+      const { arquivarConversaWhatsApp, apagarRecolhaWhatsApp } = await import("@/lib/db");
+      await enviarTextoWhatsApp(telefone, decisao.texto);
+      // Não é um cliente: o rascunho da recolha sai, e nunca se cria pedido.
+      await apagarRecolhaWhatsApp(telefone).catch((e) => console.error("[whatsapp] o rascunho do candidato não saiu:", e));
+      await arquivarConversaWhatsApp(telefone, true, { motivo: cand.MOTIVO_DO_CANDIDATO, porQuem: "vitoria" }).catch((e) =>
+        console.error("[whatsapp] o candidato não saiu da fila:", e),
+      );
+      return true;
+    }
+    case "responder":
+      await enviarTextoWhatsApp(telefone, decisao.texto);
+      return true;
+    case "equipa":
+      await passarAUmaPessoa(telefone, decisao.motivo, decisao.texto);
+      return true;
+    case "queixa": {
+      const { desculpasPeloAtendimento, perguntaSeEUmaPessoa } = await import("@/lib/voz-da-vitoria");
+      await passarAUmaPessoa(
+        telefone,
+        "Cliente insatisfeito com o atendimento — responder já",
+        desculpasPeloAtendimento(null, perguntaSeEUmaPessoa(texto)),
+      );
+      return true;
+    }
+  }
+}
+
+/**
  * O VALOR ÚNICO, DECIDIDO — 15-11-2026 (d39). Aceite: agradece, fica no
  * histórico do pedido e a conversa passa à equipa para escolher o parceiro
  * (é a equipa quem aceita a proposta dele, na Mesa). O resto: a equipa.
@@ -1203,7 +1249,7 @@ export async function responderAoSeguimentoDoCliente(
   const { desisteClaramente, MOTIVOS_DO_SEGUIMENTO } = await import("@/lib/a-escolha-e-a-desistencia");
   const agora = new Date();
 
-  // d111: «já tenho outra opção» — cancela logo (o «3» continua a pedir o CANCELAR).
+  // d111: «já tenho outra opção» — cancela logo (e desde a d129 o «3» também, mais abaixo).
   if (desisteClaramente(texto)) {
     await d111.desistirDoPedido(telefone, c.pedidoId, "resposta ao seguimento");
     return;
@@ -1220,6 +1266,12 @@ export async function responderAoSeguimentoDoCliente(
 
   const leitura = regras.lerRespostaAoLembrete(texto);
   if (leitura === "cancelar") {
+    // d129: o «3» do menu cancela logo (a mensagem do porquê da d126); só o texto livre ambíguo pede o CANCELAR.
+    const { eOTresDoMenu } = await import("@/lib/a-escolha-e-a-desistencia");
+    if (eOTresDoMenu(texto)) {
+      await d111.desistirDoPedido(telefone, c.pedidoId, "«3» ao seguimento", { comOPorque: true });
+      return;
+    }
     if (c.aEsperaDeCancelar) return;
     const r = await base.pedirConfirmacaoDoCancelamentoDoSeguimento(c.pedidoId, telefone).catch((err) => {
       console.error("[whatsapp] a pergunta do CANCELAR do seguimento falhou:", err instanceof Error ? err.message : err);
@@ -3343,6 +3395,7 @@ export async function tratarMensagemDoCliente(
     const { assistentePode } = await import("@/lib/db");
     if (!(await assistentePode("recolher"))) return;
     if (conteudo.tipo === "texto") {
+      if (await aIntencaoAntesDaRecolha(telefone, conteudo.texto)) return;
       if (await aoCandidato(telefone, conteudo.texto)) return;
       if (!novoDe) await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto);
       else await recolherPedidoPorWhatsApp(telefone, conteudo.texto, conteudo.imagens, conteudo.visto, { pedidoNovoDe: novoDe });

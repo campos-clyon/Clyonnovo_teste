@@ -409,3 +409,13 @@ export function videosDaRajada(mensagens: MensagemComId[]): number {
   const desde = inicioDaRajada(mensagens);
   return mensagens.slice(desde + 1).filter((m) => m.direccao === "in" && m.texto.trim() === MARCA_DE_VIDEO).length;
 }
+
+/**
+ * AS FOTOGRAFIAS DELE NA CONVERSA — d129 (26-11-2026). As vistas (a marca da
+ * fotografia ou do vídeo) e as que não abriram mas estão no telemóvel. Antes do
+ * pedido também contam: foi o caso do #688, que a mandou antes da 1.ª mensagem.
+ */
+export function fotografiasNaConversa(fio: ReadonlyArray<{ direccao?: string; texto?: string }> | null | undefined): number {
+  if (!Array.isArray(fio)) return 0;
+  return fio.filter((m) => m?.direccao === "in" && (eMarcaDeImagem(m.texto ?? "") || eFotografiaFalhada(m.texto ?? ""))).length;
+}

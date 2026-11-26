@@ -392,10 +392,10 @@ describe("a desistência clara cancela; o resto não", () => {
     }
   });
 
-  it("o «3» continua a pedir o CANCELAR (é o menu), e não cancela", async () => {
+  it("d129: o «3» do menu cancela logo, sem pedir o CANCELAR — e a mensagem é a do porquê (d126)", async () => {
     await seguimento("3");
-    expect(estado.chamadas.map((c) => c.f)).toEqual(["pedir"]);
-    expect(estado.cancelamentos).toEqual([]);
+    expect(estado.chamadas.map((c) => c.f)).not.toContain("pedir");
+    expect(estado.cancelamentos).toEqual([{ pedidoId: 612, origem: "desistencia", mensagem: null }]);
   });
 
   it("o pedido pago não cancela: vai à equipa, com a frase de sempre", async () => {
@@ -511,7 +511,7 @@ describe("os textos, as traduções fixas e as portas", () => {
     // O cancelamento é o caminho único da d93/d94, com a origem e a mensagem da d111.
     const no = ler("src/lib/a-escolha-e-a-desistencia-no-whatsapp.ts");
     expect(no).toContain('origem: "desistencia"');
-    expect(no).toContain("mensagem: mensagemDaDesistencia(pedidoId)");
+    expect(no).toContain("mensagem: opcoes.comOPorque ? null : mensagemDaDesistencia(pedidoId)");
     // O fecho é o do botão «Fechar» (fecharPeloCliente).
     expect(vitoria).toMatch(/export async function fecharAEscolhaDoCliente[\s\S]{0,400}await fecharPeloCliente\(telefone, alvo\);/);
   });

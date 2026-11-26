@@ -1,4 +1,4 @@
-import { naMesa, type ConversaNaMesa, type FactosDaConversa } from "./mesa-das-conversas";
+import { eCandidatoPeloMotivo, naMesa, type ConversaNaMesa, type FactosDaConversa } from "./mesa-das-conversas";
 
 /**
  * A MESA DAS CONVERSAS, A PARTIR DA BASE — 21-10-2026.
@@ -95,6 +95,8 @@ export async function mesaComOTelemovelWhatsApp(): Promise<MesaDasConversas> {
       nome: pedido?.nome ?? null,
       guardada: guardada ? { nota: guardada.nota, quando: guardada.criadoEm } : null,
       profissional: profissionais.get(chave) ?? null,
+      // d129: a Vitória mandou-lhe a candidatura (o porquê do fecho ou da entrega diz «Candidato a parceiro»).
+      candidato: eCandidatoPeloMotivo(fecho?.motivo) || eCandidatoPeloMotivo(entregueDe.get(chave)?.motivo),
       // A leitura da Vitória só vale enquanto não houver mensagem nova.
       leitura:
         leitura && leitura.ateMensagemId >= ultimoId

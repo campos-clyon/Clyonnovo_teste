@@ -141,13 +141,20 @@ export async function escolhaPorPalavrasNoSeguimento(telefone: string, pedidoId:
  * O que não se pode cancelar por aqui (contratado, pago, com data, faturado)
  * vai à equipa com a frase de sempre.
  */
-export async function desistirDoPedido(telefone: string, pedidoId: number, onde: string): Promise<void> {
+export async function desistirDoPedido(
+  telefone: string,
+  pedidoId: number,
+  onde: string,
+  /** d129: com o porquê da d126 (o «3» do menu) em vez da frase da d111. */
+  opcoes: { comOPorque?: boolean } = {},
+): Promise<void> {
   const { cancelarEApagarNaHora } = await import("./cancelar-pelo-cliente-na-base");
   const r = await cancelarEApagarNaHora(pedidoId, {
     origem: "desistencia",
     telefone,
     verificarTelefone: true,
-    mensagem: mensagemDaDesistencia(pedidoId),
+    // Sem mensagem, sai a da d126: cancelado, os dados, e a pergunta delicada do porquê.
+    mensagem: opcoes.comOPorque ? null : mensagemDaDesistencia(pedidoId),
   }).catch((err) => ({ ok: false as const, porque: err instanceof Error ? err.message : "erro", daEquipa: false }));
   if (r.ok) return;
   const { PASSO_O_CANCELAMENTO_A_EQUIPA } = await import("./cancelar-pelo-cliente");

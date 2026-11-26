@@ -50,10 +50,23 @@ const PISTAS_EN: RegExp[] = [
 /** Quem fala do trabalho dele, ou do preço, é um cliente — mesmo que diga «motorista». */
 const DE_CLIENTE = /\b(orcamento|quanto\s+custa|preco|valor|recolher|recolha\s+de|levar\s+(?:o|a|os|as|um|uma)|mudanca\s+de\s+casa|preciso\s+de\s+(?:um|uma)\s+(?:motorista|ajudante))\b/;
 
+/**
+ * d129 (26-11-2026): o que diz SER PARCEIRO não é um cliente, mesmo que fale
+ * do serviço que faz («quero ser parceiro para recolha de móveis e fretes»,
+ * «quero fazer o meu registo para ser parceiro»). Antes, o «recolha de» calava
+ * a regra. A leitura do modelo (`vitoria-agente/intencao.ts`) vem primeiro;
+ * isto é a rede quando ele não está.
+ */
+const QUER_SER_PARCEIRO: RegExp[] = [
+  new RegExp(String.raw`\b${QUERO}\s+(?:[\p{L}\d/-]+\s+){0,6}?(?:ser|tornar-me|virar)\s+(?:vosso\s+|um\s+|uma\s+)?parceir[oa]s?\b`, "u"),
+  /\b(?:cadastr\w*|regist\w*|inscri\w*|inscrev\w*)\b.{0,40}\bparceir[oa]s?\b/,
+];
+
 /** A mensagem é de alguém que quer trabalhar com a CLYON (parceiro, motorista ou ajudante)? */
 export function querSerParceiro(texto: string | null | undefined): boolean {
   const t = semAcentos(texto ?? "").replace(/\s+/g, " ").trim();
   if (!t || t.length > 800) return false;
+  if (QUER_SER_PARCEIRO.some((re) => re.test(t))) return true;
   if (DE_CLIENTE.test(t)) return false;
   return PISTAS_PT.some((re) => re.test(t)) || PISTAS_EN.some((re) => re.test(t));
 }

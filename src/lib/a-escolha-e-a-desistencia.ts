@@ -131,6 +131,16 @@ export function mensagemDaDesistencia(pedidoId: number): string {
   return `Obrigada por nos avisar! O seu pedido #${pedidoId} foi cancelado e os dados do pedido serão apagados. Se voltar a precisar, pode pedir de novo quando quiser.`;
 }
 
+/**
+ * O «3» DO MENU — d129 (pedida e aprovada pelo dono, 26-11-2026). Ao seguimento
+ * que oferece 1/2/3, o «3» («já não preciso») cancela logo, sem pedir o
+ * CANCELAR: foi a Vitória que ofereceu a opção. O «Responda CANCELAR» fica para
+ * o texto livre ambíguo. Só o número sozinho («3», «opção 3»).
+ */
+export function eOTresDoMenu(texto: string | null | undefined): boolean {
+  return /^(?:opcao|op|numero|n)?\s*3$/.test(normalizar(texto ?? ""));
+}
+
 /* ── 2. A lista das propostas ────────────────────────────────────────────── */
 
 /** A última linha da lista. É por ela (e pelo número do pedido) que se reconhece a lista na conversa. */

@@ -1,6 +1,9 @@
 {
   "_nota": "As frases mais comuns da Vitória, já traduzidas e revistas: [português, inglês, francês, espanhol]. Saem quando o tradutor falha (decisão d35, 28-10-2026). Uma frase da Vitória que mude em português muda aqui também — o teste traducoes-fixas-da-vitoria.test.ts chumba se faltar. Ver traducoes-fixas-da-vitoria.ts.",
   "frases": [
+    ["Obrigada, fica atualizado no pedido. Confirma?","Thank you, your request has been updated. Do you confirm?","Merci, la demande est mise à jour. Vous confirmez ?","Gracias, el pedido queda actualizado. ¿Lo confirma?"],
+    ["Aqui só consigo ajudar com os serviços e os pedidos da CLYON.","Here I can only help with CLYON's services and requests.","Ici, je ne peux vous aider qu'avec les services et les demandes de CLYON.","Aquí solo puedo ayudar con los servicios y los pedidos de CLYON."],
+    ["Obrigada pela mensagem. Passo-a a uma pessoa da equipa da CLYON, que lhe responde por aqui.","Thank you for your message. I'm passing it to a person from the CLYON team, who will reply to you here.","Merci pour votre message. Je la transmets à une personne de l'équipe CLYON, qui vous répondra ici.","Gracias por su mensaje. Se lo paso a una persona del equipo de CLYON, que le responderá por aquí."],
     ["É o total, sem nada adiantado.","That's the total, with nothing paid upfront.","C'est le total, sans rien à payer d'avance.","Es el total, sin pagar nada por adelantado."],
     ["Se não me disser nada até amanhã às 18h, o pedido fecha.","If I don't hear from you by 6 pm tomorrow, the request will close.","Si je n'ai pas de nouvelles d'ici demain 18h, la demande sera fermée.","Si no me dice nada antes de mañana a las 18:00, el pedido se cierra."],
     ["Se ainda precisar, é só responder e volto a abri-lo.","If you still need it, just reply and I'll reopen it.","Si vous en avez encore besoin, répondez simplement et je la rouvrirai.","Si todavía lo necesita, basta con responder y lo vuelvo a abrir."],

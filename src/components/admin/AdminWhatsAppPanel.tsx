@@ -1788,6 +1788,16 @@ export default function AdminWhatsAppPanel() {
                             <span className="hidden sm:inline">Profissional</span>
                           </span>
                         )}
+                        {/* Quer ser parceiro: a Vitória mandou-lhe a candidatura (d129). */}
+                        {!l.profissional && l.candidato && (
+                          <span
+                            title="Quer ser parceiro — a Vitória mandou-lhe a ligação da candidatura"
+                            className={`flex shrink-0 items-center gap-1 rounded px-1.5 py-px text-[11px] font-semibold ${CORES.profissionais}`}
+                          >
+                            <Wrench className="h-3 w-3" aria-hidden="true" />
+                            <span className="hidden sm:inline">Candidato</span>
+                          </span>
+                        )}
                         {l.guardada && (
                           <Bookmark
                             className="h-3.5 w-3.5 shrink-0 text-cyan-300"

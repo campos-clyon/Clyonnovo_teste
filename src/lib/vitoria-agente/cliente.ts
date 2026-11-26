@@ -42,6 +42,7 @@ import {
 import type { Pendente } from "./pendentes";
 import { motivoParaBloquearOAgente, eurosDosResultados } from "./guarda";
 import { motivoParaAfirmarOQueInclui } from "./o-que-o-servico-inclui";
+import { blocoDosLimitesEDoSite } from "./prompt-da-vitoria";
 
 /** Quantas idas ao modelo numa volta, no máximo (cada ida pode trazer várias ferramentas). */
 export const IDAS_NO_MAXIMO = 6;
@@ -207,7 +208,11 @@ export async function correrOAgente(pedido: PedidoAoAgente, deps: DependenciasDo
         thinking: { type: "adaptive" },
         output_config: { effort: pedido.esforco ?? ESFORCO_POR_OMISSAO },
         // O aviso é fixo e vai à frente: a cache apanha as ferramentas e o aviso; a de cima, o resto da conversa.
-        system: [{ type: "text", text: deps.recolha ? deps.recolha.aviso : AVISO_AO_MODELO, cache_control: { type: "ephemeral" } }],
+        system: [
+          { type: "text", text: deps.recolha ? deps.recolha.aviso : AVISO_AO_MODELO, cache_control: { type: "ephemeral" } },
+          // d129: os limites (só a CLYON; na dúvida, a equipa) e o que o site sabe, das fontes — fixo por dia, na cache.
+          { type: "text", text: blocoDosLimitesEDoSite(pedido.agora), cache_control: { type: "ephemeral" } },
+        ],
         cache_control: { type: "ephemeral" },
         tools: deps.recolha ? deps.recolha.ferramentas : FERRAMENTAS_DA_VITORIA,
         tool_choice: { type: "auto" },

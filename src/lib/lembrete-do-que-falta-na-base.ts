@@ -355,7 +355,18 @@ async function lerPedidos(pool: Pool, ids?: number[]): Promise<PedidoLido[]> {
     const id = Number(r.id);
     const telefone = (r.contactPhone as string | null) ?? null;
     const tel = noveDigitos(telefone);
-    const faltas = oQueFaltaNoPedido(r as unknown as Parameters<typeof oQueFaltaNoPedido>[0]);
+    const lidas = oQueFaltaNoPedido(r as unknown as Parameters<typeof oQueFaltaNoPedido>[0]);
+    /*
+     * AS FOTOGRAFIAS QUE ELE JÁ MANDOU NA CONVERSA — d129 (26-11-2026), o #688.
+     * O cliente mandou a fotografia ANTES da primeira mensagem; a ponte não a
+     * descarrega (fica no telemóvel), o pedido ficou sem ficheiros e a Vitória
+     * pediu «2 ou 3 fotografias» duas vezes («Eu mandei a foto»). A conversa
+     * conta: com uma fotografia dele no fio, as fotografias não faltam.
+     */
+    const faltas =
+      lidas.includes("fotografias") && tel && (await fotografiasNaConversaDe(telefone!)) > 0
+        ? lidas.filter((f) => f !== "fotografias")
+        : lidas;
     // Só se pergunta à base o que custa (a conversa, o bloqueio, a língua) por um pedido que pode receber mensagens.
     const vivo =
       faltas.length > 0 && Number(r.jaFoiEnviado) !== 1 && r.anonimizadoEm == null && !pedidoFechado((r.status as string | null) ?? null);
@@ -952,4 +963,15 @@ export async function marcarOPrimeiroPeloRecebido(pedidoId: number): Promise<voi
      ON DUPLICATE KEY UPDATE lembrete1Em = COALESCE(lembrete1Em, VALUES(lembrete1Em))`,
     [pedidoId],
   );
+}
+
+/** d129: quantas fotografias (ou vídeos) ele mandou nesta conversa — as vistas e as que ficaram no telemóvel. Na dúvida, 0. */
+async function fotografiasNaConversaDe(telefone: string): Promise<number> {
+  try {
+    const { mensagensDoNumeroWhatsApp } = await import("./db");
+    const { fotografiasNaConversa } = await import("./rajada-do-whatsapp");
+    return fotografiasNaConversa(await mensagensDoNumeroWhatsApp(telefone, 100));
+  } catch {
+    return 0;
+  }
 }

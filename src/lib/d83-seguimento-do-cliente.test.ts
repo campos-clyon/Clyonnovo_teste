@@ -60,6 +60,20 @@ vi.mock("@/lib/seguimento-do-cliente-na-base", async () => {
   };
 });
 
+// d129: o «3» cancela logo, pelo caminho da d126 (sem mensagem: sai a do porquê). Fingido: nada sai.
+vi.mock("@/lib/cancelar-pelo-cliente-na-base", async (original) => {
+  const porque = await import("./porque-cancelou");
+  return {
+    ...(await original<typeof import("@/lib/cancelar-pelo-cliente-na-base")>()),
+    cancelarEApagarNaHora: vi.fn(async (pedidoId: number, o: { origem: string; mensagem?: string | null }) => {
+      estado.chamadas.push({ f: "cancelarNaHora", porque: `${o.origem}|${o.mensagem ?? "porque"}` });
+      estado.cancelado = true;
+      estado.enviados.push(o.mensagem ?? porque.mensagemDepoisDeCancelar([pedidoId], { dados: "apagados" }));
+      return { ok: true, encerradas: 1, conversaApagada: true, mensagemPor: "whatsapp" };
+    }),
+  };
+});
+
 // d111: o «1» lê as propostas do pedido — aqui, nenhuma (a equipa escolhe com ele, como antes).
 vi.mock("@/lib/vitoria-agente/accoes-na-base", () => ({
   propostasParaEscolherDeVerdade: vi.fn(async () => []),
@@ -397,19 +411,21 @@ describe("a conversa do seguimento", () => {
     expect(estado.passadas[0]).toContain("outra data");
   });
 
-  it("«3» → só pergunta; o CANCELAR cancela, uma vez", async () => {
+  it("d129: «3» → cancela logo (sem pedir o CANCELAR), com a mensagem do porquê da d126", async () => {
     await oClienteEscreve("3");
-    expect(estado.enviados.at(-1)).toBe(textoDaConfirmacaoDoCancelamento(612));
-    expect(estado.enviados.at(-1)?.startsWith("Confirma que quer cancelar o pedido #612? Responda CANCELAR.")).toBe(true);
-    expect(estado.cancelado).toBe(false);
+    expect(estado.chamadas.map((c) => c.f)).toEqual(["cancelarNaHora"]);
+    expect(estado.chamadas[0].porque).toBe("desistencia|porque");
+    expect(estado.cancelado).toBe(true);
+    expect(estado.enviados.at(-1)).toContain("#612");
+    expect(estado.enviados.some((t) => /Responda CANCELAR/.test(t))).toBe(false);
     expect(estado.passadas).toEqual([]);
-    // Outro «3» à espera: nem pergunta outra vez, nem cancela.
-    await oClienteEscreve("3");
-    expect(estado.chamadas.map((c) => c.f)).toEqual(["pedir"]);
+  });
+
+  it("à espera do CANCELAR (pedido antes da d129), o CANCELAR ainda cancela, uma vez", async () => {
+    estado.aEspera = true;
+    estado.enviados.push(textoDaConfirmacaoDoCancelamento(612));
     await oClienteEscreve("CANCELAR");
     expect(estado.cancelado).toBe(true);
-    expect(estado.enviados.at(-1)).toBe("[cancelado #612]");
-    await oClienteEscreve("CANCELAR");
     expect(estado.chamadas.filter((c) => c.f === "confirmar")).toHaveLength(1);
   });
 

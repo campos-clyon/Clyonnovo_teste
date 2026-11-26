@@ -3382,6 +3382,9 @@ export function dizQueEstaMal(texto: string): boolean {
   return /\b(nao (esta|e) (certo|bem|correcto|correto)|esta (mal|errado)|errad[oa]|engan\w*|incorrect\w*|nao e (isso|assim)|corrig\w*)\b/.test(semAcentos(texto));
 }
 
+/** d129: o que ele juntou no resumo (as medidas, uma nota) ficou; confirma-se numa linha, sem o resumo outra vez. */
+export const ATUALIZADO_CONFIRMA = "Obrigada, fica atualizado no pedido. Confirma?";
+
 /** O resumo não se repete igual a quem disse que está mal: pergunta-se o quê. */
 export const O_QUE_ESTA_MAL =
   "Peço desculpa, não apanhei bem o que quer mudar. Diga-me só o que está mal — por exemplo «piso -3» ou «fatura: não» — e eu corrijo logo.";
@@ -5071,6 +5074,20 @@ export function responderComCompreensao(
     }
     if (dizQueEstaMal(cru) && intencao !== "confirmar") {
       return { estado: { passo, dados: d }, resposta: O_QUE_ESTA_MAL };
+    }
+    /*
+     * O SIM QUE JÁ FOI DADO — d129 (26-11-2026), o #688. «Sim é isso» levou o
+     * resumo outra vez («Já respondi antes»), e as medidas que ele juntou depois
+     * pediram o SIM uma terceira vez. Com tudo preenchido: um SIM (mesmo com mais
+     * palavras, ou as medidas a seguir) regista com o que juntou; o que só
+     * acrescenta à descrição (as medidas, uma nota), sem SIM, pede «Confirma?»
+     * numa linha — nunca o resumo inteiro.
+     */
+    if (passo === "confirmar" && !dispensaAFatura(cru)) {
+      if (simOuNao(cru) === "sim") return { estado: { passo, dados: d }, resposta: "", registar: true };
+      if (JSON.stringify(d) !== JSON.stringify(estado.dados)) {
+        return { estado: { passo, dados: d }, resposta: ATUALIZADO_CONFIRMA };
+      }
     }
   }
 

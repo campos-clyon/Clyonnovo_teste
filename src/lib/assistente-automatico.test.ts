@@ -1094,7 +1094,8 @@ describe("os interruptores", () => {
     expect(i).toBeGreaterThan(-1);
     // A mensagem dele já ficou registada pelo webhook antes de aqui chegar,
     // por isso aparece na mesa do painel como qualquer outra conversa.
-    expect(NEGOCIACAO.slice(i, i + 200)).toContain("recolherPedidoPorWhatsApp");
+    // d129: antes da recolha, a leitura da intenção e o candidato (que também respondem) — por isso 400.
+    expect(NEGOCIACAO.slice(i, i + 400)).toContain("recolherPedidoPorWhatsApp");
   });
 });
 

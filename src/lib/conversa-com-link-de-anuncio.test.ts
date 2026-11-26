@@ -166,7 +166,9 @@ describe("a conversa do anúncio, pelas regras — nenhum turno fica sem respost
     const passoAntes = e.passo;
     const r4 = await turno(e, "Orçamento", fio, ditos);
     e = r4.estado;
-    expect(r4.resposta).toMatch(/O valor é dado pelos parceiros da sua zona/);
+    // d129: com as peças contadas, a estimativa da tabela (com e sem IVA) e que o preço final é o da proposta.
+    expect(r4.resposta).toMatch(/O valor é dado pelos parceiros da sua zona|Pela tabela de referência da CLYON, fica à volta de .+ € \+ IVA \(.+ € com IVA\)/);
+    expect(r4.resposta).toMatch(/proposta/);
     expect(r4.resposta).not.toMatch(/n[aã]o apanhei/i);
     if (passoAntes === "morada" || passoAntes === "codigoPostal") {
       expect(r4.resposta).toMatch(/Sigo com a zona \(Mina de Água, Amadora\)/);

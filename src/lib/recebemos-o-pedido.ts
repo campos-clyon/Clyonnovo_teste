@@ -34,6 +34,18 @@ export function textoDoRecebido(pedidoId: number, oQueFalta: string | null | und
   if (!falta) return `Recebemos o seu pedido #${pedidoId}. Assim que houver novidades, digo-lhe por aqui.`;
   const re = new RegExp(`O seu pedido (#${pedidoId}(?: \\([^)]*\\))?) está quase pronto`);
   if (re.test(falta)) return falta.replace(re, "Recebemos o seu pedido $1. Está quase pronto");
+  /*
+   * UMA SÓ SAUDAÇÃO — d129 (26-11-2026). Com a 1.ª na voz da Vitória (d113)
+   * saía «Recebemos o seu pedido #N.» + «Olá! Aqui é a Vitória…» + «Falta pouco
+   * para o seu pedido #N…»: dois começos e o número duas vezes. Agora: o olá
+   * curto, o número uma vez, e o que falta.
+   */
+  const daVitoria = new RegExp(
+    `^Olá! (Aqui é a Vitória[^\\n]*?\\.)\\s*\\n+\\s*Falta pouco para o seu pedido (#${pedidoId}(?: \\([^)]*\\))?) seguir para os parceiros da sua zona\\.`,
+  );
+  if (daVitoria.test(falta)) {
+    return falta.replace(daVitoria, "Olá! $1 Recebemos o seu pedido $2.\n\nFalta pouco para seguir para os parceiros da sua zona.");
+  }
   return `Recebemos o seu pedido #${pedidoId}.\n\n${falta}`;
 }
 

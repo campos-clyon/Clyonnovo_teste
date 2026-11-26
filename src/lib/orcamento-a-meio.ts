@@ -1,4 +1,8 @@
 import { perguntaPeloPreco } from "./leitor-da-recolha";
+import { moveisPelaDescricao } from "./pricing-helper";
+import { valorSemEComIva } from "./preco-de-referencia";
+import { NA_PROPOSTA_COM_IVA } from "./seo-data";
+import { AS_DUAS_FATURAS_DO_TRABALHO } from "./voz-da-vitoria";
 import {
   deOutraForma,
   outraVez,
@@ -35,6 +39,42 @@ import {
  */
 
 const semAcentos = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/*
+ * A ESTIMATIVA DA TABELA E A VERDADE DA FATURA — d129 (pedido e aprovado pelo
+ * dono, 26-11-2026), o #688 (2 estantes, nos Olivais). O cliente perguntou o
+ * preço e, a seguir, «com e sem fatura»; ouviu duas vezes «Como lhe disse, o
+ * valor chega nas propostas…» — repetido e sem ajudar. Agora diz-se a
+ * estimativa pela tabela do site (as peças, a recolha mínima, os andares; o
+ * valor + IVA e o com IVA ao lado — `moveisPelaDescricao`, a mesma conta do
+ * simulador), que o preço final é o da proposta, e à fatura a verdade: há
+ * sempre fatura, e o preço já é o total com IVA. Nunca «sem fatura».
+ */
+
+/** A pergunta é pela fatura («com e sem fatura?», «passam fatura?», «o preço é com fatura?»). */
+export function perguntaPelaFaturaNoPreco(texto: string | null | undefined): boolean {
+  const t = semAcentos(texto ?? "");
+  if (t.length > 120) return false;
+  return /\bfac?turas?\b/.test(t) && (/\?/.test(texto ?? "") || /\b(com|sem)\s+(e\s+sem\s+)?fac?tura/.test(t));
+}
+
+/** A resposta à fatura: há sempre, e o preço da proposta já é o total. */
+export const A_FATURA_SAI_SEMPRE = `Há sempre fatura, não há preço «sem fatura». ${AS_DUAS_FATURAS_DO_TRABALHO} ${NA_PROPOSTA_COM_IVA}`;
+
+/** «Pela tabela do site, 2 peças médias ficam em 60 € + IVA (73,80 € com IVA)…» — ou null, sem peças que se contem. */
+export function estimativaPelaTabela(d: DadosDaRecolha): string | null {
+  const v = moveisPelaDescricao({
+    serviceType: d.serviceType,
+    description: d.description,
+    floor: d.floor ?? undefined,
+    hasElevator: d.hasElevator ?? undefined,
+    parkingDistance: d.parkingDistance ?? undefined,
+  });
+  if (!v || !(v.valor > 0)) return null;
+  const minima = v.itens.pelaRecolhaMinima ? " — é a recolha mínima" : "";
+  const andares = d.floor == null ? ", mais os andares se não houver elevador" : "";
+  return `Pela tabela de referência da CLYON, fica à volta de ${valorSemEComIva(v.valor)}${minima}${andares}. É uma estimativa: o preço final é o da proposta do parceiro que escolher.`;
+}
 
 /** A mensagem é só a pergunta do preço — sem morada, sem coisas, sem números. */
 export function soPedeOPreco(texto: string | null | undefined): boolean {
@@ -83,13 +123,19 @@ export function responderAoOrcamentoAMeio(
 ): RespostaDaRecolha | null {
   const passo: PassoDaRecolha = estado.passo;
   if (passo === "servico" || estado.dados.pedidoAberto != null) return null;
-  if (!soPedeOPreco(texto)) return null;
+  if (!soPedeOPreco(texto) && !perguntaPelaFaturaNoPreco(texto)) return null;
   const fotos = Math.max(contexto.fotos ?? 0, estado.dados.fotosRecebidas ?? 0);
   const d: DadosDaRecolha = { ...estado.dados };
   const temZona = Boolean(d.city || d.postalCode);
-  const explicacao = contexto.jaExplicouOPreco
-    ? "Como lhe disse, o valor chega nas propostas dos parceiros da sua zona."
-    : COMO_SE_PEDE_O_PRECO;
+  const estimativa = estimativaPelaTabela(d);
+  const daFatura = perguntaPelaFaturaNoPreco(texto) ? `${A_FATURA_SAI_SEMPRE} ` : "";
+  // d129: nunca a mesma frase outra vez — a estimativa, ou a explicação dita de outra maneira.
+  const explicacao =
+    daFatura +
+    (estimativa ??
+      (contexto.jaExplicouOPreco
+        ? "O valor certo vem nas propostas dos parceiros da sua zona; com as peças e o andar consigo dar-lhe já uma estimativa pela tabela."
+        : COMO_SE_PEDE_O_PRECO));
 
   if (passo === "morada" || passo === "codigoPostal") {
     d.soAZona = true;

@@ -58,7 +58,7 @@ export const SEPARADORES_DA_MESA: Array<{ id: SeparadorDaMesa; titulo: string; v
   { id: "a_espera", titulo: "À espera do cliente", vazio: "Nenhuma conversa à espera do cliente." },
   { id: "com_pedido", titulo: "Com pedido", vazio: "Nenhuma conversa com pedido em curso." },
   { id: "guardada", titulo: "Guardadas", vazio: "Nada guardado para continuar." },
-  { id: "profissionais", titulo: "Profissionais", vazio: "Nenhum profissional registado escreveu." },
+  { id: "profissionais", titulo: "Profissionais", vazio: "Nenhum profissional registado nem candidato a parceiro escreveu." },
   { id: "resolvida", titulo: "Resolvidas", vazio: "Nada resolvido ainda." },
   { id: "bloqueada", titulo: "Bloqueadas", vazio: "Ninguém bloqueado." },
 ];
@@ -148,6 +148,12 @@ export type FactosDaConversa = {
    * este número (últimos 9 dígitos). 13-11-2026 (d21).
    */
   profissional?: { id: number; nome: string } | null;
+  /**
+   * Quem escreve quer ser parceiro (d129, 26-11-2026): a Vitória mandou-lhe a
+   * candidatura (a conversa fechou-se ou passou à equipa com esse porquê).
+   * Vai também para os «Profissionais», para a equipa o ver.
+   */
+  candidato?: boolean;
   /** O que a Vitória percebeu ao ler a conversa, se ainda vale (nada de novo depois). */
   leitura?: { estado: string; motivo: string | null; lidaHaSegundos?: number | null } | null;
 };
@@ -187,6 +193,8 @@ export type ConversaNaMesa = {
   fechadaPor: string | null;
   /** O profissional registado com este telefone, se for um (d21). */
   profissional: { id: number; nome: string } | null;
+  /** d129: quem escreve quer ser parceiro (recebeu a candidatura) — também nos «Profissionais». */
+  candidato?: boolean;
   /** d93: o cliente cancelou pela conversa e pediu para não voltar a ser contactado. */
   naoContactar?: boolean;
   /** O nome do contacto, quando se sabe — a linha mostra-o no lugar do número (d124). */
@@ -426,6 +434,7 @@ export function naMesa(f: FactosDaConversa): ConversaNaMesa {
     guardada: f.guardada ? { nota: f.guardada.nota } : null,
     fechadaPor: null as string | null,
     profissional: f.profissional ?? null,
+    candidato: f.candidato === true,
     nome: f.nome ?? null,
   };
 
@@ -615,14 +624,14 @@ export function contarNaMesa(linhas: ConversaNaMesa[]): Record<SeparadorDaMesa, 
   for (const l of linhas) {
     c[l.estado] += 1;
     if (l.guardada) c.guardada += 1;
-    if (l.profissional && l.estado === "por_responder") c.profissionais += 1;
+    if (eDeProfissional(l) && l.estado === "por_responder") c.profissionais += 1;
   }
   return c;
 }
 
-/** Uma conversa de um profissional registado — vai também para os «Profissionais». */
-export function eDeProfissional(l: Pick<ConversaNaMesa, "profissional">): boolean {
-  return l.profissional != null;
+/** Uma conversa de um profissional registado, ou de um candidato a parceiro (d129) — vai também para os «Profissionais». */
+export function eDeProfissional(l: Pick<ConversaNaMesa, "profissional" | "candidato">): boolean {
+  return l.profissional != null || l.candidato === true;
 }
 
 /**
@@ -649,4 +658,13 @@ export function linhasDoSeparador(linhas: ConversaNaMesa[], separador: string): 
   const doSeparador =
     separador === "guardada" ? linhas.filter((l) => l.guardada) : linhas.filter((l) => l.estado === separador);
   return ordenarNaMesa(doSeparador, separador);
+}
+
+/**
+ * O porquê de um fecho ou de uma entrega é o de um candidato a parceiro? —
+ * «Candidato a parceiro — a Vitória mandou a ligação da candidatura» (d69) e
+ * «Candidato a parceiro voltou a escrever — responder». d129 (26-11-2026).
+ */
+export function eCandidatoPeloMotivo(motivo: string | null | undefined): boolean {
+  return /^\s*candidato a parceiro\b/i.test(String(motivo ?? ""));
 }
