@@ -55,6 +55,7 @@ const TONS = {
   ambar: { forte: "#B45309", claro: "#FFFBEB" },
   esmeralda: { forte: "#047857", claro: "#ECFDF5" },
   ardosia: { forte: "#475569", claro: "#F1F5F9" },
+  indigo: { forte: "#4338CA", claro: "#EEF2FF" },
 } as const satisfies Record<string, Tom>;
 
 /** O tom e o ícone (Ionicons) de cada serviço, pelo id do simulador. Um serviço novo cai no ardósia. */
@@ -66,6 +67,8 @@ const POR_SERVICO: Readonly<Record<string, { tom: keyof typeof TONS; icone: stri
   esvaziamento_apartamento: { tom: "coral", icone: "business-outline" },
   mudanca: { tom: "esmeralda", icone: "car-outline" },
   manutencao_casa: { tom: "ambar", icone: "hammer-outline" },
+  // A montagem e desmontagem de móveis volta a 26-11-2026 (d132): a chave inglesa do 🔧 do site.
+  montagem_moveis: { tom: "indigo", icone: "build-outline" },
   outro: { tom: "ardosia", icone: "ellipsis-horizontal-circle-outline" },
 };
 

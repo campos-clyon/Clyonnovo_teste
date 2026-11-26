@@ -83,7 +83,8 @@ describe("d3 — o cartão da pergunta do cliente na app Pro", () => {
   });
 
   it("a nota da atualização da Pro fala do cartão (publicada a 26-11-2026, d1)", () => {
-    const pro = notasDaApp("pro")[0];
+    // Já não é a primeira desde a d132 (26-11-2026): procura-se pelo id.
+    const pro = notasDaApp("pro").find((n) => n.id === "pro-2026-11-24")!;
     expect(pro.id).toBe("pro-2026-11-24");
     expect(pro.nota).toContain("Sim, recebi");
     expect(pro.nota).toMatch(/cliente pergunta se consegue/);

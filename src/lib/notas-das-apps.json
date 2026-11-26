@@ -1,6 +1,11 @@
 {
   "pro": [
     {
+      "id": "pro-2026-11-26",
+      "nota": "Novo serviço «Montagem de móveis»: marque-o em Serviços para receber pedidos de montar e desmontar móveis, roupeiros e camas.\nNos pedidos de montagem vê as peças e os extras que o cliente pediu.",
+      "updates": []
+    },
+    {
       "id": "pro-2026-11-24",
       "nota": "O pagamento do cliente fica registado no trabalho: «Sim, recebi» ou «Ainda não recebi».\nNo Início, o cliente pergunta se consegue uma condição («até quinta»): responda Sim, com o quando, ou Não.",
       "updates": [
@@ -83,6 +88,11 @@
     }
   ],
   "cliente": [
+    {
+      "id": "cliente-2026-11-26-2",
+      "nota": "Já pode pedir a montagem e desmontagem de móveis, peça a peça, com a estimativa.\nNas recolhas e na mudança pode juntar as peças a desmontar (e a montar no destino).",
+      "updates": []
+    },
     {
       "id": "cliente-2026-11-26",
       "nota": "Numa proposta de recolha de entulho de um parceiro sem guia de resíduos, vê o aviso antes de contratar e pode contratar na mesma.",

@@ -76,7 +76,7 @@ import {
   type Referencia,
 } from "../lib/novo-pedido";
 import { ROTULO_DO_TOTAL_DE_REFERENCIA } from "../../../src/lib/preco-em-tres-linhas";
-import { unidadeDaPergunta, type PerguntaDaApp } from "../lib/perguntas-do-pedido";
+import { grupoDePecas, nomeDaPeca, tituloDoGrupoDePecas, unidadeDaPergunta, type PerguntaDaApp } from "../lib/perguntas-do-pedido";
 import {
   chaveDoLeitor,
   corpoDoLeitor,
@@ -344,6 +344,42 @@ function PerguntasDaCategoria({
             </Marcado>
           );
         }
+        // As peças da montagem (d132): um contador por peça, com o preço da R7 por baixo — como os itens.
+        const grupoDaPeca = grupoDePecas(p.id);
+        if (grupoDaPeca) {
+          const doGrupo = visiveis.filter((x) => grupoDePecas(x.id) === grupoDaPeca);
+          if (p !== doGrupo[0]) return null;
+          return (
+            <Marcado key={grupoDaPeca} campo={grupoDaPeca}>
+              <View style={{ gap: 2 }}>
+                <Text style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>{tituloDoGrupoDePecas(grupoDaPeca, perguntas)}</Text>
+                {doGrupo.map((x) => (
+                  <Contador
+                    key={x.id}
+                    nome={nomeDaPeca(x.titulo)}
+                    exemplos={x.ajuda ?? ""}
+                    linhas={2}
+                    valor={Number(valorDaResposta(r, x.id) ?? 0) || 0}
+                    aoMudar={(n) => mudar(comResposta(r, x.id, String(n)))}
+                  />
+                ))}
+              </View>
+            </Marcado>
+          );
+        }
+        if (p.id === "fixarAParede" && p.tipo === "numero") {
+          return (
+            <Marcado key={p.id} campo={p.id}>
+              <Contador
+                nome={p.titulo}
+                exemplos={p.ajuda ?? ""}
+                linhas={2}
+                valor={Number(v ?? 0) || 0}
+                aoMudar={(n) => mudar(comResposta(r, p.id, String(n)))}
+              />
+            </Marcado>
+          );
+        }
         if (p.tipo === "escolha" && p.varias) {
           const escolhidas = Array.isArray(v) ? v : [];
           return (
@@ -481,7 +517,20 @@ function Acessos({
   );
 }
 
-function Contador({ nome, exemplos, valor, aoMudar }: { nome: string; exemplos: string; valor: number; aoMudar: (n: number) => void }) {
+function Contador({
+  nome,
+  exemplos,
+  valor,
+  aoMudar,
+  linhas = 1,
+}: {
+  nome: string;
+  exemplos: string;
+  valor: number;
+  aoMudar: (n: number) => void;
+  /** Quantas linhas para os exemplos: as peças da montagem trazem o preço da R7 e precisam de duas. */
+  linhas?: number;
+}) {
   const botao = (sinal: "−" | "+", n: number) => (
     <Pressable
       accessibilityRole="button"
@@ -498,9 +547,11 @@ function Contador({ nome, exemplos, valor, aoMudar }: { nome: string; exemplos: 
         <Text titulo style={{ color: CORES.tinta, fontSize: 14.5, fontWeight: "600" }}>
           {nome}
         </Text>
-        <Text style={{ color: CORES.suave, fontSize: 12 }} numberOfLines={1}>
-          {exemplos}
-        </Text>
+        {exemplos ? (
+          <Text style={{ color: CORES.suave, fontSize: 12 }} numberOfLines={linhas}>
+            {exemplos}
+          </Text>
+        ) : null}
       </View>
       {botao("−", valor - 1)}
       <Text style={{ width: 26, textAlign: "center", color: CORES.tinta, fontSize: 17, fontWeight: "700" }}>{String(valor)}</Text>

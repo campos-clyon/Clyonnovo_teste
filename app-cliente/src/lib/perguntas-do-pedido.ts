@@ -75,6 +75,9 @@ function quandoDaPergunta(v: unknown): Record<string, string[]> | null {
   return Object.keys(out).length > 0 ? out : null;
 }
 
+/** O id de uma pergunta: começa por uma letra; depois letras, algarismos, «_» e «.»; até 40. */
+export const ID_DA_PERGUNTA = /^[A-Za-z][A-Za-z0-9_.]{0,39}$/;
+
 /** As perguntas da R7 de um serviço, com a forma certa — `null` sem elas (R7 antiga: o pedido de sempre). */
 export function perguntasValidas(v: unknown): PerguntaDaApp[] | null {
   if (!Array.isArray(v) || v.length === 0) return null;
@@ -85,7 +88,8 @@ export function perguntasValidas(v: unknown): PerguntaDaApp[] | null {
       const titulo = texto(r.titulo);
       const tipo = r.tipo === "escolha" || r.tipo === "numero" || r.tipo === "texto" ? r.tipo : null;
       const ecra = r.ecra === "oque" || r.ecra === "acesso" ? r.ecra : null;
-      if (!id || !/^[A-Za-z.]{1,40}$/.test(id) || !titulo || !tipo || !ecra) return null;
+      // Letras, algarismos, «_» e «.» (as peças da montagem, d132: `pecasDaMontagem.roupeiro_3`).
+      if (!id || !ID_DA_PERGUNTA.test(id) || !titulo || !tipo || !ecra) return null;
       if (PROIBIDO_NAS_PERGUNTAS.test(titulo)) return null;
       const opcoes = opcoesDaPergunta(id, r.opcoes);
       if (tipo === "escolha" && opcoes.length === 0) return null;
@@ -172,4 +176,67 @@ export function respostaEscrita(p: PerguntaDaApp, respostas: Respostas): string 
     return u ? `${n} ${u}` : String(n);
   }
   return (v as string).trim();
+}
+
+/*
+ * AS PEÇAS DA MONTAGEM — d132, 26-11-2026 (a montagem e desmontagem de móveis
+ * volta). A R7 manda uma pergunta de número por linha da tabela da montagem:
+ * `pecasDaMontagem.<peça>` no serviço «Montagem e desmontagem de móveis», e
+ * `desmontarPecas.<peça>` nas recolhas («Desmontar antes de levar») e na
+ * mudança («Desmontar e montar no destino»), com o rótulo do extra no título
+ * da primeira («Desmontar antes de levar — Peça pequena»). A app desenha cada
+ * grupo como os itens dos móveis — contadores, um por peça — e manda cada um
+ * ao site como um objecto `{ pequena: 2, roupeiro_3: 1 }`. Os preços vêm
+ * escritos na ajuda de cada pergunta (a R7); a app não tem números.
+ */
+
+/** Os grupos de peças, pelo prefixo do id (o nome do campo do pedido). */
+export const GRUPOS_DE_PECAS = ["pecasDaMontagem", "desmontarPecas"] as const;
+export type GrupoDePecas = (typeof GRUPOS_DE_PECAS)[number];
+
+/** O grupo de peças de uma pergunta, ou `null`. */
+export function grupoDePecas(id: string): GrupoDePecas | null {
+  return GRUPOS_DE_PECAS.find((g) => id.startsWith(`${g}.`)) ?? null;
+}
+
+const SEPARADOR_DO_ROTULO = " — ";
+
+/** «Desmontar antes de levar — Peça pequena» → «Peça pequena». */
+export function nomeDaPeca(titulo: string): string {
+  const i = titulo.indexOf(SEPARADOR_DO_ROTULO);
+  return i >= 0 ? titulo.slice(i + SEPARADOR_DO_ROTULO.length) : titulo;
+}
+
+/** O rótulo do extra, tirado do título da primeira peça («Desmontar antes de levar»), ou `null`. */
+export function rotuloDoGrupoDePecas(grupo: GrupoDePecas, perguntas: readonly Pick<PerguntaDaApp, "id" | "titulo">[]): string | null {
+  const primeira = perguntas.find((p) => grupoDePecas(p.id) === grupo);
+  if (!primeira) return null;
+  const i = primeira.titulo.indexOf(SEPARADOR_DO_ROTULO);
+  return i > 0 ? primeira.titulo.slice(0, i) : null;
+}
+
+/** O título por cima dos contadores: o do simulador do site («Quantas peças?»), ou o do extra, opcional. */
+export function tituloDoGrupoDePecas(grupo: GrupoDePecas, perguntas: readonly Pick<PerguntaDaApp, "id" | "titulo">[]): string {
+  if (grupo === "pecasDaMontagem") return "Quantas peças?";
+  const rotulo = rotuloDoGrupoDePecas(grupo, perguntas);
+  return rotulo ? `${rotulo} (opcional)` : "Peças a desmontar (opcional)";
+}
+
+/** As peças contadas de um grupo, só as de 1 para cima: `{ pequena: 2, roupeiro_3: 1 }`. */
+export function pecasDoGrupo(grupo: GrupoDePecas, perguntas: readonly PerguntaDaApp[], respostas: Respostas): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const p of perguntas) {
+    if (grupoDePecas(p.id) !== grupo || !respostaServe(p, respostas[p.id])) continue;
+    const n = numeroDaResposta(respostas[p.id]) ?? 0;
+    if (n > 0) out[p.id.slice(grupo.length + 1)] = n;
+  }
+  return out;
+}
+
+/** «2 × Peça pequena, 1 × Roupeiro de 3 portas» — como `pecasEmTexto` do site; `null` sem peças. */
+export function pecasEmTextoDaApp(grupo: GrupoDePecas, perguntas: readonly PerguntaDaApp[], respostas: Respostas): string | null {
+  const partes = perguntas
+    .filter((p) => grupoDePecas(p.id) === grupo && respostaServe(p, respostas[p.id]) && (numeroDaResposta(respostas[p.id]) ?? 0) > 0)
+    .map((p) => `${numeroDaResposta(respostas[p.id])} × ${nomeDaPeca(p.titulo)}`);
+  return partes.length > 0 ? partes.join(", ") : null;
 }

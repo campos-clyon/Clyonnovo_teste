@@ -2,8 +2,13 @@ import { diaEmLisboa, pecasEmLisboa, somarDiasAoDia } from "../../../src/lib/hor
 import { precoEmTresLinhasValido, type PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
 import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, type LinhaDePreco, type TextosDaV3 } from "./catalogo";
 import {
+  GRUPOS_DE_PECAS,
+  grupoDePecas,
   numeroDaResposta,
+  pecasDoGrupo,
+  pecasEmTextoDaApp,
   perguntaAparece,
+  rotuloDoGrupoDePecas,
   perguntasValidas,
   respostaEscrita,
   respostaServe,
@@ -990,9 +995,30 @@ export function textoDoQuando(r: Pick<Rascunho, "quando" | "data" | "hora">): st
 function respostasNoResumo(r: Rascunho, perguntas: readonly PerguntaDaApp[]): string[] {
   const respostas = respostasDoRascunho(r, perguntas);
   const l: string[] = [];
-  for (const p of perguntasVisiveis(r, perguntas, "oque")) {
+  const visiveis = perguntasVisiveis(r, perguntas, "oque");
+  const gruposVistos = new Set<string>();
+  for (const p of visiveis) {
     if (p.id === "desmontagem" || p.id === "repeticao") continue;
     if (p.id.startsWith("itens.") && (numeroDaResposta(respostas[p.id]) ?? 0) === 0) continue;
+    // A montagem (d132): as peças numa linha por grupo, e os extras ditos por extenso.
+    const grupo = grupoDePecas(p.id);
+    if (grupo) {
+      if (gruposVistos.has(grupo)) continue;
+      gruposVistos.add(grupo);
+      const pecas = pecasEmTextoDaApp(grupo, visiveis, respostas);
+      const rotulo = rotuloDoGrupoDePecas(grupo, perguntas);
+      if (pecas) l.push(rotulo ? `${rotulo}: ${pecas}.` : `${pecas}.`);
+      continue;
+    }
+    if (p.id === "fixarAParede") {
+      const n = respostaServe(p, respostas[p.id]) ? (numeroDaResposta(respostas[p.id]) ?? 0) : 0;
+      if (n > 0) l.push(`Fixar à parede (anti-queda): ${n} ${n === 1 ? "móvel" : "móveis"}.`);
+      continue;
+    }
+    if (p.id === "retirarEmbalagens" || p.id === "cozinhaNaMontagem") {
+      if (respostas[p.id] === "sim") l.push(p.id === "retirarEmbalagens" ? "Retirar as embalagens." : "Há móveis de cozinha.");
+      continue;
+    }
     const t = respostaEscrita(p, respostas);
     if (t) l.push(p.id.startsWith("itens.") ? `${numeroDaResposta(respostas[p.id])} ${p.titulo.toLowerCase()}.` : `${t}.`);
   }
@@ -1177,6 +1203,24 @@ function camposDasPerguntas(r: Rascunho, perguntas: readonly PerguntaDaApp[], d:
     const v = respostas[id];
     if (!respostaServe(p, v)) continue;
     out[id] = p.tipo === "numero" ? numeroDaResposta(v) : v;
+  }
+  /*
+   * A MONTAGEM (d132, 26-11-2026): os campos do simulador do site —
+   * `operacaoDaMontagem`, `pecasDaMontagem` e `desmontarPecas` como objectos
+   * (`{ pequena: 2 }`), `fixarAParede` em número, `retirarEmbalagens` e
+   * `cozinhaNaMontagem` em sim/não. O site escreve as linhas da descrição.
+   */
+  const op = visiveis.find((x) => x.id === "operacaoDaMontagem");
+  if (op && respostaServe(op, respostas[op.id])) out.operacaoDaMontagem = respostas[op.id];
+  for (const g of GRUPOS_DE_PECAS) {
+    const pecas = pecasDoGrupo(g, visiveis, respostas);
+    if (Object.keys(pecas).length > 0) out[g] = pecas;
+  }
+  const fixar = visiveis.find((x) => x.id === "fixarAParede");
+  if (fixar && respostaServe(fixar, respostas[fixar.id])) out.fixarAParede = numeroDaResposta(respostas[fixar.id]);
+  for (const id of ["retirarEmbalagens", "cozinhaNaMontagem"]) {
+    const v = ids.has(id) ? respostas[id] : undefined;
+    if (v === "sim" || v === "nao") out[id] = v === "sim";
   }
   // A desmontagem só onde a R7 a pergunta.
   if (!ids.has("desmontagem")) out.needsDismantling = undefined;

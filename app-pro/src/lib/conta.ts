@@ -34,9 +34,10 @@ export type { Distincao, Falta, ResumoDoPerfil, SeccaoComFalta };
 /**
  * OS SERVIÇOS DA INSCRIÇÃO — 27-10-2026 (auditoria da orquestra).
  *
- * Os mesmos do /quero-ser-parceiro (`InscricaoForm.tsx`): os do plano
- * (`SERVICOS_PUBLICOS`, sem montagem nem jardinagem desde 25-10) e sem
- * «Outro serviço». O registo da app e o perfil escolhem daqui.
+ * Os mesmos do /quero-ser-parceiro (`InscricaoForm.tsx`): os grupos do plano
+ * (`CATEGORIAS_DOS_PROFISSIONAIS`), sem «Outro serviço». O registo da app e o
+ * perfil escolhem daqui. Desde 26-11-2026 (d132) com o grupo «Montagem de
+ * móveis» (`montagem_de_moveis`): a jardinagem continua fora.
  */
 export const SERVICOS_DA_INSCRICAO: readonly GrupoDeServicos[] = CATEGORIAS_DOS_PROFISSIONAIS;
 
