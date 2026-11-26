@@ -119,9 +119,10 @@ export async function pessoasDaAppPro(): Promise<PessoaDoTeste[]> {
       estado: string | null;
       isActive: number | null;
       contaDeTeste: number | null;
+      createdAt: Date | string | null;
     }>(
       p,
-      `SELECT id, name, email, phone, gmailDoTeste, appAbertaEm, appVersao, estado, isActive, contaDeTeste
+      `SELECT id, name, email, phone, gmailDoTeste, appAbertaEm, appVersao, estado, isActive, contaDeTeste, createdAt
          FROM providers
         WHERE isClyon = 0 AND COALESCE(estado, '') <> 'apagado'
           AND ((isActive = 1 AND estado = 'aprovado')
@@ -149,6 +150,7 @@ export async function pessoasDaAppPro(): Promise<PessoaDoTeste[]> {
       temAvisosDaApp: emails.some((e) => comAvisos.has(e)),
       porque: aprovado ? "Aprovado (vê o convite no painel)" : l.appAbertaEm ? "Abriu a app" : "Deu o Gmail do teste",
       contaDeTeste: Number(l.contaDeTeste ?? 0) === 1,
+      inscritoEm: iso(l.createdAt),
     };
   });
 }

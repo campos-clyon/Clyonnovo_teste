@@ -10,6 +10,8 @@ import {
 import { avisarClientesQueEntraramNaListaDaPlay, avisarQuemEntrouNaListaDaPlay } from "@/lib/lista-da-play-avisos-na-base";
 import { percursosDosConvites } from "@/lib/percurso-da-app-cliente-na-base";
 import { resumoDosPercursos, type Percurso } from "@/lib/percurso-da-app-cliente";
+import { ultimosAvisosDaAppPro } from "@/lib/aviso-da-app-pro-na-base";
+import { telemovelParaWhatsApp } from "@/lib/whatsapp-cloud";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,11 +48,23 @@ async function percursos(app: "pro" | "cliente"): Promise<Percurso[] | null> {
   }
 }
 
+/** d134: o último «Avisar no WhatsApp» de cada profissional. Um extra: sem ele, o quadro sai na mesma. */
+async function avisosDaApp(app: "pro" | "cliente"): Promise<Map<number, string> | null> {
+  if (app !== "pro") return null;
+  try {
+    return await ultimosAvisosDaAppPro();
+  } catch (e) {
+    console.error("[admin/quem-conta-para-os-12] avisos da app:", e instanceof Error ? e.message : e);
+    return new Map();
+  }
+}
+
 async function quadro(app: "pro" | "cliente") {
-  const [pessoas, lista, todos] = await Promise.all([
+  const [pessoas, lista, todos, avisados] = await Promise.all([
     app === "pro" ? pessoasDaAppPro() : pessoasDaAppDeCliente(),
     listaDaPlayGuardada(app),
     percursos(app),
+    avisosDaApp(app),
   ]);
   const montado = montarQuadro(pessoas, lista.emails.length ? lista.emails : null, new Date());
   const porEmail = new Map((todos ?? []).map((p) => [p.email, p]));
@@ -61,6 +75,12 @@ async function quadro(app: "pro" | "cliente") {
     linhas: montado.linhas.map((l) => ({
       ...l,
       percurso: todos ? (l.emails.map((e) => porEmail.get(e)).find(Boolean) ?? null) : null,
+      avisoDaApp: avisados
+        ? {
+            avisadoEm: avisados.get(Number(l.id.slice(1))) ?? null,
+            temWhatsApp: telemovelParaWhatsApp(l.telefone) !== null,
+          }
+        : null,
     })),
     percursos: todos ? resumoDosPercursos(todos) : null,
     lista: { emails: lista.emails, coladaEm: lista.coladaEm, porQuem: lista.porQuem },

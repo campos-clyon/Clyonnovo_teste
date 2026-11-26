@@ -110,6 +110,8 @@ export type PessoaDoTeste = {
   /** Porque está no quadro: «Aprovado», «Convidado», «Adicionado à Play»… */
   porque: string;
   contaDeTeste: boolean;
+  /** A inscrição na CLYON (ISO) — só na CLYON Pro, para o aviso «Avisar no WhatsApp» (d134). */
+  inscritoEm?: string | null;
 };
 
 export type LinhaDoQuadro = PessoaDoTeste & {

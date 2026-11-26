@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ClipboardPaste, Loader2, Phone, RefreshCw, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ClipboardPaste, Loader2, MessageCircle, Phone, RefreshCw, Send, Trash2, X } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { dataEHoraEmLisboa, instanteDaBase } from "@/lib/hora-de-lisboa";
 import {
@@ -21,6 +21,15 @@ import {
   type Percurso,
   type ResumoDosPercursos,
 } from "@/lib/percurso-da-app-cliente";
+import {
+  estadoQueSeAvisa,
+  podeAvisarAgora,
+  quemAvisarEmMassa,
+  rotuloDoAvisado,
+  textoDoAvisoDaAppPro,
+  type LinhaQueSeAvisa,
+} from "@/lib/aviso-da-app-pro";
+import { intervaloAoAcaso } from "@/lib/aviso-aos-profissionais";
 
 /*
  * «QUEM CONTA PARA OS 12» — 17-11-2026 (d60, pedida e aprovada pelo dono).
@@ -40,10 +49,19 @@ import {
  * último passo: convite enviado → clicou → aparelho → passo → «Não consegui»
  * com o motivo) e, por cima, o resumo de todos (cliques, % iPhone e
  * computador, motivos por passo).
+ *
+ * d134 (26-11-2026): na CLYON Pro, a coluna «Aviso» — «Avisar no WhatsApp»
+ * a quem está em «Nunca entrou» ou «Instalou e parou»: abre o texto
+ * (editável) e só o manda ao carregar em «Enviar». E «Avisar todos os que
+ * nunca entraram (N)»: a lista e o texto, enviados um a um com 20 a 45 s
+ * entre cada. Um por dia a cada pessoa («avisado a DD/MM às HH:MM»).
  */
 
+type AvisoDaApp = { avisadoEm: string | null; temWhatsApp: boolean };
+type LinhaComAviso = LinhaDoQuadro & { percurso?: Percurso | null; avisoDaApp?: AvisoDaApp | null };
+
 type Quadro = {
-  linhas: Array<LinhaDoQuadro & { percurso?: Percurso | null }>;
+  linhas: LinhaComAviso[];
   percursos?: ResumoDosPercursos | null;
   semConta: EmailDaPlaySemConta[];
   totais: Record<EstadoDeUso, number>;
@@ -103,6 +121,30 @@ const TEMAS = {
   },
 };
 
+/** A linha como o aviso a vê (estado, WhatsApp, último aviso). */
+function paraOAviso(l: LinhaComAviso): LinhaQueSeAvisa {
+  return {
+    id: l.id,
+    estado: l.estado,
+    contaDeTeste: l.contaDeTeste,
+    temWhatsApp: l.avisoDaApp?.temWhatsApp === true,
+    avisadoEm: l.avisoDaApp?.avisadoEm ?? null,
+  };
+}
+
+/** O texto do aviso desta linha (o que se vê na pré-visualização). */
+function textoDaLinha(l: LinhaComAviso): string {
+  return textoDoAvisoDaAppPro({
+    nome: l.nome,
+    estado: l.estado === "parou" ? "parou" : "nunca",
+    inscritoEm: l.inscritoEm ?? null,
+    abertaEm: l.abertaEm,
+    naoGmail: l.naoGmail,
+  });
+}
+
+const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 function quando(v: string | null): string {
   const d = instanteDaBase(v);
   return d ? dataEHoraEmLisboa(d) : "—";
@@ -119,6 +161,19 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
   const [texto, setTexto] = useState("");
   const [filtro, setFiltro] = useState<EstadoDeUso | "todos">("todos");
   const [avisos, setAvisos] = useState("");
+  // d134: a pré-visualização de um aviso (nada sai sem «Enviar») e o «Avisar todos».
+  const [previa, setPrevia] = useState<{ linha: LinhaComAviso; texto: string } | null>(null);
+  const [aEnviar, setAEnviar] = useState(false);
+  const [erroDoAviso, setErroDoAviso] = useState("");
+  const [massa, setMassa] = useState<{ ids: string[]; ver: string | null } | null>(null);
+  const [progresso, setProgresso] = useState<{
+    feitos: number;
+    falharam: number;
+    total: number;
+    aCorrer: boolean;
+    proximo: string;
+  } | null>(null);
+  const parar = useRef(false);
 
   const carregar = useCallback(async () => {
     if (!token) return;
@@ -176,7 +231,83 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
     }
   }
 
+  /** Marca a linha como avisada, sem voltar a ler o quadro. */
+  function marcarAvisado(id: string, avisadoEm: string) {
+    setQuadro((q) =>
+      q
+        ? {
+            ...q,
+            linhas: q.linhas.map((l) =>
+              l.id === id ? { ...l, avisoDaApp: { temWhatsApp: l.avisoDaApp?.temWhatsApp ?? true, avisadoEm } } : l,
+            ),
+          }
+        : q,
+    );
+  }
+
+  /** UM aviso pelo WhatsApp da plataforma. Só os botões «Enviar» o chamam. */
+  async function enviarAviso(l: LinhaComAviso, textoDoAviso: string): Promise<string | null> {
+    if (!token) return "Sem sessão.";
+    try {
+      const res = await fetch("/api/admin/quem-conta-para-os-12/avisar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ providerId: l.id, texto: textoDoAviso }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: string; avisadoEm?: string | null };
+      if (d.avisadoEm) marcarAvisado(l.id, d.avisadoEm);
+      if (!res.ok) return d.error ?? "O aviso não saiu.";
+      return null;
+    } catch {
+      return "O aviso não saiu.";
+    }
+  }
+
+  async function enviarAPrevia() {
+    if (!previa) return;
+    setAEnviar(true);
+    const falhou = await enviarAviso(previa.linha, previa.texto);
+    setAEnviar(false);
+    if (falhou) {
+      setErroDoAviso(falhou);
+      return;
+    }
+    setErroDoAviso("");
+    setPrevia(null);
+    setAvisos(`Aviso enviado pelo WhatsApp a ${previa.linha.nome}.`);
+  }
+
+  /** «Avisar todos os que nunca entraram»: um a um, com 20 a 45 s entre cada. */
+  async function enviarATodos() {
+    if (!massa || !quadro) return;
+    const escolhidos = quadro.linhas.filter(
+      (l) => massa.ids.includes(l.id) && podeAvisarAgora(paraOAviso(l), new Date()),
+    );
+    if (escolhidos.length === 0) return;
+    parar.current = false;
+    const total = escolhidos.length;
+    let feitos = 0;
+    let falharam = 0;
+    for (let i = 0; i < total; i += 1) {
+      if (parar.current) break;
+      const l = escolhidos[i];
+      setProgresso({ feitos, falharam, total, aCorrer: true, proximo: `a enviar a ${l.nome}` });
+      const falhou = await enviarAviso(l, textoDaLinha(l));
+      if (falhou) falharam += 1;
+      else feitos += 1;
+      if (i < total - 1 && !parar.current) {
+        const s = intervaloAoAcaso();
+        setProgresso({ feitos, falharam, total, aCorrer: true, proximo: `o próximo dentro de ${s} s` });
+        await esperar(s * 1000);
+      }
+    }
+    setProgresso({ feitos, falharam, total, aCorrer: false, proximo: "" });
+    setAvisos(`Avisados pelo WhatsApp: ${feitos}${falharam ? ` · não saíram: ${falharam}` : ""}.`);
+  }
+
   const nomeDaApp = app === "pro" ? "CLYON Pro" : "app de cliente";
+  const comAviso = app === "pro";
+  const paraAvisarEmMassa = comAviso ? quemAvisarEmMassa((quadro?.linhas ?? []).map(paraOAviso), new Date()) : [];
   const linhas = (quadro?.linhas ?? []).filter((l) => filtro === "todos" || l.estado === filtro);
 
   return (
@@ -193,6 +324,20 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {comAviso && quadro && (
+            <button
+              type="button"
+              className={t.botao}
+              disabled={paraAvisarEmMassa.length === 0 || progresso?.aCorrer === true}
+              onClick={() => {
+                setProgresso(null);
+                setMassa({ ids: paraAvisarEmMassa.map((l) => l.id), ver: paraAvisarEmMassa[0]?.id ?? null });
+              }}
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              Avisar todos os que nunca entraram ({paraAvisarEmMassa.length})
+            </button>
+          )}
           <button type="button" className={t.botao} onClick={() => setColar((v) => !v)}>
             <ClipboardPaste className="h-4 w-4" aria-hidden="true" />
             Colar a lista da Play
@@ -210,6 +355,140 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
 
       {erro && <p className={`mt-3 text-sm ${t.erro}`}>{erro}</p>}
       {avisos && <p className={`mt-3 text-sm ${t.forte}`}>{avisos}</p>}
+
+      {comAviso && massa && quadro && (
+        <div className={`mt-4 rounded-xl border px-3 py-3 ${tema === "escuro" ? "border-slate-700" : "border-slate-200"}`}>
+          <div className="flex items-start justify-between gap-2">
+            <p className={t.forte}>Avisar no WhatsApp quem nunca entrou na app</p>
+            <button
+              type="button"
+              aria-label="Fechar"
+              className={t.botao}
+              disabled={progresso?.aCorrer === true}
+              onClick={() => setMassa(null)}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+          <p className={`mt-1 ${t.fraco}`}>
+            Sai um a um, pelo WhatsApp da plataforma, com 20 a 45 segundos entre cada: não feche esta página até
+            acabar. Quem já foi avisado hoje fica de fora. Carregue num nome para ver o texto dessa pessoa.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {quadro.linhas
+              .filter((l) => paraAvisarEmMassa.some((x) => x.id === l.id))
+              .map((l) => (
+                <li key={l.id} className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="checkbox"
+                    aria-label={`Avisar ${l.nome}`}
+                    checked={massa.ids.includes(l.id)}
+                    disabled={progresso?.aCorrer === true}
+                    onChange={(e) =>
+                      setMassa((m) =>
+                        m ? { ...m, ids: e.target.checked ? [...m.ids, l.id] : m.ids.filter((x) => x !== l.id) } : m,
+                      )
+                    }
+                  />
+                  <button
+                    type="button"
+                    className={`text-left text-sm ${t.link}`}
+                    onClick={() => setMassa((m) => (m ? { ...m, ver: l.id } : m))}
+                  >
+                    {l.nome}
+                  </button>
+                  <span className={t.fraco}>{l.telefone}</span>
+                  {rotuloDoAvisado(l.avisoDaApp?.avisadoEm) && (
+                    <span className={t.fraco}>{rotuloDoAvisado(l.avisoDaApp?.avisadoEm)}</span>
+                  )}
+                </li>
+              ))}
+          </ul>
+          {(() => {
+            const visto = quadro.linhas.find((l) => l.id === massa.ver);
+            return visto ? (
+              <pre
+                className={`mt-3 whitespace-pre-wrap rounded-lg border p-2 font-sans text-xs ${
+                  tema === "escuro" ? "border-slate-800 text-slate-300" : "border-slate-200 text-slate-700"
+                }`}
+              >
+                {textoDaLinha(visto)}
+              </pre>
+            ) : null;
+          })()}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {progresso?.aCorrer ? (
+              <button type="button" className={t.botao} onClick={() => (parar.current = true)}>
+                Parar
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={t.botao}
+                disabled={massa.ids.length === 0}
+                onClick={() => void enviarATodos()}
+              >
+                <Send className="h-4 w-4" aria-hidden="true" />
+                Enviar a {massa.ids.length}, um a um
+              </button>
+            )}
+            {progresso && (
+              <span className={t.texto}>
+                {progresso.feitos + progresso.falharam} de {progresso.total} · enviados: {progresso.feitos}
+                {progresso.falharam ? ` · não saíram: ${progresso.falharam}` : ""}
+                {progresso.aCorrer && progresso.proximo ? ` · ${progresso.proximo}` : ""}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {comAviso && previa && (
+        <div className={`mt-4 rounded-xl border px-3 py-3 ${tema === "escuro" ? "border-slate-700" : "border-slate-200"}`}>
+          <p className={t.forte}>
+            Aviso no WhatsApp para {previa.linha.nome}
+            {previa.linha.telefone ? ` (${previa.linha.telefone})` : ""}
+          </p>
+          <p className={`mt-1 ${t.fraco}`}>Reveja e altere o texto se quiser. Só sai ao carregar em «Enviar».</p>
+          <label className="sr-only" htmlFor="texto-do-aviso-da-app">
+            Texto do aviso
+          </label>
+          <textarea
+            id="texto-do-aviso-da-app"
+            rows={12}
+            value={previa.texto}
+            onChange={(e) => setPrevia((p) => (p ? { ...p, texto: e.target.value } : p))}
+            className={`mt-2 ${t.campo} font-sans`}
+          />
+          {erroDoAviso && <p className={`mt-2 text-sm ${t.erro}`}>{erroDoAviso}</p>}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={t.botao}
+              disabled={aEnviar || !previa.texto.trim()}
+              onClick={() => void enviarAPrevia()}
+            >
+              {aEnviar ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Send className="h-4 w-4" aria-hidden="true" />
+              )}
+              Enviar
+            </button>
+            <button
+              type="button"
+              className={t.botao}
+              disabled={aEnviar}
+              onClick={() => {
+                setPrevia(null);
+                setErroDoAviso("");
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {quadro && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -312,6 +591,7 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
                 <th className="py-2 pr-3 font-semibold">Telefone</th>
                 <th className="py-2 pr-3 font-semibold">Lista da Play</th>
                 {quadro?.percursos && <th className="py-2 font-semibold">Na ligação do convite</th>}
+                {comAviso && <th className="py-2 pl-3 text-right font-semibold">Aviso</th>}
               </tr>
             </thead>
             <tbody className={t.tabela}>
@@ -370,6 +650,29 @@ export default function QuemContaParaOs12({ app, tema }: { app: AppDoTeste; tema
                             {l.percurso.aparelhos.map((a) => ROTULOS_DO_APARELHO[a]).join(" · ")} · {l.percurso.cliques} clique(s)
                             {l.percurso.cliqueEm ? ` · 1.º a ${quando(l.percurso.cliqueEm)}` : ""}
                           </div>
+                        )}
+                      </td>
+                    )}
+                    {comAviso && (
+                      <td className="py-2.5 pl-3 text-right">
+                        {estadoQueSeAvisa(l.estado) &&
+                          (podeAvisarAgora(paraOAviso(l), new Date()) ? (
+                            <button
+                              type="button"
+                              className={`ml-auto whitespace-nowrap ${t.botao}`}
+                              onClick={() => {
+                                setErroDoAviso("");
+                                setPrevia({ linha: l, texto: textoDaLinha(l) });
+                              }}
+                            >
+                              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                              Avisar no WhatsApp
+                            </button>
+                          ) : !l.avisoDaApp?.temWhatsApp ? (
+                            <span className={t.fraco}>sem telemóvel para o WhatsApp</span>
+                          ) : null)}
+                        {rotuloDoAvisado(l.avisoDaApp?.avisadoEm) && (
+                          <div className={`mt-1 whitespace-nowrap ${t.fraco}`}>{rotuloDoAvisado(l.avisoDaApp?.avisadoEm)}</div>
                         )}
                       </td>
                     )}

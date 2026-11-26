@@ -569,7 +569,13 @@ const A_REGRA_T_SE_APLICA = A_REGRA_R_SE_APLICA;
  */
 const PELO_SITE = /(?<!\p{L})(pelo|no nosso|do nosso|o nosso) site(?!\p{L})/iu;
 // d55 (17-11-2026): o texto do cancelamento é o do dono, palavra por palavra — «pelo site clyon.pt ou por aqui» é o canal.
-const A_HISTORIA = new Set(["src/app/sobre-nos/page.tsx", "src/lib/juntar-a-conta.ts", "src/lib/mensagens-das-fases.ts"]);
+// d134 (26-11-2026): o aviso da CLYON Pro é o texto do dono — «o uso da CLYON Pro pelo site» opõe o painel no navegador à app.
+const A_HISTORIA = new Set([
+  "src/app/sobre-nos/page.tsx",
+  "src/lib/juntar-a-conta.ts",
+  "src/lib/mensagens-das-fases.ts",
+  "src/lib/aviso-da-app-pro.ts",
+]);
 
 /*
  * v) A DISTÂNCIA DAS MUDANÇAS SÓ DA TABELA — d28 (parte do Site).

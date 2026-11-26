@@ -309,6 +309,8 @@ const SO_DO_ADMINISTRADOR: Array<{ seccao: SeccaoDoAssistente; rota: string; por
   // «Quem conta para os 12» (d60, 17-11-2026): nomes, emails e telefones de quem está no teste das apps.
   { seccao: "profissionais", rota: "/api/admin/quem-conta-para-os-12", porque: "quem usa a CLYON Pro, com o telefone, e a lista da Play colada são do administrador (d60, 17-11-2026)" },
   { seccao: "contas", rota: "/api/admin/quem-conta-para-os-12", porque: "quem usa a app de cliente, com o telefone, e a lista da Play colada são do administrador (d60, 17-11-2026)" },
+  { seccao: "profissionais", rota: "/api/admin/quem-conta-para-os-12/avisar", porque: "o «Avisar no WhatsApp» de quem não usa a CLYON Pro é do administrador, como o quadro (d134, 26-11-2026)" },
+  { seccao: "contas", rota: "/api/admin/quem-conta-para-os-12/avisar", porque: "o mesmo ecrã do quadro; o aviso só aparece na CLYON Pro e é do administrador (d134, 26-11-2026)" },
   { seccao: "contas", rota: "/api/admin/app-cliente-sinais", porque: "o «Algo não funciona?» da app de cliente pode trazer o email da conta; fica no Programa da app, do administrador (d108, 24-11-2026)" },
   { seccao: "configs", rota: "/api/admin/aviso-aos-profissionais", porque: "o interruptor «Mostrar o aviso do novo modelo» é do administrador, com o sim do dono (d11, 15-11-2026)" },
   { seccao: "configs", rota: "/api/admin/vitoria-seguimento/interruptor", porque: "ligar a mensagem gentil da Vitória a quem fica calado é do administrador, com o sim do dono (d25, 14-11-2026)" },

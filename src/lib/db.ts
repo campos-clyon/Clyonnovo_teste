@@ -16334,6 +16334,8 @@ export type Acontecimento =
   // O aviso a todos os profissionais (d11, 15-11-2026): versões, envio, parar, o interruptor e cada destinatário.
   | "aviso_profissionais"
   | "aviso_profissionais_destinatario"
+  // «Avisar no WhatsApp» quem não usa a CLYON Pro (d134, 26-11-2026): um por profissional, com quem enviou.
+  | "aviso_da_app_pro"
   | "fecho_perguntado"
   /*
    * O QUE O CLIENTE DISSE QUE PAGOU, na hora de dar o trabalho por feito —
