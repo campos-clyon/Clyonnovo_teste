@@ -872,7 +872,7 @@ async function cumprirADecisaoNoPedidoEmCurso(
 async function aoCandidato(telefone: string, texto: string): Promise<boolean> {
   if (!texto.trim()) return false; // só imagens
   const cand = await import("@/lib/candidato-a-parceiro");
-  const { mensagensDoNumeroWhatsApp, arquivarConversaWhatsApp } = await import("@/lib/db");
+  const { mensagensDoNumeroWhatsApp } = await import("@/lib/db");
   const fio = await mensagensDoNumeroWhatsApp(telefone, 40).catch(() => []);
   if (cand.jaRecebeuACandidatura(fio)) {
     const { soAgradece } = await import("@/lib/mesa-das-conversas");
@@ -881,12 +881,64 @@ async function aoCandidato(telefone: string, texto: string): Promise<boolean> {
     return true;
   }
   if (!cand.querSerParceiro(texto)) return false;
+  // d129c: a meio de uma recolha de um cliente, o cliente ganha; na dúvida, pergunta-se numa linha.
+  const rascunho = await rascunhoDaRecolhaEmCurso(telefone);
+  const guarda = cand.guardaDoCandidato({
+    texto,
+    passosRespondidos: cand.passosDeClienteRespondidos(rascunho),
+    perguntouADuvida: cand.perguntouADuvida(fio),
+  });
+  if (guarda === "cliente") return false;
+  if (guarda === "perguntar") {
+    await enviarTextoWhatsApp(telefone, cand.QUER_PEDIR_OU_SER_PARCEIRO);
+    return true;
+  }
+  if (guarda === "equipa") {
+    await passarAUmaPessoa(telefone, cand.MOTIVO_DA_DUVIDA_CLIENTE_OU_CANDIDATO);
+    return true;
+  }
   const zona = cand.zonaDoCandidato(fio.filter((m) => m.direccao === "in").map((m) => m.texto).concat(texto));
   await enviarTextoWhatsApp(telefone, cand.respostaAoCandidato(zona));
+  await fecharComoCandidato(telefone, rascunho);
+  return true;
+}
+
+/**
+ * O RASCUNHO DA RECOLHA EM CURSO NESTE NÚMERO (sem pedido, e ainda a valer),
+ * ou null. d129c (26-11-2026). Na dúvida, null.
+ */
+async function rascunhoDaRecolhaEmCurso(telefone: string): Promise<Record<string, unknown> | null> {
+  try {
+    const { recolhaWhatsApp } = await import("@/lib/db");
+    const g = await recolhaWhatsApp(telefone);
+    if (!g || g.pedidoId != null) return null;
+    const { rascunhoAindaVale } = await import("@/lib/conversa-parada-a-meio");
+    if (!rascunhoAindaVale(g.actualizadoEm)) return null;
+    return (g.dados ?? {}) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * O FECHO DO CANDIDATO — d129c (26-11-2026). O rascunho de um pedido NUNCA se
+ * apaga por esta leitura (uma cliente perdeu assim o pedido dela): com um
+ * rascunho no número, fica guardado e a conversa vai para a equipa com o
+ * motivo (entregue: as rotinas da recolha parada não lhe tocam); sem
+ * rascunho, fecha-se como candidato, como na d69 — arquivarConversaWhatsApp(telefone, true, { motivo: cand.MOTIVO_DO_CANDIDATO …
+ */
+async function fecharComoCandidato(telefone: string, rascunho: Record<string, unknown> | null): Promise<void> {
+  const cand = await import("@/lib/candidato-a-parceiro");
+  const { arquivarConversaWhatsApp, interromperNumeroWhatsApp } = await import("@/lib/db");
+  if (rascunho) {
+    await interromperNumeroWhatsApp(telefone, cand.MOTIVO_DO_CANDIDATO_COM_RASCUNHO).catch((e) =>
+      console.error("[whatsapp] o candidato com rascunho não passou à equipa:", e),
+    );
+    return;
+  }
   await arquivarConversaWhatsApp(telefone, true, { motivo: cand.MOTIVO_DO_CANDIDATO, porQuem: "vitoria" }).catch((e) =>
     console.error("[whatsapp] o candidato não saiu da fila:", e),
   );
-  return true;
 }
 
 /**
@@ -894,8 +946,8 @@ async function aoCandidato(telefone: string, texto: string): Promise<boolean> {
  * a conversa (`vitoria-agente/intencao.ts`): o cliente segue para a recolha de
  * sempre; o candidato a parceiro recebe a candidatura (escrita pelo modelo, com
  * a ligação posta pelo código) e a conversa fecha-se como «candidato a
- * parceiro» (vai para os «Profissionais» da Mesa), sem pedido e sem o
- * rascunho; a dúvida responde-se e a pergunta do fluxo volta; a queixa e o
+ * parceiro» (vai para os «Profissionais» da Mesa), sem pedido — e, desde a
+ * d129c, o rascunho nunca se apaga: com ele, a conversa vai à equipa; a dúvida responde-se e a pergunta do fluxo volta; a queixa e o
  * resto passam a uma pessoa. Devolve true quando tratou a mensagem.
  */
 async function aIntencaoAntesDaRecolha(telefone: string, texto: string): Promise<boolean> {
@@ -906,14 +958,9 @@ async function aIntencaoAntesDaRecolha(telefone: string, texto: string): Promise
     case "regras":
       return false;
     case "candidato": {
-      const cand = await import("@/lib/candidato-a-parceiro");
-      const { arquivarConversaWhatsApp, apagarRecolhaWhatsApp } = await import("@/lib/db");
       await enviarTextoWhatsApp(telefone, decisao.texto);
-      // Não é um cliente: o rascunho da recolha sai, e nunca se cria pedido.
-      await apagarRecolhaWhatsApp(telefone).catch((e) => console.error("[whatsapp] o rascunho do candidato não saiu:", e));
-      await arquivarConversaWhatsApp(telefone, true, { motivo: cand.MOTIVO_DO_CANDIDATO, porQuem: "vitoria" }).catch((e) =>
-        console.error("[whatsapp] o candidato não saiu da fila:", e),
-      );
+      // d129c: o rascunho NUNCA se apaga por esta leitura — com rascunho, a equipa vê; sem ele, fecha-se como candidato.
+      await fecharComoCandidato(telefone, await rascunhoDaRecolhaEmCurso(telefone));
       return true;
     }
     case "responder":

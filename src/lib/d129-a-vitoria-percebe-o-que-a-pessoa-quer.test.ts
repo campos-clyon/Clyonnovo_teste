@@ -264,14 +264,16 @@ describe("a Mesa: o candidato vai para os «Profissionais»", () => {
     expect(contarNaMesa([l]).profissionais).toBe(0); // resolvida: está lá, mas não por responder
   });
 
-  it("o caminho na conversa: a leitura antes do fluxo, a candidatura, o rascunho apagado e o fecho como candidato", () => {
+  it("o caminho na conversa: a leitura antes do fluxo, a candidatura e o fecho como candidato (o rascunho fica, d129c)", () => {
     const neg = ler("src/lib/whatsapp-negociacao.ts");
     const i = neg.indexOf("if (await aIntencaoAntesDaRecolha(telefone, conteudo.texto)) return;");
     expect(i).toBeGreaterThan(0);
     expect(i).toBeLessThan(neg.indexOf("if (await aoCandidato(telefone, conteudo.texto)) return;"));
     const corpo = neg.slice(neg.indexOf("async function aIntencaoAntesDaRecolha"), neg.indexOf("O VALOR ÚNICO, DECIDIDO"));
-    expect(corpo).toContain("apagarRecolhaWhatsApp(telefone)");
-    expect(corpo).toContain("MOTIVO_DO_CANDIDATO");
+    // d129c: o rascunho nunca se apaga por esta leitura; o fecho é o fecharComoCandidato (com rascunho, a equipa).
+    expect(corpo).not.toContain("apagarRecolhaWhatsApp");
+    expect(corpo).toContain("fecharComoCandidato(telefone");
+    expect(neg).toContain("MOTIVO_DO_CANDIDATO");
     expect(corpo).not.toContain("registarARecolha");
   });
 });
