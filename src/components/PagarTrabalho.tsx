@@ -732,7 +732,7 @@ function DadosDaTransferencia({
   copiar: (texto: string, qual: string) => Promise<void>;
 }) {
   const linhas = [
-    { chave: "iban", rotulo: IBAN, valor: t.iban, copia: t.iban.replace(/s+/g, "") },
+    { chave: "iban", rotulo: IBAN, valor: t.iban, copia: t.iban.replace(/\s+/g, "") },
     { chave: "titular", rotulo: TITULAR, valor: t.titular, copia: null },
     { chave: "valor", rotulo: TOTAL_A_PAGAR, valor: valorDaTransferencia(t.valor, t.valorSemIva), copia: t.valor.toFixed(2).replace(".", ",") },
     { chave: "descritivo", rotulo: DESCRITIVO, valor: t.descritivo, copia: t.descritivo },

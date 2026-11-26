@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AddressData, AddressStatus, DistanceFromBase, DistanceStatus } from "../types";
 import { useLocation } from "@/contexts/LocationContext";
 import { useGooglePlaces, type PlacePrediction } from "@/hooks/useGooglePlaces";
+import { linhaDaMoradaEscolhida } from "@/lib/morada-escolhida";
 
 // A lista de sugestões trabalha diretamente com as predictions do hook.
 type AddressSuggestion = PlacePrediction;
@@ -36,6 +37,8 @@ export default function AddressAutocomplete({
   const [loading, setLoading] = useState(false);
   const [addressStatus, setAddressStatus] = useState<AddressStatus>("empty");
   const [selectedAddress, setSelectedAddress] = useState<AddressData | null>(null);
+  /* d128b: a medida da estrada (Google) quando chega; antes, a linha recta com folga. */
+  const [kmDaEstrada, setKmDaEstrada] = useState<number | null>(null);
 
   // ── Fechar dropdown ao clicar fora ──────────────────────────────────────
   useEffect(() => {
@@ -86,6 +89,7 @@ export default function AddressAutocomplete({
     if (addressStatus === "selected" || addressStatus === "manual_confirmed") {
       setAddressStatus("typing");
       setSelectedAddress(null);
+      setKmDaEstrada(null);
     } else {
       setAddressStatus(v.length > 0 ? "typing" : "empty");
     }
@@ -130,6 +134,7 @@ export default function AddressAutocomplete({
     const label = addressData.formattedAddress || suggestion.mainText;
 
     onChange(label);
+    setKmDaEstrada(null);
     setSelectedAddress(addressData);
     setAddressStatus("selected");
 
@@ -163,6 +168,9 @@ export default function AddressAutocomplete({
       if (res.ok && data.ok) {
         // Sucesso
         console.log("[v0] Distance calculated:", { distanceKm: data.distanceKm, duration: data.durationText });
+        if (typeof data.distanceKm === "number" && (data.durationSeconds != null || data.distanceMeters != null)) {
+          setKmDaEstrada(data.distanceKm);
+        }
         if (typeof onDistanceCalculated === "function") {
           onDistanceCalculated({
             distanceMeters: data.distanceMeters,
@@ -239,6 +247,19 @@ export default function AddressAutocomplete({
           ))}
         </div>
       )}
+
+      {/*
+        d128b: a localidade e a distância a Lisboa da morada escolhida, para o
+        cliente ver se escolheu a certa («Felgueiras · 407 km de Lisboa»).
+      */}
+      {addressStatus === "selected" && selectedAddress && (() => {
+        const linha = linhaDaMoradaEscolhida({ ...selectedAddress, kmDaEstrada });
+        return linha ? (
+          <p className="mt-1.5 px-1 text-sm text-slate-600" data-morada-escolhida>
+            {linha}
+          </p>
+        ) : null;
+      })()}
 
       {/* Mensagem se não houver resultados */}
       {showDropdown && suggestions.length === 0 && !loading && value.trim().length >= 3 && (

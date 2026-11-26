@@ -64,14 +64,18 @@ export async function GET(req: NextRequest) {
    * lista aparece na mesma sem a coluna: uma fase em falta não pode esconder
    * os pedidos.
    */
+  // d123 na lista antiga: «Propostas por enviar» até sair mesmo, pela regra da Mesa.
+  const etiquetasDaFase: Record<number, string> = {};
   const categorias = await categoriasDosPedidos(
     (orders as Array<{ id: number }>).map((o) => Number(o.id)),
+    etiquetasDaFase,
   ).catch(() => ({}));
 
   return NextResponse.json({
     orders: sanitizeOrders(orders),
     counts,
     categorias,
+    etiquetasDaFase,
     role: "admin_geral",
   });
 }

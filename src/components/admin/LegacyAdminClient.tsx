@@ -886,6 +886,8 @@ export default function ColaboradorAdminClient({
    * "orcamento enviado" sobre um pedido que ja foi pago.
    */
   const [pedidoCategorias, setPedidoCategorias] = useState<Record<string, string>>({});
+  /* d123: «Propostas por enviar» enquanto nada foi ao cliente — a conta vem da API, pela regra da Mesa. */
+  const [etiquetasDaFase, setEtiquetasDaFase] = useState<Record<string, string>>({});
   const [pedidosLoading, setPedidosLoading] = useState(false);
   const [pedidosError, setPedidosError] = useState<string | null>(null);
   // Abre nos novos: o que ninguém viu ainda é o que precisa de atenção
@@ -1278,7 +1280,7 @@ export default function ColaboradorAdminClient({
       setPedidos(safeOrders);
       setPedidosCounts(data.counts ?? {});
       setPedidoCategorias(data.categorias ?? {});
-      setPedidoCategorias(data.categorias ?? {});
+      setEtiquetasDaFase(data.etiquetasDaFase ?? {});
     } catch {
       if (!silent) setPedidosError("Não foi possível carregar os pedidos.");
     } finally {
@@ -2629,7 +2631,9 @@ export default function ColaboradorAdminClient({
                                   // enviado» parte-se ao meio dentro da pílula
                                   // e o que se vê é um botão deformado.
                                   <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-px text-[10px] font-semibold ${CORES_DA_CATEGORIA[pedidoCategorias[String(p.id)]] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
-                                    {ETIQUETA_DA_CATEGORIA[pedidoCategorias[String(p.id)] as CategoriaDoPedido] ?? pedidoCategorias[String(p.id)]}
+                                    {etiquetasDaFase[String(p.id)] ??
+                                      ETIQUETA_DA_CATEGORIA[pedidoCategorias[String(p.id)] as CategoriaDoPedido] ??
+                                      pedidoCategorias[String(p.id)]}
                                   </span>
                                 ) : (
                                   <span className="text-xs text-slate-400">—</span>

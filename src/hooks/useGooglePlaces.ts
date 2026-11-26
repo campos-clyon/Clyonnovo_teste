@@ -25,6 +25,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { rectanguloDaZona } from "@/lib/morada-escolhida";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos públicos
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,6 +92,15 @@ const CLIENT_KEY = (
 const COUNTRY = "pt";
 /** "geocode" = ruas + localidades/cidades, sem estabelecimentos (hotéis, bares…). */
 const AUTOCOMPLETE_TYPES: string[] = ["geocode"];
+/**
+ * d128b: a zona de trabalho como preferência da pesquisa (o rectângulo do
+ * círculo de 200 km da base). No servidor (`/api/maps/autocomplete`) usa-se o
+ * limite das Configs; aqui, no navegador, o por omissão.
+ */
+const ZONA_DE_PREFERENCIA = (() => {
+  const r = rectanguloDaZona();
+  return { south: r.sul, west: r.oeste, north: r.norte, east: r.este };
+})();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Loader singleton do SDK (injeta o <script> uma única vez)
@@ -261,6 +272,8 @@ async function sdkSearch(
     sessionToken: currentToken(g),
     componentRestrictions: { country: COUNTRY },
     types: AUTOCOMPLETE_TYPES,
+    // d128b: preferência à zona de trabalho (200 km da base), sem excluir o resto.
+    locationBias: ZONA_DE_PREFERENCIA,
   }));
   return (response.predictions ?? []).map((p) => ({
     placeId: p.place_id,

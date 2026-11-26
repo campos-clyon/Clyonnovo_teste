@@ -19314,9 +19314,15 @@ async function telefoneDoPedido(pedidoId: number): Promise<string | null> {
  *
  * Devolve um mapa por id. Um pedido sem linha no mapa é um pedido sem
  * negociações, e quem lê trata-o como tal.
+ *
+ * d123 na lista antiga (26-11-2026): com `etiquetas`, põe nele a etiqueta da
+ * fase quando as propostas ainda não foram ao cliente («Propostas por enviar»),
+ * pela mesma regra da Mesa (`etiquetaDasPropostasPorEnviar`).
  */
 export async function categoriasDosPedidos(
   ids: number[],
+  etiquetas?: Record<number, string>,
+  agora: Date = new Date(),
 ): Promise<Record<number, string>> {
   const limpos = ids.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n > 0);
   if (limpos.length === 0) return {};
@@ -19326,21 +19332,37 @@ export async function categoriasDosPedidos(
   if (!pool) return {};
 
   const { categoriaDoPedido } = await import("@/lib/assistente-categorias");
+  const { etiquetaDasPropostasPorEnviar } = await import("@/lib/do-nosso-lado");
 
   const [linhas] = (await pool.execute(
-    `SELECT o.id, o.status,
-            n.estado, n.propostasJson, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm
+    `SELECT o.id, o.status, o.contactEmail, o.propostaEnviadaEm,
+            COALESCE(
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.origemPedido')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$._source')),
+              JSON_UNQUOTE(JSON_EXTRACT(o.rawOrderJson, '$.source'))
+            ) AS origem,
+            n.estado, n.propostasJson, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
+            n.updatedAt AS actualizadaEm
        FROM simulatorOrders o
        LEFT JOIN negociacoes n ON n.pedidoId = o.id
       WHERE o.id IN (${limpos.map(() => "?").join(",")})`,
     limpos,
   )) as [Array<Record<string, unknown>>, unknown];
 
-  const porPedido = new Map<number, { status: string | null; negociacoes: any[] }>();
+  const porPedido = new Map<
+    number,
+    { status: string | null; origem: string | null; contactEmail: string | null; propostaEnviadaEm: Date | null; negociacoes: any[] }
+  >();
   for (const l of linhas) {
     const id = Number(l.id);
     if (!porPedido.has(id)) {
-      porPedido.set(id, { status: (l.status as string) ?? null, negociacoes: [] });
+      porPedido.set(id, {
+        status: (l.status as string) ?? null,
+        origem: (l.origem as string) ?? null,
+        contactEmail: (l.contactEmail as string) ?? null,
+        propostaEnviadaEm: (l.propostaEnviadaEm as Date) ?? null,
+        negociacoes: [],
+      });
     }
     // O LEFT JOIN devolve uma linha com as colunas da negociação a null quando
     // o pedido não tem nenhuma. Essa linha não é uma negociação vazia — é a
@@ -19353,11 +19375,18 @@ export async function categoriasDosPedidos(
       execucaoEnviadaEm: (l.execucaoEnviadaEm as Date) ?? null,
       confirmadoEm: (l.confirmadoEm as Date) ?? null,
       pagoEm: (l.pagoEm as Date) ?? null,
+      actualizadaEm: (l.actualizadaEm as Date) ?? null,
     });
   }
 
   const r: Record<number, string> = {};
-  for (const [id, p] of porPedido) r[id] = categoriaDoPedido(p);
+  for (const [id, p] of porPedido) {
+    r[id] = categoriaDoPedido(p);
+    if (etiquetas) {
+      const e = etiquetaDasPropostasPorEnviar(r[id], { id, ...p } as never, agora);
+      if (e) etiquetas[id] = e;
+    }
+  }
   return r;
 }
 

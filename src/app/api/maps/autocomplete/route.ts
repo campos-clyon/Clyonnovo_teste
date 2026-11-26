@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getMapsApiKey } from "@/lib/maps-config";
 import { limitarRotaPublica } from "@/lib/limite-rota-publica";
+import { baseDaZona, limiteDaZonaKm } from "@/lib/fora-da-zona-na-base";
+import { locationbiasDaZona } from "@/lib/morada-escolhida";
 
 export const revalidate = 0;
 
@@ -34,19 +36,38 @@ export async function POST(request: NextRequest) {
     key,
   });
 
-  const response = await fetch(
-    `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params.toString()}`,
-    { cache: "no-store" },
-  );
+  /*
+   * d128b (26-11-2026): preferência à zona de trabalho (o limite das Configs à
+   * volta da base) — preferência, não restrição: o resto do país continua a
+   * aparecer. Se o Google recusar o parâmetro, pesquisa-se sem ele: uma
+   * preferência nunca pode deixar o cliente sem moradas.
+   */
+  let zona: string | null = null;
+  try {
+    zona = locationbiasDaZona(await limiteDaZonaKm(), baseDaZona());
+  } catch {
+    zona = null;
+  }
+  const pedir = (comZona: boolean) => {
+    const p = new URLSearchParams(params);
+    if (comZona && zona) p.set("locationbias", zona);
+    return fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?${p.toString()}`, { cache: "no-store" });
+  };
 
-  if (!response.ok) {
+  let response = await pedir(true);
+  let data = response.ok ? await response.json() : null;
+  if (zona && (!response.ok || data?.status === "INVALID_REQUEST")) {
+    console.warn("[maps/autocomplete] locationbias recusado — pesquisa sem a zona", data?.status ?? response.status);
+    response = await pedir(false);
+    data = response.ok ? await response.json() : null;
+  }
+
+  if (!response.ok || !data) {
     return NextResponse.json(
       { error: "autocomplete_unavailable" },
       { status: 502 },
     );
   }
-
-  const data = await response.json();
 
   if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
     /*
