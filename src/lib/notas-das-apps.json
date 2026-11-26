@@ -3,7 +3,9 @@
     {
       "id": "pro-2026-11-24",
       "nota": "O pagamento do cliente fica registado no trabalho: «Sim, recebi» ou «Ainda não recebi».\nNo Início, o cliente pergunta se consegue uma condição («até quinta»): responda Sim, com o quando, ou Não.",
-      "updates": []
+      "updates": [
+        "01a217c9-c3f7-74b4-9df5-eb8b6947b51d"
+      ]
     },
     {
       "id": "pro-2026-11-23",
