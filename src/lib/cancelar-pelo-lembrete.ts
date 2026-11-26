@@ -201,7 +201,7 @@ export async function cancelarPeloLembreteComum(
     /** O que a rotina faz quando desfaz a reserva (a d71 pára o ciclo). */
     aoDesfazer?: (porque: string) => Promise<void>;
   },
-): Promise<{ ok: true; encerradas: number } | { ok: false; porque: string }> {
+): Promise<{ ok: true; encerradas: number } | { ok: false; porque: string; daEquipa?: boolean }> {
   const agora = f.agoraSql;
   const comPergunta =
     f.confirmacao === "pergunta"
@@ -237,7 +237,8 @@ export async function cancelarPeloLembreteComum(
     }));
     if (!d.ok) {
       await desfazer(d.porque);
-      return { ok: false, porque: d.porque };
+      // d126: «daEquipa» — fica com a equipa por uma das excepções (dinheiro, acordo, data); quem chama diz porquê ao cliente.
+      return { ok: false, porque: d.porque, daEquipa: d.daEquipa };
     }
     return { ok: true, encerradas: d.encerradas };
   }

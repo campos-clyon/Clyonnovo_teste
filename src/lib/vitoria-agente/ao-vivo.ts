@@ -34,6 +34,7 @@
  */
 
 import { MENSAGEM_DE_PASSAR_A_UMA_PESSOA } from "../voz-da-vitoria";
+import { passoOCancelamentoAEquipa } from "../cancelar-pelo-cliente";
 import type { ResultadoDoAgente } from "./cliente";
 import { pendenteEmPalavras, respostaAoPendente, type Pendente, type PerguntaAoParceiro } from "./pendentes";
 import { emEuros, motivoParaNaoFecharNoSim, type FechoProposto, type PropostaDoAgente } from "./propostas-do-agente";
@@ -91,7 +92,8 @@ export type DependenciasAoVivo = {
   propostasParaEscolher: (pedidoId: number) => Promise<PropostaDoAgente[]>;
   /** O fecho de sempre, como o botão «Contratar» (ct:pedido:negociação). */
   fecharPeloBotao: (pedidoId: number, negociacaoId: number) => Promise<void>;
-  cancelarPeloCancelar: (pedidoId: number) => Promise<{ ok: true } | { ok: false; porque: string }>;
+  /** `daEquipa`: fica com a equipa por uma das excepções (dinheiro, acordo, data) — a mensagem diz porquê (d126). */
+  cancelarPeloCancelar: (pedidoId: number) => Promise<{ ok: true } | { ok: false; porque: string; daEquipa?: boolean }>;
   marcarPerguntaDoCancelar: (pedidoId: number) => Promise<void>;
   /** d97: `nota` é o que o agente tem de saber deste turno (um fecho que estava à espera do SIM). */
   correrOAgente: (prazoMs: number, nota?: string) => Promise<ResultadoDoAgente>;
@@ -172,7 +174,11 @@ export async function responderAoVivo(conteudo: ConteudoDaRajada, deps: Dependen
         const c = await deps.cancelarPeloCancelar(p.pedidoId);
         await deps.acabarPendente(p, c.ok ? "cancelado pelo CANCELAR" : `não cancelou: ${c.porque}`);
         if (!c.ok) {
-          await deps.passarAEquipa(`Pedido #${p.pedidoId}: respondeu CANCELAR à Vitória, mas ${c.porque} — cancelar à mão`, MENSAGEM_DE_PASSAR_A_UMA_PESSOA);
+          // d126: pelas excepções (dinheiro, acordo, data), o cliente ouve porquê; o motivo fica no cartão da conversa.
+          await deps.passarAEquipa(
+            `Pedido #${p.pedidoId}: respondeu CANCELAR à Vitória, mas ${c.porque} — ${c.daEquipa ? "tratar à mão" : "cancelar à mão"}`,
+            c.daEquipa ? passoOCancelamentoAEquipa(p.pedidoId, c.porque) : MENSAGEM_DE_PASSAR_A_UMA_PESSOA,
+          );
         }
         await deps.registar({
           estado: "vivo_codigo",

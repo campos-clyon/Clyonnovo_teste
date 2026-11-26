@@ -167,8 +167,21 @@ export async function marcarPerguntaDoCancelar(pedidoId: number, telefone: strin
   await appendOrderHistory(pedidoId, { type: "note", by: null, message: FONTE_DO_CANCELAR_DO_AGENTE.notaDaPergunta }).catch(() => {});
 }
 
-/** O CANCELAR do cliente: cancela pelo caminho único, se o pedido ainda pode (sem contrato, sem data, deste telefone). */
-export async function cancelarPeloCancelarDoAgente(pedidoId: number, telefone: string): Promise<{ ok: true } | { ok: false; porque: string }> {
+/**
+ * O CANCELAR do cliente: cancela pelo caminho único (`cancelarEApagarNaHora`,
+ * o da d93/d126), se o pedido é deste telefone. As excepções — o dinheiro, o
+ * acordo, a data marcada — são as de `porqueFicaComAEquipa`, lidas lá, e
+ * voltam com `daEquipa` (quem chama diz porquê ao cliente).
+ *
+ * d126, continuação (26-11-2026): um Trabalho CLYON com parceiros que só ACEITARAM (sem
+ * contratado, pagamento nem data) cancela-se como os outros, e os parceiros
+ * são avisados como no cancelamento dos Trabalhos CLYON. Antes, «é um Trabalho
+ * CLYON» passava a conversa à equipa e nada se cancelava (o caso do 26/11).
+ */
+export async function cancelarPeloCancelarDoAgente(
+  pedidoId: number,
+  telefone: string,
+): Promise<{ ok: true } | { ok: false; porque: string; daEquipa?: boolean }> {
   const pool = await poolDosCancelamentos();
   const { cancelarPeloLembreteComum } = await import("../cancelar-pelo-lembrete");
   const r = await cancelarPeloLembreteComum(FONTE_DO_CANCELAR_DO_AGENTE, pool, pedidoId, telefone, {
@@ -176,13 +189,10 @@ export async function cancelarPeloCancelarDoAgente(pedidoId: number, telefone: s
       const db = await import("../db");
       const { pedidosDoTelefone } = await import("../whatsapp-negociacao");
       if (!(await pedidosDoTelefone(telefone)).includes(pedidoId)) return { porque: "o pedido não é deste telefone" };
-      const p = (await db.getSimulatorOrderById(pedidoId)) as { status?: string | null; dataAgendada?: unknown; serviceType?: string | null; city?: string | null } | undefined;
+      const p = (await db.getSimulatorOrderById(pedidoId)) as { status?: string | null; serviceType?: string | null; city?: string | null } | undefined;
       if (!p) return { porque: "pedido não encontrado" };
       if (/cancel|conclu|complet/i.test(String(p.status ?? ""))) return { porque: `o pedido está ${p.status}` };
-      if (p.dataAgendada) return { porque: "o pedido já tem data marcada" };
-      const linhas = await db.negociacoesDoPedido(pedidoId);
-      if (linhas.some((n) => n.estado === "acordada")) return { porque: "o pedido já está contratado" };
-      if (linhas.some((n) => (n as { ofertaClyon?: unknown }).ofertaClyon)) return { porque: "é um Trabalho CLYON" };
+      // O contratado, a data, o pago, a referência viva e o faturado: as regras de sempre, no caminho único.
       return { eClyon: false, servico: p.serviceType ?? null, localidade: p.city ?? null };
     },
   });
