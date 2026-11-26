@@ -3,7 +3,9 @@
     {
       "id": "pro-2026-11-26",
       "nota": "Novo serviço «Montagem de móveis»: marque-o em Serviços para receber pedidos de montar e desmontar móveis, roupeiros e camas.\nNos pedidos de montagem vê as peças e os extras que o cliente pediu.",
-      "updates": []
+      "updates": [
+        "01a2186b-5314-7aac-a0a8-e4f62f2ab451"
+      ]
     },
     {
       "id": "pro-2026-11-24",
