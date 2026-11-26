@@ -167,6 +167,7 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
 import { contaDaLinha } from "@/lib/conta-do-pagamento";
 import RegistarPedido, { type Alcance } from "./RegistarPedido";
+import TirarAEmpresa from "./TirarAEmpresa";
 import { FormularioDaOferta } from "./FormularioDaOferta";
 import {
   TrabalhoClyonComAccoes,
@@ -3359,6 +3360,18 @@ export default function AdminNegociacoesPanel({
                 actualProviderId={acordada.providerId}
                 actualNome={acordada.profissionalNome}
                 onMudou={() => carregar(true)}
+              />
+            )}
+            {/* d137: contratado e ainda por fazer, sem dinheiro — tirá-lo e reabrir as propostas dos outros (o servidor confirma o dinheiro). */}
+            {!concluido && !acordada.confirmadoEm && !acordada.execucaoEnviadaEm && !acordada.pagoEm && (
+              <TirarAEmpresa
+                pedidoId={p.id}
+                empresa={acordada.profissionalNome}
+                onde="mesa"
+                onFeito={(r) => {
+                  setAviso(r.diaPassou ? `${r.feito} O dia combinado já passou: combine o dia novo com o cliente e com quem ele escolher.` : r.feito);
+                  carregar(true);
+                }}
               />
             )}
             {/* Num trabalho à hora, sem a folha não se dá por feito (d26, 15-11-2026). */}

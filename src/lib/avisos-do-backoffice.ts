@@ -1,3 +1,4 @@
+import { avisoATirada } from "./tirar-a-empresa";
 import { sendPushToUser } from "./webpush";
 import { urlDeAccao } from "./url-do-site";
 import { avisarOClienteDoPedido, type TipoDeAvisoAoCliente } from "./avisos-ao-cliente";
@@ -21,6 +22,8 @@ export type TipoDeAvisoAoProfissional =
   | "pedido_mudou"
   | "pago_antes"
   | "passou_para_si"
+  // d137: a equipa tirou-lhe o trabalho (atribuído, ainda por fazer).
+  | "trabalho_retirado"
   // As horas de um trabalho por hora (31-10-2026).
   | "horas_confirmadas"
   | "horas_confirmadas_pela_clyon"
@@ -43,6 +46,12 @@ export function avisoAoProfissional(tipo: TipoDeAvisoAoProfissional, pedidoId: n
       return { title: `O #${id} mudou`, body: `A CLYON mudou o pedido #${id}. Toque para ver antes de propor.` };
     case "passou_para_si":
       return { title: `O #${id} passou para si`, body: `A CLYON passou-lhe o trabalho do #${id}. Toque para ver a morada e combinar o dia.` };
+    case "trabalho_retirado":
+    {
+      // O mesmo texto do WhatsApp (d137, `tirar-a-empresa.ts`).
+      const a = avisoATirada(id);
+      return { title: a.title, body: a.body };
+    }
     case "horas_confirmadas":
       return { title: "Horas confirmadas", body: `O cliente confirmou as horas do #${id}. Já pode concluir o trabalho.` };
     case "horas_confirmadas_pela_clyon":

@@ -266,6 +266,8 @@ export type NegociacaoDaOferta = {
   execucaoEnviadaEm: string | null;
   confirmadoEm: string | null;
   pagoEm: string | null;
+  /** d137: a empresa foi tirada do trabalho (`tirar-a-empresa.ts`) — não conta como recusa. */
+  retiradaEm?: string | null;
 };
 
 export type FaseDaOferta =
@@ -317,7 +319,14 @@ export function resumoDaOferta(
   } else if (interessados.length > 0) {
     fase = "escolher";
   } else if (enviados > 0 && negociacoes.every((n) => n.estado === "desistida" || n.estado === "morta")) {
-    fase = "sem_ninguem";
+    /*
+     * d137: com a empresa tirada e ninguém a ter recusado, o trabalho está «à
+     * espera» do caminho que a equipa escolher (voltar a oferecer, ou passar a
+     * negociação) — quem ficou de fora quando ela foi escolhida não recusou.
+     */
+    const tirada = negociacoes.some((n) => n.retiradaEm != null);
+    const recusaramMesmo = negociacoes.some((n) => n.estado === "desistida" && n.retiradaEm == null);
+    fase = tirada && !recusaramMesmo ? "a_espera" : "sem_ninguem";
   } else {
     fase = "a_espera";
   }

@@ -1593,7 +1593,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 27;
+const VERSAO_DAS_NEGOCIACOES = 28;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1947,6 +1947,13 @@ export async function ensureNegociacoesTable(): Promise<void> {
     `ALTER TABLE negociacoes ADD COLUMN formaDita VARCHAR(20) NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN parceiroConfirmouEm DATETIME NULL DEFAULT NULL`,
     `ALTER TABLE negociacoes ADD COLUMN parceiroNegouEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v28 (26-11-2026, d137) — A EMPRESA TIRADA DO TRABALHO (`tirar-a-empresa.ts`):
+     * quando a equipa a tirou de um trabalho atribuído e ainda por fazer. A
+     * negociação fica «morta»; com esta data não volta no «Voltar a oferecer a
+     * todos» nem na distribuição (só escolhida à mão). Nula = nunca foi tirada.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN retiradaEm DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -3751,7 +3758,7 @@ export async function voltarAOferecerTrabalhoClyon(
       return { ok: false, porque: "arrumado" };
     }
     const [negs] = (await conn.execute(
-      `SELECT n.id, n.providerId, n.estado, n.estadoAntesDeCancelar, n.ofertaClyon,
+      `SELECT n.id, n.providerId, n.estado, n.estadoAntesDeCancelar, n.ofertaClyon, n.retiradaEm,
               pr.name AS profissional, pr.phone AS telefone, COALESCE(pr.whatsappAvisos, 0) AS whatsappAvisos
          FROM negociacoes n
          JOIN providers pr ON pr.id = n.providerId
@@ -3765,6 +3772,7 @@ export async function voltarAOferecerTrabalhoClyon(
         estado: string;
         estadoAntesDeCancelar: string | null;
         ofertaClyon: string | null;
+        retiradaEm: Date | null;
         profissional: string | null;
         telefone: string | null;
         whatsappAvisos: number;
@@ -3777,7 +3785,10 @@ export async function voltarAOferecerTrabalhoClyon(
     }
     const recusou = (n: { estado: string; estadoAntesDeCancelar: string | null }) =>
       n.estado === "desistida" || (n.estado === "morta" && n.estadoAntesDeCancelar == null);
-    const alvos = negs.filter((n) => recusou(n) && (negociacaoId == null || Number(n.id) === negociacaoId));
+    // d137: a empresa tirada do trabalho não volta no «a todos» — só escolhida à mão.
+    const alvos = negs.filter((n) =>
+      negociacaoId == null ? recusou(n) && n.retiradaEm == null : recusou(n) && Number(n.id) === negociacaoId,
+    );
     if (alvos.length === 0) {
       await conn.rollback();
       return { ok: false, porque: "ninguem" };
@@ -3789,7 +3800,7 @@ export async function voltarAOferecerTrabalhoClyon(
       await conn.execute(
         `UPDATE negociacoes
             SET estado = 'aberta', valorAcordado = NULL, propostasJson = ?, atribuidaEm = NULL,
-                ofertaClyon = ?
+                ofertaClyon = ?, retiradaEm = NULL
           WHERE id = ?`,
         [propostas, n.ofertaClyon ?? "distribuida", n.id],
       );
@@ -4384,6 +4395,8 @@ export type OfertaClyonNaBase = {
     clientePagouEm: Date | null;
     /** d82: passado pelo administrador ao caminho em que o cliente paga à CLYON. */
     clientePagaAClyon: { em: Date | null; por: string | null; motivo: string | null } | null;
+    /** d137: quando a equipa tirou esta empresa do trabalho; nula = nunca. */
+    retiradaEm?: Date | null;
   }>;
 };
 
@@ -4780,7 +4793,7 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
             n.dataCombinada, n.atribuidaEm, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
             n.provaJson, n.estrelas, n.comentario, n.avaliadoEm, n.semFactura,
             n.clientePagaAClyonEm, n.clientePagaAClyonPor, n.clientePagaAClyonMotivo,
-            n.updatedAt AS actualizadaEm
+            n.updatedAt AS actualizadaEm, n.retiradaEm
        FROM negociacoes n
        JOIN providers p ON p.id = n.providerId
       WHERE n.pedidoId IN (${ids.map(() => "?").join(",")})
@@ -4818,6 +4831,8 @@ export async function ofertasClyon(limite = 100): Promise<OfertaClyonNaBase[]> {
     if (!porPedido.has(k)) porPedido.set(k, []);
     porPedido.get(k)!.push({
       clientePagouEm: pagouEm.get(Number(n.id)) ?? null,
+      // d137: a empresa tirada do trabalho.
+      retiradaEm: data(n.retiradaEm),
       negociacaoId: Number(n.id),
       providerId: Number(n.providerId),
       profissional: String(n.profissional ?? ""),
@@ -16420,6 +16435,8 @@ export type Acontecimento =
   | "pedido_email_mudado"
   /* O trabalho fechado passou para outro profissional. Ver `passarOTrabalhoAOutroProfissional`. */
   | "profissional_trocado"
+  /* d137: a equipa tirou a empresa de um trabalho atribuído e ainda por fazer. Ver `tirar-a-empresa.ts`. */
+  | "profissional_retirado"
   /*
    * ALGUÉM MUDOU A COMISSÃO DA CLYON.
    *

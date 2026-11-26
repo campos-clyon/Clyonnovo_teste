@@ -71,6 +71,8 @@ import type { CorDoProfissional } from "@/lib/cores-dos-profissionais";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
+import TirarAEmpresa from "@/components/admin/TirarAEmpresa";
+import { empresaTiradaSemOferta } from "@/lib/tirar-a-empresa";
 import PedidoDetailModal from "@/components/admin/PedidoDetailModal";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
@@ -113,6 +115,8 @@ type NegociacaoDoTrabalho = {
   negociacaoId: number;
   providerId: number;
   profissional: string;
+  /** d137: a equipa tirou esta empresa do trabalho — não conta como recusa. */
+  retiradaEm?: string | null;
   /** O telefone e quem responde pela empresa — para a adjudicação ao cliente (22-10-2026). */
   telefone?: string | null;
   responsavel?: string | null;
@@ -347,6 +351,13 @@ function ondeEstaABola(t: TrabalhoClyon): string {
   if (t.estadoDoPedido === "arquivado") return "Arquivado.";
   switch (r.fase) {
     case "a_espera":
+      // d137: a empresa saiu e ainda ninguém o tem em aberto — a vez é de quem escolhe o caminho.
+      if (empresaTiradaSemOferta(t)) {
+        return (
+          "A empresa saiu do trabalho — volte a oferecer a todos (o mesmo valor fixo) ou passe a negociação" +
+          (t.precoAceiteEm ? ` · o cliente aceitou o preço ${quando(t.precoAceiteEm)}` : "")
+        );
+      }
       return (
         `Oferecido a ${r.enviados} ${r.enviados === 1 ? "profissional" : "profissionais"} — à espera que alguém aceite` +
         (r.recusaram > 0 ? ` · ${r.recusaram} ${r.recusaram === 1 ? "recusou" : "recusaram"}` : "") +
@@ -765,7 +776,13 @@ export function TrabalhoClyonComAccoes({
    * abrir a ficha com o histórico.
    */
   const reoferecer = (negociacaoId: number | null) => {
-    const quem = negociacaoId == null ? "a todos os que recusaram" : `a ${t.negociacoes.find((n) => n.negociacaoId === negociacaoId)?.profissional ?? "esse profissional"}`;
+    const tirada = t.negociacoes.some((n) => n.retiradaEm);
+    const quem =
+      negociacaoId == null
+        ? tirada
+          ? "a todos (a empresa tirada fica de fora)"
+          : "a todos os que recusaram"
+        : `a ${t.negociacoes.find((n) => n.negociacaoId === negociacaoId)?.profissional ?? "esse profissional"}`;
     if (!window.confirm(`Voltar a oferecer o #${t.pedidoId} ${quem}, com o mesmo valor?\n\nVolta a aparecer-lhe para aceitar ou recusar, e é avisado por WhatsApp.`)) return;
     void mexer({ accao: "reoferecer", negociacaoId }, (d) => String(d.feito ?? `#${t.pedidoId} oferecido outra vez.`));
   };
@@ -890,6 +907,17 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
   const [fichaId, setFichaId] = useState<number | null>(null);
   /** O editor do pedido, por cima de tudo. */
   const [aEditar, setAEditar] = useState<number | null>(null);
+  /** d137: a empresa saiu com o dia já passado — o editor abre no campo do dia. */
+  const [editarODia, setEditarODia] = useState(false);
+  const empresaTirada = (r: { feito: string; diaPassou: boolean }) => {
+    onErro("");
+    onAviso(r.diaPassou ? `${r.feito} O dia do pedido já passou: marque o dia novo.` : r.feito);
+    onMudou();
+    if (r.diaPassou) {
+      setEditarODia(true);
+      setAEditar(t.pedidoId);
+    }
+  };
 
   return (
     <CartaoDoTrabalho
@@ -898,6 +926,7 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       corDoBloco={corDoBloco}
       abrirAoInicio={abrirAoInicio}
       onPassarANegociacao={() => void passarANegociacao()}
+      onEmpresaTirada={empresaTirada}
       ocupado={ocupado}
       comTipo={comTipo}
       onEscolher={escolher}
@@ -980,9 +1009,11 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
               <div className="mx-auto max-w-5xl">
                 <RegistarPedido
                   editarId={aEditar}
+                  focarNoDia={editarODia}
                   onCriado={() => onMudou()}
                   onFechar={() => {
                     setAEditar(null);
+                    setEditarODia(false);
                     onMudou();
                   }}
                   /*
@@ -1051,6 +1082,7 @@ function CartaoDoTrabalho({
   comTipo = false,
   corDoBloco,
   onPassarANegociacao,
+  onEmpresaTirada,
   janelas,
 }: {
   t: TrabalhoClyon;
@@ -1097,6 +1129,8 @@ function CartaoDoTrabalho({
   corDoBloco?: string;
   /** Ninguém aceitou: passa a negociação (20-10-2026, fase 4). */
   onPassarANegociacao?: () => void;
+  /** d137: a empresa saiu do trabalho (e se o dia já passou). */
+  onEmpresaTirada?: (r: { feito: string; diaPassou: boolean }) => void;
   /** As janelas do cartão (cancelar, a ficha, o editor) — `TrabalhoClyonComAccoes`. */
   janelas?: ReactNode;
 }) {
@@ -1711,6 +1745,38 @@ function CartaoDoTrabalho({
       )}
 
       {/*
+        A EMPRESA SAIU — d137 (o #595). Os dois caminhos, à vista: voltar a
+        oferecer a todos com o mesmo valor fixo (a empresa tirada fica de fora;
+        sem outros, vai a todos os que o podem fazer), ou passar a negociação.
+        Nada foi enviado antes de se escolher.
+      */}
+      {aberto && empresaTiradaSemOferta(t) && r.fase !== "cancelada" && (
+        <div className="mt-2 rounded-xl border border-cyan-500/40 bg-cyan-500/5 p-2.5 text-xs text-cyan-100">
+          <p className="font-semibold">A empresa saiu do trabalho. Escolha o caminho:</p>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onReoferecer(null)}
+              disabled={ocupado === t.pedidoId}
+              className="rounded-lg border border-cyan-500/40 px-2.5 py-1 font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-40"
+            >
+              Voltar a oferecer a todos (o mesmo valor fixo)
+            </button>
+            {onPassarANegociacao && (
+              <button
+                type="button"
+                onClick={onPassarANegociacao}
+                disabled={ocupado === t.pedidoId}
+                className="rounded-lg border border-cyan-500/40 px-2.5 py-1 font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-40"
+              >
+                Passar a negociação (cada parceiro propõe)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/*
         A QUEM FOI OFERECIDO — 19-10-2026, a lista da Mesa: cada um com o que
         fez, e «Voltar a oferecer» a quem recusou, enquanto ninguém o tem.
       */}
@@ -1721,7 +1787,9 @@ function CartaoDoTrabalho({
           </summary>
           <ul className="mt-2 space-y-1.5">
             {t.negociacoes.map((n) => {
-              const e = ESTADO_DA_OFERTA[n.estado] ?? { rotulo: n.estado, cor: "bg-slate-800 text-slate-300" };
+              const e = n.retiradaEm
+                ? { rotulo: "tirada do trabalho", cor: "bg-rose-500/10 text-rose-300" }
+                : (ESTADO_DA_OFERTA[n.estado] ?? { rotulo: n.estado, cor: "bg-slate-800 text-slate-300" });
               const recusou = n.estado === "desistida" || n.estado === "morta";
               return (
                 <li key={n.negociacaoId} className="flex flex-wrap items-center justify-between gap-2">
@@ -1743,7 +1811,7 @@ function CartaoDoTrabalho({
               );
             })}
           </ul>
-          {!a && r.recusaram > 1 && r.fase !== "cancelada" && (
+          {!a && r.recusaram > 1 && r.fase !== "cancelada" && !empresaTiradaSemOferta(t) && (
             <button
               type="button"
               onClick={() => onReoferecer(null)}
@@ -1943,6 +2011,10 @@ function CartaoDoTrabalho({
       {/* Trocar quem o faz, antes de estar confirmado — o «Trocar empresa» da Mesa. */}
       {a && !a.confirmadoEm && !a.pagoEm && (
         <TrocarProfissional pedidoId={t.pedidoId} actualProviderId={a.providerId} actualNome={a.profissional} onMudou={onMudou} />
+      )}
+      {/* d137: atribuído e ainda por fazer, sem dinheiro — tirar a empresa e voltar a «à espera» (o servidor confirma o dinheiro). */}
+      {aberto && a && r.fase === "atribuida" && !a.execucaoEnviadaEm && !a.confirmadoEm && !a.pagoEm && !a.clientePagouEm && onEmpresaTirada && (
+        <TirarAEmpresa pedidoId={t.pedidoId} empresa={a.profissional} onde="clyon" onFeito={onEmpresaTirada} />
       )}
 
       {/* d64: um trabalho em vários dias — o primeiro passa a ser o dia do pedido. */}

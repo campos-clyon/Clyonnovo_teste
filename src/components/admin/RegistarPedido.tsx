@@ -192,6 +192,7 @@ export default function RegistarPedido({
   recolhaWhatsApp = null,
   ofertaDaCopia,
   escolherValorFixo,
+  focarNoDia = false,
 }: {
   onCriado: () => void;
   /*
@@ -265,10 +266,24 @@ export default function RegistarPedido({
    * «Orçamentos novos» da Mesa.
    */
   escolherValorFixo?: (r: { id: number; alcance: Alcance | null; valorDePartida: number | null; base: BaseDoPreco }) => ReactNode;
+  /**
+   * d137 (26-11-2026): a empresa saiu de um Trabalho CLYON com o dia já
+   * passado — o editor abre já no campo do dia, com a frase a pedi-lo.
+   */
+  focarNoDia?: boolean;
 }) {
   const { token } = useAdminAuth();
+  const campoDoDia = useRef<HTMLInputElement | null>(null);
   const [aberto, setAberto] = useState(editarId != null || inicial != null);
   const [aCarregarPedido, setACarregarPedido] = useState(editarId != null);
+  // d137: o dia já passou — leva ao campo do dia logo que o pedido carregar.
+  useEffect(() => {
+    if (!focarNoDia || aCarregarPedido) return;
+    const el = campoDoDia.current;
+    if (!el) return;
+    el.scrollIntoView({ block: "center" });
+    el.focus();
+  }, [focarNoDia, aCarregarPedido]);
   /**
    * Em edição, o valor fixo quando o pedido é um Trabalho CLYON. Nesses, gravar
    * não recomeça nada e o valor não se muda aqui (`recomecar-do-zero.ts`).
@@ -1331,7 +1346,13 @@ export default function RegistarPedido({
               );
             })}
           </div>
+          {focarNoDia && (
+            <span className="mt-1 block rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-200">
+              O dia do pedido já passou — marque o dia novo combinado com o cliente.
+            </span>
+          )}
           <input
+            ref={campoDoDia}
             type="datetime-local"
             value={f.dataDesejada}
             onChange={(e) => {

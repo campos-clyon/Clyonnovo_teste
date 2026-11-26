@@ -644,8 +644,11 @@ export async function distribuirPedido(
   const jaTemViva = new Set(
     linhasExistentes.filter((n) => VIVAS.has(n.estado)).map((n) => Number(n.providerId)),
   );
+  // d137: a empresa tirada do trabalho também fica de fora — só volta escolhida à mão.
   const disseQueNao = new Set(
-    linhasExistentes.filter((n) => n.estado === "desistida").map((n) => Number(n.providerId)),
+    linhasExistentes
+      .filter((n) => n.estado === "desistida" || (n as { retiradaEm?: unknown }).retiradaEm != null)
+      .map((n) => Number(n.providerId)),
   );
   const perdeuParaOutro = new Set(
     linhasExistentes.filter((n) => n.estado === "morta").map((n) => Number(n.providerId)),

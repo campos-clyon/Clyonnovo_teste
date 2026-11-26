@@ -262,6 +262,8 @@ async function lerDoNossoLado(agora: Date): Promise<LinhaDoNossoLado[]> {
       execucaoEnviadaEm: iso(n.execucaoEnviadaEm),
       confirmadoEm: iso(n.confirmadoEm),
       pagoEm: iso(n.pagoEm),
+      // d137: a empresa tirada do trabalho não conta como recusa.
+      retiradaEm: iso(n.retiradaEm ?? null),
     }));
     return {
       pedidoId: o.pedidoId,

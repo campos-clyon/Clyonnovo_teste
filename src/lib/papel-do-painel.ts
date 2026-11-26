@@ -355,6 +355,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/negociacoes/cancelar", seccoes: ["negociacoes_clyon", "agenda"] },
   // O «porquê?» do alcance e o «Trocar profissional» também nos Trabalhos CLYON (19-10-2026).
   { prefixo: "/api/admin/negociacoes/trocar-profissional", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
+  // d137: «Tirar a empresa e pedir propostas de novo» — nos Trabalhos CLYON e na Mesa.
+  { prefixo: "/api/admin/negociacoes/tirar-empresa", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes/alcance", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   // Quem está indisponível no dia do pedido (d35, 15-11-2026) — só leitura, para o «Atribuir directamente a…».
   { prefixo: "/api/admin/indisponibilidades", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },

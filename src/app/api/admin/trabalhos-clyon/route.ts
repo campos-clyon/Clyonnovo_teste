@@ -212,6 +212,8 @@ export async function GET(req: NextRequest) {
           telefone: n.telefone,
           responsavel: n.responsavel,
           estado: n.estado,
+          // d137: a empresa tirada do trabalho (não conta como recusa).
+          retiradaEm: iso(n.retiradaEm ?? null),
           modo: modoDaOferta(n.modo),
           dataCombinada: iso(n.dataCombinada),
           atribuidaEm: iso(n.atribuidaEm),
@@ -298,6 +300,43 @@ export async function GET(req: NextRequest) {
     console.error("[admin/trabalhos-clyon GET]", e);
     return NextResponse.json({ error: "Não foi possível ler os trabalhos CLYON." }, { status: 500 });
   }
+}
+
+/**
+ * O PEDIDO COMO A DISTRIBUIÇÃO O LÊ (o mesmo que o POST manda) — d137: o
+ * «Voltar a oferecer a todos» depois de a empresa ser tirada, quando não há
+ * outros a quem tenha sido oferecido.
+ */
+async function paraADistribuicao(
+  pedido: NonNullable<Awaited<ReturnType<typeof getSimulatorOrderById>>>,
+  valor: number,
+  base: ReturnType<typeof lerBase>,
+  baseUrl: string,
+) {
+  const geo = await coordenadasDoPedido(pedido);
+  let fotos = 0;
+  try {
+    const cru = JSON.parse(pedido.rawOrderJson ?? "{}");
+    fotos = Array.isArray(cru?.files) ? cru.files.length : 0;
+  } catch {
+    /* sem fotografias legíveis, conta-se zero */
+  }
+  return {
+    id: Number(pedido.id),
+    serviceType: pedido.serviceType ?? null,
+    description: pedido.description ?? null,
+    city: pedido.city ?? null,
+    urgency: pedido.urgency ?? null,
+    quantidadeDeFotos: fotos,
+    valorDesejadoCliente: valor,
+    precisaFatura: Boolean(pedido.precisaFatura),
+    precisaGuiaTransporte: Boolean(pedido.precisaGuiaTransporte),
+    baseDoPreco: base,
+    formaDePagamento: "na_plataforma" as const,
+    lat: geo.lat,
+    lng: geo.lng,
+    baseUrl,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -930,6 +969,40 @@ export async function PATCH(req: NextRequest) {
         if (fora) return NextResponse.json({ error: fora, foraDaZona: true }, { status: 409 });
       }
       const r = await voltarAOferecerTrabalhoClyon(pedidoId, alvo);
+      /*
+       * d137: a empresa foi tirada e não há outros a quem o trabalho tenha sido
+       * oferecido — «a todos» é a todos os que o podem fazer, com o mesmo valor
+       * fixo e a mesma taxa (a empresa tirada fica de fora, `distribuir-pedido.ts`).
+       */
+      if (!r.ok && r.porque === "ninguem" && alvo == null) {
+        const { temEmpresaTirada } = await import("@/lib/tirar-a-empresa-na-base");
+        if (await temEmpresaTirada(pedidoId)) {
+          const pedido = await getSimulatorOrderById(pedidoId);
+          const cru = pedido as unknown as Record<string, unknown> | undefined;
+          const valorFixo = cru?.valorFixoClyon == null ? null : Number(cru.valorFixoClyon);
+          const taxaDoPedido = cru?.taxaClyon == null ? null : Number(cru.taxaClyon);
+          if (!pedido || valorFixo == null || taxaDoPedido == null) {
+            return NextResponse.json({ error: "Este trabalho não tem valor fixo e taxa — use «Alterar valor ou taxa» primeiro." }, { status: 409 });
+          }
+          const base = lerBase(pedido.baseDoPreco);
+          const d = await distribuirPedido(await paraADistribuicao(pedido, valorFixo, base, urlDeAccaoDoPedido(req.headers)), {
+            oferta: { valor: valorFixo, modo: "distribuida", taxas: taxasDoTrabalhoClyon(taxaDoPedido), quando: pedido.dataAgendada ?? null },
+          });
+          const resumo =
+            `Trabalho CLYON oferecido outra vez a todos os que o podem fazer, por ${quem}, com o mesmo valor (${euros(valorFixo)}${unidadeDaBase(base)}) — ` +
+            `a empresa tirada fica de fora. ${resumoDaDistribuicao(d)}`;
+          await appendOrderHistory(pedidoId, { type: "note", by: por, message: resumo });
+          await registarSemFalhar({
+            acontecimento: "pedido_distribuido",
+            pedidoId,
+            autorTipo: colab?.papel === "assistente" ? "assistente" : "clyon",
+            autorNome: quem,
+            valor: valorFixo,
+            resumo,
+          });
+          return NextResponse.json({ ok: true, feito: resumo, avisados: d.receberam });
+        }
+      }
       if (!r.ok) {
         const porque = {
           nao_e_clyon: ["Esse pedido não é um Trabalho CLYON.", 404],
