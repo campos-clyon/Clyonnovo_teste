@@ -108,6 +108,10 @@ export async function responderAoClienteAoVivo(
       marcarPerguntaDoCancelar: async (pedidoId) => (await import("./accoes-na-base")).marcarPerguntaDoCancelar(pedidoId, telefone),
       // d97: a pergunta ao parceiro sai sozinha (o WhatsApp dos avisos e a app Pro), e regista-se.
       perguntarAoParceiro: async (p) => (await import("./pergunta-ao-parceiro-na-base")).perguntarAoParceiroDeVerdade(telefone, p, agora),
+      // d136: as datas a todos os parceiros com proposta, e o dia que o escolhido ofereceu.
+      perguntarARonda: async (p) => (await import("./pergunta-ao-parceiro-na-base")).perguntarARondaDeVerdade(telefone, p, agora),
+      diaOferecido: async (pedidoId, negociacaoId, texto) =>
+        (await import("./pergunta-ao-parceiro-na-base")).diaOferecidoNaRonda(pedidoId, negociacaoId, texto, agora),
       correrOAgente: async (prazoMs, nota): Promise<ResultadoDoAgente> => {
         const db = await import("../db");
         const fio = await db.mensagensDoNumeroWhatsApp(telefone, 40);

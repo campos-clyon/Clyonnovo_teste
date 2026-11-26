@@ -36,6 +36,16 @@ import {
   type DesfechoDaResposta,
   type PerguntaRegistada,
 } from "./pergunta-ao-parceiro";
+import {
+  diaDaEscolha,
+  diaOferecido,
+  JANELA_DA_RONDA,
+  mensagemDeDisponibilidade,
+  oQueOParceiroDisse,
+  PARCEIROS_POR_RONDA,
+  respostaAoClienteDaRonda,
+  rondaDe,
+} from "./disponibilidade";
 
 export const SQL_DAS_PERGUNTAS_AO_PARCEIRO = `CREATE TABLE IF NOT EXISTS vitoriaPerguntasAoParceiro (
       id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -61,11 +71,17 @@ export const SQL_DAS_PERGUNTAS_AO_PARCEIRO = `CREATE TABLE IF NOT EXISTS vitoria
       KEY idx_pergunta_provider (providerId, estado)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+export const SQL_DA_RONDA = "ALTER TABLE vitoriaPerguntasAoParceiro ADD COLUMN ronda VARCHAR(80) NULL DEFAULT NULL";
+
 let pronta = false;
 async function pool() {
   const p = await garantirTabelas();
   if (!pronta) {
     await p.execute(SQL_DAS_PERGUNTAS_AO_PARCEIRO);
+    // d136: a ronda das datas (a mesma pergunta a vários parceiros, a resposta junta ao cliente).
+    await p.execute(SQL_DA_RONDA).catch((e: { code?: string; errno?: number }) => {
+      if (e?.code !== "ER_DUP_FIELDNAME" && e?.errno !== 1060) throw e;
+    });
     pronta = true;
   }
   return p;
@@ -90,12 +106,24 @@ export async function perguntarAoParceiroDeVerdade(
 ): Promise<{ ok: true; jaPerguntado?: boolean; ate?: string } | { ok: false; porque: string }> {
   const db = await import("../db");
   const base = await pool();
-  const prazo = prazoDaPergunta(agora);
+  // d136: a ronda das datas conta as 2 h na janela de contacto (d7).
+  const prazo = p.rondaId ? prazoDaPergunta(agora, undefined, JANELA_DA_RONDA) : prazoDaPergunta(agora);
   const [ins] = (await base.execute(
     `INSERT IGNORE INTO vitoriaPerguntasAoParceiro
-       (chave, pedidoId, negociacaoId, telefoneCliente, parceiro, condicao, mensagem, estado, perguntadoEm, prazoEm)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'a_sair', ?, ?)`,
-    [chaveDaPergunta(p), p.pedidoId, p.negociacaoId, digitos(telefoneCliente), p.parceiro.slice(0, 160), p.condicao.slice(0, 255), p.mensagem, paraABase(agora), paraABase(prazo)],
+       (chave, pedidoId, negociacaoId, telefoneCliente, parceiro, condicao, mensagem, estado, perguntadoEm, prazoEm, ronda)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'a_sair', ?, ?, ?)`,
+    [
+      chaveDaPergunta(p),
+      p.pedidoId,
+      p.negociacaoId,
+      digitos(telefoneCliente),
+      p.parceiro.slice(0, 160),
+      p.condicao.slice(0, 255),
+      p.mensagem,
+      paraABase(agora),
+      paraABase(prazo),
+      p.rondaId ? p.rondaId.slice(0, 60) : null,
+    ],
   )) as [{ affectedRows?: number; insertId?: number }, unknown];
   if (Number(ins.affectedRows ?? 0) === 0) return { ok: true, jaPerguntado: true };
   const id = Number(ins.insertId);
@@ -150,7 +178,9 @@ export async function perguntarAoParceiroDeVerdade(
     .appendOrderHistory(p.pedidoId, {
       type: "note",
       by: null,
-      message: `A Vitória perguntou a ${p.parceiro} (${canais.join(" e ")}) se consegue «${p.condicao}», a pedido do cliente. Sem resposta até ${ate}, passa à equipa.`,
+      message: p.rondaId
+        ? `A Vitória perguntou a ${p.parceiro} (${canais.join(" e ")}) se consegue «${p.condicao}» (as datas, a todos os parceiros com proposta). As respostas vão juntas ao cliente, até ${ate}.`
+        : `A Vitória perguntou a ${p.parceiro} (${canais.join(" e ")}) se consegue «${p.condicao}», a pedido do cliente. Sem resposta até ${ate}, passa à equipa.`,
     })
     .catch(() => {});
   await registarAccao({
@@ -176,6 +206,7 @@ function lerLinha(r: Record<string, unknown>): PerguntaRegistada {
     mensagem: String(r.mensagem ?? ""),
     propostoEm: String(r.perguntadoEm ?? ""),
     telefoneCliente: String(r.telefoneCliente ?? ""),
+    ...(r.ronda ? { rondaId: String(r.ronda) } : {}),
   };
 }
 
@@ -201,6 +232,8 @@ async function oAgenteComANota(telefoneCliente: string, agora: Date, nota: strin
 
 /** A RESPOSTA DO PARCEIRO, venha de onde vier. Nunca lança. */
 async function responderComARespostaDoParceiro(p: PerguntaRegistada, texto: string, origem: "whatsapp" | "painel", agora: Date): Promise<DesfechoDaResposta | null> {
+  // d136: a resposta a uma ronda das datas junta-se às dos outros parceiros.
+  if (p.rondaId) return responderNaRonda(p, texto, origem, agora);
   try {
     const db = await import("../db");
     const base = await pool();
@@ -311,7 +344,8 @@ export async function respostaDoParceiroPeloWhatsApp(telefone: string, texto: st
     if (desfecho == null) return false;
     if (desfecho !== "ja_respondida" && !opcoes.interrompido) {
       const { enviarAvisoWhatsApp } = await import("../whatsapp-cloud");
-      await enviarAvisoWhatsApp(telefone, obrigadoAoParceiro(p.pedidoId, lerARespostaDoParceiro(texto))).catch(() => false);
+      const obrigado = p.rondaId ? obrigadoNaRonda(p.pedidoId) : obrigadoAoParceiro(p.pedidoId, lerARespostaDoParceiro(texto));
+      await enviarAvisoWhatsApp(telefone, obrigado).catch(() => false);
     }
     return true;
   } catch (e) {
@@ -379,6 +413,7 @@ export async function correrOsPrazosDasPerguntas(): Promise<{ linhas: string[] }
     const [rows] = (await base.execute(
       "SELECT * FROM vitoriaPerguntasAoParceiro WHERE estado = 'aberta' AND prazoEm <= UTC_TIMESTAMP() ORDER BY id ASC LIMIT 20",
     )) as [Array<Record<string, unknown>>, unknown];
+    const rondas = new Set<string>();
     for (const r of rows) {
       const p = lerLinha(r);
       const [u] = (await base.execute("UPDATE vitoriaPerguntasAoParceiro SET estado = 'expirou' WHERE id = ? AND estado = 'aberta'", [p.id])) as [
@@ -386,6 +421,12 @@ export async function correrOsPrazosDasPerguntas(): Promise<{ linhas: string[] }
         unknown,
       ];
       if (Number(u.affectedRows ?? 0) !== 1) continue;
+      // d136: na ronda das datas, o prazo não passa à equipa: o cliente lê o que já respondeu (abaixo).
+      if (p.rondaId) {
+        rondas.add(p.rondaId);
+        linhas.push(`#${p.pedidoId} (${p.parceiro}, datas)`);
+        continue;
+      }
       const motivo = motivoDoPrazo(p);
       await db.interromperNumeroWhatsApp(p.telefoneCliente, motivo.slice(0, 480)).catch(() => {});
       await db.appendOrderHistory(p.pedidoId, { type: "note", by: null, message: `${p.parceiro} não respondeu à pergunta da Vitória «${p.condicao}» a tempo: passou à equipa.` }).catch(() => {});
@@ -401,8 +442,197 @@ export async function correrOsPrazosDasPerguntas(): Promise<{ linhas: string[] }
       await registarAccao({ ferramenta: "pergunta_sem_resposta", resultado: { pedidoId: p.pedidoId, parceiro: p.parceiro, motivo }, telefone: p.telefoneCliente, pedidoId: p.pedidoId, ensaio: false });
       linhas.push(`#${p.pedidoId} (${p.parceiro})`);
     }
+    for (const ronda of rondas) await responderAoClienteDaRonda(ronda).catch(() => {});
   } catch (e) {
     console.error("[vitoria-agente] os prazos das perguntas falharam:", e instanceof Error ? e.message : e);
   }
   return { linhas };
+}
+
+/* ── d136: as datas a todos os parceiros (a ronda) ──────────────────────── */
+
+/** O obrigado ao parceiro que respondeu às datas. */
+export function obrigadoNaRonda(pedidoId: number): string {
+  return `Obrigada! Já anotei a sua resposta sobre o pedido #${pedidoId} — digo ao cliente quem pode e quando.`;
+}
+
+/**
+ * A RONDA SAI: a pergunta das datas, uma por parceiro (a mesma ida da d97 —
+ * o WhatsApp dos avisos e a app Pro —, cada uma registada com a `ronda`).
+ * Devolve quem a recebeu e quem não tinha canal.
+ */
+export async function perguntarARondaDeVerdade(
+  telefoneCliente: string,
+  p: PerguntaAoParceiro,
+  agora: Date = new Date(),
+): Promise<{ ok: true; saiu: string[]; naoSaiu: string[] } | { ok: false; porque: string }> {
+  const ronda = (p.ronda ?? []).slice(0, PARCEIROS_POR_RONDA);
+  if (ronda.length === 0) return { ok: false, porque: "sem parceiros na ronda" };
+  const rondaId = p.rondaId ?? rondaDe(p.pedidoId, p.propostoEm);
+  const saiu: string[] = [];
+  const naoSaiu: string[] = [];
+  for (const x of ronda) {
+    const um: PerguntaAoParceiro = {
+      tipo: "parceiro",
+      pedidoId: p.pedidoId,
+      negociacaoId: x.negociacaoId,
+      parceiro: x.parceiro,
+      condicao: p.condicao,
+      mensagem: x.mensagem,
+      propostoEm: p.propostoEm,
+      rondaId,
+    };
+    const q = await perguntarAoParceiroDeVerdade(telefoneCliente, um, agora).catch(() => ({ ok: false as const, porque: "falhou" }));
+    (q.ok ? saiu : naoSaiu).push(x.parceiro);
+  }
+  return { ok: true, saiu, naoSaiu };
+}
+
+/**
+ * AS DATAS PELO CAMINHO DAS REGRAS (sem o agente): o cliente escreveu um dia e
+ * uma hora sem ter escolhido. As propostas abertas do pedido (até 4) recebem
+ * a pergunta. Devolve se saiu para alguém.
+ */
+export async function perguntarDatasATodosDeVerdade(telefoneCliente: string, pedidoId: number, quando: string, agora: Date = new Date()): Promise<boolean> {
+  try {
+    if (!(await lerInterruptor("aceitar")).ligado) return false;
+    const accoes = await import("./accoes-na-base");
+    const lista = (await accoes.propostasParaEscolherDeVerdade(pedidoId)).slice(0, PARCEIROS_POR_RONDA);
+    if (lista.length === 0) return false;
+    const mensagem = mensagemDeDisponibilidade(pedidoId, quando);
+    const propostoEm = agora.toISOString();
+    const p: PerguntaAoParceiro = {
+      tipo: "parceiro",
+      pedidoId,
+      negociacaoId: lista[0].negociacaoId,
+      parceiro: lista.map((x) => x.parceiro).join(", "),
+      condicao: quando.replace(/\s+/g, " ").trim().slice(0, 160) || "quando pode fazer o serviço",
+      mensagem,
+      propostoEm,
+      ronda: lista.map((x) => ({ negociacaoId: x.negociacaoId, parceiro: x.parceiro, mensagem })),
+      rondaId: rondaDe(pedidoId, propostoEm),
+    };
+    const r = await perguntarARondaDeVerdade(telefoneCliente, p, agora);
+    return r.ok && r.saiu.length > 0;
+  } catch (e) {
+    console.error("[vitoria-agente] as datas aos parceiros não saíram:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+/** A resposta de um parceiro da ronda: regista-a e, se for a última, responde ao cliente. Nunca lança. */
+async function responderNaRonda(p: PerguntaRegistada, texto: string, origem: "whatsapp" | "painel", agora: Date): Promise<DesfechoDaResposta | null> {
+  try {
+    const db = await import("../db");
+    const base = await pool();
+    const leitura = lerARespostaDoParceiro(texto);
+    const [r] = (await base.execute(
+      `UPDATE vitoriaPerguntasAoParceiro SET estado = 'respondida', respondidoEm = UTC_TIMESTAMP(), leitura = ?, resposta = ?
+        WHERE id = ? AND estado = 'aberta'`,
+      [leitura.tipo, texto.replace(/\s+/g, " ").trim().slice(0, 500), p.id],
+    )) as [{ affectedRows?: number }, unknown];
+    if (Number(r.affectedRows ?? 0) !== 1) return "ja_respondida";
+    const disse = oQueOParceiroDisse(texto);
+    await db
+      .appendOrderHistory(p.pedidoId, {
+        type: "note",
+        by: null,
+        message: `${p.parceiro} respondeu à pergunta das datas da Vitória «${p.condicao}»: ${disse} (${origem === "painel" ? "no painel" : "no WhatsApp"}).`,
+      })
+      .catch(() => {});
+    await registarAccao({
+      ferramenta: "resposta_do_parceiro",
+      resultado: { pedidoId: p.pedidoId, parceiro: p.parceiro, leitura: disse, origem, ronda: p.rondaId },
+      telefone: p.telefoneCliente,
+      pedidoId: p.pedidoId,
+      ensaio: false,
+    });
+    if (p.rondaId) await responderAoClienteDaRonda(p.rondaId, agora);
+    return leitura.tipo === "nao" ? "nao" : "sim";
+  } catch (e) {
+    console.error("[vitoria-agente] a resposta da ronda falhou:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+/**
+ * A RONDA ACABOU? Quando nenhuma pergunta dela está aberta (todos
+ * responderam, ou o prazo passou), o cliente lê numa mensagem curta quem pode
+ * e quando, e qual prefere. Uma vez por ronda (a ronda ganha um «!» quando a
+ * mensagem sai). Ninguém respondeu: passa à equipa. Uma pessoa com a conversa:
+ * fica no histórico, e não se escreve ao cliente.
+ */
+async function responderAoClienteDaRonda(rondaId: string, agora: Date = new Date()): Promise<void> {
+  const base = await pool();
+  const db = await import("../db");
+  const [rows] = (await base.execute(
+    `SELECT id, pedidoId, parceiro, estado, resposta, telefoneCliente, condicao FROM vitoriaPerguntasAoParceiro
+      WHERE ronda = ? AND estado IN ('aberta', 'respondida', 'expirou') ORDER BY id ASC`,
+    [rondaId],
+  )) as [Array<Record<string, unknown>>, unknown];
+  if (rows.length === 0 || rows.some((r) => String(r.estado) === "aberta")) return;
+  const [u] = (await base.execute("UPDATE vitoriaPerguntasAoParceiro SET ronda = ? WHERE ronda = ?", [`${rondaId.slice(0, 78)}!`, rondaId])) as [
+    { affectedRows?: number },
+    unknown,
+  ];
+  if (Number(u.affectedRows ?? 0) === 0) return;
+  const pedidoId = Number(rows[0].pedidoId);
+  const telefone = String(rows[0].telefoneCliente ?? "");
+  const condicao = String(rows[0].condicao ?? "");
+  const respostas = rows.map((r) => ({ parceiro: String(r.parceiro ?? ""), resposta: String(r.estado) === "respondida" ? String(r.resposta ?? "") : null }));
+  if (respostas.every((r) => r.resposta == null)) {
+    const motivo = `À espera dos parceiros há 2 h — pedido #${pedidoId}: nenhum respondeu se consegue «${condicao}». Responder ao cliente`;
+    await db.interromperNumeroWhatsApp(telefone, motivo.slice(0, 480)).catch(() => {});
+    await db.appendOrderHistory(pedidoId, { type: "note", by: null, message: `Nenhum parceiro respondeu à pergunta das datas «${condicao}» a tempo: passou à equipa.` }).catch(() => {});
+    await registarAccao({ ferramenta: "pergunta_sem_resposta", resultado: { pedidoId, ronda: rondaId, motivo }, telefone, pedidoId, ensaio: false });
+    return;
+  }
+  const texto = respostaAoClienteDaRonda(pedidoId, respostas);
+  if (await db.numeroInterrompidoWhatsApp(telefone).catch(() => true)) {
+    await db.appendOrderHistory(pedidoId, { type: "note", by: null, message: `As respostas dos parceiros às datas (uma pessoa tem a conversa — dizer ao cliente): ${texto}` }).catch(() => {});
+    return;
+  }
+  const saiu = await (await import("../whatsapp-cloud")).enviarTextoWhatsApp(telefone, texto).catch(() => false);
+  await db.appendOrderHistory(pedidoId, { type: "note", by: null, message: `A Vitória disse ao cliente as respostas dos parceiros às datas${saiu ? "" : " (não saiu)"}.` }).catch(() => {});
+  await base
+    .execute("INSERT INTO vitoriaEnsaios (telefone, pedidoId, mensagemDoCliente, respostaDoAgente, teriaFeitoJson, estado) VALUES (?, ?, ?, ?, ?, 'vivo_parceiro')", [
+      digitos(telefone),
+      pedidoId,
+      "[as respostas dos parceiros às datas]",
+      texto.slice(0, 4000),
+      JSON.stringify([`disse ao cliente as respostas da ronda das datas (#${pedidoId}, ${respostas.length} parceiros)`]),
+    ])
+    .catch(() => {});
+  await registarAccao({ ferramenta: "ronda_das_datas", resultado: { pedidoId, ronda: rondaId, saiu, quantos: respostas.length }, texto, telefone, pedidoId, ensaio: false });
+  void agora;
+}
+
+/**
+ * O DIA DA ESCOLHA DEPOIS DA RONDA: o parceiro escolhido respondeu às datas
+ * (nos últimos 7 dias)? Então o fecho leva o dia — o que o cliente disse ao
+ * escolher, ou o que o parceiro ofereceu. Sem ronda: null (o fecho de sempre).
+ */
+export async function diaOferecidoNaRonda(
+  pedidoId: number,
+  negociacaoId: number,
+  textoDoCliente: string,
+  agora: Date = new Date(),
+): Promise<{ em: string; dito: string } | null> {
+  try {
+    const base = await pool();
+    const [rows] = (await base.execute(
+      `SELECT resposta, respondidoEm FROM vitoriaPerguntasAoParceiro
+        WHERE pedidoId = ? AND negociacaoId = ? AND ronda IS NOT NULL AND estado = 'respondida'
+          AND respondidoEm >= UTC_TIMESTAMP() - INTERVAL 7 DAY
+        ORDER BY id DESC LIMIT 1`,
+      [pedidoId, negociacaoId],
+    )) as [Array<Record<string, unknown>>, unknown];
+    const r = rows[0];
+    if (!r) return null;
+    const { instanteDaBase } = await import("../hora-de-lisboa");
+    const em = instanteDaBase(r.respondidoEm as string | Date | null) ?? agora;
+    return diaDaEscolha(textoDoCliente, diaOferecido(String(r.resposta ?? ""), em), agora);
+  } catch {
+    return null;
+  }
 }

@@ -228,6 +228,8 @@ describe("as ferramentas", () => {
       "perguntar_ao_parceiro",
       "perguntas_frequentes",
       "o_que_o_servico_inclui",
+      // d136: as datas a todos os parceiros, no fim (a cache).
+      "perguntar_datas_aos_parceiros",
     ]);
     for (const f of FERRAMENTAS_DA_VITORIA) {
       expect(f.strict, f.name).toBe(true);
@@ -273,7 +275,7 @@ describe("as ferramentas", () => {
   });
 
   it("d92: aceitar, cancelar e perguntar ao parceiro só PROPÕEM (o código é que fecha e cancela)", async () => {
-    expect([...FERRAMENTAS_QUE_PROPOEM]).toEqual(["aceitar_proposta", "perguntar_ao_parceiro", "cancelar_pedido"]);
+    expect([...FERRAMENTAS_QUE_PROPOEM]).toEqual(["aceitar_proposta", "perguntar_ao_parceiro", "perguntar_datas_aos_parceiros", "cancelar_pedido"]);
     // Sem propostas no pedido, aceitar não tem o que escolher.
     const r = await correrFerramenta("aceitar_proposta", { pedido: 812, escolha: "X" }, base(), estadoNovo());
     expect(r.erro).toBe(true);

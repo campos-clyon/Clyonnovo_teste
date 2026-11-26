@@ -2,6 +2,7 @@ import { lerBase } from "./base-do-preco";
 import { nomeEmPortugues } from "./coverage";
 import { mensagemDasPropostas, propostasParaOCliente, trabalhoFechado, type PropostaParaOCliente } from "./mensagem-das-propostas";
 import { SERVICE_CATEGORIES } from "./service-categories";
+import { escolherAVariante, mensagemDasPropostasVariada, tipoDaMensagem, type PropostaCurta } from "./propostas-curtas";
 import { comValidade } from "./validade-do-orcamento";
 import { mensagemDoValorUnico } from "./valor-unico";
 
@@ -86,6 +87,38 @@ export function textoDoOrcamentoDaMesa(
     );
   }
   const comPropostas = !trabalhoFechado(p.negociacoes) && propostas.length > 0;
+  /*
+   * O TEXTO CURTO — 26-11-2026 (d136). O «Enviar orçamento» e o «Enviar pela
+   * CLYON» mandavam ainda a lista longa («O valor de cada uma é o total a
+   * pagar…», «Inclui o que está nas fotografias…»), quando a rotina das
+   * propostas já diz o mesmo em 3 a 5 linhas (d123, `propostas-curtas.ts`).
+   * Agora a Mesa manda a mesma mensagem curta, com a validade (d62) no fim. O
+   * «Está combinado com…» (já fechado) fica como estava.
+   */
+  const pedidoId = Number(p.id);
+  if (comPropostas && Number.isInteger(pedidoId) && pedidoId > 0) {
+    const base = lerBase(p.baseDoPreco);
+    const daNegociacao = new Map(p.negociacoes.map((n) => [Number((n as { id?: unknown }).id), n]));
+    const curtas: PropostaCurta[] = propostas.map((x) => ({
+      negociacaoId: x.negociacaoId ?? null,
+      parceiro: x.profissional,
+      semIva: x.semIva,
+      total: x.total,
+      isento: x.contaDoNovoModelo?.regime === "isento",
+      aceitou: (daNegociacao.get(Number(x.negociacaoId)) as { estado?: unknown } | undefined)?.estado === "aguarda_contratacao",
+    }));
+    const curto = mensagemDasPropostasVariada({
+      pedidoId,
+      nome: p.contactName,
+      servico: nomeDoServicoDoOrcamento(p.serviceType),
+      propostas: curtas,
+      agora,
+      unidade: base === "carga" || base === "hora" ? base : null,
+      nova: false,
+      variante: escolherAVariante(tipoDaMensagem(false, curtas.length), pedidoId, 0),
+    });
+    if (curto) return comValidade(curto, agora);
+  }
   const texto = mensagemDasPropostas({
     nomeCliente: p.contactName,
     servico: nomeDoServicoDoOrcamento(p.serviceType),

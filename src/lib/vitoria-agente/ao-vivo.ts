@@ -99,6 +99,10 @@ export type DependenciasAoVivo = {
   correrOAgente: (prazoMs: number, nota?: string) => Promise<ResultadoDoAgente>;
   /** d97: manda a pergunta ao parceiro (WhatsApp dos avisos + app Pro) e regista-a. Sem canal, diz porquê. */
   perguntarAoParceiro: (p: PerguntaAoParceiro) => Promise<{ ok: true; jaPerguntado?: boolean; ate?: string } | { ok: false; porque: string }>;
+  /** d136: as datas a todos os parceiros da ronda (a mesma ida da d97, uma por parceiro). */
+  perguntarARonda?: (p: PerguntaAoParceiro) => Promise<{ ok: true; saiu: string[]; naoSaiu: string[] } | { ok: false; porque: string }>;
+  /** d136: o dia que o parceiro escolhido ofereceu na ronda (ou o que o cliente disse ao escolher). */
+  diaOferecido?: (pedidoId: number, negociacaoId: number, textoDoCliente: string) => Promise<{ em: string; dito: string } | null>;
   /** A porta de sempre (traduz, não repete). */
   enviar: (texto: string) => Promise<boolean>;
   /** Passa a uma pessoa: manda a mensagem (null = nenhuma, já saiu a do agente) e interrompe o número com o motivo. */
@@ -221,9 +225,27 @@ export async function responderAoVivo(conteudo: ConteudoDaRajada, deps: Dependen
       await deps.enviar(r.texto);
       const feito = [...r.teriaFeito];
       if (r.pendente) {
+        // d136: o fecho de quem escolheu depois da ronda das datas leva o dia (o que disse, ou o que o parceiro ofereceu).
+        if (r.pendente.tipo === "fecho" && !r.pendente.diaCombinado && deps.diaOferecido) {
+          const pf = r.pendente;
+          const dia = await deps.diaOferecido(pf.pedidoId, pf.negociacaoId, texto).catch(() => null);
+          if (dia) r.pendente = { ...pf, diaCombinado: dia };
+        }
         await deps.gravarPendente(r.pendente);
         if (r.pendente.tipo === "cancelar") await deps.marcarPerguntaDoCancelar(r.pendente.pedidoId).catch(() => {});
-        if (r.pendente.tipo === "parceiro") {
+        if (r.pendente.tipo === "parceiro" && r.pendente.ronda && r.pendente.ronda.length > 0 && deps.perguntarARonda) {
+          // d136: as datas a todos os parceiros da ronda; nenhuma saiu → equipa.
+          const pr = r.pendente;
+          const q = await deps.perguntarARonda(pr).catch((e) => ({ ok: false as const, porque: e instanceof Error ? e.message.slice(0, 120) : "falhou" }));
+          if (q.ok && q.saiu.length > 0) {
+            feito.push(`perguntou as datas a ${q.saiu.join(", ")}: «${pr.condicao}» (#${pr.pedidoId}) — à espera das respostas`);
+            if (q.naoSaiu.length > 0) feito.push(`a pergunta não saiu para ${q.naoSaiu.join(", ")} (sem canal)`);
+          } else {
+            const porque = q.ok ? "nenhum parceiro tem canal" : q.porque;
+            await deps.passarAEquipa(`Pedido #${pr.pedidoId}: perguntar aos parceiros se conseguem «${pr.condicao}» — a pergunta não saiu (${porque})`, null);
+            feito.push(`a pergunta das datas não saiu (${porque}): passou à equipa`);
+          }
+        } else if (r.pendente.tipo === "parceiro") {
           // d97: a pergunta sai sozinha para o parceiro. Só se não puder sair (sem WhatsApp dos avisos nem app) vai à equipa.
           const q = await deps.perguntarAoParceiro(r.pendente).catch((e) => ({ ok: false as const, porque: e instanceof Error ? e.message.slice(0, 120) : "falhou" }));
           if (q.ok) {

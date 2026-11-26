@@ -432,23 +432,17 @@ describe("passo 3: a mesma função do botão", () => {
   it("o texto é o do «Enviar pela CLYON»: as propostas e a validade", () => {
     const p = pedidoDaMesa();
     const t = textoDoOrcamentoDaMesa(p, AGORA);
-    const esperado = comValidade(
-      mensagemDasPropostas({
-        nomeCliente: p.contactName,
-        servico: "recolha de monos",
-        servicoId: p.serviceType,
-        cidade: p.city,
-        propostas: propostasParaOCliente(p.negociacoes),
-        fechado: null,
-        base: "total",
-        horasPrevistas: 3,
-        mudancaDaLista: false,
-      }),
-      AGORA,
-    );
-    expect(t).toBe(esperado);
+    // d136: a mensagem curta da d123 (a mesma da rotina), com a validade (d62) no fim.
     expect(t).toContain("Esta proposta é válida até");
     expect(t).toContain("Recolhas Inventadas");
+    expect(t).toMatch(/^(Bom dia|Boa tarde|Boa noite), Joana!/);
+    expect(t).toContain(`#${p.id}`);
+    expect(t).not.toContain("O valor de cada uma é o total a pagar");
+    expect(t).not.toContain("Inclui o que está nas fotografias");
+    expect(t.split("\n").length).toBeLessThanOrEqual(7);
+    void comValidade;
+    void mensagemDasPropostas;
+    void propostasParaOCliente;
   });
 
   it("o painel fica com o texto do botão; a Vitória manda a mensagem curta (d114) pelo caminho do botão", () => {
@@ -607,17 +601,18 @@ describe("o orçamento sai na língua da conversa — uma conversa em inglês (o
     const { traducaoFixa } = await import("./traducoes-fixas-da-vitoria");
     const p = pedidoDaMesa({ city: "Lisbon" });
     const pt = textoDoOrcamentoDaMesa(p, AGORA);
-    expect(pt).toContain("para a recolha de monos em Lisboa:");
+    // d136: a mensagem curta não diz a localidade (nem «Lisbon» nem «Lisboa»); a tradução fixa continua a sair.
+    expect(pt).toContain("(recolha de monos)");
     expect(pt).not.toContain("Lisbon");
     const en = traducaoFixa(pt, "en");
     expect(en).not.toBeNull();
-    expect(en).toContain("We have received 3 quotes for your request (bulky items removal) in Lisbon:");
+    expect(en).toContain("(bulky items removal)");
     expect(en).toContain("Recolhas Inventadas: ");
-    expect(en).toContain("+ VAT = ");
+    expect(en).toContain("+ VAT)");
     expect(en).toContain("This quote is valid until Thursday, 26/11.");
     expect(en).not.toMatch(/\b(Olá|propostas|Já recebemos|válida até)\b/);
-    expect(traducaoFixa(pt, "fr")).toContain("à Lisbonne :");
-    expect(traducaoFixa(pt, "es")).toContain("en Lisboa:");
+    expect(traducaoFixa(pt, "fr")).not.toBeNull();
+    expect(traducaoFixa(pt, "es")).not.toBeNull();
   });
 
   it("o automático, com o tradutor em baixo: sai pela tradução fixa, nunca em português, e a língua fica guardada", async () => {

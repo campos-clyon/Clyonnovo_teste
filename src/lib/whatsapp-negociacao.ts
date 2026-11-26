@@ -3979,6 +3979,19 @@ export async function tratarMensagemDoCliente(
         return;
       }
     }
+    /*
+     * AS DATAS A TODOS — 26-11-2026 (d136). Sem parceiro contratado, não se
+     * manda escolher primeiro: a pergunta do dia sai para os parceiros com
+     * proposta aberta (até 4), e as respostas voltam juntas ao cliente.
+     */
+    if (pedidos[0] != null) {
+      const { perguntarDatasATodosDeVerdade } = await import("@/lib/vitoria-agente/pergunta-ao-parceiro-na-base");
+      if (await perguntarDatasATodosDeVerdade(telefone, pedidos[0], texto.replace(/\s+/g, " ").trim().slice(0, 160), agora)) {
+        const { VOU_PERGUNTAR_AOS_PARCEIROS } = await import("@/lib/vitoria-agente/disponibilidade");
+        await enviarTextoWhatsApp(telefone, VOU_PERGUNTAR_AOS_PARCEIROS);
+        return;
+      }
+    }
     await enviarTextoWhatsApp(
       telefone,
       "Ainda não há parceiro contratado — escolha primeiro uma proposta, e depois mando-lhe marcar a data.",

@@ -163,8 +163,9 @@ describe("o SIM e o CANCELAR lidos pelo código", () => {
 describe("aceitar, perguntar ao parceiro e cancelar só propõem", () => {
   it("quinze ferramentas, strict, com as novas no fim (a cache; d97: o_que_o_servico_inclui)", () => {
     const nomes = FERRAMENTAS_DA_VITORIA.map((f) => f.name);
-    expect(nomes.slice(-5)).toEqual(["aceitar_proposta", "cancelar_pedido", "perguntar_ao_parceiro", "perguntas_frequentes", "o_que_o_servico_inclui"]);
-    expect(nomes.length).toBe(15);
+    expect(nomes.slice(-6)).toEqual(["aceitar_proposta", "cancelar_pedido", "perguntar_ao_parceiro", "perguntas_frequentes", "o_que_o_servico_inclui", "perguntar_datas_aos_parceiros"]);
+    // d136: dezasseis, com as datas a todos os parceiros no fim.
+    expect(nomes.length).toBe(16);
     for (const f of FERRAMENTAS_DA_VITORIA) expect(f.strict, f.name).toBe(true);
   });
 

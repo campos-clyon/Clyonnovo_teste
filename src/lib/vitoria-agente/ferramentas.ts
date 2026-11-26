@@ -41,6 +41,7 @@ import {
   type PropostaComOValorDoParceiro,
 } from "./propostas-do-agente";
 import { pendenteEmPalavras, type Pendente } from "./pendentes";
+import { mensagemDeDisponibilidade, PARCEIROS_POR_RONDA, rondaDe, VOU_PERGUNTAR_AOS_PARCEIROS } from "./disponibilidade";
 import { condicaoJaIncluida, motivoParaAfirmarOQueInclui, oQueOServicoInclui } from "./o-que-o-servico-inclui";
 
 /** O pedido como a base o tem (as colunas que as ferramentas lêem). */
@@ -95,7 +96,7 @@ export const PASSOS_QUE_O_AGENTE_GRAVA = [
 ] as const satisfies readonly PassoDaRecolha[];
 
 /** As que deixam uma acção à espera da confirmação do cliente (ou do parceiro), lida pelo código. */
-export const FERRAMENTAS_QUE_PROPOEM = ["aceitar_proposta", "perguntar_ao_parceiro", "cancelar_pedido"] as const;
+export const FERRAMENTAS_QUE_PROPOEM = ["aceitar_proposta", "perguntar_ao_parceiro", "perguntar_datas_aos_parceiros", "cancelar_pedido"] as const;
 
 const objecto = (properties: Record<string, unknown>, required: string[]) => ({
   type: "object" as const,
@@ -237,6 +238,22 @@ export const FERRAMENTAS_DA_VITORIA: Anthropic.Beta.BetaTool[] = [
     description:
       "O que o serviço de um pedido deste cliente inclui sempre (numa recolha: descer, carregar, o transporte e levar a um destino legal), o que acontece se no dia houver mais, e o que só o parceiro pode dizer. Usa-a para «inclui o transporte?», «inclui a descida?», «levam para o lixo / a reciclagem?»: responde logo com isto, sem perguntar ao parceiro.",
     input_schema: objecto({ pedido: PEDIDO }, ["pedido"]),
+    strict: true,
+  },
+  {
+    name: "perguntar_datas_aos_parceiros",
+    description:
+      "d136: quando o cliente pergunta por datas ou disponibilidade ANTES de escolher («e datas para executar o serviço?», «esta semana termina amanhã, ainda assim conseguem?», «conseguem sábado?»): a pergunta SAI para todos os parceiros com proposta aberta no pedido (até 4), e as respostas voltam juntas ao cliente. Nunca respondas «depende de cada parceiro, escolha primeiro». A resposta leva, tal e qual, a frase que esta ferramenta devolve. Se o cliente já escolheu uma proposta com uma condição de dia, é perguntar_ao_parceiro.",
+    input_schema: objecto(
+      {
+        pedido: PEDIDO,
+        quando: {
+          type: "string",
+          description: "O dia ou o prazo que o cliente pede, curto, como se diz ao parceiro («amanhã (sexta) ou sábado», «esta semana», «até dia 2/12»); vazio se só perguntou quando pode.",
+        },
+      },
+      ["pedido", "quando"],
+    ),
     strict: true,
   },
 ];
@@ -625,6 +642,35 @@ export async function correrFerramenta(
           proposta: semOValorDoParceiro(prop),
           oQueDizerAoCliente:
             "Que vais confirmar com o parceiro se consegue cumprir a condição e que lhe dizes assim que ele responder. Não prometas o sim nem uma hora.",
+        });
+      }
+      case "perguntar_datas_aos_parceiros": {
+        const p = await doTelefone(deps, inteiro(e.pedido));
+        if (typeof p === "string") return erro(p);
+        const quando = texto(e.quando, 160) ?? "";
+        const lista = (deps.propostasParaEscolher ? await deps.propostasParaEscolher(p.id) : []).slice(0, PARCEIROS_POR_RONDA);
+        if (lista.length === 0) return erro(`O pedido #${p.id} ainda não tem propostas abertas: diz ao cliente que, assim que chegarem, lhe dizes quem pode e quando.`);
+        const mensagem = mensagemDeDisponibilidade(p.id, quando);
+        const ronda = lista.map((x) => ({ negociacaoId: x.negociacaoId, parceiro: x.parceiro, mensagem }));
+        const propostoEm = deps.agora.toISOString();
+        estado.pendente = {
+          tipo: "parceiro",
+          pedidoId: p.id,
+          negociacaoId: ronda[0].negociacaoId,
+          parceiro: ronda.map((x) => x.parceiro).join(", "),
+          condicao: quando || "quando pode fazer o serviço",
+          mensagem,
+          propostoEm,
+          ronda,
+          rondaId: rondaDe(p.id, propostoEm),
+        };
+        estado.fraseObrigatoria = VOU_PERGUNTAR_AOS_PARCEIROS;
+        estado.teriaFeito.push(pendenteEmPalavras(estado.pendente, ensaio));
+        return guardar(estado, {
+          perguntaPreparada: true,
+          parceiros: ronda.map((x) => x.parceiro),
+          fraseQueTemDeIrNaResposta: VOU_PERGUNTAR_AOS_PARCEIROS,
+          nota: "Não prometas o sim nem uma hora. As respostas voltam juntas ao cliente, pelo sistema.",
         });
       }
       case "cancelar_pedido": {

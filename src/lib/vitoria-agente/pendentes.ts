@@ -29,6 +29,13 @@ export type PerguntaAoParceiro = {
   /** O que se mandaria (ou mandou) ao parceiro. */
   mensagem: string;
   propostoEm: string;
+  /**
+   * d136: AS DATAS A TODOS — a pergunta de disponibilidade sai para cada um
+   * destes (até 4), e a resposta junta-se numa só mensagem ao cliente
+   * (`disponibilidade.ts`). `rondaId` marca cada pergunta que saiu dela.
+   */
+  ronda?: Array<{ negociacaoId: number; parceiro: string; mensagem: string }>;
+  rondaId?: string;
 };
 export type Pendente = FechoProposto | CancelarProposto | PerguntaAoParceiro;
 
@@ -126,6 +133,15 @@ export function lerPendente(v: unknown): Pendente | null {
       condicao: String(p.condicao ?? ""),
       mensagem: String(p.mensagem ?? ""),
       propostoEm: p.propostoEm,
+      ...(Array.isArray(p.ronda)
+        ? {
+            ronda: (p.ronda as Array<Record<string, unknown>>)
+              .filter((x) => x && Number.isInteger(Number(x.negociacaoId)))
+              .slice(0, 4)
+              .map((x) => ({ negociacaoId: Number(x.negociacaoId), parceiro: String(x.parceiro ?? ""), mensagem: String(x.mensagem ?? "") })),
+          }
+        : {}),
+      ...(typeof p.rondaId === "string" ? { rondaId: p.rondaId } : {}),
     };
   }
   return null;
@@ -141,6 +157,9 @@ export function pendenteEmPalavras(p: Pendente, emEnsaio: boolean): string {
     case "cancelar":
       return `${t}perguntado se cancela o #${p.pedidoId} (à espera do CANCELAR)`;
     case "parceiro":
+      if (p.ronda && p.ronda.length > 0) {
+        return `${t}perguntado a ${p.ronda.map((x) => x.parceiro).join(", ")} se conseguem: «${p.condicao}» (#${p.pedidoId})`;
+      }
       return `${t}perguntado a ${p.parceiro} se consegue: «${p.condicao}» (#${p.pedidoId})`;
   }
 }

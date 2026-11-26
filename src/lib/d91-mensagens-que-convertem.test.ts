@@ -12,7 +12,33 @@ import {
   varianteDasPropostas,
   varianteDoTexto,
 } from "./mensagem-das-propostas";
-import { textoDoOrcamentoDaMesa, type PedidoDoOrcamento } from "./texto-do-orcamento-da-mesa";
+import { localidadeDoOrcamento, nomeDoServicoDoOrcamento, type PedidoDoOrcamento } from "./texto-do-orcamento-da-mesa";
+import { comValidade } from "./validade-do-orcamento";
+import { lerBase } from "./base-do-preco";
+import { trabalhoFechado } from "./mensagem-das-propostas";
+
+/*
+ * d136 (26-11-2026): o «Enviar orçamento» da Mesa passou à mensagem curta da
+ * d123 (ver d136-as-datas-a-todos-os-parceiros.test.ts). A mensagem longa,
+ * a destes testes, continua a ser a de `mensagemDasPropostas` — escrita aqui
+ * como a Mesa a escrevia, para os testes do relatório continuarem a lê-la.
+ */
+const textoLongo = (p: PedidoDoOrcamento, agora: Date) =>
+  comValidade(
+    mensagemDasPropostas({
+      nomeCliente: p.contactName,
+      servico: nomeDoServicoDoOrcamento(p.serviceType),
+      servicoId: p.serviceType,
+      pedidoId: p.id ?? null,
+      cidade: localidadeDoOrcamento(p.city),
+      propostas: propostasParaOCliente(p.negociacoes),
+      fechado: trabalhoFechado(p.negociacoes),
+      base: lerBase(p.baseDoPreco),
+      horasPrevistas: p.horasPrevistas ?? null,
+      mudancaDaLista: false,
+    }),
+    agora,
+  );
 import { traducaoFixa } from "./traducoes-fixas-da-vitoria";
 import { lembreteDasPropostas, mensagemDoLembrete } from "./propostas-sem-resposta";
 import { oQuePodeFazer } from "./email-proposta";
@@ -76,7 +102,7 @@ describe("3.9 a mensagem das propostas — o caso do #663", () => {
   });
 
   it("o cabeçalho, o pagamento e o fim, como no relatório", () => {
-    const t = textoDoOrcamentoDaMesa(pedido(), AGORA);
+    const t = textoLongo(pedido(), AGORA);
     const linhas = t.split("\n");
     expect(linhas[0]).toBe("Olá, Maria!");
     expect(linhas[2]).toBe(
@@ -95,8 +121,8 @@ describe("3.9 a mensagem das propostas — o caso do #663", () => {
 
   it("sem promessa de «quando» se paga: nada adiantado, ao parceiro que contratar", () => {
     const todas = [
-      textoDoOrcamentoDaMesa(pedido(), AGORA),
-      textoDoOrcamentoDaMesa(pedido({ id: 663 }), AGORA),
+      textoLongo(pedido(), AGORA),
+      textoLongo(pedido({ id: 663 }), AGORA),
       oQuePodeFazer("sexta-feira, 27/11"),
       oQuePodeFazer(null),
       PEDIR_E_GRATIS_NO_EMAIL,
@@ -108,13 +134,13 @@ describe("3.9 a mensagem das propostas — o caso do #663", () => {
   });
 
   it("uma proposta só: no singular, e «Diga-nos se quer avançar»", () => {
-    const t = textoDoOrcamentoDaMesa(pedido({ negociacoes: [O_663[1]] }), AGORA);
+    const t = textoLongo(pedido({ negociacoes: [O_663[1]] }), AGORA);
     expect(t).toContain("Já tem uma proposta para a recolha de monos em Almada. O valor é o total a pagar, com o IVA e a taxa da plataforma:");
     expect(t).toContain("Diga-nos se quer avançar e tratamos do resto — quem faz o trabalho é o parceiro escolhido.");
   });
 
   it("por carga: a unidade no lugar de «no total», e o aviso das cargas", () => {
-    const t = textoDoOrcamentoDaMesa(pedido({ baseDoPreco: "carga" }), AGORA);
+    const t = textoLongo(pedido({ baseDoPreco: "carga" }), AGORA);
     expect(t).toContain("Recolhas Isentas Exemplo: 86,96 € por carga — parceiro isento de IVA (85,00 € + 1,96 € de IVA da taxa da plataforma)");
     expect(t).toContain("O valor de cada uma já leva o IVA e a taxa da plataforma:");
     expect(t).toContain(AS_CARGAS_CONFIRMAM_SE_NO_LOCAL);
@@ -136,16 +162,16 @@ describe("3.9 as traduções fixas da mensagem das propostas (o envio automátic
   it("inglês, francês e espanhol, linha a linha", () => {
     for (const id of [662, 663]) {
       for (const base of ["total", "carga"]) {
-        const pt = textoDoOrcamentoDaMesa(pedido({ id, baseDoPreco: base }), AGORA);
+        const pt = textoLongo(pedido({ id, baseDoPreco: base }), AGORA);
         for (const l of ["en", "fr", "es"] as const) expect(traducaoFixa(pt, l), `${id} ${base} ${l}`).not.toBeNull();
       }
     }
-    const uma = textoDoOrcamentoDaMesa(pedido({ id: 663, negociacoes: [O_663[1]] }), AGORA);
+    const uma = textoLongo(pedido({ id: 663, negociacoes: [O_663[1]] }), AGORA);
     for (const l of ["en", "fr", "es"] as const) expect(traducaoFixa(uma, l), l).not.toBeNull();
   });
 
   it("as linhas do #663, em inglês", () => {
-    const en = traducaoFixa(textoDoOrcamentoDaMesa(pedido({ id: 663 }), AGORA), "en")!;
+    const en = traducaoFixa(textoLongo(pedido({ id: 663 }), AGORA), "en")!;
     expect(en).toContain("You have 2 quotes for your request (bulky items removal) in Almada. The price of each one is the total to pay, including VAT and the platform fee:");
     expect(en).toContain("Recolhas Isentas Exemplo: 86,96 € in total - partner exempt from VAT (85,00 € + 1,96 € VAT on the platform fee)");
     expect(en).toContain("Transportes Normais Exemplo: 132,84 € in total (108,00 € + 24,84 € VAT)");
@@ -155,7 +181,7 @@ describe("3.9 as traduções fixas da mensagem das propostas (o envio automátic
   });
 
   it("em francês e em espanhol, o isento", () => {
-    const pt = textoDoOrcamentoDaMesa(pedido(), AGORA);
+    const pt = textoLongo(pedido(), AGORA);
     expect(traducaoFixa(pt, "fr")).toContain("86,96 € au total - partenaire exonéré de TVA (85,00 € + 1,96 € de TVA sur les frais de plateforme)");
     expect(traducaoFixa(pt, "es")).toContain("86,96 € en total - colaborador exento de IVA (85,00 € + 1,96 € de IVA de la tarifa de la plataforma)");
   });
@@ -170,8 +196,8 @@ describe("5.1 o A/B pela paridade do n.º do pedido", () => {
   });
 
   it("B é A com a escolha feita por ele a seguir à lista", () => {
-    const a = textoDoOrcamentoDaMesa(pedido({ id: 662 }), AGORA);
-    const b = textoDoOrcamentoDaMesa(pedido({ id: 663 }), AGORA);
+    const a = textoLongo(pedido({ id: 662 }), AGORA);
+    const b = textoLongo(pedido({ id: 663 }), AGORA);
     expect(a).not.toContain(RESERVAMOS_A_MAIS_EM_CONTA);
     expect(b).toContain(RESERVAMOS_A_MAIS_EM_CONTA);
     expect(RESERVAMOS_A_MAIS_EM_CONTA).toBe(
@@ -183,13 +209,13 @@ describe("5.1 o A/B pela paridade do n.º do pedido", () => {
     // O resto igual.
     expect(b.replace(`${RESERVAMOS_A_MAIS_EM_CONTA}\n\n`, "")).toBe(a);
     // Com uma proposta só, «esta proposta».
-    expect(textoDoOrcamentoDaMesa(pedido({ id: 663, negociacoes: [O_663[1]] }), AGORA)).toContain(RESERVAMOS_ESTA_PROPOSTA);
+    expect(textoLongo(pedido({ id: 663, negociacoes: [O_663[1]] }), AGORA)).toContain(RESERVAMOS_ESTA_PROPOSTA);
   });
 
   it("a variante lê-se do texto e fica no histórico do pedido — nos três caminhos", () => {
-    expect(varianteDoTexto(textoDoOrcamentoDaMesa(pedido({ id: 662 }), AGORA))).toBe("A");
-    expect(varianteDoTexto(textoDoOrcamentoDaMesa(pedido({ id: 663 }), AGORA))).toBe("B");
-    expect(notaDaVariante(textoDoOrcamentoDaMesa(pedido({ id: 663 }), AGORA))).toBe(" Mensagem das propostas: variante B (d91).");
+    expect(varianteDoTexto(textoLongo(pedido({ id: 662 }), AGORA))).toBe("A");
+    expect(varianteDoTexto(textoLongo(pedido({ id: 663 }), AGORA))).toBe("B");
+    expect(notaDaVariante(textoLongo(pedido({ id: 663 }), AGORA))).toBe(" Mensagem das propostas: variante B (d91).");
     expect(notaDaVariante("Olá! Está combinado com…")).toBe("");
     const rota = ler("src/app/api/admin/negociacoes/route.ts");
     expect(rota).toContain("${resumo}${notaDaVariante(texto)}");
@@ -202,7 +228,7 @@ describe("5.1 o A/B pela paridade do n.º do pedido", () => {
   });
 
   it("nenhuma das duas se lê como uma pergunta do formulário (o SIM não vira resposta a outra coisa)", () => {
-    for (const id of [662, 663]) expect(passoDaPergunta(textoDoOrcamentoDaMesa(pedido({ id }), AGORA))).toBeNull();
+    for (const id of [662, 663]) expect(passoDaPergunta(textoLongo(pedido({ id }), AGORA))).toBeNull();
   });
 });
 

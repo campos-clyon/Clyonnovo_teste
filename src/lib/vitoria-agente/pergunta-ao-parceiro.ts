@@ -43,23 +43,30 @@ const emLisboa = (dia: string, hora: number, minuto = 0) => instanteEmLisboa(`${
  * Lisboa: perguntado às 20h30, acaba às 9h30 do dia seguinte; perguntado às
  * 23h ou às 6h, às 10h (conta a partir das 9h).
  */
-export function prazoDaPergunta(perguntadoEm: Date, minutos = MINUTOS_PARA_O_PARCEIRO_RESPONDER): Date {
+export function prazoDaPergunta(
+  perguntadoEm: Date,
+  minutos = MINUTOS_PARA_O_PARCEIRO_RESPONDER,
+  /** d136: a janela (por omissão, a de contacto). */
+  janela: { abre: number; fecha: number } = { abre: HORA_QUE_ABRE, fecha: HORA_QUE_FECHA },
+): Date {
+  const HORA_QUE_ABRE_AQUI = janela.abre;
+  const HORA_QUE_FECHA_AQUI = janela.fecha;
   let dia = diaEmLisboa(perguntadoEm);
   const p = pecasEmLisboa(perguntadoEm);
   let inicio = perguntadoEm;
-  if (p.hora < HORA_QUE_ABRE) inicio = emLisboa(dia, HORA_QUE_ABRE);
-  else if (p.hora >= HORA_QUE_FECHA) {
+  if (p.hora < HORA_QUE_ABRE_AQUI) inicio = emLisboa(dia, HORA_QUE_ABRE_AQUI);
+  else if (p.hora >= HORA_QUE_FECHA_AQUI) {
     dia = somarDiasAoDia(dia, 1);
-    inicio = emLisboa(dia, HORA_QUE_ABRE);
+    inicio = emLisboa(dia, HORA_QUE_ABRE_AQUI);
   }
   let falta = minutos * 60_000;
   for (let i = 0; i < 30; i += 1) {
-    const fecha = emLisboa(dia, HORA_QUE_FECHA);
+    const fecha = emLisboa(dia, HORA_QUE_FECHA_AQUI);
     const cabe = fecha.getTime() - inicio.getTime();
     if (falta <= cabe) return new Date(inicio.getTime() + falta);
     falta -= Math.max(0, cabe);
     dia = somarDiasAoDia(dia, 1);
-    inicio = emLisboa(dia, HORA_QUE_ABRE);
+    inicio = emLisboa(dia, HORA_QUE_ABRE_AQUI);
   }
   return new Date(perguntadoEm.getTime() + minutos * 60_000);
 }
@@ -147,7 +154,9 @@ export function chaveDaPergunta(p: Pick<PerguntaAoParceiro, "pedidoId" | "negoci
 /** A pergunta ao parceiro reconhece-se pelo texto (o da d92, `mensagemAoParceiro`): o número do pedido, ou null. */
 export function pedidoDaPergunta(texto: string | null | undefined): number | null {
   const t = String(texto ?? "");
-  if (!/quer escolher a sua proposta/i.test(t) || !/Responda SIM ou NÃO/i.test(t)) return null;
+  // d136: e a das datas, que sai a todos os parceiros do pedido.
+  const daRonda = /pergunta (?:se consegue|quando pode)/i.test(t) && /Responda com o dia que pode/i.test(t);
+  if (!daRonda && (!/quer escolher a sua proposta/i.test(t) || !/Responda SIM ou NÃO/i.test(t))) return null;
   const m = t.match(/pedido #(\d{1,9})/);
   return m ? Number(m[1]) : null;
 }
@@ -155,7 +164,13 @@ export function pedidoDaPergunta(texto: string | null | undefined): number | nul
 /* ── Os textos ──────────────────────────────────────────────────────────── */
 
 /** O aviso na app Pro (o mesmo que vai no WhatsApp, mais curto). */
-export function avisoDaPerguntaNaApp(p: Pick<PerguntaAoParceiro, "pedidoId" | "condicao">): { titulo: string; corpo: string } {
+export function avisoDaPerguntaNaApp(p: Pick<PerguntaAoParceiro, "pedidoId" | "condicao"> & { rondaId?: string | null }): { titulo: string; corpo: string } {
+  if (p.rondaId) {
+    return {
+      titulo: `Pergunta do cliente — pedido #${p.pedidoId}`,
+      corpo: `O cliente pergunta se consegue «${p.condicao}». Responda com o dia que pode, no WhatsApp da CLYON ou no seu painel.`,
+    };
+  }
   return {
     titulo: `Pergunta do cliente — pedido #${p.pedidoId}`,
     corpo: `O cliente quer escolher a sua proposta, se conseguir: «${p.condicao}». Responda SIM ou NÃO no WhatsApp da CLYON ou no seu painel.`,
