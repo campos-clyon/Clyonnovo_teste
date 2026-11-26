@@ -82,12 +82,12 @@ describe("d3 — o cartão da pergunta do cliente na app Pro", () => {
     expect(i.indexOf("<PerguntaDoCliente />")).toBeLessThan(i.indexOf("<AvisosDoNovoModelo />"));
   });
 
-  it("a nota da atualização da Pro fala do cartão (por publicar: precisa do sim do dono)", () => {
+  it("a nota da atualização da Pro fala do cartão (publicada a 26-11-2026, d1)", () => {
     const pro = notasDaApp("pro")[0];
     expect(pro.id).toBe("pro-2026-11-24");
     expect(pro.nota).toContain("Sim, recebi");
     expect(pro.nota).toMatch(/cliente pergunta se consegue/);
-    expect(pro.updates).toEqual([]); // por publicar: precisa do sim do dono na conversa
+    expect(pro.updates).toEqual(["01a217c9-c3f7-74b4-9df5-eb8b6947b51d"]); // publicada a 26-11-2026 com o sim do CEO e do dono
   });
 });
 
