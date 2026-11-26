@@ -132,6 +132,18 @@ export const LIGACOES_PARADAS_POR_INSTANCIA = 1;
 export const PARADA_FECHA_AO_FIM_DE_MS = 10_000;
 export const A_BASE_FECHA_PARADAS_AO_FIM_DE_S = 120;
 
+/*
+ * A BASE COMPRIME O QUE MANDA — d133 (26-11-2026).
+ *
+ * O MySQL do Railway mandava para fora ~4,8 GB por dia, e o Railway cobra
+ * cada GB que sai. Quase tudo é texto: listas da Mesa, das conversas, dos
+ * pagamentos, JSON das propostas. Com o protocolo comprimido (zlib, o
+ * `compress` do mysql2) a base comprime cada pacote antes de o mandar; texto e
+ * JSON encolhem várias vezes. Ensaiado com SSL e o fuso "Z" num MySQL 9: os
+ * mesmos resultados, linha a linha.
+ */
+export const BASE_COMPRIMIDA = true;
+
 const doProcesso = globalThis as typeof globalThis & {
   __poolDaClyon?: mysql.Pool;
 };
@@ -158,6 +170,7 @@ export async function getPool() {
       // MYSQL_CA_CERT; sem ela, fica como estava. Ver ssl-da-base.ts.
       ssl: sslDaBase(),
       timezone: FUSO_DA_BASE,
+      compress: BASE_COMPRIMIDA,
     });
     const p = poolInstance as unknown as {
       on?: (ev: string, fn: (c: { query: (sql: string, cb: (e: unknown) => void) => void }) => void) => void;
@@ -640,6 +653,42 @@ export async function getGalleryMediaItems() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(galleryMedia);
+}
+
+/**
+ * A galeria SEM as imagens — d133 (26-11-2026).
+ *
+ * As imagens vivem na coluna `imageUrl` em base64 (~11 MB as 25). A página
+ * /trabalhos só precisa do endereço de cada uma: para as guardadas em base64
+ * chega uma marca de versão (CRC32, calculada NA BASE) para o `?v=` da rota
+ * que as serve. Antes, cada regeneração da página puxava os 11 MB inteiros.
+ */
+export type LinhaDaGaleriaSemAImagem = {
+  id: string;
+  section: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  alt: string;
+  order: number;
+  isActive: number;
+  projectKey: string | null;
+  phase: string | null;
+  urlExterna: string | null;
+  versaoDaImagem: string | null;
+};
+
+export async function getGalleryMediaItemsSemAImagem(): Promise<LinhaDaGaleriaSemAImagem[]> {
+  await ensureGalleryMediaTable();
+  const pool = await getPool();
+  if (!pool) return [];
+  const [linhas] = (await pool.query(
+    `SELECT id, section, title, subtitle, description, alt, \`order\`, isActive, projectKey, phase,
+            CASE WHEN imageUrl LIKE 'data:image/%' THEN NULL ELSE imageUrl END AS urlExterna,
+            CASE WHEN imageUrl LIKE 'data:image/%' THEN LOWER(HEX(CRC32(imageUrl))) ELSE NULL END AS versaoDaImagem
+       FROM galleryMedia`,
+  )) as [LinhaDaGaleriaSemAImagem[], unknown];
+  return linhas;
 }
 
 /**

@@ -62,7 +62,54 @@ function separadorVisivel(): boolean {
   return typeof document === "undefined" || document.visibilityState === "visible";
 }
 
+/* ── Ninguém a mexer: o pulso abranda — d133 (26-11-2026) ──────────────────
+ *
+ * A base do Railway mandava ~4,8 GB por dia para fora, quase tudo de dia, e
+ * em blocos de horas seguidas: separadores do backoffice abertos num ecrã,
+ * visíveis mas sem ninguém, a puxar a Mesa inteira de 20 em 20 segundos.
+ *
+ * Ao fim de 5 minutos sem rato, teclado nem toque, o pulso bate só uma vez em
+ * cada nove (de 3 em 3 minutos): um ecrã deixado aberto continua a mudar,
+ * devagar. Ao primeiro movimento bate LOGO e volta aos 20 segundos — quem
+ * está a trabalhar não nota diferença.
+ */
+export const PARADO_AO_FIM_DE_MS = 5 * 60_000;
+export const BATIDAS_QUANDO_PARADO = 9;
+
+/** Esta batida vai à rede? `contadas` = batidas seguidas com a pessoa parada. */
+export function bateAgora(agora: number, ultimaActividade: number, contadas: number): boolean {
+  if (agora - ultimaActividade <= PARADO_AO_FIM_DE_MS) return true;
+  return contadas % BATIDAS_QUANDO_PARADO === 0;
+}
+
+let ultimaActividade = Date.now();
+let batidasParado = 0;
+let aOuvirAPessoa = false;
+
+function aoMexer() {
+  const agora = Date.now();
+  const estavaParado = agora - ultimaActividade > PARADO_AO_FIM_DE_MS;
+  ultimaActividade = agora;
+  batidasParado = 0;
+  if (estavaParado && temporizador !== null && separadorVisivel()) bater();
+}
+
+function ouvirAPessoa() {
+  if (aOuvirAPessoa || typeof window === "undefined") return;
+  aOuvirAPessoa = true;
+  for (const ev of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart", "focus"]) {
+    window.addEventListener(ev, aoMexer, { passive: true });
+  }
+}
+
 function bater() {
+  const agora = Date.now();
+  if (agora - ultimaActividade > PARADO_AO_FIM_DE_MS) {
+    batidasParado += 1;
+    if (!bateAgora(agora, ultimaActividade, batidasParado)) return;
+  } else {
+    batidasParado = 0;
+  }
   // Uma cópia: um ouvinte que se desligue a meio da batida não pode fazer o
   // ciclo saltar o seguinte.
   for (const o of [...ouvintes]) o();
@@ -81,6 +128,9 @@ function parar() {
 
 function aoMudarVisibilidade() {
   if (separadorVisivel()) {
+    // Voltar ao separador é alguém a olhar: conta como mexer.
+    ultimaActividade = Date.now();
+    batidasParado = 0;
     bater();
     arrancar();
   } else {
@@ -94,6 +144,7 @@ function subscrever(o: Batida): () => void {
     document.addEventListener("visibilitychange", aoMudarVisibilidade);
     aOuvirOSeparador = true;
   }
+  ouvirAPessoa();
   arrancar();
   return () => {
     ouvintes.delete(o);

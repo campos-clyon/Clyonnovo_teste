@@ -804,15 +804,10 @@ export default function ColaboradorAdminClient({
   // A última mudança, do registo permanente — quem, quando, de quanto para quanto (d2, 12-11-2026).
   const [ultimaMudancaDeTaxa, setUltimaMudancaDeTaxa] = useState<UltimaMudancaDeTaxa | null>(null);
 
-  // Estatísticas do gestor de imagens (para a aba "Imagens do site")
-  const [imageStats, setImageStats] = useState<{
-    total: number;
-    ativas: number;
-    inativas: number;
-    hero: number;
-    showcase: number;
-  } | null>(null);
-  const [loadingImageStats, setLoadingImageStats] = useState(false);
+  // As estatísticas das imagens do site saíram a 26-11-2026 (d133): ninguém as
+  // mostrava, e cada abertura do painel puxava da base as 25 imagens em base64
+  // (~11 MB) só para as contar. O ecrã «Imagens do site» lê a galeria quando
+  // se abre (ImageManagerClient).
 
   // ── Leads state ─────────────��────────────────────────────────────────────
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -1044,7 +1039,6 @@ export default function ColaboradorAdminClient({
     if (papel === "admin") {
       void carregarSimulatorSettings(storedToken);
       void carregarTaxas(storedToken);
-      void carregarImageStats(storedToken);
       setLoading(false);
     }
     // O assistente fica "a carregar" até chegarem as secções dele — ver o
@@ -1209,32 +1203,6 @@ export default function ColaboradorAdminClient({
       setTaxasErro("Erro de rede.");
     } finally {
       setTaxasAGravar(false);
-    }
-  };
-
-  const carregarImageStats = async (authToken: string) => {
-    try {
-      setLoadingImageStats(true);
-      const response = await fetch(`/api/media/gallery?_=${Date.now()}`, {
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-      const items: Array<{ section?: string; isActive?: boolean }> = data.items || [];
-      setImageStats({
-        total: items.length,
-        ativas: items.filter((item) => item.isActive).length,
-        inativas: items.filter((item) => !item.isActive).length,
-        hero: items.filter((item) => item.section === "hero").length,
-        showcase: items.filter((item) => item.section === "showcase").length,
-      });
-    } catch {
-      // Estatísticas de imagens são informativas; falhas não bloqueiam o painel.
-    } finally {
-      setLoadingImageStats(false);
     }
   };
 

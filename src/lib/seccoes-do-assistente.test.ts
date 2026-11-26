@@ -214,7 +214,6 @@ const CHAMADAS_FORA_DOS_BLOCOS: Record<string, SeccaoDoAssistente | "todas" | nu
   "/api/admin/leads": "leads",
   "/api/admin/lead-events": "leads",
   "/api/admin/taxas": "configs",
-  "/api/media/gallery": "configs",
   "/api/colaboradores/admin/settings/simulador": "configs",
   "/api/admin/seguranca/alterar-senha": "configs",
   // Os selos do menu: só o painel do administrador os usa com proveito; ao

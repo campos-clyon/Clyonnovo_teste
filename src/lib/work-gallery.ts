@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import {
   getDb,
   getGalleryMediaItems,
+  getGalleryMediaItemsSemAImagem,
   getGalleryMediaItemById,
   replaceGalleryMediaItems,
 } from "@/lib/db";
@@ -326,6 +327,48 @@ export async function listPublicGalleryItems(section?: GallerySection) {
 }
 
 /**
+ * Os itens activos JÁ com o endereço público da imagem, sem trazer o base64
+ * da base — d133 (26-11-2026). É o que as páginas públicas mostram: a rota
+ * `/api/media/gallery/render/<id>?v=<versão>` serve cada imagem, e a versão
+ * (CRC32 da coluna, calculado no MySQL) muda quando a imagem muda.
+ *
+ * Sem linhas na base, ou com a base a falhar, faz o caminho de sempre
+ * (`listPublicGalleryItems`, que semeia ou cai na galeria de omissão).
+ */
+async function itensPublicosComEndereco(section: GallerySection): Promise<GalleryItem[]> {
+  const db = await getDb();
+  if (db) {
+    try {
+      const linhas = await getGalleryMediaItemsSemAImagem();
+      if (linhas.length > 0) {
+        return normalizeItems(
+          linhas
+            .filter((l) => l.section === section && Boolean(l.isActive))
+            .map((l) => ({
+              id: l.id,
+              section: l.section as GallerySection,
+              title: l.title,
+              subtitle: l.subtitle || "",
+              description: l.description || "",
+              alt: l.alt,
+              imageUrl: l.versaoDaImagem
+                ? `/api/media/gallery/render/${l.id}?v=${l.versaoDaImagem}`
+                : l.urlExterna || "",
+              order: Number(l.order || 1),
+              isActive: true,
+              projectKey: l.projectKey || "",
+              phase: (l.phase as GalleryPhase | null) || undefined,
+            })),
+        );
+      }
+    } catch {
+      // cai no caminho de sempre, logo abaixo
+    }
+  }
+  return (await listPublicGalleryItems(section)).map((item) => ({ ...item, imageUrl: resolveGalleryImageUrl(item) }));
+}
+
+/**
  * Um item só, para a rota que serve a imagem.
  *
  * `null` quer dizer que não existe. Uma falha da base PROPAGA-SE: antes caía
@@ -448,9 +491,9 @@ export async function replaceGalleryFile(previousUrl: string, file: File, hint?:
 }
 
 export async function getHeroCarouselImages() {
-  const items = await listPublicGalleryItems("hero");
+  const items = await itensPublicosComEndereco("hero");
   return items.map((item) => ({
-    url: resolveGalleryImageUrl(item),
+    url: item.imageUrl,
     alt: item.alt,
     title: item.title,
     subtitle:
@@ -459,7 +502,8 @@ export async function getHeroCarouselImages() {
 }
 
 export async function getShowcaseProjects() {
-  const items = await listPublicGalleryItems("showcase");
+  // Já com o endereço público de cada imagem, e sem o base64 (d133).
+  const items = await itensPublicosComEndereco("showcase");
   const groups = new Map<string, GalleryItem[]>();
 
   for (const item of items) {
@@ -478,10 +522,7 @@ export async function getShowcaseProjects() {
       title: first?.title || "Trabalho real",
       subtitle: first?.subtitle || "",
       description: first?.description || "",
-      items: orderedItems.map((item) => ({
-        ...item,
-        imageUrl: resolveGalleryImageUrl(item),
-      })),
+      items: orderedItems,
     };
   });
 }
