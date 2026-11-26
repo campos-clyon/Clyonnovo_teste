@@ -134,6 +134,24 @@ export function recebePorHoraCent(t: TarifaCongelada, horaCent: number): number 
   return t.regras.modo === "de_dentro" ? horaCent - Math.round(horaCent * t.regras.taxa) : horaCent;
 }
 
+/**
+ * AS TAXAS COM QUE ESTA NEGOCIAÇÃO SE LÊ AO PROFISSIONAL — d5 (26-11-2026).
+ * Numa mudança escolhida pela lista, o «recebe por hora» é um só: o da tarifa
+ * congelada (a taxa sai da hora dele, «de_dentro»). A taxa gravada na linha
+ * pode ser outra (uma negociação em dinheiro grava a taxa toda do lado do
+ * cliente e zero do dele), e a caixa da hora do painel e da app, que fazem a
+ * conta com `taxas`, dizia um número diferente do cartão. A rota manda estas,
+ * e o ecrã só as mostra.
+ */
+export function taxasDaMudancaEscolhida(
+  tarifaCongeladaJson: string | null | undefined,
+  gravadas: { cliente: number; profissional: number },
+): { cliente: number; profissional: number } {
+  const t = tarifaCongeladaDeJson(tarifaCongeladaJson ?? null);
+  if (!t) return gravadas;
+  return { cliente: gravadas.cliente, profissional: t.regras.modo === "de_dentro" ? t.regras.taxa : 0 };
+}
+
 /** «Responda até 14:30» no mesmo dia em Lisboa; «Responda até 12/11 às 10:00» noutro. */
 export function textoDoPrazo(prazo: Date, agora: Date = new Date()): { texto: string; passou: boolean } {
   const hora = horaEmLisboa(prazo);

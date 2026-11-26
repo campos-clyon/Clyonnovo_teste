@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reservasDe } from "@/lib/reserva-na-base";
 import { negociacoesDoProfissional, getPool, custosEBaseDoProfissional, mudancasEscolhidasDoProfissional } from "@/lib/db";
-import { mudancaEscolhida, semDerrubar } from "@/lib/mudanca-escolhida-pelo-cliente";
+import { mudancaEscolhida, semDerrubar, taxasDaMudancaEscolhida } from "@/lib/mudanca-escolhida-pelo-cliente";
 import type { MudancaEscolhidaNaBase } from "@/lib/db";
 import { getActivePricingMap } from "@/lib/pricing-helper";
 import {
@@ -436,7 +436,10 @@ export async function GET(req: NextRequest) {
        * fazia um trabalho fechado no mês passado aparecer-lhe com outro valor
        * do que aquele com que o aceitou.
        */
-      const taxasDela = taxasDaNegociacao(l);
+      const gravadasDela = taxasDaNegociacao(l);
+      // d5: numa mudança escolhida pela lista, o «recebe por hora» é o da tarifa congelada, em todo o lado.
+      const escolhidaDela = escolhidas.get(Number(l.id));
+      const taxasDela = escolhidaDela ? taxasDaMudancaEscolhida(escolhidaDela.tarifaCongeladaJson, gravadasDela) : gravadasDela;
       const fase = faseDoTrabalho(l as never);
 
       /*
