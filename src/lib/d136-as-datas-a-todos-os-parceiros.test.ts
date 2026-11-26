@@ -195,9 +195,9 @@ describe("as respostas dos parceiros, numa mensagem curta", () => {
       respostaAoClienteDaRonda(664, [
         { parceiro: "Recolhas Tejo", resposta: "Sim, amanhã de manhã" },
         { parceiro: "Transportes Exemplo", resposta: "sábado" },
-        { parceiro: "Mudanças Fictícias", resposta: null },
+        { parceiro: "Mudanças Exemplo", resposta: null },
       ]),
-    ).toBe("Já perguntei aos parceiros do pedido #664: Recolhas Tejo: amanhã de manhã · Transportes Exemplo: sábado · Mudanças Fictícias: (sem resposta). Qual prefere?");
+    ).toBe("Já perguntei aos parceiros do pedido #664: Recolhas Tejo: amanhã de manhã · Transportes Exemplo: sábado · Mudanças Exemplo: (sem resposta). Qual prefere?");
     expect(respostaAoClienteDaRonda(664, [{ parceiro: "Recolhas Tejo", resposta: "não consigo" }])).toMatch(/nenhum confirmou essa data/);
   });
 
