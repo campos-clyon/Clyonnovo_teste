@@ -345,10 +345,10 @@ describe("o #688 — 2 estantes nos Olivais", () => {
     for (const l of ["en", "fr", "es"] as const) expect(traducaoFixa(ATUALIZADO_CONFIRMA, l)).not.toBeNull();
   });
 
-  it("«cuidado: na rua também há o lote 32» vai para as notas do pedido (o parceiro lê-as)", () => {
-    const t = "Cuidado: na rua também há o lote 32";
+  it("«cuidado: aqui também há o lote 32» (o aviso do #688) vai para as notas do pedido (o parceiro lê-as)", () => {
+    const t = "Cuidado: aqui também há o lote 32";
     expect(eAvisoParaOParceiro(t)).toBe(true);
-    expect(eAvisoParaOParceiro("Rua das Amoras Bravas 12")).toBe(false);
+    expect(eAvisoParaOParceiro("Rua das Gaivotas Mansas 3")).toBe(false);
     const r = comOAvisoParaOParceiro({ estado, resposta: "Qual é o andar?" }, t);
     expect(r.estado.dados.notas).toEqual([t]);
     // Uma vez só.
