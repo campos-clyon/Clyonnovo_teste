@@ -192,13 +192,13 @@ export default function OrcamentoClient({
                 Dizia "(c/ IVA)" e "IVA incluído". A CLYON está em isenção do
                 artigo 53.º do CIVA e não liquida IVA — dizer que está incluído
                 é afirmar que há um imposto dentro do preço que não existe, e
-                que a factura vai contradizer.
+                que a fatura vai contradizer.
 
                 E DESDE 29-09-2026 É O PREÇO SEM IVA, JÁ COM A TAXA — como em
                 todo o lado. Mostrava o `precoFinalIva`, feito à mão (× 1,23) e
                 sem a taxa, com a etiqueta «valor final». O email do orçamento
                 passou a dizer o preço sem IVA e, à parte, o que acresce com
-                factura; esta página, que é para onde o email manda, diz o mesmo.
+                fatura; esta página, que é para onde o email manda, diz o mesmo.
               */}
               <p className="text-xs text-tinta-fraca font-medium uppercase tracking-wide">Preço aprovado, {etiquetaDoPreco(modelo)}</p>
               <p className="text-3xl font-bold text-acao mt-1">{preco}</p>

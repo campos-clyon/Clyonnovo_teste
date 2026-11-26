@@ -173,9 +173,9 @@ const GUIAS: Record<string, string> = {
 
 /* O terceiro passo pela data (d10): desde 15-11-2026 paga-se ao parceiro. */
 const ESCOLHE_NO_MODELO_ANTIGO =
-  "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Pela plataforma, o valor só chega ao parceiro depois de confirmar que ficou feito.";
+  "Escolha a que quiser — ou nenhuma, e só paga se contratar alguém. Pela plataforma, o valor só chega ao parceiro depois de confirmar que ficou feito.";
 const ESCOLHE_NO_NOVO_MODELO =
-  "Escolhe a que quiser — ou nenhuma, e só paga se contratar alguém. Paga diretamente ao parceiro, por transferência, MB WAY ou dinheiro, e recebe as duas faturas no pedido.";
+  "Escolha a que quiser — ou nenhuma, e só paga se contratar alguém. Paga diretamente ao parceiro, por transferência, MB WAY ou dinheiro, e recebe as duas faturas no pedido.";
 
 const REGIOES_DO_SERVICO = [
   { href: "/regioes/lisboa", texto: "Lisboa" },
@@ -305,8 +305,8 @@ export default async function ServicoGerado({ params }: Props) {
               confirmação (30-09-2026).
             */}
             {[
-              "Descreve o que precisa, com fotografias se ajudarem.",
-              `Recebe propostas de parceiros da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`,
+              "Descreva o que precisa, com fotografias se ajudarem.",
+              `Receba propostas de parceiros da sua zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`,
               // Dizia «Só paga depois de confirmar», que se lia como «depois do
               // trabalho feito» — e quem paga pela plataforma paga a referência
               // logo a seguir a aceitar (29-09-2026).

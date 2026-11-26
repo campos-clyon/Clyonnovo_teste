@@ -598,8 +598,8 @@ export default function SimulatorThreePhaseForm() {
                 <CheckCircle className="w-4 h-4 text-blue-600" />
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                Os parceiros da sua zona vão responder com valores. Aceita o que
-                quiser, ou propõe outro — só paga se contratar alguém.
+                Os parceiros da sua zona vão responder com valores. Aceite o que
+                quiser, ou proponha outro — só paga se contratar alguém.
               </p>
             </div>
             {acessoToken && (

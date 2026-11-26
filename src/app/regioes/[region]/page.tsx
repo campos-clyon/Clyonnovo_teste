@@ -125,7 +125,7 @@ export default async function RegionPage({ params }: Props) {
       q: `Que serviços posso pedir ${emTerra(regionData.name)}?`,
       // 30-09-2026: listava «limpeza pós-obra», que não é um serviço da
       // plataforma (não está em service-categories.ts).
-      a: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreve o que tem e recebe propostas de parceiros.`,
+      a: `Recolha de móveis, recolha de monos, recolha de entulho, mudanças e esvaziamento de casas ${emTerra(regionData.name)}. Descreva o que tem e receba propostas de parceiros.`,
     },
     {
       q: `Quanto tempo demora a receber resposta ${emTerra(regionData.name)}?`,
@@ -170,19 +170,19 @@ export default async function RegionPage({ params }: Props) {
   const COMO_FUNCIONA = [
     {
       icon: MessageSquare,
-      titulo: "Descreve o que tem",
+      titulo: "Descreva o que tem",
       texto:
         "Fotografias e uma frase chegam. Não precisa de medir nada nem de saber o nome das peças.",
     },
     {
       icon: Truck,
-      titulo: "Recebe propostas",
-      texto: `Parceiros da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Vê o nome, a nota e os trabalhos de cada um.`,
+      titulo: "Receba propostas",
+      texto: `Parceiros da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}. Veja o nome, a nota e os trabalhos de cada um.`,
     },
     {
       icon: ShieldCheck,
-      titulo: "Escolhe, ou não",
-      texto: `Aceita a proposta que quiser — ou nenhuma. ${PRECO_FECHADO}`,
+      titulo: "Escolha, ou não",
+      texto: `Aceite a proposta que quiser — ou nenhuma. ${PRECO_FECHADO}`,
     },
   ];
 

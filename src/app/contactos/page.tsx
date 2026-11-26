@@ -326,7 +326,7 @@ export default async function ContactosPage() {
                   "Só aos que fazem esse serviço e cujo raio alcança a sua morada. A sua morada exata e o seu telefone não são visíveis para eles nesta fase — só a localidade.",
                 ],
                 [
-                  "Recebe propostas com valores",
+                  "Receba propostas com valores",
                   `Em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma. ${NA_PROPOSTA_COM_IVA} Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
                 ],
                 [

@@ -20,6 +20,7 @@
  * AQUI (AAAA-MM-DD, hora de Lisboa).
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
+  // 26-11-2026 (d4): as páginas públicas passam a tratar por «você» (Descreva, Receba, Escolha, Peça); o texto de cada uma mudou.
   // 23-11-2026 (d96): /mudancas com o parágrafo das cidades e uma linha própria em cada cartão.
   // 23-11-2026 (d7): o cartão do guia «Quanto custa uma mudança» em /mudancas lê a lista de parceiros, como o resto da página.
   // 17-11-2026 (d62/d63, acertos): o cartão das mudanças em /contactos com o com IVA da mesma etiqueta (49,20 €/h).
@@ -47,51 +48,51 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 29-10-2026: «parceiro» em vez de «profissional» em tudo o que o cliente lê
   // (dono). Antes, 28-10-2026 (d1): as avaliações por fonte, a promessa do prazo e os
   // botões do orçamento mudaram o texto destas páginas.
-  "/": "2026-11-17",
+  "/": "2026-11-26",
   // 10-11-2026 (d29): os dados estruturados de /avaliacoes, /trabalhos, /precos e /blog
   // (o que a página diz ao Google sobre si: o caminho, as perguntas, a lista dos artigos).
   "/avaliacoes": "2026-11-16",
-  "/faq": "2026-11-17",
-  "/sobre-nos": "2026-11-19",
+  "/faq": "2026-11-26",
+  "/sobre-nos": "2026-11-26",
   "/trabalhos": "2026-11-10",
   // 18-11-2026 (d8): o guia novo para quem tem carrinha entra na lista dos artigos.
   "/blog": "2026-11-18",
-  "/servicos": "2026-11-17",
-  "/recolha-de-moveis": "2026-11-16",
-  "/recolha-de-sofas": "2026-11-16",
-  "/recolha-de-camas": "2026-11-16",
-  "/recolha-de-armarios": "2026-11-16",
+  "/servicos": "2026-11-26",
+  "/recolha-de-moveis": "2026-11-26",
+  "/recolha-de-sofas": "2026-11-26",
+  "/recolha-de-camas": "2026-11-26",
+  "/recolha-de-armarios": "2026-11-26",
   // 02-11-2026: liga às secções «recolha gratuita» de Lisboa e de Setúbal.
   "/recolha-gratuita-de-moveis-usados": "2026-11-19",
-  "/recolha-de-eletrodomesticos": "2026-11-16",
+  "/recolha-de-eletrodomesticos": "2026-11-26",
   "/recolha-de-moveis-urgente": "2026-11-15",
   "/retirar-moveis-velhos": "2026-11-16",
   "/orcamento-recolha-lisboa": "2026-11-19",
-  "/como-funciona": "2026-11-16",
+  "/como-funciona": "2026-11-26",
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
   "/precos": "2026-11-17",
-  "/empresas": "2026-11-17",
+  "/empresas": "2026-11-26",
   // d43: a página nova dos armazéns, escritórios e lojas.
   "/esvaziamento-de-armazens-e-escritorios": "2026-11-15",
   // 31-10-2026: o sem IVA nunca sozinho — cada preço com o com IVA ao lado (antes,
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
   "/precos/esvaziamento-de-casas": "2026-11-17",
   "/precos/mudancas": "2026-11-17",
-  "/contactos": "2026-11-19",
-  "/servicos/esvaziamento-apartamento": "2026-11-15",
-  "/servicos/manutencao-casa": "2026-11-15",
+  "/contactos": "2026-11-26",
+  "/servicos/esvaziamento-apartamento": "2026-11-26",
+  "/servicos/manutencao-casa": "2026-11-26",
   "/recolha-de-monos": "2026-11-17",
   // 03-11-2026 (d1 v2): os andares sem elevador por m³ na calculadora e nos factores do preço.
   // E no mesmo dia (d4): o saco a 4,00–4,80 € (10 sacos 40–48 €) e os andares por trabalho.
-  "/recolha-de-entulho": "2026-11-15",
+  "/recolha-de-entulho": "2026-11-26",
   "/precos/recolha-de-entulho": "2026-11-15",
   // 04-11-2026 (d7): os móveis com a recolha mínima e o sofá, a cama e o armário como peças grandes.
   // 18-11-2026 (d5): a descrição com o máximo da tabela, 15 a 65 € + IVA, e o com IVA ao lado.
   "/precos/recolha-de-monos-e-moveis": "2026-11-18",
-  "/esvaziamento-de-casas": "2026-11-17",
+  "/esvaziamento-de-casas": "2026-11-26",
   "/esvaziamento-de-casas-amadora": "2026-11-17",
   // 11-11-2026: as mudanças ao preço de cada parceiro (o «desde» dos parceiros da lista, ou a referência).
-  "/mudancas": "2026-11-23",
+  "/mudancas": "2026-11-26",
   "/transporte-de-moveis": "2026-11-16",
   "/pequenas-mudancas": "2026-11-16",
   "/mudancas-de-escritorio": "2026-11-16",

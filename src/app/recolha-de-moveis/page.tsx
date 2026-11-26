@@ -469,7 +469,7 @@ export default function RecolhaDeMoveisPage() {
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-5">
               <h3 className="font-semibold text-cyan-800">Recolha paga (CLYON)</h3>
               <p className="mt-2 text-sm text-acao">
-                Quando precisa de rapidez, desmontagem, carregamento a partir do interior do imóvel e transporte. Descreve o pedido uma vez e recebe propostas de parceiros da sua zona.
+                Quando precisa de rapidez, desmontagem, carregamento a partir do interior do imóvel e transporte. Descreva o pedido uma vez e receba propostas de parceiros da sua zona.
               </p>
             </div>
           </div>

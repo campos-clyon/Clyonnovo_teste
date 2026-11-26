@@ -111,7 +111,7 @@ function getServiceIntro(serviceName: string, cityName: string, regionLabel: str
   // 30-09-2026: dizia «Trabalhamos em contexto residencial e comercial». A
   // CLYON não vai a casa de ninguém — quem vai é o profissional que o cliente
   // escolher, e é isso que a frase tem de dizer.
-  return `${serviceName} ${emTerra(cityName)}: descreve o que precisa e recebe propostas de parceiros da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios ${emTerra(regionLabel)}.`;
+  return `${serviceName} ${emTerra(cityName)}: descreva o que precisa e receba propostas de parceiros da sua zona, com o preço fechado antes de começar. Para casas, lojas e escritórios ${emTerra(regionLabel)}.`;
 }
 
 function getIncludedItems(serviceName: string, cityName: string, serviceSlug: string) {

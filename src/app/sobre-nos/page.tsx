@@ -273,7 +273,7 @@ const PRINCIPIOS = [
   },
   {
     icone: Banknote,
-    titulo: "Paga como preferir",
+    titulo: "Pague como preferir",
     texto: PAGA_COMO_PREFERIR_NO_MODELO_ANTIGO,
   },
   {
@@ -297,10 +297,10 @@ const CLIENTES = [
 ];
 
 const PASSOS = [
-  "Descreve o que precisa: fotografias, morada, quantidade, andar e elevador.",
-  `Recebe em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de parceiros da sua zona, já com IVA e com a taxa da plataforma.`,
-  "Escolhe a proposta. O parceiro vai ao local no dia combinado, retira e trata do destino.",
-  "Confirma na plataforma que ficou feito — e é à CLYON que recorre se alguma coisa correr mal.",
+  "Descreva o que precisa: fotografias, morada, quantidade, andar e elevador.",
+  `Receba em menos de ${PRAZO_DE_RESPOSTA.porExtenso} as propostas de parceiros da sua zona, já com IVA e com a taxa da plataforma.`,
+  "Escolha a proposta. O parceiro vai ao local no dia combinado, retira e trata do destino.",
+  "Confirme na plataforma que ficou feito — e é à CLYON que recorre se alguma coisa correr mal.",
 ];
 
 /* Quatro testemunhos, tal e qual estão em `reviews-data.ts`. */
@@ -318,7 +318,7 @@ const faqs = [
     question: "O que é a CLYON?",
     answer:
       "A CLYON é uma plataforma de recolha de móveis, monos e entulho, esvaziamento de casas, mudanças e manutenção da casa em Lisboa, na Margem Sul e em Setúbal. " +
-      `Liga quem precisa a parceiros da zona: descreve o pedido, recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolhe.`,
+      `Liga quem precisa a parceiros da zona: descreva o pedido, receba propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso} e escolha.`,
   },
   {
     question: "Como nasceu a CLYON?",
@@ -417,8 +417,8 @@ export default async function SobreNosPage() {
               <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                 A CLYON é a plataforma que liga quem precisa de recolher móveis velhos, monos ou entulho, esvaziar uma
                 casa, fazer uma mudança ou tratar da manutenção da casa a parceiros em Lisboa, na Margem
-                Sul e em Setúbal. Diz o que
-                precisa, recebe propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}, escolhe — e só confirma quando
+                Sul e em Setúbal. Diga o que
+                precisa, receba propostas em menos de {PRAZO_DE_RESPOSTA.porExtenso}, escolha — e só confirme quando
                 estiver feito.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">

@@ -33,16 +33,16 @@ import { agoraDoModelo } from "@/lib/relogio-do-modelo";
  */
 
 export const metadata: Metadata = {
-  title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
+  title: "Como Funciona — Peça, Receba Propostas, Escolha",
   description:
-    "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
+    "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros da sua zona, já com a taxa da plataforma. Escolha a que quiser.",
   alternates: {
     canonical: `${SITE_URL}/como-funciona`,
   },
   openGraph: og({
-    title: "Como Funciona — Pede, Recebe Propostas, Escolhe",
+    title: "Como Funciona — Peça, Receba Propostas, Escolha",
     description:
-      "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros da sua zona, já com a taxa da plataforma. Escolhe a que quiser.",
+      "Descreva o que precisa e receba em menos de 6 horas propostas de parceiros da sua zona, já com a taxa da plataforma. Escolha a que quiser.",
     url: `${SITE_URL}/como-funciona`,
   }),
 };
@@ -85,7 +85,7 @@ export default function ComoFuncionaPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_24%),linear-gradient(90deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,1)_52%)]" />
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-22 sm:px-6 lg:px-8 lg:pb-16">
           <h1 className="max-w-[18ch] text-[2.4rem] font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-[3.4rem]">
-            Pede, recebe propostas, escolhe.
+            Peça, receba propostas, escolha.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
             A CLYON é uma plataforma: liga-o a parceiros independentes da sua zona. Quem faz o trabalho é o parceiro

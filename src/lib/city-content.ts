@@ -92,7 +92,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher um sofá em Lisboa?",
-        a: `O valor depende do volume, acesso, piso e necessidade de desmontagem. Num 5.º andar sem elevador em Alfama, o preço é diferente de um rés-do-chão em Telheiras. Descreva o sofá com fotos e recebe propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do volume, acesso, piso e necessidade de desmontagem. Num 5.º andar sem elevador em Alfama, o preço é diferente de um rés-do-chão em Telheiras. Descreva o sofá com fotos e receba propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Há recolha de camas e colchões em Lisboa?",
@@ -180,7 +180,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Monos em Lisboa: Câmara Grátis ou Parceiro em Casa",
     h1: "Recolha de Monos em Lisboa: pela Câmara ou de dentro de casa",
     localIntro:
-      `Tem monos em casa que precisa de retirar? A remoção de monos da Câmara de Lisboa é gratuita para particulares e marca-se com antecedência. Pela CLYON, o parceiro vai buscá-los onde estiverem — num 5.º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. Descreve o pedido, recebe propostas ${PROPOSTAS_EM_ATE}, e o parceiro escolhido aparece no dia combinado e leva tudo.`,
+      `Tem monos em casa que precisa de retirar? A remoção de monos da Câmara de Lisboa é gratuita para particulares e marca-se com antecedência. Pela CLYON, o parceiro vai buscá-los onde estiverem — num 5.º andar sem elevador em Alfama, numa cave na Graça ou numa garagem no Parque das Nações. Descreva o pedido, receba propostas ${PROPOSTAS_EM_ATE}, e o parceiro escolhido aparece no dia combinado e leva tudo.`,
     accessNotes:
       "Em Lisboa, os acessos mais complicados são nos bairros históricos: Alfama, Mouraria, Graça e Castelo têm escadas estreitas, ruas empedradas e estacionamento impossível. Por isso o pedido deve dizer o andar e o tipo de escada: é com isso que o parceiro fecha o preço, e não há surpresas no dia.",
     neighborhoodHighlight:
@@ -196,7 +196,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher monos em Lisboa?",
-        a: `Depende do volume, acesso, urgência e necessidade de desmontagem. Descreva os monos com fotos e recebe propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
+        a: `Depende do volume, acesso, urgência e necessidade de desmontagem. Descreva os monos com fotos e receba propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Há recolha de monos em prédios sem elevador em Lisboa?",
@@ -260,7 +260,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis em Almada?",
-        a: `O valor depende do volume, acesso, piso e necessidade de desmontagem. Descreva o pedido com fotos e recebe propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do volume, acesso, piso e necessidade de desmontagem. Descreva o pedido com fotos e receba propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Recolhem móveis em Cacilhas com escadas?",
@@ -309,7 +309,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis no Seixal - Amora, Corroios e Arrentela | CLYON",
     h1: "Recolha de Móveis no Seixal - Amora, Corroios e Arrentela",
     localIntro:
-      `Precisa de retirar móveis no Seixal? Pela CLYON, o pedido chega a parceiros que trabalham em todo o concelho — Amora, Corroios, Arrentela, Paio Pires, Cruz de Pau e Fernão Ferro. Recebe propostas ${PROPOSTAS_EM_ATE}, com o preço fechado, e combina a data com o parceiro escolhido.`,
+      `Precisa de retirar móveis no Seixal? Pela CLYON, o pedido chega a parceiros que trabalham em todo o concelho — Amora, Corroios, Arrentela, Paio Pires, Cruz de Pau e Fernão Ferro. Receba propostas ${PROPOSTAS_EM_ATE}, com o preço fechado, e combine a data com o parceiro escolhido.`,
     accessNotes:
       "O Seixal tem uma mistura de prédios com elevador (Corroios, Cruz de Pau) e moradias (Fernão Ferro, Paio Pires). Diga no pedido se é prédio ou moradia, e o andar: é com isso que o parceiro prepara o trabalho.",
     neighborhoodHighlight:
@@ -326,7 +326,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher um sofá no Seixal?",
-        a: `O valor depende do volume, acesso e necessidade de desmontagem. Descreva o sofá com fotos e recebe propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do volume, acesso e necessidade de desmontagem. Descreva o sofá com fotos e receba propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Fazem recolha de móveis em Fernão Ferro?",
@@ -370,7 +370,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Recolhem entulho aos sacos no Seixal?",
-        a: `Sim — em sacos de obra de ${PESO_DO_SACO}, carregados à mão; e, se estiver solto, a granel. Diga quantos sacos tem e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `Sim — em sacos de obra de ${PESO_DO_SACO}, carregados à mão; e, se estiver solto, a granel. Diga quantos sacos tem e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Podem recolher entulho no mesmo dia no Seixal?",
@@ -474,7 +474,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis em Mem Martins?",
-        a: `Em Mem Martins, a maioria dos prédios tem elevador e bons acessos, o que simplifica o trabalho. O valor depende do volume e do conjunto de peças: descreva o pedido com fotos e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `Em Mem Martins, a maioria dos prédios tem elevador e bons acessos, o que simplifica o trabalho. O valor depende do volume e do conjunto de peças: descreva o pedido com fotos e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Recolhem móveis de quintas em Sintra?",
@@ -512,7 +512,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis em Setúbal?",
-        a: `O valor depende do volume, acesso, piso e necessidade de desmontagem. Setúbal tem uma mistura de prédios antigos no centro e urbanizações mais recentes — o acesso entra na proposta. Descreva o pedido com fotos e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do volume, acesso, piso e necessidade de desmontagem. Setúbal tem uma mistura de prédios antigos no centro e urbanizações mais recentes — o acesso entra na proposta. Descreva o pedido com fotos e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Recolhem móveis em quintas de Azeitão?",
@@ -562,7 +562,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     faqs: [
       {
         q: "Quanto custa recolher entulho em Setúbal?",
-        a: `A recolha de entulho conta-se ${ENTULHO_EM_FRASE}, em sacos de ${PESO_DO_SACO}. Diga a quantidade e o local e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `A recolha de entulho conta-se ${ENTULHO_EM_FRASE}, em sacos de ${PESO_DO_SACO}. Diga a quantidade e o local e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "A CLYON fornece contentores para entulho em Setúbal?",
@@ -610,7 +610,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Mudanças em Lisboa - Residenciais e Comerciais | CLYON",
     h1: "Mudanças em Lisboa: Residenciais e Comerciais",
     localIntro:
-      "Mudar de casa em Lisboa tem desafios próprios: apartamentos em prédios antigos sem elevador em Alfama, estacionamento difícil na Baixa, horários restritos em condomínios no Parque das Nações. Pela CLYON, descreve a mudança e recebe propostas de parceiros da zona: embalagem, proteção dos móveis, transporte e montagem na casa nova, conforme o que pedir. O parceiro pode tratar da licença de estacionamento (EMEL ou junta de freguesia); o custo vem discriminado na proposta.",
+      "Mudar de casa em Lisboa tem desafios próprios: apartamentos em prédios antigos sem elevador em Alfama, estacionamento difícil na Baixa, horários restritos em condomínios no Parque das Nações. Pela CLYON, descreva a mudança e receba propostas de parceiros da zona: embalagem, proteção dos móveis, transporte e montagem na casa nova, conforme o que pedir. O parceiro pode tratar da licença de estacionamento (EMEL ou junta de freguesia); o custo vem discriminado na proposta.",
     accessNotes:
       "Em bairros históricos de Lisboa (Alfama, Mouraria, Bairro Alto), o estacionamento é o maior desafio: o parceiro pode tratar da licença para reservar lugar (EMEL ou junta de freguesia), com o custo discriminado na proposta. Em condomínios novos, o horário combina-se com a administração.",
     neighborhoodHighlight:
@@ -628,7 +628,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
          * de conteúdo e não numa página — mas é renderizada, e ia parar ao
          * texto visível E ao FAQPage que o Google lê.
          */
-        a: `Depende do piso, do volume e da distância para a nova casa. Descreva a mudança e recebe propostas de parceiros ${PROPOSTAS_EM_ATE}, sem compromisso.`,
+        a: `Depende do piso, do volume e da distância para a nova casa. Descreva a mudança e receba propostas de parceiros ${PROPOSTAS_EM_ATE}, sem compromisso.`,
       },
       {
         q: "Há quem embale os meus pertences em Lisboa?",
@@ -698,7 +698,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Móveis em Monte Abraão - Queluz e Massamá | CLYON",
     h1: "Recolha de Móveis em Monte Abraão - Sofás, Camas e Armários",
     localIntro:
-      `Precisa de retirar móveis em Monte Abraão? Pela CLYON, parceiros da zona recolhem sofás, camas, armários e eletrodomésticos em toda a freguesia e zonas vizinhas: Queluz, Massamá, Belas e Agualva-Cacém. O preço vem na proposta, conforme o volume, o acesso, a urgência e a necessidade de desmontagem — e recebe propostas ${PROPOSTAS_EM_ATE} depois de descrever o pedido.`,
+      `Precisa de retirar móveis em Monte Abraão? Pela CLYON, parceiros da zona recolhem sofás, camas, armários e eletrodomésticos em toda a freguesia e zonas vizinhas: Queluz, Massamá, Belas e Agualva-Cacém. O preço vem na proposta, conforme o volume, o acesso, a urgência e a necessidade de desmontagem — e receba propostas ${PROPOSTAS_EM_ATE} depois de descrever o pedido.`,
     accessNotes:
       "Monte Abraão tem maioritariamente prédios com elevador, o que facilita a recolha. Nas zonas mais antigas próximas do centro de Queluz, alguns edifícios têm escadas estreitas — diga-o no pedido para vir na proposta.",
     neighborhoodHighlight:
@@ -711,7 +711,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher um sofá em Monte Abraão?",
-        a: `O valor depende do piso, acesso e dimensões do sofá. A maioria dos prédios em Monte Abraão tem elevador, o que ajuda a manter o custo mais baixo. Descreva o sofá com fotos e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do piso, acesso e dimensões do sofá. A maioria dos prédios em Monte Abraão tem elevador, o que ajuda a manter o custo mais baixo. Descreva o sofá com fotos e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Podem recolher móveis no mesmo dia em Monte Abraão?",
@@ -755,7 +755,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa a recolha de entulho em Monte Abraão?",
-        a: `O valor depende do volume de entulho, tipo de resíduos e facilidade de acesso. Descreva a obra com fotos e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do volume de entulho, tipo de resíduos e facilidade de acesso. Descreva a obra com fotos e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Fornecem contentor para obras em Monte Abraão?",
@@ -787,7 +787,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher móveis em Queluz?",
-        a: `O valor depende do acesso, piso e volume. Queluz tem uma mistura de edifícios antigos e modernos — o acesso entra na proposta. Descreva o pedido com fotos e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do acesso, piso e volume. Queluz tem uma mistura de edifícios antigos e modernos — o acesso entra na proposta. Descreva o pedido com fotos e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Há recolha na zona do Palácio de Queluz?",
@@ -827,7 +827,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
       },
       {
         q: "Quanto custa recolher um sofá em Carnaxide?",
-        a: `O valor depende do piso, acesso e dimensões. A maioria dos prédios em Carnaxide tem elevador, o que facilita o trabalho. Descreva o sofá com fotos e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+        a: `O valor depende do piso, acesso e dimensões. A maioria dos prédios em Carnaxide tem elevador, o que facilita o trabalho. Descreva o sofá com fotos e receba propostas ${PROPOSTAS_EM_ATE}.`,
       },
       {
         q: "Podem entrar em condomínios fechados em Carnaxide?",
@@ -860,7 +860,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Monos em Odivelas: Junta Grátis ou Parceiro em Casa",
     h1: "Recolha de Monos em Odivelas: pela junta ou de dentro de casa",
     localIntro:
-      `Em Odivelas, a recolha de monos é das juntas de freguesia: a Câmara passou-lhes esse serviço, e cada uma tem o seu contacto. Os SIMAR também os recolhem, sem custo para os seus clientes, na data e no local combinados. Um parceiro da CLYON faz sentido quando o sofá ainda está lá em cima, quando não dá para esperar ou quando é preciso desmontar antes de descer. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Em Odivelas, a recolha de monos é das juntas de freguesia: a Câmara passou-lhes esse serviço, e cada uma tem o seu contacto. Os SIMAR também os recolhem, sem custo para os seus clientes, na data e no local combinados. Um parceiro da CLYON faz sentido quando o sofá ainda está lá em cima, quando não dá para esperar ou quando é preciso desmontar antes de descer. Descreva o pedido e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Odivelas é terra de rampas. No centro, na Ramada e na Pontinha há prédios com a porta meio piso acima ou abaixo do passeio, e esses degraus contam tanto como os andares. Em Caneças e Famões há mais moradias, e a carrinha encosta melhor. No pedido diga o andar, se há elevador e quantos degraus separam a rua da entrada.",
     neighborhoodHighlight:
@@ -885,7 +885,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Monos em Sesimbra: Câmara Grátis ou Parceiro em Casa",
     h1: "Recolha de Monos em Sesimbra e na Quinta do Conde",
     localIntro:
-      `Sesimbra tem dois feitios. A vila desce até ao mar por ruas curtas e inclinadas, algumas só para peões. A Quinta do Conde é plana, de moradias e prédios baixos, com a carrinha à porta. A Câmara recolhe monos sem custo, no espaço público, até 1100 litros de cada vez. Quando o volume é maior, quando os móveis estão dentro de casa ou quando é preciso desmontar, pede a um parceiro da CLYON e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Sesimbra tem dois feitios. A vila desce até ao mar por ruas curtas e inclinadas, algumas só para peões. A Quinta do Conde é plana, de moradias e prédios baixos, com a carrinha à porta. A Câmara recolhe monos sem custo, no espaço público, até 1100 litros de cada vez. Quando o volume é maior, quando os móveis estão dentro de casa ou quando é preciso desmontar, peça a um parceiro da CLYON e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Na vila, diga no pedido a rua e se a carrinha chega à porta: onde não chega, as peças vão a pé até onde ela pode parar, e isso conta no tempo. Na Quinta do Conde, na Lagoa de Albufeira e no Zambujal o acesso é simples; conte com a garagem e o quintal.",
     neighborhoodHighlight:
@@ -910,7 +910,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Monos no Montijo: Câmara Grátis ou Parceiro em Casa",
     h1: "Recolha de Monos no Montijo: pela Câmara, pela junta ou de casa",
     localIntro:
-      `No Montijo, quem recolhe os monos depende da freguesia. Na União de Freguesias de Montijo e Afonsoeiro é a Câmara; em Atalaia e Alto Estanqueiro-Jardia, Sarilhos Grandes, Canha e Pegões é a junta. Em qualquer delas o serviço não tem custo. A recolha paga, por um parceiro da CLYON, serve para o que não pode esperar pela data e para o que está dentro de casa ou num andar sem elevador. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `No Montijo, quem recolhe os monos depende da freguesia. Na União de Freguesias de Montijo e Afonsoeiro é a Câmara; em Atalaia e Alto Estanqueiro-Jardia, Sarilhos Grandes, Canha e Pegões é a junta. Em qualquer delas o serviço não tem custo. A recolha paga, por um parceiro da CLYON, serve para o que não pode esperar pela data e para o que está dentro de casa ou num andar sem elevador. Descreva o pedido e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "O centro tem ruas de comércio estreitas e prédios de três a quatro pisos, muitos sem elevador; o Afonsoeiro tem construção mais recente, com garagem. O concelho tem duas partes separadas, e Canha e Pegões ficam longe da cidade: diga a morada completa no pedido, para a proposta contar com a viagem.",
     neighborhoodHighlight:
@@ -935,7 +935,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Monos em Carnaxide: Grátis até 1 m³ ou de Casa",
     h1: "Recolha de Monos em Carnaxide e Queijas",
     localIntro:
-      `Carnaxide e Queijas são do concelho de Oeiras, e é a Câmara de Oeiras que recolhe os monos: por marcação antecipada, sem custo até 1 m³, e com orçamento quando é mais do que isso. A recolha faz-se nos dias de cada zona, que se sabem pelo Número Verde. Um parceiro da CLYON faz sentido quando o volume passa de 1 m³, quando os móveis estão lá dentro ou quando é preciso desmontar um roupeiro. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Carnaxide e Queijas são do concelho de Oeiras, e é a Câmara de Oeiras que recolhe os monos: por marcação antecipada, sem custo até 1 m³, e com orçamento quando é mais do que isso. A recolha faz-se nos dias de cada zona, que se sabem pelo Número Verde. Um parceiro da CLYON faz sentido quando o volume passa de 1 m³, quando os móveis estão lá dentro ou quando é preciso desmontar um roupeiro. Descreva o pedido e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "A freguesia mistura o núcleo antigo de Carnaxide, com ruas de sentido único onde a carrinha bloqueia o trânsito enquanto carrega, com urbanizações de garagem e elevador na Outurela, na Portela e em Queijas. Em condomínio fechado, diga no pedido se é preciso avisar a portaria ou reservar o elevador.",
     neighborhoodHighlight:
@@ -960,7 +960,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Monos nos Olivais: Câmara Grátis ou Parceiro em Casa",
     h1: "Recolha de Monos nos Olivais",
     localIntro:
-      `Os Olivais Norte e Sul foram planeados com espaço entre os blocos, e a carrinha chega quase sempre junto da porta. O Bairro da Encarnação é diferente: casas baixas, com quintal e ruas mais estreitas. A Câmara de Lisboa recolhe monos sem custo a quem pede em nome individual. Um parceiro da CLYON serve para o que tem de sair de dentro de casa, para o que não pode esperar pela marcação e para desmontar antes de descer. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Os Olivais Norte e Sul foram planeados com espaço entre os blocos, e a carrinha chega quase sempre junto da porta. O Bairro da Encarnação é diferente: casas baixas, com quintal e ruas mais estreitas. A Câmara de Lisboa recolhe monos sem custo a quem pede em nome individual. Um parceiro da CLYON serve para o que tem de sair de dentro de casa, para o que não pode esperar pela marcação e para desmontar antes de descer. Descreva o pedido e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Nos blocos altos há elevador, mas alguns são de cabina pequena, onde um sofá de três lugares não entra: diga no pedido as medidas da peça maior e o andar. Na Encarnação conte com o que está no quintal e no anexo. O estacionamento é largo e gratuito na maior parte da freguesia.",
     neighborhoodHighlight:
@@ -985,7 +985,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas em Almada e Cacilhas",
     h1: "Esvaziamento de Casas e Apartamentos em Almada",
     localIntro:
-      `Em Almada, o mesmo T2 dá trabalhos muito diferentes. Em Almada velha e Cacilhas há muitos prédios anteriores aos anos 60, de escada única e sem elevador, sobre a arriba; no Pragal e no Feijó há elevador e garagem; na Charneca de Caparica e na Sobreda há moradias com anexo e quintal. Para heranças, vendas e fins de arrendamento, os parceiros retiram móveis, eletrodomésticos e o recheio miúdo, e deixam a casa vazia. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Em Almada, o mesmo T2 dá trabalhos muito diferentes. Em Almada velha e Cacilhas há muitos prédios anteriores aos anos 60, de escada única e sem elevador, sobre a arriba; no Pragal e no Feijó há elevador e garagem; na Charneca de Caparica e na Sobreda há moradias com anexo e quintal. Para heranças, vendas e fins de arrendamento, os parceiros retiram móveis, eletrodomésticos e o recheio miúdo, e deixam a casa vazia. Descreva a casa e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Diga no pedido o andar, se há elevador e se há degraus entre a rua e a porta: em Cacilhas e em Almada velha é isso que decide quantas pessoas vão e quanto tempo leva. Na Costa da Caparica, entre junho e setembro, estacionar junto à praia é o maior obstáculo.",
     neighborhoodHighlight:
@@ -1010,7 +1010,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas no Seixal, Amora e Corroios",
     h1: "Esvaziamento de Casas no Seixal, na Amora, em Corroios e Fernão Ferro",
     localIntro:
-      `O concelho do Seixal tem dois tipos de casa. Na Amora, na Cruz de Pau e no Miratejo são prédios de vários andares; em Fernão Ferro, Santa Marta do Pinhal e Vale de Milhaços são moradias com garagem, arrecadação e quintal, onde o recheio de fora costuma ser tanto como o de dentro. Os parceiros esvaziam tudo: móveis, eletrodomésticos, caixas, ferramentas e o que está no anexo. Descreve a casa, fotografa também a garagem e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `O concelho do Seixal tem dois tipos de casa. Na Amora, na Cruz de Pau e no Miratejo são prédios de vários andares; em Fernão Ferro, Santa Marta do Pinhal e Vale de Milhaços são moradias com garagem, arrecadação e quintal, onde o recheio de fora costuma ser tanto como o de dentro. Os parceiros esvaziam tudo: móveis, eletrodomésticos, caixas, ferramentas e o que está no anexo. Descreva a casa, fotografe também a garagem e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Estacionar não é problema em quase todo o concelho, e nas moradias a carrinha encosta ao portão. O que pesa é o volume: diga no pedido se há garagem, sótão ou quintal com coisas, para a proposta não ficar curta no dia.",
     neighborhoodHighlight:
@@ -1035,7 +1035,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas em Oeiras e Algés",
     h1: "Esvaziamento de Casas e Apartamentos em Oeiras",
     localIntro:
-      `Em Oeiras, a encosta faz a diferença. Algés, Linda-a-Velha e a Cruz Quebrada têm prédios antigos em ruas inclinadas, onde a carrinha fica num plano diferente da porta; Oeiras, Paço de Arcos e Porto Salvo têm mais construção recente, com elevador e garagem. Quando a casa tem de ficar livre para uma venda ou uma partilha, o parceiro escolhido leva tudo, do sofá à última caixa de loiça. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Em Oeiras, a encosta faz a diferença. Algés, Linda-a-Velha e a Cruz Quebrada têm prédios antigos em ruas inclinadas, onde a carrinha fica num plano diferente da porta; Oeiras, Paço de Arcos e Porto Salvo têm mais construção recente, com elevador e garagem. Quando a casa tem de ficar livre para uma venda ou uma partilha, o parceiro escolhido leva tudo, do sofá à última caixa de loiça. Descreva a casa e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Junto à marginal e às estações de Algés, Paço de Arcos e Oeiras, estacionar é sempre disputado; nas ruas acima da linha resolve-se. Diga no pedido se a casa fica num desses troços e se há elevador, para o parceiro vir com as pessoas certas.",
     neighborhoodHighlight:
@@ -1085,7 +1085,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas em Queluz, Belas e Massamá",
     h1: "Esvaziamento de Casas em Queluz e Belas",
     localIntro:
-      `Queluz tem o centro antigo à volta do Palácio, com ruas estreitas e trânsito condicionado, e à volta urbanizações de prédios com elevador, no Pendão, em Belas e em Massamá. São casas em que se junta muito ao longo dos anos: arrecadação na cave, marquise cheia, roupeiros embutidos. Os parceiros levam tudo isso, com os móveis e os eletrodomésticos, até a casa ficar vazia. Descreve o que há e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Queluz tem o centro antigo à volta do Palácio, com ruas estreitas e trânsito condicionado, e à volta urbanizações de prédios com elevador, no Pendão, em Belas e em Massamá. São casas em que se junta muito ao longo dos anos: arrecadação na cave, marquise cheia, roupeiros embutidos. Os parceiros levam tudo isso, com os móveis e os eletrodomésticos, até a casa ficar vazia. Descreva o que há e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Junto ao Palácio e à estação estacionar é difícil; no resto da zona resolve-se. Se há arrecadação na cave ou no sótão do prédio, diga-o no pedido e fotografe-a: é o que mais vezes fica de fora da descrição e aparece no dia.",
     neighborhoodHighlight:
@@ -1110,7 +1110,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas em Monte Abraão e Massamá",
     h1: "Esvaziamento de Apartamentos em Monte Abraão e Massamá",
     localIntro:
-      `Monte Abraão e Massamá cresceram em blocos altos, construídos em conjunto, quase todos com elevador. O que complica um esvaziamento aqui não é a escada: são os acessos entre blocos, muitas vezes só para peões, que obrigam a levar tudo a pé até onde a carrinha pode parar. Os parceiros fazem esse percurso as vezes que forem precisas e deixam o apartamento vazio, com móveis, eletrodomésticos e recheio. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Monte Abraão e Massamá cresceram em blocos altos, construídos em conjunto, quase todos com elevador. O que complica um esvaziamento aqui não é a escada: são os acessos entre blocos, muitas vezes só para peões, que obrigam a levar tudo a pé até onde a carrinha pode parar. Os parceiros fazem esse percurso as vezes que forem precisas e deixam o apartamento vazio, com móveis, eletrodomésticos e recheio. Descreva a casa e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Diga no pedido a distância aproximada entre a porta do prédio e o sítio onde a carrinha pode parar, e se o elevador leva um sofá. Nas avenidas principais há onde parar; nas ruas interiores os lugares são dos residentes.",
     neighborhoodHighlight:
@@ -1135,7 +1135,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas em Alcochete e no Samouco",
     h1: "Esvaziamento de Casas e Moradias em Alcochete",
     localIntro:
-      `Alcochete é vila de casas baixas, e quase todas se alcançam de carrinha até à porta. No Samouco e em São Francisco há mais moradias com quintal e anexo, onde o recheio de fora pesa tanto como o de dentro. A zona ribeirinha tem ruas mais estreitas e pavimento irregular. O parceiro escolhido esvazia a casa e o exterior, e deixa-a pronta para vender ou arrendar. Descreve o que há e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Alcochete é vila de casas baixas, e quase todas se alcançam de carrinha até à porta. No Samouco e em São Francisco há mais moradias com quintal e anexo, onde o recheio de fora pesa tanto como o de dentro. A zona ribeirinha tem ruas mais estreitas e pavimento irregular. O parceiro escolhido esvazia a casa e o exterior, e deixa-a pronta para vender ou arrendar. Descreva o que há e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Fora do Verão, estacionar é simples; nos meses quentes a frente ribeirinha enche. Se a casa tem anexo, garagem ou quintal com coisas, fotografe-os e diga-o no pedido.",
     neighborhoodHighlight:
@@ -1185,7 +1185,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Esvaziamento de Casas nos Olivais e na Encarnação",
     h1: "Esvaziamento de Casas nos Olivais",
     localIntro:
-      `Nos Olivais Norte e Sul, os blocos têm espaço à volta e a carrinha encosta quase à porta, o que em Lisboa é raro; alguns elevadores, porém, são de cabina pequena. No Bairro da Encarnação as casas são baixas, com quintal e anexo. Os parceiros retiram tudo, do roupeiro aos sacos de roupa, e deixam a casa pronta para entregar. Descreve a casa e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Nos Olivais Norte e Sul, os blocos têm espaço à volta e a carrinha encosta quase à porta, o que em Lisboa é raro; alguns elevadores, porém, são de cabina pequena. No Bairro da Encarnação as casas são baixas, com quintal e anexo. Os parceiros retiram tudo, do roupeiro aos sacos de roupa, e deixam a casa pronta para entregar. Descreva a casa e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Estacionar é largo e gratuito na maior parte da freguesia. Diga no pedido o andar e as medidas da peça maior, para se saber se desce no elevador ou pela escada.",
     neighborhoodHighlight:
@@ -1210,7 +1210,7 @@ export const CITY_SERVICE_CONTENT: Record<string, CityServiceContent> = {
     metaTitle: "Recolha de Entulho em Loures: SIMAR ou a Saco",
     h1: "Recolha de Entulho em Loures, Sacavém e Santo António dos Cavaleiros",
     localIntro:
-      `Em Loures, o entulho de uma pequena obra feita pelo próprio pode ir pelos SIMAR: o serviço é gratuito para os clientes, até 1 m³ por obra, e só aceita alguns materiais. Quando a obra é maior, quando há madeira, louças ou outros restos misturados, ou quando o entulho está lá em cima e não pode esperar uma semana, um parceiro da CLYON recolhe-o em sacos de obra de ${PESO_DO_SACO} ou a granel. Descreve o pedido e recebe propostas ${PROPOSTAS_EM_ATE}.`,
+      `Em Loures, o entulho de uma pequena obra feita pelo próprio pode ir pelos SIMAR: o serviço é gratuito para os clientes, até 1 m³ por obra, e só aceita alguns materiais. Quando a obra é maior, quando há madeira, louças ou outros restos misturados, ou quando o entulho está lá em cima e não pode esperar uma semana, um parceiro da CLYON recolhe-o em sacos de obra de ${PESO_DO_SACO} ou a granel. Descreva o pedido e receba propostas ${PROPOSTAS_EM_ATE}.`,
     accessNotes:
       "Santo António dos Cavaleiros são torres com elevador, onde os sacos descem bem; no centro de Loures e na Bobadela há casas antigas de dois pisos com escada interior estreita. Diga o andar e se o entulho já está ensacado.",
     neighborhoodHighlight:

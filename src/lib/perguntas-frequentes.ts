@@ -49,7 +49,7 @@ export const PERGUNTAS_FREQUENTES = [
       },
       {
         q: "Como funciona a recolha de móveis — passo a passo?",
-        a: "1) Faz o pedido no simulador ou por WhatsApp, com fotografias. 2) Recebe as propostas dos parceiros da sua zona, já com a taxa da plataforma, e escolhe uma. 3) O parceiro vai no dia combinado e retira os móveis do interior do imóvel. 4) Confirma que ficou feito.",
+        a: "1) Faça o pedido no simulador ou por WhatsApp, com fotografias. 2) Receba as propostas dos parceiros da sua zona, já com a taxa da plataforma, e escolha uma. 3) O parceiro vai no dia combinado e retira os móveis do interior do imóvel. 4) Confirme que ficou feito.",
       },
       {
         q: "A recolha inclui subir ao apartamento para retirar os móveis?",

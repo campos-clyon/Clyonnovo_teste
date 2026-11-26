@@ -273,7 +273,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
         title: "Quando a recolha gratuita não resolve",
         paragraphs: [
           "A pesquisa por recolha gratuita de móveis usados é muito comum, mas nem sempre a via gratuita resolve o problema. A recolha municipal tem limitações: horários restritos, agendamento demorado, volume máximo e nenhum apoio para desmontagem ou retirada do interior do imóvel.",
-          `Se o objetivo é libertar o espaço rapidamente, com carregamento porta a porta, desmontagem e retirada completa, a recolha paga é a opção mais eficaz. Pela CLYON, recebe propostas ${PROPOSTAS_EM_ATE} de parceiros da zona, que carregam dentro de casa e levam os móveis para destino licenciado.`,
+          `Se o objetivo é libertar o espaço rapidamente, com carregamento porta a porta, desmontagem e retirada completa, a recolha paga é a opção mais eficaz. Pela CLYON, receba propostas ${PROPOSTAS_EM_ATE} de parceiros da zona, que carregam dentro de casa e levam os móveis para destino licenciado.`,
           "A diferença principal: na recolha municipal, é muitas vezes quem pede que leva os móveis até à porta ou ao local combinado, e espera pela data marcada. Na recolha paga, o parceiro entra no imóvel, desmonta se o pedir e resolve tudo num só pedido.",
         ],
         bullets: [
@@ -680,7 +680,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
         title: "Quando a recolha privada compensa mais",
         paragraphs: [
           "Quando o volume é grande, o acesso é difícil, existem vários pisos, faltam meios de transporte ou o espaço precisa de ficar livre rapidamente, a recolha privada passa a ser muito mais eficiente.",
-          `É aí que a CLYON pode ajudar: descreve o pedido e recebe propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
+          `É aí que a CLYON pode ajudar: descreva o pedido e receba propostas de parceiros da zona ${PROPOSTAS_EM_ATE}.`,
         ],
       },
       {
@@ -868,7 +868,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         title: "Como pedir orçamento",
         paragraphs: [
-          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais certo será o valor. Na CLYON, recebe propostas de parceiros da zona em menos de 6 horas — veja as [pequenas mudanças](/pequenas-mudancas) e o [transporte de móveis](/transporte-de-moveis).",
+          "Envie fotos do móvel, indique as duas moradas com andar e tipo de acesso. Quanto mais detalhe, mais certo será o valor. Na CLYON, receba propostas de parceiros da zona em menos de 6 horas — veja as [pequenas mudanças](/pequenas-mudancas) e o [transporte de móveis](/transporte-de-moveis).",
         ],
       },
     ],
@@ -1016,7 +1016,7 @@ function artigos(preco: PrecoPublicoDasMudancas): BlogPost[] {
       {
         title: "Como pedir",
         paragraphs: [
-          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite — a escritura, a entrega das chaves. Recebe as propostas dos parceiros da zona ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
+          `Mande fotografias de cada divisão, diga o andar, se há elevador e a data limite — a escritura, a entrega das chaves. Receba as propostas dos parceiros da zona ${PROPOSTAS_EM_ATE}, e ${O_DIA_DO_TRABALHO}.`,
           "Veja o [esvaziamento de casas](/esvaziamento-de-casas), ou peça já no [simulador](/simulador).",
         ],
       },

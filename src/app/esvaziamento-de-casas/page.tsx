@@ -382,7 +382,7 @@ export default function EsvaziamentoDeCasasPage() {
                 { step: "01", title: "Envie o pedido", desc: "Fotos do imóvel, localização e acesso. WhatsApp ou formulário." },
                 { step: "02", title: "Receba propostas", desc: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, com o valor e a data que propõem.` },
                 { step: "03", title: "Execução no local", desc: "O parceiro escolhido chega, carrega tudo e leva para destino licenciado." },
-                { step: "04", title: "Confirma e avalia", desc: "Com o imóvel vazio, confirma o trabalho feito e deixa a sua avaliação." },
+                { step: "04", title: "Confirme e avalie", desc: "Com o imóvel vazio, confirme o trabalho feito e deixe a sua avaliação." },
               ].map((item) => (
                 <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">
                   <span className="text-2xl font-bold text-emerald-600">{item.step}</span>

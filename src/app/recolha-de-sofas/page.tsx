@@ -306,7 +306,7 @@ export default function RecolhaDeSofasPage() {
             {[
               { step: "01", title: "Envie fotos ou uma descrição", desc: "Envie fotos do sofá, a morada e indique o andar, se há elevador e o tipo de acesso." },
               { step: "02", title: "Receba propostas", desc: `Parceiros da zona respondem ${PROPOSTAS_EM_ATE}, cada um com o valor fechado.` },
-              { step: "03", title: "Escolha e combine", desc: "Aceita a proposta que preferir e combina o dia e a hora com o parceiro." },
+              { step: "03", title: "Escolha e combine", desc: "Aceite a proposta que preferir e combine o dia e a hora com o parceiro." },
               { step: "04", title: "Recolha no local", desc: "O parceiro entra no imóvel, carrega, transporta e leva para destino licenciado." },
             ].map((item) => (
               <div key={item.step} className="rounded-xl border border-slate-200 bg-white p-5">

@@ -385,7 +385,7 @@ export default async function TermosPage() {
         <S id="como-funciona" titulo="5. Como funciona um pedido">
           <ol className="ml-5 list-decimal space-y-2">
             <li>
-              Descreve o que precisa: o serviço, a morada, as condições de
+              Descreva o que precisa: o serviço, a morada, as condições de
               acesso e, se quiser, fotografias. Quanto mais concreto, melhor a
               estimativa.
             </li>
@@ -595,7 +595,7 @@ export default async function TermosPage() {
                 <strong>
                   Paga diretamente ao parceiro que contratou.
                 </strong>{" "}
-                Escolhe como:
+                Escolha como:
               </p>
               <ul className="ml-5 list-disc space-y-3">
                 <li>
@@ -870,7 +870,7 @@ export default async function TermosPage() {
           </p>
           <p>
             <strong>Não existe qualquer relação laboral com a CLYON.</strong>{" "}
-            Não há subordinação, horário nem exclusividade. Escolhe que pedidos
+            Não há subordinação, horário nem exclusividade. O parceiro escolhe que pedidos
             aceita, propõe os seus preços e organiza o seu trabalho. A CLYON não
             lhe garante volume de trabalho.
           </p>

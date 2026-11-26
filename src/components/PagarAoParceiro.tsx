@@ -230,7 +230,7 @@ export default function PagarAoParceiro({
           ) : (
             <div className="rounded-xl border border-slate-300 bg-white p-3">
               <p className="font-medium text-slate-900">
-                {visto.registo.confirmacoes?.[visto.comoPagar ?? ""] ?? `Confirma que já pagou a ${visto.parceiro ?? "o parceiro"}?`}
+                {visto.registo.confirmacoes?.[visto.comoPagar ?? ""] ?? `Confirme que já pagou a ${visto.parceiro ?? "o parceiro"}?`}
               </p>
               <div className="mt-2 flex gap-2">
                 <button

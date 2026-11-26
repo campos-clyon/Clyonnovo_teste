@@ -186,7 +186,7 @@ const HOW_IT_WORKS = [
   },
   {
     icon: CheckCircle2,
-    title: "Recebe propostas e escolhe",
+    title: "Receba propostas e escolha",
     description:
       /*
        * Dizia "Confirmamos preço e data — Ligamos-lhe a confirmar o preço e a
@@ -232,7 +232,7 @@ const GUARANTEES = [
       // raio e as categorias. O que existe é a candidatura lida por uma
       // pessoa antes de haver conta (candidaturas.ts), e o perfil com nota e
       // trabalhos no cartão de cada proposta.
-      "Vê o nome, a nota e os trabalhos do parceiro antes de aceitar. Cada candidatura é lida por uma pessoa da CLYON antes de a conta ser aberta.",
+      "Veja o nome, a nota e os trabalhos do parceiro antes de aceitar. Cada candidatura é lida por uma pessoa da CLYON antes de a conta ser aberta.",
     gradient: "from-cyan-400 to-cyan-500",
     glow: "shadow-cyan-500/40",
     iconBg: "bg-gradient-to-br from-cyan-400 to-cyan-600",
@@ -325,7 +325,7 @@ const homeFaqs = [
     // 09-10-2026: as seis perguntas eram todas de recolhas.
     question: "Também tratam de mudanças?",
     answer:
-      `Sim. Mudanças de casa e de escritório, pequenas mudanças e o transporte de um só móvel, com o mesmo pedido: descreve o que vai e as duas moradas, e recebe propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
+      `Sim. Mudanças de casa e de escritório, pequenas mudanças e o transporte de um só móvel, com o mesmo pedido: descreva o que vai e as duas moradas, e receba propostas de parceiros da zona em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`,
   },
   {
     question: "Atendem empresas e condomínios?",

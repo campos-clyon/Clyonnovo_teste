@@ -127,7 +127,7 @@ const faqsCom = (preco: PrecoPublicoDasMudancas) => [
     // factura a partir de 490 €. Fica a explicação do que faz variar o preço.
     // Desde 13-10-2026 há tabela: à hora, a do dono — ver `tabela-das-mudancas.ts`.
     // E desde 11-11-2026, ao preço de cada parceiro (o preço público).
-    answer: `${precoDaMudancaPorExtenso(preco)} ${EXTRAS_DA_MUDANCA} Descreve a mudança e o pedido segue para os parceiros que escolher, com resposta ${PROPOSTAS_EM_ATE}.`,
+    answer: `${precoDaMudancaPorExtenso(preco)} ${EXTRAS_DA_MUDANCA} Descreva a mudança e o pedido segue para os parceiros que escolher, com resposta ${PROPOSTAS_EM_ATE}.`,
   },
   {
     question: "Fazem desmontagem e montagem de móveis?",

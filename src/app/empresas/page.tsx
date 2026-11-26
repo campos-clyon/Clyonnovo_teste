@@ -98,7 +98,7 @@ export default async function EmpresasPage() {
           <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
             A CLYON liga a sua empresa a parceiros de Lisboa, da Margem Sul e de
             Setúbal — para recolhas, esvaziamentos, mudanças e a {MANUTENCAO.toLowerCase()}, com
-            reparações e remodelações. Descreve o trabalho, recebe propostas {PROPOSTAS_EM_ATE} com
+            reparações e remodelações. Descreva o trabalho, receba propostas {PROPOSTAS_EM_ATE} com
             o preço fechado, e escolhe. Quem faz o trabalho é o parceiro; quem responde se algo correr mal é a
             CLYON.
           </p>

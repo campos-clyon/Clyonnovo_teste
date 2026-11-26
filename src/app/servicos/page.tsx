@@ -202,7 +202,7 @@ const steps = [
     title: "Receba propostas",
     text: `Parceiros da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, com o preço já com a taxa da plataforma.`,
   },
-  { n: "3", title: "Escolha e combine", text: "Aceita a proposta que quiser e combina o dia com o parceiro." },
+  { n: "3", title: "Escolha e combine", text: "Aceite a proposta que quiser e combine o dia com o parceiro." },
 ];
 
 /*

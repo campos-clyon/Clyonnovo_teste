@@ -283,7 +283,7 @@ export function AnexoGrande({ url, nome }: { url: string; nome?: string }) {
           <FileText className="h-4 w-4" aria-hidden="true" />
           Abrir o PDF
         </a>
-        <p className="text-xs text-white/50">Abre noutro separador ou descarrega, conforme o browser.</p>
+        <p className="text-xs text-white/50">Abra noutro separador ou descarregue, conforme o browser.</p>
       </div>
     );
   }

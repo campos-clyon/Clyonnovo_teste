@@ -79,7 +79,7 @@ function perguntasGerais(nome: string, preco: PrecoPublicoDasMudancas): Array<{ 
   return [
     {
       pergunta: `Como funciona o pedido de mudança ${emTerra(nome)}?`,
-      resposta: `Descreve a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a parceiros com atividade ${emTerra(nome)}. Recebe as propostas ${PROPOSTAS_EM_ATE}, compara e escolhe; pedir não custa nada.`,
+      resposta: `Descreva a mudança — as duas moradas, os andares, se há elevador e o que vai — e o pedido chega a parceiros com atividade ${emTerra(nome)}. Receba as propostas ${PROPOSTAS_EM_ATE}, compare e escolha; pedir não custa nada.`,
     },
     {
       pergunta: "Quem faz a mudança?",

@@ -343,7 +343,7 @@ export default function PropostasRecebidas({
               </div>
             )}
             <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-tinta-fraca">
-              {acordada.valores?.ivaIncluido ? "Valor com IVA incluído. Recebe fatura." : acordada.preco.detalhe}{" "}
+              {acordada.valores?.ivaIncluido ? "Valor com IVA incluído. Receba fatura." : acordada.preco.detalhe}{" "}
               {/*
                 E COMO É QUE O NÚMERO FOI FEITO — ver `orcamento-a-distancia.ts`.
                 Já está contratado, e o que falta é o dia: se o valor mudar à

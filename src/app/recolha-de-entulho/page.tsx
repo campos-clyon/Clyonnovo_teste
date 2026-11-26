@@ -168,19 +168,19 @@ const MEDIDAS = [
 
 const PASSOS = [
   {
-    titulo: "Descreve o entulho",
+    titulo: "Descreva o entulho",
     texto: "Quantos sacos ou metros cúbicos, se está ensacado ou solto, o andar, o elevador e o estacionamento. Fotografias ajudam.",
   },
   {
-    titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
-    texto: "De parceiros da sua zona, com o preço fechado e o IVA lá dentro. Vê o nome e a nota de cada um, e escolhe.",
+    titulo: `Receba propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
+    texto: "De parceiros da sua zona, com o preço fechado e o IVA lá dentro. Veja o nome e a nota de cada um, e escolha.",
   },
   {
     titulo: "O parceiro carrega e leva",
     texto: `Em sacos ou a granel, até à carrinha, e daí para operador licenciado. ${O_DIA_DO_TRABALHO_NO_INICIO}.`,
   },
   {
-    titulo: "Confirma quando estiver feito",
+    titulo: "Confirme quando estiver feito",
     texto: "Na plataforma. E é à CLYON que recorre se alguma coisa correr mal.",
   },
 ];
@@ -437,7 +437,7 @@ export default function RecolhaEntulhoPage() {
             { icone: Clock3, titulo: `Propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`, texto: `${O_DIA_DO_TRABALHO_NO_INICIO}.` },
             { icone: UserCheck, titulo: "Parceiros aprovados", texto: "Cada pedido é lido por uma pessoa da CLYON." },
             { icone: Recycle, titulo: "Destino licenciado", texto: "Guia de resíduos, se a pedir." },
-            { icone: CheckCircle2, titulo: "Confirma no fim", texto: "Só quando estiver feito." },
+            { icone: CheckCircle2, titulo: "Confirme no fim", texto: "Só quando estiver feito." },
           ].map((item) => (
             <div key={item.titulo} className="flex items-start gap-3 bg-white px-5 py-5 sm:px-6">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
