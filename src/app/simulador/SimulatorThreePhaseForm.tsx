@@ -68,6 +68,7 @@ import TabelaDasMudancas from "@/components/mudancas/TabelaDasMudancas";
 import { SEM_PARCEIROS, precoPublicoDeFora, type PrecoPublicoDasMudancas } from "@/lib/preco-publico-das-mudancas";
 import { horasDaMudanca } from "@/lib/lista-de-parceiros-da-mudanca";
 import {
+  CAIXA_DO_ACESSO_DIFICIL,
   TIPOLOGIAS,
   TIPOLOGIA_POR_EXTENSO,
   orcamentoDaMudanca,
@@ -1841,7 +1842,8 @@ function AccessFields({
           onChange={(e) => onChange("difficultAccess", e.target.checked)}
           className="rounded border-gray-400 accent-cyan-600"
         />
-        <span className="text-sm text-gray-700">Acesso difícil ou desmontagem necessária</span>
+        {/* d132b: só o acesso — a desmontagem pede-se peça a peça, no «Desmontar e montar no destino». */}
+        <span className="text-sm text-gray-700">{CAIXA_DO_ACESSO_DIFICIL}</span>
       </label>
     </div>
   );
@@ -2129,9 +2131,8 @@ function Phase2Location({
                 // Com a proteção, como a lista dos parceiros (11-11-2026).
                 protecao: true,
                 tipologia: (formData.tipologia as Tipologia | undefined) ?? null,
-                desmontagem:
-                  formData.originAccess?.difficultAccess === true ||
-                  formData.destinationAccess?.difficultAccess === true,
+                // d132b: o acesso difícil não soma horas; desmontar e montar é o extra pela tabela (linha à parte).
+                desmontagem: false,
                 kmPercurso: formData.movingDistance?.distanceKm ?? null,
                 origem: formData.originAccess,
                 destino: formData.destinationAccess,
@@ -2145,19 +2146,12 @@ function Phase2Location({
                       {ROTULO_DA_ESTIMATIVA_DA_MUDANCA}:{" "}
                       <strong>
                         {estimativaDaMudanca(conta, precoDasMudancas, {
-                          horas: horasDaMudanca(
-                            (formData.tipologia as Tipologia | undefined) ?? null,
-                            formData.originAccess?.difficultAccess === true ||
-                              formData.destinationAccess?.difficultAccess === true,
-                            2,
-                          ),
+                          horas: horasDaMudanca((formData.tipologia as Tipologia | undefined) ?? null, false, 2),
                           pessoas: pessoasParaACasa((formData.tipologia as Tipologia | undefined) ?? null, 2),
                         }, {
                           // A conta do cartão da lista para esta casa, com a proteção (d7).
                           tipologia: (formData.tipologia as Tipologia | undefined) ?? null,
-                          desmontagem:
-                            formData.originAccess?.difficultAccess === true ||
-                            formData.destinationAccess?.difficultAccess === true,
+                          desmontagem: false,
                         })}
                       </strong>
                     </p>

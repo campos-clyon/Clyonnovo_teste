@@ -187,7 +187,8 @@ export function camposDoServico(servico: string): readonly CampoDoLeitor[] {
       // A tipologia só numa casa; a garagem, o sótão e a cave têm as perguntas do espaço.
       return [...(servico === "esvaziamento_casa" || servico === "esvaziamento_apartamento" ? [TIPOLOGIA_DO_ESVAZIAMENTO] : []), VOLUME, DESMONTAGEM, ...ACESSO];
     case "mudanca":
-      return [TIPOLOGIA_DA_MUDANCA, DESMONTAGEM, ...ACESSO];
+      // d132b (26-11-2026): a mudança já não tem o «desmontar sim/não» (somava horas) — é o extra peça a peça.
+      return [TIPOLOGIA_DA_MUDANCA, ...ACESSO];
     case "manutencao":
       return [...MANUTENCAO, ...ACESSO];
     case "montagem":

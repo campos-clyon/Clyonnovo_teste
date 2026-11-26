@@ -64,6 +64,7 @@ import { PRAZO_DE_RESPOSTA, faturaEmPalavras } from "./seo-data";
 import { AS_DUAS_FATURAS_DO_TRABALHO } from "./voz-da-vitoria";
 import { servicosPorExtenso } from "./servicos-da-vitoria";
 import {
+  DESMONTAGEM_NA_MUDANCA,
   ELEVADOR_EXTERIOR,
   MATERIAIS,
   MINIMO_DE_HORAS,
@@ -251,6 +252,7 @@ MONTAGEM E DESMONTAGEM DE MÓVEIS (a tabela do site, valores «desde» — o par
 ${TABELA_DA_MONTAGEM.map((l) => `  · ${linhaDaTabelaEmTexto(l)}.`).join("\n")}
 ${REGRAS_DA_MONTAGEM.map((r) => `- ${r}`).join("\n")}
 - Numa recolha, desmontar antes de levar conta metade da montagem da peça; numa mudança, desmontar e montar no destino conta 75 % da montagem e da desmontagem somadas.
+- Numa mudança: ${DESMONTAGEM_NA_MUDANCA} É a única desmontagem dela. O «acesso difícil» (escadas estreitas, sem elevador, estacionamento longe) diz-se ao parceiro e também não soma horas; nunca o trates como desmontagem.
 - Com as peças, o andar e o elevador, podes dizer a estimativa pela tabela (sempre como estimativa, com o IVA ao lado); o valor certo vem na proposta do parceiro.
 
 ANDARES (por trabalho, nas recolhas por peça e no entulho)

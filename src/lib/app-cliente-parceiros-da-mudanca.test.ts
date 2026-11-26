@@ -180,10 +180,13 @@ describe("o pedido da app leva a escolha, e a lista pede-se com o mesmo corpo", 
       pessoas: 3,
       data: "2026-11-20",
     });
-    // A leitura da rota do pedido (pedidoDaListaDoPedido) é a mesma: o acesso difícil num dos lados.
+    // A leitura da rota do pedido (pedidoDaListaDoPedido): o acesso difícil num dos lados, só num pedido
+    // antigo (d132b, 26-11-2026) — um novo leva a marca e não soma horas; a rota da lista ignora o
+    // «desmontagem» que esta versão da app ainda manda.
     expect(ler("src/lib/mudanca-com-parceiros-escolhidos.ts")).toContain(
-      "desmontagem: ao?.difficultAccess === true || ad?.difficultAccess === true || order.desmontagem === true,",
+      "desmontagem: !desmontagemSoPelaTabela(order) && (ao?.difficultAccess === true || ad?.difficultAccess === true || order.desmontagem === true),",
     );
+    expect(ler("src/app/api/mudancas/parceiros/route.ts")).toContain("desmontagem: false");
     expect(corpoDaLista({ originAddress: { formattedAddress: "x" } }, 2)).toBeNull();
   });
 

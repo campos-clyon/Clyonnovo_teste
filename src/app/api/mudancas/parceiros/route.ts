@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ligado: false, parceiros: [] });
   }
 
-  const lido = lerPedidoDaLista(corpo);
+  // A lista é sempre de um pedido novo (d132b, 26-11-2026): a desmontagem não soma horas — é o extra
+  // pela tabela da montagem. As versões da app que ainda mandam o acesso difícil como desmontagem também.
+  const lido = lerPedidoDaLista(corpo && typeof corpo === "object" ? { ...(corpo as Record<string, unknown>), desmontagem: false } : corpo);
   if (!lido.ok) return NextResponse.json({ ok: false, error: lido.erro }, { status: 400 });
 
   try {

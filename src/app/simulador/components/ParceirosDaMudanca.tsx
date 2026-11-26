@@ -66,8 +66,6 @@ export default function ParceirosDaMudanca({
   origem,
   destino,
   tipologia,
-  origemAcesso,
-  destinoAcesso,
   inicial,
   onPedir,
   onSemLista,
@@ -75,6 +73,7 @@ export default function ParceirosDaMudanca({
   origem?: AddressData;
   destino?: AddressData;
   tipologia?: string;
+  /** Os acessos das pontas: já não mudam a lista (d132b — o acesso difícil não soma horas). */
   origemAcesso?: MovingAccess;
   destinoAcesso?: MovingAccess;
   inicial: EscolhaDaMudanca | null;
@@ -99,7 +98,8 @@ export default function ParceirosDaMudanca({
   const semLista = useRef(onSemLista);
   semLista.current = onSemLista;
 
-  const desmontagem = origemAcesso?.difficultAccess === true || destinoAcesso?.difficultAccess === true;
+  // d132b (26-11-2026): o acesso difícil já não é desmontagem — desmontar e montar é o extra pela tabela.
+  const desmontagem = false;
 
   useEffect(() => {
     let vivo = true;

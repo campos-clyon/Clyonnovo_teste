@@ -21,7 +21,7 @@ import {
   HORAS_COM_TRES_PESSOAS,
   TIPOLOGIAS,
   TIPOLOGIA_POR_EXTENSO,
-  desmontagemPorTipologiaEmTexto,
+  DESMONTAGEM_NA_MUDANCA,
   horasEscritas,
   horasPorTipologiaEmTexto,
   intervaloDeHorasCurto,
@@ -482,7 +482,7 @@ export function regrasDaMudancaParaOModelo(p: PrecoPublicoDasMudancas): string {
   HORAS ESTIMADAS PELA TIPOLOGIA, SEMPRE EM INTERVALO (diz «entre X e Y horas», nunca um número só):
     equipa de 3: ${horasPorTipologiaEmTexto(3)};
     equipa de 2: ${horasPorTipologiaEmTexto(2)} — T3 e T4+ só com 3 pessoas. ${NOTA_DO_T4_OU_MAIOR}
-    Desmontagem/montagem soma aos dois extremos: ${desmontagemPorTipologiaEmTexto()}.
+    ${DESMONTAGEM_NA_MUDANCA} O acesso difícil (escadas estreitas, sem elevador, estacionamento longe) também não soma horas: o parceiro vê-o antes de propor.
   Material: a proteção (filme, cartão, plástico bolha) entra na estimativa; as caixas e o embalamento completo só se o cliente os pedir.
   ${deslocacao}
   Cada andar sem elevador (referência): ${POR_ANDAR_SEM_ELEVADOR_POR_PESSOA} € por pessoa (${POR_ANDAR_SEM_ELEVADOR} € a equipa de ${PESSOAS_NA_EQUIPA}).

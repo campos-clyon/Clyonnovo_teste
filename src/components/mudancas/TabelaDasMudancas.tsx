@@ -13,7 +13,7 @@ import {
   MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO,
   NOTA_DO_T4_OU_MAIOR,
   TIPOLOGIAS,
-  desmontagemPorTipologiaEmTexto,
+  DESMONTAGEM_NA_MUDANCA,
   intervaloDeHorasCurto,
   PRECO_POR_HORA,
   PRECO_POR_HORA_COM_IVA,
@@ -158,7 +158,7 @@ export default function TabelaDasMudancas({
           })}
         </ul>
         <p className="mt-2 text-xs text-slate-500">
-          Com desmontagem e montagem de móveis: {desmontagemPorTipologiaEmTexto()}. {NOTA_DO_T4_OU_MAIOR} São horas
+          {DESMONTAGEM_NA_MUDANCA} {NOTA_DO_T4_OU_MAIOR} São horas
           habituais, não um limite: o parceiro diz quantas prevê ao ver o que vai.
         </p>
       </div>

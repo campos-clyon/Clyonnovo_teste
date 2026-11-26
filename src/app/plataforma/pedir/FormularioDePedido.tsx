@@ -29,7 +29,8 @@ import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
-import PerguntasDaMontagem from "@/app/simulador/components/PerguntasDaMontagem";
+import PerguntasDaMontagem, { PecasADesmontar } from "@/app/simulador/components/PerguntasDaMontagem";
+import { CAIXA_DO_ACESSO_DIFICIL } from "@/lib/tabela-das-mudancas";
 import PrecoDeReferencia from "@/app/simulador/components/PrecoDeReferencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import ValoresEFaturacao from "./components/ValoresEFaturacao";
@@ -349,7 +350,8 @@ export default function SimulatorThreePhaseForm() {
         const res = await fetch("/api/simulator/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: formData }),
+          // Uma mudança nova (d132b): o acesso difícil não soma as horas da desmontagem.
+          body: JSON.stringify({ order: formData.serviceType === "mudanca" ? { ...formData, desmontagemSoPelaTabela: true } : formData }),
         });
         if (res.ok) {
           apiResult = (await res.json()) as EstimateResult;
@@ -1119,7 +1121,8 @@ function AccessFields({
           onChange={(e) => onChange("difficultAccess", e.target.checked)}
           className="rounded border-gray-400 accent-cyan-600"
         />
-        <span className="text-sm text-gray-700">Acesso difícil ou desmontagem necessária</span>
+        {/* d132b: só o acesso — a desmontagem pede-se peça a peça, no «Desmontar e montar no destino». */}
+        <span className="text-sm text-gray-700">{CAIXA_DO_ACESSO_DIFICIL}</span>
       </label>
     </div>
   );
@@ -1352,6 +1355,9 @@ function Phase2Location({
             </div>
           </div>
         </div>
+
+        {/* Desmontar e montar no destino, peça a peça pela tabela da montagem (d132b: a caixa do acesso já não é desmontagem). */}
+        <PecasADesmontar servico="mudanca" pecas={formData.desmontarPecas} onPecas={(p) => updateField("desmontarPecas", p)} />
 
         {/* Validation hint */}
         {(!originReady || !destReady) && (

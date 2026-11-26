@@ -5,6 +5,8 @@ import type { LaborCost } from "../app/simulador/types";
 import {
   MINIMO_DA_MUDANCA_DUAS_PESSOAS,
   MINIMO_DE_HORAS,
+  acessoDificilNumaPonta,
+  desmontagemSoPelaTabela,
   horasEstimadas,
   minimoDaMudancaDaEquipa,
   pessoasDoMotor,
@@ -806,6 +808,8 @@ export interface FastEstimateInput {
   cozinhaNaMontagem?: boolean | string;
   /** Nas recolhas e na mudança (d132): as peças a desmontar, pela tabela da montagem. */
   desmontarPecas?: Record<string, unknown>;
+  /** Um pedido de mudança novo (d132b): o acesso difícil não soma as horas da desmontagem. */
+  desmontagemSoPelaTabela?: boolean;
 }
 
 /**
@@ -843,6 +847,7 @@ export const CAMPOS_DO_PEDIDO_PARA_O_MOTOR = [
   "retirarEmbalagens",
   "cozinhaNaMontagem",
   "desmontarPecas",
+  "desmontagemSoPelaTabela",
 ] as const satisfies ReadonlyArray<keyof FastEstimateInput>;
 
 /** Só os campos de `CAMPOS_DO_PEDIDO_PARA_O_MOTOR` que o pedido tem. */
@@ -1349,10 +1354,16 @@ function tipologiaDaMudanca(input: FastEstimateInput): Tipologia | null {
   return tipologiaDoTexto(dita) ?? tipologiaDoTexto(input.description);
 }
 
-/** «Acesso difícil ou desmontagem», numa das pontas — mais uma hora. */
+/**
+ * As horas da desmontagem numa mudança — só num pedido antigo (d132b, 26-11-2026):
+ * num novo, o acesso difícil não as soma e a desmontagem é o extra pela tabela
+ * da montagem (`desmontarPecas`). Num antigo, «acesso difícil ou desmontagem»
+ * numa das pontas, como sempre.
+ */
 function desmontagemNaMudanca(input: FastEstimateInput): boolean {
+  if (desmontagemSoPelaTabela(input)) return false;
   const pedida = input.needsDismantling === true || input.needsDismantling === "true" || input.needsDismantling === "yes";
-  return pedida || input.originAccess?.difficultAccess === true || input.destinationAccess?.difficultAccess === true;
+  return pedida || acessoDificilNumaPonta(input);
 }
 
 /**

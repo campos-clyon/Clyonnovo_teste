@@ -35,7 +35,7 @@
  * Quem lê os textos daqui é o cliente — por isso dizem «parceiro».
  */
 
-import { MINIMO_DE_HORAS, horasEscritas, horasEstimadas, tipologiaDoTexto, type Tipologia } from "./tabela-das-mudancas";
+import { MINIMO_DE_HORAS, desmontagemSoPelaTabela, horasEscritas, horasEstimadas, tipologiaDoTexto, type Tipologia } from "./tabela-das-mudancas";
 import { tarifaCongeladaDeJson } from "./conta-da-mudanca";
 import { diaEmLisboa, horaEmLisboa, instanteDaBase, instanteEmLisboa, somarDiasAoDia } from "./hora-de-lisboa";
 import { precoDoCliente, type PrecoDoCliente } from "./preco-do-cliente";
@@ -256,8 +256,10 @@ export function horasPrevistasDaLinha(l: {
     serviceType: typeof l.serviceType === "string" ? l.serviceType : null,
     description: typeof l.description === "string" ? l.description : null,
     tipologia: typeof bruto.tipologia === "string" ? bruto.tipologia : null,
+    // Um pedido novo (d132b) nunca soma as horas da desmontagem: é o extra pela tabela da montagem.
     desmontagem:
-      desmontar === true || desmontar === "true" || desmontar === "yes" || acesso("originAccess") || acesso("destinationAccess"),
+      !desmontagemSoPelaTabela(bruto) &&
+      (desmontar === true || desmontar === "true" || desmontar === "yes" || acesso("originAccess") || acesso("destinationAccess")),
   });
 }
 

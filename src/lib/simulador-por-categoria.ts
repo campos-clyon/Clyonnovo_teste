@@ -1,6 +1,6 @@
 import { SERVICOS_PUBLICOS } from "./service-categories";
 import { ESPACOS_DA_EMPRESA, PEDIDOS_DA_EMPRESA } from "./esvaziamento-de-empresa";
-import { HORAS_DA_DESMONTAGEM, TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, horasEscritas, type Tipologia } from "./tabela-das-mudancas";
+import { AJUDA_DO_ACESSO_DIFICIL, TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, tituloDoAcessoDificil, type Tipologia } from "./tabela-das-mudancas";
 import { PERGUNTAS_DO_ESPACO, RESPOSTAS_DA_QUANTIDADE, TITULO_DA_QUANTIDADE, TITULO_DAS_COISAS } from "./perguntas-do-espaco";
 import { esvaziamentoComOIvaAoLado, precoDoItem } from "./preco-de-referencia";
 import {
@@ -233,7 +233,8 @@ function montagem(): PerguntaDoSimulador[] {
  * peças, pela tabela da montagem: numa recolha desmonta-se antes de levar
  * (metade da montagem), numa mudança desmonta-se e monta-se no destino (75 % da
  * soma dos dois). Nas recolhas aparece com o «É preciso desmontar?» a sim; na
- * mudança é opcional e à parte das horas da desmontagem.
+ * mudança é opcional, e desde a d132b (26-11-2026) é a ÚNICA desmontagem dela —
+ * já não há horas da desmontagem nem acesso difícil que as some.
  */
 function extraDaDesmontagemPelaTabela(servico: string, quando?: CondicaoDaPergunta): PerguntaDoSimulador[] {
   const operacao: OperacaoDaMontagem = servico === "mudanca" ? "os_dois" : "desmontar";
@@ -390,7 +391,8 @@ function mudanca(): PerguntaDoSimulador[] {
   const tipologias = ([...TIPOLOGIAS] as Tipologia[]).map((t) => ({ id: t, nome: TIPOLOGIA_POR_EXTENSO[t] }));
   const ponta = (prefixo: "origem" | "destino", onde: string): PerguntaDoSimulador[] => [
     ...perguntasDoAcesso(prefixo, onde),
-    { id: `${prefixo}.difficultAccess`, titulo: `Há alguma dificuldade no acesso${onde}?`, tipo: "escolha", obrigatoria: false, ecra: "acesso", opcoes: SIM_NAO },
+    // d132b (26-11-2026): só o acesso — não soma horas; a desmontagem é o extra pela tabela, lá em cima.
+    { id: `${prefixo}.difficultAccess`, titulo: tituloDoAcessoDificil(onde), tipo: "escolha", obrigatoria: false, ecra: "acesso", opcoes: SIM_NAO, ajuda: AJUDA_DO_ACESSO_DIFICIL },
     {
       id: `${prefixo}.accessNotes`,
       titulo: "Qual é a dificuldade?",
@@ -403,8 +405,8 @@ function mudanca(): PerguntaDoSimulador[] {
   ];
   return [
     { id: "tipologia", titulo: "O tamanho da casa", tipo: "escolha", obrigatoria: true, ecra: "oque", opcoes: tipologias },
-    desmontagem("É preciso desmontar e montar móveis?", `Acrescenta de ${horasEscritas(HORAS_DA_DESMONTAGEM.itens)} h a ${horasEscritas(HORAS_DA_DESMONTAGEM["T4+"])} h, conforme o tamanho da casa.`),
-    // Ou peça a peça, pela tabela da montagem (d132): opcional, à parte das horas.
+    // Desmontar e montar no destino: SÓ peça a peça, pela tabela da montagem (d132). A pergunta que somava
+    // horas («É preciso desmontar e montar móveis?») saiu a 26-11-2026 (d132b): nunca se cobra duas vezes.
     ...extraDaDesmontagemPelaTabela("mudanca"),
     ...ponta("origem", " na casa de onde sai"),
     ...ponta("destino", " na casa para onde vai"),

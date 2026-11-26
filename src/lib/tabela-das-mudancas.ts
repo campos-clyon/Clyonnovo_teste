@@ -206,6 +206,52 @@ export const HORAS_DA_DESMONTAGEM: Readonly<Record<Tipologia, number>> = Object.
   "T4+": 3,
 });
 
+/*
+ * O ACESSO DIFÍCIL JÁ NÃO É DESMONTAGEM — 26-11-2026 (d132b, o CEO e o dono).
+ * A caixa «Acesso difícil ou desmontagem necessária» de cada ponta somava as
+ * horas da desmontagem (`HORAS_DA_DESMONTAGEM`); desde a d132 há o extra
+ * «Desmontar e montar no destino», peça a peça pela tabela da montagem (75 % da
+ * soma) — e com os dois a desmontagem cobrava-se duas vezes. Agora a caixa é só
+ * «Acesso difícil» (escadas estreitas, sem elevador, estacionamento longe…) e
+ * não soma horas; desmontar e montar conta APENAS pelo extra.
+ *
+ * Os pedidos antigos ficam como estão: os novos levam `desmontagemSoPelaTabela:
+ * true` (gravado na rota do pedido), e só um pedido sem essa marca lê o acesso
+ * difícil e a desmontagem como horas, como antes.
+ */
+export const MARCA_DA_DESMONTAGEM_SO_PELA_TABELA = "desmontagemSoPelaTabela" as const;
+
+/** O texto da caixa de cada ponta (o simulador, o /plataforma/pedir). */
+export const CAIXA_DO_ACESSO_DIFICIL = "Acesso difícil (escadas estreitas, sem elevador, estacionamento longe…)";
+
+/** A pergunta da R7 em cada ponta: «Há acesso difícil na casa de onde sai?». */
+export const tituloDoAcessoDificil = (onde = "") => `Há acesso difícil${onde}?`;
+
+/** A ajuda dessa pergunta: o que é, e que não soma horas. */
+export const AJUDA_DO_ACESSO_DIFICIL =
+  "Escadas estreitas, sem elevador, estacionamento longe… O parceiro vê-o antes de propor. A desmontagem e a montagem pedem-se à parte, peça a peça.";
+
+/** O que se diz de desmontar e montar numa mudança (as páginas, a tabela, a Vitória, o modelo). */
+export const DESMONTAGEM_NA_MUDANCA =
+  "Desmontar e montar móveis conta-se à parte, peça a peça, pela tabela da montagem (75 % da montagem e da desmontagem somadas) — não soma horas.";
+
+/**
+ * Este pedido é da regra nova (tem a marca)? Então nunca soma as horas da
+ * desmontagem — a desmontagem é o extra. Sem a marca (um pedido antigo), cada
+ * leitor lê o acesso difícil e a desmontagem como sempre os leu.
+ */
+export function desmontagemSoPelaTabela(o: unknown): boolean {
+  return !!o && typeof o === "object" && (o as Record<string, unknown>)[MARCA_DA_DESMONTAGEM_SO_PELA_TABELA] === true;
+}
+
+/** O acesso difícil numa das pontas (a caixa antiga, que também era a desmontagem). */
+export function acessoDificilNumaPonta(o: unknown): boolean {
+  if (!o || typeof o !== "object") return false;
+  const r = o as Record<string, unknown>;
+  const acesso = (k: string) => (r[k] as { difficultAccess?: unknown } | undefined)?.difficultAccess === true;
+  return acesso("originAccess") || acesso("destinationAccess");
+}
+
 /** Esta casa só se faz com 3 pessoas (T3 e T4+)? Sem tipologia, conta a casa mais pequena. */
 export function soComTresPessoas(tipologia: Tipologia | null | undefined): boolean {
   return HORAS_COM_DUAS_PESSOAS[tipologia ?? "itens"] == null;
@@ -615,7 +661,7 @@ export const MINIMO_DA_MUDANCA_COM_IVA_EM_TEXTO =
 
 /** O que pesa numa mudança, sem números: as horas e a tarifa do parceiro. */
 export const EXTRAS_DA_MUDANCA =
-  "Andares sem elevador, desmontagem e montagem de móveis pesam nas horas; os km e o material de embalamento " +
+  "Andares sem elevador pesam nas horas; desmontar e montar móveis conta-se à parte, peça a peça; os km e o material de embalamento " +
   "são os da tarifa do parceiro escolhido.";
 
 /** O mesmo valor com IVA, escrito como a tabela os escreve («61,50 €»). */
@@ -640,7 +686,8 @@ export function tabelaEmLinhas(): Array<{ titulo: string; linhas: LinhaDaTabelaD
         ["Carrinha + motorista + 2 ajudantes (3 pessoas)", `${euros(PRECO_POR_HORA)} / hora`, `${comIvaEscrito(PRECO_POR_HORA)} / hora com IVA`],
         ["Carrinha + motorista + 1 ajudante (2 pessoas)", `${euros(PRECO_POR_HORA_DUAS_PESSOAS)} / hora`, `${comIvaEscrito(PRECO_POR_HORA_DUAS_PESSOAS)} / hora com IVA`],
         ["Mínimo", `${MINIMO_DE_HORAS} horas`],
-        ["Desmontagem e montagem de móveis", "acrescenta horas de trabalho"],
+        // d132b (26-11-2026): já não soma horas — conta à parte, pela tabela da montagem.
+        ["Desmontagem e montagem de móveis", "à parte, peça a peça, pela tabela da montagem"],
       ],
     },
     {

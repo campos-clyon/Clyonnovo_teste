@@ -2831,3 +2831,113 @@ describe("d2) o «desde» das mudanças é o da lista de parceiros, em todas as 
     expect(achados).toEqual([]);
   });
 });
+
+/*
+ * d132b — 26-11-2026 (o CEO e o dono, «Sim, substitui»). Na mudança, a caixa
+ * «Acesso difícil ou desmontagem necessária» somava as horas da desmontagem, e
+ * a d132 trouxe o extra «Desmontar e montar no destino» (75 % da soma, pela
+ * tabela da montagem): com os dois, a desmontagem cobrava-se duas vezes. A
+ * caixa passa a ser só o acesso; a desmontagem conta APENAS pelo extra. Os
+ * pedidos antigos (sem a marca) ficam como estavam.
+ */
+describe("d132b: na mudança, o acesso difícil já não é desmontagem — nunca se cobra duas vezes", () => {
+  const PECAS = { roupeiro_2: 1, cama_casal: 1 };
+  const MUDANCA = {
+    serviceType: "mudanca",
+    tipologia: "T2",
+    movingDistance: { distanceKm: 10 },
+    originAccess: { floor: "2º", hasElevator: "yes", parkingDistance: "door" },
+    destinationAccess: { floor: "rés-do-chão", parkingDistance: "door" },
+  };
+  const comAcessoDificil = {
+    ...MUDANCA,
+    originAccess: { ...MUDANCA.originAccess, difficultAccess: true },
+    destinationAccess: { ...MUDANCA.destinationAccess, difficultAccess: true },
+  };
+
+  it("o motor: marcar «acesso difícil» + o extra dá o mesmo que só o extra — a desmontagem conta uma vez", async () => {
+    const { calculateFastEstimate } = await import("./pricing-helper");
+    const { extraDaDesmontagem } = await import("./tabela-da-montagem");
+    const motor = (o: Record<string, unknown>) =>
+      calculateFastEstimate({ description: "", ...o, desmontagemSoPelaTabela: true } as Parameters<typeof calculateFastEstimate>[0]);
+    const so = await motor({ ...MUDANCA, desmontarPecas: PECAS });
+    const os2 = await motor({ ...comAcessoDificil, desmontarPecas: PECAS });
+    const nada = await motor(MUDANCA);
+    const extra = extraDaDesmontagem("mudanca", PECAS)?.valor ?? 0;
+    expect(extra).toBeGreaterThan(0);
+    expect(os2.estimatedPriceWithoutVat).toBe(so.estimatedPriceWithoutVat);
+    expect(os2.estimatedPriceWithVat).toBe(so.estimatedPriceWithVat);
+    // A diferença para a mudança sem nada é só o extra (nenhuma hora a mais).
+    expect(Math.round(((so.estimatedPriceWithoutVat ?? 0) - (nada.estimatedPriceWithoutVat ?? 0)) * 100) / 100).toBe(extra);
+    expect((await motor(comAcessoDificil)).estimatedPriceWithoutVat).toBe(nada.estimatedPriceWithoutVat);
+  });
+
+  it("um pedido antigo (sem a marca) com a caixa marcada fica como estava: soma as horas", async () => {
+    const { calculateFastEstimate } = await import("./pricing-helper");
+    const motor = (o: Record<string, unknown>) => calculateFastEstimate({ description: "", ...o } as Parameters<typeof calculateFastEstimate>[0]);
+    expect((await motor(comAcessoDificil)).estimatedPriceWithoutVat ?? 0).toBeGreaterThan((await motor(MUDANCA)).estimatedPriceWithoutVat ?? 0);
+    const { horasPrevistasDaLinha } = await import("./horas-do-trabalho");
+    const linha = (o: Record<string, unknown>) => horasPrevistasDaLinha({ serviceType: "mudanca", rawOrderJson: JSON.stringify(o) });
+    expect(linha(comAcessoDificil)).toBeGreaterThan(linha(MUDANCA));
+    expect(linha({ ...comAcessoDificil, desmontagemSoPelaTabela: true })).toBe(linha(MUDANCA));
+    const { corpoDoSimuladorDoSite } = await import("./preco-de-referencia");
+    expect(corpoDoSimuladorDoSite(comAcessoDificil as never)?.desmontagem).toBe(true);
+    expect(corpoDoSimuladorDoSite({ ...comAcessoDificil, desmontagemSoPelaTabela: true } as never)?.desmontagem).toBeUndefined();
+  });
+
+  it("o simulador e a R12: o acesso difícil não muda a estimativa; o extra vai numa linha à parte", async () => {
+    const { valorDoSimuladorDoSite } = await import("./preco-de-referencia");
+    const v = (o: Record<string, unknown>) => valorDoSimuladorDoSite(o as never);
+    expect(v({ ...comAcessoDificil, desmontarPecas: PECAS })).toBe(v({ ...MUDANCA, desmontarPecas: PECAS }));
+    expect(v(comAcessoDificil)).toBe(v(MUDANCA));
+    const SIM = SEM_COMENTARIOS(readFileSync(join(RAIZ, "src/app/simulador/SimulatorThreePhaseForm.tsx"), "utf8"));
+    const i = SIM.indexOf("<PecasADesmontar servico=\"mudanca\"");
+    expect(i).toBeGreaterThan(-1);
+    const bloco = SIM.slice(i, SIM.indexOf("TabelaDasMudancas compacta", i));
+    expect(bloco).not.toContain("difficultAccess");
+    expect(SEM_COMENTARIOS(readFileSync(join(RAIZ, "src/app/simulador/components/ParceirosDaMudanca.tsx"), "utf8"))).toMatch(/const desmontagem = false;/);
+    expect(readFileSync(join(RAIZ, "src/app/api/mudancas/parceiros/route.ts"), "utf8")).toContain("desmontagem: false");
+    expect(readFileSync(join(RAIZ, "src/app/api/cliente/referencia/route.ts"), "utf8")).toContain("desmontagemSoPelaTabela: true");
+    expect(readFileSync(join(RAIZ, "src/app/api/simulador/pedido/route.ts"), "utf8")).toMatch(/order\[MARCA_DA_DESMONTAGEM_SO_PELA_TABELA\] = true/);
+  });
+
+  it("a caixa diz só o acesso, no simulador e no /plataforma/pedir — e o /plataforma/pedir tem o extra", async () => {
+    const { CAIXA_DO_ACESSO_DIFICIL } = await import("./tabela-das-mudancas");
+    expect(CAIXA_DO_ACESSO_DIFICIL).not.toMatch(/desmont|montag/i);
+    for (const f of ["src/app/simulador/SimulatorThreePhaseForm.tsx", "src/app/plataforma/pedir/FormularioDePedido.tsx"]) {
+      const t = readFileSync(join(RAIZ, f), "utf8");
+      const i = t.indexOf("function AccessFields(");
+      expect(i, f).toBeGreaterThan(-1);
+      const caixa = t.slice(i, t.indexOf("function Phase2Location(", i));
+      expect(caixa, f).toContain("{CAIXA_DO_ACESSO_DIFICIL}");
+      // Sem os comentários (os de JSX também): o que o cliente lê.
+      expect(SEM_COMENTARIOS(caixa.replace(/\{\/\*[\s\S]*?\*\/\}/g, "")), f).not.toMatch(/desmontagem/i);
+    }
+    expect(readFileSync(join(RAIZ, "src/app/plataforma/pedir/FormularioDePedido.tsx"), "utf8")).toContain("<PecasADesmontar servico=\"mudanca\"");
+  });
+
+  it("a R7: a mudança já não pergunta o «desmontar sim/não» das horas, e o acesso difícil diz o que é", async () => {
+    const { perguntasDoServico } = await import("./simulador-por-categoria");
+    const { AJUDA_DO_ACESSO_DIFICIL, tituloDoAcessoDificil } = await import("./tabela-das-mudancas");
+    const l = perguntasDoServico("mudanca");
+    expect(l.map((p) => p.id)).not.toContain("desmontagem");
+    expect(l.some((p) => p.id.startsWith("desmontarPecas."))).toBe(true);
+    const o = l.find((p) => p.id === "origem.difficultAccess");
+    expect(o?.titulo).toBe(tituloDoAcessoDificil(" na casa de onde sai"));
+    expect(o?.ajuda).toBe(AJUDA_DO_ACESSO_DIFICIL);
+    for (const p of l) expect(`${p.titulo} ${p.ajuda ?? ""}`, p.id).not.toMatch(/acrescenta de .* h/i);
+  });
+
+  it("a Vitória, o modelo e as páginas dizem o mesmo: desmontar e montar à parte, sem horas", async () => {
+    const { DESMONTAGEM_NA_MUDANCA, EXTRAS_DA_MUDANCA, tabelaEmLinhas } = await import("./tabela-das-mudancas");
+    const { oQueOSiteSabe } = await import("./o-que-o-site-sabe");
+    const { regrasDaMudancaParaOModelo, precoPublicoConhecido } = await import("./preco-publico-das-mudancas");
+    expect(oQueOSiteSabe(new Date())).toContain(DESMONTAGEM_NA_MUDANCA);
+    const modelo = regrasDaMudancaParaOModelo(precoPublicoConhecido());
+    expect(modelo).toContain(DESMONTAGEM_NA_MUDANCA);
+    expect(modelo).not.toMatch(/soma aos dois extremos/);
+    expect(EXTRAS_DA_MUDANCA).not.toMatch(/desmontagem e montagem de móveis pesam nas horas/);
+    expect(JSON.stringify(tabelaEmLinhas())).not.toContain("acrescenta horas");
+    expect(readFileSync(join(RAIZ, "src/components/mudancas/TabelaDasMudancas.tsx"), "utf8")).toContain("{DESMONTAGEM_NA_MUDANCA}");
+  });
+});

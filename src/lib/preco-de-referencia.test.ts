@@ -103,8 +103,9 @@ describe("S13 — o preço de referência", () => {
       destino: { floor: "rés-do-chão", hasElevator: null },
     };
     const j = await (await chamar({ servico: "mudanca", ...pedido })).json();
-    // Com a proteção, como o simulador do site e a lista dos parceiros (11-11-2026).
-    const comProtecao = orcamentoDaMudanca({ ...pedido, protecao: true });
+    // Com a proteção, como o simulador do site e a lista dos parceiros (11-11-2026). Desde a d132b
+    // (26-11-2026) a R12 é sempre de um pedido novo: a desmontagem não soma horas (é o extra pela tabela).
+    const comProtecao = orcamentoDaMudanca({ ...pedido, desmontagem: false, protecao: true });
     const doSite = `${ROTULO_DA_ESTIMATIVA_DA_MUDANCA}: ${estimativaDaMudanca(comProtecao)}`;
     // Desde a d6 o rótulo da R12 é «Estimativa»; o texto é o mesmo da caixa do site.
     expect(j.linhas.map(linhaEscrita)).toContain(`Estimativa: ${estimativaDaMudanca(comProtecao)}`);

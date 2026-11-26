@@ -160,7 +160,7 @@ export function PecasADesmontar({ servico, pecas = {}, onPecas }: { servico: str
       </summary>
       <p className="text-xs text-slate-600">
         {servico === "mudanca"
-          ? "Peça a peça, pela tabela da montagem: 75 % da montagem e da desmontagem somadas, à parte das horas da mudança."
+          ? "Peça a peça, pela tabela da montagem: 75 % da montagem e da desmontagem somadas. É a única desmontagem da mudança: não soma horas."
           : "Peça a peça, pela tabela da montagem: metade do preço de montar."}
       </p>
       <ListaDasPecas pecas={pecas} operacao={operacao} onPecas={onPecas} />

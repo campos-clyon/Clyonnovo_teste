@@ -36,7 +36,7 @@ import { limitarCorpoDoPedido } from "@/lib/limites-do-pedido";
 import { enviarLinkDoPedido } from "@/lib/email-pedido";
 
 import { valorDeArranque as valorDeArranqueCalculado } from "@/lib/valor-de-arranque";
-import { valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
+import { MARCA_DA_DESMONTAGEM_SO_PELA_TABELA, valorDePartidaPorHora } from "@/lib/tabela-das-mudancas";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { moradaCompleta } from "@/lib/morada";
 import { problemaDoTelefone } from "@/lib/telefone-do-cliente";
@@ -141,6 +141,15 @@ export async function POST(req: NextRequest) {
      */
     Object.assign(order, camposDaCategoriaParaGravar(order));
     order.description = comAsLinhasDaCategoria(order.description, order) || order.description;
+
+    /*
+     * O ACESSO DIFÍCIL JÁ NÃO É DESMONTAGEM — 26-11-2026 (d132b). Cada mudança
+     * nova leva a marca: o acesso difícil e a desmontagem não somam horas (a
+     * desmontagem é o extra pela tabela da montagem, `desmontarPecas`), aqui, na
+     * lista dos parceiros, nas horas previstas e no motor. Os pedidos antigos,
+     * sem a marca, ficam como estavam.
+     */
+    if (order.serviceType === "mudanca") order[MARCA_DA_DESMONTAGEM_SO_PELA_TABELA] = true;
 
     /*
      * A MUDANÇA COM OS PARCEIROS ESCOLHIDOS PELO CLIENTE — 10-11-2026 (fase 2).

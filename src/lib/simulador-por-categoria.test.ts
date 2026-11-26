@@ -87,7 +87,8 @@ describe("d1 — as perguntas de cada categoria", () => {
     expect(ids("esvaziamento_cave")).toEqual(["volume", "acessoDoEspaco", "coisasDoEspaco", "parkingDistance"]);
     expect(ids("esvaziamento_sotao")).toEqual(["volume", "acessoDoEspaco", "floor", "hasElevator", "parkingDistance"]);
     expect(ids("mudanca")).toEqual([
-      "tipologia", "desmontagem", ...DESMONTAR,
+      // d132b (26-11-2026): sem o «desmontar sim/não» que somava horas — só o extra peça a peça.
+      "tipologia", ...DESMONTAR,
       "origem.floor", "origem.hasElevator", "origem.parkingDistance", "origem.difficultAccess", "origem.accessNotes",
       "destino.floor", "destino.hasElevator", "destino.parkingDistance", "destino.difficultAccess", "destino.accessNotes",
     ]);
@@ -101,11 +102,11 @@ describe("d1 — as perguntas de cada categoria", () => {
     expect(perguntasDoServico("jardinagem")).toEqual([]);
   });
 
-  it("a desmontagem só na recolha de móveis e de monos, no esvaziamento de casa e de apartamento, e na mudança", () => {
+  it("a desmontagem só na recolha de móveis e de monos e no esvaziamento de casa e de apartamento (a mudança só pelo extra, d132b)", () => {
     expect([...SERVICOS_COM_DESMONTAGEM].sort()).toEqual(
-      ["recolha_moveis", "recolha_monos", "esvaziamento_casa", "esvaziamento_apartamento", "mudanca"].sort(),
+      ["recolha_moveis", "recolha_monos", "esvaziamento_casa", "esvaziamento_apartamento"].sort(),
     );
-    for (const s of ["recolha_entulho", "manutencao_casa", "outro", "esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]) {
+    for (const s of ["mudanca", "recolha_entulho", "manutencao_casa", "outro", "esvaziamento_garagem", "esvaziamento_sotao", "esvaziamento_cave"]) {
       expect(ids(s), s).not.toContain("desmontagem");
     }
   });

@@ -29,7 +29,9 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
   }
-  const pedido = lerPedidoParaReferencia(corpo);
+  // Um pedido que ainda se está a fazer é sempre novo (d132b, 26-11-2026): a desmontagem da mudança
+  // conta só pelo extra da tabela da montagem, nunca em horas.
+  const pedido = lerPedidoParaReferencia(corpo && typeof corpo === "object" ? { ...(corpo as Record<string, unknown>), desmontagemSoPelaTabela: true } : corpo);
   if (!pedido) return NextResponse.json({ ok: false, error: "Pedido inválido." }, { status: 400 });
 
   // A mudança diz o preço público (11-11-2026): o «desde» dos parceiros da lista, ou a referência.

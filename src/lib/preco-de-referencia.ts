@@ -46,6 +46,8 @@ import {
   RAIO_INCLUIDO_KM,
   TIPOLOGIA_POR_EXTENSO,
   horasEscritas,
+  acessoDificilNumaPonta,
+  desmontagemSoPelaTabela,
   intervaloDeHorasEmTexto,
   orcamentoDaMudanca,
   pessoasParaACasa,
@@ -1197,7 +1199,9 @@ export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | 
   if (c.servico === "mudanca") {
     const tipologia = TIPOLOGIAS.find((t) => t === c.tipologia) ?? null;
     const km = typeof c.kmPercurso === "number" && Number.isFinite(c.kmPercurso) && c.kmPercurso >= 0 && c.kmPercurso < 5000 ? c.kmPercurso : null;
-    p.mudanca = { tipologia, kmPercurso: km, desmontagem: lerDesmontagem(c.desmontagem) === true, origem: ponta(c.origem), destino: ponta(c.destino) };
+    // d132b (26-11-2026): num pedido novo a desmontagem não soma horas — é o extra pela tabela (`desmontarPecas`).
+    const desmontagem = !desmontagemSoPelaTabela(c) && lerDesmontagem(c.desmontagem) === true;
+    p.mudanca = { tipologia, kmPercurso: km, desmontagem, origem: ponta(c.origem), destino: ponta(c.destino) };
   } else {
     // O andar, o elevador e o estacionamento (d1): levam a faixa ao topo.
     const acesso = lerAcesso({ floor: c.floor, hasElevator: c.hasElevator, parkingDistance: c.parkingDistance ?? c.estacionamento, pecasNoElevador: c.pecasNoElevador });
@@ -1266,6 +1270,8 @@ export type FormularioDoSimulador = {
   cozinhaNaMontagem?: boolean;
   /** Nas recolhas e na mudança (d132): as peças a desmontar, pela tabela da montagem. */
   desmontarPecas?: Record<string, number>;
+  /** Um pedido de mudança novo (d132b): o acesso difícil não soma as horas da desmontagem. */
+  desmontagemSoPelaTabela?: boolean;
 };
 
 /**
@@ -1274,8 +1280,9 @@ export type FormularioDoSimulador = {
  * `referenciaDoPedido`, como a R12: para o mesmo pedido, o site e a app dizem o
  * mesmo número e o mesmo porquê. O site conta o entulho em sacos (as cargas já
  * convertidas, `SACOS_POR_CARGA`) — menos a carga no chão, que vai a granel
- * (d4); a mudança, com a desmontagem do
- * «acesso difícil» de cada ponta, como a caixa da tabela.
+ * (d4); a mudança, com a desmontagem do «acesso difícil» de cada ponta só num
+ * pedido antigo (d132b, 26-11-2026: num novo, a desmontagem é o extra pela
+ * tabela da montagem, e o formulário vivo é sempre novo).
  */
 export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string, unknown> | null {
   const s = f.serviceType;
@@ -1320,7 +1327,8 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
   if (s === "mudanca") {
     corpo.tipologia = f.tipologia;
     corpo.kmPercurso = f.movingDistance?.distanceKm;
-    corpo.desmontagem = f.originAccess?.difficultAccess === true || f.destinationAccess?.difficultAccess === true;
+    if (desmontagemSoPelaTabela(f)) corpo.desmontagemSoPelaTabela = true;
+    else corpo.desmontagem = acessoDificilNumaPonta(f);
     corpo.origem = f.originAccess;
     corpo.destino = f.destinationAccess;
   } else {
@@ -1335,12 +1343,13 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
 
 /** O número da estimativa do formulário do site, sem IVA (d59) — a mesma conta. */
 export function valorDoSimuladorDoSite(f: FormularioDoSimulador): number | null {
-  const pedido = lerPedidoParaReferencia(corpoDoSimuladorDoSite(f));
+  const pedido = lerPedidoParaReferencia(corpoDoSimuladorDoSite({ ...f, desmontagemSoPelaTabela: true }));
   return pedido ? valorDaReferencia(pedido) : null;
 }
 
 /** A referência do formulário do site — a mesma conta da R12. */
 export function referenciaDoSimuladorDoSite(f: FormularioDoSimulador): ReferenciaDoPedido | null {
-  const pedido = lerPedidoParaReferencia(corpoDoSimuladorDoSite(f));
+  // O formulário vivo é sempre um pedido novo (d132b).
+  const pedido = lerPedidoParaReferencia(corpoDoSimuladorDoSite({ ...f, desmontagemSoPelaTabela: true }));
   return pedido ? referenciaDoPedido(pedido) : null;
 }

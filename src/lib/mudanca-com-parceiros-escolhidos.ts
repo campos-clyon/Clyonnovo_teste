@@ -16,7 +16,7 @@ import {
   type PedidoDaLista,
 } from "./parceiros-da-mudanca";
 import type { Ponto } from "./distancia-entre-pontos";
-import type { IntervaloDeHoras } from "./tabela-das-mudancas";
+import { desmontagemSoPelaTabela, type IntervaloDeHoras } from "./tabela-das-mudancas";
 import type { CartaoDoParceiro } from "./lista-de-parceiros-da-mudanca";
 
 /**
@@ -68,7 +68,8 @@ export function pedidoDaListaDoPedido(order: Record<string, unknown>) {
     origem: o ? { lat: o.lat, lng: o.lng, morada: o.formattedAddress, cidade: o.city } : null,
     destino: d ? { lat: d.lat, lng: d.lng, morada: d.formattedAddress, cidade: d.city } : null,
     tipologia: order.tipologia,
-    desmontagem: ao?.difficultAccess === true || ad?.difficultAccess === true || order.desmontagem === true,
+    // Um pedido novo (d132b): o acesso difícil já não é desmontagem — a desmontagem é o extra pela tabela.
+    desmontagem: !desmontagemSoPelaTabela(order) && (ao?.difficultAccess === true || ad?.difficultAccess === true || order.desmontagem === true),
     pessoas: order.pessoas,
     embalamento: order.embalamento === true,
     data: typeof order.dataPreferida === "string" ? order.dataPreferida : null,
