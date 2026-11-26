@@ -51,9 +51,9 @@ describe("S4 — GET /api/cliente/catalogo", () => {
     const { j } = await ler();
     expect(j.servicos.map((s: { id: string }) => s.id)).toEqual(SERVICOS_PUBLICOS.map((c) => c.id));
     for (const s of j.servicos) expect(s.nome).toBe(NOMES_DOS_SERVICOS[s.id]);
-    // Fora do plano (montagem, jardinagem) não entram.
+    // Fora do plano (a jardinagem) não entra; a montagem voltou a 26-11-2026 (d132).
     expect(j.servicos.map((s: { id: string }) => s.id)).not.toContain("jardinagem");
-    expect(j.servicos.map((s: { id: string }) => s.id)).not.toContain("montagem_moveis");
+    expect(j.servicos.map((s: { id: string }) => s.id)).toContain("montagem_moveis");
   });
 
   it("«Hoje» como no simulador, como pedido urgente sem prometer o dia (d8); sem «no próprio dia», sem big bags nem contentores", async () => {

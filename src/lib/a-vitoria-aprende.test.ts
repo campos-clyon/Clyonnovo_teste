@@ -87,7 +87,8 @@ describe("o que o site sabe — lido das fontes", () => {
 
 describe("a guarda: uma lição nunca muda um preço, uma taxa ou uma promessa", () => {
   it("um preço que não bate com o site fica bloqueado, com o motivo", () => {
-    expect(motivoParaBloquear("A recolha de um sofá fica em 35 € + IVA.")).toMatch(/35 €.*não bate com os preços do site/);
+    // 35 € é, desde 26-11-2026 (d132), o mínimo da montagem de móveis: o exemplo passou a 37 €.
+    expect(motivoParaBloquear("A recolha de um sofá fica em 37 € + IVA.")).toMatch(/37 €.*não bate com os preços do site/);
   });
 
   it("os preços do site, com o IVA ao lado, passam", () => {
@@ -119,7 +120,7 @@ describe("a guarda: uma lição nunca muda um preço, uma taxa ou uma promessa",
 
   it("a resposta livre do modelo passa pela mesma guarda", () => {
     expect(respostaLivre("Pode, sim — as fotografias ajudam os profissionais a acertar o preço.")).toBeTruthy();
-    expect(respostaLivre("Fica em 35 € no total.")).toBeNull();
+    expect(respostaLivre("Fica em 37 € no total.")).toBeNull();
     expect(respostaLivre("Fazemos no próprio dia.")).toBeNull();
   });
 });
@@ -251,7 +252,7 @@ describe("uma lição aprovada muda a resposta da conversa seguinte", () => {
   });
 
   it("uma lição com um preço que não bate com o site nunca chega à conversa", () => {
-    usarLicoes([{ ...LICAO, respostaProposta: "Não vendemos, mas a recolha fica em 35 €." }]);
+    usarLicoes([{ ...LICAO, respostaProposta: "Não vendemos, mas a recolha fica em 37 €." }]);
     expect(conversa()[4]).toContain(PERGUNTA_ANOTADA);
   });
 

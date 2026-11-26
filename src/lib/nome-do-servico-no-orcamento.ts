@@ -25,6 +25,8 @@ const NA_PESQUISA: Record<string, string> = {
   esvaziamento_empresa: "esvaziamento de armazém, escritório ou loja",
   mudanca: "mudança de casa",
   manutencao_casa: "reparações e manutenção da casa",
+  // d132 (26-11-2026): a montagem de móveis voltou.
+  montagem_moveis: "montagem e desmontagem de móveis",
   outro: "serviço de transporte",
 };
 

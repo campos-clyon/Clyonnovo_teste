@@ -1,6 +1,15 @@
 import { PESO_DO_SACO } from "./sacos-de-entulho";
 import { linhaDoEspacoDaEmpresa, linhaDosPedidosDaEmpresa } from "./esvaziamento-de-empresa";
 import {
+  COZINHA_SO_POR_ORCAMENTO,
+  OPERACOES_DA_MONTAGEM,
+  SERVICOS_COM_O_EXTRA_DA_DESMONTAGEM,
+  lerPecasDaMontagem,
+  lerRespostasDaMontagem,
+  pecasEmTexto,
+  rotuloDoExtraDaDesmontagem,
+} from "./tabela-da-montagem";
+import {
   QUANTO_TRABALHO,
   RECHEIOS,
   TIPOS_DE_TRABALHO,
@@ -102,6 +111,8 @@ export const PREFIXO_DA_TIPOLOGIA = "Tipologia: ";
 export const PREFIXO_DO_RECHEIO = "Recheio: ";
 export const PREFIXO_DO_TRABALHO = "Trabalho: ";
 export const PREFIXO_DOS_MATERIAIS = "Materiais: ";
+export const PREFIXO_DA_MONTAGEM = "Montagem: ";
+export const PREFIXO_DOS_EXTRAS_DA_MONTAGEM = "Extras da montagem: ";
 
 const minuscula = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
@@ -131,6 +142,23 @@ export function linhasDaCategoria(order: Record<string, unknown>): string[] {
     const fora = order.foraDeHoras === true || order.foraDeHoras === "sim";
     const pedidos = linhaDosPedidosDaEmpresa({ foraDeHoras: fora });
     if (pedidos) l.push(pedidos);
+  }
+  if (servico === "montagem_moveis") {
+    // A montagem (d132): o que é para fazer, as peças pela tabela, os extras e a cozinha.
+    const r = lerRespostasDaMontagem(order);
+    const op = OPERACOES_DA_MONTAGEM.find((o) => o.id === r.operacao)?.nome;
+    const pecas = pecasEmTexto(r.pecas);
+    if (op || pecas) l.push(`${PREFIXO_DA_MONTAGEM}${[op, pecas].filter(Boolean).join(" — ")}.`);
+    const extras = [
+      r.fixarAParede > 0 ? `fixar à parede (anti-queda) ${r.fixarAParede} ${r.fixarAParede === 1 ? "móvel" : "móveis"}` : null,
+      r.retirarEmbalagens ? "retirar as embalagens" : null,
+    ].filter(Boolean);
+    if (extras.length) l.push(`${PREFIXO_DOS_EXTRAS_DA_MONTAGEM}${extras.join(", ")}.`);
+    if (r.cozinha) l.push(`Cozinha: ${COZINHA_SO_POR_ORCAMENTO}`);
+  }
+  if (SERVICOS_COM_O_EXTRA_DA_DESMONTAGEM.includes(servico)) {
+    const d = pecasEmTexto(lerPecasDaMontagem(order.desmontarPecas));
+    if (d) l.push(`${rotuloDoExtraDaDesmontagem(servico)}: ${d}.`);
   }
   if (servico === "manutencao_casa") {
     const m = lerManutencao(order);

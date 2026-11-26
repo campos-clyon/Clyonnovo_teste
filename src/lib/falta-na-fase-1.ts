@@ -25,6 +25,9 @@ export interface DadosDaFase1 {
   movelItemsPequeno?: number;
   movelItemsMedio?: number;
   movelItemsGrande?: number;
+  /** A montagem (d132): o que é para fazer e as peças. */
+  operacaoDaMontagem?: string;
+  pecasDaMontagem?: Record<string, number>;
 }
 
 /** O texto do que falta quando só a descrição (ou uma fotografia) segura o passo. */
@@ -56,6 +59,18 @@ export function faltaNaFase1(d: DadosDaFase1): string[] {
     const falta: string[] = [];
     if (!d.volumeTier) falta.push("a quantidade");
     if (!d.acessoDoEspaco) falta.push("o acesso");
+    return falta;
+  }
+
+  /*
+   * A MONTAGEM (d132, 26-11-2026): o que é para fazer, e as peças contadas — ou,
+   * sem elas (a cozinha, uma coisa fora da tabela), a descrição ou uma fotografia.
+   */
+  if (d.serviceType === "montagem_moveis") {
+    const falta: string[] = [];
+    if (!d.operacaoDaMontagem) falta.push("o que é para fazer (montar, desmontar ou os dois)");
+    const pecas = Object.values(d.pecasDaMontagem ?? {}).reduce((s, n) => s + (n ?? 0), 0);
+    if (pecas <= 0 && !d.description?.trim() && (d.files ?? []).length === 0) falta.push("as peças (ou uma descrição, ou uma fotografia)");
     return falta;
   }
 

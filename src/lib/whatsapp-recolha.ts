@@ -588,7 +588,14 @@ const PISTAS: Array<[string, RegExp]> = [
    * coisas, «uma moradia com quintal»). E quem fala em levar alguma coisa
    * (`QUER_LEVAR_ALGUMA_COISA`) está a pedir uma recolha, monte o que montar.
    */
-  ["montagem_moveis", /\bmont(ar|arem|armos|agem|agens)\b/],
+  /*
+   * A MONTAGEM DE MÓVEIS VOLTOU — 26-11-2026 (d132): é um serviço, e dá o
+   * serviço do pedido. «Desmontar» volta a ser pista dela, mas só sem nada para
+   * levar: quem fala em levar alguma coisa continua a pedir uma recolha
+   * (`CEDE_A_QUEM_QUER_LEVAR`), e a mudança vem antes («mudança com
+   * desmontagem e montagem» é uma mudança).
+   */
+  ["montagem_moveis", /\b(des)?mont(ar|arem|armos|am|em|agem|agens)\b/],
   [
     "jardinagem",
     /\bjardinag|\bjardineir|\brelva(s|do|dos)?\b|\bpod(a|ar|as)\b|\bsebes?\b|\b(limpar|limpeza|tratar|arranjar|cuidar|manutencao)\s+((d[eoa]s?|o|a|os|as|um|uma|meu|minha|nosso|nossa)\s+){0,2}(jardi[mn]s?|quinta(l|is))\b|\bcortar\s+(a\s+|o\s+|as\s+|os\s+)?(mato|ervas?|arvores?)\b/,
@@ -603,6 +610,9 @@ const PISTAS: Array<[string, RegExp]> = [
  * nem a jardinagem, mesmo que as diga: «desmontar o roupeiro e levá-lo»,
  * «levam o sofá velho e montam o novo?». O «tirar uma dúvida» não conta.
  */
+/** Os serviços que cedem a quem quer levar alguma coisa: os fora do plano e a montagem (d132). */
+const CEDE_A_QUEM_QUER_LEVAR: ReadonlySet<string> = new Set([...FORA_DO_PLANO, "montagem_moveis"]);
+
 const QUER_LEVAR_ALGUMA_COISA =
   /\b(recolh\w*|lev(ar|am|em|arem|asse|assem)|leva-l[oa]s?|retir(ar|am|em|arem|e)|retira-l[oa]s?|tir(ar|am|em|arem)|tira-l[oa]s?|deitar\s+fora|remov(er|am|em)|despej\w*|abate\w*|livrar-me|desfazer-me)\b/;
 
@@ -624,7 +634,7 @@ function pistaDoTexto(texto: string, semOutro: boolean): string | null {
   const levar = QUER_LEVAR_ALGUMA_COISA.test(semDuvidas(t));
   for (const [id, re] of PISTAS) {
     if (semOutro && id === "outro") continue;
-    if (FORA_DO_PLANO.has(id) && levar) continue;
+    if (CEDE_A_QUEM_QUER_LEVAR.has(id) && levar) continue;
     if (re.test(t)) return id;
   }
   return null;

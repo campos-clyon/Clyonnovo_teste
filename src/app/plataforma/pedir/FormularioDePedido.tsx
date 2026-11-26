@@ -29,6 +29,8 @@ import ServiceTypeCards from "./components/ServiceTypeCards";
 import EntulhoDetails from "./components/EntulhoDetails";
 import VolumeQuantitySelector from "./components/VolumeQuantitySelector";
 import MovelItemSelector from "./components/MovelItemSelector";
+import PerguntasDaMontagem from "@/app/simulador/components/PerguntasDaMontagem";
+import PrecoDeReferencia from "@/app/simulador/components/PrecoDeReferencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import ValoresEFaturacao from "./components/ValoresEFaturacao";
 import { ChevronRight, ChevronLeft, CheckCircle, Loader2 } from "lucide-react";
@@ -256,6 +258,9 @@ export default function SimulatorThreePhaseForm() {
       // Para entulho: tem dados suficientes (campo de descrição agora é opcional)
       return true;
     }
+
+    // A montagem (d132): o que é para fazer e as peças chegam.
+    if (formData.serviceType === "montagem_moveis" && formData.operacaoDaMontagem && Object.values(formData.pecasDaMontagem ?? {}).some((n) => n > 0)) return true;
 
     // Para outros serviços: precisa de PELO MENOS UMA DAS:
     // 1. Descrição preenchida
@@ -876,6 +881,25 @@ function Phase1Service({
         selected={formData.serviceType}
         onSelect={(serviceType) => updateField("serviceType", serviceType)}
       />
+
+      {/* A montagem e desmontagem de móveis (d132): as mesmas perguntas e a mesma estimativa do simulador. */}
+      {formData.serviceType === "montagem_moveis" && (
+        <>
+          <PrecoDeReferencia servico={formData.serviceType} formulario={formData} />
+          <PerguntasDaMontagem
+            operacao={formData.operacaoDaMontagem}
+            pecas={formData.pecasDaMontagem}
+            fixarAParede={formData.fixarAParede}
+            retirarEmbalagens={formData.retirarEmbalagens}
+            cozinha={formData.cozinhaNaMontagem}
+            onOperacao={(v) => updateField("operacaoDaMontagem", v)}
+            onPecas={(p) => updateField("pecasDaMontagem", p)}
+            onFixarAParede={(n) => updateField("fixarAParede", n)}
+            onRetirarEmbalagens={(v) => updateField("retirarEmbalagens", v)}
+            onCozinha={(v) => updateField("cozinhaNaMontagem", v)}
+          />
+        </>
+      )}
 
       {/* Entulho Details (conditional) */}
       {formData.serviceType === "recolha_entulho" && (

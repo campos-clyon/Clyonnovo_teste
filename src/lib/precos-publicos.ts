@@ -31,6 +31,7 @@
 
 import { PESO_DO_SACO, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import { PRECO_POR_HORA_DUAS_PESSOAS, MINIMO_DE_HORAS } from "./tabela-das-mudancas";
+import { ETIQUETA_DA_MONTAGEM, MINIMO_DA_MONTAGEM } from "./tabela-da-montagem";
 
 export type PrecoPublico = {
   /** O que aparece no cartão e no texto: "40 – 120 €", "desde 260 €". */
@@ -253,7 +254,12 @@ export const PRECOS: Record<string, PrecoPublico> = {
   // Desde 16-11-2026 (d60) a referência tem a equipa de 2 (40 €/h) e a de 3 (55 €/h): a etiqueta diz a de 2.
   mudanca: { etiqueta: `referência desde ${PRECO_POR_HORA_DUAS_PESSOAS} €/hora + IVA`, minimo: PRECO_POR_HORA_DUAS_PESSOAS * MINIMO_DE_HORAS },
 
-  montagem_moveis: { etiqueta: "desde 49 €", minimo: 49 },
+  /*
+   * DESDE 26-11-2026 (d132): o serviço volta, com a tabela por peça de
+   * `tabela-da-montagem.ts`. O «desde» é o mínimo do serviço (35 €). Era
+   * «desde 49 €», de antes de sair do plano (25-10-2026).
+   */
+  montagem_moveis: { etiqueta: ETIQUETA_DA_MONTAGEM, minimo: MINIMO_DA_MONTAGEM },
   jardinagem: { etiqueta: "desde 64 €", minimo: 64 },
   manutencao_casa: { etiqueta: `desde ${MINIMO_DA_MANUTENCAO} €`, minimo: MINIMO_DA_MANUTENCAO },
 };

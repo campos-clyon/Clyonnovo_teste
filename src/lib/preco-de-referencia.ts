@@ -56,6 +56,19 @@ import {
 } from "./tabela-das-mudancas";
 import { PERGUNTAS_DO_ESPACO, acessoDificilDoEspaco } from "./perguntas-do-espaco";
 import {
+  COZINHA_SO_POR_ORCAMENTO,
+  MINIMO_DA_MONTAGEM,
+  OPERACOES_DA_MONTAGEM,
+  contaDaMontagem,
+  extraDaDesmontagem,
+  lerPecasDaMontagem,
+  lerRespostasDaMontagem,
+  pecasEmTexto,
+  rotuloDoExtraDaDesmontagem,
+  type PecasDaMontagem,
+  type RespostasDaMontagem,
+} from "./tabela-da-montagem";
+import {
   estimativaPelaLista,
   oQueOExemploLeva,
   precoPublicoConhecido,
@@ -82,6 +95,7 @@ import {
   lerTipologiaDoEsvaziamento,
   localidadeServida,
   nomeDaOpcao,
+  numeroDoAndar,
   razoesDoAcessoDificil,
   type AcessoDoPedido,
   type EntulhoDoPedido,
@@ -552,6 +566,10 @@ export type PedidoParaReferencia = {
   tipologia?: string | null;
   recheio?: Recheio | null;
   manutencao?: RespostasDaManutencao;
+  /** A montagem de móveis (d132): a operação, as peças pela tabela, os extras, a cozinha. */
+  montagem?: RespostasDaMontagem;
+  /** Nas recolhas e na mudança (d132): as peças a desmontar (e montar no destino), pela tabela da montagem. */
+  desmontarPecas?: PecasDaMontagem;
   /** O andar, o elevador e o estacionamento (todos menos a mudança, que os tem em cada ponta). */
   acesso?: AcessoDoPedido;
   localidade?: string | null;
@@ -904,7 +922,8 @@ function faixaDoServico(servico: string): { de: number; ate: number } | null {
 }
 
 /** Os serviços sem conta pelas respostas: a estimativa é a faixa (ou o «desde») publicada. */
-const SEM_CONTA_PELAS_RESPOSTAS: readonly string[] = ["recolha_monos", "montagem_moveis", "jardinagem"];
+// A montagem saiu daqui a 26-11-2026 (d132): conta-se pela tabela (`tabela-da-montagem.ts`).
+const SEM_CONTA_PELAS_RESPOSTAS: readonly string[] = ["recolha_monos", "jardinagem"];
 
 /**
  * A ESTIMATIVA DO QUE O CLIENTE ESCOLHEU — a do site e a da app (R12). Desde a
@@ -1062,6 +1081,25 @@ function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPe
     if (rep && m.repeticao !== "pontual") porque.push(`${rep}: ${ENTRA_NA_PROPOSTA}.`);
   }
 
+  if (p.servico === "montagem_moveis") {
+    // A montagem pela tabela (d132, 26-11-2026): peça a peça pela operação, os extras e o mínimo do serviço.
+    acessoDito = true;
+    const r = p.montagem ?? lerRespostasDaMontagem({});
+    const andar = p.acesso?.floor != null ? numeroDoAndar(p.acesso.floor) : null;
+    const c = contaDaMontagem(r, { andar, semElevador: p.acesso?.hasElevator === "no" });
+    if (c) {
+      especifica = daEstimativa({ tipo: "valor", valor: c.total });
+      const op = OPERACOES_DA_MONTAGEM.find((o) => o.id === c.operacao)?.nome ?? "";
+      for (const x of c.pecas) porque.push(`${op}: ${x.quantidade} × ${x.nome} × ${euros(x.unitario)} = ${euros(x.subtotal)} + IVA.`);
+      for (const e of c.extras) porque.push(`${e.rotulo}: +${euros(e.valor)} + IVA.`);
+      if (c.peloMinimo) porque.push(`O mínimo do serviço: ${euros(MINIMO_DA_MONTAGEM)} + IVA.`);
+    } else {
+      especifica = daEstimativa({ tipo: "desde", de: MINIMO_DA_MONTAGEM });
+      porque.push(r.operacao ? "Sem as peças contadas, a proposta sai da descrição e das fotografias." : "Diga se é para montar, desmontar ou os dois, e quantas peças.");
+    }
+    if (r.cozinha) porque.push(COZINHA_SO_POR_ORCAMENTO);
+  }
+
   // Os outros serviços com faixa (os monos, o apartamento sem tipologia): o acesso leva ao topo.
   if (!especifica && razoes.length > 0 && acessoConta && !acessoDito && !eEsvaziamentoDeEspaco(p.servico)) {
     const f = faixaDoServico(p.servico);
@@ -1079,6 +1117,9 @@ function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPe
   }
   if (acessoConta && !acessoDito) for (const r of razoes) porque.push(`${r}: ${acessoNoTopo ? "o topo da faixa" : ENTRA_NA_PROPOSTA}.`);
 
+  // O extra da desmontagem pela tabela da montagem (d132): nas recolhas e na mudança, numa linha à parte.
+  const extra = p.desmontarPecas ? extraDaDesmontagem(p.servico, p.desmontarPecas) : null;
+
   // A localidade: só a regra publicada (a mudança conta os km acima de 50). Fora das zonas, a proposta depende da zona.
   if (p.localidade && localidadeServida(p.localidade) === false) {
     porque.push(`${p.localidade.trim()}: a proposta depende da zona (os parceiros trabalham em ${ZONAS_EM_FRASE}).`);
@@ -1086,8 +1127,14 @@ function referenciaEValor(p: PedidoParaReferencia): { referencia: ReferenciaDoPe
   if (ajuste.porque) porque.push(ajuste.porque);
 
   if (especifica) linhas.push({ rotulo: ROTULO_DA_ESTIMATIVA, texto: especifica.texto });
-  return { referencia: { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? null, porque }, valor: especifica?.valor ?? null, estimativa: especifica?.estimativa ?? null };
+  if (extra && p.desmontarPecas) {
+    const rotulo = rotuloDoExtraDaDesmontagem(p.servico);
+    linhas.push({ rotulo, texto: `${valorSemEComIva(extra.valor)}.` });
+    porque.push(`${rotulo}: ${pecasEmTexto(p.desmontarPecas)}, pela tabela da montagem (${p.servico === "mudanca" ? "75 % da montagem e da desmontagem somadas" : "metade da montagem"}).`);
+  }
+  return { referencia: { linhas, nota: NOTA_DOS_PRECOS, conta: especifica?.conta ?? null, porque }, valor: especifica?.valor != null ? especifica.valor + (extra?.valor ?? 0) : null, estimativa: especifica?.estimativa ?? null };
 }
+
 
 /**
  * A REFERÊNCIA EM TRÊS LINHAS — «Serviço / IVA / Total» (02-11-2026, o resumo
@@ -1167,6 +1214,12 @@ export function lerPedidoParaReferencia(corpo: unknown): PedidoParaReferencia | 
     if (r) p.recheio = r;
   }
   if (c.servico === "manutencao_casa") p.manutencao = lerManutencao(c);
+  if (c.servico === "montagem_moveis") p.montagem = lerRespostasDaMontagem(c);
+  // O extra da desmontagem pela tabela (d132): só onde existe, e só com peças.
+  if (c.servico === "recolha_moveis" || c.servico === "recolha_monos" || c.servico === "mudanca") {
+    const d = lerPecasDaMontagem(c.desmontarPecas);
+    if (Object.keys(d).length > 0) p.desmontarPecas = d;
+  }
   const localidade = curto(c.localidade);
   if (localidade && localidade.trim()) p.localidade = localidade.trim();
   if (typeof c.descricao === "string" && c.descricao.trim()) p.descricao = c.descricao.trim().slice(0, 2000);
@@ -1205,6 +1258,14 @@ export type FormularioDoSimulador = {
   destinationAccess?: { floor?: string; hasElevator?: string; difficultAccess?: boolean };
   movingDistance?: { distanceKm?: number };
   address?: { city?: string };
+  /** A montagem (d132): os mesmos ids do simulador por categoria. */
+  operacaoDaMontagem?: string;
+  pecasDaMontagem?: Record<string, number>;
+  fixarAParede?: number;
+  retirarEmbalagens?: boolean;
+  cozinhaNaMontagem?: boolean;
+  /** Nas recolhas e na mudança (d132): as peças a desmontar, pela tabela da montagem. */
+  desmontarPecas?: Record<string, number>;
 };
 
 /**
@@ -1248,6 +1309,14 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
     if (f.tipologia) corpo.tipologia = f.tipologia;
     if (f.recheio) corpo.recheio = f.recheio;
   }
+  if (s === "montagem_moveis") {
+    corpo.operacaoDaMontagem = f.operacaoDaMontagem;
+    corpo.pecasDaMontagem = f.pecasDaMontagem;
+    corpo.fixarAParede = f.fixarAParede;
+    corpo.retirarEmbalagens = f.retirarEmbalagens === true;
+    corpo.cozinhaNaMontagem = f.cozinhaNaMontagem === true;
+  }
+  if (f.desmontarPecas && (s === "recolha_moveis" || s === "recolha_monos" || s === "mudanca")) corpo.desmontarPecas = f.desmontarPecas;
   if (s === "mudanca") {
     corpo.tipologia = f.tipologia;
     corpo.kmPercurso = f.movingDistance?.distanceKm;

@@ -157,6 +157,14 @@ export interface OrderData {
    * mais precisa de o saber. Ver `src/lib/forma-de-pagamento.ts`.
    */
   formaDePagamento?: string;
+  // ── Montagem de móveis (d132, 26-11-2026): os ids de simulador-por-categoria.ts ──
+  operacaoDaMontagem?: "montar" | "desmontar" | "os_dois";
+  pecasDaMontagem?: Record<string, number>;
+  fixarAParede?: number;
+  retirarEmbalagens?: boolean;
+  cozinhaNaMontagem?: boolean;
+  /** Nas recolhas e na mudança: as peças a desmontar (e montar no destino), pela tabela da montagem. */
+  desmontarPecas?: Record<string, number>;
 }
 
 export type EstimateStatus = "estimated" | "needs_more_info" | "onsite_required";

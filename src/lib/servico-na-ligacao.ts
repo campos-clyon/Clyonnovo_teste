@@ -28,7 +28,7 @@ export function servicoDaLigacao(pesquisa: string): string | null {
   const p = new URLSearchParams(pesquisa);
   const valor = (p.get("servico") ?? p.get("categoria") ?? "").trim().toLowerCase();
   if (!valor) return null;
-  // Só os serviços do plano (25-10-2026): `?servico=montagem-moveis` abre o simulador sem nada escolhido.
+  // Só os serviços do plano (25-10-2026): `?servico=jardinagem` abre o simulador sem nada escolhido.
   const categoria = SERVICOS_PUBLICOS.find((c) => c.id === valor || c.slug === valor);
   if (categoria) return categoria.id;
   return NOMES_ANTIGOS[valor] ?? null;

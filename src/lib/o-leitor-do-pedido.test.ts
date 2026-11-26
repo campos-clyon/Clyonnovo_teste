@@ -108,7 +108,8 @@ const porCampo = (s: ReturnType<typeof sugestoesQuePassam>) => Object.fromEntrie
 describe("1. os campos de cada categoria", () => {
   it("todos os serviços do site têm as suas perguntas, e os de fora do plano nenhuma", () => {
     for (const s of SERVICOS_PUBLICOS) expect(GRUPO_DO_SERVICO[s.id], s.id).toBeDefined();
-    expect(camposDoServico("montagem_moveis")).toEqual([]);
+    // A montagem voltou a 26-11-2026 (d132): a operação e o acesso.
+    expect(camposDoServico("montagem_moveis").map((c) => c.id)).toEqual(["operacaoDaMontagem", "floor", "hasElevator", "parkingDistance"]);
     expect(camposDoServico("jardinagem")).toEqual([]);
     expect(camposDoServico("nao_existe")).toEqual([]);
   });
@@ -524,7 +525,8 @@ describe("8. a chamada: o modelo responde, falha ou não está — e nunca calad
 
   it("sem nada para ler, ou num serviço fora do plano, não se chama o modelo", async () => {
     await lerOPedido(pedido("recolha_entulho", "  "));
-    await lerOPedido(pedido("montagem_moveis", "montar um roupeiro"));
+    // A montagem voltou ao plano (d132): o fora do plano é a jardinagem.
+    await lerOPedido(pedido("jardinagem", "cortar a relva"));
     expect(chamados).toEqual([]);
   }, COM_TEMPO);
 });

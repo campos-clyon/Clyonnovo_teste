@@ -79,6 +79,7 @@ import { eurosDaLista, precoDaMudancaNoWhatsApp, precoPublicoConhecido } from ".
 import { NOSSA_EQUIPA, PROPRIO_DIA } from "./frases-proibidas";
 import { nomeDoServico } from "./service-categories";
 import { TAXA_IVA } from "./taxas-plataforma";
+import { DESDE_DA_MONTAGEM, EUROS_DA_MONTAGEM, REGRAS_DA_MONTAGEM, TABELA_DA_MONTAGEM, linhaDaTabelaEmTexto } from "./tabela-da-montagem";
 
 /** «40 €», «13,50 €». */
 function euros(n: number): string {
@@ -245,6 +246,13 @@ ENTULHO
 - ${A_GRANEL}
 - A granel conta-se ao mesmo preço dos sacos: 1 m³ são cerca de ${ENTULHO_POR_VOLUME[0].sacos} sacos, ${faixa(ENTULHO_POR_VOLUME[0].de, ENTULHO_POR_VOLUME[0].ate)}.
 
+MONTAGEM E DESMONTAGEM DE MÓVEIS (a tabela do site, valores «desde» — o parceiro propõe o valor final)
+- O serviço começa ${DESDE_DA_MONTAGEM}. Por peça (montar):
+${TABELA_DA_MONTAGEM.map((l) => `  · ${linhaDaTabelaEmTexto(l)}.`).join("\n")}
+${REGRAS_DA_MONTAGEM.map((r) => `- ${r}`).join("\n")}
+- Numa recolha, desmontar antes de levar conta metade da montagem da peça; numa mudança, desmontar e montar no destino conta 75 % da montagem e da desmontagem somadas.
+- Com as peças, o andar e o elevador, podes dizer a estimativa pela tabela (sempre como estimativa, com o IVA ao lado); o valor certo vem na proposta do parceiro.
+
 ANDARES (por trabalho, nas recolhas por peça e no entulho)
 - Com elevador: +${maisIva(RECOLHA_POR_ANDAR_COM_ELEVADOR)} por andar.
 - Sem elevador, no entulho: +${maisIva(RECOLHA_POR_ANDAR_SEM_ELEVADOR)} por andar.
@@ -318,6 +326,8 @@ export const EUROS_DAS_FONTES: readonly number[] = (() => {
   ])
     juntar(n);
   for (const m of MATERIAIS) juntar(m.preco);
+  // d132 (26-11-2026): a tabela da montagem — as peças, a desmontagem, os dois, a hora, o mínimo e os extras.
+  for (const n of EUROS_DA_MONTAGEM) juntar(n);
   const todos = new Set<number>(sem);
   for (const n of sem) todos.add(comIva(n));
   return [...todos].sort((a, b) => a - b);

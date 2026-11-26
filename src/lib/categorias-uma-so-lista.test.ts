@@ -39,10 +39,11 @@ const semNotas = (f: string) =>
 describe("a lista única: quatro grupos (29-10-2026)", () => {
   it("são estes, por esta ordem", () => {
     expect(CATEGORIAS_DOS_PROFISSIONAIS).toBe(GRUPOS_DE_SERVICOS);
-    expect(GRUPOS_DE_SERVICOS.map((g) => g.label)).toEqual(["Recolhas", "Esvaziamentos", "Mudanças", "Manutenção da casa"]);
+    // E a montagem de móveis desde 26-11-2026 (d132).
+    expect(GRUPOS_DE_SERVICOS.map((g) => g.label)).toEqual(["Recolhas", "Esvaziamentos", "Mudanças", "Montagem de móveis", "Manutenção da casa"]);
   });
 
-  it("cada serviço que o cliente escolhe tem um grupo, e só um; montagem, jardinagem e «outro» não têm", () => {
+  it("cada serviço que o cliente escolhe tem um grupo, e só um; jardinagem e «outro» não têm", () => {
     const doCliente = SERVICOS_PUBLICOS.map((c) => c.id).filter((id) => id !== "outro");
     for (const id of doCliente) {
       expect(grupoDoServico(id), id).not.toBeNull();
@@ -76,6 +77,8 @@ describe("a lista única: quatro grupos (29-10-2026)", () => {
       // Armazém, escritório ou loja (d43, 15-11-2026).
       "esvaziamento_empresa",
       "mudanca",
+      // A montagem de móveis (d132, 26-11-2026).
+      "montagem_moveis",
       "manutencao_casa",
       "outro",
     ]);
@@ -190,7 +193,7 @@ describe("a regra do envio, escrita no perfil do backoffice", () => {
 });
 
 describe("as categorias gravadas, em grupos", () => {
-  it("um serviço antigo passa ao seu grupo; montagem, jardinagem e «outro» ficam; o resto cai", () => {
+  it("um serviço antigo passa ao seu grupo; jardinagem e «outro» ficam; o resto cai", () => {
     expect(normalizarCategorias(["recolha_monos", "mudanca", "recolha_moveis"])).toEqual(["recolhas", "mudancas"]);
     expect(normalizarCategorias(["jardinagem", "esvaziamento_casa", "inventada", "outro"])).toEqual([
       "esvaziamentos",
@@ -198,7 +201,8 @@ describe("as categorias gravadas, em grupos", () => {
       "outro",
     ]);
     expect(normalizarCategorias(["recolhas", "recolha_entulho"])).toEqual(["recolhas"]);
-    expect(gruposDe(["montagem_moveis"])).toEqual([]);
+    // A montagem tem grupo desde 26-11-2026 (d132): quem a tinha gravada passa a ele.
+    expect(gruposDe(["montagem_moveis"])).toEqual(["montagem_de_moveis"]);
   });
 
   it("as páginas públicas recebem os serviços dos grupos", () => {
@@ -279,8 +283,10 @@ describe("a migração dos dados (com cópia antes)", () => {
       { id: 5, categorias: null },
       { id: 6, categorias: JSON.stringify(["mudanca", "jardinagem"]) },
     ]);
-    expect(plano.map((m) => m.providerId)).toEqual([1, 2, 6]);
-    const [um, dois, seis] = plano;
+    // O 4 tinha a montagem gravada: desde a d132 passa ao grupo «Montagem de móveis».
+    expect(plano.map((m) => m.providerId)).toEqual([1, 2, 4, 6]);
+    const [um, dois, quatro, seis] = plano;
+    expect(quatro.depois).toEqual(["montagem_de_moveis", "jardinagem"]);
     expect(um.depois).toEqual(["recolhas"]);
     expect(um.ganhaServicos).toBe(true);
     expect(um.servicosNovos).toEqual(["recolha_monos", "recolha_entulho"]);

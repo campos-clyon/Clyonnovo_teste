@@ -287,7 +287,8 @@ describe("as condições puras — todas obrigatórias", () => {
     expect(porqueNaoSegueSozinho({ ...COMPLETO, faltas: ["fotografias"] })).toBe("incompleto");
     expect(porqueNaoSegueSozinho({ ...COMPLETO, codigoPostal: "2800" })).toBe("sem_codigo_postal");
     expect(porqueNaoSegueSozinho({ ...COMPLETO, codigoPostal: null })).toBe("sem_codigo_postal");
-    expect(porqueNaoSegueSozinho({ ...COMPLETO, serviceType: "montagem_moveis" })).toBe("servico_fora");
+    // A montagem voltou a 26-11-2026 (d132): segue como os outros.
+    expect(porqueNaoSegueSozinho({ ...COMPLETO, serviceType: "montagem_moveis" })).toBeNull();
     expect(porqueNaoSegueSozinho({ ...COMPLETO, serviceType: "jardinagem" })).toBe("servico_fora");
     expect(porqueNaoSegueSozinho({ ...COMPLETO, serviceType: "outro" })).toBe("servico_fora");
     expect(porqueNaoSegueSozinho({ ...COMPLETO, contactName: "Fred Teste" })).toBe("de_teste");
@@ -300,11 +301,11 @@ describe("as condições puras — todas obrigatórias", () => {
     expect(porqueNaoSegueSozinho({ ...COMPLETO, porTraduzir: true })).toBe("por_traduzir");
     expect(porqueNaoSegueSozinho({ ...COMPLETO, registadoSozinho: true })).toBe("registado_sozinho");
   });
-  it("os serviços da lista da CLYON: recolhas, esvaziamentos, mudanças e manutenção", () => {
-    for (const s of ["recolha_moveis", "recolha_monos", "recolha_entulho", "esvaziamento_casa", "esvaziamento_empresa", "mudanca", "manutencao_casa"]) {
+  it("os serviços da lista da CLYON: recolhas, esvaziamentos, mudanças, montagem (d132) e manutenção", () => {
+    for (const s of ["recolha_moveis", "recolha_monos", "recolha_entulho", "esvaziamento_casa", "esvaziamento_empresa", "mudanca", "montagem_moveis", "manutencao_casa"]) {
       expect(servicoDaListaDaClyon(s), s).toBe(true);
     }
-    for (const s of ["montagem_moveis", "jardinagem", "outro", "limpeza_pos_obra", "", null]) {
+    for (const s of ["jardinagem", "outro", "limpeza_pos_obra", "", null]) {
       expect(servicoDaListaDaClyon(s as string | null), String(s)).toBe(false);
     }
   });
@@ -441,7 +442,7 @@ describe("o que fica nos «por enviar», com o motivo", () => {
     await ficou("bloqueado");
   });
   it("serviço fora da lista", async () => {
-    base.pedido = { ...PEDIDO_COMPLETO, serviceType: "montagem_moveis" };
+    base.pedido = { ...PEDIDO_COMPLETO, serviceType: "jardinagem" };
     await ficou("servico_fora");
   });
   it("cancelado ou arquivado", async () => {

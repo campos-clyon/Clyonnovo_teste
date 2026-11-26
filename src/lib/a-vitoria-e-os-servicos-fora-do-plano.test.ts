@@ -36,6 +36,9 @@ import { paraTeclado } from "./whatsapp-cloud";
  *
  * E o número que o cliente escolhe continua a dar o serviço que estava ao
  * lado dele na lista que ELE viu — a de agora tem oito, a de antes tinha dez.
+ *
+ * A MONTAGEM DE MÓVEIS VOLTOU — 26-11-2026 (d132): está na lista dela, dá o
+ * serviço do pedido e já não se recusa. Fora fica só a jardinagem.
  */
 
 // 14:00 em Lisboa — o horário de Inverno começou hoje, e Lisboa está em UTC.
@@ -57,11 +60,12 @@ const semAcentos = (t: string) =>
 const linhasDaLista = (texto: string) => texto.split("\n").filter((l) => /^\d+\. /.test(l));
 
 describe("a lista numerada que a Vitória mostra", () => {
-  it("é a do site: sem a montagem nem a jardinagem, e com a manutenção da casa", () => {
+  it("é a do site: com a montagem (d132) e a manutenção da casa, sem a jardinagem", () => {
     const pergunta = perguntaDo("servico", {}, true, T0);
     expect(linhasDaLista(pergunta)).toEqual(SERVICOS_PUBLICOS.map((c, i) => `${i + 1}. ${c.label}`));
     expect(pergunta).toContain("Manutenção da casa");
-    expect(pergunta).not.toMatch(/montagem|jardinagem|quintais/i);
+    expect(pergunta).toContain("Montagem e desmontagem de móveis");
+    expect(pergunta).not.toMatch(/jardinagem|quintais/i);
   });
 
   it("cada número dá o serviço que está ao lado dele — pela lista mostrada, e não pela inteira", () => {
@@ -74,12 +78,14 @@ describe("a lista numerada que a Vitória mostra", () => {
       expect(servicoDoTexto(`${n}.`), linha).toBe(id);
     }
     // Desde 29-10-2026 a garagem, o sótão e a cave são o 6, o 7 e o 8; desde 15-11-2026 (d43) o 9 é o
-    // esvaziamento de armazém, escritório ou loja, e a manutenção da casa passou para o 11.
+    // esvaziamento de armazém, escritório ou loja; desde 26-11-2026 (d132) o 11 é a montagem de móveis,
+    // e a manutenção da casa passou para o 12.
     expect(servicoDoTexto("7")).toBe("esvaziamento_sotao");
     expect(servicoDoTexto("9")).toBe("esvaziamento_empresa");
-    expect(servicoDoTexto("11")).toBe("manutencao_casa");
-    expect(servicoDoTexto("12")).toBe("outro");
-    expect(servicoDoTexto("13")).toBeNull();
+    expect(servicoDoTexto("11")).toBe("montagem_moveis");
+    expect(servicoDoTexto("12")).toBe("manutencao_casa");
+    expect(servicoDoTexto("13")).toBe("outro");
+    expect(servicoDoTexto("14")).toBeNull();
     expect(IDS_DA_LISTA).toEqual(SERVICOS_PUBLICOS.map((c) => c.id));
   });
 
@@ -92,8 +98,9 @@ describe("a lista numerada que a Vitória mostra", () => {
     expect(lista).toEqual(IDS_ANTIGOS);
     expect(servicoDoTexto("9", lista)).toBe("manutencao_casa");
     expect(servicoDoTexto("10", lista)).toBe("outro");
-    expect(servicoDoTexto("7", lista)).toBeNull();
-    expect(servicoForaDoPlano("7", lista)).toBe("montagem_moveis");
+    // Na lista antiga a montagem era o 7: desde a d132 é um serviço.
+    expect(servicoDoTexto("7", lista)).toBe("montagem_moveis");
+    expect(servicoForaDoPlano("7", lista)).toBeNull();
     expect(servicoForaDoPlano("8", lista)).toBe("jardinagem");
     // A de agora, e a última que saiu é a que conta.
     const agora = paraTeclado(perguntaDo("servico", {}, true, T0));
@@ -103,12 +110,16 @@ describe("a lista numerada que a Vitória mostra", () => {
     expect(servicosDaListaNoFio([{ direccao: "in", texto: LISTA_ANTIGA }])).toBeNull();
   });
 
-  it("quem viu a lista antiga e escolhe o 7 ouve que a montagem não se faz; o 9 é a manutenção", () => {
+  it("quem viu a lista antiga e escolhe o 7 fica com a montagem (d132); o 8 ouve que a jardinagem não se faz; o 9 é a manutenção", () => {
     const sete = responderNaRecolha(recolhaNova(), "7", T0, true, false, { lista: IDS_ANTIGOS });
-    expect(sete.foraDoPlano).toBe("montagem_moveis");
-    expect(sete.estado.passo).toBe("servico");
-    expect(sete.estado.dados.serviceType).toBeUndefined();
-    expect(sete.resposta).toContain(naoFazemosEsseServico("montagem_moveis"));
+    expect(sete.foraDoPlano).toBeUndefined();
+    expect(sete.estado.dados.serviceType).toBe("montagem_moveis");
+
+    const oito = responderNaRecolha(recolhaNova(), "8", T0, true, false, { lista: IDS_ANTIGOS });
+    expect(oito.foraDoPlano).toBe("jardinagem");
+    expect(oito.estado.passo).toBe("servico");
+    expect(oito.estado.dados.serviceType).toBeUndefined();
+    expect(oito.resposta).toContain(naoFazemosEsseServico("jardinagem"));
 
     const nove = responderNaRecolha(recolhaNova(), "9", T0, true, false, { lista: IDS_ANTIGOS });
     expect(nove.estado.dados.serviceType).toBe("manutencao_casa");
@@ -117,15 +128,16 @@ describe("a lista numerada que a Vitória mostra", () => {
 });
 
 describe("uma conversa pela lista numerada (sem o Gemini)", () => {
-  it("«Olá» leva a lista, e o 11 é a manutenção da casa (d43)", () => {
+  it("«Olá» leva a lista: o 11 é a montagem (d132) e o 12 a manutenção da casa", () => {
     const ola = responderNaRecolha(recolhaNova(), "Olá", T0, false, false);
     expect(ola.resposta).toContain(QUEM_FALA);
     expect(ola.resposta).toContain("9. Esvaziamento de armazém, escritório ou loja");
-    expect(ola.resposta).toContain("11. Manutenção da casa");
-    expect(ola.resposta).not.toMatch(/montagem|jardinagem/i);
+    expect(ola.resposta).toContain("11. Montagem e desmontagem de móveis");
+    expect(ola.resposta).toContain("12. Manutenção da casa");
+    expect(ola.resposta).not.toMatch(/jardinagem/i);
 
     const lista = servicosDaLista(paraTeclado(ola.resposta));
-    const sete = responderNaRecolha(ola.estado, "11", T0, true, false, { lista });
+    const sete = responderNaRecolha(ola.estado, "12", T0, true, false, { lista });
     expect(sete.estado.dados.serviceType).toBe("manutencao_casa");
     expect(sete.resposta).toContain("manutenção da casa");
     expect(sete.estado.passo).toBe("nome");
@@ -137,40 +149,17 @@ describe("uma conversa pela lista numerada (sem o Gemini)", () => {
   });
 });
 
-describe("a montagem de móveis, pedida por palavras", () => {
+describe("a montagem de móveis, pedida por palavras — de volta a 26-11-2026 (d132)", () => {
   const PRIMEIRA =
     "Boa tarde. Fazem montagem de móveis? Comprei um roupeiro e uma cómoda e preciso de os montar.";
 
-  it("a primeira mensagem leva a apresentação, o «não fazemos» e a pergunta se precisa de outra coisa", () => {
+  it("a primeira mensagem já não leva o «não fazemos»: o pedido segue com a montagem", () => {
     const r = responderNaRecolha(recolhaNova(), PRIMEIRA, T0, false, false);
-    expect(r.foraDoPlano).toBe("montagem_moveis");
-    expect(r.estado.passo).toBe("servico");
-    expect(r.estado.dados.serviceType).toBeUndefined();
+    expect(r.foraDoPlano).toBeUndefined();
+    expect(r.estado.dados.serviceType).toBe("montagem_moveis");
+    expect(r.estado.passo).not.toBe("servico");
     expect(r.resposta).toContain(QUEM_FALA);
-    expect(r.resposta).toContain("Peço imensa desculpa, mas de momento a CLYON não faz montagem de móveis.");
-    expect(r.resposta).toContain("Precisa de outra coisa?");
-    // Pelos números, a lista vai com ela — a de agora.
-    expect(linhasDaLista(r.resposta)).toEqual(SERVICOS_PUBLICOS.map((c, i) => `${i + 1}. ${c.label}`));
-    expect(r.resposta).not.toMatch(/Fica anotado|recolha de móveis\./);
-    // A releitura sabe que a pergunta em cima é a do serviço.
-    expect(passoDaPergunta(paraTeclado(r.resposta))).toBe("servico");
-  });
-
-  it("e a seguir, se ele quer outra coisa, a conversa segue com essa", () => {
-    const r1 = responderNaRecolha(recolhaNova(), PRIMEIRA, T0, false, false);
-    const r2 = responderNaRecolha(r1.estado, "Ah, então e levam o roupeiro velho?", T0, true, false);
-    expect(r2.estado.dados.serviceType).toBe("recolha_moveis");
-    expect(r2.foraDoPlano).toBeUndefined();
-    expect(r2.estado.passo).not.toBe("servico");
-  });
-
-  it("à segunda vez oferece uma pessoa — e a frase não é a mesma, que o envio calaria", () => {
-    const r1 = responderNaRecolha(recolhaNova(), PRIMEIRA, T0, false, false);
-    const r2 = responderNaRecolha(r1.estado, "Mas é só montar os móveis, não dá mesmo?", T0, true, false);
-    expect(r2.foraDoPlano).toBe("montagem_moveis");
-    expect(r2.resposta).not.toContain(QUEM_FALA);
-    expect(r2.resposta).toContain("falar com alguém");
-    expect(r2.resposta).not.toBe(r1.resposta);
+    expect(r.resposta).not.toMatch(/não faz montagem/);
   });
 
   it("pelo Gemini, as palavras dele mandam sobre o palpite do modelo", () => {
@@ -180,27 +169,15 @@ describe("a montagem de móveis, pedida por palavras", () => {
       T0,
       { texto: "Preciso de alguém para montar um roupeiro novo", jaCumprimentou: true },
     );
-    expect(r.foraDoPlano).toBe("montagem_moveis");
-    expect(r.estado.dados.serviceType).toBeUndefined();
-    expect(r.estado.passo).toBe("servico");
-    expect(r.resposta).toBe(
-      `${naoFazemosEsseServico("montagem_moveis")} Precisa de outra coisa? Pode ser ${O_QUE_PODE_FAZER} — diga-me à vontade.`,
-    );
-    expect(passoDaPergunta(paraTeclado(r.resposta))).toBe("servico");
+    expect(r.foraDoPlano).toBeUndefined();
+    expect(r.estado.dados.serviceType).toBe("montagem_moveis");
   });
 
-  it("e o modelo não consegue pôr no pedido um serviço que a CLYON não faz", () => {
-    expect(fundirCampos({}, { servico: "montagem_moveis" }).serviceType).toBeUndefined();
+  it("o modelo pode pôr a montagem no pedido, e nunca a jardinagem", () => {
+    expect(fundirCampos({}, { servico: "montagem_moveis" }).serviceType).toBe("montagem_moveis");
     expect(fundirCampos({}, { servico: "jardinagem" }).serviceType).toBeUndefined();
     expect(fundirCampos({}, { servico: "manutencao_casa" }).serviceType).toBe("manutencao_casa");
     expect(fundirCampos({}, { servico: "mudanca" }).serviceType).toBe("mudanca");
-    const r = responderComCompreensao(
-      recolhaNova(),
-      { intencao: "informar", campos: { servico: "montagem_moveis" } },
-      T0,
-      { texto: "Preciso de ajuda com umas coisas do IKEA", jaCumprimentou: true },
-    );
-    expect(r.estado.dados.serviceType).toBeUndefined();
   });
 });
 
@@ -227,11 +204,8 @@ describe("a jardinagem e a limpeza de quintais", () => {
 });
 
 describe("quem pede o que não se faz, e quem não pede", () => {
-  it("estes pedem a montagem ou a jardinagem", () => {
+  it("estes pedem a jardinagem (a montagem voltou a 26-11-2026, d132)", () => {
     const fora: Array<[string, string]> = [
-      ["Montagem e desmontagem de móveis", "montagem_moveis"],
-      ["preciso de montar uma cama", "montagem_moveis"],
-      ["Fazem montagem de cozinhas?", "montagem_moveis"],
       ["Preciso de um jardineiro", "jardinagem"],
       ["poda de árvores no jardim", "jardinagem"],
       ["Fazem a manutenção do jardim?", "jardinagem"],
@@ -259,6 +233,10 @@ describe("quem pede o que não se faz, e quem não pede", () => {
       ["Preciso de reparar uma torneira", "manutencao_casa"],
       ["Pintar o muro do quintal", "manutencao_casa"],
       ["Montar umas prateleiras e reparar a torneira", "manutencao_casa"],
+      // A montagem (d132): um serviço.
+      ["Montagem e desmontagem de móveis", "montagem_moveis"],
+      ["preciso de montar uma cama", "montagem_moveis"],
+      ["Fazem montagem de cozinhas?", "montagem_moveis"],
     ];
     for (const [frase, id] of dentro) {
       expect(servicoForaDoPlano(frase), frase).toBeNull();
@@ -276,7 +254,8 @@ describe("a frase dela", () => {
       const familia = semAcentos(c.label).split(" ")[0];
       expect(frase, c.id).toContain(familia);
     }
-    expect(frase).not.toMatch(/montagem|jardin|quinta/);
+    expect(frase).toContain("montagem");
+    expect(frase).not.toMatch(/jardin|quinta/);
   });
 
   it("tem um nome para cada serviço fora do plano, e é a voz de uma assistente online", () => {
@@ -293,8 +272,9 @@ describe("o que vai aos modelos", () => {
   it("as opções do serviço são as do site, com o aviso do que não se faz", () => {
     const ids = SERVICOS_PARA_O_MODELO.split("\n").map((l) => /^- (\w+):/.exec(l)?.[1]);
     expect(ids).toEqual(SERVICOS_PUBLICOS.map((c) => c.id));
-    expect(SERVICOS_PARA_O_MODELO).not.toMatch(/montagem_moveis|jardinagem/);
-    expect(FORA_DO_PLANO_PARA_O_MODELO).toContain("montagem e desmontagem de móveis");
+    expect(SERVICOS_PARA_O_MODELO).not.toMatch(/jardinagem/);
+    expect(SERVICOS_PARA_O_MODELO).toContain("montagem_moveis");
+    expect(FORA_DO_PLANO_PARA_O_MODELO).not.toContain("montagem");
     expect(FORA_DO_PLANO_PARA_O_MODELO).toContain("jardinagem e limpeza de quintais");
     expect(FORA_DO_PLANO_PARA_O_MODELO).toContain('NÃO preenchas "servico"');
   });
@@ -316,7 +296,7 @@ describe("o que vai aos modelos", () => {
     }
     for (const instrucao of [INSTRUCAO_DA_LEITURA, INSTRUCAO_DA_IMAGEM]) {
       expect(instrucao).toContain(servicosPorExtenso());
-      expect(instrucao).not.toMatch(/montagem|jardinagem/i);
+      expect(instrucao).not.toMatch(/jardinagem/i);
     }
     expect(INSTRUCAO_DA_IMAGEM).toContain("reparar, pintar ou remodelar");
   });
@@ -341,14 +321,17 @@ describe("a primeira resposta e a releitura", () => {
     const { dados } = recolhaPeloFio(fio, T0);
     expect(dados.serviceType).toBe("manutencao_casa");
 
+    // O 7 da lista antiga é a montagem, que voltou (d132); o 8, a jardinagem, continua fora.
     const montagem = recolhaPeloFio([fio[0], { ...fio[1], texto: "7" }], T0);
-    expect(montagem.dados.serviceType).toBeUndefined();
-    expect(montagem.passo).toBe("servico");
+    expect(montagem.dados.serviceType).toBe("montagem_moveis");
+    const jardinagem = recolhaPeloFio([fio[0], { ...fio[1], texto: "8" }], T0);
+    expect(jardinagem.dados.serviceType).toBeUndefined();
+    expect(jardinagem.passo).toBe("servico");
   });
 
   it("o estado que se guarda não leva o serviço recusado", () => {
     const e: EstadoDaRecolha = { passo: "servico", dados: { contactName: "Leopoldo" } };
-    const r = responderNaRecolha(e, "Preciso de montar uma cama", T0, true, false);
+    const r = responderNaRecolha(e, "Preciso de um jardineiro", T0, true, false);
     expect(r.estado.dados.contactName).toBe("Leopoldo");
     expect(r.estado.dados.serviceType).toBeUndefined();
   });

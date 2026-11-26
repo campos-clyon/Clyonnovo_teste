@@ -4,6 +4,17 @@ import { HORAS_DA_DESMONTAGEM, TIPOLOGIAS, TIPOLOGIA_POR_EXTENSO, horasEscritas,
 import { PERGUNTAS_DO_ESPACO, RESPOSTAS_DA_QUANTIDADE, TITULO_DA_QUANTIDADE, TITULO_DAS_COISAS } from "./perguntas-do-espaco";
 import { esvaziamentoComOIvaAoLado, precoDoItem } from "./preco-de-referencia";
 import {
+  COZINHA_SO_POR_ORCAMENTO,
+  FIXAR_A_PAREDE_POR_MOVEL,
+  OPERACOES_DA_MONTAGEM,
+  RETIRAR_AS_EMBALAGENS,
+  TABELA_DA_MONTAGEM,
+  comOIvaAoLado,
+  precoNaOperacao,
+  rotuloDoExtraDaDesmontagem,
+  type OperacaoDaMontagem,
+} from "./tabela-da-montagem";
+import {
   ANDARES,
   ELEVADORES,
   ESTACIONAMENTOS,
@@ -165,6 +176,72 @@ const TAMANHOS: ReadonlyArray<{ id: "pequeno" | "medio" | "grande"; nome: string
   { id: "grande", nome: "Grandes", exemplos: "Sofá, armário, frigorífico, máquina de lavar", maximo: 99 },
 ];
 
+/*
+ * A MONTAGEM DE MÓVEIS — 26-11-2026 (d132). O que é para fazer (montar,
+ * desmontar ou os dois), quantas peças de cada linha da tabela
+ * (`tabela-da-montagem.ts`, com o preço e o IVA ao lado), os extras (fixar à
+ * parede, retirar as embalagens), se há cozinha (só por orçamento) — e o
+ * acesso, como os outros. As fotografias e a descrição são de todos.
+ */
+function pecasDaTabela(prefixo: string, operacao: OperacaoDaMontagem, quando?: CondicaoDaPergunta): PerguntaDoSimulador[] {
+  return TABELA_DA_MONTAGEM.map(
+    (l): PerguntaDoSimulador => ({
+      id: `${prefixo}.${l.id}`,
+      titulo: l.nome,
+      tipo: "numero",
+      obrigatoria: false,
+      ecra: "oque",
+      ajuda: `${l.exemplos ? `${l.exemplos} · ` : ""}${comOIvaAoLado(precoNaOperacao(l.preco, operacao))}`,
+      unidade: "peças",
+      minimo: 0,
+      maximo: 99,
+      ...(quando ? { quando } : {}),
+    }),
+  );
+}
+
+function montagem(): PerguntaDoSimulador[] {
+  return [
+    {
+      id: "operacaoDaMontagem",
+      titulo: "O que é para fazer?",
+      tipo: "escolha",
+      obrigatoria: true,
+      ecra: "oque",
+      opcoes: OPERACOES_DA_MONTAGEM.map((o) => ({ id: o.id, nome: o.nome })),
+    },
+    // Os preços da ajuda são os da montagem; ao desmontar, metade (a estimativa faz a conta).
+    ...pecasDaTabela("pecasDaMontagem", "montar"),
+    {
+      id: "fixarAParede",
+      titulo: "Quantos móveis fixar à parede (anti-queda)?",
+      tipo: "numero",
+      obrigatoria: false,
+      ecra: "oque",
+      ajuda: `${comOIvaAoLado(FIXAR_A_PAREDE_POR_MOVEL)} por móvel`,
+      unidade: "móveis",
+      minimo: 0,
+      maximo: 99,
+    },
+    { id: "retirarEmbalagens", titulo: "Quer que retirem as embalagens?", tipo: "escolha", obrigatoria: false, ecra: "oque", opcoes: SIM_NAO, ajuda: comOIvaAoLado(RETIRAR_AS_EMBALAGENS) },
+    { id: "cozinhaNaMontagem", titulo: "Há móveis de cozinha?", tipo: "escolha", obrigatoria: false, ecra: "oque", opcoes: SIM_NAO, ajuda: COZINHA_SO_POR_ORCAMENTO },
+  ];
+}
+
+/**
+ * O EXTRA DA DESMONTAGEM NAS RECOLHAS E NA MUDANÇA — 26-11-2026 (d132). Que
+ * peças, pela tabela da montagem: numa recolha desmonta-se antes de levar
+ * (metade da montagem), numa mudança desmonta-se e monta-se no destino (75 % da
+ * soma dos dois). Nas recolhas aparece com o «É preciso desmontar?» a sim; na
+ * mudança é opcional e à parte das horas da desmontagem.
+ */
+function extraDaDesmontagemPelaTabela(servico: string, quando?: CondicaoDaPergunta): PerguntaDoSimulador[] {
+  const operacao: OperacaoDaMontagem = servico === "mudanca" ? "os_dois" : "desmontar";
+  return pecasDaTabela("desmontarPecas", operacao, quando).map((p, i) =>
+    i === 0 ? { ...p, titulo: `${rotuloDoExtraDaDesmontagem(servico)} — ${p.titulo}` } : p,
+  );
+}
+
 function moveis(): PerguntaDoSimulador[] {
   return [
     {
@@ -194,11 +271,12 @@ function moveis(): PerguntaDoSimulador[] {
     ),
     ...perguntasDaCarga({ movelModo: ["carga"] }),
     desmontagem(),
+    ...extraDaDesmontagemPelaTabela("recolha_moveis", { desmontagem: ["sim"] }),
   ];
 }
 
 function monos(): PerguntaDoSimulador[] {
-  return [...perguntasDaCarga(), desmontagem()];
+  return [...perguntasDaCarga(), desmontagem(), ...extraDaDesmontagemPelaTabela("recolha_monos", { desmontagem: ["sim"] })];
 }
 
 function entulho(): PerguntaDoSimulador[] {
@@ -326,6 +404,8 @@ function mudanca(): PerguntaDoSimulador[] {
   return [
     { id: "tipologia", titulo: "O tamanho da casa", tipo: "escolha", obrigatoria: true, ecra: "oque", opcoes: tipologias },
     desmontagem("É preciso desmontar e montar móveis?", `Acrescenta de ${horasEscritas(HORAS_DA_DESMONTAGEM.itens)} h a ${horasEscritas(HORAS_DA_DESMONTAGEM["T4+"])} h, conforme o tamanho da casa.`),
+    // Ou peça a peça, pela tabela da montagem (d132): opcional, à parte das horas.
+    ...extraDaDesmontagemPelaTabela("mudanca"),
     ...ponta("origem", " na casa de onde sai"),
     ...ponta("destino", " na casa para onde vai"),
   ];
@@ -383,6 +463,8 @@ export function perguntasDoServico(servico: string): PerguntaDoSimulador[] {
       return mudanca();
     case "manutencao_casa":
       return [...manutencao(), ...perguntasDoAcesso()];
+    case "montagem_moveis":
+      return [...montagem(), ...perguntasDoAcesso()];
     default:
       // «Outro serviço»: a descrição diz tudo; só o acesso.
       return perguntasDoAcesso();

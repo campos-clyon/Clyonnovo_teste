@@ -53,6 +53,15 @@ import {
   type QuantoDaManutencao,
 } from "./precos-publicos";
 import { acessoDificilDoEspaco } from "./perguntas-do-espaco";
+import {
+  MINIMO_DA_MONTAGEM,
+  contaDaMontagem,
+  extraDaDesmontagem,
+  lerPecasDaMontagem,
+  lerRespostasDaMontagem,
+  pecasEmTexto,
+  rotuloDoExtraDaDesmontagem,
+} from "./tabela-da-montagem";
 import { PESO_DO_SACO, SACOS_POR_BIG_BAG, SACOS_POR_METRO_CUBICO } from "./sacos-de-entulho";
 import { comIva, comIvaEscrito, euros, semIvaEscrito, type AcessoDoEntulho, type Valor } from "./quanto-custa";
 import {
@@ -374,6 +383,32 @@ export function quantoTrabalhoDoTexto(texto: string | null | undefined, tipo: st
   if (/\b(varias|varios|algumas|alguns|umas|uns|tres|quatro|cinco)\b|\b[2-9]\s/.test(t)) return "varias_pequenas";
   return "uma_pequena";
 }
+
+/**
+ * A MONTAGEM DE MÓVEIS PELA TABELA — 26-11-2026 (d132). As peças pela operação
+ * (montar, desmontar a metade, os dois a 75 % da soma), os extras e o mínimo do
+ * serviço — a mesma conta da R12 e do simulador (`contaDaMontagem`). Sem as
+ * peças, o «desde» publicado (o mínimo).
+ */
+export function montagemPelaTabela(input: FastEstimateInput): FaixaPublicada | null {
+  if (input.serviceType !== "montagem_moveis") return null;
+  const r = lerRespostasDaMontagem(input as unknown as Record<string, unknown>);
+  const andar = floorNumber(input.floor);
+  const c = contaDaMontagem(r, { andar, semElevador: input.hasElevator === "no" });
+  if (c) {
+    const linhaDasPecas = c.pecas.map((p) => `${p.quantidade} × ${p.nome} ${p.unitario} €`).join(" + ");
+    const extras = c.extras.map((e) => ` + ${e.rotulo} ${e.valor} €`).join("");
+    return {
+      de: c.total,
+      ate: c.total,
+      valor: c.total,
+      linha: `Tabela da montagem (${c.operacao}): ${linhaDasPecas}${extras} = ${c.antesDoMinimo} €${c.peloMinimo ? ` → mínimo ${MINIMO_DA_MONTAGEM} €` : ""} s/IVA (${comIva(c.total)} € c/IVA)${c.cozinha ? "; a cozinha à parte, por orçamento" : ""}`,
+    };
+  }
+  const m = MINIMO_DA_MONTAGEM;
+  return { de: m, ate: m, valor: m, linha: `Montagem: proposta com fotografias — desde ${m} € s/IVA (${comIva(m)} € c/IVA), o «desde» publicado` };
+}
+
 
 export function manutencaoPelaGrelha(input: FastEstimateInput): FaixaPublicada | null {
   if (input.serviceType !== "manutencao_casa") return null;
@@ -763,6 +798,14 @@ export interface FastEstimateInput {
   /** Manutenção da casa: as respostas do simulador (`TIPOS_DE_TRABALHO`, `QUANTO_TRABALHO`), d71. */
   tipoDeTrabalho?: string;
   quantoTrabalho?: string;
+  /** A montagem de móveis (d132): os ids do simulador por categoria. */
+  operacaoDaMontagem?: string;
+  pecasDaMontagem?: Record<string, unknown>;
+  fixarAParede?: number | string;
+  retirarEmbalagens?: boolean | string;
+  cozinhaNaMontagem?: boolean | string;
+  /** Nas recolhas e na mudança (d132): as peças a desmontar, pela tabela da montagem. */
+  desmontarPecas?: Record<string, unknown>;
 }
 
 /**
@@ -794,6 +837,12 @@ export const CAMPOS_DO_PEDIDO_PARA_O_MOTOR = [
   "pecasNoElevador",
   "tipoDeTrabalho",
   "quantoTrabalho",
+  "operacaoDaMontagem",
+  "pecasDaMontagem",
+  "fixarAParede",
+  "retirarEmbalagens",
+  "cozinhaNaMontagem",
+  "desmontarPecas",
 ] as const satisfies ReadonlyArray<keyof FastEstimateInput>;
 
 /** Só os campos de `CAMPOS_DO_PEDIDO_PARA_O_MOTOR` que o pedido tem. */
@@ -1649,7 +1698,38 @@ function applyRecommendedPrice(
   return { recommended, note: null };
 }
 
+/**
+ * O EXTRA DA DESMONTAGEM PELA TABELA — 26-11-2026 (d132). Nas recolhas de
+ * móveis e de monos e na mudança, as peças a desmontar (e montar no destino)
+ * somam-se à estimativa, ao preço da tabela da montagem, como a R12 e o
+ * simulador as mostram (numa linha à parte). Sem peças, nada muda.
+ */
 export async function calculateFastEstimate(input: FastEstimateInput): Promise<FastEstimateResult> {
+  const base = await estimativaSemOExtraDaDesmontagem(input);
+  const pecas = lerPecasDaMontagem(input.desmontarPecas);
+  const extra = extraDaDesmontagem(input.serviceType, pecas);
+  if (!extra || base.estimatedPriceWithoutVat == null) return base;
+  const mais = (v: number | null | undefined) => (v == null ? v : Math.round((v + extra.valor) * 100) / 100);
+  const semIva = mais(base.estimatedPriceWithoutVat) as number;
+  const comOIva = comIva(semIva);
+  const linha = `${rotuloDoExtraDaDesmontagem(input.serviceType)} pela tabela da montagem (${pecasEmTexto(pecas)}): +${extra.valor} € s/IVA`;
+  return {
+    ...base,
+    estimatedPriceWithoutVat: semIva,
+    estimatedPriceWithVat: comOIva,
+    vatAmount: Math.round((comOIva - semIva) * 100) / 100,
+    estimateMinWithoutVat: mais(base.estimateMinWithoutVat),
+    estimateMaxWithoutVat: mais(base.estimateMaxWithoutVat),
+    estimateMinWithVat: base.estimateMinWithoutVat == null ? base.estimateMinWithVat : comIva(mais(base.estimateMinWithoutVat) as number),
+    estimateMaxWithVat: base.estimateMaxWithoutVat == null ? base.estimateMaxWithVat : comIva(mais(base.estimateMaxWithoutVat) as number),
+    recommendedPriceWithoutVat: mais(base.recommendedPriceWithoutVat),
+    recommendedPriceWithVat: base.recommendedPriceWithoutVat == null ? base.recommendedPriceWithVat : comIva(mais(base.recommendedPriceWithoutVat) as number),
+    assumptions: [...base.assumptions, linha],
+    internalNotes: [...base.internalNotes, linha],
+  };
+}
+
+async function estimativaSemOExtraDaDesmontagem(input: FastEstimateInput): Promise<FastEstimateResult> {
   const pricing = await getActivePricingMap();
 
   // ── Parâmetros reais da estrutura de custos (da DB) ─────────────────────────
@@ -1814,7 +1894,7 @@ export async function calculateFastEstimate(input: FastEstimateInput): Promise<F
   // No ponto do motor (`pontoDaEstimativa`); o acesso difícil leva ao topo, como na R12.
   // Os monos com as peças contadas já foram pela tabela das peças (d59): a faixa é só sem elas.
   const faixaPublicada =
-    esvaziamentoPelaTipologia(input) ?? manutencaoPelaGrelha(input) ?? (pecas ? null : monosPelaFaixa(input, eCargaCompleta(svc, input.volumeTier, resolveItemCount(input))));
+    esvaziamentoPelaTipologia(input) ?? manutencaoPelaGrelha(input) ?? montagemPelaTabela(input) ?? (pecas ? null : monosPelaFaixa(input, eCargaCompleta(svc, input.volumeTier, resolveItemCount(input))));
   if (faixaPublicada) {
     precoSemIva = faixaPublicada.valor;
     notes.push(`${faixaPublicada.linha} (a grelha publicada substitui a fórmula de custo)`);

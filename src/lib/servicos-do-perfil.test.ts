@@ -59,9 +59,9 @@ describe("os serviços de um perfil", () => {
   });
 
   it("os serviços fora do plano não aparecem, nem ligam às páginas deles (25-10-2026)", () => {
-    // A manutenção da casa voltou ao plano no mesmo dia: aparece.
+    // A manutenção da casa voltou ao plano no mesmo dia, e a montagem a 26-11-2026 (d132): aparecem.
     const lista = servicosDoPerfil(["recolha_moveis", "montagem_moveis", "jardinagem", "manutencao_casa"], "Lisboa");
-    expect(lista.map((s) => s.categoria)).toEqual(["recolha_moveis", "manutencao_casa"]);
+    expect(lista.map((s) => s.categoria)).toEqual(["recolha_moveis", "montagem_moveis", "manutencao_casa"]);
   });
 
   it("uma categoria que não se conhece não aparece", () => {

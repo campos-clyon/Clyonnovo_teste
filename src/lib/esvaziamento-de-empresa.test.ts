@@ -77,6 +77,7 @@ describe("d43 — o esvaziamento de armazém, escritório ou loja", () => {
   it("a Vitória já o oferece: a seguir à cave, e a manutenção da casa passa a 11 (I&D, d43)", () => {
     expect(AINDA_NAO_NA_VITORIA.has("esvaziamento_empresa")).toBe(false);
     expect(IDS_DA_LISTA.indexOf("esvaziamento_empresa")).toBe(IDS_DA_LISTA.indexOf("esvaziamento_cave") + 1);
-    expect(IDS_DA_LISTA.indexOf("manutencao_casa")).toBe(10);
+    // E desde 26-11-2026 (d132) a montagem de móveis vem antes: a manutenção passa a 12.
+    expect(IDS_DA_LISTA.indexOf("manutencao_casa")).toBe(11);
   });
 });

@@ -32,6 +32,7 @@ import MovelItemSelector from "./components/MovelItemSelector";
 import PrecoDeReferencia from "./components/PrecoDeReferencia";
 import PerguntasDoEspaco from "./components/PerguntasDoEspaco";
 import PerguntasDaEmpresa from "./components/PerguntasDaEmpresa";
+import PerguntasDaMontagem, { PecasADesmontar } from "./components/PerguntasDaMontagem";
 import PareceUmEsvaziamento from "./components/PareceUmEsvaziamento";
 import { pareceUmEsvaziamento } from "@/lib/parece-um-esvaziamento";
 import { ESVAZIAMENTO_DE_EMPRESA, comOEspacoDaEmpresa, comOsPedidosDaEmpresa } from "@/lib/esvaziamento-de-empresa";
@@ -49,6 +50,8 @@ import { passosDaMudancaComEscolha, tresPassosDepoisDeEnviar } from "@/lib/texto
 import ParceirosDaMudanca, { type EscolhaDaMudanca } from "./components/ParceirosDaMudanca";
 import { ROTULO_DA_ESTIMATIVA_DA_MUDANCA, estimativaDaMudanca, valorDoSimuladorDoSite, type FormularioDoSimulador } from "@/lib/preco-de-referencia";
 import { comIva } from "@/lib/quanto-custa";
+import { extraDaDesmontagem, lerPecasDaMontagem, rotuloDoExtraDaDesmontagem } from "@/lib/tabela-da-montagem";
+import { valorSemEComIva } from "@/lib/preco-de-referencia";
 import CompactOrderDetails from "./components/CompactOrderDetails";
 import { TITULO_DAS_PECAS_NO_ELEVADOR } from "@/lib/simulador-por-categoria";
 import { PECAS_NO_ELEVADOR } from "@/lib/respostas-do-simulador";
@@ -1576,6 +1579,22 @@ function Phase1Service({
         />
       )}
 
+      {/* A montagem e desmontagem de móveis (d132, 26-11-2026): a operação, as peças pela tabela, os extras. */}
+      {formData.serviceType === "montagem_moveis" && (
+        <PerguntasDaMontagem
+          operacao={formData.operacaoDaMontagem}
+          pecas={formData.pecasDaMontagem}
+          fixarAParede={formData.fixarAParede}
+          retirarEmbalagens={formData.retirarEmbalagens}
+          cozinha={formData.cozinhaNaMontagem}
+          onOperacao={(v) => updateField("operacaoDaMontagem", v)}
+          onPecas={(p) => updateField("pecasDaMontagem", p)}
+          onFixarAParede={(n) => updateField("fixarAParede", n)}
+          onRetirarEmbalagens={(v) => updateField("retirarEmbalagens", v)}
+          onCozinha={(v) => updateField("cozinhaNaMontagem", v)}
+        />
+      )}
+
       {/* Entulho Details (conditional) */}
       {formData.serviceType === "recolha_entulho" && (
         <EntulhoDetails
@@ -1705,6 +1724,11 @@ function Phase1Service({
         />
       )}
 
+
+      {/* Desmontar antes de levar (d132): as peças pela tabela da montagem, à parte da recolha. */}
+      {(formData.serviceType === "recolha_moveis" || formData.serviceType === "recolha_monos") && (
+        <PecasADesmontar servico={formData.serviceType} pecas={formData.desmontarPecas} onPecas={(p) => updateField("desmontarPecas", p)} />
+      )}
 
       {/* Order Details with integrated upload */}
       <CompactOrderDetails
@@ -2098,6 +2122,8 @@ function Phase2Location({
                 </button>
               ))}
             </div>
+            {/* Desmontar e montar no destino, peça a peça pela tabela da montagem (d132). */}
+            <PecasADesmontar servico="mudanca" pecas={formData.desmontarPecas} onPecas={(p) => updateField("desmontarPecas", p)} />
             {(() => {
               const conta = orcamentoDaMudanca({
                 // Com a proteção, como a lista dos parceiros (11-11-2026).
@@ -2136,6 +2162,15 @@ function Phase2Location({
                       </strong>
                     </p>
                   )}
+                  {(() => {
+                    // O extra da desmontagem pela tabela da montagem (d132), numa linha à parte — como a R12.
+                    const extra = extraDaDesmontagem("mudanca", lerPecasDaMontagem(formData.desmontarPecas));
+                    return extra ? (
+                      <p className="mt-1 text-sm text-gray-800">
+                        {rotuloDoExtraDaDesmontagem("mudanca")}: <strong>{valorSemEComIva(extra.valor)}</strong>
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
               );
             })()}

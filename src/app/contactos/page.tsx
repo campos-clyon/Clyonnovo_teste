@@ -133,8 +133,9 @@ const PERGUNTAS = [
   {
     q: "Que serviços posso pedir por aqui?",
     // Só os serviços do plano (25-10-2026): saíram a montagem e a jardinagem;
-    // a manutenção da casa voltou no mesmo dia, com reparações e remodelações.
-    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, mudanças e manutenção da casa — reparações e remodelações, da pintura à casa de banho e à cozinha. Se o que precisa não está na lista, descreva-o no formulário — há parceiros para trabalhos fora do catálogo.",
+    // a manutenção da casa voltou no mesmo dia, com reparações e remodelações,
+    // e a montagem de móveis a 26-11-2026 (d132).
+    a: "Recolha de móveis, de monos e de entulho, esvaziamento de casas e apartamentos, mudanças, montagem e desmontagem de móveis e manutenção da casa — reparações e remodelações, da pintura à casa de banho e à cozinha. Se o que precisa não está na lista, descreva-o no formulário — há parceiros para trabalhos fora do catálogo.",
   },
 ];
 

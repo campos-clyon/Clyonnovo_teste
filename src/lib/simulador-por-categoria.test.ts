@@ -65,14 +65,18 @@ const chamar = async (corpo: unknown) =>
     )
   ).json();
 
+/** As peças a desmontar pela tabela da montagem (d132), nas recolhas e na mudança. */
+const DESMONTAR = ["pequena", "media", "cama_casal", "roupeiro_2", "roupeiro_3", "roupeiro_4", "grande", "parede"].map((p) => `desmontarPecas.${p}`);
+const MONTAGEM = ["pequena", "media", "cama_casal", "roupeiro_2", "roupeiro_3", "roupeiro_4", "grande", "parede"].map((p) => `pecasDaMontagem.${p}`);
+
 describe("d1 — as perguntas de cada categoria", () => {
   it("cada serviço do simulador tem as suas perguntas, pela ordem", () => {
     expect(ids("recolha_moveis")).toEqual([
-      "movelModo", "itens.pequeno", "itens.medio", "itens.grande", "volume", "quantidadeExacta", "desmontagem",
+      "movelModo", "itens.pequeno", "itens.medio", "itens.grande", "volume", "quantidadeExacta", "desmontagem", ...DESMONTAR,
       "floor", "hasElevator", "pecasNoElevador", "parkingDistance",
     ]);
     // «As peças grandes cabem no elevador?» nos móveis e nos monos (d60).
-    expect(ids("recolha_monos")).toEqual(["volume", "quantidadeExacta", "desmontagem", "floor", "hasElevator", "pecasNoElevador", "parkingDistance"]);
+    expect(ids("recolha_monos")).toEqual(["volume", "quantidadeExacta", "desmontagem", ...DESMONTAR, "floor", "hasElevator", "pecasNoElevador", "parkingDistance"]);
     expect(ids("recolha_entulho")).toEqual([
       "entulho", "tipoDeSaco", "quantidade", "ensacados", "porEnsacar", "entulhoVolume", "floor", "hasElevator", "parkingDistance",
     ]);
@@ -83,14 +87,17 @@ describe("d1 — as perguntas de cada categoria", () => {
     expect(ids("esvaziamento_cave")).toEqual(["volume", "acessoDoEspaco", "coisasDoEspaco", "parkingDistance"]);
     expect(ids("esvaziamento_sotao")).toEqual(["volume", "acessoDoEspaco", "floor", "hasElevator", "parkingDistance"]);
     expect(ids("mudanca")).toEqual([
-      "tipologia", "desmontagem",
+      "tipologia", "desmontagem", ...DESMONTAR,
       "origem.floor", "origem.hasElevator", "origem.parkingDistance", "origem.difficultAccess", "origem.accessNotes",
       "destino.floor", "destino.hasElevator", "destino.parkingDistance", "destino.difficultAccess", "destino.accessNotes",
     ]);
     expect(ids("manutencao_casa")).toEqual(["tipoDeTrabalho", "quantoTrabalho", "materiais", "repeticao", "floor", "hasElevator", "parkingDistance"]);
     expect(ids("outro")).toEqual(["floor", "hasElevator", "parkingDistance"]);
+    // A montagem (d132, 26-11-2026): o que é para fazer, as peças da tabela, os extras, a cozinha e o acesso.
+    expect(ids("montagem_moveis")).toEqual([
+      "operacaoDaMontagem", ...MONTAGEM, "fixarAParede", "retirarEmbalagens", "cozinhaNaMontagem", "floor", "hasElevator", "parkingDistance",
+    ]);
     // Fora do plano, nada.
-    expect(perguntasDoServico("montagem_moveis")).toEqual([]);
     expect(perguntasDoServico("jardinagem")).toEqual([]);
   });
 

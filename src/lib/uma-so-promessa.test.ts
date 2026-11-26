@@ -86,7 +86,9 @@ describe("os botões de orçamento levam ao simulador", () => {
     expect(pedirNoSimulador("recolha-entulho")).toBe("/simulador?servico=recolha_entulho");
     expect(pedirNoSimulador("esvaziamento-casas")).toBe("/simulador?servico=esvaziamento_casa");
     expect(pedirNoSimulador("mudancas")).toBe("/simulador?servico=mudanca");
-    expect(pedirNoSimulador("montagem-moveis")).toBe("/simulador");
+    // A montagem voltou ao plano a 26-11-2026 (d132); a jardinagem não.
+    expect(pedirNoSimulador("montagem-moveis")).toBe("/simulador?servico=montagem_moveis");
+    expect(pedirNoSimulador("jardinagem")).toBe("/simulador");
     expect(pedirNoSimulador(null)).toBe("/simulador");
   });
 
@@ -268,7 +270,7 @@ describe("as páginas dos serviços fora do plano", () => {
   it("dizem no topo que a CLYON não faz o serviço, e o que se pode pedir", () => {
     expect(COMPONENTE).toContain('"De momento a CLYON não faz este serviço."');
     expect(COMPONENTE).toContain("O_QUE_PODE_FAZER");
-    expect(O_QUE_PODE_FAZER).not.toMatch(/montagem|jardin|quinta/);
+    expect(O_QUE_PODE_FAZER).not.toMatch(/jardin|quinta/);
     expect(QUINTAIS).toContain("<ServicoForaDoPlano");
     expect(SERVICO).toMatch(/if \(FORA_DO_PLANO\.has\(cat\.id\)\) return <ServicoForaDoPlano/);
   });

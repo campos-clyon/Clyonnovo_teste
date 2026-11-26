@@ -55,6 +55,8 @@ describe("o registo na app — só os serviços do plano", () => {
       // Armazém, escritório ou loja (d43, 15-11-2026).
       "esvaziamento_empresa",
       "mudanca",
+      // A montagem de móveis voltou a 26-11-2026 (d132).
+      "montagem_moveis",
       "manutencao_casa",
       "outro",
     ]);

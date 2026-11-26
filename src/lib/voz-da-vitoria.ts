@@ -228,12 +228,15 @@ export const SIM_OS_PARCEIROS_FAZEM = "Sim, é um serviço que os parceiros faze
  * As famílias da frase seguem a lista do site (`servicos-da-vitoria.ts`): um
  * teste chumba se uma entrar ou sair sem a frase mudar.
  */
+/*
+ * A MONTAGEM DE MÓVEIS VOLTOU — 26-11-2026 (d132): saiu daqui e entrou na
+ * frase do que ela pode fazer. Fica de fora só a jardinagem.
+ */
 const O_QUE_NAO_FAZ: Record<string, string> = {
-  montagem_moveis: "montagem de móveis",
   jardinagem: "jardinagem nem limpeza de quintais",
 };
 
-export const O_QUE_PODE_FAZER = "uma recolha, um esvaziamento, uma mudança ou a manutenção da casa";
+export const O_QUE_PODE_FAZER = "uma recolha, um esvaziamento, uma mudança, a montagem de móveis ou a manutenção da casa";
 
 /** «Peço imensa desculpa, mas de momento a CLYON não faz montagem de móveis.» */
 export function naoFazemosEsseServico(servico: string): string {

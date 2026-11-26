@@ -8,13 +8,25 @@ import { PROMESSA } from "@/lib/pagamento-na-plataforma";
 
 import { FORA_DO_PLANO, SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { PRECOS, comMaiuscula, maisIva } from "@/lib/precos-publicos";
-import { comIvaDaEtiqueta, etiquetaDoCartao, precoDeReferencia } from "@/lib/preco-de-referencia";
+import { comIvaDaEtiqueta, etiquetaDoCartao } from "@/lib/preco-de-referencia";
 import { cabeNoGoogle } from "@/lib/titulos-seo";
 import { descricaoQueCabe } from "@/lib/descricoes-seo";
 import GuiasDoServico from "@/components/GuiasDoServico";
 import ServicoForaDoPlano, { NAO_FAZ_ESTE_SERVICO } from "@/components/ServicoForaDoPlano";
 import { O_QUE_PODE_FAZER } from "@/lib/voz-da-vitoria";
 import { pedirNoSimulador } from "@/lib/servico-na-ligacao";
+import {
+  COZINHA_SO_POR_ORCAMENTO,
+  DESDE_DA_MONTAGEM,
+  FIXAR_A_PAREDE_POR_MOVEL,
+  REGRAS_DA_MONTAGEM,
+  TABELA_DA_MONTAGEM,
+  comOIvaAoLado,
+  linhaDaTabelaEmTexto,
+  precoDaPecaDaMontagem,
+} from "@/lib/tabela-da-montagem";
+import { PAGA_DIRETAMENTE_AO_PARCEIRO } from "@/lib/pagar-ao-parceiro";
+import { QUEM_FAZ_O_TRABALHO } from "@/lib/promessas-publicas";
 import { novoModeloEmVigor } from "@/lib/novo-modelo";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import {
@@ -72,22 +84,35 @@ const PERGUNTAS: Record<string, Pergunta[]> = {
       a: "O que ainda serve pode seguir para reutilização ou doação; o resto tem de ir para um operador licenciado. Quem transporta é o parceiro, e as regras da plataforma obrigam-no a ter as autorizações que a lei exige. A CLYON está registada como operador de resíduos na Agência Portuguesa do Ambiente.",
     },
   ],
+  /*
+   * A MONTAGEM VOLTA — 26-11-2026 (d132), com a tabela por peça
+   * (`tabela-da-montagem.ts`). Os números saem de lá, com o IVA ao lado.
+   */
   "montagem-moveis": [
+    {
+      q: "Quanto custa montar um roupeiro?",
+      a: `Pela tabela: de 2 portas ${comOIvaAoLado(precoDaPecaDaMontagem("roupeiro_2"))}, de 3 portas ${comOIvaAoLado(precoDaPecaDaMontagem("roupeiro_3"))}, de 4 portas ou de correr ${comOIvaAoLado(precoDaPecaDaMontagem("roupeiro_4"))}. Fixar à parede (anti-queda) soma ${comOIvaAoLado(FIXAR_A_PAREDE_POR_MOVEL)}. São valores «desde»: o parceiro propõe o valor final, com as fotografias.`,
+    },
+    {
+      q: "E desmontar para uma mudança?",
+      a: `Sim, e é dos pedidos mais frequentes. ${REGRAS_DA_MONTAGEM[0]} Roupeiros, camas e estantes desmontam-se, guardam-se as ferragens, e volta a montar-se no destino.`,
+    },
     {
       q: "Montam móveis comprados noutro sítio?",
       a: "Sim. IKEA, Conforama, JYSK, Leroy Merlin ou compra em segunda mão — desde que venham com as instruções e as ferragens.",
     },
     {
-      q: "E desmontar para uma mudança?",
-      a: "Sim, e é dos pedidos mais frequentes. Roupeiros, camas e estantes desmontam-se, embalam-se as ferragens, e volta a montar-se no destino.",
+      q: "E os móveis de cozinha?",
+      a: COZINHA_SO_POR_ORCAMENTO,
     },
     {
-      q: "Trazem ferramentas?",
-      a: "Sim. O parceiro leva o que precisa, incluindo aparafusadora e nível. Se o móvel exigir fixação à parede, diga-o no pedido para o preço já contar com isso.",
+      q: "Quem vai montar?",
+      // «Verificado» só junto do selo de cada parceiro (regra q da orquestra): aqui, quem faz o trabalho.
+      a: `${QUEM_FAZ_O_TRABALHO} O parceiro leva as ferramentas, incluindo aparafusadora e nível; nas propostas vê o selo de quem tem a identidade, o NIF e o contacto confirmados.`,
     },
     {
-      q: "Quanto custa montar um roupeiro?",
-      a: `Depende do número de portas e de haver ou não fixação à parede. A montagem custa ${precoDeReferencia("montagem_moveis")}, e o valor exato vem na proposta.`,
+      q: "Quando e como pago?",
+      a: `No fim, com o trabalho feito. ${PAGA_DIRETAMENTE_AO_PARCEIRO}`,
     },
   ],
   /*
@@ -135,7 +160,8 @@ const FATORES: Record<string, string[]> = {
     "O prazo: uma data fixa, ou a casa tem de ficar vazia até ao fim do arrendamento.",
   ],
   "montagem-moveis": [
-    "O número de peças, e de portas e gavetas em cada uma.",
+    "As peças e o tamanho de cada uma — a tabela acima é o ponto de partida.",
+    "O número de portas e gavetas em cada peça.",
     "A fixação à parede — roupeiros altos, estantes e móveis de cozinha.",
     "Desmontar num sítio e montar noutro, ou só uma das duas.",
     "O andar e o acesso, quando é preciso carregar as caixas até à divisão.",
@@ -323,6 +349,32 @@ export default async function ServicoGerado({ params }: Props) {
           </ul>
         </div>
       </section>
+
+      {slug === "montagem-moveis" && (
+        <section className="secao bg-white">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl font-bold text-tinta sm:text-3xl">A tabela da montagem</h2>
+            <p className="mt-4 text-sm leading-relaxed text-tinta-fraca">
+              Valores «desde», por peça. O serviço começa {DESDE_DA_MONTAGEM}, e o parceiro escolhido propõe o valor final.
+            </p>
+            <ul className="mt-6 divide-y divide-[#E2EEF3] rounded-2xl border border-[#E2EEF3] bg-white">
+              {TABELA_DA_MONTAGEM.map((l) => (
+                <li key={l.id} className="px-5 py-3 text-sm leading-relaxed text-tinta">
+                  {linhaDaTabelaEmTexto(l)}
+                </li>
+              ))}
+            </ul>
+            <ul className="mt-5 space-y-2">
+              {REGRAS_DA_MONTAGEM.map((r) => (
+                <li key={r} className="flex items-start gap-3 text-sm leading-relaxed text-tinta-fraca">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-acao" aria-hidden="true" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
 
       {(FATORES[slug]?.length ?? 0) > 0 && (
         <section className="secao bg-[#F4F8FB]">

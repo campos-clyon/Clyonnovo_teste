@@ -49,6 +49,8 @@ const SERVICOS = [
   { href: "/recolha-de-entulho", texto: "Recolha de Entulho" },
   { href: "/esvaziamento-de-casas", texto: "Esvaziamento de Casas" },
   { href: "/mudancas", texto: "Mudanças" },
+  // Voltou a 26-11-2026 (d132), com a tabela por peça.
+  { href: "/servicos/montagem-moveis", texto: "Montagem de Móveis" },
   { href: "/precos", texto: "Preços orientativos" },
 ];
 

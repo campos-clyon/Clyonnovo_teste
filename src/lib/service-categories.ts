@@ -128,7 +128,8 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     slug: "montagem-moveis",
     label: "Montagem e desmontagem de móveis",
     emoji: "🔧",
-    description: "Montagem e desmontagem de móveis, roupeiros e camas com cuidado.",
+    // Volta a 26-11-2026 (d132), com a tabela por peça (tabela-da-montagem.ts).
+    description: "Montar e desmontar móveis, roupeiros e camas, por parceiros da sua zona.",
     href: "/servicos/montagem-moveis",
   },
   {
@@ -191,7 +192,13 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
  * profissionais antigos com estes serviços continuam a ter nome, e o que lê
  * a lista inteira para outros fins não muda de número a meio de uma conversa.
  */
-export const FORA_DO_PLANO: ReadonlySet<string> = new Set(["montagem_moveis", "jardinagem"]);
+/*
+ * A MONTAGEM DE MÓVEIS VOLTA — 26-11-2026 (decisão d132, o CEO e o dono), com
+ * a tabela por peça (`tabela-da-montagem.ts`): volta aos menus, à grelha, ao
+ * simulador, às inscrições e aos perfis (o grupo «Montagem de móveis»), ao
+ * sitemap, ao Google e à Vitória. Fica fora só a jardinagem e limpeza de quintais.
+ */
+export const FORA_DO_PLANO: ReadonlySet<string> = new Set(["jardinagem"]);
 
 /** Os serviços que o site oferece hoje — para menus, grelhas, formulários e listas públicas. */
 export const SERVICOS_PUBLICOS: ServiceCategory[] = SERVICE_CATEGORIES.filter((c) => !FORA_DO_PLANO.has(c.id));
@@ -294,6 +301,19 @@ export const GRUPOS_DE_SERVICOS: readonly GrupoDeServicos[] = [
     emoji: "🚚",
     descricao: "Mudanças de casa e de escritório, e transporte de móveis.",
     servicos: ["mudanca"],
+    servicosEmBreve: [],
+  },
+  /*
+   * A MONTAGEM DE MÓVEIS — 26-11-2026 (d132). Um grupo próprio: quem monta e
+   * desmonta móveis marca-o. Os profissionais antigos com `montagem_moveis`
+   * gravado passam a este grupo (`normalizarCategorias`).
+   */
+  {
+    id: "montagem_de_moveis",
+    label: "Montagem de móveis",
+    emoji: "🔧",
+    descricao: "Montar e desmontar móveis, roupeiros e camas.",
+    servicos: ["montagem_moveis"],
     servicosEmBreve: [],
   },
   {

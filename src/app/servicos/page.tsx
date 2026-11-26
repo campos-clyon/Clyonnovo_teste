@@ -68,12 +68,13 @@ export const metadata: Metadata = {
   title: "Recolhas, Esvaziamentos, Mudanças e Manutenção",
   // Sem a limpeza pós-obra, que deixou de ser serviço activo (29-09-2026).
   description:
-    `Recolha de entulho, móveis e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal. Desde ${MENOR_PRECO_PUBLICADO} € + IVA, propostas em menos de 6 horas.`,
+    // Com a montagem de móveis desde 26-11-2026 (d132): o «desde» mais baixo é o dela.
+    `Recolhas, esvaziamentos, mudanças, montagem de móveis e manutenção da casa em Lisboa e Setúbal. Desde ${MENOR_PRECO_PUBLICADO} € + IVA, propostas em menos de 6 horas.`,
   alternates: { canonical: `${SITE_URL}/servicos` },
   openGraph: og({
     title: "Recolhas, Esvaziamentos, Mudanças e Manutenção",
     description:
-      `Recolha de entulho, móveis e monos, esvaziamentos, mudanças e manutenção da casa em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA.`,
+      `Recolhas, esvaziamentos, mudanças, montagem de móveis e manutenção da casa em Lisboa e Setúbal. Preços desde ${MENOR_PRECO_PUBLICADO} € + IVA.`,
     url: `${SITE_URL}/servicos`,
   }),
 };
@@ -173,6 +174,22 @@ const services: Service[] = [
     messages: [
       { from: "cliente", text: "Mudança de T2 no dia 15, com desmontagem de roupeiro.", time: "11:08" },
       { from: "clyon",   text: `Mande as duas moradas e fotos das divisões: as propostas chegam em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, já com a taxa da plataforma.`, time: "11:10" },
+    ],
+  },
+  /*
+   * A MONTAGEM E DESMONTAGEM DE MÓVEIS — 26-11-2026 (d132). Volta ao plano,
+   * com a tabela por peça (`tabela-da-montagem.ts`); o preço é o da fonte.
+   */
+  {
+    title: "Montagem de Móveis",
+    tagline: "Montar e desmontar, por peça",
+    price: etiquetaDe("montagem_moveis"),
+    href: "/servicos/montagem-moveis",
+    accent: "from-pink-400 to-rose-500",
+    emoji: "🔧",
+    messages: [
+      { from: "cliente", text: "Comprei um roupeiro de 3 portas e uma cómoda. Há quem os monte em Almada?", time: "10:21" },
+      { from: "clyon",   text: `Sim. Diga as peças e o andar, com uma fotografia das caixas: parceiros da sua zona respondem em menos de ${PRAZO_DE_RESPOSTA.porExtenso}.`, time: "10:23" },
     ],
   },
   /*

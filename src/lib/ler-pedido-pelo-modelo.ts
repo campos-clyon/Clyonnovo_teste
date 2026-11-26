@@ -44,7 +44,7 @@ import { anfitriaoDoNossoBlob, buscarImagemExterna, urlDeAnexoPermitido } from "
  * Só se sugere o que se sabe: o «não sei» de cada campo nunca é sugestão.
  * ────────────────────────────────────────────────────────────────────────── */
 
-export type Grupo = "moveis" | "monos" | "entulho" | "esvaziamento" | "mudanca" | "manutencao" | "outro";
+export type Grupo = "moveis" | "monos" | "entulho" | "esvaziamento" | "mudanca" | "manutencao" | "montagem" | "outro";
 
 /** Que perguntas tem cada serviço (o mesmo desenho do simulador e da app). */
 export const GRUPO_DO_SERVICO: Readonly<Record<string, Grupo>> = {
@@ -59,6 +59,8 @@ export const GRUPO_DO_SERVICO: Readonly<Record<string, Grupo>> = {
   esvaziamento_empresa: "esvaziamento",
   mudanca: "mudanca",
   manutencao_casa: "manutencao",
+  // d132 (26-11-2026): a montagem de móveis voltou — a operação e o acesso; as peças contam-se no simulador.
+  montagem_moveis: "montagem",
   outro: "outro",
 };
 
@@ -69,6 +71,13 @@ type CampoDeItens = { id: "itens"; tipo: "itens"; explicacao: string };
 export type CampoDoLeitor = CampoDeOpcao | CampoDeNumero | CampoSimNao | CampoDeItens;
 
 export const ANDARES = ["rés-do-chão", "1º", "2º", "3º", "4º+"] as const;
+
+const OPERACAO_DA_MONTAGEM: CampoDoLeitor = {
+  id: "operacaoDaMontagem",
+  tipo: "opcao",
+  opcoes: ["montar", "desmontar", "os_dois"],
+  explicacao: "o que é para fazer: montar, desmontar, ou os_dois (desmontar e voltar a montar)",
+};
 
 const ACESSO: readonly CampoDoLeitor[] = [
   { id: "floor", tipo: "opcao", opcoes: ANDARES, explicacao: "o andar: rés-do-chão, 1º, 2º, 3º, ou 4º+ (do 4.º para cima)" },
@@ -181,6 +190,8 @@ export function camposDoServico(servico: string): readonly CampoDoLeitor[] {
       return [TIPOLOGIA_DA_MUDANCA, DESMONTAGEM, ...ACESSO];
     case "manutencao":
       return [...MANUTENCAO, ...ACESSO];
+    case "montagem":
+      return [OPERACAO_DA_MONTAGEM, ...ACESSO];
   }
 }
 

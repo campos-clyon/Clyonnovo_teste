@@ -81,6 +81,8 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/contactos": "2026-11-26",
   "/servicos/esvaziamento-apartamento": "2026-11-26",
   "/servicos/manutencao-casa": "2026-11-26",
+  // 26-11-2026 (d132): a montagem de móveis volta, com a tabela por peça.
+  "/servicos/montagem-moveis": "2026-11-26",
   "/recolha-de-monos": "2026-11-17",
   // 03-11-2026 (d1 v2): os andares sem elevador por m³ na calculadora e nos factores do preço.
   // E no mesmo dia (d4): o saco a 4,00–4,80 € (10 sacos 40–48 €) e os andares por trabalho.

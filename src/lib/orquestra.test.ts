@@ -490,6 +490,8 @@ const FONTES_DE_PRECOS = new Set([
   "src/lib/precos-publicos.ts",
   "src/lib/tabela-das-mudancas.ts",
   "src/lib/sacos-de-entulho.ts",
+  // d132 (26-11-2026): a tabela da montagem de móveis.
+  "src/lib/tabela-da-montagem.ts",
 ]);
 const DO_ORCAMENTISTA = new Set(["src/lib/prompt-do-orcamento.ts"]);
 /** A Vitória: o que ela diz, o que lê, o que traduz, e as rotas que a fazem falar. */
@@ -2535,6 +2537,8 @@ describe("d63: nenhum «desde» público abaixo do mínimo do motor", () => {
     esvaziamento_garagem: [{ volumeTier: "carrinha", acessoDoEspaco: "rua" }],
     esvaziamento_sotao: [{ volumeTier: "carrinha", acessoDoEspaco: "rua" }],
     esvaziamento_cave: [{ volumeTier: "carrinha", acessoDoEspaco: "rua" }],
+    // d132: uma peça pequena a montar (abaixo do mínimo), e sem peças (o «desde»).
+    montagem_moveis: [{ operacaoDaMontagem: "montar", pecasDaMontagem: { pequena: 1 } }, { operacaoDaMontagem: "desmontar", pecasDaMontagem: { pequena: 1 } }, {}],
   };
 
   /** Fora desta comparação, e porquê. */
@@ -2544,7 +2548,6 @@ describe("d63: nenhum «desde» público abaixo do mínimo do motor", () => {
     // O motor ainda não lê a grelha da manutenção (`MANUTENCAO_POR_TIPO`): dá a conta geral. A R12 e o
     // simulador dão a grelha (o «desde» é o mínimo dela), e o preço é o da proposta do parceiro.
     manutencao_casa: "o motor não tem a grelha da manutenção (a R12 tem)",
-    montagem_moveis: "fora do simulador e do Google desde 25-10-2026",
     jardinagem: "fora do simulador e do Google desde 25-10-2026",
   };
 

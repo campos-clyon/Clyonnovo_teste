@@ -92,11 +92,15 @@ const staticPages = [
    *
    * 25-10-2026, à noite: a manutenção da casa voltou ao plano, e
    * /servicos/manutencao-casa voltou para aqui.
+   *
+   * 26-11-2026 (d132): a montagem de móveis voltou ao plano, e
+   * /servicos/montagem-moveis voltou para aqui.
    */
   { url: `${SITE_URL}/como-funciona`, priority: 0.8, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/orcamento-recolha-lisboa`, priority: 0.8, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/servicos/esvaziamento-apartamento`, priority: 0.85, changeFrequency: "monthly" as const },
   { url: `${SITE_URL}/servicos/manutencao-casa`, priority: 0.8, changeFrequency: "monthly" as const },
+  { url: `${SITE_URL}/servicos/montagem-moveis`, priority: 0.8, changeFrequency: "monthly" as const },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
