@@ -118,7 +118,7 @@ function o595(extra: Record<string, unknown> = {}) {
       parceiroConfirmouEm: null,
       dataCombinada: new Date("2026-11-12T09:00:00Z"),
       profissional: "Nova Recolha",
-      telefone: "912000111",
+      telefone: "912345678",
       ...extra,
     },
     // Os outros que tinham a oferta em aberto: ficaram de fora quando ela foi escolhida.
@@ -237,7 +237,7 @@ describe("d137 — na base", () => {
     expect(estado.negs[0].retiradaEm).toBeInstanceOf(Date);
     // Os outros não são tocados nem avisados: o caminho escolhe-o a pessoa.
     expect(estado.negs[1].estado).toBe("morta");
-    expect(estado.whatsapp).toEqual([{ telefone: "351912000111", texto: "CLYON · O trabalho #595 deixou de estar consigo. Obrigado." }]);
+    expect(estado.whatsapp).toEqual([{ telefone: "351912345678", texto: "CLYON · O trabalho #595 deixou de estar consigo. Obrigado." }]);
     expect(estado.push).toEqual([{ providerId: 31, tipo: "trabalho_retirado" }]);
     expect(estado.historico[0]).toMatch(/^Trabalho tirado a Nova Recolha por Ana — motivo: não apareceu no dia\./);
     expect(estado.historico[0]).toMatch(/«falta o sim» saiu/);
@@ -285,7 +285,7 @@ describe("d137 — na base", () => {
     const r = await tirarAEmpresaDoTrabalho(595, null, quem, AGORA);
     expect(r).toMatchObject({ ok: true, onde: "mesa", reabertas: 1 });
     expect(estado.negs[1].estado).toBe("aberta");
-    expect(estado.whatsapp.map((w) => w.telefone)).toEqual(["351912000111"]);
+    expect(estado.whatsapp.map((w) => w.telefone)).toEqual(["351912345678"]);
     expect(estado.historico[0]).toMatch(/As propostas voltaram a estar abertas \(1\)/);
   });
 });
