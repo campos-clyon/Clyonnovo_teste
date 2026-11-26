@@ -97,10 +97,12 @@ export async function responderAoClienteAoVivo(
       acabarPendente: async (p, como) => (await import("./accoes-na-base")).acabarPendente(telefone, p, como, false, ensaioId),
       gravarPendente: async (p) => (await import("./accoes-na-base")).gravarPendente(telefone, p, false, ensaioId),
       propostasParaEscolher: async (id) => (await import("./accoes-na-base")).propostasParaEscolherDeVerdade(id),
-      fecharPeloBotao: async (pedidoId, negociacaoId) => {
+      fecharPeloBotao: async (pedidoId, negociacaoId, diaCombinado) => {
         // O caminho do botão «Contratar» do WhatsApp: fecharPeloCliente, com o interruptor «fechar», a guia e o retrato.
+        // d131: com o dia que o parceiro confirmou, que o fecho grava no pedido e na negociação.
         const { tratarMensagemDoCliente } = await import("../whatsapp-negociacao");
-        await tratarMensagemDoCliente(telefone, { tipo: "botao", id: `ct:${pedidoId}:${negociacaoId}` });
+        const botao = { tipo: "botao", id: `ct:${pedidoId}:${negociacaoId}` } as const;
+        await tratarMensagemDoCliente(telefone, diaCombinado ? { ...botao, diaCombinado } : botao);
       },
       cancelarPeloCancelar: async (pedidoId) => (await import("./accoes-na-base")).cancelarPeloCancelarDoAgente(pedidoId, telefone),
       marcarPerguntaDoCancelar: async (pedidoId) => (await import("./accoes-na-base")).marcarPerguntaDoCancelar(pedidoId, telefone),

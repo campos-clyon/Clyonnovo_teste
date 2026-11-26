@@ -80,6 +80,16 @@ export function respostaAoPendente(p: Pendente, texto: string | null | undefined
   return confirma ? { tipo: "confirmou" } : { tipo: "outra" };
 }
 
+/** O dia combinado com o parceiro (d131), validado; ou null. */
+export function lerDiaCombinado(v: unknown): { em: string; dito: string } | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.em !== "string") return null;
+  const t = new Date(o.em);
+  if (Number.isNaN(t.getTime())) return null;
+  return { em: t.toISOString(), dito: typeof o.dito === "string" ? o.dito.slice(0, 200) : "" };
+}
+
 /** Lê um pendente guardado (JSON do registo). null se não for um. */
 export function lerPendente(v: unknown): Pendente | null {
   let o: unknown = v;
@@ -95,7 +105,16 @@ export function lerPendente(v: unknown): Pendente | null {
   const id = Number(p.pedidoId);
   if (!Number.isInteger(id) || id <= 0 || typeof p.propostoEm !== "string") return null;
   if (p.tipo === "fecho" && Number.isInteger(Number(p.negociacaoId)) && Number.isFinite(Number(p.total))) {
-    return { tipo: "fecho", pedidoId: id, negociacaoId: Number(p.negociacaoId), parceiro: String(p.parceiro ?? ""), total: Number(p.total), propostoEm: p.propostoEm };
+    const diaCombinado = lerDiaCombinado(p.diaCombinado);
+    return {
+      tipo: "fecho",
+      pedidoId: id,
+      negociacaoId: Number(p.negociacaoId),
+      parceiro: String(p.parceiro ?? ""),
+      total: Number(p.total),
+      propostoEm: p.propostoEm,
+      ...(diaCombinado ? { diaCombinado } : {}),
+    };
   }
   if (p.tipo === "cancelar") return { tipo: "cancelar", pedidoId: id, propostoEm: p.propostoEm };
   if (p.tipo === "parceiro" && Number.isInteger(Number(p.negociacaoId))) {

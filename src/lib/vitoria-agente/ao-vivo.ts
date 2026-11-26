@@ -91,7 +91,7 @@ export type DependenciasAoVivo = {
   gravarPendente: (p: Pendente) => Promise<void>;
   propostasParaEscolher: (pedidoId: number) => Promise<PropostaDoAgente[]>;
   /** O fecho de sempre, como o botão «Contratar» (ct:pedido:negociação). */
-  fecharPeloBotao: (pedidoId: number, negociacaoId: number) => Promise<void>;
+  fecharPeloBotao: (pedidoId: number, negociacaoId: number, diaCombinado?: { em: string; dito: string } | null) => Promise<void>;
   /** `daEquipa`: fica com a equipa por uma das excepções (dinheiro, acordo, data) — a mensagem diz porquê (d126). */
   cancelarPeloCancelar: (pedidoId: number) => Promise<{ ok: true } | { ok: false; porque: string; daEquipa?: boolean }>;
   marcarPerguntaDoCancelar: (pedidoId: number) => Promise<void>;
@@ -166,7 +166,8 @@ export async function responderAoVivo(conteudo: ConteudoDaRajada, deps: Dependen
           }
           await deps.acabarPendente(p, "fechado pelo SIM");
           jaSaiu = true;
-          await deps.fecharPeloBotao(p.pedidoId, p.negociacaoId);
+          // d131: o dia que o parceiro confirmou vai com o fecho (pedido e negociação).
+          await deps.fecharPeloBotao(p.pedidoId, p.negociacaoId, p.diaCombinado ?? null);
           await deps.registar({ estado: "vivo_codigo", texto: null, motivo: null, teriaFeito: [`fechou o #${p.pedidoId} com ${p.parceiro} pelo SIM do cliente`] });
           return "codigo";
         }

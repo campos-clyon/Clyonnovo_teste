@@ -2,6 +2,7 @@ import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { linhaDoAnuncio } from "./anuncio-de-imovel";
 import { DESCRICAO_DAS_FOTOS } from "./leitor-da-recolha";
 import { segundaParagemPorExtenso } from "./segunda-morada";
+import { semAHoraLimite } from "./hora-limite";
 import { campoComValor, estacionamentoDaConversa, oQueOQuandoAcrescenta, soRepeteOsCampos } from "./campos-na-descricao";
 
 /**
@@ -486,7 +487,7 @@ function acesso(floor: string | null | undefined, lado: string | null | undefine
 
 /** Ele disse a hora? «às 9», «15h», «10:30». Sem isso, a hora não se escreve. */
 function disseAHora(texto: string | null | undefined): boolean {
-  const t = plano(limpo(texto));
+  const t = semAHoraLimite(plano(limpo(texto)));
   return /(?<!\d)\d{1,2}\s*(h\b|h\d{2}|:\d{2})|\b(as|pelas|por volta das)\s+\d{1,2}\b/.test(t);
 }
 

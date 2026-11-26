@@ -1329,7 +1329,49 @@ export async function fecharAEscolhaDoCliente(telefone: string, pedidoId: number
  * morada». Chama-se UMA vez, só depois de o fecho ficar gravado (a transacção
  * da d26 só deixa passar um). Nunca lança: o negócio já está fechado.
  */
-export async function avisarOContratadoDoFechoPeloWhatsApp(pedidoId: number, negociacaoId: number, valorAcordado: number | null): Promise<void> {
+/**
+ * GRAVA O DIA COMBINADO NO FECHO — d131 (26-11-2026). Só com o dia que o
+ * parceiro confirmou (e ainda por vir): o pedido fica com ele na «Data e hora
+ * desejada» e a negociação acordada na `dataCombinada` (a Agenda, a app Pro, o
+ * «Já está feito»). Devolve o dia gravado, ou null. Nunca lança: o negócio já
+ * está fechado — sem o dia, a mensagem sai como sempre.
+ */
+async function gravarODiaCombinadoNoFecho(
+  alvo: Alvo,
+  dia: { em: string; dito: string } | null,
+  agora: Date,
+): Promise<{ em: string; dito: string } | null> {
+  if (!dia) return null;
+  const em = new Date(dia.em);
+  if (Number.isNaN(em.getTime()) || em.getTime() <= agora.getTime()) return null;
+  try {
+    const pool = await getPool();
+    if (!pool) return null;
+    await pool.execute("UPDATE negociacoes SET dataCombinada = ? WHERE id = ? AND pedidoId = ? AND estado = 'acordada'", [
+      em,
+      alvo.negociacaoId,
+      alvo.pedidoId,
+    ]);
+    await updateSimulatorOrder(alvo.pedidoId, { dataAgendada: em } as unknown as Parameters<typeof updateSimulatorOrder>[1]);
+    await registarAccao(
+      alvo.pedidoId,
+      alvo.negociacaoId,
+      `Dia combinado com ${alvo.profissionalNome} (o parceiro confirmou «${dia.dito}»): ${em.toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })}.`,
+    );
+    return { em: em.toISOString(), dito: dia.dito };
+  } catch (e) {
+    console.error("[whatsapp] o dia combinado não ficou gravado:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+export async function avisarOContratadoDoFechoPeloWhatsApp(
+  pedidoId: number,
+  negociacaoId: number,
+  valorAcordado: number | null,
+  /** d131: o dia combinado em palavras, quando o parceiro o confirmou. */
+  quando: string | null = null,
+): Promise<void> {
   try {
     const linha = (await negociacoesDoPedido(pedidoId)).find((n) => Number(n.id) === negociacaoId);
     if (!linha || !Number(linha.providerId)) return;
@@ -1342,6 +1384,7 @@ export async function avisarOContratadoDoFechoPeloWhatsApp(pedidoId: number, neg
       linha: linha as Parameters<typeof avisarQueFoiContratadoSemFalhar>[0]["linha"],
       valorAcordado,
       baseUrl: urlDeAccao(),
+      quando,
     });
   } catch (e) {
     console.error("[whatsapp] o aviso ao contratado não saiu:", e instanceof Error ? e.message : e);
@@ -1353,6 +1396,13 @@ async function fecharPeloCliente(
   alvo: Alvo,
   /** O que ele escreveu ao fechar — pode trazer o dia lá dentro. */
   diaQueEleDisse?: string,
+  /**
+   * O DIA QUE O PARCEIRO CONFIRMOU — d131 (26-11-2026). A condição do cliente
+   * («tem que ser dia 2/12 de manhã») que o parceiro disse que consegue (d97):
+   * grava-se no pedido (`dataAgendada`) e na negociação (`dataCombinada`),
+   * antes do aviso ao parceiro e da mensagem do fecho, que a dizem.
+   */
+  diaCombinado?: { em: string; dito: string } | null,
 ): Promise<void> {
   const {
     assistentePode,
@@ -1483,7 +1533,14 @@ async function fecharPeloCliente(
   }
   const encerradas = gravou.encerradas;
   if (encerradas > 0) await avisarQuemFicouSemOTrabalho({ pedidoId: alvo.pedidoId, quem: perdem, porque: "outro" });
-  await avisarOContratadoDoFechoPeloWhatsApp(alvo.pedidoId, alvo.negociacaoId, r2.negociacao.valorAcordado ?? null);
+  // d131: o dia que o parceiro confirmou fica no pedido e na negociação — antes do aviso e da mensagem, que o dizem.
+  const combinado = await gravarODiaCombinadoNoFecho(alvo, diaCombinado ?? null, agora);
+  await avisarOContratadoDoFechoPeloWhatsApp(
+    alvo.pedidoId,
+    alvo.negociacaoId,
+    r2.negociacao.valorAcordado ?? null,
+    combinado ? (await import("@/lib/vitoria-agente/dia-combinado")).diaCombinadoEmPalavras(combinado) : null,
+  );
   await registarAccao(
     alvo.pedidoId,
     alvo.negociacaoId,
@@ -1569,8 +1626,9 @@ async function fecharPeloCliente(
    * como é que ela se escreve seria fazer uma pergunta que não se sabe ler.
    */
   const dito = diaQueEleDisse ? lerAData(diaQueEleDisse) : null;
-  const sobreODia =
-    dito && dito.hora == null
+  const sobreODia = combinado
+    ? `\n\n${(await import("@/lib/vitoria-agente/dia-combinado")).fraseDoDiaCombinado(combinado)}`
+    : dito && dito.hora == null
       ? `\n\nVi que falou no ${diaPorPalavras(dito)}. A que horas lhe dá jeito? Diga-me o dia e a hora juntos — por exemplo, ${dito.dia} às 10h.`
       : ` Se já tem data pensada, responda por exemplo: 27/08 14:30 — fica logo marcada.`;
 
@@ -2831,7 +2889,8 @@ function avisoDasRetiradas(
 export async function tratarMensagemDoCliente(
   telefone: string,
   conteudo:
-    | { tipo: "botao"; id: string }
+    /** `diaCombinado`: só o fecho da Vitória agente, com o dia que o parceiro confirmou (d131). */
+    | { tipo: "botao"; id: string; diaCombinado?: { em: string; dito: string } | null }
     | {
         tipo: "texto";
         texto: string;
@@ -3486,7 +3545,9 @@ export async function tratarMensagemDoCliente(
     const alvo = await alvoDe(pedidoId, negociacaoId);
     if (!alvo) return;
 
-    if (accao === "ct") await fecharPeloCliente(telefone, alvo);
+    // d131: o fecho da Vitória agente pode trazer o dia que o parceiro confirmou.
+    if (accao === "ct" && conteudo.diaCombinado) await fecharPeloCliente(telefone, alvo, undefined, conteudo.diaCombinado);
+    else if (accao === "ct") await fecharPeloCliente(telefone, alvo);
     else await recusarPeloCliente(telefone, alvo);
     return;
   }

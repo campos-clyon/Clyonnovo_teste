@@ -610,7 +610,9 @@ export async function ensaioEmSombra(
           const motivo = motivoParaNaoFecharNoSim(pend, agora, await accoes.propostasParaEscolherDeVerdade(pend.pedidoId).catch(() => []));
           linha = motivo
             ? `não teria fechado o #${pend.pedidoId}: ${motivo}`
-            : `teria fechado o #${pend.pedidoId} com ${pend.parceiro} por ${emEuros(pend.total)} (o SIM do cliente, pelo caminho de sempre)`;
+            : `teria fechado o #${pend.pedidoId} com ${pend.parceiro} por ${emEuros(pend.total)} (o SIM do cliente, pelo caminho de sempre)` +
+              // d131: e gravado o dia que o parceiro confirmou.
+              (pend.diaCombinado ? `, com o dia combinado «${pend.diaCombinado.dito}»` : "");
         } else {
           linha = `teria cancelado o #${pend.pedidoId} (o CANCELAR do cliente, pelo caminho único)`;
         }

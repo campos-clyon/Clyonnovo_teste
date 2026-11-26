@@ -28,6 +28,7 @@ import type { ResultadoDoAgente } from "./cliente";
 import type { FechoProposto } from "./propostas-do-agente";
 import { motivoParaNaoFecharPeloAgente, perguntaDoFecho, type PedidoParaOFecho, type PropostaComOValorDoParceiro } from "./propostas-do-agente";
 import type { PerguntaAoParceiro } from "./pendentes";
+import { diaCombinadoNaCondicao, type DiaCombinado } from "./dia-combinado";
 
 /** O prazo da resposta do parceiro: 2 h, contadas só dentro do horário. */
 export const MINUTOS_PARA_O_PARCEIRO_RESPONDER = 120;
@@ -230,6 +231,8 @@ export type DependenciasDaResposta = {
   correrOAgente: (nota: string) => Promise<ResultadoDoAgente | null>;
   enviarAoCliente: (texto: string) => Promise<boolean>;
   gravarPendente: (f: FechoProposto) => Promise<void>;
+  /** d131: o dia da condição confirmada fica já no pedido, como a data desejada. */
+  gravarODiaDesejado?: (d: DiaCombinado) => Promise<void>;
   passarAEquipa: (motivo: string, mensagem: string | null) => Promise<void>;
   registar: (l: { texto: string | null; motivo: string | null; teriaFeito: string[]; resultado?: ResultadoDoAgente | null }) => Promise<void>;
 };
@@ -269,10 +272,18 @@ export async function tratarARespostaDoParceiro(
     if (!prop) return paraAEquipa(`Pedido #${p.pedidoId}: ${p.parceiro} disse SIM a «${p.condicao}», mas a proposta já não está disponível`);
     const travao = motivoParaNaoFecharPeloAgente(prop, await deps.pedidoParaOFecho(), deps.agora);
     if (travao) return paraAEquipa(`Pedido #${p.pedidoId}: ${p.parceiro} disse SIM a «${p.condicao}», mas ${travao}`);
+    /*
+     * d131: o dia da condição («dia 2/12 de manhã»), que o parceiro confirmou,
+     * vai no fecho — com o SIM, grava-se no pedido e na negociação. E o pedido
+     * fica já com ele como a data desejada (é a do cliente).
+     */
+    const diaCombinado = diaCombinadoNaCondicao(p.condicao, leitura.quando, deps.agora);
+    if (diaCombinado && deps.gravarODiaDesejado) await deps.gravarODiaDesejado(diaCombinado).catch(() => {});
+    const comODia = (f: FechoProposto): FechoProposto => (diaCombinado ? { ...f, diaCombinado } : f);
     const r = await deps.correrOAgente(notaParaOAgente(p, leitura)).catch(() => null);
     if (r && r.estado === "ok" && r.texto && r.pendente?.tipo === "fecho" && r.pendente.negociacaoId === p.negociacaoId) {
       await deps.enviarAoCliente(r.texto);
-      await deps.gravarPendente(r.pendente);
+      await deps.gravarPendente(comODia(r.pendente));
       await deps.registar({ texto: r.texto, motivo: null, teriaFeito: [doParceiro, ...r.teriaFeito], resultado: r });
       return "sim";
     }
@@ -288,7 +299,7 @@ export async function tratarARespostaDoParceiro(
       total: prop.conta.total,
       propostoEm: deps.agora.toISOString(),
     };
-    await deps.gravarPendente(fecho);
+    await deps.gravarPendente(comODia(fecho));
     await deps.registar({
       texto: textoAoCliente,
       motivo: r ? `o Claude não trouxe a pergunta do SIM (${r.estado}): escreveu o código` : "sem o Claude: escreveu o código",

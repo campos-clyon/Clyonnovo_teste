@@ -536,6 +536,8 @@ export function pareceQuando(texto: string): boolean {
     /\bquando\s+(der|puder|quiser|for\s+possivel|lhe\s+der\s+jeito)\b/.test(t) ||
     /\b(de|pela|a|esta|durante\s+a|ao\s+fim\s+da|ao\s+final\s+da)\s+(manha|tarde|noite)\b/.test(t) ||
     /\b(\d+|uns|alguns|poucos|proximos)\s+dias\b/.test(t) ||
+    // «dia 2», sem o mês — d131 (26-11-2026). «Bom dia» não conta.
+    /(?<!\bbom\s)\bdia\s+\d{1,2}\b(?!\s*(?:\d|[º°ª]|h\b|h\d|:\d))/.test(t) ||
     /(?<![\d])[2-6]\s*[ªa]?\s*-?\s*f(eira)?\b/.test(t) ||
     // «12 -4dto» é a porta e o andar, e não o 12 de abril (26-10-2026).
     /(?<![\d])\d{1,2}\s*[\/.-]\s*\d{1,2}(?![\d-]|[º°ª]|(esq|dto|dt|dir|frente|andar)\b)/.test(t) ||

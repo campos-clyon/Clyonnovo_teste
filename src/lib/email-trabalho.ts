@@ -150,6 +150,12 @@ export type AvisoDeContratacao = {
     /** d4: o regime de IVA do parceiro — «com IVA» só a quem tem regime normal. Sem ele, não se diz. */
     regime?: "normal" | "isento" | null;
   } | null;
+  /**
+   * O DIA COMBINADO, em palavras — d131 (26-11-2026): o que ele confirmou à
+   * Vitória («quarta-feira, 2 de dezembro, de manhã (até às 13h30)»). Nulo
+   * quando não há dia combinado.
+   */
+  quando?: string | null;
   baseUrl?: string;
 };
 
@@ -193,6 +199,17 @@ export async function avisarQueFoiContratado(p: AvisoDeContratacao): Promise<boo
         }
       </td></tr>
     </table>
+
+    ${
+      p.quando
+        ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;margin-bottom:20px;">
+             <tr><td style="padding:16px 18px;">
+               <p style="margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Dia combinado</p>
+               <p style="margin:0;font-size:15px;line-height:1.5;color:#0B1929;">${e(p.quando)}</p>
+             </td></tr>
+           </table>`
+        : ""
+    }
 
     ${
       p.morada

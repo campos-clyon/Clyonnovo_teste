@@ -679,6 +679,8 @@ export async function avisarQueFoiContratadoSemFalhar(c: {
   };
   valorAcordado: number | null;
   baseUrl: string;
+  /** d131: o dia combinado em palavras (o que o parceiro confirmou à Vitória). */
+  quando?: string | null;
 }): Promise<void> {
   const { pedidoId, negociacaoId, providerId, linha } = c;
   try {
@@ -729,6 +731,7 @@ export async function avisarQueFoiContratadoSemFalhar(c: {
         temDividaDoProfissional(linha.formaDePagamento, modeloDaNegociacao(linha.createdAt))
           ? dividaDoProfissional(c.valorAcordado, taxasDaNegociacao(linha))
           : null,
+      quando: c.quando ?? null,
       baseUrl: c.baseUrl,
     });
 

@@ -1,5 +1,6 @@
 import { deslocamentoDeLisboa } from "./hora-de-lisboa";
 import { semAcentos, semLugaresNemPassado } from "./leitor-da-recolha";
+import { horaLimiteNaFrase, semAHoraLimite } from "./hora-limite";
 
 /**
  * TODAS AS DATAS QUE O CLIENTE DISSE, PELA ORDEM EM QUE AS DISSE — 28-10-2026
@@ -99,10 +100,20 @@ type Mencao = {
   semana?: number;
   /** Dias a somar a hoje, nas relativas. */
   salto?: number;
+  /** «dia 2» sem o mês (d131): o próximo dia 2 a partir de hoje. */
+  soODia?: boolean;
 };
 
 /** «hoje», «amanhã», «depois de amanhã» — d57. Sem acentos, como o resto. */
 const RELATIVA = /\b(depois de amanha|amanha|hoje)\b/g;
+
+/**
+ * «DIA 2», SEM O MÊS — 26-11-2026 (d131). *«Tem que ser dia 2 de manhã»*: o
+ * pedido ficou «Sem pressa» e sem data, porque só se liam datas com o mês. É
+ * o próximo dia 2 a partir de hoje (hoje incluído), em Lisboa — como já lia
+ * `diasDitos` (campos-na-descricao). «Bom dia 2 estantes» não é uma data.
+ */
+const SO_O_DIA = /(?<!\bbom\s)\bdia\s+(\d{1,2})\b(?!\s*(?:\/|[.-]\d|[º°ª]|h\b|h\d|:\d))/g;
 
 /**
  * A PARTE DO DIA NUM BOCADO DE FRASE — 17-11-2026 (decisão d57). O período
@@ -122,13 +133,16 @@ export function parteDoDiaNaFrase(bocado: string): string {
         : /\bnoite\b/.test(t)
           ? "à noite"
           : "";
-  const h = t.match(/\b(depois das|depois da|a partir das|a partir da|antes das|antes da|as|pelas)\s+(\d{1,2})(?:\s*h\s*(\d{2})?|:(\d{2}))?(?:\s*horas)?\b/);
+  // d131: «até às 13 ou 13h30» é a hora-limite, e não a hora a que chega.
+  const limite = horaLimiteNaFrase(t);
+  const h = semAHoraLimite(t).match(/\b(depois das|depois da|a partir das|a partir da|as|pelas)\s+(\d{1,2})(?:\s*h\s*(\d{2})?|:(\d{2}))?(?:\s*horas)?\b/);
   let hora = "";
-  if (h && Number(h[2]) <= 23 && (h[3] || h[4] || /h|horas/.test(h[0]) || /^(depois|a partir|antes)/.test(h[1]))) {
-    const prende = { "depois das": "depois das", "depois da": "depois da", "a partir das": "a partir das", "a partir da": "a partir da", "antes das": "antes das", "antes da": "antes da", as: "às", pelas: "pelas" }[h[1]] ?? h[1];
+  if (h && Number(h[2]) <= 23 && (h[3] || h[4] || /h|horas/.test(h[0]) || /^(depois|a partir)/.test(h[1]))) {
+    const prende = { "depois das": "depois das", "depois da": "depois da", "a partir das": "a partir das", "a partir da": "a partir da", as: "às", pelas: "pelas" }[h[1]] ?? h[1];
     const minutos = h[3] ?? h[4];
     hora = `${prende} ${Number(h[2])}h${minutos && minutos !== "00" ? minutos : ""}`;
   }
+  if (limite) hora = hora ? `${hora}, ${limite.texto}` : limite.texto;
   if (periodo && hora) return `${periodo} (${hora})`;
   return periodo || hora;
 }
@@ -162,6 +176,10 @@ function mencoes(t: string): Mencao[] {
     const i = m.index ?? 0;
     const ano = m[3] ? Number(m[3].length === 2 ? `20${m[3]}` : m[3]) : undefined;
     juntar({ posicao: i, fim: i + m[0].length, tipo: "data", dia: Number(m[1]), mes: Number(m[2]), ano });
+  }
+  for (const m of t.matchAll(SO_O_DIA)) {
+    const i = m.index ?? 0;
+    juntar({ posicao: i, fim: i + m[0].length, tipo: "data", dia: Number(m[1]), soODia: true });
   }
   for (const m of t.matchAll(DIA_DA_SEMANA)) {
     const i = m.index ?? 0;
@@ -215,6 +233,16 @@ export function datasDitas(texto: string | null | undefined, agora: Date = new D
     if (m.tipo === "relativa") {
       dia = new Date(hoje);
       dia.setUTCDate(dia.getUTCDate() + (m.salto ?? 0));
+    } else if (m.tipo === "data" && m.soODia) {
+      if (!m.dia || m.dia < 1 || m.dia > 31) continue;
+      // Este mês, se o dia ainda não passou; senão o seguinte que o tenha (31 em novembro não existe).
+      let achado: Date | null = null;
+      for (let salto = 0; salto < 3 && !achado; salto++) {
+        const c: Date = new Date(Date.UTC(parede.getUTCFullYear(), parede.getUTCMonth() + salto, m.dia));
+        if (c.getUTCDate() === m.dia && c.getTime() >= hoje) achado = c;
+      }
+      if (!achado) continue;
+      dia = achado;
     } else if (m.tipo === "data") {
       if (!m.dia || !m.mes || m.mes < 1 || m.mes > 12 || m.dia < 1 || m.dia > 31) continue;
       const ano = m.ano ?? parede.getUTCFullYear();

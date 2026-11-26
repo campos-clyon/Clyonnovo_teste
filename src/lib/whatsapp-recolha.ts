@@ -99,6 +99,7 @@ import { emTerra } from "./preposicao-da-terra";
 import { estimativaDoEntulhoDito } from "./preco-do-entulho-na-conversa";
 import { respostaDoSiteOuDasLicoes } from "./licoes-da-vitoria";
 import { datasDitas, parteDoDiaNaFrase, primeiraPreferida, quandoComVariasDatas } from "./datas-ditas";
+import { semAHoraLimite } from "./hora-limite";
 import { linguaPedida, semPedidoDeLingua } from "./lingua-do-cliente";
 import { naJanelaDasMensagensAutomaticas } from "./janela-das-mensagens-automaticas";
 import { COMO_FUNCIONA, perguntaOQueAconteceAgora } from "./perguntas-frequentes-da-vitoria";
@@ -1076,7 +1077,8 @@ export function interpretarQuando(
     let minuto = 0;
     // «às 14h», «pelas 9», «11:30», «9h30». Os dígitos de uma data numérica
     // (14/09) não têm «:» nem «h» a seguir, por isso não se confundem.
-    const horaDita = t.match(/(?:\bas\s+|\bpelas\s+|\b)(\d{1,2})(?::(\d{2})|h(\d{2})?)\b/);
+    // d131: «até às 13h30» é a hora-limite (vai para as notas), e não a hora do pedido.
+    const horaDita = semAHoraLimite(t).match(/(?:\bas\s+|\bpelas\s+|\b)(\d{1,2})(?::(\d{2})|h(\d{2})?)\b/);
     const mesmoDia = (a: Date, b: Date) =>
       a.getUTCFullYear() === b.getUTCFullYear() &&
       a.getUTCMonth() === b.getUTCMonth() &&
@@ -1610,7 +1612,7 @@ function moradaNumaLinha(
 
 /** Ele disse a hora? «às 9», «15h», «10:30». Sem isso, a hora não se escreve. */
 function disseAHora(texto: string | null | undefined): boolean {
-  const t = semAcentos(texto ?? "");
+  const t = semAHoraLimite(semAcentos(texto ?? ""));
   return /(?<!\d)\d{1,2}\s*(h\b|h\d{2}|:\d{2})|\b(as|pelas|por volta das)\s+\d{1,2}\b/.test(t);
 }
 
@@ -1629,7 +1631,7 @@ export function quandoNoResumo(d: DadosDaRecolha): string {
     const comHora = disseAHora(d.quandoTexto);
     // «Depois das 17h» não é «às 17:00» — 17-11-2026 (d57): a parte do dia, colada à data.
     const parteDoDia = parteDoDiaNaFrase(semAcentos(d.quandoTexto ?? ""));
-    if (/^(ao fim do dia|de manha|a tarde|a noite).*\(|depois d|a partir d|antes d/.test(semAcentos(parteDoDia))) {
+    if (/^(ao fim do dia|de manha|a tarde|a noite).*\(|depois d|a partir d|antes d|ate as/.test(semAcentos(parteDoDia))) {
       const soODia = dataPorExtenso(d.dataDesejada, false);
       if (soODia) return `${soODia}, ${parteDoDia}`;
     }

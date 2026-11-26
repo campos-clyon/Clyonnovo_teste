@@ -361,6 +361,11 @@ export type FechoProposto = {
   parceiro: string;
   total: number;
   propostoEm: string;
+  /**
+   * O DIA QUE O PARCEIRO CONFIRMOU — d131 (26-11-2026). Com o SIM, o fecho
+   * grava-o no pedido e na negociação (ver `dia-combinado.ts`).
+   */
+  diaCombinado?: { em: string; dito: string } | null;
 };
 
 /**

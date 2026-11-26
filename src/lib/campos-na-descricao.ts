@@ -195,7 +195,7 @@ export function diasDitos(texto: string | null | undefined, agora: Date = new Da
     const ano = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : undefined;
     juntar(comAno(Number(m[1]), Number(m[2]), hoje, ano), m.index ?? 0, (m.index ?? 0) + m[0].length);
   }
-  const soODia = new RegExp(`(?:${SEMANA}\\s*,?\\s*)?\\bdia\\s+(\\d{1,2})\\b(?!\\s*(?:de\\s|/))`, "g");
+  const soODia = new RegExp(`(?:${SEMANA}\\s*,?\\s*)?\\bdia\\s+(\\d{1,2})\\b(?!\\s*(?:de\\s+(?:${MESES.join("|")})\\b|/))`, "g");
   for (const m of p.matchAll(soODia)) {
     const n = Number(m[1]);
     const [a, mes] = hoje.split("-").map(Number);

@@ -238,6 +238,10 @@ async function responderComARespostaDoParceiro(p: PerguntaRegistada, texto: stri
         correrOAgente: (nota) => oAgenteComANota(p.telefoneCliente, agora, nota, ensaio),
         enviarAoCliente: async (t) => (await import("../whatsapp-cloud")).enviarTextoWhatsApp(p.telefoneCliente, t),
         gravarPendente: (f) => accoes.gravarPendente(p.telefoneCliente, f, false, ensaio.id),
+        // d131: a condição confirmada é o dia que o cliente quer — fica já na «Data e hora desejada».
+        gravarODiaDesejado: async (d) => {
+          await db.updateSimulatorOrder(p.pedidoId, { dataAgendada: new Date(d.em) } as unknown as Parameters<typeof db.updateSimulatorOrder>[1]);
+        },
         passarAEquipa: async (motivo, mensagem) => {
           if (mensagem) await (await import("../whatsapp-cloud")).enviarTextoWhatsApp(p.telefoneCliente, mensagem).catch(() => false);
           await db.interromperNumeroWhatsApp(p.telefoneCliente, motivo.slice(0, 480)).catch(() => {});
