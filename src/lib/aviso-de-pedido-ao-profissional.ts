@@ -28,8 +28,8 @@ import { precoComBase, type BaseDoPreco } from "./base-do-preco";
  *
  * ── AS REGRAS QUE ESTE TEXTO CUMPRE, E PORQUÊ ─────────────────────────────
  *
- * 1. (ATÉ À d135, 26-11-2026 — o dono quer o aviso curto, sem apresentação;
- *    ver `avisoDePedidoAoProfissional`.) DIZ QUEM ESCREVE, NA PRIMEIRA LINHA. Foi o que o dono pediu e é o que a
+ * 1. DIZ QUEM ESCREVE, NA PRIMEIRA LINHA — desde a d135b (26-11-2026) só com
+ *    «CLYON · » à frente do título, sem a apresentação longa. Foi o que o dono pediu e é o que a
  *    situação exige: chega de um número que nunca lhe escreveu, sobre dinheiro.
  *    Sem nome à frente é indistinguível de burla — e é assim que se ensina um
  *    profissional a bloquear o número da CLYON.
@@ -225,11 +225,15 @@ export function ePedidoParaParar(texto: string | null | undefined): boolean {
  * primeira palavra do nome da empresa («Bom dia, Nova.» para a «Nova
  * Recolha»). O dono quer só o que faz decidir, e o resto está na ligação:
  *
- *   Pedido novo #668 · Recolha de móveis
+ *   CLYON · Pedido novo #668 · Recolha de móveis
  *   📍 Olivais, Lisboa · a 22 km de si
  *   💶 Ganho estimado: 67,50 € (já sem a taxa e sem IVA)
  *   Ver e propor: <ligação>
  *   (Para não receber estes avisos, responda parar.)
+ *
+ * «CLYON · » À FRENTE — d135b (26-11-2026, o dono: «Sim, as duas»). Repõe a
+ * identificação anti-burla de 20-09 (a regra 1 lá em cima) sem voltar a
+ * alongar: um número que nunca lhe escreveu, sobre dinheiro, diz logo de quem é.
  *
  * Sem saudação nem nome: um nome de empresa cortado à primeira palavra é pior
  * do que nenhum. O nome continua a ser recebido (as chamadas não mudam), mas
@@ -244,7 +248,7 @@ export function avisoDePedidoAoProfissional(
   _agora: Date,
 ): string {
   const servico = servicoEmPalavras(p.servico);
-  const titulo = `Pedido novo #${p.pedidoId} · ${servico.charAt(0).toUpperCase()}${servico.slice(1)}`;
+  const titulo = `CLYON · Pedido novo #${p.pedidoId} · ${servico.charAt(0).toUpperCase()}${servico.slice(1)}`;
   const onde = [localidadeParaOAviso(p.localidade), distanciaCurtaParaOAviso(p.distanciaKm)]
     .filter(Boolean)
     .join(" · ");

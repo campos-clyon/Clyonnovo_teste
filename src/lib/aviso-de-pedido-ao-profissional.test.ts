@@ -63,7 +63,7 @@ describe("o aviso curto — d135 (26-11-2026), o formato que o dono pediu", () =
     const esperado = euros(quantoOProfissionalRecebe(100, TAXAS_DE_ORIGEM));
     expect(m).toBe(
       [
-        "Pedido novo #668 · Recolha de móveis",
+        "CLYON · Pedido novo #668 · Recolha de móveis",
         "📍 Olivais, Lisboa · a 22 km de si",
         `💶 Ganho estimado: ${esperado} (já sem a taxa e sem IVA)`,
         `Ver e propor: ${PEDIDO.link}`,
@@ -75,7 +75,7 @@ describe("o aviso curto — d135 (26-11-2026), o formato que o dono pediu", () =
   it("sem saudação, sem nome — nunca «Bom dia, Nova.» para a «Nova Recolha»", () => {
     for (const nome of ["Nova Recolha", "Bruno Silva", null]) {
       const m = avisoDePedidoAoProfissional(nome, PEDIDO, TARDE);
-      expect(m.split("\n")[0]).toMatch(/^Pedido novo #310 · /);
+      expect(m.split("\n")[0]).toMatch(/^CLYON · Pedido novo #310 · /);
       expect(m).not.toMatch(/Bom dia|Boa tarde|Boa noite|Olá/);
       expect(m).not.toContain("Nova");
       expect(m).not.toContain("Bruno");
@@ -128,6 +128,15 @@ describe("o aviso curto — d135 (26-11-2026), o formato que o dono pediu", () =
     expect(nada.split("\n")).toHaveLength(4);
     expect(distanciaCurtaParaOAviso(22.6)).toBe("a 23 km de si");
     for (const km of [null, undefined, NaN, -1]) expect(distanciaCurtaParaOAviso(km as number | null)).toBeNull();
+  });
+});
+
+describe("d135b — «CLYON · » à frente, a identificação anti-burla de 20-09 sem alongar", () => {
+  it("a primeira linha diz que é a CLYON, e a mensagem continua com 5 linhas", () => {
+    const m = avisoDePedidoAoProfissional("Bruno", PEDIDO, TARDE);
+    expect(m.startsWith("CLYON · Pedido novo #310 · ")).toBe(true);
+    expect(m.split("\n")).toHaveLength(5);
+    expect(m).not.toContain("Aqui é a CLYON");
   });
 });
 

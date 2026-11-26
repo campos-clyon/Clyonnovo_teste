@@ -90,8 +90,8 @@ describe("os avisos aos profissionais dizem a unidade", () => {
       },
       agora,
     );
-    expect(oferta).toContain("No valor de 360,00 € por carga — ganhos estimados de 306,00 € por carga.");
-    expect(oferta).toContain("POR CARGA");
+    // d135b: a oferta curta diz o que lhe fica, com a unidade.
+    expect(oferta).toContain("💶 Recebe: 306,00 € por carga (valor fixo, já sem a taxa e sem IVA)");
     const novo = avisoDeValorNovoAoProfissional(
       "Rui",
       {

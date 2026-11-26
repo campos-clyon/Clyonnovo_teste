@@ -151,8 +151,12 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
   recebe?: number | null;
   base?: BaseDoPreco;
   trabalhoClyon?: boolean;
+  /** O dia marcado de um Trabalho CLYON, quando o tem (d135b). */
+  quando?: Date | null;
 }): Promise<void> {
   if (!dados.email) return;
+  const { diaEHoraCurtosEmLisboa } = await import("./hora-de-lisboa");
+  const quando = dados.quando instanceof Date && !Number.isNaN(dados.quando.getTime()) ? dados.quando : null;
   const aviso = avisoDePedidoNovo({
     pedidoId: dados.pedidoId ?? null,
     servico: dados.servico,
@@ -162,6 +166,7 @@ export async function avisarProfissionalDePedidoPorPush(dados: {
     recebe: dados.recebe ?? null,
     base: dados.base,
     trabalhoClyon: dados.trabalhoClyon,
+    dia: quando ? diaEHoraCurtosEmLisboa(quando) : null,
   });
   await sendPushToUser(dados.email, {
     title: aviso.title,

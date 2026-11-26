@@ -446,7 +446,8 @@ export async function distribuirPedido(
      * taxa escolhida (10/15/20 %) sai do lado do profissional. Sem elas, as da
      * oferta antiga — zero: o valor era o que ele recebia.
      */
-    oferta?: { valor: number; modo: ModoDaOferta; taxas?: Taxas };
+    /** `quando` (d135b): o dia marcado do pedido, para o aviso curto o dizer. */
+    oferta?: { valor: number; modo: ModoDaOferta; taxas?: Taxas; quando?: Date | null };
     /**
      * ESCOLHIDOS À MÃO — 29-09-2026.
      *
@@ -759,6 +760,7 @@ export async function distribuirPedido(
         recebe,
         base: pedido.baseDoPreco,
         trabalhoClyon: Boolean(oferta),
+        quando: oferta?.quando ?? null,
       });
 
       /*
@@ -806,6 +808,7 @@ export async function distribuirPedido(
                   modo: oferta.modo,
                   link: `${pedido.baseUrl ?? urlDeAccao()}/profissionais/pedidos/${token}`,
                   base: pedido.baseDoPreco,
+                  quando: oferta.quando ?? null,
                 },
                 new Date(),
               )

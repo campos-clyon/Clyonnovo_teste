@@ -211,20 +211,33 @@ describe("o que se diz ao profissional", () => {
     link: "https://clyon.pt/profissionais/pedidos/abc",
   };
 
-  it("a oferta distribuída: o valor e os ganhos, só aceitar ou recusar, e a CLYON escolhe", () => {
+  it("a oferta curta (d135b): CLYON e o n.º, onde, o que recebe, aceitar ou recusar e a saída", () => {
     const t = avisoDeOfertaAoProfissional("João Lima", { ...base, modo: "distribuida" }, AGORA);
-    expect(t).toContain("trabalho oferecido pela CLYON");
-    expect(t).toContain("No valor de 250,00 € — ganhos estimados de 200,00 €. Não há propostas — só aceitar ou recusar.");
-    expect(t).toContain("a CLYON escolhe e avisa");
-    expect(t).toContain("#410");
-    expect(t).toContain(base.link);
-    expect(t).toContain(COMO_SE_SAI);
-    expect(t).not.toContain("Lima");
+    expect(t).toBe(
+      [
+        "CLYON · Trabalho #410 · Recolha de entulho",
+        "📍 Sintra · a 12 km de si",
+        "💶 Recebe: 200,00 € (valor fixo, já sem a taxa e sem IVA)",
+        `Aceitar ou recusar: ${base.link}`,
+        `(${COMO_SE_SAI})`,
+      ].join("\n"),
+    );
+    expect(t).not.toContain("João");
+    expect(t).not.toContain("Dez sacos");
+    expect(t).not.toMatch(/Bom dia|Boa tarde|Boa noite|Olá/);
   });
 
-  it("a directa: se aceitar, é seu", () => {
-    const t = avisoDeOfertaAoProfissional("João", { ...base, modo: "directa" }, AGORA);
-    expect(t).toContain("Foi escolhido pela CLYON para este trabalho: se aceitar, é seu.");
+  it("com dia marcado, diz o dia; a directa tem o mesmo texto; sem nome nem saudação", () => {
+    const comDia = avisoDeOfertaAoProfissional(
+      "Nova Recolha",
+      { ...base, modo: "directa", quando: new Date("2026-11-28T09:00:00Z") },
+      AGORA,
+    );
+    expect(comDia).toContain("\n📅 Dia: 28/11, 09:00\n");
+    expect(comDia).not.toContain("Nova");
+    const semDia = avisoDeOfertaAoProfissional("Nova Recolha", { ...base, modo: "directa", quando: null }, AGORA);
+    expect(semDia).not.toContain("📅");
+    expect(semDia.split("\n")).toHaveLength(5);
   });
 
   it("a escolha: o trabalho é seu", () => {
@@ -252,7 +265,8 @@ describe("as peças estão ligadas", () => {
 
   it("oferecer não manda o link ao cliente, e distribui com a oferta", () => {
     expect(ROTA).not.toContain("enviarLinkDoPedido");
-    expect(ROTA).toContain("{ soPara, oferta: { valor: valor.valor, modo, taxas } }");
+    // d135b: leva também o dia do pedido, para o aviso curto o dizer.
+    expect(ROTA).toContain("{ soPara, oferta: { valor: valor.valor, modo, taxas, quando: pedido.dataAgendada ?? null } }");
     expect(ROTA).toContain('const modo: ModoDaOferta = soPara?.length === 1 ? "directa" : "distribuida";');
     // Desde 25-10-2026 leva também o motivo de uma taxa abaixo do escalão (d18).
     expect(ROTA).toContain("marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida, motivoDaTaxa.motivo)");

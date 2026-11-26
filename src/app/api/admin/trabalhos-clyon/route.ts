@@ -518,7 +518,7 @@ export async function POST(req: NextRequest) {
         lng: geo.lng,
         baseUrl,
       },
-      { soPara, oferta: { valor: valor.valor, modo, taxas } },
+      { soPara, oferta: { valor: valor.valor, modo, taxas, quando: pedido.dataAgendada ?? null } },
     );
 
     const quem = colab?.nome ?? "a CLYON";

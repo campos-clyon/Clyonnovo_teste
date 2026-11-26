@@ -54,11 +54,11 @@ export function kmNoAviso(km: number | null | undefined): string | null {
  * e o serviço, a localidade, a distância, o ganho estimado. O resto está na
  * ligação.
  *
- *   Negociação:     «Pedido novo #668 · Recolha de móveis»
+ *   Negociação:     «CLYON · Pedido novo #668 · Recolha de móveis»
  *                   «Olivais, Lisboa · a 22 km de si. Ganho estimado: 67,50 € (já sem a taxa e sem IVA).»
  *                   (sem valor de partida: «… Sem valor de partida: a proposta é sua.»)
- *   Trabalho CLYON: «Trabalho CLYON · Almada»
- *                   «Recolha de móveis · amanhã · 12 km. Valor fixo: recebe 120,00 €. Aceite ou recuse.»
+ *   Trabalho CLYON: «CLYON · Trabalho #410 · Recolha de móveis» (d135b, curto como o WhatsApp)
+ *                   «Almada · a 12 km de si. Recebe: 120,00 € (valor fixo, já sem a taxa e sem IVA). Dia: 28/11, 09:00. Aceite ou recuse.»
  */
 export function avisoDePedidoNovo(p: {
   /** O número do pedido (d135). Sem ele, o título fica sem número. */
@@ -72,6 +72,8 @@ export function avisoDePedidoNovo(p: {
   recebe?: number | null;
   base?: BaseDoPreco;
   trabalhoClyon?: boolean;
+  /** O dia já escrito («28/11, 09:00»), num Trabalho CLYON que o tem (d135b). */
+  dia?: string | null;
 }): AvisoNoTelemovel {
   const cidade = (p.cidade ?? "").trim();
   const recebe =
@@ -79,22 +81,28 @@ export function avisoDePedidoNovo(p: {
       ? precoComBase(euros(p.recebe), p.base ?? "total")
       : null;
   const servico = p.servico.trim() || "Trabalho novo";
-
-  if (p.trabalhoClyon) {
-    const partes = [servico, quandoNoAviso(p.urgencia), kmNoAviso(p.distanciaKm)].filter(Boolean);
-    return {
-      title: cidade ? `Trabalho CLYON · ${cidade}` : "Trabalho CLYON",
-      body: `${partes.join(" · ")}. ${recebe ? `Valor fixo: recebe ${recebe}. ` : ""}Aceite ou recuse.`,
-    };
-  }
   const numero = typeof p.pedidoId === "number" && p.pedidoId > 0 ? ` #${p.pedidoId}` : "";
   const km = kmNoAviso(p.distanciaKm);
   const onde = [cidade || null, km ? `a ${km} de si` : null].filter(Boolean).join(" · ");
+
+  if (p.trabalhoClyon) {
+    const dia = p.dia?.trim();
+    const partes = [
+      onde ? `${onde}.` : null,
+      recebe ? `Recebe: ${recebe} (valor fixo, já sem a taxa e sem IVA).` : null,
+      dia ? `Dia: ${dia}.` : null,
+      "Aceite ou recuse.",
+    ].filter(Boolean);
+    return {
+      title: `CLYON · Trabalho${numero} · ${servico}`,
+      body: partes.join(" "),
+    };
+  }
   const ganho = recebe
     ? `Ganho estimado: ${recebe} (já sem a taxa e sem IVA).`
     : "Sem valor de partida: a proposta é sua.";
   return {
-    title: `Pedido novo${numero} · ${servico}`,
+    title: `CLYON · Pedido novo${numero} · ${servico}`,
     body: onde ? `${onde}. ${ganho}` : ganho,
   };
 }

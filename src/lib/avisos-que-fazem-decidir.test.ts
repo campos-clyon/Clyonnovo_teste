@@ -54,7 +54,7 @@ describe("(a) o pedido novo diz o que decide — curto como o WhatsApp (d135)", 
         recebe: 67.5,
       }),
     ).toEqual({
-      title: "Pedido novo #668 · Recolha de móveis",
+      title: "CLYON · Pedido novo #668 · Recolha de móveis",
       body: "Olivais, Lisboa · a 22 km de si. Ganho estimado: 67,50 € (já sem a taxa e sem IVA).",
     });
   });
@@ -66,23 +66,35 @@ describe("(a) o pedido novo diz o que decide — curto como o WhatsApp (d135)", 
     expect(avisoDePedidoNovo({ servico: "Recolha de entulho", cidade: "Setúbal", recebe: 150, base: "carga" }).body).toBe(
       "Setúbal. Ganho estimado: 150,00 € por carga (já sem a taxa e sem IVA).",
     );
-    expect(avisoDePedidoNovo({ servico: "Esvaziamento", cidade: null }).title).toBe("Pedido novo · Esvaziamento");
+    expect(avisoDePedidoNovo({ servico: "Esvaziamento", cidade: null }).title).toBe("CLYON · Pedido novo · Esvaziamento");
   });
 
-  it("num Trabalho CLYON: o valor fixo, e aceitar ou recusar", () => {
+  it("num Trabalho CLYON (d135b): curto como o WhatsApp — o valor fixo, o dia se houver, e aceitar ou recusar", () => {
     expect(
       avisoDePedidoNovo({
+        pedidoId: 410,
         servico: "Recolha de móveis",
         cidade: "Lisboa",
         urgencia: "today",
         distanciaKm: 7,
         recebe: 120,
         trabalhoClyon: true,
+        dia: "28/11, 09:00",
       }),
     ).toEqual({
-      title: "Trabalho CLYON · Lisboa",
-      body: "Recolha de móveis · hoje · 7 km. Valor fixo: recebe 120,00 €. Aceite ou recuse.",
+      title: "CLYON · Trabalho #410 · Recolha de móveis",
+      body: "Lisboa · a 7 km de si. Recebe: 120,00 € (valor fixo, já sem a taxa e sem IVA). Dia: 28/11, 09:00. Aceite ou recuse.",
     });
+    expect(
+      avisoDePedidoNovo({ pedidoId: 410, servico: "Recolha de móveis", cidade: null, recebe: 120, base: "carga", trabalhoClyon: true }).body,
+    ).toBe("Recebe: 120,00 € por carga (valor fixo, já sem a taxa e sem IVA). Aceite ou recuse.");
+  });
+
+  it("o distribuir passa o dia da oferta ao push e ao WhatsApp, e a rota dos Trabalhos CLYON dá-o", () => {
+    const D = ler("src/lib/distribuir-pedido.ts");
+    expect(D).toContain("quando: oferta?.quando ?? null,");
+    expect(D).toContain("quando: oferta.quando ?? null,");
+    expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("quando: pedido.dataAgendada ?? null");
   });
 
   it("o distribuir passa os dados, depois do email, com o número do email", () => {

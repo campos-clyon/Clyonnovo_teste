@@ -624,9 +624,10 @@ describe("7. onde o profissional a lê", () => {
     expect(aviso.startsWith("Para levar: 2 roupeiros, 1 cama, 3 sofás, 1 fogão, 1 máquina de lavar roupa · Confirmar se também vai")).toBe(true);
     expect(aviso).not.toContain("Serviço:");
     expect(aviso.length).toBeLessThanOrEqual(321);
-    // d135 (26-11-2026): o aviso de pedido novo ficou curto, sem a descrição (está na
-    // ligação); quem a junta assim é o aviso do Trabalho CLYON.
-    expect(ler("src/lib/aviso-de-oferta-clyon.ts")).toContain("descricaoParaOAviso(o.descricao)");
+    // d135/d135b (26-11-2026): o aviso de pedido novo e a oferta de Trabalho CLYON ficaram
+    // curtos, sem a descrição — ela está na ligação, com as mudanças de linha (teste seguinte).
+    expect(ler("src/lib/aviso-de-pedido-ao-profissional.ts")).not.toContain("descricaoParaOAviso(p.descricao)");
+    expect(ler("src/lib/aviso-de-oferta-clyon.ts")).not.toContain("descricaoParaOAviso(o.descricao)");
   });
 
   it("o painel, a página do pedido, a app e o email guardam as mudanças de linha", () => {

@@ -2,13 +2,12 @@ import { comoTratar } from "./whatsapp-recolha";
 import { servicoEmPalavras } from "./servico-em-palavras";
 import {
   COMO_SE_SAI,
-  descricaoParaOAviso,
-  distanciaParaOAviso,
-  urgenciaParaOAviso,
+  distanciaCurtaParaOAviso,
+  localidadeParaOAviso,
 } from "./aviso-de-pedido-ao-profissional";
 import type { ModoDaOferta } from "./oferta-clyon";
 import { TRABALHO_SEM_EFEITO } from "./prazo-do-cliente-clyon";
-import { avisoDaBase, lerBase, precoComBase } from "./base-do-preco";
+import { lerBase, precoComBase } from "./base-do-preco";
 import { diaEHoraCurtosEmLisboa } from "./hora-de-lisboa";
 
 /*
@@ -40,46 +39,49 @@ export type OfertaParaAvisar = {
   link: string;
   /** Pelo trabalho todo, por carga ou por hora — 22-10-2026. Sem ela, pelo todo. */
   base?: string | null;
+  /** O dia marcado, quando o pedido o tem (d135b). */
+  quando?: Date | null;
 };
 
 const eurosPorExtenso = (v: number) => `${v.toFixed(2).replace(".", ",")} €`;
 
+/**
+ * A OFERTA CURTA — d135b (26-11-2026, o dono: «Sim, as duas»). No estilo do
+ * aviso de pedido novo (d135): só o que faz decidir, e o resto na ligação.
+ *
+ *   CLYON · Trabalho #410 · Recolha de entulho
+ *   📍 Sintra · a 7 km de si
+ *   💶 Recebe: 200,00 € (valor fixo, já sem a taxa e sem IVA)
+ *   📅 Dia: 28/11, 09:00            (só quando o pedido tem dia)
+ *   Aceitar ou recusar: <ligação>
+ *   (Para não receber estes avisos, responda parar.)
+ *
+ * Sem saudação pela primeira palavra do nome («Bom dia, Nova.» para a «Nova
+ * Recolha»), sem a descrição e sem as frases do modo — está tudo na ligação.
+ * O número é o que lhe fica (`ganhos`), pela base do preço.
+ */
 export function avisoDeOfertaAoProfissional(
-  nomeDoProfissional: string | null,
+  _nomeDoProfissional: string | null,
   o: OfertaParaAvisar,
-  agora: Date,
+  _agora: Date,
 ): string {
-  const abertura = `${comoTratar(nomeDoProfissional, agora)} Aqui é a CLYON — trabalho oferecido pela CLYON.`;
-
-  const onde = o.localidade ? ` em ${o.localidade}` : "";
-  const oQueE = [
-    `${servicoEmPalavras(o.servico)}${onde} (#${o.pedidoId}).`,
-    urgenciaParaOAviso(o.urgencia),
-    distanciaParaOAviso(o.distanciaKm),
+  const servico = servicoEmPalavras(o.servico);
+  const titulo = `CLYON · Trabalho #${o.pedidoId} · ${servico.charAt(0).toUpperCase()}${servico.slice(1)}`;
+  const onde = [localidadeParaOAviso(o.localidade), distanciaCurtaParaOAviso(o.distanciaKm)]
+    .filter(Boolean)
+    .join(" · ");
+  const recebe = precoComBase(eurosPorExtenso(o.ganhos), lerBase(o.base));
+  const dia = o.quando && !Number.isNaN(o.quando.getTime()) ? diaEHoraCurtosEmLisboa(o.quando) : null;
+  return [
+    titulo,
+    onde ? `📍 ${onde}` : null,
+    `💶 Recebe: ${recebe} (valor fixo, já sem a taxa e sem IVA)`,
+    dia ? `📅 Dia: ${dia}` : null,
+    `Aceitar ou recusar: ${o.link}`,
+    `(${COMO_SE_SAI})`,
   ]
     .filter(Boolean)
-    .join(" ");
-
-  /*
-   * «Trabalho oferecido pela CLYON no valor de 350, ganhos estimados de 280,
-   * deseja aceitar?» — 08-10-2026. O valor do trabalho e o que lhe fica, os
-   * dois, porque é com os dois que ele decide.
-   */
-  // Por carga, os dois números dizem-no (22-10-2026): «360,00 € por carga — ganhos de 306,00 € por carga».
-  const base = lerBase(o.base);
-  const valor =
-    `No valor de ${precoComBase(eurosPorExtenso(o.valor), base)} — ganhos estimados de ${precoComBase(eurosPorExtenso(o.ganhos), base)}. ` +
-    // d63: ao profissional, o aviso dele (a nota do cliente diz «confirmado consigo no local»).
-    (base === "total" ? "" : `${avisoDaBase(base) ?? ""} `) +
-    `Não há propostas — só aceitar ou recusar.\n` +
-    (o.modo === "directa"
-      ? "Foi escolhido pela CLYON para este trabalho: se aceitar, é seu."
-      : "Foi oferecido a mais profissionais. Entre os que aceitarem, a CLYON escolhe e avisa.");
-
-  const descricao = descricaoParaOAviso(o.descricao);
-  const fecho = `Ver e responder: ${o.link}\n${COMO_SE_SAI}`;
-
-  return [abertura, oQueE, valor, descricao, fecho].filter(Boolean).join("\n\n");
+    .join("\n");
 }
 
 /** O WhatsApp a quem a CLYON escolheu. Sai a todos, como o aviso da data: é o trabalho dele. */
