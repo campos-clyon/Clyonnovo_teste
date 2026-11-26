@@ -7,6 +7,8 @@ import { faltaOMotivoDaTaxa, lerValorFixo, taxasDoTrabalhoClyon } from "@/lib/of
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import type { BaseDoPreco } from "@/lib/base-do-preco";
+import JanelaDoSimDoCliente from "@/components/admin/JanelaDoSimDoCliente";
+import type { SimDoCliente } from "@/lib/sim-do-cliente";
 
 /*
  * O FORMULÁRIO DA OFERTA A VALOR FIXO, num ficheiro só dele — 06-10-2026.
@@ -81,6 +83,8 @@ export function FormularioDaOferta({
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
   const [feito, setFeito] = useState("");
+  // d130: atribuir um trabalho novo pede o sim do cliente — a janela das duas escolhas.
+  const [perguntaDoSim, setPerguntaDoSim] = useState(false);
 
   const elegiveis = alcance?.elegiveis ?? [];
 
@@ -155,16 +159,13 @@ export function FormularioDaOferta({
     todos?.find((p) => p.id === atribuirA)?.nome ??
     (atribuirInicial && atribuirInicial.providerId === atribuirA ? atribuirInicial.profissional : null);
 
-  async function oferecer() {
+  async function oferecer(sim?: SimDoCliente) {
     if (!token || !lido.ok || taxa == null) return;
-    if (
-      modo === "atribuir" &&
-      !window.confirm(
-        `Atribuir o #${pedidoId} directamente a ${nomeDoAtribuido ?? "este profissional"}?\n\n` +
-          "Fica logo com ele, como acordado por fora — sem ter de aceitar, e sem ir a mais ninguém. Ele é avisado de que o trabalho é dele, com o dia.",
-      )
-    )
+    // d130: o valor ainda não foi ao cliente — reservar até ao sim, ou o sim dado por telefone.
+    if (modo === "atribuir" && !sim) {
+      setPerguntaDoSim(true);
       return;
+    }
     setAEnviar(true);
     setErro("");
     try {
@@ -179,6 +180,8 @@ export function FormularioDaOferta({
           motivoTaxa,
           ...(modo === "escolher" ? { profissionais: escolhidos } : {}),
           ...(modo === "atribuir" && atribuirA != null ? { atribuirA } : {}),
+          // d130: reservar até ao sim, ou o sim dado por telefone.
+          ...(modo === "atribuir" && sim ? { simDoCliente: sim } : {}),
           ...(deNegociacao ? { deNegociacao: true } : {}),
         }),
       });
@@ -187,7 +190,9 @@ export function FormularioDaOferta({
         setErro(dados.error ?? "Não foi possível oferecer.");
         return;
       }
-      const msg = dados.atribuido
+      const msg = dados.reservado
+        ? `${String(dados.feito ?? `#${pedidoId} reservado.`)} Envie o valor ao cliente no cartão («Enviar proposta ao cliente»): fica atribuído quando ele aceitar.`
+        : dados.atribuido
         ? String(dados.feito ?? `#${pedidoId} atribuído a ${dados.profissional ?? "um profissional"}.`)
         : dados.receberam > 0
           ? `#${pedidoId} oferecido a ${dados.receberam} ${dados.receberam === 1 ? "profissional" : "profissionais"}: ${euros(lido.valor)}, ganhos estimados de ${euros(ganhos)}.` +
@@ -213,6 +218,19 @@ export function FormularioDaOferta({
 
   return (
     <div className="mt-4 space-y-4 rounded-xl border border-cyan-900/60 bg-slate-950/60 p-4">
+      {perguntaDoSim && (
+        <JanelaDoSimDoCliente
+          pedidoId={pedidoId}
+          profissional={nomeDoAtribuido ?? "o parceiro"}
+          valor={lido.ok ? `${euros(lido.valor)} + IVA` : null}
+          podeEnviar={false}
+          onEscolher={(sim) => {
+            setPerguntaDoSim(false);
+            void oferecer(sim);
+          }}
+          onFechar={() => setPerguntaDoSim(false)}
+        />
+      )}
       <ValorETaxaDoTrabalho
         valor={valor}
         taxa={taxa}

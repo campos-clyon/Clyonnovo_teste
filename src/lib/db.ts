@@ -2033,6 +2033,13 @@ export async function cancelarPedido(
     },
   });
   await fecharPagamentosAbertosDoPedido(pedidoId, "cancelado");
+  // d130: o parceiro reservado à espera do sim do cliente é avisado de que não avança.
+  try {
+    const { largarAReserva } = await import("./sim-do-cliente-na-base");
+    await largarAReserva(pedidoId, "cancelado", { quem: null, por: null });
+  } catch (e) {
+    console.error("[cancelarPedido] a reserva do valor fixo:", e);
+  }
   return { encerradas };
 }
 

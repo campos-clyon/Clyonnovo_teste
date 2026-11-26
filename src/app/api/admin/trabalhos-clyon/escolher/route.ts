@@ -10,6 +10,8 @@ import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { avisarProfissionalEscolhido } from "@/lib/avisar-escolhido-da-oferta";
 import { guiaImpedeANegociacao } from "@/lib/guia-na-base";
 import { confirmouSemGuia, notaSemGuia, RECUSA_SEM_A_CONFIRMACAO_DA_GUIA } from "@/lib/guia-no-backoffice";
+import { faltaOSimDoCliente, HISTORICO as HISTORICO_DO_SIM, lerSimDoCliente, RECUSA_SEM_O_SIM_DO_CLIENTE } from "@/lib/sim-do-cliente";
+import { getSimulatorOrderById } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
 
-  let corpo: { negociacaoId?: unknown; semGuiaConfirmado?: unknown };
+  let corpo: { negociacaoId?: unknown; semGuiaConfirmado?: unknown; simDoCliente?: unknown };
   try {
     corpo = (await req.json()) as typeof corpo;
   } catch {
@@ -47,6 +49,40 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    /*
+     * O SIM DO CLIENTE ANTES DE ESCOLHER — d130 (o #652). Sem ele: «reservar»
+     * (a escolha faz-se quando o cliente aceitar) ou «telefone» (o sim fica
+     * registado com quem carregou). Sem escolha, 409 com o aviso.
+     */
+    const quemEscolhe = colab?.nome ?? "a CLYON";
+    const porQuem = colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null;
+    const simDoCliente = lerSimDoCliente(corpo.simDoCliente);
+    const base = await import("@/lib/sim-do-cliente-na-base");
+    const daNegociacao = await base.pedidoDaNegociacao(negociacaoId);
+    const doPedido = daNegociacao ? ((await getSimulatorOrderById(daNegociacao.pedidoId)) as unknown as Record<string, unknown> | undefined) : undefined;
+    if (daNegociacao && doPedido && faltaOSimDoCliente(doPedido)) {
+      if (!simDoCliente) return NextResponse.json(RECUSA_SEM_O_SIM_DO_CLIENTE, { status: 409 });
+      if (simDoCliente === "reservar") {
+        const semGuia = await guiaImpedeANegociacao(negociacaoId);
+        if (semGuia && !confirmouSemGuia(corpo)) return NextResponse.json(RECUSA_SEM_A_CONFIRMACAO_DA_GUIA, { status: 409 });
+        await base.gravarReserva({
+          pedidoId: daNegociacao.pedidoId,
+          tipo: "reserva",
+          providerId: daNegociacao.providerId,
+          negociacaoId,
+          por: porQuem,
+          semGuiaConfirmado: semGuia,
+        });
+        const r = await base.reservaDoPedido(daNegociacao.pedidoId);
+        const nome = r?.profissional || `o parceiro #${daNegociacao.providerId}`;
+        await appendOrderHistory(daNegociacao.pedidoId, { type: "note", by: porQuem, message: HISTORICO_DO_SIM.reservado(quemEscolhe, nome) });
+        return NextResponse.json({ ok: true, reservado: true, profissional: nome, feito: `#${daNegociacao.pedidoId}: ${nome} reservado — à espera do sim do cliente.` });
+      }
+      if (!(await base.registarOSimPorTelefone(daNegociacao.pedidoId, { quem: quemEscolhe, por: porQuem }))) {
+        return NextResponse.json({ error: "O sim do cliente não se gravou (o valor mudou entretanto?). Tente outra vez." }, { status: 409 });
+      }
+    }
+
     /*
      * A GUIA ANTES DE ESCOLHER — 04-11-2026 (d10.1). Num trabalho de resíduos,
      * quem tem a guia por verificar pode aceitar a oferta, mas não ser escolhido.
@@ -91,6 +127,8 @@ export async function POST(req: NextRequest) {
       visivelProfissional: true,
     });
 
+    // d130: uma reserva de antes deixa de valer — o trabalho já tem quem o faça.
+    await base.tirarReservaSemAvisar(r.pedidoId).catch(() => null);
     return NextResponse.json({ ok: true, encerradas: r.encerradas, avisado: aviso.saiu });
   } catch (e) {
     console.error("[admin/trabalhos-clyon/escolher]", e);

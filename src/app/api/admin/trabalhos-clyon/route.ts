@@ -61,6 +61,7 @@ import { avisarOClienteDoPedido } from "@/lib/avisos-ao-cliente";
 import { choquesDoProfissional } from "@/lib/choques-de-agenda";
 import { oClienteRespondeuNaMesa } from "@/lib/prazo-do-cliente-clyon";
 import { atribuirDirectamente } from "@/lib/atribuir-directamente";
+import { faltaOSimDoCliente, HISTORICO as HISTORICO_DO_SIM, lerSimDoCliente, RECUSA_SEM_O_SIM_DO_CLIENTE } from "@/lib/sim-do-cliente";
 import { avisarProfissional } from "@/lib/avisos-do-backoffice";
 import { motivoAoProfissional } from "@/lib/fim-do-pedido";
 
@@ -190,6 +191,9 @@ export async function GET(req: NextRequest) {
     // d128: «fora da zona» — a morada (ou a origem da mudança) acima do limite das Configs.
     const { foraDaZonaDosPedidos } = await import("@/lib/fora-da-zona-na-base");
     const foraDaZona = await foraDaZonaDosPedidos(ofertas.map((o) => Number(o.pedidoId)));
+    // d130: o parceiro reservado à espera do sim do cliente, ou o «falta o sim» de um já atribuído.
+    const { reservasDosPedidos } = await import("@/lib/sim-do-cliente-na-base");
+    const reservas = await reservasDosPedidos(ofertas.map((o) => Number(o.pedidoId)));
     return NextResponse.json({
       outros,
       trabalhos: ofertas.map((o) => {
@@ -235,6 +239,7 @@ export async function GET(req: NextRequest) {
         return {
           pedidoId: o.pedidoId,
           foraDaZona: foraDaZona.get(Number(o.pedidoId)) ?? null,
+          reserva: reservas.get(Number(o.pedidoId)) ?? null,
           servico: o.servico,
           localidade: o.localidade,
           morada: o.morada,
@@ -423,9 +428,34 @@ export async function POST(req: NextRequest) {
     if ((await guiaImpedeOProfissional(pedidoId, atribuirA)) && !confirmouSemGuia(corpo)) {
       return NextResponse.json(RECUSA_SEM_A_CONFIRMACAO_DA_GUIA, { status: 409 });
     }
+    /*
+     * d130: um trabalho novo ainda não foi ao cliente — atribuí-lo pede a
+     * escolha: reservar (fica à espera do sim) ou o sim dado por telefone.
+     */
+    const simDoCliente = lerSimDoCliente((corpo as { simDoCliente?: unknown }).simDoCliente);
+    if (!simDoCliente) return NextResponse.json(RECUSA_SEM_O_SIM_DO_CLIENTE, { status: 409 });
     try {
       await marcarPedidoComoOfertaClyon(pedidoId, valor.valor, valor.valor, taxa.taxa, baseEscolhida, motivoDaTaxa.motivo);
       const quem = colab?.nome ?? "a CLYON";
+      const porQuem = colab ? { id: colab.id, nome: colab.nome, role: colab.papel } : null;
+      if (simDoCliente === "reservar") {
+        const reservou = await reservarOParceiro({
+          pedidoId,
+          providerId: atribuirA,
+          negociacaoId: null,
+          quem,
+          por: porQuem,
+          semGuiaConfirmado: true,
+        });
+        return NextResponse.json(
+          reservou.estado === 200
+            ? { ...reservou.corpo, modo: "directa", atribuido: false, reservado: true, valor: valor.valor, receberam: 0, chegouAAlguem: false }
+            : reservou.corpo,
+          { status: reservou.estado },
+        );
+      }
+      const { registarOSimPorTelefone } = await import("@/lib/sim-do-cliente-na-base");
+      await registarOSimPorTelefone(pedidoId, { quem, por: porQuem });
       const r = await atribuirDirectamente({
         pedidoId,
         providerId: atribuirA,
@@ -845,7 +875,37 @@ export async function PATCH(req: NextRequest) {
         by: por,
         message: `O cliente aceitou o preço da CLYON (dito à equipa, por telefone ou noutro canal) — registado por ${quem}.`,
       });
+      // d130: com o parceiro reservado, a atribuição faz-se agora; num «falta o sim», segue como estava.
+      const { depoisDoSimDoCliente } = await import("@/lib/sim-do-cliente-na-base");
+      const depois = await depoisDoSimDoCliente(pedidoId, { quem, por, baseUrl: urlDeAccaoDoPedido(req.headers) });
+      if (depois.frase) return NextResponse.json({ ok: true, feito: `#${pedidoId}: ${depois.frase}` });
       return NextResponse.json({ ok: true, feito: `#${pedidoId}: o cliente aceitou o preço — escolha quem o faz.` });
+    }
+
+    /*
+     * «PEDIR O SIM DO CLIENTE» — d130 (o #652). Atribuído sem o sim: fica
+     * «atribuído — falta o sim do cliente»; o valor vai pelo caminho de sempre
+     * (o ecrã abre a proposta e marca-a enviada). Com o sim, a marca sai.
+     */
+    if (accao === "pedir_sim") {
+      const p = (await getSimulatorOrderById(pedidoId)) as (Record<string, unknown> & { precoAceiteEm?: unknown }) | undefined;
+      if (!p || p.valorFixoClyon == null) return NextResponse.json({ error: "Não é um Trabalho CLYON." }, { status: 404 });
+      if (p.precoAceiteEm) return NextResponse.json({ error: "O cliente já aceitou este valor." }, { status: 409 });
+      const dele = await quemTemOTrabalhoClyon(pedidoId);
+      const comEle = dele.vivos.find((v) => v.eraDele);
+      if (!comEle) return NextResponse.json({ error: "Ainda ninguém tem este trabalho — use «Atribuir directamente a…»." }, { status: 409 });
+      const { gravarReserva } = await import("@/lib/sim-do-cliente-na-base");
+      await gravarReserva({ pedidoId, tipo: "falta_o_sim", providerId: comEle.providerId, negociacaoId: comEle.negociacaoId, por });
+      await appendOrderHistory(pedidoId, { type: "note", by: por, message: HISTORICO_DO_SIM.simPedido(quem, comEle.profissional) });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: atribuído — falta o sim do cliente. Envie-lhe o valor.` });
+    }
+
+    // d130: o cliente não aceitou o valor — a reserva cai, e o parceiro reservado é avisado.
+    if (accao === "reserva_recusada") {
+      const { largarAReserva } = await import("@/lib/sim-do-cliente-na-base");
+      const r = await largarAReserva(pedidoId, "recusou", { quem, por });
+      if (!r.caiu) return NextResponse.json({ error: "Não há reserva neste trabalho." }, { status: 409 });
+      return NextResponse.json({ ok: true, feito: `#${pedidoId}: ${r.frase ?? "a reserva caiu."}`, avisado: r.avisado });
     }
 
     if (accao === "proposta_aberta") {
@@ -959,6 +1019,26 @@ export async function PATCH(req: NextRequest) {
         const fora = await recusaSeForaDaZona(pedidoId);
         if (fora) return NextResponse.json({ error: fora, foraDaZona: true }, { status: 409 });
       }
+      /*
+       * O SIM DO CLIENTE ANTES DE ATRIBUIR — d130 (o #652). Sem ele, não se
+       * atribui sem escolher: «reservar» (o valor vai ao cliente e a
+       * atribuição faz-se quando ele aceitar) ou «telefone» (o sim fica
+       * registado com quem carregou, e atribui). Ver `sim-do-cliente.ts`.
+       */
+      const simDoCliente = lerSimDoCliente((corpo as { simDoCliente?: unknown }).simDoCliente);
+      const semGuiaConfirmado = (corpo as { semGuiaConfirmado?: unknown }).semGuiaConfirmado === true;
+      const doPedido = (await getSimulatorOrderById(pedidoId)) as unknown as Record<string, unknown> | undefined;
+      if (doPedido && faltaOSimDoCliente(doPedido)) {
+        if (!simDoCliente) return NextResponse.json(RECUSA_SEM_O_SIM_DO_CLIENTE, { status: 409 });
+        if (simDoCliente === "reservar") {
+          const reservou = await reservarOParceiro({ pedidoId, providerId, negociacaoId: null, quem, por, semGuiaConfirmado });
+          return NextResponse.json(reservou.corpo, { status: reservou.estado });
+        }
+        const { registarOSimPorTelefone } = await import("@/lib/sim-do-cliente-na-base");
+        if (!(await registarOSimPorTelefone(pedidoId, { quem, por }))) {
+          return NextResponse.json({ error: "O sim do cliente não se gravou (o valor mudou entretanto?). Tente outra vez." }, { status: 409 });
+        }
+      }
       const r = await atribuirDirectamente({
         pedidoId,
         providerId,
@@ -968,6 +1048,9 @@ export async function PATCH(req: NextRequest) {
         semGuiaConfirmado: (corpo as { semGuiaConfirmado?: unknown }).semGuiaConfirmado === true,
       });
       if (!r.ok) return NextResponse.json({ error: r.erro, guiaPorVerificar: r.guiaPorVerificar, pedeConfirmacaoDaGuia: r.pedeConfirmacaoDaGuia }, { status: r.estado });
+      // Uma reserva de antes (de outro parceiro) deixa de valer: o trabalho já tem quem o faça.
+      const { tirarReservaSemAvisar } = await import("@/lib/sim-do-cliente-na-base");
+      await tirarReservaSemAvisar(pedidoId).catch(() => null);
       return NextResponse.json({ ok: true, feito: r.feito, avisado: r.avisado });
     }
 
@@ -1259,4 +1342,56 @@ export async function PATCH(req: NextRequest) {
     console.error("[admin/trabalhos-clyon PATCH]", e);
     return NextResponse.json({ error: "Não foi possível guardar." }, { status: 500 });
   }
+}
+
+/**
+ * RESERVAR O PARCEIRO ATÉ AO SIM DO CLIENTE — d130 (26-11-2026). O trabalho
+ * ainda não fica com ele: a linha da reserva guarda quem, e o «Aceito este
+ * preço» (app, Vitória, ou dito à equipa) faz a atribuição sozinha
+ * (`depoisDoSimDoCliente`). A guia vê-se agora, como ao atribuir.
+ */
+async function reservarOParceiro(a: {
+  pedidoId: number;
+  providerId: number;
+  negociacaoId: number | null;
+  quem: string;
+  por: { id: number; nome: string; role: string } | null;
+  semGuiaConfirmado: boolean;
+}): Promise<{ estado: number; corpo: Record<string, unknown> }> {
+  const { guiaImpedeOProfissional } = await import("@/lib/guia-na-base");
+  const { RECUSA_SEM_A_CONFIRMACAO_DA_GUIA } = await import("@/lib/guia-no-backoffice");
+  if ((await guiaImpedeOProfissional(a.pedidoId, a.providerId)) && !a.semGuiaConfirmado) {
+    return { estado: 409, corpo: { ...RECUSA_SEM_A_CONFIRMACAO_DA_GUIA, guiaPorVerificar: true, pedeConfirmacaoDaGuia: true } };
+  }
+  const antes = await quemTemOTrabalhoClyon(a.pedidoId);
+  if (!antes.eClyon) return { estado: 404, corpo: { error: "Esse pedido não é um Trabalho CLYON." } };
+  if (antes.jaFeito) return { estado: 409, corpo: { error: "Este trabalho já foi feito — já não se atribui." } };
+  const comAlguem = antes.vivos.find((v) => v.eraDele);
+  if (comAlguem) {
+    return { estado: 409, corpo: { error: `Este trabalho já está com ${comAlguem.profissional} — para o mudar, use a troca no cartão.` } };
+  }
+  const pedido = (await getSimulatorOrderById(a.pedidoId)) as { status?: string | null } | undefined;
+  if (pedidoArrumado(pedido?.status ?? null)) {
+    return { estado: 409, corpo: { error: "Este trabalho está cancelado ou arquivado — restaure-o primeiro." } };
+  }
+  const { gravarReserva, reservaDoPedido } = await import("@/lib/sim-do-cliente-na-base");
+  const antiga = await reservaDoPedido(a.pedidoId);
+  await gravarReserva({
+    pedidoId: a.pedidoId,
+    tipo: "reserva",
+    providerId: a.providerId,
+    negociacaoId: a.negociacaoId,
+    por: a.por,
+    semGuiaConfirmado: a.semGuiaConfirmado,
+  });
+  const agora = await reservaDoPedido(a.pedidoId);
+  const nome = agora?.profissional || `o parceiro #${a.providerId}`;
+  if (antiga && antiga.providerId !== a.providerId) {
+    await appendOrderHistory(a.pedidoId, { type: "note", by: a.por, message: HISTORICO_DO_SIM.substituida(antiga.profissional, a.quem) });
+  }
+  await appendOrderHistory(a.pedidoId, { type: "note", by: a.por, message: HISTORICO_DO_SIM.reservado(a.quem, nome) });
+  return {
+    estado: 200,
+    corpo: { ok: true, reservado: true, profissional: nome, feito: `#${a.pedidoId}: ${nome} reservado — à espera do sim do cliente.` },
+  };
 }

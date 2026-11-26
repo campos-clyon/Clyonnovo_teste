@@ -17,11 +17,14 @@ export default function AtribuirDirectamente({
   pedidoId,
   ocupado,
   onAtribuir,
+  semOSim = false,
 }: {
   token: string | null;
   pedidoId: number;
   ocupado: boolean;
   onAtribuir: (providerId: number, nome: string) => void;
+  /** d130: o cliente ainda não aceitou o valor — a janela do cartão pergunta, em vez desta confirmação. */
+  semOSim?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
   const [todos, setTodos] = useState<Profissional[] | null>(null);
@@ -104,6 +107,7 @@ export default function AtribuirDirectamente({
         onClick={() => {
           if (escolhido == null) return;
           if (
+            !semOSim &&
             !window.confirm(
               `Atribuir o #${pedidoId} directamente a ${nome ?? "este profissional"}?\n\n` +
                 "Fica logo com ele, como acordado por fora — sem ter de aceitar, e sem ir a mais ninguém. Quem tinha a oferta em aberto fica de fora. Ele é avisado de que o trabalho é dele, com o dia.",

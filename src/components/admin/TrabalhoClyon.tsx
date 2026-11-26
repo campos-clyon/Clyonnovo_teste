@@ -46,6 +46,8 @@ import {
 import { quantoOProfissionalRecebe } from "@/lib/taxas-plataforma";
 import { linkDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
+import JanelaDoSimDoCliente from "@/components/admin/JanelaDoSimDoCliente";
+import { MARCA_FALTA_O_SIM, MARCA_RESERVADO, type ReservaDoValorFixo, type SimDoCliente } from "@/lib/sim-do-cliente";
 import { linkDaAdjudicacao } from "@/lib/mensagem-de-adjudicacao";
 import EnviarAdjudicacao from "@/components/admin/EnviarAdjudicacao";
 import VariosDias from "@/components/admin/VariosDias";
@@ -62,7 +64,7 @@ import { trabalhoConcluido, type MarcosDoTrabalho } from "@/lib/pedido-concluido
 import { pedidoArrumado } from "@/lib/pedido-arrumado";
 import ValorETaxaDoTrabalho from "@/components/admin/ValorETaxaDoTrabalho";
 import BotaoDoComprovativo, { BotaoEnviarComprovativo } from "@/components/admin/BotaoDoComprovativo";
-import { lerBase, type BaseDoPreco } from "@/lib/base-do-preco";
+import { lerBase, unidadeDaBase, type BaseDoPreco } from "@/lib/base-do-preco";
 import { minimoDasHorasEmPalavras, sufixoDaBase } from "@/lib/valor-por-base";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import type { CorDoProfissional } from "@/lib/cores-dos-profissionais";
@@ -148,6 +150,8 @@ export type TrabalhoClyon = {
   pedidoId: number;
   /** d128: a morada (ou a origem da mudança) acima do limite da zona — a borda âmbar e o ⚠. */
   foraDaZona?: ForaDaZona | null;
+  /** d130: o parceiro reservado à espera do sim do cliente, ou o «falta o sim» de um já atribuído. */
+  reserva?: ReservaDoValorFixo | null;
   servico: string | null;
   localidade: string | null;
   morada: string | null;
@@ -349,6 +353,8 @@ function ondeEstaABola(t: TrabalhoClyon): string {
         (t.precoAceiteEm ? ` · o cliente aceitou o preço ${quando(t.precoAceiteEm)}` : "")
       );
     case "escolher":
+      // d130: com o parceiro reservado, a vez é do cliente.
+      if (t.reserva?.tipo === "reserva") return `${t.reserva.profissional ?? "Parceiro"} ${MARCA_RESERVADO}`;
       // O cliente aceitou o preço na app (28-10-2026, S7): a vez volta a ser de cá.
       if (t.precoAceiteEm) return `O cliente aceitou o preço ${quando(t.precoAceiteEm)} — escolha quem o faz`;
       // Já com a proposta no cliente, a vez é dele (21-10-2026).
@@ -478,8 +484,8 @@ export function TrabalhoClyonComAccoes({
     concluidoVistoEm: t.concluidoVistoEm ?? (vistoAqui ? new Date().toISOString() : null),
   };
 
-  async function agir(url: string, corpo: Record<string, unknown>, negociacaoId: number, feito: string) {
-    if (!token) return;
+  async function agir(url: string, corpo: Record<string, unknown>, negociacaoId: number, feito: string): Promise<boolean> {
+    if (!token) return false;
     setOcupado(negociacaoId);
     onErro("");
     onAviso("");
@@ -493,18 +499,88 @@ export function TrabalhoClyonComAccoes({
       const dados = await res.json().catch(() => ({}));
       if (!res.ok) {
         onErro(dados.error ?? "Não foi possível.");
-        return;
+        return false;
       }
-      onAviso(feito);
+      onAviso(typeof dados.feito === "string" && dados.reservado ? dados.feito : feito);
       onMudou();
+      return true;
     } catch {
       onErro("Erro de rede.");
+      return false;
     } finally {
       setOcupado(null);
     }
   }
 
+  /*
+   * O SIM DO CLIENTE ANTES DE ATRIBUIR — d130 (o #652). Sem ele, escolher ou
+   * atribuir abre a janela: reservar e enviar o valor, ou atribuir já com o
+   * sim dado por telefone. Ver `sim-do-cliente.ts`.
+   */
+  const [semOSim, setSemOSim] = useState<
+    { tipo: "atribuir"; providerId: number; nome: string } | { tipo: "escolher"; n: NegociacaoDoTrabalho } | null
+  >(null);
+  const propostaDoValor = () =>
+    linkDaPropostaClyon(
+      {
+        ...t,
+        quando: t.resumo.atribuida?.dataCombinada ?? t.dataAgendada,
+        profissional: t.resumo.atribuida?.profissional ?? null,
+        novoModelo: t.noNovoModelo === true,
+        comValidade: true,
+      },
+      new Date(),
+    );
+  /** O valor ao cliente pelo caminho de sempre: a proposta no WhatsApp, marcada como enviada. */
+  async function enviarOValorAoCliente(): Promise<boolean> {
+    const p = propostaDoValor();
+    if (!p || !token) return false;
+    void abrirWhatsAppNaLingua(t.telefone, p.texto, token);
+    await fetch("/api/admin/trabalhos-clyon", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ pedidoId: t.pedidoId, accao: "proposta_aberta" }),
+    }).catch(() => null);
+    onMudou();
+    return true;
+  }
+  async function responderAoSemOSim(sim: SimDoCliente) {
+    const alvo = semOSim;
+    setSemOSim(null);
+    if (!alvo) return;
+    const nome = alvo.tipo === "atribuir" ? alvo.nome : alvo.n.profissional;
+    const ok =
+      alvo.tipo === "atribuir"
+        ? await mexer({ accao: "atribuir", providerId: alvo.providerId, simDoCliente: sim }, (d) => String(d.feito ?? `#${t.pedidoId} atribuído.`))
+        : await agir(
+            "/api/admin/trabalhos-clyon/escolher",
+            { negociacaoId: alvo.n.negociacaoId, simDoCliente: sim },
+            alvo.n.negociacaoId,
+            `#${t.pedidoId} atribuído a ${alvo.n.profissional}. Foi avisado por email e WhatsApp.`,
+          );
+    if (!ok || sim !== "reservar") return;
+    if (await enviarOValorAoCliente()) {
+      onAviso(`#${t.pedidoId}: ${nome} reservado — o valor foi ao cliente; fica atribuído quando ele aceitar.`);
+    } else {
+      onAviso(`#${t.pedidoId}: ${nome} reservado. Envie o valor ao cliente — fica atribuído quando ele aceitar.`);
+    }
+  }
+  // «Pedir o sim do cliente» (2): já atribuído sem ele.
+  async function pedirOSim() {
+    if (!(await mexer({ accao: "pedir_sim" }, (d) => String(d.feito ?? "Marcado.")))) return;
+    if (await enviarOValorAoCliente()) onAviso(`#${t.pedidoId}: o valor foi ao cliente — atribuído, falta o sim dele.`);
+  }
+  const reservaRecusada = () => {
+    const quem = t.reserva?.profissional ?? "o parceiro reservado";
+    if (!window.confirm(`O cliente do #${t.pedidoId} não aceitou o valor?\n\nA reserva de ${quem} cai, e ele é avisado por WhatsApp.`)) return;
+    void mexer({ accao: "reserva_recusada" }, (d) => String(d.feito ?? "A reserva caiu."));
+  };
+
   function escolher(n: NegociacaoDoTrabalho) {
+    if (!t.precoAceiteEm) {
+      setSemOSim({ tipo: "escolher", n });
+      return;
+    }
     const outros = t.resumo.interessados.length - 1;
     if (
       !window.confirm(
@@ -695,8 +771,14 @@ export function TrabalhoClyonComAccoes({
   };
 
   // «Atribuir directamente a…» (11-11-2026, o #591): a confirmação é no cartão.
-  const atribuir = (providerId: number) =>
+  const atribuir = (providerId: number, nome?: string) => {
+    // d130: sem o sim do cliente, a janela das duas escolhas.
+    if (!t.precoAceiteEm) {
+      setSemOSim({ tipo: "atribuir", providerId, nome: nome || `o parceiro #${providerId}` });
+      return;
+    }
     void mexer({ accao: "atribuir", providerId }, (d) => String(d.feito ?? `#${t.pedidoId} atribuído.`));
+  };
 
   async function avaliar(n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined, comoDisse: string): Promise<string | null> {
     if (!token) return "Sem sessão.";
@@ -836,6 +918,8 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       onPropostaAberta={propostaAberta}
       onJaEnviei={jaEnviei}
       onClienteAceitou={clienteAceitou}
+      onPedirOSim={() => void pedirOSim()}
+      onReservaRecusada={reservaRecusada}
       onFicha={() => setFichaId(t.pedidoId)}
       onMudou={onMudou}
       marcado={marcado}
@@ -843,6 +927,20 @@ Valor de partida, sem IVA (o que o cliente paga). Corrija-o se o cliente aceitou
       janelas={
         <>
           {avisoDeData}
+          {semOSim && (
+            <JanelaDoSimDoCliente
+              pedidoId={t.pedidoId}
+              profissional={semOSim.tipo === "atribuir" ? semOSim.nome : semOSim.n.profissional}
+              valor={(() => {
+                const p = propostaDoValor();
+                const semIva = t.taxa != null ? t.valorFixo : t.precoAoCliente;
+                return p ? `${euros(p.total)} com IVA${semIva != null ? ` (${euros(semIva)} sem IVA)` : ""}${unidadeDaBase(lerBase(t.base))}` : null;
+              })()}
+              podeEnviar={propostaDoValor() != null}
+              onEscolher={(sim) => void responderAoSemOSim(sim)}
+              onFechar={() => setSemOSim(null)}
+            />
+          )}
           {aCancelar && (
             <JanelaDeCancelarTrabalho
               t={aCancelar}
@@ -944,6 +1042,8 @@ function CartaoDoTrabalho({
   onPropostaAberta,
   onJaEnviei,
   onClienteAceitou,
+  onPedirOSim,
+  onReservaRecusada,
   onFicha,
   onMudou,
   marcado = false,
@@ -976,12 +1076,16 @@ function CartaoDoTrabalho({
   /** Voltar a oferecer a quem recusou — a um, ou a todos (`null`). */
   onReoferecer: (negociacaoId: number | null) => void;
   /** «Atribuir directamente a…» — 11-11-2026 (o #591). */
-  onAtribuir?: (providerId: number) => void;
+  onAtribuir?: (providerId: number, nome?: string) => void;
   token?: string | null;
   onAvaliar: (n: NegociacaoDoTrabalho, estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;
   onPropostaAberta: () => void;
   onJaEnviei: () => void;
   onClienteAceitou: () => void;
+  /** d130: já atribuído sem o sim do cliente — pede-lho (envia o valor). */
+  onPedirOSim?: () => void;
+  /** d130: o cliente não aceitou o valor — a reserva cai. */
+  onReservaRecusada?: () => void;
   onFicha: () => void;
   onMudou: () => void;
   /** Marcado para as acções em lote — 19-10-2026, como na Mesa. */
@@ -1533,8 +1637,77 @@ function CartaoDoTrabalho({
           token={token}
           pedidoId={t.pedidoId}
           ocupado={ocupado === t.pedidoId}
-          onAtribuir={(providerId) => onAtribuir(providerId)}
+          onAtribuir={(providerId, nome) => onAtribuir(providerId, nome)}
+          semOSim={!t.precoAceiteEm}
         />
+      )}
+
+      {/*
+        O SIM DO CLIENTE — d130 (o #652). Reservado: à espera do sim, e a
+        atribuição faz-se sozinha quando ele aceitar. Já atribuído sem o sim:
+        «Pedir o sim do cliente», e depois a marca até ele responder.
+      */}
+      {aberto && !a && t.reserva?.tipo === "reserva" && r.fase !== "cancelada" && (
+        <div className="mt-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-200">
+          <p className="font-semibold">
+            {t.reserva.profissional ?? "Parceiro"} {MARCA_RESERVADO}
+          </p>
+          <p className="mt-0.5 text-[11px] text-amber-200/80">
+            {t.propostaEnviadaEm ? `O valor foi ao cliente ${quando(t.propostaEnviadaEm) ?? ""}. ` : "O valor ainda não foi ao cliente — envie-o em baixo. "}
+            Quando ele aceitar (Vitória, app ou «O cliente aceitou (por telefone)»), fica atribuído e o parceiro é avisado.
+          </p>
+          {onReservaRecusada && (
+            <button
+              type="button"
+              onClick={onReservaRecusada}
+              disabled={ocupado === t.pedidoId}
+              className="mt-1.5 rounded-lg border border-amber-500/40 px-2.5 py-1 font-semibold hover:bg-amber-500/10 disabled:opacity-40"
+            >
+              O cliente não aceitou
+            </button>
+          )}
+        </div>
+      )}
+      {aberto && a && !a.confirmadoEm && !a.execucaoEnviadaEm && !t.precoAceiteEm && r.fase === "atribuida" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-200">
+          {t.reserva?.tipo === "falta_o_sim" ? (
+            <>
+              <span className="basis-full font-semibold">{maiuscula(MARCA_FALTA_O_SIM)}</span>
+              {t.propostaEnviadaEm && (
+                <button
+                  type="button"
+                  onClick={onClienteAceitou}
+                  disabled={ocupado === t.pedidoId}
+                  className="rounded-lg border border-amber-500/40 px-2.5 py-1 font-semibold hover:bg-amber-500/10 disabled:opacity-40"
+                >
+                  O cliente aceitou (por telefone)
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onCancelar}
+                disabled={ocupado === t.pedidoId}
+                className="rounded-lg border border-rose-500/40 px-2.5 py-1 font-semibold text-rose-200 hover:bg-rose-500/10 disabled:opacity-40"
+              >
+                Cancelar e avisar o parceiro
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="basis-full">O cliente ainda não aceitou este valor.</span>
+              {onPedirOSim && (
+                <button
+                  type="button"
+                  onClick={onPedirOSim}
+                  disabled={ocupado === t.pedidoId}
+                  className="rounded-lg border border-amber-500/40 px-2.5 py-1 font-semibold hover:bg-amber-500/10 disabled:opacity-40"
+                >
+                  Pedir o sim do cliente
+                </button>
+              )}
+            </>
+          )}
+        </div>
       )}
 
       {/*

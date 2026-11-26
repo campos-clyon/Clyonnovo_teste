@@ -979,6 +979,18 @@ export async function aceitarTrabalhoClyonPeloLembrete(
     const versao = pedido.propostaEnviadaEm instanceof Date ? pedido.propostaEnviadaEm : new Date(String(pedido.propostaEnviadaEm));
     await aceitarPrecoClyon(pedidoId, versao).catch(() => false);
   }
+  // d130: com um parceiro reservado (ou um «falta o sim»), o sim do cliente faz a atribuição — ou só tira a marca.
+  {
+    const sim = await import("./sim-do-cliente-na-base");
+    if (await sim.reservaDoPedido(pedidoId).catch(() => null)) {
+      const { urlDeAccao } = await import("./url-do-site");
+      const d = await sim.depoisDoSimDoCliente(pedidoId, { quem: "o cliente (WhatsApp)", por: null, baseUrl: urlDeAccao() });
+      if (d.parceiro) {
+        await marcarCicloTerminado(pedidoId, "o cliente avançou («1»)");
+        return { ok: true, parceiro: d.parceiro };
+      }
+    }
+  }
   const r = await atribuirOfertaClyon(negociacaoId);
   if (!r.ok) return { ok: false, porque: `não deu para escolher o parceiro (${r.porque})` };
   const { avisarProfissionalEscolhido } = await import("./avisar-escolhido-da-oferta");

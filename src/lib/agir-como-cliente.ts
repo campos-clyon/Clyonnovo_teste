@@ -631,7 +631,10 @@ async function aceitarOPrecoDaClyon(pedidoId: number, versao: unknown): Promise<
       ["cancelado", "rejeitado", "arquivado"].includes(String(pedido.status ?? "")) ||
       Number(pedido.canceladoPeloCliente) === 1;
     const comProfissional = (await negociacoesDoPedido(pedidoId)).some((n) => n.estado === "acordada");
-    if (!enviadoEm || pedido.precoAceiteEm || comProfissional || cancelado) return falha(409, PRECO_JA_NAO_ESPERA);
+    // d130: atribuído sem o sim, com o sim pedido ao cliente — aceita-se na mesma.
+    const simDoCliente = await import("./sim-do-cliente-na-base");
+    const faltaOSim = comProfissional && (await simDoCliente.reservaDoPedido(pedidoId).catch(() => null))?.tipo === "falta_o_sim";
+    if (!enviadoEm || pedido.precoAceiteEm || (comProfissional && !faltaOSim) || cancelado) return falha(409, PRECO_JA_NAO_ESPERA);
     if (typeof versao !== "string" || versao !== isoOuNulo(enviadoEm)) return falha(409, PRECO_MUDOU);
     const momento = enviadoEm instanceof Date ? enviadoEm : new Date(enviadoEm);
     if (!(await aceitarPrecoClyon(pedidoId, momento))) return falha(409, PRECO_MUDOU);
@@ -649,6 +652,9 @@ async function aceitarOPrecoDaClyon(pedidoId: number, versao: unknown): Promise<
       by: null,
       message: texto ? `O cliente aceitou o preço de ${texto} na app.` : "O cliente aceitou o preço na app.",
     });
+    // d130: o parceiro reservado fica com o trabalho (ou o «falta o sim» sai).
+    const { urlDeAccao } = await import("./url-do-site");
+    await simDoCliente.depoisDoSimDoCliente(pedidoId, { quem: "o cliente (app)", por: null, baseUrl: urlDeAccao() });
     return { status: 200, corpo: { ok: true, aceite: true } };
   } catch (err) {
     console.error("[agir-como-cliente] aceitar o preço:", err);

@@ -552,6 +552,14 @@ export async function pedidoDoClienteParaAApp(
 
   const contratado = contratadoDe(trabalhoClyon, cruas, negociacoes, pedido.status === "concluido");
   const cancelado = eCancelado(pedido.status, o.canceladoPeloCliente);
+  // d130: atribuído sem o sim, com o sim pedido — o cliente ainda o pode dar na app.
+  const faltaOSimDoCliente =
+    trabalhoClyon && Boolean(contratado) && !o.precoAceiteEm
+      ? await import("./sim-do-cliente-na-base")
+          .then((m) => m.reservaDoPedido(pedido.id))
+          .then((r) => r?.tipo === "falta_o_sim")
+          .catch(() => false)
+      : false;
   // d53: o «sim» ao valor único, se vale (posterior ao último envio).
   const valorUnicoAceite = valorUnicoAceiteValido(
     (pedido as { valorUnicoAceiteEm?: unknown }).valorUnicoAceiteEm,
@@ -729,6 +737,9 @@ export async function pedidoDoClienteParaAApp(
       accoes:
         trabalhoClyon && enviadoEm && !o.precoAceiteEm && !contratado && !cancelado
           ? ["aceitar_preco_clyon"]
+          : // d130: atribuído sem o sim, com o sim pedido — ainda o pode dar.
+            faltaOSimDoCliente && enviadoEm && !cancelado
+            ? ["aceitar_preco_clyon"]
           : fimClyon?.podeAvaliar && !cancelado
             ? ["avaliar"]
             : [],
