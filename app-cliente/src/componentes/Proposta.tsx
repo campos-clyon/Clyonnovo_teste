@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { Preco } from "./Preco";
 import { Text } from "./Texto";
 import { Aviso, Botao, Cartao, Ligacao } from "./ui";
-import { accaoDeContratar, podeRecusar, porqueNaoSeContrata, type NegociacaoV3, type TextosDoPedido } from "../lib/pedidos";
+import { accaoDeContratar, avisoDaGuiaDe, podeRecusar, porqueNaoSeContrata, type NegociacaoV3, type TextosDoPedido } from "../lib/pedidos";
 import { linhaDaFaturaDoParceiro } from "../lib/pagar-ao-parceiro";
 import { CORES } from "../tema";
 
@@ -44,6 +44,8 @@ export function Proposta({
   const contratar = accaoDeContratar(n);
   // d10.1: a guia de resíduos por verificar — a frase do site e o «Contratar» parado.
   const parado = porqueNaoSeContrata(n);
+  // d121: o parceiro de entulho sem guia — a frase do Jurídico por cima do «Contratar», como no site.
+  const avisoDaGuia = avisoDaGuiaDe(n);
   // O modelo de 15-11 (d10): o tipo de fatura do parceiro e a guia, antes de escolher. Nada antes da data.
   const fatura = linhaDaFaturaDoParceiro(n.novoModelo);
   const trabalhos = `${p.trabalhosConcluidos} ${p.trabalhosConcluidos === 1 ? "trabalho" : "trabalhos"} na CLYON`;
@@ -80,6 +82,7 @@ export function Proposta({
       {fatura ? <Text style={{ color: CORES.tinta, fontSize: 13.5, fontWeight: "600" }}>{fatura}</Text> : null}
       {n.formaTexto ? <Text style={{ color: CORES.suave, fontSize: 13, lineHeight: 19 }}>{n.formaTexto}</Text> : null}
       {parado ? <Aviso tom="aviso" texto={parado} /> : null}
+      {avisoDaGuia ? <Aviso tom="aviso" texto={avisoDaGuia} /> : null}
       {contratar ? <Botao titulo="Contratar" aoCarregar={aoContratar} ocupado={aContratar} desligado={!!parado || desligado} /> : null}
       {aoPropor && n.accoes.includes("propor") ? <Ligacao titulo="Ou proponha outro valor" centrada aoCarregar={aoPropor} /> : null}
       {podeRecusar(n, textos) ? <Ligacao titulo="Recusar" tom="mau" centrada aoCarregar={aoRecusar} /> : null}

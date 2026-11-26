@@ -689,7 +689,40 @@ export type ExtrasDaNegociacaoV3 = {
    * quando nada impede. Um site antigo não o manda.
    */
   naoSeContrata?: string | null;
+  /**
+   * d121 (25-11-2026): o parceiro de entulho sem guia de resíduos já se pode
+   * contratar — o site manda a frase do Jurídico (`AVISO_DA_GUIA_NO_ENTULHO`,
+   * `pedido-para-a-app.ts`) para o ecrã a mostrar por cima do «Contratar».
+   * Contratar depois de a ler vale como a confirmação: o corpo leva
+   * `semGuiaConfirmado: true`. `null` quando não há aviso; um site antigo não o manda.
+   */
+  avisoDaGuia?: string | null;
 };
+
+/**
+ * O AVISO DA GUIA ANTES DE CONTRATAR — d121 (25-11-2026), como o site
+ * (`avisoDaGuiaDe` em PropostasRecebidas.tsx): a frase que o servidor mandou,
+ * tal e qual, só quando há o que contratar nesta proposta. `null` sem aviso.
+ */
+export function avisoDaGuiaDe(n: Pick<Negociacao, "accoes"> & Pick<ExtrasDaNegociacaoV3, "avisoDaGuia">): string | null {
+  const v = typeof n.avisoDaGuia === "string" ? n.avisoDaGuia.trim() : "";
+  if (!v || !accaoDeContratar(n)) return null;
+  return v;
+}
+
+/**
+ * O corpo do «Contratar» (R8): com o aviso da guia no ecrã, leva
+ * `semGuiaConfirmado: true` — sem a marca o servidor recusa com a frase (409),
+ * como no site (`agir-como-cliente.ts`). `null` quando não há o que contratar.
+ */
+export function corpoDeContratar(
+  pedidoId: number,
+  n: Pick<Negociacao, "id" | "accoes"> & Pick<ExtrasDaNegociacaoV3, "avisoDaGuia">,
+): Record<string, unknown> | null {
+  const accao = accaoDeContratar(n);
+  if (!accao) return null;
+  return { pedidoId, negociacaoId: n.id, accao, ...(avisoDaGuiaDe(n) ? { semGuiaConfirmado: true } : {}) };
+}
 
 /** O que o site diz a seguir ao `naoSeContrata` (`PropostasRecebidas.tsx`), à letra. */
 export const DEPOIS_DE_NAO_SE_CONTRATAR = "Pode escolher outra proposta, ou esperar que a CLYON a verifique.";
@@ -700,9 +733,12 @@ export const DEPOIS_DE_NAO_SE_CONTRATAR = "Pode escolher outra proposta, ou espe
  * (409) depois de tocar. `null` quando nada impede, ou quando não há o que
  * contratar nesta proposta.
  */
-export function porqueNaoSeContrata(n: Pick<Negociacao, "accoes"> & Pick<ExtrasDaNegociacaoV3, "naoSeContrata">): string | null {
+export function porqueNaoSeContrata(
+  n: Pick<Negociacao, "accoes"> & Pick<ExtrasDaNegociacaoV3, "naoSeContrata" | "avisoDaGuia">,
+): string | null {
   const porque = typeof n.naoSeContrata === "string" ? n.naoSeContrata.trim() : "";
-  if (!porque || !accaoDeContratar(n)) return null;
+  // d121: com o aviso da guia, o «Contratar» fica activo (o site só o pára sem o aviso).
+  if (!porque || !accaoDeContratar(n) || avisoDaGuiaDe(n)) return null;
   return `${porque} ${DEPOIS_DE_NAO_SE_CONTRATAR}`;
 }
 

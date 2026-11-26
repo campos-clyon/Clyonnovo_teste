@@ -32,7 +32,7 @@ import type { Pedir } from "../lib/erros";
 import { abreOPagamentoDepoisDeContratar } from "../lib/pagamento";
 import { LINK } from "../lib/pedido-do-link";
 import {
-  accaoDeContratar,
+  corpoDeContratar,
   atalhosDoEcra,
   contratadaDe,
   corpoDePropor,
@@ -233,12 +233,13 @@ export function VistaDoPedido({ pedidoId, convidado }: { pedidoId: number; convi
    * com «Criar conta para pagar».
    */
   async function contratar(n: NegociacaoV3) {
-    const accao = accaoDeContratar(n);
-    if (!accao || porqueNaoSeContrata(n) || aContratar) return;
+    // d121: com o aviso da guia no ecrã, o corpo leva `semGuiaConfirmado` (contratar vale como a confirmação).
+    const corpo = corpoDeContratar(pedidoId, n);
+    if (!corpo || porqueNaoSeContrata(n) || aContratar) return;
     setAContratar(n);
     setAvisoDaAccao(null);
     try {
-      await pedir(ROTA_DAS_ACCOES, { metodo: "POST", corpo: { pedidoId, negociacaoId: n.id, accao } });
+      await pedir(ROTA_DAS_ACCOES, { metodo: "POST", corpo });
     } catch (e) {
       if (e instanceof ErroDaApi && e.estado === 409) await carregar();
       if (!convidado) void recarregarALista();

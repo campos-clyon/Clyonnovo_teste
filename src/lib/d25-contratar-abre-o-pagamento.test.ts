@@ -86,7 +86,8 @@ describe("«Contratar» leva directo ao ecrã de pagar", () => {
   });
 
   it("contratado, lê o pedido e abre /pagar/<id> quando há o que pagar", () => {
-    const accao = CONTRATAR.indexOf('await pedir(ROTA_DAS_ACCOES, { metodo: "POST", corpo: { pedidoId, negociacaoId: n.id, accao } });');
+    // d121: o corpo vem de corpoDeContratar (leva semGuiaConfirmado com o aviso da guia).
+    const accao = CONTRATAR.indexOf('await pedir(ROTA_DAS_ACCOES, { metodo: "POST", corpo });');
     const leitura = CONTRATAR.indexOf("const lido = await carregar();");
     const vai = CONTRATAR.indexOf(
       "if (!convidado && abreOPagamentoDepoisDeContratar(n2?.pagamento, Date.now())) router.push(`/pagar/${pedidoId}`);",
@@ -126,7 +127,7 @@ describe("a guia trava como antes (d10)", () => {
   });
 
   it("e mesmo que o toque chegasse, contratar não manda nada com a guia por verificar", () => {
-    expect(VISTA).toContain("if (!accao || porqueNaoSeContrata(n) || aContratar) return;");
+    expect(VISTA).toContain("if (!corpo || porqueNaoSeContrata(n) || aContratar) return;");
   });
 });
 

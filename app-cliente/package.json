@@ -37,6 +37,9 @@
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },
+  "overrides": {
+    "zod": "^4.6.6"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

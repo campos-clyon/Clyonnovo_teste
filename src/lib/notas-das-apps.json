@@ -82,6 +82,11 @@
   ],
   "cliente": [
     {
+      "id": "cliente-2026-11-26",
+      "nota": "Numa proposta de recolha de entulho de um parceiro sem guia de resíduos, vê o aviso antes de contratar e pode contratar na mesma.",
+      "updates": []
+    },
+    {
       "id": "cliente-2026-11-24",
       "nota": "Ao abrir pela primeira vez, a app pergunta se quer avisos dos seus pedidos.\nNa Ajuda há «Algo não funciona?»: diga-nos o que aconteceu e a equipa vê.",
       "updates": []
