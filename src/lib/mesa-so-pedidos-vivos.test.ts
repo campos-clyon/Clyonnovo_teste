@@ -158,8 +158,9 @@ describe("4. os blocos abrem-se por opção", () => {
   });
 
   it("o «Do nosso lado» e cada grupo dele são um botão, fechado por omissão, com o título e o número", () => {
-    expect(LADO).toContain('useAbertosLembrados("clyon.mesa.do-nosso-lado")');
-    expect(LADO).toContain('const fechado = !estaAberto("cartao");');
+    // d142: cada grupo é um botão pequeno na linha da Mesa e nasce SEMPRE fechado (nada fica lembrado aberto).
+    expect(LADO).not.toContain("useAbertosLembrados(");
+    expect(LADO).toContain("const [abertos, setAbertos] = useState<Set<string>>(new Set());");
     expect(LADO).toContain("onClick={() => alternar(g.tipo)}");
     expect(LADO).toContain("aria-expanded={grupoAberto}");
     expect(LADO).toContain("{g.titulo}");

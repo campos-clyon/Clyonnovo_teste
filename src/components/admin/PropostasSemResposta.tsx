@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Copy, Loader2 } from "lucide-react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import type { Lembrete } from "@/lib/propostas-sem-resposta";
+import { BOTAO_ABERTO, BOTAO_DA_LINHA, BOTAO_URGENTE, PAINEL_DA_LINHA } from "@/components/admin/linhaDaMesa";
 
 /**
  * PROPOSTAS HÁ MAIS DE 24 H SEM RESPOSTA DO CLIENTE — d54, 16-11-2026.
@@ -15,6 +16,9 @@ import type { Lembrete } from "@/lib/propostas-sem-resposta";
  * COPIAR NÃO MEXE NO LINK DO CLIENTE (CEO, 16-11-2026): a mensagem remete para
  * o link que ele já recebeu. Copiar e não enviar não pode deixá-lo sem acesso;
  * um link novo pede-se de propósito, no reenviar da Mesa.
+ *
+ * d142 (27-11-2026, dono): na linha discreta da Mesa é um botão pequeno
+ * («2 propostas >24 h»); ao carregar, a lista abre por baixo, igual a antes.
  */
 
 type LembreteComMensagem = Lembrete & { mensagem: string };
@@ -23,6 +27,7 @@ export default function PropostasSemResposta({ token, onAbrir }: { token: string
   const [lista, setLista] = useState<LembreteComMensagem[] | null>(null);
   const [estado, setEstado] = useState<Record<number, string>>({});
   const [aCopiar, setACopiar] = useState<number | null>(null);
+  const [aberto, setAberto] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!token) return;
@@ -56,7 +61,19 @@ export default function PropostasSemResposta({ token, onAbrir }: { token: string
   if (!lista || lista.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+    <>
+    <button
+      type="button"
+      onClick={() => setAberto((a) => !a)}
+      aria-expanded={aberto}
+      title="Propostas há mais de 24 h sem resposta do cliente. Carregue para ver e copiar a mensagem."
+      className={`${BOTAO_DA_LINHA} ${aberto ? BOTAO_ABERTO : BOTAO_URGENTE}`}
+    >
+      <span className="font-bold tabular-nums">{lista.length}</span>
+      {lista.length === 1 ? "proposta" : "propostas"} &gt;24 h
+    </button>
+    {aberto && (
+    <section className={PAINEL_DA_LINHA}>
       <h2 className="text-base font-bold text-white">
         Propostas há mais de 24 h sem resposta do cliente <span className="text-amber-300">· {lista.length}</span>
       </h2>
@@ -102,5 +119,7 @@ export default function PropostasSemResposta({ token, onAbrir }: { token: string
         ))}
       </ul>
     </section>
+    )}
+    </>
   );
 }

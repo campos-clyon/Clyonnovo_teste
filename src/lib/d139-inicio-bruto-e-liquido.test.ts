@@ -173,7 +173,9 @@ describe("o ecrã", () => {
     }
     const shell = ler("src/components/admin/LegacyAdminClient.tsx");
     const i = shell.indexOf('{activeSection === "negociacoes_clyon" && (');
-    const bloco = shell.slice(i, shell.indexOf("<AdminNegociacoesPanel", i));
-    expect(bloco).toContain("<PrecisaDeSiNaMesa");
+    // d142: entra pela Mesa, na linha discreta depois do filtro.
+    const bloco = shell.slice(i, shell.indexOf("</section>", i));
+    expect(bloco).toContain("linhaDoPrecisaDeSi={linhaDoPrecisaDeSi}");
+    expect(shell).toContain("const linhaDoPrecisaDeSi = <PrecisaDeSiNaMesa onAbrir=");
   });
 });

@@ -1064,7 +1064,14 @@ export default function AdminNegociacoesPanel({
   eAdministrador = false,
   busca: buscaDeFora,
   onBusca,
+  linhaDoPrecisaDeSi,
 }: {
+  /**
+   * O «Precisa de si» (chips, sem valor há mais de 4 h, propostas há mais de
+   * 24 h) — d142 (27-11-2026, dono): entra na linha discreta da Mesa, depois do
+   * filtro, ao lado do «Do nosso lado». Vem de fora porque leva a outros ecrãs.
+   */
+  linhaDoPrecisaDeSi?: ReactNode;
   /**
    * A procura de «Pedidos», partilhada pelos três separadores — 19-10-2026.
    * Com ela, a caixa desta mesa não se desenha: escreve-se lá em cima.
@@ -4966,34 +4973,6 @@ export default function AdminNegociacoesPanel({
         </span>
       </header>
 
-      {/*
-        «DO NOSSO LADO» — 03-11-2026 (d14). O que espera pela CLYON, de todas as
-        fontes, antes da procura e dos blocos: as conversas por responder há mais
-        de 2 h, os Trabalhos CLYON aceites com o preço por enviar, as propostas
-        por enviar e os trabalhos com a data passada sem «Está feito». Só
-        leitura; cada linha procura o pedido na Mesa. Lê a mesa inteira que está
-        carregada, e não o que a procura ou os filtros deixam passar.
-      */}
-      {(mostrar === "tudo" || mostrar === "clyon") && (
-        <DoNossoLado
-          token={token}
-          pedidos={pedidos}
-          trabalhosClyon={trabalhosClyon}
-          emSeguimento={pedidosEmSeguimento}
-          onAbrirPedido={(id) => {
-            setBusca(`#${id}`);
-            if (idsClyon.has(id)) irAoTrabalhoClyon(id);
-            else
-              window.setTimeout(
-                () => document.getElementById(`pedido-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                120,
-              );
-          }}
-        />
-      )}
-
-      {/* PORQUE SE FECHARAM, NA SEMANA — d54, 16-11-2026: cancelados e arquivados por serviço e motivo. */}
-      {mostrar === "tudo" && <MotivosDaSemana token={token} />}
 
       {/*
         A BUSCA, ANTES DOS CARTÕES.
@@ -5101,6 +5080,41 @@ export default function AdminNegociacoesPanel({
         altura — também quando partem em duas linhas num ecrã estreito. O «por
         ver» dos Concluídos foi para o lado do número, para não esticar só aquele.
       */}
+      {/*
+        A LINHA DISCRETA — d142 (27-11-2026, dono). *«A mesa de trabalho em
+        destaque e em primeiro; o resto em botões pequenos numa linha discreta,
+        com contador; ao carregar abre por baixo.»* Depois do filtro e antes dos
+        cartões: o «Precisa de si», as propostas há mais de 24 h, cada grupo do
+        «Do nosso lado» (d14: o que espera pela CLYON, de todas as fontes, só
+        leitura; cada linha procura o pedido na Mesa, lendo a mesa inteira que
+        está carregada e não o que a procura deixa passar) e os fechados da
+        semana (d54). Cada um devolve botões e o seu conteúdo aberto, que vai
+        para o fim da linha a toda a largura (`linhaDaMesa.ts`).
+      */}
+      {(linhaDoPrecisaDeSi || mostrar === "tudo" || mostrar === "clyon") && (
+        <div role="group" aria-label="O que está à espera" className="mb-2 flex flex-wrap items-center gap-1.5">
+          {linhaDoPrecisaDeSi}
+          {(mostrar === "tudo" || mostrar === "clyon") && (
+            <DoNossoLado
+              token={token}
+              pedidos={pedidos}
+              trabalhosClyon={trabalhosClyon}
+              emSeguimento={pedidosEmSeguimento}
+              onAbrirPedido={(id) => {
+                setBusca(`#${id}`);
+                if (idsClyon.has(id)) irAoTrabalhoClyon(id);
+                else
+                  window.setTimeout(
+                    () => document.getElementById(`pedido-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                    120,
+                  );
+              }}
+            />
+          )}
+          {mostrar === "tudo" && <MotivosDaSemana token={token} />}
+        </div>
+      )}
+
       {/* «Alterações do cliente» (S17, 29-10-2026): só aparece quando há, com o número à cabeça. */}
       {mostrar !== "clyon" && <AlteracoesDoCliente token={token} />}
       <div className="mb-3 mt-2 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">

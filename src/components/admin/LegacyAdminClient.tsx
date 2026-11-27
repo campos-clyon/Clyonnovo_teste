@@ -732,6 +732,11 @@ export default function ColaboradorAdminClient({
   // Todos começam no Início — desde 17-10-2026 é lá que estão os pedidos, e o
   // dia do assistente começava nos pedidos.
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
+  /*
+   * O QUE PRECISA DE SI — na Mesa desde a d139; desde a d142 (27-11-2026, dono)
+   * em botões pequenos na linha discreta, depois do filtro: a mesa em primeiro.
+   */
+  const linhaDoPrecisaDeSi = <PrecisaDeSiNaMesa onAbrir={(s) => setActiveSection(s as AdminSection)} />;
   /** O ecrã de cada secção abre-se a quem a tem (desde 19-10-2026, os pedidos também). */
   const podeVerEcra = (s: AdminSection) => podeVer(s);
   /** Os separadores de «Pedidos» que esta conta vê, pela ordem do ecrã. */
@@ -3495,8 +3500,6 @@ export default function ColaboradorAdminClient({
 
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-3 rounded-[22px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4">
-              {/* O QUE PRECISA DE SI — no topo da Mesa desde a d139 (27-11-2026, dono); o Início fica só com números. */}
-              <PrecisaDeSiNaMesa onAbrir={(s) => setActiveSection(s as AdminSection)} />
               <p className="text-[11px] text-slate-500">
                 Os orçamentos novos, os trabalhos de valor fixo e as negociações — as em que a
                 CLYON responde pelo cliente e as que o cliente conduz pela ligação do email.
@@ -3509,6 +3512,7 @@ export default function ColaboradorAdminClient({
                 podeApagar={papel === "admin"}
                 podeOferecerTrabalhoClyon={podeVer("trabalhos_clyon")}
                 eAdministrador={papel === "admin"}
+                linhaDoPrecisaDeSi={linhaDoPrecisaDeSi}
               />
             </section>
           )}

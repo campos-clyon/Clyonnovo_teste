@@ -6,6 +6,14 @@ import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import PropostasSemResposta from "@/components/admin/PropostasSemResposta";
 import { HORAS_SEM_VALOR, type SemValorNoInicio } from "@/lib/pedido-sem-valor";
+import {
+  BOTAO_ABERTO,
+  BOTAO_DA_LINHA,
+  BOTAO_NEUTRO,
+  BOTAO_URGENTE,
+  BOTAO_VERMELHO,
+  PAINEL_DA_LINHA,
+} from "@/components/admin/linhaDaMesa";
 
 /**
  * O QUE PRECISA DE SI — NO TOPO DA MESA desde a d139 (27-11-2026, dono).
@@ -19,6 +27,11 @@ import { HORAS_SEM_VALOR, type SemValorNoInicio } from "@/lib/pedido-sem-valor";
  * sem resposta do cliente (d54). É o ecrã onde se trabalham. Cada chip leva
  * ao ecrã que resolve aquilo. Os números vêm do resumo do backoffice
  * (`/api/admin/resumo`), o mesmo de sempre.
+ *
+ * d142 (27-11-2026, dono): já não é uma barra nem cartões — são botões pequenos
+ * na linha discreta da Mesa (`linhaDaMesa.ts`), depois do filtro; a mesa de
+ * trabalho fica em primeiro. Nada se perdeu: os mesmos chips, contadores e
+ * selos, e as listas abrem por baixo ao carregar.
  */
 
 export type SeccaoDoPrecisaDeSi =
@@ -63,6 +76,7 @@ function euros(v: number): string {
 export default function PrecisaDeSiNaMesa({ onAbrir }: { onAbrir: (s: SeccaoDoPrecisaDeSi) => void }) {
   const { token, ready } = useAdminAuth();
   const [r, setR] = useState<Resumo | null>(null);
+  const [semValorAberto, setSemValorAberto] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!token) return;
@@ -157,67 +171,69 @@ export default function PrecisaDeSiNaMesa({ onAbrir }: { onAbrir: (s: SeccaoDoPr
 
   // Um zero não ocupa uma caixa: chips a zero não são informação, são ruído com ar de trabalho.
   const cartoes = todos.filter((c) => c.n != null && c.n > 0);
+  const semValor = r?.semValor ?? [];
 
+  /*
+   * d142 (27-11-2026, dono): um FRAGMENTO para a linha discreta do topo da
+   * Mesa (`linhaDaMesa.ts`). Os chips continuam a levar ao ecrã que resolve
+   * aquilo; os sem valor e as propostas abrem por baixo da linha.
+   */
   return (
-    <div className="space-y-3">
-      {/* PRECISA DE SI — chips pequenos, cada um leva ao ecrã que resolve aquilo. */}
-      <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="mr-1 text-sm font-bold text-white">
-            {cartoes.length > 0 ? "Precisa de si" : "Nada à espera de si"}
-          </h2>
-          {!r ? (
-            <p className="text-xs text-slate-400">A ver o que precisa de si…</p>
-          ) : cartoes.length === 0 ? (
-            <p className="flex items-center gap-1.5 text-xs text-emerald-300">
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Está tudo tratado. Nenhum pedido por enviar, nenhuma proposta à espera de resposta, nenhum trabalho atrasado.
-            </p>
-          ) : (
-            <ul className="flex flex-wrap gap-1.5">
-              {cartoes.map((c) => (
-                <li key={c.chave}>
-                  <button
-                    onClick={() => onAbrir(c.seccao)}
-                    title={c.porque}
-                    className={`flex items-baseline gap-1 rounded-md border px-2 py-1 text-xs transition ${
-                      c.urgente
-                        ? "border-amber-500/40 bg-amber-500/[0.08] text-amber-200 hover:bg-amber-500/15"
-                        : "border-slate-700 bg-slate-950/40 text-slate-200 hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <span className={`text-sm font-bold tabular-nums ${c.urgente ? "text-amber-300" : "text-white"}`}>
-                      {c.n}
-                    </span>
-                    {c.titulo}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <button
-            onClick={() => void carregar()}
-            className="ml-auto flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-400 transition hover:bg-slate-800"
-          >
-            <RefreshCw className="h-3 w-3" aria-hidden="true" />
-            Atualizar
-          </button>
-        </div>
-      </section>
+    <>
+      {!r ? (
+        <span className="text-[11px] text-slate-400">A ver o que precisa de si…</span>
+      ) : cartoes.length === 0 ? (
+        <span
+          className="flex items-center gap-1 text-[11px] text-emerald-300"
+          title="Está tudo tratado. Nenhum pedido por enviar, nenhuma proposta à espera de resposta, nenhum trabalho atrasado."
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+          Nada à espera de si
+        </span>
+      ) : (
+        <ul aria-label="Precisa de si" className="contents">
+          {cartoes.map((c) => (
+            <li key={c.chave} className="contents">
+              <button
+                type="button"
+                onClick={() => onAbrir(c.seccao)}
+                title={c.porque}
+                className={`${BOTAO_DA_LINHA} ${c.urgente ? BOTAO_URGENTE : BOTAO_NEUTRO}`}
+              >
+                {c.urgente && <span aria-hidden="true">⚠</span>}
+                <span className={`font-bold tabular-nums ${c.urgente ? "text-amber-300" : "text-white"}`}>{c.n}</span>
+                {c.titulo}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {/*
         SEM VALOR HÁ MAIS DE 4 H — d50, 16-11-2026. Os por enviar a vermelho
         (sem valor nem pergunta ao cliente), pelo n.º do pedido, com o serviço
         e a hora de entrada em Lisboa. A regra é a do selo da Mesa
-        (`pedido-sem-valor.ts`).
+        (`pedido-sem-valor.ts`). Desde a d142, um botão que abre a lista.
       */}
-      {r?.semValor && r.semValor.length > 0 && (
-        <section className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-3">
+      {semValor.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setSemValorAberto((a) => !a)}
+          aria-expanded={semValorAberto}
+          title="Por enviar, sem valor nem pergunta ao cliente. Carregue para ver a lista."
+          className={`${BOTAO_DA_LINHA} ${semValorAberto ? BOTAO_ABERTO : BOTAO_VERMELHO}`}
+        >
+          <span className="font-bold tabular-nums">{semValor.length}</span>
+          sem valor &gt;{HORAS_SEM_VALOR} h
+        </button>
+      )}
+      {semValor.length > 0 && semValorAberto && (
+        <section className={PAINEL_DA_LINHA}>
           <h2 className="text-sm font-bold text-white" title="Por enviar, sem valor nem pergunta ao cliente. Do maior n.º para o menor.">
-            <span className="text-red-300">{r.semValor.length}</span> sem valor há mais de {HORAS_SEM_VALOR} h
+            <span className="text-red-300">{semValor.length}</span> sem valor há mais de {HORAS_SEM_VALOR} h
           </h2>
           <ul className="mt-1 grid gap-x-4 divide-y divide-slate-800 md:grid-cols-2 md:divide-y-0 xl:grid-cols-3">
-            {r.semValor.map((p) => (
+            {semValor.map((p) => (
               <li key={p.id}>
                 <button
                   onClick={() => onAbrir("pedidos")}
@@ -237,8 +253,18 @@ export default function PrecisaDeSiNaMesa({ onAbrir }: { onAbrir: (s: SeccaoDoPr
         </section>
       )}
 
-      {/* PROPOSTAS SEM RESPOSTA DO CLIENTE — d54, 16-11-2026. */}
+      {/* PROPOSTAS SEM RESPOSTA DO CLIENTE — d54, 16-11-2026; um botão na linha desde a d142. */}
       <PropostasSemResposta token={token} onAbrir={() => onAbrir("negociacoes_clyon")} />
-    </div>
+
+      <button
+        type="button"
+        onClick={() => void carregar()}
+        title="Atualizar o que precisa de si"
+        aria-label="Atualizar"
+        className="flex items-center rounded-md border border-slate-700 px-1.5 py-1 text-slate-400 transition hover:bg-slate-800"
+      >
+        <RefreshCw className="h-3 w-3" aria-hidden="true" />
+      </button>
+    </>
   );
 }

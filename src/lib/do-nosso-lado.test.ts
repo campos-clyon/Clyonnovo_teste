@@ -236,11 +236,12 @@ describe("o cartão na Mesa", () => {
   const CARTAO = ler("src/components/admin/DoNossoLado.tsx");
   const ROTA = ler("src/app/api/admin/whatsapp/route.ts");
 
-  it("fica no topo da Mesa, antes dos filtros e dos blocos, com a mesa inteira que está carregada", () => {
+  it("fica na linha discreta da Mesa, depois do filtro e antes dos cartões, com a mesa inteira que está carregada", () => {
     const i = MESA.indexOf("<DoNossoLado");
     expect(i).toBeGreaterThan(-1);
-    // A procura é a barra do topo do backoffice desde d79; os filtros da Mesa vêm depois.
-    expect(i).toBeLessThan(MESA.indexOf('aria-label="Filtrar por profissional"'));
+    // d142 (27-11-2026, dono): a mesa de trabalho em primeiro; a linha vem depois do filtro.
+    expect(i).toBeGreaterThan(MESA.indexOf('aria-label="Filtrar por profissional"'));
+    expect(i).toBeLessThan(MESA.indexOf("onClick={() => escolherBloco(null)}"));
     const bloco = MESA.slice(i, MESA.indexOf("/>", MESA.indexOf("}}", i)) + 2);
     expect(bloco).toContain("pedidos={pedidos}");
     expect(bloco).toContain("trabalhosClyon={trabalhosClyon}");
