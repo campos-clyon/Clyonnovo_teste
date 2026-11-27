@@ -108,3 +108,42 @@ export function diaDaEscolha(textoDoCliente: string | null | undefined, oferecid
   if (oferecido && new Date(oferecido.em).getTime() > agora.getTime()) return oferecido;
   return null;
 }
+
+/* ── d146b: o pedido fechou, as perguntas fecham ───────────────────────── */
+
+/**
+ * Os estados em que o pedido já não precisa das respostas dos parceiros (o
+ * mesmo «fim» do resto da plataforma).
+ */
+export const ESTADOS_DO_PEDIDO_FECHADO = ["cancelado", "arquivado", "concluido", "rejeitado"] as const;
+
+/** Porque é que as perguntas aos parceiros de um pedido fecham: contratado, ou fechado. */
+export type FechoDoPedido = "contratado" | "fechado";
+
+/**
+ * O PEDIDO JÁ FECHOU? — d146b (27-11-2026). No #692 a ronda das datas
+ * continuou depois de o cliente contratar, e 30 min depois juntou respostas de
+ * parceiros já encerrados numa nota à equipa. Com um parceiro contratado
+ * (ou o pedido cancelado, arquivado, concluído, rejeitado — ou apagado), as
+ * perguntas da d97/d136 desse pedido fecham-se, e nada mais segue.
+ */
+export function oPedidoJaFechou(pedido: { existe: boolean; status: string | null | undefined; contratada: number | null | undefined }): FechoDoPedido | null {
+  if (!pedido.existe) return "fechado";
+  if (Number(pedido.contratada ?? 0) > 0) return "contratado";
+  const s = String(pedido.status ?? "").trim().toLowerCase();
+  return (ESTADOS_DO_PEDIDO_FECHADO as readonly string[]).includes(s) ? "fechado" : null;
+}
+
+/**
+ * O OBRIGADO CURTO a quem responde depois do fecho (uma vez). Nada segue para
+ * o cliente nem para a equipa. Ao parceiro contratado, o dia combina-se com o
+ * cliente; aos outros, o trabalho já foi atribuído.
+ */
+export function obrigadoDepoisDoFecho(pedidoId: number, fecho: FechoDoPedido, eOContratado: boolean): string {
+  if (fecho === "contratado" && eOContratado) {
+    return `Obrigada! O pedido #${pedidoId} já foi contratado consigo — o dia combina-se agora directamente com o cliente.`;
+  }
+  return fecho === "contratado"
+    ? `Obrigada pela resposta! O trabalho do pedido #${pedidoId} já foi atribuído — não precisa de fazer mais nada.`
+    : `Obrigada pela resposta! O pedido #${pedidoId} já foi fechado — não precisa de fazer mais nada.`;
+}

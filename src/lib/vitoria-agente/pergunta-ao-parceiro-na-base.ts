@@ -23,6 +23,7 @@ import { conversaAnonimizada } from "./anonimizar";
 import { correrOAgente, clienteDoClaude, type ResultadoDoAgente } from "./cliente";
 import { ferramentasDeVerdade, gastoDeHojeUsd, garantirTabelas, lerInterruptor, quemEscreveNoNumero, registarAccao, tectoDiarioUsd } from "./na-base";
 import type { PerguntaAoParceiro } from "./pendentes";
+import { fecharAsPerguntasDoPedido } from "./perguntas-fecham-com-o-pedido";
 import {
   avisoDaPerguntaNaApp,
   chaveDaPergunta,
@@ -41,10 +42,13 @@ import {
   diaOferecido,
   JANELA_DA_RONDA,
   mensagemDeDisponibilidade,
+  obrigadoDepoisDoFecho,
+  oPedidoJaFechou,
   oQueOParceiroDisse,
   PARCEIROS_POR_RONDA,
   respostaAoClienteDaRonda,
   rondaDe,
+  type FechoDoPedido,
 } from "./disponibilidade";
 
 export const SQL_DAS_PERGUNTAS_AO_PARCEIRO = `CREATE TABLE IF NOT EXISTS vitoriaPerguntasAoParceiro (
@@ -90,6 +94,43 @@ async function pool() {
 const digitos = (t: string | null | undefined) => String(t ?? "").replace(/\D/g, "").slice(-20);
 const noves = (t: string | null | undefined) => String(t ?? "").replace(/\D/g, "").slice(-9);
 const paraABase = (d: Date) => d.toISOString().slice(0, 19).replace("T", " ");
+
+/* ── d146b: o pedido fechou, as perguntas fecham ───────────────────────── */
+
+/**
+ * O PEDIDO JÁ FECHOU? (contratado, ou cancelado/arquivado/concluído/rejeitado,
+ * ou apagado). Com a negociação contratada, para o obrigado certo. Uma leitura
+ * falhada: null (fica como estava).
+ */
+async function fechoDoPedidoNaBase(pedidoId: number): Promise<{ fecho: FechoDoPedido; contratada: number | null } | null> {
+  try {
+    const base = await pool();
+    const [rows] = (await base.execute(
+      `SELECT o.status,
+              (SELECT n.id FROM negociacoes n WHERE n.pedidoId = o.id AND n.estado = 'acordada' ORDER BY n.id DESC LIMIT 1) AS contratada
+         FROM simulatorOrders o WHERE o.id = ? LIMIT 1`,
+      [pedidoId],
+    )) as [Array<Record<string, unknown>>, unknown];
+    const r = rows[0];
+    const contratada = r?.contratada != null ? Number(r.contratada) : null;
+    const fecho = oPedidoJaFechou({ existe: Boolean(r), status: r?.status as string | null | undefined, contratada });
+    return fecho ? { fecho, contratada } : null;
+  } catch {
+    return null;
+  }
+}
+
+/*
+ * O fecho das perguntas (`fecharAsPerguntasDoPedido`) vive num módulo leve
+ * (`perguntas-fecham-com-o-pedido.ts`): chamam-no logo ao contratar e no fim do
+ * pedido, e aqui na passagem de 10 em 10 min (para o que fechou por outra porta).
+ */
+/** Se o pedido já fechou, fecha as perguntas dele e diz porquê; senão, null. */
+async function fecharSeOPedidoFechou(pedidoId: number): Promise<{ fecho: FechoDoPedido; contratada: number | null } | null> {
+  const f = await fechoDoPedidoNaBase(pedidoId);
+  if (f) await fecharAsPerguntasDoPedido(pedidoId, f.fecho);
+  return f;
+}
 
 
 /* ── A ida: a pergunta sai ───────────────────────────────────────────────── */
@@ -232,6 +273,8 @@ async function oAgenteComANota(telefoneCliente: string, agora: Date, nota: strin
 
 /** A RESPOSTA DO PARCEIRO, venha de onde vier. Nunca lança. */
 async function responderComARespostaDoParceiro(p: PerguntaRegistada, texto: string, origem: "whatsapp" | "painel", agora: Date): Promise<DesfechoDaResposta | null> {
+  // d146b: com o pedido contratado (ou fechado), a resposta não vai ao cliente nem à equipa.
+  if (await fecharSeOPedidoFechou(p.pedidoId)) return "ja_respondida";
   // d136: a resposta a uma ronda das datas junta-se às dos outros parceiros.
   if (p.rondaId) return responderNaRonda(p, texto, origem, agora);
   try {
@@ -333,7 +376,7 @@ export async function respostaDoParceiroPeloWhatsApp(telefone: string, texto: st
     if (await respostaDoParceiroAoSemDia(telefone, texto, opcoes).catch(() => false)) return true;
     const base = await pool();
     const [rows] = (await base.execute(
-      `SELECT * FROM vitoriaPerguntasAoParceiro WHERE telefoneParceiro = ? AND estado = 'aberta' ORDER BY id DESC LIMIT 5`,
+      `SELECT * FROM vitoriaPerguntasAoParceiro WHERE telefoneParceiro = ? AND estado IN ('aberta', 'encerrada') ORDER BY id DESC LIMIT 5`,
       [noves(telefone)],
     )) as [Array<Record<string, unknown>>, unknown];
     if (rows.length === 0) return false;
@@ -343,6 +386,22 @@ export async function respostaDoParceiroPeloWhatsApp(telefone: string, texto: st
     const linha = rows.find((r) => Number(r.pedidoId) === pedidoId);
     if (!linha) return false;
     const p = lerLinha(linha);
+    // d146b: o pedido já foi contratado (ou fechou) — a resposta não segue para ninguém.
+    const fechou = await fecharSeOPedidoFechou(p.pedidoId);
+    if (fechou || String(linha.estado) === "encerrada") {
+      const [m] = (await base.execute(
+        `UPDATE vitoriaPerguntasAoParceiro SET estado = 'encerrada_avisada', respondidoEm = UTC_TIMESTAMP(), resposta = ?
+          WHERE id = ? AND estado = 'encerrada'`,
+        [String(texto).replace(/\s+/g, " ").trim().slice(0, 500), p.id],
+      )) as [{ affectedRows?: number }, unknown];
+      if (Number(m.affectedRows ?? 0) === 1 && !opcoes.interrompido) {
+        const { enviarAvisoWhatsApp } = await import("../whatsapp-cloud");
+        const f = fechou ?? (await fechoDoPedidoNaBase(p.pedidoId));
+        const obrigado = obrigadoDepoisDoFecho(p.pedidoId, f?.fecho ?? "fechado", f?.contratada != null && f.contratada === p.negociacaoId);
+        await enviarAvisoWhatsApp(telefone, obrigado).catch(() => false);
+      }
+      return true;
+    }
     const desfecho = await responderComARespostaDoParceiro(p, texto, "whatsapp", new Date());
     if (desfecho == null) return false;
     if (desfecho !== "ja_respondida" && !opcoes.interrompido) {
@@ -389,6 +448,15 @@ export async function respostaDoParceiroPeloPainel(
   ];
   const linha = rows[0];
   if (!linha) return { ok: false, porque: "Esta pergunta não é sua.", estado: 404 };
+  // d146b: o pedido já foi contratado (ou fechou) — obrigado, e nada segue.
+  if (String(linha.estado) === "aberta" || String(linha.estado) === "encerrada") {
+    const fechou = await fecharSeOPedidoFechou(Number(linha.pedidoId));
+    if (fechou || String(linha.estado) === "encerrada") {
+      await base.execute("UPDATE vitoriaPerguntasAoParceiro SET estado = 'encerrada_avisada', respondidoEm = UTC_TIMESTAMP() WHERE id = ? AND estado = 'encerrada'", [perguntaId]);
+      const f = fechou ?? (await fechoDoPedidoNaBase(Number(linha.pedidoId)));
+      return { ok: true, texto: obrigadoDepoisDoFecho(Number(linha.pedidoId), f?.fecho ?? "fechado", f?.contratada != null && f.contratada === Number(linha.negociacaoId)) };
+    }
+  }
   if (String(linha.estado) !== "aberta") return { ok: false, porque: "Esta pergunta já foi respondida ou passou à equipa.", estado: 409 };
   const q = String(quando ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
   const texto = resposta === "sim" ? `sim${q ? `, ${q}` : ""}` : "não";
@@ -413,6 +481,14 @@ export async function correrOsPrazosDasPerguntas(): Promise<{ linhas: string[] }
   try {
     const base = await pool();
     const db = await import("../db");
+    // d146b: as perguntas de um pedido já contratado (ou fechado) fecham — nem equipa, nem cliente.
+    const [vivos] = (await base.execute(
+      "SELECT DISTINCT pedidoId FROM vitoriaPerguntasAoParceiro WHERE estado = 'aberta' ORDER BY pedidoId DESC LIMIT 50",
+    )) as [Array<Record<string, unknown>>, unknown];
+    for (const v of vivos) {
+      const f = await fechoDoPedidoNaBase(Number(v.pedidoId));
+      if (f && (await fecharAsPerguntasDoPedido(Number(v.pedidoId), f.fecho)) > 0) linhas.push(`#${Number(v.pedidoId)} (perguntas fechadas: ${f.fecho})`);
+    }
     const [rows] = (await base.execute(
       "SELECT * FROM vitoriaPerguntasAoParceiro WHERE estado = 'aberta' AND prazoEm <= UTC_TIMESTAMP() ORDER BY id ASC LIMIT 20",
     )) as [Array<Record<string, unknown>>, unknown];
@@ -573,7 +649,13 @@ async function responderAoClienteDaRonda(rondaId: string, agora: Date = new Date
       WHERE ronda = ? AND estado IN ('aberta', 'respondida', 'expirou') ORDER BY id ASC`,
     [rondaId],
   )) as [Array<Record<string, unknown>>, unknown];
-  if (rows.length === 0 || rows.some((r) => String(r.estado) === "aberta")) return;
+  if (rows.length === 0) return;
+  // d146b (o #692): contratado ou fechado entretanto — a ronda fecha calada: nem nota à equipa, nem mensagem ao cliente.
+  if (await fecharSeOPedidoFechou(Number(rows[0].pedidoId))) {
+    await base.execute("UPDATE vitoriaPerguntasAoParceiro SET ronda = ? WHERE ronda = ?", [`${rondaId.slice(0, 78)}!`, rondaId]).catch(() => {});
+    return;
+  }
+  if (rows.some((r) => String(r.estado) === "aberta")) return;
   const [u] = (await base.execute("UPDATE vitoriaPerguntasAoParceiro SET ronda = ? WHERE ronda = ?", [`${rondaId.slice(0, 78)}!`, rondaId])) as [
     { affectedRows?: number },
     unknown,

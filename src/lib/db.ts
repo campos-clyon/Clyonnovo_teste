@@ -2734,6 +2734,10 @@ export async function gravarNegociacao(
   const pool = await getPool();
   if (!pool) throw new Error("DB not available");
   const r = await gravarNegociacaoSemOPrecisaInfo(pool, id, dados, seAinda);
+  // d146b: contratado — as perguntas da Vitória aos parceiros deste pedido (d97, as datas da d136) fecham logo.
+  if (r.ok && seAinda && dados.estado === "acordada") {
+    await import("./vitoria-agente/perguntas-fecham-com-o-pedido").then((m) => m.fecharAsPerguntasDoPedido(seAinda.pedidoId, "contratado")).catch(() => 0);
+  }
   // d110: a primeira resposta de um parceiro tira o pedido de «precisa info».
   if (r.ok && eRespostaDeParceiro(dados)) await sairDoPrecisaInfoPelaNegociacao(id, "proposta").catch(() => {});
   return r;
@@ -4189,6 +4193,8 @@ export async function atribuirOfertaClyon(negociacaoId: number): Promise<Atribui
       [pedidoId, negociacaoId],
     )) as any[];
     await conn.commit();
+    // d146b: atribuído — as perguntas da Vitória aos parceiros deste pedido fecham logo.
+    await import("./vitoria-agente/perguntas-fecham-com-o-pedido").then((m) => m.fecharAsPerguntasDoPedido(pedidoId, "contratado")).catch(() => 0);
     return {
       ok: true,
       pedidoId,

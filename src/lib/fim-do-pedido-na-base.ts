@@ -130,6 +130,8 @@ export async function fimDoPedido(
   }
 
   if (o.depoisDeFechar) await o.depoisDeFechar();
+  // d146b: cancelado, arquivado ou apagado — as perguntas da Vitória aos parceiros fecham logo.
+  await import("./vitoria-agente/perguntas-fecham-com-o-pedido").then((m) => m.fecharAsPerguntasDoPedido(pedidoId, "fechado")).catch(() => 0);
 
   const avisados = o.avisar === false ? 0 : await avisarDoFim(pedidoId, o.fim, o.motivo ?? null, quemSabeDoFim(o.fim, antes));
   return { encerradas, avisados };
