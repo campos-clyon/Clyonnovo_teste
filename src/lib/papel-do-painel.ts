@@ -365,6 +365,8 @@ const SECCOES_QUE_ABREM: EntradaDaRota[] = [
   { prefixo: "/api/admin/indisponibilidades", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   // O link do pedido e o motivo dos dados do dono no «Enviar adjudicação» (03-11-2026, d15): na Mesa e nos Trabalhos CLYON.
   { prefixo: "/api/admin/negociacoes/adjudicacao", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
+  // d147: a pergunta e a resposta de pós-trabalho nos Concluídos «por ver» — na Mesa e nos Trabalhos CLYON.
+  { prefixo: "/api/admin/negociacoes/pos-trabalho", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes", seccoes: ["negociacoes_clyon"] },
   { prefixo: "/api/admin/alteracoes-do-cliente", seccoes: ["negociacoes_clyon", "trabalhos_clyon", "pedidos"] },
   // A validade dos orçamentos (d62, 18-11-2026): a linha do passo e o «Lembrar agora», na Mesa e nos Trabalhos CLYON.

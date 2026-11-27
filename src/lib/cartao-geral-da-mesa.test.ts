@@ -16,16 +16,17 @@ import { join } from "node:path";
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
 const PAINEL = ler("src/components/admin/AdminNegociacoesPanel.tsx");
 
-// A fila dos cartões: da grelha até ao fim do `.map` dos blocos.
+// A fila dos cartões: da grelha até ao fim do «Geral», que desde a d147 vem depois do `.map` dos blocos.
 const inicio = PAINEL.indexOf("grid-cols-[repeat(auto-fit,");
-const FILA = PAINEL.slice(inicio, PAINEL.indexOf("        })}\n      </div>", inicio));
+const FILA = PAINEL.slice(inicio, PAINEL.indexOf("      {soOBloco && (", inicio));
 
 describe("o «Geral»", () => {
-  it("vem antes dos cartões dos blocos", () => {
+  // d147 (27-11-2026, dono): «… Concluídos · Geral (em último)».
+  it("vem depois dos cartões dos blocos, em último", () => {
     expect(inicio).toBeGreaterThan(-1);
     const geral = FILA.indexOf("<p className={TITULO_DO_FILTRO}>Geral</p>");
     expect(geral).toBeGreaterThan(-1);
-    expect(geral).toBeLessThan(FILA.indexOf("blocosDoModo.map((b) =>"));
+    expect(geral).toBeGreaterThan(FILA.indexOf("blocosDoModo.map((b) =>"));
   });
 
   it("vem escolhido por omissão: é o estado sem bloco escolhido, e é com ele que a mesa abre", () => {

@@ -23,7 +23,8 @@ describe("os cartões dos Trabalhos CLYON", () => {
 
   it("a linha de cima é o botão que abre e fecha", () => {
     // Abrir um concluído por ver é vê-lo (19-10-2026), e abre-se.
-    const botao = CARTAO.indexOf("if (porVer && !aberto) onVisto();");
+    // d147: só quando não há nota a recolher (`fechaAoAbrir`).
+    const botao = CARTAO.indexOf("if (porVer && !aberto && fechaAoAbrir) onVisto();");
     expect(botao).toBeGreaterThan(-1);
     expect(CARTAO.slice(botao, botao + 200)).toContain("setAberto((v) => !v);");
     expect(CARTAO.slice(botao, botao + 200)).toContain("aria-expanded={aberto}");

@@ -95,7 +95,7 @@ describe("o cartão de cada trabalho", () => {
 
   it("um concluído por ver tem destaque, e abri-lo é vê-lo", () => {
     expect(CARTAO).toContain('const porVer = (r.fase === "confirmada" || r.fase === "paga") && !t.concluidoVistoEm;');
-    expect(CARTAO).toContain("if (porVer && !aberto) onVisto();");
+    expect(CARTAO).toContain("if (porVer && !aberto && fechaAoAbrir) onVisto();");
     expect(T).toContain('body: JSON.stringify({ accao: "visto", pedidoId: t.pedidoId }),');
     expect(ler("src/app/api/admin/trabalhos-clyon/route.ts")).toContain("await marcarConcluidoComoVisto(pedidoId);");
   });
@@ -128,7 +128,8 @@ describe("as acções da Mesa (fase 3)", () => {
     expect(A).toContain("guardar: (estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;");
     expect(T).toContain('import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";');
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain(
-      'body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario, comoDisse }),',
+      // d147: a gravação da Mesa vive em `guardarANota`, usada pelo cartão e pela caixa «Depois do trabalho».
+      'body: JSON.stringify({ pedidoId: p.id, negociacaoId, accao: "avaliar", estrelas, comentario, comoDisse }),',
     );
     expect(ROTA).toContain("const gravou = await avaliarProfissional(negociacaoId, pedidoId, estrelas, comentario, {");
   });

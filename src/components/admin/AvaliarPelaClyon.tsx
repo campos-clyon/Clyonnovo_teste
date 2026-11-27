@@ -35,8 +35,17 @@ export default function AvaliarPelaClyon({
   profissionalNome,
   onMudou,
   guardar,
+  inicial,
+  dica,
 }: {
   profissionalNome: string;
+  /**
+   * d147 (27-11-2026): o que já vem escrito — a resposta do cliente lida da
+   * conversa, a nota se ele a deu com um número, e o «Por WhatsApp a DD/MM».
+   */
+  inicial?: { estrelas?: number | null; comentario?: string | null; comoDisse?: string | null };
+  /** Uma linha por cima das estrelas (d147: estrelas só se o cliente as deu). */
+  dica?: string;
   onMudou: () => void;
   /**
    * Como se grava a nota — 19-10-2026. A Mesa grava pela rota das
@@ -46,9 +55,12 @@ export default function AvaliarPelaClyon({
   guardar: (estrelas: number, comentario: string | undefined, comoDisse: string) => Promise<string | null>;
 }) {
   const { papel } = useAdminAuth();
-  const [estrelas, setEstrelas] = useState(0);
-  const [comentario, setComentario] = useState("");
-  const [comoDisse, setComoDisse] = useState("");
+  const [estrelas, setEstrelas] = useState(() => {
+    const e = Number(inicial?.estrelas ?? 0);
+    return Number.isInteger(e) && e >= 1 && e <= 5 ? e : 0;
+  });
+  const [comentario, setComentario] = useState(() => String(inicial?.comentario ?? "").slice(0, 600));
+  const [comoDisse, setComoDisse] = useState(() => String(inicial?.comoDisse ?? "").slice(0, COMO_O_CLIENTE_O_DISSE.maximo));
   const [aEnviar, setAEnviar] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -81,6 +93,7 @@ export default function AvaliarPelaClyon({
         Só a nota que o cliente lhe deu. Fica «{REGISTADA_PELA_CLYON.toLowerCase()}», fora das
         estrelas do Google; se o cliente avaliar {profissionalNome} depois, fica a dele.
       </p>
+      {dica && <p className="mt-1 text-[11px] leading-relaxed text-amber-200/90">{dica}</p>}
 
       <div className="mt-2.5 flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((n) => (

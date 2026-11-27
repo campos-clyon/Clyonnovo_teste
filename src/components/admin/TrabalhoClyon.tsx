@@ -70,6 +70,8 @@ import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
 import type { CorDoProfissional } from "@/lib/cores-dos-profissionais";
 import EtiquetaDaOrigem from "@/components/admin/EtiquetaDaOrigem";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
+import PosTrabalhoPorVer from "@/components/admin/PosTrabalhoPorVer";
+import { oPorVerFechaAoAbrir } from "@/lib/pos-trabalho";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
 import TirarAEmpresa from "@/components/admin/TirarAEmpresa";
 import { empresaTiradaSemOferta } from "@/lib/tirar-a-empresa";
@@ -1168,6 +1170,8 @@ function CartaoDoTrabalho({
     if (abrirAoInicio) setAberto(true);
   }, [abrirAoInicio]);
   const porVer = (r.fase === "confirmada" || r.fase === "paga") && !t.concluidoVistoEm;
+  // d147: com a nota por recolher, abrir já não fecha o «por ver» — fecha-se pela caixa «Depois do trabalho».
+  const fechaAoAbrir = oPorVerFechaAoAbrir({ avaliado: a?.estrelas != null, clyonPodeAvaliar: Boolean(a?.confirmadoEm) });
   const [aEscreverNota, setAEscreverNota] = useState(false);
   const [rascunho, setRascunho] = useState("");
   const [aGuardarNota, setAGuardarNota] = useState(false);
@@ -1316,7 +1320,7 @@ function CartaoDoTrabalho({
       */}
       <div
         {...linhaQueAbre(() => {
-          if (porVer && !aberto) onVisto();
+          if (porVer && !aberto && fechaAoAbrir) onVisto();
           setAberto((v) => !v);
         }, `${aberto ? "Fechar" : "Abrir"} o trabalho #${t.pedidoId}`)}
         aria-expanded={aberto}
@@ -1520,6 +1524,20 @@ function CartaoDoTrabalho({
           <span className="whitespace-pre-line break-words text-xs leading-relaxed text-amber-200/90">{t.notas}</span>
         </button>
       ) : null}
+
+      {/* d147: a pergunta de pós-trabalho e a resposta do cliente, num concluído por ver ainda sem nota. */}
+      {porVer && a && a.estrelas == null && (
+        <PosTrabalhoPorVer
+          pedidoId={t.pedidoId}
+          profissionalNome={a.profissional}
+          podeGuardar={Boolean(a.confirmadoEm)}
+          guardar={(estrelas, comentario, comoDisse) => onAvaliar(a, estrelas, comentario, comoDisse)}
+          onFechado={() => {
+            onVisto();
+            onMudou?.();
+          }}
+        />
+      )}
 
       {aberto && (
         <>

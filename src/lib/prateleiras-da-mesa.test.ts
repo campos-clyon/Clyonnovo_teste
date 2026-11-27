@@ -124,7 +124,7 @@ describe("«Precisa de si» só tem o que precisa MESMO dele", () => {
     );
   });
 
-  it("vem logo a seguir ao «Precisa de si», e antes das propostas", () => {
+  it("tem lugar próprio no BLOCOS: d147 — depois das propostas e antes do «Precisa de si»", () => {
     /*
      * A ORDEM LÊ-SE NO `BLOCOS`, e não no memo — 23-09-2026.
      *
@@ -146,8 +146,9 @@ describe("«Precisa de si» só tem o que precisa MESMO dele", () => {
     expect(si).toBeGreaterThan(-1);
     expect(cliente).toBeGreaterThan(-1);
     expect(propostas).toBeGreaterThan(-1);
-    expect(si).toBeLessThan(cliente);
-    expect(cliente).toBeLessThan(propostas);
+    // d147 (27-11-2026, dono): a ordem do pedido, do início ao fim.
+    expect(propostas).toBeLessThan(cliente);
+    expect(cliente).toBeLessThan(si);
     // E o memo continua a emitir a prateleira, que é outra coisa.
     // Com `\s*` porque o ficheiro tem CRLF e a chamada está partida em linhas.
     expect(prateleiras).toMatch(/bloco\(\s*"aguardaCliente"/);

@@ -24,7 +24,7 @@ describe("o cartão diz que está por ver", () => {
 
 describe("o bloco dos Concluídos diz quais são", () => {
   const i = MESA.indexOf('{b.chave === "concluidos" && !fechado && concluidosPorVer > 0 && (');
-  const lista = MESA.slice(i, MESA.indexOf("abri-lo dá-o por visto", i));
+  const lista = MESA.slice(i, MESA.indexOf("abri-lo dá-o por visto quando já tem nota", i));
 
   it("existe, e só com o bloco aberto e algum por ver", () => {
     expect(i).toBeGreaterThan(-1);

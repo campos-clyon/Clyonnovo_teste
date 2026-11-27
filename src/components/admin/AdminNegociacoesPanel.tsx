@@ -55,6 +55,8 @@ import NotaDoPedido, { BotaoAnotar, type NotasDaMesa } from "@/components/admin/
 import PainelDoQueFalta, { BotaoPedirOQueFalta } from "@/components/admin/PedirOQueFalta";
 import type { ChaveDaFalta } from "@/lib/mensagem-do-que-falta";
 import AvaliarPelaClyon from "@/components/admin/AvaliarPelaClyon";
+import PosTrabalhoPorVer from "@/components/admin/PosTrabalhoPorVer";
+import { oPorVerFechaAoAbrir } from "@/lib/pos-trabalho";
 import TrocarProfissional from "@/components/admin/TrocarProfissional";
 import HorasNaMesa from "@/components/admin/HorasNaMesa";
 import ConfirmarChegadaNaMesa from "@/components/admin/ConfirmarChegadaNaMesa";
@@ -891,6 +893,13 @@ const BLOCOS: Array<{
   visivelEm: (mostrar: Mostrar) => boolean;
 }> = [
   /*
+   * A ORDEM DO PEDIDO, DO INÍCIO AO FIM — d147 (27-11-2026, dono): «Feitos, à
+   * espera de confirmação · Orçamentos novos · À espera de propostas · A
+   * aguardar cliente · Precisa de si · Contratados · Concluídos · Geral (em
+   * último)». É este array que decide a ordem dos cartões de cima e dos blocos
+   * por baixo; a regra de que bloco é cada pedido não muda.
+   */
+  /*
    * Primeiro de cima para baixo porque é o único nível onde a demora custa
    * dinheiro: há um profissional à espera de resposta, e um trabalho por
    * confirmar é dinheiro cativo. Até aqui vivia debaixo do bloco âmbar. (Dizia-se
@@ -925,52 +934,6 @@ const BLOCOS: Array<{
     cor: "text-ambar-texto border-ambar",
     corDoNumero: "text-ambar-texto",
     corDoCartao: "border-ambar/40 border-l-ambar bg-ambar/14",
-    visivelEm: () => true,
-  },
-  {
-    chave: "n1",
-    titulo: "Precisa de si",
-    dica:
-      "Nada avança sem si. A proposta fica de pé até alguém responder — responda, ou feche o negócio, em nome do cliente, dentro do pedido. Em cima, o «Outro serviço» que já foi aos profissionais e ficou um dia sem propostas.",
-    Icone: Clock,
-    cor: "text-ciano-texto border-ciano",
-    corDoNumero: "text-ciano-texto",
-    corDoCartao: "border-ciano/40 border-l-ciano bg-ciano/14",
-    visivelEm: () => true,
-  },
-  /*
-   * ── A BOLA ESTÁ COM O CLIENTE ──────────────────────────────────────
-   *
-   * "Vamos criar uma nova categoria que vai chamar-se «A aguardar
-   * Cliente». Os pedidos que estão à espera de o cliente responder, hoje
-   * estão em «Precisa de si», e vamos colocá-los aqui." — 23-09-2026.
-   *
-   * Tem toda a razão, e o próprio ecrã já o dizia por baixo do título:
-   * «4 pedidos estão à espera de si» por cima de uma lista de treze. Os
-   * outros nove não esperavam por ninguém de cá dentro — esperavam por
-   * um cliente que tem email, recebeu o link, e responde sozinho.
-   *
-   * Um bloco chamado «Precisa de si» com nove linhas em que ele não
-   * precisa de fazer nada ensina a ignorar o bloco. E o que se perde
-   * nesse desconto é o dos outros quatro, onde a demora custa dinheiro.
-   *
-   * O QUE OS SEPARA é `quemNegoceia` — a mesma regra que decide se a
-   * CLYON pode confirmar um trabalho em nome de alguém. Sem email, ou
-   * registado pela equipa, a CLYON responde; com email, responde ele.
-   *
-   * NÃO ESTÁ PARADO, e é por isso que fica logo a seguir: há um
-   * profissional do outro lado à espera. O que muda é o gesto — aqui
-   * lembra-se o cliente, ali responde-se por ele.
-   */
-  {
-    chave: "aguardaCliente",
-    titulo: "A aguardar cliente",
-    dica:
-      "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu a ligação, ou a CLYON já lhe enviou o orçamento. Se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
-    Icone: UserRound,
-    cor: "text-laranja-texto border-laranja",
-    corDoNumero: "text-laranja-texto",
-    corDoCartao: "border-laranja/40 border-l-laranja bg-laranja/14",
     visivelEm: () => true,
   },
   /*
@@ -1014,6 +977,52 @@ const BLOCOS: Array<{
     cor: "text-azul-texto border-azul",
     corDoNumero: "text-azul-texto",
     corDoCartao: "border-azul/40 border-l-azul bg-azul/14",
+    visivelEm: () => true,
+  },
+  /*
+   * ── A BOLA ESTÁ COM O CLIENTE ──────────────────────────────────────
+   *
+   * "Vamos criar uma nova categoria que vai chamar-se «A aguardar
+   * Cliente». Os pedidos que estão à espera de o cliente responder, hoje
+   * estão em «Precisa de si», e vamos colocá-los aqui." — 23-09-2026.
+   *
+   * Tem toda a razão, e o próprio ecrã já o dizia por baixo do título:
+   * «4 pedidos estão à espera de si» por cima de uma lista de treze. Os
+   * outros nove não esperavam por ninguém de cá dentro — esperavam por
+   * um cliente que tem email, recebeu o link, e responde sozinho.
+   *
+   * Um bloco chamado «Precisa de si» com nove linhas em que ele não
+   * precisa de fazer nada ensina a ignorar o bloco. E o que se perde
+   * nesse desconto é o dos outros quatro, onde a demora custa dinheiro.
+   *
+   * O QUE OS SEPARA é `quemNegoceia` — a mesma regra que decide se a
+   * CLYON pode confirmar um trabalho em nome de alguém. Sem email, ou
+   * registado pela equipa, a CLYON responde; com email, responde ele.
+   *
+   * NÃO ESTÁ PARADO, e é por isso que fica logo a seguir: há um
+   * profissional do outro lado à espera. O que muda é o gesto — aqui
+   * lembra-se o cliente, ali responde-se por ele.
+   */
+  {
+    chave: "aguardaCliente",
+    titulo: "A aguardar cliente",
+    dica:
+      "A proposta está em cima da mesa e é o cliente que responde — tem email e recebeu a ligação, ou a CLYON já lhe enviou o orçamento. Se estiver a demorar, lembre-o. Abrir o pedido mostra o que ele já recebeu.",
+    Icone: UserRound,
+    cor: "text-laranja-texto border-laranja",
+    corDoNumero: "text-laranja-texto",
+    corDoCartao: "border-laranja/40 border-l-laranja bg-laranja/14",
+    visivelEm: () => true,
+  },
+  {
+    chave: "n1",
+    titulo: "Precisa de si",
+    dica:
+      "Nada avança sem si. A proposta fica de pé até alguém responder — responda, ou feche o negócio, em nome do cliente, dentro do pedido. Em cima, o «Outro serviço» que já foi aos profissionais e ficou um dia sem propostas.",
+    Icone: Clock,
+    cor: "text-ciano-texto border-ciano",
+    corDoNumero: "text-ciano-texto",
+    corDoCartao: "border-ciano/40 border-l-ciano bg-ciano/14",
     visivelEm: () => true,
   },
   /*
@@ -2875,10 +2884,34 @@ export default function AdminNegociacoesPanel({
     const cancelado = p.status === "cancelado";
     const concluido = !cancelado && pedidoConcluido(p);
     const porVer = concluido && !p.concluidoVistoEm;
+    /*
+     * d147 (27-11-2026): com uma nota por recolher (sem nota, e a CLYON pode
+     * dá-la por este cliente), abrir já não fecha o «por ver» — fecha-se com
+     * «Guardar a resposta» ou «Sem resposta do cliente — fechar».
+     */
+    const fechaAoAbrir = oPorVerFechaAoAbrir({ avaliado: Boolean(acordada?.avaliadoEm), clyonPodeAvaliar: clyonPodeConfirmar(p) });
+    const marcarComoVisto = () =>
+      setPedidos((lista) => lista.map((x) => (x.id === p.id ? { ...x, concluidoVistoEm: new Date().toISOString() } : x)));
+    /** A nota da CLYON em nome do cliente, pela rota das negociações (a dos Trabalhos CLYON tem a sua). */
+    const guardarANota = async (negociacaoId: number, estrelas: number, comentario: string | undefined, comoDisse: string): Promise<string | null> => {
+      if (!token) return "Sem sessão.";
+      try {
+        const res = await fetchComAConfirmacaoDaGuia("/api/admin/negociacoes/agir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ pedidoId: p.id, negociacaoId, accao: "avaliar", estrelas, comentario, comoDisse }),
+        });
+        const dados = await res.json().catch(() => ({}));
+        return res.ok ? null : (dados.error ?? "Não foi possível avaliar.");
+      } catch {
+        return "Erro de rede.";
+      }
+    };
     const alternarAberto = () => {
       // Abrir um concluído por ver É vê-lo: o carimbo grava-se no servidor e
       // o destaque apaga-se — sem botão próprio para "marcar como visto".
-      if (porVer && !negociacoesVisiveis.has(p.id) && token) {
+      // Desde a d147, só quando não há nota a recolher (`fechaAoAbrir`).
+      if (porVer && fechaAoAbrir && !negociacoesVisiveis.has(p.id) && token) {
         void fetch("/api/admin/negociacoes", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -3255,6 +3288,20 @@ export default function AdminNegociacoesPanel({
         */}
         <NotaDoPedido pedidoId={p.id} nota={p.notasInternas} notas={notas} />
 
+        {/* d147: a pergunta de pós-trabalho e a resposta do cliente, num concluído por ver ainda sem nota. */}
+        {porVer && acordada && !acordada.avaliadoEm && (
+          <PosTrabalhoPorVer
+            pedidoId={p.id}
+            profissionalNome={acordada.profissionalNome}
+            podeGuardar={clyonPodeConfirmar(p)}
+            guardar={(estrelas, comentario, comoDisse) => guardarANota(acordada.id, estrelas, comentario, comoDisse)}
+            onFechado={() => {
+              marcarComoVisto();
+              void carregar(true);
+            }}
+          />
+        )}
+
         {aberto && (
           <>
         {/*
@@ -3457,20 +3504,7 @@ export default function AdminNegociacoesPanel({
                 profissionalNome={acordada.profissionalNome}
                 onMudou={() => carregar(true)}
                 // A Mesa grava pela rota das negociações (a dos Trabalhos CLYON tem a sua).
-                guardar={async (estrelas, comentario, comoDisse) => {
-                  if (!token) return "Sem sessão.";
-                  try {
-                    const res = await fetchComAConfirmacaoDaGuia("/api/admin/negociacoes/agir", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                      body: JSON.stringify({ pedidoId: p.id, negociacaoId: acordada.id, accao: "avaliar", estrelas, comentario, comoDisse }),
-                    });
-                    const dados = await res.json().catch(() => ({}));
-                    return res.ok ? null : (dados.error ?? "Não foi possível avaliar.");
-                  } catch {
-                    return "Erro de rede.";
-                  }
-                }}
+                guardar={(estrelas, comentario, comoDisse) => guardarANota(acordada.id, estrelas, comentario, comoDisse)}
               />
             ) : (
               <p className="mt-2.5 text-xs text-slate-500">
@@ -5133,18 +5167,6 @@ export default function AdminNegociacoesPanel({
       {/* «Alterações do cliente» (S17, 29-10-2026): só aparece quando há, com o número à cabeça. */}
       {mostrar !== "clyon" && <AlteracoesDoCliente token={token} />}
       <div className="mb-3 mt-2 grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2">
-        <button
-          type="button"
-          onClick={() => escolherBloco(null)}
-          aria-pressed={soOBloco === null}
-          title="Ver todos os blocos"
-          className={classeDoFiltro(soOBloco === null, false)}
-        >
-          <p className={TITULO_DO_FILTRO}>Geral</p>
-          <p className="text-lg font-bold leading-tight text-slate-100">
-            {blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0) + semBloco.length}
-          </p>
-        </button>
         {blocosDoModo.map((b) => {
           const n = quantosNoBloco(b.chave);
           const escolhido = soOBloco === b.chave;
@@ -5168,6 +5190,19 @@ export default function AdminNegociacoesPanel({
             </button>
           );
         })}
+        {/* O «GERAL» EM ÚLTIMO — d147 (27-11-2026, dono). */}
+        <button
+          type="button"
+          onClick={() => escolherBloco(null)}
+          aria-pressed={soOBloco === null}
+          title="Ver todos os blocos"
+          className={classeDoFiltro(soOBloco === null, false)}
+        >
+          <p className={TITULO_DO_FILTRO}>Geral</p>
+          <p className="text-lg font-bold leading-tight text-slate-100">
+            {blocosDoModo.reduce((soma, b) => soma + quantosNoBloco(b.chave), 0) + semBloco.length}
+          </p>
+        </button>
       </div>
 
       {soOBloco && (
@@ -5717,7 +5752,7 @@ export default function AdminNegociacoesPanel({
                         #{t.pedidoId} · {t.cliente || "Cliente sem nome"}
                       </button>
                     ))}
-                  <span>— carregue para ir ao cartão; abri-lo dá-o por visto.</span>
+                  <span>— carregue para ir ao cartão; fecha-se com «Guardar a resposta» ou «Sem resposta do cliente — fechar» (abri-lo dá-o por visto quando já tem nota).</span>
                 </div>
               )}
 
