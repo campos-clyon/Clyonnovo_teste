@@ -94,7 +94,7 @@ import { avisoAcimaDoValorUnico, valorUnicoSugerido } from "@/lib/valor-unico";
 import { nomeDoServicoDoOrcamento, textoDoOrcamentoDaMesa } from "@/lib/texto-do-orcamento-da-mesa";
 import PassoDaValidade, { type ValidadeNaMesa } from "@/components/admin/PassoDaValidade";
 import SeguimentoDoCliente, { type SeguimentoNaMesa } from "@/components/admin/SeguimentoDoCliente";
-import { linhaDaMensagemNoPedido } from "@/lib/mensagem-no-suporte";
+import MensagensNoPedido from "./MensagensNoPedido";
 import ValorUnicoNaMesa, { VALOR_UNICO_ACEITE_NA_MESA } from "./ValorUnicoNaMesa";
 import { linhaQueAbre } from "@/lib/linha-que-abre";
 import { MOTIVOS_DE_CANCELAMENTO } from "@/lib/cancelamento";
@@ -1388,8 +1388,6 @@ export default function AdminNegociacoesPanel({
   const [seguimentos, setSeguimentos] = useState<Record<number, SeguimentoNaMesa>>({});
   /** d138: os contratados sem dia (ou sem hora) — os de 4 dias ou mais vão vermelhos ao «Precisa de si». */
   const [semDia, setSemDia] = useState<Array<{ pedidoId: number; negociacaoId: number; semDia: SemDia }>>([]);
-  /** d140: os pedidos com uma mensagem do cliente no pedido por responder (Suporte › «No pedido»). */
-  const [mensagensNoPedido, setMensagensNoPedido] = useState<Array<{ pedidoId: number; desde: string; motivo: string | null }>>([]);
 
   /** d5: «Confirmei com o parceiro» — o cliente passa a ver os dados de pagamento. */
   const confirmarDadosDePagamento = async (negociacaoId: number) => {
@@ -1469,20 +1467,6 @@ export default function AdminNegociacoesPanel({
         if (rd.ok) setSemDia(((await rd.json()) as { trabalhos?: typeof semDia }).trabalhos ?? []);
       } catch {
         /* sem a lista, a Mesa de sempre */
-      }
-      /*
-       * AS MENSAGENS NO PEDIDO — d140 (27-11-2026): o cliente escreveu dentro do
-       * pedido e ninguém respondeu (ou a Vitória passou à equipa). Entram em
-       * «Precisa de si». Em silêncio: sem a leitura, a Mesa de sempre.
-       */
-      try {
-        const rm = await fetch("/api/admin/negociacoes/mensagens-no-pedido", { headers: { Authorization: `Bearer ${token}` } });
-        if (rm.ok) {
-          const v = (await rm.json()) as { pedidos?: Array<{ pedidoId: number; desde: string; motivo: string | null }> };
-          setMensagensNoPedido(v.pedidos ?? []);
-        }
-      } catch {
-        /* sem as mensagens no pedido, a Mesa de sempre */
       }
       setPedidos(
         ((dados.pedidos ?? []) as Pedido[]).map((p) =>
@@ -2700,14 +2684,6 @@ export default function AdminNegociacoesPanel({
   const emSeguimento = (id: number) => seguimentos[id]?.emCurso === true;
   const emSeguimentoNoN1 = [...idsDoPrecisaDeSi].filter(emSeguimento);
   /*
-   * A MENSAGEM NO PEDIDO POR RESPONDER — d140 (27-11-2026). O cliente escreveu
-   * dentro do pedido (Suporte › «No pedido»): o pedido entra em «Precisa de si»,
-   * em cima, com «Mensagem no pedido por responder há N». Os que já estão no
-   * bloco não contam duas vezes.
-   */
-  const relogioDasMensagens = new Date(lidoEm ?? Date.now());
-  const mensagensForaDoN1 = mensagensNoPedido.filter((m) => !idsDoPrecisaDeSi.has(m.pedidoId));
-  /*
    * d83 v2 (22-11-2026): os mesmos pedidos, para o «Do nosso lado» do topo —
    * as conversas deles, os preços e as propostas por enviar e os escolhidos sem
    * resposta deixam de contar como «à espera de nós» (`semOsEmSeguimento`).
@@ -2792,7 +2768,6 @@ export default function AdminNegociacoesPanel({
     return chave === "porEnviar"
       ? porPromoverNaMesa.length
       : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length : 0) +
-          (chave === "n1" ? mensagensForaDoN1.length : 0) -
           // d83: os que estão em seguimento não contam como «à espera de nós».
           (chave === "n1" ? emSeguimentoNoN1.length : 0);
   }
@@ -5111,6 +5086,22 @@ export default function AdminNegociacoesPanel({
       {(linhaDoPrecisaDeSi || mostrar === "tudo" || mostrar === "clyon") && (
         <div role="group" aria-label="O que está à espera" className="mb-2 flex flex-wrap items-center gap-1.5">
           {linhaDoPrecisaDeSi}
+          {/*
+            d140b (27-11-2026, dono): as mensagens no pedido por responder são um
+            botão próprio da linha, fora do «Precisa de si» e do contador dele.
+          */}
+          <MensagensNoPedido
+            token={token}
+            onAbrirPedido={(id) => {
+              setBusca(`#${id}`);
+              if (idsClyon.has(id)) irAoTrabalhoClyon(id);
+              else
+                window.setTimeout(
+                  () => document.getElementById(`pedido-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  120,
+                );
+            }}
+          />
           {(mostrar === "tudo" || mostrar === "clyon") && (
             <DoNossoLado
               token={token}
@@ -5870,47 +5861,6 @@ export default function AdminNegociacoesPanel({
                           «Precisa de si» desde 18-11-2026 (dono): decide-se aqui, com o
                           cartão de negociação dele.
                         */}
-                        {/*
-                          d140: AS MENSAGENS NO PEDIDO POR RESPONDER — em cima de tudo, com
-                          a espera e o motivo; «Ver na Mesa» procura o pedido, «Responder»
-                          abre o Suporte (a resposta sai no pedido, onde o cliente escreveu).
-                        */}
-                        {b.chave === "n1" && mensagensNoPedido.length > 0 && (
-                          <div className="mb-3 space-y-1.5">
-                            {[...mensagensNoPedido]
-                              .sort((x, y) => y.pedidoId - x.pedidoId)
-                              .map((m) => (
-                                <div
-                                  key={`mensagem-${m.pedidoId}`}
-                                  className="flex flex-wrap items-center gap-2 rounded-lg border border-ciano/40 border-l-4 border-l-ciano bg-ciano/14 px-3 py-2 text-xs"
-                                >
-                                  <span className="font-semibold text-ciano-texto">#{m.pedidoId}</span>
-                                  <span className="text-slate-200">
-                                    {linhaDaMensagemNoPedido(m.desde, relogioDasMensagens)}
-                                    {m.motivo ? ` — ${m.motivo}` : ""}
-                                  </span>
-                                  <span className="ml-auto flex gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setBusca(`#${m.pedidoId}`);
-                                        if (idsClyon.has(m.pedidoId)) irAoTrabalhoClyon(m.pedidoId);
-                                      }}
-                                      className="rounded-md border border-slate-600 px-2 py-0.5 text-slate-200 hover:bg-slate-700"
-                                    >
-                                      Ver na Mesa
-                                    </button>
-                                    <a
-                                      href="/admin?section=suporte"
-                                      className="rounded-md border border-ciano/50 px-2 py-0.5 font-semibold text-ciano-texto hover:bg-ciano/25"
-                                    >
-                                      Responder no Suporte
-                                    </a>
-                                  </span>
-                                </div>
-                              ))}
-                          </div>
-                        )}
                         {b.chave === "n1" && outrosSemPropostas.length > 0 && (
                           <div className="mb-3">
                             <p className="mb-2 text-xs leading-relaxed text-magenta-texto">

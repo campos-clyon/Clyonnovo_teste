@@ -10,6 +10,11 @@ import {
   eHojeOuAmanha,
   HORA_DO_PRIMEIRO_AVISO,
   HORA_DO_ULTIMO_AVISO,
+  DIAS_DAS_MENSAGENS_NO_PEDIDO,
+  eOAvisoDaResposta,
+  ESTADOS_FECHADOS_DAS_MENSAGENS,
+  mensagemDoPedidoPorResponder,
+  mensagemNoPedidoContaNaMesa,
   mensagemPorResponder,
   motivoDaEquipa,
   pedeAlteracao,
@@ -18,6 +23,7 @@ import {
 } from "./mensagem-no-suporte";
 import { pecasEmLisboa } from "./hora-de-lisboa";
 import { urlDeAccao } from "./url-do-site";
+import { concluidoPelosMarcos } from "./pedido-concluido";
 
 /**
  * UMA MENSAGEM NO SUPORTE, NA BASE — d140 (27-11-2026). As regras e as frases
@@ -316,16 +322,160 @@ export async function enviarOsAvisosDoSuportePendentes(agora: Date = new Date())
   return out;
 }
 
-/** Os pedidos com uma mensagem no pedido por responder — para a Mesa («Precisa de si»). */
-export async function mensagensNoPedidoPorResponder(): Promise<Array<{ pedidoId: number; desde: string; motivo: string | null }>> {
-  const { pedidosComConversa } = await import("./db");
-  const pedidos = await pedidosComConversa(200);
-  const out: Array<{ pedidoId: number; desde: string; motivo: string | null }> = [];
-  for (const p of pedidos) {
-    const m = mensagemPorResponder(p.historyJson);
-    if (!m) continue;
-    const d = instanteDaBase(m.desde);
-    out.push({ pedidoId: p.id, desde: d ? d.toISOString() : m.desde, motivo: m.motivo });
+/* ── Na Mesa — d140b (27-11-2026, dono) ─────────────────────────────── */
+
+export type MensagemNoPedidoNaMesa = { pedidoId: number; desde: string; ultima: string; motivo: string | null };
+
+let tabelaDasResolvidasPronta = false;
+async function poolDasResolvidas() {
+  const p = await getPool();
+  if (!p) throw new Error("DB not available");
+  if (!tabelaDasResolvidasPronta) {
+    // Uma linha por pedido: quem deu por resolvido e quando. A mensagem fica no pedido.
+    await p.execute(`
+      CREATE TABLE IF NOT EXISTS mensagensNoPedidoResolvidas (
+        pedidoId    INT UNSIGNED NOT NULL PRIMARY KEY,
+        resolvidaMs BIGINT       NOT NULL,
+        porId       INT          NULL,
+        porNome     VARCHAR(120) NULL,
+        em          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    tabelaDasResolvidasPronta = true;
   }
-  return out;
+  return p;
+}
+
+/** «Já está resolvido»: tira a linha da Mesa, com quem e quando, sem apagar a mensagem. Uma nova do cliente volta a contar. */
+export async function marcarMensagemNoPedidoResolvida(
+  pedidoId: number,
+  por: { id: number | null; nome: string | null },
+  agora: Date = new Date(),
+): Promise<void> {
+  const p = await poolDasResolvidas();
+  await p.execute(
+    `INSERT INTO mensagensNoPedidoResolvidas (pedidoId, resolvidaMs, porId, porNome) VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE resolvidaMs = VALUES(resolvidaMs), porId = VALUES(porId), porNome = VALUES(porNome), em = CURRENT_TIMESTAMP`,
+    [pedidoId, agora.getTime(), por.id, (por.nome ?? "").slice(0, 120) || null],
+  );
+}
+
+const marcas = (n: number) => Array.from({ length: n }, () => "?").join(", ");
+const ultimosNove = (t: string | null | undefined) => String(t ?? "").replace(/\D/g, "").slice(-9);
+
+/**
+ * OS PEDIDOS COM UMA MENSAGEM NO PEDIDO POR RESPONDER — a linha discreta da
+ * Mesa («N mensagens no pedido»). Só os da última semana, de pedidos vivos
+ * (nem concluídos, nem cancelados, nem arquivados), que ninguém respondeu
+ * depois — no pedido, no WhatsApp desse número — nem deu por resolvidos.
+ */
+export async function mensagensNoPedidoPorResponder(agora: Date = new Date()): Promise<MensagemNoPedidoNaMesa[]> {
+  const p = await getPool();
+  if (!p) return [];
+  const fechados = ESTADOS_FECHADOS_DAS_MENSAGENS.map((e) => `'${e}'`).join(", ");
+  const [linhas] = (await p.execute(
+    `SELECT id, status, contactPhone, historyJson
+       FROM simulatorOrders
+      WHERE historyJson LIKE '%"client_reply"%'
+        AND (status IS NULL OR status NOT IN (${fechados}))
+        AND updatedAt > NOW() - INTERVAL ${DIAS_DAS_MENSAGENS_NO_PEDIDO + 1} DAY
+      ORDER BY id DESC
+      LIMIT 200`,
+  )) as [Array<{ id: number; status: string | null; contactPhone: string | null; historyJson: string | null }>, unknown];
+
+  // 1. O histórico do pedido (onde ficam a resposta do Suporte e a da Vitória).
+  type Linha = (typeof linhas)[number];
+  type PorResponder = NonNullable<ReturnType<typeof mensagemDoPedidoPorResponder>>;
+  const candidatos: Array<{ l: Linha; m: PorResponder }> = [];
+  for (const l of linhas) {
+    const m = mensagemDoPedidoPorResponder(l.historyJson);
+    if (m && mensagemNoPedidoContaNaMesa(m, { estado: l.status }, agora)) candidatos.push({ l, m });
+  }
+  if (candidatos.length === 0) return [];
+  const ids = candidatos.map((x) => Number(x.l.id));
+
+  // 2. O trabalho concluído pelos marcos da negociação (a regra da Mesa).
+  const concluidos = new Set<number>();
+  try {
+    const [neg] = (await p.execute(
+      `SELECT n.pedidoId, n.confirmadoEm, n.pagoEm,
+              (SELECT MAX(pg.pagoEm) FROM pagamentos pg WHERE pg.negociacaoPaga = n.id AND pg.pagoEm IS NOT NULL) AS clientePagouEm
+         FROM negociacoes n WHERE n.pedidoId IN (${marcas(ids.length)})`,
+      ids,
+    )) as [Array<{ pedidoId: number; confirmadoEm: unknown; pagoEm: unknown; clientePagouEm: unknown }>, unknown];
+    for (const n of neg) if (concluidoPelosMarcos(n)) concluidos.add(Number(n.pedidoId));
+  } catch {
+    /* sem as negociações, conta o estado do pedido */
+  }
+
+  // 3. «Já está resolvido».
+  const resolvidas = new Map<number, Date>();
+  try {
+    const pr = await poolDasResolvidas();
+    const [res] = (await pr.execute(
+      `SELECT pedidoId, resolvidaMs FROM mensagensNoPedidoResolvidas WHERE pedidoId IN (${marcas(ids.length)})`,
+      ids,
+    )) as [Array<{ pedidoId: number; resolvidaMs: number | string }>, unknown];
+    for (const r of res) resolvidas.set(Number(r.pedidoId), new Date(Number(r.resolvidaMs)));
+  } catch {
+    /* sem a tabela, nada está dado por resolvido */
+  }
+
+  // 4. A nossa última mensagem no WhatsApp desse número (a ponte e o telemóvel), sem o aviso automático.
+  const noWhatsApp = new Map<string, Date>();
+  const guardar = (nove: string, d: Date | null) => {
+    if (!d || Number.isNaN(d.getTime())) return;
+    const antes = noWhatsApp.get(nove);
+    if (!antes || d > antes) noWhatsApp.set(nove, d);
+  };
+  const noves = [...new Set(candidatos.map((x) => ultimosNove(x.l.contactPhone)).filter((t) => t.length === 9))];
+  if (noves.length > 0) {
+    try {
+      const formas = noves.flatMap((t) => [t, `351${t}`]);
+      const [saidas] = (await p.execute(
+        `SELECT telefone, texto, criadoEm FROM whatsappMensagens
+          WHERE direccao = 'out' AND telefone IN (${marcas(formas.length)})
+            AND criadoEm > NOW() - INTERVAL ${DIAS_DAS_MENSAGENS_NO_PEDIDO + 1} DAY`,
+        formas,
+      )) as [Array<{ telefone: string; texto: string; criadoEm: Date | string }>, unknown];
+      for (const s of saidas) if (!eOAvisoDaResposta(s.texto)) guardar(ultimosNove(s.telefone), instanteDaBase(s.criadoEm as never));
+    } catch {
+      /* sem a tabela da ponte, fica o histórico */
+    }
+    try {
+      const [tel] = (await p.execute(
+        `SELECT chave, texto, quandoUnix FROM whatsappNoTelemovel WHERE deMim = 1 AND chave IN (${marcas(noves.length)})`,
+        noves,
+      )) as [Array<{ chave: string; texto: string | null; quandoUnix: number | string }>, unknown];
+      for (const t of tel) if (!eOAvisoDaResposta(t.texto)) guardar(String(t.chave), new Date(Number(t.quandoUnix) * 1000));
+    } catch {
+      /* sem a leitura do telemóvel, fica o histórico */
+    }
+  }
+
+  const out: MensagemNoPedidoNaMesa[] = [];
+  for (const { l, m } of candidatos) {
+    const id = Number(l.id);
+    const nove = ultimosNove(l.contactPhone);
+    const conta = mensagemNoPedidoContaNaMesa(
+      m,
+      {
+        estado: l.status,
+        concluido: concluidos.has(id),
+        respondidaNoWhatsAppEm: nove.length === 9 ? (noWhatsApp.get(nove) ?? null) : null,
+        resolvidaEm: resolvidas.get(id) ?? null,
+      },
+      agora,
+    );
+    if (!conta) continue;
+    const desde = instanteDaBase(m.desde);
+    const ultima = instanteDaBase(m.ultima);
+    out.push({
+      pedidoId: id,
+      desde: desde ? desde.toISOString() : m.desde,
+      ultima: ultima ? ultima.toISOString() : m.ultima,
+      motivo: m.motivo,
+    });
+  }
+  return out.sort((a, b) => b.pedidoId - a.pedidoId);
 }

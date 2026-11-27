@@ -39,6 +39,17 @@ const DA_CLYON = new Set(["info_requested", "message_to_client"]);
  * nosso lado. Um histórico estragado não é «por responder».
  */
 export function mensagemPorResponder(historyJson: unknown): { desde: string; motivo: string | null } | null {
+  const m = mensagemDoPedidoPorResponder(historyJson);
+  return m ? { desde: m.desde, motivo: m.motivo } : null;
+}
+
+/**
+ * O MESMO, COM A ÚLTIMA — d140b (27-11-2026). `desde` é a primeira mensagem
+ * dele por responder (é a espera que a Mesa mostra); `ultima` é a mais
+ * recente (é por ela que se vê se alguém respondeu depois, noutro sítio, e se
+ * ainda é desta semana).
+ */
+export function mensagemDoPedidoPorResponder(historyJson: unknown): { desde: string; ultima: string; motivo: string | null } | null {
   if (typeof historyJson !== "string" || !historyJson.trim()) return null;
   let lista: unknown;
   try {
@@ -48,11 +59,14 @@ export function mensagemPorResponder(historyJson: unknown): { desde: string; mot
   }
   if (!Array.isArray(lista)) return null;
   let desde: string | null = null;
+  let ultima = "";
   let motivo: string | null = null;
   for (const e of lista as Entrada[]) {
     if (!e || typeof e !== "object") continue;
     if (e.type === "client_reply") {
-      if (desde == null) desde = typeof e.createdAt === "string" ? e.createdAt : "";
+      const quando = typeof e.createdAt === "string" ? e.createdAt : "";
+      if (desde == null) desde = quando;
+      ultima = quando;
       continue;
     }
     if (typeof e.type === "string" && DA_CLYON.has(e.type)) {
@@ -61,10 +75,56 @@ export function mensagemPorResponder(historyJson: unknown): { desde: string; mot
         continue;
       }
       desde = null;
+      ultima = "";
       motivo = null;
     }
   }
-  return desde == null ? null : { desde, motivo };
+  return desde == null ? null : { desde, ultima: ultima || desde, motivo };
+}
+
+/* ── Na Mesa: só as que ainda são de alguém (d140b) ───────────────────── */
+
+/**
+ * d140b (27-11-2026, dono): a linha das mensagens no pedido mostrava o #362 e
+ * o #346, de há 66 dias e já resolvidos, sem forma de os limpar. Contam só as
+ * da última semana, de pedidos ainda vivos, que ninguém respondeu depois (no
+ * pedido, no WhatsApp desse número) nem deu por resolvidas.
+ */
+export const DIAS_DAS_MENSAGENS_NO_PEDIDO = 7;
+
+/** Os estados de um pedido fechado: as mensagens dele não contam. */
+export const ESTADOS_FECHADOS_DAS_MENSAGENS = ["concluido", "cancelado", "arquivado", "rejeitado"] as const;
+
+/** O aviso automático «Respondemos à sua mensagem no pedido» não é uma resposta. */
+export function eOAvisoDaResposta(texto: string | null | undefined): boolean {
+  return /^\s*Respondemos à sua mensagem no pedido\b/i.test(String(texto ?? ""));
+}
+
+export function mensagemNoPedidoContaNaMesa(
+  m: { ultima: string | Date | null | undefined },
+  o: {
+    estado: string | null | undefined;
+    concluido?: boolean;
+    /** A última mensagem NOSSA no WhatsApp desse número (sem o aviso automático). */
+    respondidaNoWhatsAppEm?: Date | null;
+    /** Quando alguém carregou em «Já está resolvido». */
+    resolvidaEm?: Date | null;
+  },
+  agora: Date,
+): boolean {
+  if ((ESTADOS_FECHADOS_DAS_MENSAGENS as readonly string[]).includes(String(o.estado ?? ""))) return false;
+  if (o.concluido) return false;
+  const ultima = instanteDaBase(m.ultima ?? null);
+  if (!ultima) return false;
+  if (agora.getTime() - ultima.getTime() > DIAS_DAS_MENSAGENS_NO_PEDIDO * 86_400_000) return false;
+  if (o.respondidaNoWhatsAppEm && o.respondidaNoWhatsAppEm.getTime() > ultima.getTime()) return false;
+  if (o.resolvidaEm && o.resolvidaEm.getTime() >= ultima.getTime()) return false;
+  return true;
+}
+
+/** O botão da linha discreta: «1 mensagem no pedido», «3 mensagens no pedido». */
+export function rotuloDasMensagensNoPedido(n: number): string {
+  return `${n === 1 ? "mensagem" : "mensagens"} no pedido`;
 }
 
 /** A linha da Mesa: «Mensagem no pedido por responder há 3 h». */

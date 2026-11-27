@@ -261,12 +261,10 @@ describe("as ligações no código", () => {
     expect(semComentarios(ler("src/app/api/profissionais/ajuda/route.ts"))).toContain('depoisDaAjudaDaPlataforma(id, "parceiro")');
   });
 
-  it("a Mesa põe as mensagens no pedido em «Precisa de si», e o cron envia os avisos guardados", () => {
+  it("a Mesa mostra as mensagens no pedido num botão próprio da linha discreta (d140b), e o cron envia os avisos guardados", () => {
     const painel = semComentarios(ler("src/components/admin/AdminNegociacoesPanel.tsx"));
-    expect(painel).toContain('fetch("/api/admin/negociacoes/mensagens-no-pedido"');
-    expect(painel).toContain('b.chave === "n1" && mensagensNoPedido.length > 0');
-    expect(painel).toContain("linhaDaMensagemNoPedido(m.desde, relogioDasMensagens)");
-    expect(painel).toContain('(chave === "n1" ? mensagensForaDoN1.length : 0)');
+    expect(painel).toContain("<MensagensNoPedido");
+    expect(semComentarios(ler("src/components/admin/MensagensNoPedido.tsx"))).toContain('fetch("/api/admin/negociacoes/mensagens-no-pedido"');
     expect(semComentarios(ler("src/app/api/cron/assistente/route.ts"))).toContain("enviarOsAvisosDoSuportePendentes()");
   });
 
