@@ -11,6 +11,7 @@ import {
   getSimulatorOrderById,
   perfilDoProfissional,
   cancelarPedido,
+  gravarMotivoDoFecho,
   registarSemFalhar,
   aceitarPrecoClyon,
   interromperNumeroWhatsApp,
@@ -22,6 +23,7 @@ import { precoDaPropostaClyon } from "@/lib/proposta-clyon-ao-cliente";
 import { textosDaConta, isoOuNulo } from "@/lib/pedido-para-a-app";
 import { notaDoPrecoParaOCliente } from "@/lib/itens-a-mais";
 import { lerBase } from "@/lib/base-do-preco";
+import { motivoDoFechoDoTexto } from "@/lib/motivo-do-fecho";
 import { oQueSeDesfaz, resumoDoCancelamento } from "@/lib/cancelamento";
 import { propor, aceitar, desistir, contratar, type Negociacao, type Proposta } from "@/lib/negociacao";
 import { avisarQueFoiContratado, avisarQueOClienteRecusou } from "@/lib/email-trabalho";
@@ -259,6 +261,8 @@ export async function agirComoCliente(a: {
 
       const r = await cancelarPedido(pedidoId, { motivo: motivo || "o cliente cancelou" });
       if (!r) return falha(404, "Pedido não encontrado.");
+      // d14: o motivo fica no pedido (a medição da d7 lê-o) — o dito pelo cliente, ou «já não precisa».
+      await gravarMotivoDoFecho(pedidoId, motivoDoFechoDoTexto(motivo) ?? "ja_nao_precisa", null, null).catch(() => {});
       // d102: a excepção passa à equipa — a conversa fica com uma pessoa, com o motivo.
       if (ficaComAEquipa && lido.contactPhone) {
         await interromperNumeroWhatsApp(

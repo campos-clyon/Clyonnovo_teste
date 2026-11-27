@@ -1,5 +1,6 @@
 import {
   appendOrderHistory,
+  gravarMotivoDoFecho,
   negociacoesDoPedido,
   perfilDoProfissional,
   quemTemOTrabalhoClyon,
@@ -77,6 +78,8 @@ export async function arquivarTrabalhosClyonSemResposta(agora: Date = new Date()
       const comTelefone = (await quemTemOTrabalhoClyon(p.id)).vivos.filter((v) => ids.has(v.negociacaoId));
 
       await updateSimulatorOrder(p.id, { status: "arquivado" }, { motivo: FECHADO_SEM_RESPOSTA });
+      // d14: o fecho calado grava o motivo no pedido (a medição da d7 lê-o) — como o seguimento e a validade.
+      await gravarMotivoDoFecho(p.id, "sem_resposta", null, null).catch(() => {});
       r.arquivados.push(p.id);
 
       let avisados = 0;

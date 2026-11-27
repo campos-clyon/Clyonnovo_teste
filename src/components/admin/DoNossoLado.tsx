@@ -18,6 +18,7 @@ import {
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import type { TrabalhoParaOFecho } from "@/lib/fecho-do-modelo-novo";
 import type { PedidoEmSeguimento } from "@/lib/seguimento-do-cliente";
+import type { MudancaSemValorParaOLado } from "@/lib/mudanca-a-hora-sem-valor";
 
 /**
  * «DO NOSSO LADO» — o cartão do topo da Mesa (d14, 03-11-2026). Só leitura:
@@ -120,6 +121,32 @@ export default function DoNossoLado({
     void lerSemPropostas(true);
   }, [lerSemPropostas]);
 
+  /* d14: as mudanças à hora sem o valor enviado há 3 h ou mais — lidas à parte, de 2 em 2 minutos. */
+  const [mudancasSemValor, setMudancasSemValor] = useState<MudancaSemValorParaOLado[] | null>(null);
+  const mudancasSemValorLidoEm = useRef(0);
+  const lerMudancasSemValor = useCallback(
+    async (forcar = false) => {
+      if (!token) return;
+      if (!forcar && Date.now() - mudancasSemValorLidoEm.current < CONVERSAS_DE_MS) return;
+      mudancasSemValorLidoEm.current = Date.now();
+      try {
+        const r = await fetch("/api/admin/negociacoes/mudanca-sem-valor", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        setMudancasSemValor(Array.isArray(d?.pedidos) ? (d.pedidos as MudancaSemValorParaOLado[]) : []);
+      } catch {
+        /* fica o que já se tinha lido */
+      }
+    },
+    [token],
+  );
+  useEffect(() => {
+    void lerMudancasSemValor(true);
+  }, [lerMudancasSemValor]);
+
   const lerConversas = useCallback(
     async (forcar = false) => {
       if (!token || !podeVerConversas) return;
@@ -152,10 +179,11 @@ export default function DoNossoLado({
     setAgora(new Date());
     void lerSemFecho();
     void lerSemPropostas();
+    void lerMudancasSemValor();
     return lerConversas();
   });
 
-  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, semFecho, emSeguimento, semPropostas, agora });
+  const grupos = doNossoLado({ conversas: podeVerConversas ? conversas : null, pedidos, trabalhosClyon, semFecho, emSeguimento, semPropostas, mudancasSemValor, agora });
   const total = grupos.reduce((s, g) => s + g.linhas.length, 0);
   const visiveis = grupos.filter((g) => g.linhas.length > 0 || (g.tipo === "conversa" && podeVerConversas && conversasFalharam));
 
@@ -226,6 +254,18 @@ export default function DoNossoLado({
                           <span className="truncate text-slate-300">{l.oQue}</span>
                           <span className="whitespace-nowrap text-slate-400">{haQuantoEspera(l.esperaS)}</span>
                         </button>
+                        {l.modelo && (
+                          <div className="pb-1.5 pl-1 text-[11px] text-slate-400">
+                            <p className="whitespace-pre-wrap">{l.modelo}</p>
+                            <button
+                              type="button"
+                              onClick={() => void navigator.clipboard?.writeText(l.modelo ?? "").catch(() => {})}
+                              className="mt-0.5 font-semibold text-cyan-400 hover:underline"
+                            >
+                              Copiar o texto
+                            </button>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>

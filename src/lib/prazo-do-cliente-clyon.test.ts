@@ -16,6 +16,7 @@ vi.mock("@/lib/db", () => ({
   negociacoesDoPedido: vi.fn(async () => []),
   quemTemOTrabalhoClyon: vi.fn(async () => ({ eClyon: true, jaFeito: false, vivos: [] })),
   updateSimulatorOrder: vi.fn(async () => {}),
+  gravarMotivoDoFecho: vi.fn(async () => {}),
   perfilDoProfissional: vi.fn(async (id: number) => ({ email: `pro${id}@exemplo.pt` })),
   appendOrderHistory: vi.fn(async () => {}),
   registarSemFalhar: vi.fn(async () => {}),

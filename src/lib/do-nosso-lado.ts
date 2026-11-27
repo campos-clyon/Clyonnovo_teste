@@ -15,6 +15,11 @@ import {
 } from "./escolhidos-sem-resposta";
 import { linhasDoFecho, TITULO_DO_GRUPO_DO_FECHO, type TrabalhoParaOFecho } from "./fecho-do-modelo-novo";
 import { pedidoFechado } from "./pedido-arrumado";
+import {
+  O_QUE_DA_MUDANCA_SEM_VALOR,
+  textoModeloDoValorDaMudanca,
+  type MudancaSemValorParaOLado,
+} from "./mudanca-a-hora-sem-valor";
 import { esperaEDoCliente, mapaDoSeguimento, type PedidoEmSeguimento } from "./seguimento-do-cliente";
 
 /**
@@ -42,7 +47,7 @@ import { esperaEDoCliente, mapaDoSeguimento, type PedidoEmSeguimento } from "./s
 /** Mais de 2 h sem resposta a um cliente é já «do nosso lado». */
 export const DUAS_HORAS_S = 2 * 3600;
 
-export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada" | "sem_resposta" | "sem_fecho" | "sem_propostas";
+export type TipoDoNossoLado = "conversa" | "preco_clyon" | "propostas" | "data_passada" | "sem_resposta" | "sem_fecho" | "sem_propostas" | "mudanca_sem_valor";
 
 export type LinhaDoNossoLado = {
   tipo: TipoDoNossoLado;
@@ -56,6 +61,8 @@ export type LinhaDoNossoLado = {
   aviso?: string;
   /** O que espera, em poucas palavras. */
   oQue: string;
+  /** Um texto-modelo para a equipa copiar e mandar (d14, a mudança sem valor). Nunca sai sozinho. */
+  modelo?: string;
 };
 
 export type GrupoDoNossoLado = {
@@ -74,6 +81,8 @@ export const TITULOS_DO_NOSSO_LADO: Record<TipoDoNossoLado, string> = {
   sem_fecho: TITULO_DO_GRUPO_DO_FECHO,
   // d102 (a), 24-11-2026: o pedido que seguiu e não teve resposta, ou ficou sem parceiros na zona.
   sem_propostas: "Pedidos sem propostas dos parceiros (ou sem parceiros na zona)",
+  // d14 (27-11-2026): a mudança à hora a que ninguém mandou o valor, às 3 h.
+  mudanca_sem_valor: "Mudanças à hora sem o valor enviado (há mais de 3 h)",
 };
 
 /** Um pedido sem propostas, como a rota da Mesa o dá (`/api/admin/negociacoes/sem-propostas`). */
@@ -88,6 +97,30 @@ export function semPropostasDoNossoLado(lista: readonly SemPropostasParaOLado[],
     if (vistos.has(p.pedidoId) || Number.isNaN(d.getTime())) continue;
     vistos.add(p.pedidoId);
     out.push({ tipo: "sem_propostas", pedidoId: p.pedidoId, telefone: null, esperaS: Math.max(0, Math.floor((agora.getTime() - d.getTime()) / 1000)), oQue: p.linha });
+  }
+  return out;
+}
+
+/**
+ * d14: as mudanças à hora sem o valor enviado há 3 h ou mais, lidas à parte
+ * (`/api/admin/negociacoes/mudanca-sem-valor`) — a regra está em
+ * `mudanca-a-hora-sem-valor.ts`. Cada linha leva o texto-modelo. Pura.
+ */
+export function mudancasSemValorDoNossoLado(lista: readonly MudancaSemValorParaOLado[], agora: Date): LinhaDoNossoLado[] {
+  const out: LinhaDoNossoLado[] = [];
+  const vistos = new Set<number>();
+  for (const p of lista) {
+    const t = instanteDaBase(p.desde)?.getTime();
+    if (vistos.has(p.pedidoId) || t == null) continue;
+    vistos.add(p.pedidoId);
+    out.push({
+      tipo: "mudanca_sem_valor",
+      pedidoId: p.pedidoId,
+      telefone: null,
+      esperaS: Math.max(0, Math.floor((agora.getTime() - t) / 1000)),
+      oQue: O_QUE_DA_MUDANCA_SEM_VALOR,
+      modelo: textoModeloDoValorDaMudanca(p.pedidoId),
+    });
   }
   return out;
 }
@@ -483,6 +516,8 @@ export function doNossoLado(fontes: {
   emSeguimento?: readonly PedidoEmSeguimento[] | null;
   /** d102 (a): os pedidos sem propostas, lidos à parte (todos os dos últimos 30 dias). */
   semPropostas?: readonly SemPropostasParaOLado[] | null;
+  /** d14: as mudanças à hora sem o valor enviado há 3 h ou mais, lidas à parte. */
+  mudancasSemValor?: readonly MudancaSemValorParaOLado[] | null;
   agora: Date;
 }): GrupoDoNossoLado[] {
   const porEspera = (l: LinhaDoNossoLado[]) =>
@@ -505,6 +540,7 @@ export function doNossoLado(fontes: {
     ["sem_resposta", semRespostaDoNossoLado(fontes.pedidos, fontes.agora)],
     ["sem_fecho", semFecho],
     ["sem_propostas", semPropostasDoNossoLado(fontes.semPropostas ?? [], fontes.agora)],
+    ["mudanca_sem_valor", mudancasSemValorDoNossoLado(fontes.mudancasSemValor ?? [], fontes.agora)],
   ];
   return grupos.map(([tipo, linhas]) => ({
     tipo,
