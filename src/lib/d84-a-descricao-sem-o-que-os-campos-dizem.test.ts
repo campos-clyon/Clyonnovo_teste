@@ -109,7 +109,8 @@ describe("1. o exemplo do pedido da cave: sem as linhas que os campos já dizem"
     const texto = comporADescricao(r, fontesDoCaso(), { ...PEDIDO, parkingDistance: "difficult" }, { modo: "sugestao", agora: AGORA });
     expect(texto).toContain("Por confirmar: o peso do colchão.");
     const semCampo = comporADescricao(r, fontesDoCaso(), PEDIDO, { modo: "sugestao", agora: AGORA });
-    expect(semCampo).toMatch(/Por confirmar: o estacionamento; se dá para estacionar à porta; o peso do colchão\./);
+    // d141: o mesmo assunto uma vez só — «o estacionamento» e «se dá para estacionar à porta» são um.
+    expect(semCampo).toMatch(/Por confirmar: o estacionamento; o peso do colchão\./);
   });
 });
 

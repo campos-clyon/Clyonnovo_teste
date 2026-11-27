@@ -11,7 +11,7 @@ const ler = (f: string) => readFileSync(f, "utf8").replace(/\r\n/g, "\n");
 describe("os erros do #483", () => {
   it("no rés-do-chão o elevador fica resolvido no resumo", () => {
     expect(ler("src/app/simulador/components/OrderSummaryCard.tsx")).toContain(
-      'status={order.floor === "rés-do-chão" || order.hasElevator ? "filled" : "pending"}',
+      'status={eAoNivelDaRua(order.floor) || order.hasElevator ? "filled" : "pending"}',
     );
   });
 

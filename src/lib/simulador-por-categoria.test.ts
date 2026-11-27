@@ -192,7 +192,7 @@ describe("d1 — as perguntas de cada categoria", () => {
 
   it("o acesso: os ids de sempre; a garagem e a cave sem o andar; a mudança em cada ponta", () => {
     const acesso = Object.fromEntries(perguntasDoServico("recolha_monos").filter((x) => x.ecra === "acesso").map((x) => [x.id, x]));
-    expect(acesso.floor.opcoes!.map((o) => o.id)).toEqual(["rés-do-chão", "1º", "2º", "3º", "4º+"]);
+    expect(acesso.floor.opcoes!.map((o) => o.id)).toEqual(["rés-do-chão", "loja", "1º", "2º", "3º", "4º+"]);
     expect(acesso.hasElevator.opcoes!.map((o) => o.id)).toEqual(["yes", "small", "no", "unknown"]);
     expect(acesso.hasElevator.quando).toEqual({ floor: ["1º", "2º", "3º", "4º+"] });
     expect(acesso.parkingDistance.opcoes!.map((o) => o.id)).toEqual(["door", "under_20m", "over_30m", "difficult"]);
