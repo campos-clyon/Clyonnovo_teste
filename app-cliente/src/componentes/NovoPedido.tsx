@@ -47,6 +47,7 @@ import {
   nomeDoMes,
   semanasDoMes,
   textoDoQuando,
+  ajudaDoAcessoDificil,
   ecraDaLinha,
   ecraDe,
   ecrasDoPedir,
