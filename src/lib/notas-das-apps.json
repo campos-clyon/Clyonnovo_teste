@@ -91,6 +91,11 @@
   ],
   "cliente": [
     {
+      "id": "cliente-2026-11-27-2",
+      "nota": "Na mudança, a ajuda do «Acesso difícil» aparece de novo ao escolher o acesso da origem e do destino.",
+      "updates": []
+    },
+    {
       "id": "cliente-2026-11-27",
       "nota": "Na mudança, o «Acesso difícil» explica-se melhor e já não soma horas: desmontar móveis pede-se peça a peça.",
       "updates": []
