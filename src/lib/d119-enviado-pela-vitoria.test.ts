@@ -97,8 +97,9 @@ describe("«é connosco» só quando ela passou à equipa ou o cliente está sem
     const c = { desde: new Date("2026-11-23T10:00:00Z"), lembrete1Em: null, ultimoAvisoEm: null, fechadoEm: null, paradoEm: new Date("2026-11-25T10:00:00Z") };
     expect(linhaDaMesa({ ...c, vitoriaRespondeu: true }, true)).toBe("orçamento enviado 23/11 · o cliente respondeu a 25/11 e a Vitória já lhe respondeu — contagem parada");
     expect(linhaDaMesa(c, true)).toContain("é connosco");
+    // d146 (27-11-2026): a resposta da Vitória já não decide o bloco — ver d146-bloco-estavel.test.ts.
     const BASE = ler("src/lib/validade-do-orcamento-na-base.ts");
-    expect(BASE).toContain("parado: Boolean(vista.paradoEm) && connosco,");
+    expect(BASE).not.toContain("&& connosco");
   });
 });
 

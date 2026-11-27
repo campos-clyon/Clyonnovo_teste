@@ -41,15 +41,14 @@ import {
   HORAS_PARA_CONFIRMAR_O_CANCELAMENTO,
   jaFalouHoje,
   mesmoTelefoneEstrito,
-  linhaDaMesa, respostaEConnosco,
   melhorProposta,
   naJanelaDaValidade,
   NOME_DO_INTERRUPTOR_DA_VALIDADE,
   proximoPasso,
-  rotuloDoLembrarAgora,
   textoDoFechoAoCliente,
   textoDoLembrete,
   textoDoUltimoAviso,
+  validadeDoPedidoNaMesa,
   varianteDoLembrete,
   type CicloDoOrcamento,
   type PassoDaValidade,
@@ -860,20 +859,13 @@ export async function validadeNaMesa(agora: Date = new Date()): Promise<{ ligado
         ? antes!
         : { desde: p.propostaEnviadaEm, lembrete1Em: null, ultimoAvisoEm: null, fechadoEm: null, paradoEm: null };
       const resp = respostas.get(noveDigitos(p.contactPhone));
-      const respondeu = clienteRespondeuNoCiclo(c.desde, resp?.ultimaMensagemEm);
-      const vista = respondeu && !c.paradoEm ? { ...c, paradoEm: resp?.ultimaMensagemEm ?? agora } : c;
-      // d119: a Vitória respondeu-lhe depois (e a conversa não passou à equipa): não é connosco.
-      const connosco = respostaEConnosco({
-        ultimaDoClienteEm: resp?.ultimaMensagemEm ?? null,
-        ultimaDaVitoriaEm: resp?.ultimaDaVitoriaEm ?? null,
-        passadaEm: resp?.passadaEm ?? null,
-      });
-      const comAResposta = vista.paradoEm && !connosco ? { ...vista, vitoriaRespondeu: true } : vista;
+      // d146: o bloco sai do ciclo gravado e da resposta do cliente — as mensagens da Vitória depois não o mudam.
+      const { linha, lembrar, parado } = validadeDoPedidoNaMesa(c, resp?.ultimaMensagemEm, ligado, agora);
       return {
         pedidoId: p.id,
-        linha: linhaDaMesa(comAResposta, ligado),
-        lembrar: ligado && !vista.paradoEm ? rotuloDoLembrarAgora(vista, agora) : null,
-        parado: Boolean(vista.paradoEm) && connosco,
+        linha,
+        lembrar,
+        parado,
         falha: falhaDe.get(p.id) ?? null,
       };
     }),

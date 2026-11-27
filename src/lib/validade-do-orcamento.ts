@@ -425,6 +425,9 @@ export function lerRespostaAoLembrete(texto: string | null | undefined): Respost
  * connosco («Precisa de si») se ficou sem resposta, ou se a conversa passou à
  * equipa depois. Com a Vitória a responder-lhe a seguir (e a conversa com
  * ela), a contagem para mas o pedido fica em «A aguardar cliente». Pura.
+ * Desde a d146 (27-11-2026) já não decide o bloco da Mesa — ver
+ * `validadeDoPedidoNaMesa`: uma resposta da Vitória não tira o pedido de
+ * «Precisa de si».
  */
 export function respostaEConnosco(r: {
   ultimaDoClienteEm: Date | null | undefined;
@@ -465,6 +468,32 @@ export function rotuloDoLembrarAgora(c: CicloDoOrcamento, agora: Date): string |
   if (p === "lembrete1") return "Lembrar agora";
   if (p === "ultimo_aviso") return "Lembrar agora (último aviso)";
   return null;
+}
+
+/**
+ * O PASSO DE UM PEDIDO NA MESA — d146 (dono, 27-11-2026). *«Um pedido só muda
+ * de bloco por um acontecimento concreto. Nunca a oscilar entre leituras.»* O
+ * #695 saltava entre «Precisa de si» e «A aguardar cliente» a cada mensagem: o
+ * cliente escrevia (connosco), a Vitória respondia 15 s depois (já não era —
+ * d119), e assim a cada minuto. O cliente respondeu ao orçamento: a contagem
+ * pára e o pedido é connosco até um acontecimento o mudar (orçamento novo, o
+ * cliente escolher, cancelar). As mensagens que vêm depois — da Vitória ou dele
+ * — não mexem no bloco. Só do ciclo gravado e da primeira resposta; pura.
+ */
+export function validadeDoPedidoNaMesa(
+  c: CicloDoOrcamento & { reaberto?: boolean },
+  ultimaDoClienteEm: Date | null | undefined,
+  ligado: boolean,
+  agora: Date,
+): { linha: string; lembrar: string | null; parado: boolean } {
+  const paradoEm =
+    c.paradoEm ?? (ultimaDoClienteEm instanceof Date && clienteRespondeuNoCiclo(c.desde, ultimaDoClienteEm) ? ultimaDoClienteEm : null);
+  const vista = { ...c, paradoEm };
+  return {
+    linha: linhaDaMesa(vista, ligado),
+    lembrar: ligado && !paradoEm ? rotuloDoLembrarAgora(vista, agora) : null,
+    parado: Boolean(paradoEm),
+  };
 }
 
 /* ── O «3» pede confirmação — d2 (CEO e dono, 18-11-2026) ────────────────── */

@@ -1384,6 +1384,12 @@ export default function AdminNegociacoesPanel({
   const [aFixar, setAFixar] = useState<number | null>(null);
   /** O passo da validade de cada orçamento no cliente (d62), pelo número do pedido. */
   const [validade, setValidade] = useState<Record<number, ValidadeNaMesa>>({});
+  /**
+   * d146 (27-11-2026): a última validade lida com sucesso. Uma leitura que falha
+   * não apaga o «o cliente respondeu — é connosco»: sem isto, o pedido saltava
+   * de «Precisa de si» para «A aguardar cliente» e voltava na leitura seguinte.
+   */
+  const ultimaValidade = useRef<{ ligado: boolean; pedidos: Record<number, ValidadeNaMesa> } | null>(null);
   /** O seguimento do cliente (d83): o «Falei com o cliente» e o passo, por pedido. */
   const [seguimentos, setSeguimentos] = useState<Record<number, SeguimentoNaMesa>>({});
   /** d138: os contratados sem dia (ou sem hora) — os de 4 dias ou mais vão vermelhos ao «Precisa de si». */
@@ -1434,17 +1440,18 @@ export default function AdminNegociacoesPanel({
        * interruptor ligado) voltam a «Precisa de si». Em silêncio: sem ela, a
        * Mesa serve como antes.
        */
-      let daValidade: Record<number, ValidadeNaMesa> = {};
-      let validadeLigada = false;
+      let daValidade: Record<number, ValidadeNaMesa> = ultimaValidade.current?.pedidos ?? {};
+      let validadeLigada = ultimaValidade.current?.ligado ?? false;
       try {
         const rv = await fetch("/api/admin/validade-dos-orcamentos", { headers: { Authorization: `Bearer ${token}` } });
         if (rv.ok) {
           const v = (await rv.json()) as { ligado?: boolean; pedidos?: ValidadeNaMesa[] };
           validadeLigada = v.ligado === true;
           daValidade = Object.fromEntries((v.pedidos ?? []).map((x) => [x.pedidoId, x]));
+          ultimaValidade.current = { ligado: validadeLigada, pedidos: daValidade };
         }
       } catch {
-        /* sem a validade, a Mesa de sempre */
+        /* sem a validade nova, a última que se leu (d146) — ou a Mesa de sempre */
       }
       setValidade(daValidade);
       /*
@@ -2767,8 +2774,8 @@ export default function AdminNegociacoesPanel({
   function quantosNoBloco(chave: ChaveDoBloco): number {
     return chave === "porEnviar"
       ? porPromoverNaMesa.length
-      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length : 0) +
-          // d83: os que estão em seguimento não contam como «à espera de nós».
+      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length : 0) -
+          // d83: os que estão em seguimento não contam como «à espera de nós» (d146: o «+» da d140b contava-os duas vezes).
           (chave === "n1" ? emSeguimentoNoN1.length : 0);
   }
   /*
