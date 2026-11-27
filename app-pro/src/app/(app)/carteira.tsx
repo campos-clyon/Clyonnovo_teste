@@ -120,6 +120,8 @@ function Conteudo({
   const R = rotulosDaCarteira(noNovoModelo);
   const promessa = noNovoModelo ? PROMESSA_DO_NOVO_MODELO : PROMESSA;
   const porReceber = dados.resumo?.porReceber ?? Math.round((k.disponivel + k.aCaminho) * 100) / 100;
+  const porConfirmar = dados.resumo?.porConfirmarOPagamento ?? 0;
+  const porCobrar = dados.resumo ? dados.resumo.clienteAindaNaoPagou : k.porCobrar;
 
   return (
     <>
@@ -186,7 +188,11 @@ function Conteudo({
       ) : null}
 
       <Caixa>
-        {k.porCobrar > 0 ? <Linha rotulo={R.porCobrar.rotulo} nota={R.porCobrar.nota} valor={k.porCobrar} tom="aviso" /> : null}
+        {/* 27-11-2026 (o #558): «o cliente ainda não pagou» sem os confirmados por confirmar o pagamento — como o painel. */}
+        {porCobrar > 0 ? <Linha rotulo={R.porCobrar.rotulo} nota={R.porCobrar.nota} valor={porCobrar} tom="aviso" /> : null}
+        {porConfirmar > 0 ? (
+          <Linha rotulo={R.porConfirmarOPagamento.rotulo} nota={R.porConfirmarOPagamento.nota} valor={porConfirmar} tom="aviso" />
+        ) : null}
         <Linha rotulo={R.totalGanho.rotulo} nota={R.totalGanho.nota} valor={k.totalGanho} forte ultima />
       </Caixa>
 
@@ -336,20 +342,29 @@ function PagamentosEmDinheiro({ children }: { children: ReactNode }) {
   );
 }
 
-/** Os trabalhos um a um, com dois separadores — o mesmo que o painel (30-10-2026). Do n.º maior para o menor. */
+/**
+ * Os trabalhos um a um, com os separadores do painel (30-10-2026). Do n.º maior para o menor.
+ * «Por confirmar» tem o seu separador — 27-11-2026 (o #558): um trabalho confirmado sem registo
+ * de a quem o cliente pagou nunca aparece em «Por receber». Só aparece quando há algum.
+ */
+type SeparadorDaCarteira = "por_receber" | "por_confirmar" | "recebido";
 function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
   const c = useCores();
-  const [separador, setSeparador] = useState<"por_receber" | "recebido">("por_receber");
-  const doGrupo = (g: "por_receber" | "recebido") =>
-    linhas.filter((l) => (g === "recebido" ? l.grupo === "recebido" : l.grupo !== "recebido"));
+  const [separador, setSeparador] = useState<SeparadorDaCarteira>("por_receber");
+  const doGrupo = (g: SeparadorDaCarteira) =>
+    linhas.filter((l) =>
+      g === "recebido" ? l.grupo === "recebido" : g === "por_confirmar" ? l.grupo === "por_confirmar" : l.grupo === "por_receber" || l.grupo === "retido",
+    );
+  const separadores: SeparadorDaCarteira[] =
+    doGrupo("por_confirmar").length > 0 ? ["por_receber", "por_confirmar", "recebido"] : ["por_receber", "recebido"];
   const mostradas = doGrupo(separador);
   return (
     <Caixa>
       <View style={estilos.lado}>
-        {(["por_receber", "recebido"] as const).map((g) => (
+        {separadores.map((g) => (
           <View key={g} style={{ flex: 1 }}>
             <Botao
-              titulo={`${g === "recebido" ? `${R.pago.rotulo}s` : R.porReceber.rotulo} (${doGrupo(g).length})`}
+              titulo={`${g === "recebido" ? `${R.pago.rotulo}s` : g === "por_confirmar" ? "Por confirmar" : R.porReceber.rotulo} (${doGrupo(g).length})`}
               tipo={separador === g ? undefined : "secundario"}
               aoCarregar={() => setSeparador(g)}
             />
@@ -367,7 +382,7 @@ function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
               #{l.pedidoId ?? l.negociacaoId} · {l.servico ?? "Trabalho"}
             </Text>
             <Text style={{ color: c.tinta, fontSize: LETRA.normal, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
-              {euros(l.grupo === "recebido" ? l.recebe : l.falta)}
+              {euros(l.grupo === "recebido" || l.grupo === "por_confirmar" ? l.recebe : l.falta)}
             </Text>
           </View>
           <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
@@ -376,7 +391,7 @@ function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
           <Text style={{ color: c.suave, fontSize: LETRA.pequena }}>
             Trabalho {euros(l.valor)} sem IVA · taxa da plataforma {euros(l.taxa)} · recebe {euros(l.recebe)}
           </Text>
-          <Text style={{ color: l.grupo === "retido" ? c.aviso : c.tinta, fontSize: LETRA.pequena }}>
+          <Text style={{ color: l.grupo === "retido" || l.grupo === "por_confirmar" ? c.aviso : c.tinta, fontSize: LETRA.pequena }}>
             {l.grupo === "recebido" ? `Pago a ${l.recebidoEmTexto ?? "—"} · ${l.como ?? ""}` : l.razao}
           </Text>
         </View>

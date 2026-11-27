@@ -19,6 +19,7 @@ export type ChaveDaCarteira =
   | "pago"
   | "aCaminho"
   | "porCobrar"
+  | "porConfirmarOPagamento"
   | "recebidoEmMao"
   | "aPagarAClyon"
   | "pagoAClyonComOSaldo"
@@ -59,6 +60,11 @@ export const ROTULOS_DA_CARTEIRA: Record<ChaveDaCarteira, RotuloDaCarteira> = {
   porCobrar: {
     rotulo: "O cliente ainda não pagou",
     nota: "trabalho feito; passa a «Por receber» quando o cliente pagar",
+  },
+  /** Feito e confirmado, sem registo de a quem o cliente pagou — nada por receber (27-11-2026, o #558). */
+  porConfirmarOPagamento: {
+    rotulo: "Por confirmar o pagamento",
+    nota: "a CLYON está a confirmar a quem o cliente pagou",
   },
   recebidoEmMao: {
     rotulo: "Recebido em mão",

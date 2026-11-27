@@ -231,7 +231,8 @@ export type LinhaDaCarteira = {
   valor: number;
   taxa: number;
   recebe: number;
-  grupo: "por_receber" | "retido" | "recebido";
+  /** «por_confirmar» (27-11-2026, o #558): feito e confirmado, sem registo de a quem o cliente pagou — nada por receber. */
+  grupo: "por_receber" | "retido" | "por_confirmar" | "recebido";
   razao: string;
   falta: number;
   recebidoEmTexto: string | null;
@@ -246,6 +247,8 @@ export type RespostaDaCarteira = {
     podePedir: number;
     aEsperaDaConfirmacao: number;
     clienteAindaNaoPagou: number;
+    /** Feito e confirmado, sem registo de a quem o cliente pagou (27-11-2026); ausente num site antigo. */
+    porConfirmarOPagamento?: number;
     recebidoEsteMes: number;
     recebidoUltimos12Meses: number;
     recebidoTotal: number;
