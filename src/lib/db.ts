@@ -1593,7 +1593,7 @@ async function alargarATaxaDoProfissional(pool: mysql.Pool): Promise<void> {
 // Sobe sempre que a lista de colunas cresce. Sem isto, um processo já quente
 // nunca corria as migrações novas — o guarda booleano sozinho garantia que só
 // arranques frios as viam.
-const VERSAO_DAS_NEGOCIACOES = 28;
+const VERSAO_DAS_NEGOCIACOES = 29;
 let versaoDasNegociacoes = 0;
 
 /**
@@ -1954,6 +1954,14 @@ export async function ensureNegociacoesTable(): Promise<void> {
      * todos» nem na distribuição (só escolhida à mão). Nula = nunca foi tirada.
      */
     `ALTER TABLE negociacoes ADD COLUMN retiradaEm DATETIME NULL DEFAULT NULL`,
+    /*
+     * v29 (27-11-2026, d144) — «ADICIONAR À MINHA AGENDA»: o dia (o
+     * `dataCombinada`) que estava marcado quando o profissional pôs o trabalho
+     * no calendário dele. Se o dia mudar depois, o botão diz-lhe «O dia mudou —
+     * actualize na sua agenda» (`textos-da-agenda-do-profissional.ts`). Nula =
+     * nunca o pôs. Em UTC, como o `dataCombinada`.
+     */
+    `ALTER TABLE negociacoes ADD COLUMN agendaAdicionadaPara DATETIME NULL DEFAULT NULL`,
   ];
   await correrMigracoes(pool, "negociacoes", colunas, "negociacoes");
   await alargarATaxaDoProfissional(pool);
@@ -5697,6 +5705,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
     floor: string | null;
     hasElevator: string | null;
     abertoProfissionalEm: Date | null;
+    /** d144: o dia que estava marcado quando ele o pôs na agenda dele (nulo = nunca). */
+    agendaAdicionadaPara?: Date | null;
     moradaDestino: string | null;
     localidadeDestino: string | null;
     andarDestino: string | null;
@@ -5794,6 +5804,8 @@ export async function negociacoesDoProfissional(providerId: number): Promise<
             -- eles -- a API ja os anunciava, esta consulta e que nunca os foi
             -- buscar.
             n.abertoProfissionalEm, n.dataCombinada, n.duracaoMinutos,
+            -- d144: o dia que estava marcado quando ele o pos na agenda dele.
+            n.agendaAdicionadaPara,
             -- QUANTOS OUTROS JA PROPUSERAM NESTE PEDIDO.
             --
             -- A conta que ele faz antes de decidir se vale a pena responder:

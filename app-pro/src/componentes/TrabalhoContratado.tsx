@@ -71,6 +71,7 @@ import {
 } from "../lib/trabalhos";
 import { ESPACO, LETRA, RAIO, useCores } from "../tema";
 import { FaturaDoTrabalho } from "./FaturaDoTrabalho";
+import { AdicionarAAgenda } from "./AdicionarAAgenda";
 import { ComoRecebe } from "./ComoRecebe";
 import { PagamentoDoCliente } from "./PagamentoDoCliente";
 
@@ -156,6 +157,8 @@ export function TrabalhoContratado({ t, descricao = null }: { t: Trabalho; descr
       ) : null}
       {descricao}
       {!viajando && !semDia ? <ODia t={t} /> : null}
+      {/* d144: «Adicionar à minha agenda» — com o dia marcado, para o calendário dele. */}
+      <AdicionarAAgenda t={t} />
       <OndeEComQuem t={t} />
       {/* O modelo de 15-11 (d10): a fatura dele e a da taxa. Fora do modelo novo não desenha nada. */}
       <FaturaDoTrabalho negociacaoId={t.negociacaoId} />

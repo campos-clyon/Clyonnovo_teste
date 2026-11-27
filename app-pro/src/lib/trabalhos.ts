@@ -251,6 +251,8 @@ export type Trabalho = {
   diasAteLibertar: number | null;
   /** Quanto tempo leva, em minutos — null são as duas horas do costume. */
   duracaoMinutos: number | null;
+  /** d144: pôs o trabalho na agenda dele e o dia mudou depois (do servidor, `diaMudouNaAgenda`). */
+  agendaDiaMudou?: boolean;
   // ── As horas de um trabalho por hora e os materiais (31-10-2026) ──
   // Opcionais: um site antigo não os manda.
   /** As horas previstas do pedido (mínimo 3), para o total estimado. `null` fora do «por hora». */

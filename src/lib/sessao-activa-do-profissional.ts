@@ -1,6 +1,7 @@
 import { ensureProvidersSchema, getPool } from "@/lib/db";
 import {
   contaPodeEntrarNoPainel,
+  verificarLigacaoDaAgenda,
   verificarSessaoDoProfissional,
   type SessaoDoProfissional,
 } from "@/lib/profissional-auth";
@@ -64,4 +65,27 @@ export async function sessaoActivaDoProfissional(
    */
   if (emitidoAntesDoCorte(sessao.emitidoEm, linhas[0]?.sessoesDesde)) return null;
   return sessao;
+}
+
+/**
+ * O PROFISSIONAL DA LIGAÇÃO DO .ics DA AGENDA — d144 (27-11-2026). A mesma
+ * porta da sessão: a conta tem de poder entrar no painel e a ligação não pode
+ * ser de antes de um «Sair de todos os aparelhos» ou de uma palavra-passe nova.
+ */
+export async function profissionalDaLigacaoDaAgenda(
+  token: string | null | undefined,
+  negociacaoId: number,
+): Promise<number | null> {
+  const ligacao = await verificarLigacaoDaAgenda(token, negociacaoId);
+  if (!ligacao) return null;
+  await ensureProvidersSchema();
+  const pool = await getPool();
+  if (!pool) throw new Error("[sessao-do-profissional] base de dados indisponível");
+  const [linhas] = (await pool.execute(
+    "SELECT estado, isActive, sessoesDesde FROM providers WHERE id = ? AND isClyon = 0 LIMIT 1",
+    [ligacao.providerId],
+  )) as [Array<{ estado: string | null; isActive: number | null; sessoesDesde?: Date | string | null }>, unknown];
+  if (!contaPodeEntrarNoPainel(linhas[0])) return null;
+  if (emitidoAntesDoCorte(ligacao.emitidoEm, linhas[0]?.sessoesDesde)) return null;
+  return ligacao.providerId;
 }

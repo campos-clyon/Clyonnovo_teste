@@ -295,3 +295,41 @@ export async function renovarSessaoSePreciso(
     return false;
   }
 }
+
+/**
+ * A LIGAÇÃO DO .ics DA AGENDA — d144 (dono, 27-11-2026).
+ *
+ * A app CLYON Pro abre o ficheiro no navegador do telemóvel, e o navegador não
+ * leva a sessão da app (nem cookie nem `Authorization`). Por isso a rota que dá
+ * as ligações (`POST /api/profissionais/pedidos/[id]/agenda`, com sessão)
+ * devolve o endereço do .ics com esta assinatura: serve para UM trabalho, deste
+ * profissional, durante 15 minutos, e o seu `type` não é o da sessão — não abre
+ * mais nada (`verificarSessaoDoProfissional` exige o `type` exacto).
+ */
+export const TIPO_LIGACAO_DA_AGENDA = "agenda-ics";
+export const DURACAO_DA_LIGACAO_DA_AGENDA_SEGUNDOS = 15 * 60;
+
+export async function assinarLigacaoDaAgenda(providerId: number, negociacaoId: number): Promise<string> {
+  return new jose.SignJWT({ providerId, negociacaoId, type: TIPO_LIGACAO_DA_AGENDA })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${DURACAO_DA_LIGACAO_DA_AGENDA_SEGUNDOS}s`)
+    .sign(chave());
+}
+
+/** O profissional da ligação, se for desta negociação e estiver dentro do prazo; senão `null`. */
+export async function verificarLigacaoDaAgenda(
+  token: string | null | undefined,
+  negociacaoId: number,
+): Promise<{ providerId: number; emitidoEm: number | null } | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jose.jwtVerify(token, chave());
+    const p = payload as Record<string, unknown>;
+    if (p.type !== TIPO_LIGACAO_DA_AGENDA) return null;
+    if (typeof p.providerId !== "number" || p.negociacaoId !== negociacaoId) return null;
+    return { providerId: p.providerId, emitidoEm: typeof p.iat === "number" ? p.iat : null };
+  } catch {
+    return null;
+  }
+}

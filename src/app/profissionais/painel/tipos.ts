@@ -113,6 +113,8 @@ export type Pedido = {
   dataCombinada?: string | null;
   /** Quanto tempo leva, em minutos — null é «as duas horas do costume» (03-10-2026). */
   duracaoMinutos?: number | null;
+  /** d144: ele pôs o trabalho na agenda dele e o dia mudou depois — `diaMudouNaAgenda`. */
+  agendaDiaMudou?: boolean;
   description: string | null;
   filesJson: string | null;
   floor: string | null;

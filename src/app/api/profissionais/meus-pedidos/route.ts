@@ -71,6 +71,7 @@ import { negociacoesNoNovoModelo, regimesDasNegociacoes } from "@/lib/novo-model
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 import { indisponibilidadesDoProfissional } from "@/lib/indisponibilidades-na-base";
 import { notaDeIndisponibilidade } from "@/lib/indisponibilidade";
+import { diaMudouNaAgenda } from "@/lib/textos-da-agenda-do-profissional";
 
 export const runtime = "nodejs";
 // Nunca em cache: a sugestão de cada pedido depende dos custos que ele acabou
@@ -786,6 +787,15 @@ export async function GET(req: NextRequest) {
           const v = (l as unknown as { duracaoMinutos?: number | string | null }).duracaoMinutos;
           return v != null ? Number(v) : null;
         })(),
+        /*
+         * «O DIA MUDOU — ACTUALIZE NA SUA AGENDA» — d144 (27-11-2026). Ele pôs o
+         * trabalho no calendário dele e o dia mudou depois. A regra é uma só,
+         * para o painel e a app (`diaMudouNaAgenda`).
+         */
+        agendaDiaMudou: diaMudouNaAgenda(
+          (l as unknown as { dataCombinada?: Date | string | null }).dataCombinada ?? null,
+          l.agendaAdicionadaPara ?? null,
+        ),
         city: (vista.city as string | undefined) ?? null,
         urgency: (vista.urgency as string | undefined) ?? null,
         /*

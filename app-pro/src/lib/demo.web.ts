@@ -580,6 +580,14 @@ export async function pedirEmDemo<T>(caminho: string, metodo: string, corpo: unk
     mudar((t) => ({ ...t, dataCombinada: c.quando ? `${String(c.quando)}:00+01:00` : null }));
     return { ok: true } as T;
   }
+  // d144: «Adicionar à minha agenda» — na demonstração, o Google Agenda sem dados de ninguém.
+  if (caminho.startsWith("/api/profissionais/pedidos/") && caminho.endsWith("/agenda") && metodo === "POST") {
+    return {
+      ok: true,
+      google: "https://calendar.google.com/calendar/render?action=TEMPLATE&text=CLYON%20%23900",
+      ics: "https://calendar.google.com/calendar/render?action=TEMPLATE&text=CLYON%20%23900",
+    } as T;
+  }
   if (caminho === "/api/profissionais/pedido-do-link") return { ok: true, negociacaoId: 901 } as T;
   if (caminho === "/api/profissionais/esqueci-palavra-passe") {
     return {

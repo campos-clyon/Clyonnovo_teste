@@ -6,6 +6,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 // Vive à parte porque a Agenda usa o mesmo. Ver o cabeçalho do ficheiro:
 // ninguém sai da agenda para ir arrumar a agenda.
 import MarcarODia from "./MarcarODia";
+import AdicionarAAgenda from "./AdicionarAAgenda";
 import {
   Archive,
   ArchiveRestore,
@@ -2207,6 +2208,15 @@ function DetalheDoTrabalho({
                 </a>
               )}
             </div>
+          )}
+
+          {/* «Adicionar à minha agenda» (d144, dono): com o dia marcado e o trabalho por fazer. */}
+          {dataCombinada && pedido.fase === "a_executar" && (
+            <AdicionarAAgenda
+              negociacaoId={pedido.negociacaoId}
+              diaMudou={pedido.agendaDiaMudou === true}
+              onAdicionada={onRecarregar}
+            />
           )}
         </section>
       )}
