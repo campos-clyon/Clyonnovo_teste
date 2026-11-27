@@ -32,6 +32,7 @@ import type { ForaDaGrelhaNaMesa } from "@/lib/custo-do-trabalho";
 import { ruaEmFaltaDosPedidos } from "@/lib/rua-depois-do-aceite-na-base";
 import { registosDoPagamento } from "@/lib/pagamento-registado-na-base";
 import { registoDoPagamento } from "@/lib/pagamento-registado";
+import { reservasDe } from "@/lib/reserva-na-base";
 
 export const runtime = "nodejs";
 
@@ -85,6 +86,8 @@ export async function GET(req: NextRequest) {
     const doNovoModelo = await modeloDasNegociacoes(pedidos.flatMap((p) => p.negociacoes));
     // d17: e o regime de cada uma, para o texto dizer o total do cartão (`totalAoClienteDaNegociacao`).
     const regimes = await regimesDasNegociacoes([...doNovoModelo]);
+    // d143: a reserva do valor único, para o «parceiro recebe» do cabeçalho sair da mesma conta.
+    const reservas = await reservasDe([...doNovoModelo]).catch(() => new Map<number, number>());
     // d28: o selo «dados de pagamento mudados» — o IBAN ou o MB WAY mudaram depois de o cliente contratar.
     const dadosMudados = await negociacoesComDadosDePagamentoMudados(
       pedidos.flatMap((p) => p.negociacoes).filter((n) => n.estado === "acordada" && doNovoModelo.has(Number(n.id))).map((n) => Number(n.id)),
@@ -155,6 +158,7 @@ export async function GET(req: NextRequest) {
           ...(registos.has(Number(n.id)) ? { pagamentoRegistado: registoDoPagamento(registos.get(Number(n.id))!) } : {}),
           ...(porConfirmar.has(Number(n.id)) ? { dadosDePagamentoPorConfirmar: porConfirmar.get(Number(n.id)) } : {}),
           ...(dosParceiros.has(Number(n.providerId)) ? { doValorUnico: dosParceiros.get(Number(n.providerId)) } : {}),
+          ...(reservas.has(Number(n.id)) ? { reservaCent: reservas.get(Number(n.id)) } : {}),
           ...(doNovoModelo.has(Number(n.id)) && regimes.has(Number(n.id))
             ? { regimeParaOTotal: regimes.get(Number(n.id)) }
             : {}),

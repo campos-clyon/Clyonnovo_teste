@@ -1,5 +1,5 @@
 import type { ContaDoPagamento as Conta } from "@/lib/conta-do-pagamento";
-import { emEuros, emPercentagem } from "@/lib/conta-do-pagamento";
+import { emEuros, emPercentagem, parceiroFicaCom } from "@/lib/conta-do-pagamento";
 
 /*
  * A CONTA DE UM PAGAMENTO, DEGRAU A DEGRAU — 15-10-2026.
@@ -30,6 +30,8 @@ export default function ContaDoPagamento({
   mostrarClyon?: boolean;
 }) {
   const escuro = tom === "escuro";
+  // d143 (27-11-2026): no modelo de 15-11, quanto o parceiro fica — sem IVA, e com o IVA dele se o tiver.
+  const doParceiro = mostrarClyon ? parceiroFicaCom(conta) : null;
   const c = {
     caixa: escuro ? "border-slate-800 bg-slate-950/40" : "border-slate-200 bg-white",
     titulo: escuro ? "text-slate-400" : "text-slate-500",
@@ -79,8 +81,13 @@ export default function ContaDoPagamento({
           );
         })}
       </dl>
-      {mostrarClyon ? (
+      {doParceiro ? (
         <p className={`mt-2 border-t pt-1.5 text-xs ${c.linha} ${c.nota}`}>
+          O parceiro fica com: <strong className={`tabular-nums ${c.valor}`}>{doParceiro}</strong>
+        </p>
+      ) : null}
+      {mostrarClyon ? (
+        <p className={`${doParceiro ? "mt-1" : "mt-2 border-t pt-1.5"} text-xs ${c.linha} ${c.nota}`}>
           Fica para a CLYON:{" "}
           <strong className={`tabular-nums ${conta.clyon < 0 ? "text-red-400" : c.final}`}>{emEuros(conta.clyon)}</strong>
           {conta.taxas.length > 1 ? ` (${conta.taxas.map((t) => emEuros(t.valor)).join(" + ")})` : ""}, sem IVA

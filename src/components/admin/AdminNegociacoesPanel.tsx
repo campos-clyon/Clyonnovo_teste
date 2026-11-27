@@ -167,7 +167,7 @@ import { abrirWhatsAppNaLingua } from "@/lib/abrir-whatsapp-na-lingua";
 import { telefoneLegivel } from "@/lib/telefone-legivel";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
 import GerarReferencia from "@/components/admin/GerarReferencia";
-import { contaDaLinha } from "@/lib/conta-do-pagamento";
+import { contaDaLinha, parceiroRecebeSemIva } from "@/lib/conta-do-pagamento";
 import RegistarPedido, { type Alcance } from "./RegistarPedido";
 import TirarAEmpresa from "./TirarAEmpresa";
 import { FormularioDaOferta } from "./FormularioDaOferta";
@@ -548,6 +548,23 @@ function valorNaMesa(v: number | string | null | undefined, p: Pick<Pedido, "bas
   }
   if (base === "hora") return `${euros(num)}/hora (${totalEstimadoNoBackoffice(num, p.horasPrevistas)})`;
   return `${euros(num)}${sufixoDaBase(base)}`;
+}
+
+/**
+ * «· PARCEIRO RECEBE 243,00 €» NO CABEÇALHO — d143 (dono, 27-11-2026). Ao lado
+ * do «Acordada por … com …», no modelo de 15-11: a base do parceiro, sem IVA,
+ * a mesma do «O parceiro fica com» da «Conta do pagamento». Por hora, só com as
+ * horas confirmadas (antes disso o valor é por hora e o total não se sabe).
+ */
+function parceiroRecebeNaMesa(n: Negociacao, p: Pick<Pedido, "baseDoPreco">): string {
+  if ((n as { noNovoModelo?: boolean }).noNovoModelo !== true) return "";
+  const base = lerBase(p.baseDoPreco);
+  if (base === "hora" && !n.horasConfirmadasEm) return "";
+  const acordado = n.valorAcordado == null ? null : Number(n.valorAcordado);
+  const reserva = Number((n as { reservaCent?: unknown }).reservaCent ?? 0);
+  const x = parceiroRecebeSemIva(acordado, taxasDaNegociacao(n), Number.isInteger(reserva) ? reserva : 0);
+  if (x == null) return "";
+  return ` · parceiro recebe ${euros(x)}${base === "hora" ? "" : sufixoDaBase(base)}`;
 }
 
 /*
@@ -2943,7 +2960,7 @@ export default function AdminNegociacoesPanel({
       : acordada
         ? {
             tom: "text-emerald-400",
-            texto: `✓ Acordada por ${valorNaMesa(acordada.valorAcordado, p, acordada)} com ${acordada.profissionalNome}`,
+            texto: `✓ Acordada por ${valorNaMesa(acordada.valorAcordado, p, acordada)} com ${acordada.profissionalNome}${parceiroRecebeNaMesa(acordada, p)}`,
           }
         : quantasAbertas > 0
           ? {

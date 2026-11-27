@@ -76,6 +76,12 @@ export type ContaDoPagamento = {
    * ao profissional. Ausente no modelo antigo.
    */
   novoModelo?: true;
+  /**
+   * O QUE O PARCEIRO FICA — d143 (dono, 27-11-2026). Só no modelo de 15-11:
+   * `semIva` é a base dele (B), `comIva` a fatura dele (B + o IVA dele), nula
+   * quando é isento ou não leva IVA. Sai da mesma conta (`contaDoValorAcordado`).
+   */
+  parceiro?: { semIva: number; comIva: number | null };
 };
 
 export const aosCentimos = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -455,6 +461,7 @@ export function contaDoRegistoNoNovoModelo(
     clyon: d.comissao,
     profissional: fica,
     novoModelo: true,
+    parceiro: { semIva: fica, comIva: null },
     degraus: [
       {
         tipo: "inicio",
@@ -531,6 +538,10 @@ export function contaDoNovoModelo(
     clyon: parte,
     profissional: doProfissional,
     novoModelo: true,
+    parceiro: {
+      semIva: e(c.baseDoProfissionalCent),
+      comIva: c.ivaDoProfissionalCent > 0 ? doProfissional : null,
+    },
     degraus: [
       {
         tipo: "inicio",
@@ -591,4 +602,31 @@ export function aPassarAClyonDaConta(conta: ContaDoPagamento | null | undefined)
   if (!conta?.novoModelo) return null;
   const final = conta.degraus.find((d) => d.final);
   return final ? final.valor : null;
+}
+
+/**
+ * «O PARCEIRO FICA COM» — d143 (dono, 27-11-2026). A linha da «Conta do
+ * pagamento»: «243,00 € sem IVA (298,89 € com o IVA dele)», ou só o sem IVA
+ * quando ele é isento ou não leva IVA. Fora do modelo de 15-11, nula.
+ */
+export function parceiroFicaCom(conta: ContaDoPagamento | null | undefined): string | null {
+  const p = conta?.parceiro;
+  if (!p) return null;
+  return p.comIva != null && Math.abs(p.comIva - p.semIva) > 0.005
+    ? `${emEuros(p.semIva)} sem IVA (${emEuros(p.comIva)} com o IVA dele)`
+    : `${emEuros(p.semIva)} sem IVA`;
+}
+
+/**
+ * QUANTO O PARCEIRO RECEBE, SEM IVA, PARA O CABEÇALHO DO CARTÃO — d143. A base
+ * dele na mesma conta (`contaDoValorAcordado`), com a reserva do valor único
+ * quando a há: o mesmo número do «O parceiro fica com» da conta. Nula sem valor.
+ */
+export function parceiroRecebeSemIva(
+  acordado: number | null | undefined,
+  taxas: Taxas,
+  reservaCent = 0,
+): number | null {
+  const c = contaDoValorAcordado(acordado, taxas, "normal", reservaCent);
+  return c ? c.baseDoProfissionalCent / 100 : null;
 }
