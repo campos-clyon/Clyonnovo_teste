@@ -14,6 +14,7 @@ import {
 import type { Taxas } from "@/lib/taxas-plataforma";
 import { NOVO_MODELO_DESDE } from "@/lib/novo-modelo";
 import { BUSINESS_PHONE } from "@/lib/seo-data";
+import { RESPOSTA_AO_PEDIDO_DE_AJUDA } from "@/lib/textos-aos-parceiros";
 
 /**
  * Ajuda.
@@ -189,7 +190,7 @@ export default function Ajuda({ onVoltar }: { onVoltar: () => void }) {
             <CheckCircle2 className="mx-auto h-7 w-7 text-emerald-600" aria-hidden="true" />
             <p className="mt-2 text-sm font-semibold text-emerald-900">Recebemos o seu pedido</p>
             <p className="mt-1 text-xs leading-relaxed text-emerald-800">
-              Respondemos por aqui e por email. Se for urgente, ligue-nos.
+              {RESPOSTA_AO_PEDIDO_DE_AJUDA}
             </p>
             <button
               onClick={() => setEnviado(false)}

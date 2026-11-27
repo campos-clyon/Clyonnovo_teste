@@ -3457,7 +3457,9 @@ export async function tratarMensagemDoCliente(
           () => ({ tipo: "como_antes" }) as const,
         );
         if (decisao.tipo === "resposta") {
-          await enviarTextoWhatsApp(telefone, decisao.texto);
+          // d10: o Gmail do teste responde E passa à equipa, com a etiqueta «pôr na lista de testadores».
+          if (decisao.passaAEquipa) await passarAUmaPessoa(telefone, decisao.passaAEquipa, decisao.texto);
+          else await enviarTextoWhatsApp(telefone, decisao.texto);
           return;
         }
         if (decisao.tipo === "fora_de_horas") {

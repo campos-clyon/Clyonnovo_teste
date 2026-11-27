@@ -17,6 +17,7 @@ import {
   type AssuntoDeAjuda,
 } from "../../../../src/lib/ajuda-plataforma";
 import { IDENTIFICACAO } from "../../../../src/lib/identificacao-legal";
+import { PEDIDO_DE_AJUDA_ENVIADO } from "../../../../src/lib/textos-aos-parceiros";
 import type { Taxas } from "../../../../src/lib/taxas-plataforma";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
@@ -205,7 +206,7 @@ function NovoPedido({ aoEnviar }: { aoEnviar: () => void }) {
       />
       {erro ? <Mensagem texto={erro} /> : null}
       {formulario.aviso ? <Mensagem texto={formulario.aviso} /> : null}
-      {feito ? <Mensagem tom="bom" texto="Recebemos o seu pedido. Respondemos por aqui e por email. Se for urgente, ligue-nos." /> : null}
+      {feito ? <Mensagem tom="bom" texto={PEDIDO_DE_AJUDA_ENVIADO} /> : null}
       <Botao titulo="Enviar" ocupado={aEnviar} desactivado={mensagem.trim().length < MINIMO_DA_MENSAGEM} aoCarregar={() => void enviar()} />
     </Caixa>
     </FormularioComErros>

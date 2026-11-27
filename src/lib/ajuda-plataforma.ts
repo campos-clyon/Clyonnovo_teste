@@ -1,3 +1,4 @@
+import { IPHONE_USA_O_PAINEL, PARAR_E_VOLTAR_A_RECEBER_AVISOS, QUANDO_RESPONDEM, textoSemPedidos } from "./textos-aos-parceiros";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
 
 /**
@@ -243,9 +244,25 @@ function respostasDoNovoModelo(taxas: Taxas | null): Record<string, PerguntaFreq
  */
 export function perguntasDoProfissional(taxas: Taxas | null, agora: Date = new Date()): PerguntaFrequente[] {
   const antigas = perguntasDoProfissionalNoModeloAntigo(taxas);
-  if (!novoModeloEmVigor(agora)) return antigas;
+  if (!novoModeloEmVigor(agora)) return [...antigas, ...perguntasDaAppEDoAtendimento()];
   const novas = respostasDoNovoModelo(taxas);
-  return [...antigas.map((p) => novas[p.pergunta] ?? p), novas[PERGUNTA_DO_DINHEIRO_RECEBIDO]];
+  return [...antigas.map((p) => novas[p.pergunta] ?? p), novas[PERGUNTA_DO_DINHEIRO_RECEBIDO], ...perguntasDaAppEDoAtendimento()];
+}
+
+/**
+ * AS QUATRO PERGUNTAS DA APP E DO ATENDIMENTO — d10 (27-11-2026). As mesmas
+ * respostas que a Vitória dá no WhatsApp (`textos-aos-parceiros.ts`), para não
+ * haver duas redacções: quando respondem, não me aparecem pedidos, iPhone e
+ * os avisos. A de «não me aparecem pedidos» não leva o limite da zona em km
+ * (a Ajuda não lê as Configs): diz a regra sem número.
+ */
+export function perguntasDaAppEDoAtendimento(): PerguntaFrequente[] {
+  return [
+    { pergunta: "Quando respondem ao meu pedido de ajuda?", resposta: QUANDO_RESPONDEM },
+    { pergunta: "Não me aparecem pedidos. O que verifico?", resposta: textoSemPedidos(null) },
+    { pergunta: "Tenho iPhone: posso usar a CLYON Pro?", resposta: IPHONE_USA_O_PAINEL },
+    { pergunta: "Como paro ou volto a receber avisos?", resposta: PARAR_E_VOLTAR_A_RECEBER_AVISOS },
+  ];
 }
 
 /** Os assuntos por que um pedido de ajuda pode ser classificado. */

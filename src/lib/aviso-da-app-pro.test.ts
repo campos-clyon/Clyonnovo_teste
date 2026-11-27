@@ -37,7 +37,11 @@ describe("o texto do aviso, pelo estado", () => {
     expect(t).toContain(`2) Instale em ${APP_PRO_NA_PLAY}`);
     expect(t).toContain("3) Entre com o mesmo email e palavra-passe do painel.");
     expect(t).toContain("4) Aceite as notificações — é assim que recebe os pedidos a tempo.");
-    expect(t).toContain("Se aparecer «Este item não está disponível», diga-nos qual é o Gmail do seu telemóvel e pomo-lo na lista.");
+    expect(t).toContain("Se aparecer «Este item não está disponível», responda a esta mensagem com o Gmail do seu telemóvel e pomo-lo na lista.");
+    // d10: quem tem iPhone fica com caminho (o painel), antes dos passos do Android.
+    expect(t).toContain("Se tem iPhone, a app ainda não está para si: use o painel no browser do telemóvel, com o mesmo email e palavra-passe.");
+    expect(t.indexOf("Se tem iPhone")).toBeLessThan(t.indexOf("Para instalar (Android):"));
+    expect(t).not.toContain("diga-nos qual é o Gmail");
     expect(t).not.toContain(FRASE_DO_GMAIL);
     expect(t).not.toContain("não a abre desde");
   });

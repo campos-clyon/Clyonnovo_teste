@@ -7,7 +7,7 @@ import {
   jaRespondeuForaDeHorasEstaNoite,
   NOME_DO_INTERRUPTOR,
   precisaDosValores,
-  qualPerguntaDeDinheiro,
+  qualTemaDoParceiro,
   SEM_VALORES,
   type DecisaoParaOProfissional,
   type ValoresDaCarteira,
@@ -145,8 +145,13 @@ export async function oQueDizerAoProfissional(
   if (!novoModeloEmVigor(agora)) return { tipo: "como_antes" };
   const { ligado } = await interruptorDaVitoriaAosProfissionais();
   if (!ligado) return { tipo: "como_antes" };
-  const pergunta = qualPerguntaDeDinheiro(texto);
+  const pergunta = qualTemaDoParceiro(texto);
   const valores = precisaDosValores(pergunta) ? await valoresDaCarteiraDoProfissional(pro.id, agora) : SEM_VALORES;
+  // d10: o «sem pedidos» diz o limite da zona de trabalho (Configs), nunca escrito à mão.
+  let limiteDaZonaKm: number | null = null;
+  if (pergunta === "sem_pedidos") {
+    limiteDaZonaKm = await import("./fora-da-zona-na-base").then((m) => m.limiteDaZonaKm()).catch(() => null);
+  }
   let jaRespondeuEstaNoite = false;
   if (!pergunta) {
     const fecho = inicioDoFecho(agora);
@@ -156,5 +161,5 @@ export async function oQueDizerAoProfissional(
       jaRespondeuEstaNoite = jaRespondeuForaDeHorasEstaNoite(saidas, agora, fecho);
     }
   }
-  return decidirARespostaAoProfissional({ texto, agora, interruptorLigado: true, nome: pro.nome, valores, jaRespondeuEstaNoite });
+  return decidirARespostaAoProfissional({ texto, agora, interruptorLigado: true, nome: pro.nome, valores, jaRespondeuEstaNoite, limiteDaZonaKm });
 }

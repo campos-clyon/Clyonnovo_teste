@@ -9,6 +9,16 @@ import { NADA_A_PAGAR_AGORA_NO_NOVO_MODELO } from "./aviso-de-oferta-clyon";
 import { PAGAR_O_VALOR_EM_ATRASO } from "./valor-em-atraso";
 import { ATENDIMENTO_ABRE_AS, ATENDIMENTO_FECHA_AS, emHorarioDeAtendimento, quandoSeResponde } from "./horario-de-atendimento";
 import { pecasEmLisboa } from "./hora-de-lisboa";
+import {
+  ENTRAR_E_PALAVRA_PASSE,
+  ETIQUETA_DO_GMAIL_DO_TESTE,
+  GMAIL_RECEBIDO,
+  IPHONE_USA_O_PAINEL,
+  PARAR_E_VOLTAR_A_RECEBER_AVISOS,
+  PEDIR_O_GMAIL,
+  QUANDO_RESPONDEM,
+  textoSemPedidos,
+} from "./textos-aos-parceiros";
 
 /**
  * A VITÓRIA RESPONDE AOS PROFISSIONAIS — d21 (CEO e dono, 13-11-2026). Puro.
@@ -62,6 +72,30 @@ export const PERGUNTAS_DE_DINHEIRO: readonly PerguntaDeDinheiro[] = [
   "cliente_nao_pagou",
   "como_sao_escolhidos",
 ];
+
+/**
+ * OS TEMAS NOVOS DA d10 (27-11-2026) — o que um parceiro pergunta sobre a app e
+ * sobre os pedidos, para além do dinheiro. Cada um tem a sua frase em
+ * `textos-aos-parceiros.ts` (a mesma da Ajuda do painel e da app).
+ */
+export type TemaDaApp =
+  | "sem_pedidos"
+  | "entrar_e_palavra_passe"
+  | "iphone"
+  | "gmail_do_teste"
+  | "quando_respondem"
+  | "parar_e_voltar";
+
+export const TEMAS_DA_APP: readonly TemaDaApp[] = [
+  "sem_pedidos",
+  "entrar_e_palavra_passe",
+  "iphone",
+  "gmail_do_teste",
+  "quando_respondem",
+  "parar_e_voltar",
+];
+
+export type TemaDoParceiro = PerguntaDeDinheiro | TemaDaApp;
 
 /** O título do interruptor nas Configs — o nome que o dono confirma. */
 export const NOME_DO_INTERRUPTOR = "Vitória: respostas automáticas aos profissionais";
@@ -178,10 +212,75 @@ export function qualPerguntaDeDinheiro(texto: string): PerguntaDeDinheiro | null
   if (
     /\bcomo (e que )?(sao|e) (escolhid|selecionad|seleccionad|atribuid|distribuid)/.test(t) ||
     /\b(quem|como) (e que )?(escolhe|decide)\b.*\b(profissional|proposta|pedido|trabalho)/.test(t) ||
-    /\b(porque|porque e que) (nao )?(fico|ganho|recebo|consigo)( com)? (os |nenhum |mais )?(trabalhos?|pedidos?)\b/.test(t) ||
+    /\b(porque|porque e que) (nao )?(fico|ganho|consigo)( com)? (os |nenhum |mais )?trabalhos?\b/.test(t) ||
     /\bcomo (e que )?(ganho|consigo|fico com|recebo) (mais )?(trabalhos|pedidos)\b/.test(t)
   )
     return "como_sao_escolhidos";
+
+  return null;
+}
+
+/** Um Gmail escrito na mensagem. */
+const UM_GMAIL = /[\w.+-]+@(?:gmail|googlemail)\.com\b/i;
+
+/**
+ * QUAL É O TEMA — as 10 de dinheiro e os 6 da app (d10). O Gmail do teste
+ * primeiro (traz um endereço), depois o dinheiro, depois os da app; a mesma
+ * ordem decide os que se parecem («não recebo pedidos» nunca é «como sou
+ * escolhido»). Lê a mensagem inteira, sem acentos. `null`: passa à equipa.
+ */
+export function qualTemaDoParceiro(texto: string): TemaDoParceiro | null {
+  const t = semAcentos(texto);
+  if (!t) return null;
+
+  // O Gmail para a lista dos testadores: um endereço Gmail, ou a Play a dizer que o item não está disponível.
+  if (UM_GMAIL.test(texto) || /\b(este )?item nao (esta|fica|aparece) disponivel\b|\bnao esta disponivel (no|para o) (meu )?(pais|telemovel|dispositivo)\b/.test(t))
+    return "gmail_do_teste";
+
+  const dinheiro = qualPerguntaDeDinheiro(texto);
+  if (dinheiro) return dinheiro;
+
+  // iPhone (e o resto da Apple): a app é só Android.
+  if (/\b(iphone|ipad|ios|apple|app store)\b/.test(t)) return "iphone";
+
+  // Quando respondem.
+  if (
+    /\bquando (e que )?(me )?(vao )?(respond|atend|vou ter resposta|tenho resposta|vem a resposta)/.test(t) ||
+    /\b(a que horas|que horas) (abrem|atendem|respondem|funcionam)\b/.test(t) ||
+    /\bhorario (de )?(atendimento|resposta|funcionamento)\b|\bqual (e )?o horario\b/.test(t) ||
+    /\bquanto tempo (demora|demoram|levam|leva|e que demora)( a| para)? respond/.test(t) ||
+    /\b(ainda )?nao (me )?(responderam|respondeu|responde)\b.*\b(quando|prazo)\b/.test(t)
+  )
+    return "quando_respondem";
+
+  // Parar e voltar a receber os avisos (WhatsApp ou notificações).
+  const falaDeAvisos = /\b(avisos?|notificacoes|notificacao|mensagens? (de|dos) pedidos?|alertas?)\b/.test(t);
+  if (
+    falaDeAvisos &&
+    /\b(parar|paro|pare|parem|desligar|desligo|desativar|desativo|desactivar|desactivo|deixar de|deixei de|nao quero (mais )?(receber)?|voltar|volto|religar|reativar|reactivar|ativar|activar|ligar|ligo|voltei|nao (me )?(recebo|recebi|chegam|chega|aparecem|aparece))\b/.test(t)
+  )
+    return "parar_e_voltar";
+
+  // Entrar na app / no painel e a palavra-passe.
+  if (
+    /\b(palavra[- ]?passe|password|senha)\b/.test(t) ||
+    /\b(nao )?(consigo|consegui|posso|deixa|da para) (entrar|iniciar sessao|fazer login|fazer o login|aceder|abrir a (app|conta))\b/.test(t) ||
+    /\bnao (entra|entro|abre|deixa entrar)\b/.test(t) ||
+    /\bcomo (e que )?(entro|faco login|inicio sessao|acedo)\b/.test(t) ||
+    /\b(login|iniciar sessao|entrar na (app|conta|plataforma|clyon pro))\b/.test(t)
+  )
+    return "entrar_e_palavra_passe";
+
+  // Não me aparecem pedidos.
+  if (
+    /\bnao (me )?(recebo|recebi|chegam|chega|aparecem|aparece|vejo|vi|entram|entra|tenho|tive)\b.*\b(pedidos?|trabalhos?)\b/.test(t) ||
+    /\b(sem|nenhum|zero) (pedidos?|trabalhos?)\b/.test(t) ||
+    /\bnao ha pedidos\b/.test(t) ||
+    /\bdeixei de (receber|ver) (os |nenhum )?(pedidos?|trabalhos?)\b/.test(t) ||
+    /\b(porque|porque e que|por que) (nao )?(me )?(recebo|aparecem|chegam|aparece|chega|entram)( nenhum| nenhuns)? (pedidos?|trabalhos?)\b/.test(t) ||
+    /\b(pedidos?|trabalhos?)\b.*\bnao (me )?(aparecem|chegam|aparece|chega|entram)\b/.test(t)
+  )
+    return "sem_pedidos";
 
   return null;
 }
@@ -287,6 +386,30 @@ export function respostaAoProfissional(
   }
 }
 
+/**
+ * A RESPOSTA AOS TEMAS DA APP (d10). `limiteDaZonaKm` é o das Configs (só o
+ * «sem pedidos» o diz). O Gmail nunca se repete na resposta.
+ */
+export function respostaAoTemaDaApp(
+  tema: TemaDaApp,
+  opcoes: { limiteDaZonaKm?: number | null; comGmailNaMensagem?: boolean } = {},
+): string {
+  switch (tema) {
+    case "sem_pedidos":
+      return textoSemPedidos(opcoes.limiteDaZonaKm ?? null);
+    case "entrar_e_palavra_passe":
+      return ENTRAR_E_PALAVRA_PASSE;
+    case "iphone":
+      return IPHONE_USA_O_PAINEL;
+    case "gmail_do_teste":
+      return opcoes.comGmailNaMensagem === false ? PEDIR_O_GMAIL : GMAIL_RECEBIDO;
+    case "quando_respondem":
+      return QUANDO_RESPONDEM;
+    case "parar_e_voltar":
+      return PARAR_E_VOLTAR_A_RECEBER_AVISOS;
+  }
+}
+
 /** O nome a seguir ao «Obrigada» — só o primeiro, e só se parecer um nome. */
 function comONome(nome: string | null | undefined): string {
   const primeiro = String(nome ?? "").trim().split(/\s+/)[0] ?? "";
@@ -326,7 +449,13 @@ export type DecisaoParaOProfissional =
   /** As duas chaves não estão dadas: tudo como antes (a passagem a uma pessoa de sempre). */
   | { tipo: "como_antes" }
   /** Uma das 9: responde e não passa à equipa (a resposta diz o que fazer a seguir). */
-  | { tipo: "resposta"; pergunta: PerguntaDeDinheiro; texto: string }
+  | {
+      tipo: "resposta";
+      pergunta: TemaDoParceiro;
+      texto: string;
+      /** Responde E passa à equipa, com esta etiqueta (o Gmail do teste: «pôr na lista de testadores»). */
+      passaAEquipa?: string;
+    }
   /** Fora de horas: diz quando lhe respondem e passa à equipa — ou só passa, se já o disse esta noite. */
   | { tipo: "fora_de_horas"; texto: string | null }
   /** Em horário, uma pergunta que não sabe: passa à equipa, como hoje. */
@@ -344,11 +473,25 @@ export function decidirARespostaAoProfissional(e: {
   valores?: ValoresDaCarteira;
   /** Já saiu a resposta fora de horas nesta noite? */
   jaRespondeuEstaNoite?: boolean;
+  /** O limite da zona de trabalho nas Configs (km), para o «sem pedidos». */
+  limiteDaZonaKm?: number | null;
 }): DecisaoParaOProfissional {
   if (!e.interruptorLigado || !novoModeloEmVigor(e.agora)) return { tipo: "como_antes" };
-  const pergunta = qualPerguntaDeDinheiro(e.texto);
+  const pergunta = qualTemaDoParceiro(e.texto);
+  if (pergunta && (TEMAS_DA_APP as readonly string[]).includes(pergunta)) {
+    const tema = pergunta as TemaDaApp;
+    const comGmail = UM_GMAIL.test(e.texto);
+    return {
+      tipo: "resposta",
+      pergunta: tema,
+      texto: respostaAoTemaDaApp(tema, { limiteDaZonaKm: e.limiteDaZonaKm ?? null, comGmailNaMensagem: comGmail }),
+      // O Gmail recebido vai à equipa, com a etiqueta; sem o Gmail (só «item indisponível») pede-se-o, sem passar.
+      ...(tema === "gmail_do_teste" && comGmail ? { passaAEquipa: ETIQUETA_DO_GMAIL_DO_TESTE } : {}),
+    };
+  }
   if (pergunta) {
-    return { tipo: "resposta", pergunta, texto: respostaAoProfissional(pergunta, e.valores ?? SEM_VALORES, UM_IBAN.test(e.texto)) };
+    const dinheiro = pergunta as PerguntaDeDinheiro;
+    return { tipo: "resposta", pergunta: dinheiro, texto: respostaAoProfissional(dinheiro, e.valores ?? SEM_VALORES, UM_IBAN.test(e.texto)) };
   }
   if (!emHorarioDeAtendimento(e.agora)) {
     return { tipo: "fora_de_horas", texto: e.jaRespondeuEstaNoite ? null : respostaForaDeHoras(e.nome, e.agora) };
@@ -357,6 +500,6 @@ export function decidirARespostaAoProfissional(e: {
 }
 
 /** Precisa de ler a carteira para responder a isto? (Só a taxa e o stand-by levam números.) */
-export function precisaDosValores(pergunta: PerguntaDeDinheiro | null): boolean {
+export function precisaDosValores(pergunta: TemaDoParceiro | null): boolean {
   return pergunta === "pagar_a_taxa" || pergunta === "stand_by";
 }

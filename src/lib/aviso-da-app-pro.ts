@@ -14,6 +14,7 @@
  */
 
 import { APP_PRO_NA_PLAY, LINK_DO_TESTE_DA_APP_PRO } from "./links-da-app";
+import { FRASE_DO_IPHONE_NO_AVISO, RESPONDA_COM_O_GMAIL } from "./textos-aos-parceiros";
 import { diaEmLisboa, diaMesEHoraEmLisboa, pecasEmLisboa } from "./hora-de-lisboa";
 import type { EstadoDeUso } from "./quem-conta-para-os-12";
 
@@ -30,7 +31,7 @@ export const MAXIMO_DO_TEXTO_DO_AVISO = 2000;
 export const FRASE_DA_DESCONTINUACAO =
   "Todos os parceiros vão passar a usar a app: o uso da CLYON Pro pelo site vai ser descontinuado no próximo ano.";
 
-export const FRASE_DO_GMAIL = "A Play precisa de um Gmail: diga-nos qual usa no telemóvel.";
+export const FRASE_DO_GMAIL = "A Play precisa de um Gmail: responda a esta mensagem com o Gmail que usa no telemóvel.";
 
 const dois = (n: number) => String(n).padStart(2, "0");
 
@@ -83,12 +84,13 @@ export function textoDoAvisoDaAppPro(d: DadosDoAviso): string {
   if (d.estado === "nunca") {
     linhas.push(
       `${ola} Aqui é a equipa da CLYON 😊 ${inscricao} e, até hoje, ainda não entrou na app CLYON Pro. ${FRASE_DA_DESCONTINUACAO}`,
+      FRASE_DO_IPHONE_NO_AVISO,
       "Para instalar (Android):",
       `1) No telemóvel, abra ${LINK_DO_TESTE_DA_APP_PRO} com a conta Google da Play Store e carregue em «Tornar-se testador».`,
       `2) Instale em ${APP_PRO_NA_PLAY}`,
       "3) Entre com o mesmo email e palavra-passe do painel.",
       "4) Aceite as notificações — é assim que recebe os pedidos a tempo.",
-      "Se aparecer «Este item não está disponível», diga-nos qual é o Gmail do seu telemóvel e pomo-lo na lista.",
+      `Se aparecer «Este item não está disponível», ${RESPONDA_COM_O_GMAIL}`,
     );
   } else {
     const aberta = valida(d.abertaEm);
