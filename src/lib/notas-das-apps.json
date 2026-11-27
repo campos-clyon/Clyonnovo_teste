@@ -3,7 +3,9 @@
     {
       "id": "pro-2026-11-27-2",
       "nota": "Na Carteira, um trabalho confirmado em que a CLYON ainda está a confirmar a quem o cliente pagou passa para o separador «Por confirmar», e já não aparece em «Por receber».",
-      "updates": []
+      "updates": [
+        "01a21e28-6eb6-7d76-8235-f6ad28f419a1"
+      ]
     },
     {
       "id": "pro-2026-11-27",
