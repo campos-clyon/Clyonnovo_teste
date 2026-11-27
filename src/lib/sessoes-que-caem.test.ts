@@ -107,9 +107,9 @@ describe("mudar a palavra-passe fecha as sessões abertas", () => {
 });
 
 describe("todas as rotas do backoffice passam pela base", () => {
-  it("o requireAdmin e o requireAdminGeral confirmam a conta", () => {
+  it("o requireAdmin, o requireAdminGeral e o colaboradorComSessaoValida (d145) confirmam a conta", () => {
     const HELPER = lerNu("src/lib/admin-auth-helper.ts");
-    expect(HELPER.match(/await contaAindaVale\(/g)?.length).toBe(2);
+    expect(HELPER.match(/await contaAindaVale\(/g)?.length).toBe(3);
   });
 
   it("nenhuma rota verifica o token à mão", () => {

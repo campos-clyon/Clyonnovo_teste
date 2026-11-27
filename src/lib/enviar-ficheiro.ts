@@ -26,7 +26,8 @@ export type FicheiroEnviado = {
 
 export type ResultadoDoEnvio =
   | { ok: true; ficheiro: FicheiroEnviado }
-  | { ok: false; motivo: string };
+  // `demasiados`: o servidor respondeu 429 — vale a pena esperar e tentar outra vez (d145).
+  | { ok: false; motivo: string; demasiados?: boolean };
 
 /**
  * O tecto do Vercel é 4,5 MB de corpo. Ficamos abaixo com folga: o corpo leva
@@ -39,10 +40,19 @@ function nomeSeguro(nome: string): string {
   return nome.replace(/[^\w.\-]/g, "_").slice(-80);
 }
 
-async function pelaNossaFuncao(f: File): Promise<ResultadoDoEnvio> {
+/*
+ * COM A SESSÃO DE QUEM ENVIA — d145, 27-11-2026. O backoffice manda o seu
+ * `Authorization` também aqui: a rota dá à equipa um limite próprio, por
+ * colaborador, em vez do limite por IP do público.
+ */
+async function pelaNossaFuncao(f: File, o: OpcoesDoEnvio = {}): Promise<ResultadoDoEnvio> {
   const fd = new FormData();
   fd.append("fotos", f, f.name);
-  const res = await fetch("/api/simulador/upload-fotos", { method: "POST", body: fd });
+  const res = await fetch("/api/simulador/upload-fotos", {
+    method: "POST",
+    body: fd,
+    headers: cabecalhosDoEnvio(o),
+  });
   const dados = await res.json().catch(() => null);
   const subidos = (dados?.files ?? []) as FicheiroEnviado[];
 
@@ -55,6 +65,7 @@ async function pelaNossaFuncao(f: File): Promise<ResultadoDoEnvio> {
       porFicheiro.length > 0
         ? porFicheiro.map((x) => x.motivo).join(" | ")
         : (dados?.motivoTecnico ?? dados?.message ?? dados?.error ?? `resposta ${res.status} do servidor`),
+    ...(res.status === 429 ? { demasiados: true } : {}),
   };
 }
 
@@ -160,7 +171,7 @@ export async function enviarFicheiro(original: File, opcoes: OpcoesDoEnvio = {})
 
   if (ficheiro.size <= LIMITE_DO_SERVIDOR) {
     try {
-      return await pelaNossaFuncao(ficheiro);
+      return await pelaNossaFuncao(ficheiro, opcoes);
     } catch (err) {
       return {
         ok: false,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { limitarPorContaDoCliente } from "@/lib/cliente-auth";
+import { colaboradorComSessaoValida } from "@/lib/admin-auth-helper";
 import { tipoDoFicheiro } from "@/lib/tipo-ficheiro";
 import { obterTokenDoBlob } from "@/lib/blob-token";
 
@@ -12,6 +13,9 @@ export const maxDuration = 60;
 // sabe deduzir pela extensão quando o browser não declara nada.
 const MAX_SIZE = 30 * 1024 * 1024; // 30 MB por ficheiro
 const MAX_FICHEIROS = 20; // por pedido — um cliente não envia mais que isto
+// A equipa do backoffice: por colaborador, não por IP (d145).
+const LOTES_DA_EQUIPA = 200;
+const JANELA_SEGUNDOS = 300;
 
 /**
  * A mensagem de erro do SDK, sem nada que se pareça com uma credencial.
@@ -35,20 +39,39 @@ function limparSegredos(err: unknown): string {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Rota aberta por necessidade — quem preenche o simulador ainda não tem
-    // conta. Sem limite, era gravar ficheiros de 30 MB num bucket público em
-    // ciclo, à nossa conta. 10 lotes por IP a cada 5 minutos chega para quem
-    // está mesmo a pedir um orçamento.
-    const rl = await checkRateLimit(`upload-fotos:${getClientIp(request)}`, 10, 300);
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: "Demasiados envios. Aguarde um momento e tente novamente." },
-        { status: 429, headers: { "Retry-After": "300" } },
+    // A EQUIPA TEM O SEU PRÓPRIO LIMITE — d145, 27-11-2026. O backoffice sobe
+    // aqui as fotografias do WhatsApp, muitas, e várias pessoas atrás do mesmo
+    // IP: com o limite do público, as fotos falhavam com «Demasiados envios».
+    // Com sessão de colaborador válida, conta-se por colaborador e não por IP.
+    const daEquipa = await colaboradorComSessaoValida(request);
+    if (daEquipa) {
+      const rlEquipa = await checkRateLimit(
+        `upload-fotos-equipa:${daEquipa.id}`,
+        LOTES_DA_EQUIPA,
+        JANELA_SEGUNDOS,
       );
+      if (!rlEquipa.allowed) {
+        return NextResponse.json(
+          { error: "Demasiados envios. Aguarde um momento e tente novamente." },
+          { status: 429, headers: { "Retry-After": "60" } },
+        );
+      }
+    } else {
+      // Rota aberta por necessidade — quem preenche o simulador ainda não tem
+      // conta. Sem limite, era gravar ficheiros de 30 MB num bucket público em
+      // ciclo, à nossa conta. 10 lotes por IP a cada 5 minutos chega para quem
+      // está mesmo a pedir um orçamento.
+      const rl = await checkRateLimit(`upload-fotos:${getClientIp(request)}`, 10, 300);
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { error: "Demasiados envios. Aguarde um momento e tente novamente." },
+          { status: 429, headers: { "Retry-After": "300" } },
+        );
+      }
+      // E por conta, para quem envia com sessão de cliente — o site ou a app (Segurança, 28-10-2026).
+      const porConta = await limitarPorContaDoCliente(request, "upload-fotos-conta", 10, 300);
+      if (porConta.erro) return porConta.erro;
     }
-    // E por conta, para quem envia com sessão de cliente — o site ou a app (Segurança, 28-10-2026).
-    const porConta = await limitarPorContaDoCliente(request, "upload-fotos-conta", 10, 300);
-    if (porConta.erro) return porConta.erro;
 
     // O nome da variável depende do prefixo com que o store foi ligado — ver
     // blob-token.ts. Procurar só por BLOB_READ_WRITE_TOKEN dava "não

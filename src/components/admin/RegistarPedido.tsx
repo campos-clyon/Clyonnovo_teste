@@ -579,8 +579,24 @@ export default function RegistarPedido({
   /** Sobe uma fotografia que já está no formulário, e diz-lhe como correu. */
   async function subirFotografia(chave: string, original: File) {
     const { enviarFicheiro } = await import("@/lib/enviar-ficheiro");
-    // Com a sessão do backoffice: os PDF e os vídeos grandes só passam assim (d24).
-    const r = await enviarFicheiro(original, { autorizacao: token ? `Bearer ${token}` : null });
+    const { enviarComNovasTentativas } = await import("@/lib/enviar-com-novas-tentativas");
+    // Com a sessão do backoffice: os PDF e os vídeos grandes só passam assim (d24),
+    // e a rota dá à equipa um limite próprio, por colaborador (d145).
+    // Um «Demasiados envios» (429) não fica em «Falhou»: espera, cada vez mais,
+    // e tenta outra vez — a fila manda uma fotografia de cada vez (d145).
+    const r = await enviarComNovasTentativas(
+      () => enviarFicheiro(original, { autorizacao: token ? `Bearer ${token}` : null }),
+      {
+        aoEsperar: (_tentativa, ms) =>
+          setItensDasFotos((v) =>
+            v.map((x): FotografiaNoFormulario =>
+              x.chave === chave
+                ? { ...x, motivo: `Demasiados envios seguidos — nova tentativa daqui a ${Math.round(ms / 1000)} s` }
+                : x,
+            ),
+          ),
+      },
+    );
     setItensDasFotos((v) =>
       v.map((x): FotografiaNoFormulario => {
         if (x.chave !== chave) return x;
@@ -1654,6 +1670,9 @@ export default function RegistarPedido({
                       ×
                     </button>
                   </div>
+                  {ft.estado === "a-carregar" && ft.motivo && (
+                    <span className="text-[10px] leading-tight text-slate-400">À espera…</span>
+                  )}
                   {ft.estado === "falhou" && (
                     <button
                       type="button"

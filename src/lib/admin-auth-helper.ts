@@ -113,6 +113,39 @@ export async function requireAdmin(req: NextRequest): Promise<AuthResult> {
 }
 
 /**
+ * A EQUIPA, NUMA ROTA QUE TAMBÉM É PÚBLICA — d145, 27-11-2026.
+ *
+ * O backoffice sobe as fotografias do WhatsApp pela mesma rota do simulador
+ * (`/api/simulador/upload-fotos`), que trava a 10 lotes por IP. Quatro fotos
+ * de um pedido falharam todas com «Demasiados envios»: a equipa envia muitas
+ * e trabalha atrás do mesmo IP.
+ *
+ * Isto diz se quem chama é um colaborador com sessão que AINDA vale (a mesma
+ * confirmação na base de `requireAdmin`), sem a lista de secções do
+ * assistente: a rota não é do backoffice, é a equipa a usar uma rota pública.
+ * Devolve `null` em qualquer dúvida — sem token, token inválido, conta
+ * desactivada, base sem responder — e quem chama aplica o limite do público.
+ */
+export async function colaboradorComSessaoValida(req: NextRequest): Promise<AdminColab | null> {
+  const cabecalho = req.headers.get("authorization");
+  if (!cabecalho) return null;
+  try {
+    const colab = await verifyColaboradorAuthHeader(cabecalho);
+    const papel = papelDoColaborador(colab);
+    if (!colab || !papel) return null;
+    const recusa = await contaAindaVale(colab, papel, tokenDoCabecalho(cabecalho));
+    if (recusa) return null;
+    if (papel === "assistente") {
+      const naBase = await assistentePorId(colab.id).catch(() => undefined);
+      if (!naBase || !naBase.activo) return null;
+    }
+    return { id: colab.id, nome: colab.nome, isAdmin: colab.isAdmin, papel };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Só o administrador. Para o que um assistente nunca pode fazer, mesmo que
  * um dia a rota vá parar à lista dele por engano: gerir assistentes (e as
  * comissões deles), apagar, a palavra-passe do administrador. Confirmado na
