@@ -144,6 +144,25 @@ export async function GET(req: NextRequest) {
       });
     }
     /*
+     * O AVISO DA RESPOSTA NO PEDIDO — d140 (27-11-2026). A Vitória respondeu
+     * no Suporte do pedido fora das 9h–20h: o aviso curto no WhatsApp («Respondemos
+     * à sua mensagem no pedido #N») sai nesta janela. Um por pedido e por dia.
+     */
+    const { enviarOsAvisosDoSuportePendentes } = await import("@/lib/mensagem-no-suporte-na-base");
+    const doSuporte = await enviarOsAvisosDoSuportePendentes().catch((e) => {
+      console.error("[cron/assistente] avisos do suporte:", e);
+      return { enviados: 0, linhas: [] as string[] };
+    });
+    if (doSuporte.enviados > 0) {
+      await registarSemFalhar({
+        acontecimento: "assistente_alerta",
+        autorTipo: "assistente",
+        autorNome: "respostas no pedido",
+        resumo: `${doSuporte.enviados} aviso(s) de resposta no pedido enviado(s) ao cliente.`,
+        detalhe: { linhas: doSuporte.linhas.slice(0, 40) },
+      });
+    }
+    /*
      * A CONVERSA QUE VOLTOU À VITÓRIA — 25-11-2026 (d112). Respondida à mão e
      * 24 h sem a equipa: se a última mensagem do cliente ficou sem resposta, a
      * Vitória lê-a e responde (ou passa à equipa pelas regras dela), das 9h às

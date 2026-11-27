@@ -79,6 +79,8 @@ export type MensagemDaConversa = {
   quando: string;
   /** O nome de quem escreveu, quando se sabe. */
   autor?: string | null;
+  /** d140: a Vitória respondeu que a equipa confirma — a bola continua do nosso lado. */
+  passaAEquipa?: boolean;
 };
 
 export type ConversaDeSuporte = {
@@ -106,6 +108,7 @@ export type EntradaDoHistorico = {
   message?: unknown;
   createdAt?: unknown;
   by?: { nome?: unknown; role?: unknown } | null;
+  passaAEquipa?: unknown;
 };
 
 /**
@@ -169,6 +172,7 @@ export function conversaDoHistorico(historyJson: unknown): MensagemDaConversa[] 
       texto: corpo,
       quando: texto(bruta.createdAt),
       autor: texto(bruta.by?.nome) || null,
+      ...(bruta.passaAEquipa === true ? { passaAEquipa: true } : {}),
     });
   }
   return mensagens;
@@ -191,7 +195,8 @@ export function ultimaEm(c: ConversaDeSuporte): number {
  */
 export function porResponder(c: ConversaDeSuporte): boolean {
   const ultima = c.mensagens[c.mensagens.length - 1];
-  return ultima?.de === "eles";
+  // d140: a resposta da Vitória que passou à equipa não é resposta — continua por responder.
+  return ultima?.de === "eles" || ultima?.passaAEquipa === true;
 }
 
 /** O instante de uma data como as fontes a gravam ('2026-09-16 18:35:02'). */

@@ -126,7 +126,7 @@ export function lerMensagemNova(corpo: {
 }
 
 export type RespostaDoCliente =
-  | { ok: true }
+  | { ok: true; respondidaPeloQueFalta?: boolean }
   | { ok: false; status: 400 | 404 | 409; error: string };
 
 /**
@@ -176,9 +176,27 @@ export async function responderAClyon(
    * mesmo que o WhatsApp — gravam o que ficou respondido, dizem o que falta e,
    * completo, o pedido segue sozinho para os parceiros. Nunca falha a resposta.
    */
+  let respondidaPeloQueFalta = false;
   if (mensagem || fotografias.length > 0) {
     const { aplicarARespostaAoQueFalta } = await import("./resposta-ao-que-falta-na-conta");
-    await aplicarARespostaAoQueFalta(pedidoId, mensagem, fotografias.length);
+    respondidaPeloQueFalta = (await aplicarARespostaAoQueFalta(pedidoId, mensagem, fotografias.length)).aplicada;
   }
-  return { ok: true };
+  return { ok: true, respondidaPeloQueFalta };
+}
+
+/**
+ * DEPOIS DE O CLIENTE ESCREVER NO PEDIDO — d140 (27-11-2026). A Vitória
+ * responde no pedido (ou passa à equipa), a equipa é avisada, e o parceiro de
+ * um trabalho de hoje ou de amanhã sabe de uma alteração. Corre depois da
+ * resposta à chamada (`after`), para o cliente não esperar; o que o «pedir o
+ * que falta» já respondeu não volta a ser respondido. Nunca lança.
+ */
+export async function depoisDeOClienteEscrever(pedidoId: number, mensagem: string, r: RespostaDoCliente): Promise<void> {
+  if (!r.ok || r.respondidaPeloQueFalta) return;
+  try {
+    const { depoisDaMensagemNoPedido } = await import("./mensagem-no-suporte-na-base");
+    await depoisDaMensagemNoPedido(pedidoId, mensagem.trim() || "Fotografias enviadas.");
+  } catch (e) {
+    console.error("[conversa-com-a-clyon] depois da mensagem:", e instanceof Error ? e.message : e);
+  }
 }

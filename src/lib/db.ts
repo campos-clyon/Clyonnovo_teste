@@ -15653,7 +15653,14 @@ export async function desligarDaConta(pedidoId: number): Promise<string | null> 
 
 export async function appendOrderHistory(
   orderId: number,
-  entry: { type: string; by?: { id: number; nome: string; role: string } | null; message: string }
+  entry: {
+    type: string;
+    by?: { id: number; nome: string; role: string } | null;
+    message: string;
+    /** d140: a resposta da Vitória que passou à equipa — a mensagem continua por responder. */
+    passaAEquipa?: boolean;
+    motivo?: string;
+  }
 ): Promise<void> {
   await ensureSimulatorOrdersTable();
   const pool = await getPool();

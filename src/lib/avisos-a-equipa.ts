@@ -65,9 +65,10 @@ export const FOLGA_DA_MESMA_ESPERA_MS = 10 * 60 * 1000;
 export const ENTREGA_VALE_MS = 16 * 3600 * 1000;
 
 /** Que parte da equipa o recebe: a Mesa ou o WhatsApp (o administrador recebe tudo). */
-export type SeccaoDoAviso = "mesa" | "whatsapp" | "contactos";
+/** «suporte» (d140): uma mensagem no Suporte — quem tem o Suporte ou a Mesa. */
+export type SeccaoDoAviso = "mesa" | "whatsapp" | "contactos" | "suporte";
 
-export type TipoDoAviso = "nosso_lado" | "por_decidir" | "entregue" | "contacto";
+export type TipoDoAviso = "nosso_lado" | "por_decidir" | "entregue" | "contacto" | "suporte";
 
 export type AvisoAEquipa = {
   /** Única por pedido e por estado — ver `chaveDoAviso`. */
@@ -233,6 +234,8 @@ export type DependenciasDosAvisos = {
   entregasPorEnviar: () => Promise<AvisoAEquipa[]>;
   /** A conversa continua entregue a uma pessoa? Uma já devolvida não se anuncia. */
   aindaEntregue: (telefone: string) => Promise<boolean>;
+  /** d140: a mensagem no Suporte guardada fora de horas continua por responder? Sem ela, anuncia-se. */
+  suporteAindaPorResponder?: (aviso: AvisoAEquipa) => Promise<boolean>;
   marcarEnviado: (chave: string, como: "enviado" | "dispensado") => Promise<void>;
   /** Envia à equipa da secção; devolve a quantos aparelhos CHEGOU (0 = ninguém com avisos ligados, ou falhou tudo). */
   enviar: (aviso: AvisoAEquipa) => Promise<number>;
@@ -273,7 +276,14 @@ export async function correrOsAvisosDaEquipa(
   // 1. As entregas que ficaram guardadas (fora de horas, ou o envio falhou).
   try {
     for (const a of await deps.entregasPorEnviar()) {
-      if (agora.getTime() - a.desde.getTime() > ENTREGA_VALE_MS || !(a.telefone && (await deps.aindaEntregue(a.telefone)))) {
+      // d140: uma mensagem no Suporte vale enquanto estiver por responder; uma entrega, enquanto a conversa estiver entregue.
+      const aindaVale =
+        a.tipo === "suporte"
+          ? deps.suporteAindaPorResponder
+            ? await deps.suporteAindaPorResponder(a)
+            : true
+          : !!(a.telefone && (await deps.aindaEntregue(a.telefone)));
+      if (agora.getTime() - a.desde.getTime() > ENTREGA_VALE_MS || !aindaVale) {
         await deps.marcarEnviado(a.chave, "dispensado");
         continue;
       }
@@ -283,7 +293,9 @@ export async function correrOsAvisosDaEquipa(
       }
       await deps.marcarEnviado(a.chave, "enviado");
       r.entregasEnviadas++;
-      r.linhas.push(`Entrega anunciada: ${a.pedidoId != null ? `#${a.pedidoId}` : "conversa sem pedido"}.`);
+      r.linhas.push(
+        `${a.tipo === "suporte" ? "Mensagem no Suporte anunciada" : "Entrega anunciada"}: ${a.pedidoId != null ? `#${a.pedidoId}` : "sem pedido"}.`,
+      );
     }
   } catch (e) {
     r.falhas.push(`entregas: ${e instanceof Error ? e.message : String(e)}`);

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { criarPedidoDeAjuda, ajudasDoProfissional, perfilDoProfissional, taxasActuais } from "@/lib/db";
 import { tokenDoProfissional } from "@/lib/profissional-auth";
 import { sessaoActivaDoProfissional } from "@/lib/sessao-activa-do-profissional";
@@ -85,6 +85,11 @@ export async function POST(req: NextRequest) {
       email: typeof perfil?.email === "string" ? perfil.email : null,
       assunto: validacao.dados.assunto,
       mensagem: validacao.dados.mensagem,
+    });
+    // d140: a equipa é avisada já (o push dos avisos da equipa), e não só pelo selo do Suporte.
+    after(async () => {
+      const { depoisDaAjudaDaPlataforma } = await import("@/lib/mensagem-no-suporte-na-base");
+      await depoisDaAjudaDaPlataforma(id, "parceiro");
     });
     return NextResponse.json({ ok: true, id });
   } catch (error) {

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { sessaoDoCliente } from "@/lib/cliente-auth";
 import { getPool, getSimulatorOrderById } from "@/lib/db";
-import { responderAClyon } from "@/lib/conversa-com-a-clyon";
+import { depoisDeOClienteEscrever, responderAClyon } from "@/lib/conversa-com-a-clyon";
 import { historicoParaOCliente } from "@/lib/historico-para-o-cliente";
 
 export const runtime = "nodejs";
@@ -48,6 +48,8 @@ export async function POST(
 
   const r = await responderAClyon(orderId, { nome: session!.user!.name ?? email }, { mensagem: message });
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
+  // d140: a Vitória responde no pedido, e a equipa (e o parceiro, se for caso) sabe já.
+  after(() => depoisDeOClienteEscrever(orderId, message, r));
 
   /*
    * Devolvia o `historyJson` inteiro, com as notas da equipa, a quem acabava

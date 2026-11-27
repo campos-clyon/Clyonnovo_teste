@@ -24,6 +24,8 @@ export type TipoDeAvisoAoProfissional =
   | "passou_para_si"
   // d137: a equipa tirou-lhe o trabalho (atribuído, ainda por fazer).
   | "trabalho_retirado"
+  // d140: o cliente pediu uma alteração no Suporte do pedido (trabalho hoje ou amanhã).
+  | "alteracao_pedida"
   // As horas de um trabalho por hora (31-10-2026).
   | "horas_confirmadas"
   | "horas_confirmadas_pela_clyon"
@@ -52,6 +54,8 @@ export function avisoAoProfissional(tipo: TipoDeAvisoAoProfissional, pedidoId: n
       const a = avisoATirada(id);
       return { title: a.title, body: a.body };
     }
+    case "alteracao_pedida":
+      return { title: `CLYON · Trabalho #${id}`, body: `O cliente do #${id} pediu uma alteração. A equipa confirma consigo.` };
     case "horas_confirmadas":
       return { title: "Horas confirmadas", body: `O cliente confirmou as horas do #${id}. Já pode concluir o trabalho.` };
     case "horas_confirmadas_pela_clyon":

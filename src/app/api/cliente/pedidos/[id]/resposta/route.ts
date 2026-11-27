@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { emailDoCliente } from "@/lib/cliente-auth";
 import { limitarPorConta, limitarRotaPublica } from "@/lib/limite-rota-publica";
 import { getSimulatorOrderById } from "@/lib/db";
-import { responderAClyon } from "@/lib/conversa-com-a-clyon";
+import { depoisDeOClienteEscrever, responderAClyon } from "@/lib/conversa-com-a-clyon";
 import { convidadoDoPedido } from "@/lib/sessao-de-convidado";
 
 export const runtime = "nodejs";
@@ -51,6 +51,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const quem = convidado ? `Cliente (pela ligação, na app; telemóvel ${convidado.prova8})` : pedido.contactName?.trim() || email!;
     const r = await responderAClyon(pedidoId, { nome: quem }, corpo ?? {});
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
+    // d140: a Vitória responde no pedido, e a equipa (e o parceiro, se for caso) sabe já.
+    const mensagem = typeof corpo?.mensagem === "string" ? corpo.mensagem : "";
+    after(() => depoisDeOClienteEscrever(pedidoId, mensagem, r));
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[cliente/pedidos/resposta]", err instanceof Error ? err.message : err);

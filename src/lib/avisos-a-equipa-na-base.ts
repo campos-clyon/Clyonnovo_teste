@@ -79,6 +79,8 @@ export function recebeOAviso(c: ContaDaEquipa, seccao: SeccaoDoAviso): boolean {
   const tem = seccoesGuardadas(c.seccoesJson);
   // A caixa «Contactos» (d85): só quem tem a secção — os formulários e o Suporte não são da Mesa.
   if (seccao === "contactos") return tem.includes("contactos");
+  // d140: uma mensagem no Suporte chega a quem tem o Suporte e a quem tem a Mesa (o pedido entra em «Precisa de si»).
+  if (seccao === "suporte") return tem.includes("suporte") || tem.some((s) => SECCOES_DA_MESA.includes(s));
   return seccao === "whatsapp" ? tem.includes("whatsapp") : tem.some((s) => SECCOES_DA_MESA.includes(s));
 }
 
@@ -190,7 +192,7 @@ async function entregasPorEnviar(): Promise<AvisoAEquipa[]> {
   const p = await pool();
   const [linhas] = (await p.execute(
     `SELECT chave, tipo, pedidoId, telefone, seccao, titulo, corpo, url, desdeMs
-       FROM avisosDaEquipa WHERE tipo = 'entregue' AND enviadoMs IS NULL AND comoFicou IS NULL
+       FROM avisosDaEquipa WHERE tipo IN ('entregue', 'suporte') AND enviadoMs IS NULL AND comoFicou IS NULL
       ORDER BY desdeMs ASC LIMIT 50`,
   )) as [Array<Record<string, unknown>>, unknown];
   return linhas.map((l) => ({
@@ -328,6 +330,10 @@ function dependencias(agora: Date): DependenciasDosAvisos {
     reservar,
     entregasPorEnviar,
     aindaEntregue: async (telefone) => (await import("./db")).numeroInterrompidoWhatsApp(telefone),
+    suporteAindaPorResponder: async (a) => {
+      const { suporteAindaPorResponder } = await import("./mensagem-no-suporte-na-base");
+      return suporteAindaPorResponder(a.chave, a.pedidoId);
+    },
     marcarEnviado,
     enviar,
   };
@@ -357,4 +363,15 @@ export async function avisarAEquipaDaEntrega(telefone: string, motivo: string | 
   } catch (e) {
     console.error("[avisos-a-equipa] entrega:", e instanceof Error ? e.message : e);
   }
+}
+
+/**
+ * UMA MENSAGEM NO SUPORTE — d140 (27-11-2026). O cliente escreveu no pedido,
+ * ou alguém pediu ajuda na plataforma: avisa já a equipa (fora das 08h–21h
+ * fica guardada e sai na passagem das 08h, se ainda estiver por responder).
+ * Uma por espera: as mensagens seguidas da mesma espera não repetem o aviso.
+ * Nunca lança.
+ */
+export async function avisarAEquipaDoSuporte(aviso: AvisoAEquipa, agora: Date = new Date()): Promise<"enviado" | "guardado" | "repetido"> {
+  return anunciarAEntrega({ reservar, enviar, marcarEnviado }, aviso, agora);
 }
