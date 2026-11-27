@@ -5,44 +5,53 @@ import { getPool } from "@/lib/db";
 import { dinheiroDoInicio } from "@/lib/dinheiro-do-inicio";
 import { gastosDaClyon } from "@/lib/financas-gastos-na-base";
 import { entradasDaPlataforma, pagamentosAosAssistentes, tudoDaGestora } from "@/lib/financas-na-base";
+import { lerGanhosDosTrabalhos } from "@/lib/ganhos-dos-trabalhos";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
-import { periodosDaSocia } from "@/lib/socia-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * O DINHEIRO DO INÍCIO — d56, 17-11-2026.
+ * O DINHEIRO DO INÍCIO — d56, 17-11-2026; bruto e líquido desde a d139
+ * (27-11-2026).
  *
  * Debaixo de /api/admin/financas de propósito: quem vê as Finanças (o
  * administrador, e o assistente com as Carteiras) vê isto, pela mesma regra
- * (`SECCOES_QUE_ABREM`). A conta é a das Finanças (`dinheiroDoInicio` →
- * `lucroNoIntervalo`), com os mesmos dados (sem contas nem pagamentos de
- * teste) e os assistentes e a sócia só para o administrador. Vão só os
- * totais: nem pagamentos, nem nomes.
+ * (`SECCOES_QUE_ABREM`). O bruto é o ganho de cada trabalho feito
+ * (`lerGanhosDosTrabalhos`, a conta das comissões); as despesas são as das
+ * Finanças (`despesasNoIntervalo`), com os mesmos dados (sem contas nem
+ * pagamentos de teste) e as comissões das assistentes só para o
+ * administrador. Vão só os totais: nem pagamentos, nem nomes.
  */
 export async function GET(req: NextRequest) {
   const { err, colab } = await requireAdmin(req);
   if (err) return err;
   const eAdmin = colab?.papel === "admin";
   try {
-    const [tudo, entradas, gastos, assistentes, socia, aReceber] = await Promise.all([
+    const hoje = diaEmLisboa(new Date());
+    const [tudo, entradas, gastos, assistentes, trabalhos, aReceber] = await Promise.all([
       tudoDaGestora(),
       entradasDaPlataforma(),
       gastosDaClyon(),
       eAdmin ? pagamentosAosAssistentes() : Promise.resolve(null),
-      eAdmin ? periodosDaSocia() : Promise.resolve(null),
+      lerGanhosDosTrabalhos(hoje),
       aReceberDosProfissionais(),
     ]);
-    const hoje = diaEmLisboa(new Date());
-    const periodos = dinheiroDoInicio(
-      { entradas: entradas ?? [], movimentos: tudo.movimentos, categorias: tudo.categorias, gastos, assistentes },
-      socia,
+    const periodos = dinheiroDoInicio({
+      trabalhos: trabalhos ?? [],
+      contas: { entradas: entradas ?? [], movimentos: tudo.movimentos, categorias: tudo.categorias, gastos, assistentes },
       hoje,
-    );
+    });
     return NextResponse.json(
-      { hoje, eAdmin, semEntradas: entradas == null, periodos, aReceberDosProfissionais: aReceber },
+      {
+        hoje,
+        eAdmin,
+        semEntradas: entradas == null,
+        semTrabalhos: trabalhos == null,
+        periodos,
+        aReceberDosProfissionais: aReceber,
+      },
       { headers: { "Cache-Control": "private, max-age=60" } },
     );
   } catch (e) {

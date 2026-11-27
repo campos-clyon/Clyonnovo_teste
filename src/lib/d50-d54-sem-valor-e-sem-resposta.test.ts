@@ -69,7 +69,7 @@ describe("d50 — sem valor há mais de 4 h", () => {
     expect(mesa).toContain("seloDePorEnviar(p, agora)");
     const db = ler("src/lib/db.ts");
     expect(db).toContain("semValorParaOInicio(");
-    const inicio = semComentarios(ler("src/components/admin/AdminInicioPanel.tsx"));
+    const inicio = semComentarios(ler("src/components/admin/PrecisaDeSiNaMesa.tsx"));
     expect(inicio).toContain("sem valor há mais de {HORAS_SEM_VALOR} h");
   });
 });

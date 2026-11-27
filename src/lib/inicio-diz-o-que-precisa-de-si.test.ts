@@ -17,10 +17,14 @@ import { join } from "node:path";
  *
  * A regra do ecrã novo: só entra o que alguém tem de FAZER, e cada número é
  * um link para onde se resolve.
+ *
+ * NA MESA desde a d139 (27-11-2026, dono): a faixa saiu do Início (que ficou
+ * só com números) e vive no topo da Mesa, em `PrecisaDeSiNaMesa.tsx`.
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
-const PAINEL = ler("src/components/admin/AdminInicioPanel.tsx");
+const PAINEL = ler("src/components/admin/PrecisaDeSiNaMesa.tsx");
+const INICIO = ler("src/components/admin/AdminInicioPanel.tsx");
 const SHELL = ler("src/components/admin/LegacyAdminClient.tsx");
 const ROTA = ler("src/app/api/admin/resumo/route.ts");
 const DB = ler("src/lib/db.ts");
@@ -87,10 +91,11 @@ describe("só entra o que alguém tem de fazer", () => {
       '"pedidos"',
       '"levantamentos"',
       '"profissionais"',
-      '"whatsapp"',
     ]) {
       expect(PAINEL).toContain(s);
     }
+    // O WhatsApp é um ponto da Operação, no Início.
+    expect(INICIO).toContain('onAbrir("whatsapp")');
   });
 
   it("e o shell sabe abrir essas secções", () => {

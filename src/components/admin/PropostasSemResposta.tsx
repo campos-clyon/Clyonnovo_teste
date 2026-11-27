@@ -8,7 +8,7 @@ import type { Lembrete } from "@/lib/propostas-sem-resposta";
 /**
  * PROPOSTAS HÁ MAIS DE 24 H SEM RESPOSTA DO CLIENTE — d54, 16-11-2026.
  *
- * No Início, pelo n.º do pedido (do maior para o menor). Cada linha tem o
+ * No topo da Mesa desde a d139 (antes no Início), pelo n.º do pedido (do maior para o menor). Cada linha tem o
  * «Copiar mensagem»: a mensagem vai para a área de transferência com os
  * valores já postos, e NADA se envia daqui — quem a copia é quem a manda.
  *

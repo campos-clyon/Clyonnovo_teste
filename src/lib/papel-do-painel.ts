@@ -334,10 +334,11 @@ type EntradaDaRota = { seccoes: SeccaoDoAssistente[] } & (
  * secção e confirma que tudo o que ela chama está aqui.
  */
 const SECCOES_QUE_ABREM: EntradaDaRota[] = [
-  // Início: o resumo do dia.
-  { prefixo: "/api/admin/resumo", seccoes: ["overview"] },
+  // Início: o resumo do dia. Também a Mesa, desde a d139: o «Precisa de si» vive no topo dela.
+  { prefixo: "/api/admin/resumo", seccoes: ["overview", "negociacoes_clyon", "trabalhos_clyon"] },
   // As propostas sem resposta do cliente (d54, 16-11-2026): a lista do Início, e o link novo do «Copiar mensagem».
-  { prefixo: "/api/admin/propostas-sem-resposta", seccoes: ["overview"] },
+  // Desde a d139 (27-11-2026) a lista está no topo da Mesa.
+  { prefixo: "/api/admin/propostas-sem-resposta", seccoes: ["overview", "negociacoes_clyon", "trabalhos_clyon"] },
   { prefixo: "/api/admin/negociacoes/reenviar", seccoes: ["negociacoes_clyon", "overview"] },
   // Os motivos de cancelar e arquivar da semana (d54): o resumo da Mesa, também nos Trabalhos CLYON.
   { prefixo: "/api/admin/motivos-do-fecho", seccoes: ["negociacoes_clyon", "trabalhos_clyon"] },

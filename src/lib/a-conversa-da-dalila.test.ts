@@ -290,7 +290,7 @@ describe("as peças estão ligadas", () => {
   it("o selo na Mesa e a contagem no Início", () => {
     expect(ler("src/app/api/admin/negociacoes/route.ts")).toContain("faltaARua: semRua.get(Number(p.id))");
     expect(ler("src/components/admin/AdminNegociacoesPanel.tsx")).toContain("linhaDaRuaNaMesa(p.faltaARua)");
-    expect(ler("src/components/admin/AdminInicioPanel.tsx")).toContain('titulo: "aceites sem rua"');
+    expect(ler("src/components/admin/PrecisaDeSiNaMesa.tsx")).toContain('titulo: "aceites sem rua"');
     expect(ler("src/lib/db.ts")).toContain("contarAceitesSemRua()");
   });
 });

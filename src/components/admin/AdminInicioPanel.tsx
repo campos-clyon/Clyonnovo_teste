@@ -2,17 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/components/admin/useAutoRefresh";
-import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import dynamic from "next/dynamic";
-import PropostasSemResposta from "@/components/admin/PropostasSemResposta";
 import DinheiroDoInicio from "@/components/admin/DinheiroDoInicio";
-import { HORAS_SEM_VALOR, type SemValorNoInicio } from "@/lib/pedido-sem-valor";
 import type { OperacaoDoInicio } from "@/lib/desempenho";
 
 /*
  * O DESEMPENHO — d41, 15-11-2026: pedidos que entram, trabalhos feitos,
- * conversão e gráficos, por baixo do «precisa de si». Carregado à parte (os
+ * conversão e gráficos, por baixo da operação. Carregado à parte (os
  * gráficos pesam) para o resumo do dia aparecer primeiro.
  */
 const DesempenhoDoInicio = dynamic(() => import("@/components/admin/DesempenhoDoInicio"), { ssr: false });
@@ -21,22 +19,22 @@ const FunilDoSimulador = dynamic(() => import("@/components/admin/FunilDoSimulad
 const FalhasDaIa = dynamic(() => import("@/components/admin/FalhasDaIa"), { ssr: false });
 
 /**
- * O INÍCIO — o que precisa de si, hoje.
+ * O INÍCIO — os números e os dados da empresa.
  *
  * "Essa tela de início já não condiz com as novas ferramentas, está
  * desactualizada. Vamos colocá-la no modo actual, com informações precisas
  * como num painel bem planeado." — 12-09-2026.
  *
- * COMPACTO, POR HIERARQUIA — d56, 17-11-2026. Quatro andares, por esta ordem:
- *   1. Precisa de si — os alertas de hoje numa faixa de chips pequenos
- *      (número + rótulo; a explicação no `title`). Um zero não aparece.
- *   2. Dinheiro — o lucro de hoje, da semana, do mês e do ano, pela conta das
- *      Finanças (`DinheiroDoInicio`), o que os profissionais devem e o que
- *      está por transferir.
- *   3. Operação — linhas curtas: pedidos entrados, a decorrer, feitos por
+ * SÓ NÚMEROS — d139, 27-11-2026 (dono): o «Precisa de si», os sem valor há
+ * mais de 4 h e as propostas há mais de 24 h sem resposta passaram para o
+ * topo da Mesa (`PrecisaDeSiNaMesa`), onde se trabalham. Três andares:
+ *   1. Dinheiro — bruto (o que a CLYON ganhou com as taxas) e líquido (depois
+ *      das despesas das Finanças), de hoje ao total, e a margem
+ *      (`DinheiroDoInicio`).
+ *   2. Operação — linhas curtas: pedidos entrados, a decorrer, feitos por
  *      confirmar, cancelados no mês, e o assistente do WhatsApp num ponto
  *      (só em destaque quando desligado).
- *   4. Desempenho — os pedidos que entram e os trabalhos realizados lado a
+ *   3. Desempenho — os pedidos que entram e os trabalhos realizados lado a
  *      lado numa tabela.
  *
  * As «conversas suas» (entregues à equipa) vivem na secção do WhatsApp, por
@@ -56,8 +54,6 @@ type Resumo = {
   filaDoWhatsApp: number | null;
   whatsappLigado: boolean | null;
   aDecorrer: number | null;
-  /** Por enviar há 4 h ou mais sem valor nem pergunta (d50), pelo n.º do pedido. */
-  semValor?: SemValorNoInicio[] | null;
   /** Pedidos desde segunda-feira com o custo real fora da grelha (d61, modo sombra). */
   foraDaGrelhaSemana?: number | null;
   /** Aceites pelo cliente e ainda só com a zona (d69). */
@@ -77,21 +73,6 @@ type Seccao =
   | "whatsapp"
   | "pagamentos"
   | "carteiras";
-
-/** Um chip do «precisa de si»: o número, o rótulo curto, o porquê (no `title`) e onde se resolve. */
-type Cartao = {
-  chave: string;
-  n: number | null;
-  titulo: string;
-  porque: string;
-  seccao: Seccao;
-  /** Urgente pinta-se de âmbar; o resto fica sóbrio. */
-  urgente?: boolean;
-};
-
-function euros(v: number): string {
-  return v.toFixed(2).replace(".", ",") + " €";
-}
 
 export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => void }) {
   const { token, ready } = useAdminAuth();
@@ -136,88 +117,11 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
     return (
       <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        A ver o que precisa de si…
+        A carregar os números…
       </div>
     );
   }
 
-  // Anotado ANTES do filtro: sem isto o `seccao` de cada literal infere-se como `string`.
-  const todos: Cartao[] = r
-    ? [
-        {
-          chave: "atrasados",
-          n: r.atrasados,
-          titulo: "atrasados",
-          porque: "O dia passou e ninguém deu o trabalho por feito. Ligue ao profissional.",
-          seccao: "agenda",
-          urgente: true,
-        },
-        {
-          chave: "esperam",
-          n: r.esperamResposta,
-          titulo: "à espera de si",
-          porque: "Propostas em que a CLYON responde pelo cliente, e que ficam aqui até alguém responder.",
-          seccao: "negociacoes_clyon",
-          urgente: true,
-        },
-        {
-          chave: "levantamentos",
-          n: r.levantamentosPorPagar,
-          titulo: "por transferir",
-          porque:
-            r.levantamentosEmEuros != null && r.levantamentosEmEuros > 0
-              ? `${euros(r.levantamentosEmEuros)} pedidos por profissionais que já fizeram o trabalho.`
-              : "Transferências pedidas por profissionais que já fizeram o trabalho.",
-          seccao: "levantamentos",
-          urgente: true,
-        },
-        {
-          chave: "porEnviar",
-          n: r.porEnviar,
-          titulo: "por enviar",
-          porque: "Pedidos na mesa que ainda não foram a profissional nenhum.",
-          seccao: "pedidos",
-        },
-        {
-          chave: "semData",
-          n: r.semData,
-          titulo: "sem dia marcado",
-          porque: "Contratados e sem data. Combine com o cliente.",
-          seccao: "agenda",
-        },
-        {
-          chave: "aceitesSemRua",
-          n: r.aceitesSemRua ?? null,
-          titulo: "aceites sem rua",
-          porque: "O cliente aceitou e o pedido só tem a zona. A Vitória pede-lhe a rua pelo WhatsApp; sem resposta em 2 h, é connosco. Veja «Falta a rua» no cartão, na Mesa.",
-          seccao: "negociacoes_clyon",
-        },
-        {
-          chave: "candidaturas",
-          n: r.candidaturas,
-          titulo: "candidaturas",
-          porque: "Vieram do formulário do site e ainda não têm conta.",
-          seccao: "profissionais",
-        },
-        {
-          chave: "porAprovar",
-          n: r.profissionaisPorAprovar,
-          titulo: "por aprovar",
-          porque: "Profissionais com conta aberta que ainda não recebem pedidos.",
-          seccao: "profissionais",
-        },
-        {
-          chave: "foraDaGrelha",
-          n: r.foraDaGrelhaSemana ?? null,
-          titulo: "fora da grelha (semana)",
-          porque: "O custo real do trabalho ficou acima do tecto ou abaixo do chão da grelha, desde segunda-feira. Veja os degraus no cartão do pedido, na Mesa.",
-          seccao: "negociacoes_clyon",
-        },
-      ]
-    : [];
-
-  // Um zero não ocupa uma caixa: chips a zero não são informação, são ruído com ar de trabalho.
-  const cartoes = todos.filter((c) => c.n != null && c.n > 0);
   const op = r?.operacao ?? null;
 
   return (
@@ -226,88 +130,10 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
         <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{erro}</p>
       )}
 
-      {/* 1. PRECISA DE SI — chips pequenos, cada um leva ao ecrã que resolve aquilo. */}
-      <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="mr-1 text-sm font-bold text-white">
-            {cartoes.length > 0 ? "Precisa de si" : "Nada à espera de si"}
-          </h2>
-          {cartoes.length === 0 ? (
-            <p className="flex items-center gap-1.5 text-xs text-emerald-300">
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Está tudo tratado. Nenhum pedido por enviar, nenhuma proposta à espera de resposta, nenhum trabalho atrasado.
-            </p>
-          ) : (
-            <ul className="flex flex-wrap gap-1.5">
-              {cartoes.map((c) => (
-                <li key={c.chave}>
-                  <button
-                    onClick={() => onAbrir(c.seccao)}
-                    title={c.porque}
-                    className={`flex items-baseline gap-1 rounded-md border px-2 py-1 text-xs transition ${
-                      c.urgente
-                        ? "border-amber-500/40 bg-amber-500/[0.08] text-amber-200 hover:bg-amber-500/15"
-                        : "border-slate-700 bg-slate-950/40 text-slate-200 hover:bg-slate-800/60"
-                    }`}
-                  >
-                    <span className={`text-sm font-bold tabular-nums ${c.urgente ? "text-amber-300" : "text-white"}`}>
-                      {c.n}
-                    </span>
-                    {c.titulo}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <button
-            onClick={() => void carregar()}
-            className="ml-auto flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-400 transition hover:bg-slate-800"
-          >
-            <RefreshCw className="h-3 w-3" aria-hidden="true" />
-            Atualizar
-          </button>
-        </div>
-      </section>
+      {/* 1. DINHEIRO — bruto e líquido (d139). */}
+      <DinheiroDoInicio onAbrir={(s) => onAbrir(s)} />
 
-      {/*
-        SEM VALOR HÁ MAIS DE 4 H — d50, 16-11-2026. Os por enviar a vermelho
-        (sem valor nem pergunta ao cliente), pelo n.º do pedido, com o serviço
-        e a hora de entrada em Lisboa. A regra é a do selo da Mesa
-        (`pedido-sem-valor.ts`).
-      */}
-      {r?.semValor && r.semValor.length > 0 && (
-        <section className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-3">
-          <h2 className="text-sm font-bold text-white" title="Por enviar, sem valor nem pergunta ao cliente. Do maior n.º para o menor.">
-            <span className="text-red-300">{r.semValor.length}</span> sem valor há mais de {HORAS_SEM_VALOR} h
-          </h2>
-          <ul className="mt-1 grid gap-x-4 divide-y divide-slate-800 md:grid-cols-2 md:divide-y-0 xl:grid-cols-3">
-            {r.semValor.map((p) => (
-              <li key={p.id}>
-                <button
-                  onClick={() => onAbrir("pedidos")}
-                  className="flex w-full flex-wrap items-baseline gap-x-2 py-1 text-left text-xs hover:bg-slate-800/40"
-                >
-                  <span className="text-sm font-bold text-white">#{p.id}</span>
-                  <span className="rounded border border-red-500/50 bg-red-500/15 px-1.5 text-[11px] font-semibold text-red-300">
-                    por enviar · {p.servico}
-                  </span>
-                  <span className="ml-auto tabular-nums text-slate-400">
-                    entrou {p.entrouEm} · há {p.horas} h
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* PROPOSTAS SEM RESPOSTA DO CLIENTE — d54, 16-11-2026. */}
-      <PropostasSemResposta token={token} onAbrir={() => onAbrir("negociacoes_clyon")} />
-
-      {/* 2. DINHEIRO — d56. */}
-      <DinheiroDoInicio aPagar={r?.levantamentosEmEuros ?? null} onAbrir={(s) => onAbrir(s)} />
-
-      {/* 3. OPERAÇÃO — linhas curtas; o WhatsApp é um ponto, e só grita desligado. */}
+      {/* 2. OPERAÇÃO — linhas curtas; o WhatsApp é um ponto, e só grita desligado. */}
       {r && (
         <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-400">
@@ -356,11 +182,18 @@ export default function AdminInicioPanel({ onAbrir }: { onAbrir: (s: Seccao) => 
                 <span className="tabular-nums text-slate-500">· {r.filaDoWhatsApp} por sair</span>
               )}
             </button>
+            <button
+              onClick={() => void carregar()}
+              className="ml-auto flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-400 transition hover:bg-slate-800"
+            >
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+              Atualizar
+            </button>
           </div>
         </section>
       )}
 
-      {/* 4. DESEMPENHO */}
+      {/* 3. DESEMPENHO */}
       <DesempenhoDoInicio />
       <FunilDoSimulador />
       <FalhasDaIa />

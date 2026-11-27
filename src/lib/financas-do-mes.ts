@@ -398,6 +398,50 @@ export function lucroNoIntervalo(d: DadosDasContas, de: string, ate: string, o: 
   };
 }
 
+/** As despesas da CLYON num intervalo de dias (d139). */
+export type DespesasDoIntervalo = {
+  /** Gastos recorrentes e ocasionais das Finanças. */
+  gastos: number;
+  /** Despesas lançadas à mão nas Transações. */
+  lancadas: number;
+  /** Comissões do euPago dos pagamentos do intervalo. */
+  eupago: number;
+  /** Comissões pagas às assistentes e à sócia. `null` para quem não é o administrador. */
+  assistentes: number | null;
+  total: number;
+};
+
+/**
+ * AS DESPESAS DE UM INTERVALO — d139, 27-11-2026 (dono): o que se tira ao
+ * bruto para dar o líquido do Início. É o lado dos gastos da conta das
+ * Finanças (o mesmo núcleo de `contasDoMes`): recorrentes + ocasionais +
+ * despesas lançadas à mão + comissões do euPago + comissões pagas às
+ * assistentes (a sócia incluída: é o que a gestora já conta como pago).
+ * Num mês inteiro, `total` = `gastos.total + assistentes` de `contasDoMes`.
+ */
+export function despesasNoIntervalo(
+  d: DadosDasContas,
+  de: string,
+  ate: string,
+  recorrentes: "por_dia" | "mes_inteiro",
+): DespesasDoIntervalo {
+  const dentro = (dia: string) => dia >= de && dia <= ate;
+  const n = entradasEMovimentos(d, dentro);
+  const g = gastosNoIntervalo(d.gastos, de, ate, recorrentes);
+  const assistentes = d.assistentes
+    ? aosCentimos(d.assistentes.filter((a) => dentro(a.dia)).reduce((s, a) => s + a.valor, 0))
+    : null;
+  const lancadas = aosCentimos(n.despesasLancadas);
+  const eupago = aosCentimos(n.eupago);
+  return {
+    gastos: g.total,
+    lancadas,
+    eupago,
+    assistentes,
+    total: aosCentimos(g.total + lancadas + eupago + (assistentes ?? 0)),
+  };
+}
+
 /** O balanço de um mês: o que entrou para a CLYON e o que saiu dela. */
 export type BalancoDoMes = { mes: string; entradas: number; gastos: number; assistentes: number; balanco: number };
 

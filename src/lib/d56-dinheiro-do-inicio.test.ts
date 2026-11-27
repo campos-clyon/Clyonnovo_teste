@@ -114,8 +114,9 @@ describe("a semana começa à segunda, em dias de Lisboa", () => {
     expect(segundaDoDia("2026-12-02")).toBe("2026-11-30");
   });
 
-  it("os quatro intervalos: hoje e a semana por dia; o mês e o ano com os meses inteiros", () => {
-    const iv = intervalosDoInicio("2026-11-17");
+  it("os intervalos: hoje e a semana por dia; o mês, o ano e o total com os meses inteiros", () => {
+    const iv = intervalosDoInicio("2026-11-17", "2026-09-02");
+    expect(iv.total).toEqual({ de: "2026-09-02", recorrentes: "mes_inteiro" });
     expect(iv.hoje).toEqual({ de: "2026-11-17", recorrentes: "por_dia" });
     expect(iv.semana).toEqual({ de: "2026-11-16", recorrentes: "por_dia" });
     expect(iv.mes).toEqual({ de: "2026-11-01", recorrentes: "mes_inteiro" });
@@ -191,11 +192,11 @@ describe("o mês inteiro dá o mesmo que as Finanças", () => {
     }
   });
 
-  it("o «Este mês» do Início (do dia 1 até hoje) é o mês das Finanças", () => {
-    const d = dados({ assistentes: [] });
-    const din = dinheiroDoInicio(d, null, "2026-11-17");
-    expect(din.mes.lucro).toBe(contasDoMes(d, "2026-11").lucro);
-    expect(din.mes.gastos).toBe(contasDoMes(d, "2026-11").gastos.total);
+  it("d139: as despesas do «Este mês» do Início são as das Finanças (gastos + assistentes)", () => {
+    const d = dados();
+    const din = dinheiroDoInicio({ trabalhos: [], contas: d, hoje: "2026-11-17" });
+    const f = contasDoMes(d, "2026-11");
+    expect(din.mes.despesas.total).toBe(Math.round((f.gastos.total + (f.assistentes ?? 0)) * 100) / 100);
   });
 });
 
@@ -225,21 +226,12 @@ describe("antes e depois da sócia", () => {
     expect(l.lucro).toBe(Math.round((f.lucro + 15) * 100) / 100);
   });
 
-  it("o «Hoje»: receita do dia, recorrente do dia, ocasional do dia, e a sócia do dia", () => {
-    const din = dinheiroDoInicio(dados(), PERIODOS, "2026-11-17");
-    const h = din.hoje;
-    // Receita: a taxa de uma entrada (10) + a receita à mão (2). Gastos: 1 (30 ÷ 30) + 12.
-    expect(h.receita).toBe(12);
-    expect(h.gastos).toBe(13);
-    expect(h.assistentes).toBe(0);
-    expect(h.lucro).toBe(-1);
-    expect(h.socia).toBe(2);
-    expect(h.lucroDepoisDaSocia).toBe(-3);
-    expect(h.dias).toBe(1);
-    // A semana: duas entradas (20) + 2 à mão − (2 recorrente + 12 + 1 euPago) = 7; sócia 4.
-    expect(din.semana.lucro).toBe(7);
-    expect(din.semana.socia).toBe(4);
-    expect(din.semana.mediaPorDia).toBe(3.5);
+  it("d139: o «Hoje» desconta o recorrente do dia, o ocasional do dia e nada de assistentes", () => {
+    const din = dinheiroDoInicio({ trabalhos: [{ pedidoId: 1, dia: "2026-11-17", ganho: 20, semValor: false }], contas: dados(), hoje: "2026-11-17" });
+    // Gastos: 1 (30 ÷ 30) + 12; sem euPago nem assistentes nesse dia.
+    expect(din.hoje.bruto).toBe(20);
+    expect(din.hoje.despesas.total).toBe(13);
+    expect(din.hoje.liquido).toBe(7);
   });
 
   it("quem não é o administrador não vê os assistentes nem a sócia", () => {
@@ -256,23 +248,24 @@ describe("antes e depois da sócia", () => {
 
 describe("o ecrã", () => {
   const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
-  it("a rota vive debaixo das Finanças, e os assistentes e a sócia só vão ao administrador", () => {
+  it("a rota vive debaixo das Finanças, e os assistentes só vão ao administrador", () => {
     const rota = ler("src/app/api/admin/financas/inicio/route.ts");
     expect(rota).toContain("dinheiroDoInicio(");
     expect(rota).toContain("diaEmLisboa(new Date())");
     expect(rota).toContain("eAdmin ? pagamentosAosAssistentes() : Promise.resolve(null)");
-    expect(rota).toContain("eAdmin ? periodosDaSocia() : Promise.resolve(null)");
+    expect(rota).toContain("lerGanhosDosTrabalhos(hoje)");
   });
   it("a percentagem da sócia não se escreve no Início", () => {
     const ecra = ler("src/components/admin/DinheiroDoInicio.tsx");
     expect(ecra).not.toMatch(/percentagem|\d+\s*%/);
   });
-  it("a ordem: precisa de si, dinheiro, operação, desempenho", () => {
+  it("a ordem (d139): dinheiro, operação, desempenho — e o «Precisa de si» já não está no Início", () => {
     const p = ler("src/components/admin/AdminInicioPanel.tsx");
     const i = (t: string) => p.indexOf(t);
-    expect(i("Precisa de si")).toBeGreaterThan(-1);
-    expect(i("Precisa de si")).toBeLessThan(i("<DinheiroDoInicio"));
+    expect(i("<DinheiroDoInicio")).toBeGreaterThan(-1);
     expect(i("<DinheiroDoInicio")).toBeLessThan(i("Operação</h2>"));
     expect(i("Operação</h2>")).toBeLessThan(i("<DesempenhoDoInicio />"));
+    expect(p).not.toContain("<PropostasSemResposta");
+    expect(p).not.toContain('"Precisa de si"');
   });
 });

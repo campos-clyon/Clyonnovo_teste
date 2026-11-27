@@ -279,11 +279,14 @@ describe("secções por assistente", () => {
 
   it("as seis de sempre (uma conta antiga com NULL) não chegam às secções novas", () => {
     const antigas = [...SECCOES_DAS_CONTAS_ANTIGAS];
-    for (const p of ["/api/admin/carteiras", "/api/admin/pagamentos", "/api/admin/levantamentos", "/api/admin/leads", "/api/admin/users", "/api/admin/taxas", "/api/admin/resumo", "/api/media/gallery"]) {
+    for (const p of ["/api/admin/carteiras", "/api/admin/pagamentos", "/api/admin/levantamentos", "/api/admin/leads", "/api/admin/users", "/api/admin/taxas", "/api/media/gallery"]) {
       expect(assistenteComSeccoesPodeChamar(antigas, p, "GET"), p).toBe(false);
     }
     expect(assistenteComSeccoesPodeChamar(antigas, "/api/admin/pedidos", "GET")).toBe(true);
     // A Mesa é uma permissão só desde 20-10-2026: quem tinha a mesa tem o valor fixo.
     expect(assistenteComSeccoesPodeChamar(antigas, "/api/admin/trabalhos-clyon", "GET")).toBe(true);
+    // d139 (27-11-2026): o «Precisa de si» vive no topo da Mesa, e quem tem a Mesa lê o resumo (só contagens).
+    expect(assistenteComSeccoesPodeChamar(antigas, "/api/admin/resumo", "GET")).toBe(true);
+    expect(assistenteComSeccoesPodeChamar(["agenda"], "/api/admin/resumo", "GET")).toBe(false);
   });
 });

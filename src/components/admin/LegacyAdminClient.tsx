@@ -64,6 +64,7 @@ import AdminSessoesPanel from "@/components/admin/AdminSessoesPanel";
 import AdminLivroPanel from "@/components/admin/AdminLivroPanel";
 import AdminPagamentosPanel from "@/components/admin/AdminPagamentosPanel";
 import AdminInicioPanel from "@/components/admin/AdminInicioPanel";
+import PrecisaDeSiNaMesa from "@/components/admin/PrecisaDeSiNaMesa";
 import { tService, tUrgency } from "@/lib/translations";
 import { cliqueDeLinhaDeTabela } from "@/lib/linha-que-abre";
 import { useAvisoDeDataFutura } from "@/components/admin/AvisoDeDataFutura";
@@ -3494,6 +3495,8 @@ export default function ColaboradorAdminClient({
 
           {activeSection === "negociacoes_clyon" && (
             <section className="space-y-3 rounded-[22px] border border-slate-700/60 bg-slate-900/80 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] sm:p-4">
+              {/* O QUE PRECISA DE SI — no topo da Mesa desde a d139 (27-11-2026, dono); o Início fica só com números. */}
+              <PrecisaDeSiNaMesa onAbrir={(s) => setActiveSection(s as AdminSection)} />
               <p className="text-[11px] text-slate-500">
                 Os orçamentos novos, os trabalhos de valor fixo e as negociações — as em que a
                 CLYON responde pelo cliente e as que o cliente conduz pela ligação do email.
