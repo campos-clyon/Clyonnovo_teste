@@ -37,7 +37,9 @@ import { diaEmLisboa, horaEmLisboa } from "./hora-de-lisboa";
  */
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
-const semComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+/** Sem os comentários de linha e de bloco (só os que começam a linha — ver tirar-comentarios-sem-comer-codigo). */
+const semComentarios = (s: string) =>
+  s.replace(/^[ \t]*\{?\/\*[\s\S]*?\*\/\}?/gm, "").replace(/^\s*\/\/.*$/gm, "");
 
 const PEDIDO = 668;
 const PEDE_MAIS = "Boa tarde, além do sofá queria que levassem também mais duas cadeiras e uma mesa. É possível?";
@@ -248,7 +250,7 @@ describe("as ligações no código", () => {
   it("as duas portas do cliente (conta do site e app) chamam a Vitória depois de responder, com `after`", () => {
     for (const f of ["src/app/api/users/me/orders/[id]/reply/route.ts", "src/app/api/cliente/pedidos/[id]/resposta/route.ts"]) {
       const c = semComentarios(ler(f));
-      expect(c).toContain("after(() => depoisDeOClienteEscrever(");
+      expect(c).toContain("agendarDepoisDeOClienteEscrever(");
     }
     const conversa = semComentarios(ler("src/lib/conversa-com-a-clyon.ts"));
     // O que o «pedir o que falta» já respondeu não volta a ser respondido.
@@ -264,7 +266,7 @@ describe("as ligações no código", () => {
     expect(painel).toContain('fetch("/api/admin/negociacoes/mensagens-no-pedido"');
     expect(painel).toContain('b.chave === "n1" && mensagensNoPedido.length > 0');
     expect(painel).toContain("linhaDaMensagemNoPedido(m.desde, relogioDasMensagens)");
-    expect(painel).toContain('outrosSemPropostas.length + mensagensForaDoN1.length');
+    expect(painel).toContain('(chave === "n1" ? mensagensForaDoN1.length : 0)');
     expect(semComentarios(ler("src/app/api/cron/assistente/route.ts"))).toContain("enviarOsAvisosDoSuportePendentes()");
   });
 

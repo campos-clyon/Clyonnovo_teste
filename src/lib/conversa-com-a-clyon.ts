@@ -191,6 +191,18 @@ export async function responderAClyon(
  * resposta à chamada (`after`), para o cliente não esperar; o que o «pedir o
  * que falta» já respondeu não volta a ser respondido. Nunca lança.
  */
+/**
+ * Agenda `depoisDeOClienteEscrever` para depois da resposta (`after` do Next);
+ * fora de um pedido HTTP (um teste, um script), corre em segundo plano. Nunca lança.
+ */
+export function agendarDepoisDeOClienteEscrever(pedidoId: number, mensagem: string, r: RespostaDoCliente): void {
+  if (!r.ok || r.respondidaPeloQueFalta) return;
+  const tarefa = () => depoisDeOClienteEscrever(pedidoId, mensagem, r);
+  void import("next/server")
+    .then(({ after }) => after(tarefa))
+    .catch(() => void tarefa().catch(() => {}));
+}
+
 export async function depoisDeOClienteEscrever(pedidoId: number, mensagem: string, r: RespostaDoCliente): Promise<void> {
   if (!r.ok || r.respondidaPeloQueFalta) return;
   try {

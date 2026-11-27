@@ -2767,7 +2767,8 @@ export default function AdminNegociacoesPanel({
   function quantosNoBloco(chave: ChaveDoBloco): number {
     return chave === "porEnviar"
       ? porPromoverNaMesa.length
-      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length + mensagensForaDoN1.length : 0) -
+      : pedidosDoBloco(chave).length + clyonDoBloco(chave).length + (chave === "n1" ? outrosSemPropostas.length : 0) +
+          (chave === "n1" ? mensagensForaDoN1.length : 0) -
           // d83: os que estão em seguimento não contam como «à espera de nós».
           (chave === "n1" ? emSeguimentoNoN1.length : 0);
   }
@@ -5513,7 +5514,7 @@ export default function AdminNegociacoesPanel({
            */
           // d110: a procurar, um «Precisa de si» só com pedidos em seguimento conta 0 mas tem-nos — não fecha.
           const fechado = aProcurar
-            ? quantosNoBloco(b.chave) === 0 && !(b.chave === "n1" && (emSeguimentoNoN1.length > 0 || mensagensNoPedido.length > 0))
+            ? quantosNoBloco(b.chave) === 0 && !(b.chave === "n1" && emSeguimentoNoN1.length > 0)
             : soOBloco === b.chave
               ? false
               : fechados.has(b.chave);

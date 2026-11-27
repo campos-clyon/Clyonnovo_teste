@@ -87,10 +87,15 @@ export async function POST(req: NextRequest) {
       mensagem: validacao.dados.mensagem,
     });
     // d140: a equipa é avisada já (o push dos avisos da equipa), e não só pelo selo do Suporte.
-    after(async () => {
+    const avisar = async () => {
       const { depoisDaAjudaDaPlataforma } = await import("@/lib/mensagem-no-suporte-na-base");
       await depoisDaAjudaDaPlataforma(id, "parceiro");
-    });
+    };
+    try {
+      after(avisar);
+    } catch {
+      void avisar().catch(() => {});
+    }
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error("[profissionais/ajuda POST]", error);
