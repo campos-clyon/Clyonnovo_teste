@@ -479,6 +479,7 @@ function Acessos({
   aoMudar,
   comDificil,
   comAndar = true,
+  ajudaDoDificil,
 }: {
   titulo?: string;
   acesso: Acesso;
@@ -486,6 +487,8 @@ function Acessos({
   comDificil: boolean;
   /** A garagem e a cave não perguntam o andar (d5, como o simulador do site). */
   comAndar?: boolean;
+  /** A ajuda do servidor para «Acesso difícil?» (d12): não soma horas; desmontar pede-se peça a peça. */
+  ajudaDoDificil?: string | null;
 }) {
   return (
     <View style={{ gap: 14 }}>
@@ -508,6 +511,7 @@ function Acessos({
             valor={acesso.difficultAccess ? "sim" : "nao"}
             aoEscolher={(v) => aoMudar({ ...acesso, difficultAccess: v === "sim" })}
           />
+          {ajudaDoDificil ? <Paragrafo pequeno suave>{ajudaDoDificil}</Paragrafo> : null}
           {acesso.difficultAccess ? (
             <Campo rotulo="Nota do acesso" valor={acesso.accessNotes ?? ""} aoMudar={(v) => aoMudar({ ...acesso, accessNotes: v })} maxLength={300} placeholder="Escadas estreitas, rua só a pé…" />
           ) : null}
@@ -1778,11 +1782,11 @@ function Formulario({ deParte, recomecar }: { deParte: RefObject<ParametrosPosto
             {ecra === "acesso" && !perguntasDe(r, c) ? (
               <View style={{ gap: 20 }}>
                 <Marcado campo="acesso">
-                  <Acessos titulo={mudanca ? "Na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} comAndar={!semAndar(e)} />
+                  <Acessos titulo={mudanca ? "Na origem" : undefined} acesso={r.acesso} aoMudar={(a) => mudar({ acesso: a })} comDificil={mudanca} comAndar={!semAndar(e)} ajudaDoDificil={ajudaDoAcessoDificil(r, c, "origem")} />
                 </Marcado>
                 {mudanca ? (
                   <Marcado campo="acessoDestino">
-                    <Acessos titulo="No destino" acesso={r.acessoDestino} aoMudar={(a) => mudar({ acessoDestino: a })} comDificil />
+                    <Acessos titulo="No destino" acesso={r.acessoDestino} aoMudar={(a) => mudar({ acessoDestino: a })} comDificil ajudaDoDificil={ajudaDoAcessoDificil(r, c, "destino")} />
                   </Marcado>
                 ) : null}
               </View>

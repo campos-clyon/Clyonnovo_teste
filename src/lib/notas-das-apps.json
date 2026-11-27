@@ -91,6 +91,11 @@
   ],
   "cliente": [
     {
+      "id": "cliente-2026-11-27",
+      "nota": "Na mudança, o «Acesso difícil» explica-se melhor e já não soma horas: desmontar móveis pede-se peça a peça.",
+      "updates": []
+    },
+    {
       "id": "cliente-2026-11-26-2",
       "nota": "Já pode pedir a montagem e desmontagem de móveis, peça a peça, com a estimativa.\nNas recolhas e na mudança pode juntar as peças a desmontar (e a montar no destino).",
       "updates": []

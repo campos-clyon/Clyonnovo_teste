@@ -107,8 +107,6 @@ export function corpoDaLista(order: Record<string, unknown>, pessoas: Pessoas): 
   const o = order.originAddress as M;
   const d = order.destinationAddress as M;
   if (!o || !d || typeof o.formattedAddress !== "string" || typeof d.formattedAddress !== "string") return null;
-  const ao = order.originAccess as { difficultAccess?: unknown } | undefined;
-  const ad = order.destinationAccess as { difficultAccess?: unknown } | undefined;
   const ponta = (m: NonNullable<M>) => ({
     lat: typeof m.lat === "number" ? m.lat : undefined,
     lng: typeof m.lng === "number" ? m.lng : undefined,
@@ -119,8 +117,7 @@ export function corpoDaLista(order: Record<string, unknown>, pessoas: Pessoas): 
     origem: ponta(o),
     destino: ponta(d),
     tipologia: typeof order.tipologia === "string" && order.tipologia ? order.tipologia : null,
-    // A mesma leitura da rota do pedido (`pedidoDaListaDoPedido`).
-    desmontagem: ao?.difficultAccess === true || ad?.difficultAccess === true || order.desmontagem === true,
+    // d12 (27-11-2026): o acesso difícil já não soma horas nem vira «desmontagem»; a desmontagem pede-se peça a peça.
     pessoas,
     data: typeof order.dataPreferida === "string" ? order.dataPreferida : undefined,
   };

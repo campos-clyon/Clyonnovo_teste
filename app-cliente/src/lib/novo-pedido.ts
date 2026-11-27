@@ -436,6 +436,15 @@ export function espacoDe(r: Pick<Rascunho, "servico">, c: Catalogo): EspacoDoSer
   return servicoDe(r, c)?.espaco ?? null;
 }
 
+/**
+ * A ajuda que o servidor manda com a pergunta «Há acesso difícil?» de cada lado (d12, 27-11-2026): o acesso
+ * difícil não soma horas, e a desmontagem pede-se peça a peça. A app mostra-a como vem — não a escreve.
+ */
+export function ajudaDoAcessoDificil(r: Pick<Rascunho, "servico">, c: Catalogo, lado: "origem" | "destino"): string | null {
+  const p = servicoDe(r, c)?.perguntas?.find((x) => x.id === `${lado}.difficultAccess`);
+  return p?.ajuda?.trim() ? p.ajuda.trim() : null;
+}
+
 /** A linha «No espaço há: …» — a mesma de `linhaDasCoisas` no site. */
 export function linhaDasCoisasDoEspaco(e: EspacoDoServico, coisas: readonly string[] | undefined): string | null {
   if (!e.coisas || !coisas || coisas.length === 0) return null;

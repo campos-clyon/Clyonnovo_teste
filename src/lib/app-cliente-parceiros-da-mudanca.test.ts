@@ -170,24 +170,35 @@ describe("o pedido da app leva a escolha, e a lista pede-se com o mesmo corpo", 
     expect(ecrasDoPedir({ servico: "recolha_moveis" }, c)).not.toContain("parceiros");
   });
 
-  it("a lista lê as moradas, a casa, a desmontagem e o dia do corpo do pedido — como a rota do pedido a refaz", () => {
+  it("a lista lê as moradas, a casa e o dia do corpo do pedido — como a rota do pedido a refaz", () => {
     const { order } = corpoDoPedido(mudanca(), c, { emailDaSessao: null, rascunhosAntes: 0 });
     expect(corpoDaLista(order, 3)).toEqual({
       origem: { lat: 38.6, lng: -9.1, morada: "Rua A, Seixal", cidade: "Seixal" },
       destino: { lat: 38.67, lng: -9.15, morada: "Rua B, Almada", cidade: "Almada" },
       tipologia: "T2",
-      desmontagem: true,
       pessoas: 3,
       data: "2026-11-20",
     });
-    // A leitura da rota do pedido (pedidoDaListaDoPedido): o acesso difícil num dos lados, só num pedido
+    // d12 (27-11-2026): a app já não deriva «desmontagem» do acesso difícil (o acesso não soma horas). A leitura da rota do pedido (pedidoDaListaDoPedido): o acesso difícil num dos lados, só num pedido
     // antigo (d132b, 26-11-2026) — um novo leva a marca e não soma horas; a rota da lista ignora o
     // «desmontagem» que esta versão da app ainda manda.
     expect(ler("src/lib/mudanca-com-parceiros-escolhidos.ts")).toContain(
       "desmontagem: !desmontagemSoPelaTabela(order) && (ao?.difficultAccess === true || ad?.difficultAccess === true || order.desmontagem === true),",
     );
     expect(ler("src/app/api/mudancas/parceiros/route.ts")).toContain("desmontagem: false");
+    expect(ler("app-cliente/src/lib/parceiros-da-mudanca.ts")).not.toMatch(/desmontagem:/);
     expect(corpoDaLista({ originAddress: { formattedAddress: "x" } }, 2)).toBeNull();
+  });
+
+  it("o «Acesso difícil?» da app mostra a ajuda que o servidor manda (d12)", async () => {
+    const { AJUDA_DO_ACESSO_DIFICIL } = await import("./tabela-das-mudancas");
+    const { perguntasDoServico } = await import("./simulador-por-categoria");
+    const catalogo = { servicos: [{ id: "mudanca", perguntas: perguntasDoServico("mudanca") }] } as unknown as Catalogo;
+    const { ajudaDoAcessoDificil } = await import("../../app-cliente/src/lib/novo-pedido");
+    expect(ajudaDoAcessoDificil({ servico: "mudanca" }, catalogo, "origem")).toBe(AJUDA_DO_ACESSO_DIFICIL);
+    expect(ajudaDoAcessoDificil({ servico: "mudanca" }, catalogo, "destino")).toBe(AJUDA_DO_ACESSO_DIFICIL);
+    expect(ajudaDoAcessoDificil({ servico: "outro" }, catalogo, "origem")).toBeNull();
+    expect(ler("app-cliente/src/componentes/NovoPedido.tsx")).toContain("ajudaDoDificil ? <Paragrafo pequeno suave>{ajudaDoDificil}</Paragrafo>");
   });
 
   it("com a escolha, vão os ids opacos, a equipa e o «procurar mais»; sem lista, nada disso", () => {
