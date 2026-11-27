@@ -8,7 +8,8 @@ import { agoraDoModelo } from "./relogio-do-modelo";
 import { perguntasFrequentes } from "./perguntas-frequentes";
 import { precoPublicoConhecido } from "./preco-publico-das-mudancas";
 import { REGIONS, getRegionCities } from "./seo-data";
-import { AVALIACOES_NO_GOOGLE, NOTAS_EM_FRASE } from "./avaliacoes-publicas";
+import { AVALIACOES_NO_GOOGLE, MES_DAS_CONTAGENS, NOTAS_EM_FRASE } from "./avaliacoes-publicas";
+import { confiancaDoInicio, desdeCurto, gruposDoInicio, passosDoInicio } from "./grupos-da-app";
 import { reviews } from "./reviews-data";
 import { DESMONTAGEM_A_PEDIDO, PEDIDO_URGENTE, PROMESSA_DO_PRAZO } from "./promessas-publicas";
 import { quemFaturaEmPalavras } from "./identificacao-legal";
@@ -65,6 +66,8 @@ export function catalogoDaApp() {
       // O que inclui (a mesma linha da inicial do site) e o preço de referência, com o IVA ao lado.
       inclui: c.description,
       precoReferencia: precoDeReferencia(c.id),
+      // O Início (d148): o «desde» curto, com o IVA ao lado; o preço inteiro fica no precoReferencia.
+      desdeCurto: desdeCurto(c.id, precoPublicoConhecido()),
       // Garagem, sótão e cave (d5, 31-10-2026): as perguntas do simulador do site, já escritas.
       ...(perguntasDoEspacoParaAApp(c.id) ? { espaco: perguntasDoEspacoParaAApp(c.id) } : {}),
       // O simulador de cada categoria (d1, 03-11-2026): as perguntas dela, pela ordem, com os ids da R12 e do pedido.
@@ -77,11 +80,17 @@ export function catalogoDaApp() {
       }),
       nota: NOTA_DOS_PRECOS,
     },
+    // O Início (d148): «Do que precisa?» em quatro grupos, cada um com o seu «desde».
+    grupos: gruposDoInicio(precoPublicoConhecido()),
     comoFunciona: passosDeComoFunciona(agoraDoModelo()).map((p) => ({ titulo: p.titulo, texto: p.texto })),
     zonas: REGIONS.map((r) => ({ nome: r.name, localidades: getRegionCities(r.slug).map((c) => c.name) })),
     // Só as do Google, com o mês da contagem (regra j da orquestra).
     avaliacoes: {
       resumo: NOTAS_EM_FRASE,
+      // As partes do resumo, para o Início as desenhar (d148): a mesma fonte, o mesmo mês.
+      nota: AVALIACOES_NO_GOOGLE.nota,
+      numero: AVALIACOES_NO_GOOGLE.numero,
+      mes: MES_DAS_CONTAGENS,
       url: AVALIACOES_NO_GOOGLE.url,
       testemunhos: reviews.map((r) => ({ nome: r.name.trim().split(/\s+/)[0], mes: r.date, texto: r.text })),
     },
@@ -120,6 +129,9 @@ export function catalogoDaApp() {
       notaDosPrecos: NOTA_DOS_PRECOS,
       promessaDoPrazo: PROMESSA_DO_PRAZO,
       pedidoUrgente: PEDIDO_URGENTE,
+      // O Início (d148): o que dá confiança, só factos, pela data do modelo.
+      confianca: confiancaDoInicio(agoraDoModelo()),
+      passosDoInicio: passosDoInicio(agoraDoModelo()),
     },
     ficheiros: { maximo: 20, tipos: ["image/jpeg", "image/png", "image/webp", "image/heic"] },
     whatsapp: TELEFONE_DA_CLYON,

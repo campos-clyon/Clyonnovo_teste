@@ -15,7 +15,7 @@ const GUARDAR = ler("lib/morada-do-cliente.ts");
 
 describe("a barra de cima do Início", () => {
   it("já não tem o logótipo e tem os três ícones, por esta ordem, com accessibilityLabel", () => {
-    const topo = INICIO.slice(INICIO.indexOf("export const BOTOES_DO_TOPO"), INICIO.indexOf("/** Um pedido activo"));
+    const topo = INICIO.slice(INICIO.indexOf("export const BOTOES_DO_TOPO"), INICIO.indexOf("/**\n * A GRELHA DE ANTES"));
     expect(topo).not.toContain("assets/icon.png");
     const ordem = ["chatbubble-outline", "help-buoy-outline", "notifications-outline"].map((i) => topo.indexOf(`icone: "${i}"`));
     expect(ordem.every((n) => n > 0)).toBe(true);

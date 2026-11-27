@@ -9,6 +9,7 @@ import { lerBase, type BaseDoPreco } from "./base-do-preco";
 import { fraseDaBase } from "./frase-da-base";
 import { diasPorExtenso, type DiaDoTrabalho } from "./varios-dias";
 import { telefoneLegivel } from "./telefone-legivel";
+import { NO_FIM_DO_TRABALHO, SALVO_SE_COMBINAREM } from "./quando-se-paga";
 
 /**
  * A MENSAGEM DE ADJUDICAÇÃO — 21-10-2026.
@@ -262,7 +263,7 @@ export function blocoDoPagamentoAoParceiro(
   const como = formasEmPalavras(n.formas);
   return [
     valorDoBlocoDoNovoModelo(n),
-    `Paga diretamente ${quem}, no fim do trabalho (salvo se combinarem outra coisa)${como ? `: ${como}` : ""}. ` +
+    `Paga diretamente ${quem}, ${NO_FIM_DO_TRABALHO} (${SALVO_SE_COMBINAREM})${como ? `: ${como}` : ""}. ` +
       (link?.trim() ? `Os dados para pagar estão no seu pedido, e só lá:\n${link.trim()}` : "Os dados para pagar estão no seu pedido, e só lá."),
     "Se alguém lhe pedir que pague para outros dados, não pague e fale connosco.",
     "Recebe duas faturas no pedido: a do trabalho, do parceiro, e a da taxa da plataforma. Guarde o comprovativo do pagamento.",

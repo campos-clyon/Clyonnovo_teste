@@ -1,6 +1,6 @@
 import { diaEmLisboa, pecasEmLisboa, somarDiasAoDia } from "../../../src/lib/hora-de-lisboa";
 import { precoEmTresLinhasValido, type PrecoEmTresLinhas } from "../../../src/lib/preco-em-tres-linhas";
-import { informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, type LinhaDePreco, type TextosDaV3 } from "./catalogo";
+import { desdeValido, informacaoDoCatalogo, texto, textosDaV3, type InformacaoDoCatalogo, type LinhaDePreco, type TextosDaV3 } from "./catalogo";
 import {
   GRUPOS_DE_PECAS,
   grupoDePecas,
@@ -93,6 +93,8 @@ export type ServicoDoCatalogo = {
   inclui: string | null;
   /** «40 – 120 € + IVA (49,20 – 147,60 € com IVA)», já escrito pela API (R7 v2). */
   precoReferencia: string | null;
+  /** d148: «desde 60 € + IVA (73,80 € com IVA)», já escrito pela API; nada sem preço publicado ou numa R7 antiga. */
+  desdeCurto: string | null;
   /** Garagem, sótão e cave: as perguntas do simulador do site (R7, d5). */
   espaco: EspacoDoServico | null;
   /** As perguntas da categoria (R7, d1 de 03-11-2026), pela ordem; `null` numa R7 antiga (o pedido de sempre). */
@@ -198,6 +200,7 @@ export function catalogoValido(v: unknown): Catalogo | null {
         detalhes,
         inclui: texto(r.inclui),
         precoReferencia: preco && !PROIBIDO.test(preco) ? preco : null,
+        desdeCurto: desdeValido(r.desdeCurto),
         espaco: espacoValido(r.espaco),
         perguntas: perguntasValidas(r.perguntas),
       };

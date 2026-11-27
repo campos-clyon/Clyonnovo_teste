@@ -9,31 +9,35 @@ import { Aviso, Botao, Carregando, PrecoDeReferencia, Seccao } from "../../compo
 import { VersaoNova } from "../../componentes/VersaoNova";
 import { OQueHaDeNovo } from "../../componentes/Novidades";
 import { PrimeiroUso } from "../../componentes/PrimeiroUso";
+import { PedidosEmCurso } from "../../componentes/inicio/PedidoEmCurso";
+import { Intencoes } from "../../componentes/inicio/Intencoes";
+import { AjudaDiscreta, PorquePodeConfiar, TresPassos, VozesDoGoogle } from "../../componentes/inicio/Confianca";
 import { useCatalogo } from "../../estado/Catalogo";
 import { usePedidos } from "../../estado/Pedidos";
 import { useSessao } from "../../estado/Sessao";
 import { whatsappDaClyon } from "../../lib/abrir";
-import { sessoesDeConvidado } from "../../lib/convidado";
-import type { SessaoDeConvidado } from "../../lib/pedido-do-link";
 import { lerMoradaDaConta, SEM_MORADA } from "../../lib/morada-do-cliente";
-import { noSeparador, type PedidoNaLista } from "../../lib/pedidos";
+import type { Catalogo } from "../../lib/novo-pedido";
 import { aparenciaDoServico, CORES } from "../../tema";
 
 /**
- * E0 v4 — INÍCIO (dono, 29-10-2026): menos informação e mais branco.
+ * E0 v5 — INÍCIO (d148, 27-11-2026, o CEO e o dono, depois de ver o protótipo).
  *
- * Por esta ordem, só o que se aplica: um cabeçalho curto (o título, a frase do
- * topo do site e «Pedir orçamento»), os pedidos activos (com conta, ou os
- * abertos pelo link neste telemóvel), os serviços em cartões coloridos com o
- * preço de referência (o IVA ao lado, já escrito pela API), «Como funciona»
- * curto e o WhatsApp numa linha. As perguntas, as zonas e as avaliações do
- * Google passaram para o Perfil, em «Ajuda». Tudo do catálogo (R7 v2); um
- * bloco que a API não mande não aparece.
+ * O topo (a morada, Conversas, Ajuda, Notificações), a pesquisa e a barra de
+ * baixo ficam como estavam. O meio, por esta ordem e só o que se aplica:
+ *   1. o pedido em curso, em destaque, com a novidade e o passo seguinte;
+ *   2. «Do que precisa?» — quatro grupos com ilustração e um «desde» curto (o
+ *      preço inteiro fica no Descobrir), a folha de cada grupo, «Outro serviço»
+ *      e a nota dos preços;
+ *   3. como funciona, em três passos;
+ *   4. porque pode confiar (o Google, parceiros aprovados pela equipa, pagar ao parceiro
+ *      no fim do trabalho, duas faturas) e algumas avaliações do Google;
+ *   5. o WhatsApp numa linha, e a frase única.
+ * Tudo do catálogo (R7): os grupos, os «desde», a confiança e os passos vêm já
+ * escritos do site (`src/lib/grupos-da-app.ts`). Numa R7 antiga, sem grupos, o
+ * Início mostra a grelha de serviços de antes — nunca um ecrã vazio.
  */
-export const TITULO_DO_INICIO = "Recolhas, esvaziamentos, mudanças e manutenção da casa";
-
-/** Quantos pedidos activos se vêem no Início; o resto está em «Ver todos» (Perfil → Os meus pedidos). */
-const ACTIVOS_NO_INICIO = 3;
+export const TITULO_DO_INICIO = "Do que precisa?";
 
 /** Os três botões redondos da direita, só com ícone (por esta ordem). */
 export const BOTOES_DO_TOPO = [
@@ -115,84 +119,45 @@ function Topo() {
   );
 }
 
-/** Um pedido activo: o serviço, o número e o estado em palavras (os da API). */
-function LinhaDoPedido({ servico, segunda, estado, novidade, aoAbrir }: { servico: string; segunda: string; estado: string; novidade: string | null; aoAbrir: () => void }) {
+/**
+ * A GRELHA DE ANTES (E0 v4): os serviços em cartões, com o preço de referência.
+ * Só numa R7 antiga, que ainda não manda os grupos.
+ */
+function GrelhaDeServicos({ c }: { c: Catalogo }) {
+  if (c.servicos.length === 0) return null;
   return (
-    <Pressable
-      onPress={aoAbrir}
-      accessibilityRole="button"
-      accessibilityLabel={`${servico}, ${segunda}, ${estado}${novidade ? `, ${novidade}` : ""}`}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        padding: 14,
-        borderRadius: 18,
-        borderWidth: novidade ? 1.5 : 1,
-        borderColor: novidade ? CORES.ciano : CORES.linha,
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }} numberOfLines={1}>
-          {servico}
-        </Text>
-        <Text style={{ color: CORES.suave, fontSize: 12.5 }} numberOfLines={1}>
-          {segunda}
-        </Text>
-        <Text style={{ color: novidade ? CORES.marca : CORES.tinta, fontSize: 13, fontWeight: "600" }} numberOfLines={1}>
-          {novidade ?? estado}
-        </Text>
+    <Seccao titulo="Serviços" ligacao="Ver todos" aoCarregar={() => router.push("/servicos")}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        {c.servicos.map((s) => {
+          const a = aparenciaDoServico(s.id);
+          return (
+            <Pressable
+              key={s.id}
+              onPress={() => router.push({ pathname: "/pedir", params: { servico: s.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={`Pedir orçamento para ${s.nome}`}
+              style={({ pressed }) => ({ flexBasis: 140, flexGrow: 1, minHeight: 116, borderRadius: 20, backgroundColor: a.tom.claro, padding: 14, gap: 8, opacity: pressed ? 0.75 : 1 })}
+            >
+              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: CORES.fundo, alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={a.icone as never} size={20} color={a.tom.forte} />
+              </View>
+              <Text titulo style={{ color: CORES.tinta, fontSize: 14, fontWeight: "600", lineHeight: 19 }} numberOfLines={2}>
+                {s.nome}
+              </Text>
+              {s.precoReferencia ? <PrecoDeReferencia texto={s.precoReferencia} tamanho={12} /> : null}
+            </Pressable>
+          );
+        })}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={CORES.icone} />
-    </Pressable>
+      {c.textos.notaDosPrecos ? <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17 }}>{c.textos.notaDosPrecos}</Text> : null}
+    </Seccao>
   );
 }
 
-function PedidosActivos() {
-  const { ligado } = useSessao();
-  const { pedidos } = usePedidos();
-  const [doLink, setDoLink] = useState<SessaoDeConvidado[]>([]);
-  useFocusEffect(
-    useCallback(() => {
-      if (ligado) return;
-      void sessoesDeConvidado().then(setDoLink).catch(() => setDoLink([]));
-    }, [ligado]),
-  );
-
-  if (ligado) {
-    const activos = pedidos.filter((p: PedidoNaLista) => noSeparador(p, "em_aberto"));
-    if (activos.length === 0) return null;
-    return (
-      <Seccao titulo="Pedidos ativos" ligacao={activos.length > ACTIVOS_NO_INICIO ? "Ver todos" : undefined} aoCarregar={() => router.push("/pedidos")}>
-        {activos.slice(0, ACTIVOS_NO_INICIO).map((p) => (
-          <LinhaDoPedido
-            key={p.id}
-            servico={p.servico}
-            segunda={[`Pedido #${p.id}`, p.cidade].filter(Boolean).join(" · ")}
-            estado={p.estadoTexto}
-            novidade={p.novidade}
-            aoAbrir={() => router.push(`/pedido/${p.id}`)}
-          />
-        ))}
-      </Seccao>
-    );
-  }
-  if (doLink.length === 0) return null;
-  return (
-    <Seccao titulo="Pedidos ativos">
-      {doLink.slice(0, ACTIVOS_NO_INICIO).map((s) => (
-        <LinhaDoPedido
-          key={s.pedidoId}
-          servico={s.servico ?? "Pedido"}
-          segunda={[`Pedido #${s.pedidoId}`, s.cidade].filter(Boolean).join(" · ")}
-          estado="Aberto pela ligação"
-          novidade={null}
-          aoAbrir={() => router.push(`/convidado/${s.pedidoId}`)}
-        />
-      ))}
-    </Seccao>
-  );
+/** «Parceiros da sua zona respondem…» — a frase do topo do site, sem o «Descreva o que precisa.» que repetia a pergunta. */
+export function subtituloDoInicio(subtitulo: string | null): string | null {
+  const s = subtitulo?.replace(/^Descreva o que precisa\.\s*/, "").trim();
+  return s ? s : null;
 }
 
 export default function Inicio() {
@@ -202,13 +167,13 @@ export default function Inicio() {
 
   if (!catalogo && aLer) return <Carregando />;
   const c = catalogo;
-  const passos = (c?.info.comoFunciona ?? []).slice(0, 3);
+  const subtitulo = subtituloDoInicio(c?.textos.subtituloInicial ?? null);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CORES.fundo }} edges={["top", "left", "right", "bottom"]}>
       <Topo />
       <RolagemComTeclado
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, gap: 26 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 32, gap: 30 }}
         refreshControl={
           <RefreshControl
             refreshing={aLer}
@@ -225,36 +190,6 @@ export default function Inicio() {
         {/* Sem sessão: «Entre para vermos que chegou»; e os avisos, uma vez (d108). */}
         <PrimeiroUso />
 
-        {/* 1. O cabeçalho curto: claro, com muito branco à volta. */}
-        <View style={{ borderRadius: 24, backgroundColor: CORES.cianoFundo, padding: 20, gap: 12 }}>
-          <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 21, fontWeight: "700", lineHeight: 27 }}>
-            {TITULO_DO_INICIO}
-          </Text>
-          {c?.textos.subtituloInicial ? <Text style={{ color: CORES.suave, fontSize: 14, lineHeight: 20 }}>{c.textos.subtituloInicial}</Text> : null}
-          <Pressable
-            onPress={() => router.push("/pedir")}
-            accessibilityRole="button"
-            accessibilityLabel="Pedir orçamento"
-            style={({ pressed }) => ({
-              alignSelf: "flex-start",
-              backgroundColor: CORES.ciano,
-              borderRadius: 14,
-              minHeight: 48,
-              paddingHorizontal: 18,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 2,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text titulo style={{ color: CORES.tinta, fontSize: 15, fontWeight: "600" }}>
-              Pedir orçamento
-            </Text>
-            <Ionicons name="arrow-forward" size={18} color={CORES.tinta} />
-          </Pressable>
-        </View>
-
         {/* Sem catálogo e sem cópia guardada: o erro e «Tentar outra vez» — nunca um ecrã vazio. */}
         {!c && erro ? (
           <View style={{ gap: 10 }}>
@@ -263,78 +198,36 @@ export default function Inicio() {
           </View>
         ) : null}
 
-        {/* 2. Os pedidos activos, se houver. */}
-        <PedidosActivos />
+        {/* 1. O pedido em curso, se houver. */}
+        <PedidosEmCurso />
 
-        {/* 3. Os serviços, em cartões coloridos, com o preço de referência. */}
-        {c && c.servicos.length > 0 ? (
-          <Seccao titulo="Serviços" ligacao="Ver todos" aoCarregar={() => router.push("/servicos")}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {c.servicos.map((s) => {
-                const a = aparenciaDoServico(s.id);
-                return (
-                  <Pressable
-                    key={s.id}
-                    onPress={() => router.push({ pathname: "/pedir", params: { servico: s.id } })}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Pedir orçamento para ${s.nome}`}
-                    style={({ pressed }) => ({
-                      flexBasis: 140,
-                      flexGrow: 1,
-                      minHeight: 116,
-                      borderRadius: 20,
-                      backgroundColor: a.tom.claro,
-                      padding: 14,
-                      gap: 8,
-                      opacity: pressed ? 0.75 : 1,
-                    })}
-                  >
-                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: CORES.fundo, alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name={a.icone as never} size={20} color={a.tom.forte} />
-                    </View>
-                    <Text titulo style={{ color: CORES.tinta, fontSize: 14, fontWeight: "600", lineHeight: 19 }} numberOfLines={2}>
-                      {s.nome}
-                    </Text>
-                    {s.precoReferencia ? <PrecoDeReferencia texto={s.precoReferencia} tamanho={12} /> : null}
-                  </Pressable>
-                );
-              })}
+        {/* 2. «Do que precisa?»: os grupos (ou, numa R7 antiga, a grelha de antes). */}
+        {c ? (
+          <View style={{ gap: 18 }}>
+            <View style={{ gap: 8 }}>
+              <Text titulo accessibilityRole="header" style={{ color: CORES.tinta, fontSize: 27, fontWeight: "700", lineHeight: 32 }}>
+                {TITULO_DO_INICIO}
+              </Text>
+              {subtitulo ? <Text style={{ color: CORES.suave, fontSize: 14.5, lineHeight: 21 }}>{subtitulo}</Text> : null}
             </View>
-            {c.textos.notaDosPrecos ? <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17 }}>{c.textos.notaDosPrecos}</Text> : null}
-          </Seccao>
+            {c.info.grupos.length > 0 ? (
+              <Intencoes grupos={c.info.grupos} servicos={c.servicos} notaDosPrecos={c.textos.notaDosPrecos} />
+            ) : (
+              <GrelhaDeServicos c={c} />
+            )}
+          </View>
         ) : null}
 
-        {/* 4. Como funciona, curto: os três passos, só os títulos. */}
-        {passos.length > 0 ? (
-          <Seccao titulo="Como funciona" ligacao="Ver mais" aoCarregar={() => router.push("/info/como-funciona")}>
-            {passos.map((p, i) => (
-              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: CORES.cianoFundo, alignItems: "center", justifyContent: "center" }}>
-                  <Text titulo style={{ color: CORES.marca, fontSize: 13, fontWeight: "700" }}>
-                    {String(i + 1)}
-                  </Text>
-                </View>
-                <Text style={{ flex: 1, color: CORES.tinta, fontSize: 14, lineHeight: 20 }}>{p.titulo}</Text>
-              </View>
-            ))}
-          </Seccao>
-        ) : null}
+        {/* 3. Como funciona, em três passos. */}
+        {c ? <TresPassos passos={c.textos.passosDoInicio} comoFunciona={c.info.comoFunciona} /> : null}
 
-        {/* 5. O WhatsApp, numa linha. */}
-        <Pressable
-          onPress={() => whatsappDaClyon()}
-          accessibilityRole="button"
-          accessibilityLabel="Falar com a CLYON pelo WhatsApp"
-          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16, backgroundColor: CORES.whatsappSuave, opacity: pressed ? 0.7 : 1 })}
-        >
-          <Ionicons name="logo-whatsapp" size={22} color={CORES.bom} />
-          <Text titulo style={{ flex: 1, color: CORES.tinta, fontSize: 14.5, fontWeight: "600" }} numberOfLines={1}>
-            Falar com a CLYON pelo WhatsApp
-          </Text>
-          <Ionicons name="chevron-forward" size={18} color={CORES.icone} />
-        </Pressable>
+        {/* 4. Porque pode confiar: só factos, do servidor. */}
+        {c ? <PorquePodeConfiar avaliacoes={c.info.avaliacoes} linhas={c.textos.confianca} /> : null}
+        {c ? <VozesDoGoogle avaliacoes={c.info.avaliacoes} /> : null}
 
-        {c?.textos.fraseUnica ? <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17 }}>{c.textos.fraseUnica}</Text> : null}
+        {/* 5. O WhatsApp, discreto, e a frase única. */}
+        <AjudaDiscreta aoCarregar={() => whatsappDaClyon()} />
+        {c?.textos.fraseUnica ? <Text style={{ color: CORES.suave, fontSize: 12, lineHeight: 17, marginTop: -18 }}>{c.textos.fraseUnica}</Text> : null}
       </RolagemComTeclado>
     </SafeAreaView>
   );

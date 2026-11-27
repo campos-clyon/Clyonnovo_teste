@@ -105,6 +105,11 @@
   ],
   "cliente": [
     {
+      "id": "cliente-2026-11-27-3",
+      "nota": "O Início está novo: diga do que precisa em quatro grupos, com o preço «desde» de cada um, veja o seu pedido em curso logo no topo e porque pode confiar nos parceiros.",
+      "updates": []
+    },
+    {
       "id": "cliente-2026-11-27-2",
       "nota": "Na mudança, a ajuda do «Acesso difícil» aparece de novo ao escolher o acesso da origem e do destino.",
       "updates": []

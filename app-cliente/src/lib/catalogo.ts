@@ -22,7 +22,12 @@ export type GrupoDePrecos = { titulo: string | null; servico: string | null; lin
 export type Passo = { titulo: string; texto: string | null };
 export type Zona = { nome: string; localidades: string[] };
 export type Testemunho = { nome: string; mes: string | null; texto: string };
-export type Avaliacoes = { resumo: string; url: string | null; testemunhos: Testemunho[] };
+/** As partes do resumo (d148): a nota, quantas e o mês da contagem — da mesma fonte; sem elas, só o resumo. */
+export type Avaliacoes = { resumo: string; url: string | null; testemunhos: Testemunho[]; nota: string | null; numero: number | null; mes: string | null };
+/** Um grupo do Início (d148): «Levar móveis e monos», os serviços dele e o «desde» já escrito, com o IVA ao lado. */
+export type GrupoDoInicio = { id: string; titulo: string; inclui: string | null; servicos: string[]; desde: string | null };
+/** Uma linha de confiança, ou um passo curto do Início (d148): o título e uma linha. */
+export type LinhaCurta = { titulo: string; texto: string };
 export type Pergunta = { p: string; r: string };
 
 export type InformacaoDoCatalogo = {
@@ -31,6 +36,8 @@ export type InformacaoDoCatalogo = {
   zonas: Zona[];
   avaliacoes: Avaliacoes | null;
   perguntas: Pergunta[];
+  /** d148: os grupos do Início; vazio numa R7 antiga (o Início mostra a grelha de antes). */
+  grupos: GrupoDoInicio[];
 };
 
 /** Os textos novos da R7 v2 (G2–G7), todos opcionais: sem eles, a app não escreve os seus. */
@@ -45,6 +52,10 @@ export type TextosDaV3 = {
   horarioDoWhatsapp: string | null;
   /** d8: por baixo de «Hoje» — vai como pedido urgente, sem prometer o dia (a mesma frase do simulador e da FAQ). */
   pedidoUrgente?: string | null;
+  /** d148: o que dá confiança no Início (só factos, do servidor). */
+  confianca: LinhaCurta[];
+  /** d148: os três passos do Início, em curto. */
+  passosDoInicio: LinhaCurta[];
 };
 
 const PROIBIDO = /big[\s_-]?bag|contentor|pr[óo]prio dia/i;
@@ -134,7 +145,9 @@ function avaliacoesDe(v: unknown): Avaliacoes | null {
     })
     .filter((t): t is Testemunho => !!t);
   // Só as do Google (regra j da orquestra): um endereço que não é do Google não se abre.
-  return { resumo, url: url && /^https:\/\/([a-z0-9-]+\.)*(google\.[a-z.]+|goo\.gl|g\.page)\//i.test(url) ? url : null, testemunhos };
+  const nota = texto(o.nota);
+  const numero = typeof o.numero === "number" && Number.isInteger(o.numero) && o.numero > 0 ? o.numero : null;
+  return { resumo, nota, numero, mes: texto(o.mes), url: url && /^https:\/\/([a-z0-9-]+\.)*(google\.[a-z.]+|goo\.gl|g\.page)\//i.test(url) ? url : null, testemunhos };
 }
 
 function perguntasDe(v: unknown): Pergunta[] {
@@ -148,6 +161,37 @@ function perguntasDe(v: unknown): Pergunta[] {
     .filter(semProibidas);
 }
 
+/** Linhas curtas (título + texto), sem as proibidas. */
+function linhasCurtas(v: unknown): LinhaCurta[] {
+  return lista(v)
+    .map((x): LinhaCurta | null => {
+      const o = (x ?? {}) as Record<string, unknown>;
+      const titulo = texto(o.titulo);
+      const t = texto(o.texto);
+      return titulo && t ? { titulo, texto: t } : null;
+    })
+    .filter(semProibidas);
+}
+
+/** Um «desde» só serve com a segunda parte entre parênteses no fim (o valor com o imposto, critério 35). */
+export function desdeValido(v: unknown): string | null {
+  const t = texto(v);
+  return t && partesDoPreco(t).resto && !PROIBIDO.test(t) ? t : null;
+}
+
+/** Os grupos do Início (d148). Um grupo sem título ou sem serviços não aparece. */
+function gruposDe(v: unknown): GrupoDoInicio[] {
+  return lista(v)
+    .map((x): GrupoDoInicio | null => {
+      const o = (x ?? {}) as Record<string, unknown>;
+      const id = texto(o.id);
+      const titulo = texto(o.titulo);
+      const servicos = lista(o.servicos).map(texto).filter((s): s is string => !!s);
+      return id && titulo && servicos.length > 0 ? { id, titulo, inclui: texto(o.inclui), servicos, desde: desdeValido(o.desde) } : null;
+    })
+    .filter(semProibidas);
+}
+
 /** Os blocos de informação da R7 v2 que vieram, na forma da app. */
 export function informacaoDoCatalogo(v: unknown): InformacaoDoCatalogo {
   const c = (v ?? {}) as Record<string, unknown>;
@@ -157,6 +201,7 @@ export function informacaoDoCatalogo(v: unknown): InformacaoDoCatalogo {
     zonas: zonasDe(c.zonas),
     avaliacoes: avaliacoesDe(c.avaliacoes),
     perguntas: perguntasDe(c.perguntas),
+    grupos: gruposDe(c.grupos),
   };
 }
 
@@ -178,6 +223,8 @@ export function textosDaV3(v: unknown): TextosDaV3 {
     tresPassos: passosDe(t.tresPassos),
     horarioDoWhatsapp: limpo(t.horarioDoWhatsapp ?? t.horario),
     pedidoUrgente: limpo(t.pedidoUrgente),
+    confianca: linhasCurtas(t.confianca),
+    passosDoInicio: linhasCurtas(t.passosDoInicio),
   };
 }
 

@@ -169,16 +169,19 @@ describe("A7 — o convidado: a app abre no Início, sem ecrã de entrada à fre
     expect(raiz).not.toContain("bem-vindo");
   });
 
-  it("o Início é curto (29-10-2026): cabeçalho, pedidos ativos, serviços, como funciona e o WhatsApp numa linha", () => {
+  it("o Início (d148, 27-11-2026): o pedido em curso, «Do que precisa?» com os grupos, como funciona, a confiança e o WhatsApp numa linha", () => {
     const inicio = ler("src/app/(app)/index.tsx");
-    expect(inicio).toContain('"Recolhas, esvaziamentos, mudanças e manutenção da casa"');
-    for (const s of ['"Pedidos ativos"', '"Serviços"', '"Como funciona"', "Falar com a CLYON pelo WhatsApp"]) expect(inicio).toContain(s);
-    // Saíram para o Perfil («Ajuda»): as avaliações do Google, as zonas e as perguntas; e o «Entrar» repetido.
-    for (const s of ["Avaliações no Google", "info.avaliacoes", "info.zonas", "info.perguntas", "Já tem conta? Entrar", "LinearGradient"]) {
-      expect(inicio).not.toContain(s);
-    }
-    // Desde a barra de cima (30-10-2026) o «Entrar» está só no Perfil.
+    expect(inicio).toContain('TITULO_DO_INICIO = "Do que precisa?"');
+    for (const s of ["<PedidosEmCurso />", "<Intencoes", "<TresPassos", "<PorquePodeConfiar", "<VozesDoGoogle", "<AjudaDiscreta", "<GrelhaDeServicos"]) expect(inicio).toContain(s);
+    // A grelha de antes só numa R7 sem grupos; e o «Entrar» repetido continua só no Perfil.
+    expect(inicio).toContain("c.info.grupos.length > 0 ?");
+    expect(inicio).not.toContain("Já tem conta? Entrar");
     expect(inicio).not.toContain("accessibilityLabel=\"Entrar\"");
+    // A app não escreve preços nem promessas no Início: vêm todos da R7.
+    const semNotas = (t: string) => t.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/^\s*\/\/.*$/gm, "");
+    const componentes = semNotas(["Intencoes", "Confianca", "PedidoEmCurso"].map((n) => ler(`src/componentes/inicio/${n}.tsx`)).join("\n"));
+    expect(componentes + semNotas(inicio)).not.toMatch(/\d+(,\d+)? ?€/);
+    expect(componentes + semNotas(inicio)).not.toMatch(/6 horas|no fim do trabalho|4,9|profissiona/i);
   });
 
   it("o Perfil tem os pedidos, «As minhas avaliações» e a Ajuda", () => {
