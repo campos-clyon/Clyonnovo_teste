@@ -271,7 +271,7 @@ export default function Carteira({
 
 function TresBlocos({ resumo, novoModelo }: { resumo: ResumoDaCarteira; novoModelo: boolean }) {
   const R = rotulosDaCarteira(novoModelo);
-  const retido = resumo.aEsperaDaConfirmacao + resumo.clienteAindaNaoPagou;
+  const retido = resumo.aEsperaDaConfirmacao + resumo.clienteAindaNaoPagou + (resumo.porConfirmarOPagamento ?? 0);
   return (
     <section className="grid gap-3 sm:grid-cols-3">
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
@@ -301,6 +301,12 @@ function TresBlocos({ resumo, novoModelo }: { resumo: ResumoDaCarteira; novoMode
             {R.porCobrar.rotulo}: {euros(resumo.clienteAindaNaoPagou)}
           </p>
         )}
+        {/* 27-11-2026 (o #558): feito e confirmado, sem registo de a quem o cliente pagou. */}
+        {(resumo.porConfirmarOPagamento ?? 0) > 0 && (
+          <p className="mt-1 text-xs text-amber-800">
+            Por confirmar o pagamento: {euros(resumo.porConfirmarOPagamento ?? 0)}
+          </p>
+        )}
       </div>
     </section>
   );
@@ -314,16 +320,24 @@ function TresBlocos({ resumo, novoModelo }: { resumo: ResumoDaCarteira; novoMode
 function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
   // Só os nomes (iguais nos dois modelos).
   const R = ROTULOS_DA_CARTEIRA;
-  const [separador, setSeparador] = useState<"por_receber" | "recebido">("por_receber");
-  const mostradas = linhas.filter((l) =>
-    separador === "recebido" ? l.grupo === "recebido" : l.grupo !== "recebido",
-  );
-  const quantos = (g: "por_receber" | "recebido") =>
-    linhas.filter((l) => (g === "recebido" ? l.grupo === "recebido" : l.grupo !== "recebido")).length;
+  /*
+   * «Por confirmar o pagamento» tem o seu separador — 27-11-2026 (o #558): um
+   * trabalho confirmado sem registo de a quem o cliente pagou nunca aparece em
+   * «Por receber», como se a CLYON lhe devesse. Só aparece quando há algum.
+   */
+  type Separador = "por_receber" | "por_confirmar" | "recebido";
+  const [separador, setSeparador] = useState<Separador>("por_receber");
+  const doSeparador = (g: Separador) =>
+    linhas.filter((l) =>
+      g === "recebido" ? l.grupo === "recebido" : g === "por_confirmar" ? l.grupo === "por_confirmar" : l.grupo === "por_receber" || l.grupo === "retido",
+    );
+  const mostradas = doSeparador(separador);
+  const quantos = (g: Separador) => doSeparador(g).length;
+  const separadores: Separador[] = quantos("por_confirmar") > 0 ? ["por_receber", "por_confirmar", "recebido"] : ["por_receber", "recebido"];
   return (
     <section className="mt-3 overflow-hidden rounded-2xl border border-[#E2EEF3] bg-white shadow-sm">
       <div className="flex border-b border-slate-100" role="tablist">
-        {(["por_receber", "recebido"] as const).map((g) => (
+        {separadores.map((g) => (
           <button
             key={g}
             role="tab"
@@ -333,7 +347,7 @@ function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
               separador === g ? "border-b-2 border-[#0B1929] text-[#0B1929]" : "text-slate-500"
             }`}
           >
-            {g === "recebido" ? `${R.pago.rotulo}s` : R.porReceber.rotulo} ({quantos(g)})
+            {g === "recebido" ? `${R.pago.rotulo}s` : g === "por_confirmar" ? "Por confirmar" : R.porReceber.rotulo} ({quantos(g)})
           </button>
         ))}
       </div>
@@ -354,7 +368,7 @@ function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="text-base font-semibold text-[#0B1929]">
-                    {euros(l.grupo === "recebido" ? l.recebe : l.falta)}
+                    {euros(l.grupo === "recebido" || l.grupo === "por_confirmar" ? l.recebe : l.falta)}
                   </div>
                 </div>
               </div>
@@ -362,7 +376,7 @@ function ListaDeTrabalhos({ linhas }: { linhas: LinhaDaCarteira[] }) {
                 Trabalho {euros(l.valor)} sem IVA · taxa da plataforma {euros(l.taxa)} · recebe{" "}
                 {euros(l.recebe)}
               </div>
-              <div className={`mt-1 text-xs ${l.grupo === "retido" ? "text-amber-800" : "text-slate-600"}`}>
+              <div className={`mt-1 text-xs ${l.grupo === "retido" || l.grupo === "por_confirmar" ? "text-amber-800" : "text-slate-600"}`}>
                 {l.grupo === "recebido"
                   ? `Pago a ${l.recebidoEmTexto ?? "—"} · ${l.como ?? ""}`
                   : l.razao}

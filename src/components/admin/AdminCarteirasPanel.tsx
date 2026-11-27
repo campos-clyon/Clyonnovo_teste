@@ -633,7 +633,10 @@ export default function AdminCarteirasPanel() {
                 : t.forma === "dinheiro"
                 ? "em dinheiro — nada a transferir"
                 : t.clienteAindaNaoPagou
-                  ? "o cliente ainda não pagou"
+                  ? // 27-11-2026 (o #558): confirmado sem registo de a quem o cliente pagou.
+                    t.confirmadoEm
+                    ? "falta dizer a quem o cliente pagou"
+                    : "o cliente ainda não pagou"
                   : t.aguardaConfirmacao
                   ? "falta confirmar"
                   : "por fazer"}

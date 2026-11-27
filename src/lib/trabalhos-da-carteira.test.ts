@@ -51,7 +51,8 @@ describe("a carteira trabalho a trabalho dá os mesmos números de carteiraDe", 
     expect(resumo.porReceber).toBe(Math.round((k.disponivel + k.aCaminho) * 100) / 100);
     expect(resumo.podePedir).toBe(k.disponivel);
     expect(resumo.aEsperaDaConfirmacao).toBe(k.cativo);
-    expect(resumo.clienteAindaNaoPagou).toBe(k.porCobrar);
+    // O confirmado sem registo de a quem o cliente pagou conta à parte (27-11-2026, o #558).
+    expect(resumo.clienteAindaNaoPagou + resumo.porConfirmarOPagamento).toBe(k.porCobrar);
     expect(resumo.recebidoTotal).toBe(k.levantado);
   });
 
@@ -64,7 +65,7 @@ describe("a carteira trabalho a trabalho dá os mesmos números de carteiraDe", 
     expect(de(12)).toMatchObject({ grupo: "por_receber", falta: 270, razao: RAZOES.podePedir });
     expect(de(13)).toMatchObject({ grupo: "recebido", recebidoEmTexto: "20/10/2026" });
     expect(de(14)).toMatchObject({ grupo: "retido", razao: RAZOES.confirmacao });
-    expect(de(15)).toMatchObject({ grupo: "retido", razao: RAZOES.clienteNaoPagou });
+    expect(de(15)).toMatchObject({ grupo: "por_confirmar", razao: RAZOES.porConfirmar, falta: 0 });
     expect(de(12)).toMatchObject({ valor: 300, taxa: 30, recebe: 270, cliente: "Maria", pedidoId: 412 });
   });
 

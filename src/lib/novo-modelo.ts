@@ -347,7 +347,28 @@ export function trabalhoClyonDoModeloAntigo(
   if (!novoModeloEmVigor(agora)) return true;
   // Sem a data do pedido, fica no antigo — nunca se passa ao novo por não se saber quando nasceu.
   if (instanteDaBase(n.pedidoCriadoEm ?? null) == null) return true;
-  return comoData(n.confirmadoEm) != null || comoData(n.pagoAoProfissionalEm) != null;
+  /*
+   * O QUE JÁ ANDOU CONTA-SE À DATA DA d122, E SÓ ATÉ ELA — 27-11-2026 (o #558).
+   * Contava a qualquer hora: um Trabalho CLYON de antes do corte que estava no
+   * modelo de 15-11 voltava ao antigo no instante em que era confirmado — a
+   * carteira e a app Pro passavam a dizer «o cliente ainda não pagou» (por
+   * receber, como se a CLYON lhe devesse), quando o cliente lhe tinha pago a
+   * ele. «Como foi» é o que já tinha andado quando a regra mudou; depois disso,
+   * confirmar ou fechar não muda o modelo.
+   */
+  return andouAntesDaD122(n.confirmadoEm) || andouAntesDaD122(n.pagoAoProfissionalEm);
+}
+
+/**
+ * QUANDO A d122 ENTROU — 25-11-2026, 15h20 de Lisboa (fde0607c). Um Trabalho
+ * CLYON de antes do corte que foi confirmado (ou pago ao profissional pela
+ * CLYON) antes disto fica no antigo, como foi; depois, nunca muda por isso.
+ */
+export const TRABALHOS_CLYON_ANTIGOS_AO_PARCEIRO_DESDE = new Date("2026-11-25T14:20:00Z");
+
+function andouAntesDaD122(v: Date | string | null | undefined): boolean {
+  const d = instanteDaBase(v ?? null);
+  return d != null && d.getTime() < TRABALHOS_CLYON_ANTIGOS_AO_PARCEIRO_DESDE.getTime();
 }
 
 /**

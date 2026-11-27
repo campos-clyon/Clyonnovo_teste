@@ -43,7 +43,13 @@ export type LevantamentoComData = Levantamento & {
   criadoEm?: Date | string | null;
 };
 
-export type GrupoDaLinha = "por_receber" | "retido" | "recebido";
+/**
+ * «por_confirmar» — 27-11-2026 (o #558): o trabalho está feito e confirmado e
+ * ninguém registou a quem o cliente pagou (à CLYON ou ao profissional). Não é
+ * «por receber» (a CLYON não lhe deve nada enquanto não se souber) nem «o
+ * cliente ainda não pagou»: é a CLYON que tem de confirmar o pagamento.
+ */
+export type GrupoDaLinha = "por_receber" | "retido" | "por_confirmar" | "recebido";
 
 export type LinhaDaCarteira = {
   negociacaoId: number;
@@ -81,8 +87,10 @@ export type ResumoDaCarteira = {
   podePedir: number;
   /** Pago pelo cliente à CLYON, à espera da confirmação (ou de o trabalho ser feito). */
   aEsperaDaConfirmacao: number;
-  /** Trabalho feito que o cliente ainda não pagou. */
+  /** Trabalho feito que o cliente ainda não pagou (sem os confirmados por confirmar o pagamento). */
   clienteAindaNaoPagou: number;
+  /** Feito e confirmado, sem registo de a quem o cliente pagou — a CLYON confirma (27-11-2026). */
+  porConfirmarOPagamento: number;
   /** Já transferido pela CLYON. */
   recebidoEsteMes: number;
   recebidoUltimos12Meses: number;
@@ -117,6 +125,8 @@ export const RAZOES = {
   confirmacao: "à espera da confirmação do cliente",
   porFazer: "o cliente já pagou; o trabalho está por fazer",
   clienteNaoPagou: "o cliente ainda não pagou",
+  /** Feito e confirmado, e ninguém registou a quem o cliente pagou (27-11-2026, o #558). */
+  porConfirmar: "por confirmar o pagamento — a CLYON está a confirmar a quem o cliente pagou",
   /** Pago pelo cliente ao profissional, em mão: nunca «por receber» (01-11-2026). */
   emMao: "recebido em mão — pago pelo cliente no local",
 } as const;
@@ -146,6 +156,7 @@ export function contaDaCarteira(
   };
 
   // Os libertados que esperam por uma transferência, do mais antigo ao mais novo.
+  let porConfirmar = 0;
   const aPagar: Array<{ t: TrabalhoParaALista; b: ReturnType<typeof base>; quando: number; devido?: number; credito?: boolean }> = [];
 
   for (const t of trabalhos) {
@@ -164,6 +175,18 @@ export function contaDaCarteira(
       continue;
     }
     if (!oClientePagou(t)) {
+      /*
+       * FEITO E CONFIRMADO, SEM «A QUEM PAGOU» — 27-11-2026 (o #558, dono). O
+       * parceiro via-o «por receber», como se a CLYON lhe devesse, quando o
+       * cliente lhe tinha pago a ele. Enquanto ninguém registar a quem o cliente
+       * pagou, fica «por confirmar o pagamento», sem valor por receber; a Mesa
+       * mostra-o em «Precisa de si» (`semAQuemPagou`).
+       */
+      if (t.confirmadoEm != null) {
+        porConfirmar += b.recebe;
+        linhas.push({ ...b, grupo: "por_confirmar", razao: RAZOES.porConfirmar, falta: 0, recebidoEm: null, como: null });
+        continue;
+      }
       linhas.push({ ...b, grupo: "retido", razao: RAZOES.clienteNaoPagou, falta: b.recebe, recebidoEm: null, como: null });
       continue;
     }
@@ -266,7 +289,8 @@ export function contaDaCarteira(
       aCaminho: cart.aCaminho,
       podePedir: cart.disponivel,
       aEsperaDaConfirmacao: cart.cativo,
-      clienteAindaNaoPagou: porCobrar,
+      clienteAindaNaoPagou: c(Math.max(0, porCobrar - porConfirmar)),
+      porConfirmarOPagamento: c(porConfirmar),
       recebidoEsteMes: c(mes),
       recebidoUltimos12Meses: c(ano),
       recebidoTotal: c(total),

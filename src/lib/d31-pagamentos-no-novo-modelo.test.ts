@@ -203,10 +203,12 @@ describe("d31 — as Carteiras (o #612)", () => {
 
   it("um Trabalho CLYON confirmado e sem o cliente ter pago nunca fica «pode pedir a transferência»", () => {
     const c = contaDaCarteira([naCarteira()], [], agora);
-    expect(c.linhas[0]).toMatchObject({ grupo: "retido", razao: RAZOES.clienteNaoPagou, falta: 315 });
+    // 27-11-2026 (o #558): confirmado sem registo de a quem o cliente pagou — por confirmar, nunca por receber.
+    expect(c.linhas[0]).toMatchObject({ grupo: "por_confirmar", razao: RAZOES.porConfirmar, falta: 0 });
     expect(c.resumo.podePedir).toBe(0);
     expect(c.resumo.porReceber).toBe(0);
-    expect(c.resumo.clienteAindaNaoPagou).toBe(315);
+    expect(c.resumo.clienteAindaNaoPagou).toBe(0);
+    expect(c.resumo.porConfirmarOPagamento).toBe(315);
   });
 
   it("o cliente pagou: fica disponível; e o que a CLYON já lhe transferiu continua recebido", () => {
@@ -222,7 +224,8 @@ describe("d31 — as Carteiras (o #612)", () => {
   });
 
   it("o trabalho de plataforma do modelo antigo segue a mesma regra", () => {
-    expect(linha(naCarteira({ pagoPelaClyon: false })).razao).toBe(RAZOES.clienteNaoPagou);
+    expect(linha(naCarteira({ pagoPelaClyon: false })).razao).toBe(RAZOES.porConfirmar);
+    expect(linha(naCarteira({ pagoPelaClyon: false, execucaoEnviadaEm: null, confirmadoEm: null })).razao).toBe(RAZOES.clienteNaoPagou);
   });
 
   it("nas Carteiras do backoffice: confirmado sem o cliente ter pago fica «à espera do cliente», nunca «A pagar»", () => {

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth-helper";
 import { resumoDoBackoffice } from "@/lib/db";
 import { operacaoDoInicio } from "@/lib/desempenho";
 import { linhasDoDesempenho } from "@/lib/desempenho-na-base";
+import { trabalhosSemAQuemPagou } from "@/lib/sem-a-quem-pagou-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,13 +27,15 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
   try {
-    const [resumo, operacao] = await Promise.all([
+    const [resumo, operacao, semAQuemPagou] = await Promise.all([
       resumoDoBackoffice(),
       linhasDoDesempenho()
         .then((l) => operacaoDoInicio(l))
         .catch(() => null),
+      // 27-11-2026 (o #558): feitos e confirmados sem registo de a quem o cliente pagou.
+      trabalhosSemAQuemPagou().catch(() => null),
     ]);
-    return NextResponse.json({ ...resumo, operacao });
+    return NextResponse.json({ ...resumo, operacao, semAQuemPagou });
   } catch (e) {
     console.error("[admin/resumo]", e);
     return NextResponse.json({ error: "Não foi possível carregar o resumo." }, { status: 500 });

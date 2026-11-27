@@ -39,6 +39,7 @@ export type SeccaoDoPrecisaDeSi =
   | "negociacoes_clyon"
   | "agenda"
   | "levantamentos"
+  | "pagamentos"
   | "profissionais";
 
 type Resumo = {
@@ -56,6 +57,8 @@ type Resumo = {
   foraDaGrelhaSemana?: number | null;
   /** Aceites pelo cliente e ainda só com a zona (d69). */
   aceitesSemRua?: number | null;
+  /** Feitos e confirmados sem registo de a quem o cliente pagou, pelo n.º do pedido (27-11-2026, o #558). */
+  semAQuemPagou?: number[] | null;
 };
 
 /** Um chip do «precisa de si»: o número, o rótulo curto, o porquê (no `title`) e onde se resolve. */
@@ -122,6 +125,19 @@ export default function PrecisaDeSiNaMesa({ onAbrir }: { onAbrir: (s: SeccaoDoPr
               ? `${euros(r.levantamentosEmEuros)} pedidos por profissionais que já fizeram o trabalho.`
               : "Transferências pedidas por profissionais que já fizeram o trabalho.",
           seccao: "levantamentos",
+          urgente: true,
+        },
+        {
+          /*
+           * FALTA DIZER A QUEM O CLIENTE PAGOU — 27-11-2026 (o #558, dono). O
+           * parceiro vê-o «por confirmar o pagamento» até alguém o registar nos
+           * Pagamentos (pago à CLYON, ou «Pagou ao profissional»).
+           */
+          chave: "semAQuemPagou",
+          n: r.semAQuemPagou?.length ?? null,
+          titulo: "falta dizer a quem o cliente pagou",
+          porque: `${(r.semAQuemPagou ?? []).map((n) => `#${n}`).join(", ")} — feito e confirmado, e ninguém registou a quem o cliente pagou. O parceiro vê «por confirmar o pagamento». Registe-o nos Pagamentos: pago à CLYON, ou «Pagou ao profissional».`,
+          seccao: "pagamentos",
           urgente: true,
         },
         {
