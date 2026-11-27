@@ -192,7 +192,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança do Barreiro para Lisboa?",
         resposta:
-          "Depende do volume, do andar e do bairro de destino em Lisboa. A portagem da ponte entra na proposta, sem surpresas. Recebe propostas grátis em menos de 6 horas.",
+          "Depende do volume, do andar e do bairro de destino em Lisboa. A portagem da ponte entra na proposta, sem surpresas. Receba propostas grátis em menos de 6 horas.",
       },
       {
         pergunta: "Fazem mudanças no Barreiro Velho, onde as ruas são estreitas?",
@@ -267,7 +267,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança Sintra → Lisboa?",
         resposta:
-          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ", e os km pela tarifa dele: no simulador vê os parceiros, a nota e o preço de cada um. Recebe propostas grátis em menos de 6 horas.",
+          "A distância (~25 km centro-a-centro) pesa no orçamento, tal como o volume e os acessos nas duas pontas. Paga-se à hora, " + MODELO_DA_MUDANCA_CURTO + ", e os km pela tarifa dele: no simulador vê os parceiros, a nota e o preço de cada um. Receba propostas grátis em menos de 6 horas.",
       },
     ],
     testemunho: null,
@@ -367,7 +367,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa uma mudança em Corroios?",
         resposta:
-          "Depende do volume, do andar e do elevador. Recebe propostas grátis em menos de 6 horas.",
+          "Depende do volume, do andar e do elevador. Receba propostas grátis em menos de 6 horas.",
       },
       {
         pergunta: "Fazem mudanças Corroios → Lisboa?",
@@ -476,7 +476,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança no Lumiar?",
         resposta:
-          "Depende do volume, do elevador e do percurso até ao destino — a Alta de Lisboa tem acessos amplos, Telheiras tem prédios mais antigos. Recebe propostas grátis em menos de 6 horas.",
+          "Depende do volume, do elevador e do percurso até ao destino — a Alta de Lisboa tem acessos amplos, Telheiras tem prédios mais antigos. Receba propostas grátis em menos de 6 horas.",
       },
     ],
     testemunho: null,
@@ -511,7 +511,7 @@ const TODAS_AS_CIDADES_MUDANCAS: CidadeMudanca[] = [
       {
         pergunta: "Quanto custa mudança em Sesimbra?",
         resposta:
-          "Depende do volume, dos acessos e da época do ano — no verão a carga na vila tem de ser feita de manhã cedo, e isso condiciona o planeamento. Para Lisboa, a portagem da ponte entra na proposta. Recebe propostas grátis em menos de 6 horas.",
+          "Depende do volume, dos acessos e da época do ano — no verão a carga na vila tem de ser feita de manhã cedo, e isso condiciona o planeamento. Para Lisboa, a portagem da ponte entra na proposta. Receba propostas grátis em menos de 6 horas.",
       },
     ],
     testemunho: null,

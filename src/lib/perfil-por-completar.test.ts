@@ -8,7 +8,7 @@ import {
   faltaPelaChave,
   type PerfilParaCompletar,
 } from "./perfil-por-completar";
-import { PASSOS_DO_PROFISSIONAL, passoDaSeccao } from "./como-funciona-para-o-profissional";
+import { passosDoProfissionalDoModelo } from "./como-funciona-para-o-profissional";
 import { MAX_PROPOSTAS_POR_LADO } from "./negociacao";
 import { PROMESSA } from "./pagamento-na-plataforma";
 import { EMPRESA_PARCEIRA_AO_PUBLICO } from "./identificacao-legal";
@@ -247,14 +247,15 @@ describe("cada falta sabe onde se resolve", () => {
 });
 
 describe("o «como funciona» diz o mesmo aos dois lados", () => {
+  const PASSOS = passosDoProfissionalDoModelo(false);
   it("são seis passos, do pedido ao dinheiro", () => {
-    expect(PASSOS_DO_PROFISSIONAL).toHaveLength(6);
-    expect(PASSOS_DO_PROFISSIONAL[0].chave).toBe("chegam");
-    expect(PASSOS_DO_PROFISSIONAL[PASSOS_DO_PROFISSIONAL.length - 1].chave).toBe("recebe");
+    expect(PASSOS).toHaveLength(6);
+    expect(PASSOS[0].chave).toBe("chegam");
+    expect(PASSOS[PASSOS.length - 1].chave).toBe("recebe");
   });
 
   it("os números vêm das constantes, e não escritos à mão", () => {
-    const propostas = PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "propostas");
+    const propostas = PASSOS.find((p) => p.chave === "propostas");
     expect(propostas?.texto).toContain(`${MAX_PROPOSTAS_POR_LADO} propostas`);
   });
 
@@ -266,7 +267,7 @@ describe("o «como funciona» diz o mesmo aos dois lados", () => {
      * é lida antes de a pessoa se inscrever, e é sobre ela que decide se vale
      * a pena responder depressa.
      */
-    const propostas = PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "propostas");
+    const propostas = PASSOS.find((p) => p.chave === "propostas");
     expect(propostas?.texto).not.toMatch(/horas para responder|expirar|caduca/);
   });
 
@@ -279,7 +280,7 @@ describe("o «como funciona» diz o mesmo aos dois lados", () => {
      * isso o passo diz as duas. E a factura ao cliente é da parceira, e não
      * dele («A fatura do serviço é sua» saiu com o mesmo commit).
      */
-    const recebe = PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "recebe");
+    const recebe = PASSOS.find((p) => p.chave === "recebe");
     expect(recebe?.texto).toContain(PROMESSA.proComoRecebe);
     expect(recebe?.texto).toContain("Pela plataforma");
     expect(recebe?.texto).toContain("Em dinheiro");
@@ -293,8 +294,8 @@ describe("o «como funciona» diz o mesmo aos dois lados", () => {
   });
 
   it("o passo da sugestão manda para os custos, que é onde se resolve", () => {
-    expect(passoDaSeccao("servicos")?.chave).toBe("chegam");
-    expect(PASSOS_DO_PROFISSIONAL.find((p) => p.chave === "sugestao")?.seccao).toBe("servicos");
+    expect(PASSOS.find((p) => p.seccao === "servicos")?.chave).toBe("chegam");
+    expect(PASSOS.find((p) => p.chave === "sugestao")?.seccao).toBe("servicos");
   });
 });
 

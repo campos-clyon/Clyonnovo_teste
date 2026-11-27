@@ -331,7 +331,7 @@ export default async function ContactosPage() {
                   `Em menos de ${PRAZO_DE_RESPOSTA.porExtenso}, cada uma com o preço já com a taxa da plataforma. ${NA_PROPOSTA_COM_IVA} Pode aceitar, pode contrapropor, e pode não fazer nada — as propostas ficam de pé até lhes responder, sem prazo a correr.`,
                 ],
                 [
-                  "Escolhe, e só depois se paga",
+                  "Escolha, e só depois se paga",
                   promessaGeral(agoraDoModelo()).faqComoSePaga,
                 ],
               ].map(([titulo, texto], i) => (

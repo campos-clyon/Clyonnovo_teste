@@ -17,7 +17,14 @@ const RAIZ = join(process.cwd(), "src");
 // Fora: o backoffice, a API, as áreas de conta/entrada e o painel do profissional.
 const FORA = /^(app\/(api|admin|conta|entrar|profissionais\/(painel|pedidos))|components\/admin)(\/|$)/;
 // Textos públicos que vivem em lib.
-const LIB_PUBLICA = ["lib/city-content.ts", "lib/blog-data.ts", "lib/perguntas-frequentes.ts"];
+const LIB_PUBLICA = [
+  "lib/city-content.ts",
+  "lib/blog-data.ts",
+  "lib/perguntas-frequentes.ts",
+  "lib/como-funciona.ts",
+  "lib/textos-do-pedido.ts",
+  "lib/mudancas-cidades.ts",
+];
 
 function ficheiros(dir: string, acc: string[] = []): string[] {
   for (const nome of readdirSync(dir)) {
@@ -48,6 +55,9 @@ const EM_TU = [
   /,\s*recebe propostas/,
   /\bRecebe\s+(propostas|as propostas|em menos)\b/,
   /\bVê o nome\b/,
+  // d13 (27-11-2026): os títulos dos passos («Descreve…», «Recebe propostas», «Escolhe», «Confirma que ficou feito»).
+  /\b(Escolhe uma|Escolhe,\s+e|Confirma que ficou)\b/,
+  /["`](Descreve|Escolhe|Confirma)\b/,
 ];
 const FACTURA = /(?<![\w$.-])[Ff]actura(s|ção)?(?![\w-])/;
 

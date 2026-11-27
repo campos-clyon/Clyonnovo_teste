@@ -14,7 +14,7 @@ import {
 } from "./pagamento-na-plataforma";
 import { COMO_SE_PAGA, FACTURA_EM_PALAVRAS_ANTIGA, comoSePaga, faturaEmPalavras } from "./seo-data";
 import { PASSOS_DE_COMO_FUNCIONA, passosDeComoFunciona } from "./como-funciona";
-import { COMO_RECEBE, PASSOS_DO_PROFISSIONAL, comoRecebe, passosDoProfissional } from "./como-funciona-para-o-profissional";
+import { comoRecebeDoModelo, passosDoProfissionalDoModelo, comoRecebe, passosDoProfissional } from "./como-funciona-para-o-profissional";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { perguntasFrequentes, PERGUNTAS_FREQUENTES } from "./perguntas-frequentes";
 import { estadoDoValorEmAtraso } from "./estado-do-valor-em-atraso";
@@ -41,8 +41,8 @@ describe("antes de 15-11, tudo igual", () => {
     expect(comoSePagaNoSite(ANTES)).toBe(COMO_SE_PAGA_DO_PAGAMENTO);
     expect(faturaEmPalavras(ANTES)).toBe(FACTURA_EM_PALAVRAS_ANTIGA);
     expect(passosDeComoFunciona(ANTES)).toBe(PASSOS_DE_COMO_FUNCIONA);
-    expect(comoRecebe(ANTES)).toBe(COMO_RECEBE);
-    expect(passosDoProfissional(ANTES)).toBe(PASSOS_DO_PROFISSIONAL);
+    expect(comoRecebe(ANTES)).toBe(comoRecebeDoModelo(false));
+    expect(passosDoProfissional(ANTES)).toBe(passosDoProfissionalDoModelo(false));
     expect(perguntasFrequentes({ tipo: "referencia" } as never, ANTES)).toBe(PERGUNTAS_FREQUENTES);
     expect(promessaDaForma("na_plataforma", "iva_incluido")).toBe(PROMESSA_POR_FORMA.na_plataforma);
   });

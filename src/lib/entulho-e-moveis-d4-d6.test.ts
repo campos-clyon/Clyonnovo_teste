@@ -144,7 +144,7 @@ describe("d6 v2 — a frase por peça nos títulos e nas descrições das cidade
       const t = tituloDaCidade(service.name, city.name, service.slug, city.slug);
       // O «desde» é a recolha mínima desde a d7 (era «Desde 15 € + IVA»), e a descrição di-la.
       // Lisboa tem título e descrição próprios desde a d96 (23/11): o benefício no título (d2, 24/11) e o mínimo com IVA na descrição.
-      if (city.slug !== "lisboa") expect([`— 15–65 €/Peça + IVA`, `— Desde 60 € + IVA`].some((fim) => t.endsWith(fim)), t).toBe(true);
+      if (city.slug !== "lisboa") expect([`— 15–65 €/Peça + IVA`, `— Desde 60 € + IVA`, `— 60 € + IVA = 73,80 €`].some((fim) => t.endsWith(fim)), t).toBe(true);
       if (city.slug !== "lisboa")
         expect(descricaoDaCidade(service.slug, service.name, city.name, city.slug), city.slug).toContain(
           "Por peça, 15 a 65 € + IVA (18,45 a 79,95 € com IVA), mínimo 60 € + IVA.",

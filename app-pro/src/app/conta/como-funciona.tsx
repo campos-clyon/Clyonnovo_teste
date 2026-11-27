@@ -9,7 +9,7 @@ import { faltasEm, type SeccaoComFalta } from "../../lib/conta";
 import {
   comoRecebeDoModelo,
   O_QUE_A_CLYON_NAO_FAZ,
-  PASSOS_DO_PROFISSIONAL,
+  passosDoProfissionalDoModelo,
 } from "../../../../src/lib/como-funciona-para-o-profissional";
 import { ESPACO, LETRA, RAIO, useCores } from "../../tema";
 
@@ -31,7 +31,7 @@ export default function ComoFunciona() {
 
   return (
     <RolagemComTeclado style={{ backgroundColor: c.fundo }} contentContainerStyle={[estilos.pagina, { paddingBottom: margens.bottom + ESPACO.xxl }]}>
-      {PASSOS_DO_PROFISSIONAL.map((p, i) => {
+      {passosDoProfissionalDoModelo(perfil?.novoModelo != null).map((p, i) => {
         const faltas = perfil && p.seccao ? faltasEm(perfil, p.seccao) : [];
         return (
           <Caixa key={p.chave}>

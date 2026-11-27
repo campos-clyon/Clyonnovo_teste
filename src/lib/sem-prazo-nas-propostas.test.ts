@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AS_PROPOSTAS_EXPIRAM, estaExpirada, estaPrestesAExpirar } from "./negociacao";
-import { PASSOS_DO_PROFISSIONAL } from "./como-funciona-para-o-profissional";
+import { passosDoProfissionalDoModelo } from "./como-funciona-para-o-profissional";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 /* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
@@ -74,7 +74,7 @@ describe("e ninguém promete às pessoas um prazo que não existe", () => {
     /\b48 horas\b|horas para responder|a proposta expira|se a proposta expirar|se uma proposta expirar|o prazo acabar|dentro do prazo|prazo termina/i;
 
   it("o «como funciona» do profissional não fala de prazo", () => {
-    for (const passo of PASSOS_DO_PROFISSIONAL) {
+    for (const passo of [...passosDoProfissionalDoModelo(false), ...passosDoProfissionalDoModelo(true)]) {
       expect(passo.texto, passo.chave).not.toMatch(PRAZO);
     }
   });

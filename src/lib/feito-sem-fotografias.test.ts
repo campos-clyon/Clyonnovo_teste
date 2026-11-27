@@ -53,7 +53,7 @@ import {
   quemConfirmaOTrabalho,
 } from "./trabalho";
 import { clyonPodeConfirmarOTrabalho } from "./quem-negoceia";
-import { PASSOS_DO_PROFISSIONAL, COMO_RECEBE } from "./como-funciona-para-o-profissional";
+import { passosDoProfissionalDoModelo, comoRecebeDoModelo } from "./como-funciona-para-o-profissional";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO, comORelogioEm } from "./relogio-dos-testes";
 /* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
@@ -214,8 +214,10 @@ describe("os ecrãs do profissional não pedem fotografias", () => {
 describe("os textos já não põem as fotografias como condição", () => {
   it("a ajuda e o «como funciona» do profissional", () => {
     const tudo = [
-      ...PASSOS_DO_PROFISSIONAL.map((p) => p.texto),
-      ...COMO_RECEBE.map((p) => p.texto),
+      ...passosDoProfissionalDoModelo(false).map((p) => p.texto),
+      ...passosDoProfissionalDoModelo(true).map((p) => p.texto),
+      ...comoRecebeDoModelo(false).map((p) => p.texto),
+      ...comoRecebeDoModelo(true).map((p) => p.texto),
       ...PERGUNTAS_DO_PROFISSIONAL.map((p) => p.resposta),
     ].join(" ");
     expect(tudo).not.toMatch(/sem fotografias, (a|um colega da) CLYON/i);

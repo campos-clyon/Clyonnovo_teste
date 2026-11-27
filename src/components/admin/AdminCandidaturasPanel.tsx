@@ -10,6 +10,7 @@ import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { lerOrigemDaCandidatura, type OrigemDaCandidatura } from "@/lib/origem-da-candidatura";
 import VisorDeFotos from "@/components/VisorDeFotos";
 import { Miniatura } from "@/components/Anexo";
+import { linhaDoParceiroForaDaZona, type ParceiroForaDaZona } from "@/lib/parceiro-fora-da-zona";
 
 /**
  * QUEM SE CANDIDATOU PELO SITE.
@@ -46,6 +47,8 @@ type Candidatura = {
   origem?: OrigemDaCandidatura | null;
   /** As fotografias da carrinha (04-11-2026, d17). Vazia nas de antes. */
   fotografiasDoVeiculo?: string[];
+  /** d15 (27-11-2026): a cidade fica acima do limite da zona (o das Configs). Nulo se não. */
+  foraDaZona?: ParceiroForaDaZona | null;
   criadoEm: string;
   tratadoEm: string | null;
   tratadoPor: string | null;
@@ -484,6 +487,11 @@ export default function AdminCandidaturasPanel({
                     {c.nome}
                     {c.cidade && <span className="font-normal text-slate-400"> · {c.cidade}</span>}
                   </p>
+                  {c.foraDaZona && (
+                    <p className="mt-1 inline-block rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+                      ⚠ {linhaDoParceiroForaDaZona(c.foraDaZona)}
+                    </p>
+                  )}
                   <p className="mt-0.5 text-xs text-slate-400">
                     {c.email}
                     {/* Abre o WhatsApp de quem se candidatou (21-10-2026). */}

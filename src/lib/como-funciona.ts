@@ -12,13 +12,13 @@ type Passo = { passo: string; titulo: string; texto: string };
 const PASSOS_DO_MODELO_ANTIGO: ReadonlyArray<Passo> = [
   {
     passo: "01",
-    titulo: "Descreve o que precisa",
+    titulo: "Descreva o que precisa",
     texto:
-      "No formulário ou por WhatsApp: o que é para levar ou fazer, fotografias, a morada e as condições de acesso — andar, elevador, estacionamento. E escolhe como prefere pagar: pela plataforma ou em dinheiro, ao parceiro.",
+      "No formulário ou por WhatsApp: o que é para levar ou fazer, fotografias, a morada e as condições de acesso — andar, elevador, estacionamento. E escolha como prefere pagar: pela plataforma ou em dinheiro, ao parceiro.",
   },
   {
     passo: "02",
-    titulo: "Recebe propostas",
+    titulo: "Receba propostas",
     texto:
       /*
        * A morada exacta e o contacto só passam depois de contratar: os campos
@@ -30,13 +30,13 @@ const PASSOS_DO_MODELO_ANTIGO: ReadonlyArray<Passo> = [
   },
   {
     passo: "03",
-    titulo: "Escolhe",
+    titulo: "Escolha",
     texto:
       `Aceita a que quiser — ou nenhuma, sem custo. ${COMO_SE_PAGA}`,
   },
   {
     passo: "04",
-    titulo: "Confirma que ficou feito",
+    titulo: "Confirme que ficou feito",
     texto:
       /*
        * O prazo do silêncio é o de trabalho.ts: sem resposta do cliente, o

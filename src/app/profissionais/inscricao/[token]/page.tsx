@@ -4,6 +4,7 @@ import { Clock, ShieldCheck } from "lucide-react";
 import { convitePorTokenHash } from "@/lib/db";
 import { hashDeToken, verificarTokenDeAcesso } from "@/lib/pedido-acesso";
 import InscricaoForm from "../../InscricaoForm";
+import { limiteDaZonaKm } from "@/lib/fora-da-zona-na-base";
 
 export const metadata: Metadata = {
   // Sem « — CLYON»: o template do layout já a acrescenta (29-09-2026).
@@ -102,6 +103,7 @@ export default async function PaginaDoConvite({
         emailConvidado={convite!.email}
         telefoneConvidado={convite!.telefone ?? ""}
         veiculoConvidado={convite!.tipoVeiculo ?? ""}
+        limiteDaZonaKm={await limiteDaZonaKm()}
       />
     </main>
   );

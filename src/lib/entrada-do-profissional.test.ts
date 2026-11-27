@@ -107,7 +107,7 @@ describe("o link que se partilha", () => {
 
   it("o rodapé público leva os profissionais direto ao login", () => {
     expect(FOOTER).toContain('href="/profissionais/entrar"');
-    expect(FOOTER).toContain("Sou profissional");
+    expect(FOOTER).toContain("Sou parceiro");
   });
 });
 

@@ -17,11 +17,11 @@ const TRES_PASSOS_DO_MODELO_ANTIGO: ReadonlyArray<{ titulo: string; texto: strin
       "Um pedido completo segue sozinho, entre as 9h e as 20h; fora desse horário, às 9h. Se faltar alguma coisa, a CLYON fala consigo. Com nota dada por quem já os contratou.",
   },
   {
-    titulo: `Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
+    titulo: `Receba propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}`,
     texto: "Cada uma com preço fechado, com IVA incluído, antes de haver trabalho nenhum.",
   },
   {
-    titulo: "Escolhe uma — ou nenhuma",
+    titulo: "Escolha uma — ou nenhuma",
     texto:
       "Depois de aceitar, recebe a referência para pagar; o parceiro só recebe " +
       "depois de confirmar que ficou feito. Recusar não custa nada.",
@@ -35,7 +35,7 @@ export const TRES_PASSOS_DEPOIS_DE_ENVIAR = TRES_PASSOS_DO_MODELO_ANTIGO;
  * aparecem no pedido — não recebe referência nenhuma. Sem «quando» se paga.
  */
 const PASSO_DE_ESCOLHER_NO_NOVO_MODELO = {
-  titulo: "Escolhe uma — ou nenhuma",
+  titulo: "Escolha uma — ou nenhuma",
   texto:
     "Depois de aceitar, paga diretamente ao parceiro — por transferência, MB WAY ou dinheiro —, " +
     "pelos dados que aparecem no seu pedido. Recusar não custa nada.",

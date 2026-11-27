@@ -67,6 +67,8 @@ export function comOPrimeiroQueCabe(base: string, ...extras: string[]): string {
 const PRECO_MOVEIS = `${PRECO_POR_ITEM.pequeno}–${PRECO_MAXIMO_DA_PECA} €/Peça + IVA`; // "15–65 €/Peça + IVA"
 // O «desde» é a recolha mínima desde 04-11-2026 (d7): «Desde 40 € + IVA» (era a peça pequena, 15 €).
 const MOVEIS_DESDE = `Desde ${RECOLHA_MINIMA_DOS_MOVEIS} € + IVA`;
+// d13 (27-11-2026): o valor com IVA ao lado — o mínimo de uma recolha, sem IVA e com IVA (ex.: "60 € + IVA = 73,80 €"). Cabe nos nomes curtos; nos compridos fica o de cima.
+const MOVEIS_COM_IVA_AO_LADO = `${RECOLHA_MINIMA_DOS_MOVEIS} € + IVA = ${euros(comIva(RECOLHA_MINIMA_DOS_MOVEIS))}`;
 const SEM_PRECO = "Propostas Grátis";
 
 /*
@@ -180,7 +182,7 @@ export function tituloDaCidade(
     const terraJunta = TERRA_JUNTA_NO_TITULO[`${serviceSlug}-${citySlug}`];
     if (terraJunta) {
       const curta = `Recolha de Móveis ${cityName} e ${terraJunta}`;
-      for (const extra of [PRECO_MOVEIS, MOVEIS_DESDE]) {
+      for (const extra of [MOVEIS_COM_IVA_AO_LADO, PRECO_MOVEIS, MOVEIS_DESDE]) {
         for (const b of [`Recolha de Móveis ${emTerraDaPagina(serviceSlug, citySlug, cityName)}`, curta]) {
           if (cabeNoGoogle(`${b} — ${extra}`)) return `${b} — ${extra}`;
         }
@@ -188,7 +190,7 @@ export function tituloDaCidade(
       return `Recolha de Móveis ${emTerraDaPagina(serviceSlug, citySlug, cityName)}`;
     }
     // Lisboa tem título próprio desde a d96 (TITULO_PROPRIO, em cima); a d5 dava «De Casa, Sem Esperar».
-    return comOPrimeiroQueCabe(base, PRECO_MOVEIS, MOVEIS_DESDE, SEM_PRECO);
+    return comOPrimeiroQueCabe(base, MOVEIS_COM_IVA_AO_LADO, PRECO_MOVEIS, MOVEIS_DESDE, SEM_PRECO);
   }
 
   // 23-11-2026 (d5, da d7 de 22/11): o Seixal de monos diz as três terras que procuram.

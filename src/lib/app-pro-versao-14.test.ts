@@ -5,7 +5,7 @@ import { DIAS_PARA_MARCAR, HORAS_PARA_MARCAR, diasParaMarcar } from "../../app-p
 import { JANELA_PADRAO } from "./agenda-em-grelha";
 import { FORA_DO_PLANO, SERVICOS_PUBLICOS } from "./service-categories";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
-import { PASSOS_DO_PROFISSIONAL } from "./como-funciona-para-o-profissional";
+import { passosDoProfissionalDoModelo } from "./como-funciona-para-o-profissional";
 import { avisoDosItens } from "./itens-a-mais";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 /* d4 (24-11-2026): a lista fixa PERGUNTAS_DO_PROFISSIONAL saiu; estes testes varrem as duas listas (antes e depois de 15-11). */
@@ -158,7 +158,7 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     expect(AJUDA).toContain("{perguntas.map(");
     const COMO = semNotas("app-pro/src/app/conta/como-funciona.tsx");
     expect(COMO).toContain('} from "../../../../src/lib/como-funciona-para-o-profissional"');
-    expect(COMO).toContain("{PASSOS_DO_PROFISSIONAL.map(");
+    expect(COMO).toContain("{passosDoProfissionalDoModelo(perfil?.novoModelo != null).map(");
     const AVISOS = semNotas("app-pro/src/componentes/AvisosDoValor.tsx");
     expect(AVISOS).toContain('import { avisoDosItens } from "../../../src/lib/itens-a-mais"');
     expect(AVISOS).toContain('avisoDosItens(base, "profissional")');
@@ -186,7 +186,7 @@ describe("a Ajuda, o Como funciona e os itens a mais vêm do site", () => {
     expect(noModeloNovo).toContain("a taxa da plataforma é 11 % do valor do trabalho, sem IVA");
     expect(noModeloNovo).not.toContain("5 % por cima");
 
-    const como = PASSOS_DO_PROFISSIONAL.map((p) => p.texto).join(" ");
+    const como = passosDoProfissionalDoModelo(false).map((p) => p.texto).join(" ");
     expect(como).toContain("o cliente vê-o com IVA incluído");
     expect(como).not.toContain("com a taxa da plataforma e com IVA");
 

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Camera, ExternalLink, HandCoins, MapPin, MinusCircle, ShieldCheck, Smartphone } from "lucide-react";
 import { taxasActuais } from "@/lib/db";
+import { limiteDaZonaKm } from "@/lib/fora-da-zona-na-base";
 import { SITE_URL } from "@/lib/seo-data";
 import {
   passosDoProfissional,
@@ -81,8 +82,10 @@ export const revalidate = 3600;
 import { agoraDoModelo } from "@/lib/relogio-do-modelo";
 
 export default async function QueroSerParceiroPage() {
-  const [taxas, daSemana, doMesPorConcelho] = await Promise.all([
+  const [taxas, limiteDaZona, daSemana, doMesPorConcelho] = await Promise.all([
     taxasActuais(),
+    // d15 (27-11-2026): o limite da zona vem das Configs (zona_km_maximo), nunca escrito aqui.
+    limiteDaZonaKm(),
     pedidosDosUltimos7Dias(),
     // Por zona (04-11-2026, d16): só os concelhos com o mínimo — ver ProcuraNaZona.
     pedidosDoMesPorConcelho(MINIMO_PARA_MOSTRAR),
@@ -247,7 +250,7 @@ export default async function QueroSerParceiroPage() {
               <h2 className="text-lg font-bold text-white">A CLYON Pro: os pedidos no seu telemóvel</h2>
               <p className="mt-1.5 text-sm leading-relaxed text-slate-300">
                 {APP_PRO_SO_EM_TESTE
-                  ? "Cada pedido novo chega com um aviso e responde ali mesmo, com o seu preço. A app é para Android e está em teste com os primeiros profissionais: depois de aprovado, o painel mostra-lhe como entrar. Sem a app, faz tudo no painel, no browser do telemóvel."
+                  ? "Cada pedido novo chega com um aviso e responde ali mesmo, com o seu preço. A app é para Android e está em teste com os primeiros parceiros: depois de aprovado, o painel mostra-lhe como entrar. Sem a app, faz tudo no painel, no browser do telemóvel."
                   : "Cada pedido novo chega com um aviso e responde ali mesmo, com o seu preço. A app é para Android; sem ela, faz tudo no painel, no browser do telemóvel."}
               </p>
               <a
@@ -267,7 +270,7 @@ export default async function QueroSerParceiroPage() {
                 href="/app-pro"
                 className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-white px-4 text-sm font-bold text-[#0F172A] transition hover:bg-slate-100"
               >
-                Já é profissional da CLYON? Instale a app em 4 passos
+                Já é parceiro da CLYON? Instale a app em 4 passos
               </Link>
             </div>
           </div>
@@ -348,7 +351,7 @@ export default async function QueroSerParceiroPage() {
             para escolher a palavra-passe e entrar.
           </p>
           <div className="mt-6">
-            <FormularioDeCandidatura depoisDeAprovado={depoisDeAprovado(agoraDoModelo())} />
+            <FormularioDeCandidatura depoisDeAprovado={depoisDeAprovado(agoraDoModelo())} limiteDaZonaKm={limiteDaZona} />
           </div>
         </div>
       </section>

@@ -23,6 +23,7 @@ import { geocodificarLocalidade } from "@/lib/geocodificar";
 import { RAIO_POR_OMISSAO_KM, categoriasDoCorpo } from "@/lib/inscricao-profissional";
 import { urlDeAccaoDoPedido } from "@/lib/url-do-site";
 import { comChave } from "@/lib/acesso-mvp";
+import { candidaturasForaDaZona } from "@/lib/parceiro-fora-da-zona-na-base";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,7 +63,12 @@ export async function GET(req: NextRequest) {
   const { err } = await requireAdmin(req);
   if (err) return err;
   try {
-    return NextResponse.json({ candidaturas: await listarCandidaturas() });
+    const candidaturas = await listarCandidaturas();
+    // d15 (27-11-2026): a marca âmbar de quem tem a base acima do limite das Configs.
+    const fora = await candidaturasForaDaZona(candidaturas);
+    return NextResponse.json({
+      candidaturas: candidaturas.map((c) => ({ ...c, foraDaZona: fora.get(c.id) ?? null })),
+    });
   } catch (e) {
     console.error("[admin/candidaturas GET]", e);
     return NextResponse.json({ candidaturas: [] });

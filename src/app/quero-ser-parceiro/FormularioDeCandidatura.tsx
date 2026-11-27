@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Camera, CheckCircle2, Loader2, X } from "lucide-react";
 import { CATEGORIAS_DOS_PROFISSIONAIS } from "@/lib/service-categories";
+import { avisoDaZonaParaOParceiro } from "@/lib/parceiro-fora-da-zona";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { origemParaACandidatura } from "@/lib/origem-da-candidatura";
 import { paginaAnterior } from "@/lib/pagina-anterior";
@@ -54,7 +55,10 @@ const CAIXA =
 
 export default function FormularioDeCandidatura({
   depoisDeAprovado,
+  limiteDaZonaKm,
 }: {
+  /** O limite da zona, das Configs (d15, 27-11-2026): o aviso diz-o por este número. */
+  limiteDaZonaKm: number;
   /** O que falta depois de aprovado — do servidor, pela data do modelo (d16, `depoisDeAprovado`). */
   depoisDeAprovado: string;
 }) {
@@ -329,6 +333,9 @@ export default function FormularioDeCandidatura({
             />
             <span className="mt-1 block text-xs text-slate-500">
               A localidade da sua base. É daqui que se mede o que lhe fica perto.
+            </span>
+            <span className="mt-1 block text-xs font-medium text-amber-700">
+              {avisoDaZonaParaOParceiro(limiteDaZonaKm)}
             </span>
             {erroDe("cidade") && (
               <span className="mt-1 block text-xs text-red-600">{erroDe("cidade")}</span>

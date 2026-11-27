@@ -113,6 +113,13 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       /*
+       * /profissionais JUNTA-SE A /quero-ser-parceiro (d13, 27-11-2026), 308. Os redirects do
+       * next.config correm ANTES do middleware: o portão de /profissionais (middleware.ts,
+       * `exigeChave`) não chega a ver este pedido. As secções de baixo (/profissionais/entrar,
+       * /painel, /<perfil>…) NÃO mudam: só o endereço exacto /profissionais.
+       */
+      { source: "/profissionais", destination: "/quero-ser-parceiro", permanent: true },
+      /*
        * As páginas que se juntaram a outras (29-09-2026): a gerada
        * /esvaziamento-casas-amadora vai para a estática equivalente, o sofá
        * de Lisboa para /recolha-de-sofas, o artigo da limpeza pós-obra para

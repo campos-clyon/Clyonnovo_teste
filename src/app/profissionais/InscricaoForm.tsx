@@ -17,6 +17,7 @@ import {
 } from "@/lib/guia-de-residuos";
 import AjudaDaGuia from "@/components/AjudaDaGuia";
 import { NOVO_MODELO_DESDE_POR_EXTENSO, novoModeloEmVigor } from "@/lib/novo-modelo";
+import { avisoDaZonaParaOParceiro } from "@/lib/parceiro-fora-da-zona";
 
 // A lista única das categorias (29-10-2026) — a mesma do backoffice e da app Pro.
 const CATEGORIAS = CATEGORIAS_DOS_PROFISSIONAIS;
@@ -56,7 +57,10 @@ export default function InscricaoForm({
   emailConvidado = "",
   telefoneConvidado = "",
   veiculoConvidado = "",
+  limiteDaZonaKm,
 }: {
+  /** O limite da zona, das Configs (d15, 27-11-2026): o aviso diz-o por este número. */
+  limiteDaZonaKm: number;
   /** O token do convite. Sem ele a API recusa a inscrição. */
   convite: string;
   nomeConvidado?: string;
@@ -430,6 +434,7 @@ export default function InscricaoForm({
           </div>
         </div>
 
+        <p className="text-xs font-medium text-amber-700">{avisoDaZonaParaOParceiro(limiteDaZonaKm)}</p>
       </fieldset>
 
       {novo && (

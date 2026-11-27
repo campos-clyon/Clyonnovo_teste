@@ -56,6 +56,7 @@ import {
   porVerificar,
   porqueNaoPodeAprovar,
 } from "@/lib/parceiro-verificado";
+import { linhaDoParceiroForaDaZona, type ParceiroForaDaZona } from "@/lib/parceiro-fora-da-zona";
 
 type Actividade = { recebidos: number; comProposta: number; fechados: number };
 /** «Responde em» (28-10-2026, d5): medianas dos últimos 30 dias, em minutos. Ver `tempo-de-resposta.ts`. */
@@ -94,6 +95,8 @@ type Profissional = {
   isActive: number;
   baseLat: string | null;
   baseLng: string | null;
+  /** d15 (27-11-2026): a base fica acima do limite da zona (o das Configs). Nulo se não. */
+  foraDaZona?: ParceiroForaDaZona | null;
   createdAt: string;
   moradaFiscal: string | null;
   codigoPostalFiscal: string | null;
@@ -627,6 +630,15 @@ function Cartao({
               <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300">
                 <BadgeCheck className="h-3 w-3" aria-hidden="true" />
                 guia verificada
+              </span>
+            )}
+            {/* d15 (27-11-2026): a base fica para lá do limite da zona — não recebe pedidos. */}
+            {p.foraDaZona && (
+              <span
+                className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300"
+                title={linhaDoParceiroForaDaZona(p.foraDaZona)}
+              >
+                ⚠ fora da zona · {Math.round(p.foraDaZona.km)} km
               </span>
             )}
             {p.contaDeTeste && (

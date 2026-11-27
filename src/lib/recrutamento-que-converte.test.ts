@@ -107,7 +107,7 @@ describe("a app CLYON Pro", () => {
     const visivel = semNotas(PAGINA);
     expect(visivel).toContain("A CLYON Pro: os pedidos no seu telemóvel");
     if (APP_PRO_SO_EM_TESTE) {
-      expect(visivel).toContain("está em teste com os primeiros profissionais");
+      expect(visivel).toContain("está em teste com os primeiros parceiros");
       expect(visivel).toContain("só abre a quem já está no teste");
     }
     expect(visivel).not.toMatch(/descarregue|download/i);

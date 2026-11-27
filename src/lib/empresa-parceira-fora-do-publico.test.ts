@@ -4,7 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { ENTIDADE_QUE_FACTURA } from "./entidade-que-factura";
 import { EMPRESA_PARCEIRA_AO_PUBLICO, QUEM_FACTURA_EM_PALAVRAS } from "./identificacao-legal";
 import { FACTURA_EM_PALAVRAS_ANTIGA, NOTA_DE_PRECO } from "./seo-data";
-import { PASSOS_DO_PROFISSIONAL } from "./como-funciona-para-o-profissional";
+import { passosDoProfissionalDoModelo } from "./como-funciona-para-o-profissional";
 import { perguntasDoProfissional } from "./ajuda-plataforma";
 import { ANTES_DO_MODELO, DEPOIS_DO_MODELO } from "./relogio-dos-testes";
 import { mensagemDaReferencia } from "./mensagem-da-referencia";
@@ -211,7 +211,7 @@ describe("as frases que saem dizem a categoria", () => {
     semNome(QUEM_FACTURA_EM_PALAVRAS, "QUEM_FACTURA_EM_PALAVRAS");
     semNome(FACTURA_EM_PALAVRAS_ANTIGA, "FACTURA_EM_PALAVRAS_ANTIGA");
     semNome(NOTA_DE_PRECO.completa, "NOTA_DE_PRECO");
-    for (const p of PASSOS_DO_PROFISSIONAL) semNome(`${p.titulo} ${p.texto}`, `passo ${p.chave}`);
+    for (const p of [...passosDoProfissionalDoModelo(false), ...passosDoProfissionalDoModelo(true)]) semNome(`${p.titulo} ${p.texto}`, `passo ${p.chave}`);
     for (const p of PERGUNTAS_DO_PROFISSIONAL) semNome(`${p.pergunta} ${p.resposta}`, p.pergunta);
     expect(FACTURA_EM_PALAVRAS_ANTIGA).toContain(EMPRESA_PARCEIRA_AO_PUBLICO);
   });

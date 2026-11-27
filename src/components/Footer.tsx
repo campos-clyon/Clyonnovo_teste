@@ -165,7 +165,7 @@ export default function Footer({ ano }: { ano: number }) {
         className="group flex min-h-[44px] items-center gap-3 rounded-lg bg-slate-800 px-3.5 py-3 text-sm text-white transition-colors hover:bg-slate-700"
       >
         <Wrench className="h-4 w-4 shrink-0 text-marca" aria-hidden="true" />
-        Sou profissional
+        Sou parceiro
       </Link>
     </div>
   );

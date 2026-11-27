@@ -67,7 +67,7 @@ const PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO: PassoDoProfissional[] = [
       "trabalho, medidos a partir da sua base; o custo por km, o custo por hora e pessoa, o " +
       "tempo médio de um trabalho, os custos fixos do ano, a margem e o seguro de risco são " +
       "os que puser no perfil. Enquanto os deixar vazios, entra a referência da CLYON — que " +
-      "é o custo de um profissional médio, e nenhum profissional é médio.",
+      "é o custo de um parceiro médio, e nenhum parceiro é médio.",
     seccao: "servicos",
   },
   {
@@ -162,11 +162,23 @@ const PASSO_DO_DINHEIRO_NO_NOVO_MODELO =
   "si, com IVA ou com isenção de IVA conforme o seu regime, e a da taxa da plataforma, emitida pela " +
   `${EMPRESA_PARCEIRA_AO_PUBLICO}, com IVA.`;
 
-export const PASSOS_DO_PROFISSIONAL: PassoDoProfissional[] = PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO;
+/** O titulo do passo do dinheiro no modelo de 15-11-2026 (d9, 27-11-2026): o cliente paga ao parceiro, nao ha espera por nada. */
+const TITULO_DO_DINHEIRO_NO_NOVO_MODELO = "O cliente paga-lhe diretamente, e a taxa da plataforma só existe se fechar";
+
+/**
+ * Os passos pelo que o SERVIDOR diz (d9, 27-11-2026): a app CLYON Pro nao tem
+ * relogio do modelo e escolhe pelo `novoModelo` do perfil — o mesmo que o site, o
+ * painel e o email de aprovacao ja fazem, cada um pela sua via.
+ */
+export function passosDoProfissionalDoModelo(novoModelo: boolean): PassoDoProfissional[] {
+  if (!novoModelo) return PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO;
+  return PASSOS_DO_PROFISSIONAL_NO_MODELO_ANTIGO.map((p) =>
+    p.seccao === "banco" ? { ...p, titulo: TITULO_DO_DINHEIRO_NO_NOVO_MODELO, texto: PASSO_DO_DINHEIRO_NO_NOVO_MODELO } : p,
+  );
+}
 
 export function passosDoProfissional(agora: Date = new Date()): PassoDoProfissional[] {
-  if (!novoModeloEmVigor(agora)) return PASSOS_DO_PROFISSIONAL;
-  return PASSOS_DO_PROFISSIONAL.map((p) => (p.seccao === "banco" ? { ...p, texto: PASSO_DO_DINHEIRO_NO_NOVO_MODELO } : p));
+  return passosDoProfissionalDoModelo(novoModeloEmVigor(agora));
 }
 
 export const VALOR_DO_EXEMPLO = 350;
@@ -273,8 +285,6 @@ const COMO_RECEBE_NO_MODELO_ANTIGO: Array<{ forma: string; texto: string }> = [
     texto: FORMA_EM_PALAVRAS.dinheiro.profissional,
   },
 ];
-/** O de sempre — a app CLYON Pro ainda o lê (as Apps passam a `comoRecebe`). */
-export const COMO_RECEBE: Array<{ forma: string; texto: string }> = COMO_RECEBE_NO_MODELO_ANTIGO;
 
 /*
  * DESDE 15-11-2026 (d10): o cliente paga-lhe diretamente, e ele passa à CLYON a
@@ -322,7 +332,7 @@ export function comoRecebe(agora: Date = new Date()): Array<{ forma: string; tex
  * metade é de quem assumiu que sim. Dizer o que não somos poupa as duas.
  */
 export const O_QUE_A_CLYON_NAO_FAZ: string[] = [
-  "Não faz o trabalho nem manda equipas: quem desmonta, carrega e transporta é o profissional.",
+  "Não faz o trabalho nem manda equipas: quem desmonta, carrega e transporta é o parceiro.",
   "Não muda o valor que combinou. Se o trabalho mudar à porta, corrige-se na plataforma, com registo.",
   "Não cobra mensalidade, não vende contactos e não desconta nada por responder a um pedido.",
   // 18-11-2026 (d8): dizia «e ignora os outros, sem penalização». Desde a d6
@@ -350,7 +360,3 @@ export function depoisDeAprovado(agora: Date = new Date()): string {
   return novoModeloEmVigor(agora) ? DEPOIS_DE_APROVADO_NO_NOVO_MODELO : DEPOIS_DE_APROVADO_NO_MODELO_ANTIGO;
 }
 
-/** O passo que fala de uma secção do perfil — para ligar o aviso ao ecrã certo. */
-export function passoDaSeccao(seccao: SeccaoComFalta): PassoDoProfissional | undefined {
-  return PASSOS_DO_PROFISSIONAL.find((p) => p.seccao === seccao);
-}

@@ -14,6 +14,7 @@ import { textoDaApp } from "@/lib/app-pro-no-telemovel";
 import { resumoDaMigracao } from "@/lib/categorias-em-grupos";
 import { resumoDosDadosParaReceber } from "@/lib/dados-para-receber";
 import { resumoDaReposicaoDoRegime } from "@/lib/regime-por-confirmar-na-base";
+import { contasForaDaZona } from "@/lib/parceiro-fora-da-zona-na-base";
 
 export const runtime = "nodejs";
 
@@ -87,6 +88,8 @@ export async function GET(req: NextRequest) {
         return new Map();
       });
 
+    // d15 (27-11-2026): a marca âmbar de quem tem a base acima do limite das Configs.
+    const { limite: zonaKmMaximo, marcas: foraDaZona } = await contasForaDaZona(rows as Array<{ id: unknown; baseLat: unknown; baseLng: unknown }>);
     const profissionais = (rows as Array<Record<string, unknown>>).map(
       ({ fotosViaturaJson, fotoViaturaUrl, ...p }) => ({
         ...p,
@@ -123,6 +126,7 @@ export async function GET(req: NextRequest) {
         actividade:
           actividade.get(Number(p.id)) ?? { recebidos: 0, comProposta: 0, fechados: 0 },
         respondeEm: rapidez.get(Number(p.id)) ?? null,
+        foraDaZona: foraDaZona.get(Number(p.id)) ?? null,
       }),
     );
 
@@ -130,7 +134,7 @@ export async function GET(req: NextRequest) {
     const grupos = await resumoDaMigracao(pool as unknown as Parameters<typeof resumoDaMigracao>[0]);
     // Quantos regimes voltaram a «por confirmar» (d19, 13-11-2026). Nulo antes de correr.
     const regimesRepostos = await resumoDaReposicaoDoRegime();
-    return NextResponse.json({ profissionais, grupos, regimesRepostos });
+    return NextResponse.json({ profissionais, grupos, regimesRepostos, zonaKmMaximo });
   } catch (error) {
     console.error("[api/admin/profissionais GET]", error);
     return NextResponse.json({ error: "Erro ao listar profissionais" }, { status: 500 });

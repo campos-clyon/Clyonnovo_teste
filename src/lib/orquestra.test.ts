@@ -1176,7 +1176,7 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
     expect(tem(BRASIL, "toda a gente")).toBe(false);
     expect(tem(VOZ, "A nossa equipa vai buscar")).toBe(true);
     expect(tem(VOZ, "Profissionais verificados na CLYON")).toBe(false);
-    expect(tem(PRAZO, "Recebe propostas em 6 horas")).toBe(true);
+    expect(tem(PRAZO, "Receba propostas em 6 horas")).toBe(true);
     expect(tem(PRAZO, "Orçamento em 6h")).toBe(true);
     expect(tem(PRAZO, PROMESSA_DO_PRAZO)).toBe(false);
     expect(PROMESSA_DO_PRAZO).toBe(
@@ -1558,7 +1558,7 @@ describe("a orquestra: o site inteiro fala a mesma língua", () => {
       readFileSync(join(RAIZ, "src/lib/textos-do-pedido.ts"), "utf8");
     const email = readFileSync(join(RAIZ, "src/lib/email-pedido.ts"), "utf8");
     expect(ecra).toContain(CONFERE);
-    expect(ecra).toContain("Recebe propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}");
+    expect(ecra).toContain("Receba propostas em menos de ${PRAZO_DE_RESPOSTA.porExtenso}");
     expect(email).toContain(CONFERE);
     expect(email).toContain("${PROMESSA_DO_PRAZO}");
   });

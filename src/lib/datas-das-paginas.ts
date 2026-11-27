@@ -20,6 +20,8 @@
  * AQUI (AAAA-MM-DD, hora de Lisboa).
  */
 export const ACTUALIZADO_EM: Record<string, string> = {
+  // 27-11-2026 (d9, d13, d15): os passos do «como funciona» em «você» e o «recebe» do parceiro, /quero-ser-parceiro
+  // com «parceiro», o aviso da zona e o redirect de /profissionais; os títulos de recolha de móveis com o IVA ao lado.
   // 26-11-2026 (d4): as páginas públicas passam a tratar por «você» (Descreva, Receba, Escolha, Peça); o texto de cada uma mudou.
   // 23-11-2026 (d96): /mudancas com o parágrafo das cidades e uma linha própria em cada cartão.
   // 23-11-2026 (d7): o cartão do guia «Quanto custa uma mudança» em /mudancas lê a lista de parceiros, como o resto da página.
@@ -68,7 +70,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-de-moveis-urgente": "2026-11-15",
   "/retirar-moveis-velhos": "2026-11-16",
   "/orcamento-recolha-lisboa": "2026-11-19",
-  "/como-funciona": "2026-11-26",
+  "/como-funciona": "2026-11-27",
   // 31-10-2026 (d1): «Pedidos no mesmo dia custam mais?» passou a responder com NO_MESMO_DIA.
   "/precos": "2026-11-17",
   "/empresas": "2026-11-26",
@@ -78,7 +80,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 29-10-2026: «parceiro»; e a garagem, o sótão e a cave na tabela do esvaziamento).
   "/precos/esvaziamento-de-casas": "2026-11-17",
   "/precos/mudancas": "2026-11-17",
-  "/contactos": "2026-11-26",
+  "/contactos": "2026-11-27",
   "/servicos/esvaziamento-apartamento": "2026-11-26",
   "/servicos/manutencao-casa": "2026-11-26",
   // 26-11-2026 (d132): a montagem de móveis volta, com a tabela por peça.
@@ -104,7 +106,7 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   // 18-11-2026 (d5): o menu «Soluções» sem a limpeza (serviço futuro).
   // 18-11-2026 (d8): o título e a descrição («Trabalho com carrinha…»), o bloco de Lisboa, Loures e
   // a Linha de Sintra com as ligações por zona, e a linha das mudanças escolhidas (3 horas).
-  "/quero-ser-parceiro": "2026-11-19",
+  "/quero-ser-parceiro": "2026-11-27",
   // 17-11-2026 (d68): a Amora no título, na descrição e no H1 (a página para onde /recolha-moveis-amora vai).
   "/recolha-moveis-seixal": "2026-11-17",
   // 23-11-2026 (d5): o título de Lisboa (móveis) e o do Seixal (monos).
@@ -131,15 +133,15 @@ export const ACTUALIZADO_EM: Record<string, string> = {
   "/recolha-monos-cascais": "2026-11-23",
   // d96: factos corrigidos que estas páginas mostram — o ecocentro de Loures e de Odivelas (é o do Lumiar),
   // os monos de Odivelas pelas juntas, Oeiras grátis até 1 m³, Moscavide fora dos Olivais, o Alto da Loba fora de Carnaxide.
-  "/recolha-moveis-loures": "2026-11-23",
+  "/recolha-moveis-loures": "2026-11-27",
   "/recolha-monos-loures": "2026-11-23",
   "/esvaziamento-casas-loures": "2026-11-23",
-  "/recolha-moveis-odivelas": "2026-11-23",
+  "/recolha-moveis-odivelas": "2026-11-27",
   "/esvaziamento-casas-odivelas": "2026-11-23",
-  "/recolha-moveis-olivais": "2026-11-23",
+  "/recolha-moveis-olivais": "2026-11-27",
   "/recolha-entulho-olivais": "2026-11-23",
   "/recolha-monos-oeiras": "2026-11-23",
-  "/recolha-moveis-oeiras": "2026-11-23",
+  "/recolha-moveis-oeiras": "2026-11-27",
   "/recolha-moveis-carnaxide": "2026-11-23",
   "/recolha-entulho-carnaxide": "2026-11-23",
   // d96: as mudanças com texto próprio (Seixal, Amadora, Almada) e os Olivais sem Moscavide nas zonas.
