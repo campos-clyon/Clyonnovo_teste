@@ -82,6 +82,7 @@ import { horasDaMudanca } from "./lista-de-parceiros-da-mudanca";
 import { referenciaEmTresLinhas, type PrecoEmTresLinhas } from "./preco-em-tres-linhas";
 import { TAXA_IVA } from "./taxas-plataforma";
 import { PESO_DO_SACO, SACOS_POR_CARGA, SACOS_POR_METRO_CUBICO, lerQuantidadeDeEntulho } from "./sacos-de-entulho";
+import { eAoNivelDaRua } from "./res-do-chao";
 import {
   CARGAS_DO_ENTULHO,
   QUANTO_TRABALHO,
@@ -1333,7 +1334,7 @@ export function corpoDoSimuladorDoSite(f: FormularioDoSimulador): Record<string,
     corpo.destino = f.destinationAccess;
   } else {
     corpo.floor = f.floor;
-    corpo.hasElevator = f.floor === "rés-do-chão" ? undefined : f.hasElevator;
+    corpo.hasElevator = eAoNivelDaRua(f.floor) ? undefined : f.hasElevator;
     corpo.parkingDistance = f.parkingDistance;
     if (f.pecasNoElevador) corpo.pecasNoElevador = f.pecasNoElevador;
   }

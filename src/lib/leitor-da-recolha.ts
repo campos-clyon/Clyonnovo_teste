@@ -253,6 +253,8 @@ export function andarDaResposta(texto: string): string | null {
   const t = semAcentos(texto).replace(/[.!º°ª]+/g, "").trim();
   if (/^(o\s+|no\s+|ao\s+|e\s+o\s+|e\s+no\s+)?\d{1,2}$/.test(t)) return String(Number(t.match(/\d{1,2}/)![0]));
   if (/^(o\s+|no\s+)?(terreo|piso\s*0|zero|loja)$/.test(t)) return "0";
+  // «É uma loja», «numa loja ao nível da rua» (d141): ao nível da rua, conta como o rés-do-chão.
+  if (/^(e\s+)?(uma\s+|numa\s+|na\s+|a\s+)?loja\b/.test(t)) return "0";
   if (/\b(moradia|vivenda|casa\s+terrea|terrea)\b/.test(t)) return "0";
   const extenso = t.match(/^(o\s+|no\s+)?(primeiro|segundo|terceiro|quarto|quinto|sexto|setimo|oitavo|nono|decimo)$/);
   if (extenso) return ANDAR_POR_EXTENSO[extenso[2]];

@@ -20,6 +20,8 @@ import {
   sugestoesDosCampos,
   type SugestaoDoCampo,
 } from "./campos-na-descricao";
+import { eAoNivelDaRua } from "./res-do-chao";
+import { semFalarDaImagem } from "./sem-falar-da-imagem";
 
 /**
  * A DESCRIÇÃO ESCRITA PELO MODELO — 29-10-2026 (ordem do CEO, aprovada pelo
@@ -131,7 +133,15 @@ export const INSTRUCAO_DA_DESCRICAO = [
   // d84 (22-11-2026): «Serviço localizado numa cave sem elevador.» — a nota repetia os campos.
   "As notas NUNCA repetem o que os campos do pedido já dizem e o profissional vê à parte: o serviço, a morada ou a localidade, " +
     "o andar, a cave ou o rés-do-chão, o elevador, o dia e a hora, o estacionamento, as fotografias. Uma nota só com isso não se escreve.",
-  '  "porConfirmar": o que falta saber para fazer o preço, em poucas palavras («as medidas do roupeiro»).',
+  '  "porConfirmar": o que falta saber para fazer o preço, em poucas palavras («as medidas do roupeiro»). ' +
+    "NUNCA o que os CAMPOS DO PEDIDO já dizem (o andar, o elevador, o estacionamento, o dia, a localidade): os campos são a verdade.",
+  // d141 (27-11-2026): o #692, um restaurante no rés-do-chão, ficou com «Por confirmar: o elevador; se tem elevador».
+  "Se o andar é rés-do-chão, loja ao nível da rua ou moradia térrea, NUNCA fales de elevador, de andares nem de escadas.",
+  // d141: «na imagem 1…», «a fotografia mostra…» — o profissional lê o que há, não a ordem das fotografias.
+  "O que se vê nas fotografias escreve-se como coisas («1 frigorífico vertical com porta de vidro», «prateleiras com caixas de cartão»), " +
+    "NUNCA «na imagem 1», «na fotografia», «a imagem mostra», «vê-se». " +
+    '"confirmarSeTambemVai" só quando há dúvida real: o que se vê e ninguém disse se vai.',
+  "Cada coisa uma vez só, em frases curtas. Sem notas inventadas: uma nota só existe se as fontes a dizem.",
   "REGRAS: só o que está nas fontes — não inventes coisas, quantidades, dias nem acessos. Sem preços, sem valores, sem euros. " +
     "Sem nomes, telefones, emails nem moradas (nem ruas, nem números de porta, nem códigos postais). " +
     "Português de Portugal, frases curtas, sem cumprimentos nem emojis. Listas vazias quando não há nada.",
@@ -189,8 +199,13 @@ export function semDadosPessoais(texto: string, pedido: Pick<PedidoParaADescrica
  * OS CAMPOS DO PEDIDO EM PALAVRAS
  * ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * O rés-do-chão, a loja, a moradia térrea — sem andares nem elevador (d141).
+ * «Rés-do-chão», como o backoffice o grava, não passava no «res» sem acento, e
+ * o #692 (um restaurante) ficou com «Por confirmar: o elevador».
+ */
 function ePisoTerreo(floor: string | null | undefined): boolean {
-  return /^(0|r\/?c|res)/i.test(String(floor ?? "").trim());
+  return eAoNivelDaRua(floor);
 }
 
 /* O andar, o elevador e o estacionamento em palavras vivem em `campos-na-descricao.ts` (d84). */
@@ -263,7 +278,7 @@ export function entradaDoModelo(fontes: FontesDaDescricao, pedido: PedidoParaADe
   const campoDoPedido = [
     `Localidade: ${ondeE(pedido.city, pedido.postalCode) ?? "por confirmar"}`,
     `Andar: ${andarPorExtenso(pedido.floor) ?? "por confirmar"}`,
-    `Elevador: ${ePisoTerreo(pedido.floor) ? "não interessa (rés-do-chão)" : (elevadorPorExtenso(pedido.hasElevator) ?? "por confirmar")}`,
+    `Elevador: ${ePisoTerreo(pedido.floor) ? "não há (ao nível da rua) — não perguntes pelo elevador nem pelos andares" : (elevadorPorExtenso(pedido.hasElevator) ?? "por confirmar")}`,
     `Estacionamento: ${estacionamentoPorExtenso(pedido.parkingDistance) ?? "por confirmar"}`,
     `Dia no pedido: ${dia ?? "nenhum"}`,
     `Fotografias no pedido: ${pedido.fotos}`,
@@ -549,9 +564,56 @@ function jaEstaNoCampo(item: string, pedido: PedidoParaADescricao): boolean {
   if (/paragem|destino/.test(p)) return false;
   if (/estacion/.test(p)) return campoComValor(pedido.parkingDistance);
   if (/elevador/.test(p)) return campoComValor(pedido.hasElevator) || ePisoTerreo(pedido.floor);
-  if (/\bandar\b|\bpiso\b/.test(p)) return campoComValor(pedido.floor);
-  if (/\bdia\b|\bdata\b|\bhora\b/.test(p)) return campoComValor(pedido.dataAgendada);
+  if (/\bandar(es)?\b|\bpiso\b|\bescadas?\b|\bres.do.chao\b/.test(p)) return campoComValor(pedido.floor);
+  if (/\bdia\b|\bdata\b|\bhora\b|\bquando\b/.test(p)) return campoComValor(pedido.dataAgendada);
+  if (/\blocalidade\b|\bmorada\b|\bcodigo postal\b/.test(p)) return campoComValor(pedido.city) || campoComValor(pedido.postalCode);
+  if (/\bfotografias?\b|\bfotos?\b|\bimagens?\b/.test(p)) return pedido.fotos > 0;
   return false;
+}
+
+/** O assunto de um «por confirmar» — «o elevador» e «se tem elevador» são o mesmo. */
+function assuntoDe(item: string): string {
+  const p = plano(item);
+  const assuntos: Array<[string, RegExp]> = [
+    ["elevador", /elevador/],
+    ["estacionamento", /estacion/],
+    ["andar", /\bandar|\bpiso\b/],
+    ["dia", /\bdia\b|\bdata\b/],
+    ["localidade", /localidade|codigo postal/],
+  ];
+  if (!/paragem|destino|origem/.test(p)) for (const [k, re] of assuntos) if (re.test(p)) return k;
+  return p.replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function semRepetirOAssunto(itens: string[]): string[] {
+  const vistos = new Set<string>();
+  return itens.filter((i) => {
+    const a = assuntoDe(i);
+    if (vistos.has(a)) return false;
+    vistos.add(a);
+    return true;
+  });
+}
+
+/** Fala de elevador, andares ou escadas — o que num rés-do-chão ou numa loja não se diz. */
+const DE_ANDARES = /elevador|\bandar(es)?\b|\bescadas?\b|\bsubir\b|\bdescer\b/;
+
+/**
+ * A RESPOSTA SEM AS MULETAS (d141): sem «na imagem 1…» em lado nenhum e, ao
+ * nível da rua, sem elevador nem andares nas notas e no «por confirmar».
+ */
+function respostaSemMuletas(r: RespostaDoModelo, pedido: PedidoParaADescricao): RespostaDoModelo {
+  const limpa = (l: string[]) => l.map(semFalarDaImagem).filter(Boolean);
+  const aoNivel = ePisoTerreo(pedido.floor);
+  const semAndares = (l: string[]) => (aoNivel ? l.filter((i) => !DE_ANDARES.test(plano(i))) : l);
+  return {
+    paraLevar: limpa(r.paraLevar),
+    confirmarSeTambemVai: limpa(r.confirmarSeTambemVai),
+    quando: r.quando,
+    estacionamento: r.estacionamento,
+    notas: semAndares(limpa(r.notas)),
+    porConfirmar: semAndares(limpa(r.porConfirmar)),
+  };
 }
 
 /**
@@ -564,6 +626,7 @@ export function comporADescricao(
   pedido: PedidoParaADescricao,
   opcoes: OpcoesDaComposicao = {},
 ): string {
+  r = respostaSemMuletas(r, pedido);
   const modo = opcoes.modo ?? "notas";
   const agora = opcoes.agora ?? new Date();
   const campos = camposQueContam(fontes);
@@ -628,7 +691,7 @@ export function comporADescricao(
   const notas = juntarSemRepetir([campos.clienteCarrega === true ? ["O cliente carrega para a viatura"] : [], doModelo, notasDoDia]);
   if (notas.length) linhas.push(`Notas: ${notas.map(comPonto).join(" ")}`);
 
-  const porConfirmar = juntarSemRepetir([falta, r.porConfirmar.filter((i) => !jaEstaNoCampo(i, pedido))]).slice(0, 8);
+  const porConfirmar = semRepetirOAssunto(juntarSemRepetir([falta, r.porConfirmar.filter((i) => !jaEstaNoCampo(i, pedido))])).slice(0, 8);
   if (porConfirmar.length) linhas.push(comPonto(`Por confirmar: ${porConfirmar.join("; ")}`));
   return linhas.join("\n");
 }

@@ -49,6 +49,8 @@ const minuscula = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
 export const ANDARES: readonly OpcaoDaResposta[] = [
   { id: "rés-do-chão", nome: "Rés-do-chão" },
+  // d141 (27-11-2026): a loja, ao nível da rua — conta como o rés-do-chão no preço.
+  { id: "loja", nome: "Loja (ao nível da rua)" },
   { id: "1º", nome: "1.º andar" },
   { id: "2º", nome: "2.º andar" },
   { id: "3º", nome: "3.º andar" },
@@ -98,7 +100,7 @@ export function lerAcesso(v: { floor?: unknown; hasElevator?: unknown; parkingDi
 export function numeroDoAndar(floor: string | number | null | undefined): number | null {
   if (floor == null || floor === "") return null;
   if (typeof floor === "number") return Number.isFinite(floor) ? Math.max(0, Math.floor(floor)) : null;
-  if (/r[ée]s|r\/c|^0$/i.test(floor)) return 0;
+  if (/r[ée]s|r\/c|^0$|^loja\b/i.test(floor)) return 0;
   const n = Number.parseInt(floor.replace(/[^\d]/g, ""), 10);
   return Number.isFinite(n) ? n : null;
 }

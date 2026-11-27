@@ -103,7 +103,8 @@ const SIM_NAO: readonly OpcaoDaResposta[] = [
   { id: "nao", nome: "Não" },
 ];
 
-const ACIMA_DO_RES_DO_CHAO = ANDARES.filter((a) => a.id !== "rés-do-chão").map((a) => a.id);
+// A loja (d141) está ao nível da rua, como o rés-do-chão: não pergunta o elevador.
+const ACIMA_DO_RES_DO_CHAO = ANDARES.filter((a) => a.id !== "rés-do-chão" && a.id !== "loja").map((a) => a.id);
 
 /* ── O acesso ───────────────────────────────────────────────────────────── */
 

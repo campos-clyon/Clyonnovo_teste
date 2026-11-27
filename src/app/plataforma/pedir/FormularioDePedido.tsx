@@ -47,6 +47,7 @@ import {
 } from "@/lib/analytics";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
 import { PEDIDO_URGENTE } from "@/lib/promessas-publicas";
+import { eAoNivelDaRua } from "@/lib/res-do-chao";
 import { moradaDepoisDeEscrever } from "@/lib/morada-escrita";
 
 const DRAFT_KEY = "clyon_simulator_draft";
@@ -278,15 +279,15 @@ export default function SimulatorThreePhaseForm() {
       const hasOrigin = !!(formData.originAddress?.formattedAddress);
       const hasDestination = !!(formData.destinationAddress?.formattedAddress);
       const originElevatorValid =
-        formData.originAccess?.floor === "rés-do-chão" ? true : !!formData.originAccess?.hasElevator;
+        eAoNivelDaRua(formData.originAccess?.floor) ? true : !!formData.originAccess?.hasElevator;
       const destElevatorValid =
-        formData.destinationAccess?.floor === "rés-do-chão" ? true : !!formData.destinationAccess?.hasElevator;
+        eAoNivelDaRua(formData.destinationAccess?.floor) ? true : !!formData.destinationAccess?.hasElevator;
       const originAccessOk = !!(formData.originAccess?.floor && originElevatorValid && formData.originAccess?.parkingDistance);
       const destAccessOk = !!(formData.destinationAccess?.floor && destElevatorValid && formData.destinationAccess?.parkingDistance);
       return hasOrigin && hasDestination && originAccessOk && destAccessOk;
     }
     // Outros serviços: apenas uma morada
-    const elevatorValid = formData.floor === "rés-do-chão" ? true : !!formData.hasElevator;
+    const elevatorValid = eAoNivelDaRua(formData.floor) ? true : !!formData.hasElevator;
     // A morada tem de chegar para bater à porta — a mesma regra do simulador.
     return (
       moradaServeParaTrabalhar(formData.address ?? {}) &&
@@ -1068,12 +1069,13 @@ function AccessFields({
             value={floor || ""}
             onChange={(e) => {
               onChange("floor", e.target.value);
-              if (e.target.value === "rés-do-chão") onChange("hasElevator", "");
+              if (eAoNivelDaRua(e.target.value)) onChange("hasElevator", "");
             }}
             className={selectCls}
           >
             <option value="">Seleccione...</option>
             <option value="rés-do-chão">Rés-do-chão</option>
+            <option value="loja">Loja (ao nível da rua)</option>
             <option value="1º">1º Andar</option>
             <option value="2º">2º Andar</option>
             <option value="3º">3º Andar</option>
@@ -1081,7 +1083,7 @@ function AccessFields({
           </select>
         </div>
 
-        {floor && floor !== "rés-do-chão" && (
+        {floor && !eAoNivelDaRua(floor) && (
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Elevador *</label>
             <select
@@ -1375,7 +1377,7 @@ function Phase2Location({
   const numeroEscrito = formData.address?.streetNumber ?? "";
   const numeroMauFeitio = numeroEscrito.trim() !== "" && !numeroDePortaValido(numeroEscrito);
   const missingFloor = showValidationErrors && !formData.floor;
-  const missingElevator = showValidationErrors && formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator;
+  const missingElevator = showValidationErrors && formData.floor && !eAoNivelDaRua(formData.floor) && !formData.hasElevator;
   const missingParking = showValidationErrors && !formData.parkingDistance;
 
   // Calcular lista de campos em falta para mostrar mensagem única
@@ -1383,7 +1385,7 @@ function Phase2Location({
   if (precisao === "nenhuma" || precisao === "localidade") missingFields.push("Morada");
   else if (precisao === "rua") missingFields.push("Número de porta");
   if (!formData.floor) missingFields.push("Andar");
-  if (formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator) missingFields.push("Elevador");
+  if (formData.floor && !eAoNivelDaRua(formData.floor) && !formData.hasElevator) missingFields.push("Elevador");
   if (!formData.parkingDistance) missingFields.push("Estacionamento");
 
   const errorBorderCls = "border-2 border-red-400 focus:ring-red-400 focus:border-red-400";
@@ -1469,7 +1471,7 @@ function Phase2Location({
             onChange={(e) => {
               const newFloor = e.target.value;
               updateField("floor", newFloor);
-              if (newFloor === "rés-do-chão") {
+              if (eAoNivelDaRua(newFloor)) {
                 updateField("hasElevator", "");
               }
             }}
@@ -1477,6 +1479,7 @@ function Phase2Location({
           >
             <option value="">Seleccione...</option>
             <option value="rés-do-chão">Rés-do-chão</option>
+            <option value="loja">Loja (ao nível da rua)</option>
             <option value="1º">1º Andar</option>
             <option value="2º">2º Andar</option>
             <option value="3º">3º Andar</option>
@@ -1484,7 +1487,7 @@ function Phase2Location({
           </select>
         </div>
 
-        {formData.floor !== "rés-do-chão" && formData.floor && (
+        {!eAoNivelDaRua(formData.floor) && formData.floor && (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-900">Elevador *</label>
             <select

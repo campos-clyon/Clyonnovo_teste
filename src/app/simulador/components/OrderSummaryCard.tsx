@@ -3,6 +3,7 @@
 import type { OrderData } from "../types";
 
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
+import { eAoNivelDaRua } from "@/lib/res-do-chao";
 const SERVICE_LABELS: Record<string, string> = NOMES_DOS_SERVICOS;
 
 const ELEVATOR_LABELS: Record<string, string> = {
@@ -202,8 +203,8 @@ export default function OrderSummaryCard({ order, onEdit }: OrderSummaryCardProp
               label="Elevador"
               // No rés-do-chão não há elevador a perguntar: a linha fica
               // resolvida em vez de parecer por preencher (22-10-2026).
-              value={order.floor === "rés-do-chão" ? "Não precisa (rés-do-chão)" : order.hasElevator ? ELEVATOR_LABELS[order.hasElevator] : undefined}
-              status={order.floor === "rés-do-chão" || order.hasElevator ? "filled" : "pending"}
+              value={eAoNivelDaRua(order.floor) ? (order.floor === "loja" ? "Não precisa (loja)" : "Não precisa (rés-do-chão)") : order.hasElevator ? ELEVATOR_LABELS[order.hasElevator] : undefined}
+              status={eAoNivelDaRua(order.floor) || order.hasElevator ? "filled" : "pending"}
             />
             <SummaryRow
               icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h8m0 0l-3-3m3 3l-3 3M3 17l3 3 3-3M3 17V7m18 10l-3 3-3-3m3 3V7" /></svg>}

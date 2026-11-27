@@ -41,7 +41,7 @@ describe("o formulário", () => {
   });
 
   it("com rés-do-chão, a pergunta do elevador não aparece", () => {
-    expect(F).toContain("{!eResDoChao(f.floor) && (");
-    expect(F).toContain("{!eResDoChao(f.andarDestino) && (");
+    expect(F).toContain("{!eAoNivelDaRua(f.floor) && (");
+    expect(F).toContain("{!eAoNivelDaRua(f.andarDestino) && (");
   });
 });

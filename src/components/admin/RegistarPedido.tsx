@@ -24,7 +24,7 @@ import { horasPrevistasDoPedido } from "@/lib/horas-do-trabalho";
 import { faltaOMotivoDaTaxa, mensagemDeValorComAtribuido } from "@/lib/oferta-clyon";
 import CaixaDeTextoQueCresce from "@/components/CaixaDeTextoQueCresce";
 import { campoEmLisboa } from "@/lib/hora-de-lisboa";
-import { RES_DO_CHAO, eResDoChao } from "@/lib/res-do-chao";
+import { LOJA, LOJA_POR_EXTENSO, RES_DO_CHAO, eAoNivelDaRua, eLoja, eResDoChao } from "@/lib/res-do-chao";
 import type { SugestaoDoCampo } from "@/lib/campos-na-descricao";
 // Só o tipo — o módulo é do servidor (fala com a base e com o WhatsApp).
 import type { AvisoAQuemTemOTrabalho } from "@/lib/avisar-quem-tem-o-trabalho";
@@ -1103,6 +1103,19 @@ export default function RegistarPedido({
             />
             Rés-do-chão
           </label>
+          {/* A LOJA, AO NÍVEL DA RUA (d141): conta como o rés-do-chão no preço, sem elevador. */}
+          <label className="mt-1.5 ml-3 inline-flex items-center gap-1.5 text-[11px] text-slate-300">
+            <input
+              type="checkbox"
+              checked={eLoja(f.floor)}
+              onChange={(e) => {
+                muda("floor", e.target.checked ? LOJA : "");
+                if (e.target.checked) muda("hasElevator", "");
+              }}
+              className="h-3.5 w-3.5"
+            />
+            {LOJA_POR_EXTENSO}
+          </label>
         </div>
 
         {/*
@@ -1115,7 +1128,7 @@ export default function RegistarPedido({
           "difficult") porque é esse que o motor de preços lê. Etiquetas novas
           com valores novos dariam campos preenchidos e preços iguais.
         */}
-        {!eResDoChao(f.floor) && (
+        {!eAoNivelDaRua(f.floor) && (
           <label className="text-xs text-slate-400">
             {doisEnderecos ? "Elevador na origem" : "Elevador"}
             <select
@@ -1213,9 +1226,21 @@ export default function RegistarPedido({
                 />
                 Rés-do-chão
               </label>
+              <label className="mt-1.5 ml-3 inline-flex items-center gap-1.5 text-[11px] text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={eLoja(f.andarDestino)}
+                  onChange={(e) => {
+                    muda("andarDestino", e.target.checked ? LOJA : "");
+                    if (e.target.checked) muda("elevadorDestino", "");
+                  }}
+                  className="h-3.5 w-3.5"
+                />
+                {LOJA_POR_EXTENSO}
+              </label>
             </div>
 
-            {!eResDoChao(f.andarDestino) && (
+            {!eAoNivelDaRua(f.andarDestino) && (
               <label className="text-xs text-slate-400">
                 Elevador no destino
                 <select

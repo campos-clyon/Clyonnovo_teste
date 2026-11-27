@@ -52,6 +52,8 @@ function andarEmPalavras(floor: unknown): string | null {
   const f = typeof floor === "number" ? String(floor) : typeof floor === "string" ? floor.trim() : "";
   if (!f) return null;
   if (/^r[ée]s/i.test(f) || f === "0") return "rés-do-chão";
+  // A loja, ao nível da rua (d141): como o rés-do-chão, sem elevador.
+  if (/^loja\b/i.test(f)) return "loja (ao nível da rua)";
   if (/moradia/i.test(f)) return "moradia";
   if (/^\d+$/.test(f)) return `${f}.º andar`;
   return f;
@@ -61,7 +63,7 @@ function andarEmPalavras(floor: unknown): string | null {
 export function acessoEmPalavras(p: { floor?: unknown; hasElevator?: unknown }): string | null {
   const andar = andarEmPalavras(p.floor);
   const elevador = typeof p.hasElevator === "string" ? ELEVADOR[p.hasElevator.trim().toLowerCase()] ?? null : null;
-  const precisaDeElevador = andar && andar !== "rés-do-chão" && andar !== "moradia";
+  const precisaDeElevador = andar && andar !== "rés-do-chão" && andar !== "moradia" && !andar.startsWith("loja");
   return [andar, precisaDeElevador ? elevador : null].filter(Boolean).join(", ") || null;
 }
 

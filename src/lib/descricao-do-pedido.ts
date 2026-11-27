@@ -4,6 +4,7 @@ import { DESCRICAO_DAS_FOTOS } from "./leitor-da-recolha";
 import { segundaParagemPorExtenso } from "./segunda-morada";
 import { semAHoraLimite } from "./hora-limite";
 import { campoComValor, estacionamentoDaConversa, oQueOQuandoAcrescenta, soRepeteOsCampos } from "./campos-na-descricao";
+import { eAoNivelDaRua, eLoja, LOJA_POR_EXTENSO } from "./res-do-chao";
 
 /**
  * A DESCRIÇÃO QUE O PROFISSIONAL LÊ — escrita pela Vitória. 26-10-2026.
@@ -465,7 +466,7 @@ function oQueSeViu(descricao: string | null | undefined): string[] {
 function andarPorExtenso(floor: string | null | undefined, lado?: string | null): string | null {
   const f = limpo(floor);
   if (!f) return null;
-  const base = f === "0" ? "rés-do-chão" : f === "-1" ? "cave" : /^\d{1,2}$/.test(f) ? `${f}.º andar` : f;
+  const base = eLoja(f) ? LOJA_POR_EXTENSO.toLowerCase() : f === "0" ? "rés-do-chão" : f === "-1" ? "cave" : /^\d{1,2}$/.test(f) ? `${f}.º andar` : f;
   const l = limpo(lado);
   return l ? `${base} ${l}` : base;
 }
@@ -480,7 +481,7 @@ function elevadorPorExtenso(e: string | null | undefined): string | null {
 /** «3.º andar Esq, com elevador» — ou só o que se sabe. */
 function acesso(floor: string | null | undefined, lado: string | null | undefined, elevador: string | null | undefined): string | null {
   const andar = andarPorExtenso(floor, lado);
-  const elev = limpo(floor) === "0" ? null : elevadorPorExtenso(elevador);
+  const elev = eAoNivelDaRua(limpo(floor)) ? null : elevadorPorExtenso(elevador);
   if (andar && elev) return `${andar}, ${elev}`;
   return andar ?? elev;
 }
@@ -584,7 +585,7 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
 
   // O andar, o elevador e o estacionamento: só o que a conversa diz e o campo não tem.
   const andarDito = tem(noPedido.floor) ? null : d.floor;
-  const elevadorDito = tem(noPedido.hasElevator) || limpo(noPedido.floor) === "0" ? null : d.hasElevator;
+  const elevadorDito = tem(noPedido.hasElevator) || eAoNivelDaRua(limpo(noPedido.floor)) ? null : d.hasElevator;
   const aqui = acesso(andarDito, andarDito ? d.lado : null, elevadorDito);
   const est = estacionamentoDaConversa(null, d.metrosAtePorta, d.parkingDistance);
   const estDito = !tem(noPedido.parkingDistance) && est && modo === "notas" ? est.texto : null;
@@ -594,7 +595,7 @@ export function descricaoOrganizada(d: DadosDaRecolha, opcoes: OpcoesDaDescricao
     const destino = acesso(
       tem(noPedido.andarDestino) ? null : d.andarDestino,
       null,
-      tem(noPedido.elevadorDestino) || limpo(noPedido.andarDestino) === "0" ? null : d.elevadorDestino,
+      tem(noPedido.elevadorDestino) || eAoNivelDaRua(limpo(noPedido.andarDestino)) ? null : d.elevadorDestino,
     );
     if (destino) linhas.push(comPonto(`Destino (dito pelo cliente): ${destino}`));
     const estDestino = estacionamentoDaConversa(null, d.metrosAtePortaDestino, d.estacionamentoDestino);

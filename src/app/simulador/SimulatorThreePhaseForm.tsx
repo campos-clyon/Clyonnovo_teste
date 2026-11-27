@@ -99,6 +99,7 @@ import { contarPedidoNoGoogleAds } from "@/lib/conversao-do-anuncio";
 import { origemDaVisita } from "@/lib/origem-da-visita";
 import { CHAVE_DO_RASCUNHO, rascunhoParaGuardar, rascunhoValido } from "@/lib/rascunho-do-simulador";
 import { WHATSAPP_DA_CLYON } from "@/lib/telefone-da-clyon";
+import { eAoNivelDaRua } from "@/lib/res-do-chao";
 import { moradaDepoisDeEscrever } from "@/lib/morada-escrita";
 
 const DRAFT_KEY = CHAVE_DO_RASCUNHO;
@@ -448,15 +449,15 @@ export default function SimulatorThreePhaseForm() {
       const hasOrigin = !!(formData.originAddress?.formattedAddress);
       const hasDestination = !!(formData.destinationAddress?.formattedAddress);
       const originElevatorValid =
-        formData.originAccess?.floor === "rés-do-chão" ? true : !!formData.originAccess?.hasElevator;
+        eAoNivelDaRua(formData.originAccess?.floor) ? true : !!formData.originAccess?.hasElevator;
       const destElevatorValid =
-        formData.destinationAccess?.floor === "rés-do-chão" ? true : !!formData.destinationAccess?.hasElevator;
+        eAoNivelDaRua(formData.destinationAccess?.floor) ? true : !!formData.destinationAccess?.hasElevator;
       const originAccessOk = !!(formData.originAccess?.floor && originElevatorValid && formData.originAccess?.parkingDistance);
       const destAccessOk = !!(formData.destinationAccess?.floor && destElevatorValid && formData.destinationAccess?.parkingDistance);
       return hasOrigin && hasDestination && originAccessOk && destAccessOk;
     }
     // Outros serviços: apenas uma morada
-    const elevatorValid = formData.floor === "rés-do-chão" ? true : !!formData.hasElevator;
+    const elevatorValid = eAoNivelDaRua(formData.floor) ? true : !!formData.hasElevator;
     /*
      * A morada tem de chegar para bater à porta.
      *
@@ -1788,12 +1789,13 @@ function AccessFields({
             value={floor || ""}
             onChange={(e) => {
               onChange("floor", e.target.value);
-              if (e.target.value === "rés-do-chão") onChange("hasElevator", "");
+              if (eAoNivelDaRua(e.target.value)) onChange("hasElevator", "");
             }}
             className={selectCls}
           >
             <option value="">Seleccione...</option>
             <option value="rés-do-chão">Rés-do-chão</option>
+            <option value="loja">Loja (ao nível da rua)</option>
             <option value="1º">1º Andar</option>
             <option value="2º">2º Andar</option>
             <option value="3º">3º Andar</option>
@@ -1801,7 +1803,7 @@ function AccessFields({
           </select>
         </div>
 
-        {floor && floor !== "rés-do-chão" && (
+        {floor && !eAoNivelDaRua(floor) && (
           <div className="space-y-1.5">
             <label htmlFor="sim-elevador-rapido" className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">Elevador *</label>
             <select id="sim-elevador-rapido"
@@ -2187,7 +2189,7 @@ function Phase2Location({
   const numeroMauFeitio = numeroEscrito.trim() !== "" && !numeroDePortaValido(numeroEscrito);
   const missingFloor = showValidationErrors && !formData.floor;
   const semAndar = !!formData.serviceType && PERGUNTAS_DO_ESPACO[formData.serviceType]?.perguntaOAndar === false;
-  const missingElevator = showValidationErrors && formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator;
+  const missingElevator = showValidationErrors && formData.floor && !eAoNivelDaRua(formData.floor) && !formData.hasElevator;
   const missingParking = showValidationErrors && !formData.parkingDistance;
 
   // Calcular lista de campos em falta para mostrar mensagem única
@@ -2197,7 +2199,7 @@ function Phase2Location({
   if (precisao === "nenhuma" || precisao === "localidade") missingFields.push("Morada");
   else if (precisao === "rua") missingFields.push("Número de porta");
   if (!formData.floor) missingFields.push("Andar");
-  if (formData.floor && formData.floor !== "rés-do-chão" && !formData.hasElevator) missingFields.push("Elevador");
+  if (formData.floor && !eAoNivelDaRua(formData.floor) && !formData.hasElevator) missingFields.push("Elevador");
   if (!formData.parkingDistance) missingFields.push("Estacionamento");
 
   /* O mesmo vermelho da fase 3: se a cor quer dizer «isto impede», tem de ser
@@ -2292,7 +2294,7 @@ function Phase2Location({
             onChange={(e) => {
               const newFloor = e.target.value;
               updateField("floor", newFloor);
-              if (newFloor === "rés-do-chão") {
+              if (eAoNivelDaRua(newFloor)) {
                 updateField("hasElevator", "");
               }
             }}
@@ -2300,6 +2302,7 @@ function Phase2Location({
           >
             <option value="">Seleccione...</option>
             <option value="rés-do-chão">Rés-do-chão</option>
+            <option value="loja">Loja (ao nível da rua)</option>
             <option value="1º">1º Andar</option>
             <option value="2º">2º Andar</option>
             <option value="3º">3º Andar</option>
@@ -2307,7 +2310,7 @@ function Phase2Location({
           </select>
         </div>
 
-        {formData.floor !== "rés-do-chão" && formData.floor && (
+        {!eAoNivelDaRua(formData.floor) && formData.floor && (
           <div className="space-y-2">
             <label htmlFor="sim-elevador" className="block text-sm font-medium text-gray-900">Elevador *</label>
             <select id="sim-elevador"
@@ -2327,7 +2330,7 @@ function Phase2Location({
 
         {/* A peça grande que não cabe no elevador desce pela escada (d60, 16-11-2026): só nos móveis e nos monos. */}
         {(formData.serviceType === "recolha_moveis" || formData.serviceType === "recolha_monos") &&
-          formData.floor !== "rés-do-chão" &&
+          !eAoNivelDaRua(formData.floor) &&
           (formData.hasElevator === "yes" || formData.hasElevator === "small") && (
             <div className="space-y-2">
               <label htmlFor="sim-pecas-no-elevador" className="block text-sm font-medium text-gray-900">

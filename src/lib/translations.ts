@@ -57,6 +57,7 @@ export const FIELD_TRANSLATIONS: Record<string, Record<string, string>> = {
     "rdc":           "Rés-do-chão",
     "rc":            "Rés-do-chão",
     "0":             "Rés-do-chão",
+    "loja":          "Loja (ao nível da rua)",
     "1":             "1º Andar",
     "1º":            "1º Andar",
     "primeiro":      "1º Andar",

@@ -1,6 +1,7 @@
 import type { DadosDaRecolha } from "./whatsapp-recolha";
 import { descricaoOrganizada, type CamposQueOProfissionalVe, type OpcoesDaDescricao } from "./descricao-do-pedido";
 import { DESCRICAO_DAS_FOTOS } from "./leitor-da-recolha";
+import { semFalarDaImagem } from "./sem-falar-da-imagem";
 
 /**
  * AS FONTES DA DESCRIÇÃO DE UM PEDIDO — 29-10-2026 (ordem do CEO, aprovada
@@ -355,7 +356,8 @@ export function frasesDoCliente(fontes: FontesDaDescricao): string[] {
 
 /** O que se viu nas fotografias e conta agora (sem o «Nas imagens:»). */
 export function oQueSeVe(fontes: FontesDaDescricao): string[] {
-  return fontes.visto.filter((d) => conta(fontes, d.em)).map((d) => d.t.replace(NAS_IMAGENS, "").trim());
+  return fontes.visto.filter((d) => conta(fontes, d.em)).map((d) => semFalarDaImagem(d.t.replace(NAS_IMAGENS, "").trim()))
+    .filter(Boolean);
 }
 
 /** Os campos apurados na conversa que contam agora. */

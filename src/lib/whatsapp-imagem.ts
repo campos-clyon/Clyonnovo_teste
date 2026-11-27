@@ -1,4 +1,5 @@
 import { fazManutencaoDaCasa, servicosPorExtenso } from "./servicos-da-vitoria";
+import { semFalarDaImagem } from "./sem-falar-da-imagem";
 
 /**
  * O QUE SE VÊ NUMA FOTOGRAFIA DO CLIENTE — 21-10-2026.
@@ -56,6 +57,8 @@ export function limparOQueSeVe(bruto: string | null | undefined): string | null 
     .replace(/^vejo\s+/i, "")
     .replace(/\s+/g, " ")
     .trim();
+  // d141: nem «a imagem mostra», nem «na fotografia 2» a meio da frase.
+  t = semFalarDaImagem(t);
   if (!t || /^\(?\s*nada\s*\)?\.?$/i.test(t)) return null;
   t = t.replace(/[.\s]+$/, "");
   return `${t.charAt(0).toLowerCase()}${t.slice(1)}`.slice(0, 300);

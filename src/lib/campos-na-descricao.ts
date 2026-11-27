@@ -48,6 +48,8 @@ const temValor = (v: unknown): boolean => {
 export function andarPorExtenso(floor: string | null | undefined): string | null {
   const f = String(floor ?? "").trim();
   if (!f) return null;
+  // A loja, ao nível da rua (d141).
+  if (/^loja\b/i.test(f)) return "loja (ao nível da rua)";
   const m = /^(-?\d{1,2})\s*[º°ª]?\s*(.*)$/.exec(f);
   if (m) {
     const n = m[1];
