@@ -16,6 +16,7 @@ import {
 import { contaDaLinha, eTrabalhoClyon } from "@/lib/conta-do-pagamento";
 import { lerForma } from "@/lib/forma-de-pagamento";
 import { negociacoesPagas } from "@/lib/pagamentos-na-base";
+import { semDiaDoTrabalho } from "@/lib/trabalho-sem-dia";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,8 @@ export async function GET(req: NextRequest) {
               n.dataCombinada, n.duracaoMinutos, n.execucaoEnviadaEm, n.confirmadoEm, n.pagoEm,
               -- Quando ficou feito (d36, 15-11-2026): num feito, a data que a agenda mostra.
               n.feitoEm,
+              -- d138: desde quando está sem dia (a contratação).
+              n.contratadaEm, n.atribuidaEm,
               -- O terreno e o ajuste no local, pela app do profissional (18-10-2026).
               n.aCaminhoEm, n.chegouEm, n.ajustesJson,
               o.dataAgendada, o.diasDoTrabalhoJson, o.registoRealJson, o.status AS estadoDoPedido, o.serviceType, o.city, o.address, o.postalCode,
@@ -184,6 +187,17 @@ export async function GET(req: NextRequest) {
         }),
         diaDoTrabalho: a.diaDoTrabalho ?? null,
         deDias: a.deDias ?? null,
+        /* d138: sem dia (ou sem hora) marcado pelo parceiro — há quantos dias, e vermelho ao 4.º. */
+        semDia: semDiaDoTrabalho(
+          {
+            dataCombinada: l.dataCombinada as Date | null,
+            contratadaEm: l.contratadaEm as Date | null,
+            atribuidaEm: l.atribuidaEm as Date | null,
+            criadaEm: l.negociacaoCriadaEm as Date | null,
+            feito: a.estado === "feito",
+          },
+          agora,
+        ),
       };
     });
 

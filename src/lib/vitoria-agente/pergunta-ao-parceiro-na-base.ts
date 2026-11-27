@@ -328,6 +328,9 @@ async function responderComARespostaDoParceiro(p: PerguntaRegistada, texto: stri
 export async function respostaDoParceiroPeloWhatsApp(telefone: string, texto: string, opcoes: { interrompido?: boolean } = {}): Promise<boolean> {
   try {
     if (!String(texto ?? "").trim() || noves(telefone).length !== 9) return false;
+    // d138: a resposta ao aviso do dia por marcar («não consigo contactar o cliente») — a Vitória pergunta ao cliente.
+    const { respostaDoParceiroAoSemDia } = await import("../trabalho-sem-dia-na-base");
+    if (await respostaDoParceiroAoSemDia(telefone, texto, opcoes).catch(() => false)) return true;
     const base = await pool();
     const [rows] = (await base.execute(
       `SELECT * FROM vitoriaPerguntasAoParceiro WHERE telefoneParceiro = ? AND estado = 'aberta' ORDER BY id DESC LIMIT 5`,

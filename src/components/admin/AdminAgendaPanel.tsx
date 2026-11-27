@@ -57,6 +57,7 @@ import {
 } from "@/lib/agenda-dos-trabalhos";
 import TelefoneComWhatsApp from "@/components/admin/TelefoneComWhatsApp";
 import { choquesDoProfissional, textoDosChoques, type Marcacao } from "@/lib/choques-de-agenda";
+import { doMaisAntigo } from "@/lib/trabalho-sem-dia";
 
 import { NOMES_DOS_SERVICOS } from "@/lib/service-categories";
 /**
@@ -112,6 +113,8 @@ function comDiaPorGravar(t: Trabalho, combinada: string | null, agora: Date): Tr
     estado: feito ? "feito" : a.estado,
     diasDeAtraso: feito ? 0 : a.diasDeAtraso,
     horaJaPassou: feito ? false : a.horaJaPassou,
+    // d138: com o dia acabado de marcar, deixa de estar «sem data».
+    semDia: combinada ? null : t.semDia,
   };
 }
 
@@ -579,6 +582,8 @@ export default function AdminAgendaPanel() {
     lista.sort((a, b) => {
       const p = PESO_NA_AGENDA[a.estado] - PESO_NA_AGENDA[b.estado];
       if (p !== 0) return p;
+      // d138: no «Sem data», do que está sem dia há mais tempo para o mais recente.
+      if (a.estado === "sem_data" && b.estado === "sem_data") return doMaisAntigo(a, b);
       if (!a.quando) return 1;
       if (!b.quando) return -1;
       return new Date(a.quando).getTime() - new Date(b.quando).getTime();
@@ -586,6 +591,8 @@ export default function AdminAgendaPanel() {
   }
 
   const gruposVisiveis = GRUPOS.filter((g) => estadosVisiveis.includes(g.estado));
+  /** d138: os sem dia há 4 dias ou mais (em qualquer bloco). */
+  const vermelhosSemDia = trabalhosVisiveis.filter((t) => t.semDia?.vermelho).length;
   const totalVisivel = gruposVisiveis.reduce((s, g) => s + (porEstado.get(g.estado)?.length ?? 0), 0);
 
   /* O que vai para a grelha: o mesmo filtro da lista, e só o que tem dia. */
@@ -745,7 +752,8 @@ export default function AdminAgendaPanel() {
             ? (porEstado.get(g.estado)?.length ?? 0)
             : resumo[g.chave] + (ajusteDoResumo[g.estado] ?? 0);
           const escolhido = soOBloco === g.estado;
-          const alarme = g.estado === "atrasado" && n > 0;
+          // d138: o «Sem data» também puxa o olho quando há trabalhos sem dia há 4 dias ou mais.
+          const alarme = (g.estado === "atrasado" && n > 0) || (g.estado === "sem_data" && vermelhosSemDia > 0);
           return (
             <button
               key={g.estado}
@@ -1114,7 +1122,7 @@ function LinhaDaAgenda({
       }}
       aria-label={`Abrir o pedido #${t.pedidoId}`}
       className={`cursor-pointer rounded-xl border px-4 py-3 transition hover:border-cyan-600/60 focus:outline-none focus-visible:border-cyan-500 ${
-        t.estado === "atrasado"
+        t.estado === "atrasado" || t.semDia?.vermelho
           ? "border-rose-500/40 bg-rose-500/5"
           : "border-slate-800 bg-slate-950/40"
       }`}
@@ -1140,6 +1148,16 @@ function LinhaDaAgenda({
             {t.estado === "hoje" && t.horaJaPassou && (
               <span className="flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
                 <Clock className="h-3 w-3" aria-hidden="true" />a hora já passou
+              </span>
+            )}
+            {/* d138: sem dia (ou sem hora) — há quantos dias; ao 4.º, vermelho e «combine já». */}
+            {t.semDia && (
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+                  t.semDia.vermelho ? "border-rose-500 bg-rose-500 text-white" : "border-slate-600 bg-slate-800 text-slate-300"
+                }`}
+              >
+                {t.semDia.etiqueta}
               </span>
             )}
           </p>

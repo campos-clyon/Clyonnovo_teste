@@ -1,6 +1,7 @@
 "use client";
 
 import { AVISO_SEM_GUIA_NO_BACKOFFICE, fetchComAConfirmacaoDaGuia, SELO_SEM_GUIA } from "@/lib/guia-no-backoffice";
+import type { SemDia } from "@/lib/trabalho-sem-dia";
 import RegistoReal from "@/components/admin/RegistoReal";
 import FolhaFinalDaMudanca from "@/components/admin/FolhaFinalDaMudanca";
 import { isMudancaType } from "@/lib/calendar-helpers";
@@ -1360,6 +1361,8 @@ export default function AdminNegociacoesPanel({
   const [validade, setValidade] = useState<Record<number, ValidadeNaMesa>>({});
   /** O seguimento do cliente (d83): o «Falei com o cliente» e o passo, por pedido. */
   const [seguimentos, setSeguimentos] = useState<Record<number, SeguimentoNaMesa>>({});
+  /** d138: os contratados sem dia (ou sem hora) — os de 4 dias ou mais vão vermelhos ao «Precisa de si». */
+  const [semDia, setSemDia] = useState<Array<{ pedidoId: number; negociacaoId: number; semDia: SemDia }>>([]);
 
   /** d5: «Confirmei com o parceiro» — o cliente passa a ver os dados de pagamento. */
   const confirmarDadosDePagamento = async (negociacaoId: number) => {
@@ -1432,6 +1435,13 @@ export default function AdminNegociacoesPanel({
         }
       } catch {
         /* sem o seguimento, a Mesa de sempre */
+      }
+      // d138: os trabalhos sem dia. Em silêncio: sem eles, a Mesa de sempre.
+      try {
+        const rd = await fetch("/api/admin/trabalhos-sem-dia", { headers: { Authorization: `Bearer ${token}` } });
+        if (rd.ok) setSemDia(((await rd.json()) as { trabalhos?: typeof semDia }).trabalhos ?? []);
+      } catch {
+        /* sem a lista, a Mesa de sempre */
       }
       setPedidos(
         ((dados.pedidos ?? []) as Pedido[]).map((p) =>
@@ -2696,6 +2706,8 @@ export default function AdminNegociacoesPanel({
     (f) => f.dias,
   );
   const feitosAtrasados = feitosPorConfirmar.filter((f) => passouDoPrazo(f.dias)).length;
+  /** d138: sem dia há 4 dias ou mais — vermelhos no «Precisa de si», do mais antigo para o mais recente. */
+  const semDiaVermelhos = semDia.filter((x) => x.semDia.vermelho);
 
   /*
    * OS ATALHOS SÃO O PRÓPRIO BLOCO, e não uma segunda conta parecida.
@@ -5461,7 +5473,8 @@ export default function AdminNegociacoesPanel({
            * em cima, e aí diz que está vazio em vez de desaparecer.
            */
           // Com todos em seguimento (d83), o bloco fica: a linha «Em seguimento · N» mostra-os.
-          if (quantos === 0 && soOBloco !== b.chave && !(b.chave === "n1" && emSeguimentoNoN1.length > 0)) return null;
+          // d138: e com trabalhos sem dia há 4+ dias, o «Precisa de si» aparece (são dele).
+          if (quantos === 0 && soOBloco !== b.chave && !(b.chave === "n1" && (emSeguimentoNoN1.length > 0 || semDiaVermelhos.length > 0))) return null;
           /*
            * Escolher um cartão é um pedido para VER: o bloco abre sem mexer
            * em `fechados`. Ao voltar a todos, Concluídos volta a estar como
@@ -5508,6 +5521,12 @@ export default function AdminNegociacoesPanel({
                     + {emSeguimentoNoN1.length} em seguimento
                   </span>
                 )}
+                {/* d138: os trabalhos sem dia há 4 dias ou mais contam no selo, a vermelho. */}
+                {b.chave === "n1" && semDiaVermelhos.length > 0 && (
+                  <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold text-white">
+                    {semDiaVermelhos.length} por marcar há 4+ dias
+                  </span>
+                )}
                 {/* O selo passa a alerta: feitos há dois dias ou mais sem confirmação (27-10-2026). */}
                 {b.chave === "porConfirmar" && feitosAtrasados > 0 && (
                   <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs font-bold text-white">
@@ -5529,6 +5548,31 @@ export default function AdminNegociacoesPanel({
                   <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
                 )}
               </button>
+
+              {/*
+                SEM DATA HÁ 4 DIAS OU MAIS — d138 (27-11-2026, o dono): «não podemos
+                aceitar que os trabalhos fiquem mais de 4 dias sem data nem
+                horário». Um cartão vermelho por trabalho, do mais antigo para o
+                mais recente; carregar leva ao cartão dele.
+              */}
+              {b.chave === "n1" && !fechado && semDiaVermelhos.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 px-1 text-xs">
+                  {semDiaVermelhos.map((x) => (
+                    <button
+                      key={`sem-dia-${x.negociacaoId}`}
+                      type="button"
+                      onClick={() =>
+                        idsClyon.has(x.pedidoId)
+                          ? irAoTrabalhoClyon(x.pedidoId)
+                          : document.getElementById(`pedido-${x.pedidoId}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      }
+                      className="rounded-md border border-rose-500/70 bg-rose-500/15 px-2.5 py-1 font-semibold text-rose-200 hover:bg-rose-500/25"
+                    >
+                      #{x.pedidoId} · {x.semDia.etiqueta}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Marcar os feitos todos, para os confirmar de uma vez na barra. */}
               {b.chave === "porConfirmar" && !fechado && quantos > 0 && (

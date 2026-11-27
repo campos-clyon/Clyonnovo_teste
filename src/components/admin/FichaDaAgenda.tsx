@@ -28,6 +28,7 @@ import ContaDoPagamento from "@/components/ContaDoPagamento";
 import CancelarPedido from "./CancelarPedido";
 import AjusteNaFicha from "./AjusteNaFicha";
 import type { VistaDoAjuste } from "@/lib/ajuste-no-local";
+import type { SemDia } from "@/lib/trabalho-sem-dia";
 import { diaEmLisboa } from "@/lib/hora-de-lisboa";
 import {
   ETIQUETA,
@@ -108,6 +109,8 @@ export type TrabalhoDaAgenda = {
   aCaminhoEm?: string | null;
   chegouEm?: string | null;
   ajuste?: VistaDoAjuste | null;
+  /** d138: sem dia (ou sem hora) marcado — há quantos dias, e vermelho ao 4.º. */
+  semDia?: SemDia | null;
 };
 
 /**

@@ -200,8 +200,26 @@ export async function GET(req: NextRequest) {
         detalhe: { linhas: semResposta.linhas.slice(0, 40) },
       });
     }
+    /*
+     * O TRABALHO SEM DIA — 27-11-2026 (d138). Contratado e sem dia (ou sem
+     * hora): o aviso ao parceiro para o marcar, o lembrete ao 2.º dia e, ao
+     * 4.º, a conversa à equipa e o cartão vermelho. Só das 9h às 20h. Ver
+     * `trabalho-sem-dia.ts`. Uma falha aqui não estraga a passagem.
+     */
+    const { correrOsTrabalhosSemDia } = await import("@/lib/trabalho-sem-dia-na-base");
+    const semDia = await correrOsTrabalhosSemDia().catch(() => ({ linhas: [] as string[] }));
+    if (semDia.linhas.length > 0) {
+      await registarSemFalhar({
+        acontecimento: "assistente_alerta",
+        autorTipo: "assistente",
+        autorNome: "trabalhos sem dia",
+        resumo: `${semDia.linhas.length} passo(s) nos trabalhos sem dia: ${semDia.linhas.slice(0, 10).join("; ")}.`,
+        detalhe: { linhas: semDia.linhas.slice(0, 40) },
+      });
+    }
     return NextResponse.json({
       ok: true,
+      trabalhosSemDia: semDia.linhas.length,
       ruaDepoisDoAceite: daRua.linhas.length,
       perguntasSemResposta: semResposta.linhas.length,
       ...r,
